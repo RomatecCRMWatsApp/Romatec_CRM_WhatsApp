@@ -5,7 +5,7 @@ import { Users, Home, Send, Settings, LogOut } from "lucide-react";
 import { useLocation } from "wouter";
 import { trpc } from "@/lib/trpc";
 
-const LOGO_URL = "https://d2xsxph8kpxj0f.cloudfront.net/310519663438352331/2uYgCCZRKgbanKmmzr4z87/LOGORPEQUENO_01_7034e7c7.jpg";
+const LOGO_URL = "https://d2xsxph8kpxj0f.cloudfront.net/310519663438352331/2uYgCCZRKgbanKmmzr4z87/LOGO_R_PEQUENO_01-removebg-preview_1a0ec276.png";
 
 export default function Dashboard() {
   const { user } = useAuth();

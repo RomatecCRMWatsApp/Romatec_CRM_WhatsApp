@@ -125,6 +125,9 @@
 - [x] Implementar controle de contatos (expandir/colapsar)
 - [x] Adicionar botões de controle: Play, Pause, Reset (3D)
 - [x] Mostrar próximo ciclo em tempo real
+- [x] Exibir ciclo vigente e próximo ciclo
+- [x] Mostrar tabela de campanhas com mensagens
+- [x] Listar contatos por campanha
 
 ## Migração de Dados (NOVO)
 - [x] Carregar imóveis na página de Gerenciar Imóveis
@@ -145,6 +148,7 @@
 - [x] Upload do logo da Romatec para CDN
 - [x] Exibir logo no header do dashboard
 - [x] Exibir logo na página de login
+- [x] Usar logo com fundo transparente
 - [ ] Adicionar favicon com logo da empresa
 - [x] Atualizar branding em todas as páginas
 
