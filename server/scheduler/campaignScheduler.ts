@@ -1,28 +1,25 @@
 import { getDb } from "../db";
 import { campaigns, contacts, messages, campaignContacts, contactCampaignHistory, properties } from "../../drizzle/schema";
-import { eq, and, isNull, or, lte } from "drizzle-orm";
+import { eq, and } from "drizzle-orm";
 
 /**
  * SISTEMA DINÂMICO DE CAMPANHAS - VINCULADO A IMÓVEIS
  * 
- * REGRAS:
- * 1. Campanhas = Imóveis ativos (status "available")
- * 2. EXATAMENTE 2 mensagens por hora (1 de cada campanha do par)
- * 3. Pares dinâmicos: se 4 imóveis = 2 pares, se 6 = 3 pares, etc.
- * 4. Rotação: Par1 → Par2 → Par3 → Par1... (loop infinito)
- * 5. 12 contatos por campanha
- * 6. Intervalo aleatório 10-30 min entre as 2 mensagens
- * 7. Bloqueio de 72h por contato após envio
- * 8. Mensagens variadas para evitar detecção
- * 9. Quando novo imóvel é cadastrado, entra automaticamente no ciclo
- * 10. Quando imóvel é vendido/removido, sai automaticamente do ciclo
+ * REGRAS RÍGIDAS (NUNCA VIOLAR):
+ * 1. MÁXIMO ABSOLUTO: 2 mensagens por hora (1 de cada campanha do par)
+ * 2. MÍNIMO 20 minutos entre mensagens (intervalo aleatório 20-40 min)
+ * 3. Rotação de pares: (1+2) → (3+4) → (1+2)...
+ * 4. 12 contatos por campanha
+ * 5. Bloqueio de 72h por contato após envio
+ * 6. Mensagens variadas para evitar detecção
+ * 7. Lock de envio: NUNCA enviar se já enviou 2 nesta hora
  */
 
 interface SchedulerState {
   isRunning: boolean;
   cycleNumber: number;
   messagesThisHour: number;
-  randomInterval: number;
+  lastMessageSentAt: number; // timestamp da última msg enviada
   cycleStartTime: number;
   startedAt: number;
   totalSent: number;
@@ -38,7 +35,7 @@ class CampaignScheduler {
     isRunning: false,
     cycleNumber: 0,
     messagesThisHour: 0,
-    randomInterval: 0,
+    lastMessageSentAt: 0,
     cycleStartTime: Date.now(),
     startedAt: Date.now(),
     totalSent: 0,
@@ -51,9 +48,16 @@ class CampaignScheduler {
 
   private hourlyTimer: NodeJS.Timeout | null = null;
   private messageTimer: NodeJS.Timeout | null = null;
+  private isSending: boolean = false; // LOCK: impede envio simultâneo
+
+  // ========== LIMITE RÍGIDO ==========
+  private readonly MAX_MESSAGES_PER_HOUR = 2;
+  private readonly MIN_INTERVAL_MINUTES = 20; // mínimo 20 min entre msgs
+  private readonly MAX_INTERVAL_MINUTES = 40; // máximo 40 min entre msgs
+  // ====================================
 
   /**
-   * Inicia o scheduler - sincroniza campanhas com imóveis e começa o loop
+   * Inicia o scheduler
    */
   async start() {
     if (this.state.isRunning) {
@@ -62,21 +66,23 @@ class CampaignScheduler {
     }
 
     console.log("🚀 Iniciando sistema dinâmico de campanhas...");
+    console.log(`📏 LIMITE RÍGIDO: ${this.MAX_MESSAGES_PER_HOUR} msgs/hora, intervalo ${this.MIN_INTERVAL_MINUTES}-${this.MAX_INTERVAL_MINUTES} min`);
 
-    // Sincronizar campanhas com imóveis ativos
     await this.syncCampaignsWithProperties();
 
     this.state.isRunning = true;
     this.state.cycleStartTime = Date.now();
     this.state.startedAt = Date.now();
     this.state.cycleNumber = 0;
+    this.state.messagesThisHour = 0;
+    this.state.lastMessageSentAt = 0;
     this.state.totalSent = 0;
     this.state.totalFailed = 0;
     this.state.totalBlocked = 0;
 
     console.log("✅ Scheduler iniciado - Loop infinito 24/7");
 
-    // Executar primeiro ciclo imediatamente
+    // Executar primeiro ciclo
     await this.executeCycle();
 
     // Agendar próximos ciclos
@@ -88,6 +94,7 @@ class CampaignScheduler {
    */
   stop() {
     this.state.isRunning = false;
+    this.isSending = false;
     if (this.hourlyTimer) {
       clearTimeout(this.hourlyTimer);
       this.hourlyTimer = null;
@@ -100,10 +107,7 @@ class CampaignScheduler {
   }
 
   /**
-   * SINCRONIZAÇÃO DINÂMICA: Campanhas = Imóveis ativos
-   * - Cria campanha para cada imóvel novo
-   * - Remove campanhas de imóveis vendidos/inativos
-   * - Designa 12 contatos para cada campanha nova
+   * SINCRONIZAÇÃO: Campanhas = Imóveis ativos
    */
   async syncCampaignsWithProperties() {
     const db = await getDb();
@@ -111,20 +115,17 @@ class CampaignScheduler {
 
     console.log("🔄 Sincronizando campanhas com imóveis...");
 
-    // 1. Buscar imóveis ativos
     const activeProperties = await db.select().from(properties).where(eq(properties.status, "available"));
-    console.log(`📊 ${activeProperties.length} imóveis ativos encontrados`);
+    console.log(`📊 ${activeProperties.length} imóveis ativos`);
 
-    // 2. Buscar campanhas existentes
     const existingCampaigns = await db.select().from(campaigns);
 
-    // 3. Criar campanhas para imóveis novos (sem campanha)
+    // Criar campanhas para imóveis novos
     const existingPropertyIds = existingCampaigns.map(c => c.propertyId);
     const newProperties = activeProperties.filter(p => !existingPropertyIds.includes(p.id));
 
     for (const prop of newProperties) {
-      console.log(`➕ Criando campanha para imóvel: ${prop.denomination}`);
-
+      console.log(`➕ Criando campanha: ${prop.denomination}`);
       const variations = this.generateMessageVariations(prop);
 
       const result = await db.insert(campaigns).values({
@@ -139,32 +140,26 @@ class CampaignScheduler {
       });
 
       const campaignId = Number(result[0].insertId);
-
-      // Designar 12 contatos aleatórios
       await this.assignContactsToCampaign(campaignId);
     }
 
-    // 4. Pausar campanhas de imóveis vendidos/inativos
+    // Pausar/reativar campanhas conforme imóveis
     const activePropertyIds = activeProperties.map(p => p.id);
     for (const campaign of existingCampaigns) {
       if (!activePropertyIds.includes(campaign.propertyId)) {
-        console.log(`⏸️ Pausando campanha de imóvel vendido/inativo: ${campaign.name}`);
         await db.update(campaigns).set({ status: "paused" }).where(eq(campaigns.id, campaign.id));
       } else if (campaign.status === "paused") {
-        // Reativar se imóvel voltou a ficar disponível
-        console.log(`▶️ Reativando campanha: ${campaign.name}`);
         await db.update(campaigns).set({ status: "running" }).where(eq(campaigns.id, campaign.id));
       }
     }
 
-    // 5. Atualizar estado
     const runningCampaigns = await db.select().from(campaigns).where(eq(campaigns.status, "running"));
     this.state.totalPairs = Math.ceil(runningCampaigns.length / 2);
-    console.log(`✅ Sincronização completa: ${runningCampaigns.length} campanhas ativas, ${this.state.totalPairs} pares`);
+    console.log(`✅ ${runningCampaigns.length} campanhas ativas, ${this.state.totalPairs} pares`);
   }
 
   /**
-   * Gera variações de mensagem para um imóvel
+   * Gera variações de mensagem
    */
   private generateMessageVariations(prop: any): string[] {
     const priceFormatted = Number(prop.price).toLocaleString("pt-BR");
@@ -185,23 +180,16 @@ class CampaignScheduler {
     const db = await getDb();
     if (!db) return;
 
-    // Buscar contatos ativos que não estão bloqueados
-    const now = new Date();
     const allContacts = await db.select().from(contacts).where(eq(contacts.status, "active"));
-
-    // Buscar contatos já designados para outras campanhas
     const alreadyAssigned = await db.select().from(campaignContacts);
     const assignedContactIds = new Set(alreadyAssigned.map(cc => cc.contactId));
 
-    // Filtrar contatos disponíveis (não designados para outra campanha)
     let available = allContacts.filter(c => !assignedContactIds.has(c.id));
-
-    // Se não houver contatos suficientes não designados, usar todos
     if (available.length < 12) {
       available = allContacts;
     }
 
-    // Embaralhar e pegar 12
+    // Embaralhar ALEATORIAMENTE (não alfabético)
     const shuffled = [...available].sort(() => Math.random() - 0.5);
     const selected = shuffled.slice(0, 12);
 
@@ -214,25 +202,51 @@ class CampaignScheduler {
       });
     }
 
-    console.log(`📱 ${selected.length} contatos designados para campanha ${campaignId}`);
+    console.log(`📱 ${selected.length} contatos designados (aleatórios)`);
   }
 
   /**
-   * Executa um ciclo (1 hora = EXATAMENTE 2 mensagens)
+   * ========== VERIFICAÇÃO RÍGIDA DE LIMITE ==========
+   * Retorna true se pode enviar, false se NÃO pode
+   */
+  private canSendMessage(): boolean {
+    // REGRA 1: Máximo 2 msgs por hora
+    if (this.state.messagesThisHour >= this.MAX_MESSAGES_PER_HOUR) {
+      console.log(`🚫 BLOQUEADO: já enviou ${this.state.messagesThisHour}/${this.MAX_MESSAGES_PER_HOUR} msgs nesta hora`);
+      return false;
+    }
+
+    // REGRA 2: Mínimo 20 min desde última msg
+    if (this.state.lastMessageSentAt > 0) {
+      const minutesSinceLastMsg = (Date.now() - this.state.lastMessageSentAt) / (60 * 1000);
+      if (minutesSinceLastMsg < this.MIN_INTERVAL_MINUTES) {
+        console.log(`🚫 BLOQUEADO: apenas ${minutesSinceLastMsg.toFixed(1)} min desde última msg (mínimo ${this.MIN_INTERVAL_MINUTES} min)`);
+        return false;
+      }
+    }
+
+    // REGRA 3: Lock de envio (impede corrida)
+    if (this.isSending) {
+      console.log(`🚫 BLOQUEADO: envio em andamento (lock ativo)`);
+      return false;
+    }
+
+    return true;
+  }
+
+  /**
+   * Executa um ciclo (1 hora = EXATAMENTE 2 mensagens, com verificação rígida)
    */
   private async executeCycle() {
     if (!this.state.isRunning) return;
 
     console.log(`\n⏰ === CICLO ${this.state.cycleNumber + 1} ===`);
 
-    // Sincronizar campanhas com imóveis a cada ciclo
     await this.syncCampaignsWithProperties();
 
-    // Resetar contador
+    // RESET contador da hora
     this.state.messagesThisHour = 0;
-    this.state.randomInterval = this.generateRandomInterval();
 
-    // Obter campanhas ativas
     const db = await getDb();
     if (!db) return;
 
@@ -250,63 +264,87 @@ class CampaignScheduler {
 
     const pairStart = this.state.currentPairIndex * 2;
     const camp1 = runningCampaigns[pairStart];
-    const camp2 = runningCampaigns[pairStart + 1] || runningCampaigns[0]; // Se ímpar, usa o primeiro
+    const camp2 = runningCampaigns[pairStart + 1] || runningCampaigns[0];
 
     this.state.currentCampaignNames = [camp1.name, camp2.name];
 
+    // Gerar intervalo aleatório entre 20-40 min
+    const intervalMinutes = this.generateRandomInterval();
+
     console.log(`📤 Par ${this.state.currentPairIndex + 1}/${totalPairs}: ${camp1.name} + ${camp2.name}`);
-    console.log(`⏳ Intervalo aleatório: ${this.state.randomInterval} minutos`);
+    console.log(`⏳ Intervalo entre msgs: ${intervalMinutes} minutos`);
 
-    // MENSAGEM 1: Enviar imediatamente
-    console.log(`\n📨 Mensagem 1/${2}: ${camp1.name}`);
-    await this.sendMessageForCampaign(camp1);
+    // ===== MENSAGEM 1: Verificar e enviar =====
+    if (this.canSendMessage()) {
+      console.log(`\n📨 Mensagem 1/2: ${camp1.name}`);
+      await this.sendMessageForCampaign(camp1);
+    } else {
+      console.log(`🚫 Mensagem 1/2 BLOQUEADA pelo limite`);
+    }
 
-    // MENSAGEM 2: Enviar após intervalo aleatório (10-30 min)
+    // ===== MENSAGEM 2: Agendar com intervalo =====
     if (this.messageTimer) clearTimeout(this.messageTimer);
 
-    const delayMs = this.state.randomInterval * 60 * 1000;
-    console.log(`⏳ Aguardando ${this.state.randomInterval} min para mensagem 2...`);
+    const delayMs = intervalMinutes * 60 * 1000;
+    console.log(`⏳ Mensagem 2/2 agendada para daqui ${intervalMinutes} min`);
 
     this.messageTimer = setTimeout(async () => {
       if (!this.state.isRunning) return;
-      console.log(`\n📨 Mensagem 2/${2}: ${camp2.name}`);
-      await this.sendMessageForCampaign(camp2);
-      console.log(`✅ Ciclo ${this.state.cycleNumber + 1} completo! EXATAMENTE 2 mensagens enviadas.`);
+
+      // VERIFICAÇÃO RÍGIDA antes de enviar msg 2
+      if (this.canSendMessage()) {
+        console.log(`\n📨 Mensagem 2/2: ${camp2.name}`);
+        await this.sendMessageForCampaign(camp2);
+        console.log(`✅ Ciclo ${this.state.cycleNumber + 1} completo! ${this.state.messagesThisHour}/2 msgs enviadas.`);
+      } else {
+        console.log(`🚫 Mensagem 2/2 BLOQUEADA pelo limite`);
+      }
     }, delayMs);
   }
 
   /**
-   * Envia 1 mensagem para 1 contato de uma campanha
+   * Envia 1 mensagem para 1 contato (com LOCK e verificação)
    */
   private async sendMessageForCampaign(campaign: any) {
+    // LOCK: impede envio simultâneo
+    if (this.isSending) {
+      console.log(`🚫 LOCK: envio já em andamento, ignorando`);
+      return;
+    }
+
+    // VERIFICAÇÃO FINAL antes de enviar
+    if (this.state.messagesThisHour >= this.MAX_MESSAGES_PER_HOUR) {
+      console.log(`🚫 LIMITE ATINGIDO: ${this.state.messagesThisHour}/${this.MAX_MESSAGES_PER_HOUR} - NÃO enviando`);
+      return;
+    }
+
+    this.isSending = true; // ATIVAR LOCK
+
     try {
       const db = await getDb();
-      if (!db) return;
+      if (!db) { this.isSending = false; return; }
 
-      // Obter próximo contato disponível
       const contact = await this.getNextContact(campaign.id);
       if (!contact) {
         console.warn(`⚠️ Nenhum contato disponível para ${campaign.name}`);
         this.state.totalBlocked++;
-
-        // Tentar resetar contatos se todos foram usados
         await this.resetCampaignContacts(campaign.id);
+        this.isSending = false;
         return;
       }
 
-      // Obter variação de mensagem aleatória
       const messageText = await this.getMessageVariation(campaign.id);
       if (!messageText) {
         console.error(`❌ Sem variações de mensagem para ${campaign.name}`);
         this.state.totalFailed++;
+        this.isSending = false;
         return;
       }
 
-      // Enviar mensagem (simulado por enquanto, Z-API será integrado)
+      // ENVIAR
       const success = await this.sendViaZAPI(contact.phone, messageText);
 
       if (success) {
-        // Registrar envio no banco
         await db.insert(messages).values({
           campaignId: campaign.id,
           contactId: contact.id,
@@ -316,38 +354,31 @@ class CampaignScheduler {
           sentAt: new Date(),
         });
 
-        // Atualizar status do contato na campanha
         await db.update(campaignContacts)
-          .set({
-            status: "sent",
-            messagesSent: 1,
-            lastMessageSent: new Date(),
-          })
+          .set({ status: "sent", messagesSent: 1, lastMessageSent: new Date() })
           .where(and(
             eq(campaignContacts.campaignId, campaign.id),
             eq(campaignContacts.contactId, contact.id)
           ));
 
-        // Atualizar contagem da campanha
         await db.update(campaigns)
           .set({ sentCount: (campaign.sentCount || 0) + 1 })
           .where(eq(campaigns.id, campaign.id));
 
         // Bloquear contato por 72h
         await db.update(contacts)
-          .set({
-            blockedUntil: new Date(Date.now() + 3 * 24 * 60 * 60 * 1000),
-          })
+          .set({ blockedUntil: new Date(Date.now() + 3 * 24 * 60 * 60 * 1000) })
           .where(eq(contacts.id, contact.id));
 
-        // Registrar histórico
         await this.updateContactHistory(contact.id, campaign.id);
 
+        // ATUALIZAR CONTADORES (RÍGIDO)
         this.state.messagesThisHour++;
+        this.state.lastMessageSentAt = Date.now();
         this.state.totalSent++;
-        console.log(`✅ Enviado para ${contact.phone} (${contact.name})`);
+
+        console.log(`✅ [${this.state.messagesThisHour}/${this.MAX_MESSAGES_PER_HOUR}] Enviado para ${contact.phone} (${contact.name})`);
       } else {
-        // Registrar falha
         await db.update(campaignContacts)
           .set({ status: "failed" })
           .where(and(
@@ -365,6 +396,8 @@ class CampaignScheduler {
     } catch (error) {
       console.error("❌ Erro no envio:", error);
       this.state.totalFailed++;
+    } finally {
+      this.isSending = false; // LIBERAR LOCK
     }
   }
 
@@ -383,12 +416,14 @@ class CampaignScheduler {
 
     const now = new Date();
 
-    for (const cc of ccList) {
+    // Embaralhar para não seguir ordem fixa
+    const shuffled = [...ccList].sort(() => Math.random() - 0.5);
+
+    for (const cc of shuffled) {
       const result = await db.select().from(contacts).where(eq(contacts.id, cc.contactId)).limit(1);
       const contact = result[0];
       if (!contact) continue;
 
-      // Verificar bloqueio de 72h
       if (contact.blockedUntil && contact.blockedUntil > now) {
         continue;
       }
@@ -400,24 +435,16 @@ class CampaignScheduler {
   }
 
   /**
-   * Reset contatos de uma campanha quando todos foram usados
+   * Reset contatos de uma campanha
    */
   private async resetCampaignContacts(campaignId: number) {
     const db = await getDb();
     if (!db) return;
 
     console.log(`🔄 Resetando contatos da campanha ${campaignId}...`);
-
-    // Resetar status para pending
-    await db.update(campaignContacts)
-      .set({ status: "pending", messagesSent: 0 })
-      .where(eq(campaignContacts.campaignId, campaignId));
-
-    // Designar novos contatos aleatórios
     await db.delete(campaignContacts).where(eq(campaignContacts.campaignId, campaignId));
     await this.assignContactsToCampaign(campaignId);
-
-    console.log(`✅ Contatos resetados para campanha ${campaignId}`);
+    console.log(`✅ Contatos resetados`);
   }
 
   /**
@@ -439,7 +466,7 @@ class CampaignScheduler {
   }
 
   /**
-   * Envia mensagem via Z-API (ou simula)
+   * Envia mensagem via Z-API
    */
   private async sendViaZAPI(phone: string, message: string): Promise<boolean> {
     try {
@@ -447,7 +474,6 @@ class CampaignScheduler {
       const config = await getCompanyConfig();
 
       if (config?.zApiInstanceId && config?.zApiToken) {
-        // Envio REAL via Z-API (com Client-Token)
         const { sendMessageViaZAPI } = await import("../zapi-integration");
         const result = await sendMessageViaZAPI({
           instanceId: config.zApiInstanceId,
@@ -459,7 +485,6 @@ class CampaignScheduler {
         console.log(`📨 [Z-API] ${phone}: ${result.success ? "✅" : "❌"}`);
         return result.success;
       } else {
-        // Simulação (Z-API não configurado)
         console.log(`📨 [SIMULADO] ${phone}: "${message.substring(0, 50)}..."`);
         return true;
       }
@@ -470,7 +495,7 @@ class CampaignScheduler {
   }
 
   /**
-   * Atualiza histórico de campanha do contato
+   * Atualiza histórico
    */
   private async updateContactHistory(contactId: number, campaignId: number) {
     const db = await getDb();
@@ -497,10 +522,10 @@ class CampaignScheduler {
   }
 
   /**
-   * Gera intervalo aleatório entre 10-30 minutos
+   * Gera intervalo aleatório entre 20-40 minutos
    */
   private generateRandomInterval(): number {
-    return Math.floor(Math.random() * (30 - 10 + 1)) + 10;
+    return Math.floor(Math.random() * (this.MAX_INTERVAL_MINUTES - this.MIN_INTERVAL_MINUTES + 1)) + this.MIN_INTERVAL_MINUTES;
   }
 
   /**
@@ -521,6 +546,7 @@ class CampaignScheduler {
 
       this.state.cycleNumber++;
       this.state.cycleStartTime = Date.now();
+      this.state.messagesThisHour = 0; // RESET contador da hora
 
       await this.executeCycle();
       this.scheduleNextCycle();
@@ -557,7 +583,8 @@ class CampaignScheduler {
       isRunning: this.state.isRunning,
       cycleNumber: this.state.cycleNumber,
       messagesThisHour: this.state.messagesThisHour,
-      randomInterval: this.state.randomInterval,
+      maxMessagesPerHour: this.MAX_MESSAGES_PER_HOUR,
+      lastMessageSentAt: this.state.lastMessageSentAt,
       totalSent: this.state.totalSent,
       totalFailed: this.state.totalFailed,
       totalBlocked: this.state.totalBlocked,

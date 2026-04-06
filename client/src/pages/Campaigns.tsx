@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect, useMemo, useCallback } from "react";
 import { useAuth } from "@/_core/hooks/useAuth";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -10,12 +10,11 @@ import { toast } from "sonner";
 
 /**
  * REGRAS DO SISTEMA:
- * - EXATAMENTE 2 mensagens por hora (1 de cada campanha do par)
- * - Intervalo aleatório 10-30 min entre as 2
+ * - MÁXIMO 2 mensagens por hora (limite rígido)
+ * - Intervalo mínimo 20 min entre mensagens
  * - Rotação de pares: (1+2) → (3+4) → (1+2)...
  * - 12 contatos por campanha
  * - Loop infinito 24/7
- * - Campanhas vinculadas a imóveis (dinâmico)
  */
 
 function formatTimer(seconds: number): string {
@@ -27,8 +26,12 @@ function formatTimer(seconds: number): string {
 
 function formatTime(date: Date | string | null): string {
   if (!date) return "--:--:--";
-  const d = typeof date === "string" ? new Date(date) : date;
-  return d.toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit", second: "2-digit" });
+  try {
+    const d = typeof date === "string" ? new Date(date) : date;
+    return d.toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit", second: "2-digit" });
+  } catch {
+    return "--:--:--";
+  }
 }
 
 export default function Campaigns() {
@@ -37,14 +40,22 @@ export default function Campaigns() {
   const [expandedCampaign, setExpandedCampaign] = useState<number | null>(null);
   const [cycleTimer, setCycleTimer] = useState(3600);
   const [isSettingUp, setIsSettingUp] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
 
-  // tRPC queries
+  // tRPC queries - polling a cada 10s (não 5s para evitar corrida)
   const schedulerState = trpc.scheduler.getState.useQuery(undefined, {
-    refetchInterval: 5000,
+    refetchInterval: 10000,
   });
   const campaignDetails = trpc.scheduler.getCampaignDetails.useQuery(undefined, {
-    refetchInterval: 5000,
+    refetchInterval: 10000,
   });
+
+  // Marcar como carregado quando os dados chegarem
+  useEffect(() => {
+    if (schedulerState.data !== undefined && campaignDetails.data !== undefined) {
+      setIsLoading(false);
+    }
+  }, [schedulerState.data, campaignDetails.data]);
 
   // tRPC mutations
   const autoSetup = trpc.campaigns.autoSetup.useMutation({
@@ -93,67 +104,82 @@ export default function Campaigns() {
     onError: (error) => toast.error(`Erro: ${error.message}`),
   });
 
+  // Dados estáveis com useMemo
+  const isRunning = useMemo(() => schedulerState.data?.state?.isRunning || false, [schedulerState.data?.state?.isRunning]);
+  const stats = useMemo(() => schedulerState.data?.stats, [schedulerState.data?.stats]);
+  const todayMessages = useMemo(() => schedulerState.data?.todayMessages || [], [schedulerState.data?.todayMessages]);
+  const allCampaigns = useMemo(() => campaignDetails.data || [], [campaignDetails.data]);
+  const cycleNumber = useMemo(() => stats?.cycleNumber || 0, [stats?.cycleNumber]);
+  const runningCampaigns = useMemo(() => allCampaigns.filter((c: any) => c.status === "running"), [allCampaigns]);
+  const totalPairs = useMemo(() => Math.ceil(runningCampaigns.length / 2), [runningCampaigns.length]);
+  const currentPairIndex = useMemo(() => totalPairs > 0 ? cycleNumber % totalPairs : 0, [cycleNumber, totalPairs]);
+
+  // Totais estáveis
+  const totals = useMemo(() => {
+    const totalContacts = allCampaigns.reduce((sum: number, c: any) => sum + (c.totalContacts || 0), 0);
+    const totalSent = allCampaigns.reduce((sum: number, c: any) => sum + (c.sentCount || 0), 0);
+    const totalPending = allCampaigns.reduce((sum: number, c: any) => sum + (c.pendingCount || 0), 0);
+    const totalFailed = allCampaigns.reduce((sum: number, c: any) => sum + (c.failedCount || 0), 0);
+    const successRate = totalContacts > 0 ? ((totalSent / totalContacts) * 100).toFixed(1) : "0.0";
+    return { totalContacts, totalSent, totalPending, totalFailed, successRate };
+  }, [allCampaigns]);
+
   // Cronômetro do ciclo
   useEffect(() => {
-    if (!schedulerState.data?.state?.isRunning) return;
+    if (!isRunning) return;
     const interval = setInterval(() => {
-      setCycleTimer((prev) => {
-        if (prev <= 0) return 3600;
-        return prev - 1;
-      });
+      setCycleTimer((prev) => (prev <= 0 ? 3600 : prev - 1));
     }, 1000);
     return () => clearInterval(interval);
-  }, [schedulerState.data?.state?.isRunning]);
+  }, [isRunning]);
 
   // Resetar timer quando muda o ciclo
   useEffect(() => {
-    if (schedulerState.data?.state?.cycleNumber !== undefined) {
+    if (cycleNumber !== undefined) {
       const now = new Date();
       const nextHour = new Date(now);
       nextHour.setHours(nextHour.getHours() + 1, 0, 0, 0);
       const remaining = Math.floor((nextHour.getTime() - now.getTime()) / 1000);
       setCycleTimer(remaining);
     }
-  }, [schedulerState.data?.state?.cycleNumber]);
+  }, [cycleNumber]);
 
-  const isRunning = schedulerState.data?.state?.isRunning || false;
-  const stats = schedulerState.data?.stats;
-  const todayMessages = schedulerState.data?.todayMessages || [];
-  const allCampaigns = useMemo(() => campaignDetails.data || [], [campaignDetails.data]);
-
-  // Calcular par atual
-  const cycleNumber = stats?.cycleNumber || 0;
-  const runningCampaigns = allCampaigns.filter((c: any) => c.status === "running");
-  const totalPairs = Math.ceil(runningCampaigns.length / 2);
-  const currentPairIndex = totalPairs > 0 ? cycleNumber % totalPairs : 0;
-
-  // Calcular totais
-  const totalContacts = allCampaigns.reduce((sum: number, c: any) => sum + (c.totalContacts || 0), 0);
-  const totalSent = allCampaigns.reduce((sum: number, c: any) => sum + (c.sentCount || 0), 0);
-  const totalPending = allCampaigns.reduce((sum: number, c: any) => sum + (c.pendingCount || 0), 0);
-  const totalFailed = allCampaigns.reduce((sum: number, c: any) => sum + (c.failedCount || 0), 0);
-  const successRate = totalContacts > 0 ? ((totalSent / totalContacts) * 100).toFixed(1) : "0.0";
-
-  const handleAutoSetup = () => {
+  const handleAutoSetup = useCallback(() => {
     setIsSettingUp(true);
     autoSetup.mutate();
-  };
+  }, [autoSetup]);
 
-  const handleStart = () => {
+  const handleStart = useCallback(() => {
     if (allCampaigns.length < 2) {
       toast.error("Configure as campanhas primeiro! Clique em 'Auto Configurar'");
       return;
     }
     startScheduler.mutate();
-  };
+  }, [allCampaigns.length, startScheduler]);
 
-  const handleReset = () => {
+  const handleReset = useCallback(() => {
     if (isRunning) {
       toast.error("Pare o scheduler antes de resetar!");
       return;
     }
     resetScheduler.mutate();
-  };
+  }, [isRunning, resetScheduler]);
+
+  const handleToggleExpand = useCallback((id: number) => {
+    setExpandedCampaign((prev) => (prev === id ? null : id));
+  }, []);
+
+  // LOADING STATE: só renderiza quando dados chegaram
+  if (isLoading) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100 flex items-center justify-center">
+        <div className="text-center">
+          <Loader2 className="h-12 w-12 animate-spin text-green-600 mx-auto mb-4" />
+          <p className="text-slate-600 text-lg">Carregando campanhas...</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100">
@@ -166,16 +192,24 @@ export default function Campaigns() {
             </Button>
             <div>
               <h1 className="text-2xl md:text-3xl font-bold flex items-center gap-2">
-                <Send className="h-7 w-7" /> Campanhas WhatsApp
+                <Send className="h-7 w-7" />
+                <span>Campanhas WhatsApp</span>
               </h1>
-              <p className="text-white/80 text-sm mt-1">EXATAMENTE 2 mensagens por hora | Loop infinito 24/7</p>
+              <p className="text-white/80 text-sm mt-1">
+                <span>MAX 2 msgs/hora | Intervalo 20-40 min | Loop 24/7</span>
+              </p>
             </div>
           </div>
           <div className="flex items-center gap-2">
-            {isRunning && (
+            {isRunning ? (
               <span className="flex items-center gap-2 bg-green-500/20 border border-green-400/50 px-3 py-1.5 rounded-full text-sm">
                 <span className="w-2 h-2 rounded-full bg-green-400 animate-pulse" />
-                RODANDO
+                <span>RODANDO</span>
+              </span>
+            ) : (
+              <span className="flex items-center gap-2 bg-red-500/20 border border-red-400/50 px-3 py-1.5 rounded-full text-sm">
+                <span className="w-2 h-2 rounded-full bg-red-400" />
+                <span>PARADO</span>
               </span>
             )}
           </div>
@@ -190,10 +224,10 @@ export default function Campaigns() {
             <div className="flex items-center justify-between">
               <CardTitle className="text-xl flex items-center gap-2">
                 <BarChart3 className="h-5 w-5 text-green-700" />
-                Painel de Controle
+                <span>Painel de Controle</span>
               </CardTitle>
               <span className={`px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wide ${isRunning ? "bg-green-100 text-green-700 border border-green-300" : "bg-red-100 text-red-700 border border-red-300"}`}>
-                {isRunning ? "Ativo 24/7" : "Parado"}
+                <span>{isRunning ? "Ativo 24/7" : "Parado"}</span>
               </span>
             </div>
           </CardHeader>
@@ -203,27 +237,27 @@ export default function Campaigns() {
               <div className="p-3 bg-blue-50 rounded-lg text-center border border-blue-100">
                 <Users className="h-4 w-4 text-blue-500 mx-auto mb-1" />
                 <p className="text-xs text-slate-500">Total Contatos</p>
-                <p className="text-2xl font-bold text-blue-600">{totalContacts}</p>
+                <p className="text-2xl font-bold text-blue-600">{totals.totalContacts}</p>
               </div>
               <div className="p-3 bg-green-50 rounded-lg text-center border border-green-100">
                 <CheckCircle2 className="h-4 w-4 text-green-500 mx-auto mb-1" />
                 <p className="text-xs text-slate-500">Enviadas</p>
-                <p className="text-2xl font-bold text-green-600">{totalSent}</p>
+                <p className="text-2xl font-bold text-green-600">{totals.totalSent}</p>
               </div>
               <div className="p-3 bg-orange-50 rounded-lg text-center border border-orange-100">
                 <Clock className="h-4 w-4 text-orange-500 mx-auto mb-1" />
                 <p className="text-xs text-slate-500">Restantes</p>
-                <p className="text-2xl font-bold text-orange-600">{totalPending}</p>
+                <p className="text-2xl font-bold text-orange-600">{totals.totalPending}</p>
               </div>
               <div className="p-3 bg-red-50 rounded-lg text-center border border-red-100">
                 <AlertCircle className="h-4 w-4 text-red-500 mx-auto mb-1" />
                 <p className="text-xs text-slate-500">Falhas</p>
-                <p className="text-2xl font-bold text-red-600">{totalFailed}</p>
+                <p className="text-2xl font-bold text-red-600">{totals.totalFailed}</p>
               </div>
               <div className="p-3 bg-purple-50 rounded-lg text-center border border-purple-100">
                 <BarChart3 className="h-4 w-4 text-purple-500 mx-auto mb-1" />
                 <p className="text-xs text-slate-500">Taxa Sucesso</p>
-                <p className="text-2xl font-bold text-purple-600">{successRate}%</p>
+                <p className="text-2xl font-bold text-purple-600">{totals.successRate}%</p>
               </div>
             </div>
 
@@ -233,10 +267,11 @@ export default function Campaigns() {
                 <div className="flex items-center justify-between">
                   <div>
                     <p className="font-semibold text-purple-800 flex items-center gap-2">
-                      <Timer className="h-5 w-5" /> Próximo Ciclo em:
+                      <Timer className="h-5 w-5" />
+                      <span>Pr&oacute;ximo Ciclo em:</span>
                     </p>
                     <p className="text-xs text-slate-500 mt-1">
-                      Ciclo {cycleNumber + 1} | Par {currentPairIndex + 1} de {totalPairs}
+                      <span>Ciclo {cycleNumber + 1} | Par {currentPairIndex + 1} de {totalPairs}</span>
                     </p>
                   </div>
                   <span className="text-5xl font-mono font-bold text-purple-600 tabular-nums">{formatTimer(cycleTimer)}</span>
@@ -258,9 +293,9 @@ export default function Campaigns() {
                 className="bg-gradient-to-r from-purple-500 to-purple-600 hover:from-purple-600 hover:to-purple-700 text-white font-semibold h-12"
               >
                 {isSettingUp ? (
-                  <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> Configurando...</>
+                  <span className="flex items-center gap-2"><Loader2 className="h-4 w-4 animate-spin" /><span>Configurando...</span></span>
                 ) : (
-                  <><Settings2 className="mr-2 h-4 w-4" /> Auto Configurar</>
+                  <span className="flex items-center gap-2"><Settings2 className="h-4 w-4" /><span>Auto Configurar</span></span>
                 )}
               </Button>
 
@@ -270,14 +305,14 @@ export default function Campaigns() {
                   disabled={allCampaigns.length < 2}
                   className="bg-gradient-to-r from-green-500 to-green-600 hover:from-green-600 hover:to-green-700 text-white font-semibold h-12"
                 >
-                  <Play className="mr-2 h-4 w-4" /> Iniciar
+                  <span className="flex items-center gap-2"><Play className="h-4 w-4" /><span>Iniciar</span></span>
                 </Button>
               ) : (
                 <Button
                   onClick={() => stopScheduler.mutate()}
                   className="bg-gradient-to-r from-red-500 to-red-600 hover:from-red-600 hover:to-red-700 text-white font-semibold h-12"
                 >
-                  <Pause className="mr-2 h-4 w-4" /> Pausar
+                  <span className="flex items-center gap-2"><Pause className="h-4 w-4" /><span>Pausar</span></span>
                 </Button>
               )}
 
@@ -287,7 +322,7 @@ export default function Campaigns() {
                 variant="outline"
                 className="h-12 font-semibold border-2"
               >
-                <RotateCcw className="mr-2 h-4 w-4" /> Resetar
+                <span className="flex items-center gap-2"><RotateCcw className="h-4 w-4" /><span>Resetar</span></span>
               </Button>
 
               <Button
@@ -296,7 +331,7 @@ export default function Campaigns() {
                 variant="outline"
                 className="h-12 font-semibold border-2 border-red-200 text-red-600 hover:bg-red-50"
               >
-                <Square className="mr-2 h-4 w-4" /> Parar Tudo
+                <span className="flex items-center gap-2"><Square className="h-4 w-4" /><span>Parar Tudo</span></span>
               </Button>
             </div>
           </CardContent>
@@ -308,11 +343,11 @@ export default function Campaigns() {
             <CardHeader className="bg-gradient-to-r from-blue-50 to-indigo-50 pb-3">
               <CardTitle className="text-lg flex items-center gap-2">
                 <Zap className="h-5 w-5 text-blue-600" />
-                Rotação de Pares - Ciclo Atual
+                <span>Rota&ccedil;&atilde;o de Pares - Ciclo Atual</span>
               </CardTitle>
             </CardHeader>
             <CardContent className="pt-4">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4" key={`pairs-${runningCampaigns.length}`}>
                 {Array.from({ length: totalPairs }).map((_, pairIdx) => {
                   const camp1 = runningCampaigns[pairIdx * 2];
                   const camp2 = runningCampaigns[pairIdx * 2 + 1];
@@ -321,7 +356,7 @@ export default function Campaigns() {
 
                   return (
                     <div
-                      key={pairIdx}
+                      key={`pair-${pairIdx}-${camp1?.id || 0}-${camp2?.id || 0}`}
                       className={`p-4 rounded-xl border-2 transition-all ${
                         isCurrentPair
                           ? "bg-green-50 border-green-400 shadow-md shadow-green-100"
@@ -335,15 +370,21 @@ export default function Campaigns() {
                           isCurrentPair ? "bg-green-500 animate-pulse" : isNextPair ? "bg-yellow-500" : "bg-slate-400"
                         }`} />
                         <h3 className="font-bold">
-                          {isCurrentPair ? "ENVIANDO AGORA" : isNextPair ? "PRÓXIMO PAR" : `Par ${pairIdx + 1}`}
+                          <span>{isCurrentPair ? "ENVIANDO AGORA" : isNextPair ? "PROXIMO PAR" : `Par ${pairIdx + 1}`}</span>
                         </h3>
                       </div>
                       <div className="flex items-center gap-2">
-                        <span className="px-2 py-1 bg-white rounded text-sm font-medium border">{camp1?.name || "?"}</span>
+                        <span className="px-2 py-1 bg-white rounded text-sm font-medium border">
+                          <span>{camp1?.name || "?"}</span>
+                        </span>
                         <span className="text-slate-400">+</span>
-                        <span className="px-2 py-1 bg-white rounded text-sm font-medium border">{camp2?.name || camp1?.name || "?"}</span>
+                        <span className="px-2 py-1 bg-white rounded text-sm font-medium border">
+                          <span>{camp2?.name || camp1?.name || "?"}</span>
+                        </span>
                       </div>
-                      <p className="text-xs text-slate-500 mt-2">1 msg de cada = 2 msgs/hora</p>
+                      <p className="text-xs text-slate-500 mt-2">
+                        <span>1 msg de cada = 2 msgs/hora</span>
+                      </p>
                     </div>
                   );
                 })}
@@ -356,25 +397,24 @@ export default function Campaigns() {
         <div>
           <h2 className="text-xl font-bold mb-4 flex items-center gap-2">
             <BarChart3 className="h-5 w-5 text-green-700" />
-            Monitoramento em Tempo Real
+            <span>Monitoramento em Tempo Real</span>
           </h2>
           {allCampaigns.length === 0 ? (
             <Card className="p-8 text-center border-2 border-dashed border-slate-300">
               <Settings2 className="h-12 w-12 text-slate-400 mx-auto mb-4" />
               <p className="text-slate-500 mb-4 text-lg">Nenhuma campanha configurada</p>
-              <p className="text-slate-400 text-sm mb-6">Clique em "Auto Configurar" para criar campanhas automaticamente baseadas nos imóveis cadastrados</p>
+              <p className="text-slate-400 text-sm mb-6">Clique em "Auto Configurar" para criar campanhas automaticamente baseadas nos imoveis cadastrados</p>
               <Button onClick={handleAutoSetup} disabled={isSettingUp} className="bg-purple-600 hover:bg-purple-700 text-white">
                 {isSettingUp ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Settings2 className="mr-2 h-4 w-4" />}
-                Auto Configurar Campanhas
+                <span>Auto Configurar Campanhas</span>
               </Button>
             </Card>
           ) : (
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-              {allCampaigns.map((campaign: any, idx: number) => (
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6" key={`campaigns-${allCampaigns.length}`}>
+              {allCampaigns.map((campaign: any) => (
                 <CampaignCard
-                  key={campaign.id}
+                  key={`camp-${campaign.id}`}
                   campaign={campaign}
-                  index={idx}
                   isRunning={isRunning}
                   currentPairIndex={currentPairIndex}
                   totalPairs={totalPairs}
@@ -382,7 +422,7 @@ export default function Campaigns() {
                   cycleNumber={cycleNumber}
                   runningCampaigns={runningCampaigns}
                   expanded={expandedCampaign === campaign.id}
-                  onToggle={() => setExpandedCampaign(expandedCampaign === campaign.id ? null : campaign.id)}
+                  onToggle={() => handleToggleExpand(campaign.id)}
                   onToggleActive={(active: boolean) => toggleCampaign.mutate({ campaignId: campaign.id, active })}
                 />
               ))}
@@ -396,16 +436,18 @@ export default function Campaigns() {
             <CardHeader className="bg-gradient-to-r from-green-50 to-emerald-50">
               <CardTitle className="text-lg flex items-center gap-2">
                 <CheckCircle2 className="h-5 w-5 text-green-600" />
-                Mensagens Enviadas Hoje ({todayMessages.length})
+                <span>Mensagens Enviadas Hoje ({todayMessages.length})</span>
               </CardTitle>
             </CardHeader>
             <CardContent className="pt-4">
               <div className="space-y-2 max-h-60 overflow-y-auto">
                 {todayMessages.map((msg: any) => (
-                  <div key={msg.id} className="flex items-center gap-3 p-2 bg-green-50 rounded border border-green-200">
+                  <div key={`msg-${msg.id}`} className="flex items-center gap-3 p-2 bg-green-50 rounded border border-green-200">
                     <CheckCircle2 className="h-4 w-4 text-green-600 flex-shrink-0" />
                     <span className="text-sm font-mono text-green-700">{formatTime(msg.sentAt)}</span>
-                    <span className="text-sm text-slate-600 truncate">{msg.messageText?.substring(0, 80)}...</span>
+                    <span className="text-sm text-slate-600 truncate">
+                      <span>{String(msg.messageText || '').substring(0, 80)}</span>
+                    </span>
                   </div>
                 ))}
               </div>
@@ -418,11 +460,10 @@ export default function Campaigns() {
 }
 
 /**
- * Card de cada campanha com monitoramento em tempo real
+ * Card de cada campanha - componente separado para evitar re-render do pai
  */
 function CampaignCard({
   campaign,
-  index,
   isRunning,
   currentPairIndex,
   totalPairs,
@@ -434,7 +475,6 @@ function CampaignCard({
   onToggleActive,
 }: {
   campaign: any;
-  index: number;
   isRunning: boolean;
   currentPairIndex: number;
   totalPairs: number;
@@ -445,21 +485,18 @@ function CampaignCard({
   onToggle: () => void;
   onToggleActive: (active: boolean) => void;
 }) {
-  // Encontrar posição no array de campanhas ativas
   const runningIdx = runningCampaigns.findIndex((c: any) => c.id === campaign.id);
   const pairIndex = runningIdx >= 0 ? Math.floor(runningIdx / 2) : -1;
   const isInCurrentPair = pairIndex === currentPairIndex && isRunning && campaign.status === "running";
   const isInNextPair = pairIndex === (currentPairIndex + 1) % totalPairs && isRunning && campaign.status === "running" && totalPairs > 1;
   const isActive = campaign.status === "running";
 
-  const contactsList = campaign.contacts || [];
+  const contactsList: any[] = campaign.contacts || [];
   const sentCount = campaign.sentCount || 0;
   const pendingCount = campaign.pendingCount || 0;
-  const failedCount = campaign.failedCount || 0;
   const totalContacts = campaign.totalContacts || 12;
   const progressPercent = totalContacts > 0 ? Math.round((sentCount / totalContacts) * 100) : 0;
 
-  // Status visual
   let statusText = "Agendado";
   let statusBadgeClass = "bg-slate-100 text-slate-600";
   let borderColor = "border-l-slate-300";
@@ -495,15 +532,20 @@ function CampaignCard({
               isInCurrentPair ? "bg-green-500 animate-pulse" : isInNextPair ? "bg-yellow-500 animate-pulse" : isActive ? "bg-blue-400" : "bg-gray-300"
             }`} />
             <div>
-              <CardTitle className="text-lg">{campaign.name}</CardTitle>
+              <CardTitle className="text-lg">
+                <span>{String(campaign.name || '')}</span>
+              </CardTitle>
               <div className="flex items-center gap-2 mt-1">
-                <span className={`px-2 py-0.5 rounded-full text-xs font-semibold ${statusBadgeClass}`}>{statusText}</span>
-                <span className="text-xs text-slate-400">Imóvel: {campaign.propertyName}</span>
+                <span className={`px-2 py-0.5 rounded-full text-xs font-semibold ${statusBadgeClass}`}>
+                  <span>{statusText}</span>
+                </span>
+                <span className="text-xs text-slate-400">
+                  <span>Imovel: {String(campaign.propertyName || '')}</span>
+                </span>
               </div>
             </div>
           </div>
           <div className="flex items-center gap-3">
-            {/* Toggle Ativo/Pausado */}
             <div className="flex items-center gap-2">
               <span className="text-xs text-slate-500">{isActive ? "Ativo" : "Pausado"}</span>
               <Switch
@@ -515,7 +557,7 @@ function CampaignCard({
             {isInCurrentPair && (
               <div className="text-right">
                 <p className="text-3xl font-mono font-bold text-green-600 tabular-nums">{formatTimer(cycleTimer)}</p>
-                <p className="text-xs text-slate-500">Cronômetro (1 hora)</p>
+                <p className="text-xs text-slate-500">Cronometro (1 hora)</p>
               </div>
             )}
           </div>
@@ -554,7 +596,7 @@ function CampaignCard({
           <div className="p-2 bg-blue-50 rounded-lg border border-blue-100">
             <p className="text-xs text-slate-500">Taxa do Dia</p>
             <p className="text-xl font-bold text-blue-600">
-              {totalContacts > 0 ? `${((sentCount / totalContacts) * 100).toFixed(1)}%` : "0.0%"}
+              <span>{totalContacts > 0 ? `${((sentCount / totalContacts) * 100).toFixed(1)}%` : "0.0%"}</span>
             </p>
             <p className="text-xs text-slate-400">Meta: {totalContacts} msg/dia</p>
           </div>
@@ -565,7 +607,8 @@ function CampaignCard({
           <div className="p-3 bg-gradient-to-r from-purple-50 to-indigo-50 rounded-lg mb-4 border border-purple-200">
             <div className="flex items-center justify-between">
               <p className="text-sm font-semibold text-purple-800 flex items-center gap-1">
-                <Timer className="h-4 w-4" /> Próximo Ciclo em:
+                <Timer className="h-4 w-4" />
+                <span>Proximo Ciclo em:</span>
               </p>
               <span className="text-2xl font-mono font-bold text-purple-600 tabular-nums">{formatTimer(cycleTimer)}</span>
             </div>
@@ -574,7 +617,7 @@ function CampaignCard({
 
         {/* Info */}
         <p className="text-xs text-slate-500 mb-3">
-          Iniciado: {campaign.startDate ? formatTime(campaign.startDate) : "--:--:--"} | Ciclos: {totalContacts} de 1 hora = {totalContacts} horas
+          <span>Iniciado: {campaign.startDate ? formatTime(campaign.startDate) : "--:--:--"} | Ciclos: {totalContacts} de 1 hora = {totalContacts} horas</span>
         </p>
 
         {/* Toggle Lista de Contatos */}
@@ -592,13 +635,13 @@ function CampaignCard({
 
         {/* Lista de Contatos Expandível */}
         {expanded && (
-          <div className="mt-3 space-y-1.5 max-h-96 overflow-y-auto">
+          <div className="mt-3 space-y-1.5 max-h-96 overflow-y-auto" key={`contacts-${campaign.id}-${contactsList.length}`}>
             {contactsList.length === 0 ? (
               <p className="text-sm text-slate-500 text-center py-4">Nenhum contato designado</p>
             ) : (
               contactsList.map((contact: any) => (
                 <div
-                  key={contact.id}
+                  key={`contact-${contact.id}`}
                   className={`flex items-center gap-3 p-3 rounded-lg border transition-all ${
                     contact.status === "sent"
                       ? "bg-green-50 border-green-200"
@@ -607,7 +650,6 @@ function CampaignCard({
                       : "bg-white border-slate-200"
                   }`}
                 >
-                  {/* Checkbox visual */}
                   <div className={`w-5 h-5 rounded border-2 flex items-center justify-center flex-shrink-0 ${
                     contact.status === "sent"
                       ? "bg-green-500 border-green-500"
@@ -619,24 +661,23 @@ function CampaignCard({
                     {contact.status === "failed" && <AlertCircle className="h-3 w-3 text-white" />}
                   </div>
 
-                  {/* Telefone */}
                   <span className="text-sm font-mono font-semibold min-w-[130px]">
-                    {contact.phone}
+                    <span>{String(contact.phone || '')}</span>
                   </span>
 
-                  {/* Nome */}
                   <span className="text-sm text-slate-600 truncate flex-1">
-                    ({contact.name})
+                    <span>({String(contact.name || '')})</span>
                   </span>
 
-                  {/* Status / Horário */}
                   <div className="flex items-center gap-1 flex-shrink-0">
                     {contact.status === "sent" ? (
                       <span className="text-xs text-green-600 font-mono bg-green-100 px-2 py-0.5 rounded">
-                        {formatTime(contact.sentAt)}
+                        <span>{formatTime(contact.sentAt)}</span>
                       </span>
                     ) : contact.status === "failed" ? (
-                      <span className="text-xs text-red-600 bg-red-100 px-2 py-0.5 rounded">Falha</span>
+                      <span className="text-xs text-red-600 bg-red-100 px-2 py-0.5 rounded">
+                        <span>Falha</span>
+                      </span>
                     ) : (
                       <Clock className="h-4 w-4 text-yellow-500" />
                     )}

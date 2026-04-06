@@ -109,3 +109,6 @@
 - [x] Adicionar upload drag&drop para vídeos na edição de imóveis
 - [x] Adicionar upload drag&drop para planta baixa na edição de imóveis
 - [x] Corrigir: imóveis de teste voltam ao publicar (testes agora fazem cleanup automático + dados limpos)
+- [x] Corrigir erro insertBefore (reescrito com useMemo, useCallback, loading state, keys estáveis, polling 10s)
+- [x] URGENTE: Parar campanhas e corrigir bug insertBefore React (keys, loading, corrida de render)
+- [x] CRÍTICO: Scheduler corrigido - limite rígido 2 msgs/hora, intervalo mínimo 20min, lock de envio
