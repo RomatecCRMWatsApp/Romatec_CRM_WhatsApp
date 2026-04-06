@@ -131,6 +131,7 @@ export const companyConfig = mysqlTable("companyConfig", {
   address: text("address"),
   zApiInstanceId: varchar("zApiInstanceId", { length: 255 }),
   zApiToken: varchar("zApiToken", { length: 255 }),
+  zApiClientToken: varchar("zApiClientToken", { length: 255 }),
   zApiConnected: boolean("zApiConnected").default(false),
   zApiLastChecked: timestamp("zApiLastChecked"),
   createdAt: timestamp("createdAt").defaultNow().notNull(),

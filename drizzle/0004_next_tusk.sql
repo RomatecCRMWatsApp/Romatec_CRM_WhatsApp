@@ -1,0 +1,1 @@
+ALTER TABLE `companyConfig` ADD `zApiClientToken` varchar(255);

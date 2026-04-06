@@ -631,6 +631,7 @@ Retorne as 4 variações separadas por |||` },
         address: z.string().optional(),
         zApiInstanceId: z.string().optional(),
         zApiToken: z.string().optional(),
+        zApiClientToken: z.string().optional(),
       }))
       .mutation(async ({ input }) => {
         return updateCompanyConfig(input);
@@ -641,14 +642,23 @@ Retorne as 4 variações separadas por |||` },
         return { success: false, message: "Z-API credentials not configured" };
       }
       try {
-        const response = await fetch(`https://api.z-api.io/instances/${config.zApiInstanceId}/status`, {
-          headers: { "Client-Token": config.zApiToken },
-        });
+        const headers: Record<string, string> = {};
+        if (config.zApiClientToken) {
+          headers["Client-Token"] = config.zApiClientToken;
+        }
+        const response = await fetch(
+          `https://api.z-api.io/instances/${config.zApiInstanceId}/token/${config.zApiToken}/status`,
+          { headers }
+        );
         if (response.ok) {
-          await updateCompanyConfig({ zApiConnected: true, zApiLastChecked: new Date() });
-          return { success: true, message: "Z-API connection successful" };
+          const data = await response.json();
+          if (data.connected) {
+            await updateCompanyConfig({ zApiConnected: true, zApiLastChecked: new Date() });
+            return { success: true, message: "WhatsApp conectado com sucesso!" };
+          }
+          return { success: false, message: "WhatsApp n\u00e3o est\u00e1 conectado. Verifique o QR Code na Z-API." };
         } else {
-          return { success: false, message: "Z-API connection failed" };
+          return { success: false, message: "Falha na conex\u00e3o com Z-API. Verifique as credenciais." };
         }
       } catch (error) {
         return { success: false, message: String(error) };

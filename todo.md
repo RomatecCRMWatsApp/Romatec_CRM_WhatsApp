@@ -94,3 +94,6 @@
 - [x] Adicionar imagens reais aos imóveis (ALACIDE 16 fotos, Mod_Vaz-02 7 fotos, Mod_Vaz-03 8 fotos + planta)
 - [x] Adicionar imagens Mod_Vaz-01 (8 renders + planta baixa)
 - [x] Adicionar mapa Google Maps na página pública do imóvel (geocodificação automática por endereço)
+
+## Configuração Z-API
+- [x] Configurar credenciais Z-API (Instance ID, Token, Client-Token) no sistema - CONECTADO!

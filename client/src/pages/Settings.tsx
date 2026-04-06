@@ -17,15 +17,15 @@ export default function Settings() {
   });
   const testZApi = trpc.companyConfig.testZApiConnection.useMutation({
     onSuccess: (data) => {
-      if (data.success) { toast.success("Z-API conectado!"); refetch(); }
-      else toast.error("Falha: " + data.message);
+      if (data.success) { toast.success(data.message); refetch(); }
+      else toast.error(data.message);
     },
     onError: (e) => toast.error("Erro: " + e.message),
   });
 
   const [form, setForm] = useState({
     companyName: "", phone: "", address: "",
-    zApiInstanceId: "", zApiToken: "",
+    zApiInstanceId: "", zApiToken: "", zApiClientToken: "",
   });
 
   useEffect(() => {
@@ -36,6 +36,7 @@ export default function Settings() {
         address: config.address || "",
         zApiInstanceId: config.zApiInstanceId || "",
         zApiToken: config.zApiToken || "",
+        zApiClientToken: config.zApiClientToken || "",
       });
     }
   }, [config]);
@@ -89,20 +90,29 @@ export default function Settings() {
           <CardContent className="space-y-4">
             <div>
               <Label className="text-muted-foreground">Instance ID</Label>
-              <Input value={form.zApiInstanceId} onChange={e => setForm(f => ({ ...f, zApiInstanceId: e.target.value }))} placeholder="Seu Instance ID da Z-API" className="bg-secondary border-border" />
+              <Input value={form.zApiInstanceId} onChange={e => setForm(f => ({ ...f, zApiInstanceId: e.target.value }))} placeholder="Ex: 3F0D313A38C952B7106F6A1199C38405" className="bg-secondary border-border" />
             </div>
             <div>
-              <Label className="text-muted-foreground">Token</Label>
-              <Input type="password" value={form.zApiToken} onChange={e => setForm(f => ({ ...f, zApiToken: e.target.value }))} placeholder="Seu Token da Z-API" className="bg-secondary border-border" />
+              <Label className="text-muted-foreground">Token da Instância</Label>
+              <Input type="password" value={form.zApiToken} onChange={e => setForm(f => ({ ...f, zApiToken: e.target.value }))} placeholder="Ex: DC81667D92271C9D2478B93C" className="bg-secondary border-border" />
+            </div>
+            <div>
+              <Label className="text-muted-foreground">Client-Token (Segurança)</Label>
+              <Input type="password" value={form.zApiClientToken} onChange={e => setForm(f => ({ ...f, zApiClientToken: e.target.value }))} placeholder="Ex: Fcbaed18a6a61464aaf16df37a5be91b9S" className="bg-secondary border-border" />
             </div>
             <Button
-              onClick={() => testZApi.mutate()}
+              onClick={() => {
+                // Salvar primeiro, depois testar
+                updateMutation.mutate(form, {
+                  onSuccess: () => testZApi.mutate(),
+                });
+              }}
               variant="outline"
-              disabled={testZApi.isPending}
+              disabled={testZApi.isPending || updateMutation.isPending}
               className="w-full"
             >
               <RefreshCw className={`mr-2 h-4 w-4 ${testZApi.isPending ? "animate-spin" : ""}`} />
-              {testZApi.isPending ? "Testando..." : "Testar Conexão"}
+              {testZApi.isPending ? "Testando..." : "Salvar e Testar Conexão"}
             </Button>
           </CardContent>
         </Card>
