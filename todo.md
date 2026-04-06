@@ -108,3 +108,34 @@
 - [ ] Criar script de instalação
 - [ ] Criar arquivo .env.example
 - [ ] Documentar variáveis de ambiente necessárias
+
+
+## Redesign Visual (NOVO)
+- [x] Atualizar tema com cores vibrantes (gradientes, efeitos)
+- [x] Implementar botões 3D com sombras e efeitos hover
+- [x] Redesenhar cards com bordas arredondadas e gradientes
+- [x] Adicionar animações suaves e transições
+- [x] Atualizar paleta de cores (manter verde + dourado + cores vibrantes)
+
+## Aba de Campanhas (NOVO)
+- [x] Criar página de Campanhas com monitoramento em tempo real
+- [x] Exibir cronômetro de envio (horas:minutos:segundos)
+- [x] Mostrar progresso do ciclo (percentual)
+- [x] Listar estatísticas: enviadas, faltam, ciclo atual, taxa do dia
+- [x] Implementar controle de contatos (expandir/colapsar)
+- [x] Adicionar botões de controle: Play, Pause, Reset (3D)
+- [x] Mostrar próximo ciclo em tempo real
+
+## Migração de Dados (NOVO)
+- [x] Carregar imóveis na página de Gerenciar Imóveis
+- [x] Carregar contatos na página de Gerenciar Clientes
+- [x] Exibir dados com paginação e filtros
+- [ ] Implementar CRUD completo (editar, deletar)
+- [x] Adicionar busca por nome/telefone
+
+## Painel de Configurações (NOVO)
+- [ ] Exibir dados da empresa (nome, telefone, endereço)
+- [ ] Mostrar status Z-API (conectado/desconectado)
+- [ ] Permitir edição de dados da empresa
+- [ ] Testar conexão Z-API
+- [ ] Salvar configurações no banco
