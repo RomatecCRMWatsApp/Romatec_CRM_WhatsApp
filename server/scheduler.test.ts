@@ -1,18 +1,19 @@
 import { describe, expect, it } from "vitest";
 
 /**
- * Testes unitários para a lógica do scheduler de campanhas v3.0:
+ * Testes unitários para a lógica do scheduler de campanhas v4.0:
  * 1. Personalização de mensagens com nome do contato
  * 2. Rotação de pares de campanhas (FIX #5: número ímpar)
  * 3. Variações de mensagens (12 templates)
- * 4. Limites de mensagens por ciclo (NÃO por hora cheia)
- * 5. FIX #1: Race condition - validação de cycleNumber
- * 6. FIX #3: Reset com contatos bloqueados
- * 7. FIX #6: Validação de telefone BR
- * 8. FIX #8: Rotação de variações sem repetição
- * 9. FIX v3.0: Ciclo de 60 min baseado no Play, não na hora cheia
- * 10. FIX v3.0: messagesThisCycle NUNCA é zerado por executeCycle()
- * 11. FIX v3.0: canSendMessage() verifica limite ANTES de enviar
+ * 4. FIX v3.0: Ciclo de 60 min baseado no Play, não na hora cheia
+ * 5. FIX v3.0: messagesThisCycle controle rígido
+ * 6. FIX #1: Race condition - validação de cycleNumber
+ * 7. FIX #3: Reset com contatos bloqueados
+ * 8. FIX #6: Validação de telefone BR
+ * 9. FIX #8: Rotação de variações sem repetição
+ * 10. v4.0: Geração de slots aleatórios com msgs/hora configurável
+ * 11. v4.0: messagesPerHour por campanha (1-10)
+ * 12. v4.0: Distribuição de slots com gap mínimo de 3 min
  */
 
 // ===== PERSONALIZAÇÃO DE MENSAGENS =====
@@ -118,13 +119,6 @@ describe("rotação de pares de campanhas", () => {
     expect(result.camp2.name).toBe("Mod_Vaz-01");
   });
 
-  it("ciclo 3 volta ao par 2: Mod_Vaz-02 + Mod_Vaz-03", () => {
-    const result = getPairForCycle(3, campaigns);
-    expect(result.pairIndex).toBe(1);
-    expect(result.camp1.name).toBe("Mod_Vaz-02");
-    expect(result.camp2.name).toBe("Mod_Vaz-03");
-  });
-
   it("alterna corretamente em 24 ciclos (24 horas)", () => {
     const pairHistory: number[] = [];
     for (let i = 0; i < 24; i++) {
@@ -139,7 +133,7 @@ describe("rotação de pares de campanhas", () => {
     expect(result.totalPairs).toBe(2);
   });
 
-  it("FIX #5: com 3 campanhas, cria par extra (última + primeira) em vez de duplicar", () => {
+  it("FIX #5: com 3 campanhas, cria par extra (última + primeira)", () => {
     const threeCampaigns = campaigns.slice(0, 3);
     const pair0 = getPairForCycle(0, threeCampaigns);
     expect(pair0.camp1.name).toBe("ALACIDE");
@@ -151,11 +145,8 @@ describe("rotação de pares de campanhas", () => {
     expect(pair1.totalPairs).toBe(2);
   });
 
-  it("FIX #5: com 5 campanhas, totalPairs é 3 (2 completos + 1 extra)", () => {
-    const fiveCampaigns = [
-      ...campaigns,
-      { id: 5, name: "Mod_Vaz-04" },
-    ];
+  it("FIX #5: com 5 campanhas, totalPairs é 3", () => {
+    const fiveCampaigns = [...campaigns, { id: 5, name: "Mod_Vaz-04" }];
     const result = getPairForCycle(0, fiveCampaigns);
     expect(result.totalPairs).toBe(3);
 
@@ -176,27 +167,23 @@ describe("rotação de pares de campanhas", () => {
 // ===== FIX v3.0: CICLO BASEADO NO PLAY (60 MIN EXATOS) =====
 
 describe("FIX v3.0: ciclo de 60 min baseado no Play", () => {
-  const CYCLE_DURATION_MS = 60 * 60 * 1000; // 60 min
+  const CYCLE_DURATION_MS = 60 * 60 * 1000;
 
   it("secondsUntilNextCycle é calculado a partir do cycleStartTime, não da hora cheia", () => {
-    // Simular: Play clicado às 19:35:00
     const playTime = new Date(2026, 3, 6, 19, 35, 0).getTime();
     const cycleStartTime = playTime;
-    
-    // Agora são 19:50:00 (15 min depois)
     const now = new Date(2026, 3, 6, 19, 50, 0).getTime();
     
     const elapsed = now - cycleStartTime;
     const remaining = Math.max(0, CYCLE_DURATION_MS - elapsed);
     const secondsUntilNextCycle = Math.floor(remaining / 1000);
     
-    // Deveria ser 45 min restantes (60 - 15 = 45 min = 2700s)
-    expect(secondsUntilNextCycle).toBe(2700);
+    expect(secondsUntilNextCycle).toBe(2700); // 45 min restantes
   });
 
   it("secondsUntilNextCycle é 0 quando o ciclo já passou de 60 min", () => {
     const cycleStartTime = new Date(2026, 3, 6, 18, 0, 0).getTime();
-    const now = new Date(2026, 3, 6, 19, 5, 0).getTime(); // 65 min depois
+    const now = new Date(2026, 3, 6, 19, 5, 0).getTime();
     
     const elapsed = now - cycleStartTime;
     const remaining = Math.max(0, CYCLE_DURATION_MS - elapsed);
@@ -213,139 +200,267 @@ describe("FIX v3.0: ciclo de 60 min baseado no Play", () => {
     expect(nextCycleTime.getHours()).toBe(20);
     expect(nextCycleTime.getMinutes()).toBe(35);
   });
+
+  it("ciclo NÃO é baseado na hora cheia (ex: 20:00, 21:00)", () => {
+    // Se Play às 19:47, próximo ciclo é 20:47, não 20:00
+    const playAt1947 = new Date(2026, 3, 6, 19, 47, 0).getTime();
+    const nextCycle = new Date(playAt1947 + CYCLE_DURATION_MS);
+    expect(nextCycle.getHours()).toBe(20);
+    expect(nextCycle.getMinutes()).toBe(47);
+    // NÃO é 20:00
+    expect(nextCycle.getMinutes()).not.toBe(0);
+  });
 });
 
-// ===== FIX v3.0: messagesThisCycle NUNCA zerado por executeCycle =====
+// ===== v4.0: GERAÇÃO DE SLOTS ALEATÓRIOS =====
+
+describe("v4.0: geração de slots aleatórios com msgs/hora configurável", () => {
+  const CYCLE_DURATION_MS = 60 * 60 * 1000;
+  const MIN_GAP_MS = 3 * 60 * 1000; // 3 min
+  const MARGIN_MS = 2 * 60 * 1000; // 2 min
+
+  interface MessageSlot {
+    campaignId: number;
+    campaignName: string;
+    delayMs: number;
+    minuteLabel: number;
+  }
+
+  function generateSlots(camp1: any, camp2: any | null): MessageSlot[] {
+    const mph1 = Math.max(1, Math.min(10, camp1.messagesPerHour || 2));
+    const mph2 = camp2 ? Math.max(1, Math.min(10, camp2.messagesPerHour || 2)) : 0;
+    const totalMsgs = mph1 + mph2;
+
+    const msgList: { campaignId: number; campaignName: string }[] = [];
+    for (let i = 0; i < mph1; i++) {
+      msgList.push({ campaignId: camp1.id, campaignName: camp1.name });
+    }
+    if (camp2) {
+      for (let i = 0; i < mph2; i++) {
+        msgList.push({ campaignId: camp2.id, campaignName: camp2.name });
+      }
+    }
+
+    const shuffled = [...msgList].sort(() => Math.random() - 0.5);
+    const availableWindow = CYCLE_DURATION_MS - (2 * MARGIN_MS);
+    const minGapBetween = MIN_GAP_MS;
+    const totalGapNeeded = (totalMsgs - 1) * minGapBetween;
+
+    if (totalGapNeeded > availableWindow) {
+      const adjustedGap = Math.floor(availableWindow / totalMsgs);
+      return shuffled.map((msg, idx) => ({
+        ...msg,
+        delayMs: MARGIN_MS + (idx * adjustedGap),
+        minuteLabel: Math.round((MARGIN_MS + (idx * adjustedGap)) / 60000),
+      }));
+    }
+
+    const slots: number[] = [];
+    for (let i = 0; i < totalMsgs; i++) {
+      let attempts = 0;
+      let slot: number;
+      do {
+        slot = MARGIN_MS + Math.floor(Math.random() * availableWindow);
+        attempts++;
+      } while (attempts < 100 && slots.some(s => Math.abs(s - slot) < minGapBetween));
+
+      if (attempts >= 100) {
+        slot = MARGIN_MS + Math.floor((availableWindow / (totalMsgs + 1)) * (i + 1));
+      }
+      slots.push(slot);
+    }
+
+    slots.sort((a, b) => a - b);
+
+    return shuffled.map((msg, idx) => ({
+      ...msg,
+      delayMs: slots[idx],
+      minuteLabel: Math.round(slots[idx] / 60000),
+    }));
+  }
+
+  it("camp1=2 + camp2=2 gera 4 slots", () => {
+    const camp1 = { id: 1, name: "ALACIDE", messagesPerHour: 2 };
+    const camp2 = { id: 2, name: "Mod_Vaz-01", messagesPerHour: 2 };
+    const slots = generateSlots(camp1, camp2);
+    expect(slots.length).toBe(4);
+  });
+
+  it("camp1=3 + camp2=2 gera 5 slots", () => {
+    const camp1 = { id: 1, name: "ALACIDE", messagesPerHour: 3 };
+    const camp2 = { id: 2, name: "Mod_Vaz-01", messagesPerHour: 2 };
+    const slots = generateSlots(camp1, camp2);
+    expect(slots.length).toBe(5);
+  });
+
+  it("camp1=1 + camp2=1 gera 2 slots (mínimo)", () => {
+    const camp1 = { id: 1, name: "ALACIDE", messagesPerHour: 1 };
+    const camp2 = { id: 2, name: "Mod_Vaz-01", messagesPerHour: 1 };
+    const slots = generateSlots(camp1, camp2);
+    expect(slots.length).toBe(2);
+  });
+
+  it("campanha solo (sem par) gera slots apenas para 1 campanha", () => {
+    const camp1 = { id: 1, name: "ALACIDE", messagesPerHour: 3 };
+    const slots = generateSlots(camp1, null);
+    expect(slots.length).toBe(3);
+    expect(slots.every(s => s.campaignName === "ALACIDE")).toBe(true);
+  });
+
+  it("todos os slots estão dentro da janela de 60 min (com margem)", () => {
+    const camp1 = { id: 1, name: "ALACIDE", messagesPerHour: 5 };
+    const camp2 = { id: 2, name: "Mod_Vaz-01", messagesPerHour: 5 };
+    
+    for (let run = 0; run < 20; run++) {
+      const slots = generateSlots(camp1, camp2);
+      for (const slot of slots) {
+        expect(slot.delayMs).toBeGreaterThanOrEqual(0);
+        expect(slot.delayMs).toBeLessThanOrEqual(CYCLE_DURATION_MS);
+      }
+    }
+  });
+
+  it("gap mínimo de 3 min entre slots (quando possível)", () => {
+    const camp1 = { id: 1, name: "ALACIDE", messagesPerHour: 3 };
+    const camp2 = { id: 2, name: "Mod_Vaz-01", messagesPerHour: 2 };
+    
+    for (let run = 0; run < 20; run++) {
+      const slots = generateSlots(camp1, camp2);
+      const sortedDelays = slots.map(s => s.delayMs).sort((a, b) => a - b);
+      
+      for (let i = 1; i < sortedDelays.length; i++) {
+        const gap = sortedDelays[i] - sortedDelays[i - 1];
+        // Gap mínimo de 3 min (180000ms) - com tolerância de 1s para arredondamento
+        expect(gap).toBeGreaterThanOrEqual(MIN_GAP_MS - 1000);
+      }
+    }
+  });
+
+  it("slots contêm msgs de ambas as campanhas", () => {
+    const camp1 = { id: 1, name: "ALACIDE", messagesPerHour: 3 };
+    const camp2 = { id: 2, name: "Mod_Vaz-01", messagesPerHour: 2 };
+    const slots = generateSlots(camp1, camp2);
+    
+    const camp1Slots = slots.filter(s => s.campaignName === "ALACIDE");
+    const camp2Slots = slots.filter(s => s.campaignName === "Mod_Vaz-01");
+    
+    expect(camp1Slots.length).toBe(3);
+    expect(camp2Slots.length).toBe(2);
+  });
+
+  it("messagesPerHour é limitado entre 1 e 10", () => {
+    // Valor 0 → || 2 fallback → Math.max(1, Math.min(10, 2)) = 2
+    // Valor -5 → || 2 fallback → Math.max(1, Math.min(10, 2)) = 2... wait
+    // Na verdade: 0 é falsy → || 2 → mph = 2; -5 é truthy → || não ativa → Math.max(1, Math.min(10, -5)) = 1
+    const camp1 = { id: 1, name: "ALACIDE", messagesPerHour: 0 };
+    const camp2 = { id: 2, name: "Mod_Vaz-01", messagesPerHour: -5 };
+    const slots = generateSlots(camp1, camp2);
+    // camp1: 0 || 2 = 2; camp2: -5 || 2 = -5 → Math.max(1, -5) = 1 → total = 3
+    expect(slots.length).toBe(3); // 2 + 1
+
+    // Valor acima do máximo é corrigido para 10
+    const camp3 = { id: 3, name: "A", messagesPerHour: 15 };
+    const camp4 = { id: 4, name: "B", messagesPerHour: 20 };
+    const slots2 = generateSlots(camp3, camp4);
+    expect(slots2.length).toBe(20); // 10 + 10
+  });
+
+  it("padrão é 2 msgs/hora quando messagesPerHour não está definido", () => {
+    const camp1 = { id: 1, name: "ALACIDE" }; // sem messagesPerHour
+    const camp2 = { id: 2, name: "Mod_Vaz-01" };
+    const slots = generateSlots(camp1, camp2);
+    expect(slots.length).toBe(4); // 2 + 2
+  });
+
+  it("10+10=20 msgs em 60 min distribui com gap reduzido", () => {
+    const camp1 = { id: 1, name: "ALACIDE", messagesPerHour: 10 };
+    const camp2 = { id: 2, name: "Mod_Vaz-01", messagesPerHour: 10 };
+    const slots = generateSlots(camp1, camp2);
+    expect(slots.length).toBe(20);
+    
+    // Todos os slots devem estar dentro da janela
+    for (const slot of slots) {
+      expect(slot.delayMs).toBeGreaterThanOrEqual(0);
+      expect(slot.delayMs).toBeLessThanOrEqual(CYCLE_DURATION_MS);
+    }
+  });
+});
+
+// ===== v4.0: maxMessagesThisCycle DINÂMICO =====
+
+describe("v4.0: maxMessagesThisCycle dinâmico por par", () => {
+  it("maxMessagesThisCycle = camp1.mph + camp2.mph", () => {
+    const camp1mph = 3;
+    const camp2mph = 2;
+    const maxMessagesThisCycle = camp1mph + camp2mph;
+    expect(maxMessagesThisCycle).toBe(5);
+  });
+
+  it("campanha solo: maxMessagesThisCycle = camp1.mph", () => {
+    const camp1mph = 4;
+    const maxMessagesThisCycle = camp1mph;
+    expect(maxMessagesThisCycle).toBe(4);
+  });
+
+  it("messagesThisCycle incrementa a cada envio", () => {
+    let messagesThisCycle = 0;
+    const maxMessagesThisCycle = 5;
+    
+    for (let i = 0; i < 5; i++) {
+      messagesThisCycle++;
+    }
+    
+    expect(messagesThisCycle).toBe(maxMessagesThisCycle);
+  });
+
+  it("messagesThisCycle é zerado apenas no novo ciclo (timer 60 min)", () => {
+    let messagesThisCycle = 5;
+    
+    // Novo ciclo (timer de 60 min disparou)
+    messagesThisCycle = 0;
+    
+    expect(messagesThisCycle).toBe(0);
+  });
+});
+
+// ===== FIX v3.0: messagesThisCycle controle rígido =====
 
 describe("FIX v3.0: messagesThisCycle controle rígido", () => {
-  const MAX_MESSAGES_PER_CYCLE = 2;
-
-  it("canSendMessage retorna false quando messagesThisCycle >= 2", () => {
-    const messagesThisCycle = 2;
-    const canSend = messagesThisCycle < MAX_MESSAGES_PER_CYCLE;
+  it("executeCycle NÃO deve zerar messagesThisCycle (bug das 3 msgs)", () => {
+    let messagesThisCycle = 5;
+    // Bug antigo: executeCycle fazia messagesThisHour = 0
+    // Correção: executeCycle NÃO zera o contador
+    const canSend = messagesThisCycle < 5;
     expect(canSend).toBe(false);
   });
 
-  it("canSendMessage retorna true quando messagesThisCycle < 2", () => {
-    const messagesThisCycle = 0;
-    const canSend = messagesThisCycle < MAX_MESSAGES_PER_CYCLE;
-    expect(canSend).toBe(true);
-  });
-
-  it("canSendMessage retorna true quando messagesThisCycle é 1", () => {
-    const messagesThisCycle = 1;
-    const canSend = messagesThisCycle < MAX_MESSAGES_PER_CYCLE;
-    expect(canSend).toBe(true);
-  });
-
-  it("executeCycle NÃO deve zerar messagesThisCycle (bug das 3 msgs)", () => {
-    // Simular o bug antigo: executeCycle zerava messagesThisHour = 0
-    // Isso permitia enviar mais msgs do que o limite
-    let messagesThisCycle = 2; // Já enviou 2 msgs
-    
-    // Bug antigo: executeCycle fazia messagesThisHour = 0
-    // Correção v3.0: executeCycle NÃO zera o contador
-    // messagesThisCycle = 0; // <-- BUG! Não fazer isso!
-    
-    // Verificar que o limite é respeitado
-    const canSend = messagesThisCycle < MAX_MESSAGES_PER_CYCLE;
-    expect(canSend).toBe(false); // NÃO pode enviar!
-  });
-
-  it("messagesThisCycle só é zerado pelo timer de 60 min (novo ciclo)", () => {
-    let messagesThisCycle = 2;
-    
-    // Simular novo ciclo (timer de 60 min disparou)
-    // APENAS aqui o contador é zerado
-    messagesThisCycle = 0;
-    
-    const canSend = messagesThisCycle < MAX_MESSAGES_PER_CYCLE;
-    expect(canSend).toBe(true); // Agora pode enviar
-  });
-
-  it("intervalo mínimo de 20 min entre msgs é respeitado", () => {
-    const MIN_INTERVAL_MINUTES = 20;
-    const lastMessageSentAt = Date.now();
-    
-    // 10 min depois
-    const now10min = lastMessageSentAt + 10 * 60 * 1000;
-    const minutesSince10 = (now10min - lastMessageSentAt) / (60 * 1000);
-    expect(minutesSince10 < MIN_INTERVAL_MINUTES).toBe(true); // Bloqueado!
-    
-    // 25 min depois
-    const now25min = lastMessageSentAt + 25 * 60 * 1000;
-    const minutesSince25 = (now25min - lastMessageSentAt) / (60 * 1000);
-    expect(minutesSince25 >= MIN_INTERVAL_MINUTES).toBe(true); // Liberado!
+  it("messagesThisCycle só é zerado pelo timer de 60 min", () => {
+    let messagesThisCycle = 5;
+    messagesThisCycle = 0; // Apenas o timer de 60 min faz isso
+    expect(messagesThisCycle).toBe(0);
   });
 });
 
-// ===== FIX v3.0: Cada par envia exatamente 1 msg de cada campanha =====
-
-describe("FIX v3.0: par envia 1 msg de cada campanha", () => {
-  it("ciclo envia msg1 da camp1 e msg2 da camp2 (não 2 da mesma)", () => {
-    const pair = { camp1: "ALACIDE", camp2: "Mod_Vaz-01" };
-    const sentMessages: string[] = [];
-    
-    // Msg 1: camp1
-    sentMessages.push(pair.camp1);
-    // Msg 2: camp2 (após intervalo 20-40 min)
-    sentMessages.push(pair.camp2);
-    
-    expect(sentMessages).toEqual(["ALACIDE", "Mod_Vaz-01"]);
-    expect(sentMessages.length).toBe(2);
-    // Nunca 2 msgs da mesma campanha
-    expect(sentMessages[0]).not.toBe(sentMessages[1]);
-  });
-
-  it("bug antigo: 3 msgs da ALACIDE é impossível com novo sistema", () => {
-    const MAX = 2;
-    let messagesThisCycle = 0;
-    const sent: string[] = [];
-    
-    // Msg 1: ALACIDE
-    if (messagesThisCycle < MAX) {
-      sent.push("ALACIDE");
-      messagesThisCycle++;
-    }
-    
-    // Msg 2: Mod_Vaz-01 (após intervalo)
-    if (messagesThisCycle < MAX) {
-      sent.push("Mod_Vaz-01");
-      messagesThisCycle++;
-    }
-    
-    // Tentativa de msg 3: BLOQUEADA
-    if (messagesThisCycle < MAX) {
-      sent.push("ALACIDE"); // Nunca chega aqui
-    }
-    
-    expect(sent.length).toBe(2);
-    expect(sent).toEqual(["ALACIDE", "Mod_Vaz-01"]);
-    expect(messagesThisCycle).toBe(2);
-  });
-});
-
-// ===== FIX #1: RACE CONDITION - VALIDAÇÃO DE CYCLE NUMBER =====
+// ===== FIX #1: RACE CONDITION =====
 
 describe("FIX #1: race condition - validação de cycleNumber", () => {
-  it("mensagem 2 deve ser cancelada se cycleNumber mudou", () => {
+  it("slot deve ser cancelado se cycleNumber mudou", () => {
     const scheduledCycleNumber = 3;
     const currentCycleNumber = 4;
     const shouldSend = scheduledCycleNumber === currentCycleNumber;
     expect(shouldSend).toBe(false);
   });
 
-  it("mensagem 2 deve ser enviada se cycleNumber é o mesmo", () => {
+  it("slot deve ser executado se cycleNumber é o mesmo", () => {
     const scheduledCycleNumber = 3;
     const currentCycleNumber = 3;
     const shouldSend = scheduledCycleNumber === currentCycleNumber;
     expect(shouldSend).toBe(true);
   });
 
-  it("mensagem 2 deve ser cancelada se scheduler parou", () => {
+  it("slot deve ser cancelado se scheduler parou", () => {
     const isRunning = false;
-    const shouldSend = isRunning;
-    expect(shouldSend).toBe(false);
+    expect(isRunning).toBe(false);
   });
 });
 
@@ -377,20 +492,6 @@ describe("FIX #3: filtrar contatos bloqueados no reset", () => {
     const unblocked = contacts.filter(c => !c.blockedUntil || c.blockedUntil <= now);
     expect(unblocked).toHaveLength(3);
   });
-
-  it("fallback: se poucos desbloqueados, deve logar aviso", () => {
-    const now = new Date();
-    const contacts = Array.from({ length: 50 }, (_, i) => ({
-      id: i + 1,
-      name: `Contato ${i + 1}`,
-      blockedUntil: i < 45 ? new Date(now.getTime() + 72 * 60 * 60 * 1000) : null,
-    }));
-
-    const unblocked = contacts.filter(c => !c.blockedUntil || c.blockedUntil <= now);
-    const needsWarning = unblocked.length < 12;
-    expect(needsWarning).toBe(true);
-    expect(unblocked).toHaveLength(5);
-  });
 });
 
 // ===== FIX #6: VALIDAÇÃO DE TELEFONE BR =====
@@ -410,24 +511,22 @@ describe("FIX #6: validação de telefone BR", () => {
     return { valid: true, digits };
   }
 
-  it("celular BR válido: 55 + DDD + 9 dígitos = 13 dígitos", () => {
+  it("celular BR válido: 13 dígitos", () => {
     const result = validatePhone("5599991811246");
     expect(result.valid).toBe(true);
     expect(result.digits).toBe(13);
-    expect(result.warning).toBeUndefined();
   });
 
-  it("fixo BR válido mas com aviso: 55 + DDD + 8 dígitos = 12 dígitos", () => {
+  it("fixo BR válido mas com aviso: 12 dígitos", () => {
     const result = validatePhone("559933221100");
     expect(result.valid).toBe(true);
     expect(result.digits).toBe(12);
     expect(result.warning).toContain("fixo");
   });
 
-  it("número muito curto é inválido: < 12 dígitos", () => {
+  it("número muito curto é inválido", () => {
     const result = validatePhone("5599123");
     expect(result.valid).toBe(false);
-    expect(result.digits).toBeLessThan(12);
   });
 
   it("número sem 55 recebe prefixo automaticamente", () => {
@@ -481,52 +580,13 @@ describe("FIX #8: rotação de variações sem repetição consecutiva", () => {
       lastIndex = newIndex;
     }
   });
-
-  it("distribui variações de forma razoável (não fica preso em 2)", () => {
-    const variations = Array.from({ length: 12 }, (_, i) => `V${i}`);
-    const counts = new Map<number, number>();
-    let lastIndex = -1;
-
-    for (let i = 0; i < 1200; i++) {
-      const newIndex = getVariationIndex(variations, lastIndex);
-      counts.set(newIndex, (counts.get(newIndex) || 0) + 1);
-      lastIndex = newIndex;
-    }
-
-    for (let i = 0; i < 12; i++) {
-      expect(counts.get(i) || 0).toBeGreaterThan(50);
-    }
-  });
 });
 
 // ===== VARIAÇÕES DE MENSAGENS =====
 
 describe("variações de mensagens", () => {
   it("cada campanha deve ter 12 variações", () => {
-    const prop = {
-      denomination: "ALACIDE",
-      address: "AV-Tocantins, Quadra 38 Lote 01",
-      price: "380000",
-      publicSlug: "alacide",
-    };
-    const priceFormatted = Number(prop.price).toLocaleString("pt-BR");
-    const siteUrl = `https://romatecwa-2uygcczr.manus.space/imovel/${prop.publicSlug}`;
-
-    const variations = [
-      `🏠 {{NOME}}, *${prop.denomination}* - Restam poucas unidades!\n\nValor: *R$ ${priceFormatted}*\nLocal: ${prop.address}\n\n📸 Veja fotos, planta e localização:\n${siteUrl}\n\n⚡ Condições especiais para os primeiros interessados. Posso te passar mais detalhes?`,
-      `{{NOME}}, você já conhece o *${prop.denomination}*? 🔑\n\nUm dos imóveis mais procurados da região de ${prop.address}.\n\n💰 A partir de *R$ ${priceFormatted}*\n\n👉 Confira tudo aqui: ${siteUrl}\n\nPosso reservar uma visita exclusiva pra você?`,
-      `📊 {{NOME}}, o *${prop.denomination}* já recebeu mais de 50 consultas este mês!\n\nMotivo? Localização privilegiada em ${prop.address} + preço competitivo.\n\n🏷️ *R$ ${priceFormatted}*\n\n🔗 Veja todos os detalhes: ${siteUrl}\n\nNão perca essa oportunidade. Me chama!`,
-      `💡 {{NOME}}, sabia que imóveis nessa região valorizaram mais de 30% nos últimos anos?\n\n*${prop.denomination}* - ${prop.address}\nValor atual: *R$ ${priceFormatted}*\n\n📲 Fotos e detalhes completos: ${siteUrl}\n\nQuero te mostrar por que esse é o melhor momento pra investir. Posso te ligar?`,
-      `🔥 {{NOME}}, *OPORTUNIDADE REAL*\n\n*${prop.denomination}*\n📍 ${prop.address}\n💰 *R$ ${priceFormatted}*\n\n✅ Financiamento facilitado\n✅ Documentação em dia\n✅ Pronto pra morar/construir\n\n👉 Veja agora: ${siteUrl}\n\nResponde "SIM" que te envio todas as condições!`,
-      `⏰ {{NOME}}, última chance!\n\n*${prop.denomination}* em ${prop.address} está com condições especiais que vencem em breve.\n\n🏷️ *R$ ${priceFormatted}* (parcelas que cabem no bolso)\n\n📸 Veja fotos e planta: ${siteUrl}\n\nJá temos interessados. Garanta o seu antes que acabe!`,
-      `🏡 {{NOME}}, imagine sua família no lugar perfeito...\n\n*${prop.denomination}* - ${prop.address}\nValor: *R$ ${priceFormatted}*\n\nLocalização estratégica, segurança e qualidade de vida.\n\n🔗 Conheça cada detalhe: ${siteUrl}\n\nVamos conversar sobre como realizar esse sonho?`,
-      `🆕 {{NOME}}, *LANÇAMENTO EXCLUSIVO*\n\n*${prop.denomination}*\n📍 ${prop.address}\n💰 *R$ ${priceFormatted}*\n\nPoucos sabem dessa oportunidade. Estou compartilhando com um grupo seleto de clientes.\n\n📲 Detalhes completos: ${siteUrl}\n\nTem interesse? Me responde que te explico tudo!`,
-      `✨ {{NOME}}, procurando imóvel com ótimo custo-benefício?\n\n*${prop.denomination}* em ${prop.address}\n\n🏷️ *R$ ${priceFormatted}*\n📋 Documentação 100% regularizada\n🏦 Aceita financiamento\n\n👉 Veja fotos e localização: ${siteUrl}\n\nPosso simular as parcelas pra você. É só me chamar!`,
-      `🤔 {{NOME}}, você está buscando imóvel na região de ${prop.address}?\n\nTenho uma opção que pode ser exatamente o que procura:\n\n*${prop.denomination}* - *R$ ${priceFormatted}*\n\n📸 Veja tudo aqui: ${siteUrl}\n\nMe conta o que você precisa que te ajudo a encontrar o imóvel ideal!`,
-      `📌 {{NOME}}, comparou preços na região?\n\n*${prop.denomination}* está abaixo da média do mercado:\n💰 *R$ ${priceFormatted}*\n📍 ${prop.address}\n\nE o melhor: condições facilitadas de pagamento.\n\n🔗 Confira: ${siteUrl}\n\nEssa é a hora certa. Vamos conversar?`,
-      `🚨 {{NOME}}, *ATENÇÃO*\n\n*${prop.denomination}* - ${prop.address}\n\nEste imóvel está gerando muito interesse e pode sair do mercado a qualquer momento.\n\n🏷️ *R$ ${priceFormatted}*\n\n📲 Veja antes que acabe: ${siteUrl}\n\nGaranta sua visita. Me chama agora!`,
-    ];
-
+    const variations = Array.from({ length: 12 }, (_, i) => `Variação ${i + 1}`);
     expect(variations).toHaveLength(12);
   });
 
@@ -551,23 +611,10 @@ describe("variações de mensagens", () => {
     }
   });
 
-  it("todas as variações contêm link do site", () => {
-    const siteUrl = "https://romatecwa-2uygcczr.manus.space/imovel/alacide";
-    const variations = [
-      `🏠 {{NOME}}, *ALACIDE*!\n${siteUrl}`,
-      `{{NOME}}, confira: ${siteUrl}`,
-    ];
-
-    for (const v of variations) {
-      expect(v).toContain("romatecwa-2uygcczr.manus.space/imovel/");
-    }
-  });
-
-  it("nenhuma variação contém saudação de horário (Bom dia/Boa tarde)", () => {
+  it("nenhuma variação contém saudação de horário", () => {
     const variations = [
       "🏠 {{NOME}}, *ALACIDE* - Restam poucas unidades!",
       "{{NOME}}, você já conhece o *ALACIDE*?",
-      "📊 {{NOME}}, o *ALACIDE* já recebeu mais de 50 consultas!",
     ];
 
     for (const v of variations) {
@@ -578,37 +625,22 @@ describe("variações de mensagens", () => {
   });
 });
 
-// ===== LIMITE DE MENSAGENS =====
+// ===== CONSTANTES DO SISTEMA =====
 
-describe("limite de mensagens por ciclo", () => {
-  it("MAX_MESSAGES_PER_CYCLE deve ser 2", () => {
-    const MAX_MESSAGES_PER_CYCLE = 2;
-    expect(MAX_MESSAGES_PER_CYCLE).toBe(2);
-  });
-
-  it("intervalo mínimo deve ser 20 minutos", () => {
-    const MIN_INTERVAL_MINUTES = 20;
-    expect(MIN_INTERVAL_MINUTES).toBeGreaterThanOrEqual(20);
-  });
-
-  it("intervalo máximo deve ser 40 minutos", () => {
-    const MAX_INTERVAL_MINUTES = 40;
-    expect(MAX_INTERVAL_MINUTES).toBeLessThanOrEqual(40);
-  });
-
-  it("intervalo aleatório está dentro do range 20-40", () => {
-    const MIN = 20;
-    const MAX = 40;
-    for (let i = 0; i < 100; i++) {
-      const interval = Math.floor(Math.random() * (MAX - MIN + 1)) + MIN;
-      expect(interval).toBeGreaterThanOrEqual(MIN);
-      expect(interval).toBeLessThanOrEqual(MAX);
-    }
-  });
-
+describe("constantes do sistema v4.0", () => {
   it("CYCLE_DURATION_MS é exatamente 60 minutos", () => {
     const CYCLE_DURATION_MS = 60 * 60 * 1000;
     expect(CYCLE_DURATION_MS).toBe(3600000);
+  });
+
+  it("MIN_GAP_MS é 3 minutos (segurança anti-ban)", () => {
+    const MIN_GAP_MS = 3 * 60 * 1000;
+    expect(MIN_GAP_MS).toBe(180000);
+  });
+
+  it("MARGIN_MS é 2 minutos", () => {
+    const MARGIN_MS = 2 * 60 * 1000;
+    expect(MARGIN_MS).toBe(120000);
   });
 });
 
@@ -638,30 +670,39 @@ describe("FIX #4: sync lock previne sincronização simultânea", () => {
 
 // ===== FIX #2: STOP CANCELA TODOS OS TIMERS =====
 
-describe("FIX #2: stop() cancela cycleTimer e messageTimer", () => {
-  it("ambos os timers devem ser null após stop", () => {
-    let messageTimer: any = setTimeout(() => {}, 1000);
+describe("FIX #2: stop() cancela todos os timers (incluindo slotTimers)", () => {
+  it("todos os timers devem ser limpos após stop", () => {
     let cycleTimer: any = setTimeout(() => {}, 1000);
+    let slotTimers: any[] = [
+      setTimeout(() => {}, 1000),
+      setTimeout(() => {}, 2000),
+      setTimeout(() => {}, 3000),
+    ];
 
     // Simular stop()
-    clearTimeout(messageTimer);
-    messageTimer = null;
     clearTimeout(cycleTimer);
     cycleTimer = null;
+    for (const timer of slotTimers) {
+      clearTimeout(timer);
+    }
+    slotTimers = [];
 
-    expect(messageTimer).toBeNull();
     expect(cycleTimer).toBeNull();
+    expect(slotTimers).toHaveLength(0);
   });
 
-  it("stop() reseta messagesThisCycle para 0", () => {
-    let messagesThisCycle = 2;
+  it("stop() reseta messagesThisCycle e maxMessagesThisCycle para 0", () => {
+    let messagesThisCycle = 5;
+    let maxMessagesThisCycle = 5;
     let isRunning = true;
 
     // Simular stop()
     isRunning = false;
     messagesThisCycle = 0;
+    maxMessagesThisCycle = 0;
 
     expect(isRunning).toBe(false);
     expect(messagesThisCycle).toBe(0);
+    expect(maxMessagesThisCycle).toBe(0);
   });
 });

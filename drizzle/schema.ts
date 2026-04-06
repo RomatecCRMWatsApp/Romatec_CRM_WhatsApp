@@ -80,6 +80,7 @@ export const campaigns = mysqlTable("campaigns", {
   totalContacts: int("totalContacts").default(12),
   sentCount: int("sentCount").default(0),
   failedCount: int("failedCount").default(0),
+  messagesPerHour: int("messagesPerHour").default(2), // msgs/hora configurável: 1-5
   startDate: timestamp("startDate"),
   endDate: timestamp("endDate"),
   createdAt: timestamp("createdAt").defaultNow().notNull(),

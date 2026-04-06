@@ -9,9 +9,10 @@ import { trpc } from "@/lib/trpc";
 import { toast } from "sonner";
 
 /**
- * REGRAS DO SISTEMA:
- * - MÁXIMO 2 mensagens por hora (limite rígido)
- * - Intervalo mínimo 20 min entre mensagens
+ * REGRAS DO SISTEMA v4.0:
+ * - msgs/hora CONFIGURÁVEL por campanha (1-10, padrão 2)
+ * - Slots aleatórios distribuídos dentro de 60 min
+ * - Mínimo 3 min entre msgs (segurança anti-ban)
  * - Rotação de pares: (1+2) → (3+4) → (1+2)...
  * - 12 contatos por campanha
  * - Loop infinito 24/7
@@ -211,7 +212,7 @@ export default function Campaigns() {
                 <span>Campanhas WhatsApp</span>
               </h1>
               <p className="text-white/80 text-sm mt-1">
-                <span>MAX 2 msgs/hora | Intervalo 20-40 min | Ciclo 24h/dia, 7 dias/semana</span>
+                <span>msgs/hora configurável por campanha | Ciclo 24h/dia, 7 dias/semana</span>
               </p>
             </div>
           </div>
@@ -316,11 +317,23 @@ export default function Campaigns() {
                 {/* Linha 3: Msgs enviadas nesta hora */}
                 <div className="mt-3 flex items-center justify-center gap-2 text-sm">
                   <span className="text-slate-500">Msgs neste ciclo:</span>
-                  <span className="font-bold text-purple-700">{stats?.messagesThisHour || 0}/{stats?.maxMessagesPerHour || 2}</span>
-                  {(stats?.messagesThisHour || 0) >= 2 && (
+                  <span className="font-bold text-purple-700">{stats?.messagesThisHour || 0}/{stats?.maxMessagesPerHour || 0}</span>
+                  {(stats?.maxMessagesPerHour || 0) > 0 && (stats?.messagesThisHour || 0) >= (stats?.maxMessagesPerHour || 0) && (
                     <span className="text-xs bg-green-100 text-green-700 px-2 py-0.5 rounded-full">Ciclo completo</span>
                   )}
                 </div>
+                {/* Slots agendados */}
+                {(stats as any)?.scheduledSlots && (stats as any).scheduledSlots.length > 0 && (
+                  <div className="mt-2 flex flex-wrap items-center justify-center gap-1">
+                    {(stats as any).scheduledSlots.map((slot: any, idx: number) => (
+                      <span key={idx} className={`text-xs px-2 py-0.5 rounded-full font-mono ${
+                        slot.sent ? "bg-green-100 text-green-700 line-through" : "bg-purple-100 text-purple-600"
+                      }`}>
+                        {slot.campaignName.substring(0, 8)}@{slot.minuteLabel}min
+                      </span>
+                    ))}
+                  </div>
+                )}
               </div>
             )}
 
@@ -466,7 +479,13 @@ export default function Campaigns() {
                         </span>
                       </div>
                       <p className="text-xs text-slate-500 mt-2">
-                        <span>1 msg de cada = 2 msgs/hora</span>
+                        <span>
+                          {(() => {
+                            const c1mph = allCampaigns.find((c: any) => c.name === camp1?.name)?.messagesPerHour || 2;
+                            const c2mph = camp2 ? (allCampaigns.find((c: any) => c.name === camp2?.name)?.messagesPerHour || 2) : 0;
+                            return `${c1mph}+${c2mph} = ${c1mph + c2mph} msgs/hora`;
+                          })()}
+                        </span>
                       </p>
                     </div>
                   );
@@ -571,6 +590,23 @@ function CampaignCard({
   onToggle: () => void;
   onToggleActive: (active: boolean) => void;
 }) {
+  const [editingMph, setEditingMph] = useState(false);
+  const [mphValue, setMphValue] = useState(campaign.messagesPerHour || 2);
+  const utils = trpc.useUtils();
+
+  const updateMph = trpc.scheduler.updateMessagesPerHour.useMutation({
+    onSuccess: (data) => {
+      toast.success(data.message);
+      setEditingMph(false);
+      utils.scheduler.getCampaignDetails.invalidate();
+    },
+    onError: (error) => toast.error(`Erro: ${error.message}`),
+  });
+
+  // Sync mphValue quando campaign muda
+  useEffect(() => {
+    setMphValue(campaign.messagesPerHour || 2);
+  }, [campaign.messagesPerHour]);
   const isActive = campaign.status === "running";
   
   // Verificar se esta campanha está no par ativo usando dados do backend
@@ -680,6 +716,43 @@ function CampaignCard({
               </div>
             )}
           </div>
+        </div>
+
+        {/* Campo msgs/hora editável */}
+        <div className="mt-3 flex items-center gap-3 p-2 bg-indigo-50 rounded-lg border border-indigo-200">
+          <span className="text-xs font-semibold text-indigo-700">msgs/hora:</span>
+          {editingMph ? (
+            <div className="flex items-center gap-2">
+              <div className="flex items-center border border-indigo-300 rounded-lg overflow-hidden">
+                <button
+                  onClick={() => setMphValue(Math.max(1, mphValue - 1))}
+                  className="px-2 py-1 bg-indigo-100 hover:bg-indigo-200 text-indigo-700 font-bold text-sm"
+                >-</button>
+                <span className="px-3 py-1 text-lg font-bold text-indigo-800 bg-white min-w-[40px] text-center">{mphValue}</span>
+                <button
+                  onClick={() => setMphValue(Math.min(10, mphValue + 1))}
+                  className="px-2 py-1 bg-indigo-100 hover:bg-indigo-200 text-indigo-700 font-bold text-sm"
+                >+</button>
+              </div>
+              <button
+                onClick={() => updateMph.mutate({ campaignId: campaign.id, messagesPerHour: mphValue })}
+                disabled={updateMph.isPending}
+                className="px-3 py-1 bg-green-500 hover:bg-green-600 text-white text-xs font-bold rounded-lg"
+              >{updateMph.isPending ? '...' : 'Salvar'}</button>
+              <button
+                onClick={() => { setEditingMph(false); setMphValue(campaign.messagesPerHour || 2); }}
+                className="px-2 py-1 text-xs text-slate-500 hover:text-slate-700"
+              >Cancelar</button>
+            </div>
+          ) : (
+            <button
+              onClick={() => setEditingMph(true)}
+              className="flex items-center gap-1 px-3 py-1 bg-white border border-indigo-200 rounded-lg hover:bg-indigo-50 transition-colors"
+            >
+              <span className="text-xl font-bold text-indigo-800">{campaign.messagesPerHour || 2}</span>
+              <span className="text-xs text-indigo-500 ml-1">clique p/ editar</span>
+            </button>
+          )}
         </div>
       </CardHeader>
 

@@ -187,3 +187,15 @@
 - [x] FIX: canSendMessage() verifica limite ANTES de enviar (verificação tripla)
 - [x] FIX: isSending LOCK impede envio simultâneo
 - [x] Testes: 53 testes passando (incluindo 11 novos para v3.0)
+
+## Feature: msgs/hora configurável por campanha v4.0 (06/04/2026)
+- [x] Adicionar campo messagesPerHour no schema campaigns (default: 2, min: 1, max: 10)
+- [x] Executar migração SQL (ALTER TABLE campaigns ADD messagesPerHour)
+- [x] Reescrever scheduler v4.0 com fila dinâmica por par e slots aleatórios
+- [x] Slots distribuídos aleatoriamente dentro de 60 min (mínimo 3 min entre msgs)
+- [x] Ciclo baseado no Play, NÃO na hora cheia do relógio
+- [x] Procedure tRPC updateMessagesPerHour para salvar no banco
+- [x] UI editável no card de campanha (campo clicável com +/- e Salvar)
+- [x] Mostrar slots agendados no cronômetro (verde=enviado, roxo=pendente)
+- [x] Mostrar total do par (camp1.mph + camp2.mph) na rotação de pares
+- [x] Testes unitários: 56 testes passando (incluindo 12 novos para v4.0)

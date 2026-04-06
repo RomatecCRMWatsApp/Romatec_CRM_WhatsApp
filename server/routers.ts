@@ -661,6 +661,22 @@ Retorne as 4 variações separadas por |||` },
       }),
 
     /**
+     * Atualizar msgs/hora de uma campanha (1-10)
+     */
+    updateMessagesPerHour: protectedProcedure
+      .input(z.object({ campaignId: z.number(), messagesPerHour: z.number().min(1).max(10) }))
+      .mutation(async ({ input }) => {
+        const db = await getDb();
+        if (!db) throw new Error("Database not available");
+
+        await db.update(campaigns)
+          .set({ messagesPerHour: input.messagesPerHour })
+          .where(eq(campaigns.id, input.campaignId));
+
+        return { success: true, message: `Campanha atualizada: ${input.messagesPerHour} msgs/hora` };
+      }),
+
+    /**
      * Detalhes completos de cada campanha com contatos e status
      */
     getCampaignDetails: publicProcedure.query(async () => {
@@ -716,6 +732,7 @@ Retorne as 4 variações separadas por |||` },
           propertyId: camp.propertyId,
           propertyName: prop[0]?.denomination || "Desconhecido",
           status: camp.status,
+          messagesPerHour: camp.messagesPerHour || 2,
           totalContacts: ccList.length,
           sentCount,
           pendingCount,

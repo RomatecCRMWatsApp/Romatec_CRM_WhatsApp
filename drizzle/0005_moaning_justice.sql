@@ -1,0 +1,1 @@
+ALTER TABLE `campaigns` ADD `messagesPerHour` int DEFAULT 2;
