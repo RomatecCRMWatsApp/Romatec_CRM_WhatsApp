@@ -201,12 +201,21 @@ export const appRouter = router({
       .mutation(async ({ input }) => {
         const db = await getDb();
         if (!db) throw new Error("Database not available");
-        // Remover campanhas vinculadas primeiro
+        // Remover todas as dependências em cascata
         const relatedCampaigns = await db.select().from(campaigns).where(eq(campaigns.propertyId, input.id));
         for (const camp of relatedCampaigns) {
+          // Remover messages da campanha
+          await db.delete(messages).where(eq(messages.campaignId, camp.id));
+          // Remover contactCampaignHistory
+          await db.delete(contactCampaignHistory).where(eq(contactCampaignHistory.campaignId, camp.id));
+          // Remover campaignContacts
           await db.delete(campaignContacts).where(eq(campaignContacts.campaignId, camp.id));
         }
+        // Remover messages diretas do imóvel
+        await db.delete(messages).where(eq(messages.propertyId, input.id));
+        // Remover campanhas
         await db.delete(campaigns).where(eq(campaigns.propertyId, input.id));
+        // Remover o imóvel
         await db.delete(properties).where(eq(properties.id, input.id));
         return { success: true };
       }),

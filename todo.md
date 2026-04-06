@@ -100,8 +100,8 @@
 
 ## Bugs
 - [x] Corrigir NotFoundError: insertBefore no site publicado (restart servidor resolveu)
-- [ ] Excluir imóvel de teste do banco
-- [ ] Corrigir bug de exclusão de imóvel (imóvel volta após excluir)
+- [x] Excluir imóvel de teste do banco (ID 30015 removido)
+- [x] Corrigir bug de exclusão de imóvel (adicionado cascade delete de messages e history)
 - [x] Revisar código completo do bot (corrigido Client-Token, endpoint /send-text, headers)
 - [x] Testar envio real de mensagem WhatsApp via Z-API (messageId: 69F7407D071E813F2CC2)
 - [x] Preparar para campanha real - Z-API funcionando!
