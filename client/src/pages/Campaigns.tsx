@@ -138,8 +138,9 @@ export default function Campaigns() {
     return { totalContacts, totalSent, totalPending, totalFailed, successRate };
   }, [allCampaigns]);
 
-  // Cronômetro local baseado em secondsUntilNextCycle do backend
-  const [localTimer, setLocalTimer] = useState(3600);
+  // Cronômetro REGRESSIVO: começa em cycleDuration (60 min) e diminui até 0
+  const cycleDuration = stateData?.cycleDurationSeconds || 3600;
+  const [localTimer, setLocalTimer] = useState(cycleDuration);
   
   useEffect(() => {
     if (stateData?.secondsUntilNextCycle !== undefined) {
@@ -150,10 +151,13 @@ export default function Campaigns() {
   useEffect(() => {
     if (!isRunning) return;
     const interval = setInterval(() => {
-      setLocalTimer((prev) => (prev <= 0 ? 3600 : prev - 1));
+      setLocalTimer((prev) => (prev <= 0 ? 0 : prev - 1));
     }, 1000);
     return () => clearInterval(interval);
   }, [isRunning]);
+
+  // Progresso do tempo: 0% quando cycleDuration restam, 100% quando 0s restam
+  const timeProgressPercent = Math.round(((cycleDuration - localTimer) / cycleDuration) * 100);
 
   const handleAutoSetup = useCallback(() => {
     setIsSettingUp(true);
@@ -291,7 +295,7 @@ export default function Campaigns() {
                 <div className="w-full bg-purple-100 rounded-full h-2 mb-3">
                   <div
                     className="bg-gradient-to-r from-purple-400 to-purple-600 h-2 rounded-full transition-all duration-1000"
-                    style={{ width: `${((3600 - localTimer) / 3600) * 100}%` }}
+                    style={{ width: `${((cycleDuration - localTimer) / cycleDuration) * 100}%` }}
                   />
                 </div>
                 {/* Linha 2: Info de tempo detalhada */}
@@ -311,7 +315,7 @@ export default function Campaigns() {
                 </div>
                 {/* Linha 3: Msgs enviadas nesta hora */}
                 <div className="mt-3 flex items-center justify-center gap-2 text-sm">
-                  <span className="text-slate-500">Msgs nesta hora:</span>
+                  <span className="text-slate-500">Msgs neste ciclo:</span>
                   <span className="font-bold text-purple-700">{stats?.messagesThisHour || 0}/{stats?.maxMessagesPerHour || 2}</span>
                   {(stats?.messagesThisHour || 0) >= 2 && (
                     <span className="text-xs bg-green-100 text-green-700 px-2 py-0.5 rounded-full">Ciclo completo</span>
@@ -589,30 +593,46 @@ function CampaignCard({
   const totalContacts = campaign.totalContacts || 12;
   const progressPercent = totalContacts > 0 ? Math.round((sentCount / totalContacts) * 100) : 0;
 
+  // Determinar se esta campanha já enviou neste ciclo
+  const hasSentThisCycle = sentCount > 0;
+
   let statusText = "Agendado";
   let statusBadgeClass = "bg-slate-100 text-slate-600";
   let borderColor = "border-l-slate-300";
   let bgColor = "";
+  let ledClass = "bg-gray-300";
 
   if (!isActive) {
     statusText = "Pausada";
     statusBadgeClass = "bg-gray-100 text-gray-500";
     borderColor = "border-l-gray-300";
     bgColor = "opacity-60";
+    ledClass = "bg-gray-300";
+  } else if (isInCurrentPair && hasSentThisCycle) {
+    // Já enviou neste ciclo - LED verde FIXO (não pulsa)
+    statusText = "Enviado";
+    statusBadgeClass = "bg-emerald-100 text-emerald-700 border border-emerald-400";
+    borderColor = "border-l-emerald-500";
+    bgColor = "bg-emerald-50/50 ring-1 ring-emerald-200";
+    ledClass = "bg-emerald-500 shadow-lg shadow-emerald-400/50";
   } else if (isInCurrentPair) {
+    // No par ativo mas ainda não enviou - LED verde PULSANTE
     statusText = "Enviando";
     statusBadgeClass = "bg-green-100 text-green-700 border border-green-300";
     borderColor = "border-l-green-500";
     bgColor = "bg-green-50/50 ring-1 ring-green-200";
+    ledClass = "bg-green-500 animate-pulse shadow-lg shadow-green-400/50";
   } else if (isInNextPair) {
     statusText = "Próximo";
     statusBadgeClass = "bg-yellow-100 text-yellow-700 border border-yellow-300";
     borderColor = "border-l-yellow-500";
     bgColor = "bg-yellow-50/30";
+    ledClass = "bg-yellow-500 animate-pulse";
   } else {
     statusText = "Ativo";
     statusBadgeClass = "bg-blue-100 text-blue-600";
     borderColor = "border-l-blue-400";
+    ledClass = "bg-blue-400";
   }
 
   return (
@@ -620,9 +640,7 @@ function CampaignCard({
       <CardHeader className="pb-3">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <span className={`inline-block w-3 h-3 rounded-full ${
-              isInCurrentPair ? "bg-green-500 animate-pulse shadow-lg shadow-green-400/50" : isInNextPair ? "bg-yellow-500 animate-pulse" : isActive ? "bg-blue-400" : "bg-gray-300"
-            }`} />
+            <span className={`inline-block w-3 h-3 rounded-full ${ledClass}`} />
             <div>
               <CardTitle className="text-lg">
                 <span>{String(campaign.name || '')}</span>
@@ -666,8 +684,8 @@ function CampaignCard({
       </CardHeader>
 
       <CardContent>
-        {/* Progresso */}
-        <div className="mb-4">
+        {/* Progresso do Ciclo (baseado nas mensagens enviadas) */}
+        <div className="mb-3">
           <div className="flex items-center justify-between mb-1">
             <p className="text-xs text-slate-600 font-medium">Progresso do Ciclo</p>
             <p className={`text-sm font-bold ${progressPercent === 100 ? "text-orange-600" : "text-green-700"}`}>{progressPercent}%</p>
@@ -679,6 +697,22 @@ function CampaignCard({
             />
           </div>
         </div>
+
+        {/* Barra de Tempo - sobe conforme cronômetro diminui */}
+        {isActive && isRunning && (
+          <div className="mb-4">
+            <div className="flex items-center justify-between mb-1">
+              <p className="text-xs text-slate-600 font-medium">Tempo do Ciclo</p>
+              <p className="text-sm font-bold text-blue-600">{Math.round(((3600 - cycleTimer) / 3600) * 100)}%</p>
+            </div>
+            <div className="w-full bg-slate-200 rounded-full h-2">
+              <div
+                className="h-2 rounded-full transition-all duration-1000 bg-gradient-to-r from-blue-400 to-blue-600"
+                style={{ width: `${Math.round(((3600 - cycleTimer) / 3600) * 100)}%` }}
+              />
+            </div>
+          </div>
+        )}
 
         {/* Stats Grid */}
         <div className="grid grid-cols-2 gap-3 mb-4">

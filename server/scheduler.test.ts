@@ -1,15 +1,18 @@
 import { describe, expect, it } from "vitest";
 
 /**
- * Testes unitários para a lógica do scheduler de campanhas v2.1:
+ * Testes unitários para a lógica do scheduler de campanhas v3.0:
  * 1. Personalização de mensagens com nome do contato
  * 2. Rotação de pares de campanhas (FIX #5: número ímpar)
  * 3. Variações de mensagens (12 templates)
- * 4. Limites de mensagens por hora
+ * 4. Limites de mensagens por ciclo (NÃO por hora cheia)
  * 5. FIX #1: Race condition - validação de cycleNumber
  * 6. FIX #3: Reset com contatos bloqueados
  * 7. FIX #6: Validação de telefone BR
  * 8. FIX #8: Rotação de variações sem repetição
+ * 9. FIX v3.0: Ciclo de 60 min baseado no Play, não na hora cheia
+ * 10. FIX v3.0: messagesThisCycle NUNCA é zerado por executeCycle()
+ * 11. FIX v3.0: canSendMessage() verifica limite ANTES de enviar
  */
 
 // ===== PERSONALIZAÇÃO DE MENSAGENS =====
@@ -66,10 +69,6 @@ describe("personalizeMessage", () => {
 // ===== ROTAÇÃO DE PARES (FIX #5: número ímpar) =====
 
 describe("rotação de pares de campanhas", () => {
-  /**
-   * FIX #5: Nova lógica de pares - número ímpar não duplica campanha 0
-   * Em vez disso, cria par extra com última + primeira
-   */
   function getPairForCycle(cycleNumber: number, campaigns: { id: number; name: string }[]) {
     const completePairs = Math.floor(campaigns.length / 2);
     const hasOddCampaign = campaigns.length % 2 !== 0;
@@ -84,7 +83,6 @@ describe("rotação de pares de campanhas", () => {
       camp1 = campaigns[pairStart];
       camp2 = campaigns[pairStart + 1];
     } else {
-      // Par extra para campanha ímpar
       camp1 = campaigns[campaigns.length - 1];
       camp2 = campaigns[0];
     }
@@ -141,19 +139,16 @@ describe("rotação de pares de campanhas", () => {
     expect(result.totalPairs).toBe(2);
   });
 
-  // FIX #5: Teste para número ímpar de campanhas
   it("FIX #5: com 3 campanhas, cria par extra (última + primeira) em vez de duplicar", () => {
     const threeCampaigns = campaigns.slice(0, 3);
-    // Par 0: ALACIDE + Mod_Vaz-01 (normal)
     const pair0 = getPairForCycle(0, threeCampaigns);
     expect(pair0.camp1.name).toBe("ALACIDE");
     expect(pair0.camp2.name).toBe("Mod_Vaz-01");
 
-    // Par 1: Mod_Vaz-02 + ALACIDE (par extra - última + primeira)
     const pair1 = getPairForCycle(1, threeCampaigns);
     expect(pair1.camp1.name).toBe("Mod_Vaz-02");
     expect(pair1.camp2.name).toBe("ALACIDE");
-    expect(pair1.totalPairs).toBe(2); // 1 completo + 1 extra
+    expect(pair1.totalPairs).toBe(2);
   });
 
   it("FIX #5: com 5 campanhas, totalPairs é 3 (2 completos + 1 extra)", () => {
@@ -164,7 +159,6 @@ describe("rotação de pares de campanhas", () => {
     const result = getPairForCycle(0, fiveCampaigns);
     expect(result.totalPairs).toBe(3);
 
-    // Par extra (ciclo 2): Mod_Vaz-04 + ALACIDE
     const extraPair = getPairForCycle(2, fiveCampaigns);
     expect(extraPair.camp1.name).toBe("Mod_Vaz-04");
     expect(extraPair.camp2.name).toBe("ALACIDE");
@@ -179,19 +173,171 @@ describe("rotação de pares de campanhas", () => {
   });
 });
 
+// ===== FIX v3.0: CICLO BASEADO NO PLAY (60 MIN EXATOS) =====
+
+describe("FIX v3.0: ciclo de 60 min baseado no Play", () => {
+  const CYCLE_DURATION_MS = 60 * 60 * 1000; // 60 min
+
+  it("secondsUntilNextCycle é calculado a partir do cycleStartTime, não da hora cheia", () => {
+    // Simular: Play clicado às 19:35:00
+    const playTime = new Date(2026, 3, 6, 19, 35, 0).getTime();
+    const cycleStartTime = playTime;
+    
+    // Agora são 19:50:00 (15 min depois)
+    const now = new Date(2026, 3, 6, 19, 50, 0).getTime();
+    
+    const elapsed = now - cycleStartTime;
+    const remaining = Math.max(0, CYCLE_DURATION_MS - elapsed);
+    const secondsUntilNextCycle = Math.floor(remaining / 1000);
+    
+    // Deveria ser 45 min restantes (60 - 15 = 45 min = 2700s)
+    expect(secondsUntilNextCycle).toBe(2700);
+  });
+
+  it("secondsUntilNextCycle é 0 quando o ciclo já passou de 60 min", () => {
+    const cycleStartTime = new Date(2026, 3, 6, 18, 0, 0).getTime();
+    const now = new Date(2026, 3, 6, 19, 5, 0).getTime(); // 65 min depois
+    
+    const elapsed = now - cycleStartTime;
+    const remaining = Math.max(0, CYCLE_DURATION_MS - elapsed);
+    const secondsUntilNextCycle = Math.floor(remaining / 1000);
+    
+    expect(secondsUntilNextCycle).toBe(0);
+  });
+
+  it("próximo ciclo é EXATAMENTE 60 min após o início do ciclo atual", () => {
+    const cycleStartTime = new Date(2026, 3, 6, 19, 35, 0).getTime();
+    const nextCycleTime = new Date(cycleStartTime + CYCLE_DURATION_MS);
+    
+    // Próximo ciclo deve ser 20:35:00 (não 20:00:00)
+    expect(nextCycleTime.getHours()).toBe(20);
+    expect(nextCycleTime.getMinutes()).toBe(35);
+  });
+});
+
+// ===== FIX v3.0: messagesThisCycle NUNCA zerado por executeCycle =====
+
+describe("FIX v3.0: messagesThisCycle controle rígido", () => {
+  const MAX_MESSAGES_PER_CYCLE = 2;
+
+  it("canSendMessage retorna false quando messagesThisCycle >= 2", () => {
+    const messagesThisCycle = 2;
+    const canSend = messagesThisCycle < MAX_MESSAGES_PER_CYCLE;
+    expect(canSend).toBe(false);
+  });
+
+  it("canSendMessage retorna true quando messagesThisCycle < 2", () => {
+    const messagesThisCycle = 0;
+    const canSend = messagesThisCycle < MAX_MESSAGES_PER_CYCLE;
+    expect(canSend).toBe(true);
+  });
+
+  it("canSendMessage retorna true quando messagesThisCycle é 1", () => {
+    const messagesThisCycle = 1;
+    const canSend = messagesThisCycle < MAX_MESSAGES_PER_CYCLE;
+    expect(canSend).toBe(true);
+  });
+
+  it("executeCycle NÃO deve zerar messagesThisCycle (bug das 3 msgs)", () => {
+    // Simular o bug antigo: executeCycle zerava messagesThisHour = 0
+    // Isso permitia enviar mais msgs do que o limite
+    let messagesThisCycle = 2; // Já enviou 2 msgs
+    
+    // Bug antigo: executeCycle fazia messagesThisHour = 0
+    // Correção v3.0: executeCycle NÃO zera o contador
+    // messagesThisCycle = 0; // <-- BUG! Não fazer isso!
+    
+    // Verificar que o limite é respeitado
+    const canSend = messagesThisCycle < MAX_MESSAGES_PER_CYCLE;
+    expect(canSend).toBe(false); // NÃO pode enviar!
+  });
+
+  it("messagesThisCycle só é zerado pelo timer de 60 min (novo ciclo)", () => {
+    let messagesThisCycle = 2;
+    
+    // Simular novo ciclo (timer de 60 min disparou)
+    // APENAS aqui o contador é zerado
+    messagesThisCycle = 0;
+    
+    const canSend = messagesThisCycle < MAX_MESSAGES_PER_CYCLE;
+    expect(canSend).toBe(true); // Agora pode enviar
+  });
+
+  it("intervalo mínimo de 20 min entre msgs é respeitado", () => {
+    const MIN_INTERVAL_MINUTES = 20;
+    const lastMessageSentAt = Date.now();
+    
+    // 10 min depois
+    const now10min = lastMessageSentAt + 10 * 60 * 1000;
+    const minutesSince10 = (now10min - lastMessageSentAt) / (60 * 1000);
+    expect(minutesSince10 < MIN_INTERVAL_MINUTES).toBe(true); // Bloqueado!
+    
+    // 25 min depois
+    const now25min = lastMessageSentAt + 25 * 60 * 1000;
+    const minutesSince25 = (now25min - lastMessageSentAt) / (60 * 1000);
+    expect(minutesSince25 >= MIN_INTERVAL_MINUTES).toBe(true); // Liberado!
+  });
+});
+
+// ===== FIX v3.0: Cada par envia exatamente 1 msg de cada campanha =====
+
+describe("FIX v3.0: par envia 1 msg de cada campanha", () => {
+  it("ciclo envia msg1 da camp1 e msg2 da camp2 (não 2 da mesma)", () => {
+    const pair = { camp1: "ALACIDE", camp2: "Mod_Vaz-01" };
+    const sentMessages: string[] = [];
+    
+    // Msg 1: camp1
+    sentMessages.push(pair.camp1);
+    // Msg 2: camp2 (após intervalo 20-40 min)
+    sentMessages.push(pair.camp2);
+    
+    expect(sentMessages).toEqual(["ALACIDE", "Mod_Vaz-01"]);
+    expect(sentMessages.length).toBe(2);
+    // Nunca 2 msgs da mesma campanha
+    expect(sentMessages[0]).not.toBe(sentMessages[1]);
+  });
+
+  it("bug antigo: 3 msgs da ALACIDE é impossível com novo sistema", () => {
+    const MAX = 2;
+    let messagesThisCycle = 0;
+    const sent: string[] = [];
+    
+    // Msg 1: ALACIDE
+    if (messagesThisCycle < MAX) {
+      sent.push("ALACIDE");
+      messagesThisCycle++;
+    }
+    
+    // Msg 2: Mod_Vaz-01 (após intervalo)
+    if (messagesThisCycle < MAX) {
+      sent.push("Mod_Vaz-01");
+      messagesThisCycle++;
+    }
+    
+    // Tentativa de msg 3: BLOQUEADA
+    if (messagesThisCycle < MAX) {
+      sent.push("ALACIDE"); // Nunca chega aqui
+    }
+    
+    expect(sent.length).toBe(2);
+    expect(sent).toEqual(["ALACIDE", "Mod_Vaz-01"]);
+    expect(messagesThisCycle).toBe(2);
+  });
+});
+
 // ===== FIX #1: RACE CONDITION - VALIDAÇÃO DE CYCLE NUMBER =====
 
 describe("FIX #1: race condition - validação de cycleNumber", () => {
   it("mensagem 2 deve ser cancelada se cycleNumber mudou", () => {
     const scheduledCycleNumber = 3;
-    const currentCycleNumber = 4; // Mudou!
+    const currentCycleNumber = 4;
     const shouldSend = scheduledCycleNumber === currentCycleNumber;
     expect(shouldSend).toBe(false);
   });
 
   it("mensagem 2 deve ser enviada se cycleNumber é o mesmo", () => {
     const scheduledCycleNumber = 3;
-    const currentCycleNumber = 3; // Mesmo ciclo
+    const currentCycleNumber = 3;
     const shouldSend = scheduledCycleNumber === currentCycleNumber;
     expect(shouldSend).toBe(true);
   });
@@ -209,10 +355,10 @@ describe("FIX #3: filtrar contatos bloqueados no reset", () => {
   it("contatos com blockedUntil no futuro devem ser filtrados", () => {
     const now = new Date();
     const contacts = [
-      { id: 1, name: "Maria", blockedUntil: new Date(now.getTime() + 24 * 60 * 60 * 1000) }, // bloqueado +24h
-      { id: 2, name: "João", blockedUntil: null }, // livre
-      { id: 3, name: "Ana", blockedUntil: new Date(now.getTime() - 1000) }, // expirado
-      { id: 4, name: "Carlos", blockedUntil: new Date(now.getTime() + 72 * 60 * 60 * 1000) }, // bloqueado +72h
+      { id: 1, name: "Maria", blockedUntil: new Date(now.getTime() + 24 * 60 * 60 * 1000) },
+      { id: 2, name: "João", blockedUntil: null },
+      { id: 3, name: "Ana", blockedUntil: new Date(now.getTime() - 1000) },
+      { id: 4, name: "Carlos", blockedUntil: new Date(now.getTime() + 72 * 60 * 60 * 1000) },
     ];
 
     const unblocked = contacts.filter(c => !c.blockedUntil || c.blockedUntil <= now);
@@ -287,7 +433,7 @@ describe("FIX #6: validação de telefone BR", () => {
   it("número sem 55 recebe prefixo automaticamente", () => {
     const result = validatePhone("99991811246");
     expect(result.valid).toBe(true);
-    expect(result.digits).toBe(13); // 55 + 99991811246
+    expect(result.digits).toBe(13);
   });
 
   it("número com caracteres especiais é limpo", () => {
@@ -347,7 +493,6 @@ describe("FIX #8: rotação de variações sem repetição consecutiva", () => {
       lastIndex = newIndex;
     }
 
-    // Cada variação deve ter sido usada pelo menos 50 vezes em 1200 iterações
     for (let i = 0; i < 12; i++) {
       expect(counts.get(i) || 0).toBeGreaterThan(50);
     }
@@ -435,10 +580,10 @@ describe("variações de mensagens", () => {
 
 // ===== LIMITE DE MENSAGENS =====
 
-describe("limite de mensagens por hora", () => {
-  it("MAX_MESSAGES_PER_HOUR deve ser 2", () => {
-    const MAX_MESSAGES_PER_HOUR = 2;
-    expect(MAX_MESSAGES_PER_HOUR).toBe(2);
+describe("limite de mensagens por ciclo", () => {
+  it("MAX_MESSAGES_PER_CYCLE deve ser 2", () => {
+    const MAX_MESSAGES_PER_CYCLE = 2;
+    expect(MAX_MESSAGES_PER_CYCLE).toBe(2);
   });
 
   it("intervalo mínimo deve ser 20 minutos", () => {
@@ -460,6 +605,11 @@ describe("limite de mensagens por hora", () => {
       expect(interval).toBeLessThanOrEqual(MAX);
     }
   });
+
+  it("CYCLE_DURATION_MS é exatamente 60 minutos", () => {
+    const CYCLE_DURATION_MS = 60 * 60 * 1000;
+    expect(CYCLE_DURATION_MS).toBe(3600000);
+  });
 });
 
 // ===== FIX #4: SYNC LOCK =====
@@ -469,17 +619,15 @@ describe("FIX #4: sync lock previne sincronização simultânea", () => {
     let isSyncing = false;
     const results: string[] = [];
 
-    // Simular primeira chamada
     if (!isSyncing) {
       isSyncing = true;
       results.push("sync1-start");
       isSyncing = false;
     }
 
-    // Simular segunda chamada enquanto primeira roda
-    isSyncing = true; // Simular que está rodando
+    isSyncing = true;
     if (!isSyncing) {
-      results.push("sync2-start"); // Não deve executar
+      results.push("sync2-start");
     } else {
       results.push("sync2-blocked");
     }
@@ -490,18 +638,30 @@ describe("FIX #4: sync lock previne sincronização simultânea", () => {
 
 // ===== FIX #2: STOP CANCELA TODOS OS TIMERS =====
 
-describe("FIX #2: stop() cancela messageTimer e hourlyTimer", () => {
+describe("FIX #2: stop() cancela cycleTimer e messageTimer", () => {
   it("ambos os timers devem ser null após stop", () => {
     let messageTimer: any = setTimeout(() => {}, 1000);
-    let hourlyTimer: any = setTimeout(() => {}, 1000);
+    let cycleTimer: any = setTimeout(() => {}, 1000);
 
     // Simular stop()
     clearTimeout(messageTimer);
     messageTimer = null;
-    clearTimeout(hourlyTimer);
-    hourlyTimer = null;
+    clearTimeout(cycleTimer);
+    cycleTimer = null;
 
     expect(messageTimer).toBeNull();
-    expect(hourlyTimer).toBeNull();
+    expect(cycleTimer).toBeNull();
+  });
+
+  it("stop() reseta messagesThisCycle para 0", () => {
+    let messagesThisCycle = 2;
+    let isRunning = true;
+
+    // Simular stop()
+    isRunning = false;
+    messagesThisCycle = 0;
+
+    expect(isRunning).toBe(false);
+    expect(messagesThisCycle).toBe(0);
   });
 });

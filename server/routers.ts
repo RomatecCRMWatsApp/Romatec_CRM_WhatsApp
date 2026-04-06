@@ -600,6 +600,7 @@ Retorne as 4 variações separadas por |||` },
           sentCount: 0,
           failedCount: 0,
           status: "paused", // PAUSADO - usuário precisa clicar Iniciar
+          startDate: null, // LIMPAR horário antigo - será setado quando clicar Iniciar
           ...(newVariations.length > 0 ? { messageVariations: newVariations } : {}),
         }).where(eq(campaigns.id, camp.id));
       }

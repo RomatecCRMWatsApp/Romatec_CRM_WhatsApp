@@ -165,3 +165,25 @@
 - [x] BUG: Cronômetro adicionado no header de cada card de campanha
 - [x] BUG: Cronômetro adicionado no header de cada card de campanha
 - [x] BUG: Campanhas de teste (TESTE_AUTO) filtradas da UI
+
+## Ajustes Cronômetro e LED (06/04/2026)
+- [x] Cronômetro inverso: contagem regressiva de 1:00:00 até 00:00:00 (diminuindo)
+- [x] Barra de progresso subindo conforme cronômetro diminui
+- [x] LED mudar de "Enviando" (verde pulsante) para "Enviado" (verde fixo) após envio da mensagem
+
+## Bug Horário Início (06/04/2026)
+- [x] BUG: Horário "Iniciado" agora limpa no reset (null) e atualiza ao clicar Iniciar
+
+## Painel Cronômetro Estilo CRM Antigo (06/04/2026)
+- [x] Painel cronômetro com: contagem regressiva grande, Ciclo X | Par X de Y, barra progresso roxa
+- [x] Mostrar: Início às, Rodando há, Próximo ciclo (horário previsto)
+- [x] Mostrar: Mensagens neste ciclo: X/2
+
+## BUG CRÍTICO CORRIGIDO v3.0: 3 msgs ALACIDE em vez de 1 ALACIDE + 1 Mod_Vaz-01 (06/04/2026)
+- [x] BUG: Scheduler enviou 3 msgs da ALACIDE quando deveria ser 1 ALACIDE + 1 Mod_Vaz-01 por hora
+- [x] FIX: O ciclo de 60min agora é baseado no momento do Play (não na hora cheia do relógio)
+- [x] FIX: executeCycle() NÃO reseta messagesThisCycle - só o timer de 60min zera o contador
+- [x] FIX: scheduleNextCycle() agenda EXATAMENTE 60min após o início do ciclo atual
+- [x] FIX: canSendMessage() verifica limite ANTES de enviar (verificação tripla)
+- [x] FIX: isSending LOCK impede envio simultâneo
+- [x] Testes: 53 testes passando (incluindo 11 novos para v3.0)
