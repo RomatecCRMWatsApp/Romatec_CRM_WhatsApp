@@ -227,3 +227,8 @@
 - [x] Limitar msgs/hora pelos contatos pendentes (proteção anti-duplicação)
 - [x] Nunca enviar 2 msgs para o mesmo contato
 - [x] Atualizar UI para mostrar contatos dinâmicos (mostra mph ×12 = X contatos)
+
+## Relatório WhatsApp a cada fim de ciclo (06/04/2026)
+- [x] Enviar relatório via Z-API para (99) 99181-1246 a cada fim de ciclo
+- [x] Relatório com: campanha, msgs enviadas, falhas, contatos pendentes, próximo ciclo
+- [x] Formato texto limpo para WhatsApp

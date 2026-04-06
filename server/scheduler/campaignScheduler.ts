@@ -759,6 +759,81 @@ class CampaignScheduler {
   }
 
   /**
+   * Envia relatório do ciclo via WhatsApp para o dono
+   */
+  private async sendCycleReport() {
+    try {
+      const OWNER_PHONE = '5599991811246'; // José Romário
+      const now = new Date();
+      const hora = now.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit', timeZone: 'America/Sao_Paulo' });
+      const data = now.toLocaleDateString('pt-BR', { timeZone: 'America/Sao_Paulo' });
+
+      const db = await getDb();
+      if (!db) return;
+
+      // Buscar stats de todas as campanhas
+      const allCampaigns = await db.select().from(campaigns);
+      let totalSent = 0;
+      let totalFailed = 0;
+      let totalPending = 0;
+      let totalContacts = 0;
+      const campStats: string[] = [];
+
+      for (const camp of allCampaigns) {
+        const ccList = await db.select().from(campaignContacts).where(eq(campaignContacts.campaignId, camp.id));
+        const sent = ccList.filter(c => c.status === 'sent').length;
+        const pending = ccList.filter(c => c.status === 'pending').length;
+        const failed = ccList.filter(c => c.status === 'failed').length;
+        totalSent += sent;
+        totalFailed += failed;
+        totalPending += pending;
+        totalContacts += ccList.length;
+
+        campStats.push(`  • ${camp.name}: ${sent}/${ccList.length} enviadas | ${pending} pendentes | ${failed} falhas`);
+      }
+
+      const cycleNum = this.state.cycleNumber + 1;
+      const parAtual = this.state.currentCampaignNames.join(' + ');
+      const msgsNoCiclo = this.state.messagesThisCycle;
+      const maxMsgs = this.state.maxMessagesThisCycle;
+      const taxaSucesso = totalContacts > 0 ? ((totalSent / totalContacts) * 100).toFixed(1) : '0.0';
+
+      // Calcular horário do próximo ciclo
+      const nextCycleTime = new Date(Date.now() + 60000); // próximo ciclo começa em ~1 min
+      const nextCycleHora = nextCycleTime.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit', timeZone: 'America/Sao_Paulo' });
+
+      const report = [
+        `📊 *RELATÓRIO ROMATEC CRM*`,
+        `📅 ${data} às ${hora}`,
+        ``,
+        `🔄 *Ciclo ${cycleNum} finalizado*`,
+        `👥 Par: ${parAtual}`,
+        `📨 Msgs neste ciclo: ${msgsNoCiclo}/${maxMsgs}`,
+        ``,
+        `📊 *Resumo Geral:*`,
+        `  ✅ Enviadas: ${totalSent}/${totalContacts}`,
+        `  ⏳ Pendentes: ${totalPending}`,
+        `  ❌ Falhas: ${totalFailed}`,
+        `  🎯 Taxa: ${taxaSucesso}%`,
+        ``,
+        `🏠 *Por Campanha:*`,
+        ...campStats,
+        ``,
+        `⏭️ *Próximo ciclo:* ${nextCycleHora}`,
+      ].join('\n');
+
+      const sent = await this.sendViaZAPI(OWNER_PHONE, report);
+      if (sent) {
+        console.log(`📊 Relatório do ciclo ${cycleNum} enviado para ${OWNER_PHONE}`);
+      } else {
+        console.error(`❌ Falha ao enviar relatório do ciclo ${cycleNum} para ${OWNER_PHONE}`);
+      }
+    } catch (error) {
+      console.error('❌ Erro ao enviar relatório:', error);
+    }
+  }
+
+  /**
    * Agenda próximo ciclo em EXATAMENTE 60 minutos
    */
   private scheduleNextCycle() {
@@ -771,6 +846,9 @@ class CampaignScheduler {
 
     this.cycleTimer = setTimeout(async () => {
       if (!this.state.isRunning) return;
+
+      // 📊 Enviar relatório do ciclo que acabou ANTES de começar o próximo
+      await this.sendCycleReport();
 
       // Cancelar timers de slots do ciclo anterior
       for (const timer of this.slotTimers) {
