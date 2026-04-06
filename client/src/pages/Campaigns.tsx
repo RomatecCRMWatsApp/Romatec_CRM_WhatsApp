@@ -349,21 +349,49 @@ export default function Campaigns() {
               )}
 
               <Button
-                onClick={handleReset}
-                disabled={isRunning}
-                variant="outline"
-                className="h-12 font-semibold border-2"
+                onClick={() => {
+                  if (isRunning) {
+                    toast.error("Pare o scheduler antes de redefinir!");
+                    return;
+                  }
+                  if (confirm("Tem certeza? Isso vai limpar TUDO e começar do zero com 12 novos contatos por campanha.")) {
+                    resetScheduler.mutate();
+                  }
+                }}
+                className={`h-12 font-semibold border-2 ${
+                  isRunning
+                    ? "bg-gray-200 text-gray-400 border-gray-300 cursor-not-allowed"
+                    : "bg-gradient-to-r from-orange-500 to-amber-500 hover:from-orange-600 hover:to-amber-600 text-white border-orange-400"
+                }`}
               >
-                <span className="flex items-center gap-2"><RotateCcw className="h-4 w-4" /><span>Redefinir</span></span>
+                {resetScheduler.isPending ? (
+                  <span className="flex items-center gap-2"><Loader2 className="h-4 w-4 animate-spin" /><span>Resetando...</span></span>
+                ) : (
+                  <span className="flex items-center gap-2"><RotateCcw className="h-4 w-4" /><span>Redefinir</span></span>
+                )}
               </Button>
 
               <Button
-                onClick={() => stopScheduler.mutate()}
-                disabled={!isRunning}
-                variant="outline"
-                className="h-12 font-semibold border-2 border-red-200 text-red-600 hover:bg-red-50"
+                onClick={() => {
+                  if (!isRunning) {
+                    toast.error("O scheduler já está parado!");
+                    return;
+                  }
+                  if (confirm("Tem certeza que deseja PARAR TUDO? As campanhas serão pausadas.")) {
+                    stopScheduler.mutate();
+                  }
+                }}
+                className={`h-12 font-semibold border-2 ${
+                  !isRunning
+                    ? "bg-gray-200 text-gray-400 border-gray-300 cursor-not-allowed"
+                    : "bg-gradient-to-r from-red-600 to-red-700 hover:from-red-700 hover:to-red-800 text-white border-red-500"
+                }`}
               >
-                <span className="flex items-center gap-2"><Square className="h-4 w-4" /><span>Parar Tudo</span></span>
+                {stopScheduler.isPending ? (
+                  <span className="flex items-center gap-2"><Loader2 className="h-4 w-4 animate-spin" /><span>Parando...</span></span>
+                ) : (
+                  <span className="flex items-center gap-2"><Square className="h-4 w-4" /><span>Parar Tudo</span></span>
+                )}
               </Button>
             </div>
           </CardContent>

@@ -156,3 +156,6 @@
 - [x] BUG 4: Mod_Vaz-01 não enviou nenhuma msg no mesmo ciclo que ALACIDE - ambas do Par 1 deveriam enviar
 - [x] BUG 5: Horário de início mostra 18:05:51 mesmo após reiniciar - deveria atualizar para hora real
 - [x] BUG 6: Contagem inconsistente - WhatsApp mostra 3 msgs enviadas mas dashboard mostra 2
+
+## Bugs Botões (06/04/2026)
+- [x] BUG: Botões "Redefinir" e "Parar Tudo" sem cores visíveis e não acionam
