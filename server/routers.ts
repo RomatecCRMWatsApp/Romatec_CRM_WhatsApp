@@ -462,8 +462,24 @@ Retorne as 4 variações separadas por |||` },
   scheduler: router({
     /**
      * Iniciar scheduler (loop infinito 24/7)
+     * SEGURANÇA: Para qualquer instância anterior antes de iniciar
      */
     start: protectedProcedure.mutation(async () => {
+      // SEGURANÇA: Parar qualquer instância anterior para evitar timers duplicados
+      campaignScheduler.stop();
+      await new Promise(resolve => setTimeout(resolve, 500));
+
+      // Garantir que campanhas estão como "running" antes de iniciar
+      const db = await getDb();
+      if (db) {
+        const allCampaigns = await db.select().from(campaigns);
+        for (const camp of allCampaigns) {
+          if (camp.status === "paused") {
+            await db.update(campaigns).set({ status: "running" }).where(eq(campaigns.id, camp.id));
+          }
+        }
+      }
+
       await campaignScheduler.start();
       return { success: true, message: "Scheduler iniciado - 2 mensagens por hora, loop infinito" };
     }),
@@ -511,38 +527,102 @@ Retorne as 4 variações separadas por |||` },
     }),
 
     /**
-     * Resetar campanhas - limpa tudo e recria com novos contatos
+     * Resetar campanhas - LIMPA TUDO e começa do ZERO com 12 NOVOS contatos
+     * 
+     * Fluxo completo:
+     * 1. PARAR scheduler (cancelar TODOS os timers)
+     * 2. Aguardar 2s para garantir que nenhum envio está em andamento
+     * 3. LIMPAR: campaignContacts, messages, contactCampaignHistory
+     * 4. DESBLOQUEAR todos os contatos
+     * 5. REGENERAR variações de mensagem (com novos textos profissionais)
+     * 6. REDESIGNAR 12 novos contatos aleatórios para cada campanha
+     * 7. Status = "paused" (usuário precisa clicar Iniciar)
      */
     reset: protectedProcedure.mutation(async () => {
-      // Parar scheduler se estiver rodando
+      console.log("\n\n⚠️ ===== RESET COMPLETO INICIADO =====");
+
+      // PASSO 1: PARAR scheduler completamente
       campaignScheduler.stop();
+      console.log("✅ Scheduler parado");
+
+      // PASSO 2: Aguardar para garantir que nenhum envio está em andamento
+      await new Promise(resolve => setTimeout(resolve, 2000));
+      console.log("✅ Aguardou 2s - nenhum envio em andamento");
 
       const db = await getDb();
       if (!db) throw new Error("Database not available");
 
-      // Limpar contatos de campanhas e mensagens
+      // PASSO 3: LIMPAR TUDO - eliminar o que foi feito
       await db.delete(campaignContacts);
       await db.delete(messages);
       await db.delete(contactCampaignHistory);
+      console.log("✅ Contatos, mensagens e histórico DELETADOS");
 
-      // Resetar contadores das campanhas
+      // PASSO 4: DESBLOQUEAR todos os contatos ANTES de redesignar
+      await db.update(contacts).set({ blockedUntil: null });
+      console.log("✅ Todos os contatos desbloqueados");
+
+      // PASSO 5: Buscar campanhas e imóveis para REGENERAR variações
       const allCampaigns = await db.select().from(campaigns);
+      const allProperties = await db.select().from(properties);
+
       for (const camp of allCampaigns) {
+        // Buscar imóvel vinculado para regenerar variações
+        const prop = allProperties.find(p => p.id === camp.propertyId);
+        let newVariations: string[] = [];
+
+        if (prop) {
+          // Regenerar variações com textos profissionais atualizados
+          const priceFormatted = Number(prop.price).toLocaleString("pt-BR");
+          const slug = prop.publicSlug || prop.denomination.toLowerCase().replace(/[^a-z0-9]+/g, '-');
+          const siteUrl = `https://romatecwa-2uygcczr.manus.space/imovel/${slug}`;
+
+          newVariations = [
+            `🏠 {{NOME}}, *${prop.denomination}* - Restam poucas unidades!\n\nValor: *R$ ${priceFormatted}*\nLocal: ${prop.address}\n\n📸 Veja fotos, planta e localização:\n${siteUrl}\n\n⚡ Condições especiais para os primeiros interessados. Posso te passar mais detalhes?`,
+            `{{NOME}}, você já conhece o *${prop.denomination}*? 🔑\n\nUm dos imóveis mais procurados da região de ${prop.address}.\n\n💰 A partir de *R$ ${priceFormatted}*\n\n👉 Confira tudo aqui: ${siteUrl}\n\nPosso reservar uma visita exclusiva pra você?`,
+            `📊 {{NOME}}, o *${prop.denomination}* já recebeu mais de 50 consultas este mês!\n\nMotivo? Localização privilegiada em ${prop.address} + preço competitivo.\n\n🏷️ *R$ ${priceFormatted}*\n\n🔗 Veja todos os detalhes: ${siteUrl}\n\nNão perca essa oportunidade. Me chama!`,
+            `💡 {{NOME}}, sabia que imóveis nessa região valorizaram mais de 30% nos últimos anos?\n\n*${prop.denomination}* - ${prop.address}\nValor atual: *R$ ${priceFormatted}*\n\n📲 Fotos e detalhes completos: ${siteUrl}\n\nQuero te mostrar por que esse é o melhor momento pra investir. Posso te ligar?`,
+            `🔥 {{NOME}}, *OPORTUNIDADE REAL*\n\n*${prop.denomination}*\n📍 ${prop.address}\n💰 *R$ ${priceFormatted}*\n\n✅ Financiamento facilitado\n✅ Documentação em dia\n✅ Pronto pra morar/construir\n\n👉 Veja agora: ${siteUrl}\n\nResponde "SIM" que te envio todas as condições!`,
+            `⏰ {{NOME}}, última chance!\n\n*${prop.denomination}* em ${prop.address} está com condições especiais que vencem em breve.\n\n🏷️ *R$ ${priceFormatted}* (parcelas que cabem no bolso)\n\n📸 Veja fotos e planta: ${siteUrl}\n\nJá temos interessados. Garanta o seu antes que acabe!`,
+            `🏡 {{NOME}}, imagine sua família no lugar perfeito...\n\n*${prop.denomination}* - ${prop.address}\nValor: *R$ ${priceFormatted}*\n\nLocalização estratégica, segurança e qualidade de vida.\n\n🔗 Conheça cada detalhe: ${siteUrl}\n\nVamos conversar sobre como realizar esse sonho?`,
+            `🆕 {{NOME}}, *LANÇAMENTO EXCLUSIVO*\n\n*${prop.denomination}*\n📍 ${prop.address}\n💰 *R$ ${priceFormatted}*\n\nPoucos sabem dessa oportunidade. Estou compartilhando com um grupo seleto de clientes.\n\n📲 Detalhes completos: ${siteUrl}\n\nTem interesse? Me responde que te explico tudo!`,
+            `✨ {{NOME}}, procurando imóvel com ótimo custo-benefício?\n\n*${prop.denomination}* em ${prop.address}\n\n🏷️ *R$ ${priceFormatted}*\n📋 Documentação 100% regularizada\n🏦 Aceita financiamento\n\n👉 Veja fotos e localização: ${siteUrl}\n\nPosso simular as parcelas pra você. É só me chamar!`,
+            `🤔 {{NOME}}, você está buscando imóvel na região de ${prop.address}?\n\nTenho uma opção que pode ser exatamente o que procura:\n\n*${prop.denomination}* - *R$ ${priceFormatted}*\n\n📸 Veja tudo aqui: ${siteUrl}\n\nMe conta o que você precisa que te ajudo a encontrar o imóvel ideal!`,
+            `📌 {{NOME}}, comparou preços na região?\n\n*${prop.denomination}* está abaixo da média do mercado:\n💰 *R$ ${priceFormatted}*\n📍 ${prop.address}\n\nE o melhor: condições facilitadas de pagamento.\n\n🔗 Confira: ${siteUrl}\n\nEssa é a hora certa. Vamos conversar?`,
+            `🚨 {{NOME}}, *ATENÇÃO*\n\n*${prop.denomination}* - ${prop.address}\n\nEste imóvel está gerando muito interesse e pode sair do mercado a qualquer momento.\n\n🏷️ *R$ ${priceFormatted}*\n\n📲 Veja antes que acabe: ${siteUrl}\n\nGaranta sua visita. Me chama agora!`,
+          ];
+        }
+
         await db.update(campaigns).set({
           sentCount: 0,
           failedCount: 0,
-          status: "running",
+          status: "paused", // PAUSADO - usuário precisa clicar Iniciar
+          ...(newVariations.length > 0 ? { messageVariations: newVariations } : {}),
         }).where(eq(campaigns.id, camp.id));
       }
+      console.log(`✅ ${allCampaigns.length} campanhas resetadas (status=paused, variações regeneradas)`);
 
-      // Redesignar 12 contatos aleatórios para cada campanha
+      // PASSO 6: REDESIGNAR 12 novos contatos ALEATÓRIOS para cada campanha
+      // Pegar TODOS os contatos ativos (já desbloqueados no passo 4)
       const allContacts = await db.select().from(contacts).where(eq(contacts.status, "active"));
       const shuffled = [...allContacts].sort(() => Math.random() - 0.5);
 
+      // Garantir que cada campanha recebe 12 contatos DIFERENTES
+      const usedContactIds = new Set<number>();
       for (let i = 0; i < allCampaigns.length; i++) {
-        const startIdx = i * 12;
-        const campaignContactsList = shuffled.slice(startIdx, startIdx + 12);
-        for (const contact of campaignContactsList) {
+        // Pegar contatos ainda não usados
+        const available = shuffled.filter(c => !usedContactIds.has(c.id));
+        const selected = available.slice(0, 12);
+
+        // Se não tem 12 disponíveis, pegar do início (fallback)
+        if (selected.length < 12) {
+          const remaining = 12 - selected.length;
+          const fallback = shuffled.filter(c => !selected.find(s => s.id === c.id)).slice(0, remaining);
+          selected.push(...fallback);
+        }
+
+        for (const contact of selected) {
+          usedContactIds.add(contact.id);
           await db.insert(campaignContacts).values({
             campaignId: allCampaigns[i].id,
             contactId: contact.id,
@@ -550,12 +630,14 @@ Retorne as 4 variações separadas por |||` },
             status: "pending",
           });
         }
+        console.log(`📱 Campanha ${allCampaigns[i].name}: ${selected.length} NOVOS contatos designados`);
       }
 
-      // Desbloquear todos os contatos
-      await db.update(contacts).set({ blockedUntil: null });
+      console.log("✅ ===== RESET COMPLETO FINALIZADO =====");
+      console.log(`📊 ${allCampaigns.length} campanhas | ${usedContactIds.size} contatos únicos designados`);
+      console.log("⚠️ Status: PAUSADO - Clique em Iniciar para começar");
 
-      return { success: true, message: `Campanhas resetadas com novos contatos` };
+      return { success: true, message: `Campanhas resetadas! ${allCampaigns.length} campanhas com novos contatos. Clique em Iniciar.` };
     }),
 
     /**

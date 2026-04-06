@@ -128,3 +128,23 @@
 - [x] BUG MÉDIO 6: Validação de telefone BR deve ser mínimo 13 dígitos (55+DDD+9 dígitos)
 - [x] MELHORIA 7: Log de aviso quando contatos disponíveis < 48 (4 campanhas × 12)
 - [x] MELHORIA 8: getMessageVariation() garantir rotação sem repetição consecutiva
+
+## Bugs Reportados pelo José (06/04/2026 - Sessão 2)
+- [x] BUG: Reset enviou 4+ mensagens em vez de 2/hora - scheduler não para completamente antes de resetar
+- [x] BUG: Reset não troca contatos - precisa eliminar tudo e começar do zero com 12 NOVOS contatos
+- [x] BUG: Mensagens antigas com "Boa tarde!" ainda no banco - reset deve atualizar variações de mensagem
+- [x] BUG: Reset + Start causa envio duplicado - múltiplos timers ativos simultaneamente
+- [x] CORREÇÃO: Reset deve: parar scheduler → cancelar TODOS timers → limpar msgs/contatos → gerar novas variações → redesignar 12 novos contatos → NÃO reiniciar automaticamente
+
+## Bugs Reportados pelo José (06/04/2026 - Sessão 2)
+- [x] BUG GRAVE: Reset enviou 4 msgs + reset + mais 4 msgs = 8 total (deveria ser max 2/hora)
+- [x] BUG: Reset não mata timers antigos - ciclo anterior continua rodando em paralelo
+- [x] BUG: Reset não troca contatos por 12 NOVOS - reutiliza os mesmos
+- [x] BUG: Variações antigas ("Boa tarde!") permanecem no banco após reset
+- [x] CORREÇÃO: Reset deve parar scheduler completamente, cancelar TODOS timers, limpar tudo, gerar novas variações, pegar 12 novos contatos, e NÃO reiniciar automaticamente
+
+## Correção do Número WhatsApp (06/04/2026)
+- [x] BUG: Número do WhatsApp no link do site está errado (91811-2460 em vez de 99181-1246)
+
+## Especialistas na Página Pública (06/04/2026)
+- [x] Adicionar 2 especialistas na página pública: José Romário (99) 99181-1246 e Daniele Cavalcante (99) 99206-2871

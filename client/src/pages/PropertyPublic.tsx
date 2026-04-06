@@ -50,8 +50,16 @@ export default function PropertyPublic() {
   const whatsappMsg = encodeURIComponent(
     `Olá! Vi o imóvel *${property.denomination}* no site e gostaria de mais informações.\n📍 ${property.address}${property.city ? `, ${property.city}` : ""}\n💰 R$ ${formatCurrency(property.price)}`
   );
-  const whatsappLink = `https://wa.me/5599918112460?text=${whatsappMsg}`;
-  const phoneLink = `tel:+5599918112460`;
+
+  // Especialistas da Romatec
+  const especialistas = [
+    { nome: "José Romário", telefone: "5599991811246", display: "(99) 9 9181-1246" },
+    { nome: "Daniele Cavalcante", telefone: "5599992062871", display: "(99) 9 9206-2871" },
+  ];
+  const [selectedEsp, setSelectedEsp] = useState(0);
+  const esp = especialistas[selectedEsp];
+  const whatsappLink = `https://wa.me/${esp.telefone}?text=${whatsappMsg}`;
+  const phoneLink = `tel:+${esp.telefone}`;
 
   const prevImage = () => setImageIndex(i => (i - 1 + imageCount) % imageCount);
   const nextImage = () => setImageIndex(i => (i + 1) % imageCount);
@@ -340,32 +348,68 @@ export default function PropertyPublic() {
             </div>
           )}
 
+          {/* Especialistas */}
+          <div className="glass-card p-6 mb-6">
+            <h3 className="text-lg font-bold text-foreground mb-4 text-center">Fale com um Especialista</h3>
+            <div className="grid grid-cols-2 gap-3">
+              {especialistas.map((e, idx) => (
+                <button
+                  key={idx}
+                  onClick={() => setSelectedEsp(idx)}
+                  className={`p-4 rounded-xl border-2 transition-all text-left ${
+                    selectedEsp === idx
+                      ? "border-emerald bg-emerald/10"
+                      : "border-border/30 bg-secondary/20 hover:border-emerald/40"
+                  }`}
+                >
+                  <div className="flex items-center gap-3">
+                    <div className={`w-10 h-10 rounded-full flex items-center justify-center text-sm font-bold ${
+                      selectedEsp === idx ? "bg-emerald text-white" : "bg-secondary text-muted-foreground"
+                    }`}>
+                      {e.nome.split(" ")[0][0]}{e.nome.split(" ").slice(-1)[0][0]}
+                    </div>
+                    <div>
+                      <p className={`text-sm font-semibold ${selectedEsp === idx ? "text-emerald" : "text-foreground"}`}>{e.nome}</p>
+                      <p className="text-xs text-muted-foreground">{e.display}</p>
+                    </div>
+                  </div>
+                  {selectedEsp === idx && (
+                    <p className="text-xs text-emerald mt-2 font-medium">✓ Selecionado</p>
+                  )}
+                </button>
+              ))}
+            </div>
+          </div>
+
           {/* Romatec Info */}
           <div className="glass-card p-6 mb-6 text-center">
             <h3 className="text-lg font-bold text-foreground mb-1">Romatec Consultoria Imobiliária</h3>
             <p className="text-sm text-muted-foreground mb-1">Rua São Raimundo, 10 - Centro, Açailândia - MA</p>
-            <p className="text-sm text-muted-foreground">(99) 9181-1246</p>
+            <p className="text-sm text-muted-foreground">José Romário: (99) 9 9181-1246 | Daniele: (99) 9 9206-2871</p>
           </div>
         </div>
       </div>
 
       {/* Fixed Bottom CTA */}
       <div className="fixed bottom-0 inset-x-0 z-50 p-4 bg-background/80 backdrop-blur-xl border-t border-border/30">
-        <div className="max-w-3xl mx-auto flex gap-3">
-          <a
-            href={whatsappLink}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="flex-1 btn-premium py-3.5 rounded-xl flex items-center justify-center gap-2 text-base no-underline"
-          >
-            <MessageCircle className="h-5 w-5" /> WhatsApp
-          </a>
-          <a
-            href={phoneLink}
-            className="flex-1 btn-gold py-3.5 rounded-xl flex items-center justify-center gap-2 text-base no-underline"
-          >
-            <Phone className="h-5 w-5" /> Ligar
-          </a>
+        <div className="max-w-3xl mx-auto">
+          <p className="text-xs text-center text-muted-foreground mb-2">Falar com <span className="font-semibold text-emerald">{esp.nome}</span></p>
+          <div className="flex gap-3">
+            <a
+              href={whatsappLink}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="flex-1 btn-premium py-3.5 rounded-xl flex items-center justify-center gap-2 text-base no-underline"
+            >
+              <MessageCircle className="h-5 w-5" /> WhatsApp
+            </a>
+            <a
+              href={phoneLink}
+              className="flex-1 btn-gold py-3.5 rounded-xl flex items-center justify-center gap-2 text-base no-underline"
+            >
+              <Phone className="h-5 w-5" /> Ligar
+            </a>
+          </div>
         </div>
       </div>
     </div>

@@ -74,9 +74,11 @@ class CampaignScheduler {
    * Inicia o scheduler
    */
   async start() {
+    // Se já está rodando, parar primeiro para evitar timers duplicados
     if (this.state.isRunning) {
-      console.log("⚠️ Scheduler já está rodando");
-      return;
+      console.log("⚠️ Scheduler já está rodando - parando antes de reiniciar");
+      this.stop();
+      await new Promise(resolve => setTimeout(resolve, 500));
     }
 
     console.log("🚀 Iniciando sistema dinâmico de campanhas...");
@@ -109,11 +111,14 @@ class CampaignScheduler {
    * FIX #2: Cancela AMBOS os timers (hourlyTimer E messageTimer)
    */
   stop() {
+    console.log("⏹️ Parando scheduler...");
+
+    // 1. Marcar como não rodando IMEDIATAMENTE
     this.state.isRunning = false;
     this.isSending = false;
     this.isSyncing = false;
 
-    // FIX #2: Cancelar timer da mensagem 2 explicitamente
+    // 2. Cancelar TODOS os timers
     if (this.messageTimer) {
       clearTimeout(this.messageTimer);
       this.messageTimer = null;
@@ -126,7 +131,13 @@ class CampaignScheduler {
       console.log("🛑 Timer do próximo ciclo cancelado");
     }
 
-    console.log("⏹️ Scheduler parado - todos os timers cancelados");
+    // 3. Resetar contadores da hora para evitar envios residuais
+    this.state.messagesThisHour = 0;
+    this.state.lastMessageSentAt = 0;
+    this.state.cycleNumber = 0;
+    this.lastVariationIndex.clear();
+
+    console.log("⏹️ Scheduler COMPLETAMENTE parado - todos os timers cancelados, estado resetado");
   }
 
   /**
