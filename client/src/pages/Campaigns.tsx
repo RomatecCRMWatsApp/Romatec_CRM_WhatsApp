@@ -87,11 +87,13 @@ export default function Campaigns() {
     onError: (error) => toast.error(`Erro: ${error.message}`),
   });
 
+  const utils = trpc.useUtils();
   const resetScheduler = trpc.scheduler.reset.useMutation({
     onSuccess: () => {
       toast.success("Campanhas resetadas com novos contatos! Clique em Iniciar.");
-      campaignDetails.refetch();
-      schedulerState.refetch();
+      // Invalidar cache completamente para forçar refetch limpo
+      utils.scheduler.getCampaignDetails.invalidate();
+      utils.scheduler.getState.invalidate();
     },
     onError: (error) => toast.error(`Erro: ${error.message}`),
   });
@@ -109,7 +111,8 @@ export default function Campaigns() {
   const stats = useMemo(() => schedulerState.data?.stats, [schedulerState.data?.stats]);
   const stateData = useMemo(() => schedulerState.data?.state, [schedulerState.data?.state]);
   const todayMessages = useMemo(() => schedulerState.data?.todayMessages || [], [schedulerState.data?.todayMessages]);
-  const allCampaigns = useMemo(() => campaignDetails.data || [], [campaignDetails.data]);
+  // Filtrar campanhas de teste (TESTE_AUTO) que não devem aparecer na UI
+  const allCampaigns = useMemo(() => (campaignDetails.data || []).filter((c: any) => !String(c.name || '').startsWith('TESTE_AUTO')), [campaignDetails.data]);
   const cycleNumber = useMemo(() => stats?.cycleNumber || 0, [stats?.cycleNumber]);
   const runningCampaigns = useMemo(() => allCampaigns.filter((c: any) => c.status === "running"), [allCampaigns]);
   const totalPairs = useMemo(() => Math.ceil(runningCampaigns.length / 2), [runningCampaigns.length]);
@@ -626,6 +629,7 @@ function CampaignCard({
               </CardTitle>
               <div className="flex items-center gap-2 mt-1">
                 <span className={`px-2 py-0.5 rounded-full text-xs font-semibold ${statusBadgeClass}`}>
+                  {isInCurrentPair && <span className="inline-block w-2 h-2 rounded-full bg-green-500 mr-1" />}
                   <span>{statusText}</span>
                 </span>
                 <span className="text-xs text-slate-400">
@@ -634,15 +638,29 @@ function CampaignCard({
               </div>
             </div>
           </div>
+          {/* Cronômetro de 1 hora no canto superior direito */}
           <div className="flex items-center gap-3">
-            <div className="flex items-center gap-2">
-              <span className="text-xs text-slate-500">{isActive ? "Ativo" : "Pausado"}</span>
-              <Switch
-                checked={isActive}
-                onCheckedChange={onToggleActive}
-                disabled={isRunning}
-              />
-            </div>
+            {isActive && (
+              <div className="text-right">
+                <div className="flex items-center gap-1">
+                  <span className="text-2xl">⏱</span>
+                  <span className={`text-2xl font-mono font-bold tabular-nums ${
+                    isInCurrentPair ? "text-green-600" : "text-slate-400"
+                  }`}>{formatTimer(cycleTimer)}</span>
+                </div>
+                <p className="text-xs text-slate-400">Cronômetro (1 hora)</p>
+              </div>
+            )}
+            {!isActive && (
+              <div className="flex items-center gap-2">
+                <span className="text-xs text-slate-500">Pausado</span>
+                <Switch
+                  checked={isActive}
+                  onCheckedChange={onToggleActive}
+                  disabled={isRunning}
+                />
+              </div>
+            )}
           </div>
         </div>
       </CardHeader>

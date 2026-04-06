@@ -159,3 +159,9 @@
 
 ## Bugs Botões (06/04/2026)
 - [x] BUG: Botões "Redefinir" e "Parar Tudo" sem cores visíveis e não acionam
+
+## Bug Reset Enviados (06/04/2026)
+- [x] BUG: Redefinir não zera sentCount e contatos dentro de cada campanha (fix: invalidate cache após reset)
+- [x] BUG: Cronômetro adicionado no header de cada card de campanha
+- [x] BUG: Cronômetro adicionado no header de cada card de campanha
+- [x] BUG: Campanhas de teste (TESTE_AUTO) filtradas da UI
