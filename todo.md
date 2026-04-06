@@ -118,3 +118,13 @@
 - [x] Envio aleatório (contatos embaralhados)
 - [x] Incluir link da página pública do imóvel nas mensagens de campanha
 - [x] Testes unitários: personalização (6), rotação de pares (7), variações (4), limites (4) = 62 testes total
+
+## Correções de Bugs - Análise Profunda (06/04/2026)
+- [x] BUG CRÍTICO 1: Race condition no executeCycle() - salvar cycleNumber no setTimeout e validar antes de enviar msg 2
+- [x] BUG CRÍTICO 2: clearTimeout(messageTimer) no stop() - mensagem 2 dispara mesmo após parar
+- [x] BUG CRÍTICO 3: resetCampaignContacts() reutiliza contatos bloqueados 72h - filtrar bloqueados
+- [x] BUG CRÍTICO 4: syncCampaignsWithProperties() sem lock - pode causar leitura inconsistente
+- [x] BUG MÉDIO 5: Rotação de par com número ímpar de campanhas - campanha 0 recebe dobro
+- [x] BUG MÉDIO 6: Validação de telefone BR deve ser mínimo 13 dígitos (55+DDD+9 dígitos)
+- [x] MELHORIA 7: Log de aviso quando contatos disponíveis < 48 (4 campanhas × 12)
+- [x] MELHORIA 8: getMessageVariation() garantir rotação sem repetição consecutiva

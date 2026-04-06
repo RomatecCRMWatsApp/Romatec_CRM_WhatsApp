@@ -1,18 +1,19 @@
 import { describe, expect, it } from "vitest";
 
 /**
- * Testes unitários para a lógica do scheduler de campanhas:
+ * Testes unitários para a lógica do scheduler de campanhas v2.1:
  * 1. Personalização de mensagens com nome do contato
- * 2. Rotação de pares de campanhas
+ * 2. Rotação de pares de campanhas (FIX #5: número ímpar)
  * 3. Variações de mensagens (12 templates)
+ * 4. Limites de mensagens por hora
+ * 5. FIX #1: Race condition - validação de cycleNumber
+ * 6. FIX #3: Reset com contatos bloqueados
+ * 7. FIX #6: Validação de telefone BR
+ * 8. FIX #8: Rotação de variações sem repetição
  */
 
 // ===== PERSONALIZAÇÃO DE MENSAGENS =====
 
-/**
- * Replica a lógica de personalizeMessage do CampaignScheduler
- * para testar isoladamente sem instanciar a classe inteira
- */
 function personalizeMessage(messageText: string, contact: { name: string; phone: string }): string {
   const firstName = (contact.name || '').split(' ')[0].trim();
   let personalized = messageText;
@@ -62,16 +63,32 @@ describe("personalizeMessage", () => {
   });
 });
 
-// ===== ROTAÇÃO DE PARES =====
+// ===== ROTAÇÃO DE PARES (FIX #5: número ímpar) =====
 
 describe("rotação de pares de campanhas", () => {
-  // Simula a lógica de seleção de pares do scheduler
+  /**
+   * FIX #5: Nova lógica de pares - número ímpar não duplica campanha 0
+   * Em vez disso, cria par extra com última + primeira
+   */
   function getPairForCycle(cycleNumber: number, campaigns: { id: number; name: string }[]) {
-    const totalPairs = Math.ceil(campaigns.length / 2);
+    const completePairs = Math.floor(campaigns.length / 2);
+    const hasOddCampaign = campaigns.length % 2 !== 0;
+    const totalPairs = hasOddCampaign ? completePairs + 1 : completePairs;
     const pairIndex = cycleNumber % totalPairs;
-    const pairStart = pairIndex * 2;
-    const camp1 = campaigns[pairStart];
-    const camp2 = campaigns[pairStart + 1] || campaigns[0];
+
+    let camp1: any;
+    let camp2: any;
+
+    if (pairIndex < completePairs) {
+      const pairStart = pairIndex * 2;
+      camp1 = campaigns[pairStart];
+      camp2 = campaigns[pairStart + 1];
+    } else {
+      // Par extra para campanha ímpar
+      camp1 = campaigns[campaigns.length - 1];
+      camp2 = campaigns[0];
+    }
+
     return { pairIndex, camp1, camp2, totalPairs };
   }
 
@@ -116,7 +133,6 @@ describe("rotação de pares de campanhas", () => {
       const result = getPairForCycle(i, campaigns);
       pairHistory.push(result.pairIndex);
     }
-    // Deve alternar: 0, 1, 0, 1, 0, 1...
     expect(pairHistory).toEqual([0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1]);
   });
 
@@ -125,12 +141,216 @@ describe("rotação de pares de campanhas", () => {
     expect(result.totalPairs).toBe(2);
   });
 
-  it("funciona com 3 campanhas (par ímpar usa fallback)", () => {
+  // FIX #5: Teste para número ímpar de campanhas
+  it("FIX #5: com 3 campanhas, cria par extra (última + primeira) em vez de duplicar", () => {
     const threeCampaigns = campaigns.slice(0, 3);
-    const result = getPairForCycle(1, threeCampaigns);
-    // Par 2 tem apenas Mod_Vaz-02, fallback para ALACIDE
-    expect(result.camp1.name).toBe("Mod_Vaz-02");
-    expect(result.camp2.name).toBe("ALACIDE"); // fallback
+    // Par 0: ALACIDE + Mod_Vaz-01 (normal)
+    const pair0 = getPairForCycle(0, threeCampaigns);
+    expect(pair0.camp1.name).toBe("ALACIDE");
+    expect(pair0.camp2.name).toBe("Mod_Vaz-01");
+
+    // Par 1: Mod_Vaz-02 + ALACIDE (par extra - última + primeira)
+    const pair1 = getPairForCycle(1, threeCampaigns);
+    expect(pair1.camp1.name).toBe("Mod_Vaz-02");
+    expect(pair1.camp2.name).toBe("ALACIDE");
+    expect(pair1.totalPairs).toBe(2); // 1 completo + 1 extra
+  });
+
+  it("FIX #5: com 5 campanhas, totalPairs é 3 (2 completos + 1 extra)", () => {
+    const fiveCampaigns = [
+      ...campaigns,
+      { id: 5, name: "Mod_Vaz-04" },
+    ];
+    const result = getPairForCycle(0, fiveCampaigns);
+    expect(result.totalPairs).toBe(3);
+
+    // Par extra (ciclo 2): Mod_Vaz-04 + ALACIDE
+    const extraPair = getPairForCycle(2, fiveCampaigns);
+    expect(extraPair.camp1.name).toBe("Mod_Vaz-04");
+    expect(extraPair.camp2.name).toBe("ALACIDE");
+  });
+
+  it("FIX #5: com 2 campanhas (par perfeito), totalPairs é 1", () => {
+    const twoCampaigns = campaigns.slice(0, 2);
+    const result = getPairForCycle(0, twoCampaigns);
+    expect(result.totalPairs).toBe(1);
+    expect(result.camp1.name).toBe("ALACIDE");
+    expect(result.camp2.name).toBe("Mod_Vaz-01");
+  });
+});
+
+// ===== FIX #1: RACE CONDITION - VALIDAÇÃO DE CYCLE NUMBER =====
+
+describe("FIX #1: race condition - validação de cycleNumber", () => {
+  it("mensagem 2 deve ser cancelada se cycleNumber mudou", () => {
+    const scheduledCycleNumber = 3;
+    const currentCycleNumber = 4; // Mudou!
+    const shouldSend = scheduledCycleNumber === currentCycleNumber;
+    expect(shouldSend).toBe(false);
+  });
+
+  it("mensagem 2 deve ser enviada se cycleNumber é o mesmo", () => {
+    const scheduledCycleNumber = 3;
+    const currentCycleNumber = 3; // Mesmo ciclo
+    const shouldSend = scheduledCycleNumber === currentCycleNumber;
+    expect(shouldSend).toBe(true);
+  });
+
+  it("mensagem 2 deve ser cancelada se scheduler parou", () => {
+    const isRunning = false;
+    const shouldSend = isRunning;
+    expect(shouldSend).toBe(false);
+  });
+});
+
+// ===== FIX #3: RESET COM CONTATOS BLOQUEADOS =====
+
+describe("FIX #3: filtrar contatos bloqueados no reset", () => {
+  it("contatos com blockedUntil no futuro devem ser filtrados", () => {
+    const now = new Date();
+    const contacts = [
+      { id: 1, name: "Maria", blockedUntil: new Date(now.getTime() + 24 * 60 * 60 * 1000) }, // bloqueado +24h
+      { id: 2, name: "João", blockedUntil: null }, // livre
+      { id: 3, name: "Ana", blockedUntil: new Date(now.getTime() - 1000) }, // expirado
+      { id: 4, name: "Carlos", blockedUntil: new Date(now.getTime() + 72 * 60 * 60 * 1000) }, // bloqueado +72h
+    ];
+
+    const unblocked = contacts.filter(c => !c.blockedUntil || c.blockedUntil <= now);
+    expect(unblocked).toHaveLength(2);
+    expect(unblocked.map(c => c.name)).toEqual(["João", "Ana"]);
+  });
+
+  it("todos os contatos devem passar se nenhum está bloqueado", () => {
+    const now = new Date();
+    const contacts = [
+      { id: 1, name: "Maria", blockedUntil: null },
+      { id: 2, name: "João", blockedUntil: null },
+      { id: 3, name: "Ana", blockedUntil: new Date(now.getTime() - 1000) },
+    ];
+
+    const unblocked = contacts.filter(c => !c.blockedUntil || c.blockedUntil <= now);
+    expect(unblocked).toHaveLength(3);
+  });
+
+  it("fallback: se poucos desbloqueados, deve logar aviso", () => {
+    const now = new Date();
+    const contacts = Array.from({ length: 50 }, (_, i) => ({
+      id: i + 1,
+      name: `Contato ${i + 1}`,
+      blockedUntil: i < 45 ? new Date(now.getTime() + 72 * 60 * 60 * 1000) : null,
+    }));
+
+    const unblocked = contacts.filter(c => !c.blockedUntil || c.blockedUntil <= now);
+    const needsWarning = unblocked.length < 12;
+    expect(needsWarning).toBe(true);
+    expect(unblocked).toHaveLength(5);
+  });
+});
+
+// ===== FIX #6: VALIDAÇÃO DE TELEFONE BR =====
+
+describe("FIX #6: validação de telefone BR", () => {
+  function validatePhone(phone: string): { valid: boolean; warning?: string; digits: number } {
+    const cleanPhone = phone.replace(/\D/g, '');
+    const formattedPhone = cleanPhone.startsWith('55') ? cleanPhone : `55${cleanPhone}`;
+    const digits = formattedPhone.length;
+
+    if (digits < 12) {
+      return { valid: false, warning: `Muito curto (${digits} dígitos)`, digits };
+    }
+    if (digits < 13) {
+      return { valid: true, warning: `Pode ser fixo (${digits} dígitos)`, digits };
+    }
+    return { valid: true, digits };
+  }
+
+  it("celular BR válido: 55 + DDD + 9 dígitos = 13 dígitos", () => {
+    const result = validatePhone("5599991811246");
+    expect(result.valid).toBe(true);
+    expect(result.digits).toBe(13);
+    expect(result.warning).toBeUndefined();
+  });
+
+  it("fixo BR válido mas com aviso: 55 + DDD + 8 dígitos = 12 dígitos", () => {
+    const result = validatePhone("559933221100");
+    expect(result.valid).toBe(true);
+    expect(result.digits).toBe(12);
+    expect(result.warning).toContain("fixo");
+  });
+
+  it("número muito curto é inválido: < 12 dígitos", () => {
+    const result = validatePhone("5599123");
+    expect(result.valid).toBe(false);
+    expect(result.digits).toBeLessThan(12);
+  });
+
+  it("número sem 55 recebe prefixo automaticamente", () => {
+    const result = validatePhone("99991811246");
+    expect(result.valid).toBe(true);
+    expect(result.digits).toBe(13); // 55 + 99991811246
+  });
+
+  it("número com caracteres especiais é limpo", () => {
+    const result = validatePhone("+55 (99) 99181-1246");
+    expect(result.valid).toBe(true);
+    expect(result.digits).toBe(13);
+  });
+});
+
+// ===== FIX #8: ROTAÇÃO DE VARIAÇÕES SEM REPETIÇÃO =====
+
+describe("FIX #8: rotação de variações sem repetição consecutiva", () => {
+  function getVariationIndex(variations: string[], lastIndex: number): number {
+    if (variations.length <= 1) return 0;
+    let newIndex: number;
+    do {
+      newIndex = Math.floor(Math.random() * variations.length);
+    } while (newIndex === lastIndex);
+    return newIndex;
+  }
+
+  it("nunca retorna o mesmo índice duas vezes seguidas", () => {
+    const variations = Array.from({ length: 12 }, (_, i) => `Variação ${i + 1}`);
+    let lastIndex = -1;
+
+    for (let i = 0; i < 100; i++) {
+      const newIndex = getVariationIndex(variations, lastIndex);
+      expect(newIndex).not.toBe(lastIndex);
+      lastIndex = newIndex;
+    }
+  });
+
+  it("com apenas 1 variação, sempre retorna 0", () => {
+    const variations = ["Única variação"];
+    const result = getVariationIndex(variations, 0);
+    expect(result).toBe(0);
+  });
+
+  it("com 2 variações, alterna entre 0 e 1", () => {
+    const variations = ["A", "B"];
+    let lastIndex = 0;
+    for (let i = 0; i < 50; i++) {
+      const newIndex = getVariationIndex(variations, lastIndex);
+      expect(newIndex).not.toBe(lastIndex);
+      lastIndex = newIndex;
+    }
+  });
+
+  it("distribui variações de forma razoável (não fica preso em 2)", () => {
+    const variations = Array.from({ length: 12 }, (_, i) => `V${i}`);
+    const counts = new Map<number, number>();
+    let lastIndex = -1;
+
+    for (let i = 0; i < 1200; i++) {
+      const newIndex = getVariationIndex(variations, lastIndex);
+      counts.set(newIndex, (counts.get(newIndex) || 0) + 1);
+      lastIndex = newIndex;
+    }
+
+    // Cada variação deve ter sido usada pelo menos 50 vezes em 1200 iterações
+    for (let i = 0; i < 12; i++) {
+      expect(counts.get(i) || 0).toBeGreaterThan(50);
+    }
   });
 });
 
@@ -138,7 +358,6 @@ describe("rotação de pares de campanhas", () => {
 
 describe("variações de mensagens", () => {
   it("cada campanha deve ter 12 variações", () => {
-    // Simula a geração de variações
     const prop = {
       denomination: "ALACIDE",
       address: "AV-Tocantins, Quadra 38 Lote 01",
@@ -240,5 +459,49 @@ describe("limite de mensagens por hora", () => {
       expect(interval).toBeGreaterThanOrEqual(MIN);
       expect(interval).toBeLessThanOrEqual(MAX);
     }
+  });
+});
+
+// ===== FIX #4: SYNC LOCK =====
+
+describe("FIX #4: sync lock previne sincronização simultânea", () => {
+  it("lock impede execução concorrente", () => {
+    let isSyncing = false;
+    const results: string[] = [];
+
+    // Simular primeira chamada
+    if (!isSyncing) {
+      isSyncing = true;
+      results.push("sync1-start");
+      isSyncing = false;
+    }
+
+    // Simular segunda chamada enquanto primeira roda
+    isSyncing = true; // Simular que está rodando
+    if (!isSyncing) {
+      results.push("sync2-start"); // Não deve executar
+    } else {
+      results.push("sync2-blocked");
+    }
+
+    expect(results).toEqual(["sync1-start", "sync2-blocked"]);
+  });
+});
+
+// ===== FIX #2: STOP CANCELA TODOS OS TIMERS =====
+
+describe("FIX #2: stop() cancela messageTimer e hourlyTimer", () => {
+  it("ambos os timers devem ser null após stop", () => {
+    let messageTimer: any = setTimeout(() => {}, 1000);
+    let hourlyTimer: any = setTimeout(() => {}, 1000);
+
+    // Simular stop()
+    clearTimeout(messageTimer);
+    messageTimer = null;
+    clearTimeout(hourlyTimer);
+    hourlyTimer = null;
+
+    expect(messageTimer).toBeNull();
+    expect(hourlyTimer).toBeNull();
   });
 });

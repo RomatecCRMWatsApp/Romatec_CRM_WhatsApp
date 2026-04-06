@@ -12,7 +12,7 @@ describe('Z-API Integration', () => {
       });
 
       expect(result.success).toBe(false);
-      expect(result.error).toBe('Número inválido');
+      expect(result.error).toContain('Número inválido');
     });
 
     it('deve retornar erro se telefone curto', async () => {
