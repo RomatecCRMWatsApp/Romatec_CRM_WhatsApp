@@ -1,6 +1,6 @@
 import { eq } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/mysql2";
-import { InsertUser, users } from "../drizzle/schema";
+import { InsertUser, users, Contact, InsertContact, contacts, Property, InsertProperty, properties, Campaign, InsertCampaign, campaigns, CompanyConfig, InsertCompanyConfig, companyConfig } from "../drizzle/schema";
 import { ENV } from './_core/env';
 
 let _db: ReturnType<typeof drizzle> | null = null;
@@ -87,6 +87,85 @@ export async function getUserByOpenId(openId: string) {
   const result = await db.select().from(users).where(eq(users.openId, openId)).limit(1);
 
   return result.length > 0 ? result[0] : undefined;
+}
+
+// Helpers para Contatos
+export async function getAllContacts() {
+  const db = await getDb();
+  if (!db) return [];
+  return db.select().from(contacts);
+}
+
+export async function getContactById(id: number) {
+  const db = await getDb();
+  if (!db) return undefined;
+  const result = await db.select().from(contacts).where(eq(contacts.id, id)).limit(1);
+  return result.length > 0 ? result[0] : undefined;
+}
+
+export async function createContact(data: InsertContact) {
+  const db = await getDb();
+  if (!db) return undefined;
+  const result = await db.insert(contacts).values(data);
+  return result;
+}
+
+// Helpers para Imóveis
+export async function getAllProperties() {
+  const db = await getDb();
+  if (!db) return [];
+  return db.select().from(properties);
+}
+
+export async function getPropertyById(id: number) {
+  const db = await getDb();
+  if (!db) return undefined;
+  const result = await db.select().from(properties).where(eq(properties.id, id)).limit(1);
+  return result.length > 0 ? result[0] : undefined;
+}
+
+export async function createProperty(data: InsertProperty) {
+  const db = await getDb();
+  if (!db) return undefined;
+  return db.insert(properties).values(data);
+}
+
+// Helpers para Campanhas
+export async function getAllCampaigns() {
+  const db = await getDb();
+  if (!db) return [];
+  return db.select().from(campaigns);
+}
+
+export async function getCampaignById(id: number) {
+  const db = await getDb();
+  if (!db) return undefined;
+  const result = await db.select().from(campaigns).where(eq(campaigns.id, id)).limit(1);
+  return result.length > 0 ? result[0] : undefined;
+}
+
+export async function createCampaign(data: InsertCampaign) {
+  const db = await getDb();
+  if (!db) return undefined;
+  return db.insert(campaigns).values(data);
+}
+
+// Helpers para Configuração da Empresa
+export async function getCompanyConfig() {
+  const db = await getDb();
+  if (!db) return undefined;
+  const result = await db.select().from(companyConfig).limit(1);
+  return result.length > 0 ? result[0] : undefined;
+}
+
+export async function updateCompanyConfig(data: Partial<InsertCompanyConfig>) {
+  const db = await getDb();
+  if (!db) return undefined;
+  const config = await getCompanyConfig();
+  if (!config) {
+    return db.insert(companyConfig).values(data as InsertCompanyConfig);
+  }
+  return db.update(companyConfig).set(data).where(eq(companyConfig.id, config.id));
 }
 
 // TODO: add feature queries here as your schema grows.
