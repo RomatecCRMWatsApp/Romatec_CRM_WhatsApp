@@ -33,41 +33,41 @@
 - [ ] Criar gráficos de desempenho
 
 ## Frontend - Módulo de Clientes
-- [ ] Listar contatos com paginação
-- [ ] Implementar busca e filtros
+- [x] Listar contatos com paginação
+- [x] Implementar busca e filtros
 - [ ] Criar formulário de novo contato
 - [ ] Implementar edição de contato
 - [ ] Implementar exclusão de contato
-- [ ] Criar funcionalidade de importação (vCard e CSV)
+- [x] Criar funcionalidade de importação (vCard e CSV)
 - [ ] Exibir histórico de interações por contato
 
 ## Frontend - Módulo de Imóveis
-- [ ] Listar imóveis com cards
+- [x] Listar imóveis com cards
 - [ ] Criar formulário de novo imóvel
 - [ ] Implementar upload de fotos
 - [ ] Implementar edição de imóvel
 - [ ] Implementar exclusão de imóvel
-- [ ] Exibir detalhes completos do imóvel
+- [x] Exibir detalhes completos do imóvel
 
 ## Frontend - Módulo de Campanhas
-- [ ] Listar campanhas com status
+- [x] Listar campanhas com status
 - [ ] Criar formulário de nova campanha
 - [ ] Selecionar imóvel para campanha
 - [ ] Selecionar contatos para campanha
-- [ ] Implementar botões: Play, Pause, Reset
-- [ ] Exibir progresso de envio
+- [x] Implementar botões: Play, Pause, Reset
+- [x] Exibir progresso de envio
 - [ ] Exibir histórico de mensagens enviadas
 - [ ] Implementar pausa de campanha
 - [ ] Implementar reset de campanha
 
 ## Frontend - Painel de Configurações
-- [ ] Exibir dados da empresa (telefone, endereço)
-- [ ] Formulário para editar dados da empresa
-- [ ] Campo para Instance ID da Z-API
-- [ ] Campo para Token da Z-API
-- [ ] Indicador de status de conexão Z-API
-- [ ] Botão para testar conexão
-- [ ] Exibir número de celular vinculado: (99) 999169-0178
+- [x] Exibir dados da empresa (telefone, endereço)
+- [x] Formulário para editar dados da empresa
+- [x] Campo para Instance ID da Z-API
+- [x] Campo para Token da Z-API
+- [x] Indicador de status de conexão Z-API
+- [x] Botão para testar conexão
+- [x] Exibir número de celular vinculado: (99) 999169-0178
 
 ## Integração Z-API
 - [x] Configurar autenticação com Z-API
@@ -85,11 +85,11 @@
 - [ ] Implementar logging de interações
 
 ## Dados Iniciais
-- [ ] Processar e importar contatos do vCard
-- [ ] Processar e importar contatos do CSV
-- [ ] Cadastrar 4 imóveis fornecidos
-- [ ] Fazer upload de fotos dos imóveis
-- [ ] Configurar dados da empresa
+- [x] Processar e importar contatos do vCard
+- [x] Processar e importar contatos do CSV
+- [x] Cadastrar 4 imóveis fornecidos
+- [x] Fazer upload de fotos dos imóveis
+- [x] Configurar dados da empresa
 
 ## Testes
 - [ ] Escrever testes unitários com Vitest
@@ -101,13 +101,13 @@
 - [ ] Testar importação de contatos
 
 ## Documentação e Deploy
-- [ ] Criar documentação de instalação local
-- [ ] Criar guia de configuração Z-API
-- [ ] Criar guia de uso do sistema
-- [ ] Empacotar projeto para deploy
-- [ ] Criar script de instalação
-- [ ] Criar arquivo .env.example
-- [ ] Documentar variáveis de ambiente necessárias
+- [x] Criar documentação de instalação local
+- [x] Criar guia de configuração Z-API
+- [x] Criar guia de uso do sistema
+- [x] Empacotar projeto para deploy
+- [x] Criar script de instalação
+- [x] Criar arquivo .env.example
+- [x] Documentar variáveis de ambiente necessárias
 
 
 ## Redesign Visual (NOVO)
