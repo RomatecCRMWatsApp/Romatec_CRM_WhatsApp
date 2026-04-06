@@ -80,23 +80,172 @@ export const appRouter = router({
       .query(async ({ input }) => {
         return getPropertyById(input.id);
       }),
+    getBySlug: publicProcedure
+      .input(z.object({ slug: z.string() }))
+      .query(async ({ input }) => {
+        const db = await getDb();
+        if (!db) return null;
+        const result = await db.select().from(properties).where(eq(properties.publicSlug, input.slug)).limit(1);
+        return result[0] || null;
+      }),
     create: protectedProcedure
       .input(z.object({
         denomination: z.string(),
         address: z.string(),
+        city: z.string().optional(),
+        state: z.string().optional(),
+        cep: z.string().optional(),
         price: z.string(),
+        offerPrice: z.string().optional(),
         description: z.string().optional(),
         images: z.array(z.string()).optional(),
+        videoUrl: z.string().optional(),
+        plantaBaixaUrl: z.string().optional(),
+        areaConstruida: z.string().optional(),
+        areaCasa: z.string().optional(),
+        areaTerreno: z.string().optional(),
+        bedrooms: z.number().optional(),
+        bathrooms: z.number().optional(),
+        garageSpaces: z.number().optional(),
+        propertyType: z.string().optional(),
       }))
       .mutation(async ({ input }) => {
-        return createProperty({
+        const slug = input.denomination.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '') + '-' + Date.now().toString(36);
+        const db = await getDb();
+        if (!db) throw new Error("Database not available");
+        const result = await db.insert(properties).values({
           denomination: input.denomination,
           address: input.address,
+          city: input.city,
+          state: input.state,
+          cep: input.cep,
           price: input.price as any,
+          offerPrice: input.offerPrice as any || null,
           description: input.description,
           images: input.images || [],
+          videoUrl: input.videoUrl,
+          plantaBaixaUrl: input.plantaBaixaUrl,
+          areaConstruida: input.areaConstruida as any || null,
+          areaCasa: input.areaCasa as any || null,
+          areaTerreno: input.areaTerreno as any || null,
+          bedrooms: input.bedrooms,
+          bathrooms: input.bathrooms,
+          garageSpaces: input.garageSpaces,
+          propertyType: input.propertyType,
+          publicSlug: slug,
           status: "available",
         });
+        return { id: Number(result[0].insertId), slug };
+      }),
+    update: protectedProcedure
+      .input(z.object({
+        id: z.number(),
+        denomination: z.string().optional(),
+        address: z.string().optional(),
+        city: z.string().optional(),
+        state: z.string().optional(),
+        cep: z.string().optional(),
+        price: z.string().optional(),
+        offerPrice: z.string().optional(),
+        description: z.string().optional(),
+        images: z.array(z.string()).optional(),
+        videoUrl: z.string().optional(),
+        plantaBaixaUrl: z.string().optional(),
+        areaConstruida: z.string().optional(),
+        areaCasa: z.string().optional(),
+        areaTerreno: z.string().optional(),
+        bedrooms: z.number().optional(),
+        bathrooms: z.number().optional(),
+        garageSpaces: z.number().optional(),
+        propertyType: z.string().optional(),
+        status: z.enum(["available", "sold", "inactive"]).optional(),
+      }))
+      .mutation(async ({ input }) => {
+        const db = await getDb();
+        if (!db) throw new Error("Database not available");
+        const { id, ...data } = input;
+        const updateData: any = {};
+        Object.entries(data).forEach(([k, v]) => { if (v !== undefined) updateData[k] = v; });
+        await db.update(properties).set(updateData).where(eq(properties.id, id));
+        return { success: true };
+      }),
+    generateDescription: protectedProcedure
+      .input(z.object({
+        denomination: z.string(),
+        address: z.string(),
+        city: z.string().optional(),
+        price: z.string(),
+        offerPrice: z.string().optional(),
+        areaConstruida: z.string().optional(),
+        areaCasa: z.string().optional(),
+        areaTerreno: z.string().optional(),
+        bedrooms: z.number().optional(),
+        bathrooms: z.number().optional(),
+        garageSpaces: z.number().optional(),
+        propertyType: z.string().optional(),
+      }))
+      .mutation(async ({ input }) => {
+        const { invokeLLM } = await import("./_core/llm");
+        const prompt = `Você é um corretor de imóveis especialista em marketing imobiliário. Gere uma descrição ATRATIVA e PROFISSIONAL para o seguinte imóvel:
+
+- Nome: ${input.denomination}
+- Endereço: ${input.address}${input.city ? `, ${input.city}` : ''}
+- Tipo: ${input.propertyType || 'Imóvel'}
+- Preço: R$ ${Number(input.price).toLocaleString('pt-BR')}${input.offerPrice ? ` (Oferta: R$ ${Number(input.offerPrice).toLocaleString('pt-BR')})` : ''}
+- Área Construída: ${input.areaConstruida || 'N/I'} m²
+- Área da Casa: ${input.areaCasa || 'N/I'} m²
+- Área do Terreno: ${input.areaTerreno || 'N/I'} m²
+- Quartos: ${input.bedrooms || 'N/I'}
+- Banheiros: ${input.bathrooms || 'N/I'}
+- Vagas: ${input.garageSpaces || 'N/I'}
+
+REGRAS:
+1. Use gatilhos de ESCASSEZ ("oportunidade única", "últimas unidades", "não vai durar")
+2. Use gatilhos de OFERTA ("condições especiais", "valor abaixo do mercado")
+3. Destaque os pontos fortes do imóvel
+4. Máximo 3 parágrafos
+5. Tom profissional mas persuasivo
+6. NÃO use emojis excessivos (máximo 2-3)
+7. Escreva em português brasileiro`;
+
+        const response = await invokeLLM({
+          messages: [
+            { role: "system", content: "Você é um especialista em marketing imobiliário brasileiro. Gere descrições atrativas com gatilhos de venda." },
+            { role: "user", content: prompt },
+          ],
+        });
+
+        const descContent = response.choices[0]?.message?.content;
+        const descText = typeof descContent === 'string' ? descContent : 'Descrição não gerada';
+        return { description: descText };
+      }),
+    generateWhatsAppMessage: protectedProcedure
+      .input(z.object({ propertyId: z.number() }))
+      .mutation(async ({ input }) => {
+        const db = await getDb();
+        if (!db) throw new Error("Database not available");
+        const prop = await db.select().from(properties).where(eq(properties.id, input.propertyId)).limit(1);
+        if (!prop[0]) throw new Error("Imóvel não encontrado");
+        const p = prop[0];
+
+        const { invokeLLM } = await import("./_core/llm");
+        const response = await invokeLLM({
+          messages: [
+            { role: "system", content: "Você gera mensagens curtas para WhatsApp de imóveis. Máximo 3 linhas. Sem emojis excessivos (máx 2). Inclua o link no final. Tom profissional e persuasivo." },
+            { role: "user", content: `Gere 4 variações de mensagem curta para WhatsApp sobre o imóvel:
+- ${p.denomination} em ${p.address}
+- Preço: R$ ${Number(p.price).toLocaleString('pt-BR')}
+- ${p.bedrooms || '?'} quartos, ${p.areaConstruida || '?'}m²
+- Link: {{LINK}}
+
+Retorne as 4 variações separadas por |||` },
+          ],
+        });
+
+        const rawContent = response.choices[0]?.message?.content || "";
+        const text = typeof rawContent === 'string' ? rawContent : '';
+        const variations = text.split('|||').map((v: string) => v.trim()).filter(Boolean);
+        return { variations: variations.length > 0 ? variations : [text] };
       }),
   }),
 
@@ -294,6 +443,138 @@ export const appRouter = router({
      */
     getStats: publicProcedure.query(async () => {
       return campaignScheduler.getStats();
+    }),
+
+    /**
+     * Resetar campanhas - limpa tudo e recria com novos contatos
+     */
+    reset: protectedProcedure.mutation(async () => {
+      // Parar scheduler se estiver rodando
+      campaignScheduler.stop();
+
+      const db = await getDb();
+      if (!db) throw new Error("Database not available");
+
+      // Limpar contatos de campanhas e mensagens
+      await db.delete(campaignContacts);
+      await db.delete(messages);
+      await db.delete(contactCampaignHistory);
+
+      // Resetar contadores das campanhas
+      const allCampaigns = await db.select().from(campaigns);
+      for (const camp of allCampaigns) {
+        await db.update(campaigns).set({
+          sentCount: 0,
+          failedCount: 0,
+          status: "running",
+        }).where(eq(campaigns.id, camp.id));
+      }
+
+      // Redesignar 12 contatos aleatórios para cada campanha
+      const allContacts = await db.select().from(contacts).where(eq(contacts.status, "active"));
+      const shuffled = [...allContacts].sort(() => Math.random() - 0.5);
+
+      for (let i = 0; i < allCampaigns.length; i++) {
+        const startIdx = i * 12;
+        const campaignContactsList = shuffled.slice(startIdx, startIdx + 12);
+        for (const contact of campaignContactsList) {
+          await db.insert(campaignContacts).values({
+            campaignId: allCampaigns[i].id,
+            contactId: contact.id,
+            messagesSent: 0,
+            status: "pending",
+          });
+        }
+      }
+
+      // Desbloquear todos os contatos
+      await db.update(contacts).set({ blockedUntil: null });
+
+      return { success: true, message: `Campanhas resetadas com novos contatos` };
+    }),
+
+    /**
+     * Toggle campanha ativa/pausada no loop
+     */
+    toggleCampaign: protectedProcedure
+      .input(z.object({ campaignId: z.number(), active: z.boolean() }))
+      .mutation(async ({ input }) => {
+        const db = await getDb();
+        if (!db) throw new Error("Database not available");
+
+        await db.update(campaigns)
+          .set({ status: input.active ? "running" : "paused" })
+          .where(eq(campaigns.id, input.campaignId));
+
+        return { success: true, message: `Campanha ${input.active ? "ativada" : "pausada"}` };
+      }),
+
+    /**
+     * Detalhes completos de cada campanha com contatos e status
+     */
+    getCampaignDetails: publicProcedure.query(async () => {
+      const db = await getDb();
+      if (!db) return [];
+
+      const allCampaigns = await db.select().from(campaigns);
+      const result = [];
+
+      for (const camp of allCampaigns) {
+        // Buscar imóvel vinculado
+        const prop = await db.select().from(properties).where(eq(properties.id, camp.propertyId)).limit(1);
+
+        // Buscar contatos desta campanha
+        const ccList = await db.select().from(campaignContacts).where(eq(campaignContacts.campaignId, camp.id));
+
+        const contactDetails = [];
+        let sentCount = 0;
+        let pendingCount = 0;
+        let failedCount = 0;
+
+        for (const cc of ccList) {
+          const contactResult = await db.select().from(contacts).where(eq(contacts.id, cc.contactId)).limit(1);
+          const contact = contactResult[0];
+          if (!contact) continue;
+
+          // Buscar última mensagem enviada
+          const lastMsg = await db.select().from(messages)
+            .where(and(
+              eq(messages.contactId, contact.id),
+              eq(messages.campaignId, camp.id)
+            ))
+            .limit(1);
+
+          if (cc.status === "sent") sentCount++;
+          else if (cc.status === "failed") failedCount++;
+          else pendingCount++;
+
+          contactDetails.push({
+            id: cc.id,
+            contactId: contact.id,
+            name: contact.name,
+            phone: contact.phone,
+            status: cc.status,
+            sentAt: lastMsg[0]?.sentAt || null,
+            blockedUntil: contact.blockedUntil,
+          });
+        }
+
+        result.push({
+          id: camp.id,
+          name: camp.name,
+          propertyId: camp.propertyId,
+          propertyName: prop[0]?.denomination || "Desconhecido",
+          status: camp.status,
+          totalContacts: ccList.length,
+          sentCount,
+          pendingCount,
+          failedCount,
+          startDate: camp.startDate,
+          contacts: contactDetails,
+        });
+      }
+
+      return result;
     }),
   }),
 

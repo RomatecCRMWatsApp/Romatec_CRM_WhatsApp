@@ -12,6 +12,7 @@ import Contacts from "./pages/Contacts";
 import Properties from "./pages/Properties";
 import Campaigns from "./pages/Campaigns";
 import Settings from "./pages/Settings";
+import PropertyPublic from "./pages/PropertyPublic";
 
 // Componente para proteger rotas autenticadas
 function ProtectedRoute({ component: Component }: { component: React.ComponentType }) {
@@ -55,6 +56,7 @@ function Router() {
       <Route path={"/settings"}>
         {() => <ProtectedRoute component={Settings} />}
       </Route>
+      <Route path={"/imovel/:slug"} component={PropertyPublic} />
       <Route path={"/404"} component={NotFound} />
       <Route component={NotFound} />
     </Switch>
@@ -64,7 +66,7 @@ function Router() {
 function App() {
   return (
     <ErrorBoundary>
-      <ThemeProvider defaultTheme="light">
+      <ThemeProvider defaultTheme="dark">
         <TooltipProvider>
           <Toaster />
           <Router />

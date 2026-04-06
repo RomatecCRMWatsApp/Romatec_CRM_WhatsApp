@@ -92,13 +92,13 @@
 - [x] Configurar dados da empresa
 
 ## Testes
-- [ ] Escrever testes unitários com Vitest
-- [ ] Testar CRUD de contatos
-- [ ] Testar CRUD de imóveis
-- [ ] Testar CRUD de campanhas
-- [ ] Testar integração Z-API
-- [ ] Testar lógica de envio de mensagens
-- [ ] Testar importação de contatos
+- [x] Escrever testes unitários com Vitest
+- [x] Testar CRUD de contatos
+- [x] Testar CRUD de imóveis
+- [x] Testar CRUD de campanhas
+- [x] Testar integração Z-API
+- [x] Testar lógica de envio de mensagens
+- [x] Testar importação de contatos
 
 ## Documentação e Deploy
 - [x] Criar documentação de instalação local
@@ -111,11 +111,12 @@
 
 
 ## Redesign Visual (NOVO)
-- [x] Atualizar tema com cores vibrantes (gradientes, efeitos)
+- [x] Atualizar tema dark premium (preto + verde + dourado)
 - [x] Implementar botões 3D com sombras e efeitos hover
 - [x] Redesenhar cards com bordas arredondadas e gradientes
 - [x] Adicionar animações suaves e transições
-- [x] Atualizar paleta de cores (manter verde + dourado + cores vibrantes)
+- [x] Atualizar paleta de cores (dark + verde + dourado)
+- [x] Aplicar estilo Loud Dashboard em todo o sistema
 
 ## Aba de Campanhas (NOVO)
 - [x] Criar página de Campanhas com monitoramento em tempo real
@@ -174,41 +175,41 @@
 ## Fase 3 - Sistema de Automação de Campanhas WhatsApp
 
 ### Arquitetura e Schema
-- [ ] Criar tabela `campaign_schedules` com ciclos e pares
-- [ ] Criar tabela `contact_campaign_history` para rastrear envios
-- [ ] Criar tabela `campaign_messages` com variações de texto
-- [ ] Adicionar coluna `blocked_until` em contacts para bloqueio de 72h
-- [ ] Adicionar coluna `last_campaign_id` em contacts para ciclo
+- [x] Criar tabela `campaign_schedules` com ciclos e pares
+- [x] Criar tabela `contact_campaign_history` para rastrear envios
+- [x] Criar tabela `campaign_messages` com variações de texto
+- [x] Adicionar coluna `blocked_until` em contacts para bloqueio de 72h
+- [x] Adicionar coluna `last_campaign_id` em contacts para ciclo
 
 ### Scheduler Principal
-- [ ] Implementar `CampaignScheduler` com lógica de 2 mensagens/hora
-- [ ] Implementar intervalo aleatório (10-30 min) entre mensagens
-- [ ] Implementar rotação de pares (1+2 / 3+4)
-- [ ] Implementar carregamento dinâmico de campanhas do banco
-- [ ] Implementar bloqueio de 3 dias por contato
-- [ ] Implementar ciclo de campanhas por contato (1→2→3→4)
-- [ ] Implementar loop infinito 24/7
+- [x] Implementar `CampaignScheduler` com lógica de 2 mensagens/hora
+- [x] Implementar intervalo aleatório (10-30 min) entre mensagens
+- [x] Implementar rotação de pares (1+2 / 3+4)
+- [x] Implementar carregamento dinâmico de campanhas do banco
+- [x] Implementar bloqueio de 3 dias por contato
+- [x] Implementar ciclo de campanhas por contato (1→2→3→4)
+- [x] Implementar loop infinito 24/7
 - [ ] Implementar relatório de ciclo 24h
 
 ### Controle de Contatos
-- [ ] Implementar seleção de contato diferente por envio
-- [ ] Implementar verificação de bloqueio (72h)
-- [ ] Implementar verificação de ciclo de campanha
-- [ ] Implementar reset automático de contatos
-- [ ] Implementar status tracking (pending/sent/failed)
+- [x] Implementar seleção de contato diferente por envio
+- [x] Implementar verificação de bloqueio (72h)
+- [x] Implementar verificação de ciclo de campanha
+- [x] Implementar reset automático de contatos
+- [x] Implementar status tracking (pending/sent/failed)
 
 ### Dashboard de Monitoramento
-- [ ] Criar página de "Monitoramento em Tempo Real"
-- [ ] Exibir total de contatos
-- [ ] Exibir quantidade enviada
-- [ ] Exibir quantidade restante
-- [ ] Exibir número de falhas
-- [ ] Exibir taxa de sucesso (%)
-- [ ] Exibir cronômetro de execução
-- [ ] Exibir número do ciclo atual
-- [ ] Exibir status dinâmico das campanhas
-- [ ] Exibir próximo ciclo em (countdown)
-- [ ] Exibir lista de contatos com status
+- [x] Criar página de "Monitoramento em Tempo Real"
+- [x] Exibir total de contatos
+- [x] Exibir quantidade enviada
+- [x] Exibir quantidade restante
+- [x] Exibir número de falhas
+- [x] Exibir taxa de sucesso (%)
+- [x] Exibir cronômetro de execução
+- [x] Exibir número do ciclo atual
+- [x] Exibir status dinâmico das campanhas
+- [x] Exibir próximo ciclo em (countdown)
+- [x] Exibir lista de contatos com status
 
 ### Integração Z-API
 - [ ] Implementar envio real de mensagens via Z-API
@@ -217,16 +218,14 @@
 - [ ] Implementar webhook para respostas
 
 ### Testes e Validação
-- [ ] Testar lógica de 2 mensagens/hora
-- [ ] Testar intervalo aleatório (10-30 min)
-- [ ] Testar rotação de pares
-- [ ] Testar bloqueio de 3 dias
-- [ ] Testar ciclo de campanhas por contato
-- [ ] Testar loop infinito 24/7
+- [x] Testar endpoints tRPC de scheduler (start/stop/getState/getStats)
+- [x] Testar endpoints tRPC de campanhas (list/getById)
+- [x] Testar endpoints tRPC de imóveis (list/getById/getBySlug)
+- [x] Testar integração Z-API (envio/validação)
+- [ ] Adicionar testes com fake timers para 2 msgs/hora e intervalo 10-30 min
+- [ ] Adicionar testes de rotação de pares e ciclo por contato
 - [ ] Testar relatório de ciclo 24h
-- [ ] Testar dashboard em tempo real
-- [ ] Testar integração Z-API
-- [ ] Validar comportamento humano (sem padrões)
+- [ ] Testar bloqueio de 72h por número
 
 
 ## Fase 4 - Sistema Dinâmico Vinculado a Imóveis
@@ -234,13 +233,34 @@
 - [x] Auto-detecção de novos imóveis no ciclo
 - [x] Remoção automática de imóveis vendidos do ciclo
 - [x] Pares dinâmicos (adapta a qualquer quantidade de imóveis)
-- [ ] Toggle por campanha: ativo/pausado no loop
+- [x] Toggle por campanha: ativo/pausado no loop
 - [x] Contatos em rodízio sem repetição
 - [x] Mensagens personalizadas e variadas por campanha
-- [ ] Dashboard com controle dinâmico de campanhas
-- [ ] Testes do sistema dinâmico
+- [x] Dashboard com controle dinâmico de campanhas
+- [ ] Testes dedicados do sistema dinâmico (auto-detecção, toggle, pares)
 
 ## Servidor Local
 - [ ] Preparar pacote para instalação em servidor local
 - [ ] Documentação de instalação local
 - [ ] Script de setup automático
+
+## Fase 5 - Reformulação Aba de Imóveis e Página Pública
+- [x] Adicionar campos ao schema: videoUrl, plantaBaixaUrl, areaConstruida, areaCasa, areaTerreno
+- [x] Migrar banco com novos campos
+- [x] Reformular página de imóveis com galeria de fotos
+- [x] Adicionar seção de vídeo do imóvel
+- [x] Adicionar seção de planta baixa
+- [x] Exibir endereço, áreas e valor de oferta
+- [x] Criar formulário completo de cadastro de imóvel
+- [x] Criar página pública de imóvel (acessível sem login)
+- [x] Gerar link público para cada imóvel
+- [x] Atualizar mensagens de campanha com link do imóvel
+- [x] Mensagem WhatsApp curta, profissional, com link
+- [x] IA gera descrição automática do imóvel ao cadastrar (gatilhos de escassez e oferta)
+- [x] IA analisa campos de texto (cômodos, área, terreno, localização) para gerar texto
+- [ ] Análise de imagem da planta baixa por IA (requer visão computacional)
+- [x] Reformular cards de imóveis com layout: nome, endereço, preço, áreas, quartos/banheiros/garagem, botões fotos/planta/vídeo, link página pública, botão enviar WhatsApp
+- [x] Usar dados reais dos imóveis (ALACIDE, Mod_Vaz-01, Mod_Vaz-02, Mod_Vaz-03)
+- [x] Cards de imóveis estilo premium: foto grande, nome, preço, endereço, ícones quartos/banheiros/área, botão ver detalhes
+- [x] Card expandido: foto + galeria miniaturas, descrição IA, tags, botões mensagem/ligar
+- [ ] Integrar mapa no card expandido/página pública

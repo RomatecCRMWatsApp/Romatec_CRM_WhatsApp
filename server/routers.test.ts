@@ -49,10 +49,12 @@ describe("Routers", () => {
       const ctx = createMockContext();
       const caller = appRouter.createCaller(ctx);
       
+      // Use unique phone to avoid duplicate entry
+      const uniquePhone = `(99) ${Math.floor(10000 + Math.random() * 89999)}-${Math.floor(1000 + Math.random() * 8999)}`;
       const result = await caller.contacts.create({
-        name: "João Silva",
-        phone: "(99) 99999-9999",
-        email: "joao@example.com",
+        name: "João Silva Teste",
+        phone: uniquePhone,
+        email: `joao_${Date.now()}@example.com`,
       });
       
       expect(result).toBeDefined();
