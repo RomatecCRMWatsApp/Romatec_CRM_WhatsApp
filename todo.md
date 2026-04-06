@@ -92,5 +92,5 @@
 
 ## Imagens e Mapas dos Imóveis
 - [x] Adicionar imagens reais aos imóveis (ALACIDE 16 fotos, Mod_Vaz-02 7 fotos, Mod_Vaz-03 8 fotos + planta)
-- [ ] Adicionar imagens Mod_Vaz-01 (aguardando envio)
-- [ ] Adicionar mapas/localização aos imóveis
+- [x] Adicionar imagens Mod_Vaz-01 (8 renders + planta baixa)
+- [x] Adicionar mapa Google Maps na página pública do imóvel (geocodificação automática por endereço)

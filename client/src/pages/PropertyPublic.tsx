@@ -1,4 +1,5 @@
-import { useState } from "react";
+import { useState, useCallback } from "react";
+import { MapView } from "@/components/Map";
 import { MapPin, BedDouble, Bath, Car, Ruler, Image as ImageIcon, Video, FileImage, Phone, MessageCircle, Heart, ChevronLeft, ChevronRight, ArrowLeft, Share2 } from "lucide-react";
 import { useRoute } from "wouter";
 import { trpc } from "@/lib/trpc";
@@ -303,6 +304,39 @@ export default function PropertyPublic() {
                   />
                 </div>
               )}
+            </div>
+          )}
+
+          {/* Mapa de Localização */}
+          {property.address && (
+            <div className="glass-card p-6 mb-6">
+              <h2 className="text-lg font-bold text-foreground mb-3 flex items-center gap-2">
+                <MapPin className="h-5 w-5 text-emerald" /> Localização
+              </h2>
+              <div className="rounded-xl overflow-hidden border border-border/30">
+                <MapView
+                  className="h-[300px] md:h-[400px]"
+                  initialCenter={{ lat: -4.9476, lng: -47.5068 }}
+                  initialZoom={14}
+                  onMapReady={(map) => {
+                    const geocoder = new google.maps.Geocoder();
+                    const fullAddress = `${property.address}${property.city ? `, ${property.city}` : ""}${property.state ? ` - ${property.state}` : ""}`;
+                    geocoder.geocode({ address: fullAddress }, (results, status) => {
+                      if (status === "OK" && results && results[0]) {
+                        map.setCenter(results[0].geometry.location);
+                        new google.maps.marker.AdvancedMarkerElement({
+                          map,
+                          position: results[0].geometry.location,
+                          title: property.denomination,
+                        });
+                      }
+                    });
+                  }}
+                />
+              </div>
+              <p className="text-sm text-muted-foreground mt-3 text-center">
+                {property.address}{property.city ? `, ${property.city}` : ""}{property.state ? ` - ${property.state}` : ""}
+              </p>
             </div>
           )}
 
