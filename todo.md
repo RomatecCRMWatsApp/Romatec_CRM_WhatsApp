@@ -70,12 +70,12 @@
 - [ ] Exibir número de celular vinculado: (99) 999169-0178
 
 ## Integração Z-API
-- [ ] Configurar autenticação com Z-API
-- [ ] Implementar envio de mensagens via Z-API
+- [x] Configurar autenticação com Z-API
+- [x] Implementar envio de mensagens via Z-API
 - [ ] Implementar recebimento de webhooks (respostas dos clientes)
-- [ ] Implementar lógica de fila de mensagens
+- [x] Implementar lógica de fila de mensagens (MessageScheduler)
 - [ ] Implementar retry automático
-- [ ] Monitorar status de conexão
+- [x] Monitorar status de conexão
 
 ## Robô IA
 - [ ] Integrar LLM para análise de mensagens

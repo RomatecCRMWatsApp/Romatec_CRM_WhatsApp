@@ -181,10 +181,28 @@ export const appRouter = router({
       }
     }),
   }),
+
+  // Z-API Router
+  zapi: router({
+    sendMessage: protectedProcedure
+      .input(z.object({
+        phone: z.string(),
+        message: z.string(),
+      }))
+      .mutation(async ({ input }) => {
+        const config = await getCompanyConfig();
+        if (!config?.zApiInstanceId || !config?.zApiToken) {
+          return { success: false, error: 'Z-API nao configurado' };
+        }
+        const { sendMessageViaZAPI } = await import('./zapi-integration');
+        return sendMessageViaZAPI({
+          instanceId: config.zApiInstanceId,
+          token: config.zApiToken,
+          phone: input.phone,
+          message: input.message,
+        });
+      }),
+  }),
 });
 
 export type AppRouter = typeof appRouter;
-
-
-// Adicionar antes do export type AppRouter
-// Procedure para enviar mensagem via Z-API será adicionado aqui
