@@ -447,11 +447,12 @@ class CampaignScheduler {
       const config = await getCompanyConfig();
 
       if (config?.zApiInstanceId && config?.zApiToken) {
-        // Envio REAL via Z-API
+        // Envio REAL via Z-API (com Client-Token)
         const { sendMessageViaZAPI } = await import("../zapi-integration");
         const result = await sendMessageViaZAPI({
           instanceId: config.zApiInstanceId,
           token: config.zApiToken,
+          clientToken: config.zApiClientToken || undefined,
           phone,
           message,
         });

@@ -78,6 +78,40 @@ async function startServer() {
     }
   });
 
+  // Upload de arquivos (fotos, vídeos, plantas) - usa express.raw para binários
+  app.post('/api/upload', express.raw({ type: '*/*', limit: '50mb' }), async (req, res) => {
+    try {
+      const fileName = (req.headers['x-file-name'] as string) || 'upload';
+      const fileType = (req.headers['x-file-type'] as string) || 'application/octet-stream';
+      
+      // Validar tipo de arquivo
+      const allowedTypes = ['image/jpeg', 'image/png', 'image/webp', 'image/gif', 'video/mp4', 'video/webm', 'video/quicktime', 'application/pdf'];
+      if (!allowedTypes.some(t => fileType.startsWith(t.split('/')[0]) || fileType === t)) {
+        return res.status(400).json({ success: false, error: 'Tipo de arquivo n\u00e3o permitido' });
+      }
+      
+      // Validar tamanho (50MB)
+      const buffer = req.body as Buffer;
+      if (!buffer || buffer.length === 0) {
+        return res.status(400).json({ success: false, error: 'Arquivo vazio' });
+      }
+      if (buffer.length > 50 * 1024 * 1024) {
+        return res.status(400).json({ success: false, error: 'Arquivo excede 50MB' });
+      }
+      
+      const { storagePut } = await import('../storage');
+      const randomSuffix = Math.random().toString(36).substring(2, 10);
+      const ext = fileName.split('.').pop() || 'bin';
+      const key = `properties/${Date.now()}-${randomSuffix}.${ext}`;
+      
+      const { url } = await storagePut(key, buffer, fileType);
+      res.json({ success: true, url });
+    } catch (error) {
+      console.error('[Upload] Erro:', error);
+      res.status(500).json({ success: false, error: String(error) });
+    }
+  });
+
   // tRPC API
   app.use(
     "/api/trpc",

@@ -1,11 +1,11 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useRef, useCallback } from "react";
 import { useAuth } from "@/_core/hooks/useAuth";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Home, Search, Edit, MapPin, DollarSign, Plus, ArrowLeft, Image, Video, FileImage, Ruler, BedDouble, Bath, Car, Sparkles, ExternalLink, Loader2, X, Eye, Heart, Phone, MessageCircle, ChevronLeft, ChevronRight, Trash2 } from "lucide-react";
+import { Home, Search, Edit, MapPin, DollarSign, Plus, ArrowLeft, Image, Video, FileImage, Ruler, BedDouble, Bath, Car, Sparkles, ExternalLink, Loader2, X, Eye, Heart, Phone, MessageCircle, ChevronLeft, ChevronRight, Trash2, Upload, CloudUpload } from "lucide-react";
 import { useLocation } from "wouter";
 import { trpc } from "@/lib/trpc";
 import { toast } from "sonner";
@@ -55,6 +55,90 @@ export default function Properties() {
   const [newImageUrl, setNewImageUrl] = useState("");
   const [isGeneratingDesc, setIsGeneratingDesc] = useState(false);
   const [imageIndex, setImageIndex] = useState(0);
+  const [isUploading, setIsUploading] = useState(false);
+  const [uploadProgress, setUploadProgress] = useState("");
+  const photoInputRef = useRef<HTMLInputElement>(null);
+  const videoInputRef = useRef<HTMLInputElement>(null);
+  const plantaInputRef = useRef<HTMLInputElement>(null);
+
+  const uploadFile = async (file: File): Promise<string | null> => {
+    try {
+      const buffer = await file.arrayBuffer();
+      const response = await fetch('/api/upload', {
+        method: 'POST',
+        headers: {
+          'Content-Type': file.type,
+          'X-File-Name': file.name,
+          'X-File-Type': file.type,
+        },
+        body: buffer,
+      });
+      const data = await response.json();
+      if (data.success && data.url) return data.url;
+      toast.error('Erro no upload: ' + (data.error || 'desconhecido'));
+      return null;
+    } catch (e) {
+      toast.error('Erro no upload: ' + String(e));
+      return null;
+    }
+  };
+
+  const handlePhotoUpload = async (files: FileList | null) => {
+    if (!files || files.length === 0) return;
+    setIsUploading(true);
+    const newUrls: string[] = [];
+    for (let i = 0; i < files.length; i++) {
+      setUploadProgress(`Enviando foto ${i + 1} de ${files.length}...`);
+      const url = await uploadFile(files[i]);
+      if (url) newUrls.push(url);
+    }
+    if (newUrls.length > 0) {
+      setForm(prev => ({ ...prev, images: [...prev.images, ...newUrls] }));
+      toast.success(`${newUrls.length} foto(s) enviada(s)!`);
+    }
+    setIsUploading(false);
+    setUploadProgress("");
+  };
+
+  const handleVideoUpload = async (files: FileList | null) => {
+    if (!files || files.length === 0) return;
+    setIsUploading(true);
+    setUploadProgress("Enviando v\u00eddeo...");
+    const url = await uploadFile(files[0]);
+    if (url) {
+      setForm(prev => ({ ...prev, videoUrl: url }));
+      toast.success("V\u00eddeo enviado!");
+    }
+    setIsUploading(false);
+    setUploadProgress("");
+  };
+
+  const handlePlantaUpload = async (files: FileList | null) => {
+    if (!files || files.length === 0) return;
+    setIsUploading(true);
+    setUploadProgress("Enviando planta baixa...");
+    const url = await uploadFile(files[0]);
+    if (url) {
+      setForm(prev => ({ ...prev, plantaBaixaUrl: url }));
+      toast.success("Planta baixa enviada!");
+    }
+    setIsUploading(false);
+    setUploadProgress("");
+  };
+
+  const handleDrop = useCallback((e: React.DragEvent, type: 'photo' | 'video' | 'planta') => {
+    e.preventDefault();
+    e.stopPropagation();
+    const files = e.dataTransfer.files;
+    if (type === 'photo') handlePhotoUpload(files);
+    else if (type === 'video') handleVideoUpload(files);
+    else handlePlantaUpload(files);
+  }, []);
+
+  const handleDragOver = (e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+  };
 
   const createProperty = trpc.properties.create.useMutation({
     onSuccess: () => { toast.success("Imóvel cadastrado!"); refetch(); setShowForm(false); setForm({ ...emptyForm }); },
@@ -275,9 +359,31 @@ export default function Properties() {
                   <Image className="h-5 w-5 text-emerald" />
                   <h3 className="font-semibold text-foreground">Galeria de Fotos</h3>
                 </div>
+                {/* Upload drag&drop + buscar no PC */}
+                <input ref={photoInputRef} type="file" accept="image/*" multiple className="hidden" onChange={e => handlePhotoUpload(e.target.files)} />
+                <div
+                  onDrop={e => handleDrop(e, 'photo')}
+                  onDragOver={handleDragOver}
+                  onClick={() => !isUploading && photoInputRef.current?.click()}
+                  className="p-6 border-2 border-dashed border-emerald/40 rounded-xl text-center cursor-pointer hover:border-emerald hover:bg-emerald/5 transition-all"
+                >
+                  {isUploading && uploadProgress.includes('foto') ? (
+                    <div className="flex flex-col items-center gap-2">
+                      <Loader2 className="h-8 w-8 text-emerald animate-spin" />
+                      <p className="text-emerald font-medium">{uploadProgress}</p>
+                    </div>
+                  ) : (
+                    <div className="flex flex-col items-center gap-2">
+                      <CloudUpload className="h-10 w-10 text-emerald/60" />
+                      <p className="text-foreground font-medium">Arraste fotos aqui ou clique para buscar</p>
+                      <p className="text-muted-foreground text-xs">Aceita JPG, PNG, WebP (m\u00faltiplos arquivos)</p>
+                    </div>
+                  )}
+                </div>
+                {/* URL manual */}
                 <div className="flex gap-2">
-                  <Input value={newImageUrl} onChange={e => setNewImageUrl(e.target.value)} placeholder="Cole a URL da imagem aqui..." className="flex-1 bg-secondary/30 border-border/50" />
-                  <Button onClick={addImage} className="btn-premium"><Plus className="mr-1 h-4 w-4" /> Adicionar</Button>
+                  <Input value={newImageUrl} onChange={e => setNewImageUrl(e.target.value)} placeholder="Ou cole a URL da imagem aqui..." className="flex-1 bg-secondary/30 border-border/50" />
+                  <Button onClick={addImage} variant="outline" className="border-emerald/30 text-emerald hover:bg-emerald/10"><Plus className="mr-1 h-4 w-4" /> URL</Button>
                 </div>
                 {form.images.length > 0 ? (
                   <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
@@ -292,19 +398,38 @@ export default function Properties() {
                     ))}
                   </div>
                 ) : (
-                  <div className="p-12 border-2 border-dashed border-border/30 rounded-xl text-center">
-                    <Image className="h-12 w-12 text-muted-foreground/30 mx-auto mb-2" />
-                    <p className="text-muted-foreground">Nenhuma foto adicionada</p>
-                  </div>
+                  <p className="text-muted-foreground text-sm text-center">Nenhuma foto adicionada ainda</p>
                 )}
               </TabsContent>
 
               <TabsContent value="video" className="space-y-4">
                 <div className="flex items-center gap-2 mb-2">
                   <Video className="h-5 w-5 text-red-500" />
-                  <h3 className="font-semibold text-foreground">Vídeo do Imóvel</h3>
+                  <h3 className="font-semibold text-foreground">V\u00eddeo do Im\u00f3vel</h3>
                 </div>
-                <Input value={form.videoUrl} onChange={e => setForm(p => ({ ...p, videoUrl: e.target.value }))} placeholder="Cole a URL do vídeo (YouTube, etc.)" className="bg-secondary/30 border-border/50" />
+                {/* Upload drag&drop de v\u00eddeo */}
+                <input ref={videoInputRef} type="file" accept="video/*" className="hidden" onChange={e => handleVideoUpload(e.target.files)} />
+                <div
+                  onDrop={e => handleDrop(e, 'video')}
+                  onDragOver={handleDragOver}
+                  onClick={() => !isUploading && videoInputRef.current?.click()}
+                  className="p-6 border-2 border-dashed border-red-500/40 rounded-xl text-center cursor-pointer hover:border-red-500 hover:bg-red-500/5 transition-all"
+                >
+                  {isUploading && uploadProgress.includes('v\u00eddeo') ? (
+                    <div className="flex flex-col items-center gap-2">
+                      <Loader2 className="h-8 w-8 text-red-500 animate-spin" />
+                      <p className="text-red-500 font-medium">{uploadProgress}</p>
+                    </div>
+                  ) : (
+                    <div className="flex flex-col items-center gap-2">
+                      <CloudUpload className="h-10 w-10 text-red-500/60" />
+                      <p className="text-foreground font-medium">Arraste o v\u00eddeo aqui ou clique para buscar</p>
+                      <p className="text-muted-foreground text-xs">Aceita MP4, WebM, MOV (m\u00e1x 50MB)</p>
+                    </div>
+                  )}
+                </div>
+                {/* URL manual */}
+                <Input value={form.videoUrl} onChange={e => setForm(p => ({ ...p, videoUrl: e.target.value }))} placeholder="Ou cole a URL do v\u00eddeo (YouTube, etc.)" className="bg-secondary/30 border-border/50" />
                 {form.videoUrl ? (
                   <div className="rounded-xl overflow-hidden border border-border/50 bg-black aspect-video">
                     {form.videoUrl.includes("youtube") || form.videoUrl.includes("youtu.be") ? (
@@ -313,12 +438,7 @@ export default function Properties() {
                       <video src={form.videoUrl} controls className="w-full h-full" />
                     )}
                   </div>
-                ) : (
-                  <div className="p-12 border-2 border-dashed border-border/30 rounded-xl text-center">
-                    <Video className="h-12 w-12 text-muted-foreground/30 mx-auto mb-2" />
-                    <p className="text-muted-foreground">Nenhum vídeo adicionado</p>
-                  </div>
-                )}
+                ) : null}
               </TabsContent>
 
               <TabsContent value="planta" className="space-y-4">
@@ -326,17 +446,34 @@ export default function Properties() {
                   <FileImage className="h-5 w-5 text-emerald" />
                   <h3 className="font-semibold text-foreground">Planta Baixa</h3>
                 </div>
-                <Input value={form.plantaBaixaUrl} onChange={e => setForm(p => ({ ...p, plantaBaixaUrl: e.target.value }))} placeholder="Cole a URL da planta baixa" className="bg-secondary/30 border-border/50" />
+                {/* Upload drag&drop de planta */}
+                <input ref={plantaInputRef} type="file" accept="image/*,.pdf" className="hidden" onChange={e => handlePlantaUpload(e.target.files)} />
+                <div
+                  onDrop={e => handleDrop(e, 'planta')}
+                  onDragOver={handleDragOver}
+                  onClick={() => !isUploading && plantaInputRef.current?.click()}
+                  className="p-6 border-2 border-dashed border-emerald/40 rounded-xl text-center cursor-pointer hover:border-emerald hover:bg-emerald/5 transition-all"
+                >
+                  {isUploading && uploadProgress.includes('planta') ? (
+                    <div className="flex flex-col items-center gap-2">
+                      <Loader2 className="h-8 w-8 text-emerald animate-spin" />
+                      <p className="text-emerald font-medium">{uploadProgress}</p>
+                    </div>
+                  ) : (
+                    <div className="flex flex-col items-center gap-2">
+                      <CloudUpload className="h-10 w-10 text-emerald/60" />
+                      <p className="text-foreground font-medium">Arraste a planta baixa aqui ou clique para buscar</p>
+                      <p className="text-muted-foreground text-xs">Aceita JPG, PNG, PDF</p>
+                    </div>
+                  )}
+                </div>
+                {/* URL manual */}
+                <Input value={form.plantaBaixaUrl} onChange={e => setForm(p => ({ ...p, plantaBaixaUrl: e.target.value }))} placeholder="Ou cole a URL da planta baixa" className="bg-secondary/30 border-border/50" />
                 {form.plantaBaixaUrl ? (
                   <div className="rounded-xl overflow-hidden border border-border/50">
                     <img src={form.plantaBaixaUrl} alt="Planta Baixa" className="w-full max-h-96 object-contain bg-secondary/20" />
                   </div>
-                ) : (
-                  <div className="p-12 border-2 border-dashed border-border/30 rounded-xl text-center">
-                    <FileImage className="h-12 w-12 text-muted-foreground/30 mx-auto mb-2" />
-                    <p className="text-muted-foreground">Nenhuma planta baixa adicionada</p>
-                  </div>
-                )}
+                ) : null}
               </TabsContent>
             </Tabs>
 

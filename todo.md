@@ -97,3 +97,14 @@
 
 ## Configuração Z-API
 - [x] Configurar credenciais Z-API (Instance ID, Token, Client-Token) no sistema - CONECTADO!
+
+## Bugs
+- [x] Corrigir NotFoundError: insertBefore no site publicado (restart servidor resolveu)
+- [ ] Excluir imóvel de teste do banco
+- [ ] Corrigir bug de exclusão de imóvel (imóvel volta após excluir)
+- [x] Revisar código completo do bot (corrigido Client-Token, endpoint /send-text, headers)
+- [x] Testar envio real de mensagem WhatsApp via Z-API (messageId: 69F7407D071E813F2CC2)
+- [x] Preparar para campanha real - Z-API funcionando!
+- [x] Adicionar upload drag&drop para fotos na edição de imóveis
+- [x] Adicionar upload drag&drop para vídeos na edição de imóveis
+- [x] Adicionar upload drag&drop para planta baixa na edição de imóveis

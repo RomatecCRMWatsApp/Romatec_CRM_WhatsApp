@@ -10,6 +10,7 @@ const ZAPI_BASE_URL = 'https://api.z-api.io/instances';
 interface SendMessageParams {
   instanceId: string;
   token: string;
+  clientToken?: string;
   phone: string;
   message: string;
 }
@@ -22,12 +23,14 @@ interface ZAPIResponse {
 }
 
 /**
- * Enviar mensagem via Z-API COM RETRY AUTOMÁTICO
+ * Enviar mensagem de TEXTO via Z-API COM RETRY AUTOMÁTICO
+ * Endpoint correto: /send-text
  * Tenta até 3 vezes com backoff exponencial
  */
 export async function sendMessageViaZAPI({
   instanceId,
   token,
+  clientToken,
   phone,
   message,
 }: SendMessageParams): Promise<ZAPIResponse> {
@@ -44,16 +47,24 @@ export async function sendMessageViaZAPI({
     return { success: false, error: 'Número inválido', attempts: 0 };
   }
 
+  // Headers com Client-Token obrigatório
+  const headers: Record<string, string> = {
+    'Content-Type': 'application/json',
+  };
+  if (clientToken) {
+    headers['Client-Token'] = clientToken;
+  }
+
   for (let attempt = 1; attempt <= MAX_RETRIES; attempt++) {
     try {
       const response = await axios.post(
-        `${ZAPI_BASE_URL}/${instanceId}/token/${token}/send-message`,
+        `${ZAPI_BASE_URL}/${instanceId}/token/${token}/send-text`,
         {
           phone: formattedPhone,
           message: message,
         },
         {
-          headers: { 'Content-Type': 'application/json' },
+          headers,
           timeout: 15000,
         }
       );
@@ -62,6 +73,15 @@ export async function sendMessageViaZAPI({
         return {
           success: true,
           messageId: response.data.messageId,
+          attempts: attempt,
+        };
+      }
+
+      // Z-API pode retornar 200 mas com zapiMessageId em vez de messageId
+      if (response.status === 200 && (response.data?.zapiMessageId || response.data?.id)) {
+        return {
+          success: true,
+          messageId: response.data.zapiMessageId || response.data.id,
           attempts: attempt,
         };
       }
@@ -96,16 +116,21 @@ export async function sendMessageViaZAPI({
 }
 
 /**
- * Validar conexão com Z-API
+ * Validar conexão com Z-API (com Client-Token)
  */
 export async function validateZAPIConnection(
   instanceId: string,
-  token: string
+  token: string,
+  clientToken?: string
 ): Promise<boolean> {
   try {
+    const headers: Record<string, string> = {};
+    if (clientToken) {
+      headers['Client-Token'] = clientToken;
+    }
     const response = await axios.get(
       `${ZAPI_BASE_URL}/${instanceId}/token/${token}/status`,
-      { timeout: 5000 }
+      { timeout: 5000, headers }
     );
     return response.status === 200;
   } catch (error) {
@@ -119,12 +144,17 @@ export async function validateZAPIConnection(
  */
 export async function getZAPIStatus(
   instanceId: string,
-  token: string
+  token: string,
+  clientToken?: string
 ): Promise<{ connected: boolean; phone?: string }> {
   try {
+    const headers: Record<string, string> = {};
+    if (clientToken) {
+      headers['Client-Token'] = clientToken;
+    }
     const response = await axios.get(
       `${ZAPI_BASE_URL}/${instanceId}/token/${token}/status`,
-      { timeout: 5000 }
+      { timeout: 5000, headers }
     );
 
     if (response.status === 200 && response.data?.connected) {
@@ -181,12 +211,14 @@ export function parseWebhookPayload(body: any): WebhookPayload | null {
 export class MessageScheduler {
   private instanceId: string;
   private token: string;
+  private clientToken?: string;
   private messagesPerHour = 2;
   private delayBetweenMessages = (60 * 60 * 1000) / this.messagesPerHour;
 
-  constructor(instanceId: string, token: string) {
+  constructor(instanceId: string, token: string, clientToken?: string) {
     this.instanceId = instanceId;
     this.token = token;
+    this.clientToken = clientToken;
   }
 
   async sendMessagesWithDelay(
@@ -200,6 +232,7 @@ export class MessageScheduler {
       const result = await sendMessageViaZAPI({
         instanceId: this.instanceId,
         token: this.token,
+        clientToken: this.clientToken,
         phone,
         message: text,
       });

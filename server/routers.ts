@@ -679,6 +679,7 @@ Retorne as 4 variações separadas por |||` },
         return sendMessageViaZAPI({
           instanceId: config.zApiInstanceId,
           token: config.zApiToken,
+          clientToken: config.zApiClientToken || undefined,
           phone: input.phone,
           message: input.message,
         });
