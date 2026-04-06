@@ -199,3 +199,31 @@
 - [x] Mostrar slots agendados no cronômetro (verde=enviado, roxo=pendente)
 - [x] Mostrar total do par (camp1.mph + camp2.mph) na rotação de pares
 - [x] Testes unitários: 56 testes passando (incluindo 12 novos para v4.0)
+
+## Redesign Visual Campanhas - Dark Premium (06/04/2026)
+- [x] Fundo escuro em toda a tela de campanhas (consistente com dashboard)
+- [x] Cards de campanha com fundo dark, bordas sutis, sombras
+- [x] Painel de controle dark com gradientes
+- [x] Cronômetro e slots com cores vibrantes sobre fundo escuro
+- [x] Rotação de pares com visual dark
+- [x] Botões com cores vibrantes sobre fundo escuro
+
+## Bug Horário Cards + Redesign Dark (06/04/2026)
+- [x] BUG: Horário de início nos cards mostra hora antiga (19:44:47) em vez da hora do scheduler (20:13:23)
+- [x] FIX: Cards devem usar startedAtFormatted do scheduler como fonte da verdade
+- [x] Redesign dark premium: fundo escuro, cards escuros, cores vibrantes
+- [x] BUG: Barra "Tempo do Ciclo" preenchida mas percentual mostra 0% - percentual não acompanha a barra
+
+## Proteção Anti-Duplicação msgs/hora (06/04/2026) - IMPLEMENTADO
+- [x] msgs/hora limitado automaticamente pelos contatos pendentes (countPendingContacts)
+- [x] generateSlots usa Math.min(mph, pendingContacts) para limitar
+- [x] Nunca enviar 2 msgs para o mesmo cliente (contato marcado 'sent' após envio)
+- [x] Scheduler usa Math.min(messagesPerHour, contatosPendentes)
+
+## Atualização contatos dinâmicos = msgs/hora × 12 (06/04/2026)
+- [x] totalContacts = messagesPerHour × 12 (múltiplos de 12 pelo ciclo de 12h)
+- [x] Quando muda msgs/hora, recalcular contatos e redesignar automaticamente
+- [x] 1 msg/h = 12 contatos, 2 = 24, 3 = 36, 4 = 48, 5 = 60
+- [x] Limitar msgs/hora pelos contatos pendentes (proteção anti-duplicação)
+- [x] Nunca enviar 2 msgs para o mesmo contato
+- [x] Atualizar UI para mostrar contatos dinâmicos (mostra mph ×12 = X contatos)

@@ -321,14 +321,14 @@ Retorne as 4 variações separadas por |||` },
           propertyId: input.propertyId,
           name: input.name,
           messageVariations: input.messageVariations || [],
-          totalContacts: input.totalContacts || 12,
+          totalContacts: input.totalContacts || 24,
           status: "draft",
         });
       }),
 
     /**
      * AUTO CONFIGURAR CAMPANHAS
-     * Cria 4 campanhas (1 por imóvel) com 12 contatos cada = 48 contatos
+     * Cria campanhas (1 por imóvel) com messagesPerHour×12 contatos cada
      * Seleciona contatos aleatórios do banco
      */
     autoSetup: protectedProcedure.mutation(async () => {
@@ -369,7 +369,7 @@ Retorne as 4 variações separadas por |||` },
           propertyId: prop.id,
           name: prop.denomination,
           messageVariations: variations,
-          totalContacts: 12,
+          totalContacts: 24, // padrão: 2 msgs/hora × 12 = 24
           sentCount: 0,
           failedCount: 0,
           status: "running",
@@ -379,9 +379,11 @@ Retorne as 4 variações separadas por |||` },
         const campaignId = Number(result[0].insertId);
         createdCampaigns.push({ id: campaignId, name: prop.denomination });
 
-        // 6. Designar 12 contatos para esta campanha
-        const startIdx = i * 12;
-        const campaignContactsList = shuffled.slice(startIdx, startIdx + 12);
+        // 6. Designar contatos para esta campanha (mph × 12)
+        const mph = 2; // padrão
+        const contactsNeeded = mph * 12; // = 24
+        const startIdx = i * contactsNeeded;
+        const campaignContactsList = shuffled.slice(startIdx, startIdx + contactsNeeded);
 
         for (const contact of campaignContactsList) {
           await db.insert(campaignContacts).values({
@@ -396,8 +398,8 @@ Retorne as 4 variações separadas por |||` },
       return {
         success: true,
         campaigns: createdCampaigns,
-        totalContacts: Math.min(allProperties.length * 12, shuffled.length),
-        message: `${createdCampaigns.length} campanhas criadas com ${Math.min(allProperties.length * 12, shuffled.length)} contatos`,
+        totalContacts: Math.min(allProperties.length * 24, shuffled.length),
+        message: `${createdCampaigns.length} campanhas criadas com ${Math.min(allProperties.length * 24, shuffled.length)} contatos (2 msgs/hora × 12 = 24 por campanha)`,
       };
     }),
 
@@ -530,7 +532,7 @@ Retorne as 4 variações separadas por |||` },
     }),
 
     /**
-     * Resetar campanhas - LIMPA TUDO e começa do ZERO com 12 NOVOS contatos
+     * Resetar campanhas - LIMPA TUDO e começa do ZERO com 24 NOVOS contatos
      * 
      * Fluxo completo:
      * 1. PARAR scheduler (cancelar TODOS os timers)
@@ -538,7 +540,7 @@ Retorne as 4 variações separadas por |||` },
      * 3. LIMPAR: campaignContacts, messages, contactCampaignHistory
      * 4. DESBLOQUEAR todos os contatos
      * 5. REGENERAR variações de mensagem (com novos textos profissionais)
-     * 6. REDESIGNAR 12 novos contatos aleatórios para cada campanha
+     * 6. REDESIGNAR contatos (messagesPerHour × 12) para cada campanha
      * 7. Status = "paused" (usuário precisa clicar Iniciar)
      */
     reset: protectedProcedure.mutation(async () => {
@@ -606,21 +608,29 @@ Retorne as 4 variações separadas por |||` },
       }
       console.log(`✅ ${allCampaigns.length} campanhas resetadas (status=paused, variações regeneradas)`);
 
-      // PASSO 6: REDESIGNAR 12 novos contatos ALEATÓRIOS para cada campanha
+      // PASSO 6: REDESIGNAR contatos (mph × 12) para cada campanha
       // Pegar TODOS os contatos ativos (já desbloqueados no passo 4)
       const allContacts = await db.select().from(contacts).where(eq(contacts.status, "active"));
       const shuffled = [...allContacts].sort(() => Math.random() - 0.5);
 
-      // Garantir que cada campanha recebe 12 contatos DIFERENTES
+      // Cada campanha recebe messagesPerHour × 12 contatos DIFERENTES
       const usedContactIds = new Set<number>();
       for (let i = 0; i < allCampaigns.length; i++) {
+        const mph = allCampaigns[i].messagesPerHour || 2;
+        const contactsNeeded = mph * 12;
+
+        // Atualizar totalContacts no banco
+        await db.update(campaigns)
+          .set({ totalContacts: contactsNeeded })
+          .where(eq(campaigns.id, allCampaigns[i].id));
+
         // Pegar contatos ainda não usados
         const available = shuffled.filter(c => !usedContactIds.has(c.id));
-        const selected = available.slice(0, 12);
+        const selected = available.slice(0, contactsNeeded);
 
-        // Se não tem 12 disponíveis, pegar do início (fallback)
-        if (selected.length < 12) {
-          const remaining = 12 - selected.length;
+        // Se não tem o suficiente, pegar do início (fallback)
+        if (selected.length < contactsNeeded) {
+          const remaining = contactsNeeded - selected.length;
           const fallback = shuffled.filter(c => !selected.find(s => s.id === c.id)).slice(0, remaining);
           selected.push(...fallback);
         }
@@ -669,11 +679,41 @@ Retorne as 4 variações separadas por |||` },
         const db = await getDb();
         if (!db) throw new Error("Database not available");
 
+        const newMph = input.messagesPerHour;
+        const newTotalContacts = newMph * 12; // Múltiplos de 12 pelo ciclo de 12h
+
+        // Atualizar msgs/hora e totalContacts
         await db.update(campaigns)
-          .set({ messagesPerHour: input.messagesPerHour })
+          .set({ messagesPerHour: newMph, totalContacts: newTotalContacts })
           .where(eq(campaigns.id, input.campaignId));
 
-        return { success: true, message: `Campanha atualizada: ${input.messagesPerHour} msgs/hora` };
+        // Redesignar contatos: limpar antigos e atribuir novos
+        await db.delete(campaignContacts).where(eq(campaignContacts.campaignId, input.campaignId));
+
+        // Pegar contatos ativos e não bloqueados
+        const now = new Date();
+        const allContacts = await db.select().from(contacts).where(eq(contacts.status, "active"));
+        const unblockedContacts = allContacts.filter(c => !c.blockedUntil || c.blockedUntil <= now);
+        const shuffled = [...unblockedContacts].sort(() => Math.random() - 0.5);
+        const selected = shuffled.slice(0, newTotalContacts);
+
+        for (const contact of selected) {
+          await db.insert(campaignContacts).values({
+            campaignId: input.campaignId,
+            contactId: contact.id,
+            messagesSent: 0,
+            status: "pending",
+          });
+        }
+
+        console.log(`📊 Campanha ${input.campaignId}: ${newMph} msgs/hora × 12 = ${newTotalContacts} contatos (${selected.length} designados)`);
+
+        return { 
+          success: true, 
+          message: `${newMph} msgs/hora × 12 = ${newTotalContacts} contatos redesignados`,
+          totalContacts: newTotalContacts,
+          assignedContacts: selected.length,
+        };
       }),
 
     /**

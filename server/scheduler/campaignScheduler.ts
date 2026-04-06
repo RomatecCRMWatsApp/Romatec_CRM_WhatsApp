@@ -11,15 +11,17 @@ import { eq, and, isNull, or, lte } from "drizzle-orm";
  * 3. As msgs são distribuídas em SLOTS ALEATÓRIOS dentro dos 60 min
  * 4. Mínimo 3 min entre msgs (segurança anti-ban)
  * 5. Rotação de pares: Par 1 → Par 2 → Par 1...
- * 6. 12 contatos por campanha
+ * 6. Contatos por campanha = messagesPerHour × 12 (1mph=12, 2mph=24, 3mph=36...)
  * 7. Bloqueio de 72h por contato após envio
  * 8. Ciclo de 60 min começa quando clica PLAY
  * 
  * EXEMPLO:
- * - ALACIDE: messagesPerHour = 3
- * - Mod_Vaz-01: messagesPerHour = 2
+ * - ALACIDE: messagesPerHour = 3 → 36 contatos (3×12) → 12 horas para completar
+ * - Mod_Vaz-01: messagesPerHour = 2 → 24 contatos (2×12) → 12 horas para completar
  * - Total no ciclo: 5 msgs distribuídas aleatoriamente em 60 min
- * - Slots possíveis: [min 2, min 12, min 25, min 38, min 52]
+ * - msgs/hora é LIMITADO automaticamente pelos contatos pendentes
+ * - NUNCA envia 2 msgs para o mesmo contato
+ * - Ciclo completo = SEMPRE 12 horas (totalContacts / messagesPerHour = 12)
  */
 
 interface MessageSlot {
@@ -178,7 +180,7 @@ class CampaignScheduler {
           propertyId: prop.id,
           name: prop.denomination,
           messageVariations: variations,
-          totalContacts: 12,
+          totalContacts: 24, // messagesPerHour(2) × 12 = 24
           sentCount: 0,
           failedCount: 0,
           messagesPerHour: 2, // padrão 2 msgs/hora
@@ -245,12 +247,17 @@ class CampaignScheduler {
     const allContacts = await db.select().from(contacts).where(eq(contacts.status, "active"));
     const unblockedContacts = allContacts.filter(c => !c.blockedUntil || c.blockedUntil <= now);
 
-    if (unblockedContacts.length < 12) {
-      console.warn(`⚠️ Apenas ${unblockedContacts.length} contatos desbloqueados disponíveis`);
+    // totalContacts = messagesPerHour × 12
+    const campaign = await db.select().from(campaigns).where(eq(campaigns.id, campaignId)).limit(1);
+    const mph = campaign[0]?.messagesPerHour || 2;
+    const neededContacts = mph * 12;
+
+    if (unblockedContacts.length < neededContacts) {
+      console.warn(`⚠️ Apenas ${unblockedContacts.length} contatos desbloqueados disponíveis (precisa de ${neededContacts})`);
     }
 
     const shuffled = [...unblockedContacts].sort(() => Math.random() - 0.5);
-    const selected = shuffled.slice(0, 12);
+    const selected = shuffled.slice(0, neededContacts);
 
     for (const contact of selected) {
       await db.insert(campaignContacts).values({
@@ -269,10 +276,21 @@ class CampaignScheduler {
    * Distribui N mensagens em slots aleatórios dentro de 60 min
    * com mínimo de MIN_GAP_MS entre cada slot
    */
-  private generateSlots(camp1: any, camp2: any | null): MessageSlot[] {
-    const mph1 = Math.max(1, Math.min(10, camp1.messagesPerHour || 2));
-    const mph2 = camp2 ? Math.max(1, Math.min(10, camp2.messagesPerHour || 2)) : 0;
+  private generateSlots(camp1: any, camp2: any | null, pendingCamp1: number = 999, pendingCamp2: number = 999): MessageSlot[] {
+    // Limitar msgs/hora pelo número de contatos PENDENTES (proteção anti-duplicação)
+    const rawMph1 = Math.max(1, Math.min(10, camp1.messagesPerHour || 2));
+    const rawMph2 = camp2 ? Math.max(1, Math.min(10, camp2.messagesPerHour || 2)) : 0;
+    const mph1 = Math.min(rawMph1, pendingCamp1);
+    const mph2 = camp2 ? Math.min(rawMph2, pendingCamp2) : 0;
     const totalMsgs = mph1 + mph2;
+
+    if (mph1 < rawMph1) console.log(`⚠️ ${camp1.name}: msgs/hora limitado de ${rawMph1} → ${mph1} (apenas ${pendingCamp1} contatos pendentes)`);
+    if (camp2 && mph2 < rawMph2) console.log(`⚠️ ${camp2.name}: msgs/hora limitado de ${rawMph2} → ${mph2} (apenas ${pendingCamp2} contatos pendentes)`);
+
+    if (totalMsgs === 0) {
+      console.log(`⏭️ Nenhum contato pendente neste par, pulando ciclo`);
+      return [];
+    }
 
     // Criar lista de msgs: camp1 primeiro, depois camp2
     const msgList: { campaignId: number; campaignName: string }[] = [];
@@ -385,8 +403,13 @@ class CampaignScheduler {
 
     this.state.currentCampaignNames = camp2 ? [camp1.name, camp2.name] : [camp1.name];
 
-    // Gerar slots aleatórios baseados em messagesPerHour de cada campanha
-    const slots = this.generateSlots(camp1, camp2);
+    // Contar contatos PENDENTES de cada campanha (proteção anti-duplicação)
+    const pendingCamp1 = await this.countPendingContacts(camp1.id);
+    const pendingCamp2 = camp2 ? await this.countPendingContacts(camp2.id) : 0;
+    console.log(`📊 Contatos pendentes: ${camp1.name}=${pendingCamp1}, ${camp2 ? `${camp2.name}=${pendingCamp2}` : 'solo'}`);
+
+    // Gerar slots aleatórios LIMITADOS pelos contatos pendentes
+    const slots = this.generateSlots(camp1, camp2, pendingCamp1, pendingCamp2);
     const totalMsgsThisCycle = slots.length;
     this.state.maxMessagesThisCycle = totalMsgsThisCycle;
     this.state.messagesThisCycle = 0;
@@ -567,6 +590,37 @@ class CampaignScheduler {
       this.state.totalFailed++;
     } finally {
       this.isSending = false;
+    }
+  }
+
+  /**
+   * Conta contatos pendentes de uma campanha (para limitar msgs/hora)
+   */
+  private async countPendingContacts(campaignId: number): Promise<number> {
+    try {
+      const db = await getDb();
+      if (!db) return 0;
+
+      const ccList = await db.select().from(campaignContacts)
+        .where(and(
+          eq(campaignContacts.campaignId, campaignId),
+          eq(campaignContacts.status, "pending")
+        ));
+
+      // Filtrar contatos não bloqueados
+      const now = new Date();
+      let count = 0;
+      for (const cc of ccList) {
+        const result = await db.select().from(contacts).where(eq(contacts.id, cc.contactId)).limit(1);
+        const contact = result[0];
+        if (contact && (!contact.blockedUntil || contact.blockedUntil <= now)) {
+          count++;
+        }
+      }
+      return count;
+    } catch (error) {
+      console.error("Erro ao contar pendentes:", error);
+      return 0;
     }
   }
 
