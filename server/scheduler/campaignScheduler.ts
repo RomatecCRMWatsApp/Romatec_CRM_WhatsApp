@@ -159,17 +159,52 @@ class CampaignScheduler {
   }
 
   /**
-   * Gera variações de mensagem
+   * Gera variações de mensagem com copywriting profissional
+   * - Sem "bom dia/boa tarde" (roda 24h)
+   * - Gatilhos mentais: escassez, urgência, exclusividade, prova social
+   * - Link para página pública do imóvel
    */
   private generateMessageVariations(prop: any): string[] {
     const priceFormatted = Number(prop.price).toLocaleString("pt-BR");
+    const slug = prop.publicSlug || prop.denomination.toLowerCase().replace(/[^a-z0-9]+/g, '-');
+    const siteUrl = `https://romatecwa-2uygcczr.manus.space/imovel/${slug}`;
+
     return [
-      `Olá! Temos uma excelente oportunidade para você: ${prop.denomination} em ${prop.address}. Imóvel com ótimas condições. Quer saber mais?`,
-      `Boa tarde! O imóvel ${prop.denomination} está disponível por R$ ${priceFormatted}. Localizado em ${prop.address}. Posso enviar mais detalhes?`,
-      `Ei! Você conhece o ${prop.denomination}? É um imóvel incrível em ${prop.address}. Valor: R$ ${priceFormatted}. Vamos conversar?`,
-      `Oportunidade única! ${prop.denomination} - ${prop.address}. Condições especiais de pagamento. Quer agendar uma visita?`,
-      `Bom dia! Estamos com o ${prop.denomination} disponível. Localização privilegiada em ${prop.address}. Valor a partir de R$ ${priceFormatted}. Interesse?`,
-      `Novidade! ${prop.denomination} acaba de entrar no mercado. ${prop.address}. Ótimo investimento por R$ ${priceFormatted}. Quer conhecer?`,
+      // GATILHO: Escassez + Urgência
+      `🏠 {{NOME}}, *${prop.denomination}* - Restam poucas unidades!\n\nValor: *R$ ${priceFormatted}*\nLocal: ${prop.address}\n\n📸 Veja fotos, planta e localização:\n${siteUrl}\n\n⚡ Condições especiais para os primeiros interessados. Posso te passar mais detalhes?`,
+
+      // GATILHO: Curiosidade + Exclusividade
+      `{{NOME}}, você já conhece o *${prop.denomination}*? 🔑\n\nUm dos imóveis mais procurados da região de ${prop.address}.\n\n💰 A partir de *R$ ${priceFormatted}*\n\n👉 Confira tudo aqui: ${siteUrl}\n\nPosso reservar uma visita exclusiva pra você?`,
+
+      // GATILHO: Prova Social + Autoridade
+      `📊 {{NOME}}, o *${prop.denomination}* já recebeu mais de 50 consultas este mês!\n\nMotivo? Localização privilegiada em ${prop.address} + preço competitivo.\n\n🏷️ *R$ ${priceFormatted}*\n\n🔗 Veja todos os detalhes: ${siteUrl}\n\nNão perca essa oportunidade. Me chama!`,
+
+      // GATILHO: Investimento + Valorização
+      `💡 {{NOME}}, sabia que imóveis nessa região valorizaram mais de 30% nos últimos anos?\n\n*${prop.denomination}* - ${prop.address}\nValor atual: *R$ ${priceFormatted}*\n\n📲 Fotos e detalhes completos: ${siteUrl}\n\nQuero te mostrar por que esse é o melhor momento pra investir. Posso te ligar?`,
+
+      // GATILHO: Direto ao ponto + Call to action forte
+      `🔥 {{NOME}}, *OPORTUNIDADE REAL*\n\n*${prop.denomination}*\n📍 ${prop.address}\n💰 *R$ ${priceFormatted}*\n\n✅ Financiamento facilitado\n✅ Documentação em dia\n✅ Pronto pra morar/construir\n\n👉 Veja agora: ${siteUrl}\n\nResponde "SIM" que te envio todas as condições!`,
+
+      // GATILHO: Medo de perder (FOMO)
+      `⏰ {{NOME}}, última chance!\n\n*${prop.denomination}* em ${prop.address} está com condições especiais que vencem em breve.\n\n🏷️ *R$ ${priceFormatted}* (parcelas que cabem no bolso)\n\n📸 Veja fotos e planta: ${siteUrl}\n\nJá temos interessados. Garanta o seu antes que acabe!`,
+
+      // GATILHO: Sonho + Emoção
+      `🏡 {{NOME}}, imagine sua família no lugar perfeito...\n\n*${prop.denomination}* - ${prop.address}\nValor: *R$ ${priceFormatted}*\n\nLocalização estratégica, segurança e qualidade de vida.\n\n🔗 Conheça cada detalhe: ${siteUrl}\n\nVamos conversar sobre como realizar esse sonho?`,
+
+      // GATILHO: Novidade + Exclusividade
+      `🆕 {{NOME}}, *LANÇAMENTO EXCLUSIVO*\n\n*${prop.denomination}*\n📍 ${prop.address}\n💰 *R$ ${priceFormatted}*\n\nPoucos sabem dessa oportunidade. Estou compartilhando com um grupo seleto de clientes.\n\n📲 Detalhes completos: ${siteUrl}\n\nTem interesse? Me responde que te explico tudo!`,
+
+      // GATILHO: Benefício + Facilidade
+      `✨ {{NOME}}, procurando imóvel com ótimo custo-benefício?\n\n*${prop.denomination}* em ${prop.address}\n\n🏷️ *R$ ${priceFormatted}*\n📋 Documentação 100% regularizada\n🏦 Aceita financiamento\n\n👉 Veja fotos e localização: ${siteUrl}\n\nPosso simular as parcelas pra você. É só me chamar!`,
+
+      // GATILHO: Pergunta + Engajamento
+      `🤔 {{NOME}}, você está buscando imóvel na região de ${prop.address}?\n\nTenho uma opção que pode ser exatamente o que procura:\n\n*${prop.denomination}* - *R$ ${priceFormatted}*\n\n📸 Veja tudo aqui: ${siteUrl}\n\nMe conta o que você precisa que te ajudo a encontrar o imóvel ideal!`,
+
+      // GATILHO: Comparação + Valor
+      `📌 {{NOME}}, comparou preços na região?\n\n*${prop.denomination}* está abaixo da média do mercado:\n💰 *R$ ${priceFormatted}*\n📍 ${prop.address}\n\nE o melhor: condições facilitadas de pagamento.\n\n🔗 Confira: ${siteUrl}\n\nEssa é a hora certa. Vamos conversar?`,
+
+      // GATILHO: Urgência + Escassez
+      `🚨 {{NOME}}, *ATENÇÃO*\n\n*${prop.denomination}* - ${prop.address}\n\nEste imóvel está gerando muito interesse e pode sair do mercado a qualquer momento.\n\n🏷️ *R$ ${priceFormatted}*\n\n📲 Veja antes que acabe: ${siteUrl}\n\nGaranta sua visita. Me chama agora!`,
     ];
   }
 
@@ -303,6 +338,26 @@ class CampaignScheduler {
   }
 
   /**
+   * Personaliza mensagem com dados do contato
+   * Substitui {{NOME}} pelo primeiro nome do contato
+   */
+  private personalizeMessage(messageText: string, contact: { name: string; phone: string }): string {
+    // Extrair primeiro nome (antes do primeiro espaço)
+    const firstName = (contact.name || '').split(' ')[0].trim();
+    
+    // Se tem nome válido, personalizar; senão, remover o placeholder
+    let personalized = messageText;
+    if (firstName && firstName.length > 1) {
+      personalized = personalized.replace(/{{NOME}}/g, firstName);
+    } else {
+      // Remover "Olá {{NOME}}, " ou "{{NOME}}, " do início
+      personalized = personalized.replace(/{{NOME}},?\s*/g, '');
+    }
+    
+    return personalized;
+  }
+
+  /**
    * Envia 1 mensagem para 1 contato (com LOCK e verificação)
    */
   private async sendMessageForCampaign(campaign: any) {
@@ -333,13 +388,16 @@ class CampaignScheduler {
         return;
       }
 
-      const messageText = await this.getMessageVariation(campaign.id);
-      if (!messageText) {
+      const rawMessage = await this.getMessageVariation(campaign.id);
+      if (!rawMessage) {
         console.error(`❌ Sem variações de mensagem para ${campaign.name}`);
         this.state.totalFailed++;
         this.isSending = false;
         return;
       }
+
+      // PERSONALIZAR mensagem com nome do contato
+      const messageText = this.personalizeMessage(rawMessage, contact);
 
       // ENVIAR
       const success = await this.sendViaZAPI(contact.phone, messageText);

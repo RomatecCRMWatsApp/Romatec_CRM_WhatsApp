@@ -112,3 +112,9 @@
 - [x] Corrigir erro insertBefore (reescrito com useMemo, useCallback, loading state, keys estáveis, polling 10s)
 - [x] URGENTE: Parar campanhas e corrigir bug insertBefore React (keys, loading, corrida de render)
 - [x] CRÍTICO: Scheduler corrigido - limite rígido 2 msgs/hora, intervalo mínimo 20min, lock de envio
+- [x] Corrigir rotação de campanhas (pares alternados a cada hora - validado com 7 testes unitários)
+- [x] Reescrever mensagens com copywriting profissional (12 variações com gatilhos mentais)
+- [x] Mensagens personalizadas por contato ({{NOME}} substituído pelo primeiro nome real - 6 testes)
+- [x] Envio aleatório (contatos embaralhados)
+- [x] Incluir link da página pública do imóvel nas mensagens de campanha
+- [x] Testes unitários: personalização (6), rotação de pares (7), variações (4), limites (4) = 62 testes total
