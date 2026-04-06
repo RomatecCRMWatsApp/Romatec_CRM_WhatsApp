@@ -469,14 +469,17 @@ Retorne as 4 variações separadas por |||` },
       campaignScheduler.stop();
       await new Promise(resolve => setTimeout(resolve, 500));
 
-      // Garantir que campanhas estão como "running" antes de iniciar
+      // Garantir que campanhas estão como "running" e atualizar startDate
       const db = await getDb();
       if (db) {
         const allCampaigns = await db.select().from(campaigns);
+        const now = new Date();
         for (const camp of allCampaigns) {
-          if (camp.status === "paused") {
-            await db.update(campaigns).set({ status: "running" }).where(eq(campaigns.id, camp.id));
-          }
+          // Ativar campanhas pausadas E atualizar startDate para AGORA
+          await db.update(campaigns).set({ 
+            status: "running",
+            startDate: now,
+          }).where(eq(campaigns.id, camp.id));
         }
       }
 

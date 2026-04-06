@@ -38,16 +38,15 @@ export default function Campaigns() {
   const { user } = useAuth();
   const [, navigate] = useLocation();
   const [expandedCampaign, setExpandedCampaign] = useState<number | null>(null);
-  const [cycleTimer, setCycleTimer] = useState(3600);
   const [isSettingUp, setIsSettingUp] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
 
-  // tRPC queries - polling a cada 10s (não 5s para evitar corrida)
+  // tRPC queries - polling a cada 5s para status mais responsivo
   const schedulerState = trpc.scheduler.getState.useQuery(undefined, {
-    refetchInterval: 10000,
+    refetchInterval: 5000,
   });
   const campaignDetails = trpc.scheduler.getCampaignDetails.useQuery(undefined, {
-    refetchInterval: 10000,
+    refetchInterval: 5000,
   });
 
   // Marcar como carregado quando os dados chegarem
@@ -75,6 +74,7 @@ export default function Campaigns() {
     onSuccess: () => {
       toast.success("Scheduler iniciado! Loop infinito 24/7");
       schedulerState.refetch();
+      campaignDetails.refetch();
     },
     onError: (error) => toast.error(`Erro: ${error.message}`),
   });
@@ -89,7 +89,7 @@ export default function Campaigns() {
 
   const resetScheduler = trpc.scheduler.reset.useMutation({
     onSuccess: () => {
-      toast.success("Campanhas resetadas com novos contatos!");
+      toast.success("Campanhas resetadas com novos contatos! Clique em Iniciar.");
       campaignDetails.refetch();
       schedulerState.refetch();
     },
@@ -107,12 +107,23 @@ export default function Campaigns() {
   // Dados estáveis com useMemo
   const isRunning = useMemo(() => schedulerState.data?.state?.isRunning || false, [schedulerState.data?.state?.isRunning]);
   const stats = useMemo(() => schedulerState.data?.stats, [schedulerState.data?.stats]);
+  const stateData = useMemo(() => schedulerState.data?.state, [schedulerState.data?.state]);
   const todayMessages = useMemo(() => schedulerState.data?.todayMessages || [], [schedulerState.data?.todayMessages]);
   const allCampaigns = useMemo(() => campaignDetails.data || [], [campaignDetails.data]);
   const cycleNumber = useMemo(() => stats?.cycleNumber || 0, [stats?.cycleNumber]);
   const runningCampaigns = useMemo(() => allCampaigns.filter((c: any) => c.status === "running"), [allCampaigns]);
   const totalPairs = useMemo(() => Math.ceil(runningCampaigns.length / 2), [runningCampaigns.length]);
-  const currentPairIndex = useMemo(() => totalPairs > 0 ? cycleNumber % totalPairs : 0, [cycleNumber, totalPairs]);
+  
+  // Usar currentPairIndex do backend (fonte da verdade)
+  const currentPairIndex = useMemo(() => {
+    if (stateData?.activePair?.index !== undefined) return stateData.activePair.index;
+    return totalPairs > 0 ? cycleNumber % totalPairs : 0;
+  }, [stateData?.activePair?.index, cycleNumber, totalPairs]);
+
+  // Nomes do par ativo do backend
+  const activePairNames = useMemo(() => {
+    return stateData?.activePair?.campaigns || [];
+  }, [stateData?.activePair?.campaigns]);
 
   // Totais estáveis
   const totals = useMemo(() => {
@@ -124,25 +135,22 @@ export default function Campaigns() {
     return { totalContacts, totalSent, totalPending, totalFailed, successRate };
   }, [allCampaigns]);
 
-  // Cronômetro do ciclo
+  // Cronômetro local baseado em secondsUntilNextCycle do backend
+  const [localTimer, setLocalTimer] = useState(3600);
+  
+  useEffect(() => {
+    if (stateData?.secondsUntilNextCycle !== undefined) {
+      setLocalTimer(stateData.secondsUntilNextCycle);
+    }
+  }, [stateData?.secondsUntilNextCycle]);
+
   useEffect(() => {
     if (!isRunning) return;
     const interval = setInterval(() => {
-      setCycleTimer((prev) => (prev <= 0 ? 3600 : prev - 1));
+      setLocalTimer((prev) => (prev <= 0 ? 3600 : prev - 1));
     }, 1000);
     return () => clearInterval(interval);
   }, [isRunning]);
-
-  // Resetar timer quando muda o ciclo
-  useEffect(() => {
-    if (cycleNumber !== undefined) {
-      const now = new Date();
-      const nextHour = new Date(now);
-      nextHour.setHours(nextHour.getHours() + 1, 0, 0, 0);
-      const remaining = Math.floor((nextHour.getTime() - now.getTime()) / 1000);
-      setCycleTimer(remaining);
-    }
-  }, [cycleNumber]);
 
   const handleAutoSetup = useCallback(() => {
     setIsSettingUp(true);
@@ -183,7 +191,7 @@ export default function Campaigns() {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100">
-      {/* Header */}
+      {/* Header com Status LED */}
       <div className="bg-gradient-to-r from-[#1a5c2e] to-[#2d8a4e] text-white p-6">
         <div className="container flex items-center justify-between">
           <div className="flex items-center gap-4">
@@ -196,19 +204,19 @@ export default function Campaigns() {
                 <span>Campanhas WhatsApp</span>
               </h1>
               <p className="text-white/80 text-sm mt-1">
-                <span>MAX 2 msgs/hora | Intervalo 20-40 min | Loop 24/7</span>
+                <span>MAX 2 msgs/hora | Intervalo 20-40 min | Ciclo 24h/dia, 7 dias/semana</span>
               </p>
             </div>
           </div>
           <div className="flex items-center gap-2">
             {isRunning ? (
-              <span className="flex items-center gap-2 bg-green-500/20 border border-green-400/50 px-3 py-1.5 rounded-full text-sm">
-                <span className="w-2 h-2 rounded-full bg-green-400 animate-pulse" />
+              <span className="flex items-center gap-2 bg-green-500/30 border border-green-400 px-4 py-2 rounded-full text-sm font-bold animate-pulse">
+                <span className="w-3 h-3 rounded-full bg-green-400 shadow-lg shadow-green-400/50" />
                 <span>RODANDO</span>
               </span>
             ) : (
-              <span className="flex items-center gap-2 bg-red-500/20 border border-red-400/50 px-3 py-1.5 rounded-full text-sm">
-                <span className="w-2 h-2 rounded-full bg-red-400" />
+              <span className="flex items-center gap-2 bg-red-500/30 border border-red-400 px-4 py-2 rounded-full text-sm font-bold">
+                <span className="w-3 h-3 rounded-full bg-red-400" />
                 <span>PARADO</span>
               </span>
             )}
@@ -261,26 +269,50 @@ export default function Campaigns() {
               </div>
             </div>
 
-            {/* Cronômetro Global */}
+            {/* Cronômetro e Info de Tempo - SEMPRE visível quando rodando */}
             {isRunning && (
               <div className="p-4 bg-gradient-to-r from-purple-50 to-indigo-50 rounded-xl border border-purple-200 mb-6">
-                <div className="flex items-center justify-between">
+                {/* Linha 1: Cronômetro grande */}
+                <div className="flex items-center justify-between mb-3">
                   <div>
                     <p className="font-semibold text-purple-800 flex items-center gap-2">
                       <Timer className="h-5 w-5" />
-                      <span>Pr&oacute;ximo Ciclo em:</span>
+                      <span>Próximo Ciclo em:</span>
                     </p>
                     <p className="text-xs text-slate-500 mt-1">
                       <span>Ciclo {cycleNumber + 1} | Par {currentPairIndex + 1} de {totalPairs}</span>
                     </p>
                   </div>
-                  <span className="text-5xl font-mono font-bold text-purple-600 tabular-nums">{formatTimer(cycleTimer)}</span>
+                  <span className="text-5xl font-mono font-bold text-purple-600 tabular-nums">{formatTimer(localTimer)}</span>
                 </div>
-                <div className="mt-3 w-full bg-purple-100 rounded-full h-2">
+                <div className="w-full bg-purple-100 rounded-full h-2 mb-3">
                   <div
                     className="bg-gradient-to-r from-purple-400 to-purple-600 h-2 rounded-full transition-all duration-1000"
-                    style={{ width: `${((3600 - cycleTimer) / 3600) * 100}%` }}
+                    style={{ width: `${((3600 - localTimer) / 3600) * 100}%` }}
                   />
+                </div>
+                {/* Linha 2: Info de tempo detalhada */}
+                <div className="grid grid-cols-3 gap-3 text-center">
+                  <div className="p-2 bg-white/60 rounded-lg">
+                    <p className="text-xs text-slate-500">Iniciou às</p>
+                    <p className="text-sm font-bold text-purple-700">{stateData?.startedAtFormatted || "--:--:--"}</p>
+                  </div>
+                  <div className="p-2 bg-white/60 rounded-lg">
+                    <p className="text-xs text-slate-500">Rodando há</p>
+                    <p className="text-sm font-bold text-purple-700">{stateData?.uptimeFormatted || "00:00:00"}</p>
+                  </div>
+                  <div className="p-2 bg-white/60 rounded-lg">
+                    <p className="text-xs text-slate-500">Próximo ciclo</p>
+                    <p className="text-sm font-bold text-purple-700">{stateData?.nextCycleFormatted || "--:--:--"}</p>
+                  </div>
+                </div>
+                {/* Linha 3: Msgs enviadas nesta hora */}
+                <div className="mt-3 flex items-center justify-center gap-2 text-sm">
+                  <span className="text-slate-500">Msgs nesta hora:</span>
+                  <span className="font-bold text-purple-700">{stats?.messagesThisHour || 0}/{stats?.maxMessagesPerHour || 2}</span>
+                  {(stats?.messagesThisHour || 0) >= 2 && (
+                    <span className="text-xs bg-green-100 text-green-700 px-2 py-0.5 rounded-full">Ciclo completo</span>
+                  )}
                 </div>
               </div>
             )}
@@ -295,7 +327,7 @@ export default function Campaigns() {
                 {isSettingUp ? (
                   <span className="flex items-center gap-2"><Loader2 className="h-4 w-4 animate-spin" /><span>Configurando...</span></span>
                 ) : (
-                  <span className="flex items-center gap-2"><Settings2 className="h-4 w-4" /><span>Auto Configurar</span></span>
+                  <span className="flex items-center gap-2"><Settings2 className="h-4 w-4" /><span>Auto</span></span>
                 )}
               </Button>
 
@@ -322,7 +354,7 @@ export default function Campaigns() {
                 variant="outline"
                 className="h-12 font-semibold border-2"
               >
-                <span className="flex items-center gap-2"><RotateCcw className="h-4 w-4" /><span>Resetar</span></span>
+                <span className="flex items-center gap-2"><RotateCcw className="h-4 w-4" /><span>Redefinir</span></span>
               </Button>
 
               <Button
@@ -337,13 +369,13 @@ export default function Campaigns() {
           </CardContent>
         </Card>
 
-        {/* Rotação de Pares */}
+        {/* Rotação de Pares - com destaque do par ativo */}
         {runningCampaigns.length >= 2 && (
           <Card className="border-2 border-blue-200">
             <CardHeader className="bg-gradient-to-r from-blue-50 to-indigo-50 pb-3">
               <CardTitle className="text-lg flex items-center gap-2">
                 <Zap className="h-5 w-5 text-blue-600" />
-                <span>Rota&ccedil;&atilde;o de Pares - Ciclo Atual</span>
+                <span>Rotação de Pares - Ciclo Atual</span>
               </CardTitle>
             </CardHeader>
             <CardContent className="pt-4">
@@ -351,34 +383,50 @@ export default function Campaigns() {
                 {Array.from({ length: totalPairs }).map((_, pairIdx) => {
                   const camp1 = runningCampaigns[pairIdx * 2];
                   const camp2 = runningCampaigns[pairIdx * 2 + 1];
-                  const isCurrentPair = currentPairIndex === pairIdx && isRunning;
-                  const isNextPair = (currentPairIndex + 1) % totalPairs === pairIdx && isRunning && totalPairs > 1;
+                  
+                  // Verificar se este par está ativo usando dados do backend
+                  const isCurrentPair = isRunning && (
+                    currentPairIndex === pairIdx ||
+                    (activePairNames.length > 0 && camp1 && activePairNames.includes(camp1.name))
+                  );
+                  const isNextPair = isRunning && !isCurrentPair && (currentPairIndex + 1) % totalPairs === pairIdx && totalPairs > 1;
 
                   return (
                     <div
                       key={`pair-${pairIdx}-${camp1?.id || 0}-${camp2?.id || 0}`}
                       className={`p-4 rounded-xl border-2 transition-all ${
                         isCurrentPair
-                          ? "bg-green-50 border-green-400 shadow-md shadow-green-100"
+                          ? "bg-green-50 border-green-500 shadow-lg shadow-green-200 ring-2 ring-green-300"
                           : isNextPair
-                          ? "bg-yellow-50 border-yellow-300"
+                          ? "bg-yellow-50 border-yellow-400 shadow-md shadow-yellow-100"
                           : "bg-slate-50 border-slate-200"
                       }`}
                     >
                       <div className="flex items-center gap-2 mb-2">
-                        <span className={`inline-block w-3 h-3 rounded-full ${
-                          isCurrentPair ? "bg-green-500 animate-pulse" : isNextPair ? "bg-yellow-500" : "bg-slate-400"
+                        <span className={`inline-block w-4 h-4 rounded-full ${
+                          isCurrentPair ? "bg-green-500 animate-pulse shadow-lg shadow-green-400/50" : isNextPair ? "bg-yellow-500 animate-pulse" : "bg-slate-300"
                         }`} />
-                        <h3 className="font-bold">
-                          <span>{isCurrentPair ? "ENVIANDO AGORA" : isNextPair ? "PROXIMO PAR" : `Par ${pairIdx + 1}`}</span>
+                        <h3 className={`font-bold text-sm ${
+                          isCurrentPair ? "text-green-800" : isNextPair ? "text-yellow-800" : "text-slate-600"
+                        }`}>
+                          <span>{isCurrentPair ? "ENVIANDO AGORA" : isNextPair ? "PRÓXIMO PAR" : `Par ${pairIdx + 1}`}</span>
                         </h3>
+                        {isCurrentPair && (
+                          <span className="ml-auto text-xs bg-green-200 text-green-800 px-2 py-0.5 rounded-full font-bold">
+                            ATIVO
+                          </span>
+                        )}
                       </div>
                       <div className="flex items-center gap-2">
-                        <span className="px-2 py-1 bg-white rounded text-sm font-medium border">
+                        <span className={`px-3 py-1.5 rounded text-sm font-bold border ${
+                          isCurrentPair ? "bg-green-100 border-green-300 text-green-800" : "bg-white border-slate-200"
+                        }`}>
                           <span>{camp1?.name || "?"}</span>
                         </span>
-                        <span className="text-slate-400">+</span>
-                        <span className="px-2 py-1 bg-white rounded text-sm font-medium border">
+                        <span className="text-slate-400 font-bold">+</span>
+                        <span className={`px-3 py-1.5 rounded text-sm font-bold border ${
+                          isCurrentPair ? "bg-green-100 border-green-300 text-green-800" : "bg-white border-slate-200"
+                        }`}>
                           <span>{camp2?.name || camp1?.name || "?"}</span>
                         </span>
                       </div>
@@ -403,7 +451,7 @@ export default function Campaigns() {
             <Card className="p-8 text-center border-2 border-dashed border-slate-300">
               <Settings2 className="h-12 w-12 text-slate-400 mx-auto mb-4" />
               <p className="text-slate-500 mb-4 text-lg">Nenhuma campanha configurada</p>
-              <p className="text-slate-400 text-sm mb-6">Clique em "Auto Configurar" para criar campanhas automaticamente baseadas nos imoveis cadastrados</p>
+              <p className="text-slate-400 text-sm mb-6">Clique em "Auto Configurar" para criar campanhas automaticamente baseadas nos imóveis cadastrados</p>
               <Button onClick={handleAutoSetup} disabled={isSettingUp} className="bg-purple-600 hover:bg-purple-700 text-white">
                 {isSettingUp ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Settings2 className="mr-2 h-4 w-4" />}
                 <span>Auto Configurar Campanhas</span>
@@ -418,9 +466,10 @@ export default function Campaigns() {
                   isRunning={isRunning}
                   currentPairIndex={currentPairIndex}
                   totalPairs={totalPairs}
-                  cycleTimer={cycleTimer}
+                  cycleTimer={localTimer}
                   cycleNumber={cycleNumber}
                   runningCampaigns={runningCampaigns}
+                  activePairNames={activePairNames}
                   expanded={expandedCampaign === campaign.id}
                   onToggle={() => handleToggleExpand(campaign.id)}
                   onToggleActive={(active: boolean) => toggleCampaign.mutate({ campaignId: campaign.id, active })}
@@ -470,6 +519,7 @@ function CampaignCard({
   cycleTimer,
   cycleNumber,
   runningCampaigns,
+  activePairNames,
   expanded,
   onToggle,
   onToggleActive,
@@ -481,15 +531,26 @@ function CampaignCard({
   cycleTimer: number;
   cycleNumber: number;
   runningCampaigns: any[];
+  activePairNames: string[];
   expanded: boolean;
   onToggle: () => void;
   onToggleActive: (active: boolean) => void;
 }) {
+  const isActive = campaign.status === "running";
+  
+  // Verificar se esta campanha está no par ativo usando dados do backend
+  const isInCurrentPair = isRunning && isActive && (
+    activePairNames.includes(campaign.name) ||
+    (() => {
+      const runningIdx = runningCampaigns.findIndex((c: any) => c.id === campaign.id);
+      const pairIndex = runningIdx >= 0 ? Math.floor(runningIdx / 2) : -1;
+      return pairIndex === currentPairIndex;
+    })()
+  );
+  
   const runningIdx = runningCampaigns.findIndex((c: any) => c.id === campaign.id);
   const pairIndex = runningIdx >= 0 ? Math.floor(runningIdx / 2) : -1;
-  const isInCurrentPair = pairIndex === currentPairIndex && isRunning && campaign.status === "running";
-  const isInNextPair = pairIndex === (currentPairIndex + 1) % totalPairs && isRunning && campaign.status === "running" && totalPairs > 1;
-  const isActive = campaign.status === "running";
+  const isInNextPair = isRunning && isActive && !isInCurrentPair && pairIndex === (currentPairIndex + 1) % totalPairs && totalPairs > 1;
 
   const contactsList: any[] = campaign.contacts || [];
   const sentCount = campaign.sentCount || 0;
@@ -509,14 +570,14 @@ function CampaignCard({
     bgColor = "opacity-60";
   } else if (isInCurrentPair) {
     statusText = "Enviando";
-    statusBadgeClass = "bg-green-100 text-green-700";
+    statusBadgeClass = "bg-green-100 text-green-700 border border-green-300";
     borderColor = "border-l-green-500";
-    bgColor = "bg-green-50/30";
+    bgColor = "bg-green-50/50 ring-1 ring-green-200";
   } else if (isInNextPair) {
-    statusText = "Aguardando";
-    statusBadgeClass = "bg-yellow-100 text-yellow-700";
+    statusText = "Próximo";
+    statusBadgeClass = "bg-yellow-100 text-yellow-700 border border-yellow-300";
     borderColor = "border-l-yellow-500";
-    bgColor = "bg-yellow-50/20";
+    bgColor = "bg-yellow-50/30";
   } else {
     statusText = "Ativo";
     statusBadgeClass = "bg-blue-100 text-blue-600";
@@ -529,7 +590,7 @@ function CampaignCard({
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-3">
             <span className={`inline-block w-3 h-3 rounded-full ${
-              isInCurrentPair ? "bg-green-500 animate-pulse" : isInNextPair ? "bg-yellow-500 animate-pulse" : isActive ? "bg-blue-400" : "bg-gray-300"
+              isInCurrentPair ? "bg-green-500 animate-pulse shadow-lg shadow-green-400/50" : isInNextPair ? "bg-yellow-500 animate-pulse" : isActive ? "bg-blue-400" : "bg-gray-300"
             }`} />
             <div>
               <CardTitle className="text-lg">
@@ -554,12 +615,6 @@ function CampaignCard({
                 disabled={isRunning}
               />
             </div>
-            {isInCurrentPair && (
-              <div className="text-right">
-                <p className="text-3xl font-mono font-bold text-green-600 tabular-nums">{formatTimer(cycleTimer)}</p>
-                <p className="text-xs text-slate-500">Cronometro (1 hora)</p>
-              </div>
-            )}
           </div>
         </div>
       </CardHeader>
@@ -569,11 +624,11 @@ function CampaignCard({
         <div className="mb-4">
           <div className="flex items-center justify-between mb-1">
             <p className="text-xs text-slate-600 font-medium">Progresso do Ciclo</p>
-            <p className="text-sm font-bold text-green-700">{progressPercent}%</p>
+            <p className={`text-sm font-bold ${progressPercent === 100 ? "text-orange-600" : "text-green-700"}`}>{progressPercent}%</p>
           </div>
           <div className="w-full bg-slate-200 rounded-full h-3">
             <div
-              className="bg-gradient-to-r from-green-400 to-green-600 h-3 rounded-full transition-all duration-500"
+              className={`h-3 rounded-full transition-all duration-500 ${progressPercent === 100 ? "bg-gradient-to-r from-orange-400 to-orange-600" : "bg-gradient-to-r from-green-400 to-green-600"}`}
               style={{ width: `${progressPercent}%` }}
             />
           </div>
@@ -602,20 +657,20 @@ function CampaignCard({
           </div>
         </div>
 
-        {/* Próximo Ciclo */}
+        {/* Cronômetro inline para campanha do par ativo */}
         {isInCurrentPair && (
-          <div className="p-3 bg-gradient-to-r from-purple-50 to-indigo-50 rounded-lg mb-4 border border-purple-200">
+          <div className="p-3 bg-gradient-to-r from-green-50 to-emerald-50 rounded-lg mb-4 border border-green-200">
             <div className="flex items-center justify-between">
-              <p className="text-sm font-semibold text-purple-800 flex items-center gap-1">
+              <p className="text-sm font-semibold text-green-800 flex items-center gap-1">
                 <Timer className="h-4 w-4" />
-                <span>Proximo Ciclo em:</span>
+                <span>Próximo Ciclo em:</span>
               </p>
-              <span className="text-2xl font-mono font-bold text-purple-600 tabular-nums">{formatTimer(cycleTimer)}</span>
+              <span className="text-2xl font-mono font-bold text-green-600 tabular-nums">{formatTimer(cycleTimer)}</span>
             </div>
           </div>
         )}
 
-        {/* Info */}
+        {/* Info de início */}
         <p className="text-xs text-slate-500 mb-3">
           <span>Iniciado: {campaign.startDate ? formatTime(campaign.startDate) : "--:--:--"} | Ciclos: {totalContacts} de 1 hora = {totalContacts} horas</span>
         </p>

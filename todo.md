@@ -148,3 +148,11 @@
 
 ## Especialistas na Página Pública (06/04/2026)
 - [x] Adicionar 2 especialistas na página pública: José Romário (99) 99181-1246 e Daniele Cavalcante (99) 99206-2871
+
+## Bugs Reportados pelo José (06/04/2026 - Sessão 3 - Tela de Campanhas)
+- [x] BUG 1: Cronômetro ausente - não mostra contagem regressiva para próximo ciclo
+- [x] BUG 2: Status "PARADO" no topo quando campanha está rodando - deveria mostrar "RODANDO" com LED verde
+- [x] BUG 3: Par ativo não acende na rotação de pares - deveria destacar (verde) o par que está rodando
+- [x] BUG 4: Mod_Vaz-01 não enviou nenhuma msg no mesmo ciclo que ALACIDE - ambas do Par 1 deveriam enviar
+- [x] BUG 5: Horário de início mostra 18:05:51 mesmo após reiniciar - deveria atualizar para hora real
+- [x] BUG 6: Contagem inconsistente - WhatsApp mostra 3 msgs enviadas mas dashboard mostra 2

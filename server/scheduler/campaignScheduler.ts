@@ -732,9 +732,17 @@ class CampaignScheduler {
     this.hourlyTimer = setTimeout(async () => {
       if (!this.state.isRunning) return;
 
+      // FIX #9: LIMPAR messageTimer do ciclo anterior ANTES de resetar contador
+      // Isso impede que a msg 2 do ciclo anterior dispare após o reset do contador
+      if (this.messageTimer) {
+        clearTimeout(this.messageTimer);
+        this.messageTimer = null;
+        console.log("🛑 Timer da mensagem 2 do ciclo anterior cancelado (novo ciclo iniciando)");
+      }
+
       this.state.cycleNumber++;
       this.state.cycleStartTime = Date.now();
-      this.state.messagesThisHour = 0; // RESET contador da hora
+      this.state.messagesThisHour = 0; // RESET contador da hora (seguro agora)
 
       await this.executeCycle();
       this.scheduleNextCycle();
@@ -750,10 +758,23 @@ class CampaignScheduler {
     nextHour.setHours(nextHour.getHours() + 1, 0, 0, 0);
     const secondsUntilNextCycle = Math.max(0, Math.floor((nextHour.getTime() - now) / 1000));
 
+    // Calcular uptime formatado
+    const uptimeMs = now - this.state.startedAt;
+    const uptimeHours = String(Math.floor(uptimeMs / 3600000)).padStart(2, '0');
+    const uptimeMinutes = String(Math.floor((uptimeMs % 3600000) / 60000)).padStart(2, '0');
+    const uptimeSeconds = String(Math.floor((uptimeMs % 60000) / 1000)).padStart(2, '0');
+
     return {
       ...this.state,
       secondsUntilNextCycle,
-      uptimeMs: now - this.state.startedAt,
+      uptimeMs,
+      uptimeFormatted: `${uptimeHours}:${uptimeMinutes}:${uptimeSeconds}`,
+      startedAtFormatted: new Date(this.state.startedAt).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit', second: '2-digit' }),
+      nextCycleFormatted: nextHour.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit', second: '2-digit' }),
+      activePair: {
+        index: this.state.currentPairIndex,
+        campaigns: this.state.currentCampaignNames,
+      },
     };
   }
 
