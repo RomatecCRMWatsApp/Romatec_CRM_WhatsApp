@@ -169,3 +169,78 @@
 - [x] Redirecionar usuário autenticado para dashboard
 - [x] Implementar logout com redirecionamento para login
 - [x] Proteger rotas que requerem autenticação
+
+
+## Fase 3 - Sistema de Automação de Campanhas WhatsApp
+
+### Arquitetura e Schema
+- [ ] Criar tabela `campaign_schedules` com ciclos e pares
+- [ ] Criar tabela `contact_campaign_history` para rastrear envios
+- [ ] Criar tabela `campaign_messages` com variações de texto
+- [ ] Adicionar coluna `blocked_until` em contacts para bloqueio de 72h
+- [ ] Adicionar coluna `last_campaign_id` em contacts para ciclo
+
+### Scheduler Principal
+- [ ] Implementar `CampaignScheduler` com lógica de 2 mensagens/hora
+- [ ] Implementar intervalo aleatório (10-30 min) entre mensagens
+- [ ] Implementar rotação de pares (1+2 / 3+4)
+- [ ] Implementar carregamento dinâmico de campanhas do banco
+- [ ] Implementar bloqueio de 3 dias por contato
+- [ ] Implementar ciclo de campanhas por contato (1→2→3→4)
+- [ ] Implementar loop infinito 24/7
+- [ ] Implementar relatório de ciclo 24h
+
+### Controle de Contatos
+- [ ] Implementar seleção de contato diferente por envio
+- [ ] Implementar verificação de bloqueio (72h)
+- [ ] Implementar verificação de ciclo de campanha
+- [ ] Implementar reset automático de contatos
+- [ ] Implementar status tracking (pending/sent/failed)
+
+### Dashboard de Monitoramento
+- [ ] Criar página de "Monitoramento em Tempo Real"
+- [ ] Exibir total de contatos
+- [ ] Exibir quantidade enviada
+- [ ] Exibir quantidade restante
+- [ ] Exibir número de falhas
+- [ ] Exibir taxa de sucesso (%)
+- [ ] Exibir cronômetro de execução
+- [ ] Exibir número do ciclo atual
+- [ ] Exibir status dinâmico das campanhas
+- [ ] Exibir próximo ciclo em (countdown)
+- [ ] Exibir lista de contatos com status
+
+### Integração Z-API
+- [ ] Implementar envio real de mensagens via Z-API
+- [ ] Implementar tratamento de erros e retry
+- [ ] Implementar logging de envios
+- [ ] Implementar webhook para respostas
+
+### Testes e Validação
+- [ ] Testar lógica de 2 mensagens/hora
+- [ ] Testar intervalo aleatório (10-30 min)
+- [ ] Testar rotação de pares
+- [ ] Testar bloqueio de 3 dias
+- [ ] Testar ciclo de campanhas por contato
+- [ ] Testar loop infinito 24/7
+- [ ] Testar relatório de ciclo 24h
+- [ ] Testar dashboard em tempo real
+- [ ] Testar integração Z-API
+- [ ] Validar comportamento humano (sem padrões)
+
+
+## Fase 4 - Sistema Dinâmico Vinculado a Imóveis
+- [x] Scheduler 100% dinâmico: campanhas = imóveis ativos
+- [x] Auto-detecção de novos imóveis no ciclo
+- [x] Remoção automática de imóveis vendidos do ciclo
+- [x] Pares dinâmicos (adapta a qualquer quantidade de imóveis)
+- [ ] Toggle por campanha: ativo/pausado no loop
+- [x] Contatos em rodízio sem repetição
+- [x] Mensagens personalizadas e variadas por campanha
+- [ ] Dashboard com controle dinâmico de campanhas
+- [ ] Testes do sistema dinâmico
+
+## Servidor Local
+- [ ] Preparar pacote para instalação em servidor local
+- [ ] Documentação de instalação local
+- [ ] Script de setup automático

@@ -141,3 +141,62 @@ export const interactions = mysqlTable("interactions", {
 
 export type Interaction = typeof interactions.$inferSelect;
 export type InsertInteraction = typeof interactions.$inferInsert;
+
+// Tabela de Histórico de Campanhas por Contato
+export const contactCampaignHistory = mysqlTable("contactCampaignHistory", {
+  id: int("id").autoincrement().primaryKey(),
+  contactId: int("contactId").notNull(),
+  campaignId: int("campaignId").notNull(),
+  lastCampaignId: int("lastCampaignId"), // última campanha enviada
+  sentAt: timestamp("sentAt").defaultNow().notNull(),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+});
+
+export type ContactCampaignHistory = typeof contactCampaignHistory.$inferSelect;
+export type InsertContactCampaignHistory = typeof contactCampaignHistory.$inferInsert;
+
+// Tabela de Ciclos de Campanhas
+export const campaignSchedules = mysqlTable("campaignSchedules", {
+  id: int("id").autoincrement().primaryKey(),
+  hourCycle: int("hourCycle").default(0).notNull(),
+  campaign1Id: int("campaign1Id").notNull(),
+  campaign2Id: int("campaign2Id").notNull(),
+  message1SentAt: timestamp("message1SentAt"),
+  message2SentAt: timestamp("message2SentAt"),
+  status: mysqlEnum("status", ["pending", "running", "completed", "failed"]).default("pending").notNull(),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+});
+
+export type CampaignSchedule = typeof campaignSchedules.$inferSelect;
+export type InsertCampaignSchedule = typeof campaignSchedules.$inferInsert;
+
+// Tabela de Variações de Mensagens
+export const messageVariations = mysqlTable("messageVariations", {
+  id: int("id").autoincrement().primaryKey(),
+  campaignId: int("campaignId").notNull(),
+  messageText: text("messageText").notNull(),
+  messageOrder: int("messageOrder").default(0).notNull(),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+});
+
+export type MessageVariation = typeof messageVariations.$inferSelect;
+export type InsertMessageVariation = typeof messageVariations.$inferInsert;
+
+// Tabela de Relatórios Diários
+export const dailyReports = mysqlTable("dailyReports", {
+  id: int("id").autoincrement().primaryKey(),
+  date: varchar("date", { length: 10 }).notNull(),
+  totalSent: int("totalSent").default(0).notNull(),
+  totalFailed: int("totalFailed").default(0).notNull(),
+  totalBlocked: int("totalBlocked").default(0).notNull(),
+  executionTime: int("executionTime").default(0).notNull(),
+  successRate: decimal("successRate", { precision: 5, scale: 2 }).default("0"),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+});
+
+export type DailyReport = typeof dailyReports.$inferSelect;
+export type InsertDailyReport = typeof dailyReports.$inferInsert;

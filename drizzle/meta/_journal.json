@@ -15,6 +15,13 @@
       "when": 1712410286001,
       "tag": "0001_create_all_tables",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "5",
+      "when": 1775493622700,
+      "tag": "0002_talented_azazel",
+      "breakpoints": true
     }
   ]
 }
