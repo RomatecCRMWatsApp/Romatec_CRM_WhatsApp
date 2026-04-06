@@ -184,3 +184,7 @@ export const appRouter = router({
 });
 
 export type AppRouter = typeof appRouter;
+
+
+// Adicionar antes do export type AppRouter
+// Procedure para enviar mensagem via Z-API será adicionado aqui
