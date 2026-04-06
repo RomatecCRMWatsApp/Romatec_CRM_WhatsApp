@@ -89,3 +89,8 @@
 ## Logo e Branding
 - [x] Logo da Romatec no header e login
 - [x] Tema dark premium aplicado em todas as páginas
+
+## Imagens e Mapas dos Imóveis
+- [x] Adicionar imagens reais aos imóveis (ALACIDE 16 fotos, Mod_Vaz-02 7 fotos, Mod_Vaz-03 8 fotos + planta)
+- [ ] Adicionar imagens Mod_Vaz-01 (aguardando envio)
+- [ ] Adicionar mapas/localização aos imóveis
