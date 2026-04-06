@@ -43,10 +43,10 @@
 
 ## Frontend - Módulo de Imóveis
 - [x] Listar imóveis com cards
-- [ ] Criar formulário de novo imóvel
-- [ ] Implementar upload de fotos
-- [ ] Implementar edição de imóvel
-- [ ] Implementar exclusão de imóvel
+- [x] Criar formulário de novo imóvel
+- [x] Implementar upload de fotos
+- [x] Implementar edição de imóvel
+- [x] Implementar exclusão de imóvel
 - [x] Exibir detalhes completos do imóvel
 
 ## Frontend - Módulo de Campanhas

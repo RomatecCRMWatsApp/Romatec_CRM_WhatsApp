@@ -5,7 +5,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Home, Search, Edit, MapPin, DollarSign, Plus, ArrowLeft, Image, Video, FileImage, Ruler, BedDouble, Bath, Car, Sparkles, ExternalLink, Loader2, X, Eye, Heart, Phone, MessageCircle, ChevronLeft, ChevronRight } from "lucide-react";
+import { Home, Search, Edit, MapPin, DollarSign, Plus, ArrowLeft, Image, Video, FileImage, Ruler, BedDouble, Bath, Car, Sparkles, ExternalLink, Loader2, X, Eye, Heart, Phone, MessageCircle, ChevronLeft, ChevronRight, Trash2 } from "lucide-react";
 import { useLocation } from "wouter";
 import { trpc } from "@/lib/trpc";
 import { toast } from "sonner";
@@ -66,10 +66,21 @@ export default function Properties() {
     onError: (e) => toast.error(`Erro: ${e.message}`),
   });
 
+  const deleteProperty = trpc.properties.delete.useMutation({
+    onSuccess: () => { toast.success("Imóvel excluído!"); refetch(); },
+    onError: (e) => toast.error(`Erro: ${e.message}`),
+  });
+
   const generateDesc = trpc.properties.generateDescription.useMutation({
     onSuccess: (data) => { setForm(prev => ({ ...prev, description: data.description })); toast.success("Descrição gerada pela IA!"); setIsGeneratingDesc(false); },
     onError: (e) => { toast.error(`Erro ao gerar: ${e.message}`); setIsGeneratingDesc(false); },
   });
+
+  const handleDelete = (id: number, name: string) => {
+    if (confirm(`Tem certeza que deseja excluir o imóvel "${name}"? Esta ação não pode ser desfeita.`)) {
+      deleteProperty.mutate({ id });
+    }
+  };
 
   const filteredProperties = useMemo(() => {
     if (!properties) return [];
@@ -455,6 +466,9 @@ export default function Properties() {
                     </button>
                     <button onClick={() => handleEdit(property)} className="flex-1 py-2.5 rounded-xl bg-gold/10 hover:bg-gold/20 text-gold font-semibold text-sm transition-all flex items-center justify-center gap-1.5">
                       <Edit className="h-4 w-4" /> Editar
+                    </button>
+                    <button onClick={() => handleDelete(property.id, property.denomination)} className="py-2.5 px-3 rounded-xl bg-red-500/10 hover:bg-red-500/20 text-red-400 transition-all">
+                      <Trash2 className="h-4 w-4" />
                     </button>
                     {property.publicSlug && (
                       <button onClick={() => window.open(`/imovel/${property.publicSlug}`, "_blank")} className="py-2.5 px-3 rounded-xl bg-secondary/50 hover:bg-secondary text-foreground transition-all">
