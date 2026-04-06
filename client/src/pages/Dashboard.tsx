@@ -1,7 +1,7 @@
 import { useAuth } from "@/_core/hooks/useAuth";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Users, Home, Send, Settings, LogOut } from "lucide-react";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Users, Home, Send, Settings, LogOut, Wifi, WifiOff, TrendingUp, Building2 } from "lucide-react";
 import { useLocation } from "wouter";
 import { trpc } from "@/lib/trpc";
 
@@ -10,157 +10,99 @@ const LOGO_URL = "https://d2xsxph8kpxj0f.cloudfront.net/310519663438352331/2uYgC
 export default function Dashboard() {
   const { user } = useAuth();
   const [, navigate] = useLocation();
+  const logoutMutation = trpc.auth.logout.useMutation({
+    onSuccess: () => window.location.href = "/",
+  });
 
   const { data: contacts } = trpc.contacts.list.useQuery();
   const { data: properties } = trpc.properties.list.useQuery();
   const { data: campaigns } = trpc.campaigns.list.useQuery();
   const { data: config } = trpc.companyConfig.get.useQuery();
 
-  const { logout } = useAuth();
   const activeCampaigns = campaigns?.filter(c => c.status === "running").length || 0;
-  const totalContacts = contacts?.length || 0;
-  const totalProperties = properties?.length || 0;
+
+  const stats = [
+    { label: "Clientes", value: contacts?.length || 0, icon: Users, color: "emerald", route: "/contacts" },
+    { label: "Imóveis", value: properties?.length || 0, icon: Building2, color: "amber", route: "/properties" },
+    { label: "Campanhas", value: activeCampaigns, icon: Send, color: "blue", route: "/campaigns" },
+  ];
 
   return (
     <div className="min-h-screen bg-background">
       {/* Header */}
-      <div className="bg-gradient-to-r from-primary to-primary/80 text-primary-foreground p-6">
+      <div className="bg-gradient-to-r from-emerald-600 to-emerald-800 text-white p-6">
         <div className="container flex items-center justify-between">
           <div className="flex items-center gap-4">
-            <img src={LOGO_URL} alt="Romatec" className="h-16 w-auto object-contain" />
+            <img src={LOGO_URL} alt="Romatec" className="h-14 w-auto object-contain rounded-lg" />
             <div>
-              <h1 className="text-3xl font-bold">Romatec CRM</h1>
-              <p className="text-primary-foreground/80">Bem-vindo, {user?.name || "Usuário"}!</p>
+              <h1 className="text-2xl font-bold">Romatec CRM</h1>
+              <p className="text-white/70 text-sm">Bem-vindo, {user?.name || "Usuário"}</p>
             </div>
           </div>
-          <Button
-            onClick={() => {
-              const logout = trpc.auth.logout.useMutation();
-              logout.mutate();
-            }}
-            variant="outline"
-            className="text-primary-foreground border-primary-foreground hover:bg-primary-foreground/20"
-          >
-            <LogOut className="mr-2 h-4 w-4" />
-            Sair
+          <Button onClick={() => logoutMutation.mutate()} variant="outline" className="border-white/30 text-white hover:bg-white/20">
+            <LogOut className="mr-2 h-4 w-4" /> Sair
           </Button>
         </div>
       </div>
 
-      {/* Main Content */}
-      <div className="container py-8">
-        {/* Stats Grid */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
-          <Card className="card-hover">
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Clientes</CardTitle>
-              <Users className="h-4 w-4 text-accent" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">{totalContacts}</div>
-              <p className="text-xs text-muted-foreground">Contatos cadastrados</p>
-            </CardContent>
-          </Card>
+      <div className="container py-8 space-y-6">
+        {/* Stats */}
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          {stats.map(s => (
+            <Card key={s.label} className="bg-card border-border cursor-pointer hover:border-emerald-500/50 transition-colors" onClick={() => navigate(s.route)}>
+              <CardContent className="pt-6">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-sm text-muted-foreground">{s.label}</p>
+                    <p className="text-3xl font-bold text-foreground mt-1">{s.value}</p>
+                  </div>
+                  <div className={`p-3 rounded-xl bg-${s.color}-500/20`}>
+                    <s.icon className={`h-6 w-6 text-${s.color}-400`} />
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          ))}
+        </div>
 
-          <Card className="card-hover">
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Imóveis</CardTitle>
-              <Home className="h-4 w-4 text-accent" />
-            </CardHeader>
+        {/* Z-API Status + Quick Actions */}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <Card className="bg-card border-border">
+            <CardHeader><CardTitle className="text-foreground text-lg">Status WhatsApp</CardTitle></CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">{totalProperties}</div>
-              <p className="text-xs text-muted-foreground">Propriedades ativas</p>
-            </CardContent>
-          </Card>
-
-          <Card className="card-hover">
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Campanhas</CardTitle>
-              <Send className="h-4 w-4 text-accent" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">{activeCampaigns}</div>
-              <p className="text-xs text-muted-foreground">Campanhas ativas</p>
-            </CardContent>
-          </Card>
-
-          <Card className="card-hover">
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Status Z-API</CardTitle>
-              <Settings className="h-4 w-4 text-accent" />
-            </CardHeader>
-            <CardContent>
-              <div className={`text-2xl font-bold ${config?.zApiConnected ? "text-green-600" : "text-red-600"}`}>
-                {config?.zApiConnected ? "Conectado" : "Desconectado"}
+              <div className="flex items-center gap-3">
+                {config?.zApiConnected ? (
+                  <><Wifi className="h-8 w-8 text-emerald-400" /><div><p className="font-bold text-emerald-400">Conectado</p><p className="text-xs text-muted-foreground">Z-API ativo</p></div></>
+                ) : (
+                  <><WifiOff className="h-8 w-8 text-red-400" /><div><p className="font-bold text-red-400">Desconectado</p><p className="text-xs text-muted-foreground">Configure em Configurações</p></div></>
+                )}
               </div>
-              <p className="text-xs text-muted-foreground">WhatsApp API</p>
+            </CardContent>
+          </Card>
+
+          <Card className="bg-card border-border">
+            <CardHeader><CardTitle className="text-foreground text-lg">Empresa</CardTitle></CardHeader>
+            <CardContent className="space-y-1">
+              <p className="text-sm text-foreground font-medium">{config?.companyName || "Romatec"}</p>
+              <p className="text-xs text-muted-foreground">{config?.phone || "—"}</p>
+              <p className="text-xs text-muted-foreground">{config?.address || "—"}</p>
             </CardContent>
           </Card>
         </div>
 
-        {/* Quick Actions */}
-        <Card className="mb-8">
-          <CardHeader>
-            <CardTitle>Ações Rápidas</CardTitle>
-            <CardDescription>Acesse as principais funcionalidades do CRM</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-              <Button
-                onClick={() => navigate("/contacts")}
-                className="w-full bg-primary hover:bg-primary/90"
-              >
-                <Users className="mr-2 h-4 w-4" />
-                Gerenciar Clientes
-              </Button>
-              <Button
-                onClick={() => navigate("/properties")}
-                className="w-full bg-primary hover:bg-primary/90"
-              >
-                <Home className="mr-2 h-4 w-4" />
-                Gerenciar Imóveis
-              </Button>
-              <Button
-                onClick={() => navigate("/campaigns")}
-                className="w-full bg-primary hover:bg-primary/90"
-              >
-                <Send className="mr-2 h-4 w-4" />
-                Campanhas
-              </Button>
-              <Button
-                onClick={() => navigate("/settings")}
-                className="w-full bg-primary hover:bg-primary/90"
-              >
-                <Settings className="mr-2 h-4 w-4" />
-                Configurações
-              </Button>
-            </div>
-          </CardContent>
-        </Card>
-
-        {/* Recent Activity */}
-        <Card>
-          <CardHeader>
-            <CardTitle>Informações da Empresa</CardTitle>
-            <CardDescription>Dados cadastrados no sistema</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-4">
-              <div>
-                <p className="text-sm text-muted-foreground">Nome da Empresa</p>
-                <p className="font-semibold">{config?.companyName || "Romatec Consultoria Imobiliária"}</p>
-              </div>
-              <div>
-                <p className="text-sm text-muted-foreground">Telefone</p>
-                <p className="font-semibold">{config?.phone || "(99) 999169-0178"}</p>
-              </div>
-              <div>
-                <p className="text-sm text-muted-foreground">Endereço</p>
-                <p className="font-semibold">{config?.address || "Não configurado"}</p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
+        {/* Navigation */}
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+          {[
+            { label: "Clientes", icon: Users, route: "/contacts", color: "bg-emerald-600 hover:bg-emerald-700" },
+            { label: "Imóveis", icon: Building2, route: "/properties", color: "bg-amber-600 hover:bg-amber-700" },
+            { label: "Campanhas", icon: Send, route: "/campaigns", color: "bg-blue-600 hover:bg-blue-700" },
+            { label: "Configurações", icon: Settings, route: "/settings", color: "bg-gray-600 hover:bg-gray-700" },
+          ].map(item => (
+            <Button key={item.label} onClick={() => navigate(item.route)} className={`${item.color} h-14 text-white font-bold`}>
+              <item.icon className="mr-2 h-5 w-5" /> {item.label}
+            </Button>
+          ))}
+        </div>
       </div>
     </div>
   );

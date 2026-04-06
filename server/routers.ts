@@ -43,6 +43,33 @@ export const appRouter = router({
           status: "active",
         });
       }),
+    update: protectedProcedure
+      .input(z.object({
+        id: z.number(),
+        name: z.string().optional(),
+        phone: z.string().optional(),
+        email: z.string().optional(),
+        status: z.enum(["active", "inactive", "blocked"]).optional(),
+      }))
+      .mutation(async ({ input }) => {
+        const db = await getDb();
+        if (!db) throw new Error("Database not available");
+        const { id, ...data } = input;
+        const updateData: any = {};
+        Object.entries(data).forEach(([k, v]) => { if (v !== undefined) updateData[k] = v; });
+        await db.update(contacts).set(updateData).where(eq(contacts.id, id));
+        return { success: true };
+      }),
+    delete: protectedProcedure
+      .input(z.object({ id: z.number() }))
+      .mutation(async ({ input }) => {
+        const db = await getDb();
+        if (!db) throw new Error("Database not available");
+        // Remover contato de campanhas primeiro
+        await db.delete(campaignContacts).where(eq(campaignContacts.contactId, input.id));
+        await db.delete(contacts).where(eq(contacts.id, input.id));
+        return { success: true };
+      }),
     importBatch: protectedProcedure
       .input(z.array(z.object({
         name: z.string(),
@@ -167,6 +194,20 @@ export const appRouter = router({
         const updateData: any = {};
         Object.entries(data).forEach(([k, v]) => { if (v !== undefined) updateData[k] = v; });
         await db.update(properties).set(updateData).where(eq(properties.id, id));
+        return { success: true };
+      }),
+    delete: protectedProcedure
+      .input(z.object({ id: z.number() }))
+      .mutation(async ({ input }) => {
+        const db = await getDb();
+        if (!db) throw new Error("Database not available");
+        // Remover campanhas vinculadas primeiro
+        const relatedCampaigns = await db.select().from(campaigns).where(eq(campaigns.propertyId, input.id));
+        for (const camp of relatedCampaigns) {
+          await db.delete(campaignContacts).where(eq(campaignContacts.campaignId, camp.id));
+        }
+        await db.delete(campaigns).where(eq(campaigns.propertyId, input.id));
+        await db.delete(properties).where(eq(properties.id, input.id));
         return { success: true };
       }),
     generateDescription: protectedProcedure

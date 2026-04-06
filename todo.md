@@ -10,8 +10,8 @@
 - [x] Implementar CRUD básico de imóveis (create, read, list) - faltam update/delete
 - [x] Implementar CRUD básico de campanhas (create, read, list) - faltam update/delete/start/pause/reset
 - [x] Implementar CRUD de configurações da empresa (get, update)
-- [ ] Implementar procedures de update/delete para contatos
-- [ ] Implementar procedures de update/delete para imóveis
+- [x] Implementar procedures de update/delete para contatos
+- [x] Implementar procedures de update/delete para imóveis
 - [ ] Implementar procedures de update/delete/start/pause/reset para campanhas
 - [ ] Implementar integração Z-API (validar credenciais, enviar mensagens, receber webhooks)
 - [ ] Implementar lógica de envio de 2 mensagens/hora
@@ -35,9 +35,9 @@
 ## Frontend - Módulo de Clientes
 - [x] Listar contatos com paginação
 - [x] Implementar busca e filtros
-- [ ] Criar formulário de novo contato
-- [ ] Implementar edição de contato
-- [ ] Implementar exclusão de contato
+- [x] Criar formulário de novo contato
+- [x] Implementar edição de contato
+- [x] Implementar exclusão de contato
 - [x] Criar funcionalidade de importação (vCard e CSV)
 - [ ] Exibir histórico de interações por contato
 
@@ -134,15 +134,15 @@
 - [x] Carregar imóveis na página de Gerenciar Imóveis
 - [x] Carregar contatos na página de Gerenciar Clientes
 - [x] Exibir dados com paginação e filtros
-- [ ] Implementar CRUD completo (editar, deletar)
+- [x] Implementar CRUD completo (editar, deletar)
 - [x] Adicionar busca por nome/telefone
 
 ## Painel de Configurações (NOVO)
-- [ ] Exibir dados da empresa (nome, telefone, endereço)
-- [ ] Mostrar status Z-API (conectado/desconectado)
-- [ ] Permitir edição de dados da empresa
-- [ ] Testar conexão Z-API
-- [ ] Salvar configurações no banco
+- [x] Exibir dados da empresa (nome, telefone, endereço)
+- [x] Mostrar status Z-API (conectado/desconectado)
+- [x] Permitir edição de dados da empresa
+- [x] Testar conexão Z-API
+- [x] Salvar configurações no banco
 
 ## Fase 2 - Correção de Dados e Carregamento
 - [x] Atualizar CNPJ da empresa (17.261.987/0001-09)
