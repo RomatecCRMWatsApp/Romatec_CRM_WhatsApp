@@ -1,9 +1,11 @@
 import { useAuth } from "@/_core/hooks/useAuth";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Users, Home, Send, Settings } from "lucide-react";
+import { Users, Home, Send, Settings, LogOut } from "lucide-react";
 import { useLocation } from "wouter";
 import { trpc } from "@/lib/trpc";
+
+const LOGO_URL = "https://d2xsxph8kpxj0f.cloudfront.net/310519663438352331/2uYgCCZRKgbanKmmzr4z87/LOGORPEQUENO_01_7034e7c7.jpg";
 
 export default function Dashboard() {
   const { user } = useAuth();
@@ -14,6 +16,7 @@ export default function Dashboard() {
   const { data: campaigns } = trpc.campaigns.list.useQuery();
   const { data: config } = trpc.companyConfig.get.useQuery();
 
+  const { logout } = useAuth();
   const activeCampaigns = campaigns?.filter(c => c.status === "running").length || 0;
   const totalContacts = contacts?.length || 0;
   const totalProperties = properties?.length || 0;
@@ -22,9 +25,25 @@ export default function Dashboard() {
     <div className="min-h-screen bg-background">
       {/* Header */}
       <div className="bg-gradient-to-r from-primary to-primary/80 text-primary-foreground p-6">
-        <div className="container">
-          <h1 className="text-3xl font-bold">Romatec CRM</h1>
-          <p className="text-primary-foreground/80">Bem-vindo, {user?.name || "Usuário"}!</p>
+        <div className="container flex items-center justify-between">
+          <div className="flex items-center gap-4">
+            <img src={LOGO_URL} alt="Romatec" className="h-12 w-auto object-contain" />
+            <div>
+              <h1 className="text-3xl font-bold">Romatec CRM</h1>
+              <p className="text-primary-foreground/80">Bem-vindo, {user?.name || "Usuário"}!</p>
+            </div>
+          </div>
+          <Button
+            onClick={() => {
+              const logout = trpc.auth.logout.useMutation();
+              logout.mutate();
+            }}
+            variant="outline"
+            className="text-primary-foreground border-primary-foreground hover:bg-primary-foreground/20"
+          >
+            <LogOut className="mr-2 h-4 w-4" />
+            Sair
+          </Button>
         </div>
       </div>
 

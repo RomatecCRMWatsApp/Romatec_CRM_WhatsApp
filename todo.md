@@ -139,3 +139,18 @@
 - [ ] Permitir edição de dados da empresa
 - [ ] Testar conexão Z-API
 - [ ] Salvar configurações no banco
+
+
+## Logo e Branding (NOVO)
+- [x] Upload do logo da Romatec para CDN
+- [x] Exibir logo no header do dashboard
+- [x] Exibir logo na página de login
+- [ ] Adicionar favicon com logo da empresa
+- [x] Atualizar branding em todas as páginas
+
+## Sistema de Login (NOVO)
+- [x] Criar página de login com OAuth Manus
+- [x] Exibir logo no formulário de login
+- [x] Redirecionar usuário autenticado para dashboard
+- [x] Implementar logout com redirecionamento para login
+- [x] Proteger rotas que requerem autenticação

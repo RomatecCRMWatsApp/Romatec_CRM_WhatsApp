@@ -15,7 +15,7 @@ export default function Properties() {
   const filteredProperties = useMemo(() => {
     if (!properties) return [];
     return properties.filter(p => 
-      p.name?.toLowerCase().includes(searchTerm.toLowerCase()) || 
+      p.denomination?.toLowerCase().includes(searchTerm.toLowerCase()) || 
       p.address?.toLowerCase().includes(searchTerm.toLowerCase())
     );
   }, [properties, searchTerm]);
