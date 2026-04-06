@@ -205,12 +205,6 @@ export default function Campaigns() {
                 </CardHeader>
 
                 <CardContent>
-                  {/* Timer */}
-                  <div className="mb-4 p-3 bg-gradient-to-r from-primary/10 to-secondary/10 rounded-lg">
-                    <p className="text-xs text-slate-600 mb-1">⏱️ Cronômetro (1 hora)</p>
-                    <p className="text-3xl font-bold text-primary">{timers[String(prop.id)]}</p>
-                  </div>
-
                   {/* Progress */}
                   <div className="mb-4">
                     <p className="text-xs text-slate-600 mb-2">Progresso do Ciclo</p>
