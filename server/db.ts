@@ -107,7 +107,8 @@ export async function createContact(data: InsertContact) {
   const db = await getDb();
   if (!db) return undefined;
   const result = await db.insert(contacts).values(data);
-  return result;
+  const insertId = (result as any)[0]?.insertId;
+  return { ...result, id: insertId };
 }
 
 // Helpers para Imóveis
@@ -127,7 +128,9 @@ export async function getPropertyById(id: number) {
 export async function createProperty(data: InsertProperty) {
   const db = await getDb();
   if (!db) return undefined;
-  return db.insert(properties).values(data);
+  const result = await db.insert(properties).values(data);
+  const insertId = (result as any)[0]?.insertId;
+  return { ...result, id: insertId };
 }
 
 // Helpers para Campanhas
@@ -147,7 +150,9 @@ export async function getCampaignById(id: number) {
 export async function createCampaign(data: InsertCampaign) {
   const db = await getDb();
   if (!db) return undefined;
-  return db.insert(campaigns).values(data);
+  const result = await db.insert(campaigns).values(data);
+  const insertId = (result as any)[0]?.insertId;
+  return { ...result, id: insertId };
 }
 
 // Helpers para Configuração da Empresa

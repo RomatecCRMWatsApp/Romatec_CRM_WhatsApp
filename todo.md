@@ -108,3 +108,4 @@
 - [x] Adicionar upload drag&drop para fotos na edição de imóveis
 - [x] Adicionar upload drag&drop para vídeos na edição de imóveis
 - [x] Adicionar upload drag&drop para planta baixa na edição de imóveis
+- [x] Corrigir: imóveis de teste voltam ao publicar (testes agora fazem cleanup automático + dados limpos)

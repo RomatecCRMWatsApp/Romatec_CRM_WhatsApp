@@ -402,6 +402,21 @@ Retorne as 4 variações separadas por |||` },
     }),
 
     /**
+     * Deletar campanha e suas dependências
+     */
+    delete: protectedProcedure
+      .input(z.object({ id: z.number() }))
+      .mutation(async ({ input }) => {
+        const db = await getDb();
+        if (!db) throw new Error("Database not available");
+        await db.delete(messages).where(eq(messages.campaignId, input.id));
+        await db.delete(contactCampaignHistory).where(eq(contactCampaignHistory.campaignId, input.id));
+        await db.delete(campaignContacts).where(eq(campaignContacts.campaignId, input.id));
+        await db.delete(campaigns).where(eq(campaigns.id, input.id));
+        return { success: true };
+      }),
+
+    /**
      * Obter contatos de uma campanha com status
      */
     getContacts: protectedProcedure
