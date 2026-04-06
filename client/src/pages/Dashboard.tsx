@@ -27,7 +27,7 @@ export default function Dashboard() {
       <div className="bg-gradient-to-r from-primary to-primary/80 text-primary-foreground p-6">
         <div className="container flex items-center justify-between">
           <div className="flex items-center gap-4">
-            <img src={LOGO_URL} alt="Romatec" className="h-16 w-auto object-contain rounded-none" />
+            <img src={LOGO_URL} alt="Romatec" className="h-16 w-auto object-contain" />
             <div>
               <h1 className="text-3xl font-bold">Romatec CRM</h1>
               <p className="text-primary-foreground/80">Bem-vindo, {user?.name || "Usuário"}!</p>

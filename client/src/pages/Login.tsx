@@ -26,7 +26,7 @@ export default function Login() {
             <img
               src={LOGO_URL}
               alt="Romatec Logo"
-              className="h-24 w-auto object-contain rounded-none"
+              className="h-24 w-auto object-contain"
             />
           </div>
 
