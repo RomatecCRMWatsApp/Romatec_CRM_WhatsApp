@@ -384,3 +384,8 @@
 - [x] Adicionar padrão de detecção de venda (vender, anunciar, captar, avaliar meu imóvel)
 - [x] Criar resposta rápida para vendedores direcionando ao especialista
 - [x] Atualizar system prompt da IA para tratar vendedores
+
+## Bug: Scheduler não envia todas as 5 campanhas por hora (07/04/2026)
+- [x] Diagnosticar por que campanhas estão pulando horas (restoreAndResume não reagendava)
+- [x] Corrigir para garantir 5 envios por hora (1 por campanha) - reagenda após restart
+- [x] Relatório duplicado na mesma hora - corrigido com controle de restart

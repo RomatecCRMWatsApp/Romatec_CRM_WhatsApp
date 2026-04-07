@@ -140,6 +140,14 @@ const GREETING_PATTERNS = /^\s*(oi|ol[aá]|ola|hey|ei|bom\s*dia|boa\s*(tarde|noi
 const FINANCING_PATTERNS = /\b(financ\w*|parcela\w*|presta[çc][aã]o|entrada|caixa|banco|cr[eé]dito|consorcio|cons[oó]rcio|pagar|pagamento|quanto\s*custa|valor|pre[çc]o)/i;
 const INTEREST_PATTERNS = /\b(interesse|interessad[oa]|quero|gostei|gostaria|visitar|conhecer|agendar|visita|ver\s*o\s*im[oó]vel|comprar)\b/i;
 const SELL_PATTERNS = /\b(vender|vendo|anunciar|anuncio|captar|capta[çc][aã]o|avaliar|avalia[çc][aã]o|colocar\s*(pra|para)\s*vend|quero\s*vender|tenho\s*(um|uma|pra|para)\s*(im[oó]vel|casa|apto|apartamento|terreno|lote|ch[aá]cara|sitio|s[ií]tio)|meu\s*(im[oó]vel|casa|apto|apartamento|terreno))\b/i;
+const NO_INTEREST_PATTERNS = /\b(n[aã]o\s*(quero|tenho|posso|preciso|obrigad)|sem\s*(comprar|interesse|condi[çc]|dinheiro|grana)|agora\s*n[aã]o|no\s*momento\s*n[aã]o|tou\s*sem|esse\s*m[eê]s\s*n[aã]o|n[aã]o\s*estou\s*interessad|desculpa|obrigad[oa]\s*mas)\b/i;
+
+function getQuickNoInterestReply(name: string): string {
+  const firstName = name ? name.split(' ')[0] : 'Cliente';
+  return `Tudo bem, *${firstName}*! Sem problemas. \ud83d\ude4f\n\n` +
+    `Quando estiver pronto(a), a *Romatec* estará aqui para te ajudar a encontrar o imóvel ideal.\n\n` +
+    `Pode nos chamar a qualquer momento! \ud83c\udfe0`;
+}
 
 function getQuickSellReply(name: string): string {
   const firstName = name ? name.split(' ')[0] : 'Cliente';
@@ -221,7 +229,14 @@ export async function processBotMessage(context: BotContext): Promise<BotRespons
     return { text: reply, qualified: true };
   }
 
-  // 4. Interesse direto: conectar com atendente
+  // 4. Sem interesse no momento: resposta educada (ANTES de interesse para evitar conflito com "comprar")
+  if (NO_INTEREST_PATTERNS.test(messageText)) {
+    const reply = getQuickNoInterestReply(senderName);
+    console.log(`[Bot] Resposta rápida (SEM INTERESSE) em ${Date.now() - startTime}ms`);
+    return { text: reply, qualified: false };
+  }
+
+  // 5. Interesse direto: conectar com atendente
   if (INTEREST_PATTERNS.test(messageText) && messageText.length < 60) {
     const firstName = senderName.split(' ')[0];
     const reply = `Que ótimo, *${firstName}*! \ud83c\udf89 Ficamos muito felizes com seu interesse!\n\n` +

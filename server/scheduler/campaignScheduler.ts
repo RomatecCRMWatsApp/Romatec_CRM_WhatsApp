@@ -185,11 +185,21 @@ class CampaignScheduler {
       this.state.startedAt = saved.startedAt ? saved.startedAt.getTime() : Date.now();
 
       await this.syncCampaignsWithProperties();
-      this.startCheckLoop();
+      await this.initCampaignStates();
 
       console.log(`✅ AUTO-RESTART completo! Hora ${this.state.hourNumber + 1}/${this.MAX_HOURS_PER_CYCLE}`);
       console.log(`📊 Restaurado: ${this.state.totalSent} enviadas, ${this.state.totalFailed} falhas`);
 
+      // Reagendar envios pendentes desta hora
+      const pending = this.state.campaignStates.filter(cs => !cs.sentThisHour);
+      if (pending.length > 0) {
+        console.log(`📤 Reagendando ${pending.length} envios pendentes após restart`);
+        await this.scheduleHourSends();
+      } else {
+        console.log(`✅ Todas as campanhas já enviaram nesta hora`);
+      }
+
+      this.startCheckLoop();
       await this.saveStateToDB();
     } catch (error) {
       console.error('❌ Erro ao restaurar estado:', error);
@@ -326,6 +336,18 @@ class CampaignScheduler {
       await this.initCampaignStates();
       await this.scheduleHourSends();
       await this.saveStateToDB();
+      return;
+    }
+
+    // Verificar se há campanhas pendentes sem timer agendado
+    if (!isNewHour) {
+      const pending = this.state.campaignStates.filter(cs => !cs.sentThisHour);
+      const hasActiveTimers = this.slotTimers.length > 0;
+      if (pending.length > 0 && !hasActiveTimers) {
+        console.log(`⚠️ ${pending.length} campanhas pendentes sem timer - reagendando`);
+        await this.scheduleHourSends();
+        await this.saveStateToDB();
+      }
     }
   }
 
