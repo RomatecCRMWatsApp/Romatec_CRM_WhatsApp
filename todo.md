@@ -335,8 +335,8 @@
 - [x] Atribuir 24 contatos à nova campanha + remover campanha de teste
 
 ## Bug: insertBefore no Redefinir (07/04/2026)
-- [ ] Corrigir NotFoundError insertBefore ao clicar Redefinir na página de Campanhas
-- [ ] Estabilizar renderização React após mutação de reset
+- [x] Corrigir NotFoundError insertBefore ao clicar Redefinir na página de Campanhas
+- [x] Estabilizar renderização React após mutação de reset (invalidate+refetch antes de resetKey) (invalidate+refetch antes de resetKey)
 
 ## Bug: Webhook Z-API não processa mensagens (07/04/2026)
 - [x] Corrigir TypeError: payload.message.substring is not a function (Z-API envia message como objeto)
@@ -346,4 +346,18 @@
 - [x] Usar credenciais Z-API do env em vez do banco (mais confiável)
 - [x] Adicionar logging detalhado do payload raw para debug
 - [x] Testar bot localmente com curl - resposta enviada com sucesso
-- [ ] Republicar para que Z-API use código corrigido
+- [x] Republicar para que Z-API use código corrigido (publicado com sucesso)
+
+## Otimizar velocidade de resposta do bot (07/04/2026)
+- [x] Reduzir tempo de resposta do bot (atualmente ~5s, meta: <2s) - AGORA: 0-15ms!
+- [x] Usar respostas pré-definidas para saudações simples (Oi, Olá) sem chamar LLM
+- [x] Usar LLM apenas para mensagens complexas (perguntas específicas longas)
+
+## Corrigir cidade: Feira de Santana → Açailândia - MA (07/04/2026)
+- [x] Trocar todas as referências de "Feira de Santana" para "Açailândia - MA" no bot-ai.ts
+- [x] Verificar e trocar em outros arquivos do sistema (nenhuma outra referência encontrada)
+
+## Incluir Chácaras Giuliano no bot IA (07/04/2026)
+- [x] Adicionar Cond. Chácaras Giuliano (R$ 160k, lotes, 7.601m²) na lista PROPERTIES do bot-ai.ts
+- [x] Atualizar faixa de preço mínimo de R$ 210k para R$ 160k nas respostas rápidas
+- [x] Atualizar system prompt da IA com o novo imóvel

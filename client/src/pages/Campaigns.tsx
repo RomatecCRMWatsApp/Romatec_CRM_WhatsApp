@@ -93,12 +93,20 @@ export default function Campaigns() {
       setExpandedCampaign(null);
     },
     onSuccess: async () => {
-      // Incrementar key para forçar remount limpo dos componentes
-      setResetKey(prev => prev + 1);
-      // Aguardar um tick para o DOM limpar antes de buscar novos dados
-      await new Promise(resolve => setTimeout(resolve, 300));
-      await utils.scheduler.getCampaignDetails.invalidate();
-      await utils.scheduler.getState.invalidate();
+      try {
+        // Invalidar queries primeiro para buscar dados novos
+        await utils.scheduler.getCampaignDetails.invalidate();
+        await utils.scheduler.getState.invalidate();
+        // Aguardar dados serem refetchados
+        await utils.scheduler.getCampaignDetails.refetch();
+        await utils.scheduler.getState.refetch();
+        // Só depois de ter dados novos, incrementar key para remount limpo
+        setResetKey(prev => prev + 1);
+      } catch (e) {
+        console.warn('[Reset] Erro ao refetch:', e);
+      }
+      // Pequeno delay para React processar o remount
+      await new Promise(resolve => setTimeout(resolve, 100));
       setIsResetting(false);
       toast.success("Campanhas resetadas com novos contatos! Clique em Iniciar.");
     },

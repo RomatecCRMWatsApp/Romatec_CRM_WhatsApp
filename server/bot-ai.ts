@@ -25,10 +25,11 @@ export interface BotResponse {
 // ============ DADOS ============
 
 const PROPERTIES = [
-  { slug: 'alacide', name: 'Alacide', value: 210000, beds: 2, area: '58m\u00b2', type: 'Apartamento' },
-  { slug: 'mod-vaz-01', name: 'Mod Vaz 01', value: 250000, beds: 2, area: '68m\u00b2', type: 'Apartamento' },
-  { slug: 'mod-vaz-02', name: 'Mod Vaz 02', value: 300000, beds: 3, area: '110m\u00b2', type: 'Casa' },
-  { slug: 'mod-vaz-03', name: 'Mod Vaz 03', value: 380000, beds: 3, area: '92m\u00b2', type: 'Apartamento' },
+  { slug: 'cond-chacaras-giuliano', name: 'Cond. Chácaras Giuliano', value: 160000, beds: 0, area: '7.601m²', type: 'Lote/Chácara' },
+  { slug: 'alacide', name: 'Alacide', value: 210000, beds: 2, area: '58m²', type: 'Apartamento' },
+  { slug: 'mod-vaz-01', name: 'Mod Vaz 01', value: 250000, beds: 2, area: '68m²', type: 'Apartamento' },
+  { slug: 'mod-vaz-02', name: 'Mod Vaz 02', value: 300000, beds: 3, area: '110m²', type: 'Casa' },
+  { slug: 'mod-vaz-03', name: 'Mod Vaz 03', value: 380000, beds: 3, area: '92m²', type: 'Apartamento' },
 ];
 
 const BANKS = [
@@ -133,22 +134,86 @@ async function transcribeAudioMessage(audioUrl: string): Promise<string> {
 
 // ============ IA: ANÁLISE + RESPOSTA ============
 
+// ============ RESPOSTAS RÁPIDAS (sem LLM) ============
+
+const GREETING_PATTERNS = /^\s*(oi|ol[aá]|ola|hey|ei|bom\s*dia|boa\s*(tarde|noite)|opa|eae|eai|fala|salve|hello|hi)\s*[!?.]*\s*$/i;
+const FINANCING_PATTERNS = /\b(financ\w*|parcela\w*|presta[çc][aã]o|entrada|caixa|banco|cr[eé]dito|consorcio|cons[oó]rcio|pagar|pagamento|quanto\s*custa|valor|pre[çc]o)/i;
+const INTEREST_PATTERNS = /\b(interesse|interessad[oa]|quero|gostei|gostaria|visitar|conhecer|agendar|visita|ver\s*o\s*im[oó]vel|comprar)\b/i;
+
+function getQuickGreeting(name: string): string {
+  const firstName = name ? name.split(' ')[0] : 'Cliente';
+  const greetings = [
+    `Olá, *${firstName}*! Seja muito bem-vindo(a) à *Romatec Consultoria Imobiliária*, sua especialista em imóveis em Açailândia - MA. Temos excelentes opções de apartamentos e casas, com valores a partir de *R$ 160.000*. Como podemos te ajudar a encontrar o imóvel dos seus sonhos hoje?`,
+    `Olá, *${firstName}*! \ud83c\udfe0 Bem-vindo(a) à *Romatec*! Somos especialistas em imóveis em Açailândia - MA, com opções de *R$ 160 mil* a *R$ 380 mil*. Posso te ajudar a encontrar o imóvel ideal?`,
+    `Oi, *${firstName}*! Que bom falar com você! Aqui é a *Romatec Consultoria Imobiliária*. Temos apartamentos e casas incríveis em Açailândia - MA. O que você está procurando?`,
+  ];
+  return greetings[Math.floor(Math.random() * greetings.length)];
+}
+
+function getQuickFinancingReply(name: string): string {
+  const firstName = name ? name.split(' ')[0] : 'Cliente';
+  // Mostrar parcelas do imóvel mais acessível
+  const cheapest = PROPERTIES[0];
+  const fin = cheapest.value * 0.8;
+  const pmt240 = calcPrice(fin, 10.26, 240);
+  const pmt300 = calcPrice(fin, 10.26, 300);
+  
+  return `Olá, *${firstName}*! \ud83c\udfe6 Ótima pergunta! Na Romatec trabalhamos com as melhores condições de financiamento.\n\n` +
+    `\ud83d\udcb0 *Parcelas a partir de ${fmtFull(pmt300)}/mês* (Caixa, 25 anos)\n` +
+    `\ud83c\udfe0 Imóveis de *${fmt(PROPERTIES[0].value)}* a *${fmt(PROPERTIES[PROPERTIES.length-1].value)}*\n` +
+    `\ud83d\udcb3 Entrada a partir de *20%*\n\n` +
+    `Você tem algum valor de parcela em mente ou um tipo de imóvel que procura?` +
+    formatAttendantLink();
+}
+
 export async function processBotMessage(context: BotContext): Promise<BotResponse> {
+  const startTime = Date.now();
   let messageText = context.message || '';
 
   // Se for áudio, transcrever
   if (context.audioUrl && !messageText) {
     messageText = await transcribeAudioMessage(context.audioUrl);
     if (messageText) {
-      console.log(`[Bot] \u00c1udio transcrito: "${messageText.substring(0, 80)}"`);
+      console.log(`[Bot] Áudio transcrito: "${messageText.substring(0, 80)}"`);
     } else {
-      return { text: 'Recebi seu \u00e1udio! Pode me enviar por texto tamb\u00e9m? Assim consigo te ajudar melhor \ud83d\ude09' };
+      return { text: 'Recebi seu áudio! Pode me enviar por texto também? Assim consigo te ajudar melhor \ud83d\ude09' };
     }
   }
 
   if (!messageText) {
-    return { text: 'Ol\u00e1! Sou o assistente da *Romatec Consultoria Imobili\u00e1ria*. Como posso te ajudar hoje?' };
+    return { text: 'Olá! Sou o assistente da *Romatec Consultoria Imobiliária*. Como posso te ajudar hoje?' };
   }
+
+  const senderName = context.senderName || 'Cliente';
+
+  // === RESPOSTAS RÁPIDAS (sem LLM - <100ms) ===
+  
+  // 1. Saudações simples: Oi, Olá, Bom dia, etc.
+  if (GREETING_PATTERNS.test(messageText)) {
+    const reply = getQuickGreeting(senderName);
+    console.log(`[Bot] Resposta rápida (saudação) em ${Date.now() - startTime}ms`);
+    return { text: reply, qualified: false };
+  }
+
+  // 2. Financiamento/parcelas: resposta rápida com dados reais
+  if (FINANCING_PATTERNS.test(messageText) && messageText.length < 50) {
+    const reply = getQuickFinancingReply(senderName);
+    console.log(`[Bot] Resposta rápida (financiamento) em ${Date.now() - startTime}ms`);
+    return { text: reply, qualified: true };
+  }
+
+  // 3. Interesse direto: conectar com atendente
+  if (INTEREST_PATTERNS.test(messageText) && messageText.length < 60) {
+    const firstName = senderName.split(' ')[0];
+    const reply = `Que ótimo, *${firstName}*! \ud83c\udf89 Ficamos muito felizes com seu interesse!\n\n` +
+      `Nossos especialistas podem te mostrar todos os detalhes e agendar uma visita:\n` +
+      formatAttendantLink();
+    console.log(`[Bot] Resposta rápida (interesse) em ${Date.now() - startTime}ms`);
+    return { text: reply, qualified: true };
+  }
+
+  // === MENSAGENS COMPLEXAS: usar LLM ===
+  console.log(`[Bot] Mensagem complexa, usando IA: "${messageText.substring(0, 50)}"`);
 
   // Montar contexto dos imóveis para a IA (com parcelas 240x e 300x)
   const propertiesContext = PROPERTIES.map(p => {
@@ -160,7 +225,7 @@ export async function processBotMessage(context: BotContext): Promise<BotRespons
 
   const banksContext = BANKS.map(b => `- ${b.name}: ${b.rate}% a.a. + TR`).join('\n');
 
-  const systemPrompt = `Voc\u00ea \u00e9 o assistente virtual da Romatec Consultoria Imobili\u00e1ria, especializada em im\u00f3veis em Feira de Santana-BA.
+  const systemPrompt = `Voc\u00ea \u00e9 o assistente virtual da Romatec Consultoria Imobili\u00e1ria, especializada em imóveis em Açailândia - MA.
 Seu objetivo \u00e9 ser persuasivo, profissional e amig\u00e1vel. Voc\u00ea qualifica leads e vende im\u00f3veis.
 
 IM\u00d3VEIS DISPON\u00cdVEIS:
@@ -225,7 +290,7 @@ FORMATO DE RESPOSTA (JSON):
 
     const content = response.choices[0]?.message?.content;
     if (!content || typeof content !== 'string') {
-      return { text: 'Ol\u00e1! Sou da *Romatec Consultoria*. Temos im\u00f3veis de *R$ 210 mil* a *R$ 380 mil* com financiamento facilitado. Como posso te ajudar?' };
+      return { text: 'Ol\u00e1! Sou da *Romatec Consultoria*. Temos imóveis de *R$ 160 mil* a *R$ 380 mil* com financiamento facilitado. Como posso te ajudar?' };
     }
 
     const parsed = JSON.parse(content);
