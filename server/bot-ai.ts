@@ -139,6 +139,18 @@ async function transcribeAudioMessage(audioUrl: string): Promise<string> {
 const GREETING_PATTERNS = /^\s*(oi|ol[aá]|ola|hey|ei|bom\s*dia|boa\s*(tarde|noite)|opa|eae|eai|fala|salve|hello|hi)\s*[!?.]*\s*$/i;
 const FINANCING_PATTERNS = /\b(financ\w*|parcela\w*|presta[çc][aã]o|entrada|caixa|banco|cr[eé]dito|consorcio|cons[oó]rcio|pagar|pagamento|quanto\s*custa|valor|pre[çc]o)/i;
 const INTEREST_PATTERNS = /\b(interesse|interessad[oa]|quero|gostei|gostaria|visitar|conhecer|agendar|visita|ver\s*o\s*im[oó]vel|comprar)\b/i;
+const SELL_PATTERNS = /\b(vender|vendo|anunciar|anuncio|captar|capta[çc][aã]o|avaliar|avalia[çc][aã]o|colocar\s*(pra|para)\s*vend|quero\s*vender|tenho\s*(um|uma|pra|para)\s*(im[oó]vel|casa|apto|apartamento|terreno|lote|ch[aá]cara|sitio|s[ií]tio)|meu\s*(im[oó]vel|casa|apto|apartamento|terreno))\b/i;
+
+function getQuickSellReply(name: string): string {
+  const firstName = name ? name.split(' ')[0] : 'Cliente';
+  return `Olá, *${firstName}*! 🏠 Que ótimo saber que você tem um imóvel para vender!\n\n` +
+    `A *Romatec Consultoria Imobiliária* também trabalha com *captação de imóveis* para venda. ` +
+    `Nossos especialistas podem avaliar seu imóvel e encontrar o melhor comprador para você!\n\n` +
+    `📋 *Para dar andamento, entre em contato direto com nosso especialista:*\n\n` +
+    `🟢 *José Romário* (CEO) — wa.me/5575988310407\n` +
+    `🟢 *Daniele* — wa.me/5575991949818\n\n` +
+    `Eles vão te orientar sobre documentação, avaliação e divulgação do seu imóvel. 💪`;
+}
 
 function getQuickGreeting(name: string): string {
   const firstName = name ? name.split(' ')[0] : 'Cliente';
@@ -202,7 +214,14 @@ export async function processBotMessage(context: BotContext): Promise<BotRespons
     return { text: reply, qualified: true };
   }
 
-  // 3. Interesse direto: conectar com atendente
+  // 3. Intenção de VENDA: direcionar para captação
+  if (SELL_PATTERNS.test(messageText)) {
+    const reply = getQuickSellReply(senderName);
+    console.log(`[Bot] Resposta rápida (VENDA/CAPTAÇÃO) em ${Date.now() - startTime}ms`);
+    return { text: reply, qualified: true };
+  }
+
+  // 4. Interesse direto: conectar com atendente
   if (INTEREST_PATTERNS.test(messageText) && messageText.length < 60) {
     const firstName = senderName.split(' ')[0];
     const reply = `Que ótimo, *${firstName}*! \ud83c\udf89 Ficamos muito felizes com seu interesse!\n\n` +
@@ -251,6 +270,7 @@ REGRAS:
 8. NUNCA invente dados. Use apenas os im\u00f3veis e taxas listados acima.
 9. Inclua links dos im\u00f3veis quando relevante.
 10. Se o cliente perguntar algo fora do escopo imobiliário, redirecione educadamente.
+12. Se o cliente quer VENDER um imóvel (não comprar), responda com empatia, diga que a Romatec também faz captação de imóveis para venda, e direcione para os especialistas. NÃO tente vender imóveis para quem quer vender.
 11. Para o Cond. Chácaras Giuliano: ENFATIZE que CADA chácara custa R$ 160 mil, com ~1.000m² cada unidade. São 6 unidades no total e RESTAM APENAS 3! Use gatilho de urgência/escassez: "estão sendo comercializadas rapidamente", "poucas unidades restantes", "oportunidade única". NÃO diga "lote/chácara" — diga apenas "chácara".
 
 FORMATO DE RESPOSTA (JSON):
@@ -260,7 +280,8 @@ FORMATO DE RESPOSTA (JSON):
   "wants_attendant": true/false,
   "budget_detected": null ou n\u00famero,
   "show_simulation": true/false,
-  "property_value_for_simulation": null ou n\u00famero
+  "property_value_for_simulation": null ou número,
+  "wants_to_sell": true/false
 }`;
 
   try {
@@ -283,8 +304,9 @@ FORMATO DE RESPOSTA (JSON):
               budget_detected: { type: ['number', 'null'] },
               show_simulation: { type: 'boolean' },
               property_value_for_simulation: { type: ['number', 'null'] },
+              wants_to_sell: { type: 'boolean' },
             },
-            required: ['reply', 'interest_level', 'wants_attendant', 'budget_detected', 'show_simulation', 'property_value_for_simulation'],
+            required: ['reply', 'interest_level', 'wants_attendant', 'budget_detected', 'show_simulation', 'property_value_for_simulation', 'wants_to_sell'],
             additionalProperties: false,
           },
         },
@@ -309,6 +331,13 @@ FORMATO DE RESPOSTA (JSON):
       fullReply += '\n\n' + formatRecommendationsWhatsApp(parsed.budget_detected);
     }
 
+    // Se quer VENDER, sempre direcionar para especialista
+    if (parsed.wants_to_sell) {
+      fullReply += '\n' + formatAttendantLink();
+      console.log(`[Bot] Cliente quer VENDER imóvel - direcionando para captação`);
+      return { text: fullReply, qualified: true };
+    }
+
     // Adicionar link de atendente se qualificado
     const qualified = parsed.interest_level >= 60 || parsed.wants_attendant;
     if (qualified) {
@@ -321,8 +350,8 @@ FORMATO DE RESPOSTA (JSON):
   } catch (error) {
     console.error('[Bot] Erro IA:', error);
     return {
-      text: 'Ol\u00e1! Sou da *Romatec Consultoria Imobili\u00e1ria*. Temos \u00f3timas op\u00e7\u00f5es de im\u00f3veis em Feira de Santana!\n\n' +
-        '\ud83c\udfe0 A partir de *R$ 210 mil* com financiamento em at\u00e9 *30 anos*.\n\n' +
+      text: 'Olá! Sou da *Romatec Consultoria Imobiliária*. Temos ótimas opções de imóveis em Açailândia - MA!\n\n' +
+        '🏠 A partir de *R$ 160 mil* com financiamento em até *25 anos*.\n\n' +
         'Como posso te ajudar?',
     };
   }

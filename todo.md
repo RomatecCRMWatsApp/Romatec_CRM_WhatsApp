@@ -379,3 +379,8 @@
 ## Inserir vídeo no Chácaras Giuliano (07/04/2026)
 - [x] Upload do vídeo para CDN via manus-upload-file
 - [x] Inserir vídeo na página do imóvel Chácaras Giuliano (videoUrl atualizado no banco)
+
+## Bot inteligente: detectar intenção de VENDA (07/04/2026)
+- [x] Adicionar padrão de detecção de venda (vender, anunciar, captar, avaliar meu imóvel)
+- [x] Criar resposta rápida para vendedores direcionando ao especialista
+- [x] Atualizar system prompt da IA para tratar vendedores
