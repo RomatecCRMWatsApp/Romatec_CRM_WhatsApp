@@ -916,6 +916,62 @@ Retorne as 4 variações separadas por |||` },
     }),
   }),
 
+  // Bot AI Router
+  bot: router({
+    /**
+     * Processar mensagem de cliente e retornar resposta do bot
+     * Usado pelo webhook quando cliente manda mensagem
+     */
+    processMessage: publicProcedure
+      .input(z.object({
+        phone: z.string(),
+        message: z.string().optional(),
+        audioUrl: z.string().optional(),
+        senderName: z.string().optional(),
+      }))
+      .mutation(async ({ input }) => {
+        const { processBotMessage } = await import('./bot-ai');
+        try {
+          const response = await processBotMessage({
+            phone: input.phone,
+            message: input.message,
+            audioUrl: input.audioUrl,
+            senderName: input.senderName,
+          });
+          return { success: true, ...response };
+        } catch (error) {
+          console.error('[Bot] Erro ao processar mensagem:', error);
+          return {
+            success: false,
+            text: 'Desculpe, ocorreu um erro. Tente novamente.',
+          };
+        }
+      }),
+
+    /**
+     * Simular financiamento com taxas reais
+     */
+    simulateFinancing: publicProcedure
+      .input(z.object({
+        propertyValue: z.number(),
+        entryPercent: z.number().optional().default(20),
+      }))
+      .query(async ({ input }) => {
+        const { simulateFinancing } = await import('./bot-ai');
+        return simulateFinancing(input.propertyValue, input.entryPercent);
+      }),
+
+    /**
+     * Recomendar imóveis por orçamento
+     */
+    recommendProperties: publicProcedure
+      .input(z.object({ budget: z.number() }))
+      .query(async ({ input }) => {
+        const { recommendProperties } = await import('./bot-ai');
+        return recommendProperties(input.budget);
+      }),
+  }),
+
   // Z-API Router
   zapi: router({
     sendMessage: protectedProcedure

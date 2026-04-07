@@ -288,3 +288,18 @@
 - [x] Adicionar navegação para Performance no Dashboard principal
 - [x] Tema dark premium consistente com o resto do sistema
 - [x] Testes automatizados da procedure performance.getStats (3 testes integração, 100 total passando)
+
+
+## Bot Inteligente com Interação (07/04/2026)
+- [x] Criar webhook para receber mensagens da Z-API (POST /api/webhook/zapi)
+- [x] Implementar lógica de IA para entender intenção do cliente (IA analisa "Oi", "Áudio", interesse)
+- [x] Transcrição de áudio com Whisper API (quando cliente manda áudio)
+- [x] Resposta persuasiva inicial com qualidades do imóvel + condições
+- [x] Integrar simulador de financiamento (Caixa 10.26%, Itaú 11.60%, Santander 11.69%, Bradesco 11.70%, BB 12.00%)
+- [x] Simular financiamento em 240x com taxa real + TR (conforme orçamento do cliente)
+- [x] Recomendação de imóveis por orçamento (210k, 250k, 300k, 380k)
+- [x] Fluxo de qualificação: quando cliente interessado → enviar link com botão para escolher atendente (Romário/Daniele)
+- [x] Enviar link de simulação completa para cliente visualizar todos os bancos
+- [x] Testes de integração com Z-API (receber/responder mensagens)
+- [x] Testes com áudio (transcrição + resposta)
+- [x] Testes de simulação (cálculos corretos, taxas reais) — 108 testes passando

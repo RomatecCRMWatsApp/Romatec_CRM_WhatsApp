@@ -41,6 +41,8 @@ async function startServer() {
     try {
       const { parseWebhookPayload } = await import('../zapi-integration');
       const { getDb } = await import('../db');
+      const { processBotMessage } = await import('../bot-ai');
+      const { sendMessageViaZAPI } = await import('../zapi-integration');
       const payload = parseWebhookPayload(req.body);
 
       if (!payload) {
@@ -68,6 +70,36 @@ async function startServer() {
             sentAt: new Date(),
           });
           console.log(`[Webhook] Resposta de ${contact.name} salva`);
+
+          // Processar com bot IA e responder automaticamente
+          try {
+            const botResponse = await processBotMessage({
+              phone: payload.phone,
+              message: payload.message,
+              audioUrl: payload.audioUrl,
+              senderName: contact.name,
+            });
+
+            if (botResponse.text) {
+              const { getCompanyConfig } = await import('../db');
+              const config = await getCompanyConfig();
+              if (config?.zApiInstanceId && config?.zApiToken) {
+                const sendResult = await sendMessageViaZAPI({
+                  instanceId: config.zApiInstanceId,
+                  token: config.zApiToken,
+                  clientToken: config.zApiClientToken || undefined,
+                  phone: payload.phone,
+                  message: botResponse.text,
+                });
+
+                if (sendResult.success) {
+                  console.log(`[Bot] Resposta automática enviada para ${contact.name}`);
+                }
+              }
+            }
+          } catch (botError) {
+            console.error('[Bot] Erro ao processar:', botError);
+          }
         }
       }
 

@@ -183,6 +183,8 @@ export interface WebhookPayload {
   timestamp?: number;
   isGroup?: boolean;
   senderName?: string;
+  audioUrl?: string;
+  isAudio?: boolean;
 }
 
 export function parseWebhookPayload(body: any): WebhookPayload | null {
@@ -198,6 +200,10 @@ export function parseWebhookPayload(body: any): WebhookPayload | null {
     // Ignorar mensagens de grupo
     if (isGroup) return null;
 
+    // Detectar áudio
+    const audioUrl = body?.audio?.audioUrl || body?.audioUrl || body?.mediaUrl || '';
+    const isAudio = body?.isAudio || body?.type === 'audio' || body?.type === 'ptt' || !!audioUrl;
+
     return {
       phone: phone.replace(/\D/g, ''),
       message,
@@ -205,6 +211,8 @@ export function parseWebhookPayload(body: any): WebhookPayload | null {
       timestamp: body?.timestamp || Date.now(),
       isGroup: false,
       senderName: body?.senderName || body?.pushName || '',
+      audioUrl: audioUrl || undefined,
+      isAudio,
     };
   } catch {
     return null;
