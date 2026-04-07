@@ -451,3 +451,6 @@
 
 ## Bug: NotFoundError insertBefore no Dashboard publicado (07/04/2026)
 - [x] Corrigir erro "NotFoundError: insertBefore" no Dashboard causado pelos gráficos Recharts
+
+## Bug: Scheduler pulando horas (07/04/2026)
+- [ ] Corrigir scheduler que pula horas - deveria enviar em todas as 12 horas mas falha em algumas (Hora Real 4/12 mas só 2 enviadas)
