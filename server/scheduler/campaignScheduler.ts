@@ -2,90 +2,111 @@ import { getDb } from "../db";
 import { campaigns, contacts, messages, campaignContacts, contactCampaignHistory, properties, schedulerState as schedulerStateTable } from "../../drizzle/schema";
 import { eq, and, isNull, or, lte } from "drizzle-orm";
 
-  /**
-   * SISTEMA DINÂMICO DE CAMPANHAS v5.0 - CICLO DIÁRIO 24H
-   * 
-   * REGRAS:
-   * 1. Cada campanha tem seu próprio messagesPerHour (1-10, padrão 2)
-   * 2. No ciclo de 60 min, o par ativo envia: camp1.messagesPerHour + camp2.messagesPerHour msgs
-   * 3. As msgs são distribuídas em SLOTS ALEATÓRIOS dentro dos 60 min
-   * 4. Mínimo 3 min entre msgs (segurança anti-ban)
-   * 5. Rotação de pares: Par 1 → Par 2 → Par 1...
-   * 6. Contatos por campanha = messagesPerHour × 24 (1mph=24, 2mph=48, 3mph=72...)
-   * 7. Bloqueio de 72h por contato após envio
-   * 8. Ciclo de 60 min começa quando clica PLAY
-   * 9. CICLO DIÁRIO = 24 ciclos (24 horas). Ao final, encerra e inicia novo dia.
-   * 10. Números inválidos são pulados sem contar como falha.
-   */
+/**
+ * SISTEMA RESTRITIVO DE CAMPANHAS v6.0 - CICLO 12H
+ * 
+ * REGRA PRINCIPAL: Cada campanha envia APENAS 1 mensagem por hora.
+ * 
+ * LÓGICA:
+ * 1. Todas as campanhas ativas participam de cada hora
+ * 2. Cada campanha envia EXATAMENTE 1 mensagem por hora → bloqueia até próxima hora
+ * 3. Controle por hora atual (YYYY-MM-DD-HH) + flag sentThisHour
+ * 4. Ciclo = 12 horas (2 ciclos por dia para estatísticas)
+ * 5. Cada campanha = 12 contatos (1 msg/hora × 12 horas)
+ * 6. Mensagens distribuídas em momentos aleatórios dentro da hora
+ * 7. Mínimo 3 min entre envios (segurança anti-ban)
+ * 8. Bloqueio de 72h por contato após envio
+ * 9. Relatório enviado ao dono a cada hora e ao final do ciclo
+ * 10. Estado salvo no banco para persistir entre reinícios
+ */
 
-interface MessageSlot {
+interface CampaignHourState {
   campaignId: number;
   campaignName: string;
-  delayMs: number; // delay desde o início do ciclo
-  minuteLabel: number; // minuto aproximado (para log)
+  sentThisHour: boolean;
+  lastSentHourKey: string | null;
 }
 
 interface SchedulerState {
   isRunning: boolean;
-  cycleNumber: number;
-  messagesThisCycle: number;
-  maxMessagesThisCycle: number; // total dinâmico (camp1.mph + camp2.mph)
-  lastMessageSentAt: number;
-  cycleStartTime: number;
-  startedAt: number;
+  hourNumber: number; // 0-11 dentro do ciclo
   totalSent: number;
   totalFailed: number;
   totalBlocked: number;
-  currentPairIndex: number;
-  totalPairs: number;
-  currentCampaignNames: string[];
-  // Status de envio para a UI
+  startedAt: number;
+  currentHourKey: string;
+  campaignStates: CampaignHourState[];
+  // UI
   lastSentCampaignName: string;
   lastSentAt: number;
-  // Slots agendados para o ciclo atual
   scheduledSlots: { campaignName: string; minuteLabel: number; sent: boolean }[];
 }
 
 class CampaignScheduler {
   private state: SchedulerState = {
     isRunning: false,
-    cycleNumber: 0,
-    messagesThisCycle: 0,
-    maxMessagesThisCycle: 0,
-    lastMessageSentAt: 0,
-    cycleStartTime: Date.now(),
-    startedAt: Date.now(),
+    hourNumber: 0,
     totalSent: 0,
     totalFailed: 0,
     totalBlocked: 0,
-    currentPairIndex: 0,
-    totalPairs: 0,
-    currentCampaignNames: [],
-    lastSentCampaignName: "",
+    startedAt: Date.now(),
+    currentHourKey: '',
+    campaignStates: [],
+    lastSentCampaignName: '',
     lastSentAt: 0,
     scheduledSlots: [],
   };
 
-  private cycleTimer: NodeJS.Timeout | null = null;
-  private slotTimers: NodeJS.Timeout[] = []; // timers para cada slot de msg
+  private checkTimer: NodeJS.Timeout | null = null;
+  private slotTimers: NodeJS.Timeout[] = [];
   private isSending: boolean = false;
   private isSyncing: boolean = false;
 
-  // ========== CONSTANTES ==========
-  private readonly CYCLE_DURATION_MS = 60 * 60 * 1000; // 60 minutos
-  private readonly MIN_GAP_MS = 3 * 60 * 1000; // mínimo 3 min entre msgs (segurança)
-  private readonly MARGIN_MS = 2 * 60 * 1000; // margem de 2 min no início e fim do ciclo
-  private readonly MAX_CYCLES_PER_DAY = 24; // 24 ciclos = 1 dia completo
-  // ====================================
+  // Constantes
+  private readonly MAX_HOURS_PER_CYCLE = 12; // 12 horas por ciclo
+  private readonly CHECK_INTERVAL_MS = 60 * 1000; // verificar a cada 1 minuto
+  private readonly MIN_GAP_MS = 3 * 60 * 1000; // mínimo 3 min entre msgs
+  private readonly MARGIN_MS = 2 * 60 * 1000; // margem 2 min início/fim da hora
+  private readonly HOUR_MS = 60 * 60 * 1000; // 1 hora em ms
 
   // Rastrear última variação usada por campanha
   private lastVariationIndex: Map<number, number> = new Map();
 
-  // ========== PERSISTÊNCIA NO BANCO ==========
+  // ========== CONTROLE DE HORA ==========
 
   /**
-   * Salva estado atual no banco (chamado a cada mudança importante)
+   * Gera chave única da hora atual: YYYY-MM-DD-HH
    */
+  private getCurrentHourKey(): string {
+    const now = new Date();
+    return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}-${String(now.getHours()).padStart(2, '0')}`;
+  }
+
+  /**
+   * Reseta flags de todas as campanhas quando muda a hora
+   */
+  private resetCampaignsIfNewHour(): boolean {
+    const currentHour = this.getCurrentHourKey();
+    
+    if (currentHour === this.state.currentHourKey) {
+      return false; // mesma hora, nada a fazer
+    }
+
+    // Nova hora! Resetar flags
+    console.log(`\n🕐 === NOVA HORA: ${currentHour} ===`);
+    this.state.currentHourKey = currentHour;
+    
+    for (const cs of this.state.campaignStates) {
+      if (cs.lastSentHourKey !== currentHour) {
+        cs.sentThisHour = false;
+      }
+    }
+
+    return true;
+  }
+
+  // ========== PERSISTÊNCIA NO BANCO ==========
+
   async saveStateToDB() {
     try {
       const db = await getDb();
@@ -96,32 +117,30 @@ class CampaignScheduler {
         totalSent: this.state.totalSent,
         totalFailed: this.state.totalFailed,
         totalBlocked: this.state.totalBlocked,
-        totalPairs: this.state.totalPairs,
-        currentCampaignNames: this.state.currentCampaignNames,
-        maxMessagesThisCycle: this.state.maxMessagesThisCycle,
-        scheduledSlots: this.state.scheduledSlots,
+        currentHourKey: this.state.currentHourKey,
+        campaignStates: this.state.campaignStates,
         lastSentCampaignName: this.state.lastSentCampaignName,
         lastSentAt: this.state.lastSentAt,
+        scheduledSlots: this.state.scheduledSlots,
       };
 
       const dataToSave = {
         status: status as 'stopped' | 'running' | 'paused',
-        currentPairIndex: this.state.currentPairIndex,
-        cycleNumber: this.state.cycleNumber,
-        messagesThisCycle: this.state.messagesThisCycle,
+        currentPairIndex: 0,
+        cycleNumber: this.state.hourNumber,
+        messagesThisCycle: this.state.campaignStates.filter(c => c.sentThisHour).length,
         startedAt: this.state.startedAt ? new Date(this.state.startedAt) : null,
-        cycleStartedAt: this.state.cycleStartTime ? new Date(this.state.cycleStartTime) : null,
+        cycleStartedAt: new Date(),
         stateJson,
       };
 
-      // Upsert: tentar update primeiro, se não existir, inserir
       const rows = await db.select().from(schedulerStateTable).where(eq(schedulerStateTable.id, 1)).limit(1);
       if (rows.length === 0) {
         await db.insert(schedulerStateTable).values({ id: 1, ...dataToSave });
-        console.log(`💾 Estado CRIADO no banco: ${status} | Ciclo ${this.state.cycleNumber + 1} | Par ${this.state.currentPairIndex + 1}`);
+        console.log(`💾 Estado CRIADO no banco: ${status} | Hora ${this.state.hourNumber + 1}/${this.MAX_HOURS_PER_CYCLE}`);
       } else {
         await db.update(schedulerStateTable).set(dataToSave).where(eq(schedulerStateTable.id, 1));
-        console.log(`💾 Estado salvo no banco: ${status} | Ciclo ${this.state.cycleNumber + 1} | Par ${this.state.currentPairIndex + 1}`);
+        console.log(`💾 Estado salvo: ${status} | Hora ${this.state.hourNumber + 1}/${this.MAX_HOURS_PER_CYCLE}`);
       }
     } catch (error) {
       console.error('❌ Erro ao salvar estado:', error);
@@ -130,7 +149,6 @@ class CampaignScheduler {
 
   /**
    * Restaura estado do banco e retoma se estava rodando
-   * Chamado automaticamente no boot do servidor
    */
   async restoreAndResume() {
     try {
@@ -141,7 +159,7 @@ class CampaignScheduler {
       const saved = rows[0];
 
       if (!saved) {
-        console.log('📋 Nenhum estado salvo encontrado - scheduler parado');
+        console.log('📋 Nenhum estado salvo - scheduler parado');
         return;
       }
 
@@ -150,63 +168,35 @@ class CampaignScheduler {
         return;
       }
 
-      // Estava rodando! Restaurar e retomar
-      console.log('🔄 AUTO-RESTART: Scheduler estava rodando antes do deploy!');
-      console.log(`📋 Restaurando: Ciclo ${saved.cycleNumber + 1} | Par ${saved.currentPairIndex + 1}`);
-
+      console.log('🔄 AUTO-RESTART: Scheduler estava rodando!');
+      
       const stateJson = (saved.stateJson || {}) as Record<string, any>;
 
-      // Restaurar contadores acumulados
+      // Restaurar contadores
       this.state.totalSent = stateJson.totalSent || 0;
       this.state.totalFailed = stateJson.totalFailed || 0;
       this.state.totalBlocked = stateJson.totalBlocked || 0;
-      this.state.totalPairs = stateJson.totalPairs || 0;
-      this.state.currentCampaignNames = stateJson.currentCampaignNames || [];
+      this.state.hourNumber = saved.cycleNumber || 0;
+      this.state.campaignStates = stateJson.campaignStates || [];
+      this.state.currentHourKey = stateJson.currentHourKey || '';
 
-      // Iniciar um NOVO ciclo (não tentar retomar o ciclo antigo, pois os timers se perderam)
-      // Mas manter o cycleNumber e pairIndex para continuar de onde parou
-      this.state.cycleNumber = saved.cycleNumber;
-      this.state.currentPairIndex = saved.currentPairIndex;
-
-      // Iniciar como se fosse um novo start, mas preservando contadores
-      const preservedSent = this.state.totalSent;
-      const preservedFailed = this.state.totalFailed;
-      const preservedBlocked = this.state.totalBlocked;
-      const preservedCycle = this.state.cycleNumber;
+      // Iniciar
+      this.state.isRunning = true;
+      this.state.startedAt = saved.startedAt ? saved.startedAt.getTime() : Date.now();
 
       await this.syncCampaignsWithProperties();
+      this.startCheckLoop();
 
-      const now = Date.now();
-      this.state.isRunning = true;
-      this.state.cycleStartTime = now;
-      this.state.startedAt = saved.startedAt ? saved.startedAt.getTime() : now;
-      this.state.messagesThisCycle = 0;
-      this.state.maxMessagesThisCycle = 0;
-      this.state.lastMessageSentAt = 0;
-      this.state.scheduledSlots = [];
-      this.state.lastSentCampaignName = '';
-      this.state.lastSentAt = 0;
+      console.log(`✅ AUTO-RESTART completo! Hora ${this.state.hourNumber + 1}/${this.MAX_HOURS_PER_CYCLE}`);
+      console.log(`📊 Restaurado: ${this.state.totalSent} enviadas, ${this.state.totalFailed} falhas`);
 
-      // Restaurar contadores preservados
-      this.state.totalSent = preservedSent;
-      this.state.totalFailed = preservedFailed;
-      this.state.totalBlocked = preservedBlocked;
-      this.state.cycleNumber = preservedCycle;
-
-      this.lastVariationIndex.clear();
-
-      console.log('✅ AUTO-RESTART completo! Iniciando novo ciclo...');
-      console.log(`📊 Contadores restaurados: ${preservedSent} enviadas, ${preservedFailed} falhas`);
-
-      await this.executeCycle();
-      this.scheduleNextCycle();
       await this.saveStateToDB();
     } catch (error) {
       console.error('❌ Erro ao restaurar estado:', error);
     }
   }
 
-  // ========== FIM PERSISTÊNCIA ==========
+  // ========== CONTROLE PRINCIPAL ==========
 
   /**
    * Inicia o scheduler
@@ -218,36 +208,39 @@ class CampaignScheduler {
       await new Promise(resolve => setTimeout(resolve, 500));
     }
 
-    console.log("🚀 Iniciando sistema dinâmico de campanhas v4.0...");
-    console.log("📏 msgs/hora CONFIGURÁVEL por campanha");
+    console.log("🚀 Iniciando sistema RESTRITIVO v6.0...");
+    console.log("📏 REGRA: 1 mensagem por campanha por hora | Ciclo 12h");
 
     await this.syncCampaignsWithProperties();
 
-    const now = Date.now();
     this.state.isRunning = true;
-    this.state.cycleStartTime = now;
-    this.state.startedAt = now;
-    this.state.cycleNumber = 0;
-    this.state.messagesThisCycle = 0;
-    this.state.maxMessagesThisCycle = 0;
-    this.state.lastMessageSentAt = 0;
+    this.state.startedAt = Date.now();
+    this.state.hourNumber = 0;
     this.state.totalSent = 0;
     this.state.totalFailed = 0;
     this.state.totalBlocked = 0;
-    this.state.lastSentCampaignName = "";
+    this.state.currentHourKey = '';
+    this.state.lastSentCampaignName = '';
     this.state.lastSentAt = 0;
     this.state.scheduledSlots = [];
     this.lastVariationIndex.clear();
 
-    console.log("✅ Scheduler v4.0 iniciado - Ciclo 1 começa AGORA");
+    // Inicializar estados das campanhas
+    await this.initCampaignStates();
 
-    await this.executeCycle();
-    this.scheduleNextCycle();
+    console.log("✅ Scheduler v6.0 iniciado - Verificação a cada 1 minuto");
+
+    // Executar imediatamente a primeira verificação
+    await this.checkAndSend();
+    
+    // Iniciar loop de verificação
+    this.startCheckLoop();
+    
     await this.saveStateToDB();
   }
 
   /**
-   * Para o scheduler completamente
+   * Para o scheduler
    */
   stop() {
     console.log("⏹️ Parando scheduler...");
@@ -256,21 +249,16 @@ class CampaignScheduler {
     this.isSending = false;
     this.isSyncing = false;
 
-    // Cancelar TODOS os timers de slots
     for (const timer of this.slotTimers) {
       clearTimeout(timer);
     }
     this.slotTimers = [];
 
-    if (this.cycleTimer) {
-      clearTimeout(this.cycleTimer);
-      this.cycleTimer = null;
+    if (this.checkTimer) {
+      clearInterval(this.checkTimer);
+      this.checkTimer = null;
     }
 
-    this.state.messagesThisCycle = 0;
-    this.state.maxMessagesThisCycle = 0;
-    this.state.lastMessageSentAt = 0;
-    this.state.cycleNumber = 0;
     this.state.scheduledSlots = [];
     this.lastVariationIndex.clear();
 
@@ -279,8 +267,223 @@ class CampaignScheduler {
   }
 
   /**
-   * SINCRONIZAÇÃO: Campanhas = Imóveis ativos
+   * Loop principal: verifica a cada 1 minuto
    */
+  private startCheckLoop() {
+    if (this.checkTimer) {
+      clearInterval(this.checkTimer);
+    }
+
+    this.checkTimer = setInterval(async () => {
+      if (!this.state.isRunning) return;
+      await this.checkAndSend();
+    }, this.CHECK_INTERVAL_MS);
+  }
+
+  /**
+   * Verificação principal: reseta hora se necessário e agenda envios
+   */
+  private async checkAndSend() {
+    if (!this.state.isRunning) return;
+
+    const isNewHour = this.resetCampaignsIfNewHour();
+
+    if (isNewHour) {
+      // Nova hora! Incrementar contador
+      this.state.hourNumber++;
+
+      // Verificar se completou 12 horas (1 ciclo)
+      if (this.state.hourNumber >= this.MAX_HOURS_PER_CYCLE) {
+        console.log(`\n🌟 === CICLO DE ${this.MAX_HOURS_PER_CYCLE}H COMPLETO! ===`);
+        console.log(`📊 Total: ${this.state.totalSent} enviadas, ${this.state.totalFailed} falhas`);
+        
+        await this.sendDailyReport();
+
+        // Resetar para novo ciclo
+        this.state.hourNumber = 0;
+        this.state.totalSent = 0;
+        this.state.totalFailed = 0;
+        this.state.totalBlocked = 0;
+        console.log(`🚀 Novo ciclo de ${this.MAX_HOURS_PER_CYCLE}h iniciado!`);
+      }
+
+      // Sincronizar campanhas
+      await this.syncCampaignsWithProperties();
+      await this.initCampaignStates();
+
+      // Agendar envios para esta hora
+      await this.scheduleHourSends();
+      
+      // Enviar relatório da hora anterior
+      await this.sendCycleReport();
+      
+      await this.saveStateToDB();
+    }
+
+    // Se é a primeira execução (sem hourKey ainda), agendar
+    if (!this.state.currentHourKey) {
+      this.state.currentHourKey = this.getCurrentHourKey();
+      await this.initCampaignStates();
+      await this.scheduleHourSends();
+      await this.saveStateToDB();
+    }
+  }
+
+  /**
+   * Inicializa estados das campanhas ativas
+   */
+  private async initCampaignStates() {
+    const db = await getDb();
+    if (!db) return;
+
+    const runningCampaigns = await db.select().from(campaigns).where(eq(campaigns.status, "running"));
+    const currentHour = this.getCurrentHourKey();
+
+    // Preservar estados existentes, adicionar novos
+    const newStates: CampaignHourState[] = [];
+    
+    for (const camp of runningCampaigns) {
+      const existing = this.state.campaignStates.find(cs => cs.campaignId === camp.id);
+      if (existing) {
+        // Preservar se mesma hora, resetar se hora diferente
+        newStates.push({
+          ...existing,
+          campaignName: camp.name,
+          sentThisHour: existing.lastSentHourKey === currentHour ? existing.sentThisHour : false,
+        });
+      } else {
+        newStates.push({
+          campaignId: camp.id,
+          campaignName: camp.name,
+          sentThisHour: false,
+          lastSentHourKey: null,
+        });
+      }
+    }
+
+    this.state.campaignStates = newStates;
+    console.log(`📋 ${newStates.length} campanhas ativas | ${newStates.filter(c => c.sentThisHour).length} já enviaram nesta hora`);
+  }
+
+  /**
+   * Agenda envios de TODAS as campanhas que ainda não enviaram nesta hora
+   * Distribui em momentos aleatórios com gap mínimo de 3 min
+   */
+  private async scheduleHourSends() {
+    // Cancelar timers anteriores
+    for (const timer of this.slotTimers) {
+      clearTimeout(timer);
+    }
+    this.slotTimers = [];
+
+    const pendingCampaigns = this.state.campaignStates.filter(cs => !cs.sentThisHour);
+    
+    if (pendingCampaigns.length === 0) {
+      console.log(`✅ Todas as campanhas já enviaram nesta hora`);
+      return;
+    }
+
+    // Calcular quanto tempo resta na hora atual
+    const now = new Date();
+    const minutesIntoHour = now.getMinutes();
+    const remainingMs = (60 - minutesIntoHour) * 60 * 1000;
+    
+    // Se restam menos de 5 min, não agendar (esperar próxima hora)
+    if (remainingMs < 5 * 60 * 1000) {
+      console.log(`⏳ Menos de 5 min restantes na hora, aguardando próxima hora`);
+      return;
+    }
+
+    // Gerar slots aleatórios dentro do tempo restante
+    const totalMsgs = pendingCampaigns.length;
+    const availableWindow = remainingMs - this.MARGIN_MS;
+    
+    // Embaralhar campanhas para ordem aleatória
+    const shuffled = [...pendingCampaigns].sort(() => Math.random() - 0.5);
+
+    // Gerar delays aleatórios com gap mínimo
+    const delays: number[] = [];
+    for (let i = 0; i < totalMsgs; i++) {
+      let attempts = 0;
+      let delay: number;
+
+      do {
+        delay = Math.floor(Math.random() * Math.max(1, availableWindow));
+        attempts++;
+      } while (
+        attempts < 100 &&
+        delays.some(d => Math.abs(d - delay) < this.MIN_GAP_MS)
+      );
+
+      // Fallback: distribuir uniformemente
+      if (attempts >= 100) {
+        delay = Math.floor((availableWindow / (totalMsgs + 1)) * (i + 1));
+      }
+
+      delays.push(delay);
+    }
+
+    // Ordenar cronologicamente
+    delays.sort((a, b) => a - b);
+
+    // Salvar slots para UI
+    this.state.scheduledSlots = shuffled.map((cs, idx) => ({
+      campaignName: cs.campaignName,
+      minuteLabel: Math.round(delays[idx] / 60000),
+      sent: false,
+    }));
+
+    console.log(`📤 Agendando ${totalMsgs} envios nesta hora:`);
+    
+    for (let i = 0; i < shuffled.length; i++) {
+      const cs = shuffled[i];
+      const delay = delays[i];
+      const slotIndex = i;
+
+      console.log(`  📨 ${cs.campaignName} → ~${Math.round(delay / 60000)} min`);
+
+      const timer = setTimeout(async () => {
+        if (!this.state.isRunning) return;
+
+        // VERIFICAÇÃO DUPLA: checar flag antes de enviar
+        const campState = this.state.campaignStates.find(c => c.campaignId === cs.campaignId);
+        if (!campState || campState.sentThisHour) {
+          console.log(`🛑 ${cs.campaignName}: já enviou nesta hora, pulando`);
+          return;
+        }
+
+        const db = await getDb();
+        if (!db) return;
+
+        const campResult = await db.select().from(campaigns).where(eq(campaigns.id, cs.campaignId)).limit(1);
+        const campaign = campResult[0];
+        if (!campaign || campaign.status !== 'running') {
+          console.log(`⚠️ ${cs.campaignName}: não está ativa, pulando`);
+          return;
+        }
+
+        console.log(`\n📨 Enviando: ${cs.campaignName} (hora ${this.state.hourNumber + 1}/${this.MAX_HOURS_PER_CYCLE})`);
+        
+        await this.sendMessageForCampaign(campaign);
+
+        // 🔴 TRAVA: marcar como enviado nesta hora
+        campState.sentThisHour = true;
+        campState.lastSentHourKey = this.getCurrentHourKey();
+
+        // Marcar slot como enviado na UI
+        if (this.state.scheduledSlots[slotIndex]) {
+          this.state.scheduledSlots[slotIndex].sent = true;
+        }
+
+        await this.saveStateToDB();
+      }, delay);
+
+      this.slotTimers.push(timer);
+    }
+  }
+
+  // ========== SINCRONIZAÇÃO ==========
+
   async syncCampaignsWithProperties() {
     if (this.isSyncing) return;
     this.isSyncing = true;
@@ -304,10 +507,10 @@ class CampaignScheduler {
           propertyId: prop.id,
           name: prop.denomination,
           messageVariations: variations,
-          totalContacts: 24, // messagesPerHour(2) × 12 = 24
+          totalContacts: 12, // 1 msg/hora × 12 horas = 12 contatos
           sentCount: 0,
           failedCount: 0,
-          messagesPerHour: 2, // padrão 2 msgs/hora
+          messagesPerHour: 1, // RESTRITIVO: sempre 1
           status: "running",
           startDate: new Date(),
         });
@@ -327,8 +530,7 @@ class CampaignScheduler {
       }
 
       const runningCampaigns = await db.select().from(campaigns).where(eq(campaigns.status, "running"));
-      this.state.totalPairs = Math.ceil(runningCampaigns.length / 2);
-      console.log(`✅ ${runningCampaigns.length} campanhas ativas, ${this.state.totalPairs} pares`);
+      console.log(`✅ ${runningCampaigns.length} campanhas ativas`);
     } catch (error) {
       console.error("❌ Erro na sincronização:", error);
     } finally {
@@ -336,33 +538,53 @@ class CampaignScheduler {
     }
   }
 
-  /**
-   * Gera variações de mensagem com copywriting profissional
-   */
+  // ========== GERAÇÃO DE VARIAÇÕES ==========
+
   private generateMessageVariations(prop: any): string[] {
     const priceFormatted = Number(prop.price).toLocaleString("pt-BR");
     const slug = prop.publicSlug || prop.denomination.toLowerCase().replace(/[^a-z0-9]+/g, '-');
     const siteUrl = `https://romatecwa-2uygcczr.manus.space/imovel/${slug}`;
+    const denom = prop.denomination || '';
 
+    // Detectar se é chácara para mensagem de escassez
+    const isChacara = denom.toLowerCase().includes('chacara') || denom.toLowerCase().includes('chácar') || denom.toLowerCase().includes('giuliano');
+
+    if (isChacara) {
+      return [
+        `🌿 {{NOME}}, *${denom}* - Chácaras exclusivas em Açailândia!\n\n🏡 Cada chácara: *~1.000m²* por apenas *R$ ${priceFormatted}*\n⚠️ *Restam apenas 3 unidades!* São 6 no total e estão saindo rápido.\n\n📸 Veja fotos e localização: ${siteUrl}\n\nGaranta a sua antes que acabe!`,
+        `{{NOME}}, já conhece o *${denom}*? 🌳\n\nSão chácaras de *~1.000m²* cada, perfeitas pra quem busca tranquilidade e espaço.\n\n💰 *R$ ${priceFormatted}* por unidade\n🚨 *Apenas 3 disponíveis* (de 6 no total)\n\n👉 Confira: ${siteUrl}\n\nNão perca essa oportunidade única!`,
+        `🔥 {{NOME}}, *OPORTUNIDADE RARA*\n\n*${denom}* - Açailândia/MA\n🏡 Chácaras de ~1.000m²\n💰 *R$ ${priceFormatted}* cada\n\n⚠️ *Das 6 unidades, restam apenas 3!*\n✅ Ideal pra lazer, moradia ou investimento\n\n📲 Veja agora: ${siteUrl}\n\nResponde "SIM" que te passo todos os detalhes!`,
+        `⏰ {{NOME}}, *ÚLTIMAS UNIDADES*!\n\n*${denom}*: chácaras de ~1.000m² em Açailândia.\n\n💰 *R$ ${priceFormatted}* por chácara\n🚨 Apenas *3 de 6* ainda disponíveis\n\nO condomínio está vendendo rápido. Quem garante primeiro, escolhe o melhor lote.\n\n📸 Detalhes: ${siteUrl}\n\nMe chama agora!`,
+        `🏡 {{NOME}}, imagine ter sua própria chácara...\n\n*${denom}* - ~1.000m² de puro sossego em Açailândia.\nValor: *R$ ${priceFormatted}*\n\n⚠️ *Restam só 3 unidades!* Não vai durar muito.\n\n🔗 Conheça: ${siteUrl}\n\nVamos conversar sobre como garantir a sua?`,
+        `🆕 {{NOME}}, *LANÇAMENTO EXCLUSIVO*\n\n*${denom}* - Chácaras em condomínio fechado\n📍 Açailândia/MA\n📐 ~1.000m² cada\n💰 *R$ ${priceFormatted}*\n\n🚨 *Apenas 3 restantes* de 6 unidades!\n\n📲 Detalhes: ${siteUrl}\n\nTem interesse? Me responde!`,
+        `✨ {{NOME}}, procurando chácara com ótimo custo-benefício?\n\n*${denom}*: ~1.000m² por *R$ ${priceFormatted}*\n📍 Condomínio em Açailândia/MA\n\n⚠️ *Só restam 3 de 6 unidades*\n✅ Documentação regularizada\n\n👉 Veja: ${siteUrl}\n\nPosso te passar mais detalhes!`,
+        `🤔 {{NOME}}, já pensou em investir em chácara?\n\n*${denom}* - Açailândia/MA\n~1.000m² por apenas *R$ ${priceFormatted}*\n\n📊 Das 6 unidades, *3 já foram vendidas*!\nValorização garantida na região.\n\n📸 Veja tudo: ${siteUrl}\n\nMe conta se tem interesse!`,
+        `📌 {{NOME}}, comparou preços de chácaras na região?\n\n*${denom}*: ~1.000m² por *R$ ${priceFormatted}*\nIsso está *abaixo da média* do mercado!\n\n🚨 *Restam apenas 3 unidades* de 6\n\n🔗 Confira: ${siteUrl}\n\nEssa é a hora certa. Vamos conversar?`,
+        `🚨 {{NOME}}, *ATENÇÃO*\n\n*${denom}* está gerando muito interesse!\n\n🏡 Chácaras de ~1.000m² - *R$ ${priceFormatted}* cada\n⚠️ *Apenas 3 de 6 unidades disponíveis*\n\nPode sair do mercado a qualquer momento.\n\n📲 Veja antes que acabe: ${siteUrl}\n\nGaranta a sua agora!`,
+        `💎 {{NOME}}, oportunidade *ÚNICA* em Açailândia!\n\n*${denom}*\n📐 ~1.000m² por chácara\n💰 *R$ ${priceFormatted}*\n🏡 Condomínio com apenas 6 unidades\n\n🔴 *3 já vendidas!* Restam 3.\n\n👉 Veja: ${siteUrl}\n\nNão deixe pra depois!`,
+        `🌿 {{NOME}}, sua chácara dos sonhos está aqui!\n\n*${denom}* - Condomínio exclusivo\n📍 Açailândia/MA\n📐 ~1.000m² cada unidade\n💰 *R$ ${priceFormatted}*\n\n⚠️ *Últimas 3 unidades!*\n\n📸 Fotos e mapa: ${siteUrl}\n\nMe chama que te explico tudo!`,
+      ];
+    }
+
+    // Variações genéricas para outros imóveis
     return [
-      `🏠 {{NOME}}, *${prop.denomination}* - Restam poucas unidades!\n\nValor: *R$ ${priceFormatted}*\nLocal: ${prop.address}\n\n📸 Veja fotos, planta e localização:\n${siteUrl}\n\n⚡ Condições especiais para os primeiros interessados. Posso te passar mais detalhes?`,
-      `{{NOME}}, você já conhece o *${prop.denomination}*? 🔑\n\nUm dos imóveis mais procurados da região de ${prop.address}.\n\n💰 A partir de *R$ ${priceFormatted}*\n\n👉 Confira tudo aqui: ${siteUrl}\n\nPosso reservar uma visita exclusiva pra você?`,
-      `📊 {{NOME}}, o *${prop.denomination}* já recebeu mais de 50 consultas este mês!\n\nMotivo? Localização privilegiada em ${prop.address} + preço competitivo.\n\n🏷️ *R$ ${priceFormatted}*\n\n🔗 Veja todos os detalhes: ${siteUrl}\n\nNão perca essa oportunidade. Me chama!`,
-      `💡 {{NOME}}, sabia que imóveis nessa região valorizaram mais de 30% nos últimos anos?\n\n*${prop.denomination}* - ${prop.address}\nValor atual: *R$ ${priceFormatted}*\n\n📲 Fotos e detalhes completos: ${siteUrl}\n\nQuero te mostrar por que esse é o melhor momento pra investir. Posso te ligar?`,
-      `🔥 {{NOME}}, *OPORTUNIDADE REAL*\n\n*${prop.denomination}*\n📍 ${prop.address}\n💰 *R$ ${priceFormatted}*\n\n✅ Financiamento facilitado\n✅ Documentação em dia\n✅ Pronto pra morar/construir\n\n👉 Veja agora: ${siteUrl}\n\nResponde "SIM" que te envio todas as condições!`,
-      `⏰ {{NOME}}, última chance!\n\n*${prop.denomination}* em ${prop.address} está com condições especiais que vencem em breve.\n\n🏷️ *R$ ${priceFormatted}* (parcelas que cabem no bolso)\n\n📸 Veja fotos e planta: ${siteUrl}\n\nJá temos interessados. Garanta o seu antes que acabe!`,
-      `🏡 {{NOME}}, imagine sua família no lugar perfeito...\n\n*${prop.denomination}* - ${prop.address}\nValor: *R$ ${priceFormatted}*\n\nLocalização estratégica, segurança e qualidade de vida.\n\n🔗 Conheça cada detalhe: ${siteUrl}\n\nVamos conversar sobre como realizar esse sonho?`,
-      `🆕 {{NOME}}, *LANÇAMENTO EXCLUSIVO*\n\n*${prop.denomination}*\n📍 ${prop.address}\n💰 *R$ ${priceFormatted}*\n\nPoucos sabem dessa oportunidade. Estou compartilhando com um grupo seleto de clientes.\n\n📲 Detalhes completos: ${siteUrl}\n\nTem interesse? Me responde que te explico tudo!`,
-      `✨ {{NOME}}, procurando imóvel com ótimo custo-benefício?\n\n*${prop.denomination}* em ${prop.address}\n\n🏷️ *R$ ${priceFormatted}*\n📋 Documentação 100% regularizada\n🏦 Aceita financiamento\n\n👉 Veja fotos e localização: ${siteUrl}\n\nPosso simular as parcelas pra você. É só me chamar!`,
-      `🤔 {{NOME}}, você está buscando imóvel na região de ${prop.address}?\n\nTenho uma opção que pode ser exatamente o que procura:\n\n*${prop.denomination}* - *R$ ${priceFormatted}*\n\n📸 Veja tudo aqui: ${siteUrl}\n\nMe conta o que você precisa que te ajudo a encontrar o imóvel ideal!`,
-      `📌 {{NOME}}, comparou preços na região?\n\n*${prop.denomination}* está abaixo da média do mercado:\n💰 *R$ ${priceFormatted}*\n📍 ${prop.address}\n\nE o melhor: condições facilitadas de pagamento.\n\n🔗 Confira: ${siteUrl}\n\nEssa é a hora certa. Vamos conversar?`,
-      `🚨 {{NOME}}, *ATENÇÃO*\n\n*${prop.denomination}* - ${prop.address}\n\nEste imóvel está gerando muito interesse e pode sair do mercado a qualquer momento.\n\n🏷️ *R$ ${priceFormatted}*\n\n📲 Veja antes que acabe: ${siteUrl}\n\nGaranta sua visita. Me chama agora!`,
+      `🏠 {{NOME}}, *${denom}* - Restam poucas unidades!\n\nValor: *R$ ${priceFormatted}*\nLocal: ${prop.address}\n\n📸 Veja fotos, planta e localização:\n${siteUrl}\n\n⚡ Condições especiais para os primeiros interessados. Posso te passar mais detalhes?`,
+      `{{NOME}}, você já conhece o *${denom}*? 🔑\n\nUm dos imóveis mais procurados da região de ${prop.address}.\n\n💰 A partir de *R$ ${priceFormatted}*\n\n👉 Confira tudo aqui: ${siteUrl}\n\nPosso reservar uma visita exclusiva pra você?`,
+      `📊 {{NOME}}, o *${denom}* já recebeu mais de 50 consultas este mês!\n\nMotivo? Localização privilegiada em ${prop.address} + preço competitivo.\n\n🏷️ *R$ ${priceFormatted}*\n\n🔗 Veja todos os detalhes: ${siteUrl}\n\nNão perca essa oportunidade. Me chama!`,
+      `💡 {{NOME}}, sabia que imóveis nessa região valorizaram mais de 30% nos últimos anos?\n\n*${denom}* - ${prop.address}\nValor atual: *R$ ${priceFormatted}*\n\n📲 Fotos e detalhes completos: ${siteUrl}\n\nQuero te mostrar por que esse é o melhor momento pra investir. Posso te ligar?`,
+      `🔥 {{NOME}}, *OPORTUNIDADE REAL*\n\n*${denom}*\n📍 ${prop.address}\n💰 *R$ ${priceFormatted}*\n\n✅ Financiamento facilitado\n✅ Documentação em dia\n✅ Pronto pra morar/construir\n\n👉 Veja agora: ${siteUrl}\n\nResponde "SIM" que te envio todas as condições!`,
+      `⏰ {{NOME}}, última chance!\n\n*${denom}* em ${prop.address} está com condições especiais que vencem em breve.\n\n🏷️ *R$ ${priceFormatted}* (parcelas que cabem no bolso)\n\n📸 Veja fotos e planta: ${siteUrl}\n\nJá temos interessados. Garanta o seu antes que acabe!`,
+      `🏡 {{NOME}}, imagine sua família no lugar perfeito...\n\n*${denom}* - ${prop.address}\nValor: *R$ ${priceFormatted}*\n\nLocalização estratégica, segurança e qualidade de vida.\n\n🔗 Conheça cada detalhe: ${siteUrl}\n\nVamos conversar sobre como realizar esse sonho?`,
+      `🆕 {{NOME}}, *LANÇAMENTO EXCLUSIVO*\n\n*${denom}*\n📍 ${prop.address}\n💰 *R$ ${priceFormatted}*\n\nPoucos sabem dessa oportunidade. Estou compartilhando com um grupo seleto de clientes.\n\n📲 Detalhes completos: ${siteUrl}\n\nTem interesse? Me responde que te explico tudo!`,
+      `✨ {{NOME}}, procurando imóvel com ótimo custo-benefício?\n\n*${denom}* em ${prop.address}\n\n🏷️ *R$ ${priceFormatted}*\n📋 Documentação 100% regularizada\n🏦 Aceita financiamento\n\n👉 Veja fotos e localização: ${siteUrl}\n\nPosso simular as parcelas pra você. É só me chamar!`,
+      `🤔 {{NOME}}, você está buscando imóvel na região de ${prop.address}?\n\nTenho uma opção que pode ser exatamente o que procura:\n\n*${denom}* - *R$ ${priceFormatted}*\n\n📸 Veja tudo aqui: ${siteUrl}\n\nMe conta o que você precisa que te ajudo a encontrar o imóvel ideal!`,
+      `📌 {{NOME}}, comparou preços na região?\n\n*${denom}* está abaixo da média do mercado:\n💰 *R$ ${priceFormatted}*\n📍 ${prop.address}\n\nE o melhor: condições facilitadas de pagamento.\n\n🔗 Confira: ${siteUrl}\n\nEssa é a hora certa. Vamos conversar?`,
+      `🚨 {{NOME}}, *ATENÇÃO*\n\n*${denom}* - ${prop.address}\n\nEste imóvel está gerando muito interesse e pode sair do mercado a qualquer momento.\n\n🏷️ *R$ ${priceFormatted}*\n\n📲 Veja antes que acabe: ${siteUrl}\n\nGaranta sua visita. Me chama agora!`,
     ];
   }
 
-  /**
-   * Atribui 12 contatos aleatórios (não bloqueados) a uma campanha
-   */
+  // ========== CONTATOS ==========
+
   private async assignContactsToCampaign(campaignId: number) {
     const db = await getDb();
     if (!db) return;
@@ -371,13 +593,10 @@ class CampaignScheduler {
     const allContacts = await db.select().from(contacts).where(eq(contacts.status, "active"));
     const unblockedContacts = allContacts.filter(c => !c.blockedUntil || c.blockedUntil <= now);
 
-    // totalContacts = messagesPerHour × 12
-    const campaign = await db.select().from(campaigns).where(eq(campaigns.id, campaignId)).limit(1);
-    const mph = campaign[0]?.messagesPerHour || 2;
-    const neededContacts = mph * 12;
+    const neededContacts = 12; // 1 msg/hora × 12 horas = 12
 
     if (unblockedContacts.length < neededContacts) {
-      console.warn(`⚠️ Apenas ${unblockedContacts.length} contatos desbloqueados disponíveis (precisa de ${neededContacts})`);
+      console.warn(`⚠️ Apenas ${unblockedContacts.length} contatos disponíveis (precisa de ${neededContacts})`);
     }
 
     const shuffled = [...unblockedContacts].sort(() => Math.random() - 0.5);
@@ -395,231 +614,22 @@ class CampaignScheduler {
     console.log(`📱 ${selected.length} contatos designados para campanha ${campaignId}`);
   }
 
-  /**
-   * ========== GERAÇÃO DE SLOTS ALEATÓRIOS ==========
-   * Distribui N mensagens em slots aleatórios dentro de 60 min
-   * com mínimo de MIN_GAP_MS entre cada slot
-   */
-  private generateSlots(camp1: any, camp2: any | null, pendingCamp1: number = 999, pendingCamp2: number = 999): MessageSlot[] {
-    // Limitar msgs/hora pelo número de contatos PENDENTES (proteção anti-duplicação)
-    const rawMph1 = Math.max(1, Math.min(10, camp1.messagesPerHour || 2));
-    const rawMph2 = camp2 ? Math.max(1, Math.min(10, camp2.messagesPerHour || 2)) : 0;
-    const mph1 = Math.min(rawMph1, pendingCamp1);
-    const mph2 = camp2 ? Math.min(rawMph2, pendingCamp2) : 0;
-    const totalMsgs = mph1 + mph2;
+  // ========== ENVIO ==========
 
-    if (mph1 < rawMph1) console.log(`⚠️ ${camp1.name}: msgs/hora limitado de ${rawMph1} → ${mph1} (apenas ${pendingCamp1} contatos pendentes)`);
-    if (camp2 && mph2 < rawMph2) console.log(`⚠️ ${camp2.name}: msgs/hora limitado de ${rawMph2} → ${mph2} (apenas ${pendingCamp2} contatos pendentes)`);
-
-    if (totalMsgs === 0) {
-      console.log(`⏭️ Nenhum contato pendente neste par, pulando ciclo`);
-      return [];
-    }
-
-    // Criar lista de msgs: camp1 primeiro, depois camp2
-    const msgList: { campaignId: number; campaignName: string }[] = [];
-    for (let i = 0; i < mph1; i++) {
-      msgList.push({ campaignId: camp1.id, campaignName: camp1.name });
-    }
-    if (camp2) {
-      for (let i = 0; i < mph2; i++) {
-        msgList.push({ campaignId: camp2.id, campaignName: camp2.name });
-      }
-    }
-
-    // Embaralhar a lista para alternar campanhas aleatoriamente
-    const shuffled = [...msgList].sort(() => Math.random() - 0.5);
-
-    // Gerar slots de tempo aleatórios com mínimo de MIN_GAP_MS entre eles
-    const availableWindow = this.CYCLE_DURATION_MS - (2 * this.MARGIN_MS);
-    const minGapBetween = this.MIN_GAP_MS;
-
-    // Calcular espaço necessário
-    const totalGapNeeded = (totalMsgs - 1) * minGapBetween;
-
-    if (totalGapNeeded > availableWindow) {
-      // Se não cabe com gap de 3 min, reduzir gap proporcionalmente
-      const adjustedGap = Math.floor(availableWindow / totalMsgs);
-      console.warn(`⚠️ Gap reduzido para ${Math.round(adjustedGap / 60000)} min (${totalMsgs} msgs em 60 min)`);
-
-      return shuffled.map((msg, idx) => ({
-        ...msg,
-        delayMs: this.MARGIN_MS + (idx * adjustedGap),
-        minuteLabel: Math.round((this.MARGIN_MS + (idx * adjustedGap)) / 60000),
-      }));
-    }
-
-    // Gerar slots aleatórios com gap mínimo
-    const slots: number[] = [];
-    for (let i = 0; i < totalMsgs; i++) {
-      let attempts = 0;
-      let slot: number;
-
-      do {
-        slot = this.MARGIN_MS + Math.floor(Math.random() * availableWindow);
-        attempts++;
-      } while (
-        attempts < 100 &&
-        slots.some(s => Math.abs(s - slot) < minGapBetween)
-      );
-
-      // Fallback: distribuir uniformemente se não conseguir aleatório
-      if (attempts >= 100) {
-        slot = this.MARGIN_MS + Math.floor((availableWindow / (totalMsgs + 1)) * (i + 1));
-      }
-
-      slots.push(slot);
-    }
-
-    // Ordenar slots cronologicamente
-    slots.sort((a, b) => a - b);
-
-    return shuffled.map((msg, idx) => ({
-      ...msg,
-      delayMs: slots[idx],
-      minuteLabel: Math.round(slots[idx] / 60000),
-    }));
-  }
-
-  /**
-   * Executa um ciclo: distribui msgs do par ativo em slots aleatórios
-   */
-  private async executeCycle() {
-    if (!this.state.isRunning) return;
-
-    console.log(`\n⏰ === CICLO ${this.state.cycleNumber + 1} ===`);
-
-    await this.syncCampaignsWithProperties();
-
-    const db = await getDb();
-    if (!db) return;
-
-    const runningCampaigns = await db.select().from(campaigns).where(eq(campaigns.status, "running"));
-
-    if (runningCampaigns.length < 1) {
-      console.error("❌ Nenhuma campanha ativa. Aguardando...");
-      return;
-    }
-
-    // Calcular pares
-    const completePairs = Math.floor(runningCampaigns.length / 2);
-    const hasOddCampaign = runningCampaigns.length % 2 !== 0;
-    const totalPairs = hasOddCampaign ? completePairs + 1 : completePairs;
-    this.state.totalPairs = totalPairs;
-    this.state.currentPairIndex = totalPairs > 0 ? this.state.cycleNumber % totalPairs : 0;
-
-    let camp1: any;
-    let camp2: any | null = null;
-
-    if (runningCampaigns.length === 1) {
-      camp1 = runningCampaigns[0];
-      camp2 = null;
-    } else if (this.state.currentPairIndex < completePairs) {
-      const pairStart = this.state.currentPairIndex * 2;
-      camp1 = runningCampaigns[pairStart];
-      camp2 = runningCampaigns[pairStart + 1];
-    } else {
-      // Par extra para campanha ímpar
-      camp1 = runningCampaigns[runningCampaigns.length - 1];
-      camp2 = runningCampaigns[0];
-      console.log(`🔄 Par extra (campanha ímpar): ${camp1.name} + ${camp2.name}`);
-    }
-
-    this.state.currentCampaignNames = camp2 ? [camp1.name, camp2.name] : [camp1.name];
-
-    // Contar contatos PENDENTES de cada campanha (proteção anti-duplicação)
-    const pendingCamp1 = await this.countPendingContacts(camp1.id);
-    const pendingCamp2 = camp2 ? await this.countPendingContacts(camp2.id) : 0;
-    console.log(`📊 Contatos pendentes: ${camp1.name}=${pendingCamp1}, ${camp2 ? `${camp2.name}=${pendingCamp2}` : 'solo'}`);
-
-    // Gerar slots aleatórios LIMITADOS pelos contatos pendentes
-    const slots = this.generateSlots(camp1, camp2, pendingCamp1, pendingCamp2);
-    const totalMsgsThisCycle = slots.length;
-    this.state.maxMessagesThisCycle = totalMsgsThisCycle;
-    this.state.messagesThisCycle = 0;
-
-    // Salvar slots para a UI
-    this.state.scheduledSlots = slots.map(s => ({
-      campaignName: s.campaignName,
-      minuteLabel: s.minuteLabel,
-      sent: false,
-    }));
-
-    const mph1 = camp1.messagesPerHour || 2;
-    const mph2 = camp2 ? (camp2.messagesPerHour || 2) : 0;
-
-    console.log(`📤 Par ${this.state.currentPairIndex + 1}/${totalPairs}: ${camp1.name} (${mph1} msgs/h) + ${camp2 ? `${camp2.name} (${mph2} msgs/h)` : 'solo'}`);
-    console.log(`📊 Total: ${totalMsgsThisCycle} msgs neste ciclo`);
-    console.log(`🕐 Slots: ${slots.map(s => `${s.campaignName}@${s.minuteLabel}min`).join(' → ')}`);
-
-    // Cancelar timers de slots anteriores
-    for (const timer of this.slotTimers) {
-      clearTimeout(timer);
-    }
-    this.slotTimers = [];
-
-    // Agendar cada slot
-    const currentCycleNumber = this.state.cycleNumber;
-
-    for (let i = 0; i < slots.length; i++) {
-      const slot = slots[i];
-      const slotIndex = i;
-
-      const timer = setTimeout(async () => {
-        // Verificar se ainda estamos no mesmo ciclo e rodando
-        if (!this.state.isRunning) {
-          console.log(`🛑 Slot ${slotIndex + 1} cancelado: scheduler parado`);
-          return;
-        }
-        if (this.state.cycleNumber !== currentCycleNumber) {
-          console.log(`🛑 Slot ${slotIndex + 1} cancelado: ciclo mudou`);
-          return;
-        }
-
-        // Buscar campanha atualizada do DB
-        const campResult = await db.select().from(campaigns).where(eq(campaigns.id, slot.campaignId)).limit(1);
-        const campaign = campResult[0];
-        if (!campaign) {
-          console.log(`⚠️ Campanha ${slot.campaignId} não encontrada`);
-          return;
-        }
-
-        console.log(`\n📨 Slot ${slotIndex + 1}/${totalMsgsThisCycle}: ${slot.campaignName} (minuto ~${slot.minuteLabel})`);
-        await this.sendMessageForCampaign(campaign);
-
-        // Marcar slot como enviado
-        if (this.state.scheduledSlots[slotIndex]) {
-          this.state.scheduledSlots[slotIndex].sent = true;
-        }
-      }, slot.delayMs);
-
-      this.slotTimers.push(timer);
-    }
-  }
-
-  /**
-   * Personaliza mensagem com dados do contato
-   */
   private personalizeMessage(messageText: string, contact: { name: string; phone: string }): string {
     const firstName = (contact.name || '').split(' ')[0].trim();
-    
     let personalized = messageText;
     if (firstName && firstName.length > 1) {
       personalized = personalized.replace(/{{NOME}}/g, firstName);
     } else {
       personalized = personalized.replace(/{{NOME}},?\s*/g, '');
     }
-    
     return personalized;
   }
 
-  /**
-   * Envia 1 mensagem para 1 contato (com LOCK)
-   */
   private async sendMessageForCampaign(campaign: any) {
     if (this.isSending) {
       console.log(`🚫 LOCK: envio já em andamento, aguardando...`);
-      // Esperar até 30s pelo lock liberar
       let waitCount = 0;
       while (this.isSending && waitCount < 30) {
         await new Promise(resolve => setTimeout(resolve, 1000));
@@ -655,7 +665,6 @@ class CampaignScheduler {
       }
 
       const messageText = this.personalizeMessage(rawMessage, contact);
-
       const sendResult = await this.sendViaZAPI(contact.phone, messageText);
 
       // Número inválido: pular sem contar como falha
@@ -666,7 +675,7 @@ class CampaignScheduler {
             eq(campaignContacts.campaignId, campaign.id),
             eq(campaignContacts.contactId, contact.id)
           ));
-        console.log(`⚠️ Número inválido ${contact.phone} - pulado (não conta como falha de envio)`);
+        console.log(`⚠️ Número inválido ${contact.phone} - pulado`);
         this.isSending = false;
         return;
       }
@@ -699,14 +708,11 @@ class CampaignScheduler {
 
         await this.updateContactHistory(contact.id, campaign.id);
 
-        this.state.messagesThisCycle++;
-        this.state.lastMessageSentAt = Date.now();
         this.state.totalSent++;
         this.state.lastSentCampaignName = campaign.name;
         this.state.lastSentAt = Date.now();
 
-        console.log(`✅ [${this.state.messagesThisCycle}/${this.state.maxMessagesThisCycle}] Enviado para ${contact.phone} (${contact.name}) - ${campaign.name}`);
-        this.saveStateToDB().catch(e => console.error('Erro ao salvar estado após envio:', e));
+        console.log(`✅ Enviado para ${contact.phone} (${contact.name}) - ${campaign.name}`);
       } else {
         await db.update(campaignContacts)
           .set({ status: "failed" })
@@ -719,10 +725,8 @@ class CampaignScheduler {
           .set({ failedCount: (campaign.failedCount || 0) + 1 })
           .where(eq(campaigns.id, campaign.id));
 
-        this.state.messagesThisCycle++;
         this.state.totalFailed++;
-        console.error(`❌ Falha ao enviar para ${contact.phone} (erro de rede/API)`);
-        this.saveStateToDB().catch(e => console.error('Erro ao salvar estado após falha:', e));
+        console.error(`❌ Falha ao enviar para ${contact.phone}`);
       }
     } catch (error) {
       console.error("❌ Erro no envio:", error);
@@ -732,40 +736,6 @@ class CampaignScheduler {
     }
   }
 
-  /**
-   * Conta contatos pendentes de uma campanha (para limitar msgs/hora)
-   */
-  private async countPendingContacts(campaignId: number): Promise<number> {
-    try {
-      const db = await getDb();
-      if (!db) return 0;
-
-      const ccList = await db.select().from(campaignContacts)
-        .where(and(
-          eq(campaignContacts.campaignId, campaignId),
-          eq(campaignContacts.status, "pending")
-        ));
-
-      // Filtrar contatos não bloqueados
-      const now = new Date();
-      let count = 0;
-      for (const cc of ccList) {
-        const result = await db.select().from(contacts).where(eq(contacts.id, cc.contactId)).limit(1);
-        const contact = result[0];
-        if (contact && (!contact.blockedUntil || contact.blockedUntil <= now)) {
-          count++;
-        }
-      }
-      return count;
-    } catch (error) {
-      console.error("Erro ao contar pendentes:", error);
-      return 0;
-    }
-  }
-
-  /**
-   * Obtém próximo contato disponível
-   */
   private async getNextContact(campaignId: number) {
     const db = await getDb();
     if (!db) return null;
@@ -790,9 +760,6 @@ class CampaignScheduler {
     return null;
   }
 
-  /**
-   * Reset contatos de uma campanha
-   */
   private async resetCampaignContacts(campaignId: number) {
     const db = await getDb();
     if (!db) return;
@@ -803,9 +770,6 @@ class CampaignScheduler {
     console.log(`✅ Contatos resetados`);
   }
 
-  /**
-   * Obtém variação de mensagem aleatória (sem repetição consecutiva)
-   */
   private async getMessageVariation(campaignId: number): Promise<string | null> {
     const db = await getDb();
     if (!db) return null;
@@ -833,15 +797,14 @@ class CampaignScheduler {
     return variations[newIndex];
   }
 
-  /**
-   * Envia mensagem via Z-API
-   */
+  // ========== Z-API ==========
+
   private async sendViaZAPI(phone: string, message: string): Promise<'sent' | 'failed' | 'invalid'> {
     try {
       const cleanPhone = phone.replace(/\D/g, '');
       const formattedPhone = cleanPhone.startsWith('55') ? cleanPhone : `55${cleanPhone}`;
 
-      // Validação estrita: celular BR = 13 dígitos, 5º dígito = 9
+      // Validação: celular BR = 13 dígitos, 5º dígito = 9
       if (formattedPhone.length !== 13 || formattedPhone[4] !== '9') {
         console.warn(`⚠️ Número inválido (${formattedPhone.length}d): ${phone} → pulando`);
         return 'invalid';
@@ -871,9 +834,8 @@ class CampaignScheduler {
     }
   }
 
-  /**
-   * Atualiza histórico
-   */
+  // ========== HISTÓRICO ==========
+
   private async updateContactHistory(contactId: number, campaignId: number) {
     const db = await getDb();
     if (!db) return;
@@ -898,12 +860,11 @@ class CampaignScheduler {
     }
   }
 
-  /**
-   * Envia relatório do ciclo via WhatsApp para o dono
-   */
+  // ========== RELATÓRIOS ==========
+
   private async sendCycleReport() {
     try {
-      const OWNER_PHONE = '5599991811246'; // José Romário
+      const OWNER_PHONE = '5599991811246';
       const now = new Date();
       const hora = now.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit', timeZone: 'America/Sao_Paulo' });
       const data = now.toLocaleDateString('pt-BR', { timeZone: 'America/Sao_Paulo' });
@@ -911,12 +872,10 @@ class CampaignScheduler {
       const db = await getDb();
       if (!db) return;
 
-      // Buscar stats de todas as campanhas
       const allCampaigns = await db.select().from(campaigns);
       let totalSent = 0;
       let totalFailed = 0;
       let totalPending = 0;
-      let totalContacts = 0;
       const campStats: string[] = [];
 
       for (const camp of allCampaigns) {
@@ -927,112 +886,37 @@ class CampaignScheduler {
         totalSent += sent;
         totalFailed += failed;
         totalPending += pending;
-        totalContacts += ccList.length;
-
-        campStats.push(`  • ${camp.name}: ${sent}/${ccList.length} enviadas | ${pending} pendentes | ${failed} falhas`);
+        campStats.push(`  • ${camp.name}: ${sent}/${ccList.length} enviadas | ${pending} pendentes`);
       }
 
-      const cycleNum = this.state.cycleNumber + 1;
-      const parAtual = this.state.currentCampaignNames.join(' + ');
-      const msgsNoCiclo = this.state.messagesThisCycle;
-      const maxMsgs = this.state.maxMessagesThisCycle;
-      const taxaSucesso = totalContacts > 0 ? ((totalSent / totalContacts) * 100).toFixed(1) : '0.0';
-
-      // Calcular horário do próximo ciclo
-      const nextCycleTime = new Date(Date.now() + 60000); // próximo ciclo começa em ~1 min
-      const nextCycleHora = nextCycleTime.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit', timeZone: 'America/Sao_Paulo' });
+      const sentThisHour = this.state.campaignStates.filter(c => c.sentThisHour).length;
+      const totalCamps = this.state.campaignStates.length;
 
       const report = [
         `📊 *RELATÓRIO ROMATEC CRM*`,
         `📅 ${data} às ${hora}`,
         ``,
-        `🔄 *Ciclo ${cycleNum} finalizado*`,
-        `👥 Par: ${parAtual}`,
-        `📨 Msgs neste ciclo: ${msgsNoCiclo}/${maxMsgs}`,
+        `🕐 *Hora ${this.state.hourNumber}/${this.MAX_HOURS_PER_CYCLE}*`,
+        `📨 Enviadas nesta hora: ${sentThisHour}/${totalCamps} campanhas`,
         ``,
         `📊 *Resumo Geral:*`,
-        `  ✅ Enviadas: ${totalSent}/${totalContacts}`,
+        `  ✅ Enviadas: ${totalSent}`,
         `  ⏳ Pendentes: ${totalPending}`,
         `  ❌ Falhas: ${totalFailed}`,
-        `  🎯 Taxa: ${taxaSucesso}%`,
         ``,
         `🏠 *Por Campanha:*`,
         ...campStats,
         ``,
-        `⏭️ *Próximo ciclo:* ${nextCycleHora}`,
+        `⏭️ *Próxima hora:* envio automático`,
       ].join('\n');
 
-      const sent = await this.sendViaZAPI(OWNER_PHONE, report);
-      if (sent) {
-        console.log(`📊 Relatório do ciclo ${cycleNum} enviado para ${OWNER_PHONE}`);
-      } else {
-        console.error(`❌ Falha ao enviar relatório do ciclo ${cycleNum} para ${OWNER_PHONE}`);
-      }
+      await this.sendViaZAPI(OWNER_PHONE, report);
+      console.log(`📊 Relatório da hora ${this.state.hourNumber} enviado`);
     } catch (error) {
       console.error('❌ Erro ao enviar relatório:', error);
     }
   }
 
-  /**
-   * Agenda próximo ciclo em EXATAMENTE 60 minutos
-   * Após 24 ciclos (1 dia), encerra e inicia novo dia automaticamente
-   */
-  private scheduleNextCycle() {
-    if (!this.state.isRunning) return;
-
-    const elapsed = Date.now() - this.state.cycleStartTime;
-    const remaining = Math.max(0, this.CYCLE_DURATION_MS - elapsed);
-
-    console.log(`⏳ Próximo ciclo em ${Math.round(remaining / 60000)} minutos (Ciclo ${this.state.cycleNumber + 1}/${this.MAX_CYCLES_PER_DAY})`);
-
-    this.cycleTimer = setTimeout(async () => {
-      if (!this.state.isRunning) return;
-
-      // 📊 Enviar relatório do ciclo que acabou
-      await this.sendCycleReport();
-
-      // Cancelar timers de slots do ciclo anterior
-      for (const timer of this.slotTimers) {
-        clearTimeout(timer);
-      }
-      this.slotTimers = [];
-
-      // Avançar para próximo ciclo
-      this.state.cycleNumber++;
-
-      // Verificar se completou 24 ciclos (1 dia)
-      if (this.state.cycleNumber >= this.MAX_CYCLES_PER_DAY) {
-        console.log(`\n🌟 === DIA COMPLETO! ${this.MAX_CYCLES_PER_DAY} ciclos finalizados ===`);
-        console.log(`📊 Total do dia: ${this.state.totalSent} enviadas, ${this.state.totalFailed} falhas`);
-        
-        // Enviar relatório diário consolidado
-        await this.sendDailyReport();
-
-        // Resetar para novo dia
-        this.state.cycleNumber = 0;
-        this.state.totalSent = 0;
-        this.state.totalFailed = 0;
-        this.state.totalBlocked = 0;
-        console.log(`🚀 Novo dia iniciado automaticamente!`);
-      }
-
-      this.state.cycleStartTime = Date.now();
-      this.state.messagesThisCycle = 0;
-      this.state.maxMessagesThisCycle = 0;
-      this.state.lastMessageSentAt = 0;
-      this.state.scheduledSlots = [];
-
-      console.log(`\n🔄 === CICLO ${this.state.cycleNumber + 1}/${this.MAX_CYCLES_PER_DAY} ===`);
-
-      await this.executeCycle();
-      this.scheduleNextCycle();
-      await this.saveStateToDB();
-    }, remaining);
-  }
-
-  /**
-   * Envia relatório diário consolidado (após 24 ciclos)
-   */
   private async sendDailyReport() {
     try {
       const OWNER_PHONE = '5599991811246';
@@ -1062,74 +946,73 @@ class CampaignScheduler {
       const taxaSucesso = (totalSent + totalFailed) > 0 ? ((totalSent / (totalSent + totalFailed)) * 100).toFixed(1) : '0.0';
 
       const report = [
-        `🌟 *RELATÓRIO DIÁRIO ROMATEC CRM*`,
+        `🌟 *RELATÓRIO CICLO ${this.MAX_HOURS_PER_CYCLE}H - ROMATEC CRM*`,
         `📅 ${data}`,
         ``,
-        `✅ *24 ciclos completos (1 dia)*`,
+        `✅ *${this.MAX_HOURS_PER_CYCLE} horas completas*`,
         ``,
-        `📊 *Resumo do Dia:*`,
+        `📊 *Resumo:*`,
         `  ✅ Enviadas: ${totalSent}`,
         `  ❌ Falhas: ${totalFailed}`,
         `  ⏳ Pendentes: ${totalPending}`,
-        `  🎯 Taxa de Sucesso: ${taxaSucesso}%`,
+        `  🎯 Taxa: ${taxaSucesso}%`,
         ``,
         `🏠 *Por Campanha:*`,
         ...campStats,
         ``,
-        `🚀 *Novo dia iniciado automaticamente!*`,
+        `🚀 *Novo ciclo de ${this.MAX_HOURS_PER_CYCLE}h iniciado!*`,
       ].join('\n');
 
       await this.sendViaZAPI(OWNER_PHONE, report);
-      console.log(`🌟 Relatório diário enviado!`);
+      console.log(`🌟 Relatório do ciclo enviado!`);
     } catch (error) {
-      console.error('❌ Erro ao enviar relatório diário:', error);
+      console.error('❌ Erro ao enviar relatório:', error);
     }
   }
 
-  /**
-   * Retorna estado atual para a UI
-   */
+  // ========== ESTADO PARA UI ==========
+
   getState() {
     const now = Date.now();
-    
-    const elapsedInCycle = now - this.state.cycleStartTime;
-    const remainingInCycle = Math.max(0, this.CYCLE_DURATION_MS - elapsedInCycle);
-    const secondsUntilNextCycle = Math.floor(remainingInCycle / 1000);
+    const currentMinute = new Date().getMinutes();
+    const remainingMinutes = 60 - currentMinute;
 
     const uptimeMs = now - this.state.startedAt;
     const uptimeHours = String(Math.floor(uptimeMs / 3600000)).padStart(2, '0');
     const uptimeMinutes = String(Math.floor((uptimeMs % 3600000) / 60000)).padStart(2, '0');
     const uptimeSeconds = String(Math.floor((uptimeMs % 60000) / 1000)).padStart(2, '0');
 
-    const nextCycleTime = new Date(this.state.cycleStartTime + this.CYCLE_DURATION_MS);
+    const sentThisHour = this.state.campaignStates.filter(c => c.sentThisHour).length;
+    const totalCamps = this.state.campaignStates.length;
 
     return {
       ...this.state,
-      // Compatibilidade com a UI
-      messagesThisHour: this.state.messagesThisCycle,
-      maxMessagesPerHour: this.state.maxMessagesThisCycle,
-      secondsUntilNextCycle,
-      cycleDurationSeconds: Math.floor(this.CYCLE_DURATION_MS / 1000),
-      maxCyclesPerDay: this.MAX_CYCLES_PER_DAY,
-      cycleProgress: `${this.state.cycleNumber + 1}/${this.MAX_CYCLES_PER_DAY}`,
+      // Compatibilidade com a UI existente
+      messagesThisHour: sentThisHour,
+      maxMessagesPerHour: totalCamps,
+      messagesThisCycle: sentThisHour,
+      maxMessagesThisCycle: totalCamps,
+      secondsUntilNextCycle: remainingMinutes * 60,
+      cycleDurationSeconds: 3600,
+      maxCyclesPerDay: this.MAX_HOURS_PER_CYCLE,
+      cycleNumber: this.state.hourNumber,
+      cycleProgress: `${this.state.hourNumber + 1}/${this.MAX_HOURS_PER_CYCLE}`,
+      currentPairIndex: 0,
+      totalPairs: 1,
+      currentCampaignNames: this.state.campaignStates.map(c => c.campaignName),
       uptimeMs,
       uptimeFormatted: `${uptimeHours}:${uptimeMinutes}:${uptimeSeconds}`,
-      startedAtFormatted: new Date(this.state.startedAt).toLocaleTimeString('pt-BR', { 
-        hour: '2-digit', minute: '2-digit', second: '2-digit', timeZone: 'America/Sao_Paulo' 
+      startedAtFormatted: new Date(this.state.startedAt).toLocaleTimeString('pt-BR', {
+        hour: '2-digit', minute: '2-digit', second: '2-digit', timeZone: 'America/Sao_Paulo'
       }),
-      nextCycleFormatted: nextCycleTime.toLocaleTimeString('pt-BR', { 
-        hour: '2-digit', minute: '2-digit', second: '2-digit', timeZone: 'America/Sao_Paulo' 
-      }),
+      nextCycleFormatted: `${String(new Date().getHours() + 1).padStart(2, '0')}:00`,
       activePair: {
-        index: this.state.currentPairIndex,
-        campaigns: this.state.currentCampaignNames,
+        index: 0,
+        campaigns: this.state.campaignStates.map(c => c.campaignName),
       },
     };
   }
 
-  /**
-   * Retorna estatísticas
-   */
   getStats() {
     const uptimeMs = Date.now() - this.state.startedAt;
     const hours = Math.floor(uptimeMs / (60 * 60 * 1000));
@@ -1137,18 +1020,21 @@ class CampaignScheduler {
     const total = this.state.totalSent + this.state.totalFailed;
     const successRate = total > 0 ? (this.state.totalSent / total) * 100 : 0;
 
+    const sentThisHour = this.state.campaignStates.filter(c => c.sentThisHour).length;
+    const totalCamps = this.state.campaignStates.length;
+
     return {
       isRunning: this.state.isRunning,
-      cycleNumber: this.state.cycleNumber,
-      messagesThisHour: this.state.messagesThisCycle,
-      maxMessagesPerHour: this.state.maxMessagesThisCycle,
-      lastMessageSentAt: this.state.lastMessageSentAt,
+      cycleNumber: this.state.hourNumber,
+      messagesThisHour: sentThisHour,
+      maxMessagesPerHour: totalCamps,
+      lastMessageSentAt: this.state.lastSentAt,
       totalSent: this.state.totalSent,
       totalFailed: this.state.totalFailed,
       totalBlocked: this.state.totalBlocked,
-      currentPairIndex: this.state.currentPairIndex,
-      totalPairs: this.state.totalPairs,
-      currentCampaignNames: this.state.currentCampaignNames,
+      currentPairIndex: 0,
+      totalPairs: 1,
+      currentCampaignNames: this.state.campaignStates.map(c => c.campaignName),
       scheduledSlots: this.state.scheduledSlots,
       uptime: `${hours}h ${minutes}m`,
       successRate: `${successRate.toFixed(2)}%`,

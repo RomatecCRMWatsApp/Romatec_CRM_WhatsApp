@@ -25,7 +25,7 @@ export interface BotResponse {
 // ============ DADOS ============
 
 const PROPERTIES = [
-  { slug: 'cond-chacaras-giuliano', name: 'Cond. Chácaras Giuliano', value: 160000, beds: 0, area: '7.601m²', type: 'Lote/Chácara' },
+  { slug: 'cond-chacaras-giuliano', name: 'Cond. Chácaras Giuliano', value: 160000, beds: 0, area: '~1.000m² por unidade', type: 'Chácara (Condomínio)', units: 6, remaining: 3 },
   { slug: 'alacide', name: 'Alacide', value: 210000, beds: 2, area: '58m²', type: 'Apartamento' },
   { slug: 'mod-vaz-01', name: 'Mod Vaz 01', value: 250000, beds: 2, area: '68m²', type: 'Apartamento' },
   { slug: 'mod-vaz-02', name: 'Mod Vaz 02', value: 300000, beds: 3, area: '110m²', type: 'Casa' },
@@ -216,11 +216,13 @@ export async function processBotMessage(context: BotContext): Promise<BotRespons
   console.log(`[Bot] Mensagem complexa, usando IA: "${messageText.substring(0, 50)}"`);
 
   // Montar contexto dos imóveis para a IA (com parcelas 240x e 300x)
-  const propertiesContext = PROPERTIES.map(p => {
+  const propertiesContext = PROPERTIES.map((p: any) => {
     const fin = p.value * 0.8;
     const pmt240 = calcPrice(fin, 10.26, 240);
     const pmt300 = calcPrice(fin, 10.26, 300);
-    return `- ${p.name}: ${p.type}, ${p.beds} quartos, ${p.area}, ${fmt(p.value)}, parcela Caixa 20 anos: ${fmtFull(pmt240)}/mês, 25 anos: ${fmtFull(pmt300)}/mês, link: ${SITE_URL}/imovel/${p.slug}`;
+    const scarcity = p.remaining ? ` ⚠️ RESTAM APENAS ${p.remaining} UNIDADES de ${p.units}!` : '';
+    const bedsInfo = p.beds > 0 ? `${p.beds} quartos, ` : '';
+    return `- ${p.name}: ${p.type}, ${bedsInfo}${p.area}, ${fmt(p.value)} cada, parcela Caixa 20 anos: ${fmtFull(pmt240)}/mês, 25 anos: ${fmtFull(pmt300)}/mês, link: ${SITE_URL}/imovel/${p.slug}${scarcity}`;
   }).join('\n');
 
   const banksContext = BANKS.map(b => `- ${b.name}: ${b.rate}% a.a. + TR`).join('\n');
@@ -248,7 +250,8 @@ REGRAS:
 7. M\u00e1ximo 4-5 linhas por resposta. Seja direto.
 8. NUNCA invente dados. Use apenas os im\u00f3veis e taxas listados acima.
 9. Inclua links dos im\u00f3veis quando relevante.
-10. Se o cliente perguntar algo fora do escopo imobili\u00e1rio, redirecione educadamente.
+10. Se o cliente perguntar algo fora do escopo imobiliário, redirecione educadamente.
+11. Para o Cond. Chácaras Giuliano: ENFATIZE que CADA chácara custa R$ 160 mil, com ~1.000m² cada unidade. São 6 unidades no total e RESTAM APENAS 3! Use gatilho de urgência/escassez: "estão sendo comercializadas rapidamente", "poucas unidades restantes", "oportunidade única". NÃO diga "lote/chácara" — diga apenas "chácara".
 
 FORMATO DE RESPOSTA (JSON):
 {

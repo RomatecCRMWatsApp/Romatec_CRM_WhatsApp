@@ -361,3 +361,17 @@
 - [x] Adicionar Cond. Chácaras Giuliano (R$ 160k, lotes, 7.601m²) na lista PROPERTIES do bot-ai.ts
 - [x] Atualizar faixa de preço mínimo de R$ 210k para R$ 160k nas respostas rápidas
 - [x] Atualizar system prompt da IA com o novo imóvel
+
+## Ajustar Chácaras Giuliano: escassez + detalhes corretos (07/04/2026)
+- [x] Corrigir dados: cada chácara R$ 160k, ~1.000m² cada, 6 unidades, restam apenas 3
+- [x] Adicionar mensagem de escassez no bot IA (gatilho urgência)
+- [x] Atualizar mensagens de campanha do Chácaras Giuliano com escassez e clareza
+
+## Reescrever scheduler: 1 msg/campanha/hora (07/04/2026)
+- [x] Implementar regra restritiva: cada campanha envia APENAS 1 mensagem por hora (ciclo 12h, 2 ciclos/dia)
+- [x] Controle por hora atual + flag sentThisHour (não por delay fixo)
+- [x] Salvar estado no banco (lastSentAt, sentThisHour) para persistir entre reinícios
+- [x] Reset automático a cada nova hora
+- [x] Ciclo contínuo entre as 5 campanhas
+- [x] Verificação a cada 1 minuto
+- [x] Nunca enviar 2 mensagens na mesma hora para a mesma campanha

@@ -577,30 +577,53 @@ Retorne as 4 variações separadas por |||` },
         let newVariations: string[] = [];
 
         if (prop) {
-          // Regenerar variações com textos profissionais atualizados
+          // Importar gerador de variações do scheduler (mantém consistência)
+          const { campaignScheduler } = await import("./scheduler/campaignScheduler");
+          // Usar método interno via acesso direto ao generateMessageVariations
           const priceFormatted = Number(prop.price).toLocaleString("pt-BR");
           const slug = prop.publicSlug || prop.denomination.toLowerCase().replace(/[^a-z0-9]+/g, '-');
           const siteUrl = `https://romatecwa-2uygcczr.manus.space/imovel/${slug}`;
+          const denom = prop.denomination || '';
+          const isChacara = denom.toLowerCase().includes('chacara') || denom.toLowerCase().includes('chácar') || denom.toLowerCase().includes('giuliano');
 
-          newVariations = [
-            `🏠 {{NOME}}, *${prop.denomination}* - Restam poucas unidades!\n\nValor: *R$ ${priceFormatted}*\nLocal: ${prop.address}\n\n📸 Veja fotos, planta e localização:\n${siteUrl}\n\n⚡ Condições especiais para os primeiros interessados. Posso te passar mais detalhes?`,
-            `{{NOME}}, você já conhece o *${prop.denomination}*? 🔑\n\nUm dos imóveis mais procurados da região de ${prop.address}.\n\n💰 A partir de *R$ ${priceFormatted}*\n\n👉 Confira tudo aqui: ${siteUrl}\n\nPosso reservar uma visita exclusiva pra você?`,
-            `📊 {{NOME}}, o *${prop.denomination}* já recebeu mais de 50 consultas este mês!\n\nMotivo? Localização privilegiada em ${prop.address} + preço competitivo.\n\n🏷️ *R$ ${priceFormatted}*\n\n🔗 Veja todos os detalhes: ${siteUrl}\n\nNão perca essa oportunidade. Me chama!`,
-            `💡 {{NOME}}, sabia que imóveis nessa região valorizaram mais de 30% nos últimos anos?\n\n*${prop.denomination}* - ${prop.address}\nValor atual: *R$ ${priceFormatted}*\n\n📲 Fotos e detalhes completos: ${siteUrl}\n\nQuero te mostrar por que esse é o melhor momento pra investir. Posso te ligar?`,
-            `🔥 {{NOME}}, *OPORTUNIDADE REAL*\n\n*${prop.denomination}*\n📍 ${prop.address}\n💰 *R$ ${priceFormatted}*\n\n✅ Financiamento facilitado\n✅ Documentação em dia\n✅ Pronto pra morar/construir\n\n👉 Veja agora: ${siteUrl}\n\nResponde "SIM" que te envio todas as condições!`,
-            `⏰ {{NOME}}, última chance!\n\n*${prop.denomination}* em ${prop.address} está com condições especiais que vencem em breve.\n\n🏷️ *R$ ${priceFormatted}* (parcelas que cabem no bolso)\n\n📸 Veja fotos e planta: ${siteUrl}\n\nJá temos interessados. Garanta o seu antes que acabe!`,
-            `🏡 {{NOME}}, imagine sua família no lugar perfeito...\n\n*${prop.denomination}* - ${prop.address}\nValor: *R$ ${priceFormatted}*\n\nLocalização estratégica, segurança e qualidade de vida.\n\n🔗 Conheça cada detalhe: ${siteUrl}\n\nVamos conversar sobre como realizar esse sonho?`,
-            `🆕 {{NOME}}, *LANÇAMENTO EXCLUSIVO*\n\n*${prop.denomination}*\n📍 ${prop.address}\n💰 *R$ ${priceFormatted}*\n\nPoucos sabem dessa oportunidade. Estou compartilhando com um grupo seleto de clientes.\n\n📲 Detalhes completos: ${siteUrl}\n\nTem interesse? Me responde que te explico tudo!`,
-            `✨ {{NOME}}, procurando imóvel com ótimo custo-benefício?\n\n*${prop.denomination}* em ${prop.address}\n\n🏷️ *R$ ${priceFormatted}*\n📋 Documentação 100% regularizada\n🏦 Aceita financiamento\n\n👉 Veja fotos e localização: ${siteUrl}\n\nPosso simular as parcelas pra você. É só me chamar!`,
-            `🤔 {{NOME}}, você está buscando imóvel na região de ${prop.address}?\n\nTenho uma opção que pode ser exatamente o que procura:\n\n*${prop.denomination}* - *R$ ${priceFormatted}*\n\n📸 Veja tudo aqui: ${siteUrl}\n\nMe conta o que você precisa que te ajudo a encontrar o imóvel ideal!`,
-            `📌 {{NOME}}, comparou preços na região?\n\n*${prop.denomination}* está abaixo da média do mercado:\n💰 *R$ ${priceFormatted}*\n📍 ${prop.address}\n\nE o melhor: condições facilitadas de pagamento.\n\n🔗 Confira: ${siteUrl}\n\nEssa é a hora certa. Vamos conversar?`,
-            `🚨 {{NOME}}, *ATENÇÃO*\n\n*${prop.denomination}* - ${prop.address}\n\nEste imóvel está gerando muito interesse e pode sair do mercado a qualquer momento.\n\n🏷️ *R$ ${priceFormatted}*\n\n📲 Veja antes que acabe: ${siteUrl}\n\nGaranta sua visita. Me chama agora!`,
-          ];
+          if (isChacara) {
+            newVariations = [
+              `🌿 {{NOME}}, *${denom}* - Chácaras exclusivas em Açailândia!\n\n🏡 Cada chácara: *~1.000m²* por apenas *R$ ${priceFormatted}*\n⚠️ *Restam apenas 3 unidades!* São 6 no total e estão saindo rápido.\n\n📸 Veja fotos e localização: ${siteUrl}\n\nGaranta a sua antes que acabe!`,
+              `{{NOME}}, já conhece o *${denom}*? 🌳\n\nSão chácaras de *~1.000m²* cada, perfeitas pra quem busca tranquilidade e espaço.\n\n💰 *R$ ${priceFormatted}* por unidade\n🚨 *Apenas 3 disponíveis* (de 6 no total)\n\n👉 Confira: ${siteUrl}\n\nNão perca essa oportunidade única!`,
+              `🔥 {{NOME}}, *OPORTUNIDADE RARA*\n\n*${denom}* - Açailândia/MA\n🏡 Chácaras de ~1.000m²\n💰 *R$ ${priceFormatted}* cada\n\n⚠️ *Das 6 unidades, restam apenas 3!*\n✅ Ideal pra lazer, moradia ou investimento\n\n📲 Veja agora: ${siteUrl}\n\nResponde "SIM" que te passo todos os detalhes!`,
+              `⏰ {{NOME}}, *ÚLTIMAS UNIDADES*!\n\n*${denom}*: chácaras de ~1.000m² em Açailândia.\n\n💰 *R$ ${priceFormatted}* por chácara\n🚨 Apenas *3 de 6* ainda disponíveis\n\nO condomínio está vendendo rápido.\n\n📸 Detalhes: ${siteUrl}\n\nMe chama agora!`,
+              `🏡 {{NOME}}, imagine ter sua própria chácara...\n\n*${denom}* - ~1.000m² de puro sossego em Açailândia.\nValor: *R$ ${priceFormatted}*\n\n⚠️ *Restam só 3 unidades!*\n\n🔗 Conheça: ${siteUrl}\n\nVamos conversar sobre como garantir a sua?`,
+              `🆕 {{NOME}}, *LANÇAMENTO EXCLUSIVO*\n\n*${denom}* - Chácaras em condomínio fechado\n📍 Açailândia/MA\n📐 ~1.000m² cada\n💰 *R$ ${priceFormatted}*\n\n🚨 *Apenas 3 restantes* de 6 unidades!\n\n📲 Detalhes: ${siteUrl}\n\nTem interesse? Me responde!`,
+              `✨ {{NOME}}, procurando chácara com ótimo custo-benefício?\n\n*${denom}*: ~1.000m² por *R$ ${priceFormatted}*\n📍 Condomínio em Açailândia/MA\n\n⚠️ *Só restam 3 de 6 unidades*\n✅ Documentação regularizada\n\n👉 Veja: ${siteUrl}\n\nPosso te passar mais detalhes!`,
+              `🤔 {{NOME}}, já pensou em investir em chácara?\n\n*${denom}* - Açailândia/MA\n~1.000m² por apenas *R$ ${priceFormatted}*\n\n📊 Das 6 unidades, *3 já foram vendidas*!\n\n📸 Veja tudo: ${siteUrl}\n\nMe conta se tem interesse!`,
+              `📌 {{NOME}}, comparou preços de chácaras na região?\n\n*${denom}*: ~1.000m² por *R$ ${priceFormatted}*\nIsso está *abaixo da média* do mercado!\n\n🚨 *Restam apenas 3 unidades* de 6\n\n🔗 Confira: ${siteUrl}\n\nEssa é a hora certa. Vamos conversar?`,
+              `🚨 {{NOME}}, *ATENÇÃO*\n\n*${denom}* está gerando muito interesse!\n\n🏡 Chácaras de ~1.000m² - *R$ ${priceFormatted}* cada\n⚠️ *Apenas 3 de 6 unidades disponíveis*\n\n📲 Veja antes que acabe: ${siteUrl}\n\nGaranta a sua agora!`,
+              `💎 {{NOME}}, oportunidade *ÚNICA* em Açailândia!\n\n*${denom}*\n📐 ~1.000m² por chácara\n💰 *R$ ${priceFormatted}*\n🏡 Condomínio com apenas 6 unidades\n\n🔴 *3 já vendidas!* Restam 3.\n\n👉 Veja: ${siteUrl}\n\nNão deixe pra depois!`,
+              `🌿 {{NOME}}, sua chácara dos sonhos está aqui!\n\n*${denom}* - Condomínio exclusivo\n📍 Açailândia/MA\n📐 ~1.000m² cada unidade\n💰 *R$ ${priceFormatted}*\n\n⚠️ *Últimas 3 unidades!*\n\n📸 Fotos e mapa: ${siteUrl}\n\nMe chama que te explico tudo!`,
+            ];
+          } else {
+            newVariations = [
+              `🏠 {{NOME}}, *${denom}* - Restam poucas unidades!\n\nValor: *R$ ${priceFormatted}*\nLocal: ${prop.address}\n\n📸 Veja fotos, planta e localização:\n${siteUrl}\n\n⚡ Condições especiais para os primeiros interessados. Posso te passar mais detalhes?`,
+              `{{NOME}}, você já conhece o *${denom}*? 🔑\n\nUm dos imóveis mais procurados da região de ${prop.address}.\n\n💰 A partir de *R$ ${priceFormatted}*\n\n👉 Confira tudo aqui: ${siteUrl}\n\nPosso reservar uma visita exclusiva pra você?`,
+              `📊 {{NOME}}, o *${denom}* já recebeu mais de 50 consultas este mês!\n\nMotivo? Localização privilegiada em ${prop.address} + preço competitivo.\n\n🏷️ *R$ ${priceFormatted}*\n\n🔗 Veja todos os detalhes: ${siteUrl}\n\nNão perca essa oportunidade. Me chama!`,
+              `💡 {{NOME}}, sabia que imóveis nessa região valorizaram mais de 30% nos últimos anos?\n\n*${denom}* - ${prop.address}\nValor atual: *R$ ${priceFormatted}*\n\n📲 Fotos e detalhes completos: ${siteUrl}\n\nQuero te mostrar por que esse é o melhor momento pra investir. Posso te ligar?`,
+              `🔥 {{NOME}}, *OPORTUNIDADE REAL*\n\n*${denom}*\n📍 ${prop.address}\n💰 *R$ ${priceFormatted}*\n\n✅ Financiamento facilitado\n✅ Documentação em dia\n✅ Pronto pra morar/construir\n\n👉 Veja agora: ${siteUrl}\n\nResponde "SIM" que te envio todas as condições!`,
+              `⏰ {{NOME}}, última chance!\n\n*${denom}* em ${prop.address} está com condições especiais que vencem em breve.\n\n🏷️ *R$ ${priceFormatted}* (parcelas que cabem no bolso)\n\n📸 Veja fotos e planta: ${siteUrl}\n\nJá temos interessados. Garanta o seu antes que acabe!`,
+              `🏡 {{NOME}}, imagine sua família no lugar perfeito...\n\n*${denom}* - ${prop.address}\nValor: *R$ ${priceFormatted}*\n\nLocalização estratégica, segurança e qualidade de vida.\n\n🔗 Conheça cada detalhe: ${siteUrl}\n\nVamos conversar sobre como realizar esse sonho?`,
+              `🆕 {{NOME}}, *LANÇAMENTO EXCLUSIVO*\n\n*${denom}*\n📍 ${prop.address}\n💰 *R$ ${priceFormatted}*\n\nPoucos sabem dessa oportunidade. Estou compartilhando com um grupo seleto de clientes.\n\n📲 Detalhes completos: ${siteUrl}\n\nTem interesse? Me responde que te explico tudo!`,
+              `✨ {{NOME}}, procurando imóvel com ótimo custo-benefício?\n\n*${denom}* em ${prop.address}\n\n🏷️ *R$ ${priceFormatted}*\n📋 Documentação 100% regularizada\n🏦 Aceita financiamento\n\n👉 Veja fotos e localização: ${siteUrl}\n\nPosso simular as parcelas pra você. É só me chamar!`,
+              `🤔 {{NOME}}, você está buscando imóvel na região de ${prop.address}?\n\nTenho uma opção que pode ser exatamente o que procura:\n\n*${denom}* - *R$ ${priceFormatted}*\n\n📸 Veja tudo aqui: ${siteUrl}\n\nMe conta o que você precisa que te ajudo a encontrar o imóvel ideal!`,
+              `📌 {{NOME}}, comparou preços na região?\n\n*${denom}* está abaixo da média do mercado:\n💰 *R$ ${priceFormatted}*\n📍 ${prop.address}\n\nE o melhor: condições facilitadas de pagamento.\n\n🔗 Confira: ${siteUrl}\n\nEssa é a hora certa. Vamos conversar?`,
+              `🚨 {{NOME}}, *ATENÇÃO*\n\n*${denom}* - ${prop.address}\n\nEste imóvel está gerando muito interesse e pode sair do mercado a qualquer momento.\n\n🏷️ *R$ ${priceFormatted}*\n\n📲 Veja antes que acabe: ${siteUrl}\n\nGaranta sua visita. Me chama agora!`,
+            ];
+          }
         }
 
         await db.update(campaigns).set({
           sentCount: 0,
           failedCount: 0,
+          messagesPerHour: 1, // RESTRITIVO: sempre 1 msg/hora
+          totalContacts: 12, // 1 msg/hora × 12 horas = 12
           status: "paused", // PAUSADO - usuário precisa clicar Iniciar
           startDate: null, // LIMPAR horário antigo - será setado quando clicar Iniciar
           ...(newVariations.length > 0 ? { messageVariations: newVariations } : {}),
