@@ -833,6 +833,89 @@ Retorne as 4 variações separadas por |||` },
     }),
   }),
 
+  // Performance Router
+  performance: router({
+    /**
+     * Estatísticas gerais de performance
+     * Retorna: totais, por campanha, por dia (últimos 30 dias)
+     */
+    getStats: protectedProcedure.query(async () => {
+      const db = await getDb();
+      if (!db) return { totals: { sent: 0, failed: 0, pending: 0, blocked: 0, successRate: 0, avgPerDay: 0, activeCampaigns: 0 }, byCampaign: [], byDay: [], byHour: [] };
+
+      // Totais gerais de mensagens
+      const allMessages = await db.select().from(messages);
+      const totalSent = allMessages.filter(m => m.status === 'sent' || m.status === 'delivered').length;
+      const totalFailed = allMessages.filter(m => m.status === 'failed').length;
+      const totalBlocked = allMessages.filter(m => m.status === 'blocked').length;
+      const totalPending = allMessages.filter(m => m.status === 'pending').length;
+      const successRate = allMessages.length > 0 ? Math.round((totalSent / (totalSent + totalFailed)) * 100) : 0;
+
+      // Campanhas ativas
+      const allCampaigns = await db.select().from(campaigns);
+      const activeCampaigns = allCampaigns.filter(c => c.status === 'running').length;
+
+      // Por campanha
+      const byCampaign = allCampaigns.map(camp => {
+        const campMsgs = allMessages.filter(m => m.campaignId === camp.id);
+        const sent = campMsgs.filter(m => m.status === 'sent' || m.status === 'delivered').length;
+        const failed = campMsgs.filter(m => m.status === 'failed').length;
+        return {
+          id: camp.id,
+          name: camp.name,
+          status: camp.status,
+          sent,
+          failed,
+          total: camp.totalContacts || 24,
+          pending: (camp.totalContacts || 24) - sent - failed,
+          successRate: sent + failed > 0 ? Math.round((sent / (sent + failed)) * 100) : 0,
+          messagesPerHour: camp.messagesPerHour || 2,
+        };
+      });
+
+      // Por dia (últimos 30 dias)
+      const now = new Date();
+      const byDay: { date: string; sent: number; failed: number }[] = [];
+      for (let i = 29; i >= 0; i--) {
+        const d = new Date(now);
+        d.setDate(d.getDate() - i);
+        const dateStr = d.toISOString().split('T')[0];
+        const dayStart = new Date(dateStr + 'T00:00:00Z');
+        const dayEnd = new Date(dateStr + 'T23:59:59Z');
+        const daySent = allMessages.filter(m => (m.status === 'sent' || m.status === 'delivered') && m.sentAt && m.sentAt >= dayStart && m.sentAt <= dayEnd).length;
+        const dayFailed = allMessages.filter(m => m.status === 'failed' && m.sentAt && m.sentAt >= dayStart && m.sentAt <= dayEnd).length;
+        byDay.push({ date: dateStr, sent: daySent, failed: dayFailed });
+      }
+
+      // Média por dia (últimos 7 dias com envios)
+      const last7 = byDay.slice(-7);
+      const daysWithActivity = last7.filter(d => d.sent > 0).length;
+      const avgPerDay = daysWithActivity > 0 ? Math.round(last7.reduce((sum, d) => sum + d.sent, 0) / daysWithActivity) : 0;
+
+      // Por hora do dia (distribuição)
+      const byHour: { hour: number; count: number }[] = [];
+      for (let h = 0; h < 24; h++) {
+        const count = allMessages.filter(m => (m.status === 'sent' || m.status === 'delivered') && m.sentAt && m.sentAt.getHours() === h).length;
+        byHour.push({ hour: h, count });
+      }
+
+      return {
+        totals: {
+          sent: totalSent,
+          failed: totalFailed,
+          pending: totalPending,
+          blocked: totalBlocked,
+          successRate,
+          avgPerDay,
+          activeCampaigns,
+        },
+        byCampaign,
+        byDay,
+        byHour,
+      };
+    }),
+  }),
+
   // Z-API Router
   zapi: router({
     sendMessage: protectedProcedure

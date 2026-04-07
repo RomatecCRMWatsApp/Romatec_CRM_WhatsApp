@@ -276,3 +276,15 @@
 - [x] Testar todas as 4 páginas: /imovel/alacide, /imovel/mod-vaz-01, /imovel/mod-vaz-02, /imovel/mod-vaz-03
 - [x] Confirmar links corretos nas mensagens das campanhas (slugs com hífen, não underscore)
 - [x] 97 testes passando, TypeScript sem erros
+
+## Dashboard de Performance (07/04/2026)
+- [x] Criar procedure tRPC para estatísticas de performance (msgs por dia, taxa sucesso, por campanha)
+- [x] Criar página Performance.tsx com gráficos (Chart.js/Recharts)
+- [x] Gráfico 1: Barras de envios últimos 7 dias + Área chart evolução 30 dias
+- [x] Gráfico 2: Taxa de sucesso vs falha por campanha (pizza/donut)
+- [x] Gráfico 3: Progresso por campanha (barras - enviados/pendentes/total)
+- [x] Gráfico 4: Evolução de envios ao longo do tempo (linha)
+- [x] Cards resumo: total enviadas, taxa sucesso, média por dia, campanhas ativas
+- [x] Adicionar navegação para Performance no Dashboard principal
+- [x] Tema dark premium consistente com o resto do sistema
+- [x] Testes automatizados da procedure performance.getStats (3 testes integração, 100 total passando)

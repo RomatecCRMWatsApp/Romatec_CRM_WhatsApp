@@ -1,7 +1,7 @@
 import { useAuth } from "@/_core/hooks/useAuth";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Users, Home, Send, Settings, LogOut, Wifi, WifiOff, TrendingUp, Building2 } from "lucide-react";
+import { Users, Home, Send, Settings, LogOut, Wifi, WifiOff, TrendingUp, Building2, BarChart3 } from "lucide-react";
 import { useLocation } from "wouter";
 import { trpc } from "@/lib/trpc";
 
@@ -92,11 +92,12 @@ export default function Dashboard() {
         </div>
 
         {/* Navigation */}
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+        <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
           {[
             { label: "Clientes", icon: Users, route: "/contacts", color: "bg-emerald-600 hover:bg-emerald-700" },
             { label: "Imóveis", icon: Building2, route: "/properties", color: "bg-amber-600 hover:bg-amber-700" },
             { label: "Campanhas", icon: Send, route: "/campaigns", color: "bg-blue-600 hover:bg-blue-700" },
+            { label: "Performance", icon: BarChart3, route: "/performance", color: "bg-purple-600 hover:bg-purple-700" },
             { label: "Configurações", icon: Settings, route: "/settings", color: "bg-gray-600 hover:bg-gray-700" },
           ].map(item => (
             <Button key={item.label} onClick={() => navigate(item.route)} className={`${item.color} h-14 text-white font-bold`}>
