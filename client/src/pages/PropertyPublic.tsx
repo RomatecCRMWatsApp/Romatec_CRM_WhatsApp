@@ -1,4 +1,4 @@
-import { useState, useCallback } from "react";
+import { useState } from "react";
 import { MapView } from "@/components/Map";
 import { MapPin, BedDouble, Bath, Car, Ruler, Image as ImageIcon, Video, FileImage, Phone, MessageCircle, Heart, ChevronLeft, ChevronRight, ArrowLeft, Share2 } from "lucide-react";
 import { useRoute } from "wouter";
@@ -8,13 +8,23 @@ function formatCurrency(value: number | string) {
   return Number(value).toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 }
 
+// Especialistas da Romatec (fora do componente - constante)
+const especialistas = [
+  { nome: "José Romário", telefone: "5599991811246", display: "(99) 9 9181-1246" },
+  { nome: "Daniele Cavalcante", telefone: "5599992062871", display: "(99) 9 9206-2871" },
+];
+
 export default function PropertyPublic() {
   const [, params] = useRoute("/imovel/:slug");
   const slug = params?.slug || "";
   const { data: property, isLoading } = trpc.properties.getBySlug.useQuery({ slug }, { enabled: !!slug });
+
+  // TODOS os hooks ANTES de qualquer return condicional
   const [imageIndex, setImageIndex] = useState(0);
   const [activeTab, setActiveTab] = useState<"fotos" | "video" | "planta">("fotos");
+  const [selectedEsp, setSelectedEsp] = useState(0);
 
+  // Loading state
   if (isLoading) {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center">
@@ -26,6 +36,7 @@ export default function PropertyPublic() {
     );
   }
 
+  // Not found
   if (!property) {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center">
@@ -51,12 +62,6 @@ export default function PropertyPublic() {
     `Olá! Vi o imóvel *${property.denomination}* no site e gostaria de mais informações.\n📍 ${property.address}${property.city ? `, ${property.city}` : ""}\n💰 R$ ${formatCurrency(property.price)}`
   );
 
-  // Especialistas da Romatec
-  const especialistas = [
-    { nome: "José Romário", telefone: "5599991811246", display: "(99) 9 9181-1246" },
-    { nome: "Daniele Cavalcante", telefone: "5599992062871", display: "(99) 9 9206-2871" },
-  ];
-  const [selectedEsp, setSelectedEsp] = useState(0);
   const esp = especialistas[selectedEsp];
   const whatsappLink = `https://wa.me/${esp.telefone}?text=${whatsappMsg}`;
   const phoneLink = `tel:+${esp.telefone}`;

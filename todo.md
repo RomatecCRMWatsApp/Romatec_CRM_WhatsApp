@@ -263,3 +263,16 @@
 - [x] Auto-restart: se status era 'running', reiniciar scheduler automaticamente após deploy
 - [x] Campanhas não param mais ao republicar
 - [x] 97 testes passando
+
+## Bug: Link /imovel/alacide não funciona (07/04/2026)
+- [x] Link da página pública do imóvel não abre quando clicado na mensagem do WhatsApp
+- [x] Verificar rota /imovel/:slug no App.tsx
+- [x] Verificar se slug "alacide" corresponde ao imóvel no banco
+
+## Fix: Erro React #310 nas páginas públicas de imóveis (07/04/2026)
+- [x] Corrigir erro "Rendered more hooks than during the previous render" no PropertyPublic.tsx
+- [x] Mover todos os useState para ANTES dos returns condicionais (loading/not found)
+- [x] Mover array especialistas para fora do componente (constante)
+- [x] Testar todas as 4 páginas: /imovel/alacide, /imovel/mod-vaz-01, /imovel/mod-vaz-02, /imovel/mod-vaz-03
+- [x] Confirmar links corretos nas mensagens das campanhas (slugs com hífen, não underscore)
+- [x] 97 testes passando, TypeScript sem erros
