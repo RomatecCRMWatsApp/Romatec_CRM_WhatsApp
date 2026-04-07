@@ -473,6 +473,7 @@ export default function Campaigns() {
                   cycleDuration={cycleDuration}
                   campaignStates={campaignStates}
                   schedulerStartedAt={stateData?.startedAtFormatted || null}
+                  todayMessages={todayMessages}
                   expanded={expandedCampaign === campaign.id}
                   onToggle={() => handleToggleExpand(campaign.id)}
                   onToggleActive={(active: boolean) => toggleCampaign.mutate({ campaignId: campaign.id, active })}
@@ -482,26 +483,7 @@ export default function Campaigns() {
           )}
         </div>
 
-        {/* Mensagens de Hoje */}
-        {todayMessages.length > 0 && (
-          <div className="glass-card p-6">
-            <h2 className="text-lg font-bold flex items-center gap-2 text-foreground mb-4">
-              <CheckCircle2 className="h-5 w-5 text-emerald-400" />
-              Mensagens Enviadas Hoje ({todayMessages.length})
-            </h2>
-            <div className="space-y-2 max-h-60 overflow-y-auto">
-              {todayMessages.map((msg: any) => (
-                <div key={`msg-${msg.id}`} className="flex items-center gap-3 p-2.5 bg-emerald-500/10 rounded-lg border border-emerald-500/20">
-                  <CheckCircle2 className="h-4 w-4 text-emerald-400 flex-shrink-0" />
-                  <span className="text-sm font-mono text-emerald-300">{formatTime(msg.sentAt)}</span>
-                  <span className="text-sm text-foreground/70 truncate">
-                    {String(msg.messageText || '').substring(0, 80)}
-                  </span>
-                </div>
-              ))}
-            </div>
-          </div>
-        )}
+
       </div>
     </div>
   );
@@ -518,6 +500,7 @@ function CampaignCard({
   cycleDuration,
   campaignStates,
   schedulerStartedAt,
+  todayMessages,
   expanded,
   onToggle,
   onToggleActive,
@@ -529,6 +512,7 @@ function CampaignCard({
   cycleDuration: number;
   campaignStates: any[];
   schedulerStartedAt: string | null;
+  todayMessages: any[];
   expanded: boolean;
   onToggle: () => void;
   onToggleActive: (active: boolean) => void;
@@ -705,18 +689,48 @@ function CampaignCard({
           </div>
         </div>
 
-        {/* Status enviou nesta hora */}
-        {hasSentThisHour && (
-          <div className="p-3 bg-emerald-500/10 rounded-lg mb-4 border border-emerald-500/20">
-            <div className="flex items-center justify-between">
-              <p className="text-sm font-semibold text-emerald-400 flex items-center gap-1">
-                <CheckCircle2 className="h-4 w-4" />
-                Mensagem enviada! Aguardando próxima hora...
-              </p>
-              <span className="text-2xl font-mono font-bold text-emerald-400 tabular-nums">{formatTimer(cycleTimer)}</span>
-            </div>
-          </div>
-        )}
+        {/* Confirmação de envio nesta hora - mostra contato e horário */}
+        {(() => {
+          // Encontrar o último contato enviado nesta campanha
+          const sentContact = (campaign.contacts || []).find((c: any) => c.status === "sent" && c.sentAt);
+          const lastSentContact = (campaign.contacts || [])
+            .filter((c: any) => c.status === "sent" && c.sentAt)
+            .sort((a: any, b: any) => new Date(b.sentAt).getTime() - new Date(a.sentAt).getTime())[0];
+          
+          if (hasSentThisHour && lastSentContact) {
+            return (
+              <div className="p-3 bg-emerald-500/10 rounded-lg mb-4 border border-emerald-500/20">
+                <div className="flex items-center gap-2 mb-1.5">
+                  <CheckCircle2 className="h-4 w-4 text-emerald-400 flex-shrink-0" />
+                  <span className="text-sm font-semibold text-emerald-400">Enviado com sucesso!</span>
+                </div>
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <span className="text-xs bg-emerald-500/20 text-emerald-300 px-2 py-0.5 rounded border border-emerald-500/30 font-mono">
+                      {formatTime(lastSentContact.sentAt)}
+                    </span>
+                    <span className="text-sm text-emerald-200 font-medium truncate max-w-[180px]">
+                      {lastSentContact.name}
+                    </span>
+                    <span className="text-xs text-emerald-400/60 font-mono">
+                      {lastSentContact.phone}
+                    </span>
+                  </div>
+                </div>
+              </div>
+            );
+          } else if (hasSentThisHour) {
+            return (
+              <div className="p-3 bg-emerald-500/10 rounded-lg mb-4 border border-emerald-500/20">
+                <div className="flex items-center gap-2">
+                  <CheckCircle2 className="h-4 w-4 text-emerald-400" />
+                  <span className="text-sm font-semibold text-emerald-400">Mensagem enviada nesta hora!</span>
+                </div>
+              </div>
+            );
+          }
+          return null;
+        })()}
 
         {/* Info */}
         <p className="text-xs text-muted-foreground mb-3">

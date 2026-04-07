@@ -422,3 +422,12 @@
 - [x] Regras follow-up: parar se cliente responder, máximo 3 follow-ups, resetar se responder
 - [x] Corrigir bug envio excessivo scheduler (AUTO-RESTART duplica envios - verificar msgs no banco antes de reagendar)
 - [x] Corrigir preços invertidos no bot-ai.ts (ALACIDE, Mod_Vaz-01, Mod_Vaz-02, Mod_Vaz-03)
+
+## Bug: Campanhas ficam travadas em "Aguardando envio" (07/04/2026)
+- [ ] Mod_Vaz-03 ficou com status "Pendente" na hora 3/12 enquanto outras campanhas enviaram normalmente
+- [ ] Investigar e corrigir causa raiz do travamento
+
+## Ajustes Layout UI Campanhas (07/04/2026)
+- [ ] Bug: 4º enviado no painel de controle não risca (Condomínio@42min)
+- [x] Substituir cronômetro duplicado de baixo nos cards por confirmação de envio (nome contato + horário)
+- [x] Remover seção "Mensagens Enviadas" de baixo do monitoramento (cada card terá sua própria info)
