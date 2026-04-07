@@ -431,3 +431,20 @@
 - [ ] Bug: 4º enviado no painel de controle não risca (Condomínio@42min)
 - [x] Substituir cronômetro duplicado de baixo nos cards por confirmação de envio (nome contato + horário)
 - [x] Remover seção "Mensagens Enviadas" de baixo do monitoramento (cada card terá sua própria info)
+
+## Desempenho na Home (07/04/2026)
+- [ ] Adicionar painel de desempenho/performance na parte de baixo da Home
+- [ ] Cards resumo: Total Enviadas, Taxa Sucesso, Média/Dia, Falhas
+- [ ] Gráficos: Envios 7 Dias, Distribuição Status, Evolução 30 Dias, Hora do Dia
+- [ ] Performance por Campanha com barras e detalhes
+
+## Painel de Desempenho na Página Principal (07/04/2026)
+- [x] Integrar painel de desempenho (gráficos e estatísticas) na parte inferior da Home/Dashboard
+- [x] Cards resumo: Total Enviadas, Taxa de Sucesso, Média/Dia, Falhas
+- [x] Gráfico de barras: Envios últimos 7 dias
+- [x] Gráfico pizza: Distribuição de status
+- [x] Gráfico área: Evolução últimos 30 dias
+- [x] Gráfico barras: Distribuição por hora do dia
+- [x] Gráfico barras horizontais: Performance por campanha
+- [x] Cards detalhados por campanha com barra de progresso e status ATIVA/PAUSADA
+- [x] Atualização automática a cada 30 segundos
