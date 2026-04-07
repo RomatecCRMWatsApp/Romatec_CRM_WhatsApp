@@ -333,3 +333,17 @@
 - [x] Criar campanha para Condomínio de Chácaras Giuliano (ID: 60001, MPH: 3)
 - [x] Gerar 12 variações de mensagem persuasivas para o novo imóvel
 - [x] Atribuir 24 contatos à nova campanha + remover campanha de teste
+
+## Bug: insertBefore no Redefinir (07/04/2026)
+- [ ] Corrigir NotFoundError insertBefore ao clicar Redefinir na página de Campanhas
+- [ ] Estabilizar renderização React após mutação de reset
+
+## Bug: Webhook Z-API não processa mensagens (07/04/2026)
+- [x] Corrigir TypeError: payload.message.substring is not a function (Z-API envia message como objeto)
+- [x] Garantir que parseWebhookPayload converte message para string sempre
+- [x] Adicionar filtro fromMe=true para ignorar mensagens enviadas por nós
+- [x] Remover inserção na tabela messages (campaignId NOT NULL impede salvar respostas do bot)
+- [x] Usar credenciais Z-API do env em vez do banco (mais confiável)
+- [x] Adicionar logging detalhado do payload raw para debug
+- [x] Testar bot localmente com curl - resposta enviada com sucesso
+- [ ] Republicar para que Z-API use código corrigido

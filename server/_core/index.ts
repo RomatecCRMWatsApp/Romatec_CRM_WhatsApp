@@ -40,7 +40,6 @@ async function startServer() {
   app.post('/api/webhook/zapi', async (req, res) => {
     try {
       const { parseWebhookPayload } = await import('../zapi-integration');
-      const { getDb } = await import('../db');
       const { processBotMessage } = await import('../bot-ai');
       const { sendMessageViaZAPI } = await import('../zapi-integration');
       const payload = parseWebhookPayload(req.body);
@@ -49,58 +48,73 @@ async function startServer() {
         return res.json({ received: true, processed: false });
       }
 
-      console.log(`[Webhook] ${payload.phone} - "${payload.message.substring(0, 50)}"`);
+      // Ignorar mensagens vazias
+      const msgText = String(payload.message || '').trim();
+      if (!msgText && !payload.audioUrl) {
+        console.log(`[Webhook] Ignorado: mensagem vazia de ${payload.phone}`);
+        return res.json({ received: true, processed: false, reason: 'empty' });
+      }
 
-      const db = await getDb();
-      if (db) {
-        const { contacts, messages: messagesTable } = await import('../../drizzle/schema');
-        const allContacts = await db.select().from(contacts);
-        const contact = allContacts.find((c: any) => {
-          const cleanDb = c.phone.replace(/\D/g, '');
-          return cleanDb === payload.phone || cleanDb.endsWith(payload.phone.slice(-8));
-        });
+      console.log(`[Webhook] ${payload.phone} - "${msgText.substring(0, 50)}"`);
 
-        if (contact) {
-          await db.insert(messagesTable).values({
-            campaignId: null as any,
-            contactId: contact.id,
-            propertyId: null as any,
-            messageText: payload.message,
-            status: 'delivered',
-            sentAt: new Date(),
+      // Buscar nome do contato (opcional, não bloqueia o bot)
+      let senderName = payload.senderName || 'Cliente';
+      try {
+        const { getDb } = await import('../db');
+        const db = await getDb();
+        if (db) {
+          const { contacts } = await import('../../drizzle/schema');
+          const allContacts = await db.select().from(contacts);
+          const contact = allContacts.find((c: any) => {
+            const cleanDb = c.phone.replace(/\D/g, '');
+            return cleanDb === payload.phone || cleanDb.endsWith(payload.phone.slice(-8));
           });
-          console.log(`[Webhook] Resposta de ${contact.name} salva`);
-
-          // Processar com bot IA e responder automaticamente
-          try {
-            const botResponse = await processBotMessage({
-              phone: payload.phone,
-              message: payload.message,
-              audioUrl: payload.audioUrl,
-              senderName: contact.name,
-            });
-
-            if (botResponse.text) {
-              const { getCompanyConfig } = await import('../db');
-              const config = await getCompanyConfig();
-              if (config?.zApiInstanceId && config?.zApiToken) {
-                const sendResult = await sendMessageViaZAPI({
-                  instanceId: config.zApiInstanceId,
-                  token: config.zApiToken,
-                  clientToken: config.zApiClientToken || undefined,
-                  phone: payload.phone,
-                  message: botResponse.text,
-                });
-
-                if (sendResult.success) {
-                  console.log(`[Bot] Resposta automática enviada para ${contact.name}`);
-                }
-              }
-            }
-          } catch (botError) {
-            console.error('[Bot] Erro ao processar:', botError);
+          if (contact) {
+            senderName = contact.name || senderName;
+            console.log(`[Webhook] Contato encontrado: ${senderName}`);
+          } else {
+            console.log(`[Webhook] Contato não encontrado no banco, usando pushName: ${senderName}`);
           }
         }
+      } catch (dbErr) {
+        console.warn('[Webhook] Erro ao buscar contato (não crítico):', dbErr);
+      }
+
+      // Processar com bot IA e responder automaticamente
+      try {
+        const botResponse = await processBotMessage({
+          phone: payload.phone,
+          message: msgText,
+          audioUrl: payload.audioUrl,
+          senderName,
+        });
+
+        if (botResponse.text) {
+          // Buscar credenciais Z-API do env (mais confiável que banco)
+          const instanceId = process.env.ZAPI_INSTANCE_ID;
+          const token = process.env.ZAPI_TOKEN;
+          const clientToken = process.env.ZAPI_CLIENT_TOKEN;
+
+          if (instanceId && token) {
+            const sendResult = await sendMessageViaZAPI({
+              instanceId,
+              token,
+              clientToken: clientToken || undefined,
+              phone: payload.phone,
+              message: botResponse.text,
+            });
+
+            if (sendResult.success) {
+              console.log(`[Bot] ✅ Resposta enviada para ${senderName} (${payload.phone})`);
+            } else {
+              console.error(`[Bot] ❌ Falha ao enviar para ${senderName}: ${sendResult.error}`);
+            }
+          } else {
+            console.error('[Bot] Credenciais Z-API não encontradas no env');
+          }
+        }
+      } catch (botError) {
+        console.error('[Bot] Erro ao processar:', botError);
       }
 
       res.json({ received: true, processed: true });

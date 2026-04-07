@@ -191,20 +191,49 @@ export interface WebhookPayload {
 
 export function parseWebhookPayload(body: any): WebhookPayload | null {
   try {
+    // Log raw payload para debug
+    console.log('[Webhook] Raw payload:', JSON.stringify(body).substring(0, 500));
+
     // Z-API envia diferentes formatos de webhook
     const phone = body?.phone || body?.from || body?.chatId?.replace('@c.us', '');
-    const message = body?.text?.message || body?.message || body?.body || '';
+    
+    // Extrair mensagem - Z-API pode enviar em vários formatos
+    // text.message pode ser string ou objeto, body.message pode ser objeto
+    let rawMessage = body?.text?.message || body?.text?.body || body?.text || body?.message || body?.body || '';
+    
+    // Garantir que message seja SEMPRE string
+    if (typeof rawMessage === 'object' && rawMessage !== null) {
+      // Se for objeto, tentar extrair .message, .body, .text ou converter para string
+      rawMessage = rawMessage.message || rawMessage.body || rawMessage.text || rawMessage.caption || JSON.stringify(rawMessage);
+    }
+    const message = String(rawMessage || '');
+    
     const messageId = body?.messageId || body?.id;
     const isGroup = body?.isGroup || body?.isGroupMsg || false;
 
-    if (!phone) return null;
+    // Ignorar se não tem phone
+    if (!phone) {
+      console.log('[Webhook] Ignorado: sem phone');
+      return null;
+    }
 
     // Ignorar mensagens de grupo
-    if (isGroup) return null;
+    if (isGroup) {
+      console.log('[Webhook] Ignorado: mensagem de grupo');
+      return null;
+    }
+
+    // Ignorar se fromMe (mensagem enviada por nós mesmos)
+    if (body?.fromMe === true) {
+      console.log('[Webhook] Ignorado: fromMe=true');
+      return null;
+    }
 
     // Detectar áudio
     const audioUrl = body?.audio?.audioUrl || body?.audioUrl || body?.mediaUrl || '';
     const isAudio = body?.isAudio || body?.type === 'audio' || body?.type === 'ptt' || !!audioUrl;
+
+    console.log(`[Webhook] Parsed: phone=${phone}, message="${message.substring(0, 50)}", isAudio=${isAudio}`);
 
     return {
       phone: phone.replace(/\D/g, ''),
@@ -216,7 +245,8 @@ export function parseWebhookPayload(body: any): WebhookPayload | null {
       audioUrl: audioUrl || undefined,
       isAudio,
     };
-  } catch {
+  } catch (err) {
+    console.error('[Webhook] Erro ao parsear payload:', err);
     return null;
   }
 }

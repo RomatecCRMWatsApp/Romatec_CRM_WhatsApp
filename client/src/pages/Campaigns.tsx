@@ -40,12 +40,14 @@ export default function Campaigns() {
   const [expandedCampaign, setExpandedCampaign] = useState<number | null>(null);
   const [isSettingUp, setIsSettingUp] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
+  const [isResetting, setIsResetting] = useState(false);
+  const [resetKey, setResetKey] = useState(0);
 
   const schedulerState = trpc.scheduler.getState.useQuery(undefined, {
-    refetchInterval: 5000,
+    refetchInterval: isResetting ? false : 5000,
   });
   const campaignDetails = trpc.scheduler.getCampaignDetails.useQuery(undefined, {
-    refetchInterval: 5000,
+    refetchInterval: isResetting ? false : 5000,
   });
 
   useEffect(() => {
@@ -86,12 +88,24 @@ export default function Campaigns() {
 
   const utils = trpc.useUtils();
   const resetScheduler = trpc.scheduler.reset.useMutation({
-    onSuccess: () => {
-      toast.success("Campanhas resetadas com novos contatos! Clique em Iniciar.");
-      utils.scheduler.getCampaignDetails.invalidate();
-      utils.scheduler.getState.invalidate();
+    onMutate: () => {
+      setIsResetting(true);
+      setExpandedCampaign(null);
     },
-    onError: (error) => toast.error(`Erro: ${error.message}`),
+    onSuccess: async () => {
+      // Incrementar key para forçar remount limpo dos componentes
+      setResetKey(prev => prev + 1);
+      // Aguardar um tick para o DOM limpar antes de buscar novos dados
+      await new Promise(resolve => setTimeout(resolve, 300));
+      await utils.scheduler.getCampaignDetails.invalidate();
+      await utils.scheduler.getState.invalidate();
+      setIsResetting(false);
+      toast.success("Campanhas resetadas com novos contatos! Clique em Iniciar.");
+    },
+    onError: (error) => {
+      setIsResetting(false);
+      toast.error(`Erro: ${error.message}`);
+    },
   });
 
   const toggleCampaign = trpc.scheduler.toggleCampaign.useMutation({
@@ -353,7 +367,7 @@ export default function Campaigns() {
                   toast.error("Pare o scheduler antes de redefinir!");
                   return;
                 }
-                if (confirm("Tem certeza? Isso vai limpar TUDO e começar do zero com novos contatos (msgs/hora × 12 por campanha).")) {
+                if (confirm("Tem certeza? Isso vai limpar TUDO e começar do zero com novos contatos (msgs/hora × 24 por campanha).")) {
                   resetScheduler.mutate();
                 }
               }}
@@ -364,8 +378,8 @@ export default function Campaigns() {
                   : "bg-gradient-to-r from-amber-600 to-orange-600 hover:from-amber-500 hover:to-orange-500 text-white shadow-lg shadow-amber-900/30"
               }`}
             >
-              {resetScheduler.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : <RotateCcw className="h-4 w-4" />}
-              Redefinir
+              {(resetScheduler.isPending || isResetting) ? <Loader2 className="h-4 w-4 animate-spin" /> : <RotateCcw className="h-4 w-4" />}
+              {isResetting ? 'Redefinindo...' : 'Redefinir'}
             </button>
 
             <button
@@ -398,7 +412,7 @@ export default function Campaigns() {
               <Zap className="h-5 w-5 text-amber-400" />
               Rotação de Pares - Ciclo Atual
             </h2>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4" key={`pairs-${runningCampaigns.length}`}>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4" key={`pairs-${resetKey}-${runningCampaigns.length}`}>
               {Array.from({ length: totalPairs }).map((_, pairIdx) => {
                 const camp1 = runningCampaigns[pairIdx * 2];
                 const camp2 = runningCampaigns[pairIdx * 2 + 1];
@@ -478,7 +492,7 @@ export default function Campaigns() {
               </button>
             </div>
           ) : (
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6" key={`campaigns-${allCampaigns.length}`}>
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6" key={`campaigns-${resetKey}-${allCampaigns.length}`}>
               {allCampaigns.map((campaign: any) => (
                 <CampaignCard
                   key={`camp-${campaign.id}`}
