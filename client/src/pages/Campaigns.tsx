@@ -8,13 +8,11 @@ import { trpc } from "@/lib/trpc";
 import { toast } from "sonner";
 
 /**
- * REGRAS DO SISTEMA v4.0 - DARK PREMIUM:
- * - msgs/hora CONFIGURÁVEL por campanha (1-10, padrão 2)
- * - Slots aleatórios distribuídos dentro de 60 min
- * - Mínimo 3 min entre msgs (segurança anti-ban)
- * - Rotação de pares: (1+2) → (3+4) → (1+2)...
- * - Contatos por campanha = msgs/hora × 12 (1=12, 2=24, 3=36...)
- * - Loop infinito 24/7
+ * SISTEMA v6.0 - 5 CAMPANHAS INDEPENDENTES
+ * - Cada campanha envia 1 msg/hora
+ * - Ciclo de 12 horas
+ * - Sem rotação de pares
+ * - Todas as campanhas enviam a cada hora
  */
 
 function formatTimer(seconds: number): string {
@@ -71,7 +69,7 @@ export default function Campaigns() {
 
   const startScheduler = trpc.scheduler.start.useMutation({
     onSuccess: () => {
-      toast.success("Scheduler iniciado! Loop infinito 24/7");
+      toast.success("Scheduler iniciado! 1 msg/campanha/hora, ciclo 12h");
       schedulerState.refetch();
       campaignDetails.refetch();
     },
@@ -94,18 +92,14 @@ export default function Campaigns() {
     },
     onSuccess: async () => {
       try {
-        // Invalidar queries primeiro para buscar dados novos
         await utils.scheduler.getCampaignDetails.invalidate();
         await utils.scheduler.getState.invalidate();
-        // Aguardar dados serem refetchados
         await utils.scheduler.getCampaignDetails.refetch();
         await utils.scheduler.getState.refetch();
-        // Só depois de ter dados novos, incrementar key para remount limpo
         setResetKey(prev => prev + 1);
       } catch (e) {
         console.warn('[Reset] Erro ao refetch:', e);
       }
-      // Pequeno delay para React processar o remount
       await new Promise(resolve => setTimeout(resolve, 100));
       setIsResetting(false);
       toast.success("Campanhas resetadas com novos contatos! Clique em Iniciar.");
@@ -129,18 +123,12 @@ export default function Campaigns() {
   const stateData = useMemo(() => schedulerState.data?.state, [schedulerState.data?.state]);
   const todayMessages = useMemo(() => schedulerState.data?.todayMessages || [], [schedulerState.data?.todayMessages]);
   const allCampaigns = useMemo(() => (campaignDetails.data || []).filter((c: any) => !String(c.name || '').startsWith('TESTE_AUTO')), [campaignDetails.data]);
-  const cycleNumber = useMemo(() => stats?.cycleNumber || 0, [stats?.cycleNumber]);
-  const runningCampaigns = useMemo(() => allCampaigns.filter((c: any) => c.status === "running"), [allCampaigns]);
-  const totalPairs = useMemo(() => Math.ceil(runningCampaigns.length / 2), [runningCampaigns.length]);
+  const hourNumber = useMemo(() => stats?.cycleNumber || 0, [stats?.cycleNumber]);
 
-  const currentPairIndex = useMemo(() => {
-    if (stateData?.activePair?.index !== undefined) return stateData.activePair.index;
-    return totalPairs > 0 ? cycleNumber % totalPairs : 0;
-  }, [stateData?.activePair?.index, cycleNumber, totalPairs]);
-
-  const activePairNames = useMemo(() => {
-    return stateData?.activePair?.campaigns || [];
-  }, [stateData?.activePair?.campaigns]);
+  // Campanhas que enviaram nesta hora (do estado do scheduler)
+  const campaignStates = useMemo(() => stateData?.campaignStates || [], [stateData?.campaignStates]);
+  const sentThisHour = useMemo(() => stats?.messagesThisHour || 0, [stats?.messagesThisHour]);
+  const totalCampsActive = useMemo(() => stats?.maxMessagesPerHour || 0, [stats?.maxMessagesPerHour]);
 
   const totals = useMemo(() => {
     const totalContacts = allCampaigns.reduce((sum: number, c: any) => sum + (c.totalContacts || 0), 0);
@@ -168,7 +156,6 @@ export default function Campaigns() {
     return () => clearInterval(interval);
   }, [isRunning]);
 
-  // Progresso do tempo: 0% no início → 100% quando ciclo completa
   const timeProgressPercent = cycleDuration > 0 ? Math.round(((cycleDuration - localTimer) / cycleDuration) * 100) : 0;
 
   const handleAutoSetup = useCallback(() => {
@@ -177,20 +164,12 @@ export default function Campaigns() {
   }, [autoSetup]);
 
   const handleStart = useCallback(() => {
-    if (allCampaigns.length < 2) {
+    if (allCampaigns.length < 1) {
       toast.error("Configure as campanhas primeiro! Clique em 'Auto Configurar'");
       return;
     }
     startScheduler.mutate();
   }, [allCampaigns.length, startScheduler]);
-
-  const handleReset = useCallback(() => {
-    if (isRunning) {
-      toast.error("Pare o scheduler antes de resetar!");
-      return;
-    }
-    resetScheduler.mutate();
-  }, [isRunning, resetScheduler]);
 
   const handleToggleExpand = useCallback((id: number) => {
     setExpandedCampaign((prev) => (prev === id ? null : id));
@@ -219,10 +198,10 @@ export default function Campaigns() {
             <div>
               <h1 className="text-2xl md:text-3xl font-bold flex items-center gap-3 text-white">
                 <Send className="h-7 w-7 text-emerald-400" />
-                <span>Romatec CRM Campanhas WhatsApp</span>
+                <span>Romatec CRM Campanhas</span>
               </h1>
               <p className="text-emerald-300/70 text-sm mt-1">
-                msgs/hora configurável por campanha | Ciclo 24h/dia, 7 dias/semana
+                1 msg/campanha/hora | Ciclo de 12 horas | {allCampaigns.length} campanhas
               </p>
             </div>
           </div>
@@ -244,7 +223,7 @@ export default function Campaigns() {
 
       <div className="container py-6 space-y-6">
 
-        {/* Painel de Controle - Dark */}
+        {/* Painel de Controle */}
         <div className="glass-card p-6">
           <div className="flex items-center justify-between mb-5">
             <h2 className="text-lg font-bold flex items-center gap-2 text-foreground">
@@ -256,11 +235,11 @@ export default function Campaigns() {
                 ? "bg-emerald-500/15 text-emerald-400 border border-emerald-500/30"
                 : "bg-red-500/15 text-red-400 border border-red-500/30"
             }`}>
-              {isRunning ? "Ativo 24/7" : "Parado"}
+              {isRunning ? "Ativo" : "Parado"}
             </span>
           </div>
 
-          {/* Stats Grid - Dark */}
+          {/* Stats Grid */}
           <div className="grid grid-cols-2 md:grid-cols-5 gap-3 mb-6">
             {[
               { icon: Users, label: "Total Contatos", value: totals.totalContacts, color: "text-blue-400", bg: "bg-blue-500/10 border-blue-500/20" },
@@ -277,24 +256,24 @@ export default function Campaigns() {
             ))}
           </div>
 
-          {/* Cronômetro Principal - Dark */}
+          {/* Cronômetro Principal - Hora Atual */}
           {isRunning && (
             <div className="p-5 rounded-xl bg-gradient-to-r from-purple-900/30 via-indigo-900/20 to-purple-900/30 border border-purple-500/20 mb-6">
               <div className="flex items-center justify-between mb-3">
                 <div>
                   <p className="font-semibold text-purple-300 flex items-center gap-2">
                     <Timer className="h-5 w-5" />
-                    Próximo Ciclo em:
+                    Próxima Hora em:
                   </p>
                   <p className="text-xs text-purple-400/60 mt-1">
-                    Ciclo {cycleNumber + 1} | Par {currentPairIndex + 1} de {totalPairs}
+                    Hora {hourNumber + 1}/12 | {sentThisHour}/{totalCampsActive} campanhas enviaram
                   </p>
                 </div>
-                <span className="text-5xl font-mono font-bold text-purple-400 tabular-nums text-glow-green" style={{ textShadow: '0 0 20px rgba(168, 85, 247, 0.5)' }}>
+                <span className="text-5xl font-mono font-bold text-purple-400 tabular-nums" style={{ textShadow: '0 0 20px rgba(168, 85, 247, 0.5)' }}>
                   {formatTimer(localTimer)}
                 </span>
               </div>
-              {/* Barra de progresso do ciclo */}
+              {/* Barra de progresso da hora */}
               <div className="w-full bg-purple-900/40 rounded-full h-2 mb-4">
                 <div
                   className="bg-gradient-to-r from-purple-500 to-purple-400 h-2 rounded-full transition-all duration-1000"
@@ -312,16 +291,16 @@ export default function Campaigns() {
                   <p className="text-sm font-bold text-purple-300">{stateData?.uptimeFormatted || "00:00:00"}</p>
                 </div>
                 <div className="p-2 bg-white/5 rounded-lg border border-white/10">
-                  <p className="text-xs text-muted-foreground">Próximo ciclo</p>
-                  <p className="text-sm font-bold text-purple-300">{stateData?.nextCycleFormatted || "--:--:--"}</p>
+                  <p className="text-xs text-muted-foreground">Próxima hora</p>
+                  <p className="text-sm font-bold text-purple-300">{stateData?.nextCycleFormatted || "--:--"}</p>
                 </div>
               </div>
-              {/* Msgs neste ciclo */}
+              {/* Status das campanhas nesta hora */}
               <div className="mt-3 flex items-center justify-center gap-2 text-sm">
-                <span className="text-muted-foreground">Msgs neste ciclo:</span>
-                <span className="font-bold text-purple-300">{stats?.messagesThisHour || 0}/{stats?.maxMessagesPerHour || 0}</span>
-                {(stats?.maxMessagesPerHour || 0) > 0 && (stats?.messagesThisHour || 0) >= (stats?.maxMessagesPerHour || 0) && (
-                  <span className="text-xs bg-emerald-500/20 text-emerald-400 px-2 py-0.5 rounded-full border border-emerald-500/30">Ciclo completo</span>
+                <span className="text-muted-foreground">Enviadas nesta hora:</span>
+                <span className="font-bold text-purple-300">{sentThisHour}/{totalCampsActive}</span>
+                {totalCampsActive > 0 && sentThisHour >= totalCampsActive && (
+                  <span className="text-xs bg-emerald-500/20 text-emerald-400 px-2 py-0.5 rounded-full border border-emerald-500/30">Hora completa!</span>
                 )}
               </div>
               {/* Slots agendados */}
@@ -333,7 +312,7 @@ export default function Campaigns() {
                         ? "bg-emerald-500/15 text-emerald-400 border-emerald-500/30 line-through"
                         : "bg-purple-500/15 text-purple-300 border-purple-500/30"
                     }`}>
-                      {slot.campaignName.substring(0, 8)}@{slot.minuteLabel}min
+                      {slot.campaignName.substring(0, 10)}@{slot.minuteLabel}min
                     </span>
                   ))}
                 </div>
@@ -341,7 +320,7 @@ export default function Campaigns() {
             </div>
           )}
 
-          {/* Botões de Controle - Dark */}
+          {/* Botões de Controle */}
           <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
             <button
               onClick={handleAutoSetup}
@@ -355,7 +334,7 @@ export default function Campaigns() {
             {!isRunning ? (
               <button
                 onClick={handleStart}
-                disabled={allCampaigns.length < 2}
+                disabled={allCampaigns.length < 1}
                 className="h-12 rounded-xl font-semibold text-sm flex items-center justify-center gap-2 transition-all bg-gradient-to-r from-emerald-600 to-emerald-700 hover:from-emerald-500 hover:to-emerald-600 text-white shadow-lg shadow-emerald-900/30 disabled:opacity-40 disabled:cursor-not-allowed"
               >
                 <Play className="h-4 w-4" /> Iniciar
@@ -375,7 +354,7 @@ export default function Campaigns() {
                   toast.error("Pare o scheduler antes de redefinir!");
                   return;
                 }
-                if (confirm("Tem certeza? Isso vai limpar TUDO e começar do zero com novos contatos (msgs/hora × 24 por campanha).")) {
+                if (confirm("Tem certeza? Isso vai limpar TUDO e começar do zero com novos contatos.")) {
                   resetScheduler.mutate();
                 }
               }}
@@ -413,68 +392,51 @@ export default function Campaigns() {
           </div>
         </div>
 
-        {/* Rotação de Pares - Dark */}
-        {runningCampaigns.length >= 2 && (
+        {/* Status das 5 Campanhas nesta Hora */}
+        {allCampaigns.length > 0 && isRunning && (
           <div className="glass-card p-6">
             <h2 className="text-lg font-bold flex items-center gap-2 text-foreground mb-4">
               <Zap className="h-5 w-5 text-amber-400" />
-              Rotação de Pares - Ciclo Atual
+              Status por Hora - Todas as Campanhas
             </h2>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4" key={`pairs-${resetKey}-${runningCampaigns.length}`}>
-              {Array.from({ length: totalPairs }).map((_, pairIdx) => {
-                const camp1 = runningCampaigns[pairIdx * 2];
-                const camp2 = runningCampaigns[pairIdx * 2 + 1];
-                const isCurrentPair = isRunning && (
-                  currentPairIndex === pairIdx ||
-                  (activePairNames.length > 0 && camp1 && activePairNames.includes(camp1.name))
-                );
-                const isNextPair = isRunning && !isCurrentPair && (currentPairIndex + 1) % totalPairs === pairIdx && totalPairs > 1;
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3" key={`hour-status-${resetKey}`}>
+              {allCampaigns.filter((c: any) => c.status === "running").map((campaign: any) => {
+                const campState = campaignStates.find((cs: any) => cs.campaignName === campaign.name);
+                const hasSent = campState?.sentThisHour || false;
 
                 return (
                   <div
-                    key={`pair-${pairIdx}-${camp1?.id || 0}-${camp2?.id || 0}`}
+                    key={`hour-${campaign.id}`}
                     className={`p-4 rounded-xl border transition-all ${
-                      isCurrentPair
-                        ? "bg-emerald-500/10 border-emerald-500/40 shadow-lg shadow-emerald-900/20 ring-1 ring-emerald-500/30"
-                        : isNextPair
-                        ? "bg-amber-500/10 border-amber-500/30 shadow-md shadow-amber-900/10"
-                        : "bg-secondary/30 border-border/50"
+                      hasSent
+                        ? "bg-emerald-500/10 border-emerald-500/40 shadow-lg shadow-emerald-900/20"
+                        : "bg-amber-500/10 border-amber-500/30 shadow-md shadow-amber-900/10"
                     }`}
                   >
-                    <div className="flex items-center gap-2 mb-3">
-                      <span className={`inline-block w-4 h-4 rounded-full ${
-                        isCurrentPair ? "bg-emerald-400 animate-pulse shadow-lg shadow-emerald-400/50" : isNextPair ? "bg-amber-400 animate-pulse" : "bg-muted-foreground/30"
+                    <div className="flex items-center gap-2 mb-2">
+                      <span className={`inline-block w-3 h-3 rounded-full ${
+                        hasSent ? "bg-emerald-400 shadow-lg shadow-emerald-400/50" : "bg-amber-400 animate-pulse shadow-lg shadow-amber-400/30"
                       }`} />
                       <h3 className={`font-bold text-sm ${
-                        isCurrentPair ? "text-emerald-400" : isNextPair ? "text-amber-400" : "text-muted-foreground"
+                        hasSent ? "text-emerald-400" : "text-amber-400"
                       }`}>
-                        {isCurrentPair ? "ENVIANDO AGORA" : isNextPair ? "PRÓXIMO PAR" : `Par ${pairIdx + 1}`}
+                        {hasSent ? "ENVIOU" : "AGUARDANDO"}
                       </h3>
-                      {isCurrentPair && (
-                        <span className="ml-auto text-xs bg-emerald-500/20 text-emerald-400 px-2 py-0.5 rounded-full font-bold border border-emerald-500/30">
-                          ATIVO
-                        </span>
-                      )}
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <span className={`px-3 py-1.5 rounded-lg text-sm font-bold border ${
-                        isCurrentPair ? "bg-emerald-500/15 border-emerald-500/30 text-emerald-300" : "bg-secondary/50 border-border/50 text-foreground/70"
+                      <span className={`ml-auto text-xs px-2 py-0.5 rounded-full font-bold border ${
+                        hasSent
+                          ? "bg-emerald-500/20 text-emerald-400 border-emerald-500/30"
+                          : "bg-amber-500/20 text-amber-400 border-amber-500/30"
                       }`}>
-                        {camp1?.name || "?"}
-                      </span>
-                      <span className="text-muted-foreground font-bold">+</span>
-                      <span className={`px-3 py-1.5 rounded-lg text-sm font-bold border ${
-                        isCurrentPair ? "bg-emerald-500/15 border-emerald-500/30 text-emerald-300" : "bg-secondary/50 border-border/50 text-foreground/70"
-                      }`}>
-                        {camp2?.name || camp1?.name || "?"}
+                        {hasSent ? "1/1" : "0/1"}
                       </span>
                     </div>
+                    <span className={`px-3 py-1.5 rounded-lg text-sm font-bold border inline-block ${
+                      hasSent ? "bg-emerald-500/15 border-emerald-500/30 text-emerald-300" : "bg-amber-500/15 border-amber-500/30 text-amber-300"
+                    }`}>
+                      {campaign.name}
+                    </span>
                     <p className="text-xs text-muted-foreground mt-2">
-                      {(() => {
-                        const c1mph = allCampaigns.find((c: any) => c.name === camp1?.name)?.messagesPerHour || 2;
-                        const c2mph = camp2 ? (allCampaigns.find((c: any) => c.name === camp2?.name)?.messagesPerHour || 2) : 0;
-                        return `${c1mph}+${c2mph} = ${c1mph + c2mph} msgs/hora`;
-                      })()}
+                      1 msg/hora | {campaign.sentCount || 0}/{campaign.totalContacts || 12} total
                     </p>
                   </div>
                 );
@@ -483,7 +445,7 @@ export default function Campaigns() {
           </div>
         )}
 
-        {/* Monitoramento em Tempo Real - Dark */}
+        {/* Monitoramento em Tempo Real */}
         <div>
           <h2 className="text-xl font-bold mb-4 flex items-center gap-2 text-foreground">
             <BarChart3 className="h-5 w-5 text-emerald-400" />
@@ -506,13 +468,10 @@ export default function Campaigns() {
                   key={`camp-${campaign.id}`}
                   campaign={campaign}
                   isRunning={isRunning}
-                  currentPairIndex={currentPairIndex}
-                  totalPairs={totalPairs}
+                  hourNumber={hourNumber}
                   cycleTimer={localTimer}
                   cycleDuration={cycleDuration}
-                  cycleNumber={cycleNumber}
-                  runningCampaigns={runningCampaigns}
-                  activePairNames={activePairNames}
+                  campaignStates={campaignStates}
                   schedulerStartedAt={stateData?.startedAtFormatted || null}
                   expanded={expandedCampaign === campaign.id}
                   onToggle={() => handleToggleExpand(campaign.id)}
@@ -523,7 +482,7 @@ export default function Campaigns() {
           )}
         </div>
 
-        {/* Mensagens de Hoje - Dark */}
+        {/* Mensagens de Hoje */}
         {todayMessages.length > 0 && (
           <div className="glass-card p-6">
             <h2 className="text-lg font-bold flex items-center gap-2 text-foreground mb-4">
@@ -549,18 +508,15 @@ export default function Campaigns() {
 }
 
 /**
- * Card de cada campanha - Dark Premium
+ * Card de cada campanha - v6.0
  */
 function CampaignCard({
   campaign,
   isRunning,
-  currentPairIndex,
-  totalPairs,
+  hourNumber,
   cycleTimer,
   cycleDuration,
-  cycleNumber,
-  runningCampaigns,
-  activePairNames,
+  campaignStates,
   schedulerStartedAt,
   expanded,
   onToggle,
@@ -568,20 +524,17 @@ function CampaignCard({
 }: {
   campaign: any;
   isRunning: boolean;
-  currentPairIndex: number;
-  totalPairs: number;
+  hourNumber: number;
   cycleTimer: number;
   cycleDuration: number;
-  cycleNumber: number;
-  runningCampaigns: any[];
-  activePairNames: string[];
+  campaignStates: any[];
   schedulerStartedAt: string | null;
   expanded: boolean;
   onToggle: () => void;
   onToggleActive: (active: boolean) => void;
 }) {
   const [editingMph, setEditingMph] = useState(false);
-  const [mphValue, setMphValue] = useState(campaign.messagesPerHour || 2);
+  const [mphValue, setMphValue] = useState(campaign.messagesPerHour || 1);
   const utils = trpc.useUtils();
 
   const updateMph = trpc.scheduler.updateMessagesPerHour.useMutation({
@@ -594,36 +547,22 @@ function CampaignCard({
   });
 
   useEffect(() => {
-    setMphValue(campaign.messagesPerHour || 2);
+    setMphValue(campaign.messagesPerHour || 1);
   }, [campaign.messagesPerHour]);
 
   const isActive = campaign.status === "running";
-
-  const isInCurrentPair = isRunning && isActive && (
-    activePairNames.includes(campaign.name) ||
-    (() => {
-      const runningIdx = runningCampaigns.findIndex((c: any) => c.id === campaign.id);
-      const pairIndex = runningIdx >= 0 ? Math.floor(runningIdx / 2) : -1;
-      return pairIndex === currentPairIndex;
-    })()
-  );
-
-  const runningIdx = runningCampaigns.findIndex((c: any) => c.id === campaign.id);
-  const pairIndex = runningIdx >= 0 ? Math.floor(runningIdx / 2) : -1;
-  const isInNextPair = isRunning && isActive && !isInCurrentPair && pairIndex === (currentPairIndex + 1) % totalPairs && totalPairs > 1;
+  const campState = campaignStates.find((cs: any) => cs.campaignName === campaign.name);
+  const hasSentThisHour = campState?.sentThisHour || false;
 
   const contactsList: any[] = campaign.contacts || [];
   const sentCount = campaign.sentCount || 0;
   const pendingCount = campaign.pendingCount || 0;
-  const mph = campaign.messagesPerHour || 2;
-  const totalContacts = campaign.totalContacts || (mph * 12);
+  const totalContacts = campaign.totalContacts || 12;
   const progressPercent = totalContacts > 0 ? Math.round((sentCount / totalContacts) * 100) : 0;
-  const hasSentThisCycle = sentCount > 0;
 
-  // Progresso do tempo do ciclo - CORRIGIDO: usa cycleDuration real
   const timePercent = cycleDuration > 0 ? Math.round(((cycleDuration - cycleTimer) / cycleDuration) * 100) : 0;
 
-  // Cores e status baseados no estado
+  // Status e cores
   let statusText = "Agendado";
   let ledClass = "bg-muted-foreground/30";
   let borderAccent = "border-l-muted/50";
@@ -633,23 +572,16 @@ function CampaignCard({
   if (!isActive) {
     statusText = "Pausada";
     cardBg = "opacity-50";
-    ledClass = "bg-muted-foreground/30";
     statusBadge = "bg-secondary/50 text-muted-foreground border-border/50";
     borderAccent = "border-l-muted/50";
-  } else if (isInCurrentPair && hasSentThisCycle) {
-    statusText = "Enviado";
+  } else if (hasSentThisHour) {
+    statusText = "Enviou nesta hora";
     ledClass = "bg-emerald-400 shadow-lg shadow-emerald-400/50";
     borderAccent = "border-l-emerald-500";
     cardBg = "ring-1 ring-emerald-500/20";
     statusBadge = "bg-emerald-500/15 text-emerald-400 border-emerald-500/30";
-  } else if (isInCurrentPair) {
-    statusText = "Enviando";
-    ledClass = "bg-emerald-400 animate-pulse shadow-lg shadow-emerald-400/50";
-    borderAccent = "border-l-emerald-500";
-    cardBg = "ring-1 ring-emerald-500/30";
-    statusBadge = "bg-emerald-500/15 text-emerald-400 border-emerald-500/30";
-  } else if (isInNextPair) {
-    statusText = "Próximo";
+  } else if (isRunning) {
+    statusText = "Aguardando envio";
     ledClass = "bg-amber-400 animate-pulse shadow-lg shadow-amber-400/30";
     borderAccent = "border-l-amber-500";
     cardBg = "ring-1 ring-amber-500/20";
@@ -672,23 +604,22 @@ function CampaignCard({
               <h3 className="text-lg font-bold text-foreground">{String(campaign.name || '')}</h3>
               <div className="flex items-center gap-2 mt-1">
                 <span className={`px-2 py-0.5 rounded-full text-xs font-semibold border ${statusBadge}`}>
-                  {isInCurrentPair && <span className="inline-block w-2 h-2 rounded-full bg-emerald-400 mr-1" />}
                   {statusText}
                 </span>
                 <span className="text-xs text-muted-foreground">
-                  Imovel: {String(campaign.propertyName || '')}
+                  Imóvel: {String(campaign.propertyName || '')}
                 </span>
               </div>
             </div>
           </div>
-          {/* Cronômetro no canto */}
+          {/* Timer no canto */}
           <div className="flex items-center gap-3">
-            {isActive && (
+            {isActive && isRunning && (
               <div className="text-right">
                 <span className={`text-2xl font-mono font-bold tabular-nums ${
-                  isInCurrentPair ? "text-emerald-400" : "text-muted-foreground/50"
+                  hasSentThisHour ? "text-emerald-400" : "text-amber-400"
                 }`}>{formatTimer(cycleTimer)}</span>
-                <p className="text-xs text-muted-foreground">Cronômetro (1 hora)</p>
+                <p className="text-xs text-muted-foreground">Próxima hora</p>
               </div>
             )}
             {!isActive && (
@@ -704,41 +635,11 @@ function CampaignCard({
           </div>
         </div>
 
-        {/* Campo msgs/hora - Dark */}
+        {/* Campo msgs/hora (fixo em 1 para v6.0) */}
         <div className="mt-3 flex items-center gap-3 p-2.5 bg-indigo-500/10 rounded-lg border border-indigo-500/20">
-          <span className="text-xs font-semibold text-indigo-300">msgs/hora:</span>
-          {editingMph ? (
-            <div className="flex items-center gap-2">
-              <div className="flex items-center border border-indigo-500/30 rounded-lg overflow-hidden">
-                <button
-                  onClick={() => setMphValue(Math.max(1, mphValue - 1))}
-                  className="px-2.5 py-1 bg-indigo-500/20 hover:bg-indigo-500/30 text-indigo-300 font-bold text-sm transition-colors"
-                >-</button>
-                <span className="px-3 py-1 text-lg font-bold text-indigo-200 bg-secondary/50 min-w-[40px] text-center">{mphValue}</span>
-                <button
-                  onClick={() => setMphValue(Math.min(10, mphValue + 1))}
-                  className="px-2.5 py-1 bg-indigo-500/20 hover:bg-indigo-500/30 text-indigo-300 font-bold text-sm transition-colors"
-                >+</button>
-              </div>
-              <button
-                onClick={() => updateMph.mutate({ campaignId: campaign.id, messagesPerHour: mphValue })}
-                disabled={updateMph.isPending}
-                className="px-3 py-1 bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold rounded-lg transition-colors"
-              >{updateMph.isPending ? '...' : 'Salvar'}</button>
-              <button
-                onClick={() => { setEditingMph(false); setMphValue(campaign.messagesPerHour || 2); }}
-                className="px-2 py-1 text-xs text-muted-foreground hover:text-foreground transition-colors"
-              >Cancelar</button>
-            </div>
-          ) : (
-            <button
-              onClick={() => setEditingMph(true)}
-              className="flex items-center gap-1 px-3 py-1 bg-secondary/50 border border-indigo-500/20 rounded-lg hover:bg-indigo-500/10 transition-colors"
-            >
-              <span className="text-xl font-bold text-indigo-300">{campaign.messagesPerHour || 2}</span>
-              <span className="text-xs text-indigo-400/60 ml-1">×12 = {(campaign.messagesPerHour || 2) * 12} contatos</span>
-            </button>
-          )}
+          <span className="text-xs font-semibold text-indigo-300">Regra:</span>
+          <span className="text-sm font-bold text-indigo-200">1 msg/hora</span>
+          <span className="text-xs text-indigo-400/60 ml-1">× 12 horas = 12 contatos/ciclo</span>
         </div>
       </div>
 
@@ -747,7 +648,7 @@ function CampaignCard({
         {/* Progresso do Ciclo (msgs enviadas) */}
         <div className="mb-3">
           <div className="flex items-center justify-between mb-1">
-            <p className="text-xs text-muted-foreground font-medium">Progresso do Ciclo</p>
+            <p className="text-xs text-muted-foreground font-medium">Progresso do Ciclo (12h)</p>
             <p className={`text-sm font-bold ${progressPercent === 100 ? "text-amber-400" : "text-emerald-400"}`}>{progressPercent}%</p>
           </div>
           <div className="progress-bar">
@@ -758,11 +659,11 @@ function CampaignCard({
           </div>
         </div>
 
-        {/* Barra de Tempo - CORRIGIDA: percentual acompanha a barra */}
+        {/* Barra de Tempo da Hora */}
         {isActive && isRunning && (
           <div className="mb-4">
             <div className="flex items-center justify-between mb-1">
-              <p className="text-xs text-muted-foreground font-medium">Tempo do Ciclo</p>
+              <p className="text-xs text-muted-foreground font-medium">Tempo da Hora</p>
               <p className="text-sm font-bold text-blue-400">{timePercent}%</p>
             </div>
             <div className="w-full bg-secondary/50 rounded-full h-2">
@@ -774,7 +675,7 @@ function CampaignCard({
           </div>
         )}
 
-        {/* Stats Grid - Dark */}
+        {/* Stats Grid */}
         <div className="grid grid-cols-2 gap-3 mb-4">
           <div className="p-2.5 bg-emerald-500/10 rounded-lg border border-emerald-500/20">
             <p className="text-xs text-muted-foreground">Enviadas</p>
@@ -785,37 +686,44 @@ function CampaignCard({
             <p className="text-xl font-bold text-amber-400">{pendingCount}</p>
           </div>
           <div className="p-2.5 bg-purple-500/10 rounded-lg border border-purple-500/20">
-            <p className="text-xs text-muted-foreground">Ciclo Atual</p>
-            <p className="text-xl font-bold text-purple-400">{cycleNumber + 1}<span className="text-sm text-muted-foreground">/{totalContacts}</span></p>
+            <p className="text-xs text-muted-foreground">Hora Atual</p>
+            <p className="text-xl font-bold text-purple-400">{hourNumber + 1}<span className="text-sm text-muted-foreground">/12</span></p>
           </div>
           <div className="p-2.5 bg-blue-500/10 rounded-lg border border-blue-500/20">
-            <p className="text-xs text-muted-foreground">Taxa do Dia</p>
+            <p className="text-xs text-muted-foreground">Esta Hora</p>
             <p className="text-xl font-bold text-blue-400">
-              {totalContacts > 0 ? `${((sentCount / totalContacts) * 100).toFixed(1)}%` : "0.0%"}
+              {hasSentThisHour ? (
+                <span className="text-emerald-400 flex items-center gap-1">
+                  <CheckCircle2 className="h-5 w-5" /> Enviou
+                </span>
+              ) : (
+                <span className="text-amber-400 flex items-center gap-1">
+                  <Clock className="h-5 w-5" /> Pendente
+                </span>
+              )}
             </p>
-            <p className="text-xs text-muted-foreground">Meta: {totalContacts} msg/dia</p>
           </div>
         </div>
 
-        {/* Cronômetro inline para par ativo */}
-        {isInCurrentPair && (
+        {/* Status enviou nesta hora */}
+        {hasSentThisHour && (
           <div className="p-3 bg-emerald-500/10 rounded-lg mb-4 border border-emerald-500/20">
             <div className="flex items-center justify-between">
               <p className="text-sm font-semibold text-emerald-400 flex items-center gap-1">
-                <Timer className="h-4 w-4" />
-                Próximo Ciclo em:
+                <CheckCircle2 className="h-4 w-4" />
+                Mensagem enviada! Aguardando próxima hora...
               </p>
               <span className="text-2xl font-mono font-bold text-emerald-400 tabular-nums">{formatTimer(cycleTimer)}</span>
             </div>
           </div>
         )}
 
-        {/* Info de início - CORRIGIDO: usa horário do scheduler */}
+        {/* Info */}
         <p className="text-xs text-muted-foreground mb-3">
-          Iniciado: {schedulerStartedAt || "--:--:--"} | {mph} msgs/h × 12 ciclos = {totalContacts} contatos | 12 horas
+          Iniciado: {schedulerStartedAt || "--:--:--"} | 1 msg/hora × 12 horas = {totalContacts} contatos
         </p>
 
-        {/* Toggle Lista de Contatos - Dark */}
+        {/* Toggle Lista de Contatos */}
         <button
           onClick={onToggle}
           className="w-full flex items-center justify-between p-3 bg-secondary/30 rounded-lg border border-border/50 hover:bg-secondary/50 transition-colors"
@@ -828,7 +736,7 @@ function CampaignCard({
           {expanded ? <ChevronUp className="h-4 w-4 text-muted-foreground" /> : <ChevronDown className="h-4 w-4 text-muted-foreground" />}
         </button>
 
-        {/* Lista de Contatos Expandível - Dark */}
+        {/* Lista de Contatos Expandível */}
         {expanded && (
           <div className="mt-3 space-y-1.5 max-h-96 overflow-y-auto" key={`contacts-${campaign.id}-${contactsList.length}`}>
             {contactsList.length === 0 ? (

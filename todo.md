@@ -389,3 +389,10 @@
 - [x] Diagnosticar por que campanhas estão pulando horas (restoreAndResume não reagendava)
 - [x] Corrigir para garantir 5 envios por hora (1 por campanha) - reagenda após restart
 - [x] Relatório duplicado na mesma hora - corrigido com controle de restart
+
+## Corrigir UI Campanhas: remover lógica de pares (07/04/2026)
+- [x] Remover seção "Rotação de Pares" da interface
+- [x] Mostrar 5 campanhas independentes com status individual (verde=enviou, amarelo=pendente)
+- [x] Corrigir display: "Hora X/12" em vez de "Ciclo X | Par X de 3"
+- [x] Mostrar "Msgs nesta hora: X/5" corretamente
+- [x] Atualizar endpoint getStatus para retornar dados sem pares
