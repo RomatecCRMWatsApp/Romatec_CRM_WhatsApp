@@ -375,3 +375,7 @@
 - [x] Ciclo contínuo entre as 5 campanhas
 - [x] Verificação a cada 1 minuto
 - [x] Nunca enviar 2 mensagens na mesma hora para a mesma campanha
+
+## Inserir vídeo no Chácaras Giuliano (07/04/2026)
+- [x] Upload do vídeo para CDN via manus-upload-file
+- [x] Inserir vídeo na página do imóvel Chácaras Giuliano (videoUrl atualizado no banco)
