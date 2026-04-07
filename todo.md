@@ -448,3 +448,6 @@
 - [x] Gráfico barras horizontais: Performance por campanha
 - [x] Cards detalhados por campanha com barra de progresso e status ATIVA/PAUSADA
 - [x] Atualização automática a cada 30 segundos
+
+## Bug: NotFoundError insertBefore no Dashboard publicado (07/04/2026)
+- [x] Corrigir erro "NotFoundError: insertBefore" no Dashboard causado pelos gráficos Recharts
