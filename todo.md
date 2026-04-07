@@ -243,3 +243,10 @@
 - [x] Linha 1: "Romatec CRM" (título grande)
 - [x] Linha 2: "Customer Relationship Management" (subtítulo)
 - [x] Linha 3: "CEO José Romário P Bezerra" (menor, embaixo)
+
+## PWA - Progressive Web App (07/04/2026)
+- [x] Criar manifest.json com nome, ícones, cores da Romatec
+- [x] Criar service worker para cache offline
+- [x] Adicionar meta tags PWA no index.html (iOS e Android)
+- [x] Gerar ícones PWA em 9 tamanhos (72-512px + apple-touch-icon)
+- [x] Registrar service worker no main.tsx
