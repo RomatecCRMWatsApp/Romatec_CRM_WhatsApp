@@ -400,3 +400,25 @@
 ## Bug: "Próxima hora" mostra horário errado (07/04/2026)
 - [x] Corrigir cálculo de nextCycleFormatted - deve mostrar a próxima hora cheia (15:00, 16:00, etc.)
 - [x] Corrigir secondsUntilNextCycle - deve ser segundos até a próxima hora cheia
+
+## Instalação Local + GitHub (07/04/2026)
+- [ ] Preparar projeto para execução local (ajustar configs, scripts de setup, .env.example)
+- [ ] Criar guia de instalação detalhado passo a passo (INSTALL_LOCAL.md)
+- [ ] Exportar código para GitHub
+- [ ] Entregar guia e instruções ao usuário
+
+## Bug: Envio excessivo de mensagens por ciclo (07/04/2026)
+- [x] BUG: No 2º ciclo, campanhas enviaram 15-16 msgs em vez de 10 (5 camp × 2 horas = 10)
+- [x] Investigar: sentCount no banco não reseta entre ciclos? Ou scheduler agenda envios duplicados?
+- [x] Corrigir lógica para garantir EXATAMENTE 1 msg/campanha/hora sem exceção
+- [x] Corrigir preços invertidos no bot-ai.ts vs banco de dados
+
+## URGENTE: Números dos especialistas errados no bot (07/04/2026)
+- [x] Corrigir DDD dos especialistas no bot: 75 → 99 (José Romário: 5599991811246, Daniele: 5599992062871)
+
+## Melhorias Bot + Correções (07/04/2026)
+- [x] Implementar sistema de intenções estruturado (SAUDACAO, PRECO, INTERESSE, LOCALIZACAO, FOTOS, AGENDAMENTO, FINANCIAMENTO, OBJECAO, CONFIRMACAO, DUVIDA, DESPEDIDA)
+- [x] Implementar follow-up automático em 3 etapas (30min, 2h, 24h) quando cliente não responde
+- [x] Regras follow-up: parar se cliente responder, máximo 3 follow-ups, resetar se responder
+- [x] Corrigir bug envio excessivo scheduler (AUTO-RESTART duplica envios - verificar msgs no banco antes de reagendar)
+- [x] Corrigir preços invertidos no bot-ai.ts (ALACIDE, Mod_Vaz-01, Mod_Vaz-02, Mod_Vaz-03)

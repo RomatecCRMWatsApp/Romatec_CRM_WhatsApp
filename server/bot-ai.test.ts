@@ -42,6 +42,7 @@ describe('Bot AI - Simulação de Financiamento', () => {
 describe('Bot AI - Recomendação de Imóveis', () => {
   it('deve recomendar imóveis dentro do orçamento', () => {
     const recs = recommendProperties(260000);
+    // Chácaras Giuliano (160k), Mod Vaz 03 (210k), Mod Vaz 02 (250k) = 3 imóveis
     expect(recs.length).toBeGreaterThanOrEqual(2);
     expect(recs.every(p => p.value <= 260000 * 1.15)).toBe(true);
   });
@@ -53,18 +54,46 @@ describe('Bot AI - Recomendação de Imóveis', () => {
 
   it('deve retornar todos para orçamento alto', () => {
     const recs = recommendProperties(500000);
-    expect(recs).toHaveLength(4);
+    // 5 imóveis: Giuliano 160k, Mod Vaz 03 210k, Mod Vaz 02 250k, Mod Vaz 01 300k, Alacide 380k
+    expect(recs).toHaveLength(5);
   });
 
   it('deve formatar recomendações para WhatsApp', () => {
-    const msg = formatRecommendationsWhatsApp(300000);
+    // Orçamento 350k: Giuliano 160k, Mod Vaz 03 210k, Mod Vaz 02 250k, Mod Vaz 01 300k
+    const msg = formatRecommendationsWhatsApp(350000);
     expect(msg).toContain('IMÓVEIS DENTRO DO SEU ORÇAMENTO');
-    expect(msg).toContain('Alacide');
+    expect(msg).toContain('Mod Vaz');
     expect(msg).toContain('/imovel/');
   });
 
   it('deve mostrar mensagem para orçamento baixo', () => {
     const msg = formatRecommendationsWhatsApp(50000);
-    expect(msg).toContain('210.000');
+    // Menor imóvel agora é Chácaras Giuliano a R$ 160.000
+    expect(msg).toContain('160.000');
+  });
+});
+
+describe('Bot AI - Preços corretos (conforme banco)', () => {
+  it('deve ter os preços corretos dos imóveis', () => {
+    // Verificar que os preços estão alinhados com o banco de dados
+    const recs = recommendProperties(1000000); // Pegar todos
+    const giuliano = recs.find(p => p.slug === 'cond-chacaras-giuliano');
+    const modVaz03 = recs.find(p => p.slug === 'mod-vaz-03');
+    const modVaz02 = recs.find(p => p.slug === 'mod-vaz-02');
+    const modVaz01 = recs.find(p => p.slug === 'mod-vaz-01');
+    const alacide = recs.find(p => p.slug === 'alacide');
+
+    expect(giuliano?.value).toBe(160000);
+    expect(modVaz03?.value).toBe(210000);
+    expect(modVaz02?.value).toBe(250000);
+    expect(modVaz01?.value).toBe(300000);
+    expect(alacide?.value).toBe(380000);
+  });
+
+  it('deve ordenar imóveis por preço crescente', () => {
+    const recs = recommendProperties(1000000);
+    for (let i = 1; i < recs.length; i++) {
+      expect(recs[i].value).toBeGreaterThanOrEqual(recs[i - 1].value);
+    }
   });
 });

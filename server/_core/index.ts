@@ -40,7 +40,7 @@ async function startServer() {
   app.post('/api/webhook/zapi', async (req, res) => {
     try {
       const { parseWebhookPayload } = await import('../zapi-integration');
-      const { processBotMessage } = await import('../bot-ai');
+      const { processBotMessage, registerBotMessage } = await import('../bot-ai');
       const { sendMessageViaZAPI } = await import('../zapi-integration');
       const payload = parseWebhookPayload(req.body);
 
@@ -105,6 +105,8 @@ async function startServer() {
             });
 
             if (sendResult.success) {
+              // Registrar para follow-up automático
+              registerBotMessage(payload.phone, senderName);
               console.log(`[Bot] ✅ Resposta enviada para ${senderName} (${payload.phone})`);
             } else {
               console.error(`[Bot] ❌ Falha ao enviar para ${senderName}: ${sendResult.error}`);

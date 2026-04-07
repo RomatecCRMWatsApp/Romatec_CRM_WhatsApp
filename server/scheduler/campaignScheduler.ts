@@ -1,9 +1,10 @@
 import { getDb } from "../db";
 import { campaigns, contacts, messages, campaignContacts, contactCampaignHistory, properties, schedulerState as schedulerStateTable } from "../../drizzle/schema";
-import { eq, and, isNull, or, lte } from "drizzle-orm";
+import { eq, and, isNull, or, lte, gte, sql } from "drizzle-orm";
+import { registerBotMessage, getFollowUpsToSend, cleanupOldFollowUps } from "../bot-ai";
 
 /**
- * SISTEMA RESTRITIVO DE CAMPANHAS v6.0 - CICLO 12H
+   * SISTEMA RESTRITIVO DE CAMPANHAS v7.0 - CICLO 12H + FOLLOW-UP
  * 
  * REGRA PRINCIPAL: Cada campanha envia APENAS 1 mensagem por hora.
  * 
@@ -71,6 +72,9 @@ class CampaignScheduler {
 
   // Rastrear última variação usada por campanha
   private lastVariationIndex: Map<number, number> = new Map();
+
+  // Timer do follow-up automático
+  private followUpTimer: NodeJS.Timeout | null = null;
 
   // ========== CONTROLE DE HORA ==========
 
@@ -200,6 +204,7 @@ class CampaignScheduler {
       }
 
       this.startCheckLoop();
+      this.startFollowUpLoop();
       await this.saveStateToDB();
     } catch (error) {
       console.error('❌ Erro ao restaurar estado:', error);
@@ -245,6 +250,7 @@ class CampaignScheduler {
     
     // Iniciar loop de verificação
     this.startCheckLoop();
+    this.startFollowUpLoop();
     
     await this.saveStateToDB();
   }
@@ -271,6 +277,12 @@ class CampaignScheduler {
 
     this.state.scheduledSlots = [];
     this.lastVariationIndex.clear();
+
+    // Parar follow-up timer
+    if (this.followUpTimer) {
+      clearInterval(this.followUpTimer);
+      this.followUpTimer = null;
+    }
 
     console.log("⏹️ Scheduler COMPLETAMENTE parado");
     this.saveStateToDB().catch(e => console.error('Erro ao salvar estado no stop:', e));
@@ -353,6 +365,7 @@ class CampaignScheduler {
 
   /**
    * Inicializa estados das campanhas ativas
+   * CORREÇÃO v7: verifica mensagens REAIS no banco para evitar duplicatas após restart
    */
   private async initCampaignStates() {
     const db = await getDb();
@@ -361,30 +374,54 @@ class CampaignScheduler {
     const runningCampaigns = await db.select().from(campaigns).where(eq(campaigns.status, "running"));
     const currentHour = this.getCurrentHourKey();
 
+    // Calcular início da hora atual para verificar no banco
+    const now = new Date();
+    const hourStart = new Date(now.getFullYear(), now.getMonth(), now.getDate(), now.getHours(), 0, 0);
+
     // Preservar estados existentes, adicionar novos
     const newStates: CampaignHourState[] = [];
     
     for (const camp of runningCampaigns) {
       const existing = this.state.campaignStates.find(cs => cs.campaignId === camp.id);
+      
+      // VERIFICAÇÃO NO BANCO: checar se já enviou nesta hora
+      const sentInDb = await db.select({ count: sql<number>`count(*)` })
+        .from(messages)
+        .where(and(
+          eq(messages.campaignId, camp.id),
+          eq(messages.status, 'sent'),
+          gte(messages.sentAt, hourStart)
+        ));
+      const alreadySentInDb = (sentInDb[0]?.count || 0) > 0;
+
       if (existing) {
-        // Preservar se mesma hora, resetar se hora diferente
+        const sentFromState = existing.lastSentHourKey === currentHour ? existing.sentThisHour : false;
+        // Usar OR: se o estado OU o banco dizem que já enviou, marcar como enviado
+        const sentThisHour = sentFromState || alreadySentInDb;
+        if (alreadySentInDb && !sentFromState) {
+          console.log(`🔍 ${camp.name}: banco confirma envio nesta hora (estado não sabia)`);
+        }
         newStates.push({
           ...existing,
           campaignName: camp.name,
-          sentThisHour: existing.lastSentHourKey === currentHour ? existing.sentThisHour : false,
+          sentThisHour,
+          lastSentHourKey: sentThisHour ? currentHour : existing.lastSentHourKey,
         });
       } else {
+        if (alreadySentInDb) {
+          console.log(`🔍 ${camp.name}: banco confirma envio nesta hora (campanha nova no estado)`);
+        }
         newStates.push({
           campaignId: camp.id,
           campaignName: camp.name,
-          sentThisHour: false,
-          lastSentHourKey: null,
+          sentThisHour: alreadySentInDb,
+          lastSentHourKey: alreadySentInDb ? currentHour : null,
         });
       }
     }
 
     this.state.campaignStates = newStates;
-    console.log(`📋 ${newStates.length} campanhas ativas | ${newStates.filter(c => c.sentThisHour).length} já enviaram nesta hora`);
+    console.log(`📋 ${newStates.length} campanhas ativas | ${newStates.filter(c => c.sentThisHour).length} já enviaram nesta hora (verificado no banco)`);
   }
 
   /**
@@ -467,15 +504,32 @@ class CampaignScheduler {
       const timer = setTimeout(async () => {
         if (!this.state.isRunning) return;
 
-        // VERIFICAÇÃO DUPLA: checar flag antes de enviar
+        // VERIFICAÇÃO TRIPLA v7: checar flag + banco antes de enviar
         const campState = this.state.campaignStates.find(c => c.campaignId === cs.campaignId);
         if (!campState || campState.sentThisHour) {
-          console.log(`🛑 ${cs.campaignName}: já enviou nesta hora, pulando`);
+          console.log(`🛑 ${cs.campaignName}: já enviou nesta hora (flag), pulando`);
           return;
         }
 
         const db = await getDb();
         if (!db) return;
+
+        // VERIFICAÇÃO NO BANCO: última linha de defesa contra duplicatas
+        const hourStart = new Date();
+        hourStart.setMinutes(0, 0, 0);
+        const sentInDb = await db.select({ count: sql<number>`count(*)` })
+          .from(messages)
+          .where(and(
+            eq(messages.campaignId, cs.campaignId),
+            eq(messages.status, 'sent'),
+            gte(messages.sentAt, hourStart)
+          ));
+        if ((sentInDb[0]?.count || 0) > 0) {
+          console.log(`🛑 ${cs.campaignName}: banco confirma envio nesta hora, BLOQUEANDO duplicata`);
+          campState.sentThisHour = true;
+          campState.lastSentHourKey = this.getCurrentHourKey();
+          return;
+        }
 
         const campResult = await db.select().from(campaigns).where(eq(campaigns.id, cs.campaignId)).limit(1);
         const campaign = campResult[0];
@@ -733,6 +787,9 @@ class CampaignScheduler {
         this.state.totalSent++;
         this.state.lastSentCampaignName = campaign.name;
         this.state.lastSentAt = Date.now();
+
+        // Registrar para follow-up automático
+        registerBotMessage(contact.phone, contact.name);
 
         console.log(`✅ Enviado para ${contact.phone} (${contact.name}) - ${campaign.name}`);
       } else {
@@ -1037,6 +1094,51 @@ class CampaignScheduler {
         campaigns: this.state.campaignStates.map(c => c.campaignName),
       },
     };
+  }
+
+  // ========== FOLLOW-UP AUTOMÁTICO ==========
+
+  /**
+   * Inicia loop de verificação de follow-ups (a cada 5 min)
+   */
+  private startFollowUpLoop() {
+    if (this.followUpTimer) {
+      clearInterval(this.followUpTimer);
+    }
+
+    this.followUpTimer = setInterval(async () => {
+      if (!this.state.isRunning) return;
+      await this.processFollowUps();
+    }, 5 * 60 * 1000); // Verificar a cada 5 minutos
+  }
+
+  /**
+   * Processa e envia follow-ups pendentes
+   */
+  private async processFollowUps() {
+    try {
+      const followUps = getFollowUpsToSend();
+      if (followUps.length === 0) return;
+
+      console.log(`📤 [Follow-up] ${followUps.length} mensagens de acompanhamento para enviar`);
+
+      for (const fu of followUps) {
+        // Esperar 30s entre follow-ups para não parecer spam
+        await new Promise(resolve => setTimeout(resolve, 30000));
+        
+        const result = await this.sendViaZAPI(fu.phone, fu.message);
+        if (result === 'sent') {
+          console.log(`✅ [Follow-up] Etapa ${fu.step}/3 enviada para ${fu.phone}`);
+        } else {
+          console.log(`❌ [Follow-up] Falha ao enviar etapa ${fu.step} para ${fu.phone}`);
+        }
+      }
+
+      // Limpar follow-ups antigos
+      cleanupOldFollowUps();
+    } catch (error) {
+      console.error('❌ [Follow-up] Erro:', error);
+    }
   }
 
   getStats() {
