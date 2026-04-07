@@ -1,5 +1,5 @@
 import { getDb } from "../db";
-import { campaigns, contacts, messages, campaignContacts, contactCampaignHistory, properties } from "../../drizzle/schema";
+import { campaigns, contacts, messages, campaignContacts, contactCampaignHistory, properties, schedulerState as schedulerStateTable } from "../../drizzle/schema";
 import { eq, and, isNull, or, lte } from "drizzle-orm";
 
 /**
@@ -86,6 +86,133 @@ class CampaignScheduler {
   // Rastrear última variação usada por campanha
   private lastVariationIndex: Map<number, number> = new Map();
 
+  // ========== PERSISTÊNCIA NO BANCO ==========
+
+  /**
+   * Salva estado atual no banco (chamado a cada mudança importante)
+   */
+  async saveStateToDB() {
+    try {
+      const db = await getDb();
+      if (!db) return;
+
+      const status = this.state.isRunning ? 'running' : 'stopped';
+      const stateJson = {
+        totalSent: this.state.totalSent,
+        totalFailed: this.state.totalFailed,
+        totalBlocked: this.state.totalBlocked,
+        totalPairs: this.state.totalPairs,
+        currentCampaignNames: this.state.currentCampaignNames,
+        maxMessagesThisCycle: this.state.maxMessagesThisCycle,
+        scheduledSlots: this.state.scheduledSlots,
+        lastSentCampaignName: this.state.lastSentCampaignName,
+        lastSentAt: this.state.lastSentAt,
+      };
+
+      const dataToSave = {
+        status: status as 'stopped' | 'running' | 'paused',
+        currentPairIndex: this.state.currentPairIndex,
+        cycleNumber: this.state.cycleNumber,
+        messagesThisCycle: this.state.messagesThisCycle,
+        startedAt: this.state.startedAt ? new Date(this.state.startedAt) : null,
+        cycleStartedAt: this.state.cycleStartTime ? new Date(this.state.cycleStartTime) : null,
+        stateJson,
+      };
+
+      // Upsert: tentar update primeiro, se não existir, inserir
+      const rows = await db.select().from(schedulerStateTable).where(eq(schedulerStateTable.id, 1)).limit(1);
+      if (rows.length === 0) {
+        await db.insert(schedulerStateTable).values({ id: 1, ...dataToSave });
+        console.log(`💾 Estado CRIADO no banco: ${status} | Ciclo ${this.state.cycleNumber + 1} | Par ${this.state.currentPairIndex + 1}`);
+      } else {
+        await db.update(schedulerStateTable).set(dataToSave).where(eq(schedulerStateTable.id, 1));
+        console.log(`💾 Estado salvo no banco: ${status} | Ciclo ${this.state.cycleNumber + 1} | Par ${this.state.currentPairIndex + 1}`);
+      }
+    } catch (error) {
+      console.error('❌ Erro ao salvar estado:', error);
+    }
+  }
+
+  /**
+   * Restaura estado do banco e retoma se estava rodando
+   * Chamado automaticamente no boot do servidor
+   */
+  async restoreAndResume() {
+    try {
+      const db = await getDb();
+      if (!db) return;
+
+      const rows = await db.select().from(schedulerStateTable).where(eq(schedulerStateTable.id, 1)).limit(1);
+      const saved = rows[0];
+
+      if (!saved) {
+        console.log('📋 Nenhum estado salvo encontrado - scheduler parado');
+        return;
+      }
+
+      if (saved.status !== 'running') {
+        console.log(`📋 Estado salvo: ${saved.status} - scheduler permanece parado`);
+        return;
+      }
+
+      // Estava rodando! Restaurar e retomar
+      console.log('🔄 AUTO-RESTART: Scheduler estava rodando antes do deploy!');
+      console.log(`📋 Restaurando: Ciclo ${saved.cycleNumber + 1} | Par ${saved.currentPairIndex + 1}`);
+
+      const stateJson = (saved.stateJson || {}) as Record<string, any>;
+
+      // Restaurar contadores acumulados
+      this.state.totalSent = stateJson.totalSent || 0;
+      this.state.totalFailed = stateJson.totalFailed || 0;
+      this.state.totalBlocked = stateJson.totalBlocked || 0;
+      this.state.totalPairs = stateJson.totalPairs || 0;
+      this.state.currentCampaignNames = stateJson.currentCampaignNames || [];
+
+      // Iniciar um NOVO ciclo (não tentar retomar o ciclo antigo, pois os timers se perderam)
+      // Mas manter o cycleNumber e pairIndex para continuar de onde parou
+      this.state.cycleNumber = saved.cycleNumber;
+      this.state.currentPairIndex = saved.currentPairIndex;
+
+      // Iniciar como se fosse um novo start, mas preservando contadores
+      const preservedSent = this.state.totalSent;
+      const preservedFailed = this.state.totalFailed;
+      const preservedBlocked = this.state.totalBlocked;
+      const preservedCycle = this.state.cycleNumber;
+
+      await this.syncCampaignsWithProperties();
+
+      const now = Date.now();
+      this.state.isRunning = true;
+      this.state.cycleStartTime = now;
+      this.state.startedAt = saved.startedAt ? saved.startedAt.getTime() : now;
+      this.state.messagesThisCycle = 0;
+      this.state.maxMessagesThisCycle = 0;
+      this.state.lastMessageSentAt = 0;
+      this.state.scheduledSlots = [];
+      this.state.lastSentCampaignName = '';
+      this.state.lastSentAt = 0;
+
+      // Restaurar contadores preservados
+      this.state.totalSent = preservedSent;
+      this.state.totalFailed = preservedFailed;
+      this.state.totalBlocked = preservedBlocked;
+      this.state.cycleNumber = preservedCycle;
+
+      this.lastVariationIndex.clear();
+
+      console.log('✅ AUTO-RESTART completo! Iniciando novo ciclo...');
+      console.log(`📊 Contadores restaurados: ${preservedSent} enviadas, ${preservedFailed} falhas`);
+
+      await this.executeCycle();
+      this.scheduleNextCycle();
+      await this.saveStateToDB();
+    } catch (error) {
+      console.error('❌ Erro ao restaurar estado:', error);
+    }
+  }
+
+  // ========== FIM PERSISTÊNCIA ==========
+
   /**
    * Inicia o scheduler
    */
@@ -121,6 +248,7 @@ class CampaignScheduler {
 
     await this.executeCycle();
     this.scheduleNextCycle();
+    await this.saveStateToDB();
   }
 
   /**
@@ -152,6 +280,7 @@ class CampaignScheduler {
     this.lastVariationIndex.clear();
 
     console.log("⏹️ Scheduler COMPLETAMENTE parado");
+    this.saveStateToDB().catch(e => console.error('Erro ao salvar estado no stop:', e));
   }
 
   /**
@@ -569,6 +698,7 @@ class CampaignScheduler {
         this.state.lastSentAt = Date.now();
 
         console.log(`✅ [${this.state.messagesThisCycle}/${this.state.maxMessagesThisCycle}] Enviado para ${contact.phone} (${contact.name}) - ${campaign.name}`);
+        this.saveStateToDB().catch(e => console.error('Erro ao salvar estado após envio:', e));
       } else {
         await db.update(campaignContacts)
           .set({ status: "failed" })
@@ -584,6 +714,7 @@ class CampaignScheduler {
         this.state.messagesThisCycle++;
         this.state.totalFailed++;
         console.error(`❌ Falha ao enviar para ${contact.phone}`);
+        this.saveStateToDB().catch(e => console.error('Erro ao salvar estado após falha:', e));
       }
     } catch (error) {
       console.error("❌ Erro no envio:", error);
@@ -868,6 +999,7 @@ class CampaignScheduler {
 
       await this.executeCycle();
       this.scheduleNextCycle();
+      await this.saveStateToDB();
     }, remaining);
   }
 

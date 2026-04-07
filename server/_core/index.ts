@@ -134,8 +134,17 @@ async function startServer() {
     console.log(`Port ${preferredPort} is busy, using port ${port} instead`);
   }
 
-  server.listen(port, () => {
+  server.listen(port, async () => {
     console.log(`Server running on http://localhost:${port}/`);
+
+    // AUTO-RESTART: Verificar se o scheduler estava rodando antes do deploy
+    try {
+      const { campaignScheduler } = await import('../scheduler/campaignScheduler');
+      console.log('\n🔍 Verificando estado do scheduler no banco...');
+      await campaignScheduler.restoreAndResume();
+    } catch (error) {
+      console.error('❌ Erro no auto-restart do scheduler:', error);
+    }
   });
 }
 

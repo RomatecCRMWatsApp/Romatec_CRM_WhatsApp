@@ -250,3 +250,16 @@
 - [x] Adicionar meta tags PWA no index.html (iOS e Android)
 - [x] Gerar ícones PWA em 9 tamanhos (72-512px + apple-touch-icon)
 - [x] Registrar service worker no main.tsx
+
+## Bug: Ícone PWA não aparece na tela inicial (07/04/2026)
+- [x] Corrigir apple-touch-icon para iOS (caminho local /apple-touch-icon.png)
+- [x] Garantir ícones acessíveis no manifest.json (192 e 512 locais)
+- [x] Copiar ícones para client/public/ para iOS encontrar automaticamente
+
+## Persistência do Scheduler + Auto-Restart (07/04/2026)
+- [x] Criar tabela schedulerState no banco (status, currentPairIndex, cycleNumber, startedAt, stateJson)
+- [x] Salvar estado no banco a cada mudança (start, stop, ciclo, envio)
+- [x] Restaurar estado do banco ao iniciar o servidor (restoreAndResume)
+- [x] Auto-restart: se status era 'running', reiniciar scheduler automaticamente após deploy
+- [x] Campanhas não param mais ao republicar
+- [x] 97 testes passando

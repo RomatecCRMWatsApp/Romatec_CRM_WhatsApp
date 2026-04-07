@@ -216,3 +216,19 @@ export const dailyReports = mysqlTable("dailyReports", {
 
 export type DailyReport = typeof dailyReports.$inferSelect;
 export type InsertDailyReport = typeof dailyReports.$inferInsert;
+
+// Tabela de Estado do Scheduler (persistência para auto-restart)
+export const schedulerState = mysqlTable("schedulerState", {
+  id: int("id").autoincrement().primaryKey(),
+  status: mysqlEnum("status", ["stopped", "running", "paused"]).default("stopped").notNull(),
+  currentPairIndex: int("currentPairIndex").default(0).notNull(),
+  cycleNumber: int("cycleNumber").default(0).notNull(),
+  messagesThisCycle: int("messagesThisCycle").default(0).notNull(),
+  startedAt: timestamp("startedAt"),
+  cycleStartedAt: timestamp("cycleStartedAt"),
+  stateJson: json("stateJson").$type<Record<string, any>>(), // dados extras (slots, campanhas enviadas, etc)
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+});
+
+export type SchedulerState = typeof schedulerState.$inferSelect;
+export type InsertSchedulerState = typeof schedulerState.$inferInsert;

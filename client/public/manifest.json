@@ -34,7 +34,7 @@
       "type": "image/png"
     },
     {
-      "src": "https://d2xsxph8kpxj0f.cloudfront.net/310519663438352331/2uYgCCZRKgbanKmmzr4z87/icon-192x192_7c2cfe20.png",
+      "src": "/icon-192x192.png",
       "sizes": "192x192",
       "type": "image/png",
       "purpose": "any maskable"
@@ -45,7 +45,7 @@
       "type": "image/png"
     },
     {
-      "src": "https://d2xsxph8kpxj0f.cloudfront.net/310519663438352331/2uYgCCZRKgbanKmmzr4z87/icon-512x512_1f96d005.png",
+      "src": "/icon-512x512.png",
       "sizes": "512x512",
       "type": "image/png",
       "purpose": "any maskable"
