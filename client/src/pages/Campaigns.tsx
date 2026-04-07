@@ -197,7 +197,7 @@ export default function Campaigns() {
             <div>
               <h1 className="text-2xl md:text-3xl font-bold flex items-center gap-3 text-white">
                 <Send className="h-7 w-7 text-emerald-400" />
-                <span>Campanhas WhatsApp</span>
+                <span>Romatec CRM Campanhas WhatsApp</span>
               </h1>
               <p className="text-emerald-300/70 text-sm mt-1">
                 msgs/hora configurável por campanha | Ciclo 24h/dia, 7 dias/semana

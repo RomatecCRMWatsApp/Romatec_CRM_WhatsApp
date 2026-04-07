@@ -232,3 +232,6 @@
 - [x] Enviar relatório via Z-API para (99) 99181-1246 a cada fim de ciclo
 - [x] Relatório com: campanha, msgs enviadas, falhas, contatos pendentes, próximo ciclo
 - [x] Formato texto limpo para WhatsApp
+
+## Alterar título header Campanhas (07/04/2026)
+- [x] Mudar "Campanhas WhatsApp" para "Romatec CRM Campanhas WhatsApp"
