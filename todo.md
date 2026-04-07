@@ -314,3 +314,8 @@
 - [x] Investigar 3+ falhas: números inválidos (12, 13, 15 dígitos) causando erro 400 Z-API
 - [x] Validar formato de telefone antes de enviar (55+DDD+9+8dígitos = 13 dígitos)
 - [x] Pular números inválidos sem contar como falha (marcar como "invalid")
+
+## Limpeza de Contatos Inválidos (07/04/2026)
+- [x] Analisar base de 2.544 contatos: identificar números inválidos (!=13 dígitos ou 5º dígito !=9)
+- [x] Remover contatos com números inválidos do banco (1.105 removidos)
+- [x] Reportar quantos foram removidos e quantos válidos restaram (1.439 válidos)
