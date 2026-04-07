@@ -303,3 +303,14 @@
 - [x] Testes de integração com Z-API (receber/responder mensagens)
 - [x] Testes com áudio (transcrição + resposta)
 - [x] Testes de simulação (cálculos corretos, taxas reais) — 108 testes passando
+
+## Ajustes Ciclo + Bot Parcelas (07/04/2026)
+- [x] Ciclo fixo 24h: scheduler sempre roda 24 ciclos (1 ciclo = 1 hora, 24 ciclos = 1 dia)
+- [x] Ao final de 24h encerra ciclo e inicia novo automaticamente
+- [x] Estatísticas por ciclo diário (envios, cliques, interações, leads qualificados)
+- [x] Bot envia parcelas simples no WhatsApp: 240x (20 anos) e 300x (25 anos) com Caixa
+- [x] Remover página de simulador web (desnecessário) — não foi criada
+- [x] Não criar simulador interativo — foco é captar e vender
+- [x] Investigar 3+ falhas: números inválidos (12, 13, 15 dígitos) causando erro 400 Z-API
+- [x] Validar formato de telefone antes de enviar (55+DDD+9+8dígitos = 13 dígitos)
+- [x] Pular números inválidos sem contar como falha (marcar como "invalid")

@@ -2,27 +2,21 @@ import { getDb } from "../db";
 import { campaigns, contacts, messages, campaignContacts, contactCampaignHistory, properties, schedulerState as schedulerStateTable } from "../../drizzle/schema";
 import { eq, and, isNull, or, lte } from "drizzle-orm";
 
-/**
- * SISTEMA DINÂMICO DE CAMPANHAS v4.0 - msgs/hora CONFIGURÁVEL
- * 
- * REGRAS:
- * 1. Cada campanha tem seu próprio messagesPerHour (1-10, padrão 2)
- * 2. No ciclo de 60 min, o par ativo envia: camp1.messagesPerHour + camp2.messagesPerHour msgs
- * 3. As msgs são distribuídas em SLOTS ALEATÓRIOS dentro dos 60 min
- * 4. Mínimo 3 min entre msgs (segurança anti-ban)
- * 5. Rotação de pares: Par 1 → Par 2 → Par 1...
- * 6. Contatos por campanha = messagesPerHour × 12 (1mph=12, 2mph=24, 3mph=36...)
- * 7. Bloqueio de 72h por contato após envio
- * 8. Ciclo de 60 min começa quando clica PLAY
- * 
- * EXEMPLO:
- * - ALACIDE: messagesPerHour = 3 → 36 contatos (3×12) → 12 horas para completar
- * - Mod_Vaz-01: messagesPerHour = 2 → 24 contatos (2×12) → 12 horas para completar
- * - Total no ciclo: 5 msgs distribuídas aleatoriamente em 60 min
- * - msgs/hora é LIMITADO automaticamente pelos contatos pendentes
- * - NUNCA envia 2 msgs para o mesmo contato
- * - Ciclo completo = SEMPRE 12 horas (totalContacts / messagesPerHour = 12)
- */
+  /**
+   * SISTEMA DINÂMICO DE CAMPANHAS v5.0 - CICLO DIÁRIO 24H
+   * 
+   * REGRAS:
+   * 1. Cada campanha tem seu próprio messagesPerHour (1-10, padrão 2)
+   * 2. No ciclo de 60 min, o par ativo envia: camp1.messagesPerHour + camp2.messagesPerHour msgs
+   * 3. As msgs são distribuídas em SLOTS ALEATÓRIOS dentro dos 60 min
+   * 4. Mínimo 3 min entre msgs (segurança anti-ban)
+   * 5. Rotação de pares: Par 1 → Par 2 → Par 1...
+   * 6. Contatos por campanha = messagesPerHour × 24 (1mph=24, 2mph=48, 3mph=72...)
+   * 7. Bloqueio de 72h por contato após envio
+   * 8. Ciclo de 60 min começa quando clica PLAY
+   * 9. CICLO DIÁRIO = 24 ciclos (24 horas). Ao final, encerra e inicia novo dia.
+   * 10. Números inválidos são pulados sem contar como falha.
+   */
 
 interface MessageSlot {
   campaignId: number;
@@ -81,6 +75,7 @@ class CampaignScheduler {
   private readonly CYCLE_DURATION_MS = 60 * 60 * 1000; // 60 minutos
   private readonly MIN_GAP_MS = 3 * 60 * 1000; // mínimo 3 min entre msgs (segurança)
   private readonly MARGIN_MS = 2 * 60 * 1000; // margem de 2 min no início e fim do ciclo
+  private readonly MAX_CYCLES_PER_DAY = 24; // 24 ciclos = 1 dia completo
   // ====================================
 
   // Rastrear última variação usada por campanha
@@ -661,9 +656,22 @@ class CampaignScheduler {
 
       const messageText = this.personalizeMessage(rawMessage, contact);
 
-      const success = await this.sendViaZAPI(contact.phone, messageText);
+      const sendResult = await this.sendViaZAPI(contact.phone, messageText);
 
-      if (success) {
+      // Número inválido: pular sem contar como falha
+      if (sendResult === 'invalid') {
+        await db.update(campaignContacts)
+          .set({ status: "failed" })
+          .where(and(
+            eq(campaignContacts.campaignId, campaign.id),
+            eq(campaignContacts.contactId, contact.id)
+          ));
+        console.log(`⚠️ Número inválido ${contact.phone} - pulado (não conta como falha de envio)`);
+        this.isSending = false;
+        return;
+      }
+
+      if (sendResult === 'sent') {
         await db.insert(messages).values({
           campaignId: campaign.id,
           contactId: contact.id,
@@ -713,7 +721,7 @@ class CampaignScheduler {
 
         this.state.messagesThisCycle++;
         this.state.totalFailed++;
-        console.error(`❌ Falha ao enviar para ${contact.phone}`);
+        console.error(`❌ Falha ao enviar para ${contact.phone} (erro de rede/API)`);
         this.saveStateToDB().catch(e => console.error('Erro ao salvar estado após falha:', e));
       }
     } catch (error) {
@@ -828,14 +836,15 @@ class CampaignScheduler {
   /**
    * Envia mensagem via Z-API
    */
-  private async sendViaZAPI(phone: string, message: string): Promise<boolean> {
+  private async sendViaZAPI(phone: string, message: string): Promise<'sent' | 'failed' | 'invalid'> {
     try {
       const cleanPhone = phone.replace(/\D/g, '');
       const formattedPhone = cleanPhone.startsWith('55') ? cleanPhone : `55${cleanPhone}`;
 
-      if (formattedPhone.length < 12) {
-        console.error(`❌ Telefone muito curto (${formattedPhone.length} dígitos): ${phone}`);
-        return false;
+      // Validação estrita: celular BR = 13 dígitos, 5º dígito = 9
+      if (formattedPhone.length !== 13 || formattedPhone[4] !== '9') {
+        console.warn(`⚠️ Número inválido (${formattedPhone.length}d): ${phone} → pulando`);
+        return 'invalid';
       }
 
       const { getCompanyConfig } = await import("../db");
@@ -851,14 +860,14 @@ class CampaignScheduler {
           message,
         });
         console.log(`📨 [Z-API] ${phone}: ${result.success ? "✅" : "❌"}`);
-        return result.success;
+        return result.success ? 'sent' : 'failed';
       } else {
         console.log(`📨 [SIMULADO] ${phone}: "${message.substring(0, 50)}..."`);
-        return true;
+        return 'sent';
       }
     } catch (error) {
       console.error("❌ Erro Z-API:", error);
-      return false;
+      return 'failed';
     }
   }
 
@@ -966,6 +975,7 @@ class CampaignScheduler {
 
   /**
    * Agenda próximo ciclo em EXATAMENTE 60 minutos
+   * Após 24 ciclos (1 dia), encerra e inicia novo dia automaticamente
    */
   private scheduleNextCycle() {
     if (!this.state.isRunning) return;
@@ -973,12 +983,12 @@ class CampaignScheduler {
     const elapsed = Date.now() - this.state.cycleStartTime;
     const remaining = Math.max(0, this.CYCLE_DURATION_MS - elapsed);
 
-    console.log(`⏳ Próximo ciclo em ${Math.round(remaining / 60000)} minutos`);
+    console.log(`⏳ Próximo ciclo em ${Math.round(remaining / 60000)} minutos (Ciclo ${this.state.cycleNumber + 1}/${this.MAX_CYCLES_PER_DAY})`);
 
     this.cycleTimer = setTimeout(async () => {
       if (!this.state.isRunning) return;
 
-      // 📊 Enviar relatório do ciclo que acabou ANTES de começar o próximo
+      // 📊 Enviar relatório do ciclo que acabou
       await this.sendCycleReport();
 
       // Cancelar timers de slots do ciclo anterior
@@ -989,18 +999,91 @@ class CampaignScheduler {
 
       // Avançar para próximo ciclo
       this.state.cycleNumber++;
+
+      // Verificar se completou 24 ciclos (1 dia)
+      if (this.state.cycleNumber >= this.MAX_CYCLES_PER_DAY) {
+        console.log(`\n🌟 === DIA COMPLETO! ${this.MAX_CYCLES_PER_DAY} ciclos finalizados ===`);
+        console.log(`📊 Total do dia: ${this.state.totalSent} enviadas, ${this.state.totalFailed} falhas`);
+        
+        // Enviar relatório diário consolidado
+        await this.sendDailyReport();
+
+        // Resetar para novo dia
+        this.state.cycleNumber = 0;
+        this.state.totalSent = 0;
+        this.state.totalFailed = 0;
+        this.state.totalBlocked = 0;
+        console.log(`🚀 Novo dia iniciado automaticamente!`);
+      }
+
       this.state.cycleStartTime = Date.now();
       this.state.messagesThisCycle = 0;
       this.state.maxMessagesThisCycle = 0;
       this.state.lastMessageSentAt = 0;
       this.state.scheduledSlots = [];
 
-      console.log(`\n🔄 === NOVO CICLO ${this.state.cycleNumber + 1} ===`);
+      console.log(`\n🔄 === CICLO ${this.state.cycleNumber + 1}/${this.MAX_CYCLES_PER_DAY} ===`);
 
       await this.executeCycle();
       this.scheduleNextCycle();
       await this.saveStateToDB();
     }, remaining);
+  }
+
+  /**
+   * Envia relatório diário consolidado (após 24 ciclos)
+   */
+  private async sendDailyReport() {
+    try {
+      const OWNER_PHONE = '5599991811246';
+      const now = new Date();
+      const data = now.toLocaleDateString('pt-BR', { timeZone: 'America/Sao_Paulo' });
+
+      const db = await getDb();
+      if (!db) return;
+
+      const allCampaigns = await db.select().from(campaigns);
+      let totalSent = 0;
+      let totalFailed = 0;
+      let totalPending = 0;
+      const campStats: string[] = [];
+
+      for (const camp of allCampaigns) {
+        const ccList = await db.select().from(campaignContacts).where(eq(campaignContacts.campaignId, camp.id));
+        const sent = ccList.filter(c => c.status === 'sent').length;
+        const pending = ccList.filter(c => c.status === 'pending').length;
+        const failed = ccList.filter(c => c.status === 'failed').length;
+        totalSent += sent;
+        totalFailed += failed;
+        totalPending += pending;
+        campStats.push(`  • ${camp.name}: ${sent} enviadas | ${pending} pendentes | ${failed} falhas`);
+      }
+
+      const taxaSucesso = (totalSent + totalFailed) > 0 ? ((totalSent / (totalSent + totalFailed)) * 100).toFixed(1) : '0.0';
+
+      const report = [
+        `🌟 *RELATÓRIO DIÁRIO ROMATEC CRM*`,
+        `📅 ${data}`,
+        ``,
+        `✅ *24 ciclos completos (1 dia)*`,
+        ``,
+        `📊 *Resumo do Dia:*`,
+        `  ✅ Enviadas: ${totalSent}`,
+        `  ❌ Falhas: ${totalFailed}`,
+        `  ⏳ Pendentes: ${totalPending}`,
+        `  🎯 Taxa de Sucesso: ${taxaSucesso}%`,
+        ``,
+        `🏠 *Por Campanha:*`,
+        ...campStats,
+        ``,
+        `🚀 *Novo dia iniciado automaticamente!*`,
+      ].join('\n');
+
+      await this.sendViaZAPI(OWNER_PHONE, report);
+      console.log(`🌟 Relatório diário enviado!`);
+    } catch (error) {
+      console.error('❌ Erro ao enviar relatório diário:', error);
+    }
   }
 
   /**
@@ -1027,6 +1110,8 @@ class CampaignScheduler {
       maxMessagesPerHour: this.state.maxMessagesThisCycle,
       secondsUntilNextCycle,
       cycleDurationSeconds: Math.floor(this.CYCLE_DURATION_MS / 1000),
+      maxCyclesPerDay: this.MAX_CYCLES_PER_DAY,
+      cycleProgress: `${this.state.cycleNumber + 1}/${this.MAX_CYCLES_PER_DAY}`,
       uptimeMs,
       uptimeFormatted: `${uptimeHours}:${uptimeMinutes}:${uptimeSeconds}`,
       startedAtFormatted: new Date(this.state.startedAt).toLocaleTimeString('pt-BR', { 

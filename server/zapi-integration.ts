@@ -43,14 +43,16 @@ export async function sendMessageViaZAPI({
     ? cleanPhone
     : `55${cleanPhone}`;
 
-  // FIX #6: Validação melhorada para telefone BR
-  // Celular BR = 55 + DDD(2) + 9 dígitos = 13 dígitos
-  // Fixo BR = 55 + DDD(2) + 8 dígitos = 12 dígitos
-  if (!formattedPhone || formattedPhone.length < 12) {
-    return { success: false, error: `Número inválido (${formattedPhone.length} dígitos, mínimo 12)`, attempts: 0 };
+  // Validação estrita: celular BR = 55 + DDD(2) + 9 + 8dígitos = 13 dígitos
+  // Rejeitar fixos (12 dígitos), números curtos e números longos demais
+  if (!formattedPhone || formattedPhone.length !== 13) {
+    console.warn(`⚠️ Número inválido (${formattedPhone.length} dígitos, esperado 13): ${formattedPhone}`);
+    return { success: false, error: `Número inválido: ${formattedPhone} (${formattedPhone.length} dígitos, esperado 13 para celular BR)`, attempts: 0 };
   }
-  if (formattedPhone.length < 13) {
-    console.warn(`⚠️ Telefone com ${formattedPhone.length} dígitos (pode ser fixo): ${formattedPhone}`);
+  // Verificar se o 5º dígito é 9 (indicativo de celular)
+  if (formattedPhone[4] !== '9') {
+    console.warn(`⚠️ Número não parece celular (5º dígito não é 9): ${formattedPhone}`);
+    return { success: false, error: `Número não é celular: ${formattedPhone}`, attempts: 0 };
   }
 
   // Headers com Client-Token obrigatório

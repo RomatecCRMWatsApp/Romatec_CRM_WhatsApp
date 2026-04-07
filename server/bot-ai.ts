@@ -56,30 +56,25 @@ function calcPrice(financed: number, annualRate: number, months: number): number
   return (financed * r * Math.pow(1 + r, months)) / (Math.pow(1 + r, months) - 1);
 }
 
-// ============ SIMULAÇÃO FORMATADA WHATSAPP ============
+// ============ PARCELAS SIMPLES WHATSAPP ============
 
+/**
+ * Formata parcelas simples e atrativas para WhatsApp
+ * Mostra apenas Caixa (menor taxa) em 240x (20 anos) e 300x (25 anos)
+ */
 export function formatSimulationWhatsApp(propertyValue: number, entryPct: number = 20): string {
   const entry = propertyValue * (entryPct / 100);
   const financed = propertyValue - entry;
-  const months = 240;
+  const pmt240 = calcPrice(financed, 10.26, 240); // 20 anos
+  const pmt300 = calcPrice(financed, 10.26, 300); // 25 anos
 
-  let msg = `\ud83d\udcca *SIMULA\u00c7\u00c3O DE FINANCIAMENTO*\n`;
-  msg += `\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\n`;
+  let msg = `\ud83d\udcb0 *PARCELAS A PARTIR DE:*\n\n`;
   msg += `\ud83c\udfe0 Im\u00f3vel: *${fmt(propertyValue)}*\n`;
-  msg += `\ud83d\udcb0 Entrada (${entryPct}%): *${fmt(entry)}*\n`;
-  msg += `\ud83d\udcb3 Financiado: *${fmt(financed)}*\n`;
-  msg += `\ud83d\udcc5 Prazo: *${months / 12} anos (${months}x)*\n\n`;
-
-  BANKS.forEach((bank, i) => {
-    const pmt = calcPrice(financed, bank.rate, months);
-    msg += `${bank.emoji} *${bank.name}* (${bank.rate}% a.a.)\n`;
-    msg += `   Parcela: *${fmtFull(pmt)}*\n`;
-    if (i === 0) msg += `   \u2705 _Menor taxa do mercado!_\n`;
-    msg += `\n`;
-  });
-
-  msg += `\u2139\ufe0f Taxas reais de abril/2026 + TR\n`;
-  msg += `\ud83d\udd17 Simule outros valores: ${SITE_URL}/simulador`;
+  msg += `\ud83d\udcb3 Entrada (${entryPct}%): *${fmt(entry)}*\n\n`;
+  msg += `\ud83c\udfe6 *Caixa Econ\u00f4mica* (menor taxa: 10,26% a.a.)\n`;
+  msg += `   \u2705 Em *20 anos (240x)*: *${fmtFull(pmt240)}/m\u00eas*\n`;
+  msg += `   \u2705 Em *25 anos (300x)*: *${fmtFull(pmt300)}/m\u00eas*\n\n`;
+  msg += `\u2139\ufe0f Taxas reais de abril/2026 + TR`;
   return msg;
 }
 
@@ -97,10 +92,12 @@ export function formatRecommendationsWhatsApp(budget: number): string {
 
   let msg = `\ud83c\udfe1 *IM\u00d3VEIS DENTRO DO SEU OR\u00c7AMENTO*\n\n`;
   recs.forEach(p => {
-    const pmt = calcPrice(p.value * 0.8, 10.26, 240);
+    const financed = p.value * 0.8;
+    const pmt240 = calcPrice(financed, 10.26, 240);
+    const pmt300 = calcPrice(financed, 10.26, 300);
     msg += `\ud83d\udccd *${p.name}* \u2014 ${p.type}\n`;
     msg += `   Valor: *${fmt(p.value)}* | ${p.beds} quartos | ${p.area}\n`;
-    msg += `   Parcela a partir de *${fmtFull(pmt)}* (Caixa)\n`;
+    msg += `   \u2705 Parcela 20 anos: *${fmtFull(pmt240)}* | 25 anos: *${fmtFull(pmt300)}*\n`;
     msg += `   \ud83d\udd17 ${SITE_URL}/imovel/${p.slug}\n\n`;
   });
   return msg;
@@ -153,10 +150,12 @@ export async function processBotMessage(context: BotContext): Promise<BotRespons
     return { text: 'Ol\u00e1! Sou o assistente da *Romatec Consultoria Imobili\u00e1ria*. Como posso te ajudar hoje?' };
   }
 
-  // Montar contexto dos imóveis para a IA
+  // Montar contexto dos imóveis para a IA (com parcelas 240x e 300x)
   const propertiesContext = PROPERTIES.map(p => {
-    const pmt = calcPrice(p.value * 0.8, 10.26, 240);
-    return `- ${p.name}: ${p.type}, ${p.beds} quartos, ${p.area}, ${fmt(p.value)}, parcela Caixa ${fmtFull(pmt)}/m\u00eas, link: ${SITE_URL}/imovel/${p.slug}`;
+    const fin = p.value * 0.8;
+    const pmt240 = calcPrice(fin, 10.26, 240);
+    const pmt300 = calcPrice(fin, 10.26, 300);
+    return `- ${p.name}: ${p.type}, ${p.beds} quartos, ${p.area}, ${fmt(p.value)}, parcela Caixa 20 anos: ${fmtFull(pmt240)}/mês, 25 anos: ${fmtFull(pmt300)}/mês, link: ${SITE_URL}/imovel/${p.slug}`;
   }).join('\n');
 
   const banksContext = BANKS.map(b => `- ${b.name}: ${b.rate}% a.a. + TR`).join('\n');
@@ -178,7 +177,7 @@ REGRAS:
 1. Responda SEMPRE em portugu\u00eas, de forma natural e persuasiva
 2. Use *negrito* para destacar valores e nomes (formato WhatsApp)
 3. Quando cliente diz "Oi/Ol\u00e1": apresente a Romatec, mencione os im\u00f3veis (faixa de pre\u00e7o) e pergunte o que procura
-4. Quando pergunta sobre pre\u00e7o/financiamento: mostre a simula\u00e7\u00e3o com a menor parcela (Caixa) e mencione que financiamos em at\u00e9 30 anos
+4. Quando pergunta sobre preço/financiamento: mostre as parcelas da Caixa em 20 anos (240x) e 25 anos (300x) - a de 25 anos é mais atrativa por ser menor
 5. Quando menciona or\u00e7amento: recomende im\u00f3veis compat\u00edveis e envie os links
 6. Quando demonstra interesse alto: ofere\u00e7a conectar com especialista
 7. M\u00e1ximo 4-5 linhas por resposta. Seja direto.

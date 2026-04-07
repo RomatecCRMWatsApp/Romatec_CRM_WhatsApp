@@ -29,13 +29,13 @@ describe('Bot AI - Simulação de Financiamento', () => {
     expect(r20.simulations[0].monthlyPayment).toBeGreaterThan(r40.simulations[0].monthlyPayment);
   });
 
-  it('deve formatar simulação para WhatsApp', () => {
+  it('deve formatar parcelas simples para WhatsApp (240x e 300x)', () => {
     const msg = formatSimulationWhatsApp(250000);
-    expect(msg).toContain('SIMULAÇÃO DE FINANCIAMENTO');
+    expect(msg).toContain('PARCELAS A PARTIR DE');
     expect(msg).toContain('Caixa');
-    expect(msg).toContain('10.26%');
-    expect(msg).toContain('Banco do Brasil');
-    expect(msg).toContain('Menor taxa do mercado');
+    expect(msg).toContain('20 anos (240x)');
+    expect(msg).toContain('25 anos (300x)');
+    expect(msg).toContain('10,26%');
   });
 });
 
