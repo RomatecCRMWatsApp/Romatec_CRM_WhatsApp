@@ -319,3 +319,11 @@
 - [x] Analisar base de 2.544 contatos: identificar números inválidos (!=13 dígitos ou 5º dígito !=9)
 - [x] Remover contatos com números inválidos do banco (1.105 removidos)
 - [x] Reportar quantos foram removidos e quantos válidos restaram (1.439 válidos)
+
+## Novo Imóvel: Condomínio de Chácaras (07/04/2026)
+- [x] Analisar mapa PDF e extrair tabela de chácaras com áreas (Matrícula 16370, 6 lotes)
+- [x] Upload das 9 fotos aéreas + mapa Google Earth para CDN
+- [x] Cadastrar imóvel no banco: Cond. Chácaras Giuliano, R$ 160k, 6 lotes, 7.601 m² (ID: 90001)
+- [x] Criar página pública /imovel/cond-chacaras-giuliano (PropertyPublic.tsx existente)
+- [x] Incluir condições: entrada 30%, parcelamento direto ou financiamento (na descrição)
+- [x] Testes e verificação (página verificada no navegador)
