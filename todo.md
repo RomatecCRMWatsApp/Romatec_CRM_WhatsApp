@@ -235,3 +235,11 @@
 
 ## Alterar título header Campanhas (07/04/2026)
 - [x] Mudar "Campanhas WhatsApp" para "Romatec CRM Campanhas WhatsApp"
+
+## Alterar header Dashboard (07/04/2026)
+- [ ] Mudar "Romatec CRM / Bem-vindo..." para "Romatec CRM - Sistema de Gestão de Clientes + Vendas | CEO José Romário P Bezerra"
+
+## Alterar header Dashboard (07/04/2026)
+- [x] Linha 1: "Romatec CRM" (título grande)
+- [x] Linha 2: "Customer Relationship Management" (subtítulo)
+- [x] Linha 3: "CEO José Romário P Bezerra" (menor, embaixo)

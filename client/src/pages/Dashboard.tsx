@@ -36,7 +36,8 @@ export default function Dashboard() {
             <img src={LOGO_URL} alt="Romatec" className="h-14 w-auto object-contain rounded-lg" />
             <div>
               <h1 className="text-2xl font-bold">Romatec CRM</h1>
-              <p className="text-white/70 text-sm">Bem-vindo, {user?.name || "Usuário"}</p>
+              <p className="text-white/80 text-sm">Customer Relationship Management</p>
+              <p className="text-white/50 text-xs mt-0.5">CEO José Romário P Bezerra</p>
             </div>
           </div>
           <Button onClick={() => logoutMutation.mutate()} variant="outline" className="border-white/30 text-white hover:bg-white/20">
