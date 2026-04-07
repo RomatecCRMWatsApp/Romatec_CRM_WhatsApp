@@ -327,3 +327,9 @@
 - [x] Criar página pública /imovel/cond-chacaras-giuliano (PropertyPublic.tsx existente)
 - [x] Incluir condições: entrada 30%, parcelamento direto ou financiamento (na descrição)
 - [x] Testes e verificação (página verificada no navegador)
+
+## Sincronizar 5º Imóvel nas Campanhas (07/04/2026)
+- [x] Verificar campanhas atuais no banco (4 existentes + 1 teste)
+- [x] Criar campanha para Condomínio de Chácaras Giuliano (ID: 60001, MPH: 3)
+- [x] Gerar 12 variações de mensagem persuasivas para o novo imóvel
+- [x] Atribuir 24 contatos à nova campanha + remover campanha de teste
