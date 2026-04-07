@@ -996,8 +996,12 @@ class CampaignScheduler {
 
   getState() {
     const now = Date.now();
-    const currentMinute = new Date().getMinutes();
-    const remainingMinutes = 60 - currentMinute;
+    // Calcular próxima hora cheia no fuso de Brasília
+    const nowBR = new Date(new Date().toLocaleString('en-US', { timeZone: 'America/Sao_Paulo' }));
+    const currentMinute = nowBR.getMinutes();
+    const currentSecond = nowBR.getSeconds();
+    const remainingSeconds = (60 - currentMinute - 1) * 60 + (60 - currentSecond);
+    const nextHour = (nowBR.getHours() + 1) % 24;
 
     const uptimeMs = now - this.state.startedAt;
     const uptimeHours = String(Math.floor(uptimeMs / 3600000)).padStart(2, '0');
@@ -1014,7 +1018,7 @@ class CampaignScheduler {
       maxMessagesPerHour: totalCamps,
       messagesThisCycle: sentThisHour,
       maxMessagesThisCycle: totalCamps,
-      secondsUntilNextCycle: remainingMinutes * 60,
+      secondsUntilNextCycle: remainingSeconds,
       cycleDurationSeconds: 3600,
       maxCyclesPerDay: this.MAX_HOURS_PER_CYCLE,
       cycleNumber: this.state.hourNumber,
@@ -1027,7 +1031,7 @@ class CampaignScheduler {
       startedAtFormatted: new Date(this.state.startedAt).toLocaleTimeString('pt-BR', {
         hour: '2-digit', minute: '2-digit', second: '2-digit', timeZone: 'America/Sao_Paulo'
       }),
-      nextCycleFormatted: `${String(new Date().getHours() + 1).padStart(2, '0')}:00`,
+      nextCycleFormatted: `${String(nextHour).padStart(2, '0')}:00`,
       activePair: {
         index: 0,
         campaigns: this.state.campaignStates.map(c => c.campaignName),

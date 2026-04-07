@@ -396,3 +396,7 @@
 - [x] Corrigir display: "Hora X/12" em vez de "Ciclo X | Par X de 3"
 - [x] Mostrar "Msgs nesta hora: X/5" corretamente
 - [x] Atualizar endpoint getStatus para retornar dados sem pares
+
+## Bug: "Próxima hora" mostra horário errado (07/04/2026)
+- [x] Corrigir cálculo de nextCycleFormatted - deve mostrar a próxima hora cheia (15:00, 16:00, etc.)
+- [x] Corrigir secondsUntilNextCycle - deve ser segundos até a próxima hora cheia
