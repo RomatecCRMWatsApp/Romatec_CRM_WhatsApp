@@ -17,15 +17,31 @@ export const appRouter = router({
       ctx.res.clearCookie(COOKIE_NAME, { ...cookieOptions, maxAge: -1 });
       return { success: true } as const;
     }),
-    login: publicProcedure
+   login: publicProcedure
       .input(z.object({ username: z.string(), password: z.string() }))
       .mutation(async ({ input, ctx }) => {
         const db = await getDb();
         if (!db) throw new Error("Database not available");
         const { users } = await import("../drizzle/schema");
-        const userList = await db.select().from(users).where(eq(users.openId, input.username)).limit(1);
+        let userList = await db.select().from(users).where(eq(users.openId, input.username)).limit(1);
+        // Se não encontrou por openId, tenta por email
+        if (!userList[0]) {
+          userList = await db.select().from(users).where(eq(users.email, input.username)).limit(1);
+        }
+        // Se ainda não encontrou, cria o usuário admin automaticamente
+        if (!userList[0]) {
+          const adminOpenId = process.env.ADMIN_OPEN_ID || input.username;
+          await db.insert(users).values({
+            openId: adminOpenId,
+            name: "Admin",
+            email: input.username,
+            loginMethod: "local",
+            role: "admin",
+          });
+          userList = await db.select().from(users).where(eq(users.openId, adminOpenId)).limit(1);
+        }
         const user = userList[0];
-        if (!user) throw new Error("Usuário não encontrado");
+        if (!user) throw new Error("Erro ao criar usuário");
         const { sdk } = await import("./_core/sdk");
         const { ONE_YEAR_MS } = await import("@shared/const");
         const cookieOptions = getSessionCookieOptions(ctx.req);
