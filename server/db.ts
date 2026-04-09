@@ -1,5 +1,6 @@
 import { eq } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/mysql2";
+import { createConnection } from "mysql2/promise";
 import { InsertUser, users, contacts, InsertContact, properties, InsertProperty, campaigns, InsertCampaign, companyConfig, InsertCompanyConfig } from "../drizzle/schema";
 import { ENV } from './_core/env';
 
@@ -11,12 +12,11 @@ export async function getDb() {
       const rawUrl = process.env.DATABASE_URL || '';
       const cleanUrl = rawUrl.startsWith('DATABASE_URL=') ? rawUrl.replace('DATABASE_URL=', '') : rawUrl;
       const url = new URL(cleanUrl);
-      const mysql2 = require("mysql2/promise");
-      const connection = await mysql2.createConnection({
+      const connection = await createConnection({
         host: url.hostname,
         port: parseInt(url.port) || 3306,
-        user: url.username,
-        password: url.password,
+        user: decodeURIComponent(url.username),
+        password: decodeURIComponent(url.password),
         database: url.pathname.replace('/', ''),
         ssl: { rejectUnauthorized: false },
       });
