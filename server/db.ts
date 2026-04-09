@@ -8,7 +8,9 @@ let _db: ReturnType<typeof drizzle> | null = null;
 export async function getDb() {
   if (!_db && process.env.DATABASE_URL) {
     try {
-      const url = new URL(process.env.DATABASE_URL);
+      const rawUrl = process.env.DATABASE_URL || '';
+      const cleanUrl = rawUrl.startsWith('DATABASE_URL=') ? rawUrl.replace('DATABASE_URL=', '') : rawUrl;
+      const url = new URL(cleanUrl);
       const mysql2 = require("mysql2/promise");
       const connection = await mysql2.createConnection({
         host: url.hostname,
