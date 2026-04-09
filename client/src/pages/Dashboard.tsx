@@ -1,4 +1,4 @@
-import { useMemo, useState, useEffect, lazy, Suspense } from "react";
+import { useMemo, useState, useEffect, lazy, Suspense, useRef } from "react";
 import { useAuth } from "@/_core/hooks/useAuth";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -29,6 +29,8 @@ const CAMPAIGN_COLORS = [COLORS.emerald, COLORS.gold, COLORS.blue, COLORS.purple
 function PerformanceCharts({ perfData }: { perfData: any }) {
   // Importar Recharts dinamicamente para evitar conflitos de DOM
   const [Recharts, setRecharts] = useState<any>(null);
+  // ID único por instância para evitar conflito de IDs no SVG (bug insertBefore)
+  const uid = useRef(`grad_${Math.random().toString(36).substring(2, 8)}`).current;
 
   useEffect(() => {
     import("recharts").then((mod) => {
@@ -172,7 +174,7 @@ function PerformanceCharts({ perfData }: { perfData: any }) {
               <ResponsiveContainer width="100%" height="100%">
                 <AreaChart data={last30Days}>
                   <defs>
-                    <linearGradient id="gradSentDash" x1="0" y1="0" x2="0" y2="1">
+                    <linearGradient id={uid} x1="0" y1="0" x2="0" y2="1">
                       <stop offset="5%" stopColor={COLORS.emerald} stopOpacity={0.3} />
                       <stop offset="95%" stopColor={COLORS.emerald} stopOpacity={0} />
                     </linearGradient>
@@ -181,7 +183,7 @@ function PerformanceCharts({ perfData }: { perfData: any }) {
                   <XAxis dataKey="label" tick={{ fill: "#9ca3af", fontSize: 9 }} axisLine={{ stroke: "#374151" }} interval={4} />
                   <YAxis tick={{ fill: "#9ca3af", fontSize: 11 }} axisLine={{ stroke: "#374151" }} allowDecimals={false} />
                   <Tooltip content={<CustomTooltipContent />} />
-                  <Area type="monotone" dataKey="sent" name="Enviadas" stroke={COLORS.emerald} fill="url(#gradSentDash)" strokeWidth={2} />
+                  <Area type="monotone" dataKey="sent" name="Enviadas" stroke={COLORS.emerald} fill={`url(#${uid})`} strokeWidth={2} />
                   <Line type="monotone" dataKey="failed" name="Falhas" stroke={COLORS.red} strokeWidth={1.5} dot={false} />
                 </AreaChart>
               </ResponsiveContainer>

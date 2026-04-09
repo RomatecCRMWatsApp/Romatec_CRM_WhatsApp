@@ -92,15 +92,19 @@ export default function Campaigns() {
     },
     onSuccess: async () => {
       try {
+        // Aguardar DOM estabilizar ANTES de refetch (evita insertBefore)
+        await new Promise(resolve => setTimeout(resolve, 300));
         await utils.scheduler.getCampaignDetails.invalidate();
         await utils.scheduler.getState.invalidate();
+        // Incrementar resetKey ANTES do refetch para desmontar cards antigos
+        setResetKey(prev => prev + 1);
+        await new Promise(resolve => setTimeout(resolve, 200));
         await utils.scheduler.getCampaignDetails.refetch();
         await utils.scheduler.getState.refetch();
-        setResetKey(prev => prev + 1);
       } catch (e) {
         console.warn('[Reset] Erro ao refetch:', e);
       }
-      await new Promise(resolve => setTimeout(resolve, 100));
+      await new Promise(resolve => setTimeout(resolve, 200));
       setIsResetting(false);
       toast.success("Campanhas resetadas com novos contatos! Clique em Iniciar.");
     },
@@ -463,7 +467,14 @@ export default function Campaigns() {
             </div>
           ) : (
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6" key={`campaigns-${resetKey}-${allCampaigns.length}`}>
-              {allCampaigns.map((campaign: any) => (
+              {isResetting ? (
+                <div className="col-span-2 flex items-center justify-center py-12">
+                  <div className="text-center">
+                    <div className="w-10 h-10 border-4 border-amber-500/30 border-t-amber-500 rounded-full animate-spin mx-auto mb-3" />
+                    <p className="text-sm text-muted-foreground">Redefinindo campanhas...</p>
+                  </div>
+                </div>
+              ) : allCampaigns.map((campaign: any) => (
                 <CampaignCard
                   key={`camp-${campaign.id}`}
                   campaign={campaign}
