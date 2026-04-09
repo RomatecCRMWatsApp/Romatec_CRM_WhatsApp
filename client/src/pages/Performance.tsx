@@ -1,4 +1,4 @@
-import { useMemo } from "react";
+import { useMemo, useRef } from "react";
 import { trpc } from "@/lib/trpc";
 import { useLocation } from "wouter";
 import {
@@ -41,8 +41,9 @@ function CustomTooltip({ active, payload, label }: any) {
 
 export default function Performance() {
   const [, navigate] = useLocation();
+  const uid = useRef(`perf_${Math.random().toString(36).substring(2, 8)}`).current;
   const { data, isLoading } = trpc.performance.getStats.useQuery(undefined, {
-    refetchInterval: 30000, // Atualiza a cada 30s
+    refetchInterval: 30000,
   });
 
   // Formatar dados dos últimos 7 dias para o gráfico de linha
@@ -234,7 +235,7 @@ export default function Performance() {
               <ResponsiveContainer width="100%" height="100%">
                 <AreaChart data={last30Days}>
                   <defs>
-                    <linearGradient id="gradSent" x1="0" y1="0" x2="0" y2="1">
+                    <linearGradient id={uid} x1="0" y1="0" x2="0" y2="1">
                       <stop offset="5%" stopColor={COLORS.emerald} stopOpacity={0.3} />
                       <stop offset="95%" stopColor={COLORS.emerald} stopOpacity={0} />
                     </linearGradient>
@@ -243,7 +244,7 @@ export default function Performance() {
                   <XAxis dataKey="label" tick={{ fill: "#9ca3af", fontSize: 9 }} axisLine={{ stroke: "#374151" }} interval={4} />
                   <YAxis tick={{ fill: "#9ca3af", fontSize: 11 }} axisLine={{ stroke: "#374151" }} allowDecimals={false} />
                   <Tooltip content={<CustomTooltip />} />
-                  <Area type="monotone" dataKey="sent" name="Enviadas" stroke={COLORS.emerald} fill="url(#gradSent)" strokeWidth={2} />
+                  <Area type="monotone" dataKey="sent" name="Enviadas" stroke={COLORS.emerald} fill={`url(#${uid})`} strokeWidth={2} />
                   <Line type="monotone" dataKey="failed" name="Falhas" stroke={COLORS.red} strokeWidth={1.5} dot={false} />
                 </AreaChart>
               </ResponsiveContainer>
