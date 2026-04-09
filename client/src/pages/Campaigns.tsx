@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo, useCallback } from "react";
+ï»¿import { useState, useEffect, useMemo, useCallback } from "react";
 import { useAuth } from "@/_core/hooks/useAuth";
 import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
@@ -9,7 +9,7 @@ import { toast } from "sonner";
 
 /**
  * SISTEMA v6.0 - 5 CAMPANHAS INDEPENDENTES
- * - Cada campanha envia 1 msg/hora em rotação
+ * - Cada campanha envia 1 msg/hora em rotaï¿½ï¿½o
  * - Ciclo de 12 horas
  * - Sem rotaÃ§Ã£o de pares
  * - Todas as campanhas enviam a cada hora
@@ -205,7 +205,7 @@ export default function Campaigns() {
                 <span>Romatec CRM Campanhas</span>
               </h1>
               <p className="text-emerald-300/70 text-sm mt-1">
-                Rotação sequencial 08h-18h | 2 msgs/campanha/dia | {allCampaigns.length} campanhas
+                Rotaï¿½ï¿½o sequencial 08h-18h | 2 msgs/campanha/dia | {allCampaigns.length} campanhas
               </p>
             </div>
           </div>
@@ -440,7 +440,7 @@ export default function Campaigns() {
                       {campaign.name}
                     </span>
                     <p className="text-xs text-muted-foreground mt-2">
-                      1 msg/hora em rotação | {campaign.sentCount || 0}/{campaign.totalContacts || 12} total
+                      1 msg/hora em rotaï¿½ï¿½o | {campaign.sentCount || 0}/{campaign.totalContacts || 12} total
                     </p>
                   </div>
                 );
@@ -633,7 +633,7 @@ function CampaignCard({
         {/* Campo msgs/hora (fixo em 1 para v6.0) */}
         <div className="mt-3 flex items-center gap-3 p-2.5 bg-indigo-500/10 rounded-lg border border-indigo-500/20">
           <span className="text-xs font-semibold text-indigo-300">Regra:</span>
-          <span className="text-sm font-bold text-indigo-200">1 msg/hora em rotação</span>
+          <span className="text-sm font-bold text-indigo-200">1 msg/hora em rotaï¿½ï¿½o</span>
           <span className="text-xs text-indigo-400/60 ml-1">Ã— 12 horas = 12 contatos/ciclo</span>
         </div>
       </div>
@@ -745,7 +745,7 @@ function CampaignCard({
 
         {/* Info */}
         <p className="text-xs text-muted-foreground mb-3">
-          Iniciado: {schedulerStartedAt || "--:--:--"} | 1 msg/hora em rotação Ã— 12 horas = {totalContacts} contatos
+          Iniciado: {schedulerStartedAt || "--:--:--"} | 1 msg/hora em rotaï¿½ï¿½o Ã— 12 horas = {totalContacts} contatos
         </p>
 
         {/* Toggle Lista de Contatos */}
