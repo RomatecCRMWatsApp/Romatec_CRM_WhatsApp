@@ -4,7 +4,7 @@ import { systemRouter } from "./_core/systemRouter";
 import { publicProcedure, protectedProcedure, router } from "./_core/trpc";
 import { getAllContacts, getContactById, createContact, getAllProperties, getPropertyById, createProperty, getAllCampaigns, getCampaignById, createCampaign, getCompanyConfig, updateCompanyConfig, getDb } from "./db";
 import { campaigns, contacts, campaignContacts, messages, properties, contactCampaignHistory, users } from "../drizzle/schema";
-import { eq, and } from "drizzle-orm";
+import { eq, and, sql } from "drizzle-orm";
 import { campaignScheduler } from "./scheduler/campaignScheduler";
 import { z } from "zod";
 
@@ -412,6 +412,7 @@ export const appRouter = router({
 });
 
 export type AppRouter = typeof appRouter;
+
 
 
 
