@@ -26,7 +26,7 @@ export const appRouter = router({
           if (currentHash !== (user as any).passwordHash) throw new Error("Senha atual incorreta!");
         }
         const newHash = crypto.createHash('sha256').update(input.newPassword).digest('hex');
-        await db.update(users).set({ passwordHash: newHash } as any).where(eq(users.openId, ctx.user.openId));
+        await db.execute(sql`UPDATE users SET passwordHash = ${newHash} WHERE openId = ${ctx.user.openId}`);
         return { success: true };
       }),
     logout: publicProcedure.mutation(({ ctx }) => {
@@ -412,5 +412,6 @@ export const appRouter = router({
 });
 
 export type AppRouter = typeof appRouter;
+
 
 
