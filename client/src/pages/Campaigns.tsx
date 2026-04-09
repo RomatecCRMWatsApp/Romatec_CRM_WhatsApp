@@ -9,7 +9,7 @@ import { toast } from "sonner";
 
 /**
  * SISTEMA v6.0 - 5 CAMPANHAS INDEPENDENTES
- * - Cada campanha envia 1 msg/hora
+ * - Cada campanha envia 1 msg/hora em rotação
  * - Ciclo de 12 horas
  * - Sem rotaÃ§Ã£o de pares
  * - Todas as campanhas enviam a cada hora
@@ -205,7 +205,7 @@ export default function Campaigns() {
                 <span>Romatec CRM Campanhas</span>
               </h1>
               <p className="text-emerald-300/70 text-sm mt-1">
-                1 msg/campanha/hora | Ciclo de 12 horas | {allCampaigns.length} campanhas
+                Rotação sequencial 08h-18h | 2 msgs/campanha/dia | {allCampaigns.length} campanhas
               </p>
             </div>
           </div>
@@ -260,7 +260,7 @@ export default function Campaigns() {
             ))}
           </div>
 
-          {/* CronÃ´metro Principal - Hora Atual */}
+          {/* CronÃ´metro Principal - Hora do Dia */}
           {isRunning && (
             <div className="p-5 rounded-xl bg-gradient-to-r from-purple-900/30 via-indigo-900/20 to-purple-900/30 border border-purple-500/20 mb-6">
               <div className="flex items-center justify-between mb-3">
@@ -440,7 +440,7 @@ export default function Campaigns() {
                       {campaign.name}
                     </span>
                     <p className="text-xs text-muted-foreground mt-2">
-                      1 msg/hora | {campaign.sentCount || 0}/{campaign.totalContacts || 12} total
+                      1 msg/hora em rotação | {campaign.sentCount || 0}/{campaign.totalContacts || 12} total
                     </p>
                   </div>
                 );
@@ -633,7 +633,7 @@ function CampaignCard({
         {/* Campo msgs/hora (fixo em 1 para v6.0) */}
         <div className="mt-3 flex items-center gap-3 p-2.5 bg-indigo-500/10 rounded-lg border border-indigo-500/20">
           <span className="text-xs font-semibold text-indigo-300">Regra:</span>
-          <span className="text-sm font-bold text-indigo-200">1 msg/hora</span>
+          <span className="text-sm font-bold text-indigo-200">1 msg/hora em rotação</span>
           <span className="text-xs text-indigo-400/60 ml-1">Ã— 12 horas = 12 contatos/ciclo</span>
         </div>
       </div>
@@ -643,7 +643,7 @@ function CampaignCard({
         {/* Progresso do Ciclo (msgs enviadas) */}
         <div className="mb-3">
           <div className="flex items-center justify-between mb-1">
-            <p className="text-xs text-muted-foreground font-medium">Progresso do Ciclo (12h)</p>
+            <p className="text-xs text-muted-foreground font-medium">Progresso do Dia (2 msgs)</p>
             <p className={`text-sm font-bold ${progressPercent === 100 ? "text-amber-400" : "text-emerald-400"}`}>{progressPercent}%</p>
           </div>
           <div className="progress-bar">
@@ -681,8 +681,8 @@ function CampaignCard({
             <p className="text-xl font-bold text-amber-400">{pendingCount}</p>
           </div>
           <div className="p-2.5 bg-purple-500/10 rounded-lg border border-purple-500/20">
-            <p className="text-xs text-muted-foreground">Hora Atual</p>
-            <p className="text-xl font-bold text-purple-400">{hourNumber + 1}<span className="text-sm text-muted-foreground">/12</span></p>
+            <p className="text-xs text-muted-foreground">Hora do Dia</p>
+            <p className="text-xl font-bold text-purple-400">{hourNumber + 1}<span className="text-sm text-muted-foreground">/10</span></p>
           </div>
           <div className="p-2.5 bg-blue-500/10 rounded-lg border border-blue-500/20">
             <p className="text-xs text-muted-foreground">Esta Hora</p>
@@ -745,7 +745,7 @@ function CampaignCard({
 
         {/* Info */}
         <p className="text-xs text-muted-foreground mb-3">
-          Iniciado: {schedulerStartedAt || "--:--:--"} | 1 msg/hora Ã— 12 horas = {totalContacts} contatos
+          Iniciado: {schedulerStartedAt || "--:--:--"} | 1 msg/hora em rotação Ã— 12 horas = {totalContacts} contatos
         </p>
 
         {/* Toggle Lista de Contatos */}
