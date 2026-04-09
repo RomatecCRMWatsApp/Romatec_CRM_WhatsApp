@@ -7,7 +7,7 @@ function formatCurrency(value: number | string) {
   return Number(value).toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 }
 
-// Especialistas da Romatec (fora do componente - constante)
+// Especialistas movidos para dentro do componente
 const especialistas = [
   { 
     nome: "JosÃ© RomÃ¡rio P. Bezerra", 
@@ -444,4 +444,5 @@ export default function PropertyPublic() {
     </div>
   );
 }
+
 
