@@ -10,8 +10,20 @@ function formatCurrency(value: number | string) {
 
 // Especialistas da Romatec (fora do componente - constante)
 const especialistas = [
-  { nome: "José Romário", telefone: "5599991811246", display: "(99) 9 9181-1246" },
-  { nome: "Daniele Cavalcante", telefone: "5599992062871", display: "(99) 9 9206-2871" },
+  { 
+    nome: "José Romário P. Bezerra", 
+    cargo: "Diretor Comercial",
+    telefone: "5599991811246", 
+    display: "(99) 9 9181-1246",
+    avatar: "JR"
+  },
+  { 
+    nome: "Daniele Cavalcante Vieira", 
+    cargo: "Especialista em Imóveis",
+    telefone: "5599992062871", 
+    display: "(99) 9 9206-2871",
+    avatar: "DC"
+  },
 ];
 
 export default function PropertyPublic() {
@@ -59,7 +71,7 @@ export default function PropertyPublic() {
   const hasMultipleImages = imageCount > 1;
 
   const whatsappMsg = encodeURIComponent(
-    `Olá! Vi o imóvel *${property.denomination}* no site e gostaria de mais informações.\n📍 ${property.address}${property.city ? `, ${property.city}` : ""}\n💰 R$ ${formatCurrency(property.price)}`
+    `Olá, ${esp.nome.split(' ')[0]}! 👋\n\nVi o imóvel *${property.denomination}* no site da Romatec e tenho interesse!\n\n📍 *Localização:* ${property.address}${property.city ? `, ${property.city}` : ""}\n💰 *Valor:* R$ ${formatCurrency(property.price)}\n\nPoderia me dar mais informações? 😊`
   );
 
   const esp = especialistas[selectedEsp];
@@ -355,35 +367,42 @@ export default function PropertyPublic() {
 
           {/* Especialistas */}
           <div className="glass-card p-6 mb-6">
-            <h3 className="text-lg font-bold text-foreground mb-4 text-center">Fale com um Especialista</h3>
-            <div className="grid grid-cols-2 gap-3">
+            <div className="text-center mb-4">
+              <h3 className="text-lg font-bold text-foreground">🏆 Fale com um Especialista</h3>
+              <p className="text-sm text-muted-foreground mt-1">Nossa equipe está pronta para te ajudar a realizar o sonho da casa própria!</p>
+            </div>
+            <div className="grid grid-cols-1 gap-3">
               {especialistas.map((e, idx) => (
                 <button
                   key={idx}
                   onClick={() => setSelectedEsp(idx)}
                   className={`p-4 rounded-xl border-2 transition-all text-left ${
                     selectedEsp === idx
-                      ? "border-emerald bg-emerald/10"
+                      ? "border-emerald bg-emerald/10 shadow-lg shadow-emerald/10"
                       : "border-border/30 bg-secondary/20 hover:border-emerald/40"
                   }`}
                 >
-                  <div className="flex items-center gap-3">
-                    <div className={`w-10 h-10 rounded-full flex items-center justify-center text-sm font-bold ${
-                      selectedEsp === idx ? "bg-emerald text-white" : "bg-secondary text-muted-foreground"
+                  <div className="flex items-center gap-4">
+                    <div className={`w-14 h-14 rounded-full flex items-center justify-center text-lg font-bold flex-shrink-0 ${
+                      selectedEsp === idx ? "bg-emerald text-white shadow-lg" : "bg-secondary text-muted-foreground"
                     }`}>
-                      {e.nome.split(" ")[0][0]}{e.nome.split(" ").slice(-1)[0][0]}
+                      {e.avatar}
                     </div>
-                    <div>
-                      <p className={`text-sm font-semibold ${selectedEsp === idx ? "text-emerald" : "text-foreground"}`}>{e.nome}</p>
-                      <p className="text-xs text-muted-foreground">{e.display}</p>
+                    <div className="flex-1">
+                      <p className={`font-bold text-base ${selectedEsp === idx ? "text-emerald" : "text-foreground"}`}>{e.nome}</p>
+                      <p className="text-xs text-muted-foreground font-medium">{e.cargo}</p>
+                      <p className="text-sm text-muted-foreground mt-0.5">📱 {e.display}</p>
                     </div>
+                    {selectedEsp === idx && (
+                      <span className="text-emerald text-xl flex-shrink-0">✓</span>
+                    )}
                   </div>
-                  {selectedEsp === idx && (
-                    <p className="text-xs text-emerald mt-2 font-medium">✓ Selecionado</p>
-                  )}
                 </button>
               ))}
             </div>
+            <p className="text-xs text-center text-muted-foreground mt-3">
+              Selecione um especialista e clique em WhatsApp ou Ligar abaixo
+            </p>
           </div>
 
           {/* Romatec Info */}
@@ -398,7 +417,9 @@ export default function PropertyPublic() {
       {/* Fixed Bottom CTA */}
       <div className="fixed bottom-0 inset-x-0 z-50 p-4 bg-background/80 backdrop-blur-xl border-t border-border/30">
         <div className="max-w-3xl mx-auto">
-          <p className="text-xs text-center text-muted-foreground mb-2">Falar com <span className="font-semibold text-emerald">{esp.nome}</span></p>
+          <p className="text-xs text-center text-muted-foreground mb-2">
+            💬 Falar com <span className="font-bold text-emerald">{esp.nome}</span> — {esp.display}
+          </p>
           <div className="flex gap-3">
             <a
               href={whatsappLink}
