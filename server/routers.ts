@@ -99,7 +99,16 @@ export const appRouter = router({
       if (!db) throw new Error("Database not available");
       const { id, ...data } = input;
       const updateData: any = {};
-      Object.entries(data).forEach(([k, v]) => { if (v !== undefined) updateData[k] = v; });
+      Object.entries(data).forEach(([k, v]) => {
+        if (v !== undefined) {
+          // Converter price e offerPrice para número (decimal no banco)
+          if (k === 'price' || k === 'offerPrice' || k === 'areaConstruida' || k === 'areaCasa' || k === 'areaTerreno') {
+            updateData[k] = v === '' || v === null ? null : Number(String(v).replace(',', '.'));
+          } else {
+            updateData[k] = v;
+          }
+        }
+      });
       await db.update(properties).set(updateData).where(eq(properties.id, id));
       return { success: true };
     }),
