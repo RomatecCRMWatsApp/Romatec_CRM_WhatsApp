@@ -1,7 +1,6 @@
 import { eq } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/mysql2";
-import mysql from "mysql2/promise";
-import { InsertUser, users, Contact, InsertContact, contacts, Property, InsertProperty, properties, Campaign, InsertCampaign, campaigns, CompanyConfig, InsertCompanyConfig, companyConfig } from "../drizzle/schema";
+import { InsertUser, users, contacts, InsertContact, properties, InsertProperty, campaigns, InsertCampaign, companyConfig, InsertCompanyConfig } from "../drizzle/schema";
 import { ENV } from './_core/env';
 
 let _db: ReturnType<typeof drizzle> | null = null;
@@ -9,7 +8,8 @@ let _db: ReturnType<typeof drizzle> | null = null;
 export async function getDb() {
   if (!_db && process.env.DATABASE_URL) {
     try {
-      const connection = await mysql.createConnection(process.env.DATABASE_URL);
+      const mysql2 = require("mysql2/promise");
+      const connection = await mysql2.createConnection(process.env.DATABASE_URL);
       _db = drizzle(connection);
       console.log("[Database] Connected successfully");
     } catch (error) {
@@ -51,7 +51,7 @@ export async function upsertUser(user: InsertUser): Promise<void> {
 
 export async function getUserByOpenId(openId: string) {
   const db = await getDb();
-  if (!db) { console.warn("[Database] Cannot get user: database not available"); return undefined; }
+  if (!db) return undefined;
   const result = await db.select().from(users).where(eq(users.openId, openId)).limit(1);
   return result.length > 0 ? result[0] : undefined;
 }
