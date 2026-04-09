@@ -4,7 +4,7 @@ import { systemRouter } from "./_core/systemRouter";
 import { publicProcedure, protectedProcedure, router } from "./_core/trpc";
 import { getAllContacts, getContactById, createContact, getAllProperties, getPropertyById, createProperty, getAllCampaigns, getCampaignById, createCampaign, getCompanyConfig, updateCompanyConfig, getDb } from "./db";
 import { campaigns, contacts, campaignContacts, messages, properties, contactCampaignHistory } from "../drizzle/schema";
-import { eq, and, sql } from "drizzle-orm";
+import { eq, and } from "drizzle-orm";
 import { campaignScheduler } from "./scheduler/campaignScheduler";
 import { z } from "zod";
 
@@ -17,298 +17,132 @@ export const appRouter = router({
       ctx.res.clearCookie(COOKIE_NAME, { ...cookieOptions, maxAge: -1 });
       return { success: true } as const;
     }),
-   login: publicProcedure
+    login: publicProcedure
       .input(z.object({ username: z.string(), password: z.string() }))
       .mutation(async ({ input, ctx }) => {
-        const db = await getDb();
-        if (!db) throw new Error("Database not available");
-        const { users } = await import("../drizzle/schema");
-        let userList = await db.select().from(users).where(eq(users.openId, input.username)).limit(1);
-        // Se não encontrou por openId, tenta por email
-        if (!userList[0]) {
-          userList = await db.select().from(users).where(eq(users.email, input.username)).limit(1);
+        try {
+          const mysql = await import("mysql2/promise");
+          const conn = await mysql.createConnection(process.env.DATABASE_URL!);
+          const [rows] = await conn.execute(
+            "SELECT * FROM users WHERE email = ? OR openId = ? LIMIT 1",
+            [input.username, input.username]
+          ) as any;
+          await conn.end();
+          const user = rows[0];
+          if (!user) throw new Error("Usuário não encontrado");
+          const { sdk } = await import("./_core/sdk");
+          const { ONE_YEAR_MS } = await import("@shared/const");
+          const cookieOptions = getSessionCookieOptions(ctx.req);
+          const token = await sdk.createSessionToken(user.openId, { name: user.name || "" });
+          ctx.res.cookie(COOKIE_NAME, token, { ...cookieOptions, maxAge: ONE_YEAR_MS });
+          return { success: true };
+        } catch (error) {
+          console.error("[Login] Erro:", error);
+          throw error;
         }
-        // Se ainda não encontrou, cria o usuário admin automaticamente
-        if (!userList[0]) {
-          const adminOpenId = process.env.ADMIN_OPEN_ID || input.username;
-          await db.insert(users).values({
-            openId: adminOpenId,
-            name: "Admin",
-            email: input.username,
-            loginMethod: "local",
-            role: "admin",
-          });
-          userList = await db.select().from(users).where(eq(users.openId, adminOpenId)).limit(1);
-        }
-        const user = userList[0];
-        if (!user) throw new Error("Erro ao criar usuário");
-        const { sdk } = await import("./_core/sdk");
-        const { ONE_YEAR_MS } = await import("@shared/const");
-        const cookieOptions = getSessionCookieOptions(ctx.req);
-        const token = await sdk.createSessionToken(user.openId, { name: user.name || "" });
-        ctx.res.cookie(COOKIE_NAME, token, { ...cookieOptions, maxAge: ONE_YEAR_MS });
-        return { success: true };
       }),
   }),
 
-  // Routers de Contatos
   contacts: router({
-    list: publicProcedure.query(async () => {
-      return getAllContacts();
+    list: publicProcedure.query(async () => getAllContacts()),
+    getById: publicProcedure.input(z.object({ id: z.number() })).query(async ({ input }) => getContactById(input.id)),
+    create: protectedProcedure.input(z.object({ name: z.string(), phone: z.string(), email: z.string().optional() })).mutation(async ({ input }) => createContact({ name: input.name, phone: input.phone, email: input.email, status: "active" })),
+    update: protectedProcedure.input(z.object({ id: z.number(), name: z.string().optional(), phone: z.string().optional(), email: z.string().optional(), status: z.enum(["active", "inactive", "blocked"]).optional() })).mutation(async ({ input }) => {
+      const db = await getDb();
+      if (!db) throw new Error("Database not available");
+      const { id, ...data } = input;
+      const updateData: any = {};
+      Object.entries(data).forEach(([k, v]) => { if (v !== undefined) updateData[k] = v; });
+      await db.update(contacts).set(updateData).where(eq(contacts.id, id));
+      return { success: true };
     }),
-    getById: publicProcedure
-      .input(z.object({ id: z.number() }))
-      .query(async ({ input }) => {
-        return getContactById(input.id);
-      }),
-    create: protectedProcedure
-      .input(z.object({
-        name: z.string(),
-        phone: z.string(),
-        email: z.string().optional(),
-      }))
-      .mutation(async ({ input }) => {
-        return createContact({
-          name: input.name,
-          phone: input.phone,
-          email: input.email,
-          status: "active",
-        });
-      }),
-    update: protectedProcedure
-      .input(z.object({
-        id: z.number(),
-        name: z.string().optional(),
-        phone: z.string().optional(),
-        email: z.string().optional(),
-        status: z.enum(["active", "inactive", "blocked"]).optional(),
-      }))
-      .mutation(async ({ input }) => {
-        const db = await getDb();
-        if (!db) throw new Error("Database not available");
-        const { id, ...data } = input;
-        const updateData: any = {};
-        Object.entries(data).forEach(([k, v]) => { if (v !== undefined) updateData[k] = v; });
-        await db.update(contacts).set(updateData).where(eq(contacts.id, id));
-        return { success: true };
-      }),
-    delete: protectedProcedure
-      .input(z.object({ id: z.number() }))
-      .mutation(async ({ input }) => {
-        const db = await getDb();
-        if (!db) throw new Error("Database not available");
-        await db.delete(campaignContacts).where(eq(campaignContacts.contactId, input.id));
-        await db.delete(contacts).where(eq(contacts.id, input.id));
-        return { success: true };
-      }),
-    importBatch: protectedProcedure
-      .input(z.array(z.object({
-        name: z.string(),
-        phone: z.string(),
-        email: z.string().optional(),
-      })))
-      .mutation(async ({ input }) => {
-        const db = await getDb();
-        if (!db) throw new Error("Database not available");
-        const results = [];
-        for (const contact of input) {
-          try {
-            await createContact({ name: contact.name, phone: contact.phone, email: contact.email, status: "active" });
-            results.push({ success: true, ...contact });
-          } catch (error) {
-            results.push({ success: false, ...contact, error: String(error) });
-          }
+    delete: protectedProcedure.input(z.object({ id: z.number() })).mutation(async ({ input }) => {
+      const db = await getDb();
+      if (!db) throw new Error("Database not available");
+      await db.delete(campaignContacts).where(eq(campaignContacts.contactId, input.id));
+      await db.delete(contacts).where(eq(contacts.id, input.id));
+      return { success: true };
+    }),
+    importBatch: protectedProcedure.input(z.array(z.object({ name: z.string(), phone: z.string(), email: z.string().optional() }))).mutation(async ({ input }) => {
+      const db = await getDb();
+      if (!db) throw new Error("Database not available");
+      const results = [];
+      for (const contact of input) {
+        try {
+          await createContact({ name: contact.name, phone: contact.phone, email: contact.email, status: "active" });
+          results.push({ success: true, ...contact });
+        } catch (error) {
+          results.push({ success: false, ...contact, error: String(error) });
         }
-        return results;
-      }),
+      }
+      return results;
+    }),
   }),
 
-  // Routers de Imóveis
   properties: router({
-    list: publicProcedure.query(async () => {
-      return getAllProperties();
+    list: publicProcedure.query(async () => getAllProperties()),
+    getById: publicProcedure.input(z.object({ id: z.number() })).query(async ({ input }) => getPropertyById(input.id)),
+    getBySlug: publicProcedure.input(z.object({ slug: z.string() })).query(async ({ input }) => {
+      const db = await getDb();
+      if (!db) return null;
+      const result = await db.select().from(properties).where(eq(properties.publicSlug, input.slug)).limit(1);
+      return result[0] || null;
     }),
-    getById: publicProcedure
-      .input(z.object({ id: z.number() }))
-      .query(async ({ input }) => {
-        return getPropertyById(input.id);
-      }),
-    getBySlug: publicProcedure
-      .input(z.object({ slug: z.string() }))
-      .query(async ({ input }) => {
-        const db = await getDb();
-        if (!db) return null;
-        const result = await db.select().from(properties).where(eq(properties.publicSlug, input.slug)).limit(1);
-        return result[0] || null;
-      }),
-    create: protectedProcedure
-      .input(z.object({
-        denomination: z.string(),
-        address: z.string(),
-        city: z.string().optional(),
-        state: z.string().optional(),
-        cep: z.string().optional(),
-        price: z.string(),
-        offerPrice: z.string().optional(),
-        description: z.string().optional(),
-        images: z.array(z.string()).optional(),
-        videoUrl: z.string().optional(),
-        plantaBaixaUrl: z.string().optional(),
-        areaConstruida: z.string().optional(),
-        areaCasa: z.string().optional(),
-        areaTerreno: z.string().optional(),
-        bedrooms: z.number().optional(),
-        bathrooms: z.number().optional(),
-        garageSpaces: z.number().optional(),
-        propertyType: z.string().optional(),
-      }))
-      .mutation(async ({ input }) => {
-        const slug = input.denomination.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '') + '-' + Date.now().toString(36);
-        const db = await getDb();
-        if (!db) throw new Error("Database not available");
-        const result = await db.insert(properties).values({
-          denomination: input.denomination,
-          address: input.address,
-          city: input.city,
-          state: input.state,
-          cep: input.cep,
-          price: input.price as any,
-          offerPrice: input.offerPrice as any || null,
-          description: input.description,
-          images: input.images || [],
-          videoUrl: input.videoUrl,
-          plantaBaixaUrl: input.plantaBaixaUrl,
-          areaConstruida: input.areaConstruida as any || null,
-          areaCasa: input.areaCasa as any || null,
-          areaTerreno: input.areaTerreno as any || null,
-          bedrooms: input.bedrooms,
-          bathrooms: input.bathrooms,
-          garageSpaces: input.garageSpaces,
-          propertyType: input.propertyType,
-          publicSlug: slug,
-          status: "available",
-        });
-        return { id: Number(result[0].insertId), slug };
-      }),
-    update: protectedProcedure
-      .input(z.object({
-        id: z.number(),
-        denomination: z.string().optional(),
-        address: z.string().optional(),
-        city: z.string().optional(),
-        state: z.string().optional(),
-        cep: z.string().optional(),
-        price: z.string().optional(),
-        offerPrice: z.string().optional(),
-        description: z.string().optional(),
-        images: z.array(z.string()).optional(),
-        videoUrl: z.string().optional(),
-        plantaBaixaUrl: z.string().optional(),
-        areaConstruida: z.string().optional(),
-        areaCasa: z.string().optional(),
-        areaTerreno: z.string().optional(),
-        bedrooms: z.number().optional(),
-        bathrooms: z.number().optional(),
-        garageSpaces: z.number().optional(),
-        propertyType: z.string().optional(),
-        status: z.enum(["available", "sold", "inactive"]).optional(),
-      }))
-      .mutation(async ({ input }) => {
-        const db = await getDb();
-        if (!db) throw new Error("Database not available");
-        const { id, ...data } = input;
-        const updateData: any = {};
-        Object.entries(data).forEach(([k, v]) => { if (v !== undefined) updateData[k] = v; });
-        await db.update(properties).set(updateData).where(eq(properties.id, id));
-        return { success: true };
-      }),
-    delete: protectedProcedure
-      .input(z.object({ id: z.number() }))
-      .mutation(async ({ input }) => {
-        const db = await getDb();
-        if (!db) throw new Error("Database not available");
-        const relatedCampaigns = await db.select().from(campaigns).where(eq(campaigns.propertyId, input.id));
-        for (const camp of relatedCampaigns) {
-          await db.delete(messages).where(eq(messages.campaignId, camp.id));
-          await db.delete(contactCampaignHistory).where(eq(contactCampaignHistory.campaignId, camp.id));
-          await db.delete(campaignContacts).where(eq(campaignContacts.campaignId, camp.id));
-        }
-        await db.delete(messages).where(eq(messages.propertyId, input.id));
-        await db.delete(campaigns).where(eq(campaigns.propertyId, input.id));
-        await db.delete(properties).where(eq(properties.id, input.id));
-        return { success: true };
-      }),
-    generateDescription: protectedProcedure
-      .input(z.object({
-        denomination: z.string(),
-        address: z.string(),
-        city: z.string().optional(),
-        price: z.string(),
-        offerPrice: z.string().optional(),
-        areaConstruida: z.string().optional(),
-        areaCasa: z.string().optional(),
-        areaTerreno: z.string().optional(),
-        bedrooms: z.number().optional(),
-        bathrooms: z.number().optional(),
-        garageSpaces: z.number().optional(),
-        propertyType: z.string().optional(),
-      }))
-      .mutation(async ({ input }) => {
-        const { invokeLLM } = await import("./_core/llm");
-        const prompt = `Você é um corretor de imóveis especialista em marketing imobiliário. Gere uma descrição ATRATIVA e PROFISSIONAL para o seguinte imóvel:\n\n- Nome: ${input.denomination}\n- Endereço: ${input.address}${input.city ? `, ${input.city}` : ''}\n- Tipo: ${input.propertyType || 'Imóvel'}\n- Preço: R$ ${Number(input.price).toLocaleString('pt-BR')}\n- Quartos: ${input.bedrooms || 'N/I'}\n- Banheiros: ${input.bathrooms || 'N/I'}\n\nRegras: use gatilhos de escassez e oferta. Máximo 3 parágrafos. Tom profissional. Português brasileiro.`;
-        const response = await invokeLLM({
-          messages: [
-            { role: "system", content: "Você é um especialista em marketing imobiliário brasileiro." },
-            { role: "user", content: prompt },
-          ],
-        });
-        const descContent = response.choices[0]?.message?.content;
-        return { description: typeof descContent === 'string' ? descContent : 'Descrição não gerada' };
-      }),
-    generateWhatsAppMessage: protectedProcedure
-      .input(z.object({ propertyId: z.number() }))
-      .mutation(async ({ input }) => {
-        const db = await getDb();
-        if (!db) throw new Error("Database not available");
-        const prop = await db.select().from(properties).where(eq(properties.id, input.propertyId)).limit(1);
-        if (!prop[0]) throw new Error("Imóvel não encontrado");
-        const p = prop[0];
-        const { invokeLLM } = await import("./_core/llm");
-        const response = await invokeLLM({
-          messages: [
-            { role: "system", content: "Você gera mensagens curtas para WhatsApp de imóveis. Máximo 3 linhas. Tom profissional e persuasivo." },
-            { role: "user", content: `Gere 4 variações de mensagem curta para WhatsApp sobre: ${p.denomination} em ${p.address}, R$ ${Number(p.price).toLocaleString('pt-BR')}. Link: {{LINK}}. Separe por |||` },
-          ],
-        });
-        const rawContent = response.choices[0]?.message?.content || "";
-        const text = typeof rawContent === 'string' ? rawContent : '';
-        const variations = text.split('|||').map((v: string) => v.trim()).filter(Boolean);
-        return { variations: variations.length > 0 ? variations : [text] };
-      }),
+    create: protectedProcedure.input(z.object({ denomination: z.string(), address: z.string(), city: z.string().optional(), state: z.string().optional(), cep: z.string().optional(), price: z.string(), offerPrice: z.string().optional(), description: z.string().optional(), images: z.array(z.string()).optional(), videoUrl: z.string().optional(), plantaBaixaUrl: z.string().optional(), areaConstruida: z.string().optional(), areaCasa: z.string().optional(), areaTerreno: z.string().optional(), bedrooms: z.number().optional(), bathrooms: z.number().optional(), garageSpaces: z.number().optional(), propertyType: z.string().optional() })).mutation(async ({ input }) => {
+      const slug = input.denomination.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '') + '-' + Date.now().toString(36);
+      const db = await getDb();
+      if (!db) throw new Error("Database not available");
+      const result = await db.insert(properties).values({ ...input, price: input.price as any, offerPrice: input.offerPrice as any || null, areaConstruida: input.areaConstruida as any || null, areaCasa: input.areaCasa as any || null, areaTerreno: input.areaTerreno as any || null, images: input.images || [], publicSlug: slug, status: "available" });
+      return { id: Number((result as any)[0].insertId), slug };
+    }),
+    update: protectedProcedure.input(z.object({ id: z.number(), denomination: z.string().optional(), address: z.string().optional(), city: z.string().optional(), state: z.string().optional(), cep: z.string().optional(), price: z.string().optional(), offerPrice: z.string().optional(), description: z.string().optional(), images: z.array(z.string()).optional(), videoUrl: z.string().optional(), plantaBaixaUrl: z.string().optional(), areaConstruida: z.string().optional(), areaCasa: z.string().optional(), areaTerreno: z.string().optional(), bedrooms: z.number().optional(), bathrooms: z.number().optional(), garageSpaces: z.number().optional(), propertyType: z.string().optional(), status: z.enum(["available", "sold", "inactive"]).optional() })).mutation(async ({ input }) => {
+      const db = await getDb();
+      if (!db) throw new Error("Database not available");
+      const { id, ...data } = input;
+      const updateData: any = {};
+      Object.entries(data).forEach(([k, v]) => { if (v !== undefined) updateData[k] = v; });
+      await db.update(properties).set(updateData).where(eq(properties.id, id));
+      return { success: true };
+    }),
+    delete: protectedProcedure.input(z.object({ id: z.number() })).mutation(async ({ input }) => {
+      const db = await getDb();
+      if (!db) throw new Error("Database not available");
+      const relatedCampaigns = await db.select().from(campaigns).where(eq(campaigns.propertyId, input.id));
+      for (const camp of relatedCampaigns) {
+        await db.delete(messages).where(eq(messages.campaignId, camp.id));
+        await db.delete(contactCampaignHistory).where(eq(contactCampaignHistory.campaignId, camp.id));
+        await db.delete(campaignContacts).where(eq(campaignContacts.campaignId, camp.id));
+      }
+      await db.delete(messages).where(eq(messages.propertyId, input.id));
+      await db.delete(campaigns).where(eq(campaigns.propertyId, input.id));
+      await db.delete(properties).where(eq(properties.id, input.id));
+      return { success: true };
+    }),
+    generateDescription: protectedProcedure.input(z.object({ denomination: z.string(), address: z.string(), city: z.string().optional(), price: z.string(), offerPrice: z.string().optional(), areaConstruida: z.string().optional(), areaCasa: z.string().optional(), areaTerreno: z.string().optional(), bedrooms: z.number().optional(), bathrooms: z.number().optional(), garageSpaces: z.number().optional(), propertyType: z.string().optional() })).mutation(async ({ input }) => {
+      const { invokeLLM } = await import("./_core/llm");
+      const prompt = `Gere uma descrição atrativa para o imóvel: ${input.denomination} em ${input.address}, R$ ${Number(input.price).toLocaleString('pt-BR')}. Use gatilhos de escassez. Máximo 3 parágrafos em português.`;
+      const response = await invokeLLM({ messages: [{ role: "user", content: prompt }] });
+      const descContent = response.choices[0]?.message?.content;
+      return { description: typeof descContent === 'string' ? descContent : 'Descrição não gerada' };
+    }),
+    generateWhatsAppMessage: protectedProcedure.input(z.object({ propertyId: z.number() })).mutation(async ({ input }) => {
+      const db = await getDb();
+      if (!db) throw new Error("Database not available");
+      const prop = await db.select().from(properties).where(eq(properties.id, input.propertyId)).limit(1);
+      if (!prop[0]) throw new Error("Imóvel não encontrado");
+      const p = prop[0];
+      const { invokeLLM } = await import("./_core/llm");
+      const response = await invokeLLM({ messages: [{ role: "user", content: `Gere 4 variações de mensagem WhatsApp para: ${p.denomination} em ${p.address}, R$ ${Number(p.price).toLocaleString('pt-BR')}. Link: {{LINK}}. Separe por |||` }] });
+      const text = typeof response.choices[0]?.message?.content === 'string' ? response.choices[0].message.content : '';
+      const variations = text.split('|||').map((v: string) => v.trim()).filter(Boolean);
+      return { variations: variations.length > 0 ? variations : [text] };
+    }),
   }),
 
-  // Routers de Campanhas
   campaigns: router({
     list: publicProcedure.query(async () => getAllCampaigns()),
-    getById: publicProcedure
-      .input(z.object({ id: z.number() }))
-      .query(async ({ input }) => getCampaignById(input.id)),
-    create: protectedProcedure
-      .input(z.object({
-        propertyId: z.number(),
-        name: z.string(),
-        messageVariations: z.array(z.string()).optional(),
-        totalContacts: z.number().optional(),
-      }))
-      .mutation(async ({ input }) => {
-        return createCampaign({
-          propertyId: input.propertyId,
-          name: input.name,
-          messageVariations: input.messageVariations || [],
-          totalContacts: input.totalContacts || 24,
-          status: "draft",
-        });
-      }),
+    getById: publicProcedure.input(z.object({ id: z.number() })).query(async ({ input }) => getCampaignById(input.id)),
+    create: protectedProcedure.input(z.object({ propertyId: z.number(), name: z.string(), messageVariations: z.array(z.string()).optional(), totalContacts: z.number().optional() })).mutation(async ({ input }) => createCampaign({ propertyId: input.propertyId, name: input.name, messageVariations: input.messageVariations || [], totalContacts: input.totalContacts || 24, status: "draft" })),
     autoSetup: protectedProcedure.mutation(async () => {
       const db = await getDb();
       if (!db) throw new Error("Database not available");
@@ -321,23 +155,8 @@ export const appRouter = router({
       const createdCampaigns = [];
       for (let i = 0; i < allProperties.length; i++) {
         const prop = allProperties[i];
-        const variations = [
-          `Olá! Temos uma excelente oportunidade: ${prop.denomination} em ${prop.address}. Quer saber mais?`,
-          `O imóvel ${prop.denomination} está disponível por R$ ${Number(prop.price).toLocaleString("pt-BR")}. Posso enviar detalhes?`,
-          `Você conhece o ${prop.denomination}? Imóvel incrível em ${prop.address}. Vamos conversar?`,
-          `Oportunidade única! ${prop.denomination} - ${prop.address}. Condições especiais. Quer agendar uma visita?`,
-        ];
-        const result = await db.insert(campaigns).values({
-          propertyId: prop.id,
-          name: prop.denomination,
-          messageVariations: variations,
-          totalContacts: 24,
-          sentCount: 0,
-          failedCount: 0,
-          status: "running",
-          startDate: new Date(),
-        });
-        const campaignId = Number(result[0].insertId);
+        const result = await db.insert(campaigns).values({ propertyId: prop.id, name: prop.denomination, messageVariations: [], totalContacts: 24, sentCount: 0, failedCount: 0, status: "running", startDate: new Date() });
+        const campaignId = Number((result as any)[0].insertId);
         createdCampaigns.push({ id: campaignId, name: prop.denomination });
         const campaignContactsList = shuffled.slice(i * 24, i * 24 + 24);
         for (const contact of campaignContactsList) {
@@ -346,36 +165,31 @@ export const appRouter = router({
       }
       return { success: true, campaigns: createdCampaigns, message: `${createdCampaigns.length} campanhas criadas` };
     }),
-    delete: protectedProcedure
-      .input(z.object({ id: z.number() }))
-      .mutation(async ({ input }) => {
-        const db = await getDb();
-        if (!db) throw new Error("Database not available");
-        await db.delete(messages).where(eq(messages.campaignId, input.id));
-        await db.delete(contactCampaignHistory).where(eq(contactCampaignHistory.campaignId, input.id));
-        await db.delete(campaignContacts).where(eq(campaignContacts.campaignId, input.id));
-        await db.delete(campaigns).where(eq(campaigns.id, input.id));
-        return { success: true };
-      }),
-    getContacts: protectedProcedure
-      .input(z.object({ campaignId: z.number() }))
-      .query(async ({ input }) => {
-        const db = await getDb();
-        if (!db) return [];
-        const cc = await db.select().from(campaignContacts).where(eq(campaignContacts.campaignId, input.campaignId));
-        const result = [];
-        for (const item of cc) {
-          const contactResult = await db.select().from(contacts).where(eq(contacts.id, item.contactId)).limit(1);
-          const contact = contactResult[0];
-          if (!contact) continue;
-          const lastMsg = await db.select().from(messages).where(and(eq(messages.contactId, contact.id), eq(messages.campaignId, input.campaignId), eq(messages.status, "sent"))).limit(1);
-          result.push({ id: item.id, contactId: contact.id, name: contact.name, phone: contact.phone, status: item.status, messagesSent: item.messagesSent || 0, lastMessageSent: lastMsg[0]?.sentAt || null, blockedUntil: contact.blockedUntil });
-        }
-        return result;
-      }),
+    delete: protectedProcedure.input(z.object({ id: z.number() })).mutation(async ({ input }) => {
+      const db = await getDb();
+      if (!db) throw new Error("Database not available");
+      await db.delete(messages).where(eq(messages.campaignId, input.id));
+      await db.delete(contactCampaignHistory).where(eq(contactCampaignHistory.campaignId, input.id));
+      await db.delete(campaignContacts).where(eq(campaignContacts.campaignId, input.id));
+      await db.delete(campaigns).where(eq(campaigns.id, input.id));
+      return { success: true };
+    }),
+    getContacts: protectedProcedure.input(z.object({ campaignId: z.number() })).query(async ({ input }) => {
+      const db = await getDb();
+      if (!db) return [];
+      const cc = await db.select().from(campaignContacts).where(eq(campaignContacts.campaignId, input.campaignId));
+      const result = [];
+      for (const item of cc) {
+        const contactResult = await db.select().from(contacts).where(eq(contacts.id, item.contactId)).limit(1);
+        const contact = contactResult[0];
+        if (!contact) continue;
+        const lastMsg = await db.select().from(messages).where(and(eq(messages.contactId, contact.id), eq(messages.campaignId, input.campaignId), eq(messages.status, "sent"))).limit(1);
+        result.push({ id: item.id, contactId: contact.id, name: contact.name, phone: contact.phone, status: item.status, messagesSent: item.messagesSent || 0, lastMessageSent: lastMsg[0]?.sentAt || null, blockedUntil: contact.blockedUntil });
+      }
+      return result;
+    }),
   }),
 
-  // Scheduler Router
   scheduler: router({
     start: protectedProcedure.mutation(async () => {
       campaignScheduler.stop();
@@ -428,32 +242,28 @@ export const appRouter = router({
           await db.insert(campaignContacts).values({ campaignId: allCampaigns[i].id, contactId: contact.id, messagesSent: 0, status: "pending" });
         }
       }
-      return { success: true, message: `Campanhas resetadas! Clique em Iniciar.` };
+      return { success: true, message: "Campanhas resetadas! Clique em Iniciar." };
     }),
-    toggleCampaign: protectedProcedure
-      .input(z.object({ campaignId: z.number(), active: z.boolean() }))
-      .mutation(async ({ input }) => {
-        const db = await getDb();
-        if (!db) throw new Error("Database not available");
-        await db.update(campaigns).set({ status: input.active ? "running" : "paused" }).where(eq(campaigns.id, input.campaignId));
-        return { success: true };
-      }),
-    updateMessagesPerHour: protectedProcedure
-      .input(z.object({ campaignId: z.number(), messagesPerHour: z.number().min(1).max(10) }))
-      .mutation(async ({ input }) => {
-        const db = await getDb();
-        if (!db) throw new Error("Database not available");
-        const newTotalContacts = input.messagesPerHour * 12;
-        await db.update(campaigns).set({ messagesPerHour: input.messagesPerHour, totalContacts: newTotalContacts }).where(eq(campaigns.id, input.campaignId));
-        await db.delete(campaignContacts).where(eq(campaignContacts.campaignId, input.campaignId));
-        const now = new Date();
-        const allContacts = await db.select().from(contacts).where(eq(contacts.status, "active"));
-        const selected = [...allContacts].filter(c => !c.blockedUntil || c.blockedUntil <= now).sort(() => Math.random() - 0.5).slice(0, newTotalContacts);
-        for (const contact of selected) {
-          await db.insert(campaignContacts).values({ campaignId: input.campaignId, contactId: contact.id, messagesSent: 0, status: "pending" });
-        }
-        return { success: true, message: `${input.messagesPerHour} msgs/hora`, totalContacts: newTotalContacts };
-      }),
+    toggleCampaign: protectedProcedure.input(z.object({ campaignId: z.number(), active: z.boolean() })).mutation(async ({ input }) => {
+      const db = await getDb();
+      if (!db) throw new Error("Database not available");
+      await db.update(campaigns).set({ status: input.active ? "running" : "paused" }).where(eq(campaigns.id, input.campaignId));
+      return { success: true };
+    }),
+    updateMessagesPerHour: protectedProcedure.input(z.object({ campaignId: z.number(), messagesPerHour: z.number().min(1).max(10) })).mutation(async ({ input }) => {
+      const db = await getDb();
+      if (!db) throw new Error("Database not available");
+      const newTotalContacts = input.messagesPerHour * 12;
+      await db.update(campaigns).set({ messagesPerHour: input.messagesPerHour, totalContacts: newTotalContacts }).where(eq(campaigns.id, input.campaignId));
+      await db.delete(campaignContacts).where(eq(campaignContacts.campaignId, input.campaignId));
+      const now = new Date();
+      const allContacts = await db.select().from(contacts).where(eq(contacts.status, "active"));
+      const selected = [...allContacts].filter(c => !c.blockedUntil || c.blockedUntil <= now).sort(() => Math.random() - 0.5).slice(0, newTotalContacts);
+      for (const contact of selected) {
+        await db.insert(campaignContacts).values({ campaignId: input.campaignId, contactId: contact.id, messagesSent: 0, status: "pending" });
+      }
+      return { success: true, message: `${input.messagesPerHour} msgs/hora`, totalContacts: newTotalContacts };
+    }),
     getCampaignDetails: publicProcedure.query(async () => {
       const db = await getDb();
       if (!db) return [];
@@ -480,19 +290,9 @@ export const appRouter = router({
     }),
   }),
 
-  // Routers de Configuração da Empresa
   companyConfig: router({
     get: publicProcedure.query(async () => getCompanyConfig()),
-    update: protectedProcedure
-      .input(z.object({
-        companyName: z.string().optional(),
-        phone: z.string().optional(),
-        address: z.string().optional(),
-        zApiInstanceId: z.string().optional(),
-        zApiToken: z.string().optional(),
-        zApiClientToken: z.string().optional(),
-      }))
-      .mutation(async ({ input }) => updateCompanyConfig(input)),
+    update: protectedProcedure.input(z.object({ companyName: z.string().optional(), phone: z.string().optional(), address: z.string().optional(), zApiInstanceId: z.string().optional(), zApiToken: z.string().optional(), zApiClientToken: z.string().optional() })).mutation(async ({ input }) => updateCompanyConfig(input)),
     testZApiConnection: protectedProcedure.mutation(async () => {
       const config = await getCompanyConfig();
       if (!config || !config.zApiInstanceId || !config.zApiToken) return { success: false, message: "Z-API credentials not configured" };
@@ -515,7 +315,6 @@ export const appRouter = router({
     }),
   }),
 
-  // Performance Router
   performance: router({
     getStats: protectedProcedure.query(async () => {
       const db = await getDb();
@@ -555,43 +354,33 @@ export const appRouter = router({
     }),
   }),
 
-  // Bot AI Router
   bot: router({
-    processMessage: publicProcedure
-      .input(z.object({ phone: z.string(), message: z.string().optional(), audioUrl: z.string().optional(), senderName: z.string().optional() }))
-      .mutation(async ({ input }) => {
-        const { processBotMessage } = await import('./bot-ai');
-        try {
-          const response = await processBotMessage({ phone: input.phone, message: input.message, audioUrl: input.audioUrl, senderName: input.senderName });
-          return { success: true, ...response };
-        } catch (error) {
-          return { success: false, text: 'Desculpe, ocorreu um erro. Tente novamente.' };
-        }
-      }),
-    simulateFinancing: publicProcedure
-      .input(z.object({ propertyValue: z.number(), entryPercent: z.number().optional().default(20) }))
-      .query(async ({ input }) => {
-        const { simulateFinancing } = await import('./bot-ai');
-        return simulateFinancing(input.propertyValue, input.entryPercent);
-      }),
-    recommendProperties: publicProcedure
-      .input(z.object({ budget: z.number() }))
-      .query(async ({ input }) => {
-        const { recommendProperties } = await import('./bot-ai');
-        return recommendProperties(input.budget);
-      }),
+    processMessage: publicProcedure.input(z.object({ phone: z.string(), message: z.string().optional(), audioUrl: z.string().optional(), senderName: z.string().optional() })).mutation(async ({ input }) => {
+      const { processBotMessage } = await import('./bot-ai');
+      try {
+        const response = await processBotMessage({ phone: input.phone, message: input.message, audioUrl: input.audioUrl, senderName: input.senderName });
+        return { success: true, ...response };
+      } catch (error) {
+        return { success: false, text: 'Desculpe, ocorreu um erro.' };
+      }
+    }),
+    simulateFinancing: publicProcedure.input(z.object({ propertyValue: z.number(), entryPercent: z.number().optional().default(20) })).query(async ({ input }) => {
+      const { simulateFinancing } = await import('./bot-ai');
+      return simulateFinancing(input.propertyValue, input.entryPercent);
+    }),
+    recommendProperties: publicProcedure.input(z.object({ budget: z.number() })).query(async ({ input }) => {
+      const { recommendProperties } = await import('./bot-ai');
+      return recommendProperties(input.budget);
+    }),
   }),
 
-  // Z-API Router
   zapi: router({
-    sendMessage: protectedProcedure
-      .input(z.object({ phone: z.string(), message: z.string() }))
-      .mutation(async ({ input }) => {
-        const config = await getCompanyConfig();
-        if (!config?.zApiInstanceId || !config?.zApiToken) return { success: false, error: 'Z-API nao configurado' };
-        const { sendMessageViaZAPI } = await import('./zapi-integration');
-        return sendMessageViaZAPI({ instanceId: config.zApiInstanceId, token: config.zApiToken, clientToken: config.zApiClientToken || undefined, phone: input.phone, message: input.message });
-      }),
+    sendMessage: protectedProcedure.input(z.object({ phone: z.string(), message: z.string() })).mutation(async ({ input }) => {
+      const config = await getCompanyConfig();
+      if (!config?.zApiInstanceId || !config?.zApiToken) return { success: false, error: 'Z-API nao configurado' };
+      const { sendMessageViaZAPI } = await import('./zapi-integration');
+      return sendMessageViaZAPI({ instanceId: config.zApiInstanceId, token: config.zApiToken, clientToken: config.zApiClientToken || undefined, phone: input.phone, message: input.message });
+    }),
   }),
 });
 
