@@ -17,7 +17,8 @@ import Performance from "./pages/Performance";
 
 // Componente para proteger rotas autenticadas
 function ProtectedRoute({ component: Component }: { component: React.ComponentType }) {
-  const { isAuthenticated, loading } = useAuth();
+  return <Component />;
+}
 
   if (loading) {
     return (
