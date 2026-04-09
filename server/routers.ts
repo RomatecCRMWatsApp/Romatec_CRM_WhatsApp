@@ -1,4 +1,4 @@
-import { COOKIE_NAME } from "@shared/const";
+﻿import { COOKIE_NAME } from "@shared/const";
 import { getSessionCookieOptions } from "./_core/cookies";
 import { systemRouter } from "./_core/systemRouter";
 import { publicProcedure, protectedProcedure, router } from "./_core/trpc";
@@ -12,6 +12,23 @@ export const appRouter = router({
   system: systemRouter,
   auth: router({
     me: publicProcedure.query(opts => opts.ctx.user),
+        changePassword: protectedProcedure
+      .input(z.object({ currentPassword: z.string(), newPassword: z.string().min(6) }))
+      .mutation(async ({ input, ctx }) => {
+        const db = await getDb();
+        if (!db) throw new Error("Database not available");
+        const crypto = require('crypto');
+        const userResult = await db.select().from(users).where(eq(users.openId, ctx.user.openId)).limit(1);
+        const user = userResult[0];
+        if (!user) throw new Error("Usuario nao encontrado");
+        if ((user as any).passwordHash) {
+          const currentHash = crypto.createHash('sha256').update(input.currentPassword).digest('hex');
+          if (currentHash !== (user as any).passwordHash) throw new Error("Senha atual incorreta!");
+        }
+        const newHash = crypto.createHash('sha256').update(input.newPassword).digest('hex');
+        await db.update(users).set({ passwordHash: newHash } as any).where(eq(users.openId, ctx.user.openId));
+        return { success: true };
+      }),
     logout: publicProcedure.mutation(({ ctx }) => {
       const cookieOptions = getSessionCookieOptions(ctx.req);
       ctx.res.clearCookie(COOKIE_NAME, { ...cookieOptions, maxAge: -1 });
@@ -101,7 +118,7 @@ export const appRouter = router({
       const updateData: any = {};
       Object.entries(data).forEach(([k, v]) => {
         if (v !== undefined) {
-          // Converter price e offerPrice para número (decimal no banco)
+          // Converter price e offerPrice para nÃºmero (decimal no banco)
           if (k === 'price' || k === 'offerPrice' || k === 'areaConstruida' || k === 'areaCasa' || k === 'areaTerreno') {
             updateData[k] = v === '' || v === null ? null : Number(String(v).replace(',', '.'));
           } else {
@@ -249,7 +266,7 @@ export const appRouter = router({
         for (const contact of selected) {
           await db.insert(campaignContacts).values({ campaignId: allCampaigns[i].id, contactId: contact.id, messagesSent: 0, status: "pending" });
         }
-        // Marcar campanha como running após atribuir contatos
+        // Marcar campanha como running apÃ³s atribuir contatos
         await db.update(campaigns).set({ status: "running" }).where(eq(campaigns.id, allCampaigns[i].id));
       }
       return { success: true, message: "Campanhas resetadas! Clique em Iniciar." };
@@ -395,3 +412,4 @@ export const appRouter = router({
 });
 
 export type AppRouter = typeof appRouter;
+
