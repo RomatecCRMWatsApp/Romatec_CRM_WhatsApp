@@ -1,4 +1,4 @@
-import { useMemo, useState, useEffect, lazy, Suspense, useRef } from "react";
+﻿import { useMemo, useState, useEffect, lazy, Suspense, useRef } from "react";
 import { useAuth } from "@/_core/hooks/useAuth";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -23,13 +23,13 @@ const COLORS = {
 const CAMPAIGN_COLORS = [COLORS.emerald, COLORS.gold, COLORS.blue, COLORS.purple, COLORS.cyan, COLORS.pink];
 
 /**
- * Componente de gráficos separado para isolar Recharts do DOM principal
+ * Componente de grÃ¡ficos separado para isolar Recharts do DOM principal
  * e evitar o erro insertBefore durante re-renders
  */
 function PerformanceCharts({ perfData }: { perfData: any }) {
   // Importar Recharts dinamicamente para evitar conflitos de DOM
   const [Recharts, setRecharts] = useState<any>(null);
-  // ID único por instância para evitar conflito de IDs no SVG (bug insertBefore)
+  // ID Ãºnico por instÃ¢ncia para evitar conflito de IDs no SVG (bug insertBefore)
   const uid = useRef(`grad_${Math.random().toString(36).substring(2, 8)}`).current;
 
   useEffect(() => {
@@ -100,12 +100,12 @@ function PerformanceCharts({ perfData }: { perfData: any }) {
 
   return (
     <>
-      {/* Gráficos - Linha 1 */}
+      {/* GrÃ¡ficos - Linha 1 */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
         <div className="glass-card p-5">
           <h3 className="text-base font-bold text-foreground mb-4 flex items-center gap-2">
             <Activity className="h-4 w-4 text-emerald-400" />
-            Envios - Últimos 7 Dias
+            Envios - Ãšltimos 7 Dias
           </h3>
           <div className="h-[250px]">
             {last7Days.length > 0 ? (
@@ -128,7 +128,7 @@ function PerformanceCharts({ perfData }: { perfData: any }) {
         <div className="glass-card p-5">
           <h3 className="text-base font-bold text-foreground mb-4 flex items-center gap-2">
             <Zap className="h-4 w-4 text-amber-400" />
-            Distribuição de Status
+            DistribuiÃ§Ã£o de Status
           </h3>
           <div className="h-[250px] flex items-center">
             {pieData.length > 0 ? (
@@ -155,19 +155,19 @@ function PerformanceCharts({ perfData }: { perfData: any }) {
             ) : (
               <div className="w-full text-center text-muted-foreground">
                 <Clock className="h-12 w-12 mx-auto mb-2 opacity-30" />
-                <p className="text-sm">Nenhum dado disponível ainda</p>
+                <p className="text-sm">Nenhum dado disponÃ­vel ainda</p>
               </div>
             )}
           </div>
         </div>
       </div>
 
-      {/* Gráficos - Linha 2 */}
+      {/* GrÃ¡ficos - Linha 2 */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
         <div className="glass-card p-5">
           <h3 className="text-base font-bold text-foreground mb-4 flex items-center gap-2">
             <TrendingUp className="h-4 w-4 text-blue-400" />
-            Evolução - Últimos 30 Dias
+            EvoluÃ§Ã£o - Ãšltimos 30 Dias
           </h3>
           <div className="h-[250px]">
             {last30Days.length > 0 ? (
@@ -196,7 +196,7 @@ function PerformanceCharts({ perfData }: { perfData: any }) {
         <div className="glass-card p-5">
           <h3 className="text-base font-bold text-foreground mb-4 flex items-center gap-2">
             <Clock className="h-4 w-4 text-purple-400" />
-            Distribuição por Hora do Dia
+            DistribuiÃ§Ã£o por Hora do Dia
           </h3>
           <div className="h-[250px]">
             {hourData.length > 0 ? (
@@ -319,7 +319,7 @@ export default function Dashboard() {
     refetchInterval: 30000,
   });
 
-  // Manter dados estáveis para evitar re-render dos gráficos
+  // Manter dados estÃ¡veis para evitar re-render dos grÃ¡ficos
   const [stablePerfData, setStablePerfData] = useState<any>(null);
   useEffect(() => {
     if (perfData) {
@@ -331,7 +331,7 @@ export default function Dashboard() {
 
   const stats = useMemo(() => [
     { label: "Clientes", value: contacts?.length || 0, icon: Users, color: "emerald", route: "/contacts" },
-    { label: "Imóveis", value: properties?.length || 0, icon: Building2, color: "amber", route: "/properties" },
+    { label: "ImÃ³veis", value: properties?.length || 0, icon: Building2, color: "amber", route: "/properties" },
     { label: "Campanhas", value: activeCampaigns, icon: Send, color: "blue", route: "/campaigns" },
   ], [contacts?.length, properties?.length, activeCampaigns]);
 
@@ -345,9 +345,9 @@ export default function Dashboard() {
           <div className="flex items-center gap-4">
             <img src={LOGO_URL} alt="Romatec" className="h-14 w-auto object-contain rounded-lg" />
             <div>
-              <h1 className="text-2xl font-bold">Romatec CRM - <span className="font-normal italic">Gestão de Relacionamento com o Cliente</span></h1>
-              <p className="text-white/80 text-sm">Sistema de Gestão de Clientes + Vendas</p>
-              <p className="text-white/50 text-xs mt-0.5">CEO José Romário P Bezerra</p>
+              <h1 className="text-2xl font-bold">Romatec CRM - <span className="font-normal italic">GestÃ£o de Relacionamento com o Cliente</span></h1>
+              <p className="text-white/80 text-sm">Sistema de GestÃ£o de Clientes + Vendas</p>
+              <p className="text-white/50 text-xs mt-0.5">CEO JosÃ© RomÃ¡rio P Bezerra</p>
             </div>
           </div>
           <Button onClick={() => logoutMutation.mutate()} variant="outline" className="border-white/30 text-white hover:bg-white/20">
@@ -385,7 +385,7 @@ export default function Dashboard() {
                 {config?.zApiConnected ? (
                   <><Wifi className="h-8 w-8 text-emerald-400" /><div><p className="font-bold text-emerald-400">Conectado</p><p className="text-xs text-muted-foreground">Z-API ativo</p></div></>
                 ) : (
-                  <><WifiOff className="h-8 w-8 text-red-400" /><div><p className="font-bold text-red-400">Desconectado</p><p className="text-xs text-muted-foreground">Configure em Configurações</p></div></>
+                  <><WifiOff className="h-8 w-8 text-red-400" /><div><p className="font-bold text-red-400">Desconectado</p><p className="text-xs text-muted-foreground">Configure em ConfiguraÃ§Ãµes</p></div></>
                 )}
               </div>
             </CardContent>
@@ -395,8 +395,8 @@ export default function Dashboard() {
             <CardHeader><CardTitle className="text-foreground text-lg">Empresa</CardTitle></CardHeader>
             <CardContent className="space-y-1">
               <p className="text-sm text-foreground font-medium">{config?.companyName || "Romatec"}</p>
-              <p className="text-xs text-muted-foreground">{config?.phone || "—"}</p>
-              <p className="text-xs text-muted-foreground">{config?.address || "—"}</p>
+              <p className="text-xs text-muted-foreground">{config?.phone || "â€”"}</p>
+              <p className="text-xs text-muted-foreground">{config?.address || "â€”"}</p>
             </CardContent>
           </Card>
         </div>
@@ -405,10 +405,10 @@ export default function Dashboard() {
         <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
           {[
             { label: "Clientes", icon: Users, route: "/contacts", color: "bg-emerald-600 hover:bg-emerald-700" },
-            { label: "Imóveis", icon: Building2, route: "/properties", color: "bg-amber-600 hover:bg-amber-700" },
+            { label: "ImÃ³veis", icon: Building2, route: "/properties", color: "bg-amber-600 hover:bg-amber-700" },
             { label: "Campanhas", icon: Send, route: "/campaigns", color: "bg-blue-600 hover:bg-blue-700" },
             { label: "Desempenho", icon: BarChart3, route: "/performance", color: "bg-purple-600 hover:bg-purple-700" },
-            { label: "Configurações", icon: Settings, route: "/settings", color: "bg-gray-600 hover:bg-gray-700" },
+            { label: "ConfiguraÃ§Ãµes", icon: Settings, route: "/settings", color: "bg-gray-600 hover:bg-gray-700" },
           ].map(item => (
             <Button key={item.label} onClick={() => navigate(item.route)} className={`${item.color} h-14 text-white font-bold`}>
               <item.icon className="mr-2 h-5 w-5" /> {item.label}
@@ -450,11 +450,11 @@ export default function Dashboard() {
 
             <div className="glass-card p-4">
               <div className="flex items-center justify-between mb-2">
-                <span className="text-xs text-muted-foreground">Média/Dia</span>
+                <span className="text-xs text-muted-foreground">MÃ©dia/Dia</span>
                 <TrendingUp className="h-4 w-4 text-amber-400" />
               </div>
               <p className="text-3xl font-bold text-amber-400">{totals.avgPerDay}</p>
-              <p className="text-xs text-muted-foreground mt-1">mensagens nos últimos 7 dias</p>
+              <p className="text-xs text-muted-foreground mt-1">mensagens nos Ãºltimos 7 dias</p>
             </div>
 
             <div className="glass-card p-4">
@@ -467,14 +467,14 @@ export default function Dashboard() {
             </div>
           </div>
 
-          {/* Gráficos - componente isolado */}
+          {/* GrÃ¡ficos - componente isolado */}
           {stablePerfData ? (
             <PerformanceCharts perfData={stablePerfData} />
           ) : (
             <div className="flex items-center justify-center py-12">
               <div className="text-center">
                 <div className="w-10 h-10 border-4 border-emerald-500/30 border-t-emerald-500 rounded-full animate-spin mx-auto mb-3" />
-                <p className="text-sm text-muted-foreground">Carregando gráficos...</p>
+                <p className="text-sm text-muted-foreground">Carregando grÃ¡ficos...</p>
               </div>
             </div>
           )}
@@ -483,3 +483,6 @@ export default function Dashboard() {
     </div>
   );
 }
+
+
+

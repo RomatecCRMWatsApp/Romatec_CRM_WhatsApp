@@ -1,4 +1,4 @@
-import { useMemo, useRef } from "react";
+﻿import { useMemo, useRef } from "react";
 import { trpc } from "@/lib/trpc";
 import { useLocation } from "wouter";
 import {
@@ -46,7 +46,7 @@ export default function Performance() {
     refetchInterval: 30000,
   });
 
-  // Formatar dados dos últimos 7 dias para o gráfico de linha
+  // Formatar dados dos Ãºltimos 7 dias para o grÃ¡fico de linha
   const last7Days = useMemo(() => {
     if (!data?.byDay) return [];
     return data.byDay.slice(-7).map(d => ({
@@ -55,7 +55,7 @@ export default function Performance() {
     }));
   }, [data?.byDay]);
 
-  // Formatar dados dos últimos 30 dias
+  // Formatar dados dos Ãºltimos 30 dias
   const last30Days = useMemo(() => {
     if (!data?.byDay) return [];
     return data.byDay.map(d => ({
@@ -64,7 +64,7 @@ export default function Performance() {
     }));
   }, [data?.byDay]);
 
-  // Dados para gráfico de pizza (status geral)
+  // Dados para grÃ¡fico de pizza (status geral)
   const pieData = useMemo(() => {
     if (!data?.totals) return [];
     return [
@@ -116,7 +116,7 @@ export default function Performance() {
                 Dashboard de Performance
               </h1>
               <p className="text-white/70 text-sm mt-0.5">
-                Romatec CRM - Análise de campanhas WhatsApp
+                Romatec CRM - AnÃ¡lise de campanhas WhatsApp
               </p>
             </div>
           </div>
@@ -146,11 +146,11 @@ export default function Performance() {
 
           <div className="glass-card p-4">
             <div className="flex items-center justify-between mb-2">
-              <span className="text-xs text-muted-foreground">Média/Dia</span>
+              <span className="text-xs text-muted-foreground">MÃ©dia/Dia</span>
               <TrendingUp className="h-4 w-4 text-gold" />
             </div>
             <p className="text-3xl font-bold text-gold text-glow-gold">{totals.avgPerDay}</p>
-            <p className="text-xs text-muted-foreground mt-1">msgs nos últimos 7 dias</p>
+            <p className="text-xs text-muted-foreground mt-1">msgs nos Ãºltimos 7 dias</p>
           </div>
 
           <div className="glass-card p-4">
@@ -163,13 +163,13 @@ export default function Performance() {
           </div>
         </div>
 
-        {/* Gráficos - Linha 1 */}
+        {/* GrÃ¡ficos - Linha 1 */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          {/* Gráfico: Envios últimos 7 dias */}
+          {/* GrÃ¡fico: Envios Ãºltimos 7 dias */}
           <div className="glass-card p-5">
             <h3 className="text-base font-bold text-foreground mb-4 flex items-center gap-2">
               <Activity className="h-4 w-4 text-emerald" />
-              Envios - Últimos 7 Dias
+              Envios - Ãšltimos 7 Dias
             </h3>
             <div className="h-[250px]">
               <ResponsiveContainer width="100%" height="100%">
@@ -185,11 +185,11 @@ export default function Performance() {
             </div>
           </div>
 
-          {/* Gráfico: Status Geral (Pizza) */}
+          {/* GrÃ¡fico: Status Geral (Pizza) */}
           <div className="glass-card p-5">
             <h3 className="text-base font-bold text-foreground mb-4 flex items-center gap-2">
               <Zap className="h-4 w-4 text-gold" />
-              Distribuição de Status
+              DistribuiÃ§Ã£o de Status
             </h3>
             <div className="h-[250px] flex items-center">
               {pieData.length > 0 ? (
@@ -216,20 +216,20 @@ export default function Performance() {
               ) : (
                 <div className="w-full text-center text-muted-foreground">
                   <Clock className="h-12 w-12 mx-auto mb-2 opacity-30" />
-                  <p className="text-sm">Nenhum dado disponível ainda</p>
+                  <p className="text-sm">Nenhum dado disponÃ­vel ainda</p>
                 </div>
               )}
             </div>
           </div>
         </div>
 
-        {/* Gráficos - Linha 2 */}
+        {/* GrÃ¡ficos - Linha 2 */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          {/* Gráfico: Evolução 30 dias */}
+          {/* GrÃ¡fico: EvoluÃ§Ã£o 30 dias */}
           <div className="glass-card p-5">
             <h3 className="text-base font-bold text-foreground mb-4 flex items-center gap-2">
               <TrendingUp className="h-4 w-4 text-blue-400" />
-              Evolução - Últimos 30 Dias
+              EvoluÃ§Ã£o - Ãšltimos 30 Dias
             </h3>
             <div className="h-[250px]">
               <ResponsiveContainer width="100%" height="100%">
@@ -251,11 +251,11 @@ export default function Performance() {
             </div>
           </div>
 
-          {/* Gráfico: Distribuição por Hora */}
+          {/* GrÃ¡fico: DistribuiÃ§Ã£o por Hora */}
           <div className="glass-card p-5">
             <h3 className="text-base font-bold text-foreground mb-4 flex items-center gap-2">
               <Clock className="h-4 w-4 text-purple-400" />
-              Distribuição por Hora do Dia
+              DistribuiÃ§Ã£o por Hora do Dia
             </h3>
             <div className="h-[250px]">
               <ResponsiveContainer width="100%" height="100%">
@@ -278,7 +278,7 @@ export default function Performance() {
             Performance por Campanha
           </h3>
 
-          {/* Gráfico de barras horizontais por campanha */}
+          {/* GrÃ¡fico de barras horizontais por campanha */}
           <div className="h-[200px] mb-6">
             <ResponsiveContainer width="100%" height="100%">
               <BarChart data={byCampaign} layout="vertical" barGap={2}>
@@ -357,7 +357,7 @@ export default function Performance() {
           </div>
         </div>
 
-        {/* Botão voltar */}
+        {/* BotÃ£o voltar */}
         <div className="text-center pb-6">
           <button
             onClick={() => navigate("/dashboard")}
@@ -370,3 +370,5 @@ export default function Performance() {
     </div>
   );
 }
+
+
