@@ -1,11 +1,11 @@
 /**
  * Upload de arquivos via Cloudinary
- * Cloud: RomatecCRM
+ * Cloud: drooexltp
  */
 
 import crypto from 'crypto';
 
-const CLOUD_NAME = process.env.CLOUDINARY_CLOUD_NAME || 'RomatecCRM';
+const CLOUD_NAME = process.env.CLOUDINARY_CLOUD_NAME || 'drooexltp';
 const API_KEY = process.env.CLOUDINARY_API_KEY || '454146681184898';
 const API_SECRET = process.env.CLOUDINARY_API_SECRET || 'soDNjdzXi2Hhd9NLvLuZmxrBi4g';
 
