@@ -388,12 +388,32 @@ export default function Properties() {
                 {form.images.length > 0 ? (
                   <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
                     {form.images.map((img, idx) => (
-                      <div key={idx} className="relative group rounded-xl overflow-hidden border border-border/50">
+                      <div key={idx} className="relative group rounded-xl overflow-hidden border-2 border-border/50 transition-all"
+                        style={{ borderColor: idx === 0 ? '#10b981' : undefined }}>
                         <img src={img} alt={`Foto ${idx + 1}`} className="w-full h-40 object-cover" />
+                        {/* Botão remover */}
                         <button onClick={() => removeImage(idx)} className="absolute top-2 right-2 bg-red-500/90 text-white rounded-full p-1.5 opacity-0 group-hover:opacity-100 transition-opacity">
                           <X className="h-3 w-3" />
                         </button>
-                        <span className="absolute bottom-2 left-2 bg-black/60 text-white text-xs px-2 py-0.5 rounded-full">Foto {idx + 1}</span>
+                        {/* Badge capa ou botão definir capa */}
+                        {idx === 0 ? (
+                          <span className="absolute bottom-2 left-2 bg-emerald-500/90 text-white text-xs px-2 py-0.5 rounded-full font-bold flex items-center gap-1">
+                            ⭐ Capa
+                          </span>
+                        ) : (
+                          <button
+                            onClick={() => {
+                              const newImages = [...form.images];
+                              newImages.splice(idx, 1);
+                              newImages.unshift(img);
+                              setForm(prev => ({ ...prev, images: newImages }));
+                            }}
+                            className="absolute bottom-2 left-2 bg-black/70 text-white text-xs px-2 py-0.5 rounded-full opacity-0 group-hover:opacity-100 transition-opacity hover:bg-emerald-600"
+                          >
+                            ⭐ Definir como Capa
+                          </button>
+                        )}
+                        <span className="absolute top-2 left-2 bg-black/60 text-white text-xs px-2 py-0.5 rounded-full">Foto {idx + 1}</span>
                       </div>
                     ))}
                   </div>
