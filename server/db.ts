@@ -8,8 +8,16 @@ let _db: ReturnType<typeof drizzle> | null = null;
 export async function getDb() {
   if (!_db && process.env.DATABASE_URL) {
     try {
+      const url = new URL(process.env.DATABASE_URL);
       const mysql2 = require("mysql2/promise");
-      const connection = await mysql2.createConnection(process.env.DATABASE_URL);
+      const connection = await mysql2.createConnection({
+        host: url.hostname,
+        port: parseInt(url.port) || 3306,
+        user: url.username,
+        password: url.password,
+        database: url.pathname.replace('/', ''),
+        ssl: { rejectUnauthorized: false },
+      });
       _db = drizzle(connection);
       console.log("[Database] Connected successfully");
     } catch (error) {
