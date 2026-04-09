@@ -1,4 +1,4 @@
-﻿import { useState, useEffect, useMemo, useCallback } from "react";
+import { useState, useEffect, useMemo, useCallback } from "react";
 import { useAuth } from "@/_core/hooks/useAuth";
 import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
@@ -270,7 +270,7 @@ export default function Campaigns() {
                     Próxima Hora em:
                   </p>
                   <p className="text-xs text-purple-400/60 mt-1">
-                    Hora {hourNumber + 1}/12 | {sentThisHour}/{totalCampsActive} campanhas enviaram
+                    Hora {hourNumber + 1}/10 | {sentThisHour}/{totalCampsActive} campanhas enviaram
                   </p>
                 </div>
                 <span className="text-5xl font-mono font-bold text-purple-400 tabular-nums" style={{ textShadow: '0 0 20px rgba(168, 85, 247, 0.5)' }}>
@@ -440,7 +440,7 @@ export default function Campaigns() {
                       {campaign.name}
                     </span>
                     <p className="text-xs text-muted-foreground mt-2">
-                      1 msg/hora em rota��o | {campaign.sentCount || 0}/{campaign.totalContacts || 12} total
+                      1 msg/hora em rota��o | {campaign.sentCount || 0}/{campaign.totalContacts || 2} total
                     </p>
                   </div>
                 );
@@ -552,7 +552,7 @@ function CampaignCard({
   const contactsList: any[] = campaign.contacts || [];
   const sentCount = campaign.sentCount || 0;
   const pendingCount = campaign.pendingCount || 0;
-  const totalContacts = campaign.totalContacts || 12;
+  const totalContacts = campaign.totalContacts || 2;
   const progressPercent = totalContacts > 0 ? Math.round((sentCount / totalContacts) * 100) : 0;
 
   const timePercent = cycleDuration > 0 ? Math.round(((cycleDuration - cycleTimer) / cycleDuration) * 100) : 0;
@@ -634,7 +634,7 @@ function CampaignCard({
         <div className="mt-3 flex items-center gap-3 p-2.5 bg-indigo-500/10 rounded-lg border border-indigo-500/20">
           <span className="text-xs font-semibold text-indigo-300">Regra:</span>
           <span className="text-sm font-bold text-indigo-200">1 msg/hora em rota��o</span>
-          <span className="text-xs text-indigo-400/60 ml-1">× 12 horas = 12 contatos/ciclo</span>
+          <span className="text-xs text-indigo-400/60 ml-1">× 10 horas = 2 contatos/ciclo</span>
         </div>
       </div>
 
