@@ -3,7 +3,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Settings as SettingsIcon, ArrowLeft, Save, Wifi, WifiOff, RefreshCw } from "lucide-react";
+import { Settings as SettingsIcon, ArrowLeft, Save, Wifi, WifiOff, RefreshCw, Lock, Eye, EyeOff, User } from "lucide-react";
 import { useLocation } from "wouter";
 import { trpc } from "@/lib/trpc";
 import { toast } from "sonner";
@@ -11,10 +11,13 @@ import { toast } from "sonner";
 export default function Settings() {
   const [, navigate] = useLocation();
   const { data: config, refetch } = trpc.companyConfig.get.useQuery();
+  const { data: me } = trpc.auth.me.useQuery();
+
   const updateMutation = trpc.companyConfig.update.useMutation({
     onSuccess: () => { toast.success("Configurações salvas!"); refetch(); },
     onError: (e) => toast.error("Erro: " + e.message),
   });
+
   const testZApi = trpc.companyConfig.testZApiConnection.useMutation({
     onSuccess: (data) => {
       if (data.success) { toast.success(data.message); refetch(); }
@@ -23,9 +26,25 @@ export default function Settings() {
     onError: (e) => toast.error("Erro: " + e.message),
   });
 
+  const changePassword = trpc.auth.changePassword.useMutation({
+    onSuccess: () => {
+      toast.success("Senha alterada com sucesso!");
+      setPassForm({ currentPassword: "", newPassword: "", confirmPassword: "" });
+    },
+    onError: (e) => toast.error("Erro: " + e.message),
+  });
+
   const [form, setForm] = useState({
     companyName: "", phone: "", address: "",
     zApiInstanceId: "", zApiToken: "", zApiClientToken: "",
+  });
+
+  const [passForm, setPassForm] = useState({
+    currentPassword: "", newPassword: "", confirmPassword: "",
+  });
+
+  const [showPass, setShowPass] = useState({
+    current: false, new: false, confirm: false,
   });
 
   useEffect(() => {
@@ -41,6 +60,21 @@ export default function Settings() {
     }
   }, [config]);
 
+  const handleChangePassword = () => {
+    if (!passForm.newPassword || passForm.newPassword.length < 6) {
+      toast.error("Nova senha deve ter pelo menos 6 caracteres!");
+      return;
+    }
+    if (passForm.newPassword !== passForm.confirmPassword) {
+      toast.error("Senhas não conferem!");
+      return;
+    }
+    changePassword.mutate({
+      currentPassword: passForm.currentPassword,
+      newPassword: passForm.newPassword,
+    });
+  };
+
   return (
     <div className="min-h-screen bg-background">
       <div className="bg-gradient-to-r from-emerald-600 to-emerald-800 text-white p-6">
@@ -55,7 +89,8 @@ export default function Settings() {
       </div>
 
       <div className="container py-8 space-y-6 max-w-2xl">
-        {/* Empresa */}
+
+        {/* Dados da Empresa */}
         <Card className="bg-card border-border">
           <CardHeader><CardTitle className="text-foreground">Dados da Empresa</CardTitle></CardHeader>
           <CardContent className="space-y-4">
@@ -94,19 +129,14 @@ export default function Settings() {
             </div>
             <div>
               <Label className="text-muted-foreground">Token da Instância</Label>
-              <Input type="password" value={form.zApiToken} onChange={e => setForm(f => ({ ...f, zApiToken: e.target.value }))} placeholder="Ex: DC81667D92271C9D2478B93C" className="bg-secondary border-border" />
+              <Input type="password" value={form.zApiToken} onChange={e => setForm(f => ({ ...f, zApiToken: e.target.value }))} className="bg-secondary border-border" />
             </div>
             <div>
               <Label className="text-muted-foreground">Client-Token (Segurança)</Label>
-              <Input type="password" value={form.zApiClientToken} onChange={e => setForm(f => ({ ...f, zApiClientToken: e.target.value }))} placeholder="Ex: Fcbaed18a6a61464aaf16df37a5be91b9S" className="bg-secondary border-border" />
+              <Input type="password" value={form.zApiClientToken} onChange={e => setForm(f => ({ ...f, zApiClientToken: e.target.value }))} className="bg-secondary border-border" />
             </div>
             <Button
-              onClick={() => {
-                // Salvar primeiro, depois testar
-                updateMutation.mutate(form, {
-                  onSuccess: () => testZApi.mutate(),
-                });
-              }}
+              onClick={() => updateMutation.mutate(form, { onSuccess: () => testZApi.mutate() })}
               variant="outline"
               disabled={testZApi.isPending || updateMutation.isPending}
               className="w-full"
@@ -117,7 +147,106 @@ export default function Settings() {
           </CardContent>
         </Card>
 
-        {/* Save */}
+        {/* Login / Senha */}
+        <Card className="bg-card border-border">
+          <CardHeader>
+            <CardTitle className="text-foreground flex items-center gap-2">
+              <Lock className="h-5 w-5 text-emerald-400" />
+              Acesso ao Sistema
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            {/* Info do usuário atual */}
+            <div className="flex items-center gap-3 p-3 bg-secondary/30 rounded-lg border border-border/50">
+              <div className="p-2 rounded-full bg-emerald-500/20">
+                <User className="h-5 w-5 text-emerald-400" />
+              </div>
+              <div>
+                <p className="text-sm font-semibold text-foreground">{me?.name || "Usuário"}</p>
+                <p className="text-xs text-muted-foreground">{me?.email || "—"}</p>
+              </div>
+              <span className="ml-auto px-2 py-0.5 rounded-full text-xs font-bold bg-emerald-500/15 text-emerald-400 border border-emerald-500/30">
+                {me?.role === "admin" ? "Admin" : "Usuário"}
+              </span>
+            </div>
+
+            {/* Alterar senha */}
+            <div className="space-y-3 pt-2">
+              <p className="text-sm font-semibold text-foreground">Alterar Senha</p>
+
+              <div>
+                <Label className="text-muted-foreground text-xs">Senha Atual</Label>
+                <div className="relative">
+                  <Input
+                    type={showPass.current ? "text" : "password"}
+                    value={passForm.currentPassword}
+                    onChange={e => setPassForm(f => ({ ...f, currentPassword: e.target.value }))}
+                    placeholder="Digite a senha atual"
+                    className="bg-secondary border-border pr-10"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowPass(s => ({ ...s, current: !s.current }))}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+                  >
+                    {showPass.current ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                  </button>
+                </div>
+              </div>
+
+              <div>
+                <Label className="text-muted-foreground text-xs">Nova Senha</Label>
+                <div className="relative">
+                  <Input
+                    type={showPass.new ? "text" : "password"}
+                    value={passForm.newPassword}
+                    onChange={e => setPassForm(f => ({ ...f, newPassword: e.target.value }))}
+                    placeholder="Mínimo 6 caracteres"
+                    className="bg-secondary border-border pr-10"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowPass(s => ({ ...s, new: !s.new }))}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+                  >
+                    {showPass.new ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                  </button>
+                </div>
+              </div>
+
+              <div>
+                <Label className="text-muted-foreground text-xs">Confirmar Nova Senha</Label>
+                <div className="relative">
+                  <Input
+                    type={showPass.confirm ? "text" : "password"}
+                    value={passForm.confirmPassword}
+                    onChange={e => setPassForm(f => ({ ...f, confirmPassword: e.target.value }))}
+                    placeholder="Repita a nova senha"
+                    className="bg-secondary border-border pr-10"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowPass(s => ({ ...s, confirm: !s.confirm }))}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+                  >
+                    {showPass.confirm ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                  </button>
+                </div>
+              </div>
+
+              <Button
+                onClick={handleChangePassword}
+                disabled={changePassword.isPending || !passForm.newPassword}
+                className="w-full bg-blue-600 hover:bg-blue-700 text-white"
+              >
+                <Lock className="mr-2 h-4 w-4" />
+                {changePassword.isPending ? "Alterando..." : "Alterar Senha"}
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Salvar tudo */}
         <Button
           onClick={() => updateMutation.mutate(form)}
           disabled={updateMutation.isPending}
