@@ -28,7 +28,7 @@ export const appRouter = router({
             userList = await db.select().from(users).where(eq(users.openId, input.username)).limit(1);
           }
           const user = userList[0];
-          if (!user) throw new Error("Usuário não encontrado");
+          if (!user) throw new Error("Usuario nao encontrado");
           const { sdk } = await import("./_core/sdk");
           const { ONE_YEAR_MS } = await import("@shared/const");
           const cookieOptions = getSessionCookieOptions(ctx.req);
@@ -119,19 +119,19 @@ export const appRouter = router({
     }),
     generateDescription: protectedProcedure.input(z.object({ denomination: z.string(), address: z.string(), city: z.string().optional(), price: z.string(), offerPrice: z.string().optional(), areaConstruida: z.string().optional(), areaCasa: z.string().optional(), areaTerreno: z.string().optional(), bedrooms: z.number().optional(), bathrooms: z.number().optional(), garageSpaces: z.number().optional(), propertyType: z.string().optional() })).mutation(async ({ input }) => {
       const { invokeLLM } = await import("./_core/llm");
-      const prompt = `Gere uma descrição atrativa para o imóvel: ${input.denomination} em ${input.address}, R$ ${Number(input.price).toLocaleString('pt-BR')}. Use gatilhos de escassez. Máximo 3 parágrafos em português.`;
+      const prompt = "Gere uma descricao atrativa para o imovel: " + input.denomination + " em " + input.address + ", R$ " + Number(input.price).toLocaleString('pt-BR') + ". Use gatilhos de escassez. Maximo 3 paragrafos em portugues.";
       const response = await invokeLLM({ messages: [{ role: "user", content: prompt }] });
       const descContent = response.choices[0]?.message?.content;
-      return { description: typeof descContent === 'string' ? descContent : 'Descrição não gerada' };
+      return { description: typeof descContent === 'string' ? descContent : 'Descricao nao gerada' };
     }),
     generateWhatsAppMessage: protectedProcedure.input(z.object({ propertyId: z.number() })).mutation(async ({ input }) => {
       const db = await getDb();
       if (!db) throw new Error("Database not available");
       const prop = await db.select().from(properties).where(eq(properties.id, input.propertyId)).limit(1);
-      if (!prop[0]) throw new Error("Imóvel não encontrado");
+      if (!prop[0]) throw new Error("Imovel nao encontrado");
       const p = prop[0];
       const { invokeLLM } = await import("./_core/llm");
-      const response = await invokeLLM({ messages: [{ role: "user", content: `Gere 4 variações de mensagem WhatsApp para: ${p.denomination} em ${p.address}, R$ ${Number(p.price).toLocaleString('pt-BR')}. Link: {{LINK}}. Separe por |||` }] });
+      const response = await invokeLLM({ messages: [{ role: "user", content: "Gere 4 variacoes de mensagem WhatsApp para: " + p.denomination + " em " + p.address + ", R$ " + Number(p.price).toLocaleString('pt-BR') + ". Link: {{LINK}}. Separe por |||" }] });
       const text = typeof response.choices[0]?.message?.content === 'string' ? response.choices[0].message.content : '';
       const variations = text.split('|||').map((v: string) => v.trim()).filter(Boolean);
       return { variations: variations.length > 0 ? variations : [text] };
@@ -146,7 +146,7 @@ export const appRouter = router({
       const db = await getDb();
       if (!db) throw new Error("Database not available");
       const allProperties = await db.select().from(properties).where(eq(properties.status, "available"));
-      if (allProperties.length === 0) throw new Error("Nenhum imóvel disponível");
+      if (allProperties.length === 0) throw new Error("Nenhum imovel disponivel");
       const allContacts = await db.select().from(contacts).where(eq(contacts.status, "active"));
       const shuffled = [...allContacts].sort(() => Math.random() - 0.5);
       await db.delete(campaignContacts);
@@ -162,7 +162,7 @@ export const appRouter = router({
           await db.insert(campaignContacts).values({ campaignId, contactId: contact.id, messagesSent: 0, status: "pending" });
         }
       }
-      return { success: true, campaigns: createdCampaigns, message: `${createdCampaigns.length} campanhas criadas` };
+      return { success: true, campaigns: createdCampaigns, message: createdCampaigns.length + " campanhas criadas" };
     }),
     delete: protectedProcedure.input(z.object({ id: z.number() })).mutation(async ({ input }) => {
       const db = await getDb();
@@ -261,7 +261,7 @@ export const appRouter = router({
       for (const contact of selected) {
         await db.insert(campaignContacts).values({ campaignId: input.campaignId, contactId: contact.id, messagesSent: 0, status: "pending" });
       }
-      return { success: true, message: `${input.messagesPerHour} msgs/hora`, totalContacts: newTotalContacts };
+      return { success: true, message: input.messagesPerHour + " msgs/hora", totalContacts: newTotalContacts };
     }),
     getCampaignDetails: publicProcedure.query(async () => {
       const db = await getDb();
@@ -298,16 +298,16 @@ export const appRouter = router({
       try {
         const headers: Record<string, string> = {};
         if (config.zApiClientToken) headers["Client-Token"] = config.zApiClientToken;
-        const response = await fetch(`https://api.z-api.io/instances/${config.zApiInstanceId}/token/${config.zApiToken}/status`, { headers });
+        const response = await fetch("https://api.z-api.io/instances/" + config.zApiInstanceId + "/token/" + config.zApiToken + "/status", { headers });
         if (response.ok) {
           const data = await response.json();
           if (data.connected) {
             await updateCompanyConfig({ zApiConnected: true, zApiLastChecked: new Date() });
             return { success: true, message: "WhatsApp conectado com sucesso!" };
           }
-          return { success: false, message: "WhatsApp não está conectado." };
+          return { success: false, message: "WhatsApp nao esta conectado." };
         }
-        return { success: false, message: "Falha na conexão com Z-API." };
+        return { success: false, message: "Falha na conexao com Z-API." };
       } catch (error) {
         return { success: false, message: String(error) };
       }
@@ -384,5 +384,3 @@ export const appRouter = router({
 });
 
 export type AppRouter = typeof appRouter;
-```
-Cola tudo e confirma!
