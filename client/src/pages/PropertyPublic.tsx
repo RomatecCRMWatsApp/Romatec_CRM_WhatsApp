@@ -1,5 +1,5 @@
-import { useState } from "react";
-import { MapPin, BedDouble, Bath, Car, Ruler, Image as ImageIcon, Video, FileImage, Phone, MessageCircle, Heart, ChevronLeft, ChevronRight, ArrowLeft, Share2 } from "lucide-react";
+﻿import { useState } from "react";
+import { MapPin, Phone, MessageCircle, ChevronLeft, ChevronRight, ArrowLeft } from "lucide-react";
 import { useRoute } from "wouter";
 import { trpc } from "@/lib/trpc";
 
@@ -10,7 +10,7 @@ function formatCurrency(value: number | string) {
 // Especialistas da Romatec (fora do componente - constante)
 const especialistas = [
   { 
-    nome: "José Romário P. Bezerra", 
+    nome: "JosÃ© RomÃ¡rio P. Bezerra", 
     cargo: "Diretor Comercial",
     telefone: "5599991811246", 
     display: "(99) 9 9181-1246",
@@ -18,7 +18,7 @@ const especialistas = [
   },
   { 
     nome: "Daniele Cavalcante Vieira", 
-    cargo: "Especialista em Imóveis",
+    cargo: "Especialista em ImÃ³veis",
     telefone: "5599992062871", 
     display: "(99) 9 9206-2871",
     avatar: "DC"
@@ -41,7 +41,7 @@ export default function PropertyPublic() {
       <div className="min-h-screen bg-background flex items-center justify-center">
         <div className="text-center">
           <div className="w-12 h-12 border-4 border-emerald/30 border-t-emerald rounded-full animate-spin mx-auto mb-4" />
-          <p className="text-muted-foreground">Carregando imóvel...</p>
+          <p className="text-muted-foreground">Carregando imÃ³vel...</p>
         </div>
       </div>
     );
@@ -55,10 +55,10 @@ export default function PropertyPublic() {
           <div className="p-6 rounded-2xl bg-secondary/30 inline-block mb-4">
             <ImageIcon className="h-16 w-16 text-muted-foreground/30" />
           </div>
-          <h2 className="text-2xl font-bold text-foreground mb-2">Imóvel não encontrado</h2>
-          <p className="text-muted-foreground">O link pode estar incorreto ou o imóvel foi removido.</p>
+          <h2 className="text-2xl font-bold text-foreground mb-2">ImÃ³vel nÃ£o encontrado</h2>
+          <p className="text-muted-foreground">O link pode estar incorreto ou o imÃ³vel foi removido.</p>
           <a href="/" className="inline-flex items-center gap-2 mt-6 text-emerald hover:text-emerald/80 transition-colors">
-            <ArrowLeft className="h-4 w-4" /> Voltar ao início
+            <ArrowLeft className="h-4 w-4" /> Voltar ao inÃ­cio
           </a>
         </div>
       </div>
@@ -70,7 +70,7 @@ export default function PropertyPublic() {
   const hasMultipleImages = imageCount > 1;
 
   const whatsappMsg = encodeURIComponent(
-    `Olá, ${esp.nome.split(' ')[0]}! 👋\n\nVi o imóvel *${property.denomination}* no site da Romatec e tenho interesse!\n\n📍 *Localização:* ${property.address}${property.city ? `, ${property.city}` : ""}\n💰 *Valor:* R$ ${formatCurrency(property.price)}\n\nPoderia me dar mais informações? 😊`
+    `OlÃ¡, ${esp.nome.split(' ')[0]}! ðŸ‘‹\n\nVi o imÃ³vel *${property.denomination}* no site da Romatec e tenho interesse!\n\nðŸ“ *LocalizaÃ§Ã£o:* ${property.address}${property.city ? `, ${property.city}` : ""}\nðŸ’° *Valor:* R$ ${formatCurrency(property.price)}\n\nPoderia me dar mais informaÃ§Ãµes? ðŸ˜Š`
   );
 
   const esp = especialistas[selectedEsp];
@@ -158,7 +158,7 @@ export default function PropertyPublic() {
                   ? "bg-emerald/15 text-emerald border border-emerald/20"
                   : "bg-red-500/15 text-red-400 border border-red-500/20"
               }`}>
-                {property.status === "available" ? "Disponível" : "Vendido"}
+                {property.status === "available" ? "DisponÃ­vel" : "Vendido"}
               </span>
               {property.propertyType && (
                 <span className="px-3 py-1 rounded-full text-xs font-bold bg-gold/15 text-gold border border-gold/20">
@@ -218,8 +218,8 @@ export default function PropertyPublic() {
               {property.areaConstruida && (
                 <div className="metric-card text-center py-3">
                   <Ruler className="h-5 w-5 text-gold mx-auto mb-1" />
-                  <p className="text-lg font-bold text-foreground">{property.areaConstruida}m²</p>
-                  <p className="text-xs text-muted-foreground">Construída</p>
+                  <p className="text-lg font-bold text-foreground">{property.areaConstruida}mÂ²</p>
+                  <p className="text-xs text-muted-foreground">ConstruÃ­da</p>
                 </div>
               )}
             </div>
@@ -229,14 +229,14 @@ export default function PropertyPublic() {
               <div className="grid grid-cols-2 gap-3 mb-6">
                 {property.areaCasa && (
                   <div className="p-3 rounded-xl bg-emerald/5 border border-emerald/10 text-center">
-                    <p className="text-xs text-muted-foreground">Área da Casa</p>
-                    <p className="font-bold text-foreground">{property.areaCasa} m²</p>
+                    <p className="text-xs text-muted-foreground">Ãrea da Casa</p>
+                    <p className="font-bold text-foreground">{property.areaCasa} mÂ²</p>
                   </div>
                 )}
                 {property.areaTerreno && (
                   <div className="p-3 rounded-xl bg-gold/5 border border-gold/10 text-center">
-                    <p className="text-xs text-muted-foreground">Área do Terreno</p>
-                    <p className="font-bold text-foreground">{property.areaTerreno} m²</p>
+                    <p className="text-xs text-muted-foreground">Ãrea do Terreno</p>
+                    <p className="font-bold text-foreground">{property.areaTerreno} mÂ²</p>
                   </div>
                 )}
               </div>
@@ -246,7 +246,7 @@ export default function PropertyPublic() {
           {/* Description */}
           {property.description && (
             <div className="glass-card p-6 mb-6">
-              <h2 className="text-lg font-bold text-foreground mb-3">Sobre o Imóvel</h2>
+              <h2 className="text-lg font-bold text-foreground mb-3">Sobre o ImÃ³vel</h2>
               <p className="text-foreground/80 leading-relaxed whitespace-pre-line">{property.description}</p>
             </div>
           )}
@@ -272,7 +272,7 @@ export default function PropertyPublic() {
                       activeTab === "video" ? "bg-red-500/15 text-red-400" : "text-muted-foreground hover:text-foreground"
                     }`}
                   >
-                    <Video className="h-4 w-4" /> Vídeo
+                    <Video className="h-4 w-4" /> VÃ­deo
                   </button>
                 )}
                 {property.plantaBaixaUrl && (
@@ -331,24 +331,24 @@ export default function PropertyPublic() {
             </div>
           )}
 
-          {/* Mapa de Localização */}
+          {/* Mapa de LocalizaÃ§Ã£o */}
           {property.address && (
             <div className="glass-card p-6 mb-6">
               <h2 className="text-lg font-bold text-foreground mb-3 flex items-center gap-2">
-                <MapPin className="h-5 w-5 text-emerald" /> Localização
+                <MapPin className="h-5 w-5 text-emerald" /> LocalizaÃ§Ã£o
               </h2>
               {/* Mapa via OpenStreetMap embed */}
               <div className="rounded-xl overflow-hidden border border-border/30 mb-3">
                 <iframe
-                  title="Localização do imóvel"
+                  title="LocalizaÃ§Ã£o do imÃ³vel"
                   width="100%"
                   height="280"
                   style={{ border: 0 }}
                   loading="lazy"
-                  src={`https://maps.google.com/maps?q=${encodeURIComponent(`${property.address}, ${property.city || 'Açailândia'}, ${property.state || 'MA'}, Brasil`)}&output=embed&z=16&hl=pt-BR`}
+                  src={`https://maps.google.com/maps?q=${encodeURIComponent(`${property.address}, ${property.city || 'AÃ§ailÃ¢ndia'}, ${property.state || 'MA'}, Brasil`)}&output=embed&z=16&hl=pt-BR`}
                 />
               </div>
-              {/* Endereço + botão Google Maps */}
+              {/* EndereÃ§o + botÃ£o Google Maps */}
               <div className="flex items-start gap-3 p-3 bg-secondary/30 rounded-xl border border-border/30">
                 <MapPin className="h-5 w-5 text-emerald flex-shrink-0 mt-0.5" />
                 <div className="flex-1">
@@ -357,12 +357,12 @@ export default function PropertyPublic() {
                   </p>
                 </div>
                 <a
-                  href={`https://www.google.com/maps/search/${encodeURIComponent(`${property.address}, ${property.city || 'Açailândia'}, ${property.state || 'MA'}`)}`}
+                  href={`https://www.google.com/maps/search/${encodeURIComponent(`${property.address}, ${property.city || 'AÃ§ailÃ¢ndia'}, ${property.state || 'MA'}`)}`}
                   target="_blank"
                   rel="noopener noreferrer"
                   className="flex-shrink-0 px-3 py-1.5 bg-emerald/20 text-emerald text-xs font-bold rounded-lg border border-emerald/30 hover:bg-emerald/30 transition-colors no-underline"
                 >
-                  📍 Ver no Maps ↗
+                  ðŸ“ Ver no Maps â†—
                 </a>
               </div>
             </div>
@@ -371,8 +371,8 @@ export default function PropertyPublic() {
           {/* Especialistas */}
           <div className="glass-card p-6 mb-6">
             <div className="text-center mb-4">
-              <h3 className="text-lg font-bold text-foreground">🏆 Fale com um Especialista</h3>
-              <p className="text-sm text-muted-foreground mt-1">Nossa equipe está pronta para te ajudar a realizar o sonho da casa própria!</p>
+              <h3 className="text-lg font-bold text-foreground">ðŸ† Fale com um Especialista</h3>
+              <p className="text-sm text-muted-foreground mt-1">Nossa equipe estÃ¡ pronta para te ajudar a realizar o sonho da casa prÃ³pria!</p>
             </div>
             <div className="grid grid-cols-1 gap-3">
               {especialistas.map((e, idx) => (
@@ -394,10 +394,10 @@ export default function PropertyPublic() {
                     <div className="flex-1">
                       <p className={`font-bold text-base ${selectedEsp === idx ? "text-emerald" : "text-foreground"}`}>{e.nome}</p>
                       <p className="text-xs text-muted-foreground font-medium">{e.cargo}</p>
-                      <p className="text-sm text-muted-foreground mt-0.5">📱 {e.display}</p>
+                      <p className="text-sm text-muted-foreground mt-0.5">ðŸ“± {e.display}</p>
                     </div>
                     {selectedEsp === idx && (
-                      <span className="text-emerald text-xl flex-shrink-0">✓</span>
+                      <span className="text-emerald text-xl flex-shrink-0">âœ“</span>
                     )}
                   </div>
                 </button>
@@ -410,9 +410,9 @@ export default function PropertyPublic() {
 
           {/* Romatec Info */}
           <div className="glass-card p-6 mb-6 text-center">
-            <h3 className="text-lg font-bold text-foreground mb-1">Romatec Consultoria Imobiliária</h3>
-            <p className="text-sm text-muted-foreground mb-1">Rua São Raimundo, 10 - Centro, Açailândia - MA</p>
-            <p className="text-sm text-muted-foreground">José Romário: (99) 9 9181-1246 | Daniele: (99) 9 9206-2871</p>
+            <h3 className="text-lg font-bold text-foreground mb-1">Romatec Consultoria ImobiliÃ¡ria</h3>
+            <p className="text-sm text-muted-foreground mb-1">Rua SÃ£o Raimundo, 10 - Centro, AÃ§ailÃ¢ndia - MA</p>
+            <p className="text-sm text-muted-foreground">JosÃ© RomÃ¡rio: (99) 9 9181-1246 | Daniele: (99) 9 9206-2871</p>
           </div>
         </div>
       </div>
@@ -421,7 +421,7 @@ export default function PropertyPublic() {
       <div className="fixed bottom-0 inset-x-0 z-50 p-4 bg-background/80 backdrop-blur-xl border-t border-border/30">
         <div className="max-w-3xl mx-auto">
           <p className="text-xs text-center text-muted-foreground mb-2">
-            💬 Falar com <span className="font-bold text-emerald">{esp.nome}</span> — {esp.display}
+            ðŸ’¬ Falar com <span className="font-bold text-emerald">{esp.nome}</span> â€” {esp.display}
           </p>
           <div className="flex gap-3">
             <a
@@ -444,3 +444,4 @@ export default function PropertyPublic() {
     </div>
   );
 }
+
