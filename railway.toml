@@ -1,6 +1,0 @@
-﻿[build]
-builder = "nixpacks"
-buildCommand = "pnpm run build"
-
-[deploy]
-startCommand = "node dist/index.js"
