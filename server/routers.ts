@@ -17,7 +17,7 @@ export const appRouter = router({
       .mutation(async ({ input, ctx }) => {
         const db = await getDb();
         if (!db) throw new Error("Database not available");
-        const crypto = require('crypto');
+        const crypto = await import('crypto');
         const userResult = await db.select().from(users).where(eq(users.openId, ctx.user.openId)).limit(1);
         const user = userResult[0];
         if (!user) throw new Error("Usuario nao encontrado");
@@ -412,4 +412,5 @@ export const appRouter = router({
 });
 
 export type AppRouter = typeof appRouter;
+
 
