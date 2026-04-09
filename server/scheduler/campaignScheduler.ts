@@ -1,4 +1,4 @@
-﻿import { getDb } from "../db";
+import { getDb } from "../db";
 import { campaigns, contacts, messages, campaignContacts, contactCampaignHistory, properties, schedulerState as schedulerStateTable } from "../../drizzle/schema";
 import { eq, and, gte, sql } from "drizzle-orm";
 import { registerBotMessage, getFollowUpsToSend, cleanupOldFollowUps } from "../bot-ai";

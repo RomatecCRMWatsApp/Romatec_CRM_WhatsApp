@@ -1,4 +1,4 @@
-﻿import { COOKIE_NAME } from "@shared/const";
+import { COOKIE_NAME } from "@shared/const";
 import { getSessionCookieOptions } from "./_core/cookies";
 import { systemRouter } from "./_core/systemRouter";
 import { publicProcedure, protectedProcedure, router } from "./_core/trpc";
@@ -257,7 +257,7 @@ export const appRouter = router({
       await db.update(contacts).set({ blockedUntil: null });
       const allCampaigns = await db.select().from(campaigns);
       for (const camp of allCampaigns) {
-        await db.update(campaigns).set({ sentCount: 0, failedCount: 0, messagesPerHour: 1, totalContacts: 12, status: "paused", startDate: null }).where(eq(campaigns.id, camp.id));
+        await db.update(campaigns).set({ sentCount: 0, failedCount: 0, messagesPerHour: 1, totalContacts: 2, status: "paused", startDate: null }).where(eq(campaigns.id, camp.id));
       }
       const allContacts = await db.select().from(contacts).where(eq(contacts.status, "active"));
       const shuffled = [...allContacts].sort(() => Math.random() - 0.5);
