@@ -4,7 +4,6 @@ import NotFound from "@/pages/NotFound";
 import { Route, Switch } from "wouter";
 import ErrorBoundary from "./components/ErrorBoundary";
 import { ThemeProvider } from "./contexts/ThemeContext";
-import { useAuth } from "@/_core/hooks/useAuth";
 import Login from "./pages/Login";
 import Home from "./pages/Home";
 import Dashboard from "./pages/Dashboard";
@@ -15,26 +14,7 @@ import Settings from "./pages/Settings";
 import PropertyPublic from "./pages/PropertyPublic";
 import Performance from "./pages/Performance";
 
-// Componente para proteger rotas autenticadas
 function ProtectedRoute({ component: Component }: { component: React.ComponentType }) {
-  return <Component />;
-}
-
-  if (loading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto mb-4"></div>
-          <p className="text-slate-600">Carregando...</p>
-        </div>
-      </div>
-    );
-  }
-
-  if (!isAuthenticated) {
-    return <Login />;
-  }
-
   return <Component />;
 }
 
