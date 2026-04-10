@@ -12,8 +12,8 @@ import { registerBotMessage, getFollowUpsToSend, cleanupOldFollowUps } from "../
  * 1. Todas as campanhas ativas participam de cada hora
  * 2. Cada campanha envia EXATAMENTE 1 mensagem por hora → bloqueia até próxima hora
  * 3. Controle por hora atual (YYYY-MM-DD-HH) + flag sentThisHour
- * 4. Ciclo = 12 horas (2 ciclos por dia para estatísticas)
- * 5. Cada campanha = 12 contatos (1 msg/hora × 12 horas)
+ * 4. Ciclo = 10 horas (08h às 18h)
+ * 5. Cada campanha = 2 contatos (rotação sequencial)
  * 6. Mensagens distribuídas em momentos aleatórios dentro da hora
  * 7. Mínimo 3 min entre envios (segurança anti-ban)
  * 8. Bloqueio de 72h por contato após envio
@@ -64,7 +64,7 @@ class CampaignScheduler {
   private isSyncing: boolean = false;
 
   // Constantes
-  private readonly MAX_HOURS_PER_CYCLE = 12; // 12 horas por ciclo
+  private readonly MAX_HOURS_PER_CYCLE = 10; // 10 horas por ciclo (08h-18h)
   private readonly CHECK_INTERVAL_MS = 60 * 1000; // verificar a cada 1 minuto
   private readonly MIN_GAP_MS = 3 * 60 * 1000; // mínimo 3 min entre msgs
   private readonly MARGIN_MS = 2 * 60 * 1000; // margem 2 min início/fim da hora
@@ -351,13 +351,15 @@ class CampaignScheduler {
       return;
     }
 
-    // Verificar se há campanhas pendentes sem timer agendado (sempre verificar)
-    const pending = this.state.campaignStates.filter(cs => !cs.sentThisHour);
-    const hasActiveTimers = this.slotTimers.length > 0;
-    if (pending.length > 0 && !hasActiveTimers && this.state.currentHourKey) {
-      console.log(`⚠️ ${pending.length} campanhas pendentes sem timer - reagendando`);
-      await this.scheduleHourSends();
-      await this.saveStateToDB();
+    // Verificar se há campanhas pendentes sem timer agendado
+    if (!isNewHour) {
+      const pending = this.state.campaignStates.filter(cs => !cs.sentThisHour);
+      const hasActiveTimers = this.slotTimers.length > 0;
+      if (pending.length > 0 && !hasActiveTimers) {
+        console.log(`⚠️ ${pending.length} campanhas pendentes sem timer - reagendando`);
+        await this.scheduleHourSends();
+        await this.saveStateToDB();
+      }
     }
   }
 
@@ -445,9 +447,9 @@ class CampaignScheduler {
     const minutesIntoHour = now.getMinutes();
     const remainingMs = (60 - minutesIntoHour) * 60 * 1000;
     
-    // Se restam menos de 3 min, não agendar (esperar próxima hora)
-    if (remainingMs < 3 * 60 * 1000) {
-      console.log(`⏳ Menos de 3 min restantes na hora, aguardando próxima hora`);
+    // Se restam menos de 5 min, não agendar (esperar próxima hora)
+    if (remainingMs < 5 * 60 * 1000) {
+      console.log(`⏳ Menos de 5 min restantes na hora, aguardando próxima hora`);
       return;
     }
 
@@ -544,10 +546,9 @@ class CampaignScheduler {
         campState.sentThisHour = true;
         campState.lastSentHourKey = this.getCurrentHourKey();
 
-        // Marcar slot como enviado na UI (por nome da campanha, mais confiável que índice)
-        const slot = this.state.scheduledSlots.find(s => s.campaignName === cs.campaignName);
-        if (slot) {
-          slot.sent = true;
+        // Marcar slot como enviado na UI
+        if (this.state.scheduledSlots[slotIndex]) {
+          this.state.scheduledSlots[slotIndex].sent = true;
         }
 
         await this.saveStateToDB();
@@ -582,7 +583,7 @@ class CampaignScheduler {
           propertyId: prop.id,
           name: prop.denomination,
           messageVariations: variations,
-          totalContacts: 12, // 1 msg/hora × 12 horas = 12 contatos
+          totalContacts: 2,
           sentCount: 0,
           failedCount: 0,
           messagesPerHour: 1, // RESTRITIVO: sempre 1
@@ -618,7 +619,7 @@ class CampaignScheduler {
   private generateMessageVariations(prop: any): string[] {
     const priceFormatted = Number(prop.price).toLocaleString("pt-BR");
     const slug = prop.publicSlug || prop.denomination.toLowerCase().replace(/[^a-z0-9]+/g, '-');
-    const siteUrl = `https://romateccrmwhatsapp-production.up.railway.app/imovel/${slug}`;
+    const siteUrl = `https://romatecwa-2uygcczr.manus.space/imovel/${slug}`;
     const denom = prop.denomination || '';
 
     // Detectar se é chácara para mensagem de escassez
@@ -668,7 +669,7 @@ class CampaignScheduler {
     const allContacts = await db.select().from(contacts).where(eq(contacts.status, "active"));
     const unblockedContacts = allContacts.filter(c => !c.blockedUntil || c.blockedUntil <= now);
 
-    const neededContacts = 12; // 1 msg/hora × 12 horas = 12
+    const neededContacts = 2;
 
     if (unblockedContacts.length < neededContacts) {
       console.warn(`⚠️ Apenas ${unblockedContacts.length} contatos disponíveis (precisa de ${neededContacts})`);
