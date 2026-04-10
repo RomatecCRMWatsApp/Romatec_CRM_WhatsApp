@@ -162,7 +162,7 @@ export const appRouter = router({
           await db.insert(campaignContacts).values({ campaignId, contactId: contact.id, messagesSent: 0, status: "pending" });
         }
       }
-      return { success: true, campaigns: createdCampaigns, message: createdCampaigns.length + " campanhas criadas" };
+      return { success: true, campaigns: createdCampaigns, totalContacts: 10, message: createdCampaigns.length + " campanhas criadas" };
     }),
     delete: protectedProcedure.input(z.object({ id: z.number() })).mutation(async ({ input }) => {
       const db = await getDb();
