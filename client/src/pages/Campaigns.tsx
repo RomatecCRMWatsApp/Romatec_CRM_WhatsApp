@@ -9,9 +9,9 @@ import { toast } from "sonner";
 
 /**
  * SISTEMA v6.0 - 5 CAMPANHAS INDEPENDENTES
- * - Cada campanha envia 1 msg/hora
+ * - Cada campanha envia 1 msg/hora em rotaÃƒÆ’Ã‚Â¯Ãƒâ€šÃ‚Â¿Ãƒâ€šÃ‚Â½ÃƒÆ’Ã‚Â¯Ãƒâ€šÃ‚Â¿Ãƒâ€šÃ‚Â½o
  * - Ciclo de 12 horas
- * - Sem rotação de pares
+ * - Sem rotaÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â§ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â£o de pares
  * - Todas as campanhas enviam a cada hora
  */
 
@@ -39,6 +39,8 @@ export default function Campaigns() {
   const [isSettingUp, setIsSettingUp] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [isResetting, setIsResetting] = useState(false);
+  const [nightMode, setNightMode] = useState(false);
+  const [nightMode, setNightMode] = useState(false);
   const [resetKey, setResetKey] = useState(0);
   const [nightMode, setNightMode] = useState(false);
 
@@ -93,15 +95,19 @@ export default function Campaigns() {
     },
     onSuccess: async () => {
       try {
+        // Aguardar DOM estabilizar ANTES de refetch (evita insertBefore)
+        await new Promise(resolve => setTimeout(resolve, 300));
         await utils.scheduler.getCampaignDetails.invalidate();
         await utils.scheduler.getState.invalidate();
+        // Incrementar resetKey ANTES do refetch para desmontar cards antigos
+        setResetKey(prev => prev + 1);
+        await new Promise(resolve => setTimeout(resolve, 200));
         await utils.scheduler.getCampaignDetails.refetch();
         await utils.scheduler.getState.refetch();
-        setResetKey(prev => prev + 1);
       } catch (e) {
         console.warn('[Reset] Erro ao refetch:', e);
       }
-      await new Promise(resolve => setTimeout(resolve, 100));
+      await new Promise(resolve => setTimeout(resolve, 200));
       setIsResetting(false);
       toast.success("Campanhas resetadas com novos contatos! Clique em Iniciar.");
     },
@@ -202,7 +208,7 @@ export default function Campaigns() {
                 <span>Romatec CRM Campanhas</span>
               </h1>
               <p className="text-emerald-300/70 text-sm mt-1">
-                1 msg/campanha/hora | Ciclo de 12 horas | {allCampaigns.length} campanhas
+                RotaÃƒÆ’Ã‚Â¯Ãƒâ€šÃ‚Â¿Ãƒâ€šÃ‚Â½ÃƒÆ’Ã‚Â¯Ãƒâ€šÃ‚Â¿Ãƒâ€šÃ‚Â½o sequencial 08h-18h | 2 msgs/campanha/dia | {allCampaigns.length} campanhas
               </p>
             </div>
           </div>
@@ -257,17 +263,17 @@ export default function Campaigns() {
             ))}
           </div>
 
-          {/* Cronômetro Principal - Hora Atual */}
+          {/* CronÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â´metro Principal - Hora do Dia */}
           {isRunning && (
             <div className="p-5 rounded-xl bg-gradient-to-r from-purple-900/30 via-indigo-900/20 to-purple-900/30 border border-purple-500/20 mb-6">
               <div className="flex items-center justify-between mb-3">
                 <div>
                   <p className="font-semibold text-purple-300 flex items-center gap-2">
                     <Timer className="h-5 w-5" />
-                    Próxima Hora em:
+                    PrÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â³xima Hora em:
                   </p>
                   <p className="text-xs text-purple-400/60 mt-1">
-                    Hora {hourNumber + 1}/12 | {sentThisHour}/{totalCampsActive} campanhas enviaram
+                    {nightMode ? "ÃƒÂ°Ã…Â¸Ã…â€™Ã¢â€žÂ¢ Modo Noite 20h-06h" : "ÃƒÂ¢Ã‹Å“Ã¢â€šÂ¬ÃƒÂ¯Ã‚Â¸Ã‚Â Modo Dia 08h-18h"} | Hora {hourNumber + 1}/10
                   </p>
                 </div>
                 <span className="text-5xl font-mono font-bold text-purple-400 tabular-nums" style={{ textShadow: '0 0 20px rgba(168, 85, 247, 0.5)' }}>
@@ -284,15 +290,15 @@ export default function Campaigns() {
               {/* Info de tempo */}
               <div className="grid grid-cols-3 gap-3 text-center">
                 <div className="p-2 bg-white/5 rounded-lg border border-white/10">
-                  <p className="text-xs text-muted-foreground">Início às</p>
+                  <p className="text-xs text-muted-foreground">InÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â­cio ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â s</p>
                   <p className="text-sm font-bold text-purple-300">{stateData?.startedAtFormatted || "--:--:--"}</p>
                 </div>
                 <div className="p-2 bg-white/5 rounded-lg border border-white/10">
-                  <p className="text-xs text-muted-foreground">Rodando há</p>
+                  <p className="text-xs text-muted-foreground">Rodando hÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¡</p>
                   <p className="text-sm font-bold text-purple-300">{stateData?.uptimeFormatted || "00:00:00"}</p>
                 </div>
                 <div className="p-2 bg-white/5 rounded-lg border border-white/10">
-                  <p className="text-xs text-muted-foreground">Próxima hora</p>
+                  <p className="text-xs text-muted-foreground">PrÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â³xima hora</p>
                   <p className="text-sm font-bold text-purple-300">{stateData?.nextCycleFormatted || "--:--"}</p>
                 </div>
               </div>
@@ -321,35 +327,75 @@ export default function Campaigns() {
             </div>
           )}
 
-          {/* Modo Dia/Noite */}
-          <div className="flex items-center justify-between p-3 bg-secondary/20 rounded-xl border border-border/30 mb-3">
-            <div>
-              <p className="text-sm font-semibold text-foreground">{nightMode ? "🌙 Modo Noite 20h-06h" : "☀️ Modo Dia 08h-18h"}</p>
-              <p className="text-xs text-muted-foreground">{nightMode ? "Enviando das 20h às 06h" : "Enviando das 08h às 18h"}</p>
-            </div>
-            <button onClick={() => { setNightMode(n => !n); toast.success(!nightMode ? "🌙 Modo Noite ativado!" : "☀️ Modo Dia ativado!"); }} className={"relative w-14 h-7 rounded-full transition-all " + (nightMode ? "bg-indigo-600" : "bg-emerald-500")}>
-              <span className={"absolute top-0.5 w-6 h-6 bg-white rounded-full shadow transition-all " + (nightMode ? "left-7" : "left-0.5")} />
+          {/* BotÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Âµes de Controle */}
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+            <button
+              onClick={handleAutoSetup}
+              disabled={isSettingUp || isRunning}
+              className="h-12 rounded-xl font-semibold text-sm flex items-center justify-center gap-2 transition-all bg-gradient-to-r from-purple-600 to-purple-700 hover:from-purple-500 hover:to-purple-600 text-white shadow-lg shadow-purple-900/30 disabled:opacity-40 disabled:cursor-not-allowed"
+            >
+              {isSettingUp ? <Loader2 className="h-4 w-4 animate-spin" /> : <Settings2 className="h-4 w-4" />}
+              Auto
             </button>
-          </div>
 
-          {/* Botões de Controle */}
-          <div className="flex gap-3">
             {!isRunning ? (
               <button
                 onClick={handleStart}
                 disabled={allCampaigns.length < 1}
-                className="flex-1 h-12 rounded-xl font-semibold text-sm flex items-center justify-center gap-2 transition-all bg-gradient-to-r from-emerald-600 to-emerald-700 hover:from-emerald-500 hover:to-emerald-600 text-white shadow-lg shadow-emerald-900/30 disabled:opacity-40 disabled:cursor-not-allowed"
+                className="h-12 rounded-xl font-semibold text-sm flex items-center justify-center gap-2 transition-all bg-gradient-to-r from-emerald-600 to-emerald-700 hover:from-emerald-500 hover:to-emerald-600 text-white shadow-lg shadow-emerald-900/30 disabled:opacity-40 disabled:cursor-not-allowed"
               >
-                <Play className="h-4 w-4" /> Iniciar Campanhas
+                <Play className="h-4 w-4" /> Iniciar
               </button>
             ) : (
               <button
                 onClick={() => stopScheduler.mutate()}
-                className="flex-1 h-12 rounded-xl font-semibold text-sm flex items-center justify-center gap-2 transition-all bg-gradient-to-r from-red-600 to-red-700 hover:from-red-500 hover:to-red-600 text-white shadow-lg shadow-red-900/30"
+                className="h-12 rounded-xl font-semibold text-sm flex items-center justify-center gap-2 transition-all bg-gradient-to-r from-red-600 to-red-700 hover:from-red-500 hover:to-red-600 text-white shadow-lg shadow-red-900/30"
               >
-                <Pause className="h-4 w-4" /> Pausar Campanhas
+                <Pause className="h-4 w-4" /> Pausar
               </button>
             )}
+
+            <button
+              onClick={() => {
+                if (isRunning) {
+                  toast.error("Pare o scheduler antes de redefinir!");
+                  return;
+                }
+                if (confirm("Tem certeza? Isso vai limpar TUDO e comeÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â§ar do zero com novos contatos.")) {
+                  resetScheduler.mutate();
+                }
+              }}
+              disabled={isRunning}
+              className={`h-12 rounded-xl font-semibold text-sm flex items-center justify-center gap-2 transition-all ${
+                isRunning
+                  ? "bg-secondary/50 text-muted-foreground cursor-not-allowed"
+                  : "bg-gradient-to-r from-amber-600 to-orange-600 hover:from-amber-500 hover:to-orange-500 text-white shadow-lg shadow-amber-900/30"
+              }`}
+            >
+              {(resetScheduler.isPending || isResetting) ? <Loader2 className="h-4 w-4 animate-spin" /> : <RotateCcw className="h-4 w-4" />}
+              {isResetting ? 'Redefinindo...' : 'Redefinir'}
+            </button>
+
+            <button
+              onClick={() => {
+                if (!isRunning) {
+                  toast.error("O scheduler jÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¡ estÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¡ parado!");
+                  return;
+                }
+                if (confirm("Tem certeza que deseja PARAR TUDO? As campanhas serÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â£o pausadas.")) {
+                  stopScheduler.mutate();
+                }
+              }}
+              disabled={!isRunning}
+              className={`h-12 rounded-xl font-semibold text-sm flex items-center justify-center gap-2 transition-all ${
+                !isRunning
+                  ? "bg-secondary/50 text-muted-foreground cursor-not-allowed"
+                  : "bg-gradient-to-r from-red-700 to-red-800 hover:from-red-600 hover:to-red-700 text-white shadow-lg shadow-red-900/30"
+              }`}
+            >
+              {stopScheduler.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Square className="h-4 w-4" />}
+              Parar Tudo
+            </button>
           </div>
         </div>
 
@@ -397,7 +443,7 @@ export default function Campaigns() {
                       {campaign.name}
                     </span>
                     <p className="text-xs text-muted-foreground mt-2">
-                      1 msg/hora | {campaign.sentCount || 0}/{campaign.totalContacts || 12} total
+                      1 msg/hora em rotaÃƒÆ’Ã‚Â¯Ãƒâ€šÃ‚Â¿Ãƒâ€šÃ‚Â½ÃƒÆ’Ã‚Â¯Ãƒâ€šÃ‚Â¿Ãƒâ€šÃ‚Â½o | {campaign.sentCount || 0}/{campaign.totalContacts || 2} total
                     </p>
                   </div>
                 );
@@ -424,7 +470,14 @@ export default function Campaigns() {
             </div>
           ) : (
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6" key={`campaigns-${resetKey}-${allCampaigns.length}`}>
-              {allCampaigns.map((campaign: any) => (
+              {isResetting ? (
+                <div className="col-span-2 flex items-center justify-center py-12">
+                  <div className="text-center">
+                    <div className="w-10 h-10 border-4 border-amber-500/30 border-t-amber-500 rounded-full animate-spin mx-auto mb-3" />
+                    <p className="text-sm text-muted-foreground">Redefinindo campanhas...</p>
+                  </div>
+                </div>
+              ) : allCampaigns.map((campaign: any) => (
                 <CampaignCard
                   key={`camp-${campaign.id}`}
                   campaign={campaign}
@@ -502,7 +555,7 @@ function CampaignCard({
   const contactsList: any[] = campaign.contacts || [];
   const sentCount = campaign.sentCount || 0;
   const pendingCount = campaign.pendingCount || 0;
-  const totalContacts = campaign.totalContacts || 12;
+  const totalContacts = campaign.totalContacts || 2;
   const progressPercent = totalContacts > 0 ? Math.round((sentCount / totalContacts) * 100) : 0;
 
   const timePercent = cycleDuration > 0 ? Math.round(((cycleDuration - cycleTimer) / cycleDuration) * 100) : 0;
@@ -552,7 +605,7 @@ function CampaignCard({
                   {statusText}
                 </span>
                 <span className="text-xs text-muted-foreground">
-                  Imóvel: {String(campaign.propertyName || '')}
+                  ImÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â³vel: {String(campaign.propertyName || '')}
                 </span>
               </div>
             </div>
@@ -564,7 +617,7 @@ function CampaignCard({
                 <span className={`text-2xl font-mono font-bold tabular-nums ${
                   hasSentThisHour ? "text-emerald-400" : "text-amber-400"
                 }`}>{formatTimer(cycleTimer)}</span>
-                <p className="text-xs text-muted-foreground">Próxima hora</p>
+                <p className="text-xs text-muted-foreground">PrÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â³xima hora</p>
               </div>
             )}
             {!isActive && (
@@ -583,8 +636,8 @@ function CampaignCard({
         {/* Campo msgs/hora (fixo em 1 para v6.0) */}
         <div className="mt-3 flex items-center gap-3 p-2.5 bg-indigo-500/10 rounded-lg border border-indigo-500/20">
           <span className="text-xs font-semibold text-indigo-300">Regra:</span>
-          <span className="text-sm font-bold text-indigo-200">1 msg/hora</span>
-          <span className="text-xs text-indigo-400/60 ml-1">× 12 horas = 12 contatos/ciclo</span>
+          <span className="text-sm font-bold text-indigo-200">1 msg/hora em rotaÃƒÆ’Ã‚Â¯Ãƒâ€šÃ‚Â¿Ãƒâ€šÃ‚Â½ÃƒÆ’Ã‚Â¯Ãƒâ€šÃ‚Â¿Ãƒâ€šÃ‚Â½o</span>
+          <span className="text-xs text-indigo-400/60 ml-1">ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â 10 horas = 2 contatos/ciclo</span>
         </div>
       </div>
 
@@ -593,7 +646,7 @@ function CampaignCard({
         {/* Progresso do Ciclo (msgs enviadas) */}
         <div className="mb-3">
           <div className="flex items-center justify-between mb-1">
-            <p className="text-xs text-muted-foreground font-medium">Progresso do Ciclo (12h)</p>
+            <p className="text-xs text-muted-foreground font-medium">Progresso do Dia (2 msgs)</p>
             <p className={`text-sm font-bold ${progressPercent === 100 ? "text-amber-400" : "text-emerald-400"}`}>{progressPercent}%</p>
           </div>
           <div className="progress-bar">
@@ -631,8 +684,8 @@ function CampaignCard({
             <p className="text-xl font-bold text-amber-400">{pendingCount}</p>
           </div>
           <div className="p-2.5 bg-purple-500/10 rounded-lg border border-purple-500/20">
-            <p className="text-xs text-muted-foreground">Hora Atual</p>
-            <p className="text-xl font-bold text-purple-400">{hourNumber + 1}<span className="text-sm text-muted-foreground">/12</span></p>
+            <p className="text-xs text-muted-foreground">Hora do Dia</p>
+            <p className="text-xl font-bold text-purple-400">{hourNumber + 1}<span className="text-sm text-muted-foreground">/10</span></p>
           </div>
           <div className="p-2.5 bg-blue-500/10 rounded-lg border border-blue-500/20">
             <p className="text-xs text-muted-foreground">Esta Hora</p>
@@ -650,9 +703,9 @@ function CampaignCard({
           </div>
         </div>
 
-        {/* Confirmação de envio nesta hora - mostra contato e horário */}
+        {/* ConfirmaÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â§ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â£o de envio nesta hora - mostra contato e horÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¡rio */}
         {(() => {
-          // Encontrar o último contato enviado nesta campanha
+          // Encontrar o ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Âºltimo contato enviado nesta campanha
           const sentContact = (campaign.contacts || []).find((c: any) => c.status === "sent" && c.sentAt);
           const lastSentContact = (campaign.contacts || [])
             .filter((c: any) => c.status === "sent" && c.sentAt)
@@ -695,7 +748,7 @@ function CampaignCard({
 
         {/* Info */}
         <p className="text-xs text-muted-foreground mb-3">
-          Iniciado: {schedulerStartedAt || "--:--:--"} | 1 msg/hora × 12 horas = {totalContacts} contatos
+          Iniciado: {schedulerStartedAt || "--:--:--"} | 1 msg/hora em rotaÃƒÆ’Ã‚Â¯Ãƒâ€šÃ‚Â¿Ãƒâ€šÃ‚Â½ÃƒÆ’Ã‚Â¯Ãƒâ€šÃ‚Â¿Ãƒâ€šÃ‚Â½o ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â 12 horas = {totalContacts} contatos
         </p>
 
         {/* Toggle Lista de Contatos */}
@@ -711,7 +764,7 @@ function CampaignCard({
           {expanded ? <ChevronUp className="h-4 w-4 text-muted-foreground" /> : <ChevronDown className="h-4 w-4 text-muted-foreground" />}
         </button>
 
-        {/* Lista de Contatos Expandível */}
+        {/* Lista de Contatos ExpandÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â­vel */}
         {expanded && (
           <div className="mt-3 space-y-1.5 max-h-96 overflow-y-auto" key={`contacts-${campaign.id}-${contactsList.length}`}>
             {contactsList.length === 0 ? (
