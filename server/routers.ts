@@ -118,7 +118,7 @@ export const appRouter = router({
       const updateData: any = {};
       Object.entries(data).forEach(([k, v]) => {
         if (v !== undefined) {
-          // Converter price e offerPrice para nÃºmero (decimal no banco)
+          // Converter price e offerPrice para nÃƒÂºmero (decimal no banco)
           if (k === 'price' || k === 'offerPrice' || k === 'areaConstruida' || k === 'areaCasa' || k === 'areaTerreno') {
             updateData[k] = v === '' || v === null ? null : Number(String(v).replace(',', '.'));
           } else {
@@ -167,7 +167,7 @@ export const appRouter = router({
   campaigns: router({
     list: publicProcedure.query(async () => getAllCampaigns()),
     getById: publicProcedure.input(z.object({ id: z.number() })).query(async ({ input }) => getCampaignById(input.id)),
-    create: protectedProcedure.input(z.object({ propertyId: z.number(), name: z.string(), messageVariations: z.array(z.string()).optional(), totalContacts: z.number().optional() })).mutation(async ({ input }) => createCampaign({ propertyId: input.propertyId, name: input.name, messageVariations: input.messageVariations || [], totalContacts: input.totalContacts || 24, status: "draft" })),
+    create: protectedProcedure.input(z.object({ propertyId: z.number(), name: z.string(), messageVariations: z.array(z.string()).optional(), totalContacts: z.number().optional() })).mutation(async ({ input }) => createCampaign({ propertyId: input.propertyId, name: input.name, messageVariations: input.messageVariations || [], totalContacts: input.totalContacts || 2, status: "draft" })),
     autoSetup: protectedProcedure.mutation(async () => {
       const db = await getDb();
       if (!db) throw new Error("Database not available");
@@ -180,7 +180,7 @@ export const appRouter = router({
       const createdCampaigns = [];
       for (let i = 0; i < allProperties.length; i++) {
         const prop = allProperties[i];
-        const result = await db.insert(campaigns).values({ propertyId: prop.id, name: prop.denomination, messageVariations: [], totalContacts: 24, sentCount: 0, failedCount: 0, status: "running", startDate: new Date() });
+        const result = await db.insert(campaigns).values({ propertyId: prop.id, name: prop.denomination, messageVariations: [], totalContacts: 2, sentCount: 0, failedCount: 0, status: "running", startDate: new Date() });
         const campaignId = Number((result as any)[0].insertId);
         createdCampaigns.push({ id: campaignId, name: prop.denomination });
         const campaignContactsList = shuffled.slice(i * 24, i * 24 + 24);
@@ -266,7 +266,7 @@ export const appRouter = router({
         for (const contact of selected) {
           await db.insert(campaignContacts).values({ campaignId: allCampaigns[i].id, contactId: contact.id, messagesSent: 0, status: "pending" });
         }
-        // Marcar campanha como running apÃ³s atribuir contatos
+        // Marcar campanha como running apÃƒÂ³s atribuir contatos
         await db.update(campaigns).set({ status: "running" }).where(eq(campaigns.id, allCampaigns[i].id));
       }
       return { success: true, message: "Campanhas resetadas! Clique em Iniciar." };
@@ -280,7 +280,7 @@ export const appRouter = router({
     updateMessagesPerHour: protectedProcedure.input(z.object({ campaignId: z.number(), messagesPerHour: z.number().min(1).max(10) })).mutation(async ({ input }) => {
       const db = await getDb();
       if (!db) throw new Error("Database not available");
-      const newTotalContacts = input.messagesPerHour * 12;
+      const newTotalContacts = 2;
       await db.update(campaigns).set({ messagesPerHour: input.messagesPerHour, totalContacts: newTotalContacts }).where(eq(campaigns.id, input.campaignId));
       await db.delete(campaignContacts).where(eq(campaignContacts.campaignId, input.campaignId));
       const now = new Date();
@@ -358,7 +358,7 @@ export const appRouter = router({
         const campMsgs = allMessages.filter(m => m.campaignId === camp.id);
         const sent = campMsgs.filter(m => m.status === 'sent' || m.status === 'delivered').length;
         const failed = campMsgs.filter(m => m.status === 'failed').length;
-        return { id: camp.id, name: camp.name, status: camp.status, sent, failed, total: camp.totalContacts || 24, pending: (camp.totalContacts || 24) - sent - failed, successRate: sent + failed > 0 ? Math.round((sent / (sent + failed)) * 100) : 0, messagesPerHour: camp.messagesPerHour || 2 };
+        return { id: camp.id, name: camp.name, status: camp.status, sent, failed, total: camp.totalContacts || 2, pending: (camp.totalContacts || 2) - sent - failed, successRate: sent + failed > 0 ? Math.round((sent / (sent + failed)) * 100) : 0, messagesPerHour: camp.messagesPerHour || 2 };
       });
       const now = new Date();
       const byDay: { date: string; sent: number; failed: number }[] = [];
