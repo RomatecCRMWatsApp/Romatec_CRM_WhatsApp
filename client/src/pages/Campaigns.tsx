@@ -10,7 +10,7 @@ import { toast } from "sonner";
 /**
  * SISTEMA v6.0 - 5 CAMPANHAS INDEPENDENTES
  * - Cada campanha envia 1 msg/hora
- * - Ciclo de 12 horas
+ * - Ciclo de 10 horas
  * - Sem rotação de pares
  * - Todas as campanhas enviam a cada hora
  */
@@ -36,10 +36,10 @@ export default function Campaigns() {
   const { user } = useAuth();
   const [, navigate] = useLocation();
   const [expandedCampaign, setExpandedCampaign] = useState<number | null>(null);
+  const [isSettingUp, setIsSettingUp] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [isResetting, setIsResetting] = useState(false);
   const [resetKey, setResetKey] = useState(0);
-  const [nightMode, setNightMode] = useState(false);
 
   const schedulerState = trpc.scheduler.getState.useQuery(undefined, {
     refetchInterval: isResetting ? false : 5000,
@@ -54,6 +54,7 @@ export default function Campaigns() {
     }
   }, [schedulerState.data, campaignDetails.data]);
 
+  const autoSetup = trpc.campaigns.autoSetup.useMutation({
     onSuccess: (data) => {
       toast.success(`${data.campaigns.length} campanhas criadas com ${data.totalContacts} contatos!`);
       campaignDetails.refetch();
@@ -68,7 +69,7 @@ export default function Campaigns() {
 
   const startScheduler = trpc.scheduler.start.useMutation({
     onSuccess: () => {
-      toast.success("Scheduler iniciado! 1 msg/campanha/hora, ciclo 12h");
+      toast.success("Scheduler iniciado! 1 msg/campanha/hora, ciclo 10h");
       schedulerState.refetch();
       campaignDetails.refetch();
     },
@@ -91,15 +92,19 @@ export default function Campaigns() {
     },
     onSuccess: async () => {
       try {
+        // Aguardar DOM estabilizar ANTES de refetch (evita insertBefore)
+        await new Promise(resolve => setTimeout(resolve, 300));
         await utils.scheduler.getCampaignDetails.invalidate();
         await utils.scheduler.getState.invalidate();
+        // Incrementar resetKey ANTES do refetch para desmontar cards antigos
+        setResetKey(prev => prev + 1);
+        await new Promise(resolve => setTimeout(resolve, 200));
         await utils.scheduler.getCampaignDetails.refetch();
         await utils.scheduler.getState.refetch();
-        setResetKey(prev => prev + 1);
       } catch (e) {
         console.warn('[Reset] Erro ao refetch:', e);
       }
-      await new Promise(resolve => setTimeout(resolve, 100));
+      await new Promise(resolve => setTimeout(resolve, 200));
       setIsResetting(false);
       toast.success("Campanhas resetadas com novos contatos! Clique em Iniciar.");
     },
@@ -157,10 +162,14 @@ export default function Campaigns() {
 
   const timeProgressPercent = cycleDuration > 0 ? Math.round(((cycleDuration - localTimer) / cycleDuration) * 100) : 0;
 
+  const handleAutoSetup = useCallback(() => {
     setIsSettingUp(true);
+    autoSetup.mutate();
+  }, [autoSetup]);
 
   const handleStart = useCallback(() => {
     if (allCampaigns.length < 1) {
+      toast.error("Configure as campanhas primeiro! Clique em 'Auto Configurar'");
       return;
     }
     startScheduler.mutate();
@@ -196,7 +205,7 @@ export default function Campaigns() {
                 <span>Romatec CRM Campanhas</span>
               </h1>
               <p className="text-emerald-300/70 text-sm mt-1">
-                1 msg/campanha/hora | Ciclo de 12 horas | {allCampaigns.length} campanhas
+                1 msg/campanha/hora | Ciclo de 10 horas | {allCampaigns.length} campanhas
               </p>
             </div>
           </div>
@@ -261,7 +270,7 @@ export default function Campaigns() {
                     Próxima Hora em:
                   </p>
                   <p className="text-xs text-purple-400/60 mt-1">
-                    Hora {hourNumber + 1}/12 | {sentThisHour}/{totalCampsActive} campanhas enviaram
+                    Hora {hourNumber + 1}/10 | {sentThisHour}/{totalCampsActive} campanhas enviaram
                   </p>
                 </div>
                 <span className="text-5xl font-mono font-bold text-purple-400 tabular-nums" style={{ textShadow: '0 0 20px rgba(168, 85, 247, 0.5)' }}>
@@ -315,35 +324,75 @@ export default function Campaigns() {
             </div>
           )}
 
-          {/* Modo Dia/Noite */}
-          <div className="flex items-center justify-between p-3 bg-secondary/20 rounded-xl border border-border/30 mb-3">
-            <div>
-              <p className="text-sm font-semibold text-foreground">{nightMode ? "🌙 Modo Noite 20h-06h" : "☀️ Modo Dia 08h-18h"}</p>
-              <p className="text-xs text-muted-foreground">{nightMode ? "Enviando das 20h às 06h" : "Enviando das 08h às 18h"}</p>
-            </div>
-            <button onClick={() => { setNightMode(n => !n); toast.success(!nightMode ? "🌙 Modo Noite ativado!" : "☀️ Modo Dia ativado!"); }} className={"relative w-14 h-7 rounded-full transition-all " + (nightMode ? "bg-indigo-600" : "bg-emerald-500")}>
-              <span className={"absolute top-0.5 w-6 h-6 bg-white rounded-full shadow transition-all " + (nightMode ? "left-7" : "left-0.5")} />
-            </button>
-          </div>
-
           {/* Botões de Controle */}
-          <div className="flex gap-3">
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+            <button
+              onClick={handleAutoSetup}
+              disabled={isSettingUp || isRunning}
+              className="h-12 rounded-xl font-semibold text-sm flex items-center justify-center gap-2 transition-all bg-gradient-to-r from-purple-600 to-purple-700 hover:from-purple-500 hover:to-purple-600 text-white shadow-lg shadow-purple-900/30 disabled:opacity-40 disabled:cursor-not-allowed"
+            >
+              {isSettingUp ? <Loader2 className="h-4 w-4 animate-spin" /> : <Settings2 className="h-4 w-4" />}
+              Auto
+            </button>
+
             {!isRunning ? (
               <button
                 onClick={handleStart}
                 disabled={allCampaigns.length < 1}
-                className="flex-1 h-12 rounded-xl font-semibold text-sm flex items-center justify-center gap-2 transition-all bg-gradient-to-r from-emerald-600 to-emerald-700 hover:from-emerald-500 hover:to-emerald-600 text-white shadow-lg shadow-emerald-900/30 disabled:opacity-40 disabled:cursor-not-allowed"
+                className="h-12 rounded-xl font-semibold text-sm flex items-center justify-center gap-2 transition-all bg-gradient-to-r from-emerald-600 to-emerald-700 hover:from-emerald-500 hover:to-emerald-600 text-white shadow-lg shadow-emerald-900/30 disabled:opacity-40 disabled:cursor-not-allowed"
               >
-                <Play className="h-4 w-4" /> Iniciar Campanhas
+                <Play className="h-4 w-4" /> Iniciar
               </button>
             ) : (
               <button
                 onClick={() => stopScheduler.mutate()}
-                className="flex-1 h-12 rounded-xl font-semibold text-sm flex items-center justify-center gap-2 transition-all bg-gradient-to-r from-red-600 to-red-700 hover:from-red-500 hover:to-red-600 text-white shadow-lg shadow-red-900/30"
+                className="h-12 rounded-xl font-semibold text-sm flex items-center justify-center gap-2 transition-all bg-gradient-to-r from-red-600 to-red-700 hover:from-red-500 hover:to-red-600 text-white shadow-lg shadow-red-900/30"
               >
-                <Pause className="h-4 w-4" /> Pausar Campanhas
+                <Pause className="h-4 w-4" /> Pausar
               </button>
             )}
+
+            <button
+              onClick={() => {
+                if (isRunning) {
+                  toast.error("Pare o scheduler antes de redefinir!");
+                  return;
+                }
+                if (confirm("Tem certeza? Isso vai limpar TUDO e começar do zero com novos contatos.")) {
+                  resetScheduler.mutate();
+                }
+              }}
+              disabled={isRunning}
+              className={`h-12 rounded-xl font-semibold text-sm flex items-center justify-center gap-2 transition-all ${
+                isRunning
+                  ? "bg-secondary/50 text-muted-foreground cursor-not-allowed"
+                  : "bg-gradient-to-r from-amber-600 to-orange-600 hover:from-amber-500 hover:to-orange-500 text-white shadow-lg shadow-amber-900/30"
+              }`}
+            >
+              {(resetScheduler.isPending || isResetting) ? <Loader2 className="h-4 w-4 animate-spin" /> : <RotateCcw className="h-4 w-4" />}
+              {isResetting ? 'Redefinindo...' : 'Redefinir'}
+            </button>
+
+            <button
+              onClick={() => {
+                if (!isRunning) {
+                  toast.error("O scheduler já está parado!");
+                  return;
+                }
+                if (confirm("Tem certeza que deseja PARAR TUDO? As campanhas serão pausadas.")) {
+                  stopScheduler.mutate();
+                }
+              }}
+              disabled={!isRunning}
+              className={`h-12 rounded-xl font-semibold text-sm flex items-center justify-center gap-2 transition-all ${
+                !isRunning
+                  ? "bg-secondary/50 text-muted-foreground cursor-not-allowed"
+                  : "bg-gradient-to-r from-red-700 to-red-800 hover:from-red-600 hover:to-red-700 text-white shadow-lg shadow-red-900/30"
+              }`}
+            >
+              {stopScheduler.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Square className="h-4 w-4" />}
+              Parar Tudo
+            </button>
           </div>
         </div>
 
@@ -391,7 +440,7 @@ export default function Campaigns() {
                       {campaign.name}
                     </span>
                     <p className="text-xs text-muted-foreground mt-2">
-                      1 msg/hora | {campaign.sentCount || 0}/{campaign.totalContacts || 12} total
+                      1 msg/hora | {campaign.sentCount || 0}/{campaign.totalContacts || 10} total
                     </p>
                   </div>
                 );
@@ -410,12 +459,22 @@ export default function Campaigns() {
             <div className="glass-card p-8 text-center">
               <Settings2 className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
               <p className="text-foreground mb-4 text-lg">Nenhuma campanha configurada</p>
+              <p className="text-muted-foreground text-sm mb-6">Clique em "Auto Configurar" para criar campanhas automaticamente</p>
+              <button onClick={handleAutoSetup} disabled={isSettingUp} className="btn-premium">
                 {isSettingUp ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Settings2 className="mr-2 h-4 w-4" />}
+                Auto Configurar Campanhas
               </button>
             </div>
           ) : (
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6" key={`campaigns-${resetKey}-${allCampaigns.length}`}>
-              {allCampaigns.map((campaign: any) => (
+              {isResetting ? (
+                <div className="col-span-2 flex items-center justify-center py-12">
+                  <div className="text-center">
+                    <div className="w-10 h-10 border-4 border-amber-500/30 border-t-amber-500 rounded-full animate-spin mx-auto mb-3" />
+                    <p className="text-sm text-muted-foreground">Redefinindo campanhas...</p>
+                  </div>
+                </div>
+              ) : allCampaigns.map((campaign: any) => (
                 <CampaignCard
                   key={`camp-${campaign.id}`}
                   campaign={campaign}
@@ -493,7 +552,7 @@ function CampaignCard({
   const contactsList: any[] = campaign.contacts || [];
   const sentCount = campaign.sentCount || 0;
   const pendingCount = campaign.pendingCount || 0;
-  const totalContacts = campaign.totalContacts || 12;
+  const totalContacts = campaign.totalContacts || 10;
   const progressPercent = totalContacts > 0 ? Math.round((sentCount / totalContacts) * 100) : 0;
 
   const timePercent = cycleDuration > 0 ? Math.round(((cycleDuration - cycleTimer) / cycleDuration) * 100) : 0;
@@ -575,7 +634,7 @@ function CampaignCard({
         <div className="mt-3 flex items-center gap-3 p-2.5 bg-indigo-500/10 rounded-lg border border-indigo-500/20">
           <span className="text-xs font-semibold text-indigo-300">Regra:</span>
           <span className="text-sm font-bold text-indigo-200">1 msg/hora</span>
-          <span className="text-xs text-indigo-400/60 ml-1">× 12 horas = 12 contatos/ciclo</span>
+          <span className="text-xs text-indigo-400/60 ml-1">× 10 horas = 10 contatos/ciclo</span>
         </div>
       </div>
 
@@ -584,7 +643,7 @@ function CampaignCard({
         {/* Progresso do Ciclo (msgs enviadas) */}
         <div className="mb-3">
           <div className="flex items-center justify-between mb-1">
-            <p className="text-xs text-muted-foreground font-medium">Progresso do Ciclo (12h)</p>
+            <p className="text-xs text-muted-foreground font-medium">Progresso do Ciclo (10h)</p>
             <p className={`text-sm font-bold ${progressPercent === 100 ? "text-amber-400" : "text-emerald-400"}`}>{progressPercent}%</p>
           </div>
           <div className="progress-bar">
@@ -623,7 +682,7 @@ function CampaignCard({
           </div>
           <div className="p-2.5 bg-purple-500/10 rounded-lg border border-purple-500/20">
             <p className="text-xs text-muted-foreground">Hora Atual</p>
-            <p className="text-xl font-bold text-purple-400">{hourNumber + 1}<span className="text-sm text-muted-foreground">/12</span></p>
+            <p className="text-xl font-bold text-purple-400">{hourNumber + 1}<span className="text-sm text-muted-foreground">/10</span></p>
           </div>
           <div className="p-2.5 bg-blue-500/10 rounded-lg border border-blue-500/20">
             <p className="text-xs text-muted-foreground">Esta Hora</p>
@@ -686,7 +745,7 @@ function CampaignCard({
 
         {/* Info */}
         <p className="text-xs text-muted-foreground mb-3">
-          Iniciado: {schedulerStartedAt || "--:--:--"} | 1 msg/hora × 12 horas = {totalContacts} contatos
+          Iniciado: {schedulerStartedAt || "--:--:--"} | 1 msg/hora × 10 horas = {totalContacts} contatos
         </p>
 
         {/* Toggle Lista de Contatos */}
