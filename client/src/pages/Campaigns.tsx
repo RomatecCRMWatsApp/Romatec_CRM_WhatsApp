@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo, useCallback } from "react";
+﻿import { useState, useEffect, useMemo, useCallback } from "react";
 import { useAuth } from "@/_core/hooks/useAuth";
 import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
@@ -11,7 +11,7 @@ import { toast } from "sonner";
  * SISTEMA v6.0 - 5 CAMPANHAS INDEPENDENTES
  * - Cada campanha envia 1 msg/hora
  * - Ciclo de 12 horas
- * - Sem rotaÃ§Ã£o de pares
+ * - Sem rotaÃƒÂ§ÃƒÂ£o de pares
  * - Todas as campanhas enviam a cada hora
  */
 
@@ -36,7 +36,6 @@ export default function Campaigns() {
   const { user } = useAuth();
   const [, navigate] = useLocation();
   const [expandedCampaign, setExpandedCampaign] = useState<number | null>(null);
-  const [isSettingUp, setIsSettingUp] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [isResetting, setIsResetting] = useState(false);
   const [resetKey, setResetKey] = useState(0);
@@ -55,16 +54,13 @@ export default function Campaigns() {
     }
   }, [schedulerState.data, campaignDetails.data]);
 
-  const autoSetup = trpc.campaigns.autoSetup.useMutation({
     onSuccess: (data) => {
       toast.success(`${data.campaigns.length} campanhas criadas com ${data.totalContacts} contatos!`);
       campaignDetails.refetch();
       schedulerState.refetch();
-      setIsSettingUp(false);
     },
     onError: (error) => {
       toast.error(`Erro: ${error.message}`);
-      setIsSettingUp(false);
     },
   });
 
@@ -159,10 +155,6 @@ export default function Campaigns() {
 
   const timeProgressPercent = cycleDuration > 0 ? Math.round(((cycleDuration - localTimer) / cycleDuration) * 100) : 0;
 
-  const handleAutoSetup = useCallback(() => {
-    setIsSettingUp(true);
-    autoSetup.mutate();
-  }, [autoSetup]);
 
   const handleStart = useCallback(() => {
     if (allCampaigns.length < 1) {
@@ -218,7 +210,7 @@ export default function Campaigns() {
                   toast.error("Pare o scheduler antes de redefinir!");
                   return;
                 }
-                if (confirm("Tem certeza? Isso vai limpar TUDO e comeÃ§ar do zero com novos contatos.")) {
+                if (confirm("Tem certeza? Isso vai limpar TUDO e comeÃƒÂ§ar do zero com novos contatos.")) {
                   resetScheduler.mutate();
                 }
               }}
@@ -236,10 +228,10 @@ export default function Campaigns() {
             <button
               onClick={() => {
                 if (!isRunning) {
-                  toast.error("O scheduler jÃ¡ estÃ¡ parado!");
+                  toast.error("O scheduler jÃƒÂ¡ estÃƒÂ¡ parado!");
                   return;
                 }
-                if (confirm("Tem certeza que deseja PARAR TUDO? As campanhas serÃ£o pausadas.")) {
+                if (confirm("Tem certeza que deseja PARAR TUDO? As campanhas serÃƒÂ£o pausadas.")) {
                   stopScheduler.mutate();
                 }
               }}
@@ -320,8 +312,6 @@ export default function Campaigns() {
               <Settings2 className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
               <p className="text-foreground mb-4 text-lg">Nenhuma campanha configurada</p>
               <p className="text-muted-foreground text-sm mb-6">Clique em "Auto Configurar" para criar campanhas automaticamente</p>
-              <button onClick={handleAutoSetup} disabled={isSettingUp} className="btn-premium">
-                {isSettingUp ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Settings2 className="mr-2 h-4 w-4" />}
                 Auto Configurar Campanhas
               </button>
             </div>
@@ -455,7 +445,7 @@ function CampaignCard({
                   {statusText}
                 </span>
                 <span className="text-xs text-muted-foreground">
-                  ImÃ³vel: {String(campaign.propertyName || '')}
+                  ImÃƒÂ³vel: {String(campaign.propertyName || '')}
                 </span>
               </div>
             </div>
@@ -467,7 +457,7 @@ function CampaignCard({
                 <span className={`text-2xl font-mono font-bold tabular-nums ${
                   hasSentThisHour ? "text-emerald-400" : "text-amber-400"
                 }`}>{formatTimer(cycleTimer)}</span>
-                <p className="text-xs text-muted-foreground">PrÃ³xima hora</p>
+                <p className="text-xs text-muted-foreground">PrÃƒÂ³xima hora</p>
               </div>
             )}
             {!isActive && (
@@ -487,7 +477,7 @@ function CampaignCard({
         <div className="mt-3 flex items-center gap-3 p-2.5 bg-indigo-500/10 rounded-lg border border-indigo-500/20">
           <span className="text-xs font-semibold text-indigo-300">Regra:</span>
           <span className="text-sm font-bold text-indigo-200">1 msg/hora</span>
-          <span className="text-xs text-indigo-400/60 ml-1">Ã— 12 horas = 12 contatos/ciclo</span>
+          <span className="text-xs text-indigo-400/60 ml-1">Ãƒâ€” 12 horas = 12 contatos/ciclo</span>
         </div>
       </div>
 
@@ -553,9 +543,9 @@ function CampaignCard({
           </div>
         </div>
 
-        {/* ConfirmaÃ§Ã£o de envio nesta hora - mostra contato e horÃ¡rio */}
+        {/* ConfirmaÃƒÂ§ÃƒÂ£o de envio nesta hora - mostra contato e horÃƒÂ¡rio */}
         {(() => {
-          // Encontrar o Ãºltimo contato enviado nesta campanha
+          // Encontrar o ÃƒÂºltimo contato enviado nesta campanha
           const sentContact = (campaign.contacts || []).find((c: any) => c.status === "sent" && c.sentAt);
           const lastSentContact = (campaign.contacts || [])
             .filter((c: any) => c.status === "sent" && c.sentAt)
@@ -598,7 +588,7 @@ function CampaignCard({
 
         {/* Info */}
         <p className="text-xs text-muted-foreground mb-3">
-          Iniciado: {schedulerStartedAt || "--:--:--"} | 1 msg/hora Ã— 12 horas = {totalContacts} contatos
+          Iniciado: {schedulerStartedAt || "--:--:--"} | 1 msg/hora Ãƒâ€” 12 horas = {totalContacts} contatos
         </p>
 
         {/* Toggle Lista de Contatos */}
@@ -614,7 +604,7 @@ function CampaignCard({
           {expanded ? <ChevronUp className="h-4 w-4 text-muted-foreground" /> : <ChevronDown className="h-4 w-4 text-muted-foreground" />}
         </button>
 
-        {/* Lista de Contatos ExpandÃ­vel */}
+        {/* Lista de Contatos ExpandÃƒÂ­vel */}
         {expanded && (
           <div className="mt-3 space-y-1.5 max-h-96 overflow-y-auto" key={`contacts-${campaign.id}-${contactsList.length}`}>
             {contactsList.length === 0 ? (
