@@ -1,4 +1,4 @@
-﻿import { useState, useEffect, useMemo, useCallback } from "react";
+import { useState, useEffect, useMemo, useCallback } from "react";
 import { useAuth } from "@/_core/hooks/useAuth";
 import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
@@ -11,7 +11,7 @@ import { toast } from "sonner";
  * SISTEMA v6.0 - 5 CAMPANHAS INDEPENDENTES
  * - Cada campanha envia 1 msg/hora
  * - Ciclo de 12 horas
- * - Sem rotaÃƒÂ§ÃƒÂ£o de pares
+ * - Sem rotação de pares
  * - Todas as campanhas enviam a cada hora
  */
 
@@ -36,6 +36,7 @@ export default function Campaigns() {
   const { user } = useAuth();
   const [, navigate] = useLocation();
   const [expandedCampaign, setExpandedCampaign] = useState<number | null>(null);
+  const [isSettingUp, setIsSettingUp] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [isResetting, setIsResetting] = useState(false);
   const [resetKey, setResetKey] = useState(0);
@@ -54,13 +55,16 @@ export default function Campaigns() {
     }
   }, [schedulerState.data, campaignDetails.data]);
 
+  const autoSetup = trpc.campaigns.autoSetup.useMutation({
     onSuccess: (data) => {
       toast.success(`${data.campaigns.length} campanhas criadas com ${data.totalContacts} contatos!`);
       campaignDetails.refetch();
       schedulerState.refetch();
+      setIsSettingUp(false);
     },
     onError: (error) => {
       toast.error(`Erro: ${error.message}`);
+      setIsSettingUp(false);
     },
   });
 
@@ -155,6 +159,10 @@ export default function Campaigns() {
 
   const timeProgressPercent = cycleDuration > 0 ? Math.round(((cycleDuration - localTimer) / cycleDuration) * 100) : 0;
 
+  const handleAutoSetup = useCallback(() => {
+    setIsSettingUp(true);
+    autoSetup.mutate();
+  }, [autoSetup]);
 
   const handleStart = useCallback(() => {
     if (allCampaigns.length < 1) {
@@ -185,7 +193,155 @@ export default function Campaigns() {
       <div className="bg-gradient-to-r from-[#0a2e1a] via-[#1a5c2e] to-[#0d3d1f] border-b border-emerald-900/50 p-6">
         <div className="container flex items-center justify-between">
           <div className="flex items-center gap-4">
+            <button onClick={() => navigate("/dashboard")} className="p-2 rounded-lg hover:bg-white/10 transition-colors text-white/70 hover:text-white">
+              <ArrowLeft className="h-5 w-5" />
+            </button>
+            <div>
+              <h1 className="text-2xl md:text-3xl font-bold flex items-center gap-3 text-white">
+                <Send className="h-7 w-7 text-emerald-400" />
+                <span>Romatec CRM Campanhas</span>
+              </h1>
+              <p className="text-emerald-300/70 text-sm mt-1">
+                1 msg/campanha/hora | Ciclo de 12 horas | {allCampaigns.length} campanhas
+              </p>
+            </div>
+          </div>
+          <div>
+            {isRunning ? (
+              <span className="flex items-center gap-2 px-4 py-2 rounded-full text-sm font-bold bg-emerald-500/20 border border-emerald-500/40 text-emerald-400">
+                <span className="w-3 h-3 rounded-full bg-emerald-400 shadow-lg shadow-emerald-400/50 animate-pulse" />
+                RODANDO
+              </span>
+            ) : (
+              <span className="flex items-center gap-2 px-4 py-2 rounded-full text-sm font-bold bg-red-500/20 border border-red-500/40 text-red-400">
+                <span className="w-3 h-3 rounded-full bg-red-400" />
+                PARADO
+              </span>
+            )}
+          </div>
+        </div>
+      </div>
 
+      <div className="container py-6 space-y-6">
+
+        {/* Painel de Controle */}
+        <div className="glass-card p-6">
+          <div className="flex items-center justify-between mb-5">
+            <h2 className="text-lg font-bold flex items-center gap-2 text-foreground">
+              <BarChart3 className="h-5 w-5 text-emerald-400" />
+              Painel de Controle
+            </h2>
+            <span className={`px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wide ${
+              isRunning
+                ? "bg-emerald-500/15 text-emerald-400 border border-emerald-500/30"
+                : "bg-red-500/15 text-red-400 border border-red-500/30"
+            }`}>
+              {isRunning ? "Ativo" : "Parado"}
+            </span>
+          </div>
+
+          {/* Stats Grid */}
+          <div className="grid grid-cols-2 md:grid-cols-5 gap-3 mb-6">
+            {[
+              { icon: Users, label: "Total Contatos", value: totals.totalContacts, color: "text-blue-400", bg: "bg-blue-500/10 border-blue-500/20" },
+              { icon: CheckCircle2, label: "Enviadas", value: totals.totalSent, color: "text-emerald-400", bg: "bg-emerald-500/10 border-emerald-500/20" },
+              { icon: Clock, label: "Restantes", value: totals.totalPending, color: "text-amber-400", bg: "bg-amber-500/10 border-amber-500/20" },
+              { icon: AlertCircle, label: "Falhas", value: totals.totalFailed, color: "text-red-400", bg: "bg-red-500/10 border-red-500/20" },
+              { icon: BarChart3, label: "Taxa Sucesso", value: `${totals.successRate}%`, color: "text-purple-400", bg: "bg-purple-500/10 border-purple-500/20" },
+            ].map((stat) => (
+              <div key={stat.label} className={`p-3 rounded-xl text-center border ${stat.bg}`}>
+                <stat.icon className={`h-4 w-4 ${stat.color} mx-auto mb-1`} />
+                <p className="text-xs text-muted-foreground">{stat.label}</p>
+                <p className={`text-2xl font-bold ${stat.color}`}>{stat.value}</p>
+              </div>
+            ))}
+          </div>
+
+          {/* Cronômetro Principal - Hora Atual */}
+          {isRunning && (
+            <div className="p-5 rounded-xl bg-gradient-to-r from-purple-900/30 via-indigo-900/20 to-purple-900/30 border border-purple-500/20 mb-6">
+              <div className="flex items-center justify-between mb-3">
+                <div>
+                  <p className="font-semibold text-purple-300 flex items-center gap-2">
+                    <Timer className="h-5 w-5" />
+                    Próxima Hora em:
+                  </p>
+                  <p className="text-xs text-purple-400/60 mt-1">
+                    Hora {hourNumber + 1}/12 | {sentThisHour}/{totalCampsActive} campanhas enviaram
+                  </p>
+                </div>
+                <span className="text-5xl font-mono font-bold text-purple-400 tabular-nums" style={{ textShadow: '0 0 20px rgba(168, 85, 247, 0.5)' }}>
+                  {formatTimer(localTimer)}
+                </span>
+              </div>
+              {/* Barra de progresso da hora */}
+              <div className="w-full bg-purple-900/40 rounded-full h-2 mb-4">
+                <div
+                  className="bg-gradient-to-r from-purple-500 to-purple-400 h-2 rounded-full transition-all duration-1000"
+                  style={{ width: `${timeProgressPercent}%` }}
+                />
+              </div>
+              {/* Info de tempo */}
+              <div className="grid grid-cols-3 gap-3 text-center">
+                <div className="p-2 bg-white/5 rounded-lg border border-white/10">
+                  <p className="text-xs text-muted-foreground">Início às</p>
+                  <p className="text-sm font-bold text-purple-300">{stateData?.startedAtFormatted || "--:--:--"}</p>
+                </div>
+                <div className="p-2 bg-white/5 rounded-lg border border-white/10">
+                  <p className="text-xs text-muted-foreground">Rodando há</p>
+                  <p className="text-sm font-bold text-purple-300">{stateData?.uptimeFormatted || "00:00:00"}</p>
+                </div>
+                <div className="p-2 bg-white/5 rounded-lg border border-white/10">
+                  <p className="text-xs text-muted-foreground">Próxima hora</p>
+                  <p className="text-sm font-bold text-purple-300">{stateData?.nextCycleFormatted || "--:--"}</p>
+                </div>
+              </div>
+              {/* Status das campanhas nesta hora */}
+              <div className="mt-3 flex items-center justify-center gap-2 text-sm">
+                <span className="text-muted-foreground">Enviadas nesta hora:</span>
+                <span className="font-bold text-purple-300">{sentThisHour}/{totalCampsActive}</span>
+                {totalCampsActive > 0 && sentThisHour >= totalCampsActive && (
+                  <span className="text-xs bg-emerald-500/20 text-emerald-400 px-2 py-0.5 rounded-full border border-emerald-500/30">Hora completa!</span>
+                )}
+              </div>
+              {/* Slots agendados */}
+              {(stats as any)?.scheduledSlots && (stats as any).scheduledSlots.length > 0 && (
+                <div className="mt-3 flex flex-wrap items-center justify-center gap-1.5">
+                  {(stats as any).scheduledSlots.map((slot: any, idx: number) => (
+                    <span key={idx} className={`text-xs px-2 py-0.5 rounded-full font-mono border ${
+                      slot.sent
+                        ? "bg-emerald-500/15 text-emerald-400 border-emerald-500/30 line-through"
+                        : "bg-purple-500/15 text-purple-300 border-purple-500/30"
+                    }`}>
+                      {slot.campaignName.substring(0, 10)}@{slot.minuteLabel}min
+                    </span>
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* Modo Dia/Noite */}
+          <div className="flex items-center justify-between p-3 bg-secondary/20 rounded-xl border border-border/30 mb-3">
+            <div>
+              <p className="text-sm font-semibold text-foreground">{nightMode ? "🌙 Modo Noite 20h-06h" : "☀️ Modo Dia 08h-18h"}</p>
+              <p className="text-xs text-muted-foreground">{nightMode ? "Enviando das 20h às 06h" : "Enviando das 08h às 18h"}</p>
+            </div>
+            <button onClick={() => { setNightMode(n => !n); toast.success(!nightMode ? "🌙 Modo Noite ativado!" : "☀️ Modo Dia ativado!"); }} className={"relative w-14 h-7 rounded-full transition-all " + (nightMode ? "bg-indigo-600" : "bg-emerald-500")}>
+              <span className={"absolute top-0.5 w-6 h-6 bg-white rounded-full shadow transition-all " + (nightMode ? "left-7" : "left-0.5")} />
+            </button>
+          </div>
+
+          {/* Botões de Controle */}
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+            <button
+              onClick={handleAutoSetup}
+              disabled={isSettingUp || isRunning}
+              className="h-12 rounded-xl font-semibold text-sm flex items-center justify-center gap-2 transition-all bg-gradient-to-r from-purple-600 to-purple-700 hover:from-purple-500 hover:to-purple-600 text-white shadow-lg shadow-purple-900/30 disabled:opacity-40 disabled:cursor-not-allowed"
+            >
+              {isSettingUp ? <Loader2 className="h-4 w-4 animate-spin" /> : <Settings2 className="h-4 w-4" />}
+              Auto
+            </button>
 
             {!isRunning ? (
               <button
@@ -210,7 +366,7 @@ export default function Campaigns() {
                   toast.error("Pare o scheduler antes de redefinir!");
                   return;
                 }
-                if (confirm("Tem certeza? Isso vai limpar TUDO e comeÃƒÂ§ar do zero com novos contatos.")) {
+                if (confirm("Tem certeza? Isso vai limpar TUDO e começar do zero com novos contatos.")) {
                   resetScheduler.mutate();
                 }
               }}
@@ -228,10 +384,10 @@ export default function Campaigns() {
             <button
               onClick={() => {
                 if (!isRunning) {
-                  toast.error("O scheduler jÃƒÂ¡ estÃƒÂ¡ parado!");
+                  toast.error("O scheduler já está parado!");
                   return;
                 }
-                if (confirm("Tem certeza que deseja PARAR TUDO? As campanhas serÃƒÂ£o pausadas.")) {
+                if (confirm("Tem certeza que deseja PARAR TUDO? As campanhas serão pausadas.")) {
                   stopScheduler.mutate();
                 }
               }}
@@ -312,6 +468,8 @@ export default function Campaigns() {
               <Settings2 className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
               <p className="text-foreground mb-4 text-lg">Nenhuma campanha configurada</p>
               <p className="text-muted-foreground text-sm mb-6">Clique em "Auto Configurar" para criar campanhas automaticamente</p>
+              <button onClick={handleAutoSetup} disabled={isSettingUp} className="btn-premium">
+                {isSettingUp ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Settings2 className="mr-2 h-4 w-4" />}
                 Auto Configurar Campanhas
               </button>
             </div>
@@ -445,7 +603,7 @@ function CampaignCard({
                   {statusText}
                 </span>
                 <span className="text-xs text-muted-foreground">
-                  ImÃƒÂ³vel: {String(campaign.propertyName || '')}
+                  Imóvel: {String(campaign.propertyName || '')}
                 </span>
               </div>
             </div>
@@ -457,7 +615,7 @@ function CampaignCard({
                 <span className={`text-2xl font-mono font-bold tabular-nums ${
                   hasSentThisHour ? "text-emerald-400" : "text-amber-400"
                 }`}>{formatTimer(cycleTimer)}</span>
-                <p className="text-xs text-muted-foreground">PrÃƒÂ³xima hora</p>
+                <p className="text-xs text-muted-foreground">Próxima hora</p>
               </div>
             )}
             {!isActive && (
@@ -477,7 +635,7 @@ function CampaignCard({
         <div className="mt-3 flex items-center gap-3 p-2.5 bg-indigo-500/10 rounded-lg border border-indigo-500/20">
           <span className="text-xs font-semibold text-indigo-300">Regra:</span>
           <span className="text-sm font-bold text-indigo-200">1 msg/hora</span>
-          <span className="text-xs text-indigo-400/60 ml-1">Ãƒâ€” 12 horas = 12 contatos/ciclo</span>
+          <span className="text-xs text-indigo-400/60 ml-1">× 12 horas = 12 contatos/ciclo</span>
         </div>
       </div>
 
@@ -543,9 +701,9 @@ function CampaignCard({
           </div>
         </div>
 
-        {/* ConfirmaÃƒÂ§ÃƒÂ£o de envio nesta hora - mostra contato e horÃƒÂ¡rio */}
+        {/* Confirmação de envio nesta hora - mostra contato e horário */}
         {(() => {
-          // Encontrar o ÃƒÂºltimo contato enviado nesta campanha
+          // Encontrar o último contato enviado nesta campanha
           const sentContact = (campaign.contacts || []).find((c: any) => c.status === "sent" && c.sentAt);
           const lastSentContact = (campaign.contacts || [])
             .filter((c: any) => c.status === "sent" && c.sentAt)
@@ -588,7 +746,7 @@ function CampaignCard({
 
         {/* Info */}
         <p className="text-xs text-muted-foreground mb-3">
-          Iniciado: {schedulerStartedAt || "--:--:--"} | 1 msg/hora Ãƒâ€” 12 horas = {totalContacts} contatos
+          Iniciado: {schedulerStartedAt || "--:--:--"} | 1 msg/hora × 12 horas = {totalContacts} contatos
         </p>
 
         {/* Toggle Lista de Contatos */}
@@ -604,7 +762,7 @@ function CampaignCard({
           {expanded ? <ChevronUp className="h-4 w-4 text-muted-foreground" /> : <ChevronDown className="h-4 w-4 text-muted-foreground" />}
         </button>
 
-        {/* Lista de Contatos ExpandÃƒÂ­vel */}
+        {/* Lista de Contatos Expandível */}
         {expanded && (
           <div className="mt-3 space-y-1.5 max-h-96 overflow-y-auto" key={`contacts-${campaign.id}-${contactsList.length}`}>
             {contactsList.length === 0 ? (
