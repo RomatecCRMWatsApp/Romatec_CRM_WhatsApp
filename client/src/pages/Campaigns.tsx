@@ -333,74 +333,23 @@ export default function Campaigns() {
           </div>
 
           {/* Botões de Controle */}
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-            <button
-              onClick={handleAutoSetup}
-              disabled={isSettingUp || isRunning}
-              className="h-12 rounded-xl font-semibold text-sm flex items-center justify-center gap-2 transition-all bg-gradient-to-r from-purple-600 to-purple-700 hover:from-purple-500 hover:to-purple-600 text-white shadow-lg shadow-purple-900/30 disabled:opacity-40 disabled:cursor-not-allowed"
-            >
-              {isSettingUp ? <Loader2 className="h-4 w-4 animate-spin" /> : <Settings2 className="h-4 w-4" />}
-              Auto
-            </button>
-
+          <div className="flex gap-3">
             {!isRunning ? (
               <button
                 onClick={handleStart}
                 disabled={allCampaigns.length < 1}
-                className="h-12 rounded-xl font-semibold text-sm flex items-center justify-center gap-2 transition-all bg-gradient-to-r from-emerald-600 to-emerald-700 hover:from-emerald-500 hover:to-emerald-600 text-white shadow-lg shadow-emerald-900/30 disabled:opacity-40 disabled:cursor-not-allowed"
+                className="flex-1 h-12 rounded-xl font-semibold text-sm flex items-center justify-center gap-2 transition-all bg-gradient-to-r from-emerald-600 to-emerald-700 hover:from-emerald-500 hover:to-emerald-600 text-white shadow-lg shadow-emerald-900/30 disabled:opacity-40 disabled:cursor-not-allowed"
               >
-                <Play className="h-4 w-4" /> Iniciar
+                <Play className="h-4 w-4" /> Iniciar Campanhas
               </button>
             ) : (
               <button
                 onClick={() => stopScheduler.mutate()}
-                className="h-12 rounded-xl font-semibold text-sm flex items-center justify-center gap-2 transition-all bg-gradient-to-r from-red-600 to-red-700 hover:from-red-500 hover:to-red-600 text-white shadow-lg shadow-red-900/30"
+                className="flex-1 h-12 rounded-xl font-semibold text-sm flex items-center justify-center gap-2 transition-all bg-gradient-to-r from-red-600 to-red-700 hover:from-red-500 hover:to-red-600 text-white shadow-lg shadow-red-900/30"
               >
-                <Pause className="h-4 w-4" /> Pausar
+                <Pause className="h-4 w-4" /> Pausar Campanhas
               </button>
             )}
-
-            <button
-              onClick={() => {
-                if (isRunning) {
-                  toast.error("Pare o scheduler antes de redefinir!");
-                  return;
-                }
-                if (confirm("Tem certeza? Isso vai limpar TUDO e começar do zero com novos contatos.")) {
-                  resetScheduler.mutate();
-                }
-              }}
-              disabled={isRunning}
-              className={`h-12 rounded-xl font-semibold text-sm flex items-center justify-center gap-2 transition-all ${
-                isRunning
-                  ? "bg-secondary/50 text-muted-foreground cursor-not-allowed"
-                  : "bg-gradient-to-r from-amber-600 to-orange-600 hover:from-amber-500 hover:to-orange-500 text-white shadow-lg shadow-amber-900/30"
-              }`}
-            >
-              {(resetScheduler.isPending || isResetting) ? <Loader2 className="h-4 w-4 animate-spin" /> : <RotateCcw className="h-4 w-4" />}
-              {isResetting ? 'Redefinindo...' : 'Redefinir'}
-            </button>
-
-            <button
-              onClick={() => {
-                if (!isRunning) {
-                  toast.error("O scheduler já está parado!");
-                  return;
-                }
-                if (confirm("Tem certeza que deseja PARAR TUDO? As campanhas serão pausadas.")) {
-                  stopScheduler.mutate();
-                }
-              }}
-              disabled={!isRunning}
-              className={`h-12 rounded-xl font-semibold text-sm flex items-center justify-center gap-2 transition-all ${
-                !isRunning
-                  ? "bg-secondary/50 text-muted-foreground cursor-not-allowed"
-                  : "bg-gradient-to-r from-red-700 to-red-800 hover:from-red-600 hover:to-red-700 text-white shadow-lg shadow-red-900/30"
-              }`}
-            >
-              {stopScheduler.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Square className="h-4 w-4" />}
-              Parar Tudo
-            </button>
           </div>
         </div>
 
