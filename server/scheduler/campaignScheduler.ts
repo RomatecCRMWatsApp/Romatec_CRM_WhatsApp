@@ -4,14 +4,14 @@ import { eq, and, gte, sql } from "drizzle-orm";
 import { registerBotMessage, getFollowUpsToSend, cleanupOldFollowUps } from "../bot-ai";
 
 /**
- * SCHEDULER ROMATEC v8.0 - ROTAÇÃO SEQUENCIAL 08h-18h
+ * SCHEDULER ROMATEC v8.0 - ROTAÃ‡ÃƒO SEQUENCIAL 08h-18h
  *
- * - Ciclo de 10 horas: 08h às 18h
- * - A cada hora, UMA campanha envia (rotação sequencial)
- * - 5 campanhas × 2 rodadas = 10 horas por dia
- * - Hora 1→camp0, Hora 2→camp1, ..., Hora 5→camp4, Hora 6→camp0 (2ª rodada)...
+ * - Ciclo de 10 horas: 08h Ã s 18h
+ * - A cada hora, UMA campanha envia (rotaÃ§Ã£o sequencial)
+ * - 5 campanhas Ã— 2 rodadas = 10 horas por dia
+ * - Hora 1â†’camp0, Hora 2â†’camp1, ..., Hora 5â†’camp4, Hora 6â†’camp0 (2Âª rodada)...
  * - Cada campanha envia EXATAMENTE 2 mensagens por dia
- * - Fora do horário (18h-08h): nada é enviado
+ * - Fora do horÃ¡rio (18h-08h): nada Ã© enviado
  * - Bloqueio de 72h por contato
  */
 
@@ -100,20 +100,20 @@ class CampaignScheduler {
       const rows = await db.select().from(schedulerStateTable).where(eq(schedulerStateTable.id, 1)).limit(1);
       const saved = rows[0];
       if (!saved || saved.status !== 'running') return;
-      console.log('🔄 AUTO-RESTART scheduler...');
+      console.log('ðŸ”„ AUTO-RESTART scheduler...');
       const s = (saved.stateJson || {}) as any;
       this.state = { ...this.state, ...s, isRunning: true, startedAt: saved.startedAt ? saved.startedAt.getTime() : Date.now() };
       await this.syncCampaignOrder();
       this.startCheckLoop();
       this.startFollowUpLoop();
       await this.saveStateToDB();
-      console.log(`✅ Restaurado: camp[${this.state.currentCampaignIndex}] rodada ${this.state.currentRound}`);
+      console.log(`âœ… Restaurado: camp[${this.state.currentCampaignIndex}] rodada ${this.state.currentRound}`);
     } catch (e) { console.error('Erro ao restaurar:', e); }
   }
 
   async start() {
     if (this.state.isRunning) { this.stop(); await new Promise(r => setTimeout(r, 500)); }
-    console.log('🚀 Scheduler v8.0 — Rotação 08h-18h');
+    console.log('ðŸš€ Scheduler v8.0 â€” RotaÃ§Ã£o 08h-18h');
     this.state = {
       isRunning: true, currentCampaignIndex: 0, currentRound: 1,
       totalSent: 0, totalFailed: 0, startedAt: Date.now(),
@@ -123,8 +123,8 @@ class CampaignScheduler {
     this.lastVariationIndex.clear();
     await this.syncCampaignOrder();
     await this.assignContactsToAllCampaigns();
-    console.log(`📋 Campanhas: [${this.state.campaignOrder.join(' → ')}]`);
-    console.log(`⏰ Operando das ${HORA_INICIO}h às ${HORA_FIM}h`);
+    console.log(`ðŸ“‹ Campanhas: [${this.state.campaignOrder.join(' â†’ ')}]`);
+    console.log(`â° Operando das ${HORA_INICIO}h Ã s ${HORA_FIM}h`);
     this.startCheckLoop();
     this.startFollowUpLoop();
     await this.checkAndSend();
@@ -139,7 +139,7 @@ class CampaignScheduler {
     if (this.followUpTimer) { clearInterval(this.followUpTimer); this.followUpTimer = null; }
     this.state.scheduledSlots = [];
     this.saveStateToDB().catch(console.error);
-    console.log('⏹️ Scheduler parado.');
+    console.log('â¹ï¸ Scheduler parado.');
   }
 
   private startCheckLoop() {
@@ -169,7 +169,7 @@ class CampaignScheduler {
       return;
     }
 
-    console.log(`\n🕐 NOVA HORA: ${hourBR}h`);
+    console.log(`\nðŸ• NOVA HORA: ${hourBR}h`);
     this.state.currentHourKey = currentHour;
     if (this.slotTimer) { clearTimeout(this.slotTimer); this.slotTimer = null; }
     this.state.scheduledSlots = [];
@@ -192,7 +192,7 @@ class CampaignScheduler {
     const campResult = await db.select().from(campaigns).where(eq(campaigns.id, campaignId)).limit(1);
     const campaign = campResult[0];
     if (!campaign || campaign.status !== 'running') {
-      console.log(`⚠️ Campanha ${campaignId} inativa — avançando`);
+      console.log(`âš ï¸ Campanha ${campaignId} inativa â€” avanÃ§ando`);
       this.advanceCampaignIndex();
       return;
     }
@@ -202,7 +202,7 @@ class CampaignScheduler {
     const delayMinutes = minutesLeft <= 2 ? 1 : 2 + Math.floor(Math.random() * Math.min(minutesLeft - 2, 50));
     const delayMs = delayMinutes * 60 * 1000;
 
-    console.log(`📨 [${this.getCurrentHourBR()}h] ${campaign.name} → em ${delayMinutes}min (rodada ${this.state.currentRound})`);
+    console.log(`ðŸ“¨ [${this.getCurrentHourBR()}h] ${campaign.name} â†’ em ${delayMinutes}min (rodada ${this.state.currentRound})`);
 
     this.state.scheduledSlots = [{ campaignName: campaign.name, minuteLabel: delayMinutes, sent: false }];
 
@@ -216,7 +216,7 @@ class CampaignScheduler {
         .from(messages)
         .where(and(eq(messages.campaignId, campIdToSend), eq(messages.status, 'sent'), gte(messages.sentAt, hourStart)));
       if ((sentInDb[0]?.count || 0) > 0) {
-        console.log(`🛑 ${campaign.name}: já enviou esta hora — avançando`);
+        console.log(`ðŸ›‘ ${campaign.name}: jÃ¡ enviou esta hora â€” avanÃ§ando`);
         this.advanceCampaignIndex();
         this.state.scheduledSlots = [];
         await this.saveStateToDB();
@@ -245,12 +245,12 @@ class CampaignScheduler {
     if (this.state.currentCampaignIndex >= total) {
       this.state.currentCampaignIndex = 0;
       this.state.currentRound++;
-      console.log(`🔄 Rodada ${this.state.currentRound} — voltando para camp[0]`);
+      console.log(`ðŸ”„ Rodada ${this.state.currentRound} â€” voltando para camp[0]`);
     }
   }
 
   private async resetDailyCycle() {
-    console.log(`\n🌙 FIM DO DIA — Resetando ciclo`);
+    console.log(`\nðŸŒ™ FIM DO DIA â€” Resetando ciclo`);
     this.state.currentHourKey = this.getCurrentHourKey();
     this.state.currentCampaignIndex = 0;
     this.state.currentRound = 1;
@@ -258,7 +258,7 @@ class CampaignScheduler {
     await this.assignContactsToAllCampaigns();
     await this.saveStateToDB();
     await this.sendDailyReport();
-    console.log(`✅ Ciclo resetado — começa amanhã às ${HORA_INICIO}h`);
+    console.log(`âœ… Ciclo resetado â€” comeÃ§a amanhÃ£ Ã s ${HORA_INICIO}h`);
   }
 
   async syncCampaignOrder() {
@@ -271,7 +271,7 @@ class CampaignScheduler {
     const ordered = this.state.campaignOrder.filter(id => newIdSet.has(id));
     for (const id of newIds) { if (!ordered.includes(id)) ordered.push(id); }
     this.state.campaignOrder = ordered;
-    console.log(`📋 Ordem: [${ordered.map(id => valid.find(c=>c.id===id)?.name||id).join(' → ')}]`);
+    console.log(`ðŸ“‹ Ordem: [${ordered.map(id => valid.find(c=>c.id===id)?.name||id).join(' â†’ ')}]`);
   }
 
   async syncCampaignsWithProperties() {
@@ -326,7 +326,7 @@ class CampaignScheduler {
     for (const c of selected) {
       await db.insert(campaignContacts).values({ campaignId, contactId: c.id, messagesSent: 0, status: 'pending' });
     }
-    console.log(`📱 ${selected.length} contatos → campanha ${campaignId}`);
+    console.log(`ðŸ“± ${selected.length} contatos â†’ campanha ${campaignId}`);
   }
 
   private personalizeMessage(text: string, contact: { name: string }): string {
@@ -348,7 +348,7 @@ class CampaignScheduler {
       if (!db) { this.isSending = false; return; }
       const contact = await this.getNextContact(campaign.id);
       if (!contact) {
-        console.warn(`⚠️ Sem contatos para ${campaign.name}`);
+        console.warn(`âš ï¸ Sem contatos para ${campaign.name}`);
         await this.assignContactsToCampaign(campaign.id, 2);
         this.state.totalFailed++;
         return;
@@ -374,7 +374,7 @@ class CampaignScheduler {
         this.state.totalSent++;
         this.state.lastSentCampaignName = campaign.name;
         this.state.lastSentAt = Date.now();
-        console.log(`✅ [${campaign.name}] → ${contact.name} | Total: ${this.state.totalSent}`);
+        console.log(`âœ… [${campaign.name}] â†’ ${contact.name} | Total: ${this.state.totalSent}`);
       } else {
         await db.update(campaignContacts).set({ status: 'failed' })
           .where(and(eq(campaignContacts.campaignId, campaign.id), eq(campaignContacts.contactId, contact.id)));
@@ -426,7 +426,7 @@ class CampaignScheduler {
         const r = await sendMessageViaZAPI({ instanceId: config.zApiInstanceId, token: config.zApiToken, clientToken: config.zApiClientToken||undefined, phone, message });
         return r.success ? 'sent' : 'failed';
       }
-      console.log(`📨 [SIMULADO] ${phone}: "${message.substring(0,50)}..."`);
+      console.log(`ðŸ“¨ [SIMULADO] ${phone}: "${message.substring(0,50)}..."`);
       return 'sent';
     } catch (e) { console.error('Erro Z-API:', e); return 'failed'; }
   }
@@ -448,26 +448,26 @@ class CampaignScheduler {
     const slug = prop.publicSlug || prop.denomination.toLowerCase().replace(/[^a-z0-9]+/g, '-');
     const url = `https://romateccrmwhatsapp-production.up.railway.app/imovel/${slug}`;
     const name = prop.denomination || '';
-    const isChacara = name.toLowerCase().includes('chacara') || name.toLowerCase().includes('chácar') || name.toLowerCase().includes('giuliano');
+    const isChacara = name.toLowerCase().includes('chacara') || name.toLowerCase().includes('chÃ¡car') || name.toLowerCase().includes('giuliano');
 
     if (isChacara) {
       return [
-        `🌿 {{NOME}}, *${name}* - Chácaras em Açailândia!\n\n🏡 ~1.000m² por *R$ ${price}*\n⚠️ *Restam 3 unidades!*\n\n📸 ${url}\n\nGarante a sua!`,
-        `{{NOME}}, *${name}*! 🌳\n\n~1.000m² | *R$ ${price}*\n🚨 *Apenas 3 disponíveis!*\n\n👉 ${url}\n\nNão perca!`,
-        `🔥 {{NOME}}, OPORTUNIDADE!\n\n*${name}* - R$ ${price}\n⚠️ 3 de 6 já vendidas!\n\n📲 ${url}\n\nResponde "SIM"!`,
-        `⏰ {{NOME}}, últimas unidades!\n\n*${name}*: ~1.000m² | *R$ ${price}*\n\n📸 ${url}\n\nMe chama!`,
-        `💎 {{NOME}}, chácara dos sonhos!\n\n*${name}* | *R$ ${price}*\n🔴 Restam só 3!\n\n👉 ${url}\n\nNão deixe pra depois!`,
-        `🆕 {{NOME}}, condomínio exclusivo!\n\n*${name}*: ~1.000m² | *R$ ${price}*\n🚨 Últimas unidades!\n\n📲 ${url}\n\nTem interesse?`,
+        `ðŸŒ¿ {{NOME}}, *${name}* - ChÃ¡caras em AÃ§ailÃ¢ndia!\n\nðŸ¡ ~1.000mÂ² por *R$ ${price}*\nâš ï¸ *Restam 3 unidades!*\n\nðŸ“¸ ${url}\n\nGarante a sua!`,
+        `{{NOME}}, *${name}*! ðŸŒ³\n\n~1.000mÂ² | *R$ ${price}*\nðŸš¨ *Apenas 3 disponÃ­veis!*\n\nðŸ‘‰ ${url}\n\nNÃ£o perca!`,
+        `ðŸ”¥ {{NOME}}, OPORTUNIDADE!\n\n*${name}* - R$ ${price}\nâš ï¸ 3 de 6 jÃ¡ vendidas!\n\nðŸ“² ${url}\n\nResponde "SIM"!`,
+        `â° {{NOME}}, Ãºltimas unidades!\n\n*${name}*: ~1.000mÂ² | *R$ ${price}*\n\nðŸ“¸ ${url}\n\nMe chama!`,
+        `ðŸ’Ž {{NOME}}, chÃ¡cara dos sonhos!\n\n*${name}* | *R$ ${price}*\nðŸ”´ Restam sÃ³ 3!\n\nðŸ‘‰ ${url}\n\nNÃ£o deixe pra depois!`,
+        `ðŸ†• {{NOME}}, condomÃ­nio exclusivo!\n\n*${name}*: ~1.000mÂ² | *R$ ${price}*\nðŸš¨ Ãšltimas unidades!\n\nðŸ“² ${url}\n\nTem interesse?`,
       ];
     }
 
     return [
-      `🏠 {{NOME}}, *${name}* - Oportunidade!\n\nValor: *R$ ${price}*\n📍 ${prop.address}\n\n📸 ${url}\n\nPosso te ajudar?`,
-      `{{NOME}}, você conhece *${name}*? 🔑\n\n💰 *R$ ${price}* | ${prop.address}\n\n👉 ${url}\n\nPosso reservar visita?`,
-      `🔥 {{NOME}}, OPORTUNIDADE REAL!\n\n*${name}* | *R$ ${price}*\n✅ Financiamento disponível\n\n👉 ${url}\n\nResponde "SIM"!`,
-      `⏰ {{NOME}}, última chance!\n\n*${name}* - *R$ ${price}*\n\n📸 ${url}\n\nGarante sua visita!`,
-      `🏡 {{NOME}}, imagine morar aqui...\n\n*${name}* - ${prop.address}\n💰 *R$ ${price}*\n\n🔗 ${url}\n\nVamos conversar?`,
-      `📊 {{NOME}}, *${name}* com alta procura!\n\n💰 *R$ ${price}*\n\n🔗 ${url}\n\nMe chama!`,
+      `ðŸ  {{NOME}}, *${name}* - Oportunidade!\n\nValor: *R$ ${price}*\nðŸ“ ${prop.address}\n\nðŸ“¸ ${url}\n\nPosso te ajudar?`,
+      `{{NOME}}, vocÃª conhece *${name}*? ðŸ”‘\n\nðŸ’° *R$ ${price}* | ${prop.address}\n\nðŸ‘‰ ${url}\n\nPosso reservar visita?`,
+      `ðŸ”¥ {{NOME}}, OPORTUNIDADE REAL!\n\n*${name}* | *R$ ${price}*\nâœ… Financiamento disponÃ­vel\n\nðŸ‘‰ ${url}\n\nResponde "SIM"!`,
+      `â° {{NOME}}, Ãºltima chance!\n\n*${name}* - *R$ ${price}*\n\nðŸ“¸ ${url}\n\nGarante sua visita!`,
+      `ðŸ¡ {{NOME}}, imagine morar aqui...\n\n*${name}* - ${prop.address}\nðŸ’° *R$ ${price}*\n\nðŸ”— ${url}\n\nVamos conversar?`,
+      `ðŸ“Š {{NOME}}, *${name}* com alta procura!\n\nðŸ’° *R$ ${price}*\n\nðŸ”— ${url}\n\nMe chama!`,
     ];
   }
 
@@ -480,11 +480,11 @@ class CampaignScheduler {
       const stats: string[] = [];
       for (const c of allCamps) {
         const cc = await db.select().from(campaignContacts).where(eq(campaignContacts.campaignId, c.id));
-        stats.push(`  • ${c.name}: ${cc.filter(x=>x.status==='sent').length} enviadas`);
+        stats.push(`  â€¢ ${c.name}: ${cc.filter(x=>x.status==='sent').length} enviadas`);
       }
-      const report = [`📊 *RELATÓRIO DIÁRIO - ROMATEC*`, `📅 ${now.toLocaleDateString('pt-BR')}`, ``, `✅ Enviadas: ${this.state.totalSent}`, `❌ Falhas: ${this.state.totalFailed}`, ``, ...stats, ``, `🚀 Novo ciclo às ${HORA_INICIO}h!`].join('\n');
+      const report = [`ðŸ“Š *RELATÃ“RIO DIÃRIO - ROMATEC*`, `ðŸ“… ${now.toLocaleDateString('pt-BR')}`, ``, `âœ… Enviadas: ${this.state.totalSent}`, `âŒ Falhas: ${this.state.totalFailed}`, ``, ...stats, ``, `ðŸš€ Novo ciclo Ã s ${HORA_INICIO}h!`].join('\n');
       await this.sendViaZAPI(OWNER_PHONE, report);
-    } catch (e) { console.error('Erro relatório:', e); }
+    } catch (e) { console.error('Erro relatÃ³rio:', e); }
   }
 
   private startFollowUpLoop() {
