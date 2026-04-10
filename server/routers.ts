@@ -236,7 +236,7 @@ export const appRouter = router({
       const allContacts = await db.select().from(contacts).where(eq(contacts.status, "active"));
       const shuffled = [...allContacts].sort(() => Math.random() - 0.5);
       for (let i = 0; i < allCampaigns.length; i++) {
-        const selected = shuffled.slice(i * 12, i * 12 + 12);
+        const selected = shuffled.slice(i * 10, i * 10 + 10);
         for (const contact of selected) {
           await db.insert(campaignContacts).values({ campaignId: allCampaigns[i].id, contactId: contact.id, messagesSent: 0, status: "pending" });
         }
@@ -254,7 +254,7 @@ export const appRouter = router({
     updateMessagesPerHour: protectedProcedure.input(z.object({ campaignId: z.number(), messagesPerHour: z.number().min(1).max(10) })).mutation(async ({ input }) => {
       const db = await getDb();
       if (!db) throw new Error("Database not available");
-      const newTotalContacts = input.messagesPerHour * 12;
+      const newTotalContacts = input.messagesPerHour * 10;
       await db.update(campaigns).set({ messagesPerHour: input.messagesPerHour, totalContacts: newTotalContacts }).where(eq(campaigns.id, input.campaignId));
       await db.delete(campaignContacts).where(eq(campaignContacts.campaignId, input.campaignId));
       const now = new Date();
