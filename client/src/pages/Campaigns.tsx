@@ -9,9 +9,9 @@ import { toast } from "sonner";
 
 /**
  * SISTEMA v6.0 - 5 CAMPANHAS INDEPENDENTES
- * - Cada campanha envia 1 msg/hora em rotaÃ¯Â¿Â½Ã¯Â¿Â½o
+ * - Cada campanha envia 1 msg/hora em rotaÃƒÂ¯Ã‚Â¿Ã‚Â½ÃƒÂ¯Ã‚Â¿Ã‚Â½o
  * - Ciclo de 12 horas
- * - Sem rotaÃƒÂ§ÃƒÂ£o de pares
+ * - Sem rotaÃƒÆ’Ã‚Â§ÃƒÆ’Ã‚Â£o de pares
  * - Todas as campanhas enviam a cada hora
  */
 
@@ -39,6 +39,7 @@ export default function Campaigns() {
   const [isSettingUp, setIsSettingUp] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [isResetting, setIsResetting] = useState(false);
+  const [nightMode, setNightMode] = useState(false);
   const [resetKey, setResetKey] = useState(0);
   const [nightMode, setNightMode] = useState(false);
 
@@ -206,7 +207,7 @@ export default function Campaigns() {
                 <span>Romatec CRM Campanhas</span>
               </h1>
               <p className="text-emerald-300/70 text-sm mt-1">
-                RotaÃ¯Â¿Â½Ã¯Â¿Â½o sequencial 08h-18h | 2 msgs/campanha/dia | {allCampaigns.length} campanhas
+                RotaÃƒÂ¯Ã‚Â¿Ã‚Â½ÃƒÂ¯Ã‚Â¿Ã‚Â½o sequencial 08h-18h | 2 msgs/campanha/dia | {allCampaigns.length} campanhas
               </p>
             </div>
           </div>
@@ -261,17 +262,17 @@ export default function Campaigns() {
             ))}
           </div>
 
-          {/* CronÃƒÂ´metro Principal - Hora do Dia */}
+          {/* CronÃƒÆ’Ã‚Â´metro Principal - Hora do Dia */}
           {isRunning && (
             <div className="p-5 rounded-xl bg-gradient-to-r from-purple-900/30 via-indigo-900/20 to-purple-900/30 border border-purple-500/20 mb-6">
               <div className="flex items-center justify-between mb-3">
                 <div>
                   <p className="font-semibold text-purple-300 flex items-center gap-2">
                     <Timer className="h-5 w-5" />
-                    PrÃƒÂ³xima Hora em:
+                    PrÃƒÆ’Ã‚Â³xima Hora em:
                   </p>
                   <p className="text-xs text-purple-400/60 mt-1">
-                    {nightMode ? "ðŸŒ™ Modo Noite 20h-06h" : "â˜€ï¸ Modo Dia 08h-18h"} | Hora {hourNumber + 1}/10
+                    {nightMode ? "Ã°Å¸Å’â„¢ Modo Noite 20h-06h" : "Ã¢Ëœâ‚¬Ã¯Â¸Â Modo Dia 08h-18h"} | Hora {hourNumber + 1}/10
                   </p>
                 </div>
                 <span className="text-5xl font-mono font-bold text-purple-400 tabular-nums" style={{ textShadow: '0 0 20px rgba(168, 85, 247, 0.5)' }}>
@@ -288,15 +289,15 @@ export default function Campaigns() {
               {/* Info de tempo */}
               <div className="grid grid-cols-3 gap-3 text-center">
                 <div className="p-2 bg-white/5 rounded-lg border border-white/10">
-                  <p className="text-xs text-muted-foreground">InÃƒÂ­cio ÃƒÂ s</p>
+                  <p className="text-xs text-muted-foreground">InÃƒÆ’Ã‚Â­cio ÃƒÆ’Ã‚Â s</p>
                   <p className="text-sm font-bold text-purple-300">{stateData?.startedAtFormatted || "--:--:--"}</p>
                 </div>
                 <div className="p-2 bg-white/5 rounded-lg border border-white/10">
-                  <p className="text-xs text-muted-foreground">Rodando hÃƒÂ¡</p>
+                  <p className="text-xs text-muted-foreground">Rodando hÃƒÆ’Ã‚Â¡</p>
                   <p className="text-sm font-bold text-purple-300">{stateData?.uptimeFormatted || "00:00:00"}</p>
                 </div>
                 <div className="p-2 bg-white/5 rounded-lg border border-white/10">
-                  <p className="text-xs text-muted-foreground">PrÃƒÂ³xima hora</p>
+                  <p className="text-xs text-muted-foreground">PrÃƒÆ’Ã‚Â³xima hora</p>
                   <p className="text-sm font-bold text-purple-300">{stateData?.nextCycleFormatted || "--:--"}</p>
                 </div>
               </div>
@@ -325,7 +326,7 @@ export default function Campaigns() {
             </div>
           )}
 
-          {/* BotÃƒÂµes de Controle */}
+          {/* BotÃƒÆ’Ã‚Âµes de Controle */}
           <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
             <button
               onClick={handleAutoSetup}
@@ -359,7 +360,7 @@ export default function Campaigns() {
                   toast.error("Pare o scheduler antes de redefinir!");
                   return;
                 }
-                if (confirm("Tem certeza? Isso vai limpar TUDO e comeÃƒÂ§ar do zero com novos contatos.")) {
+                if (confirm("Tem certeza? Isso vai limpar TUDO e comeÃƒÆ’Ã‚Â§ar do zero com novos contatos.")) {
                   resetScheduler.mutate();
                 }
               }}
@@ -377,10 +378,10 @@ export default function Campaigns() {
             <button
               onClick={() => {
                 if (!isRunning) {
-                  toast.error("O scheduler jÃƒÂ¡ estÃƒÂ¡ parado!");
+                  toast.error("O scheduler jÃƒÆ’Ã‚Â¡ estÃƒÆ’Ã‚Â¡ parado!");
                   return;
                 }
-                if (confirm("Tem certeza que deseja PARAR TUDO? As campanhas serÃƒÂ£o pausadas.")) {
+                if (confirm("Tem certeza que deseja PARAR TUDO? As campanhas serÃƒÆ’Ã‚Â£o pausadas.")) {
                   stopScheduler.mutate();
                 }
               }}
@@ -441,7 +442,7 @@ export default function Campaigns() {
                       {campaign.name}
                     </span>
                     <p className="text-xs text-muted-foreground mt-2">
-                      1 msg/hora em rotaÃ¯Â¿Â½Ã¯Â¿Â½o | {campaign.sentCount || 0}/{campaign.totalContacts || 2} total
+                      1 msg/hora em rotaÃƒÂ¯Ã‚Â¿Ã‚Â½ÃƒÂ¯Ã‚Â¿Ã‚Â½o | {campaign.sentCount || 0}/{campaign.totalContacts || 2} total
                     </p>
                   </div>
                 );
@@ -603,7 +604,7 @@ function CampaignCard({
                   {statusText}
                 </span>
                 <span className="text-xs text-muted-foreground">
-                  ImÃƒÂ³vel: {String(campaign.propertyName || '')}
+                  ImÃƒÆ’Ã‚Â³vel: {String(campaign.propertyName || '')}
                 </span>
               </div>
             </div>
@@ -615,7 +616,7 @@ function CampaignCard({
                 <span className={`text-2xl font-mono font-bold tabular-nums ${
                   hasSentThisHour ? "text-emerald-400" : "text-amber-400"
                 }`}>{formatTimer(cycleTimer)}</span>
-                <p className="text-xs text-muted-foreground">PrÃƒÂ³xima hora</p>
+                <p className="text-xs text-muted-foreground">PrÃƒÆ’Ã‚Â³xima hora</p>
               </div>
             )}
             {!isActive && (
@@ -634,8 +635,8 @@ function CampaignCard({
         {/* Campo msgs/hora (fixo em 1 para v6.0) */}
         <div className="mt-3 flex items-center gap-3 p-2.5 bg-indigo-500/10 rounded-lg border border-indigo-500/20">
           <span className="text-xs font-semibold text-indigo-300">Regra:</span>
-          <span className="text-sm font-bold text-indigo-200">1 msg/hora em rotaÃ¯Â¿Â½Ã¯Â¿Â½o</span>
-          <span className="text-xs text-indigo-400/60 ml-1">Ãƒâ€” 10 horas = 2 contatos/ciclo</span>
+          <span className="text-sm font-bold text-indigo-200">1 msg/hora em rotaÃƒÂ¯Ã‚Â¿Ã‚Â½ÃƒÂ¯Ã‚Â¿Ã‚Â½o</span>
+          <span className="text-xs text-indigo-400/60 ml-1">ÃƒÆ’Ã¢â‚¬â€ 10 horas = 2 contatos/ciclo</span>
         </div>
       </div>
 
@@ -701,9 +702,9 @@ function CampaignCard({
           </div>
         </div>
 
-        {/* ConfirmaÃƒÂ§ÃƒÂ£o de envio nesta hora - mostra contato e horÃƒÂ¡rio */}
+        {/* ConfirmaÃƒÆ’Ã‚Â§ÃƒÆ’Ã‚Â£o de envio nesta hora - mostra contato e horÃƒÆ’Ã‚Â¡rio */}
         {(() => {
-          // Encontrar o ÃƒÂºltimo contato enviado nesta campanha
+          // Encontrar o ÃƒÆ’Ã‚Âºltimo contato enviado nesta campanha
           const sentContact = (campaign.contacts || []).find((c: any) => c.status === "sent" && c.sentAt);
           const lastSentContact = (campaign.contacts || [])
             .filter((c: any) => c.status === "sent" && c.sentAt)
@@ -746,7 +747,7 @@ function CampaignCard({
 
         {/* Info */}
         <p className="text-xs text-muted-foreground mb-3">
-          Iniciado: {schedulerStartedAt || "--:--:--"} | 1 msg/hora em rotaÃ¯Â¿Â½Ã¯Â¿Â½o Ãƒâ€” 12 horas = {totalContacts} contatos
+          Iniciado: {schedulerStartedAt || "--:--:--"} | 1 msg/hora em rotaÃƒÂ¯Ã‚Â¿Ã‚Â½ÃƒÂ¯Ã‚Â¿Ã‚Â½o ÃƒÆ’Ã¢â‚¬â€ 12 horas = {totalContacts} contatos
         </p>
 
         {/* Toggle Lista de Contatos */}
@@ -762,7 +763,7 @@ function CampaignCard({
           {expanded ? <ChevronUp className="h-4 w-4 text-muted-foreground" /> : <ChevronDown className="h-4 w-4 text-muted-foreground" />}
         </button>
 
-        {/* Lista de Contatos ExpandÃƒÂ­vel */}
+        {/* Lista de Contatos ExpandÃƒÆ’Ã‚Â­vel */}
         {expanded && (
           <div className="mt-3 space-y-1.5 max-h-96 overflow-y-auto" key={`contacts-${campaign.id}-${contactsList.length}`}>
             {contactsList.length === 0 ? (
