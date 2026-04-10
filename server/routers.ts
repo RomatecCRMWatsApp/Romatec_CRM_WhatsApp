@@ -118,7 +118,7 @@ export const appRouter = router({
       const updateData: any = {};
       Object.entries(data).forEach(([k, v]) => {
         if (v !== undefined) {
-          // Converter price e offerPrice para nÃƒÂºmero (decimal no banco)
+          // Converter price e offerPrice para nÃƒÆ’Ã‚Âºmero (decimal no banco)
           if (k === 'price' || k === 'offerPrice' || k === 'areaConstruida' || k === 'areaCasa' || k === 'areaTerreno') {
             updateData[k] = v === '' || v === null ? null : Number(String(v).replace(',', '.'));
           } else {
@@ -266,7 +266,7 @@ export const appRouter = router({
         for (const contact of selected) {
           await db.insert(campaignContacts).values({ campaignId: allCampaigns[i].id, contactId: contact.id, messagesSent: 0, status: "pending" });
         }
-        // Marcar campanha como running apÃƒÂ³s atribuir contatos
+        // Marcar campanha como running apÃƒÆ’Ã‚Â³s atribuir contatos
         await db.update(campaigns).set({ status: "running" }).where(eq(campaigns.id, allCampaigns[i].id));
       }
       return { success: true, message: "Campanhas resetadas! Clique em Iniciar." };
@@ -311,7 +311,7 @@ export const appRouter = router({
           else pendingCount++;
           contactDetails.push({ id: cc.id, contactId: contact.id, name: contact.name, phone: contact.phone, status: cc.status, sentAt: lastMsg[0]?.sentAt || null, blockedUntil: contact.blockedUntil });
         }
-        result.push({ id: camp.id, name: camp.name, propertyId: camp.propertyId, propertyName: prop[0]?.denomination || "Desconhecido", status: camp.status, messagesPerHour: camp.messagesPerHour || 2, totalContacts: ccList.length, sentCount, pendingCount, failedCount, startDate: camp.startDate, contacts: contactDetails });
+        result.push({ id: camp.id, name: camp.name, propertyId: camp.propertyId, propertyName: prop[0]?.denomination || "Desconhecido", status: camp.status, messagesPerHour: camp.messagesPerHour || 2, totalContacts: 2, sentCount, pendingCount, failedCount, startDate: camp.startDate, contacts: contactDetails });
       }
       return result;
     }),
