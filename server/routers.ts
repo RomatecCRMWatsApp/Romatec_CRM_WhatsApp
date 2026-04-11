@@ -334,12 +334,12 @@ export const appRouter = router({
       await db.update(contacts).set({ blockedUntil: null });
       const allCampaigns = await db.select().from(campaigns);
       for (const camp of allCampaigns) {
-        await db.update(campaigns).set({ sentCount: 0, failedCount: 0, messagesPerHour: 1, totalContacts: 10, status: "paused", startDate: null }).where(eq(campaigns.id, camp.id));
+        await db.update(campaigns).set({ sentCount: 0, failedCount: 0, messagesPerHour: 1, totalContacts: 2, status: "paused", startDate: null }).where(eq(campaigns.id, camp.id));
       }
       const allContacts = await db.select().from(contacts).where(eq(contacts.status, "active"));
       const shuffled = [...allContacts].sort(() => Math.random() - 0.5);
       for (let i = 0; i < allCampaigns.length; i++) {
-        const selected = shuffled.slice(i * 10, i * 10 + 10);
+        const selected = shuffled.slice(i * 2, i * 2 + 2);
         for (const contact of selected) {
           await db.insert(campaignContacts).values({ campaignId: allCampaigns[i].id, contactId: contact.id, messagesSent: 0, status: "pending" });
         }
@@ -353,10 +353,10 @@ export const appRouter = router({
       await db.update(campaigns).set({ status: input.active ? "running" : "paused" }).where(eq(campaigns.id, input.campaignId));
       return { success: true, message: input.active ? "Campanha ativada!" : "Campanha pausada!" };
     }),
-    updateMessagesPerHour: protectedProcedure.input(z.object({ campaignId: z.number(), messagesPerHour: z.number().min(1).max(10) })).mutation(async ({ input }) => {
+    updateMessagesPerHour: protectedProcedure.input(z.object({ campaignId: z.number(), messagesPerHour: z.number().min(1).max(2) })).mutation(async ({ input }) => {
       const db = await getDb();
       if (!db) throw new Error("Database not available");
-      const newTotalContacts = input.messagesPerHour * 10;
+      const newTotalContacts = input.messagesPerHour * 2;
       await db.update(campaigns).set({ messagesPerHour: input.messagesPerHour, totalContacts: newTotalContacts }).where(eq(campaigns.id, input.campaignId));
       await db.delete(campaignContacts).where(eq(campaignContacts.campaignId, input.campaignId));
       const now = new Date();
@@ -435,7 +435,7 @@ export const appRouter = router({
         const campMsgs = allMessages.filter(m => m.campaignId === camp.id);
         const sent = campMsgs.filter(m => m.status === 'sent' || m.status === 'delivered').length;
         const failed = campMsgs.filter(m => m.status === 'failed').length;
-        return { id: camp.id, name: camp.name, status: camp.status, sent, failed, total: camp.totalContacts || 10, pending: (camp.totalContacts || 10) - sent - failed, successRate: sent + failed > 0 ? Math.round((sent / (sent + failed)) * 100) : 0 };
+        return { id: camp.id, name: camp.name, status: camp.status, sent, failed, total: camp.totalContacts || 2, pending: (camp.totalContacts || 2) - sent - failed, successRate: sent + failed > 0 ? Math.round((sent / (sent + failed)) * 100) : 0 };
       });
       const now = new Date();
       const byDay: { date: string; sent: number; failed: number }[] = [];
@@ -480,7 +480,7 @@ export const appRouter = router({
   }),
 
   zapi: router({
-    sendMessage: protectedProcedure.input(z.object({ phone: z.string().min(10), message: z.string().min(1) })).mutation(async ({ input }) => {
+    sendMessage: protectedProcedure.input(z.object({ phone: z.string().min(2), message: z.string().min(1) })).mutation(async ({ input }) => {
       const config = await getCompanyConfig();
       if (!config?.zApiInstanceId || !config?.zApiToken) return { success: false, error: 'Z-API nao configurado' };
       const { sendMessageViaZAPI } = await import('./zapi-integration');
