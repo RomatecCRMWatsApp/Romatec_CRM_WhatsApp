@@ -13,7 +13,7 @@ import { registerBotMessage, getFollowUpsToSend, cleanupOldFollowUps } from "../
  * 2. Cada campanha envia EXATAMENTE 1 mensagem por hora → bloqueia até próxima hora
  * 3. Controle por hora atual (YYYY-MM-DD-HH) + flag sentThisHour
  * 4. Ciclo = 10 horas (1 ciclo por dia)
- * 5. Cada campanha = 10 contatos (1 msg/hora × 10 horas)
+ * 5. Cada campanha = 2 contatos (1 msg/hora × 2 horas)
  * 6. Mensagens distribuídas em momentos aleatórios dentro da hora
  * 7. Mínimo 3 min entre envios (segurança anti-ban)
  * 8. Bloqueio de 72h por contato após envio
@@ -224,7 +224,7 @@ class CampaignScheduler {
     }
 
     console.log("🚀 Iniciando sistema RESTRITIVO v6.0...");
-    console.log("📏 REGRA: 1 mensagem por campanha por hora | Ciclo 12h");
+    console.log("📏 REGRA: 1 mensagem por campanha por hora | Ciclo 10h");
 
     await this.syncCampaignsWithProperties();
 
@@ -582,7 +582,7 @@ class CampaignScheduler {
           propertyId: prop.id,
           name: prop.denomination,
           messageVariations: variations,
-          totalContacts: 10, // 1 msg/hora × 10 horas = 10 contatos
+          totalContacts: 2, // 1 msg/hora × 2 horas = 2 contatos
           sentCount: 0,
           failedCount: 0,
           messagesPerHour: 1, // RESTRITIVO: sempre 1
@@ -668,7 +668,7 @@ class CampaignScheduler {
     const allContacts = await db.select().from(contacts).where(eq(contacts.status, "active"));
     const unblockedContacts = allContacts.filter(c => !c.blockedUntil || c.blockedUntil <= now);
 
-    const neededContacts = 10; // 1 msg/hora × 10 horas = 10
+    const neededContacts = 2; // 1 msg/hora × 2 horas = 2
 
     if (unblockedContacts.length < neededContacts) {
       console.warn(`⚠️ Apenas ${unblockedContacts.length} contatos disponíveis (precisa de ${neededContacts})`);
@@ -1098,7 +1098,7 @@ class CampaignScheduler {
   // ========== FOLLOW-UP AUTOMÁTICO ==========
 
   /**
-   * Inicia loop de verificação de follow-ups (a cada 5 min)
+   * Inicia loop de verificação de follow-ups (a cada 3 min)
    */
   private startFollowUpLoop() {
     if (this.followUpTimer) {
@@ -1108,7 +1108,7 @@ class CampaignScheduler {
     this.followUpTimer = setInterval(async () => {
       if (!this.state.isRunning) return;
       await this.processFollowUps();
-    }, 5 * 60 * 1000); // Verificar a cada 5 minutos
+    }, 5 * 60 * 1000); // Verificar a cada 3 minutos
   }
 
   /**
