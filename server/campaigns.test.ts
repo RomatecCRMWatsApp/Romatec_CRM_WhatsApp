@@ -191,7 +191,7 @@ describe("contacts", () => {
     it("returns contacts array (public endpoint)", async () => {
       const { ctx } = createPublicContext();
       const caller = appRouter.createCaller(ctx);
-      const result = await caller.contacts.list({ page: 1, limit: 10 });
+      const result = await caller.contacts.list({ page: 1, limit: 2 });
       // The list endpoint may return array directly or paginated object
       if (Array.isArray(result)) {
         expect(result.length).toBeGreaterThanOrEqual(0);
