@@ -249,6 +249,7 @@ export const appRouter = router({
       const allProperties = await db.select().from(properties).where(eq(properties.status, "available"));
       if (allProperties.length === 0) throw new Error("Nenhum imovel disponivel");
       const allContacts = await db.select().from(contacts).where(eq(contacts.status, "active"));
+      if (allContacts.length < allProperties.length * 2) throw new Error("Contatos insuficientes para distribuir");
       const shuffled = [...allContacts].sort(() => Math.random() - 0.5);
       await db.delete(campaignContacts);
       await db.delete(messages);
@@ -337,6 +338,7 @@ export const appRouter = router({
         await db.update(campaigns).set({ sentCount: 0, failedCount: 0, messagesPerHour: 1, totalContacts: 2, status: "paused", startDate: null }).where(eq(campaigns.id, camp.id));
       }
       const allContacts = await db.select().from(contacts).where(eq(contacts.status, "active"));
+      if (allContacts.length < allCampaigns.length * 2) throw new Error("Contatos insuficientes para distribuir");
       const shuffled = [...allContacts].sort(() => Math.random() - 0.5);
       for (let i = 0; i < allCampaigns.length; i++) {
         const selected = shuffled.slice(i * 2, i * 2 + 2);
