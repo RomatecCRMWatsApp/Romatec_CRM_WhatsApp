@@ -9,7 +9,7 @@ import { toast } from "sonner";
 /**
  * SISTEMA v6.0 - 5 CAMPANHAS INDEPENDENTES
  * - Cada campanha envia 1 msg/hora
- * - Ciclo de 10 horas
+ * - Ciclo de 2 horas
  * - Sem rotação de pares
  * - Todas as campanhas enviam a cada hora
  */
@@ -55,7 +55,7 @@ export default function Campaigns() {
 
   const startScheduler = trpc.scheduler.start.useMutation({
     onSuccess: () => {
-      toast.success("Scheduler iniciado! 1 msg/campanha/hora, ciclo 10h");
+      toast.success("Scheduler iniciado! 1 msg/campanha/hora, ciclo 2h");
       schedulerState.refetch();
       campaignDetails.refetch();
     },
@@ -176,7 +176,7 @@ export default function Campaigns() {
                 <span>Romatec CRM Campanhas</span>
               </h1>
               <p className="text-emerald-300/70 text-sm mt-1">
-                1 msg/campanha/hora | Ciclo de 10 horas | {allCampaigns.length} campanhas
+                1 msg/campanha/hora | Ciclo de 2 horas | {allCampaigns.length} campanhas
               </p>
             </div>
           </div>
@@ -315,7 +315,7 @@ export default function Campaigns() {
                       <span className={`ml-auto text-xs px-2 py-0.5 rounded-full font-bold border ${hasSent ? "bg-emerald-500/20 text-emerald-400 border-emerald-500/30" : "bg-amber-500/20 text-amber-400 border-amber-500/30"}`}>{hasSent ? "1/1" : "0/1"}</span>
                     </div>
                     <span className={`px-3 py-1.5 rounded-lg text-sm font-bold border inline-block ${hasSent ? "bg-emerald-500/15 border-emerald-500/30 text-emerald-300" : "bg-amber-500/15 border-amber-500/30 text-amber-300"}`}>{campaign.name}</span>
-                    <p className="text-xs text-muted-foreground mt-2">1 msg/hora | {campaign.sentCount || 0}/{campaign.totalContacts || 10} total</p>
+                    <p className="text-xs text-muted-foreground mt-2">1 msg/hora | {campaign.sentCount || 0}/{campaign.totalContacts || 2} total</p>
                   </div>
                 );
               })}
@@ -368,7 +368,7 @@ function CampaignCard({ campaign, isRunning, hourNumber, cycleTimer, cycleDurati
   const contactsList: any[] = campaign.contacts || [];
   const sentCount = campaign.sentCount || 0;
   const pendingCount = campaign.pendingCount || 0;
-  const totalContacts = campaign.totalContacts || 10;
+  const totalContacts = campaign.totalContacts || 2;
   const progressPercent = totalContacts > 0 ? Math.round((sentCount / totalContacts) * 100) : 0;
   const timePercent = cycleDuration > 0 ? Math.round(((cycleDuration - cycleTimer) / cycleDuration) * 100) : 0;
 
@@ -415,14 +415,14 @@ function CampaignCard({ campaign, isRunning, hourNumber, cycleTimer, cycleDurati
         <div className="mt-3 flex items-center gap-3 p-2.5 bg-indigo-500/10 rounded-lg border border-indigo-500/20">
           <span className="text-xs font-semibold text-indigo-300">Regra:</span>
           <span className="text-sm font-bold text-indigo-200">1 msg/hora</span>
-          <span className="text-xs text-indigo-400/60 ml-1">× 10 horas = 10 contatos/ciclo</span>
+          <span className="text-xs text-indigo-400/60 ml-1">× 2 horas = 2 contatos/ciclo</span>
         </div>
       </div>
 
       <div className="px-5 pb-5">
         <div className="mb-3">
           <div className="flex items-center justify-between mb-1">
-            <p className="text-xs text-muted-foreground font-medium">Progresso do Ciclo (10h)</p>
+            <p className="text-xs text-muted-foreground font-medium">Progresso do Ciclo (2h)</p>
             <p className={`text-sm font-bold ${progressPercent === 100 ? "text-amber-400" : "text-emerald-400"}`}>{progressPercent}%</p>
           </div>
           <div className="progress-bar">
@@ -453,7 +453,7 @@ function CampaignCard({ campaign, isRunning, hourNumber, cycleTimer, cycleDurati
           </div>
           <div className="p-2.5 bg-purple-500/10 rounded-lg border border-purple-500/20">
             <p className="text-xs text-muted-foreground">Hora Atual</p>
-            <p className="text-xl font-bold text-purple-400">{hourNumber + 1}<span className="text-sm text-muted-foreground">/10</span></p>
+            <p className="text-xl font-bold text-purple-400">{hourNumber + 1}<span className="text-sm text-muted-foreground">/2</span></p>
           </div>
           <div className="p-2.5 bg-blue-500/10 rounded-lg border border-blue-500/20">
             <p className="text-xs text-muted-foreground">Esta Hora</p>
@@ -464,7 +464,7 @@ function CampaignCard({ campaign, isRunning, hourNumber, cycleTimer, cycleDurati
         </div>
 
         <p className="text-xs text-muted-foreground mb-3">
-          Iniciado: {schedulerStartedAt || "--:--:--"} | 1 msg/hora × 10 horas = {totalContacts} contatos
+          Iniciado: {schedulerStartedAt || "--:--:--"} | 1 msg/hora × 2 horas = {totalContacts} contatos
         </p>
 
         <button onClick={onToggle} className="w-full flex items-center justify-between p-3 bg-secondary/30 rounded-lg border border-border/50 hover:bg-secondary/50 transition-colors">
