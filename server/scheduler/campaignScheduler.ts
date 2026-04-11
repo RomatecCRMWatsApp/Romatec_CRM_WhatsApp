@@ -64,7 +64,7 @@ class CampaignScheduler {
   private isSyncing: boolean = false;
 
   // Constantes
-  private readonly MAX_HOURS_PER_CYCLE = 10; // 10 horas por ciclo
+  private readonly MAX_HOURS_PER_CYCLE = 2; // 2 horas por ciclo
   private readonly CHECK_INTERVAL_MS = 60 * 1000; // verificar a cada 1 minuto
   private readonly MIN_GAP_MS = 3 * 60 * 1000; // mínimo 3 min entre msgs
   private readonly MARGIN_MS = 2 * 60 * 1000; // margem 2 min início/fim da hora
@@ -224,7 +224,7 @@ class CampaignScheduler {
     }
 
     console.log("🚀 Iniciando sistema RESTRITIVO v6.0...");
-    console.log("📏 REGRA: 1 mensagem por campanha por hora | Ciclo 12h");
+    console.log("📏 REGRA: 1 mensagem por campanha por hora | Ciclo 2h");
 
     await this.syncCampaignsWithProperties();
 
@@ -582,7 +582,7 @@ class CampaignScheduler {
           propertyId: prop.id,
           name: prop.denomination,
           messageVariations: variations,
-          totalContacts: 10, // 1 msg/hora × 10 horas = 10 contatos
+          totalContacts: 2, // 1 msg/hora × 2 horas = 2 contatos
           sentCount: 0,
           failedCount: 0,
           messagesPerHour: 1, // RESTRITIVO: sempre 1
@@ -668,7 +668,7 @@ class CampaignScheduler {
     const allContacts = await db.select().from(contacts).where(eq(contacts.status, "active"));
     const unblockedContacts = allContacts.filter(c => !c.blockedUntil || c.blockedUntil <= now);
 
-    const neededContacts = 10; // 1 msg/hora × 10 horas = 10
+    const neededContacts = 2; // 1 msg/hora × 2 horas = 2
 
     if (unblockedContacts.length < neededContacts) {
       console.warn(`⚠️ Apenas ${unblockedContacts.length} contatos disponíveis (precisa de ${neededContacts})`);
