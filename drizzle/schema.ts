@@ -77,7 +77,7 @@ export const campaigns = mysqlTable("campaigns", {
   name: varchar("name", { length: 255 }).notNull(),
   status: mysqlEnum("status", ["draft", "scheduled", "running", "paused", "completed"]).default("draft").notNull(),
   messageVariations: json("messageVariations").$type<string[]>(),
-  totalContacts: int("totalContacts").default(10),
+  totalContacts: int("totalContacts").default(2),
   sentCount: int("sentCount").default(0),
   failedCount: int("failedCount").default(0),
   messagesPerHour: int("messagesPerHour").default(1), // msgs/hora configurável: 1-5
