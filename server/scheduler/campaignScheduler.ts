@@ -128,7 +128,7 @@ export class CampaignScheduler {
       } else {
         await db.insert(schedulerStateTable).values({ id: 1, status, cycleNumber: this.state.hourNumber, stateJson, messagesThisCycle: this.state.totalSent });
       }
-      console.log(`💾 Estado salvo: ${status} | Hora ${this.state.hourNumber + 1}/10`);
+      console.log(`💾 Estado salvo: ${status} | Hora ${this.state.hourNumber + 1}/2`);
     } catch (e) {
       console.error('❌ Erro ao salvar estado:', e);
     }
@@ -149,7 +149,7 @@ export class CampaignScheduler {
           this.state.nightMode = json.nightMode || false;
           this.state.campaignStates = json.campaignStates || [];
         }
-        console.log(`✅ Estado restaurado: Hora ${this.state.hourNumber + 1}/10`);
+        console.log(`✅ Estado restaurado: Hora ${this.state.hourNumber + 1}/2`);
       } else {
         console.log('📋 Nenhum estado salvo - scheduler parado');
       }
@@ -778,7 +778,7 @@ export class CampaignScheduler {
       maxMessagesPerHour: 1,
       maxMessagesThisCycle: activeCamps,
       scheduledSlots: this.state.scheduledSlots,
-      cycleProgress: `${this.state.hourNumber}/10`,
+      cycleProgress: `${this.state.hourNumber}/2`,
     };
   }
 }
