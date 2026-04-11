@@ -365,10 +365,10 @@ function CampaignCard({ campaign, isRunning, hourNumber, cycleTimer, cycleDurati
   const isActive = campaign.status === "running";
   const campState = campaignStates.find((cs: any) => cs.campaignName === campaign.name);
   const hasSentThisHour = campState?.sentThisHour || false;
-  const contactsList: any[] = campaign.contacts || [];
+  const contactsList: any[] = campaign.contactDetails || [];
   const sentCount = campaign.sentCount || 0;
   const pendingCount = campaign.pendingCount || 0;
-  const totalContacts = campaign.totalContacts || 2;
+  const totalContacts = campaign.totalContacts || 0;
   const progressPercent = totalContacts > 0 ? Math.round((sentCount / totalContacts) * 100) : 0;
   const timePercent = cycleDuration > 0 ? Math.round(((cycleDuration - cycleTimer) / cycleDuration) * 100) : 0;
 
@@ -464,7 +464,7 @@ function CampaignCard({ campaign, isRunning, hourNumber, cycleTimer, cycleDurati
         </div>
 
         <p className="text-xs text-muted-foreground mb-3">
-          Iniciado: {schedulerStartedAt || "--:--:--"} | 1 msg/hora × 2 horas = {totalContacts} contatos
+          Iniciado: {schedulerStartedAt || "--:--:--"} | {campaign.messagesPerHour || 1} msg/hora × {Math.round(cycleDuration / 3600)} horas = {totalContacts} contatos
         </p>
 
         <button onClick={onToggle} className="w-full flex items-center justify-between p-3 bg-secondary/30 rounded-lg border border-border/50 hover:bg-secondary/50 transition-colors">
