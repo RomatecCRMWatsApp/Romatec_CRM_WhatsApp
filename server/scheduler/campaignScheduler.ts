@@ -12,7 +12,7 @@ import { registerBotMessage, getFollowUpsToSend, cleanupOldFollowUps } from "../
  * 1. Todas as campanhas ativas participam de cada hora
  * 2. Cada campanha envia EXATAMENTE 1 mensagem por hora → bloqueia até próxima hora
  * 3. Controle por hora atual (YYYY-MM-DD-HH) + flag sentThisHour
- * 4. Ciclo = 2 horas (1 ciclo por dia)
+ * 4. Ciclo = 2 horas
  * 5. Cada campanha = 2 contatos (1 msg/hora × 2 horas)
  * 6. Mensagens distribuídas em momentos aleatórios dentro da hora
  * 7. Mínimo 3 min entre envios (segurança anti-ban)
