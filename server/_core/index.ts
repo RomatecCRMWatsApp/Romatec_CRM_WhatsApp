@@ -188,6 +188,14 @@ async function startServer() {
   server.listen(port, async () => {
     console.log(`Server running on http://localhost:${port}/`);
 
+    // MIGRATION: Atualizar nomes das campanhas principais
+    try {
+      const { updateCampaignNames } = await import('./migrations/updateCampaignNames');
+      await updateCampaignNames();
+    } catch (error) {
+      console.error('❌ Erro na migration de nomes de campanhas:', error);
+    }
+
     // AUTO-RESTART: Verificar se o scheduler estava rodando antes do deploy
     try {
       const { campaignScheduler } = await import('../scheduler/campaignScheduler');
