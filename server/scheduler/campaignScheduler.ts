@@ -224,7 +224,7 @@ class CampaignScheduler {
     }
 
     console.log("🚀 Iniciando sistema RESTRITIVO v6.0...");
-    console.log("📏 REGRA: 1 mensagem por campanha por hora | Ciclo 12h");
+    console.log("📏 REGRA: 1 mensagem por campanha por hora | Ciclo 10h");
 
     await this.syncCampaignsWithProperties();
 
