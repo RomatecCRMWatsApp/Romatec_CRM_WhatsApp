@@ -48,7 +48,7 @@ export const appRouter = router({
     create: protectedProcedure
       .input(z.object({ 
         name: z.string().min(1), 
-        phone: z.string().min(10), 
+        phone: z.string().min(2), 
         email: z.string().email().optional() 
       }))
       .mutation(async ({ input }) => createContact({ 
@@ -88,7 +88,7 @@ export const appRouter = router({
     importBatch: protectedProcedure
       .input(z.array(z.object({ 
         name: z.string().min(1), 
-        phone: z.string().min(10), 
+        phone: z.string().min(2), 
         email: z.string().email().optional() 
       })))
       .mutation(async ({ input }) => {
@@ -240,7 +240,7 @@ export const appRouter = router({
         propertyId: z.number(), 
         name: z.string().min(1), 
         messageVariations: z.array(z.string()).optional(), 
-        totalContacts: z.number().min(1).optional().default(10) 
+        totalContacts: z.number().min(1).optional().default(2) 
       }))
       .mutation(async ({ input }) => createCampaign(input)),
     autoSetup: protectedProcedure.mutation(async () => {
@@ -257,15 +257,15 @@ export const appRouter = router({
       const createdCampaigns = [];
       for (let i = 0; i < allProperties.length; i++) {
         const prop = allProperties[i];
-        const result = await db.insert(campaigns).values({ propertyId: prop.id, name: prop.denomination, messageVariations: [], totalContacts: 10, sentCount: 0, failedCount: 0, status: "running", messagesPerHour: 1 });
+        const result = await db.insert(campaigns).values({ propertyId: prop.id, name: prop.denomination, messageVariations: [], totalContacts: 2, sentCount: 0, failedCount: 0, status: "running", messagesPerHour: 1 });
         const campaignId = Number((result as any)[0].insertId);
         createdCampaigns.push({ id: campaignId, name: prop.denomination });
-        const campaignContactsList = shuffled.slice(i * 10, i * 10 + 10);
+        const campaignContactsList = shuffled.slice(i * 2, i * 2 + 2);
         for (const contact of campaignContactsList) {
           await db.insert(campaignContacts).values({ campaignId, contactId: contact.id, messagesSent: 0, status: "pending" });
         }
       }
-      return { success: true, campaigns: createdCampaigns, totalContacts: 10, message: createdCampaigns.length + " campanhas criadas" };
+      return { success: true, campaigns: createdCampaigns, totalContacts: 2, message: createdCampaigns.length + " campanhas criadas" };
     }),
     delete: protectedProcedure.input(z.object({ id: z.number() })).mutation(async ({ input }) => {
       const db = await getDb();
@@ -387,7 +387,7 @@ export const appRouter = router({
           else pendingCount++;
           contactDetails.push({ id: cc.id, contactId: contact.id, name: contact.name, phone: contact.phone, status: cc.status, sentAt: lastMsg[0]?.sentAt || null, blockedUntil: contact.blockedUntil });
         }
-        result.push({ id: camp.id, name: camp.name, propertyId: camp.propertyId, propertyName: prop[0]?.denomination || "Desconhecido", status: camp.status, messagesPerHour: camp.messagesPerHour || 1, sentCount, pendingCount, failedCount, totalContacts: camp.totalContacts || 10, contactDetails });
+        result.push({ id: camp.id, name: camp.name, propertyId: camp.propertyId, propertyName: prop[0]?.denomination || "Desconhecido", status: camp.status, messagesPerHour: camp.messagesPerHour || 1, sentCount, pendingCount, failedCount, totalContacts: camp.totalContacts || 2, contactDetails });
       }
       return result;
     }),
