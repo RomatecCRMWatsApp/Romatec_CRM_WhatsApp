@@ -315,7 +315,7 @@ export default function Campaigns() {
                       <span className={`ml-auto text-xs px-2 py-0.5 rounded-full font-bold border ${hasSent ? "bg-emerald-500/20 text-emerald-400 border-emerald-500/30" : "bg-amber-500/20 text-amber-400 border-amber-500/30"}`}>{hasSent ? "1/1" : "0/1"}</span>
                     </div>
                     <span className={`px-3 py-1.5 rounded-lg text-sm font-bold border inline-block ${hasSent ? "bg-emerald-500/15 border-emerald-500/30 text-emerald-300" : "bg-amber-500/15 border-amber-500/30 text-amber-300"}`}>{campaign.name}</span>
-                    <p className="text-xs text-muted-foreground mt-2">1 msg/hora | {campaign.sentCount || 0}/{campaign.totalContacts || 10} total</p>
+                    <p className="text-xs text-muted-foreground mt-2">1 msg/hora | {campaign.sentCount || 0}/{campaign.totalContacts || 2} total</p>
                   </div>
                 );
               })}
@@ -368,7 +368,7 @@ function CampaignCard({ campaign, isRunning, hourNumber, cycleTimer, cycleDurati
   const contactsList: any[] = campaign.contacts || [];
   const sentCount = campaign.sentCount || 0;
   const pendingCount = campaign.pendingCount || 0;
-  const totalContacts = campaign.totalContacts || 10;
+  const totalContacts = campaign.totalContacts || 2;
   const progressPercent = totalContacts > 0 ? Math.round((sentCount / totalContacts) * 100) : 0;
   const timePercent = cycleDuration > 0 ? Math.round(((cycleDuration - cycleTimer) / cycleDuration) * 100) : 0;
 
@@ -464,7 +464,7 @@ function CampaignCard({ campaign, isRunning, hourNumber, cycleTimer, cycleDurati
         </div>
 
         <p className="text-xs text-muted-foreground mb-3">
-          Iniciado: {schedulerStartedAt || "--:--:--"} | 1 msg/hora × 10 horas = {totalContacts} contatos
+          Iniciado: {schedulerStartedAt || "--:--:--"} | 1 msg/hora × 2 horas = {totalContacts} contatos
         </p>
 
         <button onClick={onToggle} className="w-full flex items-center justify-between p-3 bg-secondary/30 rounded-lg border border-border/50 hover:bg-secondary/50 transition-colors">
