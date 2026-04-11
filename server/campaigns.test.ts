@@ -76,7 +76,7 @@ describe("scheduler", () => {
       expect(result).toHaveProperty("state");
       expect(result).toHaveProperty("stats");
       expect(result.state).toHaveProperty("isRunning");
-      expect(result.state).toHaveProperty("currentPairIndex");
+      expect(result.state).toHaveProperty("hourNumber");
     });
   });
 
@@ -87,7 +87,7 @@ describe("scheduler", () => {
       const result = await caller.scheduler.getStats();
       // Stats may have different property names depending on implementation
       expect(typeof result).toBe("object");
-      expect(result).toHaveProperty("isRunning");
+      expect(result).toHaveProperty("cycleNumber");
     });
   });
 
