@@ -74,7 +74,7 @@ export const schedulerRouter = router({
       id: campaign.id,
       name: campaign.name,
       propertyId: campaign.propertyId,
-      totalContacts: campaign.totalContacts || 10,
+      totalContacts: campaign.totalContacts || 2,
       sentCount: campaign.sentCount || 0,
       failedCount: campaign.failedCount || 0,
     }));
