@@ -196,14 +196,9 @@ async function startServer() {
       console.error('❌ Erro na migration de nomes de campanhas:', error);
     }
 
-    // AUTO-RESTART: Verificar se o scheduler estava rodando antes do deploy
-    try {
-      const { campaignScheduler } = await import('../scheduler/campaignScheduler');
-      console.log('\n🔍 Verificando estado do scheduler no banco...');
-      await campaignScheduler.restoreAndResume();
-    } catch (error) {
-      console.error('❌ Erro no auto-restart do scheduler:', error);
-    }
+    // AUTO-RESTART: O scheduler já faz auto-restore automaticamente
+    // Ver linhas 789-806 de server/scheduler/campaignScheduler.ts
+    console.log('\n✅ Scheduler com auto-restore automático configurado');
   });
 }
 
