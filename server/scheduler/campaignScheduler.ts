@@ -4,7 +4,7 @@ import { eq, and, isNull, or, lte, gte, sql } from "drizzle-orm";
 import { registerBotMessage, getFollowUpsToSend, cleanupOldFollowUps } from "../bot-ai";
 
 /**
-   * SISTEMA RESTRITIVO DE CAMPANHAS v8.0 - CICLO 10H + FOLLOW-UP
+   * SISTEMA RESTRITIVO DE CAMPANHAS v8.0 - CICLO 2H + FOLLOW-UP
  * 
  * REGRA PRINCIPAL: Cada campanha envia APENAS 1 mensagem por hora.
  * 
@@ -12,8 +12,8 @@ import { registerBotMessage, getFollowUpsToSend, cleanupOldFollowUps } from "../
  * 1. Todas as campanhas ativas participam de cada hora
  * 2. Cada campanha envia EXATAMENTE 1 mensagem por hora → bloqueia até próxima hora
  * 3. Controle por hora atual (YYYY-MM-DD-HH) + flag sentThisHour
- * 4. Ciclo = 10 horas (1 ciclo por dia)
- * 5. Cada campanha = 10 contatos (1 msg/hora × 10 horas)
+ * 4. Ciclo = 2 horas (1 ciclo por dia)
+ * 5. Cada campanha = 2 contatos (1 msg/hora × 2 horas)
  * 6. Mensagens distribuídas em momentos aleatórios dentro da hora
  * 7. Mínimo 3 min entre envios (segurança anti-ban)
  * 8. Bloqueio de 72h por contato após envio
@@ -64,7 +64,7 @@ class CampaignScheduler {
   private isSyncing: boolean = false;
 
   // Constantes
-  private readonly MAX_HOURS_PER_CYCLE = 10; // 10 horas por ciclo
+  private readonly MAX_HOURS_PER_CYCLE = 2; // 2 horas por ciclo
   private readonly CHECK_INTERVAL_MS = 60 * 1000; // verificar a cada 1 minuto
   private readonly MIN_GAP_MS = 3 * 60 * 1000; // mínimo 3 min entre msgs
   private readonly MARGIN_MS = 2 * 60 * 1000; // margem 2 min início/fim da hora
@@ -224,7 +224,7 @@ class CampaignScheduler {
     }
 
     console.log("🚀 Iniciando sistema RESTRITIVO v6.0...");
-    console.log("📏 REGRA: 1 mensagem por campanha por hora | Ciclo 12h");
+    console.log("📏 REGRA: 1 mensagem por campanha por hora | Ciclo 2h");
 
     await this.syncCampaignsWithProperties();
 
@@ -314,7 +314,7 @@ class CampaignScheduler {
       // Nova hora! Incrementar contador
       this.state.hourNumber++;
 
-      // Verificar se completou 10 horas (1 ciclo)
+      // Verificar se completou 2 horas (1 ciclo)
       if (this.state.hourNumber >= this.MAX_HOURS_PER_CYCLE) {
         console.log(`\n🌟 === CICLO DE ${this.MAX_HOURS_PER_CYCLE}H COMPLETO! ===`);
         console.log(`📊 Total: ${this.state.totalSent} enviadas, ${this.state.totalFailed} falhas`);
@@ -582,7 +582,7 @@ class CampaignScheduler {
           propertyId: prop.id,
           name: prop.denomination,
           messageVariations: variations,
-          totalContacts: 10, // 1 msg/hora × 10 horas = 10 contatos
+          totalContacts: 2, // 1 msg/hora × 2 horas = 2 contatos
           sentCount: 0,
           failedCount: 0,
           messagesPerHour: 1, // RESTRITIVO: sempre 1
@@ -668,7 +668,7 @@ class CampaignScheduler {
     const allContacts = await db.select().from(contacts).where(eq(contacts.status, "active"));
     const unblockedContacts = allContacts.filter(c => !c.blockedUntil || c.blockedUntil <= now);
 
-    const neededContacts = 10; // 1 msg/hora × 10 horas = 10
+    const neededContacts = 2; // 1 msg/hora × 2 horas = 2
 
     if (unblockedContacts.length < neededContacts) {
       console.warn(`⚠️ Apenas ${unblockedContacts.length} contatos disponíveis (precisa de ${neededContacts})`);
