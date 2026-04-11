@@ -122,10 +122,12 @@ export default function Campaigns() {
   const totalCampsActive = useMemo(() => stats?.maxMessagesPerHour || 0, [stats?.maxMessagesPerHour]);
 
   const totals = useMemo(() => {
-    const totalContacts = allCampaigns.reduce((sum: number, c: any) => sum + (c.totalContacts || 0), 0);
     const totalSent = allCampaigns.reduce((sum: number, c: any) => sum + (c.sentCount || 0), 0);
     const totalPending = allCampaigns.reduce((sum: number, c: any) => sum + (c.pendingCount || 0), 0);
     const totalFailed = allCampaigns.reduce((sum: number, c: any) => sum + (c.failedCount || 0), 0);
+    // Usa sentCount + pendingCount + failedCount como total real de contatos atribuídos
+    // evitando o valor fixo de totalContacts que pode vir inflado do backend
+    const totalContacts = totalSent + totalPending + totalFailed;
     const successRate = totalContacts > 0 ? ((totalSent / totalContacts) * 100).toFixed(1) : "0.0";
     return { totalContacts, totalSent, totalPending, totalFailed, successRate };
   }, [allCampaigns]);
@@ -804,7 +806,9 @@ function CampaignCard({
   const contactsList: any[] = campaign.contactDetails || [];
   const sentCount = campaign.sentCount || 0;
   const pendingCount = campaign.pendingCount || 0;
-  const totalContacts = campaign.totalContacts || 0;
+  const failedCount = campaign.failedCount || 0;
+  // Total real = contatos efetivamente atribuídos (evita valor inflado do backend)
+  const totalContacts = (sentCount + pendingCount + failedCount) || campaign.totalContacts || 0;
   const progressPercent = totalContacts > 0 ? Math.round((sentCount / totalContacts) * 100) : 0;
   const timePercent = cycleDuration > 0 ? Math.round(((cycleDuration - cycleTimer) / cycleDuration) * 100) : 0;
 
