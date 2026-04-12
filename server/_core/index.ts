@@ -286,6 +286,31 @@ async function startServer() {
       console.error('Erro na protecao de contatos:', error);
     }
 
+    // PROTECAO: garantir messageVariations preenchidas em todas as campanhas
+    try {
+      const { getDb: getDb3 } = await import('../db');
+      const { campaigns: campaignsTable } = await import('../../drizzle/schema');
+      const { eq, or, isNull } = await import('drizzle-orm');
+      const db3 = await getDb3();
+      if (db3) {
+        const emptyCamps = await db3.select().from(campaignsTable).where(
+          or(isNull(campaignsTable.messageVariations), eq(campaignsTable.messageVariations, '[]'))
+        );
+        for (const camp of emptyCamps) {
+          const defaultMessages = [
+            `Olá! Temos uma ótima oportunidade em ${camp.name}. Gostaria de conhecer mais? 🏠`,
+            `Vimos que você pode estar interessado em ${camp.name}. Vamos conversar? 📞`,
+            `Oportunidade especial em ${camp.name}. Clique para saber mais! ✨`
+          ];
+          await db3.update(campaignsTable).set({ messageVariations: JSON.stringify(defaultMessages) }).where(eq(campaignsTable.id, camp.id));
+          console.log(`[PROTECAO] Preenchidas messageVariations para campanha ${camp.id}: ${camp.name}`);
+        }
+        if (emptyCamps.length === 0) console.log('[PROTECAO] Todas as campanhas têm messageVariations preenchidas');
+      }
+    } catch (error) {
+      console.error('Erro na protecao de messageVariations:', error);
+    }
+
     // AUTO-RESTART: Verificar se o scheduler estava rodando antes do deploy
     try {
       const { campaignScheduler } = await import('../scheduler/campaignScheduler');
