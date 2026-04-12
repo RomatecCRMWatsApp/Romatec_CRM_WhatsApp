@@ -577,10 +577,10 @@ export default function Campaigns() {
           >
             <div>
               <p style={{ fontSize: "12px", fontWeight: 600, color: "#a8d5b0", margin: "0 0 2px" }}>
-                {nightMode ? "­ƒîÖ Modo noite 20hÔÇô06h" : "ÔÿÇ´©Å Modo dia 08hÔÇô18h"}
+                {nightMode ? "­🌙 Modo noite 20h-06h" : "☀️ Modo dia 08h-18h"}
               </p>
               <p style={{ fontSize: "10px", color: "#3a5a40", margin: 0 }}>
-                {nightMode ? "Enviando das 20h ├ás 06h" : "Enviando das 08h ├ás 18h"}
+                {nightMode ? "Enviando das 20h às 06h" : "Enviando das 08h às 18h"}
               </p>
             </div>
             <button
