@@ -289,4 +289,4 @@ async function startServer() {
 
 startServer().catch(console.error);
 
-// build 202604120115
+// build 202604121500 - ciclo 10h, 2 contatos/campanha, limpar codigo antigo
