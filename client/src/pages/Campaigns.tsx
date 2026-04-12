@@ -515,7 +515,7 @@ export default function Campaigns() {
               <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: "6px", marginTop: "10px" }}>
                 {[
                   { label: "Início às", value: stateData?.startedAtFormatted || "--:--:--" },
-                  { label: "Rodando há", value: stateData?.uptimeFormatted || "00:00:00" },
+                  { label: "Rodando háalue: stateData?.uptimeFormatted || "00:00:00" },
                   { label: "Próxima hora", value: stateData?.nextCycleFormatted || "--:--" },
                 ].map((item) => (
                   <div
