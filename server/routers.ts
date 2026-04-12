@@ -263,7 +263,12 @@ export const appRouter = router({
           await db.delete(campaignContacts).where(eq(campaignContacts.campaignId, campaignId));
         } else {
           // Create campaign only if it doesn't exist for this property
-          const ins = await db.insert(campaigns).values({ propertyId: prop.id, name: prop.denomination, messageVariations: [], totalContacts: 2, sentCount: 0, failedCount: 0, status: "paused", messagesPerHour: 1 });
+          const defaultMessages = [
+            `Olá! Temos uma ótima oportunidade em ${prop.denomination}. Gostaria de conhecer mais? 🏠`,
+            `Vimos que você pode estar interessado em ${prop.denomination}. Vamos conversar? 📞`,
+            `Oportunidade especial em ${prop.denomination}. Clique para saber mais! ✨`
+          ];
+          const ins = await db.insert(campaigns).values({ propertyId: prop.id, name: prop.denomination, messageVariations: defaultMessages, totalContacts: 2, sentCount: 0, failedCount: 0, status: "paused", messagesPerHour: 1 });
           campaignId = Number((ins as any)[0].insertId);
         }
         result.push({ id: campaignId, name: prop.denomination });
