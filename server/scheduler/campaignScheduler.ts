@@ -266,11 +266,11 @@ export class CampaignScheduler {
       const cycleIdx = this.getCurrentCycleIndex();
       if (cycleIdx >= 0) {
         this.state.hourNumber = cycleIdx;
+        console.log(`\n🕐 === NOVA HORA (Brasília): ${currentHourKey} | Ciclo ${this.state.hourNumber + 1}/10 ===`);
       } else {
-        this.state.hourNumber++;
+        console.log(`\n🕐 === NOVA HORA (Brasília): ${currentHourKey} | FORA DO HORÁRIO ATIVO ===`);
+        return;
       }
-
-      console.log(`\n🕐 === NOVA HORA (Brasília): ${currentHourKey} | Ciclo ${this.state.hourNumber + 1}/10 ===`);
 
       // Resetar slots e estados das campanhas
       this.state.campaignStates = this.state.campaignStates.map(cs => ({
