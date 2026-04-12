@@ -220,7 +220,7 @@ export default function Campaigns() {
               Romatec CRM Campanhas
             </h1>
             <p style={{ fontSize: "11px", color: "#3a6a45", margin: "2px 0 0" }}>
-              1 msg/campanha/hora ┬À Ciclo de 10 horas ┬À {allCampaigns.length} campanhas
+              1 msg/campanha/hora  •  Ciclo de 10 horas  •  {allCampaigns.length} campanhas
             </p>
           </div>
         </div>
@@ -494,7 +494,7 @@ export default function Campaigns() {
                     <Timer size={13} /> Próxima hora em:
                   </p>
                   <p style={{ fontSize: "10px", color: "#3a3a6a", margin: 0 }}>
-                    Hora {hourNumber + 1}/10 ┬À {sentThisHour}/{totalCampsActive} campanhas enviaram
+                    Hora {hourNumber + 1}/10  •  {sentThisHour}/{totalCampsActive} campanhas enviaram
                   </p>
                 </div>
                 <span
@@ -727,7 +727,7 @@ export default function Campaigns() {
                         {campaign.name}
                       </span>
                       <p style={{ fontSize: "9px", color: "#3a5a40", margin: 0 }}>
-                        1 msg/hora ┬À {campaign.sentCount || 0}/{campaign.totalContacts || 2} total
+                        1 msg/hora  •  {campaign.sentCount || 0}/{campaign.totalContacts || 2} total
                       </p>
                     </div>
                   );
@@ -970,7 +970,7 @@ function CampaignCard({
 
       {/* Info texto */}
       <p style={{ fontSize: "9px", color: "#2a4a30", marginBottom: "8px" }}>
-        Iniciado: {schedulerStartedAt || "--:--:--"} ┬À {campaign.messagesPerHour || 1} msg/hora ✓ {Math.round(cycleDuration / 3600)}h = {totalContacts} contatos
+        Iniciado: {schedulerStartedAt || "--:--:--"}  •  {campaign.messagesPerHour || 1} msg/hora ✓ {Math.round(cycleDuration / 3600)}h = {totalContacts} contatos
       </p>
 
       {/* Botúo contatos */}
@@ -981,7 +981,7 @@ function CampaignCard({
             Contatos ({sentCount}/{totalContacts})
           </span>
           <span style={{ color: "#2a4a30" }}>
-            {sentCount} enviados ┬À {pendingCount} aguardando
+            {sentCount} enviados  •  {pendingCount} aguardando
           </span>
         </div>
         {expanded ? <ChevronUp size={13} /> : <ChevronDown size={13} />}
