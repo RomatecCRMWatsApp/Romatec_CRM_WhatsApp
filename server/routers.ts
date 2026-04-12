@@ -246,25 +246,36 @@ export const appRouter = router({
       if (allProperties.length === 0) throw new Error("Nenhum imovel disponivel");
       const allContacts = await db.select().from(contacts).where(eq(contacts.status, "active"));
       const shuffled = [...allContacts].sort(() => Math.random() - 0.5);
-      await db.delete(campaignContacts);
-      await db.delete(messages);
-      await db.delete(contactCampaignHistory);
-      await db.delete(campaigns);
-      const createdCampaigns = [];
-      const usedIds = new Set<number>();
-      for (let i = 0; i < allProperties.length; i++) {
-        const prop = allProperties[i];
-        const result = await db.insert(campaigns).values({ propertyId: prop.id, name: prop.denomination, messageVariations: [], totalContacts: 2, sentCount: 0, failedCount: 0, status: "running", messagesPerHour: 1 });
-        const campaignId = Number((result as any)[0].insertId);
-        createdCampaigns.push({ id: campaignId, name: prop.denomination });
-        const available = shuffled.filter(c => !usedIds.has(c.id));
+      // NEVER delete existing campaigns — preserves IDs and avoids drift
+      // Instead: update existing campaigns, create only for new properties
+      const existingCampaigns = await db.select().from(campaigns);
+      const existingByPropId = new Map(existingCampaigns.map(c => [c.propertyId, c]));
+      const result = [];
+      const usedContactIds = new Set<number>();
+      for (const prop of allProperties) {
+        let campaignId: number;
+        const existing = existingByPropId.get(prop.id);
+        if (existing) {
+          // Update existing campaign — keep same ID
+          await db.update(campaigns).set({ totalContacts: 2, messagesPerHour: 1, sentCount: 0, failedCount: 0, status: "paused" }).where(eq(campaigns.id, existing.id));
+          campaignId = existing.id;
+          // Remove existing contacts to reassign
+          await db.delete(campaignContacts).where(eq(campaignContacts.campaignId, campaignId));
+        } else {
+          // Create campaign only if it doesn't exist for this property
+          const ins = await db.insert(campaigns).values({ propertyId: prop.id, name: prop.denomination, messageVariations: [], totalContacts: 2, sentCount: 0, failedCount: 0, status: "paused", messagesPerHour: 1 });
+          campaignId = Number((ins as any)[0].insertId);
+        }
+        result.push({ id: campaignId, name: prop.denomination });
+        // Assign 2 unique contacts to this campaign
+        const available = shuffled.filter(c => !usedContactIds.has(c.id));
         const selected = available.slice(0, 2);
         for (const contact of selected) {
-          usedIds.add(contact.id);
+          usedContactIds.add(contact.id);
           await db.insert(campaignContacts).values({ campaignId, contactId: contact.id, messagesSent: 0, status: "pending" });
         }
       }
-      return { success: true, campaigns: createdCampaigns, totalContacts: 2, message: createdCampaigns.length + " campanhas criadas" };
+      return { success: true, campaigns: result, totalContacts: 2, message: result.length + " campanhas configuradas" };
     }),
     delete: protectedProcedure.input(z.object({ id: z.number() })).mutation(async ({ input }) => {
       const db = await getDb();

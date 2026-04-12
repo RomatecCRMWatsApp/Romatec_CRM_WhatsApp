@@ -30,7 +30,7 @@ CREATE TABLE `campaigns` (
 `name` varchar(255) NOT NULL,
 `status` enum('draft','scheduled','running','paused','completed') NOT NULL DEFAULT 'draft',
 `messageVariations` json,
-`totalContacts` int DEFAULT 12,
+`totalContacts` int DEFAULT 2,
 `sentCount` int DEFAULT 0,
 `failedCount` int DEFAULT 0,
 `startDate` timestamp,
