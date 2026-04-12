@@ -677,7 +677,7 @@ export default function Campaigns() {
               }}
             >
               <Zap size={13} style={{ color: "#e8a83e" }} />
-              Status por hora  todas as campanhas
+              Status por hora (todas as campanhas)
             </h2>
             <div
               style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(180px, 1fr))", gap: "8px" }}
