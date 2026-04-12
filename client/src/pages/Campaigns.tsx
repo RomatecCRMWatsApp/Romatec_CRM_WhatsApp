@@ -491,7 +491,7 @@ export default function Campaigns() {
               <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "10px" }}>
                 <div>
                   <p style={{ fontSize: "11px", color: "#7a7ae8", display: "flex", alignItems: "center", gap: "5px", margin: "0 0 3px", fontWeight: 600 }}>
-                    <Timer size={13} /> Pr├│xima hora em:
+                    <Timer size={13} /> Próxima hora em:
                   </p>
                   <p style={{ fontSize: "10px", color: "#3a3a6a", margin: 0 }}>
                     Hora {hourNumber + 1}/10 ┬À {sentThisHour}/{totalCampsActive} campanhas enviaram
@@ -514,9 +514,9 @@ export default function Campaigns() {
               </div>
               <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: "6px", marginTop: "10px" }}>
                 {[
-                  { label: "In├¡cio às", value: stateData?.startedAtFormatted || "--:--:--" },
-                  { label: "Rodando h├í", value: stateData?.uptimeFormatted || "00:00:00" },
-                  { label: "Pr├│xima hora", value: stateData?.nextCycleFormatted || "--:--" },
+                  { label: "Início às", value: stateData?.startedAtFormatted || "--:--:--" },
+                  { label: "Rodando há", value: stateData?.uptimeFormatted || "00:00:00" },
+                  { label: "Próxima hora", value: stateData?.nextCycleFormatted || "--:--" },
                 ].map((item) => (
                   <div
                     key={item.label}
