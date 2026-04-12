@@ -615,7 +615,7 @@ export default function Campaigns() {
             </button>
           </div>
 
-          {/* BotÁes */}
+          {/* Botões */}
           <div style={{ display: "flex", gap: "10px" }}>
             {!isRunning ? (
               <button onClick={handleStart} disabled={allCampaigns.length < 1} className="rmt-btn-start">
