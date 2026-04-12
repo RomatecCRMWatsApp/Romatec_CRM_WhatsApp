@@ -200,7 +200,7 @@ async function startServer() {
     try {
       const { campaignScheduler } = await import('../scheduler/campaignScheduler');
       console.log('\n🔍 Verificando estado do scheduler no banco...');
-      await campaignScheduler.restoreAndResume();
+      await campaignScheduler.start(false);
     } catch (error) {
       console.error('❌ Erro no auto-restart do scheduler:', error);
     }
