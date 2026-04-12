@@ -342,4 +342,4 @@ async function startServer() {
 
 startServer().catch(console.error);
 
-// build 202604121600 - v1.1.0 - protecao 2 contatos fixo, scheduler condicional, cache bust
+// build 202604121700 - v1.1.0 - Dockerfile Railway, phone 12->13 auto-fix, scheduler v9.0

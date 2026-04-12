@@ -39,19 +39,22 @@ export async function sendMessageViaZAPI({
 
   // Formatar número
   const cleanPhone = phone.replace(/\D/g, '');
-  const formattedPhone = cleanPhone.startsWith('55')
-    ? cleanPhone
-    : `55${cleanPhone}`;
+  let formattedPhone = cleanPhone.startsWith('55') ? cleanPhone : `55${cleanPhone}`;
 
-  // Validação estrita: celular BR = 55 + DDD(2) + 9 + 8dígitos = 13 dígitos
-  // Rejeitar fixos (12 dígitos), números curtos e números longos demais
-  if (!formattedPhone || formattedPhone.length !== 13) {
-    console.warn(`⚠️ Número inválido (${formattedPhone.length} dígitos, esperado 13): ${formattedPhone}`);
-    return { success: false, error: `Número inválido: ${formattedPhone} (${formattedPhone.length} dígitos, esperado 13 para celular BR)`, attempts: 0 };
+  // Auto-fix: 12 dígitos = número BR antigo sem o 9 (ex: 5599XXXXXXXX → 55999XXXXXXXX)
+  if (formattedPhone.length === 12 && formattedPhone.startsWith('55')) {
+    formattedPhone = formattedPhone.slice(0, 4) + '9' + formattedPhone.slice(4);
+    console.log(`📱 Auto-fix telefone 12→13 dígitos: ${formattedPhone}`);
   }
-  // Verificar se o 5º dígito é 9 (indicativo de celular)
+
+  // Validação: celular BR = 55 + DDD(2) + 9 + 8dígitos = 13 dígitos
+  if (!formattedPhone || formattedPhone.length !== 13) {
+    console.warn(`⚠️ Número inválido (${formattedPhone.length}d): ${formattedPhone}`);
+    return { success: false, error: `Número inválido: ${formattedPhone} (${formattedPhone.length} dígitos)`, attempts: 0 };
+  }
+  // Verificar se o 5º dígito é 9 (celular)
   if (formattedPhone[4] !== '9') {
-    console.warn(`⚠️ Número não parece celular (5º dígito não é 9): ${formattedPhone}`);
+    console.warn(`⚠️ Número não é celular (5º dígito≠9): ${formattedPhone}`);
     return { success: false, error: `Número não é celular: ${formattedPhone}`, attempts: 0 };
   }
 
@@ -270,7 +273,10 @@ export async function sendButtonsViaZAPI({
   footer,
 }: SendMessageParams & { buttons: ButtonOption[]; footer?: string }): Promise<ZAPIResponse> {
   const cleanPhone = phone.replace(/\D/g, '');
-  const formattedPhone = cleanPhone.startsWith('55') ? cleanPhone : `55${cleanPhone}`;
+  let formattedPhone = cleanPhone.startsWith('55') ? cleanPhone : `55${cleanPhone}`;
+  if (formattedPhone.length === 12 && formattedPhone.startsWith('55')) {
+    formattedPhone = formattedPhone.slice(0, 4) + '9' + formattedPhone.slice(4);
+  }
 
   if (!formattedPhone || formattedPhone.length !== 13 || formattedPhone[4] !== '9') {
     return { success: false, error: `Numero invalido: ${formattedPhone}`, attempts: 0 };
