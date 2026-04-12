@@ -14,7 +14,7 @@ import { toast } from "sonner";
  * SISTEMA v6.0 - 5 CAMPANHAS INDEPENDENTES
  * - Cada campanha envia 1 msg/hora
  * - Ciclo de 10 horas
- * - Sem rota2502º2502úo de pares
+ * - Sem rotaúúo de pares
  * - Todas as campanhas enviam a cada hora
  */
 
@@ -125,7 +125,7 @@ export default function Campaigns() {
     const totalSent = allCampaigns.reduce((sum: number, c: any) => sum + (c.sentCount || 0), 0);
     const totalPending = allCampaigns.reduce((sum: number, c: any) => sum + (c.pendingCount || 0), 0);
     const totalFailed = allCampaigns.reduce((sum: number, c: any) => sum + (c.failedCount || 0), 0);
-    // Usa sentCount + pendingCount + failedCount como total real de contatos atribu2502¡dos
+    // Usa sentCount + pendingCount + failedCount como total real de contatos atribuádos
     // evitando o valor fixo de totalContacts que pode vir inflado do backend
     const totalContacts = totalSent + totalPending + totalFailed;
     const successRate = totalContacts > 0 ? ((totalSent / totalContacts) * 100).toFixed(1) : "0.0";
@@ -448,7 +448,7 @@ export default function Campaigns() {
             </span>
           </div>
 
-          {/* M2502®tricas */}
+          {/* Métricas */}
           <div
             style={{
               display: "grid",
@@ -491,7 +491,7 @@ export default function Campaigns() {
               <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "10px" }}>
                 <div>
                   <p style={{ fontSize: "11px", color: "#7a7ae8", display: "flex", alignItems: "center", gap: "5px", margin: "0 0 3px", fontWeight: 600 }}>
-                    <Timer size={13} /> Pr2502│xima hora em:
+                    <Timer size={13} /> Próxima hora em:
                   </p>
                   <p style={{ fontSize: "10px", color: "#3a3a6a", margin: 0 }}>
                     Hora {hourNumber + 1}/10 ┬À {sentThisHour}/{totalCampsActive} campanhas enviaram
@@ -514,9 +514,9 @@ export default function Campaigns() {
               </div>
               <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: "6px", marginTop: "10px" }}>
                 {[
-                  { label: "In2502¡cio 2502ás", value: stateData?.startedAtFormatted || "--:--:--" },
-                  { label: "Rodando h2502í", value: stateData?.uptimeFormatted || "00:00:00" },
-                  { label: "Pr2502│xima hora", value: stateData?.nextCycleFormatted || "--:--" },
+                  { label: "Início às", value: stateData?.startedAtFormatted || "--:--:--" },
+                  { label: "Rodando há", value: stateData?.uptimeFormatted || "00:00:00" },
+                  { label: "Próxima hora", value: stateData?.nextCycleFormatted || "--:--" },
                 ].map((item) => (
                   <div
                     key={item.label}
@@ -615,7 +615,7 @@ export default function Campaigns() {
             </button>
           </div>
 
-          {/* Bot2502Áes */}
+          {/* BotÁes */}
           <div style={{ display: "flex", gap: "10px" }}>
             {!isRunning ? (
               <button onClick={handleStart} disabled={allCampaigns.length < 1} className="rmt-btn-start">
@@ -629,7 +629,7 @@ export default function Campaigns() {
             <button
               onClick={() => {
                 if (isRunning) { toast.error("Pare o scheduler antes de redefinir!"); return; }
-                if (confirm("Tem certeza? Isso vai limpar TUDO e come2502ºar do zero.")) {
+                if (confirm("Tem certeza? Isso vai limpar TUDO e comeúar do zero.")) {
                   resetScheduler.mutate();
                 }
               }}
@@ -807,7 +807,7 @@ function CampaignCard({
   const sentCount = campaign.sentCount || 0;
   const pendingCount = campaign.pendingCount || 0;
   const failedCount = campaign.failedCount || 0;
-  // Total real = contatos efetivamente atribu2502¡dos (evita valor inflado do backend)
+  // Total real = contatos efetivamente atribuádos (evita valor inflado do backend)
   const totalContacts = (sentCount + pendingCount + failedCount) || campaign.totalContacts || 0;
   const progressPercent = totalContacts > 0 ? Math.round((sentCount / totalContacts) * 100) : 0;
   const timePercent = cycleDuration > 0 ? Math.round(((cycleDuration - cycleTimer) / cycleDuration) * 100) : 0;
@@ -848,7 +848,7 @@ function CampaignCard({
       className="rmt-camp-card"
       style={{ borderLeftColor: borderColor, opacity: cardOpacity }}
     >
-      {/* Cabe2502ºalho do card */}
+      {/* Cabeúalho do card */}
       <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", marginBottom: "10px" }}>
         <div style={{ display: "flex", alignItems: "flex-start", gap: "8px" }}>
           <span
@@ -867,7 +867,7 @@ function CampaignCard({
               {String(campaign.name || "")}
             </h3>
             <p style={{ fontSize: "10px", color: "#3a5a40", margin: 0 }}>
-              Im2502│vel: {String(campaign.propertyName || "")}
+              Imóvel: {String(campaign.propertyName || "")}
             </p>
           </div>
         </div>
@@ -884,7 +884,7 @@ function CampaignCard({
       {/* Regra */}
       <div className="rmt-rule-row">
         Regra: <span style={{ color: "#5aaa70", fontWeight: 600 }}>1 msg/hora</span>
-        {" "}2502ù 10 horas = 10 contatos/ciclo
+        {" "}✓ 10 horas = 10 contatos/ciclo
         {isActive && isRunning && (
           <span
             style={{
@@ -970,10 +970,10 @@ function CampaignCard({
 
       {/* Info texto */}
       <p style={{ fontSize: "9px", color: "#2a4a30", marginBottom: "8px" }}>
-        Iniciado: {schedulerStartedAt || "--:--:--"} ┬À {campaign.messagesPerHour || 1} msg/hora 2502ù {Math.round(cycleDuration / 3600)}h = {totalContacts} contatos
+        Iniciado: {schedulerStartedAt || "--:--:--"} ┬À {campaign.messagesPerHour || 1} msg/hora ✓ {Math.round(cycleDuration / 3600)}h = {totalContacts} contatos
       </p>
 
-      {/* Bot2502úo contatos */}
+      {/* Botúo contatos */}
       <button onClick={onToggle} className="rmt-contacts-btn">
         <div style={{ display: "flex", alignItems: "center", gap: "5px" }}>
           <Users size={12} style={{ color: "#3a6a45" }} />
