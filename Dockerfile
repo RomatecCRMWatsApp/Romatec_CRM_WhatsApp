@@ -4,8 +4,8 @@ WORKDIR /app
 # Install pnpm
 RUN npm install -g pnpm@10.4.1
 
-# Install dependencies (cached layer)
-COPY package.json pnpm-lock.yaml ./
+# Install dependencies (cached layer) — must include patches before pnpm install
+COPY package.json pnpm-lock.yaml patches ./
 RUN pnpm install --frozen-lockfile
 
 # Copy source and build (this layer invalidates when source changes)
