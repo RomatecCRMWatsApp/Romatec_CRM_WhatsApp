@@ -242,7 +242,7 @@ export default function Campaigns() {
               Romatec CRM Campanhas
             </h1>
             <p style={{ fontSize: "11px", color: "#3a6a45", margin: "2px 0 0" }}>
-              1 msg/campanha/hora    Ciclo de 10 horas    {allCampaigns.length} campanhas
+              1 msg/campanha/hora • Ciclo de 10 horas • {allCampaigns.length} campanhas
             </p>
           </div>
         </div>
@@ -746,7 +746,7 @@ export default function Campaigns() {
                         {campaign.name}
                       </span>
                       <p style={{ fontSize: "9px", color: "#3a5a40", margin: 0 }}>
-                        1 msg/hora    {campaign.sentCount || 0}/{campaign.totalContacts || 2} total
+                        1 msg/hora • {campaign.sentCount || 0}/{campaign.totalContacts || 2} total
                       </p>
                     </div>
                   );
