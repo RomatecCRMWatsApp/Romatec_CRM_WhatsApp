@@ -345,8 +345,8 @@ export default function Dashboard() {
           <div className="flex items-center gap-4">
             <img src={LOGO_URL} alt="Romatec" className="h-14 w-auto object-contain rounded-lg" />
             <div>
-              <h1 className="text-2xl font-bold">Romatec CRM - <span className="font-normal italic">Gestção de Relacionamento com o Cliente</span></h1>
-              <p className="text-white/80 text-sm">Sistema de Gestção de Clientes + Vendas</p>
+              <h1 className="text-2xl font-bold">Romatec CRM - <span className="font-normal italic">Gestão de Relacionamento com o Cliente</span></h1>
+              <p className="text-white/80 text-sm">Sistema de Gestão de Clientes + Vendas</p>
               <p className="text-white/50 text-xs mt-0.5">CEO José Romário P Bezerra</p>
             </div>
           </div>

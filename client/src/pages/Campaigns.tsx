@@ -1000,7 +1000,7 @@ function CampaignCard({
             Contatos ({sentCount}/{totalContacts})
           </span>
           <span style={{ color: "#2a4a30" }}>
-            {sentCount} enviados    {pendingCount} aguardando
+            {sentCount} enviados • {pendingCount} aguardando
           </span>
         </div>
         {expanded ? <ChevronUp size={13} /> : <ChevronDown size={13} />}
