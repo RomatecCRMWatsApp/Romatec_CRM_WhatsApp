@@ -307,7 +307,7 @@ export const appRouter = router({
     }),
   }),
   scheduler: router({
-    start: protectedProcedure.mutation(async () => {
+    start: protectedProcedure.input(z.object({ nightMode: z.boolean().optional() })).mutation(async ({ input }) => {
       campaignScheduler.stop();
       await new Promise(resolve => setTimeout(resolve, 500));
       const db = await getDb();
@@ -318,7 +318,7 @@ export const appRouter = router({
           await db.update(campaigns).set({ status: "running", startDate: now }).where(eq(campaigns.id, camp.id));
         }
       }
-      await campaignScheduler.start();
+      await campaignScheduler.start(input.nightMode || false);
       return { success: true, message: "Scheduler iniciado" };
     }),
     stop: protectedProcedure.mutation(async () => {

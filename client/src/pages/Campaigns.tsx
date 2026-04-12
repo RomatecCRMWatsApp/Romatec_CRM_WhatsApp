@@ -74,6 +74,28 @@ export default function Campaigns() {
     onError: (error) => toast.error(`Erro: ${error.message}`),
   });
 
+  const handleNightModeToggle = async (newMode: boolean) => {
+    setNightMode(newMode);
+    const isRunning = schedulerState.data?.state?.isRunning;
+    if (isRunning) {
+      // Para o scheduler
+      stopScheduler.mutate(undefined, {
+        onSuccess: () => {
+          // Aguarda um pouco e reinicia com o novo nightMode
+          setTimeout(() => {
+            startScheduler.mutate({ nightMode: newMode }, {
+              onSuccess: () => {
+                toast.success(newMode ? "🌙 Modo Noite ativado e scheduler reiniciado!" : "☀️ Modo Dia ativado e scheduler reiniciado!");
+              }
+            });
+          }, 1000);
+        }
+      });
+    } else {
+      toast.success(newMode ? "🌙 Modo Noite ativado!" : "☀️ Modo Dia ativado!");
+    }
+  };
+
   const utils = trpc.useUtils();
   const resetScheduler = trpc.scheduler.reset.useMutation({
     onMutate: () => {
@@ -125,7 +147,7 @@ export default function Campaigns() {
     const totalSent = allCampaigns.reduce((sum: number, c: any) => sum + (c.sentCount || 0), 0);
     const totalPending = allCampaigns.reduce((sum: number, c: any) => sum + (c.pendingCount || 0), 0);
     const totalFailed = allCampaigns.reduce((sum: number, c: any) => sum + (c.failedCount || 0), 0);
-    // Usa sentCount + pendingCount + failedCount como total real de contatos atribuádos
+    // Usa sentCount + pendingCount + failedCount como total real de contatos atribuídos
     // evitando o valor fixo de totalContacts que pode vir inflado do backend
     const totalContacts = totalSent + totalPending + totalFailed;
     const successRate = totalContacts > 0 ? ((totalSent / totalContacts) * 100).toFixed(1) : "0.0";
@@ -153,8 +175,8 @@ export default function Campaigns() {
 
   const handleStart = useCallback(() => {
     if (allCampaigns.length < 1) return;
-    startScheduler.mutate();
-  }, [allCampaigns.length, startScheduler]);
+    startScheduler.mutate({ nightMode });
+  }, [allCampaigns.length, startScheduler, nightMode]);
 
   const handleToggleExpand = useCallback((id: number) => {
     setExpandedCampaign((prev) => (prev === id ? null : id));
@@ -584,10 +606,7 @@ export default function Campaigns() {
               </p>
             </div>
             <button
-              onClick={() => {
-                setNightMode((n) => !n);
-                toast.success(!nightMode ? "🌙 Modo Noite ativado!" : "☀️ Modo Dia ativado!");
-              }}
+              onClick={() => handleNightModeToggle(!nightMode)}
               style={{
                 width: "40px",
                 height: "22px",
@@ -629,7 +648,7 @@ export default function Campaigns() {
             <button
               onClick={() => {
                 if (isRunning) { toast.error("Pare o scheduler antes de redefinir!"); return; }
-                if (confirm("Tem certeza? Isso vai limpar TUDO e comeúar do zero.")) {
+                if (confirm("Tem certeza? Isso vai limpar TUDO e começar do zero.")) {
                   resetScheduler.mutate();
                 }
               }}
@@ -789,9 +808,9 @@ export default function Campaigns() {
   );
 }
 
-// ============================================Ç
+// ============================================
 // CAMPAIGN CARD
-// ============================================Ç
+// ============================================
 function CampaignCard({
   campaign, isRunning, hourNumber, cycleTimer, cycleDuration,
   campaignStates, schedulerStartedAt, todayMessages, expanded, onToggle, onToggleActive,
@@ -807,7 +826,7 @@ function CampaignCard({
   const sentCount = campaign.sentCount || 0;
   const pendingCount = campaign.pendingCount || 0;
   const failedCount = campaign.failedCount || 0;
-  // Total real = contatos efetivamente atribuádos (evita valor inflado do backend)
+  // Total real = contatos efetivamente atribuídos (evita valor inflado do backend)
   const totalContacts = (sentCount + pendingCount + failedCount) || campaign.totalContacts || 0;
   const progressPercent = totalContacts > 0 ? Math.round((sentCount / totalContacts) * 100) : 0;
   const timePercent = cycleDuration > 0 ? Math.round(((cycleDuration - cycleTimer) / cycleDuration) * 100) : 0;
@@ -848,7 +867,7 @@ function CampaignCard({
       className="rmt-camp-card"
       style={{ borderLeftColor: borderColor, opacity: cardOpacity }}
     >
-      {/* Cabeúalho do card */}
+      {/* Cabeçalho do card */}
       <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", marginBottom: "10px" }}>
         <div style={{ display: "flex", alignItems: "flex-start", gap: "8px" }}>
           <span
