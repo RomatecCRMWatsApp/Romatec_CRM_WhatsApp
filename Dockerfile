@@ -2,7 +2,7 @@ FROM node:22-slim
 WORKDIR /app
 
 # Force rebuild cache bust — changes on every build
-ARG BUILD_DATE=unspecified
+ARG BUILD_DATE=20260412-2150-telegram-fix
 
 # Install pnpm
 RUN npm install -g pnpm@10.4.1
