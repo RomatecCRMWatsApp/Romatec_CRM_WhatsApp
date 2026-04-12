@@ -14,6 +14,8 @@ import { registerBotMessage, getFollowUpsToSend, cleanupOldFollowUps } from "../
  * - Horário: 08h-18h (modo dia) ou 20h-06h (modo noite)
  * - Bloqueio de 72h por contato após envio
  * - 1 msg por hora por campanha ativa
+ * - Horário sincronizado com Brasília (GMT-3)
+ * - Ao acionar, sincroniza com o ciclo da hora atual
  */
 
 interface SchedulerState {
@@ -82,21 +84,37 @@ export class CampaignScheduler {
   private readonly HOUR_MS = 60 * 60 * 1000;
   private readonly BLOCK_HOURS = 72;
 
+  // ========== HORÁRIO BRASÍLIA ==========
+
+  private getBrasiliaDate(): Date {
+    // Sempre usa o fuso horário de Brasília (America/Sao_Paulo)
+    const now = new Date();
+    const brasiliaStr = now.toLocaleString('en-US', { timeZone: 'America/Sao_Paulo' });
+    return new Date(brasiliaStr);
+  }
+
   // ========== ESTADO ==========
 
   private getCurrentHourKey(): string {
-    const now = new Date();
+    const now = this.getBrasiliaDate();
     return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}-${String(now.getHours()).padStart(2, '0')}`;
   }
 
   private getCurrentHour(): number {
-    return new Date().getHours();
+    return this.getBrasiliaDate().getHours();
   }
 
   private isActiveHour(): boolean {
     const hour = this.getCurrentHour();
     const activeHours = this.state.nightMode ? ACTIVE_HOURS_NIGHT : ACTIVE_HOURS_DAY;
     return activeHours.includes(hour);
+  }
+
+  private getCurrentCycleIndex(): number {
+    const hour = this.getCurrentHour();
+    const activeHours = this.state.nightMode ? ACTIVE_HOURS_NIGHT : ACTIVE_HOURS_DAY;
+    const idx = activeHours.indexOf(hour);
+    return idx >= 0 ? idx : -1;
   }
 
   private getCampaignForCurrentHour(allCampaigns: any[]): any | null {
@@ -128,7 +146,7 @@ export class CampaignScheduler {
       } else {
         await db.insert(schedulerStateTable).values({ id: 1, status, cycleNumber: this.state.hourNumber, stateJson, messagesThisCycle: this.state.totalSent });
       }
-      console.log(`💾 Estado salvo: ${status} | Hora ${this.state.hourNumber + 1}/2`);
+      console.log(`💾 Estado salvo: ${status} | Ciclo ${this.state.hourNumber + 1}/10`);
     } catch (e) {
       console.error('❌ Erro ao salvar estado:', e);
     }
@@ -149,7 +167,7 @@ export class CampaignScheduler {
           this.state.nightMode = json.nightMode || false;
           this.state.campaignStates = json.campaignStates || [];
         }
-        console.log(`✅ Estado restaurado: Hora ${this.state.hourNumber + 1}/2`);
+        console.log(`✅ Estado restaurado: Ciclo ${this.state.hourNumber + 1}/10`);
       } else {
         console.log('📋 Nenhum estado salvo - scheduler parado');
       }
@@ -170,13 +188,24 @@ export class CampaignScheduler {
     this.state.nightMode = nightMode;
     this.state.isRunning = true;
     this.state.startedAt = Date.now();
-    this.state.hourNumber = 0;
     this.state.totalSent = 0;
     this.state.totalFailed = 0;
     this.state.totalBlocked = 0;
     this.state.currentHourKey = '';
     this.state.campaignStates = [];
     this.state.scheduledSlots = [];
+
+    // Sincronizar ciclo com a hora atual de Brasília
+    const currentHour = this.getCurrentHour();
+    const activeHours = nightMode ? ACTIVE_HOURS_NIGHT : ACTIVE_HOURS_DAY;
+    const cycleIdx = activeHours.indexOf(currentHour);
+    if (cycleIdx >= 0) {
+      this.state.hourNumber = cycleIdx;
+      console.log(`🕐 Brasília: ${currentHour}h → Ciclo ${cycleIdx + 1}/10`);
+    } else {
+      this.state.hourNumber = 0;
+      console.log(`⏰ Fora do horário ativo (hora atual Brasília: ${currentHour}h)`);
+    }
 
     console.log(`🚀 Iniciando sistema ROMATEC CRM v9.0...`);
     console.log(`📏 REGRA: Rotação sequencial | Ciclo 10h | ${nightMode ? 'Modo Noite 20h-06h' : 'Modo Dia 08h-18h'}`);
@@ -232,9 +261,16 @@ export class CampaignScheduler {
     if (currentHourKey !== this.state.currentHourKey) {
       // Nova hora!
       this.state.currentHourKey = currentHourKey;
-      this.state.hourNumber++;
 
-      console.log(`\n🕐 === NOVA HORA: ${currentHourKey} ===`);
+      // Sincronizar ciclo com a hora real de Brasília
+      const cycleIdx = this.getCurrentCycleIndex();
+      if (cycleIdx >= 0) {
+        this.state.hourNumber = cycleIdx;
+      } else {
+        this.state.hourNumber++;
+      }
+
+      console.log(`\n🕐 === NOVA HORA (Brasília): ${currentHourKey} | Ciclo ${this.state.hourNumber + 1}/10 ===`);
 
       // Resetar slots e estados das campanhas
       this.state.campaignStates = this.state.campaignStates.map(cs => ({
@@ -288,7 +324,7 @@ export class CampaignScheduler {
     const hour = this.getCurrentHour();
     const campIndex = HOUR_TO_CAMP_INDEX[hour];
 
-    console.log(`📤 Hora ${hour}h → Campanha: ${campaign.name} (índice ${campIndex})`);
+    console.log(`📤 Hora ${hour}h (Brasília) → Campanha: ${campaign.name} (ciclo ${campIndex !== undefined ? campIndex + 1 : '?'}/10)`);
 
     // Verificar se já enviou nesta hora
     const campState = this.state.campaignStates.find(cs => cs.campaignId === campaign.id);
@@ -298,7 +334,7 @@ export class CampaignScheduler {
     }
 
     // Agendar envio em momento aleatório dentro da hora
-    const now = new Date();
+    const now = this.getBrasiliaDate();
     const minutesIntoHour = now.getMinutes();
     const secondsIntoHour = minutesIntoHour * 60 + now.getSeconds();
     const remainingMs = this.HOUR_MS - (secondsIntoHour * 1000);
@@ -512,7 +548,7 @@ export class CampaignScheduler {
     const allContacts = await db.select().from(contacts).where(eq(contacts.status, 'active'));
     const unblocked = allContacts.filter(c => !c.blockedUntil || c.blockedUntil <= now);
 
-    const neededContacts = 2; // 2 por campanha por ciclo
+    const neededContacts = 2;
 
     if (unblocked.length < neededContacts) {
       console.warn(`⚠️ Apenas ${unblocked.length} contatos disponíveis`);
@@ -697,6 +733,7 @@ export class CampaignScheduler {
       if (!config?.zApiInstanceId || !config?.zApiToken) return;
 
       const hour = this.getCurrentHour();
+      const cycleIdx = this.getCurrentCycleIndex();
       const db = await getDb();
       if (!db) return;
 
@@ -706,14 +743,15 @@ export class CampaignScheduler {
 
       const OWNER_PHONE = config.phone || '5599991811246';
       const report = [
-        `📊 *RELATÓRIO HORA ${hour}h - ROMATEC CRM v9.0*`,
-        `🕐 *${new Date().toLocaleTimeString('pt-BR')}*`,
+        `📊 *RELATÓRIO HORA ${hour}h (Brasília) - ROMATEC CRM v9.0*`,
+        `🕐 *${this.getBrasiliaDate().toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit', second: '2-digit' })}*`,
         ``,
+        `🔄 *Ciclo atual:* ${cycleIdx >= 0 ? cycleIdx + 1 : '?'}/10`,
         `📨 *Campanha desta hora:* ${activeCamp?.name || 'Nenhuma'}`,
         `✅ *Enviadas hoje:* ${this.state.totalSent}`,
         `❌ *Falhas:* ${this.state.totalFailed}`,
         ``,
-        `${this.state.nightMode ? '🌙 Modo Noite' : '☀️ Modo Dia'}`,
+        `${this.state.nightMode ? '🌙 Modo Noite (20h-06h)' : '☀️ Modo Dia (08h-18h)'}`,
       ].join('\n');
 
       const { sendMessageViaZAPI } = await import('../zapi-integration');
@@ -738,17 +776,20 @@ export class CampaignScheduler {
     const uptimeMinutes = String(Math.floor((uptimeMs % 3600000) / 60000)).padStart(2, '0');
     const uptimeSeconds = String(Math.floor((uptimeMs % 60000) / 1000)).padStart(2, '0');
 
-    const currentMinute = new Date().getMinutes();
-    const currentSecond = new Date().getSeconds();
+    const brasiliaNow = this.getBrasiliaDate();
+    const currentMinute = brasiliaNow.getMinutes();
+    const currentSecond = brasiliaNow.getSeconds();
     const remainingSeconds = (60 - currentMinute - 1) * 60 + (60 - currentSecond);
 
-    const nextHour = new Date();
+    const nextHour = new Date(brasiliaNow);
     nextHour.setHours(nextHour.getHours() + 1, 0, 0, 0);
     const nextCycleFormatted = `${String(nextHour.getHours()).padStart(2, '0')}:00`;
 
     const startedAtFormatted = this.state.startedAt
-      ? new Date(this.state.startedAt).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit', second: '2-digit' })
+      ? new Date(this.state.startedAt).toLocaleTimeString('pt-BR', { timeZone: 'America/Sao_Paulo', hour: '2-digit', minute: '2-digit', second: '2-digit' })
       : '--:--:--';
+
+    const cycleIndex = this.getCurrentCycleIndex();
 
     return {
       isRunning: this.state.isRunning,
@@ -762,15 +803,22 @@ export class CampaignScheduler {
       uptimeFormatted: `${uptimeHours}:${uptimeMinutes}:${uptimeSeconds}`,
       startedAtFormatted,
       nextCycleFormatted,
+      currentCycleIndex: cycleIndex,
+      totalCycles: 10,
+      brasiliaHour: brasiliaNow.getHours(),
     };
   }
 
   getStats() {
     const sentThisHour = this.state.campaignStates.filter(cs => cs.sentThisHour).length;
     const activeCamps = this.state.campaignStates.length;
+    const cycleIndex = this.getCurrentCycleIndex();
+    const totalCycles = 10;
 
     return {
       cycleNumber: this.state.hourNumber,
+      currentCycleIndex: cycleIndex,
+      totalCycles,
       totalSent: this.state.totalSent,
       totalFailed: this.state.totalFailed,
       totalBlocked: this.state.totalBlocked,
@@ -778,7 +826,7 @@ export class CampaignScheduler {
       maxMessagesPerHour: 1,
       maxMessagesThisCycle: activeCamps,
       scheduledSlots: this.state.scheduledSlots,
-      cycleProgress: `${this.state.hourNumber}/2`,
+      cycleProgress: cycleIndex >= 0 ? `${cycleIndex + 1}/${totalCycles}` : 'Fora do horário',
     };
   }
 }
