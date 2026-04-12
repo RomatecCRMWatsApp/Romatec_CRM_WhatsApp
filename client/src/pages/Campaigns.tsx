@@ -514,7 +514,7 @@ export default function Campaigns() {
               </div>
               <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: "6px", marginTop: "10px" }}>
                 {[
-                  { label: "In├¡cio ├ás", value: stateData?.startedAtFormatted || "--:--:--" },
+                  { label: "In├¡cio às", value: stateData?.startedAtFormatted || "--:--:--" },
                   { label: "Rodando h├í", value: stateData?.uptimeFormatted || "00:00:00" },
                   { label: "Pr├│xima hora", value: stateData?.nextCycleFormatted || "--:--" },
                 ].map((item) => (
@@ -658,7 +658,7 @@ export default function Campaigns() {
               }}
             >
               <Zap size={13} style={{ color: "#e8a83e" }} />
-              Status por hora ÔÇô todas as campanhas
+              Status por hora - todas as campanhas
             </h2>
             <div
               style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(180px, 1fr))", gap: "8px" }}
