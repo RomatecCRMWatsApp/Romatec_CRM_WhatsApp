@@ -36,8 +36,9 @@ async function startServer() {
   // OAuth callback under /api/oauth/callback
   registerOAuthRoutes(app);
 
-  // Webhook Z-API - recebe respostas do WhatsApp
-  app.post('/api/webhook/zapi', async (req, res) => {
+  // ─── Webhook Z-API ─── recebe respostas do WhatsApp
+  // Handler compartilhado (alias /webhook/zapi e /api/webhook/zapi)
+  async function handleZapiWebhook(req: any, res: any) {
     try {
       const { parseWebhookPayload } = await import('../zapi-integration');
       const { processBotMessage, registerBotMessage } = await import('../bot-ai');
@@ -90,29 +91,43 @@ async function startServer() {
         });
 
         if (botResponse.text) {
-          // Buscar credenciais Z-API do env (mais confiável que banco)
           const instanceId = process.env.ZAPI_INSTANCE_ID;
           const token = process.env.ZAPI_TOKEN;
           const clientToken = process.env.ZAPI_CLIENT_TOKEN;
 
           if (instanceId && token) {
-            const sendResult = await sendMessageViaZAPI({
-              instanceId,
-              token,
-              clientToken: clientToken || undefined,
-              phone: payload.phone,
-              message: botResponse.text,
-            });
+            const { sendButtonsViaZAPI } = await import('../zapi-integration');
+            let sendResult;
+
+            // Usar botoes interativos se o bot retornar opcoes
+            if (botResponse.buttons && botResponse.buttons.length > 0) {
+              sendResult = await sendButtonsViaZAPI({
+                instanceId,
+                token,
+                clientToken: clientToken || undefined,
+                phone: payload.phone,
+                message: botResponse.text,
+                buttons: botResponse.buttons,
+                footer: 'Romatec Imoveis',
+              });
+            } else {
+              sendResult = await sendMessageViaZAPI({
+                instanceId,
+                token,
+                clientToken: clientToken || undefined,
+                phone: payload.phone,
+                message: botResponse.text,
+              });
+            }
 
             if (sendResult.success) {
-              // Registrar para follow-up automático
               registerBotMessage(payload.phone, senderName);
-              console.log(`[Bot] ✅ Resposta enviada para ${senderName} (${payload.phone})`);
+              console.log(`[Bot] Resposta enviada para ${senderName} (${payload.phone}) — ${sendResult.attempts} tentativa(s)`);
             } else {
-              console.error(`[Bot] ❌ Falha ao enviar para ${senderName}: ${sendResult.error}`);
+              console.error(`[Bot] Falha ao enviar para ${senderName}: ${sendResult.error}`);
             }
           } else {
-            console.error('[Bot] Credenciais Z-API não encontradas no env');
+            console.error('[Bot] Credenciais Z-API nao encontradas no env');
           }
         }
       } catch (botError) {
@@ -123,6 +138,34 @@ async function startServer() {
     } catch (error) {
       console.error('[Webhook] Erro:', error);
       res.json({ received: true, processed: false, error: String(error) });
+    }
+  }
+
+  // Registrar webhook nos dois paths (Railway pode redirecionar qualquer um)
+  app.post('/webhook/zapi', handleZapiWebhook);
+  app.post('/api/webhook/zapi', handleZapiWebhook);
+
+  // ─── GET /api/zapi/status ─── verifica conexao Z-API
+  app.get('/api/zapi/status', async (_req, res) => {
+    try {
+      const instanceId = process.env.ZAPI_INSTANCE_ID;
+      const token = process.env.ZAPI_TOKEN;
+      const clientToken = process.env.ZAPI_CLIENT_TOKEN;
+
+      if (!instanceId || !token) {
+        return res.json({ connected: false, error: 'Credenciais Z-API nao configuradas' });
+      }
+
+      const { getZAPIStatus } = await import('../zapi-integration');
+      const status = await getZAPIStatus(instanceId, token, clientToken || undefined);
+      res.json({
+        connected: status.connected,
+        phone: status.phone,
+        webhookUrl: 'https://romateccrmwhatsapp-production.up.railway.app/webhook/zapi',
+        checkedAt: new Date().toISOString(),
+      });
+    } catch (err) {
+      res.json({ connected: false, error: String(err) });
     }
   });
 
@@ -204,6 +247,43 @@ async function startServer() {
     } catch (error) {
       console.error('❌ Erro no auto-restart do scheduler:', error);
     }
+
+    // MONITORAMENTO Z-API: verificar conexao a cada 5 minutos
+    const ZAPI_CHECK_INTERVAL = 5 * 60 * 1000;
+    setInterval(async () => {
+      const instanceId = process.env.ZAPI_INSTANCE_ID;
+      const token = process.env.ZAPI_TOKEN;
+      const clientToken = process.env.ZAPI_CLIENT_TOKEN;
+      if (!instanceId || !token) return;
+      try {
+        const { getZAPIStatus } = await import('../zapi-integration');
+        const status = await getZAPIStatus(instanceId, token, clientToken || undefined);
+        if (!status.connected) {
+          console.warn('[Z-API] ⚠️  WhatsApp DESCONECTADO — reconecte no painel Z-API');
+        } else {
+          console.log(`[Z-API] ✅ Conectado (${status.phone || 'ok'})`);
+        }
+      } catch (err) {
+        console.warn('[Z-API] Erro ao verificar status:', err);
+      }
+    }, ZAPI_CHECK_INTERVAL);
+
+    // SALVAR WEBHOOK URL no banco (para referencia)
+    try {
+      const { getDb } = await import('../db');
+      const db = await getDb();
+      if (db) {
+        const { companyConfig } = await import('../../drizzle/schema');
+        const { eq } = await import('drizzle-orm');
+        const configs = await db.select().from(companyConfig).limit(1);
+        if (configs[0]) {
+          await db.update(companyConfig)
+            .set({ updatedAt: new Date() } as any)
+            .where(eq(companyConfig.id, configs[0].id));
+        }
+        console.log('[Z-API] Webhook URL: https://romateccrmwhatsapp-production.up.railway.app/webhook/zapi');
+      }
+    } catch (_e) { /* nao critico */ }
   });
 }
 

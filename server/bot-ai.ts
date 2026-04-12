@@ -20,6 +20,7 @@ export interface BotContext {
 export interface BotResponse {
   text: string;
   qualified?: boolean;
+  buttons?: Array<{ id: string; label: string }>;
 }
 
 type ConversationStage =
@@ -245,7 +246,15 @@ async function processStage(context: BotContext, state: ConversationState): Prom
     case 'nao_iniciado':
     case 'abordagem_enviada': {
       setState(context.phone, { stage: 'qual_etapa_1', lastUserReplyAt: Date.now() });
-      return { text: QUAL_QUESTIONS.etapa_1(fn), qualified: true };
+      return {
+        text: QUAL_QUESTIONS.etapa_1(fn),
+        qualified: true,
+        buttons: [
+          { id: 'sim_3meses', label: 'Sim, tenho interesse!' },
+          { id: 'talvez', label: 'Talvez, quero saber mais' },
+          { id: 'nao_agora', label: 'Nao por agora' },
+        ],
+      };
     }
 
     // ---- ETAPA 1: Interesse nos proximos 3 meses ----
@@ -414,7 +423,7 @@ export function getFollowUpsToSend(): { phone: string; message: string; step: nu
   const now = Date.now();
   const toSend: { phone: string; message: string; step: number }[] = [];
 
-  for (const [phone, state] of followUpStates.entries()) {
+  for (const [phone, state] of Array.from(followUpStates.entries())) {
     const convState = conversationStates.get(phone);
     if (convState && (convState.stage === 'sem_interesse' || convState.stage === 'concluido' || convState.stage === 'qualificado')) continue;
     if (state.lastUserReplyAt && state.lastUserReplyAt > state.lastBotMessageAt) continue;
@@ -438,7 +447,7 @@ export function getFollowUpsToSend(): { phone: string; message: string; step: nu
 export function cleanupOldFollowUps() {
   const now = Date.now();
   const maxAge = 48 * 60 * 60 * 1000;
-  for (const [phone, state] of followUpStates.entries()) {
+  for (const [phone, state] of Array.from(followUpStates.entries())) {
     if (now - state.lastBotMessageAt > maxAge) {
       followUpStates.delete(phone);
       conversationStates.delete(phone);

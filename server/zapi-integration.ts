@@ -252,6 +252,66 @@ export function parseWebhookPayload(body: any): WebhookPayload | null {
 }
 
 /**
+ * Enviar mensagem com BOTÕES INTERATIVOS via Z-API
+ * Fallback para texto puro se Z-API não suportar botões
+ */
+export interface ButtonOption {
+  id: string;
+  label: string;
+}
+
+export async function sendButtonsViaZAPI({
+  instanceId,
+  token,
+  clientToken,
+  phone,
+  message,
+  buttons,
+  footer,
+}: SendMessageParams & { buttons: ButtonOption[]; footer?: string }): Promise<ZAPIResponse> {
+  const cleanPhone = phone.replace(/\D/g, '');
+  const formattedPhone = cleanPhone.startsWith('55') ? cleanPhone : `55${cleanPhone}`;
+
+  if (!formattedPhone || formattedPhone.length !== 13 || formattedPhone[4] !== '9') {
+    return { success: false, error: `Numero invalido: ${formattedPhone}`, attempts: 0 };
+  }
+
+  const headers: Record<string, string> = { 'Content-Type': 'application/json' };
+  if (clientToken) headers['Client-Token'] = clientToken;
+
+  // Tentar endpoint de botões da Z-API
+  try {
+    const response = await axios.post(
+      `${ZAPI_BASE_URL}/${instanceId}/token/${token}/send-button-list`,
+      {
+        phone: formattedPhone,
+        message,
+        buttonList: {
+          buttons: buttons.map((b, i) => ({
+            id: b.id || String(i + 1),
+            label: b.label,
+          })),
+        },
+        footer: footer || 'Romatec Imoveis',
+      },
+      { headers, timeout: 15000 }
+    );
+
+    if (response.status === 200 && (response.data?.messageId || response.data?.zapiMessageId)) {
+      console.log(`[Z-API] Botoes enviados para ${formattedPhone}`);
+      return { success: true, messageId: response.data.messageId || response.data.zapiMessageId, attempts: 1 };
+    }
+  } catch (btnError: any) {
+    console.warn(`[Z-API] Botoes nao suportados, usando texto puro: ${btnError?.message}`);
+  }
+
+  // Fallback: texto com opcoes numeradas
+  const btnText = buttons.map((b, i) => `${i + 1}. ${b.label}`).join('\n');
+  const fullMsg = `${message}\n\n${btnText}`;
+  return sendMessageViaZAPI({ instanceId, token, clientToken, phone, message: fullMsg });
+}
+
+/**
  * Lógica de envio com controle de taxa (2 mensagens por hora)
  */
 export class MessageScheduler {
