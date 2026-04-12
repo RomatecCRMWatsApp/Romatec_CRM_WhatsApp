@@ -577,16 +577,16 @@ export default function Campaigns() {
           >
             <div>
               <p style={{ fontSize: "12px", fontWeight: 600, color: "#a8d5b0", margin: "0 0 2px" }}>
-                {nightMode ? "🌙 Modo noite 20h-06h" : "☀️ Modo dia 08h-18h"}
+                {nightMode ? "[Noite] Modo noite 20h-06h" : "[Dia] Modo dia 08h-18h"}
               </p>
               <p style={{ fontSize: "10px", color: "#3a5a40", margin: 0 }}>
-                {nightMode ? "Enviando das 20h às 06h" : "Enviando das 08h às 18h"}
+                {nightMode ? "Enviando das 20h as 06h" : "Enviando das 08h as 18h"}
               </p>
             </div>
             <button
               onClick={() => {
                 setNightMode((n) => !n);
-                toast.success(!nightMode ? "🌙 Modo Noite ativado!" : "☀️ Modo Dia ativado!");
+                toast.success(!nightMode ? "[Noite] Modo Noite ativado!" : "[Dia] Modo Dia ativado!");
               }}
               style={{
                 width: "40px",
