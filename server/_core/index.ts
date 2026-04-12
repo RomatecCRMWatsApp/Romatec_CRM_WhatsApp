@@ -28,6 +28,11 @@ async function findAvailablePort(startPort: number = 3000): Promise<number> {
 }
 
 async function startServer() {
+  console.log('═══════════════════════════════════════════════════');
+  console.log('🚀 BUILD_ID: 2974da2-fresh-rebuild');
+  console.log('📦 v1.1.1 | Scheduler v9.0 | 10h cycle | Auto-fix 12→13');
+  console.log('═══════════════════════════════════════════════════\n');
+
   const app = express();
   const server = createServer(app);
   // Configure body parser with larger size limit for file uploads
