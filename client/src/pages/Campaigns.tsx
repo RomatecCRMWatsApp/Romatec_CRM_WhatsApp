@@ -130,7 +130,7 @@ export default function Campaigns() {
   const totalCampsActive = useMemo(() => stats?.maxMessagesPerHour || 0, [stats?.maxMessagesPerHour]);
 
   const totals = useMemo(() => {
-    const totalContacts = allCampaigns.reduce((sum: number, c: any) => sum + (c.totalContacts || 0), 0);
+    const totalContacts = allCampaigns.reduce((sum: number, c: any) => sum + (c.sentCount || 0) + (c.pendingCount || 0) + (c.failedCount || 0), 0);
     const totalSent = allCampaigns.reduce((sum: number, c: any) => sum + (c.sentCount || 0), 0);
     const totalPending = allCampaigns.reduce((sum: number, c: any) => sum + (c.pendingCount || 0), 0);
     const totalFailed = allCampaigns.reduce((sum: number, c: any) => sum + (c.failedCount || 0), 0);
@@ -757,5 +757,6 @@ function CampaignCard({
     </div>
   );
 }
+
 
 
