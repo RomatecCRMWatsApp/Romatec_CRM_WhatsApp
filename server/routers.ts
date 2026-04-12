@@ -268,7 +268,7 @@ export const appRouter = router({
             `Vimos que você pode estar interessado em ${prop.denomination}. Vamos conversar? 📞`,
             `Oportunidade especial em ${prop.denomination}. Clique para saber mais! ✨`
           ];
-          const ins = await db.insert(campaigns).values({ propertyId: prop.id, name: prop.denomination, messageVariations: defaultMessages, totalContacts: 2, sentCount: 0, failedCount: 0, status: "paused", messagesPerHour: 1 });
+          const ins = await db.insert(campaigns).values({ propertyId: prop.id, name: prop.denomination, messageVariations: JSON.stringify(defaultMessages), totalContacts: 2, sentCount: 0, failedCount: 0, status: "paused", messagesPerHour: 1 });
           campaignId = Number((ins as any)[0].insertId);
         }
         result.push({ id: campaignId, name: prop.denomination });

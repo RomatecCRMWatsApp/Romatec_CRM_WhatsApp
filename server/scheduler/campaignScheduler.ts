@@ -620,11 +620,24 @@ export class CampaignScheduler {
     const result = await db.select().from(campaigns).where(eq(campaigns.id, campaignId)).limit(1);
     const campaign = result[0];
 
-    if (!campaign?.messageVariations || (campaign.messageVariations as string[]).length === 0) {
+    if (!campaign?.messageVariations) {
       return null;
     }
 
-    const variations = campaign.messageVariations as string[];
+    // Parsing JSON string to array
+    let variations: string[] = [];
+    try {
+      const parsed = JSON.parse(campaign.messageVariations as string);
+      variations = Array.isArray(parsed) ? parsed : [];
+    } catch (e) {
+      console.warn(`⚠️ Erro ao fazer parse de messageVariations para campanha ${campaignId}:`, e);
+      return null;
+    }
+
+    if (variations.length === 0) {
+      return null;
+    }
+
     const lastIndex = this.lastVariationIndex.get(campaignId) ?? -1;
 
     let newIndex: number;
