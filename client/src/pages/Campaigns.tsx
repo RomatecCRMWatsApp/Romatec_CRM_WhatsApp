@@ -493,7 +493,7 @@ function CampaignCard({
   const contactsList: any[] = campaign.contacts || [];
   const sentCount = campaign.sentCount || 0;
   const pendingCount = campaign.pendingCount || 0;
-  const totalContacts = campaign.totalContacts || 12;
+  const totalContacts = (campaign.sentCount || 0) + (campaign.pendingCount || 0) + (campaign.failedCount || 0) || campaign.totalContacts || 0;
   const progressPercent = totalContacts > 0 ? Math.round((sentCount / totalContacts) * 100) : 0;
 
   const timePercent = cycleDuration > 0 ? Math.round(((cycleDuration - cycleTimer) / cycleDuration) * 100) : 0;
@@ -757,3 +757,5 @@ function CampaignCard({
     </div>
   );
 }
+
+
