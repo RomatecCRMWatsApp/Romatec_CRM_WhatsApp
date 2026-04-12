@@ -674,7 +674,13 @@ export class CampaignScheduler {
   private async sendViaZAPI(phone: string, message: string): Promise<'sent' | 'failed' | 'invalid'> {
     try {
       const cleanPhone = phone.replace(/\D/g, '');
-      const formattedPhone = cleanPhone.startsWith('55') ? cleanPhone : `55${cleanPhone}`;
+      let formattedPhone = cleanPhone.startsWith('55') ? cleanPhone : `55${cleanPhone}`;
+
+      // Auto-fix: 12 dígitos = número BR antigo sem o 9 (ex: 5599XXXXXXXX → 55999XXXXXXXX)
+      if (formattedPhone.length === 12 && formattedPhone.startsWith('55')) {
+        formattedPhone = formattedPhone.slice(0, 4) + '9' + formattedPhone.slice(4);
+        console.log(`📱 Auto-fix telefone 12→13: ${phone} → ${formattedPhone}`);
+      }
 
       if (formattedPhone.length !== 13 || formattedPhone[4] !== '9') {
         console.warn(`⚠️ Número inválido (${formattedPhone.length}d): ${phone} → pulando`);
