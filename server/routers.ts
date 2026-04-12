@@ -7,7 +7,6 @@ import { campaigns, contacts, campaignContacts, messages, properties, contactCam
 import { eq, and } from "drizzle-orm";
 import { campaignScheduler } from "./scheduler/campaignScheduler";
 import { z } from "zod";
-
 export const appRouter = router({
   system: systemRouter,
   auth: router({
@@ -41,7 +40,6 @@ export const appRouter = router({
         }
       }),
   }),
-
   contacts: router({
     list: protectedProcedure.query(async () => getAllContacts()),
     getById: protectedProcedure.input(z.object({ id: z.number() })).query(async ({ input }) => getContactById(input.id)),
@@ -111,7 +109,6 @@ export const appRouter = router({
         return results;
       }),
   }),
-
   properties: router({
     list: publicProcedure.query(async () => getAllProperties()),
     getById: publicProcedure.input(z.object({ id: z.number() })).query(async ({ input }) => getPropertyById(input.id)),
@@ -231,7 +228,6 @@ export const appRouter = router({
         return { variations: variations.length > 0 ? variations : [text] };
       }),
   }),
-
   campaigns: router({
     list: protectedProcedure.query(async () => getAllCampaigns()),
     getById: protectedProcedure.input(z.object({ id: z.number() })).query(async ({ input }) => getCampaignById(input.id)),
@@ -291,7 +287,6 @@ export const appRouter = router({
       return result;
     }),
   }),
-
   scheduler: router({
     start: protectedProcedure.mutation(async () => {
       campaignScheduler.stop();
@@ -392,7 +387,6 @@ export const appRouter = router({
       return result;
     }),
   }),
-
   companyConfig: router({
     get: publicProcedure.query(async () => getCompanyConfig()),
     update: protectedProcedure.input(z.object({ companyName: z.string().optional(), phone: z.string().optional(), address: z.string().optional(), zApiInstanceId: z.string().optional(), zApiToken: z.string().optional(), zApiClientToken: z.string().optional() })).mutation(async ({ input }) => updateCompanyConfig(input)),
@@ -418,7 +412,6 @@ export const appRouter = router({
       }
     }),
   }),
-
   performance: router({
     getStats: protectedProcedure.query(async () => {
       const db = await getDb();
@@ -457,7 +450,6 @@ export const appRouter = router({
       return { totals: { sent: totalSent, failed: totalFailed, pending: totalPending, blocked: totalBlocked, successRate, avgPerDay, activeCampaigns }, byCampaign, byDay, byHour };
     }),
   }),
-
   bot: router({
     processMessage: publicProcedure.input(z.object({ phone: z.string(), message: z.string().optional(), audioUrl: z.string().optional(), senderName: z.string().optional() })).mutation(async ({ input }) => {
       const { processBotMessage } = await import('./bot-ai');
@@ -478,7 +470,6 @@ export const appRouter = router({
       return recommendProperties(input.budget);
     }),
   }),
-
   zapi: router({
     sendMessage: protectedProcedure.input(z.object({ phone: z.string().min(2), message: z.string().min(1) })).mutation(async ({ input }) => {
       const config = await getCompanyConfig();
@@ -488,11 +479,6 @@ export const appRouter = router({
     }),
   }),
 });
-
 export type AppRouter = typeof appRouter;
-
 / /   r e d e p l o y   0 4 / 1 1 / 2 0 2 6   2 2 : 3 8 : 4 5 
- 
- 
-
 export type { AppRouter };
