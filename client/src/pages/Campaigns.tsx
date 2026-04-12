@@ -14,7 +14,7 @@ import { toast } from "sonner";
  * SISTEMA v6.0 - 5 CAMPANHAS INDEPENDENTES
  * - Cada campanha envia 1 msg/hora
  * - Ciclo de 10 horas
- * - Sem rotaúúo de pares
+ * - Sem rotação de pares
  * - Todas as campanhas enviam a cada hora
  */
 
@@ -175,7 +175,7 @@ export default function Campaigns() {
 
   return (
     <div className="min-h-screen" style={{ background: "#080f0a", color: "#e8f5e9" }}>
-      {/* ✓Ç✓Ç HEADER ✓Ç✓Ç */}
+      {/* ÇÇ HEADER ÇÇ */}
       <div
         style={{
           background: "linear-gradient(135deg, #0a1f11 0%, #163322 50%, #0a1f11 100%)",
@@ -220,7 +220,7 @@ export default function Campaigns() {
               Romatec CRM Campanhas
             </h1>
             <p style={{ fontSize: "11px", color: "#3a6a45", margin: "2px 0 0" }}>
-              1 msg/campanha/hora  •  Ciclo de 10 horas  •  {allCampaigns.length} campanhas
+              1 msg/campanha/hora    Ciclo de 10 horas    {allCampaigns.length} campanhas
             </p>
           </div>
         </div>
@@ -413,7 +413,7 @@ export default function Campaigns() {
 
       <div style={{ padding: "16px", display: "flex", flexDirection: "column", gap: "14px" }}>
 
-        {/* ✓Ç✓Ç PAINEL DE CONTROLE ✓Ç✓Ç */}
+        {/* ÇÇ PAINEL DE CONTROLE ÇÇ */}
         <div className="rmt-card">
           <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "14px" }}>
             <h2
@@ -494,7 +494,7 @@ export default function Campaigns() {
                     <Timer size={13} /> Próxima hora em:
                   </p>
                   <p style={{ fontSize: "10px", color: "#3a3a6a", margin: 0 }}>
-                    Hora {hourNumber + 1}/10  •  {sentThisHour}/{totalCampsActive} campanhas enviaram
+                    Hora {hourNumber + 1}/10    {sentThisHour}/{totalCampsActive} campanhas enviaram
                   </p>
                 </div>
                 <span
@@ -577,7 +577,7 @@ export default function Campaigns() {
           >
             <div>
               <p style={{ fontSize: "12px", fontWeight: 600, color: "#a8d5b0", margin: "0 0 2px" }}>
-                {nightMode ? "🌙 Modo noite 20h—06h" : "☀️ Modo dia 08h—18h"}
+                {nightMode ? " Modo noite 20h06h" : " Modo dia 08h18h"}
               </p>
               <p style={{ fontSize: "10px", color: "#3a5a40", margin: 0 }}>
                 {nightMode ? "Enviando das 20h às 06h" : "Enviando das 08h às 18h"}
@@ -586,7 +586,7 @@ export default function Campaigns() {
             <button
               onClick={() => {
                 setNightMode((n) => !n);
-                toast.success(!nightMode ? "🌙 Modo Noite ativado!" : "☀️ Modo Dia ativado!");
+                toast.success(!nightMode ? " Modo Noite ativado!" : " Modo Dia ativado!");
               }}
               style={{
                 width: "40px",
@@ -641,7 +641,7 @@ export default function Campaigns() {
           </div>
         </div>
 
-        {/* ✓Ç✓Ç STATUS POR HORA (apenas quando rodando) ✓Ç✓Ç */}
+        {/* ÇÇ STATUS POR HORA (apenas quando rodando) ÇÇ */}
         {allCampaigns.length > 0 && isRunning && (
           <div className="rmt-card">
             <h2
@@ -658,7 +658,7 @@ export default function Campaigns() {
               }}
             >
               <Zap size={13} style={{ color: "#e8a83e" }} />
-              Status por hora — todas as campanhas
+              Status por hora  todas as campanhas
             </h2>
             <div
               style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(180px, 1fr))", gap: "8px" }}
@@ -727,7 +727,7 @@ export default function Campaigns() {
                         {campaign.name}
                       </span>
                       <p style={{ fontSize: "9px", color: "#3a5a40", margin: 0 }}>
-                        1 msg/hora  •  {campaign.sentCount || 0}/{campaign.totalContacts || 2} total
+                        1 msg/hora    {campaign.sentCount || 0}/{campaign.totalContacts || 2} total
                       </p>
                     </div>
                   );
@@ -736,7 +736,7 @@ export default function Campaigns() {
           </div>
         )}
 
-        {/* ✓Ç✓Ç MONITORAMENTO ✓Ç✓Ç */}
+        {/* ÇÇ MONITORAMENTO ÇÇ */}
         <div>
           <h2
             style={{
@@ -789,9 +789,9 @@ export default function Campaigns() {
   );
 }
 
-// ✓Ç✓Ç✓Ç✓Ç✓Ç✓Ç✓Ç✓Ç✓Ç✓Ç✓Ç✓Ç✓Ç✓Ç✓Ç✓Ç✓Ç✓Ç✓Ç✓Ç✓Ç✓Ç✓Ç✓Ç✓Ç✓Ç✓Ç✓Ç✓Ç✓Ç✓Ç✓Ç✓Ç✓Ç✓Ç✓Ç✓Ç✓Ç✓Ç✓Ç✓Ç✓Ç✓Ç✓Ç✓Ç
+// ÇÇÇÇÇÇÇÇÇÇÇÇÇÇÇÇÇÇÇÇÇÇÇÇÇÇÇÇÇÇÇÇÇÇÇÇÇÇÇÇÇÇÇÇÇ
 // CAMPAIGN CARD
-// ✓Ç✓Ç✓Ç✓Ç✓Ç✓Ç✓Ç✓Ç✓Ç✓Ç✓Ç✓Ç✓Ç✓Ç✓Ç✓Ç✓Ç✓Ç✓Ç✓Ç✓Ç✓Ç✓Ç✓Ç✓Ç✓Ç✓Ç✓Ç✓Ç✓Ç✓Ç✓Ç✓Ç✓Ç✓Ç✓Ç✓Ç✓Ç✓Ç✓Ç✓Ç✓Ç✓Ç✓Ç✓Ç
+// ÇÇÇÇÇÇÇÇÇÇÇÇÇÇÇÇÇÇÇÇÇÇÇÇÇÇÇÇÇÇÇÇÇÇÇÇÇÇÇÇÇÇÇÇÇ
 function CampaignCard({
   campaign, isRunning, hourNumber, cycleTimer, cycleDuration,
   campaignStates, schedulerStartedAt, todayMessages, expanded, onToggle, onToggleActive,
@@ -884,7 +884,7 @@ function CampaignCard({
       {/* Regra */}
       <div className="rmt-rule-row">
         Regra: <span style={{ color: "#5aaa70", fontWeight: 600 }}>1 msg/hora</span>
-        {" "}✓ 10 horas = 10 contatos/ciclo
+        {" "} 10 horas = 10 contatos/ciclo
         {isActive && isRunning && (
           <span
             style={{
@@ -970,7 +970,7 @@ function CampaignCard({
 
       {/* Info texto */}
       <p style={{ fontSize: "9px", color: "#2a4a30", marginBottom: "8px" }}>
-        Iniciado: {schedulerStartedAt || "--:--:--"}  •  {campaign.messagesPerHour || 1} msg/hora ✓ {Math.round(cycleDuration / 3600)}h = {totalContacts} contatos
+        Iniciado: {schedulerStartedAt || "--:--:--"}    {campaign.messagesPerHour || 1} msg/hora  {Math.round(cycleDuration / 3600)}h = {totalContacts} contatos
       </p>
 
       {/* Botúo contatos */}
@@ -981,7 +981,7 @@ function CampaignCard({
             Contatos ({sentCount}/{totalContacts})
           </span>
           <span style={{ color: "#2a4a30" }}>
-            {sentCount} enviados  •  {pendingCount} aguardando
+            {sentCount} enviados    {pendingCount} aguardando
           </span>
         </div>
         {expanded ? <ChevronUp size={13} /> : <ChevronDown size={13} />}
