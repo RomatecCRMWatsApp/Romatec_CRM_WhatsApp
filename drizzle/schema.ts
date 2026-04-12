@@ -232,3 +232,24 @@ export const schedulerState = mysqlTable("schedulerState", {
 
 export type SchedulerState = typeof schedulerState.$inferSelect;
 export type InsertSchedulerState = typeof schedulerState.$inferInsert;
+
+// Tabela de Qualificacao de Leads (Bot IA)
+export const leadQualifications = mysqlTable("leadQualifications", {
+  id: int("id").autoincrement().primaryKey(),
+  contactId: int("contactId"),
+  campaignId: int("campaignId"),
+  phone: varchar("phone", { length: 20 }).notNull(),
+  nome: varchar("nome", { length: 255 }),
+  valorParcela: varchar("valorParcela", { length: 100 }),
+  valorEntrada: varchar("valorEntrada", { length: 100 }),
+  tipoEmprego: varchar("tipoEmprego", { length: 100 }),
+  restricaoCPF: varchar("restricaoCPF", { length: 100 }),
+  prazo: varchar("prazo", { length: 100 }),
+  primeiroImovel: varchar("primeiroImovel", { length: 100 }),
+  score: mysqlEnum("score", ["quente", "morno", "frio"]).notNull().default("frio"),
+  campanhaOrigem: varchar("campanhaOrigem", { length: 255 }),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+});
+
+export type LeadQualification = typeof leadQualifications.$inferSelect;
+export type InsertLeadQualification = typeof leadQualifications.$inferInsert;

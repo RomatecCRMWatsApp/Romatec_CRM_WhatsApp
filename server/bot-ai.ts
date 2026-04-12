@@ -1,10 +1,13 @@
 /**
- * Bot IA Inteligente v3.0 - Romatec CRM
- * Vendedor Virtual WhatsApp — Fluxo Completo
- * 1 cliente por hora | Detecção de 5 intenções | Roteiro por empreendimento
+ * Bot IA Inteligente v4.0 - Romatec CRM
+ * Consultor Imobiliario Virtual com Qualificacao de Leads
+ * Fluxo: Abordagem -> Qualificacao (6 etapas) -> Score -> CTA
  */
 import { invokeLLM } from './_core/llm';
 import { transcribeAudio } from './_core/voiceTranscription';
+import { getDb } from './db';
+import { leadQualifications, contacts, campaigns } from '../drizzle/schema';
+import { eq } from 'drizzle-orm';
 
 // ============ TIPOS ============
 export interface BotContext {
@@ -19,24 +22,39 @@ export interface BotResponse {
   qualified?: boolean;
 }
 
-// ============ ESTÁGIOS DA CONVERSA ============
 type ConversationStage =
   | 'nao_iniciado'
   | 'abordagem_enviada'
-  | 'interesse_identificado'
-  | 'imovel_apresentado'
+  | 'qual_etapa_1'
+  | 'qual_etapa_2'
+  | 'qual_etapa_3'
+  | 'qual_etapa_4'
+  | 'qual_etapa_5'
+  | 'qual_etapa_6'
+  | 'qualificado'
   | 'visita_agendada'
   | 'sem_interesse'
   | 'concluido';
+
+interface QualAnswers {
+  prazo?: string;
+  primeiroImovel?: string;
+  valorParcela?: string;
+  valorEntrada?: string;
+  tipoEmprego?: string;
+  restricaoCPF?: string;
+}
 
 interface ConversationState {
   phone: string;
   stage: ConversationStage;
   senderName: string;
   propertySlug?: string;
+  campaignId?: number;
   lastBotMessageAt: number;
   lastUserReplyAt: number | null;
   followUpStep: number;
+  qualAnswers: QualAnswers;
 }
 
 const conversationStates = new Map<string, ConversationState>();
@@ -49,27 +67,28 @@ function setState(phone: string, state: Partial<ConversationState>) {
   const clean = phone.replace(/\D/g, '');
   const existing = conversationStates.get(clean) || {
     phone: clean,
-    stage: 'nao_iniciado',
+    stage: 'nao_iniciado' as ConversationStage,
     senderName: 'Cliente',
     lastBotMessageAt: Date.now(),
     lastUserReplyAt: null,
     followUpStep: 0,
+    qualAnswers: {},
   };
   conversationStates.set(clean, { ...existing, ...state });
 }
 
-// ============ DADOS DOS IMÓVEIS ============
+// ============ DADOS DOS IMOVEIS ============
 const PROPERTIES = [
-  { slug: 'cond-chacaras-giuliano', name: 'Condomínio de Chácaras Giuliano', value: 160000, beds: 0, area: '~1.000m² por unidade', type: 'Chácara', units: 6, remaining: 3, city: 'Açailândia' },
-  { slug: 'mod-vaz-03', name: 'Mod Vaz 03', value: 210000, beds: 3, area: '92m²', type: 'Apartamento', city: 'Açailândia' },
-  { slug: 'mod-vaz-02', name: 'Mod Vaz 02', value: 250000, beds: 3, area: '110m²', type: 'Casa', city: 'Açailândia' },
-  { slug: 'mod-vaz-01', name: 'Mod Vaz 01', value: 300000, beds: 2, area: '68m²', type: 'Apartamento', city: 'Açailândia' },
-  { slug: 'alacide', name: 'Alacide', value: 380000, beds: 2, area: '58m²', type: 'Apartamento', city: 'Açailândia' },
+  { slug: 'cond-chacaras-giuliano', name: 'Condominio de Chacaras Giuliano', value: 160000, beds: 0, area: '~1.000m2 por unidade', type: 'Chacara', city: 'Acailandia' },
+  { slug: 'mod-vaz-03', name: 'Mod Vaz 03', value: 210000, beds: 3, area: '92m2', type: 'Apartamento', city: 'Acailandia' },
+  { slug: 'mod-vaz-02', name: 'Mod Vaz 02', value: 250000, beds: 3, area: '110m2', type: 'Casa', city: 'Acailandia' },
+  { slug: 'mod-vaz-01', name: 'Mod Vaz 01', value: 300000, beds: 2, area: '68m2', type: 'Apartamento', city: 'Acailandia' },
+  { slug: 'alacide', name: 'Alacide', value: 380000, beds: 2, area: '58m2', type: 'Apartamento', city: 'Acailandia' },
 ] as const;
 
 const BANKS = [
   { name: 'Caixa', rate: 10.26 },
-  { name: 'Itaú', rate: 11.60 },
+  { name: 'Itau', rate: 11.60 },
   { name: 'Santander', rate: 11.69 },
   { name: 'Bradesco', rate: 11.70 },
   { name: 'Banco do Brasil', rate: 12.00 },
@@ -78,11 +97,13 @@ const BANKS = [
 const SITE_URL = 'https://romateccrmwhatsapp-production.up.railway.app';
 
 const PLANTAO = {
-  data: 'Sábado, 19 de Abril',
-  horario: '9h às 17h',
-  local: 'Stand de Vendas — Rua São Raimundo, 10 - Centro, Açailândia - MA',
+  data: 'Sabado, 19 de Abril',
+  horario: '9h as 17h',
+  local: 'Stand de Vendas — Rua Sao Raimundo, 10 - Centro, Acailandia - MA',
   telefone: '(99) 99181-1246',
 };
+
+const CONSULTOR_LINK = `\n\n👤 *Falar agora com consultor:*\n🟢 *Jose Romario* — wa.me/5599991811246\n🟢 *Daniele* — wa.me/5599992062871`;
 
 // ============ HELPERS ============
 function fmt(v: number): string {
@@ -98,183 +119,234 @@ function calcPrice(financed: number, annualRate: number, months: number): number
 function firstName(name: string): string {
   return name.split(' ')[0] || 'Cliente';
 }
-function formatAttendantLink(): string {
-  return `\n👤 *Falar com especialista:*\n\n🟢 *José Romário* — wa.me/5599991811246\n🟢 *Daniele* — wa.me/5599992062871\n\nEstamos prontos para te atender!`;
-}
 function getProperty(slug?: string) {
   if (!slug) return PROPERTIES[0];
   return PROPERTIES.find(p => p.slug === slug) || PROPERTIES[0];
 }
 
-// ============ ROTEIROS POR EMPREENDIMENTO ============
-function getAbordagem(prop: typeof PROPERTIES[number], name: string): string {
-  const fn = firstName(name);
-  if (prop.slug === 'cond-chacaras-giuliano') {
-    return `Bom dia, *${fn}*! Aqui é da *Romatec Imóveis*.\n\nTemos uma oportunidade exclusiva: *Condomínio de Chácaras Giuliano* em Açailândia.\n\nSão chácaras de *~1.000m²* cada, por apenas *R$ 160 mil*.\n⚠️ *Restam apenas 3 unidades* de 6!\n\nVocê buscaria um imóvel para moradia, lazer ou investimento?`;
-  }
-  if (prop.slug === 'alacide') {
-    return `Bom dia, *${fn}*! Aqui é da *Romatec Imóveis*.\n\nTemos o *Alacide*, um excelente apartamento em Açailândia com condições especiais de financiamento.\n\n✅ Aceita FGTS\n✅ Minha Casa Minha Vida\n✅ A partir de *R$ 380 mil*\n\nVocê busca imóvel para moradia ou investimento?`;
-  }
-  return `Bom dia, *${fn}*! Aqui é da *Romatec Imóveis*.\n\nPosso apresentar uma oportunidade em Açailândia?\n\nTemos o *${prop.name}* — ${prop.type} com ${prop.beds > 0 ? prop.beds + ' quartos, ' : ''}${prop.area}.\n\n💰 A partir de *${fmt(prop.value)}*\n\nVocê busca imóvel para moradia ou investimento?`;
-}
-
-function getApresentacao(prop: typeof PROPERTIES[number], name: string, finalidade: string): string {
-  const fn = firstName(name);
-  const fin = prop.value * 0.8;
-  const pmt300 = calcPrice(fin, 10.26, 300);
-
-  if (prop.slug === 'cond-chacaras-giuliano') {
-    return `Perfeito, *${fn}*! O *Condomínio de Chácaras Giuliano* oferece:\n\n✅ Chácaras de *~1.000m²*\n✅ Escritura garantida\n✅ Infraestrutura completa\n✅ Condomínio fechado e seguro\n✅ Financiamento facilitado\n\n💰 *R$ 160.000* por unidade\n📊 Parcela a partir de *${fmtFull(pmt300)}/mês*\n\n⚠️ *Restam apenas 3 unidades!*\n\n🔗 ${SITE_URL}/imovel/${prop.slug}\n\nVocê teria disponibilidade para uma visita ao Stand de Vendas?`;
-  }
-
-  return `Perfeito, *${fn}*! O *${prop.name}* oferece:\n\n✅ ${prop.beds > 0 ? prop.beds + ' quartos' : 'Área de ' + prop.area}\n✅ Escritura garantida\n✅ Infraestrutura completa\n✅ Financiamento facilitado${prop.slug === 'alacide' ? '\n✅ Aceita FGTS e MCMV' : ''}\n\n💰 *${fmt(prop.value)}*\n📊 Parcela a partir de *${fmtFull(pmt300)}/mês*\n\n🔗 ${SITE_URL}/imovel/${prop.slug}\n\nVocê teria disponibilidade para uma visita ao nosso Stand de Vendas?`;
-}
-
-function getConviteVisita(name: string): string {
-  const fn = firstName(name);
-  return `Ótimo, *${fn}*! 📅\n\nNosso *Plantão de Vendas* é:\n\n📅 *${PLANTAO.data}*\n🕐 *${PLANTAO.horario}*\n📍 *${PLANTAO.local}*\n\nConfirmo sua presença com atendimento exclusivo?`;
-}
-
-function getConfirmacaoVisita(name: string): string {
-  const fn = firstName(name);
-  return `Perfeito! Aguardamos o(a) senhor(a) com satisfação, *${fn}*! 🤝\n\n📅 *${PLANTAO.data}*\n📍 *${PLANTAO.local}*\n📞 *${PLANTAO.telefone}*\n\nAté lá! — *Romatec Imóveis*`;
-}
-
-function getEncerramento(name: string): string {
-  const fn = firstName(name);
-  return `Compreendo, *${fn}*. Agradeço sua atenção.\n\nFico à disposição caso mude de ideia. Tenha um ótimo dia! 😊\n\n— *Romatec Imóveis*`;
-}
-
-function getObjecaoPreco(name: string, prop: typeof PROPERTIES[number]): string {
-  const fn = firstName(name);
-  const fin = prop.value * 0.8;
-  const pmt300 = calcPrice(fin, 10.26, 300);
-  return `Entendo a preocupação, *${fn}*! Trabalhamos com:\n\n✅ Entrada facilitada\n✅ Parcelamento direto com a construtora\n✅ Sem burocracia de banco${prop.slug === 'alacide' ? '\n✅ Aceita FGTS e Minha Casa Minha Vida' : ''}\n\n💰 Parcela a partir de *${fmtFull(pmt300)}/mês* em 25 anos\n\nPosso detalhar as condições para o(a) senhor(a)?`;
-}
-
-function getObjecaoTempo(name: string): string {
-  const fn = firstName(name);
-  return `Sem problema, *${fn}*! Quando seria um bom momento?\n\nEstou à disposição durante toda a semana. 😊`;
-}
-
-// ============ DETECÇÃO DE INTENÇÃO ============
-type IntentType = 'SIM' | 'NAO' | 'PRECO' | 'TEMPO' | 'DISTANCIA' | 'SAUDACAO' | 'OUTROS';
+// ============ DETECCAO DE INTENCAO ============
+type IntentType = 'SIM' | 'NAO' | 'PRECO' | 'TEMPO' | 'OUTROS';
 
 function detectIntent(message: string): IntentType {
   const msg = message.toLowerCase().trim();
-
-  if (/\b(sim|pode|quero|gostei|me\s*interessa|claro|confirmo|confirmado|vamos|ok|certo|beleza|top|show|perfeito|blz|aceito|vou|lá\s*estarei)\b/.test(msg)) return 'SIM';
-
-  if (/\b(n[aã]o|nao|sem\s*interesse|obrigad[oa]|tchau|at[eé]\s*mais|desculp[ae]|agora\s*n[aã]o|outro\s*momento|n[aã]o\s*tenho\s*interesse|não\s*quero|parem|remov[ae]|bloquei)\b/.test(msg)) return 'NAO';
-
-  if (/\b(caro|t[aá]\s*caro|sem\s*dinheiro|grana|pre[çc]o|valor|quanto|or[çc]amento|parcela|entrada|financiamento|banco|fgts|consegue\s*baixar|desconto)\b/.test(msg)) return 'PRECO';
-
-  if (/\b(ocupado|depois|agora\s*n[aã]o|outro\s*dia|quando|hor[aá]rio|disponibilidade|mais\s*tarde|essa\s*semana|pr[oó]xima\s*semana)\b/.test(msg)) return 'TEMPO';
-
-  if (/\b(longe|onde\s*fica|localiza[çc][aã]o|endere[çc]o|bairro|fica\s*onde|mapa|como\s*chegar|dist[aâ]ncia)\b/.test(msg)) return 'DISTANCIA';
-
-  if (/^\s*(oi|ol[aá]|hey|ei|bom\s*dia|boa\s*(tarde|noite)|opa|eae|fala|salve|hello|hi)\s*[!?.]*\s*$/.test(msg)) return 'SAUDACAO';
-
+  if (/\b(sim|pode|quero|gostei|me\s*interessa|claro|confirmo|confirmado|vamos|ok|certo|beleza|top|show|perfeito|blz|aceito|vou|tenho\s*interesse|com\s*certeza|tudo\s*bem|boa)\b/.test(msg)) return 'SIM';
+  if (/\b(n[aã]o|nao|sem\s*interesse|obrigad[oa]|tchau|at[eé]\s*mais|desculp[ae]|agora\s*n[aã]o|outro\s*momento|n[aã]o\s*tenho\s*interesse|nao\s*quero|parem|remov[ae]|bloquei|cancelar|parar)\b/.test(msg)) return 'NAO';
+  if (/\b(caro|preco|valor|quanto|parcela|entrada|financiamento|banco|fgts|desconto|custo)\b/.test(msg)) return 'PRECO';
+  if (/\b(ocupado|depois|agora\s*n[aã]o|outro\s*dia|quando|horario|disponibilidade|mais\s*tarde|semana)\b/.test(msg)) return 'TEMPO';
   return 'OUTROS';
 }
 
-// ============ PROCESSAMENTO POR ESTÁGIO ============
+// ============ QUALIFICACAO — PERGUNTAS ============
+const QUAL_QUESTIONS: Record<string, (fn: string) => string> = {
+  etapa_1: (fn) => `Que otimo, *${fn}*! Sou consultor da *Romatec Imoveis* e vou te ajudar a encontrar o imovel ideal.\n\nPrimeira pergunta rapida:\n\n📅 Voce tem interesse em adquirir um imovel nos *proximos 3 meses*?`,
+  etapa_2: (fn) => `Perfeito, *${fn}*!\n\n🏠 Voce ja possui algum imovel proprio ou seria o *primeiro*?`,
+  etapa_3: (fn) => `Entendido, *${fn}*!\n\n💰 Qual valor de *parcela mensal* voce consegue pagar confortavelmente?\n\n_(Ex: R$ 800, R$ 1.200, R$ 2.000...)_`,
+  etapa_4: (fn) => `Otimo, *${fn}*!\n\n🏦 Voce consegue dar uma *entrada de aproximadamente 20%* do valor do imovel?\n\n_(Para um imovel de R$ 200 mil, seriam R$ 40 mil de entrada)_`,
+  etapa_5: (fn) => `Entendido, *${fn}*!\n\n💼 Voce trabalha com *carteira assinada*, e *autonomo* ou *empresario*?`,
+  etapa_6: (fn) => `Ultima pergunta, *${fn}*, prometo! 😊\n\n🔍 Voce tem alguma *restricao no CPF* (SPC/Serasa)?`,
+};
+
+// ============ SCORING ============
+type LeadScore = 'quente' | 'morno' | 'frio';
+
+function calcScore(answers: QualAnswers, propValue: number): LeadScore {
+  const restricao = (answers.restricaoCPF || '').toLowerCase();
+  const temRestricao = /sim|tenho|tem|possui/.test(restricao);
+
+  const parcela = answers.valorParcela || '';
+  const parcelaNum = parseFloat(parcela.replace(/[^\d,]/g, '').replace(',', '.')) || 0;
+  const parcelaMinima = calcPrice(propValue * 0.8, 10.26, 300);
+
+  const entrada = answers.valorEntrada || '';
+  const temEntrada20 = /sim|tenho|tem|posso|consigo|dou|disponho/.test(entrada.toLowerCase());
+
+  const prazo = (answers.prazo || '').toLowerCase();
+  const interessePrazo = !/nao|n[aã]o|depois|muito\s*tempo|ano\s*que\s*vem/.test(prazo);
+
+  if (!interessePrazo) return 'frio';
+  if (temRestricao) return 'frio';
+  if (temEntrada20 && (parcelaNum === 0 || parcelaNum >= parcelaMinima * 0.7)) return 'quente';
+  return 'morno';
+}
+
+function getScoreResponse(score: LeadScore, fn: string, prop: typeof PROPERTIES[number], answers: QualAnswers): string {
+  const fin = prop.value * 0.8;
+  const pmt300 = calcPrice(fin, 10.26, 300);
+  const link = `${SITE_URL}/imovel/${prop.slug}`;
+
+  if (score === 'quente') {
+    return `*${fn}*, pelo que me contou, voce esta em um *perfil excelente* para financiar o *${prop.name}*! 🔥\n\n✅ Perfil aprovado para financiamento\n✅ Entrada compativel\n✅ Sem restricoes\n\n💰 *${fmt(prop.value)}* | Parcela partir de *${fmtFull(pmt300)}/mes*\n\n🔗 ${link}\n\nPerfeito! Vou agendar um *consultor para falar com voce hoje*.\n\n📅 Qual o *melhor horario* para te ligar — manha, tarde ou noite?${CONSULTOR_LINK}`;
+  }
+
+  if (score === 'morno') {
+    const fgts = prop.value <= 300000 ? '\n✅ *FGTS pode ser usado como entrada*' : '';
+    return `*${fn}*, entendo sua situacao! Temos otimas opcoes para voce. 😊\n\n${fgts}\n✅ Financiamento com entrada parcelada\n✅ Parcelas que cabem no orcamento\n✅ Simulacao personalizada gratuita\n\n💰 *${fmt(prop.value)}* — financiamento em ate 360 meses\n\n🔗 Veja o imovel: ${link}\n\nPosso te enviar uma *simulacao personalizada*?\n\nOu prefere falar com um consultor essa semana?`;
+  }
+
+  // frio
+  return `*${fn}*, obrigado pela honestidade! 😊\n\nEntendemos que o momento nao e ideal agora. Mas nao se preocupe:\n\n✅ Podemos *regularizar seu CPF* em parceria com especialistas\n✅ Guardamos seu contato com prioridade\n✅ Quando estiver pronto, saimos na frente!\n\n🔗 Enquanto isso, veja nossos imoveis: ${link}\n\nPosso entrar em contato *daqui 30 dias* para atualizar sua situacao?`;
+}
+
+// ============ SALVAR QUALIFICACAO NO BANCO ============
+async function saveLeadQualification(
+  phone: string,
+  nome: string,
+  answers: QualAnswers,
+  score: LeadScore,
+  prop: typeof PROPERTIES[number],
+  campaignId?: number,
+) {
+  try {
+    const db = await getDb();
+    if (!db) return;
+
+    let contactId: number | undefined;
+    const contactResult = await db.select().from(contacts).where(eq(contacts.phone, phone)).limit(1);
+    if (contactResult[0]) contactId = contactResult[0].id;
+
+    await db.insert(leadQualifications).values({
+      contactId: contactId || null,
+      campaignId: campaignId || null,
+      phone,
+      nome,
+      valorParcela: answers.valorParcela || null,
+      valorEntrada: answers.valorEntrada || null,
+      tipoEmprego: answers.tipoEmprego || null,
+      restricaoCPF: answers.restricaoCPF || null,
+      prazo: answers.prazo || null,
+      primeiroImovel: answers.primeiroImovel || null,
+      score,
+      campanhaOrigem: prop.name,
+    } as any);
+
+    console.log(`[Bot] Lead qualificado: ${nome} (${phone}) — Score: ${score.toUpperCase()}`);
+  } catch (e) {
+    console.error('[Bot] Erro ao salvar qualificacao:', e);
+  }
+}
+
+// ============ PROCESSAMENTO POR ESTAGIO ============
 async function processStage(context: BotContext, state: ConversationState): Promise<BotResponse> {
-  const msg = context.message || '';
+  const msg = (context.message || '').trim();
   const intent = detectIntent(msg);
   const prop = getProperty(state.propertySlug || context.propertySlug);
   const name = state.senderName || context.senderName || 'Cliente';
+  const fn = firstName(name);
 
-  // Se cliente disse NAO em qualquer estágio — encerra
-  if (intent === 'NAO' && state.stage !== 'nao_iniciado') {
+  // NAO em qualquer estagio inicial — encerra
+  if (intent === 'NAO' && ['abordagem_enviada', 'nao_iniciado'].includes(state.stage)) {
     setState(context.phone, { stage: 'sem_interesse', lastUserReplyAt: Date.now() });
-    return { text: getEncerramento(name), qualified: false };
+    return { text: `Tudo bem, *${fn}*! Fico a disposicao se mudar de ideia. Tenha um otimo dia! 😊\n\n— *Romatec Imoveis*`, qualified: false };
   }
 
   switch (state.stage) {
 
+    // ---- ABORDAGEM: lead respondeu, iniciar qualificacao ----
     case 'nao_iniciado':
     case 'abordagem_enviada': {
-      // Cliente respondeu à abordagem
-      if (intent === 'NAO') {
-        setState(context.phone, { stage: 'sem_interesse', lastUserReplyAt: Date.now() });
-        return { text: getEncerramento(name), qualified: false };
-      }
-      if (intent === 'SIM' || intent === 'OUTROS' || intent === 'SAUDACAO') {
-        // Identifica finalidade e apresenta imóvel
-        const finalidade = /investimento|renda|alugar/i.test(msg) ? 'investimento' : 'moradia';
-        setState(context.phone, { stage: 'imovel_apresentado', lastUserReplyAt: Date.now() });
-        return { text: getApresentacao(prop, name, finalidade), qualified: true };
-      }
-      if (intent === 'PRECO') {
-        setState(context.phone, { stage: 'imovel_apresentado', lastUserReplyAt: Date.now() });
-        return { text: getObjecaoPreco(name, prop), qualified: true };
-      }
-      if (intent === 'TEMPO') {
-        setState(context.phone, { lastUserReplyAt: Date.now() });
-        return { text: getObjecaoTempo(name), qualified: true };
-      }
-      setState(context.phone, { stage: 'interesse_identificado', lastUserReplyAt: Date.now() });
-      return { text: getApresentacao(prop, name, 'moradia'), qualified: true };
+      setState(context.phone, { stage: 'qual_etapa_1', lastUserReplyAt: Date.now() });
+      return { text: QUAL_QUESTIONS.etapa_1(fn), qualified: true };
     }
 
-    case 'interesse_identificado':
-    case 'imovel_apresentado': {
-      if (intent === 'SIM') {
-        setState(context.phone, { stage: 'visita_agendada', lastUserReplyAt: Date.now() });
-        return { text: getConviteVisita(name), qualified: true };
-      }
-      if (intent === 'PRECO') {
-        setState(context.phone, { lastUserReplyAt: Date.now() });
-        return { text: getObjecaoPreco(name, prop), qualified: true };
-      }
-      if (intent === 'TEMPO') {
-        setState(context.phone, { lastUserReplyAt: Date.now() });
-        return { text: getObjecaoTempo(name), qualified: true };
-      }
-      if (intent === 'DISTANCIA') {
-        setState(context.phone, { lastUserReplyAt: Date.now() });
-        return {
-          text: `Fica em *Açailândia - MA*, com fácil acesso.\n\n📍 ${PLANTAO.local}\n\nPosso te enviar o mapa completo. Teria disponibilidade para uma visita?`,
-          qualified: true
-        };
-      }
-      // Resposta ambígua — convidar para visita
-      setState(context.phone, { stage: 'visita_agendada', lastUserReplyAt: Date.now() });
-      return { text: getConviteVisita(name), qualified: true };
+    // ---- ETAPA 1: Interesse nos proximos 3 meses ----
+    case 'qual_etapa_1': {
+      setState(context.phone, {
+        stage: 'qual_etapa_2',
+        lastUserReplyAt: Date.now(),
+        qualAnswers: { ...state.qualAnswers, prazo: msg },
+      });
+      return { text: QUAL_QUESTIONS.etapa_2(fn), qualified: true };
     }
 
+    // ---- ETAPA 2: Primeiro imovel? ----
+    case 'qual_etapa_2': {
+      setState(context.phone, {
+        stage: 'qual_etapa_3',
+        lastUserReplyAt: Date.now(),
+        qualAnswers: { ...state.qualAnswers, primeiroImovel: msg },
+      });
+      return { text: QUAL_QUESTIONS.etapa_3(fn), qualified: true };
+    }
+
+    // ---- ETAPA 3: Valor parcela mensal ----
+    case 'qual_etapa_3': {
+      setState(context.phone, {
+        stage: 'qual_etapa_4',
+        lastUserReplyAt: Date.now(),
+        qualAnswers: { ...state.qualAnswers, valorParcela: msg },
+      });
+      return { text: QUAL_QUESTIONS.etapa_4(fn), qualified: true };
+    }
+
+    // ---- ETAPA 4: Entrada 20% ----
+    case 'qual_etapa_4': {
+      setState(context.phone, {
+        stage: 'qual_etapa_5',
+        lastUserReplyAt: Date.now(),
+        qualAnswers: { ...state.qualAnswers, valorEntrada: msg },
+      });
+      return { text: QUAL_QUESTIONS.etapa_5(fn), qualified: true };
+    }
+
+    // ---- ETAPA 5: Tipo emprego ----
+    case 'qual_etapa_5': {
+      setState(context.phone, {
+        stage: 'qual_etapa_6',
+        lastUserReplyAt: Date.now(),
+        qualAnswers: { ...state.qualAnswers, tipoEmprego: msg },
+      });
+      return { text: QUAL_QUESTIONS.etapa_6(fn), qualified: true };
+    }
+
+    // ---- ETAPA 6: Restricao CPF — calcular score e salvar ----
+    case 'qual_etapa_6': {
+      const finalAnswers: QualAnswers = { ...state.qualAnswers, restricaoCPF: msg };
+      const score = calcScore(finalAnswers, prop.value);
+
+      setState(context.phone, {
+        stage: score === 'quente' ? 'visita_agendada' : 'qualificado',
+        lastUserReplyAt: Date.now(),
+        qualAnswers: finalAnswers,
+      });
+
+      // Salvar no banco em background
+      saveLeadQualification(
+        context.phone, name, finalAnswers, score, prop, state.campaignId,
+      ).catch(() => {});
+
+      return { text: getScoreResponse(score, fn, prop, finalAnswers), qualified: score !== 'frio' };
+    }
+
+    // ---- VISITA AGENDADA: confirmar horario ----
     case 'visita_agendada': {
-      if (intent === 'SIM') {
-        setState(context.phone, { stage: 'concluido', lastUserReplyAt: Date.now() });
-        return { text: getConfirmacaoVisita(name), qualified: true };
-      }
-      if (intent === 'PRECO') {
-        setState(context.phone, { lastUserReplyAt: Date.now() });
-        return { text: getObjecaoPreco(name, prop) + '\n\nCom essas condições, conseguiria visitar o Stand de Vendas?', qualified: true };
-      }
-      if (intent === 'TEMPO') {
-        setState(context.phone, { lastUserReplyAt: Date.now() });
-        return { text: getObjecaoTempo(name), qualified: true };
-      }
       setState(context.phone, { stage: 'concluido', lastUserReplyAt: Date.now() });
-      return { text: getConfirmacaoVisita(name), qualified: true };
+      return {
+        text: `Perfeito, *${fn}*! 🤝\n\nUm de nossos consultores vai entrar em contato com voce *hoje* no melhor horario.\n\n📅 *${PLANTAO.data}*\n📍 *${PLANTAO.local}*\n📞 *${PLANTAO.telefone}*\n\nAte logo! — *Romatec Imoveis*`,
+        qualified: true,
+      };
+    }
+
+    case 'qualificado': {
+      return {
+        text: `Olá, *${fn}*! Estou aqui para qualquer duvida sobre o *${prop.name}*.\n\n🔗 ${SITE_URL}/imovel/${prop.slug}${CONSULTOR_LINK}`,
+        qualified: true,
+      };
     }
 
     case 'concluido': {
-      return { text: `Até ${PLANTAO.data}, *${firstName(name)}*! 😊\n\nQualquer dúvida, estou à disposição.\n\n— *Romatec Imóveis*`, qualified: true };
+      return { text: `Ate logo, *${fn}*! 😊 Qualquer duvida estou aqui. — *Romatec Imoveis*`, qualified: true };
     }
 
     case 'sem_interesse': {
-      return { text: `Obrigado, *${firstName(name)}*! Estarei à disposição se precisar. 😊`, qualified: false };
+      return { text: `Obrigado, *${fn}*! Estarei a disposicao se precisar. 😊`, qualified: false };
     }
 
     default:
-      return { text: getAbordagem(prop, name), qualified: false };
+      return { text: QUAL_QUESTIONS.etapa_1(fn), qualified: false };
   }
 }
 
-// ============ FOLLOW-UP AUTOMÁTICO ============
+// ============ FOLLOW-UP AUTOMATICO ============
 export interface FollowUpState {
   phone: string;
   step: number;
@@ -288,7 +360,7 @@ const FOLLOWUP_SEQUENCE = [
     delayMinutes: 30,
     getMessage: (name: string) => {
       const fn = firstName(name);
-      return `Oi${fn !== 'Cliente' ? `, *${fn}*` : ''} 👋\n\nVi que você ainda não respondeu.\n\nEsse imóvel está chamando muita atenção hoje 🔥\n\nQuer que eu te mande os detalhes rápidos agora?`;
+      return `Oi${fn !== 'Cliente' ? `, *${fn}*` : ''} 👋\n\nVi que voce ainda nao respondeu.\n\nEsse imovel esta chamando muita atencao hoje! 🔥\n\nQuer que eu te mande os detalhes agora?`;
     },
   },
   {
@@ -296,7 +368,7 @@ const FOLLOWUP_SEQUENCE = [
     delayMinutes: 120,
     getMessage: (name: string) => {
       const fn = firstName(name);
-      return `Passando rapidinho${fn !== 'Cliente' ? `, *${fn}*` : ''} 👀\n\nEssa oportunidade costuma sair rápido.\n\nJá tivemos bastante procura hoje.\n\nQuer garantir as informações antes que acabe?`;
+      return `Passando rapidinho${fn !== 'Cliente' ? `, *${fn}*` : ''} 👀\n\nEssa oportunidade costuma sair rapido.\n\nJa tivemos bastante procura hoje.\n\nQuer garantir as informacoes antes que acabe?`;
     },
   },
   {
@@ -304,14 +376,14 @@ const FOLLOWUP_SEQUENCE = [
     delayMinutes: 1440,
     getMessage: (name: string) => {
       const fn = firstName(name);
-      return `Último contato sobre essa oportunidade${fn !== 'Cliente' ? `, *${fn}*` : ''} 🚨\n\nAlgumas unidades já foram reservadas.\n\nSe ainda tiver interesse, me fala que te priorizo agora 👍`;
+      return `Ultimo contato sobre essa oportunidade${fn !== 'Cliente' ? `, *${fn}*` : ''} 🚨\n\nAlgumas unidades ja foram reservadas.\n\nSe ainda tiver interesse, me fala que te priorizo agora 👍`;
     },
   },
 ];
 
 const followUpStates = new Map<string, FollowUpState>();
 
-export function registerBotMessage(phone: string, senderName?: string) {
+export function registerBotMessage(phone: string, senderName?: string, campaignId?: number) {
   const clean = phone.replace(/\D/g, '');
   followUpStates.set(clean, {
     phone: clean,
@@ -319,11 +391,11 @@ export function registerBotMessage(phone: string, senderName?: string) {
     lastBotMessageAt: Date.now(),
     lastUserReplyAt: null,
   });
-  // Inicializa estado de conversa se não existir
   if (!conversationStates.has(clean)) {
     setState(clean, {
       stage: 'abordagem_enviada',
       senderName: senderName || 'Cliente',
+      campaignId,
       lastBotMessageAt: Date.now(),
     });
   }
@@ -343,10 +415,8 @@ export function getFollowUpsToSend(): { phone: string; message: string; step: nu
   const toSend: { phone: string; message: string; step: number }[] = [];
 
   for (const [phone, state] of followUpStates.entries()) {
-    // Verificar se cliente já está em estágio finalizado
     const convState = conversationStates.get(phone);
-    if (convState && (convState.stage === 'sem_interesse' || convState.stage === 'concluido')) continue;
-
+    if (convState && (convState.stage === 'sem_interesse' || convState.stage === 'concluido' || convState.stage === 'qualificado')) continue;
     if (state.lastUserReplyAt && state.lastUserReplyAt > state.lastBotMessageAt) continue;
     if (state.step >= 3) continue;
 
@@ -381,29 +451,26 @@ export async function processBotMessage(context: BotContext): Promise<BotRespons
   const startTime = Date.now();
   let messageText = context.message || '';
 
-  // Transcrever áudio se necessário
   if (context.audioUrl && !messageText) {
     try {
-      const result = await transcribeAudio({ audioUrl: context.audioUrl, language: 'pt', prompt: 'Mensagem de cliente sobre imóvel' });
+      const result = await transcribeAudio({ audioUrl: context.audioUrl, language: 'pt', prompt: 'Mensagem de cliente sobre imovel' });
       messageText = (result && 'text' in result) ? result.text || '' : '';
-      if (messageText) console.log(`[Bot] Áudio transcrito: "${messageText.substring(0, 80)}"`);
+      if (messageText) console.log(`[Bot] Audio transcrito: "${messageText.substring(0, 80)}"`);
     } catch (e) {
-      console.error('[Bot] Erro ao transcrever áudio:', e);
+      console.error('[Bot] Erro ao transcrever audio:', e);
     }
-    if (!messageText) return { text: 'Recebi seu áudio! Pode me enviar por texto também? Assim consigo te ajudar melhor 😉' };
+    if (!messageText) return { text: 'Recebi seu audio! Pode me enviar por texto tambem? Assim consigo te ajudar melhor 😉' };
   }
 
   if (!messageText) {
-    return { text: 'Olá! Sou o assistente da *Romatec Imóveis*. Como posso te ajudar hoje?' };
+    return { text: 'Ola! Sou consultor da *Romatec Imoveis*. Como posso te ajudar hoje?' };
   }
 
   const senderName = context.senderName || 'Cliente';
   const clean = context.phone.replace(/\D/g, '');
 
-  // Registrar resposta do usuário
   registerUserReply(context.phone);
 
-  // Buscar ou criar estado da conversa
   let state = getState(clean);
   if (!state) {
     setState(clean, {
@@ -415,20 +482,17 @@ export async function processBotMessage(context: BotContext): Promise<BotRespons
     state = getState(clean)!;
   }
 
-  // Atualizar nome se necessário
   if (senderName !== 'Cliente' && state.senderName === 'Cliente') {
     setState(clean, { senderName });
     state = getState(clean)!;
   }
 
-  // Processar pelo estágio atual
   const response = await processStage({ ...context, message: messageText }, state);
-
-  console.log(`[Bot] Estágio: ${state.stage} → Intenção: ${detectIntent(messageText)} em ${Date.now() - startTime}ms`);
+  console.log(`[Bot] ${clean} | Estagio: ${state.stage} | ${Date.now() - startTime}ms`);
   return response;
 }
 
-// ============ SIMULAÇÃO DE FINANCIAMENTO ============
+// ============ SIMULACAO DE FINANCIAMENTO ============
 export function simulateFinancing(propertyValue: number, entryPercent: number = 20) {
   const entry = propertyValue * (entryPercent / 100);
   const financed = propertyValue - entry;
@@ -448,7 +512,7 @@ export function formatSimulationWhatsApp(propertyValue: number, entryPct: number
   const financed = propertyValue - entry;
   const pmt240 = calcPrice(financed, 10.26, 240);
   const pmt300 = calcPrice(financed, 10.26, 300);
-  return `💰 *PARCELAS A PARTIR DE:*\n\n🏠 Imóvel: *${fmt(propertyValue)}*\n💳 Entrada (${entryPct}%): *${fmt(entry)}*\n\n🏦 *Caixa Econômica* (menor taxa: 10,26% a.a.)\n   ✅ Em *20 anos (240x)*: *${fmtFull(pmt240)}/mês*\n   ✅ Em *25 anos (300x)*: *${fmtFull(pmt300)}/mês*\n\nℹ️ Taxas reais de abril/2026 + TR`;
+  return `*PARCELAS A PARTIR DE:*\n\nImovel: *${fmt(propertyValue)}*\nEntrada (${entryPct}%): *${fmt(entry)}*\n\n*Caixa Economica* (10,26% a.a.)\nEm *20 anos (240x)*: *${fmtFull(pmt240)}/mes*\nEm *25 anos (300x)*: *${fmtFull(pmt300)}/mes*\n\nTaxas reais de abril/2026 + TR`;
 }
 
 export function recommendProperties(budget: number) {
