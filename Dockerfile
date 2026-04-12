@@ -10,7 +10,8 @@ RUN npm install -g pnpm@10.4.1
 # Install dependencies (cached layer) — must include patches before pnpm install
 COPY package.json pnpm-lock.yaml ./
 COPY patches/ ./patches/
-RUN pnpm install --frozen-lockfile
+# Use --no-frozen-lockfile to regenerate pnpm-lock.yaml if package.json was updated
+RUN pnpm install --no-frozen-lockfile
 
 # Copy source and build (this layer invalidates when source changes)
 COPY . .
