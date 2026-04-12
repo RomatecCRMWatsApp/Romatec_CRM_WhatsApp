@@ -251,13 +251,16 @@ export const appRouter = router({
       await db.delete(contactCampaignHistory);
       await db.delete(campaigns);
       const createdCampaigns = [];
+      const usedIds = new Set<number>();
       for (let i = 0; i < allProperties.length; i++) {
         const prop = allProperties[i];
         const result = await db.insert(campaigns).values({ propertyId: prop.id, name: prop.denomination, messageVariations: [], totalContacts: 2, sentCount: 0, failedCount: 0, status: "running", messagesPerHour: 1 });
         const campaignId = Number((result as any)[0].insertId);
         createdCampaigns.push({ id: campaignId, name: prop.denomination });
-        const campaignContactsList = shuffled.slice(i * 2, i * 2 + 2);
-        for (const contact of campaignContactsList) {
+        const available = shuffled.filter(c => !usedIds.has(c.id));
+        const selected = available.slice(0, 2);
+        for (const contact of selected) {
+          usedIds.add(contact.id);
           await db.insert(campaignContacts).values({ campaignId, contactId: contact.id, messagesSent: 0, status: "pending" });
         }
       }
@@ -354,16 +357,15 @@ export const appRouter = router({
     updateMessagesPerHour: protectedProcedure.input(z.object({ campaignId: z.number(), messagesPerHour: z.number().min(1).max(2) })).mutation(async ({ input }) => {
       const db = await getDb();
       if (!db) throw new Error("Database not available");
-      const newTotalContacts = input.messagesPerHour * 2;
-      await db.update(campaigns).set({ messagesPerHour: input.messagesPerHour, totalContacts: newTotalContacts }).where(eq(campaigns.id, input.campaignId));
+      await db.update(campaigns).set({ messagesPerHour: input.messagesPerHour, totalContacts: 2 }).where(eq(campaigns.id, input.campaignId));
       await db.delete(campaignContacts).where(eq(campaignContacts.campaignId, input.campaignId));
       const now = new Date();
       const allContacts = await db.select().from(contacts).where(eq(contacts.status, "active"));
-      const selected = [...allContacts].filter(c => !c.blockedUntil || c.blockedUntil <= now).sort(() => Math.random() - 0.5).slice(0, newTotalContacts);
+      const selected = [...allContacts].filter(c => !c.blockedUntil || c.blockedUntil <= now).sort(() => Math.random() - 0.5).slice(0, 2);
       for (const contact of selected) {
         await db.insert(campaignContacts).values({ campaignId: input.campaignId, contactId: contact.id, messagesSent: 0, status: "pending" });
       }
-      return { success: true, message: input.messagesPerHour + " msgs/hora", totalContacts: newTotalContacts };
+      return { success: true, message: input.messagesPerHour + " msgs/hora", totalContacts: 2 };
     }),
     getCampaignDetails: protectedProcedure.query(async () => {
       const db = await getDb();

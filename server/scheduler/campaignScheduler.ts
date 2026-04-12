@@ -483,6 +483,7 @@ export class CampaignScheduler {
       const existingCampaigns = await db.select().from(campaigns);
       const existingPropertyIds = existingCampaigns.map(c => c.propertyId);
 
+      const sharedUsedIds = new Set<number>();
       for (const prop of activeProperties) {
         if (!existingPropertyIds.includes(prop.id)) {
           console.log(`➕ Criando campanha: ${prop.denomination}`);
@@ -499,7 +500,7 @@ export class CampaignScheduler {
             startDate: new Date(),
           });
           const campaignId = Number((result as any)[0].insertId);
-          await this.assignContactsToCampaign(campaignId);
+          await this.assignContactsToCampaign(campaignId, sharedUsedIds);
         }
       }
 
@@ -540,7 +541,7 @@ export class CampaignScheduler {
 
   // ========== CONTATOS ==========
 
-  private async assignContactsToCampaign(campaignId: number) {
+  private async assignContactsToCampaign(campaignId: number, globalUsedIds?: Set<number>) {
     const db = await getDb();
     if (!db) return;
 
@@ -548,16 +549,22 @@ export class CampaignScheduler {
     const allContacts = await db.select().from(contacts).where(eq(contacts.status, 'active'));
     const unblocked = allContacts.filter(c => !c.blockedUntil || c.blockedUntil <= now);
 
-    const neededContacts = 2;
+    // Excluir contatos já usados em outras campanhas
+    const existingAssignments = await db.select().from(campaignContacts);
+    const alreadyUsed = new Set<number>(existingAssignments.map(cc => cc.contactId));
+    if (globalUsedIds) globalUsedIds.forEach(id => alreadyUsed.add(id));
 
-    if (unblocked.length < neededContacts) {
-      console.warn(`⚠️ Apenas ${unblocked.length} contatos disponíveis`);
+    const available = unblocked.filter(c => !alreadyUsed.has(c.id));
+
+    if (available.length < 2) {
+      console.warn(`⚠️ Apenas ${available.length} contatos disponíveis sem repetição para campanha ${campaignId}`);
     }
 
-    const shuffled = [...unblocked].sort(() => Math.random() - 0.5);
-    const selected = shuffled.slice(0, neededContacts);
+    const shuffled = [...available].sort(() => Math.random() - 0.5);
+    const selected = shuffled.slice(0, 2);
 
     for (const contact of selected) {
+      if (globalUsedIds) globalUsedIds.add(contact.id);
       await db.insert(campaignContacts).values({
         campaignId,
         contactId: contact.id,
