@@ -1,4 +1,4 @@
-﻿import { useState } from "react";
+import { useState } from "react";
 import { MapPin, Phone, MessageCircle, ChevronLeft, ChevronRight, ArrowLeft, BedDouble, Bath, Car, Ruler, Image as ImageIcon, Video, FileImage, Share2, Heart } from "lucide-react";
 import { useRoute } from "wouter";
 import { trpc } from "@/lib/trpc";

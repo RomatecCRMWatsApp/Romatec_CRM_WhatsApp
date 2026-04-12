@@ -203,7 +203,7 @@ export const appRouter = router({
       }))
       .mutation(async ({ input }) => {
         const { invokeLLM } = await import("./_core/llm");
-        const prompt = `Gere uma descricao atrativa para o imovel: ${input.denomination} em ${input.address}, R$ ${Number(input.price).toLocaleString('pt-BR')}. Use gatilhos de escassez e urg├¬ncia.`;
+        const prompt = `Gere uma descricao atrativa para o imovel: ${input.denomination} em ${input.address}, R$ ${Number(input.price).toLocaleString('pt-BR')}. Use gatilhos de escassez e urgência.`;
         const response = await invokeLLM({ messages: [{ role: "user", content: prompt }] });
         const descContent = response.choices[0]?.message?.content;
         return { description: typeof descContent === 'string' ? descContent : 'Descricao nao gerada' };
