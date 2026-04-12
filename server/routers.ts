@@ -333,9 +333,12 @@ export const appRouter = router({
       }
       const allContacts = await db.select().from(contacts).where(eq(contacts.status, "active"));
       const shuffled = [...allContacts].sort(() => Math.random() - 0.5);
+      const usedIds = new Set<number>();
       for (let i = 0; i < allCampaigns.length; i++) {
-        const selected = shuffled.slice(i * 2, i * 2 + 2);
+        const available = shuffled.filter(c => !usedIds.has(c.id));
+        const selected = available.slice(0, 2);
         for (const contact of selected) {
+          usedIds.add(contact.id);
           await db.insert(campaignContacts).values({ campaignId: allCampaigns[i].id, contactId: contact.id, messagesSent: 0, status: "pending" });
         }
         await db.update(campaigns).set({ status: "running" }).where(eq(campaigns.id, allCampaigns[i].id));

@@ -14,7 +14,7 @@ import { toast } from "sonner";
  * SISTEMA v6.0 - 5 CAMPANHAS INDEPENDENTES
  * - Cada campanha envia 1 msg/hora
  * - Ciclo de 10 horas
- * - Sem rotaÔö£┬║Ôö£├║o de pares
+ * - Sem rota├º├úo de pares
  * - Todas as campanhas enviam a cada hora
  */
 
@@ -125,7 +125,7 @@ export default function Campaigns() {
     const totalSent = allCampaigns.reduce((sum: number, c: any) => sum + (c.sentCount || 0), 0);
     const totalPending = allCampaigns.reduce((sum: number, c: any) => sum + (c.pendingCount || 0), 0);
     const totalFailed = allCampaigns.reduce((sum: number, c: any) => sum + (c.failedCount || 0), 0);
-    // Usa sentCount + pendingCount + failedCount como total real de contatos atribuÔö£┬ídos
+    // Usa sentCount + pendingCount + failedCount como total real de contatos atribu├¡dos
     // evitando o valor fixo de totalContacts que pode vir inflado do backend
     const totalContacts = totalSent + totalPending + totalFailed;
     const successRate = totalContacts > 0 ? ((totalSent / totalContacts) * 100).toFixed(1) : "0.0";
@@ -175,7 +175,7 @@ export default function Campaigns() {
 
   return (
     <div className="min-h-screen" style={{ background: "#080f0a", color: "#e8f5e9" }}>
-      {/* ├ö├Â├ç├ö├Â├ç HEADER ├ö├Â├ç├ö├Â├ç */}
+      {/* ÔöÇÔöÇ HEADER ÔöÇÔöÇ */}
       <div
         style={{
           background: "linear-gradient(135deg, #0a1f11 0%, #163322 50%, #0a1f11 100%)",
@@ -220,7 +220,7 @@ export default function Campaigns() {
               Romatec CRM Campanhas
             </h1>
             <p style={{ fontSize: "11px", color: "#3a6a45", margin: "2px 0 0" }}>
-              1 msg/campanha/hora Ôö¼├Ç Ciclo de 10 horas Ôö¼├Ç {allCampaigns.length} campanhas
+              1 msg/campanha/hora ┬À Ciclo de 10 horas ┬À {allCampaigns.length} campanhas
             </p>
           </div>
         </div>
@@ -413,7 +413,7 @@ export default function Campaigns() {
 
       <div style={{ padding: "16px", display: "flex", flexDirection: "column", gap: "14px" }}>
 
-        {/* ├ö├Â├ç├ö├Â├ç PAINEL DE CONTROLE ├ö├Â├ç├ö├Â├ç */}
+        {/* ÔöÇÔöÇ PAINEL DE CONTROLE ÔöÇÔöÇ */}
         <div className="rmt-card">
           <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "14px" }}>
             <h2
@@ -448,7 +448,7 @@ export default function Campaigns() {
             </span>
           </div>
 
-          {/* MÔö£┬«tricas */}
+          {/* M├®tricas */}
           <div
             style={{
               display: "grid",
@@ -491,10 +491,10 @@ export default function Campaigns() {
               <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "10px" }}>
                 <div>
                   <p style={{ fontSize: "11px", color: "#7a7ae8", display: "flex", alignItems: "center", gap: "5px", margin: "0 0 3px", fontWeight: 600 }}>
-                    <Timer size={13} /> PrÔö£Ôöéxima hora em:
+                    <Timer size={13} /> Pr├│xima hora em:
                   </p>
                   <p style={{ fontSize: "10px", color: "#3a3a6a", margin: 0 }}>
-                    Hora {hourNumber + 1}/10 Ôö¼├Ç {sentThisHour}/{totalCampsActive} campanhas enviaram
+                    Hora {hourNumber + 1}/10 ┬À {sentThisHour}/{totalCampsActive} campanhas enviaram
                   </p>
                 </div>
                 <span
@@ -514,9 +514,9 @@ export default function Campaigns() {
               </div>
               <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: "6px", marginTop: "10px" }}>
                 {[
-                  { label: "InÔö£┬ício Ôö£├ís", value: stateData?.startedAtFormatted || "--:--:--" },
-                  { label: "Rodando hÔö£├¡", value: stateData?.uptimeFormatted || "00:00:00" },
-                  { label: "PrÔö£Ôöéxima hora", value: stateData?.nextCycleFormatted || "--:--" },
+                  { label: "In├¡cio ├ás", value: stateData?.startedAtFormatted || "--:--:--" },
+                  { label: "Rodando h├í", value: stateData?.uptimeFormatted || "00:00:00" },
+                  { label: "Pr├│xima hora", value: stateData?.nextCycleFormatted || "--:--" },
                 ].map((item) => (
                   <div
                     key={item.label}
@@ -577,16 +577,16 @@ export default function Campaigns() {
           >
             <div>
               <p style={{ fontSize: "12px", fontWeight: 600, color: "#a8d5b0", margin: "0 0 2px" }}>
-                {nightMode ? "┬¡ãÆ├«├û Modo noite 20h├ö├ç├┤06h" : "├ö├┐├ç┬┤┬®├à Modo dia 08h├ö├ç├┤18h"}
+                {nightMode ? "­ƒîÖ Modo noite 20hÔÇô06h" : "ÔÿÇ´©Å Modo dia 08hÔÇô18h"}
               </p>
               <p style={{ fontSize: "10px", color: "#3a5a40", margin: 0 }}>
-                {nightMode ? "Enviando das 20h Ôö£├ís 06h" : "Enviando das 08h Ôö£├ís 18h"}
+                {nightMode ? "Enviando das 20h ├ás 06h" : "Enviando das 08h ├ás 18h"}
               </p>
             </div>
             <button
               onClick={() => {
                 setNightMode((n) => !n);
-                toast.success(!nightMode ? "┬¡ãÆ├«├û Modo Noite ativado!" : "├ö├┐├ç┬┤┬®├à Modo Dia ativado!");
+                toast.success(!nightMode ? "­ƒîÖ Modo Noite ativado!" : "ÔÿÇ´©Å Modo Dia ativado!");
               }}
               style={{
                 width: "40px",
@@ -615,7 +615,7 @@ export default function Campaigns() {
             </button>
           </div>
 
-          {/* BotÔö£├ües */}
+          {/* Bot├Áes */}
           <div style={{ display: "flex", gap: "10px" }}>
             {!isRunning ? (
               <button onClick={handleStart} disabled={allCampaigns.length < 1} className="rmt-btn-start">
@@ -629,7 +629,7 @@ export default function Campaigns() {
             <button
               onClick={() => {
                 if (isRunning) { toast.error("Pare o scheduler antes de redefinir!"); return; }
-                if (confirm("Tem certeza? Isso vai limpar TUDO e comeÔö£┬║ar do zero.")) {
+                if (confirm("Tem certeza? Isso vai limpar TUDO e come├ºar do zero.")) {
                   resetScheduler.mutate();
                 }
               }}
@@ -641,7 +641,7 @@ export default function Campaigns() {
           </div>
         </div>
 
-        {/* ├ö├Â├ç├ö├Â├ç STATUS POR HORA (apenas quando rodando) ├ö├Â├ç├ö├Â├ç */}
+        {/* ÔöÇÔöÇ STATUS POR HORA (apenas quando rodando) ÔöÇÔöÇ */}
         {allCampaigns.length > 0 && isRunning && (
           <div className="rmt-card">
             <h2
@@ -658,7 +658,7 @@ export default function Campaigns() {
               }}
             >
               <Zap size={13} style={{ color: "#e8a83e" }} />
-              Status por hora ├ö├ç├┤ todas as campanhas
+              Status por hora ÔÇô todas as campanhas
             </h2>
             <div
               style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(180px, 1fr))", gap: "8px" }}
@@ -727,7 +727,7 @@ export default function Campaigns() {
                         {campaign.name}
                       </span>
                       <p style={{ fontSize: "9px", color: "#3a5a40", margin: 0 }}>
-                        1 msg/hora Ôö¼├Ç {campaign.sentCount || 0}/{campaign.totalContacts || 2} total
+                        1 msg/hora ┬À {campaign.sentCount || 0}/{campaign.totalContacts || 2} total
                       </p>
                     </div>
                   );
@@ -736,7 +736,7 @@ export default function Campaigns() {
           </div>
         )}
 
-        {/* ├ö├Â├ç├ö├Â├ç MONITORAMENTO ├ö├Â├ç├ö├Â├ç */}
+        {/* ÔöÇÔöÇ MONITORAMENTO ÔöÇÔöÇ */}
         <div>
           <h2
             style={{
@@ -789,9 +789,9 @@ export default function Campaigns() {
   );
 }
 
-// ├ö├Â├ç├ö├Â├ç├ö├Â├ç├ö├Â├ç├ö├Â├ç├ö├Â├ç├ö├Â├ç├ö├Â├ç├ö├Â├ç├ö├Â├ç├ö├Â├ç├ö├Â├ç├ö├Â├ç├ö├Â├ç├ö├Â├ç├ö├Â├ç├ö├Â├ç├ö├Â├ç├ö├Â├ç├ö├Â├ç├ö├Â├ç├ö├Â├ç├ö├Â├ç├ö├Â├ç├ö├Â├ç├ö├Â├ç├ö├Â├ç├ö├Â├ç├ö├Â├ç├ö├Â├ç├ö├Â├ç├ö├Â├ç├ö├Â├ç├ö├Â├ç├ö├Â├ç├ö├Â├ç├ö├Â├ç├ö├Â├ç├ö├Â├ç├ö├Â├ç├ö├Â├ç├ö├Â├ç├ö├Â├ç├ö├Â├ç├ö├Â├ç
+// ÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇ
 // CAMPAIGN CARD
-// ├ö├Â├ç├ö├Â├ç├ö├Â├ç├ö├Â├ç├ö├Â├ç├ö├Â├ç├ö├Â├ç├ö├Â├ç├ö├Â├ç├ö├Â├ç├ö├Â├ç├ö├Â├ç├ö├Â├ç├ö├Â├ç├ö├Â├ç├ö├Â├ç├ö├Â├ç├ö├Â├ç├ö├Â├ç├ö├Â├ç├ö├Â├ç├ö├Â├ç├ö├Â├ç├ö├Â├ç├ö├Â├ç├ö├Â├ç├ö├Â├ç├ö├Â├ç├ö├Â├ç├ö├Â├ç├ö├Â├ç├ö├Â├ç├ö├Â├ç├ö├Â├ç├ö├Â├ç├ö├Â├ç├ö├Â├ç├ö├Â├ç├ö├Â├ç├ö├Â├ç├ö├Â├ç├ö├Â├ç├ö├Â├ç├ö├Â├ç├ö├Â├ç
+// ÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇ
 function CampaignCard({
   campaign, isRunning, hourNumber, cycleTimer, cycleDuration,
   campaignStates, schedulerStartedAt, todayMessages, expanded, onToggle, onToggleActive,
@@ -807,7 +807,7 @@ function CampaignCard({
   const sentCount = campaign.sentCount || 0;
   const pendingCount = campaign.pendingCount || 0;
   const failedCount = campaign.failedCount || 0;
-  // Total real = contatos efetivamente atribuÔö£┬ídos (evita valor inflado do backend)
+  // Total real = contatos efetivamente atribu├¡dos (evita valor inflado do backend)
   const totalContacts = (sentCount + pendingCount + failedCount) || campaign.totalContacts || 0;
   const progressPercent = totalContacts > 0 ? Math.round((sentCount / totalContacts) * 100) : 0;
   const timePercent = cycleDuration > 0 ? Math.round(((cycleDuration - cycleTimer) / cycleDuration) * 100) : 0;
@@ -848,7 +848,7 @@ function CampaignCard({
       className="rmt-camp-card"
       style={{ borderLeftColor: borderColor, opacity: cardOpacity }}
     >
-      {/* CabeÔö£┬║alho do card */}
+      {/* Cabe├ºalho do card */}
       <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", marginBottom: "10px" }}>
         <div style={{ display: "flex", alignItems: "flex-start", gap: "8px" }}>
           <span
@@ -867,7 +867,7 @@ function CampaignCard({
               {String(campaign.name || "")}
             </h3>
             <p style={{ fontSize: "10px", color: "#3a5a40", margin: 0 }}>
-              ImÔö£Ôöével: {String(campaign.propertyName || "")}
+              Im├│vel: {String(campaign.propertyName || "")}
             </p>
           </div>
         </div>
@@ -884,7 +884,7 @@ function CampaignCard({
       {/* Regra */}
       <div className="rmt-rule-row">
         Regra: <span style={{ color: "#5aaa70", fontWeight: 600 }}>1 msg/hora</span>
-        {" "}Ôö£├╣ 10 horas = 10 contatos/ciclo
+        {" "}├ù 10 horas = 10 contatos/ciclo
         {isActive && isRunning && (
           <span
             style={{
@@ -970,10 +970,10 @@ function CampaignCard({
 
       {/* Info texto */}
       <p style={{ fontSize: "9px", color: "#2a4a30", marginBottom: "8px" }}>
-        Iniciado: {schedulerStartedAt || "--:--:--"} Ôö¼├Ç {campaign.messagesPerHour || 1} msg/hora Ôö£├╣ {Math.round(cycleDuration / 3600)}h = {totalContacts} contatos
+        Iniciado: {schedulerStartedAt || "--:--:--"} ┬À {campaign.messagesPerHour || 1} msg/hora ├ù {Math.round(cycleDuration / 3600)}h = {totalContacts} contatos
       </p>
 
-      {/* BotÔö£├║o contatos */}
+      {/* Bot├úo contatos */}
       <button onClick={onToggle} className="rmt-contacts-btn">
         <div style={{ display: "flex", alignItems: "center", gap: "5px" }}>
           <Users size={12} style={{ color: "#3a6a45" }} />
@@ -981,7 +981,7 @@ function CampaignCard({
             Contatos ({sentCount}/{totalContacts})
           </span>
           <span style={{ color: "#2a4a30" }}>
-            {sentCount} enviados Ôö¼├Ç {pendingCount} aguardando
+            {sentCount} enviados ┬À {pendingCount} aguardando
           </span>
         </div>
         {expanded ? <ChevronUp size={13} /> : <ChevronDown size={13} />}
