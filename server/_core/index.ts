@@ -239,13 +239,66 @@ async function startServer() {
       console.error('❌ Erro na migration de nomes de campanhas:', error);
     }
 
+    // PROTECAO: garantir exatamente 2 contatos por campanha no banco
+    try {
+      const { getDb } = await import('../db');
+      const { campaigns: campaignsTable, campaignContacts: ccTable, contacts: contactsTable } = await import('../../drizzle/schema');
+      const { eq } = await import('drizzle-orm');
+      const db = await getDb();
+      if (db) {
+        const allCamps = await db.select().from(campaignsTable);
+        for (const camp of allCamps) {
+          // Forcar totalContacts=2
+          if ((camp.totalContacts || 0) !== 2) {
+            await db.update(campaignsTable).set({ totalContacts: 2, messagesPerHour: 1 }).where(eq(campaignsTable.id, camp.id));
+          }
+          // Remover contatos excedentes (manter max 2)
+          const ccList = await db.select().from(ccTable).where(eq(ccTable.campaignId, camp.id));
+          if (ccList.length > 2) {
+            const toRemove = ccList.slice(2);
+            for (const cc of toRemove) {
+              await db.delete(ccTable).where(eq(ccTable.id, cc.id));
+            }
+            console.log(`[PROTECAO] Campanha ${camp.id}: removidos ${toRemove.length} contatos excedentes`);
+          }
+          // Adicionar contatos se menos de 2
+          if (ccList.length < 2) {
+            const usedIds = new Set(ccList.map(cc => cc.contactId));
+            const allCcs = await db.select().from(ccTable);
+            const globalUsed = new Set(allCcs.map(cc => cc.contactId));
+            const activeContacts = await db.select().from(contactsTable).where(eq(contactsTable.status, 'active'));
+            const available = activeContacts.filter(c => !globalUsed.has(c.id) && !usedIds.has(c.id));
+            const needed = 2 - ccList.length;
+            const toAdd = available.sort(() => Math.random() - 0.5).slice(0, needed);
+            for (const c of toAdd) {
+              await db.insert(ccTable).values({ campaignId: camp.id, contactId: c.id, messagesSent: 0, status: 'pending' });
+            }
+          }
+        }
+        console.log('[PROTECAO] Verificacao de contatos concluida: max 2 por campanha');
+      }
+    } catch (error) {
+      console.error('Erro na protecao de contatos:', error);
+    }
+
     // AUTO-RESTART: Verificar se o scheduler estava rodando antes do deploy
     try {
       const { campaignScheduler } = await import('../scheduler/campaignScheduler');
-      console.log('\n🔍 Verificando estado do scheduler no banco...');
-      await campaignScheduler.start(false);
+      const { getDb: getDb2 } = await import('../db');
+      const { schedulerState: stateTable } = await import('../../drizzle/schema');
+      const db2 = await getDb2();
+      if (db2) {
+        const rows = await db2.select().from(stateTable).limit(1);
+        if (rows[0]?.status === 'running') {
+          console.log('\n🔄 Scheduler estava rodando — restaurando...');
+          const nightMode = (rows[0].stateJson as any)?.nightMode || false;
+          await campaignScheduler.start(nightMode);
+        } else {
+          console.log('\n⏸️  Scheduler estava parado — nao iniciando automaticamente');
+        }
+      }
     } catch (error) {
-      console.error('❌ Erro no auto-restart do scheduler:', error);
+      console.error('Erro no auto-restart do scheduler:', error);
     }
 
     // MONITORAMENTO Z-API: verificar conexao a cada 5 minutos
@@ -289,4 +342,4 @@ async function startServer() {
 
 startServer().catch(console.error);
 
-// build 202604121500 - ciclo 10h, 2 contatos/campanha, limpar codigo antigo
+// build 202604121600 - v1.1.0 - protecao 2 contatos fixo, scheduler condicional, cache bust

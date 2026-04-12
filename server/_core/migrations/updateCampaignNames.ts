@@ -3,11 +3,11 @@ import { campaigns } from "../../../drizzle/schema";
 import { getDb } from "../../db";
 
 const CAMPAIGN_NAMES: { id: number; name: string }[] = [
-  { id: 60132, name: "ALACIDE" },
-  { id: 60133, name: "Mod_Vaz-01" },
-  { id: 60134, name: "Mod_Vaz-02" },
-  { id: 60135, name: "Mod_Vaz-03" },
-  { id: 60136, name: "Condomínio de Chácaras Giuliano" },
+  { id: 60142, name: "ALACIDE" },
+  { id: 60143, name: "Mod_Vaz-01" },
+  { id: 60144, name: "Mod_Vaz-02" },
+  { id: 60145, name: "Mod_Vaz-03" },
+  { id: 60146, name: "Condomínio de Chácaras Giuliano" },
 ];
 
 export async function updateCampaignNames(): Promise<void> {

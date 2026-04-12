@@ -1,0 +1,5 @@
+[phases.build]
+cmds = ["pnpm build"]
+
+[phases.build.cache]
+directories = []
