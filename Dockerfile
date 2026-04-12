@@ -1,6 +1,9 @@
 FROM node:22-slim
 WORKDIR /app
 
+# Force rebuild cache bust — changes on every build
+ARG BUILD_DATE=unspecified
+
 # Install pnpm
 RUN npm install -g pnpm@10.4.1
 
