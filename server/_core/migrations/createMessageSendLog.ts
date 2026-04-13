@@ -17,9 +17,11 @@ export async function createMessageSendLogTable(): Promise<void> {
     // Check if table already exists
     const result = await (db as any).execute(
       `SELECT TABLE_NAME FROM information_schema.TABLES WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'messageSendLog'`
-    );
+    ) as any[];
 
-    if (result && result.length > 0) {
+    // Result is [rows, fields] format from mysql2
+    const rows = Array.isArray(result) && result[0] ? result[0] : result;
+    if (Array.isArray(rows) && rows.length > 0) {
       console.log('[Migration] ✅ messageSendLog table already exists');
       return;
     }
