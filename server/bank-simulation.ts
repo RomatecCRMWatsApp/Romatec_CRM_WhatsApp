@@ -260,7 +260,7 @@ export function simulateBank(bank: BankConfig, input: SimulationInput): Simulati
       ltvRatio: 0,
       debtRatio: 0,
       isQualified: false,
-      reason: `Renda mínima: R$ ${bank.minIncome.toLocaleString('pt-BR')} (sua: R$ ${input.monthlyIncome.toLocaleString('pt-BR')})`,
+      reason: `Renda mínima: R$ ${bank.minIncome.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} (sua: R$ ${input.monthlyIncome.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })})`,
     };
   }
 
@@ -359,7 +359,7 @@ export function generateMultiBankProposal(
   message += `${best.bankName}\n`;
   message += `💰 Parcela: R$ ${best.monthlyPayment.toLocaleString('pt-BR', { maximumFractionDigits: 2 })}/mês\n`;
   message += `📅 Prazo: ${(input.loanTermMonths / 12).toFixed(0)} anos\n`;
-  message += `✍️ Entrada: R$ ${best.downPayment.toLocaleString('pt-BR', { maximumFractionDigits: 0 })}\n`;
+  message += `✍️ Entrada: R$ ${best.downPayment.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}\n`;
   message += `━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n\n`;
 
   // Mostrar top 3 opções
@@ -405,9 +405,9 @@ export function generateDetailedReport(
   let report = `\n📋 RELATÓRIO SIMULAÇÃO - ${firstName.toUpperCase()}\n`;
   report += `━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n\n`;
   report += `💼 PERFIL DO CLIENTE:\n`;
-  report += `- Valor do Imóvel: R$ ${propertyValue.toLocaleString('pt-BR')}\n`;
-  report += `- Renda Mensal: R$ ${monthlyIncome.toLocaleString('pt-BR')}\n`;
-  report += `- Entrada Disponível: ${downPaymentPercent.toFixed(1)}% (R$ ${((propertyValue * downPaymentPercent) / 100).toLocaleString('pt-BR')})\n`;
+  report += `- Valor do Imóvel: R$ ${propertyValue.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}\n`;
+  report += `- Renda Mensal: R$ ${monthlyIncome.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}\n`;
+  report += `- Entrada Disponível: ${downPaymentPercent.toFixed(1)}% (R$ ${((propertyValue * downPaymentPercent) / 100).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })})\n`;
   report += `- Prazo: ${(loanTermMonths / 12).toFixed(0)} anos\n\n`;
 
   report += `🏦 SIMULAÇÃO POR BANCO:\n`;

@@ -139,7 +139,7 @@ const CONSULTOR_LINK = `\n\n👤 *Falar agora com consultor:*\n🟢 *Jose Romari
 
 // ============ HELPERS ============
 function fmt(v: number): string {
-  return v.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL', minimumFractionDigits: 0, maximumFractionDigits: 0 });
+  return v.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL', minimumFractionDigits: 2, maximumFractionDigits: 2 });
 }
 function fmtFull(v: number): string {
   return v.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });

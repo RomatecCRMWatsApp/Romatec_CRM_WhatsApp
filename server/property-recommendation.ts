@@ -166,7 +166,7 @@ function generateReasons(property: Property, profile: LeadProfile, score: number
   const reasons: string[] = [];
 
   if (property.value >= profile.budgetMin && property.value <= profile.budgetMax) {
-    reasons.push(`✅ Dentro do orçamento (R$ ${property.value.toLocaleString('pt-BR')})`);
+    reasons.push(`✅ Dentro do orçamento (R$ ${property.value.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })})`);
   }
 
   if (property.type.toLowerCase() === profile.preferredType?.toLowerCase()) {
@@ -285,7 +285,7 @@ export function generateAutomatedProposal(
     const ranking = i === 0 ? '🏆' : i === 1 ? '🥈' : '🥉';
 
     message += `${ranking} *${prop.name}*\n`;
-    message += `💰 R$ ${prop.value.toLocaleString('pt-BR')}\n`;
+    message += `💰 R$ ${prop.value.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}\n`;
     message += `🏘️ ${prop.type} | ${prop.city}\n`;
 
     if (prop.beds) {
@@ -304,7 +304,7 @@ export function generateAutomatedProposal(
     // Financiamento aproximado
     if (prop.financingApproximate.qualifies) {
       const pmt = prop.financingApproximate.monthlyPayment;
-      message += `💵 Aprox. R$ ${pmt.toLocaleString('pt-BR', { maximumFractionDigits: 0 })}/mês\n`;
+      message += `💵 Aprox. R$ ${pmt.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}/mês\n`;
     } else {
       message += `⚠️ Acima do limite de endividamento\n`;
     }
@@ -338,11 +338,11 @@ export function generateConsultorSummary(
   summary += `━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n\n`;
 
   summary += `📊 PERFIL DO LEAD:\n`;
-  summary += `- Orçamento: R$ ${profile.budgetMin.toLocaleString('pt-BR')} a R$ ${profile.budgetMax.toLocaleString('pt-BR')}\n`;
+  summary += `- Orçamento: R$ ${profile.budgetMin.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} a R$ ${profile.budgetMax.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}\n`;
   summary += `- Tipo preferido: ${profile.preferredType || 'Qualquer'}\n`;
   summary += `- Quartos desejados: ${profile.beds || 'Sem preferência'}\n`;
-  summary += `- Renda mensal: R$ ${profile.monthlyIncome.toLocaleString('pt-BR')}\n`;
-  summary += `- Entrada disponível: R$ ${profile.availableDownPayment.toLocaleString('pt-BR')}\n`;
+  summary += `- Renda mensal: R$ ${profile.monthlyIncome.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}\n`;
+  summary += `- Entrada disponível: R$ ${profile.availableDownPayment.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}\n`;
   summary += `- Score: ${profile.score.toUpperCase()}\n`;
   summary += `- Urgência: ${profile.urgency.toUpperCase()}\n\n`;
 
@@ -352,8 +352,8 @@ export function generateConsultorSummary(
   for (let i = 0; i < recommendations.length; i++) {
     const prop = recommendations[i];
     summary += `${i + 1}. ${prop.name} (Match: ${prop.matchScore}%)\n`;
-    summary += `   Valor: R$ ${prop.value.toLocaleString('pt-BR')}\n`;
-    summary += `   Parcela aprox: R$ ${prop.financingApproximate.monthlyPayment.toLocaleString('pt-BR', { maximumFractionDigits: 0 })}/mês\n`;
+    summary += `   Valor: R$ ${prop.value.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}\n`;
+    summary += `   Parcela aprox: R$ ${prop.financingApproximate.monthlyPayment.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}/mês\n`;
     summary += `   Status: ${prop.financingApproximate.qualifies ? '✅ QUALIFICA' : '❌ Acima limite'}\n\n`;
   }
 

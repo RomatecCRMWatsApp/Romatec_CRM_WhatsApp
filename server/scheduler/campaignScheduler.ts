@@ -772,7 +772,7 @@ export class CampaignScheduler {
   }
 
   private generateMessageVariations(prop: any): string[] {
-    const priceFormatted = Number(prop.price).toLocaleString('pt-BR');
+    const priceFormatted = Number(prop.price).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
     const slug = prop.publicSlug || prop.denomination.toLowerCase().replace(/[^a-z0-9]+/g, '-');
     const siteUrl = `https://romateccrmwhatsapp-production.up.railway.app/imovel/${slug}`;
     const denom = prop.denomination || '';
