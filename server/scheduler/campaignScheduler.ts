@@ -121,9 +121,22 @@ export class CampaignScheduler {
     const hour = this.getCurrentHour();
     const campIndex = HOUR_TO_CAMP_INDEX[hour];
     if (campIndex === undefined) return null;
-    const running = allCampaigns.filter(c => c.status === 'running');
-    if (running.length === 0) return null;
-    return running[campIndex % running.length] || null;
+
+    // ═══════════════════════════════════════════════════════════
+    // FILTRO CRÍTICO: Apenas campanhas ATIVAS para este ciclo
+    // ═══════════════════════════════════════════════════════════
+    const activePeriod = this.state.nightMode ? 'activeNight' : 'activeDay';
+    const eligible = allCampaigns.filter(c =>
+      c.status === 'running' && c[activePeriod] === true
+    );
+
+    if (eligible.length === 0) {
+      console.log(`⚠️  Nenhuma campanha elegível para ciclo ${this.state.nightMode ? 'NOITE' : 'DIA'} (máx 5 ativas)`);
+      return null;
+    }
+
+    // Rotação sequencial entre campanhas elegíveis
+    return eligible[campIndex % eligible.length] || null;
   }
 
   private async saveStateToDB() {
@@ -601,7 +614,15 @@ export class CampaignScheduler {
     const allCampaigns = await db.select().from(campaigns).where(eq(campaigns.status, 'running'));
     const currentHourKey = this.getCurrentHourKey();
 
-    this.state.campaignStates = allCampaigns.map(camp => {
+    // ═══════════════════════════════════════════════════════════
+    // FILTRO: Apenas campanhas ativas para este ciclo (máx 5)
+    // ═══════════════════════════════════════════════════════════
+    const activePeriod = this.state.nightMode ? 'activeNight' : 'activeDay';
+    const eligibleCampaigns = allCampaigns.filter(camp => camp[activePeriod] === true);
+
+    console.log(`📊 Iniciando campanhas elegíveis: ${eligibleCampaigns.length}/5 no ciclo ${this.state.nightMode ? 'NOITE 🌙' : 'DIA ☀️'}`);
+
+    this.state.campaignStates = eligibleCampaigns.map(camp => {
       const existing = this.state.campaignStates.find(cs => cs.campaignId === camp.id);
       return {
         campaignId: camp.id,

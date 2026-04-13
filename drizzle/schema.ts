@@ -83,6 +83,12 @@ export const campaigns = mysqlTable("campaigns", {
   messagesPerHour: int("messagesPerHour").default(1), // msgs/hora configurável: 1-5
   startDate: timestamp("startDate"),
   endDate: timestamp("endDate"),
+  // ═══════════════════════════════════════════════════════════
+  // NOVA FEATURE: Habilitação por ciclo (máx 5 campanhas ativas/ciclo)
+  // ═══════════════════════════════════════════════════════════
+  activeDay: boolean("activeDay").default(false).notNull(),    // Ativo no ciclo dia (08h-18h)
+  activeNight: boolean("activeNight").default(false).notNull(), // Ativo no ciclo noite (20h-06h)
+  cycleActivationUpdatedAt: timestamp("cycleActivationUpdatedAt").defaultNow().onUpdateNow(),
   createdAt: timestamp("createdAt").defaultNow().notNull(),
   updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
 });

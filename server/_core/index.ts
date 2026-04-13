@@ -365,6 +365,14 @@ Se você recebeu esta mensagem, o Telegram está 100% operacional!`;
   server.listen(port, async () => {
     console.log(`Server running on http://localhost:${port}/`);
 
+    // MIGRATION: Adicionar colunas de ativação por ciclo
+    try {
+      const { addCycleActivationColumns } = await import('./migrations/addCycleActivationColumns');
+      await addCycleActivationColumns();
+    } catch (error) {
+      console.error('❌ Erro na migration de cycle activation:', error);
+    }
+
     // MIGRATION: Criar tabela messageSendLog (previne duplicatas)
     try {
       const { createMessageSendLogTable } = await import('./migrations/createMessageSendLog');
