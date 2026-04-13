@@ -826,6 +826,8 @@ export default function Campaigns() {
                   expanded={expandedCampaign === campaign.id}
                   onToggle={() => handleToggleExpand(campaign.id)}
                   onToggleActive={(active: boolean) => toggleCampaign.mutate({ campaignId: campaign.id, active })}
+                  cycleStatus={cycleStatus}
+                  toggleCycleActivation={toggleCycleActivation}
                 />
               ))}
             </div>
@@ -842,10 +844,12 @@ export default function Campaigns() {
 function CampaignCard({
   campaign, isRunning, hourNumber, cycleTimer, cycleDuration,
   campaignStates, schedulerStartedAt, todayMessages, expanded, onToggle, onToggleActive,
+  cycleStatus, toggleCycleActivation,
 }: {
   campaign: any; isRunning: boolean; hourNumber: number; cycleTimer: number;
   cycleDuration: number; campaignStates: any[]; schedulerStartedAt: string | null;
   todayMessages: any[]; expanded: boolean; onToggle: () => void; onToggleActive: (active: boolean) => void;
+  cycleStatus: any; toggleCycleActivation: any;
 }) {
   const isActive = campaign.status === "running";
   const campState = campaignStates.find((cs: any) => cs.campaignName === campaign.name);
