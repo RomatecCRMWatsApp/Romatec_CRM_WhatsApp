@@ -40,8 +40,9 @@ export async function uploadToCloudinary(
   const folder = 'romatec_imoveis';
   const publicId = `${folder}/${Date.now()}_${safeName}`;
 
-  // Parâmetros para assinar
+  // Parâmetros para assinar — access_mode=public garante acesso sem autenticação
   const paramsToSign: Record<string, string> = {
+    access_mode: 'public',
     public_id: publicId,
     timestamp,
   };
@@ -69,6 +70,7 @@ export async function uploadToCloudinary(
     addField('api_key', API_KEY),
     addField('timestamp', timestamp),
     addField('public_id', publicId),
+    addField('access_mode', 'public'),
     addField('signature', signature),
     Buffer.from(`--${boundary}--\r\n`),
   ];
