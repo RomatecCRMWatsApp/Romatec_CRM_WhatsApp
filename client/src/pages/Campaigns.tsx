@@ -84,11 +84,11 @@ export default function Campaigns() {
   const handleNightModeToggle = async (newMode: boolean) => {
     setNightMode(newMode);
     const isRunning = schedulerState.data?.state?.isRunning;
+
     if (isRunning) {
-      // Para o scheduler
+      // Scheduler está rodando: para e reinicia com novo nightMode
       stopScheduler.mutate(undefined, {
         onSuccess: () => {
-          // Aguarda um pouco e reinicia com o novo nightMode
           setTimeout(() => {
             startScheduler.mutate({ nightMode: newMode }, {
               onSuccess: () => {
@@ -99,7 +99,15 @@ export default function Campaigns() {
         }
       });
     } else {
-      toast.success(newMode ? "🌙 Modo Noite ativado!" : "☀️ Modo Dia ativado!");
+      // Scheduler está PARADO: inicia com novo nightMode para persistir a escolha
+      startScheduler.mutate({ nightMode: newMode }, {
+        onSuccess: () => {
+          toast.success(newMode ? "🌙 Modo Noite ativado e scheduler iniciado!" : "☀️ Modo Dia ativado e scheduler iniciado!");
+        },
+        onError: (error) => {
+          toast.error(`Erro ao aplicar modo: ${error.message}`);
+        }
+      });
     }
   };
 
