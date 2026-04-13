@@ -427,15 +427,36 @@ export class CampaignScheduler {
       }
 
       // ═══════════════════════════════════════════════════════════════════════
-      // VERIFICAÇÃO CRÍTICA: 1 mensagem por contato por hora (cycle_hour)
+      // VERIFICAÇÃO CRÍTICA: 1 mensagem por CAMPANHA por hora + 1 por CONTATO
       // ═══════════════════════════════════════════════════════════════════════
       const { messageSendLog } = await import('../../drizzle/schema');
       const cleanPhone = contact.phone.replace(/\D/g, '');
       const now = new Date();
       const nowUnix = Math.floor(now.getTime() / 1000);
       const cycleHour = Math.floor(nowUnix / 3600) * 3600;
+      const hourLabel = new Date(cycleHour * 1000).toLocaleTimeString('pt-BR', { timeZone: 'America/Sao_Paulo' });
 
-      // Verificar se esse contato já recebeu mensagem neste ciclo de hora
+      // 1) Verificar se ESTA CAMPANHA já enviou nesta hora (proteção de DB, sobrevive a restart)
+      const campSentLog = await db
+        .select()
+        .from(messageSendLog)
+        .where(
+          and(
+            eq(messageSendLog.campaignId, campaignId),
+            eq(messageSendLog.cycleHour, cycleHour),
+            eq(messageSendLog.status, 'sent')
+          )
+        )
+        .limit(1);
+
+      if (campSentLog.length > 0) {
+        console.log(`⚠️ PROTEÇÃO DB: ${campaign.name} já enviou nesta hora (${hourLabel}) — cancelando duplicata`);
+        const cs = this.state.campaignStates.find(s => s.campaignId === campaignId);
+        if (cs) { cs.sentThisHour = true; cs.lastSentHourKey = this.state.currentHourKey; }
+        return;
+      }
+
+      // 2) Verificar se esse CONTATO já recebeu mensagem neste ciclo de hora
       const existingLog = await db
         .select()
         .from(messageSendLog)
@@ -448,15 +469,14 @@ export class CampaignScheduler {
         .limit(1);
 
       if (existingLog.length > 0) {
-        console.log(`⏭️ ${campaign.name} → ${contact.name}: JÁ RECEBEU MENSAGEM NESTA HORA (${new Date(cycleHour * 1000).toLocaleTimeString('pt-BR', { timeZone: 'America/Sao_Paulo' })})`);
-        // Registrar como skipped
+        console.log(`⏭️ ${campaign.name} → ${contact.name}: JÁ RECEBEU MENSAGEM NESTA HORA (${hourLabel})`);
         await db.insert(messageSendLog).values({
           contactPhone: cleanPhone,
           campaignId,
           sentAt: now,
           cycleHour,
           status: 'skipped_duplicate',
-          reason: `Contato já recebeu mensagem em ${new Date(cycleHour * 1000).toLocaleTimeString('pt-BR', { timeZone: 'America/Sao_Paulo' })}`,
+          reason: `Contato já recebeu mensagem em ${hourLabel}`,
         }).catch(() => {});
         return;
       }
