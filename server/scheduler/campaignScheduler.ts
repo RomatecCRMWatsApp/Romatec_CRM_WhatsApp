@@ -123,20 +123,24 @@ export class CampaignScheduler {
     if (campIndex === undefined) return null;
 
     // ═══════════════════════════════════════════════════════════
-    // FILTRO CRÍTICO: Apenas campanhas ATIVAS para este ciclo
+    // SEQUÊNCIA FIXA: Cada hora tem uma campanha ESPECÍFICA
+    // Não rotação — índice direto!
     // ═══════════════════════════════════════════════════════════
     const activePeriod = this.state.nightMode ? 'activeNight' : 'activeDay';
-    const eligible = allCampaigns.filter(c =>
-      c.status === 'running' && c[activePeriod] === true
-    );
+    const campaign = allCampaigns[campIndex];
 
-    if (eligible.length === 0) {
-      console.log(`⚠️  Nenhuma campanha elegível para ciclo ${this.state.nightMode ? 'NOITE' : 'DIA'} (máx 5 ativas)`);
+    // Validar se campanha existe e está elegível
+    if (!campaign) {
+      console.log(`⚠️  Campanha no índice ${campIndex} não encontrada`);
       return null;
     }
 
-    // Rotação sequencial entre campanhas elegíveis
-    return eligible[campIndex % eligible.length] || null;
+    if (campaign.status !== 'running' || !campaign[activePeriod]) {
+      console.log(`⚠️  ${campaign.name}: não elegível (status=${campaign.status}, ${activePeriod}=${campaign[activePeriod]})`);
+      return null;
+    }
+
+    return campaign;
   }
 
   private async saveStateToDB() {
