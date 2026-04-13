@@ -38,6 +38,57 @@ async function startServer() {
   // Configure body parser with larger size limit for file uploads
   app.use(express.json({ limit: "50mb" }));
   app.use(express.urlencoded({ limit: "50mb", extended: true }));
+
+  // ─── GET /api/telegram/test ─── envia mensagem de teste ao Telegram (early registration)
+  app.get('/api/telegram/test', async (_req, res) => {
+    try {
+      const botToken = process.env.TELEGRAM_BOT_TOKEN;
+      const chatId = process.env.TELEGRAM_CHAT_ID;
+      const enabled = process.env.TELEGRAM_NOTIFICATIONS_ENABLED === 'true';
+
+      if (!botToken || !chatId) {
+        return res.status(400).json({
+          success: false,
+          error: 'Credenciais Telegram não configuradas',
+          configured: { botToken: !!botToken, chatId: !!chatId, enabled }
+        });
+      }
+
+      if (!enabled) {
+        return res.status(400).json({
+          success: false,
+          error: 'TELEGRAM_NOTIFICATIONS_ENABLED não está configurado como "true"'
+        });
+      }
+
+      const TelegramBot = await import('node-telegram-bot-api').then(m => m.default);
+      const bot = new TelegramBot(botToken, { polling: false });
+
+      const testMessage = `<b>✅ TESTE DE TELEGRAM - Romatec CRM</b>
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+<b>Status:</b> Sistema funcionando perfeitamente! 🚀
+<b>Horário:</b> ${new Date().toLocaleString('pt-BR', { timeZone: 'America/Sao_Paulo' })}
+<b>Timezone:</b> America/Sao_Paulo (Brasília)
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+Se você recebeu esta mensagem, o Telegram está 100% operacional!`;
+
+      await bot.sendMessage(chatId, testMessage, { parse_mode: 'HTML' });
+
+      res.json({
+        success: true,
+        message: 'Mensagem de teste enviada com sucesso!',
+        sentAt: new Date().toISOString(),
+        chatId
+      });
+    } catch (err) {
+      res.status(500).json({
+        success: false,
+        error: String(err),
+        message: 'Erro ao enviar mensagem de teste'
+      });
+    }
+  });
+
   // OAuth callback under /api/oauth/callback
   registerOAuthRoutes(app);
 
@@ -171,56 +222,6 @@ async function startServer() {
       });
     } catch (err) {
       res.json({ connected: false, error: String(err) });
-    }
-  });
-
-  // ─── GET /api/telegram/test ─── envia mensagem de teste ao Telegram
-  app.get('/api/telegram/test', async (_req, res) => {
-    try {
-      const botToken = process.env.TELEGRAM_BOT_TOKEN;
-      const chatId = process.env.TELEGRAM_CHAT_ID;
-      const enabled = process.env.TELEGRAM_NOTIFICATIONS_ENABLED === 'true';
-
-      if (!botToken || !chatId) {
-        return res.status(400).json({
-          success: false,
-          error: 'Credenciais Telegram não configuradas',
-          configured: { botToken: !!botToken, chatId: !!chatId, enabled }
-        });
-      }
-
-      if (!enabled) {
-        return res.status(400).json({
-          success: false,
-          error: 'TELEGRAM_NOTIFICATIONS_ENABLED não está configurado como "true"'
-        });
-      }
-
-      const TelegramBot = await import('node-telegram-bot-api').then(m => m.default);
-      const bot = new TelegramBot(botToken, { polling: false });
-
-      const testMessage = `<b>✅ TESTE DE TELEGRAM - Romatec CRM</b>
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-<b>Status:</b> Sistema funcionando perfeitamente! 🚀
-<b>Horário:</b> ${new Date().toLocaleString('pt-BR', { timeZone: 'America/Sao_Paulo' })}
-<b>Timezone:</b> America/Sao_Paulo (Brasília)
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-Se você recebeu esta mensagem, o Telegram está 100% operacional!`;
-
-      await bot.sendMessage(chatId, testMessage, { parse_mode: 'HTML' });
-
-      res.json({
-        success: true,
-        message: 'Mensagem de teste enviada com sucesso!',
-        sentAt: new Date().toISOString(),
-        chatId
-      });
-    } catch (err) {
-      res.status(500).json({
-        success: false,
-        error: String(err),
-        message: 'Erro ao enviar mensagem de teste'
-      });
     }
   });
 
