@@ -89,19 +89,54 @@ export const QUALIFICATION_SEQUENCE: QualificationQuestion[] = [
 ];
 
 /**
- * Detectar intenção: positiva (SIM), negativa (NÃO), ou neutra
+ * Detectar intenção: positiva (SIM), negativa (NAO = rejeição de venda), ou neutra
+ *
+ * REGRA: "não" / "nao" SOZINHO nunca é rejeição — é resposta válida ao formulário.
+ * Só retorna NAO para frases compostas que indicam recusa ao atendimento.
  */
 export function detectQualificationIntent(message: string): 'SIM' | 'NAO' | 'NEUTRO' {
-  const msg = message.toLowerCase().trim();
+  const msg = message.toLowerCase().trim()
+    .normalize('NFD').replace(/[\u0300-\u036f]/g, ''); // remove acentos para comparação
 
-  // Palavras-chave POSITIVAS (venda)
+  // Palavras sozinhas que NUNCA são rejeição de venda
+  const palavrasSozinhas = ['nao', 'n', 'negativo', 'nope'];
+  if (palavrasSozinhas.includes(msg)) return 'NEUTRO';
+
+  // Palavras-chave POSITIVAS
   const positivoRegex = /\b(sim|claro|pode|quero|aceito|vou|com\s*certeza|tenho|possuo|consigo|dou|disponho|beleza|ok|certo|vamos|topa|blz|perfeito|show|top|boa|positivo|afirmativo|confirmo|confirmado)\b/;
-
-  // Palavras-chave NEGATIVAS (descarte)
-  const negativoRegex = /\b(n[aã]o|nao|sem|nunca|nunca\s*vou|n[aã]o\s*tenho|n[aã]o\s*possuo|n[aã]o\s*consigo|n[aã]o\s*tenho\s*interesse|sem\s*interesse|cancelar|parar|para\s*de|remover|bloquear|sair|desinscrever|parem|chega|n[aã]o\s*vou|n[aã]o\s*quero|muito\s*caro|n[aã]o\s*faz|n[aã]o\s*interessa|desculpa|obrigad[oa])\b/;
-
   if (positivoRegex.test(msg)) return 'SIM';
-  if (negativoRegex.test(msg)) return 'NAO';
+
+  // Frases compostas de REJEIÇÃO DE VENDA (mínimo 2 palavras com contexto de recusa)
+  const fraseRejeicao = [
+    'nao quero', 'nao tenho interesse', 'sem interesse', 'zero interesse',
+    'nao me interessa', 'nao estou interessado', 'nao estou interessada',
+    'nao preciso', 'nao preciso disso', 'nao vou comprar', 'nao vou adquirir',
+    'nao quero mais', 'nao quero mais contato', 'nao quero contato',
+    'para de me mandar', 'pare de me mandar', 'para de mandar mensagem',
+    'para de me incomodar', 'me tira da lista', 'tira meu numero',
+    'remove meu numero', 'nao me manda mais', 'nao me mande mais',
+    'nao me liga mais', 'vou te bloquear', 'vou bloquear',
+    'me deixa em paz', 'suma', 'vai embora',
+    'nao me chateia', 'nao me perturbe', 'me larga', 'to fora', 'tou fora',
+    'nao rola', 'nao vai rolar', 'nao tem como', 'de jeito nenhum',
+    'nem a pau', 'nem pensar', 'jamais', 'nunca vou comprar',
+    'ja comprei', 'ja tenho imovel', 'ja tenho casa', 'ja resolvi',
+    'nao preciso mais', 'desisti de comprar', 'prefiro alugar',
+    'nao tenho dinheiro', 'sem dinheiro', 'nao consigo pagar',
+    'nao posso pagar', 'muito caro', 'caro demais',
+    'nome sujo', 'cpf sujo', 'estou negativado', 'estou negativada',
+    'parece golpe', 'isso e golpe', 'isso e fraude',
+    'nao confio', 'para com isso', 'pare com isso', 'chega de mensagem',
+    'desinscrever', 'cancelar', 'remover',
+  ];
+
+  for (const frase of fraseRejeicao) {
+    if (msg.includes(frase)) return 'NAO';
+  }
+
+  // "chega", "para", "pare", "basta" sozinhos (sem contexto de resposta)
+  if (/^(chega|basta|pare|para|some|suma)$/.test(msg)) return 'NAO';
+
   return 'NEUTRO';
 }
 

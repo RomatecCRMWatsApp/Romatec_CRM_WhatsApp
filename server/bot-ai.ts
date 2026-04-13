@@ -204,7 +204,8 @@ type IntentType = 'SIM' | 'NAO' | 'PRECO' | 'TEMPO' | 'OUTROS';
 function detectIntent(message: string): IntentType {
   const msg = message.toLowerCase().trim();
   if (/\b(sim|pode|quero|gostei|me\s*interessa|claro|confirmo|confirmado|vamos|ok|certo|beleza|top|show|perfeito|blz|aceito|vou|tenho\s*interesse|com\s*certeza|tudo\s*bem|boa)\b/.test(msg)) return 'SIM';
-  if (/\b(n[aã]o|nao|sem\s*interesse|obrigad[oa]|tchau|at[eé]\s*mais|desculp[ae]|agora\s*n[aã]o|outro\s*momento|n[aã]o\s*tenho\s*interesse|nao\s*quero|parem|remov[ae]|bloquei|cancelar|parar)\b/.test(msg)) return 'NAO';
+  // NAO: apenas frases compostas de recusa — "não" sozinho é resposta ao formulário
+  if (/\b(sem\s*interesse|n[aã]o\s*tenho\s*interesse|n[aã]o\s*quero|parem|remov[ae]|bloquei|cancelar|para\s*de|pare\s*de|me\s*tira)\b/.test(msg)) return 'NAO';
   if (/\b(caro|preco|valor|quanto|parcela|entrada|financiamento|banco|fgts|desconto|custo)\b/.test(msg)) return 'PRECO';
   if (/\b(ocupado|depois|agora\s*n[aã]o|outro\s*dia|quando|horario|disponibilidade|mais\s*tarde|semana)\b/.test(msg)) return 'TEMPO';
   return 'OUTROS';

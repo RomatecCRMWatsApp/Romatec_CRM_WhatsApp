@@ -111,8 +111,8 @@ export async function loadLeadState(phone: string): Promise<LeadState | null> {
 }
 
 /**
- * Marcar lead como descartado (não mandar mensagens por 90 dias)
- * Chamado quando cliente diz "não quero"
+ * Marcar lead como descartado (aguardar 24h antes de reativar)
+ * Todo "não" de hoje pode ser "sim" amanhã
  */
 export async function discardLead(
   phone: string,
@@ -124,7 +124,7 @@ export async function discardLead(
 
     const cleanPhone = phone.replace(/\D/g, '');
     const blockedUntil = new Date();
-    blockedUntil.setDate(blockedUntil.getDate() + 90); // Bloquear por 90 dias
+    blockedUntil.setHours(blockedUntil.getHours() + 24); // Bloquear por 24 horas apenas
 
     const existing = await db
       .select()
