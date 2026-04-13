@@ -17,6 +17,12 @@ import {
   isResponseValid,
   QualificationAnswers,
 } from './qualification-flow';
+import {
+  persistLeadState,
+  loadLeadState,
+  discardLead,
+  isLeadBlocked,
+} from './lead-persistence';
 
 // ============ TIPOS ============
 export interface BotContext {
@@ -609,16 +615,40 @@ export async function processBotMessage(context: BotContext): Promise<BotRespons
   const senderName = context.senderName || 'Cliente';
   const clean = context.phone.replace(/\D/g, '');
 
+  // ═══════════════════════════════════════════════════════════════════════
+  // GATE 0: VERIFICAR SE LEAD ESTÁ BLOQUEADO (não mandar mensagens)
+  // ═══════════════════════════════════════════════════════════════════════
+  const blocked = await isLeadBlocked(clean);
+  if (blocked) {
+    console.log(`[Bot] 🚫 Lead ${clean} está bloqueado. Ignorando mensagem.`);
+    return { text: 'Entendido! Respeitamos sua decisão. Tenha um ótimo dia! 😊', qualified: false };
+  }
+
   registerUserReply(context.phone);
 
   let state = getState(clean);
   if (!state) {
-    setState(clean, {
-      stage: 'abordagem_enviada',
-      senderName,
-      propertySlug: context.propertySlug,
-      lastBotMessageAt: Date.now(),
-    });
+    // ═════════════════════════════════════════════════════════════════════
+    // CARREGAR DO BANCO SE EXISTIR (persistência)
+    // ═════════════════════════════════════════════════════════════════════
+    const savedState = await loadLeadState(clean);
+    if (savedState) {
+      console.log(`[Bot] 📥 Carregado estado do banco: stage=${savedState.stage}`);
+      setState(clean, {
+        stage: savedState.stage as ConversationStage,
+        senderName: savedState.senderName,
+        propertySlug: context.propertySlug,
+        qualAnswers: savedState.answers,
+        lastBotMessageAt: Date.now(),
+      });
+    } else {
+      setState(clean, {
+        stage: 'abordagem_enviada',
+        senderName,
+        propertySlug: context.propertySlug,
+        lastBotMessageAt: Date.now(),
+      });
+    }
     state = getState(clean)!;
   }
 
@@ -628,6 +658,27 @@ export async function processBotMessage(context: BotContext): Promise<BotRespons
   }
 
   const response = await processStage({ ...context, message: messageText }, state);
+
+  // ═════════════════════════════════════════════════════════════════════════
+  // SALVAR ESTADO NO BANCO (persistência automática)
+  // ═════════════════════════════════════════════════════════════════════════
+  const updatedState = getState(clean);
+  if (updatedState) {
+    await persistLeadState(
+      clean,
+      updatedState.stage,
+      updatedState.senderName,
+      updatedState.qualAnswers,
+    );
+  }
+
+  // ═════════════════════════════════════════════════════════════════════════
+  // SE FOI DESCARTADO, BLOQUEAR PARA 90 DIAS
+  // ═════════════════════════════════════════════════════════════════════════
+  if (updatedState?.stage === 'descartado') {
+    await discardLead(clean, 'cliente_recusou_em_conversa');
+  }
+
   console.log(`[Bot] ${clean} | Estagio: ${state.stage} | ${Date.now() - startTime}ms`);
   return response;
 }
