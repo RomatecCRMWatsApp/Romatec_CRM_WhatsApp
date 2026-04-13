@@ -835,6 +835,16 @@ function CampaignCard({
   todayMessages: any[]; expanded: boolean; onToggle: () => void; onToggleActive: (active: boolean) => void;
 }) {
   const isActive = campaign.status === "running";
+
+  // Hooks for cycle activation
+  const cycleStatus = trpc.campaigns.getCycleStatus.useQuery();
+  const toggleCycleActivation = trpc.campaigns.toggleCycleActivation.useMutation({
+    onSuccess: () => {
+      cycleStatus.refetch();
+      toast.success("Ciclo de campanha atualizado!");
+    },
+    onError: (error) => toast.error(`Erro: ${error.message}`),
+  });
   const campState = campaignStates.find((cs: any) => cs.campaignName === campaign.name);
   const hasSentThisHour = campState?.sentThisHour || false;
   const contactsList: any[] = campaign.contactDetails || [];
@@ -933,6 +943,116 @@ function CampaignCard({
           </span>
         )}
       </div>
+
+      {/* ═══════════════════════════════════════════════════════════ */}
+      {/* CICLO ACTIVATION TOGGLES - Nova Feature: Máx 5 por ciclo */}
+      {/* ═══════════════════════════════════════════════════════════ */}
+      {cycleStatus.data && (
+        <div style={{
+          marginTop: "10px",
+          padding: "8px",
+          background: "rgba(0, 0, 0, 0.3)",
+          borderRadius: "6px",
+          border: "1px solid rgba(94, 168, 112, 0.2)",
+        }}>
+          <div style={{
+            display: "grid",
+            gridTemplateColumns: "1fr 1fr",
+            gap: "8px",
+          }}>
+            {/* CICLO DIA */}
+            <button
+              onClick={() => {
+                const newState = !(campaign.activeDay || false);
+                toggleCycleActivation.mutate({
+                  campaignId: campaign.id,
+                  period: "day",
+                  active: newState,
+                });
+              }}
+              disabled={
+                toggleCycleActivation.isPending ||
+                (!campaign.activeDay && cycleStatus.data.dayCount >= 5)
+              }
+              style={{
+                padding: "6px 8px",
+                borderRadius: "4px",
+                border: `1px solid ${campaign.activeDay ? "#5aaa70" : "#2a3a2c"}`,
+                background: campaign.activeDay ? "rgba(90, 170, 112, 0.15)" : "rgba(40, 50, 42, 0.4)",
+                color: campaign.activeDay ? "#5aaa70" : "#3a5a40",
+                fontSize: "11px",
+                fontWeight: 600,
+                cursor: (!campaign.activeDay && cycleStatus.data.dayCount >= 5) ? "not-allowed" : "pointer",
+                opacity: (!campaign.activeDay && cycleStatus.data.dayCount >= 5) ? 0.5 : 1,
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                gap: "4px",
+              }}
+              title={!campaign.activeDay && cycleStatus.data.dayCount >= 5
+                ? "Limite de 5 campanhas no ciclo DIA atingido"
+                : campaign.activeDay
+                ? "Desativar ciclo DIA"
+                : "Ativar ciclo DIA"}
+            >
+              <span style={{ fontSize: "12px" }}>☀️</span>
+              {campaign.activeDay ? "ATIVO" : "INATIVO"}
+            </button>
+
+            {/* CICLO NOITE */}
+            <button
+              onClick={() => {
+                const newState = !(campaign.activeNight || false);
+                toggleCycleActivation.mutate({
+                  campaignId: campaign.id,
+                  period: "night",
+                  active: newState,
+                });
+              }}
+              disabled={
+                toggleCycleActivation.isPending ||
+                (!campaign.activeNight && cycleStatus.data.nightCount >= 5)
+              }
+              style={{
+                padding: "6px 8px",
+                borderRadius: "4px",
+                border: `1px solid ${campaign.activeNight ? "#5aaa70" : "#2a3a2c"}`,
+                background: campaign.activeNight ? "rgba(90, 170, 112, 0.15)" : "rgba(40, 50, 42, 0.4)",
+                color: campaign.activeNight ? "#5aaa70" : "#3a5a40",
+                fontSize: "11px",
+                fontWeight: 600,
+                cursor: (!campaign.activeNight && cycleStatus.data.nightCount >= 5) ? "not-allowed" : "pointer",
+                opacity: (!campaign.activeNight && cycleStatus.data.nightCount >= 5) ? 0.5 : 1,
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                gap: "4px",
+              }}
+              title={!campaign.activeNight && cycleStatus.data.nightCount >= 5
+                ? "Limite de 5 campanhas no ciclo NOITE atingido"
+                : campaign.activeNight
+                ? "Desativar ciclo NOITE"
+                : "Ativar ciclo NOITE"}
+            >
+              <span style={{ fontSize: "12px" }}>🌙</span>
+              {campaign.activeNight ? "ATIVO" : "INATIVO"}
+            </button>
+          </div>
+
+          {/* Contador de campanhas ativas */}
+          <div style={{
+            marginTop: "6px",
+            fontSize: "9px",
+            color: "#3a5a40",
+            textAlign: "center",
+            display: "flex",
+            justifyContent: "space-around",
+          }}>
+            <span>DIA: {cycleStatus.data.dayCount}/5</span>
+            <span>NOITE: {cycleStatus.data.nightCount}/5</span>
+          </div>
+        </div>
+      )}
 
       {/* Barra de progresso do ciclo */}
       <div style={{ marginBottom: "8px" }}>
