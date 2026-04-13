@@ -81,6 +81,19 @@ export default function Campaigns() {
     onError: (error) => toast.error(`Erro: ${error.message}`),
   });
 
+  // ═══════════════════════════════════════════════════════════
+  // Hooks para ativação por ciclo (DIA/NOITE)
+  // ═══════════════════════════════════════════════════════════
+  const cycleStatus = trpc.campaigns.getCycleStatus.useQuery();
+
+  const toggleCycleActivation = trpc.campaigns.toggleCycleActivation.useMutation({
+    onSuccess: () => {
+      cycleStatus.refetch();
+      toast.success("Ciclo de campanha atualizado!");
+    },
+    onError: (error) => toast.error(`Erro: ${error.message}`),
+  });
+
   const handleNightModeToggle = async (newMode: boolean) => {
     setNightMode(newMode);
     const isRunning = schedulerState.data?.state?.isRunning;
@@ -835,16 +848,6 @@ function CampaignCard({
   todayMessages: any[]; expanded: boolean; onToggle: () => void; onToggleActive: (active: boolean) => void;
 }) {
   const isActive = campaign.status === "running";
-
-  // Hooks for cycle activation
-  const cycleStatus = trpc.campaigns.getCycleStatus.useQuery();
-  const toggleCycleActivation = trpc.campaigns.toggleCycleActivation.useMutation({
-    onSuccess: () => {
-      cycleStatus.refetch();
-      toast.success("Ciclo de campanha atualizado!");
-    },
-    onError: (error) => toast.error(`Erro: ${error.message}`),
-  });
   const campState = campaignStates.find((cs: any) => cs.campaignName === campaign.name);
   const hasSentThisHour = campState?.sentThisHour || false;
   const contactsList: any[] = campaign.contactDetails || [];
