@@ -278,9 +278,7 @@ Se você recebeu esta mensagem, o Telegram está 100% operacional!`;
   if (process.env.NODE_ENV === "development") {
     await setupVite(app, server);
   } else {
-    // serveStatic(app);  // TEMP: Disabled to diagnose routing issue
-    // For now, use a minimal version without the catch-all
-    console.log('[DEBUG] Static file serving disabled for diagnostics');
+    serveStatic(app);
   }
 
   const preferredPort = parseInt(process.env.PORT || "3000");
