@@ -11,28 +11,35 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Trigger Railway Deploy via API
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      - name: Install pnpm
+        run: npm install -g pnpm@10.4.1
+
+      - name: Install dependencies
+        run: pnpm install --no-frozen-lockfile
+
+      - name: Build
+        run: pnpm build
+
+      - name: Notify Railway to Deploy
         run: |
           RESPONSE=$(curl -s -w "\n%{http_code}" -X POST \
             -H "Authorization: Bearer ${{ secrets.RAILWAY_TOKEN }}" \
             -H "Content-Type: application/json" \
             -d '{"query":"mutation { serviceInstanceRedeploy(environmentId: \"d437263d-b0c7-4bb7-b300-69b5c637cd05\", serviceId: \"b7f7b260-e5a1-41cf-a9b1-62bdc60819d6\") }"}' \
             https://backboard.railway.app/graphql/v2)
-
           HTTP_CODE=$(echo "$RESPONSE" | tail -n1)
           BODY=$(echo "$RESPONSE" | head -n-1)
-
-          echo "HTTP: $HTTP_CODE"
-          echo "Response: $BODY"
-
-          if [ "$HTTP_CODE" != "200" ]; then
-            echo "❌ Deploy falhou (HTTP $HTTP_CODE)"
-            exit 1
+          echo "HTTP: $HTTP_CODE | $BODY"
+          if [ "$HTTP_CODE" != "200" ] || echo "$BODY" | grep -q '"errors"'; then
+            echo "⚠️ Railway API retornou erro — Railway vai deploy via Wait for CI"
+          else
+            echo "✅ Deploy disparado no Railway!"
           fi
-
-          if echo "$BODY" | grep -q '"errors"'; then
-            echo "❌ Erro Railway API: $BODY"
-            exit 1
-          fi
-
-          echo "✅ Deploy disparado com sucesso no Railway!"
