@@ -28,6 +28,11 @@ import {
   simulateAllBanks,
   SimulationInput,
 } from './bank-simulation';
+import {
+  generateAutomatedProposal,
+  extractLeadProfile,
+  recommendProperties,
+} from './property-recommendation';
 
 // ============ TIPOS ============
 export interface BotContext {
@@ -483,9 +488,10 @@ async function processStage(context: BotContext, state: ConversationState): Prom
       ).catch(() => {});
 
       // ═══════════════════════════════════════════════════════════════════
-      // GERAR PROPOSTA COM SIMULAÇÃO MULTI-BANCO
+      // GERAR PROPOSTA INTEGRADA COM MULTI-BANCO + RECOMENDAÇÕES
       // ═══════════════════════════════════════════════════════════════════
       let proposalMsg = generateProposalMessage(fn, finalAnswers, score);
+      let propertyRecommendations = '';
 
       try {
         // Extrair dados financeiros das respostas
@@ -506,8 +512,9 @@ async function processStage(context: BotContext, state: ConversationState): Prom
           loanTermMonths = 300; // 25 anos para quem tem tempo
         }
 
-        // Se temos dados financeiros válidos, gerar proposta multi-banco
+        // Se temos dados financeiros válidos, gerar proposta completa
         if (propertyValue > 50000 && monthlyIncome > 800) {
+          // 1️⃣ MULTI-BANCO PROPOSAL
           const multiProposal = generateMultiBankProposal(
             fn,
             propertyValue,
@@ -518,13 +525,21 @@ async function processStage(context: BotContext, state: ConversationState): Prom
             /sim|tenho|tem|disponível|disponvel|anos/.test((finalAnswers.fgtsDisponivel || '').toLowerCase())
           );
 
-          proposalMsg = multiProposal;
+          // 2️⃣ RECOMENDAÇÕES DE IMÓVEL
+          const leadProfile = extractLeadProfile(finalAnswers, score);
+          const propRecommendations = generateAutomatedProposal(fn, leadProfile, SITE_URL);
+
+          // Combinar as duas mensagens
+          proposalMsg = multiProposal + '\n\n' + propRecommendations;
+          propertyRecommendations = propRecommendations;
+
           console.log(`[Bot] 🏦 Proposta multi-banco gerada para ${name} — ${propertyValue.toLocaleString('pt-BR')} / ${monthlyIncome.toLocaleString('pt-BR')}/mês`);
+          console.log(`[Bot] 🏠 Recomendações de imóvel geradas — ${recommendProperties(leadProfile).length} propriedades encontradas`);
         } else {
           console.log(`[Bot] ⚠️  Dados financeiros insuficientes para simulação — Usando proposta simples`);
         }
       } catch (error) {
-        console.error(`[Bot] ❌ Erro ao gerar proposta multi-banco:`, error);
+        console.error(`[Bot] ❌ Erro ao gerar proposta multi-banco/recomendações:`, error);
         // Fallback para proposta simples em caso de erro
       }
 
