@@ -203,7 +203,14 @@ export default function PropertyPublic() {
             )}
 
             {activeTab === "planta" && property.plantaBaixaUrl && (
-              <img src={property.plantaBaixaUrl} alt="Planta Baixa" className="w-full rounded-xl" />
+              property.plantaBaixaUrl.toLowerCase().includes('.pdf') ? (
+                <div className="flex flex-col items-center gap-2">
+                  <iframe src={property.plantaBaixaUrl} className="w-full rounded-xl border-0" style={{ height: '70vh' }} title="Planta Baixa" />
+                  <a href={property.plantaBaixaUrl} target="_blank" rel="noopener noreferrer" className="text-sm text-emerald-400 underline">Abrir PDF em nova aba</a>
+                </div>
+              ) : (
+                <img src={property.plantaBaixaUrl} alt="Planta Baixa" className="w-full rounded-xl" />
+              )
             )}
 
             {activeTab === "video" && property.videoUrl && (

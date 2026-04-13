@@ -55,6 +55,8 @@ export default function Properties() {
   const [newImageUrl, setNewImageUrl] = useState("");
   const [isGeneratingDesc, setIsGeneratingDesc] = useState(false);
   const [imageIndex, setImageIndex] = useState(0);
+  const [lightboxOpen, setLightboxOpen] = useState(false);
+  const [lightboxIndex, setLightboxIndex] = useState(0);
   const [isUploading, setIsUploading] = useState(false);
   const [uploadProgress, setUploadProgress] = useState("");
   const photoInputRef = useRef<HTMLInputElement>(null);
@@ -491,7 +493,14 @@ export default function Properties() {
                 <Input value={form.plantaBaixaUrl} onChange={e => setForm(p => ({ ...p, plantaBaixaUrl: e.target.value }))} placeholder="Ou cole a URL da planta baixa" className="bg-secondary/30 border-border/50" />
                 {form.plantaBaixaUrl ? (
                   <div className="rounded-xl overflow-hidden border border-border/50">
-                    <img src={form.plantaBaixaUrl} alt="Planta Baixa" className="w-full max-h-96 object-contain bg-secondary/20" />
+                    {form.plantaBaixaUrl.toLowerCase().includes('.pdf') ? (
+                      <div className="bg-secondary/20 p-4 flex flex-col items-center gap-3">
+                        <iframe src={form.plantaBaixaUrl} className="w-full h-96 border-0" title="Planta Baixa PDF" />
+                        <a href={form.plantaBaixaUrl} target="_blank" rel="noopener noreferrer" className="text-xs text-emerald-400 underline">Abrir PDF em nova aba</a>
+                      </div>
+                    ) : (
+                      <img src={form.plantaBaixaUrl} alt="Planta Baixa" className="w-full max-h-96 object-contain bg-secondary/20" />
+                    )}
                   </div>
                 ) : null}
               </TabsContent>
@@ -656,7 +665,12 @@ export default function Properties() {
             <div className="relative">
               {selectedProperty.images?.length > 0 ? (
                 <div className="relative h-72 md:h-96">
-                  <img src={selectedProperty.images[imageIndex] || selectedProperty.images[0]} alt={selectedProperty.denomination} className="w-full h-full object-cover" />
+                  <img
+                    src={selectedProperty.images[imageIndex] || selectedProperty.images[0]}
+                    alt={selectedProperty.denomination}
+                    className="w-full h-full object-cover cursor-zoom-in"
+                    onClick={() => { setLightboxIndex(imageIndex); setLightboxOpen(true); }}
+                  />
                   {selectedProperty.images.length > 1 && (
                     <>
                       <button onClick={() => setImageIndex(i => (i - 1 + selectedProperty.images.length) % selectedProperty.images.length)} className="absolute left-3 top-1/2 -translate-y-1/2 p-2 rounded-full bg-black/50 text-white hover:bg-black/70 transition-all">
@@ -790,7 +804,14 @@ export default function Properties() {
                   <div>
                     <h3 className="text-sm font-semibold text-muted-foreground mb-2 flex items-center gap-1"><FileImage className="h-4 w-4 text-emerald" /> Planta Baixa</h3>
                     <div className="rounded-xl overflow-hidden border border-border/30">
-                      <img src={selectedProperty.plantaBaixaUrl} alt="Planta Baixa" className="w-full max-h-64 object-contain bg-secondary/20" />
+                      {selectedProperty.plantaBaixaUrl.toLowerCase().includes('.pdf') ? (
+                        <div className="bg-secondary/20 p-3 flex flex-col items-center gap-2">
+                          <iframe src={selectedProperty.plantaBaixaUrl} className="w-full h-64 border-0" title="Planta Baixa PDF" />
+                          <a href={selectedProperty.plantaBaixaUrl} target="_blank" rel="noopener noreferrer" className="text-xs text-emerald-400 underline">Abrir PDF em nova aba</a>
+                        </div>
+                      ) : (
+                        <img src={selectedProperty.plantaBaixaUrl} alt="Planta Baixa" className="w-full max-h-64 object-contain bg-secondary/20" />
+                      )}
                     </div>
                   </div>
                 )}
@@ -811,6 +832,70 @@ export default function Properties() {
             </div>
           </DialogContent>
         </Dialog>
+      )}
+
+      {/* Lightbox fullscreen */}
+      {lightboxOpen && selectedProperty?.images?.length > 0 && (
+        <div
+          className="fixed inset-0 z-[9999] bg-black/95 flex items-center justify-center"
+          onClick={() => setLightboxOpen(false)}
+        >
+          {/* Fechar */}
+          <button
+            className="absolute top-4 right-4 p-2 rounded-full bg-white/10 hover:bg-white/20 text-white transition-all z-10"
+            onClick={() => setLightboxOpen(false)}
+          >
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+          </button>
+
+          {/* Contador */}
+          <div className="absolute top-4 left-1/2 -translate-x-1/2 text-white/70 text-sm">
+            {lightboxIndex + 1} / {selectedProperty.images.length}
+          </div>
+
+          {/* Seta esquerda */}
+          {selectedProperty.images.length > 1 && (
+            <button
+              className="absolute left-4 p-3 rounded-full bg-white/10 hover:bg-white/25 text-white transition-all"
+              onClick={e => { e.stopPropagation(); setLightboxIndex(i => (i - 1 + selectedProperty.images.length) % selectedProperty.images.length); }}
+            >
+              <ChevronLeft className="h-7 w-7" />
+            </button>
+          )}
+
+          {/* Imagem */}
+          <img
+            src={selectedProperty.images[lightboxIndex]}
+            alt={`Foto ${lightboxIndex + 1}`}
+            className="max-w-[90vw] max-h-[90vh] object-contain select-none rounded-lg shadow-2xl"
+            onClick={e => e.stopPropagation()}
+          />
+
+          {/* Seta direita */}
+          {selectedProperty.images.length > 1 && (
+            <button
+              className="absolute right-4 p-3 rounded-full bg-white/10 hover:bg-white/25 text-white transition-all"
+              onClick={e => { e.stopPropagation(); setLightboxIndex(i => (i + 1) % selectedProperty.images.length); }}
+            >
+              <ChevronRight className="h-7 w-7" />
+            </button>
+          )}
+
+          {/* Miniaturas */}
+          {selectedProperty.images.length > 1 && (
+            <div className="absolute bottom-4 left-1/2 -translate-x-1/2 flex gap-2 overflow-x-auto max-w-[90vw] px-2">
+              {selectedProperty.images.map((img: string, idx: number) => (
+                <button
+                  key={idx}
+                  onClick={e => { e.stopPropagation(); setLightboxIndex(idx); }}
+                  className={`flex-shrink-0 w-14 h-10 rounded-md overflow-hidden border-2 transition-all ${idx === lightboxIndex ? "border-white" : "border-transparent opacity-50 hover:opacity-80"}`}
+                >
+                  <img src={img} alt="" className="w-full h-full object-cover" />
+                </button>
+              ))}
+            </div>
+          )}
+        </div>
       )}
     </div>
   );
