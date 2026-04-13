@@ -982,27 +982,30 @@ function CampaignCard({
                 (!campaign.activeDay && cycleStatus.data.dayCount >= 5)
               }
               style={{
-                padding: "6px 8px",
-                borderRadius: "4px",
-                border: `1px solid ${campaign.activeDay ? "#5aaa70" : "#2a3a2c"}`,
-                background: campaign.activeDay ? "rgba(90, 170, 112, 0.15)" : "rgba(40, 50, 42, 0.4)",
-                color: campaign.activeDay ? "#5aaa70" : "#3a5a40",
-                fontSize: "11px",
-                fontWeight: 600,
+                padding: "8px 10px",
+                borderRadius: "6px",
+                border: `2px solid ${campaign.activeDay ? "#3ec87a" : "#555"}`,
+                background: campaign.activeDay ? "rgba(62, 200, 122, 0.25)" : "rgba(50, 50, 50, 0.5)",
+                color: campaign.activeDay ? "#3ec87a" : "#888",
+                fontSize: "12px",
+                fontWeight: 700,
                 cursor: (!campaign.activeDay && cycleStatus.data.dayCount >= 5) ? "not-allowed" : "pointer",
                 opacity: (!campaign.activeDay && cycleStatus.data.dayCount >= 5) ? 0.5 : 1,
                 display: "flex",
                 alignItems: "center",
                 justifyContent: "center",
-                gap: "4px",
+                gap: "6px",
+                transition: "all 0.2s ease",
+                textTransform: "uppercase",
+                letterSpacing: "0.5px",
               }}
               title={!campaign.activeDay && cycleStatus.data.dayCount >= 5
                 ? "Limite de 5 campanhas no ciclo DIA atingido"
                 : campaign.activeDay
-                ? "Desativar ciclo DIA"
-                : "Ativar ciclo DIA"}
+                ? "Clique para desativar ciclo DIA"
+                : "Clique para ativar ciclo DIA"}
             >
-              <span style={{ fontSize: "12px" }}>☀️</span>
+              <span style={{ fontSize: "14px" }}>☀️</span>
               {campaign.activeDay ? "ATIVO" : "INATIVO"}
             </button>
 
@@ -1021,27 +1024,30 @@ function CampaignCard({
                 (!campaign.activeNight && cycleStatus.data.nightCount >= 5)
               }
               style={{
-                padding: "6px 8px",
-                borderRadius: "4px",
-                border: `1px solid ${campaign.activeNight ? "#5aaa70" : "#2a3a2c"}`,
-                background: campaign.activeNight ? "rgba(90, 170, 112, 0.15)" : "rgba(40, 50, 42, 0.4)",
-                color: campaign.activeNight ? "#5aaa70" : "#3a5a40",
-                fontSize: "11px",
-                fontWeight: 600,
+                padding: "8px 10px",
+                borderRadius: "6px",
+                border: `2px solid ${campaign.activeNight ? "#3ec87a" : "#555"}`,
+                background: campaign.activeNight ? "rgba(62, 200, 122, 0.25)" : "rgba(50, 50, 50, 0.5)",
+                color: campaign.activeNight ? "#3ec87a" : "#888",
+                fontSize: "12px",
+                fontWeight: 700,
                 cursor: (!campaign.activeNight && cycleStatus.data.nightCount >= 5) ? "not-allowed" : "pointer",
                 opacity: (!campaign.activeNight && cycleStatus.data.nightCount >= 5) ? 0.5 : 1,
                 display: "flex",
                 alignItems: "center",
                 justifyContent: "center",
-                gap: "4px",
+                gap: "6px",
+                transition: "all 0.2s ease",
+                textTransform: "uppercase",
+                letterSpacing: "0.5px",
               }}
               title={!campaign.activeNight && cycleStatus.data.nightCount >= 5
                 ? "Limite de 5 campanhas no ciclo NOITE atingido"
                 : campaign.activeNight
-                ? "Desativar ciclo NOITE"
-                : "Ativar ciclo NOITE"}
+                ? "Clique para desativar ciclo NOITE"
+                : "Clique para ativar ciclo NOITE"}
             >
-              <span style={{ fontSize: "12px" }}>🌙</span>
+              <span style={{ fontSize: "14px" }}>🌙</span>
               {campaign.activeNight ? "ATIVO" : "INATIVO"}
             </button>
           </div>
