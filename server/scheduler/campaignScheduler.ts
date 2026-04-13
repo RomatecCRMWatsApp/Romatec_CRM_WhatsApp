@@ -615,10 +615,15 @@ export class CampaignScheduler {
   private personalizeMessage(messageText: string, contact: { name: string; phone: string }): string {
     const firstName = (contact.name || '').split(' ')[0].trim();
     let personalized = messageText;
+
     if (firstName && firstName.length > 1) {
-      personalized = personalized.replace(/{{NOME}}/g, firstName);
+      // Suporta ambos os formatos: {NOME} e {{NOME}}
+      personalized = personalized.replace(/\{\{NOME\}\}/g, firstName);
+      personalized = personalized.replace(/\{NOME\}/g, firstName);
     } else {
-      personalized = personalized.replace(/{{NOME}},?\s*/g, '');
+      // Remove placeholders se não houver nome
+      personalized = personalized.replace(/\{\{NOME\}\},?\s*/g, '');
+      personalized = personalized.replace(/\{NOME\},?\s*/g, '');
     }
     return personalized;
   }
