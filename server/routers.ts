@@ -463,7 +463,7 @@ export const appRouter = router({
           else pendingCount++;
           contactDetails.push({ id: cc.id, contactId: contact.id, name: contact.name, phone: contact.phone, status: cc.status, sentAt: lastMsg[0]?.sentAt || null, blockedUntil: contact.blockedUntil });
         }
-        result.push({ id: camp.id, name: camp.name, propertyId: camp.propertyId, propertyName: prop[0]?.denomination || "Desconhecido", status: camp.status, messagesPerHour: camp.messagesPerHour || 1, sentCount, pendingCount, failedCount, totalContacts: ccList.length > 0 ? ccList.length : (camp.totalContacts || 0), contactDetails });
+        result.push({ id: camp.id, name: camp.name, propertyId: camp.propertyId, propertyName: prop[0]?.denomination || "Desconhecido", status: camp.status, messagesPerHour: camp.messagesPerHour || 1, activeDay: camp.activeDay || false, activeNight: camp.activeNight || false, sentCount, pendingCount, failedCount, totalContacts: ccList.length > 0 ? ccList.length : (camp.totalContacts || 0), contactDetails });
       }
       return result;
     }),
