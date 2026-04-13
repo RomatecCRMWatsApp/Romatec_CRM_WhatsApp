@@ -309,47 +309,6 @@ export class CampaignScheduler {
     }
   }
 
-  // Gera horários randomizados distribuídos: intervalos de 15 min, nunca nos últimos 8 min
-  private generateRandomizedSchedule(activeCampaigns: any[]): Map<number, number> {
-    const schedule = new Map<number, number>();
-    const now = this.getBrasiliaDate();
-    const minutesIntoHour = now.getMinutes();
-    const secondsIntoHour = minutesIntoHour * 60 + now.getSeconds();
-    const remainingMs = this.HOUR_MS - (secondsIntoHour * 1000);
-    const remainingMinutes = Math.floor(remainingMs / 60000);
-
-    // Janela de envio: 12-20 minutos (não no final)
-    // Deixar sempre 8 minutos no final para qualificação
-    const SAFE_WINDOW_START = 2; // 2 min de margem inicial
-    const SAFE_WINDOW_END = remainingMinutes - 8; // -8 min do final
-    const MIN_INTERVAL_BETWEEN_SENDS = 15; // 15 min entre envios
-
-    console.log(`🎲 Gerando schedule randomizado: janela ${SAFE_WINDOW_START}-${SAFE_WINDOW_END} min, intervalo 15 min`);
-
-    let currentMinute = SAFE_WINDOW_START;
-    let campIndex = 0;
-
-    // Distribui campanhas em horários aleatórios com intervalo mínimo
-    for (const campaign of activeCampaigns) {
-      if (currentMinute + MIN_INTERVAL_BETWEEN_SENDS > SAFE_WINDOW_END) {
-        // Sem espaço suficiente, reusa horário com pequena variação
-        currentMinute = SAFE_WINDOW_START + Math.floor(Math.random() * 5);
-      }
-
-      // Adiciona pequena variação (±2 min) para não parecer robô
-      const randomVariation = Math.floor(Math.random() * 4) - 2; // -2 a +2
-      const finalMinute = Math.max(SAFE_WINDOW_START, currentMinute + randomVariation);
-
-      schedule.set(campaign.id, finalMinute);
-      console.log(`  📍 ${campaign.name} → ${finalMinute}º minuto`);
-
-      currentMinute += MIN_INTERVAL_BETWEEN_SENDS;
-      campIndex++;
-    }
-
-    return schedule;
-  }
-
   private async scheduleHourSend() {
     const db = await getDb();
     if (!db) return;
@@ -374,34 +333,41 @@ export class CampaignScheduler {
       return;
     }
 
-    // Gerar schedule randomizado para esta campanha
-    const schedule = this.generateRandomizedSchedule(allCampaigns);
-    const scheduledMinute = schedule.get(campaign.id) || 5;
-
-    // Calcular delay baseado no minuto agendado
+    // Agendar envio ALEATÓRIO nos primeiros 15 minutos da hora
+    // Fluxo: 15 min envio + 45 min qualificação = 60 min total
     const now = this.getBrasiliaDate();
     const minutesIntoHour = now.getMinutes();
     const secondsIntoHour = minutesIntoHour * 60 + now.getSeconds();
+
+    // Janela de envio: 0-15 minutos da hora (aleatória)
+    const SEND_WINDOW_START = 0; // início da hora
+    const SEND_WINDOW_END = 15; // 15 minutos
+
+    // Gerar minuto aleatório entre 0-15
+    const randomMinute = SEND_WINDOW_START + Math.floor(Math.random() * (SEND_WINDOW_END - SEND_WINDOW_START + 1));
+
+    // Calcular delay até o minuto aleatório
+    const delayMinutes = randomMinute - minutesIntoHour;
+    const delaySeconds = delayMinutes * 60 - secondsIntoHour;
+    const delayMs = Math.max(1000, delaySeconds * 1000);
+
     const remainingMs = this.HOUR_MS - (secondsIntoHour * 1000);
 
-    // Delay = tempo até o minuto agendado
-    const delayMinutes = scheduledMinute - minutesIntoHour;
-    const delayMs = Math.max(1000, (delayMinutes * 60 - now.getSeconds()) * 1000);
-
-    if (delayMs < 1000 || delayMs > remainingMs) {
-      console.log(`⚠️ Delay inválido (${Math.round(delayMs / 60000)}min) — pulando`);
+    if (delayMs > remainingMs) {
+      console.log(`⚠️ Sem tempo suficiente para envio aleatório — pulando`);
       return;
     }
 
     const slot: SlotInfo = {
       campaignId: campaign.id,
       campaignName: campaign.name,
-      minuteLabel: scheduledMinute,
+      minuteLabel: randomMinute,
       sent: false,
     };
     this.state.scheduledSlots = [slot];
 
-    console.log(`📨 ${campaign.name} → ${Math.round(delayMs / 60000)}min (minuto ${scheduledMinute})`);
+    console.log(`🎲 ${campaign.name} → envio aleatório no minuto ${randomMinute} (em ${Math.round(delayMs / 60000)}min)`);
+    console.log(`   ⏱️ Fluxo: 15min envio + 45min qualificação = 60min/hora`);
 
     const timer = setTimeout(async () => {
       if (!this.state.isRunning) return;
