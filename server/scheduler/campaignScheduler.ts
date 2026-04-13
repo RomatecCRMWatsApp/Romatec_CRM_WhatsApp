@@ -1033,6 +1033,13 @@ export class CampaignScheduler {
 
     const cycleIndex = this.getCurrentCycleIndex();
 
+    const h = brasiliaNow.getHours();
+    let systemPhase: 'active_day' | 'active_night' | 'standby' | 'blocked';
+    if (h >= 6 && h < 8) systemPhase = 'blocked';
+    else if (h >= 8 && h < 18) systemPhase = 'active_day';
+    else if (h >= 18 && h < 20) systemPhase = 'standby';
+    else systemPhase = 'active_night';
+
     return {
       isRunning: this.state.isRunning,
       hourNumber: this.state.hourNumber,
@@ -1047,7 +1054,8 @@ export class CampaignScheduler {
       nextCycleFormatted,
       currentCycleIndex: cycleIndex,
       totalCycles: 10,
-      brasiliaHour: brasiliaNow.getHours(),
+      brasiliaHour: h,
+      systemPhase,
     };
   }
 

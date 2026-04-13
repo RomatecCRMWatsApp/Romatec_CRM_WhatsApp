@@ -10,6 +10,27 @@ import { useLocation } from "wouter";
 import { trpc } from "@/lib/trpc";
 import { toast } from "sonner";
 
+// ─── Live Brasília clock ───────────────────────────────────────────────────
+function useBrasiliaTime() {
+  const getBrasilia = () => {
+    const now = new Date();
+    return new Date(now.toLocaleString('en-US', { timeZone: 'America/Sao_Paulo' }));
+  };
+  const [time, setTime] = useState(getBrasilia);
+  useEffect(() => {
+    const id = setInterval(() => setTime(getBrasilia()), 1000);
+    return () => clearInterval(id);
+  }, []);
+  return time;
+}
+
+const PHASE_CONFIG = {
+  active_day:   { label: 'ATIVO DIA',   color: '#3ec87a', bg: 'rgba(62,200,122,0.12)',   border: 'rgba(62,200,122,0.3)',   glow: '0 0 18px rgba(62,200,122,0.25)'  },
+  active_night: { label: 'ATIVO NOITE', color: '#8a7ae8', bg: 'rgba(138,122,232,0.12)',  border: 'rgba(138,122,232,0.3)',  glow: '0 0 18px rgba(138,122,232,0.25)' },
+  standby:      { label: 'STANDBY',     color: '#e8a83e', bg: 'rgba(232,168,62,0.12)',   border: 'rgba(232,168,62,0.3)',   glow: '0 0 18px rgba(232,168,62,0.2)'   },
+  blocked:      { label: 'BLOQUEADO',   color: '#e05a5a', bg: 'rgba(220,60,60,0.10)',    border: 'rgba(220,60,60,0.25)',   glow: '0 0 18px rgba(220,60,60,0.15)'   },
+};
+
 /**
  * SISTEMA v6.0 - 5 CAMPANHAS INDEPENDENTES
  * - Cada campanha envia 1 msg/hora
@@ -43,6 +64,7 @@ export default function Campaigns() {
   const [isResetting, setIsResetting] = useState(false);
   const [resetKey, setResetKey] = useState(0);
   const [nightMode, setNightMode] = useState(false);
+  const brasiliaTime = useBrasiliaTime();
 
   const schedulerState = trpc.scheduler.getState.useQuery(undefined, {
     refetchInterval: isResetting ? false : 5000,
@@ -182,6 +204,15 @@ export default function Campaigns() {
     const successRate = totalContacts > 0 ? ((totalSent / totalContacts) * 100).toFixed(1) : "0.0";
     return { totalContacts, totalSent, totalPending, totalFailed, successRate };
   }, [allCampaigns]);
+
+  const systemPhase = (stateData?.systemPhase as keyof typeof PHASE_CONFIG) || (() => {
+    const h = brasiliaTime.getHours();
+    if (h >= 6 && h < 8) return 'blocked' as const;
+    if (h >= 8 && h < 18) return 'active_day' as const;
+    if (h >= 18 && h < 20) return 'standby' as const;
+    return 'active_night' as const;
+  })();
+  const phase = PHASE_CONFIG[systemPhase];
 
   const cycleDuration = stateData?.cycleDurationSeconds || 3600;
   const [localTimer, setLocalTimer] = useState(cycleDuration);
@@ -335,6 +366,8 @@ export default function Campaigns() {
       <style>{`
         @keyframes rmt-pulse { 0%,100%{opacity:1} 50%{opacity:.3} }
         @keyframes rmt-amber-pulse { 0%,100%{opacity:1} 50%{opacity:.4} }
+        @keyframes rmt-clock-glow { 0%,100%{opacity:0.7} 50%{opacity:1} }
+        @keyframes rmt-phase-pulse { 0%,100%{box-shadow:var(--phase-glow)} 50%{box-shadow:none} }
         .rmt-card {
           background: #0d1f12;
           border: 1px solid #1a3520;
@@ -463,6 +496,100 @@ export default function Campaigns() {
       `}</style>
 
       <div style={{ padding: "16px", display: "flex", flexDirection: "column", gap: "14px" }}>
+
+        {/* ══════════════════════════════════════════════ */}
+        {/* == RELÓGIO BRASÍLIA + FASE DO SISTEMA        == */}
+        {/* ══════════════════════════════════════════════ */}
+        <div
+          style={{
+            background: "linear-gradient(135deg, #0a1a10 0%, #0d2518 50%, #0a1a10 100%)",
+            border: `1px solid ${phase.border}`,
+            borderRadius: "16px",
+            padding: "20px 24px",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "space-between",
+            boxShadow: phase.glow,
+            position: "relative",
+            overflow: "hidden",
+          }}
+        >
+          {/* decorative grid bg */}
+          <div style={{
+            position: "absolute", inset: 0, opacity: 0.04,
+            backgroundImage: "repeating-linear-gradient(0deg,transparent,transparent 20px,#3ec87a 20px,#3ec87a 21px),repeating-linear-gradient(90deg,transparent,transparent 20px,#3ec87a 20px,#3ec87a 21px)",
+            pointerEvents: "none",
+          }} />
+
+          {/* left: date + time */}
+          <div style={{ zIndex: 1 }}>
+            <p style={{
+              fontSize: "10px",
+              color: "#3a6a45",
+              textTransform: "uppercase",
+              letterSpacing: "0.12em",
+              margin: "0 0 4px",
+              fontWeight: 600,
+            }}>
+              {brasiliaTime.toLocaleDateString('pt-BR', { weekday: 'long', day: '2-digit', month: 'long', year: 'numeric' })}
+            </p>
+            <p style={{
+              fontSize: "42px",
+              fontFamily: "'Courier New', monospace",
+              fontWeight: 700,
+              color: phase.color,
+              margin: 0,
+              letterSpacing: "0.04em",
+              lineHeight: 1,
+              textShadow: `0 0 20px ${phase.color}50`,
+              animation: "rmt-clock-glow 2s infinite",
+            }}>
+              {brasiliaTime.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit', second: '2-digit' })}
+            </p>
+            <p style={{ fontSize: "10px", color: "#2a4a30", margin: "4px 0 0", letterSpacing: "0.06em" }}>
+              Horário de Brasília
+            </p>
+          </div>
+
+          {/* right: phase badge */}
+          <div style={{ zIndex: 1, textAlign: "right" }}>
+            <div style={{
+              display: "inline-flex",
+              flexDirection: "column",
+              alignItems: "center",
+              gap: "6px",
+              padding: "14px 20px",
+              borderRadius: "12px",
+              background: phase.bg,
+              border: `1px solid ${phase.border}`,
+              minWidth: "110px",
+            }}>
+              <span style={{ fontSize: "22px", lineHeight: 1 }}>
+                {systemPhase === 'active_day' ? '☀️' : systemPhase === 'active_night' ? '🌙' : systemPhase === 'standby' ? '💤' : '🔒'}
+              </span>
+              <span style={{
+                fontSize: "11px",
+                fontWeight: 700,
+                color: phase.color,
+                letterSpacing: "0.1em",
+                textTransform: "uppercase",
+              }}>
+                {phase.label}
+              </span>
+              <span style={{ fontSize: "9px", color: "#3a5a40", letterSpacing: "0.05em" }}>
+                {systemPhase === 'active_day'   ? '08h → 18h' :
+                 systemPhase === 'active_night' ? '20h → 06h' :
+                 systemPhase === 'standby'      ? '18h → 20h' :
+                                                  '06h → 08h'}
+              </span>
+            </div>
+            {isRunning && (
+              <p style={{ fontSize: "9px", color: "#3a6a45", marginTop: "6px", letterSpacing: "0.05em" }}>
+                <span style={{ color: "#3ec87a" }}>●</span> Scheduler ativo
+              </p>
+            )}
+          </div>
+        </div>
 
         {/* == PAINEL DE CONTROLE == */}
         <div className="rmt-card">
@@ -689,25 +816,68 @@ export default function Campaigns() {
           </div>
         </div>
 
-        {/* == STATUS POR HORA (apenas quando rodando) == */}
-        {allCampaigns.length > 0 && isRunning && (
+        {/* == STATUS POR HORA (todas as campanhas, sempre visível) == */}
+        {allCampaigns.length > 0 && (
           <div className="rmt-card">
-            <h2
-              style={{
-                fontSize: "13px",
-                fontWeight: 600,
-                color: "#c8a040",
+            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "12px" }}>
+              <h2
+                style={{
+                  fontSize: "13px",
+                  fontWeight: 600,
+                  color: "#c8a040",
+                  display: "flex",
+                  alignItems: "center",
+                  gap: "6px",
+                  margin: 0,
+                  textTransform: "uppercase",
+                  letterSpacing: "0.06em",
+                }}
+              >
+                <Zap size={13} style={{ color: "#e8a83e" }} />
+                Status por hora — campanhas
+              </h2>
+              <span style={{
+                fontSize: "9px",
+                padding: "2px 8px",
+                borderRadius: "8px",
+                fontWeight: 700,
+                background: phase.bg,
+                border: `1px solid ${phase.border}`,
+                color: phase.color,
+                letterSpacing: "0.06em",
+              }}>
+                {phase.label}
+              </span>
+            </div>
+
+            {/* Standby / Blocked overlay message */}
+            {(systemPhase === 'standby' || systemPhase === 'blocked') && (
+              <div style={{
+                padding: "14px 16px",
+                borderRadius: "10px",
+                background: phase.bg,
+                border: `1px solid ${phase.border}`,
                 display: "flex",
                 alignItems: "center",
-                gap: "6px",
+                gap: "12px",
                 marginBottom: "12px",
-                textTransform: "uppercase",
-                letterSpacing: "0.06em",
-              }}
-            >
-              <Zap size={13} style={{ color: "#e8a83e" }} />
-              Status por hora (todas as campanhas)
-            </h2>
+              }}>
+                <span style={{ fontSize: "24px" }}>
+                  {systemPhase === 'standby' ? '💤' : '🔒'}
+                </span>
+                <div>
+                  <p style={{ fontSize: "12px", fontWeight: 700, color: phase.color, margin: "0 0 2px", letterSpacing: "0.04em" }}>
+                    {systemPhase === 'standby' ? 'Sistema em Standby — 18h às 20h' : 'Sistema Bloqueado — 06h às 08h'}
+                  </p>
+                  <p style={{ fontSize: "10px", color: "#3a5a40", margin: 0 }}>
+                    {systemPhase === 'standby'
+                      ? 'Intervalo entre ciclo DIA e NOITE. Próximo ciclo inicia automaticamente às 20h.'
+                      : 'Intervalo entre ciclo NOITE e DIA. Próximo ciclo inicia automaticamente às 08h.'}
+                  </p>
+                </div>
+              </div>
+            )}
+
             <div
               style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(180px, 1fr))", gap: "8px" }}
               key={`hour-status-${resetKey}`}
@@ -717,61 +887,35 @@ export default function Campaigns() {
                 .map((campaign: any) => {
                   const campState = campaignStates.find((cs: any) => cs.campaignName === campaign.name);
                   const hasSent = campState?.sentThisHour || false;
+                  const isInactive = systemPhase === 'standby' || systemPhase === 'blocked';
+                  const dotColor = isInactive ? phase.color : hasSent ? "#3ec87a" : "#e8a83e";
+                  const cardBorder = isInactive ? phase.border : hasSent ? "rgba(62,200,122,0.25)" : "rgba(232,168,62,0.2)";
+                  const cardBg = isInactive ? phase.bg : hasSent ? "rgba(62,200,122,0.06)" : "rgba(232,168,62,0.06)";
+                  const labelColor = isInactive ? phase.color : hasSent ? "#3ec87a" : "#e8a83e";
+                  const statusText = isInactive ? phase.label : hasSent ? "ENVIOU" : "AGUARDANDO";
                   return (
                     <div
                       key={`hour-${campaign.id}`}
-                      style={{
-                        padding: "12px",
-                        borderRadius: "10px",
-                        border: `1px solid ${hasSent ? "rgba(62,200,122,0.25)" : "rgba(232,168,62,0.2)"}`,
-                        background: hasSent ? "rgba(62,200,122,0.06)" : "rgba(232,168,62,0.06)",
-                      }}
+                      style={{ padding: "12px", borderRadius: "10px", border: `1px solid ${cardBorder}`, background: cardBg }}
                     >
                       <div style={{ display: "flex", alignItems: "center", gap: "7px", marginBottom: "7px" }}>
-                        <span
-                          style={{
-                            width: "8px",
-                            height: "8px",
-                            borderRadius: "50%",
-                            background: hasSent ? "#3ec87a" : "#e8a83e",
-                            flexShrink: 0,
-                            animation: hasSent ? "none" : "rmt-amber-pulse 1.5s infinite",
-                          }}
-                        />
-                        <span
-                          style={{
-                            fontSize: "10px",
-                            fontWeight: 700,
-                            color: hasSent ? "#3ec87a" : "#e8a83e",
-                            letterSpacing: "0.05em",
-                          }}
-                        >
-                          {hasSent ? "ENVIOU" : "AGUARDANDO"}
+                        <span style={{
+                          width: "8px", height: "8px", borderRadius: "50%", background: dotColor, flexShrink: 0,
+                          animation: (!isInactive && !hasSent) ? "rmt-amber-pulse 1.5s infinite" : isInactive ? "rmt-pulse 2s infinite" : "none",
+                        }} />
+                        <span style={{ fontSize: "10px", fontWeight: 700, color: labelColor, letterSpacing: "0.05em" }}>
+                          {statusText}
                         </span>
-                        <span
-                          style={{
-                            marginLeft: "auto",
-                            fontSize: "9px",
-                            padding: "1px 6px",
-                            borderRadius: "8px",
-                            fontWeight: 700,
-                            background: hasSent ? "rgba(62,200,122,0.12)" : "rgba(232,168,62,0.12)",
-                            border: `1px solid ${hasSent ? "rgba(62,200,122,0.2)" : "rgba(232,168,62,0.2)"}`,
-                            color: hasSent ? "#3ec87a" : "#e8a83e",
-                          }}
-                        >
-                          {hasSent ? "1/1" : "0/1"}
+                        <span style={{
+                          marginLeft: "auto", fontSize: "9px", padding: "1px 6px", borderRadius: "8px", fontWeight: 700,
+                          background: isInactive ? phase.bg : hasSent ? "rgba(62,200,122,0.12)" : "rgba(232,168,62,0.12)",
+                          border: `1px solid ${isInactive ? phase.border : hasSent ? "rgba(62,200,122,0.2)" : "rgba(232,168,62,0.2)"}`,
+                          color: labelColor,
+                        }}>
+                          {isInactive ? "--" : hasSent ? "1/1" : "0/1"}
                         </span>
                       </div>
-                      <span
-                        style={{
-                          fontSize: "12px",
-                          fontWeight: 600,
-                          color: hasSent ? "#5ad890" : "#e8c060",
-                          display: "block",
-                          marginBottom: "4px",
-                        }}
-                      >
+                      <span style={{ fontSize: "12px", fontWeight: 600, color: isInactive ? "#5a7a60" : hasSent ? "#5ad890" : "#e8c060", display: "block", marginBottom: "4px" }}>
                         {campaign.name}
                       </span>
                       <p style={{ fontSize: "9px", color: "#3a5a40", margin: 0 }}>
