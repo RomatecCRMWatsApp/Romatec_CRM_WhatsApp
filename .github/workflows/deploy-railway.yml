@@ -21,3 +21,4 @@ jobs:
         run: railway up --service Romatec_CRM_WhatsApp --detach
         env:
           RAILWAY_TOKEN: ${{ secrets.RAILWAY_TOKEN }}
+          RAILWAY_PROJECT_ID: 69e2b76b-a56b-448e-a57c-4b9dcb0d1574
