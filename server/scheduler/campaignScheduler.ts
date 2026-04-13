@@ -279,6 +279,10 @@ export class CampaignScheduler {
       // Nova hora!
       this.state.currentHourKey = currentHourKey;
 
+      // Auto-ativar/desativar ciclos (08h, 18h, 20h, 06h)
+      const brasiliaHour = parseInt(currentHourKey.split('-')[3], 10);
+      await this.autoToggleCycles(brasiliaHour);
+
       // Sincronizar ciclo com a hora real de Brasília
       const cycleIdx = this.getCurrentCycleIndex();
       if (cycleIdx >= 0) {
@@ -541,6 +545,22 @@ export class CampaignScheduler {
         await registerBotMessage(contact.phone, contact.name || '', campaignId, personalized);
 
         await this.updateContactHistory(contact.id, campaignId);
+
+        // ─── FOLLOW-UP: enviar link do imóvel 1-2 minutos depois ───
+        const linkMsg = await this.getPropertyLinkMessage(campaignId);
+        if (linkMsg) {
+          const delayMs = 60000 + Math.floor(Math.random() * 60000); // 60-120 segundos
+          const followUpPhone = contact.phone;
+          console.log(`⏳ Link do imóvel agendado para ${followUpPhone} em ${Math.round(delayMs / 1000)}s`);
+          setTimeout(async () => {
+            try {
+              await this.sendViaZAPI(followUpPhone, linkMsg);
+              console.log(`🔗 Link enviado para ${followUpPhone}`);
+            } catch (e) {
+              console.error(`❌ Erro ao enviar link follow-up:`, e);
+            }
+          }, delayMs);
+        }
       } else if (result === 'failed') {
         this.state.totalFailed++;
         await db.insert(messages).values({
@@ -773,31 +793,89 @@ export class CampaignScheduler {
 
   private generateMessageVariations(prop: any): string[] {
     const priceFormatted = Number(prop.price).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
-    const slug = prop.publicSlug || prop.denomination.toLowerCase().replace(/[^a-z0-9]+/g, '-');
-    const siteUrl = `https://romateccrmwhatsapp-production.up.railway.app/imovel/${slug}`;
     const denom = prop.denomination || '';
+    const city = prop.address?.split(',').pop()?.trim() || 'Açailândia';
 
     const isChacara = denom.toLowerCase().includes('chacara') || denom.toLowerCase().includes('chácar') || denom.toLowerCase().includes('giuliano');
 
+    // ─── MENSAGENS SEM LINK — o link é enviado como follow-up 1-2 min depois ───
+
     if (isChacara) {
       return [
-        `🌿 {{NOME}}, *${denom}* - Chácaras exclusivas em Açailândia!\n\n🏡 Cada chácara: *~1.000m²* por apenas *R$ ${priceFormatted}*\n⚠️ *Restam apenas 3 unidades!*\n\n📸 Veja fotos e localização: ${siteUrl}\n\nGaranta a sua antes que acabe!`,
-        `{{NOME}}, já conhece o *${denom}*? 🌳\n\nChácaras de *~1.000m²* por *R$ ${priceFormatted}*\n🚨 *Apenas 3 disponíveis*\n\n👉 Confira: ${siteUrl}\n\nNão perca essa oportunidade!`,
-        `🔥 {{NOME}}, *OPORTUNIDADE RARA*\n\n*${denom}* - Açailândia/MA\n🏡 ~1.000m² por *R$ ${priceFormatted}*\n⚠️ *Restam apenas 3 unidades!*\n\n📲 Veja agora: ${siteUrl}`,
-        `⏰ {{NOME}}, *ÚLTIMAS UNIDADES*!\n\n*${denom}*: ~1.000m² por *R$ ${priceFormatted}*\n🚨 Apenas 3 disponíveis\n\n📸 Detalhes: ${siteUrl}`,
-        `🏡 {{NOME}}, imagine ter sua própria chácara...\n\n*${denom}* - ~1.000m²\nValor: *R$ ${priceFormatted}*\n\n🔗 Conheça: ${siteUrl}`,
-        `💎 {{NOME}}, oportunidade *ÚNICA* em Açailândia!\n\n*${denom}*\n📐 ~1.000m² | 💰 *R$ ${priceFormatted}*\n🔴 *3 já vendidas!* Restam 3.\n\n👉 Veja: ${siteUrl}`,
+        `Oi {{NOME}}! 👋\n\nPassando pra te contar de uma oportunidade aqui em Açailândia que tá chamando muito a atenção.\n\n*${denom}* — chácaras de *~1.000m²*, com privacidade total e natureza ao redor.\n\n💰 Por apenas *R$ ${priceFormatted}*\n\nRestam poucas unidades. Tem interesse em saber mais? 😊`,
+        `Boa tarde, {{NOME}}! 🌿\n\nTenho uma opção interessante pra te apresentar: *${denom}*.\n\nSão chácaras de *~1.000m²* em Açailândia, perfeitas pra quem busca tranquilidade ou investimento.\n\n🏷️ Valor: *R$ ${priceFormatted}*\n\nPosso te mandar os detalhes completos?`,
+        `{{NOME}}, bom dia! ☀️\n\nVocê já pensou em ter um espaço verde só seu? 🌳\n\n*${denom}* tem chácaras de *~1.000m²* disponíveis em Açailândia por *R$ ${priceFormatted}*.\n\nSão últimas unidades. Quer que eu reserve uma visita?`,
+        `Oi {{NOME}}! Tudo bem? 😊\n\nEstou com uma novidade que pode te interessar bastante.\n\n🌿 *${denom}* — Açailândia/MA\n📐 ~1.000m² por chácara\n💰 *R$ ${priceFormatted}*\n\nSe quiser, posso te explicar como funciona o financiamento. É bem acessível!`,
+        `{{NOME}}, boa noite! 🌙\n\nSabia que ainda dá pra ter uma chácara em Açailândia com financiamento facilitado?\n\n*${denom}* — lotes de *~1.000m²* por *R$ ${priceFormatted}*\n\nGostaria de conversar sobre as condições?`,
+        `Oi {{NOME}}! 👋\n\nTenho algo especial pra te mostrar hoje.\n\n*${denom}* é um condomínio de chácaras exclusivo em Açailândia, com lotes de *~1.000m²* cada.\n\n💰 A partir de *R$ ${priceFormatted}* — com opção de financiamento!\n\nAcontece muito interesse esse mês. Posso te passar mais informações?`,
       ];
     }
 
     return [
-      `🏠 {{NOME}}, *${denom}* - Restam poucas unidades!\n\nValor: *R$ ${priceFormatted}*\nLocal: ${prop.address}\n\n📸 Veja fotos e localização:\n${siteUrl}\n\nPosso te passar mais detalhes?`,
-      `{{NOME}}, você já conhece o *${denom}*? 🔑\n\n💰 A partir de *R$ ${priceFormatted}*\n\n👉 Confira: ${siteUrl}\n\nPosso reservar uma visita exclusiva pra você?`,
-      `🔥 {{NOME}}, *OPORTUNIDADE REAL*\n\n*${denom}*\n📍 ${prop.address}\n💰 *R$ ${priceFormatted}*\n\n👉 Veja agora: ${siteUrl}`,
-      `⏰ {{NOME}}, última chance!\n\n*${denom}* em ${prop.address}\n🏷️ *R$ ${priceFormatted}*\n\n📸 Veja fotos: ${siteUrl}`,
-      `🏡 {{NOME}}, imagine sua família no lugar perfeito...\n\n*${denom}* - ${prop.address}\nValor: *R$ ${priceFormatted}*\n\n🔗 Conheça: ${siteUrl}`,
-      `🚨 {{NOME}}, *ATENÇÃO*\n\n*${denom}* está gerando muito interesse!\n🏷️ *R$ ${priceFormatted}*\n\n📲 Veja antes que acabe: ${siteUrl}`,
+      `Oi {{NOME}}! 👋\n\nTenho uma oportunidade que pode ser exatamente o que você procura.\n\n🏠 *${denom}*\n📍 ${city}\n💰 *R$ ${priceFormatted}*\n\nAinda tem unidades disponíveis. Posso te contar mais?`,
+      `Boa tarde, {{NOME}}! 😊\n\nPassando pra apresentar o *${denom}*, um imóvel que tá gerando bastante interesse aqui em ${city}.\n\n💰 Valor: *R$ ${priceFormatted}*\n\nCondições de financiamento bem atrativas. Tem interesse em saber como funciona?`,
+      `{{NOME}}, tudo bem? 🙂\n\nEstou com um imóvel disponível em ${city} que achei que vale a pena te mostrar.\n\n*${denom}*\n💰 *R$ ${priceFormatted}*\n\nSeria uma boa hora pra conversar sobre isso?`,
+      `Oi {{NOME}}! ☀️\n\nSabia que o *${denom}* em ${city} ainda tem unidades disponíveis?\n\n🏠 Valor: *R$ ${priceFormatted}*\n\nFinanciamento facilitado com parcelas que cabem no seu orçamento.\n\nQuer que eu faça uma simulação pra você?`,
+      `Boa noite, {{NOME}}! 🌙\n\nVi que você pode estar buscando um imóvel em ${city}. Tenho uma opção excelente:\n\n🏡 *${denom}*\n💰 *R$ ${priceFormatted}*\n\nPosso te enviar mais detalhes?`,
+      `Olá, {{NOME}}! 👋\n\nEstou representando a *Romatec Imóveis* e tenho uma oportunidade em ${city} que pode te interessar.\n\n🏠 *${denom}* — *R$ ${priceFormatted}*\n\nSe quiser, posso agendar uma visita sem compromisso. O que você acha?`,
     ];
+  }
+
+  // Gera a mensagem de follow-up com o link (enviada 1-2 min depois)
+  private async getPropertyLinkMessage(campaignId: number): Promise<string | null> {
+    try {
+      const db = await getDb();
+      if (!db) return null;
+      const result = await db.select().from(campaigns).where(eq(campaigns.id, campaignId)).limit(1);
+      const camp = result[0];
+      if (!camp?.propertyId) return null;
+      const propResult = await db.select().from(properties).where(eq(properties.id, camp.propertyId)).limit(1);
+      const prop = propResult[0];
+      if (!prop) return null;
+      const slug = (prop as any).publicSlug || prop.denomination.toLowerCase().replace(/[^a-z0-9]+/g, '-');
+      const url = `https://romateccrmwhatsapp-production.up.railway.app/imovel/${slug}`;
+      return `📸 *Veja as fotos e detalhes completos aqui:*\n${url}`;
+    } catch {
+      return null;
+    }
+  }
+
+  // Auto-ativar/desativar ciclos nos horários programados
+  private async autoToggleCycles(brasiliaHour: number) {
+    try {
+      const db = await getDb();
+      if (!db) return;
+
+      if (brasiliaHour === 8) {
+        // Ativar ciclo DIA: ligar activeDay em todas as campanhas running (máx 5)
+        const running = await db.select().from(campaigns).where(eq(campaigns.status, 'running'));
+        const toActivate = running.slice(0, 5);
+        for (const c of toActivate) {
+          await db.update(campaigns).set({ activeDay: true }).where(eq(campaigns.id, c.id));
+        }
+        console.log(`☀️ [Auto-Ciclo] 08:00 — CICLO DIA INICIADO | ${toActivate.length} campanhas ativadas`);
+        this.state.nightMode = false;
+      } else if (brasiliaHour === 18) {
+        // Encerrar ciclo DIA
+        await db.update(campaigns).set({ activeDay: false });
+        console.log(`🌆 [Auto-Ciclo] 18:00 — CICLO DIA ENCERRADO`);
+      } else if (brasiliaHour === 20) {
+        // Ativar ciclo NOITE
+        const running = await db.select().from(campaigns).where(eq(campaigns.status, 'running'));
+        const toActivate = running.slice(0, 5);
+        for (const c of toActivate) {
+          await db.update(campaigns).set({ activeNight: true }).where(eq(campaigns.id, c.id));
+        }
+        console.log(`🌙 [Auto-Ciclo] 20:00 — CICLO NOITE INICIADO | ${toActivate.length} campanhas ativadas`);
+        this.state.nightMode = true;
+      } else if (brasiliaHour === 6) {
+        // Encerrar ciclo NOITE
+        await db.update(campaigns).set({ activeNight: false });
+        console.log(`🌅 [Auto-Ciclo] 06:00 — CICLO NOITE ENCERRADO`);
+      }
+    } catch (err) {
+      console.error('[Auto-Ciclo] Erro:', err);
+    }
   }
 
   // ========== Z-API ==========
