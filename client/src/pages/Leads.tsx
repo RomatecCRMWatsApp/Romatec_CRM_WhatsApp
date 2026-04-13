@@ -105,6 +105,14 @@ export default function Leads() {
     onError: e => toast.error(`Erro: ${e.message}`),
   });
 
+  const testTelegram = trpc.testTelegram.useMutation({
+    onSuccess: (r) => {
+      if (r.success) toast.success(r.message || 'Telegram enviado!');
+      else toast.error(`Telegram erro: ${(r as any).error}`);
+    },
+    onError: e => toast.error(`Erro: ${e.message}`),
+  });
+
   const leads = data?.leads || [];
   const stats = data?.stats;
   const total = data?.total || 0;
@@ -145,13 +153,23 @@ export default function Leads() {
             </p>
           </div>
         </div>
-        <button onClick={() => refetch()} style={{
-          padding: '6px 14px', borderRadius: '8px', background: 'rgba(62,200,122,0.1)',
-          border: '1px solid rgba(62,200,122,0.2)', color: '#3ec87a', fontSize: '11px',
-          fontWeight: 600, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '6px',
-        }}>
-          <RefreshCw size={12} /> Atualizar
-        </button>
+        <div style={{ display: 'flex', gap: '8px' }}>
+          <button onClick={() => testTelegram.mutate()} disabled={testTelegram.isPending} style={{
+            padding: '6px 14px', borderRadius: '8px', background: 'rgba(38,169,224,0.1)',
+            border: '1px solid rgba(38,169,224,0.25)', color: '#26a9e0', fontSize: '11px',
+            fontWeight: 600, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '6px',
+            opacity: testTelegram.isPending ? 0.6 : 1,
+          }}>
+            ✈️ {testTelegram.isPending ? 'Enviando...' : 'Testar Telegram'}
+          </button>
+          <button onClick={() => refetch()} style={{
+            padding: '6px 14px', borderRadius: '8px', background: 'rgba(62,200,122,0.1)',
+            border: '1px solid rgba(62,200,122,0.2)', color: '#3ec87a', fontSize: '11px',
+            fontWeight: 600, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '6px',
+          }}>
+            <RefreshCw size={12} /> Atualizar
+          </button>
+        </div>
       </div>
 
       <style>{`

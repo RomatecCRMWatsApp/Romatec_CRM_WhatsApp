@@ -560,6 +560,28 @@ export const appRouter = router({
     }),
   }),
 
+  // Teste de notificação Telegram
+  testTelegram: protectedProcedure.mutation(async () => {
+    try {
+      const { notifyHotLead } = await import('./_core/telegramNotification');
+      await notifyHotLead({
+        name: 'João Teste Silva',
+        phone: '5599999999999',
+        score: 'quente',
+        renda: 'R$ 6.000',
+        entrada: 'R$ 30.000',
+        fgts: 'Sim, 3 anos',
+        tipo: 'Casa',
+        valor: 'R$ 250.000',
+        prazo: 'Imediato',
+        campanha: 'Mod_Vaz-02',
+      });
+      return { success: true, message: 'Notificação enviada! Verifique o Telegram.' };
+    } catch (e: any) {
+      return { success: false, error: String(e?.message || e) };
+    }
+  }),
+
   // ══════════════════════════════════════════════════════════════════════
   // LEADS — Gestão completa de leads qualificados pelo bot
   // ══════════════════════════════════════════════════════════════════════
