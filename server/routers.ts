@@ -565,11 +565,9 @@ export const appRouter = router({
     // Diagnóstico direto — lê process.env para dar erro preciso
     const token = process.env.TELEGRAM_BOT_TOKEN;
     const chatId = process.env.TELEGRAM_CHAT_ID;
-    const enabled = process.env.TELEGRAM_NOTIFICATIONS_ENABLED;
 
     if (!token) return { success: false, error: 'TELEGRAM_BOT_TOKEN não está definido no Railway.' };
     if (!chatId) return { success: false, error: 'TELEGRAM_CHAT_ID não está definido no Railway.' };
-    if (enabled !== 'true') return { success: false, error: `TELEGRAM_NOTIFICATIONS_ENABLED="${enabled}" — deve ser "true".` };
 
     try {
       const TelegramBot = await import('node-telegram-bot-api').then(m => m.default);

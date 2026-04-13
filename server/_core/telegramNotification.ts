@@ -171,13 +171,12 @@ export async function notifyHotLead(params: {
   prazo?: string;
   campanha?: string;
 }): Promise<boolean> {
-  // Lê direto do process.env para pegar o valor atual (não o snapshot do ENV)
+  // Se token e chatId estão presentes, considera habilitado (TELEGRAM_NOTIFICATIONS_ENABLED é opcional)
   const token = process.env.TELEGRAM_BOT_TOKEN;
   const chatId = process.env.TELEGRAM_CHAT_ID;
-  const enabled = process.env.TELEGRAM_NOTIFICATIONS_ENABLED === 'true';
 
-  if (!enabled || !token || !chatId) {
-    console.log(`[Telegram] notifyHotLead bloqueado — enabled=${enabled} token=${!!token} chatId=${!!chatId}`);
+  if (!token || !chatId) {
+    console.log(`[Telegram] notifyHotLead bloqueado — token=${!!token} chatId=${!!chatId}`);
     return false;
   }
 
