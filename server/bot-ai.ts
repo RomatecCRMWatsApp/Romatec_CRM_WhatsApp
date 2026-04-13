@@ -109,14 +109,61 @@ function setState(phone: string, state: Partial<ConversationState>) {
   conversationStates.set(clean, { ...existing, ...state });
 }
 
-// ============ DADOS DOS IMOVEIS ============
-const PROPERTIES = [
-  { slug: 'cond-chacaras-giuliano', name: 'Condominio de Chacaras Giuliano', value: 160000, beds: 0, area: '~1.000m2 por unidade', type: 'Chacara', city: 'Acailandia' },
-  { slug: 'mod-vaz-03', name: 'Mod Vaz 03', value: 210000, beds: 3, area: '92m2', type: 'Apartamento', city: 'Acailandia' },
-  { slug: 'mod-vaz-02', name: 'Mod Vaz 02', value: 250000, beds: 3, area: '110m2', type: 'Casa', city: 'Acailandia' },
-  { slug: 'mod-vaz-01', name: 'Mod Vaz 01', value: 300000, beds: 2, area: '68m2', type: 'Apartamento', city: 'Acailandia' },
-  { slug: 'alacide', name: 'Alacide', value: 380000, beds: 2, area: '58m2', type: 'Apartamento', city: 'Acailandia' },
-] as const;
+// ============ DADOS DOS IMOVEIS — carregados do banco ============
+// Cache em memória renovado a cada 10 min para não bater no DB a cada mensagem
+type PropertyEntry = { slug: string; name: string; value: number; beds: number; area: string; type: string; city: string };
+let _propertiesCache: PropertyEntry[] = [];
+let _propertiesCacheAt = 0;
+
+async function getProperties(): Promise<PropertyEntry[]> {
+  if (Date.now() - _propertiesCacheAt < 10 * 60 * 1000 && _propertiesCache.length > 0) {
+    return _propertiesCache;
+  }
+  try {
+    const db = await getDb();
+    if (db) {
+      const { properties: propsTable } = await import('../drizzle/schema');
+      const { eq: eqOp } = await import('drizzle-orm');
+      const rows = await db.select().from(propsTable).where(eqOp(propsTable.status, 'available'));
+      if (rows.length > 0) {
+        _propertiesCache = rows.map((p: any) => ({
+          slug: p.publicSlug || p.denomination.toLowerCase().replace(/[^a-z0-9]+/g, '-'),
+          name: p.denomination,
+          value: Number(p.price),
+          beds: p.bedrooms || 0,
+          area: p.areaConstruida ? `${p.areaConstruida}m²` : (p.areaTerreno ? `~${p.areaTerreno}m²` : 'Sob consulta'),
+          type: p.propertyType || 'Imóvel',
+          city: p.city || 'Açailândia',
+        }));
+        _propertiesCacheAt = Date.now();
+        return _propertiesCache;
+      }
+    }
+  } catch (e) {
+    console.warn('[Bot] Erro ao carregar imóveis do DB, usando cache:', e);
+  }
+  // Fallback estático se DB indisponível
+  return [
+    { slug: 'cond-chacaras-giuliano', name: 'Condomínio de Chácaras Giuliano', value: 160000, beds: 0, area: '~1.000m²', type: 'Chácara', city: 'Açailândia' },
+    { slug: 'mod-vaz-03', name: 'Mod Vaz 03', value: 210000, beds: 3, area: '92m²', type: 'Apartamento', city: 'Açailândia' },
+    { slug: 'mod-vaz-02', name: 'Mod Vaz 02', value: 250000, beds: 3, area: '110m²', type: 'Casa', city: 'Açailândia' },
+    { slug: 'mod-vaz-01', name: 'Mod Vaz 01', value: 300000, beds: 2, area: '68m²', type: 'Apartamento', city: 'Açailândia' },
+    { slug: 'alacide', name: 'Alacide', value: 380000, beds: 2, area: '58m²', type: 'Apartamento', city: 'Açailândia' },
+  ];
+}
+
+// Sync fallback (usado onde o contexto não é async)
+function getPropertySync(slug?: string): PropertyEntry {
+  const list = _propertiesCache.length > 0 ? _propertiesCache : [
+    { slug: 'cond-chacaras-giuliano', name: 'Condomínio de Chácaras Giuliano', value: 160000, beds: 0, area: '~1.000m²', type: 'Chácara', city: 'Açailândia' },
+    { slug: 'mod-vaz-03', name: 'Mod Vaz 03', value: 210000, beds: 3, area: '92m²', type: 'Apartamento', city: 'Açailândia' },
+    { slug: 'mod-vaz-02', name: 'Mod Vaz 02', value: 250000, beds: 3, area: '110m²', type: 'Casa', city: 'Açailândia' },
+    { slug: 'mod-vaz-01', name: 'Mod Vaz 01', value: 300000, beds: 2, area: '68m²', type: 'Apartamento', city: 'Açailândia' },
+    { slug: 'alacide', name: 'Alacide', value: 380000, beds: 2, area: '58m²', type: 'Apartamento', city: 'Açailândia' },
+  ];
+  if (!slug) return list[0];
+  return list.find(p => p.slug === slug) || list[0];
+}
 
 const BANKS = [
   { name: 'Caixa', rate: 10.26 },
@@ -152,8 +199,7 @@ function firstName(name: string): string {
   return name.split(' ')[0] || 'Cliente';
 }
 function getProperty(slug?: string) {
-  if (!slug) return PROPERTIES[0];
-  return PROPERTIES.find(p => p.slug === slug) || PROPERTIES[0];
+  return getPropertySync(slug);
 }
 
 /**
@@ -347,7 +393,7 @@ function calcScore(answers: QualAnswers, propValue: number): LeadScore {
   return 'morno';
 }
 
-function getScoreResponse(score: LeadScore, fn: string, prop: typeof PROPERTIES[number], answers: QualAnswers): string {
+function getScoreResponse(score: LeadScore, fn: string, prop: PropertyEntry, answers: QualAnswers): string {
   const fin = prop.value * 0.8;
   const pmt300 = calcPrice(fin, 10.26, 300);
   const link = `${SITE_URL}/imovel/${prop.slug}`;
@@ -607,6 +653,24 @@ async function processStage(context: BotContext, state: ConversationState): Prom
         prop,
         state.campaignId,
       ).catch(() => {});
+
+      // Notificar Telegram quando lead é quente ou morno
+      if (score === 'quente' || score === 'morno') {
+        import('./_core/telegramNotification').then(({ notifyHotLead }) => {
+          notifyHotLead({
+            name: finalAnswers.nome || name || 'Sem nome',
+            phone: context.phone,
+            score,
+            renda: finalAnswers.rendaMensal,
+            entrada: finalAnswers.entradaDisponivel,
+            fgts: finalAnswers.fgtsDisponivel,
+            tipo: finalAnswers.tipoImovelBusca,
+            valor: finalAnswers.valorImovelPretendido,
+            prazo: finalAnswers.prazoPrefido,
+            campanha: prop?.name,
+          });
+        }).catch(() => {});
+      }
 
       // ═══════════════════════════════════════════════════════════════════
       // GERAR PROPOSTA INTEGRADA COM MULTI-BANCO + RECOMENDAÇÕES
@@ -961,5 +1025,10 @@ export function formatSimulationWhatsApp(propertyValue: number, entryPct: number
 }
 
 export function recommendProperties(budget: number) {
-  return [...PROPERTIES].filter(p => p.value <= budget * 1.15).sort((a, b) => a.value - b.value);
+  return [..._propertiesCache].filter(p => p.value <= budget * 1.15).sort((a, b) => a.value - b.value);
 }
+
+// Pré-carrega imóveis do banco na inicialização
+getProperties().then(list => {
+  console.log(`[Bot] ${list.length} imóveis carregados do banco para o bot`);
+}).catch(() => {});

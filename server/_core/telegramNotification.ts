@@ -156,3 +156,43 @@ class TelegramNotifier {
 
 // Export singleton instance
 export const telegramNotifier = new TelegramNotifier();
+
+// ─── Notificação instantânea de lead quente ────────────────────────────────
+export async function notifyHotLead(params: {
+  name: string;
+  phone: string;
+  score: string;
+  renda?: string;
+  entrada?: string;
+  fgts?: string;
+  tipo?: string;
+  valor?: string;
+  prazo?: string;
+  campanha?: string;
+}) {
+  if (!telegramNotifier['bot'] || !telegramNotifier['initialized'] || !ENV.telegramNotificationsEnabled) {
+    return;
+  }
+  try {
+    const waLink = `https://wa.me/${params.phone.replace(/\D/g, '')}`;
+    const scoreEmoji = params.score === 'quente' ? '🔥' : params.score === 'morno' ? '🌡️' : '❄️';
+    const msg = `${scoreEmoji} <b>LEAD ${params.score.toUpperCase()} QUALIFICADO!</b>
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+👤 <b>Nome:</b> ${params.name}
+📱 <b>Telefone:</b> ${params.phone}
+${params.renda ? `💰 <b>Renda:</b> ${params.renda}` : ''}
+${params.entrada ? `🏦 <b>Entrada:</b> ${params.entrada}` : ''}
+${params.fgts ? `📋 <b>FGTS:</b> ${params.fgts}` : ''}
+${params.tipo ? `🏠 <b>Tipo imóvel:</b> ${params.tipo}` : ''}
+${params.valor ? `💲 <b>Valor pretendido:</b> ${params.valor}` : ''}
+${params.prazo ? `⏰ <b>Prazo:</b> ${params.prazo}` : ''}
+${params.campanha ? `📢 <b>Campanha:</b> ${params.campanha}` : ''}
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+👆 <a href="${waLink}">Abrir conversa no WhatsApp</a>
+🚀 Contate AGORA para maximizar conversão!`;
+    await telegramNotifier['bot'].sendMessage(ENV.telegramChatId, msg, { parse_mode: 'HTML', disable_web_page_preview: true });
+    console.log(`[Telegram] 🔥 Lead quente notificado: ${params.name} (${params.phone})`);
+  } catch (e) {
+    console.error('[Telegram] Erro ao notificar lead quente:', e);
+  }
+}

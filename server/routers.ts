@@ -3,8 +3,8 @@ import { getSessionCookieOptions } from "./_core/cookies";
 import { systemRouter } from "./_core/systemRouter";
 import { publicProcedure, protectedProcedure, router } from "./_core/trpc";
 import { getAllContacts, getContactById, createContact, getAllProperties, getPropertyById, createProperty, getAllCampaigns, getCampaignById, createCampaign, getCompanyConfig, updateCompanyConfig, getDb } from "./db";
-import { campaigns, contacts, campaignContacts, messages, properties, contactCampaignHistory, users } from "../drizzle/schema";
-import { eq, and } from "drizzle-orm";
+import { campaigns, contacts, campaignContacts, messages, properties, contactCampaignHistory, users, leadQualifications } from "../drizzle/schema";
+import { eq, and, desc, gte, or, like, isNotNull } from "drizzle-orm";
 import { campaignScheduler } from "./scheduler/campaignScheduler";
 import { z } from "zod";
 export const appRouter = router({
@@ -558,6 +558,151 @@ export const appRouter = router({
       const { sendMessageViaZAPI } = await import('./zapi-integration');
       return sendMessageViaZAPI({ instanceId: config.zApiInstanceId, token: config.zApiToken, clientToken: config.zApiClientToken || undefined, phone: input.phone, message: input.message });
     }),
+  }),
+
+  // ══════════════════════════════════════════════════════════════════════
+  // LEADS — Gestão completa de leads qualificados pelo bot
+  // ══════════════════════════════════════════════════════════════════════
+  leads: router({
+
+    // Lista todos os leads com filtros e paginação
+    list: protectedProcedure
+      .input(z.object({
+        score: z.enum(['quente', 'morno', 'frio', 'all']).optional().default('all'),
+        stage: z.string().optional(),
+        search: z.string().optional(),
+        limit: z.number().min(1).max(200).optional().default(50),
+        offset: z.number().min(0).optional().default(0),
+      }))
+      .query(async ({ input }) => {
+        const db = await getDb();
+        if (!db) return { leads: [], total: 0, stats: { quente: 0, morno: 0, frio: 0, total: 0, descartado: 0 } };
+
+        let rows = await db.select().from(leadQualifications).orderBy(desc(leadQualifications.updatedAt));
+
+        // Filtro por score
+        if (input.score !== 'all') {
+          rows = rows.filter((r: any) => r.score === input.score);
+        }
+
+        // Filtro por stage
+        if (input.stage) {
+          rows = rows.filter((r: any) => r.stage === input.stage);
+        }
+
+        // Filtro por busca (nome ou telefone)
+        if (input.search && input.search.trim()) {
+          const q = input.search.toLowerCase();
+          rows = rows.filter((r: any) => {
+            const nome = String(r.nome || (r.answers as any)?.nome || '').toLowerCase();
+            const phone = String(r.phone || '').toLowerCase();
+            return nome.includes(q) || phone.includes(q);
+          });
+        }
+
+        // Stats gerais
+        const allRows = await db.select().from(leadQualifications);
+        const stats = {
+          total: allRows.length,
+          quente: allRows.filter((r: any) => r.score === 'quente').length,
+          morno: allRows.filter((r: any) => r.score === 'morno').length,
+          frio: allRows.filter((r: any) => r.score === 'frio').length,
+          descartado: allRows.filter((r: any) => r.stage === 'descartado' || r.stage === 'sem_interesse').length,
+          qualificado: allRows.filter((r: any) => r.stage === 'qualificado').length,
+          emAndamento: allRows.filter((r: any) => String(r.stage || '').startsWith('qual_etapa')).length,
+        };
+
+        const total = rows.length;
+        const paginated = rows.slice(input.offset, input.offset + input.limit);
+
+        // Enriquecer com nome do contato do banco se disponível
+        const enriched = await Promise.all(paginated.map(async (lead: any) => {
+          let contactName = lead.nome || (lead.answers as any)?.nome || null;
+          let campaignName = null;
+          try {
+            if (lead.contactId) {
+              const ct = await db.select().from(contacts).where(eq(contacts.id, lead.contactId)).limit(1);
+              if (ct[0]) contactName = ct[0].name || contactName;
+            }
+            if (lead.campaignId) {
+              const cp = await db.select().from(campaigns).where(eq(campaigns.id, lead.campaignId)).limit(1);
+              if (cp[0]) campaignName = cp[0].name;
+            }
+          } catch {}
+          return { ...lead, contactName, campaignName };
+        }));
+
+        return { leads: enriched, total, stats };
+      }),
+
+    // Detalhes completos de um lead
+    getById: protectedProcedure
+      .input(z.object({ id: z.number() }))
+      .query(async ({ input }) => {
+        const db = await getDb();
+        if (!db) return null;
+        const rows = await db.select().from(leadQualifications).where(eq(leadQualifications.id, input.id)).limit(1);
+        return rows[0] || null;
+      }),
+
+    // Atualizar score manualmente
+    updateScore: protectedProcedure
+      .input(z.object({
+        id: z.number(),
+        score: z.enum(['quente', 'morno', 'frio']),
+      }))
+      .mutation(async ({ input }) => {
+        const db = await getDb();
+        if (!db) return { success: false };
+        await db.update(leadQualifications).set({ score: input.score, updatedAt: new Date() }).where(eq(leadQualifications.id, input.id));
+        return { success: true };
+      }),
+
+    // Descartar lead
+    discard: protectedProcedure
+      .input(z.object({
+        id: z.number(),
+        reason: z.string().optional().default('Descartado manualmente'),
+        blockDays: z.number().optional().default(30),
+      }))
+      .mutation(async ({ input }) => {
+        const db = await getDb();
+        if (!db) return { success: false };
+        const blockedUntil = new Date(Date.now() + input.blockDays * 24 * 60 * 60 * 1000);
+        await db.update(leadQualifications).set({
+          stage: 'descartado',
+          discardReason: input.reason,
+          blockedUntil,
+          updatedAt: new Date(),
+        }).where(eq(leadQualifications.id, input.id));
+        return { success: true };
+      }),
+
+    // Reativar lead bloqueado
+    reactivate: protectedProcedure
+      .input(z.object({ id: z.number() }))
+      .mutation(async ({ input }) => {
+        const db = await getDb();
+        if (!db) return { success: false };
+        await db.update(leadQualifications).set({
+          stage: 'nao_iniciado',
+          score: 'frio',
+          blockedUntil: null,
+          discardReason: null,
+          updatedAt: new Date(),
+        }).where(eq(leadQualifications.id, input.id));
+        return { success: true };
+      }),
+
+    // Enviar mensagem manual via WhatsApp
+    sendWhatsApp: protectedProcedure
+      .input(z.object({ phone: z.string(), message: z.string().min(1) }))
+      .mutation(async ({ input }) => {
+        const config = await getCompanyConfig();
+        if (!config?.zApiInstanceId || !config?.zApiToken) return { success: false, error: 'Z-API nao configurado' };
+        const { sendMessageViaZAPI } = await import('./zapi-integration');
+        return sendMessageViaZAPI({ instanceId: config.zApiInstanceId, token: config.zApiToken, clientToken: config.zApiClientToken || undefined, phone: input.phone, message: input.message });
+      }),
   }),
 });
 export type AppRouter = typeof appRouter;

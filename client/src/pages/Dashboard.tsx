@@ -402,11 +402,12 @@ export default function Dashboard() {
         </div>
 
         {/* Navigation */}
-        <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
+        <div className="grid grid-cols-2 md:grid-cols-6 gap-3">
           {[
             { label: "Clientes", icon: Users, route: "/contacts", color: "bg-emerald-600 hover:bg-emerald-700" },
             { label: "Imóveis", icon: Building2, route: "/properties", color: "bg-amber-600 hover:bg-amber-700" },
             { label: "Campanhas", icon: Send, route: "/campaigns", color: "bg-blue-600 hover:bg-blue-700" },
+            { label: "🔥 Leads", icon: TrendingUp, route: "/leads", color: "bg-red-700 hover:bg-red-800" },
             { label: "Desempenho", icon: BarChart3, route: "/performance", color: "bg-purple-600 hover:bg-purple-700" },
             { label: "Configurações", icon: Settings, route: "/settings", color: "bg-gray-600 hover:bg-gray-700" },
           ].map(item => (

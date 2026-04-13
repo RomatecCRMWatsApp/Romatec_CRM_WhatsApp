@@ -13,6 +13,7 @@ import Campaigns from "./pages/Campaigns";
 import Settings from "./pages/Settings";
 import PropertyPublic from "./pages/PropertyPublic";
 import Performance from "./pages/Performance";
+import Leads from "./pages/Leads";
 
 function ProtectedRoute({ component: Component }: { component: React.ComponentType }) {
   return <Component />;
@@ -40,6 +41,9 @@ function Router() {
       </Route>
       <Route path={"/performance"}>
         {() => <ProtectedRoute component={Performance} />}
+      </Route>
+      <Route path={"/leads"}>
+        {() => <ProtectedRoute component={Leads} />}
       </Route>
       <Route path={"/imovel/:slug"} component={PropertyPublic} />
       <Route path={"/404"} component={NotFound} />
