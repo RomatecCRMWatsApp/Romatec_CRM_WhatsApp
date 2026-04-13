@@ -8,6 +8,15 @@ import { transcribeAudio } from './_core/voiceTranscription';
 import { getDb } from './db';
 import { leadQualifications, contacts, campaigns } from '../drizzle/schema';
 import { eq } from 'drizzle-orm';
+import {
+  QUALIFICATION_SEQUENCE,
+  detectQualificationIntent,
+  calculateLeadScore,
+  generateRejectionResponse,
+  generateProposalMessage,
+  isResponseValid,
+  QualificationAnswers,
+} from './qualification-flow';
 
 // ============ TIPOS ============
 export interface BotContext {
@@ -26,15 +35,21 @@ export interface BotResponse {
 type ConversationStage =
   | 'nao_iniciado'
   | 'abordagem_enviada'
-  | 'qual_etapa_1'
-  | 'qual_etapa_2'
-  | 'qual_etapa_3'
-  | 'qual_etapa_4'
-  | 'qual_etapa_5'
-  | 'qual_etapa_6'
+  | 'qual_etapa_1'   // Nome
+  | 'qual_etapa_2'   // Renda mensal
+  | 'qual_etapa_3'   // Financiamento ativo?
+  | 'qual_etapa_4'   // FGTS disponível?
+  | 'qual_etapa_5'   // Entrada disponível?
+  | 'qual_etapa_6'   // Tipo de imóvel
+  | 'qual_etapa_7'   // Região/bairro
+  | 'qual_etapa_8'   // Valor do imóvel
+  | 'qual_etapa_9'   // Moradia ou investimento?
+  | 'qual_etapa_10'  // Prazo ideal
   | 'qualificado'
+  | 'proposta_enviada'
   | 'visita_agendada'
   | 'sem_interesse'
+  | 'descartado'
   | 'concluido';
 
 interface QualAnswers {
@@ -137,14 +152,21 @@ function detectIntent(message: string): IntentType {
   return 'OUTROS';
 }
 
-// ============ QUALIFICACAO — PERGUNTAS ============
+// ============ QUALIFICACAO — PERGUNTAS EXPANDIDAS ============
+// Usando o novo QUALIFICATION_SEQUENCE do módulo qualification-flow.ts
 const QUAL_QUESTIONS: Record<string, (fn: string) => string> = {
-  etapa_1: (fn) => `Que otimo, *${fn}*! Sou consultor da *Romatec Imoveis* e vou te ajudar a encontrar o imovel ideal.\n\nPrimeira pergunta rapida:\n\n📅 Voce tem interesse em adquirir um imovel nos *proximos 3 meses*?`,
-  etapa_2: (fn) => `Perfeito, *${fn}*!\n\n🏠 Voce ja possui algum imovel proprio ou seria o *primeiro*?`,
-  etapa_3: (fn) => `Entendido, *${fn}*!\n\n💰 Qual valor de *parcela mensal* voce consegue pagar confortavelmente?\n\n_(Ex: R$ 800, R$ 1.200, R$ 2.000...)_`,
-  etapa_4: (fn) => `Otimo, *${fn}*!\n\n🏦 Voce consegue dar uma *entrada de aproximadamente 20%* do valor do imovel?\n\n_(Para um imovel de R$ 200 mil, seriam R$ 40 mil de entrada)_`,
-  etapa_5: (fn) => `Entendido, *${fn}*!\n\n💼 Voce trabalha com *carteira assinada*, e *autonomo* ou *empresario*?`,
-  etapa_6: (fn) => `Ultima pergunta, *${fn}*, prometo! 😊\n\n🔍 Voce tem alguma *restricao no CPF* (SPC/Serasa)?`,
+  // Wrapper para manter compatibilidade com código legado
+  // enquanto usa o novo QUALIFICATION_SEQUENCE
+  ...Object.fromEntries(
+    QUALIFICATION_SEQUENCE.map((q, idx) => [
+      `etapa_${idx + 1}`,
+      (fn: string) => q.question(fn),
+    ])
+  ),
+
+  // Manter perguntas legadas para compatibilidade
+  etapa_old_1: (fn) => `Que otimo, *${fn}*! Sou consultor da *Romatec Imoveis* e vou te ajudar a encontrar o imovel ideal.\n\nPrimeira pergunta rapida:\n\n📅 Voce tem interesse em adquirir um imovel nos *proximos 3 meses*?`,
+  etapa_old_2: (fn) => `Perfeito, *${fn}*!\n\n🏠 Voce ja possui algum imovel proprio ou seria o *primeiro*?`,
 };
 
 // ============ SCORING ============
