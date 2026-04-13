@@ -397,6 +397,14 @@ Se você recebeu esta mensagem, o Telegram está 100% operacional!`;
       console.error('❌ Erro na migration de reset de ciclo:', error);
     }
 
+    // MIGRATION: Auto-ativar campanhas para ciclos DIA e NOITE
+    try {
+      const { activateAllCycles } = await import('./migrations/activateAllCycles');
+      await activateAllCycles();
+    } catch (error) {
+      console.error('❌ Erro na migration de ativação de ciclos:', error);
+    }
+
     // PROTECAO: garantir exatamente 2 contatos por campanha no banco
     try {
       const { getDb } = await import('../db');
