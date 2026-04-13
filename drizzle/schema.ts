@@ -1,4 +1,4 @@
-import { int, mysqlEnum, mysqlTable, text, timestamp, varchar, decimal, boolean, json } from "drizzle-orm/mysql-core";
+import { int, mysqlEnum, mysqlTable, text, timestamp, varchar, decimal, boolean, json, index, uniqueIndex } from "drizzle-orm/mysql-core";
 
 /**
  * Core user table backing auth flow.
@@ -282,18 +282,14 @@ export const messageSendLog = mysqlTable(
   (table) => ({
     // CONSTRAINT ÚNICA: impede duplicatas ao nível de DB
     // Qualquer tentativa de insert com mesmo (contactPhone, cycleHour) falha
-    uniquePerHour: require("drizzle-orm/mysql-core").unique().on(
+    uniquePerHour: uniqueIndex("unique_contact_cycle_hour").on(
       table.contactPhone,
       table.cycleHour
     ),
     // Índices para performance
-    idxContactPhone: require("drizzle-orm/mysql-core").index().on(
-      table.contactPhone
-    ),
-    idxCycleHour: require("drizzle-orm/mysql-core").index().on(
-      table.cycleHour
-    ),
-    idxSentAt: require("drizzle-orm/mysql-core").index().on(table.sentAt),
+    idxContactPhone: index("idx_contactPhone").on(table.contactPhone),
+    idxCycleHour: index("idx_cycleHour").on(table.cycleHour),
+    idxSentAt: index("idx_sentAt").on(table.sentAt),
   })
 );
 
