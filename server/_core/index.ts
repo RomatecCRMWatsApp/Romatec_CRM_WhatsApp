@@ -538,22 +538,10 @@ Se você recebeu esta mensagem, o Telegram está 100% operacional!`;
       console.error('Erro na protecao de messageVariations:', error);
     }
 
-    // AUTO-RESTART: Verificar se o scheduler estava rodando antes do deploy
+    // AUTO-RESTART: gerenciado pelo próprio campaignScheduler.ts (IIFE no final do arquivo)
     try {
-      const { campaignScheduler } = await import('../scheduler/campaignScheduler');
-      const { getDb: getDb2 } = await import('../db');
-      const { schedulerState: stateTable } = await import('../../drizzle/schema');
-      const db2 = await getDb2();
-      if (db2) {
-        const rows = await db2.select().from(stateTable).limit(1);
-        if (rows[0]?.status === 'running') {
-          console.log('\n🔄 Scheduler estava rodando — restaurando...');
-          const nightMode = (rows[0].stateJson as any)?.nightMode || false;
-          await campaignScheduler.start(nightMode);
-        } else {
-          console.log('\n⏸️  Scheduler estava parado — nao iniciando automaticamente');
-        }
-      }
+      // Importar o scheduler para garantir que o IIFE de auto-restore execute
+      await import('../scheduler/campaignScheduler');
     } catch (error) {
       console.error('Erro no auto-restart do scheduler:', error);
     }
