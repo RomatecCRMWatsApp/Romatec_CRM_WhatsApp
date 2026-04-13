@@ -14,61 +14,44 @@ export async function addCycleActivationColumns(): Promise<void> {
       return;
     }
 
-    // Check which columns already exist
-    const result = await (db as any).execute(
-      `SELECT COLUMN_NAME FROM information_schema.COLUMNS
-       WHERE TABLE_SCHEMA = DATABASE()
-       AND TABLE_NAME = 'campaigns'
-       AND COLUMN_NAME IN ('activeDay', 'activeNight', 'cycleActivationUpdatedAt')`
-    );
+    // Try to add columns - ignore if they already exist
+    const columnsToAdd = [
+      { name: 'activeDay', definition: 'BOOLEAN DEFAULT false NOT NULL COMMENT "Ativo no ciclo dia (08h-18h)"' },
+      { name: 'activeNight', definition: 'BOOLEAN DEFAULT false NOT NULL COMMENT "Ativo no ciclo noite (20h-06h)"' },
+      { name: 'cycleActivationUpdatedAt', definition: 'TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT "Quando a ativação foi alterada"' },
+    ];
 
-    const existingColumns = new Set((result || []).map((r: any) => r.COLUMN_NAME));
-
-    if (existingColumns.size === 3) {
-      console.log('[Migration] ✅ Cycle activation columns already exist');
-      return;
-    }
-
-    // Add columns if they don't exist
-    const columnsToAdd: { name: string; definition: string }[] = [];
-
-    if (!existingColumns.has('activeDay')) {
-      columnsToAdd.push({
-        name: 'activeDay',
-        definition: 'BOOLEAN DEFAULT false NOT NULL COMMENT "Ativo no ciclo dia (08h-18h)"',
-      });
-    }
-
-    if (!existingColumns.has('activeNight')) {
-      columnsToAdd.push({
-        name: 'activeNight',
-        definition: 'BOOLEAN DEFAULT false NOT NULL COMMENT "Ativo no ciclo noite (20h-06h)"',
-      });
-    }
-
-    if (!existingColumns.has('cycleActivationUpdatedAt')) {
-      columnsToAdd.push({
-        name: 'cycleActivationUpdatedAt',
-        definition: 'TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT "Quando a ativação foi alterada"',
-      });
-    }
+    let addedCount = 0;
+    let skippedCount = 0;
 
     for (const col of columnsToAdd) {
-      await (db as any).execute(
-        `ALTER TABLE campaigns ADD COLUMN ${col.name} ${col.definition}`
-      );
-      console.log(`[Migration] ✅ Adicionada coluna: ${col.name}`);
+      try {
+        await (db as any).execute(
+          `ALTER TABLE campaigns ADD COLUMN ${col.name} ${col.definition}`
+        );
+        console.log(`[Migration] ✅ Adicionada coluna: ${col.name}`);
+        addedCount++;
+      } catch (error: any) {
+        // Skip if column already exists
+        if (error.code === 'ER_DUP_FIELDNAME' || error.message?.includes('Duplicate column')) {
+          skippedCount++;
+        } else {
+          throw error;
+        }
+      }
     }
 
-    console.log('[Migration] ✅ Cycle activation columns added successfully');
-    console.log('[Migration] 📊 Campanhas agora têm activeDay e activeNight (máx 5 por ciclo)');
+    if (addedCount > 0) {
+      console.log(`[Migration] ✅ ${addedCount} colunas adicionadas ao campaigns`);
+    }
+    if (skippedCount > 0) {
+      console.log(`[Migration] ℹ️  ${skippedCount} colunas já existiam`);
+    }
+    if (addedCount === 0 && skippedCount === 3) {
+      console.log('[Migration] ℹ️  Cycle activation columns já existem, pulando');
+    }
   } catch (error) {
     const err = error as any;
-    // Ignore "column already exists" error
-    if (err.message?.includes('Duplicate column name') || err.code === 'ER_DUP_FIELDNAME') {
-      console.log('[Migration] ℹ️  Cycle activation columns already exist');
-    } else {
-      console.error('[Migration] ❌ Error adding cycle activation columns:', error);
-    }
+    console.error('[Migration] ❌ Error adding cycle activation columns:', err.message || error);
   }
 }
