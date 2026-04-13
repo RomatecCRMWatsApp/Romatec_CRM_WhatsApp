@@ -825,20 +825,20 @@ export class CampaignScheduler {
       return null;
     }
 
-    // Parsing JSON string to array com fallback robusto
+    // Drizzle retorna campo json já parseado (string[]). Fallback para string JSON raw.
     let variations: string[] = [];
-    try {
-      const parsed = JSON.parse(campaign.messageVariations as string);
-      variations = Array.isArray(parsed) ? parsed : [];
-    } catch (e) {
-      // Fallback 1: Tenta usar o valor como uma mensagem simples
-      const rawValue = String(campaign.messageVariations).trim();
-      if (rawValue && rawValue.length > 5) {
-        console.warn(`⚠️ messageVariations malformada para campanha ${campaignId}, usando como texto: "${rawValue.substring(0, 50)}..."`);
-        variations = [rawValue];
-      } else {
-        console.warn(`⚠️ Erro ao fazer parse de messageVariations para campanha ${campaignId}:`, e);
-        return null;
+    const raw = campaign.messageVariations;
+    if (Array.isArray(raw)) {
+      // Caso normal: Drizzle deserializou o JSON → já é string[]
+      variations = raw as string[];
+    } else if (raw) {
+      try {
+        const parsed = JSON.parse(raw as string);
+        variations = Array.isArray(parsed) ? parsed : [String(raw)];
+      } catch {
+        // Fallback: valor bruto como única mensagem
+        const rawStr = String(raw).trim();
+        if (rawStr.length > 5) variations = [rawStr];
       }
     }
 
