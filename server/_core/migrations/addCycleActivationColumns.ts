@@ -14,15 +14,17 @@ export async function addCycleActivationColumns(): Promise<void> {
       return;
     }
 
-    // Check if columns already exist
+    // Check which columns already exist
     const result = await (db as any).execute(
       `SELECT COLUMN_NAME FROM information_schema.COLUMNS
        WHERE TABLE_SCHEMA = DATABASE()
        AND TABLE_NAME = 'campaigns'
-       AND COLUMN_NAME IN ('activeDay', 'activeNight')`
+       AND COLUMN_NAME IN ('activeDay', 'activeNight', 'cycleActivationUpdatedAt')`
     );
 
-    if (result && result.length >= 2) {
+    const existingColumns = new Set((result || []).map((r: any) => r.COLUMN_NAME));
+
+    if (existingColumns.size === 3) {
       console.log('[Migration] ✅ Cycle activation columns already exist');
       return;
     }
@@ -30,21 +32,21 @@ export async function addCycleActivationColumns(): Promise<void> {
     // Add columns if they don't exist
     const columnsToAdd: { name: string; definition: string }[] = [];
 
-    if (!result?.some((r: any) => r.COLUMN_NAME === 'activeDay')) {
+    if (!existingColumns.has('activeDay')) {
       columnsToAdd.push({
         name: 'activeDay',
         definition: 'BOOLEAN DEFAULT false NOT NULL COMMENT "Ativo no ciclo dia (08h-18h)"',
       });
     }
 
-    if (!result?.some((r: any) => r.COLUMN_NAME === 'activeNight')) {
+    if (!existingColumns.has('activeNight')) {
       columnsToAdd.push({
         name: 'activeNight',
         definition: 'BOOLEAN DEFAULT false NOT NULL COMMENT "Ativo no ciclo noite (20h-06h)"',
       });
     }
 
-    if (!result?.some((r: any) => r.COLUMN_NAME === 'cycleActivationUpdatedAt')) {
+    if (!existingColumns.has('cycleActivationUpdatedAt')) {
       columnsToAdd.push({
         name: 'cycleActivationUpdatedAt',
         definition: 'TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT "Quando a ativação foi alterada"',
