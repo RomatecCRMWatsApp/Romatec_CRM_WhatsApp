@@ -159,7 +159,10 @@ export class CampaignScheduler {
       };
       const rows = await db.select().from(schedulerStateTable).where(eq(schedulerStateTable.id, 1)).limit(1);
       if (rows[0]) {
-        await db.update(schedulerStateTable).set({ status, cycleNumber: this.state.hourNumber, stateJson, updatedAt: new Date() }).where(eq(schedulerStateTable.id, 1));
+        // Preservar campos extras (ex: lastCycleNotif do Telegram) que não pertencem ao scheduler
+        const existingJson = (rows[0].stateJson as Record<string, any>) || {};
+        const mergedJson = { ...existingJson, ...stateJson };
+        await db.update(schedulerStateTable).set({ status, cycleNumber: this.state.hourNumber, stateJson: mergedJson, updatedAt: new Date() }).where(eq(schedulerStateTable.id, 1));
       } else {
         await db.insert(schedulerStateTable).values({ id: 1, status, cycleNumber: this.state.hourNumber, stateJson, messagesThisCycle: this.state.totalSent });
       }
@@ -777,16 +780,60 @@ export class CampaignScheduler {
     const db = await getDb();
     if (!db) return null;
 
-    const ccList = await db.select().from(campaignContacts)
+    const now = new Date();
+
+    // Primeiro: tentar contatos 'pending'
+    const pendingList = await db.select().from(campaignContacts)
       .where(and(
         eq(campaignContacts.campaignId, campaignId),
         eq(campaignContacts.status, 'pending')
       ));
 
-    const now = new Date();
-    const shuffled = [...ccList].sort(() => Math.random() - 0.5);
+    const shuffledPending = [...pendingList].sort(() => Math.random() - 0.5);
+    for (const cc of shuffledPending) {
+      const result = await db.select().from(contacts).where(eq(contacts.id, cc.contactId)).limit(1);
+      const contact = result[0];
+      if (!contact) continue;
+      if (contact.blockedUntil && contact.blockedUntil > now) continue;
+      return contact;
+    }
 
-    for (const cc of shuffled) {
+    // Se não há 'pending' disponíveis: reciclar 'sent' cujo bloqueio de 72h já expirou
+    const sentList = await db.select().from(campaignContacts)
+      .where(and(
+        eq(campaignContacts.campaignId, campaignId),
+        eq(campaignContacts.status, 'sent')
+      ));
+
+    for (const cc of sentList) {
+      const result = await db.select().from(contacts).where(eq(contacts.id, cc.contactId)).limit(1);
+      const contact = result[0];
+      if (!contact) continue;
+      if (contact.blockedUntil && contact.blockedUntil > now) continue;
+
+      // Reativar contato para próximos envios
+      await db.update(campaignContacts)
+        .set({ status: 'pending', messagesSent: 0 })
+        .where(and(
+          eq(campaignContacts.campaignId, campaignId),
+          eq(campaignContacts.contactId, contact.id)
+        ));
+      console.log(`♻️ Contato ${contact.name} reativado (72h expirou) para campanha ${campaignId}`);
+      return contact;
+    }
+
+    // Se ainda não há contatos: atribuir novos da pool geral
+    console.log(`📥 Sem contatos disponíveis — atribuindo novos para campanha ${campaignId}`);
+    const usedIds = new Set<number>();
+    await this.assignContactsToCampaign(campaignId, usedIds);
+
+    // Tentar novamente após atribuição
+    const newList = await db.select().from(campaignContacts)
+      .where(and(
+        eq(campaignContacts.campaignId, campaignId),
+        eq(campaignContacts.status, 'pending')
+      ));
+    for (const cc of newList) {
       const result = await db.select().from(contacts).where(eq(contacts.id, cc.contactId)).limit(1);
       const contact = result[0];
       if (!contact) continue;
