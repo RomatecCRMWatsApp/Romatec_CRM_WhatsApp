@@ -351,6 +351,22 @@ async function startServer() {
       }
     }, ZAPI_CHECK_INTERVAL);
 
+    // TELEGRAM: inicializar notificações de ciclo
+    try {
+      const { telegramNotifier } = await import('./telegramNotification');
+      await telegramNotifier.initialize();
+
+      // Verificar ciclo a cada minuto
+      setInterval(async () => {
+        const now = new Date();
+        const brasiliaStr = now.toLocaleString('en-US', { timeZone: 'America/Sao_Paulo' });
+        const brasiliaNow = new Date(brasiliaStr);
+        telegramNotifier.checkAndNotify(brasiliaNow.getHours());
+      }, 60 * 1000);
+    } catch (error) {
+      console.warn('[Telegram] Erro ao inicializar notificações:', error);
+    }
+
     // SALVAR WEBHOOK URL no banco (para referencia)
     try {
       const { getDb } = await import('../db');
