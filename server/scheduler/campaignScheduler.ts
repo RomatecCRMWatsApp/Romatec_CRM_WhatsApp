@@ -682,7 +682,8 @@ export class CampaignScheduler {
           const existingCamp = existingCampaigns.find(c => c.propertyId === prop.id);
           if (existingCamp) {
             const rawVar = String(existingCamp.messageVariations || '');
-            if (rawVar.includes('{ENDERECO}') || rawVar.includes('ENDERECO') || rawVar.length < 50) {
+            // Força re-geração se: placeholder antigo, msg curta, ou não tem os novos gatilhos (👀 está em toda variação nova)
+            if (rawVar.includes('{ENDERECO}') || rawVar.includes('ENDERECO') || rawVar.length < 50 || !rawVar.includes('👀')) {
               await db.update(campaigns)
                 .set({ messageVariations: freshVariations })
                 .where(eq(campaigns.id, existingCamp.id));
