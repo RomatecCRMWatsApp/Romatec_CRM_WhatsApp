@@ -51,6 +51,13 @@ export default function Campaigns() {
     refetchInterval: isResetting ? false : 5000,
   });
 
+  // Sincronizar nightMode com o estado do backend
+  useEffect(() => {
+    if (schedulerState.data?.state?.nightMode !== undefined) {
+      setNightMode(schedulerState.data.state.nightMode);
+    }
+  }, [schedulerState.data?.state?.nightMode]);
+
   useEffect(() => {
     if (schedulerState.data !== undefined && campaignDetails.data !== undefined) {
       setIsLoading(false);
