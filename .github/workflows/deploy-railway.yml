@@ -11,14 +11,28 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Checkout
-        uses: actions/checkout@v4
+      - name: Trigger Railway Deploy via API
+        run: |
+          RESPONSE=$(curl -s -w "\n%{http_code}" -X POST \
+            -H "Authorization: Bearer ${{ secrets.RAILWAY_TOKEN }}" \
+            -H "Content-Type: application/json" \
+            -d '{"query":"mutation { serviceInstanceRedeploy(environmentId: \"d437263d-b0c7-4bb7-b300-69b5c637cd05\", serviceId: \"b7f7b260-e5a1-41cf-a9b1-62bdc60819d6\") }"}' \
+            https://backboard.railway.app/graphql/v2)
 
-      - name: Install Railway CLI
-        run: npm install -g @railway/cli
+          HTTP_CODE=$(echo "$RESPONSE" | tail -n1)
+          BODY=$(echo "$RESPONSE" | head -n-1)
 
-      - name: Deploy to Railway
-        run: railway up --service Romatec_CRM_WhatsApp --detach
-        env:
-          RAILWAY_TOKEN: ${{ secrets.RAILWAY_TOKEN }}
-          RAILWAY_PROJECT_ID: 69e2b76b-a56b-448e-a57c-4b9dcb0d1574
+          echo "HTTP: $HTTP_CODE"
+          echo "Response: $BODY"
+
+          if [ "$HTTP_CODE" != "200" ]; then
+            echo "❌ Deploy falhou (HTTP $HTTP_CODE)"
+            exit 1
+          fi
+
+          if echo "$BODY" | grep -q '"errors"'; then
+            echo "❌ Erro Railway API: $BODY"
+            exit 1
+          fi
+
+          echo "✅ Deploy disparado com sucesso no Railway!"
