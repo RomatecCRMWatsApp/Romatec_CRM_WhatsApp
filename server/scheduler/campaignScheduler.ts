@@ -405,6 +405,13 @@ export class CampaignScheduler {
       const campaign = campResult[0];
       if (!campaign) return;
 
+      // PROTEÇÃO: Verificar NOVAMENTE se já enviou esta hora (dupla verificação)
+      const campState = this.state.campaignStates.find(cs => cs.campaignId === campaignId);
+      if (campState?.sentThisHour) {
+        console.log(`⚠️ PROTEÇÃO: ${campaign.name} já foi enviado nesta hora, cancelando`);
+        return;
+      }
+
       const contact = await this.getNextContact(campaignId);
       if (!contact) {
         console.log(`⚠️ ${campaign.name}: sem contatos disponíveis`);
@@ -518,6 +525,7 @@ export class CampaignScheduler {
         if (cs) {
           cs.sentThisHour = true;
           cs.lastSentHourKey = this.state.currentHourKey;
+          console.log(`🔒 ${campaign.name} MARCADO como enviado nesta hora (${this.state.currentHourKey})`);
         }
 
         const slot = this.state.scheduledSlots.find(s => s.campaignId === campaignId);
