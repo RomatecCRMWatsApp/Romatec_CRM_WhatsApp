@@ -127,7 +127,16 @@ Se você recebeu esta mensagem, o Telegram está 100% operacional!`;
         return res.json({ received: true, processed: false, reason: 'empty' });
       }
 
-      console.log(`[Webhook] ${payload.phone} - "${msgText.substring(0, 50)}"`);
+      console.log(`[Webhook] ${payload.phone} - "${msgText.substring(0, 50)}" | audioUrl: ${!!payload.audioUrl}`);
+
+      // DEBUG: Se mensagem vazia mas não é áudio, log do problema
+      if (!msgText && !payload.audioUrl) {
+        console.log(`[Webhook] ⚠️ PROBLEMA DETECTADO: payload.message vazio e sem audioUrl`);
+        console.log(`[Webhook] payload.phone: ${payload.phone}`);
+        console.log(`[Webhook] payload.messageId: ${payload.messageId}`);
+        console.log(`[Webhook] Retornando sem processar...`);
+        return res.json({ received: true, processed: false, reason: 'empty_message', debug: 'Webhook recebido mas mensagem vazia' });
+      }
 
       // Buscar nome do contato (opcional, não bloqueia o bot)
       let senderName = payload.senderName || 'Cliente';

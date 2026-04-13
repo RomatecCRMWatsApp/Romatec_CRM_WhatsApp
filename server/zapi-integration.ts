@@ -194,49 +194,69 @@ export interface WebhookPayload {
 
 export function parseWebhookPayload(body: any): WebhookPayload | null {
   try {
-    // Log raw payload para debug
-    console.log('[Webhook] Raw payload:', JSON.stringify(body).substring(0, 500));
+    // Log raw payload completo para debug
+    const fullPayload = JSON.stringify(body);
+    console.log('[Webhook] ===== PAYLOAD COMPLETO =====');
+    console.log('[Webhook] Tamanho:', fullPayload.length, 'caracteres');
+    console.log('[Webhook] Primeiros 1000 chars:', fullPayload.substring(0, 1000));
+    console.log('[Webhook] Chaves principais:', Object.keys(body).join(', '));
+
+    // Se houver estrutura aninhada, log adicional
+    if (body?.text && typeof body.text === 'object') {
+      console.log('[Webhook] body.text:', JSON.stringify(body.text).substring(0, 200));
+    }
+    if (body?.data && typeof body.data === 'object') {
+      console.log('[Webhook] body.data:', JSON.stringify(body.data).substring(0, 200));
+    }
 
     // Z-API envia diferentes formatos de webhook
-    const phone = body?.phone || body?.from || body?.chatId?.replace('@c.us', '');
-    
+    const phone = body?.phone || body?.from || body?.chatId?.replace('@c.us', '') || body?.data?.phone;
+
     // Extrair mensagem - Z-API pode enviar em vários formatos
-    // text.message pode ser string ou objeto, body.message pode ser objeto
-    let rawMessage = body?.text?.message || body?.text?.body || body?.text || body?.message || body?.body || '';
-    
+    let rawMessage = body?.text?.message || body?.text?.body || body?.text || body?.message || body?.body || body?.data?.message || body?.data?.text || '';
+
     // Garantir que message seja SEMPRE string
     if (typeof rawMessage === 'object' && rawMessage !== null) {
       // Se for objeto, tentar extrair .message, .body, .text ou converter para string
       rawMessage = rawMessage.message || rawMessage.body || rawMessage.text || rawMessage.caption || JSON.stringify(rawMessage);
     }
-    const message = String(rawMessage || '');
-    
-    const messageId = body?.messageId || body?.id;
-    const isGroup = body?.isGroup || body?.isGroupMsg || false;
+    const message = String(rawMessage || '').trim();
+
+    const messageId = body?.messageId || body?.id || body?.data?.messageId;
+    const isGroup = body?.isGroup || body?.isGroupMsg || body?.data?.isGroup || false;
+    const eventType = body?.event || body?.type || body?.data?.event || '';
+
+    console.log(`[Webhook] Extração: phone=${phone}, message="${message.substring(0, 80)}", eventType=${eventType}`);
 
     // Ignorar se não tem phone
     if (!phone) {
-      console.log('[Webhook] Ignorado: sem phone');
+      console.log('[Webhook] ⚠️ Ignorado: sem phone');
       return null;
     }
 
     // Ignorar mensagens de grupo
     if (isGroup) {
-      console.log('[Webhook] Ignorado: mensagem de grupo');
+      console.log('[Webhook] ⚠️ Ignorado: mensagem de grupo');
       return null;
     }
 
     // Ignorar se fromMe (mensagem enviada por nós mesmos)
-    if (body?.fromMe === true) {
-      console.log('[Webhook] Ignorado: fromMe=true');
+    if (body?.fromMe === true || body?.data?.fromMe === true) {
+      console.log('[Webhook] ⚠️ Ignorado: fromMe=true (mensagem nossa)');
       return null;
     }
 
-    // Detectar áudio
-    const audioUrl = body?.audio?.audioUrl || body?.audioUrl || body?.mediaUrl || '';
-    const isAudio = body?.isAudio || body?.type === 'audio' || body?.type === 'ptt' || !!audioUrl;
+    // Ignorar mensagens vazias APENAS se não for áudio
+    // (Z-API envia audioUrl mas message vazio para mensagens de áudio)
+    const audioUrl = body?.audio?.audioUrl || body?.audioUrl || body?.mediaUrl || body?.data?.audioUrl || '';
+    const isAudio = body?.isAudio || body?.type === 'audio' || body?.type === 'ptt' || body?.data?.isAudio || !!audioUrl;
 
-    console.log(`[Webhook] Parsed: phone=${phone}, message="${message.substring(0, 50)}", isAudio=${isAudio}`);
+    if (!message && !isAudio) {
+      console.log('[Webhook] ⚠️ Ignorado: mensagem vazia e não é áudio');
+      return null;
+    }
+
+    console.log(`[Webhook] ✅ Parsed: phone=${phone}, msgLen=${message.length}, isAudio=${isAudio}`);
 
     return {
       phone: phone.replace(/\D/g, ''),
