@@ -562,24 +562,23 @@ export const appRouter = router({
 
   // Teste de notificação Telegram
   testTelegram: protectedProcedure.mutation(async () => {
+    // Diagnóstico direto — lê process.env para dar erro preciso
+    const token = process.env.TELEGRAM_BOT_TOKEN;
+    const chatId = process.env.TELEGRAM_CHAT_ID;
+    const enabled = process.env.TELEGRAM_NOTIFICATIONS_ENABLED;
+
+    if (!token) return { success: false, error: 'TELEGRAM_BOT_TOKEN não está definido no Railway.' };
+    if (!chatId) return { success: false, error: 'TELEGRAM_CHAT_ID não está definido no Railway.' };
+    if (enabled !== 'true') return { success: false, error: `TELEGRAM_NOTIFICATIONS_ENABLED="${enabled}" — deve ser "true".` };
+
     try {
-      const { notifyHotLead } = await import('./_core/telegramNotification');
-      const sent = await notifyHotLead({
-        name: 'João Teste Silva',
-        phone: '5599999999999',
-        score: 'quente',
-        renda: 'R$ 6.000',
-        entrada: 'R$ 30.000',
-        fgts: 'Sim, 3 anos',
-        tipo: 'Casa',
-        valor: 'R$ 250.000',
-        prazo: 'Imediato',
-        campanha: 'Mod_Vaz-02',
-      });
-      if (sent) return { success: true, message: 'Notificação enviada! Verifique o Telegram.' };
-      return { success: false, error: 'Falha ao enviar — verifique TELEGRAM_NOTIFICATIONS_ENABLED, TELEGRAM_BOT_TOKEN e TELEGRAM_CHAT_ID nos logs do Railway.' };
+      const TelegramBot = await import('node-telegram-bot-api').then(m => m.default);
+      const bot = new TelegramBot(token, { polling: false });
+      await bot.sendMessage(chatId, '🔥 <b>LEAD QUENTE QUALIFICADO! (Teste)</b>\n👤 João Teste Silva\n📱 5599999999999\n💰 R$ 6.000 / entrada R$ 30.000\n🚀 Contate AGORA!', { parse_mode: 'HTML', disable_web_page_preview: true });
+      return { success: true, message: 'Notificação enviada! Verifique o Telegram.' };
     } catch (e: any) {
-      return { success: false, error: String(e?.message || e) };
+      const detail = e?.response?.body ? JSON.stringify(e.response.body) : String(e?.message || e);
+      return { success: false, error: `Telegram API erro: ${detail}` };
     }
   }),
 
