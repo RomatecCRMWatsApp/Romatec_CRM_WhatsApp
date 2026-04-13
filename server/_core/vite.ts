@@ -64,8 +64,12 @@ export function serveStatic(app: Express) {
     }
   }}));
 
-  // fall through to index.html if the file doesn't exist
-  app.use("*", (_req, res) => {
+  // fall through to index.html if the file doesn't exist (skip API routes)
+  app.use("*", (_req, res, next) => {
+    // Don't serve index.html for API routes
+    if (_req.path.startsWith('/api/')) {
+      return next();
+    }
     res.setHeader('Content-Type', 'text/html; charset=utf-8');
     res.sendFile(path.resolve(distPath, "index.html"));
   });
