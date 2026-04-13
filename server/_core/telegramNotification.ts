@@ -158,6 +158,7 @@ class TelegramNotifier {
 export const telegramNotifier = new TelegramNotifier();
 
 // ─── Notificação instantânea de lead quente ────────────────────────────────
+// Cria uma instância fresca do bot a cada chamada para evitar estado stale do singleton
 export async function notifyHotLead(params: {
   name: string;
   phone: string;
@@ -169,30 +170,46 @@ export async function notifyHotLead(params: {
   valor?: string;
   prazo?: string;
   campanha?: string;
-}) {
-  if (!telegramNotifier['bot'] || !telegramNotifier['initialized'] || !ENV.telegramNotificationsEnabled) {
-    return;
+}): Promise<boolean> {
+  // Lê direto do process.env para pegar o valor atual (não o snapshot do ENV)
+  const token = process.env.TELEGRAM_BOT_TOKEN;
+  const chatId = process.env.TELEGRAM_CHAT_ID;
+  const enabled = process.env.TELEGRAM_NOTIFICATIONS_ENABLED === 'true';
+
+  if (!enabled || !token || !chatId) {
+    console.log(`[Telegram] notifyHotLead bloqueado — enabled=${enabled} token=${!!token} chatId=${!!chatId}`);
+    return false;
   }
+
   try {
+    const TelegramBot = await import('node-telegram-bot-api').then(m => m.default);
+    const bot = new TelegramBot(token, { polling: false });
+
     const waLink = `https://wa.me/${params.phone.replace(/\D/g, '')}`;
     const scoreEmoji = params.score === 'quente' ? '🔥' : params.score === 'morno' ? '🌡️' : '❄️';
-    const msg = `${scoreEmoji} <b>LEAD ${params.score.toUpperCase()} QUALIFICADO!</b>
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-👤 <b>Nome:</b> ${params.name}
-📱 <b>Telefone:</b> ${params.phone}
-${params.renda ? `💰 <b>Renda:</b> ${params.renda}` : ''}
-${params.entrada ? `🏦 <b>Entrada:</b> ${params.entrada}` : ''}
-${params.fgts ? `📋 <b>FGTS:</b> ${params.fgts}` : ''}
-${params.tipo ? `🏠 <b>Tipo imóvel:</b> ${params.tipo}` : ''}
-${params.valor ? `💲 <b>Valor pretendido:</b> ${params.valor}` : ''}
-${params.prazo ? `⏰ <b>Prazo:</b> ${params.prazo}` : ''}
-${params.campanha ? `📢 <b>Campanha:</b> ${params.campanha}` : ''}
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-👆 <a href="${waLink}">Abrir conversa no WhatsApp</a>
-🚀 Contate AGORA para maximizar conversão!`;
-    await telegramNotifier['bot'].sendMessage(ENV.telegramChatId, msg, { parse_mode: 'HTML', disable_web_page_preview: true });
+
+    const lines = [
+      `${scoreEmoji} <b>LEAD ${params.score.toUpperCase()} QUALIFICADO!</b>`,
+      `━━━━━━━━━━━━━━━━━━━━━━━━━━━━`,
+      `👤 <b>Nome:</b> ${params.name}`,
+      `📱 <b>Telefone:</b> ${params.phone}`,
+      params.renda    ? `💰 <b>Renda:</b> ${params.renda}`             : '',
+      params.entrada  ? `🏦 <b>Entrada:</b> ${params.entrada}`         : '',
+      params.fgts     ? `📋 <b>FGTS:</b> ${params.fgts}`              : '',
+      params.tipo     ? `🏠 <b>Tipo imóvel:</b> ${params.tipo}`        : '',
+      params.valor    ? `💲 <b>Valor pretendido:</b> ${params.valor}`  : '',
+      params.prazo    ? `⏰ <b>Prazo:</b> ${params.prazo}`             : '',
+      params.campanha ? `📢 <b>Campanha:</b> ${params.campanha}`       : '',
+      `━━━━━━━━━━━━━━━━━━━━━━━━━━━━`,
+      `👆 <a href="${waLink}">Abrir conversa no WhatsApp</a>`,
+      `🚀 Contate AGORA para maximizar conversão!`,
+    ].filter(l => l !== '');
+
+    await bot.sendMessage(chatId, lines.join('\n'), { parse_mode: 'HTML', disable_web_page_preview: true });
     console.log(`[Telegram] 🔥 Lead quente notificado: ${params.name} (${params.phone})`);
+    return true;
   } catch (e) {
     console.error('[Telegram] Erro ao notificar lead quente:', e);
+    return false;
   }
 }

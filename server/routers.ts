@@ -564,7 +564,7 @@ export const appRouter = router({
   testTelegram: protectedProcedure.mutation(async () => {
     try {
       const { notifyHotLead } = await import('./_core/telegramNotification');
-      await notifyHotLead({
+      const sent = await notifyHotLead({
         name: 'João Teste Silva',
         phone: '5599999999999',
         score: 'quente',
@@ -576,7 +576,8 @@ export const appRouter = router({
         prazo: 'Imediato',
         campanha: 'Mod_Vaz-02',
       });
-      return { success: true, message: 'Notificação enviada! Verifique o Telegram.' };
+      if (sent) return { success: true, message: 'Notificação enviada! Verifique o Telegram.' };
+      return { success: false, error: 'Falha ao enviar — verifique TELEGRAM_NOTIFICATIONS_ENABLED, TELEGRAM_BOT_TOKEN e TELEGRAM_CHAT_ID nos logs do Railway.' };
     } catch (e: any) {
       return { success: false, error: String(e?.message || e) };
     }
