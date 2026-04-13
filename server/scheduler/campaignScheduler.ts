@@ -872,22 +872,44 @@ export class CampaignScheduler {
 
     if (isChacara) {
       return [
-        `Oi {{NOME}}! 👋\n\nPassando pra te contar de uma oportunidade aqui em Açailândia que tá chamando muito a atenção.\n\n*${denom}* — chácaras de *~1.000m²*, com privacidade total e natureza ao redor.\n\n💰 Por apenas *R$ ${priceFormatted}*\n\nRestam poucas unidades. Tem interesse em saber mais? 😊`,
-        `Boa tarde, {{NOME}}! 🌿\n\nTenho uma opção interessante pra te apresentar: *${denom}*.\n\nSão chácaras de *~1.000m²* em Açailândia, perfeitas pra quem busca tranquilidade ou investimento.\n\n🏷️ Valor: *R$ ${priceFormatted}*\n\nPosso te mandar os detalhes completos?`,
-        `{{NOME}}, bom dia! ☀️\n\nVocê já pensou em ter um espaço verde só seu? 🌳\n\n*${denom}* tem chácaras de *~1.000m²* disponíveis em Açailândia por *R$ ${priceFormatted}*.\n\nSão últimas unidades. Quer que eu reserve uma visita?`,
-        `Oi {{NOME}}! Tudo bem? 😊\n\nEstou com uma novidade que pode te interessar bastante.\n\n🌿 *${denom}* — Açailândia/MA\n📐 ~1.000m² por chácara\n💰 *R$ ${priceFormatted}*\n\nSe quiser, posso te explicar como funciona o financiamento. É bem acessível!`,
-        `{{NOME}}, boa noite! 🌙\n\nSabia que ainda dá pra ter uma chácara em Açailândia com financiamento facilitado?\n\n*${denom}* — lotes de *~1.000m²* por *R$ ${priceFormatted}*\n\nGostaria de conversar sobre as condições?`,
-        `Oi {{NOME}}! 👋\n\nTenho algo especial pra te mostrar hoje.\n\n*${denom}* é um condomínio de chácaras exclusivo em Açailândia, com lotes de *~1.000m²* cada.\n\n💰 A partir de *R$ ${priceFormatted}* — com opção de financiamento!\n\nAcontece muito interesse esse mês. Posso te passar mais informações?`,
+        // Gatilho: curiosidade + escassez
+        `{{NOME}}, ainda tem uma chácara disponível aqui em Açailândia 👀\n\nMuita gente perguntou essa semana, mas ainda não fechou.\n\n*Você tem interesse em sair do aluguel ou investir?*`,
+
+        // Gatilho: sonho + pertencimento
+        `{{NOME}} 🌿\n\nImagina acordar no seu próprio espaço, sem vizinho em cima, com quintal de *1.000m²*...\n\nEsso lugar existe aqui em Açailândia e ainda tem parcela que cabe no salário.\n\n*Posso te mostrar?*`,
+
+        // Gatilho: urgência real
+        `{{NOME}}, rápido — tenho uma chácara aqui que tá praticamente saindo 🔥\n\nA última que ofereci assim fechou em 3 dias.\n\n*Você quer ver antes que some?*`,
+
+        // Gatilho: prova social + FOMO
+        `Boa noite {{NOME}}! 🌙\n\nUma família de Açailândia fechou uma chácara igual a essa semana passada — disseram que foi a melhor decisão.\n\nAinda tem uma no mesmo condomínio por *R$ ${priceFormatted}*.\n\n*Quer que eu reserve pra você ver?*`,
+
+        // Gatilho: dor (aluguel) + solução
+        `{{NOME}}, quantos anos ainda pagando aluguel? 🤔\n\nTenho uma chácara de *1.000m²* aqui em Açailândia que sai por parcela menor do que você imagina.\n\n*Me fala: você prefere casa ou chácara?*`,
+
+        // Gatilho: exclusividade + segredo
+        `{{NOME}} 🤫\n\nNão tô divulgando esse imóvel pra todo mundo não — mas achei que era exatamente o que você busca.\n\nChácara de *~1.000m²* em Açailândia, *R$ ${priceFormatted}*, financiamento fácil.\n\n*Posso te mandar as fotos?*`,
       ];
     }
 
     return [
-      `Oi {{NOME}}! 👋\n\nTenho uma oportunidade que pode ser exatamente o que você procura.\n\n🏠 *${denom}*\n📍 ${city}\n💰 *R$ ${priceFormatted}*\n\nAinda tem unidades disponíveis. Posso te contar mais?`,
-      `Boa tarde, {{NOME}}! 😊\n\nPassando pra apresentar o *${denom}*, um imóvel que tá gerando bastante interesse aqui em ${city}.\n\n💰 Valor: *R$ ${priceFormatted}*\n\nCondições de financiamento bem atrativas. Tem interesse em saber como funciona?`,
-      `{{NOME}}, tudo bem? 🙂\n\nEstou com um imóvel disponível em ${city} que achei que vale a pena te mostrar.\n\n*${denom}*\n💰 *R$ ${priceFormatted}*\n\nSeria uma boa hora pra conversar sobre isso?`,
-      `Oi {{NOME}}! ☀️\n\nSabia que o *${denom}* em ${city} ainda tem unidades disponíveis?\n\n🏠 Valor: *R$ ${priceFormatted}*\n\nFinanciamento facilitado com parcelas que cabem no seu orçamento.\n\nQuer que eu faça uma simulação pra você?`,
-      `Boa noite, {{NOME}}! 🌙\n\nVi que você pode estar buscando um imóvel em ${city}. Tenho uma opção excelente:\n\n🏡 *${denom}*\n💰 *R$ ${priceFormatted}*\n\nPosso te enviar mais detalhes?`,
-      `Olá, {{NOME}}! 👋\n\nEstou representando a *Romatec Imóveis* e tenho uma oportunidade em ${city} que pode te interessar.\n\n🏠 *${denom}* — *R$ ${priceFormatted}*\n\nSe quiser, posso agendar uma visita sem compromisso. O que você acha?`,
+      // Gatilho: curiosidade + escassez imediata
+      `{{NOME}}, me tira uma dúvida rápida 👇\n\nVocê ainda tá buscando casa própria em ${city}?\n\nTenho um imóvel aqui que tá saindo muito rápido e queria te mostrar antes de fechar.`,
+
+      // Gatilho: FOMO + prova social
+      `{{NOME}} 🔥\n\nEsse imóvel aqui em ${city} já teve 4 consultas essa semana — e ainda não fechou.\n\n*R$ ${priceFormatted}* com financiamento que cabe no bolso.\n\n*Você quer ser o próximo a conhecer?*`,
+
+      // Gatilho: dor + transformação
+      `Boa noite {{NOME}}! 🌙\n\nAluguel todo mês é dinheiro jogado fora, né?\n\nTenho uma casa em ${city} por *R$ ${priceFormatted}* — parcela que você provavelmente já paga de aluguel.\n\n*Faz sentido pra você?*`,
+
+      // Gatilho: urgência + escassez
+      `{{NOME}}, preciso te avisar de algo ⚠️\n\nEsse imóvel em ${city} tá com *última unidade disponível*.\n\nJá tive 2 interessados essa semana. Se quiser ver primeiro, me responde agora.`,
+
+      // Gatilho: curiosidade pura (padrão interruptivo)
+      `{{NOME}} 👀\n\nVocê toparia sair do aluguel com parcela de financiamento?\n\nTenho algo aqui em ${city} que pode mudar de figura pra você — *R$ ${priceFormatted}*.\n\n*Quer ver?*`,
+
+      // Gatilho: exclusividade + reciprocidade
+      `{{NOME}}, tenho uma condição especial aqui 🤫\n\nNão ofereço pra todo mundo, mas tenho um imóvel em ${city} por *R$ ${priceFormatted}* com entrada negociável.\n\n*Você tem FGTS disponível?*`,
     ];
   }
 
