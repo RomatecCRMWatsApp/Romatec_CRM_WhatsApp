@@ -89,6 +89,7 @@ export default function Campaigns() {
   const toggleCycleActivation = trpc.campaigns.toggleCycleActivation.useMutation({
     onSuccess: () => {
       cycleStatus.refetch();
+      campaignDetails.refetch();
       toast.success("Ciclo de campanha atualizado!");
     },
     onError: (error) => toast.error(`Erro: ${error.message}`),
