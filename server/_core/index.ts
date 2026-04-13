@@ -39,13 +39,12 @@ async function startServer() {
   app.use(express.json({ limit: "50mb" }));
   app.use(express.urlencoded({ limit: "50mb", extended: true }));
 
-  // ─── GET /api/test/health ─── simples health check
-  app.get('/api/test/health', (_req, res) => {
+  // ─── Priority API handler for /api/* routes (as middleware, not routes)
+  app.use('/api/test/health', (_req, res) => {
     res.json({ status: 'OK', timestamp: new Date().toISOString() });
   });
 
-  // ─── GET /api/telegram/test ─── envia mensagem de teste ao Telegram (early registration)
-  app.get('/api/telegram/test', async (_req, res) => {
+  app.use('/api/telegram/test', async (_req, res) => {
     try {
       const botToken = process.env.TELEGRAM_BOT_TOKEN;
       const chatId = process.env.TELEGRAM_CHAT_ID;
