@@ -172,7 +172,8 @@ Se você recebeu esta mensagem, o Telegram está 100% operacional!`;
         const { getDb } = await import('../db');
         const db = await getDb();
         if (db) {
-          const { contacts } = await import('../../drizzle/schema');
+          const { contacts, campaignContacts } = await import('../../drizzle/schema');
+          const { eq } = await import('drizzle-orm');
           const allContacts = await db.select().from(contacts);
           const contact = allContacts.find((c: any) => {
             const cleanDb = c.phone.replace(/\D/g, '');
@@ -181,6 +182,13 @@ Se você recebeu esta mensagem, o Telegram está 100% operacional!`;
           if (contact) {
             senderName = contact.name || senderName;
             console.log(`[Webhook] Contato encontrado: ${senderName}`);
+
+            // Lead respondeu → zerar contador de tentativas e desbloquear para continuar recebendo
+            // Isso garante que só leads que interagem continuam no funil
+            await db.update(campaignContacts)
+              .set({ messagesSent: 0, status: 'pending' })
+              .where(eq(campaignContacts.contactId, contact.id));
+            console.log(`[Webhook] ✅ ${senderName} respondeu — contador zerado, desbloqueado para próximo ciclo`);
           } else {
             console.log(`[Webhook] Contato não encontrado no banco, usando pushName: ${senderName}`);
           }

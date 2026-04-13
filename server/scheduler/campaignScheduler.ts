@@ -82,7 +82,9 @@ export class CampaignScheduler {
   private readonly MIN_GAP_MS = 3 * 60 * 1000;
   private readonly MARGIN_MS = 2 * 60 * 1000;
   private readonly HOUR_MS = 60 * 60 * 1000;
-  private readonly BLOCK_HOURS = 72;
+  // Máximo de mensagens sem resposta antes de parar o contato
+  // Se o lead responder, o contador é zerado pelo webhook (handleZapiWebhook)
+  private readonly MAX_ATTEMPTS_NO_RESPONSE = 3;
 
   // ========== HORÁRIO BRASÍLIA ==========
 
@@ -562,14 +564,27 @@ export class CampaignScheduler {
           }
         }
 
-        // Marcar como enviado — imediatamente elegível para o próximo ciclo
-        // A proteção de duplicata por hora fica no messageSendLog (constraint única contactPhone+cycleHour)
+        // Incrementar contador de tentativas sem resposta
+        const ccRow = await db.select().from(campaignContacts)
+          .where(and(eq(campaignContacts.campaignId, campaignId), eq(campaignContacts.contactId, contact.id)))
+          .limit(1);
+        const newCount = (ccRow[0]?.messagesSent || 0) + 1;
+        const reachedLimit = newCount >= this.MAX_ATTEMPTS_NO_RESPONSE;
+
         await db.update(campaignContacts)
-          .set({ status: 'pending', messagesSent: 1, lastMessageSent: new Date() })
+          .set({
+            status: reachedLimit ? 'blocked' : 'pending',
+            messagesSent: newCount,
+            lastMessageSent: new Date(),
+          })
           .where(and(
             eq(campaignContacts.campaignId, campaignId),
             eq(campaignContacts.contactId, contact.id)
           ));
+
+        if (reachedLimit) {
+          console.log(`🚫 ${contact.name}: ${newCount} msgs sem resposta → bloqueado (para de receber). Responder desbloqueará.`);
+        }
 
         // Registrar mensagem
         await db.insert(messages).values({
@@ -777,7 +792,7 @@ export class CampaignScheduler {
     const db = await getDb();
     if (!db) return null;
 
-    // Buscar contatos 'pending' da campanha (sem bloqueio de 72h — messageSendLog protege duplicatas por hora)
+    // Buscar contatos 'pending' — 'blocked' = sem resposta após MAX_ATTEMPTS (desbloqueado ao responder)
     const ccList = await db.select().from(campaignContacts)
       .where(and(
         eq(campaignContacts.campaignId, campaignId),
