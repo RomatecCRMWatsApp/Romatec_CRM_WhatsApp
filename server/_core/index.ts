@@ -586,6 +586,47 @@ Se você recebeu esta mensagem, o Telegram está 100% operacional!`;
       console.warn('[Telegram] Erro ao inicializar notificações:', error);
     }
 
+    // ─── REENGAJAMENTO AUTOMÁTICO: Enviar msg para leads com timeout 45min ───────
+    try {
+      console.log('[Reengajement] ✅ Sistema ativado (verifica a cada 10 min)');
+
+      setInterval(async () => {
+        try {
+          const { getStaleLeads } = await import('../lead-persistence');
+          const { sendMessageViaZAPI } = await import('../zapi-integration');
+
+          const staleLeads = await getStaleLeads(45); // Timeout 45 minutos
+
+          for (const lead of staleLeads) {
+            try {
+              // Enviar mensagem de reengajamento
+              const reengagementMsg = `Oi${lead.senderName !== 'Cliente' ? `, *${lead.senderName.split(' ')[0]}*` : ''} 👋\n\nVi que você ainda não respondeu à minha última mensagem.\n\nA oportunidade que te mostrei é realmente boa! 🏠\n\nQuer que eu continue? 😊`;
+
+              const result = await sendMessageViaZAPI({
+                instanceId: process.env.ZAPI_INSTANCE_ID!,
+                token: process.env.ZAPI_TOKEN!,
+                clientToken: process.env.ZAPI_CLIENT_TOKEN,
+                phone: lead.phone,
+                message: reengagementMsg,
+              });
+
+              if (result.success) {
+                console.log(`[Reengajement] ✅ Enviado para ${lead.phone}`);
+              } else {
+                console.warn(`[Reengajement] ⚠️  Falha ao enviar para ${lead.phone}`);
+              }
+            } catch (err) {
+              console.error(`[Reengajement] ❌ Erro com ${lead.phone}:`, err);
+            }
+          }
+        } catch (error) {
+          console.error('[Reengajement] ❌ Erro ao buscar leads stale:', error);
+        }
+      }, 10 * 60 * 1000); // Verificar a cada 10 minutos
+    } catch (error) {
+      console.error('[Reengajement] ❌ Erro ao inicializar:', error);
+    }
+
     // SALVAR WEBHOOK URL no banco (para referencia)
     try {
       const { getDb } = await import('../db');
