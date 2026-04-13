@@ -245,6 +245,28 @@ export const leadQualifications = mysqlTable("leadQualifications", {
   contactId: int("contactId"),
   campaignId: int("campaignId"),
   phone: varchar("phone", { length: 20 }).notNull(),
+
+  // ═══════════════════════════════════════════════════════════════════════
+  // QUALIFICACAO — 10 PERGUNTAS (JSON para flexibilidade)
+  // ═══════════════════════════════════════════════════════════════════════
+  answers: json("answers").$type<{
+    nome?: string;                      // Pergunta 1: Nome completo
+    rendaMensal?: string;               // Pergunta 2: Renda mensal bruta
+    financiamentoAtivo?: string;        // Pergunta 3: Possui financiamento ativo?
+    fgtsDisponivel?: string;            // Pergunta 4: FGTS disponível + tempo de carteira
+    entradaDisponivel?: string;         // Pergunta 5: Entrada disponível
+    tipoImovelBusca?: string;           // Pergunta 6: Tipo de imóvel (casa/apto/comercial)
+    regiaoBairro?: string;              // Pergunta 7: Região/bairro
+    valorImovelPretendido?: string;     // Pergunta 8: Valor pretendido
+    isMoradiaOuInvestimento?: string;   // Pergunta 9: Moradia própria ou investimento?
+    prazoPrefido?: string;              // Pergunta 10: Prazo ideal para fechar
+    tipoEmprego?: string;               // Extra: tipo de emprego
+    restricaoCPF?: string;              // Extra: restrição no CPF
+  }>(),
+
+  // ═══════════════════════════════════════════════════════════════════════
+  // CAMPOS LEGADOS (compatibilidade)
+  // ═══════════════════════════════════════════════════════════════════════
   nome: varchar("nome", { length: 255 }),
   valorParcela: varchar("valorParcela", { length: 100 }),
   valorEntrada: varchar("valorEntrada", { length: 100 }),
@@ -252,9 +274,19 @@ export const leadQualifications = mysqlTable("leadQualifications", {
   restricaoCPF: varchar("restricaoCPF", { length: 100 }),
   prazo: varchar("prazo", { length: 100 }),
   primeiroImovel: varchar("primeiroImovel", { length: 100 }),
+
+  // ═══════════════════════════════════════════════════════════════════════
+  // STATUS E SCORING
+  // ═══════════════════════════════════════════════════════════════════════
+  stage: varchar("stage", { length: 50 }).default("qual_etapa_1"),  // Estágio atual de qualificação
   score: mysqlEnum("score", ["quente", "morno", "frio"]).notNull().default("frio"),
   campanhaOrigem: varchar("campanhaOrigem", { length: 255 }),
+  lastActivityAt: timestamp("lastActivityAt").defaultNow(),          // Último evento (para timeout)
+  blockedUntil: timestamp("blockedUntil"),                           // Bloqueado até (para leads que pediram para parar)
+  discardReason: varchar("discardReason", { length: 255 }),         // Motivo do descarte (se foi descartado)
+
   createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
 });
 
 export type LeadQualification = typeof leadQualifications.$inferSelect;
