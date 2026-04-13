@@ -253,3 +253,49 @@ export const leadQualifications = mysqlTable("leadQualifications", {
 
 export type LeadQualification = typeof leadQualifications.$inferSelect;
 export type InsertLeadQualification = typeof leadQualifications.$inferInsert;
+
+// ═══════════════════════════════════════════════════════════════════════
+// TABELA CRÍTICA: Message Send Log - Garante 1 msg/contato/hora
+// ═══════════════════════════════════════════════════════════════════════
+// Enforça que cada contato recebe NO MÁXIMO 1 mensagem por ciclo de hora
+// Unique constraint em (contact_phone, cycle_hour) é a última linha de defesa
+export const messageSendLog = mysqlTable(
+  "messageSendLog",
+  {
+    id: int("id").autoincrement().primaryKey(),
+    // Telefone do contato (sem formatação, apenas dígitos)
+    contactPhone: varchar("contactPhone", { length: 20 }).notNull(),
+    // ID da campanha que enviou
+    campaignId: int("campaignId").notNull(),
+    // Quando foi enviado
+    sentAt: timestamp("sentAt").defaultNow().notNull(),
+    // UNIX timestamp arredondado para a hora (ex: 1681234800 = 2023-04-12 02:00:00 UTC)
+    // Calcula como: FLOOR(UNIX_TIMESTAMP(sentAt) / 3600) * 3600
+    // Isso permite detectar se já foi enviado no mesmo ciclo de hora
+    cycleHour: int("cycleHour").notNull(),
+    // Status do envio
+    status: mysqlEnum("status", ["sent", "skipped_duplicate", "failed"]).default("sent").notNull(),
+    // Motivo se foi pulado/falhou
+    reason: varchar("reason", { length: 255 }),
+    createdAt: timestamp("createdAt").defaultNow().notNull(),
+  },
+  (table) => ({
+    // CONSTRAINT ÚNICA: impede duplicatas ao nível de DB
+    // Qualquer tentativa de insert com mesmo (contactPhone, cycleHour) falha
+    uniquePerHour: require("drizzle-orm/mysql-core").unique().on(
+      table.contactPhone,
+      table.cycleHour
+    ),
+    // Índices para performance
+    idxContactPhone: require("drizzle-orm/mysql-core").index().on(
+      table.contactPhone
+    ),
+    idxCycleHour: require("drizzle-orm/mysql-core").index().on(
+      table.cycleHour
+    ),
+    idxSentAt: require("drizzle-orm/mysql-core").index().on(table.sentAt),
+  })
+);
+
+export type MessageSendLog = typeof messageSendLog.$inferSelect;
+export type InsertMessageSendLog = typeof messageSendLog.$inferInsert;

@@ -210,6 +210,75 @@ Se você recebeu esta mensagem, o Telegram está 100% operacional!`;
   app.post('/webhook/zapi', handleZapiWebhook);
   app.post('/api/webhook/zapi', handleZapiWebhook);
 
+  // ─── GET /api/admin/send-log ─── auditoria de envios (previne duplicatas)
+  app.get('/api/admin/send-log', async (req, res) => {
+    try {
+      const { getDb } = await import('../db');
+      const { messageSendLog } = await import('../../drizzle/schema');
+      const { eq, desc, gte } = await import('drizzle-orm');
+
+      const db = await getDb();
+      if (!db) {
+        return res.status(500).json({ success: false, error: 'Database unavailable' });
+      }
+
+      // Parâmetros de query
+      const dateStr = (req.query.date as string) || new Date().toISOString().split('T')[0];
+      const limit = Math.min(parseInt((req.query.limit as string) || '100'), 1000);
+      const offset = parseInt((req.query.offset as string) || '0');
+
+      // Parse date para início do dia (Brasília)
+      const [year, month, day] = dateStr.split('-').map(Number);
+      const dateObj = new Date(year, month - 1, day);
+      const brasiliaStr = dateObj.toLocaleString('en-US', { timeZone: 'America/Sao_Paulo' });
+      const dateStart = new Date(brasiliaStr);
+      dateStart.setHours(0, 0, 0, 0);
+
+      const dateEnd = new Date(dateStart);
+      dateEnd.setDate(dateEnd.getDate() + 1);
+
+      // Buscar logs
+      const logs = await db
+        .select()
+        .from(messageSendLog)
+        .where(gte(messageSendLog.sentAt, dateStart))
+        .orderBy(desc(messageSendLog.sentAt))
+        .limit(limit)
+        .offset(offset);
+
+      // Contar totais
+      const sentCount = logs.filter(l => l.status === 'sent').length;
+      const skippedCount = logs.filter(l => l.status === 'skipped_duplicate').length;
+      const failedCount = logs.filter(l => l.status === 'failed').length;
+
+      res.json({
+        success: true,
+        date: dateStr,
+        summary: {
+          totalRecords: logs.length,
+          sent: sentCount,
+          skippedDuplicate: skippedCount,
+          failed: failedCount,
+        },
+        logs: logs.map(l => ({
+          id: l.id,
+          phone: l.contactPhone,
+          campaign: l.campaignId,
+          status: l.status,
+          reason: l.reason,
+          sentAt: l.sentAt?.toISOString(),
+          cycleHour: new Date(l.cycleHour * 1000).toLocaleTimeString('pt-BR', { timeZone: 'America/Sao_Paulo', hour: '2-digit', minute: '2-digit' }),
+        })),
+        pagination: { limit, offset, totalAvailable: logs.length >= limit },
+      });
+    } catch (err) {
+      res.status(500).json({
+        success: false,
+        error: String(err),
+      });
+    }
+  });
+
   // ─── GET /api/zapi/status ─── verifica conexao Z-API
   app.get('/api/zapi/status', async (_req, res) => {
     try {

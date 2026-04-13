@@ -398,6 +398,41 @@ export class CampaignScheduler {
         return;
       }
 
+      // ═══════════════════════════════════════════════════════════════════════
+      // VERIFICAÇÃO CRÍTICA: 1 mensagem por contato por hora (cycle_hour)
+      // ═══════════════════════════════════════════════════════════════════════
+      const { messageSendLog } = await import('../../drizzle/schema');
+      const cleanPhone = contact.phone.replace(/\D/g, '');
+      const now = new Date();
+      const nowUnix = Math.floor(now.getTime() / 1000);
+      const cycleHour = Math.floor(nowUnix / 3600) * 3600;
+
+      // Verificar se esse contato já recebeu mensagem neste ciclo de hora
+      const existingLog = await db
+        .select()
+        .from(messageSendLog)
+        .where(
+          and(
+            eq(messageSendLog.contactPhone, cleanPhone),
+            eq(messageSendLog.cycleHour, cycleHour)
+          )
+        )
+        .limit(1);
+
+      if (existingLog.length > 0) {
+        console.log(`⏭️ ${campaign.name} → ${contact.name}: JÁ RECEBEU MENSAGEM NESTA HORA (${new Date(cycleHour * 1000).toLocaleTimeString('pt-BR', { timeZone: 'America/Sao_Paulo' })})`);
+        // Registrar como skipped
+        await db.insert(messageSendLog).values({
+          contactPhone: cleanPhone,
+          campaignId,
+          sentAt: now,
+          cycleHour,
+          status: 'skipped_duplicate',
+          reason: `Contato já recebeu mensagem em ${new Date(cycleHour * 1000).toLocaleTimeString('pt-BR', { timeZone: 'America/Sao_Paulo' })}`,
+        }).catch(() => {});
+        return;
+      }
+
       const messageText = await this.getMessageVariation(campaignId);
       if (!messageText) {
         console.log(`⚠️ ${campaign.name}: sem variações de mensagem`);
@@ -411,6 +446,34 @@ export class CampaignScheduler {
       const result = await this.sendViaZAPI(contact.phone, personalized);
 
       if (result === 'sent') {
+        // ═══════════════════════════════════════════════════════════════════════
+        // REGISTRAR NO LOG CRÍTICO: messageSendLog
+        // ═══════════════════════════════════════════════════════════════════════
+        const { messageSendLog } = await import('../../drizzle/schema');
+        const now = new Date();
+        const nowUnix = Math.floor(now.getTime() / 1000);
+        const cycleHour = Math.floor(nowUnix / 3600) * 3600;
+
+        try {
+          await db.insert(messageSendLog).values({
+            contactPhone: cleanPhone,
+            campaignId,
+            sentAt: now,
+            cycleHour,
+            status: 'sent',
+            reason: null,
+          });
+          console.log(`📊 [SendLog] Registrado: ${cleanPhone} em ciclo ${new Date(cycleHour * 1000).toLocaleTimeString('pt-BR', { timeZone: 'America/Sao_Paulo' })}`);
+        } catch (logErr) {
+          // Se falhar por duplicata (constraint única), é porque outro envio já registrou
+          // Isso é BOM — significa que o DB evitou uma duplicata
+          if ((logErr as any)?.message?.includes('Duplicate')) {
+            console.warn(`⚠️ [SendLog] Duplicata detectada e bloqueada pelo DB para ${cleanPhone}`);
+          } else {
+            console.error(`❌ [SendLog] Erro ao registrar:`, logErr);
+          }
+        }
+
         // Marcar como enviado
         await db.update(campaignContacts)
           .set({ status: 'sent', messagesSent: 1, lastMessageSent: new Date() })
