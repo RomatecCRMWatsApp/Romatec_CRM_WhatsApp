@@ -309,6 +309,47 @@ export class CampaignScheduler {
     }
   }
 
+  // Gera horários randomizados distribuídos: intervalos de 15 min, nunca nos últimos 8 min
+  private generateRandomizedSchedule(activeCampaigns: any[]): Map<number, number> {
+    const schedule = new Map<number, number>();
+    const now = this.getBrasiliaDate();
+    const minutesIntoHour = now.getMinutes();
+    const secondsIntoHour = minutesIntoHour * 60 + now.getSeconds();
+    const remainingMs = this.HOUR_MS - (secondsIntoHour * 1000);
+    const remainingMinutes = Math.floor(remainingMs / 60000);
+
+    // Janela de envio: 12-20 minutos (não no final)
+    // Deixar sempre 8 minutos no final para qualificação
+    const SAFE_WINDOW_START = 2; // 2 min de margem inicial
+    const SAFE_WINDOW_END = remainingMinutes - 8; // -8 min do final
+    const MIN_INTERVAL_BETWEEN_SENDS = 15; // 15 min entre envios
+
+    console.log(`🎲 Gerando schedule randomizado: janela ${SAFE_WINDOW_START}-${SAFE_WINDOW_END} min, intervalo 15 min`);
+
+    let currentMinute = SAFE_WINDOW_START;
+    let campIndex = 0;
+
+    // Distribui campanhas em horários aleatórios com intervalo mínimo
+    for (const campaign of activeCampaigns) {
+      if (currentMinute + MIN_INTERVAL_BETWEEN_SENDS > SAFE_WINDOW_END) {
+        // Sem espaço suficiente, reusa horário com pequena variação
+        currentMinute = SAFE_WINDOW_START + Math.floor(Math.random() * 5);
+      }
+
+      // Adiciona pequena variação (±2 min) para não parecer robô
+      const randomVariation = Math.floor(Math.random() * 4) - 2; // -2 a +2
+      const finalMinute = Math.max(SAFE_WINDOW_START, currentMinute + randomVariation);
+
+      schedule.set(campaign.id, finalMinute);
+      console.log(`  📍 ${campaign.name} → ${finalMinute}º minuto`);
+
+      currentMinute += MIN_INTERVAL_BETWEEN_SENDS;
+      campIndex++;
+    }
+
+    return schedule;
+  }
+
   private async scheduleHourSend() {
     const db = await getDb();
     if (!db) return;
@@ -333,38 +374,41 @@ export class CampaignScheduler {
       return;
     }
 
-    // Agendar envio em momento aleatório dentro da hora
+    // Gerar schedule randomizado para esta campanha
+    const schedule = this.generateRandomizedSchedule(allCampaigns);
+    const scheduledMinute = schedule.get(campaign.id) || 5;
+
+    // Calcular delay baseado no minuto agendado
     const now = this.getBrasiliaDate();
     const minutesIntoHour = now.getMinutes();
     const secondsIntoHour = minutesIntoHour * 60 + now.getSeconds();
     const remainingMs = this.HOUR_MS - (secondsIntoHour * 1000);
 
-    if (remainingMs < this.MARGIN_MS * 2) {
-      console.log(`⚠️ Pouco tempo restante na hora — pulando`);
+    // Delay = tempo até o minuto agendado
+    const delayMinutes = scheduledMinute - minutesIntoHour;
+    const delayMs = Math.max(1000, (delayMinutes * 60 - now.getSeconds()) * 1000);
+
+    if (delayMs < 1000 || delayMs > remainingMs) {
+      console.log(`⚠️ Delay inválido (${Math.round(delayMs / 60000)}min) — pulando`);
       return;
     }
-
-    const minDelay = this.MARGIN_MS;
-    const maxDelay = remainingMs - this.MARGIN_MS;
-    const delay = minDelay + Math.floor(Math.random() * (maxDelay - minDelay));
-    const minuteLabel = Math.round(delay / 60000) + minutesIntoHour;
 
     const slot: SlotInfo = {
       campaignId: campaign.id,
       campaignName: campaign.name,
-      minuteLabel,
+      minuteLabel: scheduledMinute,
       sent: false,
     };
     this.state.scheduledSlots = [slot];
 
-    console.log(`📨 ${campaign.name} → ~${Math.round(delay / 60000)} min`);
+    console.log(`📨 ${campaign.name} → ${Math.round(delayMs / 60000)}min (minuto ${scheduledMinute})`);
 
     const timer = setTimeout(async () => {
       if (!this.state.isRunning) return;
       const cs = this.state.campaignStates.find(s => s.campaignId === campaign.id);
       if (cs?.sentThisHour) return;
       await this.sendMessageForCampaign(campaign.id);
-    }, delay);
+    }, delayMs);
 
     this.slotTimers.push(timer);
     await this.saveStateToDB();
