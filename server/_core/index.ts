@@ -39,12 +39,14 @@ async function startServer() {
   app.use(express.json({ limit: "50mb" }));
   app.use(express.urlencoded({ limit: "50mb", extended: true }));
 
-  // ─── Priority API handler for /api/* routes (as middleware, not routes)
-  app.use('/api/test/health', (_req, res) => {
+  // ─── Create dedicated API router to ensure priority
+  const apiRouter = express.Router();
+
+  apiRouter.get('/test/health', (_req, res) => {
     res.json({ status: 'OK', timestamp: new Date().toISOString() });
   });
 
-  app.use('/api/telegram/test', async (_req, res) => {
+  apiRouter.get('/telegram/test', async (_req, res) => {
     try {
       const botToken = process.env.TELEGRAM_BOT_TOKEN;
       const chatId = process.env.TELEGRAM_CHAT_ID;
@@ -92,6 +94,9 @@ Se você recebeu esta mensagem, o Telegram está 100% operacional!`;
       });
     }
   });
+
+  // ─── Register the API router FIRST (before all other middleware/routes)
+  app.use('/api', apiRouter);
 
   // OAuth callback under /api/oauth/callback
   registerOAuthRoutes(app);
