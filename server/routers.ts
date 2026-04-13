@@ -305,6 +305,66 @@ export const appRouter = router({
       }
       return result;
     }),
+    getCycleStatus: protectedProcedure.query(async () => {
+      const db = await getDb();
+      if (!db) return { campaigns: [], dayCount: 0, nightCount: 0 };
+      const allCampaigns = await db.select().from(campaigns);
+      const dayActive = allCampaigns.filter(c => c.activeDay).length;
+      const nightActive = allCampaigns.filter(c => c.activeNight).length;
+      return {
+        campaigns: allCampaigns.map(c => ({
+          id: c.id,
+          name: c.name,
+          activeDay: c.activeDay || false,
+          activeNight: c.activeNight || false,
+        })),
+        dayCount: dayActive,
+        nightCount: nightActive,
+        maxPerCycle: 5,
+      };
+    }),
+    toggleCycleActivation: protectedProcedure
+      .input(z.object({
+        campaignId: z.number(),
+        period: z.enum(["day", "night"]),
+        active: z.boolean(),
+      }))
+      .mutation(async ({ input }) => {
+        const db = await getDb();
+        if (!db) throw new Error("Database not available");
+        if (input.active) {
+          const allCampaigns = await db.select().from(campaigns);
+          const activeCount = input.period === "day"
+            ? allCampaigns.filter(c => c.activeDay).length
+            : allCampaigns.filter(c => c.activeNight).length;
+          if (activeCount >= 5) {
+            throw new Error(`Máximo de 5 campanhas ativadas no ciclo ${input.period === 'day' ? 'DIA' : 'NOITE'} já foi atingido.`);
+          }
+        }
+        const updateData: any = {};
+        if (input.period === "day") {
+          updateData.activeDay = input.active;
+        } else {
+          updateData.activeNight = input.active;
+        }
+        updateData.cycleActivationUpdatedAt = new Date();
+        await db.update(campaigns).set(updateData).where(eq(campaigns.id, input.campaignId));
+        const allCampaigns = await db.select().from(campaigns);
+        const dayActive = allCampaigns.filter(c => c.activeDay).length;
+        const nightActive = allCampaigns.filter(c => c.activeNight).length;
+        return {
+          success: true,
+          message: `Campanha ${input.active ? 'ativada' : 'desativada'} no ciclo ${input.period === 'day' ? 'DIA ☀️' : 'NOITE 🌙'}`,
+          campaigns: allCampaigns.map(c => ({
+            id: c.id,
+            name: c.name,
+            activeDay: c.activeDay || false,
+            activeNight: c.activeNight || false,
+          })),
+          dayCount: dayActive,
+          nightCount: nightActive,
+        };
+      }),
   }),
   scheduler: router({
     start: protectedProcedure.input(z.object({ nightMode: z.boolean().optional() })).mutation(async ({ input }) => {
@@ -407,82 +467,6 @@ export const appRouter = router({
       }
       return result;
     }),
-    // ═══════════════════════════════════════════════════════════
-    // TOGGLE CYCLE ACTIVATION - Habilitação por ciclo (máx 5/ciclo)
-    // ═══════════════════════════════════════════════════════════
-    getCycleStatus: protectedProcedure.query(async () => {
-      const db = await getDb();
-      if (!db) return { campaigns: [], dayCount: 0, nightCount: 0 };
-
-      const allCampaigns = await db.select().from(campaigns);
-      const dayActive = allCampaigns.filter(c => c.activeDay).length;
-      const nightActive = allCampaigns.filter(c => c.activeNight).length;
-
-      return {
-        campaigns: allCampaigns.map(c => ({
-          id: c.id,
-          name: c.name,
-          activeDay: c.activeDay || false,
-          activeNight: c.activeNight || false,
-        })),
-        dayCount: dayActive,
-        nightCount: nightActive,
-        maxPerCycle: 5,
-      };
-    }),
-    toggleCycleActivation: protectedProcedure
-      .input(z.object({
-        campaignId: z.number(),
-        period: z.enum(["day", "night"]),
-        active: z.boolean(),
-      }))
-      .mutation(async ({ input }) => {
-        const db = await getDb();
-        if (!db) throw new Error("Database not available");
-
-        // Se está tentando ativar, verificar limite de 5
-        if (input.active) {
-          const allCampaigns = await db.select().from(campaigns);
-          const activeCount = input.period === "day"
-            ? allCampaigns.filter(c => c.activeDay).length
-            : allCampaigns.filter(c => c.activeNight).length;
-
-          if (activeCount >= 5) {
-            throw new Error(`Máximo de 5 campanhas ativadas no ciclo ${input.period === 'day' ? 'DIA' : 'NOITE'} já foi atingido. Desative uma campanha antes de adicionar outra.`);
-          }
-        }
-
-        // Executar toggle
-        const updateData: any = {};
-        if (input.period === "day") {
-          updateData.activeDay = input.active;
-        } else {
-          updateData.activeNight = input.active;
-        }
-        updateData.cycleActivationUpdatedAt = new Date();
-
-        await db.update(campaigns)
-          .set(updateData)
-          .where(eq(campaigns.id, input.campaignId));
-
-        // Retornar estado atualizado
-        const allCampaigns = await db.select().from(campaigns);
-        const dayActive = allCampaigns.filter(c => c.activeDay).length;
-        const nightActive = allCampaigns.filter(c => c.activeNight).length;
-
-        return {
-          success: true,
-          message: `Campanha ${input.active ? 'ativada' : 'desativada'} no ciclo ${input.period === 'day' ? 'DIA ☀️' : 'NOITE 🌙'}`,
-          campaigns: allCampaigns.map(c => ({
-            id: c.id,
-            name: c.name,
-            activeDay: c.activeDay || false,
-            activeNight: c.activeNight || false,
-          })),
-          dayCount: dayActive,
-          nightCount: nightActive,
-        };
-      }),
   }),
   companyConfig: router({
     get: publicProcedure.query(async () => getCompanyConfig()),
