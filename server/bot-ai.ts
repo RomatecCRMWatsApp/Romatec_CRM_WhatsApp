@@ -776,8 +776,9 @@ const FOLLOWUP_SEQUENCE = [
 
 const followUpStates = new Map<string, FollowUpState>();
 
-export function registerBotMessage(phone: string, senderName?: string, campaignId?: number) {
+export function registerBotMessage(phone: string, senderName?: string, campaignId?: number, _msgText?: string) {
   const clean = phone.replace(/\D/g, '');
+  // Reinicia sequência de follow-up para este contato
   followUpStates.set(clean, {
     phone: clean,
     step: 0,
@@ -791,6 +792,12 @@ export function registerBotMessage(phone: string, senderName?: string, campaignI
       campaignId,
       lastBotMessageAt: Date.now(),
     });
+  } else {
+    // Atualiza o timestamp para o follow-up contar a partir da mensagem de campanha
+    const existing = conversationStates.get(clean);
+    if (existing) {
+      setState(clean, { ...existing, lastBotMessageAt: Date.now() });
+    }
   }
 }
 

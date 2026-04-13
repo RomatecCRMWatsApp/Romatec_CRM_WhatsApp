@@ -232,6 +232,7 @@ export class CampaignScheduler {
 
     await this.saveStateToDB();
     this.startCheckLoop();
+    this.startFollowUpLoop();
 
     await this.checkAndSend();
 
@@ -266,6 +267,33 @@ export class CampaignScheduler {
       if (!this.state.isRunning) return;
       await this.checkAndSend();
     }, this.CHECK_INTERVAL_MS);
+  }
+
+  // ─── Follow-up loop: verifica e envia persuasão T+5/15/25/35/44 min ───────
+  private startFollowUpLoop() {
+    // Limpa timer anterior se houver
+    if (this.followUpTimer) {
+      clearInterval(this.followUpTimer);
+      this.followUpTimer = null;
+    }
+
+    this.followUpTimer = setInterval(async () => {
+      if (!this.state.isRunning) return;
+      try {
+        cleanupOldFollowUps();
+        const dues = getFollowUpsToSend();
+        for (const { phone, message, step } of dues) {
+          try {
+            await this.sendViaZAPI(phone, message);
+            console.log(`🎯 Follow-up T+step${step} enviado para ${phone}`);
+          } catch (e) {
+            console.error(`❌ Erro follow-up step${step} para ${phone}:`, e);
+          }
+        }
+      } catch (e) {
+        console.error('❌ Erro no loop de follow-up:', e);
+      }
+    }, 60 * 1000); // verifica a cada 1 minuto
   }
 
   // ========== LÓGICA PRINCIPAL ==========
@@ -623,13 +651,14 @@ export class CampaignScheduler {
 
       const sharedUsedIds = new Set<number>();
       for (const prop of activeProperties) {
+        const freshVariations = this.generateMessageVariations(prop);
+
         if (!existingPropertyIds.includes(prop.id)) {
           console.log(`➕ Criando campanha: ${prop.denomination}`);
-          const variations = this.generateMessageVariations(prop);
           const result = await db.insert(campaigns).values({
             propertyId: prop.id,
             name: prop.denomination,
-            messageVariations: variations,
+            messageVariations: freshVariations,
             totalContacts: 2,
             sentCount: 0,
             failedCount: 0,
@@ -639,6 +668,18 @@ export class CampaignScheduler {
           });
           const campaignId = Number((result as any)[0].insertId);
           await this.assignContactsToCampaign(campaignId, sharedUsedIds);
+        } else {
+          // Atualizar templates da campanha existente se ainda tem placeholders antigos
+          const existingCamp = existingCampaigns.find(c => c.propertyId === prop.id);
+          if (existingCamp) {
+            const rawVar = String(existingCamp.messageVariations || '');
+            if (rawVar.includes('{ENDERECO}') || rawVar.includes('ENDERECO') || rawVar.length < 50) {
+              await db.update(campaigns)
+                .set({ messageVariations: freshVariations })
+                .where(eq(campaigns.id, existingCamp.id));
+              console.log(`🔄 Templates atualizados para campanha: ${existingCamp.name}`);
+            }
+          }
         }
       }
 
