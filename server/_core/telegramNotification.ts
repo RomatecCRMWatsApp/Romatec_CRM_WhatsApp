@@ -45,43 +45,28 @@ class TelegramNotifier {
    * Hour boundaries: 08 (DIA start), 18 (DIA end), 20 (NOITE start), 06 (NOITE end)
    */
   async checkAndNotify(currentHour: number): Promise<void> {
-    // Skip if not initialized or notifications disabled
-    if (!this.bot || !this.initialized || !ENV.telegramNotificationsEnabled) {
-      return;
-    }
+    // Prevenir duplicatas por hora
+    if (this.lastNotificationHour === currentHour) return;
 
-    // Skip if we already notified in this hour (prevent duplicates)
-    if (this.lastNotificationHour === currentHour) {
-      return;
-    }
-
-    // Check if current hour is a notification boundary
+    // Verificar se é uma hora de transição de ciclo
     let cycle: 'day' | 'night' | null = null;
     let event: 'start' | 'end' | null = null;
+    if (currentHour === 8)  { cycle = 'day';   event = 'start'; }
+    else if (currentHour === 18) { cycle = 'day';   event = 'end';   }
+    else if (currentHour === 20) { cycle = 'night'; event = 'start'; }
+    else if (currentHour === 6)  { cycle = 'night'; event = 'end';   }
+    if (!cycle || !event) return;
 
-    if (currentHour === 8) {
-      cycle = 'day';
-      event = 'start';
-    } else if (currentHour === 18) {
-      cycle = 'day';
-      event = 'end';
-    } else if (currentHour === 20) {
-      cycle = 'night';
-      event = 'start';
-    } else if (currentHour === 6) {
-      cycle = 'night';
-      event = 'end';
-    }
+    // Usar instância fresca (evitar singleton stale)
+    const token = process.env.TELEGRAM_BOT_TOKEN;
+    const chatId = process.env.TELEGRAM_CHAT_ID;
+    if (!token || !chatId) return;
 
-    if (!cycle || !event) {
-      return; // Not a notification boundary
-    }
-
-    // Send notification and track the hour
     try {
+      const TelegramBot = await import('node-telegram-bot-api').then(m => m.default);
+      const bot = new TelegramBot(token, { polling: false });
       const message = this.getFormattedMessage(cycle, event);
-      await this.bot.sendMessage(ENV.telegramChatId, message, { parse_mode: 'HTML' });
-
+      await bot.sendMessage(chatId, message, { parse_mode: 'HTML' });
       this.lastNotificationHour = currentHour;
       console.log(`[Telegram] ✅ Notificação enviada: CICLO ${cycle.toUpperCase()} - ${event.toUpperCase()}`);
     } catch (error) {
