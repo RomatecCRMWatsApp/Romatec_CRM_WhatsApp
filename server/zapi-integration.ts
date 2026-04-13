@@ -194,77 +194,134 @@ export interface WebhookPayload {
 
 export function parseWebhookPayload(body: any): WebhookPayload | null {
   try {
-    // Log raw payload completo para debug
+    // ═══════════════════════════════════════════════════════════════
+    // FASE 1: LOGGING INICIAL
+    // ═══════════════════════════════════════════════════════════════
     const fullPayload = JSON.stringify(body);
-    console.log('[Webhook] ===== PAYLOAD COMPLETO =====');
-    console.log('[Webhook] Tamanho:', fullPayload.length, 'caracteres');
-    console.log('[Webhook] Primeiros 1000 chars:', fullPayload.substring(0, 1000));
-    console.log('[Webhook] Chaves principais:', Object.keys(body).join(', '));
+    console.log('\n[Webhook] ╔═══════════════════════════════════════════╗');
+    console.log('[Webhook] ║ WEBHOOK Z-API RECEBIDO                    ║');
+    console.log('[Webhook] ╚═══════════════════════════════════════════╝');
+    console.log(`[Webhook] Tamanho: ${fullPayload.length} chars`);
+    console.log(`[Webhook] Chaves: ${Object.keys(body).join(', ')}`);
 
     // Se houver estrutura aninhada, log adicional
     if (body?.text && typeof body.text === 'object') {
-      console.log('[Webhook] body.text:', JSON.stringify(body.text).substring(0, 200));
+      console.log('[Webhook] Estrutura text:', JSON.stringify(body.text).substring(0, 300));
     }
     if (body?.data && typeof body.data === 'object') {
-      console.log('[Webhook] body.data:', JSON.stringify(body.data).substring(0, 200));
+      console.log('[Webhook] Estrutura data:', JSON.stringify(body.data).substring(0, 300));
     }
 
-    // Z-API envia diferentes formatos de webhook
-    const phone = body?.phone || body?.from || body?.chatId?.replace('@c.us', '') || body?.data?.phone;
+    // ═══════════════════════════════════════════════════════════════
+    // FASE 2: EXTRAIR PHONE (múltiplas tentativas)
+    // ═══════════════════════════════════════════════════════════════
+    const phone =
+      body?.phone ||
+      body?.from ||
+      body?.chatId?.replace('@c.us', '') ||
+      body?.data?.phone ||
+      body?.jid?.replace('@s.whatsapp.net', '') ||
+      '';
 
-    // Extrair mensagem - Z-API pode enviar em vários formatos
-    let rawMessage = body?.text?.message || body?.text?.body || body?.text || body?.message || body?.body || body?.data?.message || body?.data?.text || '';
+    if (!phone) {
+      console.log('[Webhook] ❌ Nenhum phone encontrado. Payload:', fullPayload.substring(0, 500));
+      return null;
+    }
 
-    // Garantir que message seja SEMPRE string
+    // ═══════════════════════════════════════════════════════════════
+    // FASE 3: EXTRAIR MENSAGEM (múltiplas tentativas)
+    // ═══════════════════════════════════════════════════════════════
+    let rawMessage =
+      body?.text?.message ||
+      body?.text?.body ||
+      body?.text ||
+      body?.message ||
+      body?.body ||
+      body?.data?.message ||
+      body?.data?.text ||
+      body?.content ||
+      '';
+
+    // Converter objeto para string se necessário
     if (typeof rawMessage === 'object' && rawMessage !== null) {
-      // Se for objeto, tentar extrair .message, .body, .text ou converter para string
-      rawMessage = rawMessage.message || rawMessage.body || rawMessage.text || rawMessage.caption || JSON.stringify(rawMessage);
+      rawMessage = rawMessage.message || rawMessage.body || rawMessage.text || rawMessage.caption || '';
     }
     const message = String(rawMessage || '').trim();
 
-    const messageId = body?.messageId || body?.id || body?.data?.messageId;
-    const isGroup = body?.isGroup || body?.isGroupMsg || body?.data?.isGroup || false;
-    const eventType = body?.event || body?.type || body?.data?.event || '';
+    // ═══════════════════════════════════════════════════════════════
+    // FASE 4: DETECTAR TIPO DE EVENTO E FILTROS
+    // ═══════════════════════════════════════════════════════════════
+    const eventType = body?.event || body?.type || body?.data?.event || body?.status || 'unknown';
+    const fromMe = body?.fromMe === true || body?.data?.fromMe === true || false;
+    const isGroup = body?.isGroup === true || body?.isGroupMsg === true || body?.data?.isGroup === true || false;
 
-    console.log(`[Webhook] Extração: phone=${phone}, message="${message.substring(0, 80)}", eventType=${eventType}`);
+    console.log(`[Webhook] Phone: ${phone}`);
+    console.log(`[Webhook] Event: ${eventType}`);
+    console.log(`[Webhook] Message length: ${message.length}`);
+    console.log(`[Webhook] From me: ${fromMe}, Is group: ${isGroup}`);
 
-    // Ignorar se não tem phone
-    if (!phone) {
-      console.log('[Webhook] ⚠️ Ignorado: sem phone');
+    // Regra 1: Ignorar mensagens enviadas por nós
+    if (fromMe) {
+      console.log('[Webhook] 🚫 Ignorado: é mensagem nossa (fromMe=true)');
       return null;
     }
 
-    // Ignorar mensagens de grupo
+    // Regra 2: Ignorar mensagens de grupo
     if (isGroup) {
-      console.log('[Webhook] ⚠️ Ignorado: mensagem de grupo');
+      console.log('[Webhook] 🚫 Ignorado: é mensagem de grupo');
       return null;
     }
 
-    // Ignorar se fromMe (mensagem enviada por nós mesmos)
-    if (body?.fromMe === true || body?.data?.fromMe === true) {
-      console.log('[Webhook] ⚠️ Ignorado: fromMe=true (mensagem nossa)');
+    // Regra 3: Ignorar status callbacks
+    if (['sent', 'delivered', 'read', 'failed', 'error', 'message_status', 'message.status'].includes(eventType.toLowerCase())) {
+      console.log(`[Webhook] 🚫 Ignorado: é status callback (${eventType})`);
       return null;
     }
 
-    // Ignorar mensagens vazias APENAS se não for áudio
-    // (Z-API envia audioUrl mas message vazio para mensagens de áudio)
-    const audioUrl = body?.audio?.audioUrl || body?.audioUrl || body?.mediaUrl || body?.data?.audioUrl || '';
-    const isAudio = body?.isAudio || body?.type === 'audio' || body?.type === 'ptt' || body?.data?.isAudio || !!audioUrl;
+    // ═══════════════════════════════════════════════════════════════
+    // FASE 5: EXTRAIR ÁUDIO
+    // ═══════════════════════════════════════════════════════════════
+    const audioUrl =
+      body?.audio?.audioUrl ||
+      body?.audioUrl ||
+      body?.mediaUrl ||
+      body?.data?.audioUrl ||
+      body?.media?.url ||
+      '';
 
+    const isAudio =
+      body?.isAudio === true ||
+      ['audio', 'ptt', 'voice'].includes(body?.type?.toLowerCase() || '') ||
+      body?.data?.isAudio === true ||
+      !!audioUrl;
+
+    // ═══════════════════════════════════════════════════════════════
+    // FASE 6: VALIDAR CONTEÚDO
+    // ═══════════════════════════════════════════════════════════════
     if (!message && !isAudio) {
-      console.log('[Webhook] ⚠️ Ignorado: mensagem vazia e não é áudio');
+      console.log('[Webhook] ⚠️  Mensagem vazia (não é áudio)');
+      console.log('[Webhook] Payload:', fullPayload.substring(0, 800));
       return null;
     }
 
-    console.log(`[Webhook] ✅ Parsed: phone=${phone}, msgLen=${message.length}, isAudio=${isAudio}`);
+    // ═══════════════════════════════════════════════════════════════
+    // FASE 7: RETORNAR COM SUCESSO
+    // ═══════════════════════════════════════════════════════════════
+    const messageId = body?.messageId || body?.id || body?.data?.messageId || '';
+    const senderName = body?.senderName || body?.pushName || body?.data?.senderName || body?.contact?.name || '';
+
+    console.log(`[Webhook] ✅ Parseado com sucesso`);
+    console.log(`[Webhook] → Phone: ${phone}`);
+    console.log(`[Webhook] → Message: "${message.substring(0, 100)}${message.length > 100 ? '...' : ''}"`);
+    console.log('[Webhook] → Ready for processing\n');
 
     return {
       phone: phone.replace(/\D/g, ''),
       message,
       messageId,
-      timestamp: body?.timestamp || Date.now(),
+      timestamp: body?.timestamp || body?.data?.timestamp || Date.now(),
       isGroup: false,
-      senderName: body?.senderName || body?.pushName || '',
+      senderName,
       audioUrl: audioUrl || undefined,
       isAudio,
     };

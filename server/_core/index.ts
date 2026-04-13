@@ -46,6 +46,34 @@ async function startServer() {
     res.json({ status: 'OK', timestamp: new Date().toISOString() });
   });
 
+  // ─── TEST WEBHOOK INSPECTOR (para diagnosticar payloads Z-API) ─────
+  apiRouter.post('/webhook/inspect', (req, res) => {
+    const payload = req.body;
+    console.log('\n╔════ WEBHOOK INSPECTOR ════╗');
+    console.log('Payload completo (primeiro 2000 chars):');
+    console.log(JSON.stringify(payload, null, 2).substring(0, 2000));
+    console.log('\nChaves principais:', Object.keys(payload).join(', '));
+
+    // Extrair informações
+    const phone = payload?.phone || payload?.from || payload?.data?.phone || 'NÃO ENCONTRADO';
+    const message = payload?.message || payload?.text?.message || payload?.body || payload?.data?.message || '';
+    const eventType = payload?.event || payload?.type || payload?.data?.event || 'DESCONHECIDO';
+    const isOutgoing = payload?.fromMe || payload?.data?.fromMe || false;
+
+    console.log('\n📊 Análise:');
+    console.log(`  Phone: ${phone}`);
+    console.log(`  Message: "${message.substring(0, 100)}"`);
+    console.log(`  Event Type: ${eventType}`);
+    console.log(`  Is Outgoing: ${isOutgoing}`);
+    console.log('╚════════════════════════╝\n');
+
+    res.json({
+      received: true,
+      extracted: { phone, message, eventType, isOutgoing },
+      hint: 'Verifique os logs do servidor para análise completa'
+    });
+  });
+
   apiRouter.get('/telegram/test', async (_req, res) => {
     try {
       const botToken = process.env.TELEGRAM_BOT_TOKEN;
