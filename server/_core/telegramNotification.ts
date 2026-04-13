@@ -1,43 +1,15 @@
-import { ENV } from './env';
+import { getDb } from '../db';
+import { campaigns, messages, messageSendLog, schedulerState as schedulerStateTable } from '../../drizzle/schema';
+import { eq, gte, sql } from 'drizzle-orm';
 
 /**
  * Telegram Notification System
  * Sends automated cycle transition notifications at 08:00, 18:00, 20:00, 06:00 (Brasília time)
- * Prevents duplicates with lastNotificationHour tracking
+ * Prevents duplicates using DB persistence (survives server restarts)
  */
 class TelegramNotifier {
-  private bot: any = null;
-  private lastNotificationHour: number = -1;
-  private initialized: boolean = false;
-
-  /**
-   * Initialize Telegram Bot connection
-   * Gracefully degrades if credentials missing or invalid
-   */
-  async initialize(): Promise<void> {
-    if (this.initialized) return;
-
-    try {
-      if (!ENV.telegramBotToken || !ENV.telegramChatId) {
-        console.log('[Telegram] ⚠️  Credenciais não configuradas (TELEGRAM_BOT_TOKEN ou TELEGRAM_CHAT_ID ausentes)');
-        return;
-      }
-
-      if (!ENV.telegramNotificationsEnabled) {
-        console.log('[Telegram] ℹ️  Notificações desativadas (TELEGRAM_NOTIFICATIONS_ENABLED=false)');
-        return;
-      }
-
-      const TelegramBot = await import('node-telegram-bot-api').then(m => m.default);
-      this.bot = new TelegramBot(ENV.telegramBotToken, { polling: false });
-      this.initialized = true;
-
-      console.log('[Telegram] ✅ Notificador inicializado com sucesso');
-      console.log('[Telegram] 🔔 Monitorando ciclos: DIA (08:00, 18:00) | NOITE (20:00, 06:00)');
-    } catch (error) {
-      console.error('[Telegram] ❌ Erro ao inicializar:', error);
-      this.initialized = false;
-    }
+  private getBrasiliaDate(): Date {
+    return new Date(new Date().toLocaleString('en-US', { timeZone: 'America/Sao_Paulo' }));
   }
 
   /**
@@ -45,97 +17,102 @@ class TelegramNotifier {
    * Hour boundaries: 08 (DIA start), 18 (DIA end), 20 (NOITE start), 06 (NOITE end)
    */
   async checkAndNotify(currentHour: number): Promise<void> {
-    // Prevenir duplicatas por hora
-    if (this.lastNotificationHour === currentHour) return;
-
-    // Verificar se é uma hora de transição de ciclo
     let cycle: 'day' | 'night' | null = null;
     let event: 'start' | 'end' | null = null;
-    if (currentHour === 8)  { cycle = 'day';   event = 'start'; }
+    if (currentHour === 8)       { cycle = 'day';   event = 'start'; }
     else if (currentHour === 18) { cycle = 'day';   event = 'end';   }
     else if (currentHour === 20) { cycle = 'night'; event = 'start'; }
     else if (currentHour === 6)  { cycle = 'night'; event = 'end';   }
     if (!cycle || !event) return;
 
-    // Usar instância fresca (evitar singleton stale)
     const token = process.env.TELEGRAM_BOT_TOKEN;
     const chatId = process.env.TELEGRAM_CHAT_ID;
     if (!token || !chatId) return;
 
+    // Chave de deduplicação: ano-mês-dia-hora (única por hora por dia)
+    const now = this.getBrasiliaDate();
+    const dedupKey = `${now.getFullYear()}-${now.getMonth() + 1}-${now.getDate()}-${currentHour}`;
+
     try {
+      const db = await getDb();
+      if (!db) return;
+
+      // Verificar no DB se já enviamos essa notificação hoje (persiste entre restarts)
+      const rows = await db.select().from(schedulerStateTable).where(eq(schedulerStateTable.id, 1)).limit(1);
+      const stateJson = (rows[0]?.stateJson as Record<string, any>) || {};
+      if (stateJson.lastCycleNotif === dedupKey) {
+        console.log(`[Telegram] Notificação ${cycle} ${event} já enviada (${dedupKey}), pulando`);
+        return;
+      }
+
+      // Buscar estatísticas reais do DB
+      const stats = await this.fetchStats(db);
+
+      // Montar mensagem
+      const cycleLabel = cycle === 'day' ? '☀️ CICLO DIURNO' : '🌙 CICLO NOTURNO';
+      const eventLabel = event === 'start' ? 'INICIANDO' : 'FINALIZANDO';
+      const timeLabel = { day: { start: '08:00', end: '18:00' }, night: { start: '20:00', end: '06:00' } }[cycle][event];
+      const nextCycle = (cycle === 'night') ? 'Diurno 08:00' : 'Noturno 20:00';
+
+      const message = `<b>${cycleLabel} ${eventLabel} | ${timeLabel}</b>
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+✅ Campanhas ativas: ${stats.activeCampaigns}
+📤 Mensagens enviadas hoje: ${stats.messagesSentToday}
+🔄 Contatos bloqueados (72h): ${stats.contactsBlocked}
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+⏰ Próximo ciclo: ${nextCycle}
+🚀 Sistema operacional`;
+
+      // Enviar
       const TelegramBot = await import('node-telegram-bot-api').then(m => m.default);
       const bot = new TelegramBot(token, { polling: false });
-      const message = this.getFormattedMessage(cycle, event);
       await bot.sendMessage(chatId, message, { parse_mode: 'HTML' });
-      this.lastNotificationHour = currentHour;
-      console.log(`[Telegram] ✅ Notificação enviada: CICLO ${cycle.toUpperCase()} - ${event.toUpperCase()}`);
+      console.log(`[Telegram] ✅ Notificação enviada: ${cycle.toUpperCase()} ${event.toUpperCase()}`);
+
+      // Persistir chave de deduplicação no DB (evita reenvio mesmo após restart)
+      await db.update(schedulerStateTable)
+        .set({ stateJson: { ...stateJson, lastCycleNotif: dedupKey } })
+        .where(eq(schedulerStateTable.id, 1));
+
     } catch (error) {
       console.error(`[Telegram] ⚠️ Erro ao enviar notificação (${cycle} ${event}):`, error);
     }
   }
 
-  /**
-   * Format notification message with campaign statistics
-   */
-  private getFormattedMessage(cycle: 'day' | 'night', event: 'start' | 'end'): string {
-    const time = this.getTimeForCycleEvent(cycle, event);
-    const cycleLabel = cycle === 'day' ? '📍 CICLO DIURNO' : '🌙 CICLO NOTURNO';
-    const eventLabel = event === 'start' ? 'INICIANDO' : 'FINALIZANDO';
-
-    return `<b>${cycleLabel} ${eventLabel} | ${time}</b>
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-✅ Campanhas ativas: 5
-📤 Mensagens enviadas: Verificando...
-⏳ Mensagens pendentes: Verificando...
-🔄 Contatos bloqueados (72h): Verificando...
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-⏰ Próximo ciclo: ${this.getNextCycleInfo(cycle, event)}
-🚀 Sistema operacional`;
-  }
-
-  /**
-   * Get formatted time string for cycle event
-   */
-  private getTimeForCycleEvent(cycle: 'day' | 'night', event: 'start' | 'end'): string {
-    const times: Record<string, Record<string, string>> = {
-      day: { start: '08:00', end: '18:00' },
-      night: { start: '20:00', end: '06:00' },
-    };
-    return times[cycle][event];
-  }
-
-  /**
-   * Get next cycle info for message
-   */
-  private getNextCycleInfo(cycle: 'day' | 'night', event: 'start' | 'end'): string {
-    if (cycle === 'day' && event === 'start') {
-      return 'Noturno 20:00';
-    } else if (cycle === 'day' && event === 'end') {
-      return 'Noturno 20:00';
-    } else if (cycle === 'night' && event === 'start') {
-      return 'Diurno 08:00';
-    } else if (cycle === 'night' && event === 'end') {
-      return 'Diurno 08:00';
-    }
-    return 'Próximo ciclo';
-  }
-
-  /**
-   * Fetch campaign statistics from database
-   * (Placeholder for future implementation)
-   */
-  private async getCampaignStats(): Promise<{
+  private async fetchStats(db: any): Promise<{
     activeCampaigns: number;
-    messagesSent: number;
-    messagesPending: number;
+    messagesSentToday: number;
     contactsBlocked: number;
   }> {
-    return {
-      activeCampaigns: 5,
-      messagesSent: 0,
-      messagesPending: 0,
-      contactsBlocked: 0,
-    };
+    try {
+      // Início do dia em Brasília
+      const now = this.getBrasiliaDate();
+      const todayStart = new Date(now);
+      todayStart.setHours(0, 0, 0, 0);
+
+      // Campanhas ativas
+      const activeCamps = await db.select({ count: sql<number>`COUNT(*)` })
+        .from(campaigns)
+        .where(eq(campaigns.status, 'running'));
+      const activeCampaigns = Number(activeCamps[0]?.count ?? 0);
+
+      // Mensagens enviadas hoje (via messageSendLog — registros de envio de campanhas)
+      const sentToday = await db.select({ count: sql<number>`COUNT(*)` })
+        .from(messageSendLog)
+        .where(gte(messageSendLog.sentAt, todayStart));
+      const messagesSentToday = Number(sentToday[0]?.count ?? 0);
+
+      // Contatos bloqueados nas últimas 72h (distintos por telefone)
+      const cutoff72h = new Date(Date.now() - 72 * 60 * 60 * 1000);
+      const blocked = await db.select({ count: sql<number>`COUNT(DISTINCT contactPhone)` })
+        .from(messageSendLog)
+        .where(gte(messageSendLog.sentAt, cutoff72h));
+      const contactsBlocked = Number(blocked[0]?.count ?? 0);
+
+      return { activeCampaigns, messagesSentToday, contactsBlocked };
+    } catch {
+      return { activeCampaigns: 0, messagesSentToday: 0, contactsBlocked: 0 };
+    }
   }
 }
 
@@ -156,7 +133,6 @@ export async function notifyHotLead(params: {
   prazo?: string;
   campanha?: string;
 }): Promise<boolean> {
-  // Se token e chatId estão presentes, considera habilitado (TELEGRAM_NOTIFICATIONS_ENABLED é opcional)
   const token = process.env.TELEGRAM_BOT_TOKEN;
   const chatId = process.env.TELEGRAM_CHAT_ID;
 
