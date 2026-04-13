@@ -23,6 +23,11 @@ import {
   discardLead,
   isLeadBlocked,
 } from './lead-persistence';
+import {
+  generateMultiBankProposal,
+  simulateAllBanks,
+  SimulationInput,
+} from './bank-simulation';
 
 // ============ TIPOS ============
 export interface BotContext {
@@ -144,6 +149,48 @@ function firstName(name: string): string {
 function getProperty(slug?: string) {
   if (!slug) return PROPERTIES[0];
   return PROPERTIES.find(p => p.slug === slug) || PROPERTIES[0];
+}
+
+/**
+ * Extrair valor numérico de string (ex: "R$ 3.500" → 3500)
+ */
+function parseNumericValue(value: string): number {
+  if (!value) return 0;
+  const match = value.toString().match(/\d+[\d.]*[\d]/);
+  if (!match) return 0;
+  return parseInt(match[0].replace(/[^\d]/g, ''), 10);
+}
+
+/**
+ * Extrair percentual de entrada disponível
+ * Retorna percentual (0-50)
+ */
+function parseDownPaymentPercent(downPaymentStr: string, propertyValue: number): number {
+  if (!downPaymentStr) return 20; // Default 20%
+
+  const lowerStr = downPaymentStr.toLowerCase();
+
+  // Se mencionar percentual explícito
+  const percentMatch = downPaymentStr.match(/(\d+)\s*%/);
+  if (percentMatch) {
+    return Math.min(parseInt(percentMatch[1], 10), 50);
+  }
+
+  // Se mencionar valor em reais
+  if (/reais|mil|r\$|k|milhões?/.test(lowerStr)) {
+    const valueAmount = parseNumericValue(downPaymentStr);
+    if (valueAmount > 0 && propertyValue > 0) {
+      return Math.min((valueAmount / propertyValue) * 100, 50);
+    }
+  }
+
+  // Se mencionar parcelado ou flexível
+  if (/parcelad|pouco|pequen|mín|mínimo|flexível|possível/.test(lowerStr)) {
+    return 10;
+  }
+
+  // Padrão: 20%
+  return 20;
 }
 
 // ============ DETECCAO DE INTENCAO ============
@@ -435,8 +482,51 @@ async function processStage(context: BotContext, state: ConversationState): Prom
         state.campaignId,
       ).catch(() => {});
 
-      // Gerar proposta automática
-      const proposalMsg = generateProposalMessage(fn, finalAnswers, score);
+      // ═══════════════════════════════════════════════════════════════════
+      // GERAR PROPOSTA COM SIMULAÇÃO MULTI-BANCO
+      // ═══════════════════════════════════════════════════════════════════
+      let proposalMsg = generateProposalMessage(fn, finalAnswers, score);
+
+      try {
+        // Extrair dados financeiros das respostas
+        const propertyValue = parseNumericValue(finalAnswers.valorImovelPretendido || '');
+        const monthlyIncome = parseNumericValue(finalAnswers.rendaMensal || '');
+        const downPaymentStr = finalAnswers.entradaDisponivel || '';
+
+        // Determinar prazo do empréstimo baseado na resposta
+        let loanTermMonths = 240; // 20 anos padrão
+        const prazoStr = (finalAnswers.prazoPrefido || '').toLowerCase();
+        if (/imediato|urgente|logo|30|dias/.test(prazoStr)) {
+          loanTermMonths = 180; // 15 anos para quem quer rápido
+        } else if (/3\s*meses|semana/.test(prazoStr)) {
+          loanTermMonths = 240; // 20 anos normal
+        } else if (/6\s*meses|meio\s*ano/.test(prazoStr)) {
+          loanTermMonths = 240;
+        } else if (/sem\s*pressa|ano|dois/.test(prazoStr)) {
+          loanTermMonths = 300; // 25 anos para quem tem tempo
+        }
+
+        // Se temos dados financeiros válidos, gerar proposta multi-banco
+        if (propertyValue > 50000 && monthlyIncome > 800) {
+          const multiProposal = generateMultiBankProposal(
+            fn,
+            propertyValue,
+            monthlyIncome,
+            downPaymentStr,
+            loanTermMonths,
+            /sim|tenho|tem|possui|ativo/.test((finalAnswers.financiamentoAtivo || '').toLowerCase()),
+            /sim|tenho|tem|disponível|disponvel|anos/.test((finalAnswers.fgtsDisponivel || '').toLowerCase())
+          );
+
+          proposalMsg = multiProposal;
+          console.log(`[Bot] 🏦 Proposta multi-banco gerada para ${name} — ${propertyValue.toLocaleString('pt-BR')} / ${monthlyIncome.toLocaleString('pt-BR')}/mês`);
+        } else {
+          console.log(`[Bot] ⚠️  Dados financeiros insuficientes para simulação — Usando proposta simples`);
+        }
+      } catch (error) {
+        console.error(`[Bot] ❌ Erro ao gerar proposta multi-banco:`, error);
+        // Fallback para proposta simples em caso de erro
+      }
 
       return {
         text: proposalMsg,
