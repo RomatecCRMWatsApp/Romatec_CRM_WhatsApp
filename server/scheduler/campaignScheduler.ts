@@ -917,26 +917,18 @@ export class CampaignScheduler {
       if (!db) return;
 
       if (brasiliaHour === 8) {
-        // Ativar ciclo DIA: ligar activeDay em todas as campanhas running (máx 5)
-        const running = await db.select().from(campaigns).where(eq(campaigns.status, 'running'));
-        const toActivate = running.slice(0, 5);
-        for (const c of toActivate) {
-          await db.update(campaigns).set({ activeDay: true }).where(eq(campaigns.id, c.id));
-        }
-        console.log(`☀️ [Auto-Ciclo] 08:00 — CICLO DIA INICIADO | ${toActivate.length} campanhas ativadas`);
+        // Ativar ciclo DIA, desativar NOITE
+        await db.update(campaigns).set({ activeDay: true, activeNight: false }).where(eq(campaigns.status, 'running'));
+        console.log(`☀️ [Auto-Ciclo] 08:00 — CICLO DIA INICIADO (activeDay=true, activeNight=false)`);
         this.state.nightMode = false;
       } else if (brasiliaHour === 18) {
         // Encerrar ciclo DIA
         await db.update(campaigns).set({ activeDay: false });
         console.log(`🌆 [Auto-Ciclo] 18:00 — CICLO DIA ENCERRADO`);
       } else if (brasiliaHour === 20) {
-        // Ativar ciclo NOITE
-        const running = await db.select().from(campaigns).where(eq(campaigns.status, 'running'));
-        const toActivate = running.slice(0, 5);
-        for (const c of toActivate) {
-          await db.update(campaigns).set({ activeNight: true }).where(eq(campaigns.id, c.id));
-        }
-        console.log(`🌙 [Auto-Ciclo] 20:00 — CICLO NOITE INICIADO | ${toActivate.length} campanhas ativadas`);
+        // Ativar ciclo NOITE, desativar DIA
+        await db.update(campaigns).set({ activeNight: true, activeDay: false }).where(eq(campaigns.status, 'running'));
+        console.log(`🌙 [Auto-Ciclo] 20:00 — CICLO NOITE INICIADO (activeNight=true, activeDay=false)`);
         this.state.nightMode = true;
       } else if (brasiliaHour === 6) {
         // Encerrar ciclo NOITE
@@ -1150,23 +1142,16 @@ export const campaignScheduler = new CampaignScheduler();
       console.log(`🕐 Brasília: ${brasiliaHour}h → Modo: ${isNightHour ? 'NOITE 🌙' : isDayHour ? 'DIA ☀️' : 'STANDBY/BLOQUEADO'}`);
 
       // Corrigir activeDay/activeNight nas campanhas conforme o horário atual
-      if (isNightHour || isDayHour) {
-        const { campaigns: campaignsTable } = await import('../../drizzle/schema');
-        const running = await db.select().from(campaignsTable).where(eq(campaignsTable.status, 'running'));
-        const toActivate = running.slice(0, 5);
-        if (isNightHour) {
-          // Garantir que campanhas ativas têm activeNight=true
-          for (const c of toActivate) {
-            await db.update(campaignsTable).set({ activeNight: true }).where(eq(campaignsTable.id, c.id));
-          }
-          console.log(`🌙 [Auto-restore] activeNight ativado em ${toActivate.length} campanhas`);
-        } else {
-          // Garantir que campanhas ativas têm activeDay=true
-          for (const c of toActivate) {
-            await db.update(campaignsTable).set({ activeDay: true }).where(eq(campaignsTable.id, c.id));
-          }
-          console.log(`☀️ [Auto-restore] activeDay ativado em ${toActivate.length} campanhas`);
-        }
+      // Sempre atualiza TODOS os running para garantir estado consistente
+      const { campaigns: campaignsTable } = await import('../../drizzle/schema');
+      if (isNightHour) {
+        // Noite: activeNight=true, activeDay=false em todas
+        await db.update(campaignsTable).set({ activeNight: true, activeDay: false }).where(eq(campaignsTable.status, 'running'));
+        console.log(`🌙 [Auto-restore] activeNight=true activeDay=false aplicado em todas as campanhas running`);
+      } else if (isDayHour) {
+        // Dia: activeDay=true, activeNight=false em todas
+        await db.update(campaignsTable).set({ activeDay: true, activeNight: false }).where(eq(campaignsTable.status, 'running'));
+        console.log(`☀️ [Auto-restore] activeDay=true activeNight=false aplicado em todas as campanhas running`);
       }
 
       // nightMode é derivado do horário atual, não do estado salvo
