@@ -668,14 +668,21 @@ export class CampaignScheduler {
       return null;
     }
 
-    // Parsing JSON string to array
+    // Parsing JSON string to array com fallback robusto
     let variations: string[] = [];
     try {
       const parsed = JSON.parse(campaign.messageVariations as string);
       variations = Array.isArray(parsed) ? parsed : [];
     } catch (e) {
-      console.warn(`⚠️ Erro ao fazer parse de messageVariations para campanha ${campaignId}:`, e);
-      return null;
+      // Fallback 1: Tenta usar o valor como uma mensagem simples
+      const rawValue = String(campaign.messageVariations).trim();
+      if (rawValue && rawValue.length > 5) {
+        console.warn(`⚠️ messageVariations malformada para campanha ${campaignId}, usando como texto: "${rawValue.substring(0, 50)}..."`);
+        variations = [rawValue];
+      } else {
+        console.warn(`⚠️ Erro ao fazer parse de messageVariations para campanha ${campaignId}:`, e);
+        return null;
+      }
     }
 
     if (variations.length === 0) {
