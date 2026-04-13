@@ -1,0 +1,100 @@
+name: Monitor Railway Webhook
+
+on:
+  schedule:
+    # Executa a cada 6 horas (0:00, 6:00, 12:00, 18:00 UTC)
+    - cron: '0 */6 * * *'
+  workflow_dispatch:
+    # Permite disparo manual via GitHub UI
+
+jobs:
+  monitor-webhook:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Check webhook deliveries
+        id: webhook_status
+        uses: actions/github-script@v7
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          script: |
+            const { owner, repo } = context.repo;
+
+            try {
+              // Obtém as últimas entregas de webhook
+              const deliveries = await github.rest.repos.getWebhookDeliveries({
+                owner,
+                repo,
+                hook_id: 605880195
+              });
+
+              console.log('📊 Webhook Deliveries Status:');
+              console.log(`Total deliveries: ${deliveries.data.length}`);
+
+              // Verifica os últimos 5 deliveries
+              const recentDeliveries = deliveries.data.slice(0, 5);
+              let hasErrors = false;
+
+              for (const delivery of recentDeliveries) {
+                const status = delivery.response?.status || 'unknown';
+                console.log(`- Delivery ${delivery.id}: Status ${status}`);
+
+                if (status >= 400) {
+                  hasErrors = true;
+                }
+              }
+
+              if (hasErrors) {
+                console.log('⚠️ Detectados erros 4xx/5xx nas entregas recentes!');
+                core.setOutput('webhook_error', 'true');
+              } else {
+                console.log('✅ Webhook operacional!');
+                core.setOutput('webhook_error', 'false');
+              }
+            } catch (error) {
+              console.log('⚠️ Erro ao verificar webhook:', error.message);
+              core.setOutput('webhook_error', 'unknown');
+            }
+
+      - name: Create issue if webhook is broken
+        if: steps.webhook_status.outputs.webhook_error == 'true'
+        uses: actions/github-script@v7
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          script: |
+            const { owner, repo } = context.repo;
+
+            // Verifica se já existe issue aberta
+            const issues = await github.rest.issues.listForRepo({
+              owner,
+              repo,
+              state: 'open',
+              labels: ['railway-webhook']
+            });
+
+            if (issues.data.length === 0) {
+              // Cria nova issue
+              await github.rest.issues.create({
+                owner,
+                repo,
+                title: '🚨 Railway Webhook Error Detected',
+                body: `## Railway Webhook Monitor Alert\n\nA webhook do Railway está retornando erros (4xx/5xx).\n\n### ✅ Solução Rápida:\n\n1. Acesse: https://dashboard.railway.app\n2. Selecione o projeto **romateccrmwhatsapp**\n3. Vá em: **Project Settings → Source Repo**\n4. Clique em **Disconnect**\n5. Aguarde 5 segundos\n6. Clique em **Connect** e selecione **RomatecCRMWatsApp/Romatec_CRM_WhatsApp**\n\nRailway recriará a webhook automaticamente! 🔄\n\n---\n\n**Detalhes técnicos:**\n- Monitorado por: [\`monitor-railway-webhook.yml\`](.github/workflows/monitor-railway-webhook.yml)\n- Próxima verificação: em 6 horas\n- Labels: \`railway-webhook\``,
+                labels: ['railway-webhook', 'infrastructure']
+              });
+
+              console.log('✉️ Issue criada para alertar sobre erro da webhook');
+            } else {
+              console.log('ℹ️ Issue já existe - pulando criação');
+            }
+
+      - name: Log status
+        run: |
+          echo "🔗 RAILWAY WEBHOOK MONITOR"
+          echo "=========================="
+          echo "Status: Verificação concluída"
+          echo "Timestamp: $(date -u +'%Y-%m-%d %H:%M:%S UTC')"
+          echo ""
+          echo "ℹ️ Se houver erros 4xx/5xx, uma issue será criada automaticamente"
+          echo "⏰ Próxima verificação: em 6 horas"
