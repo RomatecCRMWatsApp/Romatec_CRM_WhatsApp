@@ -248,6 +248,34 @@ async function saveLeadQualification(
   }
 }
 
+// ============ DETECCAO DE REJEICAO (GATE PRINCIPAL) ============
+/**
+ * Detecta se o lead quer PARAR a conversa
+ * Se sim → encerra com elegância e bloqueia
+ */
+function checkForRejection(context: BotContext, state: ConversationState, fn: string): BotResponse | null {
+  const msg = (context.message || '').trim();
+  const qualIntent = detectQualificationIntent(msg);
+
+  // Rejeição detectada em qualquer etapa
+  if (qualIntent === 'NAO') {
+    console.log(`[Bot] ❌ REJEIÇÃO: ${state.phone} recusou em estágio ${state.stage}`);
+
+    // Encerrar com elegância
+    setState(context.phone, {
+      stage: 'descartado',
+      lastUserReplyAt: Date.now(),
+    });
+
+    return {
+      text: generateRejectionResponse(fn),
+      qualified: false,
+    };
+  }
+
+  return null; // Continuar processamento normal
+}
+
 // ============ PROCESSAMENTO POR ESTAGIO ============
 async function processStage(context: BotContext, state: ConversationState): Promise<BotResponse> {
   const msg = (context.message || '').trim();
@@ -256,7 +284,16 @@ async function processStage(context: BotContext, state: ConversationState): Prom
   const name = state.senderName || context.senderName || 'Cliente';
   const fn = firstName(name);
 
-  // NAO em qualquer estagio inicial — encerra
+  // ═══════════════════════════════════════════════════════════════════
+  // GATE 1: DETECTAR REJEIÇÃO (CRÍTICO)
+  // Se o cliente diz "não quero" em QUALQUER etapa, encerrar com elegância
+  // ═══════════════════════════════════════════════════════════════════
+  const rejectionResponse = checkForRejection(context, state, fn);
+  if (rejectionResponse) {
+    return rejectionResponse;
+  }
+
+  // NAO em qualquer estagio inicial — encerra (compatibilidade legada)
   if (intent === 'NAO' && ['abordagem_enviada', 'nao_iniciado'].includes(state.stage)) {
     setState(context.phone, { stage: 'sem_interesse', lastUserReplyAt: Date.now() });
     return { text: `Tudo bem, *${fn}*! Fico a disposicao se mudar de ideia. Tenha um otimo dia! 😊\n\n— *Romatec Imoveis*`, qualified: false };
@@ -329,23 +366,81 @@ async function processStage(context: BotContext, state: ConversationState): Prom
       return { text: QUAL_QUESTIONS.etapa_6(fn), qualified: true };
     }
 
-    // ---- ETAPA 6: Restricao CPF — calcular score e salvar ----
+    // ---- ETAPA 6: Tipo de Imóvel (NOVO) ----
     case 'qual_etapa_6': {
-      const finalAnswers: QualAnswers = { ...state.qualAnswers, restricaoCPF: msg };
-      const score = calcScore(finalAnswers, prop.value);
+      setState(context.phone, {
+        stage: 'qual_etapa_7',
+        lastUserReplyAt: Date.now(),
+        qualAnswers: { ...state.qualAnswers, tipoImovelBusca: msg },
+      });
+      return { text: QUAL_QUESTIONS.etapa_6(fn), qualified: true };
+    }
+
+    // ---- ETAPA 7: Região/Bairro (NOVO) ----
+    case 'qual_etapa_7': {
+      setState(context.phone, {
+        stage: 'qual_etapa_8',
+        lastUserReplyAt: Date.now(),
+        qualAnswers: { ...state.qualAnswers, regiaoBairro: msg },
+      });
+      return { text: QUAL_QUESTIONS.etapa_7(fn), qualified: true };
+    }
+
+    // ---- ETAPA 8: Valor do Imóvel (NOVO) ----
+    case 'qual_etapa_8': {
+      setState(context.phone, {
+        stage: 'qual_etapa_9',
+        lastUserReplyAt: Date.now(),
+        qualAnswers: { ...state.qualAnswers, valorImovelPretendido: msg },
+      });
+      return { text: QUAL_QUESTIONS.etapa_8(fn), qualified: true };
+    }
+
+    // ---- ETAPA 9: Moradia ou Investimento? (NOVO) ----
+    case 'qual_etapa_9': {
+      setState(context.phone, {
+        stage: 'qual_etapa_10',
+        lastUserReplyAt: Date.now(),
+        qualAnswers: { ...state.qualAnswers, isMoradiaOuInvestimento: msg },
+      });
+      return { text: QUAL_QUESTIONS.etapa_9(fn), qualified: true };
+    }
+
+    // ---- ETAPA 10: Prazo Ideal — QUALIFICAÇÃO COMPLETA (NOVO) ----
+    case 'qual_etapa_10': {
+      const finalAnswers = { ...state.qualAnswers, prazoPrefido: msg };
+      const score = calculateLeadScore(finalAnswers);
+
+      console.log(`[Bot] ✅ QUALIFICADO: ${name} (${state.phone}) — Score: ${score.toUpperCase()}`);
 
       setState(context.phone, {
-        stage: score === 'quente' ? 'visita_agendada' : 'qualificado',
+        stage: 'qualificado',
         lastUserReplyAt: Date.now(),
         qualAnswers: finalAnswers,
       });
 
       // Salvar no banco em background
       saveLeadQualification(
-        context.phone, name, finalAnswers, score, prop, state.campaignId,
+        context.phone,
+        name,
+        finalAnswers,
+        score,
+        prop,
+        state.campaignId,
       ).catch(() => {});
 
-      return { text: getScoreResponse(score, fn, prop, finalAnswers), qualified: score !== 'frio' };
+      // Gerar proposta automática
+      const proposalMsg = generateProposalMessage(fn, finalAnswers, score);
+
+      return {
+        text: proposalMsg,
+        qualified: score !== 'frio',
+        buttons: [
+          { id: 'agendar_visita', label: '📅 Agendar Visita' },
+          { id: 'mais_detalhes', label: '📋 Mais Detalhes' },
+          { id: 'simulacao', label: '💰 Ver Simulação' },
+        ],
+      };
     }
 
     // ---- VISITA AGENDADA: confirmar horario ----
@@ -366,6 +461,20 @@ async function processStage(context: BotContext, state: ConversationState): Prom
 
     case 'concluido': {
       return { text: `Ate logo, *${fn}*! 😊 Qualquer duvida estou aqui. — *Romatec Imoveis*`, qualified: true };
+    }
+
+    case 'descartado': {
+      return {
+        text: `Tudo bem, *${fn}*! 😊\n\nAgradecemos o contato. Estaremos aqui se mudar de ideia!\n\n*Sucesso sempre!* 🙏\n— *Romatec Imóveis*`,
+        qualified: false,
+      };
+    }
+
+    case 'proposta_enviada': {
+      return {
+        text: `*${fn}*, sua proposta foi enviada! 🎉\n\nUm consultor vai entrar em contato em breve com mais detalhes.\n\n📞 Dúvidas? Chama a gente!`,
+        qualified: true,
+      };
     }
 
     case 'sem_interesse': {
