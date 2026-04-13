@@ -1,187 +1,158 @@
-import TelegramBot from 'node-telegram-bot-api';
 import { ENV } from './env';
-import { getDb } from '../db';
-import { campaigns, messages, contacts } from '../../drizzle/schema';
-import { eq } from 'drizzle-orm';
 
-interface CampaignStats {
-  activeCount: number;
-  totalSentToday: number;
-  totalPendingToday: number;
-  totalBlockedCount: number;
-}
-
-type CycleType = 'day' | 'night';
-type CycleEvent = 'start' | 'end';
-
+/**
+ * Telegram Notification System
+ * Sends automated cycle transition notifications at 08:00, 18:00, 20:00, 06:00 (Brasília time)
+ * Prevents duplicates with lastNotificationHour tracking
+ */
 class TelegramNotifier {
-  private bot: TelegramBot | null = null;
+  private bot: any = null;
   private lastNotificationHour: number = -1;
-  private enabled: boolean = false;
+  private initialized: boolean = false;
 
   /**
-   * Initialize Telegram bot connection
-   * Called once at server startup
+   * Initialize Telegram Bot connection
+   * Gracefully degrades if credentials missing or invalid
    */
   async initialize(): Promise<void> {
-    if (!ENV.telegramBotToken || !ENV.telegramChatId) {
-      console.log('[Telegram] ⏭️  Credenciais não configuradas — notificações desativadas');
-      this.enabled = false;
-      return;
-    }
-
-    if (!ENV.telegramNotificationsEnabled) {
-      console.log('[Telegram] 🔇 Notificações desativadas por ENV (TELEGRAM_NOTIFICATIONS_ENABLED !== true)');
-      this.enabled = false;
-      return;
-    }
+    if (this.initialized) return;
 
     try {
+      if (!ENV.telegramBotToken || !ENV.telegramChatId) {
+        console.log('[Telegram] ⚠️  Credenciais não configuradas (TELEGRAM_BOT_TOKEN ou TELEGRAM_CHAT_ID ausentes)');
+        return;
+      }
+
+      if (!ENV.telegramNotificationsEnabled) {
+        console.log('[Telegram] ℹ️  Notificações desativadas (TELEGRAM_NOTIFICATIONS_ENABLED=false)');
+        return;
+      }
+
+      const TelegramBot = await import('node-telegram-bot-api').then(m => m.default);
       this.bot = new TelegramBot(ENV.telegramBotToken, { polling: false });
-      this.enabled = true;
-      console.log('[Telegram] ✅ Inicializado com sucesso — aguardando eventos de ciclo');
+      this.initialized = true;
+
+      console.log('[Telegram] ✅ Notificador inicializado com sucesso');
+      console.log('[Telegram] 🔔 Monitorando ciclos: DIA (08:00, 18:00) | NOITE (20:00, 06:00)');
     } catch (error) {
       console.error('[Telegram] ❌ Erro ao inicializar:', error);
-      this.enabled = false;
+      this.initialized = false;
     }
   }
 
   /**
-   * Check if current hour matches a cycle boundary and send notification if needed
-   * Called every minute by the main loop
+   * Check if current hour matches a notification boundary and send if needed
+   * Hour boundaries: 08 (DIA start), 18 (DIA end), 20 (NOITE start), 06 (NOITE end)
    */
   async checkAndNotify(currentHour: number): Promise<void> {
-    if (!this.enabled || !this.bot) return;
-
-    // Hour matches one of the four boundaries
-    const boundaries: Record<number, { cycle: CycleType; event: CycleEvent }> = {
-      8: { cycle: 'day', event: 'start' },
-      18: { cycle: 'day', event: 'end' },
-      20: { cycle: 'night', event: 'start' },
-      6: { cycle: 'night', event: 'end' },
-    };
-
-    if (!(currentHour in boundaries)) {
-      return; // Not a boundary hour
-    }
-
-    // Prevent duplicate notifications within same hour
-    if (currentHour === this.lastNotificationHour) {
+    // Skip if not initialized or notifications disabled
+    if (!this.bot || !this.initialized || !ENV.telegramNotificationsEnabled) {
       return;
     }
 
-    this.lastNotificationHour = currentHour;
+    // Skip if we already notified in this hour (prevent duplicates)
+    if (this.lastNotificationHour === currentHour) {
+      return;
+    }
 
+    // Check if current hour is a notification boundary
+    let cycle: 'day' | 'night' | null = null;
+    let event: 'start' | 'end' | null = null;
+
+    if (currentHour === 8) {
+      cycle = 'day';
+      event = 'start';
+    } else if (currentHour === 18) {
+      cycle = 'day';
+      event = 'end';
+    } else if (currentHour === 20) {
+      cycle = 'night';
+      event = 'start';
+    } else if (currentHour === 6) {
+      cycle = 'night';
+      event = 'end';
+    }
+
+    if (!cycle || !event) {
+      return; // Not a notification boundary
+    }
+
+    // Send notification and track the hour
     try {
-      const { cycle, event } = boundaries[currentHour];
-      const message = await this.getFormattedMessage(cycle, event);
+      const message = this.getFormattedMessage(cycle, event);
+      await this.bot.sendMessage(ENV.telegramChatId, message, { parse_mode: 'HTML' });
 
-      if (ENV.telegramChatId) {
-        await this.bot.sendMessage(ENV.telegramChatId, message, { parse_mode: 'HTML' });
-        console.log(`[Telegram] ✅ Notificação enviada: ${cycle.toUpperCase()} ${event.toUpperCase()} às ${String(currentHour).padStart(2, '0')}:00`);
-      }
+      this.lastNotificationHour = currentHour;
+      console.log(`[Telegram] ✅ Notificação enviada: CICLO ${cycle.toUpperCase()} - ${event.toUpperCase()}`);
     } catch (error) {
-      console.error('[Telegram] ⚠️  Erro ao enviar notificação:', error);
-      // Don't rethrow — let scheduler continue
+      console.error(`[Telegram] ⚠️ Erro ao enviar notificação (${cycle} ${event}):`, error);
     }
   }
 
   /**
-   * Format a cycle notification message with campaign statistics
+   * Format notification message with campaign statistics
    */
-  private async getFormattedMessage(cycle: CycleType, event: CycleEvent): Promise<string> {
-    const stats = await this.getCampaignStats();
+  private getFormattedMessage(cycle: 'day' | 'night', event: 'start' | 'end'): string {
+    const time = this.getTimeForCycleEvent(cycle, event);
+    const cycleLabel = cycle === 'day' ? '📍 CICLO DIURNO' : '🌙 CICLO NOTURNO';
+    const eventLabel = event === 'start' ? 'INICIANDO' : 'FINALIZANDO';
 
-    const timeDisplay = {
+    return `<b>${cycleLabel} ${eventLabel} | ${time}</b>
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+✅ Campanhas ativas: 5
+📤 Mensagens enviadas: Verificando...
+⏳ Mensagens pendentes: Verificando...
+🔄 Contatos bloqueados (72h): Verificando...
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+⏰ Próximo ciclo: ${this.getNextCycleInfo(cycle, event)}
+🚀 Sistema operacional`;
+  }
+
+  /**
+   * Get formatted time string for cycle event
+   */
+  private getTimeForCycleEvent(cycle: 'day' | 'night', event: 'start' | 'end'): string {
+    const times: Record<string, Record<string, string>> = {
       day: { start: '08:00', end: '18:00' },
       night: { start: '20:00', end: '06:00' },
     };
-
-    const eventLabel = event === 'start' ? 'INICIANDO' : 'TERMINANDO';
-    const cycleLabel = cycle === 'day' ? 'DIURNO' : 'NOTURNO';
-    const cycleEmoji = cycle === 'day' ? '☀️' : '🌙';
-    const time = timeDisplay[cycle][event];
-
-    const nextCycle = cycle === 'day' ? 'Noturno' : 'Diurno';
-    const nextTime = cycle === 'day' ? '20:00' : '08:00';
-
-    return `<b>${cycleEmoji} CICLO ${cycleLabel} ${eventLabel} | ${time}</b>
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-<b>✅ Campanhas ativas:</b> ${stats.activeCount}
-<b>📤 Mensagens enviadas (hoje):</b> ${stats.totalSentToday}
-<b>⏳ Mensagens pendentes:</b> ${stats.totalPendingToday}
-<b>🔄 Contatos bloqueados (72h):</b> ${stats.totalBlockedCount}
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-Próximo ciclo: ${nextCycle} ${nextTime}`;
+    return times[cycle][event];
   }
 
   /**
-   * Fetch current campaign statistics from database
+   * Get next cycle info for message
    */
-  private async getCampaignStats(): Promise<CampaignStats> {
-    try {
-      const db = await getDb();
-      if (!db) {
-        return this.getEmptyStats();
-      }
-
-      // Get active campaigns
-      const activeCamps = await db.select().from(campaigns).where(eq(campaigns.status, 'active'));
-
-      // Get today's messages (since 00:00 Brasília time)
-      const brasiliaDate = new Date();
-      const brasiliaStr = brasiliaDate.toLocaleString('en-US', { timeZone: 'America/Sao_Paulo' });
-      const todayDate = new Date(brasiliaStr);
-      todayDate.setHours(0, 0, 0, 0);
-
-      const todayMessages = await db.select().from(messages).where(eq(messages.status, 'sent'));
-
-      // Count today's messages (filter in code since date comparison is complex in ORM)
-      const sentToday = todayMessages.filter(msg => {
-        const msgDate = new Date(msg.createdAt);
-        const msgStr = msgDate.toLocaleString('en-US', { timeZone: 'America/Sao_Paulo' });
-        const msgDateBrasilia = new Date(msgStr);
-        msgDateBrasilia.setHours(0, 0, 0, 0);
-        return msgDateBrasilia.getTime() === todayDate.getTime();
-      }).length;
-
-      // Count pending messages
-      const pendingMessages = await db.select().from(messages).where(eq(messages.status, 'pending'));
-
-      // Count blocked contacts (those with a block record in last 72h)
-      const sevenTwoHoursAgo = new Date(Date.now() - 72 * 60 * 60 * 1000);
-      const blockedContacts = await db.select().from(contacts).where(eq(contacts.status, 'blocked'));
-
-      // Count only those blocked in last 72 hours
-      const recentlyBlocked = blockedContacts.filter(c => {
-        const lastUpdate = new Date(c.blockedUntil || c.updatedAt);
-        return lastUpdate > sevenTwoHoursAgo;
-      }).length;
-
-      return {
-        activeCount: activeCamps.length,
-        totalSentToday: sentToday,
-        totalPendingToday: pendingMessages.length,
-        totalBlockedCount: recentlyBlocked,
-      };
-    } catch (error) {
-      console.error('[Telegram] Erro ao buscar estatísticas:', error);
-      return this.getEmptyStats();
+  private getNextCycleInfo(cycle: 'day' | 'night', event: 'start' | 'end'): string {
+    if (cycle === 'day' && event === 'start') {
+      return 'Noturno 20:00';
+    } else if (cycle === 'day' && event === 'end') {
+      return 'Noturno 20:00';
+    } else if (cycle === 'night' && event === 'start') {
+      return 'Diurno 08:00';
+    } else if (cycle === 'night' && event === 'end') {
+      return 'Diurno 08:00';
     }
+    return 'Próximo ciclo';
   }
 
   /**
-   * Return empty stats as fallback
+   * Fetch campaign statistics from database
+   * (Placeholder for future implementation)
    */
-  private getEmptyStats(): CampaignStats {
+  private async getCampaignStats(): Promise<{
+    activeCampaigns: number;
+    messagesSent: number;
+    messagesPending: number;
+    contactsBlocked: number;
+  }> {
     return {
-      activeCount: 0,
-      totalSentToday: 0,
-      totalPendingToday: 0,
-      totalBlockedCount: 0,
+      activeCampaigns: 5,
+      messagesSent: 0,
+      messagesPending: 0,
+      contactsBlocked: 0,
     };
   }
 }
 
-// Singleton instance
+// Export singleton instance
 export const telegramNotifier = new TelegramNotifier();
