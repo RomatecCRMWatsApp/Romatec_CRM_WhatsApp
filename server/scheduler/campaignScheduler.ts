@@ -195,13 +195,22 @@ export class CampaignScheduler {
 
   // ========== CONTROLE ==========
 
-  async start(nightMode = false) {
+  /** Detecta o modo correto baseado no horário atual de Brasília */
+  private getAutoNightMode(): boolean {
+    const h = this.getCurrentHour();
+    // 20h-05h59 = noite; resto = dia
+    return (h >= 20 || h < 6);
+  }
+
+  async start(forcedNightMode?: boolean) {
     if (this.state.isRunning) {
       console.log('⚠️ Scheduler já está rodando - parando antes de reiniciar');
       this.stop();
       await new Promise(resolve => setTimeout(resolve, 500));
     }
 
+    // Se nightMode não foi passado explicitamente, detectar pelo horário atual
+    const nightMode = forcedNightMode !== undefined ? forcedNightMode : this.getAutoNightMode();
     this.state.nightMode = nightMode;
     this.state.isRunning = true;
     this.state.startedAt = Date.now();
@@ -1133,9 +1142,35 @@ export const campaignScheduler = new CampaignScheduler();
     const rows = await db.select().from(schedulerStateTable).where(eq(schedulerStateTable.id, 1)).limit(1);
     if (rows[0]?.status === 'running') {
       console.log('🔄 Auto-restaurando scheduler...');
-      const json = rows[0].stateJson as any;
-      const nightMode = json?.nightMode || false;
-      await campaignScheduler.start(nightMode);
+
+      // Detectar modo correto pelo horário atual de Brasília (ignora estado salvo — pode estar stale)
+      const brasiliaHour = new Date(new Date().toLocaleString('en-US', { timeZone: 'America/Sao_Paulo' })).getHours();
+      const isNightHour = brasiliaHour >= 20 || brasiliaHour < 6;
+      const isDayHour   = brasiliaHour >= 8 && brasiliaHour < 18;
+      console.log(`🕐 Brasília: ${brasiliaHour}h → Modo: ${isNightHour ? 'NOITE 🌙' : isDayHour ? 'DIA ☀️' : 'STANDBY/BLOQUEADO'}`);
+
+      // Corrigir activeDay/activeNight nas campanhas conforme o horário atual
+      if (isNightHour || isDayHour) {
+        const { campaigns: campaignsTable } = await import('../../drizzle/schema');
+        const running = await db.select().from(campaignsTable).where(eq(campaignsTable.status, 'running'));
+        const toActivate = running.slice(0, 5);
+        if (isNightHour) {
+          // Garantir que campanhas ativas têm activeNight=true
+          for (const c of toActivate) {
+            await db.update(campaignsTable).set({ activeNight: true }).where(eq(campaignsTable.id, c.id));
+          }
+          console.log(`🌙 [Auto-restore] activeNight ativado em ${toActivate.length} campanhas`);
+        } else {
+          // Garantir que campanhas ativas têm activeDay=true
+          for (const c of toActivate) {
+            await db.update(campaignsTable).set({ activeDay: true }).where(eq(campaignsTable.id, c.id));
+          }
+          console.log(`☀️ [Auto-restore] activeDay ativado em ${toActivate.length} campanhas`);
+        }
+      }
+
+      // nightMode é derivado do horário atual, não do estado salvo
+      await campaignScheduler.start(isNightHour ? true : false);
     } else {
       console.log('📋 Estado salvo: stopped - scheduler permanece parado');
     }

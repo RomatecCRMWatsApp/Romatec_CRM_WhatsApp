@@ -378,7 +378,8 @@ export const appRouter = router({
           await db.update(campaigns).set({ status: "running", startDate: now }).where(eq(campaigns.id, camp.id));
         }
       }
-      await campaignScheduler.start(input.nightMode || false);
+      // Passa nightMode explícito se o usuário escolheu pelo toggle; senão auto-detecta pelo horário
+      await campaignScheduler.start(input.nightMode);
       return { success: true, message: "Scheduler iniciado" };
     }),
     stop: protectedProcedure.mutation(async () => {
