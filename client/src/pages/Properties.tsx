@@ -834,67 +834,106 @@ export default function Properties() {
         </Dialog>
       )}
 
-      {/* Lightbox fullscreen */}
+      {/* Carousel Fullscreen */}
       {lightboxOpen && selectedProperty?.images?.length > 0 && (
-        <div
-          className="fixed inset-0 z-[9999] bg-black/95 flex items-center justify-center"
-          onClick={() => setLightboxOpen(false)}
-        >
-          {/* Fechar */}
-          <button
-            className="absolute top-4 right-4 p-2 rounded-full bg-white/10 hover:bg-white/20 text-white transition-all z-10"
-            onClick={() => setLightboxOpen(false)}
-          >
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
-          </button>
-
-          {/* Contador */}
-          <div className="absolute top-4 left-1/2 -translate-x-1/2 text-white/70 text-sm">
-            {lightboxIndex + 1} / {selectedProperty.images.length}
+        <div className="fixed inset-0 z-[9999] flex flex-col bg-black" style={{ background: 'rgba(0,0,0,0.97)' }}>
+          {/* Topo: nome + contador + fechar */}
+          <div className="flex items-center justify-between px-5 py-4 flex-shrink-0">
+            <p className="text-white/60 text-sm font-medium tracking-wide">{selectedProperty.denomination}</p>
+            <span className="text-white/50 text-sm bg-white/10 px-3 py-1 rounded-full">
+              {lightboxIndex + 1} / {selectedProperty.images.length}
+            </span>
+            <button
+              className="p-2 rounded-full bg-white/10 hover:bg-white/20 text-white transition-all"
+              onClick={() => setLightboxOpen(false)}
+            >
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+            </button>
           </div>
 
-          {/* Seta esquerda */}
-          {selectedProperty.images.length > 1 && (
-            <button
-              className="absolute left-4 p-3 rounded-full bg-white/10 hover:bg-white/25 text-white transition-all"
-              onClick={e => { e.stopPropagation(); setLightboxIndex(i => (i - 1 + selectedProperty.images.length) % selectedProperty.images.length); }}
+          {/* Área do carousel */}
+          <div className="flex-1 flex items-center justify-center relative overflow-hidden px-12">
+            {/* Track deslizante */}
+            <div
+              className="flex items-center gap-4 transition-transform duration-300 ease-out"
+              style={{ transform: `translateX(calc(-${lightboxIndex * 100}% - ${lightboxIndex * 16}px))`, width: `${selectedProperty.images.length * 100}%` }}
             >
-              <ChevronLeft className="h-7 w-7" />
-            </button>
-          )}
+              {selectedProperty.images.map((img: string, idx: number) => (
+                <div
+                  key={idx}
+                  className="flex-shrink-0 flex items-center justify-center transition-all duration-300"
+                  style={{
+                    width: `${100 / selectedProperty.images.length}%`,
+                    opacity: idx === lightboxIndex ? 1 : 0.3,
+                    transform: idx === lightboxIndex ? 'scale(1)' : 'scale(0.88)',
+                  }}
+                >
+                  <img
+                    src={img}
+                    alt={`Foto ${idx + 1}`}
+                    className="max-h-[70vh] w-full object-contain rounded-xl shadow-2xl"
+                    style={{ boxShadow: idx === lightboxIndex ? '0 0 60px rgba(62,200,122,0.15)' : 'none' }}
+                  />
+                </div>
+              ))}
+            </div>
 
-          {/* Imagem */}
-          <img
-            src={selectedProperty.images[lightboxIndex]}
-            alt={`Foto ${lightboxIndex + 1}`}
-            className="max-w-[90vw] max-h-[90vh] object-contain select-none rounded-lg shadow-2xl"
-            onClick={e => e.stopPropagation()}
-          />
+            {/* Seta esquerda */}
+            {lightboxIndex > 0 && (
+              <button
+                className="absolute left-0 top-1/2 -translate-y-1/2 p-3 rounded-full bg-white/10 hover:bg-white/20 text-white transition-all backdrop-blur-sm"
+                onClick={() => setLightboxIndex(i => i - 1)}
+              >
+                <ChevronLeft className="h-7 w-7" />
+              </button>
+            )}
 
-          {/* Seta direita */}
-          {selectedProperty.images.length > 1 && (
-            <button
-              className="absolute right-4 p-3 rounded-full bg-white/10 hover:bg-white/25 text-white transition-all"
-              onClick={e => { e.stopPropagation(); setLightboxIndex(i => (i + 1) % selectedProperty.images.length); }}
-            >
-              <ChevronRight className="h-7 w-7" />
-            </button>
-          )}
+            {/* Seta direita */}
+            {lightboxIndex < selectedProperty.images.length - 1 && (
+              <button
+                className="absolute right-0 top-1/2 -translate-y-1/2 p-3 rounded-full bg-white/10 hover:bg-white/20 text-white transition-all backdrop-blur-sm"
+                onClick={() => setLightboxIndex(i => i + 1)}
+              >
+                <ChevronRight className="h-7 w-7" />
+              </button>
+            )}
+          </div>
 
-          {/* Miniaturas */}
-          {selectedProperty.images.length > 1 && (
-            <div className="absolute bottom-4 left-1/2 -translate-x-1/2 flex gap-2 overflow-x-auto max-w-[90vw] px-2">
+          {/* Dots + miniaturas */}
+          <div className="flex-shrink-0 pb-5 pt-3 flex flex-col items-center gap-3">
+            {/* Dots */}
+            <div className="flex gap-2">
+              {selectedProperty.images.map((_: string, idx: number) => (
+                <button
+                  key={idx}
+                  onClick={() => setLightboxIndex(idx)}
+                  className="rounded-full transition-all duration-200"
+                  style={{
+                    width: idx === lightboxIndex ? '24px' : '8px',
+                    height: '8px',
+                    background: idx === lightboxIndex ? '#3ec87a' : 'rgba(255,255,255,0.3)',
+                  }}
+                />
+              ))}
+            </div>
+            {/* Miniaturas (scroll horizontal) */}
+            <div className="flex gap-2 overflow-x-auto max-w-[90vw] px-4 pb-1">
               {selectedProperty.images.map((img: string, idx: number) => (
                 <button
                   key={idx}
-                  onClick={e => { e.stopPropagation(); setLightboxIndex(idx); }}
-                  className={`flex-shrink-0 w-14 h-10 rounded-md overflow-hidden border-2 transition-all ${idx === lightboxIndex ? "border-white" : "border-transparent opacity-50 hover:opacity-80"}`}
+                  onClick={() => setLightboxIndex(idx)}
+                  className="flex-shrink-0 rounded-lg overflow-hidden transition-all duration-200"
+                  style={{
+                    width: '60px', height: '44px',
+                    border: `2px solid ${idx === lightboxIndex ? '#3ec87a' : 'transparent'}`,
+                    opacity: idx === lightboxIndex ? 1 : 0.45,
+                  }}
                 >
                   <img src={img} alt="" className="w-full h-full object-cover" />
                 </button>
               ))}
             </div>
-          )}
+          </div>
         </div>
       )}
     </div>
