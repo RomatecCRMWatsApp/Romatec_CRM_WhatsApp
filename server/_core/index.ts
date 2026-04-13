@@ -423,6 +423,14 @@ Se você recebeu esta mensagem, o Telegram está 100% operacional!`;
       console.error('❌ Erro na migration de cycle activation:', error);
     }
 
+    // MIGRATION: Adicionar coluna answers para qualificação (10 respostas JSON)
+    try {
+      const { addAnswersColumn } = await import('./migrations/addAnswersColumn');
+      await addAnswersColumn();
+    } catch (error) {
+      console.error('❌ Erro na migration de answers column:', error);
+    }
+
     // MIGRATION: Criar tabela messageSendLog (previne duplicatas)
     try {
       const { createMessageSendLogTable } = await import('./migrations/createMessageSendLog');
