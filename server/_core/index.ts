@@ -405,6 +405,14 @@ Se você recebeu esta mensagem, o Telegram está 100% operacional!`;
       console.error('❌ Erro na migration de ativação de ciclos:', error);
     }
 
+    // MIGRATION: Atualizar valores das messageVariations
+    try {
+      const { updateMessageValues } = await import('./migrations/updateMessageValues');
+      await updateMessageValues();
+    } catch (error) {
+      console.error('❌ Erro na migration de atualização de valores:', error);
+    }
+
     // PROTECAO: garantir exatamente 2 contatos por campanha no banco
     try {
       const { getDb } = await import('../db');
