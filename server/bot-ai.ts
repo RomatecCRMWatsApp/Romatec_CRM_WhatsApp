@@ -198,6 +198,102 @@ function parseDownPaymentPercent(downPaymentStr: string, propertyValue: number):
   return 20;
 }
 
+// ============ INICIACAO — LEAD NOVO MANDA PRIMEIRO CONTATO ============
+const PALAVRAS_INICIACAO = [
+  'oi', 'ola', 'olá', 'eai', 'ei', 'opa', 'oii', 'oie', 'hey', 'hi',
+  'bom dia', 'boa tarde', 'boa noite', 'bom tarde',
+  'tudo bem', 'tudo bom', 'td bem', 'td bom', 'como vai', 'como esta',
+  'quero saber', 'quero informacao', 'quero informação', 'me interessa',
+  'tenho interesse', 'quero comprar', 'quero imovel', 'procuro imovel',
+  'info', 'informacao', 'informação', 'mais info', 'detalhes',
+  'vim pelo anuncio', 'vi o anuncio', 'anuncio', 'campanha',
+  'quanto custa', 'qual o preco', 'qual o preço', 'valor do imovel',
+  'ainda disponivel', 'ainda disponível', 'disponivel', 'disponível',
+  'pode me ajudar', 'preciso de ajuda', 'quero ajuda',
+  'boa', 'certo', 'ok', 'show', 'entendi', 'blz',
+];
+
+const RESPOSTAS_INICIACAO = [
+  `Olá! Seja bem-vindo(a) à *Romatec Imóveis*! 🏠\n\nSou a assistente virtual e vou te ajudar a encontrar o imóvel ideal.\n\nVamos começar? 😊`,
+  `Oi! Que bom ter você aqui! 🎉\n\nSou da equipe *Romatec Imóveis* — especialistas em imóveis em Açailândia/MA.\n\nPronto(a) para te ajudar a conquistar sua casa própria! 🔑`,
+  `Olá! Bem-vindo(a) à *Romatec Imóveis*! 🌟\n\nTemos ótimas oportunidades de casas, apartamentos e muito mais.\n\nVamos encontrar o imóvel certo pra você? 🏠`,
+  `Boa! Obrigado pelo contato com a *Romatec Imóveis*! 😃\n\nSou sua consultora virtual e estou aqui pra facilitar tudo.\n\nVamos nessa? 💪`,
+  `Olá, bem-vindo(a)! 👋\n\n*Romatec Imóveis* — seu sonho, nossa missão!\n\nVou te fazer algumas perguntas rápidas para encontrar o imóvel ideal. Pode ser? 😊`,
+];
+
+function isIniciacao(msg: string): boolean {
+  const m = msg.toLowerCase().trim().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+  // Mensagem muito curta (até 20 chars) = provavelmente iniciação
+  if (m.length <= 20) {
+    for (const palavra of PALAVRAS_INICIACAO) {
+      const p = palavra.normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+      if (m === p || m.startsWith(p + ' ') || m.endsWith(' ' + p) || m.includes(' ' + p + ' ')) return true;
+    }
+  }
+  // Frases explícitas de interesse em imóvel (qualquer tamanho)
+  if (/\b(quero\s*(comprar|imovel|casa|apartamento|info)|tenho\s*interesse|vim\s*pelo\s*anuncio|vi\s*o\s*anuncio|quanto\s*custa|ainda\s*disponiv)\b/.test(m)) return true;
+  return false;
+}
+
+function getRespostaIniciacao(): string {
+  return RESPOSTAS_INICIACAO[Math.floor(Math.random() * RESPOSTAS_INICIACAO.length)];
+}
+
+// ============ PERSUASÃO E GATILHOS ============
+const RESPOSTAS_PERSUASAO = {
+  HESITACAO: [
+    `Entendo, *{fn}*! 🤔\n\nMas sabia que *97% dos imóveis* que apresentamos saem em menos de 30 dias?\n\nEnquanto você pensa, outros estão decidindo.\n\nO que te faz hesitar? Me conta que resolvo aqui mesmo! 💪`,
+    `*{fn}*, é natural querer pensar! 😊\n\nMas as *condições de hoje* podem não estar disponíveis amanhã.\n\nTaxa especial + entrada facilitada = janela aberta agora!\n\nQual é sua maior dúvida? Me fala! 🏠`,
+    `Pode pensar à vontade, *{fn}*! 😌\n\n⚠️ Só um aviso: temos *poucas unidades* disponíveis e alta demanda.\n\nO que está pesando na decisão? Talvez eu possa ajudar! 🤝`,
+  ],
+  OBJECAO_PRECO: [
+    `*{fn}*, entendo a preocupação com o valor! 💰\n\n✅ Entrada a partir de *10%*\n✅ FGTS pode ser usado na entrada\n✅ Parcelas em até *360 meses*\n✅ Financiamento com taxa *10,26% a.a.*\n\nQual valor você consegue pagar por mês? Me conta! 😊`,
+    `*{fn}*, deixa eu mostrar como fica na prática:\n\n🏦 Financiamento em *até 360 meses*\n📉 Taxa de *10,26% a.a.* — menor do mercado\n🔑 Entrada parcelada disponível\n\nAlguns clientes saem com parcelas de *menos de R$ 1.000/mês*!\n\nQuer uma simulação personalizada? 🔢`,
+    `Entendo, *{fn}*! 😊\n\nMas vou ser direto: *aguardar* geralmente custa mais caro.\n\nInflação + alta de juros = imóvel mais caro em 6 meses.\n\n*Hoje* é o melhor momento. Posso mostrar as condições pra você?`,
+  ],
+  OBJECAO_SCORE: [
+    `*{fn}*, isso não é um problema! 😊\n\n✅ Trabalhamos com Caixa, Santander, Itaú, Bradesco e BB\n✅ Cada banco tem critérios diferentes\n✅ Muitos clientes com restrições conseguiram aprovação\n\nVamos ver seu caso com atenção. Pode continuar! 💪`,
+    `Não se preocupe com o score, *{fn}*! 🤝\n\nAlguns bancos aprovam com score abaixo de 500.\n\nAlém disso, *FGTS como garantia* aumenta muito as chances!\n\nMe conta mais sobre sua situação pra eu ver a melhor opção. 👇`,
+  ],
+  OBJECAO_RENDA: [
+    `*{fn}*, tem opções pra todos os perfis de renda! 😊\n\n✅ Minha Casa Minha Vida: renda de *até R$ 8.000*\n✅ Subsídio de *até R$ 55.000* do governo\n✅ Parcelas a partir de *R$ 300/mês*\n\nQual programa encaixa melhor no seu perfil? 🏠`,
+    `Entendo, *{fn}*! Mas *renda familiar* conta na hora do financiamento.\n\nSe tiver cônjuge ou familiar, podem somar rendas!\n\nIsso muda bastante o que você consegue financiar. Qual a renda total da família? 💰`,
+  ],
+  SINAL_COMPRA: [
+    `*{fn}*, percebi que você está *muito interessado(a)*! 🔥\n\nEsse é o momento certo para conversar com nosso consultor.\n\n👤 *José Romário* está disponível agora:\n🟢 wa.me/5599991811246\n\nOu me diz um horário e ele te liga! 📞`,
+    `Ótimo, *{fn}*! 🎉 Parece que você encontrou o que procurava!\n\nVou conectar você com nossa especialista agora:\n\n🟢 *Daniele* — wa.me/5599992062871\n\nEla pode esclarecer tudo e garantir as melhores condições! 🏠`,
+  ],
+};
+
+type PersuasionTrigger = 'HESITACAO' | 'OBJECAO_PRECO' | 'OBJECAO_SCORE' | 'OBJECAO_RENDA' | 'SINAL_COMPRA';
+
+function detectPersuasionTrigger(msg: string): PersuasionTrigger | null {
+  const m = msg.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+
+  // SINAL_COMPRA — prioridade máxima
+  if (/\b(quero\s*comprar|quero\s*fechar|vou\s*comprar|quero\s*assinar|quero\s*esse|e\s*esse\s*mesmo|me\s*interesso|fechado|fecha\s*ai|bora\s*fechar|quero\s*ja|quero\s*agora)\b/.test(m)) return 'SINAL_COMPRA';
+
+  // HESITACAO
+  if (/\b(vou\s*pensar|deixa\s*eu\s*pensar|preciso\s*pensar|vou\s*ver|nao\s*sei|talvez|quem\s*sabe|nao\s*tenho\s*certeza|tenho\s*duvida|to\s*em\s*duvida|estou\s*em\s*duvida|ainda\s*nao\s*sei|deixa\s*pra\s*depois|me\s*da\s*um\s*tempo|preciso\s*de\s*tempo)\b/.test(m)) return 'HESITACAO';
+
+  // OBJECAO_PRECO
+  if (/\b(muito\s*caro|caro\s*demais|nao\s*tenho\s*esse\s*dinheiro|nao\s*posso\s*pagar\s*isso|e\s*caro|parcela\s*alta|parcela\s*cara|nao\s*tenho\s*entrada|sem\s*entrada|nao\s*consigo\s*a\s*entrada|nao\s*cabe\s*no\s*orcamento)\b/.test(m)) return 'OBJECAO_PRECO';
+
+  // OBJECAO_SCORE
+  if (/\b(cpf\s*sujo|score\s*baixo|restricao|negativado|serasa|spc|nome\s*sujo|nao\s*consigo\s*financiar|nao\s*aprovaram|reprovado|banco\s*nao\s*aprovou)\b/.test(m)) return 'OBJECAO_SCORE';
+
+  // OBJECAO_RENDA
+  if (/\b(renda\s*baixa|pouca\s*renda|ganho\s*pouco|salario\s*minimo|nao\s*ganho\s*o\s*suficiente|nao\s*tenho\s*renda\s*suficiente|minha\s*renda\s*e\s*pouca)\b/.test(m)) return 'OBJECAO_RENDA';
+
+  return null;
+}
+
+function getPersuasionResponse(trigger: PersuasionTrigger, fn: string): string {
+  const responses = RESPOSTAS_PERSUASAO[trigger];
+  const msg = responses[Math.floor(Math.random() * responses.length)];
+  return msg.replace(/\{fn\}/g, fn);
+}
+
 // ============ DETECCAO DE INTENCAO ============
 type IntentType = 'SIM' | 'NAO' | 'PRECO' | 'TEMPO' | 'OUTROS';
 
@@ -352,6 +448,20 @@ async function processStage(context: BotContext, state: ConversationState): Prom
     return rejectionResponse;
   }
 
+  // ═══════════════════════════════════════════════════════════════════
+  // GATE 2: GATILHOS DE PERSUASÃO (hesitação/objeção durante qualificação)
+  // Responde ao gatilho SEM avançar o estágio — lead precisa responder de novo
+  // ═══════════════════════════════════════════════════════════════════
+  const QUAL_STAGES = ['qual_etapa_1','qual_etapa_2','qual_etapa_3','qual_etapa_4','qual_etapa_5','qual_etapa_6','qual_etapa_7','qual_etapa_8','qual_etapa_9','qual_etapa_10'];
+  if (QUAL_STAGES.includes(state.stage)) {
+    const trigger = detectPersuasionTrigger(msg);
+    if (trigger) {
+      console.log(`[Bot] 💬 GATILHO ${trigger}: ${state.phone} em estágio ${state.stage}`);
+      setState(context.phone, { lastUserReplyAt: Date.now() });
+      return { text: getPersuasionResponse(trigger, fn), qualified: true };
+    }
+  }
+
   // NAO em qualquer estagio inicial — encerra (compatibilidade legada)
   if (intent === 'NAO' && ['abordagem_enviada', 'nao_iniciado'].includes(state.stage)) {
     setState(context.phone, { stage: 'sem_interesse', lastUserReplyAt: Date.now() });
@@ -363,6 +473,16 @@ async function processStage(context: BotContext, state: ConversationState): Prom
     // ---- ABORDAGEM: lead respondeu, iniciar qualificacao ----
     case 'nao_iniciado':
     case 'abordagem_enviada': {
+      // Se é uma mensagem de iniciação (oi, olá, tenho interesse...) → boas-vindas antes do formulário
+      if (isIniciacao(msg)) {
+        setState(context.phone, { stage: 'qual_etapa_1', lastUserReplyAt: Date.now() });
+        const welcome = getRespostaIniciacao();
+        const firstQuestion = QUAL_QUESTIONS.etapa_1(fn);
+        return {
+          text: `${welcome}\n\n${firstQuestion}`,
+          qualified: true,
+        };
+      }
       setState(context.phone, { stage: 'qual_etapa_1', lastUserReplyAt: Date.now() });
       return {
         text: QUAL_QUESTIONS.etapa_1(fn),
@@ -608,27 +728,48 @@ export interface FollowUpState {
 
 const FOLLOWUP_SEQUENCE = [
   {
+    // T+5min — ESCASSEZ: impacto inicial, despertar urgência
     step: 1,
-    delayMinutes: 30,
+    delayMinutes: 5,
     getMessage: (name: string) => {
       const fn = firstName(name);
-      return `Oi${fn !== 'Cliente' ? `, *${fn}*` : ''} 👋\n\nVi que voce ainda nao respondeu.\n\nEsse imovel esta chamando muita atencao hoje! 🔥\n\nQuer que eu te mande os detalhes agora?`;
+      return `${fn !== 'Cliente' ? `*${fn}*, ` : ''}vi que você ainda não respondeu 👋\n\n🔥 Esse imóvel está *chamando muita atenção hoje*!\n\nTivemos *3 consultas nas últimas horas*.\n\nQuer garantir as informações antes que acabe? 🏠`;
     },
   },
   {
+    // T+15min — PROVA SOCIAL: outros comprando, criar FOMO
     step: 2,
-    delayMinutes: 120,
+    delayMinutes: 15,
     getMessage: (name: string) => {
       const fn = firstName(name);
-      return `Passando rapidinho${fn !== 'Cliente' ? `, *${fn}*` : ''} 👀\n\nEssa oportunidade costuma sair rapido.\n\nJa tivemos bastante procura hoje.\n\nQuer garantir as informacoes antes que acabe?`;
+      return `${fn !== 'Cliente' ? `*${fn}*, ` : ''}passando rapidinho! 👀\n\n📊 *Outros clientes* já estão fazendo simulações de financiamento para este imóvel.\n\nNão deixa essa oportunidade passar! Posso te enviar os detalhes agora? 😊`;
     },
   },
   {
+    // T+25min — AUTORIDADE: credibilidade da empresa
     step: 3,
-    delayMinutes: 1440,
+    delayMinutes: 25,
     getMessage: (name: string) => {
       const fn = firstName(name);
-      return `Ultimo contato sobre essa oportunidade${fn !== 'Cliente' ? `, *${fn}*` : ''} 🚨\n\nAlgumas unidades ja foram reservadas.\n\nSe ainda tiver interesse, me fala que te priorizo agora 👍`;
+      return `${fn !== 'Cliente' ? `*${fn}*, ` : ''}você sabia? 🏆\n\nA *Romatec Imóveis* já ajudou *centenas de famílias* a conquistar a casa própria em Açailândia.\n\n✅ Financiamento facilitado\n✅ Parcelas que cabem no bolso\n✅ Atendimento especializado\n\nQuer fazer parte desse grupo? Me chama! 🤝`;
+    },
+  },
+  {
+    // T+35min — URGÊNCIA: prazo limitado
+    step: 4,
+    delayMinutes: 35,
+    getMessage: (name: string) => {
+      const fn = firstName(name);
+      return `⚠️ ${fn !== 'Cliente' ? `*${fn}*, ` : ''}atenção!\n\nAs *condições especiais de financiamento* que estamos oferecendo têm prazo limitado.\n\n⏰ Não deixe para depois o que você pode resolver hoje!\n\nUm consultor pode te atender *agora mesmo*. Bora? 🚀`;
+    },
+  },
+  {
+    // T+44min — ÚLTIMA CHANCE: encerramento com gancho
+    step: 5,
+    delayMinutes: 44,
+    getMessage: (name: string) => {
+      const fn = firstName(name);
+      return `🚨 ${fn !== 'Cliente' ? `*${fn}*, ` : ''}último contato!\n\nAlgumas unidades já foram *reservadas hoje*.\n\nSe ainda tiver interesse, me fala *agora* que te priorizo na fila! 🏠\n\nOu fala direto com nosso consultor:\n👤 wa.me/5599991811246`;
     },
   },
 ];
@@ -670,7 +811,7 @@ export function getFollowUpsToSend(): { phone: string; message: string; step: nu
     const convState = conversationStates.get(phone);
     if (convState && (convState.stage === 'sem_interesse' || convState.stage === 'concluido' || convState.stage === 'qualificado')) continue;
     if (state.lastUserReplyAt && state.lastUserReplyAt > state.lastBotMessageAt) continue;
-    if (state.step >= 3) continue;
+    if (state.step >= 5) continue;
 
     const nextStep = state.step + 1;
     const followUp = FOLLOWUP_SEQUENCE[nextStep - 1];
