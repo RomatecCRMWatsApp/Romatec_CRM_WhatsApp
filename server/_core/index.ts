@@ -105,19 +105,25 @@ Se você recebeu esta mensagem, o Telegram está 100% operacional!`;
   // Handler compartilhado (alias /webhook/zapi e /api/webhook/zapi)
   async function handleZapiWebhook(req: any, res: any) {
     try {
+      console.log(`\n[Webhook] ===== RECEBIDO WEBHOOK =====`);
+      console.log(`[Webhook] Body completo:`, JSON.stringify(req.body).substring(0, 200));
+
       const { parseWebhookPayload } = await import('../zapi-integration');
       const { processBotMessage, registerBotMessage } = await import('../bot-ai');
       const { sendMessageViaZAPI } = await import('../zapi-integration');
       const payload = parseWebhookPayload(req.body);
 
       if (!payload) {
+        console.log(`[Webhook] ❌ Payload parseado como NULL`);
         return res.json({ received: true, processed: false });
       }
+
+      console.log(`[Webhook] ✅ Payload parseado:`, JSON.stringify(payload).substring(0, 150));
 
       // Ignorar mensagens vazias
       const msgText = String(payload.message || '').trim();
       if (!msgText && !payload.audioUrl) {
-        console.log(`[Webhook] Ignorado: mensagem vazia de ${payload.phone}`);
+        console.log(`[Webhook] ⚠️  Ignorado: mensagem vazia de ${payload.phone}`);
         return res.json({ received: true, processed: false, reason: 'empty' });
       }
 
@@ -148,6 +154,7 @@ Se você recebeu esta mensagem, o Telegram está 100% operacional!`;
 
       // Processar com bot IA e responder automaticamente
       try {
+        console.log(`[Webhook] 🤖 Processando com bot IA...`);
         const botResponse = await processBotMessage({
           phone: payload.phone,
           message: msgText,
@@ -155,14 +162,20 @@ Se você recebeu esta mensagem, o Telegram está 100% operacional!`;
           senderName,
         });
 
-        if (botResponse.text) {
+        console.log(`[Webhook] 📝 Bot respondeu:`, JSON.stringify(botResponse).substring(0, 150));
+
+        if (botResponse && botResponse.text) {
           const instanceId = process.env.ZAPI_INSTANCE_ID;
           const token = process.env.ZAPI_TOKEN;
           const clientToken = process.env.ZAPI_CLIENT_TOKEN;
 
+          console.log(`[Webhook] 🔑 Credenciais Z-API: instanceId=${!!instanceId}, token=${!!token}, clientToken=${!!clientToken}`);
+
           if (instanceId && token) {
             const { sendButtonsViaZAPI } = await import('../zapi-integration');
             let sendResult;
+
+            console.log(`[Webhook] 📤 Enviando resposta para ${payload.phone}...`);
 
             // Usar botoes interativos se o bot retornar opcoes
             if (botResponse.buttons && botResponse.buttons.length > 0) {
