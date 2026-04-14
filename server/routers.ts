@@ -119,18 +119,18 @@ export const appRouter = router({
       return result[0] || null;
     }),
     create: protectedProcedure
-      .input(z.object({ 
-        denomination: z.string().min(1), 
-        address: z.string().min(1), 
-        city: z.string().optional(), 
-        state: z.string().optional(), 
-        cep: z.string().optional(), 
-        price: z.string().min(1), 
+      .input(z.object({
+        denomination: z.string().min(1),
+        address: z.string().min(1),
+        city: z.string().optional(),
+        state: z.string().optional(),
+        cep: z.string().optional(),
+        price: z.string().min(1),
         offerPrice: z.string().optional(),
-        areaConstruida: z.number().optional(),
-        areaTotal: z.number().optional(),
-        bedrooms: z.number().optional(),
-        bathrooms: z.number().optional(),
+        areaConstruida: z.coerce.number().optional(),
+        areaTotal: z.coerce.number().optional(),
+        bedrooms: z.coerce.number().optional(),
+        bathrooms: z.coerce.number().optional(),
         description: z.string().optional(),
         status: z.enum(["available", "unavailable"]).default("available")
       }))
@@ -149,19 +149,19 @@ export const appRouter = router({
         return { id: Number((result as any)[0].insertId), slug };
       }),
     update: protectedProcedure
-      .input(z.object({ 
-        id: z.number(), 
-        denomination: z.string().optional(), 
-        address: z.string().optional(), 
-        city: z.string().optional(), 
-        state: z.string().optional(), 
+      .input(z.object({
+        id: z.number(),
+        denomination: z.string().optional(),
+        address: z.string().optional(),
+        city: z.string().optional(),
+        state: z.string().optional(),
         cep: z.string().optional(),
         price: z.string().optional(),
         offerPrice: z.string().optional(),
-        areaConstruida: z.number().optional(),
-        areaTotal: z.number().optional(),
-        bedrooms: z.number().optional(),
-        bathrooms: z.number().optional(),
+        areaConstruida: z.coerce.number().optional(),
+        areaTotal: z.coerce.number().optional(),
+        bedrooms: z.coerce.number().optional(),
+        bathrooms: z.coerce.number().optional(),
         description: z.string().optional(),
         status: z.enum(["available", "unavailable"]).optional()
       }))
@@ -197,9 +197,9 @@ export const appRouter = router({
         city: z.string().optional(), 
         price: z.string(), 
         offerPrice: z.string().optional(), 
-        areaConstruida: z.number().optional(),
-        bedrooms: z.number().optional(),
-        bathrooms: z.number().optional()
+        areaConstruida: z.coerce.number().optional(),
+        bedrooms: z.coerce.number().optional(),
+        bathrooms: z.coerce.number().optional()
       }))
       .mutation(async ({ input }) => {
         const { invokeLLM } = await import("./_core/llm");
