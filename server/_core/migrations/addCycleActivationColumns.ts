@@ -32,8 +32,9 @@ export async function addCycleActivationColumns(): Promise<void> {
         console.log(`[Migration] ✅ Adicionada coluna: ${col.name}`);
         addedCount++;
       } catch (error: any) {
-        // Skip if column already exists
-        if (error.code === 'ER_DUP_FIELDNAME' || error.message?.includes('Duplicate column')) {
+        const code = error.code || error.cause?.code || '';
+        const msg = error.message || '';
+        if (code === 'ER_DUP_FIELDNAME' || msg.includes('Duplicate column')) {
           skippedCount++;
         } else {
           throw error;

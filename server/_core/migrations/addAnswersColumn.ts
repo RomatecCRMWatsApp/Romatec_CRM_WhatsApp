@@ -16,7 +16,9 @@ export async function addAnswersColumn(): Promise<void> {
       );
       console.log('[Migration] ✅ Coluna answers adicionada com sucesso');
     } catch (error: any) {
-      if (error.code === 'ER_DUP_FIELDNAME' || error.message?.includes('Duplicate column')) {
+      const code = error.code || error.cause?.code || '';
+      const msg = error.message || '';
+      if (code === 'ER_DUP_FIELDNAME' || msg.includes('Duplicate column')) {
         console.log('[Migration] ℹ️  Coluna answers já existe');
       } else {
         throw error;
