@@ -882,17 +882,16 @@ export default function Campaigns() {
               style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(180px, 1fr))", gap: "8px" }}
               key={`hour-status-${resetKey}`}
             >
-              {allCampaigns
-                .filter((c: any) => c.status === "running")
-                .map((campaign: any) => {
+              {allCampaigns.map((campaign: any) => {
+                  const isRunning = campaign.status === "running";
                   const campState = campaignStates.find((cs: any) => cs.campaignName === campaign.name);
                   const hasSent = campState?.sentThisHour || false;
                   const isInactive = systemPhase === 'standby' || systemPhase === 'blocked';
-                  const dotColor = isInactive ? phase.color : hasSent ? "#3ec87a" : "#e8a83e";
-                  const cardBorder = isInactive ? phase.border : hasSent ? "rgba(62,200,122,0.25)" : "rgba(232,168,62,0.2)";
-                  const cardBg = isInactive ? phase.bg : hasSent ? "rgba(62,200,122,0.06)" : "rgba(232,168,62,0.06)";
-                  const labelColor = isInactive ? phase.color : hasSent ? "#3ec87a" : "#e8a83e";
-                  const statusText = isInactive ? phase.label : hasSent ? "ENVIOU" : "AGUARDANDO";
+                  const dotColor = !isRunning ? "#555" : isInactive ? phase.color : hasSent ? "#3ec87a" : "#e8a83e";
+                  const cardBorder = !isRunning ? "rgba(80,80,80,0.3)" : isInactive ? phase.border : hasSent ? "rgba(62,200,122,0.25)" : "rgba(232,168,62,0.2)";
+                  const cardBg = !isRunning ? "rgba(30,30,30,0.4)" : isInactive ? phase.bg : hasSent ? "rgba(62,200,122,0.06)" : "rgba(232,168,62,0.06)";
+                  const labelColor = !isRunning ? "#555" : isInactive ? phase.color : hasSent ? "#3ec87a" : "#e8a83e";
+                  const statusText = !isRunning ? "PAUSADO" : isInactive ? phase.label : hasSent ? "ENVIOU" : "AGUARDANDO";
                   return (
                     <div
                       key={`hour-${campaign.id}`}
@@ -901,23 +900,38 @@ export default function Campaigns() {
                       <div style={{ display: "flex", alignItems: "center", gap: "7px", marginBottom: "7px" }}>
                         <span style={{
                           width: "8px", height: "8px", borderRadius: "50%", background: dotColor, flexShrink: 0,
-                          animation: (!isInactive && !hasSent) ? "rmt-amber-pulse 1.5s infinite" : isInactive ? "rmt-pulse 2s infinite" : "none",
+                          animation: (isRunning && !isInactive && !hasSent) ? "rmt-amber-pulse 1.5s infinite" : "none",
                         }} />
                         <span style={{ fontSize: "10px", fontWeight: 700, color: labelColor, letterSpacing: "0.05em" }}>
                           {statusText}
                         </span>
                         <span style={{
                           marginLeft: "auto", fontSize: "9px", padding: "1px 6px", borderRadius: "8px", fontWeight: 700,
-                          background: isInactive ? phase.bg : hasSent ? "rgba(62,200,122,0.12)" : "rgba(232,168,62,0.12)",
-                          border: `1px solid ${isInactive ? phase.border : hasSent ? "rgba(62,200,122,0.2)" : "rgba(232,168,62,0.2)"}`,
+                          background: !isRunning ? "rgba(80,80,80,0.15)" : isInactive ? phase.bg : hasSent ? "rgba(62,200,122,0.12)" : "rgba(232,168,62,0.12)",
+                          border: `1px solid ${!isRunning ? "rgba(80,80,80,0.3)" : isInactive ? phase.border : hasSent ? "rgba(62,200,122,0.2)" : "rgba(232,168,62,0.2)"}`,
                           color: labelColor,
                         }}>
-                          {isInactive ? "--" : hasSent ? "1/1" : "0/1"}
+                          {!isRunning ? "--" : isInactive ? "--" : hasSent ? "1/1" : "0/1"}
                         </span>
                       </div>
-                      <span style={{ fontSize: "12px", fontWeight: 600, color: isInactive ? "#5a7a60" : hasSent ? "#5ad890" : "#e8c060", display: "block", marginBottom: "4px" }}>
+                      <span style={{ fontSize: "12px", fontWeight: 600, color: !isRunning ? "#555" : isInactive ? "#5a7a60" : hasSent ? "#5ad890" : "#e8c060", display: "block", marginBottom: "6px" }}>
                         {campaign.name}
                       </span>
+                      {/* Badges Ativo Dia / Ativo Noite */}
+                      <div style={{ display: "flex", gap: "4px", marginBottom: "4px" }}>
+                        <span style={{
+                          fontSize: "9px", padding: "1px 6px", borderRadius: "6px", fontWeight: 700,
+                          background: campaign.activeDay ? "rgba(62,200,122,0.15)" : "rgba(60,60,60,0.4)",
+                          border: `1px solid ${campaign.activeDay ? "rgba(62,200,122,0.35)" : "rgba(80,80,80,0.3)"}`,
+                          color: campaign.activeDay ? "#3ec87a" : "#555",
+                        }}>☀️ DIA</span>
+                        <span style={{
+                          fontSize: "9px", padding: "1px 6px", borderRadius: "6px", fontWeight: 700,
+                          background: campaign.activeNight ? "rgba(120,100,220,0.15)" : "rgba(60,60,60,0.4)",
+                          border: `1px solid ${campaign.activeNight ? "rgba(120,100,220,0.35)" : "rgba(80,80,80,0.3)"}`,
+                          color: campaign.activeNight ? "#a090f0" : "#555",
+                        }}>🌙 NOITE</span>
+                      </div>
                       <p style={{ fontSize: "9px", color: "#3a5a40", margin: 0 }}>
                         1 msg/hora • {campaign.sentCount || 0}/{campaign.totalContacts || 2} total
                       </p>
