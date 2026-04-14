@@ -139,6 +139,11 @@ export const appRouter = router({
         const slug = input.denomination.toLowerCase().replace(/[^a-z0-9]+/g, '-') + '-' + Date.now().toString(36);
         const db = await getDb();
         if (!db) throw new Error("Database not available");
+        // Limite de 5 imóveis ativos
+        const activeCount = await db.select().from(properties).where(eq(properties.status, "available"));
+        if (activeCount.length >= 5) {
+          throw new Error("Limite de 5 imóveis ativos atingido. Inative um imóvel antes de cadastrar outro.");
+        }
         const result = await db.insert(properties).values({
           ...input,
           price: input.price as any,
