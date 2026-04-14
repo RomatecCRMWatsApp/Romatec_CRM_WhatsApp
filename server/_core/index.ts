@@ -240,6 +240,14 @@ async function startServer() {
       console.error('❌ Erro na migration addApiKeysToCompanyConfig:', e);
     }
 
+    // RESTORE: Mod_Vaz-02 deletado acidentalmente
+    try {
+      const { restoreModVaz02 } = await import('./migrations/restoreModVaz02');
+      await restoreModVaz02();
+    } catch (e) {
+      console.error('❌ Erro no restore Mod_Vaz-02:', e);
+    }
+
     // STARTUP: Carregar credenciais salvas no DB para process.env (fallback do .env)
     try {
       const { getCompanyConfig } = await import('../db');
