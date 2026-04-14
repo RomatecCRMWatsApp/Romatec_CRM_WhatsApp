@@ -590,7 +590,11 @@ export class CampaignScheduler {
         return;
       }
 
-      const personalized = this.personalizeMessage(messageText, contact);
+      // Buscar link do imóvel e incluir na mensagem (não mais como follow-up separado)
+      const linkMsg = await this.getPropertyLinkMessage(campaignId);
+      const fullText = linkMsg ? `${messageText}\n\n${linkMsg}` : messageText;
+
+      const personalized = this.personalizeMessage(fullText, contact);
 
       console.log(`\n📨 Enviando: ${campaign.name} → ${contact.name} (${contact.phone})`);
 
@@ -689,22 +693,6 @@ export class CampaignScheduler {
         await registerBotMessage(contact.phone, contact.name || '', campaignId, personalized);
 
         await this.updateContactHistory(contact.id, campaignId);
-
-        // ─── FOLLOW-UP: enviar link do imóvel 1-2 minutos depois ───
-        const linkMsg = await this.getPropertyLinkMessage(campaignId);
-        if (linkMsg) {
-          const delayMs = 60000 + Math.floor(Math.random() * 60000); // 60-120 segundos
-          const followUpPhone = contact.phone;
-          console.log(`⏳ Link do imóvel agendado para ${followUpPhone} em ${Math.round(delayMs / 1000)}s`);
-          setTimeout(async () => {
-            try {
-              await this.sendViaZAPI(followUpPhone, linkMsg);
-              console.log(`🔗 Link enviado para ${followUpPhone}`);
-            } catch (e) {
-              console.error(`❌ Erro ao enviar link follow-up:`, e);
-            }
-          }, delayMs);
-        }
       } else if (result === 'failed') {
         this.state.totalFailed++;
         await db.insert(messages).values({
@@ -1024,7 +1012,7 @@ export class CampaignScheduler {
       const prop = propResult[0];
       if (!prop) return null;
       const slug = (prop as any).publicSlug || prop.denomination.toLowerCase().replace(/[^a-z0-9]+/g, '-');
-      const url = `https://romateccrmwhatsapp-production.up.railway.app/imovel/${slug}`;
+      const url = `https://romateccrm.com/imovel/${slug}`;
       return `📸 *Veja as fotos e detalhes completos aqui:*\n${url}`;
     } catch {
       return null;
