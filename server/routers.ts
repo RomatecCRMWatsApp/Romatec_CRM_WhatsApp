@@ -471,7 +471,24 @@ export const appRouter = router({
   }),
   companyConfig: router({
     get: publicProcedure.query(async () => getCompanyConfig()),
-    update: protectedProcedure.input(z.object({ companyName: z.string().optional(), phone: z.string().optional(), address: z.string().optional(), zApiInstanceId: z.string().optional(), zApiToken: z.string().optional(), zApiClientToken: z.string().optional() })).mutation(async ({ input }) => updateCompanyConfig(input)),
+    update: protectedProcedure.input(z.object({
+      companyName: z.string().optional(),
+      phone: z.string().optional(),
+      address: z.string().optional(),
+      zApiInstanceId: z.string().optional(),
+      zApiToken: z.string().optional(),
+      zApiClientToken: z.string().optional(),
+      telegramBotToken: z.string().optional(),
+      telegramChatId: z.string().optional(),
+      openAiApiKey: z.string().optional(),
+    })).mutation(async ({ input }) => {
+      await updateCompanyConfig(input);
+      // Sincronizar process.env imediatamente para uso em runtime sem reiniciar
+      if (input.telegramBotToken !== undefined) process.env.TELEGRAM_BOT_TOKEN = input.telegramBotToken;
+      if (input.telegramChatId !== undefined)   process.env.TELEGRAM_CHAT_ID   = input.telegramChatId;
+      if (input.openAiApiKey !== undefined)      process.env.OPENAI_API_KEY     = input.openAiApiKey;
+      return { success: true };
+    }),
     testZApiConnection: protectedProcedure.mutation(async () => {
       const config = await getCompanyConfig();
       if (!config || !config.zApiInstanceId || !config.zApiToken) return { success: false, message: "Z-API credentials not configured" };

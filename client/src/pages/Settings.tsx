@@ -3,7 +3,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Settings as SettingsIcon, ArrowLeft, Save, Wifi, WifiOff, RefreshCw, Lock, Eye, EyeOff, User, Send, CheckCircle2, XCircle, MessageSquare } from "lucide-react";
+import { Settings as SettingsIcon, ArrowLeft, Save, Wifi, WifiOff, RefreshCw, Lock, Eye, EyeOff, User, Send, CheckCircle2, XCircle, MessageSquare, Bot, Bell } from "lucide-react";
 import { useLocation } from "wouter";
 import { trpc } from "@/lib/trpc";
 import { toast } from "sonner";
@@ -53,6 +53,7 @@ export default function Settings() {
   const [form, setForm] = useState({
     companyName: "", phone: "", address: "",
     zApiInstanceId: "", zApiToken: "", zApiClientToken: "",
+    telegramBotToken: "", telegramChatId: "", openAiApiKey: "",
   });
 
   const [passForm, setPassForm] = useState({
@@ -76,6 +77,9 @@ export default function Settings() {
         zApiInstanceId: config.zApiInstanceId || "",
         zApiToken: config.zApiToken || "",
         zApiClientToken: config.zApiClientToken || "",
+        telegramBotToken: (config as any).telegramBotToken || "",
+        telegramChatId: (config as any).telegramChatId || "",
+        openAiApiKey: (config as any).openAiApiKey || "",
       });
     }
   }, [config]);
@@ -249,6 +253,72 @@ export default function Settings() {
                 ⚠️ Z-API não está conectado. Salve e teste a conexão primeiro.
               </p>
             )}
+          </CardContent>
+        </Card>
+
+        {/* Telegram + OpenAI */}
+        <Card className="bg-card border-border">
+          <CardHeader>
+            <CardTitle className="text-foreground flex items-center gap-2">
+              <Bell className="h-5 w-5 text-blue-400" />
+              Notificações e IA
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-5">
+
+            {/* Telegram */}
+            <div className="space-y-3">
+              <p className="text-sm font-semibold text-foreground flex items-center gap-2">
+                <span className="text-lg">📲</span> Telegram Bot
+              </p>
+              <p className="text-xs text-muted-foreground">
+                Notificações de envio, leads quentes e alertas do sistema via Telegram.
+              </p>
+              <div>
+                <Label className="text-muted-foreground text-xs">Bot Token</Label>
+                <Input
+                  type="password"
+                  value={form.telegramBotToken}
+                  onChange={e => setForm(f => ({ ...f, telegramBotToken: e.target.value }))}
+                  placeholder="110201543:AAHdqTcvCH1vGWJxfSeofSAs0K5PALDsaw"
+                  className="bg-secondary border-border font-mono text-xs"
+                />
+                <p className="text-xs text-muted-foreground mt-1">Obtido via @BotFather no Telegram</p>
+              </div>
+              <div>
+                <Label className="text-muted-foreground text-xs">Chat ID</Label>
+                <Input
+                  value={form.telegramChatId}
+                  onChange={e => setForm(f => ({ ...f, telegramChatId: e.target.value }))}
+                  placeholder="-1001234567890 ou 123456789"
+                  className="bg-secondary border-border font-mono text-xs"
+                />
+                <p className="text-xs text-muted-foreground mt-1">ID do grupo ou canal que receberá as notificações</p>
+              </div>
+            </div>
+
+            <div className="border-t border-border/50" />
+
+            {/* OpenAI */}
+            <div className="space-y-3">
+              <p className="text-sm font-semibold text-foreground flex items-center gap-2">
+                <Bot className="h-4 w-4 text-emerald-400" /> OpenAI (Bot IA)
+              </p>
+              <p className="text-xs text-muted-foreground">
+                Chave usada pelo bot para qualificar leads e responder automaticamente no WhatsApp.
+              </p>
+              <div>
+                <Label className="text-muted-foreground text-xs">API Key</Label>
+                <Input
+                  type="password"
+                  value={form.openAiApiKey}
+                  onChange={e => setForm(f => ({ ...f, openAiApiKey: e.target.value }))}
+                  placeholder="sk-..."
+                  className="bg-secondary border-border font-mono text-xs"
+                />
+              </div>
+            </div>
+
           </CardContent>
         </Card>
 

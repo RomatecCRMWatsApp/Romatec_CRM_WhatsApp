@@ -199,6 +199,36 @@ async function startServer() {
   server.listen(port, async () => {
     console.log(`Server running on http://localhost:${port}/`);
 
+    // MIGRATION: Garantir colunas de API keys no companyConfig
+    try {
+      const { addApiKeysToCompanyConfig } = await import('./migrations/addApiKeysToCompanyConfig');
+      await addApiKeysToCompanyConfig();
+    } catch (e) {
+      console.error('❌ Erro na migration addApiKeysToCompanyConfig:', e);
+    }
+
+    // STARTUP: Carregar credenciais salvas no DB para process.env (fallback do .env)
+    try {
+      const { getCompanyConfig } = await import('../db');
+      const cfg = await getCompanyConfig();
+      if (cfg) {
+        if (!process.env.TELEGRAM_BOT_TOKEN && cfg.telegramBotToken) {
+          process.env.TELEGRAM_BOT_TOKEN = cfg.telegramBotToken;
+          console.log('🔑 TELEGRAM_BOT_TOKEN carregado do banco');
+        }
+        if (!process.env.TELEGRAM_CHAT_ID && cfg.telegramChatId) {
+          process.env.TELEGRAM_CHAT_ID = cfg.telegramChatId;
+          console.log('🔑 TELEGRAM_CHAT_ID carregado do banco');
+        }
+        if (!process.env.OPENAI_API_KEY && cfg.openAiApiKey) {
+          process.env.OPENAI_API_KEY = cfg.openAiApiKey;
+          console.log('🔑 OPENAI_API_KEY carregado do banco');
+        }
+      }
+    } catch (e) {
+      console.error('❌ Erro ao carregar credenciais do banco:', e);
+    }
+
     // AUTO-RESTART: Verificar se o scheduler estava rodando antes do deploy
     try {
       const { campaignScheduler } = await import('../scheduler/campaignScheduler');

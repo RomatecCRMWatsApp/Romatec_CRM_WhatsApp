@@ -141,6 +141,9 @@ export const companyConfig = mysqlTable("companyConfig", {
   zApiClientToken: varchar("zApiClientToken", { length: 255 }),
   zApiConnected: boolean("zApiConnected").default(false),
   zApiLastChecked: timestamp("zApiLastChecked"),
+  telegramBotToken: varchar("telegramBotToken", { length: 255 }),
+  telegramChatId: varchar("telegramChatId", { length: 100 }),
+  openAiApiKey: varchar("openAiApiKey", { length: 255 }),
   createdAt: timestamp("createdAt").defaultNow().notNull(),
   updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
 });
