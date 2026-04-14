@@ -568,17 +568,13 @@ Se você recebeu esta mensagem, o Telegram está 100% operacional!`;
       }
     }, ZAPI_CHECK_INTERVAL);
 
-    // TELEGRAM: inicializar notificações de ciclo
+    // TELEGRAM: verificar transições de ciclo a cada minuto
     try {
       const { telegramNotifier } = await import('./telegramNotification');
-      await telegramNotifier.initialize();
-
-      // Verificar ciclo a cada minuto
       setInterval(async () => {
         const now = new Date();
-        const brasiliaStr = now.toLocaleString('en-US', { timeZone: 'America/Sao_Paulo' });
-        const brasiliaNow = new Date(brasiliaStr);
-        telegramNotifier.checkAndNotify(brasiliaNow.getHours());
+        const brasiliaNow = new Date(now.toLocaleString('en-US', { timeZone: 'America/Sao_Paulo' }));
+        await telegramNotifier.checkAndNotify(brasiliaNow.getHours());
       }, 60 * 1000);
     } catch (error) {
       console.warn('[Telegram] Erro ao inicializar notificações:', error);
