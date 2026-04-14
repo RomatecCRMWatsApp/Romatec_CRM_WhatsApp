@@ -2,6 +2,7 @@ import { getDb } from "../db";
 import { campaigns, contacts, messages, campaignContacts, contactCampaignHistory, properties, schedulerState as schedulerStateTable } from "../../drizzle/schema";
 import { eq, and } from "drizzle-orm";
 import { registerBotMessage, getFollowUpsToSend, cleanupOldFollowUps } from "../bot-ai";
+import { notifyMessageSent } from "../_core/telegramNotification";
 
 /**
  * SISTEMA ROMATEC CRM v9.0 - ROTAÇÃO SEQUENCIAL
@@ -630,6 +631,17 @@ export class CampaignScheduler {
         if (slot) slot.sent = true;
 
         console.log(`✅ Enviado com sucesso! Total hoje: ${this.state.totalSent}`);
+
+        // Notificar Telegram sobre o envio para acompanhamento
+        notifyMessageSent({
+          contactName: contact.name || contact.phone,
+          contactPhone: contact.phone,
+          campaignName: campaign.name,
+          messageText: personalized,
+          cycleHour: this.state.hourNumber,
+          maxCycle: this.MAX_HOURS_PER_CYCLE,
+          messagesSent: newCount,
+        }).catch(() => {}); // não bloquear envio por falha no Telegram
 
         // Registrar para bot
         await registerBotMessage(contact.phone, contact.name || '', campaignId, personalized);

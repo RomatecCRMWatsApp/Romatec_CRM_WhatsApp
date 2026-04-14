@@ -1,35 +1,11 @@
 import { useState, useEffect, useMemo, useCallback } from "react";
 import { useAuth } from "@/_core/hooks/useAuth";
+import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
-import {
-  ChevronDown, ChevronUp, Play, Zap, Settings2, CheckCircle2,
-  Clock, AlertCircle, Loader2, ArrowLeft, Timer, BarChart3,
-  Send, Users, Pause
-} from "lucide-react";
+import { ChevronDown, ChevronUp, Play, Square, RotateCcw, Zap, Settings2, CheckCircle2, Clock, AlertCircle, Loader2, ArrowLeft, Timer, BarChart3, Send, Users, Pause } from "lucide-react";
 import { useLocation } from "wouter";
 import { trpc } from "@/lib/trpc";
 import { toast } from "sonner";
-
-// ─── Live Brasília clock ───────────────────────────────────────────────────
-function useBrasiliaTime() {
-  const getBrasilia = () => {
-    const now = new Date();
-    return new Date(now.toLocaleString('en-US', { timeZone: 'America/Sao_Paulo' }));
-  };
-  const [time, setTime] = useState(getBrasilia);
-  useEffect(() => {
-    const id = setInterval(() => setTime(getBrasilia()), 1000);
-    return () => clearInterval(id);
-  }, []);
-  return time;
-}
-
-const PHASE_CONFIG = {
-  active_day:   { label: 'ATIVO DIA',   color: '#3ec87a', bg: 'rgba(62,200,122,0.12)',   border: 'rgba(62,200,122,0.3)',   glow: '0 0 18px rgba(62,200,122,0.25)'  },
-  active_night: { label: 'ATIVO NOITE', color: '#8a7ae8', bg: 'rgba(138,122,232,0.12)',  border: 'rgba(138,122,232,0.3)',  glow: '0 0 18px rgba(138,122,232,0.25)' },
-  standby:      { label: 'STANDBY',     color: '#e8a83e', bg: 'rgba(232,168,62,0.12)',   border: 'rgba(232,168,62,0.3)',   glow: '0 0 18px rgba(232,168,62,0.2)'   },
-  blocked:      { label: 'BLOQUEADO',   color: '#e05a5a', bg: 'rgba(220,60,60,0.10)',    border: 'rgba(220,60,60,0.25)',   glow: '0 0 18px rgba(220,60,60,0.15)'   },
-};
 
 /**
  * SISTEMA v6.0 - 5 CAMPANHAS INDEPENDENTES
@@ -60,11 +36,10 @@ export default function Campaigns() {
   const { user } = useAuth();
   const [, navigate] = useLocation();
   const [expandedCampaign, setExpandedCampaign] = useState<number | null>(null);
+  const [isSettingUp, setIsSettingUp] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [isResetting, setIsResetting] = useState(false);
   const [resetKey, setResetKey] = useState(0);
-  const [nightMode, setNightMode] = useState(false);
-  const brasiliaTime = useBrasiliaTime();
 
   const schedulerState = trpc.scheduler.getState.useQuery(undefined, {
     refetchInterval: isResetting ? false : 5000,
@@ -73,18 +48,24 @@ export default function Campaigns() {
     refetchInterval: isResetting ? false : 5000,
   });
 
-  // Sincronizar nightMode com o estado do backend
-  useEffect(() => {
-    if (schedulerState.data?.state?.nightMode !== undefined) {
-      setNightMode(schedulerState.data.state.nightMode);
-    }
-  }, [schedulerState.data?.state?.nightMode]);
-
   useEffect(() => {
     if (schedulerState.data !== undefined && campaignDetails.data !== undefined) {
       setIsLoading(false);
     }
   }, [schedulerState.data, campaignDetails.data]);
+
+  const autoSetup = trpc.campaigns.autoSetup.useMutation({
+    onSuccess: (data) => {
+      toast.success(`${data.campaigns.length} campanhas criadas com ${data.totalContacts} contatos!`);
+      campaignDetails.refetch();
+      schedulerState.refetch();
+      setIsSettingUp(false);
+    },
+    onError: (error) => {
+      toast.error(`Erro: ${error.message}`);
+      setIsSettingUp(false);
+    },
+  });
 
   const startScheduler = trpc.scheduler.start.useMutation({
     onSuccess: () => {
@@ -103,50 +84,6 @@ export default function Campaigns() {
     onError: (error) => toast.error(`Erro: ${error.message}`),
   });
 
-  // ═══════════════════════════════════════════════════════════
-  // Hooks para ativação por ciclo (DIA/NOITE)
-  // ═══════════════════════════════════════════════════════════
-  const cycleStatus = trpc.campaigns.getCycleStatus.useQuery();
-
-  const toggleCycleActivation = trpc.campaigns.toggleCycleActivation.useMutation({
-    onSuccess: () => {
-      cycleStatus.refetch();
-      campaignDetails.refetch();
-      toast.success("Ciclo de campanha atualizado!");
-    },
-    onError: (error) => toast.error(`Erro: ${error.message}`),
-  });
-
-  const handleNightModeToggle = async (newMode: boolean) => {
-    setNightMode(newMode);
-    const isRunning = schedulerState.data?.state?.isRunning;
-
-    if (isRunning) {
-      // Scheduler está rodando: para e reinicia com novo nightMode
-      stopScheduler.mutate(undefined, {
-        onSuccess: () => {
-          setTimeout(() => {
-            startScheduler.mutate({ nightMode: newMode }, {
-              onSuccess: () => {
-                toast.success(newMode ? "🌙 Modo Noite ativado e scheduler reiniciado!" : "☀️ Modo Dia ativado e scheduler reiniciado!");
-              }
-            });
-          }, 1000);
-        }
-      });
-    } else {
-      // Scheduler está PARADO: inicia com novo nightMode para persistir a escolha
-      startScheduler.mutate({ nightMode: newMode }, {
-        onSuccess: () => {
-          toast.success(newMode ? "🌙 Modo Noite ativado e scheduler iniciado!" : "☀️ Modo Dia ativado e scheduler iniciado!");
-        },
-        onError: (error) => {
-          toast.error(`Erro ao aplicar modo: ${error.message}`);
-        }
-      });
-    }
-  };
-
   const utils = trpc.useUtils();
   const resetScheduler = trpc.scheduler.reset.useMutation({
     onMutate: () => {
@@ -155,15 +92,19 @@ export default function Campaigns() {
     },
     onSuccess: async () => {
       try {
+        // Aguardar DOM estabilizar ANTES de refetch (evita insertBefore)
+        await new Promise(resolve => setTimeout(resolve, 300));
         await utils.scheduler.getCampaignDetails.invalidate();
         await utils.scheduler.getState.invalidate();
+        // Incrementar resetKey ANTES do refetch para desmontar cards antigos
+        setResetKey(prev => prev + 1);
+        await new Promise(resolve => setTimeout(resolve, 200));
         await utils.scheduler.getCampaignDetails.refetch();
         await utils.scheduler.getState.refetch();
-        setResetKey((prev) => prev + 1);
       } catch (e) {
-        console.warn("[Reset] Erro ao refetch:", e);
+        console.warn('[Reset] Erro ao refetch:', e);
       }
-      await new Promise((resolve) => setTimeout(resolve, 100));
+      await new Promise(resolve => setTimeout(resolve, 200));
       setIsResetting(false);
       toast.success("Campanhas resetadas com novos contatos! Clique em Iniciar.");
     },
@@ -185,34 +126,22 @@ export default function Campaigns() {
   const stats = useMemo(() => schedulerState.data?.stats, [schedulerState.data?.stats]);
   const stateData = useMemo(() => schedulerState.data?.state, [schedulerState.data?.state]);
   const todayMessages = useMemo(() => schedulerState.data?.todayMessages || [], [schedulerState.data?.todayMessages]);
-  const allCampaigns = useMemo(
-    () => (campaignDetails.data || []).filter((c: any) => !String(c.name || "").startsWith("TESTE_AUTO")),
-    [campaignDetails.data]
-  );
+  const allCampaigns = useMemo(() => (campaignDetails.data || []).filter((c: any) => !String(c.name || '').startsWith('TESTE_AUTO')), [campaignDetails.data]);
   const hourNumber = useMemo(() => stats?.cycleNumber || 0, [stats?.cycleNumber]);
+
+  // Campanhas que enviaram nesta hora (do estado do scheduler)
   const campaignStates = useMemo(() => stateData?.campaignStates || [], [stateData?.campaignStates]);
   const sentThisHour = useMemo(() => stats?.messagesThisHour || 0, [stats?.messagesThisHour]);
   const totalCampsActive = useMemo(() => stats?.maxMessagesPerHour || 0, [stats?.maxMessagesPerHour]);
 
   const totals = useMemo(() => {
+    const totalContacts = allCampaigns.reduce((sum: number, c: any) => sum + (c.totalContacts || 0), 0);
     const totalSent = allCampaigns.reduce((sum: number, c: any) => sum + (c.sentCount || 0), 0);
     const totalPending = allCampaigns.reduce((sum: number, c: any) => sum + (c.pendingCount || 0), 0);
     const totalFailed = allCampaigns.reduce((sum: number, c: any) => sum + (c.failedCount || 0), 0);
-    // Usa sentCount + pendingCount + failedCount como total real de contatos atribuídos
-    // evitando o valor fixo de totalContacts que pode vir inflado do backend
-    const totalContacts = totalSent + totalPending + totalFailed;
     const successRate = totalContacts > 0 ? ((totalSent / totalContacts) * 100).toFixed(1) : "0.0";
     return { totalContacts, totalSent, totalPending, totalFailed, successRate };
   }, [allCampaigns]);
-
-  const systemPhase = (stateData?.systemPhase as keyof typeof PHASE_CONFIG) || (() => {
-    const h = brasiliaTime.getHours();
-    if (h >= 6 && h < 8) return 'blocked' as const;
-    if (h >= 8 && h < 18) return 'active_day' as const;
-    if (h >= 18 && h < 20) return 'standby' as const;
-    return 'active_night' as const;
-  })();
-  const phase = PHASE_CONFIG[systemPhase];
 
   const cycleDuration = stateData?.cycleDurationSeconds || 3600;
   const [localTimer, setLocalTimer] = useState(cycleDuration);
@@ -233,10 +162,18 @@ export default function Campaigns() {
 
   const timeProgressPercent = cycleDuration > 0 ? Math.round(((cycleDuration - localTimer) / cycleDuration) * 100) : 0;
 
+  const handleAutoSetup = useCallback(() => {
+    setIsSettingUp(true);
+    autoSetup.mutate();
+  }, [autoSetup]);
+
   const handleStart = useCallback(() => {
-    if (allCampaigns.length < 1) return;
-    startScheduler.mutate({ nightMode });
-  }, [allCampaigns.length, startScheduler, nightMode]);
+    if (allCampaigns.length < 1) {
+      toast.error("Configure as campanhas primeiro! Clique em 'Auto Configurar'");
+      return;
+    }
+    startScheduler.mutate();
+  }, [allCampaigns.length, startScheduler]);
 
   const handleToggleExpand = useCallback((id: number) => {
     setExpandedCampaign((prev) => (prev === id ? null : id));
@@ -244,494 +181,141 @@ export default function Campaigns() {
 
   if (isLoading) {
     return (
-      <div className="min-h-screen flex items-center justify-center" style={{ background: "#080f0a" }}>
+      <div className="min-h-screen bg-background flex items-center justify-center">
         <div className="text-center">
-          <Loader2 className="h-10 w-10 animate-spin mx-auto mb-4" style={{ color: "#3ec87a" }} />
-          <p style={{ color: "#4a7a55", fontSize: "14px", letterSpacing: "0.05em" }}>
-            Carregando campanhas...
-          </p>
+          <Loader2 className="h-12 w-12 animate-spin text-emerald-500 mx-auto mb-4" />
+          <p className="text-muted-foreground text-lg">Carregando campanhas...</p>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen" style={{ background: "#080f0a", color: "#e8f5e9" }}>
-      {/* == HEADER == */}
-      <div
-        style={{
-          background: "linear-gradient(135deg, #0a1f11 0%, #163322 50%, #0a1f11 100%)",
-          borderBottom: "1px solid #1a3520",
-          padding: "14px 20px",
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "space-between",
-        }}
-      >
-        <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
-          <button
-            onClick={() => navigate("/dashboard")}
-            style={{
-              width: "32px",
-              height: "32px",
-              borderRadius: "8px",
-              background: "rgba(255,255,255,0.06)",
-              border: "1px solid rgba(255,255,255,0.1)",
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-              cursor: "pointer",
-              color: "#5a9a6a",
-            }}
-          >
-            <ArrowLeft size={15} />
-          </button>
-          <div>
-            <h1
-              style={{
-                fontSize: "17px",
-                fontWeight: 600,
-                color: "#e8f5e9",
-                display: "flex",
-                alignItems: "center",
-                gap: "8px",
-                margin: 0,
-              }}
-            >
-              <Send size={16} style={{ color: "#3ec87a" }} />
-              Romatec CRM Campanhas
-            </h1>
-            <p style={{ fontSize: "11px", color: "#3a6a45", margin: "2px 0 0" }}>
-              1 msg/campanha/hora • Ciclo de 10 horas • {allCampaigns.length} campanhas
-            </p>
-          </div>
-        </div>
-
-        {isRunning ? (
-          <span
-            style={{
-              display: "flex",
-              alignItems: "center",
-              gap: "6px",
-              padding: "5px 12px",
-              borderRadius: "20px",
-              fontSize: "11px",
-              fontWeight: 600,
-              letterSpacing: "0.05em",
-              background: "rgba(62,200,122,0.12)",
-              border: "1px solid rgba(62,200,122,0.25)",
-              color: "#3ec87a",
-            }}
-          >
-            <span
-              style={{
-                width: "7px",
-                height: "7px",
-                borderRadius: "50%",
-                background: "#3ec87a",
-                animation: "rmt-pulse 1.5s infinite",
-              }}
-            />
-            RODANDO
-          </span>
-        ) : (
-          <span
-            style={{
-              display: "flex",
-              alignItems: "center",
-              gap: "6px",
-              padding: "5px 12px",
-              borderRadius: "20px",
-              fontSize: "11px",
-              fontWeight: 600,
-              letterSpacing: "0.05em",
-              background: "rgba(220,60,60,0.12)",
-              border: "1px solid rgba(220,60,60,0.25)",
-              color: "#f07070",
-            }}
-          >
-            <span
-              style={{
-                width: "7px",
-                height: "7px",
-                borderRadius: "50%",
-                background: "#f07070",
-              }}
-            />
-            PARADO
-          </span>
-        )}
-      </div>
-
-      <style>{`
-        @keyframes rmt-pulse { 0%,100%{opacity:1} 50%{opacity:.3} }
-        @keyframes rmt-amber-pulse { 0%,100%{opacity:1} 50%{opacity:.4} }
-        @keyframes rmt-clock-glow { 0%,100%{opacity:0.7} 50%{opacity:1} }
-        @keyframes rmt-phase-pulse { 0%,100%{box-shadow:var(--phase-glow)} 50%{box-shadow:none} }
-        .rmt-card {
-          background: #0d1f12;
-          border: 1px solid #1a3520;
-          border-radius: 12px;
-          padding: 16px;
-        }
-        .rmt-metric {
-          background: #080f0a;
-          border: 1px solid #162a1c;
-          border-radius: 10px;
-          padding: 10px 8px;
-          text-align: center;
-        }
-        .rmt-metric-highlight {
-          background: #141008;
-          border: 1px solid #2e2408;
-        }
-        .rmt-mini-stat {
-          background: #080f0a;
-          border: 1px solid #162a1c;
-          border-radius: 8px;
-          padding: 8px 10px;
-        }
-        .rmt-contacts-btn {
-          width: 100%;
-          background: #080f0a;
-          border: 1px solid #162a1c;
-          border-radius: 8px;
-          padding: 8px 10px;
-          display: flex;
-          align-items: center;
-          justify-content: space-between;
-          cursor: pointer;
-          color: #5a8a70;
-          font-size: 11px;
-          transition: background 0.15s;
-        }
-        .rmt-contacts-btn:hover { background: #0f1f14; }
-        .rmt-btn-start {
-          flex: 1;
-          height: 42px;
-          border-radius: 10px;
-          background: linear-gradient(135deg, #1e6b30, #155224);
-          border: 1px solid #2a8a40;
-          color: #c8f0d0;
-          font-size: 13px;
-          font-weight: 600;
-          cursor: pointer;
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          gap: 7px;
-          letter-spacing: 0.02em;
-          transition: all 0.15s;
-        }
-        .rmt-btn-start:hover { background: linear-gradient(135deg, #237535, #1a5e2a); }
-        .rmt-btn-start:disabled { opacity: 0.4; cursor: not-allowed; }
-        .rmt-btn-pause {
-          flex: 1;
-          height: 42px;
-          border-radius: 10px;
-          background: linear-gradient(135deg, #6b1e1e, #521515);
-          border: 1px solid #8a2a2a;
-          color: #f0c8c8;
-          font-size: 13px;
-          font-weight: 600;
-          cursor: pointer;
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          gap: 7px;
-          transition: all 0.15s;
-        }
-        .rmt-btn-pause:hover { background: linear-gradient(135deg, #752323, #5e1a1a); }
-        .rmt-btn-reset {
-          height: 42px;
-          padding: 0 18px;
-          border-radius: 10px;
-          background: linear-gradient(135deg, #6b4a1e, #523815);
-          border: 1px solid #8a6a2a;
-          color: #f0d8c8;
-          font-size: 13px;
-          font-weight: 600;
-          cursor: pointer;
-          transition: all 0.15s;
-        }
-        .rmt-btn-reset:hover { background: linear-gradient(135deg, #755223, #5e3e1a); }
-        .rmt-btn-reset:disabled { opacity: 0.4; cursor: not-allowed; }
-        .rmt-prog-bar {
-          height: 4px;
-          background: #0a1a0f;
-          border-radius: 3px;
-          overflow: hidden;
-        }
-        .rmt-prog-fill {
-          height: 100%;
-          border-radius: 3px;
-          background: #1e6b30;
-          transition: width 0.5s ease;
-        }
-        .rmt-camp-card {
-          background: #0d1f12;
-          border: 1px solid #1a3520;
-          border-left: 3px solid #1e6b30;
-          border-radius: 12px;
-          padding: 14px;
-          transition: box-shadow 0.2s;
-        }
-        .rmt-camp-card:hover { box-shadow: 0 4px 20px rgba(0,0,0,0.4); }
-        .rmt-rule-row {
-          background: #070d09;
-          border: 1px solid #122018;
-          border-radius: 7px;
-          padding: 6px 10px;
-          font-size: 10px;
-          color: #3a6a45;
-          margin-bottom: 10px;
-        }
-        .rmt-slot-pill {
-          font-size: 10px;
-          padding: 2px 7px;
-          border-radius: 10px;
-          font-family: monospace;
-          border: 1px solid;
-        }
-      `}</style>
-
-      <div style={{ padding: "16px", display: "flex", flexDirection: "column", gap: "14px" }}>
-
-        {/* ══════════════════════════════════════════════ */}
-        {/* == RELÓGIO BRASÍLIA + FASE DO SISTEMA        == */}
-        {/* ══════════════════════════════════════════════ */}
-        <div
-          style={{
-            background: "linear-gradient(135deg, #0a1a10 0%, #0d2518 50%, #0a1a10 100%)",
-            border: `1px solid ${phase.border}`,
-            borderRadius: "16px",
-            padding: "20px 24px",
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "space-between",
-            boxShadow: phase.glow,
-            position: "relative",
-            overflow: "hidden",
-          }}
-        >
-          {/* decorative grid bg */}
-          <div style={{
-            position: "absolute", inset: 0, opacity: 0.04,
-            backgroundImage: "repeating-linear-gradient(0deg,transparent,transparent 20px,#3ec87a 20px,#3ec87a 21px),repeating-linear-gradient(90deg,transparent,transparent 20px,#3ec87a 20px,#3ec87a 21px)",
-            pointerEvents: "none",
-          }} />
-
-          {/* left: date + time */}
-          <div style={{ zIndex: 1 }}>
-            <p style={{
-              fontSize: "10px",
-              color: "#3a6a45",
-              textTransform: "uppercase",
-              letterSpacing: "0.12em",
-              margin: "0 0 4px",
-              fontWeight: 600,
-            }}>
-              {brasiliaTime.toLocaleDateString('pt-BR', { weekday: 'long', day: '2-digit', month: 'long', year: 'numeric' })}
-            </p>
-            <p style={{
-              fontSize: "42px",
-              fontFamily: "'Courier New', monospace",
-              fontWeight: 700,
-              color: phase.color,
-              margin: 0,
-              letterSpacing: "0.04em",
-              lineHeight: 1,
-              textShadow: `0 0 20px ${phase.color}50`,
-              animation: "rmt-clock-glow 2s infinite",
-            }}>
-              {brasiliaTime.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit', second: '2-digit' })}
-            </p>
-            <p style={{ fontSize: "10px", color: "#2a4a30", margin: "4px 0 0", letterSpacing: "0.06em" }}>
-              Horário de Brasília
-            </p>
-          </div>
-
-          {/* right: phase badge */}
-          <div style={{ zIndex: 1, textAlign: "right" }}>
-            <div style={{
-              display: "inline-flex",
-              flexDirection: "column",
-              alignItems: "center",
-              gap: "6px",
-              padding: "14px 20px",
-              borderRadius: "12px",
-              background: phase.bg,
-              border: `1px solid ${phase.border}`,
-              minWidth: "110px",
-            }}>
-              <span style={{ fontSize: "22px", lineHeight: 1 }}>
-                {systemPhase === 'active_day' ? '☀️' : systemPhase === 'active_night' ? '🌙' : systemPhase === 'standby' ? '💤' : '🔒'}
-              </span>
-              <span style={{
-                fontSize: "11px",
-                fontWeight: 700,
-                color: phase.color,
-                letterSpacing: "0.1em",
-                textTransform: "uppercase",
-              }}>
-                {phase.label}
-              </span>
-              <span style={{ fontSize: "9px", color: "#3a5a40", letterSpacing: "0.05em" }}>
-                {systemPhase === 'active_day'   ? '08h → 18h' :
-                 systemPhase === 'active_night' ? '20h → 06h' :
-                 systemPhase === 'standby'      ? '18h → 20h' :
-                                                  '06h → 08h'}
-              </span>
-            </div>
-            {isRunning && (
-              <p style={{ fontSize: "9px", color: "#3a6a45", marginTop: "6px", letterSpacing: "0.05em" }}>
-                <span style={{ color: "#3ec87a" }}>●</span> Scheduler ativo
+    <div className="min-h-screen bg-background text-foreground">
+      {/* Header Premium Dark */}
+      <div className="bg-gradient-to-r from-[#0a2e1a] via-[#1a5c2e] to-[#0d3d1f] border-b border-emerald-900/50 p-6">
+        <div className="container flex items-center justify-between">
+          <div className="flex items-center gap-4">
+            <button onClick={() => navigate("/dashboard")} className="p-2 rounded-lg hover:bg-white/10 transition-colors text-white/70 hover:text-white">
+              <ArrowLeft className="h-5 w-5" />
+            </button>
+            <div>
+              <h1 className="text-2xl md:text-3xl font-bold flex items-center gap-3 text-white">
+                <Send className="h-7 w-7 text-emerald-400" />
+                <span>Romatec CRM Campanhas</span>
+              </h1>
+              <p className="text-emerald-300/70 text-sm mt-1">
+                1 msg/campanha/hora | Ciclo de 10 horas | {allCampaigns.length} campanhas
               </p>
+            </div>
+          </div>
+          <div>
+            {isRunning ? (
+              <span className="flex items-center gap-2 px-4 py-2 rounded-full text-sm font-bold bg-emerald-500/20 border border-emerald-500/40 text-emerald-400">
+                <span className="w-3 h-3 rounded-full bg-emerald-400 shadow-lg shadow-emerald-400/50 animate-pulse" />
+                RODANDO
+              </span>
+            ) : (
+              <span className="flex items-center gap-2 px-4 py-2 rounded-full text-sm font-bold bg-red-500/20 border border-red-500/40 text-red-400">
+                <span className="w-3 h-3 rounded-full bg-red-400" />
+                PARADO
+              </span>
             )}
           </div>
         </div>
+      </div>
 
-        {/* == PAINEL DE CONTROLE == */}
-        <div className="rmt-card">
-          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "14px" }}>
-            <h2
-              style={{
-                fontSize: "13px",
-                fontWeight: 600,
-                color: "#7abf8a",
-                display: "flex",
-                alignItems: "center",
-                gap: "6px",
-                margin: 0,
-                textTransform: "uppercase",
-                letterSpacing: "0.06em",
-              }}
-            >
-              <BarChart3 size={14} style={{ color: "#3ec87a" }} />
-              Painel de controle
+      <div className="container py-6 space-y-6">
+
+        {/* Painel de Controle */}
+        <div className="glass-card p-6">
+          <div className="flex items-center justify-between mb-5">
+            <h2 className="text-lg font-bold flex items-center gap-2 text-foreground">
+              <BarChart3 className="h-5 w-5 text-emerald-400" />
+              Painel de Controle
             </h2>
-            <span
-              style={{
-                padding: "3px 10px",
-                borderRadius: "20px",
-                fontSize: "10px",
-                fontWeight: 600,
-                letterSpacing: "0.05em",
-                ...(isRunning
-                  ? { background: "rgba(62,200,122,0.1)", border: "1px solid rgba(62,200,122,0.2)", color: "#3ec87a" }
-                  : { background: "rgba(220,60,60,0.1)", border: "1px solid rgba(220,60,60,0.2)", color: "#f07070" }),
-              }}
-            >
-              {isRunning ? "ATIVO" : "PARADO"}
+            <span className={`px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wide ${
+              isRunning
+                ? "bg-emerald-500/15 text-emerald-400 border border-emerald-500/30"
+                : "bg-red-500/15 text-red-400 border border-red-500/30"
+            }`}>
+              {isRunning ? "Ativo" : "Parado"}
             </span>
           </div>
 
-          {/* Métricas */}
-          <div
-            style={{
-              display: "grid",
-              gridTemplateColumns: "repeat(5, 1fr)",
-              gap: "8px",
-              marginBottom: "14px",
-            }}
-          >
+          {/* Stats Grid */}
+          <div className="grid grid-cols-2 md:grid-cols-5 gap-3 mb-6">
             {[
-              { icon: Users, label: "Total contatos", value: totals.totalContacts, color: "#5ba4e8", extra: "" },
-              { icon: CheckCircle2, label: "Enviadas", value: totals.totalSent, color: "#3ec87a", extra: "" },
-              { icon: Clock, label: "Restantes", value: totals.totalPending, color: "#e8a83e", extra: "highlight" },
-              { icon: AlertCircle, label: "Falhas", value: totals.totalFailed, color: "#e85a5a", extra: "" },
-              { icon: BarChart3, label: "Taxa sucesso", value: `${totals.successRate}%`, color: "#a07ee8", extra: "" },
+              { icon: Users, label: "Total Contatos", value: totals.totalContacts, color: "text-blue-400", bg: "bg-blue-500/10 border-blue-500/20" },
+              { icon: CheckCircle2, label: "Enviadas", value: totals.totalSent, color: "text-emerald-400", bg: "bg-emerald-500/10 border-emerald-500/20" },
+              { icon: Clock, label: "Restantes", value: totals.totalPending, color: "text-amber-400", bg: "bg-amber-500/10 border-amber-500/20" },
+              { icon: AlertCircle, label: "Falhas", value: totals.totalFailed, color: "text-red-400", bg: "bg-red-500/10 border-red-500/20" },
+              { icon: BarChart3, label: "Taxa Sucesso", value: `${totals.successRate}%`, color: "text-purple-400", bg: "bg-purple-500/10 border-purple-500/20" },
             ].map((stat) => (
-              <div
-                key={stat.label}
-                className={`rmt-metric${stat.extra === "highlight" ? " rmt-metric-highlight" : ""}`}
-              >
-                <stat.icon size={13} style={{ color: stat.color, marginBottom: "4px" }} />
-                <p style={{ fontSize: "9px", color: "#3a5a40", textTransform: "uppercase", letterSpacing: "0.04em", margin: "0 0 3px" }}>
-                  {stat.label}
-                </p>
-                <p style={{ fontSize: "20px", fontWeight: 600, color: stat.color, margin: 0 }}>{stat.value}</p>
+              <div key={stat.label} className={`p-3 rounded-xl text-center border ${stat.bg}`}>
+                <stat.icon className={`h-4 w-4 ${stat.color} mx-auto mb-1`} />
+                <p className="text-xs text-muted-foreground">{stat.label}</p>
+                <p className={`text-2xl font-bold ${stat.color}`}>{stat.value}</p>
               </div>
             ))}
           </div>
 
-          {/* Timer (apenas quando rodando) */}
+          {/* Cronômetro Principal - Hora Atual */}
           {isRunning && (
-            <div
-              style={{
-                background: "#0a0f1a",
-                border: "1px solid #1a2040",
-                borderRadius: "10px",
-                padding: "14px",
-                marginBottom: "12px",
-              }}
-            >
-              <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "10px" }}>
+            <div className="p-5 rounded-xl bg-gradient-to-r from-purple-900/30 via-indigo-900/20 to-purple-900/30 border border-purple-500/20 mb-6">
+              <div className="flex items-center justify-between mb-3">
                 <div>
-                  <p style={{ fontSize: "11px", color: "#7a7ae8", display: "flex", alignItems: "center", gap: "5px", margin: "0 0 3px", fontWeight: 600 }}>
-                    <Timer size={13} /> Próxima hora em:
+                  <p className="font-semibold text-purple-300 flex items-center gap-2">
+                    <Timer className="h-5 w-5" />
+                    Próxima Hora em:
                   </p>
-                  <p style={{ fontSize: "10px", color: "#3a3a6a", margin: 0 }}>
-                    Hora {hourNumber + 1}/10    {sentThisHour}/{totalCampsActive} campanhas enviaram
+                  <p className="text-xs text-purple-400/60 mt-1">
+                    Hora {hourNumber + 1}/10 | {sentThisHour}/{totalCampsActive} campanhas enviaram
                   </p>
                 </div>
-                <span
-                  style={{
-                    fontSize: "32px",
-                    fontFamily: "monospace",
-                    fontWeight: 700,
-                    color: "#8a7ae8",
-                    letterSpacing: "0.05em",
-                  }}
-                >
+                <span className="text-5xl font-mono font-bold text-purple-400 tabular-nums" style={{ textShadow: '0 0 20px rgba(168, 85, 247, 0.5)' }}>
                   {formatTimer(localTimer)}
                 </span>
               </div>
-              <div className="rmt-prog-bar" style={{ background: "#0f1020" }}>
-                <div className="rmt-prog-fill" style={{ width: `${timeProgressPercent}%`, background: "linear-gradient(90deg, #5a4ae8, #8a7ae8)" }} />
+              {/* Barra de progresso da hora */}
+              <div className="w-full bg-purple-900/40 rounded-full h-2 mb-4">
+                <div
+                  className="bg-gradient-to-r from-purple-500 to-purple-400 h-2 rounded-full transition-all duration-1000"
+                  style={{ width: `${timeProgressPercent}%` }}
+                />
               </div>
-              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: "6px", marginTop: "10px" }}>
-                {[
-                  { label: "Início às", value: stateData?.startedAtFormatted || "--:--:--" },
-                  { label: "Rodando há", value: stateData?.uptimeFormatted || "00:00:00" },
-                  { label: "Próxima hora", value: stateData?.nextCycleFormatted || "--:--" },
-                ].map((item) => (
-                  <div
-                    key={item.label}
-                    style={{
-                      background: "rgba(255,255,255,0.03)",
-                      border: "1px solid rgba(255,255,255,0.06)",
-                      borderRadius: "7px",
-                      padding: "6px 8px",
-                      textAlign: "center",
-                    }}
-                  >
-                    <p style={{ fontSize: "9px", color: "#3a3a5a", margin: "0 0 2px" }}>{item.label}</p>
-                    <p style={{ fontSize: "11px", fontWeight: 600, color: "#8a7ae8", margin: 0 }}>{item.value}</p>
-                  </div>
-                ))}
+              {/* Info de tempo */}
+              <div className="grid grid-cols-3 gap-3 text-center">
+                <div className="p-2 bg-white/5 rounded-lg border border-white/10">
+                  <p className="text-xs text-muted-foreground">Início às</p>
+                  <p className="text-sm font-bold text-purple-300">{stateData?.startedAtFormatted || "--:--:--"}</p>
+                </div>
+                <div className="p-2 bg-white/5 rounded-lg border border-white/10">
+                  <p className="text-xs text-muted-foreground">Rodando há</p>
+                  <p className="text-sm font-bold text-purple-300">{stateData?.uptimeFormatted || "00:00:00"}</p>
+                </div>
+                <div className="p-2 bg-white/5 rounded-lg border border-white/10">
+                  <p className="text-xs text-muted-foreground">Próxima hora</p>
+                  <p className="text-sm font-bold text-purple-300">{stateData?.nextCycleFormatted || "--:--"}</p>
+                </div>
               </div>
-              <div style={{ marginTop: "8px", display: "flex", alignItems: "center", justifyContent: "center", gap: "6px", fontSize: "11px" }}>
-                <span style={{ color: "#3a3a5a" }}>Enviadas nesta hora:</span>
-                <span style={{ fontWeight: 600, color: "#8a7ae8" }}>{sentThisHour}/{totalCampsActive}</span>
+              {/* Status das campanhas nesta hora */}
+              <div className="mt-3 flex items-center justify-center gap-2 text-sm">
+                <span className="text-muted-foreground">Enviadas nesta hora:</span>
+                <span className="font-bold text-purple-300">{sentThisHour}/{totalCampsActive}</span>
                 {totalCampsActive > 0 && sentThisHour >= totalCampsActive && (
-                  <span style={{ fontSize: "10px", background: "rgba(62,200,122,0.12)", color: "#3ec87a", padding: "2px 8px", borderRadius: "10px", border: "1px solid rgba(62,200,122,0.2)" }}>
-                    Hora completa!
-                  </span>
+                  <span className="text-xs bg-emerald-500/20 text-emerald-400 px-2 py-0.5 rounded-full border border-emerald-500/30">Hora completa!</span>
                 )}
               </div>
-              {(stats as any)?.scheduledSlots?.length > 0 && (
-                <div style={{ marginTop: "8px", display: "flex", flexWrap: "wrap", gap: "4px", justifyContent: "center" }}>
+              {/* Slots agendados */}
+              {(stats as any)?.scheduledSlots && (stats as any).scheduledSlots.length > 0 && (
+                <div className="mt-3 flex flex-wrap items-center justify-center gap-1.5">
                   {(stats as any).scheduledSlots.map((slot: any, idx: number) => (
-                    <span
-                      key={idx}
-                      className="rmt-slot-pill"
-                      style={
-                        slot.sent
-                          ? { background: "rgba(62,200,122,0.1)", color: "#3ec87a", borderColor: "rgba(62,200,122,0.2)", textDecoration: "line-through" }
-                          : { background: "rgba(138,122,232,0.1)", color: "#8a7ae8", borderColor: "rgba(138,122,232,0.2)" }
-                      }
-                    >
+                    <span key={idx} className={`text-xs px-2 py-0.5 rounded-full font-mono border ${
+                      slot.sent
+                        ? "bg-emerald-500/15 text-emerald-400 border-emerald-500/30 line-through"
+                        : "bg-purple-500/15 text-purple-300 border-purple-500/30"
+                    }`}>
                       {slot.campaignName.substring(0, 10)}@{slot.minuteLabel}min
                     </span>
                   ))}
@@ -740,224 +324,157 @@ export default function Campaigns() {
             </div>
           )}
 
-          {/* Modo dia/noite */}
-          <div
-            style={{
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "space-between",
-              background: "#080f0a",
-              border: "1px solid #162a1c",
-              borderRadius: "10px",
-              padding: "10px 14px",
-              marginBottom: "12px",
-            }}
-          >
-            <div>
-              <p style={{ fontSize: "12px", fontWeight: 600, color: "#a8d5b0", margin: "0 0 2px" }}>
-                {nightMode ? "🌙 Modo noite 20h—06h" : "☀️ Modo dia 08h—18h"}
-              </p>
-              <p style={{ fontSize: "10px", color: "#3a5a40", margin: 0 }}>
-                {nightMode ? "Enviando das 20h às 06h" : "Enviando das 08h às 18h"}
-              </p>
-            </div>
+          {/* Botões de Controle */}
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
             <button
-              onClick={() => handleNightModeToggle(!nightMode)}
-              style={{
-                width: "40px",
-                height: "22px",
-                borderRadius: "11px",
-                background: nightMode ? "#3a3a8a" : "#1e6b30",
-                border: "none",
-                position: "relative",
-                cursor: "pointer",
-                flexShrink: 0,
-                transition: "background 0.2s",
-              }}
+              onClick={handleAutoSetup}
+              disabled={isSettingUp || isRunning}
+              className="h-12 rounded-xl font-semibold text-sm flex items-center justify-center gap-2 transition-all bg-gradient-to-r from-purple-600 to-purple-700 hover:from-purple-500 hover:to-purple-600 text-white shadow-lg shadow-purple-900/30 disabled:opacity-40 disabled:cursor-not-allowed"
             >
-              <span
-                style={{
-                  width: "18px",
-                  height: "18px",
-                  background: "#fff",
-                  borderRadius: "50%",
-                  position: "absolute",
-                  top: "2px",
-                  left: nightMode ? "20px" : "2px",
-                  transition: "left 0.2s",
-                }}
-              />
+              {isSettingUp ? <Loader2 className="h-4 w-4 animate-spin" /> : <Settings2 className="h-4 w-4" />}
+              Auto
             </button>
-          </div>
 
-          {/* Botões */}
-          <div style={{ display: "flex", gap: "10px" }}>
             {!isRunning ? (
-              <button onClick={handleStart} disabled={allCampaigns.length < 1} className="rmt-btn-start">
-                <Play size={13} /> Iniciar campanhas
+              <button
+                onClick={handleStart}
+                disabled={allCampaigns.length < 1}
+                className="h-12 rounded-xl font-semibold text-sm flex items-center justify-center gap-2 transition-all bg-gradient-to-r from-emerald-600 to-emerald-700 hover:from-emerald-500 hover:to-emerald-600 text-white shadow-lg shadow-emerald-900/30 disabled:opacity-40 disabled:cursor-not-allowed"
+              >
+                <Play className="h-4 w-4" /> Iniciar
               </button>
             ) : (
-              <button onClick={() => stopScheduler.mutate()} className="rmt-btn-pause">
-                <Pause size={13} /> Pausar campanhas
+              <button
+                onClick={() => stopScheduler.mutate()}
+                className="h-12 rounded-xl font-semibold text-sm flex items-center justify-center gap-2 transition-all bg-gradient-to-r from-red-600 to-red-700 hover:from-red-500 hover:to-red-600 text-white shadow-lg shadow-red-900/30"
+              >
+                <Pause className="h-4 w-4" /> Pausar
               </button>
             )}
+
             <button
               onClick={() => {
-                if (isRunning) { toast.error("Pare o scheduler antes de redefinir!"); return; }
-                if (confirm("Tem certeza? Isso vai limpar TUDO e começar do zero.")) {
+                if (isRunning) {
+                  toast.error("Pare o scheduler antes de redefinir!");
+                  return;
+                }
+                if (confirm("Tem certeza? Isso vai limpar TUDO e começar do zero com novos contatos.")) {
                   resetScheduler.mutate();
                 }
               }}
               disabled={isRunning}
-              className="rmt-btn-reset"
+              className={`h-12 rounded-xl font-semibold text-sm flex items-center justify-center gap-2 transition-all ${
+                isRunning
+                  ? "bg-secondary/50 text-muted-foreground cursor-not-allowed"
+                  : "bg-gradient-to-r from-amber-600 to-orange-600 hover:from-amber-500 hover:to-orange-500 text-white shadow-lg shadow-amber-900/30"
+              }`}
             >
-              Redefinir
+              {(resetScheduler.isPending || isResetting) ? <Loader2 className="h-4 w-4 animate-spin" /> : <RotateCcw className="h-4 w-4" />}
+              {isResetting ? 'Redefinindo...' : 'Redefinir'}
+            </button>
+
+            <button
+              onClick={() => {
+                if (!isRunning) {
+                  toast.error("O scheduler já está parado!");
+                  return;
+                }
+                if (confirm("Tem certeza que deseja PARAR TUDO? As campanhas serão pausadas.")) {
+                  stopScheduler.mutate();
+                }
+              }}
+              disabled={!isRunning}
+              className={`h-12 rounded-xl font-semibold text-sm flex items-center justify-center gap-2 transition-all ${
+                !isRunning
+                  ? "bg-secondary/50 text-muted-foreground cursor-not-allowed"
+                  : "bg-gradient-to-r from-red-700 to-red-800 hover:from-red-600 hover:to-red-700 text-white shadow-lg shadow-red-900/30"
+              }`}
+            >
+              {stopScheduler.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Square className="h-4 w-4" />}
+              Parar Tudo
             </button>
           </div>
         </div>
 
-        {/* == STATUS POR HORA (todas as campanhas, sempre visível) == */}
-        {allCampaigns.length > 0 && (
-          <div className="rmt-card">
-            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "12px" }}>
-              <h2
-                style={{
-                  fontSize: "13px",
-                  fontWeight: 600,
-                  color: "#c8a040",
-                  display: "flex",
-                  alignItems: "center",
-                  gap: "6px",
-                  margin: 0,
-                  textTransform: "uppercase",
-                  letterSpacing: "0.06em",
-                }}
-              >
-                <Zap size={13} style={{ color: "#e8a83e" }} />
-                Status por hora — campanhas
-              </h2>
-              <span style={{
-                fontSize: "9px",
-                padding: "2px 8px",
-                borderRadius: "8px",
-                fontWeight: 700,
-                background: phase.bg,
-                border: `1px solid ${phase.border}`,
-                color: phase.color,
-                letterSpacing: "0.06em",
-              }}>
-                {phase.label}
-              </span>
-            </div>
+        {/* Status das 5 Campanhas nesta Hora */}
+        {allCampaigns.length > 0 && isRunning && (
+          <div className="glass-card p-6">
+            <h2 className="text-lg font-bold flex items-center gap-2 text-foreground mb-4">
+              <Zap className="h-5 w-5 text-amber-400" />
+              Status por Hora - Todas as Campanhas
+            </h2>
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3" key={`hour-status-${resetKey}`}>
+              {allCampaigns.filter((c: any) => c.status === "running").map((campaign: any) => {
+                const campState = campaignStates.find((cs: any) => cs.campaignName === campaign.name);
+                const hasSent = campState?.sentThisHour || false;
 
-            {/* Standby / Blocked overlay message */}
-            {(systemPhase === 'standby' || systemPhase === 'blocked') && (
-              <div style={{
-                padding: "14px 16px",
-                borderRadius: "10px",
-                background: phase.bg,
-                border: `1px solid ${phase.border}`,
-                display: "flex",
-                alignItems: "center",
-                gap: "12px",
-                marginBottom: "12px",
-              }}>
-                <span style={{ fontSize: "24px" }}>
-                  {systemPhase === 'standby' ? '💤' : '🔒'}
-                </span>
-                <div>
-                  <p style={{ fontSize: "12px", fontWeight: 700, color: phase.color, margin: "0 0 2px", letterSpacing: "0.04em" }}>
-                    {systemPhase === 'standby' ? 'Sistema em Standby — 18h às 20h' : 'Sistema Bloqueado — 06h às 08h'}
-                  </p>
-                  <p style={{ fontSize: "10px", color: "#3a5a40", margin: 0 }}>
-                    {systemPhase === 'standby'
-                      ? 'Intervalo entre ciclo DIA e NOITE. Próximo ciclo inicia automaticamente às 20h.'
-                      : 'Intervalo entre ciclo NOITE e DIA. Próximo ciclo inicia automaticamente às 08h.'}
-                  </p>
-                </div>
-              </div>
-            )}
-
-            <div
-              style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(180px, 1fr))", gap: "8px" }}
-              key={`hour-status-${resetKey}`}
-            >
-              {allCampaigns
-                .filter((c: any) => c.status === "running")
-                .map((campaign: any) => {
-                  const campState = campaignStates.find((cs: any) => cs.campaignName === campaign.name);
-                  const hasSent = campState?.sentThisHour || false;
-                  const isInactive = systemPhase === 'standby' || systemPhase === 'blocked';
-                  const dotColor = isInactive ? phase.color : hasSent ? "#3ec87a" : "#e8a83e";
-                  const cardBorder = isInactive ? phase.border : hasSent ? "rgba(62,200,122,0.25)" : "rgba(232,168,62,0.2)";
-                  const cardBg = isInactive ? phase.bg : hasSent ? "rgba(62,200,122,0.06)" : "rgba(232,168,62,0.06)";
-                  const labelColor = isInactive ? phase.color : hasSent ? "#3ec87a" : "#e8a83e";
-                  const statusText = isInactive ? phase.label : hasSent ? "ENVIOU" : "AGUARDANDO";
-                  return (
-                    <div
-                      key={`hour-${campaign.id}`}
-                      style={{ padding: "12px", borderRadius: "10px", border: `1px solid ${cardBorder}`, background: cardBg }}
-                    >
-                      <div style={{ display: "flex", alignItems: "center", gap: "7px", marginBottom: "7px" }}>
-                        <span style={{
-                          width: "8px", height: "8px", borderRadius: "50%", background: dotColor, flexShrink: 0,
-                          animation: (!isInactive && !hasSent) ? "rmt-amber-pulse 1.5s infinite" : isInactive ? "rmt-pulse 2s infinite" : "none",
-                        }} />
-                        <span style={{ fontSize: "10px", fontWeight: 700, color: labelColor, letterSpacing: "0.05em" }}>
-                          {statusText}
-                        </span>
-                        <span style={{
-                          marginLeft: "auto", fontSize: "9px", padding: "1px 6px", borderRadius: "8px", fontWeight: 700,
-                          background: isInactive ? phase.bg : hasSent ? "rgba(62,200,122,0.12)" : "rgba(232,168,62,0.12)",
-                          border: `1px solid ${isInactive ? phase.border : hasSent ? "rgba(62,200,122,0.2)" : "rgba(232,168,62,0.2)"}`,
-                          color: labelColor,
-                        }}>
-                          {isInactive ? "--" : hasSent ? "1/1" : "0/1"}
-                        </span>
-                      </div>
-                      <span style={{ fontSize: "12px", fontWeight: 600, color: isInactive ? "#5a7a60" : hasSent ? "#5ad890" : "#e8c060", display: "block", marginBottom: "4px" }}>
-                        {campaign.name}
+                return (
+                  <div
+                    key={`hour-${campaign.id}`}
+                    className={`p-4 rounded-xl border transition-all ${
+                      hasSent
+                        ? "bg-emerald-500/10 border-emerald-500/40 shadow-lg shadow-emerald-900/20"
+                        : "bg-amber-500/10 border-amber-500/30 shadow-md shadow-amber-900/10"
+                    }`}
+                  >
+                    <div className="flex items-center gap-2 mb-2">
+                      <span className={`inline-block w-3 h-3 rounded-full ${
+                        hasSent ? "bg-emerald-400 shadow-lg shadow-emerald-400/50" : "bg-amber-400 animate-pulse shadow-lg shadow-amber-400/30"
+                      }`} />
+                      <h3 className={`font-bold text-sm ${
+                        hasSent ? "text-emerald-400" : "text-amber-400"
+                      }`}>
+                        {hasSent ? "ENVIOU" : "AGUARDANDO"}
+                      </h3>
+                      <span className={`ml-auto text-xs px-2 py-0.5 rounded-full font-bold border ${
+                        hasSent
+                          ? "bg-emerald-500/20 text-emerald-400 border-emerald-500/30"
+                          : "bg-amber-500/20 text-amber-400 border-amber-500/30"
+                      }`}>
+                        {hasSent ? "1/1" : "0/1"}
                       </span>
-                      <p style={{ fontSize: "9px", color: "#3a5a40", margin: 0 }}>
-                        1 msg/hora • {campaign.sentCount || 0}/{campaign.totalContacts || 2} total
-                      </p>
                     </div>
-                  );
-                })}
+                    <span className={`px-3 py-1.5 rounded-lg text-sm font-bold border inline-block ${
+                      hasSent ? "bg-emerald-500/15 border-emerald-500/30 text-emerald-300" : "bg-amber-500/15 border-amber-500/30 text-amber-300"
+                    }`}>
+                      {campaign.name}
+                    </span>
+                    <p className="text-xs text-muted-foreground mt-2">
+                      1 msg/hora | {campaign.sentCount || 0}/{campaign.totalContacts || 10} total
+                    </p>
+                  </div>
+                );
+              })}
             </div>
           </div>
         )}
 
-        {/* == MONITORAMENTO == */}
+        {/* Monitoramento em Tempo Real */}
         <div>
-          <h2
-            style={{
-              fontSize: "13px",
-              fontWeight: 600,
-              color: "#7abf8a",
-              display: "flex",
-              alignItems: "center",
-              gap: "6px",
-              marginBottom: "12px",
-              textTransform: "uppercase",
-              letterSpacing: "0.06em",
-            }}
-          >
-            <BarChart3 size={14} style={{ color: "#3ec87a" }} />
-            Monitoramento em tempo real
+          <h2 className="text-xl font-bold mb-4 flex items-center gap-2 text-foreground">
+            <BarChart3 className="h-5 w-5 text-emerald-400" />
+            Monitoramento em Tempo Real
           </h2>
-
           {allCampaigns.length === 0 ? (
-            <div className="rmt-card" style={{ textAlign: "center", padding: "32px" }}>
-              <Settings2 size={32} style={{ color: "#2a4a30", margin: "0 auto 12px" }} />
-              <p style={{ color: "#3a5a40", fontSize: "14px", margin: 0 }}>Nenhuma campanha configurada</p>
+            <div className="glass-card p-8 text-center">
+              <Settings2 className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
+              <p className="text-foreground mb-4 text-lg">Nenhuma campanha configurada</p>
+              <p className="text-muted-foreground text-sm mb-6">Clique em "Auto Configurar" para criar campanhas automaticamente</p>
+              <button onClick={handleAutoSetup} disabled={isSettingUp} className="btn-premium">
+                {isSettingUp ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Settings2 className="mr-2 h-4 w-4" />}
+                Auto Configurar Campanhas
+              </button>
             </div>
           ) : (
-            <div
-              style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(320px, 1fr))", gap: "12px" }}
-              key={`campaigns-${resetKey}-${allCampaigns.length}`}
-            >
-              {allCampaigns.map((campaign: any) => (
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6" key={`campaigns-${resetKey}-${allCampaigns.length}`}>
+              {isResetting ? (
+                <div className="col-span-2 flex items-center justify-center py-12">
+                  <div className="text-center">
+                    <div className="w-10 h-10 border-4 border-amber-500/30 border-t-amber-500 rounded-full animate-spin mx-auto mb-3" />
+                    <p className="text-sm text-muted-foreground">Redefinindo campanhas...</p>
+                  </div>
+                </div>
+              ) : allCampaigns.map((campaign: any) => (
                 <CampaignCard
                   key={`camp-${campaign.id}`}
                   campaign={campaign}
@@ -971,414 +488,331 @@ export default function Campaigns() {
                   expanded={expandedCampaign === campaign.id}
                   onToggle={() => handleToggleExpand(campaign.id)}
                   onToggleActive={(active: boolean) => toggleCampaign.mutate({ campaignId: campaign.id, active })}
-                  cycleStatus={cycleStatus}
-                  toggleCycleActivation={toggleCycleActivation}
                 />
               ))}
             </div>
           )}
         </div>
+
+
       </div>
     </div>
   );
 }
 
-// ============================================
-// CAMPAIGN CARD
-// ============================================
+/**
+ * Card de cada campanha - v6.0
+ */
 function CampaignCard({
-  campaign, isRunning, hourNumber, cycleTimer, cycleDuration,
-  campaignStates, schedulerStartedAt, todayMessages, expanded, onToggle, onToggleActive,
-  cycleStatus, toggleCycleActivation,
+  campaign,
+  isRunning,
+  hourNumber,
+  cycleTimer,
+  cycleDuration,
+  campaignStates,
+  schedulerStartedAt,
+  todayMessages,
+  expanded,
+  onToggle,
+  onToggleActive,
 }: {
-  campaign: any; isRunning: boolean; hourNumber: number; cycleTimer: number;
-  cycleDuration: number; campaignStates: any[]; schedulerStartedAt: string | null;
-  todayMessages: any[]; expanded: boolean; onToggle: () => void; onToggleActive: (active: boolean) => void;
-  cycleStatus: any; toggleCycleActivation: any;
+  campaign: any;
+  isRunning: boolean;
+  hourNumber: number;
+  cycleTimer: number;
+  cycleDuration: number;
+  campaignStates: any[];
+  schedulerStartedAt: string | null;
+  todayMessages: any[];
+  expanded: boolean;
+  onToggle: () => void;
+  onToggleActive: (active: boolean) => void;
 }) {
+  const [editingMph, setEditingMph] = useState(false);
+  const [mphValue, setMphValue] = useState(campaign.messagesPerHour || 1);
+  const utils = trpc.useUtils();
+
+  const updateMph = trpc.scheduler.updateMessagesPerHour.useMutation({
+    onSuccess: (data) => {
+      toast.success(data.message);
+      setEditingMph(false);
+      utils.scheduler.getCampaignDetails.invalidate();
+    },
+    onError: (error) => toast.error(`Erro: ${error.message}`),
+  });
+
+  useEffect(() => {
+    setMphValue(campaign.messagesPerHour || 1);
+  }, [campaign.messagesPerHour]);
+
   const isActive = campaign.status === "running";
   const campState = campaignStates.find((cs: any) => cs.campaignName === campaign.name);
   const hasSentThisHour = campState?.sentThisHour || false;
-  const contactsList: any[] = campaign.contactDetails || [];
+
+  const contactsList: any[] = campaign.contacts || [];
   const sentCount = campaign.sentCount || 0;
   const pendingCount = campaign.pendingCount || 0;
-  const failedCount = campaign.failedCount || 0;
-  // Total real = contatos efetivamente atribuídos (evita valor inflado do backend)
-  const totalContacts = (sentCount + pendingCount + failedCount) || campaign.totalContacts || 0;
+  const totalContacts = campaign.totalContacts || 10;
   const progressPercent = totalContacts > 0 ? Math.round((sentCount / totalContacts) * 100) : 0;
+
   const timePercent = cycleDuration > 0 ? Math.round(((cycleDuration - cycleTimer) / cycleDuration) * 100) : 0;
 
-  // Tema visual da campanha
-  let borderColor = "#1e6b30";
-  let ledColor = "#5ba4e8";
-  let ledAnim = false;
-  let statusLabel = "Ativo";
-  let statusStyle: React.CSSProperties = {
-    background: "rgba(91,164,232,0.1)",
-    border: "1px solid rgba(91,164,232,0.2)",
-    color: "#8ac8f8",
-  };
-  let cardOpacity = 1;
+  // Status e cores
+  let statusText = "Agendado";
+  let ledClass = "bg-muted-foreground/30";
+  let borderAccent = "border-l-muted/50";
+  let cardBg = "";
+  let statusBadge = "bg-secondary/50 text-muted-foreground border-border/50";
 
   if (!isActive) {
-    borderColor = "#1a2a1c";
-    ledColor = "#2a4a30";
-    statusLabel = "Pausada";
-    statusStyle = { background: "rgba(80,80,80,0.1)", border: "1px solid rgba(80,80,80,0.2)", color: "#6a6a6a" };
-    cardOpacity = 0.55;
+    statusText = "Pausada";
+    cardBg = "opacity-50";
+    statusBadge = "bg-secondary/50 text-muted-foreground border-border/50";
+    borderAccent = "border-l-muted/50";
   } else if (hasSentThisHour) {
-    borderColor = "#1e7a40";
-    ledColor = "#3ec87a";
-    statusLabel = "Enviou esta hora";
-    statusStyle = { background: "rgba(62,200,122,0.1)", border: "1px solid rgba(62,200,122,0.2)", color: "#3ec87a" };
+    statusText = "Enviou nesta hora";
+    ledClass = "bg-emerald-400 shadow-lg shadow-emerald-400/50";
+    borderAccent = "border-l-emerald-500";
+    cardBg = "ring-1 ring-emerald-500/20";
+    statusBadge = "bg-emerald-500/15 text-emerald-400 border-emerald-500/30";
   } else if (isRunning) {
-    borderColor = "#7a6010";
-    ledColor = "#e8a83e";
-    ledAnim = true;
-    statusLabel = "Aguardando envio";
-    statusStyle = { background: "rgba(232,168,62,0.1)", border: "1px solid rgba(232,168,62,0.2)", color: "#e8c060" };
+    statusText = "Aguardando envio";
+    ledClass = "bg-amber-400 animate-pulse shadow-lg shadow-amber-400/30";
+    borderAccent = "border-l-amber-500";
+    cardBg = "ring-1 ring-amber-500/20";
+    statusBadge = "bg-amber-500/15 text-amber-400 border-amber-500/30";
+  } else {
+    statusText = "Ativo";
+    ledClass = "bg-blue-400";
+    borderAccent = "border-l-blue-500";
+    statusBadge = "bg-blue-500/15 text-blue-400 border-blue-500/30";
   }
 
   return (
-    <div
-      className="rmt-camp-card"
-      style={{ borderLeftColor: borderColor, opacity: cardOpacity }}
-    >
-      {/* Cabeçalho do card */}
-      <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", marginBottom: "10px" }}>
-        <div style={{ display: "flex", alignItems: "flex-start", gap: "8px" }}>
-          <span
-            style={{
-              width: "8px",
-              height: "8px",
-              borderRadius: "50%",
-              background: ledColor,
-              marginTop: "5px",
-              flexShrink: 0,
-              animation: ledAnim ? "rmt-amber-pulse 1.5s infinite" : "none",
-            }}
-          />
-          <div>
-            <h3 style={{ fontSize: "14px", fontWeight: 600, color: "#d8f0dc", margin: "0 0 3px" }}>
-              {String(campaign.name || "")}
-            </h3>
-            <p style={{ fontSize: "10px", color: "#3a5a40", margin: 0 }}>
-              Imóvel: {String(campaign.propertyName || "")}
-            </p>
+    <div className={`glass-card border-l-4 ${borderAccent} ${cardBg} hover:shadow-xl transition-all`}>
+      {/* Header do Card */}
+      <div className="p-5 pb-3">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <span className={`inline-block w-3 h-3 rounded-full ${ledClass}`} />
+            <div>
+              <h3 className="text-lg font-bold text-foreground">{String(campaign.name || '')}</h3>
+              <div className="flex items-center gap-2 mt-1">
+                <span className={`px-2 py-0.5 rounded-full text-xs font-semibold border ${statusBadge}`}>
+                  {statusText}
+                </span>
+                <span className="text-xs text-muted-foreground">
+                  Imóvel: {String(campaign.propertyName || '')}
+                </span>
+              </div>
+            </div>
           </div>
-        </div>
-        <div style={{ display: "flex", alignItems: "center", gap: "8px", flexShrink: 0 }}>
-          <span style={{ fontSize: "9px", padding: "2px 8px", borderRadius: "10px", fontWeight: 600, letterSpacing: "0.03em", ...statusStyle }}>
-            {statusLabel}
-          </span>
-          {!isActive && (
-            <Switch checked={isActive} onCheckedChange={onToggleActive} disabled={isRunning} />
-          )}
-        </div>
-      </div>
-
-      {/* Regra */}
-      <div className="rmt-rule-row">
-        Regra: <span style={{ color: "#5aaa70", fontWeight: 600 }}>1 msg/hora</span>
-        {" "} 10 horas = 10 contatos/ciclo
-        {isActive && isRunning && (
-          <span
-            style={{
-              float: "right",
-              fontFamily: "monospace",
-              fontWeight: 700,
-              color: hasSentThisHour ? "#3ec87a" : "#e8a83e",
-              fontSize: "11px",
-            }}
-          >
-            {formatTimer(cycleTimer)}
-          </span>
-        )}
-      </div>
-
-      {/* ═══════════════════════════════════════════════════════════ */}
-      {/* CICLO ACTIVATION TOGGLES - Nova Feature: Máx 5 por ciclo */}
-      {/* ═══════════════════════════════════════════════════════════ */}
-      {cycleStatus.data && (
-        <div style={{
-          marginTop: "10px",
-          padding: "8px",
-          background: "rgba(0, 0, 0, 0.3)",
-          borderRadius: "6px",
-          border: "1px solid rgba(94, 168, 112, 0.2)",
-        }}>
-          <div style={{
-            display: "grid",
-            gridTemplateColumns: "1fr 1fr",
-            gap: "8px",
-          }}>
-            {/* CICLO DIA */}
-            <button
-              onClick={() => {
-                const newState = !(campaign.activeDay || false);
-                toggleCycleActivation.mutate({
-                  campaignId: campaign.id,
-                  period: "day",
-                  active: newState,
-                });
-              }}
-              disabled={
-                toggleCycleActivation.isPending ||
-                (!campaign.activeDay && cycleStatus.data.dayCount >= 5)
-              }
-              style={{
-                padding: "8px 10px",
-                borderRadius: "6px",
-                border: `2px solid ${campaign.activeDay ? "#3ec87a" : "#555"}`,
-                background: campaign.activeDay ? "rgba(62, 200, 122, 0.25)" : "rgba(50, 50, 50, 0.5)",
-                color: campaign.activeDay ? "#3ec87a" : "#888",
-                fontSize: "12px",
-                fontWeight: 700,
-                cursor: (!campaign.activeDay && cycleStatus.data.dayCount >= 5) ? "not-allowed" : "pointer",
-                opacity: (!campaign.activeDay && cycleStatus.data.dayCount >= 5) ? 0.5 : 1,
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
-                gap: "6px",
-                transition: "all 0.2s ease",
-                textTransform: "uppercase",
-                letterSpacing: "0.5px",
-              }}
-              title={!campaign.activeDay && cycleStatus.data.dayCount >= 5
-                ? "Limite de 5 campanhas no ciclo DIA atingido"
-                : campaign.activeDay
-                ? "Clique para desativar ciclo DIA"
-                : "Clique para ativar ciclo DIA"}
-            >
-              <span style={{ fontSize: "14px" }}>☀️</span>
-              {campaign.activeDay ? "ATIVO" : "INATIVO"}
-            </button>
-
-            {/* CICLO NOITE */}
-            <button
-              onClick={() => {
-                const newState = !(campaign.activeNight || false);
-                toggleCycleActivation.mutate({
-                  campaignId: campaign.id,
-                  period: "night",
-                  active: newState,
-                });
-              }}
-              disabled={
-                toggleCycleActivation.isPending ||
-                (!campaign.activeNight && cycleStatus.data.nightCount >= 5)
-              }
-              style={{
-                padding: "8px 10px",
-                borderRadius: "6px",
-                border: `2px solid ${campaign.activeNight ? "#3ec87a" : "#555"}`,
-                background: campaign.activeNight ? "rgba(62, 200, 122, 0.25)" : "rgba(50, 50, 50, 0.5)",
-                color: campaign.activeNight ? "#3ec87a" : "#888",
-                fontSize: "12px",
-                fontWeight: 700,
-                cursor: (!campaign.activeNight && cycleStatus.data.nightCount >= 5) ? "not-allowed" : "pointer",
-                opacity: (!campaign.activeNight && cycleStatus.data.nightCount >= 5) ? 0.5 : 1,
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
-                gap: "6px",
-                transition: "all 0.2s ease",
-                textTransform: "uppercase",
-                letterSpacing: "0.5px",
-              }}
-              title={!campaign.activeNight && cycleStatus.data.nightCount >= 5
-                ? "Limite de 5 campanhas no ciclo NOITE atingido"
-                : campaign.activeNight
-                ? "Clique para desativar ciclo NOITE"
-                : "Clique para ativar ciclo NOITE"}
-            >
-              <span style={{ fontSize: "14px" }}>🌙</span>
-              {campaign.activeNight ? "ATIVO" : "INATIVO"}
-            </button>
-          </div>
-
-          {/* Contador de campanhas ativas */}
-          <div style={{
-            marginTop: "6px",
-            fontSize: "9px",
-            color: "#3a5a40",
-            textAlign: "center",
-            display: "flex",
-            justifyContent: "space-around",
-          }}>
-            <span>DIA: {cycleStatus.data.dayCount}/5</span>
-            <span>NOITE: {cycleStatus.data.nightCount}/5</span>
-          </div>
-        </div>
-      )}
-
-      {/* Barra de progresso do ciclo */}
-      <div style={{ marginBottom: "8px" }}>
-        <div style={{ display: "flex", justifyContent: "space-between", fontSize: "9px", color: "#3a5a40", marginBottom: "4px" }}>
-          <span>Progresso do ciclo (10h)</span>
-          <span style={{ color: progressPercent === 100 ? "#e8a83e" : "#3ec87a", fontWeight: 600 }}>
-            {progressPercent}%
-          </span>
-        </div>
-        <div className="rmt-prog-bar">
-          <div
-            className="rmt-prog-fill"
-            style={{
-              width: `${progressPercent}%`,
-              background: progressPercent === 100 ? "linear-gradient(90deg, #7a5010, #c87820)" : "#1e6b30",
-            }}
-          />
-        </div>
-      </div>
-
-      {/* Barra de tempo da hora (apenas ativo+rodando) */}
-      {isActive && isRunning && (
-        <div style={{ marginBottom: "10px" }}>
-          <div style={{ display: "flex", justifyContent: "space-between", fontSize: "9px", color: "#3a5a40", marginBottom: "4px" }}>
-            <span>Tempo da hora</span>
-            <span style={{ color: "#5ba4e8", fontWeight: 600 }}>{timePercent}%</span>
-          </div>
-          <div className="rmt-prog-bar">
-            <div className="rmt-prog-fill" style={{ width: `${timePercent}%`, background: "linear-gradient(90deg, #1a407a, #3a70c8)" }} />
-          </div>
-        </div>
-      )}
-
-      {/* Mini stats 2x2 */}
-      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "6px", marginBottom: "10px" }}>
-        <div className="rmt-mini-stat">
-          <p style={{ fontSize: "9px", color: "#3a5a40", margin: "0 0 2px" }}>Enviadas</p>
-          <p style={{ fontSize: "16px", fontWeight: 600, color: "#3ec87a", margin: 0 }}>
-            {sentCount}<span style={{ fontSize: "11px", color: "#2a4a30" }}>/{totalContacts}</span>
-          </p>
-        </div>
-        <div className="rmt-mini-stat">
-          <p style={{ fontSize: "9px", color: "#3a5a40", margin: "0 0 2px" }}>Faltam</p>
-          <p style={{ fontSize: "16px", fontWeight: 600, color: "#e8a83e", margin: 0 }}>{pendingCount}</p>
-        </div>
-        <div className="rmt-mini-stat">
-          <p style={{ fontSize: "9px", color: "#3a5a40", margin: "0 0 2px" }}>Hora atual</p>
-          <p style={{ fontSize: "16px", fontWeight: 600, color: "#a07ee8", margin: 0 }}>
-            {hourNumber + 1}<span style={{ fontSize: "11px", color: "#3a2a5a" }}>/10</span>
-          </p>
-        </div>
-        <div className="rmt-mini-stat">
-          <p style={{ fontSize: "9px", color: "#3a5a40", margin: "0 0 2px" }}>Esta hora</p>
-          <div style={{ display: "flex", alignItems: "center", gap: "4px", marginTop: "3px" }}>
-            {hasSentThisHour ? (
-              <>
-                <CheckCircle2 size={13} style={{ color: "#3ec87a" }} />
-                <span style={{ fontSize: "12px", fontWeight: 600, color: "#3ec87a" }}>Enviou</span>
-              </>
-            ) : (
-              <>
-                <Clock size={13} style={{ color: "#e8a83e" }} />
-                <span style={{ fontSize: "12px", fontWeight: 600, color: "#e8a83e" }}>Pendente</span>
-              </>
+          {/* Timer no canto */}
+          <div className="flex items-center gap-3">
+            {isActive && isRunning && (
+              <div className="text-right">
+                <span className={`text-2xl font-mono font-bold tabular-nums ${
+                  hasSentThisHour ? "text-emerald-400" : "text-amber-400"
+                }`}>{formatTimer(cycleTimer)}</span>
+                <p className="text-xs text-muted-foreground">Próxima hora</p>
+              </div>
+            )}
+            {!isActive && (
+              <div className="flex items-center gap-2">
+                <span className="text-xs text-muted-foreground">Pausado</span>
+                <Switch
+                  checked={isActive}
+                  onCheckedChange={onToggleActive}
+                  disabled={isRunning}
+                />
+              </div>
             )}
           </div>
         </div>
+
+        {/* Campo msgs/hora (fixo em 1 para v6.0) */}
+        <div className="mt-3 flex items-center gap-3 p-2.5 bg-indigo-500/10 rounded-lg border border-indigo-500/20">
+          <span className="text-xs font-semibold text-indigo-300">Regra:</span>
+          <span className="text-sm font-bold text-indigo-200">1 msg/hora</span>
+          <span className="text-xs text-indigo-400/60 ml-1">× 10 horas = 10 contatos/ciclo</span>
+        </div>
       </div>
 
-      {/* Info texto */}
-      <p style={{ fontSize: "9px", color: "#2a4a30", marginBottom: "8px" }}>
-        Iniciado: {schedulerStartedAt || "--:--:--"}    {campaign.messagesPerHour || 1} msg/hora  {Math.round(cycleDuration / 3600)}h = {totalContacts} contatos
-      </p>
-
-      {/* Botúo contatos */}
-      <button onClick={onToggle} className="rmt-contacts-btn">
-        <div style={{ display: "flex", alignItems: "center", gap: "5px" }}>
-          <Users size={12} style={{ color: "#3a6a45" }} />
-          <span style={{ fontWeight: 600, color: "#6a9a7a" }}>
-            Contatos ({sentCount}/{totalContacts})
-          </span>
-          <span style={{ color: "#2a4a30" }}>
-            {sentCount} enviados • {pendingCount} aguardando
-          </span>
+      {/* Content do Card */}
+      <div className="px-5 pb-5">
+        {/* Progresso do Ciclo (msgs enviadas) */}
+        <div className="mb-3">
+          <div className="flex items-center justify-between mb-1">
+            <p className="text-xs text-muted-foreground font-medium">Progresso do Ciclo (10h)</p>
+            <p className={`text-sm font-bold ${progressPercent === 100 ? "text-amber-400" : "text-emerald-400"}`}>{progressPercent}%</p>
+          </div>
+          <div className="progress-bar">
+            <div
+              className={`progress-fill ${progressPercent === 100 ? "bg-gradient-to-r from-amber-500 to-orange-500" : ""}`}
+              style={{ width: `${progressPercent}%` }}
+            />
+          </div>
         </div>
-        {expanded ? <ChevronUp size={13} /> : <ChevronDown size={13} />}
-      </button>
 
-      {/* Lista de contatos expandida */}
-      {expanded && (
-        <div style={{ marginTop: "8px", display: "flex", flexDirection: "column", gap: "5px", maxHeight: "320px", overflowY: "auto" }}>
-          {contactsList.length === 0 ? (
-            <p style={{ fontSize: "12px", color: "#3a5a40", textAlign: "center", padding: "16px 0" }}>
-              Nenhum contato designado
-            </p>
-          ) : (
-            contactsList.map((contact: any) => (
+        {/* Barra de Tempo da Hora */}
+        {isActive && isRunning && (
+          <div className="mb-4">
+            <div className="flex items-center justify-between mb-1">
+              <p className="text-xs text-muted-foreground font-medium">Tempo da Hora</p>
+              <p className="text-sm font-bold text-blue-400">{timePercent}%</p>
+            </div>
+            <div className="w-full bg-secondary/50 rounded-full h-2">
               <div
-                key={`contact-${contact.id}`}
-                style={{
-                  display: "flex",
-                  alignItems: "center",
-                  gap: "8px",
-                  padding: "8px 10px",
-                  borderRadius: "8px",
-                  border: `1px solid ${
-                    contact.status === "sent"
-                      ? "rgba(62,200,122,0.15)"
-                      : contact.status === "failed"
-                      ? "rgba(220,60,60,0.15)"
-                      : "rgba(26,53,32,0.8)"
-                  }`,
-                  background:
-                    contact.status === "sent"
-                      ? "rgba(62,200,122,0.05)"
-                      : contact.status === "failed"
-                      ? "rgba(220,60,60,0.05)"
-                      : "rgba(8,15,10,0.8)",
-                }}
-              >
-                <div
-                  style={{
-                    width: "18px",
-                    height: "18px",
-                    borderRadius: "4px",
-                    border: `1px solid ${
-                      contact.status === "sent" ? "#3ec87a" : contact.status === "failed" ? "#e85a5a" : "#1a3520"
-                    }`,
-                    background:
-                      contact.status === "sent"
-                        ? "rgba(62,200,122,0.2)"
-                        : contact.status === "failed"
-                        ? "rgba(220,60,60,0.2)"
-                        : "transparent",
-                    display: "flex",
-                    alignItems: "center",
-                    justifyContent: "center",
-                    flexShrink: 0,
-                  }}
-                >
-                  {contact.status === "sent" && <CheckCircle2 size={10} style={{ color: "#3ec87a" }} />}
-                  {contact.status === "failed" && <AlertCircle size={10} style={{ color: "#e85a5a" }} />}
+                className="h-2 rounded-full transition-all duration-1000 bg-gradient-to-r from-blue-500 to-blue-400"
+                style={{ width: `${timePercent}%` }}
+              />
+            </div>
+          </div>
+        )}
+
+        {/* Stats Grid */}
+        <div className="grid grid-cols-2 gap-3 mb-4">
+          <div className="p-2.5 bg-emerald-500/10 rounded-lg border border-emerald-500/20">
+            <p className="text-xs text-muted-foreground">Enviadas</p>
+            <p className="text-xl font-bold text-emerald-400">{sentCount}<span className="text-sm text-muted-foreground">/{totalContacts}</span></p>
+          </div>
+          <div className="p-2.5 bg-amber-500/10 rounded-lg border border-amber-500/20">
+            <p className="text-xs text-muted-foreground">Faltam</p>
+            <p className="text-xl font-bold text-amber-400">{pendingCount}</p>
+          </div>
+          <div className="p-2.5 bg-purple-500/10 rounded-lg border border-purple-500/20">
+            <p className="text-xs text-muted-foreground">Hora Atual</p>
+            <p className="text-xl font-bold text-purple-400">{hourNumber + 1}<span className="text-sm text-muted-foreground">/10</span></p>
+          </div>
+          <div className="p-2.5 bg-blue-500/10 rounded-lg border border-blue-500/20">
+            <p className="text-xs text-muted-foreground">Esta Hora</p>
+            <p className="text-xl font-bold text-blue-400">
+              {hasSentThisHour ? (
+                <span className="text-emerald-400 flex items-center gap-1">
+                  <CheckCircle2 className="h-5 w-5" /> Enviou
+                </span>
+              ) : (
+                <span className="text-amber-400 flex items-center gap-1">
+                  <Clock className="h-5 w-5" /> Pendente
+                </span>
+              )}
+            </p>
+          </div>
+        </div>
+
+        {/* Confirmação de envio nesta hora - mostra contato e horário */}
+        {(() => {
+          // Encontrar o último contato enviado nesta campanha
+          const sentContact = (campaign.contacts || []).find((c: any) => c.status === "sent" && c.sentAt);
+          const lastSentContact = (campaign.contacts || [])
+            .filter((c: any) => c.status === "sent" && c.sentAt)
+            .sort((a: any, b: any) => new Date(b.sentAt).getTime() - new Date(a.sentAt).getTime())[0];
+          
+          if (hasSentThisHour && lastSentContact) {
+            return (
+              <div className="p-3 bg-emerald-500/10 rounded-lg mb-4 border border-emerald-500/20">
+                <div className="flex items-center gap-2 mb-1.5">
+                  <CheckCircle2 className="h-4 w-4 text-emerald-400 flex-shrink-0" />
+                  <span className="text-sm font-semibold text-emerald-400">Enviado com sucesso!</span>
                 </div>
-                <span style={{ fontSize: "11px", fontFamily: "monospace", fontWeight: 600, minWidth: "120px", color: "#8ab5a0" }}>
-                  {String(contact.phone || "")}
-                </span>
-                <span style={{ fontSize: "11px", color: "#3a5a40", flex: 1, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
-                  {String(contact.name || "")}
-                </span>
-                <div style={{ flexShrink: 0 }}>
-                  {contact.status === "sent" ? (
-                    <span style={{ fontSize: "10px", color: "#3ec87a", fontFamily: "monospace", background: "rgba(62,200,122,0.08)", padding: "2px 6px", borderRadius: "6px", border: "1px solid rgba(62,200,122,0.15)" }}>
-                      {formatTime(contact.sentAt)}
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <span className="text-xs bg-emerald-500/20 text-emerald-300 px-2 py-0.5 rounded border border-emerald-500/30 font-mono">
+                      {formatTime(lastSentContact.sentAt)}
                     </span>
-                  ) : contact.status === "failed" ? (
-                    <span style={{ fontSize: "10px", color: "#e85a5a", background: "rgba(220,60,60,0.08)", padding: "2px 6px", borderRadius: "6px", border: "1px solid rgba(220,60,60,0.15)" }}>
-                      Falha
+                    <span className="text-sm text-emerald-200 font-medium truncate max-w-[180px]">
+                      {lastSentContact.name}
                     </span>
-                  ) : (
-                    <Clock size={12} style={{ color: "#3a5a40" }} />
-                  )}
+                    <span className="text-xs text-emerald-400/60 font-mono">
+                      {lastSentContact.phone}
+                    </span>
+                  </div>
                 </div>
               </div>
-            ))
-          )}
-        </div>
-      )}
+            );
+          } else if (hasSentThisHour) {
+            return (
+              <div className="p-3 bg-emerald-500/10 rounded-lg mb-4 border border-emerald-500/20">
+                <div className="flex items-center gap-2">
+                  <CheckCircle2 className="h-4 w-4 text-emerald-400" />
+                  <span className="text-sm font-semibold text-emerald-400">Mensagem enviada nesta hora!</span>
+                </div>
+              </div>
+            );
+          }
+          return null;
+        })()}
+
+        {/* Info */}
+        <p className="text-xs text-muted-foreground mb-3">
+          Iniciado: {schedulerStartedAt || "--:--:--"} | 1 msg/hora × 10 horas = {totalContacts} contatos
+        </p>
+
+        {/* Toggle Lista de Contatos */}
+        <button
+          onClick={onToggle}
+          className="w-full flex items-center justify-between p-3 bg-secondary/30 rounded-lg border border-border/50 hover:bg-secondary/50 transition-colors"
+        >
+          <div className="flex items-center gap-2">
+            <Users className="h-4 w-4 text-muted-foreground" />
+            <span className="text-sm font-semibold text-foreground">Contatos ({sentCount}/{totalContacts})</span>
+            <span className="text-xs text-muted-foreground">{sentCount} enviados | {pendingCount} aguardando</span>
+          </div>
+          {expanded ? <ChevronUp className="h-4 w-4 text-muted-foreground" /> : <ChevronDown className="h-4 w-4 text-muted-foreground" />}
+        </button>
+
+        {/* Lista de Contatos Expandível */}
+        {expanded && (
+          <div className="mt-3 space-y-1.5 max-h-96 overflow-y-auto" key={`contacts-${campaign.id}-${contactsList.length}`}>
+            {contactsList.length === 0 ? (
+              <p className="text-sm text-muted-foreground text-center py-4">Nenhum contato designado</p>
+            ) : (
+              contactsList.map((contact: any) => (
+                <div
+                  key={`contact-${contact.id}`}
+                  className={`flex items-center gap-3 p-3 rounded-lg border transition-all ${
+                    contact.status === "sent"
+                      ? "bg-emerald-500/10 border-emerald-500/20"
+                      : contact.status === "failed"
+                      ? "bg-red-500/10 border-red-500/20"
+                      : "bg-secondary/20 border-border/30"
+                  }`}
+                >
+                  <div className={`w-5 h-5 rounded border-2 flex items-center justify-center flex-shrink-0 ${
+                    contact.status === "sent"
+                      ? "bg-emerald-500 border-emerald-500"
+                      : contact.status === "failed"
+                      ? "bg-red-500 border-red-500"
+                      : "border-muted-foreground/30"
+                  }`}>
+                    {contact.status === "sent" && <CheckCircle2 className="h-3 w-3 text-white" />}
+                    {contact.status === "failed" && <AlertCircle className="h-3 w-3 text-white" />}
+                  </div>
+                  <span className="text-sm font-mono font-semibold min-w-[130px] text-foreground/80">
+                    {String(contact.phone || '')}
+                  </span>
+                  <span className="text-sm text-muted-foreground truncate flex-1">
+                    ({String(contact.name || '')})
+                  </span>
+                  <div className="flex items-center gap-1 flex-shrink-0">
+                    {contact.status === "sent" ? (
+                      <span className="text-xs text-emerald-400 font-mono bg-emerald-500/15 px-2 py-0.5 rounded border border-emerald-500/20">
+                        {formatTime(contact.sentAt)}
+                      </span>
+                    ) : contact.status === "failed" ? (
+                      <span className="text-xs text-red-400 bg-red-500/15 px-2 py-0.5 rounded border border-red-500/20">
+                        Falha
+                      </span>
+                    ) : (
+                      <Clock className="h-4 w-4 text-amber-400/60" />
+                    )}
+                  </div>
+                </div>
+              ))
+            )}
+          </div>
+        )}
+      </div>
     </div>
   );
 }
-

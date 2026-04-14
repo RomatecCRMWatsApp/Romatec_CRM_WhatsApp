@@ -119,6 +119,49 @@ class TelegramNotifier {
 // Export singleton instance
 export const telegramNotifier = new TelegramNotifier();
 
+// ─── Notificação de mensagem enviada pela campanha ────────────────────────
+export async function notifyMessageSent(params: {
+  contactName: string;
+  contactPhone: string;
+  campaignName: string;
+  messageText: string;
+  cycleHour: number;
+  maxCycle: number;
+  messagesSent: number;
+}): Promise<void> {
+  const token = process.env.TELEGRAM_BOT_TOKEN;
+  const chatId = process.env.TELEGRAM_CHAT_ID;
+  if (!token || !chatId) return;
+
+  try {
+    const TelegramBot = await import('node-telegram-bot-api').then(m => m.default);
+    const bot = new TelegramBot(token, { polling: false });
+
+    const waLink = `https://wa.me/${params.contactPhone.replace(/\D/g, '')}`;
+    const preview = params.messageText.length > 120
+      ? params.messageText.substring(0, 120) + '…'
+      : params.messageText;
+
+    const attemptsBar = '🟢'.repeat(params.messagesSent) + '⚪'.repeat(Math.max(0, 3 - params.messagesSent));
+
+    const msg = [
+      `📤 <b>MENSAGEM ENVIADA</b>`,
+      `━━━━━━━━━━━━━━━━━━━━━━━━━━━━`,
+      `👤 <b>${params.contactName}</b>  📱 +${params.contactPhone.replace(/\D/g, '')}`,
+      `📢 <b>Campanha:</b> ${params.campaignName}`,
+      `🔄 <b>Ciclo:</b> ${params.cycleHour}/${params.maxCycle}  ${attemptsBar} tentativa ${params.messagesSent}/3`,
+      `━━━━━━━━━━━━━━━━━━━━━━━━━━━━`,
+      `💬 <i>${preview}</i>`,
+      `━━━━━━━━━━━━━━━━━━━━━━━━━━━━`,
+      `👆 <a href="${waLink}">Acompanhar conversa</a>`,
+    ].join('\n');
+
+    await bot.sendMessage(chatId, msg, { parse_mode: 'HTML', disable_web_page_preview: true });
+  } catch (e) {
+    console.error('[Telegram] Erro ao notificar envio:', e);
+  }
+}
+
 // ─── Notificação instantânea de lead quente ────────────────────────────────
 // Cria uma instância fresca do bot a cada chamada para evitar estado stale do singleton
 export async function notifyHotLead(params: {
