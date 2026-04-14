@@ -456,6 +456,11 @@ export default function Dashboard() {
           ))}
         </div>
 
+        {/* Version footer */}
+        <div className="text-center py-1">
+          <span className="text-xs text-muted-foreground/40 select-none">Romatec CRM v1.1.1</span>
+        </div>
+
         {/* PAINEL DE DESEMPENHO */}
         <div className="pt-4">
           <div className="flex items-center gap-3 mb-6">

@@ -419,6 +419,25 @@ export default function Settings() {
           <Save className="mr-2 h-5 w-5" />
           {updateMutation.isPending ? "Salvando..." : "Salvar configurações"}
         </Button>
+
+        {/* Informações do sistema */}
+        <div className="border border-border rounded-xl p-4 bg-card/50">
+          <h3 className="text-sm font-semibold text-muted-foreground mb-3 uppercase tracking-wide">Informações do Sistema</h3>
+          <div className="space-y-2">
+            <div className="flex justify-between text-sm">
+              <span className="text-muted-foreground">Versão</span>
+              <span className="text-foreground font-mono font-medium">v1.1.1</span>
+            </div>
+            <div className="flex justify-between text-sm">
+              <span className="text-muted-foreground">Plataforma</span>
+              <span className="text-foreground">Web · romateccrm.com</span>
+            </div>
+            <div className="flex justify-between text-sm">
+              <span className="text-muted-foreground">Banco de dados</span>
+              <span className="text-emerald-400">MySQL · Railway</span>
+            </div>
+          </div>
+        </div>
       </div>
     </div>
   );
