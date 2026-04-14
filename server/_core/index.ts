@@ -252,6 +252,14 @@ async function startServer() {
       console.error('❌ Erro no restore Mod_Vaz-02:', e);
     }
 
+    // MIGRATION: plantaBaixaUrl → MEDIUMTEXT (suporta PDF base64)
+    try {
+      const { enlargePlantaBaixaUrl } = await import('./migrations/enlargePlantaBaixaUrl');
+      await enlargePlantaBaixaUrl();
+    } catch (e) {
+      console.error('❌ Erro na migration enlargePlantaBaixaUrl:', e);
+    }
+
     // STARTUP: Carregar credenciais salvas no DB para process.env (fallback do .env)
     try {
       const { getCompanyConfig } = await import('../db');
