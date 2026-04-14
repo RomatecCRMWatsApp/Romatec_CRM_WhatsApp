@@ -157,6 +157,14 @@ async function startServer() {
         return res.status(400).json({ success: false, error: 'Arquivo excede 100MB' });
       }
 
+      // PDFs: converter para base64 data URL — sem Cloudinary, sem 401, funciona sempre
+      if (fileType === 'application/pdf') {
+        const base64 = buffer.toString('base64');
+        const url = `data:application/pdf;base64,${base64}`;
+        console.log(`[Upload] ✅ PDF base64 (${(buffer.length / 1024).toFixed(1)}KB)`);
+        return res.json({ success: true, url });
+      }
+
       console.log(`[Upload] Enviando para Cloudinary: ${fileName} (${fileType}, ${(buffer.length / 1024).toFixed(1)}KB)`);
       const { uploadToCloudinary } = await import('../cloudinary');
       const { url } = await uploadToCloudinary(buffer, fileType, fileName);

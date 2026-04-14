@@ -493,7 +493,7 @@ export default function Properties() {
                 <Input value={form.plantaBaixaUrl} onChange={e => setForm(p => ({ ...p, plantaBaixaUrl: e.target.value }))} placeholder="Ou cole a URL da planta baixa" className="bg-secondary/30 border-border/50" />
                 {form.plantaBaixaUrl ? (
                   <div className="rounded-xl overflow-hidden border border-border/50">
-                    {(form.plantaBaixaUrl.toLowerCase().includes('.pdf') || form.plantaBaixaUrl.includes('/raw/upload/')) ? (
+                    {(form.plantaBaixaUrl.toLowerCase().includes('.pdf') || form.plantaBaixaUrl.includes('/raw/upload/') || form.plantaBaixaUrl.startsWith('data:application/pdf')) ? (
                       <div className="flex items-center gap-4 p-4 bg-secondary/30 rounded-xl border border-border/40">
                         <div className="w-12 h-14 flex-shrink-0 flex items-center justify-center rounded-lg bg-red-500/15 border border-red-500/20">
                           <svg width="24" height="24" viewBox="0 0 24 24" fill="none" className="text-red-400"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/><polyline points="14 2 14 8 20 8" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/><line x1="16" y1="13" x2="8" y2="13" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/><line x1="16" y1="17" x2="8" y2="17" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/></svg>
@@ -502,7 +502,7 @@ export default function Properties() {
                           <p className="text-sm font-medium text-foreground truncate">{form.plantaBaixaUrl.split('/').pop()}</p>
                           <p className="text-xs text-muted-foreground mt-0.5">Planta Baixa — PDF</p>
                         </div>
-                        <a href={`/api/pdf-proxy?url=${encodeURIComponent(form.plantaBaixaUrl)}`} target="_blank" rel="noopener noreferrer" className="text-xs text-emerald-400 font-medium hover:underline flex-shrink-0">Abrir ↗</a>
+                        <a href={form.plantaBaixaUrl} target="_blank" rel="noopener noreferrer" className="text-xs text-emerald-400 font-medium hover:underline flex-shrink-0">Abrir ↗</a>
                         <button type="button" onClick={() => setForm(p => ({ ...p, plantaBaixaUrl: '' }))} className="text-xs text-red-400 hover:text-red-300 font-medium flex-shrink-0 ml-1">Remover</button>
                       </div>
                     ) : (
@@ -814,8 +814,8 @@ export default function Properties() {
                   <div>
                     <h3 className="text-sm font-semibold text-muted-foreground mb-2 flex items-center gap-1"><FileImage className="h-4 w-4 text-emerald" /> Planta Baixa</h3>
                     <div className="rounded-xl overflow-hidden border border-border/30">
-                      {(selectedProperty.plantaBaixaUrl.toLowerCase().includes('.pdf') || selectedProperty.plantaBaixaUrl.includes('/raw/upload/')) ? (
-                        <a href={`/api/pdf-proxy?url=${encodeURIComponent(selectedProperty.plantaBaixaUrl)}`} target="_blank" rel="noopener noreferrer"
+                      {(selectedProperty.plantaBaixaUrl.toLowerCase().includes('.pdf') || selectedProperty.plantaBaixaUrl.includes('/raw/upload/') || selectedProperty.plantaBaixaUrl.startsWith('data:application/pdf')) ? (
+                        <a href={selectedProperty.plantaBaixaUrl} target="_blank" rel="noopener noreferrer"
                           className="flex items-center gap-4 p-4 bg-secondary/30 hover:bg-secondary/50 transition-all rounded-xl border border-border/40 group">
                           <div className="w-12 h-14 flex-shrink-0 flex items-center justify-center rounded-lg bg-red-500/15 border border-red-500/20">
                             <svg width="24" height="24" viewBox="0 0 24 24" fill="none" className="text-red-400"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/><polyline points="14 2 14 8 20 8" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/><line x1="16" y1="13" x2="8" y2="13" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/><line x1="16" y1="17" x2="8" y2="17" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/></svg>
