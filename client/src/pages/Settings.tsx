@@ -426,7 +426,7 @@ export default function Settings() {
           <div className="space-y-2">
             <div className="flex justify-between text-sm">
               <span className="text-muted-foreground">Versão</span>
-              <span className="text-foreground font-mono font-medium">v1.1.1</span>
+              <span className="text-foreground font-mono font-medium">v{__APP_VERSION__}</span>
             </div>
             <div className="flex justify-between text-sm">
               <span className="text-muted-foreground">Plataforma</span>

@@ -151,8 +151,16 @@ function vitePluginManusDebugCollector(): Plugin {
 
 const plugins = [react(), tailwindcss(), jsxLocPlugin(), vitePluginManusDebugCollector()];
 
+// Lê versão do package.json em tempo de build — elimina strings hardcoded
+import { createRequire } from "node:module";
+const _require = createRequire(import.meta.url);
+const _pkg = _require("./package.json") as { version: string };
+
 export default defineConfig({
   plugins,
+  define: {
+    __APP_VERSION__: JSON.stringify(_pkg.version),
+  },
   resolve: {
     alias: {
       "@": path.resolve(import.meta.dirname, "client", "src"),

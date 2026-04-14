@@ -458,7 +458,7 @@ export default function Dashboard() {
 
         {/* Version footer */}
         <div className="text-center py-1">
-          <span className="text-xs text-muted-foreground/40 select-none">Romatec CRM v1.1.1</span>
+          <span className="text-xs text-muted-foreground/40 select-none">Romatec CRM v{__APP_VERSION__}</span>
         </div>
 
         {/* PAINEL DE DESEMPENHO */}
