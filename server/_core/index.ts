@@ -268,6 +268,55 @@ Se você recebeu esta mensagem, o Telegram está 100% operacional!`;
   app.post('/webhook/zapi', handleZapiWebhook);
   app.post('/api/webhook/zapi', handleZapiWebhook);
 
+  // ─── GET /api/pdf-proxy ─── serve PDFs do Cloudinary com URL assinada (contorna restrição CDN)
+  app.get('/api/pdf-proxy', async (req: any, res: any) => {
+    try {
+      const url = req.query.url as string;
+      if (!url || !url.includes('cloudinary.com')) {
+        return res.status(400).json({ error: 'URL inválida' });
+      }
+
+      const CLOUD_NAME = process.env.CLOUDINARY_CLOUD_NAME || 'drooexltp';
+      const API_SECRET = process.env.CLOUDINARY_API_SECRET || 'soDNjdzXi2Hhd9NLvLuZmxrBi4g';
+
+      // Extrair public_id da URL (remove version v\d+ se presente)
+      const match = url.match(/\/raw\/upload\/(?:v\d+\/)?(.+)$/);
+      if (!match) return res.status(404).send('PDF não encontrado');
+      const publicId = decodeURIComponent(match[1]);
+
+      // Gerar URL assinada para entrega (Cloudinary strict delivery)
+      const crypto = await import('crypto');
+      const toSign = publicId; // sem transformações = só o public_id
+      const signature = crypto.createHash('sha1')
+        .update(toSign + API_SECRET)
+        .digest('hex')
+        .substring(0, 8);
+
+      const signedUrl = `https://res.cloudinary.com/${CLOUD_NAME}/raw/upload/s--${signature}--/${publicId}`;
+      console.log(`[PDF Proxy] Fetching signed URL for: ${publicId}`);
+
+      const response = await fetch(signedUrl);
+      if (!response.ok) {
+        console.warn(`[PDF Proxy] Signed URL failed (${response.status}), tentando URL original`);
+        const fallback = await fetch(url);
+        if (!fallback.ok) return res.status(404).send('PDF não acessível (401/404 Cloudinary)');
+        res.setHeader('Content-Type', 'application/pdf');
+        res.setHeader('Content-Disposition', 'inline; filename="planta-baixa.pdf"');
+        const buf = await fallback.arrayBuffer();
+        return res.send(Buffer.from(buf));
+      }
+
+      res.setHeader('Content-Type', 'application/pdf');
+      res.setHeader('Content-Disposition', 'inline; filename="planta-baixa.pdf"');
+      res.setHeader('Cache-Control', 'public, max-age=3600');
+      const buf = await response.arrayBuffer();
+      return res.send(Buffer.from(buf));
+    } catch (err) {
+      console.error('[PDF Proxy] Erro:', err);
+      res.status(500).send('Erro ao carregar PDF');
+    }
+  });
+
   // ─── GET /api/admin/send-log ─── auditoria de envios (previne duplicatas)
   app.get('/api/admin/send-log', async (req, res) => {
     try {
