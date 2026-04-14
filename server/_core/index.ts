@@ -174,6 +174,26 @@ async function startServer() {
     }
   });
 
+  // PDF Proxy — permite abrir PDFs hospedados em CDN externo sem CORS
+  app.get("/api/pdf-proxy", async (req, res) => {
+    const url = req.query.url as string;
+    if (!url || !/^https?:\/\//.test(url)) {
+      return res.status(400).json({ error: "URL inválida" });
+    }
+    try {
+      const response = await fetch(url);
+      if (!response.ok) return res.status(502).json({ error: "Falha ao buscar PDF" });
+      const contentType = response.headers.get("content-type") || "application/pdf";
+      const buffer = await response.arrayBuffer();
+      res.setHeader("Content-Type", contentType);
+      res.setHeader("Content-Disposition", "inline");
+      res.setHeader("Cache-Control", "public, max-age=3600");
+      res.send(Buffer.from(buffer));
+    } catch (e) {
+      res.status(500).json({ error: String(e) });
+    }
+  });
+
   // tRPC API
   app.use(
     "/api/trpc",
