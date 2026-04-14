@@ -3,7 +3,7 @@ import { getSessionCookieOptions } from "./_core/cookies";
 import { systemRouter } from "./_core/systemRouter";
 import { publicProcedure, protectedProcedure, router } from "./_core/trpc";
 import { getAllContacts, getContactById, createContact, getAllProperties, getPropertyById, createProperty, getAllCampaigns, getCampaignById, createCampaign, getCompanyConfig, updateCompanyConfig, getDb } from "./db";
-import { campaigns, contacts, campaignContacts, messages, properties, contactCampaignHistory, users, leadQualifications } from "../drizzle/schema";
+import { campaigns, contacts, campaignContacts, messages, properties, contactCampaignHistory, users, leadQualifications, schedulerState } from "../drizzle/schema";
 import { eq, and, desc, gte, or, like, isNotNull } from "drizzle-orm";
 import { campaignScheduler } from "./scheduler/campaignScheduler";
 import { z } from "zod";
@@ -500,6 +500,29 @@ export const appRouter = router({
           const data = await response.json();
           if (data.connected) {
             await updateCompanyConfig({ zApiConnected: true, zApiLastChecked: new Date() });
+
+            // Verificar se o scheduler foi pausado automaticamente pelo Z-API down
+            const db = await getDb();
+            if (db) {
+              const rows = await db.select().from(schedulerState).where(eq(schedulerState.id, 1)).limit(1);
+              const stateJson = (rows[0]?.stateJson as Record<string, any>) || {};
+
+              if (stateJson.zapiAutopaused === true) {
+                // Limpar flag + restaurar status running → restoreAndResume vai reiniciar
+                const updated = { ...stateJson, zapiAutopaused: false };
+                await db.update(schedulerState).set({ status: 'running', stateJson: updated }).where(eq(schedulerState.id, 1));
+                console.log('[Z-API] zapiAutopaused limpo — retomando scheduler');
+
+                await campaignScheduler.restoreAndResume();
+
+                // Notificar Telegram sobre reconexão
+                const { notifyZApiUp } = await import('./_core/telegramNotification');
+                notifyZApiUp().catch(e => console.warn('[Telegram] notifyZApiUp falhou:', e));
+
+                return { success: true, message: "WhatsApp reconectado! Scheduler retomado automaticamente." };
+              }
+            }
+
             return { success: true, message: "WhatsApp conectado com sucesso!" };
           }
           return { success: false, message: "WhatsApp nao esta conectado." };

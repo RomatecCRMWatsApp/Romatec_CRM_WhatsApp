@@ -1118,9 +1118,24 @@ export class CampaignScheduler {
   }
 
   /** Chamado quando Z-API falha MAX_ZAPI_FAILS vezes seguidas */
-  private async handleZApiDown(config: any) {
+  private async handleZApiDown(_config: any) {
     console.error(`🚨 [Z-API] ${this.MAX_ZAPI_FAILS} falhas consecutivas — pausando scheduler automaticamente`);
-    this.stop();
+    this.stop(); // salva status='stopped'
+
+    // Salvar flag zapiAutopaused=true no stateJson para auto-retomar quando Z-API voltar
+    try {
+      const db = await getDb();
+      if (db) {
+        const rows = await db.select().from(schedulerStateTable).where(eq(schedulerStateTable.id, 1)).limit(1);
+        if (rows[0]) {
+          const merged = { ...(rows[0].stateJson as Record<string, any> || {}), zapiAutopaused: true };
+          await db.update(schedulerStateTable).set({ stateJson: merged }).where(eq(schedulerStateTable.id, 1));
+          console.log('💾 [Z-API] zapiAutopaused=true salvo no banco');
+        }
+      }
+    } catch (e) {
+      console.error('[Z-API] Erro ao salvar zapiAutopaused:', e);
+    }
 
     // Marcar como desconectado no banco
     try {

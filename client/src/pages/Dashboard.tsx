@@ -1,4 +1,5 @@
 ﻿import { useMemo, useState, useEffect, lazy, Suspense, useRef } from "react";
+import { toast } from "sonner";
 import { useAuth } from "@/_core/hooks/useAuth";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -320,7 +321,12 @@ export default function Dashboard() {
 
   const testZApi = trpc.companyConfig.testZApiConnection.useMutation({
     onSuccess: (data) => {
-      if (data.success) refetchConfig();
+      if (data.success) {
+        refetchConfig();
+        if (data.message?.includes('retomado')) {
+          toast.success('✅ WhatsApp reconectado! Scheduler retomado automaticamente.');
+        }
+      }
     },
   });
   const { data: perfData, isLoading: perfLoading } = trpc.performance.getStats.useQuery(undefined, {

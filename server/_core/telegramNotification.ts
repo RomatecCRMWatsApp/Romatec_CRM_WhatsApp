@@ -143,6 +143,28 @@ export async function notifyZApiDown(): Promise<void> {
   }
 }
 
+// ─── Notificação de Z-API reconectada ─────────────────────────────────────
+export async function notifyZApiUp(): Promise<void> {
+  const token = process.env.TELEGRAM_BOT_TOKEN;
+  const chatId = process.env.TELEGRAM_CHAT_ID;
+  if (!token || !chatId) return;
+
+  try {
+    const TelegramBot = await import('node-telegram-bot-api').then(m => m.default);
+    const bot = new TelegramBot(token, { polling: false });
+    const msg = [
+      `✅ <b>WhatsApp Reconectado!</b>`,
+      `━━━━━━━━━━━━━━━━━━━━━━━━━━━━`,
+      `🟢 Z-API está online`,
+      `🚀 Scheduler retomado automaticamente`,
+    ].join('\n');
+    await bot.sendMessage(chatId, msg, { parse_mode: 'HTML' });
+    console.log('[Telegram] ✅ Confirmação Z-API reconectada enviada');
+  } catch (e) {
+    console.error('[Telegram] Erro ao notificar Z-API up:', e);
+  }
+}
+
 // ─── Notificação de mensagem enviada pela campanha ────────────────────────
 export async function notifyMessageSent(params: {
   contactName: string;
