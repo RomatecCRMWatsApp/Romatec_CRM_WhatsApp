@@ -459,10 +459,10 @@ export const appRouter = router({
           const contact = contactResult[0];
           if (!contact) continue;
           const lastMsg = await db.select().from(messages).where(and(eq(messages.contactId, contact.id), eq(messages.campaignId, camp.id))).limit(1);
-          if (cc.status === "sent") sentCount++;
+          if (lastMsg[0]) sentCount++;
           else if (cc.status === "failed") failedCount++;
           else pendingCount++;
-          contactDetails.push({ id: cc.id, contactId: contact.id, name: contact.name, phone: contact.phone, status: cc.status, sentAt: lastMsg[0]?.sentAt || null, blockedUntil: contact.blockedUntil });
+          contactDetails.push({ id: cc.id, contactId: contact.id, name: contact.name, phone: contact.phone, status: lastMsg[0] ? "sent" : cc.status, sentAt: lastMsg[0]?.sentAt || null, blockedUntil: contact.blockedUntil });
         }
         result.push({ id: camp.id, name: camp.name, propertyId: camp.propertyId, propertyName: prop[0]?.denomination || "Desconhecido", status: camp.status, messagesPerHour: camp.messagesPerHour || 1, activeDay: camp.activeDay || false, activeNight: camp.activeNight || false, sentCount, pendingCount, failedCount, totalContacts: ccList.length > 0 ? ccList.length : (camp.totalContacts || 0), contactDetails });
       }
