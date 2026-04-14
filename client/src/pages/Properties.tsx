@@ -578,12 +578,19 @@ export default function Properties() {
                     </div>
                   )}
                   {/* Status Badge */}
-                  <div className="absolute top-3 left-3">
+                  <div className="absolute top-3 left-3 flex flex-col gap-1">
                     <span className={`px-3 py-1 rounded-full text-xs font-bold backdrop-blur-sm ${
                       property.status === "available" ? "bg-emerald/20 text-emerald border border-emerald/30" :
                       property.status === "sold" ? "bg-red-500/20 text-red-400 border border-red-500/30" : "bg-secondary/50 text-muted-foreground border border-border/30"
                     }`}>
                       {property.status === "available" ? "Disponível" : property.status === "sold" ? "Vendido" : "Inativo"}
+                    </span>
+                    <span className={`px-3 py-1 rounded-full text-xs font-bold backdrop-blur-sm ${
+                      property.finalidade === "aluguel"
+                        ? "bg-blue-500/20 text-blue-400 border border-blue-500/30"
+                        : "bg-emerald/20 text-emerald border border-emerald/30"
+                    }`}>
+                      {property.finalidade === "aluguel" ? "🔑 Aluguel" : "🏠 Venda"}
                     </span>
                   </div>
                   {/* Tipo Badge */}
