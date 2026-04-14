@@ -137,22 +137,18 @@ async function startServer() {
     }
   });
 
-  // Upload de arquivos (fotos, vídeos, plantas) - usa Cloudinary
+  // Upload de arquivos — imagens/vídeos/PDFs via Cloudinary
   app.post('/api/upload', express.raw({ type: '*/*', limit: '100mb' }), async (req, res) => {
     try {
       const fileName = (req.headers['x-file-name'] as string) || 'upload';
       const fileType = (req.headers['x-file-type'] as string) || 'application/octet-stream';
-      
-      // Validar tipo de arquivo
+
       const allowedTypes = ['image/jpeg', 'image/png', 'image/webp', 'image/gif', 'image/jpg', 'video/mp4', 'video/webm', 'video/quicktime', 'application/pdf'];
-      const isAllowed = allowedTypes.some(t => fileType === t) || 
-                        fileType.startsWith('image/') || 
-                        fileType.startsWith('video/');
+      const isAllowed = allowedTypes.some(t => fileType === t) || fileType.startsWith('image/') || fileType.startsWith('video/');
       if (!isAllowed) {
         return res.status(400).json({ success: false, error: 'Tipo de arquivo não permitido. Use: JPG, PNG, WEBP, MP4, PDF' });
       }
-      
-      // Validar tamanho (100MB)
+
       const buffer = req.body as Buffer;
       if (!buffer || buffer.length === 0) {
         return res.status(400).json({ success: false, error: 'Arquivo vazio' });
@@ -160,12 +156,10 @@ async function startServer() {
       if (buffer.length > 100 * 1024 * 1024) {
         return res.status(400).json({ success: false, error: 'Arquivo excede 100MB' });
       }
-      
+
       console.log(`[Upload] Enviando para Cloudinary: ${fileName} (${fileType}, ${(buffer.length / 1024).toFixed(1)}KB)`);
-      
       const { uploadToCloudinary } = await import('../cloudinary');
       const { url } = await uploadToCloudinary(buffer, fileType, fileName);
-      
       console.log(`[Upload] ✅ Cloudinary: ${url}`);
       res.json({ success: true, url });
     } catch (error) {
@@ -174,35 +168,37 @@ async function startServer() {
     }
   });
 
-  // PDF Proxy — permite abrir PDFs hospedados em CDN externo sem CORS
+  // PDF Proxy — busca PDF via Cloudinary com autenticação quando necessário
   app.get("/api/pdf-proxy", async (req, res) => {
     const url = req.query.url as string;
     if (!url || !/^https?:\/\//.test(url)) {
       return res.status(400).json({ error: "URL inválida" });
     }
     try {
-      console.log(`[PDF Proxy] Buscando: ${url.substring(0, 100)}`);
-      const response = await fetch(url, {
-        headers: {
-          'User-Agent': 'Mozilla/5.0 (compatible; RomatecCRM/1.0)',
-          'Accept': 'application/pdf,*/*',
-        },
-        redirect: 'follow',
-      });
-      console.log(`[PDF Proxy] Status: ${response.status} ${response.statusText} — Content-Type: ${response.headers.get('content-type')}`);
+      // Para URLs Cloudinary: usar autenticação Basic com api_key:api_secret
+      const isCloudinary = url.includes('res.cloudinary.com');
+      const headers: Record<string, string> = {
+        'User-Agent': 'Mozilla/5.0 (compatible; RomatecCRM/1.0)',
+        'Accept': 'application/pdf,*/*',
+      };
+      if (isCloudinary) {
+        const CLOUD_API_KEY = process.env.CLOUDINARY_API_KEY || '454146681184898';
+        const CLOUD_API_SECRET = process.env.CLOUDINARY_API_SECRET || 'soDNjdzXi2Hhd9NLvLuZmxrBi4g';
+        const credentials = Buffer.from(`${CLOUD_API_KEY}:${CLOUD_API_SECRET}`).toString('base64');
+        headers['Authorization'] = `Basic ${credentials}`;
+      }
+      const response = await fetch(url, { headers, redirect: 'follow' });
+      console.log(`[PDF Proxy] ${response.status} — ${url.substring(0, 80)}`);
       if (!response.ok) {
-        const body = await response.text().catch(() => '');
-        console.error(`[PDF Proxy] Erro Cloudinary: ${response.status} — ${body.substring(0, 200)}`);
-        return res.status(502).json({ error: `Falha ao buscar PDF (${response.status})`, detail: body.substring(0, 200) });
+        return res.status(502).json({ error: `Falha ao buscar PDF (${response.status})` });
       }
       const contentType = response.headers.get("content-type") || "application/pdf";
       const buffer = await response.arrayBuffer();
-      res.setHeader("Content-Type", contentType);
+      res.setHeader("Content-Type", "application/pdf");
       res.setHeader("Content-Disposition", "inline");
       res.setHeader("Cache-Control", "public, max-age=3600");
       res.send(Buffer.from(buffer));
     } catch (e) {
-      console.error('[PDF Proxy] Exceção:', e);
       res.status(500).json({ error: String(e) });
     }
   });

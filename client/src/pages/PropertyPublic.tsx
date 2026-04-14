@@ -204,7 +204,7 @@ export default function PropertyPublic() {
 
             {activeTab === "planta" && property.plantaBaixaUrl && (
               (property.plantaBaixaUrl.toLowerCase().includes('.pdf') || property.plantaBaixaUrl.includes('/raw/upload/')) ? (
-                <a href={property.plantaBaixaUrl} target="_blank" rel="noopener noreferrer"
+                <a href={`/api/pdf-proxy?url=${encodeURIComponent(property.plantaBaixaUrl)}`} target="_blank" rel="noopener noreferrer"
                   className="flex items-center gap-4 p-5 rounded-2xl border border-white/10 bg-white/5 hover:bg-white/10 transition-all group">
                   <div className="w-14 h-16 flex-shrink-0 flex items-center justify-center rounded-xl bg-red-500/15 border border-red-500/20">
                     <svg width="28" height="28" viewBox="0 0 24 24" fill="none" className="text-red-400"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/><polyline points="14 2 14 8 20 8" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/><line x1="16" y1="13" x2="8" y2="13" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/><line x1="16" y1="17" x2="8" y2="17" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/></svg>
