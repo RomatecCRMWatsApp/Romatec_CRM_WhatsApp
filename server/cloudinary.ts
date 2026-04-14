@@ -27,10 +27,9 @@ export async function uploadToCloudinary(
 ): Promise<{ url: string; publicId: string }> {
   const timestamp = Math.floor(Date.now() / 1000).toString();
 
-  // Determinar resource_type
+  // Determinar resource_type — PDF como 'image' (Cloudinary suporta e é público por padrão)
   let resourceType = 'image';
   if (fileType.startsWith('video/')) resourceType = 'video';
-  else if (fileType === 'application/pdf') resourceType = 'raw';
 
   // Gerar public_id único — para PDF mantém extensão para detecção no frontend
   const ext = resourceType === 'raw' ? (fileName.match(/\.[^/.]+$/)?.[0] ?? '') : '';
