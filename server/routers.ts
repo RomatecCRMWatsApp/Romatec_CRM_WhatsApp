@@ -159,10 +159,17 @@ export const appRouter = router({
         price: z.string().optional(),
         offerPrice: z.string().optional(),
         areaConstruida: z.coerce.number().optional(),
+        areaCasa: z.coerce.number().optional(),
+        areaTerreno: z.coerce.number().optional(),
         areaTotal: z.coerce.number().optional(),
         bedrooms: z.coerce.number().optional(),
         bathrooms: z.coerce.number().optional(),
+        garageSpaces: z.coerce.number().optional(),
+        propertyType: z.string().optional(),
         description: z.string().optional(),
+        images: z.array(z.string()).optional(),
+        videoUrl: z.string().optional(),
+        plantaBaixaUrl: z.string().optional(),
         status: z.enum(["available", "unavailable"]).optional()
       }))
       .mutation(async ({ input }) => {
