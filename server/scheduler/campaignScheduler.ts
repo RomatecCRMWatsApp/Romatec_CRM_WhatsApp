@@ -280,7 +280,7 @@ export class CampaignScheduler {
 
   /** Restaura estado do DB e retoma se estava rodando (chamado no startup) */
   async restoreAndResume() {
-    // Proteção contra chamada dupla (dois IIFEs no index.ts)
+    // Proteção contra chamada dupla — única fonte de startup
     if (this.state.isRunning) {
       console.log('🔄 [Restore] Scheduler já rodando — ignorando chamada duplicada');
       return;
@@ -292,6 +292,19 @@ export class CampaignScheduler {
       const rows = await db.select().from(schedulerStateTable).where(eq(schedulerStateTable.id, 1)).limit(1);
       if (rows[0]?.status === 'running') {
         const nightMode = this.getAutoNightMode();
+        const brasiliaHour = this.getCurrentHour();
+        const isDayHour   = brasiliaHour >= 8  && brasiliaHour < 18;
+        const isNightHour = brasiliaHour >= 20 || brasiliaHour < 6;
+
+        // Corrigir activeDay/activeNight em todas as campanhas running conforme horário atual
+        if (isNightHour) {
+          await db.update(campaigns).set({ activeNight: true, activeDay: false }).where(eq(campaigns.status, 'running'));
+          console.log(`🌙 [Restore] activeNight=true aplicado em todas as campanhas running`);
+        } else if (isDayHour) {
+          await db.update(campaigns).set({ activeDay: true, activeNight: false }).where(eq(campaigns.status, 'running'));
+          console.log(`☀️ [Restore] activeDay=true aplicado em todas as campanhas running`);
+        }
+
         console.log(`🔄 [Restore] Estado: running | Ciclo ${this.state.hourNumber + 1}/10 | ${nightMode ? 'NOITE' : 'DIA'}`);
         await this.start(nightMode);
       } else {
@@ -666,7 +679,7 @@ export class CampaignScheduler {
           cycleHour: this.state.hourNumber,
           maxCycle: this.MAX_HOURS_PER_CYCLE,
           messagesSent: newCount,
-        }).catch(() => {}); // não bloquear envio por falha no Telegram
+        }).catch(e => console.warn('[Telegram] notifyMessageSent falhou (não crítico):', e));
 
         // Registrar para bot
         await registerBotMessage(contact.phone, contact.name || '', campaignId, personalized);
@@ -1229,42 +1242,4 @@ export class CampaignScheduler {
 }
 
 export const campaignScheduler = new CampaignScheduler();
-
-// Auto-restore
-(async () => {
-  try {
-    const db = await getDb();
-    if (!db) return;
-    console.log('🔍 Verificando estado do scheduler no banco...');
-    const rows = await db.select().from(schedulerStateTable).where(eq(schedulerStateTable.id, 1)).limit(1);
-    if (rows[0]?.status === 'running') {
-      console.log('🔄 Auto-restaurando scheduler...');
-
-      // Detectar modo correto pelo horário atual de Brasília (ignora estado salvo — pode estar stale)
-      const brasiliaHour = new Date(new Date().toLocaleString('en-US', { timeZone: 'America/Sao_Paulo' })).getHours();
-      const isNightHour = brasiliaHour >= 20 || brasiliaHour < 6;
-      const isDayHour   = brasiliaHour >= 8 && brasiliaHour < 18;
-      console.log(`🕐 Brasília: ${brasiliaHour}h → Modo: ${isNightHour ? 'NOITE 🌙' : isDayHour ? 'DIA ☀️' : 'STANDBY/BLOQUEADO'}`);
-
-      // Corrigir activeDay/activeNight nas campanhas conforme o horário atual
-      // Sempre atualiza TODOS os running para garantir estado consistente
-      const { campaigns: campaignsTable } = await import('../../drizzle/schema');
-      if (isNightHour) {
-        // Noite: activeNight=true, activeDay=false em todas
-        await db.update(campaignsTable).set({ activeNight: true, activeDay: false }).where(eq(campaignsTable.status, 'running'));
-        console.log(`🌙 [Auto-restore] activeNight=true activeDay=false aplicado em todas as campanhas running`);
-      } else if (isDayHour) {
-        // Dia: activeDay=true, activeNight=false em todas
-        await db.update(campaignsTable).set({ activeDay: true, activeNight: false }).where(eq(campaignsTable.status, 'running'));
-        console.log(`☀️ [Auto-restore] activeDay=true activeNight=false aplicado em todas as campanhas running`);
-      }
-
-      // nightMode é derivado do horário atual, não do estado salvo
-      await campaignScheduler.start(isNightHour ? true : false);
-    } else {
-      console.log('📋 Estado salvo: stopped - scheduler permanece parado');
-    }
-  } catch (e) {
-    console.error('❌ Erro no auto-restore:', e);
-  }
-})();
+// Startup é gerenciado exclusivamente por restoreAndResume() em _core/index.ts
