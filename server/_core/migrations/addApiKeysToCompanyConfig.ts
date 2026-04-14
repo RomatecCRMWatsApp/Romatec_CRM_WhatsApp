@@ -27,7 +27,9 @@ export async function addApiKeysToCompanyConfig(): Promise<void> {
         console.log(`[Migration] ✅ Coluna ${col.name} adicionada ao companyConfig`);
         added++;
       } catch (e: any) {
-        if (e.code === 'ER_DUP_FIELDNAME' || e.message?.includes('Duplicate column')) {
+        const code = e.code ?? e.cause?.code ?? '';
+        const msg  = e.message ?? '';
+        if (code === 'ER_DUP_FIELDNAME' || msg.includes('Duplicate column')) {
           // já existe — ok
         } else {
           throw e;
