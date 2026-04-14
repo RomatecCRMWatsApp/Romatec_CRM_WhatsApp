@@ -119,6 +119,30 @@ class TelegramNotifier {
 // Export singleton instance
 export const telegramNotifier = new TelegramNotifier();
 
+// ─── Notificação de Z-API desconectada ────────────────────────────────────
+export async function notifyZApiDown(): Promise<void> {
+  const token = process.env.TELEGRAM_BOT_TOKEN;
+  const chatId = process.env.TELEGRAM_CHAT_ID;
+  if (!token || !chatId) return;
+
+  try {
+    const TelegramBot = await import('node-telegram-bot-api').then(m => m.default);
+    const bot = new TelegramBot(token, { polling: false });
+    const msg = [
+      `🚨 <b>ALERTA — WhatsApp Desconectado!</b>`,
+      `━━━━━━━━━━━━━━━━━━━━━━━━━━━━`,
+      `❌ Z-API falhou 3 vezes consecutivas`,
+      `⏸️ Scheduler pausado automaticamente`,
+      `━━━━━━━━━━━━━━━━━━━━━━━━━━━━`,
+      `👆 Acesse Configurações → Testar Conexão para reconectar`,
+    ].join('\n');
+    await bot.sendMessage(chatId, msg, { parse_mode: 'HTML' });
+    console.log('[Telegram] 🚨 Alerta Z-API desconectada enviado');
+  } catch (e) {
+    console.error('[Telegram] Erro ao notificar Z-API down:', e);
+  }
+}
+
 // ─── Notificação de mensagem enviada pela campanha ────────────────────────
 export async function notifyMessageSent(params: {
   contactName: string;

@@ -2,7 +2,7 @@
 import { useAuth } from "@/_core/hooks/useAuth";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Users, Send, Settings, LogOut, Wifi, WifiOff, TrendingUp, Building2, BarChart3, CheckCircle2, XCircle, Activity, Zap, Clock } from "lucide-react";
+import { Users, Send, Settings, LogOut, Wifi, WifiOff, TrendingUp, Building2, BarChart3, CheckCircle2, XCircle, Activity, Zap, Clock, AlertTriangle, RefreshCw } from "lucide-react";
 import { useLocation } from "wouter";
 import { trpc } from "@/lib/trpc";
 
@@ -314,7 +314,15 @@ export default function Dashboard() {
   const { data: contacts } = trpc.contacts.list.useQuery();
   const { data: properties } = trpc.properties.list.useQuery();
   const { data: campaigns } = trpc.campaigns.list.useQuery();
-  const { data: config } = trpc.companyConfig.get.useQuery();
+  const { data: config, refetch: refetchConfig } = trpc.companyConfig.get.useQuery(undefined, {
+    refetchInterval: 30000, // verifica status Z-API a cada 30s
+  });
+
+  const testZApi = trpc.companyConfig.testZApiConnection.useMutation({
+    onSuccess: (data) => {
+      if (data.success) refetchConfig();
+    },
+  });
   const { data: perfData, isLoading: perfLoading } = trpc.performance.getStats.useQuery(undefined, {
     refetchInterval: 30000,
   });
@@ -355,6 +363,31 @@ export default function Dashboard() {
           </Button>
         </div>
       </div>
+
+      {/* Banner Z-API desconectada */}
+      {config && !config.zApiConnected && (
+        <div className="bg-red-600/95 border-b border-red-500 text-white px-4 py-3">
+          <div className="container flex items-center justify-between gap-4">
+            <div className="flex items-center gap-3">
+              <AlertTriangle className="h-5 w-5 flex-shrink-0 animate-pulse" />
+              <div>
+                <p className="font-bold text-sm">WhatsApp Desconectado — Envios Suspensos</p>
+                <p className="text-xs text-red-200">Z-API não está respondendo. Verifique a conexão e reinicie o scheduler.</p>
+              </div>
+            </div>
+            <Button
+              size="sm"
+              variant="outline"
+              className="border-white/50 text-white hover:bg-white/20 shrink-0"
+              onClick={() => testZApi.mutate()}
+              disabled={testZApi.isPending}
+            >
+              <RefreshCw className={`mr-1.5 h-3.5 w-3.5 ${testZApi.isPending ? 'animate-spin' : ''}`} />
+              {testZApi.isPending ? 'Verificando...' : 'Verificar Agora'}
+            </Button>
+          </div>
+        </div>
+      )}
 
       <div className="container py-8 space-y-6">
         {/* Stats */}

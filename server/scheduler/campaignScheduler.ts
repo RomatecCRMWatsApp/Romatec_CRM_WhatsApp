@@ -87,6 +87,10 @@ export class CampaignScheduler {
   // Se o lead responder, o contador é zerado pelo webhook (handleZapiWebhook)
   private readonly MAX_ATTEMPTS_NO_RESPONSE = 3;
   private readonly MAX_HOURS_PER_CYCLE = 10;
+  private readonly MAX_ZAPI_FAILS = 3; // Auto-pause após N falhas consecutivas de envio
+
+  // Contador de falhas Z-API consecutivas — resetado a cada envio bem-sucedido
+  private zapiConsecutiveFails = 0;
 
   // ========== HORÁRIO BRASÍLIA ==========
 
@@ -1088,14 +1092,50 @@ export class CampaignScheduler {
           message,
         });
         console.log(`📨 [Z-API] ${phone}: ${result.success ? '✅' : '❌'}`);
-        return result.success ? 'sent' : 'failed';
+
+        if (result.success) {
+          // Envio ok — resetar contador de falhas
+          this.zapiConsecutiveFails = 0;
+          return 'sent';
+        } else {
+          // Falha — incrementar e verificar se deve auto-pausar
+          this.zapiConsecutiveFails++;
+          console.warn(`⚠️ [Z-API] Falha consecutiva ${this.zapiConsecutiveFails}/${this.MAX_ZAPI_FAILS}`);
+          if (this.zapiConsecutiveFails >= this.MAX_ZAPI_FAILS) {
+            await this.handleZApiDown(config);
+          }
+          return 'failed';
+        }
       } else {
         console.log(`📨 [SIMULADO] ${phone}: "${message.substring(0, 50)}..."`);
         return 'sent';
       }
     } catch (error) {
       console.error('❌ Erro Z-API:', error);
+      this.zapiConsecutiveFails++;
       return 'failed';
+    }
+  }
+
+  /** Chamado quando Z-API falha MAX_ZAPI_FAILS vezes seguidas */
+  private async handleZApiDown(config: any) {
+    console.error(`🚨 [Z-API] ${this.MAX_ZAPI_FAILS} falhas consecutivas — pausando scheduler automaticamente`);
+    this.stop();
+
+    // Marcar como desconectado no banco
+    try {
+      const { updateCompanyConfig } = await import('../db');
+      await updateCompanyConfig({ zApiConnected: false });
+    } catch (e) {
+      console.error('[Z-API] Erro ao atualizar status no banco:', e);
+    }
+
+    // Notificar via Telegram
+    try {
+      const { notifyZApiDown } = await import('../_core/telegramNotification');
+      await notifyZApiDown().catch(e => console.warn('[Telegram] notifyZApiDown falhou:', e));
+    } catch (e) {
+      console.warn('[Telegram] Erro ao importar notifyZApiDown:', e);
     }
   }
 
