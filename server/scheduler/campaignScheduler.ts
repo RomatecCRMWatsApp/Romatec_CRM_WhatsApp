@@ -86,6 +86,7 @@ export class CampaignScheduler {
   // Máximo de mensagens sem resposta antes de parar o contato
   // Se o lead responder, o contador é zerado pelo webhook (handleZapiWebhook)
   private readonly MAX_ATTEMPTS_NO_RESPONSE = 3;
+  private readonly MAX_HOURS_PER_CYCLE = 10;
 
   // ========== HORÁRIO BRASÍLIA ==========
 
@@ -279,6 +280,11 @@ export class CampaignScheduler {
 
   /** Restaura estado do DB e retoma se estava rodando (chamado no startup) */
   async restoreAndResume() {
+    // Proteção contra chamada dupla (dois IIFEs no index.ts)
+    if (this.state.isRunning) {
+      console.log('🔄 [Restore] Scheduler já rodando — ignorando chamada duplicada');
+      return;
+    }
     try {
       await this.loadStateFromDB();
       const db = await getDb();
