@@ -139,15 +139,36 @@ export const appRouter = router({
         const slug = input.denomination.toLowerCase().replace(/[^a-z0-9]+/g, '-') + '-' + Date.now().toString(36);
         const db = await getDb();
         if (!db) throw new Error("Database not available");
-        const result = await db.insert(properties).values({ 
-          ...input, 
-          price: input.price as any, 
-          offerPrice: input.offerPrice as any || null, 
-          areaConstruida: input.areaConstruida as any || null, 
+        const result = await db.insert(properties).values({
+          ...input,
+          price: input.price as any,
+          offerPrice: input.offerPrice as any || null,
+          areaConstruida: input.areaConstruida as any || null,
           areaTotal: input.areaTotal as any || null,
-          publicSlug: slug 
+          publicSlug: slug
         });
-        return { id: Number((result as any)[0].insertId), slug };
+        const propertyId = Number((result as any)[0].insertId);
+        // Criar campanha automaticamente para o novo imóvel
+        try {
+          const defaultMessages = [
+            `Olá! Temos uma ótima oportunidade em ${input.denomination}. Gostaria de conhecer mais? 🏠`,
+            `Vimos que você pode estar interessado em ${input.denomination}. Vamos conversar? 📞`,
+            `Oportunidade especial em ${input.denomination}. Clique para saber mais! ✨`
+          ];
+          await db.insert(campaigns).values({
+            propertyId,
+            name: input.denomination,
+            messageVariations: JSON.stringify(defaultMessages),
+            totalContacts: 2,
+            sentCount: 0,
+            failedCount: 0,
+            status: "paused",
+            messagesPerHour: 1
+          });
+        } catch (campErr) {
+          console.warn('[Properties] Aviso: não foi possível criar campanha automática:', campErr);
+        }
+        return { id: propertyId, slug };
       }),
     update: protectedProcedure
       .input(z.object({
