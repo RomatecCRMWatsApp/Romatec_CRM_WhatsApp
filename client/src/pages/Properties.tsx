@@ -578,19 +578,12 @@ export default function Properties() {
                     </div>
                   )}
                   {/* Status Badge */}
-                  <div className="absolute top-3 left-3 flex flex-col gap-1">
+                  <div className="absolute top-3 left-3">
                     <span className={`px-3 py-1 rounded-full text-xs font-bold backdrop-blur-sm ${
                       property.status === "available" ? "bg-emerald/20 text-emerald border border-emerald/30" :
                       property.status === "sold" ? "bg-red-500/20 text-red-400 border border-red-500/30" : "bg-secondary/50 text-muted-foreground border border-border/30"
                     }`}>
                       {property.status === "available" ? "Disponível" : property.status === "sold" ? "Vendido" : "Inativo"}
-                    </span>
-                    <span className={`px-3 py-1 rounded-full text-xs font-bold backdrop-blur-sm ${
-                      property.finalidade === "aluguel"
-                        ? "bg-blue-500/20 text-blue-400 border border-blue-500/30"
-                        : "bg-emerald/20 text-emerald border border-emerald/30"
-                    }`}>
-                      {property.finalidade === "aluguel" ? "🔑 Aluguel" : "🏠 Venda"}
                     </span>
                   </div>
                   {/* Tipo Badge */}
@@ -619,7 +612,16 @@ export default function Properties() {
                 {/* Conteúdo do Card */}
                 <div className="p-5">
                   {/* Nome e Endereço */}
-                  <h3 className="font-bold text-lg text-foreground mb-1">{property.denomination}</h3>
+                  <div className="flex items-center gap-2 mb-1">
+                    <h3 className="font-bold text-lg text-foreground">{property.denomination}</h3>
+                    <span className={`px-2 py-0.5 rounded-full text-xs font-bold shrink-0 ${
+                      property.finalidade === "aluguel"
+                        ? "bg-blue-500/20 text-blue-400 border border-blue-500/30"
+                        : "bg-emerald/20 text-emerald border border-emerald/30"
+                    }`}>
+                      {property.finalidade === "aluguel" ? "🔑 Aluguel" : "🏠 Venda"}
+                    </span>
+                  </div>
                   <div className="flex items-center gap-1.5 text-muted-foreground mb-4">
                     <MapPin className="h-3.5 w-3.5 text-emerald" />
                     <p className="text-sm truncate">{property.address}{property.city ? `, ${property.city}` : ""}</p>
