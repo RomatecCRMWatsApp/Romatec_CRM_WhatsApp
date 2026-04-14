@@ -5,7 +5,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Home, Search, Edit, MapPin, DollarSign, Plus, ArrowLeft, Image, Video, FileImage, Ruler, BedDouble, Bath, Car, Sparkles, ExternalLink, Loader2, X, Eye, Heart, Phone, MessageCircle, ChevronLeft, ChevronRight, Trash2, Upload, CloudUpload } from "lucide-react";
+import { Home, Search, Edit, MapPin, DollarSign, Plus, ArrowLeft, Image, Video, FileImage, Ruler, BedDouble, Bath, Car, Sparkles, ExternalLink, Loader2, X, Eye, Heart, Phone, MessageCircle, ChevronLeft, ChevronRight, Trash2, Upload, CloudUpload, Share2 } from "lucide-react";
 import { useLocation } from "wouter";
 import { trpc } from "@/lib/trpc";
 import { toast } from "sonner";
@@ -29,6 +29,7 @@ interface PropertyForm {
   bathrooms: number;
   garageSpaces: number;
   propertyType: string;
+  finalidade: "venda" | "aluguel";
 }
 
 const emptyForm: PropertyForm = {
@@ -37,6 +38,7 @@ const emptyForm: PropertyForm = {
   images: [], videoUrl: "", plantaBaixaUrl: "",
   areaConstruida: "", areaCasa: "", areaTerreno: "",
   bedrooms: 0, bathrooms: 0, garageSpaces: 0, propertyType: "",
+  finalidade: "venda",
 };
 
 function formatCurrency(value: number | string) {
@@ -189,6 +191,7 @@ export default function Properties() {
       areaTerreno: property.areaTerreno?.toString() || "",
       bedrooms: property.bedrooms || 0, bathrooms: property.bathrooms || 0,
       garageSpaces: property.garageSpaces || 0, propertyType: property.propertyType || "",
+      finalidade: (property.finalidade === "aluguel" ? "aluguel" : "venda") as "venda" | "aluguel",
     });
     setShowForm(true);
   };
@@ -240,9 +243,22 @@ export default function Properties() {
                   <p className="text-muted-foreground text-sm mt-1">{properties?.length || 0} propriedades cadastradas</p>
                 </div>
               </div>
-              <Button onClick={() => { setShowForm(true); setEditingId(null); setForm({ ...emptyForm }); }} className="btn-premium text-sm">
-                <Plus className="mr-2 h-4 w-4" /> Novo Imóvel
-              </Button>
+              <div className="flex items-center gap-2">
+                <Button
+                  variant="outline"
+                  onClick={() => {
+                    navigator.clipboard.writeText('https://romateccrm.com/imoveis');
+                    toast.success('Link do catálogo copiado!');
+                  }}
+                  className="border-emerald/30 text-emerald hover:bg-emerald/10 text-sm"
+                >
+                  <Share2 className="mr-2 h-4 w-4" />
+                  Compartilhar Catálogo
+                </Button>
+                <Button onClick={() => { setShowForm(true); setEditingId(null); setForm({ ...emptyForm }); }} className="btn-premium text-sm">
+                  <Plus className="mr-2 h-4 w-4" /> Novo Imóvel
+                </Button>
+              </div>
             </div>
           </div>
         </div>
@@ -267,7 +283,7 @@ export default function Properties() {
               </TabsList>
 
               <TabsContent value="info" className="space-y-4">
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                   <div>
                     <label className="text-sm font-medium text-muted-foreground mb-1 block">Nome/Denominação *</label>
                     <Input value={form.denomination} onChange={e => setForm(p => ({ ...p, denomination: e.target.value }))} placeholder="Ex: Residencial Vaz-01" className="bg-secondary/30 border-border/50" />
@@ -283,6 +299,13 @@ export default function Properties() {
                       <option value="Chácara">Chácara</option>
                       <option value="Fazenda">Fazenda</option>
                       <option value="Lote">Lote</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label className="text-sm font-medium text-muted-foreground mb-1 block">Finalidade</label>
+                    <select value={form.finalidade} onChange={e => setForm(p => ({ ...p, finalidade: e.target.value as "venda" | "aluguel" }))} className="w-full h-10 px-3 rounded-md border border-border/50 bg-secondary/30 text-foreground text-sm">
+                      <option value="venda">🏠 Venda</option>
+                      <option value="aluguel">🔑 Aluguel</option>
                     </select>
                   </div>
                 </div>

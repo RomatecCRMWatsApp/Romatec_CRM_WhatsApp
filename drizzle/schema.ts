@@ -62,6 +62,7 @@ export const properties = mysqlTable("properties", {
   garageSpaces: int("garageSpaces"),
   propertyType: varchar("propertyType", { length: 100 }),
   publicSlug: varchar("publicSlug", { length: 255 }),
+  finalidade: varchar("finalidade", { length: 20 }).default("venda").notNull(),
   status: mysqlEnum("status", ["available", "sold", "inactive"]).default("available").notNull(),
   createdAt: timestamp("createdAt").defaultNow().notNull(),
   updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),

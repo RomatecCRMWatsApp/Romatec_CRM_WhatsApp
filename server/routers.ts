@@ -132,6 +132,7 @@ export const appRouter = router({
         bedrooms: z.coerce.number().optional(),
         bathrooms: z.coerce.number().optional(),
         description: z.string().optional(),
+        finalidade: z.enum(["venda", "aluguel"]).default("venda"),
         status: z.enum(["available", "unavailable"]).default("available")
       }))
       .mutation(async ({ input }) => {
@@ -170,6 +171,7 @@ export const appRouter = router({
         images: z.array(z.string()).optional(),
         videoUrl: z.string().optional(),
         plantaBaixaUrl: z.string().optional(),
+        finalidade: z.enum(["venda", "aluguel"]).optional(),
         status: z.enum(["available", "unavailable"]).optional()
       }))
       .mutation(async ({ input }) => {

@@ -12,6 +12,7 @@ import Properties from "./pages/Properties";
 import Campaigns from "./pages/Campaigns";
 import Settings from "./pages/Settings";
 import PropertyPublic from "./pages/PropertyPublic";
+import PropertiesCatalog from "./pages/PropertiesCatalog";
 import Performance from "./pages/Performance";
 import Leads from "./pages/Leads";
 import Setup from "./pages/Setup";
@@ -63,6 +64,7 @@ function Router() {
       <Route path={"/leads"}>
         {() => <SetupGuard component={Leads} />}
       </Route>
+      <Route path={"/imoveis"} component={PropertiesCatalog} />
       <Route path={"/imovel/:slug"} component={PropertyPublic} />
       <Route path={"/404"} component={NotFound} />
       <Route component={NotFound} />

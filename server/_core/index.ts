@@ -260,6 +260,14 @@ async function startServer() {
       console.error('❌ Erro na migration enlargePlantaBaixaUrl:', e);
     }
 
+    // MIGRATION: finalidade (venda/aluguel) em properties
+    try {
+      const { addFinalidadeToProperties } = await import('./migrations/addFinalidadeToProperties');
+      await addFinalidadeToProperties();
+    } catch (e) {
+      console.error('❌ Erro na migration addFinalidadeToProperties:', e);
+    }
+
     // STARTUP: Carregar credenciais salvas no DB para process.env (fallback do .env)
     try {
       const { getCompanyConfig } = await import('../db');
