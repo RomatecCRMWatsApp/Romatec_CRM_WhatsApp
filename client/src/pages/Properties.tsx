@@ -255,26 +255,9 @@ export default function Properties() {
                   <Share2 className="mr-2 h-4 w-4" />
                   Compartilhar Catálogo
                 </Button>
-                {(() => {
-                  const activeCount = (properties || []).filter((p: any) => p.status === "available").length;
-                  const atLimit = activeCount >= 5;
-                  return (
-                    <div className="relative group">
-                      <Button
-                        onClick={() => { if (!atLimit) { setShowForm(true); setEditingId(null); setForm({ ...emptyForm }); } }}
-                        className={`btn-premium text-sm ${atLimit ? "opacity-50 cursor-not-allowed" : ""}`}
-                        disabled={atLimit}
-                      >
-                        <Plus className="mr-2 h-4 w-4" /> Novo Imóvel
-                      </Button>
-                      {atLimit && (
-                        <div className="absolute right-0 top-full mt-1 w-56 bg-secondary border border-border rounded-lg p-2 text-xs text-muted-foreground shadow-lg z-10 hidden group-hover:block">
-                          Limite de 5 imóveis ativos atingido. Inative um imóvel para cadastrar outro.
-                        </div>
-                      )}
-                    </div>
-                  );
-                })()}
+                <Button onClick={() => { setShowForm(true); setEditingId(null); setForm({ ...emptyForm }); }} className="btn-premium text-sm">
+                  <Plus className="mr-2 h-4 w-4" /> Novo Imóvel
+                </Button>
               </div>
             </div>
           </div>

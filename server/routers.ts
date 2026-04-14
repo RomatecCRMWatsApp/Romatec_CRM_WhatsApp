@@ -139,11 +139,6 @@ export const appRouter = router({
         const slug = input.denomination.toLowerCase().replace(/[^a-z0-9]+/g, '-') + '-' + Date.now().toString(36);
         const db = await getDb();
         if (!db) throw new Error("Database not available");
-        // Limite de 5 imóveis ativos
-        const activeCount = await db.select().from(properties).where(eq(properties.status, "available"));
-        if (activeCount.length >= 5) {
-          throw new Error("Limite de 5 imóveis ativos atingido. Inative um imóvel antes de cadastrar outro.");
-        }
         const result = await db.insert(properties).values({
           ...input,
           price: input.price as any,
@@ -279,6 +274,8 @@ export const appRouter = router({
       if (!db) throw new Error("Database not available");
       const allProperties = await db.select().from(properties).where(eq(properties.status, "available"));
       if (allProperties.length === 0) throw new Error("Nenhum imovel disponivel");
+      // Limite de 5 imóveis em campanhas
+      const propertiesForCampaign = allProperties.slice(0, 5);
       const allContacts = await db.select().from(contacts).where(eq(contacts.status, "active"));
       const shuffled = [...allContacts].sort(() => Math.random() - 0.5);
       // NEVER delete existing campaigns — preserves IDs and avoids drift
@@ -287,7 +284,7 @@ export const appRouter = router({
       const existingByPropId = new Map(existingCampaigns.map(c => [c.propertyId, c]));
       const result = [];
       const usedContactIds = new Set<number>();
-      for (const prop of allProperties) {
+      for (const prop of propertiesForCampaign) {
         let campaignId: number;
         const existing = existingByPropId.get(prop.id);
         if (existing) {
