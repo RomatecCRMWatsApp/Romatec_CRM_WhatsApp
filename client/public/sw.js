@@ -1,4 +1,4 @@
-const CACHE_NAME = 'romatec-crm-v1';
+const CACHE_NAME = 'romatec-crm-v2';
 const OFFLINE_URL = '/';
 
 // Install - cache essential resources
