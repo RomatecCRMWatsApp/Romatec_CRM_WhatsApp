@@ -181,8 +181,20 @@ async function startServer() {
       return res.status(400).json({ error: "URL inválida" });
     }
     try {
-      const response = await fetch(url);
-      if (!response.ok) return res.status(502).json({ error: "Falha ao buscar PDF" });
+      console.log(`[PDF Proxy] Buscando: ${url.substring(0, 100)}`);
+      const response = await fetch(url, {
+        headers: {
+          'User-Agent': 'Mozilla/5.0 (compatible; RomatecCRM/1.0)',
+          'Accept': 'application/pdf,*/*',
+        },
+        redirect: 'follow',
+      });
+      console.log(`[PDF Proxy] Status: ${response.status} ${response.statusText} — Content-Type: ${response.headers.get('content-type')}`);
+      if (!response.ok) {
+        const body = await response.text().catch(() => '');
+        console.error(`[PDF Proxy] Erro Cloudinary: ${response.status} — ${body.substring(0, 200)}`);
+        return res.status(502).json({ error: `Falha ao buscar PDF (${response.status})`, detail: body.substring(0, 200) });
+      }
       const contentType = response.headers.get("content-type") || "application/pdf";
       const buffer = await response.arrayBuffer();
       res.setHeader("Content-Type", contentType);
@@ -190,6 +202,7 @@ async function startServer() {
       res.setHeader("Cache-Control", "public, max-age=3600");
       res.send(Buffer.from(buffer));
     } catch (e) {
+      console.error('[PDF Proxy] Exceção:', e);
       res.status(500).json({ error: String(e) });
     }
   });

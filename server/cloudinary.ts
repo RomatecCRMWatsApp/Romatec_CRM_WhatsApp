@@ -32,13 +32,14 @@ export async function uploadToCloudinary(
   if (fileType.startsWith('video/')) resourceType = 'video';
   else if (fileType === 'application/pdf') resourceType = 'raw';
 
-  // Gerar public_id único
+  // Gerar public_id único — para PDF mantém extensão para detecção no frontend
+  const ext = resourceType === 'raw' ? (fileName.match(/\.[^/.]+$/)?.[0] ?? '') : '';
   const safeName = fileName
     .replace(/\.[^/.]+$/, '')
     .replace(/[^a-zA-Z0-9_-]/g, '_')
     .substring(0, 40);
   const folder = 'romatec_imoveis';
-  const publicId = `${folder}/${Date.now()}_${safeName}`;
+  const publicId = `${folder}/${Date.now()}_${safeName}${ext}`;
 
   // Parâmetros para assinar — access_mode=public garante acesso sem autenticação
   const paramsToSign: Record<string, string> = {
