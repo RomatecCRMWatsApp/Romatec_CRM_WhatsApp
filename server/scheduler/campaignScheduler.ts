@@ -376,6 +376,24 @@ export class CampaignScheduler {
     const db = await getDb();
     if (!db) return;
 
+    // Auto-fix: garantir que os flags activeDay/activeNight estejam corretos para o modo atual
+    // Protege contra estado stale após restart ou falha no auto-restore
+    if (this.state.nightMode) {
+      const wrongFlags = await db.select().from(campaigns)
+        .where(and(eq(campaigns.status, 'running'), eq(campaigns.activeNight, false)));
+      if (wrongFlags.length > 0) {
+        await db.update(campaigns).set({ activeNight: true, activeDay: false }).where(eq(campaigns.status, 'running'));
+        console.log(`🔧 [Auto-fix] ${wrongFlags.length} campanha(s) com activeNight=false corrigidas → true`);
+      }
+    } else {
+      const wrongFlags = await db.select().from(campaigns)
+        .where(and(eq(campaigns.status, 'running'), eq(campaigns.activeDay, false)));
+      if (wrongFlags.length > 0) {
+        await db.update(campaigns).set({ activeDay: true, activeNight: false }).where(eq(campaigns.status, 'running'));
+        console.log(`🔧 [Auto-fix] ${wrongFlags.length} campanha(s) com activeDay=false corrigidas → true`);
+      }
+    }
+
     const allCampaigns = await db.select().from(campaigns).where(eq(campaigns.status, 'running'));
     const campaign = this.getCampaignForCurrentHour(allCampaigns);
 
