@@ -1,14 +1,43 @@
 import { eq } from "drizzle-orm";
-import { drizzle } from "drizzle-orm/mysql2";
-import { createPool } from "mysql2/promise";
 import { InsertUser, users, contacts, InsertContact, properties, InsertProperty, campaigns, InsertCampaign, companyConfig, InsertCompanyConfig } from "../drizzle/schema";
 import { ENV } from './_core/env';
 
-let _db: ReturnType<typeof drizzle> | null = null;
+// ─── Driver detection ─────────────────────────────────────────────────────
+let _db: any = null;
+let _dbDriver: 'mysql' | 'sqlite' = 'mysql';
 
-export async function getDb() {
-  if (!_db && process.env.DATABASE_URL) {
+export function getDbDriver(): 'mysql' | 'sqlite' { return _dbDriver; }
+
+export async function getDb(): Promise<any> {
+  if (_db) return _db;
+
+  // ── SQLite (modo local / Electron) ────────────────────────────────────
+  if (process.env.DATABASE_DRIVER === 'sqlite') {
     try {
+      const BetterSQLite3 = (await import('better-sqlite3')).default;
+      const { drizzle } = await import('drizzle-orm/better-sqlite3');
+      const dbPath = process.env.SQLITE_PATH || './romatec-crm.db';
+      const sqlite = new BetterSQLite3(dbPath);
+      sqlite.pragma('journal_mode = WAL'); // melhor performance concorrente
+      sqlite.pragma('foreign_keys = ON');
+      _db = drizzle(sqlite);
+      _dbDriver = 'sqlite';
+      console.log(`[Database] SQLite conectado: ${dbPath}`);
+      // Criar tabelas na primeira execução
+      const { initSqliteTables } = await import('./_core/migrations/initSqlite');
+      initSqliteTables(sqlite);
+    } catch (error) {
+      console.error("[Database] SQLite falhou:", error);
+      _db = null;
+    }
+    return _db;
+  }
+
+  // ── MySQL (Railway / produção) ────────────────────────────────────────
+  if (process.env.DATABASE_URL) {
+    try {
+      const { drizzle } = await import('drizzle-orm/mysql2');
+      const { createPool } = await import('mysql2/promise');
       const rawUrl = process.env.DATABASE_URL || '';
       const cleanUrl = rawUrl.startsWith('DATABASE_URL=') ? rawUrl.replace('DATABASE_URL=', '') : rawUrl;
       const url = new URL(cleanUrl);
@@ -24,9 +53,10 @@ export async function getDb() {
         queueLimit: 0,
       });
       _db = drizzle(pool);
-      console.log("[Database] Pool connected successfully");
+      _dbDriver = 'mysql';
+      console.log("[Database] MySQL pool conectado");
     } catch (error) {
-      console.error("[Database] Failed to connect:", error);
+      console.error("[Database] MySQL falhou:", error);
       _db = null;
     }
   }
@@ -55,7 +85,11 @@ export async function upsertUser(user: InsertUser): Promise<void> {
     else if (user.openId === ENV.ownerOpenId) { values.role = 'admin'; updateSet.role = 'admin'; }
     if (!values.lastSignedIn) values.lastSignedIn = new Date();
     if (Object.keys(updateSet).length === 0) updateSet.lastSignedIn = new Date();
-    await db.insert(users).values(values).onDuplicateKeyUpdate({ set: updateSet });
+    if (getDbDriver() === 'sqlite') {
+      await db.insert(users).values(values).onConflictDoUpdate({ target: users.openId, set: updateSet });
+    } else {
+      await db.insert(users).values(values).onDuplicateKeyUpdate({ set: updateSet });
+    }
   } catch (error) {
     console.error("[Database] Failed to upsert user:", error);
     throw error;
