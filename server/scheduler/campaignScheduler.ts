@@ -825,16 +825,15 @@ export class CampaignScheduler {
     const db = await getDb();
     if (!db) return;
 
-    const now = new Date();
     const allContacts = await db.select().from(contacts).where(eq(contacts.status, 'active'));
-    const unblocked = allContacts.filter(c => !c.blockedUntil || c.blockedUntil <= now);
 
     // Excluir contatos já usados em outras campanhas
+    // Bloqueio individual é controlado por campaignContacts.status = 'blocked' (v9.0)
     const existingAssignments = await db.select().from(campaignContacts);
     const alreadyUsed = new Set<number>(existingAssignments.map(cc => cc.contactId));
     if (globalUsedIds) globalUsedIds.forEach(id => alreadyUsed.add(id));
 
-    const available = unblocked.filter(c => !alreadyUsed.has(c.id));
+    const available = allContacts.filter(c => !alreadyUsed.has(c.id));
 
     if (available.length < 2) {
       console.warn(`⚠️ Apenas ${available.length} contatos disponíveis sem repetição para campanha ${campaignId}`);

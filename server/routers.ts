@@ -436,9 +436,9 @@ export const appRouter = router({
       if (!db) throw new Error("Database not available");
       await db.update(campaigns).set({ messagesPerHour: input.messagesPerHour, totalContacts: 2 }).where(eq(campaigns.id, input.campaignId));
       await db.delete(campaignContacts).where(eq(campaignContacts.campaignId, input.campaignId));
-      const now = new Date();
       const allContacts = await db.select().from(contacts).where(eq(contacts.status, "active"));
-      const selected = [...allContacts].filter(c => !c.blockedUntil || c.blockedUntil <= now).sort(() => Math.random() - 0.5).slice(0, 2);
+      // Bloqueio é controlado por campaignContacts.status = 'blocked' (v9.0) — não mais pelo campo blockedUntil
+      const selected = [...allContacts].sort(() => Math.random() - 0.5).slice(0, 2);
       for (const contact of selected) {
         await db.insert(campaignContacts).values({ campaignId: input.campaignId, contactId: contact.id, messagesSent: 0, status: "pending" });
       }
