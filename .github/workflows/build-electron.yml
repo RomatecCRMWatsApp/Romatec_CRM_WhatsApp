@@ -1,0 +1,68 @@
+name: Build Electron .exe
+
+on:
+  # Dispara automaticamente ao criar uma tag v*.*.*
+  push:
+    tags:
+      - 'v*.*.*'
+  # Permite disparar manualmente pelo GitHub → Actions → Run workflow
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Versão do release (ex: 1.2.0)'
+        required: false
+        default: ''
+
+jobs:
+  build:
+    runs-on: windows-latest
+    permissions:
+      contents: write   # necessário para criar releases
+
+    steps:
+      - name: Checkout código
+        uses: actions/checkout@v4
+
+      - name: Configurar Node.js 20
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+          cache-dependency-path: electron/package-lock.json
+
+      - name: Instalar dependências Electron
+        working-directory: electron
+        run: npm install
+
+      - name: Gerar ícone (PNG → ICO)
+        working-directory: electron
+        run: node make-icon.mjs
+
+      - name: Build instalador Windows (.exe)
+        working-directory: electron
+        env:
+          CSC_IDENTITY_AUTO_DISCOVERY: 'false'
+        run: npm run build:win
+
+      - name: Listar arquivos gerados
+        run: dir electron\dist\*.exe
+
+      - name: Criar GitHub Release e anexar .exe
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ github.ref_name }}
+          name: Romatec CRM ${{ github.ref_name }}
+          body: |
+            ## Romatec CRM ${{ github.ref_name }}
+
+            ### Instalação
+            1. Baixe o arquivo `Romatec CRM Setup *.exe`
+            2. Execute o instalador (clique em "Mais informações" → "Executar assim mesmo" se aparecer aviso)
+            3. O atalho será criado automaticamente na área de trabalho
+
+            ### Requisitos
+            - Windows 10/11 (64-bit)
+            - Conexão com internet (acessa romateccrm.com)
+          files: electron/dist/*.exe
+          draft: false
+          prerelease: false

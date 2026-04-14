@@ -1,0 +1,6 @@
+Coloque aqui o arquivo icon.ico (256x256 px) com o logo da Romatec.
+
+Conversor gratuito: https://convertio.co/pt/png-ico/
+Tamanho recomendado: 256x256 pixels
+
+Após adicionar o icon.ico, execute o build normalmente.

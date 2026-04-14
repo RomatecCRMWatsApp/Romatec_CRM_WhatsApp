@@ -3,9 +3,14 @@
 .pnpm-store/
 
 # Build outputs
-dist/
-build/
+/dist/
+/build/
 *.dist
+
+# Electron — ignorar dependências e saída, manter ícone e fonte
+electron/node_modules/
+electron/dist/
+electron/package-lock.json
 
 # Environment variables
 .env
