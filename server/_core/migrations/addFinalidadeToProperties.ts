@@ -5,7 +5,7 @@ export async function addFinalidadeToProperties() {
   try {
     const db = await getDb();
     if (!db) return;
-    await db.execute(sql`ALTER TABLE properties ADD COLUMN IF NOT EXISTS finalidade VARCHAR(20) NOT NULL DEFAULT 'venda'`);
+    await db.execute(sql`ALTER TABLE properties ADD COLUMN finalidade VARCHAR(20) NOT NULL DEFAULT 'venda'`);
     console.log('[Migration] ✅ finalidade adicionada em properties');
   } catch (e: any) {
     if (e?.message?.includes('Duplicate column') || e?.cause?.code === 'ER_DUP_FIELDNAME') {

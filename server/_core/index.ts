@@ -226,6 +226,31 @@ async function startServer() {
     serveStatic(app);
   }
 
+  // ── PRÉ-INICIALIZAÇÃO: rodar migrations ANTES do servidor aceitar conexões ──
+  // MIGRATION: Garantir colunas de API keys no companyConfig
+  try {
+    const { addApiKeysToCompanyConfig } = await import('./migrations/addApiKeysToCompanyConfig');
+    await addApiKeysToCompanyConfig();
+  } catch (e) {
+    console.error('❌ Erro na migration addApiKeysToCompanyConfig:', e);
+  }
+
+  // MIGRATION: plantaBaixaUrl → MEDIUMTEXT (suporta PDF base64)
+  try {
+    const { enlargePlantaBaixaUrl } = await import('./migrations/enlargePlantaBaixaUrl');
+    await enlargePlantaBaixaUrl();
+  } catch (e) {
+    console.error('❌ Erro na migration enlargePlantaBaixaUrl:', e);
+  }
+
+  // MIGRATION: finalidade (venda/aluguel) em properties — DEVE rodar antes do listen()
+  try {
+    const { addFinalidadeToProperties } = await import('./migrations/addFinalidadeToProperties');
+    await addFinalidadeToProperties();
+  } catch (e) {
+    console.error('❌ Erro na migration addFinalidadeToProperties:', e);
+  }
+
   const preferredPort = parseInt(process.env.PORT || "3000");
   const port = await findAvailablePort(preferredPort);
 
@@ -236,36 +261,12 @@ async function startServer() {
   server.listen(port, async () => {
     console.log(`Server running on http://localhost:${port}/`);
 
-    // MIGRATION: Garantir colunas de API keys no companyConfig
-    try {
-      const { addApiKeysToCompanyConfig } = await import('./migrations/addApiKeysToCompanyConfig');
-      await addApiKeysToCompanyConfig();
-    } catch (e) {
-      console.error('❌ Erro na migration addApiKeysToCompanyConfig:', e);
-    }
-
     // RESTORE: Mod_Vaz-02 deletado acidentalmente
     try {
       const { restoreModVaz02 } = await import('./migrations/restoreModVaz02');
       await restoreModVaz02();
     } catch (e) {
       console.error('❌ Erro no restore Mod_Vaz-02:', e);
-    }
-
-    // MIGRATION: plantaBaixaUrl → MEDIUMTEXT (suporta PDF base64)
-    try {
-      const { enlargePlantaBaixaUrl } = await import('./migrations/enlargePlantaBaixaUrl');
-      await enlargePlantaBaixaUrl();
-    } catch (e) {
-      console.error('❌ Erro na migration enlargePlantaBaixaUrl:', e);
-    }
-
-    // MIGRATION: finalidade (venda/aluguel) em properties
-    try {
-      const { addFinalidadeToProperties } = await import('./migrations/addFinalidadeToProperties');
-      await addFinalidadeToProperties();
-    } catch (e) {
-      console.error('❌ Erro na migration addFinalidadeToProperties:', e);
     }
 
     // STARTUP: Carregar credenciais salvas no DB para process.env (fallback do .env)
