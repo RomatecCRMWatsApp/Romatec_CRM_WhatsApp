@@ -277,6 +277,25 @@ export class CampaignScheduler {
     console.log('⏹️ Scheduler COMPLETAMENTE parado');
   }
 
+  /** Restaura estado do DB e retoma se estava rodando (chamado no startup) */
+  async restoreAndResume() {
+    try {
+      await this.loadStateFromDB();
+      const db = await getDb();
+      if (!db) return;
+      const rows = await db.select().from(schedulerStateTable).where(eq(schedulerStateTable.id, 1)).limit(1);
+      if (rows[0]?.status === 'running') {
+        const nightMode = this.getAutoNightMode();
+        console.log(`🔄 [Restore] Estado: running | Ciclo ${this.state.hourNumber + 1}/10 | ${nightMode ? 'NOITE' : 'DIA'}`);
+        await this.start(nightMode);
+      } else {
+        console.log('📋 [Restore] Scheduler estava parado — não reiniciado');
+      }
+    } catch (e) {
+      console.error('❌ Erro no restoreAndResume:', e);
+    }
+  }
+
   private startCheckLoop() {
     this.checkTimer = setInterval(async () => {
       if (!this.state.isRunning) return;
