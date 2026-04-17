@@ -1,192 +1,293 @@
-import { getDb } from "../db";
-import { campaigns, campaignContacts, messageSendLog } from "../../drizzle/schema";
-import { eq, lt } from "drizzle-orm";
-import { campaignScheduler } from "./campaignScheduler";
+import "dotenv/config";
+import express from "express";
+import { createServer } from "http";
+import net from "net";
+import { createExpressMiddleware } from "@trpc/server/adapters/express";
+import { registerOAuthRoutes } from "./oauth";
+import { appRouter } from "../routers";
+import { createContext } from "./context";
+import { serveStatic, setupVite } from "./vite";
 
-export const DAILY_SCHEDULE = {
-  RESET_START: "08:00",
-  RESET_END: "18:00",
-  FULL_RESTART: "20:00",
-  PREP_PAUSE: "06:00",
-  resetActions: {
-    clearCounters: true,
-    resetLeadQueues: true,
-    reloadNewContacts: true,
-    clearScheduledCampaigns: true,
-  }
-};
-
-class DailyScheduler {
-  private timer: NodeJS.Timeout | null = null;
-  private firedToday: Set<string> = new Set();
-  private readonly CHECK_INTERVAL_MS = 60 * 1000;
-
-  private getBrasiliaDate(): Date {
-    const now = new Date();
-    return new Date(now.toLocaleString("en-US", { timeZone: "America/Sao_Paulo" }));
-  }
-
-  private dayKey(d: Date): string {
-    return `${d.getFullYear()}-${d.getMonth()}-${d.getDate()}`;
-  }
-
-  start() {
-    if (this.timer) return;
-    console.log("📅 [DailyScheduler] Iniciado");
-    console.log("   08:00-18:00 → ATIVO DIA");
-    console.log("   18:00-20:00 → STANDBY/RESET");
-    console.log("   20:00-06:00 → ATIVO NOITE");
-    console.log("   06:00-08:00 → PAUSA/PREP");
-    this.timer = setInterval(() => void this.tick(), this.CHECK_INTERVAL_MS);
-  }
-
-  stop() {
-    if (this.timer) {
-      clearInterval(this.timer);
-      this.timer = null;
-    }
-    console.log("📅 [DailyScheduler] Parado");
-  }
-
-  private async tick() {
-    const now = this.getBrasiliaDate();
-    const h = now.getHours();
-    const m = now.getMinutes();
-    const day = this.dayKey(now);
-
-    if (h === 8 && m === 0) {
-      const key = `${day}-start-day`;
-      if (!this.firedToday.has(key)) {
-        this.firedToday.add(key);
-        await this.startDayMode();
-      }
-    } else if (h === 18 && m === 0) {
-      const key = `${day}-start-reset`;
-      if (!this.firedToday.has(key)) {
-        this.firedToday.add(key);
-        await this.startResetMode();
-      }
-    } else if (h === 20 && m === 0) {
-      const key = `${day}-start-night`;
-      if (!this.firedToday.has(key)) {
-        this.firedToday.add(key);
-        await this.startNightMode();
-      }
-    } else if (h === 6 && m === 0) {
-      const key = `${day}-start-pause`;
-      if (!this.firedToday.has(key)) {
-        this.firedToday.add(key);
-        await this.startPauseMode();
-      }
-    }
-
-    for (const key of this.firedToday) {
-      if (!key.startsWith(day)) this.firedToday.delete(key);
-    }
-  }
-
-  private async startDayMode() {
-    console.log("☀️  [DailyScheduler] 08:00 — ATIVO DIA");
-    const db = await getDb();
-    if (!db) return;
-    try {
-      await db.update(campaigns).set({ activeDay: true, activeNight: false }).where(eq(campaigns.status, "running"));
-      console.log("   ✅ activeDay=true, activeNight=false");
-      if (!campaignScheduler.getState().isRunning) {
-        await campaignScheduler.start(false);
-        console.log("   ✅ CampaignScheduler reiniciado (modo dia)");
-      }
-    } catch (err) {
-      console.error("   ❌ Erro ao iniciar dia:", err);
-    }
-  }
-
-  private async startResetMode() {
-    console.log("🔄 [DailyScheduler] 18:00 → 20:00 — STANDBY/RESET");
-    const db = await getDb();
-    if (!db) {
-      console.error("   ❌ DB indisponível");
-      return;
-    }
-    try {
-      await db.update(campaigns).set({ activeDay: false, activeNight: false }).where(eq(campaigns.status, "running"));
-      console.log("   ✅ Campanhas desativadas");
-      await db.update(campaigns).set({ sentCount: 0 }).where(eq(campaigns.status, "running"));
-      console.log("   ✅ sentCount zerado");
-      await db.update(campaignContacts).set({ status: "pending", messagesSent: 0 }).where(eq(campaignContacts.status, "blocked"));
-      console.log("   ✅ Contatos bloqueados → pending");
-      const cutoffUnix = Math.floor((Date.now() - 24 * 60 * 60 * 1000) / 1000);
-      const cutoffHour = Math.floor(cutoffUnix / 3600) * 3600;
-      await db.delete(messageSendLog).where(lt(messageSendLog.cycleHour, cutoffHour));
-      console.log("   ✅ messageSendLog antigo limpo");
-      await db.delete(campaignContacts).where(eq(campaignContacts.status, "pending"));
-      console.log("   ✅ Filas pending limpas");
-      console.log("   🕐 Aguardando 20:00...");
-    } catch (err) {
-      console.error("   ❌ Erro no reset:", err);
-    }
-  }
-
-  private async startNightMode() {
-    console.log("🌙 [DailyScheduler] 20:00 — ATIVO NOITE");
-    const db = await getDb();
-    if (!db) return;
-    try {
-      await db.update(campaigns).set({ activeNight: true, activeDay: false }).where(eq(campaigns.status, "running"));
-      console.log("   ✅ activeNight=true, activeDay=false");
-      if (campaignScheduler.getState().isRunning) {
-        campaignScheduler.stop();
-        await new Promise(r => setTimeout(r, 500));
-      }
-      await campaignScheduler.start(true);
-      console.log("   ✅ CampaignScheduler reiniciado (modo noite)");
-      await this.notifyPhaseChange("🌙 CICLO NOITE INICIADO", [
-        "✅ 100% online",
-        "✅ Contadores zerados",
-        "✅ Leads desbloqueados",
-        "✅ Contatos novos carregados",
-        "",
-        "🚀 Trabalhando intenso 20h-06h...",
-      ]);
-    } catch (err) {
-      console.error("   ❌ Erro ao iniciar noite:", err);
-    }
-  }
-
-  private async startPauseMode() {
-    console.log("⏸️  [DailyScheduler] 06:00 — PAUSA/PREP");
-    try {
-      const db = await getDb();
-      if (db) {
-        await db.update(campaigns).set({ activeDay: false, activeNight: false }).where(eq(campaigns.status, "running"));
-        console.log("   ✅ Campanhas desativadas");
-      }
-      campaignScheduler.stop();
-      console.log("   ✅ CampaignScheduler parado");
-      console.log("   🕐 Aguardando 08:00...");
-    } catch (err) {
-      console.error("   ❌ Erro ao pausar:", err);
-    }
-  }
-
-  private async notifyPhaseChange(title: string, items: string[]) {
-    try {
-      const { getCompanyConfig } = await import("../db");
-      const { sendMessageViaZAPI } = await import("../zapi-integration");
-      const config = await getCompanyConfig();
-      if (!config?.zApiInstanceId || !config?.zApiToken || !config?.phone) return;
-      const msg = [`🤖 *ROMATEC CRM — ${title}*`, "", ...items].join("\n");
-      await sendMessageViaZAPI({
-        instanceId: config.zApiInstanceId,
-        token: config.zApiToken,
-        clientToken: config.zApiClientToken || undefined,
-        phone: config.phone,
-        message: msg,
-      });
-    } catch {
-      // não crítico
-    }
-  }
+function isPortAvailable(port: number): Promise<boolean> {
+  return new Promise(resolve => {
+    const server = net.createServer();
+    server.listen(port, () => {
+      server.close(() => resolve(true));
+    });
+    server.on("error", () => resolve(false));
+  });
 }
 
-export const dailyScheduler = new DailyScheduler();
+async function findAvailablePort(startPort: number = 3000): Promise<number> {
+  for (let port = startPort; port < startPort + 20; port++) {
+    if (await isPortAvailable(port)) {
+      return port;
+    }
+  }
+  throw new Error(`No available port found starting from ${startPort}`);
+}
+
+async function startServer() {
+  const app = express();
+  const server = createServer(app);
+  app.use(express.json({ limit: "50mb" }));
+  app.use(express.urlencoded({ limit: "50mb", extended: true }));
+  registerOAuthRoutes(app);
+
+  app.post('/api/webhook/zapi', async (req, res) => {
+    try {
+      const { parseWebhookPayload } = await import('../zapi-integration');
+      const { processBotMessage, registerBotMessage } = await import('../bot-ai');
+      const { sendMessageViaZAPI } = await import('../zapi-integration');
+      const payload = parseWebhookPayload(req.body);
+
+      if (!payload) {
+        return res.json({ received: true, processed: false });
+      }
+
+      const msgText = String(payload.message || '').trim();
+      if (!msgText && !payload.audioUrl) {
+        console.log(`[Webhook] Ignorado: mensagem vazia de ${payload.phone}`);
+        return res.json({ received: true, processed: false, reason: 'empty' });
+      }
+
+      console.log(`[Webhook] ${payload.phone} - "${msgText.substring(0, 50)}"`);
+
+      let senderName = payload.senderName || 'Cliente';
+      try {
+        const { getDb } = await import('../db');
+        const db = await getDb();
+        if (db) {
+          const { contacts } = await import('../../drizzle/schema');
+          const allContacts = await db.select().from(contacts);
+          const contact = allContacts.find((c: any) => {
+            const cleanDb = c.phone.replace(/\D/g, '');
+            return cleanDb === payload.phone || cleanDb.endsWith(payload.phone.slice(-8));
+          });
+          if (contact) {
+            senderName = contact.name || senderName;
+            console.log(`[Webhook] Contato encontrado: ${senderName}`);
+            try {
+              const { campaignContacts } = await import('../../drizzle/schema');
+              const { eq } = await import('drizzle-orm');
+              await db.update(campaignContacts)
+                .set({ messagesSent: 0, status: "pending" })
+                .where(eq(campaignContacts.contactId, contact.id));
+              console.log(`[Webhook] ✅ Tentativas resetadas para ${senderName} (respondeu)`);
+            } catch (resetErr) {
+              console.warn('[Webhook] Erro ao resetar tentativas (não crítico):', resetErr);
+            }
+          } else {
+            console.log(`[Webhook] Contato não encontrado no banco, usando pushName: ${senderName}`);
+          }
+        }
+      } catch (dbErr) {
+        console.warn('[Webhook] Erro ao buscar contato (não crítico):', dbErr);
+      }
+
+      try {
+        const botResponse = await processBotMessage({
+          phone: payload.phone,
+          message: msgText,
+          audioUrl: payload.audioUrl,
+          senderName,
+        });
+
+        if (botResponse.text) {
+          const instanceId = process.env.ZAPI_INSTANCE_ID;
+          const token = process.env.ZAPI_TOKEN;
+          const clientToken = process.env.ZAPI_CLIENT_TOKEN;
+
+          if (instanceId && token) {
+            const sendResult = await sendMessageViaZAPI({
+              instanceId,
+              token,
+              clientToken: clientToken || undefined,
+              phone: payload.phone,
+              message: botResponse.text,
+            });
+
+            if (sendResult.success) {
+              registerBotMessage(payload.phone, senderName);
+              console.log(`[Bot] ✅ Resposta enviada para ${senderName} (${payload.phone})`);
+            } else {
+              console.error(`[Bot] ❌ Falha ao enviar para ${senderName}: ${sendResult.error}`);
+            }
+          } else {
+            console.error('[Bot] Credenciais Z-API não encontradas no env');
+          }
+        }
+      } catch (botError) {
+        console.error('[Bot] Erro ao processar:', botError);
+      }
+
+      res.json({ received: true, processed: true });
+    } catch (error) {
+      console.error('[Webhook] Erro:', error);
+      res.json({ received: true, processed: false, error: String(error) });
+    }
+  });
+
+  app.post('/api/upload', express.raw({ type: '*/*', limit: '100mb' }), async (req, res) => {
+    try {
+      const fileName = (req.headers['x-file-name'] as string) || 'upload';
+      const fileType = (req.headers['x-file-type'] as string) || 'application/octet-stream';
+
+      const allowedTypes = ['image/jpeg', 'image/png', 'image/webp', 'image/gif', 'image/jpg', 'video/mp4', 'video/webm', 'video/quicktime', 'application/pdf'];
+      const isAllowed = allowedTypes.some(t => fileType === t) || fileType.startsWith('image/') || fileType.startsWith('video/');
+      if (!isAllowed) {
+        return res.status(400).json({ success: false, error: 'Tipo de arquivo não permitido. Use: JPG, PNG, WEBP, MP4, PDF' });
+      }
+
+      const buffer = req.body as Buffer;
+      if (!buffer || buffer.length === 0) {
+        return res.status(400).json({ success: false, error: 'Arquivo vazio' });
+      }
+      if (buffer.length > 100 * 1024 * 1024) {
+        return res.status(400).json({ success: false, error: 'Arquivo excede 100MB' });
+      }
+
+      if (fileType === 'application/pdf') {
+        const base64 = buffer.toString('base64');
+        const url = `data:application/pdf;base64,${base64}`;
+        console.log(`[Upload] ✅ PDF base64 (${(buffer.length / 1024).toFixed(1)}KB)`);
+        return res.json({ success: true, url });
+      }
+
+      console.log(`[Upload] Enviando para Cloudinary: ${fileName} (${fileType}, ${(buffer.length / 1024).toFixed(1)}KB)`);
+      const { uploadToCloudinary } = await import('../cloudinary');
+      const { url } = await uploadToCloudinary(buffer, fileType, fileName);
+      console.log(`[Upload] ✅ Cloudinary: ${url}`);
+      res.json({ success: true, url });
+    } catch (error) {
+      console.error('[Upload] Erro:', error);
+      res.status(500).json({ success: false, error: String(error) });
+    }
+  });
+
+  app.get("/api/pdf-proxy", async (req, res) => {
+    const url = req.query.url as string;
+    if (!url || !/^https?:\/\//.test(url)) {
+      return res.status(400).json({ error: "URL inválida" });
+    }
+    try {
+      const isCloudinary = url.includes('res.cloudinary.com');
+      const headers: Record<string, string> = {
+        'User-Agent': 'Mozilla/5.0 (compatible; RomatecCRM/1.0)',
+        'Accept': 'application/pdf,*/*',
+      };
+      if (isCloudinary) {
+        const CLOUD_API_KEY = process.env.CLOUDINARY_API_KEY || '454146681184898';
+        const CLOUD_API_SECRET = process.env.CLOUDINARY_API_SECRET || 'soDNjdzXi2Hhd9NLvLuZmxrBi4g';
+        const credentials = Buffer.from(`${CLOUD_API_KEY}:${CLOUD_API_SECRET}`).toString('base64');
+        headers['Authorization'] = `Basic ${credentials}`;
+      }
+      const response = await fetch(url, { headers, redirect: 'follow' });
+      console.log(`[PDF Proxy] ${response.status} — ${url.substring(0, 80)}`);
+      if (!response.ok) {
+        return res.status(502).json({ error: `Falha ao buscar PDF (${response.status})` });
+      }
+      const contentType = response.headers.get("content-type") || "application/pdf";
+      const buffer = await response.arrayBuffer();
+      res.setHeader("Content-Type", "application/pdf");
+      res.setHeader("Content-Disposition", "inline");
+      res.setHeader("Cache-Control", "public, max-age=3600");
+      res.send(Buffer.from(buffer));
+    } catch (e) {
+      res.status(500).json({ error: String(e) });
+    }
+  });
+
+  app.use(
+    "/api/trpc",
+    createExpressMiddleware({
+      router: appRouter,
+      createContext,
+    })
+  );
+  
+  if (process.env.NODE_ENV === "development") {
+    await setupVite(app, server);
+  } else {
+    serveStatic(app);
+  }
+
+  try {
+    const { addApiKeysToCompanyConfig } = await import('./migrations/addApiKeysToCompanyConfig');
+    await addApiKeysToCompanyConfig();
+  } catch (e) {
+    console.error('❌ Erro na migration addApiKeysToCompanyConfig:', e);
+  }
+
+  try {
+    const { enlargePlantaBaixaUrl } = await import('./migrations/enlargePlantaBaixaUrl');
+    await enlargePlantaBaixaUrl();
+  } catch (e) {
+    console.error('❌ Erro na migration enlargePlantaBaixaUrl:', e);
+  }
+
+  try {
+    const { addFinalidadeToProperties } = await import('./migrations/addFinalidadeToProperties');
+    await addFinalidadeToProperties();
+  } catch (e) {
+    console.error('❌ Erro na migration addFinalidadeToProperties:', e);
+  }
+
+  const preferredPort = parseInt(process.env.PORT || "3000");
+  const port = await findAvailablePort(preferredPort);
+
+  if (port !== preferredPort) {
+    console.log(`Port ${preferredPort} is busy, using port ${port} instead`);
+  }
+
+  server.listen(port, async () => {
+    console.log(`Server running on http://localhost:${port}/`);
+
+    try {
+      const { restoreModVaz02 } = await import('./migrations/restoreModVaz02');
+      await restoreModVaz02();
+    } catch (e) {
+      console.error('❌ Erro no restore Mod_Vaz-02:', e);
+    }
+
+    try {
+      const { getCompanyConfig } = await import('../db');
+      const cfg = await getCompanyConfig();
+      if (cfg) {
+        if (!process.env.TELEGRAM_BOT_TOKEN && cfg.telegramBotToken) {
+          process.env.TELEGRAM_BOT_TOKEN = cfg.telegramBotToken;
+          console.log('🔑 TELEGRAM_BOT_TOKEN carregado do banco');
+        }
+        if (!process.env.TELEGRAM_CHAT_ID && cfg.telegramChatId) {
+          process.env.TELEGRAM_CHAT_ID = cfg.telegramChatId;
+          console.log('🔑 TELEGRAM_CHAT_ID carregado do banco');
+        }
+        if (!process.env.OPENAI_API_KEY && cfg.openAiApiKey) {
+          process.env.OPENAI_API_KEY = cfg.openAiApiKey;
+          console.log('🔑 OPENAI_API_KEY carregado do banco');
+        }
+      }
+    } catch (e) {
+      console.error('❌ Erro ao carregar credenciais do banco:', e);
+    }
+
+    // AUTO-RESTART: Verificar se o scheduler estava rodando antes do deploy
+    try {
+      const { campaignScheduler } = await import('../scheduler/campaignScheduler');
+      console.log('\n🔍 Verificando estado do scheduler no banco...');
+      await campaignScheduler.restoreAndResume();
+    } catch (error) {
+      console.error('❌ Erro no auto-restart do scheduler:', error);
+    }
+
+    // DAILY SCHEDULER: Resets diários (08h standby / 18h prep / 20h full restart)
+    try {
+      const { dailyScheduler } = await import('../scheduler/dailyScheduler');
+      dailyScheduler.start();
+    } catch (error) {
+      console.error('❌ Erro ao iniciar dailyScheduler:', error);
+    }
+  });
+}
+
+startServer().catch(console.error);
