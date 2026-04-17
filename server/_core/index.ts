@@ -30,13 +30,10 @@ async function findAvailablePort(startPort: number = 3000): Promise<number> {
 async function startServer() {
   const app = express();
   const server = createServer(app);
-  // Configure body parser with larger size limit for file uploads
   app.use(express.json({ limit: "50mb" }));
   app.use(express.urlencoded({ limit: "50mb", extended: true }));
-  // OAuth callback under /api/oauth/callback
   registerOAuthRoutes(app);
 
-  // Webhook Z-API - recebe respostas do WhatsApp
   app.post('/api/webhook/zapi', async (req, res) => {
     try {
       const { parseWebhookPayload } = await import('../zapi-integration');
@@ -48,7 +45,6 @@ async function startServer() {
         return res.json({ received: true, processed: false });
       }
 
-      // Ignorar mensagens vazias
       const msgText = String(payload.message || '').trim();
       if (!msgText && !payload.audioUrl) {
         console.log(`[Webhook] Ignorado: mensagem vazia de ${payload.phone}`);
@@ -57,7 +53,6 @@ async function startServer() {
 
       console.log(`[Webhook] ${payload.phone} - "${msgText.substring(0, 50)}"`);
 
-      // Buscar nome do contato (opcional, não bloqueia o bot)
       let senderName = payload.senderName || 'Cliente';
       try {
         const { getDb } = await import('../db');
@@ -72,7 +67,6 @@ async function startServer() {
           if (contact) {
             senderName = contact.name || senderName;
             console.log(`[Webhook] Contato encontrado: ${senderName}`);
-            // Lead respondeu → resetar tentativas para permitir reengajamento futuro
             try {
               const { campaignContacts } = await import('../../drizzle/schema');
               const { eq } = await import('drizzle-orm');
@@ -91,7 +85,6 @@ async function startServer() {
         console.warn('[Webhook] Erro ao buscar contato (não crítico):', dbErr);
       }
 
-      // Processar com bot IA e responder automaticamente
       try {
         const botResponse = await processBotMessage({
           phone: payload.phone,
@@ -101,7 +94,6 @@ async function startServer() {
         });
 
         if (botResponse.text) {
-          // Buscar credenciais Z-API do env (mais confiável que banco)
           const instanceId = process.env.ZAPI_INSTANCE_ID;
           const token = process.env.ZAPI_TOKEN;
           const clientToken = process.env.ZAPI_CLIENT_TOKEN;
@@ -116,7 +108,6 @@ async function startServer() {
             });
 
             if (sendResult.success) {
-              // Registrar para follow-up automático
               registerBotMessage(payload.phone, senderName);
               console.log(`[Bot] ✅ Resposta enviada para ${senderName} (${payload.phone})`);
             } else {
@@ -137,7 +128,6 @@ async function startServer() {
     }
   });
 
-  // Upload de arquivos — imagens/vídeos/PDFs via Cloudinary
   app.post('/api/upload', express.raw({ type: '*/*', limit: '100mb' }), async (req, res) => {
     try {
       const fileName = (req.headers['x-file-name'] as string) || 'upload';
@@ -157,7 +147,6 @@ async function startServer() {
         return res.status(400).json({ success: false, error: 'Arquivo excede 100MB' });
       }
 
-      // PDFs: converter para base64 data URL — sem Cloudinary, sem 401, funciona sempre
       if (fileType === 'application/pdf') {
         const base64 = buffer.toString('base64');
         const url = `data:application/pdf;base64,${base64}`;
@@ -176,14 +165,12 @@ async function startServer() {
     }
   });
 
-  // PDF Proxy — busca PDF via Cloudinary com autenticação quando necessário
   app.get("/api/pdf-proxy", async (req, res) => {
     const url = req.query.url as string;
     if (!url || !/^https?:\/\//.test(url)) {
       return res.status(400).json({ error: "URL inválida" });
     }
     try {
-      // Para URLs Cloudinary: usar autenticação Basic com api_key:api_secret
       const isCloudinary = url.includes('res.cloudinary.com');
       const headers: Record<string, string> = {
         'User-Agent': 'Mozilla/5.0 (compatible; RomatecCRM/1.0)',
@@ -211,7 +198,6 @@ async function startServer() {
     }
   });
 
-  // tRPC API
   app.use(
     "/api/trpc",
     createExpressMiddleware({
@@ -219,15 +205,13 @@ async function startServer() {
       createContext,
     })
   );
-  // development mode uses Vite, production mode uses static files
+  
   if (process.env.NODE_ENV === "development") {
     await setupVite(app, server);
   } else {
     serveStatic(app);
   }
 
-  // ── PRÉ-INICIALIZAÇÃO: rodar migrations ANTES do servidor aceitar conexões ──
-  // MIGRATION: Garantir colunas de API keys no companyConfig
   try {
     const { addApiKeysToCompanyConfig } = await import('./migrations/addApiKeysToCompanyConfig');
     await addApiKeysToCompanyConfig();
@@ -235,7 +219,6 @@ async function startServer() {
     console.error('❌ Erro na migration addApiKeysToCompanyConfig:', e);
   }
 
-  // MIGRATION: plantaBaixaUrl → MEDIUMTEXT (suporta PDF base64)
   try {
     const { enlargePlantaBaixaUrl } = await import('./migrations/enlargePlantaBaixaUrl');
     await enlargePlantaBaixaUrl();
@@ -243,7 +226,6 @@ async function startServer() {
     console.error('❌ Erro na migration enlargePlantaBaixaUrl:', e);
   }
 
-  // MIGRATION: finalidade (venda/aluguel) em properties — DEVE rodar antes do listen()
   try {
     const { addFinalidadeToProperties } = await import('./migrations/addFinalidadeToProperties');
     await addFinalidadeToProperties();
@@ -261,7 +243,6 @@ async function startServer() {
   server.listen(port, async () => {
     console.log(`Server running on http://localhost:${port}/`);
 
-    // RESTORE: Mod_Vaz-02 deletado acidentalmente
     try {
       const { restoreModVaz02 } = await import('./migrations/restoreModVaz02');
       await restoreModVaz02();
@@ -269,7 +250,6 @@ async function startServer() {
       console.error('❌ Erro no restore Mod_Vaz-02:', e);
     }
 
-    // STARTUP: Carregar credenciais salvas no DB para process.env (fallback do .env)
     try {
       const { getCompanyConfig } = await import('../db');
       const cfg = await getCompanyConfig();
@@ -298,6 +278,14 @@ async function startServer() {
       await campaignScheduler.restoreAndResume();
     } catch (error) {
       console.error('❌ Erro no auto-restart do scheduler:', error);
+    }
+
+    // DAILY SCHEDULER: Resets diários (08h standby / 18h prep / 20h full restart)
+    try {
+      const { dailyScheduler } = await import('../scheduler/dailyScheduler');
+      dailyScheduler.start();
+    } catch (error) {
+      console.error('❌ Erro ao iniciar dailyScheduler:', error);
     }
   });
 }
