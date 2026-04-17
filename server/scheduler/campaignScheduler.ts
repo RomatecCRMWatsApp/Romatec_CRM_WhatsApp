@@ -1,6 +1,6 @@
 import { getDb } from "../db";
 import { campaigns, contacts, messages, campaignContacts, contactCampaignHistory, properties, schedulerState as schedulerStateTable } from "../../drizzle/schema";
-import { eq, and } from "drizzle-orm";
+import { eq, and, asc } from "drizzle-orm";
 import { registerBotMessage, getFollowUpsToSend, cleanupOldFollowUps } from "../bot-ai";
 import { notifyMessageSent } from "../_core/telegramNotification";
 
@@ -128,23 +128,23 @@ export class CampaignScheduler {
   private getCampaignForCurrentHour(allCampaigns: any[]): any | null {
     const hour = this.getCurrentHour();
     const campIndex = HOUR_TO_CAMP_INDEX[hour];
-    if (campIndex === undefined) return null;
+    if (campIndex === undefined) {
+      console.log(`⚠️ [Slot ${hour}h] Hora não mapeada em HOUR_TO_CAMP_INDEX`);
+      return null;
+    }
 
-    // ═══════════════════════════════════════════════════════════
-    // SEQUÊNCIA FIXA: Cada hora tem uma campanha ESPECÍFICA
-    // Não rotação — índice direto!
-    // ═══════════════════════════════════════════════════════════
+    // NOTA: allCampaigns DEVE estar ordenado por id ASC (feito no caller)
+    // para garantir que campIndex sempre aponte para a mesma campanha
     const activePeriod = this.state.nightMode ? 'activeNight' : 'activeDay';
     const campaign = allCampaigns[campIndex];
 
-    // Validar se campanha existe e está elegível
     if (!campaign) {
-      console.log(`⚠️  Campanha no índice ${campIndex} não encontrada`);
+      console.log(`⚠️ [Slot ${hour}h] Índice ${campIndex} fora do range (total campanhas: ${allCampaigns.length})`);
       return null;
     }
 
     if (campaign.status !== 'running' || !campaign[activePeriod]) {
-      console.log(`⚠️  ${campaign.name}: não elegível (status=${campaign.status}, ${activePeriod}=${campaign[activePeriod]})`);
+      console.log(`⚠️ [Slot ${hour}h] ${campaign.name}: não elegível (status=${campaign.status}, ${activePeriod}=${campaign[activePeriod]})`);
       return null;
     }
 
@@ -419,8 +419,11 @@ export class CampaignScheduler {
     const db = await getDb();
     if (!db) return;
 
+    const hour = this.getCurrentHour();
+    const campIndex = HOUR_TO_CAMP_INDEX[hour];
+    const activePeriod = this.state.nightMode ? 'activeNight' : 'activeDay';
+
     // Auto-fix: garantir que os flags activeDay/activeNight estejam corretos para o modo atual
-    // Protege contra estado stale após restart ou falha no auto-restore
     if (this.state.nightMode) {
       const wrongFlags = await db.select().from(campaigns)
         .where(and(eq(campaigns.status, 'running'), eq(campaigns.activeNight, false)));
@@ -437,50 +440,61 @@ export class CampaignScheduler {
       }
     }
 
-    const allCampaigns = await db.select().from(campaigns).where(eq(campaigns.status, 'running'));
-    const campaign = this.getCampaignForCurrentHour(allCampaigns);
+    // ORDER BY id garante ordem consistente entre chamadas e após restarts
+    // Sem isso, allCampaigns[campIndex] pode apontar para campanha errada
+    const allCampaigns = await db.select().from(campaigns)
+      .where(eq(campaigns.status, 'running'))
+      .orderBy(asc(campaigns.id));
 
+    console.log(`📋 [Slot ${hour}h] Índice esperado: ${campIndex} | Campanhas running: ${allCampaigns.length} | Modo: ${this.state.nightMode ? 'NOITE' : 'DIA'}`);
+
+    // Selecionar campanha principal pelo índice fixo
+    let campaign = this.getCampaignForCurrentHour(allCampaigns);
+
+    // FALLBACK: se campanha primária não elegível, tentar próximas na sequência
     if (!campaign) {
-      console.log('⚠️ Nenhuma campanha para esta hora');
-      return;
+      if (campIndex !== undefined) {
+        for (let offset = 1; offset < allCampaigns.length; offset++) {
+          const tryIdx = (campIndex + offset) % allCampaigns.length;
+          const candidate = allCampaigns[tryIdx];
+          if (candidate && candidate.status === 'running' && candidate[activePeriod]) {
+            campaign = candidate;
+            console.log(`🔄 [Slot ${hour}h] Campanha índice ${campIndex} indisponível → fallback índice ${tryIdx}: ${candidate.name}`);
+            break;
+          }
+        }
+      }
     }
 
-    const hour = this.getCurrentHour();
-    const campIndex = HOUR_TO_CAMP_INDEX[hour];
+    if (!campaign) {
+      console.log(`⚠️ [Slot ${hour}h] SLOT VAZIO — nenhuma campanha elegível (${allCampaigns.length} running, nenhuma com ${activePeriod}=true)`);
+      return;
+    }
 
     console.log(`📤 Hora ${hour}h (Brasília) → Campanha: ${campaign.name} (ciclo ${campIndex !== undefined ? campIndex + 1 : '?'}/10)`);
 
     // Verificar se já enviou nesta hora
-    const campState = this.state.campaignStates.find(cs => cs.campaignId === campaign.id);
+    const campState = this.state.campaignStates.find(cs => cs.campaignId === campaign!.id);
     if (campState?.sentThisHour) {
-      console.log(`✅ ${campaign.name} já enviou nesta hora`);
+      console.log(`✅ ${campaign.name} já enviou nesta hora — pulando agendamento`);
       return;
     }
 
-    // Agendar envio ALEATÓRIO nos primeiros 15 minutos da hora
+    // Agendar envio nos primeiros 15 minutos da hora (aleatório)
     // Fluxo: 15 min envio + 45 min qualificação = 60 min total
     const now = this.getBrasiliaDate();
     const minutesIntoHour = now.getMinutes();
     const secondsIntoHour = minutesIntoHour * 60 + now.getSeconds();
 
-    // Janela de envio: 0-15 minutos da hora (aleatória)
-    const SEND_WINDOW_START = 0; // início da hora
-    const SEND_WINDOW_END = 15; // 15 minutos
+    const SEND_WINDOW_END = 15;
+    const randomMinute = Math.floor(Math.random() * (SEND_WINDOW_END + 1));
 
-    // Gerar minuto aleatório entre 0-15
-    const randomMinute = SEND_WINDOW_START + Math.floor(Math.random() * (SEND_WINDOW_END - SEND_WINDOW_START + 1));
-
-    // Calcular delay até o minuto aleatório
-    const delayMinutes = randomMinute - minutesIntoHour;
-    const delaySeconds = delayMinutes * 60 - secondsIntoHour;
+    // CORREÇÃO: delay correto até o minuto aleatório dentro da hora
+    // secondsIntoHour já inclui minutesIntoHour*60, então não somar novamente
+    const targetSecondInHour = randomMinute * 60;
+    const delaySeconds = targetSecondInHour - secondsIntoHour;
+    // Se já passamos da janela (delaySeconds < 0), enviar imediatamente — nunca dropar o slot
     const delayMs = Math.max(1000, delaySeconds * 1000);
-
-    const remainingMs = this.HOUR_MS - (secondsIntoHour * 1000);
-
-    if (delayMs > remainingMs) {
-      console.log(`⚠️ Sem tempo suficiente para envio aleatório — pulando`);
-      return;
-    }
 
     const slot: SlotInfo = {
       campaignId: campaign.id,
@@ -490,14 +504,19 @@ export class CampaignScheduler {
     };
     this.state.scheduledSlots = [slot];
 
-    console.log(`🎲 ${campaign.name} → envio aleatório no minuto ${randomMinute} (em ${Math.round(delayMs / 60000)}min)`);
+    const sendInLabel = delayMs < 60000 ? `${Math.round(delayMs / 1000)}s` : `${Math.round(delayMs / 60000)}min`;
+    console.log(`🎲 ${campaign.name} → envio aleatório no minuto ${randomMinute} (em ${sendInLabel})`);
     console.log(`   ⏱️ Fluxo: 15min envio + 45min qualificação = 60min/hora`);
 
     const timer = setTimeout(async () => {
       if (!this.state.isRunning) return;
-      const cs = this.state.campaignStates.find(s => s.campaignId === campaign.id);
-      if (cs?.sentThisHour) return;
-      await this.sendMessageForCampaign(campaign.id);
+      const cs = this.state.campaignStates.find(s => s.campaignId === campaign!.id);
+      if (cs?.sentThisHour) {
+        console.log(`⚠️ [Timer ${hour}h] ${campaign!.name}: já enviou nesta hora — cancelando disparo`);
+        return;
+      }
+      console.log(`⏰ [Timer ${hour}h] ${campaign!.name}: disparando envio agora`);
+      await this.sendMessageForCampaign(campaign!.id);
     }, delayMs);
 
     this.slotTimers.push(timer);
@@ -505,8 +524,12 @@ export class CampaignScheduler {
   }
 
   private async sendMessageForCampaign(campaignId: number) {
-    if (this.isSending) return;
+    if (this.isSending) {
+      console.log(`⚠️ [Send] Campanha ${campaignId}: isSending=true — outro envio em andamento, slot bloqueado. Hora: ${this.getCurrentHour()}h`);
+      return;
+    }
     this.isSending = true;
+    console.log(`🚀 [Send] Campanha ${campaignId}: iniciando (hora ${this.getCurrentHour()}h, ciclo ${this.state.hourNumber + 1}/10)`);
 
     try {
       const db = await getDb();
@@ -514,7 +537,10 @@ export class CampaignScheduler {
 
       const campResult = await db.select().from(campaigns).where(eq(campaigns.id, campaignId)).limit(1);
       const campaign = campResult[0];
-      if (!campaign) return;
+      if (!campaign) {
+        console.log(`⚠️ [Send] Campanha ${campaignId} não encontrada no banco`);
+        return;
+      }
 
       // PROTEÇÃO: Verificar NOVAMENTE se já enviou esta hora (dupla verificação)
       const campState = this.state.campaignStates.find(cs => cs.campaignId === campaignId);
@@ -789,7 +815,10 @@ export class CampaignScheduler {
     const db = await getDb();
     if (!db) return;
 
-    const allCampaigns = await db.select().from(campaigns).where(eq(campaigns.status, 'running'));
+    // ORDER BY id para manter ordem consistente com scheduleHourSend
+    const allCampaigns = await db.select().from(campaigns)
+      .where(eq(campaigns.status, 'running'))
+      .orderBy(asc(campaigns.id));
     const currentHourKey = this.getCurrentHourKey();
 
     // ═══════════════════════════════════════════════════════════
