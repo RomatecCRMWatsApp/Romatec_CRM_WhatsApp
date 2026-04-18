@@ -11,6 +11,22 @@ import { sql } from 'drizzle-orm';
 export async function addUniqueCampaignCycleHour() {
   const db = await getDb();
   if (!db) return;
+
+  // Passo 1: remover duplicatas ANTES de criar o índice (manter o mais recente)
+  try {
+    await db.execute(sql`
+      DELETE m1 FROM messageSendLog m1
+      INNER JOIN messageSendLog m2
+        ON m1.campaignId = m2.campaignId
+       AND m1.cycleHour  = m2.cycleHour
+       AND m1.id < m2.id
+    `);
+    console.log('[Migration] ✅ Dedup (campaignId, cycleHour): duplicatas antigas removidas');
+  } catch (e: any) {
+    console.warn('[Migration] ⚠️ Dedup falhou (não crítico):', String(e?.message || '').substring(0, 120));
+  }
+
+  // Passo 2: criar o índice único
   try {
     await db.execute(sql`
       ALTER TABLE messageSendLog
@@ -20,26 +36,7 @@ export async function addUniqueCampaignCycleHour() {
   } catch (e: any) {
     const msg = String(e?.message || '');
     if (msg.includes('Duplicate key name') || msg.includes('already exists')) {
-      console.log('[Migration] ℹ️ unique_campaign_cycle_hour já existe');
-    } else if (msg.includes('Duplicate entry')) {
-      // Existem registros duplicados — limpar antes de criar o índice
-      console.log('[Migration] ⚠️ Registros duplicados encontrados — limpando antes de criar índice...');
-      try {
-        await db.execute(sql`
-          DELETE t1 FROM messageSendLog t1
-          INNER JOIN messageSendLog t2
-          WHERE t1.id > t2.id
-            AND t1.campaignId = t2.campaignId
-            AND t1.cycleHour = t2.cycleHour
-        `);
-        await db.execute(sql`
-          ALTER TABLE messageSendLog
-          ADD UNIQUE INDEX unique_campaign_cycle_hour (campaignId, cycleHour)
-        `);
-        console.log('[Migration] ✅ Duplicatas removidas e índice criado');
-      } catch (e2: any) {
-        console.error('[Migration] Erro ao limpar duplicatas:', String(e2?.message || '').substring(0, 120));
-      }
+      console.log('[Migration] ℹ️ unique_campaign_cycle_hour já existe — OK');
     } else {
       console.error('[Migration] Erro addUniqueCampaignCycleHour:', msg.substring(0, 120));
     }
