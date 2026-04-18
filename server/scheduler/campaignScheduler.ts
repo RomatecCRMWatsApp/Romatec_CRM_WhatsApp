@@ -60,6 +60,8 @@ const ACTIVE_HOURS_DAY = [8, 9, 10, 11, 12, 13, 14, 15, 16, 17];
 const ACTIVE_HOURS_NIGHT = [20, 21, 22, 23, 0, 1, 2, 3, 4, 5];
 
 export class CampaignScheduler {
+  private static instance: CampaignScheduler | null = null;
+
   private state: SchedulerState = {
     isRunning: false,
     currentHourKey: '',
@@ -91,6 +93,13 @@ export class CampaignScheduler {
 
   // Contador de falhas Z-API consecutivas — resetado a cada envio bem-sucedido
   private zapiConsecutiveFails = 0;
+
+  static getInstance(): CampaignScheduler {
+    if (!CampaignScheduler.instance) {
+      CampaignScheduler.instance = new CampaignScheduler();
+    }
+    return CampaignScheduler.instance;
+  }
 
   // ========== HORÁRIO BRASÍLIA ==========
 
@@ -214,10 +223,10 @@ export class CampaignScheduler {
   }
 
   async start(forcedNightMode?: boolean) {
+    // SINGLETON GUARD: prevenir dupla inicialização (restoreAndResume + dailyScheduler)
     if (this.state.isRunning) {
-      console.log('⚠️ Scheduler já está rodando - parando antes de reiniciar');
-      this.stop();
-      await new Promise(resolve => setTimeout(resolve, 500));
+      console.log('⚠️ [SINGLETON] Scheduler já está rodando — ignorando segunda inicialização');
+      return;
     }
 
     // Se nightMode não foi passado explicitamente, detectar pelo horário atual
@@ -247,6 +256,9 @@ export class CampaignScheduler {
     console.log(`🚀 Iniciando sistema ROMATEC CRM v9.0...`);
     console.log(`📏 REGRA: Rotação sequencial | Ciclo 10h | ${nightMode ? 'Modo Noite 20h-06h' : 'Modo Dia 08h-18h'}`);
 
+    // Destruir timers antigos para evitar duplas inicializações
+    this.cleanupAllTimers();
+
     await this.syncCampaignsWithProperties();
     await this.initCampaignStates();
 
@@ -259,25 +271,25 @@ export class CampaignScheduler {
     console.log(`✅ Scheduler v9.0 iniciado - Verificação a cada 1 minuto`);
   }
 
-  stop() {
-    console.log('⏹️ Parando scheduler...');
-    this.state.isRunning = false;
-
+  private cleanupAllTimers() {
     if (this.checkTimer) {
       clearInterval(this.checkTimer);
       this.checkTimer = null;
     }
-
     for (const timer of this.slotTimers) {
       clearTimeout(timer);
     }
     this.slotTimers = [];
-
     if (this.followUpTimer) {
       clearInterval(this.followUpTimer);
       this.followUpTimer = null;
     }
+  }
 
+  stop() {
+    console.log('⏹️ Parando scheduler...');
+    this.state.isRunning = false;
+    this.cleanupAllTimers();
     this.saveStateToDB().catch(() => {});
     console.log('⏹️ Scheduler COMPLETAMENTE parado');
   }
@@ -1312,5 +1324,6 @@ export class CampaignScheduler {
   }
 }
 
-export const campaignScheduler = new CampaignScheduler();
-// Startup é gerenciado exclusivamente por restoreAndResume() em _core/index.ts
+export const campaignScheduler = CampaignScheduler.getInstance();
+// SINGLETON: restoreAndResume() + dailyScheduler compartilham a mesma instância
+// Evita race condition de dupla inicialização — start() retorna silenciosamente se já rodando
