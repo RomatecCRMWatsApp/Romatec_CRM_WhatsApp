@@ -107,10 +107,12 @@ export default function PropertyPublic() {
                 </span>
                 <h1 className="text-2xl font-bold text-foreground">{property.denomination}</h1>
                 {property.address && (
-                  <p className="text-sm text-muted-foreground flex items-center gap-1 mt-1">
-                    <MapPin className="h-3 w-3 text-emerald" />
-                    {property.address}{property.city ? `, ${property.city}` : ""}{property.state ? ` - ${property.state}` : ""}
-                  </p>
+                  <div className="flex items-start gap-1 mt-1">
+                    <MapPin className="h-3 w-3 text-emerald flex-shrink-0 mt-0.5" />
+                    <p className="text-sm text-green-400 line-clamp-2 break-words">
+                      {property.address}{property.city ? `, ${property.city}` : ""}{property.state ? ` - ${property.state}` : ""}
+                    </p>
+                  </div>
                 )}
               </div>
               {property.price && (
@@ -130,33 +132,33 @@ export default function PropertyPublic() {
         {/* Características */}
         {(property.bedrooms || property.bathrooms || property.parkingSpots || property.area) && (
           <div className="glass-card p-5 mb-6">
-            <div className="grid grid-cols-4 gap-3 text-center">
+            <div className="grid grid-cols-3 gap-2">
               {property.bedrooms && (
-                <div>
-                  <BedDouble className="h-5 w-5 text-emerald mx-auto mb-1" />
-                  <p className="text-lg font-bold text-foreground">{property.bedrooms}</p>
-                  <p className="text-xs text-muted-foreground">Quartos</p>
+                <div className="flex flex-col items-center justify-center gap-1 p-4">
+                  <BedDouble className="w-6 h-6 text-emerald-400" />
+                  <span className="text-xl font-bold text-white">{property.bedrooms}</span>
+                  <span className="text-xs text-gray-400">Quartos</span>
                 </div>
               )}
               {property.bathrooms && (
-                <div>
-                  <Bath className="h-5 w-5 text-emerald mx-auto mb-1" />
-                  <p className="text-lg font-bold text-foreground">{property.bathrooms}</p>
-                  <p className="text-xs text-muted-foreground">Banheiros</p>
+                <div className="flex flex-col items-center justify-center gap-1 p-4">
+                  <Bath className="w-6 h-6 text-emerald-400" />
+                  <span className="text-xl font-bold text-white">{property.bathrooms}</span>
+                  <span className="text-xs text-gray-400">Banheiros</span>
                 </div>
               )}
               {property.parkingSpots && (
-                <div>
-                  <Car className="h-5 w-5 text-emerald mx-auto mb-1" />
-                  <p className="text-lg font-bold text-foreground">{property.parkingSpots}</p>
-                  <p className="text-xs text-muted-foreground">Vagas</p>
+                <div className="flex flex-col items-center justify-center gap-1 p-4">
+                  <Car className="w-6 h-6 text-emerald-400" />
+                  <span className="text-xl font-bold text-white">{property.parkingSpots}</span>
+                  <span className="text-xs text-gray-400">Vagas</span>
                 </div>
               )}
               {property.area && (
-                <div>
-                  <Ruler className="h-5 w-5 text-emerald mx-auto mb-1" />
-                  <p className="text-lg font-bold text-foreground">{property.area}</p>
-                  <p className="text-xs text-muted-foreground">m²</p>
+                <div className="flex flex-col items-center justify-center gap-1 p-4">
+                  <Ruler className="w-6 h-6 text-emerald-400" />
+                  <span className="text-xl font-bold text-white">{property.area}</span>
+                  <span className="text-xs text-gray-400">m²</span>
                 </div>
               )}
             </div>
@@ -193,10 +195,12 @@ export default function PropertyPublic() {
             </div>
 
             {activeTab === "fotos" && images.length > 0 && (
-              <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+              <div className="flex gap-2 overflow-x-auto px-4 pb-2 scrollbar-hide" style={{ scrollSnapType: 'x mandatory' }}>
                 {images.map((img: string, idx: number) => (
-                  <button key={idx} onClick={() => { setImageIndex(idx); window.scrollTo({ top: 0, behavior: 'smooth' }); }} className={`rounded-xl overflow-hidden border-2 transition-all ${idx === imageIndex ? "border-emerald" : "border-transparent opacity-70 hover:opacity-100"}`}>
-                    <img src={img} alt={`Foto ${idx + 1}`} className="w-full h-24 sm:h-28 object-cover max-w-full" />
+                  <button key={idx} onClick={() => { setImageIndex(idx); window.scrollTo({ top: 0, behavior: 'smooth' }); }}
+                    className={`flex-shrink-0 rounded-xl overflow-hidden border-2 transition-all ${idx === imageIndex ? "border-emerald" : "border-transparent opacity-70 hover:opacity-100"}`}
+                    style={{ scrollSnapAlign: 'start' }}>
+                    <img src={img} alt={`Foto ${idx + 1}`} className="w-20 h-20 rounded-lg object-cover" />
                   </button>
                 ))}
               </div>
