@@ -130,35 +130,49 @@ export default function PropertyPublic() {
       <div className="max-w-3xl mx-auto px-4 pt-6">
 
         {/* Características */}
-        {(property.bedrooms || property.bathrooms || property.parkingSpots || property.area) && (
-          <div className="glass-card p-5 mb-6">
-            <div className="grid grid-cols-3 gap-2">
+        {(property.bedrooms || property.bathrooms || property.garageSpaces || property.areaConstruida || property.areaCasa || property.areaTerreno) && (
+          <div className="glass-card mb-6 p-4">
+            <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
               {property.bedrooms && (
-                <div className="flex flex-col items-center justify-center gap-1 p-4">
-                  <BedDouble className="w-6 h-6 text-emerald-400" />
-                  <span className="text-xl font-bold text-white">{property.bedrooms}</span>
-                  <span className="text-xs text-gray-400">Quartos</span>
+                <div className="flex flex-col items-center justify-center gap-1 bg-gray-900 border border-gray-800 rounded-xl p-4 w-full">
+                  <BedDouble className="w-6 h-6 text-green-400" />
+                  <span className="text-lg font-bold text-white">{property.bedrooms}</span>
+                  <span className="text-xs text-gray-400 text-center">Quartos</span>
                 </div>
               )}
               {property.bathrooms && (
-                <div className="flex flex-col items-center justify-center gap-1 p-4">
-                  <Bath className="w-6 h-6 text-emerald-400" />
-                  <span className="text-xl font-bold text-white">{property.bathrooms}</span>
-                  <span className="text-xs text-gray-400">Banheiros</span>
+                <div className="flex flex-col items-center justify-center gap-1 bg-gray-900 border border-gray-800 rounded-xl p-4 w-full">
+                  <Bath className="w-6 h-6 text-green-400" />
+                  <span className="text-lg font-bold text-white">{property.bathrooms}</span>
+                  <span className="text-xs text-gray-400 text-center">Banheiros</span>
                 </div>
               )}
-              {property.parkingSpots && (
-                <div className="flex flex-col items-center justify-center gap-1 p-4">
-                  <Car className="w-6 h-6 text-emerald-400" />
-                  <span className="text-xl font-bold text-white">{property.parkingSpots}</span>
-                  <span className="text-xs text-gray-400">Vagas</span>
+              {property.garageSpaces && (
+                <div className="flex flex-col items-center justify-center gap-1 bg-gray-900 border border-gray-800 rounded-xl p-4 w-full">
+                  <Car className="w-6 h-6 text-green-400" />
+                  <span className="text-lg font-bold text-white">{property.garageSpaces}</span>
+                  <span className="text-xs text-gray-400 text-center">Vagas</span>
                 </div>
               )}
-              {property.area && (
-                <div className="flex flex-col items-center justify-center gap-1 p-4">
-                  <Ruler className="w-6 h-6 text-emerald-400" />
-                  <span className="text-xl font-bold text-white">{property.area}</span>
-                  <span className="text-xs text-gray-400">m²</span>
+              {property.areaConstruida && (
+                <div className="flex flex-col items-center justify-center gap-1 bg-gray-900 border border-gray-800 rounded-xl p-4 w-full">
+                  <Ruler className="w-6 h-6 text-green-400" />
+                  <span className="text-lg font-bold text-white">{property.areaConstruida}m²</span>
+                  <span className="text-xs text-gray-400 text-center">Área Construída</span>
+                </div>
+              )}
+              {property.areaCasa && (
+                <div className="flex flex-col items-center justify-center gap-1 bg-gray-900 border border-gray-800 rounded-xl p-4 w-full">
+                  <Ruler className="w-6 h-6 text-green-400" />
+                  <span className="text-lg font-bold text-white">{property.areaCasa}m²</span>
+                  <span className="text-xs text-gray-400 text-center">Área da Casa</span>
+                </div>
+              )}
+              {property.areaTerreno && (
+                <div className="flex flex-col items-center justify-center gap-1 bg-gray-900 border border-gray-800 rounded-xl p-4 w-full">
+                  <Ruler className="w-6 h-6 text-green-400" />
+                  <span className="text-lg font-bold text-white">{property.areaTerreno}m²</span>
+                  <span className="text-xs text-gray-400 text-center">Área do Terreno</span>
                 </div>
               )}
             </div>
