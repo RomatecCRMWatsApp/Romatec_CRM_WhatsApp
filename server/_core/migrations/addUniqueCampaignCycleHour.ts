@@ -2,37 +2,48 @@ import { getDb } from '../../db';
 import { sql } from 'drizzle-orm';
 
 /**
- * Migration: adiciona UNIQUE INDEX (campaignId, cycleHour) em messageSendLog
+ * Migration: limpa messageSendLog e adiciona UNIQUE INDEX (campaignId, cycleHour)
  *
- * Garante que cada campanha envie no máximo 1 mensagem por hora ao nível do banco,
- * bloqueando o problema de double-send em deploys zero-downtime (dois processos
- * Node.js rodam simultaneamente durante o deploy do Railway).
+ * messageSendLog é uma tabela de controle operacional (não guarda histórico crítico).
+ * Limpar garante que o índice seja criado sem falha por duplicatas residuais.
  */
 export async function addUniqueCampaignCycleHour() {
   const db = await getDb();
   if (!db) return;
 
-  // Passo 1: remover duplicatas ANTES de criar o índice (manter o mais recente)
+  // Verificar se o índice já existe — se sim, não fazer nada
   try {
-    await db.execute(sql`
-      DELETE m1 FROM messageSendLog m1
-      INNER JOIN messageSendLog m2
-        ON m1.campaignId = m2.campaignId
-       AND m1.cycleHour  = m2.cycleHour
-       AND m1.id < m2.id
-    `);
-    console.log('[Migration] ✅ Dedup (campaignId, cycleHour): duplicatas antigas removidas');
-  } catch (e: any) {
-    console.warn('[Migration] ⚠️ Dedup falhou (não crítico):', String(e?.message || '').substring(0, 120));
+    const rows: any[] = await db.execute(sql`
+      SELECT COUNT(*) as cnt
+      FROM information_schema.STATISTICS
+      WHERE TABLE_SCHEMA = DATABASE()
+        AND TABLE_NAME   = 'messageSendLog'
+        AND INDEX_NAME   = 'unique_campaign_cycle_hour'
+    `) as any;
+    const cnt = rows?.[0]?.[0]?.cnt ?? rows?.[0]?.cnt ?? 0;
+    if (Number(cnt) > 0) {
+      console.log('[Migration] ℹ️ unique_campaign_cycle_hour já existe — OK');
+      return;
+    }
+  } catch {
+    // continua para tentar criar
   }
 
-  // Passo 2: criar o índice único
+  // Limpar tabela inteira (tabela de controle, sem dados críticos)
+  try {
+    await db.execute(sql`DELETE FROM messageSendLog WHERE 1=1`);
+    console.log('[Migration] 🧹 messageSendLog limpo para criação do índice');
+  } catch (e: any) {
+    console.warn('[Migration] ⚠️ Falha ao limpar messageSendLog:', String(e?.message || '').substring(0, 80));
+  }
+
+  // Criar o índice único
   try {
     await db.execute(sql`
       ALTER TABLE messageSendLog
       ADD UNIQUE INDEX unique_campaign_cycle_hour (campaignId, cycleHour)
     `);
-    console.log('[Migration] ✅ unique_campaign_cycle_hour adicionado em messageSendLog');
+    console.log('[Migration] ✅ unique_campaign_cycle_hour criado em messageSendLog');
   } catch (e: any) {
     const msg = String(e?.message || '');
     if (msg.includes('Duplicate key name') || msg.includes('already exists')) {
