@@ -236,6 +236,60 @@ async function startServer() {
     }
   });
 
+  // Planta Baixa (PDF) — serve base64 armazenado como arquivo PDF
+  app.get("/api/imoveis/:id/planta", async (req, res) => {
+    try {
+      const { id } = req.params;
+      if (!id || isNaN(Number(id))) {
+        return res.status(400).json({ error: "ID de imóvel inválido" });
+      }
+
+      const { getDb } = await import('../db');
+      const { properties } = await import('../../drizzle/schema');
+      const { eq } = await import('drizzle-orm');
+
+      const db = await getDb();
+      if (!db) {
+        return res.status(503).json({ error: "Banco de dados indisponível" });
+      }
+
+      const prop = await db.select().from(properties).where(eq(properties.id, Number(id))).limit(1);
+      if (!prop[0] || !prop[0].plantaBaixaUrl) {
+        return res.status(404).json({ error: "Planta baixa não encontrada" });
+      }
+
+      const plantaUrl = prop[0].plantaBaixaUrl as string;
+
+      // Se for base64 (data: URI)
+      if (plantaUrl.startsWith('data:application/pdf;base64,')) {
+        const base64Data = plantaUrl.split(',')[1];
+        const buffer = Buffer.from(base64Data, 'base64');
+        res.setHeader('Content-Type', 'application/pdf');
+        res.setHeader('Content-Disposition', 'inline; filename="planta.pdf"');
+        res.setHeader('Cache-Control', 'public, max-age=86400');
+        return res.send(buffer);
+      }
+
+      // Se for URL remota (Cloudinary, etc)
+      if (plantaUrl.startsWith('http')) {
+        const response = await fetch(plantaUrl);
+        if (!response.ok) {
+          return res.status(502).json({ error: `Falha ao buscar planta (${response.status})` });
+        }
+        const buffer = await response.arrayBuffer();
+        res.setHeader('Content-Type', 'application/pdf');
+        res.setHeader('Content-Disposition', 'inline; filename="planta.pdf"');
+        res.setHeader('Cache-Control', 'public, max-age=86400');
+        return res.send(Buffer.from(buffer));
+      }
+
+      res.status(400).json({ error: "Formato de planta baixa não suportado" });
+    } catch (e) {
+      console.error('[Planta] Erro:', e);
+      res.status(500).json({ error: String(e) });
+    }
+  });
+
   app.use(
     "/api/trpc",
     createExpressMiddleware({
