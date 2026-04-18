@@ -148,15 +148,53 @@ async function startServer() {
       }
 
       if (fileType === 'application/pdf') {
+        if (buffer.length > 10 * 1024 * 1024) {
+          return res.status(400).json({ success: false, error: 'PDF muito grande (máximo 10MB)' });
+        }
         const base64 = buffer.toString('base64');
         const url = `data:application/pdf;base64,${base64}`;
         console.log(`[Upload] ✅ PDF base64 (${(buffer.length / 1024).toFixed(1)}KB)`);
         return res.json({ success: true, url });
       }
 
-      console.log(`[Upload] Enviando para Cloudinary: ${fileName} (${fileType}, ${(buffer.length / 1024).toFixed(1)}KB)`);
+      let finalBuffer = buffer;
+      const originalSizeKB = buffer.length / 1024;
+
+      // Compressão automática de imagens acima de 8MB
+      if ((fileType.startsWith('image/') && fileType !== 'image/webp') || fileType === 'image/webp') {
+        if (buffer.length > 8 * 1024 * 1024) {
+          try {
+            const sharp = (await import('sharp')).default;
+            let compressed = await sharp(buffer)
+              .resize({ width: 2400, withoutEnlargement: true })
+              .jpeg({ quality: 82 })
+              .toBuffer();
+
+            // Se ainda acima de 9.5MB, comprimir mais agressivamente
+            if (compressed.length > 9.5 * 1024 * 1024) {
+              compressed = await sharp(buffer)
+                .resize({ width: 1920, withoutEnlargement: true })
+                .jpeg({ quality: 65 })
+                .toBuffer();
+            }
+
+            const compressedSizeKB = compressed.length / 1024;
+            console.log(`[Upload] 📉 Imagem comprimida: ${originalSizeKB.toFixed(1)}KB → ${compressedSizeKB.toFixed(1)}KB`);
+            finalBuffer = compressed;
+          } catch (err) {
+            console.warn('[Upload] ⚠️ Compressão falhou, tentando upload do original:', err);
+          }
+        }
+      }
+
+      if (finalBuffer.length > 10 * 1024 * 1024) {
+        return res.status(413).json({ success: false, error: 'Arquivo muito grande para upload (máximo 10MB após compressão)' });
+      }
+
+      const finalSizeKB = finalBuffer.length / 1024;
+      console.log(`[Upload] Enviando para Cloudinary: ${fileName} (${fileType}, ${finalSizeKB.toFixed(1)}KB)`);
       const { uploadToCloudinary } = await import('../cloudinary');
-      const { url } = await uploadToCloudinary(buffer, fileType, fileName);
+      const { url } = await uploadToCloudinary(finalBuffer, fileType, fileName);
       console.log(`[Upload] ✅ Cloudinary: ${url}`);
       res.json({ success: true, url });
     } catch (error) {

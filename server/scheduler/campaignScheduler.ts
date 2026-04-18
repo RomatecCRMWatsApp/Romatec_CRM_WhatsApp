@@ -61,6 +61,7 @@ const ACTIVE_HOURS_NIGHT = [20, 21, 22, 23, 0, 1, 2, 3, 4, 5];
 
 export class CampaignScheduler {
   private static instance: CampaignScheduler | null = null;
+  private static isStarting: boolean = false;
 
   private state: SchedulerState = {
     isRunning: false,
@@ -223,52 +224,57 @@ export class CampaignScheduler {
   }
 
   async start(forcedNightMode?: boolean) {
-    // SINGLETON GUARD: prevenir dupla inicialização (restoreAndResume + dailyScheduler)
-    if (this.state.isRunning) {
-      console.log('⚠️ [SINGLETON] Scheduler já está rodando — ignorando segunda inicialização');
+    // SINGLETON GUARD: prevenir dupla inicialização durante startup
+    if (this.state.isRunning || CampaignScheduler.isStarting) {
+      console.log('⚠️ [SINGLETON] Scheduler já está rodando/iniciando — ignorando segunda inicialização');
       return;
     }
+    CampaignScheduler.isStarting = true;
 
-    // Se nightMode não foi passado explicitamente, detectar pelo horário atual
-    const nightMode = forcedNightMode !== undefined ? forcedNightMode : this.getAutoNightMode();
-    this.state.nightMode = nightMode;
-    this.state.isRunning = true;
-    this.state.startedAt = Date.now();
-    this.state.totalSent = 0;
-    this.state.totalFailed = 0;
-    this.state.totalBlocked = 0;
-    this.state.currentHourKey = '';
-    this.state.campaignStates = [];
-    this.state.scheduledSlots = [];
+    try {
+      // Se nightMode não foi passado explicitamente, detectar pelo horário atual
+      const nightMode = forcedNightMode !== undefined ? forcedNightMode : this.getAutoNightMode();
+      this.state.nightMode = nightMode;
+      this.state.isRunning = true;
+      this.state.startedAt = Date.now();
+      this.state.totalSent = 0;
+      this.state.totalFailed = 0;
+      this.state.totalBlocked = 0;
+      this.state.currentHourKey = '';
+      this.state.campaignStates = [];
+      this.state.scheduledSlots = [];
 
-    // Sincronizar ciclo com a hora atual de Brasília
-    const currentHour = this.getCurrentHour();
-    const activeHours = nightMode ? ACTIVE_HOURS_NIGHT : ACTIVE_HOURS_DAY;
-    const cycleIdx = activeHours.indexOf(currentHour);
-    if (cycleIdx >= 0) {
-      this.state.hourNumber = cycleIdx;
-      console.log(`🕐 Brasília: ${currentHour}h → Ciclo ${cycleIdx + 1}/10`);
-    } else {
-      this.state.hourNumber = 0;
-      console.log(`⏰ Fora do horário ativo (hora atual Brasília: ${currentHour}h)`);
+      // Sincronizar ciclo com a hora atual de Brasília
+      const currentHour = this.getCurrentHour();
+      const activeHours = nightMode ? ACTIVE_HOURS_NIGHT : ACTIVE_HOURS_DAY;
+      const cycleIdx = activeHours.indexOf(currentHour);
+      if (cycleIdx >= 0) {
+        this.state.hourNumber = cycleIdx;
+        console.log(`🕐 Brasília: ${currentHour}h → Ciclo ${cycleIdx + 1}/10`);
+      } else {
+        this.state.hourNumber = 0;
+        console.log(`⏰ Fora do horário ativo (hora atual Brasília: ${currentHour}h)`);
+      }
+
+      console.log(`🚀 Iniciando sistema ROMATEC CRM v9.0...`);
+      console.log(`📏 REGRA: Rotação sequencial | Ciclo 10h | ${nightMode ? 'Modo Noite 20h-06h' : 'Modo Dia 08h-18h'}`);
+
+      // Destruir timers antigos para evitar duplas inicializações
+      this.cleanupAllTimers();
+
+      await this.syncCampaignsWithProperties();
+      await this.initCampaignStates();
+
+      await this.saveStateToDB();
+      this.startCheckLoop();
+      this.startFollowUpLoop();
+
+      await this.checkAndSend();
+
+      console.log(`✅ Scheduler v9.0 iniciado - Verificação a cada 1 minuto`);
+    } finally {
+      CampaignScheduler.isStarting = false;
     }
-
-    console.log(`🚀 Iniciando sistema ROMATEC CRM v9.0...`);
-    console.log(`📏 REGRA: Rotação sequencial | Ciclo 10h | ${nightMode ? 'Modo Noite 20h-06h' : 'Modo Dia 08h-18h'}`);
-
-    // Destruir timers antigos para evitar duplas inicializações
-    this.cleanupAllTimers();
-
-    await this.syncCampaignsWithProperties();
-    await this.initCampaignStates();
-
-    await this.saveStateToDB();
-    this.startCheckLoop();
-    this.startFollowUpLoop();
-
-    await this.checkAndSend();
-
-    console.log(`✅ Scheduler v9.0 iniciado - Verificação a cada 1 minuto`);
   }
 
   private cleanupAllTimers() {
