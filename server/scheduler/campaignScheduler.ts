@@ -1,6 +1,6 @@
 import { getDb } from "../db";
 import { campaigns, contacts, messages, campaignContacts, contactCampaignHistory, properties, schedulerState as schedulerStateTable } from "../../drizzle/schema";
-import { eq, and, asc, ne } from "drizzle-orm";
+import { eq, and, asc, ne, or, gt, lt } from "drizzle-orm";
 import { registerBotMessage, getFollowUpsToSend, cleanupOldFollowUps } from "../bot-ai";
 import { notifyMessageSent } from "../_core/telegramNotification";
 
@@ -586,9 +586,8 @@ export class CampaignScheduler {
       const { messageSendLog } = await import('../../drizzle/schema');
       const cleanPhone = contact.phone.replace(/\D/g, '');
       const now = new Date();
-      const nowUnix = Math.floor(now.getTime() / 1000);
-      const cycleHour = Math.floor(nowUnix / 3600) * 3600;
-      const hourLabel = new Date(cycleHour * 1000).toLocaleTimeString('pt-BR', { timeZone: 'America/Sao_Paulo' });
+      const cycleHour = Math.floor(Date.now() / 3600000);
+      const hourLabel = new Date(cycleHour * 3600000).toLocaleTimeString('pt-BR', { timeZone: 'America/Sao_Paulo' });
 
       // 1) Verificar se ESTA CAMPANHA já enviou nesta hora (proteção de DB, sobrevive a restart)
       const campSentLog = await db
@@ -870,8 +869,7 @@ export class CampaignScheduler {
     // Sem isso, após restart sentThisHour sempre começa false e os
     // slots são re-agendados, causando "PROTEÇÃO DB bloqueando" nos logs
     // ═══════════════════════════════════════════════════════════
-    const nowUnix = Math.floor(Date.now() / 1000);
-    const cycleHour = Math.floor(nowUnix / 3600) * 3600;
+    const cycleHour = Math.floor(Date.now() / 3600000);
 
     const { messageSendLog } = await import('../../drizzle/schema');
     const sentThisHourLogs = await db
@@ -901,14 +899,26 @@ export class CampaignScheduler {
     });
   }
 
-  /** Marca registros 'pending' como 'failed' no boot (eram de antes do restart) */
+  /** Marca registros 'pending' como 'failed' no boot e remove registros antigos */
   private async cleanupPendingLogs(db: any): Promise<void> {
     try {
       const { messageSendLog } = await import('../../drizzle/schema');
+
+      // pending → failed (envios interrompidos por restart)
       await db.update(messageSendLog)
         .set({ status: 'failed', reason: 'server_restart' })
         .where(eq(messageSendLog.status, 'pending'));
       console.log(`🧹 [SendLog] Boot cleanup: 'pending' → 'failed' (restarts anteriores)`);
+
+      // Remove registros no formato antigo (epoch-seconds, ex: 1776081600) e registros
+      // com mais de 25h no formato novo (horas absolutas desde epoch, ex: 493488)
+      const currentCycleHour = Math.floor(Date.now() / 3600000);
+      const deleted = await db.delete(messageSendLog)
+        .where(or(
+          gt(messageSendLog.cycleHour, 1000000),           // formato antigo epoch-seconds
+          lt(messageSendLog.cycleHour, currentCycleHour - 25) // mais de 25h atrás (novo formato)
+        ));
+      console.log(`🧹 [SendLog] Boot cleanup: registros antigos/formato-legado removidos`);
     } catch (e) {
       console.error('[SendLog] Erro na limpeza de pending:', e);
     }

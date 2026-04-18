@@ -332,6 +332,13 @@ async function startServer() {
     console.error('❌ Erro na migration addPendingStatusToSendLog:', e);
   }
 
+  try {
+    const { cleanupOldCycleHourFormat } = await import('./migrations/cleanupOldCycleHourFormat');
+    await cleanupOldCycleHourFormat();
+  } catch (e) {
+    console.error('❌ Erro na migration cleanupOldCycleHourFormat:', e);
+  }
+
   const preferredPort = parseInt(process.env.PORT || "3000");
   const port = await findAvailablePort(preferredPort);
 

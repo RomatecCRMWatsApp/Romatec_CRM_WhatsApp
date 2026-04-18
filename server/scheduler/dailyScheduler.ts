@@ -1,6 +1,6 @@
 import { getDb } from "../db";
 import { campaigns, campaignContacts, messageSendLog } from "../../drizzle/schema";
-import { eq, lt } from "drizzle-orm";
+import { eq, lt, or, gt } from "drizzle-orm";
 import { campaignScheduler } from "./campaignScheduler";
 
 export const DAILY_SCHEDULE = {
@@ -115,9 +115,11 @@ class DailyScheduler {
       console.log("   ✅ sentCount zerado");
       await db.update(campaignContacts).set({ status: "pending", messagesSent: 0 }).where(eq(campaignContacts.status, "blocked"));
       console.log("   ✅ Contatos bloqueados → pending");
-      const cutoffUnix = Math.floor((Date.now() - 24 * 60 * 60 * 1000) / 1000);
-      const cutoffHour = Math.floor(cutoffUnix / 3600) * 3600;
-      await db.delete(messageSendLog).where(lt(messageSendLog.cycleHour, cutoffHour));
+      const cutoffHour = Math.floor((Date.now() - 25 * 60 * 60 * 1000) / 3600000);
+      await db.delete(messageSendLog).where(or(
+        gt(messageSendLog.cycleHour, 1000000),        // formato legado (epoch-seconds)
+        lt(messageSendLog.cycleHour, cutoffHour)      // mais de 25h atrás (novo formato)
+      ));
       console.log("   ✅ messageSendLog antigo limpo");
       await db.delete(campaignContacts).where(eq(campaignContacts.status, "pending"));
       console.log("   ✅ Filas pending limpas");
