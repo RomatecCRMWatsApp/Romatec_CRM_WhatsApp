@@ -1,5 +1,5 @@
 import { getDb } from "../db";
-import { campaigns, contacts, messages, campaignContacts, contactCampaignHistory, properties, schedulerState as schedulerStateTable } from "../../drizzle/schema";
+import { campaigns, contacts, messages, campaignContacts, contactCampaignHistory, properties, schedulerState as schedulerStateTable, messageSendLog } from "../../drizzle/schema";
 import { eq, and, asc, ne, or, gt, lt } from "drizzle-orm";
 import { registerBotMessage, getFollowUpsToSend, cleanupOldFollowUps } from "../bot-ai";
 import { notifyMessageSent } from "../_core/telegramNotification";
@@ -498,10 +498,32 @@ export class CampaignScheduler {
 
     console.log(`📤 Hora ${hour}h (Brasília) → Campanha: ${campaign.name} (ciclo ${campIndex !== undefined ? campIndex + 1 : '?'}/10)`);
 
-    // Verificar se já enviou nesta hora
+    // Verificar se já enviou nesta hora (memória)
     const campState = this.state.campaignStates.find(cs => cs.campaignId === campaign!.id);
     if (campState?.sentThisHour) {
       console.log(`✅ ${campaign.name} já enviou nesta hora — pulando agendamento`);
+      return;
+    }
+
+    // DB guard: previne double-scheduling em zero-downtime deploys
+    // (dois processos rodam simultaneamente; o guard de memória não protege entre processos)
+    const scheduleCycleHour = Math.floor(Date.now() / 3600000);
+    const dbScheduleCheck = await db
+      .select({ status: messageSendLog.status })
+      .from(messageSendLog)
+      .where(and(
+        eq(messageSendLog.campaignId, campaign.id),
+        eq(messageSendLog.cycleHour, scheduleCycleHour),
+        ne(messageSendLog.status, 'failed')
+      ))
+      .limit(1);
+
+    if (dbScheduleCheck.length > 0) {
+      console.log(`🔒 [Schedule Guard DB] ${campaign.name}: status='${dbScheduleCheck[0].status}' no banco — pulando agendamento`);
+      if (dbScheduleCheck[0].status === 'sent') {
+        const cs = this.state.campaignStates.find(s => s.campaignId === campaign!.id);
+        if (cs) cs.sentThisHour = true;
+      }
       return;
     }
 
@@ -537,7 +559,22 @@ export class CampaignScheduler {
       if (!this.state.isRunning) return;
       const cs = this.state.campaignStates.find(s => s.campaignId === campaign!.id);
       if (cs?.sentThisHour) {
-        console.log(`⚠️ [Timer ${hour}h] ${campaign!.name}: já enviou nesta hora — cancelando disparo`);
+        console.log(`⚠️ [Timer ${hour}h] ${campaign!.name}: já enviou nesta hora (memória) — cancelando disparo`);
+        return;
+      }
+      // DB guard no disparo: protege contra processo concorrente (deploy zero-downtime)
+      const dispatchCycleHour = Math.floor(Date.now() / 3600000);
+      const dbDispatchCheck = await getDb().then(d => d?.select({ status: messageSendLog.status })
+        .from(messageSendLog)
+        .where(and(
+          eq(messageSendLog.campaignId, campaign!.id),
+          eq(messageSendLog.cycleHour, dispatchCycleHour),
+          eq(messageSendLog.status, 'sent')
+        ))
+        .limit(1));
+      if (dbDispatchCheck && dbDispatchCheck.length > 0) {
+        console.log(`⚠️ [Timer ${hour}h] ${campaign!.name}: 'sent' encontrado no DB — cancelando disparo (processo concorrente enviou)`);
+        if (cs) cs.sentThisHour = true;
         return;
       }
       console.log(`⏰ [Timer ${hour}h] ${campaign!.name}: disparando envio agora`);
@@ -653,11 +690,16 @@ export class CampaignScheduler {
           status: 'pending',
         });
       } catch (pendingErr: any) {
-        if (pendingErr?.message?.includes('Duplicate')) {
-          // Registro de tentativa anterior ainda existe — resetar para pending
+        if (String(pendingErr?.message).includes('Duplicate')) {
+          // Conflito em (contactPhone,cycleHour) OU novo (campaignId,cycleHour) — atualizar registro existente
+          // Troca contactPhone para o contato atual (retry com contato diferente após restart)
           await db.update(messageSendLog)
-            .set({ status: 'pending', campaignId, sentAt: now })
-            .where(and(eq(messageSendLog.contactPhone, cleanPhone), eq(messageSendLog.cycleHour, cycleHour)));
+            .set({ status: 'pending', contactPhone: cleanPhone, sentAt: now })
+            .where(and(
+              eq(messageSendLog.campaignId, campaignId),
+              eq(messageSendLog.cycleHour, cycleHour),
+              ne(messageSendLog.status, 'sent')
+            ));
         }
       }
 

@@ -322,10 +322,14 @@ export const messageSendLog = mysqlTable(
     createdAt: timestamp("createdAt").defaultNow().notNull(),
   },
   (table) => ({
-    // CONSTRAINT ÚNICA: impede duplicatas ao nível de DB
-    // Qualquer tentativa de insert com mesmo (contactPhone, cycleHour) falha
+    // Impede dois registros com mesmo contato na mesma hora
     uniquePerHour: uniqueIndex("unique_contact_cycle_hour").on(
       table.contactPhone,
+      table.cycleHour
+    ),
+    // Impede a mesma campanha enviar mais de uma vez na mesma hora (lock entre processos)
+    uniqueCampaignCycle: uniqueIndex("unique_campaign_cycle_hour").on(
+      table.campaignId,
       table.cycleHour
     ),
     // Índices para performance

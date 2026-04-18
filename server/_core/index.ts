@@ -339,6 +339,13 @@ async function startServer() {
     console.error('❌ Erro na migration cleanupOldCycleHourFormat:', e);
   }
 
+  try {
+    const { addUniqueCampaignCycleHour } = await import('./migrations/addUniqueCampaignCycleHour');
+    await addUniqueCampaignCycleHour();
+  } catch (e) {
+    console.error('❌ Erro na migration addUniqueCampaignCycleHour:', e);
+  }
+
   const preferredPort = parseInt(process.env.PORT || "3000");
   const port = await findAvailablePort(preferredPort);
 
