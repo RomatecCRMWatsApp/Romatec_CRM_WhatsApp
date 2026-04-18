@@ -265,11 +265,18 @@ export class CampaignScheduler {
       await this.syncCampaignsWithProperties();
       await this.initCampaignStates();
 
+      // Setar currentHourKey ANTES de scheduleHourSend e do loop,
+      // para que checkAndSend() nunca detecte "nova hora" no primeiro tick
+      // e repita sync+init desnecessariamente (era a causa dos logs duplicados)
+      this.state.currentHourKey = this.getCurrentHourKey();
+
+      if (this.isActiveHour()) {
+        await this.scheduleHourSend();
+      }
+
       await this.saveStateToDB();
       this.startCheckLoop();
       this.startFollowUpLoop();
-
-      await this.checkAndSend();
 
       console.log(`✅ Scheduler v9.0 iniciado - Verificação a cada 1 minuto`);
     } finally {
