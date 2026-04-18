@@ -316,7 +316,7 @@ export const messageSendLog = mysqlTable(
     // Isso permite detectar se já foi enviado no mesmo ciclo de hora
     cycleHour: int("cycleHour").notNull(),
     // Status do envio
-    status: mysqlEnum("status", ["sent", "skipped_duplicate", "failed"]).default("sent").notNull(),
+    status: mysqlEnum("status", ["sent", "skipped_duplicate", "failed", "pending"]).default("sent").notNull(),
     // Motivo se foi pulado/falhou
     reason: varchar("reason", { length: 255 }),
     createdAt: timestamp("createdAt").defaultNow().notNull(),

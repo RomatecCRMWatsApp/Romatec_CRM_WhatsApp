@@ -325,6 +325,13 @@ async function startServer() {
     console.error('❌ Erro na migration addFinalidadeToProperties:', e);
   }
 
+  try {
+    const { addPendingStatusToSendLog } = await import('./migrations/addPendingStatusToSendLog');
+    await addPendingStatusToSendLog();
+  } catch (e) {
+    console.error('❌ Erro na migration addPendingStatusToSendLog:', e);
+  }
+
   const preferredPort = parseInt(process.env.PORT || "3000");
   const port = await findAvailablePort(preferredPort);
 

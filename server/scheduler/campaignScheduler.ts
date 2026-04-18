@@ -1,6 +1,6 @@
 import { getDb } from "../db";
 import { campaigns, contacts, messages, campaignContacts, contactCampaignHistory, properties, schedulerState as schedulerStateTable } from "../../drizzle/schema";
-import { eq, and, asc } from "drizzle-orm";
+import { eq, and, asc, ne } from "drizzle-orm";
 import { registerBotMessage, getFollowUpsToSend, cleanupOldFollowUps } from "../bot-ai";
 import { notifyMessageSent } from "../_core/telegramNotification";
 
@@ -610,28 +610,22 @@ export class CampaignScheduler {
         return;
       }
 
-      // 2) Verificar se esse CONTATO já recebeu mensagem neste ciclo de hora
+      // 2) Verificar se CONTATO já recebeu mensagem confirmada nesta hora
+      // Ignora 'pending' (send interrompido por restart) → retentativa permitida
       const existingLog = await db
         .select()
         .from(messageSendLog)
         .where(
           and(
             eq(messageSendLog.contactPhone, cleanPhone),
-            eq(messageSendLog.cycleHour, cycleHour)
+            eq(messageSendLog.cycleHour, cycleHour),
+            ne(messageSendLog.status, 'pending')
           )
         )
         .limit(1);
 
       if (existingLog.length > 0) {
         console.log(`⏭️ ${campaign.name} → ${contact.name}: JÁ RECEBEU MENSAGEM NESTA HORA (${hourLabel})`);
-        await db.insert(messageSendLog).values({
-          contactPhone: cleanPhone,
-          campaignId,
-          sentAt: now,
-          cycleHour,
-          status: 'skipped_duplicate',
-          reason: `Contato já recebeu mensagem em ${hourLabel}`,
-        }).catch(() => {});
         return;
       }
 
@@ -647,37 +641,45 @@ export class CampaignScheduler {
 
       const personalized = this.personalizeMessage(fullText, contact);
 
+      // ═══════════════════════════════════════════════════════════════════════
+      // PRÉ-REGISTRO: status='pending' antes de chamar Z-API
+      // Se restart ocorrer aqui, boot cleanup marca 'failed' → slot liberado para retry
+      // ═══════════════════════════════════════════════════════════════════════
+      try {
+        await db.insert(messageSendLog).values({
+          contactPhone: cleanPhone,
+          campaignId,
+          sentAt: now,
+          cycleHour,
+          status: 'pending',
+        });
+      } catch (pendingErr: any) {
+        if (pendingErr?.message?.includes('Duplicate')) {
+          // Registro de tentativa anterior ainda existe — resetar para pending
+          await db.update(messageSendLog)
+            .set({ status: 'pending', campaignId, sentAt: now })
+            .where(and(eq(messageSendLog.contactPhone, cleanPhone), eq(messageSendLog.cycleHour, cycleHour)));
+        }
+      }
+
       console.log(`\n📨 Enviando: ${campaign.name} → ${contact.name} (${contact.phone})`);
 
       const result = await this.sendViaZAPI(contact.phone, personalized);
 
       if (result === 'sent') {
         // ═══════════════════════════════════════════════════════════════════════
-        // REGISTRAR NO LOG CRÍTICO: messageSendLog
+        // CONFIRMAR ENVIO: pending → sent (somente após Z-API confirmar entrega)
         // ═══════════════════════════════════════════════════════════════════════
-        const { messageSendLog } = await import('../../drizzle/schema');
-        const now = new Date();
-        const nowUnix = Math.floor(now.getTime() / 1000);
-        const cycleHour = Math.floor(nowUnix / 3600) * 3600;
-
         try {
-          await db.insert(messageSendLog).values({
-            contactPhone: cleanPhone,
-            campaignId,
-            sentAt: now,
-            cycleHour,
-            status: 'sent',
-            reason: null,
-          });
-          console.log(`📊 [SendLog] Registrado: ${cleanPhone} em ciclo ${new Date(cycleHour * 1000).toLocaleTimeString('pt-BR', { timeZone: 'America/Sao_Paulo' })}`);
+          await db.update(messageSendLog)
+            .set({ status: 'sent', reason: null })
+            .where(and(
+              eq(messageSendLog.contactPhone, cleanPhone),
+              eq(messageSendLog.cycleHour, cycleHour)
+            ));
+          console.log(`📊 [SendLog] Confirmado: ${cleanPhone} em ciclo ${hourLabel}`);
         } catch (logErr) {
-          // Se falhar por duplicata (constraint única), é porque outro envio já registrou
-          // Isso é BOM — significa que o DB evitou uma duplicata
-          if ((logErr as any)?.message?.includes('Duplicate')) {
-            console.warn(`⚠️ [SendLog] Duplicata detectada e bloqueada pelo DB para ${cleanPhone}`);
-          } else {
-            console.error(`❌ [SendLog] Erro ao registrar:`, logErr);
-          }
+          console.error(`❌ [SendLog] Erro ao confirmar envio:`, logErr);
         }
 
         // Incrementar contador de tentativas sem resposta
@@ -746,6 +748,9 @@ export class CampaignScheduler {
         await this.updateContactHistory(contact.id, campaignId);
       } else if (result === 'failed') {
         this.state.totalFailed++;
+        await db.update(messageSendLog)
+          .set({ status: 'failed', reason: 'zapi_error' })
+          .where(and(eq(messageSendLog.contactPhone, cleanPhone), eq(messageSendLog.cycleHour, cycleHour)));
         await db.insert(messages).values({
           campaignId,
           contactId: contact.id,
@@ -757,6 +762,9 @@ export class CampaignScheduler {
         console.log(`❌ Falha no envio`);
       } else {
         // Número inválido — pular para próximo
+        await db.update(messageSendLog)
+          .set({ status: 'failed', reason: 'invalid_phone' })
+          .where(and(eq(messageSendLog.contactPhone, cleanPhone), eq(messageSendLog.cycleHour, cycleHour)));
         await db.update(campaignContacts)
           .set({ status: 'failed' })
           .where(and(
@@ -840,6 +848,9 @@ export class CampaignScheduler {
     const db = await getDb();
     if (!db) return;
 
+    // Limpar registros 'pending' de runs anteriores (restart) → libera slots para retry
+    await this.cleanupPendingLogs(db);
+
     // ORDER BY id para manter ordem consistente com scheduleHourSend
     const allCampaigns = await db.select().from(campaigns)
       .where(eq(campaigns.status, 'running'))
@@ -888,6 +899,19 @@ export class CampaignScheduler {
         lastSentHourKey: alreadySent ? currentHourKey : (existing?.lastSentHourKey || null),
       };
     });
+  }
+
+  /** Marca registros 'pending' como 'failed' no boot (eram de antes do restart) */
+  private async cleanupPendingLogs(db: any): Promise<void> {
+    try {
+      const { messageSendLog } = await import('../../drizzle/schema');
+      await db.update(messageSendLog)
+        .set({ status: 'failed', reason: 'server_restart' })
+        .where(eq(messageSendLog.status, 'pending'));
+      console.log(`🧹 [SendLog] Boot cleanup: 'pending' → 'failed' (restarts anteriores)`);
+    } catch (e) {
+      console.error('[SendLog] Erro na limpeza de pending:', e);
+    }
   }
 
   // ========== CONTATOS ==========
