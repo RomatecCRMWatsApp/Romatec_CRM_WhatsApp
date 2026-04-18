@@ -854,13 +854,38 @@ export class CampaignScheduler {
 
     console.log(`📊 Iniciando campanhas elegíveis: ${eligibleCampaigns.length}/5 no ciclo ${this.state.nightMode ? 'NOITE 🌙' : 'DIA ☀️'}`);
 
+    // ═══════════════════════════════════════════════════════════
+    // RESTAURAR sentThisHour A PARTIR DO BANCO (sobrevive a restart)
+    // Sem isso, após restart sentThisHour sempre começa false e os
+    // slots são re-agendados, causando "PROTEÇÃO DB bloqueando" nos logs
+    // ═══════════════════════════════════════════════════════════
+    const nowUnix = Math.floor(Date.now() / 1000);
+    const cycleHour = Math.floor(nowUnix / 3600) * 3600;
+
+    const { messageSendLog } = await import('../../drizzle/schema');
+    const sentThisHourLogs = await db
+      .select({ campaignId: messageSendLog.campaignId })
+      .from(messageSendLog)
+      .where(
+        and(
+          eq(messageSendLog.cycleHour, cycleHour),
+          eq(messageSendLog.status, 'sent')
+        )
+      );
+    const alreadySentIds = new Set(sentThisHourLogs.map(r => r.campaignId));
+
+    if (alreadySentIds.size > 0) {
+      console.log(`♻️ [Init] Campanhas que já enviaram nesta hora (restaurado do DB): ${[...alreadySentIds].join(', ')}`);
+    }
+
     this.state.campaignStates = eligibleCampaigns.map(camp => {
+      const alreadySent = alreadySentIds.has(camp.id);
       const existing = this.state.campaignStates.find(cs => cs.campaignId === camp.id);
       return {
         campaignId: camp.id,
         campaignName: camp.name,
-        sentThisHour: existing?.lastSentHourKey === currentHourKey ? true : false,
-        lastSentHourKey: existing?.lastSentHourKey || null,
+        sentThisHour: alreadySent || (existing?.lastSentHourKey === currentHourKey),
+        lastSentHourKey: alreadySent ? currentHourKey : (existing?.lastSentHourKey || null),
       };
     });
   }
