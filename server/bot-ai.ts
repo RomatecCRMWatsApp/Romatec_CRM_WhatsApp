@@ -424,14 +424,14 @@ async function saveLeadQualification(
     const db = await getDb();
     if (!db) return;
 
+    const cleanPhone = phone.replace(/\D/g, '');
     let contactId: number | undefined;
-    const contactResult = await db.select().from(contacts).where(eq(contacts.phone, phone)).limit(1);
+    const contactResult = await db.select().from(contacts).where(eq(contacts.phone, cleanPhone)).limit(1);
     if (contactResult[0]) contactId = contactResult[0].id;
 
-    await db.insert(leadQualifications).values({
+    const qualFields = {
       contactId: contactId || null,
       campaignId: campaignId || null,
-      phone,
       nome,
       valorParcela: answers.valorParcela || null,
       valorEntrada: answers.valorEntrada || null,
@@ -440,10 +440,20 @@ async function saveLeadQualification(
       prazo: answers.prazo || null,
       primeiroImovel: answers.primeiroImovel || null,
       score,
-      campanhaOrigem: prop.name,
-    } as any);
+      campanhaOrigem: prop?.name || null,
+      stage: 'qualificado',
+      updatedAt: new Date(),
+    };
 
-    console.log(`[Bot] Lead qualificado: ${nome} (${phone}) — Score: ${score.toUpperCase()}`);
+    // UPSERT: atualizar registro existente (criado por persistLeadState) em vez de criar duplicata
+    const existing = await db.select().from(leadQualifications).where(eq(leadQualifications.phone, cleanPhone)).limit(1);
+    if (existing[0]) {
+      await db.update(leadQualifications).set(qualFields as any).where(eq(leadQualifications.phone, cleanPhone));
+      console.log(`[Lead Update] phone=${cleanPhone} stage=qualificado score=${score.toUpperCase()} name=${nome} [QUALIFICADO]`);
+    } else {
+      await db.insert(leadQualifications).values({ phone: cleanPhone, ...qualFields } as any);
+      console.log(`[Lead Update] phone=${cleanPhone} stage=qualificado score=${score.toUpperCase()} name=${nome} [QUALIFICADO/INSERIDO]`);
+    }
   } catch (e) {
     console.error('[Bot] Erro ao salvar qualificacao:', e);
   }

@@ -42,32 +42,36 @@ export async function persistLeadState(
       .where(eq(leadQualifications.phone, cleanPhone))
       .limit(1);
 
+    const realName = senderName && senderName !== 'Cliente' ? senderName : undefined;
+
     if (existing && existing[0]) {
       // UPDATE
       await db
         .update(leadQualifications)
         .set({
           stage,
+          ...(realName ? { nome: realName } : {}),
           answers: answers as any,
           lastActivityAt: now,
           updatedAt: now,
         })
         .where(eq(leadQualifications.phone, cleanPhone));
 
-      console.log(`[Persistence] ✅ Updated lead ${cleanPhone} at stage ${stage}`);
+      console.log(`[Lead Update] phone=${cleanPhone} stage=${stage} name=${realName || existing[0].nome || 'sem nome'}`);
     } else {
       // INSERT
       await db.insert(leadQualifications).values({
         phone: cleanPhone,
         stage,
+        nome: realName || null,
         answers: answers as any,
-        score: 'frio', // default
+        score: 'frio', // default — atualizado ao completar qualificação
         lastActivityAt: now,
         createdAt: now,
         updatedAt: now,
       } as any);
 
-      console.log(`[Persistence] ✅ Created lead ${cleanPhone} at stage ${stage}`);
+      console.log(`[Lead Update] phone=${cleanPhone} stage=${stage} name=${realName || 'sem nome'} [CRIADO]`);
     }
   } catch (error) {
     console.error('[Persistence] ❌ Erro ao persistir lead:', error);
