@@ -565,7 +565,7 @@ export default function Properties() {
                 <div className="property-image relative">
                   {property.images && property.images.length > 0 ? (
                     <>
-                      <img src={property.images[0]} alt={property.denomination} />
+                      <img src={property.images[0]} alt={property.denomination} className="w-full h-48 sm:h-56 object-cover max-w-full" />
                       {property.images.length > 1 && (
                         <div className="absolute bottom-3 right-3 bg-black/60 backdrop-blur-sm text-white text-xs px-2.5 py-1 rounded-full flex items-center gap-1">
                           <Image className="h-3 w-3" /> {property.images.length}
@@ -702,15 +702,15 @@ export default function Properties() {
       {/* Modal de Detalhes Premium */}
       {selectedProperty && (
         <Dialog open={!!selectedProperty} onOpenChange={() => { setSelectedProperty(null); setImageIndex(0); }}>
-          <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto bg-card border-border/50 p-0">
+          <DialogContent className="max-w-4xl w-[calc(100vw-16px)] sm:w-auto max-h-[90vh] overflow-y-auto bg-card border-border/50 p-0">
             {/* Header com imagem */}
             <div className="relative">
               {selectedProperty.images?.length > 0 ? (
-                <div className="relative h-72 md:h-96">
+                <div className="relative h-52 sm:h-72 md:h-96">
                   <img
                     src={selectedProperty.images[imageIndex] || selectedProperty.images[0]}
                     alt={selectedProperty.denomination}
-                    className="w-full h-full object-cover cursor-zoom-in"
+                    className="w-full h-full object-cover max-w-full cursor-zoom-in"
                     onClick={() => { setLightboxIndex(imageIndex); setLightboxOpen(true); }}
                   />
                   {selectedProperty.images.length > 1 && (
@@ -738,7 +738,7 @@ export default function Properties() {
             </div>
 
             {/* Conteúdo */}
-            <div className="px-6 pb-6 -mt-8 relative z-10">
+            <div className="px-4 sm:px-6 pb-6 -mt-8 relative z-10">
               {/* Nome e Preço */}
               <div className="flex items-start justify-between mb-4">
                 <div>
@@ -901,7 +901,7 @@ export default function Properties() {
           </div>
 
           {/* Área do carousel */}
-          <div className="flex-1 flex items-center justify-center relative overflow-hidden px-12">
+          <div className="flex-1 flex items-center justify-center relative overflow-hidden px-10 sm:px-14">
             {/* Track deslizante */}
             <div
               className="flex items-center gap-4 transition-transform duration-300 ease-out"
@@ -920,7 +920,7 @@ export default function Properties() {
                   <img
                     src={img}
                     alt={`Foto ${idx + 1}`}
-                    className="max-h-[70vh] w-full object-contain rounded-xl shadow-2xl"
+                    className="max-h-[75vh] max-w-[100vw] w-full object-contain rounded-xl shadow-2xl"
                     style={{ boxShadow: idx === lightboxIndex ? '0 0 60px rgba(62,200,122,0.15)' : 'none' }}
                   />
                 </div>

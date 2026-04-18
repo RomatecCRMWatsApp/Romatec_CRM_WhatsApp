@@ -193,10 +193,10 @@ export default function PropertyPublic() {
             </div>
 
             {activeTab === "fotos" && images.length > 0 && (
-              <div className="grid grid-cols-3 gap-2">
+              <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
                 {images.map((img: string, idx: number) => (
                   <button key={idx} onClick={() => { setImageIndex(idx); window.scrollTo({ top: 0, behavior: 'smooth' }); }} className={`rounded-xl overflow-hidden border-2 transition-all ${idx === imageIndex ? "border-emerald" : "border-transparent opacity-70 hover:opacity-100"}`}>
-                    <img src={img} alt={`Foto ${idx + 1}`} className="w-full h-20 object-cover" />
+                    <img src={img} alt={`Foto ${idx + 1}`} className="w-full h-24 sm:h-28 object-cover max-w-full" />
                   </button>
                 ))}
               </div>
