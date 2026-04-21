@@ -1,63 +1,62 @@
-import { getDb } from "../db";
-import { campaigns, contacts, messages, campaignContacts, contactCampaignHistory, properties, schedulerState as schedulerStateTable, messageSendLog } from "../../drizzle/schema";
-import { eq, and, asc, ne, or, gt, lt } from "drizzle-orm";
-import { registerBotMessage, getFollowUpsToSend, cleanupOldFollowUps } from "../bot-ai";
-import { notifyMessageSent } from "../_core/telegramNotification";
+// @module CampaignScheduler — Orquestrador puro (coordena todos os módulos do scheduler)
 
 /**
- * SISTEMA ROMATEC CRM v9.0 - ROTAÇÃO SEQUENCIAL
+ * ROMATEC CRM v9.0 - ROTAÇÃO SEQUENCIAL
  *
  * LÓGICA:
  * - 5 campanhas em rotação sequencial por hora
  * - 08h → Camp1 / 09h → Camp2 / 10h → Camp3 / 11h → Camp4 / 12h → Camp5
  * - 13h → Camp1 / 14h → Camp2 / 15h → Camp3 / 16h → Camp4 / 17h → Camp5
- * - Cada campanha envia 2 msgs por ciclo (dia)
+ * - Cada campanha envia 1 msg por hora (ciclo)
  * - Horário: 08h-18h (modo dia) ou 20h-06h (modo noite)
- * - Bloqueio de 72h por contato após envio
- * - 1 msg por hora por campanha ativa
+ * - Bloqueio por MAX_ATTEMPTS_NO_RESPONSE sem resposta
  * - Horário sincronizado com Brasília (GMT-3)
- * - Ao acionar, sincroniza com o ciclo da hora atual
  */
 
-interface SchedulerState {
-  isRunning: boolean;
-  currentHourKey: string;
-  hourNumber: number;
-  totalSent: number;
-  totalFailed: number;
-  totalBlocked: number;
-  startedAt: number;
-  campaignStates: CampaignHourState[];
-  scheduledSlots: SlotInfo[];
-  nightMode: boolean;
-}
-
-interface CampaignHourState {
-  campaignId: number;
-  campaignName: string;
-  sentThisHour: boolean;
-  lastSentHourKey: string | null;
-}
-
-interface SlotInfo {
-  campaignId: number;
-  campaignName: string;
-  minuteLabel: number;
-  sent: boolean;
-}
-
-// Mapeamento: hora do dia → índice da campanha (0-4)
-// Dia: 08-17h (10 horas), Noite: 20-05h (10 horas)
-const HOUR_TO_CAMP_INDEX: Record<number, number> = {
-  8: 0, 9: 1, 10: 2, 11: 3, 12: 4,
-  13: 0, 14: 1, 15: 2, 16: 3, 17: 4,
-  // Modo noite
-  20: 0, 21: 1, 22: 2, 23: 3, 0: 4,
-  1: 0, 2: 1, 3: 2, 4: 3, 5: 4,
-};
-
-const ACTIVE_HOURS_DAY = [8, 9, 10, 11, 12, 13, 14, 15, 16, 17];
-const ACTIVE_HOURS_NIGHT = [20, 21, 22, 23, 0, 1, 2, 3, 4, 5];
+import { getDb } from '../db';
+import { campaigns, messageSendLog } from '../../drizzle/schema';
+import { eq, and, asc } from 'drizzle-orm';
+import { saveStateToDB, loadStateFromDB, getDBStatus } from './stateManager';
+import { sendViaZAPI, personalizeMessage } from './messageDispatcher';
+import {
+  getCurrentHour,
+  getCurrentHourKey,
+  isActiveHour,
+  getCurrentCycleIndex,
+  getAutoNightMode,
+  getCampaignForCurrentHour,
+  syncCycleIndexWithCurrentHour,
+} from './modules/cycleManager';
+import {
+  autoToggleCycles,
+  fixActiveFlagsForCurrentShift,
+  getSystemPhase,
+} from './modules/shiftManager';
+import {
+  calcSlotDelayMs,
+  checkCampAlreadySentThisHour,
+  checkContactAlreadySentThisHour,
+  preSendLog,
+  confirmSend,
+  recordFailedSend,
+  getPropertyLinkMessage,
+} from './modules/dispatchManager';
+import {
+  getNextContact,
+  updateContactHistory,
+} from './modules/contactManager';
+import {
+  initCampaignStates,
+  syncCampaignsWithProperties,
+  fixActiveFlagsForMode,
+  getMessageVariation,
+} from './modules/resetManager';
+import { startFollowUpLoop, stopFollowUpLoop } from './modules/followUpManager';
+import { registerBotDispatch } from './modules/qualificationBot';
+import { notifyMessageSent } from '../_core/telegramNotification';
+import { getBrasiliaDate, formatUptime } from './utils';
+import { HOUR_TO_CAMP_INDEX, CHECK_INTERVAL_MS, MAX_HOURS_PER_CYCLE } from './constants';
+import type { SchedulerState, SchedulerStateSnapshot, SchedulerStats } from './types/campaign.types';
 
 export class CampaignScheduler {
   private static instance: CampaignScheduler | null = null;
@@ -80,20 +79,6 @@ export class CampaignScheduler {
   private slotTimers: NodeJS.Timeout[] = [];
   private isSending: boolean = false;
   private lastVariationIndex: Map<number, number> = new Map();
-  private followUpTimer: NodeJS.Timeout | null = null;
-
-  private readonly CHECK_INTERVAL_MS = 60 * 1000;
-  private readonly MIN_GAP_MS = 3 * 60 * 1000;
-  private readonly MARGIN_MS = 2 * 60 * 1000;
-  private readonly HOUR_MS = 60 * 60 * 1000;
-  // Máximo de mensagens sem resposta antes de parar o contato
-  // Se o lead responder, o contador é zerado pelo webhook (handleZapiWebhook)
-  private readonly MAX_ATTEMPTS_NO_RESPONSE = 3;
-  private readonly MAX_HOURS_PER_CYCLE = 10;
-  private readonly MAX_ZAPI_FAILS = 3; // Auto-pause após N falhas consecutivas de envio
-
-  // Contador de falhas Z-API consecutivas — resetado a cada envio bem-sucedido
-  private zapiConsecutiveFails = 0;
 
   static getInstance(): CampaignScheduler {
     if (!CampaignScheduler.instance) {
@@ -102,129 +87,9 @@ export class CampaignScheduler {
     return CampaignScheduler.instance;
   }
 
-  // ========== HORÁRIO BRASÍLIA ==========
+  // ========== CONTROLE SINGLETON ==========
 
-  private getBrasiliaDate(): Date {
-    // Sempre usa o fuso horário de Brasília (America/Sao_Paulo)
-    const now = new Date();
-    const brasiliaStr = now.toLocaleString('en-US', { timeZone: 'America/Sao_Paulo' });
-    return new Date(brasiliaStr);
-  }
-
-  // ========== ESTADO ==========
-
-  private getCurrentHourKey(): string {
-    const now = this.getBrasiliaDate();
-    return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}-${String(now.getHours()).padStart(2, '0')}`;
-  }
-
-  private getCurrentHour(): number {
-    return this.getBrasiliaDate().getHours();
-  }
-
-  private isActiveHour(): boolean {
-    const hour = this.getCurrentHour();
-    const activeHours = this.state.nightMode ? ACTIVE_HOURS_NIGHT : ACTIVE_HOURS_DAY;
-    return activeHours.includes(hour);
-  }
-
-  private getCurrentCycleIndex(): number {
-    const hour = this.getCurrentHour();
-    const activeHours = this.state.nightMode ? ACTIVE_HOURS_NIGHT : ACTIVE_HOURS_DAY;
-    const idx = activeHours.indexOf(hour);
-    return idx >= 0 ? idx : -1;
-  }
-
-  private getCampaignForCurrentHour(allCampaigns: any[]): any | null {
-    const hour = this.getCurrentHour();
-    const campIndex = HOUR_TO_CAMP_INDEX[hour];
-    if (campIndex === undefined) {
-      console.log(`⚠️ [Slot ${hour}h] Hora não mapeada em HOUR_TO_CAMP_INDEX`);
-      return null;
-    }
-
-    // NOTA: allCampaigns DEVE estar ordenado por id ASC (feito no caller)
-    // para garantir que campIndex sempre aponte para a mesma campanha
-    const activePeriod = this.state.nightMode ? 'activeNight' : 'activeDay';
-    const campaign = allCampaigns[campIndex];
-
-    if (!campaign) {
-      console.log(`⚠️ [Slot ${hour}h] Índice ${campIndex} fora do range (total campanhas: ${allCampaigns.length})`);
-      return null;
-    }
-
-    if (campaign.status !== 'running' || !campaign[activePeriod]) {
-      console.log(`⚠️ [Slot ${hour}h] ${campaign.name}: não elegível (status=${campaign.status}, ${activePeriod}=${campaign[activePeriod]})`);
-      return null;
-    }
-
-    return campaign;
-  }
-
-  private async saveStateToDB() {
-    try {
-      const db = await getDb();
-      if (!db) return;
-      const status = this.state.isRunning ? 'running' : 'stopped';
-      const stateJson = {
-        hourNumber: this.state.hourNumber,
-        totalSent: this.state.totalSent,
-        totalFailed: this.state.totalFailed,
-        startedAt: this.state.startedAt,
-        nightMode: this.state.nightMode,
-        campaignStates: this.state.campaignStates,
-        scheduledSlots: this.state.scheduledSlots,
-      };
-      const rows = await db.select().from(schedulerStateTable).where(eq(schedulerStateTable.id, 1)).limit(1);
-      if (rows[0]) {
-        // Preservar campos extras (ex: lastCycleNotif do Telegram) que não pertencem ao scheduler
-        const existingJson = (rows[0].stateJson as Record<string, any>) || {};
-        const mergedJson = { ...existingJson, ...stateJson };
-        await db.update(schedulerStateTable).set({ status, cycleNumber: this.state.hourNumber, stateJson: mergedJson, updatedAt: new Date() }).where(eq(schedulerStateTable.id, 1));
-      } else {
-        await db.insert(schedulerStateTable).values({ id: 1, status, cycleNumber: this.state.hourNumber, stateJson, messagesThisCycle: this.state.totalSent });
-      }
-      console.log(`💾 Estado salvo: ${status} | Ciclo ${this.state.hourNumber + 1}/10`);
-    } catch (e) {
-      console.error('❌ Erro ao salvar estado:', e);
-    }
-  }
-
-  private async loadStateFromDB() {
-    try {
-      const db = await getDb();
-      if (!db) return;
-      const rows = await db.select().from(schedulerStateTable).where(eq(schedulerStateTable.id, 1)).limit(1);
-      if (rows[0] && rows[0].status === 'running') {
-        const json = rows[0].stateJson as any;
-        if (json) {
-          this.state.hourNumber = json.hourNumber || 0;
-          this.state.totalSent = json.totalSent || 0;
-          this.state.totalFailed = json.totalFailed || 0;
-          this.state.startedAt = json.startedAt || Date.now();
-          this.state.nightMode = json.nightMode || false;
-          this.state.campaignStates = json.campaignStates || [];
-        }
-        console.log(`✅ Estado restaurado: Ciclo ${this.state.hourNumber + 1}/10`);
-      } else {
-        console.log('📋 Nenhum estado salvo - scheduler parado');
-      }
-    } catch (e) {
-      console.error('❌ Erro ao carregar estado:', e);
-    }
-  }
-
-  // ========== CONTROLE ==========
-
-  /** Detecta o modo correto baseado no horário atual de Brasília */
-  private getAutoNightMode(): boolean {
-    const h = this.getCurrentHour();
-    // 20h-05h59 = noite; resto = dia
-    return (h >= 20 || h < 6);
-  }
-
-  async start(forcedNightMode?: boolean) {
-    // SINGLETON GUARD: prevenir dupla inicialização durante startup
+  async start(forcedNightMode?: boolean): Promise<void> {
     if (this.state.isRunning || CampaignScheduler.isStarting) {
       console.log('⚠️ [SINGLETON] Scheduler já está rodando/iniciando — ignorando segunda inicialização');
       return;
@@ -232,8 +97,7 @@ export class CampaignScheduler {
     CampaignScheduler.isStarting = true;
 
     try {
-      // Se nightMode não foi passado explicitamente, detectar pelo horário atual
-      const nightMode = forcedNightMode !== undefined ? forcedNightMode : this.getAutoNightMode();
+      const nightMode = forcedNightMode !== undefined ? forcedNightMode : getAutoNightMode();
       this.state.nightMode = nightMode;
       this.state.isRunning = true;
       this.state.startedAt = Date.now();
@@ -244,39 +108,25 @@ export class CampaignScheduler {
       this.state.campaignStates = [];
       this.state.scheduledSlots = [];
 
-      // Sincronizar ciclo com a hora atual de Brasília
-      const currentHour = this.getCurrentHour();
-      const activeHours = nightMode ? ACTIVE_HOURS_NIGHT : ACTIVE_HOURS_DAY;
-      const cycleIdx = activeHours.indexOf(currentHour);
-      if (cycleIdx >= 0) {
-        this.state.hourNumber = cycleIdx;
-        console.log(`🕐 Brasília: ${currentHour}h → Ciclo ${cycleIdx + 1}/10`);
-      } else {
-        this.state.hourNumber = 0;
-        console.log(`⏰ Fora do horário ativo (hora atual Brasília: ${currentHour}h)`);
-      }
+      this.state.hourNumber = syncCycleIndexWithCurrentHour(nightMode);
 
       console.log(`🚀 Iniciando sistema ROMATEC CRM v9.0...`);
       console.log(`📏 REGRA: Rotação sequencial | Ciclo 10h | ${nightMode ? 'Modo Noite 20h-06h' : 'Modo Dia 08h-18h'}`);
 
-      // Destruir timers antigos para evitar duplas inicializações
       this.cleanupAllTimers();
 
-      await this.syncCampaignsWithProperties();
-      await this.initCampaignStates();
+      await syncCampaignsWithProperties();
+      this.state.campaignStates = await initCampaignStates(this.state.campaignStates, nightMode);
 
-      // Setar currentHourKey ANTES de scheduleHourSend e do loop,
-      // para que checkAndSend() nunca detecte "nova hora" no primeiro tick
-      // e repita sync+init desnecessariamente (era a causa dos logs duplicados)
-      this.state.currentHourKey = this.getCurrentHourKey();
+      this.state.currentHourKey = getCurrentHourKey();
 
-      if (this.isActiveHour()) {
+      if (isActiveHour(nightMode)) {
         await this.scheduleHourSend();
       }
 
-      await this.saveStateToDB();
+      await saveStateToDB(this.state);
       this.startCheckLoop();
-      this.startFollowUpLoop();
+      startFollowUpLoop(() => this.state.isRunning);
 
       console.log(`✅ Scheduler v9.0 iniciado - Verificação a cada 1 minuto`);
     } finally {
@@ -284,56 +134,32 @@ export class CampaignScheduler {
     }
   }
 
-  private cleanupAllTimers() {
-    if (this.checkTimer) {
-      clearInterval(this.checkTimer);
-      this.checkTimer = null;
-    }
-    for (const timer of this.slotTimers) {
-      clearTimeout(timer);
-    }
-    this.slotTimers = [];
-    if (this.followUpTimer) {
-      clearInterval(this.followUpTimer);
-      this.followUpTimer = null;
-    }
-  }
-
-  stop() {
+  stop(): void {
     console.log('⏹️ Parando scheduler...');
     this.state.isRunning = false;
     this.cleanupAllTimers();
-    this.saveStateToDB().catch(() => {});
+    stopFollowUpLoop();
+    saveStateToDB(this.state).catch(() => {});
     console.log('⏹️ Scheduler COMPLETAMENTE parado');
   }
 
   /** Restaura estado do DB e retoma se estava rodando (chamado no startup) */
-  async restoreAndResume() {
-    // Proteção contra chamada dupla — única fonte de startup
+  async restoreAndResume(): Promise<void> {
     if (this.state.isRunning) {
       console.log('🔄 [Restore] Scheduler já rodando — ignorando chamada duplicada');
       return;
     }
     try {
-      await this.loadStateFromDB();
-      const db = await getDb();
-      if (!db) return;
-      const rows = await db.select().from(schedulerStateTable).where(eq(schedulerStateTable.id, 1)).limit(1);
-      if (rows[0]?.status === 'running') {
-        const nightMode = this.getAutoNightMode();
-        const brasiliaHour = this.getCurrentHour();
-        const isDayHour   = brasiliaHour >= 8  && brasiliaHour < 18;
-        const isNightHour = brasiliaHour >= 20 || brasiliaHour < 6;
+      const savedState = await loadStateFromDB();
+      if (savedState) {
+        Object.assign(this.state, savedState);
+      }
 
-        // Corrigir activeDay/activeNight em todas as campanhas running conforme horário atual
-        if (isNightHour) {
-          await db.update(campaigns).set({ activeNight: true, activeDay: false }).where(eq(campaigns.status, 'running'));
-          console.log(`🌙 [Restore] activeNight=true aplicado em todas as campanhas running`);
-        } else if (isDayHour) {
-          await db.update(campaigns).set({ activeDay: true, activeNight: false }).where(eq(campaigns.status, 'running'));
-          console.log(`☀️ [Restore] activeDay=true aplicado em todas as campanhas running`);
-        }
-
+      const dbStatus = await getDBStatus();
+      if (dbStatus === 'running') {
+        const nightMode = getAutoNightMode();
+        const brasiliaHour = getCurrentHour();
+        await fixActiveFlagsForCurrentShift(brasiliaHour);
         console.log(`🔄 [Restore] Estado: running | Ciclo ${this.state.hourNumber + 1}/10 | ${nightMode ? 'NOITE' : 'DIA'}`);
         await this.start(nightMode);
       } else {
@@ -344,57 +170,38 @@ export class CampaignScheduler {
     }
   }
 
-  private startCheckLoop() {
+  // ========== LOOPS INTERNOS ==========
+
+  private startCheckLoop(): void {
     this.checkTimer = setInterval(async () => {
       if (!this.state.isRunning) return;
       await this.checkAndSend();
-    }, this.CHECK_INTERVAL_MS);
+    }, CHECK_INTERVAL_MS);
   }
 
-  // ─── Follow-up loop: verifica e envia persuasão T+5/15/25/35/44 min ───────
-  private startFollowUpLoop() {
-    // Limpa timer anterior se houver
-    if (this.followUpTimer) {
-      clearInterval(this.followUpTimer);
-      this.followUpTimer = null;
+  private cleanupAllTimers(): void {
+    if (this.checkTimer) {
+      clearInterval(this.checkTimer);
+      this.checkTimer = null;
     }
-
-    this.followUpTimer = setInterval(async () => {
-      if (!this.state.isRunning) return;
-      try {
-        cleanupOldFollowUps();
-        const dues = getFollowUpsToSend();
-        for (const { phone, message, step } of dues) {
-          try {
-            await this.sendViaZAPI(phone, message);
-            console.log(`🎯 Follow-up T+step${step} enviado para ${phone}`);
-          } catch (e) {
-            console.error(`❌ Erro follow-up step${step} para ${phone}:`, e);
-          }
-        }
-      } catch (e) {
-        console.error('❌ Erro no loop de follow-up:', e);
-      }
-    }, 60 * 1000); // verifica a cada 1 minuto
+    for (const timer of this.slotTimers) clearTimeout(timer);
+    this.slotTimers = [];
   }
 
   // ========== LÓGICA PRINCIPAL ==========
 
-  private async checkAndSend() {
+  private async checkAndSend(): Promise<void> {
     if (!this.state.isRunning) return;
 
-    const currentHourKey = this.getCurrentHourKey();
+    const currentHourKey = getCurrentHourKey();
 
     if (currentHourKey !== this.state.currentHourKey) {
-      // Nova hora!
       this.state.currentHourKey = currentHourKey;
 
-      // Auto-ativar/desativar ciclos (08h, 18h, 20h, 06h)
       const brasiliaHour = parseInt(currentHourKey.split('-')[3], 10);
-      await this.autoToggleCycles(brasiliaHour);
+      await autoToggleCycles(brasiliaHour, (v) => { this.state.nightMode = v; });
 
-      // Sincronizar ciclo com a hora real de Brasília
-      const cycleIdx = this.getCurrentCycleIndex();
+      const cycleIdx = getCurrentCycleIndex(this.state.nightMode);
       if (cycleIdx >= 0) {
         this.state.hourNumber = cycleIdx;
         console.log(`\n🕐 === NOVA HORA (Brasília): ${currentHourKey} | Ciclo ${this.state.hourNumber + 1}/10 ===`);
@@ -403,152 +210,89 @@ export class CampaignScheduler {
         return;
       }
 
-      // Resetar slots e estados das campanhas
-      this.state.campaignStates = this.state.campaignStates.map(cs => ({
-        ...cs,
-        sentThisHour: false,
-      }));
+      this.state.campaignStates = this.state.campaignStates.map(cs => ({ ...cs, sentThisHour: false }));
       this.state.scheduledSlots = [];
-
-      // Cancelar timers antigos
       for (const timer of this.slotTimers) clearTimeout(timer);
       this.slotTimers = [];
 
-      if (!this.isActiveHour()) {
+      if (!isActiveHour(this.state.nightMode)) {
         console.log(`😴 Fora do horário ativo — aguardando próxima hora`);
-        await this.saveStateToDB();
+        await saveStateToDB(this.state);
         return;
       }
 
-      await this.syncCampaignsWithProperties();
-      await this.initCampaignStates();
+      await syncCampaignsWithProperties();
+      this.state.campaignStates = await initCampaignStates(this.state.campaignStates, this.state.nightMode);
       await this.scheduleHourSend();
-      await this.saveStateToDB();
-
-      // Relatório de hora
+      await saveStateToDB(this.state);
       await this.sendCycleReport();
     }
 
-    // Primeira execução
     if (!this.state.currentHourKey || this.state.currentHourKey === '') {
       this.state.currentHourKey = currentHourKey;
-      if (this.isActiveHour()) {
-        await this.initCampaignStates();
+      if (isActiveHour(this.state.nightMode)) {
+        this.state.campaignStates = await initCampaignStates(this.state.campaignStates, this.state.nightMode);
         await this.scheduleHourSend();
-        await this.saveStateToDB();
+        await saveStateToDB(this.state);
       }
     }
   }
 
-  private async scheduleHourSend() {
+  // ========== AGENDAMENTO DO SLOT ==========
+
+  private async scheduleHourSend(): Promise<void> {
     const db = await getDb();
     if (!db) return;
 
-    const hour = this.getCurrentHour();
+    const hour = getCurrentHour();
     const campIndex = HOUR_TO_CAMP_INDEX[hour];
-    const activePeriod = this.state.nightMode ? 'activeNight' : 'activeDay';
 
-    // Auto-fix: garantir que os flags activeDay/activeNight estejam corretos para o modo atual
-    if (this.state.nightMode) {
-      const wrongFlags = await db.select().from(campaigns)
-        .where(and(eq(campaigns.status, 'running'), eq(campaigns.activeNight, false)));
-      if (wrongFlags.length > 0) {
-        await db.update(campaigns).set({ activeNight: true, activeDay: false }).where(eq(campaigns.status, 'running'));
-        console.log(`🔧 [Auto-fix] ${wrongFlags.length} campanha(s) com activeNight=false corrigidas → true`);
-      }
-    } else {
-      const wrongFlags = await db.select().from(campaigns)
-        .where(and(eq(campaigns.status, 'running'), eq(campaigns.activeDay, false)));
-      if (wrongFlags.length > 0) {
-        await db.update(campaigns).set({ activeDay: true, activeNight: false }).where(eq(campaigns.status, 'running'));
-        console.log(`🔧 [Auto-fix] ${wrongFlags.length} campanha(s) com activeDay=false corrigidas → true`);
-      }
-    }
+    await fixActiveFlagsForMode(this.state.nightMode);
 
-    // ORDER BY id garante ordem consistente entre chamadas e após restarts
-    // Sem isso, allCampaigns[campIndex] pode apontar para campanha errada
     const allCampaigns = await db.select().from(campaigns)
       .where(eq(campaigns.status, 'running'))
       .orderBy(asc(campaigns.id));
 
     console.log(`📋 [Slot ${hour}h] Índice esperado: ${campIndex} | Campanhas running: ${allCampaigns.length} | Modo: ${this.state.nightMode ? 'NOITE' : 'DIA'}`);
 
-    // Selecionar campanha principal pelo índice fixo
-    let campaign = this.getCampaignForCurrentHour(allCampaigns);
+    let campaign = getCampaignForCurrentHour(allCampaigns, this.state.nightMode);
+    const activePeriod = this.state.nightMode ? 'activeNight' : 'activeDay';
 
-    // FALLBACK: se campanha primária não elegível, tentar próximas na sequência
-    if (!campaign) {
-      if (campIndex !== undefined) {
-        for (let offset = 1; offset < allCampaigns.length; offset++) {
-          const tryIdx = (campIndex + offset) % allCampaigns.length;
-          const candidate = allCampaigns[tryIdx];
-          if (candidate && candidate.status === 'running' && candidate[activePeriod]) {
-            campaign = candidate;
-            console.log(`🔄 [Slot ${hour}h] Campanha índice ${campIndex} indisponível → fallback índice ${tryIdx}: ${candidate.name}`);
-            break;
-          }
+    if (!campaign && campIndex !== undefined) {
+      for (let offset = 1; offset < allCampaigns.length; offset++) {
+        const tryIdx = (campIndex + offset) % allCampaigns.length;
+        const candidate = allCampaigns[tryIdx];
+        if (candidate?.status === 'running' && (candidate as any)[activePeriod]) {
+          campaign = candidate;
+          console.log(`🔄 [Slot ${hour}h] Campanha primária indisponível → fallback índice ${tryIdx}: ${candidate.name}`);
+          break;
         }
       }
     }
 
     if (!campaign) {
-      console.log(`⚠️ [Slot ${hour}h] SLOT VAZIO — nenhuma campanha elegível (${allCampaigns.length} running, nenhuma com ${activePeriod}=true)`);
+      console.log(`⚠️ [Slot ${hour}h] SLOT VAZIO — nenhuma campanha elegível`);
       return;
     }
 
-    console.log(`📤 Hora ${hour}h (Brasília) → Campanha: ${campaign.name} (ciclo ${campIndex !== undefined ? campIndex + 1 : '?'}/10)`);
+    console.log(`📤 Hora ${hour}h → Campanha: ${campaign.name}`);
 
-    // Verificar se já enviou nesta hora (memória)
     const campState = this.state.campaignStates.find(cs => cs.campaignId === campaign!.id);
     if (campState?.sentThisHour) {
       console.log(`✅ ${campaign.name} já enviou nesta hora — pulando agendamento`);
       return;
     }
 
-    // DB guard: previne double-scheduling em zero-downtime deploys
-    // (dois processos rodam simultaneamente; o guard de memória não protege entre processos)
     const scheduleCycleHour = Math.floor(Date.now() / 3600000);
-    const dbScheduleCheck = await db
-      .select({ status: messageSendLog.status })
-      .from(messageSendLog)
-      .where(and(
-        eq(messageSendLog.campaignId, campaign.id),
-        eq(messageSendLog.cycleHour, scheduleCycleHour),
-        ne(messageSendLog.status, 'failed')
-      ))
-      .limit(1);
-
-    if (dbScheduleCheck.length > 0) {
-      console.log(`🔒 [Schedule Guard DB] ${campaign.name}: status='${dbScheduleCheck[0].status}' no banco — pulando agendamento`);
-      if (dbScheduleCheck[0].status === 'sent') {
-        const cs = this.state.campaignStates.find(s => s.campaignId === campaign!.id);
-        if (cs) cs.sentThisHour = true;
-      }
+    if (await checkCampAlreadySentThisHour(db, campaign.id, scheduleCycleHour)) {
+      console.log(`🔒 [Schedule Guard DB] ${campaign.name}: já agendado/enviado no banco — pulando`);
+      const cs = this.state.campaignStates.find(s => s.campaignId === campaign!.id);
+      if (cs) cs.sentThisHour = true;
       return;
     }
 
-    // Agendar envio nos primeiros 15 minutos da hora (aleatório)
-    // Fluxo: 15 min envio + 45 min qualificação = 60 min total
-    const now = this.getBrasiliaDate();
-    const minutesIntoHour = now.getMinutes();
-    const secondsIntoHour = minutesIntoHour * 60 + now.getSeconds();
-
-    const SEND_WINDOW_END = 15;
-    const randomMinute = Math.floor(Math.random() * (SEND_WINDOW_END + 1));
-
-    // CORREÇÃO: delay correto até o minuto aleatório dentro da hora
-    // secondsIntoHour já inclui minutesIntoHour*60, então não somar novamente
-    const targetSecondInHour = randomMinute * 60;
-    const delaySeconds = targetSecondInHour - secondsIntoHour;
-    // Se já passamos da janela (delaySeconds < 0), enviar imediatamente — nunca dropar o slot
-    const delayMs = Math.max(1000, delaySeconds * 1000);
-
-    const slot: SlotInfo = {
-      campaignId: campaign.id,
-      campaignName: campaign.name,
-      minuteLabel: randomMinute,
-      sent: false,
-    };
+    const { delayMs, randomMinute } = calcSlotDelayMs();
+    const slot = { campaignId: campaign.id, campaignName: campaign.name, minuteLabel: randomMinute, sent: false };
     this.state.scheduledSlots = [slot];
 
     const sendInLabel = delayMs < 60000 ? `${Math.round(delayMs / 1000)}s` : `${Math.round(delayMs / 60000)}min`;
@@ -559,21 +303,16 @@ export class CampaignScheduler {
       if (!this.state.isRunning) return;
       const cs = this.state.campaignStates.find(s => s.campaignId === campaign!.id);
       if (cs?.sentThisHour) {
-        console.log(`⚠️ [Timer ${hour}h] ${campaign!.name}: já enviou nesta hora (memória) — cancelando disparo`);
+        console.log(`⚠️ [Timer ${hour}h] ${campaign!.name}: já enviou nesta hora — cancelando`);
         return;
       }
-      // DB guard no disparo: protege contra processo concorrente (deploy zero-downtime)
       const dispatchCycleHour = Math.floor(Date.now() / 3600000);
-      const dbDispatchCheck = await getDb().then(d => d?.select({ status: messageSendLog.status })
+      const dbCheck = await getDb().then(d => d?.select({ status: messageSendLog.status })
         .from(messageSendLog)
-        .where(and(
-          eq(messageSendLog.campaignId, campaign!.id),
-          eq(messageSendLog.cycleHour, dispatchCycleHour),
-          eq(messageSendLog.status, 'sent')
-        ))
+        .where(and(eq(messageSendLog.campaignId, campaign!.id), eq(messageSendLog.cycleHour, dispatchCycleHour), eq(messageSendLog.status, 'sent')))
         .limit(1));
-      if (dbDispatchCheck && dbDispatchCheck.length > 0) {
-        console.log(`⚠️ [Timer ${hour}h] ${campaign!.name}: 'sent' encontrado no DB — cancelando disparo (processo concorrente enviou)`);
+      if (dbCheck && dbCheck.length > 0) {
+        console.log(`⚠️ [Timer ${hour}h] ${campaign!.name}: 'sent' no DB — cancelando (processo concorrente enviou)`);
         if (cs) cs.sentThisHour = true;
         return;
       }
@@ -582,16 +321,18 @@ export class CampaignScheduler {
     }, delayMs);
 
     this.slotTimers.push(timer);
-    await this.saveStateToDB();
+    await saveStateToDB(this.state);
   }
 
-  private async sendMessageForCampaign(campaignId: number) {
+  // ========== ENVIO DE MENSAGEM ==========
+
+  private async sendMessageForCampaign(campaignId: number): Promise<void> {
     if (this.isSending) {
-      console.log(`⚠️ [Send] Campanha ${campaignId}: isSending=true — outro envio em andamento, slot bloqueado. Hora: ${this.getCurrentHour()}h`);
+      console.log(`⚠️ [Send] isSending=true — slot bloqueado. Hora: ${getCurrentHour()}h`);
       return;
     }
     this.isSending = true;
-    console.log(`🚀 [Send] Campanha ${campaignId}: iniciando (hora ${this.getCurrentHour()}h, ciclo ${this.state.hourNumber + 1}/10)`);
+    console.log(`🚀 [Send] Campanha ${campaignId}: iniciando (hora ${getCurrentHour()}h, ciclo ${this.state.hourNumber + 1}/10)`);
 
     try {
       const db = await getDb();
@@ -600,221 +341,86 @@ export class CampaignScheduler {
       const campResult = await db.select().from(campaigns).where(eq(campaigns.id, campaignId)).limit(1);
       const campaign = campResult[0];
       if (!campaign) {
-        console.log(`⚠️ [Send] Campanha ${campaignId} não encontrada no banco`);
+        console.log(`⚠️ [Send] Campanha ${campaignId} não encontrada`);
         return;
       }
 
-      // PROTEÇÃO: Verificar NOVAMENTE se já enviou esta hora (dupla verificação)
       const campState = this.state.campaignStates.find(cs => cs.campaignId === campaignId);
       if (campState?.sentThisHour) {
-        console.log(`⚠️ PROTEÇÃO: ${campaign.name} já foi enviado nesta hora, cancelando`);
+        console.log(`⚠️ PROTEÇÃO: ${campaign.name} já enviou nesta hora`);
         return;
       }
 
-      const contact = await this.getNextContact(campaignId);
+      const contact = await getNextContact(campaignId);
       if (!contact) {
         console.log(`⚠️ ${campaign.name}: sem contatos disponíveis`);
         return;
       }
 
-      // ═══════════════════════════════════════════════════════════════════════
-      // VERIFICAÇÃO CRÍTICA: 1 mensagem por CAMPANHA por hora + 1 por CONTATO
-      // ═══════════════════════════════════════════════════════════════════════
-      const { messageSendLog } = await import('../../drizzle/schema');
-      const cleanPhone = contact.phone.replace(/\D/g, '');
-      const now = new Date();
+      const cleanPhoneStr = contact.phone.replace(/\D/g, '');
       const cycleHour = Math.floor(Date.now() / 3600000);
       const hourLabel = new Date(cycleHour * 3600000).toLocaleTimeString('pt-BR', { timeZone: 'America/Sao_Paulo' });
 
-      // 1) Verificar se ESTA CAMPANHA já enviou nesta hora (proteção de DB, sobrevive a restart)
-      const campSentLog = await db
-        .select()
-        .from(messageSendLog)
-        .where(
-          and(
-            eq(messageSendLog.campaignId, campaignId),
-            eq(messageSendLog.cycleHour, cycleHour),
-            eq(messageSendLog.status, 'sent')
-          )
-        )
-        .limit(1);
-
-      if (campSentLog.length > 0) {
-        console.log(`⚠️ PROTEÇÃO DB: ${campaign.name} já enviou nesta hora (${hourLabel}) — cancelando duplicata`);
-        const cs = this.state.campaignStates.find(s => s.campaignId === campaignId);
-        if (cs) { cs.sentThisHour = true; cs.lastSentHourKey = this.state.currentHourKey; }
+      if (await checkCampAlreadySentThisHour(db, campaignId, cycleHour)) {
+        console.log(`⚠️ PROTEÇÃO DB: ${campaign.name} já enviou nesta hora (${hourLabel})`);
+        if (campState) { campState.sentThisHour = true; campState.lastSentHourKey = this.state.currentHourKey; }
         return;
       }
 
-      // 2) Verificar se CONTATO já recebeu mensagem confirmada nesta hora
-      // Ignora 'pending' (send interrompido por restart) → retentativa permitida
-      const existingLog = await db
-        .select()
-        .from(messageSendLog)
-        .where(
-          and(
-            eq(messageSendLog.contactPhone, cleanPhone),
-            eq(messageSendLog.cycleHour, cycleHour),
-            ne(messageSendLog.status, 'pending')
-          )
-        )
-        .limit(1);
-
-      if (existingLog.length > 0) {
+      if (await checkContactAlreadySentThisHour(db, cleanPhoneStr, cycleHour)) {
         console.log(`⏭️ ${campaign.name} → ${contact.name}: JÁ RECEBEU MENSAGEM NESTA HORA (${hourLabel})`);
         return;
       }
 
-      const messageText = await this.getMessageVariation(campaignId);
+      const messageText = await getMessageVariation(campaignId, this.lastVariationIndex);
       if (!messageText) {
         console.log(`⚠️ ${campaign.name}: sem variações de mensagem`);
         return;
       }
 
-      // Buscar link do imóvel e incluir na mensagem (não mais como follow-up separado)
-      const linkMsg = await this.getPropertyLinkMessage(campaignId);
+      const linkMsg = await getPropertyLinkMessage(campaignId);
       const fullText = linkMsg ? `${messageText}\n\n${linkMsg}` : messageText;
+      const personalized = personalizeMessage(fullText, contact);
 
-      const personalized = this.personalizeMessage(fullText, contact);
-
-      // ═══════════════════════════════════════════════════════════════════════
-      // PRÉ-REGISTRO: status='pending' antes de chamar Z-API
-      // Se restart ocorrer aqui, boot cleanup marca 'failed' → slot liberado para retry
-      // ═══════════════════════════════════════════════════════════════════════
-      try {
-        await db.insert(messageSendLog).values({
-          contactPhone: cleanPhone,
-          campaignId,
-          sentAt: now,
-          cycleHour,
-          status: 'pending',
-        });
-      } catch (pendingErr: any) {
-        if (String(pendingErr?.message).includes('Duplicate')) {
-          // Conflito em (contactPhone,cycleHour) OU novo (campaignId,cycleHour) — atualizar registro existente
-          // Troca contactPhone para o contato atual (retry com contato diferente após restart)
-          await db.update(messageSendLog)
-            .set({ status: 'pending', contactPhone: cleanPhone, sentAt: now })
-            .where(and(
-              eq(messageSendLog.campaignId, campaignId),
-              eq(messageSendLog.cycleHour, cycleHour),
-              ne(messageSendLog.status, 'sent')
-            ));
-        }
-      }
+      await preSendLog(db, cleanPhoneStr, campaignId, cycleHour);
 
       console.log(`\n📨 Enviando: ${campaign.name} → ${contact.name} (${contact.phone})`);
 
-      const result = await this.sendViaZAPI(contact.phone, personalized);
+      const result = await sendViaZAPI(contact.phone, personalized, async () => {
+        this.stop();
+      });
 
       if (result === 'sent') {
-        // ═══════════════════════════════════════════════════════════════════════
-        // CONFIRMAR ENVIO: pending → sent (somente após Z-API confirmar entrega)
-        // ═══════════════════════════════════════════════════════════════════════
-        try {
-          await db.update(messageSendLog)
-            .set({ status: 'sent', reason: null })
-            .where(and(
-              eq(messageSendLog.contactPhone, cleanPhone),
-              eq(messageSendLog.cycleHour, cycleHour)
-            ));
-          console.log(`📊 [SendLog] Confirmado: ${cleanPhone} em ciclo ${hourLabel}`);
-        } catch (logErr) {
-          console.error(`❌ [SendLog] Erro ao confirmar envio:`, logErr);
-        }
-
-        // Incrementar contador de tentativas sem resposta
-        const ccRow = await db.select().from(campaignContacts)
-          .where(and(eq(campaignContacts.campaignId, campaignId), eq(campaignContacts.contactId, contact.id)))
-          .limit(1);
-        const newCount = (ccRow[0]?.messagesSent || 0) + 1;
-        const reachedLimit = newCount >= this.MAX_ATTEMPTS_NO_RESPONSE;
-
-        await db.update(campaignContacts)
-          .set({
-            status: reachedLimit ? 'blocked' : 'pending',
-            messagesSent: newCount,
-            lastMessageSent: new Date(),
-          })
-          .where(and(
-            eq(campaignContacts.campaignId, campaignId),
-            eq(campaignContacts.contactId, contact.id)
-          ));
-
-        if (reachedLimit) {
-          console.log(`🚫 ${contact.name}: ${newCount} msgs sem resposta → bloqueado (para de receber). Responder desbloqueará.`);
-        }
-
-        // Registrar mensagem
-        await db.insert(messages).values({
-          campaignId,
-          contactId: contact.id,
-          propertyId: campaign.propertyId,
-          messageText: personalized,
-          status: 'sent',
-          sentAt: new Date(),
+        await confirmSend({
+          db,
+          campaign,
+          contact,
+          cleanPhone: cleanPhoneStr,
+          personalized,
+          cycleHour,
+          state: this.state,
+          onMarkSent: (id) => {
+            const cs = this.state.campaignStates.find(s => s.campaignId === id);
+            if (cs) { cs.sentThisHour = true; cs.lastSentHourKey = this.state.currentHourKey; }
+            this.state.totalSent++;
+          },
+          onMarkSlotSent: (id) => {
+            const slot = this.state.scheduledSlots.find(s => s.campaignId === id);
+            if (slot) slot.sent = true;
+          },
         });
 
-        await db.update(campaigns).set({ sentCount: (campaign.sentCount || 0) + 1 }).where(eq(campaigns.id, campaignId));
-
-        this.state.totalSent++;
-
-        // Marcar campanha como enviou nesta hora
-        const cs = this.state.campaignStates.find(s => s.campaignId === campaignId);
-        if (cs) {
-          cs.sentThisHour = true;
-          cs.lastSentHourKey = this.state.currentHourKey;
-          console.log(`🔒 ${campaign.name} MARCADO como enviado nesta hora (${this.state.currentHourKey})`);
-        }
-
-        const slot = this.state.scheduledSlots.find(s => s.campaignId === campaignId);
-        if (slot) slot.sent = true;
-
-        console.log(`✅ Enviado com sucesso! Total hoje: ${this.state.totalSent}`);
-
-        // Notificar Telegram sobre o envio para acompanhamento
-        notifyMessageSent({
-          contactName: contact.name || contact.phone,
-          contactPhone: contact.phone,
-          campaignName: campaign.name,
-          messageText: personalized,
-          cycleHour: this.state.hourNumber,
-          maxCycle: this.MAX_HOURS_PER_CYCLE,
-          messagesSent: newCount,
-        }).catch(e => console.warn('[Telegram] notifyMessageSent falhou (não crítico):', e));
-
-        // Registrar para bot
-        await registerBotMessage(contact.phone, contact.name || '', campaignId, personalized);
-
-        await this.updateContactHistory(contact.id, campaignId);
+        await registerBotDispatch(contact.phone, contact.name || '', campaignId, personalized);
+        await updateContactHistory(contact.id, campaignId);
       } else if (result === 'failed') {
         this.state.totalFailed++;
-        await db.update(messageSendLog)
-          .set({ status: 'failed', reason: 'zapi_error' })
-          .where(and(eq(messageSendLog.contactPhone, cleanPhone), eq(messageSendLog.cycleHour, cycleHour)));
-        await db.insert(messages).values({
-          campaignId,
-          contactId: contact.id,
-          propertyId: campaign.propertyId,
-          messageText: personalized,
-          status: 'failed',
-          sentAt: new Date(),
-        });
+        await recordFailedSend({ db, campaign, contact, cleanPhone: cleanPhoneStr, personalized, cycleHour, reason: 'zapi_error' });
         console.log(`❌ Falha no envio`);
       } else {
-        // Número inválido — pular para próximo
-        await db.update(messageSendLog)
-          .set({ status: 'failed', reason: 'invalid_phone' })
-          .where(and(eq(messageSendLog.contactPhone, cleanPhone), eq(messageSendLog.cycleHour, cycleHour)));
-        await db.update(campaignContacts)
-          .set({ status: 'failed' })
-          .where(and(
-            eq(campaignContacts.campaignId, campaignId),
-            eq(campaignContacts.contactId, contact.id)
-          ));
+        await recordFailedSend({ db, campaign, contact, cleanPhone: cleanPhoneStr, personalized, cycleHour, reason: 'invalid_phone' });
       }
 
-      await this.saveStateToDB();
+      await saveStateToDB(this.state);
     } catch (error) {
       console.error('❌ Erro ao enviar mensagem:', error);
     } finally {
@@ -822,528 +428,27 @@ export class CampaignScheduler {
     }
   }
 
-  // ========== SINCRONIZAÇÃO ==========
+  // ========== RELATÓRIO ==========
 
-  private async syncCampaignsWithProperties() {
-    try {
-      const db = await getDb();
-      if (!db) return;
-
-      const activeProperties = await db.select().from(properties).where(eq(properties.status, 'available'));
-      const existingCampaigns = await db.select().from(campaigns);
-      const existingPropertyIds = existingCampaigns.map(c => c.propertyId);
-
-      const sharedUsedIds = new Set<number>();
-      for (const prop of activeProperties) {
-        const freshVariations = this.generateMessageVariations(prop);
-
-        if (!existingPropertyIds.includes(prop.id)) {
-          console.log(`➕ Criando campanha: ${prop.denomination}`);
-          const result = await db.insert(campaigns).values({
-            propertyId: prop.id,
-            name: prop.denomination,
-            messageVariations: freshVariations,
-            totalContacts: 2,
-            sentCount: 0,
-            failedCount: 0,
-            messagesPerHour: 1,
-            status: 'running',
-            startDate: new Date(),
-          });
-          const campaignId = Number((result as any)[0].insertId);
-          await this.assignContactsToCampaign(campaignId, sharedUsedIds);
-        } else {
-          // Atualizar templates da campanha existente se ainda tem placeholders antigos
-          const existingCamp = existingCampaigns.find(c => c.propertyId === prop.id);
-          if (existingCamp) {
-            const rawVar = String(existingCamp.messageVariations || '');
-            // Força re-geração se: placeholder antigo, msg curta, ou não tem os novos gatilhos (👀 está em toda variação nova)
-            if (rawVar.includes('{ENDERECO}') || rawVar.includes('ENDERECO') || rawVar.length < 50 || !rawVar.includes('👀')) {
-              await db.update(campaigns)
-                .set({ messageVariations: freshVariations })
-                .where(eq(campaigns.id, existingCamp.id));
-              console.log(`🔄 Templates atualizados para campanha: ${existingCamp.name}`);
-            }
-          }
-        }
-      }
-
-      // Pausar campanhas sem imóvel ativo
-      const activePropertyIds = activeProperties.map(p => p.id);
-      for (const camp of existingCampaigns) {
-        if (!activePropertyIds.includes(camp.propertyId)) {
-          await db.update(campaigns).set({ status: 'paused' }).where(eq(campaigns.id, camp.id));
-        } else if (camp.status === 'paused') {
-          await db.update(campaigns).set({ status: 'running' }).where(eq(campaigns.id, camp.id));
-        }
-      }
-
-      const running = await db.select().from(campaigns).where(eq(campaigns.status, 'running'));
-      console.log(`✅ ${running.length} campanhas ativas`);
-    } catch (error) {
-      console.error('❌ Erro na sincronização:', error);
-    }
-  }
-
-  private async initCampaignStates() {
-    const db = await getDb();
-    if (!db) return;
-
-    // Limpar registros 'pending' de runs anteriores (restart) → libera slots para retry
-    await this.cleanupPendingLogs(db);
-
-    // ORDER BY id para manter ordem consistente com scheduleHourSend
-    const allCampaigns = await db.select().from(campaigns)
-      .where(eq(campaigns.status, 'running'))
-      .orderBy(asc(campaigns.id));
-    const currentHourKey = this.getCurrentHourKey();
-
-    // ═══════════════════════════════════════════════════════════
-    // FILTRO: Apenas campanhas ativas para este ciclo (máx 5)
-    // ═══════════════════════════════════════════════════════════
-    const activePeriod = this.state.nightMode ? 'activeNight' : 'activeDay';
-    const eligibleCampaigns = allCampaigns.filter(camp => camp[activePeriod] === true);
-
-    console.log(`📊 Iniciando campanhas elegíveis: ${eligibleCampaigns.length}/5 no ciclo ${this.state.nightMode ? 'NOITE 🌙' : 'DIA ☀️'}`);
-
-    // ═══════════════════════════════════════════════════════════
-    // RESTAURAR sentThisHour A PARTIR DO BANCO (sobrevive a restart)
-    // Sem isso, após restart sentThisHour sempre começa false e os
-    // slots são re-agendados, causando "PROTEÇÃO DB bloqueando" nos logs
-    // ═══════════════════════════════════════════════════════════
-    const cycleHour = Math.floor(Date.now() / 3600000);
-
-    const { messageSendLog } = await import('../../drizzle/schema');
-    const sentThisHourLogs = await db
-      .select({ campaignId: messageSendLog.campaignId })
-      .from(messageSendLog)
-      .where(
-        and(
-          eq(messageSendLog.cycleHour, cycleHour),
-          eq(messageSendLog.status, 'sent')
-        )
-      );
-    const alreadySentIds = new Set(sentThisHourLogs.map(r => r.campaignId));
-
-    if (alreadySentIds.size > 0) {
-      console.log(`♻️ [Init] Campanhas que já enviaram nesta hora (restaurado do DB): ${[...alreadySentIds].join(', ')}`);
-    }
-
-    this.state.campaignStates = eligibleCampaigns.map(camp => {
-      const alreadySent = alreadySentIds.has(camp.id);
-      const existing = this.state.campaignStates.find(cs => cs.campaignId === camp.id);
-      return {
-        campaignId: camp.id,
-        campaignName: camp.name,
-        sentThisHour: alreadySent || (existing?.lastSentHourKey === currentHourKey),
-        lastSentHourKey: alreadySent ? currentHourKey : (existing?.lastSentHourKey || null),
-      };
-    });
-  }
-
-  /** Marca registros 'pending' como 'failed' no boot e remove registros antigos */
-  private async cleanupPendingLogs(db: any): Promise<void> {
-    try {
-      const { messageSendLog } = await import('../../drizzle/schema');
-
-      // pending → failed (envios interrompidos por restart)
-      await db.update(messageSendLog)
-        .set({ status: 'failed', reason: 'server_restart' })
-        .where(eq(messageSendLog.status, 'pending'));
-      console.log(`🧹 [SendLog] Boot cleanup: 'pending' → 'failed' (restarts anteriores)`);
-
-      // Remove registros no formato antigo (epoch-seconds, ex: 1776081600) e registros
-      // com mais de 25h no formato novo (horas absolutas desde epoch, ex: 493488)
-      const currentCycleHour = Math.floor(Date.now() / 3600000);
-      const deleted = await db.delete(messageSendLog)
-        .where(or(
-          gt(messageSendLog.cycleHour, 1000000),           // formato antigo epoch-seconds
-          lt(messageSendLog.cycleHour, currentCycleHour - 25) // mais de 25h atrás (novo formato)
-        ));
-      console.log(`🧹 [SendLog] Boot cleanup: registros antigos/formato-legado removidos`);
-    } catch (e) {
-      console.error('[SendLog] Erro na limpeza de pending:', e);
-    }
-  }
-
-  // ========== CONTATOS ==========
-
-  private async assignContactsToCampaign(campaignId: number, globalUsedIds?: Set<number>) {
-    const db = await getDb();
-    if (!db) return;
-
-    const allContacts = await db.select().from(contacts).where(eq(contacts.status, 'active'));
-
-    // Excluir contatos já usados em outras campanhas
-    // Bloqueio individual é controlado por campaignContacts.status = 'blocked' (v9.0)
-    const existingAssignments = await db.select().from(campaignContacts);
-    const alreadyUsed = new Set<number>(existingAssignments.map(cc => cc.contactId));
-    if (globalUsedIds) globalUsedIds.forEach(id => alreadyUsed.add(id));
-
-    const available = allContacts.filter(c => !alreadyUsed.has(c.id));
-
-    if (available.length < 2) {
-      console.warn(`⚠️ Apenas ${available.length} contatos disponíveis sem repetição para campanha ${campaignId}`);
-    }
-
-    const shuffled = [...available].sort(() => Math.random() - 0.5);
-    const selected = shuffled.slice(0, 2);
-
-    for (const contact of selected) {
-      if (globalUsedIds) globalUsedIds.add(contact.id);
-      await db.insert(campaignContacts).values({
-        campaignId,
-        contactId: contact.id,
-        messagesSent: 0,
-        status: 'pending',
-      });
-    }
-
-    console.log(`📱 ${selected.length} contatos designados para campanha ${campaignId}`);
-  }
-
-  private async getNextContact(campaignId: number) {
-    const db = await getDb();
-    if (!db) return null;
-
-    // Buscar contatos 'pending' — 'blocked' = sem resposta após MAX_ATTEMPTS (desbloqueado ao responder)
-    const ccList = await db.select().from(campaignContacts)
-      .where(and(
-        eq(campaignContacts.campaignId, campaignId),
-        eq(campaignContacts.status, 'pending')
-      ));
-
-    if (ccList.length === 0) {
-      // Sem contatos: atribuir novos da pool geral
-      console.log(`📥 Sem contatos — atribuindo novos para campanha ${campaignId}`);
-      const usedIds = new Set<number>();
-      await this.assignContactsToCampaign(campaignId, usedIds);
-
-      const newList = await db.select().from(campaignContacts)
-        .where(and(
-          eq(campaignContacts.campaignId, campaignId),
-          eq(campaignContacts.status, 'pending')
-        ));
-      ccList.push(...newList);
-    }
-
-    const shuffled = [...ccList].sort(() => Math.random() - 0.5);
-    for (const cc of shuffled) {
-      const result = await db.select().from(contacts).where(eq(contacts.id, cc.contactId)).limit(1);
-      const contact = result[0];
-      if (!contact || contact.status !== 'active') continue;
-      return contact;
-    }
-
-    return null;
-  }
-
-  // ========== MENSAGENS ==========
-
-  private personalizeMessage(messageText: string, contact: { name: string; phone: string }): string {
-    const firstName = (contact.name || '').split(' ')[0].trim();
-    let personalized = messageText;
-
-    if (firstName && firstName.length > 1) {
-      // Suporta ambos os formatos: {NOME} e {{NOME}}
-      personalized = personalized.replace(/\{\{NOME\}\}/g, firstName);
-      personalized = personalized.replace(/\{NOME\}/g, firstName);
-    } else {
-      // Remove placeholders se não houver nome
-      personalized = personalized.replace(/\{\{NOME\}\},?\s*/g, '');
-      personalized = personalized.replace(/\{NOME\},?\s*/g, '');
-    }
-    return personalized;
-  }
-
-  private async getMessageVariation(campaignId: number): Promise<string | null> {
-    const db = await getDb();
-    if (!db) return null;
-
-    const result = await db.select().from(campaigns).where(eq(campaigns.id, campaignId)).limit(1);
-    const campaign = result[0];
-
-    if (!campaign?.messageVariations) {
-      return null;
-    }
-
-    // Drizzle retorna campo json já parseado (string[]). Fallback para string JSON raw.
-    let variations: string[] = [];
-    const raw = campaign.messageVariations;
-    if (Array.isArray(raw)) {
-      // Caso normal: Drizzle deserializou o JSON → já é string[]
-      variations = raw as string[];
-    } else if (raw) {
-      try {
-        const parsed = JSON.parse(raw as string);
-        variations = Array.isArray(parsed) ? parsed : [String(raw)];
-      } catch {
-        // Fallback: valor bruto como única mensagem
-        const rawStr = String(raw).trim();
-        if (rawStr.length > 5) variations = [rawStr];
-      }
-    }
-
-    if (variations.length === 0) {
-      return null;
-    }
-
-    const lastIndex = this.lastVariationIndex.get(campaignId) ?? -1;
-
-    let newIndex: number;
-    if (variations.length <= 1) {
-      newIndex = 0;
-    } else {
-      do {
-        newIndex = Math.floor(Math.random() * variations.length);
-      } while (newIndex === lastIndex);
-    }
-
-    this.lastVariationIndex.set(campaignId, newIndex);
-    return variations[newIndex];
-  }
-
-  private generateMessageVariations(prop: any): string[] {
-    const priceFormatted = Number(prop.price).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
-    const denom = prop.denomination || '';
-    const city = prop.address?.split(',').pop()?.trim() || 'Açailândia';
-
-    const isChacara = denom.toLowerCase().includes('chacara') || denom.toLowerCase().includes('chácar') || denom.toLowerCase().includes('giuliano');
-
-    // ─── MENSAGENS SEM LINK — o link é enviado como follow-up 1-2 min depois ───
-
-    if (isChacara) {
-      return [
-        // Gatilho: curiosidade + escassez
-        `{{NOME}}, ainda tem uma chácara disponível aqui em Açailândia 👀\n\nMuita gente perguntou essa semana, mas ainda não fechou.\n\n*Você tem interesse em sair do aluguel ou investir?*`,
-
-        // Gatilho: sonho + pertencimento
-        `{{NOME}} 🌿\n\nImagina acordar no seu próprio espaço, sem vizinho em cima, com quintal de *1.000m²*...\n\nEsso lugar existe aqui em Açailândia e ainda tem parcela que cabe no salário.\n\n*Posso te mostrar?*`,
-
-        // Gatilho: urgência real
-        `{{NOME}}, rápido — tenho uma chácara aqui que tá praticamente saindo 🔥\n\nA última que ofereci assim fechou em 3 dias.\n\n*Você quer ver antes que some?*`,
-
-        // Gatilho: prova social + FOMO
-        `Boa noite {{NOME}}! 🌙\n\nUma família de Açailândia fechou uma chácara igual a essa semana passada — disseram que foi a melhor decisão.\n\nAinda tem uma no mesmo condomínio por *R$ ${priceFormatted}*.\n\n*Quer que eu reserve pra você ver?*`,
-
-        // Gatilho: dor (aluguel) + solução
-        `{{NOME}}, quantos anos ainda pagando aluguel? 🤔\n\nTenho uma chácara de *1.000m²* aqui em Açailândia que sai por parcela menor do que você imagina.\n\n*Me fala: você prefere casa ou chácara?*`,
-
-        // Gatilho: exclusividade + segredo
-        `{{NOME}} 🤫\n\nNão tô divulgando esse imóvel pra todo mundo não — mas achei que era exatamente o que você busca.\n\nChácara de *~1.000m²* em Açailândia, *R$ ${priceFormatted}*, financiamento fácil.\n\n*Posso te mandar as fotos?*`,
-      ];
-    }
-
-    return [
-      // Gatilho: curiosidade + escassez imediata
-      `{{NOME}}, me tira uma dúvida rápida 👇\n\nVocê ainda tá buscando casa própria em ${city}?\n\nTenho um imóvel aqui que tá saindo muito rápido e queria te mostrar antes de fechar.`,
-
-      // Gatilho: FOMO + prova social
-      `{{NOME}} 🔥\n\nEsse imóvel aqui em ${city} já teve 4 consultas essa semana — e ainda não fechou.\n\n*R$ ${priceFormatted}* com financiamento que cabe no bolso.\n\n*Você quer ser o próximo a conhecer?*`,
-
-      // Gatilho: dor + transformação
-      `Boa noite {{NOME}}! 🌙\n\nAluguel todo mês é dinheiro jogado fora, né?\n\nTenho uma casa em ${city} por *R$ ${priceFormatted}* — parcela que você provavelmente já paga de aluguel.\n\n*Faz sentido pra você?*`,
-
-      // Gatilho: urgência + escassez
-      `{{NOME}}, preciso te avisar de algo ⚠️\n\nEsse imóvel em ${city} tá com *última unidade disponível*.\n\nJá tive 2 interessados essa semana. Se quiser ver primeiro, me responde agora.`,
-
-      // Gatilho: curiosidade pura (padrão interruptivo)
-      `{{NOME}} 👀\n\nVocê toparia sair do aluguel com parcela de financiamento?\n\nTenho algo aqui em ${city} que pode mudar de figura pra você — *R$ ${priceFormatted}*.\n\n*Quer ver?*`,
-
-      // Gatilho: exclusividade + reciprocidade
-      `{{NOME}}, tenho uma condição especial aqui 🤫\n\nNão ofereço pra todo mundo, mas tenho um imóvel em ${city} por *R$ ${priceFormatted}* com entrada negociável.\n\n*Você tem FGTS disponível?*`,
-    ];
-  }
-
-  // Gera a mensagem de follow-up com o link (enviada 1-2 min depois)
-  private async getPropertyLinkMessage(campaignId: number): Promise<string | null> {
-    try {
-      const db = await getDb();
-      if (!db) return null;
-      const result = await db.select().from(campaigns).where(eq(campaigns.id, campaignId)).limit(1);
-      const camp = result[0];
-      if (!camp?.propertyId) return null;
-      const propResult = await db.select().from(properties).where(eq(properties.id, camp.propertyId)).limit(1);
-      const prop = propResult[0];
-      if (!prop) return null;
-      const slug = (prop as any).publicSlug || prop.denomination.toLowerCase().replace(/[^a-z0-9]+/g, '-');
-      const url = `https://romateccrm.com/imovel/${slug}`;
-      return `📸 *Veja as fotos e detalhes completos aqui:*\n${url}`;
-    } catch {
-      return null;
-    }
-  }
-
-  // Auto-ativar/desativar ciclos nos horários programados
-  private async autoToggleCycles(brasiliaHour: number) {
-    try {
-      const db = await getDb();
-      if (!db) return;
-
-      if (brasiliaHour === 8) {
-        // Ativar ciclo DIA, desativar NOITE
-        await db.update(campaigns).set({ activeDay: true, activeNight: false }).where(eq(campaigns.status, 'running'));
-        console.log(`☀️ [Auto-Ciclo] 08:00 — CICLO DIA INICIADO (activeDay=true, activeNight=false)`);
-        this.state.nightMode = false;
-      } else if (brasiliaHour === 18) {
-        // Encerrar ciclo DIA
-        await db.update(campaigns).set({ activeDay: false });
-        console.log(`🌆 [Auto-Ciclo] 18:00 — CICLO DIA ENCERRADO`);
-      } else if (brasiliaHour === 20) {
-        // Ativar ciclo NOITE, desativar DIA
-        await db.update(campaigns).set({ activeNight: true, activeDay: false }).where(eq(campaigns.status, 'running'));
-        console.log(`🌙 [Auto-Ciclo] 20:00 — CICLO NOITE INICIADO (activeNight=true, activeDay=false)`);
-        this.state.nightMode = true;
-      } else if (brasiliaHour === 6) {
-        // Encerrar ciclo NOITE
-        await db.update(campaigns).set({ activeNight: false });
-        console.log(`🌅 [Auto-Ciclo] 06:00 — CICLO NOITE ENCERRADO`);
-      }
-    } catch (err) {
-      console.error('[Auto-Ciclo] Erro:', err);
-    }
-  }
-
-  // ========== Z-API ==========
-
-  private async sendViaZAPI(phone: string, message: string): Promise<'sent' | 'failed' | 'invalid'> {
-    try {
-      const cleanPhone = phone.replace(/\D/g, '');
-      let formattedPhone = cleanPhone.startsWith('55') ? cleanPhone : `55${cleanPhone}`;
-
-      // Auto-fix: 12 dígitos = número BR antigo sem o 9 (ex: 5599XXXXXXXX → 55999XXXXXXXX)
-      if (formattedPhone.length === 12 && formattedPhone.startsWith('55')) {
-        formattedPhone = formattedPhone.slice(0, 4) + '9' + formattedPhone.slice(4);
-        console.log(`📱 Auto-fix telefone 12→13: ${phone} → ${formattedPhone}`);
-      }
-
-      if (formattedPhone.length !== 13 || formattedPhone[4] !== '9') {
-        console.warn(`⚠️ Número inválido (${formattedPhone.length}d): ${phone} → pulando`);
-        return 'invalid';
-      }
-
-      const { getCompanyConfig } = await import('../db');
-      const config = await getCompanyConfig();
-
-      if (config?.zApiInstanceId && config?.zApiToken) {
-        const { sendMessageViaZAPI } = await import('../zapi-integration');
-        const result = await sendMessageViaZAPI({
-          instanceId: config.zApiInstanceId,
-          token: config.zApiToken,
-          clientToken: config.zApiClientToken || undefined,
-          phone,
-          message,
-        });
-        console.log(`📨 [Z-API] ${phone}: ${result.success ? '✅' : '❌'}`);
-
-        if (result.success) {
-          // Envio ok — resetar contador de falhas
-          this.zapiConsecutiveFails = 0;
-          return 'sent';
-        } else {
-          // Falha — incrementar e verificar se deve auto-pausar
-          this.zapiConsecutiveFails++;
-          console.warn(`⚠️ [Z-API] Falha consecutiva ${this.zapiConsecutiveFails}/${this.MAX_ZAPI_FAILS}`);
-          if (this.zapiConsecutiveFails >= this.MAX_ZAPI_FAILS) {
-            await this.handleZApiDown(config);
-          }
-          return 'failed';
-        }
-      } else {
-        console.log(`📨 [SIMULADO] ${phone}: "${message.substring(0, 50)}..."`);
-        return 'sent';
-      }
-    } catch (error) {
-      console.error('❌ Erro Z-API:', error);
-      this.zapiConsecutiveFails++;
-      return 'failed';
-    }
-  }
-
-  /** Chamado quando Z-API falha MAX_ZAPI_FAILS vezes seguidas */
-  private async handleZApiDown(_config: any) {
-    console.error(`🚨 [Z-API] ${this.MAX_ZAPI_FAILS} falhas consecutivas — pausando scheduler automaticamente`);
-    this.stop(); // salva status='stopped'
-
-    // Salvar flag zapiAutopaused=true no stateJson para auto-retomar quando Z-API voltar
-    try {
-      const db = await getDb();
-      if (db) {
-        const rows = await db.select().from(schedulerStateTable).where(eq(schedulerStateTable.id, 1)).limit(1);
-        if (rows[0]) {
-          const merged = { ...(rows[0].stateJson as Record<string, any> || {}), zapiAutopaused: true };
-          await db.update(schedulerStateTable).set({ stateJson: merged }).where(eq(schedulerStateTable.id, 1));
-          console.log('💾 [Z-API] zapiAutopaused=true salvo no banco');
-        }
-      }
-    } catch (e) {
-      console.error('[Z-API] Erro ao salvar zapiAutopaused:', e);
-    }
-
-    // Marcar como desconectado no banco
-    try {
-      const { updateCompanyConfig } = await import('../db');
-      await updateCompanyConfig({ zApiConnected: false });
-    } catch (e) {
-      console.error('[Z-API] Erro ao atualizar status no banco:', e);
-    }
-
-    // Notificar via Telegram
-    try {
-      const { notifyZApiDown } = await import('../_core/telegramNotification');
-      await notifyZApiDown().catch(e => console.warn('[Telegram] notifyZApiDown falhou:', e));
-    } catch (e) {
-      console.warn('[Telegram] Erro ao importar notifyZApiDown:', e);
-    }
-  }
-
-  // ========== HISTÓRICO ==========
-
-  private async updateContactHistory(contactId: number, campaignId: number) {
-    const db = await getDb();
-    if (!db) return;
-
-    const existing = await db.select().from(contactCampaignHistory)
-      .where(and(
-        eq(contactCampaignHistory.contactId, contactId),
-        eq(contactCampaignHistory.campaignId, campaignId)
-      )).limit(1);
-
-    if (existing[0]) {
-      await db.update(contactCampaignHistory)
-        .set({ lastCampaignId: campaignId, sentAt: new Date() })
-        .where(eq(contactCampaignHistory.id, existing[0].id));
-    } else {
-      await db.insert(contactCampaignHistory).values({
-        contactId,
-        campaignId,
-        lastCampaignId: campaignId,
-        sentAt: new Date(),
-      });
-    }
-  }
-
-  // ========== RELATÓRIOS ==========
-
-  private async sendCycleReport() {
+  private async sendCycleReport(): Promise<void> {
     try {
       const { getCompanyConfig } = await import('../db');
       const config = await getCompanyConfig();
       if (!config?.zApiInstanceId || !config?.zApiToken) return;
 
-      const hour = this.getCurrentHour();
-      const cycleIdx = this.getCurrentCycleIndex();
+      const hour = getCurrentHour();
+      const cycleIdx = getCurrentCycleIndex(this.state.nightMode);
       const db = await getDb();
       if (!db) return;
 
       const allCampaigns = await db.select().from(campaigns).where(eq(campaigns.status, 'running'));
       const campIndex = HOUR_TO_CAMP_INDEX[hour] ?? -1;
       const activeCamp = allCampaigns[campIndex % allCampaigns.length];
-
       const OWNER_PHONE = config.phone || '5599991811246';
+
       const report = [
         `📊 *RELATÓRIO HORA ${hour}h (Brasília) - ROMATEC CRM v9.0*`,
-        `🕐 *${this.getBrasiliaDate().toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit', second: '2-digit' })}*`,
+        `🕐 *${getBrasiliaDate().toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit', second: '2-digit' })}*`,
         ``,
         `🔄 *Ciclo atual:* ${cycleIdx >= 0 ? cycleIdx + 1 : '?'}/10`,
         `📨 *Campanha desta hora:* ${activeCamp?.name || 'Nenhuma'}`,
@@ -1366,36 +471,21 @@ export class CampaignScheduler {
     }
   }
 
-  // ========== GETTERS ==========
+  // ========== GETTERS PÚBLICOS ==========
 
-  getState() {
+  getState(): SchedulerStateSnapshot {
     const now = Date.now();
     const uptimeMs = this.state.isRunning ? now - this.state.startedAt : 0;
-    const uptimeHours = String(Math.floor(uptimeMs / 3600000)).padStart(2, '0');
-    const uptimeMinutes = String(Math.floor((uptimeMs % 3600000) / 60000)).padStart(2, '0');
-    const uptimeSeconds = String(Math.floor((uptimeMs % 60000) / 1000)).padStart(2, '0');
-
-    const brasiliaNow = this.getBrasiliaDate();
+    const brasiliaNow = getBrasiliaDate();
     const currentMinute = brasiliaNow.getMinutes();
     const currentSecond = brasiliaNow.getSeconds();
     const remainingSeconds = (60 - currentMinute - 1) * 60 + (60 - currentSecond);
 
     const nextHour = new Date(brasiliaNow);
     nextHour.setHours(nextHour.getHours() + 1, 0, 0, 0);
-    const nextCycleFormatted = `${String(nextHour.getHours()).padStart(2, '0')}:00`;
-
-    const startedAtFormatted = this.state.startedAt
-      ? new Date(this.state.startedAt).toLocaleTimeString('pt-BR', { timeZone: 'America/Sao_Paulo', hour: '2-digit', minute: '2-digit', second: '2-digit' })
-      : '--:--:--';
-
-    const cycleIndex = this.getCurrentCycleIndex();
 
     const h = brasiliaNow.getHours();
-    let systemPhase: 'active_day' | 'active_night' | 'standby' | 'blocked';
-    if (h >= 6 && h < 8) systemPhase = 'blocked';
-    else if (h >= 8 && h < 18) systemPhase = 'active_day';
-    else if (h >= 18 && h < 20) systemPhase = 'standby';
-    else systemPhase = 'active_night';
+    const cycleIndex = getCurrentCycleIndex(this.state.nightMode);
 
     return {
       isRunning: this.state.isRunning,
@@ -1406,34 +496,34 @@ export class CampaignScheduler {
       scheduledSlots: this.state.scheduledSlots,
       secondsUntilNextCycle: remainingSeconds,
       cycleDurationSeconds: 3600,
-      uptimeFormatted: `${uptimeHours}:${uptimeMinutes}:${uptimeSeconds}`,
-      startedAtFormatted,
-      nextCycleFormatted,
+      uptimeFormatted: formatUptime(uptimeMs),
+      startedAtFormatted: this.state.startedAt
+        ? new Date(this.state.startedAt).toLocaleTimeString('pt-BR', { timeZone: 'America/Sao_Paulo', hour: '2-digit', minute: '2-digit', second: '2-digit' })
+        : '--:--:--',
+      nextCycleFormatted: `${String(nextHour.getHours()).padStart(2, '0')}:00`,
       currentCycleIndex: cycleIndex,
-      totalCycles: 10,
+      totalCycles: MAX_HOURS_PER_CYCLE,
       brasiliaHour: h,
-      systemPhase,
+      systemPhase: getSystemPhase(h),
     };
   }
 
-  getStats() {
+  getStats(): SchedulerStats {
     const sentThisHour = this.state.campaignStates.filter(cs => cs.sentThisHour).length;
-    const activeCamps = this.state.campaignStates.length;
-    const cycleIndex = this.getCurrentCycleIndex();
-    const totalCycles = 10;
+    const cycleIndex = getCurrentCycleIndex(this.state.nightMode);
 
     return {
       cycleNumber: this.state.hourNumber,
       currentCycleIndex: cycleIndex,
-      totalCycles,
+      totalCycles: MAX_HOURS_PER_CYCLE,
       totalSent: this.state.totalSent,
       totalFailed: this.state.totalFailed,
       totalBlocked: this.state.totalBlocked,
       messagesThisHour: sentThisHour,
       maxMessagesPerHour: 1,
-      maxMessagesThisCycle: activeCamps,
+      maxMessagesThisCycle: this.state.campaignStates.length,
       scheduledSlots: this.state.scheduledSlots,
-      cycleProgress: cycleIndex >= 0 ? `${cycleIndex + 1}/${totalCycles}` : 'Fora do horário',
+      cycleProgress: cycleIndex >= 0 ? `${cycleIndex + 1}/${MAX_HOURS_PER_CYCLE}` : 'Fora do horário',
     };
   }
 }
