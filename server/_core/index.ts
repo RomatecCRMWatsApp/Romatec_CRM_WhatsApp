@@ -53,6 +53,31 @@ async function startServer() {
 
       console.log(`[Webhook] ${payload.phone} - "${msgText.substring(0, 50)}"`);
 
+      // ───────────────────────────────────────────────────────────────────
+      // Fan-out pra ZAYRA: se a mensagem é do CEO, repassa pra ela responder
+      // como assistente pessoal — bot do CRM NÃO responde nesse caso pra
+      // evitar dupla resposta. Ativado via ZAYRA_WEBHOOK_URL + CEO_WHATSAPP_PHONE.
+      // Falha silenciosa: se ZAYRA estiver fora, CRM continua o fluxo normal.
+      // ───────────────────────────────────────────────────────────────────
+      const ceoPhoneRaw = process.env.CEO_WHATSAPP_PHONE;
+      const zayraUrl    = process.env.ZAYRA_WEBHOOK_URL;
+      if (ceoPhoneRaw && zayraUrl) {
+        const ceoPhone   = ceoPhoneRaw.replace(/\D/g, '');
+        const fromPhone  = payload.phone.replace(/\D/g, '');
+        // match exato ou últimos 10 dígitos (cobre variações DDI 55 vs sem)
+        const isFromCeo  = fromPhone === ceoPhone || fromPhone.endsWith(ceoPhone.slice(-10));
+        if (isFromCeo) {
+          console.log(`[Webhook] 🎯 Mensagem do CEO — repassando pra ZAYRA (fan-out), CRM bot NÃO responde`);
+          // Fire-and-forget — não bloqueia o ack do webhook
+          fetch(zayraUrl, {
+            method:  'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body:    JSON.stringify(req.body),
+          }).catch((err: unknown) => console.warn('[Webhook] ZAYRA fan-out falhou (não crítico):', err));
+          return res.json({ received: true, processed: true, forwarded_to: 'zayra' });
+        }
+      }
+
       let senderName = payload.senderName || 'Cliente';
       try {
         const { getDb } = await import('../db');
