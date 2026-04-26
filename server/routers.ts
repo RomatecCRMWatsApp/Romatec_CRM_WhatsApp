@@ -1,13 +1,15 @@
 import { COOKIE_NAME } from "@shared/const";
 import { getSessionCookieOptions } from "./_core/cookies";
 import { systemRouter } from "./_core/systemRouter";
-import { publicProcedure, protectedProcedure, router } from "./_core/trpc";
+import { publicProcedure, protectedProcedure, adminProcedure, router } from "./_core/trpc";
 import { getAllContacts, getContactById, createContact, getAllProperties, getPropertyById, createProperty, getAllCampaigns, getCampaignById, createCampaign, getCompanyConfig, updateCompanyConfig, getDb } from "./db";
 import { campaigns, contacts, campaignContacts, messages, properties, contactCampaignHistory, users, leadQualifications, schedulerState } from "../drizzle/schema";
 import { eq, and, desc, gte, or, like, isNotNull } from "drizzle-orm";
 import { campaignScheduler } from "./scheduler/campaignScheduler";
+import { zairaRouter } from "./routers/zaira.router";
 import { z } from "zod";
 export const appRouter = router({
+  zaira: zairaRouter,
   system: systemRouter,
   auth: router({
     me: publicProcedure.query(opts => opts.ctx.user),
@@ -503,7 +505,7 @@ export const appRouter = router({
   }),
   companyConfig: router({
     get: publicProcedure.query(async () => getCompanyConfig()),
-    update: protectedProcedure.input(z.object({
+    update: adminProcedure.input(z.object({
       companyName: z.string().optional(),
       phone: z.string().optional(),
       address: z.string().optional(),
@@ -515,7 +517,9 @@ export const appRouter = router({
       openAiApiKey: z.string().optional(),
     })).mutation(async ({ input }) => {
       await updateCompanyConfig(input);
-      // Sincronizar process.env imediatamente para uso em runtime sem reiniciar
+      // Sincronizar process.env imediatamente para uso em runtime sem reiniciar.
+      // Limitada a admin via adminProcedure pra evitar que usuário comum
+      // sobrescreva tokens da empresa.
       if (input.telegramBotToken !== undefined) process.env.TELEGRAM_BOT_TOKEN = input.telegramBotToken;
       if (input.telegramChatId !== undefined)   process.env.TELEGRAM_CHAT_ID   = input.telegramChatId;
       if (input.openAiApiKey !== undefined)      process.env.OPENAI_API_KEY     = input.openAiApiKey;
