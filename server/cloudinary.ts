@@ -1,13 +1,18 @@
 /**
  * Upload de arquivos via Cloudinary
- * Cloud: drooexltp
  */
 
 import crypto from 'crypto';
 
-const CLOUD_NAME = process.env.CLOUDINARY_CLOUD_NAME || 'drooexltp';
-const API_KEY = process.env.CLOUDINARY_API_KEY || '454146681184898';
-const API_SECRET = process.env.CLOUDINARY_API_SECRET || 'soDNjdzXi2Hhd9NLvLuZmxrBi4g';
+const CLOUD_NAME = process.env.CLOUDINARY_CLOUD_NAME;
+const API_KEY    = process.env.CLOUDINARY_API_KEY;
+const API_SECRET = process.env.CLOUDINARY_API_SECRET;
+
+if (!CLOUD_NAME || !API_KEY || !API_SECRET) {
+  throw new Error(
+    '[Cloudinary] Variáveis CLOUDINARY_CLOUD_NAME, CLOUDINARY_API_KEY e CLOUDINARY_API_SECRET são obrigatórias.',
+  );
+}
 
 function generateSignature(params: Record<string, string>): string {
   const sortedParams = Object.keys(params)

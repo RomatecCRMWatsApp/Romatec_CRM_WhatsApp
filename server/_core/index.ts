@@ -36,6 +36,27 @@ async function startServer() {
 
   app.post('/api/webhook/zapi', async (req, res) => {
     try {
+      // Verificação HMAC opcional. Se ZAPI_WEBHOOK_SECRET estiver definida,
+      // exige header x-zapi-signature válido. Bloqueia atacantes injetando
+      // mensagens fake no webhook público (que aciona o bot e gasta créditos).
+      const webhookSecret = process.env.ZAPI_WEBHOOK_SECRET;
+      if (webhookSecret) {
+        const crypto = await import('crypto');
+        const received = String(req.headers['x-zapi-signature'] ?? '');
+        const rawBody  = JSON.stringify(req.body ?? {});
+        const expected = crypto.createHmac('sha256', webhookSecret).update(rawBody).digest('hex');
+        try {
+          const ok = received.length === expected.length &&
+                     crypto.timingSafeEqual(Buffer.from(received), Buffer.from(expected));
+          if (!ok) {
+            console.warn('[Webhook] Assinatura HMAC inválida — request rejeitado');
+            return res.status(401).json({ error: 'invalid signature' });
+          }
+        } catch {
+          return res.status(401).json({ error: 'invalid signature' });
+        }
+      }
+
       const { parseWebhookPayload } = await import('../zapi-integration');
       const { processBotMessage, registerBotMessage } = await import('../bot-ai');
       const { sendMessageViaZAPI } = await import('../zapi-integration');
@@ -424,6 +445,21 @@ async function startServer() {
       dailyScheduler.start();
     } catch (error) {
       console.error('❌ Erro ao iniciar dailyScheduler:', error);
+    }
+
+    // ZAIRA: Inicializar knowledge base e loop autônomo
+    try {
+      const { initKnowledge } = await import('../zaira-knowledge');
+      initKnowledge();
+      if (process.env.ZAIRA_ENABLED !== 'false') {
+        const { startAutonomousLoop } = await import('../zaira-autonomous');
+        startAutonomousLoop();
+        console.log('🤖 Zaira Agent iniciado — acesse /zaira no frontend');
+      } else {
+        console.log('🤖 Zaira Agent desabilitado (ZAIRA_ENABLED=false)');
+      }
+    } catch (e) {
+      console.warn('⚠️ Zaira Agent não pôde ser iniciado (não crítico):', e);
     }
   });
 }
