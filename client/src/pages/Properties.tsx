@@ -522,10 +522,10 @@ export default function Properties() {
                           <svg width="24" height="24" viewBox="0 0 24 24" fill="none" className="text-red-400"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/><polyline points="14 2 14 8 20 8" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/><line x1="16" y1="13" x2="8" y2="13" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/><line x1="16" y1="17" x2="8" y2="17" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/></svg>
                         </div>
                         <div className="flex-1 min-w-0">
-                          <p className="text-sm font-medium text-foreground truncate">{form.plantaBaixaUrl.split('/').pop()}</p>
+                          <p className="text-sm font-medium text-foreground truncate">{form.plantaBaixaUrl.startsWith('data:application/pdf') ? 'planta.pdf' : form.plantaBaixaUrl.split('/').pop()}</p>
                           <p className="text-xs text-muted-foreground mt-0.5">Planta Baixa — PDF</p>
                         </div>
-                        <a href={form.plantaBaixaUrl} target="_blank" rel="noopener noreferrer" className="text-xs text-emerald-400 font-medium hover:underline flex-shrink-0">Abrir ↗</a>
+                        <a href={form.plantaBaixaUrl.startsWith('data:application/pdf') && editingId ? `/api/imoveis/${editingId}/planta` : form.plantaBaixaUrl} target="_blank" rel="noopener noreferrer" className="text-xs text-emerald-400 font-medium hover:underline flex-shrink-0">Abrir ↗</a>
                         <button type="button" onClick={() => setForm(p => ({ ...p, plantaBaixaUrl: '' }))} className="text-xs text-red-400 hover:text-red-300 font-medium flex-shrink-0 ml-1">Remover</button>
                       </div>
                     ) : (
