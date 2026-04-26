@@ -30,13 +30,10 @@ async function findAvailablePort(startPort: number = 3000): Promise<number> {
 async function startServer() {
   const app = express();
   const server = createServer(app);
-  // Configure body parser with larger size limit for file uploads
   app.use(express.json({ limit: "50mb" }));
   app.use(express.urlencoded({ limit: "50mb", extended: true }));
-  // OAuth callback under /api/oauth/callback
   registerOAuthRoutes(app);
 
-  // Webhook Z-API - recebe respostas do WhatsApp
   app.post('/api/webhook/zapi', async (req, res) => {
     try {
       const { parseWebhookPayload } = await import('../zapi-integration');
@@ -48,7 +45,6 @@ async function startServer() {
         return res.json({ received: true, processed: false });
       }
 
-      // Ignorar mensagens vazias
       const msgText = String(payload.message || '').trim();
       if (!msgText && !payload.audioUrl) {
         console.log(`[Webhook] Ignorado: mensagem vazia de ${payload.phone}`);
@@ -57,32 +53,6 @@ async function startServer() {
 
       console.log(`[Webhook] ${payload.phone} - "${msgText.substring(0, 50)}"`);
 
-      // ───────────────────────────────────────────────────────────────────
-      // Fan-out pra ZAYRA: se a mensagem é do CEO, repassa pra ela responder
-      // como assistente pessoal — bot do CRM NÃO responde nesse caso pra
-      // evitar dupla resposta. Ativado via ZAYRA_WEBHOOK_URL + CEO_WHATSAPP_PHONE.
-      // Falha silenciosa: se ZAYRA estiver fora, CRM continua o fluxo normal.
-      // ───────────────────────────────────────────────────────────────────
-      const ceoPhoneRaw = process.env.CEO_WHATSAPP_PHONE;
-      const zayraUrl    = process.env.ZAYRA_WEBHOOK_URL;
-      if (ceoPhoneRaw && zayraUrl) {
-        const ceoPhone   = ceoPhoneRaw.replace(/\D/g, '');
-        const fromPhone  = payload.phone.replace(/\D/g, '');
-        // match exato ou últimos 10 dígitos (cobre variações DDI 55 vs sem)
-        const isFromCeo  = fromPhone === ceoPhone || fromPhone.endsWith(ceoPhone.slice(-10));
-        if (isFromCeo) {
-          console.log(`[Webhook] 🎯 Mensagem do CEO — repassando pra ZAYRA (fan-out), CRM bot NÃO responde`);
-          // Fire-and-forget — não bloqueia o ack do webhook
-          fetch(zayraUrl, {
-            method:  'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body:    JSON.stringify(req.body),
-          }).catch((err: unknown) => console.warn('[Webhook] ZAYRA fan-out falhou (não crítico):', err));
-          return res.json({ received: true, processed: true, forwarded_to: 'zayra' });
-        }
-      }
-
-      // Buscar nome do contato (opcional, não bloqueia o bot)
       let senderName = payload.senderName || 'Cliente';
       try {
         const { getDb } = await import('../db');
@@ -97,7 +67,6 @@ async function startServer() {
           if (contact) {
             senderName = contact.name || senderName;
             console.log(`[Webhook] Contato encontrado: ${senderName}`);
-            // Lead respondeu → resetar tentativas para permitir reengajamento futuro
             try {
               const { campaignContacts } = await import('../../drizzle/schema');
               const { eq } = await import('drizzle-orm');
@@ -116,7 +85,6 @@ async function startServer() {
         console.warn('[Webhook] Erro ao buscar contato (não crítico):', dbErr);
       }
 
-      // Processar com bot IA e responder automaticamente
       try {
         const botResponse = await processBotMessage({
           phone: payload.phone,
@@ -126,7 +94,6 @@ async function startServer() {
         });
 
         if (botResponse.text) {
-          // Buscar credenciais Z-API do env (mais confiável que banco)
           const instanceId = process.env.ZAPI_INSTANCE_ID;
           const token = process.env.ZAPI_TOKEN;
           const clientToken = process.env.ZAPI_CLIENT_TOKEN;
@@ -141,7 +108,6 @@ async function startServer() {
             });
 
             if (sendResult.success) {
-              // Registrar para follow-up automático
               registerBotMessage(payload.phone, senderName);
               console.log(`[Bot] ✅ Resposta enviada para ${senderName} (${payload.phone})`);
             } else {
@@ -162,7 +128,6 @@ async function startServer() {
     }
   });
 
-  // Upload de arquivos — imagens/vídeos/PDFs via Cloudinary
   app.post('/api/upload', express.raw({ type: '*/*', limit: '100mb' }), async (req, res) => {
     try {
       const fileName = (req.headers['x-file-name'] as string) || 'upload';
@@ -182,17 +147,54 @@ async function startServer() {
         return res.status(400).json({ success: false, error: 'Arquivo excede 100MB' });
       }
 
-      // PDFs: converter para base64 data URL — sem Cloudinary, sem 401, funciona sempre
       if (fileType === 'application/pdf') {
+        if (buffer.length > 10 * 1024 * 1024) {
+          return res.status(400).json({ success: false, error: 'PDF muito grande (máximo 10MB)' });
+        }
         const base64 = buffer.toString('base64');
         const url = `data:application/pdf;base64,${base64}`;
         console.log(`[Upload] ✅ PDF base64 (${(buffer.length / 1024).toFixed(1)}KB)`);
         return res.json({ success: true, url });
       }
 
-      console.log(`[Upload] Enviando para Cloudinary: ${fileName} (${fileType}, ${(buffer.length / 1024).toFixed(1)}KB)`);
+      let finalBuffer = buffer;
+      const originalSizeKB = buffer.length / 1024;
+
+      // Compressão automática de imagens acima de 8MB
+      if ((fileType.startsWith('image/') && fileType !== 'image/webp') || fileType === 'image/webp') {
+        if (buffer.length > 8 * 1024 * 1024) {
+          try {
+            const sharp = (await import('sharp')).default;
+            let compressed = await sharp(buffer)
+              .resize({ width: 2400, withoutEnlargement: true })
+              .jpeg({ quality: 82 })
+              .toBuffer();
+
+            // Se ainda acima de 9.5MB, comprimir mais agressivamente
+            if (compressed.length > 9.5 * 1024 * 1024) {
+              compressed = await sharp(buffer)
+                .resize({ width: 1920, withoutEnlargement: true })
+                .jpeg({ quality: 65 })
+                .toBuffer();
+            }
+
+            const compressedSizeKB = compressed.length / 1024;
+            console.log(`[Upload] 📉 Imagem comprimida: ${originalSizeKB.toFixed(1)}KB → ${compressedSizeKB.toFixed(1)}KB`);
+            finalBuffer = compressed;
+          } catch (err) {
+            console.warn('[Upload] ⚠️ Compressão falhou, tentando upload do original:', err);
+          }
+        }
+      }
+
+      if (finalBuffer.length > 10 * 1024 * 1024) {
+        return res.status(413).json({ success: false, error: 'Arquivo muito grande para upload (máximo 10MB após compressão)' });
+      }
+
+      const finalSizeKB = finalBuffer.length / 1024;
+      console.log(`[Upload] Enviando para Cloudinary: ${fileName} (${fileType}, ${finalSizeKB.toFixed(1)}KB)`);
       const { uploadToCloudinary } = await import('../cloudinary');
-      const { url } = await uploadToCloudinary(buffer, fileType, fileName);
+      const { url } = await uploadToCloudinary(finalBuffer, fileType, fileName);
       console.log(`[Upload] ✅ Cloudinary: ${url}`);
       res.json({ success: true, url });
     } catch (error) {
@@ -201,14 +203,12 @@ async function startServer() {
     }
   });
 
-  // PDF Proxy — busca PDF via Cloudinary com autenticação quando necessário
   app.get("/api/pdf-proxy", async (req, res) => {
     const url = req.query.url as string;
     if (!url || !/^https?:\/\//.test(url)) {
       return res.status(400).json({ error: "URL inválida" });
     }
     try {
-      // Para URLs Cloudinary: usar autenticação Basic com api_key:api_secret
       const isCloudinary = url.includes('res.cloudinary.com');
       const headers: Record<string, string> = {
         'User-Agent': 'Mozilla/5.0 (compatible; RomatecCRM/1.0)',
@@ -236,7 +236,60 @@ async function startServer() {
     }
   });
 
-  // tRPC API
+  // Planta Baixa (PDF) — serve base64 armazenado como arquivo PDF
+  app.get("/api/imoveis/:id/planta", async (req, res) => {
+    try {
+      const { id } = req.params;
+      if (!id || isNaN(Number(id))) {
+        return res.status(400).json({ error: "ID de imóvel inválido" });
+      }
+
+      const { getDb } = await import('../db');
+      const { properties } = await import('../../drizzle/schema');
+      const { eq } = await import('drizzle-orm');
+
+      const db = await getDb();
+      if (!db) {
+        return res.status(503).json({ error: "Banco de dados indisponível" });
+      }
+
+      const prop = await db.select().from(properties).where(eq(properties.id, Number(id))).limit(1);
+      if (!prop[0] || !prop[0].plantaBaixaUrl) {
+        return res.status(404).json({ error: "Planta baixa não encontrada" });
+      }
+
+      const plantaUrl = prop[0].plantaBaixaUrl as string;
+
+      // Se for base64 (data: URI)
+      if (plantaUrl.startsWith('data:application/pdf;base64,')) {
+        const base64Data = plantaUrl.split(',')[1];
+        const buffer = Buffer.from(base64Data, 'base64');
+        res.setHeader('Content-Type', 'application/pdf');
+        res.setHeader('Content-Disposition', 'inline; filename="planta.pdf"');
+        res.setHeader('Cache-Control', 'public, max-age=86400');
+        return res.send(buffer);
+      }
+
+      // Se for URL remota (Cloudinary, etc)
+      if (plantaUrl.startsWith('http')) {
+        const response = await fetch(plantaUrl);
+        if (!response.ok) {
+          return res.status(502).json({ error: `Falha ao buscar planta (${response.status})` });
+        }
+        const buffer = await response.arrayBuffer();
+        res.setHeader('Content-Type', 'application/pdf');
+        res.setHeader('Content-Disposition', 'inline; filename="planta.pdf"');
+        res.setHeader('Cache-Control', 'public, max-age=86400');
+        return res.send(Buffer.from(buffer));
+      }
+
+      res.status(400).json({ error: "Formato de planta baixa não suportado" });
+    } catch (e) {
+      console.error('[Planta] Erro:', e);
+      res.status(500).json({ error: String(e) });
+    }
+  });
+
   app.use(
     "/api/trpc",
     createExpressMiddleware({
@@ -244,15 +297,13 @@ async function startServer() {
       createContext,
     })
   );
-  // development mode uses Vite, production mode uses static files
+  
   if (process.env.NODE_ENV === "development") {
     await setupVite(app, server);
   } else {
     serveStatic(app);
   }
 
-  // ── PRÉ-INICIALIZAÇÃO: rodar migrations ANTES do servidor aceitar conexões ──
-  // MIGRATION: Garantir colunas de API keys no companyConfig
   try {
     const { addApiKeysToCompanyConfig } = await import('./migrations/addApiKeysToCompanyConfig');
     await addApiKeysToCompanyConfig();
@@ -260,7 +311,6 @@ async function startServer() {
     console.error('❌ Erro na migration addApiKeysToCompanyConfig:', e);
   }
 
-  // MIGRATION: plantaBaixaUrl → MEDIUMTEXT (suporta PDF base64)
   try {
     const { enlargePlantaBaixaUrl } = await import('./migrations/enlargePlantaBaixaUrl');
     await enlargePlantaBaixaUrl();
@@ -268,12 +318,32 @@ async function startServer() {
     console.error('❌ Erro na migration enlargePlantaBaixaUrl:', e);
   }
 
-  // MIGRATION: finalidade (venda/aluguel) em properties — DEVE rodar antes do listen()
   try {
     const { addFinalidadeToProperties } = await import('./migrations/addFinalidadeToProperties');
     await addFinalidadeToProperties();
   } catch (e) {
     console.error('❌ Erro na migration addFinalidadeToProperties:', e);
+  }
+
+  try {
+    const { addPendingStatusToSendLog } = await import('./migrations/addPendingStatusToSendLog');
+    await addPendingStatusToSendLog();
+  } catch (e) {
+    console.error('❌ Erro na migration addPendingStatusToSendLog:', e);
+  }
+
+  try {
+    const { cleanupOldCycleHourFormat } = await import('./migrations/cleanupOldCycleHourFormat');
+    await cleanupOldCycleHourFormat();
+  } catch (e) {
+    console.error('❌ Erro na migration cleanupOldCycleHourFormat:', e);
+  }
+
+  try {
+    const { addUniqueCampaignCycleHour } = await import('./migrations/addUniqueCampaignCycleHour');
+    await addUniqueCampaignCycleHour();
+  } catch (e) {
+    console.error('❌ Erro na migration addUniqueCampaignCycleHour:', e);
   }
 
   const preferredPort = parseInt(process.env.PORT || "3000");
@@ -286,7 +356,6 @@ async function startServer() {
   server.listen(port, async () => {
     console.log(`Server running on http://localhost:${port}/`);
 
-    // RESTORE: Mod_Vaz-02 deletado acidentalmente
     try {
       const { restoreModVaz02 } = await import('./migrations/restoreModVaz02');
       await restoreModVaz02();
@@ -294,7 +363,6 @@ async function startServer() {
       console.error('❌ Erro no restore Mod_Vaz-02:', e);
     }
 
-    // STARTUP: Carregar credenciais salvas no DB para process.env (fallback do .env)
     try {
       const { getCompanyConfig } = await import('../db');
       const cfg = await getCompanyConfig();
@@ -325,19 +393,12 @@ async function startServer() {
       console.error('❌ Erro no auto-restart do scheduler:', error);
     }
 
-    // ZAIRA: Inicializar knowledge base e loop autônomo
+    // DAILY SCHEDULER: Resets diários (08h standby / 18h prep / 20h full restart)
     try {
-      const { initKnowledge } = await import('../zaira-knowledge');
-      initKnowledge();
-      if (process.env.ZAIRA_ENABLED !== 'false') {
-        const { startAutonomousLoop } = await import('../zaira-autonomous');
-        startAutonomousLoop();
-        console.log('🤖 Zaira Agent iniciado — acesse /zaira no frontend');
-      } else {
-        console.log('🤖 Zaira Agent desabilitado (ZAIRA_ENABLED=false)');
-      }
-    } catch (e) {
-      console.warn('⚠️ Zaira Agent não pôde ser iniciado (não crítico):', e);
+      const { dailyScheduler } = await import('../scheduler/dailyScheduler');
+      dailyScheduler.start();
+    } catch (error) {
+      console.error('❌ Erro ao iniciar dailyScheduler:', error);
     }
   });
 }
