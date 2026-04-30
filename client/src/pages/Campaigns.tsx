@@ -255,8 +255,56 @@ export default function Campaigns() {
     );
   }
 
+  // Banner de aviso quando envio em massa está pausado.
+  // Detecta via env (injetada pelo Vite no build) ou flag remota futura.
+  // Hoje fica HARDCODED visível enquanto WhatsApp está instável — quando
+  // a Meta Cloud API estabilizar, removemos esse banner.
+  const CAMPAIGNS_PAUSED = (import.meta.env.VITE_CAMPAIGNS_ENABLED ?? 'false') === 'false';
+
   return (
     <div className="min-h-screen" style={{ background: "#080f0a", color: "#e8f5e9" }}>
+      {CAMPAIGNS_PAUSED && (
+        <div
+          style={{
+            background: "linear-gradient(90deg, rgba(232,168,62,0.18), rgba(232,168,62,0.08))",
+            borderBottom: "2px solid rgba(232,168,62,0.45)",
+            padding: "12px 20px",
+            display: "flex",
+            alignItems: "center",
+            gap: "12px",
+            color: "#f5c870",
+            fontSize: "13px",
+            fontWeight: 500,
+            flexWrap: "wrap",
+          }}
+        >
+          <span style={{ fontSize: "20px" }}>⏸️</span>
+          <div style={{ flex: 1, minWidth: "260px" }}>
+            <strong style={{ display: "block", color: "#ffd97a", marginBottom: "2px" }}>
+              Envio em massa de campanhas PAUSADO
+            </strong>
+            <span style={{ color: "#e8c980", fontSize: "12px" }}>
+              Estamos aguardando migração para a Meta Cloud API oficial. O CRM continua
+              recebendo mensagens, qualificando leads e mantendo todos os contatos. Apenas
+              o envio automático em massa está desligado pra evitar bloqueios da sessão.
+            </span>
+          </div>
+          <span
+            style={{
+              padding: "5px 12px",
+              borderRadius: "999px",
+              background: "rgba(232,168,62,0.15)",
+              border: "1px solid rgba(232,168,62,0.35)",
+              fontSize: "11px",
+              letterSpacing: "0.08em",
+              textTransform: "uppercase",
+              color: "#f5c870",
+            }}
+          >
+            CAMPAIGNS_ENABLED = false
+          </span>
+        </div>
+      )}
       {/* == HEADER == */}
       <div
         style={{
