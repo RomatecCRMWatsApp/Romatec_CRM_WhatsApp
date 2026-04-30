@@ -430,21 +430,36 @@ async function startServer() {
       console.error('❌ Erro ao carregar credenciais do banco:', e);
     }
 
-    // AUTO-RESTART: Verificar se o scheduler estava rodando antes do deploy
-    try {
-      const { campaignScheduler } = await import('../scheduler/campaignScheduler');
-      console.log('\n🔍 Verificando estado do scheduler no banco...');
-      await campaignScheduler.restoreAndResume();
-    } catch (error) {
-      console.error('❌ Erro no auto-restart do scheduler:', error);
-    }
+    // CAMPAIGNS_ENABLED: flag pra desativar envio em massa enquanto WhatsApp
+    // está instável (aguardando migração pra Meta Cloud API oficial).
+    // Setar CAMPAIGNS_ENABLED=false no Railway pra pausar tudo sem perder dados.
+    // Webhook continua recebendo mensagens, leads continuam sendo cadastrados,
+    // bot AI continua qualificando — só o envio em massa fica desligado.
+    const campaignsEnabled = process.env.CAMPAIGNS_ENABLED !== 'false';
 
-    // DAILY SCHEDULER: Resets diários (08h standby / 18h prep / 20h full restart)
-    try {
-      const { dailyScheduler } = await import('../scheduler/dailyScheduler');
-      dailyScheduler.start();
-    } catch (error) {
-      console.error('❌ Erro ao iniciar dailyScheduler:', error);
+    if (campaignsEnabled) {
+      // AUTO-RESTART: Verificar se o scheduler estava rodando antes do deploy
+      try {
+        const { campaignScheduler } = await import('../scheduler/campaignScheduler');
+        console.log('\n🔍 Verificando estado do scheduler no banco...');
+        await campaignScheduler.restoreAndResume();
+      } catch (error) {
+        console.error('❌ Erro no auto-restart do scheduler:', error);
+      }
+
+      // DAILY SCHEDULER: Resets diários (08h standby / 18h prep / 20h full restart)
+      try {
+        const { dailyScheduler } = await import('../scheduler/dailyScheduler');
+        dailyScheduler.start();
+      } catch (error) {
+        console.error('❌ Erro ao iniciar dailyScheduler:', error);
+      }
+    } else {
+      console.log('\n⏸️  Envio em massa de campanhas DESATIVADO (CAMPAIGNS_ENABLED=false)');
+      console.log('   • Scheduler de campanhas: PARADO');
+      console.log('   • Daily scheduler: PARADO');
+      console.log('   • Webhook + bot AI + recebimento de leads: CONTINUAM funcionando');
+      console.log('   • Pra reativar: setar CAMPAIGNS_ENABLED=true no Railway\n');
     }
 
     // ZAIRA: Inicializar knowledge base e loop autônomo
