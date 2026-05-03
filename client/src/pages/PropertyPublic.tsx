@@ -61,12 +61,12 @@ export default function PropertyPublic() {
 
   return (
     <div className="min-h-screen bg-background pb-32">
-      {/* Hero Image */}
-      <div className="relative w-full h-[55vh] bg-secondary/30 overflow-hidden">
+      {/* Hero Image — visualização livre, sem card sobreposto */}
+      <div className="relative w-full h-[55vh] sm:h-[65vh] bg-secondary/30 overflow-hidden">
         {images.length > 0 ? (
           <>
-            <img src={images[imageIndex]} alt={property.denomination} className="w-full h-full object-cover" />
-            <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-black/20" />
+            <img src={images[imageIndex]} alt={property.denomination} className="w-full h-full object-contain bg-black" />
+            <div className="absolute inset-x-0 top-0 h-20 bg-gradient-to-b from-black/50 to-transparent pointer-events-none" />
             {hasMultipleImages && (
               <>
                 <button onClick={prevImage} className="absolute left-3 top-1/2 -translate-y-1/2 p-2 rounded-full bg-black/50 text-white hover:bg-black/70 transition-all">
@@ -96,38 +96,36 @@ export default function PropertyPublic() {
         <button onClick={() => navigator.share?.({ title: property.denomination, url: window.location.href })} className="absolute top-4 right-4 p-2 rounded-full bg-black/50 text-white hover:bg-black/70 transition-all">
           <Share2 className="h-5 w-5" />
         </button>
-
-        {/* Info overlay */}
-        <div className="absolute bottom-0 left-0 right-0 p-4">
-          <div className="max-w-3xl mx-auto glass-card p-4 rounded-2xl">
-            <div className="flex items-start justify-between gap-3">
-              <div>
-                <span className="inline-block px-2 py-0.5 rounded-full text-xs font-bold bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 mb-2">
-                  {property.status === "available" ? "Disponível" : property.status}
-                </span>
-                <h1 className="text-2xl font-bold text-foreground">{property.denomination}</h1>
-                {property.address && (
-                  <div className="flex items-start gap-1 mt-1">
-                    <MapPin className="h-3 w-3 text-emerald flex-shrink-0 mt-0.5" />
-                    <p className="text-sm text-green-400 line-clamp-2 break-words">
-                      {property.address}{property.city ? `, ${property.city}` : ""}{property.state ? ` - ${property.state}` : ""}
-                    </p>
-                  </div>
-                )}
-              </div>
-              {property.price && (
-                <div className="text-right flex-shrink-0">
-                  <p className="text-xs text-muted-foreground">Valor</p>
-                  <p className="text-xl font-bold text-emerald">R$ {formatCurrency(property.price)}</p>
-                </div>
-              )}
-            </div>
-          </div>
-        </div>
       </div>
 
       {/* Content */}
       <div className="max-w-3xl mx-auto px-4 pt-6">
+
+        {/* Info card — agora abaixo da foto (não sobrepõe mais) */}
+        <div className="glass-card p-4 sm:p-5 rounded-2xl mb-6">
+          <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3">
+            <div className="flex-1 min-w-0">
+              <span className="inline-block px-2 py-0.5 rounded-full text-xs font-bold bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 mb-2">
+                {property.status === "available" ? "Disponível" : property.status}
+              </span>
+              <h1 className="text-2xl font-bold text-foreground break-words">{property.denomination}</h1>
+              {property.address && (
+                <div className="flex items-start gap-1 mt-1">
+                  <MapPin className="h-3 w-3 text-emerald flex-shrink-0 mt-0.5" />
+                  <p className="text-sm text-green-400 break-words">
+                    {property.address}{property.city ? `, ${property.city}` : ""}{property.state ? ` - ${property.state}` : ""}
+                  </p>
+                </div>
+              )}
+            </div>
+            {property.price && (
+              <div className="sm:text-right flex-shrink-0">
+                <p className="text-xs text-muted-foreground">Valor</p>
+                <p className="text-2xl sm:text-xl font-bold text-emerald">R$ {formatCurrency(property.price)}</p>
+              </div>
+            )}
+          </div>
+        </div>
 
         {/* Características */}
         {(property.bedrooms || property.bathrooms || property.garageSpaces || property.areaConstruida || property.areaCasa || property.areaTerreno) && (
