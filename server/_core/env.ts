@@ -10,4 +10,13 @@ export const ENV = {
   telegramBotToken: process.env.TELEGRAM_BOT_TOKEN ?? "",
   telegramChatId: process.env.TELEGRAM_CHAT_ID ?? "",
   telegramNotificationsEnabled: process.env.TELEGRAM_NOTIFICATIONS_ENABLED === "true",
+  // ── Zaira Agent ─────────────────────────────────────────────────────
+  anthropicApiKey: process.env.ANTHROPIC_API_KEY ?? "",
+  githubToken: process.env.GITHUB_TOKEN ?? "",
+  githubOwner: process.env.GITHUB_OWNER ?? "RomatecCRMWatsApp",
+  githubRepo: process.env.GITHUB_REPO ?? "Romatec_CRM_WhatsApp",
+  railwayProductionUrl: process.env.RAILWAY_PRODUCTION_URL ?? "https://romateccrm.com",
+  zairaEnabled: process.env.ZAIRA_ENABLED !== "false",
+  zairaAutonomyLevel: parseInt(process.env.ZAIRA_AUTONOMY_LEVEL ?? "50"),
+  zairaCheckInterval: parseInt(process.env.ZAIRA_CHECK_INTERVAL ?? "300000"),
 };
