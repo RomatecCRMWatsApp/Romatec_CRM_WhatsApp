@@ -69,7 +69,7 @@ describe('Meta - mapeamento dos campos do formulário', () => {
       { name: 'full_name', values: ['Maria das Graças'] },
       { name: 'phone_number', values: ['+5599991811246'] },
       { name: 'email', values: ['maria@exemplo.com'] },
-    ])).toEqual({ nome: 'Maria das Graças', phone: '+5599991811246', email: 'maria@exemplo.com' });
+    ])).toEqual({ nome: 'Maria das Graças', phone: '+5599991811246', email: 'maria@exemplo.com', extras: {} });
   });
 
   it('first_name + last_name quando não há nome completo', () => {
@@ -103,8 +103,8 @@ describe('Meta - mapeamento dos campos do formulário', () => {
   });
 
   it('sem campos: nada mapeado', () => {
-    expect(mapLeadFields([])).toEqual({ nome: undefined, phone: undefined, email: undefined });
-    expect(mapLeadFields(undefined)).toEqual({ nome: undefined, phone: undefined, email: undefined });
+    expect(mapLeadFields([])).toEqual({ nome: undefined, phone: undefined, email: undefined, extras: {} });
+    expect(mapLeadFields(undefined)).toEqual({ nome: undefined, phone: undefined, email: undefined, extras: {} });
   });
 });
 
@@ -161,7 +161,7 @@ describe('Meta - processamento do leadgen até o ingestLead', () => {
       metaLeadId: '444',
       campanha: 'Loteamento Jardim Romatec - Lead',
     });
-    expect(fetchImpl).toHaveBeenCalledTimes(1); // com ad_name não busca o formulário
+    expect(fetchImpl).toHaveBeenCalledTimes(2); // anúncio sem "Bom Jardims" no nome: busca o formulário pra reconhecer o empreendimento
     expect(out).toEqual([{ leadgenId: '444', status: 'ingested', result: okResult }]);
   });
 
@@ -205,5 +205,82 @@ describe('Meta - processamento do leadgen até o ingestLead', () => {
     const out = await processMetaWebhook(webhookBody(), { accessToken: 'tok', fetchImpl, ingest });
     expect(ingest).not.toHaveBeenCalled();
     expect(out[0]).toMatchObject({ leadgenId: '444', status: 'fetch_error' });
+  });
+});
+
+describe('Meta - lead do Bom Jardims (sem preço, roteiro §7.1, LGPD)', () => {
+  const okResult = { ok: true as const, created: true, messageSent: true, phone: '5599991811246' };
+  const bjLead = {
+    id: '901',
+    created_time: '2026-10-17T22:00:00+0000',
+    ad_name: 'Anúncio vídeo portal',
+    form_id: '555',
+    field_data: [
+      { name: 'full_name', values: ['joana lima'] },
+      { name: 'phone_number', values: ['+5599991811246'] },
+      { name: 'email', values: ['joana@exemplo.com'] },
+      { name: 'você_procura_a_chácara_para:', values: ['lazer_de_fim_de_semana'] },
+      { name: 'quando_pretende_comprar?', values: ['até_3_meses'] },
+      { name: 'cidade', values: ['Imperatriz'] },
+    ],
+    custom_disclaimer_responses: [{ checkbox_key: 'lgpd', is_checked: '1' }],
+  };
+
+  function graph(lead: object, formName: string) {
+    return vi.fn(async (url: string) => {
+      const path = new URL(url).pathname;
+      if (path.endsWith('/901')) return jsonResponse(lead);
+      if (path.endsWith('/555')) return jsonResponse({ id: '555', name: formName });
+      return jsonResponse({}, 404);
+    });
+  }
+
+  it('reconhece pelo nome do formulário e manda roteiro próprio, respostas, score e consentimento', async () => {
+    const fetchImpl = graph(bjLead, 'Bom Jardims - Mapa de vendas (C3)');
+    const ingest = vi.fn().mockResolvedValue(okResult);
+    await processMetaWebhook(webhookBody('901', '555'), { accessToken: 'tok', fetchImpl: fetchImpl as any, ingest });
+
+    const input = ingest.mock.calls[0][0];
+    expect(input).toMatchObject({
+      nome: 'joana lima',
+      origem: 'instagram_ads',
+      metaLeadId: '901',
+      campanha: 'Anúncio vídeo portal',
+      empreendimentoSlug: 'bom-jardims',
+      answers: { email: 'joana@exemplo.com', finalidade: 'Lazer de fim de semana', prazo: 'Até 3 meses', cidade: 'Imperatriz' },
+      leadScore: 35, // 3 meses (20) + mora a até 60 km (15)
+    });
+    expect(input.consentimento).toMatchObject({ at: '2026-10-17T22:00:00.000Z' });
+    expect(input.consentimento.texto).toContain('Lei n.º 13.709/2018');
+    expect(input.consentimento.origem).toContain('Bom Jardims - Mapa de vendas (C3)');
+    expect(input.welcomeMessage).toContain('Condomínio de Chácaras Bom Jardims');
+    expect(input.welcomeMessage).toContain('CRECI/MA 4.705');
+    // Regra nº 1: nada de valor na mensagem automática
+    expect(input.welcomeMessage).not.toMatch(/R\$|valor|pre[çc]o|parcela|entrada/i);
+  });
+
+  it('sem checkbox marcado não registra consentimento', async () => {
+    const fetchImpl = graph({ ...bjLead, custom_disclaimer_responses: [{ checkbox_key: 'lgpd', is_checked: '' }] }, 'Bom Jardims - C3');
+    const ingest = vi.fn().mockResolvedValue(okResult);
+    await processMetaWebhook(webhookBody('901', '555'), { accessToken: 'tok', fetchImpl: fetchImpl as any, ingest });
+    expect(ingest.mock.calls[0][0].empreendimentoSlug).toBe('bom-jardims');
+    expect(ingest.mock.calls[0][0].consentimento).toBeUndefined();
+  });
+
+  it('anúncio com "bomjardims" no nome dispensa a busca do formulário', async () => {
+    const fetchImpl = graph({ ...bjLead, ad_name: 'bomjardims_c3_video' }, 'qualquer');
+    const ingest = vi.fn().mockResolvedValue(okResult);
+    await processMetaWebhook(webhookBody('901', '555'), { accessToken: 'tok', fetchImpl: fetchImpl as any, ingest });
+    expect(fetchImpl).toHaveBeenCalledTimes(1);
+    expect(ingest.mock.calls[0][0].empreendimentoSlug).toBe('bom-jardims');
+  });
+
+  it('formulário de outro imóvel segue o fluxo genérico', async () => {
+    const fetchImpl = graph(bjLead, 'Teste CRM - Loteamento');
+    const ingest = vi.fn().mockResolvedValue(okResult);
+    await processMetaWebhook(webhookBody('901', '555'), { accessToken: 'tok', fetchImpl: fetchImpl as any, ingest });
+    const input = ingest.mock.calls[0][0];
+    expect(input.empreendimentoSlug).toBeUndefined();
+    expect(input.welcomeMessage).toBeUndefined();
   });
 });

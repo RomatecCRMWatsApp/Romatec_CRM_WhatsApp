@@ -63,6 +63,95 @@ export function bomJardimsWelcome(nome: string): string {
   ].join('\n');
 }
 
+// ─── Meta Lead Ads (formulário instantâneo) ──────────────────────────────────
+/** Formulário/anúncio/campanha do Bom Jardims? ("Bom Jardims - Mapa de vendas (C3)", "bomjardims_c3"...) */
+export function isBomJardimsName(name?: string | null): boolean {
+  return !!name && /bom\s*jardi/.test(normalize(name).replace(/[_-]/g, ' '));
+}
+
+/**
+ * Respostas de múltipla escolha do formulário da Meta. A Meta devolve a opção
+ * escolhida como texto ("Lazer de fim de semana" ou "lazer_de_fim_de_semana"),
+ * então a classificação é pelo valor; cidade vem de pergunta aberta.
+ */
+export function parseMetaAnswers(extras: Record<string, string>): {
+  finalidade?: typeof FINALIDADES[number];
+  prazo?: typeof PRAZOS[number];
+  pagamento?: typeof PAGAMENTOS[number];
+  cidade?: string;
+} {
+  const out: ReturnType<typeof parseMetaAnswers> = {};
+  for (const [key, raw] of Object.entries(extras)) {
+    const k = normalize(key).replace(/_/g, ' ');
+    const v = normalize(raw).replace(/_/g, ' ');
+    if (/cidade|onde (voce )?mora/.test(k)) { out.cidade ??= raw.trim(); continue; }
+    if (!out.finalidade) {
+      if (/\bmorar\b/.test(v)) { out.finalidade = 'morar'; continue; }
+      if (/lazer|fim de semana/.test(v)) { out.finalidade = 'lazer'; continue; }
+      if (/invest/.test(v)) { out.finalidade = 'investimento'; continue; }
+    }
+    if (!out.prazo) {
+      if (/imediat/.test(v)) { out.prazo = 'imediato'; continue; }
+      if (/\b3 meses|tres meses/.test(v)) { out.prazo = '3m'; continue; }
+      if (/\b12 meses|doze meses|1 ano/.test(v)) { out.prazo = '12m'; continue; }
+      if (/pesquis/.test(v)) { out.prazo = 'pesquisando'; continue; }
+    }
+    if (!out.pagamento) {
+      if (/a vista|avista/.test(v)) { out.pagamento = 'avista'; continue; }
+      if (/parcel|financ/.test(v)) { out.pagamento = 'parcelado'; continue; }
+    }
+  }
+  return out;
+}
+
+/** created_time da Meta vem como "2026-10-17T22:00:00+0000"; inválido → agora */
+function toIso(t?: string): string {
+  const d = t ? new Date(t.replace(/([+-]\d{2})(\d{2})$/, '$1:$2')) : new Date();
+  return Number.isNaN(d.getTime()) ? new Date().toISOString() : d.toISOString();
+}
+
+export interface MetaDisclaimerResponse { checkbox_key?: string; is_checked?: boolean | string | number }
+
+/**
+ * Lead do Meta Lead Ads → campos extras do ingestLead para o Bom Jardims:
+ * roteiro §7.1, respostas, pontuação §8.2 e consentimento §8.3 (checkbox do formulário).
+ */
+export function bomJardimsFromMeta(params: {
+  nome: string;
+  extras: Record<string, string>;
+  email?: string;
+  disclaimers?: MetaDisclaimerResponse[];
+  createdTime?: string;
+  formLabel: string;
+}) {
+  const a = parseMetaAnswers(params.extras);
+  const answers: Record<string, string> = {};
+  if (params.email) answers.email = params.email;
+  if (a.cidade) answers.cidade = a.cidade;
+  if (a.finalidade) answers.finalidade = FINALIDADE_LABEL[a.finalidade];
+  if (a.prazo) answers.prazo = PRAZO_LABEL[a.prazo];
+  if (a.pagamento) answers.pagamento = PAGAMENTO_LABEL[a.pagamento];
+
+  const checked = (params.disclaimers ?? []).some(d => d.is_checked === true || d.is_checked === 1 || d.is_checked === '1' || d.is_checked === 'true');
+  if (!checked) {
+    console.warn(`[BomJardims] Lead da Meta sem checkbox de consentimento marcado (${params.formLabel}) — confira o formulário (§8.3)`);
+  }
+
+  return {
+    empreendimentoSlug: BOM_JARDIMS_SLUG,
+    leadScore: scoreBomJardims({ prazo: a.prazo, pagamento: a.pagamento, cidade: a.cidade }),
+    answers,
+    welcomeMessage: bomJardimsWelcome(params.nome),
+    ...(checked ? {
+      consentimento: {
+        at: toIso(params.createdTime),
+        texto: BOM_JARDIMS_CONSENT_TEXT,
+        origem: `Meta Lead Ads — ${params.formLabel}`,
+      },
+    } : {}),
+  };
+}
+
 const opt = (max: number) => z.string().trim().max(max).optional().transform(v => v || undefined);
 const utmField = opt(100);
 

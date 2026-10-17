@@ -9,8 +9,9 @@
 
 import crypto from 'crypto';
 import { normalizePhoneBR, type LeadIntakeInput, type LeadIntakeResult } from './lead-intake';
+import { bomJardimsFromMeta, isBomJardimsName, type MetaDisclaimerResponse } from './bom-jardims';
 
-export const DEFAULT_GRAPH_VERSION = 'v21.0';
+export const DEFAULT_GRAPH_VERSION = 'v26.0';
 
 // ─── Assinatura do webhook ───────────────────────────────────────────────────
 /**
@@ -62,6 +63,8 @@ export interface MetaLead {
   form_id?: string;
   platform?: string;
   field_data?: MetaLeadField[];
+  /** Caixas de seleção do "aviso personalizado" do formulário (consentimento LGPD) */
+  custom_disclaimer_responses?: MetaDisclaimerResponse[];
 }
 
 type FetchFn = typeof fetch;
@@ -89,7 +92,7 @@ async function graphGet<T>(path: string, fields: string, opts: GraphOptions): Pr
 export function fetchMetaLead(leadgenId: string, opts: GraphOptions): Promise<MetaLead> {
   return graphGet<MetaLead>(
     leadgenId,
-    'id,created_time,ad_id,ad_name,adset_name,campaign_name,form_id,platform,field_data',
+    'id,created_time,ad_id,ad_name,adset_name,campaign_name,form_id,platform,field_data,custom_disclaimer_responses',
     opts,
   );
 }
@@ -117,7 +120,13 @@ const NAME_KEYS = ['full_name', 'nome_completo', 'nome', 'name', 'seu_nome', 'qu
 // WhatsApp primeiro: se o formulário pergunta o WhatsApp, é o número que o bot deve usar
 const PHONE_KEY_PATTERNS = [/whats|zap/, /^phone_number$/, /celular/, /telefone|fone/, /phone/];
 
-export interface MappedLeadFields { nome?: string; phone?: string; email?: string }
+export interface MappedLeadFields {
+  nome?: string;
+  phone?: string;
+  email?: string;
+  /** Demais perguntas do formulário (múltipla escolha, cidade...) pela chave normalizada */
+  extras: Record<string, string>;
+}
 
 export function mapLeadFields(fieldData: MetaLeadField[] = []): MappedLeadFields {
   const byKey = new Map<string, string>();
@@ -143,7 +152,13 @@ export function mapLeadFields(fieldData: MetaLeadField[] = []): MappedLeadFields
   }
   const phone = candidates.find(c => normalizePhoneBR(c)) ?? candidates[0];
 
-  return { nome, phone, email: byKey.get('email') };
+  const used = new Set([...NAME_KEYS, 'first_name', 'last_name', 'email']);
+  const extras: Record<string, string> = {};
+  for (const [k, v] of Array.from(byKey.entries())) {
+    if (!used.has(k) && !PHONE_KEY_PATTERNS.some(p => p.test(k))) extras[k] = v;
+  }
+
+  return { nome, phone, email: byKey.get('email'), extras };
 }
 
 // ─── Processamento do evento ─────────────────────────────────────────────────
@@ -198,15 +213,33 @@ export async function processLeadgenEvent(event: LeadgenEvent, deps: ProcessLead
   }
 
   const formId = lead.form_id || event.formId;
-  const formName = !lead.ad_name && formId ? await fetchMetaFormName(formId, deps) : undefined;
+  const adNames = [lead.ad_name, lead.adset_name, lead.campaign_name];
+  // Nome do formulário: sem nome de anúncio, ou para reconhecer o empreendimento pelo formulário
+  const formName = formId && (!lead.ad_name || !adNames.some(isBomJardimsName))
+    ? await fetchMetaFormName(formId, deps)
+    : undefined;
   const campanha = lead.ad_name || formName || lead.campaign_name || undefined;
+  const nome = fields.nome || 'Lead Instagram';
+
+  // Empreendimento com roteiro próprio: sem preço, atendimento humano, consentimento LGPD
+  const empreendimento = [...adNames, formName].some(isBomJardimsName)
+    ? bomJardimsFromMeta({
+      nome,
+      extras: fields.extras,
+      email: fields.email,
+      disclaimers: lead.custom_disclaimer_responses,
+      createdTime: lead.created_time,
+      formLabel: `formulário ${formName || formId || '?'}${lead.ad_name ? ` / anúncio ${lead.ad_name}` : ''}`,
+    })
+    : {};
 
   const result = await deps.ingest({
-    nome: fields.nome || 'Lead Instagram',
+    nome,
     phone: fields.phone,
     origem: 'instagram_ads',
     metaLeadId: lead.id || event.leadgenId,
     campanha,
+    ...empreendimento,
   });
   console.log(`[Meta] Lead ${event.leadgenId} → ${result.ok ? (result.created ? 'novo' : 'atualizado') : result.reason}`);
   return { leadgenId: event.leadgenId, status: 'ingested', result };

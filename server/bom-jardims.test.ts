@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { scoreBomJardims, moraPerto, bomJardimsWelcome, bomJardimsLeadSchema, BOM_JARDIMS_CONSENT_TEXT } from './bom-jardims';
+import { scoreBomJardims, moraPerto, bomJardimsWelcome, bomJardimsLeadSchema, BOM_JARDIMS_CONSENT_TEXT, isBomJardimsName, parseMetaAnswers, bomJardimsFromMeta } from './bom-jardims';
 import { toEmpreendimentoPublico, statusEfetivo } from './empreendimentos';
 import seed from './data/bom-jardims/seed.json';
 
@@ -95,5 +95,38 @@ describe('Bom Jardims - formulário e mensagem', () => {
 
   it('texto de consentimento é o do §8.3', () => {
     expect(BOM_JARDIMS_CONSENT_TEXT).toContain('Lei n.º 13.709/2018');
+  });
+});
+
+describe('Bom Jardims - formulário da Meta', () => {
+  it('reconhece o nome do empreendimento em várias grafias', () => {
+    expect(isBomJardimsName('Bom Jardims - Mapa de vendas (C3)')).toBe(true);
+    expect(isBomJardimsName('bomjardims_c3')).toBe(true);
+    expect(isBomJardimsName('BOM JARDIM')).toBe(true);
+    expect(isBomJardimsName('Loteamento Jardim Romatec')).toBe(false);
+    expect(isBomJardimsName(undefined)).toBe(false);
+  });
+
+  it('classifica as respostas de múltipla escolha pelo valor', () => {
+    expect(parseMetaAnswers({
+      'voce_procura_a_chacara_para': 'Investimento',
+      'quando_pretende_comprar': 'imediato',
+      'como_pretende_pagar': 'À vista',
+      'em_qual_cidade_voce_mora': 'Açailândia',
+    })).toEqual({ finalidade: 'investimento', prazo: 'imediato', pagamento: 'avista', cidade: 'Açailândia' });
+    expect(parseMetaAnswers({ a: 'morar', b: 'ate_12_meses', c: 'parcelado_direto' }))
+      .toEqual({ finalidade: 'morar', prazo: '12m', pagamento: 'parcelado' });
+    expect(parseMetaAnswers({ a: 'so_pesquisando' })).toEqual({ prazo: 'pesquisando' });
+  });
+
+  it('lead quente (≥ 60) quando é imediato, à vista e mora perto', () => {
+    const r = bomJardimsFromMeta({
+      nome: 'Ana',
+      extras: { prazo: 'Imediato', pagamento: 'À vista', cidade: 'Açailândia' },
+      disclaimers: [{ is_checked: true }],
+      formLabel: 'formulário teste',
+    });
+    expect(r.leadScore).toBe(60);
+    expect(r.consentimento?.origem).toBe('Meta Lead Ads — formulário teste');
   });
 });

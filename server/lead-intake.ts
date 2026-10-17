@@ -140,7 +140,13 @@ export async function ingestLead(input: LeadIntakeInput): Promise<LeadIntakeResu
     contactId = existingContact[0].id;
   } else {
     try {
-      const inserted = await db.insert(contacts).values({ name: nome, phone });
+      // Lead de empreendimento consentiu só com contato sobre aquele empreendimento:
+      // fica 'inactive' para não ser sorteado nas campanhas de outros imóveis (que citam preço)
+      const inserted = await db.insert(contacts).values({
+        name: nome,
+        phone,
+        ...(input.empreendimentoSlug ? { status: 'inactive' as const } : {}),
+      });
       contactId = Number(inserted?.[0]?.insertId ?? inserted?.lastInsertRowid) || undefined;
     } catch (e: any) {
       console.warn('[LeadIntake] Contato não inserido (não crítico):', e?.message);
