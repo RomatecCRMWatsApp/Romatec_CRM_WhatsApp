@@ -30,7 +30,13 @@ async function findAvailablePort(startPort: number = 3000): Promise<number> {
 async function startServer() {
   const app = express();
   const server = createServer(app);
-  app.use(express.json({ limit: "50mb" }));
+  app.use(express.json({
+    limit: "50mb",
+    // Webhook da Meta assina o corpo cru (X-Hub-Signature-256): guarda só nessa rota
+    verify: (req, _res, buf) => {
+      if (req.url?.startsWith('/api/webhook/meta')) (req as any).rawBody = Buffer.from(buf);
+    },
+  }));
   app.use(express.urlencoded({ limit: "50mb", extended: true }));
   registerOAuthRoutes(app);
 
@@ -225,6 +231,48 @@ async function startServer() {
 
   const { registerBomJardimsRoutes } = await import('../bom-jardims');
   registerBomJardimsRoutes(app, allowPublicLead);
+
+  // ─── Webhook Meta (Instagram / Facebook Lead Ads) ───
+  app.get('/api/webhook/meta', async (req, res) => {
+    const { verifyMetaWebhook } = await import('../meta-integration');
+    const { ENV } = await import('./env');
+    const challenge = verifyMetaWebhook(req.query as Record<string, unknown>, ENV.metaVerifyToken);
+    if (challenge === null) {
+      console.warn('[Meta] Verificação do webhook recusada (verify_token não confere ou não configurado)');
+      return res.sendStatus(403);
+    }
+    res.status(200).type('text/plain').send(challenge);
+  });
+
+  app.post('/api/webhook/meta', async (req, res) => {
+    try {
+      const { verifyMetaSignature, processMetaWebhook } = await import('../meta-integration');
+      const { ENV } = await import('./env');
+      if (!ENV.metaAppSecret) {
+        console.error('[Meta] META_APP_SECRET não configurado — webhook recusado');
+        return res.sendStatus(503);
+      }
+      if (!verifyMetaSignature((req as any).rawBody, req.headers['x-hub-signature-256'], ENV.metaAppSecret)) {
+        console.warn('[Meta] Assinatura X-Hub-Signature-256 inválida — request rejeitado');
+        return res.sendStatus(401);
+      }
+
+      const { ingestLead } = await import('../lead-intake');
+      const outcomes = await processMetaWebhook(req.body, {
+        accessToken: ENV.metaPageAccessToken,
+        graphVersion: ENV.metaGraphVersion,
+        ingest: ingestLead,
+      });
+      // Graph API ou banco fora: devolve erro pra Meta reenviar (o dedupe por metaLeadId segura a repetição)
+      const retry = outcomes.some(o => o.status === 'fetch_error' ||
+        (o.status === 'ingested' && !o.result.ok && o.result.reason === 'db_unavailable'));
+      if (retry) return res.sendStatus(500);
+      res.sendStatus(200);
+    } catch (error) {
+      console.error('[Meta] Erro no webhook:', error);
+      res.sendStatus(500);
+    }
+  });
 
   app.post('/api/upload', express.raw({ type: '*/*', limit: '100mb' }), async (req, res) => {
     try {
