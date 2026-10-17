@@ -175,6 +175,11 @@ export function initSqliteTables(sqlite: any): void {
     stage TEXT DEFAULT 'qual_etapa_1',
     score TEXT NOT NULL DEFAULT 'frio',
     campanhaOrigem TEXT,
+    origem TEXT DEFAULT 'whatsapp',
+    instagramUserId TEXT,
+    metaLeadId TEXT UNIQUE,
+    propertyId INTEGER,
+    utm TEXT,
     lastActivityAt INTEGER DEFAULT (strftime('%s','now')),
     blockedUntil INTEGER,
     discardReason TEXT,
@@ -205,6 +210,22 @@ export function initSqliteTables(sqlite: any): void {
     createdAt INTEGER NOT NULL DEFAULT (strftime('%s','now')),
     updatedAt INTEGER NOT NULL DEFAULT (strftime('%s','now'))
   )`);
+
+  // Colunas de origem do lead (bancos SQLite criados antes da captação via Instagram)
+  const addColumn = (sql: string) => {
+    try { sqlite.prepare(sql).run(); }
+    catch (e: any) {
+      if (!e.message?.includes('duplicate column')) {
+        console.error('[SQLite] Erro ao adicionar coluna:', e.message, '\nSQL:', sql.substring(0, 80));
+      }
+    }
+  };
+  addColumn(`ALTER TABLE leadQualifications ADD COLUMN origem TEXT DEFAULT 'whatsapp'`);
+  addColumn(`ALTER TABLE leadQualifications ADD COLUMN instagramUserId TEXT`);
+  addColumn(`ALTER TABLE leadQualifications ADD COLUMN metaLeadId TEXT`);
+  addColumn(`ALTER TABLE leadQualifications ADD COLUMN propertyId INTEGER`);
+  addColumn(`ALTER TABLE leadQualifications ADD COLUMN utm TEXT`);
+  run(`CREATE UNIQUE INDEX IF NOT EXISTS leadQualifications_metaLeadId_unique ON leadQualifications(metaLeadId)`);
 
   console.log('[SQLite] ✅ Todas as tabelas inicializadas');
 }

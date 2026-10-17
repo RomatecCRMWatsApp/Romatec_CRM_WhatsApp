@@ -174,6 +174,55 @@ async function startServer() {
     }
   });
 
+  // ─── Formulário público de captação (página do lote / link da bio do Instagram) ───
+  const { createRateLimiter } = await import('../lead-intake');
+  const allowPublicLead = createRateLimiter(5, 10 * 60 * 1000); // 5 envios / 10 min por IP
+  app.post('/api/public/lead', async (req, res) => {
+    try {
+      // Atrás do proxy do Railway: o último IP do x-forwarded-for é o que o proxy viu
+      const fwd = String(req.headers['x-forwarded-for'] ?? '').split(',').map(s => s.trim()).filter(Boolean);
+      const ip = fwd[fwd.length - 1] || req.socket.remoteAddress || 'unknown';
+      if (!allowPublicLead(ip)) {
+        return res.status(429).json({ ok: false, error: 'Muitas tentativas. Tente novamente em alguns minutos.' });
+      }
+
+      const { publicLeadSchema, ingestLead, origemFromUtm } = await import('../lead-intake');
+      const parsed = publicLeadSchema.safeParse(req.body ?? {});
+      if (!parsed.success) {
+        const first = parsed.error.issues[0];
+        return res.status(400).json({ ok: false, error: first?.message || 'Dados inválidos' });
+      }
+      const data = parsed.data;
+      if (data.website) {
+        // Honeypot preenchido: finge sucesso pro robô e descarta
+        return res.json({ ok: true });
+      }
+
+      const result = await ingestLead({
+        nome: data.nome,
+        phone: data.phone,
+        origem: origemFromUtm(data.utm),
+        propertyId: data.propertyId,
+        utm: data.utm,
+      });
+
+      if (!result.ok) {
+        if (result.reason === 'invalid_phone') {
+          return res.status(400).json({ ok: false, error: 'Informe um celular válido com DDD' });
+        }
+        if (result.reason === 'db_unavailable') {
+          return res.status(503).json({ ok: false, error: 'Sistema indisponível no momento. Fale pelo WhatsApp.' });
+        }
+        // blocked / duplicate: não revela pro público
+        return res.json({ ok: true });
+      }
+      res.json({ ok: true });
+    } catch (error) {
+      console.error('[PublicLead] Erro:', error);
+      res.status(500).json({ ok: false, error: 'Erro ao enviar. Fale pelo WhatsApp.' });
+    }
+  });
+
   app.post('/api/upload', express.raw({ type: '*/*', limit: '100mb' }), async (req, res) => {
     try {
       const fileName = (req.headers['x-file-name'] as string) || 'upload';
@@ -390,6 +439,13 @@ async function startServer() {
     await addUniqueCampaignCycleHour();
   } catch (e) {
     console.error('❌ Erro na migration addUniqueCampaignCycleHour:', e);
+  }
+
+  try {
+    const { addLeadOriginColumns } = await import('./migrations/addLeadOriginColumns');
+    await addLeadOriginColumns();
+  } catch (e) {
+    console.error('❌ Erro na migration addLeadOriginColumns:', e);
   }
 
   const preferredPort = parseInt(process.env.PORT || "3000");

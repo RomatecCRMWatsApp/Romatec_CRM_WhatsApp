@@ -2,15 +2,12 @@ import { useState } from "react";
 import { MapPin, Phone, MessageCircle, ChevronLeft, ChevronRight, ArrowLeft, BedDouble, Bath, Car, Ruler, Image as ImageIcon, Video, FileImage, Share2, Heart } from "lucide-react";
 import { useRoute } from "wouter";
 import { trpc } from "@/lib/trpc";
+import { especialistas } from "@/lib/especialistas";
+import LeadForm from "@/components/LeadForm";
 
 function formatCurrency(value: number | string) {
   return Number(value).toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 }
-
-const especialistas = [
-  { nome: "José Romário P. Bezerra", cargo: "Diretor Comercial", telefone: "5599991811246", display: "(99) 9 9181-1246", avatar: "JR" },
-  { nome: "Daniele Cavalcante Vieira", cargo: "Especialista em Imóveis", telefone: "5599992062871", display: "(99) 9 9206-2871", avatar: "DC" },
-];
 
 export default function PropertyPublic() {
   const [, params] = useRoute("/imovel/:slug");
@@ -266,6 +263,9 @@ export default function PropertyPublic() {
             </div>
           </div>
         )}
+
+        {/* Captação: formulário curto que cai no CRM e dispara o WhatsApp do bot */}
+        <LeadForm propertyId={property.id} denomination={property.denomination} />
 
         {/* Especialistas */}
         <div className="glass-card p-6 mb-6">

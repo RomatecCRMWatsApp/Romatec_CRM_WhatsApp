@@ -285,6 +285,17 @@ export const leadQualifications = mysqlTable("leadQualifications", {
   stage: varchar("stage", { length: 50 }).default("qual_etapa_1"),  // Estágio atual de qualificação
   score: mysqlEnum("score", ["quente", "morno", "frio"]).notNull().default("frio"),
   campanhaOrigem: varchar("campanhaOrigem", { length: 255 }),
+
+  // ═══════════════════════════════════════════════════════════════════════
+  // ORIGEM DO LEAD (Instagram / landing / WhatsApp)
+  // ═══════════════════════════════════════════════════════════════════════
+  // whatsapp | instagram_ads | instagram_dm | instagram_bio | site | indicacao
+  origem: varchar("origem", { length: 30 }).default("whatsapp"),
+  instagramUserId: varchar("instagramUserId", { length: 64 }),       // IGSID do Direct
+  metaLeadId: varchar("metaLeadId", { length: 64 }).unique(),        // id do leadgen (dedupe de webhook)
+  propertyId: int("propertyId"),                                      // lote/loteamento de interesse
+  utm: json("utm").$type<{ source?: string; medium?: string; campaign?: string; content?: string }>(),
+
   lastActivityAt: timestamp("lastActivityAt").defaultNow(),          // Último evento (para timeout)
   blockedUntil: timestamp("blockedUntil"),                           // Bloqueado até (para leads que pediram para parar)
   discardReason: varchar("discardReason", { length: 255 }),         // Motivo do descarte (se foi descartado)
