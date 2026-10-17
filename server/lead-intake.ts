@@ -14,7 +14,7 @@ import { getDb } from './db';
 import { contacts, leadQualifications, properties } from '../drizzle/schema';
 import { isLeadBlocked } from './lead-persistence';
 
-export const LEAD_ORIGENS = ['instagram_ads', 'instagram_dm', 'instagram_bio', 'site', 'indicacao', 'whatsapp'] as const;
+export const LEAD_ORIGENS = ['instagram_ads', 'instagram_dm', 'instagram_bio', 'google_ads', 'site', 'indicacao', 'whatsapp', 'whatsapp_empreendimento'] as const;
 export type LeadOrigem = typeof LEAD_ORIGENS[number];
 
 export interface LeadIntakeInput {
@@ -26,6 +26,15 @@ export interface LeadIntakeInput {
   metaLeadId?: string;
   instagramUserId?: string;
   utm?: { source?: string; medium?: string; campaign?: string; content?: string };
+  /** Lead de empreendimento (ex.: bom-jardims): roteiro próprio, atendimento humano, sem bot genérico */
+  empreendimentoSlug?: string;
+  loteCodigo?: string;
+  leadScore?: number;
+  consentimento?: { at: string; texto: string; origem: string; ip?: string };
+  /** Respostas extras do formulário (finalidade, prazo, pagamento, cidade, email...) */
+  answers?: Record<string, string>;
+  /** Substitui a mensagem genérica de boas-vindas */
+  welcomeMessage?: string;
 }
 
 export type LeadIntakeResult =
@@ -83,10 +92,15 @@ export const publicLeadSchema = z.object({
 
 export type PublicLeadInput = z.infer<typeof publicLeadSchema>;
 
-/** Origem a partir das UTMs: link vindo do Instagram vira instagram_bio, resto é site */
+/** Origem a partir das UTMs (padrão: utm_source = meta | google | whatsapp | indicacao | organico | instagram) */
 export function origemFromUtm(utm?: PublicLeadInput['utm']): LeadOrigem {
   const src = (utm?.source || '').toLowerCase();
-  if (src.includes('instagram') || src === 'ig') return 'instagram_bio';
+  const medium = (utm?.medium || '').toLowerCase();
+  if (src === 'meta' && (medium === 'cpc' || medium === 'lead_ads')) return 'instagram_ads';
+  if (src === 'google') return 'google_ads';
+  if (src === 'indicacao') return 'indicacao';
+  if (src === 'whatsapp') return 'whatsapp';
+  if (src.includes('instagram') || src === 'ig' || src === 'meta' || src === 'organico') return 'instagram_bio';
   if (src.includes('facebook') || src === 'fb') return 'instagram_bio';
   return 'site';
 }
@@ -150,8 +164,13 @@ export async function ingestLead(input: LeadIntakeInput): Promise<LeadIntakeResu
       ...(input.metaLeadId ? { metaLeadId: input.metaLeadId } : {}),
       ...(input.instagramUserId ? { instagramUserId: input.instagramUserId } : {}),
       ...(input.utm ? { utm: input.utm } : {}),
+      ...(input.empreendimentoSlug ? { empreendimentoSlug: input.empreendimentoSlug } : {}),
+      ...(input.loteCodigo ? { loteCodigo: input.loteCodigo } : {}),
+      ...(input.leadScore !== undefined ? { leadScore: input.leadScore } : {}),
+      ...(input.consentimento ? { consentimento: input.consentimento } : {}),
+      ...(input.answers ? { answers: { ...((lead.answers as any) || {}), ...input.answers } } : {}),
       ...(lead.nome ? {} : { nome }),
-      ...(shouldMessage ? { stage: 'abordagem_enviada', lastActivityAt: now } : {}),
+      ...(shouldMessage ? { stage: input.empreendimentoSlug ? 'novo_lead' : 'abordagem_enviada', lastActivityAt: now } : {}),
       updatedAt: now,
     }).where(eq(leadQualifications.phone, phone));
   } else {
@@ -160,8 +179,9 @@ export async function ingestLead(input: LeadIntakeInput): Promise<LeadIntakeResu
       phone,
       contactId,
       nome,
-      answers: { nome } as any,
-      stage: 'abordagem_enviada',
+      answers: { nome, ...(input.answers || {}) } as any,
+      // Lead de empreendimento segue o funil próprio (novo_lead → contato_feito → ...), fora do bot genérico
+      stage: input.empreendimentoSlug ? 'novo_lead' : 'abordagem_enviada',
       score: 'frio',
       origem: input.origem,
       campanhaOrigem: campanha || null,
@@ -169,6 +189,10 @@ export async function ingestLead(input: LeadIntakeInput): Promise<LeadIntakeResu
       metaLeadId: input.metaLeadId ?? null,
       instagramUserId: input.instagramUserId ?? null,
       utm: input.utm ?? null,
+      empreendimentoSlug: input.empreendimentoSlug ?? null,
+      loteCodigo: input.loteCodigo ?? null,
+      leadScore: input.leadScore ?? null,
+      consentimento: input.consentimento ?? null,
       lastActivityAt: now,
       createdAt: now,
       updatedAt: now,
@@ -179,12 +203,25 @@ export async function ingestLead(input: LeadIntakeInput): Promise<LeadIntakeResu
 
   let messageSent = false;
   if (shouldMessage) {
-    messageSent = await sendWelcome(phone, nome, imovel);
+    messageSent = await sendWelcome(phone, input.welcomeMessage ?? buildWelcomeMessage(nome, imovel), {
+      // Lead de empreendimento não entra no follow-up genérico do bot
+      registerFollowUp: !input.empreendimentoSlug,
+      nome,
+    });
   }
 
   try {
     const { notifyNewLead } = await import('./_core/telegramNotification');
-    await notifyNewLead({ name: nome, phone, origem: input.origem, imovel, campanha, messageSent: messageSent || !shouldMessage });
+    await notifyNewLead({
+      name: nome,
+      phone,
+      origem: input.origem,
+      imovel: input.loteCodigo ? `${imovel || input.empreendimentoSlug} — chácara ${input.loteCodigo}` : (imovel || input.empreendimentoSlug),
+      campanha,
+      messageSent: messageSent || !shouldMessage,
+      score: input.leadScore,
+      answers: input.answers,
+    });
   } catch (e) {
     console.warn('[LeadIntake] Telegram falhou (não crítico):', e);
   }
@@ -192,7 +229,7 @@ export async function ingestLead(input: LeadIntakeInput): Promise<LeadIntakeResu
   return { ok: true, created: !lead, messageSent, phone };
 }
 
-async function sendWelcome(phone: string, nome: string, imovel?: string): Promise<boolean> {
+async function sendWelcome(phone: string, message: string, opts: { registerFollowUp: boolean; nome: string }): Promise<boolean> {
   const instanceId = process.env.ZAPI_INSTANCE_ID;
   const token = process.env.ZAPI_TOKEN;
   if (!instanceId || !token) {
@@ -206,15 +243,17 @@ async function sendWelcome(phone: string, nome: string, imovel?: string): Promis
       token,
       clientToken: process.env.ZAPI_CLIENT_TOKEN || undefined,
       phone,
-      message: buildWelcomeMessage(nome, imovel),
+      message,
     });
     if (!result.success) {
       console.error(`[LeadIntake] ❌ Falha ao enviar 1ª mensagem para ${phone}: ${result.error}`);
       return false;
     }
     // Liga o follow-up automático e deixa o bot esperando a resposta na etapa de abordagem
-    const { registerBotMessage } = await import('./bot-ai');
-    registerBotMessage(phone, nome);
+    if (opts.registerFollowUp) {
+      const { registerBotMessage } = await import('./bot-ai');
+      registerBotMessage(phone, opts.nome);
+    }
     return true;
   } catch (e) {
     console.error('[LeadIntake] Erro ao enviar 1ª mensagem:', e);

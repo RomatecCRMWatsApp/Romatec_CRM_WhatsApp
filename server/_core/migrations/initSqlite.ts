@@ -226,6 +226,40 @@ export function initSqliteTables(sqlite: any): void {
   addColumn(`ALTER TABLE leadQualifications ADD COLUMN propertyId INTEGER`);
   addColumn(`ALTER TABLE leadQualifications ADD COLUMN utm TEXT`);
   run(`CREATE UNIQUE INDEX IF NOT EXISTS leadQualifications_metaLeadId_unique ON leadQualifications(metaLeadId)`);
+  addColumn(`ALTER TABLE leadQualifications ADD COLUMN empreendimentoSlug TEXT`);
+  addColumn(`ALTER TABLE leadQualifications ADD COLUMN loteCodigo TEXT`);
+  addColumn(`ALTER TABLE leadQualifications ADD COLUMN leadScore INTEGER`);
+  addColumn(`ALTER TABLE leadQualifications ADD COLUMN consentimento TEXT`);
+
+  // Empreendimentos (loteamentos / condomínios de chácaras) e lotes
+  run(`CREATE TABLE IF NOT EXISTS empreendimentos (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    slug TEXT NOT NULL UNIQUE,
+    nome TEXT NOT NULL,
+    fase TEXT NOT NULL DEFAULT 'pre_lancamento',
+    municipio TEXT, uf TEXT, endereco TEXT,
+    lat TEXT, lon TEXT, areaHa TEXT,
+    totalLotes INTEGER, lotesComercializaveis INTEGER,
+    precosPublicos INTEGER NOT NULL DEFAULT 0,
+    createdAt INTEGER NOT NULL DEFAULT (strftime('%s','now')),
+    updatedAt INTEGER NOT NULL DEFAULT (strftime('%s','now'))
+  )`);
+  run(`CREATE TABLE IF NOT EXISTS lotes (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    empreendimentoId INTEGER NOT NULL,
+    codigo TEXT NOT NULL,
+    quadra TEXT, numero INTEGER,
+    areaM2 TEXT, perimetroM TEXT,
+    destinacao TEXT,
+    comercializavel INTEGER NOT NULL DEFAULT 1,
+    status TEXT NOT NULL DEFAULT 'disponivel',
+    reservadoAte INTEGER,
+    precoAvistaRef TEXT, precoFinanciadoRef TEXT,
+    latCentro TEXT, lonCentro TEXT,
+    dossiePdf TEXT,
+    updatedAt INTEGER NOT NULL DEFAULT (strftime('%s','now')),
+    UNIQUE(empreendimentoId, codigo)
+  )`);
 
   console.log('[SQLite] ✅ Todas as tabelas inicializadas');
 }

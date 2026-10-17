@@ -111,6 +111,16 @@ export const appRouter = router({
         return results;
       }),
   }),
+  empreendimentos: router({
+    // Público: lotes com status ao vivo. Preço só sai quando precosPublicos = true.
+    publicBySlug: publicProcedure
+      .input(z.object({ slug: z.string().min(1).max(80) }))
+      .query(async ({ input }) => {
+        const { getEmpreendimentoPublico } = await import("./empreendimentos");
+        return getEmpreendimentoPublico(input.slug);
+      }),
+  }),
+
   properties: router({
     list: publicProcedure.query(async () => getAllProperties()),
     getById: publicProcedure.input(z.object({ id: z.number() })).query(async ({ input }) => getPropertyById(input.id)),

@@ -66,7 +66,9 @@ describe('Lead intake - formulário público', () => {
   it('origem vem da UTM', () => {
     expect(origemFromUtm({ source: 'instagram' })).toBe('instagram_bio');
     expect(origemFromUtm({ source: 'ig' })).toBe('instagram_bio');
-    expect(origemFromUtm({ source: 'google' })).toBe('site');
+    expect(origemFromUtm({ source: 'google' })).toBe('google_ads');
+    expect(origemFromUtm({ source: 'meta', medium: 'lead_ads' })).toBe('instagram_ads');
+    expect(origemFromUtm({ source: 'site-parceiro' })).toBe('site');
     expect(origemFromUtm(undefined)).toBe('site');
   });
 });

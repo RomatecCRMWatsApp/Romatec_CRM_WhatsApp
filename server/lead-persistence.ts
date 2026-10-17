@@ -121,6 +121,7 @@ export async function loadLeadState(phone: string): Promise<LeadState | null> {
 export async function discardLead(
   phone: string,
   reason: string,
+  blockHours: number = 24, // opt-out LGPD ("PARAR") passa um prazo bem maior
 ): Promise<void> {
   try {
     const db = await getDb();
@@ -128,7 +129,7 @@ export async function discardLead(
 
     const cleanPhone = phone.replace(/\D/g, '');
     const blockedUntil = new Date();
-    blockedUntil.setHours(blockedUntil.getHours() + 24); // Bloquear por 24 horas apenas
+    blockedUntil.setHours(blockedUntil.getHours() + blockHours);
 
     const existing = await db
       .select()
@@ -229,5 +230,26 @@ export async function getStaleLeads(timeoutMinutes: number = 45): Promise<LeadSt
   } catch (error) {
     console.error('[Persistence] ❌ Erro ao buscar leads stale:', error);
     return [];
+  }
+}
+
+/**
+ * Empreendimento do lead (ex.: bom-jardims) — esses leads têm roteiro próprio
+ * e atendimento humano; o bot genérico não responde.
+ */
+export async function getLeadEmpreendimento(phone: string): Promise<string | null> {
+  try {
+    const db = await getDb();
+    if (!db) return null;
+    const cleanPhone = phone.replace(/\D/g, '');
+    const [lead] = await db
+      .select({ empreendimentoSlug: leadQualifications.empreendimentoSlug })
+      .from(leadQualifications)
+      .where(eq(leadQualifications.phone, cleanPhone))
+      .limit(1);
+    return lead?.empreendimentoSlug || null;
+  } catch (error) {
+    console.error('[Persistence] ❌ Erro ao buscar empreendimento do lead:', error);
+    return null;
   }
 }

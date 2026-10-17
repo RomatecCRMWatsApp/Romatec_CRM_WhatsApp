@@ -14,6 +14,7 @@ import Settings from "./pages/Settings";
 import PropertyPublic from "./pages/PropertyPublic";
 import PropertiesCatalog from "./pages/PropertiesCatalog";
 import LinkPortal from "./pages/LinkPortal";
+import BomJardims from "./pages/BomJardims";
 import Performance from "./pages/Performance";
 import Leads from "./pages/Leads";
 import Setup from "./pages/Setup";
@@ -68,6 +69,7 @@ function Router() {
       <Route path={"/imoveis"} component={PropertiesCatalog} />
       <Route path={"/imovel/:slug"} component={PropertyPublic} />
       <Route path={"/links"} component={LinkPortal} />
+      <Route path={"/bom-jardims"} component={BomJardims} />
       <Route path={"/404"} component={NotFound} />
       <Route component={NotFound} />
     </Switch>

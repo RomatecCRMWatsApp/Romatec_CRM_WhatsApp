@@ -223,6 +223,9 @@ async function startServer() {
     }
   });
 
+  const { registerBomJardimsRoutes } = await import('../bom-jardims');
+  registerBomJardimsRoutes(app, allowPublicLead);
+
   app.post('/api/upload', express.raw({ type: '*/*', limit: '100mb' }), async (req, res) => {
     try {
       const fileName = (req.headers['x-file-name'] as string) || 'upload';
@@ -446,6 +449,13 @@ async function startServer() {
     await addLeadOriginColumns();
   } catch (e) {
     console.error('❌ Erro na migration addLeadOriginColumns:', e);
+  }
+
+  try {
+    const { addEmpreendimentos } = await import('./migrations/addEmpreendimentos');
+    await addEmpreendimentos();
+  } catch (e) {
+    console.error('❌ Erro na migration addEmpreendimentos:', e);
   }
 
   const preferredPort = parseInt(process.env.PORT || "3000");
