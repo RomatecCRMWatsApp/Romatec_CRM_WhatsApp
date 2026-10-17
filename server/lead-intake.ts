@@ -1,0 +1,244 @@
+/**
+ * Entrada única de leads de captação
+ * Usada por todas as portas: landing do lote (bio do Instagram), Meta Lead Ads, Direct.
+ *
+ * Fluxo: normaliza telefone → dedupe → grava contato + lead → 1ª mensagem
+ * no WhatsApp (Z-API) → avisa corretor no Telegram.
+ * Depois disso o lead cai no fluxo normal do bot (processBotMessage carrega
+ * o estado do banco quando ele responder).
+ */
+
+import { eq } from 'drizzle-orm';
+import { z } from 'zod';
+import { getDb } from './db';
+import { contacts, leadQualifications, properties } from '../drizzle/schema';
+import { isLeadBlocked } from './lead-persistence';
+
+export const LEAD_ORIGENS = ['instagram_ads', 'instagram_dm', 'instagram_bio', 'site', 'indicacao', 'whatsapp'] as const;
+export type LeadOrigem = typeof LEAD_ORIGENS[number];
+
+export interface LeadIntakeInput {
+  nome: string;
+  phone: string;
+  origem: LeadOrigem;
+  campanha?: string;
+  propertyId?: number;
+  metaLeadId?: string;
+  instagramUserId?: string;
+  utm?: { source?: string; medium?: string; campaign?: string; content?: string };
+}
+
+export type LeadIntakeResult =
+  | { ok: true; created: boolean; messageSent: boolean; phone: string }
+  | { ok: false; reason: 'invalid_phone' | 'duplicate' | 'blocked' | 'db_unavailable' };
+
+/** Lead que já conversou há menos que isso não recebe nova abordagem (evita spam) */
+const REENGAGE_AFTER_MS = 12 * 60 * 60 * 1000;
+
+/**
+ * Normaliza celular BR para o formato que o webhook Z-API entrega: 55 + DDD + 9 + 8 dígitos.
+ * Aceita "(99) 9 9181-1246", "099991811246", "+55 99 99181-1246", número antigo sem o 9.
+ * Retorna null se não for celular brasileiro válido.
+ */
+export function normalizePhoneBR(raw: string): string | null {
+  let d = String(raw || '').replace(/\D/g, '');
+  d = d.replace(/^0+/, '');
+  if (d.length === 10 || d.length === 11) d = `55${d}`;
+  // Celular antigo sem o 9: 55 + DDD + 8 dígitos começando em 6-9 (fixo começa em 2-5)
+  if (d.length === 12 && d.startsWith('55') && /[6-9]/.test(d[4])) d = d.slice(0, 4) + '9' + d.slice(4);
+  if (d.length !== 13 || !d.startsWith('55') || d[4] !== '9') return null;
+  const ddd = Number(d.slice(2, 4));
+  if (ddd < 11 || ddd > 99) return null;
+  return d;
+}
+
+function firstName(nome: string): string {
+  const f = nome.trim().split(/\s+/)[0] || 'tudo bem';
+  return f.charAt(0).toUpperCase() + f.slice(1).toLowerCase();
+}
+
+export function buildWelcomeMessage(nome: string, imovel?: string): string {
+  const interesse = imovel ? `no *${imovel}*` : 'em nossos lotes e chácaras';
+  return [
+    `Olá, *${firstName(nome)}*! 👋`,
+    ``,
+    `Aqui é da *Romatec Imóveis*. Recebemos seu interesse ${interesse} 🏡`,
+    ``,
+    `Posso te passar valores, condições de pagamento e agendar uma visita. Podemos conversar por aqui?`,
+  ].join('\n');
+}
+
+// ─── Formulário público (landing do lote / link da bio) ──────────────────────
+const utmField = z.string().trim().max(100).optional();
+
+export const publicLeadSchema = z.object({
+  nome: z.string().trim().min(2, 'Informe seu nome').max(120),
+  phone: z.string().trim().min(8).max(25),
+  propertyId: z.coerce.number().int().positive().optional(),
+  consent: z.literal(true, { message: 'É preciso aceitar o contato' }),
+  utm: z.object({ source: utmField, medium: utmField, campaign: utmField, content: utmField }).optional(),
+  // Honeypot: campo invisível no formulário. Robô preenche, humano não.
+  website: z.string().max(500).optional(),
+});
+
+export type PublicLeadInput = z.infer<typeof publicLeadSchema>;
+
+/** Origem a partir das UTMs: link vindo do Instagram vira instagram_bio, resto é site */
+export function origemFromUtm(utm?: PublicLeadInput['utm']): LeadOrigem {
+  const src = (utm?.source || '').toLowerCase();
+  if (src.includes('instagram') || src === 'ig') return 'instagram_bio';
+  if (src.includes('facebook') || src === 'fb') return 'instagram_bio';
+  return 'site';
+}
+
+// ─── Ingestão ────────────────────────────────────────────────────────────────
+export async function ingestLead(input: LeadIntakeInput): Promise<LeadIntakeResult> {
+  const phone = normalizePhoneBR(input.phone);
+  if (!phone) return { ok: false, reason: 'invalid_phone' };
+
+  const db = await getDb();
+  if (!db) return { ok: false, reason: 'db_unavailable' };
+
+  const nome = input.nome.trim();
+  const now = new Date();
+
+  // Webhook da Meta reenvia o mesmo evento — um leadgen id vira um lead só
+  if (input.metaLeadId) {
+    const dup = await db.select({ id: leadQualifications.id }).from(leadQualifications)
+      .where(eq(leadQualifications.metaLeadId, input.metaLeadId)).limit(1);
+    if (dup[0]) return { ok: false, reason: 'duplicate' };
+  }
+
+  if (await isLeadBlocked(phone)) return { ok: false, reason: 'blocked' };
+
+  let imovel: string | undefined;
+  if (input.propertyId) {
+    const prop = await db.select({ denomination: properties.denomination }).from(properties)
+      .where(eq(properties.id, input.propertyId)).limit(1);
+    imovel = prop[0]?.denomination;
+  }
+
+  // Contato (tabela usada por campanhas e pelo webhook pra achar o nome)
+  let contactId: number | undefined;
+  const existingContact = await db.select({ id: contacts.id }).from(contacts)
+    .where(eq(contacts.phone, phone)).limit(1);
+  if (existingContact[0]) {
+    contactId = existingContact[0].id;
+  } else {
+    try {
+      const inserted = await db.insert(contacts).values({ name: nome, phone });
+      contactId = Number(inserted?.[0]?.insertId ?? inserted?.lastInsertRowid) || undefined;
+    } catch (e: any) {
+      console.warn('[LeadIntake] Contato não inserido (não crítico):', e?.message);
+    }
+  }
+
+  const campanha = input.campanha || input.utm?.campaign || imovel;
+  const existingLead = await db.select().from(leadQualifications)
+    .where(eq(leadQualifications.phone, phone)).limit(1);
+  const lead = existingLead[0];
+
+  let shouldMessage: boolean;
+  if (lead) {
+    // Lead que volta por outro anúncio: atualiza origem/interesse sem perder a etapa da qualificação
+    const lastActivity = lead.lastActivityAt ? new Date(lead.lastActivityAt).getTime() : 0;
+    shouldMessage = now.getTime() - lastActivity > REENGAGE_AFTER_MS;
+    await db.update(leadQualifications).set({
+      origem: input.origem,
+      ...(campanha ? { campanhaOrigem: campanha } : {}),
+      ...(input.propertyId ? { propertyId: input.propertyId } : {}),
+      ...(input.metaLeadId ? { metaLeadId: input.metaLeadId } : {}),
+      ...(input.instagramUserId ? { instagramUserId: input.instagramUserId } : {}),
+      ...(input.utm ? { utm: input.utm } : {}),
+      ...(lead.nome ? {} : { nome }),
+      ...(shouldMessage ? { stage: 'abordagem_enviada', lastActivityAt: now } : {}),
+      updatedAt: now,
+    }).where(eq(leadQualifications.phone, phone));
+  } else {
+    shouldMessage = true;
+    await db.insert(leadQualifications).values({
+      phone,
+      contactId,
+      nome,
+      answers: { nome } as any,
+      stage: 'abordagem_enviada',
+      score: 'frio',
+      origem: input.origem,
+      campanhaOrigem: campanha || null,
+      propertyId: input.propertyId ?? null,
+      metaLeadId: input.metaLeadId ?? null,
+      instagramUserId: input.instagramUserId ?? null,
+      utm: input.utm ?? null,
+      lastActivityAt: now,
+      createdAt: now,
+      updatedAt: now,
+    } as any);
+  }
+
+  console.log(`[LeadIntake] ${lead ? 'Atualizado' : 'Novo'} lead ${phone} origem=${input.origem} imovel=${imovel || '-'}`);
+
+  let messageSent = false;
+  if (shouldMessage) {
+    messageSent = await sendWelcome(phone, nome, imovel);
+  }
+
+  try {
+    const { notifyNewLead } = await import('./_core/telegramNotification');
+    await notifyNewLead({ name: nome, phone, origem: input.origem, imovel, campanha, messageSent: messageSent || !shouldMessage });
+  } catch (e) {
+    console.warn('[LeadIntake] Telegram falhou (não crítico):', e);
+  }
+
+  return { ok: true, created: !lead, messageSent, phone };
+}
+
+async function sendWelcome(phone: string, nome: string, imovel?: string): Promise<boolean> {
+  const instanceId = process.env.ZAPI_INSTANCE_ID;
+  const token = process.env.ZAPI_TOKEN;
+  if (!instanceId || !token) {
+    console.error('[LeadIntake] Credenciais Z-API não encontradas no env — 1ª mensagem não enviada');
+    return false;
+  }
+  try {
+    const { sendMessageViaZAPI } = await import('./zapi-integration');
+    const result = await sendMessageViaZAPI({
+      instanceId,
+      token,
+      clientToken: process.env.ZAPI_CLIENT_TOKEN || undefined,
+      phone,
+      message: buildWelcomeMessage(nome, imovel),
+    });
+    if (!result.success) {
+      console.error(`[LeadIntake] ❌ Falha ao enviar 1ª mensagem para ${phone}: ${result.error}`);
+      return false;
+    }
+    // Liga o follow-up automático e deixa o bot esperando a resposta na etapa de abordagem
+    const { registerBotMessage } = await import('./bot-ai');
+    registerBotMessage(phone, nome);
+    return true;
+  } catch (e) {
+    console.error('[LeadIntake] Erro ao enviar 1ª mensagem:', e);
+    return false;
+  }
+}
+
+// ─── Rate limit do formulário público (em memória, por IP) ───────────────────
+export function createRateLimiter(max: number, windowMs: number) {
+  const hits = new Map<string, number[]>();
+  return (key: string, now: number = Date.now()): boolean => {
+    const recent = (hits.get(key) || []).filter(t => now - t < windowMs);
+    if (recent.length >= max) {
+      hits.set(key, recent);
+      return false;
+    }
+    recent.push(now);
+    hits.set(key, recent);
+    // Limpeza simples pra não crescer sem limite
+    if (hits.size > 5000) {
+      for (const [k, ts] of Array.from(hits.entries())) {
+        if (ts.every(t => now - t >= windowMs)) hits.delete(k);
+      }
+    }
+    return true;
+  };
+}

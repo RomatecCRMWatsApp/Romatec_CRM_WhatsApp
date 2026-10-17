@@ -8,6 +8,12 @@
       "port": 3000
     },
     {
+      "name": "dev-sandbox",
+      "runtimeExecutable": "npx",
+      "runtimeArgs": ["cross-env", "NODE_ENV=development", "PORT=3010", "DATABASE_DRIVER=sqlite", "SQLITE_PATH=./.sandbox-crm.db", "ZAPI_INSTANCE_ID=", "ZAPI_TOKEN=", "ZAPI_CLIENT_TOKEN=", "TELEGRAM_BOT_TOKEN=", "TELEGRAM_CHAT_ID=", "CAMPAIGNS_ENABLED=false", "ZAIRA_ENABLED=false", "tsx", "server/_core/index.ts"],
+      "port": 3010
+    },
+    {
       "name": "start",
       "runtimeExecutable": "npm",
       "runtimeArgs": ["run", "start"],

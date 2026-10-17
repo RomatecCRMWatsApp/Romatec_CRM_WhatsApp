@@ -102,6 +102,10 @@ export function detectQualificationIntent(message: string): 'SIM' | 'NAO' | 'NEU
   const palavrasSozinhas = ['nao', 'n', 'negativo', 'nope'];
   if (palavrasSozinhas.includes(msg)) return 'NEUTRO';
 
+  // Opt-out (LGPD): formulário de captação promete que "PARAR" encerra o contato
+  const optOut = ['parar', 'pare', 'sair', 'stop', 'descadastrar'];
+  if (optOut.includes(msg.replace(/[^a-z]/g, ''))) return 'NAO';
+
   // Palavras-chave POSITIVAS
   const positivoRegex = /\b(sim|claro|pode|quero|aceito|vou|com\s*certeza|tenho|possuo|consigo|dou|disponho|beleza|ok|certo|vamos|topa|blz|perfeito|show|top|boa|positivo|afirmativo|confirmo|confirmado)\b/;
   if (positivoRegex.test(msg)) return 'SIM';

@@ -30,7 +30,13 @@ async function findAvailablePort(startPort: number = 3000): Promise<number> {
 async function startServer() {
   const app = express();
   const server = createServer(app);
-  app.use(express.json({ limit: "50mb" }));
+  app.use(express.json({
+    limit: "50mb",
+    // Webhook da Meta assina o corpo cru (X-Hub-Signature-256): guarda só nessa rota
+    verify: (req, _res, buf) => {
+      if (req.url?.startsWith('/api/webhook/meta')) (req as any).rawBody = Buffer.from(buf);
+    },
+  }));
   app.use(express.urlencoded({ limit: "50mb", extended: true }));
   registerOAuthRoutes(app);
 
@@ -171,6 +177,97 @@ async function startServer() {
     } catch (error) {
       console.error('[Webhook] Erro:', error);
       res.json({ received: true, processed: false, error: String(error) });
+    }
+  });
+
+  // ─── Formulário público de captação (página do lote / link da bio do Instagram) ───
+  const { createRateLimiter } = await import('../lead-intake');
+  const allowPublicLead = createRateLimiter(5, 10 * 60 * 1000); // 5 envios / 10 min por IP
+  app.post('/api/public/lead', async (req, res) => {
+    try {
+      // Atrás do proxy do Railway: o último IP do x-forwarded-for é o que o proxy viu
+      const fwd = String(req.headers['x-forwarded-for'] ?? '').split(',').map(s => s.trim()).filter(Boolean);
+      const ip = fwd[fwd.length - 1] || req.socket.remoteAddress || 'unknown';
+      if (!allowPublicLead(ip)) {
+        return res.status(429).json({ ok: false, error: 'Muitas tentativas. Tente novamente em alguns minutos.' });
+      }
+
+      const { publicLeadSchema, ingestLead, origemFromUtm } = await import('../lead-intake');
+      const parsed = publicLeadSchema.safeParse(req.body ?? {});
+      if (!parsed.success) {
+        const first = parsed.error.issues[0];
+        return res.status(400).json({ ok: false, error: first?.message || 'Dados inválidos' });
+      }
+      const data = parsed.data;
+      if (data.website) {
+        // Honeypot preenchido: finge sucesso pro robô e descarta
+        return res.json({ ok: true });
+      }
+
+      const result = await ingestLead({
+        nome: data.nome,
+        phone: data.phone,
+        origem: origemFromUtm(data.utm),
+        propertyId: data.propertyId,
+        utm: data.utm,
+      });
+
+      if (!result.ok) {
+        if (result.reason === 'invalid_phone') {
+          return res.status(400).json({ ok: false, error: 'Informe um celular válido com DDD' });
+        }
+        if (result.reason === 'db_unavailable') {
+          return res.status(503).json({ ok: false, error: 'Sistema indisponível no momento. Fale pelo WhatsApp.' });
+        }
+        // blocked / duplicate: não revela pro público
+        return res.json({ ok: true });
+      }
+      res.json({ ok: true });
+    } catch (error) {
+      console.error('[PublicLead] Erro:', error);
+      res.status(500).json({ ok: false, error: 'Erro ao enviar. Fale pelo WhatsApp.' });
+    }
+  });
+
+  // ─── Webhook Meta (Instagram / Facebook Lead Ads) ───
+  app.get('/api/webhook/meta', async (req, res) => {
+    const { verifyMetaWebhook } = await import('../meta-integration');
+    const { ENV } = await import('./env');
+    const challenge = verifyMetaWebhook(req.query as Record<string, unknown>, ENV.metaVerifyToken);
+    if (challenge === null) {
+      console.warn('[Meta] Verificação do webhook recusada (verify_token não confere ou não configurado)');
+      return res.sendStatus(403);
+    }
+    res.status(200).type('text/plain').send(challenge);
+  });
+
+  app.post('/api/webhook/meta', async (req, res) => {
+    try {
+      const { verifyMetaSignature, processMetaWebhook } = await import('../meta-integration');
+      const { ENV } = await import('./env');
+      if (!ENV.metaAppSecret) {
+        console.error('[Meta] META_APP_SECRET não configurado — webhook recusado');
+        return res.sendStatus(503);
+      }
+      if (!verifyMetaSignature((req as any).rawBody, req.headers['x-hub-signature-256'], ENV.metaAppSecret)) {
+        console.warn('[Meta] Assinatura X-Hub-Signature-256 inválida — request rejeitado');
+        return res.sendStatus(401);
+      }
+
+      const { ingestLead } = await import('../lead-intake');
+      const outcomes = await processMetaWebhook(req.body, {
+        accessToken: ENV.metaPageAccessToken,
+        graphVersion: ENV.metaGraphVersion,
+        ingest: ingestLead,
+      });
+      // Graph API ou banco fora: devolve erro pra Meta reenviar (o dedupe por metaLeadId segura a repetição)
+      const retry = outcomes.some(o => o.status === 'fetch_error' ||
+        (o.status === 'ingested' && !o.result.ok && o.result.reason === 'db_unavailable'));
+      if (retry) return res.sendStatus(500);
+      res.sendStatus(200);
+    } catch (error) {
+      console.error('[Meta] Erro no webhook:', error);
+      res.sendStatus(500);
     }
   });
 
@@ -390,6 +487,13 @@ async function startServer() {
     await addUniqueCampaignCycleHour();
   } catch (e) {
     console.error('❌ Erro na migration addUniqueCampaignCycleHour:', e);
+  }
+
+  try {
+    const { addLeadOriginColumns } = await import('./migrations/addLeadOriginColumns');
+    await addLeadOriginColumns();
+  } catch (e) {
+    console.error('❌ Erro na migration addLeadOriginColumns:', e);
   }
 
   const preferredPort = parseInt(process.env.PORT || "3000");

@@ -262,3 +262,55 @@ export async function notifyHotLead(params: {
     return false;
   }
 }
+
+// ─── Notificação de lead novo vindo de captação (Instagram / landing) ──────
+const ORIGEM_LABEL: Record<string, string> = {
+  instagram_ads: '📸 Anúncio Instagram/Facebook',
+  instagram_dm: '💬 Direct do Instagram',
+  instagram_bio: '🔗 Link da bio / página do lote',
+  site: '🌐 Site',
+  indicacao: '🤝 Indicação',
+  whatsapp: '📱 WhatsApp',
+};
+
+// Dados vêm de formulário público — escapar antes de usar parse_mode HTML
+function escapeHtml(s: string): string {
+  return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+}
+
+export async function notifyNewLead(params: {
+  name: string;
+  phone: string;
+  origem: string;
+  imovel?: string;
+  campanha?: string;
+  messageSent: boolean;
+}): Promise<boolean> {
+  const token = process.env.TELEGRAM_BOT_TOKEN;
+  const chatId = process.env.TELEGRAM_CHAT_ID;
+  if (!token || !chatId) return false;
+
+  try {
+    const TelegramBot = await import('node-telegram-bot-api').then(m => m.default);
+    const bot = new TelegramBot(token, { polling: false });
+
+    const waLink = `https://wa.me/${params.phone.replace(/\D/g, '')}`;
+    const lines = [
+      `🆕 <b>NOVO LEAD</b> — ${ORIGEM_LABEL[params.origem] || escapeHtml(params.origem)}`,
+      `━━━━━━━━━━━━━━━━━━━━━━━━━━━━`,
+      `👤 <b>Nome:</b> ${escapeHtml(params.name)}`,
+      `📱 <b>Telefone:</b> +${params.phone.replace(/\D/g, '')}`,
+      params.imovel   ? `🏡 <b>Interesse:</b> ${escapeHtml(params.imovel)}`     : '',
+      params.campanha ? `📢 <b>Campanha:</b> ${escapeHtml(params.campanha)}`    : '',
+      params.messageSent ? `🤖 Bot já mandou a 1ª mensagem no WhatsApp` : `⚠️ Bot NÃO conseguiu mandar mensagem — contate manualmente`,
+      `━━━━━━━━━━━━━━━━━━━━━━━━━━━━`,
+      `👆 <a href="${waLink}">Abrir conversa no WhatsApp</a>`,
+    ].filter(l => l !== '');
+
+    await bot.sendMessage(chatId, lines.join('\n'), { parse_mode: 'HTML', disable_web_page_preview: true });
+    return true;
+  } catch (e) {
+    console.error('[Telegram] Erro ao notificar lead novo:', e);
+    return false;
+  }
+}
