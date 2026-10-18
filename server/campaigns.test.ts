@@ -172,16 +172,10 @@ describe("properties", () => {
 
 describe("companyConfig", () => {
   describe("companyConfig.get", () => {
-    it("returns company config (public endpoint)", async () => {
+    it("is not public (tokens of Z-API/Telegram/OpenAI live there)", async () => {
       const { ctx } = createPublicContext();
       const caller = appRouter.createCaller(ctx);
-      const result = await caller.companyConfig.get();
-      // Should return config or null
-      if (result) {
-        expect(result).toHaveProperty("companyName");
-        expect(result).toHaveProperty("phone");
-        expect(result).toHaveProperty("address");
-      }
+      await expect(caller.companyConfig.get()).rejects.toThrow();
     });
   });
 });

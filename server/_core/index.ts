@@ -506,6 +506,13 @@ async function startServer() {
     console.error('❌ Erro na migration addEmpreendimentos:', e);
   }
 
+  try {
+    const { addUserPasswordColumns } = await import('./migrations/addUserPasswordColumns');
+    await addUserPasswordColumns();
+  } catch (e) {
+    console.error('❌ Erro na migration addUserPasswordColumns:', e);
+  }
+
   const preferredPort = parseInt(process.env.PORT || "3000");
   const port = await findAvailablePort(preferredPort);
 
