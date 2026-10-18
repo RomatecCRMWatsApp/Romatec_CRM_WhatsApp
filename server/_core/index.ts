@@ -137,6 +137,10 @@ async function startServer() {
         console.warn('[Webhook] Erro ao buscar contato (não crítico):', dbErr);
       }
 
+      // Contato novo sem código: depois da 1ª resposta do bot vira lead "WhatsApp direto" (+ aviso)
+      let contatoNovo = false;
+      let respostaBot: string | null = null;
+
       // Captação v1: IMV-xxxx / #CAMPANHA / "quero vender meu..." → lead com atribuição + abertura
       if (!req.body?.fromMe) {
         try {
@@ -156,6 +160,10 @@ async function startServer() {
               console.error(`[Entrada] ❌ Abertura não enviada para ${payload.phone}: ${e?.message}`);
             }
             return res.json({ received: true, processed: true, lead: 'novo' });
+          }
+          if (entrada.acao === 'nenhuma') {
+            const { ehContatoNovo } = await import('../leads/inbound');
+            contatoNovo = await ehContatoNovo(payload.phone);
           }
         } catch (e) {
           console.warn('[Entrada] Erro na atribuição (bot segue normal):', e);
@@ -185,6 +193,7 @@ async function startServer() {
             });
 
             if (sendResult.success) {
+              respostaBot = botResponse.text;
               registerBotMessage(payload.phone, senderName);
               console.log(`[Bot] ✅ Resposta enviada para ${senderName} (${payload.phone})`);
             } else {
@@ -196,6 +205,15 @@ async function startServer() {
         }
       } catch (botError) {
         console.error('[Bot] Erro ao processar:', botError);
+      }
+
+      if (contatoNovo) {
+        try {
+          const { registrarWhatsappDireto } = await import('../leads/inbound');
+          await registrarWhatsappDireto({ phone: payload.phone, nome: senderName, texto: msgText, resposta: respostaBot });
+        } catch (e: any) {
+          console.warn('[Entrada] WhatsApp direto não registrado (não crítico):', e?.message);
+        }
       }
 
       res.json({ received: true, processed: true });

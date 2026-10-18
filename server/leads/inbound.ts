@@ -240,3 +240,74 @@ export function rotuloCanal(canal: string): string {
   return CANAL_LABEL[canal] || canal;
 }
 export const CANAIS_CAMPANHA = Object.keys(CANAL_LABEL).filter(c => c !== 'whatsapp_direto');
+
+// ─── WhatsApp direto: contato novo sem código (viu o número na placa, folder, status…) ──
+// O bot de sempre responde; logo depois o lead ganha a origem "WhatsApp direto",
+// o José recebe o aviso e ele passa a contar no relatório como orgânico.
+
+/** Regra pura: o que fazer com a linha do lead depois da 1ª resposta do bot */
+export function acaoWhatsappDireto(lead: { origemCanal?: string | null } | null | undefined): 'inserir' | 'marcar' | 'nada' {
+  if (!lead) return 'inserir';          // o bot não gravou (banco instável): cria a linha
+  if (lead.origemCanal) return 'nada';  // já tem origem (captação, formulário, Meta)
+  return 'marcar';
+}
+
+/** Antes do bot: este telefone ainda não tem lead? (só contato novo vira "WhatsApp direto") */
+export async function ehContatoNovo(phone: string): Promise<boolean> {
+  const { getDb } = await import('../db');
+  const db = await getDb();
+  if (!db) return false;
+  const { leadQualifications } = await import('../../drizzle/schema');
+  const fones = Array.from(new Set([phone.replace(/\D/g, ''), normalizePhoneBR(phone) || ''].filter(Boolean)));
+  const [lead] = await db.select({ id: leadQualifications.id }).from(leadQualifications).where(inArray(leadQualifications.phone, fones)).limit(1);
+  return !lead;
+}
+
+/** Depois da 1ª resposta do bot: origem WhatsApp direto + conversa + aviso */
+export async function registrarWhatsappDireto(input: { phone: string; nome?: string | null; texto: string; resposta?: string | null }): Promise<boolean> {
+  const { getDb } = await import('../db');
+  const db = await getDb();
+  if (!db) return false;
+  const { leadQualifications, contacts } = await import('../../drizzle/schema');
+  const phone = input.phone.replace(/\D/g, '');
+  const nome = (input.nome || '').trim() || 'Cliente';
+  const now = new Date();
+  const [lead]: any[] = await db.select().from(leadQualifications).where(eq(leadQualifications.phone, phone)).limit(1);
+  const acao = acaoWhatsappDireto(lead);
+  if (acao === 'nada') return false;
+
+  // modoQualificacao 'bot': o roteiro que já começou segue até o fim (a IA não assume no meio)
+  const origem = { origemCanal: 'whatsapp_direto', ultimoCanal: 'whatsapp_direto', modoQualificacao: 'bot', funil: 'comprador' };
+  let leadId: number;
+  if (acao === 'marcar') {
+    await db.update(leadQualifications).set({ ...origem, updatedAt: now } as any).where(eq(leadQualifications.id, lead.id));
+    leadId = lead.id;
+  } else {
+    const r: any = await db.insert(leadQualifications).values({
+      phone, nome, answers: { nome } as any, origem: 'whatsapp', ...origem, stage: 'qual_etapa_1', score: 'frio',
+      lastActivityAt: now, createdAt: now, updatedAt: now,
+    } as any);
+    leadId = Number(r?.[0]?.insertId ?? r?.lastInsertRowid ?? 0);
+  }
+
+  try {
+    const { registrarMensagemPorTelefone } = await import('./qualificacaoService');
+    await registrarMensagemPorTelefone(phone, 'in', 'lead', input.texto);
+    if (input.resposta) await registrarMensagemPorTelefone(phone, 'out', 'bot', input.resposta);
+  } catch { /* conversa é só contexto */ }
+
+  const [contato] = await db.select({ id: contacts.id }).from(contacts).where(eq(contacts.phone, phone)).limit(1).catch(() => [] as any[]);
+  const primeira = input.texto.replace(/\s+/g, ' ').trim().slice(0, 120);
+  await notificarLead({
+    tipo: 'novo_lead', leadId, nome: lead?.nome || nome, telefone: phone, funil: 'comprador',
+    origem: rotuloCanal('whatsapp_direto'),
+    detalhes: [
+      ...(primeira ? [`💬 1ª mensagem: "${primeira}"`] : []),
+      contato ? '📇 Já estava na base de contatos' : '🆕 Contato novo (sem código de imóvel ou campanha)',
+      '🤖 O bot de qualificação já respondeu',
+    ],
+  }).catch(e => console.warn('[Entrada] Aviso falhou (não crítico):', e?.message));
+
+  console.log(`[Entrada] Novo lead ${phone} canal=whatsapp_direto (${acao === 'marcar' ? 'criado pelo bot' : 'criado aqui'})`);
+  return true;
+}
