@@ -23,6 +23,7 @@ import {
   discardLead,
   isLeadBlocked,
   getLeadEmpreendimento,
+  slotsDoBotEScore,
 } from './lead-persistence';
 import {
   generateMultiBankProposal,
@@ -449,12 +450,16 @@ async function saveLeadQualification(
     // UPSERT: atualizar registro existente (criado por persistLeadState) em vez de criar duplicata
     const existing = await db.select().from(leadQualifications).where(eq(leadQualifications.phone, cleanPhone)).limit(1);
     if (existing[0]) {
-      await db.update(leadQualifications).set(qualFields as any).where(eq(leadQualifications.phone, cleanPhone));
+      // Não apaga a campanha de origem (atribuição) com o nome do imóvel recomendado
+      const fields: any = existing[0].campanhaOrigem ? { ...qualFields, campanhaOrigem: existing[0].campanhaOrigem } : qualFields;
+      await db.update(leadQualifications).set(fields).where(eq(leadQualifications.phone, cleanPhone));
       console.log(`[Lead Update] phone=${cleanPhone} stage=qualificado score=${score.toUpperCase()} name=${nome} [QUALIFICADO]`);
     } else {
       await db.insert(leadQualifications).values({ phone: cleanPhone, ...qualFields } as any);
       console.log(`[Lead Update] phone=${cleanPhone} stage=qualificado score=${score.toUpperCase()} name=${nome} [QUALIFICADO/INSERIDO]`);
     }
+    // A nota final vem das regras do score (com detalhamento), não do contador do bot
+    await slotsDoBotEScore(cleanPhone, answers as any);
   } catch (e) {
     console.error('[Bot] Erro ao salvar qualificacao:', e);
   }
@@ -951,6 +956,21 @@ export async function processBotMessage(context: BotContext): Promise<BotRespons
   if (blocked) {
     console.log(`[Bot] 🚫 Lead ${clean} está bloqueado. Ignorando mensagem.`);
     return { text: 'Entendido! Respeitamos sua decisão. Tenha um ótimo dia! 😊', qualified: false };
+  }
+
+  // ═══════════════════════════════════════════════════════════════════════
+  // QUALIFICAÇÃO POR IA (leads da captação): a IA conduz e extrai os slots;
+  // 2 falhas seguidas → o roteiro de perguntas abaixo assume (§7.3)
+  // ═══════════════════════════════════════════════════════════════════════
+  try {
+    const { processarMensagemQualificacao } = await import('./leads/qualificacaoService');
+    const ia = await processarMensagemQualificacao({ phone: clean, texto: messageText });
+    if (ia) {
+      registerUserReply(context.phone); // cancela os follow-ups automáticos: o lead respondeu
+      return { text: ia.texto, qualified: ia.acao === 'completa' || ia.acao.startsWith('handoff') };
+    }
+  } catch (e) {
+    console.warn('[Bot] Qualificação por IA indisponível, seguindo no roteiro:', e);
   }
 
   // ═══════════════════════════════════════════════════════════════════════

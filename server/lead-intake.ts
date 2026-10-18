@@ -11,7 +11,8 @@
 import { eq } from 'drizzle-orm';
 import { z } from 'zod';
 import { getDb } from './db';
-import { contacts, leadQualifications, properties } from '../drizzle/schema';
+import { contacts, leadQualifications, properties, leadCampanhas, leadInteresses } from '../drizzle/schema';
+import { mesclarSlots, slotsDeRespostas } from './leads/slots';
 import { isLeadBlocked } from './lead-persistence';
 
 export const LEAD_ORIGENS = ['instagram_ads', 'instagram_dm', 'instagram_bio', 'google_ads', 'site', 'indicacao', 'whatsapp', 'whatsapp_empreendimento'] as const;
@@ -35,6 +36,21 @@ export interface LeadIntakeInput {
   answers?: Record<string, string>;
   /** Substitui a mensagem genérica de boas-vindas */
   welcomeMessage?: string;
+  /** Cookie rmt_vid da landing: liga os eventos de navegação ao lead */
+  visitanteId?: string;
+  /** form_id do Meta Lead Ads → campanha cadastrada (leadCampanhas.metaFormId) */
+  metaFormId?: string;
+  funil?: 'comprador' | 'proprietario';
+}
+
+/** Canal de atribuição (leadCampanhas.canal) a partir da origem do lead */
+export function canalDaOrigem(origem: LeadOrigem): string {
+  const map: Record<string, string> = {
+    instagram_ads: 'meta_leadads', instagram_dm: 'instagram_organico', instagram_bio: 'instagram_organico',
+    google_ads: 'google_ads', site: 'site', indicacao: 'indicacao', whatsapp: 'whatsapp_direto',
+    whatsapp_empreendimento: 'whatsapp_direto',
+  };
+  return map[origem] || 'outro';
 }
 
 export type LeadIntakeResult =
@@ -86,6 +102,8 @@ export const publicLeadSchema = z.object({
   propertyId: z.coerce.number().int().positive().optional(),
   consent: z.literal(true, { message: 'É preciso aceitar o contato' }),
   utm: z.object({ source: utmField, medium: utmField, campaign: utmField, content: utmField }).optional(),
+  // Cookie rmt_vid (só existe se o visitante aceitou cookies na landing)
+  vid: z.string().uuid().optional(),
   // Honeypot: campo invisível no formulário. Robô preenche, humano não.
   website: z.string().max(500).optional(),
 });
@@ -126,11 +144,20 @@ export async function ingestLead(input: LeadIntakeInput): Promise<LeadIntakeResu
   if (await isLeadBlocked(phone)) return { ok: false, reason: 'blocked' };
 
   let imovel: string | undefined;
+  let imovelInfo: { codigo: string | null; preco: number | null } | undefined;
   if (input.propertyId) {
-    const prop = await db.select({ denomination: properties.denomination }).from(properties)
-      .where(eq(properties.id, input.propertyId)).limit(1);
+    const prop = await db.select({ denomination: properties.denomination, codigo: properties.codigo, price: properties.price, exibirPreco: properties.exibirPreco })
+      .from(properties).where(eq(properties.id, input.propertyId)).limit(1);
     imovel = prop[0]?.denomination;
+    if (prop[0]) imovelInfo = { codigo: prop[0].codigo, preco: prop[0].exibirPreco === false ? null : Number(prop[0].price) || null };
   }
+
+  // Campanha cadastrada pelo form_id do Meta Lead Ads
+  const [campanhaCad] = input.metaFormId
+    ? await db.select().from(leadCampanhas).where(eq(leadCampanhas.metaFormId, input.metaFormId)).limit(1)
+    : [];
+  const canal = campanhaCad?.canal || canalDaOrigem(input.origem);
+  const funil = input.funil || (campanhaCad?.funil as 'comprador' | 'proprietario') || 'comprador';
 
   // Contato (tabela usada por campanhas e pelo webhook pra achar o nome)
   let contactId: number | undefined;
@@ -153,10 +180,12 @@ export async function ingestLead(input: LeadIntakeInput): Promise<LeadIntakeResu
     }
   }
 
-  const campanha = input.campanha || input.utm?.campaign || imovel;
+  const campanha = campanhaCad?.nome || input.campanha || input.utm?.campaign || imovel;
   const existingLead = await db.select().from(leadQualifications)
     .where(eq(leadQualifications.phone, phone)).limit(1);
   const lead = existingLead[0];
+  // Respostas do formulário que batem com o enum viram slots (fonte form)
+  const { slots } = mesclarSlots((lead?.funil as any) || funil, lead?.slots as any, slotsDeRespostas(input.answers), 'form', now);
 
   let shouldMessage: boolean;
   if (lead) {
@@ -176,6 +205,11 @@ export async function ingestLead(input: LeadIntakeInput): Promise<LeadIntakeResu
       ...(input.consentimento ? { consentimento: input.consentimento } : {}),
       ...(input.answers ? { answers: { ...((lead.answers as any) || {}), ...input.answers } } : {}),
       ...(lead.nome ? {} : { nome }),
+      // 1º toque fica; último toque e slots do formulário atualizam
+      ...(lead.origemCanal ? {} : { origemCanal: canal, origemCampanhaId: campanhaCad?.id ?? null }),
+      ultimoCanal: canal,
+      ...(campanhaCad ? { ultimaCampanhaId: campanhaCad.id } : {}),
+      slots,
       ...(shouldMessage ? { stage: input.empreendimentoSlug ? 'novo_lead' : 'abordagem_enviada', lastActivityAt: now } : {}),
       updatedAt: now,
     }).where(eq(leadQualifications.phone, phone));
@@ -199,6 +233,12 @@ export async function ingestLead(input: LeadIntakeInput): Promise<LeadIntakeResu
       loteCodigo: input.loteCodigo ?? null,
       leadScore: input.leadScore ?? null,
       consentimento: input.consentimento ?? null,
+      funil,
+      origemCanal: canal,
+      origemCampanhaId: campanhaCad?.id ?? null,
+      ultimoCanal: canal,
+      ultimaCampanhaId: campanhaCad?.id ?? null,
+      slots,
       lastActivityAt: now,
       createdAt: now,
       updatedAt: now,
@@ -216,20 +256,60 @@ export async function ingestLead(input: LeadIntakeInput): Promise<LeadIntakeResu
     });
   }
 
+  // Interesse lead × imóvel (para o lead recorrente com outro imóvel)
+  const [leadRow] = await db.select({ id: leadQualifications.id }).from(leadQualifications).where(eq(leadQualifications.phone, phone)).limit(1);
+  if (leadRow && input.propertyId) {
+    await db.insert(leadInteresses).values({ leadId: leadRow.id, propertyId: input.propertyId, campanhaId: campanhaCad?.id ?? null }).catch(() => {});
+  }
+
+  // Eventos da landing (mesmo visitante) passam a ser do lead
+  if (leadRow && input.visitanteId) {
+    try {
+      const { vincularVisitante } = await import('./leads/rastreio');
+      await vincularVisitante(input.visitanteId, leadRow.id);
+    } catch (e) {
+      console.warn('[LeadIntake] Vínculo do visitante falhou (não crítico):', e);
+    }
+  }
+
+  // Score por regras (com detalhamento); o aviso de lead novo já sai com a nota
+  let scoreCalc: { score: number; classe: 'frio' | 'morno' | 'quente' } | null = null;
+  if (leadRow) {
+    try {
+      const { recalcularScoreLead } = await import('./leads/scoreService');
+      scoreCalc = await recalcularScoreLead(leadRow.id, { motivo: lead ? 'nova_entrada' : 'lead_novo', leadNovo: true, notificar: false });
+    } catch (e) {
+      console.warn('[LeadIntake] Score não calculado (não crítico):', e);
+    }
+  }
+
+  // Aviso ao José pelos canais configurados (NOTIFY_CANAIS; padrão Telegram)
   try {
-    const { notifyNewLead } = await import('./_core/telegramNotification');
-    await notifyNewLead({
-      name: nome,
-      phone,
-      origem: input.origem,
-      imovel: input.loteCodigo ? `${imovel || input.empreendimentoSlug} — chácara ${input.loteCodigo}` : (imovel || input.empreendimentoSlug),
-      campanha,
-      messageSent: messageSent || !shouldMessage,
-      score: input.leadScore,
-      answers: input.answers,
+    const { notificarLead } = await import('./leads/notificacao');
+    const { rotuloCanal } = await import('./leads/inbound');
+    const titulo = input.loteCodigo ? `${imovel || input.empreendimentoSlug} — chácara ${input.loteCodigo}` : (imovel || input.empreendimentoSlug);
+    const score = scoreCalc?.score ?? input.leadScore ?? null;
+    const classe = scoreCalc?.classe ?? null;
+    await notificarLead({
+      tipo: lead ? 'recorrente' : 'novo_lead',
+      leadId: leadRow?.id ?? 0,
+      nome,
+      telefone: phone,
+      funil,
+      score,
+      classe,
+      // Empreendimento sem preço público (Bom Jardims): nunca mostra valor
+      imovel: titulo ? { codigo: imovelInfo?.codigo ?? null, titulo, preco: input.empreendimentoSlug ? null : imovelInfo?.preco ?? null } : null,
+      origem: rotuloCanal(canal),
+      campanhaCodigo: campanhaCad?.codigo ?? null,
+      detalhes: [
+        ...(campanha && !campanhaCad ? [`📢 Campanha: ${campanha}`] : []),
+        ...Object.entries(input.answers || {}).filter(([k, v]) => v && k !== 'nome').map(([k, v]) => `📝 ${k}: ${v}`),
+        messageSent || !shouldMessage ? '🤖 1ª mensagem enviada no WhatsApp' : '⚠️ 1ª mensagem NÃO saiu no WhatsApp — contate manualmente',
+      ],
     });
   } catch (e) {
-    console.warn('[LeadIntake] Telegram falhou (não crítico):', e);
+    console.warn('[LeadIntake] Aviso falhou (não crítico):', e);
   }
 
   return { ok: true, created: !lead, messageSent, phone };

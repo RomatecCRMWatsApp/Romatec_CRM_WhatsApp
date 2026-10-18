@@ -50,6 +50,52 @@ function stageProgress(stage: string): number {
   return steps[stage] ?? 0;
 }
 
+/** Por que o lead tem essa nota: cada regra e seus pontos (a soma é o score) */
+function ScoreDetalhe({ leadId }: { leadId: number }) {
+  const utils = trpc.useUtils();
+  const { data, isLoading } = trpc.leads.scoreDetalhe.useQuery({ id: leadId });
+  const recalcular = trpc.leads.recalcularScore.useMutation({
+    onSuccess: () => { utils.leads.scoreDetalhe.invalidate({ id: leadId }); utils.leads.list.invalidate(); },
+    onError: (e) => toast.error(e.message),
+  });
+  const titulo = { fontSize: '10px', color: '#3a6a45', textTransform: 'uppercase' as const, letterSpacing: '0.08em', margin: '0 0 8px', fontWeight: 700 };
+  if (isLoading) return <p style={{ fontSize: '11px', color: '#4a7a55' }}>Carregando score...</p>;
+  return (
+    <div>
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+        <p style={titulo}>Por que essa nota? {data?.score !== null && data?.score !== undefined ? `— ${data.score}/100` : ''}</p>
+        <button className="ld-action-btn" disabled={recalcular.isPending} onClick={() => recalcular.mutate({ id: leadId })}
+          style={{ background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.1)', color: '#5a9a6a', padding: '4px 10px' }}>
+          {recalcular.isPending ? 'Recalculando...' : 'Recalcular'}
+        </button>
+      </div>
+      {!data || data.itens.length === 0 ? (
+        <p style={{ fontSize: '11px', color: '#4a7a55', margin: 0 }}>
+          {data?.calculadoEm ? 'Nenhuma regra pontuou ainda (faltam respostas).' : 'Score ainda não calculado pelas regras. Clique em Recalcular.'}
+        </p>
+      ) : (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+          {data.itens.map(i => (
+            <div key={i.regra} style={{ display: 'flex', justifyContent: 'space-between', fontSize: '12px', color: '#c8e6c9' }}>
+              <span>{i.rotulo}</span>
+              <span style={{ fontWeight: 700, color: i.pontos >= 0 ? '#3ec87a' : '#ef4444' }}>{i.pontos >= 0 ? '+' : ''}{i.pontos}</span>
+            </div>
+          ))}
+          <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '12px', borderTop: '1px solid #1a3520', paddingTop: '4px', fontWeight: 700, color: '#e8f5e9' }}>
+            <span>Total{data.limitado ? ' (limitado a 0–100)' : ''}</span>
+            <span>{data.score}</span>
+          </div>
+        </div>
+      )}
+      {data && data.historico.length > 1 && (
+        <p style={{ fontSize: '10px', color: '#3a6a45', margin: '6px 0 0' }}>
+          Histórico: {data.historico.slice(0, 6).map((h: any) => h.score).reverse().join(' → ')}
+        </p>
+      )}
+    </div>
+  );
+}
+
 const SCORE_CFG = {
   quente: { label: 'Quente',  color: '#ef4444', bg: 'rgba(239,68,68,0.12)',   border: 'rgba(239,68,68,0.3)',   icon: '🔥', glow: '0 0 12px rgba(239,68,68,0.3)' },
   morno:  { label: 'Morno',   color: '#f59e0b', bg: 'rgba(245,158,11,0.12)',  border: 'rgba(245,158,11,0.3)',  icon: '🌡️', glow: '0 0 12px rgba(245,158,11,0.25)' },
@@ -154,6 +200,20 @@ export default function Leads() {
           </div>
         </div>
         <div style={{ display: 'flex', gap: '8px' }}>
+          <button onClick={() => navigate('/leads/funil')} style={{
+            padding: '6px 14px', borderRadius: '8px', background: 'rgba(139,92,246,0.12)',
+            border: '1px solid rgba(139,92,246,0.3)', color: '#a78bfa', fontSize: '11px',
+            fontWeight: 600, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '6px',
+          }}>
+            🗂️ Funil (kanban)
+          </button>
+          <button onClick={() => navigate('/leads/campanhas')} style={{
+            padding: '6px 14px', borderRadius: '8px', background: 'rgba(245,158,11,0.1)',
+            border: '1px solid rgba(245,158,11,0.25)', color: '#f59e0b', fontSize: '11px',
+            fontWeight: 600, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '6px',
+          }}>
+            📣 Campanhas
+          </button>
           <button onClick={() => testTelegram.mutate()} disabled={testTelegram.isPending} style={{
             padding: '6px 14px', borderRadius: '8px', background: 'rgba(38,169,224,0.1)',
             border: '1px solid rgba(38,169,224,0.25)', color: '#26a9e0', fontSize: '11px',
@@ -343,6 +403,7 @@ export default function Leads() {
                   {/* ── Expanded detail ── */}
                   {isExpanded && (
                     <div style={{ borderTop: '1px solid #1a3520', padding: '14px 16px', display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                      <ScoreDetalhe leadId={lead.id} />
 
                       {/* Answers grid */}
                       {Object.keys(answers).length > 0 && (

@@ -160,6 +160,7 @@ describe('Meta - processamento do leadgen até o ingestLead', () => {
       origem: 'instagram_ads',
       metaLeadId: '444',
       campanha: 'Loteamento Jardim Romatec - Lead',
+      metaFormId: '777', // resolve a campanha cadastrada (leadCampanhas.metaFormId)
     });
     expect(fetchImpl).toHaveBeenCalledTimes(2); // anúncio sem "Bom Jardims" no nome: busca o formulário pra reconhecer o empreendimento
     expect(out).toEqual([{ leadgenId: '444', status: 'ingested', result: okResult }]);

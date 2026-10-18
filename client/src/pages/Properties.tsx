@@ -30,6 +30,8 @@ interface PropertyForm {
   garageSpaces: number;
   propertyType: string;
   finalidade: "venda" | "aluguel";
+  /** false = landing e mensagens mostram "Valor sob consulta" */
+  exibirPreco: boolean;
 }
 
 const emptyForm: PropertyForm = {
@@ -39,10 +41,35 @@ const emptyForm: PropertyForm = {
   areaConstruida: "", areaCasa: "", areaTerreno: "",
   bedrooms: 0, bathrooms: 0, garageSpaces: 0, propertyType: "",
   finalidade: "venda",
+  exibirPreco: true,
 };
 
 function formatCurrency(value: number | string) {
   return Number(value).toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+}
+
+/** QR da placa (aponta para /q/IMV-xxxx: registra o scan e abre o WhatsApp) + link da landing */
+function QrPlaca({ propertyId, codigo, onClose }: { propertyId: number; codigo: string; onClose: () => void }) {
+  const { data, isLoading, error } = trpc.leadCampanhas.qrPlaca.useQuery({ propertyId });
+  const copiar = async (t: string) => { try { await navigator.clipboard.writeText(t); toast.success("Copiado"); } catch { toast.error("Não foi possível copiar"); } };
+  return (
+    <Dialog open onOpenChange={o => { if (!o) onClose(); }}>
+      <DialogContent className="max-w-sm">
+        <DialogHeader><DialogTitle>QR da placa — {codigo}</DialogTitle></DialogHeader>
+        {isLoading ? <p className="text-sm text-muted-foreground">Gerando QR...</p> : error ? <p className="text-sm text-red-400">{error.message}</p> : data && (
+          <div className="space-y-3">
+            <div className="bg-white rounded-xl p-3"><img src={data.qrPng} alt={`QR do imóvel ${codigo}`} className="w-full" /></div>
+            <p className="text-xs text-muted-foreground">Quem escanear cai no WhatsApp com a mensagem do {codigo} e a campanha PLACA-{codigo} (criada no 1º scan).</p>
+            <div className="flex flex-wrap gap-2">
+              <Button size="sm" asChild><a href={data.qrPng} download={`QR-${codigo}.png`}>Baixar PNG</a></Button>
+              <Button size="sm" variant="outline" asChild><a href={`data:image/svg+xml;charset=utf-8,${encodeURIComponent(data.qrSvg)}`} download={`QR-${codigo}.svg`}>Baixar SVG</a></Button>
+              <Button size="sm" variant="ghost" onClick={() => copiar(data.landing)}>Copiar link da página</Button>
+            </div>
+          </div>
+        )}
+      </DialogContent>
+    </Dialog>
+  );
 }
 
 export default function Properties() {
@@ -51,6 +78,7 @@ export default function Properties() {
   const { data: properties, refetch } = trpc.properties.list.useQuery();
   const [searchTerm, setSearchTerm] = useState("");
   const [showForm, setShowForm] = useState(false);
+  const [qrDe, setQrDe] = useState<{ id: number; codigo: string } | null>(null);
   const [editingId, setEditingId] = useState<number | null>(null);
   const [selectedProperty, setSelectedProperty] = useState<any>(null);
   const [form, setForm] = useState<PropertyForm>({ ...emptyForm });
@@ -192,6 +220,7 @@ export default function Properties() {
       bedrooms: property.bedrooms || 0, bathrooms: property.bathrooms || 0,
       garageSpaces: property.garageSpaces || 0, propertyType: property.propertyType || "",
       finalidade: (property.finalidade === "aluguel" ? "aluguel" : "venda") as "venda" | "aluguel",
+      exibirPreco: property.exibirPreco !== false,
     });
     setShowForm(true);
   };
@@ -308,6 +337,13 @@ export default function Properties() {
                       <option value="aluguel">🔑 Aluguel</option>
                     </select>
                   </div>
+                  <label className="flex items-start gap-2 text-sm text-foreground md:col-span-2 cursor-pointer">
+                    <input type="checkbox" className="mt-1" checked={form.exibirPreco} onChange={e => setForm(p => ({ ...p, exibirPreco: e.target.checked }))} />
+                    <span>
+                      Exibir preço para o cliente
+                      <span className="block text-xs text-muted-foreground">Desmarcado: a landing e as mensagens automáticas mostram "Valor sob consulta".</span>
+                    </span>
+                  </label>
                 </div>
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                   <div className="md:col-span-2">
@@ -613,7 +649,10 @@ export default function Properties() {
                 <div className="p-5">
                   {/* Nome e Endereço */}
                   <div className="flex items-center gap-2 mb-1">
-                    <h3 className="font-bold text-lg text-foreground">{property.denomination}</h3>
+                    <h3 className="font-bold text-lg text-foreground">
+                      {property.codigo && <span className="font-mono text-xs text-emerald-300 mr-2 align-middle">{property.codigo}</span>}
+                      {property.denomination}
+                    </h3>
                     <span className={`px-2 py-0.5 rounded-full text-xs font-bold shrink-0 ${
                       property.finalidade === "aluguel"
                         ? "bg-blue-500/20 text-blue-400 border border-blue-500/30"
@@ -678,8 +717,13 @@ export default function Properties() {
                     <button onClick={() => handleDelete(property.id, property.denomination)} className="py-2.5 px-3 rounded-xl bg-red-500/10 hover:bg-red-500/20 text-red-400 transition-all">
                       <Trash2 className="h-4 w-4" />
                     </button>
+                    {property.codigo && (
+                      <button title="QR da placa e página do imóvel" onClick={() => setQrDe({ id: property.id, codigo: property.codigo })} className="py-2.5 px-3 rounded-xl bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-300 text-xs font-bold transition-all">
+                        QR
+                      </button>
+                    )}
                     {property.publicSlug && (
-                      <button onClick={() => window.open(`/imovel/${property.publicSlug}`, "_blank")} className="py-2.5 px-3 rounded-xl bg-secondary/50 hover:bg-secondary text-foreground transition-all">
+                      <button onClick={() => window.open(property.codigo ? `/i/${property.codigo}` : `/imovel/${property.publicSlug}`, "_blank")} className="py-2.5 px-3 rounded-xl bg-secondary/50 hover:bg-secondary text-foreground transition-all">
                         <ExternalLink className="h-4 w-4" />
                       </button>
                     )}
@@ -985,6 +1029,7 @@ export default function Properties() {
           </div>
         </div>
       )}
+      {qrDe && <QrPlaca propertyId={qrDe.id} codigo={qrDe.codigo} onClose={() => setQrDe(null)} />}
     </div>
   );
 }

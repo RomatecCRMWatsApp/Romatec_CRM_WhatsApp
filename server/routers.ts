@@ -7,14 +7,24 @@ import { campaigns, contacts, campaignContacts, messages, properties, contactCam
 import { eq, and, desc, gte, or, like, isNotNull } from "drizzle-orm";
 import { campaignScheduler } from "./scheduler/campaignScheduler";
 import { zairaRouter } from "./routers/zaira.router";
+import { leadCampanhasRouter } from "./routers/leadCampanhas.router";
+import { crmRouter } from "./routers/crm.router";
 import { z } from "zod";
 import { createRateLimiter } from "./lead-intake";
 import { publicCompanyConfig, stripMaskedFields } from "./auth-security";
 
 const allowLoginAttempt = createRateLimiter(10, 15 * 60 * 1000);
 
+/** exibirPreco = false: visitante não recebe preço nem preço de oferta */
+function semPrecoSeOculto<T extends Record<string, any>>(p: T, logado: boolean): T {
+  if (logado || p.exibirPreco !== false) return p;
+  return { ...p, price: null, offerPrice: null };
+}
+
 export const appRouter = router({
   zaira: zairaRouter,
+  leadCampanhas: leadCampanhasRouter,
+  crm: crmRouter,
   system: systemRouter,
   auth: router({
     // Sem os hashes de senha (a linha do usuário inteira ia para o navegador)
@@ -167,13 +177,26 @@ export const appRouter = router({
   }),
 
   properties: router({
-    list: publicProcedure.query(async () => getAllProperties()),
-    getById: publicProcedure.input(z.object({ id: z.number() })).query(async ({ input }) => getPropertyById(input.id)),
-    getBySlug: publicProcedure.input(z.object({ slug: z.string() })).query(async ({ input }) => {
+    // Público: imóvel com exibirPreco = false sai sem preço ("Valor sob consulta"); logado vê tudo
+    list: publicProcedure.query(async ({ ctx }) => (await getAllProperties()).map((p: any) => semPrecoSeOculto(p, !!ctx.user))),
+    getById: publicProcedure.input(z.object({ id: z.number() })).query(async ({ input, ctx }) => {
+      const p = await getPropertyById(input.id);
+      return p ? semPrecoSeOculto(p, !!ctx.user) : p;
+    }),
+    getBySlug: publicProcedure.input(z.object({ slug: z.string() })).query(async ({ input, ctx }) => {
       const db = await getDb();
       if (!db) return null;
       const result = await db.select().from(properties).where(eq(properties.publicSlug, input.slug)).limit(1);
-      return result[0] || null;
+      return result[0] ? semPrecoSeOculto(result[0], !!ctx.user) : null;
+    }),
+    // Landing /i/:codigo (pública)
+    byCodigo: publicProcedure.input(z.object({ codigo: z.string().regex(/^IMV-d{4}$/i) })).query(async ({ input }) => {
+      const db = await getDb();
+      if (!db) return null;
+      const [p] = await db.select().from(properties).where(eq(properties.codigo, input.codigo.toUpperCase())).limit(1);
+      if (!p || p.status === "inactive") return null;
+      const { numeroWhatsAppLeads } = await import("./leads/config");
+      return { ...semPrecoSeOculto(p, false), whatsappNumero: numeroWhatsAppLeads() };
     }),
     create: protectedProcedure
       .input(z.object({
@@ -190,7 +213,8 @@ export const appRouter = router({
         bathrooms: z.coerce.number().optional(),
         description: z.string().optional(),
         finalidade: z.enum(["venda", "aluguel"]).default("venda"),
-        status: z.enum(["available", "unavailable"]).default("available")
+        status: z.enum(["available", "unavailable"]).default("available"),
+        exibirPreco: z.boolean().optional(),
       }))
       .mutation(async ({ input }) => {
         const slug = input.denomination.toLowerCase().replace(/[^a-z0-9]+/g, '-') + '-' + Date.now().toString(36);
@@ -205,6 +229,13 @@ export const appRouter = router({
           publicSlug: slug
         });
         const propertyId = Number((result as any)[0].insertId);
+        // Código de atribuição IMV-xxxx (vai na mensagem pré-preenchida do WhatsApp)
+        try {
+          const { formatCodigoImovel } = await import("./_core/migrations/addLeadsV1");
+          await db.update(properties).set({ codigo: formatCodigoImovel(propertyId) }).where(eq(properties.id, propertyId));
+        } catch (e) {
+          console.warn("[Properties] Código IMV não gravado:", e);
+        }
         // Criar campanha automaticamente para o novo imóvel
         try {
           const defaultMessages = [
@@ -250,7 +281,8 @@ export const appRouter = router({
         videoUrl: z.string().optional(),
         plantaBaixaUrl: z.string().optional(),
         finalidade: z.enum(["venda", "aluguel"]).optional(),
-        status: z.enum(["available", "unavailable"]).optional()
+        status: z.enum(["available", "unavailable"]).optional(),
+        exibirPreco: z.boolean().optional(),
       }))
       .mutation(async ({ input }) => {
         const db = await getDb();
@@ -806,6 +838,40 @@ export const appRouter = router({
         }));
 
         return { leads: enriched, total, stats };
+      }),
+
+    // Por que o lead tem essa nota: regra → pontos (soma = score) + histórico
+    scoreDetalhe: protectedProcedure
+      .input(z.object({ id: z.number() }))
+      .query(async ({ input }) => {
+        const db = await getDb();
+        if (!db) return null;
+        const [lead] = await db.select().from(leadQualifications).where(eq(leadQualifications.id, input.id)).limit(1);
+        if (!lead) return null;
+        const { ROTULO_REGRA } = await import('./leads/score');
+        const { historicoScore } = await import('./leads/scoreService');
+        const det = (lead as any).scoreDetalhe as { regras: string; detalhes: Record<string, number>; at: string } | null;
+        const itens = Object.entries(det?.detalhes || {}).map(([regra, pontos]) => ({ regra, rotulo: ROTULO_REGRA[regra] || regra, pontos }));
+        const soma = itens.reduce((a, i) => a + i.pontos, 0);
+        return {
+          score: lead.leadScore ?? null,
+          classe: lead.score,
+          regras: det?.regras ?? null,
+          calculadoEm: det?.at ?? null,
+          itens,
+          soma,
+          limitado: soma !== (lead.leadScore ?? soma), // soma fora de 0–100 foi limitada
+          historico: await historicoScore(input.id),
+        };
+      }),
+
+    recalcularScore: protectedProcedure
+      .input(z.object({ id: z.number() }))
+      .mutation(async ({ input }) => {
+        const { recalcularScoreLead } = await import('./leads/scoreService');
+        const r = await recalcularScoreLead(input.id, { motivo: 'manual_painel' });
+        if (!r) throw new Error("Lead não encontrado");
+        return r;
       }),
 
     // Detalhes completos de um lead

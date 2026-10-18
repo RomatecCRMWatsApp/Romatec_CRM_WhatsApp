@@ -56,6 +56,7 @@ export async function persistLeadState(
           updatedAt: now,
         })
         .where(eq(leadQualifications.phone, cleanPhone));
+      await slotsDoBotEScore(cleanPhone, answers);
 
       console.log(`[Lead Update] phone=${cleanPhone} stage=${stage} name=${realName || existing[0].nome || 'sem nome'}`);
     } else {
@@ -234,6 +235,33 @@ export async function getStaleLeads(timeoutMinutes: number = 45): Promise<LeadSt
 }
 
 /**
+ * Respostas do bot que batem com o enum viram slots (fonte bot) e o score
+ * é recalculado pelas regras (o bot não dá mais a nota sozinho).
+ */
+export async function slotsDoBotEScore(phone: string, answers: Record<string, any>): Promise<void> {
+  try {
+    const db = await getDb();
+    if (!db) return;
+    const [lead] = await db.select({ id: leadQualifications.id, funil: leadQualifications.funil, slots: leadQualifications.slots })
+      .from(leadQualifications).where(eq(leadQualifications.phone, phone)).limit(1);
+    if (!lead) return;
+    const { mesclarSlots, slotsDeRespostas } = await import('./leads/slots');
+    const novos = slotsDeRespostas(answers);
+    const atuais = (lead.slots || {}) as Record<string, { valor: string }>;
+    // Não sobrescreve slot que veio de formulário ou do painel
+    const soNovos = Object.fromEntries(Object.entries(novos).filter(([k]) => !atuais[k]));
+    if (Object.keys(soNovos).length) {
+      const { slots, aceitos } = mesclarSlots((lead.funil as any) || 'comprador', lead.slots as any, soNovos, 'bot');
+      if (aceitos.length) await db.update(leadQualifications).set({ slots } as any).where(eq(leadQualifications.id, lead.id));
+    }
+    const { recalcularScoreLead } = await import('./leads/scoreService');
+    await recalcularScoreLead(lead.id, { motivo: 'resposta_bot', slotsNovos: soNovos });
+  } catch (e) {
+    console.warn('[Persistence] Score do bot não recalculado (não crítico):', e);
+  }
+}
+
+/**
  * Empreendimento do lead (ex.: bom-jardims) — esses leads têm roteiro próprio
  * e atendimento humano; o bot genérico não responde.
  */
@@ -243,11 +271,14 @@ export async function getLeadEmpreendimento(phone: string): Promise<string | nul
     if (!db) return null;
     const cleanPhone = phone.replace(/\D/g, '');
     const [lead] = await db
-      .select({ empreendimentoSlug: leadQualifications.empreendimentoSlug })
+      .select({ empreendimentoSlug: leadQualifications.empreendimentoSlug, funil: leadQualifications.funil, stage: leadQualifications.stage, humano: leadQualifications.humano })
       .from(leadQualifications)
       .where(eq(leadQualifications.phone, cleanPhone))
       .limit(1);
-    return lead?.empreendimentoSlug || null;
+    if (lead?.empreendimentoSlug) return lead.empreendimentoSlug;
+    // Proprietário (captação) e handoff: o corretor atende, o bot de comprador não responde
+    if (lead?.humano || lead?.funil === 'proprietario' || lead?.stage === 'atendimento_humano') return 'atendimento_humano';
+    return null;
   } catch (error) {
     console.error('[Persistence] ❌ Erro ao buscar empreendimento do lead:', error);
     return null;

@@ -239,6 +239,7 @@ export async function processLeadgenEvent(event: LeadgenEvent, deps: ProcessLead
     origem: 'instagram_ads',
     metaLeadId: lead.id || event.leadgenId,
     campanha,
+    ...(formId ? { metaFormId: formId } : {}),
     ...empreendimento,
   });
   console.log(`[Meta] Lead ${event.leadgenId} → ${result.ok ? (result.created ? 'novo' : 'atualizado') : result.reason}`);
