@@ -5,6 +5,7 @@ import {
   publicLeadSchema,
   origemFromUtm,
   createRateLimiter,
+  codigoDaUtm,
 } from './lead-intake';
 import { detectQualificationIntent } from './qualification-flow';
 
@@ -93,5 +94,18 @@ describe('Opt-out PARAR', () => {
 
   it('"não" sozinho continua neutro', () => {
     expect(detectQualificationIntent('não')).toBe('NEUTRO');
+  });
+});
+
+describe('Lead intake - utm_campaign liga o lead à campanha cadastrada', () => {
+  it('normaliza o utm_campaign para o código da campanha', () => {
+    expect(codigoDaUtm('BJ-IG-BIO')).toBe('BJ-IG-BIO');
+    expect(codigoDaUtm('bj-ig-bio')).toBe('BJ-IG-BIO');
+    expect(codigoDaUtm('#bj_status_wa')).toBe('BJ-STATUS-WA');
+    expect(codigoDaUtm(' bj story ')).toBe('BJ-STORY');
+  });
+  it('texto que não pode ser código fica de fora (cai só no utmCampaign)', () => {
+    expect(codigoDaUtm('outubro/2026 chácaras')).toBeNull();
+    expect(codigoDaUtm('x')).toBeNull();
   });
 });

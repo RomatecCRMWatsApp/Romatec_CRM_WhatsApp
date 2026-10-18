@@ -8,12 +8,13 @@
  * o estado do banco quando ele responder).
  */
 
-import { eq } from 'drizzle-orm';
+import { eq, or } from 'drizzle-orm';
 import { z } from 'zod';
 import { getDb } from './db';
 import { contacts, leadQualifications, properties, leadCampanhas, leadInteresses } from '../drizzle/schema';
 import { mesclarSlots, slotsDeRespostas } from './leads/slots';
 import { isLeadBlocked } from './lead-persistence';
+import { normalizarCodigoCampanha } from './leads/atribuicao';
 
 export const LEAD_ORIGENS = ['instagram_ads', 'instagram_dm', 'instagram_bio', 'google_ads', 'site', 'indicacao', 'whatsapp', 'whatsapp_empreendimento'] as const;
 export type LeadOrigem = typeof LEAD_ORIGENS[number];
@@ -123,6 +124,11 @@ export function origemFromUtm(utm?: PublicLeadInput['utm']): LeadOrigem {
   return 'site';
 }
 
+/** utm_campaign do link → código da campanha (BJ-IG-BIO, #bj-ig-bio, "bj ig bio" → BJ-IG-BIO) */
+export function codigoDaUtm(utmCampaign: string): string | null {
+  return normalizarCodigoCampanha(utmCampaign.replace(/_/g, '-'));
+}
+
 // ─── Ingestão ────────────────────────────────────────────────────────────────
 export async function ingestLead(input: LeadIntakeInput): Promise<LeadIntakeResult> {
   const phone = normalizePhoneBR(input.phone);
@@ -152,10 +158,18 @@ export async function ingestLead(input: LeadIntakeInput): Promise<LeadIntakeResu
     if (prop[0]) imovelInfo = { codigo: prop[0].codigo, preco: prop[0].exibirPreco === false ? null : Number(prop[0].price) || null };
   }
 
-  // Campanha cadastrada pelo form_id do Meta Lead Ads
-  const [campanhaCad] = input.metaFormId
+  // Campanha cadastrada: pelo form_id do Meta Lead Ads ou pelo utm_campaign do link (código ou utmCampaign)
+  const [porForm] = input.metaFormId
     ? await db.select().from(leadCampanhas).where(eq(leadCampanhas.metaFormId, input.metaFormId)).limit(1)
     : [];
+  const utmCamp = (input.utm?.campaign || '').trim();
+  const codigoUtm = utmCamp ? codigoDaUtm(utmCamp) : null;
+  const [porUtm] = !porForm && utmCamp
+    ? await db.select().from(leadCampanhas)
+        .where(codigoUtm ? or(eq(leadCampanhas.codigo, codigoUtm), eq(leadCampanhas.utmCampaign, utmCamp)) : eq(leadCampanhas.utmCampaign, utmCamp))
+        .limit(1)
+    : [];
+  const campanhaCad = porForm ?? porUtm;
   const canal = campanhaCad?.canal || canalDaOrigem(input.origem);
   const funil = input.funil || (campanhaCad?.funil as 'comprador' | 'proprietario') || 'comprador';
 
