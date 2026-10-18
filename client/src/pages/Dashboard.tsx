@@ -7,7 +7,7 @@ import { Users, Send, Settings, LogOut, WifiOff, TrendingUp, Building2, BarChart
 import { useLocation } from "wouter";
 import { trpc } from "@/lib/trpc";
 
-const LOGO_URL = "https://d2xsxph8kpxj0f.cloudfront.net/310519663438352331/2uYgCCZRKgbanKmmzr4z87/Capturadetela2026-04-02172521_ffb58bed.png";
+const LOGO_URL = "/icon-512x512.png";
 
 const COLORS = {
   emerald: "#10b981",

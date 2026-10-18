@@ -11,7 +11,7 @@ import {
 } from "lucide-react";
 
 const LOGO_URL =
-  "https://d2xsxph8kpxj0f.cloudfront.net/310519663438352331/2uYgCCZRKgbanKmmzr4z87/Capturadetela2026-04-02172521_ffb58bed.png";
+  "/icon-512x512.png";
 
 const STEPS = [
   { id: 1, label: "Empresa",   icon: Building2 },
