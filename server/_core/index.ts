@@ -231,6 +231,7 @@ async function startServer() {
         origem: origemFromUtm(data.utm),
         propertyId: data.propertyId,
         utm: data.utm,
+        visitanteId: data.vid,
       });
 
       if (!result.ok) {
@@ -252,6 +253,46 @@ async function startServer() {
 
   const { registerBomJardimsRoutes } = await import('../bom-jardims');
   registerBomJardimsRoutes(app, allowPublicLead);
+
+  // ─── Rastreio da landing /i/:codigo (beacon) e QR de placa /q/:codigo ───
+  const ipDe = (req: express.Request) => {
+    const fwd = String(req.headers['x-forwarded-for'] ?? '').split(',').map(v => v.trim()).filter(Boolean);
+    return fwd[fwd.length - 1] || req.socket.remoteAddress || 'unknown';
+  };
+  const allowBeacon = createRateLimiter(60, 60 * 1000); // 60 eventos/min por IP
+  app.post('/t', async (req, res) => {
+    try {
+      if (!allowBeacon(ipDe(req))) return res.status(429).end();
+      // sendBeacon pode mandar text/plain: aceita JSON em string também
+      const body = typeof req.body === 'string' ? JSON.parse(req.body || '{}') : req.body;
+      const { eventoSchema, registrarEvento } = await import('../leads/rastreio');
+      const ev = eventoSchema.safeParse(body ?? {});
+      if (!ev.success) return res.status(400).end();
+      await registrarEvento(ev.data);
+      res.status(204).end();
+    } catch (e) {
+      console.warn('[Rastreio] Evento descartado:', (e as any)?.message);
+      res.status(204).end();
+    }
+  });
+
+  app.get('/q/:codigo', async (req, res) => {
+    try {
+      const codigo = String(req.params.codigo || '').toUpperCase();
+      if (!/^IMV-d{4}$/.test(codigo)) return res.redirect(302, '/');
+      const vid = /(?:^|;s*)rmt_vid=([0-9a-f-]{36})/i.exec(String(req.headers.cookie || ''))?.[1] ?? null;
+      const { registrarScanQr } = await import('../leads/rastreio');
+      const scan = await registrarScanQr(codigo, vid);
+      if (!scan) return res.redirect(302, '/imoveis');
+      const { mensagemPreenchida, linkWhatsApp } = await import('../leads/atribuicao');
+      const { numeroWhatsAppLeads } = await import('../leads/config');
+      const msg = mensagemPreenchida({ funil: 'comprador', imovelCodigo: scan.imovelCodigo, campanhaCodigo: scan.campanhaCodigo });
+      res.redirect(302, linkWhatsApp(numeroWhatsAppLeads(), msg));
+    } catch (e) {
+      console.warn('[QR] Erro:', (e as any)?.message);
+      res.redirect(302, '/');
+    }
+  });
 
   // ─── Webhook Meta (Instagram / Facebook Lead Ads) ───
   app.get('/api/webhook/meta', async (req, res) => {

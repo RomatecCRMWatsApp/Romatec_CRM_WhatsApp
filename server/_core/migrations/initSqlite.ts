@@ -281,6 +281,10 @@ export function initSqliteTables(sqlite: any): void {
     utmSource TEXT, utmCampaign TEXT, gastoTotal REAL NOT NULL DEFAULT 0, inicio INTEGER, fim INTEGER, ativa INTEGER NOT NULL DEFAULT 1,
     createdAt INTEGER NOT NULL DEFAULT (strftime('%s','now')), updatedAt INTEGER NOT NULL DEFAULT (strftime('%s','now'))
   )`);
+  run(`CREATE TABLE IF NOT EXISTS leadEventos (
+    id INTEGER PRIMARY KEY AUTOINCREMENT, leadId INTEGER, visitanteId TEXT, tipo TEXT NOT NULL, propertyId INTEGER,
+    campanhaId INTEGER, dados TEXT, createdAt INTEGER NOT NULL DEFAULT (strftime('%s','now'))
+  )`);
   run(`CREATE TABLE IF NOT EXISTS leadScoreHistorico (
     id INTEGER PRIMARY KEY AUTOINCREMENT, leadId INTEGER NOT NULL, score INTEGER NOT NULL, classe TEXT NOT NULL,
     regras TEXT NOT NULL, detalhes TEXT NOT NULL, motivo TEXT, createdAt INTEGER NOT NULL DEFAULT (strftime('%s','now'))

@@ -18,6 +18,7 @@ import BomJardims from "./pages/BomJardims";
 import Performance from "./pages/Performance";
 import Leads from "./pages/Leads";
 import LeadCampanhas from "./pages/LeadCampanhas";
+import ImovelLanding from "./pages/ImovelLanding";
 import Setup from "./pages/Setup";
 import { trpc } from "@/lib/trpc";
 import { useAuth } from "@/_core/hooks/useAuth";
@@ -71,6 +72,7 @@ function Router() {
         {() => <SetupGuard component={Leads} />}
       </Route>
       <Route path={"/imoveis"} component={PropertiesCatalog} />
+      <Route path={"/i/:codigo"} component={ImovelLanding} />
       <Route path={"/imovel/:slug"} component={PropertyPublic} />
       <Route path={"/links"} component={LinkPortal} />
       <Route path={"/bom-jardims"} component={BomJardims} />

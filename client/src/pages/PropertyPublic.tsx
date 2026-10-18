@@ -48,7 +48,7 @@ export default function PropertyPublic() {
   const esp = especialistas[selectedEsp];
 
   const whatsappMsg = encodeURIComponent(
-    `Olá, ${esp.nome.split(' ')[0]}! 👋\n\nVi o imóvel *${property.denomination}* no site da Romatec e tenho interesse!\n\n📍 *Localização:* ${property.address}${property.city ? `, ${property.city}` : ""}\n💰 *Valor:* R$ ${formatCurrency(property.price)}\n\nPoderia me dar mais informações? 😊`
+    `Olá, ${esp.nome.split(' ')[0]}! 👋\n\nVi o imóvel *${property.denomination}* no site da Romatec e tenho interesse!\n\n📍 *Localização:* ${property.address}${property.city ? `, ${property.city}` : ""}\n💰 *Valor:* ${property.price ? `R$ ${formatCurrency(property.price)}` : 'sob consulta'}\n\nPoderia me dar mais informações? 😊`
   );
   const whatsappLink = `https://wa.me/${esp.telefone}?text=${whatsappMsg}`;
   const phoneLink = `tel:+${esp.telefone}`;

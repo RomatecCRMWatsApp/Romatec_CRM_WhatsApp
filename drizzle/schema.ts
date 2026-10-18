@@ -449,6 +449,21 @@ export const leadCampanhas = mysqlTable("leadCampanhas", {
 
 export type LeadCampanha = typeof leadCampanhas.$inferSelect;
 
+/** Rastreio da landing /i/:codigo e do QR /q/:codigo (só com consentimento de cookies) */
+export const leadEventos = mysqlTable("leadEventos", {
+  id: int("id").autoincrement().primaryKey(),
+  leadId: int("leadId"),                                   // null = visitante anônimo
+  visitanteId: varchar("visitanteId", { length: 36 }),     // cookie first-party rmt_vid
+  tipo: varchar("tipo", { length: 40 }).notNull(),
+  propertyId: int("propertyId"),
+  campanhaId: int("campanhaId"),
+  dados: json("dados").$type<Record<string, unknown>>(),
+  createdAt: timestamp("createdAt", { fsp: 3 }).defaultNow().notNull(),
+}, (t) => ({
+  idxLead: index("idx_evento_lead").on(t.leadId, t.createdAt),
+  idxVisitante: index("idx_evento_visitante").on(t.visitanteId),
+}));
+
 /** Histórico do score: grava só quando o valor muda */
 export const leadScoreHistorico = mysqlTable("leadScoreHistorico", {
   id: int("id").autoincrement().primaryKey(),

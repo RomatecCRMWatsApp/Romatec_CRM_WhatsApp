@@ -48,12 +48,37 @@ function formatCurrency(value: number | string) {
   return Number(value).toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 }
 
+/** QR da placa (aponta para /q/IMV-xxxx: registra o scan e abre o WhatsApp) + link da landing */
+function QrPlaca({ propertyId, codigo, onClose }: { propertyId: number; codigo: string; onClose: () => void }) {
+  const { data, isLoading, error } = trpc.leadCampanhas.qrPlaca.useQuery({ propertyId });
+  const copiar = async (t: string) => { try { await navigator.clipboard.writeText(t); toast.success("Copiado"); } catch { toast.error("Não foi possível copiar"); } };
+  return (
+    <Dialog open onOpenChange={o => { if (!o) onClose(); }}>
+      <DialogContent className="max-w-sm">
+        <DialogHeader><DialogTitle>QR da placa — {codigo}</DialogTitle></DialogHeader>
+        {isLoading ? <p className="text-sm text-muted-foreground">Gerando QR...</p> : error ? <p className="text-sm text-red-400">{error.message}</p> : data && (
+          <div className="space-y-3">
+            <div className="bg-white rounded-xl p-3"><img src={data.qrPng} alt={`QR do imóvel ${codigo}`} className="w-full" /></div>
+            <p className="text-xs text-muted-foreground">Quem escanear cai no WhatsApp com a mensagem do {codigo} e a campanha PLACA-{codigo} (criada no 1º scan).</p>
+            <div className="flex flex-wrap gap-2">
+              <Button size="sm" asChild><a href={data.qrPng} download={`QR-${codigo}.png`}>Baixar PNG</a></Button>
+              <Button size="sm" variant="outline" asChild><a href={`data:image/svg+xml;charset=utf-8,${encodeURIComponent(data.qrSvg)}`} download={`QR-${codigo}.svg`}>Baixar SVG</a></Button>
+              <Button size="sm" variant="ghost" onClick={() => copiar(data.landing)}>Copiar link da página</Button>
+            </div>
+          </div>
+        )}
+      </DialogContent>
+    </Dialog>
+  );
+}
+
 export default function Properties() {
   const { user } = useAuth();
   const [, navigate] = useLocation();
   const { data: properties, refetch } = trpc.properties.list.useQuery();
   const [searchTerm, setSearchTerm] = useState("");
   const [showForm, setShowForm] = useState(false);
+  const [qrDe, setQrDe] = useState<{ id: number; codigo: string } | null>(null);
   const [editingId, setEditingId] = useState<number | null>(null);
   const [selectedProperty, setSelectedProperty] = useState<any>(null);
   const [form, setForm] = useState<PropertyForm>({ ...emptyForm });
@@ -692,8 +717,13 @@ export default function Properties() {
                     <button onClick={() => handleDelete(property.id, property.denomination)} className="py-2.5 px-3 rounded-xl bg-red-500/10 hover:bg-red-500/20 text-red-400 transition-all">
                       <Trash2 className="h-4 w-4" />
                     </button>
+                    {property.codigo && (
+                      <button title="QR da placa e página do imóvel" onClick={() => setQrDe({ id: property.id, codigo: property.codigo })} className="py-2.5 px-3 rounded-xl bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-300 text-xs font-bold transition-all">
+                        QR
+                      </button>
+                    )}
                     {property.publicSlug && (
-                      <button onClick={() => window.open(`/imovel/${property.publicSlug}`, "_blank")} className="py-2.5 px-3 rounded-xl bg-secondary/50 hover:bg-secondary text-foreground transition-all">
+                      <button onClick={() => window.open(property.codigo ? `/i/${property.codigo}` : `/imovel/${property.publicSlug}`, "_blank")} className="py-2.5 px-3 rounded-xl bg-secondary/50 hover:bg-secondary text-foreground transition-all">
                         <ExternalLink className="h-4 w-4" />
                       </button>
                     )}
@@ -999,6 +1029,7 @@ export default function Properties() {
           </div>
         </div>
       )}
+      {qrDe && <QrPlaca propertyId={qrDe.id} codigo={qrDe.codigo} onClose={() => setQrDe(null)} />}
     </div>
   );
 }

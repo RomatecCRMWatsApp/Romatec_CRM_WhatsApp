@@ -25,7 +25,15 @@ function LinkGerado({ propertyId, campanhaId, funil }: { propertyId?: number; ca
     <div className="space-y-2 rounded-lg border border-border bg-secondary/30 p-3">
       <p className="text-xs text-muted-foreground">Mensagem que o cliente vai mandar:</p>
       <p className="text-sm text-foreground">{data.mensagem}</p>
+      <div className="flex flex-col sm:flex-row gap-3">
+        <div className="bg-white rounded-lg p-2 w-32 h-32 shrink-0 [&>svg]:w-full [&>svg]:h-full" dangerouslySetInnerHTML={{ __html: data.qrSvg }} />
+        <div className="text-xs text-muted-foreground space-y-1">
+          <p>QR do link do WhatsApp (para criativo/post).</p>
+          {data.landing && <p>Página do imóvel com a campanha: <a className="text-emerald-300 underline break-all" href={data.landing} target="_blank" rel="noreferrer">{data.landing}</a></p>}
+        </div>
+      </div>
       <div className="flex flex-wrap gap-2">
+        {data.landing && <Button size="sm" variant="outline" onClick={() => copiar(data.landing!, "Link da página")}><Copy className="mr-1.5 h-3.5 w-3.5" /> Copiar link da página</Button>}
         <Button size="sm" variant="outline" onClick={() => copiar(data.url, "Link")}><Copy className="mr-1.5 h-3.5 w-3.5" /> Copiar link wa.me</Button>
         <Button size="sm" variant="outline" onClick={() => copiar(data.mensagem, "Mensagem")}><Copy className="mr-1.5 h-3.5 w-3.5" /> Copiar mensagem</Button>
         <Button size="sm" variant="ghost" asChild><a href={data.url} target="_blank" rel="noreferrer"><ExternalLink className="mr-1.5 h-3.5 w-3.5" /> Testar</a></Button>

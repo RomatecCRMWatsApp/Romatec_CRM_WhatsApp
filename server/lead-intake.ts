@@ -36,6 +36,8 @@ export interface LeadIntakeInput {
   answers?: Record<string, string>;
   /** Substitui a mensagem genérica de boas-vindas */
   welcomeMessage?: string;
+  /** Cookie rmt_vid da landing: liga os eventos de navegação ao lead */
+  visitanteId?: string;
   /** form_id do Meta Lead Ads → campanha cadastrada (leadCampanhas.metaFormId) */
   metaFormId?: string;
   funil?: 'comprador' | 'proprietario';
@@ -100,6 +102,8 @@ export const publicLeadSchema = z.object({
   propertyId: z.coerce.number().int().positive().optional(),
   consent: z.literal(true, { message: 'É preciso aceitar o contato' }),
   utm: z.object({ source: utmField, medium: utmField, campaign: utmField, content: utmField }).optional(),
+  // Cookie rmt_vid (só existe se o visitante aceitou cookies na landing)
+  vid: z.string().uuid().optional(),
   // Honeypot: campo invisível no formulário. Robô preenche, humano não.
   website: z.string().max(500).optional(),
 });
@@ -256,6 +260,16 @@ export async function ingestLead(input: LeadIntakeInput): Promise<LeadIntakeResu
   const [leadRow] = await db.select({ id: leadQualifications.id }).from(leadQualifications).where(eq(leadQualifications.phone, phone)).limit(1);
   if (leadRow && input.propertyId) {
     await db.insert(leadInteresses).values({ leadId: leadRow.id, propertyId: input.propertyId, campanhaId: campanhaCad?.id ?? null }).catch(() => {});
+  }
+
+  // Eventos da landing (mesmo visitante) passam a ser do lead
+  if (leadRow && input.visitanteId) {
+    try {
+      const { vincularVisitante } = await import('./leads/rastreio');
+      await vincularVisitante(input.visitanteId, leadRow.id);
+    } catch (e) {
+      console.warn('[LeadIntake] Vínculo do visitante falhou (não crítico):', e);
+    }
   }
 
   // Score por regras (com detalhamento); o aviso de lead novo já sai com a nota

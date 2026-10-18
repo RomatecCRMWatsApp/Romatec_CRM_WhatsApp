@@ -38,6 +38,7 @@ export function precoPublico(imovel: Pick<ImovelResumo, 'preco' | 'exibirPreco'>
 }
 
 export function linkImovel(imovel: Pick<ImovelResumo, 'codigo' | 'publicSlug'>): string | null {
+  if (imovel.codigo) return `${appUrl()}/i/${imovel.codigo}`;
   if (imovel.publicSlug) return `${appUrl()}/imovel/${imovel.publicSlug}`;
   return null;
 }
@@ -188,6 +189,11 @@ export async function processarEntradaWhatsApp(input: { phone: string; texto: st
     } as any);
     const leadId = Number(inserted?.[0]?.insertId ?? inserted?.lastInsertRowid);
     if (leadId) await gravarInteresses(leadId, imoveis.map((i: any) => i.id));
+    // Quem clicou no botão do WhatsApp da landing nos últimos 30 min vira este lead
+    if (leadId) {
+      const { vincularPorCliqueWhatsApp } = await import('./rastreio');
+      await vincularPorCliqueWhatsApp(leadId, imoveis.map((i: any) => i.id), now).catch(() => null);
+    }
     const { recalcularScoreLead } = await import('./scoreService');
     const sc = leadId ? await recalcularScoreLead(leadId, { motivo: 'lead_novo_whatsapp', leadNovo: true, notificar: false }).catch(() => null) : null;
 

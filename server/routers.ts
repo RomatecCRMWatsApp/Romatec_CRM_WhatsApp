@@ -14,6 +14,12 @@ import { publicCompanyConfig, stripMaskedFields } from "./auth-security";
 
 const allowLoginAttempt = createRateLimiter(10, 15 * 60 * 1000);
 
+/** exibirPreco = false: visitante não recebe preço nem preço de oferta */
+function semPrecoSeOculto<T extends Record<string, any>>(p: T, logado: boolean): T {
+  if (logado || p.exibirPreco !== false) return p;
+  return { ...p, price: null, offerPrice: null };
+}
+
 export const appRouter = router({
   zaira: zairaRouter,
   leadCampanhas: leadCampanhasRouter,
@@ -169,13 +175,26 @@ export const appRouter = router({
   }),
 
   properties: router({
-    list: publicProcedure.query(async () => getAllProperties()),
-    getById: publicProcedure.input(z.object({ id: z.number() })).query(async ({ input }) => getPropertyById(input.id)),
-    getBySlug: publicProcedure.input(z.object({ slug: z.string() })).query(async ({ input }) => {
+    // Público: imóvel com exibirPreco = false sai sem preço ("Valor sob consulta"); logado vê tudo
+    list: publicProcedure.query(async ({ ctx }) => (await getAllProperties()).map((p: any) => semPrecoSeOculto(p, !!ctx.user))),
+    getById: publicProcedure.input(z.object({ id: z.number() })).query(async ({ input, ctx }) => {
+      const p = await getPropertyById(input.id);
+      return p ? semPrecoSeOculto(p, !!ctx.user) : p;
+    }),
+    getBySlug: publicProcedure.input(z.object({ slug: z.string() })).query(async ({ input, ctx }) => {
       const db = await getDb();
       if (!db) return null;
       const result = await db.select().from(properties).where(eq(properties.publicSlug, input.slug)).limit(1);
-      return result[0] || null;
+      return result[0] ? semPrecoSeOculto(result[0], !!ctx.user) : null;
+    }),
+    // Landing /i/:codigo (pública)
+    byCodigo: publicProcedure.input(z.object({ codigo: z.string().regex(/^IMV-d{4}$/i) })).query(async ({ input }) => {
+      const db = await getDb();
+      if (!db) return null;
+      const [p] = await db.select().from(properties).where(eq(properties.codigo, input.codigo.toUpperCase())).limit(1);
+      if (!p || p.status === "inactive") return null;
+      const { numeroWhatsAppLeads } = await import("./leads/config");
+      return { ...semPrecoSeOculto(p, false), whatsappNumero: numeroWhatsAppLeads() };
     }),
     create: protectedProcedure
       .input(z.object({

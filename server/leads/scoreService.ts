@@ -75,7 +75,9 @@ export async function recalcularScoreLead(leadId: number, opts: RecalculoOpts): 
       if (p && p.exibirPreco !== false) precoImovel = Number(p.price) || null;
       temCodigoImovel = !!p; // chegou com interesse num imóvel específico (código IMV, landing ou formulário)
     }
-    r = calcularComprador(slots, { temCodigoImovel, precoImovel, optout, inativo48h });
+    const { sinaisDoLead } = await import('./rastreio');
+    const { sinais, tempoPaginaS, sessoesDias } = await sinaisDoLead(leadId).catch(() => ({ sinais: new Set<string>(), tempoPaginaS: 0, sessoesDias: 0 }));
+    r = calcularComprador(slots, { temCodigoImovel, precoImovel, optout, inativo48h, sinais, tempoPaginaS, sessoesDias });
   }
 
   const antes = lead.leadScore ?? null;

@@ -8,7 +8,7 @@ import { protectedProcedure, adminProcedure, router } from "../_core/trpc";
 import { getDb } from "../db";
 import { leadCampanhas, leadQualifications, properties } from "../../drizzle/schema";
 import { normalizarCodigoCampanha, mensagemPreenchida, linkWhatsApp } from "../leads/atribuicao";
-import { numeroWhatsAppLeads } from "../leads/config";
+import { numeroWhatsAppLeads, appUrl } from "../leads/config";
 import { CANAIS_CAMPANHA } from "../leads/inbound";
 
 const funilSchema = z.enum(["comprador", "proprietario"]);
@@ -25,6 +25,11 @@ const campos = {
   gastoTotal: z.coerce.number().min(0).optional(),
   ativa: z.boolean().optional(),
 };
+
+async function qrSvg(texto: string): Promise<string> {
+  const QR = await import("qrcode");
+  return QR.toString(texto, { type: "svg", margin: 1, errorCorrectionLevel: "M" });
+}
 
 async function dbOrThrow() {
   const db = await getDb();
@@ -88,6 +93,28 @@ export const leadCampanhasRouter = router({
       const [imovel] = propertyId ? await db.select({ codigo: properties.codigo }).from(properties).where(eq(properties.id, propertyId)).limit(1) : [];
       const funil = input.funil ?? (campanha?.funil as "comprador" | "proprietario") ?? "comprador";
       const mensagem = mensagemPreenchida({ funil, imovelCodigo: imovel?.codigo, campanhaCodigo: campanha?.codigo });
-      return { mensagem, url: linkWhatsApp(numeroWhatsAppLeads(), mensagem) };
+      const url = linkWhatsApp(numeroWhatsAppLeads(), mensagem);
+      // Landing do imóvel com a campanha na URL (rastreio + botão de WhatsApp com o #código)
+      const landing = imovel?.codigo
+        ? `${appUrl()}/i/${imovel.codigo}${campanha ? `?utm_campaign=${encodeURIComponent(campanha.codigo)}` : ""}`
+        : null;
+      return { mensagem, url, landing, qrSvg: await qrSvg(url) };
+    }),
+
+  /** QR da placa: aponta para /q/IMV-xxxx (registra o scan e abre o WhatsApp) */
+  qrPlaca: protectedProcedure
+    .input(z.object({ propertyId: z.number().int() }))
+    .query(async ({ input }) => {
+      const db = await dbOrThrow();
+      const [imovel] = await db.select({ codigo: properties.codigo }).from(properties).where(eq(properties.id, input.propertyId)).limit(1);
+      if (!imovel?.codigo) throw new Error("Imóvel sem código IMV");
+      const url = `${appUrl()}/q/${imovel.codigo}`;
+      const QR = await import("qrcode");
+      return {
+        url,
+        landing: `${appUrl()}/i/${imovel.codigo}`,
+        qrSvg: await qrSvg(url),
+        qrPng: await QR.toDataURL(url, { width: 1024, margin: 2, errorCorrectionLevel: "M" }),
+      };
     }),
 });

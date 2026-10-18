@@ -48,6 +48,22 @@ const MYSQL: { label: string; stmt: ReturnType<typeof sql> }[] = [
   { label: 'lead.ultimaCampanhaId', stmt: sql`ALTER TABLE leadQualifications ADD COLUMN ultimaCampanhaId INT` },
   { label: 'lead.slots', stmt: sql`ALTER TABLE leadQualifications ADD COLUMN slots JSON` },
   { label: 'lead.tags', stmt: sql`ALTER TABLE leadQualifications ADD COLUMN tags JSON` },
+  // PR (c): rastreio da landing e do QR
+  {
+    label: 'leadEventos',
+    stmt: sql`CREATE TABLE IF NOT EXISTS leadEventos (
+      id INT AUTO_INCREMENT PRIMARY KEY,
+      leadId INT NULL,
+      visitanteId VARCHAR(36) NULL,
+      tipo VARCHAR(40) NOT NULL,
+      propertyId INT NULL,
+      campanhaId INT NULL,
+      dados JSON NULL,
+      createdAt TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
+      INDEX idx_evento_lead (leadId, createdAt),
+      INDEX idx_evento_visitante (visitanteId)
+    )`,
+  },
   // PR (b): score por regras com detalhamento e histórico
   { label: 'lead.scoreDetalhe', stmt: sql`ALTER TABLE leadQualifications ADD COLUMN scoreDetalhe JSON` },
   {
