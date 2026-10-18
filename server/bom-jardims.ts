@@ -7,6 +7,7 @@
 import type { Express } from 'express';
 import { z } from 'zod';
 import { ingestLead, origemFromUtm, origemVisitaSchema } from './lead-intake';
+import { fraseCorretorChama } from './leads/config';
 
 export const BOM_JARDIMS_SLUG = 'bom-jardims';
 
@@ -59,7 +60,7 @@ export function bomJardimsWelcome(nome: string): string {
   return [
     `Olá${fn ? `, ${fn}` : ''}! 👋 Aqui é do *Condomínio de Chácaras Bom Jardims*, em Açailândia/MA. Obrigado pelo interesse!`,
     ``,
-    `Em instantes o corretor *José Romário (CRECI/MA 4.705)* vai falar com você. Enquanto isso, me conta: você procura a chácara para *morar*, para *lazer de fim de semana* ou como *investimento*?`,
+    `${fraseCorretorChama()} Enquanto isso, me conta: você procura a chácara para *morar*, para *lazer de fim de semana* ou como *investimento*?`,
   ].join('\n');
 }
 

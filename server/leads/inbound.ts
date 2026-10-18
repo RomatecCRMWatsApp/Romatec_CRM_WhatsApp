@@ -9,7 +9,7 @@
  */
 import { and, eq, inArray } from 'drizzle-orm';
 import { extrairAtribuicao, type Funil } from './atribuicao';
-import { assistenteNome, appUrl } from './config';
+import { assistenteNome, appUrl, fraseCorretorChama } from './config';
 import { formatarReais, notificarLead } from './notificacao';
 import { normalizePhoneBR } from '../lead-intake';
 import { bomJardimsWelcome } from '../bom-jardims';
@@ -52,13 +52,13 @@ export function montarAbertura(params: { funil: Funil; nome?: string | null; imo
   const emp = params.empreendimento;
   if (emp) {
     if (emp.slug === 'bom-jardims') return [bomJardimsWelcome(fn), '', RODAPE_LGPD].join('\n');
-    return [ola, '', `Recebi seu interesse no *${emp.nome}* 🏡 O corretor José Romário (CRECI/MA 4.705) vai falar com você em instantes.`, '', RODAPE_LGPD].join('\n');
+    return [ola, '', `Recebi seu interesse no *${emp.nome}* 🏡 ${fraseCorretorChama()}`, '', RODAPE_LGPD].join('\n');
   }
   if (params.funil === 'proprietario') {
     return [
       ola,
       '',
-      'Que bom que você quer vender ou avaliar seu imóvel 🏠 O corretor José Romário (CRECI/MA 4.705) vai falar com você em instantes.',
+      `Que bom que você quer vender ou avaliar seu imóvel 🏠 ${fraseCorretorChama()}`,
       '',
       'Para adiantar: que tipo de imóvel é e onde fica?',
       '',

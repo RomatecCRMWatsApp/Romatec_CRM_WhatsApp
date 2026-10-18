@@ -24,6 +24,16 @@ export function numeroWhatsAppLeads(): string {
   return (process.env.ZAPI_NUMERO_E164 || process.env.COMPANY_WHATSAPP || '5599991811246').replace(/\D/g, '');
 }
 
+/** WhatsApp pessoal do corretor, como aparece nas mensagens ("vai te chamar pelo número pessoal dele, …") */
+export function corretorWhatsApp(): string {
+  return (process.env.CORRETOR_WHATSAPP_EXIBICAO || '').trim() || '(99) 9 9181-1246';
+}
+
+/** Frase padrão: o lead fala primeiro com o CRM e o José assume pelo número pessoal */
+export function fraseCorretorChama(): string {
+  return `O corretor *José Romário (CRECI/MA 4.705)* vai te chamar pelo número pessoal dele, *${corretorWhatsApp()}*.`;
+}
+
 export function appUrl(): string {
   return (process.env.APP_URL || process.env.RAILWAY_PRODUCTION_URL || 'https://romateccrm.com').replace(/\/$/, '');
 }

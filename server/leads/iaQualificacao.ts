@@ -8,6 +8,7 @@
  */
 import { z } from 'zod';
 import type { Funil } from './atribuicao';
+import { fraseCorretorChama } from './config';
 import { mesclarSlots, slotsDoFunil, slotsPendentes, valoresSlots, type SlotsLead } from './slots';
 
 export const MAX_PERGUNTAS = 8;
@@ -116,9 +117,10 @@ export function pediuHumano(texto: string): boolean {
   return /\bfalar com (o |a |um |uma )?(corretor|atendente|humano|pessoa|jose|responsavel)\b/.test(sem(texto));
 }
 
-export const MSG_HANDOFF = 'Vou chamar o José Romário, ele já te responde por aqui. 👍';
+// O lead fala primeiro com o CRM; o José assume pelo número pessoal dele
+export const MSG_HANDOFF = `Vou chamar o José Romário 👍 ${fraseCorretorChama()}`;
 export const MSG_OPTOUT = 'Tudo bem! Não vou mais te enviar mensagens. Se mudar de ideia, é só chamar por aqui. 😊';
-export const MSG_COMPLETA = 'Obrigado pelas respostas! O corretor José Romário vai continuar o atendimento por aqui. 🏡';
+export const MSG_COMPLETA = `Obrigado pelas respostas! 🏡 ${fraseCorretorChama()}`;
 
 // ─── Turno ───────────────────────────────────────────────────────────────────
 export interface MensagemHistorico { role: 'user' | 'assistant'; content: string }
