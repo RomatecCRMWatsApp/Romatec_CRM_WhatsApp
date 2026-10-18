@@ -242,6 +242,8 @@ export default function LeadDetalhe() {
             <CardContent className="space-y-1 text-sm">
               <p><span className="text-muted-foreground">1º contato:</span> {lead.origem.canal}{lead.origem.campanha ? ` · #${lead.origem.campanha.codigo}` : ""}</p>
               <p><span className="text-muted-foreground">Último:</span> {lead.ultimo.canal}{lead.ultimo.campanha ? ` · #${lead.ultimo.campanha.codigo}` : ""}</p>
+              {lead.origemWeb && <p><span className="text-muted-foreground">De onde veio:</span> {lead.origemWeb.linha}</p>}
+              {lead.origemWeb?.utm && <p className="text-xs text-muted-foreground">UTM: {lead.origemWeb.utm}</p>}
               {lead.campanhaTexto && <p className="text-xs text-muted-foreground">Campanha: {lead.campanhaTexto}</p>}
               {lead.consentimento && <p className="text-xs text-muted-foreground">Consentimento LGPD: {new Date((lead.consentimento as any).at).toLocaleString("pt-BR")}</p>}
             </CardContent>

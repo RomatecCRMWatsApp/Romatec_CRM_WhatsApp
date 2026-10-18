@@ -1,18 +1,12 @@
 import { useState } from "react";
 import { MessageCircle } from "lucide-react";
+import { origemDaVisita, utmDaVisita } from "@/lib/origemVisita";
 
 export type Utm = { source?: string; medium?: string; campaign?: string; content?: string };
 
-/** UTMs da URL atual (links da bio e anúncios levam utm_source=instagram etc.) */
+/** UTMs da URL atual ou da entrada no site (links da bio e anúncios levam utm_source=instagram etc.) */
 export function readUtm(): Utm | undefined {
-  const q = new URLSearchParams(window.location.search);
-  const utm = {
-    source: q.get("utm_source") || undefined,
-    medium: q.get("utm_medium") || undefined,
-    campaign: q.get("utm_campaign") || undefined,
-    content: q.get("utm_content") || undefined,
-  };
-  return Object.values(utm).some(Boolean) ? utm : undefined;
+  return utmDaVisita() ?? undefined;
 }
 
 /**
@@ -45,7 +39,7 @@ export default function LeadForm({ propertyId, denomination, utm, title }: {
       const res = await fetch("/api/public/lead", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ nome, phone, propertyId, consent, utm: utm ?? readUtm(), website }),
+        body: JSON.stringify({ nome, phone, propertyId, consent, utm: utm ?? readUtm(), origemVisita: origemDaVisita(), website }),
       });
       const data = await res.json().catch(() => ({}));
       if (!res.ok || !data.ok) throw new Error(data.error || "Não foi possível enviar.");

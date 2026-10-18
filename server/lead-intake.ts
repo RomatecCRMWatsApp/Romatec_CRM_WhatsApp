@@ -15,6 +15,7 @@ import { contacts, leadQualifications, properties, leadCampanhas, leadInteresses
 import { mesclarSlots, slotsDeRespostas } from './leads/slots';
 import { isLeadBlocked } from './lead-persistence';
 import { normalizarCodigoCampanha } from './leads/atribuicao';
+import { classificarOrigem, linhaOrigem, type OrigemVisita } from '../shared/origemTrafego';
 
 export const LEAD_ORIGENS = ['instagram_ads', 'instagram_dm', 'instagram_bio', 'google_ads', 'site', 'indicacao', 'whatsapp', 'whatsapp_empreendimento'] as const;
 export type LeadOrigem = typeof LEAD_ORIGENS[number];
@@ -28,6 +29,8 @@ export interface LeadIntakeInput {
   metaLeadId?: string;
   instagramUserId?: string;
   utm?: { source?: string; medium?: string; campaign?: string; content?: string };
+  /** Referrer e página de entrada da visita (formulários do site) — classifica Google orgânico, Instagram, direto… */
+  origemVisita?: OrigemVisita;
   /** Lead de empreendimento (ex.: bom-jardims): roteiro próprio, atendimento humano, sem bot genérico */
   empreendimentoSlug?: string;
   loteCodigo?: string;
@@ -96,6 +99,11 @@ export function buildWelcomeMessage(nome: string, imovel?: string): string {
 
 // ─── Formulário público (landing do lote / link da bio) ──────────────────────
 const utmField = z.string().trim().max(100).optional();
+/** Referrer (sem query) e página de entrada que o navegador captura ao abrir o site */
+export const origemVisitaSchema = z.object({
+  referrer: z.string().trim().max(300).nullable().optional(),
+  paginaEntrada: z.string().trim().max(300).nullable().optional(),
+}).optional();
 
 export const publicLeadSchema = z.object({
   nome: z.string().trim().min(2, 'Informe seu nome').max(120),
@@ -103,6 +111,7 @@ export const publicLeadSchema = z.object({
   propertyId: z.coerce.number().int().positive().optional(),
   consent: z.literal(true, { message: 'É preciso aceitar o contato' }),
   utm: z.object({ source: utmField, medium: utmField, campaign: utmField, content: utmField }).optional(),
+  origemVisita: origemVisitaSchema,
   // Cookie rmt_vid (só existe se o visitante aceitou cookies na landing)
   vid: z.string().uuid().optional(),
   // Honeypot: campo invisível no formulário. Robô preenche, humano não.
@@ -122,6 +131,11 @@ export function origemFromUtm(utm?: PublicLeadInput['utm']): LeadOrigem {
   if (src.includes('instagram') || src === 'ig' || src === 'meta' || src === 'organico') return 'instagram_bio';
   if (src.includes('facebook') || src === 'fb') return 'instagram_bio';
   return 'site';
+}
+
+/** "Link marcado: instagram · bio" (quando a UTM decide a origem) */
+export function rotuloUtm(utm?: { source?: string; medium?: string } | null): string {
+  return utm?.source ? `Link marcado: ${[utm.source, utm.medium].filter(Boolean).join(' · ')}` : 'Direto';
 }
 
 /** utm_campaign do link → código da campanha (BJ-IG-BIO, #bj-ig-bio, "bj ig bio" → BJ-IG-BIO) */
@@ -170,7 +184,12 @@ export async function ingestLead(input: LeadIntakeInput): Promise<LeadIntakeResu
         .limit(1)
     : [];
   const campanhaCad = porForm ?? porUtm;
-  const canal = campanhaCad?.canal || canalDaOrigem(input.origem);
+  // Sem campanha cadastrada nem UTM, o referrer decide (Google orgânico, Instagram, direto…)
+  const origemWeb = input.origemVisita ? classificarOrigem(input.utm, input.origemVisita) : null;
+  const canal = campanhaCad?.canal || origemWeb?.canal || canalDaOrigem(input.origem);
+  const utmGravar = input.utm || input.origemVisita
+    ? { ...(input.utm ?? {}), ...(input.origemVisita?.referrer ? { referrer: input.origemVisita.referrer } : {}), ...(input.origemVisita?.paginaEntrada ? { paginaEntrada: input.origemVisita.paginaEntrada } : {}) }
+    : null;
   const funil = input.funil || (campanhaCad?.funil as 'comprador' | 'proprietario') || 'comprador';
 
   // Contato (tabela usada por campanhas e pelo webhook pra achar o nome)
@@ -212,7 +231,7 @@ export async function ingestLead(input: LeadIntakeInput): Promise<LeadIntakeResu
       ...(input.propertyId ? { propertyId: input.propertyId } : {}),
       ...(input.metaLeadId ? { metaLeadId: input.metaLeadId } : {}),
       ...(input.instagramUserId ? { instagramUserId: input.instagramUserId } : {}),
-      ...(input.utm ? { utm: input.utm } : {}),
+      ...(utmGravar ? { utm: utmGravar } : {}),
       ...(input.empreendimentoSlug ? { empreendimentoSlug: input.empreendimentoSlug } : {}),
       ...(input.loteCodigo ? { loteCodigo: input.loteCodigo } : {}),
       ...(input.leadScore !== undefined ? { leadScore: input.leadScore } : {}),
@@ -242,7 +261,7 @@ export async function ingestLead(input: LeadIntakeInput): Promise<LeadIntakeResu
       propertyId: input.propertyId ?? null,
       metaLeadId: input.metaLeadId ?? null,
       instagramUserId: input.instagramUserId ?? null,
-      utm: input.utm ?? null,
+      utm: utmGravar,
       empreendimentoSlug: input.empreendimentoSlug ?? null,
       loteCodigo: input.loteCodigo ?? null,
       leadScore: input.leadScore ?? null,
@@ -318,6 +337,7 @@ export async function ingestLead(input: LeadIntakeInput): Promise<LeadIntakeResu
       campanhaCodigo: campanhaCad?.codigo ?? null,
       detalhes: [
         ...(campanha && !campanhaCad ? [`📢 Campanha: ${campanha}`] : []),
+        ...(input.origemVisita ? [`🌐 De: ${linhaOrigem(origemWeb?.rotulo || rotuloUtm(input.utm), input.origemVisita)}`] : []),
         ...Object.entries(input.answers || {}).filter(([k, v]) => v && k !== 'nome').map(([k, v]) => `📝 ${k}: ${v}`),
         messageSent || !shouldMessage ? '🤖 1ª mensagem enviada no WhatsApp' : '⚠️ 1ª mensagem NÃO saiu no WhatsApp — contate manualmente',
       ],

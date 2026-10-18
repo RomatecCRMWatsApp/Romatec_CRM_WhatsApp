@@ -7,6 +7,10 @@ import superjson from "superjson";
 import App from "./App";
 import { getLoginUrl } from "./const";
 import "./index.css";
+import { capturarOrigem } from "./lib/origemVisita";
+
+// De onde veio o visitante (UTM, referrer, página de entrada) — vai junto nos formulários
+capturarOrigem();
 
 const queryClient = new QueryClient();
 

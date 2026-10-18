@@ -235,6 +235,7 @@ async function startServer() {
         origem: origemFromUtm(data.utm),
         propertyId: data.propertyId,
         utm: data.utm,
+        origemVisita: data.origemVisita,
         visitanteId: data.vid,
       });
 

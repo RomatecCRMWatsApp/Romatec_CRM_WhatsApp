@@ -15,7 +15,7 @@ export const DATA_ISO = /^\d{4}-\d{2}-\d{2}$/;
 export type TipoCanal = 'pago' | 'organico' | 'outro';
 
 const PAGOS = ['meta_ctwa', 'meta_leadads', 'google_ads'];
-const ORGANICOS = ['instagram_organico', 'placa_qr', 'site', 'indicacao', 'whatsapp_direto'];
+const ORGANICOS = ['instagram_organico', 'placa_qr', 'site', 'indicacao', 'whatsapp_direto', 'busca_organica', 'facebook_organico', 'outras_redes'];
 
 export function tipoDoCanal(canal: string): TipoCanal {
   if (PAGOS.includes(canal)) return 'pago';

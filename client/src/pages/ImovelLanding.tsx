@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { BedDouble, Bath, Car, ChevronLeft, ChevronRight, ImageIcon, MapPin, MessageCircle, Ruler, FileImage, CheckCircle2 } from "lucide-react";
 import { campanhaDaVisita, enviarEvento, gravarConsentimento, lerConsentimento, utmsDaVisita, visitanteId, type Consentimento } from "@/lib/rastreio";
+import { origemDaVisita } from "@/lib/origemVisita";
 
 const TEMPO_PASSO_S = 15;
 const TEMPO_MAX_S = 300;
@@ -96,6 +97,7 @@ export default function ImovelLanding() {
           nome: form.nome, phone: form.phone, propertyId: imovel?.id, consent: true, website: form.website,
           vid: visitanteId() ?? undefined,
           utm: { source: utm.utm_source, medium: utm.utm_medium, campaign: utm.utm_campaign, content: utm.utm_content },
+          origemVisita: origemDaVisita(),
         }),
       });
       const j = await r.json().catch(() => ({}));

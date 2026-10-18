@@ -6,7 +6,7 @@
 
 import type { Express } from 'express';
 import { z } from 'zod';
-import { ingestLead, origemFromUtm } from './lead-intake';
+import { ingestLead, origemFromUtm, origemVisitaSchema } from './lead-intake';
 
 export const BOM_JARDIMS_SLUG = 'bom-jardims';
 
@@ -166,6 +166,7 @@ export const bomJardimsLeadSchema = z.object({
   loteCodigo: z.string().trim().regex(/^[A-D]\d{2}$/, 'Chácara inválida').optional(),
   consent: z.literal(true, { message: 'É preciso aceitar o contato' }),
   utm: z.object({ source: utmField, medium: utmField, campaign: utmField, content: utmField }).optional(),
+  origemVisita: origemVisitaSchema,
   website: z.string().max(500).optional(), // honeypot
 });
 
@@ -193,7 +194,7 @@ export function registerBomJardimsRoutes(app: Express, allow: (key: string) => b
         if (!(await loteComercializavel(BOM_JARDIMS_SLUG, loteCodigo))) loteCodigo = undefined;
       }
 
-      const utm = d.utm ?? { source: 'organico', medium: 'landing', campaign: 'bomjardims' };
+      const utm: { source?: string; medium?: string; campaign?: string; content?: string } = d.utm ?? {};
       const answers: Record<string, string> = {};
       if (d.email) answers.email = d.email;
       if (d.cidade) answers.cidade = d.cidade;
@@ -209,7 +210,8 @@ export function registerBomJardimsRoutes(app: Express, allow: (key: string) => b
         phone: d.phone,
         origem: origemFromUtm(utm),
         campanha: utm.campaign || 'bomjardims',
-        utm,
+        utm: d.utm,
+        origemVisita: d.origemVisita,
         empreendimentoSlug: BOM_JARDIMS_SLUG,
         loteCodigo,
         leadScore,

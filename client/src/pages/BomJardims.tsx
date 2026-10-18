@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import { MessageCircle, MapPin, Droplets, Trees, ShieldCheck, Route, FileCheck2, Handshake, Navigation, Play } from "lucide-react";
 import { trpc } from "@/lib/trpc";
 import { readUtm } from "@/components/LeadForm";
+import { origemDaVisita } from "@/lib/origemVisita";
 import LoteMap, { formatArea, STATUS_LABEL, type LoteInfo } from "@/components/bom-jardims/LoteMap";
 
 /**
@@ -132,7 +133,7 @@ function Formulario({ loteCodigo, onClearLote, lotes }: { loteCodigo?: string; o
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           ...f, finalidade, prazo, pagamento, loteCodigo: lote?.status === "disponivel" ? loteCodigo : undefined,
-          consent, utm: readUtm(), website,
+          consent, utm: readUtm(), origemVisita: origemDaVisita(), website,
         }),
       });
       const data = await res.json().catch(() => ({}));

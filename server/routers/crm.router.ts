@@ -9,6 +9,7 @@ import { leadQualifications, leadInteresses, leadEventos, leadCampanhas, leadMen
 import { ETAPAS, ROTULO_ETAPA, MOTIVOS_PERDA, ROTULO_MOTIVO, etapaDoLead, validarMovimento, escolherSimilar, imovelDoProprietario, resumoProprietario } from "../leads/kanban";
 import { mesclarSlots, slotsDoFunil, slotsPendentes, tagsDoLead, tipoImovelDe, type SlotsLead } from "../leads/slots";
 import { rotuloCanal } from "../leads/inbound";
+import { classificarOrigem, linhaOrigem } from "../../shared/origemTrafego";
 import { appUrl } from "../leads/config";
 import type { Funil } from "../leads/atribuicao";
 import { montarRelatorio, relatorioCsv, DATA_ISO } from "../leads/relatorio";
@@ -137,6 +138,17 @@ export const crmRouter = router({
       origem: { canal: rotuloCanal(l.origemCanal || l.origem || "whatsapp"), campanha: camp(l.origemCampanhaId) },
       ultimo: { canal: rotuloCanal(l.ultimoCanal || l.origemCanal || l.origem || "whatsapp"), campanha: camp(l.ultimaCampanhaId) },
       campanhaTexto: l.campanhaOrigem,
+      // De onde veio no site (referrer / página de entrada / UTMs), quando entrou por formulário
+      origemWeb: (() => {
+        const u = (l.utm || {}) as Record<string, string | undefined>;
+        if (!u.referrer && !u.paginaEntrada && !u.source) return null;
+        const c = classificarOrigem(u.source ? { source: u.source } : null, { referrer: u.referrer, paginaEntrada: u.paginaEntrada });
+        return {
+          linha: linhaOrigem(c.rotulo || `Link marcado: ${[u.source, u.medium].filter(Boolean).join(" · ")}`, { paginaEntrada: u.paginaEntrada }),
+          referrer: u.referrer ?? null,
+          utm: u.source ? [u.source, u.medium, u.campaign].filter(Boolean).join(" / ") : null,
+        };
+      })(),
       consentimento: l.consentimento,
       criadoEm: l.createdAt,
       ultimaAtividade: l.lastActivityAt,

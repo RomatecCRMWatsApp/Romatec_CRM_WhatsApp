@@ -302,7 +302,7 @@ export const leadQualifications = mysqlTable("leadQualifications", {
   instagramUserId: varchar("instagramUserId", { length: 64 }),       // IGSID do Direct
   metaLeadId: varchar("metaLeadId", { length: 64 }).unique(),        // id do leadgen (dedupe de webhook)
   propertyId: int("propertyId"),                                      // lote/loteamento de interesse
-  utm: json("utm").$type<{ source?: string; medium?: string; campaign?: string; content?: string }>(),
+  utm: json("utm").$type<{ source?: string; medium?: string; campaign?: string; content?: string; referrer?: string; paginaEntrada?: string }>(),
   empreendimentoSlug: varchar("empreendimentoSlug", { length: 80 }),  // ex.: bom-jardims (atendimento humano, sem bot genérico)
   loteCodigo: varchar("loteCodigo", { length: 10 }),                  // chácara clicada no mapa (ex.: B07)
   leadScore: int("leadScore"),                                        // 0–100 (≥ 60 = quente)
