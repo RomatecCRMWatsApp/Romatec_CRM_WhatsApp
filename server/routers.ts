@@ -8,11 +8,21 @@ import { eq, and, desc, gte, or, like, isNotNull } from "drizzle-orm";
 import { campaignScheduler } from "./scheduler/campaignScheduler";
 import { zairaRouter } from "./routers/zaira.router";
 import { z } from "zod";
+import { createRateLimiter } from "./lead-intake";
+import { publicCompanyConfig, stripMaskedFields } from "./auth-security";
+
+const allowLoginAttempt = createRateLimiter(10, 15 * 60 * 1000);
+
 export const appRouter = router({
   zaira: zairaRouter,
   system: systemRouter,
   auth: router({
-    me: publicProcedure.query(opts => opts.ctx.user),
+    // Sem os hashes de senha (a linha do usuário inteira ia para o navegador)
+    me: publicProcedure.query(opts => {
+      if (!opts.ctx.user) return opts.ctx.user;
+      const { passwordScrypt: _s, passwordHash: _h, ...safe } = opts.ctx.user as any;
+      return safe as Omit<typeof opts.ctx.user, 'passwordScrypt' | 'passwordHash'>;
+    }),
     logout: publicProcedure.mutation(({ ctx }) => {
       const cookieOptions = getSessionCookieOptions(ctx.req);
       ctx.res.clearCookie(COOKIE_NAME, { ...cookieOptions, maxAge: -1 });
@@ -22,14 +32,34 @@ export const appRouter = router({
       .input(z.object({ username: z.string(), password: z.string() }))
       .mutation(async ({ input, ctx }) => {
         try {
+          // 10 tentativas a cada 15 min por IP (atrás do proxy do Railway: último IP do x-forwarded-for)
+          const fwd = String(ctx.req.headers['x-forwarded-for'] ?? '').split(',').map(s => s.trim()).filter(Boolean);
+          const ip = fwd[fwd.length - 1] || ctx.req.socket?.remoteAddress || 'unknown';
+          if (!allowLoginAttempt(ip)) throw new Error("Muitas tentativas. Aguarde 15 minutos e tente de novo.");
+
           const db = await getDb();
           if (!db) throw new Error("Database not available");
-          let userList = await db.select().from(users).where(eq(users.email, input.username)).limit(1);
+          const username = input.username.trim();
+          let userList = await db.select().from(users).where(eq(users.email, username)).limit(1);
           if (!userList[0]) {
-            userList = await db.select().from(users).where(eq(users.openId, input.username)).limit(1);
+            userList = await db.select().from(users).where(eq(users.openId, username)).limit(1);
           }
           const user = userList[0];
-          if (!user) throw new Error("Usuario nao encontrado");
+          // Mesma mensagem para usuário inexistente e senha errada (não revela quem existe)
+          if (!user) throw new Error("Usuário ou senha incorretos.");
+
+          const { checkLogin } = await import("./auth-security");
+          const check = await checkLogin(input.password, { scryptHash: user.passwordScrypt, legacySha256: user.passwordHash });
+          if (!check.ok) {
+            if (check.reason === 'no_password_set') {
+              console.warn(`[Login] Usuário ${user.id} sem senha cadastrada e CRM_INITIAL_PASSWORD ausente`);
+              throw new Error("Senha ainda não cadastrada. Defina CRM_INITIAL_PASSWORD no Railway para o primeiro acesso.");
+            }
+            throw new Error("Usuário ou senha incorretos.");
+          }
+          if (check.setPasswordHash) {
+            await db.update(users).set({ passwordScrypt: check.setPasswordHash, passwordHash: null }).where(eq(users.id, user.id));
+          }
           const { sdk } = await import("./_core/sdk");
           const { ONE_YEAR_MS } = await import("@shared/const");
           const cookieOptions = getSessionCookieOptions(ctx.req);
@@ -37,9 +67,24 @@ export const appRouter = router({
           ctx.res.cookie(COOKIE_NAME, token, { ...cookieOptions, maxAge: ONE_YEAR_MS });
           return { success: true };
         } catch (error) {
-          console.error("[Login] Erro:", error);
+          console.error("[Login] Erro:", (error as any)?.message || error);
           throw error;
         }
+      }),
+    changePassword: protectedProcedure
+      .input(z.object({ currentPassword: z.string(), newPassword: z.string().max(200) }))
+      .mutation(async ({ input, ctx }) => {
+        const { checkLogin, hashPassword, passwordProblem } = await import("./auth-security");
+        const problem = passwordProblem(input.newPassword);
+        if (problem) throw new Error(problem);
+        const db = await getDb();
+        if (!db) throw new Error("Database not available");
+        const [user] = await db.select().from(users).where(eq(users.openId, ctx.user.openId)).limit(1);
+        if (!user) throw new Error("Usuário não encontrado");
+        const check = await checkLogin(input.currentPassword, { scryptHash: user.passwordScrypt, legacySha256: user.passwordHash });
+        if (!check.ok) throw new Error("Senha atual incorreta.");
+        await db.update(users).set({ passwordScrypt: await hashPassword(input.newPassword), passwordHash: null }).where(eq(users.id, user.id));
+        return { success: true };
       }),
   }),
   contacts: router({
@@ -420,7 +465,7 @@ export const appRouter = router({
       campaignScheduler.stop();
       return { success: true, message: "Scheduler parado" };
     }),
-    getState: publicProcedure.query(async () => {
+    getState: protectedProcedure.query(async () => {
       const state = campaignScheduler.getState();
       const stats = campaignScheduler.getStats();
       const db = await getDb();
@@ -431,7 +476,7 @@ export const appRouter = router({
       today.setHours(0, 0, 0, 0);
       return { state, stats, activeCampaigns, todayMessages: todayMessages.filter(m => m.sentAt && m.sentAt >= today) };
     }),
-    getStats: publicProcedure.query(async () => campaignScheduler.getStats()),
+    getStats: protectedProcedure.query(async () => campaignScheduler.getStats()),
     reset: protectedProcedure.mutation(async () => {
       campaignScheduler.stop();
       await new Promise(resolve => setTimeout(resolve, 2000));
@@ -504,7 +549,8 @@ export const appRouter = router({
     }),
   }),
   companyConfig: router({
-    get: publicProcedure.query(async () => getCompanyConfig()),
+    // Só para usuário logado, e com tokens mascarados (antes era pública e devolvia tudo em texto)
+    get: protectedProcedure.query(async () => publicCompanyConfig(await getCompanyConfig())),
     // Status real do WhatsApp (consulta o Z-API na hora, com motivo e passos) — painel inicial
     whatsappStatus: protectedProcedure
       .input(z.object({ force: z.boolean().optional() }).optional())
@@ -533,7 +579,9 @@ export const appRouter = router({
       telegramBotToken: z.string().optional(),
       telegramChatId: z.string().optional(),
       openAiApiKey: z.string().optional(),
-    })).mutation(async ({ input }) => {
+    })).mutation(async ({ input: raw }) => {
+      // Campo que voltou mascarado (••••••abcd) = usuário não mexeu: mantém o valor salvo
+      const input = stripMaskedFields(raw);
       await updateCompanyConfig(input);
       // Sincronizar process.env imediatamente para uso em runtime sem reiniciar.
       // Limitada a admin via adminProcedure pra evitar que usuário comum
@@ -627,7 +675,7 @@ export const appRouter = router({
     }),
   }),
   bot: router({
-    processMessage: publicProcedure.input(z.object({ phone: z.string(), message: z.string().optional(), audioUrl: z.string().optional(), senderName: z.string().optional() })).mutation(async ({ input }) => {
+    processMessage: protectedProcedure.input(z.object({ phone: z.string(), message: z.string().optional(), audioUrl: z.string().optional(), senderName: z.string().optional() })).mutation(async ({ input }) => {
       const { processBotMessage } = await import('./bot-ai');
       try {
         const response = await processBotMessage({ phone: input.phone, message: input.message, audioUrl: input.audioUrl, senderName: input.senderName });
