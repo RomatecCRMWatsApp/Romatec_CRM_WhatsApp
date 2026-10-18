@@ -63,6 +63,12 @@ export default function LinkPortal() {
             className="btn-premium py-4 rounded-2xl flex items-center justify-center gap-2 text-base font-semibold no-underline">
             <MessageCircle className="h-5 w-5" /> Falar agora no WhatsApp
           </a>
+          <a href={withUtm("/bom-jardims", utm)}
+            className="py-4 rounded-2xl flex flex-col items-center justify-center text-base font-semibold no-underline border-2 transition-colors"
+            style={{ background: "#0C3320", borderColor: "#C9A84C", color: "#F3EEDF" }}>
+            <span>🌳 Condomínio de Chácaras Bom Jardims</span>
+            <span className="text-xs font-normal" style={{ color: "#F2C04B" }}>Pré-lançamento · escolha a sua chácara</span>
+          </a>
           <a href={withUtm("/imoveis", utm)}
             className="py-4 rounded-2xl flex items-center justify-center gap-2 text-base font-semibold no-underline border border-border/50 bg-secondary/30 text-foreground hover:border-emerald/50 transition-colors">
             <Building2 className="h-5 w-5 text-emerald" /> Ver todos os imóveis

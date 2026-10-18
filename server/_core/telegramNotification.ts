@@ -268,6 +268,8 @@ const ORIGEM_LABEL: Record<string, string> = {
   instagram_ads: '📸 Anúncio Instagram/Facebook',
   instagram_dm: '💬 Direct do Instagram',
   instagram_bio: '🔗 Link da bio / página do lote',
+  google_ads: '🔎 Google',
+  whatsapp_empreendimento: '📱 WhatsApp do empreendimento',
   site: '🌐 Site',
   indicacao: '🤝 Indicação',
   whatsapp: '📱 WhatsApp',
@@ -285,6 +287,10 @@ export async function notifyNewLead(params: {
   imovel?: string;
   campanha?: string;
   messageSent: boolean;
+  /** Pontuação 0–100 (≥ 60 = quente, alerta imediato) */
+  score?: number;
+  /** Respostas do formulário (finalidade, prazo, pagamento, cidade...) */
+  answers?: Record<string, string>;
 }): Promise<boolean> {
   const token = process.env.TELEGRAM_BOT_TOKEN;
   const chatId = process.env.TELEGRAM_CHAT_ID;
@@ -295,13 +301,20 @@ export async function notifyNewLead(params: {
     const bot = new TelegramBot(token, { polling: false });
 
     const waLink = `https://wa.me/${params.phone.replace(/\D/g, '')}`;
+    const quente = params.score !== undefined && params.score >= 60;
+    const answers = Object.entries(params.answers || {})
+      .filter(([k, v]) => v && k !== 'nome')
+      .map(([k, v]) => `   • ${escapeHtml(k)}: ${escapeHtml(String(v))}`);
     const lines = [
-      `🆕 <b>NOVO LEAD</b> — ${ORIGEM_LABEL[params.origem] || escapeHtml(params.origem)}`,
+      `${quente ? '🔥 <b>LEAD QUENTE</b>' : '🆕 <b>NOVO LEAD</b>'} — ${ORIGEM_LABEL[params.origem] || escapeHtml(params.origem)}`,
       `━━━━━━━━━━━━━━━━━━━━━━━━━━━━`,
       `👤 <b>Nome:</b> ${escapeHtml(params.name)}`,
       `📱 <b>Telefone:</b> +${params.phone.replace(/\D/g, '')}`,
       params.imovel   ? `🏡 <b>Interesse:</b> ${escapeHtml(params.imovel)}`     : '',
       params.campanha ? `📢 <b>Campanha:</b> ${escapeHtml(params.campanha)}`    : '',
+      params.score !== undefined ? `📊 <b>Pontuação:</b> ${params.score}/100` : '',
+      answers.length ? `📝 <b>Respostas:</b>\n${answers.join('\n')}` : '',
+      quente ? `⏱️ Contate em até 5 minutos!` : '',
       params.messageSent ? `🤖 Bot já mandou a 1ª mensagem no WhatsApp` : `⚠️ Bot NÃO conseguiu mandar mensagem — contate manualmente`,
       `━━━━━━━━━━━━━━━━━━━━━━━━━━━━`,
       `👆 <a href="${waLink}">Abrir conversa no WhatsApp</a>`,

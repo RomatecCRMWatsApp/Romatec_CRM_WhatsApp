@@ -299,6 +299,10 @@ export const leadQualifications = mysqlTable("leadQualifications", {
   metaLeadId: varchar("metaLeadId", { length: 64 }).unique(),        // id do leadgen (dedupe de webhook)
   propertyId: int("propertyId"),                                      // lote/loteamento de interesse
   utm: json("utm").$type<{ source?: string; medium?: string; campaign?: string; content?: string }>(),
+  empreendimentoSlug: varchar("empreendimentoSlug", { length: 80 }),  // ex.: bom-jardims (atendimento humano, sem bot genérico)
+  loteCodigo: varchar("loteCodigo", { length: 10 }),                  // chácara clicada no mapa (ex.: B07)
+  leadScore: int("leadScore"),                                        // 0–100 (≥ 60 = quente)
+  consentimento: json("consentimento").$type<{ at: string; texto: string; origem: string; ip?: string }>(), // LGPD
 
   lastActivityAt: timestamp("lastActivityAt").defaultNow(),          // Último evento (para timeout)
   blockedUntil: timestamp("blockedUntil"),                           // Bloqueado até (para leads que pediram para parar)
@@ -356,3 +360,54 @@ export const messageSendLog = mysqlTable(
 
 export type MessageSendLog = typeof messageSendLog.$inferSelect;
 export type InsertMessageSendLog = typeof messageSendLog.$inferInsert;
+
+// ═══════════════════════════════════════════════════════════════════════
+// EMPREENDIMENTOS (loteamentos / condomínios de chácaras) e seus LOTES
+// ═══════════════════════════════════════════════════════════════════════
+export const empreendimentos = mysqlTable("empreendimentos", {
+  id: int("id").autoincrement().primaryKey(),
+  slug: varchar("slug", { length: 80 }).notNull().unique(),
+  nome: varchar("nome", { length: 160 }).notNull(),
+  fase: varchar("fase", { length: 30 }).default("pre_lancamento").notNull(),
+  municipio: varchar("municipio", { length: 80 }),
+  uf: varchar("uf", { length: 2 }),
+  endereco: text("endereco"),
+  lat: decimal("lat", { precision: 10, scale: 7 }),
+  lon: decimal("lon", { precision: 10, scale: 7 }),
+  areaHa: decimal("areaHa", { precision: 10, scale: 4 }),
+  totalLotes: int("totalLotes"),
+  lotesComercializaveis: int("lotesComercializaveis"),
+  // Trava de preço: enquanto false, nenhuma rota/página/mensagem pública mostra valores
+  precosPublicos: boolean("precosPublicos").default(false).notNull(),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+});
+
+export type Empreendimento = typeof empreendimentos.$inferSelect;
+
+export const LOTE_STATUS = ["disponivel", "reservado", "em_negociacao", "vendido", "nao_comercializavel"] as const;
+
+export const lotes = mysqlTable("lotes", {
+  id: int("id").autoincrement().primaryKey(),
+  empreendimentoId: int("empreendimentoId").notNull(),
+  codigo: varchar("codigo", { length: 10 }).notNull(),
+  quadra: varchar("quadra", { length: 2 }),
+  numero: int("numero"),
+  areaM2: decimal("areaM2", { precision: 10, scale: 2 }),
+  perimetroM: decimal("perimetroM", { precision: 10, scale: 2 }),
+  destinacao: varchar("destinacao", { length: 30 }),
+  comercializavel: boolean("comercializavel").default(true).notNull(),
+  status: mysqlEnum("status", LOTE_STATUS).default("disponivel").notNull(),
+  reservadoAte: timestamp("reservadoAte"),
+  // Uso interno — só sai na API pública se empreendimentos.precosPublicos = true
+  precoAvistaRef: decimal("precoAvistaRef", { precision: 12, scale: 2 }),
+  precoFinanciadoRef: decimal("precoFinanciadoRef", { precision: 12, scale: 2 }),
+  latCentro: decimal("latCentro", { precision: 10, scale: 7 }),
+  lonCentro: decimal("lonCentro", { precision: 10, scale: 7 }),
+  dossiePdf: varchar("dossiePdf", { length: 120 }),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+}, (t) => ({
+  uqLote: uniqueIndex("uq_lote").on(t.empreendimentoId, t.codigo),
+}));
+
+export type Lote = typeof lotes.$inferSelect;

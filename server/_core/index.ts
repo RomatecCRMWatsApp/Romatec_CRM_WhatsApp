@@ -229,6 +229,9 @@ async function startServer() {
     }
   });
 
+  const { registerBomJardimsRoutes } = await import('../bom-jardims');
+  registerBomJardimsRoutes(app, allowPublicLead);
+
   // ─── Webhook Meta (Instagram / Facebook Lead Ads) ───
   app.get('/api/webhook/meta', async (req, res) => {
     const { verifyMetaWebhook } = await import('../meta-integration');
@@ -494,6 +497,13 @@ async function startServer() {
     await addLeadOriginColumns();
   } catch (e) {
     console.error('❌ Erro na migration addLeadOriginColumns:', e);
+  }
+
+  try {
+    const { addEmpreendimentos } = await import('./migrations/addEmpreendimentos');
+    await addEmpreendimentos();
+  } catch (e) {
+    console.error('❌ Erro na migration addEmpreendimentos:', e);
   }
 
   try {

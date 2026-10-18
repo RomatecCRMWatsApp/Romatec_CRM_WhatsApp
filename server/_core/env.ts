@@ -24,5 +24,5 @@ export const ENV = {
   metaVerifyToken: process.env.META_VERIFY_TOKEN ?? "",
   metaPageAccessToken: process.env.META_PAGE_ACCESS_TOKEN ?? "",
   metaIgAccountId: process.env.META_IG_ACCOUNT_ID ?? "",
-  metaGraphVersion: process.env.META_GRAPH_VERSION ?? "v21.0",
+  metaGraphVersion: process.env.META_GRAPH_VERSION ?? "v26.0",
 };

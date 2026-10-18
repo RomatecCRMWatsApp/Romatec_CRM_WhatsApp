@@ -22,6 +22,7 @@ import {
   loadLeadState,
   discardLead,
   isLeadBlocked,
+  getLeadEmpreendimento,
 } from './lead-persistence';
 import {
   generateMultiBankProposal,
@@ -950,6 +951,21 @@ export async function processBotMessage(context: BotContext): Promise<BotRespons
   if (blocked) {
     console.log(`[Bot] 🚫 Lead ${clean} está bloqueado. Ignorando mensagem.`);
     return { text: 'Entendido! Respeitamos sua decisão. Tenha um ótimo dia! 😊', qualified: false };
+  }
+
+  // ═══════════════════════════════════════════════════════════════════════
+  // GATE 0.5: LEAD DE EMPREENDIMENTO (ex.: Bom Jardims) — atendimento humano
+  // O roteiro genérico (renda/FGTS/simulação bancária) não serve e pode citar
+  // valores; o corretor responde. Só o opt-out é tratado automaticamente.
+  // ═══════════════════════════════════════════════════════════════════════
+  const empreendimento = await getLeadEmpreendimento(clean);
+  if (empreendimento) {
+    if (detectQualificationIntent(messageText) === 'NAO') {
+      await discardLead(clean, `opt-out (${empreendimento})`, 24 * 365 * 5);
+      return { text: 'Tudo bem! Seu cadastro foi cancelado e não enviaremos mais mensagens. Obrigado! 😊', qualified: false };
+    }
+    console.log(`[Bot] 👤 Lead ${clean} do empreendimento ${empreendimento} — atendimento humano, bot não responde`);
+    return { text: '', qualified: true };
   }
 
   registerUserReply(context.phone);
