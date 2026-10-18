@@ -9,6 +9,7 @@ import { Home, Search, Edit, MapPin, DollarSign, Plus, ArrowLeft, Image, Video, 
 import { useLocation } from "wouter";
 import { trpc } from "@/lib/trpc";
 import { toast } from "sonner";
+import MateriaisPainel from "@/components/MateriaisPainel";
 
 interface PropertyForm {
   denomination: string;
@@ -304,11 +305,12 @@ export default function Properties() {
               </button>
             </div>
             <Tabs defaultValue="info" className="w-full">
-              <TabsList className="grid w-full grid-cols-4 mb-6 bg-secondary/50">
+              <TabsList className="grid w-full grid-cols-5 mb-6 bg-secondary/50">
                 <TabsTrigger value="info">Informações</TabsTrigger>
                 <TabsTrigger value="media">Fotos</TabsTrigger>
                 <TabsTrigger value="video">Vídeo</TabsTrigger>
                 <TabsTrigger value="planta">Planta Baixa</TabsTrigger>
+                <TabsTrigger value="materiais">Materiais</TabsTrigger>
               </TabsList>
 
               <TabsContent value="info" className="space-y-4">
@@ -572,6 +574,14 @@ export default function Properties() {
                     )}
                   </div>
                 ) : null}
+              </TabsContent>
+
+              <TabsContent value="materiais">
+                {editingId ? (
+                  <MateriaisPainel propertyId={editingId} />
+                ) : (
+                  <p className="text-sm text-muted-foreground">Cadastre o imóvel primeiro; depois, em Editar, envie as artes, vídeos e folders dele aqui.</p>
+                )}
               </TabsContent>
             </Tabs>
 

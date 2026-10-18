@@ -9,6 +9,7 @@ import { campaignScheduler } from "./scheduler/campaignScheduler";
 import { zairaRouter } from "./routers/zaira.router";
 import { leadCampanhasRouter } from "./routers/leadCampanhas.router";
 import { crmRouter } from "./routers/crm.router";
+import { materiaisRouter } from "./routers/materiais.router";
 import { z } from "zod";
 import { createRateLimiter } from "./lead-intake";
 import { publicCompanyConfig, stripMaskedFields } from "./auth-security";
@@ -25,6 +26,7 @@ export const appRouter = router({
   zaira: zairaRouter,
   leadCampanhas: leadCampanhasRouter,
   crm: crmRouter,
+  materiais: materiaisRouter,
   system: systemRouter,
   auth: router({
     // Sem os hashes de senha (a linha do usuário inteira ia para o navegador)

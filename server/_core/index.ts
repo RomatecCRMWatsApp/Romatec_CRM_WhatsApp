@@ -415,6 +415,27 @@ async function startServer() {
     }
   });
 
+  // Materiais de divulgação: só com login; vai para o Cloudinary (romatec_materiais), PDF como raw
+  app.post('/api/materiais/upload', express.raw({ type: '*/*', limit: '110mb' }), async (req, res) => {
+    try {
+      const { sdk } = await import('./sdk');
+      const user = await sdk.authenticateRequest(req).catch(() => null);
+      if (!user) return res.status(401).json({ success: false, error: 'Faça login para enviar materiais' });
+      const { problemaArquivo, resourceTypeDe } = await import('../../shared/materiais');
+      const fileName = decodeURIComponent(String(req.headers['x-file-name'] || 'material'));
+      const fileType = String(req.headers['x-file-type'] || '');
+      const buffer = req.body as Buffer;
+      const erro = problemaArquivo(fileType, buffer?.length || 0);
+      if (erro) return res.status(400).json({ success: false, error: erro });
+      const { uploadToCloudinary } = await import('../cloudinary');
+      const { url } = await uploadToCloudinary(buffer, fileType, fileName, { folder: 'romatec_materiais', resourceType: resourceTypeDe(fileType) });
+      res.json({ success: true, url, mime: fileType, tamanhoBytes: buffer.length });
+    } catch (error: any) {
+      console.error('[Materiais] Upload falhou:', error?.message);
+      res.status(500).json({ success: false, error: 'Falha no upload do material' });
+    }
+  });
+
   app.get("/api/pdf-proxy", async (req, res) => {
     const url = req.query.url as string;
     if (!url || !/^https?:\/\//.test(url)) {
@@ -584,6 +605,13 @@ async function startServer() {
     await addLeadsV1();
   } catch (e) {
     console.error('❌ Erro na migration addLeadsV1:', e);
+  }
+
+  try {
+    const { addMateriais } = await import('./migrations/addMateriais');
+    await addMateriais();
+  } catch (e) {
+    console.error('❌ Erro na migration addMateriais:', e);
   }
 
   // Leads parados há 48 h perdem pontos no score (§8)

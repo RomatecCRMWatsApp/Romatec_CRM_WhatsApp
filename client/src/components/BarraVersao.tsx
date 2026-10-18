@@ -4,7 +4,7 @@ import { trpc } from "@/lib/trpc";
 import { useAuth } from "@/_core/hooks/useAuth";
 
 /** Só nas telas internas; landing, catálogo e portal de links são públicos */
-const INTERNAS = ["/dashboard", "/contacts", "/properties", "/campaigns", "/settings", "/performance", "/leads", "/setup"];
+const INTERNAS = ["/dashboard", "/contacts", "/properties", "/campaigns", "/settings", "/performance", "/leads", "/setup", "/materiais"];
 
 const FUSO = "America/Fortaleza"; // Maranhão, UTC-3
 const dataHora = (d: Date) =>

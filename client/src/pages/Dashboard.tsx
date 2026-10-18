@@ -3,7 +3,7 @@ import { toast } from "sonner";
 import { useAuth } from "@/_core/hooks/useAuth";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Users, Send, Settings, LogOut, WifiOff, TrendingUp, Building2, BarChart3, CheckCircle2, XCircle, RefreshCw, UserPlus, Flame, ChevronRight, MessageCircle, ExternalLink, Activity, Zap, Clock } from "lucide-react";
+import { Users, Send, Settings, LogOut, WifiOff, TrendingUp, Building2, BarChart3, CheckCircle2, XCircle, RefreshCw, UserPlus, Flame, ChevronRight, MessageCircle, ExternalLink, Activity, Zap, Clock, Images } from "lucide-react";
 import { useLocation } from "wouter";
 import { trpc } from "@/lib/trpc";
 
@@ -479,6 +479,7 @@ export default function Dashboard() {
     { label: "Leads", desc: "Atender e qualificar", icon: Flame, route: "/leads" },
     { label: "Clientes", desc: "Base de contatos", icon: Users, route: "/contacts" },
     { label: "Imóveis", desc: "Cadastro e fotos", icon: Building2, route: "/properties" },
+    { label: "Materiais", desc: "Artes, vídeos e folders para divulgar", icon: Images, route: "/materiais" },
     { label: "Campanhas", desc: "Disparos no WhatsApp", icon: Send, route: "/campaigns" },
     { label: "Desempenho", desc: "Relatórios", icon: BarChart3, route: "/performance" },
     { label: "Configurações", desc: "Z-API, Telegram, empresa", icon: Settings, route: "/settings" },

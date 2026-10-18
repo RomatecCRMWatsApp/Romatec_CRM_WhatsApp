@@ -28,13 +28,15 @@ function generateSignature(params: Record<string, string>): string {
 export async function uploadToCloudinary(
   buffer: Buffer,
   fileType: string,
-  fileName: string
+  fileName: string,
+  opts: { folder?: string; resourceType?: 'image' | 'video' | 'raw' } = {},
 ): Promise<{ url: string; publicId: string }> {
   const timestamp = Math.floor(Date.now() / 1000).toString();
 
   // Determinar resource_type — PDF como 'image' (Cloudinary suporta e é público por padrão)
   let resourceType = 'image';
   if (fileType.startsWith('video/')) resourceType = 'video';
+  if (opts.resourceType) resourceType = opts.resourceType;
 
   // Gerar public_id único — para PDF mantém extensão para detecção no frontend
   const ext = resourceType === 'raw' ? (fileName.match(/\.[^/.]+$/)?.[0] ?? '') : '';
@@ -42,7 +44,7 @@ export async function uploadToCloudinary(
     .replace(/\.[^/.]+$/, '')
     .replace(/[^a-zA-Z0-9_-]/g, '_')
     .substring(0, 40);
-  const folder = 'romatec_imoveis';
+  const folder = opts.folder || 'romatec_imoveis';
   const publicId = `${folder}/${Date.now()}_${safeName}${ext}`;
 
   // Parâmetros para assinar — access_mode=public garante acesso sem autenticação

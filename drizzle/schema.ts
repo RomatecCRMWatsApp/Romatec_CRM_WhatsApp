@@ -507,3 +507,26 @@ export const leadInteresses = mysqlTable("leadInteresses", {
 }, (t) => ({
   uqInteresse: uniqueIndex("uq_lead_interesse").on(t.leadId, t.propertyId),
 }));
+
+/** Materiais de divulgação (artes, vídeos, folder, mapa) por imóvel ou empreendimento */
+export const materiais = mysqlTable("materiais", {
+  id: int("id").autoincrement().primaryKey(),
+  propertyId: int("propertyId"),
+  empreendimentoSlug: varchar("empreendimentoSlug", { length: 80 }),
+  titulo: varchar("titulo", { length: 160 }).notNull(),
+  /** feed | status | card | video | folder | mapa | render | outro */
+  tipo: varchar("tipo", { length: 20 }).notNull().default("outro"),
+  url: text("url").notNull(),
+  mime: varchar("mime", { length: 80 }),
+  tamanhoBytes: int("tamanhoBytes"),
+  /** false = peça bloqueada (ex.: mostra condições/preço) — aparece no CRM, mas marcada "não divulgar" */
+  liberado: boolean("liberado").default(true).notNull(),
+  observacao: varchar("observacao", { length: 255 }),
+  ordem: int("ordem").default(0).notNull(),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+}, (t) => ({
+  idxProperty: index("idx_material_property").on(t.propertyId),
+  idxEmp: index("idx_material_emp").on(t.empreendimentoSlug),
+}));
+
+export type Material = typeof materiais.$inferSelect;
