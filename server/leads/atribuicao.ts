@@ -27,10 +27,12 @@ export function extrairAtribuicao(texto: string | null | undefined): Atribuicao 
 }
 
 /** Mensagem pré-preenchida padrão (§5.1) */
-export function mensagemPreenchida(params: { funil: Funil; imovelCodigo?: string | null; campanhaCodigo?: string | null }): string {
+export function mensagemPreenchida(params: { funil: Funil; imovelCodigo?: string | null; campanhaCodigo?: string | null; empreendimentoNome?: string | null }): string {
   const camp = params.campanhaCodigo ? ` (#${params.campanhaCodigo})` : '';
   if (params.funil === 'proprietario') return `Olá! Quero vender/avaliar meu imóvel${camp}.`;
   if (params.imovelCodigo) return `Olá! Tenho interesse no imóvel ${params.imovelCodigo}${camp}. Pode me passar mais informações?`;
+  // Campanha ligada a empreendimento (ex.: Bom Jardims): quem clica já sabe do que vai receber informação
+  if (params.empreendimentoNome) return `Olá! Quero saber mais sobre o ${params.empreendimentoNome}${camp}.`;
   return `Olá! Quero saber mais sobre os imóveis da Romatec${camp}.`;
 }
 

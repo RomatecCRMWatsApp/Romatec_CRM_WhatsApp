@@ -34,3 +34,14 @@ describe('O corretor chama pelo número pessoal (lead fala primeiro com o CRM)',
     expect(MSG_COMPLETA).not.toContain('por aqui');
   });
 });
+
+describe('Mensagem pronta do link da campanha', () => {
+  it('campanha ligada ao Bom Jardims cita o empreendimento e mantém o código', async () => {
+    const { mensagemPreenchida, extrairAtribuicao } = await import('./atribuicao');
+    const m = mensagemPreenchida({ funil: 'comprador', campanhaCodigo: 'IG-OUT26-CHAC', empreendimentoNome: 'Condomínio de Chácaras Bom Jardims' });
+    expect(m).toBe('Olá! Quero saber mais sobre o Condomínio de Chácaras Bom Jardims (#IG-OUT26-CHAC).');
+    expect(extrairAtribuicao(m).campanhaCodigo).toBe('IG-OUT26-CHAC');
+    expect(extrairAtribuicao(m).funilSugerido).not.toBe('proprietario');
+    expect(mensagemPreenchida({ funil: 'comprador', campanhaCodigo: 'X-1A' })).toContain('imóveis da Romatec');
+  });
+});

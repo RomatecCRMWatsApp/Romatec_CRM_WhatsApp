@@ -98,7 +98,10 @@ export const leadCampanhasRouter = router({
       const propertyId = input.propertyId ?? campanha?.propertyId ?? undefined;
       const [imovel] = propertyId ? await db.select({ codigo: properties.codigo }).from(properties).where(eq(properties.id, propertyId)).limit(1) : [];
       const funil = input.funil ?? (campanha?.funil as "comprador" | "proprietario") ?? "comprador";
-      const mensagem = mensagemPreenchida({ funil, imovelCodigo: imovel?.codigo, campanhaCodigo: campanha?.codigo });
+      const [emp] = campanha?.empreendimentoSlug
+        ? await db.select({ nome: empreendimentos.nome }).from(empreendimentos).where(eq(empreendimentos.slug, campanha.empreendimentoSlug)).limit(1)
+        : [];
+      const mensagem = mensagemPreenchida({ funil, imovelCodigo: imovel?.codigo, campanhaCodigo: campanha?.codigo, empreendimentoNome: emp?.nome });
       const url = linkWhatsApp(numeroWhatsAppLeads(), mensagem);
       // Landing do imóvel com a campanha na URL (rastreio + botão de WhatsApp com o #código)
       const landing = imovel?.codigo
