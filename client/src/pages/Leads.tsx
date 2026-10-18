@@ -214,6 +214,13 @@ export default function Leads() {
           }}>
             📣 Campanhas
           </button>
+          <button onClick={() => navigate('/leads/relatorio')} style={{
+            padding: '6px 14px', borderRadius: '8px', background: 'rgba(14,165,233,0.1)',
+            border: '1px solid rgba(14,165,233,0.25)', color: '#38bdf8', fontSize: '11px',
+            fontWeight: 600, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '6px',
+          }}>
+            📊 Relatório
+          </button>
           <button onClick={() => testTelegram.mutate()} disabled={testTelegram.isPending} style={{
             padding: '6px 14px', borderRadius: '8px', background: 'rgba(38,169,224,0.1)',
             border: '1px solid rgba(38,169,224,0.25)', color: '#26a9e0', fontSize: '11px',

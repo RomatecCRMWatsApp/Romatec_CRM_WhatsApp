@@ -2,7 +2,7 @@
  * Painel de leads v1: kanban por funil (§12.1) e tela do lead (§12.2).
  */
 import { z } from "zod";
-import { and, desc, eq, inArray } from "drizzle-orm";
+import { and, desc, eq, gte, inArray, lte } from "drizzle-orm";
 import { protectedProcedure, router } from "../_core/trpc";
 import { getDb } from "../db";
 import { leadQualifications, leadInteresses, leadEventos, leadCampanhas, leadMensagens, properties } from "../../drizzle/schema";
@@ -11,6 +11,7 @@ import { mesclarSlots, slotsDoFunil, slotsPendentes, tagsDoLead, tipoImovelDe, t
 import { rotuloCanal } from "../leads/inbound";
 import { appUrl } from "../leads/config";
 import type { Funil } from "../leads/atribuicao";
+import { montarRelatorio, relatorioCsv } from "../leads/relatorio";
 
 const funilSchema = z.enum(["comprador", "proprietario"]);
 
@@ -251,4 +252,39 @@ export const crmRouter = router({
     await db.update(leadQualifications).set({ etapa: "captado", updatedAt: new Date() } as any).where(and(eq(leadQualifications.id, lead.id)));
     return { propertyId, codigo };
   }),
+  /** Relatório por canal e campanha (§12.4): leads criados no período, atribuição pelo 1º ou último toque */
+  relatorio: protectedProcedure
+    .input(z.object({
+      de: z.string().regex(/^d{4}-d{2}-d{2}$/).optional(),
+      ate: z.string().regex(/^d{4}-d{2}-d{2}$/).optional(),
+      toque: z.enum(["primeiro", "ultimo"]).default("primeiro"),
+    }))
+    .query(async ({ input }) => {
+      const db = await dbOrThrow();
+      // Datas do filtro no fuso de Imperatriz (UTC-3), "até" inclusive
+      const de = input.de ? new Date(`${input.de}T00:00:00-03:00`) : null;
+      const ate = input.ate ? new Date(`${input.ate}T23:59:59.999-03:00`) : null;
+      const periodo = (col: any) => and(...[de ? gte(col, de) : undefined, ate ? lte(col, ate) : undefined].filter(Boolean) as any[]);
+      const leads = await db.select({
+        id: leadQualifications.id, funil: leadQualifications.funil, origem: leadQualifications.origem,
+        origemCanal: leadQualifications.origemCanal, origemCampanhaId: leadQualifications.origemCampanhaId,
+        ultimoCanal: leadQualifications.ultimoCanal, ultimaCampanhaId: leadQualifications.ultimaCampanhaId,
+        propertyId: leadQualifications.propertyId, etapa: leadQualifications.etapa, stage: leadQualifications.stage,
+        score: leadQualifications.score, slots: leadQualifications.slots, createdAt: leadQualifications.createdAt,
+      }).from(leadQualifications).where(periodo(leadQualifications.createdAt));
+      const ids = leads.map((l: any) => l.id);
+      const [campanhas, interessesRows, eventos, mensagens, imoveis] = await Promise.all([
+        db.select({ id: leadCampanhas.id, codigo: leadCampanhas.codigo, nome: leadCampanhas.nome, canal: leadCampanhas.canal, gastoTotal: leadCampanhas.gastoTotal }).from(leadCampanhas),
+        ids.length ? db.select({ leadId: leadInteresses.leadId, propertyId: leadInteresses.propertyId }).from(leadInteresses).where(inArray(leadInteresses.leadId, ids)) : Promise.resolve([]),
+        db.select({ tipo: leadEventos.tipo, campanhaId: leadEventos.campanhaId, propertyId: leadEventos.propertyId, leadId: leadEventos.leadId })
+          .from(leadEventos).where(and(inArray(leadEventos.tipo, ["clique_whatsapp", "scan_qr", "view_imovel"]), periodo(leadEventos.createdAt))),
+        ids.length ? db.select({ leadId: leadMensagens.leadId, direcao: leadMensagens.direcao, createdAt: leadMensagens.createdAt }).from(leadMensagens).where(inArray(leadMensagens.leadId, ids)) : Promise.resolve([]),
+        // Sem preço: o relatório não mostra valores de imóveis (respeita exibirPreco = false)
+        db.select({ id: properties.id, codigo: properties.codigo, denomination: properties.denomination, propertyType: properties.propertyType }).from(properties),
+      ]);
+      const interesses = new Map<number, number[]>();
+      for (const r of interessesRows as any[]) interesses.set(r.leadId, [...(interesses.get(r.leadId) ?? []), r.propertyId]);
+      const rel = montarRelatorio({ leads: leads as any, campanhas, interesses, eventos, mensagens: mensagens as any, imoveis, toque: input.toque });
+      return { ...rel, csv: relatorioCsv(rel), periodo: { de: input.de ?? null, ate: input.ate ?? null } };
+    }),
 });

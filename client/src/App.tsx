@@ -18,6 +18,7 @@ import BomJardims from "./pages/BomJardims";
 import Performance from "./pages/Performance";
 import Leads from "./pages/Leads";
 import LeadCampanhas from "./pages/LeadCampanhas";
+import LeadsRelatorio from "./pages/LeadsRelatorio";
 import ImovelLanding from "./pages/ImovelLanding";
 import LeadsFunil from "./pages/LeadsFunil";
 import LeadDetalhe from "./pages/LeadDetalhe";
@@ -72,6 +73,9 @@ function Router() {
       </Route>
       <Route path={"/leads/lead/:id"}>
         {() => <SetupGuard component={LeadDetalhe} />}
+      </Route>
+      <Route path={"/leads/relatorio"}>
+        {() => <SetupGuard component={LeadsRelatorio} />}
       </Route>
       <Route path={"/leads/campanhas"}>
         {() => <SetupGuard component={LeadCampanhas} />}
