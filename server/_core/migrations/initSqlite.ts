@@ -272,7 +272,7 @@ export function initSqliteTables(sqlite: any): void {
   // Captação v1 (server/_core/migrations/addLeadsV1.ts)
   run(`ALTER TABLE properties ADD COLUMN codigo TEXT`);
   run(`ALTER TABLE properties ADD COLUMN exibirPreco INTEGER NOT NULL DEFAULT 1`);
-  for (const col of ["funil TEXT DEFAULT 'comprador'", "origemCanal TEXT", "origemCampanhaId INTEGER", "ultimoCanal TEXT", "ultimaCampanhaId INTEGER", "slots TEXT", "tags TEXT", "scoreDetalhe TEXT"]) {
+  for (const col of ["funil TEXT DEFAULT 'comprador'", "origemCanal TEXT", "origemCampanhaId INTEGER", "ultimoCanal TEXT", "ultimaCampanhaId INTEGER", "slots TEXT", "tags TEXT", "scoreDetalhe TEXT", "etapa TEXT", "motivoPerda TEXT", "humano INTEGER DEFAULT 0"]) {
     run(`ALTER TABLE leadQualifications ADD COLUMN ${col}`);
   }
   run(`CREATE TABLE IF NOT EXISTS leadCampanhas (

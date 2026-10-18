@@ -200,6 +200,13 @@ export default function Leads() {
           </div>
         </div>
         <div style={{ display: 'flex', gap: '8px' }}>
+          <button onClick={() => navigate('/leads/funil')} style={{
+            padding: '6px 14px', borderRadius: '8px', background: 'rgba(139,92,246,0.12)',
+            border: '1px solid rgba(139,92,246,0.3)', color: '#a78bfa', fontSize: '11px',
+            fontWeight: 600, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '6px',
+          }}>
+            🗂️ Funil (kanban)
+          </button>
           <button onClick={() => navigate('/leads/campanhas')} style={{
             padding: '6px 14px', borderRadius: '8px', background: 'rgba(245,158,11,0.1)',
             border: '1px solid rgba(245,158,11,0.25)', color: '#f59e0b', fontSize: '11px',

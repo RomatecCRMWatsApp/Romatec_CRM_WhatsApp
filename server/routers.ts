@@ -8,6 +8,7 @@ import { eq, and, desc, gte, or, like, isNotNull } from "drizzle-orm";
 import { campaignScheduler } from "./scheduler/campaignScheduler";
 import { zairaRouter } from "./routers/zaira.router";
 import { leadCampanhasRouter } from "./routers/leadCampanhas.router";
+import { crmRouter } from "./routers/crm.router";
 import { z } from "zod";
 import { createRateLimiter } from "./lead-intake";
 import { publicCompanyConfig, stripMaskedFields } from "./auth-security";
@@ -23,6 +24,7 @@ function semPrecoSeOculto<T extends Record<string, any>>(p: T, logado: boolean):
 export const appRouter = router({
   zaira: zairaRouter,
   leadCampanhas: leadCampanhasRouter,
+  crm: crmRouter,
   system: systemRouter,
   auth: router({
     // Sem os hashes de senha (a linha do usuário inteira ia para o navegador)

@@ -315,6 +315,11 @@ export const leadQualifications = mysqlTable("leadQualifications", {
   ultimaCampanhaId: int("ultimaCampanhaId"),
   slots: json("slots").$type<Record<string, { valor: string; fonte: "ia" | "bot" | "form" | "manual"; at: string }>>(),
   tags: json("tags").$type<string[]>(),
+  /** Coluna do kanban (§12.1); null = deduzida do stage do bot */
+  etapa: varchar("etapa", { length: 30 }),
+  motivoPerda: varchar("motivoPerda", { length: 120 }),
+  /** Corretor assumiu a conversa: o bot não responde até devolver */
+  humano: boolean("humano").default(false),
   /** Detalhamento regra → pontos do leadScore atual (server/leads/score.ts) */
   scoreDetalhe: json("scoreDetalhe").$type<{ regras: string; detalhes: Record<string, number>; at: string }>(),
 

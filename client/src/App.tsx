@@ -19,6 +19,8 @@ import Performance from "./pages/Performance";
 import Leads from "./pages/Leads";
 import LeadCampanhas from "./pages/LeadCampanhas";
 import ImovelLanding from "./pages/ImovelLanding";
+import LeadsFunil from "./pages/LeadsFunil";
+import LeadDetalhe from "./pages/LeadDetalhe";
 import Setup from "./pages/Setup";
 import { trpc } from "@/lib/trpc";
 import { useAuth } from "@/_core/hooks/useAuth";
@@ -64,6 +66,12 @@ function Router() {
       </Route>
       <Route path={"/performance"}>
         {() => <SetupGuard component={Performance} />}
+      </Route>
+      <Route path={"/leads/funil"}>
+        {() => <SetupGuard component={LeadsFunil} />}
+      </Route>
+      <Route path={"/leads/lead/:id"}>
+        {() => <SetupGuard component={LeadDetalhe} />}
       </Route>
       <Route path={"/leads/campanhas"}>
         {() => <SetupGuard component={LeadCampanhas} />}

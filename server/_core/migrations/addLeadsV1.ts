@@ -48,6 +48,10 @@ const MYSQL: { label: string; stmt: ReturnType<typeof sql> }[] = [
   { label: 'lead.ultimaCampanhaId', stmt: sql`ALTER TABLE leadQualifications ADD COLUMN ultimaCampanhaId INT` },
   { label: 'lead.slots', stmt: sql`ALTER TABLE leadQualifications ADD COLUMN slots JSON` },
   { label: 'lead.tags', stmt: sql`ALTER TABLE leadQualifications ADD COLUMN tags JSON` },
+  // PR (d): kanban e handoff humano
+  { label: 'lead.etapa', stmt: sql`ALTER TABLE leadQualifications ADD COLUMN etapa VARCHAR(30)` },
+  { label: 'lead.motivoPerda', stmt: sql`ALTER TABLE leadQualifications ADD COLUMN motivoPerda VARCHAR(120)` },
+  { label: 'lead.humano', stmt: sql`ALTER TABLE leadQualifications ADD COLUMN humano BOOLEAN DEFAULT FALSE` },
   // PR (c): rastreio da landing e do QR
   {
     label: 'leadEventos',

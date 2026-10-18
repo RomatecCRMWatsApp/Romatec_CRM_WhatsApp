@@ -271,13 +271,13 @@ export async function getLeadEmpreendimento(phone: string): Promise<string | nul
     if (!db) return null;
     const cleanPhone = phone.replace(/\D/g, '');
     const [lead] = await db
-      .select({ empreendimentoSlug: leadQualifications.empreendimentoSlug, funil: leadQualifications.funil, stage: leadQualifications.stage })
+      .select({ empreendimentoSlug: leadQualifications.empreendimentoSlug, funil: leadQualifications.funil, stage: leadQualifications.stage, humano: leadQualifications.humano })
       .from(leadQualifications)
       .where(eq(leadQualifications.phone, cleanPhone))
       .limit(1);
     if (lead?.empreendimentoSlug) return lead.empreendimentoSlug;
     // Proprietário (captação) e handoff: o corretor atende, o bot de comprador não responde
-    if (lead?.funil === 'proprietario' || lead?.stage === 'atendimento_humano') return 'atendimento_humano';
+    if (lead?.humano || lead?.funil === 'proprietario' || lead?.stage === 'atendimento_humano') return 'atendimento_humano';
     return null;
   } catch (error) {
     console.error('[Persistence] ❌ Erro ao buscar empreendimento do lead:', error);
