@@ -1,0 +1,83 @@
+import { sql } from 'drizzle-orm';
+import { getDb, getDbDriver } from '../../db';
+
+/**
+ * Migration: captação v1 — código IMV-xxxx e exibirPreco em properties,
+ * tabelas leadCampanhas e leadInteresses, e colunas de funil/atribuição/slots
+ * em leadQualifications. Idempotente (ignora coluna/tabela/índice existente).
+ */
+const MYSQL: { label: string; stmt: ReturnType<typeof sql> }[] = [
+  { label: 'properties.codigo', stmt: sql`ALTER TABLE properties ADD COLUMN codigo VARCHAR(12) NULL` },
+  { label: 'properties.exibirPreco', stmt: sql`ALTER TABLE properties ADD COLUMN exibirPreco BOOLEAN NOT NULL DEFAULT TRUE` },
+  {
+    label: 'leadCampanhas',
+    stmt: sql`CREATE TABLE IF NOT EXISTS leadCampanhas (
+      id INT AUTO_INCREMENT PRIMARY KEY,
+      codigo VARCHAR(20) NOT NULL UNIQUE,
+      nome VARCHAR(160) NOT NULL,
+      canal VARCHAR(30) NOT NULL,
+      funil VARCHAR(20) NOT NULL DEFAULT 'comprador',
+      propertyId INT NULL,
+      empreendimentoSlug VARCHAR(80) NULL,
+      metaFormId VARCHAR(40) NULL,
+      googleFormId VARCHAR(40) NULL,
+      utmSource VARCHAR(60) NULL,
+      utmCampaign VARCHAR(120) NULL,
+      gastoTotal DECIMAL(12,2) NOT NULL DEFAULT 0,
+      inicio TIMESTAMP NULL,
+      fim TIMESTAMP NULL,
+      ativa BOOLEAN NOT NULL DEFAULT TRUE,
+      createdAt TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+      updatedAt TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+    )`,
+  },
+  {
+    label: 'leadInteresses',
+    stmt: sql`CREATE TABLE IF NOT EXISTS leadInteresses (
+      leadId INT NOT NULL,
+      propertyId INT NOT NULL,
+      campanhaId INT NULL,
+      primeiroContatoAt TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+      UNIQUE KEY uq_lead_interesse (leadId, propertyId)
+    )`,
+  },
+  { label: 'lead.funil', stmt: sql`ALTER TABLE leadQualifications ADD COLUMN funil VARCHAR(20) DEFAULT 'comprador'` },
+  { label: 'lead.origemCanal', stmt: sql`ALTER TABLE leadQualifications ADD COLUMN origemCanal VARCHAR(30)` },
+  { label: 'lead.origemCampanhaId', stmt: sql`ALTER TABLE leadQualifications ADD COLUMN origemCampanhaId INT` },
+  { label: 'lead.ultimoCanal', stmt: sql`ALTER TABLE leadQualifications ADD COLUMN ultimoCanal VARCHAR(30)` },
+  { label: 'lead.ultimaCampanhaId', stmt: sql`ALTER TABLE leadQualifications ADD COLUMN ultimaCampanhaId INT` },
+  { label: 'lead.slots', stmt: sql`ALTER TABLE leadQualifications ADD COLUMN slots JSON` },
+  { label: 'lead.tags', stmt: sql`ALTER TABLE leadQualifications ADD COLUMN tags JSON` },
+];
+
+function isAlreadyApplied(e: any): boolean {
+  const code = e?.code || e?.cause?.code || '';
+  const msg = e?.message || '';
+  return code === 'ER_DUP_FIELDNAME' || code === 'ER_DUP_KEYNAME' || msg.includes('Duplicate column') || msg.includes('Duplicate key name');
+}
+
+export function formatCodigoImovel(id: number): string {
+  return `IMV-${String(id).padStart(4, '0')}`;
+}
+
+export async function addLeadsV1(): Promise<void> {
+  const db = await getDb();
+  if (!db || getDbDriver() !== 'mysql') return;
+
+  for (const { label, stmt } of MYSQL) {
+    try {
+      await (db as any).execute(stmt);
+    } catch (e: any) {
+      if (!isAlreadyApplied(e)) console.error(`[Migration] Erro addLeadsV1 (${label}):`, e?.message);
+    }
+  }
+
+  // Código IMV-xxxx a partir do id (imóveis já cadastrados e os novos sem código)
+  try {
+    await (db as any).execute(sql`UPDATE properties SET codigo = CONCAT('IMV-', LPAD(id, 4, '0')) WHERE codigo IS NULL OR codigo = ''`);
+    await (db as any).execute(sql`ALTER TABLE properties ADD UNIQUE INDEX uq_properties_codigo (codigo)`);
+  } catch (e: any) {
+    if (!isAlreadyApplied(e)) console.error('[Migration] Erro addLeadsV1 (codigo IMV):', e?.message);
+  }
+  console.log('[Migration] ✅ addLeadsV1 (códigos IMV, campanhas, funis, slots)');
+}

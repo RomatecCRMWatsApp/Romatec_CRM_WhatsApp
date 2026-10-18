@@ -17,6 +17,7 @@ import LinkPortal from "./pages/LinkPortal";
 import BomJardims from "./pages/BomJardims";
 import Performance from "./pages/Performance";
 import Leads from "./pages/Leads";
+import LeadCampanhas from "./pages/LeadCampanhas";
 import Setup from "./pages/Setup";
 import { trpc } from "@/lib/trpc";
 import { useAuth } from "@/_core/hooks/useAuth";
@@ -62,6 +63,9 @@ function Router() {
       </Route>
       <Route path={"/performance"}>
         {() => <SetupGuard component={Performance} />}
+      </Route>
+      <Route path={"/leads/campanhas"}>
+        {() => <SetupGuard component={LeadCampanhas} />}
       </Route>
       <Route path={"/leads"}>
         {() => <SetupGuard component={Leads} />}

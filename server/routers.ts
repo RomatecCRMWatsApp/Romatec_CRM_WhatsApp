@@ -7,6 +7,7 @@ import { campaigns, contacts, campaignContacts, messages, properties, contactCam
 import { eq, and, desc, gte, or, like, isNotNull } from "drizzle-orm";
 import { campaignScheduler } from "./scheduler/campaignScheduler";
 import { zairaRouter } from "./routers/zaira.router";
+import { leadCampanhasRouter } from "./routers/leadCampanhas.router";
 import { z } from "zod";
 import { createRateLimiter } from "./lead-intake";
 import { publicCompanyConfig, stripMaskedFields } from "./auth-security";
@@ -15,6 +16,7 @@ const allowLoginAttempt = createRateLimiter(10, 15 * 60 * 1000);
 
 export const appRouter = router({
   zaira: zairaRouter,
+  leadCampanhas: leadCampanhasRouter,
   system: systemRouter,
   auth: router({
     // Sem os hashes de senha (a linha do usuário inteira ia para o navegador)
@@ -190,7 +192,8 @@ export const appRouter = router({
         bathrooms: z.coerce.number().optional(),
         description: z.string().optional(),
         finalidade: z.enum(["venda", "aluguel"]).default("venda"),
-        status: z.enum(["available", "unavailable"]).default("available")
+        status: z.enum(["available", "unavailable"]).default("available"),
+        exibirPreco: z.boolean().optional(),
       }))
       .mutation(async ({ input }) => {
         const slug = input.denomination.toLowerCase().replace(/[^a-z0-9]+/g, '-') + '-' + Date.now().toString(36);
@@ -205,6 +208,13 @@ export const appRouter = router({
           publicSlug: slug
         });
         const propertyId = Number((result as any)[0].insertId);
+        // Código de atribuição IMV-xxxx (vai na mensagem pré-preenchida do WhatsApp)
+        try {
+          const { formatCodigoImovel } = await import("./_core/migrations/addLeadsV1");
+          await db.update(properties).set({ codigo: formatCodigoImovel(propertyId) }).where(eq(properties.id, propertyId));
+        } catch (e) {
+          console.warn("[Properties] Código IMV não gravado:", e);
+        }
         // Criar campanha automaticamente para o novo imóvel
         try {
           const defaultMessages = [
@@ -250,7 +260,8 @@ export const appRouter = router({
         videoUrl: z.string().optional(),
         plantaBaixaUrl: z.string().optional(),
         finalidade: z.enum(["venda", "aluguel"]).optional(),
-        status: z.enum(["available", "unavailable"]).optional()
+        status: z.enum(["available", "unavailable"]).optional(),
+        exibirPreco: z.boolean().optional(),
       }))
       .mutation(async ({ input }) => {
         const db = await getDb();

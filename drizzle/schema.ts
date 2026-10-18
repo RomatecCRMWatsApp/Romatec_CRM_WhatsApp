@@ -67,6 +67,10 @@ export const properties = mysqlTable("properties", {
   propertyType: varchar("propertyType", { length: 100 }),
   publicSlug: varchar("publicSlug", { length: 255 }),
   finalidade: varchar("finalidade", { length: 20 }).default("venda").notNull(),
+  /** Código curto de atribuição (IMV-0001): vai na mensagem pré-preenchida do WhatsApp */
+  codigo: varchar("codigo", { length: 12 }),
+  /** false = landing e mensagens mostram "Valor sob consulta" e o score ignora faixa_valor x preço */
+  exibirPreco: boolean("exibirPreco").default(true).notNull(),
   status: mysqlEnum("status", ["available", "sold", "inactive"]).default("available").notNull(),
   createdAt: timestamp("createdAt").defaultNow().notNull(),
   updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
@@ -303,6 +307,14 @@ export const leadQualifications = mysqlTable("leadQualifications", {
   loteCodigo: varchar("loteCodigo", { length: 10 }),                  // chácara clicada no mapa (ex.: B07)
   leadScore: int("leadScore"),                                        // 0–100 (≥ 60 = quente)
   consentimento: json("consentimento").$type<{ at: string; texto: string; origem: string; ip?: string }>(), // LGPD
+  // ── Captação v1 (server/leads): funil, atribuição 1º/último toque, slots de qualificação ──
+  funil: varchar("funil", { length: 20 }).default("comprador"),        // comprador | proprietario
+  origemCanal: varchar("origemCanal", { length: 30 }),                 // 1º toque (nunca sobrescrito)
+  origemCampanhaId: int("origemCampanhaId"),
+  ultimoCanal: varchar("ultimoCanal", { length: 30 }),                 // último toque
+  ultimaCampanhaId: int("ultimaCampanhaId"),
+  slots: json("slots").$type<Record<string, { valor: string; fonte: "ia" | "bot" | "form" | "manual"; at: string }>>(),
+  tags: json("tags").$type<string[]>(),
 
   lastActivityAt: timestamp("lastActivityAt").defaultNow(),          // Último evento (para timeout)
   blockedUntil: timestamp("blockedUntil"),                           // Bloqueado até (para leads que pediram para parar)
@@ -411,3 +423,35 @@ export const lotes = mysqlTable("lotes", {
 }));
 
 export type Lote = typeof lotes.$inferSelect;
+
+// ─── Captação v1: campanhas com código (#IG-OUT26-CHAC) e interesse lead × imóvel ───
+export const leadCampanhas = mysqlTable("leadCampanhas", {
+  id: int("id").autoincrement().primaryKey(),
+  codigo: varchar("codigo", { length: 20 }).notNull().unique(),
+  nome: varchar("nome", { length: 160 }).notNull(),
+  canal: varchar("canal", { length: 30 }).notNull(),
+  funil: varchar("funil", { length: 20 }).default("comprador").notNull(),
+  propertyId: int("propertyId"),
+  empreendimentoSlug: varchar("empreendimentoSlug", { length: 80 }),
+  metaFormId: varchar("metaFormId", { length: 40 }),
+  googleFormId: varchar("googleFormId", { length: 40 }),
+  utmSource: varchar("utmSource", { length: 60 }),
+  utmCampaign: varchar("utmCampaign", { length: 120 }),
+  gastoTotal: decimal("gastoTotal", { precision: 12, scale: 2 }).default("0").notNull(),
+  inicio: timestamp("inicio"),
+  fim: timestamp("fim"),
+  ativa: boolean("ativa").default(true).notNull(),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+});
+
+export type LeadCampanha = typeof leadCampanhas.$inferSelect;
+
+export const leadInteresses = mysqlTable("leadInteresses", {
+  leadId: int("leadId").notNull(),
+  propertyId: int("propertyId").notNull(),
+  campanhaId: int("campanhaId"),
+  primeiroContatoAt: timestamp("primeiroContatoAt").defaultNow().notNull(),
+}, (t) => ({
+  uqInteresse: uniqueIndex("uq_lead_interesse").on(t.leadId, t.propertyId),
+}));

@@ -154,6 +154,13 @@ export default function Leads() {
           </div>
         </div>
         <div style={{ display: 'flex', gap: '8px' }}>
+          <button onClick={() => navigate('/leads/campanhas')} style={{
+            padding: '6px 14px', borderRadius: '8px', background: 'rgba(245,158,11,0.1)',
+            border: '1px solid rgba(245,158,11,0.25)', color: '#f59e0b', fontSize: '11px',
+            fontWeight: 600, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '6px',
+          }}>
+            📣 Campanhas
+          </button>
           <button onClick={() => testTelegram.mutate()} disabled={testTelegram.isPending} style={{
             padding: '6px 14px', borderRadius: '8px', background: 'rgba(38,169,224,0.1)',
             border: '1px solid rgba(38,169,224,0.25)', color: '#26a9e0', fontSize: '11px',

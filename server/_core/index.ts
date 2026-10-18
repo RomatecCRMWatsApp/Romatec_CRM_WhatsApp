@@ -137,6 +137,27 @@ async function startServer() {
         console.warn('[Webhook] Erro ao buscar contato (não crítico):', dbErr);
       }
 
+      // Captação v1: IMV-xxxx / #CAMPANHA / "quero vender meu..." → lead com atribuição + abertura
+      if (!req.body?.fromMe) {
+        try {
+          const { processarEntradaWhatsApp } = await import('../leads/inbound');
+          const entrada = await processarEntradaWhatsApp({ phone: payload.phone, texto: msgText, nome: senderName, messageId: payload.messageId });
+          if (entrada.acao === 'abertura') {
+            const { enviarTexto } = await import('../leads/zapiClient');
+            try {
+              await enviarTexto(payload.phone, entrada.mensagem);
+              // Comprador: o bot de qualificação continua a partir da resposta à abertura
+              if (entrada.funil === 'comprador') registerBotMessage(payload.phone, senderName);
+            } catch (e: any) {
+              console.error(`[Entrada] ❌ Abertura não enviada para ${payload.phone}: ${e?.message}`);
+            }
+            return res.json({ received: true, processed: true, lead: 'novo' });
+          }
+        } catch (e) {
+          console.warn('[Entrada] Erro na atribuição (bot segue normal):', e);
+        }
+      }
+
       try {
         const botResponse = await processBotMessage({
           phone: payload.phone,
@@ -511,6 +532,13 @@ async function startServer() {
     await addUserPasswordColumns();
   } catch (e) {
     console.error('❌ Erro na migration addUserPasswordColumns:', e);
+  }
+
+  try {
+    const { addLeadsV1 } = await import('./migrations/addLeadsV1');
+    await addLeadsV1();
+  } catch (e) {
+    console.error('❌ Erro na migration addLeadsV1:', e);
   }
 
   const preferredPort = parseInt(process.env.PORT || "3000");

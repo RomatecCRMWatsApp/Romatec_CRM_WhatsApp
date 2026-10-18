@@ -30,6 +30,8 @@ interface PropertyForm {
   garageSpaces: number;
   propertyType: string;
   finalidade: "venda" | "aluguel";
+  /** false = landing e mensagens mostram "Valor sob consulta" */
+  exibirPreco: boolean;
 }
 
 const emptyForm: PropertyForm = {
@@ -39,6 +41,7 @@ const emptyForm: PropertyForm = {
   areaConstruida: "", areaCasa: "", areaTerreno: "",
   bedrooms: 0, bathrooms: 0, garageSpaces: 0, propertyType: "",
   finalidade: "venda",
+  exibirPreco: true,
 };
 
 function formatCurrency(value: number | string) {
@@ -192,6 +195,7 @@ export default function Properties() {
       bedrooms: property.bedrooms || 0, bathrooms: property.bathrooms || 0,
       garageSpaces: property.garageSpaces || 0, propertyType: property.propertyType || "",
       finalidade: (property.finalidade === "aluguel" ? "aluguel" : "venda") as "venda" | "aluguel",
+      exibirPreco: property.exibirPreco !== false,
     });
     setShowForm(true);
   };
@@ -308,6 +312,13 @@ export default function Properties() {
                       <option value="aluguel">🔑 Aluguel</option>
                     </select>
                   </div>
+                  <label className="flex items-start gap-2 text-sm text-foreground md:col-span-2 cursor-pointer">
+                    <input type="checkbox" className="mt-1" checked={form.exibirPreco} onChange={e => setForm(p => ({ ...p, exibirPreco: e.target.checked }))} />
+                    <span>
+                      Exibir preço para o cliente
+                      <span className="block text-xs text-muted-foreground">Desmarcado: a landing e as mensagens automáticas mostram "Valor sob consulta".</span>
+                    </span>
+                  </label>
                 </div>
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                   <div className="md:col-span-2">
@@ -613,7 +624,10 @@ export default function Properties() {
                 <div className="p-5">
                   {/* Nome e Endereço */}
                   <div className="flex items-center gap-2 mb-1">
-                    <h3 className="font-bold text-lg text-foreground">{property.denomination}</h3>
+                    <h3 className="font-bold text-lg text-foreground">
+                      {property.codigo && <span className="font-mono text-xs text-emerald-300 mr-2 align-middle">{property.codigo}</span>}
+                      {property.denomination}
+                    </h3>
                     <span className={`px-2 py-0.5 rounded-full text-xs font-bold shrink-0 ${
                       property.finalidade === "aluguel"
                         ? "bg-blue-500/20 text-blue-400 border border-blue-500/30"
