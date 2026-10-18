@@ -190,7 +190,7 @@ export const appRouter = router({
       return result[0] ? semPrecoSeOculto(result[0], !!ctx.user) : null;
     }),
     // Landing /i/:codigo (pública)
-    byCodigo: publicProcedure.input(z.object({ codigo: z.string().regex(/^IMV-d{4}$/i) })).query(async ({ input }) => {
+    byCodigo: publicProcedure.input(z.object({ codigo: z.string().regex(/^IMV-\d{4}$/i) })).query(async ({ input }) => {
       const db = await getDb();
       if (!db) return null;
       const [p] = await db.select().from(properties).where(eq(properties.codigo, input.codigo.toUpperCase())).limit(1);

@@ -283,8 +283,8 @@ async function startServer() {
   app.get('/q/:codigo', async (req, res) => {
     try {
       const codigo = String(req.params.codigo || '').toUpperCase();
-      if (!/^IMV-d{4}$/.test(codigo)) return res.redirect(302, '/');
-      const vid = /(?:^|;s*)rmt_vid=([0-9a-f-]{36})/i.exec(String(req.headers.cookie || ''))?.[1] ?? null;
+      if (!/^IMV-\d{4}$/.test(codigo)) return res.redirect(302, '/');
+      const vid = /(?:^|;\s*)rmt_vid=([0-9a-f-]{36})/i.exec(String(req.headers.cookie || ''))?.[1] ?? null;
       const { registrarScanQr } = await import('../leads/rastreio');
       const scan = await registrarScanQr(codigo, vid);
       if (!scan) return res.redirect(302, '/imoveis');
