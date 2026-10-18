@@ -155,7 +155,8 @@ async function startServer() {
               await registrarMensagemPorTelefone(payload.phone, 'in', 'lead', msgText);
               await registrarMensagemPorTelefone(payload.phone, 'out', 'sistema', entrada.mensagem);
               // Comprador: o bot de qualificação continua a partir da resposta à abertura
-              if (entrada.funil === 'comprador') registerBotMessage(payload.phone, senderName);
+              // Empreendimento (Bom Jardims): humano, sem follow-ups do bot genérico
+              if (entrada.funil === 'comprador' && !entrada.empreendimento) registerBotMessage(payload.phone, senderName);
             } catch (e: any) {
               console.error(`[Entrada] ❌ Abertura não enviada para ${payload.phone}: ${e?.message}`);
             }

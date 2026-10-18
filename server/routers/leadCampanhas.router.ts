@@ -6,7 +6,7 @@ import { z } from "zod";
 import { desc, eq } from "drizzle-orm";
 import { protectedProcedure, adminProcedure, router } from "../_core/trpc";
 import { getDb } from "../db";
-import { leadCampanhas, leadQualifications, properties } from "../../drizzle/schema";
+import { leadCampanhas, leadQualifications, properties, empreendimentos } from "../../drizzle/schema";
 import { normalizarCodigoCampanha, mensagemPreenchida, linkWhatsApp } from "../leads/atribuicao";
 import { numeroWhatsAppLeads, appUrl } from "../leads/config";
 import { CANAIS_CAMPANHA } from "../leads/inbound";
@@ -39,6 +39,12 @@ async function dbOrThrow() {
 
 export const leadCampanhasRouter = router({
   canais: protectedProcedure.query(() => CANAIS_CAMPANHA),
+
+  /** Empreendimentos (ex.: Bom Jardims): lead de campanha ligada a um deles vai para o atendimento próprio, sem bot genérico */
+  empreendimentos: protectedProcedure.query(async () => {
+    const db = await dbOrThrow();
+    return db.select({ slug: empreendimentos.slug, nome: empreendimentos.nome }).from(empreendimentos);
+  }),
 
   list: protectedProcedure.query(async () => {
     const db = await dbOrThrow();

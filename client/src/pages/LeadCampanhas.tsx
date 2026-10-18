@@ -13,7 +13,9 @@ const CANAL_LABEL: Record<string, string> = {
   placa_qr: "QR da placa", site: "Site", indicacao: "Indicação", wifi: "Wi-Fi", outro: "Outro",
 };
 
-const vazio = { codigo: "", nome: "", canal: "meta_ctwa", funil: "comprador" as "comprador" | "proprietario", propertyId: "", metaFormId: "", gastoTotal: "" };
+const vazio = { codigo: "", nome: "", canal: "meta_ctwa", funil: "comprador" as "comprador" | "proprietario", propertyId: "", empreendimentoSlug: "", metaFormId: "", gastoTotal: "" };
+/** "1.500,50" → 1500.5; "300.00" e "300" também valem */
+const reais = (v: string) => Number(v.includes(",") ? v.replace(/\./g, "").replace(",", ".") : v) || 0;
 
 function LinkGerado({ propertyId, campanhaId, funil }: { propertyId?: number; campanhaId?: number; funil?: "comprador" | "proprietario" }) {
   const { data, isLoading } = trpc.leadCampanhas.linkWhatsApp.useQuery({ propertyId, campanhaId, funil });
@@ -47,6 +49,11 @@ export default function LeadCampanhas() {
   const utils = trpc.useUtils();
   const { data: campanhas = [], isLoading } = trpc.leadCampanhas.list.useQuery();
   const { data: imoveis = [] } = trpc.properties.list.useQuery();
+  const { data: emps = [] } = trpc.leadCampanhas.empreendimentos.useQuery();
+  const salvarCampo = trpc.leadCampanhas.update.useMutation({
+    onSuccess: () => { toast.success("Campanha atualizada"); utils.leadCampanhas.list.invalidate(); },
+    onError: (e) => toast.error(e.message),
+  });
   const [form, setForm] = useState(vazio);
   const [abrirForm, setAbrirForm] = useState(false);
   const [linkAberto, setLinkAberto] = useState<number | null>(null);
@@ -75,8 +82,9 @@ export default function LeadCampanhas() {
       canal: form.canal,
       funil: form.funil,
       propertyId: form.propertyId ? Number(form.propertyId) : null,
+      empreendimentoSlug: form.empreendimentoSlug || null,
       metaFormId: form.metaFormId || null,
-      gastoTotal: form.gastoTotal ? Number(form.gastoTotal.replace(",", ".")) : 0,
+      gastoTotal: form.gastoTotal ? reais(form.gastoTotal) : 0,
     });
   };
 
@@ -135,6 +143,14 @@ export default function LeadCampanhas() {
                   </select>
                 </label>
                 <label className="space-y-1 text-sm">
+                  <span className="text-muted-foreground">Empreendimento (opcional)</span>
+                  <select value={form.empreendimentoSlug} onChange={e => setForm(f => ({ ...f, empreendimentoSlug: e.target.value }))} className="w-full h-10 px-3 rounded-md border border-border bg-secondary/30 text-foreground text-sm">
+                    <option value="">— nenhum —</option>
+                    {(emps as any[]).map(e => <option key={e.slug} value={e.slug}>{e.nome}</option>)}
+                  </select>
+                  <span className="text-[11px] text-muted-foreground block">Lead desta campanha vai para o atendimento do empreendimento (sem o bot genérico)</span>
+                </label>
+                <label className="space-y-1 text-sm">
                   <span className="text-muted-foreground">ID do formulário Meta Lead Ads (opcional)</span>
                   <Input value={form.metaFormId} onChange={e => setForm(f => ({ ...f, metaFormId: e.target.value }))} placeholder="1234567890" />
                 </label>
@@ -191,6 +207,30 @@ export default function LeadCampanhas() {
                         <Button size="sm" variant="ghost" onClick={() => alternar.mutate({ id: c.id, ativa: !c.ativa })}>{c.ativa ? "Pausar" : "Ativar"}</Button>
                         <Button size="sm" variant="ghost" className="text-red-300" onClick={() => { if (confirm(`Excluir a campanha #${c.codigo}?`)) excluir.mutate({ id: c.id }); }}><Trash2 className="h-4 w-4" /></Button>
                       </div>
+                    </div>
+                    <div className="flex flex-wrap items-center gap-3 text-xs text-muted-foreground">
+                      <label className="flex items-center gap-2">
+                        Empreendimento
+                        <select
+                          value={c.empreendimentoSlug || ""}
+                          onChange={e => salvarCampo.mutate({ id: c.id, empreendimentoSlug: e.target.value || null })}
+                          className="h-8 px-2 rounded-md border border-border bg-secondary/30 text-foreground text-xs"
+                        >
+                          <option value="">— nenhum —</option>
+                          {(emps as any[]).map(e => <option key={e.slug} value={e.slug}>{e.nome}</option>)}
+                        </select>
+                      </label>
+                      <label className="flex items-center gap-2">
+                        Gasto (R$)
+                        <Input
+                          key={`gasto-${c.id}-${c.gastoTotal}`}
+                          inputMode="decimal"
+                          defaultValue={c.gastoTotal ? String(c.gastoTotal).replace(".", ",") : ""}
+                          placeholder="0"
+                          className="h-8 w-28 text-xs"
+                          onBlur={e => { const v = reais(e.target.value); if (v !== c.gastoTotal) salvarCampo.mutate({ id: c.id, gastoTotal: v }); }}
+                        />
+                      </label>
                     </div>
                     {linkAberto === c.id && <LinkGerado campanhaId={c.id} />}
                   </CardContent>
