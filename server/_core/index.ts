@@ -532,6 +532,10 @@ async function startServer() {
     })
   );
   
+  // robots.txt e sitemap.xml antes do site (senão caem no index.html da SPA)
+  const { registrarRotasSeo } = await import('../seoRotas');
+  registrarRotasSeo(app);
+
   if (process.env.NODE_ENV === "development") {
     await setupVite(app, server);
   } else {

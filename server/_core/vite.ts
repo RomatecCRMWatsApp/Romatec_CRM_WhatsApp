@@ -5,6 +5,7 @@ import { nanoid } from "nanoid";
 import path from "path";
 import { createServer as createViteServer } from "vite";
 import viteConfig from "../../vite.config";
+import { htmlComMeta } from "../seoRotas";
 
 export async function setupVite(app: Express, server: Server) {
   const serverOptions = {
@@ -38,7 +39,7 @@ export async function setupVite(app: Express, server: Server) {
         `src="/src/main.tsx"`,
         `src="/src/main.tsx?v=${nanoid()}"`
       );
-      const page = await vite.transformIndexHtml(url, template);
+      const page = await htmlComMeta(await vite.transformIndexHtml(url, template), url);
       res.status(200).set({ "Content-Type": "text/html; charset=utf-8" }).end(page);
     } catch (e) {
       vite.ssrFixStacktrace(e as Error);
@@ -67,19 +68,27 @@ export function serveStatic(app: Express) {
     next();
   });
 
-  app.use(express.static(distPath, { setHeaders: (res, path) => {
+  // index: false → "/" também passa pelas meta tags; redirect: false → /bom-jardims não vira /bom-jardims/ (pasta de imagens)
+  app.use(express.static(distPath, { index: false, redirect: false, setHeaders: (res, path) => {
     if (path.endsWith('.html')) {
       res.setHeader('Content-Type', 'text/html; charset=utf-8');
     }
   }}));
 
   // fall through to index.html if the file doesn't exist (skip API routes)
-  app.use("*", (_req, res) => {
+  let indexHtml: string | null = null;
+  app.use("*", async (_req, res) => {
     // Don't serve index.html for API routes
     if (_req.path.startsWith('/api/')) {
       return res.status(404).json({ error: 'Not Found' });
     }
-    res.setHeader('Content-Type', 'text/html; charset=utf-8');
-    res.sendFile(path.resolve(distPath, "index.html"));
+    try {
+      indexHtml ??= await fs.promises.readFile(path.resolve(distPath, "index.html"), "utf-8");
+      res.setHeader('Content-Type', 'text/html; charset=utf-8');
+      res.send(await htmlComMeta(indexHtml, _req.originalUrl));
+    } catch {
+      res.setHeader('Content-Type', 'text/html; charset=utf-8');
+      res.sendFile(path.resolve(distPath, "index.html"));
+    }
   });
 }
