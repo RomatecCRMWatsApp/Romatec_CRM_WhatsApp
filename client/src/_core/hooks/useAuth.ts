@@ -44,12 +44,13 @@ export function useAuth(options?: UseAuthOptions) {
     }
   }, [logoutMutation, utils]);
 
-  const login = useCallback(async (username: string, password: string): Promise<boolean> => {
+  /** null = entrou; string = mensagem de erro do servidor (senha errada, muitas tentativas...) */
+  const login = useCallback(async (username: string, password: string): Promise<string | null> => {
     try {
       await loginMutation.mutateAsync({ username, password });
-      return true;
-    } catch {
-      return false;
+      return null;
+    } catch (error: unknown) {
+      return error instanceof TRPCClientError && error.message ? error.message : "Usuário ou senha incorretos.";
     }
   }, [loginMutation]);
 

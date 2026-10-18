@@ -7,7 +7,7 @@ export function initSqliteTables(sqlite: any): void {
   const run = (sql: string) => {
     try { sqlite.prepare(sql).run(); }
     catch (e: any) {
-      if (!e.message?.includes('already exists')) {
+      if (!e.message?.includes('already exists') && !e.message?.includes('duplicate column')) {
         console.error('[SQLite] Erro ao criar tabela:', e.message, '\nSQL:', sql.substring(0, 80));
       }
     }
@@ -21,10 +21,16 @@ export function initSqliteTables(sqlite: any): void {
     loginMethod TEXT,
     role TEXT NOT NULL DEFAULT 'user',
     password TEXT,
+    password_hash TEXT,
+    passwordHash TEXT,
     createdAt INTEGER NOT NULL DEFAULT (strftime('%s','now')),
     updatedAt INTEGER NOT NULL DEFAULT (strftime('%s','now')),
     lastSignedIn INTEGER NOT NULL DEFAULT (strftime('%s','now'))
   )`);
+
+  // Bancos SQLite criados antes das colunas de senha
+  run(`ALTER TABLE users ADD COLUMN password_hash TEXT`);
+  run(`ALTER TABLE users ADD COLUMN passwordHash TEXT`);
 
   run(`CREATE TABLE IF NOT EXISTS contacts (
     id INTEGER PRIMARY KEY AUTOINCREMENT,

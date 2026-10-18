@@ -20,6 +20,10 @@ export const users = mysqlTable("users", {
   createdAt: timestamp("createdAt").defaultNow().notNull(),
   updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
   lastSignedIn: timestamp("lastSignedIn").defaultNow().notNull(),
+  /** Hash scrypt da senha ("scrypt$sal$hash") — ver server/auth-security.ts */
+  passwordScrypt: varchar("password_hash", { length: 255 }),
+  /** Hash antigo (SHA-256 hex, sem sal); convertido para scrypt no próximo login */
+  passwordHash: varchar("passwordHash", { length: 64 }),
 });
 
 export type User = typeof users.$inferSelect;

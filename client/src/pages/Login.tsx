@@ -23,9 +23,9 @@ export default function Login() {
     e.preventDefault();
     setLoading(true);
     setError("");
-    const ok = await login(username, password);
-    if (!ok) {
-      setError("Usuário ou senha incorretos.");
+    const loginError = await login(username, password);
+    if (loginError) {
+      setError(loginError);
     }
     setLoading(false);
   };
