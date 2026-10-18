@@ -258,14 +258,24 @@ export async function ingestLead(input: LeadIntakeInput): Promise<LeadIntakeResu
     await db.insert(leadInteresses).values({ leadId: leadRow.id, propertyId: input.propertyId, campanhaId: campanhaCad?.id ?? null }).catch(() => {});
   }
 
+  // Score por regras (com detalhamento); o aviso de lead novo já sai com a nota
+  let scoreCalc: { score: number; classe: 'frio' | 'morno' | 'quente' } | null = null;
+  if (leadRow) {
+    try {
+      const { recalcularScoreLead } = await import('./leads/scoreService');
+      scoreCalc = await recalcularScoreLead(leadRow.id, { motivo: lead ? 'nova_entrada' : 'lead_novo', leadNovo: true, notificar: false });
+    } catch (e) {
+      console.warn('[LeadIntake] Score não calculado (não crítico):', e);
+    }
+  }
+
   // Aviso ao José pelos canais configurados (NOTIFY_CANAIS; padrão Telegram)
   try {
     const { notificarLead } = await import('./leads/notificacao');
     const { rotuloCanal } = await import('./leads/inbound');
     const titulo = input.loteCodigo ? `${imovel || input.empreendimentoSlug} — chácara ${input.loteCodigo}` : (imovel || input.empreendimentoSlug);
-    const quentePorEmpreendimento = input.empreendimentoSlug && (input.leadScore ?? 0) >= 60;
-    const score = input.leadScore ?? null;
-    const classe = score === null ? null : quentePorEmpreendimento || score >= 70 ? 'quente' : score >= 40 ? 'morno' : 'frio';
+    const score = scoreCalc?.score ?? input.leadScore ?? null;
+    const classe = scoreCalc?.classe ?? null;
     await notificarLead({
       tipo: lead ? 'recorrente' : 'novo_lead',
       leadId: leadRow?.id ?? 0,

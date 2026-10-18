@@ -48,6 +48,22 @@ const MYSQL: { label: string; stmt: ReturnType<typeof sql> }[] = [
   { label: 'lead.ultimaCampanhaId', stmt: sql`ALTER TABLE leadQualifications ADD COLUMN ultimaCampanhaId INT` },
   { label: 'lead.slots', stmt: sql`ALTER TABLE leadQualifications ADD COLUMN slots JSON` },
   { label: 'lead.tags', stmt: sql`ALTER TABLE leadQualifications ADD COLUMN tags JSON` },
+  // PR (b): score por regras com detalhamento e histórico
+  { label: 'lead.scoreDetalhe', stmt: sql`ALTER TABLE leadQualifications ADD COLUMN scoreDetalhe JSON` },
+  {
+    label: 'leadScoreHistorico',
+    stmt: sql`CREATE TABLE IF NOT EXISTS leadScoreHistorico (
+      id INT AUTO_INCREMENT PRIMARY KEY,
+      leadId INT NOT NULL,
+      score INT NOT NULL,
+      classe VARCHAR(10) NOT NULL,
+      regras VARCHAR(20) NOT NULL,
+      detalhes JSON NOT NULL,
+      motivo VARCHAR(60) NULL,
+      createdAt TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+      INDEX idx_score_lead (leadId, createdAt)
+    )`,
+  },
 ];
 
 function isAlreadyApplied(e: any): boolean {

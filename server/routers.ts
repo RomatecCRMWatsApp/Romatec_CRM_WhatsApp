@@ -819,6 +819,40 @@ export const appRouter = router({
         return { leads: enriched, total, stats };
       }),
 
+    // Por que o lead tem essa nota: regra → pontos (soma = score) + histórico
+    scoreDetalhe: protectedProcedure
+      .input(z.object({ id: z.number() }))
+      .query(async ({ input }) => {
+        const db = await getDb();
+        if (!db) return null;
+        const [lead] = await db.select().from(leadQualifications).where(eq(leadQualifications.id, input.id)).limit(1);
+        if (!lead) return null;
+        const { ROTULO_REGRA } = await import('./leads/score');
+        const { historicoScore } = await import('./leads/scoreService');
+        const det = (lead as any).scoreDetalhe as { regras: string; detalhes: Record<string, number>; at: string } | null;
+        const itens = Object.entries(det?.detalhes || {}).map(([regra, pontos]) => ({ regra, rotulo: ROTULO_REGRA[regra] || regra, pontos }));
+        const soma = itens.reduce((a, i) => a + i.pontos, 0);
+        return {
+          score: lead.leadScore ?? null,
+          classe: lead.score,
+          regras: det?.regras ?? null,
+          calculadoEm: det?.at ?? null,
+          itens,
+          soma,
+          limitado: soma !== (lead.leadScore ?? soma), // soma fora de 0–100 foi limitada
+          historico: await historicoScore(input.id),
+        };
+      }),
+
+    recalcularScore: protectedProcedure
+      .input(z.object({ id: z.number() }))
+      .mutation(async ({ input }) => {
+        const { recalcularScoreLead } = await import('./leads/scoreService');
+        const r = await recalcularScoreLead(input.id, { motivo: 'manual_painel' });
+        if (!r) throw new Error("Lead não encontrado");
+        return r;
+      }),
+
     // Detalhes completos de um lead
     getById: protectedProcedure
       .input(z.object({ id: z.number() }))

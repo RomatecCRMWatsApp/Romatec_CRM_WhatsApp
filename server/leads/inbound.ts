@@ -188,9 +188,11 @@ export async function processarEntradaWhatsApp(input: { phone: string; texto: st
     } as any);
     const leadId = Number(inserted?.[0]?.insertId ?? inserted?.lastInsertRowid);
     if (leadId) await gravarInteresses(leadId, imoveis.map((i: any) => i.id));
+    const { recalcularScoreLead } = await import('./scoreService');
+    const sc = leadId ? await recalcularScoreLead(leadId, { motivo: 'lead_novo_whatsapp', leadNovo: true, notificar: false }).catch(() => null) : null;
 
     await notificarLead({
-      tipo: 'novo_lead', leadId, nome, telefone: phone, funil,
+      tipo: 'novo_lead', leadId, nome, telefone: phone, funil, score: sc?.score ?? null, classe: sc?.classe ?? null,
       imovel: imovelPrincipal ? { codigo: imovelPrincipal.codigo, titulo: imovelPrincipal.titulo, preco: imovelPrincipal.exibirPreco ? imovelPrincipal.preco : null } : null,
       imovelProprietario: funil === 'proprietario' ? 'detalhes a confirmar na conversa' : null,
       origem: rotuloCanal(decisao.canal), campanhaCodigo: campanhaLabel,

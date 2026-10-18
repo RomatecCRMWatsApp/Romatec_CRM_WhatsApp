@@ -315,6 +315,8 @@ export const leadQualifications = mysqlTable("leadQualifications", {
   ultimaCampanhaId: int("ultimaCampanhaId"),
   slots: json("slots").$type<Record<string, { valor: string; fonte: "ia" | "bot" | "form" | "manual"; at: string }>>(),
   tags: json("tags").$type<string[]>(),
+  /** Detalhamento regra → pontos do leadScore atual (server/leads/score.ts) */
+  scoreDetalhe: json("scoreDetalhe").$type<{ regras: string; detalhes: Record<string, number>; at: string }>(),
 
   lastActivityAt: timestamp("lastActivityAt").defaultNow(),          // Último evento (para timeout)
   blockedUntil: timestamp("blockedUntil"),                           // Bloqueado até (para leads que pediram para parar)
@@ -446,6 +448,20 @@ export const leadCampanhas = mysqlTable("leadCampanhas", {
 });
 
 export type LeadCampanha = typeof leadCampanhas.$inferSelect;
+
+/** Histórico do score: grava só quando o valor muda */
+export const leadScoreHistorico = mysqlTable("leadScoreHistorico", {
+  id: int("id").autoincrement().primaryKey(),
+  leadId: int("leadId").notNull(),
+  score: int("score").notNull(),
+  classe: varchar("classe", { length: 10 }).notNull(),
+  regras: varchar("regras", { length: 20 }).notNull(),
+  detalhes: json("detalhes").$type<Record<string, number>>().notNull(),
+  motivo: varchar("motivo", { length: 60 }),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+}, (t) => ({
+  idxLead: index("idx_score_lead").on(t.leadId, t.createdAt),
+}));
 
 export const leadInteresses = mysqlTable("leadInteresses", {
   leadId: int("leadId").notNull(),

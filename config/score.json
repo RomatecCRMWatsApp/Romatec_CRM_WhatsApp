@@ -1,0 +1,46 @@
+{
+  "_comentario": "Pesos do score de leads (server/leads/score.ts). Classes: frio < morno <= x < quente. Bom Jardims segue o README do empreendimento.",
+  "classes": { "morno": 40, "quente": 70 },
+  "comprador": {
+    "codigo_imovel": 10,
+    "pagamento_a_vista": 25,
+    "pagamento_financiamento_aprovado": 20,
+    "pagamento_financiamento_em_analise": 10,
+    "pagamento_permuta_ou_parcelado": 8,
+    "prazo_ate_30d": 20,
+    "prazo_1_3m": 12,
+    "prazo_3_6m": 5,
+    "prazo_pesquisando": -10,
+    "faixa_valor_compativel": 10,
+    "faixa_valor_baixa": -10,
+    "quer_visita": 20,
+    "midia": 5,
+    "tempo_pagina": 5,
+    "retorno": 5,
+    "resposta_rapida": 5,
+    "inatividade_48h": -10
+  },
+  "proprietario": {
+    "documentacao_matricula": 25,
+    "documentacao_escritura_ou_contrato": 12,
+    "documentacao_posse_ou_inventario": 5,
+    "urgencia_ate_30d": 20,
+    "urgencia_1_3m": 12,
+    "exclusividade_sim": 25,
+    "exclusividade_quer_saber_mais": 10,
+    "quer_avaliacao": 15,
+    "valor_pretendido": 5,
+    "resposta_rapida": 5,
+    "inatividade_48h": -10
+  },
+  "bom_jardims": {
+    "classes": { "morno": 40, "quente": 60 },
+    "prazo_imediato": 30,
+    "prazo_3m": 20,
+    "prazo_12m": 5,
+    "pagamento_a_vista": 15,
+    "mora_perto": 15,
+    "chacara_escolhida": 10,
+    "resposta_rapida": 10
+  }
+}

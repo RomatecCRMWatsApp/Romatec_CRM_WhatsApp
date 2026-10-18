@@ -56,6 +56,7 @@ export async function persistLeadState(
           updatedAt: now,
         })
         .where(eq(leadQualifications.phone, cleanPhone));
+      await slotsDoBotEScore(cleanPhone, answers);
 
       console.log(`[Lead Update] phone=${cleanPhone} stage=${stage} name=${realName || existing[0].nome || 'sem nome'}`);
     } else {
@@ -230,6 +231,33 @@ export async function getStaleLeads(timeoutMinutes: number = 45): Promise<LeadSt
   } catch (error) {
     console.error('[Persistence] ❌ Erro ao buscar leads stale:', error);
     return [];
+  }
+}
+
+/**
+ * Respostas do bot que batem com o enum viram slots (fonte bot) e o score
+ * é recalculado pelas regras (o bot não dá mais a nota sozinho).
+ */
+export async function slotsDoBotEScore(phone: string, answers: Record<string, any>): Promise<void> {
+  try {
+    const db = await getDb();
+    if (!db) return;
+    const [lead] = await db.select({ id: leadQualifications.id, funil: leadQualifications.funil, slots: leadQualifications.slots })
+      .from(leadQualifications).where(eq(leadQualifications.phone, phone)).limit(1);
+    if (!lead) return;
+    const { mesclarSlots, slotsDeRespostas } = await import('./leads/slots');
+    const novos = slotsDeRespostas(answers);
+    const atuais = (lead.slots || {}) as Record<string, { valor: string }>;
+    // Não sobrescreve slot que veio de formulário ou do painel
+    const soNovos = Object.fromEntries(Object.entries(novos).filter(([k]) => !atuais[k]));
+    if (Object.keys(soNovos).length) {
+      const { slots, aceitos } = mesclarSlots((lead.funil as any) || 'comprador', lead.slots as any, soNovos, 'bot');
+      if (aceitos.length) await db.update(leadQualifications).set({ slots } as any).where(eq(leadQualifications.id, lead.id));
+    }
+    const { recalcularScoreLead } = await import('./leads/scoreService');
+    await recalcularScoreLead(lead.id, { motivo: 'resposta_bot', slotsNovos: soNovos });
+  } catch (e) {
+    console.warn('[Persistence] Score do bot não recalculado (não crítico):', e);
   }
 }
 

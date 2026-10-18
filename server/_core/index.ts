@@ -541,6 +541,9 @@ async function startServer() {
     console.error('❌ Erro na migration addLeadsV1:', e);
   }
 
+  // Leads parados há 48 h perdem pontos no score (§8)
+  import('../leads/scoreService').then(m => m.iniciarJobInatividade()).catch(e => console.warn('[Score] Job não iniciado:', e));
+
   const preferredPort = parseInt(process.env.PORT || "3000");
   const port = await findAvailablePort(preferredPort);
 
