@@ -505,6 +505,24 @@ export const appRouter = router({
   }),
   companyConfig: router({
     get: publicProcedure.query(async () => getCompanyConfig()),
+    // Status real do WhatsApp (consulta o Z-API na hora, com motivo e passos) — painel inicial
+    whatsappStatus: protectedProcedure
+      .input(z.object({ force: z.boolean().optional() }).optional())
+      .query(async ({ input }) => {
+        const config = await getCompanyConfig();
+        const { checkWhatsAppStatus } = await import('./whatsapp-status');
+        const status = await checkWhatsAppStatus({
+          instanceId: config?.zApiInstanceId || process.env.ZAPI_INSTANCE_ID,
+          token: config?.zApiToken || process.env.ZAPI_TOKEN,
+          clientToken: config?.zApiClientToken || process.env.ZAPI_CLIENT_TOKEN,
+        }, { force: input?.force });
+        // Mantém o campo do banco em dia (ele ficava preso no último valor)
+        const connected = status.state === 'connected';
+        if (config && status.state !== 'error' && !!config.zApiConnected !== connected) {
+          await updateCompanyConfig({ zApiConnected: connected, zApiLastChecked: new Date() }).catch(() => {});
+        }
+        return status;
+      }),
     update: adminProcedure.input(z.object({
       companyName: z.string().optional(),
       phone: z.string().optional(),

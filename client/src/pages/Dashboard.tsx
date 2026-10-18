@@ -3,7 +3,7 @@ import { toast } from "sonner";
 import { useAuth } from "@/_core/hooks/useAuth";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Users, Send, Settings, LogOut, Wifi, WifiOff, TrendingUp, Building2, BarChart3, CheckCircle2, XCircle, Activity, Zap, Clock, AlertTriangle, RefreshCw } from "lucide-react";
+import { Users, Send, Settings, LogOut, WifiOff, TrendingUp, Building2, BarChart3, CheckCircle2, XCircle, RefreshCw, UserPlus, Flame, ChevronRight, MessageCircle, ExternalLink, Activity, Zap, Clock } from "lucide-react";
 import { useLocation } from "wouter";
 import { trpc } from "@/lib/trpc";
 
@@ -305,6 +305,137 @@ function PerformanceCharts({ perfData }: { perfData: any }) {
   );
 }
 
+const ORIGEM_LABEL: Record<string, string> = {
+  instagram_ads: "Anúncio Instagram/Facebook",
+  instagram_dm: "Direct Instagram",
+  instagram_bio: "Link da bio / landing",
+  site: "Site",
+  indicacao: "Indicação",
+  whatsapp: "WhatsApp",
+};
+
+const SCORE_STYLE: Record<string, string> = {
+  quente: "bg-red-500/15 text-red-300 border-red-500/30",
+  morno: "bg-amber-500/15 text-amber-300 border-amber-500/30",
+  frio: "bg-sky-500/15 text-sky-300 border-sky-500/30",
+};
+
+function timeAgo(date?: string | Date | null): string {
+  if (!date) return "";
+  const diff = Date.now() - new Date(date).getTime();
+  const min = Math.round(diff / 60000);
+  if (min < 1) return "agora";
+  if (min < 60) return `há ${min} min`;
+  const h = Math.round(min / 60);
+  if (h < 24) return `há ${h} h`;
+  const d = Math.round(h / 24);
+  return d === 1 ? "ontem" : `há ${d} dias`;
+}
+
+function isToday(date?: string | Date | null): boolean {
+  if (!date) return false;
+  const d = new Date(date);
+  const now = new Date();
+  return d.getFullYear() === now.getFullYear() && d.getMonth() === now.getMonth() && d.getDate() === now.getDate();
+}
+
+function Logo() {
+  const [failed, setFailed] = useState(false);
+  if (failed) {
+    return <div className="h-11 w-11 rounded-xl bg-white/15 flex items-center justify-center text-xl font-black">R</div>;
+  }
+  return <img src={LOGO_URL} alt="Romatec" onError={() => setFailed(true)} className="h-11 w-auto object-contain rounded-lg" />;
+}
+
+/** Status real do WhatsApp: discreto quando ok, com motivo e passos quando não */
+function WhatsAppStatusPanel() {
+  const [, navigate] = useLocation();
+  const [force, setForce] = useState(false);
+  const status = trpc.companyConfig.whatsappStatus.useQuery({ force }, { refetchInterval: 60000 });
+  const testZApi = trpc.companyConfig.testZApiConnection.useMutation();
+
+  const verificar = async () => {
+    setForce(true);
+    const r = await status.refetch();
+    setForce(false);
+    if (r.data?.state === "connected") {
+      // Retoma o agendador se ele tinha sido pausado pela queda do Z-API
+      const t = await testZApi.mutateAsync().catch(() => null);
+      toast.success(t?.message?.includes("retomado") ? "WhatsApp conectado! Envios retomados." : "WhatsApp conectado!");
+    } else if (r.data) {
+      toast.error(r.data.title);
+    }
+  };
+
+  const s = status.data;
+  const checking = status.isFetching || testZApi.isPending;
+
+  if (!s) {
+    return (
+      <div className="glass-card p-4 flex items-center gap-3 text-sm text-muted-foreground">
+        <RefreshCw className="h-4 w-4 animate-spin" /> Verificando o WhatsApp...
+      </div>
+    );
+  }
+
+  if (s.state === "connected") {
+    return (
+      <div className="glass-card px-4 py-3 flex items-center justify-between gap-3">
+        <div className="flex items-center gap-3">
+          <span className="relative flex h-3 w-3">
+            <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-60" />
+            <span className="relative inline-flex rounded-full h-3 w-3 bg-emerald-500" />
+          </span>
+          <div>
+            <p className="text-sm font-semibold text-emerald-300">WhatsApp conectado</p>
+            <p className="text-xs text-muted-foreground">Verificado {timeAgo(s.checkedAt)} · campanhas, bot e boas-vindas de leads funcionando</p>
+          </div>
+        </div>
+        <Button size="sm" variant="ghost" onClick={verificar} disabled={checking} className="text-muted-foreground">
+          <RefreshCw className={`h-4 w-4 ${checking ? "animate-spin" : ""}`} />
+        </Button>
+      </div>
+    );
+  }
+
+  return (
+    <div className="rounded-xl border border-red-500/40 bg-red-950/40 p-5">
+      <div className="flex flex-col md:flex-row md:items-start gap-4">
+        <div className="p-2.5 rounded-lg bg-red-500/20 self-start">
+          <WifiOff className="h-6 w-6 text-red-300" />
+        </div>
+        <div className="flex-1 min-w-0">
+          <p className="font-bold text-red-200">{s.title}</p>
+          <p className="text-sm text-red-100/80 mt-0.5">{s.detail}</p>
+          {s.steps.length > 0 && (
+            <ol className="mt-3 space-y-1.5">
+              {s.steps.map((step, i) => (
+                <li key={i} className="flex gap-2 text-sm text-red-50/90">
+                  <span className="flex-shrink-0 h-5 w-5 rounded-full bg-red-500/30 text-red-100 text-xs flex items-center justify-center font-bold">{i + 1}</span>
+                  <span>{step}</span>
+                </li>
+              ))}
+            </ol>
+          )}
+          <p className="text-xs text-red-200/50 mt-3">Verificado {timeAgo(s.checkedAt)}</p>
+        </div>
+        <div className="flex flex-row md:flex-col gap-2 shrink-0">
+          <Button size="sm" onClick={verificar} disabled={checking} className="bg-red-600 hover:bg-red-700 text-white">
+            <RefreshCw className={`mr-1.5 h-4 w-4 ${checking ? "animate-spin" : ""}`} />
+            {checking ? "Verificando..." : "Verificar agora"}
+          </Button>
+          <Button size="sm" variant="outline" onClick={() => navigate("/settings")} className="border-red-400/40 text-red-100 hover:bg-red-500/20">
+            <Settings className="mr-1.5 h-4 w-4" /> Configurações
+          </Button>
+          <Button size="sm" variant="outline" asChild className="border-red-400/40 text-red-100 hover:bg-red-500/20">
+            <a href="https://app.z-api.io" target="_blank" rel="noreferrer"><ExternalLink className="mr-1.5 h-4 w-4" /> Painel Z-API</a>
+          </Button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 export default function Dashboard() {
   const { user } = useAuth();
   const [, navigate] = useLocation();
@@ -315,21 +446,9 @@ export default function Dashboard() {
   const { data: contacts } = trpc.contacts.list.useQuery();
   const { data: properties } = trpc.properties.list.useQuery();
   const { data: campaigns } = trpc.campaigns.list.useQuery();
-  const { data: config, refetch: refetchConfig } = trpc.companyConfig.get.useQuery(undefined, {
-    refetchInterval: 30000, // verifica status Z-API a cada 30s
-  });
-
-  const testZApi = trpc.companyConfig.testZApiConnection.useMutation({
-    onSuccess: (data) => {
-      if (data.success) {
-        refetchConfig();
-        if (data.message?.includes('retomado')) {
-          toast.success('✅ WhatsApp reconectado! Scheduler retomado automaticamente.');
-        }
-      }
-    },
-  });
-  const { data: perfData, isLoading: perfLoading } = trpc.performance.getStats.useQuery(undefined, {
+  const { data: config } = trpc.companyConfig.get.useQuery();
+  const { data: leadsData } = trpc.leads.list.useQuery({ limit: 200 }, { refetchInterval: 60000 });
+  const { data: perfData } = trpc.performance.getStats.useQuery(undefined, {
     refetchInterval: 30000,
   });
 
@@ -341,178 +460,207 @@ export default function Dashboard() {
     }
   }, [perfData]);
 
-  const activeCampaigns = campaigns?.filter(c => c.status === "running").length || 0;
+  const activeCampaigns = campaigns?.filter((c: any) => c.status === "running").length || 0;
+  const leads = leadsData?.leads ?? [];
+  const leadsHoje = useMemo(() => leads.filter((l: any) => isToday(l.createdAt)).length, [leads]);
+  const ultimosLeads = useMemo(
+    () => [...leads].sort((a: any, b: any) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()).slice(0, 6),
+    [leads],
+  );
 
-  const stats = useMemo(() => [
-    { label: "Clientes", value: contacts?.length || 0, icon: Users, color: "emerald", route: "/contacts" },
-    { label: "Imóveis", value: properties?.length || 0, icon: Building2, color: "amber", route: "/properties" },
-    { label: "Campanhas", value: activeCampaigns, icon: Send, color: "blue", route: "/campaigns" },
-  ], [contacts?.length, properties?.length, activeCampaigns]);
+  const kpis = [
+    { label: "Leads novos hoje", value: leadsHoje, hint: `${leadsData?.stats.total ?? 0} no total`, icon: UserPlus, accent: "text-emerald-300", route: "/leads" },
+    { label: "Leads quentes", value: leadsData?.stats.quente ?? 0, hint: "prontos para o corretor", icon: Flame, accent: "text-red-300", route: "/leads" },
+    { label: "Clientes", value: contacts?.length ?? 0, hint: "na base de contatos", icon: Users, accent: "text-sky-300", route: "/contacts" },
+    { label: "Imóveis", value: properties?.length ?? 0, hint: `${activeCampaigns} em campanha ativa`, icon: Building2, accent: "text-amber-300", route: "/properties" },
+  ];
+
+  const atalhos = [
+    { label: "Leads", desc: "Atender e qualificar", icon: Flame, route: "/leads" },
+    { label: "Clientes", desc: "Base de contatos", icon: Users, route: "/contacts" },
+    { label: "Imóveis", desc: "Cadastro e fotos", icon: Building2, route: "/properties" },
+    { label: "Campanhas", desc: "Disparos no WhatsApp", icon: Send, route: "/campaigns" },
+    { label: "Desempenho", desc: "Relatórios", icon: BarChart3, route: "/performance" },
+    { label: "Configurações", desc: "Z-API, Telegram, empresa", icon: Settings, route: "/settings" },
+  ];
 
   const totals = stablePerfData?.totals || { sent: 0, failed: 0, pending: 0, blocked: 0, successRate: 0, avgPerDay: 0, activeCampaigns: 0 };
+  const hojeRaw = new Date().toLocaleDateString("pt-BR", { weekday: "long", day: "numeric", month: "long" });
+  const hoje = hojeRaw.charAt(0).toUpperCase() + hojeRaw.slice(1);
+  const primeiroNome = (user?.name || "").split(" ")[0];
 
   return (
     <div className="min-h-screen bg-background">
-      {/* Header */}
-      <div className="bg-gradient-to-r from-emerald-600 to-emerald-800 text-white p-6">
-        <div className="container flex items-center justify-between">
-          <div className="flex items-center gap-4">
-            <img src={LOGO_URL} alt="Romatec" className="h-14 w-auto object-contain rounded-lg" />
-            <div>
-              <h1 className="text-2xl font-bold">Romatec CRM - <span className="font-normal italic">Gestão de Relacionamento com o Cliente</span></h1>
-              <p className="text-white/80 text-sm">Sistema de Gestão de Clientes + Vendas</p>
-              <p className="text-white/50 text-xs mt-0.5">CEO José Romário P Bezerra</p>
+      {/* Cabeçalho */}
+      <div className="bg-gradient-to-r from-emerald-700 to-emerald-900 text-white">
+        <div className="container py-4 flex items-center justify-between gap-4">
+          <div className="flex items-center gap-3 min-w-0">
+            <Logo />
+            <div className="min-w-0">
+              <h1 className="text-lg md:text-xl font-bold leading-tight">Romatec CRM</h1>
+              <p className="text-white/70 text-xs md:text-sm truncate">{primeiroNome ? `Olá, ${primeiroNome} · ` : ""}{hoje}</p>
             </div>
           </div>
-          <Button onClick={() => logoutMutation.mutate()} variant="outline" className="border-white/30 text-white hover:bg-white/20">
+          <Button onClick={() => logoutMutation.mutate()} variant="outline" size="sm" className="border-white/30 bg-transparent text-white hover:bg-white/15 shrink-0">
             <LogOut className="mr-2 h-4 w-4" /> Sair
           </Button>
         </div>
       </div>
 
-      {/* Banner Z-API desconectada */}
-      {config && !config.zApiConnected && (
-        <div className="bg-red-600/95 border-b border-red-500 text-white px-4 py-3">
-          <div className="container flex items-center justify-between gap-4">
-            <div className="flex items-center gap-3">
-              <AlertTriangle className="h-5 w-5 flex-shrink-0 animate-pulse" />
-              <div>
-                <p className="font-bold text-sm">WhatsApp Desconectado — Envios Suspensos</p>
-                <p className="text-xs text-red-200">Z-API não está respondendo. Verifique a conexão e reinicie o scheduler.</p>
-              </div>
-            </div>
-            <Button
-              size="sm"
-              variant="outline"
-              className="border-white/50 text-white hover:bg-white/20 shrink-0"
-              onClick={() => testZApi.mutate()}
-              disabled={testZApi.isPending}
+      <div className="container py-6 space-y-6">
+        <WhatsAppStatusPanel />
+
+        {/* Indicadores do dia */}
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+          {kpis.map(k => (
+            <button
+              key={k.label}
+              onClick={() => navigate(k.route)}
+              className="glass-card p-4 text-left hover:border-emerald-500/40 transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500"
             >
-              <RefreshCw className={`mr-1.5 h-3.5 w-3.5 ${testZApi.isPending ? 'animate-spin' : ''}`} />
-              {testZApi.isPending ? 'Verificando...' : 'Verificar Agora'}
-            </Button>
-          </div>
-        </div>
-      )}
-
-      <div className="container py-8 space-y-6">
-        {/* Stats */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-          {stats.map(s => (
-            <Card key={s.label} className="bg-card border-border cursor-pointer hover:border-emerald-500/50 transition-colors" onClick={() => navigate(s.route)}>
-              <CardContent className="pt-6">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <p className="text-sm text-muted-foreground">{s.label}</p>
-                    <p className="text-3xl font-bold text-foreground mt-1">{s.value}</p>
-                  </div>
-                  <div className={`p-3 rounded-xl bg-${s.color}-500/20`}>
-                    <s.icon className={`h-6 w-6 text-${s.color}-400`} />
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
+              <div className="flex items-center justify-between">
+                <span className="text-xs text-muted-foreground">{k.label}</span>
+                <k.icon className={`h-4 w-4 ${k.accent}`} />
+              </div>
+              <p className="text-3xl font-bold text-foreground mt-2">{k.value}</p>
+              <p className="text-xs text-muted-foreground mt-1">{k.hint}</p>
+            </button>
           ))}
         </div>
 
-        {/* Z-API Status + Empresa */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+          {/* Últimos leads */}
+          <Card className="bg-card border-border lg:col-span-2">
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-foreground text-base flex items-center gap-2">
+                <UserPlus className="h-4 w-4 text-emerald-400" /> Últimos leads
+              </CardTitle>
+              <Button size="sm" variant="ghost" onClick={() => navigate("/leads")} className="text-emerald-300 hover:text-emerald-200">
+                Ver todos <ChevronRight className="ml-1 h-4 w-4" />
+              </Button>
+            </CardHeader>
+            <CardContent className="pt-0">
+              {ultimosLeads.length === 0 ? (
+                <p className="text-sm text-muted-foreground py-6 text-center">Nenhum lead ainda. Os cadastros do Instagram e da landing aparecem aqui.</p>
+              ) : (
+                <ul className="divide-y divide-border">
+                  {ultimosLeads.map((l: any) => {
+                    const nome = l.contactName || l.nome || "Sem nome";
+                    const phone = String(l.phone || "").replace(/\D/g, "");
+                    return (
+                      <li key={l.id} className="py-3 flex items-center gap-3">
+                        <div className="h-9 w-9 rounded-full bg-emerald-500/15 text-emerald-300 flex items-center justify-center text-sm font-bold shrink-0">
+                          {nome.charAt(0).toUpperCase()}
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center gap-2 flex-wrap">
+                            <p className="text-sm font-medium text-foreground truncate">{nome}</p>
+                            {l.score && (
+                              <span className={`text-[10px] uppercase tracking-wide px-1.5 py-0.5 rounded border ${SCORE_STYLE[l.score] || ""}`}>{l.score}</span>
+                            )}
+                          </div>
+                          <p className="text-xs text-muted-foreground truncate">
+                            {ORIGEM_LABEL[l.origem] || "WhatsApp"}
+                            {l.campanhaOrigem ? ` · ${l.campanhaOrigem}` : ""} · {timeAgo(l.createdAt)}
+                          </p>
+                        </div>
+                        {phone && (
+                          <Button size="sm" variant="outline" asChild className="shrink-0 border-emerald-500/30 text-emerald-300 hover:bg-emerald-500/10">
+                            <a href={`https://wa.me/${phone}`} target="_blank" rel="noreferrer" title={`Abrir conversa com ${nome}`}>
+                              <MessageCircle className="h-4 w-4 md:mr-1.5" /><span className="hidden md:inline">WhatsApp</span>
+                            </a>
+                          </Button>
+                        )}
+                      </li>
+                    );
+                  })}
+                </ul>
+              )}
+            </CardContent>
+          </Card>
+
+          {/* Atalhos */}
           <Card className="bg-card border-border">
-            <CardHeader><CardTitle className="text-foreground text-lg">Status WhatsApp</CardTitle></CardHeader>
-            <CardContent>
-              <div className="flex items-center gap-3">
-                {config?.zApiConnected ? (
-                  <><Wifi className="h-8 w-8 text-emerald-400" /><div><p className="font-bold text-emerald-400">Conectado</p><p className="text-xs text-muted-foreground">Z-API ativo</p></div></>
-                ) : (
-                  <><WifiOff className="h-8 w-8 text-red-400" /><div><p className="font-bold text-red-400">Desconectado</p><p className="text-xs text-muted-foreground">Configure em Configurações</p></div></>
-                )}
+            <CardHeader className="pb-2">
+              <CardTitle className="text-foreground text-base">Ir para</CardTitle>
+            </CardHeader>
+            <CardContent className="pt-0 space-y-1">
+              {atalhos.map(a => (
+                <button
+                  key={a.label}
+                  onClick={() => navigate(a.route)}
+                  className="w-full flex items-center gap-3 rounded-lg px-3 py-2.5 text-left hover:bg-white/5 transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500"
+                >
+                  <div className="p-2 rounded-lg bg-emerald-500/10">
+                    <a.icon className="h-4 w-4 text-emerald-300" />
+                  </div>
+                  <div className="flex-1">
+                    <p className="text-sm font-medium text-foreground">{a.label}</p>
+                    <p className="text-xs text-muted-foreground">{a.desc}</p>
+                  </div>
+                  <ChevronRight className="h-4 w-4 text-muted-foreground" />
+                </button>
+              ))}
+              <div className="border-t border-border mt-2 pt-3 px-3">
+                <p className="text-xs text-muted-foreground">{config?.companyName || "Romatec"}</p>
+                <p className="text-xs text-muted-foreground/70">{[config?.phone, config?.address].filter(Boolean).join(" · ")}</p>
               </div>
             </CardContent>
           </Card>
-
-          <Card className="bg-card border-border">
-            <CardHeader><CardTitle className="text-foreground text-lg">Empresa</CardTitle></CardHeader>
-            <CardContent className="space-y-1">
-              <p className="text-sm text-foreground font-medium">{config?.companyName || "Romatec"}</p>
-              <p className="text-xs text-muted-foreground">{config?.phone || "â€”"}</p>
-              <p className="text-xs text-muted-foreground">{config?.address || "â€”"}</p>
-            </CardContent>
-          </Card>
         </div>
 
-        {/* Navigation */}
-        <div className="grid grid-cols-2 md:grid-cols-6 gap-3">
-          {[
-            { label: "Clientes", icon: Users, route: "/contacts", color: "bg-emerald-600 hover:bg-emerald-700" },
-            { label: "Imóveis", icon: Building2, route: "/properties", color: "bg-amber-600 hover:bg-amber-700" },
-            { label: "Campanhas", icon: Send, route: "/campaigns", color: "bg-blue-600 hover:bg-blue-700" },
-            { label: "🔥 Leads", icon: TrendingUp, route: "/leads", color: "bg-red-700 hover:bg-red-800" },
-            { label: "Desempenho", icon: BarChart3, route: "/performance", color: "bg-purple-600 hover:bg-purple-700" },
-            { label: "Configurações", icon: Settings, route: "/settings", color: "bg-gray-600 hover:bg-gray-700" },
-          ].map(item => (
-            <Button key={item.label} onClick={() => navigate(item.route)} className={`${item.color} h-14 text-white font-bold`}>
-              <item.icon className="mr-2 h-5 w-5" /> {item.label}
+        {/* Campanhas */}
+        <div className="pt-2">
+          <div className="flex items-center justify-between mb-4">
+            <div className="flex items-center gap-3">
+              <div className="p-2 rounded-lg bg-emerald-500/20">
+                <BarChart3 className="h-5 w-5 text-emerald-400" />
+              </div>
+              <div>
+                <h2 className="text-lg font-bold text-foreground">Campanhas no WhatsApp</h2>
+                <p className="text-xs text-muted-foreground">{activeCampaigns} ativa(s) · atualizado a cada 30 segundos</p>
+              </div>
+            </div>
+            <Button size="sm" variant="ghost" onClick={() => navigate("/campaigns")} className="text-emerald-300 hover:text-emerald-200">
+              Gerenciar <ChevronRight className="ml-1 h-4 w-4" />
             </Button>
-          ))}
-        </div>
-
-        {/* Version footer */}
-        <div className="text-center py-1">
-          <span className="text-xs text-muted-foreground/40 select-none">Romatec CRM v{__APP_VERSION__}</span>
-        </div>
-
-        {/* PAINEL DE DESEMPENHO */}
-        <div className="pt-4">
-          <div className="flex items-center gap-3 mb-6">
-            <div className="p-2 rounded-lg bg-emerald-500/20">
-              <BarChart3 className="h-6 w-6 text-emerald-400" />
-            </div>
-            <div>
-              <h2 className="text-xl font-bold text-foreground">Desempenho das Campanhas</h2>
-              <p className="text-xs text-muted-foreground">Atualizado automaticamente a cada 30 segundos</p>
-            </div>
           </div>
 
-          {/* Cards de Resumo */}
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-6">
             <div className="glass-card p-4">
               <div className="flex items-center justify-between mb-2">
-                <span className="text-xs text-muted-foreground">Total Enviadas</span>
+                <span className="text-xs text-muted-foreground">Enviadas</span>
                 <Send className="h-4 w-4 text-emerald-400" />
               </div>
               <p className="text-3xl font-bold text-emerald-400">{totals.sent}</p>
               <p className="text-xs text-muted-foreground mt-1">com sucesso</p>
             </div>
-
             <div className="glass-card p-4">
               <div className="flex items-center justify-between mb-2">
-                <span className="text-xs text-muted-foreground">Taxa de Sucesso</span>
+                <span className="text-xs text-muted-foreground">Taxa de sucesso</span>
                 <CheckCircle2 className="h-4 w-4 text-emerald-400" />
               </div>
-              <p className="text-3xl font-bold text-emerald-400">{totals.successRate} %</p>
+              <p className="text-3xl font-bold text-emerald-400">{totals.successRate}%</p>
               <p className="text-xs text-muted-foreground mt-1">de {totals.sent + totals.failed} tentativas</p>
             </div>
-
             <div className="glass-card p-4">
               <div className="flex items-center justify-between mb-2">
-                <span className="text-xs text-muted-foreground">Média/Dia</span>
+                <span className="text-xs text-muted-foreground">Média por dia</span>
                 <TrendingUp className="h-4 w-4 text-amber-400" />
               </div>
               <p className="text-3xl font-bold text-amber-400">{totals.avgPerDay}</p>
-              <p className="text-xs text-muted-foreground mt-1">mensagens nos últimos 7 dias</p>
+              <p className="text-xs text-muted-foreground mt-1">últimos 7 dias</p>
             </div>
-
             <div className="glass-card p-4">
               <div className="flex items-center justify-between mb-2">
                 <span className="text-xs text-muted-foreground">Falhas</span>
                 <XCircle className="h-4 w-4 text-red-400" />
               </div>
               <p className="text-3xl font-bold text-red-400">{totals.failed}</p>
-              <p className="text-xs text-muted-foreground mt-1">{totals.blocked} bloqueadas</p>
+              <p className="text-xs text-muted-foreground mt-1">{totals.blocked} bloqueada(s)</p>
             </div>
           </div>
 
-          {/* Gráficos - componente isolado */}
           {stablePerfData ? (
             <PerformanceCharts perfData={stablePerfData} />
           ) : (
@@ -524,10 +672,11 @@ export default function Dashboard() {
             </div>
           )}
         </div>
+
+        <div className="text-center pb-2">
+          <span className="text-xs text-muted-foreground/40 select-none">Romatec CRM v{__APP_VERSION__}</span>
+        </div>
       </div>
     </div>
   );
 }
-
-
-
