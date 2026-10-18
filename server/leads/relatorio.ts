@@ -9,6 +9,9 @@ import { rotuloCanal } from './inbound';
 import { canalDaOrigem, type LeadOrigem } from '../lead-intake';
 
 export type Toque = 'primeiro' | 'ultimo';
+
+/** Data do filtro do período (input type="date"): AAAA-MM-DD */
+export const DATA_ISO = /^\d{4}-\d{2}-\d{2}$/;
 export type TipoCanal = 'pago' | 'organico' | 'outro';
 
 const PAGOS = ['meta_ctwa', 'meta_leadads', 'google_ads'];

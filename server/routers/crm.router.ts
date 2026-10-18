@@ -11,7 +11,7 @@ import { mesclarSlots, slotsDoFunil, slotsPendentes, tagsDoLead, tipoImovelDe, t
 import { rotuloCanal } from "../leads/inbound";
 import { appUrl } from "../leads/config";
 import type { Funil } from "../leads/atribuicao";
-import { montarRelatorio, relatorioCsv } from "../leads/relatorio";
+import { montarRelatorio, relatorioCsv, DATA_ISO } from "../leads/relatorio";
 
 const funilSchema = z.enum(["comprador", "proprietario"]);
 
@@ -255,8 +255,8 @@ export const crmRouter = router({
   /** Relatório por canal e campanha (§12.4): leads criados no período, atribuição pelo 1º ou último toque */
   relatorio: protectedProcedure
     .input(z.object({
-      de: z.string().regex(/^d{4}-d{2}-d{2}$/).optional(),
-      ate: z.string().regex(/^d{4}-d{2}-d{2}$/).optional(),
+      de: z.string().regex(DATA_ISO).optional(),
+      ate: z.string().regex(DATA_ISO).optional(),
       toque: z.enum(["primeiro", "ultimo"]).default("primeiro"),
     }))
     .query(async ({ input }) => {
