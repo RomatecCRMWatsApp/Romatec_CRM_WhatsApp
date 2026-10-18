@@ -7,7 +7,7 @@ import { canaisNotificacao, telefonesNotificacao, appUrl, type CanalNotificacao 
 import { enviarTexto } from './zapiClient';
 import type { Funil } from './atribuicao';
 
-export type TipoAviso = 'novo_lead' | 'recorrente' | 'quente' | 'visita' | 'avaliacao' | 'humano';
+export type TipoAviso = 'novo_lead' | 'recorrente' | 'quente' | 'visita' | 'avaliacao' | 'humano' | 'completa';
 
 export interface DadosAviso {
   tipo: TipoAviso;
@@ -35,9 +35,10 @@ const TITULO: Record<TipoAviso, string> = {
   visita: 'QUER VISITA',
   avaliacao: 'QUER AVALIAÇÃO',
   humano: 'PEDIU ATENDIMENTO HUMANO',
+  completa: 'QUALIFICAÇÃO CONCLUÍDA — ASSUMA A CONVERSA',
 };
 const EMOJI_CLASSE = { frio: '🔵', morno: '🟡', quente: '🔴' } as const;
-const PRIORITARIOS: TipoAviso[] = ['quente', 'visita', 'avaliacao', 'humano'];
+const PRIORITARIOS: TipoAviso[] = ['quente', 'visita', 'avaliacao', 'humano', 'completa'];
 const ANTI_SPAM_MS = 10 * 60 * 1000;
 
 export function formatarTelefone(digitos: string): string {

@@ -959,6 +959,21 @@ export async function processBotMessage(context: BotContext): Promise<BotRespons
   }
 
   // ═══════════════════════════════════════════════════════════════════════
+  // QUALIFICAÇÃO POR IA (leads da captação): a IA conduz e extrai os slots;
+  // 2 falhas seguidas → o roteiro de perguntas abaixo assume (§7.3)
+  // ═══════════════════════════════════════════════════════════════════════
+  try {
+    const { processarMensagemQualificacao } = await import('./leads/qualificacaoService');
+    const ia = await processarMensagemQualificacao({ phone: clean, texto: messageText });
+    if (ia) {
+      registerUserReply(context.phone); // cancela os follow-ups automáticos: o lead respondeu
+      return { text: ia.texto, qualified: ia.acao === 'completa' || ia.acao.startsWith('handoff') };
+    }
+  } catch (e) {
+    console.warn('[Bot] Qualificação por IA indisponível, seguindo no roteiro:', e);
+  }
+
+  // ═══════════════════════════════════════════════════════════════════════
   // GATE 0.5: LEAD DE EMPREENDIMENTO (ex.: Bom Jardims) — atendimento humano
   // O roteiro genérico (renda/FGTS/simulação bancária) não serve e pode citar
   // valores; o corretor responde. Só o opt-out é tratado automaticamente.

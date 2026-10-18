@@ -5,7 +5,7 @@ import { z } from "zod";
 import { and, desc, eq, inArray } from "drizzle-orm";
 import { protectedProcedure, router } from "../_core/trpc";
 import { getDb } from "../db";
-import { leadQualifications, leadInteresses, leadEventos, leadCampanhas, properties } from "../../drizzle/schema";
+import { leadQualifications, leadInteresses, leadEventos, leadCampanhas, leadMensagens, properties } from "../../drizzle/schema";
 import { ETAPAS, ROTULO_ETAPA, MOTIVOS_PERDA, ROTULO_MOTIVO, etapaDoLead, validarMovimento, escolherSimilar, imovelDoProprietario, resumoProprietario } from "../leads/kanban";
 import { mesclarSlots, slotsDoFunil, slotsPendentes, tagsDoLead, tipoImovelDe, type SlotsLead } from "../leads/slots";
 import { rotuloCanal } from "../leads/inbound";
@@ -119,6 +119,7 @@ export const crmRouter = router({
     const camps = campIds.length ? await db.select({ id: leadCampanhas.id, codigo: leadCampanhas.codigo, nome: leadCampanhas.nome }).from(leadCampanhas).where(inArray(leadCampanhas.id, campIds)) : [];
     const camp = (id?: number | null) => camps.find((c: any) => c.id === id) ?? null;
     const eventos = await db.select().from(leadEventos).where(eq(leadEventos.leadId, l.id)).orderBy(desc(leadEventos.createdAt)).limit(100);
+    const mensagens = (await db.select().from(leadMensagens).where(eq(leadMensagens.leadId, l.id)).orderBy(desc(leadMensagens.createdAt)).limit(100)).reverse();
     const tipoImovel = tipoImovelDe(imoveis.find((i: any) => i.id === l.propertyId)?.tipo);
     const slots = (l.slots || {}) as SlotsLead;
     return {
@@ -150,6 +151,9 @@ export const crmRouter = router({
       tags: Array.from(new Set([...(Array.isArray(l.tags) ? l.tags : []), ...tagsDoLead(funil, slots)])),
       imoveis: imoveis.map((i: any) => ({ ...i, price: i.price ? Number(i.price) : null, link: i.codigo ? `${appUrl()}/i/${i.codigo}` : null })),
       eventos,
+      mensagens,
+      modoQualificacao: l.modoQualificacao ?? "ia",
+      perguntasIa: l.perguntasIa ?? 0,
       avalieImob: funil === "proprietario" ? linksAvalieImob(l) : null,
       imovelProprietario: funil === "proprietario" ? resumoProprietario(slots) : null,
     };

@@ -146,6 +146,10 @@ async function startServer() {
             const { enviarTexto } = await import('../leads/zapiClient');
             try {
               await enviarTexto(payload.phone, entrada.mensagem);
+              // Contexto da conversa para a qualificação por IA
+              const { registrarMensagemPorTelefone } = await import('../leads/qualificacaoService');
+              await registrarMensagemPorTelefone(payload.phone, 'in', 'lead', msgText);
+              await registrarMensagemPorTelefone(payload.phone, 'out', 'sistema', entrada.mensagem);
               // Comprador: o bot de qualificação continua a partir da resposta à abertura
               if (entrada.funil === 'comprador') registerBotMessage(payload.phone, senderName);
             } catch (e: any) {

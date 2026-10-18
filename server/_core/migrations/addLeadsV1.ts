@@ -48,6 +48,22 @@ const MYSQL: { label: string; stmt: ReturnType<typeof sql> }[] = [
   { label: 'lead.ultimaCampanhaId', stmt: sql`ALTER TABLE leadQualifications ADD COLUMN ultimaCampanhaId INT` },
   { label: 'lead.slots', stmt: sql`ALTER TABLE leadQualifications ADD COLUMN slots JSON` },
   { label: 'lead.tags', stmt: sql`ALTER TABLE leadQualifications ADD COLUMN tags JSON` },
+  // PR (e): qualificação por IA
+  { label: 'lead.modoQualificacao', stmt: sql`ALTER TABLE leadQualifications ADD COLUMN modoQualificacao VARCHAR(10) DEFAULT 'ia'` },
+  { label: 'lead.perguntasIa', stmt: sql`ALTER TABLE leadQualifications ADD COLUMN perguntasIa INT DEFAULT 0` },
+  { label: 'lead.falhasIa', stmt: sql`ALTER TABLE leadQualifications ADD COLUMN falhasIa INT DEFAULT 0` },
+  {
+    label: 'leadMensagens',
+    stmt: sql`CREATE TABLE IF NOT EXISTS leadMensagens (
+      id INT AUTO_INCREMENT PRIMARY KEY,
+      leadId INT NOT NULL,
+      direcao VARCHAR(3) NOT NULL,
+      autor VARCHAR(10) NOT NULL,
+      texto TEXT NOT NULL,
+      createdAt TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
+      INDEX idx_msg_lead (leadId, createdAt)
+    )`,
+  },
   // PR (d): kanban e handoff humano
   { label: 'lead.etapa', stmt: sql`ALTER TABLE leadQualifications ADD COLUMN etapa VARCHAR(30)` },
   { label: 'lead.motivoPerda', stmt: sql`ALTER TABLE leadQualifications ADD COLUMN motivoPerda VARCHAR(120)` },

@@ -185,6 +185,30 @@ export default function LeadDetalhe() {
             </CardContent>
           </Card>
 
+          {/* Conversa */}
+          <Card className="bg-card border-border">
+            <CardHeader className="pb-2">
+              <CardTitle className="text-base">Conversa</CardTitle>
+              <p className="text-xs text-muted-foreground">Qualificação: {lead.modoQualificacao === "bot" ? "roteiro de perguntas (IA caiu)" : "IA"} · {lead.perguntasIa} pergunta(s)</p>
+            </CardHeader>
+            <CardContent>
+              {lead.mensagens.length === 0 ? (
+                <p className="text-sm text-muted-foreground">Nenhuma mensagem registrada pelo CRM ainda.</p>
+              ) : (
+                <div className="space-y-2 max-h-96 overflow-y-auto pr-1">
+                  {lead.mensagens.map((m: any) => (
+                    <div key={m.id} className={`flex ${m.direcao === "in" ? "justify-start" : "justify-end"}`}>
+                      <div className={`max-w-[85%] rounded-xl px-3 py-2 text-sm whitespace-pre-line ${m.direcao === "in" ? "bg-secondary/60 text-foreground" : "bg-emerald-600/20 text-emerald-50"}`}>
+                        {m.texto}
+                        <p className="text-[10px] opacity-60 mt-1 text-right">{m.autor === "lead" ? "" : `${m.autor} · `}{new Date(m.createdAt).toLocaleString("pt-BR", { day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit" })}</p>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </CardContent>
+          </Card>
+
           {/* Linha do tempo */}
           <Card className="bg-card border-border">
             <CardHeader className="pb-2"><CardTitle className="text-base">Linha do tempo</CardTitle></CardHeader>
@@ -201,7 +225,7 @@ export default function LeadDetalhe() {
                   ))}
                 </ul>
               )}
-              <p className="text-[11px] text-muted-foreground mt-3">A conversa do WhatsApp fica no aparelho: abra pelo botão WhatsApp no topo.</p>
+              <p className="text-[11px] text-muted-foreground mt-3">Mensagens que você manda direto pelo celular não aparecem aqui.</p>
             </CardContent>
           </Card>
         </div>

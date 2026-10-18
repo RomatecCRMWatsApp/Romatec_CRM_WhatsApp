@@ -272,7 +272,7 @@ export function initSqliteTables(sqlite: any): void {
   // Captação v1 (server/_core/migrations/addLeadsV1.ts)
   run(`ALTER TABLE properties ADD COLUMN codigo TEXT`);
   run(`ALTER TABLE properties ADD COLUMN exibirPreco INTEGER NOT NULL DEFAULT 1`);
-  for (const col of ["funil TEXT DEFAULT 'comprador'", "origemCanal TEXT", "origemCampanhaId INTEGER", "ultimoCanal TEXT", "ultimaCampanhaId INTEGER", "slots TEXT", "tags TEXT", "scoreDetalhe TEXT", "etapa TEXT", "motivoPerda TEXT", "humano INTEGER DEFAULT 0"]) {
+  for (const col of ["funil TEXT DEFAULT 'comprador'", "origemCanal TEXT", "origemCampanhaId INTEGER", "ultimoCanal TEXT", "ultimaCampanhaId INTEGER", "slots TEXT", "tags TEXT", "scoreDetalhe TEXT", "etapa TEXT", "motivoPerda TEXT", "humano INTEGER DEFAULT 0", "modoQualificacao TEXT DEFAULT 'ia'", "perguntasIa INTEGER DEFAULT 0", "falhasIa INTEGER DEFAULT 0"]) {
     run(`ALTER TABLE leadQualifications ADD COLUMN ${col}`);
   }
   run(`CREATE TABLE IF NOT EXISTS leadCampanhas (
@@ -280,6 +280,10 @@ export function initSqliteTables(sqlite: any): void {
     funil TEXT NOT NULL DEFAULT 'comprador', propertyId INTEGER, empreendimentoSlug TEXT, metaFormId TEXT, googleFormId TEXT,
     utmSource TEXT, utmCampaign TEXT, gastoTotal REAL NOT NULL DEFAULT 0, inicio INTEGER, fim INTEGER, ativa INTEGER NOT NULL DEFAULT 1,
     createdAt INTEGER NOT NULL DEFAULT (strftime('%s','now')), updatedAt INTEGER NOT NULL DEFAULT (strftime('%s','now'))
+  )`);
+  run(`CREATE TABLE IF NOT EXISTS leadMensagens (
+    id INTEGER PRIMARY KEY AUTOINCREMENT, leadId INTEGER NOT NULL, direcao TEXT NOT NULL, autor TEXT NOT NULL,
+    texto TEXT NOT NULL, createdAt INTEGER NOT NULL DEFAULT (strftime('%s','now'))
   )`);
   run(`CREATE TABLE IF NOT EXISTS leadEventos (
     id INTEGER PRIMARY KEY AUTOINCREMENT, leadId INTEGER, visitanteId TEXT, tipo TEXT NOT NULL, propertyId INTEGER,

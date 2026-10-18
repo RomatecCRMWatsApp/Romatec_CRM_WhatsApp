@@ -320,6 +320,10 @@ export const leadQualifications = mysqlTable("leadQualifications", {
   motivoPerda: varchar("motivoPerda", { length: 120 }),
   /** Corretor assumiu a conversa: o bot não responde até devolver */
   humano: boolean("humano").default(false),
+  /** Qualificação por IA (§7.3): modo atual, perguntas feitas e falhas seguidas da IA */
+  modoQualificacao: varchar("modoQualificacao", { length: 10 }).default("ia"),
+  perguntasIa: int("perguntasIa").default(0),
+  falhasIa: int("falhasIa").default(0),
   /** Detalhamento regra → pontos do leadScore atual (server/leads/score.ts) */
   scoreDetalhe: json("scoreDetalhe").$type<{ regras: string; detalhes: Record<string, number>; at: string }>(),
 
@@ -467,6 +471,18 @@ export const leadEventos = mysqlTable("leadEventos", {
 }, (t) => ({
   idxLead: index("idx_evento_lead").on(t.leadId, t.createdAt),
   idxVisitante: index("idx_evento_visitante").on(t.visitanteId),
+}));
+
+/** Conversa do lead no WhatsApp (contexto da IA e tela do lead) */
+export const leadMensagens = mysqlTable("leadMensagens", {
+  id: int("id").autoincrement().primaryKey(),
+  leadId: int("leadId").notNull(),
+  direcao: varchar("direcao", { length: 3 }).notNull(),        // in | out
+  autor: varchar("autor", { length: 10 }).notNull(),           // lead | ia | bot | sistema
+  texto: text("texto").notNull(),
+  createdAt: timestamp("createdAt", { fsp: 3 }).defaultNow().notNull(),
+}, (t) => ({
+  idxLead: index("idx_msg_lead").on(t.leadId, t.createdAt),
 }));
 
 /** Histórico do score: grava só quando o valor muda */
