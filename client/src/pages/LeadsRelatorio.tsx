@@ -41,7 +41,7 @@ function Resumo({ titulo, valor, sub }: { titulo: string; valor: string; sub?: s
   );
 }
 
-const COLUNAS = ["Leads", "Com imóvel", "Qualif. completa", "Quentes", "Visitas", "Fechados", "Cliques WhatsApp", "Scans QR", "Visitas à página", "Gasto", "Custo / quente"];
+const COLUNAS = ["Leads", "Com imóvel", "Qualif. completa", "Quentes", "Pediram visita", "Visitaram", "Propostas", "Vendas", "Cliques WhatsApp", "Scans QR", "Visitas à página", "Gasto", "Custo / quente", "Custo / visita", "Custo / venda"];
 
 function Metricas({ c }: { c: any }) {
   const td = "px-2 py-2 text-right tabular-nums whitespace-nowrap";
@@ -52,13 +52,45 @@ function Metricas({ c }: { c: any }) {
       <td className={td}>{pct(c.completa, c.leads)}</td>
       <td className={`${td} text-orange-300 font-semibold`}>{c.quentes}</td>
       <td className={td}>{c.visitas}</td>
-      <td className={td}>{c.fechados}</td>
+      <td className={`${td} text-violet-300 font-semibold`}>{c.visitasRealizadas}</td>
+      <td className={td}>{c.propostas}</td>
+      <td className={`${td} text-emerald-300 font-semibold`}>{c.fechados}</td>
       <td className={td}>{c.cliques}</td>
       <td className={td}>{c.scans}</td>
       <td className={td}>{c.views}</td>
       <td className={td}>{c.gasto ? brl(c.gasto) : "—"}</td>
       <td className={`${td} font-semibold`}>{brl(c.custoPorQuente)}</td>
+      <td className={`${td} font-semibold`}>{brl(c.custoPorVisita)}</td>
+      <td className={`${td} font-semibold`}>{brl(c.custoPorVenda)}</td>
     </>
+  );
+}
+
+/** Funil do período: cada etapa com a conversão a partir da anterior */
+function Funil({ c }: { c: any }) {
+  const etapas: [string, number, string][] = [
+    ["Leads", c.leads, "text-foreground"],
+    ["Quentes", c.quentes, "text-orange-300"],
+    ["Pediram/agendaram visita", c.visitas, "text-sky-300"],
+    ["Visitaram", c.visitasRealizadas, "text-violet-300"],
+    ["Propostas", c.propostas, "text-amber-300"],
+    ["Vendas", c.fechados, "text-emerald-300"],
+  ];
+  return (
+    <Card className="bg-card border-border">
+      <CardHeader className="pb-2"><CardTitle className="text-base">Funil do período</CardTitle></CardHeader>
+      <CardContent>
+        <div className="grid grid-cols-3 md:grid-cols-6 gap-2">
+          {etapas.map(([rotulo, n, cor], i) => (
+            <div key={rotulo} className="rounded-lg border border-border p-3 text-center">
+              <p className={`text-2xl font-bold tabular-nums ${cor}`}>{n}</p>
+              <p className="text-[11px] text-muted-foreground">{rotulo}</p>
+              {i > 0 && <p className="text-[10px] text-muted-foreground mt-1">{pct(n, etapas[i - 1][1])} da etapa anterior</p>}
+            </div>
+          ))}
+        </div>
+      </CardContent>
+    </Card>
   );
 }
 
@@ -119,7 +151,7 @@ export default function LeadsRelatorio() {
 
   return (
     <div>
-      <PageHeader icone={BarChart3} titulo="Relatório por canal e campanha" subtitulo="Orgânico × pago, leads quentes e custo por lead quente" />
+      <PageHeader icone={BarChart3} titulo="Relatório por canal e campanha" subtitulo="Do lead à venda: funil, custo por visita e por venda, e velocidade de atendimento" />
 
       <div className="px-4 md:px-6 pb-6 max-w-[1500px] mx-auto space-y-4">
         <Card className="bg-card border-border">
@@ -157,10 +189,13 @@ export default function LeadsRelatorio() {
           <>
             <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
               <Resumo titulo="Leads no período" valor={String(r.total.leads)} sub={`${pct(r.total.comImovel, r.total.leads)} com imóvel identificado`} />
-              <Resumo titulo="Leads quentes" valor={String(r.total.quentes)} sub={`${r.total.visitas} visita(s) · ${r.total.fechados} fechado(s)`} />
-              <Resumo titulo="Custo por lead quente" valor={brl(r.total.custoPorQuente)} sub={r.total.gasto ? `Gasto cadastrado: ${brl(r.total.gasto)}` : "Cadastre o gasto em Campanhas"} />
-              <Resumo titulo="Tempo até a 1ª resposta" valor={tempo(r.tempoMedioRespostaMin)} sub={r.leadsComResposta ? `média de ${r.leadsComResposta} lead(s) que responderam` : "ninguém respondeu ainda"} />
+              <Resumo titulo="Custo por visita realizada" valor={brl(r.total.custoPorVisita)} sub={r.total.gasto ? `${r.total.visitasRealizadas} visita(s) · gasto ${brl(r.total.gasto)}` : "Cadastre o gasto em Campanhas"} />
+              <Resumo titulo="Custo por venda" valor={brl(r.total.custoPorVenda)} sub={`${r.total.fechados} venda(s) · custo por quente ${brl(r.total.custoPorQuente)}`} />
+              <Resumo titulo="Atendimento do corretor (mediana)" valor={tempo(r.atendimento.medianaMin)}
+                sub={r.atendimento.atendidos ? `pior 10%: ${tempo(r.atendimento.p90Min)} · ${r.atendimento.ate5min}% em até 5 min${r.atendimento.esperando ? ` · ${r.atendimento.esperando} esperando` : ""}` : "nenhum lead pediu corretor no período"} />
             </div>
+
+            <Funil c={r.total} />
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
               {[{ t: organico, tipo: "organico" }, { t: pago, tipo: "pago" }].map(({ t, tipo }) => (
@@ -187,6 +222,40 @@ export default function LeadsRelatorio() {
             )} />
 
             <Card className="bg-card border-border">
+              <CardHeader className="pb-2"><CardTitle className="text-base">Por corretor</CardTitle></CardHeader>
+              <CardContent>
+                {r.atendimento.porCorretor.length === 0 ? <p className="text-sm text-muted-foreground">Nada no período.</p> : (
+                  <div className="overflow-x-auto -mx-2">
+                    <table className="w-full text-xs">
+                      <thead>
+                        <tr className="text-muted-foreground border-b border-border">
+                          {["Corretor", "Leads", "Visitaram", "Vendas", "Atendidos", "Mediana de atendimento", "Pior 10%", "Esperando agora"].map((h, i) => (
+                            <th key={h} className={`px-2 py-2 font-medium whitespace-nowrap ${i ? "text-right" : "text-left"}`}>{h}</th>
+                          ))}
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {r.atendimento.porCorretor.map(c => (
+                          <tr key={String(c.responsavelId)} className="border-b border-border/50">
+                            <td className="px-2 py-2">{c.nome}</td>
+                            <td className="px-2 py-2 text-right tabular-nums">{c.leads}</td>
+                            <td className="px-2 py-2 text-right tabular-nums text-violet-300">{c.visitasRealizadas} <span className="text-muted-foreground">({pct(c.visitasRealizadas, c.leads)})</span></td>
+                            <td className="px-2 py-2 text-right tabular-nums text-emerald-300">{c.fechados}</td>
+                            <td className="px-2 py-2 text-right tabular-nums">{c.atendidos}</td>
+                            <td className="px-2 py-2 text-right tabular-nums font-semibold">{tempo(c.medianaMin)}</td>
+                            <td className="px-2 py-2 text-right tabular-nums">{tempo(c.p90Min)}</td>
+                            <td className={`px-2 py-2 text-right tabular-nums ${c.esperando ? "text-amber-300 font-semibold" : ""}`}>{c.esperando}</td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                )}
+                <p className="text-[11px] text-muted-foreground mt-2">Atendimento: do pedido de corretor (lead quente, pediu visita, empreendimento…) até o "Já atendi" ou a primeira ação do corretor no lead.</p>
+              </CardContent>
+            </Card>
+
+            <Card className="bg-card border-border">
               <CardHeader className="pb-2"><CardTitle className="text-base">Imóveis que mais geram leads quentes</CardTitle></CardHeader>
               <CardContent>
                 {r.imoveis.length === 0 ? <p className="text-sm text-muted-foreground">Nenhum imóvel identificado nos leads do período.</p> : (
@@ -208,6 +277,8 @@ export default function LeadsRelatorio() {
             <p className="text-[11px] text-muted-foreground">
               Leads contados pela data de entrada. Cliques, scans e visitas à página incluem quem ainda não virou lead.
               O gasto é o total cadastrado em cada campanha (não é dividido por período).
+              "Visitaram" conta a visita marcada como realizada na agenda ou o lead que já passou dessa etapa no funil.
+              {r.leadsComResposta ? ` Os leads levaram em média ${tempo(r.tempoMedioRespostaMin)} para responder à 1ª mensagem.` : ""}
             </p>
           </>
         )}

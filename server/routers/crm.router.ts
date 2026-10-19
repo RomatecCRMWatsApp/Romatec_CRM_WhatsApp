@@ -458,6 +458,7 @@ export const crmRouter = router({
         ultimoCanal: leadQualifications.ultimoCanal, ultimaCampanhaId: leadQualifications.ultimaCampanhaId,
         propertyId: leadQualifications.propertyId, etapa: leadQualifications.etapa, stage: leadQualifications.stage,
         score: leadQualifications.score, slots: leadQualifications.slots, createdAt: leadQualifications.createdAt,
+        responsavelId: leadQualifications.responsavelId, aguardandoCorretorDesde: leadQualifications.aguardandoCorretorDesde, atendidoAt: leadQualifications.atendidoAt,
       }).from(leadQualifications).where(periodo(leadQualifications.createdAt));
       const ids = leads.map((l: any) => l.id);
       const [campanhas, interessesRows, eventos, mensagens, imoveis] = await Promise.all([
@@ -471,7 +472,15 @@ export const crmRouter = router({
       ]);
       const interesses = new Map<number, number[]>();
       for (const r of interessesRows as any[]) interesses.set(r.leadId, [...(interesses.get(r.leadId) ?? []), r.propertyId]);
-      const rel = montarRelatorio({ leads: leads as any, campanhas, interesses, eventos, mensagens: mensagens as any, imoveis, toque: input.toque });
+      // Visitas realizadas (agenda) e nomes dos corretores
+      const { leadVisitas } = await import("../../drizzle/schema");
+      const realizadasRows: any[] = ids.length ? await db.select({ leadId: leadVisitas.leadId }).from(leadVisitas).where(and(inArray(leadVisitas.leadId, ids), eq(leadVisitas.status, "realizada"))) : [];
+      const pessoas: any[] = await db.select({ id: users.id, name: users.name }).from(users);
+      const rel = montarRelatorio({
+        leads: leads as any, campanhas, interesses, eventos, mensagens: mensagens as any, imoveis, toque: input.toque,
+        visitasRealizadas: new Set(realizadasRows.map(r => r.leadId)),
+        responsaveis: new Map(pessoas.map(p => [p.id, p.name || `Usuário ${p.id}`])),
+      });
       // Série diária para o gráfico do painel (últimos 30 dias, fuso do Maranhão)
       const porDia = serieLeadsPorDia(leads.map((l: any) => l.createdAt), 30);
       return { ...rel, porDia, csv: relatorioCsv(rel), periodo: { de: input.de ?? null, ate: input.ate ?? null } };

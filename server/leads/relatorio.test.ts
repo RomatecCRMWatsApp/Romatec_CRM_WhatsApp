@@ -64,7 +64,7 @@ describe('Relatório — 1º toque', () => {
   const r = montarRelatorio(entrada());
 
   it('totais', () => {
-    expect(r.total).toMatchObject({ leads: 5, comImovel: 2, completa: 1, quentes: 2, visitas: 2, fechados: 1, cliques: 2, scans: 1, views: 1, gasto: 300, custoPorQuente: 150 });
+    expect(r.total).toMatchObject({ leads: 5, comImovel: 2, completa: 1, quentes: 2, visitas: 3, visitasRealizadas: 1, propostas: 1, fechados: 1, cliques: 2, scans: 1, views: 1, gasto: 300, custoPorQuente: 150, custoPorVisita: 300, custoPorVenda: 300 }); // a venda conta como visita (funil sempre decrescente)
   });
 
   it('orgânico × pago', () => {
@@ -130,6 +130,6 @@ describe('Auxiliares', () => {
     const csv = relatorioCsv(r);
     const linhas = csv.replace('﻿', '').split('\r\n');
     expect(linhas[0]).toContain('Custo por lead quente (R$)');
-    expect(linhas[1]).toBe('CTWA-OUT;"Anúncio ""out""; chácaras";Anúncio Click-to-WhatsApp;Pago;3;33;33;2;1;1;0;0;0;300,00;150,00');
+    expect(linhas[1]).toBe('CTWA-OUT;"Anúncio ""out""; chácaras";Anúncio Click-to-WhatsApp;Pago;3;33;33;2;2;1;1;1;0;0;0;300,00;150,00;300,00;300,00');
   });
 });

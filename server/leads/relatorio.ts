@@ -39,6 +39,10 @@ export interface LeadRel {
   score?: string | null;
   slots?: SlotsLead | null;
   createdAt: Date | string;
+  /** Prazo de atendimento humano (server/leads/sla.ts) */
+  responsavelId?: number | null;
+  aguardandoCorretorDesde?: Date | string | null;
+  atendidoAt?: Date | string | null;
 }
 
 export interface CampanhaRel { id: number; codigo: string; nome: string; canal: string; gastoTotal?: string | number | null }
@@ -57,27 +61,33 @@ export function campanhaDoLead(l: LeadRel, toque: Toque = 'primeiro'): number | 
   return (toque === 'ultimo' ? l.ultimaCampanhaId ?? l.origemCampanhaId : l.origemCampanhaId) ?? null;
 }
 
-export interface SinaisLead { comImovel: boolean; completa: boolean; quente: boolean; visita: boolean; fechado: boolean }
+export interface SinaisLead { comImovel: boolean; completa: boolean; quente: boolean; visita: boolean; visitou: boolean; proposta: boolean; fechado: boolean }
 
-export function sinaisDoLead(l: LeadRel, comInteresse: boolean, tipoImovel?: string | null): SinaisLead {
+export function sinaisDoLead(l: LeadRel, comInteresse: boolean, tipoImovel?: string | null, realizouVisita = false): SinaisLead {
   const funil: Funil = l.funil === 'proprietario' ? 'proprietario' : 'comprador';
   const etapa = etapaDoLead(l);
   return {
     comImovel: !!l.propertyId || comInteresse,
     completa: slotsPendentes(funil, l.slots, { tipoImovel }).length === 0,
     quente: l.score === 'quente',
-    visita: etapa === 'visita_agendada' || etapa === 'visitou' || valoresSlots(l.slots).quer_visita === 'sim',
+    visita: realizouVisita || ['visita_agendada', 'visitou', 'proposta', 'fechado'].includes(etapa) || valoresSlots(l.slots).quer_visita === 'sim',
+    // Visita realizada: registrada na agenda, ou o lead já passou dela no funil
+    visitou: realizouVisita || ['visitou', 'proposta', 'fechado'].includes(etapa),
+    proposta: ['proposta', 'fechado'].includes(etapa),
     fechado: etapa === 'fechado',
   };
 }
 
 export interface Contagem {
-  leads: number; comImovel: number; completa: number; quentes: number; visitas: number; fechados: number;
+  leads: number; comImovel: number; completa: number; quentes: number; visitas: number; visitasRealizadas: number; propostas: number; fechados: number;
   cliques: number; scans: number; views: number;
-  gasto: number; custoPorQuente: number | null;
+  gasto: number; custoPorQuente: number | null; custoPorVisita: number | null; custoPorVenda: number | null;
 }
 
-const zerada = (): Contagem => ({ leads: 0, comImovel: 0, completa: 0, quentes: 0, visitas: 0, fechados: 0, cliques: 0, scans: 0, views: 0, gasto: 0, custoPorQuente: null });
+const zerada = (): Contagem => ({
+  leads: 0, comImovel: 0, completa: 0, quentes: 0, visitas: 0, visitasRealizadas: 0, propostas: 0, fechados: 0,
+  cliques: 0, scans: 0, views: 0, gasto: 0, custoPorQuente: null, custoPorVisita: null, custoPorVenda: null,
+});
 
 function somarLead(c: Contagem, s: SinaisLead) {
   c.leads++;
@@ -85,6 +95,8 @@ function somarLead(c: Contagem, s: SinaisLead) {
   if (s.completa) c.completa++;
   if (s.quente) c.quentes++;
   if (s.visita) c.visitas++;
+  if (s.visitou) c.visitasRealizadas++;
+  if (s.proposta) c.propostas++;
   if (s.fechado) c.fechados++;
 }
 
@@ -96,7 +108,10 @@ function somarEvento(c: Contagem, tipo: string) {
 
 function fechar(c: Contagem): Contagem {
   c.gasto = Math.round(c.gasto * 100) / 100;
-  c.custoPorQuente = c.gasto > 0 && c.quentes > 0 ? Math.round((c.gasto / c.quentes) * 100) / 100 : null;
+  const custo = (n: number) => (c.gasto > 0 && n > 0 ? Math.round((c.gasto / n) * 100) / 100 : null);
+  c.custoPorQuente = custo(c.quentes);
+  c.custoPorVisita = custo(c.visitasRealizadas);
+  c.custoPorVenda = custo(c.fechados);
   return c;
 }
 
@@ -113,6 +128,35 @@ export function minutosAte1aResposta(msgs: MensagemRel[]): number | null {
   return resp ? (+new Date(resp.createdAt) - tOut) / 60000 : null;
 }
 
+/** Percentil (0–100) por "nearest rank"; null com lista vazia */
+export function percentil(valores: number[], p: number): number | null {
+  if (!valores.length) return null;
+  const ord = [...valores].sort((a, b) => a - b);
+  return ord[Math.min(ord.length - 1, Math.max(0, Math.ceil((p / 100) * ord.length) - 1))];
+}
+
+/** Minutos que o lead esperou um corretor (alerta de 5 min); null se nunca precisou ou ainda espera */
+export function minutosDeAtendimento(l: Pick<LeadRel, 'aguardandoCorretorDesde' | 'atendidoAt'>): number | null {
+  if (!l.aguardandoCorretorDesde || !l.atendidoAt) return null;
+  const m = (+new Date(l.atendidoAt) - +new Date(l.aguardandoCorretorDesde)) / 60000;
+  return Number.isFinite(m) && m >= 0 ? Math.round(m) : null;
+}
+
+export interface LinhaCorretor {
+  responsavelId: number | null; nome: string;
+  leads: number; visitasRealizadas: number; fechados: number;
+  atendidos: number; esperando: number; medianaMin: number | null; p90Min: number | null;
+}
+
+export interface Atendimento {
+  /** Leads que pediram corretor e foram atendidos / ainda esperando */
+  atendidos: number; esperando: number;
+  medianaMin: number | null; p90Min: number | null;
+  /** % atendidos em até 5 minutos */
+  ate5min: number;
+  porCorretor: LinhaCorretor[];
+}
+
 export interface LinhaCanal extends Contagem { canal: string; rotulo: string; tipo: TipoCanal }
 export interface LinhaCampanha extends Contagem { campanhaId: number | null; codigo: string; nome: string; canal: string; rotuloCanal: string; tipo: TipoCanal }
 export interface LinhaTipo extends Contagem { tipo: TipoCanal; rotulo: string }
@@ -127,6 +171,7 @@ export interface Relatorio {
   imoveis: LinhaImovel[];
   tempoMedioRespostaMin: number | null;
   leadsComResposta: number;
+  atendimento: Atendimento;
 }
 
 export interface EntradaRelatorio {
@@ -138,6 +183,10 @@ export interface EntradaRelatorio {
   mensagens: MensagemRel[];
   imoveis: ImovelRel[];
   toque?: Toque;
+  /** Leads com visita marcada como realizada na agenda */
+  visitasRealizadas?: Set<number>;
+  /** users.id → nome (por corretor) */
+  responsaveis?: Map<number, string>;
 }
 
 export function montarRelatorio(e: EntradaRelatorio): Relatorio {
@@ -150,6 +199,7 @@ export function montarRelatorio(e: EntradaRelatorio): Relatorio {
   // Lead/evento sem campanha fica numa linha "sem código" por canal
   const porCamp = new Map<string, { id: number | null; c: Contagem; canal: string }>();
   const porImovel = new Map<number, { leads: number; quentes: number }>();
+  const porCorretor = new Map<number | null, { leads: number; visitasRealizadas: number; fechados: number; tempos: number[]; esperando: number }>();
   const pega = <K,>(m: Map<K, Contagem>, k: K) => { let c = m.get(k); if (!c) { c = zerada(); m.set(k, c); } return c; };
   const pegaCamp = (id: number | null, canal: string) => {
     const k = id != null ? `c${id}` : `s:${canal}`;
@@ -164,8 +214,17 @@ export function montarRelatorio(e: EntradaRelatorio): Relatorio {
     const canal = canalDoLead(l, toque);
     const interesses = e.interesses.get(l.id) ?? [];
     const imovelId = l.propertyId ?? interesses[0] ?? null;
-    const s = sinaisDoLead(l, interesses.length > 0, tipoImovelDe(imovelId ? imovelPorId.get(imovelId)?.propertyType : null));
+    const s = sinaisDoLead(l, interesses.length > 0, tipoImovelDe(imovelId ? imovelPorId.get(imovelId)?.propertyType : null), !!e.visitasRealizadas?.has(l.id));
     somarLead(total, s);
+    const rid = l.responsavelId ?? null;
+    const cor = porCorretor.get(rid) ?? { leads: 0, visitasRealizadas: 0, fechados: 0, tempos: [] as number[], esperando: 0 };
+    cor.leads++;
+    if (s.visitou) cor.visitasRealizadas++;
+    if (s.fechado) cor.fechados++;
+    const espera = minutosDeAtendimento(l);
+    if (espera != null) cor.tempos.push(espera);
+    else if (l.aguardandoCorretorDesde && !l.atendidoAt) cor.esperando++;
+    porCorretor.set(rid, cor);
     somarLead(pega(porTipo, tipoDoCanal(canal)), s);
     somarLead(pega(porCanal, canal), s);
     somarLead(pegaCamp(campanha ? campanha.id : null, campanha?.canal ?? canal), s);
@@ -222,6 +281,20 @@ export function montarRelatorio(e: EntradaRelatorio): Relatorio {
     }).sort((a, b) => b.quentes - a.quentes || b.leads - a.leads),
     tempoMedioRespostaMin: tempos.length ? Math.round(tempos.reduce((a, b) => a + b, 0) / tempos.length) : null,
     leadsComResposta: tempos.length,
+    atendimento: (() => {
+      const todos = Array.from(porCorretor.values()).flatMap(c => c.tempos);
+      return {
+        atendidos: todos.length,
+        esperando: Array.from(porCorretor.values()).reduce((a, c) => a + c.esperando, 0),
+        medianaMin: percentil(todos, 50), p90Min: percentil(todos, 90),
+        ate5min: pct(todos.filter(t => t <= 5).length, todos.length),
+        porCorretor: Array.from(porCorretor, ([rid, c]) => ({
+          responsavelId: rid, nome: rid != null ? e.responsaveis?.get(rid) ?? `Usuário ${rid}` : 'Sem responsável',
+          leads: c.leads, visitasRealizadas: c.visitasRealizadas, fechados: c.fechados,
+          atendidos: c.tempos.length, esperando: c.esperando, medianaMin: percentil(c.tempos, 50), p90Min: percentil(c.tempos, 90),
+        })).sort((a, b) => b.leads - a.leads),
+      };
+    })(),
   };
 }
 
@@ -233,10 +306,10 @@ const brl = (n: number | null) => (n == null ? '' : n.toFixed(2).replace('.', ',
 
 /** CSV (separador ;, padrão do Excel em pt-BR) da tabela por campanha */
 export function relatorioCsv(r: Relatorio): string {
-  const cab = ['Campanha', 'Nome', 'Canal', 'Tipo', 'Leads', '% com imóvel', '% qualificação completa', 'Quentes', 'Visitas', 'Fechados', 'Cliques WhatsApp', 'Scans QR', 'Visitas à página', 'Gasto (R$)', 'Custo por lead quente (R$)'];
+  const cab = ['Campanha', 'Nome', 'Canal', 'Tipo', 'Leads', '% com imóvel', '% qualificação completa', 'Quentes', 'Pediram/agendaram visita', 'Visitas realizadas', 'Propostas', 'Vendas', 'Cliques WhatsApp', 'Scans QR', 'Visitas à página', 'Gasto (R$)', 'Custo por lead quente (R$)', 'Custo por visita realizada (R$)', 'Custo por venda (R$)'];
   const linhas = r.porCampanha.map(c => [
     c.codigo, c.nome, c.rotuloCanal, ROTULO_TIPO_CANAL[c.tipo], c.leads, pct(c.comImovel, c.leads), pct(c.completa, c.leads),
-    c.quentes, c.visitas, c.fechados, c.cliques, c.scans, c.views, brl(c.gasto), brl(c.custoPorQuente),
+    c.quentes, c.visitas, c.visitasRealizadas, c.propostas, c.fechados, c.cliques, c.scans, c.views, brl(c.gasto), brl(c.custoPorQuente), brl(c.custoPorVisita), brl(c.custoPorVenda),
   ]);
   return '﻿' + [cab, ...linhas].map(l => l.map(cel).join(';')).join('\r\n');
 }
