@@ -510,6 +510,30 @@ export const leadMensagens = mysqlTable("leadMensagens", {
   idxLead: index("idx_msg_lead").on(t.leadId, t.createdAt),
 }));
 
+/** Visitas agendadas com o lead (agenda — server/leads/visitas.ts) */
+export const leadVisitas = mysqlTable("leadVisitas", {
+  id: int("id").autoincrement().primaryKey(),
+  leadId: int("leadId").notNull(),
+  propertyId: int("propertyId"),
+  quando: timestamp("quando").notNull(),
+  local: varchar("local", { length: 200 }),
+  /** agendada | confirmada | realizada | nao_veio | cancelada */
+  status: varchar("status", { length: 15 }).notNull().default("agendada"),
+  observacao: varchar("observacao", { length: 500 }),
+  responsavelId: int("responsavelId"),
+  criadoPor: int("criadoPor"),
+  /** Controle dos avisos automáticos (cada um sai uma vez) */
+  lembreteClienteAt: timestamp("lembreteClienteAt"),
+  avisoCorretorAt: timestamp("avisoCorretorAt"),
+  resultadoPedidoAt: timestamp("resultadoPedidoAt"),
+  confirmadaAt: timestamp("confirmadaAt"),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().notNull(),
+}, (t) => ({
+  idxQuando: index("idx_visita_quando").on(t.quando),
+  idxLead: index("idx_visita_lead").on(t.leadId),
+}));
+
 /** Histórico do score: grava só quando o valor muda */
 export const leadScoreHistorico = mysqlTable("leadScoreHistorico", {
   id: int("id").autoincrement().primaryKey(),

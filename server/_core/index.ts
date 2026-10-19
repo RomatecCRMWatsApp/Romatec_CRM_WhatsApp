@@ -126,6 +126,21 @@ async function startServer() {
         await import('../leads/followup').then(m => m.cancelarFollowUp(payload.phone)).catch(e => console.warn('[FollowUp] Cancelar falhou:', e?.message));
       }
 
+      // "Sim" ao lembrete de visita: confirma a visita e responde (o bot não entra)
+      if (!req.body?.fromMe) {
+        try {
+          const { confirmarPorResposta } = await import('../leads/visitas');
+          const confirmacao = await confirmarPorResposta(payload.phone, msgText);
+          if (confirmacao) {
+            const { enviarTexto } = await import('../leads/zapiClient');
+            await enviarTexto(payload.phone, confirmacao);
+            return res.json({ received: true, processed: true, visita: 'confirmada' });
+          }
+        } catch (e: any) {
+          console.warn('[Visitas] Confirmação pela resposta falhou (bot segue):', e?.message);
+        }
+      }
+
       let senderName = payload.senderName || 'Cliente';
       try {
         const { getDb } = await import('../db');
@@ -732,11 +747,20 @@ async function startServer() {
     console.error('❌ Erro na migration addFase1Captacao:', e);
   }
 
+  try {
+    const { addVisitas } = await import('./migrations/addVisitas');
+    await addVisitas();
+  } catch (e) {
+    console.error('❌ Erro na migration addVisitas:', e);
+  }
+
   // Leads parados há 48 h perdem pontos no score (§8)
   import('../leads/scoreService').then(m => m.iniciarJobInatividade()).catch(e => console.warn('[Score] Job não iniciado:', e));
   // Follow-up persistente (1/3/7/14/30 dias) e prazo de atendimento — não dependem das campanhas
   import('../leads/followup').then(m => m.iniciarJobFollowUp()).catch(e => console.warn('[FollowUp] Job não iniciado:', e));
   import('../leads/sla').then(m => m.iniciarJobSla()).catch(e => console.warn('[SLA] Job não iniciado:', e));
+  // Agenda de visitas: lembrete ao cliente, aviso ao corretor e pedido de resultado
+  import('../leads/visitas').then(m => m.iniciarJobVisitas()).catch(e => console.warn('[Visitas] Job não iniciado:', e));
   // Vigia: avisa no Telegram se o follow-up ou o alerta de atendimento pararem
   import('../leads/rotinas').then(m => m.iniciarVigiaRotinas()).catch(e => console.warn('[Rotinas] Vigia não iniciado:', e));
 

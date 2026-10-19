@@ -302,6 +302,12 @@ export function initSqliteTables(sqlite: any): void {
     id INTEGER PRIMARY KEY AUTOINCREMENT, leadId INTEGER, visitanteId TEXT, tipo TEXT NOT NULL, propertyId INTEGER,
     campanhaId INTEGER, dados TEXT, createdAt INTEGER NOT NULL DEFAULT (strftime('%s','now'))
   )`);
+  run(`CREATE TABLE IF NOT EXISTS leadVisitas (
+    id INTEGER PRIMARY KEY AUTOINCREMENT, leadId INTEGER NOT NULL, propertyId INTEGER, quando INTEGER NOT NULL,
+    local TEXT, status TEXT NOT NULL DEFAULT 'agendada', observacao TEXT, responsavelId INTEGER, criadoPor INTEGER,
+    lembreteClienteAt INTEGER, avisoCorretorAt INTEGER, resultadoPedidoAt INTEGER, confirmadaAt INTEGER,
+    createdAt INTEGER NOT NULL DEFAULT (strftime('%s','now')), updatedAt INTEGER NOT NULL DEFAULT (strftime('%s','now'))
+  )`);
   run(`CREATE TABLE IF NOT EXISTS leadScoreHistorico (
     id INTEGER PRIMARY KEY AUTOINCREMENT, leadId INTEGER NOT NULL, score INTEGER NOT NULL, classe TEXT NOT NULL,
     regras TEXT NOT NULL, detalhes TEXT NOT NULL, motivo TEXT, createdAt INTEGER NOT NULL DEFAULT (strftime('%s','now'))

@@ -120,6 +120,100 @@ export const crmRouter = router({
     return { success: true };
   }),
 
+  // ─── Agenda de visitas (server/leads/visitas.ts) ─────────────────────────
+  visitasDoLead: protectedProcedure.input(z.object({ leadId: z.number().int() })).query(async ({ input }) => {
+    const db = await dbOrThrow();
+    const { leadVisitas, properties } = await import("../../drizzle/schema");
+    const rows: any[] = await db.select().from(leadVisitas).where(eq(leadVisitas.leadId, input.leadId));
+    const props = new Map<number, string>();
+    for (const pid of Array.from(new Set(rows.map(r => r.propertyId).filter(Boolean)))) {
+      const [p]: any[] = await db.select({ t: properties.denomination }).from(properties).where(eq(properties.id, pid)).limit(1);
+      if (p) props.set(pid, p.t);
+    }
+    return rows
+      .map(r => ({ id: r.id, quando: r.quando, local: r.local, status: r.status, observacao: r.observacao, imovel: r.propertyId ? props.get(r.propertyId) ?? null : null, lembreteEnviado: !!r.lembreteClienteAt, confirmadaPeloCliente: !!r.confirmadaAt }))
+      .sort((a, b) => new Date(b.quando).getTime() - new Date(a.quando).getTime());
+  }),
+
+  agenda: protectedProcedure.input(z.object({ diasAtras: z.number().int().min(0).max(60).default(7), diasFrente: z.number().int().min(1).max(120).default(30) }).optional()).query(async ({ input }) => {
+    const db = await dbOrThrow();
+    const { leadVisitas, properties } = await import("../../drizzle/schema");
+    const { gte, lte, and: e } = await import("drizzle-orm");
+    const agora = Date.now();
+    const de = new Date(agora - (input?.diasAtras ?? 7) * 86400_000), ate = new Date(agora + (input?.diasFrente ?? 30) * 86400_000);
+    const rows: any[] = await db.select().from(leadVisitas).where(e(gte(leadVisitas.quando, de), lte(leadVisitas.quando, ate)));
+    const leadIds = Array.from(new Set(rows.map(r => r.leadId)));
+    const leads: any[] = leadIds.length ? await db.select({ id: leadQualifications.id, nome: leadQualifications.nome, phone: leadQualifications.phone }).from(leadQualifications).where(inArray(leadQualifications.id, leadIds)) : [];
+    const propIds = Array.from(new Set(rows.map(r => r.propertyId).filter(Boolean))) as number[];
+    const props: any[] = propIds.length ? await db.select({ id: properties.id, t: properties.denomination }).from(properties).where(inArray(properties.id, propIds)) : [];
+    const pessoas: any[] = await db.select({ id: users.id, name: users.name }).from(users);
+    const L = new Map(leads.map(l => [l.id, l])), P = new Map(props.map(p => [p.id, p.t])), U = new Map(pessoas.map(u => [u.id, u.name]));
+    return rows.map(r => ({
+      id: r.id, leadId: r.leadId, nome: L.get(r.leadId)?.nome || "Lead", telefone: L.get(r.leadId)?.phone || "",
+      quando: r.quando, local: r.local, status: r.status, imovel: r.propertyId ? P.get(r.propertyId) ?? null : null,
+      responsavel: r.responsavelId ? U.get(r.responsavelId) ?? null : null,
+      lembreteEnviado: !!r.lembreteClienteAt, confirmadaPeloCliente: !!r.confirmadaAt,
+      semResultado: ["agendada", "confirmada"].includes(r.status) && new Date(r.quando).getTime() < agora,
+    })).sort((a, b) => new Date(a.quando).getTime() - new Date(b.quando).getTime());
+  }),
+
+  agendarVisita: protectedProcedure
+    .input(z.object({
+      leadId: z.number().int(), quando: z.string().datetime(), local: z.string().trim().max(200).optional(),
+      propertyId: z.number().int().nullable().optional(), observacao: z.string().trim().max(500).optional(),
+    }))
+    .mutation(async ({ input, ctx }) => {
+      const db = await dbOrThrow();
+      const lead = await leadOuErro(db, input.leadId);
+      const quando = new Date(input.quando);
+      if (quando.getTime() < Date.now() - 10 * 60_000) throw new Error("A data da visita já passou");
+      const { leadVisitas } = await import("../../drizzle/schema");
+      const r: any = await db.insert(leadVisitas).values({
+        leadId: lead.id, quando, local: input.local || null, propertyId: input.propertyId ?? null, observacao: input.observacao || null,
+        status: "agendada", responsavelId: lead.responsavelId ?? ctx.user.id, criadoPor: ctx.user.id,
+      } as any);
+      const id = Number(r?.[0]?.insertId ?? r?.lastInsertRowid ?? 0);
+      const { etapaDepoisDaVisita, avisarVisitaAgendada } = await import("../leads/visitas");
+      const etapa = funilDo(lead) === "comprador" ? etapaDepoisDaVisita(etapaDoLead(lead), "agendada") : null;
+      if (etapa) await db.update(leadQualifications).set({ etapa, updatedAt: new Date() } as any).where(eq(leadQualifications.id, lead.id));
+      // Visita marcada: conta como atendimento e pausa o follow-up automático
+      await import("../leads/sla").then(m => m.marcarAtendido(lead.id)).catch(() => {});
+      await import("../leads/followup").then(m => m.cancelarFollowUp(lead.phone)).catch(() => {});
+      if (id) await avisarVisitaAgendada(id).catch(e => console.warn("[Visitas] Aviso de agendamento falhou:", e?.message));
+      return { id };
+    }),
+
+  statusVisita: protectedProcedure
+    .input(z.object({ id: z.number().int(), status: z.enum(["agendada", "confirmada", "realizada", "nao_veio", "cancelada"]) }))
+    .mutation(async ({ input }) => {
+      const db = await dbOrThrow();
+      const { leadVisitas } = await import("../../drizzle/schema");
+      const [v]: any[] = await db.select().from(leadVisitas).where(eq(leadVisitas.id, input.id)).limit(1);
+      if (!v) throw new Error("Visita não encontrada");
+      await db.update(leadVisitas).set({ status: input.status, updatedAt: new Date() } as any).where(eq(leadVisitas.id, input.id));
+      const lead = await leadOuErro(db, v.leadId);
+      const { etapaDepoisDaVisita } = await import("../leads/visitas");
+      const etapa = funilDo(lead) === "comprador" ? etapaDepoisDaVisita(etapaDoLead(lead), input.status) : null;
+      if (etapa) await db.update(leadQualifications).set({ etapa, updatedAt: new Date() } as any).where(eq(leadQualifications.id, lead.id));
+      return { success: true };
+    }),
+
+  remarcarVisita: protectedProcedure
+    .input(z.object({ id: z.number().int(), quando: z.string().datetime() }))
+    .mutation(async ({ input }) => {
+      const db = await dbOrThrow();
+      const quando = new Date(input.quando);
+      if (quando.getTime() < Date.now() - 10 * 60_000) throw new Error("A nova data já passou");
+      const { leadVisitas } = await import("../../drizzle/schema");
+      // Nova data: os avisos automáticos valem de novo
+      await db.update(leadVisitas).set({
+        quando, status: "agendada", lembreteClienteAt: null, avisoCorretorAt: null, resultadoPedidoAt: null, confirmadaAt: null, updatedAt: new Date(),
+      } as any).where(eq(leadVisitas.id, input.id));
+      const { avisarVisitaAgendada } = await import("../leads/visitas");
+      await avisarVisitaAgendada(input.id).catch(() => {});
+      return { success: true };
+    }),
+
   /** Responsável pelo lead (rodízio da equipe) — trocar manualmente */
   definirResponsavel: protectedProcedure
     .input(z.object({ id: z.number().int(), responsavelId: z.number().int().nullable() }))
