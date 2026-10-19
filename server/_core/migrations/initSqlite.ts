@@ -23,6 +23,8 @@ export function initSqliteTables(sqlite: any): void {
     password TEXT,
     password_hash TEXT,
     passwordHash TEXT,
+    perfil TEXT, creci TEXT UNIQUE, telefone TEXT, empreendimentoSlug TEXT, ativo INTEGER NOT NULL DEFAULT 1,
+    conviteHash TEXT, conviteExpira INTEGER,
     createdAt INTEGER NOT NULL DEFAULT (strftime('%s','now')),
     updatedAt INTEGER NOT NULL DEFAULT (strftime('%s','now')),
     lastSignedIn INTEGER NOT NULL DEFAULT (strftime('%s','now'))

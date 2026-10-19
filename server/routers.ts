@@ -10,6 +10,8 @@ import { zairaRouter } from "./routers/zaira.router";
 import { leadCampanhasRouter } from "./routers/leadCampanhas.router";
 import { crmRouter } from "./routers/crm.router";
 import { materiaisRouter } from "./routers/materiais.router";
+import { equipeRouter } from "./routers/equipe.router";
+import { empreendedorRouter } from "./routers/empreendedor.router";
 import { z } from "zod";
 import { createRateLimiter } from "./lead-intake";
 import { publicCompanyConfig, stripMaskedFields } from "./auth-security";
@@ -27,12 +29,16 @@ export const appRouter = router({
   leadCampanhas: leadCampanhasRouter,
   crm: crmRouter,
   materiais: materiaisRouter,
+  equipe: equipeRouter,
+  empreendedor: empreendedorRouter,
   system: systemRouter,
   auth: router({
     // Sem os hashes de senha (a linha do usuário inteira ia para o navegador)
     me: publicProcedure.query(opts => {
       if (!opts.ctx.user) return opts.ctx.user;
-      const { passwordScrypt: _s, passwordHash: _h, ...safe } = opts.ctx.user as any;
+      // Acesso desativado na tela Equipe = deslogado
+      if ((opts.ctx.user as any).ativo === false || (opts.ctx.user as any).ativo === 0) return null;
+      const { passwordScrypt: _s, passwordHash: _h, conviteHash: _c, ...safe } = opts.ctx.user as any;
       return safe as Omit<typeof opts.ctx.user, 'passwordScrypt' | 'passwordHash'>;
     }),
     logout: publicProcedure.mutation(({ ctx }) => {
@@ -52,18 +58,29 @@ export const appRouter = router({
           const db = await getDb();
           if (!db) throw new Error("Database not available");
           const username = input.username.trim();
-          let userList = await db.select().from(users).where(eq(users.email, username)).limit(1);
+          // Colaboradores entram com o número do CRECI; e-mail continua valendo
+          const { normalizarCreci, tipoLogin, perfilDe, telaInicial } = await import("@shared/equipe");
+          const creci = tipoLogin(username) === 'creci' ? normalizarCreci(username) : null;
+          let userList = creci ? await db.select().from(users).where(eq(users.creci, creci)).limit(1) : [];
+          if (!userList[0]) userList = await db.select().from(users).where(eq(users.email, username)).limit(1);
           if (!userList[0]) {
             userList = await db.select().from(users).where(eq(users.openId, username)).limit(1);
           }
           const user = userList[0];
-          // Mesma mensagem para usuário inexistente e senha errada (não revela quem existe)
-          if (!user) throw new Error("Usuário ou senha incorretos.");
+          // Mesma mensagem para usuário inexistente, desativado e senha errada (não revela quem existe)
+          if (!user || (user as any).ativo === false || (user as any).ativo === 0) throw new Error("Usuário ou senha incorretos.");
 
           const { checkLogin } = await import("./auth-security");
-          const check = await checkLogin(input.password, { scryptHash: user.passwordScrypt, legacySha256: user.passwordHash });
+          // Senha inicial do Railway (CRM_INITIAL_PASSWORD) só serve para o administrador;
+          // colaborador sem senha usa o link de primeiro acesso
+          const check = await checkLogin(
+            input.password,
+            { scryptHash: user.passwordScrypt, legacySha256: user.passwordHash },
+            user.role === 'admin' ? process.env.CRM_INITIAL_PASSWORD : undefined,
+          );
           if (!check.ok) {
             if (check.reason === 'no_password_set') {
+              if (user.role !== 'admin') throw new Error("Você ainda não criou sua senha. Use o link de primeiro acesso que recebeu.");
               console.warn(`[Login] Usuário ${user.id} sem senha cadastrada e CRM_INITIAL_PASSWORD ausente`);
               throw new Error("Senha ainda não cadastrada. Defina CRM_INITIAL_PASSWORD no Railway para o primeiro acesso.");
             }
@@ -77,7 +94,7 @@ export const appRouter = router({
           const cookieOptions = getSessionCookieOptions(ctx.req);
           const token = await sdk.createSessionToken(user.openId, { name: user.name || "" });
           ctx.res.cookie(COOKIE_NAME, token, { ...cookieOptions, maxAge: ONE_YEAR_MS });
-          return { success: true };
+          return { success: true, destino: telaInicial(perfilDe(user as any)) };
         } catch (error) {
           console.error("[Login] Erro:", (error as any)?.message || error);
           throw error;

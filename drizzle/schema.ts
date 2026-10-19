@@ -24,6 +24,17 @@ export const users = mysqlTable("users", {
   passwordScrypt: varchar("password_hash", { length: 255 }),
   /** Hash antigo (SHA-256 hex, sem sal); convertido para scrypt no próximo login */
   passwordHash: varchar("passwordHash", { length: 64 }),
+  /** Equipe (shared/equipe.ts): admin | equipe | empreendedor. Vazio = deduzido do role */
+  perfil: varchar("perfil", { length: 20 }),
+  /** Login dos colaboradores: número do CRECI (só dígitos) */
+  creci: varchar("creci", { length: 20 }),
+  telefone: varchar("telefone", { length: 20 }),
+  /** Empreendedor: só vê os gráficos de leads e as artes deste empreendimento */
+  empreendimentoSlug: varchar("empreendimentoSlug", { length: 80 }),
+  ativo: boolean("ativo").default(true).notNull(),
+  /** Convite de primeiro acesso: sha256 do token (o token em si só vai no link) */
+  conviteHash: varchar("conviteHash", { length: 64 }),
+  conviteExpira: timestamp("conviteExpira"),
 });
 
 export type User = typeof users.$inferSelect;

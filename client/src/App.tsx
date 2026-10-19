@@ -21,6 +21,10 @@ import Leads from "./pages/Leads";
 import LeadCampanhas from "./pages/LeadCampanhas";
 import LeadsRelatorio from "./pages/LeadsRelatorio";
 import Materiais from "./pages/Materiais";
+import Equipe from "./pages/Equipe";
+import Empreendedor from "./pages/Empreendedor";
+import PrimeiroAcesso from "./pages/PrimeiroAcesso";
+import { perfilDe, podeAbrir, telaInicial } from "@shared/equipe";
 import ImovelLanding from "./pages/ImovelLanding";
 import LeadsFunil from "./pages/LeadsFunil";
 import LeadDetalhe from "./pages/LeadDetalhe";
@@ -31,19 +35,27 @@ import { useEffect } from "react";
 
 // Redireciona para /setup se companyConfig não tiver nome de empresa
 function SetupGuard({ component: Component }: { component: React.ComponentType }) {
-  const [, navigate] = useLocation();
-  const { isAuthenticated } = useAuth();
+  const [location, navigate] = useLocation();
+  const { isAuthenticated, user } = useAuth();
+  const perfil = perfilDe(user as any);
+  // Empreendedor não lê a configuração da empresa (nem precisa do /setup)
   const { data: config, isLoading } = trpc.companyConfig.get.useQuery(undefined, {
-    enabled: isAuthenticated,
+    enabled: isAuthenticated && perfil !== "empreendedor",
   });
+  const permitido = !isAuthenticated || podeAbrir(perfil, location);
 
   useEffect(() => {
-    if (!isLoading && isAuthenticated && !config?.companyName) {
+    // Cada perfil só abre as telas dele (shared/equipe.ts)
+    if (isAuthenticated && !podeAbrir(perfil, location)) {
+      navigate(telaInicial(perfil));
+      return;
+    }
+    if (!isLoading && isAuthenticated && perfil === "admin" && !config?.companyName) {
       navigate("/setup");
     }
-  }, [isLoading, isAuthenticated, config, navigate]);
+  }, [isLoading, isAuthenticated, config, navigate, perfil, location]);
 
-  return <Component />;
+  return permitido ? <Component /> : null;
 }
 
 function Router() {
@@ -76,6 +88,13 @@ function Router() {
       <Route path={"/leads/lead/:id"}>
         {() => <SetupGuard component={LeadDetalhe} />}
       </Route>
+      <Route path={"/equipe"}>
+        {() => <SetupGuard component={Equipe} />}
+      </Route>
+      <Route path={"/empreendedor"}>
+        {() => <SetupGuard component={Empreendedor} />}
+      </Route>
+      <Route path={"/primeiro-acesso"} component={PrimeiroAcesso} />
       <Route path={"/materiais"}>
         {() => <SetupGuard component={Materiais} />}
       </Route>

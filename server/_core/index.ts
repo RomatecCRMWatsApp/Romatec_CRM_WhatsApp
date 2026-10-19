@@ -440,7 +440,9 @@ async function startServer() {
     try {
       const { sdk } = await import('./sdk');
       const user = await sdk.authenticateRequest(req).catch(() => null);
-      if (!user) return res.status(401).json({ success: false, error: 'Faça login para enviar materiais' });
+      if (!user || (user as any).ativo === false) return res.status(401).json({ success: false, error: 'Faça login para enviar materiais' });
+      const { perfilDe } = await import('../../shared/equipe');
+      if (perfilDe(user as any) === 'empreendedor') return res.status(403).json({ success: false, error: 'Seu acesso não envia materiais' });
       const { problemaArquivo, resourceTypeDe } = await import('../../shared/materiais');
       const fileName = decodeURIComponent(String(req.headers['x-file-name'] || 'material'));
       const fileType = String(req.headers['x-file-type'] || '');
@@ -636,6 +638,13 @@ async function startServer() {
     await addMateriais();
   } catch (e) {
     console.error('❌ Erro na migration addMateriais:', e);
+  }
+
+  try {
+    const { addEquipe } = await import('./migrations/addEquipe');
+    await addEquipe();
+  } catch (e) {
+    console.error('❌ Erro na migration addEquipe:', e);
   }
 
   // Leads parados há 48 h perdem pontos no score (§8)

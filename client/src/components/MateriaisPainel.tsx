@@ -7,17 +7,17 @@ import { ROTULO_TIPO_MATERIAL, TIPOS_MATERIAL, bloqueadaPorNome, problemaArquivo
 
 type Destino = { propertyId?: number | null; empreendimentoSlug?: string | null };
 
-const ehImagem = (m: any) => (m.mime || "").startsWith("image/") || /\.(png|jpe?g|webp|gif)$/i.test(m.url);
-const ehVideo = (m: any) => (m.mime || "").startsWith("video/") || /\.(mp4|mov|webm)$/i.test(m.url);
-const tamanho = (b?: number | null) => (!b ? "" : b > 1024 * 1024 ? `${(b / 1024 / 1024).toFixed(1)} MB` : `${Math.round(b / 1024)} KB`);
+export const ehImagem = (m: any) => (m.mime || "").startsWith("image/") || /\.(png|jpe?g|webp|gif)$/i.test(m.url);
+export const ehVideo = (m: any) => (m.mime || "").startsWith("video/") || /\.(mp4|mov|webm)$/i.test(m.url);
+export const tamanho = (b?: number | null) => (!b ? "" : b > 1024 * 1024 ? `${(b / 1024 / 1024).toFixed(1)} MB` : `${Math.round(b / 1024)} KB`);
 /** Miniatura leve do Cloudinary para a grade (o original fica para baixar) */
-const miniatura = (url: string) => url.includes("/image/upload/") ? url.replace("/image/upload/", "/image/upload/c_limit,w_480,q_auto,f_auto/") : url;
-const nomeArquivo = (m: any) => {
+export const miniatura = (url: string) => url.includes("/image/upload/") ? url.replace("/image/upload/", "/image/upload/c_limit,w_480,q_auto,f_auto/") : url;
+export const nomeArquivo = (m: any) => {
   const ext = (m.url.split("?")[0].match(/\.[a-z0-9]+$/i)?.[0]) || (ehVideo(m) ? ".mp4" : ehImagem(m) ? ".png" : ".pdf");
   return `${m.titulo.replace(/[^\wÀ-ſ -]+/g, "").trim().replace(/\s+/g, "_") || "material"}${ext}`;
 };
 
-async function baixarBlob(m: any): Promise<Blob | null> {
+export async function baixarBlob(m: any): Promise<Blob | null> {
   try {
     const r = await fetch(m.url);
     if (!r.ok) return null;

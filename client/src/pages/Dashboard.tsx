@@ -1,6 +1,7 @@
 ﻿import { useMemo, useState, useEffect, lazy, Suspense, useRef } from "react";
 import { toast } from "sonner";
 import { useAuth } from "@/_core/hooks/useAuth";
+import { perfilDe, podeAbrir } from "@shared/equipe";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Users, Send, Settings, LogOut, WifiOff, TrendingUp, Building2, BarChart3, CheckCircle2, XCircle, RefreshCw, UserPlus, Flame, ChevronRight, MessageCircle, ExternalLink, Activity, Zap, Clock, Images } from "lucide-react";
@@ -483,7 +484,9 @@ export default function Dashboard() {
     { label: "Campanhas", desc: "Disparos no WhatsApp", icon: Send, route: "/campaigns" },
     { label: "Desempenho", desc: "Relatórios", icon: BarChart3, route: "/performance" },
     { label: "Configurações", desc: "Z-API, Telegram, empresa", icon: Settings, route: "/settings" },
-  ];
+    { label: "Equipe", desc: "Acessos por CRECI e do empreendedor", icon: Users, route: "/equipe" },
+    { label: "Visão do empreendedor", desc: "O que o empreendedor vê: leads e artes", icon: BarChart3, route: "/empreendedor" },
+  ].filter(a => podeAbrir(perfilDe(user as any), a.route));
 
   const totals = stablePerfData?.totals || { sent: 0, failed: 0, pending: 0, blocked: 0, successRate: 0, avgPerDay: 0, activeCampaigns: 0 };
   const hojeRaw = new Date().toLocaleDateString("pt-BR", { weekday: "long", day: "numeric", month: "long" });

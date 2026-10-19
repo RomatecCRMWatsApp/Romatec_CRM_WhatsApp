@@ -28,7 +28,7 @@ export interface ImovelSeo {
 }
 
 /** Telas do CRM (login obrigatório): fora do Google */
-export const ROTAS_INTERNAS = ['/dashboard', '/contacts', '/properties', '/campaigns', '/settings', '/performance', '/leads', '/materiais', '/setup', '/login'];
+export const ROTAS_INTERNAS = ['/dashboard', '/contacts', '/properties', '/campaigns', '/settings', '/performance', '/leads', '/materiais', '/setup', '/login', '/equipe', '/empreendedor', '/primeiro-acesso'];
 
 const CRECI = 'Corretor José Romário · CRECI/MA 4.705';
 
