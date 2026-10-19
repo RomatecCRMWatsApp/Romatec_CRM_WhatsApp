@@ -76,19 +76,30 @@ export default function MapaTematico({ slug, lotes, ruas, perimetro, selecionado
             </filter>
           </defs>
           <rect width={W} height={H} fill="#E9EFDD" />
-          {contorno.length ? <path d={caminho(contorno.map(proj))} fill="url(#grama)" stroke="#5B4A2F" strokeWidth={2.5} strokeDasharray="2 5" strokeLinecap="round" /> : null}
+          {/* Área total da propriedade (inclui área de vivência) em gramado; perímetro oficial tracejado */}
+          {ctx?.perimetro?.length ? <path d={caminho(ctx.perimetro.map(proj))} fill="url(#grama)" stroke="#5B4A2F" strokeWidth={1.5} strokeDasharray="2 5" strokeLinecap="round" /> : null}
+          {contorno.length && contorno !== ctx?.perimetro ? <path d={caminho(contorno.map(proj))} fill="url(#grama)" stroke="#5B4A2F" strokeWidth={2.5} strokeDasharray="2 5" strokeLinecap="round" /> : null}
 
-          {/* Ruas: meio-fio, asfalto e faixa central */}
+          {/* Estrada de acesso e eixos (fora das quadras) */}
           {ctx?.ruas?.map(r => {
             const d = caminho(r.line.map(proj), false);
             return (
               <g key={r.nome}>
                 <path d={d} fill="none" stroke="#B9B4A8" strokeWidth={larguraRua + 4} strokeLinecap="round" strokeLinejoin="round" />
                 <path d={d} fill="none" stroke="#4A4D52" strokeWidth={larguraRua} strokeLinecap="round" strokeLinejoin="round" />
-                <path d={d} fill="none" stroke="#F2C744" strokeWidth={1.1} strokeDasharray="7 7" strokeLinecap="round" strokeLinejoin="round" />
               </g>
             );
           })}
+
+          {/* Ruas entre as quadras: faixa de 6 m em volta de cada lote (meio-fio + asfalto). Onde dois
+              lotes ficam frente a frente as faixas se juntam e formam a rua inteira. */}
+          <g pointerEvents="none">
+            {itens.map(l => <path key={`mf${l.id}`} d={caminho(l.poly.map(proj))} fill="none" stroke="#B9B4A8" strokeWidth={larguraRua + 4} strokeLinejoin="round" />)}
+            {itens.map(l => <path key={`as${l.id}`} d={caminho(l.poly.map(proj))} fill="none" stroke="#4A4D52" strokeWidth={larguraRua} strokeLinejoin="round" />)}
+          </g>
+          {ctx?.ruas?.map(r => (
+            <path key={`fx${r.nome}`} d={caminho(r.line.map(proj), false)} fill="none" stroke="#F2C744" strokeWidth={1.1} strokeDasharray="7 7" strokeLinecap="round" strokeLinejoin="round" pointerEvents="none" />
+          ))}
 
           {/* Lotes com cerca */}
           {itens.map(l => {
@@ -122,12 +133,26 @@ export default function MapaTematico({ slug, lotes, ruas, perimetro, selecionado
             );
           })}
 
-          {/* Pontos de referência */}
+          {/* Pontos de referência: portal desenhado e os demais com nome */}
           {ctx?.pontos?.map(p => {
             const [x, y] = proj(p.pt);
+            const portal = /portal/i.test(p.nome);
+            const rotulo = p.nome.replace(/\s*\(.*\)\s*/, "").replace(/ \/ .*/, "").replace(/^Núcleo de apoio — /, "");
+            const fs = compacto ? 8 : 10;
             return (
-              <g key={p.nome}>
-                <circle cx={x} cy={y} r={6} fill="#C9A84C" stroke="#0C3320" strokeWidth={2} />
+              <g key={p.nome} pointerEvents="none">
+                {portal ? (
+                  <g transform={`translate(${x} ${y})`}>
+                    <rect x={-13} y={-16} width={6} height={18} rx={1} fill="#6B4F2A" stroke="#0C3320" strokeWidth={1} />
+                    <rect x={7} y={-16} width={6} height={18} rx={1} fill="#6B4F2A" stroke="#0C3320" strokeWidth={1} />
+                    <path d="M -10 -15 Q 0 -27 10 -15" fill="none" stroke="#C9A84C" strokeWidth={3} />
+                    <rect x={-15} y={-20} width={30} height={5} rx={1} fill="#0C3320" />
+                  </g>
+                ) : (
+                  <circle cx={x} cy={y} r={6} fill="#C9A84C" stroke="#0C3320" strokeWidth={2} />
+                )}
+                <text x={x + (portal ? 0 : 9)} y={portal ? y + 14 : y + 3} textAnchor={portal ? "middle" : "start"} fontSize={portal ? fs + 2 : fs} fontWeight={800}
+                  fill="#0C3320" stroke="#FFFFFF" strokeWidth={3} paintOrder="stroke">{portal ? "PORTAL DE ENTRADA" : rotulo}</text>
                 <title>{p.nome}</title>
               </g>
             );
