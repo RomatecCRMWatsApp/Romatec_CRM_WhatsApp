@@ -433,6 +433,8 @@ export const empreendimentos = mysqlTable("empreendimentos", {
   /** Fuso UTM do projeto (Açailândia = 23 Sul) */
   utmFuso: int("utmFuso").default(23),
   responsavelTecnico: varchar("responsavelTecnico", { length: 200 }),
+  /** Rótulos das ruas do projeto (importados do DXF): nome, posição UTM/geo e inclinação */
+  ruas: json("ruas").$type<{ nome: string; e: number; n: number; lon: number; lat: number; angulo: number }[]>(),
   createdAt: timestamp("createdAt").defaultNow().notNull(),
   updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
 });

@@ -10,7 +10,20 @@
  */
 import { areaPlana, centroide, perimetro, pontoDentro, sentidoHorario, utmParaGeo, type LonLat, type XY } from '../../shared/utm';
 
-export interface EntidadeDxf { tipo: string; camada: string; xs: number[]; ys: number[]; texto: string; fechada: boolean }
+export interface EntidadeDxf { tipo: string; camada: string; xs: number[]; ys: number[]; texto: string; fechada: boolean; rotacao?: number; ax?: number; ay?: number }
+
+/** Ponto do texto: o de alinhamento (centralizado) quando existe, senão o de inserção */
+const pontoDoTexto = (e: EntidadeDxf): [number, number] => (e.ax != null && e.ay != null && (e.ax !== 0 || e.ay !== 0) ? [e.ax, e.ay] : [e.xs[0], e.ys[0]]);
+
+/** Texto do DXF legível: "\U+00CA" → "Ê", sem códigos de formatação do MTEXT */
+export function textoDxf(t: string): string {
+  return t
+    .replace(/\\U\+([0-9A-F]{4})/gi, (_, h) => String.fromCharCode(parseInt(h, 16)))
+    .replace(/\\P/g, ' ')
+    .replace(/\\[A-Za-z][^;]*;|[{}]/g, '')
+    .replace(/\s+/g, ' ')
+    .trim();
+}
 
 /** Lê as entidades da seção ENTITIES (DXF ASCII) */
 export function lerEntidades(conteudo: string): EntidadeDxf[] {
@@ -30,6 +43,9 @@ export function lerEntidades(conteudo: string): EntidadeDxf[] {
       else if (c === '20') cur.ys.push(Number(v));
       else if (c === '1') cur.texto += v;
       else if (c === '70' && cur.tipo === 'LWPOLYLINE') cur.fechada = (Number(v) & 1) === 1;
+      else if (c === '50' && /TEXT/.test(cur.tipo)) cur.rotacao = Number(v);
+      else if (c === '11' && cur.tipo === 'TEXT') cur.ax = Number(v);
+      else if (c === '21' && cur.tipo === 'TEXT') cur.ay = Number(v);
     }
   }
   return ents;
@@ -55,7 +71,18 @@ export interface LoteDxf {
   centro: LonLat;
 }
 
-export interface ResultadoDxf { lotes: LoteDxf[]; avisos: string[]; fuso: number }
+/** Rótulo de rua escrito no desenho ("RUA IPÊ"): posição UTM e geográfica e inclinação (graus, anti-horário a partir do leste) */
+export interface RuaDxf { nome: string; e: number; n: number; lon: number; lat: number; angulo: number }
+
+export interface ResultadoDxf { lotes: LoteDxf[]; ruas: RuaDxf[]; avisos: string[]; fuso: number }
+
+/** "RUA WALTER e MARIA" → "Rua Walter e Maria" */
+export function nomeDeRua(t: string): string {
+  const minusc = new Set(['e', 'de', 'da', 'do', 'das', 'dos']);
+  return t.toLowerCase().split(/\s+/).map((p, i) => (i > 0 && minusc.has(p) ? p : p.charAt(0).toUpperCase() + p.slice(1))).join(' ');
+}
+
+const RUA = /^(rua|r\.|av\.?|avenida|alameda|travessa|tv\.?|estrada|rodovia|via|acesso|viela|praça)\s+\S/i;
 
 export interface OpcoesDxf {
   fuso?: number; sul?: boolean;
@@ -141,5 +168,15 @@ export function importarLotesDxf(conteudo: string, opts: OpcoesDxf = {}): Result
   const semContorno = numeros.filter(t => !contornos.some(p => pontoDentro(t.x, t.y, p)));
   if (semContorno.length && lotes.length) avisos.push(`${semContorno.length} número(s) de lote fora de qualquer contorno (cópias/detalhes do desenho foram ignorados)`);
   lotes.sort((a, b) => a.quadra.localeCompare(b.quadra) || a.numero - b.numero);
-  return { lotes, avisos, fuso };
+
+  // Ruas: textos "RUA …", "TRAVESSA …" em qualquer camada (fora dos lotes)
+  const ruas: RuaDxf[] = ents
+    .filter(e => /TEXT/.test(e.tipo) && e.xs.length && RUA.test(textoDxf(e.texto)))
+    .map(e => ({ e, p: pontoDoTexto(e) }))
+    .filter(({ p }) => !deLote.some(pl => pontoDentro(p[0], p[1], pl)))
+    .map(({ e, p }) => {
+      const [lon, lat] = utmParaGeo(p[0], p[1], fuso, sul);
+      return { nome: nomeDeRua(textoDxf(e.texto)), e: Math.round(p[0] * 1000) / 1000, n: Math.round(p[1] * 1000) / 1000, lon: Math.round(lon * 1e7) / 1e7, lat: Math.round(lat * 1e7) / 1e7, angulo: e.rotacao ?? 0 };
+    });
+  return { lotes, ruas, avisos, fuso };
 }

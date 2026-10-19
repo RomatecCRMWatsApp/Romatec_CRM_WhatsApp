@@ -91,6 +91,31 @@ describe('Memorial descritivo (rascunho)', () => {
   });
 });
 
+describe('Ruas do desenho', () => {
+  it('lê o nome com acento e a inclinação; o rótulo dentro de lote é ignorado', async () => {
+    const { textoDxf, nomeDeRua } = await import('./dxf');
+    expect(textoDxf('RUA IP\\U+00CA')).toBe('RUA IPÊ');
+    expect(nomeDeRua('RUA WALTER E MARIA')).toBe('Rua Walter e Maria');
+    expect(nomeDeRua('TRAVESSA AÇAI')).toBe('Travessa Açai');
+    const base = dxfDeTeste().replace('0\r\nENDSEC', [
+      '0', 'TEXT', '8', 'COTAS_DOS_LOTES', '10', '236040', '20', '9455058', '11', '236060', '21', '9455058', '50', '0', '1', 'RUA IP\\U+00CA',
+      '0', 'TEXT', '8', 'COTAS_DOS_LOTES', '10', '236030', '20', '9455030', '1', 'RUA DENTRO DO LOTE',
+      '0', 'ENDSEC'].join('\r\n'));
+    const r = importarLotesDxf(base);
+    expect(r.ruas).toHaveLength(1);
+    expect(r.ruas[0]).toMatchObject({ nome: 'Rua Ipê', e: 236060, n: 9455058, angulo: 0 });
+  });
+  it('memorial: lado sem vizinho confronta com a rua da mesma linha, mesmo com o nome longe', async () => {
+    const { ruaDoLado } = await import('./memorial');
+    // Lado de cima do lote A01, de oeste para leste (vértices em sentido horário): lado de fora = norte
+    const a: XY = [236000, 9455050], b: XY = [236060, 9455050];
+    expect(ruaDoLado(a, b, [{ nome: 'Rua Ipê', e: 236300, n: 9455056, angulo: 0 }])).toBe('Rua Ipê'); // 240 m adiante, na linha da rua
+    expect(ruaDoLado(a, b, [{ nome: 'Rua Ipê', e: 236030, n: 9455040, angulo: 0 }])).toBeNull();       // do lado de dentro
+    expect(ruaDoLado(a, b, [{ nome: 'Rua Cedro', e: 236300, n: 9455056, angulo: 90 }])).toBeNull();   // rua transversal
+    expect(ruaDoLado(a, b, [{ nome: 'Rua Ipê', e: 236030, n: 9455080, angulo: 30 }])).toBe('Rua Ipê'); // rótulo logo em frente
+  });
+});
+
 describe('Situações de venda', () => {
   it('o site público só vê disponível / reservado / vendido / área técnica', () => {
     expect(statusPublicoDe('interesse')).toBe('disponivel');

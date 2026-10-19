@@ -178,8 +178,8 @@ export default function Empreendimento() {
 
           <TabsContent value="mapa" className="mt-3">
             <div className="grid lg:grid-cols-[1fr_360px] gap-4 items-start">
-              <MapaTematico slug={slug} lotes={lotes} selecionado={sel} onSelecionar={setSel} />
-              {selecionado ? <PainelLote lote={selecionado} onMudou={atualizar} onFechar={() => setSel(null)} />
+              <MapaTematico slug={slug} lotes={lotes} ruas={data.ruas} selecionado={sel} onSelecionar={setSel} />
+              {selecionado ? <PainelLote slug={slug} lote={selecionado} onMudou={atualizar} onFechar={() => setSel(null)} />
                 : <p className="rounded-xl border border-dashed border-border p-4 text-sm text-muted-foreground">Clique num lote para ver e mudar a situação (interesse, reserva, entrada, venda), o cliente e o corretor.</p>}
             </div>
           </TabsContent>
@@ -214,7 +214,7 @@ export default function Empreendimento() {
                   </tbody>
                 </table>
               </div>
-              {selecionado && <PainelLote lote={selecionado} onMudou={atualizar} onFechar={() => setSel(null)} />}
+              {selecionado && <PainelLote slug={slug} lote={selecionado} onMudou={atualizar} onFechar={() => setSel(null)} />}
             </div>
           </TabsContent>
 
@@ -250,6 +250,11 @@ export default function Empreendimento() {
                 <Button onClick={() => navigate(`/empreendimentos/${slug}/documentos?filtro=disponiveis`)}><Printer className="mr-1.5 h-4 w-4" /> Lotes disponíveis</Button>
                 <Button variant="outline" onClick={() => navigate(`/empreendimentos/${slug}/documentos?filtro=todos`)}><Printer className="mr-1.5 h-4 w-4" /> Todos os lotes</Button>
               </div>
+            </div>
+            <div className="rounded-xl border border-border bg-card p-4 space-y-2 text-sm">
+              <p className="font-semibold">Folder de divulgação</p>
+              <p className="text-xs text-muted-foreground">Folder em A4 com foto, mapa, medidas e QR Code para a página do empreendimento. Geral ou de uma chácara (também pelo painel do lote). Sem preço.</p>
+              <Button onClick={() => navigate(`/empreendimentos/${slug}/folder`)}><FileText className="mr-1.5 h-4 w-4" /> Abrir folder</Button>
             </div>
           </TabsContent>
         </Tabs>

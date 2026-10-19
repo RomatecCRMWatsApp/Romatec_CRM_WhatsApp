@@ -23,15 +23,17 @@ export default function EmpreendimentoDocumentos() {
   const [, params] = useRoute("/empreendimentos/:slug/documentos");
   const [, navigate] = useLocation();
   const slug = params?.slug ?? "";
-  const filtro = new URLSearchParams(window.location.search).get("filtro") === "todos" ? "todos" : "disponiveis";
-  const { data, isLoading, error } = trpc.empreendimentosAdmin.memoriais.useQuery({ slug, filtro }, { enabled: !!slug });
+  const busca = new URLSearchParams(window.location.search);
+  const codigos = (busca.get("codigos") || "").split(",").map(s => s.trim()).filter(Boolean);
+  const filtro = busca.get("filtro") === "todos" || codigos.length ? "todos" : "disponiveis";
+  const { data, isLoading, error } = trpc.empreendimentosAdmin.memoriais.useQuery({ slug, filtro, ...(codigos.length ? { codigos } : {}) }, { enabled: !!slug });
   const { data: det } = trpc.empreendimentosAdmin.detalhe.useQuery({ slug }, { enabled: !!slug });
 
   if (error) return <p className="p-6 text-sm text-red-400">{error.message}</p>;
   if (isLoading || !data || !det) return <p className="p-6 text-sm text-muted-foreground">Gerando documentos…</p>;
   const emp = data.empreendimento;
   const hoje = new Date().toLocaleDateString("pt-BR", { timeZone: "America/Fortaleza" });
-  const titulo = filtro === "todos" ? "Todos os lotes" : "Lotes disponíveis à venda";
+  const titulo = codigos.length ? `Lote ${codigos.join(", ")}` : filtro === "todos" ? "Todos os lotes" : "Lotes disponíveis à venda";
   const areaTotal = data.memoriais.reduce((s, m) => s + m.areaM2, 0);
 
   return (
@@ -49,7 +51,7 @@ export default function EmpreendimentoDocumentos() {
         <p className="text-sm">{[emp.municipio, emp.uf].filter(Boolean).join("/")} · {titulo} · emitido em {hoje}</p>
         <p className="text-xs text-[#555]">Matrícula do empreendimento: {emp.registroMatricula || "sem registro informado"}</p>
         <div className="mt-3">
-          <MapaTematico slug={slug} lotes={det.lotes as any} destacar={filtro === "todos" ? undefined : ["disponivel"]} compacto />
+          <MapaTematico slug={slug} lotes={det.lotes as any} ruas={det.ruas} destacar={filtro === "todos" ? undefined : ["disponivel"]} compacto />
         </div>
 
         {/* Anexo */}

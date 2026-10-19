@@ -75,6 +75,9 @@ export const empreendimentosAdminRouter = router({
         registroMatricula: emp.registroMatricula, registroCartorio: emp.registroCartorio, responsavelTecnico: emp.responsavelTecnico,
         utmFuso: emp.utmFuso ?? 23, precosPublicos: !!emp.precosPublicos,
       },
+      ruas: (json<{ nome: string; lon: number; lat: number; angulo: number }[]>(emp.ruas) ?? []).map(r => ({ nome: r.nome, lon: r.lon, lat: r.lat, angulo: r.angulo ?? 0 })),
+      /** WhatsApp que recebe os leads (folder de divulgação) */
+      whatsapp: (await import("../leads/config")).numeroWhatsAppLeads(),
       lotes: lotesOut, resumo, arquivos,
       valorVendido: lotesOut.filter(l => ["vendido_parcelado", "vendido_avista", "quitado"].includes(l.situacao)).reduce((s, l) => s + (l.valorVenda ?? 0), 0),
     };
@@ -188,7 +191,8 @@ export const empreendimentosAdminRouter = router({
     }).filter(x => x.antes == null || Math.abs((x.antes ?? 0) - x.depois) >= 0.01);
     const ausentes = Array.from(existentes.keys()).filter(c => !resultado.lotes.some(l => l.codigo === c));
     void db; void emp;
-    return { total: resultado.lotes.length, novos, alterados, ausentes, avisos: resultado.avisos };
+    const ruas = Array.from(new Set(resultado.ruas.map(r => r.nome)));
+    return { total: resultado.lotes.length, novos, alterados, ausentes, ruas, avisos: resultado.avisos };
   }),
 
   /** Aplica o DXF: atualiza área, perímetro, desenho e centro; lotes novos entram bloqueados para revisão */
@@ -213,7 +217,11 @@ export const empreendimentosAdminRouter = router({
         criados++;
       }
     }
-    await db.update(empreendimentos).set({ totalLotes: resultado.lotes.length } as any).where(eq(empreendimentos.id, emp.id));
+    await db.update(empreendimentos).set({
+      totalLotes: resultado.lotes.length,
+      // Nomes das ruas do desenho (mapa e confrontações do memorial); sem rótulos no DXF, mantém os anteriores
+      ...(resultado.ruas.length ? { ruas: resultado.ruas } : {}),
+    } as any).where(eq(empreendimentos.id, emp.id));
     console.log(`[Lotes] DXF aplicado em ${emp.slug} por usuário ${ctx.user.id}: ${atualizados} atualizados, ${criados} novos`);
     return { atualizados, criados, avisos: resultado.avisos };
   }),
@@ -231,7 +239,7 @@ export const empreendimentosAdminRouter = router({
         .filter(l => l.verticesUtm.length >= 3)
         .filter(l => input.codigos?.length ? input.codigos.includes(l.codigo) : input.filtro === "todos" || l.situacao === "disponivel")
         .sort((a, b) => String(a.quadra).localeCompare(String(b.quadra)) || (a.numero ?? 0) - (b.numero ?? 0));
-      const base = { nome: emp.nome, municipio: emp.municipio, uf: emp.uf, fuso: emp.utmFuso ?? 23, matricula: emp.registroMatricula };
+      const base = { nome: emp.nome, municipio: emp.municipio, uf: emp.uf, fuso: emp.utmFuso ?? 23, matricula: emp.registroMatricula, ruas: json<{ nome: string; e: number; n: number; angulo: number }[]>(emp.ruas) ?? [] };
       return {
         empreendimento: { nome: emp.nome, municipio: emp.municipio, uf: emp.uf, registroMatricula: emp.registroMatricula, responsavelTecnico: emp.responsavelTecnico },
         semGeometria: todos.filter(l => l.verticesUtm.length < 3).length,

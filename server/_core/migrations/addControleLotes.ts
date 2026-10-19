@@ -20,6 +20,7 @@ const COMANDOS: { nome: string; stmt: ReturnType<typeof sql> }[] = [
   { nome: 'emp.registroCartorio', stmt: sql`ALTER TABLE empreendimentos ADD COLUMN registroCartorio VARCHAR(160) NULL` },
   { nome: 'emp.utmFuso', stmt: sql`ALTER TABLE empreendimentos ADD COLUMN utmFuso INT DEFAULT 23` },
   { nome: 'emp.responsavelTecnico', stmt: sql`ALTER TABLE empreendimentos ADD COLUMN responsavelTecnico VARCHAR(200) NULL` },
+  { nome: 'emp.ruas', stmt: sql`ALTER TABLE empreendimentos ADD COLUMN ruas JSON NULL` },
   {
     nome: 'loteHistorico',
     stmt: sql`CREATE TABLE IF NOT EXISTS loteHistorico (

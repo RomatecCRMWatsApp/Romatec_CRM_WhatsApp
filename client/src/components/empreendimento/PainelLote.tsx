@@ -17,7 +17,37 @@ const quando = (d: string | Date) => new Date(d).toLocaleString("pt-BR", { timeZ
 const campo = "w-full h-9 rounded-md border border-border bg-secondary px-2 text-sm";
 const numero = (v: string) => (v.trim() === "" ? null : Number(v.replace(/\./g, "").replace(",", ".")));
 
-export default function PainelLote({ lote, onMudou, onFechar }: { lote: LotePainel; onMudou: () => void; onFechar?: () => void }) {
+/** Medidas do lote: cada lado com azimute, distância e confrontação (do memorial) */
+function MedidasLote({ slug, codigo }: { slug: string; codigo: string }) {
+  const [, navigate] = useLocation();
+  const { data, isLoading } = trpc.empreendimentosAdmin.memoriais.useQuery({ slug, filtro: "todos", codigos: [codigo] });
+  const m = data?.memoriais[0];
+  return (
+    <div className="border-t border-border pt-2 space-y-1.5">
+      <p className="text-xs font-semibold text-muted-foreground">Medidas e confrontações</p>
+      {isLoading && <p className="text-[11px] text-muted-foreground">Calculando…</p>}
+      {!isLoading && !m && <p className="text-[11px] text-muted-foreground">Sem desenho importado para este lote.</p>}
+      {m && (
+        <>
+          <div className="space-y-0.5">
+            {m.vertices.map(v => (
+              <p key={v.nome} className="text-[11px] leading-snug">
+                <b>{v.nome}</b> · {v.distancia.toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })} m · {v.azimute}
+                <span className="text-muted-foreground"> — {v.confronta.replace(/^a /, "")}</span>
+              </p>
+            ))}
+          </div>
+          <div className="flex flex-wrap gap-1.5 pt-1">
+            <Button size="sm" variant="outline" className="h-7 text-xs" onClick={() => navigate(`/empreendimentos/${slug}/documentos?codigos=${codigo}`)}>Memorial descritivo</Button>
+            <Button size="sm" variant="outline" className="h-7 text-xs" onClick={() => navigate(`/empreendimentos/${slug}/folder?lote=${codigo}`)}>Folder deste lote</Button>
+          </div>
+        </>
+      )}
+    </div>
+  );
+}
+
+export default function PainelLote({ slug, lote, onMudou, onFechar }: { slug: string; lote: LotePainel; onMudou: () => void; onFechar?: () => void }) {
   const [, navigate] = useLocation();
   const [situacao, setSituacao] = useState<SituacaoLote>(lote.situacao);
   const [leadId, setLeadId] = useState<number | null>(lote.leadId);
@@ -60,6 +90,8 @@ export default function PainelLote({ lote, onMudou, onFechar }: { lote: LotePain
         <span className="rounded-full px-2 py-0.5 text-[11px] font-semibold text-[#0C3320]" style={{ background: COR_SITUACAO[lote.situacao] }}>{ROTULO_SITUACAO[lote.situacao]}</span>
         {onFechar && <button onClick={onFechar} className="text-muted-foreground hover:text-foreground text-lg leading-none" aria-label="Fechar">×</button>}
       </div>
+
+      <MedidasLote slug={slug} codigo={lote.codigo} />
 
       <label className="block space-y-1">
         <span className="text-xs text-muted-foreground">Situação</span>

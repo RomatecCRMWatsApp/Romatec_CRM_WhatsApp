@@ -40,6 +40,35 @@ export function confrontantes(lote: LoteMemorial, todos: LoteMemorial[], tol = 0
   });
 }
 
+/**
+ * Rua de um lado sem lote vizinho. O nome da rua costuma estar escrito ao longo dela, às
+ * vezes longe do lote; vale o rótulo do lado de fora que está na linha da rua (perto da reta
+ * do lado e com o texto na mesma direção). Sem nenhum assim, o rótulo mais perto (até 45 m).
+ */
+export interface RuaMemorial { nome: string; e: number; n: number; angulo?: number }
+export function ruaDoLado(a: XY, b: XY, ruas: RuaMemorial[]): string | null {
+  const dx = b[0] - a[0], dy = b[1] - a[1];
+  const comp = Math.hypot(dx, dy) || 1;
+  const direcao = (Math.atan2(dy, dx) * 180) / Math.PI;
+  const paralelo = (ang: number) => { const d = Math.abs((((ang - direcao) % 180) + 180) % 180); return Math.min(d, 180 - d) <= 20; };
+  let naLinha: { nome: string; c: number } | null = null, perto: { nome: string; c: number } | null = null;
+  for (const r of ruas) {
+    const px = r.e - a[0], py = r.n - a[1];
+    if (dx * py - dy * px <= 0) continue;              // vértices em sentido horário: o lado de fora fica à esquerda
+    const t = (px * dx + py * dy) / (comp * comp);    // posição ao longo do lado (0..1 = dentro do lado)
+    const d = Math.abs(dx * py - dy * px) / comp;     // distância até a reta do lado
+    const fora = Math.max(0, -t, t - 1) * comp;       // quanto o rótulo passa da ponta do lado
+    if (d <= 20 && fora <= 800 && r.angulo != null && paralelo(r.angulo)) {
+      const c = d + fora * 0.02;
+      if (!naLinha || c < naLinha.c) naLinha = { nome: r.nome, c };
+    } else if (d <= 45 && fora <= comp * 0.75) {
+      const c = d + fora * 0.5;
+      if (!perto || c < perto.c) perto = { nome: r.nome, c };
+    }
+  }
+  return naLinha?.nome ?? perto?.nome ?? null;
+}
+
 const nomeLote = (codigo: string, todos: LoteMemorial[]) => {
   const l = todos.find(x => x.codigo === codigo);
   return l?.quadra && l.numero != null ? `Lote ${String(l.numero).padStart(2, '0')} da Quadra ${l.quadra}` : `Lote ${codigo}`;
@@ -47,13 +76,15 @@ const nomeLote = (codigo: string, todos: LoteMemorial[]) => {
 
 export interface Memorial { titulo: string; cabecalho: string[]; descricao: string; vertices: { nome: string; e: number; n: number; azimute: string; distancia: number; confronta: string }[] }
 
-export function memorialDoLote(lote: LoteMemorial, todos: LoteMemorial[], emp: { nome: string; municipio?: string | null; uf?: string | null; fuso: number; matricula?: string | null }): Memorial {
+export function memorialDoLote(lote: LoteMemorial, todos: LoteMemorial[], emp: { nome: string; municipio?: string | null; uf?: string | null; fuso: number; matricula?: string | null; ruas?: RuaMemorial[] }): Memorial {
   const v = ordenarVertices(lote.verticesUtm);
   const conf = confrontantes(lote, todos);
   const nome = lote.quadra && lote.numero != null ? `Lote ${String(lote.numero).padStart(2, '0')} da Quadra ${lote.quadra}` : `Lote ${lote.codigo}`;
   const linhas = v.map((a, i) => {
     const b = v[(i + 1) % v.length];
-    const confronta = conf[i].length ? conf[i].map(c => nomeLote(c, todos)).join(' e ') : 'área comum do condomínio / via de circulação (conferir)';
+    const rua = conf[i].length ? null : ruaDoLado(a, b, emp.ruas ?? []);
+    const confronta = conf[i].length ? conf[i].map(c => nomeLote(c, todos)).join(' e ')
+      : rua ? `a ${rua}` : 'área comum do condomínio / limite do empreendimento (conferir)';
     return { nome: `V${i + 1}`, e: a[0], n: a[1], azimute: grausMinSeg(azimute(a, b)), distancia: distancia(a, b), confronta };
   });
   const partes = linhas.map((l, i) => {
