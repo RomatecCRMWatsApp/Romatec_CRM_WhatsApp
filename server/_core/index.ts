@@ -431,6 +431,13 @@ async function startServer() {
 
   app.post('/api/upload', express.raw({ type: '*/*', limit: '100mb' }), async (req, res) => {
     try {
+      // Só com login (colaborador ou administrador): sem isso qualquer um subia arquivos no Cloudinary da Romatec
+      const { sdk } = await import('./sdk');
+      const user = await sdk.authenticateRequest(req).catch(() => null);
+      if (!user || (user as any).ativo === false) return res.status(401).json({ success: false, error: 'Faça login para enviar arquivos' });
+      const { perfilDe } = await import('../../shared/equipe');
+      if (perfilDe(user as any) === 'empreendedor') return res.status(403).json({ success: false, error: 'Seu acesso não envia arquivos' });
+
       const fileName = (req.headers['x-file-name'] as string) || 'upload';
       const fileType = (req.headers['x-file-type'] as string) || 'application/octet-stream';
 
@@ -528,23 +535,25 @@ async function startServer() {
   });
 
   app.get("/api/pdf-proxy", async (req, res) => {
-    const url = req.query.url as string;
-    if (!url || !/^https?:\/\//.test(url)) {
+    // Só PDFs do Cloudinary da própria Romatec (antes buscava qualquer endereço e
+    // mandava a senha do Cloudinary para qualquer URL que contivesse "res.cloudinary.com")
+    const { urlPdfPermitida } = await import('../pdfProxyGuard');
+    const url = urlPdfPermitida(req.query.url, process.env.CLOUDINARY_CLOUD_NAME);
+    if (!url) {
       return res.status(400).json({ error: "URL inválida" });
     }
     try {
-      const isCloudinary = url.includes('res.cloudinary.com');
       const headers: Record<string, string> = {
         'User-Agent': 'Mozilla/5.0 (compatible; RomatecCRM/1.0)',
         'Accept': 'application/pdf,*/*',
       };
-      if (isCloudinary) {
-        const CLOUD_API_KEY = process.env.CLOUDINARY_API_KEY || '454146681184898';
-        const CLOUD_API_SECRET = process.env.CLOUDINARY_API_SECRET || 'soDNjdzXi2Hhd9NLvLuZmxrBi4g';
-        const credentials = Buffer.from(`${CLOUD_API_KEY}:${CLOUD_API_SECRET}`).toString('base64');
-        headers['Authorization'] = `Basic ${credentials}`;
+      const CLOUD_API_KEY = process.env.CLOUDINARY_API_KEY;
+      const CLOUD_API_SECRET = process.env.CLOUDINARY_API_SECRET;
+      if (CLOUD_API_KEY && CLOUD_API_SECRET) {
+        headers['Authorization'] = `Basic ${Buffer.from(`${CLOUD_API_KEY}:${CLOUD_API_SECRET}`).toString('base64')}`;
       }
-      const response = await fetch(url, { headers, redirect: 'follow' });
+      // Sem seguir redirecionamento: a credencial não pode escapar para outro endereço
+      const response = await fetch(url, { headers, redirect: 'manual' });
       console.log(`[PDF Proxy] ${response.status} — ${url.substring(0, 80)}`);
       if (!response.ok) {
         return res.status(502).json({ error: `Falha ao buscar PDF (${response.status})` });
