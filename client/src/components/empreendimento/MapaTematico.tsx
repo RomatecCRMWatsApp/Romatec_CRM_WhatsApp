@@ -21,8 +21,10 @@ const centro = (pts: [number, number][]) => {
 /** Inclinação do texto na tela, sempre legível (nunca de cabeça para baixo) */
 const inclinacao = (anguloDxf: number) => { let a = -anguloDxf; while (a <= -90) a += 180; while (a > 90) a -= 180; return a; };
 
-export default function MapaTematico({ slug, lotes, ruas, selecionado, onSelecionar, destacar, realce, compacto, semLegenda }: {
+export default function MapaTematico({ slug, lotes, ruas, perimetro, selecionado, onSelecionar, destacar, realce, compacto, semLegenda }: {
   slug: string;
+  /** Perímetro oficial (DXF) — prevalece sobre o do mapa.json */
+  perimetro?: Pt[] | null;
   /** Só estes lotes (códigos) ficam coloridos — ex.: folder de um lote */
   realce?: string[];
   lotes: LoteMapa[];
@@ -42,7 +44,8 @@ export default function MapaTematico({ slug, lotes, ruas, selecionado, onSelecio
   const desenho = useMemo(() => {
     const doContexto = new Map((ctx?.lotes ?? []).map(l => [l.codigo, l.poly]));
     const itens = lotes.map(l => ({ ...l, poly: (l.poligono?.length ? l.poligono : doContexto.get(l.codigo)) ?? null })).filter(l => l.poly && l.poly.length >= 3) as (LoteMapa & { poly: Pt[] })[];
-    const todos = [...itens.flatMap(l => l.poly), ...(ctx?.perimetro ?? [])];
+    const contorno = perimetro?.length ? perimetro : ctx?.perimetro ?? [];
+    const todos = [...itens.flatMap(l => l.poly), ...contorno];
     if (!todos.length) return null;
     const lons = todos.map(p => p[0]), lats = todos.map(p => p[1]);
     const minLon = Math.min(...lons), maxLon = Math.max(...lons), minLat = Math.min(...lats), maxLat = Math.max(...lats);
@@ -52,11 +55,11 @@ export default function MapaTematico({ slug, lotes, ruas, selecionado, onSelecio
     const proj = ([lon, lat]: Pt): [number, number] => [PAD + (lon - minLon) * k * escala, PAD + (maxLat - lat) * escala];
     // Largura da rua (≈ 12 m) em pixels
     const metro = escala / 111320;
-    return { itens, proj, H, larguraRua: Math.max(6, 12 * metro) };
-  }, [lotes, ctx]);
+    return { itens, proj, H, larguraRua: Math.max(6, 12 * metro), contorno };
+  }, [lotes, ctx, perimetro]);
 
   if (!desenho) return <p className="text-sm text-muted-foreground">Sem desenho dos lotes ainda. Envie o DXF do projeto na aba Arquivos e importe.</p>;
-  const { itens, proj, H, larguraRua } = desenho;
+  const { itens, proj, H, larguraRua, contorno } = desenho;
   const fonte = compacto ? 9 : 11;
 
   return (
@@ -73,7 +76,7 @@ export default function MapaTematico({ slug, lotes, ruas, selecionado, onSelecio
             </filter>
           </defs>
           <rect width={W} height={H} fill="#E9EFDD" />
-          {ctx?.perimetro?.length ? <path d={caminho(ctx.perimetro.map(proj))} fill="url(#grama)" stroke="#5B4A2F" strokeWidth={2.5} strokeDasharray="2 5" strokeLinecap="round" /> : null}
+          {contorno.length ? <path d={caminho(contorno.map(proj))} fill="url(#grama)" stroke="#5B4A2F" strokeWidth={2.5} strokeDasharray="2 5" strokeLinecap="round" /> : null}
 
           {/* Ruas: meio-fio, asfalto e faixa central */}
           {ctx?.ruas?.map(r => {

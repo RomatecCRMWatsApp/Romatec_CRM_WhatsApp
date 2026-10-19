@@ -51,7 +51,7 @@ export default function EmpreendimentoDocumentos() {
         <p className="text-sm">{[emp.municipio, emp.uf].filter(Boolean).join("/")} · {titulo} · emitido em {hoje}</p>
         <p className="text-xs text-[#555]">Matrícula do empreendimento: {emp.registroMatricula || "sem registro informado"}</p>
         <div className="mt-3">
-          <MapaTematico slug={slug} lotes={det.lotes as any} ruas={det.ruas} destacar={filtro === "todos" ? undefined : ["disponivel"]} compacto />
+          <MapaTematico slug={slug} lotes={det.lotes as any} ruas={det.ruas} perimetro={det.perimetro?.poligono} destacar={filtro === "todos" ? undefined : ["disponivel"]} compacto />
         </div>
 
         {/* Anexo */}

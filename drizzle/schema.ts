@@ -435,6 +435,8 @@ export const empreendimentos = mysqlTable("empreendimentos", {
   responsavelTecnico: varchar("responsavelTecnico", { length: 200 }),
   /** Rótulos das ruas do projeto (importados do DXF): nome, posição UTM/geo e inclinação */
   ruas: json("ruas").$type<{ nome: string; e: number; n: number; lon: number; lat: number; angulo: number }[]>(),
+  /** Perímetro do empreendimento (DXF): vértices UTM e polígono [lon,lat] */
+  perimetro: json("perimetro").$type<{ verticesUtm: [number, number][]; poligono: [number, number][]; areaM2: number; perimetroM: number }>(),
   createdAt: timestamp("createdAt").defaultNow().notNull(),
   updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
 });

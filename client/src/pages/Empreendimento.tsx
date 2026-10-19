@@ -94,6 +94,8 @@ function Arquivos({ slug, arquivos, admin, onMudou }: { slug: string; arquivos: 
               {previa.data.novos.length > 0 && <p className="text-xs">Novos (entram bloqueados para revisão): {previa.data.novos.map(n => `${n.codigo} (${m2(n.areaM2)} m²)`).join(", ")}</p>}
               {previa.data.alterados.length > 0 && <p className="text-xs">Área alterada: {previa.data.alterados.map(a => `${a.codigo} ${m2(a.antes)} → ${m2(a.depois)}`).join("; ")}</p>}
               {previa.data.ausentes.length > 0 && <p className="text-xs text-amber-300">Não estão no desenho (ficam como estão): {previa.data.ausentes.join(", ")}</p>}
+              {previa.data.perimetro && <p className="text-xs">Perímetro: {m2(previa.data.perimetro.areaM2)} m² · {previa.data.perimetro.perimetroM.toLocaleString("pt-BR")} m</p>}
+              {previa.data.ruas.length > 0 && <p className="text-xs">Ruas: {previa.data.ruas.join(", ")}</p>}
               {previa.data.avisos.map((a, i) => <p key={i} className="text-xs text-muted-foreground">⚠️ {a}</p>)}
               <div className="flex gap-2">
                 <Button size="sm" disabled={aplicar.isPending} onClick={() => aplicar.mutate({ slug, arquivoId: dxf })}>Aplicar: atualizar desenho e áreas</Button>
@@ -178,7 +180,7 @@ export default function Empreendimento() {
 
           <TabsContent value="mapa" className="mt-3">
             <div className="grid lg:grid-cols-[1fr_360px] gap-4 items-start">
-              <MapaTematico slug={slug} lotes={lotes} ruas={data.ruas} selecionado={sel} onSelecionar={setSel} />
+              <MapaTematico slug={slug} lotes={lotes} ruas={data.ruas} perimetro={data.perimetro?.poligono} selecionado={sel} onSelecionar={setSel} />
               {selecionado ? <PainelLote slug={slug} lote={selecionado} onMudou={atualizar} onFechar={() => setSel(null)} />
                 : <p className="rounded-xl border border-dashed border-border p-4 text-sm text-muted-foreground">Clique num lote para ver e mudar a situação (interesse, reserva, entrada, venda), o cliente e o corretor.</p>}
             </div>

@@ -76,15 +76,25 @@ const nomeLote = (codigo: string, todos: LoteMemorial[]) => {
 
 export interface Memorial { titulo: string; cabecalho: string[]; descricao: string; vertices: { nome: string; e: number; n: number; azimute: string; distancia: number; confronta: string }[] }
 
-export function memorialDoLote(lote: LoteMemorial, todos: LoteMemorial[], emp: { nome: string; municipio?: string | null; uf?: string | null; fuso: number; matricula?: string | null; ruas?: RuaMemorial[] }): Memorial {
+/** O lado está sobre o perímetro do empreendimento? (meio do lado a até `tol` m de algum lado do perímetro) */
+export function ladoNoPerimetro(a: XY, b: XY, perimetroUtm: XY[] | null | undefined, tol = 0.5): boolean {
+  if (!perimetroUtm || perimetroUtm.length < 3) return false;
+  const p = anelAberto(perimetroUtm);
+  const meio: XY = [(a[0] + b[0]) / 2, (a[1] + b[1]) / 2];
+  return p.some((q, j) => distSeg(meio, q, p[(j + 1) % p.length]) <= tol);
+}
+
+export function memorialDoLote(lote: LoteMemorial, todos: LoteMemorial[], emp: { nome: string; municipio?: string | null; uf?: string | null; fuso: number; matricula?: string | null; ruas?: RuaMemorial[]; perimetroUtm?: XY[] | null }): Memorial {
   const v = ordenarVertices(lote.verticesUtm);
   const conf = confrontantes(lote, todos);
   const nome = lote.quadra && lote.numero != null ? `Lote ${String(lote.numero).padStart(2, '0')} da Quadra ${lote.quadra}` : `Lote ${lote.codigo}`;
   const linhas = v.map((a, i) => {
     const b = v[(i + 1) % v.length];
-    const rua = conf[i].length ? null : ruaDoLado(a, b, emp.ruas ?? []);
+    const divisa = !conf[i].length && ladoNoPerimetro(a, b, emp.perimetroUtm);
+    const rua = conf[i].length || divisa ? null : ruaDoLado(a, b, emp.ruas ?? []);
     const confronta = conf[i].length ? conf[i].map(c => nomeLote(c, todos)).join(' e ')
-      : rua ? `a ${rua}` : 'área comum do condomínio / limite do empreendimento (conferir)';
+      : divisa ? 'o limite do condomínio (divisa externa)'
+      : rua ? `a ${rua}` : 'área comum do condomínio (conferir)';
     return { nome: `V${i + 1}`, e: a[0], n: a[1], azimute: grausMinSeg(azimute(a, b)), distancia: distancia(a, b), confronta };
   });
   const partes = linhas.map((l, i) => {

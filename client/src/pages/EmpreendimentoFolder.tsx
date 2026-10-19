@@ -87,7 +87,7 @@ export default function EmpreendimentoFolder() {
         {/* Mapa */}
         <div className="px-6 pt-5">
           <p className="mb-2 text-sm font-bold uppercase tracking-wider" style={{ color: VERDE }}>{lote ? "Localização da chácara" : "Mapa das chácaras disponíveis"}</p>
-          <MapaTematico slug={slug} lotes={det.lotes as any} ruas={det.ruas} realce={lote ? [lote.codigo] : undefined} destacar={lote ? undefined : ["disponivel"]} compacto semLegenda />
+          <MapaTematico slug={slug} lotes={det.lotes as any} ruas={det.ruas} perimetro={det.perimetro?.poligono} realce={lote ? [lote.codigo] : undefined} destacar={lote ? undefined : ["disponivel"]} compacto semLegenda />
         </div>
 
         <div className="grid gap-5 px-6 py-5 md:grid-cols-2">

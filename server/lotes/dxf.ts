@@ -74,7 +74,10 @@ export interface LoteDxf {
 /** Rótulo de rua escrito no desenho ("RUA IPÊ"): posição UTM e geográfica e inclinação (graus, anti-horário a partir do leste) */
 export interface RuaDxf { nome: string; e: number; n: number; lon: number; lat: number; angulo: number }
 
-export interface ResultadoDxf { lotes: LoteDxf[]; ruas: RuaDxf[]; avisos: string[]; fuso: number }
+/** Perímetro do empreendimento: maior contorno fechado que envolve os lotes */
+export interface PerimetroDxf { verticesUtm: XY[]; poligono: LonLat[]; areaM2: number; perimetroM: number }
+
+export interface ResultadoDxf { lotes: LoteDxf[]; ruas: RuaDxf[]; perimetro: PerimetroDxf | null; avisos: string[]; fuso: number }
 
 /** "RUA WALTER e MARIA" → "Rua Walter e Maria" */
 export function nomeDeRua(t: string): string {
@@ -178,5 +181,23 @@ export function importarLotesDxf(conteudo: string, opts: OpcoesDxf = {}): Result
       const [lon, lat] = utmParaGeo(p[0], p[1], fuso, sul);
       return { nome: nomeDeRua(textoDxf(e.texto)), e: Math.round(p[0] * 1000) / 1000, n: Math.round(p[1] * 1000) / 1000, lon: Math.round(lon * 1e7) / 1e7, lat: Math.round(lat * 1e7) / 1e7, angulo: e.rotacao ?? 0 };
     });
-  return { lotes, ruas, avisos, fuso };
+  // Perímetro: o maior contorno que contém ao menos 90% dos centros dos lotes
+  const centros = lotes.map(l => l.verticesUtm).map(v => centroide(v));
+  const candidato = contornos
+    .filter(p => !deLote.includes(p) && centros.length && centros.filter(c => pontoDentro(c[0], c[1], p)).length >= centros.length * 0.9)
+    .sort((a, b) => areaPlana(b) - areaPlana(a))[0];
+  let perimetroEmp: PerimetroDxf | null = null;
+  if (candidato) {
+    const horario = sentidoHorario(candidato);
+    const geo = horario.map(([x, y]) => utmParaGeo(x, y, fuso, sul));
+    perimetroEmp = {
+      verticesUtm: horario.map(([x, y]) => [Math.round(x * 1000) / 1000, Math.round(y * 1000) / 1000] as XY),
+      poligono: [...geo, geo[0]].map(([lo, la]) => [Math.round(lo * 1e7) / 1e7, Math.round(la * 1e7) / 1e7] as LonLat),
+      areaM2: Math.round(areaPlana(candidato) * 100) / 100,
+      perimetroM: Math.round(perimetro(candidato) * 100) / 100,
+    };
+  } else if (lotes.length) {
+    avisos.push('Perímetro do empreendimento não encontrado (contorno fechado envolvendo os lotes)');
+  }
+  return { lotes, ruas, perimetro: perimetroEmp, avisos, fuso };
 }

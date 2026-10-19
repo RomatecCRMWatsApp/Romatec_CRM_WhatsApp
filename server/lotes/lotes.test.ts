@@ -116,6 +116,26 @@ describe('Ruas do desenho', () => {
   });
 });
 
+describe('Perímetro do empreendimento', () => {
+  it('maior contorno envolvendo os lotes; lado sobre ele vira "limite do condomínio"', async () => {
+    const { ladoNoPerimetro } = await import('./memorial');
+    const perim = ['0', 'LWPOLYLINE', '8', 'REGIAO_POLILINHAS', '90', '4', '70', '1',
+      '10', '235990', '20', '9454990', '10', '235990', '20', '9455050', '10', '236130', '20', '9455050', '10', '236130', '20', '9454990'];
+    const r = importarLotesDxf(dxfDeTeste().replace('0\r\nENDSEC', [...perim, '0', 'ENDSEC'].join('\r\n')));
+    expect(r.lotes).toHaveLength(2);
+    expect(r.perimetro).toMatchObject({ areaM2: 8400, perimetroM: 400 });
+    // Lado de cima do A01 (y = 9455050) está sobre o perímetro; o lado de baixo (y = 9455000) não
+    expect(ladoNoPerimetro([236000, 9455050], [236060, 9455050], r.perimetro!.verticesUtm)).toBe(true);
+    expect(ladoNoPerimetro([236000, 9455000], [236060, 9455000], r.perimetro!.verticesUtm)).toBe(false);
+  });
+  it('vértice oficial FQNS-M-9227 do Bom Jardims converte igual à tabela do projeto', () => {
+    const [lon, lat] = utmParaGeo(236383.8245, 9455491.8646, 23, true);
+    // Tabela: 04°55'19,084007"S e 47°22'37,505979"W
+    expect(Math.abs(lat - -(4 + 55 / 60 + 19.084007 / 3600)) * 3600).toBeLessThan(0.0001);
+    expect(Math.abs(lon - -(47 + 22 / 60 + 37.505979 / 3600)) * 3600).toBeLessThan(0.0001);
+  });
+});
+
 describe('Situações de venda', () => {
   it('o site público só vê disponível / reservado / vendido / área técnica', () => {
     expect(statusPublicoDe('interesse')).toBe('disponivel');

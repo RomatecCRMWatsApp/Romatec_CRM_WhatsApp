@@ -284,7 +284,7 @@ export function initSqliteTables(sqlite: any): void {
     'numParcelas INTEGER', 'dataSituacao INTEGER', 'observacao TEXT', 'verticesUtm TEXT', 'poligono TEXT']) {
     addColumn(`ALTER TABLE lotes ADD COLUMN ${c}`);
   }
-  for (const c of ['registroMatricula TEXT', 'registroCartorio TEXT', 'utmFuso INTEGER DEFAULT 23', 'responsavelTecnico TEXT', 'ruas TEXT']) {
+  for (const c of ['registroMatricula TEXT', 'registroCartorio TEXT', 'utmFuso INTEGER DEFAULT 23', 'responsavelTecnico TEXT', 'ruas TEXT', 'perimetro TEXT']) {
     addColumn(`ALTER TABLE empreendimentos ADD COLUMN ${c}`);
   }
   run(`CREATE TABLE IF NOT EXISTS loteHistorico (
