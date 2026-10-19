@@ -7,6 +7,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Users, Send, Settings, LogOut, WifiOff, TrendingUp, Building2, BarChart3, CheckCircle2, XCircle, RefreshCw, UserPlus, Flame, ChevronRight, MessageCircle, ExternalLink, Activity, Zap, Clock, Images } from "lucide-react";
 import { useLocation } from "wouter";
 import { trpc } from "@/lib/trpc";
+import RelogioPainel from "@/components/RelogioPainel";
 
 const LOGO_URL = "/icon-512x512.png";
 
@@ -492,6 +493,8 @@ export default function Dashboard() {
         </div>
         <p className="text-xs text-muted-foreground">{config?.companyName || "Romatec"}</p>
       </div>
+
+      <RelogioPainel />
 
       <WhatsAppStatusPanel />
 
