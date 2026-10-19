@@ -1,4 +1,4 @@
-import { int, mysqlEnum, mysqlTable, text, timestamp, varchar, decimal, boolean, json, index, uniqueIndex } from "drizzle-orm/mysql-core";
+import { int, mysqlEnum, mysqlTable, text, longtext, timestamp, varchar, decimal, boolean, json, index, uniqueIndex } from "drizzle-orm/mysql-core";
 
 /**
  * Core user table backing auth flow.
@@ -427,6 +427,12 @@ export const empreendimentos = mysqlTable("empreendimentos", {
   lotesComercializaveis: int("lotesComercializaveis"),
   // Trava de preço: enquanto false, nenhuma rota/página/mensagem pública mostra valores
   precosPublicos: boolean("precosPublicos").default(false).notNull(),
+  /** Registro do parcelamento/condomínio no cartório (vazio = sem registro: aviso fixo na tela) */
+  registroMatricula: varchar("registroMatricula", { length: 60 }),
+  registroCartorio: varchar("registroCartorio", { length: 160 }),
+  /** Fuso UTM do projeto (Açailândia = 23 Sul) */
+  utmFuso: int("utmFuso").default(23),
+  responsavelTecnico: varchar("responsavelTecnico", { length: 200 }),
   createdAt: timestamp("createdAt").defaultNow().notNull(),
   updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
 });
@@ -453,9 +459,53 @@ export const lotes = mysqlTable("lotes", {
   latCentro: decimal("latCentro", { precision: 10, scale: 7 }),
   lonCentro: decimal("lonCentro", { precision: 10, scale: 7 }),
   dossiePdf: varchar("dossiePdf", { length: 120 }),
+  // ─── Controle de vendas (interno; server/lotes/vendas.ts) ───
+  /** disponivel | bloqueado | interesse | reservado | entrada | vendido_parcelado | vendido_avista | quitado */
+  situacao: varchar("situacao", { length: 20 }).default("disponivel"),
+  leadId: int("leadId"),
+  corretorId: int("corretorId"),
+  clienteNome: varchar("clienteNome", { length: 160 }),
+  valorVenda: decimal("valorVenda", { precision: 12, scale: 2 }),
+  valorEntrada: decimal("valorEntrada", { precision: 12, scale: 2 }),
+  numParcelas: int("numParcelas"),
+  dataSituacao: timestamp("dataSituacao"),
+  observacao: varchar("observacao", { length: 500 }),
+  /** Geometria do projeto (DXF): vértices UTM [E,N] no sentido horário e polígono [lon,lat] */
+  verticesUtm: json("verticesUtm").$type<[number, number][]>(),
+  poligono: json("poligono").$type<[number, number][]>(),
   updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
 }, (t) => ({
   uqLote: uniqueIndex("uq_lote").on(t.empreendimentoId, t.codigo),
+}));
+
+/** Histórico de cada mudança de situação do lote (quem, quando, para quem) */
+export const loteHistorico = mysqlTable("loteHistorico", {
+  id: int("id").autoincrement().primaryKey(),
+  loteId: int("loteId").notNull(),
+  de: varchar("de", { length: 20 }),
+  para: varchar("para", { length: 20 }).notNull(),
+  leadId: int("leadId"),
+  corretorId: int("corretorId"),
+  usuarioId: int("usuarioId"),
+  detalhe: varchar("detalhe", { length: 500 }),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+}, (t) => ({
+  idxLote: index("idx_lotehist_lote").on(t.loteId),
+}));
+
+/** Arquivos do empreendimento (licenças, projeto, escrituras…) — guardados no banco, download só com login */
+export const empreendimentoArquivos = mysqlTable("empreendimentoArquivos", {
+  id: int("id").autoincrement().primaryKey(),
+  empreendimentoId: int("empreendimentoId").notNull(),
+  nome: varchar("nome", { length: 200 }).notNull(),
+  categoria: varchar("categoria", { length: 30 }).notNull().default("outro"),
+  mime: varchar("mime", { length: 100 }),
+  tamanhoBytes: int("tamanhoBytes"),
+  conteudoBase64: longtext("conteudoBase64").notNull(),
+  enviadoPor: int("enviadoPor"),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+}, (t) => ({
+  idxEmp: index("idx_emparq_emp").on(t.empreendimentoId),
 }));
 
 export type Lote = typeof lotes.$inferSelect;

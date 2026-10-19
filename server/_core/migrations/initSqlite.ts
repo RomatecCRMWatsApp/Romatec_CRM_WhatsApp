@@ -279,6 +279,24 @@ export function initSqliteTables(sqlite: any): void {
     updatedAt INTEGER NOT NULL DEFAULT (strftime('%s','now')),
     UNIQUE(empreendimentoId, codigo)
   )`);
+  // Controle de vendas dos lotes (server/_core/migrations/addControleLotes.ts)
+  for (const c of ['situacao TEXT DEFAULT \'disponivel\'', 'leadId INTEGER', 'corretorId INTEGER', 'clienteNome TEXT', 'valorVenda TEXT', 'valorEntrada TEXT',
+    'numParcelas INTEGER', 'dataSituacao INTEGER', 'observacao TEXT', 'verticesUtm TEXT', 'poligono TEXT']) {
+    addColumn(`ALTER TABLE lotes ADD COLUMN ${c}`);
+  }
+  for (const c of ['registroMatricula TEXT', 'registroCartorio TEXT', 'utmFuso INTEGER DEFAULT 23', 'responsavelTecnico TEXT']) {
+    addColumn(`ALTER TABLE empreendimentos ADD COLUMN ${c}`);
+  }
+  run(`CREATE TABLE IF NOT EXISTS loteHistorico (
+    id INTEGER PRIMARY KEY AUTOINCREMENT, loteId INTEGER NOT NULL, de TEXT, para TEXT NOT NULL,
+    leadId INTEGER, corretorId INTEGER, usuarioId INTEGER, detalhe TEXT,
+    createdAt INTEGER NOT NULL DEFAULT (strftime('%s','now'))
+  )`);
+  run(`CREATE TABLE IF NOT EXISTS empreendimentoArquivos (
+    id INTEGER PRIMARY KEY AUTOINCREMENT, empreendimentoId INTEGER NOT NULL, nome TEXT NOT NULL,
+    categoria TEXT NOT NULL DEFAULT 'outro', mime TEXT, tamanhoBytes INTEGER, conteudoBase64 TEXT NOT NULL,
+    enviadoPor INTEGER, createdAt INTEGER NOT NULL DEFAULT (strftime('%s','now'))
+  )`);
 
   console.log('[SQLite] ✅ Todas as tabelas inicializadas');
 

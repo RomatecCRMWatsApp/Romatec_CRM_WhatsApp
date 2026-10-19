@@ -5,7 +5,7 @@ import { perfilDe, podeAbrir, ROTULO_PERFIL } from "@shared/equipe";
 import AvisoRotinas from "./AvisoRotinas";
 import {
   BarChart3, Building2, Flame, Images, KanbanSquare, LayoutDashboard, LineChart, LogOut, Megaphone, Menu, Send,
-  Settings, UserCog, Users, X, Eye, ClipboardList, CalendarDays,
+  Settings, UserCog, Users, X, Eye, ClipboardList, CalendarDays, Map as MapIcon,
 } from "lucide-react";
 
 type Item = { rotulo: string; rota: string; icone: React.ComponentType<{ className?: string }>; exato?: boolean };
@@ -27,6 +27,7 @@ const MENU: Grupo[] = [
   {
     titulo: "Vendas",
     itens: [
+      { rotulo: "Empreendimentos", rota: "/empreendimentos", icone: MapIcon },
       { rotulo: "Imóveis", rota: "/properties", icone: Building2 },
       { rotulo: "Materiais", rota: "/materiais", icone: Images },
       { rotulo: "Clientes", rota: "/contacts", icone: Users },

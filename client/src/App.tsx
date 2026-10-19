@@ -23,6 +23,9 @@ import LeadsRelatorio from "./pages/LeadsRelatorio";
 import Materiais from "./pages/Materiais";
 import ListaInteresse from "./pages/ListaInteresse";
 import AgendaVisitas from "./pages/AgendaVisitas";
+import Empreendimentos from "./pages/Empreendimentos";
+import Empreendimento from "./pages/Empreendimento";
+import EmpreendimentoDocumentos from "./pages/EmpreendimentoDocumentos";
 import Equipe from "./pages/Equipe";
 import Empreendedor from "./pages/Empreendedor";
 import PrimeiroAcesso from "./pages/PrimeiroAcesso";
@@ -100,6 +103,15 @@ function Router() {
         {() => <SetupGuard component={Empreendedor} />}
       </Route>
       <Route path={"/primeiro-acesso"} component={PrimeiroAcesso} />
+      <Route path={"/empreendimentos/:slug/documentos"}>
+        {() => <SetupGuard component={EmpreendimentoDocumentos} />}
+      </Route>
+      <Route path={"/empreendimentos/:slug"}>
+        {() => <SetupGuard component={Empreendimento} />}
+      </Route>
+      <Route path={"/empreendimentos"}>
+        {() => <SetupGuard component={Empreendimentos} />}
+      </Route>
       <Route path={"/leads/agenda"}>
         {() => <SetupGuard component={AgendaVisitas} />}
       </Route>

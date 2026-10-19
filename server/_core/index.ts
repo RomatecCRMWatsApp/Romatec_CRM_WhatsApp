@@ -549,6 +549,61 @@ async function startServer() {
     }
   });
 
+  // Arquivos do empreendimento (licenças, projeto, escrituras): ficam no banco; envio e download só com login
+  const usuarioDaEquipe = async (req: express.Request) => {
+    const { sdk } = await import('./sdk');
+    const user = await sdk.authenticateRequest(req).catch(() => null);
+    if (!user || (user as any).ativo === false) return null;
+    const { perfilDe } = await import('../../shared/equipe');
+    return perfilDe(user as any) === 'empreendedor' ? null : user;
+  };
+  app.post('/api/empreendimentos/:slug/arquivos', express.raw({ type: '*/*', limit: '25mb' }), async (req, res) => {
+    try {
+      const user = await usuarioDaEquipe(req);
+      if (!user) return res.status(401).json({ success: false, error: 'Faça login para enviar arquivos' });
+      const buffer = req.body as Buffer;
+      if (!buffer?.length) return res.status(400).json({ success: false, error: 'Arquivo vazio' });
+      if (buffer.length > 20 * 1024 * 1024) return res.status(400).json({ success: false, error: 'Arquivo acima de 20 MB' });
+      const nome = decodeURIComponent(String(req.headers['x-file-name'] || 'arquivo')).replace(/[\\/:*?"<>|]+/g, '_').slice(0, 200);
+      const categorias = ['licenca', 'projeto', 'escritura', 'memorial', 'mapa', 'contrato', 'outro'];
+      const categoria = categorias.includes(String(req.headers['x-categoria'])) ? String(req.headers['x-categoria']) : 'outro';
+      const { getDb } = await import('../db');
+      const { empreendimentos, empreendimentoArquivos } = await import('../../drizzle/schema');
+      const { eq } = await import('drizzle-orm');
+      const db: any = await getDb();
+      const [emp] = await db.select({ id: empreendimentos.id }).from(empreendimentos).where(eq(empreendimentos.slug, req.params.slug)).limit(1);
+      if (!emp) return res.status(404).json({ success: false, error: 'Empreendimento não encontrado' });
+      await db.insert(empreendimentoArquivos).values({
+        empreendimentoId: emp.id, nome, categoria, mime: String(req.headers['x-file-type'] || 'application/octet-stream').slice(0, 100),
+        tamanhoBytes: buffer.length, conteudoBase64: buffer.toString('base64'), enviadoPor: (user as any).id,
+      });
+      res.json({ success: true });
+    } catch (error: any) {
+      console.error('[Empreendimentos] Upload falhou:', error?.message);
+      res.status(500).json({ success: false, error: 'Falha ao salvar o arquivo' });
+    }
+  });
+  app.get('/api/empreendimentos/arquivos/:id', async (req, res) => {
+    try {
+      const user = await usuarioDaEquipe(req);
+      if (!user) return res.status(401).send('Faça login para baixar arquivos');
+      const { getDb } = await import('../db');
+      const { empreendimentoArquivos } = await import('../../drizzle/schema');
+      const { eq } = await import('drizzle-orm');
+      const db: any = await getDb();
+      const [arq] = await db.select().from(empreendimentoArquivos).where(eq(empreendimentoArquivos.id, Number(req.params.id) || 0)).limit(1);
+      if (!arq) return res.status(404).send('Arquivo não encontrado');
+      const inline = /^(application\/pdf|image\/)/.test(arq.mime || '') && req.query.baixar !== '1';
+      res.setHeader('Content-Type', arq.mime || 'application/octet-stream');
+      res.setHeader('Content-Disposition', `${inline ? 'inline' : 'attachment'}; filename*=UTF-8''${encodeURIComponent(arq.nome)}`);
+      res.setHeader('Cache-Control', 'private, no-store');
+      res.send(Buffer.from(arq.conteudoBase64, 'base64'));
+    } catch (error: any) {
+      console.error('[Empreendimentos] Download falhou:', error?.message);
+      res.status(500).send('Falha ao abrir o arquivo');
+    }
+  });
+
   app.get("/api/pdf-proxy", async (req, res) => {
     // Só PDFs do Cloudinary da própria Romatec (antes buscava qualquer endereço e
     // mandava a senha do Cloudinary para qualquer URL que contivesse "res.cloudinary.com")
@@ -750,6 +805,8 @@ async function startServer() {
   try {
     const { addVisitas } = await import('./migrations/addVisitas');
     await addVisitas();
+    const { addControleLotes } = await import('./migrations/addControleLotes');
+    await addControleLotes();
   } catch (e) {
     console.error('❌ Erro na migration addVisitas:', e);
   }
