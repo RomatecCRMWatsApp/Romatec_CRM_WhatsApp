@@ -21,6 +21,7 @@ import Leads from "./pages/Leads";
 import LeadCampanhas from "./pages/LeadCampanhas";
 import LeadsRelatorio from "./pages/LeadsRelatorio";
 import Materiais from "./pages/Materiais";
+import ListaInteresse from "./pages/ListaInteresse";
 import Equipe from "./pages/Equipe";
 import Empreendedor from "./pages/Empreendedor";
 import PrimeiroAcesso from "./pages/PrimeiroAcesso";
@@ -98,6 +99,9 @@ function Router() {
         {() => <SetupGuard component={Empreendedor} />}
       </Route>
       <Route path={"/primeiro-acesso"} component={PrimeiroAcesso} />
+      <Route path={"/leads/lista-interesse"}>
+        {() => <SetupGuard component={ListaInteresse} />}
+      </Route>
       <Route path={"/materiais"}>
         {() => <SetupGuard component={Materiais} />}
       </Route>

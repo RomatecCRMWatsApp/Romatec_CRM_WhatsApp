@@ -42,7 +42,7 @@ export function capturarOrigem() {
   const pagina = (location.pathname + location.search).slice(0, 300);
   const salvo = ler();
   // Link novo com UTM ou clique de anúncio: vale o mais recente. Sem nada novo: mantém o 1º toque.
-  if (utm || /[?&]gclid=/.test(location.search) || !salvo) {
+  if (utm || /[?&](gclid|gbraid|wbraid|fbclid)=/.test(location.search) || !salvo) {
     gravar({ utm, referrer: externo, paginaEntrada: pagina, at: Date.now() });
   } else if (externo && !salvo.utm && !salvo.referrer) {
     gravar({ ...salvo, referrer: externo });

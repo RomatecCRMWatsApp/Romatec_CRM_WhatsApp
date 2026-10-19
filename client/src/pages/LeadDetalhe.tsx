@@ -60,6 +60,9 @@ export default function LeadDetalhe() {
   const atualizar = () => { utils.crm.lead.invalidate({ id }); utils.leads.scoreDetalhe.invalidate({ id }); utils.crm.kanban.invalidate(); };
   const erro = (e: { message: string }) => toast.error(e.message);
   const mover = trpc.crm.moverEtapa.useMutation({ onSuccess: atualizar, onError: erro });
+  const { data: responsaveis } = trpc.crm.responsaveis.useQuery();
+  const definirResp = trpc.crm.definirResponsavel.useMutation({ onSuccess: atualizar, onError: erro });
+  const marcarAtendido = trpc.crm.marcarAtendido.useMutation({ onSuccess: atualizar, onError: erro });
   const salvar = trpc.crm.salvarSlots.useMutation({
     onSuccess: r => { toast.success(`Salvo${r.score !== null ? ` · score ${r.score}` : ""}${r.recusados.length ? ` · valor inválido em: ${r.recusados.join(", ")}` : ""}`); atualizar(); },
     onError: erro,
@@ -106,9 +109,22 @@ export default function LeadDetalhe() {
       <div className="px-4 md:px-6 pb-6 max-w-[1500px] mx-auto grid grid-cols-1 lg:grid-cols-3 gap-4">
         {/* Coluna principal */}
         <div className="lg:col-span-2 space-y-4">
+          {/* Esperando corretor (alerta de 5 minutos) */}
+          {lead.aguardandoDesde && (
+            <div className="rounded-xl border border-amber-500/40 bg-amber-500/10 px-4 py-3 flex flex-wrap items-center justify-between gap-2">
+              <p className="text-sm text-amber-200">⏰ Esperando um corretor desde {new Date(lead.aguardandoDesde).toLocaleTimeString("pt-BR", { timeZone: "America/Fortaleza", hour: "2-digit", minute: "2-digit" })}</p>
+              <Button size="sm" variant="outline" onClick={() => marcarAtendido.mutate({ id })}>✅ Já atendi</Button>
+            </div>
+          )}
           {/* Ações */}
           <Card className="bg-card border-border">
             <CardContent className="py-4 flex flex-wrap items-center gap-2">
+              <label className="text-sm text-muted-foreground">Responsável</label>
+              <select value={lead.responsavelId ?? ""} onChange={e => definirResp.mutate({ id, responsavelId: e.target.value ? Number(e.target.value) : null })}
+                className="h-9 px-2 rounded-md border border-border bg-secondary/30 text-sm text-foreground">
+                <option value="">— sem responsável —</option>
+                {(responsaveis ?? []).map(r => <option key={r.id} value={r.id}>{r.nome}</option>)}
+              </select>
               <label className="text-sm text-muted-foreground">Etapa</label>
               <select value={lead.etapa} onChange={e => (e.target.value === "perdido" ? setPerder(true) : mover.mutate({ id, etapa: e.target.value }))}
                 className="h-9 px-2 rounded-md border border-border bg-secondary/30 text-sm text-foreground">
@@ -243,6 +259,7 @@ export default function LeadDetalhe() {
               <p><span className="text-muted-foreground">Último:</span> {lead.ultimo.canal}{lead.ultimo.campanha ? ` · #${lead.ultimo.campanha.codigo}` : ""}</p>
               {lead.origemWeb && <p><span className="text-muted-foreground">De onde veio:</span> {lead.origemWeb.linha}</p>}
               {lead.origemWeb?.utm && <p className="text-xs text-muted-foreground">UTM: {lead.origemWeb.utm}</p>}
+              {lead.cliqueAnuncio && <p className="text-xs text-muted-foreground">Clique de anúncio registrado: {lead.cliqueAnuncio}</p>}
               {lead.campanhaTexto && <p className="text-xs text-muted-foreground">Campanha: {lead.campanhaTexto}</p>}
               {lead.consentimento && <p className="text-xs text-muted-foreground">Consentimento LGPD: {new Date((lead.consentimento as any).at).toLocaleString("pt-BR")}</p>}
             </CardContent>

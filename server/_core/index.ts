@@ -105,6 +105,11 @@ async function startServer() {
         }
       }
 
+      // O lead respondeu: cancela o follow-up automático pendente (server/leads/followup.ts)
+      if (!req.body?.fromMe) {
+        await import('../leads/followup').then(m => m.cancelarFollowUp(payload.phone)).catch(e => console.warn('[FollowUp] Cancelar falhou:', e?.message));
+      }
+
       let senderName = payload.senderName || 'Cliente';
       try {
         const { getDb } = await import('../db');
@@ -157,6 +162,8 @@ async function startServer() {
               // Comprador: o bot de qualificação continua a partir da resposta à abertura
               // Empreendimento (Bom Jardims): humano, sem follow-ups do bot genérico
               if (entrada.funil === 'comprador' && !entrada.empreendimento) registerBotMessage(payload.phone, senderName);
+              // Se não responder, o follow-up sai em 1, 3, 7, 14 e 30 dias
+              await import('../leads/followup').then(m => m.agendarFollowUp(payload.phone)).catch(() => {});
             } catch (e: any) {
               console.error(`[Entrada] ❌ Abertura não enviada para ${payload.phone}: ${e?.message}`);
             }
@@ -196,6 +203,7 @@ async function startServer() {
             if (sendResult.success) {
               respostaBot = botResponse.text;
               registerBotMessage(payload.phone, senderName);
+              await import('../leads/followup').then(m => m.agendarFollowUp(payload.phone)).catch(() => {});
               console.log(`[Bot] ✅ Resposta enviada para ${senderName} (${payload.phone})`);
             } else {
               console.error(`[Bot] ❌ Falha ao enviar para ${senderName}: ${sendResult.error}`);
@@ -298,6 +306,22 @@ async function startServer() {
       console.warn('[Rastreio] Evento descartado:', (e as any)?.message);
       res.status(204).end();
     }
+  });
+
+  // "✅ Já atendi" do aviso: para o alerta de 5 minutos (link assinado, sem login)
+  app.get('/a/:id/:token', async (req, res) => {
+    const id = Number(req.params.id);
+    const { tokenAtendidoValido, marcarAtendido } = await import('../leads/sla');
+    const valido = Number.isInteger(id) && id > 0 && tokenAtendidoValido(id, String(req.params.token || ''));
+    if (valido) await marcarAtendido(id).catch(() => {});
+    res.status(valido ? 200 : 400).type('html').send(
+      `<!doctype html><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="robots" content="noindex">` +
+      `<title>Romatec CRM</title><body style="font-family:system-ui,sans-serif;background:#1b1e22;color:#e8ece9;display:grid;place-items:center;min-height:90vh;margin:0;padding:16px">` +
+      `<div style="max-width:360px;text-align:center"><p style="font-size:48px;margin:0">${valido ? '✅' : '⚠️'}</p>` +
+      `<h1 style="font-size:20px">${valido ? 'Lead marcado como atendido' : 'Link inválido'}</h1>` +
+      `<p style="color:#9aa5a0">${valido ? 'O alerta de 5 minutos foi encerrado para este lead.' : 'Abra o lead no CRM para marcar o atendimento.'}</p>` +
+      `<p><a style="color:#5fd3b4" href="/leads/lead/${valido ? id : ''}">Abrir no CRM</a></p></div></body>`,
+    );
   });
 
   app.get('/q/:codigo', async (req, res) => {
@@ -647,8 +671,18 @@ async function startServer() {
     console.error('❌ Erro na migration addEquipe:', e);
   }
 
+  try {
+    const { addFase1Captacao } = await import('./migrations/addFase1Captacao');
+    await addFase1Captacao();
+  } catch (e) {
+    console.error('❌ Erro na migration addFase1Captacao:', e);
+  }
+
   // Leads parados há 48 h perdem pontos no score (§8)
   import('../leads/scoreService').then(m => m.iniciarJobInatividade()).catch(e => console.warn('[Score] Job não iniciado:', e));
+  // Follow-up persistente (1/3/7/14/30 dias) e prazo de atendimento — não dependem das campanhas
+  import('../leads/followup').then(m => m.iniciarJobFollowUp()).catch(e => console.warn('[FollowUp] Job não iniciado:', e));
+  import('../leads/sla').then(m => m.iniciarJobSla()).catch(e => console.warn('[SLA] Job não iniciado:', e));
 
   const preferredPort = parseInt(process.env.PORT || "3000");
   const port = await findAvailablePort(preferredPort);

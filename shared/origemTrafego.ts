@@ -95,3 +95,17 @@ export function linhaOrigem(rotulo: string, visita?: OrigemVisita | null): strin
   if (visita?.paginaEntrada) partes.push(`entrou por ${visita.paginaEntrada.split('?')[0]}`);
   return partes.filter(Boolean).join(' · ');
 }
+
+/** Códigos de clique dos anúncios na URL de entrada (Google: gclid/gbraid/wbraid; Meta: fbclid) */
+export function idsDeClique(paginaEntrada?: string | null): { gclid?: string; gbraid?: string; wbraid?: string; fbclid?: string } {
+  const q = String(paginaEntrada || '').split('?')[1];
+  if (!q) return {};
+  const p = new URLSearchParams(q);
+  const out: Record<string, string> = {};
+  for (const k of ['gclid', 'gbraid', 'wbraid', 'fbclid']) {
+    const v = p.get(k);
+    // valores reais são [A-Za-z0-9_-]; corta em 200 para caber no JSON do lead
+    if (v && /^[\w-]{6,}$/.test(v)) out[k] = v.slice(0, 200);
+  }
+  return out;
+}

@@ -3,8 +3,9 @@ import { acaoWhatsappDireto, decidirEntrada, rotuloCanal } from './inbound';
 import { tipoDoCanal } from './relatorio';
 
 describe('WhatsApp direto (contato novo sem código)', () => {
-  it('sem código, a captação não abre conversa: o bot de sempre responde', () => {
-    expect(decidirEntrada({ temAtribuicao: false, funilSugerido: null, leadExiste: false, imoveisDoLead: [], imoveisMensagem: [] })).toEqual({ acao: 'nenhuma' });
+  it('sem código: contato novo vira lead WhatsApp direto e segue com a IA; quem já é lead continua a conversa', () => {
+    expect(decidirEntrada({ temAtribuicao: false, funilSugerido: null, leadExiste: false, imoveisDoLead: [], imoveisMensagem: [] })).toEqual({ acao: 'novo', funil: 'comprador', canal: 'whatsapp_direto' });
+    expect(decidirEntrada({ temAtribuicao: false, funilSugerido: null, leadExiste: true, imoveisDoLead: [], imoveisMensagem: [] })).toEqual({ acao: 'nenhuma' });
   });
 
   it('depois da 1ª resposta do bot: marca a origem só quando ainda não tem', () => {

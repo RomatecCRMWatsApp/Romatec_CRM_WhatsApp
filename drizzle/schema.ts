@@ -35,6 +35,9 @@ export const users = mysqlTable("users", {
   /** Convite de primeiro acesso: sha256 do token (o token em si só vai no link) */
   conviteHash: varchar("conviteHash", { length: 64 }),
   conviteExpira: timestamp("conviteExpira"),
+  /** Entra na roleta de leads (responsável por lead novo) */
+  recebeLeads: boolean("recebeLeads").default(false).notNull(),
+  ultimoLeadAt: timestamp("ultimoLeadAt"),
 });
 
 export type User = typeof users.$inferSelect;
@@ -313,7 +316,7 @@ export const leadQualifications = mysqlTable("leadQualifications", {
   instagramUserId: varchar("instagramUserId", { length: 64 }),       // IGSID do Direct
   metaLeadId: varchar("metaLeadId", { length: 64 }).unique(),        // id do leadgen (dedupe de webhook)
   propertyId: int("propertyId"),                                      // lote/loteamento de interesse
-  utm: json("utm").$type<{ source?: string; medium?: string; campaign?: string; content?: string; referrer?: string; paginaEntrada?: string }>(),
+  utm: json("utm").$type<{ source?: string; medium?: string; campaign?: string; content?: string; referrer?: string; paginaEntrada?: string; gclid?: string; gbraid?: string; wbraid?: string; fbclid?: string }>(),
   empreendimentoSlug: varchar("empreendimentoSlug", { length: 80 }),  // ex.: bom-jardims (atendimento humano, sem bot genérico)
   loteCodigo: varchar("loteCodigo", { length: 10 }),                  // chácara clicada no mapa (ex.: B07)
   leadScore: int("leadScore"),                                        // 0–100 (≥ 60 = quente)
@@ -337,6 +340,14 @@ export const leadQualifications = mysqlTable("leadQualifications", {
   falhasIa: int("falhasIa").default(0),
   /** Detalhamento regra → pontos do leadScore atual (server/leads/score.ts) */
   scoreDetalhe: json("scoreDetalhe").$type<{ regras: string; detalhes: Record<string, number>; at: string }>(),
+  /** Follow-up persistente (server/leads/followup.ts): passo já enviado e quando sai o próximo */
+  followUpPasso: int("followUpPasso").default(0),
+  proximoFollowUpAt: timestamp("proximoFollowUpAt"),
+  /** Corretor responsável (users.id) e prazo de atendimento humano (server/leads/sla.ts) */
+  responsavelId: int("responsavelId"),
+  aguardandoCorretorDesde: timestamp("aguardandoCorretorDesde"),
+  atendidoAt: timestamp("atendidoAt"),
+  alertaSlaNivel: int("alertaSlaNivel").default(0),
 
   lastActivityAt: timestamp("lastActivityAt").defaultNow(),          // Último evento (para timeout)
   blockedUntil: timestamp("blockedUntil"),                           // Bloqueado até (para leads que pediram para parar)

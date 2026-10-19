@@ -15,7 +15,7 @@ import { contacts, leadQualifications, properties, leadCampanhas, leadInteresses
 import { mesclarSlots, slotsDeRespostas } from './leads/slots';
 import { isLeadBlocked } from './lead-persistence';
 import { normalizarCodigoCampanha } from './leads/atribuicao';
-import { classificarOrigem, linhaOrigem, type OrigemVisita } from '../shared/origemTrafego';
+import { classificarOrigem, linhaOrigem, idsDeClique, type OrigemVisita } from '../shared/origemTrafego';
 
 export const LEAD_ORIGENS = ['instagram_ads', 'instagram_dm', 'instagram_bio', 'google_ads', 'site', 'indicacao', 'whatsapp', 'whatsapp_empreendimento'] as const;
 export type LeadOrigem = typeof LEAD_ORIGENS[number];
@@ -188,7 +188,13 @@ export async function ingestLead(input: LeadIntakeInput): Promise<LeadIntakeResu
   const origemWeb = input.origemVisita ? classificarOrigem(input.utm, input.origemVisita) : null;
   const canal = campanhaCad?.canal || origemWeb?.canal || canalDaOrigem(input.origem);
   const utmGravar = input.utm || input.origemVisita
-    ? { ...(input.utm ?? {}), ...(input.origemVisita?.referrer ? { referrer: input.origemVisita.referrer } : {}), ...(input.origemVisita?.paginaEntrada ? { paginaEntrada: input.origemVisita.paginaEntrada } : {}) }
+    ? {
+        ...(input.utm ?? {}),
+        ...(input.origemVisita?.referrer ? { referrer: input.origemVisita.referrer } : {}),
+        ...(input.origemVisita?.paginaEntrada ? { paginaEntrada: input.origemVisita.paginaEntrada } : {}),
+        // Código do clique no anúncio (para depois mandar a conversão de volta ao Google/Meta)
+        ...idsDeClique(input.origemVisita?.paginaEntrada),
+      }
     : null;
   const funil = input.funil || (campanhaCad?.funil as 'comprador' | 'proprietario') || 'comprador';
 
@@ -325,6 +331,7 @@ export async function ingestLead(input: LeadIntakeInput): Promise<LeadIntakeResu
     const classe = scoreCalc?.classe ?? null;
     await notificarLead({
       tipo: lead ? 'recorrente' : 'novo_lead',
+      empreendimento: !!input.empreendimentoSlug,
       leadId: leadRow?.id ?? 0,
       nome,
       telefone: phone,

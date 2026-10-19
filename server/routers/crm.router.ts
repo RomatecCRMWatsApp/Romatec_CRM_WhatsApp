@@ -5,7 +5,7 @@ import { z } from "zod";
 import { and, desc, eq, gte, inArray, lte } from "drizzle-orm";
 import { protectedProcedure, router } from "../_core/trpc";
 import { getDb } from "../db";
-import { leadQualifications, leadInteresses, leadEventos, leadCampanhas, leadMensagens, properties } from "../../drizzle/schema";
+import { leadQualifications, leadInteresses, leadEventos, leadCampanhas, leadMensagens, properties, users } from "../../drizzle/schema";
 import { ETAPAS, ROTULO_ETAPA, MOTIVOS_PERDA, ROTULO_MOTIVO, etapaDoLead, validarMovimento, escolherSimilar, imovelDoProprietario, resumoProprietario } from "../leads/kanban";
 import { mesclarSlots, slotsDoFunil, slotsPendentes, tagsDoLead, tipoImovelDe, type SlotsLead } from "../leads/slots";
 import { rotuloCanal } from "../leads/inbound";
@@ -105,8 +105,34 @@ export const crmRouter = router({
         motivoPerda: input.etapa === "perdido" ? input.motivoPerda : null,
         updatedAt: new Date(),
       } as any).where(eq(leadQualifications.id, input.id));
+      // Mexer no lead conta como atendimento (para o alerta de 5 minutos)
+      await import("../leads/sla").then(m => m.marcarAtendido(input.id)).catch(() => {});
       return { success: true };
     }),
+
+  /** "Já atendi" pela tela do lead (encerra o alerta de 5 minutos) */
+  marcarAtendido: protectedProcedure.input(z.object({ id: z.number().int() })).mutation(async ({ input }) => {
+    const { marcarAtendido } = await import("../leads/sla");
+    await marcarAtendido(input.id);
+    return { success: true };
+  }),
+
+  /** Responsável pelo lead (rodízio da equipe) — trocar manualmente */
+  definirResponsavel: protectedProcedure
+    .input(z.object({ id: z.number().int(), responsavelId: z.number().int().nullable() }))
+    .mutation(async ({ input }) => {
+      const db = await dbOrThrow();
+      await leadOuErro(db, input.id);
+      await db.update(leadQualifications).set({ responsavelId: input.responsavelId, updatedAt: new Date() } as any).where(eq(leadQualifications.id, input.id));
+      return { success: true };
+    }),
+
+  /** Quem pode ser responsável (equipe e administrador ativos) */
+  responsaveis: protectedProcedure.query(async () => {
+    const db = await dbOrThrow();
+    const rows: any[] = await db.select({ id: users.id, name: users.name, perfil: users.perfil, role: users.role, ativo: users.ativo, recebeLeads: users.recebeLeads }).from(users);
+    return rows.filter(u => u.ativo !== false && u.ativo !== 0 && u.perfil !== "empreendedor").map(u => ({ id: u.id, nome: u.name || "Sem nome", recebeLeads: !!u.recebeLeads }));
+  }),
 
   lead: protectedProcedure.input(z.object({ id: z.number().int() })).query(async ({ input }) => {
     const db = await dbOrThrow();
@@ -166,6 +192,13 @@ export const crmRouter = router({
       imoveis: imoveis.map((i: any) => ({ ...i, price: i.price ? Number(i.price) : null, link: i.codigo ? `${appUrl()}/i/${i.codigo}` : null })),
       eventos,
       mensagens,
+      responsavelId: l.responsavelId ?? null,
+      // Esperando um corretor (alerta de 5 minutos): desde quando
+      aguardandoDesde: l.atendidoAt ? null : l.aguardandoCorretorDesde ?? null,
+      cliqueAnuncio: (() => {
+        const u = (l.utm || {}) as Record<string, string | undefined>;
+        return u.gclid ? "Google Ads" : u.fbclid ? "Meta (Facebook/Instagram)" : null;
+      })(),
       modoQualificacao: l.modoQualificacao ?? "ia",
       perguntasIa: l.perguntasIa ?? 0,
       avalieImob: funil === "proprietario" ? linksAvalieImob(l) : null,
@@ -189,6 +222,7 @@ export const crmRouter = router({
       const { recalcularScoreLead } = await import("../leads/scoreService");
       const novos = Object.fromEntries(aceitos.map(k => [k, slots[k].valor]));
       const r = await recalcularScoreLead(lead.id, { motivo: "slots_manual", slotsNovos: novos });
+      await import("../leads/sla").then(m => m.marcarAtendido(lead.id)).catch(() => {});
       return { aceitos, recusados, score: r?.score ?? null, classe: r?.classe ?? null };
     }),
 
@@ -197,6 +231,7 @@ export const crmRouter = router({
     const db = await dbOrThrow();
     await leadOuErro(db, input.id);
     await db.update(leadQualifications).set({ humano: true, updatedAt: new Date() } as any).where(eq(leadQualifications.id, input.id));
+    await import("../leads/sla").then(m => m.marcarAtendido(input.id)).catch(() => {});
     return { success: true };
   }),
 
@@ -265,6 +300,41 @@ export const crmRouter = router({
     await db.update(leadQualifications).set({ etapa: "captado", updatedAt: new Date() } as any).where(and(eq(leadQualifications.id, lead.id)));
     return { propertyId, codigo };
   }),
+  /**
+   * Lista de interesse do lançamento (ex.: Bom Jardims): quem pediu informação do
+   * empreendimento. Só interesse — sem reserva nem sinal até o registro do condomínio.
+   * Base legal por contato: consentimento do formulário ou conversa iniciada pelo cliente.
+   */
+  listaInteresse: protectedProcedure
+    .input(z.object({ slug: z.string().max(80).default("bom-jardims") }))
+    .query(async ({ input }) => {
+      const db = await dbOrThrow();
+      const rows: any[] = await db.select().from(leadQualifications).where(eq(leadQualifications.empreendimentoSlug, input.slug)).orderBy(desc(leadQualifications.createdAt));
+      const campIds = Array.from(new Set(rows.map(r => r.origemCampanhaId).filter(Boolean))) as number[];
+      const camps: any[] = campIds.length ? await db.select({ id: leadCampanhas.id, codigo: leadCampanhas.codigo }).from(leadCampanhas).where(inArray(leadCampanhas.id, campIds)) : [];
+      const agora = Date.now();
+      const pessoas = rows.map(r => {
+        const ans = (r.answers || {}) as Record<string, string>;
+        const saiu = !!r.blockedUntil && new Date(r.blockedUntil).getTime() > agora;
+        return {
+          id: r.id,
+          nome: r.nome || ans.nome || "Sem nome",
+          phone: r.phone,
+          cidade: ans.cidade || null,
+          chacara: r.loteCodigo || ans.chacara || null,
+          prazo: ans.prazo || null,
+          pagamento: ans.pagamento || null,
+          canal: rotuloCanal(r.origemCanal || r.origem || "whatsapp"),
+          campanha: camps.find(c => c.id === r.origemCampanhaId)?.codigo ?? null,
+          classe: r.score,
+          base: r.consentimento ? "Consentimento no formulário" : "Iniciou a conversa",
+          saiu,
+          entrouEm: r.createdAt,
+        };
+      });
+      return { total: pessoas.length, ativos: pessoas.filter(p => !p.saiu).length, pessoas };
+    }),
+
   /** Relatório por canal e campanha (§12.4): leads criados no período, atribuição pelo 1º ou último toque */
   relatorio: protectedProcedure
     .input(z.object({

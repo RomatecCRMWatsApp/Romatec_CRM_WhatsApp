@@ -68,6 +68,7 @@ export const equipeRouter = router({
         ativo: u.ativo !== false && u.ativo !== 0,
         temSenha: !!(u.passwordScrypt || u.passwordHash),
         convitePendente: !!u.conviteHash && conviteValido(u.conviteExpira),
+        recebeLeads: u.recebeLeads === true || u.recebeLeads === 1,
         ultimoAcesso: u.lastSignedIn,
       })).sort((a, b) => Number(b.perfil === "admin") - Number(a.perfil === "admin") || String(a.nome).localeCompare(String(b.nome), "pt-BR")),
     };
@@ -89,7 +90,7 @@ export const equipeRouter = router({
     return { link: linkConvite(c.token), expira: c.expira };
   }),
 
-  update: adminProcedure.input(dados.partial().extend({ id: z.number().int(), ativo: z.boolean().optional() })).mutation(async ({ input, ctx }) => {
+  update: adminProcedure.input(dados.partial().extend({ id: z.number().int(), ativo: z.boolean().optional(), recebeLeads: z.boolean().optional() })).mutation(async ({ input, ctx }) => {
     const db = await dbOrThrow();
     const [atual]: any[] = await db.select().from(users).where(eq(users.id, input.id)).limit(1);
     if (!atual) throw new Error("Pessoa não encontrada");
@@ -104,6 +105,7 @@ export const equipeRouter = router({
       ...(atual.role !== "admin" ? { perfil: perfil === "admin" ? "equipe" : perfil } : {}),
       empreendimentoSlug: perfil === "empreendedor" ? merged.empreendimentoSlug : null,
       ...(input.ativo !== undefined ? { ativo: input.ativo } : {}),
+      ...(input.recebeLeads !== undefined ? { recebeLeads: input.recebeLeads } : {}),
       updatedAt: new Date(),
     } as any).where(eq(users.id, input.id));
     return { ok: true };

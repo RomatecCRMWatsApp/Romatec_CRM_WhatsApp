@@ -230,6 +230,15 @@ export function initSqliteTables(sqlite: any): void {
   };
   addColumn(`ALTER TABLE leadQualifications ADD COLUMN origem TEXT DEFAULT 'whatsapp'`);
   addColumn(`ALTER TABLE leadQualifications ADD COLUMN instagramUserId TEXT`);
+  // Fase 1 da captação: follow-up, responsável e SLA
+  addColumn(`ALTER TABLE leadQualifications ADD COLUMN followUpPasso INTEGER DEFAULT 0`);
+  addColumn(`ALTER TABLE leadQualifications ADD COLUMN proximoFollowUpAt INTEGER`);
+  addColumn(`ALTER TABLE leadQualifications ADD COLUMN responsavelId INTEGER`);
+  addColumn(`ALTER TABLE leadQualifications ADD COLUMN aguardandoCorretorDesde INTEGER`);
+  addColumn(`ALTER TABLE leadQualifications ADD COLUMN atendidoAt INTEGER`);
+  addColumn(`ALTER TABLE leadQualifications ADD COLUMN alertaSlaNivel INTEGER DEFAULT 0`);
+  addColumn(`ALTER TABLE users ADD COLUMN recebeLeads INTEGER NOT NULL DEFAULT 0`);
+  addColumn(`ALTER TABLE users ADD COLUMN ultimoLeadAt INTEGER`);
   addColumn(`ALTER TABLE leadQualifications ADD COLUMN metaLeadId TEXT`);
   addColumn(`ALTER TABLE leadQualifications ADD COLUMN propertyId INTEGER`);
   addColumn(`ALTER TABLE leadQualifications ADD COLUMN utm TEXT`);

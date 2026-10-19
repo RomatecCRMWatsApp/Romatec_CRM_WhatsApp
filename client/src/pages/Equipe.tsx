@@ -160,6 +160,12 @@ export default function Equipe() {
                         {p.creci ? `CRECI ${p.creci} · ` : ""}{p.email}{p.perfil === "empreendedor" ? ` · ${nomeEmp(p.empreendimentoSlug)}` : ""} · último acesso {dataHora(p.ultimoAcesso)}
                       </p>
                     </div>
+                    {p.perfil !== "empreendedor" && p.ativo && (
+                      <label className="flex items-center gap-2 text-xs text-muted-foreground shrink-0 cursor-pointer" title="Entra no rodízio de leads novos e recebe os alertas de 5 minutos">
+                        <input type="checkbox" checked={!!p.recebeLeads} onChange={e => atualizar.mutate({ id: p.id, recebeLeads: e.target.checked })} className="h-4 w-4 accent-[var(--primary)]" />
+                        Recebe leads
+                      </label>
+                    )}
                     {p.perfil !== "admin" && (
                       <div className="flex flex-wrap gap-2 shrink-0">
                         <Button size="sm" variant="outline" disabled={reconvite.isPending} onClick={async () => {

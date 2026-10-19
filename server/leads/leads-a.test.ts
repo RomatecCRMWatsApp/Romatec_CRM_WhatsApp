@@ -247,7 +247,8 @@ describe('Entrada pelo WhatsApp', () => {
   });
 
   it('decisão: novo, recorrente com imóvel novo, nada a fazer', () => {
-    expect(decidirEntrada({ temAtribuicao: false, funilSugerido: null, leadExiste: false, imoveisDoLead: [], imoveisMensagem: [] })).toEqual({ acao: 'nenhuma' });
+    expect(decidirEntrada({ temAtribuicao: false, funilSugerido: null, leadExiste: true, imoveisDoLead: [], imoveisMensagem: [] })).toEqual({ acao: 'nenhuma' });
+    expect(decidirEntrada({ temAtribuicao: false, funilSugerido: null, leadExiste: false, imoveisDoLead: [], imoveisMensagem: [] })).toEqual({ acao: 'novo', funil: 'comprador', canal: 'whatsapp_direto' });
     expect(decidirEntrada({ temAtribuicao: true, funilSugerido: null, campanhaCanal: 'meta_ctwa', leadExiste: false, imoveisDoLead: [], imoveisMensagem: [12] }))
       .toEqual({ acao: 'novo', funil: 'comprador', canal: 'meta_ctwa' });
     expect(decidirEntrada({ temAtribuicao: true, funilSugerido: 'proprietario', leadExiste: false, imoveisDoLead: [], imoveisMensagem: [] }))

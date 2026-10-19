@@ -891,6 +891,9 @@ export function registerUserReply(phone: string) {
 }
 
 export function getFollowUpsToSend(): { phone: string; message: string; step: number }[] {
+  // Sequência antiga (minutos, com escassez inventada) desligada: o follow-up agora é
+  // o persistente em dias (server/leads/followup.ts). Religar só com FOLLOWUP_LEGADO=on.
+  if ((process.env.FOLLOWUP_LEGADO || '').toLowerCase() !== 'on') return [];
   const now = Date.now();
   const toSend: { phone: string; message: string; step: number }[] = [];
 

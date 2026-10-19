@@ -101,7 +101,9 @@ export function decidirEntrada(params: {
   imoveisDoLead: number[];
   imoveisMensagem: number[];
 }): DecisaoEntrada {
-  if (!params.temAtribuicao) return { acao: 'nenhuma' };
+  // Sem código: contato novo vira lead "WhatsApp direto" e segue com a IA (pagamento, prazo, uso);
+  // quem já é lead continua a conversa normalmente
+  if (!params.temAtribuicao) return params.leadExiste ? { acao: 'nenhuma' } : { acao: 'novo', funil: 'comprador', canal: 'whatsapp_direto' };
   const canal = params.campanhaCanal || 'whatsapp_direto';
   if (!params.leadExiste) return { acao: 'novo', funil: params.funilSugerido ?? 'comprador', canal };
   const novos = params.imoveisMensagem.filter(id => !params.imoveisDoLead.includes(id));
@@ -126,7 +128,6 @@ export async function processarEntradaWhatsApp(input: { phone: string; texto: st
   if (jaProcessada(input.messageId)) return { acao: 'nenhuma' };
   const atrib = extrairAtribuicao(input.texto);
   const temAtribuicao = atrib.imovelCodigos.length > 0 || !!atrib.campanhaCodigo || !!atrib.funilSugerido;
-  if (!temAtribuicao) return { acao: 'nenhuma' };
 
   const phone = normalizePhoneBR(input.phone) || input.phone.replace(/\D/g, '');
   const { getDb } = await import('../db');
@@ -220,6 +221,7 @@ export async function processarEntradaWhatsApp(input: { phone: string; texto: st
       imovelProprietario: funil === 'proprietario' ? 'detalhes a confirmar na conversa' : null,
       origem: rotuloCanal(decisao.canal), campanhaCodigo: campanhaLabel,
       detalhes: empreendimento ? ['👤 Atendimento humano: responda você pelo WhatsApp do CRM (o bot não pergunta renda/FGTS)'] : undefined,
+      empreendimento: !!empreendimento,
     }).catch(e => console.warn('[Entrada] Aviso falhou (não crítico):', e?.message));
 
     console.log(`[Entrada] Novo lead ${phone} funil=${funil} canal=${decisao.canal} imóveis=${atrib.imovelCodigos.join(',') || '-'} campanha=${campanhaLabel || '-'}`);

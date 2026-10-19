@@ -26,6 +26,11 @@ export interface DadosAviso {
   /** Linhas livres já resumidas (pagamento, prazo, visita...) */
   detalhes?: string[];
   tags?: string[];
+  /** Lead de empreendimento (ex.: Bom Jardims): atendimento humano desde o 1º contato */
+  empreendimento?: boolean;
+  /** Preenchidos por notificarLead (server/leads/sla.ts) */
+  responsavelNome?: string | null;
+  linkAtendido?: string | null;
 }
 
 const TITULO: Record<TipoAviso, string> = {
@@ -70,15 +75,17 @@ export function montarAviso(d: DadosAviso): string {
   linhas.push(`📣 Origem: ${d.origem}${d.campanhaCodigo ? ` · #${d.campanhaCodigo}` : ''}`);
   for (const l of d.detalhes ?? []) linhas.push(l);
   linhas.push(`🏷️ Tags: ${d.tags?.length ? d.tags.join(', ') : '—'}`);
-  linhas.push(`🔗 Painel: ${appUrl()}/leads?id=${d.leadId}`);
+  if (d.responsavelNome) linhas.push(`🧑‍💼 Responsável: ${d.responsavelNome}`);
+  linhas.push(`🔗 Painel: ${appUrl()}/leads/lead/${d.leadId}`);
   linhas.push(`💬 Responder: https://wa.me/${fone}`);
+  if (d.linkAtendido) linhas.push(`✅ Já atendi (para o alerta de 5 min): ${d.linkAtendido}`);
   return linhas.join('\n');
 }
 
 // ─── Envio ───────────────────────────────────────────────────────────────────
 export type Enviador = (texto: string) => Promise<void>;
 
-async function enviarTelegram(texto: string): Promise<void> {
+export async function enviarTelegram(texto: string): Promise<void> {
   const token = process.env.TELEGRAM_BOT_TOKEN;
   const chatId = process.env.TELEGRAM_CHAT_ID;
   if (!token || !chatId) throw new Error('Telegram não configurado');
@@ -86,8 +93,9 @@ async function enviarTelegram(texto: string): Promise<void> {
   await new TelegramBot(token, { polling: false }).sendMessage(chatId, texto, { disable_web_page_preview: true });
 }
 
-async function enviarWhatsApp(texto: string): Promise<void> {
-  const fones = telefonesNotificacao();
+async function enviarWhatsApp(texto: string, destino?: string | null): Promise<void> {
+  // Responsável com telefone recebe o aviso; sem ele, os números de NOTIFY_PHONES
+  const fones = destino ? [destino] : telefonesNotificacao();
   if (!fones.length) throw new Error('NOTIFY_PHONES vazio');
   for (const f of fones) await enviarTexto(f, texto);
 }
@@ -98,7 +106,7 @@ export interface ResultadoAviso { enviado: boolean; canais: CanalNotificacao[]; 
 
 export async function notificarLead(
   dados: DadosAviso,
-  opts: { enviadores?: Partial<Record<CanalNotificacao, Enviador>>; canais?: CanalNotificacao[]; now?: number } = {},
+  opts: { enviadores?: Partial<Record<CanalNotificacao, Enviador>>; canais?: CanalNotificacao[]; now?: number; semSla?: boolean } = {},
 ): Promise<ResultadoAviso> {
   const now = opts.now ?? Date.now();
   const ultimo = ultimoAviso.get(dados.leadId);
@@ -106,9 +114,24 @@ export async function notificarLead(
     return { enviado: false, canais: [], pulado: 'anti_spam', erros: [] };
   }
 
+  // Responsável (rodízio) e prazo de atendimento humano — server/leads/sla.ts
+  let destinoWhats: string | null = null;
+  const sla = opts.semSla ? null : await import('./sla').catch(() => null);
+  const precisa = sla?.precisaDeGente(dados.tipo, { funil: dados.funil, empreendimento: dados.empreendimento }) ?? false;
+  if (sla && dados.leadId) {
+    try {
+      const resp = await sla.garantirResponsavel(dados.leadId);
+      if (resp) dados = { ...dados, responsavelNome: resp.name ?? null };
+      destinoWhats = await sla.telefoneDoResponsavel(dados.leadId);
+      if (precisa) dados = { ...dados, linkAtendido: sla.linkAtendido(dados.leadId) };
+    } catch (e: any) {
+      console.warn('[Notificação] Responsável/SLA indisponível:', e?.message);
+    }
+  }
+
   const enviadores: Record<CanalNotificacao, Enviador> = {
     telegram: opts.enviadores?.telegram ?? enviarTelegram,
-    whatsapp: opts.enviadores?.whatsapp ?? enviarWhatsApp,
+    whatsapp: opts.enviadores?.whatsapp ?? (t => enviarWhatsApp(t, destinoWhats)),
   };
   const canais = opts.canais ?? canaisNotificacao();
   const texto = montarAviso(dados);
@@ -136,6 +159,8 @@ export async function notificarLead(
   }
 
   if (ok.length) ultimoAviso.set(dados.leadId, now);
+  // Começa o relógio do atendimento (5 min → lembrete; 15 → repassa; 60 → administrador)
+  if (precisa && sla && dados.leadId) await sla.aguardarCorretor(dados.leadId).catch(() => {});
   return { enviado: ok.length > 0, canais: ok, erros };
 }
 
