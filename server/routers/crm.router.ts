@@ -13,6 +13,7 @@ import { classificarOrigem, linhaOrigem } from "../../shared/origemTrafego";
 import { appUrl } from "../leads/config";
 import type { Funil } from "../leads/atribuicao";
 import { montarRelatorio, relatorioCsv, DATA_ISO } from "../leads/relatorio";
+import { serieLeadsPorDia } from "../leads/painelEmpreendedor";
 
 const funilSchema = z.enum(["comprador", "proprietario"]);
 
@@ -297,6 +298,8 @@ export const crmRouter = router({
       const interesses = new Map<number, number[]>();
       for (const r of interessesRows as any[]) interesses.set(r.leadId, [...(interesses.get(r.leadId) ?? []), r.propertyId]);
       const rel = montarRelatorio({ leads: leads as any, campanhas, interesses, eventos, mensagens: mensagens as any, imoveis, toque: input.toque });
-      return { ...rel, csv: relatorioCsv(rel), periodo: { de: input.de ?? null, ate: input.ate ?? null } };
+      // Série diária para o gráfico do painel (últimos 30 dias, fuso do Maranhão)
+      const porDia = serieLeadsPorDia(leads.map((l: any) => l.createdAt), 30);
+      return { ...rel, porDia, csv: relatorioCsv(rel), periodo: { de: input.de ?? null, ate: input.ate ?? null } };
     }),
 });

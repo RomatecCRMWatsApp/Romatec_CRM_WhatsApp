@@ -1,7 +1,7 @@
 ﻿import { useMemo, useState, useEffect, lazy, Suspense, useRef } from "react";
 import { toast } from "sonner";
 import { useAuth } from "@/_core/hooks/useAuth";
-import { perfilDe, podeAbrir } from "@shared/equipe";
+import { useRelatorio30, KpisLeads, GraficoLeadsDia, DonutPagoOrganico, TopCampanhas, LeadsPorCanal, GaugeQualificacao, Cartao } from "@/components/painel/PainelLeads";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Users, Send, Settings, LogOut, WifiOff, TrendingUp, Building2, BarChart3, CheckCircle2, XCircle, RefreshCw, UserPlus, Flame, ChevronRight, MessageCircle, ExternalLink, Activity, Zap, Clock, Images } from "lucide-react";
@@ -449,6 +449,7 @@ export default function Dashboard() {
   const { data: campaigns } = trpc.campaigns.list.useQuery();
   const { data: config } = trpc.companyConfig.get.useQuery();
   const { data: leadsData } = trpc.leads.list.useQuery({ limit: 200 }, { refetchInterval: 60000 });
+  const { data: rel } = useRelatorio30();
   const { data: perfData } = trpc.performance.getStats.useQuery(undefined, {
     refetchInterval: 30000,
   });
@@ -476,142 +477,77 @@ export default function Dashboard() {
     { label: "Imóveis", value: properties?.length ?? 0, hint: `${activeCampaigns} em campanha ativa`, icon: Building2, accent: "text-amber-300", route: "/properties" },
   ];
 
-  const atalhos = [
-    { label: "Leads", desc: "Atender e qualificar", icon: Flame, route: "/leads" },
-    { label: "Clientes", desc: "Base de contatos", icon: Users, route: "/contacts" },
-    { label: "Imóveis", desc: "Cadastro e fotos", icon: Building2, route: "/properties" },
-    { label: "Materiais", desc: "Artes, vídeos e folders para divulgar", icon: Images, route: "/materiais" },
-    { label: "Campanhas", desc: "Disparos no WhatsApp", icon: Send, route: "/campaigns" },
-    { label: "Desempenho", desc: "Relatórios", icon: BarChart3, route: "/performance" },
-    { label: "Configurações", desc: "Z-API, Telegram, empresa", icon: Settings, route: "/settings" },
-    { label: "Equipe", desc: "Acessos por CRECI e do empreendedor", icon: Users, route: "/equipe" },
-    { label: "Visão do empreendedor", desc: "O que o empreendedor vê: leads e artes", icon: BarChart3, route: "/empreendedor" },
-  ].filter(a => podeAbrir(perfilDe(user as any), a.route));
-
   const totals = stablePerfData?.totals || { sent: 0, failed: 0, pending: 0, blocked: 0, successRate: 0, avgPerDay: 0, activeCampaigns: 0 };
   const hojeRaw = new Date().toLocaleDateString("pt-BR", { weekday: "long", day: "numeric", month: "long" });
   const hoje = hojeRaw.charAt(0).toUpperCase() + hojeRaw.slice(1);
   const primeiroNome = (user?.name || "").split(" ")[0];
 
   return (
-    <div className="min-h-screen bg-background">
-      {/* Cabeçalho */}
-      <div className="bg-gradient-to-r from-emerald-700 to-emerald-900 text-white">
-        <div className="container py-4 flex items-center justify-between gap-4">
-          <div className="flex items-center gap-3 min-w-0">
-            <Logo />
-            <div className="min-w-0">
-              <h1 className="text-lg md:text-xl font-bold leading-tight">Romatec CRM</h1>
-              <p className="text-white/70 text-xs md:text-sm truncate">{primeiroNome ? `Olá, ${primeiroNome} · ` : ""}{hoje}</p>
-            </div>
-          </div>
-          <Button onClick={() => logoutMutation.mutate()} variant="outline" size="sm" className="border-white/30 bg-transparent text-white hover:bg-white/15 shrink-0">
-            <LogOut className="mr-2 h-4 w-4" /> Sair
-          </Button>
+    <div className="p-4 md:p-6 space-y-5 max-w-[1500px] mx-auto">
+      {/* Título */}
+      <div className="flex flex-wrap items-end justify-between gap-2">
+        <div>
+          <h1 className="text-2xl font-bold text-foreground">Painel</h1>
+          <p className="text-sm text-muted-foreground">{primeiroNome ? `Olá, ${primeiroNome} · ` : ""}{hoje}</p>
         </div>
+        <p className="text-xs text-muted-foreground">{config?.companyName || "Romatec"}</p>
       </div>
 
-      <div className="container py-6 space-y-6">
-        <WhatsAppStatusPanel />
+      <WhatsAppStatusPanel />
 
-        {/* Indicadores do dia */}
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
-          {kpis.map(k => (
-            <button
-              key={k.label}
-              onClick={() => navigate(k.route)}
-              className="glass-card p-4 text-left hover:border-emerald-500/40 transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500"
-            >
-              <div className="flex items-center justify-between">
-                <span className="text-xs text-muted-foreground">{k.label}</span>
-                <k.icon className={`h-4 w-4 ${k.accent}`} />
-              </div>
-              <p className="text-3xl font-bold text-foreground mt-2">{k.value}</p>
-              <p className="text-xs text-muted-foreground mt-1">{k.hint}</p>
-            </button>
-          ))}
-        </div>
+      <KpisLeads r={rel} leadsHoje={leadsHoje} />
 
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
-          {/* Últimos leads */}
-          <Card className="bg-card border-border lg:col-span-2">
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-foreground text-base flex items-center gap-2">
-                <UserPlus className="h-4 w-4 text-emerald-400" /> Últimos leads
-              </CardTitle>
-              <Button size="sm" variant="ghost" onClick={() => navigate("/leads")} className="text-emerald-300 hover:text-emerald-200">
-                Ver todos <ChevronRight className="ml-1 h-4 w-4" />
-              </Button>
-            </CardHeader>
-            <CardContent className="pt-0">
-              {ultimosLeads.length === 0 ? (
-                <p className="text-sm text-muted-foreground py-6 text-center">Nenhum lead ainda. Os cadastros do Instagram e da landing aparecem aqui.</p>
-              ) : (
-                <ul className="divide-y divide-border">
-                  {ultimosLeads.map((l: any) => {
-                    const nome = l.contactName || l.nome || "Sem nome";
-                    const phone = String(l.phone || "").replace(/\D/g, "");
-                    return (
-                      <li key={l.id} className="py-3 flex items-center gap-3">
-                        <div className="h-9 w-9 rounded-full bg-emerald-500/15 text-emerald-300 flex items-center justify-center text-sm font-bold shrink-0">
-                          {nome.charAt(0).toUpperCase()}
+      <div className="grid grid-cols-1 xl:grid-cols-3 gap-4">
+        <div className="xl:col-span-2"><GraficoLeadsDia r={rel} /></div>
+        <DonutPagoOrganico r={rel} />
+      </div>
+
+      <div className="grid grid-cols-1 xl:grid-cols-3 gap-4">
+        <div className="xl:col-span-2"><TopCampanhas r={rel} /></div>
+        <GaugeQualificacao r={rel} />
+      </div>
+
+      <div className="grid grid-cols-1 xl:grid-cols-3 gap-4">
+        {/* Últimos leads */}
+        <Cartao
+          className="xl:col-span-2"
+          titulo="Últimos leads"
+          acao={<button onClick={() => navigate("/leads")} className="text-xs text-primary flex items-center">Ver todos <ChevronRight className="h-3.5 w-3.5" /></button>}
+        >
+          {ultimosLeads.length === 0 ? (
+            <p className="text-sm text-muted-foreground py-6 text-center">Nenhum lead ainda. Os cadastros do Instagram e das páginas aparecem aqui.</p>
+          ) : (
+            <ul className="divide-y divide-border/60">
+              {ultimosLeads.map((l: any) => {
+                const nome = l.contactName || l.nome || "Sem nome";
+                const phone = String(l.phone || "").replace(/\D/g, "");
+                return (
+                  <li key={l.id} className="py-2.5 flex items-center gap-3">
+                    <button onClick={() => navigate(`/leads/lead/${l.id}`)} className="flex flex-1 min-w-0 items-center gap-3 text-left">
+                      <div className="h-9 w-9 rounded-full bg-primary/15 text-primary flex items-center justify-center text-sm font-bold shrink-0">{nome.charAt(0).toUpperCase()}</div>
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-2 flex-wrap">
+                          <p className="text-sm font-medium text-foreground truncate">{nome}</p>
+                          {l.score && <span className={`text-[10px] uppercase tracking-wide px-1.5 py-0.5 rounded border ${SCORE_STYLE[l.score] || ""}`}>{l.score}</span>}
                         </div>
-                        <div className="flex-1 min-w-0">
-                          <div className="flex items-center gap-2 flex-wrap">
-                            <p className="text-sm font-medium text-foreground truncate">{nome}</p>
-                            {l.score && (
-                              <span className={`text-[10px] uppercase tracking-wide px-1.5 py-0.5 rounded border ${SCORE_STYLE[l.score] || ""}`}>{l.score}</span>
-                            )}
-                          </div>
-                          <p className="text-xs text-muted-foreground truncate">
-                            {ORIGEM_LABEL[l.origem] || "WhatsApp"}
-                            {l.campanhaOrigem ? ` · ${l.campanhaOrigem}` : ""} · {timeAgo(l.createdAt)}
-                          </p>
-                        </div>
-                        {phone && (
-                          <Button size="sm" variant="outline" asChild className="shrink-0 border-emerald-500/30 text-emerald-300 hover:bg-emerald-500/10">
-                            <a href={`https://wa.me/${phone}`} target="_blank" rel="noreferrer" title={`Abrir conversa com ${nome}`}>
-                              <MessageCircle className="h-4 w-4 md:mr-1.5" /><span className="hidden md:inline">WhatsApp</span>
-                            </a>
-                          </Button>
-                        )}
-                      </li>
-                    );
-                  })}
-                </ul>
-              )}
-            </CardContent>
-          </Card>
-
-          {/* Atalhos */}
-          <Card className="bg-card border-border">
-            <CardHeader className="pb-2">
-              <CardTitle className="text-foreground text-base">Ir para</CardTitle>
-            </CardHeader>
-            <CardContent className="pt-0 space-y-1">
-              {atalhos.map(a => (
-                <button
-                  key={a.label}
-                  onClick={() => navigate(a.route)}
-                  className="w-full flex items-center gap-3 rounded-lg px-3 py-2.5 text-left hover:bg-white/5 transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500"
-                >
-                  <div className="p-2 rounded-lg bg-emerald-500/10">
-                    <a.icon className="h-4 w-4 text-emerald-300" />
-                  </div>
-                  <div className="flex-1">
-                    <p className="text-sm font-medium text-foreground">{a.label}</p>
-                    <p className="text-xs text-muted-foreground">{a.desc}</p>
-                  </div>
-                  <ChevronRight className="h-4 w-4 text-muted-foreground" />
-                </button>
-              ))}
-              <div className="border-t border-border mt-2 pt-3 px-3">
-                <p className="text-xs text-muted-foreground">{config?.companyName || "Romatec"}</p>
-                <p className="text-xs text-muted-foreground/70">{[config?.phone, config?.address].filter(Boolean).join(" · ")}</p>
-              </div>
-            </CardContent>
-          </Card>
-        </div>
+                        <p className="text-xs text-muted-foreground truncate">{ORIGEM_LABEL[l.origem] || "WhatsApp"}{l.campanhaOrigem ? ` · ${l.campanhaOrigem}` : ""} · {timeAgo(l.createdAt)}</p>
+                      </div>
+                    </button>
+                    {phone && (
+                      <Button size="sm" variant="outline" asChild className="shrink-0 border-primary/30 text-primary hover:bg-primary/10">
+                        <a href={`https://wa.me/${phone}`} target="_blank" rel="noreferrer" title={`Abrir conversa com ${nome}`}>
+                          <MessageCircle className="h-4 w-4 md:mr-1.5" /><span className="hidden md:inline">WhatsApp</span>
+                        </a>
+                      </Button>
+                    )}
+                  </li>
+                );
+              })}
+            </ul>
+          )}
+        </Cartao>
+        <LeadsPorCanal r={rel} />
+      </div>
 
         {/* Campanhas */}
         <div className="pt-2">
@@ -677,9 +613,8 @@ export default function Dashboard() {
           )}
         </div>
 
-        <div className="text-center pb-2">
-          <span className="text-xs text-muted-foreground/40 select-none">Romatec CRM v{__APP_VERSION__}</span>
-        </div>
+      <div className="text-center pb-2">
+        <span className="text-xs text-muted-foreground/40 select-none">Romatec CRM v{__APP_VERSION__}</span>
       </div>
     </div>
   );

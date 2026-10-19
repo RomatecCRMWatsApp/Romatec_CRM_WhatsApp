@@ -26,7 +26,7 @@ export default function BarraVersao() {
   if (!isAuthenticated || !interna) return null;
 
   return (
-    <div className="w-full bg-black/60 border-b border-white/5 text-[11px] text-zinc-400 px-3 py-0.5 flex flex-wrap gap-x-3 gap-y-0 tabular-nums">
+    <div className={`w-full bg-black/40 border-b border-white/5 text-[11px] text-zinc-400 px-3 py-0.5 flex flex-wrap gap-x-3 gap-y-0 tabular-nums ${location.startsWith("/empreendedor") ? "" : "lg:pl-[17rem]"}`}>
       <span>🕒 {dataHora(agora)}</span>
       {data && (
         <>

@@ -25,6 +25,7 @@ import Equipe from "./pages/Equipe";
 import Empreendedor from "./pages/Empreendedor";
 import PrimeiroAcesso from "./pages/PrimeiroAcesso";
 import { perfilDe, podeAbrir, telaInicial } from "@shared/equipe";
+import AppShell from "./components/AppShell";
 import ImovelLanding from "./pages/ImovelLanding";
 import LeadsFunil from "./pages/LeadsFunil";
 import LeadDetalhe from "./pages/LeadDetalhe";
@@ -55,7 +56,9 @@ function SetupGuard({ component: Component }: { component: React.ComponentType }
     }
   }, [isLoading, isAuthenticated, config, navigate, perfil, location]);
 
-  return permitido ? <Component /> : null;
+  if (!permitido) return null;
+  // Telas internas dentro do menu lateral; o empreendedor tem o painel próprio, sem menu do CRM
+  return perfil === "empreendedor" || location.startsWith("/empreendedor") ? <Component /> : <AppShell><Component /></AppShell>;
 }
 
 function Router() {
