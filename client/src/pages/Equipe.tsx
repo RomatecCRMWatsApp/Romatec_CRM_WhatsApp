@@ -7,6 +7,7 @@ import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { ArrowLeft, Copy, KeyRound, MessageCircle, Plus, UserCheck, UserX, Users } from "lucide-react";
 import { ROTULO_PERFIL } from "@shared/equipe";
+import PageHeader from "@/components/PageHeader";
 
 const vazio = { nome: "", email: "", creci: "", telefone: "", perfil: "equipe" as "equipe" | "empreendedor", empreendimentoSlug: "" };
 
@@ -85,18 +86,10 @@ export default function Equipe() {
   };
 
   return (
-    <div className="min-h-screen bg-background">
-      <div className="bg-gradient-to-r from-emerald-700 to-emerald-900 text-white">
-        <div className="container py-4 flex items-center gap-3">
-          <Button size="sm" variant="ghost" className="text-white hover:bg-white/15" onClick={() => navigate("/dashboard")}><ArrowLeft className="h-4 w-4" /></Button>
-          <div>
-            <h1 className="text-lg font-bold flex items-center gap-2"><Users className="h-5 w-5" /> Equipe e acessos</h1>
-            <p className="text-xs text-white/70">Colaboradores entram com o CRECI e a senha que eles mesmos criam no primeiro acesso</p>
-          </div>
-        </div>
-      </div>
+    <div>
+      <PageHeader icone={Users} titulo="Equipe e acessos" subtitulo="Colaboradores entram com o CRECI e a senha que eles mesmos criam no primeiro acesso" />
 
-      <div className="container py-6 space-y-4">
+      <div className="px-4 md:px-6 pb-6 max-w-[1500px] mx-auto space-y-4">
         {error && <p className="text-sm text-red-400">{error.message}</p>}
         {convite && <ConviteGerado {...convite} onFechar={() => setConvite(null)} />}
 

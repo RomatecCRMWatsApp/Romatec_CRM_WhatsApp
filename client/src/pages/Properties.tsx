@@ -260,9 +260,6 @@ export default function Properties() {
           <div className="container py-6">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-4">
-                <button onClick={() => navigate("/dashboard")} className="p-2 rounded-xl bg-secondary/50 hover:bg-secondary text-foreground transition-all">
-                  <ArrowLeft className="h-5 w-5" />
-                </button>
                 <div>
                   <h1 className="text-2xl md:text-3xl font-bold text-foreground flex items-center gap-3">
                     <div className="p-2 rounded-xl bg-gradient-to-br from-emerald/20 to-emerald-dark/20 border border-emerald/20">

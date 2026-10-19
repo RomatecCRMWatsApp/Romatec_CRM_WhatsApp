@@ -5,6 +5,7 @@ import { trpc } from "@/lib/trpc";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { ArrowLeft, Building2, ExternalLink, Headset, MessageCircle, Bot, Send, XCircle, FileText, Save } from "lucide-react";
+import PageHeader from "@/components/PageHeader";
 import { CLASSE_COR, MOTIVOS, MotivoPerda, desde } from "./LeadsFunil";
 
 const ROTULO_SLOT: Record<string, string> = {
@@ -88,23 +89,21 @@ export default function LeadDetalhe() {
 
   return (
     <div className="min-h-screen bg-background">
-      <div className="bg-gradient-to-r from-emerald-700 to-emerald-900 text-white">
-        <div className="container py-4 flex flex-wrap items-center gap-3">
-          <Button size="sm" variant="ghost" className="text-white hover:bg-white/15" onClick={() => navigate("/leads/funil")}><ArrowLeft className="h-4 w-4" /></Button>
-          <div className="flex-1 min-w-0">
-            <div className="flex items-center gap-2 flex-wrap">
-              <h1 className="text-lg font-bold truncate">{lead.nome}</h1>
-              <span className={`text-xs font-bold px-2 py-0.5 rounded border ${CLASSE_COR[lead.classe || "frio"]}`}>{lead.score ?? "–"} · {(lead.classe || "frio").toUpperCase()}</span>
-              <span className="text-[11px] px-2 py-0.5 rounded bg-white/15">{lead.funil === "proprietario" ? "Proprietário" : "Comprador"}</span>
-              {lead.humano && <span className="text-[11px] px-2 py-0.5 rounded bg-violet-500/30 flex items-center gap-1"><Headset className="h-3 w-3" /> com o corretor</span>}
-            </div>
-            <p className="text-xs text-white/70">+{fone} · entrou há {desde(lead.criadoEm)} · última atividade há {desde(lead.ultimaAtividade)}</p>
-          </div>
-          <Button size="sm" asChild className="bg-[#25D366] hover:bg-[#1fb956] text-white"><a href={`https://wa.me/${fone}`} target="_blank" rel="noreferrer"><MessageCircle className="mr-1.5 h-4 w-4" /> WhatsApp</a></Button>
-        </div>
-      </div>
+      <PageHeader
+        voltar={{ rotulo: "Funil de leads", onClick: () => navigate("/leads/funil") }}
+        titulo={lead.nome}
+        subtitulo={<>
+          <span className="inline-flex flex-wrap items-center gap-2 mb-1">
+            <span className={`text-xs font-bold px-2 py-0.5 rounded border ${CLASSE_COR[lead.classe || "frio"]}`}>{lead.score ?? "–"} · {(lead.classe || "frio").toUpperCase()}</span>
+            <span className="text-[11px] px-2 py-0.5 rounded bg-white/10">{lead.funil === "proprietario" ? "Proprietário" : "Comprador"}</span>
+            {lead.humano && <span className="text-[11px] px-2 py-0.5 rounded bg-violet-500/30 inline-flex items-center gap-1"><Headset className="h-3 w-3" /> com o corretor</span>}
+          </span>
+          <br />+{fone} · entrou há {desde(lead.criadoEm)} · última atividade há {desde(lead.ultimaAtividade)}
+        </>}
+        acoes={<Button size="sm" asChild className="bg-[#25D366] hover:bg-[#1fb956] text-white"><a href={`https://wa.me/${fone}`} target="_blank" rel="noreferrer"><MessageCircle className="mr-1.5 h-4 w-4" /> WhatsApp</a></Button>}
+      />
 
-      <div className="container py-5 grid grid-cols-1 lg:grid-cols-3 gap-4">
+      <div className="px-4 md:px-6 pb-6 max-w-[1500px] mx-auto grid grid-cols-1 lg:grid-cols-3 gap-4">
         {/* Coluna principal */}
         <div className="lg:col-span-2 space-y-4">
           {/* Ações */}

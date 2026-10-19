@@ -4,7 +4,8 @@ import { toast } from "sonner";
 import { trpc } from "@/lib/trpc";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { ArrowLeft, Headset, RefreshCw } from "lucide-react";
+import { ArrowLeft, Headset, RefreshCw, KanbanSquare } from "lucide-react";
+import PageHeader from "@/components/PageHeader";
 
 type Funil = "comprador" | "proprietario";
 
@@ -75,23 +76,21 @@ export default function LeadsFunil() {
 
   return (
     <div className="min-h-screen bg-background">
-      <div className="bg-gradient-to-r from-emerald-700 to-emerald-900 text-white">
-        <div className="container py-4 flex flex-wrap items-center gap-3">
-          <Button size="sm" variant="ghost" className="text-white hover:bg-white/15" onClick={() => navigate("/leads")}><ArrowLeft className="h-4 w-4" /></Button>
-          <div className="flex-1 min-w-0">
-            <h1 className="text-lg font-bold">Funil de leads</h1>
-            <p className="text-xs text-white/70">Arraste o card entre as colunas (ou use "Mover para") · clique para abrir o lead</p>
-          </div>
-          <div className="flex rounded-lg bg-white/10 p-1">
+      <PageHeader
+        icone={KanbanSquare}
+        titulo="Funil de leads"
+        subtitulo={'Arraste o card entre as colunas (ou use "Mover para") · clique para abrir o lead'}
+        acoes={<>
+          <div className="flex rounded-lg bg-white/5 border border-border p-1">
             {(["comprador", "proprietario"] as Funil[]).map(f => (
-              <button key={f} onClick={() => setFunil(f)} className={`px-3 py-1.5 rounded-md text-sm font-semibold ${funil === f ? "bg-white text-emerald-800" : "text-white/80"}`}>
+              <button key={f} onClick={() => setFunil(f)} className={`px-3 py-1.5 rounded-md text-sm font-semibold ${funil === f ? "bg-primary text-primary-foreground" : "text-muted-foreground"}`}>
                 {f === "comprador" ? "Comprador" : "Proprietário"}
               </button>
             ))}
           </div>
-          <Button size="sm" variant="ghost" className="text-white hover:bg-white/15" onClick={() => refetch()}><RefreshCw className={`h-4 w-4 ${isFetching ? "animate-spin" : ""}`} /></Button>
-        </div>
-      </div>
+          <Button size="sm" variant="outline" onClick={() => refetch()}><RefreshCw className={`h-4 w-4 ${isFetching ? "animate-spin" : ""}`} /></Button>
+        </>}
+      />
 
       {isLoading ? (
         <p className="container py-8 text-sm text-muted-foreground">Carregando...</p>

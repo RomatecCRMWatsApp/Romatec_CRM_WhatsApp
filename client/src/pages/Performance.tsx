@@ -10,6 +10,7 @@ import {
   ArrowLeft, TrendingUp, Send, AlertTriangle, Clock, BarChart3,
   CheckCircle2, XCircle, Activity, Zap,
 } from "lucide-react";
+import PageHeader from "@/components/PageHeader";
 
 const COLORS = {
   emerald: "#10b981",
@@ -101,29 +102,9 @@ export default function Performance() {
   return (
     <div className="min-h-screen bg-background">
       {/* Header */}
-      <div className="bg-gradient-to-r from-emerald-dark/80 via-emerald/60 to-emerald-dark/80 border-b border-emerald/20">
-        <div className="container py-6">
-          <div className="flex items-center gap-4">
-            <button
-              onClick={() => navigate("/dashboard")}
-              className="p-2 rounded-lg bg-white/10 hover:bg-white/20 transition-colors text-white"
-            >
-              <ArrowLeft className="h-5 w-5" />
-            </button>
-            <div>
-              <h1 className="text-2xl font-bold text-white flex items-center gap-2">
-                <BarChart3 className="h-6 w-6" />
-                Dashboard de Performance
-              </h1>
-              <p className="text-white/70 text-sm mt-0.5">
-                Romatec CRM - Análise de campanhas WhatsApp
-              </p>
-            </div>
-          </div>
-        </div>
-      </div>
+      <PageHeader icone={BarChart3} titulo="Desempenho" subtitulo="Análise dos disparos de WhatsApp" />
 
-      <div className="container py-6 space-y-6">
+      <div className="px-4 md:px-6 pb-6 space-y-6 max-w-[1500px] mx-auto">
         {/* Cards de Resumo */}
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
           <div className="glass-card p-4">

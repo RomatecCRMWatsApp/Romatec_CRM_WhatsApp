@@ -6,6 +6,7 @@ import {
   Clock, AlertCircle, Loader2, ArrowLeft, Timer, BarChart3,
   Send, Users, Pause
 } from "lucide-react";
+import PageHeader from "@/components/PageHeader";
 import { useLocation } from "wouter";
 import { trpc } from "@/lib/trpc";
 import { toast } from "sonner";
@@ -306,55 +307,7 @@ export default function Campaigns() {
         </div>
       )}
       {/* == HEADER == */}
-      <div
-        style={{
-          background: "linear-gradient(135deg, #0a1f11 0%, #163322 50%, #0a1f11 100%)",
-          borderBottom: "1px solid #1a3520",
-          padding: "14px 20px",
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "space-between",
-        }}
-      >
-        <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
-          <button
-            onClick={() => navigate("/dashboard")}
-            style={{
-              width: "32px",
-              height: "32px",
-              borderRadius: "8px",
-              background: "rgba(255,255,255,0.06)",
-              border: "1px solid rgba(255,255,255,0.1)",
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-              cursor: "pointer",
-              color: "#5a9a6a",
-            }}
-          >
-            <ArrowLeft size={15} />
-          </button>
-          <div>
-            <h1
-              style={{
-                fontSize: "17px",
-                fontWeight: 600,
-                color: "#e8f5e9",
-                display: "flex",
-                alignItems: "center",
-                gap: "8px",
-                margin: 0,
-              }}
-            >
-              <Send size={16} style={{ color: "#3ec87a" }} />
-              Romatec CRM Campanhas
-            </h1>
-            <p style={{ fontSize: "11px", color: "#3a6a45", margin: "2px 0 0" }}>
-              1 msg/campanha/hora • Ciclo de 10 horas • {allCampaigns.length} campanhas
-            </p>
-          </div>
-        </div>
-
+      <PageHeader icone={Send} titulo="Disparos WhatsApp" subtitulo={`1 msg/campanha/hora • Ciclo de 10 horas • ${allCampaigns.length} campanhas`} acoes={<>
         {isRunning ? (
           <span
             style={{
@@ -409,7 +362,7 @@ export default function Campaigns() {
             PARADO
           </span>
         )}
-      </div>
+      </>} />
 
       <style>{`
         @keyframes rmt-pulse { 0%,100%{opacity:1} 50%{opacity:.3} }

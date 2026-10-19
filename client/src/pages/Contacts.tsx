@@ -6,6 +6,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Users, Search, Trash2, Edit, Plus, Phone, Mail, ArrowLeft, UserCheck, UserX, ChevronLeft, ChevronRight } from "lucide-react";
+import PageHeader from "@/components/PageHeader";
 import { useLocation } from "wouter";
 import { trpc } from "@/lib/trpc";
 import { toast } from "sonner";
@@ -65,28 +66,15 @@ export default function Contacts() {
   return (
     <div className="min-h-screen bg-background">
       {/* Header */}
-      <div className="bg-gradient-to-r from-emerald-600 to-emerald-800 text-white p-6">
-        <div className="container flex items-center justify-between">
-          <div>
-            <h1 className="text-3xl font-bold flex items-center gap-3">
-              <Users className="h-8 w-8" />
-              Gerenciar Clientes
-            </h1>
-            <p className="text-white/80 mt-1">Total: {contacts?.length || 0} contatos</p>
-          </div>
-          <div className="flex gap-3">
-            <Button onClick={() => setAddOpen(true)} className="bg-amber-500 hover:bg-amber-600 text-black font-bold">
-              <Plus className="mr-2 h-4 w-4" /> Novo Contato
-            </Button>
-            <Button onClick={() => navigate("/dashboard")} variant="outline" className="border-white text-white hover:bg-white/20">
-              <ArrowLeft className="mr-2 h-4 w-4" /> Voltar
-            </Button>
-          </div>
-        </div>
-      </div>
+      <PageHeader
+        icone={Users}
+        titulo="Clientes"
+        subtitulo={`Total: ${contacts?.length || 0} contatos`}
+        acoes={<Button onClick={() => setAddOpen(true)} className="bg-primary hover:bg-primary/90 text-primary-foreground font-semibold"><Plus className="mr-2 h-4 w-4" /> Novo contato</Button>}
+      />
 
       {/* Content */}
-      <div className="container py-8">
+      <div className="px-4 md:px-6 pb-8 max-w-[1500px] mx-auto">
         {/* Search Bar */}
         <div className="mb-6">
           <div className="relative">

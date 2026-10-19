@@ -4,6 +4,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Settings as SettingsIcon, ArrowLeft, Save, Wifi, WifiOff, RefreshCw, Lock, Eye, EyeOff, User, Send, CheckCircle2, XCircle, MessageSquare, Bot, Bell } from "lucide-react";
+import PageHeader from "@/components/PageHeader";
 import { useLocation } from "wouter";
 import { trpc } from "@/lib/trpc";
 import { toast } from "sonner";
@@ -117,18 +118,9 @@ export default function Settings() {
 
   return (
     <div className="min-h-screen bg-background">
-      <div className="bg-gradient-to-r from-emerald-600 to-emerald-800 text-white p-6">
-        <div className="container flex items-center justify-between">
-          <h1 className="text-3xl font-bold flex items-center gap-3">
-            <SettingsIcon className="h-8 w-8" /> Configurações
-          </h1>
-          <Button onClick={() => navigate("/dashboard")} variant="outline" className="border-white text-white hover:bg-white/20">
-            <ArrowLeft className="mr-2 h-4 w-4" /> Voltar
-          </Button>
-        </div>
-      </div>
+      <PageHeader icone={SettingsIcon} titulo="Configurações" subtitulo="Empresa, WhatsApp (Z-API), Telegram e senha" />
 
-      <div className="container py-8 space-y-6 max-w-2xl">
+      <div className="px-4 md:px-6 pb-8 space-y-6 max-w-2xl">
 
         {/* Dados da Empresa */}
         <Card className="bg-card border-border">

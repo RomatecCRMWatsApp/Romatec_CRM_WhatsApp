@@ -81,7 +81,7 @@ function ScoreDetalhe({ leadId }: { leadId: number }) {
               <span style={{ fontWeight: 700, color: i.pontos >= 0 ? '#3ec87a' : '#ef4444' }}>{i.pontos >= 0 ? '+' : ''}{i.pontos}</span>
             </div>
           ))}
-          <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '12px', borderTop: '1px solid #1a3520', paddingTop: '4px', fontWeight: 700, color: '#e8f5e9' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '12px', borderTop: '1px solid var(--border)', paddingTop: '4px', fontWeight: 700, color: '#e8f5e9' }}>
             <span>Total{data.limitado ? ' (limitado a 0–100)' : ''}</span>
             <span>{data.score}</span>
           </div>
@@ -173,22 +173,15 @@ export default function Leads() {
   ];
 
   return (
-    <div style={{ minHeight: '100vh', background: '#080f0a', color: '#e8f5e9' }}>
+    <div style={{ minHeight: '100vh', background: 'var(--background)', color: '#e8f5e9' }}>
 
       {/* ── Header ──────────────────────────────────────────────────── */}
       <div style={{
-        background: 'linear-gradient(135deg, #0a1f11 0%, #163322 50%, #0a1f11 100%)',
-        borderBottom: '1px solid #1a3520', padding: '14px 20px',
+        background: 'transparent', flexWrap: 'wrap', gap: '10px',
+        padding: '20px 24px 12px',
         display: 'flex', alignItems: 'center', justifyContent: 'space-between',
       }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-          <button onClick={() => navigate('/dashboard')} style={{
-            width: '32px', height: '32px', borderRadius: '8px', background: 'rgba(255,255,255,0.06)',
-            border: '1px solid rgba(255,255,255,0.1)', display: 'flex', alignItems: 'center',
-            justifyContent: 'center', cursor: 'pointer', color: '#5a9a6a',
-          }}>
-            <ArrowLeft size={15} />
-          </button>
           <div>
             <h1 style={{ fontSize: '17px', fontWeight: 600, color: '#e8f5e9', display: 'flex', alignItems: 'center', gap: '8px', margin: 0 }}>
               <Users size={16} style={{ color: '#3ec87a' }} />
@@ -241,7 +234,7 @@ export default function Leads() {
 
       <style>{`
         @keyframes ld-pulse { 0%,100%{opacity:1} 50%{opacity:.3} }
-        .ld-card { background:#0d1f12; border:1px solid #1a3520; border-radius:12px; padding:16px; }
+        .ld-card { background:var(--card); border:1px solid var(--border); border-radius:12px; padding:16px; }
         .ld-score-btn { border:none; cursor:pointer; border-radius:6px; font-size:10px; font-weight:700;
           padding:3px 8px; transition:all 0.15s; letter-spacing:0.05em; }
         .ld-action-btn { border-radius:8px; font-size:11px; font-weight:600; cursor:pointer;
@@ -254,7 +247,7 @@ export default function Leads() {
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(6,1fr)', gap: '8px' }}>
           {STAT_CARDS.map(sc => (
             <div key={sc.label} style={{
-              background: '#0d1f12', border: '1px solid #1a3520', borderRadius: '10px',
+              background: 'var(--card)', border: '1px solid var(--border)', borderRadius: '10px',
               padding: '12px 8px', textAlign: 'center',
             }}>
               <p style={{ fontSize: '9px', color: '#3a5a40', textTransform: 'uppercase', letterSpacing: '0.05em', margin: '0 0 4px' }}>
@@ -275,8 +268,8 @@ export default function Leads() {
               onChange={e => setSearch(e.target.value)}
               placeholder="Buscar por nome ou telefone..."
               style={{
-                width: '100%', padding: '8px 10px 8px 30px', background: '#0d1f12',
-                border: '1px solid #1a3520', borderRadius: '8px', color: '#c8f0d0',
+                width: '100%', padding: '8px 10px 8px 30px', background: 'var(--card)',
+                border: '1px solid var(--border)', borderRadius: '8px', color: '#c8f0d0',
                 fontSize: '12px', outline: 'none', boxSizing: 'border-box',
               }}
             />
@@ -327,7 +320,7 @@ export default function Leads() {
                 <div
                   key={lead.id}
                   style={{
-                    background: '#0d1f12',
+                    background: 'var(--card)',
                     border: `1px solid ${isDescartado ? '#1a2a1c' : sc.border}`,
                     borderLeft: `3px solid ${isDescartado ? '#2a3a2c' : sc.color}`,
                     borderRadius: '12px',
@@ -384,7 +377,7 @@ export default function Leads() {
                     {/* Stage + progress */}
                     <div style={{ textAlign: 'right', minWidth: '140px' }}>
                       <p style={{ fontSize: '10px', color: '#4a7a55', margin: '0 0 4px' }}>{stageLabel(lead.stage || '')}</p>
-                      <div style={{ height: '4px', background: '#0a1a0f', borderRadius: '3px', overflow: 'hidden' }}>
+                      <div style={{ height: '4px', background: 'rgba(255,255,255,0.06)', borderRadius: '3px', overflow: 'hidden' }}>
                         <div style={{
                           height: '100%', borderRadius: '3px', transition: 'width 0.3s',
                           width: `${progress}%`,
@@ -409,7 +402,7 @@ export default function Leads() {
 
                   {/* ── Expanded detail ── */}
                   {isExpanded && (
-                    <div style={{ borderTop: '1px solid #1a3520', padding: '14px 16px', display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                    <div style={{ borderTop: '1px solid var(--border)', padding: '14px 16px', display: 'flex', flexDirection: 'column', gap: '12px' }}>
                       <ScoreDetalhe leadId={lead.id} />
 
                       {/* Answers grid */}
@@ -432,7 +425,7 @@ export default function Leads() {
                               { key: 'prazoPrefido', label: 'Prazo para fechar' },
                             ].filter(f => answers[f.key]).map(field => (
                               <div key={field.key} style={{
-                                background: '#080f0a', border: '1px solid #162a1c',
+                                background: 'var(--background)', border: '1px solid var(--border)',
                                 borderRadius: '7px', padding: '7px 10px',
                               }}>
                                 <p style={{ fontSize: '9px', color: '#2a5a35', margin: '0 0 2px', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
@@ -566,7 +559,7 @@ export default function Leads() {
           alignItems: 'center', justifyContent: 'center', zIndex: 1000, padding: '20px',
         }} onClick={e => { if (e.target === e.currentTarget) setSendMsg(null); }}>
           <div style={{
-            background: '#0d1f12', border: '1px solid #1a3520', borderRadius: '16px',
+            background: 'var(--card)', border: '1px solid var(--border)', borderRadius: '16px',
             padding: '24px', width: '100%', maxWidth: '480px',
           }}>
             <h3 style={{ fontSize: '15px', fontWeight: 600, color: '#d8f0dc', margin: '0 0 4px' }}>
@@ -581,8 +574,8 @@ export default function Leads() {
               placeholder="Digite a mensagem..."
               rows={5}
               style={{
-                width: '100%', padding: '10px 12px', background: '#080f0a',
-                border: '1px solid #1a3520', borderRadius: '8px', color: '#c8f0d0',
+                width: '100%', padding: '10px 12px', background: 'var(--background)',
+                border: '1px solid var(--border)', borderRadius: '8px', color: '#c8f0d0',
                 fontSize: '13px', resize: 'vertical', outline: 'none', boxSizing: 'border-box',
               }}
             />

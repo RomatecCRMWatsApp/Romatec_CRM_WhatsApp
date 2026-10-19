@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { ArrowLeft, BarChart3, Download } from "lucide-react";
+import PageHeader from "@/components/PageHeader";
 
 const hoje = () => new Date(Date.now() - 3 * 3600_000).toISOString().slice(0, 10);
 const diasAtras = (n: number) => new Date(Date.now() - 3 * 3600_000 - n * 86400_000).toISOString().slice(0, 10);
@@ -117,20 +118,10 @@ export default function LeadsRelatorio() {
   const organico = r?.porTipo.find(t => t.tipo === "organico");
 
   return (
-    <div className="min-h-screen bg-background">
-      <div className="bg-gradient-to-r from-emerald-700 to-emerald-900 text-white">
-        <div className="container py-4 flex items-center gap-3">
-          <Button size="sm" variant="ghost" className="text-white hover:bg-white/15" onClick={() => navigate("/leads")}>
-            <ArrowLeft className="h-4 w-4" />
-          </Button>
-          <div>
-            <h1 className="text-lg font-bold flex items-center gap-2"><BarChart3 className="h-5 w-5" /> Relatório por canal e campanha</h1>
-            <p className="text-xs text-white/70">Orgânico × pago, leads quentes e custo por lead quente</p>
-          </div>
-        </div>
-      </div>
+    <div>
+      <PageHeader icone={BarChart3} titulo="Relatório por canal e campanha" subtitulo="Orgânico × pago, leads quentes e custo por lead quente" />
 
-      <div className="container py-6 space-y-4">
+      <div className="px-4 md:px-6 pb-6 max-w-[1500px] mx-auto space-y-4">
         <Card className="bg-card border-border">
           <CardContent className="p-4 flex flex-wrap items-end gap-3">
             <label className="flex flex-col gap-1 text-sm">
