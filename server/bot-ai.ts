@@ -559,12 +559,21 @@ async function processStage(context: BotContext, state: ConversationState): Prom
 
     // ---- ETAPA 1: Interesse nos proximos 3 meses ----
     case 'qual_etapa_1': {
+      // Pergunta do nome: "oi"/"bom dia" não é nome — pergunta de novo; nome válido passa a ser usado
+      const { pareceNome } = await import('./leads/antiLoop');
+      const ehSaudacao = /^(oi+|ol[aá]+|opa|bom dia|boa tarde|boa noite|tudo bem|td bem|e a[ií])[\s!.,?]*$/i.test(msg);
+      if (ehSaudacao) {
+        setState(context.phone, { lastUserReplyAt: Date.now() });
+        return { text: `Oi! 😊 Para eu te atender melhor, qual é o seu *nome*?`, qualified: true };
+      }
+      const nomeInformado = pareceNome(msg) ? msg.replace(/\s+/g, ' ').trim() : null;
       setState(context.phone, {
         stage: 'qual_etapa_2',
         lastUserReplyAt: Date.now(),
+        ...(nomeInformado ? { senderName: nomeInformado } : {}),
         qualAnswers: { ...state.qualAnswers, prazo: msg },
       });
-      return { text: QUAL_QUESTIONS.etapa_2(fn), qualified: true };
+      return { text: QUAL_QUESTIONS.etapa_2(nomeInformado ? firstName(nomeInformado) : fn), qualified: true };
     }
 
     // ---- ETAPA 2: Primeiro imovel? ----

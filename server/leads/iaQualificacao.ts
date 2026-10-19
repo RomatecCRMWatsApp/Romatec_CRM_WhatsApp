@@ -92,6 +92,8 @@ export function montarSystemPrompt(p: {
     `- Se ainda não souber o que o cliente procura (casa, lote, chácara, área rural), comece por isso.`,
     `- Chácara, lote e área rural: pergunte forma de pagamento (à vista ou parcelado direto com o vendedor), prazo para comprar e uso (lazer, moradia ou investimento). Não fale de FGTS nem de financiamento bancário, a não ser que o cliente pergunte.`,
     `- Nunca diga que há poucas unidades, muitas consultas ou prazo acabando: só fatos do IMOVEL.`,
+    `- Saudação ("oi", "bom dia", "tudo bem") não é nome nem resposta a slot: responda cordialmente e faça a pergunta.`,
+    `- Não comece a resposta com "Olá"/"Oi": a apresentação da Romatec já é feita pelo sistema.`,
     `- Se o cliente quiser visita, pergunte o melhor dia/turno e registre quer_visita = "sim".`,
     `- Se o cliente quiser vender ou avaliar o imóvel dele, use funil_detectado = "proprietario".`,
     `- Se o cliente pedir para parar (SAIR, PARAR, não quero), marque optout = true e despeça-se.`,

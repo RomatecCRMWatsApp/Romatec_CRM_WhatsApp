@@ -32,6 +32,14 @@ export function elegivelIa(lead: {
   return true;
 }
 
+/** Apresentação + aviso de dados (SAIR) em volta da 1ª resposta da IA; o nome do perfil só se parecer nome */
+export function abrirConversa(nome: string | null | undefined, texto: string, assistente: string, rodape: string): string {
+  const primeiro = String(nome || '').trim().split(/\s+/)[0] || '';
+  const fn = /^[A-Za-zÀ-ÿ]{2,20}$/.test(primeiro) && !/^(cliente|lead|oi|ola|olá)$/i.test(primeiro) ? primeiro : '';
+  const corpo = texto.trim().replace(/^(ol[aá]|oi)(?![A-Za-zÀ-ÿ])[^.!?\n]*[.!?]\s*/i, '').trim() || texto.trim(); // evita "Olá" duas vezes
+  return [`Olá${fn ? `, ${fn}` : ''}! Aqui é ${assistente}, da Romatec Consultoria Total.`, '', corpo, '', rodape].join('\n');
+}
+
 async function dbx() {
   const { getDb } = await import('../db');
   return getDb();
@@ -152,6 +160,12 @@ export async function processarMensagemQualificacao(
     await avisar('humano');
   } else if (r.acao === 'completa') {
     await avisar('completa');
+  }
+
+  // Primeira mensagem da conversa (contato que chamou direto): apresenta a Romatec e o SAIR
+  if (!historico.length) {
+    const { RODAPE_LGPD } = await import('./inbound');
+    texto = abrirConversa(lead.nome, texto, assistenteNome(), RODAPE_LGPD);
   }
 
   await registrarMensagem(lead.id, 'out', 'ia', texto);

@@ -113,6 +113,14 @@ async function startServer() {
         }
       }
 
+      // Resposta automática de outra empresa ("mensagem automática", "fora do horário"…):
+      // não responde (dois robôs conversando viram um loop) e não conta como resposta do lead
+      const { ehRespostaAutomatica, podeResponder } = await import('../leads/antiLoop');
+      if (!req.body?.fromMe && ehRespostaAutomatica(msgText)) {
+        console.log(`[Webhook] 🤖 Resposta automática de ${payload.phone} — ignorada`);
+        return res.json({ received: true, processed: false, reason: 'auto_reply' });
+      }
+
       // O lead respondeu: cancela o follow-up automático pendente (server/leads/followup.ts)
       if (!req.body?.fromMe) {
         await import('../leads/followup').then(m => m.cancelarFollowUp(payload.phone)).catch(e => console.warn('[FollowUp] Cancelar falhou:', e?.message));
@@ -184,6 +192,28 @@ async function startServer() {
         } catch (e) {
           console.warn('[Entrada] Erro na atribuição (bot segue normal):', e);
         }
+      }
+
+      // Contato novo sem código: vira lead "WhatsApp direto" ANTES de responder, já no modo IA —
+      // a IA pergunta o tipo de imóvel e segue o roteiro certo (chácara/lote sem renda/FGTS).
+      // Sem IA configurada, segue como antes: o bot de perguntas responde e o lead é criado depois.
+      if (contatoNovo) {
+        try {
+          const { qualificacaoIaLigada } = await import('../leads/qualificacaoService');
+          if (qualificacaoIaLigada()) {
+            const { registrarWhatsappDireto } = await import('../leads/inbound');
+            await registrarWhatsappDireto({ phone: payload.phone, nome: senderName, texto: msgText, modo: 'ia' });
+            contatoNovo = false;
+          }
+        } catch (e: any) {
+          console.warn('[Entrada] WhatsApp direto (IA) não registrado, segue no bot:', e?.message);
+        }
+      }
+
+      // Limite de respostas seguidas ao mesmo número (proteção contra loop com outro robô)
+      if (!req.body?.fromMe && !podeResponder(payload.phone)) {
+        console.warn(`[Webhook] ⛔ ${payload.phone}: limite de respostas em 10 min atingido — bot não responde`);
+        return res.json({ received: true, processed: false, reason: 'rate_limited' });
       }
 
       try {

@@ -286,7 +286,8 @@ export async function ehContatoNovo(phone: string): Promise<boolean> {
 }
 
 /** Depois da 1ª resposta do bot: origem WhatsApp direto + conversa + aviso */
-export async function registrarWhatsappDireto(input: { phone: string; nome?: string | null; texto: string; resposta?: string | null }): Promise<boolean> {
+export async function registrarWhatsappDireto(input: { phone: string; nome?: string | null; texto: string; resposta?: string | null; modo?: 'ia' | 'bot' }): Promise<boolean> {
+  const modoIa = input.modo === 'ia';
   const { getDb } = await import('../db');
   const db = await getDb();
   if (!db) return false;
@@ -298,8 +299,9 @@ export async function registrarWhatsappDireto(input: { phone: string; nome?: str
   const acao = acaoWhatsappDireto(lead);
   if (acao === 'nada') return false;
 
-  // modoQualificacao 'bot': o roteiro que já começou segue até o fim (a IA não assume no meio)
-  const origem = { origemCanal: 'whatsapp_direto', ultimoCanal: 'whatsapp_direto', modoQualificacao: 'bot', funil: 'comprador' };
+  // Modo IA: criado antes da 1ª resposta, a IA conduz desde o início.
+  // Modo bot: o roteiro de perguntas que já começou segue até o fim (a IA não assume no meio).
+  const origem = { origemCanal: 'whatsapp_direto', ultimoCanal: 'whatsapp_direto', modoQualificacao: modoIa ? 'ia' : 'bot', funil: 'comprador' };
   let leadId: number;
   if (acao === 'marcar') {
     await db.update(leadQualifications).set({ ...origem, updatedAt: now } as any).where(eq(leadQualifications.id, lead.id));
@@ -312,11 +314,14 @@ export async function registrarWhatsappDireto(input: { phone: string; nome?: str
     leadId = Number(r?.[0]?.insertId ?? r?.lastInsertRowid ?? 0);
   }
 
-  try {
-    const { registrarMensagemPorTelefone } = await import('./qualificacaoService');
-    await registrarMensagemPorTelefone(phone, 'in', 'lead', input.texto);
-    if (input.resposta) await registrarMensagemPorTelefone(phone, 'out', 'bot', input.resposta);
-  } catch { /* conversa é só contexto */ }
+  // No modo IA a própria qualificação grava a mensagem e a resposta
+  if (!modoIa) {
+    try {
+      const { registrarMensagemPorTelefone } = await import('./qualificacaoService');
+      await registrarMensagemPorTelefone(phone, 'in', 'lead', input.texto);
+      if (input.resposta) await registrarMensagemPorTelefone(phone, 'out', 'bot', input.resposta);
+    } catch { /* conversa é só contexto */ }
+  }
 
   const [contato] = await db.select({ id: contacts.id }).from(contacts).where(eq(contacts.phone, phone)).limit(1).catch(() => [] as any[]);
   const primeira = input.texto.replace(/\s+/g, ' ').trim().slice(0, 120);
@@ -326,7 +331,7 @@ export async function registrarWhatsappDireto(input: { phone: string; nome?: str
     detalhes: [
       ...(primeira ? [`💬 1ª mensagem: "${primeira}"`] : []),
       contato ? '📇 Já estava na base de contatos' : '🆕 Contato novo (sem código de imóvel ou campanha)',
-      '🤖 O bot de qualificação já respondeu',
+      modoIa ? '🤖 A assistente (IA) está atendendo' : '🤖 O bot de qualificação já respondeu',
     ],
   }).catch(e => console.warn('[Entrada] Aviso falhou (não crítico):', e?.message));
 
