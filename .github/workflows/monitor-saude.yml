@@ -1,0 +1,88 @@
+name: Monitor do CRM (saúde)
+
+# Monitor externo: confere https://romateccrm.com/api/saude a cada 15 min.
+# Pega o que o vigia interno não consegue avisar: servidor fora do ar, ou
+# follow-up / alerta de 5 min parados.
+# - Problema → abre uma issue "crm-fora" (o GitHub manda e-mail) e, se os
+#   secrets TELEGRAM_BOT_TOKEN e TELEGRAM_CHAT_ID existirem no repositório, avisa no Telegram.
+# - Voltou → fecha a issue com um comentário (e avisa no Telegram).
+
+on:
+  schedule:
+    - cron: '*/15 * * * *'
+  workflow_dispatch:
+
+permissions:
+  issues: write
+
+concurrency:
+  group: monitor-saude
+  cancel-in-progress: false
+
+jobs:
+  saude:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Consultar /api/saude (3 tentativas)
+        id: check
+        run: |
+          status=000; corpo=""
+          for i in 1 2 3; do
+            status=$(curl -s -o resp.json -w '%{http_code}' --max-time 20 https://romateccrm.com/api/saude || echo 000)
+            [ "$status" = "200" ] && break
+            sleep 30
+          done
+          corpo=$(head -c 1500 resp.json 2>/dev/null || true)
+          echo "status=$status" >> "$GITHUB_OUTPUT"
+          {
+            echo "corpo<<FIM"
+            echo "$corpo"
+            echo "FIM"
+          } >> "$GITHUB_OUTPUT"
+          echo "HTTP $status"
+          echo "$corpo"
+
+      - name: Abrir ou fechar o alerta
+        uses: actions/github-script@v7
+        env:
+          STATUS: ${{ steps.check.outputs.status }}
+          CORPO: ${{ steps.check.outputs.corpo }}
+          TG_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          TG_CHAT: ${{ secrets.TELEGRAM_CHAT_ID }}
+        with:
+          script: |
+            const { owner, repo } = context.repo;
+            const ok = process.env.STATUS === '200';
+            const label = 'crm-fora';
+            const abertas = await github.rest.issues.listForRepo({ owner, repo, state: 'open', labels: label });
+            const telegram = async (texto) => {
+              if (!process.env.TG_TOKEN || !process.env.TG_CHAT) return;
+              await fetch(`https://api.telegram.org/bot${process.env.TG_TOKEN}/sendMessage`, {
+                method: 'POST', headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ chat_id: process.env.TG_CHAT, text: texto }),
+              }).catch(() => {});
+            };
+
+            let motivo = `O servidor não respondeu (HTTP ${process.env.STATUS}).`;
+            try {
+              const j = JSON.parse(process.env.CORPO || '{}');
+              const ruins = (j.rotinas || []).filter(r => r.situacao !== 'ok');
+              if (ruins.length) motivo = ruins.map(r => `${r.rotulo}: ${r.situacao}${r.ultimoErro ? ` (${r.ultimoErro})` : ''}`).join('\n');
+            } catch {}
+
+            if (!ok && abertas.data.length === 0) {
+              await github.rest.issues.create({
+                owner, repo, labels: [label],
+                title: '🛑 CRM com problema (monitor de saúde)',
+                body: `O monitor externo encontrou problema em https://romateccrm.com/api/saude\n\n${motivo}\n\nConfira o Railway (deploy e logs) e a conexão da Z-API.\nEsta issue fecha sozinha quando voltar ao normal.`,
+              });
+              await telegram(`🛑 Monitor externo: o CRM está com problema.\n${motivo}`);
+            } else if (ok && abertas.data.length > 0) {
+              for (const i of abertas.data) {
+                await github.rest.issues.createComment({ owner, repo, issue_number: i.number, body: '✅ Voltou ao normal.' });
+                await github.rest.issues.update({ owner, repo, issue_number: i.number, state: 'closed' });
+              }
+              await telegram('✅ Monitor externo: o CRM voltou ao normal.');
+            }
+            core.info(ok ? '✅ CRM ok' : `🛑 ${motivo}`);
