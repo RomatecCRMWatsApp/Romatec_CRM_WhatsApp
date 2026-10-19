@@ -129,9 +129,15 @@ export async function processarSla(agora = Date.now()): Promise<number> {
   const { enviarTexto } = await import('./zapiClient');
   const { enviarTelegram } = await import('./notificacao');
   const fone = (u: any) => { const f = String(u?.telefone || '').replace(/\D/g, ''); return f.length >= 10 ? (f.startsWith('55') ? f : `55${f}`) : null; };
+  const { linhasAfetadas, registrarEnvio } = await import('./rotinas');
   const avisar = async (u: any, texto: string) => {
     const f = fone(u);
-    if (f) await enviarTexto(f, texto).catch(e => console.warn('[SLA] WhatsApp falhou:', e?.message));
+    if (f) {
+      await enviarTexto(f, texto).then(() => registrarEnvio('sla', true)).catch(e => {
+        registrarEnvio('sla', false, String(e?.message ?? e));
+        console.warn('[SLA] WhatsApp falhou:', e?.message);
+      });
+    }
     await enviarTelegram(texto).catch(() => {});
   };
   let n = 0;
@@ -141,23 +147,27 @@ export async function processarSla(agora = Date.now()): Promise<number> {
     const acao = acaoSla(minutos, nivel);
     if (acao === 'nada') continue;
     const resp = todos.find(u => u.id === l.responsavelId) ?? admin;
+    const proximo = acao === 'repassar' ? escolherResponsavel(roleta, l.responsavelId) : null;
+    // Reserva o nível do alerta antes de avisar: com dois servidores no ar, só um avisa
+    const reserva = await db.update(leadQualifications)
+      .set({ alertaSlaNivel: NIVEL_DA_ACAO[acao], ...(proximo ? { responsavelId: proximo.id } : {}) } as any)
+      .where(and(
+        eq(leadQualifications.id, l.id),
+        l.alertaSlaNivel == null ? isNull(leadQualifications.alertaSlaNivel) : eq(leadQualifications.alertaSlaNivel, nivel),
+      ));
+    if (linhasAfetadas(reserva) === 0) continue;
     const nome = l.nome || 'Lead';
     const contato = `📱 +${String(l.phone).replace(/\D/g, '')} · 💬 https://wa.me/${String(l.phone).replace(/\D/g, '')}`;
     if (acao === 'lembrar') {
       await avisar(resp, `⏰ ${nome} está esperando atendimento há ${minutos} min.\n${contato}\n✅ Já atendi: ${linkAtendido(l.id)}`);
-      await db.update(leadQualifications).set({ alertaSlaNivel: 1 } as any).where(eq(leadQualifications.id, l.id));
     } else if (acao === 'repassar') {
-      const proximo = escolherResponsavel(roleta, l.responsavelId);
       if (proximo) {
-        await db.update(leadQualifications).set({ responsavelId: proximo.id, alertaSlaNivel: 2 } as any).where(eq(leadQualifications.id, l.id));
         await db.update(users).set({ ultimoLeadAt: new Date() } as any).where(eq(users.id, proximo.id));
         await avisar(proximo, `🔁 O lead ${nome} passou para você: está sem atendimento há ${minutos} min.\n${contato}\n✅ Já atendi: ${linkAtendido(l.id)}`);
       } else {
-        await db.update(leadQualifications).set({ alertaSlaNivel: 2 } as any).where(eq(leadQualifications.id, l.id));
         await avisar(admin, `⚠️ ${nome} está há ${minutos} min sem atendimento.\n${contato}\n✅ Já atendi: ${linkAtendido(l.id)}`);
       }
     } else {
-      await db.update(leadQualifications).set({ alertaSlaNivel: 3 } as any).where(eq(leadQualifications.id, l.id));
       await avisar(admin, `🚨 ${nome} está há ${minutos} min sem atendimento (responsável: ${resp?.name || '—'}).\n${contato}\n✅ Já atendi: ${linkAtendido(l.id)}`);
     }
     n++;
@@ -165,9 +175,15 @@ export async function processarSla(agora = Date.now()): Promise<number> {
   return n;
 }
 
+/** Nível gravado em alertaSlaNivel depois de cada ação */
+export const NIVEL_DA_ACAO: Record<Exclude<AcaoSla, 'nada'>, number> = { lembrar: 1, repassar: 2, avisar_admin: 3 };
+
 let timer: NodeJS.Timeout | null = null;
 export function iniciarJobSla(intervaloMs = 60_000) {
   if (timer) return;
-  timer = setInterval(() => { processarSla().catch(e => console.warn('[SLA] Rodada falhou:', e?.message)); }, intervaloMs);
+  import('./rotinas').then(({ registrarRotina, rodarRotina }) => {
+    registrarRotina('sla', intervaloMs);
+    timer = setInterval(() => { void rodarRotina('sla', () => processarSla()); }, intervaloMs);
+  }).catch(e => console.warn('[SLA] Job não iniciado:', e?.message));
   console.log('[SLA] Prazo de atendimento ativo (5, 15 e 60 min)');
 }

@@ -265,6 +265,21 @@ export default function LeadDetalhe() {
             </CardContent>
           </Card>
 
+          <Card className="bg-card border-border">
+            <CardHeader className="pb-2"><CardTitle className="text-base">Follow-up automático</CardTitle></CardHeader>
+            <CardContent className="space-y-1 text-sm">
+              <p><span className="text-muted-foreground">Mensagens enviadas:</span> {lead.followUp.passo} de 5</p>
+              <p>
+                <span className="text-muted-foreground">Próxima:</span>{" "}
+                {lead.followUp.proximoEm
+                  ? new Date(lead.followUp.proximoEm).toLocaleString("pt-BR", { timeZone: "America/Fortaleza", day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit" })
+                  : "nenhuma programada"}
+                {lead.followUp.tentativas > 0 && ` (nova tentativa ${lead.followUp.tentativas + 1} de 3)`}
+              </p>
+              {lead.followUp.erro && <p className="text-xs text-red-300">⚠️ {lead.followUp.erro}</p>}
+            </CardContent>
+          </Card>
+
           {lead.imoveis.length > 0 && (
             <Card className="bg-card border-border">
               <CardHeader className="pb-2"><CardTitle className="text-base">Imóveis de interesse</CardTitle></CardHeader>

@@ -233,6 +233,8 @@ export function initSqliteTables(sqlite: any): void {
   // Fase 1 da captação: follow-up, responsável e SLA
   addColumn(`ALTER TABLE leadQualifications ADD COLUMN followUpPasso INTEGER DEFAULT 0`);
   addColumn(`ALTER TABLE leadQualifications ADD COLUMN proximoFollowUpAt INTEGER`);
+  addColumn(`ALTER TABLE leadQualifications ADD COLUMN followUpTentativas INTEGER DEFAULT 0`);
+  addColumn(`ALTER TABLE leadQualifications ADD COLUMN followUpErro TEXT`);
   addColumn(`ALTER TABLE leadQualifications ADD COLUMN responsavelId INTEGER`);
   addColumn(`ALTER TABLE leadQualifications ADD COLUMN aguardandoCorretorDesde INTEGER`);
   addColumn(`ALTER TABLE leadQualifications ADD COLUMN atendidoAt INTEGER`);

@@ -63,6 +63,9 @@ export interface CardKanban {
 export const crmRouter = router({
   etapas: protectedProcedure.query(() => ({ ETAPAS, ROTULO_ETAPA, MOTIVOS_PERDA, ROTULO_MOTIVO })),
 
+  /** Follow-up e alerta de atendimento estão rodando? (faixa de aviso no topo) */
+  saudeRotinas: protectedProcedure.query(async () => (await import("../leads/rotinas")).estadoRotinas()),
+
   kanban: protectedProcedure.input(z.object({ funil: funilSchema })).query(async ({ input }) => {
     const db = await dbOrThrow();
     const rows = (await db.select().from(leadQualifications).orderBy(desc(leadQualifications.updatedAt)))
@@ -199,6 +202,13 @@ export const crmRouter = router({
         const u = (l.utm || {}) as Record<string, string | undefined>;
         return u.gclid ? "Google Ads" : u.fbclid ? "Meta (Facebook/Instagram)" : null;
       })(),
+      // Follow-up automático: passo enviado (de 5), quando sai o próximo e o último erro de envio
+      followUp: {
+        passo: Number(l.followUpPasso) || 0,
+        proximoEm: l.proximoFollowUpAt ?? null,
+        tentativas: Number(l.followUpTentativas) || 0,
+        erro: l.followUpErro ?? null,
+      },
       modoQualificacao: l.modoQualificacao ?? "ia",
       perguntasIa: l.perguntasIa ?? 0,
       avalieImob: funil === "proprietario" ? linksAvalieImob(l) : null,

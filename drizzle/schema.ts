@@ -343,6 +343,9 @@ export const leadQualifications = mysqlTable("leadQualifications", {
   /** Follow-up persistente (server/leads/followup.ts): passo já enviado e quando sai o próximo */
   followUpPasso: int("followUpPasso").default(0),
   proximoFollowUpAt: timestamp("proximoFollowUpAt"),
+  /** Tentativas do passo atual que falharam no envio e o último erro (auditoria) */
+  followUpTentativas: int("followUpTentativas").default(0),
+  followUpErro: varchar("followUpErro", { length: 255 }),
   /** Corretor responsável (users.id) e prazo de atendimento humano (server/leads/sla.ts) */
   responsavelId: int("responsavelId"),
   aguardandoCorretorDesde: timestamp("aguardandoCorretorDesde"),

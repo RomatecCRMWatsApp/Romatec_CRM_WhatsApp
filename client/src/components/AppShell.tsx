@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { useLocation } from "wouter";
 import { useAuth } from "@/_core/hooks/useAuth";
 import { perfilDe, podeAbrir, ROTULO_PERFIL } from "@shared/equipe";
+import AvisoRotinas from "./AvisoRotinas";
 import {
   BarChart3, Building2, Flame, Images, KanbanSquare, LayoutDashboard, LineChart, LogOut, Megaphone, Menu, Send,
   Settings, UserCog, Users, X, Eye, ClipboardList,
@@ -150,6 +151,7 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
         <p className="font-semibold truncate">{tituloDaRota(loc)}</p>
       </header>
 
+      <AvisoRotinas />
       <main className="min-w-0">{children}</main>
     </div>
   );

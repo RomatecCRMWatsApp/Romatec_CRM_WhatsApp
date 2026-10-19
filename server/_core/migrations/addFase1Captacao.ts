@@ -8,6 +8,8 @@ import { getDb, getDbDriver } from '../../db';
 const COLUNAS: { nome: string; stmt: ReturnType<typeof sql> }[] = [
   { nome: 'lead.followUpPasso', stmt: sql`ALTER TABLE leadQualifications ADD COLUMN followUpPasso INT DEFAULT 0` },
   { nome: 'lead.proximoFollowUpAt', stmt: sql`ALTER TABLE leadQualifications ADD COLUMN proximoFollowUpAt TIMESTAMP NULL` },
+  { nome: 'lead.followUpTentativas', stmt: sql`ALTER TABLE leadQualifications ADD COLUMN followUpTentativas INT DEFAULT 0` },
+  { nome: 'lead.followUpErro', stmt: sql`ALTER TABLE leadQualifications ADD COLUMN followUpErro VARCHAR(255) NULL` },
   { nome: 'lead.responsavelId', stmt: sql`ALTER TABLE leadQualifications ADD COLUMN responsavelId INT NULL` },
   { nome: 'lead.aguardandoCorretorDesde', stmt: sql`ALTER TABLE leadQualifications ADD COLUMN aguardandoCorretorDesde TIMESTAMP NULL` },
   { nome: 'lead.atendidoAt', stmt: sql`ALTER TABLE leadQualifications ADD COLUMN atendidoAt TIMESTAMP NULL` },

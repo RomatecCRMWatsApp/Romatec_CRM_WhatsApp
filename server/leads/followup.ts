@@ -7,9 +7,12 @@
  * - Lead respondeu → cancela; o CRM respondeu → recomeça do dia 1.
  * - Sem escassez inventada; toda mensagem permite sair (SAIR).
  * - Só em horário comercial (seg–sáb, 8h–19h no Maranhão).
+ * - Sem duplicidade: o passo é reservado com um UPDATE condicional antes do envio.
+ * - Falha no envio: tenta de novo em 30 min e em 2 h; depois segue a cadência e
+ *   deixa o erro em followUpErro (aparece na tela do lead).
  * Desliga com FOLLOWUP_AUTOMATICO=off.
  */
-import { and, eq, inArray, isNotNull, lte } from 'drizzle-orm';
+import { and, eq, inArray, isNotNull, isNull, lte } from 'drizzle-orm';
 import { appUrl } from './config';
 
 /** Dias desde a última conversa em que sai cada follow-up (passo 1..5) */
@@ -109,7 +112,7 @@ export async function agendarFollowUp(phone: string, agora = Date.now()): Promis
   const fone = phone.replace(/\D/g, '');
   const prox = quandoSai(1, agora);
   await d.update(leadQualifications)
-    .set({ followUpPasso: 0, proximoFollowUpAt: prox ? new Date(proximoHorarioComercial(prox)) : null } as any)
+    .set({ followUpPasso: 0, proximoFollowUpAt: prox ? new Date(proximoHorarioComercial(prox)) : null, followUpTentativas: 0 } as any)
     .where(eq(leadQualifications.phone, fone));
 }
 
@@ -139,37 +142,82 @@ export async function processarFollowUps(agora = Date.now(), limite = 15): Promi
   const nomeEmp = new Map(emps.map(e => [e.slug, e.nome]));
   const { enviarTexto } = await import('./zapiClient');
   const { registrarMensagem } = await import('./qualificacaoService');
+  const { linhasAfetadas, registrarEnvio } = await import('./rotinas');
   let enviados = 0;
   for (const l of vencidos) {
-    const passo = (Number(l.followUpPasso) || 0) + 1;
+    const anterior = Number(l.followUpPasso) || 0;
+    const passo = anterior + 1;
     const pausa = followUpPausado(l, agora);
     const texto = pausa ? null : mensagemFollowUp(passo, { ...l, empreendimentoNome: nomeEmp.get(l.empreendimentoSlug) });
     if (!texto) {
       await d.update(leadQualifications).set({ proximoFollowUpAt: null } as any).where(eq(leadQualifications.id, l.id));
       continue;
     }
-    // Marca antes de enviar: se o envio falhar, não repete em loop
-    const base = new Date(l.proximoFollowUpAt).getTime() - (CADENCIA_DIAS[passo - 1] ?? 0) * DIA;
-    const prox = quandoSai(passo + 1, base);
-    await d.update(leadQualifications).set({
-      followUpPasso: passo, proximoFollowUpAt: prox ? new Date(proximoHorarioComercial(Math.max(prox, agora + 3600_000))) : null,
-    } as any).where(eq(leadQualifications.id, l.id));
+    // Reserva atômica: só um servidor (ex.: dois no ar durante o deploy) consegue
+    // avançar o passo; quem não conseguiu pula o lead — nada sai em duplicidade.
+    const prox = proximoPassoEm(passo, agora);
+    const reserva = await d.update(leadQualifications).set({ followUpPasso: passo, proximoFollowUpAt: prox ? new Date(prox) : null } as any)
+      .where(and(
+        eq(leadQualifications.id, l.id),
+        l.followUpPasso == null ? isNull(leadQualifications.followUpPasso) : eq(leadQualifications.followUpPasso, anterior),
+        eq(leadQualifications.proximoFollowUpAt, new Date(l.proximoFollowUpAt)),
+      ));
+    if (linhasAfetadas(reserva) === 0) continue;
     try {
       await enviarTexto(l.phone, texto);
+      registrarEnvio('followup', true);
+      if (Number(l.followUpTentativas) || l.followUpErro) {
+        await d.update(leadQualifications).set({ followUpTentativas: 0, followUpErro: null } as any).where(eq(leadQualifications.id, l.id));
+      }
       await registrarMensagem(l.id, 'out', 'sistema', texto).catch(() => {});
       enviados++;
       console.log(`[FollowUp] Lead ${l.id}: passo ${passo} enviado`);
     } catch (e: any) {
-      console.warn(`[FollowUp] Lead ${l.id}: falha no envio do passo ${passo}: ${e?.message}`);
+      const erro = String(e?.message ?? e).slice(0, 200);
+      registrarEnvio('followup', false, erro);
+      const tentativas = (Number(l.followUpTentativas) || 0) + 1;
+      const de = novaTentativaEm(tentativas, agora);
+      if (de) {
+        // Devolve o passo e tenta de novo mais tarde (só se ninguém mexeu no lead nesse meio-tempo)
+        await d.update(leadQualifications).set({
+          followUpPasso: anterior, proximoFollowUpAt: new Date(de), followUpTentativas: tentativas, followUpErro: `Passo ${passo}: ${erro}`,
+        } as any).where(and(eq(leadQualifications.id, l.id), eq(leadQualifications.followUpPasso, passo)));
+        console.warn(`[FollowUp] Lead ${l.id}: passo ${passo} falhou (${tentativas}/${MAX_TENTATIVAS}), nova tentativa às ${new Date(de).toISOString()}: ${erro}`);
+      } else {
+        // Desistiu deste passo: segue a cadência normal e deixa o erro registrado
+        await d.update(leadQualifications).set({ followUpTentativas: 0, followUpErro: `Passo ${passo} não enviado após ${MAX_TENTATIVAS} tentativas: ${erro}` } as any)
+          .where(eq(leadQualifications.id, l.id));
+        console.warn(`[FollowUp] Lead ${l.id}: passo ${passo} desistido após ${MAX_TENTATIVAS} tentativas: ${erro}`);
+      }
     }
   }
   return enviados;
+}
+
+/** Quando sai o passo seguinte a `passo`, contado do envio de agora (null = acabou a cadência) */
+export function proximoPassoEm(passo: number, agora: number): number | null {
+  const atual = CADENCIA_DIAS[passo - 1], seguinte = CADENCIA_DIAS[passo];
+  if (atual === undefined || seguinte === undefined) return null;
+  return proximoHorarioComercial(agora + (seguinte - atual) * DIA);
+}
+
+/** Tentativas por passo (1 envio + 2 novas tentativas, depois de 30 min e de 2 h) */
+export const MAX_TENTATIVAS = 3;
+const ESPERA_TENTATIVA = [30 * 60_000, 2 * 3600_000];
+
+/** Quando tentar de novo depois da `tentativas`-ésima falha; null = desiste do passo */
+export function novaTentativaEm(tentativas: number, agora: number): number | null {
+  const espera = ESPERA_TENTATIVA[tentativas - 1];
+  return tentativas >= MAX_TENTATIVAS || espera === undefined ? null : proximoHorarioComercial(agora + espera);
 }
 
 let timer: NodeJS.Timeout | null = null;
 /** Roda a cada 10 min, independente do agendador de campanhas */
 export function iniciarJobFollowUp(intervaloMs = 10 * 60_000) {
   if (timer || !followUpLigado()) return;
-  timer = setInterval(() => { processarFollowUps().catch(e => console.warn('[FollowUp] Rodada falhou:', e?.message)); }, intervaloMs);
+  import('./rotinas').then(({ registrarRotina, rodarRotina }) => {
+    registrarRotina('followup', intervaloMs);
+    timer = setInterval(() => { void rodarRotina('followup', () => processarFollowUps()); }, intervaloMs);
+  }).catch(e => console.warn('[FollowUp] Job não iniciado:', e?.message));
   console.log('[FollowUp] Job de follow-up iniciado (1, 3, 7, 14 e 30 dias)');
 }

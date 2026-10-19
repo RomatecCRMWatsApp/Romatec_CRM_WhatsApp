@@ -308,6 +308,13 @@ async function startServer() {
     }
   });
 
+  // Saúde das rotinas automáticas para monitor externo (503 = alguma rotina com problema; sem dados de lead)
+  app.get('/api/saude', async (_req, res) => {
+    const { estadoRotinas } = await import('../leads/rotinas');
+    const e = estadoRotinas();
+    res.status(e.ok ? 200 : 503).set('Cache-Control', 'no-store').json(e);
+  });
+
   // "✅ Já atendi" do aviso: para o alerta de 5 minutos (link assinado, sem login)
   app.get('/a/:id/:token', async (req, res) => {
     const id = Number(req.params.id);
@@ -683,6 +690,8 @@ async function startServer() {
   // Follow-up persistente (1/3/7/14/30 dias) e prazo de atendimento — não dependem das campanhas
   import('../leads/followup').then(m => m.iniciarJobFollowUp()).catch(e => console.warn('[FollowUp] Job não iniciado:', e));
   import('../leads/sla').then(m => m.iniciarJobSla()).catch(e => console.warn('[SLA] Job não iniciado:', e));
+  // Vigia: avisa no Telegram se o follow-up ou o alerta de atendimento pararem
+  import('../leads/rotinas').then(m => m.iniciarVigiaRotinas()).catch(e => console.warn('[Rotinas] Vigia não iniciado:', e));
 
   const preferredPort = parseInt(process.env.PORT || "3000");
   const port = await findAvailablePort(preferredPort);
