@@ -351,6 +351,10 @@ export class CampaignScheduler {
         return;
       }
 
+      // Ritmo seguro: só seg–sáb 8h–20h e até DISPARO_LIMITE_DIA por dia (protege o número)
+      const { podeDisparar } = await import('./ritmoEnvio');
+      if (!(await podeDisparar(db))) return;
+
       const contact = await getNextContact(campaignId);
       if (!contact) {
         console.log(`⚠️ ${campaign.name}: sem contatos disponíveis`);

@@ -42,6 +42,14 @@ async function startServer() {
 
   app.post('/api/webhook/zapi', async (req, res) => {
     try {
+      // Só aceita avisos da instância do CRM (e, se configurado, com ?k=ZAPI_WEBHOOK_TOKEN)
+      const { recusarWebhook } = await import('../zapiWebhookGuard');
+      const recusa = await recusarWebhook(req.body, req.query?.k);
+      if (recusa) {
+        console.warn(`[Webhook] Recusado (${recusa}) — instanceId=${String(req.body?.instanceId ?? '').slice(0, 8)}…`);
+        return res.status(403).json({ error: 'forbidden' });
+      }
+
       // Verificação HMAC opcional. Se ZAPI_WEBHOOK_SECRET estiver definida,
       // exige header x-zapi-signature válido. Bloqueia atacantes injetando
       // mensagens fake no webhook público (que aciona o bot e gasta créditos).
