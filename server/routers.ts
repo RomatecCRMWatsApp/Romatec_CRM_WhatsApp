@@ -797,6 +797,8 @@ export const appRouter = router({
         score: z.enum(['quente', 'morno', 'frio', 'all']).optional().default('all'),
         stage: z.string().optional(),
         search: z.string().optional(),
+        /** ativos (padrão): some quem foi descartado, não tem interesse ou pediu para sair */
+        situacao: z.enum(['ativos', 'descartados', 'todos']).optional().default('ativos'),
         limit: z.number().min(1).max(200).optional().default(50),
         offset: z.number().min(0).optional().default(0),
       }))
@@ -805,6 +807,11 @@ export const appRouter = router({
         if (!db) return { leads: [], total: 0, stats: { quente: 0, morno: 0, frio: 0, total: 0, descartado: 0 } };
 
         let rows = await db.select().from(leadQualifications).orderBy(desc(leadQualifications.updatedAt));
+
+        // Descartados / bloqueados (SAIR) ficam fora da lista, a não ser que se peça para ver
+        const { leadInativo } = await import('./leads/inativo');
+        if (input.situacao === 'ativos') rows = rows.filter((r: any) => !leadInativo(r));
+        else if (input.situacao === 'descartados') rows = rows.filter((r: any) => leadInativo(r));
 
         // Filtro por score
         if (input.score !== 'all') {
@@ -828,14 +835,15 @@ export const appRouter = router({
 
         // Stats gerais
         const allRows = await db.select().from(leadQualifications);
+        const ativos = allRows.filter((r: any) => !leadInativo(r));
         const stats = {
-          total: allRows.length,
-          quente: allRows.filter((r: any) => r.score === 'quente').length,
-          morno: allRows.filter((r: any) => r.score === 'morno').length,
-          frio: allRows.filter((r: any) => r.score === 'frio').length,
-          descartado: allRows.filter((r: any) => r.stage === 'descartado' || r.stage === 'sem_interesse').length,
-          qualificado: allRows.filter((r: any) => r.stage === 'qualificado').length,
-          emAndamento: allRows.filter((r: any) => String(r.stage || '').startsWith('qual_etapa')).length,
+          total: ativos.length,
+          quente: ativos.filter((r: any) => r.score === 'quente').length,
+          morno: ativos.filter((r: any) => r.score === 'morno').length,
+          frio: ativos.filter((r: any) => r.score === 'frio').length,
+          descartado: allRows.length - ativos.length,
+          qualificado: ativos.filter((r: any) => r.stage === 'qualificado').length,
+          emAndamento: ativos.filter((r: any) => String(r.stage || '').startsWith('qual_etapa')).length,
         };
 
         const total = rows.length;

@@ -119,11 +119,14 @@ export default function Leads() {
     return () => clearTimeout(t);
   }, [search]);
 
-  useEffect(() => { setOffset(0); }, [scoreFilter, debouncedSearch]);
+  // Descartados / bloqueados ficam fora da lista; o botão "Descartados" mostra só eles
+  const [verDescartados, setVerDescartados] = useState(false);
+  useEffect(() => { setOffset(0); }, [scoreFilter, debouncedSearch, verDescartados]);
 
   const { data, isLoading, refetch } = trpc.leads.list.useQuery({
     score: scoreFilter,
     search: debouncedSearch || undefined,
+    situacao: verDescartados ? 'descartados' : 'ativos',
     limit: LIMIT,
     offset,
   }, { refetchInterval: 30000 });
@@ -295,6 +298,18 @@ export default function Leads() {
               </button>
             );
           })}
+          <button
+            onClick={() => setVerDescartados(v => !v)}
+            title="Leads descartados, sem interesse ou que pediram para sair"
+            style={{
+              padding: '7px 14px', borderRadius: '20px', fontSize: '11px', fontWeight: 700, cursor: 'pointer', letterSpacing: '0.05em',
+              background: verDescartados ? 'rgba(107,114,128,0.25)' : 'rgba(255,255,255,0.04)',
+              border: `1px solid ${verDescartados ? 'rgba(156,163,175,0.6)' : 'rgba(255,255,255,0.08)'}`,
+              color: verDescartados ? '#e5e7eb' : '#4a7a55',
+            }}
+          >
+            {verDescartados ? '← Voltar aos ativos' : `🗑️ Descartados (${stats?.descartado ?? 0})`}
+          </button>
         </div>
 
         {/* ── Lead list ────────────────────────────────────────────── */}
