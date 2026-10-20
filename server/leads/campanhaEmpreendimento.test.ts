@@ -1,23 +1,29 @@
 import { describe, it, expect } from 'vitest';
-import { montarAbertura, RODAPE_LGPD } from './inbound';
+import { montarAbertura } from './inbound';
 
 describe('Campanha ligada a empreendimento (BJ-IG-PAGO → Bom Jardims)', () => {
-  it('abertura do Bom Jardims: roteiro próprio, corretor com CRECI, sem preço e sem as 3 perguntas do bot', () => {
+  it('abertura do Bom Jardims: lista exclusiva do empreendimento, corretor com CRECI, sem preço e sem as 3 perguntas do bot', () => {
     const m = montarAbertura({ funil: 'comprador', nome: 'maria silva', empreendimento: { slug: 'bom-jardims', nome: 'Condomínio de Chácaras Bom Jardims' } });
     expect(m).toContain('Olá, Maria!');
-    expect(m).toContain('Condomínio de Chácaras Bom Jardims');
+    expect(m).toContain('*lista exclusiva* do empreendimento *Condomínio de Chácaras Bom Jardims*');
     expect(m).toContain('CRECI/MA 4.705');
     expect(m).toContain('vai te chamar pelo número pessoal dele, *(99) 9 9181-1246*');
-    expect(m).toContain(RODAPE_LGPD);
+    expect(m).toContain('Para sair da lista, responda SAIR.');
     expect(m).not.toMatch(/R\$|valor|3 perguntas/i);
     expect(m.split('\n').length).toBeGreaterThan(3);
   });
 
-  it('outro empreendimento: mensagem genérica de atendimento humano', () => {
+  it('outro empreendimento: a mesma mensagem padrão, com o nome dele', () => {
     const m = montarAbertura({ funil: 'comprador', nome: null, empreendimento: { slug: 'outro', nome: 'Residencial X' } });
-    expect(m).toContain('*Residencial X*');
+    expect(m).toContain('*lista exclusiva* do empreendimento *Residencial X*');
     expect(m).toContain('vai te chamar pelo número pessoal dele, *(99) 9 9181-1246*');
     expect(m).not.toContain('3 perguntas');
+  });
+
+  it('empreendimento sem nome cadastrado: lista exclusiva genérica', () => {
+    const m = montarAbertura({ funil: 'comprador', nome: 'Ana', empreendimento: { slug: 'sumiu', nome: null } });
+    expect(m).toContain('Você está na nossa *lista exclusiva*.');
+    expect(m).not.toContain('sumiu');
   });
 
   it('sem empreendimento continua a abertura de sempre', () => {

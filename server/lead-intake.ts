@@ -287,8 +287,17 @@ export async function ingestLead(input: LeadIntakeInput): Promise<LeadIntakeResu
   console.log(`[LeadIntake] ${lead ? 'Atualizado' : 'Novo'} lead ${phone} origem=${input.origem} imovel=${imovel || '-'}`);
 
   let messageSent = false;
+  let welcome: string | null = null;
   if (shouldMessage) {
-    messageSent = await sendWelcome(phone, input.welcomeMessage ?? buildWelcomeMessage(nome, imovel), {
+    // Lead de empreendimento: boas-vindas com a lista exclusiva do empreendimento (nome do cadastro)
+    if (!input.welcomeMessage && input.empreendimentoSlug) {
+      const { boasVindasListaExclusiva, nomeDoEmpreendimento } = await import('./leads/listaComunicacao');
+      const nomeEmp = await nomeDoEmpreendimento(input.empreendimentoSlug).catch(() => null);
+      welcome = boasVindasListaExclusiva(nome, nomeEmp);
+    } else {
+      welcome = input.welcomeMessage ?? buildWelcomeMessage(nome, imovel);
+    }
+    messageSent = await sendWelcome(phone, welcome, {
       // Lead de empreendimento não entra no follow-up genérico do bot
       registerFollowUp: !input.empreendimentoSlug,
       nome,
@@ -297,6 +306,11 @@ export async function ingestLead(input: LeadIntakeInput): Promise<LeadIntakeResu
 
   // Interesse lead × imóvel (para o lead recorrente com outro imóvel)
   const [leadRow] = await db.select({ id: leadQualifications.id }).from(leadQualifications).where(eq(leadQualifications.phone, phone)).limit(1);
+  // Boas-vindas do empreendimento fica na conversa: a resposta da lista não se repete nas próximas 24 h
+  if (leadRow && messageSent && welcome && input.empreendimentoSlug) {
+    const { registrarMensagem } = await import('./leads/qualificacaoService');
+    await registrarMensagem(leadRow.id, 'out', 'sistema', welcome).catch(() => {});
+  }
   if (leadRow && input.propertyId) {
     await db.insert(leadInteresses).values({ leadId: leadRow.id, propertyId: input.propertyId, campanhaId: campanhaCad?.id ?? null }).catch(() => {});
   }

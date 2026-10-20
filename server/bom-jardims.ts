@@ -7,9 +7,10 @@
 import type { Express } from 'express';
 import { z } from 'zod';
 import { ingestLead, origemFromUtm, origemVisitaSchema } from './lead-intake';
-import { fraseCorretorChama } from './leads/config';
+import { boasVindasListaExclusiva } from './leads/listaComunicacao';
 
 export const BOM_JARDIMS_SLUG = 'bom-jardims';
+export const BOM_JARDIMS_NOME = 'Condomínio de Chácaras Bom Jardims';
 
 /** Texto de consentimento (§8.3) — registrado junto com o lead */
 export const BOM_JARDIMS_CONSENT_TEXT =
@@ -53,15 +54,9 @@ export function scoreBomJardims(input: { prazo?: string; pagamento?: string; cid
   return Math.min(100, score);
 }
 
-/** Resposta automática ao novo lead (§7.1) */
+/** Resposta automática ao novo lead (§7.1): boas-vindas padrão com a confirmação da lista exclusiva */
 export function bomJardimsWelcome(nome: string): string {
-  const primeiro = nome.trim().split(/\s+/)[0] || '';
-  const fn = primeiro ? primeiro.charAt(0).toUpperCase() + primeiro.slice(1).toLowerCase() : '';
-  return [
-    `Olá${fn ? `, ${fn}` : ''}! 👋 Aqui é do *Condomínio de Chácaras Bom Jardims*, em Açailândia/MA. Obrigado pelo interesse!`,
-    ``,
-    `${fraseCorretorChama()} Enquanto isso, me conta: você procura a chácara para *morar*, para *lazer de fim de semana* ou como *investimento*?`,
-  ].join('\n');
+  return boasVindasListaExclusiva(nome, BOM_JARDIMS_NOME);
 }
 
 // ─── Meta Lead Ads (formulário instantâneo) ──────────────────────────────────

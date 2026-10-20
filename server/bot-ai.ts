@@ -996,16 +996,16 @@ export async function processBotMessage(context: BotContext): Promise<BotRespons
       await discardLead(clean, `opt-out (${empreendimento})`, 24 * 365 * 5);
       return { text: 'Tudo bem! Seu cadastro foi cancelado e não enviaremos mais mensagens. Obrigado! 😊', qualified: false };
     }
-    // Responde que o lead está na lista de comunicação (1x a cada 24 h); o corretor segue no atendimento
+    // Responde que o lead está na lista exclusiva (1x a cada 24 h); o corretor segue no atendimento
     try {
       const { respostaListaComunicacao } = await import('./leads/listaComunicacao');
       const lista = await respostaListaComunicacao(clean, senderName, empreendimento);
       if (lista) {
-        console.log(`[Bot] 📋 Lead ${clean} do empreendimento ${empreendimento} — mensagem da lista de comunicação`);
+        console.log(`[Bot] 📋 Lead ${clean} do empreendimento ${empreendimento} — mensagem da lista exclusiva`);
         return { text: lista, qualified: true };
       }
     } catch (e: any) {
-      console.warn('[Bot] Lista de comunicação indisponível:', e?.message);
+      console.warn('[Bot] Lista exclusiva indisponível:', e?.message);
     }
     console.log(`[Bot] 👤 Lead ${clean} do empreendimento ${empreendimento} — atendimento humano, bot não responde`);
     return { text: '', qualified: true };

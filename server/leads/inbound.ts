@@ -12,7 +12,7 @@ import { extrairAtribuicao, type Funil } from './atribuicao';
 import { assistenteNome, appUrl, fraseCorretorChama } from './config';
 import { formatarReais, notificarLead } from './notificacao';
 import { normalizePhoneBR } from '../lead-intake';
-import { bomJardimsWelcome } from '../bom-jardims';
+import { boasVindasListaExclusiva } from './listaComunicacao';
 
 export interface ImovelResumo {
   id: number;
@@ -45,15 +45,12 @@ export function linkImovel(imovel: Pick<ImovelResumo, 'codigo' | 'publicSlug'>):
 }
 
 /** Mensagem de abertura para quem chegou pelo WhatsApp (§7.4) */
-export function montarAbertura(params: { funil: Funil; nome?: string | null; imovel?: ImovelResumo | null; empreendimento?: { slug: string; nome: string } | null }): string {
+export function montarAbertura(params: { funil: Funil; nome?: string | null; imovel?: ImovelResumo | null; empreendimento?: { slug: string; nome?: string | null } | null }): string {
   const fn = primeiroNome(params.nome);
   const ola = `Olá${fn ? `, ${fn}` : ''}! Aqui é ${assistenteNome()}, da Romatec Consultoria Total.`;
-  // Empreendimento (ex.: Bom Jardims): roteiro próprio e atendimento humano — sem as 3 perguntas do bot, sem preço
+  // Empreendimento (ex.: Bom Jardims): confirma a lista exclusiva e segue no atendimento humano — sem as 3 perguntas do bot, sem preço
   const emp = params.empreendimento;
-  if (emp) {
-    if (emp.slug === 'bom-jardims') return [bomJardimsWelcome(fn), '', RODAPE_LGPD].join('\n');
-    return [ola, '', `Recebi seu interesse no *${emp.nome}* 🏡 ${fraseCorretorChama()}`, '', RODAPE_LGPD].join('\n');
-  }
+  if (emp) return boasVindasListaExclusiva(fn, emp.nome);
   if (params.funil === 'proprietario') {
     return [
       ola,
@@ -168,11 +165,10 @@ export async function processarEntradaWhatsApp(input: { phone: string; texto: st
   const campanhaLabel = campanha?.codigo || atrib.campanhaCodigo || null;
   // Campanha ligada a empreendimento (ex.: BJ-IG-PAGO → Bom Jardims): atendimento humano, sem bot genérico
   const empSlug: string | null = campanha?.empreendimentoSlug || null;
-  let empreendimento: { slug: string; nome: string } | null = null;
+  let empreendimento: { slug: string; nome: string | null } | null = null;
   if (empSlug) {
-    const { empreendimentos } = await import('../../drizzle/schema');
-    const [e]: any[] = await db.select({ nome: empreendimentos.nome }).from(empreendimentos).where(eq(empreendimentos.slug, empSlug)).limit(1);
-    empreendimento = { slug: empSlug, nome: e?.nome || empSlug };
+    const { nomeDoEmpreendimento } = await import('./listaComunicacao');
+    empreendimento = { slug: empSlug, nome: await nomeDoEmpreendimento(empSlug) };
   }
 
   const gravarInteresses = async (leadId: number, ids: number[]) => {
@@ -217,7 +213,7 @@ export async function processarEntradaWhatsApp(input: { phone: string; texto: st
       tipo: 'novo_lead', leadId, nome, telefone: phone, funil, score: sc?.score ?? null, classe: sc?.classe ?? null,
       imovel: imovelPrincipal
         ? { codigo: imovelPrincipal.codigo, titulo: imovelPrincipal.titulo, preco: imovelPrincipal.exibirPreco ? imovelPrincipal.preco : null }
-        : empreendimento ? { codigo: null, titulo: empreendimento.nome, preco: null } : null,
+        : empreendimento ? { codigo: null, titulo: empreendimento.nome || empreendimento.slug, preco: null } : null,
       imovelProprietario: funil === 'proprietario' ? 'detalhes a confirmar na conversa' : null,
       origem: rotuloCanal(decisao.canal), campanhaCodigo: campanhaLabel,
       detalhes: empreendimento ? ['👤 Atendimento humano: responda você pelo WhatsApp do CRM (o bot não pergunta renda/FGTS)'] : undefined,
