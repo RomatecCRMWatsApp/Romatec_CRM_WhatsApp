@@ -7,12 +7,16 @@ import { useEffect, useMemo, useState } from "react";
  */
 
 type Pt = [number, number]; // [lon, lat]
-type MapaData = {
+export type MapaData = {
   lotes: { codigo: string; quadra: string; numero: number; areaM2: number; comercializavel: boolean; poly: Pt[] }[];
   ruas: { nome: string; line: Pt[] }[];
   perimetro: Pt[];
   pontos: { nome: string; pt: Pt }[];
+  /** Rio/córrego (eixo) e área de vivência e recreação, da planta oficial */
+  rio?: { nome: string; line: Pt[] };
+  areas?: { nome: string; detalhe?: string; poly: Pt[]; rotulo?: Pt }[];
 };
+const valido = (p: Pt | null | undefined): p is Pt => !!p && Number.isFinite(p[0]) && Number.isFinite(p[1]);
 
 export type LoteInfo = {
   codigo: string;
@@ -51,7 +55,7 @@ const PAD = 24;
 function useProjection(data: MapaData | null) {
   return useMemo(() => {
     if (!data) return null;
-    const all = [...data.perimetro, ...data.lotes.flatMap(l => l.poly)];
+    const all = [...data.perimetro, ...data.lotes.flatMap(l => l.poly), ...(data.rio?.line ?? []), ...(data.areas ?? []).flatMap(a => a.poly)].filter(valido);
     const lats = all.map(p => p[1]);
     const lons = all.map(p => p[0]);
     const minLon = Math.min(...lons), maxLon = Math.max(...lons);
@@ -89,18 +93,21 @@ export function lotesDoMapa(data: MapaData): LoteInfo[] {
   }));
 }
 
-export default function LoteMap({ lotes, selected, onSelect, onMapLoaded }: {
+export default function LoteMap({ lotes, selected, onSelect, onMapLoaded, dados }: {
   /** Chamado com os lotes da geometria pública, para a página usar se a API falhar */
   onMapLoaded?: (fallback: LoteInfo[]) => void;
+  /** Geometria já carregada (testes); sem isso, busca /bom-jardims/mapa.json */
+  dados?: MapaData;
   lotes: LoteInfo[];
   selected?: string;
   onSelect: (codigo: string) => void;
 }) {
-  const [data, setData] = useState<MapaData | null>(null);
+  const [data, setData] = useState<MapaData | null>(dados ?? null);
   const [error, setError] = useState(false);
   const proj = useProjection(data);
 
   useEffect(() => {
+    if (dados) return;
     fetch("/bom-jardims/mapa.json")
       .then(r => (r.ok ? r.json() : Promise.reject()))
       .then((d: MapaData) => { setData(d); onMapLoaded?.(lotesDoMapa(d)); })
@@ -124,8 +131,18 @@ export default function LoteMap({ lotes, selected, onSelect, onMapLoaded }: {
         <svg viewBox={`0 0 ${W} ${H}`} role="img" aria-label="Mapa de vendas do Bom Jardims"
           style={{ display: "block", width: "100%", height: "auto" }}>
           <path d={pathOf(data.perimetro.map(project))} fill="#D3E2BC" stroke="#0C3320" strokeWidth={2} strokeDasharray="6 4" />
-          {data.ruas.map(r => (
-            <path key={r.nome} d={pathOf(r.line.map(project), false)} fill="none" stroke="#FFFFFF" strokeWidth={7} strokeLinecap="round" />
+          {/* Área de vivência e recreação na frente, junto ao rio */}
+          {data.areas?.map(a => (
+            <path key={a.nome} d={pathOf(a.poly.filter(valido).map(project))} fill="#BFDB9C" stroke="#2F7D3A" strokeWidth={1.5} strokeDasharray="6 4" />
+          ))}
+          {data.rio?.line?.length ? (
+            <g pointerEvents="none">
+              <path d={pathOf(data.rio.line.filter(valido).map(project), false)} fill="none" stroke="#7FB069" strokeOpacity={0.5} strokeWidth={24} strokeLinecap="round" strokeLinejoin="round" />
+              <path d={pathOf(data.rio.line.filter(valido).map(project), false)} fill="none" stroke="#2C7FB8" strokeWidth={8} strokeLinecap="round" strokeLinejoin="round" />
+            </g>
+          ) : null}
+          {data.ruas.filter(r => r.line.filter(valido).length > 1).map(r => (
+            <path key={r.nome} d={pathOf(r.line.filter(valido).map(project), false)} fill="none" stroke="#FFFFFF" strokeWidth={7} strokeLinecap="round" />
           ))}
           {data.lotes.map(l => {
             const info = byCodigo.get(l.codigo);
@@ -150,11 +167,26 @@ export default function LoteMap({ lotes, selected, onSelect, onMapLoaded }: {
               </g>
             );
           })}
+          {data.areas?.filter(a => valido(a.rotulo)).map(a => {
+            const [x, y] = project(a.rotulo!);
+            return (
+              <text key={`r${a.nome}`} x={x} y={y} textAnchor="middle" fontSize={15} fontWeight={800} fill="#1F5A2A" stroke="#FFFFFF" strokeWidth={3} paintOrder="stroke" pointerEvents="none">
+                <tspan x={x} dy={0}>ÁREA DE VIVÊNCIA</tspan>
+                <tspan x={x} dy={17}>E RECREAÇÃO</tspan>
+              </text>
+            );
+          })}
           {data.pontos.map(p => {
             const [x, y] = project(p.pt);
+            const portal = /portal/i.test(p.nome);
             return (
               <g key={p.nome}>
                 <circle cx={x} cy={y} r={7} fill="#C9A84C" stroke="#0C3320" strokeWidth={2} />
+                {portal && (
+                  <text x={x - 12} y={y - 12} textAnchor="end" fontSize={14} fontWeight={800} fill="#0C3320" stroke="#FFFFFF" strokeWidth={3} paintOrder="stroke" pointerEvents="none">
+                    PORTAL DE ENTRADA
+                  </text>
+                )}
                 <title>{p.nome}</title>
               </g>
             );
@@ -186,6 +218,18 @@ export default function LoteMap({ lotes, selected, onSelect, onMapLoaded }: {
           <span style={{ width: 14, height: 14, borderRadius: 7, background: "#C9A84C", border: "2px solid #0C3320" }} />
           Portal, stand, poço e pontos de banho
         </span>
+        {data.areas?.length ? (
+          <span style={{ display: "inline-flex", alignItems: "center", gap: 6 }}>
+            <span style={{ width: 14, height: 14, borderRadius: 3, background: "#BFDB9C", border: "1px solid #2F7D3A" }} />
+            Área de vivência e recreação
+          </span>
+        ) : null}
+        {data.rio ? (
+          <span style={{ display: "inline-flex", alignItems: "center", gap: 6 }}>
+            <span style={{ width: 18, height: 6, borderRadius: 3, background: "#2C7FB8" }} />
+            Rio
+          </span>
+        ) : null}
       </div>
 
       {/* Chácara selecionada */}
