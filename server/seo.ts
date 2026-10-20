@@ -4,6 +4,7 @@
  * canonical, Open Graph e JSON-LD conforme a rota, e gera robots.txt e sitemap.xml.
  * Regra do pacote Bom Jardims: nada de preço em meta tag (nem de imóvel com exibirPreco=false).
  */
+import { FAQ_BOM_JARDIMS, NOMES_ALTERNATIVOS, htmlEstaticoBomJardims } from '../shared/bomJardimsSeo';
 
 export interface MetaPagina {
   title: string;
@@ -14,6 +15,8 @@ export interface MetaPagina {
   /** false = noindex (telas internas do CRM) */
   indexavel: boolean;
   jsonLd?: Record<string, unknown> | null;
+  /** Texto visível no HTML inicial (dentro de #root; o React substitui ao carregar) — o Google lê mesmo sem rodar o JS */
+  conteudoHtml?: string | null;
 }
 
 export interface ImovelSeo {
@@ -33,18 +36,49 @@ export const ROTAS_INTERNAS = ['/dashboard', '/contacts', '/properties', '/campa
 const CRECI = 'Corretor José Romário · CRECI/MA 4.705';
 
 export const META_BOM_JARDIMS: MetaPagina = {
-  title: 'Condomínio de Chácaras Bom Jardims em Açailândia/MA — 82 chácaras',
-  description: 'Condomínio fechado de chácaras na Fazenda Lua Nova, Açailândia/MA: 82 chácaras a partir de 3.025 m², portal com guarita, ruas de 12 m e área de vivência às margens do córrego. Pré-lançamento — veja o mapa e cadastre-se. ' + CRECI + '.',
+  // Começa pelo nome que as pessoas buscam ("Chácaras Bom Jardims"); a cidade vem depois
+  title: 'Chácaras Bom Jardims | Condomínio de Chácaras em Açailândia - MA',
+  description: 'Chácaras Bom Jardims: chácaras à venda em Açailândia/MA, na BR-222 (região de Imperatriz). Condomínio de chácaras com 82 chácaras a partir de 3.025 m², portal, ruas de 12 m e área de vivência. Veja o mapa e agende sua visita. ' + CRECI + '.',
   path: '/bom-jardims',
   image: '/bom-jardims/og.jpg',
   indexavel: true,
+  conteudoHtml: htmlEstaticoBomJardims(),
   jsonLd: {
     '@context': 'https://schema.org',
-    '@type': 'Place',
-    name: 'Condomínio de Chácaras Bom Jardims',
-    description: 'Condomínio fechado de chácaras em Açailândia/MA — 82 chácaras a partir de 3.025 m².',
-    address: { '@type': 'PostalAddress', addressLocality: 'Açailândia', addressRegion: 'MA', addressCountry: 'BR', streetAddress: 'Estrada do Piquiá dos Baianos, altura do km 15 da BR-222' },
-    telephone: '+55 99 99181-1246',
+    '@graph': [
+      {
+        '@type': 'Place',
+        '@id': 'https://romateccrm.com/bom-jardims#lugar',
+        name: 'Condomínio de Chácaras Bom Jardims',
+        alternateName: NOMES_ALTERNATIVOS,
+        description: 'Condomínio de chácaras em Açailândia/MA, na BR-222 — 82 chácaras a partir de 3.025 m², portal de acesso, ruas internas de 12 m e área de vivência.',
+        address: { '@type': 'PostalAddress', addressLocality: 'Açailândia', addressRegion: 'MA', addressCountry: 'BR', streetAddress: 'Estrada do Piquiá dos Baianos, altura do km 15 da BR-222' },
+        geo: { '@type': 'GeoCoordinates', latitude: -4.9254537, longitude: -47.3826563 },
+        containedInPlace: { '@type': 'City', name: 'Açailândia', address: { '@type': 'PostalAddress', addressRegion: 'MA', addressCountry: 'BR' } },
+        telephone: '+55 99 99181-1246',
+        image: 'https://romateccrm.com/bom-jardims/og.jpg',
+        url: 'https://romateccrm.com/bom-jardims',
+      },
+      {
+        '@type': 'RealEstateAgent',
+        name: 'Romatec Consultoria Total',
+        url: 'https://romateccrm.com',
+        telephone: '+55 99 99181-1246',
+        address: { '@type': 'PostalAddress', streetAddress: 'Rua São Raimundo, 10, Centro', addressLocality: 'Açailândia', addressRegion: 'MA', addressCountry: 'BR' },
+        areaServed: ['Açailândia', 'Imperatriz', 'Maranhão'],
+      },
+      {
+        '@type': 'FAQPage',
+        mainEntity: FAQ_BOM_JARDIMS.map(f => ({ '@type': 'Question', name: f.pergunta, acceptedAnswer: { '@type': 'Answer', text: f.resposta } })),
+      },
+      {
+        '@type': 'BreadcrumbList',
+        itemListElement: [
+          { '@type': 'ListItem', position: 1, name: 'Romatec Imóveis', item: 'https://romateccrm.com/' },
+          { '@type': 'ListItem', position: 2, name: 'Chácaras Bom Jardims', item: 'https://romateccrm.com/bom-jardims' },
+        ],
+      },
+    ],
   },
 };
 
@@ -116,7 +150,8 @@ export function injetarMeta(html: string, meta: MetaPagina, base: string): strin
   return html
     .replace(/<title>[^<]*<\/title>/, `<title>${esc(meta.title)}</title>`)
     .replace(/<meta name="description" content="[^"]*"\s*\/?>/, `<meta name="description" content="${esc(meta.description)}" />`)
-    .replace('</head>', `    ${tags}\n  </head>`);
+    .replace('</head>', `    ${tags}\n  </head>`)
+    .replace('<div id="root"></div>', meta.conteudoHtml ? `<div id="root">${meta.conteudoHtml}</div>` : '<div id="root"></div>');
 }
 
 export function robotsTxt(base: string): string {

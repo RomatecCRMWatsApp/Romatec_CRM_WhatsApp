@@ -3,6 +3,7 @@ import { MessageCircle, MapPin, Droplets, Trees, ShieldCheck, Route, FileCheck2,
 import { trpc } from "@/lib/trpc";
 import { readUtm } from "@/components/LeadForm";
 import { origemDaVisita } from "@/lib/origemVisita";
+import { FAQ_BOM_JARDIMS } from "@shared/bomJardimsSeo";
 import LoteMap, { formatArea, STATUS_LABEL, type LoteInfo } from "@/components/bom-jardims/LoteMap";
 
 /**
@@ -335,6 +336,19 @@ export default function BomJardims() {
           ))}
         </div>
         <p style={{ fontSize: 12, color: C.suave, marginTop: 10 }}>Imagens em perspectiva, de caráter ilustrativo.</p>
+      </section>
+
+      {/* Perguntas frequentes (também vão para o Google como FAQ — server/seo.ts) */}
+      <section style={{ ...section, paddingTop: 0 }}>
+        <h2 style={h2}>Perguntas frequentes sobre as Chácaras Bom Jardims</h2>
+        <div style={{ display: "grid", gap: 10 }}>
+          {FAQ_BOM_JARDIMS.map(f => (
+            <details key={f.pergunta} style={{ padding: "14px 18px", borderRadius: 14, background: "#fff", border: "1px solid #E2D9BF" }}>
+              <summary style={{ cursor: "pointer", fontWeight: 700, color: C.verde }}>{f.pergunta}</summary>
+              <p style={{ margin: "10px 0 0", lineHeight: 1.55 }}>{f.resposta}</p>
+            </details>
+          ))}
+        </div>
       </section>
 
       {/* 6. Localização */}
