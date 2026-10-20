@@ -82,6 +82,8 @@ export const empreendimentosAdminRouter = router({
       })(),
       /** WhatsApp que recebe os leads (folder de divulgação) */
       whatsapp: (await import("../leads/config")).numeroWhatsAppLeads(),
+      /** Sugestão no envio pelo WhatsApp (número do José); o usuário digita o destino */
+      destinoSugerido: (await import("../leads/config")).telefonesNotificacao()[0] || "",
       lotes: lotesOut, resumo, arquivos,
       valorVendido: lotesOut.filter(l => ["vendido_parcelado", "vendido_avista", "quitado"].includes(l.situacao)).reduce((s, l) => s + (l.valorVenda ?? 0), 0),
     };
@@ -232,6 +234,61 @@ export const empreendimentosAdminRouter = router({
     console.log(`[Lotes] DXF aplicado em ${emp.slug} por usuário ${ctx.user.id}: ${atualizados} atualizados, ${criados} novos`);
     return { atualizados, criados, avisos: resultado.avisos };
   }),
+
+  /** Envia o folder inteiro (imagem ou PDF de uma página) só para o número digitado no painel */
+  enviarWhatsApp: protectedProcedure
+    .input(z.object({
+      slug: z.string().max(80),
+      codigo: z.string().max(10).optional(),
+      telefone: z.string().trim().min(8).max(25),
+      imagem: z.string().max(12_000_000),
+      formato: z.enum(["imagem", "pdf"]).default("imagem"),
+    }))
+    .mutation(async ({ input }) => {
+      const db = await dbOrThrow();
+      const emp = await empreendimentoOuErro(db, input.slug);
+      const rows: any[] = await db.select({ codigo: lotes.codigo, quadra: lotes.quadra, areaM2: lotes.areaM2, situacao: lotes.situacao }).from(lotes).where(eq(lotes.empreendimentoId, emp.id));
+      const lote = input.codigo ? rows.find(r => r.codigo === input.codigo) : null;
+      if (input.codigo && !lote) throw new Error(`Chácara ${input.codigo} não encontrada`);
+      const { legendaChacara, enviarFolderWhatsApp, nomeArquivoFolder } = await import("../empreendimentoWhatsApp");
+      const legenda = legendaChacara({
+        empreendimento: emp.nome, municipio: emp.municipio, uf: emp.uf,
+        lote: lote ? { codigo: lote.codigo, quadra: lote.quadra, areaM2: num(lote.areaM2) } : null,
+        disponiveis: rows.filter(r => (r.situacao || "disponivel") === "disponivel").length,
+      });
+      const telefone = await enviarFolderWhatsApp({
+        telefone: input.telefone, imagem: input.imagem, legenda, formato: input.formato,
+        nomeArquivo: nomeArquivoFolder(input.slug, lote?.codigo),
+      });
+      console.log(`[Empreendimento] Folder ${input.slug}${lote ? ` chácara ${lote.codigo}` : ""} (${input.formato}) enviado para ${telefone}`);
+      return { success: true, telefone, formato: input.formato };
+    }),
+
+  /** Envia o memorial descritivo (rascunho, página inteira em imagem ou PDF) só para o número digitado */
+  enviarMemorialWhatsApp: protectedProcedure
+    .input(z.object({
+      slug: z.string().max(80),
+      codigo: z.string().max(10),
+      telefone: z.string().trim().min(8).max(25),
+      imagem: z.string().max(12_000_000),
+      formato: z.enum(["imagem", "pdf"]).default("imagem"),
+    }))
+    .mutation(async ({ input }) => {
+      const db = await dbOrThrow();
+      const emp = await empreendimentoOuErro(db, input.slug);
+      const [lote]: any[] = await db.select({ codigo: lotes.codigo, quadra: lotes.quadra, numero: lotes.numero }).from(lotes)
+        .where(and(eq(lotes.empreendimentoId, emp.id), eq(lotes.codigo, input.codigo))).limit(1);
+      if (!lote) throw new Error(`Lote ${input.codigo} não encontrado`);
+      const { nomeLoteMemorial } = await import("../lotes/memorial");
+      const { legendaMemorial, enviarFolderWhatsApp, nomeArquivoFolder } = await import("../empreendimentoWhatsApp");
+      const telefone = await enviarFolderWhatsApp({
+        telefone: input.telefone, imagem: input.imagem, formato: input.formato,
+        legenda: legendaMemorial({ lote: nomeLoteMemorial(lote), empreendimento: emp.nome, municipio: emp.municipio, uf: emp.uf }),
+        nomeArquivo: nomeArquivoFolder(input.slug, lote.codigo, "memorial"),
+      });
+      console.log(`[Empreendimento] Memorial ${input.slug} lote ${lote.codigo} (${input.formato}) enviado para ${telefone}`);
+      return { success: true, telefone, formato: input.formato };
+    }),
 
   /** Memoriais descritivos (rascunho) dos lotes escolhidos */
   memoriais: protectedProcedure

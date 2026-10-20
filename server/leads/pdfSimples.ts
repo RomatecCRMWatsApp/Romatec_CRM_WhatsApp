@@ -134,7 +134,48 @@ export function gerarPdfTabela(tab: TabelaPdf): Buffer {
     objs[id + 1] = `<< /Length ${Buffer.byteLength(c, 'latin1')} >>\nstream\n${c}\nendstream`;
   });
 
-  // Tudo em latin1: os literais já estão em bytes WinAnsi
+  return serializarPdf(objs);
+}
+
+/** Largura e altura de um JPEG (marcador SOF), ou null se não for JPEG */
+export function tamanhoJpeg(jpeg: Buffer): { largura: number; altura: number } | null {
+  if (jpeg.length < 4 || jpeg[0] !== 0xff || jpeg[1] !== 0xd8) return null;
+  let i = 2;
+  while (i + 9 < jpeg.length) {
+    if (jpeg[i] !== 0xff) { i++; continue; }
+    const marca = jpeg[i + 1];
+    if (marca === 0xd8 || marca === 0x01 || (marca >= 0xd0 && marca <= 0xd7)) { i += 2; continue; }
+    const tam = jpeg.readUInt16BE(i + 2);
+    // SOF0..SOF15, menos DHT (C4), JPG (C8) e DAC (CC)
+    if (marca >= 0xc0 && marca <= 0xcf && marca !== 0xc4 && marca !== 0xc8 && marca !== 0xcc) {
+      return { altura: jpeg.readUInt16BE(i + 5), largura: jpeg.readUInt16BE(i + 7) };
+    }
+    i += 2 + tam;
+  }
+  return null;
+}
+
+/**
+ * PDF de uma página com a imagem JPEG inteira (DCTDecode, sem recompressão).
+ * A página tem a proporção da imagem, com 595 pt de largura (A4), para ler bem no celular.
+ */
+export function pdfDeJpeg(jpeg: Buffer): Buffer {
+  const t = tamanhoJpeg(jpeg);
+  if (!t) throw new Error('Imagem inválida: não é JPEG');
+  const w = 595;
+  const h = Math.round((w * t.altura) / t.largura * 100) / 100;
+  const conteudo = `q ${w} 0 0 ${h} 0 0 cm /Im1 Do Q`;
+  const objs: string[] = [];
+  objs[1] = '<< /Type /Catalog /Pages 2 0 R >>';
+  objs[2] = '<< /Type /Pages /Kids [3 0 R] /Count 1 >>';
+  objs[3] = `<< /Type /Page /Parent 2 0 R /MediaBox [0 0 ${w} ${h}] /Resources << /XObject << /Im1 4 0 R >> >> /Contents 5 0 R >>`;
+  objs[4] = `<< /Type /XObject /Subtype /Image /Width ${t.largura} /Height ${t.altura} /ColorSpace /DeviceRGB /BitsPerComponent 8 /Filter /DCTDecode /Length ${jpeg.length} >>\nstream\n${jpeg.toString('latin1')}\nendstream`;
+  objs[5] = `<< /Length ${conteudo.length} >>\nstream\n${conteudo}\nendstream`;
+  return serializarPdf(objs);
+}
+
+/** Objetos (1..n) → arquivo PDF com xref. Tudo em latin1: bytes passam intactos */
+function serializarPdf(objs: string[]): Buffer {
   let pdf = '%PDF-1.4\n%\xe2\xe3\xcf\xd3\n';
   const offsets: number[] = [];
   for (let i = 1; i < objs.length; i++) {

@@ -84,10 +84,15 @@ export function ladoNoPerimetro(a: XY, b: XY, perimetroUtm: XY[] | null | undefi
   return p.some((q, j) => distSeg(meio, q, p[(j + 1) % p.length]) <= tol);
 }
 
+/** "Lote 18 da Quadra C" (sem quadra/número: "Lote C18") */
+export function nomeLoteMemorial(lote: { codigo: string; quadra?: string | null; numero?: number | null }): string {
+  return lote.quadra && lote.numero != null ? `Lote ${String(lote.numero).padStart(2, '0')} da Quadra ${lote.quadra}` : `Lote ${lote.codigo}`;
+}
+
 export function memorialDoLote(lote: LoteMemorial, todos: LoteMemorial[], emp: { nome: string; municipio?: string | null; uf?: string | null; fuso: number; matricula?: string | null; ruas?: RuaMemorial[]; perimetroUtm?: XY[] | null }): Memorial {
   const v = ordenarVertices(lote.verticesUtm);
   const conf = confrontantes(lote, todos);
-  const nome = lote.quadra && lote.numero != null ? `Lote ${String(lote.numero).padStart(2, '0')} da Quadra ${lote.quadra}` : `Lote ${lote.codigo}`;
+  const nome = nomeLoteMemorial(lote);
   const linhas = v.map((a, i) => {
     const b = v[(i + 1) % v.length];
     const divisa = !conf[i].length && ladoNoPerimetro(a, b, emp.perimetroUtm);

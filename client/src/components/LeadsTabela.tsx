@@ -2,7 +2,8 @@ import { useState } from "react";
 import { trpc } from "@/lib/trpc";
 import { toast } from "sonner";
 import { FileDown, Send, Users } from "lucide-react";
-import { normalizePhoneBR, mascaraTelefoneBR, exibirTelefoneBR } from "@shared/telefone";
+import { exibirTelefoneBR } from "@shared/telefone";
+import EnviarWhatsAppModal, { btnWhats as btn } from "@/components/EnviarWhatsAppModal";
 
 type Situacao = "ativos" | "descartados" | "todos";
 
@@ -19,23 +20,15 @@ function baixarPdf(base64: string, nomeArquivo: string) {
   setTimeout(() => URL.revokeObjectURL(url), 10_000);
 }
 
-const btn = (cor: string, bg: string, borda: string) => ({
-  padding: "7px 14px", borderRadius: "8px", background: bg, border: `1px solid ${borda}`, color: cor,
-  fontSize: "11px", fontWeight: 700, cursor: "pointer", display: "inline-flex", alignItems: "center", gap: "6px",
-});
-
 /** Tabela Nome / Telefone / E-mail / Origem da aba Leads, com PDF e envio da lista pelo WhatsApp (para um número interno) */
 export default function LeadsTabela({ situacao, search }: { situacao: Situacao; search?: string }) {
   const [origem, setOrigem] = useState("");
   const filtro = { situacao, origem: origem || undefined, search: search || undefined };
   const { data, isLoading } = trpc.leads.lista.useQuery(filtro);
 
-  // Número de destino digitado na hora (José, colaborador, corretor); o do José é só sugestão
+  // Envio pelo WhatsApp: o número de destino é digitado no modal (o do José é só sugestão)
   const [enviar, setEnviar] = useState(false);
-  const [telefone, setTelefone] = useState("");
   const [formato, setFormato] = useState<"pdf" | "texto">("pdf");
-  const destino = normalizePhoneBR(telefone);
-  const sugestao = data?.telefonePadrao || "";
 
   const pdf = trpc.leads.listaPdf.useMutation({
     onSuccess: r => { baixarPdf(r.base64, r.nomeArquivo); toast.success(`PDF gerado com ${r.total} leads`); },
@@ -104,55 +97,24 @@ export default function LeadsTabela({ situacao, search }: { situacao: Situacao; 
       )}
 
       {enviar && (
-        <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.7)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 1000, padding: "20px" }}
-          onClick={e => { if (e.target === e.currentTarget) setEnviar(false); }}>
-          <div style={{ background: "var(--card)", border: "1px solid var(--border)", borderRadius: "16px", padding: "24px", width: "100%", maxWidth: "440px" }}>
-            <h3 style={{ fontSize: "15px", fontWeight: 600, color: "#d8f0dc", margin: "0 0 4px" }}>Enviar a lista no WhatsApp</h3>
-            <p style={{ fontSize: "11px", color: "#3a6a45", margin: "0 0 14px" }}>
-              Vai só para o número que você digitar: o seu, de um colaborador ou de um corretor ({linhas.length} {linhas.length === 1 ? "lead" : "leads"} do filtro atual). Nenhuma mensagem é enviada aos leads.
-            </p>
-            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: "8px" }}>
-              <label htmlFor="lista-destino" style={{ fontSize: "10px", color: "#3a6a45", textTransform: "uppercase", letterSpacing: "0.06em", fontWeight: 700 }}>Número de destino (WhatsApp, com DDD)</label>
-              {sugestao && (
-                <button type="button" onClick={() => setTelefone(mascaraTelefoneBR(sugestao))} style={{ background: "none", border: "none", color: "#3ec87a", fontSize: "11px", fontWeight: 600, cursor: "pointer", padding: 0 }}>
-                  Usar o número do José
-                </button>
-              )}
-            </div>
-            <input id="lista-destino" autoFocus type="tel" inputMode="tel" autoComplete="off" value={telefone}
-              onChange={e => setTelefone(mascaraTelefoneBR(e.target.value))}
-              onKeyDown={e => { if (e.key === "Enter" && destino && !envio.isPending) envio.mutate({ ...filtro, telefone: destino, formato }); }}
-              placeholder={sugestao ? `Ex.: ${mascaraTelefoneBR(sugestao.slice(2))}` : "(99) 99999-9999"}
-              style={{
-                width: "100%", padding: "9px 12px", margin: "4px 0 4px", background: "var(--background)",
-                border: `1px solid ${telefone && !destino ? "rgba(239,68,68,0.5)" : "var(--border)"}`,
-                borderRadius: "8px", color: "#c8f0d0", fontSize: "14px", outline: "none", boxSizing: "border-box", letterSpacing: "0.02em",
-              }} />
-            <p style={{ fontSize: "11px", margin: "0 0 12px", minHeight: "16px", color: destino ? "#3ec87a" : "#e07070" }}>
-              {destino ? `✓ Vai para ${exibirTelefoneBR(destino)}` : telefone ? "Número incompleto ou inválido — celular com DDD (o +55 é opcional)" : ""}
-            </p>
-            <div style={{ display: "flex", gap: "8px", marginBottom: "16px" }}>
-              {(["pdf", "texto"] as const).map(f => (
-                <button key={f} onClick={() => setFormato(f)} style={{
-                  ...btn(formato === f ? "#3ec87a" : "#4a7a55", formato === f ? "rgba(62,200,122,0.15)" : "rgba(255,255,255,0.04)", formato === f ? "rgba(62,200,122,0.35)" : "rgba(255,255,255,0.08)"),
-                }}>
-                  {f === "pdf" ? "📄 Documento PDF" : "💬 Texto resumido"}
-                </button>
-              ))}
-            </div>
-            <div style={{ display: "flex", gap: "8px", justifyContent: "flex-end" }}>
-              <button onClick={() => setEnviar(false)} style={{ padding: "8px 16px", borderRadius: "8px", background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.1)", color: "#6a8a70", cursor: "pointer" }}>
-                Cancelar
-              </button>
-              <button disabled={!destino || envio.isPending} onClick={() => destino && envio.mutate({ ...filtro, telefone: destino, formato })} style={{
-                ...btn("#25d366", "rgba(37,211,102,0.15)", "rgba(37,211,102,0.3)"), padding: "8px 20px",
-                opacity: !destino || envio.isPending ? 0.5 : 1,
+        <EnviarWhatsAppModal
+          titulo="Enviar a lista no WhatsApp"
+          descricao={`Vai só para o número que você digitar: o seu, de um colaborador ou de um corretor (${linhas.length} ${linhas.length === 1 ? "lead" : "leads"} do filtro atual). Nenhuma mensagem é enviada aos leads.`}
+          sugestao={data?.telefonePadrao}
+          enviando={envio.isPending}
+          onFechar={() => setEnviar(false)}
+          onEnviar={destino => envio.mutate({ ...filtro, telefone: destino, formato })}
+        >
+          <div style={{ display: "flex", gap: "8px", marginBottom: "16px" }}>
+            {(["pdf", "texto"] as const).map(f => (
+              <button key={f} onClick={() => setFormato(f)} style={{
+                ...btn(formato === f ? "#3ec87a" : "#4a7a55", formato === f ? "rgba(62,200,122,0.15)" : "rgba(255,255,255,0.04)", formato === f ? "rgba(62,200,122,0.35)" : "rgba(255,255,255,0.08)"),
               }}>
-                <Send size={13} /> {envio.isPending ? "Enviando..." : "Enviar"}
+                {f === "pdf" ? "📄 Documento PDF" : "💬 Texto resumido"}
               </button>
-            </div>
+            ))}
           </div>
-        </div>
+        </EnviarWhatsAppModal>
       )}
     </div>
   );

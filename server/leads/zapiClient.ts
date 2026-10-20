@@ -33,6 +33,18 @@ export async function enviarDocumento(
   }, { timeoutMs: 30_000, ...opts });
 }
 
+/** Envia uma imagem (base64, ex.: PNG) com legenda; devolve o messageId. Lança ZApiError em qualquer falha. */
+export async function enviarImagem(
+  telefone: string,
+  img: { base64: string; mime: string; legenda?: string },
+  opts: Opcoes = {},
+): Promise<string> {
+  return postZApi('send-image', telefone, {
+    image: `data:${img.mime};base64,${img.base64}`,
+    ...(img.legenda ? { caption: img.legenda } : {}),
+  }, { timeoutMs: 30_000, ...opts });
+}
+
 async function postZApi(rota: string, telefone: string, corpo: Record<string, unknown>, opts: Opcoes): Promise<string> {
   const { instanceId, token, clientToken } = opts.creds ?? credsDoEnv();
   if (!instanceId || !token) throw new ZApiError('ZAPI_NAO_CONFIGURADA', 'Z-API sem Instance ID/Token');

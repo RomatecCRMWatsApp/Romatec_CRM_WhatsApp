@@ -72,3 +72,6 @@ export function etapaDoLeadPelaVenda(s: SituacaoLote): string | null {
   if (VENDIDOS.includes(s)) return 'fechado';
   return null;
 }
+
+/** Aviso do memorial descritivo gerado pelo sistema (tela, impressão, imagem e WhatsApp) */
+export const AVISO_RASCUNHO_MEMORIAL = 'Rascunho para conferência — não vale como documento oficial sem assinatura do responsável técnico';
