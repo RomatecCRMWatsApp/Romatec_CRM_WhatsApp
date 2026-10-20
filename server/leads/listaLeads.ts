@@ -6,6 +6,7 @@
 import { rotuloCanal } from './inbound';
 import { telefonesNotificacao } from './config';
 import { gerarPdfTabela } from './pdfSimples';
+import { normalizePhoneBR } from '../../shared/telefone';
 
 export interface LinhaLead {
   id: number;
@@ -14,6 +15,8 @@ export interface LinhaLead {
   email: string;
   origem: string;
   entrada: string | null; // ISO
+  /** Telefone como está no banco (só dígitos) — chave da deduplicação */
+  fone?: string;
 }
 
 export interface FiltroLista {
@@ -58,6 +61,50 @@ export function dataHoraBR(d: Date = new Date()): string {
 
 function dataBR(iso: string | null): string {
   return iso ? new Date(iso).toLocaleDateString('pt-BR', { timeZone: 'America/Sao_Paulo' }) : '';
+}
+
+const SEM_NOME = 'Sem nome';
+const ORIGEM_GENERICA = 'WhatsApp';
+
+/** Nome para comparar: minúsculo, sem acento e sem espaços extras */
+export function nomeNormalizado(nome: string): string {
+  return nome.normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase().replace(/\s+/g, ' ').trim();
+}
+
+/** Chave do lead: telefone normalizado; sem telefone, o nome normalizado; sem os dois, o próprio registro */
+export function chaveLead(l: Pick<LinhaLead, 'id' | 'nome' | 'telefone' | 'fone'>): string {
+  const bruto = String(l.fone ?? l.telefone ?? '').replace(/\D/g, '');
+  if (bruto) return `tel:${normalizePhoneBR(bruto) || bruto.replace(/^0+/, '')}`;
+  const nome = nomeNormalizado(l.nome || '');
+  return nome && nome !== nomeNormalizado(SEM_NOME) ? `nome:${nome}` : `id:${l.id}`;
+}
+
+/**
+ * Um lead por pessoa: colapsa registros com o mesmo telefone (ou o mesmo nome, se não houver telefone).
+ * Fica a entrada mais recente; nome, e-mail e origem vêm do registro mais recente que os tiver.
+ */
+export function deduplicarLinhas(linhas: LinhaLead[]): LinhaLead[] {
+  const grupos = new Map<string, LinhaLead[]>();
+  for (const l of linhas) {
+    const k = chaveLead(l);
+    const g = grupos.get(k);
+    if (g) g.push(l); else grupos.set(k, [l]);
+  }
+  const recente = (a: LinhaLead, b: LinhaLead) => (b.entrada || '').localeCompare(a.entrada || '') || b.id - a.id;
+  return Array.from(grupos.values()).map(g => {
+    if (g.length === 1) return g[0];
+    const ord = [...g].sort(recente);
+    const primeiro = (f: (l: LinhaLead) => string | null | undefined, vazio: (v: string) => boolean = v => !v) =>
+      ord.map(f).find(v => !!v && !vazio(v));
+    return {
+      ...ord[0],
+      nome: primeiro(l => l.nome?.trim(), v => v === SEM_NOME) || ord[0].nome,
+      telefone: primeiro(l => l.telefone) || ord[0].telefone,
+      email: primeiro(l => l.email?.trim()) || '',
+      origem: primeiro(l => l.origem, v => v === ORIGEM_GENERICA) || ord[0].origem,
+      entrada: primeiro(l => l.entrada) || null,
+    };
+  });
 }
 
 /** Filtros por origem (rótulo sem o empreendimento ou com ele) e busca em nome/telefone/e-mail */
@@ -154,13 +201,16 @@ export async function carregarLinhasLeads(filtro: FiltroLista): Promise<{ linhas
     const entrada = r.createdAt ? new Date(r.createdAt) : null;
     return {
       id: r.id,
-      nome: String(ct?.name || r.nome || answers.nome || 'Sem nome').trim(),
-      telefone: formatarTelefone(r.phone),
+      nome: String(ct?.name || r.nome || answers.nome || SEM_NOME).trim(),
+      telefone: formatarTelefone(normalizePhoneBR(r.phone) || r.phone),
+      fone: String(r.phone || '').replace(/\D/g, ''),
       email: String(answers.email || ct?.email || '').trim(),
       origem: origemDoLead(r, nomesEmp),
       entrada: entrada && !isNaN(entrada.getTime()) ? entrada.toISOString() : null,
     };
-  }).sort((a, b) => (b.entrada || '').localeCompare(a.entrada || ''));
+  });
+  // Um lead por telefone (ou nome): tabela, PDF, WhatsApp e contagens já saem sem repetidos
+  const unicos = deduplicarLinhas(todas).sort((a, b) => (b.entrada || '').localeCompare(a.entrada || ''));
 
-  return { linhas: filtrarLinhas(todas, filtro), origens: origensDisponiveis(todas) };
+  return { linhas: filtrarLinhas(unicos, filtro), origens: origensDisponiveis(unicos) };
 }

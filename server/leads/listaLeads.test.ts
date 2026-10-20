@@ -1,7 +1,7 @@
 import { describe, it, expect, vi } from 'vitest';
 import {
   origemDoLead, filtrarLinhas, origensDisponiveis, textoListaLeads, pdfListaLeads, legendaPdf, formatarTelefone,
-  nomeArquivoLista, telefonePadraoLista, MAX_LINHAS_TEXTO, type LinhaLead,
+  nomeArquivoLista, telefonePadraoLista, MAX_LINHAS_TEXTO, deduplicarLinhas, chaveLead, nomeNormalizado, type LinhaLead,
 } from './listaLeads';
 import { caber, larguraTexto } from './pdfSimples';
 import { enviarDocumento, ZApiError } from './zapiClient';
@@ -58,6 +58,50 @@ describe('Lista de leads — filtros e texto', () => {
     expect(formatarTelefone('5599991811246')).toBe('+55 (99) 99181-1246');
     expect(nomeArquivoLista(new Date('2026-10-20T15:00:00Z'))).toBe('leads-romatec-2026-10-20.pdf');
     expect(telefonePadraoLista()).toBe('5599991811246');
+  });
+});
+
+describe('Lista de leads — sem repetidos', () => {
+  it('mesmo número (em formatos diferentes) com nomes diferentes vira 1 lead', () => {
+    const r = deduplicarLinhas([
+      linha({ id: 1, nome: 'Maria Souza', fone: '5599988887777', entrada: '2026-10-10T10:00:00.000Z' }),
+      linha({ id: 2, nome: 'maria', fone: '99988887777', entrada: '2026-10-18T10:00:00.000Z' }),
+      linha({ id: 3, nome: 'Mariazinha', fone: '559988887777', entrada: '2026-10-01T10:00:00.000Z' }), // antigo, sem o 9
+      linha({ id: 4, nome: 'Outra Pessoa', fone: '5599977776666' }),
+    ]);
+    expect(r).toHaveLength(2);
+    const maria = r.find(l => l.id === 2)!;
+    expect(maria.nome).toBe('maria'); // o mais recente
+    expect(maria.entrada).toBe('2026-10-18T10:00:00.000Z');
+  });
+  it('sem telefone, colapsa pelo nome (sem acento/maiúsculas/espaços)', () => {
+    const r = deduplicarLinhas([
+      linha({ id: 1, nome: 'José  Conceição', fone: '', telefone: '' }),
+      linha({ id: 2, nome: 'jose conceicao', fone: '', telefone: '' }),
+      linha({ id: 3, nome: 'Sem nome', fone: '', telefone: '' }),
+      linha({ id: 4, nome: 'Sem nome', fone: '', telefone: '' }),
+    ]);
+    expect(r.map(l => l.id).sort()).toEqual([2, 3, 4]); // "Sem nome" sem telefone não colapsa
+  });
+  it('merge: fica com o e-mail e a origem de quem tiver; nome válido; entrada mais recente', () => {
+    const [l] = deduplicarLinhas([
+      linha({ id: 1, nome: 'Ana Lima', fone: '5599966665555', email: 'ana@x.com', origem: 'Meta Lead Ads · Bom Jardims', entrada: '2026-10-01T10:00:00.000Z' }),
+      linha({ id: 2, nome: 'Sem nome', fone: '5599966665555', email: '', origem: 'WhatsApp', entrada: '2026-10-19T10:00:00.000Z' }),
+    ]);
+    expect(l).toMatchObject({ id: 2, nome: 'Ana Lima', email: 'ana@x.com', origem: 'Meta Lead Ads · Bom Jardims', entrada: '2026-10-19T10:00:00.000Z' });
+  });
+  it('contagem (texto e PDF) usa a lista sem repetidos', () => {
+    const r = deduplicarLinhas([linha({ id: 1, fone: '5599911112222' }), linha({ id: 2, fone: '99911112222' }), linha({ id: 3, fone: '5599933334444' })]);
+    expect(r).toHaveLength(2);
+    expect(textoListaLeads(r, { situacao: 'ativos' })).toContain('2 leads · leads ativos');
+    expect(pdfListaLeads(r, { situacao: 'ativos' }).toString('latin1')).toContain('(2 leads ');
+    expect(origensDisponiveis(r)).toEqual([{ origem: 'Site (formulário)', total: 2 }]);
+  });
+  it('chave: telefone normalizado; sem telefone, nome', () => {
+    expect(chaveLead({ id: 1, nome: 'X', telefone: '+55 (99) 99181-1246' })).toBe('tel:5599991811246');
+    expect(chaveLead({ id: 1, nome: 'X', telefone: '', fone: '991811246' })).toBe('tel:991811246');
+    expect(chaveLead({ id: 1, nome: ' Ána ', telefone: '' })).toBe('nome:ana');
+    expect(nomeNormalizado('  JOÃO   da  Silva ')).toBe('joao da silva');
   });
 });
 
