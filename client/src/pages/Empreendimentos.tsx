@@ -1,30 +1,53 @@
 import { useLocation } from "wouter";
 import { trpc } from "@/lib/trpc";
 import PageHeader from "@/components/PageHeader";
+import MapaTematico from "@/components/empreendimento/MapaTematico";
 import { AlertTriangle, Map as MapIcon } from "lucide-react";
 
-/** Lista dos empreendimentos (loteamentos / condomínios) com o resumo das vendas */
-export default function Empreendimentos() {
+type Resumo = { slug: string; nome: string; municipio: string | null; uf: string | null; totalLotes: number; disponiveis: number; vendidos: number; semRegistro: boolean };
+
+/** Prévia do mapa temático (miniatura, sem clique nos lotes) */
+function PreviaMapa({ slug }: { slug: string }) {
+  const { data, isLoading } = trpc.empreendimentosAdmin.detalhe.useQuery({ slug }, { staleTime: 60_000 });
+  if (isLoading || !data) return <div className="h-full min-h-[180px] animate-pulse rounded-xl bg-white/5" />;
+  return (
+    <div className="pointer-events-none">
+      <MapaTematico slug={slug} lotes={data.lotes as any} ruas={data.ruas} perimetro={data.perimetro?.poligono} compacto semLegenda />
+    </div>
+  );
+}
+
+function Cartao({ e }: { e: Resumo }) {
   const [, navigate] = useLocation();
+  return (
+    <button onClick={() => navigate(`/empreendimentos/${e.slug}`)}
+      className="grid w-full gap-4 rounded-xl border border-border bg-card p-4 text-left transition-colors hover:border-primary/50 md:grid-cols-[minmax(0,1fr)_minmax(0,1.3fr)]">
+      <div className="flex flex-col">
+        <p className="text-lg font-semibold">{e.nome}</p>
+        <p className="text-xs text-muted-foreground">{[e.municipio, e.uf].filter(Boolean).join("/")}</p>
+        <div className="mt-4 grid grid-cols-3 gap-2 text-center">
+          <div className="rounded-lg bg-white/5 p-2"><p className="text-2xl font-bold">{e.totalLotes}</p><p className="text-[11px] text-muted-foreground">lotes</p></div>
+          <div className="rounded-lg bg-emerald-500/10 p-2"><p className="text-2xl font-bold text-emerald-300">{e.disponiveis}</p><p className="text-[11px] text-muted-foreground">disponíveis</p></div>
+          <div className="rounded-lg bg-rose-500/10 p-2"><p className="text-2xl font-bold text-rose-300">{e.vendidos}</p><p className="text-[11px] text-muted-foreground">vendidos</p></div>
+        </div>
+        {e.semRegistro && <p className="mt-3 inline-flex items-center gap-1 text-[11px] text-amber-300"><AlertTriangle className="h-3 w-3" /> sem registro no cartório informado</p>}
+        <p className="mt-auto pt-3 text-xs text-primary">Abrir mapa, lotes e documentos →</p>
+      </div>
+      <PreviaMapa slug={e.slug} />
+    </button>
+  );
+}
+
+/** Lista dos empreendimentos (loteamentos / condomínios) com o resumo das vendas e a prévia do mapa */
+export default function Empreendimentos() {
   const { data, isLoading, error } = trpc.empreendimentosAdmin.lista.useQuery();
   return (
     <div>
       <PageHeader icone={MapIcon} titulo="Empreendimentos" subtitulo="Mapa dos lotes, reservas e vendas, arquivos e memoriais" />
-      <div className="px-4 md:px-6 pb-8 max-w-[1100px] mx-auto grid gap-3 md:grid-cols-2">
+      <div className="px-4 md:px-6 pb-8 max-w-[1300px] mx-auto space-y-4">
         {error && <p className="text-sm text-red-400">{error.message}</p>}
         {isLoading && <p className="text-sm text-muted-foreground">Carregando…</p>}
-        {(data ?? []).map(e => (
-          <button key={e.slug} onClick={() => navigate(`/empreendimentos/${e.slug}`)} className="rounded-xl border border-border bg-card p-4 text-left hover:border-primary/50">
-            <p className="font-semibold">{e.nome}</p>
-            <p className="text-xs text-muted-foreground">{[e.municipio, e.uf].filter(Boolean).join("/")}</p>
-            <div className="mt-3 flex gap-4 text-sm">
-              <span><b className="text-lg">{e.totalLotes}</b> lotes</span>
-              <span className="text-emerald-300"><b className="text-lg">{e.disponiveis}</b> disponíveis</span>
-              <span className="text-rose-300"><b className="text-lg">{e.vendidos}</b> vendidos</span>
-            </div>
-            {e.semRegistro && <p className="mt-2 inline-flex items-center gap-1 text-[11px] text-amber-300"><AlertTriangle className="h-3 w-3" /> sem registro no cartório informado</p>}
-          </button>
-        ))}
+        {(data ?? []).map(e => <Cartao key={e.slug} e={e} />)}
       </div>
     </div>
   );
