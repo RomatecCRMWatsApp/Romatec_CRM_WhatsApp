@@ -61,6 +61,8 @@ export default function MapaTematico({ slug, lotes, ruas, perimetro, selecionado
   if (!desenho) return <p className="text-sm text-muted-foreground">Sem desenho dos lotes ainda. Envie o DXF do projeto na aba Arquivos e importe.</p>;
   const { itens, proj, H, larguraRua, contorno } = desenho;
   const fonte = compacto ? 9 : 11;
+  // Inclinação média das ruas (rótulos do projeto) para alinhar os blocos
+  const anguloRuas = ruas?.length ? inclinacao(ruas.reduce((s, r) => s + (((r.angulo % 180) + 180) % 180 > 90 ? (((r.angulo % 180) + 180) % 180) - 180 : ((r.angulo % 180) + 180) % 180), 0) / ruas.length) : -32;
 
   return (
     <div>
@@ -74,6 +76,15 @@ export default function MapaTematico({ slug, lotes, ruas, perimetro, selecionado
             <filter id="sombra" x="-5%" y="-5%" width="110%" height="110%">
               <feDropShadow dx="0" dy="1.2" stdDeviation="1.2" floodColor="#000" floodOpacity="0.25" />
             </filter>
+            {/* Calçamento em bloquete: fiadas desencontradas de blocos de concreto, alinhadas com as ruas */}
+            <pattern id="bloquete" width="4" height="2.6" patternUnits="userSpaceOnUse" patternTransform={`rotate(${anguloRuas})`}>
+              <rect width="4" height="2.6" fill="#6F685C" />
+              <rect x="0.2" y="0.2" width="1.6" height="0.9" fill="#C2B9A9" />
+              <rect x="2.2" y="0.2" width="1.6" height="0.9" fill="#B3AA99" />
+              <rect x="-0.8" y="1.5" width="1.6" height="0.9" fill="#B3AA99" />
+              <rect x="1.2" y="1.5" width="1.6" height="0.9" fill="#C6BDAD" />
+              <rect x="3.2" y="1.5" width="1.6" height="0.9" fill="#B3AA99" />
+            </pattern>
           </defs>
           <rect width={W} height={H} fill="#E9EFDD" />
           {/* Área total da propriedade (inclui área de vivência) em gramado; perímetro oficial tracejado */}
@@ -85,8 +96,8 @@ export default function MapaTematico({ slug, lotes, ruas, perimetro, selecionado
             const d = caminho(r.line.map(proj), false);
             return (
               <g key={r.nome}>
-                <path d={d} fill="none" stroke="#B9B4A8" strokeWidth={larguraRua + 4} strokeLinecap="round" strokeLinejoin="round" />
-                <path d={d} fill="none" stroke="#4A4D52" strokeWidth={larguraRua} strokeLinecap="round" strokeLinejoin="round" />
+                <path d={d} fill="none" stroke="#E2DDD2" strokeWidth={larguraRua + 4} strokeLinecap="round" strokeLinejoin="round" />
+                <path d={d} fill="none" stroke="url(#bloquete)" strokeWidth={larguraRua} strokeLinecap="round" strokeLinejoin="round" />
               </g>
             );
           })}
@@ -94,12 +105,9 @@ export default function MapaTematico({ slug, lotes, ruas, perimetro, selecionado
           {/* Ruas entre as quadras: faixa de 6 m em volta de cada lote (meio-fio + asfalto). Onde dois
               lotes ficam frente a frente as faixas se juntam e formam a rua inteira. */}
           <g pointerEvents="none">
-            {itens.map(l => <path key={`mf${l.id}`} d={caminho(l.poly.map(proj))} fill="none" stroke="#B9B4A8" strokeWidth={larguraRua + 4} strokeLinejoin="round" />)}
-            {itens.map(l => <path key={`as${l.id}`} d={caminho(l.poly.map(proj))} fill="none" stroke="#4A4D52" strokeWidth={larguraRua} strokeLinejoin="round" />)}
+            {itens.map(l => <path key={`mf${l.id}`} d={caminho(l.poly.map(proj))} fill="none" stroke="#E2DDD2" strokeWidth={larguraRua + 4} strokeLinejoin="round" />)}
+            {itens.map(l => <path key={`as${l.id}`} d={caminho(l.poly.map(proj))} fill="none" stroke="url(#bloquete)" strokeWidth={larguraRua} strokeLinejoin="round" />)}
           </g>
-          {ctx?.ruas?.map(r => (
-            <path key={`fx${r.nome}`} d={caminho(r.line.map(proj), false)} fill="none" stroke="#F2C744" strokeWidth={1.1} strokeDasharray="7 7" strokeLinecap="round" strokeLinejoin="round" pointerEvents="none" />
-          ))}
 
           {/* Lotes com cerca */}
           {itens.map(l => {
