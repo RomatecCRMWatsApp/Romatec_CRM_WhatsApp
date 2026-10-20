@@ -297,7 +297,7 @@ export default function BomJardims() {
 
       {/* 4. Mapa de vendas */}
       <section id="mapa" style={{ ...section, paddingTop: 0 }}>
-        <h2 style={h2}>Escolha a sua chácara antes de todo mundo</h2>
+        <h2 style={h2}>Escolha a sua chácara no mapa</h2>
         <p style={{ color: C.suave, margin: "0 0 20px" }}>
           Toque numa chácara para ver a área e a situação.
           {disponiveis !== undefined && <> Hoje são <b style={{ color: C.verde }}>{disponiveis} chácaras disponíveis</b>.</>}
@@ -372,9 +372,9 @@ export default function BomJardims() {
       {/* 7. Formulário */}
       <section ref={formRef} id="cadastro" style={{ background: C.verde }}>
         <div style={{ ...section, maxWidth: 720 }}>
-          <h2 style={{ ...h2, color: "#fff" }}>Garanta prioridade na escolha</h2>
+          <h2 style={{ ...h2, color: "#fff" }}>Receba o mapa pelo WhatsApp</h2>
           <p style={{ color: C.creme, margin: "0 0 24px" }}>
-            Estamos em pré-lançamento. Cadastre-se e receba o mapa de vendas pelo WhatsApp antes de todo mundo.
+            Estamos em pré-lançamento. Deixe seu contato e receba o mapa das chácaras pelo WhatsApp, com as informações do condomínio.
           </p>
           <Formulario loteCodigo={selected} onClearLote={() => setSelected(undefined)} lotes={lotes} />
           <p style={{ color: C.creme, margin: "24px 0 12px", fontWeight: 700 }}>Prefere conversar agora?</p>
