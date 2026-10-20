@@ -25,6 +25,13 @@ function semPrecoSeOculto<T extends Record<string, any>>(p: T, logado: boolean):
   return { ...p, price: null, offerPrice: null };
 }
 
+/** Filtro da lista de leads (tabela, PDF e envio pelo WhatsApp) */
+const filtroListaLeads = z.object({
+  situacao: z.enum(['ativos', 'descartados', 'todos']).optional().default('ativos'),
+  origem: z.string().trim().max(200).optional(),
+  search: z.string().trim().max(100).optional(),
+});
+
 export const appRouter = router({
   zaira: zairaRouter,
   leadCampanhas: leadCampanhasRouter,
@@ -867,6 +874,57 @@ export const appRouter = router({
         }));
 
         return { leads: enriched, total, stats };
+      }),
+
+    // Lista (tabela) de Nome, Telefone, E-mail e Origem — base do PDF e do envio pelo WhatsApp
+    lista: protectedProcedure
+      .input(filtroListaLeads)
+      .query(async ({ input }) => {
+        const { carregarLinhasLeads, telefonePadraoLista } = await import('./leads/listaLeads');
+        const { linhas, origens } = await carregarLinhasLeads(input);
+        return { linhas, origens, total: linhas.length, telefonePadrao: telefonePadraoLista() };
+      }),
+
+    // PDF da lista para baixar (base64)
+    listaPdf: protectedProcedure
+      .input(filtroListaLeads)
+      .mutation(async ({ input }) => {
+        const { carregarLinhasLeads, pdfListaLeads, nomeArquivoLista } = await import('./leads/listaLeads');
+        const { linhas } = await carregarLinhasLeads(input);
+        return { base64: pdfListaLeads(linhas, input).toString('base64'), nomeArquivo: nomeArquivoLista(), total: linhas.length };
+      }),
+
+    // Envia a lista só para o número digitado no painel (José, colaborador, corretor). Nunca para os leads.
+    enviarListaWhatsApp: protectedProcedure
+      .input(filtroListaLeads.extend({
+        telefone: z.string().trim().min(8).max(25),
+        formato: z.enum(['pdf', 'texto']).default('pdf'),
+      }))
+      .mutation(async ({ input }) => {
+        const { normalizePhoneBR } = await import('../shared/telefone');
+        const telefone = normalizePhoneBR(input.telefone);
+        if (!telefone) throw new Error('Número inválido: informe um celular com DDD, ex.: (99) 99181-1246');
+        const lista = await import('./leads/listaLeads');
+        const { linhas } = await lista.carregarLinhasLeads(input);
+        const { enviarDocumento, enviarTexto, ZApiError } = await import('./leads/zapiClient');
+        try {
+          if (input.formato === 'pdf') {
+            await enviarDocumento(telefone, {
+              base64: lista.pdfListaLeads(linhas, input).toString('base64'),
+              extensao: 'pdf', mime: 'application/pdf',
+              nomeArquivo: lista.nomeArquivoLista(),
+              legenda: lista.legendaPdf(linhas, input),
+            });
+          } else {
+            await enviarTexto(telefone, lista.textoListaLeads(linhas, input));
+          }
+        } catch (e: any) {
+          const msg = e instanceof ZApiError ? `${e.codigo}: ${e.message}` : (e?.message || 'falha no envio');
+          console.error(`[Leads] Lista não enviada para ${telefone}: ${msg}`);
+          throw new Error(`WhatsApp não enviou a lista (${msg})`);
+        }
+        console.log(`[Leads] Lista de ${linhas.length} leads enviada (${input.formato}) para ${telefone}`);
+        return { success: true, telefone, total: linhas.length, formato: input.formato };
       }),
 
     // Por que o lead tem essa nota: regra → pontos (soma = score) + histórico

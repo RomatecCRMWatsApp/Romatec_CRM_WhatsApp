@@ -7,6 +7,7 @@ import {
   Snowflake, ChevronDown, ChevronUp, MessageSquare, Trash2, RefreshCw,
   Phone, Clock, CheckCircle2, XCircle, AlertCircle, Send, BarChart3, Eye
 } from "lucide-react";
+import LeadsTabela from "@/components/LeadsTabela";
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 function formatPhone(phone: string): string {
@@ -121,6 +122,11 @@ export default function Leads() {
 
   // Descartados / bloqueados ficam fora da lista; o botão "Descartados" mostra só eles
   const [verDescartados, setVerDescartados] = useState(false);
+  // Cards (detalhe, score, ações) ou tabela (Nome/Telefone/E-mail/Origem, PDF e envio da lista)
+  const [visao, setVisao] = useState<'cards' | 'tabela'>(() => {
+    try { return localStorage.getItem('leads.visao') === 'tabela' ? 'tabela' : 'cards'; } catch { return 'cards'; }
+  });
+  useEffect(() => { try { localStorage.setItem('leads.visao', visao); } catch {} }, [visao]);
   useEffect(() => { setOffset(0); }, [scoreFilter, debouncedSearch, verDescartados]);
 
   const { data, isLoading, refetch } = trpc.leads.list.useQuery({
@@ -269,7 +275,7 @@ export default function Leads() {
             <input
               value={search}
               onChange={e => setSearch(e.target.value)}
-              placeholder="Buscar por nome ou telefone..."
+              placeholder={visao === 'tabela' ? "Buscar por nome, telefone ou e-mail..." : "Buscar por nome ou telefone..."}
               style={{
                 width: '100%', padding: '8px 10px 8px 30px', background: 'var(--card)',
                 border: '1px solid var(--border)', borderRadius: '8px', color: '#c8f0d0',
@@ -277,8 +283,20 @@ export default function Leads() {
               }}
             />
           </div>
-          {/* Score filter pills */}
-          {(['all', 'quente', 'morno', 'frio'] as const).map(s => {
+          {/* Cards | Tabela */}
+          <div style={{ display: 'flex', border: '1px solid rgba(255,255,255,0.08)', borderRadius: '20px', overflow: 'hidden' }}>
+            {(['cards', 'tabela'] as const).map(v => (
+              <button key={v} onClick={() => setVisao(v)} style={{
+                padding: '7px 14px', fontSize: '11px', fontWeight: 700, cursor: 'pointer', border: 'none',
+                background: visao === v ? 'rgba(62,200,122,0.15)' : 'rgba(255,255,255,0.04)',
+                color: visao === v ? '#3ec87a' : '#4a7a55',
+              }}>
+                {v === 'cards' ? '🗃️ Cards' : '📋 Lista'}
+              </button>
+            ))}
+          </div>
+          {/* Score filter pills (só nos cards) */}
+          {visao === 'cards' && (['all', 'quente', 'morno', 'frio'] as const).map(s => {
             const active = scoreFilter === s;
             const cfg = s !== 'all' ? SCORE_CFG[s] : null;
             return (
@@ -313,7 +331,9 @@ export default function Leads() {
         </div>
 
         {/* ── Lead list ────────────────────────────────────────────── */}
-        {isLoading ? (
+        {visao === 'tabela' ? (
+          <LeadsTabela situacao={verDescartados ? 'descartados' : 'ativos'} search={debouncedSearch || undefined} />
+        ) : isLoading ? (
           <div style={{ textAlign: 'center', padding: '40px', color: '#3a6a45' }}>Carregando leads...</div>
         ) : leads.length === 0 ? (
           <div className="ld-card" style={{ textAlign: 'center', padding: '40px' }}>
@@ -544,7 +564,7 @@ export default function Leads() {
         )}
 
         {/* ── Pagination ───────────────────────────────────────────── */}
-        {total > LIMIT && (
+        {visao === 'cards' && total > LIMIT && (
           <div style={{ display: 'flex', justifyContent: 'center', gap: '8px', paddingTop: '4px' }}>
             <button
               disabled={offset === 0}

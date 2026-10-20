@@ -1,5 +1,5 @@
 /**
- * Cliente Z-API do módulo de captação (envio de texto com timeout).
+ * Cliente Z-API do módulo de captação (envio de texto e documento com timeout).
  * Credenciais: ZAPI_INSTANCE_ID, ZAPI_TOKEN, ZAPI_CLIENT_TOKEN.
  */
 
@@ -9,16 +9,31 @@ export class ZApiError extends Error {
 
 export interface ZApiCreds { instanceId?: string; token?: string; clientToken?: string }
 
+type Opcoes = { creds?: ZApiCreds; fetchImpl?: typeof fetch; timeoutMs?: number };
+
 function credsDoEnv(): ZApiCreds {
   return { instanceId: process.env.ZAPI_INSTANCE_ID, token: process.env.ZAPI_TOKEN, clientToken: process.env.ZAPI_CLIENT_TOKEN };
 }
 
 /** Envia texto; devolve o messageId. Lança ZApiError em qualquer falha. */
-export async function enviarTexto(
+export async function enviarTexto(telefone: string, mensagem: string, opts: Opcoes = {}): Promise<string> {
+  return postZApi('send-text', telefone, { message: mensagem }, opts);
+}
+
+/** Envia um arquivo (base64) como documento no WhatsApp; devolve o messageId. Lança ZApiError em qualquer falha. */
+export async function enviarDocumento(
   telefone: string,
-  mensagem: string,
-  opts: { creds?: ZApiCreds; fetchImpl?: typeof fetch; timeoutMs?: number } = {},
+  doc: { base64: string; extensao: string; mime: string; nomeArquivo: string; legenda?: string },
+  opts: Opcoes = {},
 ): Promise<string> {
+  return postZApi(`send-document/${doc.extensao}`, telefone, {
+    document: `data:${doc.mime};base64,${doc.base64}`,
+    fileName: doc.nomeArquivo,
+    ...(doc.legenda ? { caption: doc.legenda } : {}),
+  }, { timeoutMs: 30_000, ...opts });
+}
+
+async function postZApi(rota: string, telefone: string, corpo: Record<string, unknown>, opts: Opcoes): Promise<string> {
   const { instanceId, token, clientToken } = opts.creds ?? credsDoEnv();
   if (!instanceId || !token) throw new ZApiError('ZAPI_NAO_CONFIGURADA', 'Z-API sem Instance ID/Token');
   const phone = telefone.replace(/\D/g, '');
@@ -27,10 +42,10 @@ export async function enviarTexto(
   const ctrl = new AbortController();
   const t = setTimeout(() => ctrl.abort(), opts.timeoutMs ?? 15_000);
   try {
-    const r = await (opts.fetchImpl ?? fetch)(`https://api.z-api.io/instances/${instanceId}/token/${token}/send-text`, {
+    const r = await (opts.fetchImpl ?? fetch)(`https://api.z-api.io/instances/${instanceId}/token/${token}/${rota}`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', ...(clientToken ? { 'Client-Token': clientToken } : {}) },
-      body: JSON.stringify({ phone, message: mensagem }),
+      body: JSON.stringify({ phone, ...corpo }),
       signal: ctrl.signal,
     });
     const body: any = await r.json().catch(() => ({}));

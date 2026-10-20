@@ -16,6 +16,7 @@ import { mesclarSlots, slotsDeRespostas } from './leads/slots';
 import { isLeadBlocked } from './lead-persistence';
 import { normalizarCodigoCampanha } from './leads/atribuicao';
 import { classificarOrigem, linhaOrigem, idsDeClique, type OrigemVisita } from '../shared/origemTrafego';
+import { normalizePhoneBR } from '../shared/telefone';
 
 export const LEAD_ORIGENS = ['instagram_ads', 'instagram_dm', 'instagram_bio', 'google_ads', 'site', 'indicacao', 'whatsapp', 'whatsapp_empreendimento'] as const;
 export type LeadOrigem = typeof LEAD_ORIGENS[number];
@@ -64,22 +65,8 @@ export type LeadIntakeResult =
 /** Lead que já conversou há menos que isso não recebe nova abordagem (evita spam) */
 const REENGAGE_AFTER_MS = 12 * 60 * 60 * 1000;
 
-/**
- * Normaliza celular BR para o formato que o webhook Z-API entrega: 55 + DDD + 9 + 8 dígitos.
- * Aceita "(99) 9 9181-1246", "099991811246", "+55 99 99181-1246", número antigo sem o 9.
- * Retorna null se não for celular brasileiro válido.
- */
-export function normalizePhoneBR(raw: string): string | null {
-  let d = String(raw || '').replace(/\D/g, '');
-  d = d.replace(/^0+/, '');
-  if (d.length === 10 || d.length === 11) d = `55${d}`;
-  // Celular antigo sem o 9: 55 + DDD + 8 dígitos começando em 6-9 (fixo começa em 2-5)
-  if (d.length === 12 && d.startsWith('55') && /[6-9]/.test(d[4])) d = d.slice(0, 4) + '9' + d.slice(4);
-  if (d.length !== 13 || !d.startsWith('55') || d[4] !== '9') return null;
-  const ddd = Number(d.slice(2, 4));
-  if (ddd < 11 || ddd > 99) return null;
-  return d;
-}
+/** Celular BR → 55 + DDD + 9 + 8 dígitos (regra em shared/telefone, a mesma do painel) */
+export { normalizePhoneBR };
 
 function firstName(nome: string): string {
   const f = nome.trim().split(/\s+/)[0] || 'tudo bem';
