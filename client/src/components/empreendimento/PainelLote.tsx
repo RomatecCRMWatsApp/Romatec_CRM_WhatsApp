@@ -4,6 +4,10 @@ import { toast } from "sonner";
 import { trpc } from "@/lib/trpc";
 import { Button } from "@/components/ui/button";
 import { COM_CLIENTE, COR_SITUACAO, ROTULO_SITUACAO, SITUACOES_LOTE, type SituacaoLote } from "@shared/lotes";
+import { SLUG_BOM_JARDIMS, codigoChacaraValido, linkChacara, linkKml } from "@shared/chacaraLink";
+import { exibirTelefoneBR } from "@shared/telefone";
+import EnviarWhatsAppModal from "@/components/EnviarWhatsAppModal";
+import { Link2, Send, ExternalLink, Globe2 } from "lucide-react";
 
 export type LotePainel = {
   id: number; codigo: string; quadra: string | null; numero: number | null; areaM2: number | null; perimetroM: number | null;
@@ -42,6 +46,48 @@ function MedidasLote({ slug, codigo }: { slug: string; codigo: string }) {
             <Button size="sm" variant="outline" className="h-7 text-xs" onClick={() => navigate(`/empreendimentos/${slug}/folder?lote=${codigo}`)}>Folder deste lote</Button>
           </div>
         </>
+      )}
+    </div>
+  );
+}
+
+/** Link público da chácara (fotos, mapa e localização exata) — copiar ou mandar pelo WhatsApp */
+function LinkChacara({ slug, lote }: { slug: string; lote: LotePainel }) {
+  const [enviar, setEnviar] = useState(false);
+  const { data: det } = trpc.empreendimentosAdmin.detalhe.useQuery({ slug });
+  const envio = trpc.empreendimentosAdmin.enviarLinkChacara.useMutation({
+    onSuccess: r => { toast.success(`Link da chácara ${lote.codigo} enviado para ${exibirTelefoneBR(r.telefone)}`); setEnviar(false); },
+    onError: e => toast.error(e.message),
+  });
+  const link = linkChacara(window.location.origin, lote.codigo);
+  const copiar = async () => {
+    try { await navigator.clipboard.writeText(link); toast.success(`Link da chácara ${lote.codigo} copiado`); }
+    catch { window.prompt("Copie o link:", link); }
+  };
+  return (
+    <div className="rounded-lg border border-border p-2.5 space-y-1.5">
+      <p className="text-xs text-muted-foreground">Link da chácara (fotos, mapa, localização exata e poligonal para o Google Earth)</p>
+      <a href={link} target="_blank" rel="noopener noreferrer" className="flex items-center gap-1 truncate text-xs text-primary hover:underline">
+        {link.replace(/^https?:\/\//, "")} <ExternalLink className="h-3 w-3 shrink-0" />
+      </a>
+      <div className="flex flex-wrap gap-1.5">
+        <Button size="sm" variant="outline" className="h-7 text-xs" onClick={copiar}><Link2 className="mr-1 h-3.5 w-3.5" /> Copiar link da chácara</Button>
+        <Button size="sm" variant="outline" className="h-7 text-xs border-[#25d366]/40 text-[#1fa855] hover:text-[#1fa855]" onClick={() => setEnviar(true)}>
+          <Send className="mr-1 h-3.5 w-3.5" /> Enviar no WhatsApp
+        </Button>
+        <Button asChild size="sm" variant="outline" className="h-7 text-xs">
+          <a href={linkKml(window.location.origin, lote.codigo)} download><Globe2 className="mr-1 h-3.5 w-3.5" /> KML (Google Earth)</a>
+        </Button>
+      </div>
+      {enviar && (
+        <EnviarWhatsAppModal
+          titulo={`Enviar o link da chácara ${lote.codigo}`}
+          descricao="Vai uma mensagem com o link (fotos, mapa e localização exata da chácara), só para o número que você digitar — cliente, corretor ou você mesmo."
+          sugestao={det?.destinoSugerido}
+          enviando={envio.isPending}
+          onFechar={() => setEnviar(false)}
+          onEnviar={destino => envio.mutate({ slug, codigo: lote.codigo, telefone: destino })}
+        />
       )}
     </div>
   );
@@ -92,6 +138,8 @@ export default function PainelLote({ slug, lote, onMudou, onFechar }: { slug: st
       </div>
 
       <MedidasLote slug={slug} codigo={lote.codigo} />
+
+      {slug === SLUG_BOM_JARDIMS && codigoChacaraValido(lote.codigo) && <LinkChacara slug={slug} lote={lote} />}
 
       <label className="block space-y-1">
         <span className="text-xs text-muted-foreground">Situação</span>

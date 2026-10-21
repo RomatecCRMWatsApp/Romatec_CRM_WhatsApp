@@ -1,10 +1,12 @@
 import { useEffect, useRef, useState } from "react";
-import { MessageCircle, MapPin, Droplets, Trees, ShieldCheck, Route, FileCheck2, Handshake, Navigation, Play } from "lucide-react";
+import { MessageCircle, MapPin, Droplets, Trees, ShieldCheck, Route, FileCheck2, Handshake, Navigation, Play, Globe2 } from "lucide-react";
 import { trpc } from "@/lib/trpc";
 import { readUtm } from "@/components/LeadForm";
 import { origemDaVisita } from "@/lib/origemVisita";
 import { FAQ_BOM_JARDIMS } from "@shared/bomJardimsSeo";
 import LoteMap, { formatArea, STATUS_LABEL, type LoteInfo } from "@/components/bom-jardims/LoteMap";
+import { C, SERIF, SANS, CONTATOS, GALERIA, VIDEO, waLink, useBrandFonts, ContatosBotoes } from "@/components/bom-jardims/marca";
+import { codigoChacaraValido } from "@shared/chacaraLink";
 
 /**
  * Landing do Condomínio de Chácaras Bom Jardims — /bom-jardims
@@ -12,19 +14,11 @@ import LoteMap, { formatArea, STATUS_LABEL, type LoteInfo } from "@/components/b
  * com o mesmo destaque, 82 chácaras, sem promessas de escritura/valorização.
  */
 
-const C = { verde: "#0C3320", dourado: "#C9A84C", destaque: "#F2C04B", creme: "#F3EEDF", texto: "#23352A", suave: "#5C6B5F" };
-const SERIF = "'Playfair Display', Georgia, 'Times New Roman', serif";
-const SANS = "Lato, 'Segoe UI', Arial, sans-serif";
-
-const CONTATOS = [
-  { papel: "Corretor · CRECI/MA 4.705", nome: "José Romário", telefone: "(99) 9 9181-1246", whatsapp: "5599991811246" },
-  { papel: "Empreendimento", nome: "Bom Jardims", telefone: "(99) 9 9101-1970", whatsapp: "5599991011970" },
-];
-
 const CONSENT_TEXT =
   "Autorizo a Romatec Consultoria Total e o Condomínio de Chácaras Bom Jardims a usar meus dados para contato por WhatsApp, telefone e e-mail sobre este empreendimento, nos termos da Lei n.º 13.709/2018. Posso cancelar a qualquer momento.";
 
-const PORTAL = { lat: -4.9254537, lon: -47.3826563 };
+/** Portal de entrada (KMZ oficial) */
+const PORTAL = { lat: -4.925448446, lon: -47.382658381 };
 
 const DIFERENCIAIS = [
   { icon: ShieldCheck, titulo: "Portal com guarita", texto: "Portal em tijolo aparente e troncos, portão de correr estilo fazenda e controle de acesso." },
@@ -35,55 +29,12 @@ const DIFERENCIAIS = [
   { icon: Handshake, titulo: "Pagamento direto", texto: "Financiamento direto com o empreendimento, sem banco. Condições apresentadas pelo corretor no atendimento." },
 ];
 
-const GALERIA = [
-  { src: "/bom-jardims/portal-noite.webp", alt: "Portal de entrada à noite (perspectiva ilustrativa)" },
-  { src: "/bom-jardims/portal-frontal.webp", alt: "Portal de entrada — vista frontal (perspectiva ilustrativa)" },
-  { src: "/bom-jardims/stand-perspectiva.webp", alt: "Stand de vendas e administração na chácara B14 (perspectiva ilustrativa)" },
-  { src: "/bom-jardims/stand-aerea.webp", alt: "Stand de vendas e administração — vista aérea (perspectiva ilustrativa)" },
-];
-
-function waLink(numero: string, codigo?: string) {
-  const msg = codigo
-    ? `Olá! Tenho interesse na chácara ${codigo} do Condomínio de Chácaras Bom Jardims.`
-    : "Olá! Tenho interesse no Condomínio de Chácaras Bom Jardims.";
-  return `https://wa.me/${numero}?text=${encodeURIComponent(msg)}`;
-}
-
 function maskPhone(v: string) {
   const d = v.replace(/\D/g, "").slice(0, 11);
   if (d.length <= 2) return d ? `(${d}` : "";
   if (d.length <= 3) return `(${d.slice(0, 2)}) ${d.slice(2)}`;
   if (d.length <= 7) return `(${d.slice(0, 2)}) ${d.slice(2, 3)} ${d.slice(3)}`;
   return `(${d.slice(0, 2)}) ${d.slice(2, 3)} ${d.slice(3, 7)}-${d.slice(7)}`;
-}
-
-function useBrandFonts() {
-  useEffect(() => {
-    const id = "bomjardims-fonts";
-    if (document.getElementById(id)) return;
-    const link = document.createElement("link");
-    link.id = id;
-    link.rel = "stylesheet";
-    link.href = "https://fonts.googleapis.com/css2?family=Lato:wght@400;700&family=Playfair+Display:wght@600;700&display=swap";
-    document.head.appendChild(link);
-  }, []);
-}
-
-function ContatosBotoes({ codigo }: { codigo?: string }) {
-  return (
-    <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))", gap: 12 }}>
-      {CONTATOS.map(c => (
-        <a key={c.whatsapp} href={waLink(c.whatsapp, codigo)} target="_blank" rel="noopener noreferrer"
-          style={{ display: "flex", alignItems: "center", gap: 12, padding: "14px 16px", borderRadius: 14, background: "#1F8A4C", color: "#fff", textDecoration: "none" }}>
-          <MessageCircle size={26} />
-          <span style={{ lineHeight: 1.25 }}>
-            <span style={{ display: "block", fontSize: 12, opacity: 0.9 }}>{c.papel}</span>
-            <span style={{ display: "block", fontWeight: 700 }}>{c.nome} · {c.telefone}</span>
-          </span>
-        </a>
-      ))}
-    </div>
-  );
 }
 
 const inputStyle: React.CSSProperties = {
@@ -219,8 +170,16 @@ export default function BomJardims() {
   useBrandFonts();
   const { data: emp, isFetched } = trpc.empreendimentos.publicBySlug.useQuery({ slug: "bom-jardims" });
   const [fallbackLotes, setFallbackLotes] = useState<LoteInfo[]>([]);
-  const [selected, setSelected] = useState<string>();
+  // ?chacara=C05 (vindo do link da chácara): já chega com ela escolhida no formulário
+  const [selected, setSelected] = useState<string | undefined>(() => {
+    const c = new URLSearchParams(window.location.search).get("chacara")?.toUpperCase();
+    return codigoChacaraValido(c) ? c : undefined;
+  });
   const formRef = useRef<HTMLElement>(null);
+  useEffect(() => {
+    if (selected && window.location.hash === "#cadastro") setTimeout(() => formRef.current?.scrollIntoView({ block: "start" }), 300);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
   // Sem a API (fora do ar), usa a geometria pública e avisa que a situação não foi confirmada
   const semSituacao = isFetched && !emp;
   const lotes = (emp?.lotes ?? (semSituacao ? fallbackLotes : [])) as LoteInfo[];
@@ -313,8 +272,19 @@ export default function BomJardims() {
             </button>
           </div>
         )}
+        <div style={{ display: "flex", flexWrap: "wrap", gap: 10, marginTop: 14 }}>
+          <a href="/bom-jardims.kml" download style={{ display: "inline-flex", alignItems: "center", gap: 8, padding: "11px 16px", borderRadius: 12, border: `1.5px solid ${C.verde}`, color: C.verde, fontWeight: 700, textDecoration: "none", fontSize: 14 }}>
+            <Globe2 size={17} /> Baixar KML do empreendimento (Google Earth)
+          </a>
+          {selLote && selLote.status !== "nao_comercializavel" && (
+            <a href={`/bom-jardims/chacara/${selLote.codigo}`} style={{ display: "inline-flex", alignItems: "center", gap: 8, padding: "11px 16px", borderRadius: 12, background: C.dourado, color: C.verde, fontWeight: 700, textDecoration: "none", fontSize: 14 }}>
+              <MapPin size={17} /> Localização exata da {selLote.codigo}
+            </a>
+          )}
+        </div>
         <p style={{ fontSize: 12, color: C.suave, marginTop: 12 }}>
           Mapa ilustrativo a partir do levantamento georreferenciado (SIRGAS 2000). A03 é área técnica (poço e reservatório) e B14 abriga o stand de vendas e a administração.
+          O KML traz a poligonal do empreendimento e todas as chácaras demarcadas — abre no Google Earth e em apps de mapas e GIS.
         </p>
       </section>
 
@@ -323,7 +293,7 @@ export default function BomJardims() {
         <h2 style={h2}>Chegar em casa já é um passeio</h2>
         <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(240px, 1fr))", gap: 12, marginTop: 20 }}>
           <figure style={{ margin: 0, gridRow: "span 2", borderRadius: 18, overflow: "hidden", background: "#000", position: "relative" }}>
-            <video src="/bom-jardims/video.mp4" poster="/bom-jardims/video-poster.webp" controls playsInline preload="none"
+            <video src={VIDEO.src} poster={VIDEO.poster} controls playsInline preload="none"
               style={{ width: "100%", height: "100%", objectFit: "cover", display: "block", maxHeight: 640 }} />
             <figcaption style={{ position: "absolute", top: 10, left: 10, display: "flex", alignItems: "center", gap: 6, padding: "4px 10px", borderRadius: 999, background: "rgba(12,51,32,0.8)", color: "#fff", fontSize: 12 }}>
               <Play size={12} /> Vídeo

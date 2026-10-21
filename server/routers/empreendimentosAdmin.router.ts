@@ -264,6 +264,33 @@ export const empreendimentosAdminRouter = router({
       return { success: true, telefone, formato: input.formato };
     }),
 
+  /** Envia o link público da chácara (fotos, mapa e localização exata) só para o número digitado */
+  enviarLinkChacara: protectedProcedure
+    .input(z.object({ slug: z.string().max(80), codigo: z.string().max(10), telefone: z.string().trim().min(8).max(25) }))
+    .mutation(async ({ input }) => {
+      const { SLUG_BOM_JARDIMS, codigoChacaraValido, linkChacara, mensagemLinkChacara } = await import("../../shared/chacaraLink");
+      if (input.slug !== SLUG_BOM_JARDIMS || !codigoChacaraValido(input.codigo)) throw new Error("Link disponível só para as chácaras do Bom Jardims");
+      const { normalizePhoneBR } = await import("../../shared/telefone");
+      const telefone = normalizePhoneBR(input.telefone);
+      if (!telefone) throw new Error("Número inválido: informe um celular com DDD, ex.: (99) 99181-1246");
+      const db = await dbOrThrow();
+      const emp = await empreendimentoOuErro(db, input.slug);
+      const [lote]: any[] = await db.select({ codigo: lotes.codigo, quadra: lotes.quadra, areaM2: lotes.areaM2 }).from(lotes)
+        .where(and(eq(lotes.empreendimentoId, emp.id), eq(lotes.codigo, input.codigo))).limit(1);
+      if (!lote) throw new Error(`Chácara ${input.codigo} não encontrada`);
+      const { appUrl } = await import("../leads/config");
+      const link = linkChacara(appUrl(), lote.codigo);
+      const { enviarTexto, ZApiError } = await import("../leads/zapiClient");
+      try {
+        await enviarTexto(telefone, mensagemLinkChacara({ codigo: lote.codigo, quadra: lote.quadra, areaM2: num(lote.areaM2) }, link));
+      } catch (e: any) {
+        const msg = e instanceof ZApiError ? `${e.codigo}: ${e.message}` : (e?.message || "falha no envio");
+        throw new Error(`WhatsApp não enviou o link (${msg})`);
+      }
+      console.log(`[Empreendimento] Link da chácara ${lote.codigo} enviado para ${telefone}`);
+      return { success: true, telefone, link };
+    }),
+
   /** Envia o memorial descritivo (rascunho, página inteira em imagem ou PDF) só para o número digitado */
   enviarMemorialWhatsApp: protectedProcedure
     .input(z.object({

@@ -5,7 +5,8 @@ import { trpc } from "@/lib/trpc";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { ArrowLeft, Copy, ExternalLink, Link2, Megaphone, Plus, Trash2 } from "lucide-react";
+import { ArrowLeft, Copy, ExternalLink, Globe2, Link2, Megaphone, Plus, Trash2 } from "lucide-react";
+import { SLUG_BOM_JARDIMS, linkEmpreendimento, linkKml } from "@shared/chacaraLink";
 import PageHeader from "@/components/PageHeader";
 
 const CANAL_LABEL: Record<string, string> = {
@@ -40,6 +41,31 @@ function LinkGerado({ propertyId, campanhaId, funil }: { propertyId?: number; ca
         <Button size="sm" variant="outline" onClick={() => copiar(data.url, "Link")}><Copy className="mr-1.5 h-3.5 w-3.5" /> Copiar link wa.me</Button>
         <Button size="sm" variant="outline" onClick={() => copiar(data.mensagem, "Mensagem")}><Copy className="mr-1.5 h-3.5 w-3.5" /> Copiar mensagem</Button>
         <Button size="sm" variant="ghost" asChild><a href={data.url} target="_blank" rel="noreferrer"><ExternalLink className="mr-1.5 h-3.5 w-3.5" /> Testar</a></Button>
+      </div>
+    </div>
+  );
+}
+
+/** Campanha do Bom Jardims: link da página do empreendimento (poligonal geral) + KML para o Google Earth */
+function LinkEmpreendimento({ codigoCampanha }: { codigoCampanha: string }) {
+  const pagina = linkEmpreendimento(window.location.origin, codigoCampanha);
+  const kml = linkKml(window.location.origin);
+  const copiar = async (texto: string, rotulo: string) => {
+    try { await navigator.clipboard.writeText(texto); toast.success(`${rotulo} copiado`); } catch { toast.error("Não foi possível copiar"); }
+  };
+  return (
+    <div className="space-y-2 rounded-lg border border-emerald-500/30 bg-emerald-500/5 p-3">
+      <p className="text-xs font-semibold text-emerald-300">Link do empreendimento (Condomínio de Chácaras Bom Jardims)</p>
+      <p className="text-xs text-muted-foreground">
+        Página pública com fotos, vídeo e o mapa com a poligonal geral; os cadastros por este link entram nesta campanha.
+        O KML traz a poligonal geral e todas as chácaras demarcadas (uma por uma, com o código oficial) para o Google Earth e apps de mapas.
+      </p>
+      <a className="block text-xs text-emerald-300 underline break-all" href={pagina} target="_blank" rel="noreferrer">{pagina}</a>
+      <div className="flex flex-wrap gap-2">
+        <Button size="sm" variant="outline" onClick={() => copiar(pagina, "Link do empreendimento")}><Copy className="mr-1.5 h-3.5 w-3.5" /> Copiar link do empreendimento</Button>
+        <Button size="sm" variant="outline" onClick={() => copiar(kml, "Link do KML")}><Copy className="mr-1.5 h-3.5 w-3.5" /> Copiar link do KML</Button>
+        <Button size="sm" variant="ghost" asChild><a href={kml} download><Globe2 className="mr-1.5 h-3.5 w-3.5" /> Baixar KML</a></Button>
+        <Button size="sm" variant="ghost" asChild><a href={pagina} target="_blank" rel="noreferrer"><ExternalLink className="mr-1.5 h-3.5 w-3.5" /> Abrir página</a></Button>
       </div>
     </div>
   );
@@ -223,6 +249,7 @@ export default function LeadCampanhas() {
                         />
                       </label>
                     </div>
+                    {linkAberto === c.id && c.empreendimentoSlug === SLUG_BOM_JARDIMS && <LinkEmpreendimento codigoCampanha={c.codigo} />}
                     {linkAberto === c.id && <LinkGerado campanhaId={c.id} />}
                   </CardContent>
                 </Card>

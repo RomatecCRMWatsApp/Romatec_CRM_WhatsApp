@@ -168,6 +168,53 @@ export const bomJardimsLeadSchema = z.object({
 
 export type BomJardimsLeadInput = z.infer<typeof bomJardimsLeadSchema>;
 
+// ─── KML (Google Earth) ──────────────────────────────────────────────────────
+let geometriaCache: import('../shared/kmlBomJardims').GeometriaPublica | null = null;
+
+/** Geometria pública (mapa.json): dist/public em produção, client/public em desenvolvimento */
+export async function geometriaBomJardims(): Promise<import('../shared/kmlBomJardims').GeometriaPublica | null> {
+  if (geometriaCache) return geometriaCache;
+  const fs = await import('fs');
+  const path = await import('path');
+  const candidatos = [
+    path.resolve(import.meta.dirname, 'public', BOM_JARDIMS_SLUG, 'mapa.json'),
+    path.resolve(process.cwd(), 'dist', 'public', BOM_JARDIMS_SLUG, 'mapa.json'),
+    path.resolve(process.cwd(), 'client', 'public', BOM_JARDIMS_SLUG, 'mapa.json'),
+  ];
+  const arq = candidatos.find(c => fs.existsSync(c));
+  if (!arq) return null;
+  geometriaCache = JSON.parse(await fs.promises.readFile(arq, 'utf8'));
+  return geometriaCache;
+}
+
+/** /bom-jardims.kml (empreendimento) e /bom-jardims/chacara/C05.kml (chácara) — públicos, sem login */
+export function registrarKmlBomJardims(app: Express, base: () => string) {
+  const enviar = (res: any, kml: string, arquivo: string) => {
+    res.setHeader('Content-Type', 'application/vnd.google-earth.kml+xml; charset=utf-8');
+    res.setHeader('Content-Disposition', `attachment; filename="${arquivo}"`);
+    res.setHeader('Cache-Control', 'public, max-age=3600');
+    res.send(kml);
+  };
+  app.get(`/${BOM_JARDIMS_SLUG}.kml`, async (_req, res) => {
+    const g = await geometriaBomJardims();
+    if (!g) return res.status(503).type('text/plain').send('Mapa indisponível');
+    const { kmlEmpreendimento, nomeArquivoKml } = await import('../shared/kmlBomJardims');
+    enviar(res, kmlEmpreendimento(g, { link: `${base()}/${BOM_JARDIMS_SLUG}` }), nomeArquivoKml());
+  });
+  app.get(`/${BOM_JARDIMS_SLUG}/chacara/:arquivo`, async (req, res, next) => {
+    const m = /^([A-Da-d]\d{2})\.kml$/.exec(req.params.arquivo);
+    if (!m) return next();                                   // /bom-jardims/chacara/C05 → página (SPA)
+    const g = await geometriaBomJardims();
+    if (!g) return res.status(503).type('text/plain').send('Mapa indisponível');
+    const { kmlChacara, nomeArquivoKml } = await import('../shared/kmlBomJardims');
+    const { linkChacara } = await import('../shared/chacaraLink');
+    const codigo = m[1].toUpperCase();
+    const kml = kmlChacara(g, codigo, { link: linkChacara(base(), codigo) });
+    if (!kml) return res.status(404).type('text/plain').send('Chácara não encontrada');
+    enviar(res, kml, nomeArquivoKml(codigo));
+  });
+}
+
 export function registerBomJardimsRoutes(app: Express, allow: (key: string) => boolean) {
   app.post('/api/public/lead/bom-jardims', async (req, res) => {
     try {

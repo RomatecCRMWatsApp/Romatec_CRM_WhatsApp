@@ -96,11 +96,13 @@ export function lotesDoMapa(data: MapaData): LoteInfo[] {
   }));
 }
 
-export default function LoteMap({ lotes, selected, onSelect, onMapLoaded, dados }: {
+export default function LoteMap({ lotes, selected, onSelect, onMapLoaded, dados, destaque }: {
   /** Chamado com os lotes da geometria pública, para a página usar se a API falhar */
   onMapLoaded?: (fallback: LoteInfo[]) => void;
   /** Geometria já carregada (testes); sem isso, busca /bom-jardims/mapa.json */
   dados?: MapaData;
+  /** Página de uma chácara: ela em dourado, sem a lista de escolha nem o cartão da seleção */
+  destaque?: boolean;
   lotes: LoteInfo[];
   selected?: string;
   onSelect: (codigo: string) => void;
@@ -157,7 +159,7 @@ export default function LoteMap({ lotes, selected, onSelect, onMapLoaded, dados 
             const status = info?.status ?? (NAO_COMERCIAL_LABEL[l.codigo] ? "nao_comercializavel" : "disponivel");
             const pts = l.poly.map(project);
             const [cx, cy] = centroid(pts);
-            const fill = l.codigo === "B14" ? COR_B14 : STATUS_COR[status];
+            const fill = destaque && selected === l.codigo ? "#E8B931" : l.codigo === "B14" ? COR_B14 : STATUS_COR[status];
             const clickable = status !== "nao_comercializavel";
             const isSel = selected === l.codigo;
             return (
@@ -213,7 +215,7 @@ export default function LoteMap({ lotes, selected, onSelect, onMapLoaded, dados 
       </div>
 
       {/* Escolha pela lista (mais fácil no celular) */}
-      <label style={{ display: "block", marginTop: 12, fontSize: 14, color: "#0C3320" }}>
+      {!destaque && <label style={{ display: "block", marginTop: 12, fontSize: 14, color: "#0C3320" }}>
         <span style={{ display: "block", fontWeight: 700, marginBottom: 6 }}>Ou escolha pela lista:</span>
         <select value={selected ?? ""} onChange={e => e.target.value && onSelect(e.target.value)}
           style={{ width: "100%", padding: "11px 12px", borderRadius: 12, border: "1px solid #CFC6AD", background: "#fff", color: "#0C3320", fontSize: 16 }}>
@@ -222,7 +224,7 @@ export default function LoteMap({ lotes, selected, onSelect, onMapLoaded, dados 
             <option key={l.codigo} value={l.codigo}>{l.codigo} · Quadra {l.quadra} · {formatArea(l.areaM2)}</option>
           ))}
         </select>
-      </label>
+      </label>}
 
       {/* Legenda */}
       <div style={{ display: "flex", flexWrap: "wrap", gap: "8px 16px", marginTop: 12, fontSize: 13, color: "#0C3320" }}>
@@ -263,7 +265,7 @@ export default function LoteMap({ lotes, selected, onSelect, onMapLoaded, dados 
       </div>
 
       {/* Chácara selecionada */}
-      {sel && (
+      {sel && !destaque && (
         <div style={{ marginTop: 16, padding: 16, borderRadius: 16, background: "#FFFFFF", border: "2px solid #C9A84C" }}>
           <p style={{ margin: 0, fontSize: 13, color: "#5C6B5F" }}>Chácara selecionada</p>
           <p style={{ margin: "2px 0 0", fontSize: 22, fontWeight: 700, color: "#0C3320", fontFamily: "'Playfair Display', Georgia, serif" }}>

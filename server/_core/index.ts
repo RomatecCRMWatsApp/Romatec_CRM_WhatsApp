@@ -336,8 +336,11 @@ async function startServer() {
     }
   });
 
-  const { registerBomJardimsRoutes } = await import('../bom-jardims');
+  const { registerBomJardimsRoutes, registrarKmlBomJardims } = await import('../bom-jardims');
   registerBomJardimsRoutes(app, allowPublicLead);
+  // KML público (Google Earth): empreendimento e chácara — antes dos arquivos estáticos e da SPA
+  const { appUrl } = await import('../leads/config');
+  registrarKmlBomJardims(app, appUrl);
 
   // ─── Rastreio da landing /i/:codigo (beacon) e QR de placa /q/:codigo ───
   const ipDe = (req: express.Request) => {

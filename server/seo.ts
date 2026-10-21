@@ -53,7 +53,7 @@ export const META_BOM_JARDIMS: MetaPagina = {
         alternateName: NOMES_ALTERNATIVOS,
         description: 'Condomínio de chácaras em Açailândia/MA, na BR-222 — 82 chácaras a partir de 3.025 m², portal de acesso, ruas internas de 12 m e área de vivência.',
         address: { '@type': 'PostalAddress', addressLocality: 'Açailândia', addressRegion: 'MA', addressCountry: 'BR', streetAddress: 'Estrada do Piquiá dos Baianos, altura do km 15 da BR-222' },
-        geo: { '@type': 'GeoCoordinates', latitude: -4.9254537, longitude: -47.3826563 },
+        geo: { '@type': 'GeoCoordinates', latitude: -4.925448446, longitude: -47.382658381 },
         containedInPlace: { '@type': 'City', name: 'Açailândia', address: { '@type': 'PostalAddress', addressRegion: 'MA', addressCountry: 'BR' } },
         telephone: '+55 99 99181-1246',
         image: 'https://romateccrm.com/bom-jardims/og.jpg',
@@ -118,11 +118,27 @@ export function metaDoImovel(p: ImovelSeo, path: string): MetaPagina {
   };
 }
 
+/**
+ * Link de uma chácara (/bom-jardims/chacara/C05) — é o que o corretor manda no WhatsApp: a prévia mostra
+ * a foto do empreendimento e a chácara. Fora do Google (84 páginas quase iguais): noindex, canonical própria.
+ */
+export function metaDaChacara(codigo: string): MetaPagina {
+  return {
+    title: `Chácara ${codigo} · Quadra ${codigo[0]} — Chácaras Bom Jardims, Açailândia/MA`,
+    description: `Chácara ${codigo} (Quadra ${codigo[0]}) no Condomínio de Chácaras Bom Jardims, em Açailândia/MA: fotos, mapa e localização exata. Condições e valores com o corretor. ${CRECI}.`,
+    path: `/bom-jardims/chacara/${codigo}`,
+    image: '/bom-jardims/og.jpg',
+    indexavel: false,
+  };
+}
+
 /** Meta das rotas fixas; imóvel (/i/:codigo, /imovel/:slug) é resolvido pelo servidor com o banco */
 export function metaDaRota(path: string): MetaPagina | 'imovel' {
   const p = path.replace(/\/+$/, '') || '/';
   if (ROTAS_INTERNAS.some(r => p === r || p.startsWith(`${r}/`))) return { ...META_PADRAO, title: 'Romatec CRM', path: p, indexavel: false };
   if (p === '/bom-jardims') return META_BOM_JARDIMS;
+  const chacara = /^\/bom-jardims\/chacara\/([A-Da-d]\d{2})$/.exec(p);
+  if (chacara) return metaDaChacara(chacara[1].toUpperCase());
   if (p === '/imoveis') return { ...META_PADRAO, title: 'Imóveis à venda em Açailândia/MA — Romatec', path: '/imoveis' };
   if (p === '/links') return { ...META_PADRAO, title: 'Romatec Imóveis — links e contato', path: '/links' };
   if (/^\/i\/IMV-\d{4}$/i.test(p) || /^\/imovel\/[^/]+$/.test(p)) return 'imovel';

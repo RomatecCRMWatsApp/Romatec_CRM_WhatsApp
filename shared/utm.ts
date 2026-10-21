@@ -43,6 +43,26 @@ export function utmParaGeo(e: number, n: number, fuso: number, sul = true): LonL
   return [((lon0 + lon) * 180) / Math.PI, (lat * 180) / Math.PI];
 }
 
+/** [lon, lat] → E/N UTM no fuso dado (inversa de utmParaGeo; hemisfério sul com falso norte de 10.000 km) */
+export function geoParaUtm(lon: number, lat: number, fuso: number, sul = true): XY {
+  const phi = (lat * Math.PI) / 180;
+  const lon0 = ((fuso - 1) * 6 - 180 + 3) * Math.PI / 180;
+  const s = Math.sin(phi), c = Math.cos(phi), t = Math.tan(phi);
+  const n = A / Math.sqrt(1 - E2 * s * s);
+  const t2 = t * t;
+  const c2 = EP2 * c * c;
+  const a = c * ((lon * Math.PI) / 180 - lon0);
+  const m = A * (
+    (1 - E2 / 4 - (3 * E2 ** 2) / 64 - (5 * E2 ** 3) / 256) * phi
+    - ((3 * E2) / 8 + (3 * E2 ** 2) / 32 + (45 * E2 ** 3) / 1024) * Math.sin(2 * phi)
+    + ((15 * E2 ** 2) / 256 + (45 * E2 ** 3) / 1024) * Math.sin(4 * phi)
+    - ((35 * E2 ** 3) / 3072) * Math.sin(6 * phi)
+  );
+  const e = K0 * n * (a + ((1 - t2 + c2) * a ** 3) / 6 + ((5 - 18 * t2 + t2 * t2 + 72 * c2 - 58 * EP2) * a ** 5) / 120) + 500000;
+  const nn = K0 * (m + n * t * ((a * a) / 2 + ((5 - t2 + 9 * c2 + 4 * c2 * c2) * a ** 4) / 24 + ((61 - 58 * t2 + t2 * t2 + 600 * c2 - 330 * EP2) * a ** 6) / 720));
+  return [e, sul ? nn + 10000000 : nn];
+}
+
 /** Distância plana (m) */
 export const distancia = (a: XY, b: XY) => Math.hypot(b[0] - a[0], b[1] - a[1]);
 
