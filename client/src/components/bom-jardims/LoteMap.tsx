@@ -15,6 +15,9 @@ export type MapaData = {
   /** Rio/córrego (eixo) e área de vivência e recreação, da planta oficial */
   rio?: { nome: string; line: Pt[] };
   areas?: { nome: string; detalhe?: string; poly: Pt[]; rotulo?: Pt }[];
+  /** APP (30 m) ao longo do rio e trilha ecológica, do KMZ oficial */
+  app?: { nome: string; detalhe?: string; poly: Pt[] };
+  trilha?: { nome: string; line: Pt[]; rotulo?: Pt };
 };
 const valido = (p: Pt | null | undefined): p is Pt => !!p && Number.isFinite(p[0]) && Number.isFinite(p[1]);
 
@@ -55,7 +58,7 @@ const PAD = 24;
 function useProjection(data: MapaData | null) {
   return useMemo(() => {
     if (!data) return null;
-    const all = [...data.perimetro, ...data.lotes.flatMap(l => l.poly), ...(data.rio?.line ?? []), ...(data.areas ?? []).flatMap(a => a.poly)].filter(valido);
+    const all = [...data.perimetro, ...data.lotes.flatMap(l => l.poly), ...(data.rio?.line ?? []), ...(data.areas ?? []).flatMap(a => a.poly), ...(data.app?.poly ?? []), ...(data.trilha?.line ?? [])].filter(valido);
     const lats = all.map(p => p[1]);
     const lons = all.map(p => p[0]);
     const minLon = Math.min(...lons), maxLon = Math.max(...lons);
@@ -135,6 +138,11 @@ export default function LoteMap({ lotes, selected, onSelect, onMapLoaded, dados 
           {data.areas?.map(a => (
             <path key={a.nome} d={pathOf(a.poly.filter(valido).map(project))} fill="#BFDB9C" stroke="#2F7D3A" strokeWidth={1.5} strokeDasharray="6 4" />
           ))}
+          {data.app?.poly?.length ? (
+            <path d={pathOf(data.app.poly.filter(valido).map(project))} fill="#3F7A3A" fillOpacity={0.28} stroke="#2F6A2C" strokeOpacity={0.55} strokeWidth={1} pointerEvents="none">
+              <title>{data.app.nome}</title>
+            </path>
+          ) : null}
           {data.rio?.line?.length ? (
             <g pointerEvents="none">
               <path d={pathOf(data.rio.line.filter(valido).map(project), false)} fill="none" stroke="#7FB069" strokeOpacity={0.5} strokeWidth={24} strokeLinecap="round" strokeLinejoin="round" />
@@ -167,6 +175,16 @@ export default function LoteMap({ lotes, selected, onSelect, onMapLoaded, dados 
               </g>
             );
           })}
+          {data.trilha?.line?.length ? (
+            <g pointerEvents="none">
+              <path d={pathOf(data.trilha.line.filter(valido).map(project), false)} fill="none" stroke="#FFFFFF" strokeOpacity={0.8} strokeWidth={5} strokeLinecap="round" strokeLinejoin="round" />
+              <path d={pathOf(data.trilha.line.filter(valido).map(project), false)} fill="none" stroke="#7A5530" strokeWidth={2.2} strokeDasharray="6 5" strokeLinecap="round" strokeLinejoin="round" />
+              {valido(data.trilha.rotulo) && (() => {
+                const [x, y] = project(data.trilha!.rotulo!);
+                return <text x={x + 14} y={y + 32} textAnchor="middle" fontSize={12} fontWeight={700} fontStyle="italic" fill="#6A4626" stroke="#FFFFFF" strokeWidth={3} paintOrder="stroke">{data.trilha!.nome}</text>;
+              })()}
+            </g>
+          ) : null}
           {data.areas?.filter(a => valido(a.rotulo)).map(a => {
             const [x, y] = project(a.rotulo!);
             return (
@@ -228,6 +246,18 @@ export default function LoteMap({ lotes, selected, onSelect, onMapLoaded, dados 
           <span style={{ display: "inline-flex", alignItems: "center", gap: 6 }}>
             <span style={{ width: 18, height: 6, borderRadius: 3, background: "#2C7FB8" }} />
             Rio
+          </span>
+        ) : null}
+        {data.app ? (
+          <span style={{ display: "inline-flex", alignItems: "center", gap: 6 }}>
+            <span style={{ width: 14, height: 14, borderRadius: 3, background: "rgba(63,122,58,0.3)", border: "1px solid rgba(47,106,44,0.6)" }} />
+            APP (30 m)
+          </span>
+        ) : null}
+        {data.trilha ? (
+          <span style={{ display: "inline-flex", alignItems: "center", gap: 6 }}>
+            <span style={{ width: 18, borderTop: "2px dashed #7A5530" }} />
+            Trilha ecológica
           </span>
         ) : null}
       </div>

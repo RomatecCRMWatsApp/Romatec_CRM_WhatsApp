@@ -19,6 +19,10 @@ export type Contexto = {
   rio?: { nome: string; line: Pt[]; rotulo?: Pt };
   /** Áreas de uso comum (ex.: área de vivência e recreação) */
   areas?: { nome: string; detalhe?: string; poly: Pt[]; rotulo?: Pt }[];
+  /** APP — faixa de preservação ao longo do rio */
+  app?: { nome: string; detalhe?: string; poly: Pt[] };
+  /** Trilha ecológica (núcleo de apoio → pontos de banho) */
+  trilha?: { nome: string; line: Pt[]; rotulo?: Pt };
 };
 const valido = (p: Pt | null | undefined): p is Pt => !!p && Number.isFinite(p[0]) && Number.isFinite(p[1]);
 
@@ -61,7 +65,7 @@ export default function MapaTematico({ slug, lotes, ruas, perimetro, selecionado
     // Enquadra a propriedade inteira: lotes, perímetro, portal e pontos, rio e área de vivência
     const todos = [
       ...itens.flatMap(l => l.poly), ...contorno, ...(ctx?.perimetro ?? []), ...(ctx?.pontos ?? []).map(p => p.pt),
-      ...(ctx?.rio?.line ?? []), ...(ctx?.areas ?? []).flatMap(a => a.poly),
+      ...(ctx?.rio?.line ?? []), ...(ctx?.areas ?? []).flatMap(a => a.poly), ...(ctx?.app?.poly ?? []), ...(ctx?.trilha?.line ?? []),
     ].filter(valido);
     if (!todos.length) return null;
     const lons = todos.map(p => p[0]), lats = todos.map(p => p[1]);
@@ -122,6 +126,13 @@ export default function MapaTematico({ slug, lotes, ruas, perimetro, selecionado
           {ctx?.areas?.map(a => (
             <path key={a.nome} d={caminho(a.poly.filter(valido).map(proj))} fill="url(#vivencia)" stroke="#2F7D3A" strokeWidth={1.5} strokeDasharray="6 4" pointerEvents="none" />
           ))}
+
+          {/* APP (30 m): faixa de preservação ao longo do rio, discreta */}
+          {ctx?.app?.poly?.length ? (
+            <path d={caminho(ctx.app.poly.filter(valido).map(proj))} fill="#3F7A3A" fillOpacity={0.28} stroke="#2F6A2C" strokeOpacity={0.55} strokeWidth={1} pointerEvents="none">
+              <title>{[ctx.app.nome, ctx.app.detalhe].filter(Boolean).join(" — ")}</title>
+            </path>
+          ) : null}
 
           {/* Rio (curso d'água) com mata ciliar */}
           {ctx?.rio?.line?.length ? (() => {
@@ -184,6 +195,24 @@ export default function MapaTematico({ slug, lotes, ruas, perimetro, selecionado
               </text>
             );
           })}
+
+          {/* Trilha ecológica: tracejado claro do núcleo de apoio aos pontos de banho */}
+          {ctx?.trilha?.line?.length ? (() => {
+            const pts = ctx.trilha.line.filter(valido).map(proj);
+            const d = caminho(pts, false);
+            const r = valido(ctx.trilha.rotulo) ? proj(ctx.trilha.rotulo) : null;
+            return (
+              <g pointerEvents="none">
+                <path d={d} fill="none" stroke="#FFFFFF" strokeOpacity={0.8} strokeWidth={4} strokeLinecap="round" strokeLinejoin="round" />
+                <path d={d} fill="none" stroke="#7A5530" strokeWidth={1.8} strokeDasharray="5 4" strokeLinecap="round" strokeLinejoin="round" />
+                {r && (
+                  <text x={r[0]} y={r[1] + (compacto ? 24 : 28)} textAnchor="middle" fontSize={compacto ? 8 : 10} fontWeight={700} fontStyle="italic"
+                    fill="#6A4626" stroke="#FFFFFF" strokeWidth={3} paintOrder="stroke">{ctx.trilha.nome}</text>
+                )}
+                <title>{ctx.trilha.nome}</title>
+              </g>
+            );
+          })() : null}
 
           {/* Nomes da área de vivência e do rio */}
           {ctx?.areas?.map(a => {
@@ -259,6 +288,8 @@ export default function MapaTematico({ slug, lotes, ruas, perimetro, selecionado
           {ctx?.pontos?.length ? <span className="inline-flex items-center gap-1.5"><span className="inline-block h-3 w-3 rounded-full bg-[#C9A84C] border-2 border-[#0C3320]" />Portal, stand, poço e pontos de apoio</span> : null}
           {ctx?.areas?.length ? <span className="inline-flex items-center gap-1.5"><span className="inline-block h-3 w-3 rounded-sm border border-[#2F7D3A] bg-[#C7DFA8]" />Área de vivência e recreação</span> : null}
           {ctx?.rio ? <span className="inline-flex items-center gap-1.5"><span className="inline-block h-1.5 w-4 rounded-full bg-[#2C7FB8]" />Rio</span> : null}
+          {ctx?.app ? <span className="inline-flex items-center gap-1.5"><span className="inline-block h-3 w-3 rounded-sm border border-[#2F6A2C]/60 bg-[#3F7A3A]/30" />APP (30 m)</span> : null}
+          {ctx?.trilha ? <span className="inline-flex items-center gap-1.5"><span className="inline-block w-4 border-t-2 border-dashed border-[#7A5530]" />Trilha ecológica</span> : null}
         </div>
       )}
     </div>

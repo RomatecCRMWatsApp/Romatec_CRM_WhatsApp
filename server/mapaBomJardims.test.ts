@@ -67,6 +67,25 @@ describe('Mapa do Bom Jardims — dados da planta oficial', () => {
     // Não invade o bloco de lotes
     expect(mapa.lotes.some((l: any) => dentro(centroide(l.poly), area.poly))).toBe(false);
   });
+  it('APP (30 m) do KMZ: faixa ao longo do rio, com os pontos de banho dentro e o núcleo de apoio fora', () => {
+    expect(mapa.app.nome).toBe('APP (30 m)');
+    expect(mapa.app.poly).toHaveLength(73);                         // "APP 30 m — preservada" do KMZ
+    expect(mapa.app.poly[0]).toEqual(mapa.app.poly[mapa.app.poly.length - 1]);
+    expect(mapa.rio.line.filter((p: Pt) => dentro(p, mapa.app.poly)).length).toBeGreaterThan(5);
+    for (const re of [/banho 1/i, /banho 2/i]) expect(dentro(ponto(re), mapa.app.poly)).toBe(true);
+    expect(dentro(ponto(/núcleo/i), mapa.app.poly)).toBe(false);   // "Núcleo de apoio (fora da APP)"
+    expect(mapa.lotes.some((l: any) => dentro(centroide(l.poly), mapa.app.poly))).toBe(false);
+  });
+  it('trilha ecológica do KMZ: sai do núcleo de apoio e passa pelos pontos de banho 1 e 2', () => {
+    const t = mapa.trilha.line as Pt[];
+    expect(mapa.trilha.nome).toBe('Trilha ecológica');
+    expect(t).toHaveLength(9);
+    expect(metros(t[0], ponto(/núcleo/i))).toBeLessThan(20);
+    const ateTrilha = (p: Pt) => Math.min(...t.map(q => metros(p, q)));
+    expect(ateTrilha(ponto(/banho 1/i))).toBeLessThan(1);
+    expect(metros(t[t.length - 1], ponto(/banho 2/i))).toBeLessThan(1);
+    expect(t.every(p => dentro(p, mapa.areas[0].poly))).toBe(true); // toda dentro da área de vivência
+  });
   it('perímetro certificado e lotes com a geometria do KMZ (áreas oficiais)', () => {
     expect(Math.abs(areaM2(mapa.perimetro) - 411401.13) / 411401.13).toBeLessThan(0.005);
     expect(mapa.lotes).toHaveLength(84);
@@ -100,9 +119,16 @@ describe('Mapa do Bom Jardims — desenho', () => {
     expect(svg).toContain('ÁREA DE VIVÊNCIA');
     expect(svg).toContain('>RIO<');
     expect(svg).toContain('Núcleo de apoio');
+    expect(svg).toContain('fill="#3F7A3A"');         // APP
+    expect(svg).toContain('>Trilha ecológica<');
+    expect(svg).toContain('stroke-dasharray="5 4"'); // trilha tracejada
     expect(svg).not.toContain('NaN');
     // Só o B13 colorido (os demais apagados)
     expect((svg.match(/fill="#EEF1F3"/g) || []).length).toBe(lotes.length - 1);
+  });
+  it('tela do empreendimento: legenda com APP (30 m) e Trilha ecológica', () => {
+    const html = renderToStaticMarkup(React.createElement(MapaTematico, { slug: 'bom-jardims', lotes, contexto: mapa }));
+    for (const t of ['APP (30 m)', 'Trilha ecológica', 'Área de vivência e recreação', 'Rio']) expect(html).toContain(t);
   });
   it('enquadramento inclui a área de vivência e o rio (nada fica fora do quadro)', () => {
     const svg = renderToStaticMarkup(React.createElement(MapaTematico, { slug: 'bom-jardims', lotes, contexto: mapa, semLegenda: true }));
@@ -111,11 +137,14 @@ describe('Mapa do Bom Jardims — desenho', () => {
     expect(nums.length).toBeGreaterThan(100);
     for (const [x, y] of nums) { expect(x).toBeGreaterThanOrEqual(0); expect(x).toBeLessThanOrEqual(w); expect(y).toBeGreaterThanOrEqual(0); expect(y).toBeLessThanOrEqual(h); }
   });
-  it('mapa público: rio, área de vivência e nome do portal', () => {
+  it('mapa público: rio, área de vivência, APP, trilha, nome do portal e legenda', () => {
     const svg = renderToStaticMarkup(React.createElement(LoteMap, { lotes: lotesDoMapa(mapa), onSelect: () => {}, dados: mapa }));
     expect(svg).toContain('#2C7FB8');
     expect(svg).toContain('ÁREA DE VIVÊNCIA');
     expect(svg).toContain('PORTAL DE ENTRADA');
+    expect(svg).toContain('fill="#3F7A3A"');
+    expect(svg).toContain('>Trilha ecológica<');
+    expect(svg).toContain('APP (30 m)');
     expect(svg).not.toContain('NaN');
   });
 });
