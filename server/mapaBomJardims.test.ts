@@ -17,6 +17,17 @@ const dentro = ([x, y]: Pt, poly: Pt[]) => {
   return c;
 };
 
+const anel = (p: Pt[]) => (p[0][0] === p[p.length - 1][0] && p[0][1] === p[p.length - 1][1] ? p.slice(0, -1) : p);
+const centroide = (p: Pt[]): Pt => { const a = anel(p); return [a.reduce((s, v) => s + v[0], 0) / a.length, a.reduce((s, v) => s + v[1], 0) / a.length]; };
+/** Área plana aproximada (m²) — para conferir com as áreas oficiais */
+const areaM2 = (p: Pt[]) => {
+  const k = Math.cos((-4.926 * Math.PI) / 180);
+  const q = anel(p).map(([lo, la]) => [lo * 111320 * k, la * 110574]);
+  let s = 0;
+  for (let i = 0; i < q.length; i++) { const [x1, y1] = q[i], [x2, y2] = q[(i + 1) % q.length]; s += x1 * y2 - x2 * y1; }
+  return Math.abs(s / 2);
+};
+
 describe('Mapa do Bom Jardims — dados da planta oficial', () => {
   it('portal principal exatamente no ponto do KMZ oficial, na boca da via de acesso (lado oeste), fora de lote', () => {
     const principais = mapa.pontos.filter((p: any) => /portal/i.test(p.nome));
@@ -37,18 +48,38 @@ describe('Mapa do Bom Jardims — dados da planta oficial', () => {
     expect(metros(ponto(/banho 1/i), [-47.383117, -4.928279])).toBeLessThan(2);
     expect(metros(ponto(/banho 2/i), [-47.383728, -4.928906])).toBeLessThan(2);
   });
-  it('rio (curso d\'água) ao longo da frente, a oeste, passando pela área de vivência', () => {
-    expect(mapa.rio.line.length).toBeGreaterThan(10);
+  it('rio = curso d\'água oficial do KMZ: na frente (oeste), com os pontos de banho na margem', () => {
+    expect(mapa.rio.line).toHaveLength(65);                        // linha "Curso d'água" do KMZ
     const oeste = Math.min(...mapa.perimetro.map((p: Pt) => p[0]));
-    expect(Math.min(...mapa.rio.line.map((p: Pt) => p[0]))).toBeLessThan(oeste); // corre pela divisa oeste
+    expect(Math.min(...mapa.rio.line.map((p: Pt) => p[0]))).toBeLessThan(oeste);
     expect(mapa.rio.line.some((p: Pt) => dentro(p, mapa.areas[0].poly))).toBe(true);
+    const ateRio = (p: Pt) => Math.min(...mapa.rio.line.map((q: Pt) => metros(p, q)));
+    expect(ateRio(ponto(/banho 1/i))).toBeLessThan(25);            // deck na margem
+    expect(ateRio(ponto(/banho 2/i))).toBeLessThan(25);
   });
-  it('área de vivência e recreação (Quadra F) contém o núcleo de apoio e os pontos de banho', () => {
+  it('área de vivência e recreação (Quadra F) com a área oficial (89.332,14 m²), núcleo de apoio e pontos de banho', () => {
     const area = mapa.areas[0];
     expect(area.nome).toBe('Área de vivência e recreação');
     expect(area.poly[0]).toEqual(area.poly[area.poly.length - 1]);
+    expect(Math.abs(areaM2(area.poly) - 89332.14) / 89332.14).toBeLessThan(0.01);
     for (const re of [/núcleo/i, /banho 1/i, /banho 2/i]) expect(dentro(ponto(re), area.poly)).toBe(true);
     expect(dentro(area.rotulo, area.poly)).toBe(true);
+    // Não invade o bloco de lotes
+    expect(mapa.lotes.some((l: any) => dentro(centroide(l.poly), area.poly))).toBe(false);
+  });
+  it('perímetro certificado e lotes com a geometria do KMZ (áreas oficiais)', () => {
+    expect(Math.abs(areaM2(mapa.perimetro) - 411401.13) / 411401.13).toBeLessThan(0.005);
+    expect(mapa.lotes).toHaveLength(84);
+    const a = (c: string) => areaM2(mapa.lotes.find((l: any) => l.codigo === c).poly);
+    for (const c of ['A01', 'A14', 'B13']) expect(Math.abs(a(c) - 3025.11)).toBeLessThan(15);
+    for (const c of ['C01', 'C05', 'D10']) expect(a(c)).toBeGreaterThan(3100);
+  });
+  it('numeração oficial na página pública: C01 no nordeste da quadra C, D10 no sudoeste da quadra D', () => {
+    const c = (cod: string) => centroide(mapa.lotes.find((l: any) => l.codigo === cod).poly);
+    expect(c('C01')[0]).toBeGreaterThan(c('C11')[0]);   // C01 a leste do C11
+    expect(c('C01')[1]).toBeGreaterThan(c('C10')[1]);   // e ao norte do C10
+    expect(c('D10')[0]).toBeLessThan(c('D01')[0]);      // D10 a oeste do D01
+    expect(c('D10')[1]).toBeLessThan(c('D01')[1]);      // e ao sul
   });
 });
 

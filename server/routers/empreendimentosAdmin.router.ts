@@ -323,7 +323,7 @@ async function lerDxfDoArquivo(slug: string, arquivoId: number) {
   const conteudo = Buffer.from(arq.conteudoBase64, "base64").toString("latin1");
   const rows: any[] = await db.select().from(lotes).where(eq(lotes.empreendimentoId, emp.id));
   const existentes = new Map(rows.map(r => [r.codigo, r]));
-  const { importarLotesDxf } = await import("../lotes/dxf");
+  const { importarLotesDxf, manterCodigosPorPosicao } = await import("../lotes/dxf");
   // Reimportação: a quadra vem do lote já cadastrado no mesmo lugar (mantém os códigos)
   const comCentro = rows.filter(r => r.latCentro != null && r.lonCentro != null);
   const resultado = importarLotesDxf(conteudo, {
@@ -334,5 +334,7 @@ async function lerDxfDoArquivo(slug: string, arquivoId: number) {
       return perto?.r.quadra ?? null;
     } : undefined,
   });
+  // Lote no mesmo lugar de um já cadastrado mantém o código do cadastro (numeração corrigida não volta à do DXF)
+  resultado.lotes = manterCodigosPorPosicao(resultado.lotes, rows);
   return { db, emp, resultado, existentes };
 }

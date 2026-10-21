@@ -79,6 +79,29 @@ export interface PerimetroDxf { verticesUtm: XY[]; poligono: LonLat[]; areaM2: n
 
 export interface ResultadoDxf { lotes: LoteDxf[]; ruas: RuaDxf[]; perimetro: PerimetroDxf | null; avisos: string[]; fuso: number }
 
+/**
+ * Reimportação: o lote do desenho que cai no mesmo lugar (centro a menos de `tolM` metros) de um lote já
+ * cadastrado fica com o código/quadra/número do cadastro. Assim uma numeração corrigida no banco
+ * (ex.: quadras C e D do Bom Jardims, renumeradas pela planta oficial) não volta para a do DXF.
+ */
+export function manterCodigosPorPosicao<T extends Pick<LoteDxf, 'codigo' | 'quadra' | 'numero' | 'centro'>>(
+  lotesDxf: T[],
+  cadastrados: { codigo: string; quadra: string | null; numero: number | null; lonCentro: number | string | null; latCentro: number | string | null }[],
+  tolM = 5,
+): T[] {
+  const comCentro = cadastrados.filter(r => r.lonCentro != null && r.latCentro != null);
+  const usados = new Set<string>();
+  return lotesDxf.map(l => {
+    const perto = comCentro
+      .map(r => ({ r, d: Math.hypot((Number(r.lonCentro) - l.centro[0]) * 111320 * Math.cos((l.centro[1] * Math.PI) / 180), (Number(r.latCentro) - l.centro[1]) * 110574) }))
+      .filter(x => x.d < tolM && !usados.has(x.r.codigo))
+      .sort((a, b) => a.d - b.d)[0];
+    if (!perto || perto.r.quadra == null || perto.r.numero == null) return l;
+    usados.add(perto.r.codigo);
+    return { ...l, codigo: perto.r.codigo, quadra: perto.r.quadra, numero: Number(perto.r.numero) };
+  });
+}
+
 /** "RUA WALTER e MARIA" → "Rua Walter e Maria" */
 export function nomeDeRua(t: string): string {
   const minusc = new Set(['e', 'de', 'da', 'do', 'das', 'dos']);
