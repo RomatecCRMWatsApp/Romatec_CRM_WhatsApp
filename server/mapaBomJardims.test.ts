@@ -18,11 +18,22 @@ const dentro = ([x, y]: Pt, poly: Pt[]) => {
 };
 
 describe('Mapa do Bom Jardims — dados da planta oficial', () => {
-  it('portal na cabeceira da via de acesso, na posição da planta oficial (≈ 27 m a leste da quina noroeste)', () => {
+  it('portal principal na cabeceira da Rua Walter e Maria (entrada das chácaras), fora de qualquer lote', () => {
+    const principais = mapa.pontos.filter((p: any) => /portal/i.test(p.nome));
+    expect(principais).toHaveLength(1);
+    expect(principais[0].nome).toMatch(/Walter e Maria/);
     const portal = ponto(/portal/i);
-    expect(metros(portal, [-47.3826501, -4.9254574])).toBeLessThan(3); // planta oficial (folder A4)
+    // Boca da rua: eixo da Walter e Maria (rótulos do projeto) encontrando a borda oeste do bloco de lotes
+    expect(metros(portal, [-47.3817011, -4.927564])).toBeLessThan(1);
+    expect(mapa.lotes.some((l: any) => dentro(portal, l.poly))).toBe(false);
+    // Entre o stand (B14) e a quadra D, a poucos metros de cada um
+    const distLote = (c: string) => Math.min(...(mapa.lotes.find((l: any) => l.codigo === c).poly as Pt[]).map(q => metros(portal, q)));
+    expect(distLote('B14')).toBeLessThan(40);
+    // Não é mais o canto noroeste (junto ao rio / área de vivência)
+    expect(metros(portal, [-47.3826563, -4.9254537])).toBeGreaterThan(200);
+    // A via de acesso chega até o portal
     const acesso = mapa.ruas.find((r: any) => /acesso/i.test(r.nome)).line as Pt[];
-    expect(metros(portal, acesso[acesso.length - 1])).toBeLessThan(5);
+    expect(metros(portal, acesso[0])).toBeLessThan(1);
   });
   it('rio (curso d\'água) ao longo da frente, a oeste, passando pela área de vivência', () => {
     expect(mapa.rio.line.length).toBeGreaterThan(10);
@@ -36,7 +47,6 @@ describe('Mapa do Bom Jardims — dados da planta oficial', () => {
     expect(area.poly[0]).toEqual(area.poly[area.poly.length - 1]);
     for (const re of [/núcleo/i, /banho 1/i, /banho 2/i]) expect(dentro(ponto(re), area.poly)).toBe(true);
     expect(dentro(area.rotulo, area.poly)).toBe(true);
-    expect(dentro(ponto(/portal/i), area.poly)).toBe(false);
   });
 });
 
