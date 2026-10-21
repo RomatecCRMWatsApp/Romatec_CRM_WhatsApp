@@ -18,22 +18,24 @@ const dentro = ([x, y]: Pt, poly: Pt[]) => {
 };
 
 describe('Mapa do Bom Jardims — dados da planta oficial', () => {
-  it('portal principal na cabeceira da Rua Walter e Maria (entrada das chácaras), fora de qualquer lote', () => {
+  it('portal principal exatamente no ponto do KMZ oficial, na boca da via de acesso (lado oeste), fora de lote', () => {
     const principais = mapa.pontos.filter((p: any) => /portal/i.test(p.nome));
     expect(principais).toHaveLength(1);
-    expect(principais[0].nome).toMatch(/Walter e Maria/);
     const portal = ponto(/portal/i);
-    // Boca da rua: eixo da Walter e Maria (rótulos do projeto) encontrando a borda oeste do bloco de lotes
-    expect(metros(portal, [-47.3817011, -4.927564])).toBeLessThan(1);
+    expect(portal).toEqual([-47.382658381, -4.925448446]); // KMZ oficial (Google Earth, WGS84)
     expect(mapa.lotes.some((l: any) => dentro(portal, l.poly))).toBe(false);
-    // Entre o stand (B14) e a quadra D, a poucos metros de cada um
-    const distLote = (c: string) => Math.min(...(mapa.lotes.find((l: any) => l.codigo === c).poly as Pt[]).map(q => metros(portal, q)));
-    expect(distLote('B14')).toBeLessThan(40);
-    // Não é mais o canto noroeste (junto ao rio / área de vivência)
-    expect(metros(portal, [-47.3826563, -4.9254537])).toBeGreaterThan(200);
-    // A via de acesso chega até o portal
+    // Lado oeste: a oeste de todos os lotes
+    expect(portal[0]).toBeLessThan(Math.min(...mapa.lotes.flatMap((l: any) => l.poly.map((q: Pt) => q[0]))));
+    // A via de acesso (7 m) começa na boca, junto ao portal, e desce para o sul
     const acesso = mapa.ruas.find((r: any) => /acesso/i.test(r.nome)).line as Pt[];
-    expect(metros(portal, acesso[0])).toBeLessThan(1);
+    const boca = acesso[acesso.length - 1];
+    expect(boca).toEqual([-47.382628031, -4.925439831]);
+    expect(metros(portal, boca)).toBeLessThan(5);
+    expect(acesso[acesso.length - 2][1]).toBeLessThan(boca[1]);
+  });
+  it('pontos de banho conferem com o KMZ oficial (sudoeste, junto ao rio)', () => {
+    expect(metros(ponto(/banho 1/i), [-47.383117, -4.928279])).toBeLessThan(2);
+    expect(metros(ponto(/banho 2/i), [-47.383728, -4.928906])).toBeLessThan(2);
   });
   it('rio (curso d\'água) ao longo da frente, a oeste, passando pela área de vivência', () => {
     expect(mapa.rio.line.length).toBeGreaterThan(10);
