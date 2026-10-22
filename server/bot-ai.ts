@@ -996,6 +996,17 @@ export async function processBotMessage(context: BotContext): Promise<BotRespons
       await discardLead(clean, `opt-out (${empreendimento})`, 24 * 365 * 5);
       return { text: 'Tudo bem! Seu cadastro foi cancelado e não enviaremos mais mensagens. Obrigado! 😊', qualified: false };
     }
+    // Captação: pergunta de valor/preço → resposta padrão (lista de exclusividade); "OK" em seguida → confirma o nome
+    try {
+      const { respostaCaptacao } = await import('./leads/listaComunicacao');
+      const r = await respostaCaptacao(clean, senderName, empreendimento, messageText);
+      if (r) {
+        console.log(`[Bot] 💬 Lead ${clean} do empreendimento ${empreendimento} — ${r.tipo === 'preco' ? 'resposta padrão de valor' : 'confirmação na lista exclusiva'}`);
+        return { text: r.texto, qualified: true };
+      }
+    } catch (e: any) {
+      console.warn('[Bot] Resposta de captação indisponível:', e?.message);
+    }
     // Responde que o lead está na lista exclusiva (1x a cada 24 h); o corretor segue no atendimento
     try {
       const { respostaListaComunicacao } = await import('./leads/listaComunicacao');
