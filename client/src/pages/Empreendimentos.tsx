@@ -2,9 +2,9 @@ import { useLocation } from "wouter";
 import { trpc } from "@/lib/trpc";
 import PageHeader from "@/components/PageHeader";
 import MapaTematico from "@/components/empreendimento/MapaTematico";
-import { AlertTriangle, Map as MapIcon } from "lucide-react";
+import { AlertTriangle, Lock, Map as MapIcon } from "lucide-react";
 
-type Resumo = { slug: string; nome: string; municipio: string | null; uf: string | null; totalLotes: number; disponiveis: number; vendidos: number; semRegistro: boolean };
+type Resumo = { slug: string; nome: string; municipio: string | null; uf: string | null; totalLotes: number; disponiveis: number; vendidos: number; semRegistro: boolean; acesso: boolean };
 
 /** Prévia do mapa temático (miniatura, sem clique nos lotes) */
 function PreviaMapa({ slug }: { slug: string }) {
@@ -19,6 +19,18 @@ function PreviaMapa({ slug }: { slug: string }) {
 
 function Cartao({ e }: { e: Resumo }) {
   const [, navigate] = useLocation();
+  // Corretor não habilitado: o empreendimento aparece, mas não abre (o servidor também recusa)
+  if (!e.acesso) {
+    return (
+      <div className="flex items-center gap-3 rounded-xl border border-dashed border-border bg-card p-4 opacity-70">
+        <Lock className="h-4 w-4 text-muted-foreground" />
+        <div className="flex-1">
+          <p className="font-semibold">{e.nome}</p>
+          <p className="text-xs text-muted-foreground">{[e.municipio, e.uf].filter(Boolean).join("/")} · sem acesso — peça ao administrador para habilitar</p>
+        </div>
+      </div>
+    );
+  }
   return (
     <button onClick={() => navigate(`/empreendimentos/${e.slug}`)}
       className="grid w-full gap-4 rounded-xl border border-border bg-card p-4 text-left transition-colors hover:border-primary/50 md:grid-cols-[minmax(0,1fr)_minmax(0,1.3fr)]">

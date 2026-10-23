@@ -3,6 +3,8 @@ import { initTRPC, TRPCError } from "@trpc/server";
 import superjson from "superjson";
 import type { TrpcContext } from "./context";
 import { perfilDe, podeChamar } from "../../shared/equipe";
+import { moduloLiberado } from "../../shared/permissoes";
+import { carregarPermissoes, type PermissoesUsuario } from "../permissoes";
 
 const t = initTRPC.context<TrpcContext>().create({
   transformer: superjson,
@@ -22,11 +24,17 @@ const requireUser = t.middleware(async opts => {
   if (!podeChamar(perfilDe(ctx.user as any), path)) {
     throw new TRPCError({ code: "FORBIDDEN", message: "Seu acesso não inclui esta área do CRM." });
   }
+  // Portal de permissões (shared/permissoes.ts): corretor só usa os módulos liberados para ele
+  const permissoes = await carregarPermissoes(ctx.user as any);
+  if (!moduloLiberado(permissoes.perfil, permissoes.modulos, path)) {
+    throw new TRPCError({ code: "FORBIDDEN", message: "Este módulo não está liberado para você. Peça ao administrador." });
+  }
 
   return next({
     ctx: {
       ...ctx,
       user: ctx.user,
+      permissoes,
     },
   });
 });
@@ -45,6 +53,7 @@ export const adminProcedure = t.procedure.use(
       ctx: {
         ...ctx,
         user: ctx.user,
+        permissoes: { perfil: "admin" as const, modulos: null, acessos: [] } as PermissoesUsuario,
       },
     });
   }),

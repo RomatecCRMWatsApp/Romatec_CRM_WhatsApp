@@ -209,6 +209,13 @@ export default function Simulador({ slug, lotes, ruas, perimetro, destinoSugerid
                 ))}
               </div>
             )}
+            {data.minhaComissao && (
+              <div className="space-y-1 rounded-xl border border-border bg-card p-4 text-sm">
+                <p className="font-semibold">Sua comissão nesta venda: {brl(data.minhaComissao.valor)} <span className="text-xs font-normal text-muted-foreground">({(data.minhaComissao.pct * 100).toLocaleString("pt-BR")}% do preço)</span></p>
+                {data.minhaComissao.pagamentos.map(p => <p key={p.quando} className="text-xs">{p.quando}: <b>{brl(p.valor)}</b></p>)}
+                <p className="text-[11px] text-muted-foreground">{data.minhaComissao.regra}</p>
+              </div>
+            )}
             <p className="text-[11px] leading-snug text-muted-foreground">{data.avisoLegal}</p>
           </>
         )}

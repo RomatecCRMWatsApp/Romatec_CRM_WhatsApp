@@ -29,6 +29,8 @@ import Empreendimento from "./pages/Empreendimento";
 import EmpreendimentoDocumentos from "./pages/EmpreendimentoDocumentos";
 import EmpreendimentoFolder from "./pages/EmpreendimentoFolder";
 import EmpreendimentoProposta from "./pages/EmpreendimentoProposta";
+import Financeiro from "./pages/Financeiro";
+import AreaCorretor from "./pages/AreaCorretor";
 import Equipe from "./pages/Equipe";
 import Empreendedor from "./pages/Empreendedor";
 import PrimeiroAcesso from "./pages/PrimeiroAcesso";
@@ -108,6 +110,12 @@ function Router() {
       <Route path={"/primeiro-acesso"} component={PrimeiroAcesso} />
       <Route path={"/empreendimentos/:slug/folder"}>
         {() => <SetupGuard component={EmpreendimentoFolder} />}
+      </Route>
+      <Route path={"/financeiro"}>
+        {() => <SetupGuard component={Financeiro} />}
+      </Route>
+      <Route path={"/corretor"}>
+        {() => <SetupGuard component={AreaCorretor} />}
       </Route>
       <Route path={"/empreendimentos/:slug/proposta"}>
         {() => <SetupGuard component={EmpreendimentoProposta} />}

@@ -2,37 +2,40 @@ import { useEffect, useState } from "react";
 import { useLocation } from "wouter";
 import { useAuth } from "@/_core/hooks/useAuth";
 import { perfilDe, podeAbrir, ROTULO_PERFIL } from "@shared/equipe";
+import { trpc } from "@/lib/trpc";
 import AvisoRotinas from "./AvisoRotinas";
 import {
   BarChart3, Building2, Flame, Images, KanbanSquare, LayoutDashboard, LineChart, LogOut, Megaphone, Menu, Send,
-  Settings, UserCog, Users, X, Eye, ClipboardList, CalendarDays, Map as MapIcon,
+  Settings, UserCog, Users, X, Eye, ClipboardList, CalendarDays, Map as MapIcon, Smartphone, Wallet,
 } from "lucide-react";
 
-type Item = { rotulo: string; rota: string; icone: React.ComponentType<{ className?: string }>; exato?: boolean };
+/** modulo = chave em shared/permissoes.ts (some do menu quando o módulo está desligado para o corretor) */
+type Item = { rotulo: string; rota: string; icone: React.ComponentType<{ className?: string }>; exato?: boolean; modulo?: string };
 type Grupo = { titulo?: string; itens: Item[] };
 
 const MENU: Grupo[] = [
-  { itens: [{ rotulo: "Painel", rota: "/dashboard", icone: LayoutDashboard }] },
+  { itens: [{ rotulo: "Painel", rota: "/dashboard", icone: LayoutDashboard }, { rotulo: "Área do corretor", rota: "/corretor", icone: Smartphone }] },
   {
     titulo: "Leads",
     itens: [
-      { rotulo: "Leads", rota: "/leads", icone: Flame, exato: true },
-      { rotulo: "Funil", rota: "/leads/funil", icone: KanbanSquare },
-      { rotulo: "Agenda de visitas", rota: "/leads/agenda", icone: CalendarDays },
-      { rotulo: "Campanhas de captação", rota: "/leads/campanhas", icone: Megaphone },
-      { rotulo: "Relatório", rota: "/leads/relatorio", icone: BarChart3 },
-      { rotulo: "Lista de interesse", rota: "/leads/lista-interesse", icone: ClipboardList },
+      { rotulo: "Leads", rota: "/leads", icone: Flame, exato: true, modulo: "leads" },
+      { rotulo: "Funil", rota: "/leads/funil", icone: KanbanSquare, modulo: "leads" },
+      { rotulo: "Agenda de visitas", rota: "/leads/agenda", icone: CalendarDays, modulo: "leads" },
+      { rotulo: "Campanhas de captação", rota: "/leads/campanhas", icone: Megaphone, modulo: "leads" },
+      { rotulo: "Relatório", rota: "/leads/relatorio", icone: BarChart3, modulo: "leads" },
+      { rotulo: "Lista de interesse", rota: "/leads/lista-interesse", icone: ClipboardList, modulo: "leads" },
     ],
   },
   {
     titulo: "Vendas",
     itens: [
-      { rotulo: "Empreendimentos", rota: "/empreendimentos", icone: MapIcon },
-      { rotulo: "Imóveis", rota: "/properties", icone: Building2 },
-      { rotulo: "Materiais", rota: "/materiais", icone: Images },
-      { rotulo: "Clientes", rota: "/contacts", icone: Users },
-      { rotulo: "Disparos WhatsApp", rota: "/campaigns", icone: Send },
-      { rotulo: "Desempenho", rota: "/performance", icone: LineChart },
+      { rotulo: "Empreendimentos", rota: "/empreendimentos", icone: MapIcon, modulo: "empreendimentos" },
+      { rotulo: "Financeiro", rota: "/financeiro", icone: Wallet, modulo: "financeiro" },
+      { rotulo: "Imóveis", rota: "/properties", icone: Building2, modulo: "imoveis" },
+      { rotulo: "Materiais", rota: "/materiais", icone: Images, modulo: "materiais" },
+      { rotulo: "Clientes", rota: "/contacts", icone: Users, modulo: "contatos" },
+      { rotulo: "Disparos WhatsApp", rota: "/campaigns", icone: Send, modulo: "campanhas" },
+      { rotulo: "Desempenho", rota: "/performance", icone: LineChart, modulo: "desempenho" },
     ],
   },
   {
@@ -48,8 +51,9 @@ const MENU: Grupo[] = [
 const ativo = (loc: string, it: Item) => (it.exato ? loc === it.rota : loc === it.rota || loc.startsWith(`${it.rota}/`));
 
 /** Itens que o perfil pode abrir (mesma regra do servidor/rotas: shared/equipe.ts) */
-export function menuDoPerfil(perfil: ReturnType<typeof perfilDe>): Grupo[] {
-  return MENU.map(g => ({ ...g, itens: g.itens.filter(i => podeAbrir(perfil, i.rota)) })).filter(g => g.itens.length);
+export function menuDoPerfil(perfil: ReturnType<typeof perfilDe>, modulos?: Record<string, boolean> | null): Grupo[] {
+  return MENU.map(g => ({ ...g, itens: g.itens.filter(i => podeAbrir(perfil, i.rota) && (perfil === "admin" || !i.modulo || !modulos || modulos[i.modulo] !== false)) }))
+    .filter(g => g.itens.length);
 }
 
 export function tituloDaRota(loc: string): string {
@@ -61,7 +65,9 @@ export function tituloDaRota(loc: string): string {
 function Navegacao({ onNavegar }: { onNavegar?: () => void }) {
   const [loc, navigate] = useLocation();
   const { user } = useAuth();
-  const grupos = menuDoPerfil(perfilDe(user as any));
+  const perfil = perfilDe(user as any);
+  const { data: minhas } = trpc.permissoes.minhas.useQuery(undefined, { enabled: perfil === "equipe", staleTime: 60_000 });
+  const grupos = menuDoPerfil(perfil, minhas?.modulos);
   return (
     <nav className="flex-1 overflow-y-auto px-3 py-2 space-y-4">
       {grupos.map((g, gi) => (

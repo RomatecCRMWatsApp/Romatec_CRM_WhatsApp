@@ -19,6 +19,7 @@
     { "src": "/icon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any" }
   ],
   "shortcuts": [
+    { "name": "Área do corretor", "url": "/corretor", "icons": [{ "src": "/icon-192x192.png", "sizes": "192x192" }] },
     { "name": "Leads", "url": "/leads", "icons": [{ "src": "/icon-192x192.png", "sizes": "192x192" }] },
     { "name": "Materiais", "url": "/materiais", "icons": [{ "src": "/icon-192x192.png", "sizes": "192x192" }] },
     { "name": "Relatório", "url": "/leads/relatorio", "icons": [{ "src": "/icon-192x192.png", "sizes": "192x192" }] }

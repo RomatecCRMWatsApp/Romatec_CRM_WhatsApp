@@ -311,6 +311,19 @@ export function initSqliteTables(sqlite: any): void {
     saldoCents INTEGER NOT NULL, parcelaSaldoCents INTEGER NOT NULL, totalPagoCents INTEGER NOT NULL, payload TEXT,
     criadoEm INTEGER NOT NULL DEFAULT (strftime('%s','now'))
   )`);
+  // Portal de permissões (server/_core/migrations/addPermissoes.ts)
+  run(`CREATE TABLE IF NOT EXISTS permissoesPerfil (
+    id INTEGER PRIMARY KEY AUTOINCREMENT, perfil TEXT NOT NULL, modulo TEXT NOT NULL, permitido INTEGER NOT NULL DEFAULT 1,
+    atualizadoEm INTEGER NOT NULL DEFAULT (strftime('%s','now')), UNIQUE(perfil, modulo)
+  )`);
+  run(`CREATE TABLE IF NOT EXISTS permissoesUsuario (
+    id INTEGER PRIMARY KEY AUTOINCREMENT, usuarioId INTEGER NOT NULL, modulo TEXT NOT NULL, permitido INTEGER NOT NULL,
+    atualizadoPor INTEGER, atualizadoEm INTEGER NOT NULL DEFAULT (strftime('%s','now')), UNIQUE(usuarioId, modulo)
+  )`);
+  run(`CREATE TABLE IF NOT EXISTS acessosCorretor (
+    id INTEGER PRIMARY KEY AUTOINCREMENT, usuarioId INTEGER NOT NULL, tipo TEXT NOT NULL, refId INTEGER NOT NULL, comissaoPct TEXT,
+    habilitadoPor INTEGER, criadoEm INTEGER NOT NULL DEFAULT (strftime('%s','now')), UNIQUE(usuarioId, tipo, refId)
+  )`);
 
   console.log('[SQLite] ✅ Todas as tabelas inicializadas');
 

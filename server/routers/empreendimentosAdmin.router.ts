@@ -10,6 +10,8 @@ import { getDb } from "../db";
 import { empreendimentos, lotes, loteHistorico, empreendimentoArquivos, leadQualifications, users } from "../../drizzle/schema";
 import { SITUACOES_LOTE, problemaVenda, statusPublicoDe, etapaDoLeadPelaVenda, situacaoValida, type SituacaoLote } from "../../shared/lotes";
 import { etapaDoLead } from "../leads/kanban";
+import { exigirAcesso, type PermissoesUsuario } from "../permissoes";
+import { temAcesso } from "../../shared/permissoes";
 
 async function dbOrThrow() {
   const db = await getDb();
@@ -23,6 +25,21 @@ async function empreendimentoOuErro(db: any, slug: string) {
   return emp;
 }
 
+/** Empreendimento que o usuário pode abrir (corretor: só os habilitados para ele) */
+async function empreendimentoAutorizado(db: any, slug: string, ctx: { permissoes: PermissoesUsuario }) {
+  const emp = await empreendimentoOuErro(db, slug);
+  exigirAcesso(ctx.permissoes, "empreendimento", emp.id, emp.nome);
+  return emp;
+}
+
+/** Lote de um empreendimento habilitado para o usuário */
+async function loteAutorizado(db: any, loteId: number, ctx: { permissoes: PermissoesUsuario }) {
+  const [lote]: any[] = await db.select().from(lotes).where(eq(lotes.id, loteId)).limit(1);
+  if (!lote) throw new Error("Lote não encontrado");
+  exigirAcesso(ctx.permissoes, "empreendimento", lote.empreendimentoId);
+  return lote;
+}
+
 const num = (v: unknown) => (v === null || v === undefined || v === "" ? null : Number(v));
 const json = <T,>(v: unknown): T | null => (v == null ? null : typeof v === "string" ? (() => { try { return JSON.parse(v); } catch { return null; } })() : (v as T));
 
@@ -30,7 +47,7 @@ const json = <T,>(v: unknown): T | null => (v == null ? null : typeof v === "str
 export const ORDEM_FUNIL = ["novo", "qualificando", "qualificado", "visita_agendada", "visitou", "proposta", "fechado"];
 
 export const empreendimentosAdminRouter = router({
-  lista: protectedProcedure.query(async () => {
+  lista: protectedProcedure.query(async ({ ctx }) => {
     const db = await dbOrThrow();
     const emps: any[] = await db.select().from(empreendimentos);
     const ls: any[] = await db.select({ empreendimentoId: lotes.empreendimentoId, situacao: lotes.situacao }).from(lotes);
@@ -41,13 +58,15 @@ export const empreendimentosAdminRouter = router({
         slug: e.slug, nome: e.nome, municipio: e.municipio, uf: e.uf, totalLotes: meus.length,
         disponiveis: por("disponivel"), vendidos: por("vendido_parcelado") + por("vendido_avista") + por("quitado"),
         semRegistro: !e.registroMatricula,
+        /** Corretor: os não habilitados aparecem na lista, mas não abrem */
+        acesso: temAcesso(ctx.permissoes.perfil, ctx.permissoes.acessos, "empreendimento", e.id),
       };
     });
   }),
 
-  detalhe: protectedProcedure.input(z.object({ slug: z.string().max(80) })).query(async ({ input }) => {
+  detalhe: protectedProcedure.input(z.object({ slug: z.string().max(80) })).query(async ({ input, ctx }) => {
     const db = await dbOrThrow();
-    const emp = await empreendimentoOuErro(db, input.slug);
+    const emp = await empreendimentoAutorizado(db, input.slug, ctx);
     const rows: any[] = await db.select().from(lotes).where(eq(lotes.empreendimentoId, emp.id));
     const leadIds = Array.from(new Set(rows.map(r => r.leadId).filter(Boolean))) as number[];
     const leads: any[] = leadIds.length ? await db.select({ id: leadQualifications.id, nome: leadQualifications.nome, phone: leadQualifications.phone }).from(leadQualifications).where(inArray(leadQualifications.id, leadIds)) : [];
@@ -104,8 +123,7 @@ export const empreendimentosAdminRouter = router({
     }))
     .mutation(async ({ input, ctx }) => {
       const db = await dbOrThrow();
-      const [lote]: any[] = await db.select().from(lotes).where(eq(lotes.id, input.loteId)).limit(1);
-      if (!lote) throw new Error("Lote não encontrado");
+      const lote = await loteAutorizado(db, input.loteId, ctx);
       const livre = input.situacao === "disponivel" || input.situacao === "bloqueado";
       const dados = {
         situacao: input.situacao,
@@ -151,8 +169,9 @@ export const empreendimentosAdminRouter = router({
       return { success: true };
     }),
 
-  historico: protectedProcedure.input(z.object({ loteId: z.number().int() })).query(async ({ input }) => {
+  historico: protectedProcedure.input(z.object({ loteId: z.number().int() })).query(async ({ input, ctx }) => {
     const db = await dbOrThrow();
+    await loteAutorizado(db, input.loteId, ctx);
     const rows: any[] = await db.select().from(loteHistorico).where(eq(loteHistorico.loteId, input.loteId)).orderBy(desc(loteHistorico.createdAt)).limit(50);
     const pessoas: any[] = await db.select({ id: users.id, name: users.name }).from(users);
     const U = new Map(pessoas.map(p => [p.id, p.name]));
@@ -244,9 +263,9 @@ export const empreendimentosAdminRouter = router({
       imagem: z.string().max(12_000_000),
       formato: z.enum(["imagem", "pdf"]).default("imagem"),
     }))
-    .mutation(async ({ input }) => {
+    .mutation(async ({ input, ctx }) => {
       const db = await dbOrThrow();
-      const emp = await empreendimentoOuErro(db, input.slug);
+      const emp = await empreendimentoAutorizado(db, input.slug, ctx);
       const rows: any[] = await db.select({ codigo: lotes.codigo, quadra: lotes.quadra, areaM2: lotes.areaM2, situacao: lotes.situacao }).from(lotes).where(eq(lotes.empreendimentoId, emp.id));
       const lote = input.codigo ? rows.find(r => r.codigo === input.codigo) : null;
       if (input.codigo && !lote) throw new Error(`Chácara ${input.codigo} não encontrada`);
@@ -267,14 +286,14 @@ export const empreendimentosAdminRouter = router({
   /** Envia o link público da chácara (fotos, mapa e localização exata) só para o número digitado */
   enviarLinkChacara: protectedProcedure
     .input(z.object({ slug: z.string().max(80), codigo: z.string().max(10), telefone: z.string().trim().min(8).max(25) }))
-    .mutation(async ({ input }) => {
+    .mutation(async ({ input, ctx }) => {
       const { SLUG_BOM_JARDIMS, codigoChacaraValido, linkChacara, mensagemLinkChacara } = await import("../../shared/chacaraLink");
       if (input.slug !== SLUG_BOM_JARDIMS || !codigoChacaraValido(input.codigo)) throw new Error("Link disponível só para as chácaras do Bom Jardims");
       const { normalizePhoneBR } = await import("../../shared/telefone");
       const telefone = normalizePhoneBR(input.telefone);
       if (!telefone) throw new Error("Número inválido: informe um celular com DDD, ex.: (99) 99181-1246");
       const db = await dbOrThrow();
-      const emp = await empreendimentoOuErro(db, input.slug);
+      const emp = await empreendimentoAutorizado(db, input.slug, ctx);
       const [lote]: any[] = await db.select({ codigo: lotes.codigo, quadra: lotes.quadra, areaM2: lotes.areaM2 }).from(lotes)
         .where(and(eq(lotes.empreendimentoId, emp.id), eq(lotes.codigo, input.codigo))).limit(1);
       if (!lote) throw new Error(`Chácara ${input.codigo} não encontrada`);
@@ -300,9 +319,9 @@ export const empreendimentosAdminRouter = router({
       imagem: z.string().max(12_000_000),
       formato: z.enum(["imagem", "pdf"]).default("imagem"),
     }))
-    .mutation(async ({ input }) => {
+    .mutation(async ({ input, ctx }) => {
       const db = await dbOrThrow();
-      const emp = await empreendimentoOuErro(db, input.slug);
+      const emp = await empreendimentoAutorizado(db, input.slug, ctx);
       const [lote]: any[] = await db.select({ codigo: lotes.codigo, quadra: lotes.quadra, numero: lotes.numero }).from(lotes)
         .where(and(eq(lotes.empreendimentoId, emp.id), eq(lotes.codigo, input.codigo))).limit(1);
       if (!lote) throw new Error(`Lote ${input.codigo} não encontrado`);
@@ -320,9 +339,9 @@ export const empreendimentosAdminRouter = router({
   /** Memoriais descritivos (rascunho) dos lotes escolhidos */
   memoriais: protectedProcedure
     .input(z.object({ slug: z.string().max(80), filtro: z.enum(["disponiveis", "todos"]).default("disponiveis"), codigos: z.array(z.string().max(10)).max(500).optional() }))
-    .query(async ({ input }) => {
+    .query(async ({ input, ctx }) => {
       const db = await dbOrThrow();
-      const emp = await empreendimentoOuErro(db, input.slug);
+      const emp = await empreendimentoAutorizado(db, input.slug, ctx);
       const rows: any[] = await db.select().from(lotes).where(eq(lotes.empreendimentoId, emp.id));
       const { memorialDoLote } = await import("../lotes/memorial");
       const todos = rows.map(r => ({ codigo: r.codigo, quadra: r.quadra, numero: r.numero, areaM2: num(r.areaM2) ?? 0, perimetroM: num(r.perimetroM) ?? 0, verticesUtm: json<[number, number][]>(r.verticesUtm) ?? [], situacao: r.situacao || "disponivel" }));

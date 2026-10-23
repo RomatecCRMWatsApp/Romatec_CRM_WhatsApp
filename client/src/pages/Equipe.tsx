@@ -5,9 +5,10 @@ import { trpc } from "@/lib/trpc";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { ArrowLeft, Copy, KeyRound, MessageCircle, Plus, UserCheck, UserX, Users } from "lucide-react";
+import { ArrowLeft, Copy, KeyRound, MessageCircle, Plus, ShieldCheck, UserCheck, UserX, Users } from "lucide-react";
 import { ROTULO_PERFIL } from "@shared/equipe";
 import PageHeader from "@/components/PageHeader";
+import PermissoesCorretor, { PacoteBase } from "@/components/equipe/PermissoesCorretor";
 
 const vazio = { nome: "", email: "", creci: "", telefone: "", perfil: "equipe" as "equipe" | "empreendedor", empreendimentoSlug: "" };
 
@@ -61,6 +62,7 @@ export default function Equipe() {
   const [form, setForm] = useState(vazio);
   const [abrirForm, setAbrirForm] = useState(false);
   const [convite, setConvite] = useState<{ id?: number; nome: string; link: string; login: string; telefone?: string | null } | null>(null);
+  const [permissoesDe, setPermissoesDe] = useState<number | null>(null);
   const recarregar = () => utils.equipe.list.invalidate();
 
   const criar = trpc.equipe.create.useMutation({
@@ -92,6 +94,8 @@ export default function Equipe() {
       <div className="px-4 md:px-6 pb-6 max-w-[1500px] mx-auto space-y-4">
         {error && <p className="text-sm text-red-400">{error.message}</p>}
         {convite && <ConviteGerado {...convite} onFechar={() => setConvite(null)} />}
+
+        <PacoteBase />
 
         <div className="flex justify-end">
           <Button onClick={() => setAbrirForm(v => !v)} className="bg-emerald-600 hover:bg-emerald-700 text-white"><Plus className="mr-1.5 h-4 w-4" /> Novo acesso</Button>
@@ -183,6 +187,11 @@ export default function Equipe() {
                         }}>
                           {p.ativo ? <><UserX className="mr-1.5 h-3.5 w-3.5" /> Desativar</> : <><UserCheck className="mr-1.5 h-3.5 w-3.5" /> Reativar</>}
                         </Button>
+                        {p.perfil === "equipe" && (
+                          <Button size="sm" variant={permissoesDe === p.id ? "default" : "outline"} onClick={() => setPermissoesDe(v => (v === p.id ? null : p.id))}>
+                            <ShieldCheck className="mr-1.5 h-3.5 w-3.5" /> Permissões
+                          </Button>
+                        )}
                       </div>
                     )}
                     {p.perfil === "admin" && !p.creci && (
@@ -192,6 +201,7 @@ export default function Equipe() {
                       }}>Cadastrar meu CRECI</Button>
                     )}
                   </div>
+                  {permissoesDe === p.id && <PermissoesCorretor usuarioId={p.id} />}
                 </CardContent>
               </Card>
             ))}
@@ -199,7 +209,7 @@ export default function Equipe() {
         )}
 
         <p className="text-[11px] text-muted-foreground">
-          <b>Equipe</b>: usa leads, funil, imóveis, materiais e relatórios; não mexe em configurações nem na equipe. <b>Empreendedor</b>: vê só os gráficos de leads do empreendimento (sem nomes ou telefones) e as artes liberadas para divulgar.
+          <b>Equipe</b> (corretor): usa os módulos do pacote base (ou os ajustados em "Permissões") e só abre os empreendimentos e imóveis habilitados para ele; no financeiro e no simulador vê só a própria comissão. Não mexe em configurações nem na equipe. <b>Empreendedor</b>: vê só os gráficos de leads do empreendimento (sem nomes ou telefones) e as artes liberadas para divulgar.
         </p>
       </div>
     </div>

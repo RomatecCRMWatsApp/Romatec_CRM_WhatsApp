@@ -484,6 +484,42 @@ export const lotes = mysqlTable("lotes", {
   uqLote: uniqueIndex("uq_lote").on(t.empreendimentoId, t.codigo),
 }));
 
+/** Pacote base de permissões por perfil e módulo (shared/permissoes.ts) */
+export const permissoesPerfil = mysqlTable("permissoesPerfil", {
+  id: int("id").autoincrement().primaryKey(),
+  perfil: varchar("perfil", { length: 20 }).notNull(),
+  modulo: varchar("modulo", { length: 40 }).notNull(),
+  permitido: boolean("permitido").default(true).notNull(),
+  atualizadoEm: timestamp("atualizadoEm").defaultNow().onUpdateNow().notNull(),
+}, (t) => ({
+  uqPerfil: uniqueIndex("uq_perm_perfil").on(t.perfil, t.modulo),
+}));
+
+/** Módulo ligado/desligado para um corretor (prevalece sobre o pacote base) */
+export const permissoesUsuario = mysqlTable("permissoesUsuario", {
+  id: int("id").autoincrement().primaryKey(),
+  usuarioId: int("usuarioId").notNull(),
+  modulo: varchar("modulo", { length: 40 }).notNull(),
+  permitido: boolean("permitido").notNull(),
+  atualizadoPor: int("atualizadoPor"),
+  atualizadoEm: timestamp("atualizadoEm").defaultNow().onUpdateNow().notNull(),
+}, (t) => ({
+  uqUsuario: uniqueIndex("uq_perm_usuario").on(t.usuarioId, t.modulo),
+}));
+
+/** Empreendimentos/imóveis habilitados para cada corretor (+ % de comissão do corretor, opcional) */
+export const acessosCorretor = mysqlTable("acessosCorretor", {
+  id: int("id").autoincrement().primaryKey(),
+  usuarioId: int("usuarioId").notNull(),
+  tipo: mysqlEnum("tipo", ["empreendimento", "imovel"]).notNull(),
+  refId: int("refId").notNull(),
+  comissaoPct: decimal("comissaoPct", { precision: 6, scale: 4 }),
+  habilitadoPor: int("habilitadoPor"),
+  criadoEm: timestamp("criadoEm").defaultNow().notNull(),
+}, (t) => ({
+  uqAcesso: uniqueIndex("uq_acesso").on(t.usuarioId, t.tipo, t.refId),
+}));
+
 /** Condições do financiamento direto por empreendimento (simulador; reajuste sem deploy) */
 export const condicoesPagamento = mysqlTable("condicoesPagamento", {
   id: int("id").autoincrement().primaryKey(),

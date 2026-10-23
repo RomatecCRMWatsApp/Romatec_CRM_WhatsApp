@@ -560,6 +560,13 @@ async function startServer() {
     const { perfilDe } = await import('../../shared/equipe');
     return perfilDe(user as any) === 'empreendedor' ? null : user;
   };
+  /** Corretor só mexe nos arquivos dos empreendimentos habilitados para ele (shared/permissoes.ts) */
+  const habilitadoNoEmpreendimento = async (user: any, empreendimentoId: number) => {
+    const { carregarPermissoes } = await import('../permissoes');
+    const { temAcesso } = await import('../../shared/permissoes');
+    const p = await carregarPermissoes(user);
+    return temAcesso(p.perfil, p.acessos, 'empreendimento', empreendimentoId) && (p.perfil === 'admin' || !!p.modulos?.empreendimentos);
+  };
   app.post('/api/empreendimentos/:slug/arquivos', express.raw({ type: '*/*', limit: '25mb' }), async (req, res) => {
     try {
       const user = await usuarioDaEquipe(req);
@@ -576,6 +583,7 @@ async function startServer() {
       const db: any = await getDb();
       const [emp] = await db.select({ id: empreendimentos.id }).from(empreendimentos).where(eq(empreendimentos.slug, req.params.slug)).limit(1);
       if (!emp) return res.status(404).json({ success: false, error: 'Empreendimento não encontrado' });
+      if (!(await habilitadoNoEmpreendimento(user, emp.id))) return res.status(403).json({ success: false, error: 'Você não está habilitado para este empreendimento' });
       await db.insert(empreendimentoArquivos).values({
         empreendimentoId: emp.id, nome, categoria, mime: String(req.headers['x-file-type'] || 'application/octet-stream').slice(0, 100),
         tamanhoBytes: buffer.length, conteudoBase64: buffer.toString('base64'), enviadoPor: (user as any).id,
@@ -596,6 +604,7 @@ async function startServer() {
       const db: any = await getDb();
       const [arq] = await db.select().from(empreendimentoArquivos).where(eq(empreendimentoArquivos.id, Number(req.params.id) || 0)).limit(1);
       if (!arq) return res.status(404).send('Arquivo não encontrado');
+      if (!(await habilitadoNoEmpreendimento(user, arq.empreendimentoId))) return res.status(403).send('Você não está habilitado para este empreendimento');
       const inline = /^(application\/pdf|image\/)/.test(arq.mime || '') && req.query.baixar !== '1';
       res.setHeader('Content-Type', arq.mime || 'application/octet-stream');
       res.setHeader('Content-Disposition', `${inline ? 'inline' : 'attachment'}; filename*=UTF-8''${encodeURIComponent(arq.nome)}`);
@@ -819,6 +828,13 @@ async function startServer() {
     await addSimulador();
   } catch (e) {
     console.error('❌ Erro na migration addSimulador:', e);
+  }
+
+  try {
+    const { addPermissoes } = await import('./migrations/addPermissoes');
+    await addPermissoes();
+  } catch (e) {
+    console.error('❌ Erro na migration addPermissoes:', e);
   }
 
   // Leads parados há 48 h perdem pontos no score (§8)

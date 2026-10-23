@@ -14,6 +14,10 @@ import { equipeRouter } from "./routers/equipe.router";
 import { empreendedorRouter } from "./routers/empreendedor.router";
 import { empreendimentosAdminRouter } from "./routers/empreendimentosAdmin.router";
 import { simuladorRouter } from "./routers/simulador.router";
+import { financeiroRouter } from "./routers/financeiro.router";
+import { permissoesRouter } from "./routers/permissoes.router";
+import { exigirAcesso } from "./permissoes";
+import { acessosCorretor } from "../drizzle/schema";
 import { z } from "zod";
 import { createRateLimiter } from "./lead-intake";
 import { publicCompanyConfig, stripMaskedFields } from "./auth-security";
@@ -42,6 +46,8 @@ export const appRouter = router({
   empreendedor: empreendedorRouter,
   empreendimentosAdmin: empreendimentosAdminRouter,
   simulador: simuladorRouter,
+  financeiro: financeiroRouter,
+  permissoes: permissoesRouter,
   system: systemRouter,
   auth: router({
     // Sem os hashes de senha (a linha do usuário inteira ia para o navegador)
@@ -246,7 +252,7 @@ export const appRouter = router({
         status: z.enum(["available", "unavailable"]).default("available"),
         exibirPreco: z.boolean().optional(),
       }))
-      .mutation(async ({ input }) => {
+      .mutation(async ({ input, ctx }) => {
         const slug = input.denomination.toLowerCase().replace(/[^a-z0-9]+/g, '-') + '-' + Date.now().toString(36);
         const db = await getDb();
         if (!db) throw new Error("Database not available");
@@ -265,6 +271,10 @@ export const appRouter = router({
           await db.update(properties).set({ codigo: formatCodigoImovel(propertyId) }).where(eq(properties.id, propertyId));
         } catch (e) {
           console.warn("[Properties] Código IMV não gravado:", e);
+        }
+        // Corretor que cadastrou fica habilitado no imóvel (segue editando o que ele mesmo inseriu)
+        if (ctx.permissoes.perfil === "equipe") {
+          await db.insert(acessosCorretor).values({ usuarioId: ctx.user.id, tipo: "imovel", refId: propertyId, habilitadoPor: ctx.user.id } as any).catch(() => {});
         }
         // Criar campanha automaticamente para o novo imóvel
         try {
@@ -314,7 +324,8 @@ export const appRouter = router({
         status: z.enum(["available", "unavailable"]).optional(),
         exibirPreco: z.boolean().optional(),
       }))
-      .mutation(async ({ input }) => {
+      .mutation(async ({ input, ctx }) => {
+        exigirAcesso(ctx.permissoes, "imovel", input.id);
         const db = await getDb();
         if (!db) throw new Error("Database not available");
         const { id, ...data } = input;
@@ -325,7 +336,8 @@ export const appRouter = router({
       }),
     delete: protectedProcedure
       .input(z.object({ id: z.number() }))
-      .mutation(async ({ input }) => {
+      .mutation(async ({ input, ctx }) => {
+        exigirAcesso(ctx.permissoes, "imovel", input.id);
         const db = await getDb();
         if (!db) throw new Error("Database not available");
         const relatedCampaigns = await db.select().from(campaigns).where(eq(campaigns.propertyId, input.id));
@@ -359,7 +371,8 @@ export const appRouter = router({
       }),
     generateWhatsAppMessage: protectedProcedure
       .input(z.object({ propertyId: z.number() }))
-      .mutation(async ({ input }) => {
+      .mutation(async ({ input, ctx }) => {
+        exigirAcesso(ctx.permissoes, "imovel", input.propertyId);
         const db = await getDb();
         if (!db) throw new Error("Database not available");
         const prop = await db.select().from(properties).where(eq(properties.id, input.propertyId)).limit(1);

@@ -9,9 +9,10 @@ import { and, desc, eq } from "drizzle-orm";
 import { protectedProcedure, router } from "../_core/trpc";
 import { getDb } from "../db";
 import { condicoesPagamento, empreendimentos, leadQualifications, lotes, simulacoes } from "../../drizzle/schema";
-import { perfilDe } from "../../shared/equipe";
+import { comissaoNaSimulacao } from "../../shared/permissoes";
+import { exigirAcesso, pctComissaoCorretor, type PermissoesUsuario } from "../permissoes";
 import {
-  AVISO_LEGAL_SIMULACAO, centavos, comissao, condicoesDaLinha, evolucao, mensagemSimulacao, seloDoLote, simular, textoEntrada, textoJuros,
+  AVISO_LEGAL_SIMULACAO, centavos, condicoesDaLinha, evolucao, mensagemSimulacao, seloDoLote, simular, textoEntrada, textoJuros,
   type CondicoesPagamento,
 } from "../../shared/simulador";
 import { etapaDoLead } from "../leads/kanban";
@@ -26,9 +27,10 @@ async function dbOrThrow() {
 const num = (v: unknown) => (v === null || v === undefined || v === "" ? null : Number(v));
 
 /** Empreendimento, condições vigentes e lote — com os erros do simulador (404 / 422) */
-async function contexto(db: any, slug: string, codigo: string) {
+async function contexto(db: any, slug: string, codigo: string, permissoes: PermissoesUsuario) {
   const [emp]: any[] = await db.select().from(empreendimentos).where(eq(empreendimentos.slug, slug)).limit(1);
   if (!emp) throw new TRPCError({ code: "NOT_FOUND", message: "Empreendimento não encontrado" });
+  exigirAcesso(permissoes, "empreendimento", emp.id, emp.nome);
   const [cond]: any[] = await db.select().from(condicoesPagamento)
     .where(and(eq(condicoesPagamento.empreendimentoId, emp.id), eq(condicoesPagamento.ativo, true)))
     .orderBy(desc(condicoesPagamento.vigenteDesde), desc(condicoesPagamento.id)).limit(1);
@@ -58,29 +60,29 @@ export const simuladorRouter = router({
   /** Lote + simulação com a entrada escolhida, opções de entrada e (só administrador) a comissão */
   simular: protectedProcedure.input(z.object(base)).query(async ({ input, ctx }) => {
     const db = await dbOrThrow();
-    const { lote, areaM2, selo, c } = await contexto(db, input.slug, input.lote);
+    const { emp, lote, areaM2, selo, c } = await contexto(db, input.slug, input.lote, ctx.permissoes);
     const precoTabela = num(lote.precoTabela);
     const sim = calcular(areaM2, input.entrada, c, precoTabela);
     const opcoesEntrada = Array.from({ length: c.entradaMaxParcelas }, (_, k) => {
       const s = simular(areaM2, k + 1, c, precoTabela);
       return { parcelas: k + 1, valorParcela: s.parcelasEntrada[0], total: s.entradaEfetiva, desconto: k === 0 ? s.descontoAvista : 0, texto: textoEntrada(s) };
     });
-    const admin = perfilDe(ctx.user as any) === "admin";
     return {
       lote: { id: lote.id, codigo: lote.codigo, quadra: lote.quadra, areaM2, situacao: lote.situacao || "disponivel", selo },
       condicoes: c,
       simulacao: sim,
       opcoesEntrada,
       textoJuros: textoJuros(c),
-      comissao: admin ? { comCorretor: comissao(sim.preco, true, input.entrada === 1, c), vendaDireta: comissao(sim.preco, false, input.entrada === 1, c) } : null,
+      // Breakdown (empresa/corretor, venda direta) só para o admin; o corretor vê só a comissão dele
+      ...comissaoNaSimulacao(ctx.permissoes.perfil, sim.preco, input.entrada, c, pctComissaoCorretor(ctx.permissoes, emp.id, c.comissaoCorretorPct)),
       avisoLegal: AVISO_LEGAL_SIMULACAO,
     };
   }),
 
   /** Evolução mês a mês (entrada + Tabela Price) */
-  evolucao: protectedProcedure.input(z.object({ ...base, prazo: z.number().int().min(1).max(600) })).query(async ({ input }) => {
+  evolucao: protectedProcedure.input(z.object({ ...base, prazo: z.number().int().min(1).max(600) })).query(async ({ input, ctx }) => {
     const db = await dbOrThrow();
-    const { lote, areaM2, c } = await contexto(db, input.slug, input.lote);
+    const { lote, areaM2, c } = await contexto(db, input.slug, input.lote, ctx.permissoes);
     const sim = calcular(areaM2, input.entrada, c, num(lote.precoTabela));
     if (!c.prazos.includes(input.prazo)) throw new TRPCError({ code: "UNPROCESSABLE_CONTENT", message: `Prazo de ${input.prazo} meses não está nas condições` });
     return { codigo: lote.codigo, linhas: evolucao(sim, input.prazo) };
@@ -91,7 +93,7 @@ export const simuladorRouter = router({
     .input(z.object({ ...base, prazo: z.number().int().min(1).max(600), leadId: z.number().int().nullable().optional() }))
     .mutation(async ({ input, ctx }) => {
       const db = await dbOrThrow();
-      const { emp, lote, areaM2, selo, c } = await contexto(db, input.slug, input.lote);
+      const { emp, lote, areaM2, selo, c } = await contexto(db, input.slug, input.lote, ctx.permissoes);
       if (selo === "vendido") throw new TRPCError({ code: "CONFLICT", message: `Chácara ${lote.codigo} já vendida — sem proposta` });
       if (!c.prazos.includes(input.prazo)) throw new TRPCError({ code: "UNPROCESSABLE_CONTENT", message: `Prazo de ${input.prazo} meses não está nas condições` });
       const sim = calcular(areaM2, input.entrada, c, num(lote.precoTabela));
@@ -123,12 +125,12 @@ export const simuladorRouter = router({
   /** Manda a simulação escolhida só para o número digitado */
   enviarWhatsApp: protectedProcedure
     .input(z.object({ ...base, prazo: z.number().int().min(1).max(600), telefone: z.string().trim().min(8).max(25) }))
-    .mutation(async ({ input }) => {
+    .mutation(async ({ input, ctx }) => {
       const { normalizePhoneBR } = await import("../../shared/telefone");
       const telefone = normalizePhoneBR(input.telefone);
       if (!telefone) throw new TRPCError({ code: "BAD_REQUEST", message: "Número inválido: informe um celular com DDD, ex.: (99) 99181-1246" });
       const db = await dbOrThrow();
-      const { lote, areaM2, selo, c } = await contexto(db, input.slug, input.lote);
+      const { lote, areaM2, selo, c } = await contexto(db, input.slug, input.lote, ctx.permissoes);
       if (selo === "vendido") throw new TRPCError({ code: "CONFLICT", message: `Chácara ${lote.codigo} já vendida — sem proposta` });
       if (!c.prazos.includes(input.prazo)) throw new TRPCError({ code: "UNPROCESSABLE_CONTENT", message: `Prazo de ${input.prazo} meses não está nas condições` });
       const sim = calcular(areaM2, input.entrada, c, num(lote.precoTabela));

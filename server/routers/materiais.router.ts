@@ -8,6 +8,8 @@ import { protectedProcedure, router } from "../_core/trpc";
 import { getDb } from "../db";
 import { materiais, properties, empreendimentos } from "../../drizzle/schema";
 import { TIPOS_MATERIAL, ROTULO_TIPO_MATERIAL, agruparMateriais } from "../../shared/materiais";
+import { exigirAcesso, type PermissoesUsuario } from "../permissoes";
+import { temAcesso } from "../../shared/permissoes";
 
 async function dbOrThrow() {
   const db = await getDb();
@@ -20,18 +22,42 @@ const destino = z.object({
   empreendimentoSlug: z.string().max(80).nullable().optional(),
 });
 
+/** Corretor só vê/mexe nos materiais dos empreendimentos e imóveis habilitados para ele */
+async function exigirDestino(db: any, p: PermissoesUsuario, d: { propertyId?: number | null; empreendimentoSlug?: string | null }) {
+  if (d.empreendimentoSlug) {
+    const [emp]: any[] = await db.select({ id: empreendimentos.id, nome: empreendimentos.nome }).from(empreendimentos).where(eq(empreendimentos.slug, d.empreendimentoSlug)).limit(1);
+    if (!emp) throw new Error("Empreendimento não encontrado");
+    exigirAcesso(p, "empreendimento", emp.id, emp.nome);
+  } else if (d.propertyId) {
+    exigirAcesso(p, "imovel", d.propertyId);
+  }
+}
+
+async function materialAutorizado(db: any, p: PermissoesUsuario, id: number) {
+  const [m]: any[] = await db.select().from(materiais).where(eq(materiais.id, id)).limit(1);
+  if (!m) throw new Error("Material não encontrado");
+  await exigirDestino(db, p, m);
+  return m;
+}
+
 export const materiaisRouter = router({
   tipos: protectedProcedure.query(() => ({ TIPOS_MATERIAL, ROTULO_TIPO_MATERIAL })),
 
-  list: protectedProcedure.input(destino.optional()).query(async ({ input }) => {
+  list: protectedProcedure.input(destino.optional()).query(async ({ input, ctx }) => {
     const db = await dbOrThrow();
     let rows: any[] = await db.select().from(materiais).orderBy(desc(materiais.createdAt));
     if (input?.propertyId) rows = rows.filter(m => m.propertyId === input.propertyId);
     if (input?.empreendimentoSlug) rows = rows.filter(m => m.empreendimentoSlug === input.empreendimentoSlug);
-    const [imoveis, emps] = await Promise.all([
+    const [imoveisTodos, empsTodos] = await Promise.all([
       db.select({ id: properties.id, codigo: properties.codigo, nome: properties.denomination }).from(properties),
-      db.select({ slug: empreendimentos.slug, nome: empreendimentos.nome }).from(empreendimentos),
+      db.select({ id: empreendimentos.id, slug: empreendimentos.slug, nome: empreendimentos.nome }).from(empreendimentos),
     ]);
+    // Corretor: só os materiais e destinos habilitados para ele
+    const { perfil, acessos } = ctx.permissoes;
+    const imoveis = (imoveisTodos as any[]).filter(p => temAcesso(perfil, acessos, "imovel", p.id));
+    const emps = (empsTodos as any[]).filter(e => temAcesso(perfil, acessos, "empreendimento", e.id));
+    const slugs = new Set(emps.map(e => e.slug)), ids = new Set(imoveis.map(p => p.id));
+    rows = rows.filter(m => (m.empreendimentoSlug ? slugs.has(m.empreendimentoSlug) : ids.has(m.propertyId)));
     const grupos = agruparMateriais(rows, {
       imoveis: new Map((imoveis as any[]).map(p => [p.id, p.codigo ? `${p.codigo} — ${p.nome}` : p.nome])),
       empreendimentos: new Map((emps as any[]).map(e => [e.slug, e.nome])),
@@ -55,9 +81,10 @@ export const materiaisRouter = router({
       liberado: z.boolean().default(true),
       observacao: z.string().max(255).nullable().optional(),
     }))
-    .mutation(async ({ input }) => {
+    .mutation(async ({ input, ctx }) => {
       if (!input.propertyId && !input.empreendimentoSlug) throw new Error("Escolha o imóvel ou o empreendimento");
       const db = await dbOrThrow();
+      await exigirDestino(db, ctx.permissoes, input);
       const r: any = await db.insert(materiais).values({
         propertyId: input.empreendimentoSlug ? null : input.propertyId ?? null,
         empreendimentoSlug: input.empreendimentoSlug ?? null,
@@ -77,16 +104,18 @@ export const materiaisRouter = router({
       observacao: z.string().max(255).nullable().optional(),
       ordem: z.number().int().optional(),
     }))
-    .mutation(async ({ input }) => {
+    .mutation(async ({ input, ctx }) => {
       const db = await dbOrThrow();
+      await materialAutorizado(db, ctx.permissoes, input.id);
       const { id, ...campos } = input;
       await db.update(materiais).set(campos as any).where(eq(materiais.id, id));
       return { ok: true };
     }),
 
   /** Tira do CRM; o arquivo continua no Cloudinary */
-  delete: protectedProcedure.input(z.object({ id: z.number().int() })).mutation(async ({ input }) => {
+  delete: protectedProcedure.input(z.object({ id: z.number().int() })).mutation(async ({ input, ctx }) => {
     const db = await dbOrThrow();
+    await materialAutorizado(db, ctx.permissoes, input.id);
     await db.delete(materiais).where(eq(materiais.id, input.id));
     return { ok: true };
   }),
