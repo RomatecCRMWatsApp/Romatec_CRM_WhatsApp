@@ -460,6 +460,8 @@ export const lotes = mysqlTable("lotes", {
   // Uso interno — só sai na API pública se empreendimentos.precosPublicos = true
   precoAvistaRef: decimal("precoAvistaRef", { precision: 12, scale: 2 }),
   precoFinanciadoRef: decimal("precoFinanciadoRef", { precision: 12, scale: 2 }),
+  /** Preço de tabela do simulador (interno; shared/simulador.ts) */
+  precoTabela: decimal("precoTabela", { precision: 12, scale: 2 }),
   latCentro: decimal("latCentro", { precision: 10, scale: 7 }),
   lonCentro: decimal("lonCentro", { precision: 10, scale: 7 }),
   dossiePdf: varchar("dossiePdf", { length: 120 }),
@@ -480,6 +482,46 @@ export const lotes = mysqlTable("lotes", {
   updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
 }, (t) => ({
   uqLote: uniqueIndex("uq_lote").on(t.empreendimentoId, t.codigo),
+}));
+
+/** Condições do financiamento direto por empreendimento (simulador; reajuste sem deploy) */
+export const condicoesPagamento = mysqlTable("condicoesPagamento", {
+  id: int("id").autoincrement().primaryKey(),
+  empreendimentoId: int("empreendimentoId").notNull(),
+  precoBase: decimal("precoBase", { precision: 12, scale: 2 }).notNull(),
+  areaBaseM2: decimal("areaBaseM2", { precision: 10, scale: 2 }).notNull(),
+  toleranciaAreaM2: decimal("toleranciaAreaM2", { precision: 10, scale: 2 }).default("1.00").notNull(),
+  entradaPct: decimal("entradaPct", { precision: 6, scale: 4 }).notNull(),
+  entradaMaxParcelas: int("entradaMaxParcelas").notNull(),
+  descontoAvistaPct: decimal("descontoAvistaPct", { precision: 6, scale: 4 }).notNull(),
+  jurosAaEfetivo: decimal("jurosAaEfetivo", { precision: 6, scale: 4 }).notNull(),
+  metodo: mysqlEnum("metodo", ["PRICE"]).default("PRICE").notNull(),
+  prazos: json("prazos").$type<number[]>().notNull(),
+  comissaoTotalPct: decimal("comissaoTotalPct", { precision: 6, scale: 4 }).notNull(),
+  comissaoCorretorPct: decimal("comissaoCorretorPct", { precision: 6, scale: 4 }).notNull(),
+  comissao1aParcelaPct: decimal("comissao1aParcelaPct", { precision: 6, scale: 4 }).notNull(),
+  vigenteDesde: varchar("vigenteDesde", { length: 10 }).notNull(),
+  ativo: boolean("ativo").default(true).notNull(),
+});
+
+/** Simulações gravadas (valores em centavos) — vinculadas ao lead quando houver */
+export const simulacoes = mysqlTable("simulacoes", {
+  id: int("id").autoincrement().primaryKey(),
+  empreendimentoId: int("empreendimentoId").notNull(),
+  loteId: int("loteId").notNull(),
+  leadId: int("leadId"),
+  usuarioId: int("usuarioId"),
+  entradaParcelas: int("entradaParcelas").notNull(),
+  prazoSaldo: int("prazoSaldo").notNull(),
+  precoCents: int("precoCents").notNull(),
+  entradaCents: int("entradaCents").notNull(),
+  saldoCents: int("saldoCents").notNull(),
+  parcelaSaldoCents: int("parcelaSaldoCents").notNull(),
+  totalPagoCents: int("totalPagoCents").notNull(),
+  payload: json("payload"),
+  criadoEm: timestamp("criadoEm").defaultNow().notNull(),
+}, (t) => ({
+  idxLead: index("idx_sim_lead").on(t.leadId),
 }));
 
 /** Histórico de cada mudança de situação do lote (quem, quando, para quem) */

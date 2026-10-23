@@ -27,7 +27,7 @@ const num = (v: unknown) => (v === null || v === undefined || v === "" ? null : 
 const json = <T,>(v: unknown): T | null => (v == null ? null : typeof v === "string" ? (() => { try { return JSON.parse(v); } catch { return null; } })() : (v as T));
 
 /** Ordem do funil comprador: só avança o lead, nunca volta */
-const ORDEM_FUNIL = ["novo", "qualificando", "qualificado", "visita_agendada", "visitou", "proposta", "fechado"];
+export const ORDEM_FUNIL = ["novo", "qualificando", "qualificado", "visita_agendada", "visitou", "proposta", "fechado"];
 
 export const empreendimentosAdminRouter = router({
   lista: protectedProcedure.query(async () => {

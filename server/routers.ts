@@ -13,6 +13,7 @@ import { materiaisRouter } from "./routers/materiais.router";
 import { equipeRouter } from "./routers/equipe.router";
 import { empreendedorRouter } from "./routers/empreendedor.router";
 import { empreendimentosAdminRouter } from "./routers/empreendimentosAdmin.router";
+import { simuladorRouter } from "./routers/simulador.router";
 import { z } from "zod";
 import { createRateLimiter } from "./lead-intake";
 import { publicCompanyConfig, stripMaskedFields } from "./auth-security";
@@ -40,6 +41,7 @@ export const appRouter = router({
   equipe: equipeRouter,
   empreendedor: empreendedorRouter,
   empreendimentosAdmin: empreendimentosAdminRouter,
+  simulador: simuladorRouter,
   system: systemRouter,
   auth: router({
     // Sem os hashes de senha (a linha do usuário inteira ia para o navegador)

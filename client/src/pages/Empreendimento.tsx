@@ -9,6 +9,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import PageHeader from "@/components/PageHeader";
 import MapaTematico from "@/components/empreendimento/MapaTematico";
 import PainelLote, { type LotePainel } from "@/components/empreendimento/PainelLote";
+import Simulador from "@/components/empreendimento/Simulador";
 import { COR_SITUACAO, ROTULO_SITUACAO, SITUACOES_LOTE, VENDIDOS, type SituacaoLote } from "@shared/lotes";
 import { AlertTriangle, Download, FileText, Map as MapIcon, Printer, Trash2, Upload } from "lucide-react";
 
@@ -173,6 +174,7 @@ export default function Empreendimento() {
           <TabsList className="flex-wrap h-auto">
             <TabsTrigger value="mapa">Mapa</TabsTrigger>
             <TabsTrigger value="lotes">Lotes</TabsTrigger>
+            <TabsTrigger value="simulador">Simulador</TabsTrigger>
             <TabsTrigger value="geral">Visão geral</TabsTrigger>
             <TabsTrigger value="arquivos">Arquivos ({data.arquivos.length})</TabsTrigger>
             <TabsTrigger value="documentos">Documentos</TabsTrigger>
@@ -218,6 +220,10 @@ export default function Empreendimento() {
               </div>
               {selecionado && <PainelLote slug={slug} lote={selecionado} onMudou={atualizar} onFechar={() => setSel(null)} />}
             </div>
+          </TabsContent>
+
+          <TabsContent value="simulador" className="mt-3">
+            <Simulador slug={slug} lotes={lotes} ruas={data.ruas} perimetro={data.perimetro?.poligono} destinoSugerido={data.destinoSugerido} />
           </TabsContent>
 
           <TabsContent value="geral" className="mt-3 space-y-3">

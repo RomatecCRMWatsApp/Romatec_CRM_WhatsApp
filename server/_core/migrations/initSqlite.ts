@@ -297,6 +297,20 @@ export function initSqliteTables(sqlite: any): void {
     categoria TEXT NOT NULL DEFAULT 'outro', mime TEXT, tamanhoBytes INTEGER, conteudoBase64 TEXT NOT NULL,
     enviadoPor INTEGER, createdAt INTEGER NOT NULL DEFAULT (strftime('%s','now'))
   )`);
+  // Simulador de financiamento (server/_core/migrations/addSimulador.ts)
+  addColumn(`ALTER TABLE lotes ADD COLUMN precoTabela TEXT`);
+  run(`CREATE TABLE IF NOT EXISTS condicoesPagamento (
+    id INTEGER PRIMARY KEY AUTOINCREMENT, empreendimentoId INTEGER NOT NULL, precoBase TEXT NOT NULL, areaBaseM2 TEXT NOT NULL,
+    toleranciaAreaM2 TEXT NOT NULL DEFAULT '1.00', entradaPct TEXT NOT NULL, entradaMaxParcelas INTEGER NOT NULL, descontoAvistaPct TEXT NOT NULL,
+    jurosAaEfetivo TEXT NOT NULL, metodo TEXT NOT NULL DEFAULT 'PRICE', prazos TEXT NOT NULL, comissaoTotalPct TEXT NOT NULL,
+    comissaoCorretorPct TEXT NOT NULL, comissao1aParcelaPct TEXT NOT NULL, vigenteDesde TEXT NOT NULL, ativo INTEGER NOT NULL DEFAULT 1
+  )`);
+  run(`CREATE TABLE IF NOT EXISTS simulacoes (
+    id INTEGER PRIMARY KEY AUTOINCREMENT, empreendimentoId INTEGER NOT NULL, loteId INTEGER NOT NULL, leadId INTEGER, usuarioId INTEGER,
+    entradaParcelas INTEGER NOT NULL, prazoSaldo INTEGER NOT NULL, precoCents INTEGER NOT NULL, entradaCents INTEGER NOT NULL,
+    saldoCents INTEGER NOT NULL, parcelaSaldoCents INTEGER NOT NULL, totalPagoCents INTEGER NOT NULL, payload TEXT,
+    criadoEm INTEGER NOT NULL DEFAULT (strftime('%s','now'))
+  )`);
 
   console.log('[SQLite] ✅ Todas as tabelas inicializadas');
 
