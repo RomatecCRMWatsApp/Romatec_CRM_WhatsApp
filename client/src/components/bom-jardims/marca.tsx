@@ -24,6 +24,36 @@ export const GALERIA = [
 ];
 export const VIDEO = { src: "/bom-jardims/video.mp4", poster: "/bom-jardims/video-poster.webp" };
 
+/**
+ * Projeto arquitetônico (recortes das pranchas PA-01 Portal/Guarita e PA-02 Administração/Stand B14):
+ * fachada e planta baixa, já com o título da prancha na imagem. Mostrados inteiros (sem corte).
+ */
+export const PROJETO = [
+  { src: "/bom-jardims/projeto-portal-fachada.webp", alt: "Fachada frontal — portal de entrada (projeto PA-01)", w: 1600, h: 530 },
+  { src: "/bom-jardims/projeto-portal-planta.webp", alt: "Planta baixa — implantação do portal e guarita (projeto PA-01)", w: 1600, h: 542 },
+  { src: "/bom-jardims/projeto-stand-fachada.webp", alt: "Fachada frontal — administração e stand de vendas (projeto PA-02)", w: 1600, h: 549 },
+  { src: "/bom-jardims/projeto-stand-planta.webp", alt: "Planta baixa — administração e stand de vendas na chácara B14 (projeto PA-02)", w: 1600, h: 1590 },
+];
+
+/** Bloco "Projeto — portal e stand de vendas": imagens inteiras, cada uma abre em tamanho grande */
+export function GaleriaProjeto() {
+  return (
+    <div style={{ marginTop: 28 }}>
+      <h3 style={{ fontFamily: SERIF, color: C.verde, fontSize: 22, margin: "0 0 4px" }}>Projeto — portal de entrada e stand de vendas</h3>
+      <p style={{ color: C.suave, margin: "0 0 14px", fontSize: 14 }}>Fachadas e plantas baixas do projeto arquitetônico. Toque para ampliar.</p>
+      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(min(100%, 420px), 1fr))", gap: 12, alignItems: "center" }}>
+        {PROJETO.map(p => (
+          <a key={p.src} href={p.src} target="_blank" rel="noopener noreferrer" title={p.alt}
+            style={{ display: "block", borderRadius: 14, overflow: "hidden", background: "#fff", border: "1px solid #E2D9BF" }}>
+            <img src={p.src} alt={p.alt} loading="lazy" width={p.w} height={p.h}
+              style={{ width: "100%", height: "auto", maxHeight: 460, objectFit: "contain", display: "block" }} />
+          </a>
+        ))}
+      </div>
+    </div>
+  );
+}
+
 export function waLink(numero: string, codigo?: string) {
   const msg = codigo
     ? `Olá! Tenho interesse na chácara ${codigo} do Condomínio de Chácaras Bom Jardims.`

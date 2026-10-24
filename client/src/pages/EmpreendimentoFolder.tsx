@@ -9,6 +9,8 @@ import { toast } from "sonner";
 import EnviarWhatsAppModal, { btnWhats } from "@/components/EnviarWhatsAppModal";
 import { gerarImagemFolder } from "@/lib/imagemFolder";
 import { exibirTelefoneBR } from "@shared/telefone";
+import { SLUG_BOM_JARDIMS } from "@shared/chacaraLink";
+import { PROJETO } from "@/components/bom-jardims/marca";
 
 /**
  * Folder de divulgação (A4, para imprimir ou salvar em PDF/imagem): geral do empreendimento
@@ -78,6 +80,8 @@ export default function EmpreendimentoFolder() {
     ? `Chácara ${lote.codigo} · Quadra ${lote.quadra} · ${n2(lote.areaM2 ?? 0)} m²`
     : `${disponiveis.length} chácaras disponíveis${areas.length ? ` · de ${n2(Math.min(...areas))} a ${n2(Math.max(...areas))} m²` : ""}`;
 
+  // Projeto do portal e do stand (por enquanto só o Bom Jardims tem as pranchas recortadas)
+  const projeto = slug === SLUG_BOM_JARDIMS ? PROJETO : [];
   const sistemaUtm = `UTM · SIRGAS 2000 · fuso ${(emp as any).utmFuso ?? 23}S`;
   const resumoMedidas = m ? `Área: ${n2(m.areaM2)} m² · Perímetro: ${n2(m.perimetroM)} m${ruasDoLote.length ? ` · Acesso pela ${ruasDoLote.join(" e ")}` : ""}` : "";
 
@@ -96,6 +100,7 @@ export default function EmpreendimentoFolder() {
         resumoMedidas: lote && m ? resumoMedidas : undefined,
         coordenadas: lote && m ? { titulo: sistemaUtm, linhas: m.vertices.map(v => ({ v: v.nome, e: n2(v.e), n: n2(v.n) })) } : undefined,
         diferenciais: DIFERENCIAIS as [string, string][],
+        projeto: projeto.map(p => ({ src: p.src, w: p.w, h: p.h })),
         qr, textoQr: "Aponte a câmera para ver fotos, vídeo e o mapa",
         whatsapp: zapFmt,
         aviso: AVISO,
@@ -179,6 +184,18 @@ export default function EmpreendimentoFolder() {
             <p className="mt-3 text-[11px] opacity-80">Romatec Consultoria Total · José Romário — CRECI/MA 4.705</p>
           </div>
         </div>
+
+        {/* Projeto do portal e do stand de vendas (fachada + planta baixa, sem corte) */}
+        {projeto.length > 0 && (
+          <div className="px-6 pb-5" style={{ breakInside: "avoid" }}>
+            <p className="mb-2 text-sm font-bold uppercase tracking-wider" style={{ color: VERDE }}>Projeto — portal de entrada e stand de vendas</p>
+            <div className="grid grid-cols-2 gap-3">
+              {projeto.map(p => (
+                <img key={p.src} src={p.src} alt={p.alt} className={`w-full rounded-lg border border-[#e6ecdf] bg-white object-contain ${p.h > p.w * 0.8 ? "col-span-2 mx-auto max-w-[62%]" : ""}`} />
+              ))}
+            </div>
+          </div>
+        )}
 
         {lote && (
           <div className="px-6 pb-5">

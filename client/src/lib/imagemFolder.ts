@@ -21,13 +21,15 @@ export interface DadosFolder {
   resumoMedidas?: string;              // "Área: … · Perímetro: … · Acesso pela …"
   coordenadas?: { titulo: string; linhas: { v: string; e: string; n: string }[] };
   diferenciais: [string, string][];
-  qr: string;                          // data URL do QR Code da página
+  /** Fachadas e plantas do portal e do stand (imagens com o título da prancha) */
+  projeto?: { src: string; w: number; h: number }[];
+  qr: string;                         // data URL do QR Code da página
   textoQr: string;                     // "Aponte a câmera para ver fotos, vídeo e o mapa"
   whatsapp: string;                    // "(99) 9 9181-1246"
   aviso: string;
 }
 
-type Recursos = { foto: HTMLImageElement | null; mapa: { img: HTMLImageElement; altura: number }; qr: HTMLImageElement | null };
+type Recursos = { foto: HTMLImageElement | null; mapa: { img: HTMLImageElement; altura: number }; qr: HTMLImageElement | null; projeto: HTMLImageElement[] };
 
 /** Desenha (ou só mede, com desenhar=false) o folder; devolve a altura total */
 function compor(ctx: CanvasRenderingContext2D, d: DadosFolder, r: Recursos, desenhar: boolean): number {
@@ -138,6 +140,22 @@ function compor(ctx: CanvasRenderingContext2D, d: DadosFolder, r: Recursos, dese
   fill("#DCE8DF"); ctx.font = `400 20px ${SANS}`; centro("Romatec Consultoria Total · José Romário — CRECI/MA 4.705", yc);
   y = topo + alturaQuadro;
 
+  // ── Projeto do portal e do stand: cada prancha inteira (a planta alta do stand fica mais estreita)
+  if (r.projeto.length) {
+    y += 64; titulo("Projeto — portal e stand de vendas", y); y += 14;
+    for (const img of r.projeto) {
+      const alta = img.height > img.width * 0.8;
+      const w = alta ? util * 0.62 : util, h = (img.height / img.width) * w;
+      if (desenhar) {
+        const x = M + (util - w) / 2;
+        fill("#FFFFFF"); ctx.fillRect(x, y, w, h);
+        ctx.drawImage(img, x, y, w, h);
+        ctx.strokeStyle = LINHA; ctx.lineWidth = 2; ctx.strokeRect(x, y, w, h);
+      }
+      y += h + 16;
+    }
+  }
+
   // ── Diferenciais em linha (folder da chácara) e aviso
   if (d.medidas?.length) {
     y += 60; titulo("O condomínio", y);
@@ -152,11 +170,13 @@ function compor(ctx: CanvasRenderingContext2D, d: DadosFolder, r: Recursos, dese
 
 /** Monta o folder inteiro (largura fixa de 1080 px, igual no celular e no computador) e devolve o JPEG em data URL */
 export async function gerarImagemFolder(d: DadosFolder): Promise<string> {
-  const [foto, mapa, qr] = await Promise.all([
+  const [foto, mapa, qr, projeto] = await Promise.all([
     primeiraQueCarrega([`/${d.slug}/portal-frontal.webp`, `/${d.slug}/stand-aerea.webp`]),
     svgParaImagem(d.svg, LARGURA - 2 * M),
     d.qr ? carregarImagem(d.qr).catch(() => null) : Promise.resolve(null),
+    // Prancha que não carregar fica de fora (o folder sai do mesmo jeito)
+    Promise.all((d.projeto ?? []).map(p => carregarImagem(p.src).catch(() => null))).then(l => l.filter((i): i is HTMLImageElement => !!i)),
   ]);
   if (!qr) throw new Error("O QR Code ainda não foi gerado. Tente de novo em instantes.");
-  return renderizarJpeg(LARGURA, (ctx, desenhar) => compor(ctx, d, { foto, mapa, qr }, desenhar));
+  return renderizarJpeg(LARGURA, (ctx, desenhar) => compor(ctx, d, { foto, mapa, qr, projeto }, desenhar));
 }

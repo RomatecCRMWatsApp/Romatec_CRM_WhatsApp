@@ -5,7 +5,7 @@ import { readUtm } from "@/components/LeadForm";
 import { origemDaVisita } from "@/lib/origemVisita";
 import { FAQ_BOM_JARDIMS } from "@shared/bomJardimsSeo";
 import LoteMap, { formatArea, STATUS_LABEL, type LoteInfo } from "@/components/bom-jardims/LoteMap";
-import { C, SERIF, SANS, CONTATOS, GALERIA, VIDEO, waLink, useBrandFonts, ContatosBotoes } from "@/components/bom-jardims/marca";
+import { C, SERIF, SANS, CONTATOS, GALERIA, VIDEO, waLink, useBrandFonts, ContatosBotoes, GaleriaProjeto } from "@/components/bom-jardims/marca";
 import { codigoChacaraValido, rotaAteEntrada } from "@shared/chacaraLink";
 
 /**
@@ -304,6 +304,7 @@ export default function BomJardims() {
           ))}
         </div>
         <p style={{ fontSize: 12, color: C.suave, marginTop: 10 }}>Imagens em perspectiva, de caráter ilustrativo.</p>
+        <GaleriaProjeto />
       </section>
 
       {/* Perguntas frequentes (também vão para o Google como FAQ — server/seo.ts) */}

@@ -3,7 +3,7 @@ import { useRoute } from "wouter";
 import { MapPin, Navigation, Copy, Play, ArrowLeft, Globe2 } from "lucide-react";
 import { trpc } from "@/lib/trpc";
 import LoteMap, { STATUS_LABEL, type LoteInfo, type MapaData } from "@/components/bom-jardims/LoteMap";
-import { C, SERIF, SANS, GALERIA, VIDEO, useBrandFonts, ContatosBotoes } from "@/components/bom-jardims/marca";
+import { C, SERIF, SANS, GALERIA, VIDEO, useBrandFonts, ContatosBotoes, GaleriaProjeto } from "@/components/bom-jardims/marca";
 import { codigoChacaraValido, localizacaoDoLote, tituloChacara, rotaAteEntrada, NOME_BOM_JARDIMS, SLUG_BOM_JARDIMS } from "@shared/chacaraLink";
 
 /**
@@ -152,6 +152,7 @@ export function ChacaraView({ codigo, mapa, lotes, falhou = false }: { codigo: s
             </figure>
           ))}
         </div>
+        <GaleriaProjeto />
       </section>
 
       {/* Atendimento */}
