@@ -552,6 +552,88 @@ async function startServer() {
     }
   });
 
+  // Documentos do usuário (certidão do CRECI, RG, CPF…): no banco, só o admin ou o próprio usuário (shared/cadastro.ts)
+  const usuarioLogado = async (req: express.Request) => {
+    const { sdk } = await import('./sdk');
+    const user: any = await sdk.authenticateRequest(req).catch(() => null);
+    return user && user.ativo !== false && user.ativo !== 0 ? user : null;
+  };
+  const alvoDoCadastro = (req: express.Request, user: any) => (req.params.id === 'me' ? user.id : Number(req.params.id) || 0);
+  app.post('/api/usuarios/:id/documentos', express.raw({ type: '*/*', limit: '12mb' }), async (req, res) => {
+    try {
+      const user = await usuarioLogado(req);
+      if (!user) return res.status(401).json({ success: false, error: 'Faça login para enviar documentos' });
+      const { podeGerirCadastroDe, problemaDocumento } = await import('../../shared/cadastro');
+      const alvo = alvoDoCadastro(req, user);
+      if (!podeGerirCadastroDe(user, alvo)) return res.status(403).json({ success: false, error: 'Sem permissão para este cadastro' });
+      const buffer = req.body as Buffer;
+      const tipo = String(req.headers['x-tipo'] || 'outro');
+      const mime = String(req.headers['x-file-type'] || '');
+      const validade = req.headers['x-validade'] ? String(req.headers['x-validade']) : null;
+      const erro = problemaDocumento(tipo, mime, buffer?.length || 0, validade);
+      if (erro) return res.status(400).json({ success: false, error: erro });
+      const nome = decodeURIComponent(String(req.headers['x-file-name'] || 'documento')).replace(/[\\/:*?"<>|]+/g, '_').slice(0, 200);
+      const { getDb } = await import('../db');
+      const { users, usuarioDocumentos } = await import('../../drizzle/schema');
+      const { eq } = await import('drizzle-orm');
+      const db: any = await getDb();
+      const [u] = await db.select({ id: users.id }).from(users).where(eq(users.id, alvo)).limit(1);
+      if (!u) return res.status(404).json({ success: false, error: 'Usuário não encontrado' });
+      await db.insert(usuarioDocumentos).values({ usuarioId: alvo, tipo, nome, mime, tamanhoBytes: buffer.length, conteudoBase64: buffer.toString('base64'), validade: tipo === 'certidao_creci' ? validade : null, enviadoPor: user.id });
+      if (tipo === 'certidao_creci') await db.update(users).set({ certidaoCreciValidade: validade }).where(eq(users.id, alvo));
+      res.json({ success: true });
+    } catch (error: any) {
+      console.error('[Usuários] Upload de documento falhou:', error?.message);
+      res.status(500).json({ success: false, error: 'Falha ao salvar o documento' });
+    }
+  });
+  app.get('/api/usuarios/documentos/:docId', async (req, res) => {
+    try {
+      const user = await usuarioLogado(req);
+      if (!user) return res.status(401).send('Faça login para abrir o documento');
+      const { getDb } = await import('../db');
+      const { usuarioDocumentos } = await import('../../drizzle/schema');
+      const { eq } = await import('drizzle-orm');
+      const db: any = await getDb();
+      const [doc] = await db.select().from(usuarioDocumentos).where(eq(usuarioDocumentos.id, Number(req.params.docId) || 0)).limit(1);
+      const { podeGerirCadastroDe } = await import('../../shared/cadastro');
+      if (!doc || !podeGerirCadastroDe(user, doc.usuarioId)) return res.status(404).send('Documento não encontrado');
+      const inline = /^(application\/pdf|image\/)/.test(doc.mime || '') && req.query.baixar !== '1';
+      res.setHeader('Content-Type', doc.mime || 'application/octet-stream');
+      res.setHeader('Content-Disposition', `${inline ? 'inline' : 'attachment'}; filename*=UTF-8''${encodeURIComponent(doc.nome)}`);
+      res.setHeader('Cache-Control', 'private, no-store');
+      res.send(Buffer.from(doc.conteudoBase64, 'base64'));
+    } catch (error: any) {
+      console.error('[Usuários] Download de documento falhou:', error?.message);
+      res.status(500).send('Falha ao abrir o documento');
+    }
+  });
+  // Foto de perfil (todos os perfis): Cloudinary, como as fotos dos imóveis
+  app.post('/api/usuarios/:id/foto', express.raw({ type: '*/*', limit: '6mb' }), async (req, res) => {
+    try {
+      const user = await usuarioLogado(req);
+      if (!user) return res.status(401).json({ success: false, error: 'Faça login para enviar a foto' });
+      const { podeGerirCadastroDe, MAX_FOTO_BYTES } = await import('../../shared/cadastro');
+      const alvo = alvoDoCadastro(req, user);
+      if (!podeGerirCadastroDe(user, alvo)) return res.status(403).json({ success: false, error: 'Sem permissão para este cadastro' });
+      const buffer = req.body as Buffer;
+      const mime = String(req.headers['x-file-type'] || '');
+      if (!/^image\/(jpeg|png|webp)$/.test(mime)) return res.status(400).json({ success: false, error: 'Envie uma foto JPG, PNG ou WEBP' });
+      if (!buffer?.length || buffer.length > MAX_FOTO_BYTES) return res.status(400).json({ success: false, error: 'Foto vazia ou acima de 5 MB' });
+      const { uploadToCloudinary } = await import('../cloudinary');
+      const { url } = await uploadToCloudinary(buffer, mime, `usuario-${alvo}`, { folder: 'romatec_usuarios', resourceType: 'image' });
+      const { getDb } = await import('../db');
+      const { users } = await import('../../drizzle/schema');
+      const { eq } = await import('drizzle-orm');
+      const db: any = await getDb();
+      await db.update(users).set({ fotoUrl: url }).where(eq(users.id, alvo));
+      res.json({ success: true, url });
+    } catch (error: any) {
+      console.error('[Usuários] Upload de foto falhou:', error?.message);
+      res.status(500).json({ success: false, error: 'Falha no upload da foto' });
+    }
+  });
+
   // Arquivos do empreendimento (licenças, projeto, escrituras): ficam no banco; envio e download só com login
   const usuarioDaEquipe = async (req: express.Request) => {
     const { sdk } = await import('./sdk');
@@ -835,6 +917,13 @@ async function startServer() {
     await addPermissoes();
   } catch (e) {
     console.error('❌ Erro na migration addPermissoes:', e);
+  }
+
+  try {
+    const { addCadastroUsuarios } = await import('./migrations/addCadastroUsuarios');
+    await addCadastroUsuarios();
+  } catch (e) {
+    console.error('❌ Erro na migration addCadastroUsuarios:', e);
   }
 
   // Leads parados há 48 h perdem pontos no score (§8)

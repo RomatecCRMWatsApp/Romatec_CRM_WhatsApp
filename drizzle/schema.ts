@@ -37,6 +37,23 @@ export const users = mysqlTable("users", {
   conviteExpira: timestamp("conviteExpira"),
   /** Entra na roleta de leads (responsável por lead novo) */
   recebeLeads: boolean("recebeLeads").default(false).notNull(),
+  // ─── Cadastro completo (shared/cadastro.ts) — o contrato puxa do corretor (intermediador) ───
+  creciUf: varchar("creciUf", { length: 2 }),
+  cpf: varchar("cpf", { length: 11 }),
+  rg: varchar("rg", { length: 20 }),
+  rgOrgao: varchar("rgOrgao", { length: 30 }),
+  nacionalidade: varchar("nacionalidade", { length: 40 }),
+  estadoCivil: varchar("estadoCivil", { length: 30 }),
+  enderecoLogradouro: varchar("enderecoLogradouro", { length: 160 }),
+  enderecoNumero: varchar("enderecoNumero", { length: 20 }),
+  enderecoComplemento: varchar("enderecoComplemento", { length: 80 }),
+  enderecoBairro: varchar("enderecoBairro", { length: 80 }),
+  enderecoCidade: varchar("enderecoCidade", { length: 80 }),
+  enderecoUf: varchar("enderecoUf", { length: 2 }),
+  enderecoCep: varchar("enderecoCep", { length: 8 }),
+  /** Validade da certidão de quitação do CRECI (o arquivo fica em usuarioDocumentos) */
+  certidaoCreciValidade: varchar("certidaoCreciValidade", { length: 10 }),
+  fotoUrl: varchar("fotoUrl", { length: 500 }),
   ultimoLeadAt: timestamp("ultimoLeadAt"),
 });
 
@@ -482,6 +499,22 @@ export const lotes = mysqlTable("lotes", {
   updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
 }, (t) => ({
   uqLote: uniqueIndex("uq_lote").on(t.empreendimentoId, t.codigo),
+}));
+
+/** Documentos do usuário (certidão do CRECI, RG, CPF…) — no banco, só abrem com login */
+export const usuarioDocumentos = mysqlTable("usuarioDocumentos", {
+  id: int("id").autoincrement().primaryKey(),
+  usuarioId: int("usuarioId").notNull(),
+  tipo: varchar("tipo", { length: 30 }).notNull(),
+  nome: varchar("nome", { length: 200 }).notNull(),
+  mime: varchar("mime", { length: 100 }),
+  tamanhoBytes: int("tamanhoBytes"),
+  conteudoBase64: longtext("conteudoBase64").notNull(),
+  validade: varchar("validade", { length: 10 }),
+  enviadoPor: int("enviadoPor"),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+}, (t) => ({
+  idxUsuario: index("idx_usudoc_usuario").on(t.usuarioId, t.tipo),
 }));
 
 /** Pacote base de permissões por perfil e módulo (shared/permissoes.ts) */

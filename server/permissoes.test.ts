@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import {
-  MODULOS, comissaoNaSimulacao, comissaoPropria, linhaFinanceira, marcarAcesso, minhaComissaoNaVenda, moduloDoCaminho, moduloLiberado, permissoesEfetivas, temAcesso,
+  MODULOS, ajustesNovoCorretor, comissaoNaSimulacao, comissaoPropria, linhaFinanceira, marcarAcesso, minhaComissaoNaVenda, moduloDoCaminho, moduloLiberado, permissoesEfetivas, temAcesso,
 } from '../shared/permissoes';
 import type { CondicoesPagamento } from '../shared/simulador';
 import { pctComissaoCorretor } from './permissoes';
@@ -14,6 +14,13 @@ describe('permissões — pacote base e ajuste por corretor', () => {
     const p = permissoesEfetivas([{ modulo: 'campanhas', permitido: 0 }], [{ modulo: 'campanhas', permitido: 1 }, { modulo: 'financeiro', permitido: false }]);
     expect(p.campanhas).toBe(true);
     expect(p.financeiro).toBe(false);
+  });
+
+  it('corretor NOVO começa sem nada: só o que o admin marcou fica liberado, mesmo com o pacote base todo ligado', () => {
+    const nenhum = permissoesEfetivas([], ajustesNovoCorretor([]));
+    expect(Object.values(nenhum).every(v => v === false)).toBe(true);
+    const alguns = permissoesEfetivas(MODULOS.map(m => ({ modulo: m.chave, permitido: true })), ajustesNovoCorretor(['simulador', 'financeiro', 'inexistente']));
+    expect(Object.entries(alguns).filter(([, v]) => v).map(([k]) => k).sort()).toEqual(['financeiro', 'simulador']);
   });
 
   it('módulo desligado bloqueia os procedimentos dele; admin sempre passa', () => {

@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
+import LupaPortal, { alturaDaLupa, cantoDaLupa, densificar } from "./LupaPortal";
 
 /**
  * Mapa de vendas interativo, desenhado a partir das coordenadas georreferenciadas
@@ -11,7 +12,8 @@ export type MapaData = {
   lotes: { codigo: string; quadra: string; numero: number; areaM2: number; comercializavel: boolean; poly: Pt[] }[];
   ruas: { nome: string; line: Pt[] }[];
   perimetro: Pt[];
-  pontos: { nome: string; pt: Pt }[];
+  /** imagem: recorte/render da lupa (só no portal) */
+  pontos: { nome: string; pt: Pt; imagem?: string }[];
   /** Rio/córrego (eixo) e área de vivência e recreação, da planta oficial */
   rio?: { nome: string; line: Pt[] };
   areas?: { nome: string; detalhe?: string; poly: Pt[]; rotulo?: Pt }[];
@@ -198,19 +200,24 @@ export default function LoteMap({ lotes, selected, onSelect, onMapLoaded, dados,
           })}
           {data.pontos.map(p => {
             const [x, y] = project(p.pt);
-            const portal = /portal/i.test(p.nome);
             return (
               <g key={p.nome}>
                 <circle cx={x} cy={y} r={7} fill="#C9A84C" stroke="#0C3320" strokeWidth={2} />
-                {portal && (
-                  <text x={x - 12} y={y - 12} textAnchor="end" fontSize={14} fontWeight={800} fill="#0C3320" stroke="#FFFFFF" strokeWidth={3} paintOrder="stroke" pointerEvents="none">
-                    PORTAL DE ENTRADA
-                  </text>
-                )}
                 <title>{p.nome}</title>
               </g>
             );
           })}
+          {/* Lupa do portal de entrada, no canto que não cobre os lotes */}
+          {(() => {
+            const portal = data.pontos.find(p => /portal/i.test(p.nome));
+            if (!portal || !valido(portal.pt)) return null;
+            const pt = project(portal.pt);
+            const w = 300, h = alturaDaLupa(w);
+            const outros = [data.rio?.line, data.perimetro, ...(data.areas ?? []).map(a => a.poly), data.app?.poly]
+              .flatMap(linha => densificar((linha ?? []).filter(valido).map(project)));
+            const caixa = cantoDaLupa(W, H, w, h, data.lotes.flatMap(l => l.poly.map(project)), pt, outros);
+            return <LupaPortal portal={pt} caixa={caixa} imagem={portal.imagem} rotulo="Portal de entrada" raio={15} />;
+          })()}
         </svg>
       </div>
 

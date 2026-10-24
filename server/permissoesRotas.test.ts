@@ -25,6 +25,13 @@ describe('bloqueio no servidor (não confia no front)', () => {
     await expect(corretor.permissoes.corretor({ usuarioId: 5 })).rejects.toMatchObject({ code: 'FORBIDDEN' });
   });
 
+  it('cadastro de usuários, documentos e prévia do contrato são só do admin', async () => {
+    await expect(corretor.equipe.create({ nome: 'X Y', email: 'x@y.com', perfil: 'equipe', creci: '999' } as any)).rejects.toMatchObject({ code: 'FORBIDDEN' });
+    await expect(corretor.equipe.list()).rejects.toMatchObject({ code: 'FORBIDDEN' });
+    await expect(corretor.equipe.excluirDocumento({ id: 1 })).rejects.toMatchObject({ code: 'FORBIDDEN' });
+    await expect(corretor.equipe.intermediador({ id: 1 })).rejects.toMatchObject({ code: 'FORBIDDEN' });
+  });
+
   it('empreendedor não chega ao financeiro nem ao simulador', async () => {
     const emp = caller({ id: 7, role: 'user', perfil: 'empreendedor' });
     await expect(emp.financeiro.vendas()).rejects.toMatchObject({ code: 'FORBIDDEN' });

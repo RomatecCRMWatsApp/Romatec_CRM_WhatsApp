@@ -10,6 +10,20 @@ export const NOME_BOM_JARDIMS = 'Condomínio de Chácaras Bom Jardims';
 /** Fuso UTM do projeto (Açailândia/MA) — SIRGAS 2000 */
 export const FUSO_BOM_JARDIMS = 23;
 
+/**
+ * Portal de entrada (principal) do condomínio: UTM X 235.872,420 / Y 9.454.873,270 (SIRGAS 2000, fuso 23S,
+ * EPSG:31983) → WGS 84. Na divisa junto ao marco FQNS-M-4200, ao lado da via de acesso, perto da área de recreação.
+ * O acesso desce até a estrada, ao sul; as rotas do Google Maps apontam para a ponta do acesso na estrada.
+ */
+export const PORTAL_ENTRADA = { lat: -4.92754264, lon: -47.38171366 };
+export const ACESSO_ESTRADA = { lat: -4.929037, lon: -47.3815739 };
+
+/** Rota no Google Maps até a entrada do condomínio (de onde a pessoa estiver, ou de uma origem dada) */
+export function rotaAteEntrada(origem?: string): string {
+  const destino = `${ACESSO_ESTRADA.lat},${ACESSO_ESTRADA.lon}`;
+  return `https://www.google.com/maps/dir/?api=1${origem ? `&origin=${encodeURIComponent(origem)}` : ''}&destination=${destino}&travelmode=driving`;
+}
+
 /** Código de chácara no formato oficial (A01…D18) */
 export function codigoChacaraValido(codigo: string | null | undefined): boolean {
   return /^[A-D]\d{2}$/.test(String(codigo || ''));

@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Bar, BarChart, CartesianGrid, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
 import { Copy, Download, FileText, LogOut, Share2, Video } from "lucide-react";
+import { FotoUsuario } from "@/components/AppShell";
 import { baixarBlob, ehImagem, ehVideo, miniatura, nomeArquivo } from "@/components/MateriaisPainel";
 import { ROTULO_TIPO_MATERIAL, type TipoMaterial } from "@shared/materiais";
 
@@ -92,6 +93,7 @@ export default function Empreendedor() {
             <h1 className="text-lg font-bold truncate">{p?.empreendimento.nome || "Meu empreendimento"}</h1>
             <p className="text-xs text-white/70">Olá, {String((user as any)?.name || "").split(" ")[0] || "empreendedor"} · leads e artes para divulgar</p>
           </div>
+          <FotoUsuario />
           <Button size="sm" variant="ghost" className="text-white hover:bg-white/15" onClick={() => logout()}><LogOut className="h-4 w-4" /></Button>
         </div>
         <div className="container flex gap-1 pb-0">

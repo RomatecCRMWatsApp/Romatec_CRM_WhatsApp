@@ -311,6 +311,15 @@ export function initSqliteTables(sqlite: any): void {
     saldoCents INTEGER NOT NULL, parcelaSaldoCents INTEGER NOT NULL, totalPagoCents INTEGER NOT NULL, payload TEXT,
     criadoEm INTEGER NOT NULL DEFAULT (strftime('%s','now'))
   )`);
+  // Cadastro completo dos usuários (server/_core/migrations/addCadastroUsuarios.ts)
+  for (const c of ['creciUf', 'cpf', 'rg', 'rgOrgao', 'nacionalidade', 'estadoCivil', 'enderecoLogradouro', 'enderecoNumero', 'enderecoComplemento',
+    'enderecoBairro', 'enderecoCidade', 'enderecoUf', 'enderecoCep', 'certidaoCreciValidade', 'fotoUrl']) {
+    addColumn(`ALTER TABLE users ADD COLUMN ${c} TEXT`);
+  }
+  run(`CREATE TABLE IF NOT EXISTS usuarioDocumentos (
+    id INTEGER PRIMARY KEY AUTOINCREMENT, usuarioId INTEGER NOT NULL, tipo TEXT NOT NULL, nome TEXT NOT NULL, mime TEXT, tamanhoBytes INTEGER,
+    conteudoBase64 TEXT NOT NULL, validade TEXT, enviadoPor INTEGER, createdAt INTEGER NOT NULL DEFAULT (strftime('%s','now'))
+  )`);
   // Portal de permissões (server/_core/migrations/addPermissoes.ts)
   run(`CREATE TABLE IF NOT EXISTS permissoesPerfil (
     id INTEGER PRIMARY KEY AUTOINCREMENT, perfil TEXT NOT NULL, modulo TEXT NOT NULL, permitido INTEGER NOT NULL DEFAULT 1,

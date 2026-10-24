@@ -1,4 +1,6 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
+import { toast } from "sonner";
+import { enviarArquivo } from "./equipe/CadastroUsuario";
 import { useLocation } from "wouter";
 import { useAuth } from "@/_core/hooks/useAuth";
 import { perfilDe, podeAbrir, ROTULO_PERFIL } from "@shared/equipe";
@@ -95,6 +97,35 @@ function Navegacao({ onNavegar }: { onNavegar?: () => void }) {
   );
 }
 
+/** Foto de perfil do usuário logado (todos os perfis); clicar troca a foto */
+export function FotoUsuario({ tamanho = "h-9 w-9", editavel = true }: { tamanho?: string; editavel?: boolean }) {
+  const { user } = useAuth();
+  const utils = trpc.useUtils();
+  const ref = useRef<HTMLInputElement>(null);
+  const [enviando, setEnviando] = useState(false);
+  const nome = String((user as any)?.name || "Usuário");
+  const foto = (user as any)?.fotoUrl as string | null | undefined;
+  const trocar = async (f: File | undefined) => {
+    if (!f) return;
+    setEnviando(true);
+    try {
+      await enviarArquivo("/api/usuarios/me/foto", f);
+      await utils.auth.me.invalidate();
+      toast.success("Foto atualizada");
+    } catch (e: any) { toast.error(e.message); }
+    finally { setEnviando(false); if (ref.current) ref.current.value = ""; }
+  };
+  const conteudo = foto ? <img src={foto} alt={nome} className={`${tamanho} shrink-0 rounded-full object-cover ${enviando ? "opacity-50" : ""}`} />
+    : <div className={`${tamanho} shrink-0 rounded-full bg-primary/20 text-primary flex items-center justify-center font-bold`}>{nome.charAt(0).toUpperCase()}</div>;
+  if (!editavel) return conteudo;
+  return (
+    <>
+      <input ref={ref} type="file" accept="image/jpeg,image/png,image/webp" className="hidden" onChange={e => trocar(e.target.files?.[0])} />
+      <button type="button" onClick={() => ref.current?.click()} title="Trocar foto de perfil" disabled={enviando} className="rounded-full">{conteudo}</button>
+    </>
+  );
+}
+
 function Rodape() {
   const { user, logout } = useAuth();
   const perfil = perfilDe(user as any);
@@ -102,7 +133,7 @@ function Rodape() {
   return (
     <div className="border-t border-sidebar-border p-3">
       <div className="flex items-center gap-3 rounded-xl bg-white/5 p-2.5">
-        <div className="h-9 w-9 shrink-0 rounded-full bg-primary/20 text-primary flex items-center justify-center font-bold">{nome.charAt(0).toUpperCase()}</div>
+        <FotoUsuario />
         <div className="min-w-0 flex-1">
           <p className="text-sm font-semibold text-sidebar-foreground truncate">{nome}</p>
           <p className="text-[10px] text-sidebar-foreground/50 truncate">{perfil ? ROTULO_PERFIL[perfil] : ""}</p>
@@ -156,7 +187,8 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
       <header className="lg:hidden sticky top-0 z-20 flex items-center gap-3 border-b border-border bg-background/90 backdrop-blur px-3 py-2">
         <button onClick={() => setAberto(true)} className="rounded-lg p-2 hover:bg-white/5" aria-label="Abrir menu"><Menu className="h-5 w-5" /></button>
         <img src="/icon-192x192.png" alt="" className="h-7 w-7 rounded-lg" />
-        <p className="font-semibold truncate">{tituloDaRota(loc)}</p>
+        <p className="font-semibold truncate flex-1">{tituloDaRota(loc)}</p>
+        <FotoUsuario tamanho="h-8 w-8" />
       </header>
 
       <AvisoRotinas />

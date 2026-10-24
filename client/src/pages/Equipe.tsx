@@ -5,12 +5,16 @@ import { trpc } from "@/lib/trpc";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { ArrowLeft, Copy, KeyRound, MessageCircle, Plus, ShieldCheck, UserCheck, UserX, Users } from "lucide-react";
+import { ArrowLeft, Copy, FileText, IdCard, KeyRound, MessageCircle, Plus, ShieldCheck, Trash2, UserCheck, UserX, Users } from "lucide-react";
 import { ROTULO_PERFIL } from "@shared/equipe";
 import PageHeader from "@/components/PageHeader";
 import PermissoesCorretor, { PacoteBase } from "@/components/equipe/PermissoesCorretor";
+import CadastroUsuario from "@/components/equipe/CadastroUsuario";
+import { ROTULO_CERTIDAO, ROTULO_DOCUMENTO, type SituacaoCertidao, type TipoDocumento } from "@shared/cadastro";
 
-const vazio = { nome: "", email: "", creci: "", telefone: "", perfil: "equipe" as "equipe" | "empreendedor", empreendimentoSlug: "" };
+const COR_CERTIDAO: Record<SituacaoCertidao, string> = {
+  ok: "bg-emerald-600/80 text-white", vencendo: "bg-amber-500/80 text-black", vencida: "bg-red-600/80 text-white", ausente: "bg-red-600/80 text-white",
+};
 
 const dataHora = (d?: string | Date | null) =>
   d ? new Date(d).toLocaleString("pt-BR", { timeZone: "America/Fortaleza", day: "2-digit", month: "2-digit", year: "numeric", hour: "2-digit", minute: "2-digit" }) : "—";
@@ -59,33 +63,19 @@ export default function Equipe() {
   const [, navigate] = useLocation();
   const utils = trpc.useUtils();
   const { data, isLoading, error } = trpc.equipe.list.useQuery();
-  const [form, setForm] = useState(vazio);
   const [abrirForm, setAbrirForm] = useState(false);
+  const [editando, setEditando] = useState<number | null>(null);
   const [convite, setConvite] = useState<{ id?: number; nome: string; link: string; login: string; telefone?: string | null } | null>(null);
   const [permissoesDe, setPermissoesDe] = useState<number | null>(null);
   const recarregar = () => utils.equipe.list.invalidate();
 
-  const criar = trpc.equipe.create.useMutation({
-    onSuccess: (r, v) => {
-      toast.success(`${v.nome} cadastrado(a)`);
-      setConvite({ nome: v.nome, link: r.link, login: v.perfil === "empreendedor" && !v.creci ? v.email : `o CRECI ${String(v.creci).replace(/\D/g, "")}`, telefone: v.telefone });
-      setForm(vazio); setAbrirForm(false); recarregar();
-    },
-    onError: e => toast.error(e.message),
-  });
+  const excluirDoc = trpc.equipe.excluirDocumento.useMutation({ onSuccess: () => { toast.success("Documento excluído"); recarregar(); }, onError: e => toast.error(e.message) });
+  const listas = { modulos: data?.modulos ?? [], empreendimentos: (data?.empreendimentos ?? []) as any[], imoveis: data?.imoveis ?? [] };
   const atualizar = trpc.equipe.update.useMutation({ onSuccess: () => { toast.success("Acesso atualizado"); recarregar(); }, onError: e => toast.error(e.message) });
   const reconvite = trpc.equipe.novoConvite.useMutation({ onError: e => toast.error(e.message) });
 
   const emps = data?.empreendimentos ?? [];
   const nomeEmp = (slug?: string | null) => emps.find((e: any) => e.slug === slug)?.nome || slug || "";
-
-  const salvar = (e: React.FormEvent) => {
-    e.preventDefault();
-    criar.mutate({
-      nome: form.nome, email: form.email, creci: form.creci || null, telefone: form.telefone || null,
-      perfil: form.perfil, empreendimentoSlug: form.perfil === "empreendedor" ? form.empreendimentoSlug || null : null,
-    });
-  };
 
   return (
     <div>
@@ -105,44 +95,8 @@ export default function Equipe() {
           <Card className="bg-card border-border">
             <CardHeader className="pb-2"><CardTitle className="text-base">Novo acesso</CardTitle></CardHeader>
             <CardContent>
-              <form onSubmit={salvar} className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                <label className="flex flex-col gap-1 text-sm">
-                  <span className="text-muted-foreground">Tipo de acesso</span>
-                  <select value={form.perfil} onChange={e => setForm(f => ({ ...f, perfil: e.target.value as any }))} className="h-10 px-3 rounded-md border border-border bg-secondary/30 text-foreground text-sm">
-                    <option value="equipe">{ROTULO_PERFIL.equipe} — usa o CRM</option>
-                    <option value="empreendedor">{ROTULO_PERFIL.empreendedor} — só gráficos de leads e artes</option>
-                  </select>
-                </label>
-                <label className="flex flex-col gap-1 text-sm">
-                  <span className="text-muted-foreground">Nome</span>
-                  <Input required value={form.nome} onChange={e => setForm(f => ({ ...f, nome: e.target.value }))} placeholder="Nome completo" />
-                </label>
-                <label className="flex flex-col gap-1 text-sm">
-                  <span className="text-muted-foreground">CRECI {form.perfil === "empreendedor" ? "(opcional — sem CRECI, entra com o e-mail)" : "(é o login)"}</span>
-                  <Input required={form.perfil !== "empreendedor"} inputMode="numeric" value={form.creci} onChange={e => setForm(f => ({ ...f, creci: e.target.value }))} placeholder="Ex.: 4705" />
-                </label>
-                <label className="flex flex-col gap-1 text-sm">
-                  <span className="text-muted-foreground">E-mail (confirmado no primeiro acesso)</span>
-                  <Input required type="email" value={form.email} onChange={e => setForm(f => ({ ...f, email: e.target.value }))} placeholder="nome@email.com" />
-                </label>
-                <label className="flex flex-col gap-1 text-sm">
-                  <span className="text-muted-foreground">WhatsApp (para enviar o link)</span>
-                  <Input inputMode="tel" value={form.telefone} onChange={e => setForm(f => ({ ...f, telefone: e.target.value }))} placeholder="(99) 9 9999-9999" />
-                </label>
-                {form.perfil === "empreendedor" && (
-                  <label className="flex flex-col gap-1 text-sm">
-                    <span className="text-muted-foreground">Empreendimento</span>
-                    <select required value={form.empreendimentoSlug} onChange={e => setForm(f => ({ ...f, empreendimentoSlug: e.target.value }))} className="h-10 px-3 rounded-md border border-border bg-secondary/30 text-foreground text-sm">
-                      <option value="">— escolha —</option>
-                      {emps.map((e: any) => <option key={e.slug} value={e.slug}>{e.nome}</option>)}
-                    </select>
-                  </label>
-                )}
-                <div className="md:col-span-2 flex items-center gap-2">
-                  <Button type="submit" disabled={criar.isPending} className="bg-emerald-600 hover:bg-emerald-700 text-white">{criar.isPending ? "Salvando..." : "Cadastrar e gerar link"}</Button>
-                  <Button type="button" variant="ghost" onClick={() => setAbrirForm(false)}>Cancelar</Button>
-                </div>
-              </form>
+              <CadastroUsuario listas={listas} onCancelar={() => setAbrirForm(false)}
+                onSalvo={r => { if (r.link) setConvite({ nome: r.nome, link: r.link, login: r.login, telefone: r.telefone }); setAbrirForm(false); recarregar(); }} />
             </CardContent>
           </Card>
         )}
@@ -153,9 +107,12 @@ export default function Equipe() {
               <Card key={p.id} className={`bg-card border-border ${p.ativo ? "" : "opacity-60"}`}>
                 <CardContent className="py-3 space-y-2">
                   <div className="flex flex-col md:flex-row md:items-center gap-2">
+                    {p.fotoUrl ? <img src={p.fotoUrl} alt="" className="h-10 w-10 shrink-0 rounded-full object-cover" />
+                      : <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-primary/20 font-bold text-primary">{String(p.nome || "?").charAt(0).toUpperCase()}</div>}
                     <div className="flex-1 min-w-0">
                       <div className="flex flex-wrap items-center gap-2">
                         <span className="font-semibold text-foreground">{p.nome || "Sem nome"}</span>
+                        {p.perfil === "equipe" && <span className={`text-[10px] px-1.5 py-0.5 rounded ${COR_CERTIDAO[p.certidao as SituacaoCertidao]}`}>{ROTULO_CERTIDAO[p.certidao as SituacaoCertidao]}{p.cadastro?.certidaoCreciValidade ? ` · até ${new Date(`${p.cadastro.certidaoCreciValidade}T12:00:00`).toLocaleDateString("pt-BR")}` : ""}</span>}
                         <span className="text-[10px] uppercase tracking-wide px-1.5 py-0.5 rounded border border-border text-muted-foreground">{ROTULO_PERFIL[p.perfil as keyof typeof ROTULO_PERFIL] || p.perfil}</span>
                         {!p.ativo && <span className="text-[10px] px-1.5 py-0.5 rounded bg-red-600/80 text-white">DESATIVADO</span>}
                         {p.ativo && p.perfil !== "admin" && !p.temSenha && <span className="text-[10px] px-1.5 py-0.5 rounded bg-amber-500/80 text-black">{p.convitePendente ? "aguardando 1º acesso" : "sem senha — gere um link"}</span>}
@@ -170,6 +127,9 @@ export default function Equipe() {
                         Recebe leads
                       </label>
                     )}
+                    <Button size="sm" variant={editando === p.id ? "default" : "outline"} className="shrink-0" onClick={() => setEditando(v => (v === p.id ? null : p.id))}>
+                      <IdCard className="mr-1.5 h-3.5 w-3.5" /> Cadastro
+                    </Button>
                     {p.perfil !== "admin" && (
                       <div className="flex flex-wrap gap-2 shrink-0">
                         <Button size="sm" variant="outline" disabled={reconvite.isPending} onClick={async () => {
@@ -201,6 +161,24 @@ export default function Equipe() {
                       }}>Cadastrar meu CRECI</Button>
                     )}
                   </div>
+                  {editando === p.id && (
+                    <div className="space-y-3 rounded-lg border border-border bg-secondary/10 p-3">
+                      {p.documentos.length > 0 && (
+                        <div className="space-y-1">
+                          <p className="text-xs font-semibold">Documentos</p>
+                          {p.documentos.map((d: any) => (
+                            <div key={d.id} className="flex flex-wrap items-center gap-2 text-xs">
+                              <FileText className="h-3.5 w-3.5 text-muted-foreground" />
+                              <a href={`/api/usuarios/documentos/${d.id}`} target="_blank" rel="noreferrer" className="hover:underline">{ROTULO_DOCUMENTO[d.tipo as TipoDocumento] ?? d.tipo} — {d.nome}</a>
+                              {d.validade && <span className="text-muted-foreground">validade {new Date(`${d.validade}T12:00:00`).toLocaleDateString("pt-BR")}</span>}
+                              <button onClick={() => confirm(`Excluir ${d.nome}?`) && excluirDoc.mutate({ id: d.id })} className="text-muted-foreground hover:text-red-400" aria-label="Excluir"><Trash2 className="h-3.5 w-3.5" /></button>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                      <CadastroUsuario pessoa={p} listas={listas} onCancelar={() => setEditando(null)} onSalvo={() => { setEditando(null); recarregar(); }} />
+                    </div>
+                  )}
                   {permissoesDe === p.id && <PermissoesCorretor usuarioId={p.id} />}
                 </CardContent>
               </Card>

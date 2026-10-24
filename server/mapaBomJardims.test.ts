@@ -3,6 +3,8 @@ import fs from 'fs';
 import path from 'path';
 import React from 'react';
 import { renderToStaticMarkup } from 'react-dom/server';
+import { rotaAteEntrada, PORTAL_ENTRADA, ACESSO_ESTRADA } from '../shared/chacaraLink';
+import { geoParaUtm } from '../shared/utm';
 
 type Pt = [number, number];
 const mapa = JSON.parse(fs.readFileSync(path.resolve(__dirname, '../client/public/bom-jardims/mapa.json'), 'utf8'));
@@ -29,20 +31,37 @@ const areaM2 = (p: Pt[]) => {
 };
 
 describe('Mapa do Bom Jardims — dados da planta oficial', () => {
-  it('portal principal exatamente no ponto do KMZ oficial, na boca da via de acesso (lado oeste), fora de lote', () => {
+  it('portal de entrada principal: UTM 235.872,420 / 9.454.873,270 (23S) → WGS 84, fora de lote', () => {
     const principais = mapa.pontos.filter((p: any) => /portal/i.test(p.nome));
     expect(principais).toHaveLength(1);
+    expect(principais[0].nome).toBe('Portal de entrada');
     const portal = ponto(/portal/i);
-    expect(portal).toEqual([-47.382658381, -4.925448446]); // KMZ oficial (Google Earth, WGS84)
+    expect(portal).toEqual([-47.38171366, -4.92754264]);
+    const [e, n] = geoParaUtm(portal[0], portal[1], 23, true);
+    expect(Math.abs(e - 235872.42)).toBeLessThan(0.05);
+    expect(Math.abs(n - 9454873.27)).toBeLessThan(0.05);
     expect(mapa.lotes.some((l: any) => dentro(portal, l.poly))).toBe(false);
-    // Lado oeste: a oeste de todos os lotes
-    expect(portal[0]).toBeLessThan(Math.min(...mapa.lotes.flatMap((l: any) => l.poly.map((q: Pt) => q[0]))));
-    // A via de acesso (7 m) começa na boca, junto ao portal, e desce para o sul
-    const acesso = mapa.ruas.find((r: any) => /acesso/i.test(r.nome)).line as Pt[];
-    const boca = acesso[acesso.length - 1];
-    expect(boca).toEqual([-47.382628031, -4.925439831]);
-    expect(metros(portal, boca)).toBeLessThan(5);
-    expect(acesso[acesso.length - 2][1]).toBeLessThan(boca[1]);
+    expect(dentro(portal, mapa.perimetro)).toBe(true);
+    // Ao lado da via de acesso, junto à área de recreação, entre o stand B14 e a quadra D
+    expect(metros(portal, [-47.3817011, -4.927564])).toBeLessThan(5);
+    expect(dentro(portal, mapa.areas.find((a: any) => /recrea/i.test(a.nome)).poly)).toBe(true);
+    const distLote = (c: string) => Math.min(...(mapa.lotes.find((l: any) => l.codigo === c).poly as Pt[]).map(q => metros(portal, q)));
+    expect(distLote('B14')).toBeLessThan(40);
+    expect(distLote('D11')).toBeLessThan(40);
+    // Não é mais o canto noroeste do KMZ antigo
+    expect(metros(portal, [-47.382658381, -4.925448446])).toBeGreaterThan(200);   // ≈ 266 m
+  });
+  it('acesso do DXF: da estrada (ao sul) até o portal; rotas do Google Maps apontam para a ponta na estrada', () => {
+    const acesso = mapa.ruas.find((r: any) => /porta de entrada/i.test(r.nome)).line as Pt[];
+    expect(acesso).toEqual([[-47.3815739, -4.929037], [-47.3819959, -4.9281757], [-47.38171366, -4.92754264]]);
+    expect(acesso[acesso.length - 1]).toEqual(ponto(/portal/i));                // termina no portal
+    expect(acesso[0][1]).toBeLessThan(acesso[acesso.length - 1][1]);              // vem do sul
+    expect(acesso.every(p => dentro(p, mapa.perimetro))).toBe(true);
+    expect(mapa.lotes.some((l: any) => acesso.some(p => dentro(p, l.poly)))).toBe(false);
+    expect(rotaAteEntrada()).toBe('https://www.google.com/maps/dir/?api=1&destination=-4.929037,-47.3815739&travelmode=driving');
+    expect(rotaAteEntrada('Centro, Açailândia - MA')).toContain('origin=Centro%2C%20A%C3%A7ail%C3%A2ndia%20-%20MA');
+    expect([PORTAL_ENTRADA.lon, PORTAL_ENTRADA.lat]).toEqual(ponto(/portal/i));
+    expect([ACESSO_ESTRADA.lon, ACESSO_ESTRADA.lat]).toEqual(acesso[0]);
   });
   it('pontos de banho conferem com o KMZ oficial (sudoeste, junto ao rio)', () => {
     expect(metros(ponto(/banho 1/i), [-47.383117, -4.928279])).toBeLessThan(2);
@@ -146,5 +165,26 @@ describe('Mapa do Bom Jardims — desenho', () => {
     expect(svg).toContain('>Trilha ecológica<');
     expect(svg).toContain('APP (30 m)');
     expect(svg).not.toContain('NaN');
+  });
+  it('lupa do portal nos dois mapas: imagem trocável (mapa.json) e rótulo "Portal de entrada"; miniatura sem lupa', () => {
+    expect(mapa.pontos.find((p: any) => /portal/i.test(p.nome)).imagem).toBe('/bom-jardims/portal-lupa.png');
+    expect(fs.existsSync(path.resolve(__dirname, '../client/public/bom-jardims/portal-lupa.png'))).toBe(true);
+    const publico = renderToStaticMarkup(React.createElement(LoteMap, { lotes: lotesDoMapa(mapa), onSelect: () => {}, dados: mapa }));
+    const interno = renderToStaticMarkup(React.createElement(MapaTematico, { slug: 'bom-jardims', lotes, contexto: mapa, semLegenda: true }));
+    for (const svg of [publico, interno]) {
+      expect(svg).toContain('aria-label="Lupa: Portal de entrada"');
+      expect(svg).toContain('href="/bom-jardims/portal-lupa.png"');
+      expect(svg).not.toContain('NaN');
+    }
+    const mini = renderToStaticMarkup(React.createElement(MapaTematico, { slug: 'bom-jardims', lotes, contexto: mapa, compacto: true, semLegenda: true }));
+    expect(mini).not.toContain('Lupa:');
+    expect(mini).toContain('PORTAL DE ENTRADA');
+  });
+  it('lupa vai para o canto que não cobre lotes (e evita rio/perímetro)', async () => {
+    const { cantoDaLupa } = await import('../client/src/components/bom-jardims/LupaPortal');
+    const lotesNoCanto: [number, number][] = [[50, 50], [60, 40]];
+    expect(cantoDaLupa(1000, 800, 300, 110, lotesNoCanto, [100, 100])).toMatchObject({ x: 10, y: 680 });   // sup. esquerdo ocupado → o livre mais perto do portal
+    expect(cantoDaLupa(1000, 800, 300, 110, [], [100, 100], [[900, 50]])).toMatchObject({ x: 10, y: 10 });
+    expect(cantoDaLupa(1000, 800, 300, 110, [], [900, 700], [[900, 750]])).toMatchObject({ x: 690, y: 10 });
   });
 });

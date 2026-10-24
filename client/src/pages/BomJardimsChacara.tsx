@@ -4,7 +4,7 @@ import { MapPin, Navigation, Copy, Play, ArrowLeft, Globe2 } from "lucide-react"
 import { trpc } from "@/lib/trpc";
 import LoteMap, { STATUS_LABEL, type LoteInfo, type MapaData } from "@/components/bom-jardims/LoteMap";
 import { C, SERIF, SANS, GALERIA, VIDEO, useBrandFonts, ContatosBotoes } from "@/components/bom-jardims/marca";
-import { codigoChacaraValido, localizacaoDoLote, tituloChacara, NOME_BOM_JARDIMS, SLUG_BOM_JARDIMS } from "@shared/chacaraLink";
+import { codigoChacaraValido, localizacaoDoLote, tituloChacara, rotaAteEntrada, NOME_BOM_JARDIMS, SLUG_BOM_JARDIMS } from "@shared/chacaraLink";
 
 /**
  * Link público de uma chácara — /bom-jardims/chacara/C05 (o corretor manda para o cliente).
@@ -107,7 +107,7 @@ export function ChacaraView({ codigo, mapa, lotes, falhou = false }: { codigo: s
             </div>
             <div style={{ display: "flex", flexWrap: "wrap", gap: 10 }}>
               <a href={local.googleMaps} target="_blank" rel="noopener noreferrer" style={botao(C.verde, "#fff")}><MapPin size={18} /> Abrir no Google Maps</a>
-              <a href={local.rota} target="_blank" rel="noopener noreferrer" style={botao(C.dourado, C.verde)}><Navigation size={18} /> Como chegar</a>
+              <a href={rotaAteEntrada()} target="_blank" rel="noopener noreferrer" style={botao(C.dourado, C.verde)}><Navigation size={18} /> Como chegar ao condomínio</a>
               <button onClick={copiar} style={{ ...botao("#fff", C.verde), border: `1.5px solid ${C.verde}` }}><Copy size={18} /> {copiado ? "Coordenadas copiadas" : "Copiar coordenadas"}</button>
             </div>
             <div style={{ borderTop: "1px solid #EEE7D2", paddingTop: 14, display: "grid", gap: 8 }}>

@@ -55,6 +55,15 @@ export function permissoesEfetivas(
   return out;
 }
 
+/**
+ * Corretor NOVO: ajuste explícito de todos os módulos — só o que o admin marcou fica liberado
+ * (não herda o pacote base). Módulo desconhecido é ignorado.
+ */
+export function ajustesNovoCorretor(escolhidos: string[]): { modulo: string; permitido: boolean }[] {
+  const marcados = new Set(escolhidos);
+  return MODULOS.map(m => ({ modulo: m.chave, permitido: marcados.has(m.chave) }));
+}
+
 /** O perfil pode chamar o procedimento, dado o pacote efetivo (admin sempre; fora de módulo, segue shared/equipe) */
 export function moduloLiberado(perfil: Perfil | null, permissoes: Permissoes | null, caminho: string): boolean {
   if (perfil === 'admin') return true;

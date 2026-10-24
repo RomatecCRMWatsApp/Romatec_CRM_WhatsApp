@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { COR_SITUACAO, ROTULO_SITUACAO, SITUACOES_LOTE, type SituacaoLote } from "@shared/lotes";
+import LupaPortal, { alturaDaLupa, cantoDaLupa, densificar } from "@/components/bom-jardims/LupaPortal";
 
 /**
  * Mapa temático dos lotes (SVG a partir das coordenadas). O desenho dos lotes vem do banco
@@ -14,7 +15,8 @@ export type Contexto = {
   lotes: { codigo: string; poly: Pt[] }[];
   ruas: { nome: string; line: Pt[] }[];
   perimetro: Pt[];
-  pontos?: { nome: string; pt: Pt }[];
+  /** imagem: recorte/render da lupa (só no portal) */
+  pontos?: { nome: string; pt: Pt; imagem?: string }[];
   /** Rio/córrego (eixo), traçado da planta oficial */
   rio?: { nome: string; line: Pt[]; rotulo?: Pt };
   /** Áreas de uso comum (ex.: área de vivência e recreação) */
@@ -247,21 +249,22 @@ export default function MapaTematico({ slug, lotes, ruas, perimetro, selecionado
             const rotulo = p.nome.replace(/\s*\(.*\)\s*/, "").replace(/ \/ .*/, "").replace(/ — .*/, "");
             const fs = compacto ? 8 : 10;
             if (portal) {
-              // Chamada na direção oposta ao centro dos lotes (portal fica na cabeceira da via de acesso)
+              // Mapa grande: o rótulo vai na lupa (abaixo). Miniatura: chamada na direção oposta ao centro dos lotes
               const vx = x - meio[0], vy = y - meio[1], n = Math.hypot(vx, vy) || 1;
               const lx = x + (vx / n) * 34, ly = y + (vy / n) * 34 - 10;
               const esquerda = vx < 0;
+              const comLupa = !compacto;
               return (
                 <g key={p.nome} pointerEvents="none">
-                  <line x1={x} y1={y - 8} x2={lx} y2={ly + 4} stroke="#0C3320" strokeWidth={1.5} />
+                  {!comLupa && <line x1={x} y1={y - 8} x2={lx} y2={ly + 4} stroke="#0C3320" strokeWidth={1.5} />}
                   <g transform={`translate(${x} ${y})`}>
                     <rect x={-13} y={-16} width={6} height={18} rx={1} fill="#6B4F2A" stroke="#0C3320" strokeWidth={1} />
                     <rect x={7} y={-16} width={6} height={18} rx={1} fill="#6B4F2A" stroke="#0C3320" strokeWidth={1} />
                     <path d="M -10 -15 Q 0 -27 10 -15" fill="none" stroke="#C9A84C" strokeWidth={3} />
                     <rect x={-15} y={-20} width={30} height={5} rx={1} fill="#0C3320" />
                   </g>
-                  <text x={lx} y={ly} textAnchor={esquerda ? "end" : "start"} fontSize={fs + 2} fontWeight={800}
-                    fill="#0C3320" stroke="#FFFFFF" strokeWidth={3} paintOrder="stroke">PORTAL DE ENTRADA</text>
+                  {!comLupa && <text x={lx} y={ly} textAnchor={esquerda ? "end" : "start"} fontSize={fs + 2} fontWeight={800}
+                    fill="#0C3320" stroke="#FFFFFF" strokeWidth={3} paintOrder="stroke">PORTAL DE ENTRADA</text>}
                   <title>{p.nome}</title>
                 </g>
               );
@@ -275,6 +278,17 @@ export default function MapaTematico({ slug, lotes, ruas, perimetro, selecionado
               </g>
             );
           })}
+          {/* Lupa do portal de entrada (mapa grande), no canto que não cobre os lotes */}
+          {!compacto && (() => {
+            const portal = ctx?.pontos?.find(p => /portal/i.test(p.nome) && valido(p.pt));
+            if (!portal) return null;
+            const pt = proj(portal.pt);
+            const w = 300, h = alturaDaLupa(w);
+            const outros = [ctx?.rio?.line, ctx?.perimetro, ...(ctx?.areas ?? []).map(a => a.poly), ctx?.app?.poly]
+              .flatMap(linha => densificar((linha ?? []).filter(valido).map(proj)));
+            const caixa = cantoDaLupa(W, H, w, h, itens.flatMap(l => l.poly.map(proj)), pt, outros);
+            return <LupaPortal portal={[pt[0], pt[1] - 6]} caixa={caixa} imagem={portal.imagem} rotulo="Portal de entrada" raio={18} />;
+          })()}
         </svg>
       </div>
       {!semLegenda && (

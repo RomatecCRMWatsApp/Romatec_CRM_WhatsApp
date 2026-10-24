@@ -6,7 +6,7 @@ import { origemDaVisita } from "@/lib/origemVisita";
 import { FAQ_BOM_JARDIMS } from "@shared/bomJardimsSeo";
 import LoteMap, { formatArea, STATUS_LABEL, type LoteInfo } from "@/components/bom-jardims/LoteMap";
 import { C, SERIF, SANS, CONTATOS, GALERIA, VIDEO, waLink, useBrandFonts, ContatosBotoes } from "@/components/bom-jardims/marca";
-import { codigoChacaraValido } from "@shared/chacaraLink";
+import { codigoChacaraValido, rotaAteEntrada } from "@shared/chacaraLink";
 
 /**
  * Landing do Condomínio de Chácaras Bom Jardims — /bom-jardims
@@ -17,8 +17,6 @@ import { codigoChacaraValido } from "@shared/chacaraLink";
 const CONSENT_TEXT =
   "Autorizo a Romatec Consultoria Total e o Condomínio de Chácaras Bom Jardims a usar meus dados para contato por WhatsApp, telefone e e-mail sobre este empreendimento, nos termos da Lei n.º 13.709/2018. Posso cancelar a qualquer momento.";
 
-/** Portal de entrada (KMZ oficial) */
-const PORTAL = { lat: -4.925448446, lon: -47.382658381 };
 
 const DIFERENCIAIS = [
   { icon: ShieldCheck, titulo: "Portal com guarita", texto: "Portal em tijolo aparente e troncos, portão de correr estilo fazenda e controle de acesso." },
@@ -332,7 +330,7 @@ export default function BomJardims() {
               Açailândia/MA · a área tem 41,1 ha, com a área de vivência às margens do córrego.
             </p>
           </div>
-          <a href={`https://www.google.com/maps/dir/?api=1&destination=${PORTAL.lat},${PORTAL.lon}`} target="_blank" rel="noopener noreferrer"
+          <a href={rotaAteEntrada()} target="_blank" rel="noopener noreferrer"
             style={{ display: "inline-flex", alignItems: "center", gap: 8, padding: "12px 18px", borderRadius: 12, background: C.verde, color: "#fff", fontWeight: 700, textDecoration: "none" }}>
             <Navigation size={18} /> Como chegar ao portal
           </a>
