@@ -151,6 +151,18 @@ export function evolucao(sim: Simulacao, prazo: number): LinhaEvolucao[] {
 }
 
 /**
+ * Vencimento da linha da evolução: data da venda (1º pagamento) + `mes` meses, mantendo o dia;
+ * em mês mais curto vai para o último dia (31/01 + 1 mês = 28/02 ou 29/02). Datas em "AAAA-MM-DD".
+ */
+export function vencimento(dataVenda: string, mes: number): string {
+  const [a, m, d] = dataVenda.split('-').map(Number);
+  const alvo = new Date(Date.UTC(a, m - 1 + mes, 1));
+  const ultimoDia = new Date(Date.UTC(alvo.getUTCFullYear(), alvo.getUTCMonth() + 1, 0)).getUTCDate();
+  alvo.setUTCDate(Math.min(d, ultimoDia));
+  return alvo.toISOString().slice(0, 10);
+}
+
+/**
  * Comissão sobre o preço de tabela: total (5%) = corretor (2%) + Romatec (3%); venda direta
  * da Romatec (sem corretor) = tudo para a Romatec. Paga no sinal: metade no 1º pagamento e
  * metade no 2º; sinal à vista = 100% no ato.

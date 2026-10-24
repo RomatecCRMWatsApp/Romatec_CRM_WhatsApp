@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import {
-  comissao, condicoesDaLinha, dividirEntrada, evolucao, mensagemSimulacao, parcelaPrice, precoLote, r2, seloDoLote, simular, taxaMensal, textoEntrada, textoJuros,
+  comissao, condicoesDaLinha, dividirEntrada, evolucao, vencimento, mensagemSimulacao, parcelaPrice, precoLote, r2, seloDoLote, simular, taxaMensal, textoEntrada, textoJuros,
   type CondicoesPagamento,
 } from '../shared/simulador';
 import { podeChamar } from '../shared/equipe';
@@ -92,6 +92,24 @@ describe('simulador — lote, condições do banco e acesso', () => {
     expect(podeChamar('equipe', 'simulador.simular')).toBe(true);
     expect(podeChamar('equipe', 'simulador.salvar')).toBe(true);
     expect(podeChamar('empreendedor', 'simulador.simular')).toBe(false);
+  });
+});
+
+describe('simulador — vencimentos da evolução', () => {
+  it('data da venda + meses, mantendo o dia; fim de mês vai para o último dia', () => {
+    expect(vencimento('2026-10-23', 0)).toBe('2026-10-23');
+    expect(vencimento('2026-10-23', 3)).toBe('2027-01-23');
+    expect(vencimento('2027-01-31', 1)).toBe('2027-02-28');
+    expect(vencimento('2028-01-31', 1)).toBe('2028-02-29');
+    expect(vencimento('2026-10-23', 125)).toBe('2037-03-23');
+  });
+
+  it('entrada em 6x: vencimentos mensais de 0 a 5; 1ª do saldo no mês seguinte à última da entrada', () => {
+    const ev = evolucao(simular(3025.11, 6, C), 120);
+    const datas = ev.map(l => vencimento('2026-10-23', l.mes));
+    expect(ev.filter(l => l.tipo === 'entrada')).toHaveLength(6);
+    expect(datas.slice(0, 7)).toEqual(['2026-10-23', '2026-11-23', '2026-12-23', '2027-01-23', '2027-02-23', '2027-03-23', '2027-04-23']);
+    expect(datas[datas.length - 1]).toBe('2037-03-23');
   });
 });
 

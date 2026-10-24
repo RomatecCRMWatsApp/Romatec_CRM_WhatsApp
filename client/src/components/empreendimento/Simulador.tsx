@@ -1,11 +1,11 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { toast } from "sonner";
 import { trpc } from "@/lib/trpc";
 import { Button } from "@/components/ui/button";
 import MapaTematico from "@/components/empreendimento/MapaTematico";
 import EnviarWhatsAppModal from "@/components/EnviarWhatsAppModal";
 import { exibirTelefoneBR } from "@shared/telefone";
-import { brl, type SeloLote } from "@shared/simulador";
+import { brl, vencimento, type SeloLote } from "@shared/simulador";
 import type { LotePainel } from "@/components/empreendimento/PainelLote";
 import { Calculator, Download, FileText, Link2, Send, X } from "lucide-react";
 
@@ -22,13 +22,24 @@ const SELO: Record<SeloLote, { rotulo: string; classe: string }> = {
 
 type Lote = LotePainel & { poligono: [number, number][] | null };
 
-/** Evolução mês a mês (entrada + Tabela Price) com exportação CSV */
+const hojeIso = () => new Date(Date.now() - 3 * 3600_000).toISOString().slice(0, 10);
+const dataBr = (iso: string) => iso.split("-").reverse().join("/");
+
+/**
+ * Evolução mês a mês (entrada + Tabela Price) com os vencimentos a partir da data da venda (1º pagamento),
+ * rolagem até a última parcela e exportação CSV.
+ */
 function Evolucao({ slug, codigo, entrada, prazo, onFechar }: { slug: string; codigo: string; entrada: number; prazo: number; onFechar: () => void }) {
   const { data, isLoading, error } = trpc.simulador.evolucao.useQuery({ slug, lote: codigo, entrada, prazo });
+  const [dataVenda, setDataVenda] = useState(hojeIso);
+  const valida = /^\d{4}-\d{2}-\d{2}$/.test(dataVenda);
+  const venc = (mes: number) => (valida ? dataBr(vencimento(dataVenda, mes)) : "—");
+  const rolagem = useRef<HTMLDivElement>(null);
+  const ir = (onde: "inicio" | "fim") => rolagem.current?.scrollTo({ top: onde === "inicio" ? 0 : rolagem.current.scrollHeight, behavior: "smooth" });
   const exportar = () => {
     if (!data) return;
-    const cab = ["Mês", "Tipo", "Nº", "Parcela", "Juros", "Amortização", "Saldo devedor"];
-    const linhas = data.linhas.map(l => [l.mes, l.tipo === "entrada" ? "Entrada" : "Saldo", l.numero, num(l.parcela), num(l.juros), num(l.amortizacao), num(l.saldoDevedor)]);
+    const cab = ["Mês", "Vencimento", "Tipo", "Nº", "Parcela", "Juros", "Amortização", "Saldo devedor"];
+    const linhas = data.linhas.map(l => [l.mes, venc(l.mes), l.tipo === "entrada" ? "Entrada" : "Saldo", l.numero, num(l.parcela), num(l.juros), num(l.amortizacao), num(l.saldoDevedor)]);
     const csv = "﻿" + [cab, ...linhas].map(r => r.map(cel).join(";")).join("\r\n");
     const a = document.createElement("a");
     a.href = URL.createObjectURL(new Blob([csv], { type: "text/csv;charset=utf-8" }));
@@ -38,24 +49,42 @@ function Evolucao({ slug, codigo, entrada, prazo, onFechar }: { slug: string; co
   };
   return (
     <div className="fixed inset-0 z-[1000] flex items-center justify-center bg-black/70 p-4" onClick={e => { if (e.target === e.currentTarget) onFechar(); }}>
-      <div role="dialog" aria-modal="true" className="flex max-h-[85vh] w-full max-w-3xl flex-col rounded-2xl border border-border bg-card">
-        <div className="flex items-center gap-2 border-b border-border p-4">
-          <p className="flex-1 font-semibold">Evolução — chácara {codigo} · entrada {entrada === 1 ? "à vista" : `${entrada}x`} · saldo {prazo}x</p>
+      <div role="dialog" aria-modal="true" className="flex max-h-[88vh] w-full max-w-4xl flex-col rounded-2xl border border-border bg-card">
+        <div className="flex flex-wrap items-center gap-2 border-b border-border p-4">
+          <p className="flex-1 min-w-[220px] font-semibold">Evolução — chácara {codigo} · entrada {entrada === 1 ? "à vista" : `${entrada}x`} · saldo {prazo}x</p>
           <Button size="sm" variant="outline" disabled={!data} onClick={exportar}><Download className="mr-1.5 h-4 w-4" /> CSV</Button>
           <button onClick={onFechar} aria-label="Fechar" className="text-muted-foreground hover:text-foreground"><X className="h-5 w-5" /></button>
         </div>
-        <div className="overflow-auto">
+        <div className="flex flex-wrap items-end gap-3 border-b border-border px-4 py-3 text-sm">
+          <label className="space-y-1">
+            <span className="block text-xs text-muted-foreground">Data da venda (1º pagamento)</span>
+            <input type="date" value={dataVenda} onChange={e => setDataVenda(e.target.value)} className="h-9 rounded-md border border-border bg-secondary px-2 text-sm" />
+          </label>
+          <p className="flex-1 min-w-[200px] text-xs text-muted-foreground">
+            {entrada === 1 ? "Entrada à vista na data da venda" : `Entrada em ${entrada} parcelas mensais a partir da data da venda`}; saldo em {prazo} parcelas a partir do mês seguinte.
+            {data ? ` Última parcela: ${venc(data.linhas[data.linhas.length - 1].mes)}.` : ""}
+          </p>
+          {data && data.linhas.length > 12 && (
+            <div className="flex gap-1.5">
+              <Button size="sm" variant="outline" className="h-8 text-xs" onClick={() => ir("inicio")}>Início</Button>
+              <Button size="sm" variant="outline" className="h-8 text-xs" onClick={() => ir("fim")}>Última parcela</Button>
+            </div>
+          )}
+        </div>
+        {/* min-h-0: sem isso o flex não deixa a tabela rolar e as últimas linhas ficam cortadas */}
+        <div ref={rolagem} className="min-h-0 flex-1 overflow-y-auto overflow-x-auto [scrollbar-gutter:stable]">
           {isLoading && <p className="p-4 text-sm text-muted-foreground">Calculando…</p>}
           {error && <p className="p-4 text-sm text-red-400">{error.message}</p>}
           {data && (
             <table className="w-full text-xs tabular-nums">
-              <thead className="sticky top-0 bg-card"><tr className="border-b border-border text-muted-foreground">
-                {["Mês", "Tipo", "Nº", "Parcela", "Juros", "Amortização", "Saldo devedor"].map(h => <th key={h} className="px-2 py-2 text-right font-medium first:text-left">{h}</th>)}
+              <thead className="sticky top-0 z-10 bg-card"><tr className="border-b border-border text-muted-foreground">
+                {["Mês", "Vencimento", "Tipo", "Nº", "Parcela", "Juros", "Amortização", "Saldo devedor"].map(h => <th key={h} className="px-2 py-2 text-right font-medium first:text-left">{h}</th>)}
               </tr></thead>
               <tbody>
                 {data.linhas.map((l, k) => (
                   <tr key={k} className={`border-b border-border/40 ${l.tipo === "entrada" ? "bg-secondary/30" : ""}`}>
                     <td className="px-2 py-1">{l.mes}</td>
+                    <td className="px-2 py-1 text-right font-mono">{venc(l.mes)}</td>
                     <td className="px-2 py-1 text-right">{l.tipo === "entrada" ? "Entrada" : "Saldo"}</td>
                     <td className="px-2 py-1 text-right">{l.numero}</td>
                     <td className="px-2 py-1 text-right">{num(l.parcela)}</td>
