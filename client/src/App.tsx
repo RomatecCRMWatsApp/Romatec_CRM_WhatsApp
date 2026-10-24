@@ -31,6 +31,9 @@ import EmpreendimentoDocumentos from "./pages/EmpreendimentoDocumentos";
 import EmpreendimentoFolder from "./pages/EmpreendimentoFolder";
 import EmpreendimentoProposta from "./pages/EmpreendimentoProposta";
 import Financeiro from "./pages/Financeiro";
+import Contratos from "./pages/Contratos";
+import ContratoNovo from "./pages/ContratoNovo";
+import ContratoDetalhe from "./pages/ContratoDetalhe";
 import AreaCorretor from "./pages/AreaCorretor";
 import Equipe from "./pages/Equipe";
 import MeuCadastro from "./pages/MeuCadastro";
@@ -116,6 +119,15 @@ function Router() {
       <Route path={"/primeiro-acesso"} component={PrimeiroAcesso} />
       <Route path={"/empreendimentos/:slug/folder"}>
         {() => <SetupGuard component={EmpreendimentoFolder} />}
+      </Route>
+      <Route path={"/contratos/novo"}>
+        {() => <SetupGuard component={ContratoNovo} />}
+      </Route>
+      <Route path={"/contratos/:id"}>
+        {() => <SetupGuard component={ContratoDetalhe} />}
+      </Route>
+      <Route path={"/contratos"}>
+        {() => <SetupGuard component={Contratos} />}
       </Route>
       <Route path={"/financeiro"}>
         {() => <SetupGuard component={Financeiro} />}

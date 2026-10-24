@@ -28,6 +28,7 @@ export const MODULOS: Modulo[] = [
   { chave: 'empreendimentos', rotulo: 'Empreendimentos (mapa, lotes, documentos)', procedimentos: ['empreendimentosAdmin.'], padrao: AMBOS },
   { chave: 'simulador', rotulo: 'Simulador de financiamento', procedimentos: ['simulador.'], padrao: AMBOS },
   { chave: 'financeiro', rotulo: 'Financeiro (vendas, sem comissão de terceiros)', procedimentos: ['financeiro.'], padrao: AMBOS },
+  { chave: 'contratos', rotulo: 'Contratos (minuta; o corretor só dos leads dele)', procedimentos: ['contratos.'], padrao: AMBOS },
   { chave: 'materiais', rotulo: 'Materiais e links de divulgação', procedimentos: ['materiais.'], padrao: AMBOS },
   { chave: 'imoveis', rotulo: 'Imóveis (cadastro e divulgação)', procedimentos: ['properties.'], padrao: AMBOS },
   { chave: 'leads', rotulo: 'Leads e funil', procedimentos: ['crm.', 'leadCampanhas.'], padrao: AMBOS },

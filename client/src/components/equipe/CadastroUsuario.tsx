@@ -61,7 +61,7 @@ const s = (v: unknown) => (v == null ? "" : String(v));
 const ouNull = (v: string) => (v.trim() ? v.trim() : null);
 
 /** Busca o endereço pelo CEP (ViaCEP) */
-async function buscarCep(cep: string) {
+export async function buscarCep(cep: string) {
   const d = onlyDigits(cep);
   if (d.length !== 8) return null;
   try {

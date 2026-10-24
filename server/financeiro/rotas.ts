@@ -141,6 +141,31 @@ export function registrarRotasFinanceiro(app: Express) {
     } catch (e) { erro(res, e); }
   });
 
+  // Plano completo do contrato em planilha (todas as parcelas, com status e pagamento)
+  app.get(`${base}/contratos/:id/plano.xlsx`, async (req, res) => {
+    try {
+      const a = await acesso(req, req.path, false);
+      if (!a) return res.status(401).json({ erro: 'nao_autorizado' });
+      const contratoId = Number(req.params.id) || 0;
+      const ctx = await contextoDocs(contratoId);
+      const cobs = await cobrancasDoContrato(contratoId);
+      const { rotuloParcela } = await import('./dados');
+      const { gerarXlsx } = await import('./planilha');
+      const br = (s: string | null) => (s ? s.split('-').reverse().join('/') : '');
+      const linhas = cobs.length
+        ? cobs.map((c, i) => [i + 1, rotuloParcela(c), br(c.vencimentoOriginal ?? c.vencimento), c.valorOriginal ?? c.valor, c.juros, c.amortizacao, c.saldoDevedor, c.status, br(c.pagoEm || null), c.valorPago])
+        : ctx.plano.parcelas.map((p, i) => [i + 1, rotuloParcela(p), br(p.vencimento), p.valor, p.juros, p.amortizacao, p.saldoDevedor, 'prevista', '', null]);
+      const buf = gerarXlsx(`Plano ${ctx.contrato.numero}`, [
+        ['Nº', 'Parcela', 'Vencimento', 'Valor (R$)', 'Juros (R$)', 'Amortização (R$)', 'Saldo após (R$)', 'Situação', 'Pago em', 'Valor pago (R$)'],
+        ...linhas as any,
+      ], [6, 16, 13, 14, 12, 16, 16, 12, 12, 15]);
+      await auditar('plano_xlsx', { contratoId, usuarioId: a.usuarioId, origem: a.origem, ip: req.ip });
+      res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+      res.setHeader('Content-Disposition', `attachment; filename="Plano-${ctx.contrato.numero}.xlsx"`);
+      res.send(buf);
+    } catch (e) { erro(res, e); }
+  });
+
   app.get(`${base}/recibos/:id.pdf`, async (req, res) => {
     try {
       const a = await acesso(req, req.path);

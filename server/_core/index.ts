@@ -866,6 +866,8 @@ async function startServer() {
   // Bloco Financeiro: boletos, carnê, 2ª via, recibos, declaração, verificação pública (/r/:numero) e webhook do Asaas
   const { registrarRotasFinanceiro } = await import('../financeiro/rotas');
   registrarRotasFinanceiro(app);
+  const { registrarRotasContratos } = await import('../contratos/rotas');
+  registrarRotasContratos(app);
 
   app.use(
     "/api/trpc",

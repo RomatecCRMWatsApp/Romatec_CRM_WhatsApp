@@ -3,6 +3,22 @@
 Cada versão nova vai no TOPO. Depois rode `npm run release` (valida e atualiza o package.json);
 ao subir, o servidor grava a versão no banco e todos recebem o aviso "Novidades da versão".
 
+## 1.11.0 — 2026-10-24
+tipo: minor
+obrigatoria: nao
+titulo: Contratos e financeiro do contrato
+
+### Novo
+- Menu Vendas › Contratos: lista, novo contrato (chácara e plano → comprador e cônjuge → revisão) e ficha do contrato
+- Gerar minuta e contrato definitivo com todos os anexos; cada geração vira uma versão guardada
+- A ficha mostra o que falta e o que bloqueia o contrato definitivo (registro do parcelamento, licença, credenciais)
+- Registrar o contrato assinado: a chácara passa a vendida e o plano de cobranças é gravado
+- Aba Financeiro: carnê anual de 12 parcelas ou completo, boleto A4, 2ª via, recibos, link do carnê para o comprador e planilha do plano
+
+### Melhorias
+- Criar o contrato já reserva a chácara, sem risco de duas vendas da mesma unidade
+- Corretor cria contrato só a partir de lead dele; definitivo, ativação e cobrança ficam com o administrador e a secretaria
+
 ## 1.10.1 — 2026-10-24
 tipo: patch
 obrigatoria: nao
