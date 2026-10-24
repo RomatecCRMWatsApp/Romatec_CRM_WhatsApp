@@ -9,6 +9,7 @@ import { sel } from "@/components/cadastro/campos";
 import { brl } from "@shared/simulador";
 import { maskPhone } from "@shared/masks";
 import { SeloStatus } from "./Contratos";
+import PainelAssinaturas from "@/components/contratos/PainelAssinaturas";
 
 const br = (iso?: string | null) => (iso ? String(iso).slice(0, 10).split("-").reverse().join("/") : "—");
 const ROTULO_TIPO: Record<string, string> = { entrada: "Entrada", saldo: "Saldo", avista: "À vista", antecipacao: "Antecipação" };
@@ -47,7 +48,7 @@ export default function ContratoDetalhe() {
   const { id: idStr } = useParams<{ id: string }>();
   const id = Number(idStr);
   const [, navigate] = useLocation();
-  const [aba, setAba] = useState<"contrato" | "financeiro">("contrato");
+  const [aba, setAba] = useState<"contrato" | "assinaturas" | "financeiro">("contrato");
   const [bloco, setBloco] = useState<string>("1");
   const [ocupado, setOcupado] = useState<string | null>(null);
   const utils = trpc.useUtils();
@@ -92,9 +93,9 @@ export default function ContratoDetalhe() {
         subtitulo={<span className="inline-flex flex-wrap items-center gap-2"><SeloStatus status={c.status} /> {c.empreendimento} · Chácara {c.loteCodigo} · {d.comprador?.nome ?? "—"}</span>} />
       <div className="mx-auto max-w-[1400px] space-y-4 px-4 pb-10 md:px-6">
         <div className="flex gap-2 border-b border-border">
-          {(["contrato", "financeiro"] as const).map(a => (
+          {(["contrato", "assinaturas", "financeiro"] as const).map(a => (
             <button key={a} onClick={() => setAba(a)} className={`-mb-px border-b-2 px-3 py-2 text-sm ${aba === a ? "border-primary text-primary" : "border-transparent text-muted-foreground hover:text-foreground"}`}>
-              {a === "contrato" ? "Contrato" : "Financeiro"}
+              {a === "contrato" ? "Contrato" : a === "assinaturas" ? "Assinaturas" : "Financeiro"}
             </button>
           ))}
         </div>
@@ -184,6 +185,8 @@ export default function ContratoDetalhe() {
             </aside>
           </div>
         )}
+
+        {aba === "assinaturas" && <PainelAssinaturas id={id} status={c.status} podeEnviar={d.pode.definitivo} />}
 
         {aba === "financeiro" && (
           !f ? <p className="text-sm text-muted-foreground">O financeiro do contrato é com o administrador e a secretaria.</p> : (

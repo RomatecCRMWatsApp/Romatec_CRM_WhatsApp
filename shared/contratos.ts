@@ -97,3 +97,11 @@ export function acoesDaParcela(c: { status: string; vencimento: string; vencimen
     vencida,
   };
 }
+
+/** Telefone para o WhatsApp (Z-API): só dígitos com o 55 do Brasil — "(99) 9 9123-4567" → "5599991234567" */
+export function telefoneWhatsApp(t: string | null | undefined): string | null {
+  const d = String(t ?? '').replace(/\D/g, '');
+  if (d.length === 10 || d.length === 11) return `55${d}`;
+  if ((d.length === 12 || d.length === 13) && d.startsWith('55')) return d;
+  return null;
+}

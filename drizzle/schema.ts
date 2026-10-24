@@ -976,6 +976,10 @@ export const contratos = mysqlTable("contratos", {
   usoLiberado: boolean("usoLiberado").default(false).notNull(),
   usoLiberadoEm: datetime("usoLiberadoEm"),
   criadoPor: int("criadoPor"),
+  /** Envio para assinatura (v1.12) */
+  assinaturaIniciadaEm: datetime("assinaturaIniciadaEm"),
+  /** Manifesto de assinaturas (Anexo VII) — chave em contratoArquivos */
+  manifestoArquivo: varchar("manifestoArquivo", { length: 255 }),
   criadoEm: timestamp("criadoEm").defaultNow().notNull(),
   atualizadoEm: timestamp("atualizadoEm").defaultNow().onUpdateNow().notNull(),
 }, (t) => ({
@@ -1020,6 +1024,10 @@ export const assinaturaSignatarios = mysqlTable("assinaturaSignatarios", {
   assinadoEm: datetime("assinadoEm"),
   /** IP, UA, geo, canal do OTP, série/emissor/CPF do certificado */
   evidenciasJson: json("evidenciasJson").$type<Record<string, unknown>>(),
+  /** Validade do link individual (15 dias) */
+  expiraEm: datetime("expiraEm"),
+  /** 1 = gov.br sem CPF no certificado: conferido pelo nome, revisar */
+  revisaoManual: tinyint("revisaoManual").default(0).notNull(),
 }, (t) => ({
   uxToken: uniqueIndex("ux_signatario_token").on(t.token),
   ixContrato: index("ix_signatario_contrato").on(t.contratoId),

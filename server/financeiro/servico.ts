@@ -3,6 +3,7 @@
  * 2ª via atualizada e auditoria. Asaas DORMENTE sem chave: nada é emitido, cobrado nem enviado ao cliente.
  */
 import { createHash, randomBytes } from 'node:crypto';
+import { telefoneWhatsApp } from '../../shared/contratos';
 import { and, eq, like, sql } from 'drizzle-orm';
 import { getDb } from '../db';
 import {
@@ -230,7 +231,7 @@ export async function enviarRecibo(reciboId: number, origem = 'webhook'): Promis
   const { recibo } = await dadosRecibo(reciboId);
   const pdf = await pdfRecibo(reciboId);
   const { comprador, conjuge } = await pessoasDoContrato(recibo.contratoId);
-  const telefones = [comprador?.telefone1, conjuge?.telefone1].filter(Boolean) as string[];
+  const telefones = [comprador?.telefone1, conjuge?.telefone1].map(telefoneWhatsApp).filter(Boolean) as string[];
   const d = await db();
   try {
     if (!telefones.length) throw new Error('Comprador sem telefone cadastrado');

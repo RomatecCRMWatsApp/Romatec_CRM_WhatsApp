@@ -462,6 +462,9 @@ export function initSqliteTables(sqlite: any): void {
     addColumn(`ALTER TABLE cobrancas ADD COLUMN ${c}`);
   }
   addColumn(`ALTER TABLE empJuridico ADD COLUMN asaasBeneficiario TEXT`);
+  // v1.12.0 — assinatura eletrônica (server/_core/migrations/addAssinatura.ts)
+  for (const c of ['expiraEm INTEGER', 'revisaoManual INTEGER NOT NULL DEFAULT 0']) addColumn(`ALTER TABLE assinaturaSignatarios ADD COLUMN ${c}`);
+  for (const c of ['assinaturaIniciadaEm INTEGER', 'manifestoArquivo TEXT']) addColumn(`ALTER TABLE contratos ADD COLUMN ${c}`);
   run(`CREATE TABLE IF NOT EXISTS recibos (
     id INTEGER PRIMARY KEY AUTOINCREMENT, numero TEXT NOT NULL UNIQUE, cobrancaId INTEGER NOT NULL UNIQUE, contratoId INTEGER NOT NULL,
     codigoVerif TEXT NOT NULL, valorPago TEXT NOT NULL, pagoEm TEXT NOT NULL, pdfArquivo TEXT, enviadoEm INTEGER, envioErro TEXT, criadoEm ${agora}

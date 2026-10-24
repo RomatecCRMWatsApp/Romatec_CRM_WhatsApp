@@ -14,6 +14,7 @@ import { rotuloParcela } from './dados';
 import { auditar, codigoVerificacao, contextoDocs, hojeBrasil, linhaParaCobranca, pessoasDoContrato, slugDoContrato, urlPublica } from './servico';
 import { renderDeclaracaoAnual } from './render/documentos';
 import { configAsaas } from './asaas';
+import { telefoneWhatsApp } from '../../shared/contratos';
 
 export const URL_SIDRA = 'https://apisidra.ibge.gov.br/values/t/1737/n1/all/v/63/p/last%2012';
 
@@ -104,10 +105,11 @@ export async function gerarDeclaracoesAnuais(ano: number, hoje = hojeBrasil()) {
     // Envio ao cliente só com a cobrança ligada (Asaas configurado)
     if (configAsaas(process.env, await slugDoContrato(c.id))) {
       const { comprador } = await pessoasDoContrato(c.id);
-      if (comprador?.telefone1) {
+      const tel = telefoneWhatsApp(comprador?.telefone1);
+      if (tel) {
         try {
           const { enviarDocumento } = await import('../leads/zapiClient');
-          await enviarDocumento(comprador.telefone1, { base64: pdf.toString('base64'), extensao: 'pdf', mime: 'application/pdf',
+          await enviarDocumento(tel, { base64: pdf.toString('base64'), extensao: 'pdf', mime: 'application/pdf',
             nomeArquivo: `Declaracao-quitacao-${ano}.pdf`, legenda: `Declaração anual de quitação de ${ano} — Condomínio de Chácaras Bom Jardims` });
           await db.update(declaracoesQuitacao).set({ enviadoEm: new Date() }).where(sql`${declaracoesQuitacao.contratoId} = ${c.id} AND ${declaracoesQuitacao.anoRef} = ${ano}`);
         } catch (e: any) { console.warn('[Declaração] envio falhou:', e?.message); }
@@ -128,6 +130,8 @@ export function iniciarJobsFinanceiro() {
     const agora = new Date(Date.now() - 3 * 3600_000); // horário de Brasília
     const hoje = agora.toISOString().slice(0, 10), hora = agora.getUTCHours();
     if (hora < 8) return;
+    // Lembretes D+1 e D+3 dos contratos em assinatura (horário comercial)
+    if (hora < 20) await (await import('../assinatura/servico')).enviarLembretes().catch(e => console.warn('[Assinatura] lembretes:', e?.message));
     if (hoje.slice(8) === '15' && !feito.has(`ipca:${hoje}`)) { feito.add(`ipca:${hoje}`); await atualizarIpca(); }
     const ano = Number(hoje.slice(0, 4));
     if (hoje === segundoDiaUtilDeMaio(ano) && !feito.has(`decl:${ano}`)) {

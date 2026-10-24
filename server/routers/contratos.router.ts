@@ -201,6 +201,84 @@ export const contratosRouter = router({
     return tratar(() => emitirCarneNoAsaas(input.id, input.bloco, { usuarioId: ctx.user.id }));
   }),
 
+  // ─── Assinatura eletrônica ──────────────────────────────────────────────────
+
+  /** Signatários: previstos (antes do envio, com pendências) ou os do envio (status, método, link individual) */
+  assinaturas: protectedProcedure.input(z.object({ id: z.number().int() })).query(async ({ ctx, input }) => {
+    const c = await contratoVisivel(ctx, input.id);
+    const A = await import("../assinatura/servico");
+    const { ROTULO_PAPEL, ROTULO_METODO } = await import("../assinatura/pdf");
+    const db = (await getDb()) as any;
+    const { assinaturaSignatarios, assinaturaEventos } = await import("../../drizzle/schema");
+    const sigs: any[] = await db.select().from(assinaturaSignatarios).where(eq(assinaturaSignatarios.contratoId, c.id));
+    const operar = podeGerarDefinitivo(perfilDe(ctx.user as any));
+    if (!sigs.length) {
+      const previstos = await tratar(() => A.signatariosPrevistos(c.id)).catch(() => []);
+      return { enviado: false, previstos: previstos.map(s => ({ ...s, papelRotulo: ROTULO_PAPEL[s.papel] ?? s.papel })), pendencias: A.pendenciasSignatarios(previstos), signatarios: [], eventos: [], manifesto: false };
+    }
+    const evs: any[] = await db.select().from(assinaturaEventos).where(eq(assinaturaEventos.contratoId, c.id));
+    return {
+      enviado: true, previstos: [], pendencias: [], manifesto: !!c.manifestoArquivo,
+      signatarios: sigs.sort((a, b) => a.ordem - b.ordem).map(s => ({
+        id: s.id, papel: s.papel, papelRotulo: ROTULO_PAPEL[s.papel] ?? s.papel, nome: s.nome, metodo: s.metodo, metodoRotulo: ROTULO_METODO[s.metodo] ?? s.metodo,
+        status: s.status, assinadoEm: s.assinadoEm, expiraEm: s.expiraEm, revisaoManual: !!Number(s.revisaoManual), whatsapp: !!s.whatsapp,
+        link: operar ? A.linkDoSignatario(s.token) : null,
+      })),
+      eventos: evs.sort((a, b) => Number(b.id) - Number(a.id)).slice(0, 30).map(e => ({ evento: e.evento, signatarioId: e.signatarioId, criadoEm: e.criadoEm, detalhe: e.detalhe })),
+    };
+  }),
+
+  enviarParaAssinatura: protectedProcedure.input(z.object({ id: z.number().int(), metodos: z.record(z.string(), z.enum(["avancada", "govbr", "icp_a1"])).default({}) }))
+    .mutation(async ({ ctx, input }) => {
+      exigir(podeGerarDefinitivo(perfilDe(ctx.user as any)), "O envio para assinatura é com o administrador ou a secretaria.");
+      await contratoVisivel(ctx, input.id);
+      const A = await import("../assinatura/servico");
+      return tratar(() => A.enviarParaAssinatura(input.id, input.metodos as any, ctx.user.id));
+    }),
+
+  reenviarConvite: protectedProcedure.input(z.object({ id: z.number().int(), signatarioId: z.number().int() })).mutation(async ({ ctx, input }) => {
+    exigir(podeGerarDefinitivo(perfilDe(ctx.user as any)), "O envio para assinatura é com o administrador ou a secretaria.");
+    await contratoVisivel(ctx, input.id);
+    const db = (await getDb()) as any;
+    const { assinaturaSignatarios } = await import("../../drizzle/schema");
+    // Reenvio renova a validade do link (15 dias)
+    await db.update(assinaturaSignatarios).set({ expiraEm: new Date(Date.now() + 15 * 86_400_000) })
+      .where(and(eq(assinaturaSignatarios.id, input.signatarioId), eq(assinaturaSignatarios.contratoId, input.id)));
+    const A = await import("../assinatura/servico");
+    const [r] = await A.enviarConvites(input.id, input.signatarioId);
+    return r ?? { enviado: false, erro: "Signatário já assinou" };
+  }),
+
+  /** Caixas de assinatura do contrato (ou do gabarito do modelo) para a tela de posicionar */
+  posicoes: protectedProcedure.input(z.object({ id: z.number().int() })).query(async ({ ctx, input }) => {
+    const c = await contratoVisivel(ctx, input.id);
+    const A = await import("../assinatura/servico");
+    const j = await tratar(() => juridicoDe(c.empreendimentoId));
+    const { ROTULO_PAPEL } = await import("../assinatura/pdf");
+    const previstos = await A.signatariosPrevistos(c.id).catch(() => []);
+    return {
+      caixas: await A.posicoesDe(c.id, j.modeloVersao), modeloVersao: j.modeloVersao, status: c.status, temPdf: !!c.pdfAtual,
+      papeis: previstos.map(s => ({ papel: s.papel, rotulo: ROTULO_PAPEL[s.papel] ?? s.papel, nome: s.nome })),
+    };
+  }),
+
+  salvarPosicoes: protectedProcedure.input(z.object({
+    id: z.number().int(), gabarito: z.boolean().default(false),
+    caixas: z.array(z.object({ papel: z.string().max(30), pagina: z.number().int(), x: z.number(), y: z.number(), w: z.number(), h: z.number() })).max(20),
+  })).mutation(async ({ ctx, input }) => {
+    exigir(podeCriarContrato(perfilDe(ctx.user as any)), "Seu perfil não posiciona assinaturas.");
+    const c = await contratoVisivel(ctx, input.id);
+    if (!["rascunho", "minuta", "apto_assinatura"].includes(c.status)) throw new TRPCError({ code: "CONFLICT", message: "As posições só mudam antes do envio para assinatura." });
+    const A = await import("../assinatura/servico");
+    await tratar(() => A.salvarPosicoes(input.caixas, { contratoId: c.id }));
+    if (input.gabarito) {
+      exigir(podeGerarDefinitivo(perfilDe(ctx.user as any)), "O gabarito do modelo é do administrador ou da secretaria.");
+      const j = await tratar(() => juridicoDe(c.empreendimentoId));
+      await tratar(() => A.salvarPosicoes(input.caixas, { modeloVersao: j.modeloVersao }));
+    }
+    return { ok: true };
+  }),
+
   /** Links assinados (7 dias) para enviar ao comprador: carnê do bloco e boleto de uma parcela */
   linkComprador: protectedProcedure.input(z.object({ id: z.number().int(), bloco: z.union([z.number().int().min(1), z.literal("completo")]).optional(), cobrancaId: z.number().int().optional() }))
     .mutation(async ({ ctx, input }) => {

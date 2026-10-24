@@ -868,6 +868,9 @@ async function startServer() {
   registrarRotasFinanceiro(app);
   const { registrarRotasContratos } = await import('../contratos/rotas');
   registrarRotasContratos(app);
+  // Assinatura eletrônica (links individuais, sem login) e verificação pública do contrato (/c/v/:codigo)
+  const { registrarRotasAssinatura } = await import('../assinatura/rotas');
+  registrarRotasAssinatura(app);
 
   app.use(
     "/api/trpc",
@@ -1041,6 +1044,8 @@ async function startServer() {
     await addContratos();
     const { addFinanceiro } = await import('./migrations/addFinanceiro');
     await addFinanceiro();
+    const { addAssinatura } = await import('./migrations/addAssinatura');
+    await addAssinatura();
   } catch (e) {
     console.error('❌ Erro na migration addContratos/addFinanceiro:', e);
   }

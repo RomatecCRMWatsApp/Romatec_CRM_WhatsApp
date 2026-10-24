@@ -3,6 +3,22 @@
 Cada versão nova vai no TOPO. Depois rode `npm run release` (valida e atualiza o package.json);
 ao subir, o servidor grava a versão no banco e todos recebem o aviso "Novidades da versão".
 
+## 1.12.0 — 2026-10-24
+tipo: minor
+obrigatoria: nao
+titulo: Assinatura eletrônica do contrato
+
+### Novo
+- Contrato › Assinaturas: escolha como cada um assina (eletrônica avançada, gov.br ou certificado ICP-Brasil) e envie os links pelo WhatsApp
+- Página de assinatura para o cliente: lê o contrato até o fim e assina com código enviado ao WhatsApp, certificado digital ou gov.br
+- Posicionar as assinaturas no PDF (ou deixar o quadro de assinaturas automático no fim)
+- Manifesto de assinaturas (Anexo VII) e verificação pública do contrato pelo QR Code, com conferência do arquivo
+- Quando todos assinam, o contrato fica ativo sozinho: chácara vendida e plano de cobranças gravado
+
+### Melhorias
+- Lembretes automáticos por WhatsApp 1 e 3 dias depois do envio para quem ainda não assinou
+- Certificado digital do cliente nunca fica guardado: é usado só na hora da assinatura
+
 ## 1.11.0 — 2026-10-24
 tipo: minor
 obrigatoria: nao
