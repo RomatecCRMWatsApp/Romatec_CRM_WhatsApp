@@ -86,6 +86,7 @@ const META_PADRAO: MetaPagina = {
   title: 'Romatec Consultoria Imobiliária — Imóveis em Açailândia/MA',
   description: 'Casas, lotes, chácaras e imóveis rurais em Açailândia e região. Atendimento pelo WhatsApp com o ' + CRECI + '.',
   path: '/',
+  image: '/og-image.png',
   indexavel: true,
 };
 

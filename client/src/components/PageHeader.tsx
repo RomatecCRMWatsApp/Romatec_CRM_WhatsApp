@@ -22,7 +22,7 @@ export default function PageHeader({ titulo, subtitulo, icone: Icone, acoes, vol
             <div className="h-10 w-10 shrink-0 rounded-xl bg-primary/15 text-primary flex items-center justify-center"><Icone className="h-5 w-5" /></div>
           )}
           <div className="min-w-0">
-            <h1 className="text-xl md:text-2xl font-bold text-foreground leading-tight truncate">{titulo}</h1>
+            <h1 className="text-xl md:text-2xl font-semibold text-[var(--rt-gold-light)] leading-tight truncate" style={{ fontFamily: "var(--rt-font-title)" }}>{titulo}</h1>
             {subtitulo && <p className="text-xs md:text-sm text-muted-foreground mt-0.5">{subtitulo}</p>}
           </div>
         </div>

@@ -6,6 +6,7 @@ import { createRoot } from "react-dom/client";
 import superjson from "superjson";
 import App from "./App";
 import { getLoginUrl } from "./const";
+import "./brand"; // identidade visual: tokens.css (cores, fontes, animações) uma única vez
 import "./index.css";
 import { capturarOrigem } from "./lib/origemVisita";
 

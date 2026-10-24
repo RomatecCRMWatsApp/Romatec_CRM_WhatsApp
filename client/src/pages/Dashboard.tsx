@@ -9,7 +9,6 @@ import { useLocation } from "wouter";
 import { trpc } from "@/lib/trpc";
 import RelogioPainel from "@/components/RelogioPainel";
 
-const LOGO_URL = "/icon-512x512.png";
 
 const COLORS = {
   emerald: "#10b981",
@@ -341,14 +340,6 @@ function isToday(date?: string | Date | null): boolean {
   return d.getFullYear() === now.getFullYear() && d.getMonth() === now.getMonth() && d.getDate() === now.getDate();
 }
 
-function Logo() {
-  const [failed, setFailed] = useState(false);
-  if (failed) {
-    return <div className="h-11 w-11 rounded-xl bg-white/15 flex items-center justify-center text-xl font-black">R</div>;
-  }
-  return <img src={LOGO_URL} alt="Romatec" onError={() => setFailed(true)} className="h-11 w-auto object-contain rounded-lg" />;
-}
-
 /** Status real do WhatsApp: discreto quando ok, com motivo e passos quando não */
 function WhatsAppStatusPanel() {
   const [, navigate] = useLocation();
@@ -488,7 +479,7 @@ export default function Dashboard() {
       {/* Título */}
       <div className="flex flex-wrap items-end justify-between gap-2">
         <div>
-          <h1 className="text-2xl font-bold text-foreground">Painel</h1>
+          <h1 className="text-[32px] leading-tight font-semibold text-[var(--rt-gold-light)]" style={{ fontFamily: "var(--rt-font-title)" }}>Painel</h1>
           <p className="text-sm text-muted-foreground">{primeiroNome ? `Olá, ${primeiroNome} · ` : ""}{hoje}</p>
         </div>
         <p className="text-xs text-muted-foreground">{config?.companyName || "Romatec"}</p>
@@ -498,7 +489,7 @@ export default function Dashboard() {
 
       <WhatsAppStatusPanel />
 
-      <KpisLeads r={rel} leadsHoje={leadsHoje} />
+      <KpisLeads r={rel} leadsHoje={leadsData ? leadsHoje : undefined} />
 
       <div className="grid grid-cols-1 xl:grid-cols-3 gap-4">
         <div className="xl:col-span-2"><GraficoLeadsDia r={rel} /></div>

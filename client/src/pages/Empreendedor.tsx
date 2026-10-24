@@ -7,6 +7,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Bar, BarChart, CartesianGrid, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
 import { Copy, Download, FileText, LogOut, Share2, Video } from "lucide-react";
 import { FotoUsuario } from "@/components/AppShell";
+import { APP_VERSION, AppFooter, RomatecAppIcon } from "@/brand";
 import { baixarBlob, ehImagem, ehVideo, miniatura, nomeArquivo } from "@/components/MateriaisPainel";
 import { ROTULO_TIPO_MATERIAL, type TipoMaterial } from "@shared/materiais";
 
@@ -86,9 +87,9 @@ export default function Empreendedor() {
 
   return (
     <div className="min-h-screen bg-background">
-      <div className="bg-gradient-to-r from-emerald-700 to-emerald-900 text-white">
+      <div className="bg-gradient-to-r from-[#0C3320] to-black text-white border-b border-[var(--rt-border)]">
         <div className="container py-4 flex items-center gap-3">
-          <img src="/icon-192x192.png" alt="" className="h-10 w-10 rounded-xl" />
+          <RomatecAppIcon size={40} />
           <div className="flex-1 min-w-0">
             <h1 className="text-lg font-bold truncate">{p?.empreendimento.nome || "Meu empreendimento"}</h1>
             <p className="text-xs text-white/70">Olá, {String((user as any)?.name || "").split(" ")[0] || "empreendedor"} · leads e artes para divulgar</p>
@@ -206,6 +207,8 @@ export default function Empreendedor() {
           )
         )}
       </div>
+      {/* Rodapé oficial (sem a coluna "Sistema": o empreendedor não abre as telas do CRM) */}
+      <div className="mt-10"><AppFooter version={APP_VERSION} links={[]} /></div>
     </div>
   );
 }

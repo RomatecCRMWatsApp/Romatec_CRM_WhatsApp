@@ -43,6 +43,7 @@ import Setup from "./pages/Setup";
 import { trpc } from "@/lib/trpc";
 import { useAuth } from "@/_core/hooks/useAuth";
 import { useEffect } from "react";
+import { APP_VERSION, LocationChangeLoading, PageLoader, QueryLoading, SplashScreen } from "@/brand";
 
 // Redireciona para /setup se companyConfig não tiver nome de empresa
 function SetupGuard({ component: Component }: { component: React.ComponentType }) {
@@ -159,12 +160,31 @@ function Router() {
   );
 }
 
+/** Páginas do site público (landing, imóveis, links): sem splash nem overlay do app */
+const rotaDoSite = (p: string) => ["/imoveis", "/i/", "/imovel/", "/links", "/bom-jardims"].some(r => p === r || p.startsWith(r.endsWith("/") ? r : `${r}/`));
+
+/** Splash na abertura do app/PWA + barra do topo e overlay do carregamento (identidade visual v1.0) */
+function CarregamentoDoApp() {
+  const [location] = useLocation();
+  const { loading } = useAuth();
+  if (rotaDoSite(location)) return null;
+  return (
+    <>
+      <SplashScreen ready={!loading} version={APP_VERSION} message="Sincronizando leads e WhatsApp…" />
+      <LocationChangeLoading />
+      <QueryLoading />
+      <PageLoader />
+    </>
+  );
+}
+
 function App() {
   return (
     <ErrorBoundary>
       <ThemeProvider defaultTheme="dark">
         <TooltipProvider>
           <Toaster />
+          <CarregamentoDoApp />
           <BarraVersao />
           <Router />
         </TooltipProvider>

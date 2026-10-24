@@ -1,6 +1,7 @@
 import { useState, type ReactNode } from "react";
 import { Send } from "lucide-react";
 import { normalizePhoneBR, mascaraTelefoneBR, exibirTelefoneBR } from "@shared/telefone";
+import { InfinityMini } from "@/brand";
 
 export const btnWhats = (cor: string, bg: string, borda: string) => ({
   padding: "7px 14px", borderRadius: "8px", background: bg, border: `1px solid ${borda}`, color: cor,
@@ -58,11 +59,11 @@ export default function EnviarWhatsAppModal({ titulo, descricao, sugestao, envia
           <button onClick={onFechar} style={{ padding: "8px 16px", borderRadius: "8px", background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.1)", color: "#6a8a70", cursor: "pointer" }}>
             Cancelar
           </button>
-          <button disabled={!destino || enviando} onClick={enviar} style={{
+          <button disabled={!destino || enviando} onClick={enviar} aria-busy={enviando} style={{
             ...btnWhats("#25d366", "rgba(37,211,102,0.15)", "rgba(37,211,102,0.3)"), padding: "8px 20px",
-            opacity: !destino || enviando ? 0.5 : 1,
+            opacity: !destino ? 0.5 : 1, cursor: enviando ? "progress" : undefined,
           }}>
-            <Send size={13} /> {enviando ? "Enviando..." : "Enviar"}
+            {enviando ? <><InfinityMini width={26} /> Enviando para o WhatsApp…</> : <><Send size={13} /> Enviar</>}
           </button>
         </div>
       </div>

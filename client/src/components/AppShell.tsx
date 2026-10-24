@@ -6,6 +6,7 @@ import { useAuth } from "@/_core/hooks/useAuth";
 import { perfilDe, podeAbrir, ROTULO_PERFIL } from "@shared/equipe";
 import { trpc } from "@/lib/trpc";
 import AvisoRotinas from "./AvisoRotinas";
+import { MobileTabBar, RomatecAppIcon, RomatecLockup, TAB_ICONS, type TabItem } from "@/brand";
 import {
   BarChart3, Building2, Flame, Images, KanbanSquare, LayoutDashboard, LineChart, LogOut, Megaphone, Menu, Send,
   Settings, UserCog, Users, X, Eye, ClipboardList, CalendarDays, Map as MapIcon, Smartphone, Wallet,
@@ -144,16 +145,33 @@ function Rodape() {
   );
 }
 
+/** Logo oficial no topo do menu (rosa + ROMATEC + CRM) — identidade visual v1.0 */
 function Marca() {
   return (
-    <div className="flex items-center gap-2.5 px-5 py-4">
-      <img src="/icon-192x192.png" alt="" className="h-9 w-9 rounded-xl" />
-      <div className="leading-tight">
-        <p className="font-bold text-sidebar-foreground">Romatec CRM</p>
-        <p className="text-[10px] text-sidebar-foreground/50">Consultoria Imobiliária</p>
-      </div>
+    <div className="px-4 py-4">
+      <RomatecLockup variant="menu" height={48} />
     </div>
   );
+}
+
+/**
+ * Barra inferior no celular (< 900 px): Painel · Leads · [R] · Funil · Agenda. O R abre a Área do corretor
+ * (atalhos de cadastro) — o CRM ainda não tem tela de lead manual (/leads/novo).
+ */
+function BarraInferior({ modulos }: { modulos?: Record<string, boolean> | null }) {
+  const [loc, navigate] = useLocation();
+  const { user } = useAuth();
+  const perfil = perfilDe(user as any);
+  // Corretor sem o módulo de leads: a barra (só de leads) não aparece
+  if (perfil !== "admin" && modulos && modulos.leads === false) return null;
+  const ativa = loc.startsWith("/leads/funil") ? "funil" : loc.startsWith("/leads/agenda") ? "agenda" : loc.startsWith("/leads") ? "leads" : loc.startsWith("/dashboard") ? "painel" : "";
+  const tabs = [
+    { key: "painel", label: "Painel", href: "/dashboard", icon: TAB_ICONS.painel },
+    { key: "leads", label: "Leads", href: "/leads", icon: TAB_ICONS.leads },
+    { key: "funil", label: "Funil", href: "/leads/funil", icon: TAB_ICONS.funil },
+    { key: "agenda", label: "Agenda", href: "/leads/agenda", icon: TAB_ICONS.agenda },
+  ] as [TabItem, TabItem, TabItem, TabItem];
+  return <MobileTabBar activeKey={ativa} tabs={tabs} onNavigate={navigate} onFab={() => navigate("/corretor")} fabLabel="Atalhos de cadastro" />;
 }
 
 /** Layout das telas internas: menu lateral fixo (desktop) / gaveta (celular) + barra do topo */
@@ -161,6 +179,8 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
   const [loc] = useLocation();
   const [aberto, setAberto] = useState(false);
   useEffect(() => setAberto(false), [loc]);
+  const { user } = useAuth();
+  const { data: minhas } = trpc.permissoes.minhas.useQuery(undefined, { enabled: perfilDe(user as any) === "equipe", staleTime: 60_000 });
 
   return (
     <div className="min-h-screen bg-background lg:pl-64">
@@ -186,13 +206,15 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
       {/* Barra do topo (celular): abre a gaveta */}
       <header className="lg:hidden sticky top-0 z-20 flex items-center gap-3 border-b border-border bg-background/90 backdrop-blur px-3 py-2">
         <button onClick={() => setAberto(true)} className="rounded-lg p-2 hover:bg-white/5" aria-label="Abrir menu"><Menu className="h-5 w-5" /></button>
-        <img src="/icon-192x192.png" alt="" className="h-7 w-7 rounded-lg" />
+        <RomatecAppIcon size={28} />
         <p className="font-semibold truncate flex-1">{tituloDaRota(loc)}</p>
         <FotoUsuario tamanho="h-8 w-8" />
       </header>
 
       <AvisoRotinas />
-      <main className="min-w-0">{children}</main>
+      {/* No celular, espaço para a barra inferior (96 px) */}
+      <main className="min-w-0 pb-24 min-[900px]:pb-0">{children}</main>
+      <BarraInferior modulos={minhas?.modulos} />
     </div>
   );
 }

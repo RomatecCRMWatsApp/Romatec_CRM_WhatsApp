@@ -151,11 +151,17 @@ function vitePluginManusDebugCollector(): Plugin {
 
 const plugins = [react(), tailwindcss(), jsxLocPlugin(), vitePluginManusDebugCollector()];
 
+const VERSAO_APP: string = (() => {
+  try { return JSON.parse(fs.readFileSync(path.resolve(import.meta.dirname, "package.json"), "utf8")).version; }
+  catch { return process.env.npm_package_version ?? "dev"; }
+})();
+
 export default defineConfig({
   plugins,
   define: {
-    // Versão lida do package.json via npm_package_version (sem require, sem bundle leak)
-    __APP_VERSION__: JSON.stringify(process.env.npm_package_version ?? '1.1.1'),
+    // Versão do package.json (uma fonte só: chip do rodapé, splash, barra de versão e Configurações)
+    __APP_VERSION__: JSON.stringify(VERSAO_APP),
+    "import.meta.env.VITE_APP_VERSION": JSON.stringify(VERSAO_APP),
   },
   resolve: {
     alias: {

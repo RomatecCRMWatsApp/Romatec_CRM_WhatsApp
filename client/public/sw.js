@@ -1,4 +1,4 @@
-const CACHE_NAME = 'romatec-crm-v3';
+const CACHE_NAME = 'romatec-crm-v4'; // v4: identidade visual v1.0 (ícones e manifesto novos)
 const OFFLINE_URL = '/';
 
 // Install - cache essential resources

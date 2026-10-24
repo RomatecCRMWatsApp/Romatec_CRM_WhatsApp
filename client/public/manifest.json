@@ -1,27 +1,26 @@
 {
   "id": "/dashboard",
-  "name": "Romatec CRM",
+  "name": "Romatec CRM — Gestão de Leads Imobiliários",
   "short_name": "Romatec CRM",
-  "description": "CRM da Romatec Consultoria Imobiliária: leads, imóveis, campanhas e materiais de divulgação",
+  "description": "Captação, qualificação e acompanhamento de leads imobiliários da Romatec Consultoria Total.",
   "lang": "pt-BR",
   "start_url": "/dashboard",
   "scope": "/",
   "display": "standalone",
-  "background_color": "#06301f",
-  "theme_color": "#06301f",
-  "orientation": "portrait-primary",
+  "background_color": "#000000",
+  "theme_color": "#000000",
+  "orientation": "portrait",
   "categories": ["business", "productivity"],
   "icons": [
-    { "src": "/icon-192x192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
-    { "src": "/icon-512x512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
-    { "src": "/icon-maskable-192x192.png", "sizes": "192x192", "type": "image/png", "purpose": "maskable" },
-    { "src": "/icon-maskable-512x512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" },
-    { "src": "/icon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any" }
+    { "src": "/icons/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "/icons/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
+    { "src": "/icons/icon-maskable-192.png", "sizes": "192x192", "type": "image/png", "purpose": "maskable" },
+    { "src": "/icons/icon-maskable-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
   ],
   "shortcuts": [
-    { "name": "Área do corretor", "url": "/corretor", "icons": [{ "src": "/icon-192x192.png", "sizes": "192x192" }] },
-    { "name": "Leads", "url": "/leads", "icons": [{ "src": "/icon-192x192.png", "sizes": "192x192" }] },
-    { "name": "Materiais", "url": "/materiais", "icons": [{ "src": "/icon-192x192.png", "sizes": "192x192" }] },
-    { "name": "Relatório", "url": "/leads/relatorio", "icons": [{ "src": "/icon-192x192.png", "sizes": "192x192" }] }
+    { "name": "Área do corretor", "url": "/corretor", "icons": [{ "src": "/icons/icon-192.png", "sizes": "192x192" }] },
+    { "name": "Leads", "url": "/leads", "icons": [{ "src": "/icons/icon-192.png", "sizes": "192x192" }] },
+    { "name": "Materiais", "url": "/materiais", "icons": [{ "src": "/icons/icon-192.png", "sizes": "192x192" }] },
+    { "name": "Relatório", "url": "/leads/relatorio", "icons": [{ "src": "/icons/icon-192.png", "sizes": "192x192" }] }
   ]
 }

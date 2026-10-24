@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { useLocation } from "wouter";
 import { trpc } from "@/lib/trpc";
-import { Button } from "@/components/ui/button";
+import { LoadingButton, RomatecLockup } from "@/brand";
 
 /** Primeiro acesso pelo link do convite: confirma o e-mail e cria a senha */
 export default function PrimeiroAcesso() {
@@ -27,44 +27,45 @@ export default function PrimeiroAcesso() {
     }
   };
 
-  const campo = "w-full border border-slate-300 rounded-lg px-3 py-2 text-slate-900 focus:outline-none focus:ring-2 focus:ring-emerald-600";
+  const campo = "w-full rounded-[12px] border border-[var(--rt-border)] bg-[var(--rt-bg)] px-3 py-2.5 text-[var(--rt-text)] placeholder:text-[var(--rt-text-3)] focus:outline-none focus:border-[var(--rt-gold-light)]";
+  const rotulo = "block text-xs font-bold uppercase tracking-[2px] text-[var(--rt-gold)] mb-1";
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-emerald-50 via-slate-50 to-amber-50 flex items-center justify-center p-4">
-      <div className="w-full max-w-md bg-white rounded-2xl shadow-2xl p-8">
-        <div className="flex justify-center mb-4"><img src="/icon-192x192.png" alt="Romatec CRM" className="h-20 w-20 rounded-2xl" /></div>
-        <h1 className="text-2xl font-bold text-slate-900 text-center mb-1">Primeiro acesso</h1>
+    <div className="min-h-screen flex flex-col items-center justify-center gap-6 p-4" style={{ background: "radial-gradient(circle at 50% 30%, #0A1F14 0%, #000 62%)" }}>
+      <RomatecLockup variant="stack" height={72} />
+      <div className="w-full max-w-md rounded-[18px] border border-[var(--rt-border)] bg-[var(--rt-surface)] p-7">
+        <h1 className="text-[22px] font-semibold text-[var(--rt-gold-light)] text-center mb-1" style={{ fontFamily: "var(--rt-font-title)" }}>Primeiro acesso</h1>
 
         {!token || (!isLoading && !data?.valido) ? (
-          <p className="text-center text-slate-600 mt-4">Este link é inválido ou já venceu. Peça um novo link ao administrador do CRM.</p>
+          <p className="text-center text-[var(--rt-text-2)] mt-4">Este link é inválido ou já venceu. Peça um novo link ao administrador do CRM.</p>
         ) : isLoading ? (
-          <p className="text-center text-slate-500 mt-4">Carregando...</p>
+          <p className="text-center text-[var(--rt-text-3)] mt-4">Carregando...</p>
         ) : pronto ? (
           <div className="text-center space-y-4 mt-4">
-            <p className="text-slate-700">Senha criada! A partir de agora, entre com <b>{pronto}</b> e a sua senha.</p>
-            <Button className="w-full bg-emerald-700 hover:bg-emerald-800 text-white" onClick={() => navigate("/login")}>Ir para o login</Button>
+            <p className="text-[var(--rt-text-2)]">Senha criada! A partir de agora, entre com <b className="text-[var(--rt-gold-light)]">{pronto}</b> e a sua senha.</p>
+            <button className="rt-btn w-full" onClick={() => navigate("/login")}>Ir para o login</button>
           </div>
         ) : (
           <>
-            <p className="text-center text-slate-600 mb-6">
+            <p className="text-center text-[var(--rt-text-2)] mb-6">
               Olá{data?.valido && data.nome ? `, ${data.nome}` : ""}! Confirme seu e-mail e crie sua senha.
-              {data?.valido && data.login === "creci" ? <> Depois você entra com o <b>CRECI {data.creci}</b>.</> : null}
+              {data?.valido && data.login === "creci" ? <> Depois você entra com o <b className="text-[var(--rt-gold-light)]">CRECI {data.creci}</b>.</> : null}
             </p>
             <form onSubmit={enviar} className="space-y-4 text-left">
               <div>
-                <label className="block text-sm font-medium text-slate-700 mb-1">E-mail cadastrado {data?.valido ? <span className="text-slate-400">({data.emailDica})</span> : null}</label>
+                <label className={rotulo}>E-mail cadastrado {data?.valido ? <span className="normal-case tracking-normal text-[var(--rt-text-3)]">({data.emailDica})</span> : null}</label>
                 <input type="email" required autoComplete="email" value={email} onChange={e => setEmail(e.target.value)} className={campo} placeholder="seu@email.com" />
               </div>
               <div>
-                <label className="block text-sm font-medium text-slate-700 mb-1">Crie sua senha</label>
+                <label className={rotulo}>Crie sua senha</label>
                 <input type="password" required minLength={8} autoComplete="new-password" value={senha} onChange={e => setSenha(e.target.value)} className={campo} placeholder="Pelo menos 8 caracteres, não só números" />
               </div>
               <div>
-                <label className="block text-sm font-medium text-slate-700 mb-1">Repita a senha</label>
+                <label className={rotulo}>Repita a senha</label>
                 <input type="password" required autoComplete="new-password" value={senha2} onChange={e => setSenha2(e.target.value)} className={campo} />
               </div>
-              {erro && <p className="text-sm text-red-600">{erro}</p>}
-              <Button type="submit" disabled={aceitar.isPending} className="w-full bg-emerald-700 hover:bg-emerald-800 text-white">{aceitar.isPending ? "Salvando..." : "Criar senha"}</Button>
+              {erro && <p className="text-sm text-[var(--rt-danger)]">{erro}</p>}
+              <LoadingButton type="submit" loading={aceitar.isPending} loadingText="Salvando…" className="w-full">Criar senha</LoadingButton>
             </form>
           </>
         )}

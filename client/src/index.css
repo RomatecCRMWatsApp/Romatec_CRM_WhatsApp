@@ -40,94 +40,105 @@
   --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
   --color-sidebar-border: var(--sidebar-border);
   --color-sidebar-ring: var(--sidebar-ring);
-  /* Custom colors */
-  --color-gold: oklch(0.78 0.16 80);
-  --color-gold-dark: oklch(0.65 0.14 75);
-  --color-emerald: oklch(0.72 0.20 155);
-  --color-emerald-dark: oklch(0.55 0.17 155);
+  /* Marca (client/src/brand/tokens.css) — classes rt-* do Tailwind: bg-rt-surface, text-rt-gold… */
+  --color-gold: #C9A84C;
+  --color-gold-dark: #A8862F;
+  --color-emerald: #2BD47A;
+  --color-emerald-dark: #0E6B3C;
+  --color-rt-bg: #000000;
+  --color-rt-surface: #0A1410;
+  --color-rt-green: #0C3320;
+  --color-rt-gold: #C9A84C;
+  --color-rt-gold-light: #E2C877;
+  --color-rt-gold-dark: #A8862F;
+  --color-rt-glow: #2BD47A;
+  --color-rt-border: #3A3220;
+  --color-rt-text: #E8F0EB;
+  --color-rt-text-2: #B9C7BE;
+  --font-title: "Cinzel", "Times New Roman", serif;
+  --font-body: "Manrope", system-ui, sans-serif;
+  --font-brand: Arial, Helvetica, sans-serif;
+  --font-mono: "JetBrains Mono", ui-monospace, Consolas, monospace;
 }
 
-/* Dark theme as default - Premium Dark */
+/* Identidade visual v1.0 (client/src/brand/tokens.css): sempre dark, dourado como cor principal */
 :root {
   --radius: 0.75rem;
-  /* Dark premium base */
-  --background: oklch(0.205 0.008 255);
-  --foreground: oklch(0.93 0.01 80);
-  /* Cards - slightly lighter dark */
-  --card: oklch(0.255 0.009 255);
-  --card-foreground: oklch(0.93 0.01 80);
-  /* Popover */
-  --popover: oklch(0.24 0.009 255);
-  --popover-foreground: oklch(0.93 0.01 80);
-  /* Primary - Emerald Green */
-  --primary: oklch(0.74 0.15 168);
-  --primary-foreground: oklch(0.10 0.02 155);
-  /* Secondary - Dark surface */
-  --secondary: oklch(0.29 0.01 255);
-  --secondary-foreground: oklch(0.85 0.01 80);
-  /* Muted */
-  --muted: oklch(0.31 0.01 255);
-  --muted-foreground: oklch(0.70 0.012 255);
-  /* Accent - Gold */
-  --accent: oklch(0.78 0.16 80);
-  --accent-foreground: oklch(0.10 0.02 80);
-  /* Destructive */
-  --destructive: oklch(0.65 0.25 25);
-  --destructive-foreground: oklch(0.98 0 0);
-  /* Borders */
-  --border: oklch(0.33 0.01 255);
-  --input: oklch(0.31 0.01 255);
-  --ring: oklch(0.74 0.15 168);
-  /* Charts - Green to Gold gradient */
-  --chart-1: oklch(0.74 0.15 168);
-  --chart-2: oklch(0.78 0.16 80);
-  --chart-3: oklch(0.65 0.18 155);
-  --chart-4: oklch(0.70 0.14 80);
-  --chart-5: oklch(0.58 0.15 155);
-  /* Sidebar */
-  --sidebar: oklch(0.175 0.007 255);
-  --sidebar-foreground: oklch(0.90 0.01 80);
-  --sidebar-primary: oklch(0.74 0.15 168);
-  --sidebar-primary-foreground: oklch(0.10 0.02 155);
-  --sidebar-accent: oklch(0.78 0.16 80);
-  --sidebar-accent-foreground: oklch(0.10 0.02 80);
-  --sidebar-border: oklch(0.27 0.008 255);
-  --sidebar-ring: oklch(0.72 0.20 155);
+  --background: #000000;
+  --foreground: #E8F0EB;
+  /* Cards e superfícies */
+  --card: #0A1410;
+  --card-foreground: #E8F0EB;
+  --popover: #0F1D16;
+  --popover-foreground: #E8F0EB;
+  /* Principal: dourado da marca (botões, links, item ativo) */
+  --primary: #C9A84C;
+  --primary-foreground: #0A0A0A;
+  --secondary: #0F1D16;
+  --secondary-foreground: #E8F0EB;
+  --muted: #0F1D16;
+  --muted-foreground: #9FB3A8;
+  --accent: #E2C877;
+  --accent-foreground: #0A0A0A;
+  --destructive: #F2785C;
+  --destructive-foreground: #0A0A0A;
+  --border: #3A3220;
+  --input: #2A2618;
+  --ring: #E2C877;
+  /* Gráficos: verde da marca → dourado */
+  --chart-1: #2BD47A;
+  --chart-2: #C9A84C;
+  --chart-3: #1F9A5B;
+  --chart-4: #E2C877;
+  --chart-5: #0E6B3C;
+  /* Menu lateral */
+  --sidebar: #030806;
+  --sidebar-foreground: #E8F0EB;
+  --sidebar-primary: #C9A84C;
+  --sidebar-primary-foreground: #0A0A0A;
+  --sidebar-accent: #E2C877;
+  --sidebar-accent-foreground: #0A0A0A;
+  --sidebar-border: #3A3220;
+  --sidebar-ring: #E2C877;
 }
 
 .dark {
-  --background: oklch(0.205 0.008 255);
-  --foreground: oklch(0.93 0.01 80);
-  --card: oklch(0.255 0.009 255);
-  --card-foreground: oklch(0.93 0.01 80);
-  --popover: oklch(0.24 0.009 255);
-  --popover-foreground: oklch(0.93 0.01 80);
-  --primary: oklch(0.74 0.15 168);
-  --primary-foreground: oklch(0.10 0.02 155);
-  --secondary: oklch(0.29 0.01 255);
-  --secondary-foreground: oklch(0.85 0.01 80);
-  --muted: oklch(0.31 0.01 255);
-  --muted-foreground: oklch(0.70 0.012 255);
-  --accent: oklch(0.78 0.16 80);
-  --accent-foreground: oklch(0.10 0.02 80);
-  --destructive: oklch(0.65 0.25 25);
-  --destructive-foreground: oklch(0.98 0 0);
-  --border: oklch(0.33 0.01 255);
-  --input: oklch(0.31 0.01 255);
-  --ring: oklch(0.74 0.15 168);
-  --chart-1: oklch(0.74 0.15 168);
-  --chart-2: oklch(0.78 0.16 80);
-  --chart-3: oklch(0.65 0.18 155);
-  --chart-4: oklch(0.70 0.14 80);
-  --chart-5: oklch(0.58 0.15 155);
-  --sidebar: oklch(0.175 0.007 255);
-  --sidebar-foreground: oklch(0.90 0.01 80);
-  --sidebar-primary: oklch(0.74 0.15 168);
-  --sidebar-primary-foreground: oklch(0.10 0.02 155);
-  --sidebar-accent: oklch(0.78 0.16 80);
-  --sidebar-accent-foreground: oklch(0.10 0.02 80);
-  --sidebar-border: oklch(0.27 0.008 255);
-  --sidebar-ring: oklch(0.72 0.20 155);
+  --background: #000000;
+  --foreground: #E8F0EB;
+  /* Cards e superfícies */
+  --card: #0A1410;
+  --card-foreground: #E8F0EB;
+  --popover: #0F1D16;
+  --popover-foreground: #E8F0EB;
+  /* Principal: dourado da marca (botões, links, item ativo) */
+  --primary: #C9A84C;
+  --primary-foreground: #0A0A0A;
+  --secondary: #0F1D16;
+  --secondary-foreground: #E8F0EB;
+  --muted: #0F1D16;
+  --muted-foreground: #9FB3A8;
+  --accent: #E2C877;
+  --accent-foreground: #0A0A0A;
+  --destructive: #F2785C;
+  --destructive-foreground: #0A0A0A;
+  --border: #3A3220;
+  --input: #2A2618;
+  --ring: #E2C877;
+  /* Gráficos: verde da marca → dourado */
+  --chart-1: #2BD47A;
+  --chart-2: #C9A84C;
+  --chart-3: #1F9A5B;
+  --chart-4: #E2C877;
+  --chart-5: #0E6B3C;
+  /* Menu lateral */
+  --sidebar: #030806;
+  --sidebar-foreground: #E8F0EB;
+  --sidebar-primary: #C9A84C;
+  --sidebar-primary-foreground: #0A0A0A;
+  --sidebar-accent: #E2C877;
+  --sidebar-accent-foreground: #0A0A0A;
+  --sidebar-border: #3A3220;
+  --sidebar-ring: #E2C877;
 }
 
 @layer base {
@@ -136,7 +147,7 @@
   }
   body {
     @apply bg-background text-foreground;
-    font-family: 'Inter', 'SF Pro Display', -apple-system, BlinkMacSystemFont, sans-serif;
+    font-family: var(--rt-font-body);
   }
   button:not(:disabled),
   [role="button"]:not([aria-disabled="true"]),

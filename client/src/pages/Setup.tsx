@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { RomatecAppIcon } from "@/brand";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -10,8 +11,6 @@ import {
   Loader2, XCircle, WifiOff, Bot,
 } from "lucide-react";
 
-const LOGO_URL =
-  "/icon-512x512.png";
 
 const STEPS = [
   { id: 1, label: "Empresa",   icon: Building2 },
@@ -113,12 +112,12 @@ export default function Setup() {
   const saving = update.isPending;
 
   return (
-    <div className="min-h-screen bg-[#0f172a] flex flex-col items-center justify-center p-4">
+    <div className="min-h-screen bg-black flex flex-col items-center justify-center p-4">
       {/* Card */}
       <div className="w-full max-w-lg">
         {/* Logo + título */}
         <div className="text-center mb-8">
-          <img src={LOGO_URL} alt="Romatec CRM" className="h-16 mx-auto mb-3 rounded-xl" />
+          <div className="mb-3 flex justify-center"><RomatecAppIcon size={64} /></div>
           <h1 className="text-2xl font-bold text-white">Configuração inicial</h1>
           <p className="text-slate-400 text-sm mt-1">Configure o sistema antes de começar a usar</p>
         </div>

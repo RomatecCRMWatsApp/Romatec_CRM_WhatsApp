@@ -3,6 +3,7 @@ import { useLocation } from "wouter";
 import { trpc } from "@/lib/trpc";
 import { Area, AreaChart, CartesianGrid, Cell, Pie, PieChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
 import { ChevronRight, DollarSign, Flame, MapPin, UserPlus } from "lucide-react";
+import { Skeleton } from "@/brand";
 
 /** Cores do painel (mesma família do tema: verde-menta, dourado, azul, lilás) */
 export const COR = { menta: "#5fd3b4", ouro: "#e7b955", azul: "#5aa9e6", lilas: "#c79ae8", rosa: "#ef8fa6", cinza: "#6b7280" };
@@ -31,22 +32,34 @@ export function Cartao({ titulo, acao, className = "", children }: { titulo?: st
   );
 }
 
-function Kpi({ rotulo, valor, sub, icone: Icone, cor, onClick }: { rotulo: string; valor: string | number; sub?: string; icone: any; cor: string; onClick?: () => void }) {
+/** valor undefined = ainda carregando: esqueleto no lugar do número (nunca mostrar 0 antes do dado) */
+function Kpi({ rotulo, valor, sub, icone: Icone, cor, onClick }: { rotulo: string; valor: string | number | undefined; sub?: string; icone: any; cor: string; onClick?: () => void }) {
+  const carregando = valor === undefined;
   return (
-    <button onClick={onClick} className="rounded-2xl bg-card border border-border/60 p-4 text-left hover:border-primary/40 transition-colors">
+    <button onClick={onClick} className="rounded-2xl bg-card border border-border/60 p-4 text-left hover:border-primary/40 transition-colors" aria-busy={carregando}>
       <div className="flex items-start justify-between">
         <div className="h-10 w-10 rounded-xl flex items-center justify-center" style={{ background: `${cor}22`, color: cor }}><Icone className="h-5 w-5" /></div>
       </div>
-      <p className="text-2xl md:text-3xl font-bold text-foreground mt-3">{valor}</p>
+      {carregando ? <Skeleton width="55%" height={30} className="mt-3" /> : <p className="text-2xl md:text-3xl font-bold text-foreground mt-3 font-mono">{valor}</p>}
       <p className="text-xs text-muted-foreground mt-0.5">{rotulo}</p>
-      {sub && <p className="text-[11px] mt-1" style={{ color: cor }}>{sub}</p>}
+      {carregando ? <Skeleton width="70%" height={11} className="mt-1.5" /> : sub && <p className="text-[11px] mt-1" style={{ color: cor }}>{sub}</p>}
     </button>
   );
 }
 
-export function KpisLeads({ r, leadsHoje }: { r: any; leadsHoje: number }) {
+export function KpisLeads({ r, leadsHoje }: { r: any; leadsHoje: number | undefined }) {
   const [, navigate] = useLocation();
   const t = r?.total;
+  if (!t) {
+    return (
+      <div className="grid grid-cols-2 xl:grid-cols-4 gap-3">
+        <Kpi rotulo="Leads novos hoje" valor={undefined} icone={UserPlus} cor={COR.menta} />
+        <Kpi rotulo="Leads quentes (30 dias)" valor={undefined} icone={Flame} cor={COR.rosa} />
+        <Kpi rotulo="Querem visitar" valor={undefined} icone={MapPin} cor={COR.ouro} />
+        <Kpi rotulo="Custo por lead quente" valor={undefined} icone={DollarSign} cor={COR.azul} />
+      </div>
+    );
+  }
   return (
     <div className="grid grid-cols-2 xl:grid-cols-4 gap-3">
       <Kpi rotulo="Leads novos hoje" valor={leadsHoje} sub={`${t?.leads ?? 0} nos últimos 30 dias`} icone={UserPlus} cor={COR.menta} onClick={() => navigate("/leads")} />

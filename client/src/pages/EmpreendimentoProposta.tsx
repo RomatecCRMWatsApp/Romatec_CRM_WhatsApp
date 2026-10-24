@@ -80,10 +80,14 @@ export default function EmpreendimentoProposta() {
 
         <p style={{ marginTop: "18px", fontSize: "10.5px", color: "#4b5563", lineHeight: 1.45 }}>{data.avisoLegal}</p>
 
-        <div style={{ marginTop: "24px", borderTop: `1px solid ${OURO}`, paddingTop: "10px" }}>
-          <p style={{ margin: 0, fontWeight: 700 }}>Corretor {CORRETOR_SIMULACAO.nome} · {CORRETOR_SIMULACAO.creci}</p>
-          <p style={{ margin: 0, color: "#374151" }}>WhatsApp {CORRETOR_SIMULACAO.telefones.join(" · ")}</p>
-          <p style={{ margin: "4px 0 0", color: "#6b7280" }}>Romatec Consultoria Total · Valores sujeitos a alteração e disponibilidade.</p>
+        <div style={{ marginTop: "24px", borderTop: `1px solid ${OURO}`, paddingTop: "10px", display: "flex", alignItems: "center", gap: "14px" }}>
+          {/* Selo oficial da Romatec (identidade visual v1.0) */}
+          <img src="/brand/selo-romatec.svg" alt="Selo Romatec Consultoria Total" style={{ width: "62px", height: "62px", flexShrink: 0 }} />
+          <div>
+            <p style={{ margin: 0, fontWeight: 700 }}>Corretor {CORRETOR_SIMULACAO.nome} · {CORRETOR_SIMULACAO.creci}</p>
+            <p style={{ margin: 0, color: "#374151" }}>WhatsApp {CORRETOR_SIMULACAO.telefones.join(" · ")}</p>
+            <p style={{ margin: "4px 0 0", color: "#6b7280" }}>Romatec Consultoria Total · Valores sujeitos a alteração e disponibilidade.</p>
+          </div>
         </div>
       </div>
     </div>
