@@ -1,5 +1,6 @@
 import { sql } from 'drizzle-orm';
 import { getDb, getDbDriver } from '../../db';
+import { DESCONTO_AVISTA_TOTAL_PADRAO } from '../../../shared/simulador';
 
 /**
  * Migration: simulador de financiamento (shared/simulador.ts). Idempotente.
@@ -62,6 +63,11 @@ const COMANDOS: { nome: string; stmt: ReturnType<typeof sql> }[] = [
       SELECT e.id, 160000.00, 3025.11, 1.00, 0.3000, 6, 0.0625, 0.0600, 'PRICE', JSON_ARRAY(12,24,36,60,120), 0.0500, 0.0200, 0.5000, '2026-10-23', TRUE
       FROM empreendimentos e
       WHERE e.slug = 'bom-jardims' AND NOT EXISTS (SELECT 1 FROM condicoesPagamento c WHERE c.empreendimentoId = e.id)`,
+  },
+  {
+    // À vista total (lote pago de uma vez): desconto fixo em R$, ajustável na tabela
+    nome: 'condicoesPagamento.descontoAvistaTotal',
+    stmt: sql`ALTER TABLE condicoesPagamento ADD COLUMN descontoAvistaTotal DECIMAL(12,2) NOT NULL DEFAULT ${sql.raw(DESCONTO_AVISTA_TOTAL_PADRAO.toFixed(2))} AFTER descontoAvistaPct`,
   },
   {
     nome: 'seed lotes.precoTabela (Bom Jardims)',

@@ -3,6 +3,25 @@
 Cada versão nova vai no TOPO. Depois rode `npm run release` (valida e atualiza o package.json);
 ao subir, o servidor grava a versão no banco e todos recebem o aviso "Novidades da versão".
 
+## 1.8.0 — 2026-10-24
+tipo: minor
+obrigatoria: nao
+titulo: Zoom no mapa, à vista total e notificações com som
+
+### Novo
+- Zoom no mapa dos lotes: botões + / −, roda do mouse, pinça no celular e arrastar; o clique abre o lote certo em qualquer zoom
+- Simulador: opção "À vista (total)" — o lote pago de uma vez com R$ 10.000,00 de desconto, também na proposta e no WhatsApp
+- Notificações no sininho: reserva, venda/contrato, lote liberado e sistema atualizado, cada uma com um som
+- Notificações no celular mesmo com o CRM fechado (ative no sininho ou em Meu cadastro › Preferências)
+
+### Melhorias
+- Corretor só recebe avisos dos empreendimentos habilitados para ele
+- Tocar na notificação abre o CRM direto no lote
+- Comissão do à vista total: 100% no ato, sobre o valor à vista
+
+### Avisos
+- iPhone: para receber notificações com o CRM fechado, adicione o CRM à Tela de Início (iOS 16.4 ou mais novo)
+
 ## 1.7.0 — 2026-10-24
 tipo: minor
 obrigatoria: nao

@@ -78,6 +78,17 @@ export default function EmpreendimentoProposta() {
         </table>
         <p style={{ margin: "8px 0 0", color: "#374151" }}>{data.textoJuros}. 1ª parcela do saldo no mês seguinte à {entrada === 1 ? "entrada à vista" : "última parcela da entrada"}.</p>
 
+        <div style={{ marginTop: "14px", border: `1.5px solid ${OURO}`, borderRadius: "8px", padding: "10px 12px", background: "#FBF7EC", display: "flex", justifyContent: "space-between", alignItems: "center", gap: "12px" }}>
+          <div>
+            <p style={{ margin: 0, fontWeight: 700, color: VERDE }}>Ou pagamento integral à vista</p>
+            <p style={{ margin: 0, color: "#4b5563" }}>Preço cheio {brl(sim.preco)} com desconto de {brl(sim.avistaTotal.desconto)}, pago de uma só vez.</p>
+          </div>
+          <div style={{ textAlign: "right" }}>
+            <p style={{ margin: 0, fontSize: "17px", fontWeight: 800, color: VERDE }}>{brl(sim.avistaTotal.valor)}</p>
+            <p style={{ margin: 0, color: "#047857", fontWeight: 600 }}>economize {brl(sim.avistaTotal.desconto)}</p>
+          </div>
+        </div>
+
         <p style={{ marginTop: "18px", fontSize: "10.5px", color: "#4b5563", lineHeight: 1.45 }}>{data.avisoLegal}</p>
 
         <div style={{ marginTop: "24px", borderTop: `1px solid ${OURO}`, paddingTop: "10px", display: "flex", alignItems: "center", gap: "14px" }}>

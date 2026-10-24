@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import LupaPortal, { alturaDaLupa, cantoDaLupa, densificar } from "./LupaPortal";
+import ZoomSvg from "../mapa/ZoomSvg";
 
 /**
  * Mapa de vendas interativo, desenhado a partir das coordenadas georreferenciadas
@@ -134,9 +135,8 @@ export default function LoteMap({ lotes, selected, onSelect, onMapLoaded, dados,
 
   return (
     <div>
-      <div style={{ overflowX: "auto", borderRadius: 16, background: "#E7EEDB", border: "1px solid #CFD8BF" }}>
-        <svg viewBox={`0 0 ${W} ${H}`} role="img" aria-label="Mapa de vendas do Bom Jardims"
-          style={{ display: "block", width: "100%", height: "auto" }}>
+      <div style={{ overflow: "hidden", borderRadius: 16, background: "#E7EEDB", border: "1px solid #CFD8BF" }}>
+        <ZoomSvg W={W} H={H} rotulo="Mapa de vendas do Bom Jardims">
           <path d={pathOf(data.perimetro.map(project))} fill="#D3E2BC" stroke="#0C3320" strokeWidth={2} strokeDasharray="6 4" />
           {/* Área de vivência e recreação na frente, junto ao rio */}
           {data.areas?.map(a => (
@@ -218,7 +218,7 @@ export default function LoteMap({ lotes, selected, onSelect, onMapLoaded, dados,
             const caixa = cantoDaLupa(W, H, w, h, data.lotes.flatMap(l => l.poly.map(project)), pt, outros);
             return <LupaPortal portal={pt} caixa={caixa} imagem={portal.imagem} rotulo="Portal de entrada" raio={15} />;
           })()}
-        </svg>
+        </ZoomSvg>
       </div>
 
       {/* Escolha pela lista (mais fácil no celular) */}

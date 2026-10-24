@@ -7,7 +7,8 @@ import { useIdle } from "@/hooks/useIdle";
 import { useVersionCheck } from "@/hooks/useVersionCheck";
 import { DESCANSO_PADRAO } from "@shared/releases";
 import ScreenSaver from "./ScreenSaver";
-import { PainelNovidades, UpdateBanner, WhatsNewModal } from "./Novidades";
+import { abrirNovidades, PainelNovidades, UpdateBanner, WhatsNewModal } from "./Novidades";
+import { useAlertasNotificacoes } from "./Notificacoes";
 
 /** Telas públicas (landing, catálogo, links, login): sem banner, novidades nem tela de descanso */
 const PUBLICAS = ["/login", "/primeiro-acesso", "/imoveis", "/i/", "/imovel/", "/links", "/bom-jardims", "/404"];
@@ -29,6 +30,9 @@ export default function CamadaSistema() {
   const acordarELimpar = useCallback(() => { setDesde(null); acordar(); }, [acordar]);
   // Lead novo durante o descanso: confere a cada 30 s só enquanto a tela está aberta
   const { data: novos } = trpc.novidades.novosLeads.useQuery({ desde: desde ?? 1 }, { enabled: ocioso && desde !== null, refetchInterval: 30_000 });
+  // Sininho: confere a cada 20 s, toca o som do tipo e trata o toque na notificação do celular
+  const abrirAvisos = useCallback(() => abrirNovidades("avisos"), []);
+  useAlertasNotificacoes(interna, abrirAvisos);
 
   return (
     <>

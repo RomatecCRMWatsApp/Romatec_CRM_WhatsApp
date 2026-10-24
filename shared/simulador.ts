@@ -16,6 +16,8 @@ export interface CondicoesPagamento {
   entradaMaxParcelas: number;
   /** Desconto sobre a entrada paga à vista (0.0625 = 6,25%) */
   descontoAvistaPct: number;
+  /** Desconto em R$ sobre o preço cheio quando o lote é pago todo de uma vez (à vista total) */
+  descontoAvistaTotal: number;
   /** Juros efetivos ao ano (0.06 = 6% a.a.) */
   jurosAaEfetivo: number;
   metodo: 'PRICE';
@@ -49,6 +51,13 @@ export interface Simulacao {
   entradaEfetiva: number;
   taxaMensal: number;
   planos: PlanoSaldo[];
+  /** Lote pago todo de uma vez: preço − descontoAvistaTotal */
+  avistaTotal: AvistaTotal;
+}
+
+export interface AvistaTotal {
+  valor: number;
+  desconto: number;
 }
 
 export interface LinhaEvolucao {
@@ -69,6 +78,9 @@ export interface Comissao {
   no1oPagamento: { total: number; corretor: number; romatec: number };
   no2oPagamento: { total: number; corretor: number; romatec: number };
 }
+
+/** Desconto padrão do à vista total (coluna condicoesPagamento.descontoAvistaTotal) */
+export const DESCONTO_AVISTA_TOTAL_PADRAO = 10000;
 
 /** Arredonda em centavos, meio para cima */
 export function r2(x: number): number {
@@ -100,6 +112,12 @@ export function dividirEntrada(total: number, n: number): number[] {
   return parcelas;
 }
 
+/** À vista total: preço cheio menos o desconto fixo em R$ (nunca abaixo de zero) */
+export function avistaTotal(preco: number, c: Pick<CondicoesPagamento, 'descontoAvistaTotal'>): AvistaTotal {
+  const desconto = r2(Math.min(Math.max(c.descontoAvistaTotal, 0), preco));
+  return { valor: r2(preco - desconto), desconto };
+}
+
 /**
  * Simulação completa de um lote. entradaParcelas = 1 é a entrada à vista (com desconto);
  * 2..entradaMaxParcelas, parcelada sem juros e sem desconto. O saldo é sempre preço − 30%.
@@ -124,7 +142,7 @@ export function simular(areaM2: number, entradaParcelas: number, c: CondicoesPag
   return {
     areaM2, preco, entrada30, entradaAvista, descontoAvista: r2(entrada30 - entradaAvista), saldo,
     entradaParcelas, parcelasEntrada: avista ? [entradaAvista] : dividirEntrada(entrada30, entradaParcelas),
-    entradaEfetiva, taxaMensal: i, planos,
+    entradaEfetiva, taxaMensal: i, planos, avistaTotal: avistaTotal(preco, c),
   };
 }
 
@@ -199,6 +217,7 @@ export function condicoesDaLinha(r: Record<string, any>): CondicoesPagamento {
   return {
     precoBase: n(r.precoBase), areaBaseM2: n(r.areaBaseM2), toleranciaAreaM2: n(r.toleranciaAreaM2 ?? 1),
     entradaPct: n(r.entradaPct), entradaMaxParcelas: n(r.entradaMaxParcelas), descontoAvistaPct: n(r.descontoAvistaPct),
+    descontoAvistaTotal: n(r.descontoAvistaTotal ?? DESCONTO_AVISTA_TOTAL_PADRAO),
     jurosAaEfetivo: n(r.jurosAaEfetivo), metodo: 'PRICE', prazos: (prazos as unknown[]).map(n).sort((a, b) => a - b),
     comissaoTotalPct: n(r.comissaoTotalPct), comissaoCorretorPct: n(r.comissaoCorretorPct), comissao1aParcelaPct: n(r.comissao1aParcelaPct),
   };
@@ -229,6 +248,11 @@ export function textoEntrada(sim: Simulacao): string {
   return ultima === p ? `${sim.entradaParcelas}× de ${brl(p)}` : `${sim.entradaParcelas}× de ${brl(p)} (última ${brl(ultima)})`;
 }
 
+/** "À vista R$ 150.000,00 — economize R$ 10.000,00" */
+export function textoAvistaTotal(sim: Simulacao): string {
+  return `À vista ${brl(sim.avistaTotal.valor)} — economize ${brl(sim.avistaTotal.desconto)}`;
+}
+
 const area = (v: number) => v.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 
 /** Mensagem do WhatsApp com a simulação escolhida */
@@ -241,6 +265,7 @@ export function mensagemSimulacao(codigo: string, sim: Simulacao, prazo: number,
     `Entrada (${pct(c.entradaPct, 0)}%): ${textoEntrada(sim)}`,
     `Saldo: *${prazo}× de ${brl(plano.parcela)}* fixas — juros ${pct(c.jurosAaEfetivo, 0)}% a.a. efetivos (Tabela Price)`,
     `Total a pagar: ${brl(plano.totalPago)}`,
+    `Ou pagamento integral: *${textoAvistaTotal(sim)}*`,
     `Corretor ${CORRETOR_SIMULACAO.nome} · ${CORRETOR_SIMULACAO.creci} · ${CORRETOR_SIMULACAO.telefones[0]}`,
     'Valores sujeitos a alteração e disponibilidade.',
   ].join('\n');

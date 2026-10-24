@@ -52,7 +52,7 @@ export function tipoLogin(entrada: string): 'email' | 'cpf' | 'creci' {
 
 // ─── Servidor: procedimentos tRPC ────────────────────────────────────────────
 /** O empreendedor só chama estes (o resto do CRM é negado por padrão); o próprio cadastro todos editam */
-const TRPC_EMPREENDEDOR = ['auth.', 'empreendedor.', 'system.versao', 'cadastro.', 'novidades.naoLidas', 'novidades.historico', 'novidades.marcarLida', 'novidades.marcarTodas', 'novidades.novosLeads', 'novidades.definirDescanso'];
+const TRPC_EMPREENDEDOR = ['auth.', 'empreendedor.', 'system.versao', 'cadastro.', 'novidades.naoLidas', 'novidades.historico', 'novidades.marcarLida', 'novidades.marcarTodas', 'novidades.novosLeads', 'novidades.definirDescanso', 'notificacoes.'];
 /** Secretário e corretor não mexem em configurações, na equipe nem na ZAYRA */
 const TRPC_SO_ADMIN = ['companyConfig.update', 'equipe.', 'zaira.'];
 

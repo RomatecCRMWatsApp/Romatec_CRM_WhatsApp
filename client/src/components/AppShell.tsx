@@ -10,6 +10,7 @@ import {
   Settings, UserCog, Users, X, Eye, ClipboardList, CalendarDays, Map as MapIcon, Smartphone, Wallet, IdCard, Bell,
 } from "lucide-react";
 import { abrirNovidades, SinoNovidades, useNovidadesNaoLidas } from "./sistema/Novidades";
+import { useNotificacoes } from "./sistema/Notificacoes";
 import { APP_VERSION } from "@/brand";
 
 /** modulo = chave em shared/permissoes.ts (some do menu quando o módulo está desligado para o corretor) */
@@ -22,7 +23,7 @@ const MENU: Grupo[] = [
       { rotulo: "Painel", rota: "/dashboard", icone: LayoutDashboard },
       { rotulo: "Área do corretor", rota: "/corretor", icone: Smartphone },
       { rotulo: "Meu cadastro", rota: "/meu-cadastro", icone: IdCard },
-      { rotulo: "Novidades", rota: "#novidades", icone: Bell },
+      { rotulo: "Notificações", rota: "#novidades", icone: Bell },
     ],
   },
   {
@@ -80,7 +81,7 @@ function Navegacao({ onNavegar }: { onNavegar?: () => void }) {
   const grupos = menuDoPerfil(perfil, minhas?.modulos);
   // Bolinha vermelha em "Meu cadastro": credencial ausente, vencida ou a vencer
   const { data: pendencias } = trpc.cadastro.minhasPendencias.useQuery(undefined, { enabled: !!user, staleTime: 5 * 60_000 });
-  const novidades = useNovidadesNaoLidas(!!user);
+  const novidades = useNovidadesNaoLidas(!!user) + useNotificacoes(!!user).naoLidas;
   return (
     <nav className="flex-1 overflow-y-auto px-3 py-2 space-y-4">
       {grupos.map((g, gi) => (

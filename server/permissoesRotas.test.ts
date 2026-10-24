@@ -48,6 +48,11 @@ describe('bloqueio no servidor (não confia no front)', () => {
     await expect(corretor.novidades.definirDescanso({ minutos: 7 })).rejects.toMatchObject({ code: 'BAD_REQUEST' });
   });
 
+  it('push: inscrição só com endpoint https e chaves válidas', async () => {
+    await expect(corretor.notificacoes.inscreverPush({ endpoint: 'http://inseguro.exemplo/x', keys: { p256dh: 'p'.repeat(20), auth: 'a'.repeat(10) } })).rejects.toMatchObject({ code: 'BAD_REQUEST' });
+    await expect(corretor.notificacoes.inscreverPush({ endpoint: 'https://push.exemplo/x', keys: { p256dh: 'curta', auth: 'a' } })).rejects.toMatchObject({ code: 'BAD_REQUEST' });
+  });
+
   it('empreendedor não chega ao financeiro nem ao simulador', async () => {
     const emp = caller({ id: 7, role: 'user', perfil: 'empreendedor' });
     await expect(emp.financeiro.vendas()).rejects.toMatchObject({ code: 'FORBIDDEN' });

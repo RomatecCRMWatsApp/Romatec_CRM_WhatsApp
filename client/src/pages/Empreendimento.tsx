@@ -1,4 +1,4 @@
-import { useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useLocation, useRoute } from "wouter";
 import { toast } from "sonner";
 import { trpc } from "@/lib/trpc";
@@ -140,6 +140,12 @@ export default function Empreendimento() {
 
   const lotes = (data?.lotes ?? []) as (LotePainel & { poligono: [number, number][] | null })[];
   const selecionado = useMemo(() => lotes.find(l => l.id === sel) ?? null, [lotes, sel]);
+  // Veio de uma notificação (?lote=B11): abre o painel desse lote
+  const loteDaUrl = useMemo(() => new URLSearchParams(window.location.search).get("lote")?.toUpperCase() ?? null, [slug]);
+  useEffect(() => {
+    const l = loteDaUrl && lotes.find(x => x.codigo === loteDaUrl);
+    if (l) setSel(l.id);
+  }, [loteDaUrl, lotes]);
   const lista = filtro ? lotes.filter(l => l.situacao === filtro) : lotes;
 
   const exportar = () => {

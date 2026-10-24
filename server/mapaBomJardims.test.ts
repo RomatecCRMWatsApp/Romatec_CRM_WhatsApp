@@ -180,6 +180,26 @@ describe('Mapa do Bom Jardims — desenho', () => {
     expect(mini).not.toContain('Lupa:');
     expect(mini).toContain('PORTAL DE ENTRADA');
   });
+  it('zoom confinado ao mapa nos dois mapas: botões + / − / mapa inteiro e lotes clicáveis dentro do zoom', () => {
+    const publico = renderToStaticMarkup(React.createElement(LoteMap, { lotes: lotesDoMapa(mapa), onSelect: () => {}, dados: mapa }));
+    const interno = renderToStaticMarkup(React.createElement(MapaTematico, { slug: 'bom-jardims', lotes, contexto: mapa, semLegenda: true, onSelecionar: () => {} }));
+    for (const html of [publico, interno]) {
+      for (const r of ['Ampliar o mapa', 'Reduzir o mapa', 'Voltar ao mapa inteiro']) expect(html).toContain(`aria-label="${r}"`);
+      expect(html).toContain('transform="translate(0 0) scale(1)"');
+      expect(html).toMatch(/scale\(1\)"><(defs|path)[\s\S]*role="button"[\s\S]*<\/g><\/svg>/); // lotes dentro do grupo com zoom
+      expect(html).toContain('touch-action:pan-x pan-y');                                     // sem zoom, a página rola normal
+    }
+  });
+  it('matemática do zoom: ponto sob o cursor fica parado, limites 1×–8× e sem borda vazia', async () => {
+    const { ampliarEm, limitar, VISTA_INICIAL, ZOOM_MAX } = await import('../client/src/components/mapa/ZoomSvg');
+    const W = 1000, H = 800;
+    const v = ampliarEm(VISTA_INICIAL, 2, 250, 200, W, H);
+    expect(v).toEqual({ s: 2, tx: -250, ty: -200 });
+    expect(250 * v.s + v.tx).toBe(250);                       // o ponto (250, 200) do desenho continua sob o cursor
+    expect(ampliarEm(v, 100, 0, 0, W, H).s).toBe(ZOOM_MAX);
+    expect(ampliarEm(v, 0.01, 0, 0, W, H)).toEqual(VISTA_INICIAL);
+    expect(limitar({ s: 2, tx: 300, ty: -5000 }, W, H)).toEqual({ s: 2, tx: 0, ty: -800 });
+  });
   it('lupa vai para o canto que não cobre lotes (e evita rio/perímetro)', async () => {
     const { cantoDaLupa } = await import('../client/src/components/bom-jardims/LupaPortal');
     const lotesNoCanto: [number, number][] = [[50, 50], [60, 40]];

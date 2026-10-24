@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { COR_SITUACAO, ROTULO_SITUACAO, SITUACOES_LOTE, type SituacaoLote } from "@shared/lotes";
 import LupaPortal, { alturaDaLupa, cantoDaLupa, densificar } from "@/components/bom-jardims/LupaPortal";
+import ZoomSvg from "@/components/mapa/ZoomSvg";
 
 /**
  * Mapa temático dos lotes (SVG a partir das coordenadas). O desenho dos lotes vem do banco
@@ -95,7 +96,7 @@ export default function MapaTematico({ slug, lotes, ruas, perimetro, selecionado
   return (
     <div>
       <div className="rounded-xl border border-border overflow-hidden shadow-inner">
-        <svg viewBox={`0 0 ${W} ${H}`} role="img" aria-label="Mapa temático dos lotes" className="block w-full h-auto">
+        <ZoomSvg W={W} H={H} rotulo="Mapa temático dos lotes" fundo="#E9EFDD">
           <defs>
             <pattern id="grama" width="14" height="14" patternUnits="userSpaceOnUse">
               <rect width="14" height="14" fill="#D9E6C3" />
@@ -289,7 +290,7 @@ export default function MapaTematico({ slug, lotes, ruas, perimetro, selecionado
             const caixa = cantoDaLupa(W, H, w, h, itens.flatMap(l => l.poly.map(proj)), pt, outros);
             return <LupaPortal portal={[pt[0], pt[1] - 6]} caixa={caixa} imagem={portal.imagem} rotulo="Portal de entrada" raio={18} />;
           })()}
-        </svg>
+        </ZoomSvg>
       </div>
       {!semLegenda && (
         <div className="flex flex-wrap gap-x-4 gap-y-1.5 mt-2 text-xs">

@@ -1019,6 +1019,17 @@ async function startServer() {
     console.error('❌ Erro na migration addReleases / notas de versão:', e);
   }
 
+  try {
+    const { addNotificacoes } = await import('./migrations/addNotificacoes');
+    await addNotificacoes();
+    // Versão nova no ar: "Sistema atualizado para vX.Y.Z" no sininho (e push) de todos — uma vez por versão
+    const { notificarAtualizacaoSistema } = await import('../notificacoes');
+    const { infoVersao } = await import('./systemRouter');
+    await notificarAtualizacaoSistema(infoVersao().versao);
+  } catch (e) {
+    console.error('❌ Erro na migration addNotificacoes / aviso de versão:', e);
+  }
+
   // Leads parados há 48 h perdem pontos no score (§8)
   import('../leads/scoreService').then(m => m.iniciarJobInatividade()).catch(e => console.warn('[Score] Job não iniciado:', e));
   // Follow-up persistente (1/3/7/14/30 dias) e prazo de atendimento — não dependem das campanhas

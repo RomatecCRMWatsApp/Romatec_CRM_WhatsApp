@@ -137,15 +137,29 @@ export function comissaoPropria(valorVenda: number, pct: number, parcelada: bool
 /**
  * Comissão no simulador: admin recebe o breakdown (com corretor e venda direta); corretor recebe só
  * a dele (% dele sobre o preço, 50/50 quando a entrada é parcelada) — nunca valores da empresa.
+ * À vista total (valorAvistaTotal): mesmo % sobre o valor à vista, 100% no ato.
  */
 export function comissaoNaSimulacao(
-  perfil: Perfil | null, preco: number, entradaParcelas: number, c: CondicoesPagamento, pctCorretor: number,
-): { comissao: { comCorretor: Comissao; vendaDireta: Comissao } | null; minhaComissao: ComissaoPropria | null } {
+  perfil: Perfil | null, preco: number, entradaParcelas: number, c: CondicoesPagamento, pctCorretor: number, valorAvistaTotal: number,
+): {
+  comissao: { comCorretor: Comissao; vendaDireta: Comissao } | null; minhaComissao: ComissaoPropria | null;
+  comissaoAvistaTotal: { comCorretor: Comissao; vendaDireta: Comissao } | null; minhaComissaoAvistaTotal: ComissaoPropria | null;
+} {
   if (perfil === 'admin') {
-    return { comissao: { comCorretor: comissao(preco, true, entradaParcelas === 1, c), vendaDireta: comissao(preco, false, entradaParcelas === 1, c) }, minhaComissao: null };
+    return {
+      comissao: { comCorretor: comissao(preco, true, entradaParcelas === 1, c), vendaDireta: comissao(preco, false, entradaParcelas === 1, c) }, minhaComissao: null,
+      comissaoAvistaTotal: { comCorretor: comissao(valorAvistaTotal, true, true, c), vendaDireta: comissao(valorAvistaTotal, false, true, c) }, minhaComissaoAvistaTotal: null,
+    };
   }
   // Só o corretor tem comissão própria; secretário e demais não veem comissão nenhuma
-  return { comissao: null, minhaComissao: perfil === 'corretor' ? comissaoPropria(preco, pctCorretor, entradaParcelas > 1) : null };
+  const corretor = perfil === 'corretor';
+  return {
+    comissao: null, minhaComissao: corretor ? comissaoPropria(preco, pctCorretor, entradaParcelas > 1) : null,
+    comissaoAvistaTotal: null,
+    minhaComissaoAvistaTotal: corretor
+      ? (k => ({ ...k, pagamentos: [{ quando: 'No pagamento à vista', valor: k.valor }], regra: 'À vista total: 100% da comissão no ato, sobre o valor à vista.' }))(comissaoPropria(valorAvistaTotal, pctCorretor, false))
+      : null,
+  };
 }
 
 // ─── Financeiro ──────────────────────────────────────────────────────────────

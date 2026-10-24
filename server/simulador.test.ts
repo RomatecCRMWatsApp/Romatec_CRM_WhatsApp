@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import {
-  comissao, condicoesDaLinha, dividirEntrada, evolucao, vencimento, mensagemSimulacao, parcelaPrice, precoLote, r2, seloDoLote, simular, taxaMensal, textoEntrada, textoJuros,
+  avistaTotal, comissao, condicoesDaLinha, textoAvistaTotal, dividirEntrada, evolucao, vencimento, mensagemSimulacao, parcelaPrice, precoLote, r2, seloDoLote, simular, taxaMensal, textoEntrada, textoJuros,
   type CondicoesPagamento,
 } from '../shared/simulador';
 import { podeChamar } from '../shared/equipe';
@@ -8,7 +8,7 @@ import { podeChamar } from '../shared/equipe';
 /** Condições do seed (condicoesPagamento do Bom Jardims, vigentes desde 23/10/2026) */
 const C: CondicoesPagamento = {
   precoBase: 160000, areaBaseM2: 3025.11, toleranciaAreaM2: 1, entradaPct: 0.3, entradaMaxParcelas: 6,
-  descontoAvistaPct: 0.0625, jurosAaEfetivo: 0.06, metodo: 'PRICE', prazos: [12, 24, 36, 60, 120],
+  descontoAvistaPct: 0.0625, descontoAvistaTotal: 10000, jurosAaEfetivo: 0.06, metodo: 'PRICE', prazos: [12, 24, 36, 60, 120],
   comissaoTotalPct: 0.05, comissaoCorretorPct: 0.02, comissao1aParcelaPct: 0.5,
 };
 const parcelas = (area: number) => simular(area, 6, C).planos.map(p => p.parcela);
@@ -57,6 +57,18 @@ describe('simulador Bom Jardims — valores exatos da spec', () => {
     expect(k.no2oPagamento).toEqual({ total: 4000, corretor: 1600, romatec: 2400 });
   });
 
+  it('à vista total: preço cheio − R$ 10.000 (A01, C04, B15)', () => {
+    expect(avistaTotal(160000, C)).toEqual({ valor: 150000, desconto: 10000 });
+    expect(simular(3025.11, 6, C).avistaTotal).toEqual({ valor: 150000, desconto: 10000 });
+    expect(simular(3143.41, 1, C).avistaTotal).toEqual({ valor: 156256.96, desconto: 10000 });
+    expect(simular(3984.47, 6, C).avistaTotal).toEqual({ valor: 200741.16, desconto: 10000 });
+    // independe da entrada escolhida e segue o precoTabela do lote
+    expect(simular(3025.11, 1, C, 170000).avistaTotal.valor).toBe(160000);
+    // desconto configurável na tabela
+    expect(avistaTotal(160000, { descontoAvistaTotal: 12500 })).toEqual({ valor: 147500, desconto: 12500 });
+    expect(textoAvistaTotal(simular(3025.11, 6, C)).replace(/ /g, ' ')).toBe('À vista R$ 150.000,00 — economize R$ 10.000,00');
+  });
+
   it('entrada acima do limite lança erro', () => {
     expect(() => simular(3025.11, 7, C)).toThrow();
     expect(() => simular(3025.11, 0, C)).toThrow();
@@ -76,10 +88,13 @@ describe('simulador — lote, condições do banco e acesso', () => {
   it('condições vindas do mysql2 (DECIMAL em texto, prazos em JSON) dão o mesmo cálculo', () => {
     const c = condicoesDaLinha({
       precoBase: '160000.00', areaBaseM2: '3025.11', toleranciaAreaM2: '1.00', entradaPct: '0.3000', entradaMaxParcelas: 6,
-      descontoAvistaPct: '0.0625', jurosAaEfetivo: '0.0600', metodo: 'PRICE', prazos: '[120, 12, 24, 36, 60]',
+      descontoAvistaPct: '0.0625', descontoAvistaTotal: '10000.00', jurosAaEfetivo: '0.0600', metodo: 'PRICE', prazos: '[120, 12, 24, 36, 60]',
       comissaoTotalPct: '0.0500', comissaoCorretorPct: '0.0200', comissao1aParcelaPct: '0.5000',
     });
     expect(c).toEqual(C);
+    // Linha antiga, sem a coluna: cai no padrão de R$ 10.000
+    const { descontoAvistaTotal: _, ...semColuna } = { ...C, prazos: '[12,24,36,60,120]' };
+    expect(condicoesDaLinha(semColuna).descontoAvistaTotal).toBe(10000);
     expect(simular(3025.11, 1, c).planos.map(p => p.parcela)).toEqual([9631.26, 4955.89, 3399.2, 2157.01, 1234.51]);
   });
 
@@ -158,5 +173,6 @@ describe('simulador — regras auxiliares', () => {
     expect(msg).toContain('Entrada (30%): 6× de R$ 8.000,00');
     expect(msg).toContain('Saldo: *120× de R$ 1.234,51* fixas — juros 6% a.a. efetivos (Tabela Price)');
     expect(msg).toContain('Total a pagar: R$ 196.141,20');
+    expect(msg).toContain('Ou pagamento integral: *À vista R$ 150.000,00 — economize R$ 10.000,00*');
   });
 });

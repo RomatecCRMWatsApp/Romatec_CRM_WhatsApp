@@ -62,7 +62,7 @@ describe('leads do corretor (v1.6.0)', () => {
 
   it('secretário abre todos os empreendimentos/imóveis e não tem comissão própria', () => {
     expect(temAcesso('secretario', [], 'empreendimento', 2)).toBe(true);
-    expect(comissaoNaSimulacao('secretario', 160000, 6, C, 0.02)).toEqual({ comissao: null, minhaComissao: null });
+    expect(comissaoNaSimulacao('secretario', 160000, 6, C, 0.02, 150000)).toEqual({ comissao: null, minhaComissao: null, comissaoAvistaTotal: null, minhaComissaoAvistaTotal: null });
   });
 });
 
@@ -82,25 +82,36 @@ describe('permissões — escopo por empreendimento/imóvel', () => {
 });
 
 const C: CondicoesPagamento = {
-  precoBase: 160000, areaBaseM2: 3025.11, toleranciaAreaM2: 1, entradaPct: 0.3, entradaMaxParcelas: 6, descontoAvistaPct: 0.0625,
+  precoBase: 160000, areaBaseM2: 3025.11, toleranciaAreaM2: 1, entradaPct: 0.3, entradaMaxParcelas: 6, descontoAvistaPct: 0.0625, descontoAvistaTotal: 10000,
   jurosAaEfetivo: 0.06, metodo: 'PRICE', prazos: [12, 24, 36, 60, 120], comissaoTotalPct: 0.05, comissaoCorretorPct: 0.02, comissao1aParcelaPct: 0.5,
 };
 
 describe('simulador — comissão não vaza para a equipe', () => {
   it('admin vê o breakdown completo (empresa/corretor e venda direta)', () => {
-    const k = comissaoNaSimulacao('admin', 160000, 6, C, 0.02);
+    const k = comissaoNaSimulacao('admin', 160000, 6, C, 0.02, 150000);
     expect(k.comissao?.comCorretor).toMatchObject({ total: 8000, corretor: 3200, romatec: 4800 });
     expect(k.comissao?.vendaDireta.romatec).toBe(8000);
     expect(k.minhaComissao).toBeNull();
   });
 
+  it('à vista total: mesmo % sobre o valor à vista, 100% no ato (sem 50/50)', () => {
+    const a = comissaoNaSimulacao('admin', 160000, 6, C, 0.02, 150000).comissaoAvistaTotal!;
+    expect(a.comCorretor).toMatchObject({ total: 7500, corretor: 3000, romatec: 4500 });
+    expect(a.comCorretor.no1oPagamento).toEqual({ total: 7500, corretor: 3000, romatec: 4500 });
+    expect(a.comCorretor.no2oPagamento.total).toBe(0);
+    const k = comissaoNaSimulacao('corretor', 160000, 6, C, 0.02, 150000);
+    expect(k.comissaoAvistaTotal).toBeNull();
+    expect(k.minhaComissaoAvistaTotal).toMatchObject({ valor: 3000, parcelada: false, pagamentos: [{ quando: 'No pagamento à vista', valor: 3000 }] });
+    expect(JSON.stringify(k)).not.toMatch(/romatec|vendaDireta|4500/i);
+  });
+
   it('corretor só recebe a própria comissão (padrão = % do empreendimento, 2%), nunca o breakdown', () => {
-    const k = comissaoNaSimulacao('corretor', 160000, 6, C, C.comissaoCorretorPct);
+    const k = comissaoNaSimulacao('corretor', 160000, 6, C, C.comissaoCorretorPct, 150000);
     expect(k.comissao).toBeNull();
     expect(k.minhaComissao).toMatchObject({ pct: 0.02, valor: 3200, parcelada: true });
     expect(k.minhaComissao?.pagamentos.map(p => p.valor)).toEqual([1600, 1600]);
     expect(JSON.stringify(k)).not.toMatch(/romatec|vendaDireta|4800/i);
-    expect(comissaoNaSimulacao('corretor', 160000, 1, C, 0.02).minhaComissao?.pagamentos).toHaveLength(1);
+    expect(comissaoNaSimulacao('corretor', 160000, 1, C, 0.02, 150000).minhaComissao?.pagamentos).toHaveLength(1);
   });
 });
 

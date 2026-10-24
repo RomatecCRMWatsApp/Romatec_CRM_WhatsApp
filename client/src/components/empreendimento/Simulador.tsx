@@ -187,13 +187,21 @@ export default function Simulador({ slug, lotes, ruas, perimetro, destinoSugerid
         {!codigo && <p className="rounded-xl border border-dashed border-border p-4 text-sm text-muted-foreground"><Calculator className="mr-1 inline h-4 w-4" /> Escolha a chácara pelo número ou clicando no mapa.</p>}
         {sim && data && (
           <>
+            <div className="flex flex-wrap items-center justify-between gap-2 rounded-xl border border-emerald-500/50 bg-emerald-500/10 p-4">
+              <div>
+                <p className="text-xs font-semibold uppercase tracking-wide text-emerald-400">À vista (total)</p>
+                <p className="text-lg font-bold tabular-nums">À vista {brl(sim.avistaTotal.valor)} <span className="text-sm font-semibold text-emerald-400">— economize {brl(sim.avistaTotal.desconto)}</span></p>
+                <p className="text-[11px] text-muted-foreground">Preço cheio {brl(sim.preco)} pago de uma só vez, sem entrada nem parcelas.</p>
+              </div>
+            </div>
+
             <div className={`space-y-2 rounded-xl border border-border bg-card p-4 ${isFetching ? "opacity-80" : ""}`}>
               <p className="text-sm font-semibold">Entrada ({Math.round(data.condicoes.entradaPct * 100)}% = {brl(sim.entrada30)})</p>
               <div className="flex flex-wrap gap-1.5">
                 {data.opcoesEntrada.map(o => (
                   <button key={o.parcelas} onClick={() => setEntrada(o.parcelas)}
                     className={`rounded-lg border px-2.5 py-1.5 text-left text-xs ${entrada === o.parcelas ? "border-primary bg-primary/15 text-foreground" : "border-border hover:bg-secondary/50"}`}>
-                    {o.parcelas === 1 ? <>À vista <b>{brl(o.total)}</b> <span className="text-emerald-400">(economize {brl(o.desconto)})</span></> : <>{o.parcelas}x de <b>{brl(o.valorParcela)}</b></>}
+                    {o.parcelas === 1 ? <>Entrada à vista <b>{brl(o.total)}</b> <span className="text-emerald-400">(economize {brl(o.desconto)})</span></> : <>{o.parcelas}x de <b>{brl(o.valorParcela)}</b></>}
                   </button>
                 ))}
               </div>
@@ -236,6 +244,13 @@ export default function Simulador({ slug, lotes, ruas, perimetro, destinoSugerid
                     </p>
                   </div>
                 ))}
+                {data.comissaoAvistaTotal && (
+                  <div className="rounded-lg border border-emerald-500/40 p-2 text-xs">
+                    <p className="font-semibold">À vista total ({brl(sim.avistaTotal.valor)}): {brl(data.comissaoAvistaTotal.comCorretor.total)} com corretor · {brl(data.comissaoAvistaTotal.vendaDireta.total)} venda direta</p>
+                    <p>Corretor {brl(data.comissaoAvistaTotal.comCorretor.corretor)} · Romatec {brl(data.comissaoAvistaTotal.comCorretor.romatec)}</p>
+                    <p className="text-muted-foreground">100% no ato, sobre o valor à vista (não parcela).</p>
+                  </div>
+                )}
               </div>
             )}
             {data.minhaComissao && (
@@ -243,6 +258,9 @@ export default function Simulador({ slug, lotes, ruas, perimetro, destinoSugerid
                 <p className="font-semibold">Sua comissão nesta venda: {brl(data.minhaComissao.valor)} <span className="text-xs font-normal text-muted-foreground">({(data.minhaComissao.pct * 100).toLocaleString("pt-BR")}% do preço)</span></p>
                 {data.minhaComissao.pagamentos.map(p => <p key={p.quando} className="text-xs">{p.quando}: <b>{brl(p.valor)}</b></p>)}
                 <p className="text-[11px] text-muted-foreground">{data.minhaComissao.regra}</p>
+                {data.minhaComissaoAvistaTotal && (
+                  <p className="border-t border-border pt-1.5 text-xs">Se fechar à vista total ({brl(sim.avistaTotal.valor)}): <b>{brl(data.minhaComissaoAvistaTotal.valor)}</b>, 100% no ato.</p>
+                )}
               </div>
             )}
             <p className="text-[11px] leading-snug text-muted-foreground">{data.avisoLegal}</p>

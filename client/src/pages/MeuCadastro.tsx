@@ -6,6 +6,7 @@ import { useAuth } from "@/_core/hooks/useAuth";
 import { trpc } from "@/lib/trpc";
 import PageHeader from "@/components/PageHeader";
 import CadastroUsuario from "@/components/equipe/CadastroUsuario";
+import { AtivarPush } from "@/components/sistema/Notificacoes";
 import { perfilDe } from "@shared/equipe";
 
 /** "Meu cadastro": o próprio usuário (todos os perfis) mantém dados, foto, credenciais e documentos */
@@ -56,6 +57,7 @@ function Preferencias({ minutos }: { minutos: number }) {
         </select>
       </label>
       <p className="text-[11px] text-muted-foreground">Cobre a tela com a hora e o selo Romatec quando você fica um tempo sem mexer — protege os dados dos clientes. Não abre durante envios de arquivo ou com a câmera aberta.</p>
+      <AtivarPush />
     </div>
   );
 }

@@ -1,4 +1,6 @@
 import { useEffect, useState } from "react";
+import { useLocation } from "wouter";
+import { ListaNotificacoes, useNotificacoes } from "./Notificacoes";
 import { Bell, ChevronDown, ChevronRight, RefreshCw, Sparkles } from "lucide-react";
 import { trpc } from "@/lib/trpc";
 import { Button } from "@/components/ui/button";
@@ -11,8 +13,9 @@ type ReleaseTela = { id: number; versao: string; tipo: string; titulo: string; i
 
 const dataBr = (iso: string) => new Date(iso).toLocaleDateString("pt-BR", { timeZone: "America/Fortaleza", day: "2-digit", month: "2-digit", year: "numeric" });
 
-/** Abre o painel "Novidades do sistema" (sino, item do menu) */
-export const abrirNovidades = () => window.dispatchEvent(new CustomEvent("romatec:novidades"));
+type Aba = "avisos" | "versoes";
+/** Abre o painel do sino (notificações / novidades da versão) */
+export const abrirNovidades = (aba?: Aba) => window.dispatchEvent(new CustomEvent("romatec:novidades", { detail: { aba } }));
 
 /** Itens da release em grupos coloridos (Novo, Melhorias, Correções, Avisos) */
 export function ItensDaRelease({ itens }: { itens: ItensRelease }) {
@@ -129,11 +132,13 @@ export function useNovidadesNaoLidas(habilitado = true) {
   return ((data ?? []) as ReleaseTela[]).filter(r => !r.lida).length;
 }
 
-/** Sino com o número de não lidas; abre o painel */
+/** Sino com o número de não lidas (notificações + novidades da versão); abre o painel */
 export function SinoNovidades({ className = "" }: { className?: string }) {
-  const n = useNovidadesNaoLidas();
+  const versoes = useNovidadesNaoLidas();
+  const { naoLidas: avisos } = useNotificacoes();
+  const n = versoes + avisos;
   return (
-    <button type="button" onClick={abrirNovidades} title="Novidades do sistema" aria-label={`Novidades do sistema${n ? ` (${n} não lidas)` : ""}`}
+    <button type="button" onClick={() => abrirNovidades(avisos || !versoes ? "avisos" : "versoes")} title="Notificações" aria-label={`Notificações${n ? ` (${n} não lidas)` : ""}`}
       className={`relative rounded-lg p-2 text-sidebar-foreground/70 hover:bg-white/10 hover:text-sidebar-foreground ${className}`}>
       <Bell className="h-4 w-4" />
       {n > 0 && <span className="absolute -right-0.5 -top-0.5 flex h-4 min-w-4 items-center justify-center rounded-full bg-red-500 px-1 text-[10px] font-bold text-white">{n}</span>}
@@ -141,29 +146,47 @@ export function SinoNovidades({ className = "" }: { className?: string }) {
   );
 }
 
-/** Painel lateral "Novidades do sistema": histórico das versões (expandir mostra os itens) */
+/** Painel lateral do sino: notificações (reserva, venda, liberação, sistema) e novidades das versões */
 export function PainelNovidades({ habilitado }: { habilitado: boolean }) {
   const [aberto, setAberto] = useState(false);
+  const [aba, setAba] = useState<Aba>("avisos");
   const [expandida, setExpandida] = useState<number | null>(null);
+  const [, navigate] = useLocation();
   const utils = trpc.useUtils();
   const { data } = trpc.novidades.historico.useQuery(undefined, { enabled: habilitado && aberto });
   const marcar = trpc.novidades.marcarLida.useMutation({ onSuccess: () => utils.novidades.invalidate() });
   const todas = trpc.novidades.marcarTodas.useMutation({ onSuccess: () => utils.novidades.invalidate() });
+  const { naoLidas: avisosNaoLidos } = useNotificacoes(habilitado);
   useEffect(() => {
-    const abrir = () => setAberto(true);
+    const abrir = (e: Event) => { const a = (e as CustomEvent).detail?.aba; if (a) setAba(a); setAberto(true); };
     window.addEventListener("romatec:novidades", abrir);
     return () => window.removeEventListener("romatec:novidades", abrir);
   }, []);
   const lista = (data ?? []) as ReleaseTela[];
   const naoLidas = lista.filter(r => !r.lida).length;
+  const BotaoAba = ({ id, rotulo, n }: { id: Aba; rotulo: string; n: number }) => (
+    <button type="button" onClick={() => setAba(id)}
+      className={`flex-1 rounded-md px-3 py-1.5 text-sm ${aba === id ? "bg-primary/15 font-semibold text-foreground" : "text-muted-foreground hover:bg-secondary/50"}`}>
+      {rotulo}{n > 0 && <span className="ml-1.5 rounded-full bg-red-500 px-1.5 text-[10px] font-bold text-white">{n}</span>}
+    </button>
+  );
 
   return (
     <Sheet open={aberto} onOpenChange={setAberto}>
       <SheetContent side="right" className="w-full max-w-md overflow-y-auto sm:max-w-md">
         <SheetHeader>
-          <SheetTitle className="flex items-center gap-2"><Bell className="h-4 w-4 text-[var(--rt-gold)]" /> Novidades do sistema</SheetTitle>
+          <SheetTitle className="flex items-center gap-2"><Bell className="h-4 w-4 text-[var(--rt-gold)]" /> Notificações</SheetTitle>
         </SheetHeader>
-        <div className="space-y-2 px-4 pb-6">
+        <div className="mx-4 flex gap-1 rounded-lg border border-border p-1">
+          <BotaoAba id="avisos" rotulo="Avisos" n={avisosNaoLidos} />
+          <BotaoAba id="versoes" rotulo="Novidades da versão" n={naoLidas} />
+        </div>
+        {aba === "avisos" && (
+          <div className="px-4 pb-6">
+            <ListaNotificacoes habilitado={habilitado && aberto} onAbrir={url => { setAberto(false); if (url && !url.includes("notificacoes=1")) navigate(url); }} />
+          </div>
+        )}
+        {aba === "versoes" && <div className="space-y-2 px-4 pb-6">
           {naoLidas > 0 && <button type="button" className="text-xs text-primary hover:underline" onClick={() => todas.mutate()}>Marcar todas como lidas ({naoLidas})</button>}
           {lista.length === 0 && <p className="text-sm text-muted-foreground">Nenhuma novidade ainda.</p>}
           {lista.map(r => {
@@ -186,7 +209,7 @@ export function PainelNovidades({ habilitado }: { habilitado: boolean }) {
               </div>
             );
           })}
-        </div>
+        </div>}
       </SheetContent>
     </Sheet>
   );

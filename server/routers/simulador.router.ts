@@ -74,7 +74,7 @@ export const simuladorRouter = router({
       opcoesEntrada,
       textoJuros: textoJuros(c),
       // Breakdown (empresa/corretor, venda direta) só para o admin; o corretor vê só a comissão dele
-      ...comissaoNaSimulacao(ctx.permissoes.perfil, sim.preco, input.entrada, c, pctComissaoCorretor(ctx.permissoes, emp.id, c.comissaoCorretorPct)),
+      ...comissaoNaSimulacao(ctx.permissoes.perfil, sim.preco, input.entrada, c, pctComissaoCorretor(ctx.permissoes, emp.id, c.comissaoCorretorPct), sim.avistaTotal.valor),
       avisoLegal: AVISO_LEGAL_SIMULACAO,
     };
   }),

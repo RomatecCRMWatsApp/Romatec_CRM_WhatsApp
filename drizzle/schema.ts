@@ -651,6 +651,8 @@ export const condicoesPagamento = mysqlTable("condicoesPagamento", {
   entradaPct: decimal("entradaPct", { precision: 6, scale: 4 }).notNull(),
   entradaMaxParcelas: int("entradaMaxParcelas").notNull(),
   descontoAvistaPct: decimal("descontoAvistaPct", { precision: 6, scale: 4 }).notNull(),
+  /** Desconto em R$ do à vista total (lote pago de uma vez) */
+  descontoAvistaTotal: decimal("descontoAvistaTotal", { precision: 12, scale: 2 }).default("10000.00").notNull(),
   jurosAaEfetivo: decimal("jurosAaEfetivo", { precision: 6, scale: 4 }).notNull(),
   metodo: mysqlEnum("metodo", ["PRICE"]).default("PRICE").notNull(),
   prazos: json("prazos").$type<number[]>().notNull(),
@@ -861,4 +863,41 @@ export const systemReleaseLeitura = mysqlTable("systemReleaseLeitura", {
   lidoEm: timestamp("lidoEm").defaultNow().notNull(),
 }, (t) => ({
   uxLeitura: uniqueIndex("ux_release_leitura").on(t.releaseId, t.usuarioId),
+}));
+
+/** Notificações do sininho (v1.8.0): uma linha por destinatário; chave evita repetir o mesmo evento */
+export const notificacoes = mysqlTable("notificacoes", {
+  id: int("id").autoincrement().primaryKey(),
+  usuarioId: int("usuarioId").notNull(),
+  /** atualizacao_sistema | reserva | venda_contrato | liberacao (shared/notificacoes.ts) */
+  tipo: varchar("tipo", { length: 30 }).notNull(),
+  titulo: varchar("titulo", { length: 160 }).notNull(),
+  mensagem: varchar("mensagem", { length: 500 }).notNull(),
+  url: varchar("url", { length: 300 }),
+  empreendimentoId: int("empreendimentoId"),
+  loteId: int("loteId"),
+  /** Ex.: "v1.8.0" no aviso de sistema — não notifica a mesma versão duas vezes */
+  chave: varchar("chave", { length: 80 }),
+  lidaEm: timestamp("lidaEm"),
+  criadoEm: timestamp("criadoEm").defaultNow().notNull(),
+}, (t) => ({
+  ixUsuario: index("ix_notif_usuario").on(t.usuarioId, t.id),
+  ixChave: index("ix_notif_chave").on(t.tipo, t.chave),
+}));
+
+/** Inscrições de Web Push (um registro por aparelho/navegador; endpoint único) */
+export const pushInscricoes = mysqlTable("pushInscricoes", {
+  id: int("id").autoincrement().primaryKey(),
+  usuarioId: int("usuarioId").notNull(),
+  /** sha256 do endpoint (o endpoint é longo demais para índice único) */
+  endpointHash: varchar("endpointHash", { length: 64 }).notNull(),
+  endpoint: text("endpoint").notNull(),
+  p256dh: varchar("p256dh", { length: 200 }).notNull(),
+  auth: varchar("auth", { length: 100 }).notNull(),
+  userAgent: varchar("userAgent", { length: 300 }),
+  criadoEm: timestamp("criadoEm").defaultNow().notNull(),
+  atualizadoEm: timestamp("atualizadoEm").defaultNow().notNull(),
+}, (t) => ({
+  uxEndpoint: uniqueIndex("ux_push_endpoint").on(t.endpointHash),
+  ixUsuario: index("ix_push_usuario").on(t.usuarioId),
 }));

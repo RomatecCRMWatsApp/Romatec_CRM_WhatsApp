@@ -18,6 +18,7 @@ import { financeiroRouter } from "./routers/financeiro.router";
 import { permissoesRouter } from "./routers/permissoes.router";
 import { cadastroRouter } from "./routers/cadastro.router";
 import { novidadesRouter } from "./routers/novidades.router";
+import { notificacoesRouter } from "./routers/notificacoes.router";
 import { exigirAcesso, exigirLead, leadsVisiveis } from "./permissoes";
 import { acessosCorretor } from "../drizzle/schema";
 import { z } from "zod";
@@ -65,6 +66,7 @@ export const appRouter = router({
   permissoes: permissoesRouter,
   cadastro: cadastroRouter,
   novidades: novidadesRouter,
+  notificacoes: notificacoesRouter,
   system: systemRouter,
   auth: router({
     // Sem os hashes de senha (a linha do usuário inteira ia para o navegador)

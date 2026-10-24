@@ -3,6 +3,8 @@
  * Usado quando DATABASE_DRIVER=sqlite (modo local / Electron)
  * Idempotente: usa CREATE TABLE IF NOT EXISTS em todas as tabelas
  */
+import { DESCONTO_AVISTA_TOTAL_PADRAO } from '../../../shared/simulador';
+
 export function initSqliteTables(sqlite: any): void {
   const run = (sql: string) => {
     try { sqlite.prepare(sql).run(); }
@@ -311,6 +313,7 @@ export function initSqliteTables(sqlite: any): void {
     saldoCents INTEGER NOT NULL, parcelaSaldoCents INTEGER NOT NULL, totalPagoCents INTEGER NOT NULL, payload TEXT,
     criadoEm INTEGER NOT NULL DEFAULT (strftime('%s','now'))
   )`);
+  addColumn(`ALTER TABLE condicoesPagamento ADD COLUMN descontoAvistaTotal TEXT NOT NULL DEFAULT '${DESCONTO_AVISTA_TOTAL_PADRAO.toFixed(2)}'`);
   // Cadastro completo dos usuários (server/_core/migrations/addCadastroUsuarios.ts)
   for (const c of ['creciUf', 'cpf', 'rg', 'rgOrgao', 'nacionalidade', 'estadoCivil', 'enderecoLogradouro', 'enderecoNumero', 'enderecoComplemento',
     'enderecoBairro', 'enderecoCidade', 'enderecoUf', 'enderecoCep', 'certidaoCreciValidade', 'fotoUrl']) {
@@ -357,6 +360,16 @@ export function initSqliteTables(sqlite: any): void {
   )`);
   // v1.7.0 — notas de versão e tela de descanso (server/_core/migrations/addReleases.ts)
   addColumn(`ALTER TABLE users ADD COLUMN descansoMinutos INTEGER NOT NULL DEFAULT 3`);
+  // v1.8.0 — notificações e Web Push (server/_core/migrations/addNotificacoes.ts)
+  run(`CREATE TABLE IF NOT EXISTS notificacoes (
+    id INTEGER PRIMARY KEY AUTOINCREMENT, usuarioId INTEGER NOT NULL, tipo TEXT NOT NULL, titulo TEXT NOT NULL, mensagem TEXT NOT NULL,
+    url TEXT, empreendimentoId INTEGER, loteId INTEGER, chave TEXT, lidaEm INTEGER, criadoEm INTEGER NOT NULL DEFAULT (strftime('%s','now'))
+  )`);
+  run(`CREATE TABLE IF NOT EXISTS pushInscricoes (
+    id INTEGER PRIMARY KEY AUTOINCREMENT, usuarioId INTEGER NOT NULL, endpointHash TEXT NOT NULL UNIQUE, endpoint TEXT NOT NULL,
+    p256dh TEXT NOT NULL, auth TEXT NOT NULL, userAgent TEXT,
+    criadoEm INTEGER NOT NULL DEFAULT (strftime('%s','now')), atualizadoEm INTEGER NOT NULL DEFAULT (strftime('%s','now'))
+  )`);
   run(`CREATE TABLE IF NOT EXISTS systemRelease (
     id INTEGER PRIMARY KEY AUTOINCREMENT, versao TEXT NOT NULL UNIQUE, tipo TEXT NOT NULL DEFAULT 'patch', titulo TEXT NOT NULL, itens TEXT NOT NULL,
     obrigatoria INTEGER NOT NULL DEFAULT 0, publico TEXT NOT NULL DEFAULT 'todos', publicadoEm INTEGER NOT NULL DEFAULT (strftime('%s','now')),

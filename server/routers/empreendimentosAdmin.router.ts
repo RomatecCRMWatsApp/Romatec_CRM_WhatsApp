@@ -12,6 +12,8 @@ import { SITUACOES_LOTE, problemaVenda, statusPublicoDe, etapaDoLeadPelaVenda, s
 import { etapaDoLead } from "../leads/kanban";
 import { exigirAcesso, exigirLead, type PermissoesUsuario } from "../permissoes";
 import { temAcesso } from "../../shared/permissoes";
+import { eventoDaMudanca } from "../../shared/notificacoes";
+import { dadosDoEmpreendimento, notificarMudancaLote } from "../notificacoes";
 
 async function dbOrThrow() {
   const db = await getDb();
@@ -170,6 +172,15 @@ export const empreendimentosAdminRouter = router({
             ...(avanca ? { etapa: alvo } : {}), updatedAt: agora,
           } as any).where(eq(leadQualifications.id, lead.id));
         }
+      }
+      // Reserva / venda / liberação: sininho e push de quem tem acesso ao empreendimento (sem travar a resposta)
+      if (eventoDaMudanca(lote.situacao, input.situacao)) {
+        dadosDoEmpreendimento(lote.empreendimentoId)
+          .then(emp => emp && notificarMudancaLote({
+            loteId: lote.id, codigo: lote.codigo, empreendimentoId: lote.empreendimentoId, empreendimentoSlug: emp.slug, empreendimentoNome: emp.nome,
+            de: lote.situacao, para: input.situacao, autorId: ctx.user.id, autorNome: (ctx.user as any).name ?? null,
+          }))
+          .catch(e => console.warn("[Notificações] lote", lote.codigo, e?.message ?? e));
       }
       return { success: true };
     }),
