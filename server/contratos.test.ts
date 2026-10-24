@@ -84,6 +84,27 @@ describe('contexto e gate', () => {
   });
 });
 
+describe('anexos da unidade (I memorial, V mapa, VI licença)', () => {
+  it('memorial e mapa saem da geometria do DXF; sem o PDF da LO, o Anexo VI vira página "a anexar"', async () => {
+    const { PDFDocument } = await import('pdf-lib');
+    const { anexoLicenca, anexoMapa, anexoMemorial } = await import('./contratos/anexosLote');
+    const { memorialDoLote } = await import('./lotes/memorial');
+    const q = (e: number, n: number): [number, number][] => [[e, n], [e + 55, n], [e + 55, n - 55], [e, n - 55]];
+    const lote = { codigo: 'A01', quadra: 'A', numero: 1, areaM2: 3025, perimetroM: 220, verticesUtm: q(236000, 9455000) };
+    const vizinho = { codigo: 'A02', quadra: 'A', numero: 2, areaM2: 3025, perimetroM: 220, verticesUtm: q(236055, 9455000) };
+    const memorial = memorialDoLote(lote, [lote, vizinho], { nome: 'Bom Jardims', fuso: 23 });
+    expect(memorial.vertices.some(v => /Lote 02 da Quadra A/.test(v.confronta))).toBe(true);
+    const unidade = { ...lote, memorial, outros: [vizinho], perimetroUtm: q(235900, 9455100).map(([e, n]) => [e * 1, n] as [number, number]), ruas: [], fuso: 23 };
+    const ctx = montarContexto(entrada());
+    for (const pdf of [await anexoMemorial(unidade, ctx, 'bomjardims'), await anexoMapa(unidade, ctx, 'bomjardims')]) {
+      expect((await PDFDocument.load(pdf)).getPageCount()).toBeGreaterThanOrEqual(1);
+    }
+    expect((await PDFDocument.load(await anexoLicenca(ctx, 'bomjardims'))).getPageCount()).toBe(1);
+    const lo = Buffer.from('%PDF-LO');
+    expect(await anexoLicenca(ctx, 'bomjardims', lo)).toBe(lo);
+  });
+});
+
 describe('marca do empreendimento', () => {
   it('troca cabeçalho, marca d\'água e rodapé do modelo pelos PNGs da marca', async () => {
     const zip = new PizZip(await readFile('templates/MODELO-CPCV-BOM-JARDIMS-v2.docx'));

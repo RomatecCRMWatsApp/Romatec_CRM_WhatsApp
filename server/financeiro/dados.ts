@@ -116,5 +116,6 @@ export function dadosCarne(ctx: ContextoDocs, bloco: CobrancaDoc[], n: number | 
     linhas: bloco.map(c => ({ parcela: rotuloParcela(c), vencimento: c.vencimento, valor: c.valor, juros: c.juros, amortizacao: c.amortizacao, saldoApos: c.saldoDevedor })),
     laminas: bloco.map(c => dadosLamina(ctx, c)),
     urlCarneDigital: `${ctx.urlPublica}/c/${ctx.contrato.codigoVerificacao}`,
+    beneficiario: ctx.beneficiario,
   };
 }

@@ -3,6 +3,16 @@
 Cada versão nova vai no TOPO. Depois rode `npm run release` (valida e atualiza o package.json);
 ao subir, o servidor grava a versão no banco e todos recebem o aviso "Novidades da versão".
 
+## 1.10.1 — 2026-10-24
+tipo: patch
+obrigatoria: nao
+titulo: Memorial e mapa do lote no contrato; beneficiário pela conta Asaas
+
+### Melhorias
+- Contrato com o memorial descritivo da chácara (Anexo I) e o mapa individual da unidade (Anexo V), gerados da planta georreferenciada
+- Licença de Operação e certidão do registro (Anexo VI) entram quando o administrador anexar; até lá, página "a anexar"
+- Beneficiário de boletos, carnê e recibo vem do titular da conta Asaas configurada para o empreendimento
+
 ## 1.10.0 — 2026-10-24
 tipo: minor
 obrigatoria: nao

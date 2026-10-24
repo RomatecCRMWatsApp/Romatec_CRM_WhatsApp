@@ -461,6 +461,7 @@ export function initSqliteTables(sqlite: any): void {
   for (const c of ['valorOriginal TEXT', 'vencimentoOriginal TEXT', 'segundaViaEm INTEGER', 'formaPagamento TEXT', 'asaasSnapshot TEXT']) {
     addColumn(`ALTER TABLE cobrancas ADD COLUMN ${c}`);
   }
+  addColumn(`ALTER TABLE empJuridico ADD COLUMN asaasBeneficiario TEXT`);
   run(`CREATE TABLE IF NOT EXISTS recibos (
     id INTEGER PRIMARY KEY AUTOINCREMENT, numero TEXT NOT NULL UNIQUE, cobrancaId INTEGER NOT NULL UNIQUE, contratoId INTEGER NOT NULL,
     codigoVerif TEXT NOT NULL, valorPago TEXT NOT NULL, pagoEm TEXT NOT NULL, pdfArquivo TEXT, enviadoEm INTEGER, envioErro TEXT, criadoEm ${agora}

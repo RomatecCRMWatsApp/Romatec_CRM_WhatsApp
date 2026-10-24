@@ -938,6 +938,8 @@ export const empJuridico = mysqlTable("empJuridico", {
   modeloVersao: varchar("modeloVersao", { length: 30 }).default("CPCV-BJ v2.0").notNull(),
   /** Pasta templates/marca/<slug> (cabeçalho, marca d'água, rodapé) */
   marcaSlug: varchar("marcaSlug", { length: 40 }).default("bomjardims").notNull(),
+  /** Titular da conta Asaas da chave do empreendimento — beneficiário dos boletos (lido de /myAccount; muda ao trocar a chave) */
+  asaasBeneficiario: json("asaasBeneficiario").$type<{ nome: string; cpfCnpj: string; agenciaConta: string; atualizadoEm: string; chave: string }>(),
   atualizadoPor: int("atualizadoPor"),
   atualizadoEm: timestamp("atualizadoEm").defaultNow().onUpdateNow().notNull(),
 });

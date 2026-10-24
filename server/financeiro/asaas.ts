@@ -17,8 +17,21 @@ export class AsaasErro extends Error {
 
 export interface AsaasConfig { apiKey: string; baseUrl: string; ambiente: 'producao' | 'sandbox'; walletComissao: string | null }
 
-export function configAsaas(env: NodeJS.ProcessEnv = process.env): AsaasConfig | null {
-  const apiKey = (env.ASAAS_API_KEY_BOMJARDIMS || env.ASAAS_API_KEY || '').trim();
+/** 'bom-jardims' → 'BOM_JARDIMS' (sufixo das variáveis por empreendimento) */
+export const sufixoEnv = (slug: string) => slug.toUpperCase().replace(/[^A-Z0-9]+/g, '_').replace(/^_|_$/g, '');
+
+/**
+ * Chave do empreendimento: ASAAS_API_KEY_<SLUG> (ex.: ASAAS_API_KEY_BOM_JARDIMS); aceita também o nome do spec
+ * sem separador (ASAAS_API_KEY_BOMJARDIMS) e, por último, ASAAS_API_KEY (a mesma do ZAYRA).
+ * Trocar a chave troca a conta — e com ela o beneficiário de todos os documentos.
+ */
+export function chaveDoEmpreendimento(slug: string, env: NodeJS.ProcessEnv = process.env): string {
+  const s = sufixoEnv(slug);
+  return (env[`ASAAS_API_KEY_${s}`] || env[`ASAAS_API_KEY_${s.replace(/_/g, '')}`] || env.ASAAS_API_KEY || '').trim();
+}
+
+export function configAsaas(env: NodeJS.ProcessEnv = process.env, slug = 'bom-jardims'): AsaasConfig | null {
+  const apiKey = chaveDoEmpreendimento(slug, env);
   if (!apiKey) return null;
   const amb = (env.ASAAS_AMBIENTE || '').toLowerCase();
   const ambiente: AsaasConfig['ambiente'] =
@@ -27,10 +40,25 @@ export function configAsaas(env: NodeJS.ProcessEnv = process.env): AsaasConfig |
   return { apiKey, baseUrl, ambiente, walletComissao: (env.ASAAS_WALLET_COMISSAO || '').trim() || null };
 }
 
-export function exigirConfigAsaas(env: NodeJS.ProcessEnv = process.env): AsaasConfig {
-  const c = configAsaas(env);
-  if (!c) throw new AsaasErro('ASAAS_NAO_CONFIGURADO', 'Cobrança desligada: defina ASAAS_API_KEY_BOMJARDIMS no Railway', 503);
+export function exigirConfigAsaas(env: NodeJS.ProcessEnv = process.env, slug = 'bom-jardims'): AsaasConfig {
+  const c = configAsaas(env, slug);
+  if (!c) throw new AsaasErro('ASAAS_NAO_CONFIGURADO', `Cobrança desligada: defina ASAAS_API_KEY_${sufixoEnv(slug)} no Railway`, 503);
   return c;
+}
+
+/** Beneficiário dos boletos = dono da conta Asaas da chave (nome + CPF/CNPJ) e agência/conta */
+export interface BeneficiarioAsaas { nome: string; cpfCnpj: string; agenciaConta: string; atualizadoEm: string }
+
+export async function beneficiarioDaConta(cfg: AsaasConfig, fetchFn?: FetchFn): Promise<BeneficiarioAsaas> {
+  const info = await asaasReq<{ name?: string; companyName?: string; cpfCnpj?: string }>(cfg, 'GET', '/myAccount/commercialInfo', undefined, fetchFn);
+  const conta = await numeroConta(cfg, fetchFn).catch(() => null);
+  const nome = (info?.companyName || info?.name || '').trim();
+  if (!nome) throw new AsaasErro('ASAAS_SEM_BENEFICIARIO', 'Asaas não devolveu o titular da conta', 502);
+  return {
+    nome, cpfCnpj: (info?.cpfCnpj || '').replace(/\D/g, ''),
+    agenciaConta: conta?.agency ? `${conta.agency} / ${conta.account ?? ''}${conta.accountDigit ? `-${conta.accountDigit}` : ''}` : '',
+    atualizadoEm: new Date().toISOString(),
+  };
 }
 
 export type FetchFn = (url: string, init: { method: string; headers: Record<string, string>; body?: string; signal: AbortSignal }) => Promise<{ status: number; text(): Promise<string> }>;

@@ -40,7 +40,8 @@ const ctx: ContextoDocs = {
   contrato: { id: 1, numero: 'BJ-2026-0001', modeloVersao: 'CPCV-BJ v2.0', codigoVerificacao: 'EX7K2M9P4Q1R' },
   lote: { codigo: 'A01', quadra: 'A', areaM2: 3025.11 },
   comprador: { nome: 'NOME DO COMPRADOR EXEMPLO', cpfCnpj: '00000000000', endereco: 'Endereço do comprador · Açailândia/MA · CEP 65.930-000' },
-  beneficiario: 'VALMA MARILDA BONJARDIM FIGUEREDO — CPF 364.274.623-34',
+  // No sistema vem da conta Asaas da chave do empreendimento (/myAccount); aqui, o titular atual de exemplo
+  beneficiario: 'ROMATEC CONSULTORIA TOTAL — CNPJ 17.261.987/0001-09',
   agenciaCodigo: '0001 / 0000000-0',
   urlPublica: 'https://romateccrm.com',
   plano,

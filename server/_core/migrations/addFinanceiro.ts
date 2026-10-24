@@ -16,6 +16,8 @@ const COLUNAS: [string, string, string][] = [
   ['cobrancas', 'segundaViaEm', 'DATETIME NULL'],
   ['cobrancas', 'formaPagamento', 'VARCHAR(12) NULL'],
   ['cobrancas', 'asaasSnapshot', 'JSON NULL'],
+  // Beneficiário = titular da conta Asaas da chave do empreendimento (lido de /myAccount; muda sozinho ao trocar a chave)
+  ['empJuridico', 'asaasBeneficiario', 'JSON NULL'],
 ];
 
 const TABELAS: [string, string][] = [

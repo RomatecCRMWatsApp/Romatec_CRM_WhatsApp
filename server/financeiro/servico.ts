@@ -2,16 +2,16 @@
  * Serviços do Bloco Financeiro: contexto dos documentos, recibo automático (idempotente), webhook do Asaas,
  * 2ª via atualizada e auditoria. Asaas DORMENTE sem chave: nada é emitido, cobrado nem enviado ao cliente.
  */
-import { randomBytes } from 'node:crypto';
+import { createHash, randomBytes } from 'node:crypto';
 import { and, eq, like, sql } from 'drizzle-orm';
 import { getDb } from '../db';
 import {
-  asaasWebhookLog, cobrancas, contratoPessoas, contratos, empJuridico, financeiroAuditoria, indicesIpca, lotes, pessoas, recibos,
+  asaasWebhookLog, cobrancas, contratoPessoas, contratos, empJuridico, empreendimentos, financeiroAuditoria, indicesIpca, lotes, pessoas, recibos,
 } from '../../drizzle/schema';
 import type { PlanoContrato } from '../contratos/plano';
 import { salvarArquivo, lerArquivo } from '../contratos/arquivos';
 import { enderecoCompleto } from '../contratos/contexto';
-import { atualizarCobranca, configAsaas, dadosDePagamento, payloadSegundaVia, statusLocal, type AsaasConfig, type FetchFn } from './asaas';
+import { atualizarCobranca, beneficiarioDaConta, configAsaas, dadosDePagamento, payloadSegundaVia, statusLocal, type AsaasConfig, type FetchFn } from './asaas';
 import { calcularEncargos, diasEntre, DIAS_MAX_SEGUNDA_VIA, somarDiasUteis } from './encargos';
 import { docMascarado, rotuloParcela, type CobrancaDoc, type ContextoDocs, type SnapshotAsaas, dadosParcela } from './dados';
 import { renderBoletoA4, renderRecibo } from './render/documentos';
@@ -86,7 +86,8 @@ export async function contextoDocs(contratoId: number): Promise<ContextoDocs> {
   const [j] = await d.select().from(empJuridico).where(eq(empJuridico.empreendimentoId, c.empreendimentoId)).limit(1);
   const [l] = await d.select().from(lotes).where(and(eq(lotes.empreendimentoId, c.empreendimentoId), eq(lotes.codigo, c.loteCodigo))).limit(1);
   const { comprador } = await pessoasDoContrato(contratoId);
-  const vend = json<Record<string, string>>(j?.vendedoraJson) ?? {};
+  const [emp] = await d.select({ slug: empreendimentos.slug }).from(empreendimentos).where(eq(empreendimentos.id, c.empreendimentoId)).limit(1);
+  const benef = await beneficiarioDoEmpreendimento(c.empreendimentoId, emp?.slug ?? 'bom-jardims');
   const plano = json<PlanoContrato>(c.simulacaoJson)!;
   return {
     contrato: { id: c.id, numero: c.numero, modeloVersao: j?.modeloVersao ?? 'CPCV-BJ v2.0', codigoVerificacao: c.codigoVerificacao },
@@ -94,11 +95,50 @@ export async function contextoDocs(contratoId: number): Promise<ContextoDocs> {
     comprador: comprador
       ? { nome: String(comprador.nome).toUpperCase(), cpfCnpj: comprador.cpfCnpj, endereco: enderecoCompleto(comprador as any) || '—' }
       : { nome: '—', cpfCnpj: '', endereco: '—' },
-    beneficiario: vend.vend_nome ? `${vend.vend_nome}${vend.vend_cpf ? ` — CPF ${vend.vend_cpf}` : ''}` : '—',
-    agenciaCodigo: (json<Record<string, string>>(j?.defaultsJson) ?? {}).asaas_agencia_conta ?? '—',
+    beneficiario: benef.texto,
+    agenciaCodigo: benef.agenciaConta || '—',
     urlPublica: urlPublica(),
     plano,
   };
+}
+
+/** Slug do empreendimento do contrato (escolhe a chave Asaas: ASAAS_API_KEY_<SLUG>) */
+export async function slugDoContrato(contratoId: number): Promise<string> {
+  const d = await db();
+  const [r] = await d.select({ slug: empreendimentos.slug }).from(contratos).innerJoin(empreendimentos, eq(empreendimentos.id, contratos.empreendimentoId))
+    .where(eq(contratos.id, contratoId)).limit(1);
+  return r?.slug ?? 'bom-jardims';
+}
+
+export const BENEFICIARIO_PENDENTE = 'Beneficiário: conta Asaas do empreendimento não configurada';
+const UM_DIA = 86_400_000;
+
+/**
+ * Beneficiário dos boletos/carnê/recibo = titular da conta Asaas da chave configurada para o empreendimento
+ * (ASAAS_API_KEY_<SLUG>), lido de /myAccount e guardado em empJuridico.asaasBeneficiario. Nunca é constante no código:
+ * trocou a chave (outra conta, ex.: uma SPE), a impressão digital da chave muda e o beneficiário é relido.
+ */
+export async function beneficiarioDoEmpreendimento(empreendimentoId: number, slug: string, o: { fetchFn?: FetchFn; env?: NodeJS.ProcessEnv } = {}):
+  Promise<{ texto: string; nome: string; cpfCnpj: string; agenciaConta: string; configurado: boolean }> {
+  const d = await db();
+  const [j] = await d.select({ b: empJuridico.asaasBeneficiario }).from(empJuridico).where(eq(empJuridico.empreendimentoId, empreendimentoId)).limit(1);
+  const salvo = json<{ nome: string; cpfCnpj: string; agenciaConta: string; atualizadoEm: string; chave: string }>(j?.b);
+  const cfg = configAsaas(o.env ?? process.env, slug);
+  const formatar = (b: { nome: string; cpfCnpj: string; agenciaConta: string }, configurado: boolean) => ({
+    ...b, configurado, texto: b.cpfCnpj ? `${b.nome} — ${docMascarado(b.cpfCnpj)}` : b.nome,
+  });
+  if (!cfg) return { texto: BENEFICIARIO_PENDENTE, nome: '', cpfCnpj: '', agenciaConta: '', configurado: false };
+  const chave = createHash('sha256').update(cfg.apiKey).digest('hex').slice(0, 16);
+  if (salvo && salvo.chave === chave && Date.now() - Date.parse(salvo.atualizadoEm) < UM_DIA) return formatar(salvo, true);
+  try {
+    const b = await beneficiarioDaConta(cfg, o.fetchFn);
+    if (j) await d.update(empJuridico).set({ asaasBeneficiario: { ...b, chave } as any }).where(eq(empJuridico.empreendimentoId, empreendimentoId));
+    return formatar(b, true);
+  } catch (e: any) {
+    // Asaas fora do ar: vale o último lido DESTA chave; de outra chave, nunca
+    if (salvo && salvo.chave === chave) return formatar(salvo, true);
+    throw new FinanceiroErro('SEM_BENEFICIARIO', `Não foi possível ler o titular da conta Asaas (${e?.message ?? e})`, 502);
+  }
 }
 
 export async function indicesIpcaMap(): Promise<Map<string, number>> {
@@ -184,7 +224,9 @@ export async function pdfRecibo(reciboId: number, publico = false): Promise<Buff
 
 /** Envio do recibo (WhatsApp do comprador e do cônjuge). Falha de envio não reemite: fica registrada para reenviar. */
 export async function enviarRecibo(reciboId: number, origem = 'webhook'): Promise<{ enviado: boolean; erro?: string }> {
-  if (!configAsaas()) return { enviado: false, erro: 'Cobrança desligada (Asaas sem chave): nada é enviado ao cliente' };
+  const [rec] = await (await db()).select({ contratoId: recibos.contratoId }).from(recibos).where(eq(recibos.id, reciboId)).limit(1);
+  if (!rec) throw new FinanceiroErro('NAO_ENCONTRADO', 'Recibo não encontrado', 404);
+  if (!configAsaas(process.env, await slugDoContrato(rec.contratoId))) return { enviado: false, erro: 'Cobrança desligada (Asaas sem chave): nada é enviado ao cliente' };
   const { recibo } = await dadosRecibo(reciboId);
   const pdf = await pdfRecibo(reciboId);
   const { comprador, conjuge } = await pessoasDoContrato(recibo.contratoId);
@@ -278,7 +320,7 @@ export async function segundaVia(cobrancaId: number, o: { hoje?: string; cfg?: A
   if (!['vencida', 'emitida'].includes(c.status) || c.vencimento >= hoje) throw new FinanceiroErro('NAO_VENCIDA', 'A 2ª via atualizada é só para parcela vencida', 409);
   const atraso = diasEntre(vencOriginal, hoje);
   if (atraso > DIAS_MAX_SEGUNDA_VIA) throw new FinanceiroErro('negociacao_necessaria', `Parcela vencida há ${atraso} dias: procure a administração para negociar`, 409);
-  const cfg = o.cfg === undefined ? configAsaas() : o.cfg;
+  const cfg = o.cfg === undefined ? configAsaas(process.env, await slugDoContrato(c.contratoId)) : o.cfg;
   if (!cfg) throw new FinanceiroErro('ASAAS_NAO_CONFIGURADO', 'Cobrança desligada: defina ASAAS_API_KEY_BOMJARDIMS no Railway', 503);
   if (!c.asaasPaymentId) throw new FinanceiroErro('SEM_ASAAS', 'Parcela ainda não emitida no Asaas', 409);
 

@@ -11,7 +11,7 @@ import { cobrancas, contratos, declaracoesQuitacao, empJuridico, indicesIpca } f
 import { salvarArquivo } from '../contratos/arquivos';
 import { diaUtil } from './encargos';
 import { rotuloParcela } from './dados';
-import { auditar, codigoVerificacao, contextoDocs, hojeBrasil, linhaParaCobranca, pessoasDoContrato, urlPublica } from './servico';
+import { auditar, codigoVerificacao, contextoDocs, hojeBrasil, linhaParaCobranca, pessoasDoContrato, slugDoContrato, urlPublica } from './servico';
 import { renderDeclaracaoAnual } from './render/documentos';
 import { configAsaas } from './asaas';
 
@@ -102,7 +102,7 @@ export async function gerarDeclaracoesAnuais(ano: number, hoje = hojeBrasil()) {
     await db.insert(declaracoesQuitacao).values({ contratoId: c.id, anoRef: ano, status: 'emitida', valorTotal: String(total), pdfArquivo: chave, criadoEm: new Date() });
     res.emitidas++;
     // Envio ao cliente só com a cobrança ligada (Asaas configurado)
-    if (configAsaas()) {
+    if (configAsaas(process.env, await slugDoContrato(c.id))) {
       const { comprador } = await pessoasDoContrato(c.id);
       if (comprador?.telefone1) {
         try {

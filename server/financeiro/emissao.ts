@@ -8,7 +8,7 @@ import { getDb } from '../db';
 import { cobrancas, contratos } from '../../drizzle/schema';
 import type { PlanoContrato } from '../contratos/plano';
 import { buscarOuCriarCliente, criarCobranca, dadosDePagamento, exigirConfigAsaas, payloadCliente, payloadCobranca, type FetchFn } from './asaas';
-import { auditar, contextoDocs, FinanceiroErro, hojeBrasil, pessoasDoContrato } from './servico';
+import { auditar, contextoDocs, FinanceiroErro, hojeBrasil, pessoasDoContrato, slugDoContrato } from './servico';
 import { blocoDoCarne, rotuloParcela } from './dados';
 import { r2 } from '../../shared/simulador';
 
@@ -48,7 +48,7 @@ export async function gerarCobrancasDoPlano(contratoId: number, plano: PlanoCont
 
 /** Emite no Asaas as cobranças previstas do carnê (bloco de 12) — só contrato ativo e Asaas configurado */
 export async function emitirCarneNoAsaas(contratoId: number, bloco: number, o: { usuarioId?: number; fetchFn?: FetchFn } = {}) {
-  const cfg = exigirConfigAsaas();
+  const cfg = exigirConfigAsaas(process.env, await slugDoContrato(contratoId));
   const db = (await getDb()) as any;
   const [c] = await db.select().from(contratos).where(eq(contratos.id, contratoId)).limit(1);
   if (!c) throw new FinanceiroErro('NAO_ENCONTRADO', 'Contrato não encontrado', 404);

@@ -16,6 +16,7 @@ import { SEED_EMP_JURIDICO } from '../server/_core/migrations/seedContratos';
 import { montarContexto, type EntradaContexto } from '../server/contratos/contexto';
 import { planoDoContrato } from '../server/contratos/plano';
 import { gerarContratoPdf } from '../server/contratos/gerar';
+import type { DadosUnidade } from '../server/contratos/anexosLote';
 import { hojeIso } from '../server/contratos/formato';
 
 const saida = path.resolve(process.argv[2] ?? 'contrato-exemplo');
@@ -45,6 +46,13 @@ const memorial = memorialDoLote(lote, todos, { nome: 'Condomínio de Chácaras B
 const v = memorial.vertices.map(x => [x.e, x.n] as [number, number]);
 // O mapa público não traz o traçado de todas as ruas; no sistema a frente vem de lotes.viaFrente
 const viaFrente = v.map((a, i) => ruaDoLado(a, v[(i + 1) % v.length], ruas)).find(Boolean) ?? '';
+
+// Geometria da unidade para o memorial (Anexo I) e o mapa individual (Anexo V)
+const unidade: DadosUnidade = {
+  codigo: lote.codigo, quadra: lote.quadra, numero: lote.numero, areaM2: lote.areaM2, perimetroM: Math.round(lote.perimetroM * 100) / 100,
+  verticesUtm: lote.verticesUtm, memorial, outros: todos.filter(l => l.codigo !== lote.codigo), perimetroUtm, ruas, fuso: FUSO,
+  responsavelTecnico: 'José Romário Pinto Bezerra — Técnico em Agrimensura CFT/MA 01209185369 · INCRA FQNS',
+};
 
 const sim = simular(lote.areaM2, 6, condicoes);
 const plano = planoDoContrato(sim, { modalidade: 'financiado', prazo: 120, dataPrimeiroPagamento: '2026-11-10' }, condicoes, false);
@@ -82,12 +90,12 @@ const ficticios = {
 
 await mkdir(saida, { recursive: true });
 const ctxMinuta = montarContexto(base);
-const minuta = await gerarContratoPdf(ctxMinuta, plano, { alvo: 'minuta', modelo: 'MODELO-CPCV-BOM-JARDIMS-v2.docx', marca: 'bomjardims' });
+const minuta = await gerarContratoPdf(ctxMinuta, plano, { alvo: 'minuta', modelo: 'MODELO-CPCV-BOM-JARDIMS-v2.docx', marca: 'bomjardims', unidade });
 await writeFile(path.join(saida, 'CPCV-BJ-2026-0001-A01-MINUTA.pdf'), minuta.pdf);
 
 const ctxDef = montarContexto({ ...base, lote: { ...base.lote, matricula: '00.001 (exemplo)', viaFrente: base.lote.viaFrente || 'via interna do condomínio (exemplo)' }, overrides: ficticios });
 const definitivo = await gerarContratoPdf(ctxDef, plano, {
-  alvo: 'definitivo', modelo: 'MODELO-CPCV-BOM-JARDIMS-v2.docx', marca: 'bomjardims', previaSemValor: 'EXEMPLO — DADOS FICTÍCIOS',
+  alvo: 'definitivo', modelo: 'MODELO-CPCV-BOM-JARDIMS-v2.docx', marca: 'bomjardims', unidade, previaSemValor: 'EXEMPLO — DADOS FICTÍCIOS',
 });
 await writeFile(path.join(saida, 'CPCV-BJ-2026-0001-A01-DEFINITIVO-EXEMPLO.pdf'), definitivo.pdf);
 

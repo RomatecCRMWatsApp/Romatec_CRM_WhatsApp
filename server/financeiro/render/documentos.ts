@@ -31,7 +31,7 @@ export const INSTRUCOES_PAGAMENTO = (contato: Contato) => [
   'Pague pelo QR Code PIX (compensação imediata) ou pela linha digitável/código de barras em qualquer banco, lotérica ou app.',
   'Após o vencimento: correção pelo IPCA/IBGE, multa de 2% e juros de mora de 1% ao mês pro rata die (CPCV, Cláusula 7ª; CDC, art. 52, § 1º).',
   'Antecipação de parcelas com redução proporcional dos juros (CDC, art. 52, § 2º) — solicite o cálculo à administração.',
-  'Pague somente por este boleto/PIX, em nome da vendedora. Nunca pague em dinheiro, a corretores ou a terceiros.',
+  'Pague somente por este boleto/PIX, em nome do beneficiário indicado na ficha. Nunca pague em dinheiro, a corretores ou a terceiros.',
   `Recibo automático por WhatsApp e e-mail após a compensação. 2ª via e carnê digital: ${contato.atendimento}.`,
 ];
 
@@ -141,6 +141,8 @@ export interface DadosCarne {
   laminas: DadosLamina[];
   /** URL do carnê digital (/c/:codigo) */
   urlCarneDigital: string;
+  /** Titular da conta Asaas (nunca constante) */
+  beneficiario: string;
 }
 
 const pct = (v: number, d = 0) => `${(v * 100).toLocaleString('pt-BR', { minimumFractionDigits: d, maximumFractionDigits: d })}%`;
@@ -164,7 +166,7 @@ function capa(k: Kit, d: DadosCarne, contato: Contato) {
   const itens: [string, string][] = [
     ['Contrato', `${d.contratoNumero} · ${d.modeloVersao}`], ['Promissário(a) comprador(a)', `${d.compradorNome} — ${d.compradorDoc}`],
     ['Unidade', d.unidade], ['Preço de tabela', brl(d.precoTabela)], ['Entrada (30%)', d.entradaResumo], ['Saldo', d.saldoResumo],
-    ['Este carnê', d.esteCarne], ['Emissão', 'Boletos e PIX emitidos pelo Asaas em nome da vendedora'],
+    ['Este carnê', d.esteCarne], ['Beneficiário', d.beneficiario], ['Emissão', 'Boletos e PIX emitidos pelo Asaas'],
   ];
   let y = ct - 26;
   for (const [r, v] of itens) { campo(k, p, cx + 20, y, r, v, { size: 9.6, maxW: cw - 40 }); y -= 31.5; }
@@ -294,7 +296,7 @@ export async function renderRecibo(d: DadosRecibo, o: OpcoesDoc = {}): Promise<B
   campo(k, p, c2, ly, 'Parcelas a vencer', d.parcelasAVencer);
   y -= hc + 22;
   texto(p, 'A quitação refere-se exclusivamente à parcela acima, sem prejuízo das demais obrigações do contrato.', 42, y, 7.6, k.f);
-  texto(p, `Beneficiária: ${d.beneficiario} · Identificador Asaas: ${d.asaasId}`, 42, y - 13, 7.6, k.f, COR.preto, W - 84);
+  texto(p, `Beneficiário: ${d.beneficiario} · Identificador Asaas: ${d.asaasId}`, 42, y - 13, 7.6, k.f, COR.preto, W - 84);
   y -= 40;
   const qr = await qrPng(k, d.urlVerificacao);
   p.drawImage(qr, { x: 50, y: y - 72, width: 72, height: 72 });

@@ -20,6 +20,7 @@ const { verificarRecibo, tokenConfere, corpoDoEvento } = await import('./finance
 const { assinarLink, linkValido } = await import('./financeiro/links');
 const { lerSidra, segundoDiaUtilDeMaio, situacaoDoAno } = await import('./financeiro/jobs');
 const schema = await import('../drizzle/schema');
+const awaitAsaas = await import('./financeiro/asaas');
 const { getDb } = await import('./db');
 
 const C = {
@@ -244,6 +245,33 @@ describe('7. verificação pública do recibo', () => {
     const ok = await verificarRecibo(r.numero, r.codigoVerif.toLowerCase());
     expect(ok.pdf && (await PDFDocument.load(ok.pdf)).getPageCount()).toBe(1);
     expect((await verificarRecibo('REC-BJ-1900-000001')).status).toBe(404);
+  });
+});
+
+describe('beneficiário = titular da conta Asaas do empreendimento (nunca constante)', () => {
+  const { chaveDoEmpreendimento } = awaitAsaas;
+  it('chave por empreendimento: ASAAS_API_KEY_<SLUG>, nome do spec sem separador e, por último, ASAAS_API_KEY', () => {
+    expect(chaveDoEmpreendimento('bom-jardims', { ASAAS_API_KEY_BOM_JARDIMS: 'k1', ASAAS_API_KEY: 'k0' } as any)).toBe('k1');
+    expect(chaveDoEmpreendimento('bom-jardims', { ASAAS_API_KEY_BOMJARDIMS: 'k2' } as any)).toBe('k2');
+    expect(chaveDoEmpreendimento('outro-emp', { ASAAS_API_KEY_BOM_JARDIMS: 'k1', ASAAS_API_KEY: 'k0' } as any)).toBe('k0');
+    expect(chaveDoEmpreendimento('outro-emp', {} as any)).toBe('');
+  });
+
+  it('lê nome + CPF/CNPJ de /myAccount; trocou a chave (outra conta), o beneficiário muda sem mexer no código', async () => {
+    const conta = (nome: string, doc: string) => async (url: string) => ({
+      status: 200,
+      text: async () => JSON.stringify(url.endsWith('/myAccount/commercialInfo') ? { companyName: nome, cpfCnpj: doc } : { agency: '0001', account: '123456', accountDigit: '7' }),
+    });
+    const sem = await S.beneficiarioDoEmpreendimento(1, 'bom-jardims', { env: {} as any });
+    expect(sem).toMatchObject({ configurado: false, texto: S.BENEFICIARIO_PENDENTE });
+    const a = await S.beneficiarioDoEmpreendimento(1, 'bom-jardims', { env: { ASAAS_API_KEY_BOM_JARDIMS: 'chave-romatec' } as any, fetchFn: conta('ROMATEC CONSULTORIA TOTAL', '17261987000109') as any });
+    expect(a.texto).toBe('ROMATEC CONSULTORIA TOTAL — CNPJ 17.261.987/0001-09');
+    expect(a.agenciaConta).toBe('0001 / 123456-7');
+    const b = await S.beneficiarioDoEmpreendimento(1, 'bom-jardims', { env: { ASAAS_API_KEY_BOM_JARDIMS: 'chave-spe' } as any, fetchFn: conta('BOM JARDIMS SPE LTDA', '11222333000181') as any });
+    expect(b.texto).toBe('BOM JARDIMS SPE LTDA — CNPJ 11.222.333/0001-81');
+    // Mesma chave: usa o que já leu (sem nova chamada)
+    const c = await S.beneficiarioDoEmpreendimento(1, 'bom-jardims', { env: { ASAAS_API_KEY_BOM_JARDIMS: 'chave-spe' } as any, fetchFn: (async () => { throw new Error('não deveria chamar'); }) as any });
+    expect(c.nome).toBe('BOM JARDIMS SPE LTDA');
   });
 });
 
