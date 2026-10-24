@@ -355,6 +355,16 @@ export function initSqliteTables(sqlite: any): void {
     id INTEGER PRIMARY KEY AUTOINCREMENT, usuarioId INTEGER NOT NULL, tipo TEXT NOT NULL, refId INTEGER NOT NULL, comissaoPct TEXT,
     habilitadoPor INTEGER, criadoEm INTEGER NOT NULL DEFAULT (strftime('%s','now')), UNIQUE(usuarioId, tipo, refId)
   )`);
+  // v1.7.0 — notas de versão e tela de descanso (server/_core/migrations/addReleases.ts)
+  addColumn(`ALTER TABLE users ADD COLUMN descansoMinutos INTEGER NOT NULL DEFAULT 3`);
+  run(`CREATE TABLE IF NOT EXISTS systemRelease (
+    id INTEGER PRIMARY KEY AUTOINCREMENT, versao TEXT NOT NULL UNIQUE, tipo TEXT NOT NULL DEFAULT 'patch', titulo TEXT NOT NULL, itens TEXT NOT NULL,
+    obrigatoria INTEGER NOT NULL DEFAULT 0, publico TEXT NOT NULL DEFAULT 'todos', publicadoEm INTEGER NOT NULL DEFAULT (strftime('%s','now')),
+    publicadoPor INTEGER, hashArquivo TEXT, ativo INTEGER NOT NULL DEFAULT 1
+  )`);
+  run(`CREATE TABLE IF NOT EXISTS systemReleaseLeitura (
+    releaseId INTEGER NOT NULL, usuarioId INTEGER NOT NULL, lidoEm INTEGER NOT NULL DEFAULT (strftime('%s','now')), PRIMARY KEY (releaseId, usuarioId)
+  )`);
 
   console.log('[SQLite] ✅ Todas as tabelas inicializadas');
 

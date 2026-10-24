@@ -204,6 +204,7 @@ export function CredencialCard({ uid, tipo, doc, linkCertidaoPadrao, validadeSug
           Arraste aqui ou clique para enviar (PDF, JPG, PNG ou WEBP, até 10 MB)
         </button>
       )}
+      {progresso != null && <span data-block-idle="true" hidden />}
       {progresso != null && (
         <div className="h-1.5 overflow-hidden rounded-full bg-secondary"><div className="h-full bg-primary transition-all" style={{ width: `${progresso}%` }} /></div>
       )}
@@ -291,6 +292,7 @@ export function DocumentosPessoais({ uid, docs, temConjuge, versao, onMudou, onV
         <Button type="button" variant="outline" onClick={() => input.current?.click()} disabled={progresso != null}><FileUp className="mr-1.5 h-4 w-4" /> Adicionar arquivo(s)</Button>
         <input ref={input} type="file" multiple accept={MIMES_DOCUMENTO.join(",")} hidden onChange={e => { subir(Array.from(e.target.files ?? [])); e.target.value = ""; }} />
       </div>
+      {progresso != null && <span data-block-idle="true" hidden />}
       {progresso != null && <div className="h-1.5 overflow-hidden rounded-full bg-secondary"><div className="h-full bg-primary transition-all" style={{ width: `${progresso}%` }} /></div>}
       {docs.length === 0 ? <p className="text-xs text-muted-foreground">Nenhum documento pessoal. Arraste os arquivos para cá.</p> : (
         <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">

@@ -5,6 +5,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Settings as SettingsIcon, ArrowLeft, Save, Wifi, WifiOff, RefreshCw, Lock, Eye, EyeOff, User, Send, CheckCircle2, XCircle, MessageSquare, Bot, Bell } from "lucide-react";
 import PageHeader from "@/components/PageHeader";
+import PublicarAtualizacao from "@/components/sistema/PublicarAtualizacao";
 import { useLocation } from "wouter";
 import { trpc } from "@/lib/trpc";
 import { toast } from "sonner";
@@ -430,6 +431,9 @@ export default function Settings() {
             </div>
           </div>
         </div>
+
+        {/* Publicar atualização (v1.7.0): aviso ou correção de texto sem deploy */}
+        <PublicarAtualizacao />
       </div>
     </div>
   );

@@ -371,6 +371,17 @@ async function startServer() {
     res.status(e.ok ? 200 : 503).set('Cache-Control', 'no-store').json(e);
   });
 
+  // Versão no ar (público, sem cache): os navegadores abertos comparam com a deles e mostram "Nova versão disponível"
+  app.get('/api/system/version', async (_req, res) => {
+    try {
+      const { versaoNoAr } = await import('../releases');
+      res.set('Cache-Control', 'no-store').json(await versaoNoAr());
+    } catch (e: any) {
+      console.error('[system/version]', e?.message);
+      res.status(500).json({ error: 'Falha ao consultar versão' });
+    }
+  });
+
   // "✅ Já atendi" do aviso: para o alerta de 5 minutos (link assinado, sem login)
   app.get('/a/:id/:token', async (req, res) => {
     const id = Number(req.params.id);
@@ -996,6 +1007,16 @@ async function startServer() {
     await addCadastroV2();
   } catch (e) {
     console.error('❌ Erro na migration addCadastroV2:', e);
+  }
+
+  try {
+    const { addReleases } = await import('./migrations/addReleases');
+    await addReleases();
+    // Notas de versão: grava no banco a versão do RELEASE_NOTES.md (todos recebem o "Novidades da versão")
+    const { importarReleaseNotes } = await import('../releases');
+    await importarReleaseNotes();
+  } catch (e) {
+    console.error('❌ Erro na migration addReleases / notas de versão:', e);
   }
 
   // Leads parados há 48 h perdem pontos no score (§8)

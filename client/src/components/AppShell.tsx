@@ -7,8 +7,10 @@ import AvisoRotinas from "./AvisoRotinas";
 import { MobileTabBar, RomatecAppIcon, RomatecLockup, TAB_ICONS, type TabItem } from "@/brand";
 import {
   BarChart3, Building2, Flame, Images, KanbanSquare, LayoutDashboard, LineChart, LogOut, Megaphone, Menu, Send,
-  Settings, UserCog, Users, X, Eye, ClipboardList, CalendarDays, Map as MapIcon, Smartphone, Wallet, IdCard,
+  Settings, UserCog, Users, X, Eye, ClipboardList, CalendarDays, Map as MapIcon, Smartphone, Wallet, IdCard, Bell,
 } from "lucide-react";
+import { abrirNovidades, SinoNovidades, useNovidadesNaoLidas } from "./sistema/Novidades";
+import { APP_VERSION } from "@/brand";
 
 /** modulo = chave em shared/permissoes.ts (some do menu quando o módulo está desligado para o corretor) */
 type Item = { rotulo: string; rota: string; icone: React.ComponentType<{ className?: string }>; exato?: boolean; modulo?: string };
@@ -20,6 +22,7 @@ const MENU: Grupo[] = [
       { rotulo: "Painel", rota: "/dashboard", icone: LayoutDashboard },
       { rotulo: "Área do corretor", rota: "/corretor", icone: Smartphone },
       { rotulo: "Meu cadastro", rota: "/meu-cadastro", icone: IdCard },
+      { rotulo: "Novidades", rota: "#novidades", icone: Bell },
     ],
   },
   {
@@ -77,6 +80,7 @@ function Navegacao({ onNavegar }: { onNavegar?: () => void }) {
   const grupos = menuDoPerfil(perfil, minhas?.modulos);
   // Bolinha vermelha em "Meu cadastro": credencial ausente, vencida ou a vencer
   const { data: pendencias } = trpc.cadastro.minhasPendencias.useQuery(undefined, { enabled: !!user, staleTime: 5 * 60_000 });
+  const novidades = useNovidadesNaoLidas(!!user);
   return (
     <nav className="flex-1 overflow-y-auto px-3 py-2 space-y-4">
       {grupos.map((g, gi) => (
@@ -88,7 +92,7 @@ function Navegacao({ onNavegar }: { onNavegar?: () => void }) {
             return (
               <button
                 key={it.rota}
-                onClick={() => { navigate(it.rota); onNavegar?.(); }}
+                onClick={() => { if (it.rota === "#novidades") abrirNovidades(); else navigate(it.rota); onNavegar?.(); }}
                 className={`w-full flex items-center gap-3 rounded-lg px-3 py-2 text-sm transition-colors ${on
                   ? "bg-primary/15 text-primary font-semibold shadow-[inset_3px_0_0_var(--primary)]"
                   : "text-sidebar-foreground/70 hover:bg-white/5 hover:text-sidebar-foreground"}`}
@@ -97,6 +101,9 @@ function Navegacao({ onNavegar }: { onNavegar?: () => void }) {
                 <span className="truncate">{it.rotulo}</span>
                 {it.rota === "/meu-cadastro" && !!pendencias?.length && (
                   <span className="ml-auto h-2 w-2 shrink-0 rounded-full bg-red-500" title={pendencias.join(" · ")} />
+                )}
+                {it.rota === "#novidades" && novidades > 0 && (
+                  <span className="ml-auto rounded-full bg-red-500 px-1.5 text-[10px] font-bold text-white">{novidades}</span>
                 )}
               </button>
             );
@@ -131,8 +138,10 @@ function Rodape() {
           <p className="text-sm font-semibold text-sidebar-foreground truncate">{nome}</p>
           <p className="text-[10px] text-sidebar-foreground/50 truncate">{perfil ? ROTULO_PERFIL[perfil] : ""}</p>
         </div>
+        <SinoNovidades />
         <button onClick={() => logout()} title="Sair" className="rounded-lg p-2 text-sidebar-foreground/60 hover:bg-white/10 hover:text-red-300"><LogOut className="h-4 w-4" /></button>
       </div>
+      <p className="mt-2 text-center text-[10px] tracking-wide text-sidebar-foreground/40">CRM Romatec v{APP_VERSION}</p>
     </div>
   );
 }
@@ -200,6 +209,7 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
         <button onClick={() => setAberto(true)} className="rounded-lg p-2 hover:bg-white/5" aria-label="Abrir menu"><Menu className="h-5 w-5" /></button>
         <RomatecAppIcon size={28} />
         <p className="font-semibold truncate flex-1">{tituloDaRota(loc)}</p>
+        <SinoNovidades className="text-foreground/70" />
         <FotoUsuario tamanho="h-8 w-8" />
       </header>
 

@@ -40,6 +40,14 @@ describe('bloqueio no servidor (não confia no front)', () => {
     await expect(corretor.cadastro.pessoaPorCpf({ cpf: '52998224725' })).rejects.toMatchObject({ code: 'FORBIDDEN' });
   });
 
+  it('publicar/editar atualização é só do admin', async () => {
+    const itens = { novo: ['x'], melhorias: [], correcoes: [], avisos: [] };
+    await expect(corretor.novidades.publicar({ versao: '9.9.9', tipo: 'patch', titulo: 'X', itens } as any)).rejects.toMatchObject({ code: 'FORBIDDEN' });
+    await expect(corretor.novidades.todas()).rejects.toMatchObject({ code: 'FORBIDDEN' });
+    await expect(corretor.novidades.ativar({ id: 1, ativo: false })).rejects.toMatchObject({ code: 'FORBIDDEN' });
+    await expect(corretor.novidades.definirDescanso({ minutos: 7 })).rejects.toMatchObject({ code: 'BAD_REQUEST' });
+  });
+
   it('empreendedor não chega ao financeiro nem ao simulador', async () => {
     const emp = caller({ id: 7, role: 'user', perfil: 'empreendedor' });
     await expect(emp.financeiro.vendas()).rejects.toMatchObject({ code: 'FORBIDDEN' });

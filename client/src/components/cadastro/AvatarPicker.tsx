@@ -137,6 +137,7 @@ export default function AvatarPicker({ usuarioId, fotoUrl, nome, onMudou }: { us
 
   return (
     <div className="flex items-center gap-4">
+      {(etapa || enviando) && <span data-block-idle="true" hidden />}
       <div className="relative h-24 w-24 shrink-0">
         {url ? <img src={url} alt="" className="h-24 w-24 rounded-full object-cover ring-2 ring-primary/40" />
           : <div className="flex h-24 w-24 items-center justify-center rounded-full bg-primary/20 text-3xl font-bold text-primary">{(nome.trim().charAt(0) || "?").toUpperCase()}</div>}

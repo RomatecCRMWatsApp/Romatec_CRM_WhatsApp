@@ -65,6 +65,8 @@ export const users = mysqlTable("users", {
   docEstrangeiroTipo: varchar("docEstrangeiroTipo", { length: 12 }),
   docEstrangeiroNumero: varchar("docEstrangeiroNumero", { length: 30 }),
   ultimoLeadAt: timestamp("ultimoLeadAt"),
+  /** v1.7.0 — tela de descanso: minutos sem interação (0 = desativada) */
+  descansoMinutos: int("descansoMinutos").default(3).notNull(),
 });
 
 export type User = typeof users.$inferSelect;
@@ -830,3 +832,33 @@ export const materiais = mysqlTable("materiais", {
 }));
 
 export type Material = typeof materiais.$inferSelect;
+
+/** v1.7.0 — notas de versão (RELEASE_NOTES.md ou publicadas pelo admin) e quem já leu */
+export const systemRelease = mysqlTable("systemRelease", {
+  id: int("id").autoincrement().primaryKey(),
+  versao: varchar("versao", { length: 20 }).notNull(),
+  /** major | minor | patch */
+  tipo: varchar("tipo", { length: 10 }).notNull().default("patch"),
+  titulo: varchar("titulo", { length: 150 }).notNull(),
+  /** { novo, melhorias, correcoes, avisos } */
+  itens: json("itens").notNull(),
+  obrigatoria: boolean("obrigatoria").default(false).notNull(),
+  /** todos | admin | secretario | corretor | empreendedor */
+  publico: varchar("publico", { length: 20 }).notNull().default("todos"),
+  publicadoEm: timestamp("publicadoEm").defaultNow().notNull(),
+  /** null = RELEASE_NOTES.md (deploy) */
+  publicadoPor: int("publicadoPor"),
+  /** Texto do bloco no RELEASE_NOTES.md já importado (só reimporta quando o arquivo muda) */
+  hashArquivo: varchar("hashArquivo", { length: 64 }),
+  ativo: boolean("ativo").default(true).notNull(),
+}, (t) => ({
+  uxVersao: uniqueIndex("ux_release_versao").on(t.versao),
+}));
+
+export const systemReleaseLeitura = mysqlTable("systemReleaseLeitura", {
+  releaseId: int("releaseId").notNull(),
+  usuarioId: int("usuarioId").notNull(),
+  lidoEm: timestamp("lidoEm").defaultNow().notNull(),
+}, (t) => ({
+  uxLeitura: uniqueIndex("ux_release_leitura").on(t.releaseId, t.usuarioId),
+}));

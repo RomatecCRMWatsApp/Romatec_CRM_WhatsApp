@@ -1,0 +1,29 @@
+/* Tela de descanso (v1.7.0) — identidade visual v1.0: preto, verde-escuro, dourado */
+.screensaver {
+  position: fixed; inset: 0; z-index: 2147483647;
+  background: radial-gradient(ellipse at center, #06140d 0%, #000 70%);
+  display: flex; align-items: center; justify-content: center;
+  color: var(--rt-gold, #C9A84C); cursor: none; user-select: none; -webkit-user-select: none; touch-action: none;
+  animation: ss-in .6s ease both;
+  padding: env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left);
+}
+.screensaver.saindo { animation: ss-out .3s ease both; }
+.ss-centro { display: flex; flex-direction: column; align-items: center; gap: 10px; transition: transform 2s ease; text-align: center; padding: 0 16px; }
+.ss-centro .rt-loader__label { display: none; }
+.ss-hora { font-family: var(--rt-font-title, "Cinzel", Georgia, serif); font-size: 64px; font-weight: 600; letter-spacing: 3px; line-height: 1; margin-top: 12px; color: var(--rt-gold, #C9A84C); font-variant-numeric: tabular-nums; }
+.ss-data { font-family: var(--rt-font-body, system-ui, sans-serif); font-size: 16px; color: #e8d9a8; }
+.ss-data::first-letter { text-transform: uppercase; }
+.ss-marca { font-family: var(--rt-font-body, system-ui, sans-serif); font-size: 11px; letter-spacing: 4px; color: var(--rt-gold-light, #E2C877); opacity: .85; margin-top: 6px; }
+.ss-lead { margin-top: 12px; padding: 6px 14px; border: 1px solid var(--rt-glow, #2BD47A); border-radius: 999px; color: var(--rt-glow, #2BD47A); font-size: 13px; font-weight: 600; animation: ss-pulse 1.6s ease-in-out infinite; }
+.ss-dica { margin-top: 22px; font-family: var(--rt-font-body, system-ui, sans-serif); font-size: 12px; color: var(--rt-gold, #C9A84C); animation: ss-blink 3s ease-in-out infinite; }
+.ss-rodape { position: absolute; bottom: calc(16px + env(safe-area-inset-bottom)); left: 0; right: 0; text-align: center; font-family: var(--rt-font-body, system-ui, sans-serif); font-size: 11px; color: #6f5d35; letter-spacing: 1px; }
+@keyframes ss-in { from { opacity: 0 } to { opacity: 1 } }
+@keyframes ss-out { to { opacity: 0 } }
+@keyframes ss-blink { 0%, 100% { opacity: .4 } 50% { opacity: .8 } }
+@keyframes ss-pulse { 0%, 100% { box-shadow: 0 0 0 0 rgba(43, 212, 122, .5) } 50% { box-shadow: 0 0 0 8px rgba(43, 212, 122, 0) } }
+@media (max-width: 600px) { .ss-hora { font-size: 48px; } }
+@media (prefers-reduced-motion: reduce) {
+  .ss-centro { transition: none; transform: none !important; }
+  .ss-dica, .ss-lead { animation: none; opacity: .7; }
+  .screensaver .rt-run, .screensaver .rt-spin { animation: none !important; }
+}
