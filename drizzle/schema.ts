@@ -1084,6 +1084,15 @@ export const cobrancas = mysqlTable("cobrancas", {
   status: varchar("status", { length: 12 }).default("prevista").notNull(),
   pagoEm: date("pagoEm", { mode: "string" }),
   valorPago: decimal("valorPago", { precision: 12, scale: 2 }),
+  // ─── Bloco Financeiro (v1.10.0) — saldoDevedor é o "saldo após" a parcela ───
+  /** Valor e vencimento antes da 1ª 2ª via (gravados uma vez só) */
+  valorOriginal: decimal("valorOriginal", { precision: 12, scale: 2 }),
+  vencimentoOriginal: date("vencimentoOriginal", { mode: "string" }),
+  segundaViaEm: datetime("segundaViaEm"),
+  /** PIX | BOLETO (do webhook) */
+  formaPagamento: varchar("formaPagamento", { length: 12 }),
+  /** Dados do Asaas usados na lâmina, como vieram (linha digitável, código de barras, nosso número, PIX) */
+  asaasSnapshot: json("asaasSnapshot").$type<Record<string, unknown>>(),
 }, (t) => ({
   uxParcela: uniqueIndex("ux_cobranca_parcela").on(t.contratoId, t.tipo, t.numero),
   uxAsaas: uniqueIndex("ux_cobranca_asaas").on(t.asaasPaymentId),
@@ -1250,6 +1259,69 @@ export const eventosAutorizacoes = mysqlTable("eventosAutorizacoes", {
   motivo: varchar("motivo", { length: 255 }),
   criadoEm: timestamp("criadoEm").defaultNow().notNull(),
 });
+
+// ════════════════════ Bloco Financeiro v1.0 (v1.10.0 — server/_core/migrations/addFinanceiro.ts) ════════════════════
+
+/** Um recibo por cobrança paga (índice único em cobrancaId: webhook repetido não duplica) */
+export const recibos = mysqlTable("recibos", {
+  id: int("id").autoincrement().primaryKey(),
+  /** REC-BJ-AAAA-NNNNNN */
+  numero: varchar("numero", { length: 24 }).notNull(),
+  cobrancaId: int("cobrancaId").notNull(),
+  contratoId: int("contratoId").notNull(),
+  /** XXXX-XXXX-XXXX — exigido para abrir o PDF pela verificação pública */
+  codigoVerif: char("codigoVerif", { length: 14 }).notNull(),
+  valorPago: decimal("valorPago", { precision: 12, scale: 2 }).notNull(),
+  pagoEm: date("pagoEm", { mode: "string" }).notNull(),
+  pdfArquivo: varchar("pdfArquivo", { length: 255 }),
+  enviadoEm: datetime("enviadoEm"),
+  envioErro: varchar("envioErro", { length: 255 }),
+  criadoEm: timestamp("criadoEm").defaultNow().notNull(),
+}, (t) => ({
+  uxNumero: uniqueIndex("ux_recibo_numero").on(t.numero),
+  uxCobranca: uniqueIndex("ux_recibo_cobranca").on(t.cobrancaId),
+  ixContrato: index("ix_recibo_contrato").on(t.contratoId),
+}));
+
+/** Declaração anual de quitação de débitos (Lei 12.007/2009) */
+export const declaracoesQuitacao = mysqlTable("declaracoesQuitacao", {
+  id: int("id").autoincrement().primaryKey(),
+  contratoId: int("contratoId").notNull(),
+  anoRef: smallint("anoRef").notNull(),
+  /** emitida | retida (débito em aberto no ano) */
+  status: varchar("status", { length: 10 }).default("emitida").notNull(),
+  motivo: varchar("motivo", { length: 255 }),
+  valorTotal: decimal("valorTotal", { precision: 12, scale: 2 }),
+  pdfArquivo: varchar("pdfArquivo", { length: 255 }),
+  enviadoEm: datetime("enviadoEm"),
+  criadoEm: timestamp("criadoEm").defaultNow().notNull(),
+}, (t) => ({
+  uxDeclaracao: uniqueIndex("ux_declaracao").on(t.contratoId, t.anoRef),
+}));
+
+/** IPCA mensal (IBGE/SIDRA, tabela 1737, variável 63) — "AAAA-MM" → variação % no mês */
+export const indicesIpca = mysqlTable("indicesIpca", {
+  competencia: char("competencia", { length: 7 }).primaryKey(),
+  variacao: decimal("variacao", { precision: 8, scale: 4 }).notNull(),
+  fonte: varchar("fonte", { length: 40 }).default("IBGE/SIDRA 1737").notNull(),
+  atualizadoEm: timestamp("atualizadoEm").defaultNow().onUpdateNow().notNull(),
+});
+
+/** Auditoria do bloco financeiro: geração, download, 2ª via, reenvio */
+export const financeiroAuditoria = mysqlTable("financeiroAuditoria", {
+  id: bigint("id", { mode: "number" }).autoincrement().primaryKey(),
+  acao: varchar("acao", { length: 40 }).notNull(),
+  contratoId: int("contratoId"),
+  cobrancaId: int("cobrancaId"),
+  usuarioId: int("usuarioId"),
+  /** perfil | link | webhook | job | publico */
+  origem: varchar("origem", { length: 20 }).notNull(),
+  ip: varchar("ip", { length: 45 }),
+  detalhe: json("detalhe").$type<Record<string, unknown>>(),
+  criadoEm: timestamp("criadoEm").defaultNow().notNull(),
+}, (t) => ({
+  ixContrato: index("ix_fin_aud_contrato").on(t.contratoId, t.id),
+}));
 
 export const eventosConvidados = mysqlTable("eventosConvidados", {
   id: int("id").autoincrement().primaryKey(),

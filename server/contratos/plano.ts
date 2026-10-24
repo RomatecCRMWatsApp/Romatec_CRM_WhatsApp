@@ -6,7 +6,8 @@
  * acerta só a divisão juros/amortização para zerar o saldo. Assim o total a pagar do contrato é exatamente
  * o que o cliente viu no simulador e na proposta (entrada + parcela × prazo).
  */
-import { comissao, r2, vencimento, type CondicoesPagamento, type Simulacao } from '../../shared/simulador';
+import { comissao, vencimento, type CondicoesPagamento, type Simulacao } from '../../shared/simulador';
+import { gerarPlano } from '../financeiro/plano';
 
 export type Modalidade = 'financiado' | 'avista';
 
@@ -85,17 +86,11 @@ export function planoDoContrato(sim: Simulacao, escolha: EscolhaPlano, c: Condic
   const plano = sim.planos.find(p => p.prazo === escolha.prazo);
   if (!plano) throw new Error(`Prazo de ${escolha.prazo} meses não está nas condições do empreendimento`);
   const nEnt = sim.parcelasEntrada.length;
-  const parcelas: ParcelaPlano[] = sim.parcelasEntrada.map((v, k) => ({
-    tipo: 'entrada', numero: k + 1, total: nEnt, vencimento: vencimento(d1, k), valor: v, juros: 0, amortizacao: v, saldoDevedor: sim.saldo,
-  }));
-  let saldo = sim.saldo;
-  for (let k = 1; k <= plano.prazo; k++) {
-    const ultima = k === plano.prazo;
-    const juros = ultima ? r2(plano.parcela - saldo) : r2(saldo * sim.taxaMensal);
-    const amortizacao = ultima ? saldo : r2(plano.parcela - juros);
-    saldo = ultima ? 0 : r2(saldo - amortizacao);
-    parcelas.push({ tipo: 'saldo', numero: k, total: plano.prazo, vencimento: vencimento(d1, nEnt + k - 1), valor: plano.parcela, juros, amortizacao, saldoDevedor: saldo });
-  }
+  const { linhas } = gerarPlano({
+    saldo: sim.saldo, meses: plano.prazo, taxaAA: c.jurosAaEfetivo, primeiraSaldo: vencimento(d1, nEnt),
+    entrada: { parcelas: sim.parcelasEntrada, primeira: d1 },
+  });
+  const parcelas: ParcelaPlano[] = linhas.map(({ saldoApos, ...l }) => ({ ...l, saldoDevedor: saldoApos }));
   const com = comissao(sim.preco, comCorretor, nEnt === 1, c);
   return {
     ...base, modalidade: 'financiado', avista_vencimento: '',

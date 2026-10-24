@@ -863,6 +863,10 @@ async function startServer() {
     }
   });
 
+  // Bloco Financeiro: boletos, carnê, 2ª via, recibos, declaração, verificação pública (/r/:numero) e webhook do Asaas
+  const { registrarRotasFinanceiro } = await import('../financeiro/rotas');
+  registrarRotasFinanceiro(app);
+
   app.use(
     "/api/trpc",
     createExpressMiddleware({
@@ -1033,12 +1037,16 @@ async function startServer() {
   try {
     const { addContratos } = await import('./migrations/addContratos');
     await addContratos();
+    const { addFinanceiro } = await import('./migrations/addFinanceiro');
+    await addFinanceiro();
   } catch (e) {
-    console.error('❌ Erro na migration addContratos:', e);
+    console.error('❌ Erro na migration addContratos/addFinanceiro:', e);
   }
 
   // Leads parados há 48 h perdem pontos no score (§8)
   import('../leads/scoreService').then(m => m.iniciarJobInatividade()).catch(e => console.warn('[Score] Job não iniciado:', e));
+  // IPCA mensal (dia 15) e declaração anual de quitação (2º dia útil de maio)
+  import('../financeiro/jobs').then(m => m.iniciarJobsFinanceiro()).catch(e => console.warn('[Financeiro] Jobs não iniciados:', e));
   // Follow-up persistente (1/3/7/14/30 dias) e prazo de atendimento — não dependem das campanhas
   import('../leads/followup').then(m => m.iniciarJobFollowUp()).catch(e => console.warn('[FollowUp] Job não iniciado:', e));
   import('../leads/sla').then(m => m.iniciarJobSla()).catch(e => console.warn('[SLA] Job não iniciado:', e));

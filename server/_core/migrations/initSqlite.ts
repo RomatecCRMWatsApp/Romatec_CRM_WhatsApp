@@ -457,6 +457,25 @@ export function initSqliteTables(sqlite: any): void {
     id INTEGER PRIMARY KEY AUTOINCREMENT, eventoId INTEGER NOT NULL, nome TEXT NOT NULL, documento TEXT NOT NULL, telefone TEXT, placa TEXT,
     crachaNumero INTEGER, entradaEm INTEGER, saidaEm INTEGER
   )`);
+  // v1.10.0 — Bloco Financeiro (server/_core/migrations/addFinanceiro.ts)
+  for (const c of ['valorOriginal TEXT', 'vencimentoOriginal TEXT', 'segundaViaEm INTEGER', 'formaPagamento TEXT', 'asaasSnapshot TEXT']) {
+    addColumn(`ALTER TABLE cobrancas ADD COLUMN ${c}`);
+  }
+  run(`CREATE TABLE IF NOT EXISTS recibos (
+    id INTEGER PRIMARY KEY AUTOINCREMENT, numero TEXT NOT NULL UNIQUE, cobrancaId INTEGER NOT NULL UNIQUE, contratoId INTEGER NOT NULL,
+    codigoVerif TEXT NOT NULL, valorPago TEXT NOT NULL, pagoEm TEXT NOT NULL, pdfArquivo TEXT, enviadoEm INTEGER, envioErro TEXT, criadoEm ${agora}
+  )`);
+  run(`CREATE TABLE IF NOT EXISTS declaracoesQuitacao (
+    id INTEGER PRIMARY KEY AUTOINCREMENT, contratoId INTEGER NOT NULL, anoRef INTEGER NOT NULL, status TEXT NOT NULL DEFAULT 'emitida', motivo TEXT,
+    valorTotal TEXT, pdfArquivo TEXT, enviadoEm INTEGER, criadoEm ${agora}, UNIQUE(contratoId, anoRef)
+  )`);
+  run(`CREATE TABLE IF NOT EXISTS indicesIpca (
+    competencia TEXT PRIMARY KEY, variacao TEXT NOT NULL, fonte TEXT NOT NULL DEFAULT 'IBGE/SIDRA 1737', atualizadoEm ${agora}
+  )`);
+  run(`CREATE TABLE IF NOT EXISTS financeiroAuditoria (
+    id INTEGER PRIMARY KEY AUTOINCREMENT, acao TEXT NOT NULL, contratoId INTEGER, cobrancaId INTEGER, usuarioId INTEGER, origem TEXT NOT NULL,
+    ip TEXT, detalhe TEXT, criadoEm ${agora}
+  )`);
   try {
     sqlite.prepare(`INSERT INTO empJuridico (empreendimentoId, defaultsJson, vendedoraTipo, vendedoraJson)
       SELECT e.id, ?, 'PF', ? FROM empreendimentos e

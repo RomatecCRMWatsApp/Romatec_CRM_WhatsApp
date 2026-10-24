@@ -3,6 +3,21 @@
 Cada versão nova vai no TOPO. Depois rode `npm run release` (valida e atualiza o package.json);
 ao subir, o servidor grava a versão no banco e todos recebem o aviso "Novidades da versão".
 
+## 1.10.0 — 2026-10-24
+tipo: minor
+obrigatoria: nao
+titulo: Boletos e carnê com a identidade do Bom Jardims
+
+### Novo
+- Boleto avulso A4, carnê anual (12 parcelas) e carnê completo com a identidade do Bom Jardims, prontos para a cobrança pelo Asaas
+- 2ª via atualizada de parcela vencida (até 59 dias), com IPCA, multa de 2% e juros de 1% ao mês
+- Recibo automático a cada pagamento confirmado, com verificação pública pelo QR Code
+- Declaração anual de quitação de débitos (Lei 12.007/2009)
+
+### Avisos
+- A cobrança fica desligada até a chave do Asaas ser configurada: nada é emitido, cobrado ou enviado ao cliente
+- Linha digitável, código de barras e PIX vêm sempre do Asaas
+
 ## 1.9.0 — 2026-10-24
 tipo: minor
 obrigatoria: nao
