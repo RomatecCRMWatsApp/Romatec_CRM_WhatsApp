@@ -3,8 +3,9 @@
  * cada pessoa só lê e marca as próprias notificações.
  */
 import { z } from "zod";
-import { protectedProcedure, router } from "../_core/trpc";
-import { chavePublicaVapid, listarDoUsuario, marcarLidas, pushConfigurado, repoBanco } from "../notificacoes";
+import { adminProcedure, protectedProcedure, router } from "../_core/trpc";
+import { chavePublicaVapid, listarDoUsuario, marcarLidas, notificarTeste, pushConfigurado, repoBanco } from "../notificacoes";
+import { TIPOS_NOTIFICACAO } from "../../shared/notificacoes";
 
 const endpoint = z.string().trim().url().max(2000).refine(u => u.startsWith("https://"), "Endpoint inválido");
 
@@ -26,5 +27,18 @@ export const notificacoesRouter = router({
     .mutation(async ({ ctx, input }) => {
       await repoBanco().removerInscricao(input.endpoint, ctx.user.id);
       return { ok: true };
+    }),
+
+  /**
+   * Admin: notificação de teste só para si (sininho, som e push), sem mexer em lote.
+   * atrasoSegundos dá tempo de fechar o CRM para ver o push com o app fechado.
+   */
+  testar: adminProcedure
+    .input(z.object({ tipo: z.enum(TIPOS_NOTIFICACAO), atrasoSegundos: z.number().int().min(0).max(60).default(0) }))
+    .mutation(async ({ ctx, input }) => {
+      if (!input.atrasoSegundos) return { agendada: false, ...(await notificarTeste(ctx.user as any, input.tipo)) };
+      const usuario = { id: ctx.user.id, role: (ctx.user as any).role, perfil: (ctx.user as any).perfil };
+      setTimeout(() => { notificarTeste(usuario, input.tipo).catch(e => console.warn("[Notificações] teste:", e?.message ?? e)); }, input.atrasoSegundos * 1000);
+      return { agendada: true, enviados: 0, aparelhos: 0, pushConfigurado: pushConfigurado() };
     }),
 });

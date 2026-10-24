@@ -9,6 +9,7 @@
 import crypto from "crypto";
 import { and, desc, eq, inArray, isNull, sql } from "drizzle-orm";
 import { getDb } from "./db";
+import { infoVersao } from "./_core/systemRouter";
 import { acessosCorretor, empreendimentos, notificacoes, pushInscricoes, users } from "../drizzle/schema";
 import { perfilDe } from "../shared/equipe";
 import {
@@ -172,6 +173,21 @@ export async function notificarAtualizacaoSistema(versao: string, repo: RepoNoti
     { tipo: "atualizacao_sistema", titulo, mensagem, chave }, {});
   console.log(`[Notificações] Sistema atualizado para v${versao}: ${r.destinatarios.length} pessoa(s), ${r.enviados} push(es)`);
   return r;
+}
+
+/**
+ * Notificação de teste (Configurações, só admin): vai só para quem pediu — sininho, som do tipo e push
+ * nos aparelhos dele —, sem mexer em lote nenhum. chave "teste" separa dos eventos reais.
+ */
+export async function notificarTeste(
+  usuario: { id: number; role?: string | null; perfil?: string | null }, tipo: TipoNotificacao,
+  repo: RepoNotificacoes = repoBanco(), enviar?: EnviadorPush | null,
+) {
+  const t = textoNotificacao(tipo, { lote: "A01", empreendimento: "Bom Jardims", versao: infoVersao().versao });
+  const r = await emitir(repo, enviar === undefined ? await enviadorWebPush() : enviar, [usuario as UsuarioDestino], [usuario.id],
+    { tipo, titulo: `[Teste] ${t.titulo}`, mensagem: `${t.mensagem} (notificação de teste — nenhum lote foi alterado)`, chave: "teste" },
+    { empreendimentoSlug: "bom-jardims", lote: "A01" });
+  return { enviados: r.enviados, aparelhos: r.enviados + r.removidos, pushConfigurado: pushConfigurado() };
 }
 
 // ─── Sininho (leitura) ───────────────────────────────────────────────────────

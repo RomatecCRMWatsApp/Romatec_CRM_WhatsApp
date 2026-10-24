@@ -3,6 +3,14 @@
 Cada versão nova vai no TOPO. Depois rode `npm run release` (valida e atualiza o package.json);
 ao subir, o servidor grava a versão no banco e todos recebem o aviso "Novidades da versão".
 
+## 1.8.1 — 2026-10-24
+tipo: patch
+obrigatoria: nao
+titulo: Botão para testar as notificações
+
+### Novo
+- Configurações › Testar notificações (administrador): envia um aviso de teste só para você, com o som de cada tipo e a notificação no celular, sem mexer em nenhum lote
+
 ## 1.8.0 — 2026-10-24
 tipo: minor
 obrigatoria: nao

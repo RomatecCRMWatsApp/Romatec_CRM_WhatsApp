@@ -3,8 +3,9 @@ import { toast } from "sonner";
 import { BellRing, BellOff, Smartphone } from "lucide-react";
 import { trpc } from "@/lib/trpc";
 import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { cancelarAparelho, estadoPush, inscreverAparelho, type EstadoPush } from "@/lib/push";
-import { COR_NOTIFICACAO, ROTULO_NOTIFICACAO, SOM_POR_TIPO, type TipoNotificacao } from "@shared/notificacoes";
+import { COR_NOTIFICACAO, ROTULO_NOTIFICACAO, SOM_POR_TIPO, TIPOS_NOTIFICACAO, type TipoNotificacao } from "@shared/notificacoes";
 
 /**
  * Notificações do sininho (v1.8.0): reserva, venda/contrato, liberação de lote e sistema atualizado.
@@ -118,6 +119,54 @@ export function ListaNotificacoes({ habilitado, onAbrir }: { habilitado: boolean
         </button>
       ))}
     </div>
+  );
+}
+
+/**
+ * Configurações › Testar notificações (admin): manda um aviso só para você — sininho, som do tipo e push
+ * nos seus aparelhos — sem mexer em lote. "Em 10 s" dá tempo de fechar o CRM para ver o push do celular.
+ */
+export function TesteNotificacoes() {
+  const utils = trpc.useUtils();
+  const [atraso, setAtraso] = useState(0);
+  const testar = trpc.notificacoes.testar.useMutation({
+    onSuccess: r => {
+      if (r.agendada) toast.success(`Teste agendado: chega em ${atraso} s. Feche ou minimize o CRM para ver a notificação do celular.`);
+      else {
+        utils.notificacoes.listar.invalidate(); // aparece no sininho e toca o som na hora
+        if (!r.pushConfigurado) toast.success("Teste no sininho enviado. Push desligado no servidor (faltam as chaves VAPID).");
+        else if (!r.aparelhos) toast.success("Teste no sininho enviado. Nenhum aparelho seu com notificações ativadas — ative abaixo.");
+        else toast.success(`Teste enviado: sininho e ${r.enviados} aparelho(s).`);
+      }
+    },
+    onError: e => toast.error(e.message),
+  });
+  return (
+    <Card className="bg-card border-border">
+      <CardHeader><CardTitle className="text-foreground flex items-center gap-2"><BellRing className="h-5 w-5 text-[var(--rt-gold)]" /> Testar notificações</CardTitle></CardHeader>
+      <CardContent className="space-y-3">
+        <p className="text-xs text-muted-foreground">
+          Manda um aviso de teste <b>só para você</b> (sininho, som e celular). Nenhum lote é alterado e ninguém mais recebe.
+          Com o CRM aberto você ouve o som do tipo; para ver a notificação do celular, escolha "em 10 segundos" e feche ou minimize o CRM.
+        </p>
+        <label className="flex flex-wrap items-center gap-2 text-sm">
+          Enviar
+          <select value={atraso} onChange={e => setAtraso(Number(e.target.value))} className="h-9 rounded-md border border-border bg-secondary/30 px-2 text-sm">
+            <option value={0}>agora</option>
+            <option value={10}>em 10 segundos</option>
+            <option value={30}>em 30 segundos</option>
+          </select>
+        </label>
+        <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
+          {TIPOS_NOTIFICACAO.map(t => (
+            <Button key={t} variant="outline" disabled={testar.isPending} className="justify-start" onClick={() => testar.mutate({ tipo: t, atrasoSegundos: atraso })}>
+              <span className="mr-2 h-2.5 w-2.5 rounded-full" style={{ background: COR_NOTIFICACAO[t] }} /> {ROTULO_NOTIFICACAO[t]}
+            </Button>
+          ))}
+        </div>
+        <AtivarPush />
+      </CardContent>
+    </Card>
   );
 }
 
