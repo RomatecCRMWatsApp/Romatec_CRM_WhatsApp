@@ -1,0 +1,6 @@
+# Modelos de contrato, carnê e marca: binários (sem conversão de fim de linha)
+*.pdf binary
+*.docx binary
+*.png binary
+*.jpg binary
+*.wav binary

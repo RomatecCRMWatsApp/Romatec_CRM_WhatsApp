@@ -1030,6 +1030,13 @@ async function startServer() {
     console.error('❌ Erro na migration addNotificacoes / aviso de versão:', e);
   }
 
+  try {
+    const { addContratos } = await import('./migrations/addContratos');
+    await addContratos();
+  } catch (e) {
+    console.error('❌ Erro na migration addContratos:', e);
+  }
+
   // Leads parados há 48 h perdem pontos no score (§8)
   import('../leads/scoreService').then(m => m.iniciarJobInatividade()).catch(e => console.warn('[Score] Job não iniciado:', e));
   // Follow-up persistente (1/3/7/14/30 dias) e prazo de atendimento — não dependem das campanhas

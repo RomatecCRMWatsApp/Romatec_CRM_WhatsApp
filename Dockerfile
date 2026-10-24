@@ -5,7 +5,8 @@ WORKDIR /app
 ARG BUILD_DATE=unspecified
 
 # pdftoppm (poppler): converte o PDF das credenciais em PNG por página (server/credenciais.ts)
-RUN apt-get update && apt-get install -y --no-install-recommends poppler-utils && rm -rf /var/lib/apt/lists/*
+# LibreOffice Writer + fontes Liberation: DOCX → PDF dos contratos (server/contratos/render.ts)
+RUN apt-get update && apt-get install -y --no-install-recommends poppler-utils libreoffice-writer fonts-liberation && rm -rf /var/lib/apt/lists/*
 
 # Install pnpm
 RUN npm install -g pnpm@10.4.1

@@ -1,4 +1,4 @@
-import { int, mysqlEnum, mysqlTable, text, longtext, timestamp, varchar, decimal, boolean, json, index, uniqueIndex } from "drizzle-orm/mysql-core";
+import { int, bigint, smallint, tinyint, mysqlEnum, mysqlTable, text, longtext, timestamp, datetime, date, time, varchar, char, decimal, boolean, json, index, uniqueIndex, primaryKey } from "drizzle-orm/mysql-core";
 
 /**
  * Core user table backing auth flow.
@@ -508,6 +508,14 @@ export const lotes = mysqlTable("lotes", {
   /** Geometria do projeto (DXF): vértices UTM [E,N] no sentido horário e polígono [lon,lat] */
   verticesUtm: json("verticesUtm").$type<[number, number][]>(),
   poligono: json("poligono").$type<[number, number][]>(),
+  // ─── Contratos (v1.9.0) ───
+  /** Contrato que segura a reserva do lote */
+  contratoReservaId: int("contratoReservaId"),
+  /** Descrição perimetral escrita à mão; vazio = gerada do DXF (memorialDoLote) */
+  memorialTexto: text("memorialTexto"),
+  viaFrente: varchar("viaFrente", { length: 60 }),
+  /** Matrícula própria do lote (depois do registro do parcelamento) */
+  matricula: varchar("matricula", { length: 30 }),
   updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
 }, (t) => ({
   uqLote: uniqueIndex("uq_lote").on(t.empreendimentoId, t.codigo),
@@ -541,6 +549,8 @@ export const usuarioDocumentos = mysqlTable("usuarioDocumentos", {
   thumbBase64: text("thumbBase64"),
   paginasQtd: int("paginasQtd"),
   atualizadoEm: timestamp("atualizadoEm").defaultNow().onUpdateNow(),
+  /** Certidão CRECI: data de emissão (AAAA-MM-DD) — vai para a qualificação do corretor no contrato */
+  emissao: varchar("emissao", { length: 10 }),
 }, (t) => ({
   idxUsuario: index("idx_usudoc_usuario").on(t.usuarioId, t.tipo),
 }));
@@ -901,3 +911,355 @@ export const pushInscricoes = mysqlTable("pushInscricoes", {
   uxEndpoint: uniqueIndex("ux_push_endpoint").on(t.endpointHash),
   ixUsuario: index("ix_push_usuario").on(t.usuarioId),
 }));
+
+// ════════════════════ Contratos, assinatura e cobrança (v1.9.0 — server/_core/migrations/addContratos.ts) ════════════════════
+
+/** Arquivos do módulo (PDFs, versões, documentos das pessoas): no banco, porque o disco do Railway some a cada deploy */
+export const contratoArquivos = mysqlTable("contratoArquivos", {
+  /** Ex.: contratos/12/v3.pdf — é o valor gravado nas colunas "arquivo" */
+  chave: varchar("chave", { length: 255 }).primaryKey(),
+  mime: varchar("mime", { length: 60 }).notNull(),
+  bytes: int("bytes").notNull(),
+  sha256: char("sha256", { length: 64 }).notNull(),
+  conteudoBase64: longtext("conteudoBase64").notNull(),
+  criadoEm: timestamp("criadoEm").defaultNow().notNull(),
+});
+
+/** Configuração jurídica do empreendimento: pré-preenche os campos emp_* e vend_* do contrato */
+export const empJuridico = mysqlTable("empJuridico", {
+  empreendimentoId: int("empreendimentoId").primaryKey(),
+  /** Chaves emp_* (templates/defaults_empreendimento.json) + limites da portaria */
+  defaultsJson: json("defaultsJson").$type<Record<string, unknown>>().notNull(),
+  /** PF | PJ */
+  vendedoraTipo: varchar("vendedoraTipo", { length: 2 }).default("PF").notNull(),
+  /** Chaves vend_* / tit_* */
+  vendedoraJson: json("vendedoraJson").$type<Record<string, unknown>>().notNull(),
+  modeloCpcv: varchar("modeloCpcv", { length: 120 }).default("MODELO-CPCV-BOM-JARDIMS-v2.docx").notNull(),
+  modeloVersao: varchar("modeloVersao", { length: 30 }).default("CPCV-BJ v2.0").notNull(),
+  /** Pasta templates/marca/<slug> (cabeçalho, marca d'água, rodapé) */
+  marcaSlug: varchar("marcaSlug", { length: 40 }).default("bomjardims").notNull(),
+  atualizadoPor: int("atualizadoPor"),
+  atualizadoEm: timestamp("atualizadoEm").defaultNow().onUpdateNow().notNull(),
+});
+
+/** Numeração dos contratos por ano (BJ-2026-0001) */
+export const contratoSeq = mysqlTable("contratoSeq", {
+  ano: smallint("ano").primaryKey(),
+  ultimo: int("ultimo").notNull(),
+});
+
+export const contratos = mysqlTable("contratos", {
+  id: int("id").autoincrement().primaryKey(),
+  numero: varchar("numero", { length: 20 }).notNull(),
+  empreendimentoId: int("empreendimentoId").notNull(),
+  loteId: int("loteId"),
+  loteCodigo: varchar("loteCodigo", { length: 10 }).notNull(),
+  leadId: int("leadId"),
+  corretorUserId: int("corretorUserId").notNull(),
+  /** Plano do simulador congelado na emissão */
+  simulacaoJson: json("simulacaoJson").$type<Record<string, unknown>>().notNull(),
+  /** Contexto completo do merge (snapshot) */
+  dadosJson: json("dadosJson").$type<Record<string, unknown>>().notNull(),
+  /** Campos emp_* alterados só neste contrato */
+  overridesJson: json("overridesJson").$type<Record<string, unknown>>(),
+  /** rascunho | minuta | apto_assinatura | em_assinatura | assinado | ativo | quitado | distratado | cancelado */
+  status: varchar("status", { length: 20 }).default("rascunho").notNull(),
+  /** eletronica | manuscrita */
+  modoAssinatura: varchar("modoAssinatura", { length: 12 }).default("eletronica").notNull(),
+  codigoVerificacao: char("codigoVerificacao", { length: 12 }).notNull(),
+  /** Chave em contratoArquivos */
+  pdfAtual: varchar("pdfAtual", { length: 255 }),
+  hashAtual: char("hashAtual", { length: 64 }),
+  asaasCustomerId: varchar("asaasCustomerId", { length: 40 }),
+  usoLiberado: boolean("usoLiberado").default(false).notNull(),
+  usoLiberadoEm: datetime("usoLiberadoEm"),
+  criadoPor: int("criadoPor"),
+  criadoEm: timestamp("criadoEm").defaultNow().notNull(),
+  atualizadoEm: timestamp("atualizadoEm").defaultNow().onUpdateNow().notNull(),
+}, (t) => ({
+  uxNumero: uniqueIndex("ux_contrato_numero").on(t.numero),
+  uxCodigo: uniqueIndex("ux_contrato_codigo").on(t.codigoVerificacao),
+  ixLote: index("ix_contrato_lote").on(t.empreendimentoId, t.loteCodigo, t.status),
+  ixStatus: index("ix_contrato_status").on(t.status),
+  ixCorretor: index("ix_contrato_corretor").on(t.corretorUserId),
+}));
+
+/** Versões do PDF — nunca sobrescritas */
+export const contratoVersoes = mysqlTable("contratoVersoes", {
+  id: int("id").autoincrement().primaryKey(),
+  contratoId: int("contratoId").notNull(),
+  versao: int("versao").notNull(),
+  /** gerado | carimbo_avancada:<id> | icp:<id> | govbr:<id> | manuscrito */
+  etapa: varchar("etapa", { length: 40 }).notNull(),
+  arquivo: varchar("arquivo", { length: 255 }).notNull(),
+  sha256: char("sha256", { length: 64 }).notNull(),
+  bytes: int("bytes").notNull(),
+  criadoEm: timestamp("criadoEm").defaultNow().notNull(),
+}, (t) => ({
+  uxVersao: uniqueIndex("ux_contrato_versao").on(t.contratoId, t.versao),
+}));
+
+export const assinaturaSignatarios = mysqlTable("assinaturaSignatarios", {
+  id: int("id").autoincrement().primaryKey(),
+  contratoId: int("contratoId").notNull(),
+  /** vendedora | titular | comprador | conjuge | comprador2 | intermediadora | corretor_parceiro | testemunha1 | testemunha2 */
+  papel: varchar("papel", { length: 20 }).notNull(),
+  nome: varchar("nome", { length: 160 }).notNull(),
+  cpf: char("cpf", { length: 11 }).notNull(),
+  email: varchar("email", { length: 160 }),
+  whatsapp: varchar("whatsapp", { length: 20 }),
+  /** avancada | govbr | icp_a1 | manuscrita */
+  metodo: varchar("metodo", { length: 12 }),
+  ordem: tinyint("ordem").notNull(),
+  /** pendente | convidado | assinado | recusado */
+  status: varchar("status", { length: 12 }).default("pendente").notNull(),
+  /** Link individual (base64url de 32 bytes) */
+  token: char("token", { length: 43 }).notNull(),
+  assinadoEm: datetime("assinadoEm"),
+  /** IP, UA, geo, canal do OTP, série/emissor/CPF do certificado */
+  evidenciasJson: json("evidenciasJson").$type<Record<string, unknown>>(),
+}, (t) => ({
+  uxToken: uniqueIndex("ux_signatario_token").on(t.token),
+  ixContrato: index("ix_signatario_contrato").on(t.contratoId),
+}));
+
+/** Onde cada papel assina no PDF (contratoId nulo = gabarito do modelo) — coordenadas 0..1, origem no canto inferior esquerdo */
+export const assinaturaPosicoes = mysqlTable("assinaturaPosicoes", {
+  id: int("id").autoincrement().primaryKey(),
+  contratoId: int("contratoId"),
+  modeloVersao: varchar("modeloVersao", { length: 30 }),
+  papel: varchar("papel", { length: 30 }).notNull(),
+  /** 1-based; -1 = última página */
+  pagina: int("pagina").notNull(),
+  x: decimal("x", { precision: 6, scale: 5 }).notNull(),
+  y: decimal("y", { precision: 6, scale: 5 }).notNull(),
+  w: decimal("w", { precision: 6, scale: 5 }).notNull(),
+  h: decimal("h", { precision: 6, scale: 5 }).notNull(),
+}, (t) => ({
+  ixPos: index("ix_pos").on(t.contratoId, t.modeloVersao),
+}));
+
+export const assinaturaOtp = mysqlTable("assinaturaOtp", {
+  signatarioId: int("signatarioId").primaryKey(),
+  codigoHash: char("codigoHash", { length: 64 }).notNull(),
+  expiraEm: datetime("expiraEm").notNull(),
+  tentativas: tinyint("tentativas").default(0).notNull(),
+});
+
+/** Trilha de auditoria da assinatura */
+export const assinaturaEventos = mysqlTable("assinaturaEventos", {
+  id: bigint("id", { mode: "number" }).autoincrement().primaryKey(),
+  contratoId: int("contratoId").notNull(),
+  signatarioId: int("signatarioId"),
+  /** convite_enviado | link_aberto | otp_enviado | otp_ok | assinado | upload_govbr | erro */
+  evento: varchar("evento", { length: 40 }).notNull(),
+  ip: varchar("ip", { length: 45 }),
+  userAgent: varchar("userAgent", { length: 255 }),
+  detalhe: json("detalhe").$type<Record<string, unknown>>(),
+  criadoEm: timestamp("criadoEm", { fsp: 3 }).defaultNow().notNull(),
+}, (t) => ({
+  ixContrato: index("ix_ev_contrato").on(t.contratoId),
+}));
+
+export const cobrancas = mysqlTable("cobrancas", {
+  id: int("id").autoincrement().primaryKey(),
+  contratoId: int("contratoId").notNull(),
+  /** entrada | saldo | avista | antecipacao */
+  tipo: varchar("tipo", { length: 12 }).notNull(),
+  numero: smallint("numero").notNull(),
+  total: smallint("total").notNull(),
+  vencimento: date("vencimento", { mode: "string" }).notNull(),
+  valor: decimal("valor", { precision: 12, scale: 2 }).notNull(),
+  jurosParcela: decimal("jurosParcela", { precision: 12, scale: 2 }),
+  amortizacao: decimal("amortizacao", { precision: 12, scale: 2 }),
+  saldoDevedor: decimal("saldoDevedor", { precision: 12, scale: 2 }),
+  splitValor: decimal("splitValor", { precision: 12, scale: 2 }).default("0").notNull(),
+  asaasPaymentId: varchar("asaasPaymentId", { length: 40 }),
+  nossoNumero: varchar("nossoNumero", { length: 30 }),
+  linhaDigitavel: varchar("linhaDigitavel", { length: 60 }),
+  codigoBarras: char("codigoBarras", { length: 44 }),
+  pixPayload: text("pixPayload"),
+  bankSlipUrl: varchar("bankSlipUrl", { length: 255 }),
+  /** prevista | emitida | paga | vencida | cancelada | estornada */
+  status: varchar("status", { length: 12 }).default("prevista").notNull(),
+  pagoEm: date("pagoEm", { mode: "string" }),
+  valorPago: decimal("valorPago", { precision: 12, scale: 2 }),
+}, (t) => ({
+  uxParcela: uniqueIndex("ux_cobranca_parcela").on(t.contratoId, t.tipo, t.numero),
+  uxAsaas: uniqueIndex("ux_cobranca_asaas").on(t.asaasPaymentId),
+  ixVenc: index("ix_cobranca_venc").on(t.status, t.vencimento),
+}));
+
+/** Webhook do Asaas: eventId único torna o processamento idempotente */
+export const asaasWebhookLog = mysqlTable("asaasWebhookLog", {
+  eventId: varchar("eventId", { length: 60 }).primaryKey(),
+  evento: varchar("evento", { length: 40 }).notNull(),
+  paymentId: varchar("paymentId", { length: 40 }),
+  payload: json("payload").$type<Record<string, unknown>>().notNull(),
+  processado: boolean("processado").default(false).notNull(),
+  recebidoEm: timestamp("recebidoEm").defaultNow().notNull(),
+});
+
+/** Comprador, cônjuge, 2º comprador, representante… (cadastro completo do contrato — spec §13) */
+export const pessoas = mysqlTable("pessoas", {
+  id: int("id").autoincrement().primaryKey(),
+  /** PF | PJ */
+  tipo: varchar("tipo", { length: 2 }).default("PF").notNull(),
+  nome: varchar("nome", { length: 160 }).notNull(),
+  nomeSocial: varchar("nomeSocial", { length: 160 }),
+  /** Só dígitos */
+  cpfCnpj: varchar("cpfCnpj", { length: 14 }).notNull(),
+  rg: varchar("rg", { length: 20 }),
+  rgOrgao: varchar("rgOrgao", { length: 20 }),
+  rgUf: char("rgUf", { length: 2 }),
+  rgEmissao: date("rgEmissao", { mode: "string" }),
+  cnh: varchar("cnh", { length: 20 }),
+  nascimento: date("nascimento", { mode: "string" }),
+  naturalidade: varchar("naturalidade", { length: 80 }),
+  nacionalidade: varchar("nacionalidade", { length: 40 }).default("brasileira").notNull(),
+  /** F | M | O */
+  sexo: varchar("sexo", { length: 1 }),
+  filiacaoMae: varchar("filiacaoMae", { length: 160 }),
+  filiacaoPai: varchar("filiacaoPai", { length: 160 }),
+  /** solteiro | casado | uniao_estavel | divorciado | separado | viuvo */
+  estadoCivil: varchar("estadoCivil", { length: 20 }),
+  /** comunhao_parcial | comunhao_universal | separacao_total | separacao_obrigatoria | participacao_final */
+  regimeBens: varchar("regimeBens", { length: 30 }),
+  /** Cartório, livro, folha, data */
+  pactoAntenupcial: varchar("pactoAntenupcial", { length: 160 }),
+  dataCasamento: date("dataCasamento", { mode: "string" }),
+  profissao: varchar("profissao", { length: 80 }),
+  empregador: varchar("empregador", { length: 120 }),
+  /** Só o administrador vê */
+  rendaMensal: decimal("rendaMensal", { precision: 12, scale: 2 }),
+  email: varchar("email", { length: 160 }),
+  email2: varchar("email2", { length: 160 }),
+  telefone1: varchar("telefone1", { length: 20 }),
+  telefone1Whatsapp: boolean("telefone1Whatsapp").default(true).notNull(),
+  telefone2: varchar("telefone2", { length: 20 }),
+  telefone2Whatsapp: boolean("telefone2Whatsapp").default(false).notNull(),
+  cep: char("cep", { length: 8 }),
+  logradouro: varchar("logradouro", { length: 160 }),
+  numero: varchar("numero", { length: 10 }),
+  complemento: varchar("complemento", { length: 80 }),
+  bairro: varchar("bairro", { length: 80 }),
+  cidade: varchar("cidade", { length: 80 }),
+  uf: char("uf", { length: 2 }),
+  /** whatsapp | email | telefone | correio */
+  canalPreferido: varchar("canalPreferido", { length: 10 }).default("whatsapp").notNull(),
+  horarioContato: varchar("horarioContato", { length: 40 }),
+  lgpdConsentimentoEm: datetime("lgpdConsentimentoEm"),
+  lgpdConsentimentoIp: varchar("lgpdConsentimentoIp", { length: 45 }),
+  lgpdMarketing: boolean("lgpdMarketing").default(false).notNull(),
+  leadId: int("leadId"),
+  criadoEm: timestamp("criadoEm").defaultNow().notNull(),
+  atualizadoEm: timestamp("atualizadoEm").defaultNow().onUpdateNow().notNull(),
+}, (t) => ({
+  uxDoc: uniqueIndex("ux_pessoa_doc").on(t.cpfCnpj),
+  ixLead: index("ix_pessoa_lead").on(t.leadId),
+}));
+
+export const contratoPessoas = mysqlTable("contratoPessoas", {
+  contratoId: int("contratoId").notNull(),
+  pessoaId: int("pessoaId").notNull(),
+  /** comprador | conjuge | comprador2 | conjuge2 | representante | procurador */
+  papel: varchar("papel", { length: 14 }).notNull(),
+  fracao: decimal("fracao", { precision: 5, scale: 2 }),
+}, (t) => ({
+  pk: primaryKey({ columns: [t.contratoId, t.pessoaId, t.papel] }),
+}));
+
+export const pessoaReferencias = mysqlTable("pessoaReferencias", {
+  id: int("id").autoincrement().primaryKey(),
+  pessoaId: int("pessoaId").notNull(),
+  nome: varchar("nome", { length: 160 }).notNull(),
+  relacao: varchar("relacao", { length: 40 }).notNull(),
+  telefone: varchar("telefone", { length: 20 }).notNull(),
+  email: varchar("email", { length: 160 }),
+});
+
+export const pessoaDocumentos = mysqlTable("pessoaDocumentos", {
+  id: int("id").autoincrement().primaryKey(),
+  pessoaId: int("pessoaId").notNull(),
+  /** rg_cnh_frente | rg_cnh_verso | cpf | comprovante_residencia | certidao_nascimento | certidao_casamento | pacto_antenupcial |
+   *  declaracao_uniao_estavel | comprovante_renda | contrato_social | cartao_cnpj | procuracao | foto_3x4 | outro */
+  tipo: varchar("tipo", { length: 30 }).notNull(),
+  arquivo: varchar("arquivo", { length: 255 }).notNull(),
+  sha256: char("sha256", { length: 64 }).notNull(),
+  mime: varchar("mime", { length: 60 }).notNull(),
+  validadoPor: int("validadoPor"),
+  validadoEm: datetime("validadoEm"),
+  enviadoEm: timestamp("enviadoEm").defaultNow().notNull(),
+}, (t) => ({
+  ixPessoa: index("ix_pdoc_pessoa").on(t.pessoaId),
+}));
+
+/** Dependentes da chácara (até 6 além do titular e do cônjuge — spec §14) */
+export const chacaraDependentes = mysqlTable("chacaraDependentes", {
+  id: int("id").autoincrement().primaryKey(),
+  contratoId: int("contratoId").notNull(),
+  nome: varchar("nome", { length: 160 }).notNull(),
+  /** conjuge | filho | enteado | pai_mae | irmao | neto | outro */
+  parentesco: varchar("parentesco", { length: 10 }).notNull(),
+  cpf: char("cpf", { length: 11 }),
+  nascimento: date("nascimento", { mode: "string" }),
+  telefone1: varchar("telefone1", { length: 20 }),
+  telefone2: varchar("telefone2", { length: 20 }),
+  email: varchar("email", { length: 160 }),
+  foto: varchar("foto", { length: 255 }),
+  ativo: boolean("ativo").default(true).notNull(),
+  criadoEm: timestamp("criadoEm").defaultNow().notNull(),
+});
+
+/** Carteira de chacreiro (CR80 com QR) */
+export const carteiras = mysqlTable("carteiras", {
+  id: int("id").autoincrement().primaryKey(),
+  contratoId: int("contratoId").notNull(),
+  /** comprador | conjuge | dependente */
+  titularTipo: varchar("titularTipo", { length: 10 }).notNull(),
+  /** pessoas.id ou chacaraDependentes.id */
+  titularId: int("titularId").notNull(),
+  /** BJ-A01-01 … */
+  numero: varchar("numero", { length: 20 }).notNull(),
+  qrToken: char("qrToken", { length: 32 }).notNull(),
+  validade: date("validade", { mode: "string" }).notNull(),
+  /** ativa | bloqueada | cancelada */
+  status: varchar("status", { length: 10 }).default("ativa").notNull(),
+  emitidaEm: timestamp("emitidaEm").defaultNow().notNull(),
+}, (t) => ({
+  uxNumero: uniqueIndex("ux_carteira_numero").on(t.numero),
+  uxQr: uniqueIndex("ux_carteira_qr").on(t.qrToken),
+}));
+
+export const eventosAutorizacoes = mysqlTable("eventosAutorizacoes", {
+  id: int("id").autoincrement().primaryKey(),
+  contratoId: int("contratoId").notNull(),
+  /** chacara | area_vivencia | quadra_e */
+  local: varchar("local", { length: 14 }).notNull(),
+  dataEvento: date("dataEvento", { mode: "string" }).notNull(),
+  horaInicio: time("horaInicio").notNull(),
+  horaFim: time("horaFim").notNull(),
+  descricao: varchar("descricao", { length: 160 }).notNull(),
+  convidadosSolicitados: smallint("convidadosSolicitados").notNull(),
+  convidadosAutorizados: smallint("convidadosAutorizados"),
+  somAmplificado: boolean("somAmplificado").default(false).notNull(),
+  /** solicitado | autorizado | negado | cancelado | realizado */
+  status: varchar("status", { length: 12 }).default("solicitado").notNull(),
+  decididoPor: int("decididoPor"),
+  decididoEm: datetime("decididoEm"),
+  motivo: varchar("motivo", { length: 255 }),
+  criadoEm: timestamp("criadoEm").defaultNow().notNull(),
+});
+
+export const eventosConvidados = mysqlTable("eventosConvidados", {
+  id: int("id").autoincrement().primaryKey(),
+  eventoId: int("eventoId").notNull(),
+  nome: varchar("nome", { length: 160 }).notNull(),
+  documento: varchar("documento", { length: 20 }).notNull(),
+  telefone: varchar("telefone", { length: 20 }),
+  placa: varchar("placa", { length: 10 }),
+  /** 001–100, atribuído na portaria */
+  crachaNumero: smallint("crachaNumero"),
+  entradaEm: datetime("entradaEm"),
+  saidaEm: datetime("saidaEm"),
+});

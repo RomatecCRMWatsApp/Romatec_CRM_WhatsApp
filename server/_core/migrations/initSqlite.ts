@@ -4,6 +4,7 @@
  * Idempotente: usa CREATE TABLE IF NOT EXISTS em todas as tabelas
  */
 import { DESCONTO_AVISTA_TOTAL_PADRAO } from '../../../shared/simulador';
+import { SEED_EMP_JURIDICO } from './seedContratos';
 
 export function initSqliteTables(sqlite: any): void {
   const run = (sql: string) => {
@@ -370,6 +371,98 @@ export function initSqliteTables(sqlite: any): void {
     p256dh TEXT NOT NULL, auth TEXT NOT NULL, userAgent TEXT,
     criadoEm INTEGER NOT NULL DEFAULT (strftime('%s','now')), atualizadoEm INTEGER NOT NULL DEFAULT (strftime('%s','now'))
   )`);
+  // v1.9.0 — contratos, assinatura, cobrança, pessoas e portaria (server/_core/migrations/addContratos.ts)
+  for (const c of ['contratoReservaId INTEGER', 'memorialTexto TEXT', 'viaFrente TEXT', 'matricula TEXT']) addColumn(`ALTER TABLE lotes ADD COLUMN ${c}`);
+  addColumn(`ALTER TABLE usuarioDocumentos ADD COLUMN emissao TEXT`);
+  const agora = `INTEGER NOT NULL DEFAULT (strftime('%s','now'))`;
+  run(`CREATE TABLE IF NOT EXISTS contratoArquivos (
+    chave TEXT PRIMARY KEY, mime TEXT NOT NULL, bytes INTEGER NOT NULL, sha256 TEXT NOT NULL, conteudoBase64 TEXT NOT NULL, criadoEm ${agora}
+  )`);
+  run(`CREATE TABLE IF NOT EXISTS empJuridico (
+    empreendimentoId INTEGER PRIMARY KEY, defaultsJson TEXT NOT NULL, vendedoraTipo TEXT NOT NULL DEFAULT 'PF', vendedoraJson TEXT NOT NULL,
+    modeloCpcv TEXT NOT NULL DEFAULT 'MODELO-CPCV-BOM-JARDIMS-v2.docx', modeloVersao TEXT NOT NULL DEFAULT 'CPCV-BJ v2.0',
+    marcaSlug TEXT NOT NULL DEFAULT 'bomjardims', atualizadoPor INTEGER, atualizadoEm ${agora}
+  )`);
+  run(`CREATE TABLE IF NOT EXISTS contratoSeq (ano INTEGER PRIMARY KEY, ultimo INTEGER NOT NULL)`);
+  run(`CREATE TABLE IF NOT EXISTS contratos (
+    id INTEGER PRIMARY KEY AUTOINCREMENT, numero TEXT NOT NULL UNIQUE, empreendimentoId INTEGER NOT NULL, loteId INTEGER, loteCodigo TEXT NOT NULL,
+    leadId INTEGER, corretorUserId INTEGER NOT NULL, simulacaoJson TEXT NOT NULL, dadosJson TEXT NOT NULL, overridesJson TEXT,
+    status TEXT NOT NULL DEFAULT 'rascunho', modoAssinatura TEXT NOT NULL DEFAULT 'eletronica', codigoVerificacao TEXT NOT NULL UNIQUE,
+    pdfAtual TEXT, hashAtual TEXT, asaasCustomerId TEXT, usoLiberado INTEGER NOT NULL DEFAULT 0, usoLiberadoEm INTEGER, criadoPor INTEGER,
+    criadoEm ${agora}, atualizadoEm ${agora}
+  )`);
+  run(`CREATE TABLE IF NOT EXISTS contratoVersoes (
+    id INTEGER PRIMARY KEY AUTOINCREMENT, contratoId INTEGER NOT NULL, versao INTEGER NOT NULL, etapa TEXT NOT NULL, arquivo TEXT NOT NULL,
+    sha256 TEXT NOT NULL, bytes INTEGER NOT NULL, criadoEm ${agora}, UNIQUE(contratoId, versao)
+  )`);
+  run(`CREATE TABLE IF NOT EXISTS assinaturaSignatarios (
+    id INTEGER PRIMARY KEY AUTOINCREMENT, contratoId INTEGER NOT NULL, papel TEXT NOT NULL, nome TEXT NOT NULL, cpf TEXT NOT NULL, email TEXT,
+    whatsapp TEXT, metodo TEXT, ordem INTEGER NOT NULL, status TEXT NOT NULL DEFAULT 'pendente', token TEXT NOT NULL UNIQUE, assinadoEm INTEGER,
+    evidenciasJson TEXT
+  )`);
+  run(`CREATE TABLE IF NOT EXISTS assinaturaPosicoes (
+    id INTEGER PRIMARY KEY AUTOINCREMENT, contratoId INTEGER, modeloVersao TEXT, papel TEXT NOT NULL, pagina INTEGER NOT NULL,
+    x TEXT NOT NULL, y TEXT NOT NULL, w TEXT NOT NULL, h TEXT NOT NULL
+  )`);
+  run(`CREATE TABLE IF NOT EXISTS assinaturaOtp (
+    signatarioId INTEGER PRIMARY KEY, codigoHash TEXT NOT NULL, expiraEm INTEGER NOT NULL, tentativas INTEGER NOT NULL DEFAULT 0
+  )`);
+  run(`CREATE TABLE IF NOT EXISTS assinaturaEventos (
+    id INTEGER PRIMARY KEY AUTOINCREMENT, contratoId INTEGER NOT NULL, signatarioId INTEGER, evento TEXT NOT NULL, ip TEXT, userAgent TEXT,
+    detalhe TEXT, criadoEm ${agora}
+  )`);
+  run(`CREATE TABLE IF NOT EXISTS cobrancas (
+    id INTEGER PRIMARY KEY AUTOINCREMENT, contratoId INTEGER NOT NULL, tipo TEXT NOT NULL, numero INTEGER NOT NULL, total INTEGER NOT NULL,
+    vencimento TEXT NOT NULL, valor TEXT NOT NULL, jurosParcela TEXT, amortizacao TEXT, saldoDevedor TEXT, splitValor TEXT NOT NULL DEFAULT '0',
+    asaasPaymentId TEXT UNIQUE, nossoNumero TEXT, linhaDigitavel TEXT, codigoBarras TEXT, pixPayload TEXT, bankSlipUrl TEXT,
+    status TEXT NOT NULL DEFAULT 'prevista', pagoEm TEXT, valorPago TEXT, UNIQUE(contratoId, tipo, numero)
+  )`);
+  run(`CREATE TABLE IF NOT EXISTS asaasWebhookLog (
+    eventId TEXT PRIMARY KEY, evento TEXT NOT NULL, paymentId TEXT, payload TEXT NOT NULL, processado INTEGER NOT NULL DEFAULT 0, recebidoEm ${agora}
+  )`);
+  run(`CREATE TABLE IF NOT EXISTS pessoas (
+    id INTEGER PRIMARY KEY AUTOINCREMENT, tipo TEXT NOT NULL DEFAULT 'PF', nome TEXT NOT NULL, nomeSocial TEXT, cpfCnpj TEXT NOT NULL UNIQUE,
+    rg TEXT, rgOrgao TEXT, rgUf TEXT, rgEmissao TEXT, cnh TEXT, nascimento TEXT, naturalidade TEXT, nacionalidade TEXT NOT NULL DEFAULT 'brasileira',
+    sexo TEXT, filiacaoMae TEXT, filiacaoPai TEXT, estadoCivil TEXT, regimeBens TEXT, pactoAntenupcial TEXT, dataCasamento TEXT,
+    profissao TEXT, empregador TEXT, rendaMensal TEXT, email TEXT, email2 TEXT, telefone1 TEXT, telefone1Whatsapp INTEGER NOT NULL DEFAULT 1,
+    telefone2 TEXT, telefone2Whatsapp INTEGER NOT NULL DEFAULT 0, cep TEXT, logradouro TEXT, numero TEXT, complemento TEXT, bairro TEXT,
+    cidade TEXT, uf TEXT, canalPreferido TEXT NOT NULL DEFAULT 'whatsapp', horarioContato TEXT, lgpdConsentimentoEm INTEGER,
+    lgpdConsentimentoIp TEXT, lgpdMarketing INTEGER NOT NULL DEFAULT 0, leadId INTEGER, criadoEm ${agora}, atualizadoEm ${agora}
+  )`);
+  run(`CREATE TABLE IF NOT EXISTS contratoPessoas (
+    contratoId INTEGER NOT NULL, pessoaId INTEGER NOT NULL, papel TEXT NOT NULL, fracao TEXT, PRIMARY KEY (contratoId, pessoaId, papel)
+  )`);
+  run(`CREATE TABLE IF NOT EXISTS pessoaReferencias (
+    id INTEGER PRIMARY KEY AUTOINCREMENT, pessoaId INTEGER NOT NULL, nome TEXT NOT NULL, relacao TEXT NOT NULL, telefone TEXT NOT NULL, email TEXT
+  )`);
+  run(`CREATE TABLE IF NOT EXISTS pessoaDocumentos (
+    id INTEGER PRIMARY KEY AUTOINCREMENT, pessoaId INTEGER NOT NULL, tipo TEXT NOT NULL, arquivo TEXT NOT NULL, sha256 TEXT NOT NULL,
+    mime TEXT NOT NULL, validadoPor INTEGER, validadoEm INTEGER, enviadoEm ${agora}
+  )`);
+  run(`CREATE TABLE IF NOT EXISTS chacaraDependentes (
+    id INTEGER PRIMARY KEY AUTOINCREMENT, contratoId INTEGER NOT NULL, nome TEXT NOT NULL, parentesco TEXT NOT NULL, cpf TEXT, nascimento TEXT,
+    telefone1 TEXT, telefone2 TEXT, email TEXT, foto TEXT, ativo INTEGER NOT NULL DEFAULT 1, criadoEm ${agora}
+  )`);
+  run(`CREATE TABLE IF NOT EXISTS carteiras (
+    id INTEGER PRIMARY KEY AUTOINCREMENT, contratoId INTEGER NOT NULL, titularTipo TEXT NOT NULL, titularId INTEGER NOT NULL,
+    numero TEXT NOT NULL UNIQUE, qrToken TEXT NOT NULL UNIQUE, validade TEXT NOT NULL, status TEXT NOT NULL DEFAULT 'ativa', emitidaEm ${agora}
+  )`);
+  run(`CREATE TABLE IF NOT EXISTS eventosAutorizacoes (
+    id INTEGER PRIMARY KEY AUTOINCREMENT, contratoId INTEGER NOT NULL, local TEXT NOT NULL, dataEvento TEXT NOT NULL, horaInicio TEXT NOT NULL,
+    horaFim TEXT NOT NULL, descricao TEXT NOT NULL, convidadosSolicitados INTEGER NOT NULL, convidadosAutorizados INTEGER,
+    somAmplificado INTEGER NOT NULL DEFAULT 0, status TEXT NOT NULL DEFAULT 'solicitado', decididoPor INTEGER, decididoEm INTEGER, motivo TEXT,
+    criadoEm ${agora}
+  )`);
+  run(`CREATE TABLE IF NOT EXISTS eventosConvidados (
+    id INTEGER PRIMARY KEY AUTOINCREMENT, eventoId INTEGER NOT NULL, nome TEXT NOT NULL, documento TEXT NOT NULL, telefone TEXT, placa TEXT,
+    crachaNumero INTEGER, entradaEm INTEGER, saidaEm INTEGER
+  )`);
+  try {
+    sqlite.prepare(`INSERT INTO empJuridico (empreendimentoId, defaultsJson, vendedoraTipo, vendedoraJson)
+      SELECT e.id, ?, 'PF', ? FROM empreendimentos e
+      WHERE e.slug = ? AND NOT EXISTS (SELECT 1 FROM empJuridico j WHERE j.empreendimentoId = e.id)`)
+      .run(JSON.stringify(SEED_EMP_JURIDICO.defaults), JSON.stringify(SEED_EMP_JURIDICO.vendedora), SEED_EMP_JURIDICO.slug);
+  } catch (e: any) { console.error('[SQLite] Seed empJuridico:', e.message); }
   run(`CREATE TABLE IF NOT EXISTS systemRelease (
     id INTEGER PRIMARY KEY AUTOINCREMENT, versao TEXT NOT NULL UNIQUE, tipo TEXT NOT NULL DEFAULT 'patch', titulo TEXT NOT NULL, itens TEXT NOT NULL,
     obrigatoria INTEGER NOT NULL DEFAULT 0, publico TEXT NOT NULL DEFAULT 'todos', publicadoEm INTEGER NOT NULL DEFAULT (strftime('%s','now')),
