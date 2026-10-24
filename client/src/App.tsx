@@ -37,6 +37,7 @@ import ContratoDetalhe from "./pages/ContratoDetalhe";
 import PosicionarAssinaturas from "./pages/PosicionarAssinaturas";
 import AssinarContrato from "./pages/AssinarContrato";
 import VerificarContrato from "./pages/VerificarContrato";
+import CarneDigital from "./pages/CarneDigital";
 import AreaCorretor from "./pages/AreaCorretor";
 import Equipe from "./pages/Equipe";
 import MeuCadastro from "./pages/MeuCadastro";
@@ -177,6 +178,7 @@ function Router() {
       <Route path={"/links"} component={LinkPortal} />
       <Route path={"/assinar/:token"} component={AssinarContrato} />
       <Route path={"/c/v/:codigo"} component={VerificarContrato} />
+      <Route path={"/c/:codigo"} component={CarneDigital} />
       <Route path={"/bom-jardims/chacara/:codigo"} component={BomJardimsChacara} />
       <Route path={"/bom-jardims"} component={BomJardims} />
       <Route path={"/404"} component={NotFound} />

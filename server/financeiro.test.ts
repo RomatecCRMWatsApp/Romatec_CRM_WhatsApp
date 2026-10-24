@@ -275,6 +275,38 @@ describe('beneficiário = titular da conta Asaas do empreendimento (nunca consta
   });
 });
 
+describe('carnê digital (/c/:codigo)', () => {
+  it('código é a chave: mostra só o primeiro nome, sem CPF; documentos por links assinados; recibo só da paga', async () => {
+    const { carneDigital, dentroDoLimite } = await import('./financeiro/carneDigital');
+    await expect(carneDigital('ERRADO')).rejects.toMatchObject({ status: 404 });
+    await expect(carneDigital('ZZZZZZZZZZZZ')).rejects.toMatchObject({ status: 404 });
+    const r: any = await carneDigital('ABCDEFGHJKLM', { hoje: '2027-02-20' });
+    expect(r.disponivel).toBe(true);
+    expect(r.comprador).toBe('Fulano');
+    expect(JSON.stringify(r)).not.toMatch(/52998224725|529\.982/);
+    const paga = r.parcelas.find((p: any) => p.status === 'paga');
+    expect(paga.recibo).toMatch(/^\/api\/financeiro\/recibos\/\d+\.pdf\?exp=\d+&sig=/);
+    const u = new URL(`https://x${paga.recibo}`);
+    expect(linkValido(u.pathname, u.searchParams.get('exp'), u.searchParams.get('sig'))).toBe(true);
+    expect(r.parcelas.filter((p: any) => p.status !== 'paga').every((p: any) => p.recibo === null)).toBe(true);
+    // Entrada 2 vencida (sem Asaas emitido no teste): sem boleto nem 2ª via, e não oferece carnê sem linha digitável
+    expect(r.parcelas.find((p: any) => p.rotulo === 'Entrada 2/6')).toMatchObject({ boleto: null, segundaVia: null });
+    expect(r.carnes).toEqual([]);
+    expect(r.resumo).toMatchObject({ pagas: 1, total: 126 });
+    // Limite por IP
+    for (let i = 0; i < 40; i++) dentroDoLimite('9.9.9.9', 1000);
+    expect(dentroDoLimite('9.9.9.9', 1000)).toBe(false);
+    expect(dentroDoLimite('9.9.9.9', 1000 + 11 * 60_000)).toBe(true);
+  });
+
+  it('contrato ainda não ativo: carnê indisponível', async () => {
+    const { carneDigital } = await import('./financeiro/carneDigital');
+    await db.update(schema.contratos).set({ status: 'em_assinatura' }).where((await import('drizzle-orm')).eq(schema.contratos.id, 1));
+    expect(await carneDigital('ABCDEFGHJKLM')).toMatchObject({ disponivel: false });
+    await db.update(schema.contratos).set({ status: 'ativo' }).where((await import('drizzle-orm')).eq(schema.contratos.id, 1));
+  });
+});
+
 describe('links assinados e jobs', () => {
   it('link HMAC vale 7 dias e não aceita caminho alterado', () => {
     const agora = Date.parse('2027-01-01T00:00:00Z');

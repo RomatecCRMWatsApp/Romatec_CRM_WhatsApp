@@ -3,6 +3,19 @@
 Cada versão nova vai no TOPO. Depois rode `npm run release` (valida e atualiza o package.json);
 ao subir, o servidor grava a versão no banco e todos recebem o aviso "Novidades da versão".
 
+## 1.13.0 — 2026-10-24
+tipo: minor
+obrigatoria: nao
+titulo: Carnê digital do comprador
+
+### Novo
+- Carnê digital pelo QR Code do carnê: o comprador vê as parcelas, quanto já pagou e o saldo devedor
+- Boleto e PIX de cada parcela, 2ª via atualizada (até 59 dias de atraso) e "Meus recibos" direto no celular
+- Carnês de cada ano para baixar, assim que as cobranças forem emitidas
+
+### Melhorias
+- A página mostra só o primeiro nome do comprador e os documentos abrem por links que expiram em 7 dias
+
 ## 1.12.0 — 2026-10-24
 tipo: minor
 obrigatoria: nao

@@ -203,6 +203,17 @@ export function registrarRotasFinanceiro(app: Express) {
     } catch (e) { erro(res, e); }
   });
 
+  // Carnê digital do comprador (/c/:codigo) — os documentos saem por links assinados
+  app.get('/api/c/:codigo', async (req, res) => {
+    try {
+      const { carneDigital, dentroDoLimite } = await import('./carneDigital');
+      const ip = String(req.headers['x-forwarded-for'] ?? '').split(',')[0].trim() || req.socket.remoteAddress || '';
+      if (!dentroDoLimite(ip)) return res.status(429).json({ erro: 'limite', mensagem: 'Muitas consultas — tente de novo em alguns minutos' });
+      res.setHeader('Cache-Control', 'no-store');
+      res.json(await carneDigital(String(req.params.codigo).toUpperCase(), { ip }));
+    } catch (e) { erro(res, e); }
+  });
+
   // Verificação pública do recibo (sem CPF; PDF só com o código de verificação)
   app.get('/r/:numero', async (req, res) => {
     try {
