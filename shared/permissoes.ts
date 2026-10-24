@@ -18,20 +18,22 @@ export interface Modulo {
   rotulo: string;
   /** Procedimentos tRPC do módulo (prefixo "x." ou nome exato) */
   procedimentos: string[];
-  /** Ligado no pacote base do corretor */
-  padraoCorretor: boolean;
+  /** Ligado no pacote base de cada perfil da equipe (matriz aprovada em 23/10/2026) */
+  padrao: { corretor: boolean; secretario: boolean };
 }
 
+const AMBOS = { corretor: true, secretario: true };
+
 export const MODULOS: Modulo[] = [
-  { chave: 'empreendimentos', rotulo: 'Empreendimentos (mapa, lotes, documentos)', procedimentos: ['empreendimentosAdmin.'], padraoCorretor: true },
-  { chave: 'simulador', rotulo: 'Simulador de financiamento', procedimentos: ['simulador.'], padraoCorretor: true },
-  { chave: 'financeiro', rotulo: 'Financeiro (vendas, sem comissão de terceiros)', procedimentos: ['financeiro.'], padraoCorretor: true },
-  { chave: 'materiais', rotulo: 'Materiais e links de divulgação', procedimentos: ['materiais.'], padraoCorretor: true },
-  { chave: 'imoveis', rotulo: 'Imóveis (cadastro e divulgação)', procedimentos: ['properties.'], padraoCorretor: true },
-  { chave: 'leads', rotulo: 'Leads e funil', procedimentos: ['crm.', 'leadCampanhas.'], padraoCorretor: true },
-  { chave: 'contatos', rotulo: 'Contatos', procedimentos: ['contacts.'], padraoCorretor: true },
-  { chave: 'campanhas', rotulo: 'Campanhas de WhatsApp', procedimentos: ['campaigns.', 'scheduler.'], padraoCorretor: true },
-  { chave: 'desempenho', rotulo: 'Desempenho', procedimentos: ['performance.'], padraoCorretor: true },
+  { chave: 'empreendimentos', rotulo: 'Empreendimentos (mapa, lotes, documentos)', procedimentos: ['empreendimentosAdmin.'], padrao: AMBOS },
+  { chave: 'simulador', rotulo: 'Simulador de financiamento', procedimentos: ['simulador.'], padrao: AMBOS },
+  { chave: 'financeiro', rotulo: 'Financeiro (vendas, sem comissão de terceiros)', procedimentos: ['financeiro.'], padrao: AMBOS },
+  { chave: 'materiais', rotulo: 'Materiais e links de divulgação', procedimentos: ['materiais.'], padrao: AMBOS },
+  { chave: 'imoveis', rotulo: 'Imóveis (cadastro e divulgação)', procedimentos: ['properties.'], padrao: AMBOS },
+  { chave: 'leads', rotulo: 'Leads e funil', procedimentos: ['crm.', 'leadCampanhas.'], padrao: AMBOS },
+  { chave: 'contatos', rotulo: 'Contatos', procedimentos: ['contacts.'], padrao: AMBOS },
+  { chave: 'campanhas', rotulo: 'Campanhas de WhatsApp', procedimentos: ['campaigns.', 'scheduler.'], padrao: AMBOS },
+  { chave: 'desempenho', rotulo: 'Desempenho', procedimentos: ['performance.'], padrao: { corretor: false, secretario: false } },
 ];
 
 export type ChaveModulo = string;
@@ -44,12 +46,15 @@ export function moduloDoCaminho(caminho: string): Modulo | null {
   return MODULOS.find(m => m.procedimentos.some(p => casa(p, caminho))) ?? null;
 }
 
-/** Pacote base (linhas de permissoesPerfil; módulo sem linha = padrão do código) + ajustes do corretor */
+export type PerfilEquipe = 'corretor' | 'secretario';
+
+/** Pacote base (linhas de permissoesPerfil; módulo sem linha = padrão do código) + ajustes da pessoa */
 export function permissoesEfetivas(
   base: { modulo: string; permitido: boolean | number }[],
   ajustes: { modulo: string; permitido: boolean | number }[],
+  perfil: PerfilEquipe = 'corretor',
 ): Permissoes {
-  const out: Permissoes = Object.fromEntries(MODULOS.map(m => [m.chave, m.padraoCorretor]));
+  const out: Permissoes = Object.fromEntries(MODULOS.map(m => [m.chave, m.padrao[perfil]]));
   for (const b of base) if (b.modulo in out) out[b.modulo] = !!b.permitido;
   for (const a of ajustes) if (a.modulo in out) out[a.modulo] = !!a.permitido;
   return out;
@@ -76,12 +81,24 @@ export const TIPOS_ACESSO = ['empreendimento', 'imovel'] as const;
 export type TipoAcesso = typeof TIPOS_ACESSO[number];
 export interface AcessoCorretor { tipo: TipoAcesso; refId: number; comissaoPct?: number | string | null }
 
-/** Corretor habilitado para o empreendimento/imóvel (admin sempre) */
+/** Habilitado para o empreendimento/imóvel: admin e secretário sempre; corretor só os habilitados */
 export function temAcesso(perfil: Perfil | null, acessos: AcessoCorretor[], tipo: TipoAcesso, refId: number): boolean {
-  if (perfil === 'admin') return true;
-  if (perfil !== 'equipe') return false;
+  if (perfil === 'admin' || perfil === 'secretario') return true;
+  if (perfil !== 'corretor') return false;
   return acessos.some(a => a.tipo === tipo && a.refId === refId);
 }
+
+/**
+ * Lead que o usuário pode ver/mexer: admin e secretário, todos; corretor só aqueles em que é o
+ * responsável (lead sem responsável não aparece para corretor). Empreendedor: nenhum.
+ */
+export function leadVisivel(perfil: Perfil | null, usuarioId: number, lead: { responsavelId?: number | null }): boolean {
+  if (perfil === 'admin' || perfil === 'secretario') return true;
+  return perfil === 'corretor' && lead.responsavelId === usuarioId;
+}
+
+/** Distribuição/roteamento de leads (trocar o responsável): só o admin */
+export const podeDistribuirLeads = (perfil: Perfil | null) => perfil === 'admin';
 
 /** Lista com marcação de acesso: os não habilitados aparecem, mas sem acesso */
 export function marcarAcesso<T extends { id: number }>(perfil: Perfil | null, acessos: AcessoCorretor[], tipo: TipoAcesso, itens: T[]): (T & { acesso: boolean })[] {
@@ -127,7 +144,8 @@ export function comissaoNaSimulacao(
   if (perfil === 'admin') {
     return { comissao: { comCorretor: comissao(preco, true, entradaParcelas === 1, c), vendaDireta: comissao(preco, false, entradaParcelas === 1, c) }, minhaComissao: null };
   }
-  return { comissao: null, minhaComissao: comissaoPropria(preco, pctCorretor, entradaParcelas > 1) };
+  // Só o corretor tem comissão própria; secretário e demais não veem comissão nenhuma
+  return { comissao: null, minhaComissao: perfil === 'corretor' ? comissaoPropria(preco, pctCorretor, entradaParcelas > 1) : null };
 }
 
 // ─── Financeiro ──────────────────────────────────────────────────────────────
@@ -154,7 +172,7 @@ export function linhaFinanceira<T extends VendaFinanceiro>(
     const k = c && venda.valorVenda ? comissao(Number(venda.valorVenda), !!venda.corretorId, !parcelada, c) : null;
     return { ...venda, parcelada, comissao: k, minhaComissao: null };
   }
-  return { ...venda, parcelada, comissao: null, minhaComissao: minhaComissaoNaVenda(usuarioId, venda, pctCorretor, parcelada) };
+  return { ...venda, parcelada, comissao: null, minhaComissao: perfil === 'corretor' ? minhaComissaoNaVenda(usuarioId, venda, pctCorretor, parcelada) : null };
 }
 
 /** Comissão de uma venda para quem está vendo: corretor só a dele (venda de outro = null) */

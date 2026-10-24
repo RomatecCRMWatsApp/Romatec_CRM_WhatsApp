@@ -3,7 +3,7 @@ import type { PermissoesUsuario } from './permissoes';
 
 // Permissões do corretor de teste: simulador desligado, só o empreendimento 1 habilitado
 const PERM: PermissoesUsuario = {
-  perfil: 'equipe',
+  perfil: 'corretor',
   modulos: { empreendimentos: true, simulador: false, financeiro: true, materiais: true, imoveis: true, leads: true, contatos: true, campanhas: true, desempenho: true },
   acessos: [{ tipo: 'empreendimento', refId: 1 }],
 };
@@ -13,7 +13,7 @@ const { appRouter } = await import('./routers');
 const { exigirAcesso } = await import('./permissoes');
 
 const caller = (user: Record<string, unknown>) => appRouter.createCaller({ user: { ativo: true, ...user }, req: { headers: {} } as any, res: {} as any } as any);
-const corretor = caller({ id: 5, role: 'user', perfil: 'equipe' });
+const corretor = caller({ id: 5, role: 'user', perfil: 'corretor' });
 
 describe('bloqueio no servidor (não confia no front)', () => {
   it('módulo desligado para o corretor: o procedimento recusa com FORBIDDEN', async () => {
@@ -26,10 +26,18 @@ describe('bloqueio no servidor (não confia no front)', () => {
   });
 
   it('cadastro de usuários, documentos e prévia do contrato são só do admin', async () => {
-    await expect(corretor.equipe.create({ nome: 'X Y', email: 'x@y.com', perfil: 'equipe', creci: '999' } as any)).rejects.toMatchObject({ code: 'FORBIDDEN' });
+    await expect(corretor.equipe.create({ dados: { nome: 'X Y' } } as any)).rejects.toMatchObject({ code: 'FORBIDDEN' });
     await expect(corretor.equipe.list()).rejects.toMatchObject({ code: 'FORBIDDEN' });
-    await expect(corretor.equipe.excluirDocumento({ id: 1 })).rejects.toMatchObject({ code: 'FORBIDDEN' });
+    await expect(corretor.equipe.credenciaisPendentes()).rejects.toMatchObject({ code: 'FORBIDDEN' });
     await expect(corretor.equipe.intermediador({ id: 1 })).rejects.toMatchObject({ code: 'FORBIDDEN' });
+  });
+
+  it('cadastro: o corretor só mexe no próprio; busca por CPF é só do admin', async () => {
+    await expect(corretor.cadastro.dados({ id: 9 })).rejects.toMatchObject({ code: 'FORBIDDEN' });
+    await expect(corretor.cadastro.salvar({ id: 9, dados: {} })).rejects.toMatchObject({ code: 'FORBIDDEN' });
+    await expect(corretor.cadastro.documentos({ id: 9 })).rejects.toMatchObject({ code: 'FORBIDDEN' });
+    await expect(corretor.cadastro.removerFoto({ id: 9 })).rejects.toMatchObject({ code: 'FORBIDDEN' });
+    await expect(corretor.cadastro.pessoaPorCpf({ cpf: '52998224725' })).rejects.toMatchObject({ code: 'FORBIDDEN' });
   });
 
   it('empreendedor não chega ao financeiro nem ao simulador', async () => {

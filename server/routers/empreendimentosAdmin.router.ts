@@ -10,7 +10,7 @@ import { getDb } from "../db";
 import { empreendimentos, lotes, loteHistorico, empreendimentoArquivos, leadQualifications, users } from "../../drizzle/schema";
 import { SITUACOES_LOTE, problemaVenda, statusPublicoDe, etapaDoLeadPelaVenda, situacaoValida, type SituacaoLote } from "../../shared/lotes";
 import { etapaDoLead } from "../leads/kanban";
-import { exigirAcesso, type PermissoesUsuario } from "../permissoes";
+import { exigirAcesso, exigirLead, type PermissoesUsuario } from "../permissoes";
 import { temAcesso } from "../../shared/permissoes";
 
 async function dbOrThrow() {
@@ -136,6 +136,11 @@ export const empreendimentosAdminRouter = router({
       };
       const problema = problemaVenda(dados);
       if (problema) throw new Error(problema);
+      // Corretor só vincula lead dele (confere antes de gravar o lote)
+      if (dados.leadId) {
+        const [l]: any[] = await db.select({ responsavelId: leadQualifications.responsavelId }).from(leadQualifications).where(eq(leadQualifications.id, dados.leadId)).limit(1);
+        if (l) exigirLead(ctx.permissoes, ctx.user.id, l);
+      }
       const agora = new Date();
       await db.update(lotes).set({
         ...dados, observacao: input.observacao ?? lote.observacao ?? null, dataSituacao: agora,
@@ -179,12 +184,14 @@ export const empreendimentosAdminRouter = router({
   }),
 
   /** Leads para vincular ao lote (nome ou telefone) */
-  buscarLeads: protectedProcedure.input(z.object({ q: z.string().trim().min(2).max(60) })).query(async ({ input }) => {
+  buscarLeads: protectedProcedure.input(z.object({ q: z.string().trim().min(2).max(60) })).query(async ({ input, ctx }) => {
     const db = await dbOrThrow();
     const digitos = input.q.replace(/\D/g, "");
+    const filtro = or(like(leadQualifications.nome, `%${input.q}%`), ...(digitos.length >= 4 ? [like(leadQualifications.phone, `%${digitos}%`)] : []));
+    // Corretor: só encontra os leads em que é o responsável
     const rows: any[] = await db.select({ id: leadQualifications.id, nome: leadQualifications.nome, phone: leadQualifications.phone })
       .from(leadQualifications)
-      .where(or(like(leadQualifications.nome, `%${input.q}%`), ...(digitos.length >= 4 ? [like(leadQualifications.phone, `%${digitos}%`)] : [])))
+      .where(ctx.permissoes.perfil === "corretor" ? and(filtro, eq(leadQualifications.responsavelId, ctx.user.id)) : filtro)
       .limit(10);
     return rows;
   }),

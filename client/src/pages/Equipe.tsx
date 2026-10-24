@@ -5,16 +5,11 @@ import { trpc } from "@/lib/trpc";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { ArrowLeft, Copy, FileText, IdCard, KeyRound, MessageCircle, Plus, ShieldCheck, Trash2, UserCheck, UserX, Users } from "lucide-react";
-import { ROTULO_PERFIL } from "@shared/equipe";
+import { Copy, IdCard, KeyRound, MessageCircle, Plus, ShieldCheck, UserCheck, UserX, Users } from "lucide-react";
+import { daEquipe, type Perfil } from "@shared/equipe";
 import PageHeader from "@/components/PageHeader";
 import PermissoesCorretor, { PacoteBase } from "@/components/equipe/PermissoesCorretor";
-import CadastroUsuario from "@/components/equipe/CadastroUsuario";
-import { ROTULO_CERTIDAO, ROTULO_DOCUMENTO, type SituacaoCertidao, type TipoDocumento } from "@shared/cadastro";
-
-const COR_CERTIDAO: Record<SituacaoCertidao, string> = {
-  ok: "bg-emerald-600/80 text-white", vencendo: "bg-amber-500/80 text-black", vencida: "bg-red-600/80 text-white", ausente: "bg-red-600/80 text-white",
-};
+import CadastroUsuario, { SeloPerfil } from "@/components/equipe/CadastroUsuario";
 
 const dataHora = (d?: string | Date | null) =>
   d ? new Date(d).toLocaleString("pt-BR", { timeZone: "America/Fortaleza", day: "2-digit", month: "2-digit", year: "numeric", hour: "2-digit", minute: "2-digit" }) : "—";
@@ -69,7 +64,6 @@ export default function Equipe() {
   const [permissoesDe, setPermissoesDe] = useState<number | null>(null);
   const recarregar = () => utils.equipe.list.invalidate();
 
-  const excluirDoc = trpc.equipe.excluirDocumento.useMutation({ onSuccess: () => { toast.success("Documento excluído"); recarregar(); }, onError: e => toast.error(e.message) });
   const listas = { modulos: data?.modulos ?? [], empreendimentos: (data?.empreendimentos ?? []) as any[], imoveis: data?.imoveis ?? [] };
   const atualizar = trpc.equipe.update.useMutation({ onSuccess: () => { toast.success("Acesso atualizado"); recarregar(); }, onError: e => toast.error(e.message) });
   const reconvite = trpc.equipe.novoConvite.useMutation({ onError: e => toast.error(e.message) });
@@ -79,7 +73,7 @@ export default function Equipe() {
 
   return (
     <div>
-      <PageHeader icone={Users} titulo="Equipe e acessos" subtitulo="Colaboradores entram com o CRECI e a senha que eles mesmos criam no primeiro acesso" />
+      <PageHeader icone={Users} titulo="Equipe e acessos" subtitulo="Colaboradores entram com CRECI, CPF ou e-mail e a senha que eles mesmos criam no primeiro acesso" />
 
       <div className="px-4 md:px-6 pb-6 max-w-[1500px] mx-auto space-y-4">
         {error && <p className="text-sm text-red-400">{error.message}</p>}
@@ -95,8 +89,8 @@ export default function Equipe() {
           <Card className="bg-card border-border">
             <CardHeader className="pb-2"><CardTitle className="text-base">Novo acesso</CardTitle></CardHeader>
             <CardContent>
-              <CadastroUsuario listas={listas} onCancelar={() => setAbrirForm(false)}
-                onSalvo={r => { if (r.link) setConvite({ nome: r.nome, link: r.link, login: r.login, telefone: r.telefone }); setAbrirForm(false); recarregar(); }} />
+              <CadastroUsuario admin listas={listas} onCancelar={() => setAbrirForm(false)}
+                onSalvo={r => { if (r.link) setConvite({ nome: r.nome, link: r.link, login: r.login, telefone: r.telefone }); setAbrirForm(false); setEditando(r.id); recarregar(); }} />
             </CardContent>
           </Card>
         )}
@@ -112,8 +106,10 @@ export default function Equipe() {
                     <div className="flex-1 min-w-0">
                       <div className="flex flex-wrap items-center gap-2">
                         <span className="font-semibold text-foreground">{p.nome || "Sem nome"}</span>
-                        {p.perfil === "equipe" && <span className={`text-[10px] px-1.5 py-0.5 rounded ${COR_CERTIDAO[p.certidao as SituacaoCertidao]}`}>{ROTULO_CERTIDAO[p.certidao as SituacaoCertidao]}{p.cadastro?.certidaoCreciValidade ? ` · até ${new Date(`${p.cadastro.certidaoCreciValidade}T12:00:00`).toLocaleDateString("pt-BR")}` : ""}</span>}
-                        <span className="text-[10px] uppercase tracking-wide px-1.5 py-0.5 rounded border border-border text-muted-foreground">{ROTULO_PERFIL[p.perfil as keyof typeof ROTULO_PERFIL] || p.perfil}</span>
+                        <SeloPerfil perfil={p.perfil as Perfil} />
+                        {(p.pendencias as string[]).map(t => (
+                          <span key={t} className={`text-[10px] px-1.5 py-0.5 rounded ${/a vencer/.test(t) ? "bg-amber-500/80 text-black" : "bg-red-600/80 text-white"}`}>{t}</span>
+                        ))}
                         {!p.ativo && <span className="text-[10px] px-1.5 py-0.5 rounded bg-red-600/80 text-white">DESATIVADO</span>}
                         {p.ativo && p.perfil !== "admin" && !p.temSenha && <span className="text-[10px] px-1.5 py-0.5 rounded bg-amber-500/80 text-black">{p.convitePendente ? "aguardando 1º acesso" : "sem senha — gere um link"}</span>}
                       </div>
@@ -123,7 +119,7 @@ export default function Equipe() {
                     </div>
                     {p.perfil !== "empreendedor" && p.ativo && (
                       <label className="flex items-center gap-2 text-xs text-muted-foreground shrink-0 cursor-pointer" title="Entra no rodízio de leads novos e recebe os alertas de 5 minutos">
-                        <input type="checkbox" checked={!!p.recebeLeads} onChange={e => atualizar.mutate({ id: p.id, recebeLeads: e.target.checked })} className="h-4 w-4 accent-[var(--primary)]" />
+                        <input type="checkbox" checked={!!p.recebeLeads} disabled={atualizar.isPending} onChange={e => atualizar.mutate({ id: p.id, recebeLeads: e.target.checked })} className="h-4 w-4 accent-[var(--primary)]" />
                         Recebe leads
                       </label>
                     )}
@@ -136,7 +132,7 @@ export default function Equipe() {
                           const zerar = p.temSenha && confirm(`${p.nome} já tem senha. Gerar um link novo para ele(a) criar outra senha? A senha atual deixa de valer.`);
                           if (p.temSenha && !zerar) return;
                           const r = await reconvite.mutateAsync({ id: p.id, zerarSenha: !!zerar });
-                          setConvite({ id: p.id, nome: p.nome, link: r.link, login: p.creci ? `o CRECI ${p.creci}` : p.email, telefone: p.telefone });
+                          setConvite({ id: p.id, nome: p.nome, link: r.link, login: p.creci ? `o CRECI ${p.creci}` : "o seu CPF", telefone: p.telefone });
                           recarregar();
                         }}>
                           <KeyRound className="mr-1.5 h-3.5 w-3.5" /> {p.temSenha ? "Redefinir senha" : "Gerar link"}
@@ -147,36 +143,17 @@ export default function Equipe() {
                         }}>
                           {p.ativo ? <><UserX className="mr-1.5 h-3.5 w-3.5" /> Desativar</> : <><UserCheck className="mr-1.5 h-3.5 w-3.5" /> Reativar</>}
                         </Button>
-                        {p.perfil === "equipe" && (
+                        {daEquipe(p.perfil as Perfil) && (
                           <Button size="sm" variant={permissoesDe === p.id ? "default" : "outline"} onClick={() => setPermissoesDe(v => (v === p.id ? null : p.id))}>
                             <ShieldCheck className="mr-1.5 h-3.5 w-3.5" /> Permissões
                           </Button>
                         )}
                       </div>
                     )}
-                    {p.perfil === "admin" && !p.creci && (
-                      <Button size="sm" variant="outline" onClick={() => {
-                        const c = prompt("Seu CRECI (só o número), para entrar com CRECI + senha:");
-                        if (c) atualizar.mutate({ id: p.id, creci: c });
-                      }}>Cadastrar meu CRECI</Button>
-                    )}
                   </div>
                   {editando === p.id && (
-                    <div className="space-y-3 rounded-lg border border-border bg-secondary/10 p-3">
-                      {p.documentos.length > 0 && (
-                        <div className="space-y-1">
-                          <p className="text-xs font-semibold">Documentos</p>
-                          {p.documentos.map((d: any) => (
-                            <div key={d.id} className="flex flex-wrap items-center gap-2 text-xs">
-                              <FileText className="h-3.5 w-3.5 text-muted-foreground" />
-                              <a href={`/api/usuarios/documentos/${d.id}`} target="_blank" rel="noreferrer" className="hover:underline">{ROTULO_DOCUMENTO[d.tipo as TipoDocumento] ?? d.tipo} — {d.nome}</a>
-                              {d.validade && <span className="text-muted-foreground">validade {new Date(`${d.validade}T12:00:00`).toLocaleDateString("pt-BR")}</span>}
-                              <button onClick={() => confirm(`Excluir ${d.nome}?`) && excluirDoc.mutate({ id: d.id })} className="text-muted-foreground hover:text-red-400" aria-label="Excluir"><Trash2 className="h-3.5 w-3.5" /></button>
-                            </div>
-                          ))}
-                        </div>
-                      )}
-                      <CadastroUsuario pessoa={p} listas={listas} onCancelar={() => setEditando(null)} onSalvo={() => { setEditando(null); recarregar(); }} />
+                    <div className="rounded-lg border border-border bg-secondary/10 p-3">
+                      <CadastroUsuario id={p.id} admin listas={listas} onCancelar={() => setEditando(null)} onSalvo={() => recarregar()} />
                     </div>
                   )}
                   {permissoesDe === p.id && <PermissoesCorretor usuarioId={p.id} />}
@@ -187,7 +164,7 @@ export default function Equipe() {
         )}
 
         <p className="text-[11px] text-muted-foreground">
-          <b>Equipe</b> (corretor): usa os módulos do pacote base (ou os ajustados em "Permissões") e só abre os empreendimentos e imóveis habilitados para ele; no financeiro e no simulador vê só a própria comissão. Não mexe em configurações nem na equipe. <b>Empreendedor</b>: vê só os gráficos de leads do empreendimento (sem nomes ou telefones) e as artes liberadas para divulgar.
+          <b>Secretário(a)</b>: vê todos os leads, empreendimentos e imóveis, com os módulos do pacote base dele. <b>Corretor(a)</b>: só os leads em que é o responsável e os empreendimentos e imóveis habilitados; no financeiro e no simulador vê só a própria comissão; para receber leads precisa do Cartão de Regularidade CRECI. Nenhum dos dois mexe em configurações, na equipe ou na distribuição de leads. <b>Empreendedor</b>: vê só os gráficos de leads do empreendimento (sem nomes ou telefones) e as artes liberadas para divulgar.
         </p>
       </div>
     </div>

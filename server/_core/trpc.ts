@@ -8,6 +8,11 @@ import { carregarPermissoes, type PermissoesUsuario } from "../permissoes";
 
 const t = initTRPC.context<TrpcContext>().create({
   transformer: superjson,
+  // Erros de validação por campo (cadastro): { campo: mensagem } em error.data.campos
+  errorFormatter({ shape, error }) {
+    const campos = (error.cause as { campos?: Record<string, string> } | undefined)?.campos;
+    return campos ? { ...shape, data: { ...shape.data, campos } } : shape;
+  },
 });
 
 export const router = t.router;

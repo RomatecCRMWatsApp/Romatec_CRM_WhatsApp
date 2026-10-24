@@ -2,31 +2,45 @@ import { useState } from "react";
 import { toast } from "sonner";
 import { trpc } from "@/lib/trpc";
 import { Button } from "@/components/ui/button";
+import { ROTULO_PERFIL } from "@shared/equipe";
 
 const pctTexto = (v: number | null | undefined) => (v == null ? "" : (v * 100).toLocaleString("pt-BR", { maximumFractionDigits: 2 }));
 const pctNumero = (s: string) => { const t = s.trim().replace(",", "."); return t === "" ? null : Number(t) / 100; };
 
-/** Pacote base do perfil corretor (vale para todos, a não ser que o corretor tenha ajuste próprio) */
+/** Pacote base de cada perfil da equipe (vale para todos, a não ser que a pessoa tenha ajuste próprio) */
 export function PacoteBase() {
   const utils = trpc.useUtils();
-  const { data } = trpc.permissoes.base.useQuery();
+  const [perfil, setPerfil] = useState<"corretor" | "secretario">("corretor");
+  const { data } = trpc.permissoes.base.useQuery({ perfil });
   const mudar = trpc.permissoes.definirBase.useMutation({
     onSuccess: () => { toast.success("Pacote base atualizado"); utils.permissoes.invalidate(); },
     onError: e => toast.error(e.message),
   });
-  if (!data) return null;
   return (
     <div className="rounded-xl border border-border bg-card p-4 space-y-2 text-sm">
-      <p className="font-semibold">Pacote base do corretor</p>
-      <p className="text-xs text-muted-foreground">Todo corretor (perfil Equipe) herda estes módulos. Ajuste individual fica em "Permissões" de cada um.</p>
+      <div className="flex flex-wrap items-center gap-2">
+        <p className="flex-1 font-semibold">Pacote base do perfil</p>
+        <div className="inline-flex rounded-md border border-border p-0.5 text-xs">
+          {(["corretor", "secretario"] as const).map(p => (
+            <button key={p} type="button" onClick={() => setPerfil(p)}
+              className={`rounded px-2.5 py-1 ${perfil === p ? "bg-primary text-primary-foreground" : "text-muted-foreground"}`}>{ROTULO_PERFIL[p]}</button>
+          ))}
+        </div>
+      </div>
+      <p className="text-xs text-muted-foreground">
+        Todo {ROTULO_PERFIL[perfil].toLowerCase()} herda estes módulos. Ajuste individual fica em "Permissões" de cada um.
+        {perfil === "corretor" ? " O corretor só vê os leads em que é o responsável." : " O secretário vê todos os leads, empreendimentos e imóveis."}
+      </p>
+      {!data ? <p className="text-xs text-muted-foreground">Carregando…</p> : (
       <div className="grid gap-1.5 sm:grid-cols-2 lg:grid-cols-3">
         {data.map(m => (
           <label key={m.chave} className="flex items-center gap-2 text-xs cursor-pointer">
-            <input type="checkbox" checked={m.permitido} disabled={mudar.isPending} onChange={e => mudar.mutate({ modulo: m.chave, permitido: e.target.checked })} className="h-4 w-4 accent-[var(--primary)]" />
+            <input type="checkbox" checked={m.permitido} disabled={mudar.isPending} onChange={e => mudar.mutate({ perfil, modulo: m.chave, permitido: e.target.checked })} className="h-4 w-4 accent-[var(--primary)]" />
             {m.rotulo}
           </label>
         ))}
       </div>
+      )}
     </div>
   );
 }

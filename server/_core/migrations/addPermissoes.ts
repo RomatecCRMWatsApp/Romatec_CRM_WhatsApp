@@ -57,21 +57,29 @@ const COMANDOS: { nome: string; stmt: ReturnType<typeof sql> }[] = [
     nome: 'acessos iniciais (empreendimentos)',
     stmt: sql`INSERT IGNORE INTO acessosCorretor (usuarioId, tipo, refId)
       SELECT u.id, 'empreendimento', e.id FROM users u CROSS JOIN empreendimentos e
-      WHERE u.role <> 'admin' AND (u.perfil IS NULL OR u.perfil = 'equipe')
+      WHERE u.role <> 'admin' AND (u.perfil IS NULL OR u.perfil IN ('equipe', 'corretor'))
         AND NOT EXISTS (SELECT 1 FROM permissoesPerfil)`,
   },
   {
     nome: 'acessos iniciais (imóveis)',
     stmt: sql`INSERT IGNORE INTO acessosCorretor (usuarioId, tipo, refId)
       SELECT u.id, 'imovel', p.id FROM users u CROSS JOIN properties p
-      WHERE u.role <> 'admin' AND (u.perfil IS NULL OR u.perfil = 'equipe')
+      WHERE u.role <> 'admin' AND (u.perfil IS NULL OR u.perfil IN ('equipe', 'corretor'))
         AND NOT EXISTS (SELECT 1 FROM permissoesPerfil)`,
   },
-  // Pacote base do corretor: só insere módulo que ainda não tem linha (não sobrescreve o que o admin mudou)
-  ...MODULOS.map(m => ({
-    nome: `pacote base equipe.${m.chave}`,
-    stmt: sql`INSERT IGNORE INTO permissoesPerfil (perfil, modulo, permitido) VALUES ('equipe', ${m.chave}, ${m.padraoCorretor})`,
-  })),
+  // v1.6.0: "equipe" vira corretor (perfil dos usuários e pacote base). A matriz aprovada tira
+  // "Desempenho" do corretor; roda uma vez só (depois não existe mais linha "equipe").
+  { nome: 'users.perfil equipe → corretor', stmt: sql`UPDATE users SET perfil = 'corretor' WHERE role <> 'admin' AND (perfil IS NULL OR perfil = 'equipe')` },
+  {
+    nome: 'pacote base equipe → corretor',
+    stmt: sql`UPDATE IGNORE permissoesPerfil SET perfil = 'corretor', permitido = IF(modulo = 'desempenho', 0, permitido) WHERE perfil = 'equipe'`,
+  },
+  { nome: 'pacote base equipe (sobras)', stmt: sql`DELETE FROM permissoesPerfil WHERE perfil = 'equipe'` },
+  // Pacote base de cada perfil: só insere módulo que ainda não tem linha (não sobrescreve o que o admin mudou)
+  ...MODULOS.flatMap(m => (["corretor", "secretario"] as const).map(perfil => ({
+    nome: `pacote base ${perfil}.${m.chave}`,
+    stmt: sql`INSERT IGNORE INTO permissoesPerfil (perfil, modulo, permitido) VALUES (${perfil}, ${m.chave}, ${m.padrao[perfil]})`,
+  }))),
 ];
 
 export async function addPermissoes(): Promise<void> {

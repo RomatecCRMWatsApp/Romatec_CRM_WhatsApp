@@ -3,24 +3,39 @@
  * usadas no servidor — tRPC/rotas — e no navegador — menus e redirecionamento).
  *
  * - admin: tudo (José).
- * - equipe: corretores/secretária — CRM inteiro, menos configurações, equipe e ZAYRA.
+ * - secretario: CRM inteiro (todos os leads), menos configurações, equipe, ZAYRA e distribuição de leads.
+ * - corretor: só os leads em que é o responsável e os empreendimentos/imóveis habilitados para ele.
  * - empreendedor: só o painel do empreendimento dele (gráficos de leads, sem dados
  *   pessoais) e as artes liberadas para divulgar.
+ * Secretário e corretor usam o portal de permissões (pacote base por perfil + ajuste por pessoa).
+ * O antigo perfil "equipe" (até a v1.5.0) é lido como corretor.
  */
 
-export const PERFIS = ['admin', 'equipe', 'empreendedor'] as const;
+export const PERFIS = ['admin', 'secretario', 'corretor', 'empreendedor'] as const;
 export type Perfil = typeof PERFIS[number];
 
 export const ROTULO_PERFIL: Record<Perfil, string> = {
   admin: 'Administrador',
-  equipe: 'Equipe (corretor/secretária)',
+  secretario: 'Secretário(a)',
+  corretor: 'Corretor(a)',
   empreendedor: 'Empreendedor',
 };
+
+/** Cor do selo do perfil (dourado, azul, verde, roxo) */
+export const COR_PERFIL: Record<Perfil, string> = {
+  admin: '#C9A84C', secretario: '#5AA9E6', corretor: '#2BD47A', empreendedor: '#B07CE0',
+};
+
+/** Perfis da equipe interna (usam o portal de permissões) */
+export const PERFIS_EQUIPE = ['secretario', 'corretor'] as const;
+export const daEquipe = (p: Perfil | null): p is 'secretario' | 'corretor' => p === 'secretario' || p === 'corretor';
 
 export function perfilDe(user: { role?: string | null; perfil?: string | null } | null | undefined): Perfil | null {
   if (!user) return null;
   if (user.role === 'admin') return 'admin';
-  return (PERFIS as readonly string[]).includes(String(user.perfil)) ? (user.perfil as Perfil) : 'equipe';
+  const p = String(user.perfil);
+  if (p === 'secretario' || p === 'corretor' || p === 'empreendedor') return p;
+  return 'corretor'; // "equipe" (antigo) ou vazio
 }
 
 /** CRECI só com dígitos: "CRECI/MA 4.705" → "4705" (é o login dos colaboradores) */
@@ -29,15 +44,16 @@ export function normalizarCreci(entrada: string | null | undefined): string | nu
   return d.length >= 3 && d.length <= 10 ? d : null;
 }
 
-/** Login: e-mail (tem @) ou CRECI */
-export function tipoLogin(entrada: string): 'email' | 'creci' {
-  return entrada.includes('@') ? 'email' : 'creci';
+/** Login: e-mail (tem @), CPF (11 dígitos) ou CRECI */
+export function tipoLogin(entrada: string): 'email' | 'cpf' | 'creci' {
+  if (entrada.includes('@')) return 'email';
+  return entrada.replace(/\D/g, '').length === 11 ? 'cpf' : 'creci';
 }
 
 // ─── Servidor: procedimentos tRPC ────────────────────────────────────────────
-/** O empreendedor só chama estes (o resto do CRM é negado por padrão) */
-const TRPC_EMPREENDEDOR = ['auth.', 'empreendedor.', 'system.versao'];
-/** Equipe não mexe em configurações, na equipe nem na ZAYRA */
+/** O empreendedor só chama estes (o resto do CRM é negado por padrão); o próprio cadastro todos editam */
+const TRPC_EMPREENDEDOR = ['auth.', 'empreendedor.', 'system.versao', 'cadastro.'];
+/** Secretário e corretor não mexem em configurações, na equipe nem na ZAYRA */
 const TRPC_SO_ADMIN = ['companyConfig.update', 'equipe.', 'zaira.'];
 
 export function podeChamar(perfil: Perfil | null, caminho: string): boolean {
@@ -56,6 +72,7 @@ export function telaInicial(perfil: Perfil | null): string {
 export function podeAbrir(perfil: Perfil | null, caminho: string): boolean {
   if (!perfil) return false;
   if (perfil === 'admin') return true;
+  if (caminho === '/meu-cadastro') return true;
   if (perfil === 'empreendedor') return caminho === '/empreendedor' || caminho.startsWith('/empreendedor/');
   return !['/equipe', '/settings', '/setup'].some(p => caminho === p || caminho.startsWith(`${p}/`)) && !caminho.startsWith('/empreendedor');
 }

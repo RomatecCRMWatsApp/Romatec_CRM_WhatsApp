@@ -1,15 +1,13 @@
-import { useEffect, useRef, useState } from "react";
-import { toast } from "sonner";
-import { enviarArquivo } from "./equipe/CadastroUsuario";
+import { useEffect, useState } from "react";
 import { useLocation } from "wouter";
 import { useAuth } from "@/_core/hooks/useAuth";
-import { perfilDe, podeAbrir, ROTULO_PERFIL } from "@shared/equipe";
+import { daEquipe, perfilDe, podeAbrir, ROTULO_PERFIL } from "@shared/equipe";
 import { trpc } from "@/lib/trpc";
 import AvisoRotinas from "./AvisoRotinas";
 import { MobileTabBar, RomatecAppIcon, RomatecLockup, TAB_ICONS, type TabItem } from "@/brand";
 import {
   BarChart3, Building2, Flame, Images, KanbanSquare, LayoutDashboard, LineChart, LogOut, Megaphone, Menu, Send,
-  Settings, UserCog, Users, X, Eye, ClipboardList, CalendarDays, Map as MapIcon, Smartphone, Wallet,
+  Settings, UserCog, Users, X, Eye, ClipboardList, CalendarDays, Map as MapIcon, Smartphone, Wallet, IdCard,
 } from "lucide-react";
 
 /** modulo = chave em shared/permissoes.ts (some do menu quando o módulo está desligado para o corretor) */
@@ -17,7 +15,13 @@ type Item = { rotulo: string; rota: string; icone: React.ComponentType<{ classNa
 type Grupo = { titulo?: string; itens: Item[] };
 
 const MENU: Grupo[] = [
-  { itens: [{ rotulo: "Painel", rota: "/dashboard", icone: LayoutDashboard }, { rotulo: "Área do corretor", rota: "/corretor", icone: Smartphone }] },
+  {
+    itens: [
+      { rotulo: "Painel", rota: "/dashboard", icone: LayoutDashboard },
+      { rotulo: "Área do corretor", rota: "/corretor", icone: Smartphone },
+      { rotulo: "Meu cadastro", rota: "/meu-cadastro", icone: IdCard },
+    ],
+  },
   {
     titulo: "Leads",
     itens: [
@@ -69,8 +73,10 @@ function Navegacao({ onNavegar }: { onNavegar?: () => void }) {
   const [loc, navigate] = useLocation();
   const { user } = useAuth();
   const perfil = perfilDe(user as any);
-  const { data: minhas } = trpc.permissoes.minhas.useQuery(undefined, { enabled: perfil === "equipe", staleTime: 60_000 });
+  const { data: minhas } = trpc.permissoes.minhas.useQuery(undefined, { enabled: daEquipe(perfil), staleTime: 60_000 });
   const grupos = menuDoPerfil(perfil, minhas?.modulos);
+  // Bolinha vermelha em "Meu cadastro": credencial ausente, vencida ou a vencer
+  const { data: pendencias } = trpc.cadastro.minhasPendencias.useQuery(undefined, { enabled: !!user, staleTime: 5 * 60_000 });
   return (
     <nav className="flex-1 overflow-y-auto px-3 py-2 space-y-4">
       {grupos.map((g, gi) => (
@@ -89,6 +95,9 @@ function Navegacao({ onNavegar }: { onNavegar?: () => void }) {
               >
                 <Icone className="h-4 w-4 shrink-0" />
                 <span className="truncate">{it.rotulo}</span>
+                {it.rota === "/meu-cadastro" && !!pendencias?.length && (
+                  <span className="ml-auto h-2 w-2 shrink-0 rounded-full bg-red-500" title={pendencias.join(" · ")} />
+                )}
               </button>
             );
           })}
@@ -98,33 +107,16 @@ function Navegacao({ onNavegar }: { onNavegar?: () => void }) {
   );
 }
 
-/** Foto de perfil do usuário logado (todos os perfis); clicar troca a foto */
+/** Foto de perfil do usuário logado (todos os perfis); clicar abre "Meu cadastro" (foto com recorte/selfie) */
 export function FotoUsuario({ tamanho = "h-9 w-9", editavel = true }: { tamanho?: string; editavel?: boolean }) {
   const { user } = useAuth();
-  const utils = trpc.useUtils();
-  const ref = useRef<HTMLInputElement>(null);
-  const [enviando, setEnviando] = useState(false);
+  const [, navigate] = useLocation();
   const nome = String((user as any)?.name || "Usuário");
   const foto = (user as any)?.fotoUrl as string | null | undefined;
-  const trocar = async (f: File | undefined) => {
-    if (!f) return;
-    setEnviando(true);
-    try {
-      await enviarArquivo("/api/usuarios/me/foto", f);
-      await utils.auth.me.invalidate();
-      toast.success("Foto atualizada");
-    } catch (e: any) { toast.error(e.message); }
-    finally { setEnviando(false); if (ref.current) ref.current.value = ""; }
-  };
-  const conteudo = foto ? <img src={foto} alt={nome} className={`${tamanho} shrink-0 rounded-full object-cover ${enviando ? "opacity-50" : ""}`} />
+  const conteudo = foto ? <img src={foto} alt={nome} className={`${tamanho} shrink-0 rounded-full object-cover`} />
     : <div className={`${tamanho} shrink-0 rounded-full bg-primary/20 text-primary flex items-center justify-center font-bold`}>{nome.charAt(0).toUpperCase()}</div>;
   if (!editavel) return conteudo;
-  return (
-    <>
-      <input ref={ref} type="file" accept="image/jpeg,image/png,image/webp" className="hidden" onChange={e => trocar(e.target.files?.[0])} />
-      <button type="button" onClick={() => ref.current?.click()} title="Trocar foto de perfil" disabled={enviando} className="rounded-full">{conteudo}</button>
-    </>
-  );
+  return <button type="button" onClick={() => navigate("/meu-cadastro")} title="Meu cadastro" className="rounded-full">{conteudo}</button>;
 }
 
 function Rodape() {
@@ -180,7 +172,7 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
   const [aberto, setAberto] = useState(false);
   useEffect(() => setAberto(false), [loc]);
   const { user } = useAuth();
-  const { data: minhas } = trpc.permissoes.minhas.useQuery(undefined, { enabled: perfilDe(user as any) === "equipe", staleTime: 60_000 });
+  const { data: minhas } = trpc.permissoes.minhas.useQuery(undefined, { enabled: daEquipe(perfilDe(user as any)), staleTime: 60_000 });
 
   return (
     <div className="min-h-screen bg-background lg:pl-64">

@@ -54,6 +54,16 @@ export const users = mysqlTable("users", {
   /** Validade da certidão de quitação do CRECI (o arquivo fica em usuarioDocumentos) */
   certidaoCreciValidade: varchar("certidaoCreciValidade", { length: 10 }),
   fotoUrl: varchar("fotoUrl", { length: 500 }),
+  // ─── v1.6.0 (shared/cadastro.ts, shared/qualificacao.ts) ───
+  /** Sobe quando o perfil muda: tokens com versão antiga deixam de valer (sessão encerrada) */
+  sessaoVersao: int("sessaoVersao").default(0).notNull(),
+  /** "M" | "F" — concordância na qualificação do contrato */
+  sexo: varchar("sexo", { length: 1 }),
+  profissao: varchar("profissao", { length: 80 }),
+  paisOrigem: varchar("paisOrigem", { length: 60 }),
+  /** "RNM" | "PASSAPORTE" (estrangeiro) */
+  docEstrangeiroTipo: varchar("docEstrangeiroTipo", { length: 12 }),
+  docEstrangeiroNumero: varchar("docEstrangeiroNumero", { length: 30 }),
   ultimoLeadAt: timestamp("ultimoLeadAt"),
 });
 
@@ -513,9 +523,85 @@ export const usuarioDocumentos = mysqlTable("usuarioDocumentos", {
   validade: varchar("validade", { length: 10 }),
   enviadoPor: int("enviadoPor"),
   createdAt: timestamp("createdAt").defaultNow().notNull(),
+  // ─── Credenciais (v1.6.0) ───
+  /** "usuario" | "conjuge" */
+  titular: varchar("titular", { length: 10 }).default("usuario").notNull(),
+  /** Nº CNAI, nº do documento… */
+  numero: varchar("numero", { length: 30 }),
+  /** Cartão CRECI: link de verificação on-line (selo ✓ na qualificação) */
+  linkVerificacao: varchar("linkVerificacao", { length: 500 }),
+  /** Certidão CRECI: link de emissão/renovação */
+  linkEmissao: varchar("linkEmissao", { length: 500 }),
+  anexarDocumentos: boolean("anexarDocumentos").default(true).notNull(),
+  exibirPerfil: boolean("exibirPerfil").default(false).notNull(),
+  alertaEnviadoEm: varchar("alertaEnviadoEm", { length: 10 }),
+  /** Miniatura 400 px (WEBP) da página 1 */
+  thumbBase64: text("thumbBase64"),
+  paginasQtd: int("paginasQtd"),
+  atualizadoEm: timestamp("atualizadoEm").defaultNow().onUpdateNow(),
 }, (t) => ({
   idxUsuario: index("idx_usudoc_usuario").on(t.usuarioId, t.tipo),
 }));
+
+/** Páginas PNG (1600 px) convertidas de cada documento (PDF: até 2 — frente e verso) */
+export const usuarioDocumentoPaginas = mysqlTable("usuarioDocumentoPaginas", {
+  id: int("id").autoincrement().primaryKey(),
+  documentoId: int("documentoId").notNull(),
+  n: int("n").notNull(),
+  pngBase64: longtext("pngBase64").notNull(),
+}, (t) => ({
+  uqPagina: uniqueIndex("ux_pagina").on(t.documentoId, t.n),
+}));
+
+/** Cônjuge / companheiro(a) do usuário (contrato) */
+export const usuarioConjuge = mysqlTable("usuarioConjuge", {
+  id: int("id").autoincrement().primaryKey(),
+  usuarioId: int("usuarioId").notNull(),
+  nome: varchar("nome", { length: 150 }).notNull(),
+  sexo: varchar("sexo", { length: 1 }),
+  cpf: varchar("cpf", { length: 11 }).notNull(),
+  rg: varchar("rg", { length: 14 }),
+  rgOrgao: varchar("rgOrgao", { length: 20 }),
+  nacionalidade: varchar("nacionalidade", { length: 12 }).default("brasileira").notNull(),
+  paisOrigem: varchar("paisOrigem", { length: 60 }),
+  docEstrangeiroTipo: varchar("docEstrangeiroTipo", { length: 12 }),
+  docEstrangeiroNumero: varchar("docEstrangeiroNumero", { length: 30 }),
+  profissao: varchar("profissao", { length: 80 }),
+  dataNascimento: varchar("dataNascimento", { length: 10 }),
+  telefone: varchar("telefone", { length: 11 }),
+  email: varchar("email", { length: 150 }),
+  regimeBens: varchar("regimeBens", { length: 30 }),
+  dataCasamento: varchar("dataCasamento", { length: 10 }),
+  uniaoDataInicio: varchar("uniaoDataInicio", { length: 10 }),
+  uniaoRegistrada: boolean("uniaoRegistrada").default(false).notNull(),
+  mesmoEndereco: boolean("mesmoEndereco").default(true).notNull(),
+  cep: varchar("cep", { length: 8 }),
+  logradouro: varchar("logradouro", { length: 150 }),
+  numero: varchar("numero", { length: 10 }),
+  complemento: varchar("complemento", { length: 80 }),
+  bairro: varchar("bairro", { length: 80 }),
+  cidade: varchar("cidade", { length: 80 }),
+  uf: varchar("uf", { length: 2 }),
+  ativo: boolean("ativo").default(true).notNull(),
+  criadoEm: timestamp("criadoEm").defaultNow().notNull(),
+  atualizadoEm: timestamp("atualizadoEm").defaultNow().onUpdateNow().notNull(),
+}, (t) => ({
+  uqUsuario: uniqueIndex("ux_conjuge_usuario").on(t.usuarioId),
+}));
+
+/** Foto de perfil (WEBP 512×512) — no banco, como os documentos */
+export const usuarioFoto = mysqlTable("usuarioFoto", {
+  usuarioId: int("usuarioId").primaryKey(),
+  mime: varchar("mime", { length: 30 }).notNull(),
+  conteudoBase64: text("conteudoBase64").notNull(),
+  atualizadoEm: timestamp("atualizadoEm").defaultNow().onUpdateNow().notNull(),
+});
+
+/** Links e prazos das credenciais (link_certidao_<UF>, certidao_validade_dias, …) */
+export const configCredenciais = mysqlTable("configCredenciais", {
+  chave: varchar("chave", { length: 60 }).primaryKey(),
+  valor: varchar("valor", { length: 500 }).notNull(),
+});
 
 /** Pacote base de permissões por perfil e módulo (shared/permissoes.ts) */
 export const permissoesPerfil = mysqlTable("permissoesPerfil", {

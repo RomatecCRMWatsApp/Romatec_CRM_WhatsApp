@@ -16,13 +16,27 @@ import { empreendimentosAdminRouter } from "./routers/empreendimentosAdmin.route
 import { simuladorRouter } from "./routers/simulador.router";
 import { financeiroRouter } from "./routers/financeiro.router";
 import { permissoesRouter } from "./routers/permissoes.router";
-import { exigirAcesso } from "./permissoes";
+import { cadastroRouter } from "./routers/cadastro.router";
+import { exigirAcesso, exigirLead, leadsVisiveis } from "./permissoes";
 import { acessosCorretor } from "../drizzle/schema";
 import { z } from "zod";
 import { createRateLimiter } from "./lead-intake";
 import { publicCompanyConfig, stripMaskedFields } from "./auth-security";
 
 const allowLoginAttempt = createRateLimiter(10, 15 * 60 * 1000);
+
+/** Corretor: só os leads em que é o responsável (null = sem filtro: admin e secretário) */
+const soDele = (ctx: { user: { id: number }; permissoes: { perfil: string | null } }) => (ctx.permissoes.perfil === "corretor" ? ctx.user.id : null);
+
+/** Lead por id, recusando (403) o lead de outro responsável para o corretor */
+async function leadDoUsuario(id: number, ctx: { user: { id: number }; permissoes: any }) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  const [lead] = await db.select().from(leadQualifications).where(eq(leadQualifications.id, id)).limit(1);
+  if (!lead) throw new Error("Lead não encontrado");
+  exigirLead(ctx.permissoes, ctx.user.id, lead as any);
+  return lead;
+}
 
 /** exibirPreco = false: visitante não recebe preço nem preço de oferta */
 function semPrecoSeOculto<T extends Record<string, any>>(p: T, logado: boolean): T {
@@ -48,6 +62,7 @@ export const appRouter = router({
   simulador: simuladorRouter,
   financeiro: financeiroRouter,
   permissoes: permissoesRouter,
+  cadastro: cadastroRouter,
   system: systemRouter,
   auth: router({
     // Sem os hashes de senha (a linha do usuário inteira ia para o navegador)
@@ -75,10 +90,14 @@ export const appRouter = router({
           const db = await getDb();
           if (!db) throw new Error("Database not available");
           const username = input.username.trim();
-          // Colaboradores entram com o número do CRECI; e-mail continua valendo
+          // Colaboradores entram com o CRECI ou o CPF (secretário/empreendedor não têm CRECI); e-mail continua valendo
           const { normalizarCreci, tipoLogin, perfilDe, telaInicial } = await import("@shared/equipe");
-          const creci = tipoLogin(username) === 'creci' ? normalizarCreci(username) : null;
-          let userList = creci ? await db.select().from(users).where(eq(users.creci, creci)).limit(1) : [];
+          const { cpfValido, soDigitos } = await import("@shared/cadastro");
+          const tipo = tipoLogin(username);
+          let userList: any[] = tipo === 'cpf' && cpfValido(username) ? await db.select().from(users).where(eq(users.cpf, soDigitos(username))).limit(1) : [];
+          // 11 dígitos também pode ser CRECI longo: se não achou pelo CPF, tenta o CRECI
+          const creci = tipo !== 'email' ? normalizarCreci(username) : null;
+          if (!userList[0] && creci) userList = await db.select().from(users).where(eq(users.creci, creci)).limit(1);
           if (!userList[0]) userList = await db.select().from(users).where(eq(users.email, username)).limit(1);
           if (!userList[0]) {
             userList = await db.select().from(users).where(eq(users.openId, username)).limit(1);
@@ -109,7 +128,7 @@ export const appRouter = router({
           const { sdk } = await import("./_core/sdk");
           const { ONE_YEAR_MS } = await import("@shared/const");
           const cookieOptions = getSessionCookieOptions(ctx.req);
-          const token = await sdk.createSessionToken(user.openId, { name: user.name || "" });
+          const token = await sdk.createSessionToken(user.openId, { name: user.name || "", sessaoVersao: Number((user as any).sessaoVersao) || 0 });
           ctx.res.cookie(COOKIE_NAME, token, { ...cookieOptions, maxAge: ONE_YEAR_MS });
           return { success: true, destino: telaInicial(perfilDe(user as any)) };
         } catch (error) {
@@ -206,7 +225,7 @@ export const appRouter = router({
     // Público: lotes com status ao vivo. Preço só sai quando precosPublicos = true.
     publicBySlug: publicProcedure
       .input(z.object({ slug: z.string().min(1).max(80) }))
-      .query(async ({ input }) => {
+      .query(async ({ input, ctx }) => {
         const { getEmpreendimentoPublico } = await import("./empreendimentos");
         return getEmpreendimentoPublico(input.slug);
       }),
@@ -273,7 +292,7 @@ export const appRouter = router({
           console.warn("[Properties] Código IMV não gravado:", e);
         }
         // Corretor que cadastrou fica habilitado no imóvel (segue editando o que ele mesmo inseriu)
-        if (ctx.permissoes.perfil === "equipe") {
+        if (ctx.permissoes.perfil === "corretor") {
           await db.insert(acessosCorretor).values({ usuarioId: ctx.user.id, tipo: "imovel", refId: propertyId, habilitadoPor: ctx.user.id } as any).catch(() => {});
         }
         // Criar campanha automaticamente para o novo imóvel
@@ -639,7 +658,7 @@ export const appRouter = router({
     // Status real do WhatsApp (consulta o Z-API na hora, com motivo e passos) — painel inicial
     whatsappStatus: protectedProcedure
       .input(z.object({ force: z.boolean().optional() }).optional())
-      .query(async ({ input }) => {
+      .query(async ({ input, ctx }) => {
         const config = await getCompanyConfig();
         const { checkWhatsAppStatus } = await import('./whatsapp-status');
         const status = await checkWhatsAppStatus({
@@ -824,11 +843,12 @@ export const appRouter = router({
         limit: z.number().min(1).max(200).optional().default(50),
         offset: z.number().min(0).optional().default(0),
       }))
-      .query(async ({ input }) => {
+      .query(async ({ input, ctx }) => {
         const db = await getDb();
         if (!db) return { leads: [], total: 0, stats: { quente: 0, morno: 0, frio: 0, total: 0, descartado: 0 } };
 
-        let rows = await db.select().from(leadQualifications).orderBy(desc(leadQualifications.updatedAt));
+        // Corretor: só os leads em que é o responsável (lista e contagens)
+        let rows = leadsVisiveis(ctx.permissoes, ctx.user.id, await db.select().from(leadQualifications).orderBy(desc(leadQualifications.updatedAt)));
 
         // Descartados / bloqueados (SAIR) ficam fora da lista, a não ser que se peça para ver
         const { leadInativo } = await import('./leads/inativo');
@@ -856,7 +876,7 @@ export const appRouter = router({
         }
 
         // Stats gerais
-        const allRows = await db.select().from(leadQualifications);
+        const allRows = leadsVisiveis(ctx.permissoes, ctx.user.id, await db.select().from(leadQualifications));
         const ativos = allRows.filter((r: any) => !leadInativo(r));
         const stats = {
           total: ativos.length,
@@ -894,18 +914,18 @@ export const appRouter = router({
     // Lista (tabela) de Nome, Telefone, E-mail e Origem — base do PDF e do envio pelo WhatsApp
     lista: protectedProcedure
       .input(filtroListaLeads)
-      .query(async ({ input }) => {
+      .query(async ({ input, ctx }) => {
         const { carregarLinhasLeads, telefonePadraoLista } = await import('./leads/listaLeads');
-        const { linhas, origens } = await carregarLinhasLeads(input);
+        const { linhas, origens } = await carregarLinhasLeads(input, soDele(ctx));
         return { linhas, origens, total: linhas.length, telefonePadrao: telefonePadraoLista() };
       }),
 
     // PDF da lista para baixar (base64)
     listaPdf: protectedProcedure
       .input(filtroListaLeads)
-      .mutation(async ({ input }) => {
+      .mutation(async ({ input, ctx }) => {
         const { carregarLinhasLeads, pdfListaLeads, nomeArquivoLista } = await import('./leads/listaLeads');
-        const { linhas } = await carregarLinhasLeads(input);
+        const { linhas } = await carregarLinhasLeads(input, soDele(ctx));
         return { base64: pdfListaLeads(linhas, input).toString('base64'), nomeArquivo: nomeArquivoLista(), total: linhas.length };
       }),
 
@@ -915,12 +935,12 @@ export const appRouter = router({
         telefone: z.string().trim().min(8).max(25),
         formato: z.enum(['pdf', 'texto']).default('pdf'),
       }))
-      .mutation(async ({ input }) => {
+      .mutation(async ({ input, ctx }) => {
         const { normalizePhoneBR } = await import('../shared/telefone');
         const telefone = normalizePhoneBR(input.telefone);
         if (!telefone) throw new Error('Número inválido: informe um celular com DDD, ex.: (99) 99181-1246');
         const lista = await import('./leads/listaLeads');
-        const { linhas } = await lista.carregarLinhasLeads(input);
+        const { linhas } = await lista.carregarLinhasLeads(input, soDele(ctx));
         const { enviarDocumento, enviarTexto, ZApiError } = await import('./leads/zapiClient');
         try {
           if (input.formato === 'pdf') {
@@ -945,11 +965,12 @@ export const appRouter = router({
     // Por que o lead tem essa nota: regra → pontos (soma = score) + histórico
     scoreDetalhe: protectedProcedure
       .input(z.object({ id: z.number() }))
-      .query(async ({ input }) => {
+      .query(async ({ input, ctx }) => {
         const db = await getDb();
         if (!db) return null;
         const [lead] = await db.select().from(leadQualifications).where(eq(leadQualifications.id, input.id)).limit(1);
         if (!lead) return null;
+        exigirLead(ctx.permissoes, ctx.user.id, lead as any);
         const { ROTULO_REGRA } = await import('./leads/score');
         const { historicoScore } = await import('./leads/scoreService');
         const det = (lead as any).scoreDetalhe as { regras: string; detalhes: Record<string, number>; at: string } | null;
@@ -969,7 +990,8 @@ export const appRouter = router({
 
     recalcularScore: protectedProcedure
       .input(z.object({ id: z.number() }))
-      .mutation(async ({ input }) => {
+      .mutation(async ({ input, ctx }) => {
+        await leadDoUsuario(input.id, ctx);
         const { recalcularScoreLead } = await import('./leads/scoreService');
         const r = await recalcularScoreLead(input.id, { motivo: 'manual_painel' });
         if (!r) throw new Error("Lead não encontrado");
@@ -979,10 +1001,11 @@ export const appRouter = router({
     // Detalhes completos de um lead
     getById: protectedProcedure
       .input(z.object({ id: z.number() }))
-      .query(async ({ input }) => {
+      .query(async ({ input, ctx }) => {
         const db = await getDb();
         if (!db) return null;
         const rows = await db.select().from(leadQualifications).where(eq(leadQualifications.id, input.id)).limit(1);
+        if (rows[0]) exigirLead(ctx.permissoes, ctx.user.id, rows[0] as any);
         return rows[0] || null;
       }),
 
@@ -992,9 +1015,10 @@ export const appRouter = router({
         id: z.number(),
         score: z.enum(['quente', 'morno', 'frio']),
       }))
-      .mutation(async ({ input }) => {
+      .mutation(async ({ input, ctx }) => {
         const db = await getDb();
         if (!db) return { success: false };
+        await leadDoUsuario(input.id, ctx);
         await db.update(leadQualifications).set({ score: input.score, updatedAt: new Date() }).where(eq(leadQualifications.id, input.id));
         return { success: true };
       }),
@@ -1006,9 +1030,10 @@ export const appRouter = router({
         reason: z.string().optional().default('Descartado manualmente'),
         blockDays: z.number().optional().default(30),
       }))
-      .mutation(async ({ input }) => {
+      .mutation(async ({ input, ctx }) => {
         const db = await getDb();
         if (!db) return { success: false };
+        await leadDoUsuario(input.id, ctx);
         const blockedUntil = new Date(Date.now() + input.blockDays * 24 * 60 * 60 * 1000);
         await db.update(leadQualifications).set({
           stage: 'descartado',
@@ -1022,9 +1047,10 @@ export const appRouter = router({
     // Reativar lead bloqueado
     reactivate: protectedProcedure
       .input(z.object({ id: z.number() }))
-      .mutation(async ({ input }) => {
+      .mutation(async ({ input, ctx }) => {
         const db = await getDb();
         if (!db) return { success: false };
+        await leadDoUsuario(input.id, ctx);
         await db.update(leadQualifications).set({
           stage: 'nao_iniciado',
           score: 'frio',
@@ -1038,7 +1064,7 @@ export const appRouter = router({
     // Enviar mensagem manual via WhatsApp
     sendWhatsApp: protectedProcedure
       .input(z.object({ phone: z.string(), message: z.string().min(1) }))
-      .mutation(async ({ input }) => {
+      .mutation(async ({ input, ctx }) => {
         const config = await getCompanyConfig();
         if (!config?.zApiInstanceId || !config?.zApiToken) return { success: false, error: 'Z-API nao configurado' };
         const { sendMessageViaZAPI } = await import('./zapi-integration');

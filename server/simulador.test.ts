@@ -88,9 +88,9 @@ describe('simulador — lote, condições do banco e acesso', () => {
     expect(simular(3025.11, 1, C, null).preco).toBe(160000);
   });
 
-  it('equipe usa o simulador; empreendedor não', () => {
-    expect(podeChamar('equipe', 'simulador.simular')).toBe(true);
-    expect(podeChamar('equipe', 'simulador.salvar')).toBe(true);
+  it('corretor e secretário usam o simulador; empreendedor não', () => {
+    expect(podeChamar('corretor', 'simulador.simular')).toBe(true);
+    expect(podeChamar('corretor', 'simulador.salvar')).toBe(true);
     expect(podeChamar('empreendedor', 'simulador.simular')).toBe(false);
   });
 });

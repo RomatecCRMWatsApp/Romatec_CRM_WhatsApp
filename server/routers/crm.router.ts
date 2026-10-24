@@ -14,6 +14,7 @@ import { appUrl } from "../leads/config";
 import type { Funil } from "../leads/atribuicao";
 import { montarRelatorio, relatorioCsv, DATA_ISO } from "../leads/relatorio";
 import { serieLeadsPorDia } from "../leads/painelEmpreendedor";
+import { exigirDistribuicao, exigirLead, leadsVisiveis, type PermissoesUsuario } from "../permissoes";
 
 const funilSchema = z.enum(["comprador", "proprietario"]);
 
@@ -23,9 +24,13 @@ async function dbOrThrow() {
   return db;
 }
 
-async function leadOuErro(db: any, id: number) {
+type Ctx = { user: { id: number }; permissoes: PermissoesUsuario };
+
+/** Lead que o usuário pode ver/mexer (corretor: só os leads em que é o responsável) */
+async function leadOuErro(db: any, id: number, ctx: Ctx) {
   const [lead] = await db.select().from(leadQualifications).where(eq(leadQualifications.id, id)).limit(1);
   if (!lead) throw new Error("Lead não encontrado");
+  exigirLead(ctx.permissoes, ctx.user.id, lead);
   return lead;
 }
 
@@ -66,9 +71,9 @@ export const crmRouter = router({
   /** Follow-up e alerta de atendimento estão rodando? (faixa de aviso no topo) */
   saudeRotinas: protectedProcedure.query(async () => (await import("../leads/rotinas")).estadoRotinas()),
 
-  kanban: protectedProcedure.input(z.object({ funil: funilSchema })).query(async ({ input }) => {
+  kanban: protectedProcedure.input(z.object({ funil: funilSchema })).query(async ({ input, ctx }) => {
     const db = await dbOrThrow();
-    const rows = (await db.select().from(leadQualifications).orderBy(desc(leadQualifications.updatedAt)))
+    const rows = leadsVisiveis(ctx.permissoes, ctx.user.id, await db.select().from(leadQualifications).orderBy(desc(leadQualifications.updatedAt)))
       .filter((l: any) => funilDo(l) === input.funil);
     const propIds = Array.from(new Set(rows.map((l: any) => l.propertyId).filter(Boolean))) as number[];
     const props = propIds.length
@@ -98,9 +103,9 @@ export const crmRouter = router({
 
   moverEtapa: protectedProcedure
     .input(z.object({ id: z.number().int(), etapa: z.string(), motivoPerda: z.string().max(120).optional() }))
-    .mutation(async ({ input }) => {
+    .mutation(async ({ input, ctx }) => {
       const db = await dbOrThrow();
-      const lead = await leadOuErro(db, input.id);
+      const lead = await leadOuErro(db, input.id, ctx);
       const v = validarMovimento(funilDo(lead), input.etapa, input.motivoPerda);
       if (!v.ok) throw new Error(v.erro);
       await db.update(leadQualifications).set({
@@ -114,15 +119,17 @@ export const crmRouter = router({
     }),
 
   /** "Já atendi" pela tela do lead (encerra o alerta de 5 minutos) */
-  marcarAtendido: protectedProcedure.input(z.object({ id: z.number().int() })).mutation(async ({ input }) => {
+  marcarAtendido: protectedProcedure.input(z.object({ id: z.number().int() })).mutation(async ({ input, ctx }) => {
+    await leadOuErro(await dbOrThrow(), input.id, ctx);
     const { marcarAtendido } = await import("../leads/sla");
     await marcarAtendido(input.id);
     return { success: true };
   }),
 
   // ─── Agenda de visitas (server/leads/visitas.ts) ─────────────────────────
-  visitasDoLead: protectedProcedure.input(z.object({ leadId: z.number().int() })).query(async ({ input }) => {
+  visitasDoLead: protectedProcedure.input(z.object({ leadId: z.number().int() })).query(async ({ input, ctx }) => {
     const db = await dbOrThrow();
+    await leadOuErro(db, input.leadId, ctx);
     const { leadVisitas, properties } = await import("../../drizzle/schema");
     const rows: any[] = await db.select().from(leadVisitas).where(eq(leadVisitas.leadId, input.leadId));
     const props = new Map<number, string>();
@@ -135,15 +142,18 @@ export const crmRouter = router({
       .sort((a, b) => new Date(b.quando).getTime() - new Date(a.quando).getTime());
   }),
 
-  agenda: protectedProcedure.input(z.object({ diasAtras: z.number().int().min(0).max(60).default(7), diasFrente: z.number().int().min(1).max(120).default(30) }).optional()).query(async ({ input }) => {
+  agenda: protectedProcedure.input(z.object({ diasAtras: z.number().int().min(0).max(60).default(7), diasFrente: z.number().int().min(1).max(120).default(30) }).optional()).query(async ({ input, ctx }) => {
     const db = await dbOrThrow();
     const { leadVisitas, properties } = await import("../../drizzle/schema");
     const { gte, lte, and: e } = await import("drizzle-orm");
     const agora = Date.now();
     const de = new Date(agora - (input?.diasAtras ?? 7) * 86400_000), ate = new Date(agora + (input?.diasFrente ?? 30) * 86400_000);
-    const rows: any[] = await db.select().from(leadVisitas).where(e(gte(leadVisitas.quando, de), lte(leadVisitas.quando, ate)));
+    let rows: any[] = await db.select().from(leadVisitas).where(e(gte(leadVisitas.quando, de), lte(leadVisitas.quando, ate)));
     const leadIds = Array.from(new Set(rows.map(r => r.leadId)));
-    const leads: any[] = leadIds.length ? await db.select({ id: leadQualifications.id, nome: leadQualifications.nome, phone: leadQualifications.phone }).from(leadQualifications).where(inArray(leadQualifications.id, leadIds)) : [];
+    const leads: any[] = leadIds.length ? await db.select({ id: leadQualifications.id, nome: leadQualifications.nome, phone: leadQualifications.phone, responsavelId: leadQualifications.responsavelId }).from(leadQualifications).where(inArray(leadQualifications.id, leadIds)) : [];
+    // Corretor: só as visitas dos leads dele
+    const visiveis = new Set(leadsVisiveis(ctx.permissoes, ctx.user.id, leads).map(l => l.id));
+    rows = rows.filter(r => visiveis.has(r.leadId));
     const propIds = Array.from(new Set(rows.map(r => r.propertyId).filter(Boolean))) as number[];
     const props: any[] = propIds.length ? await db.select({ id: properties.id, t: properties.denomination }).from(properties).where(inArray(properties.id, propIds)) : [];
     const pessoas: any[] = await db.select({ id: users.id, name: users.name }).from(users);
@@ -164,7 +174,7 @@ export const crmRouter = router({
     }))
     .mutation(async ({ input, ctx }) => {
       const db = await dbOrThrow();
-      const lead = await leadOuErro(db, input.leadId);
+      const lead = await leadOuErro(db, input.leadId, ctx);
       const quando = new Date(input.quando);
       if (quando.getTime() < Date.now() - 10 * 60_000) throw new Error("A data da visita já passou");
       const { leadVisitas } = await import("../../drizzle/schema");
@@ -185,13 +195,13 @@ export const crmRouter = router({
 
   statusVisita: protectedProcedure
     .input(z.object({ id: z.number().int(), status: z.enum(["agendada", "confirmada", "realizada", "nao_veio", "cancelada"]) }))
-    .mutation(async ({ input }) => {
+    .mutation(async ({ input, ctx }) => {
       const db = await dbOrThrow();
       const { leadVisitas } = await import("../../drizzle/schema");
       const [v]: any[] = await db.select().from(leadVisitas).where(eq(leadVisitas.id, input.id)).limit(1);
       if (!v) throw new Error("Visita não encontrada");
       await db.update(leadVisitas).set({ status: input.status, updatedAt: new Date() } as any).where(eq(leadVisitas.id, input.id));
-      const lead = await leadOuErro(db, v.leadId);
+      const lead = await leadOuErro(db, v.leadId, ctx);
       const { etapaDepoisDaVisita } = await import("../leads/visitas");
       const etapa = funilDo(lead) === "comprador" ? etapaDepoisDaVisita(etapaDoLead(lead), input.status) : null;
       if (etapa) await db.update(leadQualifications).set({ etapa, updatedAt: new Date() } as any).where(eq(leadQualifications.id, lead.id));
@@ -200,11 +210,14 @@ export const crmRouter = router({
 
   remarcarVisita: protectedProcedure
     .input(z.object({ id: z.number().int(), quando: z.string().datetime() }))
-    .mutation(async ({ input }) => {
+    .mutation(async ({ input, ctx }) => {
       const db = await dbOrThrow();
       const quando = new Date(input.quando);
       if (quando.getTime() < Date.now() - 10 * 60_000) throw new Error("A nova data já passou");
       const { leadVisitas } = await import("../../drizzle/schema");
+      const [v]: any[] = await db.select({ leadId: leadVisitas.leadId }).from(leadVisitas).where(eq(leadVisitas.id, input.id)).limit(1);
+      if (!v) throw new Error("Visita não encontrada");
+      await leadOuErro(db, v.leadId, ctx);
       // Nova data: os avisos automáticos valem de novo
       await db.update(leadVisitas).set({
         quando, status: "agendada", lembreteClienteAt: null, avisoCorretorAt: null, resultadoPedidoAt: null, confirmadaAt: null, updatedAt: new Date(),
@@ -214,12 +227,13 @@ export const crmRouter = router({
       return { success: true };
     }),
 
-  /** Responsável pelo lead (rodízio da equipe) — trocar manualmente */
+  /** Responsável pelo lead (rodízio da equipe) — trocar manualmente: distribuição, só o admin */
   definirResponsavel: protectedProcedure
     .input(z.object({ id: z.number().int(), responsavelId: z.number().int().nullable() }))
-    .mutation(async ({ input }) => {
+    .mutation(async ({ input, ctx }) => {
+      exigirDistribuicao(ctx.permissoes);
       const db = await dbOrThrow();
-      await leadOuErro(db, input.id);
+      await leadOuErro(db, input.id, ctx);
       await db.update(leadQualifications).set({ responsavelId: input.responsavelId, updatedAt: new Date() } as any).where(eq(leadQualifications.id, input.id));
       return { success: true };
     }),
@@ -231,9 +245,9 @@ export const crmRouter = router({
     return rows.filter(u => u.ativo !== false && u.ativo !== 0 && u.perfil !== "empreendedor").map(u => ({ id: u.id, nome: u.name || "Sem nome", recebeLeads: !!u.recebeLeads }));
   }),
 
-  lead: protectedProcedure.input(z.object({ id: z.number().int() })).query(async ({ input }) => {
+  lead: protectedProcedure.input(z.object({ id: z.number().int() })).query(async ({ input, ctx }) => {
     const db = await dbOrThrow();
-    const l = await leadOuErro(db, input.id);
+    const l = await leadOuErro(db, input.id, ctx);
     const funil = funilDo(l);
     const interessesRows = await db.select().from(leadInteresses).where(eq(leadInteresses.leadId, l.id));
     const ids = Array.from(new Set([l.propertyId, ...interessesRows.map((i: any) => i.propertyId)].filter(Boolean))) as number[];
@@ -313,9 +327,9 @@ export const crmRouter = router({
   /** Edição manual dos slots (fonte manual); null apaga o slot. Recalcula o score. */
   salvarSlots: protectedProcedure
     .input(z.object({ id: z.number().int(), slots: z.record(z.string().max(40), z.string().max(255).nullable()) }))
-    .mutation(async ({ input }) => {
+    .mutation(async ({ input, ctx }) => {
       const db = await dbOrThrow();
-      const lead = await leadOuErro(db, input.id);
+      const lead = await leadOuErro(db, input.id, ctx);
       const funil = funilDo(lead);
       const apagar = Object.entries(input.slots).filter(([, v]) => v === null || v === "").map(([k]) => k);
       const gravar = Object.fromEntries(Object.entries(input.slots).filter(([, v]) => v !== null && v !== ""));
@@ -331,18 +345,18 @@ export const crmRouter = router({
     }),
 
   /** Assumir conversa: o bot para de responder este lead */
-  assumir: protectedProcedure.input(z.object({ id: z.number().int() })).mutation(async ({ input }) => {
+  assumir: protectedProcedure.input(z.object({ id: z.number().int() })).mutation(async ({ input, ctx }) => {
     const db = await dbOrThrow();
-    await leadOuErro(db, input.id);
+    await leadOuErro(db, input.id, ctx);
     await db.update(leadQualifications).set({ humano: true, updatedAt: new Date() } as any).where(eq(leadQualifications.id, input.id));
     await import("../leads/sla").then(m => m.marcarAtendido(input.id)).catch(() => {});
     return { success: true };
   }),
 
   /** Devolver ao bot (comprador). Proprietário segue com o corretor: não há bot de captação. */
-  devolver: protectedProcedure.input(z.object({ id: z.number().int() })).mutation(async ({ input }) => {
+  devolver: protectedProcedure.input(z.object({ id: z.number().int() })).mutation(async ({ input, ctx }) => {
     const db = await dbOrThrow();
-    const lead = await leadOuErro(db, input.id);
+    const lead = await leadOuErro(db, input.id, ctx);
     if (funilDo(lead) === "proprietario") throw new Error("Lead de proprietário é atendido pelo corretor (não há bot de captação)");
     await db.update(leadQualifications).set({
       humano: false,
@@ -353,9 +367,9 @@ export const crmRouter = router({
   }),
 
   /** Envia pelo WhatsApp um imóvel parecido (mesmo tipo, preço ±20%) */
-  enviarSimilar: protectedProcedure.input(z.object({ id: z.number().int() })).mutation(async ({ input }) => {
+  enviarSimilar: protectedProcedure.input(z.object({ id: z.number().int() })).mutation(async ({ input, ctx }) => {
     const db = await dbOrThrow();
-    const lead = await leadOuErro(db, input.id);
+    const lead = await leadOuErro(db, input.id, ctx);
     if (!lead.propertyId) throw new Error("O lead não tem imóvel de interesse para comparar");
     const carteira = await db.select().from(properties);
     const base = carteira.find((p: any) => p.id === lead.propertyId);
@@ -388,9 +402,9 @@ export const crmRouter = router({
   }),
 
   /** Proprietário captado → cria o imóvel (inativo, sem preço público) e gera o IMV */
-  cadastrarImovel: protectedProcedure.input(z.object({ id: z.number().int() })).mutation(async ({ input }) => {
+  cadastrarImovel: protectedProcedure.input(z.object({ id: z.number().int() })).mutation(async ({ input, ctx }) => {
     const db = await dbOrThrow();
-    const lead = await leadOuErro(db, input.id);
+    const lead = await leadOuErro(db, input.id, ctx);
     if (funilDo(lead) !== "proprietario") throw new Error("Só para leads do funil proprietário");
     const dados = imovelDoProprietario(lead);
     const res: any = await db.insert(properties).values({
@@ -411,9 +425,10 @@ export const crmRouter = router({
    */
   listaInteresse: protectedProcedure
     .input(z.object({ slug: z.string().max(80).default("bom-jardims") }))
-    .query(async ({ input }) => {
+    .query(async ({ input, ctx }) => {
       const db = await dbOrThrow();
-      const rows: any[] = await db.select().from(leadQualifications).where(eq(leadQualifications.empreendimentoSlug, input.slug)).orderBy(desc(leadQualifications.createdAt));
+      const rows: any[] = leadsVisiveis(ctx.permissoes, ctx.user.id,
+        await db.select().from(leadQualifications).where(eq(leadQualifications.empreendimentoSlug, input.slug)).orderBy(desc(leadQualifications.createdAt)));
       const campIds = Array.from(new Set(rows.map(r => r.origemCampanhaId).filter(Boolean))) as number[];
       const camps: any[] = campIds.length ? await db.select({ id: leadCampanhas.id, codigo: leadCampanhas.codigo }).from(leadCampanhas).where(inArray(leadCampanhas.id, campIds)) : [];
       const agora = Date.now();
@@ -446,20 +461,21 @@ export const crmRouter = router({
       ate: z.string().regex(DATA_ISO).optional(),
       toque: z.enum(["primeiro", "ultimo"]).default("primeiro"),
     }))
-    .query(async ({ input }) => {
+    .query(async ({ input, ctx }) => {
       const db = await dbOrThrow();
       // Datas do filtro no fuso de Imperatriz (UTC-3), "até" inclusive
       const de = input.de ? new Date(`${input.de}T00:00:00-03:00`) : null;
       const ate = input.ate ? new Date(`${input.ate}T23:59:59.999-03:00`) : null;
       const periodo = (col: any) => and(...[de ? gte(col, de) : undefined, ate ? lte(col, ate) : undefined].filter(Boolean) as any[]);
-      const leads = await db.select({
+      // Corretor: o relatório (e os cards do painel) contam só os leads dele
+      const leads = leadsVisiveis(ctx.permissoes, ctx.user.id, await db.select({
         id: leadQualifications.id, funil: leadQualifications.funil, origem: leadQualifications.origem,
         origemCanal: leadQualifications.origemCanal, origemCampanhaId: leadQualifications.origemCampanhaId,
         ultimoCanal: leadQualifications.ultimoCanal, ultimaCampanhaId: leadQualifications.ultimaCampanhaId,
         propertyId: leadQualifications.propertyId, etapa: leadQualifications.etapa, stage: leadQualifications.stage,
         score: leadQualifications.score, slots: leadQualifications.slots, createdAt: leadQualifications.createdAt,
         responsavelId: leadQualifications.responsavelId, aguardandoCorretorDesde: leadQualifications.aguardandoCorretorDesde, atendidoAt: leadQualifications.atendidoAt,
-      }).from(leadQualifications).where(periodo(leadQualifications.createdAt));
+      }).from(leadQualifications).where(periodo(leadQualifications.createdAt)));
       const ids = leads.map((l: any) => l.id);
       const [campanhas, interessesRows, eventos, mensagens, imoveis] = await Promise.all([
         db.select({ id: leadCampanhas.id, codigo: leadCampanhas.codigo, nome: leadCampanhas.nome, canal: leadCampanhas.canal, gastoTotal: leadCampanhas.gastoTotal }).from(leadCampanhas),

@@ -39,13 +39,13 @@ export default function Login() {
 
       <div className="w-full max-w-md rounded-[18px] border border-[var(--rt-border)] bg-[var(--rt-surface)] p-7">
         <h1 className="text-center text-[22px] font-semibold tracking-wide text-[var(--rt-gold-light)]" style={{ fontFamily: "var(--rt-font-title)" }}>Acesso ao CRM</h1>
-        <p className="mb-6 mt-1 text-center text-sm text-[var(--rt-text-2)]">Entre com o seu CRECI (ou e-mail) e a senha</p>
+        <p className="mb-6 mt-1 text-center text-sm text-[var(--rt-text-2)]">Entre com o seu CRECI, CPF ou e-mail e a senha</p>
 
         <form onSubmit={handleLogin} className="space-y-4 text-left">
           <div>
-            <label className="mb-1 block text-xs font-bold uppercase tracking-[2px] text-[var(--rt-gold)]">CRECI ou e-mail</label>
+            <label className="mb-1 block text-xs font-bold uppercase tracking-[2px] text-[var(--rt-gold)]">CRECI, CPF ou e-mail</label>
             <input type="text" value={username} onChange={e => setUsername(e.target.value)} className={campo}
-              placeholder="Ex.: 4705 ou seu@email.com" autoComplete="username" required />
+              placeholder="Ex.: 4705, 000.000.000-00 ou seu@email.com" autoComplete="username" required />
           </div>
           <div>
             <label className="mb-1 block text-xs font-bold uppercase tracking-[2px] text-[var(--rt-gold)]">Senha</label>

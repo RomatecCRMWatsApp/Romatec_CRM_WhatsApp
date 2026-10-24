@@ -10,7 +10,7 @@ import { protectedProcedure, router } from "../_core/trpc";
 import { getDb } from "../db";
 import { condicoesPagamento, empreendimentos, leadQualifications, lotes, simulacoes } from "../../drizzle/schema";
 import { comissaoNaSimulacao } from "../../shared/permissoes";
-import { exigirAcesso, pctComissaoCorretor, type PermissoesUsuario } from "../permissoes";
+import { exigirAcesso, exigirLead, pctComissaoCorretor, type PermissoesUsuario } from "../permissoes";
 import {
   AVISO_LEGAL_SIMULACAO, centavos, condicoesDaLinha, evolucao, mensagemSimulacao, seloDoLote, simular, textoEntrada, textoJuros,
   type CondicoesPagamento,
@@ -102,6 +102,7 @@ export const simuladorRouter = router({
       if (input.leadId) {
         [lead] = await db.select().from(leadQualifications).where(eq(leadQualifications.id, input.leadId)).limit(1);
         if (!lead) throw new TRPCError({ code: "NOT_FOUND", message: "Lead não encontrado" });
+        exigirLead(ctx.permissoes, ctx.user.id, lead);
       }
       await db.insert(simulacoes).values({
         empreendimentoId: emp.id, loteId: lote.id, leadId: lead?.id ?? null, usuarioId: ctx.user.id,

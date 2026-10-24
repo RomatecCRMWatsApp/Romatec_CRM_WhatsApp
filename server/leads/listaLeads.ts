@@ -178,7 +178,8 @@ export function telefonePadraoLista(): string {
 }
 
 /** Leads do banco (mesma fonte da aba Leads), já com nome, e-mail e origem resolvidos e ordenados pela entrada */
-export async function carregarLinhasLeads(filtro: FiltroLista): Promise<{ linhas: LinhaLead[]; origens: { origem: string; total: number }[] }> {
+/** somenteResponsavel: corretor só vê os leads em que é o responsável */
+export async function carregarLinhasLeads(filtro: FiltroLista, somenteResponsavel?: number | null): Promise<{ linhas: LinhaLead[]; origens: { origem: string; total: number }[] }> {
   const { getDb } = await import('../db');
   const db: any = await getDb();
   if (!db) return { linhas: [], origens: [] };
@@ -186,6 +187,7 @@ export async function carregarLinhasLeads(filtro: FiltroLista): Promise<{ linhas
   const { leadInativo } = await import('./inativo');
 
   let rows: any[] = await db.select().from(leadQualifications);
+  if (somenteResponsavel) rows = rows.filter(r => r.responsavelId === somenteResponsavel);
   if (filtro.situacao === 'ativos') rows = rows.filter(r => !leadInativo(r));
   else if (filtro.situacao === 'descartados') rows = rows.filter(r => leadInativo(r));
 

@@ -1,122 +1,143 @@
 /**
- * Cadastro completo dos usuários (regras puras): dados pessoais que o contrato puxa do corretor
- * (intermediador), documentos e a certidão de quitação do CRECI (obrigatória, com validade).
+ * Cadastro completo dos usuários (regras puras): dados pessoais que o contrato puxa (qualificação),
+ * cônjuge, documentos pessoais e credenciais profissionais (Cartão e Certidão CRECI, Certificado CNAI).
+ * Máscaras e validação de CPF/RG em shared/masks.ts; texto da qualificação em shared/qualificacao.ts.
  */
+import { isValidCPF, onlyDigits } from './masks';
 
 export const UFS = ['AC', 'AL', 'AP', 'AM', 'BA', 'CE', 'DF', 'ES', 'GO', 'MA', 'MT', 'MS', 'MG', 'PA', 'PB', 'PR', 'PE', 'PI', 'RJ', 'RN', 'RS', 'RO', 'RR', 'SC', 'SP', 'SE', 'TO'] as const;
-export const ESTADOS_CIVIS = ['solteiro(a)', 'casado(a)', 'união estável', 'divorciado(a)', 'separado(a)', 'viúvo(a)'] as const;
 
-export const TIPOS_DOCUMENTO = ['certidao_creci', 'rg', 'cpf', 'comprovante_endereco', 'outro'] as const;
-export type TipoDocumento = typeof TIPOS_DOCUMENTO[number];
-export const ROTULO_DOCUMENTO: Record<TipoDocumento, string> = {
-  certidao_creci: 'Certidão de quitação do CRECI',
-  rg: 'RG',
-  cpf: 'CPF',
-  comprovante_endereco: 'Comprovante de endereço',
-  outro: 'Outro documento',
+export const ESTADOS_CIVIS = ['solteiro', 'casado', 'uniao_estavel', 'separado', 'divorciado', 'viuvo'] as const;
+export type EstadoCivil = typeof ESTADOS_CIVIS[number];
+export const ROTULO_ESTADO_CIVIL: Record<EstadoCivil, string> = {
+  solteiro: 'Solteiro(a)', casado: 'Casado(a)', uniao_estavel: 'União estável',
+  separado: 'Separado(a) judicialmente', divorciado: 'Divorciado(a)', viuvo: 'Viúvo(a)',
 };
-/** Arquivos aceitos nos documentos (PDF ou imagem) e tamanho máximo */
-export const MIMES_DOCUMENTO = ['application/pdf', 'image/jpeg', 'image/png', 'image/webp', 'image/heic'];
+/** Estado civil que pede o bloco do cônjuge/companheiro(a) */
+export const temConjuge = (ec: string | null | undefined) => ec === 'casado' || ec === 'uniao_estavel';
+
+export const REGIMES_BENS = ['comunhao_parcial', 'comunhao_universal', 'separacao_total', 'separacao_obrigatoria', 'participacao_aquestos'] as const;
+export const ROTULO_REGIME: Record<typeof REGIMES_BENS[number], string> = {
+  comunhao_parcial: 'Comunhão parcial de bens', comunhao_universal: 'Comunhão universal de bens',
+  separacao_total: 'Separação total de bens', separacao_obrigatoria: 'Separação obrigatória de bens',
+  participacao_aquestos: 'Participação final nos aquestos',
+};
+
+export const NACIONALIDADES = ['brasileira', 'estrangeira'] as const;
+
+/** Sugestões do campo Profissão (aceita valor livre) */
+export const PROFISSOES = [
+  'Corretor(a) de Imóveis', 'Técnico(a) em Edificações', 'Técnico(a) em Agrimensura', 'Engenheiro(a) Civil', 'Arquiteto(a)', 'Advogado(a)',
+  'Empresário(a)', 'Comerciante', 'Servidor(a) Público(a)', 'Autônomo(a)', 'Secretário(a)', 'Administrador(a)', 'Aposentado(a)', 'Do lar', 'Estudante',
+];
+/** Primeira letra maiúscula, sem espaços sobrando */
+export const normalizarProfissao = (p: string) => { const t = p.trim().replace(/\s+/g, ' '); return t ? t.charAt(0).toUpperCase() + t.slice(1) : t; };
+
+export const ORGAOS_EMISSORES = ['SSP', 'SESP', 'SDS', 'PC', 'IFP', 'DETRAN', 'DPF', 'PM', 'CBM', 'MB', 'EB', 'FAB', 'OAB', 'CREA', 'CRECI', 'Outro'];
+
+/** Documentos e credenciais (um só cadastro, com titular usuário ou cônjuge) */
+export const CREDENCIAIS = ['cartao_creci', 'certidao_creci', 'certificado_cnai'] as const;
+export const TIPOS_DOCUMENTO = [
+  ...CREDENCIAIS, 'rg', 'cin', 'cnh', 'cpf', 'comprovante_residencia', 'certidao_casamento', 'certidao_nascimento', 'rnm_passaporte', 'outros',
+] as const;
+export type TipoDocumento = typeof TIPOS_DOCUMENTO[number];
+export type TipoCredencial = typeof CREDENCIAIS[number];
+export const ROTULO_DOCUMENTO: Record<TipoDocumento, string> = {
+  cartao_creci: 'Cartão de Regularidade (CRECI)',
+  certidao_creci: 'Certidão de Regularidade (CRECI)',
+  certificado_cnai: 'Certificado CNAI',
+  rg: 'RG (frente/verso)',
+  cin: 'CIN – Carteira de Identidade Nacional',
+  cnh: 'CNH',
+  cpf: 'CPF',
+  comprovante_residencia: 'Comprovante de residência',
+  certidao_casamento: 'Certidão de casamento / escritura de união estável',
+  certidao_nascimento: 'Certidão de nascimento',
+  rnm_passaporte: 'RNM / Passaporte',
+  outros: 'Outros',
+};
+export const DOCUMENTOS_PESSOAIS = TIPOS_DOCUMENTO.filter(t => !(CREDENCIAIS as readonly string[]).includes(t)) as Exclude<TipoDocumento, TipoCredencial>[];
+/** Cartão, certidão e CNAI: no máximo um por usuário (o envio novo substitui o anterior) */
+export const tipoUnico = (tipo: string) => (CREDENCIAIS as readonly string[]).includes(tipo);
+
+/** Arquivos aceitos (imagem ou PDF) e tamanho máximo */
+export const MIMES_DOCUMENTO = ['application/pdf', 'image/jpeg', 'image/png', 'image/webp'];
 export const MAX_DOCUMENTO_BYTES = 10 * 1024 * 1024;
 export const MAX_FOTO_BYTES = 5 * 1024 * 1024;
 
-export const soDigitos = (v: unknown) => String(v ?? '').replace(/\D/g, '');
-
+export const soDigitos = (v: unknown) => onlyDigits(v == null ? '' : String(v));
 /** CPF com dígitos verificadores válidos (aceita com ou sem máscara) */
-export function cpfValido(v: unknown): boolean {
-  const d = soDigitos(v);
-  if (d.length !== 11 || /^(\d)\1{10}$/.test(d)) return false;
-  const dv = (n: number) => {
-    let s = 0;
-    for (let i = 0; i < n; i++) s += Number(d[i]) * (n + 1 - i);
-    const r = (s * 10) % 11;
-    return r === 10 ? 0 : r;
-  };
-  return dv(9) === Number(d[9]) && dv(10) === Number(d[10]);
-}
+export const cpfValido = (v: unknown) => isValidCPF(v == null ? '' : String(v));
 
 export const formatarCpf = (v: unknown) => { const d = soDigitos(v); return d.length === 11 ? `${d.slice(0, 3)}.${d.slice(3, 6)}.${d.slice(6, 9)}-${d.slice(9)}` : String(v ?? ''); };
 export const formatarCep = (v: unknown) => { const d = soDigitos(v); return d.length === 8 ? `${d.slice(0, 5)}-${d.slice(5)}` : String(v ?? ''); };
 
-/** Quem mexe nos documentos/foto de um usuário: o admin ou o próprio usuário */
+/** Quem mexe nos documentos/foto/cadastro de um usuário: o admin ou o próprio usuário */
 export function podeGerirCadastroDe(user: { id: number; role?: string | null } | null | undefined, alvoId: number): boolean {
   return !!user && (user.role === 'admin' || user.id === alvoId);
 }
 
-/** Problema no arquivo de documento (null = ok) */
-export function problemaDocumento(tipo: string, mime: string, bytes: number, validade?: string | null): string | null {
-  if (!(TIPOS_DOCUMENTO as readonly string[]).includes(tipo)) return 'Tipo de documento inválido';
-  if (!MIMES_DOCUMENTO.includes(mime)) return 'Envie PDF ou imagem (JPG, PNG, WEBP)';
-  if (!bytes) return 'Arquivo vazio';
-  if (bytes > MAX_DOCUMENTO_BYTES) return 'Arquivo acima de 10 MB';
-  if (tipo === 'certidao_creci' && !/^\d{4}-\d{2}-\d{2}$/.test(String(validade || ''))) return 'Informe a validade da certidão do CRECI';
+/** Tipo real do arquivo pelos primeiros bytes (não confia no nome nem no cabeçalho do navegador) */
+export function detectarMime(buf: Uint8Array): string | null {
+  const hex = (a: number, b: number) => Array.from(buf.subarray(a, b)).map(x => x.toString(16).padStart(2, '0')).join('');
+  const txt = (a: number, b: number) => String.fromCharCode(...Array.from(buf.subarray(a, b)));
+  if (hex(0, 4) === '25504446') return 'application/pdf';
+  if (hex(0, 8) === '89504e470d0a1a0a') return 'image/png';
+  if (hex(0, 3) === 'ffd8ff') return 'image/jpeg';
+  if (txt(0, 4) === 'RIFF' && txt(8, 12) === 'WEBP') return 'image/webp';
   return null;
 }
 
-export type SituacaoCertidao = 'ok' | 'vencendo' | 'vencida' | 'ausente';
-
-/** Certidão do CRECI: ausente (sem arquivo ou validade), vencida, vencendo (até 15 dias) ou ok */
-export function situacaoCertidao(validade: string | Date | null | undefined, temArquivo: boolean, hoje = new Date()): SituacaoCertidao {
-  if (!temArquivo || !validade) return 'ausente';
-  const fim = new Date(typeof validade === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(validade) ? `${validade}T23:59:59` : validade);
-  if (!Number.isFinite(fim.getTime())) return 'ausente';
-  const dias = (fim.getTime() - hoje.getTime()) / 86_400_000;
-  if (dias < 0) return 'vencida';
-  return dias <= 15 ? 'vencendo' : 'ok';
+/** Problema no arquivo: { status, erro } (415 formato, 413 tamanho, 400 tipo) ou null */
+export function problemaArquivo(tipo: string, buf: Uint8Array): { status: number; erro: string } | null {
+  if (!(TIPOS_DOCUMENTO as readonly string[]).includes(tipo)) return { status: 400, erro: 'Tipo de documento inválido' };
+  if (!buf?.length) return { status: 400, erro: 'Arquivo vazio' };
+  if (buf.length > MAX_DOCUMENTO_BYTES) return { status: 413, erro: 'Arquivo acima de 10 MB' };
+  if (!detectarMime(buf)) return { status: 415, erro: 'Formato não suportado (use PNG, JPG, WEBP ou PDF)' };
+  return null;
 }
 
-export const ROTULO_CERTIDAO: Record<SituacaoCertidao, string> = {
-  ok: 'CRECI em dia', vencendo: 'Certidão vence em breve', vencida: 'Certidão do CRECI vencida', ausente: 'Sem certidão do CRECI',
-};
+// ─── Validade (certidão e cartão CRECI) ──────────────────────────────────────
+export type StatusValidade = 'sem_validade' | 'valida' | 'a_vencer' | 'vencida';
 
-/** Dados do intermediador que o contrato usa */
-export interface DadosIntermediador {
-  nome: string;
-  creci: string | null;
-  creciUf: string | null;
-  cpf: string | null;
-  rg: string | null;
-  rgOrgao: string | null;
-  nacionalidade: string | null;
-  estadoCivil: string | null;
-  enderecoLogradouro: string | null;
-  enderecoNumero: string | null;
-  enderecoComplemento: string | null;
-  enderecoBairro: string | null;
-  enderecoCidade: string | null;
-  enderecoUf: string | null;
-  enderecoCep: string | null;
-  telefone: string | null;
-  email: string | null;
+/** Status pela validade (AAAA-MM-DD) e quantos dias faltam; a_vencer = dentro de alertaDias */
+export function statusValidade(validade: string | null | undefined, alertaDias: number, hoje = new Date()): { status: StatusValidade; dias: number | null } {
+  if (!validade || !/^\d{4}-\d{2}-\d{2}/.test(validade)) return { status: 'sem_validade', dias: null };
+  const [a, m, d] = validade.slice(0, 10).split('-').map(Number);
+  const h = Date.UTC(hoje.getFullYear(), hoje.getMonth(), hoje.getDate());
+  const dias = Math.round((Date.UTC(a, m - 1, d) - h) / 86_400_000);
+  if (dias < 0) return { status: 'vencida', dias };
+  if (dias <= alertaDias) return { status: 'a_vencer', dias };
+  return { status: 'valida', dias };
 }
 
-/** O que falta para o corretor entrar num contrato como intermediador (vazio = apto) */
-export function pendenciasIntermediador(d: Partial<DadosIntermediador>, certidao: SituacaoCertidao): string[] {
-  const faltam: string[] = [];
-  const req: [keyof DadosIntermediador, string][] = [
-    ['nome', 'nome completo'], ['creci', 'nº do CRECI'], ['creciUf', 'UF do CRECI'], ['cpf', 'CPF'], ['rg', 'RG'], ['rgOrgao', 'órgão emissor do RG'],
-    ['nacionalidade', 'nacionalidade'], ['estadoCivil', 'estado civil'], ['enderecoLogradouro', 'endereço'], ['enderecoNumero', 'número do endereço'],
-    ['enderecoBairro', 'bairro'], ['enderecoCidade', 'cidade'], ['enderecoUf', 'UF do endereço'], ['enderecoCep', 'CEP'],
-  ];
-  for (const [k, r] of req) if (!String(d[k] ?? '').trim()) faltam.push(r);
-  if (d.cpf && !cpfValido(d.cpf)) faltam.push('CPF válido');
-  if (certidao === 'ausente') faltam.push('certidão de quitação do CRECI');
-  if (certidao === 'vencida') faltam.push('certidão do CRECI dentro da validade');
-  return faltam;
+/** hoje + N dias (validade sugerida da certidão nova: 30) */
+export function maisDias(n: number, hoje = new Date()): string {
+  return new Date(Date.UTC(hoje.getFullYear(), hoje.getMonth(), hoje.getDate() + n)).toISOString().slice(0, 10);
 }
 
-/**
- * Qualificação do intermediador no contrato, ex.: "JOSÉ ROMÁRIO, brasileiro, casado(a), corretor de imóveis,
- * CRECI/MA nº 4705, CPF 123.456.789-09, RG 123 SSP/MA, residente na Rua X, nº 10, Centro, Açailândia/MA, CEP 65930-000"
- */
-export function qualificacaoIntermediador(d: DadosIntermediador): string {
-  const endereco = [
-    [d.enderecoLogradouro, d.enderecoNumero && `nº ${d.enderecoNumero}`, d.enderecoComplemento].filter(Boolean).join(', '),
-    d.enderecoBairro, [d.enderecoCidade, d.enderecoUf].filter(Boolean).join('/'), d.enderecoCep && `CEP ${formatarCep(d.enderecoCep)}`,
-  ].filter(Boolean).join(', ');
-  return [
-    d.nome.toUpperCase(), d.nacionalidade, d.estadoCivil, 'corretor de imóveis',
-    d.creci && `CRECI/${d.creciUf || '—'} nº ${d.creci}`, d.cpf && `CPF ${formatarCpf(d.cpf)}`,
-    d.rg && `RG ${d.rg}${d.rgOrgao ? ` ${d.rgOrgao}` : ''}`, endereco && `residente na ${endereco}`,
-  ].filter(Boolean).join(', ');
+export const PRAZOS_PADRAO = { certidaoValidadeDias: 30, certidaoAlertaDias: 5, cartaoAlertaDias: 30 };
+export const LINK_CERTIDAO_PADRAO = 'https://www.crecima.gov.br';
+
+/** Situação do corretor para "Recebe leads": precisa do Cartão de Regularidade CRECI */
+export const MSG_SEM_CARTAO = 'Envie o Cartão de Regularidade CRECI';
+
+/** Pendências de credencial (badge do menu e card do admin) */
+export function pendenciasCredenciais(perfil: string | null, docs: { tipo: string; titular?: string | null; validade?: string | null }[], prazos = PRAZOS_PADRAO, hoje = new Date()): string[] {
+  if (perfil !== 'corretor') return [];
+  const doc = (t: string) => docs.find(d => d.tipo === t && (d.titular ?? 'usuario') === 'usuario');
+  const out: string[] = [];
+  const cartao = doc('cartao_creci');
+  if (!cartao) out.push('Cartão CRECI ausente');
+  else if (statusValidade(cartao.validade, prazos.cartaoAlertaDias, hoje).status === 'vencida') out.push('Cartão CRECI vencido');
+  const certidao = doc('certidao_creci');
+  if (certidao) {
+    const s = statusValidade(certidao.validade, prazos.certidaoAlertaDias, hoje).status;
+    if (s === 'vencida') out.push('Certidão CRECI vencida');
+    else if (s === 'a_vencer') out.push('Certidão CRECI a vencer');
+  }
+  return out;
 }
+
+/** Link do CRECI da UF para emitir/renovar a certidão */
+export const linkCrecUf = (uf: string | null | undefined) => `https://www.creci${String(uf || 'ma').toLowerCase()}.gov.br`;

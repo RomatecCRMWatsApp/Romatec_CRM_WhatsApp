@@ -8,7 +8,7 @@ import { and, eq } from "drizzle-orm";
 import { adminProcedure, protectedProcedure, router } from "../_core/trpc";
 import { getDb } from "../db";
 import { acessosCorretor, condicoesPagamento, empreendimentos, permissoesPerfil, permissoesUsuario, properties, users } from "../../drizzle/schema";
-import { perfilDe } from "../../shared/equipe";
+import { daEquipe, perfilDe } from "../../shared/equipe";
 import { MODULOS, TIPOS_ACESSO, permissoesEfetivas } from "../../shared/permissoes";
 import { carregarPermissoes } from "../permissoes";
 
@@ -18,13 +18,15 @@ async function dbOrThrow() {
   return db as any;
 }
 
+const perfilEquipe = z.enum(["corretor", "secretario"]);
 const chaveModulo = z.string().refine(m => MODULOS.some(x => x.chave === m), "Módulo inexistente");
 
 async function corretorOuErro(db: any, usuarioId: number) {
   const [u]: any[] = await db.select().from(users).where(eq(users.id, usuarioId)).limit(1);
   if (!u) throw new Error("Corretor não encontrado");
-  if (perfilDe(u) !== "equipe") throw new Error("Permissões por corretor valem só para o perfil Equipe (o admin já vê tudo)");
-  return u;
+  const perfil = perfilDe(u);
+  if (!daEquipe(perfil)) throw new Error("Permissões por pessoa valem para Secretário(a) e Corretor(a) (o admin já vê tudo)");
+  return Object.assign(u, { perfilEquipe: perfil });
 }
 
 export const permissoesRouter = router({
@@ -39,19 +41,20 @@ export const permissoesRouter = router({
     };
   }),
 
-  /** Catálogo de módulos e pacote base do corretor */
-  base: adminProcedure.query(async () => {
+  /** Catálogo de módulos e pacote base de um perfil da equipe (corretor ou secretário) */
+  base: adminProcedure.input(z.object({ perfil: perfilEquipe }).optional()).query(async ({ input }) => {
     const db = await dbOrThrow();
-    const linhas: any[] = await db.select().from(permissoesPerfil).where(eq(permissoesPerfil.perfil, "equipe"));
-    const ef = permissoesEfetivas(linhas, []);
+    const perfil = input?.perfil ?? "corretor";
+    const linhas: any[] = await db.select().from(permissoesPerfil).where(eq(permissoesPerfil.perfil, perfil));
+    const ef = permissoesEfetivas(linhas, [], perfil);
     return MODULOS.map(m => ({ chave: m.chave, rotulo: m.rotulo, permitido: ef[m.chave] }));
   }),
 
-  definirBase: adminProcedure.input(z.object({ modulo: chaveModulo, permitido: z.boolean() })).mutation(async ({ input }) => {
+  definirBase: adminProcedure.input(z.object({ perfil: perfilEquipe.default("corretor"), modulo: chaveModulo, permitido: z.boolean() })).mutation(async ({ input }) => {
     const db = await dbOrThrow();
-    const [ja]: any[] = await db.select().from(permissoesPerfil).where(and(eq(permissoesPerfil.perfil, "equipe"), eq(permissoesPerfil.modulo, input.modulo))).limit(1);
+    const [ja]: any[] = await db.select().from(permissoesPerfil).where(and(eq(permissoesPerfil.perfil, input.perfil), eq(permissoesPerfil.modulo, input.modulo))).limit(1);
     if (ja) await db.update(permissoesPerfil).set({ permitido: input.permitido } as any).where(eq(permissoesPerfil.id, ja.id));
-    else await db.insert(permissoesPerfil).values({ perfil: "equipe", modulo: input.modulo, permitido: input.permitido } as any);
+    else await db.insert(permissoesPerfil).values({ perfil: input.perfil, modulo: input.modulo, permitido: input.permitido } as any);
     return { ok: true };
   }),
 
@@ -60,19 +63,19 @@ export const permissoesRouter = router({
     const db = await dbOrThrow();
     const u = await corretorOuErro(db, input.usuarioId);
     const [base, ajustes, acessos, emps, imoveis, conds]: any[][] = await Promise.all([
-      db.select().from(permissoesPerfil).where(eq(permissoesPerfil.perfil, "equipe")),
+      db.select().from(permissoesPerfil).where(eq(permissoesPerfil.perfil, u.perfilEquipe)),
       db.select().from(permissoesUsuario).where(eq(permissoesUsuario.usuarioId, u.id)),
       db.select().from(acessosCorretor).where(eq(acessosCorretor.usuarioId, u.id)),
       db.select({ id: empreendimentos.id, slug: empreendimentos.slug, nome: empreendimentos.nome }).from(empreendimentos),
       db.select({ id: properties.id, codigo: properties.codigo, nome: properties.denomination }).from(properties),
       db.select({ empreendimentoId: condicoesPagamento.empreendimentoId, pct: condicoesPagamento.comissaoCorretorPct, ativo: condicoesPagamento.ativo }).from(condicoesPagamento),
     ]);
-    const doPacote = permissoesEfetivas(base, []), efetivas = permissoesEfetivas(base, ajustes);
+    const doPacote = permissoesEfetivas(base, [], u.perfilEquipe), efetivas = permissoesEfetivas(base, ajustes, u.perfilEquipe);
     const ajuste = new Map(ajustes.map(a => [a.modulo, !!a.permitido]));
     const acesso = (tipo: string, id: number) => acessos.find(a => a.tipo === tipo && Number(a.refId) === id);
     const pctEmp = new Map(conds.filter(c => c.ativo !== false && c.ativo !== 0).map(c => [c.empreendimentoId, Number(c.pct)]));
     return {
-      corretor: { id: u.id, nome: u.name, creci: u.creci, email: u.email },
+      corretor: { id: u.id, nome: u.name, creci: u.creci, email: u.email, perfil: u.perfilEquipe },
       modulos: MODULOS.map(m => ({ chave: m.chave, rotulo: m.rotulo, pacoteBase: doPacote[m.chave], ajuste: ajuste.has(m.chave) ? ajuste.get(m.chave)! : null, efetivo: efetivas[m.chave] })),
       empreendimentos: emps.map(e => {
         const a = acesso("empreendimento", e.id);

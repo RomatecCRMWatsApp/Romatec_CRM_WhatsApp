@@ -320,6 +320,28 @@ export function initSqliteTables(sqlite: any): void {
     id INTEGER PRIMARY KEY AUTOINCREMENT, usuarioId INTEGER NOT NULL, tipo TEXT NOT NULL, nome TEXT NOT NULL, mime TEXT, tamanhoBytes INTEGER,
     conteudoBase64 TEXT NOT NULL, validade TEXT, enviadoPor INTEGER, createdAt INTEGER NOT NULL DEFAULT (strftime('%s','now'))
   )`);
+  // v1.6.0 (server/_core/migrations/addCadastroV2.ts)
+  addColumn(`ALTER TABLE users ADD COLUMN sessaoVersao INTEGER NOT NULL DEFAULT 0`);
+  for (const c of ['sexo', 'profissao', 'paisOrigem', 'docEstrangeiroTipo', 'docEstrangeiroNumero']) addColumn(`ALTER TABLE users ADD COLUMN ${c} TEXT`);
+  for (const c of ["titular TEXT NOT NULL DEFAULT 'usuario'", 'numero TEXT', 'linkVerificacao TEXT', 'linkEmissao TEXT', 'anexarDocumentos INTEGER NOT NULL DEFAULT 1',
+    'exibirPerfil INTEGER NOT NULL DEFAULT 0', 'alertaEnviadoEm TEXT', 'thumbBase64 TEXT', 'paginasQtd INTEGER', 'atualizadoEm INTEGER']) {
+    addColumn(`ALTER TABLE usuarioDocumentos ADD COLUMN ${c}`);
+  }
+  run(`CREATE TABLE IF NOT EXISTS usuarioDocumentoPaginas (
+    id INTEGER PRIMARY KEY AUTOINCREMENT, documentoId INTEGER NOT NULL, n INTEGER NOT NULL, pngBase64 TEXT NOT NULL, UNIQUE(documentoId, n)
+  )`);
+  run(`CREATE TABLE IF NOT EXISTS usuarioConjuge (
+    id INTEGER PRIMARY KEY AUTOINCREMENT, usuarioId INTEGER NOT NULL UNIQUE, nome TEXT NOT NULL, sexo TEXT, cpf TEXT NOT NULL, rg TEXT, rgOrgao TEXT,
+    nacionalidade TEXT NOT NULL DEFAULT 'brasileira', paisOrigem TEXT, docEstrangeiroTipo TEXT, docEstrangeiroNumero TEXT, profissao TEXT,
+    dataNascimento TEXT, telefone TEXT, email TEXT, regimeBens TEXT, dataCasamento TEXT, uniaoDataInicio TEXT,
+    uniaoRegistrada INTEGER NOT NULL DEFAULT 0, mesmoEndereco INTEGER NOT NULL DEFAULT 1, cep TEXT, logradouro TEXT, numero TEXT,
+    complemento TEXT, bairro TEXT, cidade TEXT, uf TEXT, ativo INTEGER NOT NULL DEFAULT 1,
+    criadoEm INTEGER NOT NULL DEFAULT (strftime('%s','now')), atualizadoEm INTEGER NOT NULL DEFAULT (strftime('%s','now'))
+  )`);
+  run(`CREATE TABLE IF NOT EXISTS usuarioFoto (
+    usuarioId INTEGER PRIMARY KEY, mime TEXT NOT NULL, conteudoBase64 TEXT NOT NULL, atualizadoEm INTEGER NOT NULL DEFAULT (strftime('%s','now'))
+  )`);
+  run(`CREATE TABLE IF NOT EXISTS configCredenciais (chave TEXT PRIMARY KEY, valor TEXT NOT NULL)`);
   // Portal de permissões (server/_core/migrations/addPermissoes.ts)
   run(`CREATE TABLE IF NOT EXISTS permissoesPerfil (
     id INTEGER PRIMARY KEY AUTOINCREMENT, perfil TEXT NOT NULL, modulo TEXT NOT NULL, permitido INTEGER NOT NULL DEFAULT 1,

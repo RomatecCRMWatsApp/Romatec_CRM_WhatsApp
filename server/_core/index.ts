@@ -552,50 +552,97 @@ async function startServer() {
     }
   });
 
-  // Documentos do usuário (certidão do CRECI, RG, CPF…): no banco, só o admin ou o próprio usuário (shared/cadastro.ts)
+  // Documentos e credenciais do usuário (cartão/certidão CRECI, CNAI, RG…) e foto de perfil: tudo no banco,
+  // só com login, só o admin ou o próprio usuário (server/credenciais.ts, shared/cadastro.ts)
   const usuarioLogado = async (req: express.Request) => {
     const { sdk } = await import('./sdk');
     const user: any = await sdk.authenticateRequest(req).catch(() => null);
     return user && user.ativo !== false && user.ativo !== 0 ? user : null;
   };
   const alvoDoCadastro = (req: express.Request, user: any) => (req.params.id === 'me' ? user.id : Number(req.params.id) || 0);
+  /** Login + permissão (admin ou o dono); responde e devolve null quando não pode */
+  const autorizarCadastro = async (req: express.Request, res: express.Response) => {
+    const user = await usuarioLogado(req);
+    if (!user) { res.status(401).json({ success: false, error: 'Faça login' }); return null; }
+    const { podeGerirCadastroDe } = await import('../../shared/cadastro');
+    const alvo = alvoDoCadastro(req, user);
+    if (!podeGerirCadastroDe(user, alvo)) { res.status(403).json({ success: false, error: 'Sem permissão para este cadastro' }); return null; }
+    return { user, alvo };
+  };
+  const cabecalho = (req: express.Request, nome: string) => { const v = req.headers[nome]; return v == null || v === '' ? undefined : decodeURIComponent(String(v)); };
+  const bool = (v: string | undefined) => (v === undefined ? undefined : v === '1' || v === 'true');
+  const responderErro = (res: express.Response, e: any, contexto: string) => {
+    const status = Number(e?.status) || 500;
+    if (status >= 500) console.error(`[Credenciais] ${contexto}:`, e?.message);
+    res.status(status).json({ success: false, error: status >= 500 ? 'Falha ao processar o arquivo' : e?.message });
+  };
+  // Documento do usuário da URL (o dono confere com a rota; o admin vê todos)
+  const documentoDaRota = async (req: express.Request, res: express.Response) => {
+    const ok = await autorizarCadastro(req, res);
+    if (!ok) return null;
+    const { documentoDe } = await import('../credenciais');
+    const doc = await documentoDe(Number(req.params.docId) || 0);
+    if (!doc || doc.usuarioId !== ok.alvo) { res.status(404).json({ success: false, error: 'Documento não encontrado' }); return null; }
+    return { ...ok, doc };
+  };
+
   app.post('/api/usuarios/:id/documentos', express.raw({ type: '*/*', limit: '12mb' }), async (req, res) => {
     try {
-      const user = await usuarioLogado(req);
-      if (!user) return res.status(401).json({ success: false, error: 'Faça login para enviar documentos' });
-      const { podeGerirCadastroDe, problemaDocumento } = await import('../../shared/cadastro');
-      const alvo = alvoDoCadastro(req, user);
-      if (!podeGerirCadastroDe(user, alvo)) return res.status(403).json({ success: false, error: 'Sem permissão para este cadastro' });
-      const buffer = req.body as Buffer;
-      const tipo = String(req.headers['x-tipo'] || 'outro');
-      const mime = String(req.headers['x-file-type'] || '');
-      const validade = req.headers['x-validade'] ? String(req.headers['x-validade']) : null;
-      const erro = problemaDocumento(tipo, mime, buffer?.length || 0, validade);
-      if (erro) return res.status(400).json({ success: false, error: erro });
-      const nome = decodeURIComponent(String(req.headers['x-file-name'] || 'documento')).replace(/[\\/:*?"<>|]+/g, '_').slice(0, 200);
-      const { getDb } = await import('../db');
-      const { users, usuarioDocumentos } = await import('../../drizzle/schema');
-      const { eq } = await import('drizzle-orm');
-      const db: any = await getDb();
-      const [u] = await db.select({ id: users.id }).from(users).where(eq(users.id, alvo)).limit(1);
-      if (!u) return res.status(404).json({ success: false, error: 'Usuário não encontrado' });
-      await db.insert(usuarioDocumentos).values({ usuarioId: alvo, tipo, nome, mime, tamanhoBytes: buffer.length, conteudoBase64: buffer.toString('base64'), validade: tipo === 'certidao_creci' ? validade : null, enviadoPor: user.id });
-      if (tipo === 'certidao_creci') await db.update(users).set({ certidaoCreciValidade: validade }).where(eq(users.id, alvo));
-      res.json({ success: true });
-    } catch (error: any) {
-      console.error('[Usuários] Upload de documento falhou:', error?.message);
-      res.status(500).json({ success: false, error: 'Falha ao salvar o documento' });
-    }
+      const ok = await autorizarCadastro(req, res);
+      if (!ok) return;
+      const { enviarDocumento, nomeSeguro } = await import('../credenciais');
+      const id = await enviarDocumento(ok.alvo, String(req.headers['x-tipo'] || 'outros'), req.body as Buffer, nomeSeguro(String(req.headers['x-file-name'] || 'documento')), {
+        titular: cabecalho(req, 'x-titular') === 'conjuge' ? 'conjuge' : 'usuario',
+        validade: cabecalho(req, 'x-validade') ?? null, numero: cabecalho(req, 'x-numero') ?? null,
+        linkVerificacao: cabecalho(req, 'x-link-verificacao') ?? null, linkEmissao: cabecalho(req, 'x-link-emissao') ?? null,
+        anexarDocumentos: bool(cabecalho(req, 'x-anexar')), exibirPerfil: bool(cabecalho(req, 'x-exibir')),
+      }, ok.user.id);
+      res.json({ success: true, id });
+    } catch (e: any) { responderErro(res, e, 'Upload'); }
   });
+  app.put('/api/usuarios/:id/documentos/:docId/arquivo', express.raw({ type: '*/*', limit: '12mb' }), async (req, res) => {
+    try {
+      const ok = await documentoDaRota(req, res);
+      if (!ok) return;
+      const { trocarArquivo, nomeSeguro } = await import('../credenciais');
+      await trocarArquivo(ok.doc.id, req.body as Buffer, nomeSeguro(String(req.headers['x-file-name'] || ok.doc.nome)));
+      res.json({ success: true });
+    } catch (e: any) { responderErro(res, e, 'Troca de arquivo'); }
+  });
+  app.get('/api/usuarios/:id/documentos/:docId/pagina/:n', async (req, res) => {
+    try {
+      const ok = await documentoDaRota(req, res);
+      if (!ok) return;
+      const { paginaDoDocumento } = await import('../credenciais');
+      const png = await paginaDoDocumento(ok.doc.id, Number(req.params.n) || 1);
+      if (!png) return res.status(404).send('Página não encontrada');
+      res.setHeader('Content-Type', 'image/png');
+      res.setHeader('Cache-Control', 'private, no-store');
+      res.send(png);
+    } catch (e: any) { responderErro(res, e, 'Página'); }
+  });
+  app.get('/api/usuarios/:id/documentos/:docId/thumb', async (req, res) => {
+    try {
+      const ok = await documentoDaRota(req, res);
+      if (!ok) return;
+      if (!ok.doc.thumbBase64) {
+        const { paginaDoDocumento, documentoDe } = await import('../credenciais');
+        await paginaDoDocumento(ok.doc.id, 1).catch(() => null); // documento antigo: converte e gera a miniatura
+        ok.doc = (await documentoDe(ok.doc.id)) ?? ok.doc;
+      }
+      if (!ok.doc.thumbBase64) return res.status(404).send('Sem miniatura');
+      res.setHeader('Content-Type', 'image/webp');
+      res.setHeader('Cache-Control', 'private, no-store');
+      res.send(Buffer.from(ok.doc.thumbBase64, 'base64'));
+    } catch (e: any) { responderErro(res, e, 'Miniatura'); }
+  });
+  // Arquivo original ("Baixar original")
   app.get('/api/usuarios/documentos/:docId', async (req, res) => {
     try {
       const user = await usuarioLogado(req);
       if (!user) return res.status(401).send('Faça login para abrir o documento');
-      const { getDb } = await import('../db');
-      const { usuarioDocumentos } = await import('../../drizzle/schema');
-      const { eq } = await import('drizzle-orm');
-      const db: any = await getDb();
-      const [doc] = await db.select().from(usuarioDocumentos).where(eq(usuarioDocumentos.id, Number(req.params.docId) || 0)).limit(1);
+      const { documentoDe } = await import('../credenciais');
+      const doc = await documentoDe(Number(req.params.docId) || 0);
       const { podeGerirCadastroDe } = await import('../../shared/cadastro');
       if (!doc || !podeGerirCadastroDe(user, doc.usuarioId)) return res.status(404).send('Documento não encontrado');
       const inline = /^(application\/pdf|image\/)/.test(doc.mime || '') && req.query.baixar !== '1';
@@ -608,29 +655,47 @@ async function startServer() {
       res.status(500).send('Falha ao abrir o documento');
     }
   });
-  // Foto de perfil (todos os perfis): Cloudinary, como as fotos dos imóveis
+
+  // Foto de perfil (todos os perfis): WEBP 512×512 recortado no navegador, guardado no banco
   app.post('/api/usuarios/:id/foto', express.raw({ type: '*/*', limit: '6mb' }), async (req, res) => {
     try {
-      const user = await usuarioLogado(req);
-      if (!user) return res.status(401).json({ success: false, error: 'Faça login para enviar a foto' });
-      const { podeGerirCadastroDe, MAX_FOTO_BYTES } = await import('../../shared/cadastro');
-      const alvo = alvoDoCadastro(req, user);
-      if (!podeGerirCadastroDe(user, alvo)) return res.status(403).json({ success: false, error: 'Sem permissão para este cadastro' });
+      const ok = await autorizarCadastro(req, res);
+      if (!ok) return;
+      const { detectarMime, MAX_FOTO_BYTES } = await import('../../shared/cadastro');
       const buffer = req.body as Buffer;
-      const mime = String(req.headers['x-file-type'] || '');
-      if (!/^image\/(jpeg|png|webp)$/.test(mime)) return res.status(400).json({ success: false, error: 'Envie uma foto JPG, PNG ou WEBP' });
-      if (!buffer?.length || buffer.length > MAX_FOTO_BYTES) return res.status(400).json({ success: false, error: 'Foto vazia ou acima de 5 MB' });
-      const { uploadToCloudinary } = await import('../cloudinary');
-      const { url } = await uploadToCloudinary(buffer, mime, `usuario-${alvo}`, { folder: 'romatec_usuarios', resourceType: 'image' });
+      const mime = buffer?.length ? detectarMime(buffer) : null;
+      if (!mime || mime === 'application/pdf') return res.status(415).json({ success: false, error: 'Envie uma foto JPG, PNG ou WEBP' });
+      if (buffer.length > MAX_FOTO_BYTES) return res.status(413).json({ success: false, error: 'Foto acima de 5 MB' });
       const { getDb } = await import('../db');
-      const { users } = await import('../../drizzle/schema');
+      const { users, usuarioFoto } = await import('../../drizzle/schema');
       const { eq } = await import('drizzle-orm');
       const db: any = await getDb();
-      await db.update(users).set({ fotoUrl: url }).where(eq(users.id, alvo));
+      const [ja] = await db.select({ usuarioId: usuarioFoto.usuarioId }).from(usuarioFoto).where(eq(usuarioFoto.usuarioId, ok.alvo)).limit(1);
+      const dados = { mime, conteudoBase64: buffer.toString('base64') };
+      if (ja) await db.update(usuarioFoto).set(dados).where(eq(usuarioFoto.usuarioId, ok.alvo));
+      else await db.insert(usuarioFoto).values({ usuarioId: ok.alvo, ...dados });
+      const url = `/api/usuarios/${ok.alvo}/foto?v=${Date.now()}`;
+      await db.update(users).set({ fotoUrl: url }).where(eq(users.id, ok.alvo));
       res.json({ success: true, url });
     } catch (error: any) {
       console.error('[Usuários] Upload de foto falhou:', error?.message);
       res.status(500).json({ success: false, error: 'Falha no upload da foto' });
+    }
+  });
+  app.get('/api/usuarios/:id/foto', async (req, res) => {
+    try {
+      if (!(await usuarioLogado(req))) return res.status(401).send('Faça login');
+      const { getDb } = await import('../db');
+      const { usuarioFoto } = await import('../../drizzle/schema');
+      const { eq } = await import('drizzle-orm');
+      const db: any = await getDb();
+      const [f] = await db.select().from(usuarioFoto).where(eq(usuarioFoto.usuarioId, Number(req.params.id) || 0)).limit(1);
+      if (!f) return res.status(404).send('Sem foto');
+      res.setHeader('Content-Type', f.mime);
+      res.setHeader('Cache-Control', 'private, max-age=86400'); // a URL muda (?v=) a cada foto nova
+      res.send(Buffer.from(f.conteudoBase64, 'base64'));
+    } catch {
+      res.status(500).send('Falha ao abrir a foto');
     }
   });
 
@@ -926,6 +991,13 @@ async function startServer() {
     console.error('❌ Erro na migration addCadastroUsuarios:', e);
   }
 
+  try {
+    const { addCadastroV2 } = await import('./migrations/addCadastroV2');
+    await addCadastroV2();
+  } catch (e) {
+    console.error('❌ Erro na migration addCadastroV2:', e);
+  }
+
   // Leads parados há 48 h perdem pontos no score (§8)
   import('../leads/scoreService').then(m => m.iniciarJobInatividade()).catch(e => console.warn('[Score] Job não iniciado:', e));
   // Follow-up persistente (1/3/7/14/30 dias) e prazo de atendimento — não dependem das campanhas
@@ -933,6 +1005,8 @@ async function startServer() {
   import('../leads/sla').then(m => m.iniciarJobSla()).catch(e => console.warn('[SLA] Job não iniciado:', e));
   // Agenda de visitas: lembrete ao cliente, aviso ao corretor e pedido de resultado
   import('../leads/visitas').then(m => m.iniciarJobVisitas()).catch(e => console.warn('[Visitas] Job não iniciado:', e));
+  // Credenciais CRECI: alerta de vencimento pelo WhatsApp (08:00, a cada 2 dias até regularizar)
+  import('../credenciais').then(m => m.iniciarJobCredenciais()).catch(e => console.warn('[Credenciais] Job não iniciado:', e));
   // Vigia: avisa no Telegram se o follow-up ou o alerta de atendimento pararem
   import('../leads/rotinas').then(m => m.iniciarVigiaRotinas()).catch(e => console.warn('[Rotinas] Vigia não iniciado:', e));
 

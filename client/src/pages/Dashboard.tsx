@@ -429,6 +429,26 @@ function WhatsAppStatusPanel() {
   );
 }
 
+/** Admin: corretores com Cartão CRECI ausente/vencido ou certidão vencida/a vencer (some quando está tudo em dia) */
+function CredenciaisPendentes() {
+  const [, navigate] = useLocation();
+  const { data } = trpc.equipe.credenciaisPendentes.useQuery(undefined, { staleTime: 5 * 60_000 });
+  if (!data?.length) return null;
+  return (
+    <div className="rounded-xl border border-amber-500/40 bg-amber-500/10 p-4">
+      <div className="mb-2 flex items-center gap-2">
+        <p className="flex-1 text-sm font-semibold text-amber-200">Credenciais pendentes ({data.length})</p>
+        <Button size="sm" variant="ghost" className="text-amber-200" onClick={() => navigate("/equipe")}>Equipe <ChevronRight className="ml-1 h-4 w-4" /></Button>
+      </div>
+      <ul className="space-y-1 text-sm">
+        {data.map(p => (
+          <li key={p.id} className="flex flex-wrap gap-x-2"><b className="text-foreground">{p.nome}</b><span className="text-amber-100/80">{p.pendencias.join(" · ")}</span></li>
+        ))}
+      </ul>
+    </div>
+  );
+}
+
 export default function Dashboard() {
   const { user } = useAuth();
   const [, navigate] = useLocation();
@@ -488,6 +508,8 @@ export default function Dashboard() {
       <RelogioPainel />
 
       <WhatsAppStatusPanel />
+
+      {user?.role === "admin" && <CredenciaisPendentes />}
 
       <KpisLeads r={rel} leadsHoje={leadsData ? leadsHoje : undefined} />
 

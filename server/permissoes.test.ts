@@ -1,9 +1,9 @@
 import { describe, expect, it } from 'vitest';
 import {
-  MODULOS, ajustesNovoCorretor, comissaoNaSimulacao, comissaoPropria, linhaFinanceira, marcarAcesso, minhaComissaoNaVenda, moduloDoCaminho, moduloLiberado, permissoesEfetivas, temAcesso,
+  MODULOS, ajustesNovoCorretor, comissaoNaSimulacao, comissaoPropria, leadVisivel, linhaFinanceira, marcarAcesso, minhaComissaoNaVenda, moduloDoCaminho, moduloLiberado, permissoesEfetivas, temAcesso,
 } from '../shared/permissoes';
 import type { CondicoesPagamento } from '../shared/simulador';
-import { pctComissaoCorretor } from './permissoes';
+import { exigirDistribuicao, exigirLead, leadsVisiveis, pctComissaoCorretor } from './permissoes';
 
 const acessos = [{ tipo: 'empreendimento' as const, refId: 1 }, { tipo: 'imovel' as const, refId: 7 }];
 
@@ -26,24 +26,57 @@ describe('permissões — pacote base e ajuste por corretor', () => {
   it('módulo desligado bloqueia os procedimentos dele; admin sempre passa', () => {
     const p = permissoesEfetivas([], [{ modulo: 'simulador', permitido: false }]);
     expect(moduloDoCaminho('simulador.simular')?.chave).toBe('simulador');
-    expect(moduloLiberado('equipe', p, 'simulador.simular')).toBe(false);
-    expect(moduloLiberado('equipe', p, 'empreendimentosAdmin.detalhe')).toBe(true);
+    expect(moduloLiberado('corretor', p, 'simulador.simular')).toBe(false);
+    expect(moduloLiberado('corretor', p, 'empreendimentosAdmin.detalhe')).toBe(true);
     expect(moduloLiberado('admin', p, 'simulador.simular')).toBe(true);
-    expect(moduloLiberado('equipe', p, 'auth.me')).toBe(true);
+    expect(moduloLiberado('corretor', p, 'auth.me')).toBe(true);
+  });
+});
+
+describe('leads do corretor (v1.6.0)', () => {
+  it('corretor vê só os leads em que é o responsável; secretário e admin veem todos; empreendedor nenhum', () => {
+    expect(leadVisivel('corretor', 5, { responsavelId: 5 })).toBe(true);
+    expect(leadVisivel('corretor', 5, { responsavelId: 9 })).toBe(false);
+    expect(leadVisivel('corretor', 5, { responsavelId: null })).toBe(false);
+    expect(leadVisivel('secretario', 5, { responsavelId: 9 })).toBe(true);
+    expect(leadVisivel('admin', 1, { responsavelId: null })).toBe(true);
+    expect(leadVisivel('empreendedor', 7, { responsavelId: 7 })).toBe(false);
+  });
+
+  it('servidor: filtra listas e recusa (403) lead de outro responsável; distribuição só admin', () => {
+    const corretor = { perfil: 'corretor' as const, modulos: null, acessos: [] };
+    const leads = [{ id: 1, responsavelId: 5 }, { id: 2, responsavelId: 9 }, { id: 3, responsavelId: null }];
+    expect(leadsVisiveis(corretor, 5, leads).map(l => l.id)).toEqual([1]);
+    expect(leadsVisiveis({ ...corretor, perfil: 'secretario' }, 5, leads)).toHaveLength(3);
+    expect(() => exigirLead(corretor, 5, { responsavelId: 9 })).toThrow(/outro responsável/);
+    expect(() => exigirLead(corretor, 5, { responsavelId: 5 })).not.toThrow();
+    expect(() => exigirDistribuicao({ ...corretor, perfil: 'secretario' })).toThrow(/administrador/);
+    expect(() => exigirDistribuicao({ ...corretor, perfil: 'admin' })).not.toThrow();
+  });
+
+  it('pacote base por perfil: Desempenho fica desligado para corretor e secretário (matriz)', () => {
+    expect(permissoesEfetivas([], [], 'corretor').desempenho).toBe(false);
+    expect(permissoesEfetivas([], [], 'secretario').desempenho).toBe(false);
+    expect(permissoesEfetivas([], [], 'secretario').leads).toBe(true);
+  });
+
+  it('secretário abre todos os empreendimentos/imóveis e não tem comissão própria', () => {
+    expect(temAcesso('secretario', [], 'empreendimento', 2)).toBe(true);
+    expect(comissaoNaSimulacao('secretario', 160000, 6, C, 0.02)).toEqual({ comissao: null, minhaComissao: null });
   });
 });
 
 describe('permissões — escopo por empreendimento/imóvel', () => {
   it('corretor não acessa empreendimento não habilitado; admin acessa tudo', () => {
-    expect(temAcesso('equipe', acessos, 'empreendimento', 1)).toBe(true);
-    expect(temAcesso('equipe', acessos, 'empreendimento', 2)).toBe(false);
-    expect(temAcesso('equipe', acessos, 'imovel', 1)).toBe(false);
+    expect(temAcesso('corretor', acessos, 'empreendimento', 1)).toBe(true);
+    expect(temAcesso('corretor', acessos, 'empreendimento', 2)).toBe(false);
+    expect(temAcesso('corretor', acessos, 'imovel', 1)).toBe(false);
     expect(temAcesso('admin', [], 'empreendimento', 2)).toBe(true);
     expect(temAcesso('empreendedor', acessos, 'empreendimento', 1)).toBe(false);
   });
 
   it('lista mostra todos, marcando os sem acesso', () => {
-    const l = marcarAcesso('equipe', acessos, 'empreendimento', [{ id: 1 }, { id: 2 }]);
+    const l = marcarAcesso('corretor', acessos, 'empreendimento', [{ id: 1 }, { id: 2 }]);
     expect(l).toEqual([{ id: 1, acesso: true }, { id: 2, acesso: false }]);
   });
 });
@@ -62,12 +95,12 @@ describe('simulador — comissão não vaza para a equipe', () => {
   });
 
   it('corretor só recebe a própria comissão (padrão = % do empreendimento, 2%), nunca o breakdown', () => {
-    const k = comissaoNaSimulacao('equipe', 160000, 6, C, C.comissaoCorretorPct);
+    const k = comissaoNaSimulacao('corretor', 160000, 6, C, C.comissaoCorretorPct);
     expect(k.comissao).toBeNull();
     expect(k.minhaComissao).toMatchObject({ pct: 0.02, valor: 3200, parcelada: true });
     expect(k.minhaComissao?.pagamentos.map(p => p.valor)).toEqual([1600, 1600]);
     expect(JSON.stringify(k)).not.toMatch(/romatec|vendaDireta|4800/i);
-    expect(comissaoNaSimulacao('equipe', 160000, 1, C, 0.02).minhaComissao?.pagamentos).toHaveLength(1);
+    expect(comissaoNaSimulacao('corretor', 160000, 1, C, 0.02).minhaComissao?.pagamentos).toHaveLength(1);
   });
 });
 
@@ -76,15 +109,15 @@ describe('financeiro — tudo menos comissão de terceiros', () => {
     ({ loteId: 1, codigo: 'A01', situacao, corretorId, valorVenda: 160000, valorEntrada: 48000, cliente: 'Maria' });
 
   it('corretor vê a venda de outro corretor com todos os dados, sem comissão nenhuma', () => {
-    const l = linhaFinanceira('equipe', 5, venda(9), C, 0.02);
+    const l = linhaFinanceira('corretor', 5, venda(9), C, 0.02);
     expect(l).toMatchObject({ valorVenda: 160000, valorEntrada: 48000, cliente: 'Maria', comissao: null, minhaComissao: null });
   });
 
   it('corretor vê a própria comissão (50/50 na venda parcelada ou com sinal; 100% à vista)', () => {
-    expect(linhaFinanceira('equipe', 5, venda(5), C, 0.02).minhaComissao?.pagamentos.map(p => p.valor)).toEqual([1600, 1600]);
-    expect(linhaFinanceira('equipe', 5, venda(5, 'entrada'), C, 0.02).parcelada).toBe(true);
-    expect(linhaFinanceira('equipe', 5, venda(5, 'vendido_avista'), C, 0.02).minhaComissao?.pagamentos).toHaveLength(1);
-    expect(linhaFinanceira('equipe', 5, venda(5), C, 0.02).comissao).toBeNull();
+    expect(linhaFinanceira('corretor', 5, venda(5), C, 0.02).minhaComissao?.pagamentos.map(p => p.valor)).toEqual([1600, 1600]);
+    expect(linhaFinanceira('corretor', 5, venda(5, 'entrada'), C, 0.02).parcelada).toBe(true);
+    expect(linhaFinanceira('corretor', 5, venda(5, 'vendido_avista'), C, 0.02).minhaComissao?.pagamentos).toHaveLength(1);
+    expect(linhaFinanceira('corretor', 5, venda(5), C, 0.02).comissao).toBeNull();
   });
 
   it('admin vê o breakdown de todas as vendas', () => {
@@ -109,7 +142,7 @@ describe('permissões — comissão do corretor', () => {
   });
 
   it('% do corretor: o do vínculo dele; sem ajuste, o do empreendimento (padrão atual)', () => {
-    const p = { perfil: 'equipe' as const, modulos: null, acessos: [{ tipo: 'empreendimento' as const, refId: 1, comissaoPct: '0.1000' }, { tipo: 'empreendimento' as const, refId: 2, comissaoPct: null }] };
+    const p = { perfil: 'corretor' as const, modulos: null, acessos: [{ tipo: 'empreendimento' as const, refId: 1, comissaoPct: '0.1000' }, { tipo: 'empreendimento' as const, refId: 2, comissaoPct: null }] };
     expect(pctComissaoCorretor(p, 1, 0.02)).toBe(0.1);
     expect(pctComissaoCorretor(p, 2, 0.02)).toBe(0.02);
     expect(pctComissaoCorretor(p, 3, 0.02)).toBe(0.02);

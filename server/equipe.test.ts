@@ -3,10 +3,12 @@ import { perfilDe, podeChamar, podeAbrir, telaInicial, normalizarCreci, tipoLogi
 import { serieLeadsPorDia } from './leads/painelEmpreendedor';
 
 describe('Equipe — perfis', () => {
-  it('admin vem do role; colaborador do campo perfil (padrão equipe)', () => {
+  it('admin vem do role; colaborador do campo perfil (padrão corretor; antigo "equipe" também)', () => {
     expect(perfilDe({ role: 'admin', perfil: 'empreendedor' })).toBe('admin');
     expect(perfilDe({ role: 'user', perfil: 'empreendedor' })).toBe('empreendedor');
-    expect(perfilDe({ role: 'user', perfil: null })).toBe('equipe');
+    expect(perfilDe({ role: 'user', perfil: null })).toBe('corretor');
+    expect(perfilDe({ role: 'user', perfil: 'equipe' })).toBe('corretor');
+    expect(perfilDe({ role: 'user', perfil: 'secretario' })).toBe('secretario');
     expect(perfilDe(null)).toBeNull();
   });
 });
@@ -16,23 +18,23 @@ describe('Equipe — o que cada perfil acessa', () => {
     for (const p of ['empreendedor.painel', 'empreendedor.materiais', 'auth.me', 'auth.changePassword', 'system.versao']) expect(podeChamar('empreendedor', p)).toBe(true);
     for (const p of ['crm.kanban', 'crm.lead', 'crm.relatorio', 'leadCampanhas.list', 'materiais.list', 'contacts.list', 'companyConfig.get', 'equipe.list', 'system.notifyOwner']) expect(podeChamar('empreendedor', p)).toBe(false);
   });
-  it('equipe usa o CRM, menos configurações, equipe e ZAYRA', () => {
-    for (const p of ['crm.kanban', 'crm.lead', 'materiais.create', 'leadCampanhas.list', 'companyConfig.get']) expect(podeChamar('equipe', p)).toBe(true);
-    for (const p of ['companyConfig.update', 'equipe.list', 'equipe.create', 'zaira.chat']) expect(podeChamar('equipe', p)).toBe(false);
+  it('corretor e secretário usam o CRM, menos configurações, equipe e ZAYRA', () => {
+    for (const p of ['crm.kanban', 'crm.lead', 'materiais.create', 'leadCampanhas.list', 'companyConfig.get']) expect(podeChamar('corretor', p)).toBe(true);
+    for (const p of ['companyConfig.update', 'equipe.list', 'equipe.create', 'zaira.chat']) expect(podeChamar('corretor', p)).toBe(false);
   });
   it('admin chama tudo; sem perfil, nada', () => {
     expect(podeChamar('admin', 'equipe.create')).toBe(true);
     expect(podeChamar(null, 'auth.me')).toBe(false);
   });
-  it('telas: empreendedor só /empreendedor; equipe não abre /equipe nem /settings', () => {
+  it('telas: empreendedor só /empreendedor; corretor não abre /equipe nem /settings', () => {
     expect(telaInicial('empreendedor')).toBe('/empreendedor');
-    expect(telaInicial('equipe')).toBe('/dashboard');
+    expect(telaInicial('corretor')).toBe('/dashboard');
     expect(podeAbrir('empreendedor', '/empreendedor')).toBe(true);
     expect(podeAbrir('empreendedor', '/dashboard')).toBe(false);
     expect(podeAbrir('empreendedor', '/leads')).toBe(false);
-    expect(podeAbrir('equipe', '/leads/funil')).toBe(true);
-    expect(podeAbrir('equipe', '/equipe')).toBe(false);
-    expect(podeAbrir('equipe', '/settings')).toBe(false);
+    expect(podeAbrir('corretor', '/leads/funil')).toBe(true);
+    expect(podeAbrir('corretor', '/equipe')).toBe(false);
+    expect(podeAbrir('corretor', '/settings')).toBe(false);
     expect(podeAbrir('admin', '/equipe')).toBe(true);
   });
 });
@@ -45,6 +47,12 @@ describe('Equipe — login por CRECI e convite', () => {
     expect(normalizarCreci('')).toBeNull();
     expect(tipoLogin('4705')).toBe('creci');
     expect(tipoLogin('jose@gmail.com')).toBe('email');
+    expect(tipoLogin('012.091.853-69')).toBe('cpf');
+  });
+  it('todos os perfis abrem e editam o próprio cadastro (empreendedor também)', () => {
+    expect(podeAbrir('empreendedor', '/meu-cadastro')).toBe(true);
+    expect(podeChamar('empreendedor', 'cadastro.dados')).toBe(true);
+    expect(podeChamar('secretario', 'equipe.list')).toBe(false);
   });
   it('convite vale até expirar; e-mail mascarado na tela de primeiro acesso', () => {
     const agora = Date.UTC(2026, 9, 18);

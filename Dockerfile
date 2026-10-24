@@ -4,6 +4,9 @@ WORKDIR /app
 # Force rebuild cache bust — changes on every build
 ARG BUILD_DATE=unspecified
 
+# pdftoppm (poppler): converte o PDF das credenciais em PNG por página (server/credenciais.ts)
+RUN apt-get update && apt-get install -y --no-install-recommends poppler-utils && rm -rf /var/lib/apt/lists/*
+
 # Install pnpm
 RUN npm install -g pnpm@10.4.1
 
