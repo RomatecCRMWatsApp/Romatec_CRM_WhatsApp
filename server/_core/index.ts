@@ -589,10 +589,34 @@ async function startServer() {
       res.json({ success: true, ...a });
     } catch (e: any) {
       if (e?.name === 'ErroUpload') return res.status(e.status).json({ success: false, error: e.message });
+      if (e?.name === 'CredencialCloudinaryErro') {
+        return res.status(503).json({ success: false, error: 'O armazenamento de arquivos está com a credencial do Cloudinary inválida no servidor. Avise o administrador (Configurações › diagnóstico do Cloudinary).' });
+      }
       console.error('[Materiais] Assinatura falhou:', e?.message);
       res.status(500).json({ success: false, error: 'Não foi possível preparar o envio. Tente de novo.' });
     }
   });
+  // Diagnóstico das credenciais do Cloudinary (só administrador; nunca mostra o segredo)
+  app.get('/api/materiais/diagnostico', async (req, res) => {
+    const { sdk } = await import('./sdk');
+    const user = await sdk.authenticateRequest(req).catch(() => null);
+    const { perfilDe } = await import('../../shared/equipe');
+    if (!user || perfilDe(user as any) !== 'admin') return res.status(404).json({ success: false });
+    const { diagnostico, limparCacheCredenciais } = await import('../cloudinaryConfig');
+    limparCacheCredenciais();
+    const d = await diagnostico();
+    // Em que cloud estão os arquivos já enviados (para saber qual é a conta certa)
+    let cloudsDosMateriais: Record<string, number> = {};
+    try {
+      const { getDb } = await import('../db');
+      const { materiais } = await import('../../drizzle/schema');
+      const db: any = await getDb();
+      const rows: any[] = db ? await db.select({ url: materiais.url }).from(materiais) : [];
+      for (const r of rows) { const c = /res\.cloudinary\.com\/([^/]+)\//.exec(String(r.url))?.[1] ?? 'outro'; cloudsDosMateriais[c] = (cloudsDosMateriais[c] ?? 0) + 1; }
+    } catch { cloudsDosMateriais = {}; }
+    res.json({ success: true, ...d, cloudsDosMateriais });
+  });
+
   app.get('/api/materiais/limites', async (req, res) => {
     const { sdk } = await import('./sdk');
     const user = await sdk.authenticateRequest(req).catch(() => null);

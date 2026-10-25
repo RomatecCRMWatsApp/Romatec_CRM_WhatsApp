@@ -3,6 +3,15 @@
 Cada versão nova vai no TOPO. Depois rode `npm run release` (valida e atualiza o package.json);
 ao subir, o servidor grava a versão no banco e todos recebem o aviso "Novidades da versão".
 
+## 1.16.1 — 2026-10-25
+tipo: patch
+obrigatoria: nao
+titulo: Credencial do armazenamento conferida antes do envio
+
+### Correções
+- Envio de vídeos e imagens usa só a credencial do Cloudinary que o próprio Cloudinary aceita (CLOUDINARY_URL ou as variáveis separadas), conferida antes de cada envio
+- Credencial inválida agora aparece com mensagem clara, e o administrador tem um diagnóstico que mostra qual variável está errada
+
 ## 1.16.0 — 2026-10-25
 tipo: minor
 obrigatoria: nao

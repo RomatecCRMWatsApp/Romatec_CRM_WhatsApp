@@ -3,18 +3,9 @@
  */
 
 import crypto from 'crypto';
+import { credenciais } from './cloudinaryConfig';
 
-const CLOUD_NAME = process.env.CLOUDINARY_CLOUD_NAME;
-const API_KEY    = process.env.CLOUDINARY_API_KEY;
-const API_SECRET = process.env.CLOUDINARY_API_SECRET;
-
-if (!CLOUD_NAME || !API_KEY || !API_SECRET) {
-  throw new Error(
-    '[Cloudinary] Variáveis CLOUDINARY_CLOUD_NAME, CLOUDINARY_API_KEY e CLOUDINARY_API_SECRET são obrigatórias.',
-  );
-}
-
-function generateSignature(params: Record<string, string>): string {
+function generateSignature(params: Record<string, string>, API_SECRET: string): string {
   const sortedParams = Object.keys(params)
     .sort()
     .map(key => `${key}=${params[key]}`)
@@ -31,6 +22,8 @@ export async function uploadToCloudinary(
   fileName: string,
   opts: { folder?: string; resourceType?: 'image' | 'video' | 'raw' } = {},
 ): Promise<{ url: string; publicId: string }> {
+  // Credenciais conferidas no Cloudinary (server/cloudinaryConfig.ts) — as mesmas do envio direto do navegador
+  const { cloud: CLOUD_NAME, key: API_KEY, secret: API_SECRET } = await credenciais();
   const timestamp = Math.floor(Date.now() / 1000).toString();
 
   // Determinar resource_type — PDF como 'image' (Cloudinary suporta e é público por padrão)
@@ -53,7 +46,7 @@ export async function uploadToCloudinary(
     public_id: publicId,
     timestamp,
   };
-  const signature = generateSignature(paramsToSign);
+  const signature = generateSignature(paramsToSign, API_SECRET);
 
   // Montar multipart/form-data manualmente (sem dependência externa)
   const boundary = `----FormBoundary${Math.random().toString(36).substring(2)}`;

@@ -7,17 +7,14 @@
  */
 import crypto from 'node:crypto';
 import { TIPOS_ARQUIVO_ACEITOS, resourceTypeDe } from '../shared/materiais';
+import { credenciais } from './cloudinaryConfig';
 
 const MB = 1024 * 1024;
 const PADRAO = { imagem: 10 * MB, video: 100 * MB, raw: 10 * MB };
 /** Tamanho de cada parte (o Cloudinary pede ≥ 5 MB, exceto a última) */
 export const PARTE_BYTES = 20 * MB;
 
-const cfg = () => {
-  const cloud = process.env.CLOUDINARY_CLOUD_NAME, key = process.env.CLOUDINARY_API_KEY, secret = process.env.CLOUDINARY_API_SECRET;
-  if (!cloud || !key || !secret) throw new Error('Cloudinary não configurado');
-  return { cloud, key, secret };
-};
+const cfg = (fetchFn: typeof fetch = fetch) => credenciais(fetchFn);
 
 export interface LimitesUpload { imagem: number; video: number; raw: number; plano: string | null; fonte: 'conta' | 'padrao' }
 let cache: { em: number; v: LimitesUpload } | null = null;
@@ -27,7 +24,7 @@ export async function limitesDoPlano(fetchFn: typeof fetch = fetch): Promise<Lim
   if (cache && Date.now() - cache.em < 3600_000) return cache.v;
   let v: LimitesUpload = { ...PADRAO, plano: null, fonte: 'padrao' };
   try {
-    const { cloud, key, secret } = cfg();
+    const { cloud, key, secret } = await cfg(fetchFn);
     const r = await fetchFn(`https://api.cloudinary.com/v1_1/${cloud}/usage`, {
       headers: { Authorization: `Basic ${Buffer.from(`${key}:${secret}`).toString('base64')}` }, signal: AbortSignal.timeout(8000),
     });
@@ -59,7 +56,7 @@ export async function assinaturaUpload(nome: string, mime: string, tamanho: numb
   if (tamanho > limite) {
     throw new ErroUpload(`Arquivo de ${(tamanho / MB).toFixed(0)} MB acima do limite do plano de armazenamento (${Math.floor(limite / MB)} MB por ${resourceTypeDe(mime) === 'video' ? 'vídeo' : 'arquivo'}).`, 413);
   }
-  const { cloud, key, secret } = cfg();
+  const { cloud, key, secret } = await cfg();
   const resourceType = resourceTypeDe(mime);
   const ext = resourceType === 'raw' ? (nome.match(/\.[^/.]+$/)?.[0] ?? '') : '';
   const seguro = nome.replace(/\.[^/.]+$/, '').normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/[^a-zA-Z0-9_-]/g, '_').substring(0, 60);

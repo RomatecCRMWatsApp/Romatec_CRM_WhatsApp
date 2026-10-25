@@ -5,6 +5,9 @@ beforeAll(() => {
   process.env.CLOUDINARY_CLOUD_NAME = 'romatec-teste';
   process.env.CLOUDINARY_API_KEY = '123';
   process.env.CLOUDINARY_API_SECRET = 'segredo';
+  // /ping do Cloudinary (conferência das credenciais) responde ok
+  const orig = globalThis.fetch;
+  globalThis.fetch = (async (url: any, init: any) => (String(url).endsWith('/ping') ? new Response('{"status":"ok"}') : orig(url, init))) as any;
 });
 
 describe('upload de materiais direto para o Cloudinary (em partes)', () => {

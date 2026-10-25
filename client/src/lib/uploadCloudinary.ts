@@ -19,6 +19,7 @@ export function mimeDoArquivo(f: File): string {
 /** Mensagem clara para o erro do Cloudinary */
 function traduzir(msg: string, limiteMB: number): string {
   if (/file size too large|too large|exceeds/i.test(msg)) return `Arquivo acima do limite do plano de armazenamento (${limiteMB} MB).`;
+  if (/invalid api_?key|unknown api_?key|invalid cloud_?name/i.test(msg)) return "O armazenamento de arquivos está com a credencial inválida no servidor. Avise o administrador.";
   if (/invalid signature|stale request/i.test(msg)) return "A autorização do envio expirou. Tente de novo.";
   if (/unsupported|invalid (image|video) file/i.test(msg)) return "Formato de arquivo não suportado ou arquivo corrompido.";
   return msg || "Falha no envio para o armazenamento.";
