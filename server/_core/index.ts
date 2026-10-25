@@ -590,7 +590,7 @@ async function startServer() {
     } catch (e: any) {
       if (e?.name === 'ErroUpload') return res.status(e.status).json({ success: false, error: e.message });
       if (e?.name === 'CredencialCloudinaryErro') {
-        return res.status(503).json({ success: false, error: 'O armazenamento de arquivos está com a credencial do Cloudinary inválida no servidor. Avise o administrador (Configurações › diagnóstico do Cloudinary).' });
+        return res.status(503).json({ success: false, error: 'O armazenamento de arquivos está com a credencial do Cloudinary inválida no servidor. Avise o administrador (ele confere em romateccrm.com/api/materiais/diagnostico).' });
       }
       console.error('[Materiais] Assinatura falhou:', e?.message);
       res.status(500).json({ success: false, error: 'Não foi possível preparar o envio. Tente de novo.' });
@@ -864,7 +864,10 @@ async function startServer() {
     // Só PDFs do Cloudinary da própria Romatec (antes buscava qualquer endereço e
     // mandava a senha do Cloudinary para qualquer URL que contivesse "res.cloudinary.com")
     const { urlPdfPermitida } = await import('../pdfProxyGuard');
-    const url = urlPdfPermitida(req.query.url, process.env.CLOUDINARY_CLOUD_NAME);
+    // Mesma credencial conferida dos uploads (cloudinaryConfig); sem ela, só o cloud_name das variáveis
+    const { credenciais } = await import('../cloudinaryConfig');
+    const cred = await credenciais().catch(() => null);
+    const url = urlPdfPermitida(req.query.url, cred?.cloud ?? process.env.CLOUDINARY_CLOUD_NAME?.trim());
     if (!url) {
       return res.status(400).json({ error: "URL inválida" });
     }
@@ -873,10 +876,8 @@ async function startServer() {
         'User-Agent': 'Mozilla/5.0 (compatible; RomatecCRM/1.0)',
         'Accept': 'application/pdf,*/*',
       };
-      const CLOUD_API_KEY = process.env.CLOUDINARY_API_KEY;
-      const CLOUD_API_SECRET = process.env.CLOUDINARY_API_SECRET;
-      if (CLOUD_API_KEY && CLOUD_API_SECRET) {
-        headers['Authorization'] = `Basic ${Buffer.from(`${CLOUD_API_KEY}:${CLOUD_API_SECRET}`).toString('base64')}`;
+      if (cred) {
+        headers['Authorization'] = `Basic ${Buffer.from(`${cred.key}:${cred.secret}`).toString('base64')}`;
       }
       // Sem seguir redirecionamento: a credencial não pode escapar para outro endereço
       const response = await fetch(url, { headers, redirect: 'manual' });

@@ -3,6 +3,15 @@
 Cada versão nova vai no TOPO. Depois rode `npm run release` (valida e atualiza o package.json);
 ao subir, o servidor grava a versão no banco e todos recebem o aviso "Novidades da versão".
 
+## 1.17.2 — 2026-10-25
+tipo: patch
+obrigatoria: nao
+titulo: Cloudinary com uma credencial só
+
+### Correções
+- A abertura de PDFs do armazenamento passa a usar a mesma credencial do Cloudinary já conferida dos envios de fotos e vídeos
+- A mensagem de credencial inválida no envio de materiais indica onde o administrador confere a configuração
+
 ## 1.17.1 — 2026-10-25
 tipo: patch
 obrigatoria: nao

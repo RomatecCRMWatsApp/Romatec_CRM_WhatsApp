@@ -71,9 +71,3 @@ export async function assinaturaUpload(nome: string, mime: string, tamanho: numb
 }
 
 export class ErroUpload extends Error { constructor(msg: string, public status = 400) { super(msg); this.name = 'ErroUpload'; } }
-
-/** O material só aceita arquivo da nossa conta do Cloudinary */
-export function urlDaConta(url: string): boolean {
-  const cloud = process.env.CLOUDINARY_CLOUD_NAME;
-  return !!cloud && url.startsWith(`https://res.cloudinary.com/${cloud}/`);
-}
