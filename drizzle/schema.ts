@@ -1366,7 +1366,11 @@ export const pagamentoRateio = mysqlTable("pagamentoRateio", {
   uxCobranca: uniqueIndex("ux_rateio_cobranca").on(t.cobrancaId),
 }));
 
-export const recibos = mysqlTable("recibos", {
+/**
+ * Recibos do CRM. A tabela é "crm_recibos": "recibos" já existe no banco compartilhado com a ZAYRA (outro esquema)
+ * e o CREATE IF NOT EXISTS do CRM nunca a criou (v1.30.6). Não usar o nome "recibos" no CRM.
+ */
+export const recibos = mysqlTable("crm_recibos", {
   id: int("id").autoincrement().primaryKey(),
   /** REC-BJ-AAAA-NNNNNN */
   numero: varchar("numero", { length: 24 }).notNull(),

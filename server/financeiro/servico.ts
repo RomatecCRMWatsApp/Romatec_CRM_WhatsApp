@@ -149,6 +149,30 @@ export async function indicesIpcaMap(): Promise<Map<string, number>> {
 
 // ─── Recibo automático ────────────────────────────────────────────────────
 
+/**
+ * Parcelas pagas sem recibo (até a v1.30.5 o recibo não gravava: a tabela "recibos" do banco é da ZAYRA).
+ * Emite os que faltam — só emite, não envia ao cliente (o envio segue manual pelo botão do recibo).
+ */
+export async function emitirRecibosPendentes(): Promise<{ emitidos: string[]; falhas: number }> {
+  const d = await db();
+  const pagas: any[] = await d.select({ id: cobrancas.id, contratoId: cobrancas.contratoId }).from(cobrancas).where(eq(cobrancas.status, 'paga'));
+  if (!pagas.length) return { emitidos: [], falhas: 0 };
+  const comRecibo = new Set((await d.select({ c: recibos.cobrancaId }).from(recibos)).map((r: any) => r.c));
+  const emitidos: string[] = [];
+  let falhas = 0;
+  for (const p of pagas.filter(x => !comRecibo.has(x.id))) {
+    try {
+      const rec = await emitirRecibo(p.id);
+      emitidos.push(rec.numero);
+      await auditar('recibo_emitido_pendente', { contratoId: p.contratoId, cobrancaId: p.id, origem: 'sistema', detalhe: { recibo: rec.numero, motivo: 'parcela paga sem recibo (tabela recibos da ZAYRA até a v1.30.5)' } });
+    } catch (e: any) {
+      falhas++;
+      console.warn(`[Financeiro] recibo pendente da cobrança ${p.id}:`, e?.message);
+    }
+  }
+  return { emitidos, falhas };
+}
+
 export interface ReciboEmitido { id: number; numero: string; codigoVerif: string; novo: boolean }
 
 /**

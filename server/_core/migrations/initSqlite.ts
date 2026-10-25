@@ -475,7 +475,13 @@ export function initSqliteTables(sqlite: any): void {
     id INTEGER PRIMARY KEY AUTOINCREMENT, pagamentoId INTEGER NOT NULL, cobrancaId INTEGER NOT NULL UNIQUE, contratoId INTEGER NOT NULL,
     valor TEXT NOT NULL, reciboId INTEGER
   )`);
+  // Recibos do CRM: crm_recibos. "recibos" é da ZAYRA no banco compartilhado — criada aqui no formato dela,
+  // como na produção, para os testes quebrarem se o CRM voltar a usar esse nome (v1.30.6)
   run(`CREATE TABLE IF NOT EXISTS recibos (
+    id INTEGER PRIMARY KEY AUTOINCREMENT, tenant_id INTEGER NOT NULL DEFAULT 1, numero TEXT NOT NULL, tipo TEXT NOT NULL,
+    destinatario_nome TEXT NOT NULL, token TEXT NOT NULL UNIQUE, created_at INTEGER
+  )`);
+  run(`CREATE TABLE IF NOT EXISTS crm_recibos (
     id INTEGER PRIMARY KEY AUTOINCREMENT, numero TEXT NOT NULL UNIQUE, cobrancaId INTEGER NOT NULL UNIQUE, contratoId INTEGER NOT NULL,
     codigoVerif TEXT NOT NULL, valorPago TEXT NOT NULL, pagoEm TEXT NOT NULL, pdfArquivo TEXT, enviadoEm INTEGER, envioErro TEXT, criadoEm ${agora}
   )`);
@@ -487,7 +493,7 @@ export function initSqliteTables(sqlite: any): void {
     competencia TEXT PRIMARY KEY, variacao TEXT NOT NULL, fonte TEXT NOT NULL DEFAULT 'IBGE/SIDRA 1737', atualizadoEm ${agora}
   )`);
   // v1.14.0 — trava de cancelamento (server/_core/migrations/addCancelamento.ts)
-  for (const t of ['contratos', 'recibos']) for (const c of ['canceladoEm INTEGER', 'canceladoPor INTEGER', 'canceladoMotivo TEXT']) addColumn(`ALTER TABLE ${t} ADD COLUMN ${c}`);
+  for (const t of ['contratos', 'crm_recibos']) for (const c of ['canceladoEm INTEGER', 'canceladoPor INTEGER', 'canceladoMotivo TEXT']) addColumn(`ALTER TABLE ${t} ADD COLUMN ${c}`);
   run(`CREATE TABLE IF NOT EXISTS contratoSolicitacoes (
     id INTEGER PRIMARY KEY AUTOINCREMENT, contratoId INTEGER NOT NULL, tipo TEXT NOT NULL, motivo TEXT NOT NULL, solicitanteId INTEGER NOT NULL,
     status TEXT NOT NULL, resolvidoPor INTEGER, resolvidoEm INTEGER, resposta TEXT, criadoEm ${agora}

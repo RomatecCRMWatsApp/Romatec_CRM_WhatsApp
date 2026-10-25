@@ -39,7 +39,7 @@ export function registrarRotaEspaco(app: Express) {
         .map((v: any) => [v.Variable_name ?? v.variable_name, v.Value ?? v.value]));
       // Tabelas com o mesmo nome no CRM e na ZAYRA (mesmo banco): colunas que existem de fato
       const compartilhadas: Record<string, string[]> = {};
-      for (const t of ['recibos', 'users', 'contacts', 'properties', 'campaigns', 'messages']) {
+      for (const t of ['recibos', 'crm_recibos', 'users', 'contacts', 'properties', 'campaigns', 'messages']) {
         compartilhadas[t] = (await tentar(sql`SELECT COLUMN_NAME AS c FROM information_schema.COLUMNS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = ${t} ORDER BY ORDINAL_POSITION`)).map((r: any) => String(r.c));
       }
       res.json({

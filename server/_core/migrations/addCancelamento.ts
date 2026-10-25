@@ -11,9 +11,10 @@ const COLUNAS: [string, string, string][] = [
   ['contratos', 'canceladoEm', 'DATETIME NULL'],
   ['contratos', 'canceladoPor', 'INT NULL'],
   ['contratos', 'canceladoMotivo', 'VARCHAR(300) NULL'],
-  ['recibos', 'canceladoEm', 'DATETIME NULL'],
-  ['recibos', 'canceladoPor', 'INT NULL'],
-  ['recibos', 'canceladoMotivo', 'VARCHAR(300) NULL'],
+  // crm_recibos (a tabela "recibos" do banco é da ZAYRA — v1.30.6)
+  ['crm_recibos', 'canceladoEm', 'DATETIME NULL'],
+  ['crm_recibos', 'canceladoPor', 'INT NULL'],
+  ['crm_recibos', 'canceladoMotivo', 'VARCHAR(300) NULL'],
 ];
 
 const GATILHOS: [string, string][] = [

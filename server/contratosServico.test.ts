@@ -116,7 +116,7 @@ describe('contrato: contexto, gate, ativação e cancelamento', () => {
 
   it('cancelar contrato ATIVO: chácara de volta, cobranças futuras canceladas (Asaas dormente), recibo marcado e trilha completa', async () => {
     const admin = { id: 1, name: 'José Romário', role: 'admin' };
-    db.run(sql`INSERT INTO recibos (numero, cobrancaId, contratoId, codigoVerif, valorPago, pagoEm) VALUES ('REC-BJ-2026-000001', 1, 1, 'AAAA-BBBB-CCCC', '8000', '2026-12-10')`);
+    db.run(sql`INSERT INTO crm_recibos (numero, cobrancaId, contratoId, codigoVerif, valorPago, pagoEm) VALUES ('REC-BJ-2026-000001', 1, 1, 'AAAA-BBBB-CCCC', '8000', '2026-12-10')`);
     await db.update(schema.cobrancas).set({ status: 'paga' }).where(eq(schema.cobrancas.id, 1));
     await expect(X.cancelarCobrancaAdmin(1, admin, 'senha-do-admin-123', 'x')).rejects.toMatchObject({ codigo: 'PAGA' });
     const r = await X.cancelarContratoAdmin(1, admin, 'senha-do-admin-123', 'inadimplência — decisão do administrador');

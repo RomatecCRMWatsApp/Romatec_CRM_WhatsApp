@@ -21,7 +21,8 @@ const COLUNAS: [string, string, string][] = [
 ];
 
 const TABELAS: [string, string][] = [
-  ['recibos', `CREATE TABLE IF NOT EXISTS recibos (
+  // "recibos" é da ZAYRA (mesmo banco, outro esquema): o do CRM é crm_recibos
+  ['crm_recibos', `CREATE TABLE IF NOT EXISTS crm_recibos (
     id INT AUTO_INCREMENT PRIMARY KEY,
     numero VARCHAR(24) NOT NULL,
     cobrancaId INT NOT NULL,
@@ -32,11 +33,14 @@ const TABELAS: [string, string][] = [
     pdfArquivo VARCHAR(255) NULL,
     enviadoEm DATETIME NULL,
     envioErro VARCHAR(255) NULL,
+    canceladoEm DATETIME NULL,
+    canceladoPor INT NULL,
+    canceladoMotivo VARCHAR(300) NULL,
     criadoEm TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
     UNIQUE KEY ux_recibo_numero (numero),
     UNIQUE KEY ux_recibo_cobranca (cobrancaId),
     INDEX ix_recibo_contrato (contratoId),
-    CONSTRAINT fk_recibo_cobranca FOREIGN KEY (cobrancaId) REFERENCES cobrancas(id)
+    CONSTRAINT fk_crm_recibo_cobranca FOREIGN KEY (cobrancaId) REFERENCES cobrancas(id)
   )`],
   ['declaracoesQuitacao', `CREATE TABLE IF NOT EXISTS declaracoesQuitacao (
     id INT AUTO_INCREMENT PRIMARY KEY,

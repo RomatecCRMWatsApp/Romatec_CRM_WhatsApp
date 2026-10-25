@@ -1190,6 +1190,10 @@ async function startServer() {
   } catch (e) {
     console.error('❌ Erro na migration addContratos/addFinanceiro:', e);
   }
+  // Parcelas pagas sem recibo (tabela "recibos" era da ZAYRA até a v1.30.5): emite os que faltam, sem enviar
+  import('../financeiro/servico').then(m => m.emitirRecibosPendentes())
+    .then(r => { if (r.emitidos.length || r.falhas) console.log(`[Financeiro] recibos pendentes: ${r.emitidos.length} emitido(s) ${r.emitidos.join(', ')} · ${r.falhas} falha(s)`); })
+    .catch(e => console.warn('[Financeiro] recibos pendentes:', e?.message));
 
   // Leads parados há 48 h perdem pontos no score (§8)
   import('../leads/scoreService').then(m => m.iniciarJobInatividade()).catch(e => console.warn('[Score] Job não iniciado:', e));

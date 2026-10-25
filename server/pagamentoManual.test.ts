@@ -74,7 +74,7 @@ describe('lançar pagamento', () => {
     expect(r.sobra).toBe(50);
     const cob: any[] = db.all(sql`SELECT id, status, pagoEm, valorPago FROM cobrancas WHERE id IN (10, 20) ORDER BY id`);
     expect(cob.map(c => [c.status, c.pagoEm])).toEqual([['paga', '2026-10-25'], ['paga', '2026-10-25']]);
-    expect(db.all(sql`SELECT COUNT(*) AS n FROM recibos`)[0].n).toBe(2);
+    expect(db.all(sql`SELECT COUNT(*) AS n FROM crm_recibos`)[0].n).toBe(2);
     expect(db.all(sql`SELECT observacao FROM pagamentosManuais`)[0].observacao).toContain('Sobra de R$ 50.00');
     await expect(P.lancarPagamento({ ...base, valor: 1234.51, rateio: [{ cobrancaId: 11, valor: 1234.51 }] }, 1)).rejects.toMatchObject({ codigo: 'TRANSACAO_DUPLICADA' });
     await expect(P.lancarPagamento({ ...base, idTransacao: 'E1', valor: 8000, rateio: [{ cobrancaId: 10, valor: 8000 }] }, 1)).rejects.toMatchObject({ codigo: 'JA_QUITADA' });

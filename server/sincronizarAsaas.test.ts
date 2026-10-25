@@ -41,9 +41,9 @@ describe('Sincronizar com o Asaas', () => {
     const st: any[] = db.all(sql`SELECT id, status, pagoEm FROM cobrancas ORDER BY id`);
     expect(st.map(c => c.status)).toEqual(['paga', 'vencida', 'emitida']);
     expect(st[0].pagoEm).toBe('2026-10-20');
-    expect(db.all(sql`SELECT COUNT(*) AS n FROM recibos`)[0].n).toBe(1);
+    expect(db.all(sql`SELECT COUNT(*) AS n FROM crm_recibos`)[0].n).toBe(1);
     // 2ª vez: a paga não é mais conferida; a vencida continua vencida sem evento novo
     expect(await S.sincronizarComAsaas()).toEqual({ conferidas: 2, pagas: 0, vencidas: 0, outras: 0, erros: 0 });
-    expect(db.all(sql`SELECT COUNT(*) AS n FROM recibos`)[0].n).toBe(1);
+    expect(db.all(sql`SELECT COUNT(*) AS n FROM crm_recibos`)[0].n).toBe(1);
   });
 });

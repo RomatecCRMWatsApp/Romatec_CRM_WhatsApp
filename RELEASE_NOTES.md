@@ -3,6 +3,16 @@
 Cada versão nova vai no TOPO. Depois rode `npm run release` (valida e atualiza o package.json);
 ao subir, o servidor grava a versão no banco e todos recebem o aviso "Novidades da versão".
 
+## 1.30.6 — 2026-10-25
+tipo: patch
+obrigatoria: nao
+titulo: Recibos de pagamento voltam a ser gerados
+
+### Correções
+- Os recibos do CRM passam a ficar na tabela própria (crm_recibos). A tabela "recibos" do banco é da ZAYRA, que usa o mesmo MySQL, e por isso o CRM não conseguia gravar o recibo quando uma parcela era paga — nem abrir o carnê digital e a página do contrato com parcelas
+- Parcelas que já estavam pagas e ficaram sem recibo recebem o recibo agora (só emitido; o envio ao comprador continua manual)
+- Teste novo impede o CRM de usar o nome de uma tabela da ZAYRA. A tabela da ZAYRA não foi alterada
+
 ## 1.30.5 — 2026-10-25
 tipo: patch
 obrigatoria: nao
