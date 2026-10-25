@@ -80,6 +80,12 @@ export const financeiroRouter = router({
     const { lancarPagamento } = await import("../financeiro/pagamentoManual");
     return comErroFin(() => lancarPagamento(input as any, ctx.user.id));
   }),
+  /** Confere no Asaas as cobranças em aberto e aplica o que mudou (como se o webhook tivesse chegado) */
+  sincronizarAsaas: protectedProcedure.mutation(async ({ ctx }) => {
+    await operador(ctx);
+    const { sincronizarComAsaas } = await import("../financeiro/sincronizar");
+    return sincronizarComAsaas();
+  }),
   pagamentosRecentes: protectedProcedure.query(async ({ ctx }) => {
     await operador(ctx);
     const { pagamentosRecentes } = await import("../financeiro/pagamentoManual");

@@ -1,6 +1,6 @@
 import { useMemo, useState } from "react";
 import { toast } from "sonner";
-import { CheckSquare, Loader2, Receipt, ScanSearch, TriangleAlert, X } from "lucide-react";
+import { CheckSquare, Loader2, Receipt, RefreshCw, ScanSearch, TriangleAlert, X } from "lucide-react";
 import { trpc } from "@/lib/trpc";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/_core/hooks/useAuth";
@@ -75,6 +75,13 @@ export default function LancarPagamento() {
     onError: e => toast.error(e.message),
   });
 
+  const sincronizar = trpc.financeiro.sincronizarAsaas.useMutation({
+    onSuccess: r => {
+      toast.success(`Asaas conferido: ${r.conferidas} boleto(s) em aberto · ${r.pagas} pago(s) agora baixado(s) · ${r.vencidas} vencido(s)${r.outras ? ` · ${r.outras} outra(s) mudança(s)` : ""}${r.erros ? ` · ${r.erros} com erro` : ""}`);
+      utils.financeiro.parcelasEmAberto.invalidate(); utils.contratos.detalhe.invalidate();
+    },
+    onError: e => toast.error(e.message),
+  });
   const sugestoes = useMemo(() => {
     const q = busca.trim().toLowerCase();
     if (q.length < 2) return [];
@@ -99,7 +106,13 @@ export default function LancarPagamento() {
 
   return (
     <section className="rounded-xl border border-border bg-card p-4 space-y-3">
-      <h2 className="flex items-center gap-1.5 text-sm font-semibold"><Receipt className="h-4 w-4 text-primary" /> Lançar pagamento</h2>
+      <div className="flex flex-wrap items-center gap-2">
+        <h2 className="flex items-center gap-1.5 text-sm font-semibold"><Receipt className="h-4 w-4 text-primary" /> Lançar pagamento</h2>
+        <Button size="sm" variant="outline" className="ml-auto h-8 text-xs" disabled={sincronizar.isPending} onClick={() => sincronizar.mutate()}
+          title="Confere no Asaas os boletos em aberto e dá baixa nos que foram pagos (se algum aviso do webhook não chegou)">
+          {sincronizar.isPending ? <Loader2 className="mr-1 h-3.5 w-3.5 animate-spin" /> : <RefreshCw className="mr-1 h-3.5 w-3.5" />} Sincronizar com o Asaas
+        </Button>
+      </div>
       <div className="flex gap-2">
         <input value={f.url} onChange={set("url")} placeholder="Link do recibo InfinitePay (opcional) — https://recibo.infinitepay.io/statements/…" aria-label="Link do recibo" className={campo} />
         <Button variant="outline" disabled={!f.url.trim() || ler.isPending} onClick={() => ler.mutate({ url: f.url.trim() })}>

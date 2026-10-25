@@ -3,6 +3,15 @@
 Cada versão nova vai no TOPO. Depois rode `npm run release` (valida e atualiza o package.json);
 ao subir, o servidor grava a versão no banco e todos recebem o aviso "Novidades da versão".
 
+## 1.27.0 — 2026-10-25
+tipo: minor
+obrigatoria: nao
+titulo: Sincronizar com o Asaas
+
+### Novo
+- Botão "Sincronizar com o Asaas" no quadro de pagamentos (administrador e secretária): confere no Asaas cada boleto em aberto e dá baixa nos que já foram pagos — com recibo —, marca os vencidos e aplica cancelamentos e estornos
+- Serve para quando algum aviso automático do Asaas não chegou; rodar de novo não repete baixa nem recibo
+
 ## 1.26.0 — 2026-10-25
 tipo: minor
 obrigatoria: nao
