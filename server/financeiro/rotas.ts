@@ -104,6 +104,50 @@ button{padding:10px;background:#0C3320;color:#fff;border:0;border-radius:8px;fon
 export function registrarRotasFinanceiro(app: Express) {
   const base = '/api/financeiro';
 
+  // Boleto de TESTE da integração (só administrador): cria, PDF, situação e cancelamento — só cobranças "crm-teste-"
+  const soAdmin = async (req: Request) => {
+    const { sdk } = await import('../_core/sdk');
+    const user: any = await sdk.authenticateRequest(req).catch(() => null);
+    const { perfilDe } = await import('../../shared/equipe');
+    return user && perfilDe(user) === 'admin' ? user : null;
+  };
+  const erroTeste = (res: Response, e: any) => res.status(e instanceof AsaasErro ? (e as any).status ?? 400 : 500).json({ erro: e?.message ?? 'Falha no teste' });
+  app.post(`${base}/teste-boleto`, async (req, res) => {
+    try {
+      const u = await soAdmin(req);
+      if (!u) return res.status(404).json({ erro: 'Não encontrado' });
+      const { criarBoletoTeste } = await import('./testeAsaas');
+      const r = await criarBoletoTeste(u.id, Number(req.query.valor) || undefined);
+      console.log(`[Asaas teste] boleto ${r.paymentId} criado por ${u.id} (${r.ambiente})`);
+      res.json(r);
+    } catch (e) { erroTeste(res, e); }
+  });
+  app.get(`${base}/teste-boleto/:id.pdf`, async (req, res) => {
+    try {
+      if (!(await soAdmin(req))) return res.status(404).json({ erro: 'Não encontrado' });
+      const { pdfBoletoTeste } = await import('./testeAsaas');
+      const buf = await pdfBoletoTeste(String(req.params.id));
+      res.setHeader('Content-Type', 'application/pdf');
+      res.setHeader('Content-Disposition', `inline; filename="Boleto-TESTE-${req.params.id}.pdf"`);
+      res.setHeader('Cache-Control', 'private, no-store');
+      res.send(buf);
+    } catch (e) { erroTeste(res, e); }
+  });
+  app.get(`${base}/teste-boleto/:id`, async (req, res) => {
+    try {
+      if (!(await soAdmin(req))) return res.status(404).json({ erro: 'Não encontrado' });
+      const { situacaoBoletoTeste } = await import('./testeAsaas');
+      res.json(await situacaoBoletoTeste(String(req.params.id)));
+    } catch (e) { erroTeste(res, e); }
+  });
+  app.post(`${base}/teste-boleto/:id/cancelar`, async (req, res) => {
+    try {
+      if (!(await soAdmin(req))) return res.status(404).json({ erro: 'Não encontrado' });
+      const { cancelarBoletoTeste } = await import('./testeAsaas');
+      res.json(await cancelarBoletoTeste(String(req.params.id)));
+    } catch (e) { erroTeste(res, e); }
+  });
+
   // Diagnóstico do Asaas (só administrador; nunca mostra a chave): ambiente, se a chave é aceita e o titular da conta
   app.get(`${base}/diagnostico`, async (req, res) => {
     const { sdk } = await import('../_core/sdk');

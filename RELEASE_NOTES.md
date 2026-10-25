@@ -3,6 +3,15 @@
 Cada versão nova vai no TOPO. Depois rode `npm run release` (valida e atualiza o package.json);
 ao subir, o servidor grava a versão no banco e todos recebem o aviso "Novidades da versão".
 
+## 1.24.0 — 2026-10-25
+tipo: minor
+obrigatoria: nao
+titulo: Teste da integração com o Asaas
+
+### Novo
+- No Financeiro, o quadro "Integração Asaas" (só administrador): situação da conta — chave aceita, produção ou teste, beneficiário dos boletos e webhook
+- Boleto de teste em nome do próprio administrador (valor escolhido, padrão R$ 5,00): cria no Asaas, abre o PDF no modelo do CRM com linha digitável, código de barras e PIX, confere o pagamento e cancela — não é cobrança de contrato
+
 ## 1.23.4 — 2026-10-25
 tipo: patch
 obrigatoria: nao
