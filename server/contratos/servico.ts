@@ -265,6 +265,15 @@ export async function dependentesDo(contratoId: number): Promise<(Dependente & {
 
 // ─── Contexto do merge a partir do banco ─────────────────────────────────────
 
+/** Titular da conta Asaas do empreendimento (recebedor da Cláusula 4ª); sem conta configurada ou sem resposta, null */
+export async function recebedorDoEmpreendimento(empreendimentoId: number, slug: string): Promise<{ nome: string; cpfCnpj: string } | null> {
+  try {
+    const { beneficiarioDoEmpreendimento } = await import('../financeiro/servico');
+    const b = await beneficiarioDoEmpreendimento(empreendimentoId, slug);
+    return b.configurado && b.nome ? { nome: b.nome, cpfCnpj: b.cpfCnpj } : null;
+  } catch { return null; }
+}
+
 export async function entradaDoContrato(contratoId: number): Promise<{ entrada: EntradaContexto; unidade: DadosUnidade; plano: PlanoContrato; marca: string; modelo: string }> {
   const d = await db();
   const c = await contratoPorId(contratoId);
@@ -300,7 +309,7 @@ export async function entradaDoContrato(contratoId: number): Promise<{ entrada: 
     lote: { codigo: lote.codigo, quadra: lote.quadra, numero: lote.numero, areaM2: Number(lote.areaM2), perimetroM: Number(lote.perimetroM ?? 0),
       descricao: lote.memorialTexto || memorial.descricao, viaFrente, matricula: lote.matricula ?? '' },
     plano, comprador: linhaParaPessoa(comprador), conjuge: conjuge ? linhaParaPessoa(conjuge) : null, corretor, parceiro,
-    condicionantes: dados.condicionantes,
+    condicionantes: dados.condicionantes, recebedor: await recebedorDoEmpreendimento(c.empreendimentoId, emp?.slug ?? 'bom-jardims'),
   };
   const unidade: DadosUnidade = {
     codigo: lote.codigo, quadra: lote.quadra, numero: lote.numero, areaM2: Number(lote.areaM2), perimetroM: Number(lote.perimetroM ?? 0),

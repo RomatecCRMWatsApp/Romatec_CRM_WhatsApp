@@ -9,7 +9,7 @@ export const OBRIGATORIOS_DEFINITIVO = [
   'emp_matricula_empreendimento', 'emp_registro_parcelamento', 'emp_registro_data', 'emp_aprovacao_numero',
   'emp_aprovacao_data', 'emp_lei_municipal', 'emp_li_numero', 'emp_li_data', 'emp_obras_termo_final', 'emp_associacao_nome',
   'emp_associacao_registro', 'emp_trt_rt', 'rom_creci_pj', 'corr_creci', 'corr_creci_validade', 'corr_certidao_codigo',
-  'comp_nome', 'comp_cpf', 'comp_endereco', 'ctr_numero', 'ctr_data_extenso',
+  'comp_nome', 'comp_cpf', 'comp_endereco', 'ctr_numero', 'ctr_data_extenso', 'pag_recebedor_configurado',
 ];
 
 export interface GateResult { ok: boolean; faltantes: string[]; bloqueios: string[] }

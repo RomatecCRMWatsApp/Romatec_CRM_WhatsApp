@@ -21,6 +21,7 @@ const STATUS_COB: Record<string, [string, string]> = {
 };
 /** Rótulos dos campos que faltam (tags do modelo) — o que não estiver aqui aparece como a própria tag */
 const ROTULO_CAMPO: Record<string, string> = {
+  pag_recebedor_configurado: "Conta de recebimento (Asaas) do empreendimento",
   emp_matricula_empreendimento: "Matrícula do empreendimento", emp_registro_parcelamento: "Registro do parcelamento", emp_registro_data: "Data do registro",
   emp_aprovacao_numero: "Nº da aprovação municipal", emp_aprovacao_data: "Data da aprovação", emp_lei_municipal: "Lei municipal",
   emp_li_numero: "Nº da Licença de Instalação", emp_li_data: "Data da LI", emp_obras_termo_final: "Termo final das obras", emp_associacao_registro: "Registro da associação",

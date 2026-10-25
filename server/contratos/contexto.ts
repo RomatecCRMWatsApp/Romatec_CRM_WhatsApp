@@ -66,6 +66,8 @@ export interface EntradaContexto {
   parceiro?: CredenciaisCorretor | null;
   /** Passo 7 do wizard: condições específicas, parcelas mínimas na obra, testemunhas */
   condicionantes?: Record<string, string>;
+  /** Quem recebe os pagamentos (titular da conta Asaas do empreendimento) — Cláusula 4ª; null = conta ainda não configurada */
+  recebedor?: { nome: string; cpfCnpj: string } | null;
 }
 
 const ROTULO_ESTADO_CIVIL: Record<string, [string, string]> = {
@@ -191,6 +193,14 @@ export function tagsIntermediacao(e: Pick<EntradaContexto, 'corretor' | 'parceir
   };
 }
 
+/** Recebedor dos pagamentos (Cláusula 4ª): vem da conta Asaas, nunca fixo no modelo; sem conta, a minuta avisa e o definitivo bloqueia */
+export function tagsRecebedor(r: EntradaContexto['recebedor']): Ctx {
+  const d = String(r?.cpfCnpj ?? '').replace(/\D/g, '');
+  const doc = d.length === 14 ? `CNPJ ${d.replace(/(\d{2})(\d{3})(\d{3})(\d{4})(\d{2})/, '$1.$2.$3/$4-$5')}` : d.length === 11 ? `CPF ${d.replace(/(\d{3})(\d{3})(\d{3})(\d{2})/, '$1.$2.$3-$4')}` : '';
+  if (!r?.nome) return { pag_recebedor_nome: '[CONTA DE RECEBIMENTO A CONFIGURAR]', pag_recebedor_doc: 'documento a informar', pag_recebedor_configurado: '' };
+  return { pag_recebedor_nome: r.nome.toUpperCase(), pag_recebedor_doc: doc || 'documento a informar', pag_recebedor_configurado: 'sim' };
+}
+
 export function montarContexto(e: EntradaContexto): Ctx {
   const emp = { ...e.juridico.defaults, ...(e.overrides ?? {}) } as Record<string, unknown>;
   const l = e.lote;
@@ -200,6 +210,7 @@ export function montarContexto(e: EntradaContexto): Ctx {
     ctr_numero: e.contrato.numero, ctr_versao_modelo: e.juridico.modeloVersao, ctr_codigo_verificacao: e.contrato.codigoVerificacao,
     ctr_data_extenso: dataExtenso(e.contrato.dataGeracao),
     ctr_parcelas_minimas_obra: '3', ctr_condicoes_especificas: 'Não há.',
+    ...tagsRecebedor(e.recebedor),
     lote_codigo: l.codigo, lote_quadra: l.quadra ?? '', lote_numero: l.numero != null ? String(l.numero).padStart(2, '0') : '',
     lote_area_m2: brl(l.areaM2), lote_area_extenso: areaExtenso(l.areaM2), lote_perimetro_m: brl(l.perimetroM),
     lote_descricao: l.descricao, lote_via_frente: l.viaFrente, lote_matricula: l.matricula,

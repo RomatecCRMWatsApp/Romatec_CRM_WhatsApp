@@ -134,6 +134,8 @@
   "plano_avista_forma",
   "#pagamento_financiado",
   "emp_plataforma_pagamento",
+  "pag_recebedor_nome",
+  "pag_recebedor_doc",
   "ctr_parcelas_minimas_obra",
   "emp_vias_especificacao",
   "emp_agua_especificacao",

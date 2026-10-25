@@ -13,7 +13,7 @@ import { gerarContratoPdf } from './gerar';
 import type { DadosUnidade } from './anexosLote';
 import { carregarCamadas } from './mapaEmpreendimento';
 import { hojeIso } from './formato';
-import { ContratoErro, condicoesDe, credenciaisDoUsuario, juridicoDe, planoEscolhido, responsavelTecnicoId } from './servico';
+import { ContratoErro, condicoesDe, credenciaisDoUsuario, juridicoDe, planoEscolhido, recebedorDoEmpreendimento, responsavelTecnicoId } from './servico';
 
 const json = <T>(v: unknown): T | null => (v == null ? null : typeof v === 'string' ? JSON.parse(v) : (v as T));
 
@@ -73,6 +73,7 @@ export async function prepararModelo(slug: string, loteCodigo = 'A01', usuarioId
     lote: { codigo: lote.codigo, quadra: lote.quadra, numero: lote.numero, areaM2: Number(lote.areaM2), perimetroM: Number(lote.perimetroM ?? 0),
       descricao: lote.memorialTexto || memorial.descricao, viaFrente, matricula: lote.matricula ?? '' },
     plano, comprador: { ...CLIENTE_EXEMPLO.comprador }, conjuge: { ...CLIENTE_EXEMPLO.conjuge }, corretor, parceiro: null,
+    recebedor: await recebedorDoEmpreendimento(emp.id, emp.slug),
   } as any;
   const unidade: DadosUnidade = {
     codigo: lote.codigo, quadra: lote.quadra, numero: lote.numero, areaM2: Number(lote.areaM2), perimetroM: Number(lote.perimetroM ?? 0),

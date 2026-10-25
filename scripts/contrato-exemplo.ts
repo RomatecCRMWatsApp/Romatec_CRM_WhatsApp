@@ -88,6 +88,8 @@ const base0: EntradaContexto = {
   // Corretor parceiro FICTÍCIO (mostra a parte de 2% do corretor intermediador)
   parceiro: { nome: 'Corretor Exemplo da Silva', cpf: '00000000000', creci: '0.000', creciUf: 'MA', creciValidade: '2027-12-31',
     certidaoCodigo: '0000/2026 (exemplo)', certidaoEmissao: '2026-10-20', certidaoValidade: '2026-11-19' },
+  // Recebedor dos pagamentos: no sistema vem da conta Asaas do empreendimento; aqui, o titular atual
+  recebedor: { nome: 'J R P BEZERRA LTDA', cpfCnpj: '17261987000109' },
 };
 
 const base: EntradaContexto = !MODELO ? base0 : {

@@ -3,6 +3,15 @@
 Cada versão nova vai no TOPO. Depois rode `npm run release` (valida e atualiza o package.json);
 ao subir, o servidor grava a versão no banco e todos recebem o aviso "Novidades da versão".
 
+## 1.27.1 — 2026-10-25
+tipo: patch
+obrigatoria: nao
+titulo: Contrato com a gestora como recebedora
+
+### Melhorias
+- Contrato de compra e venda: os pagamentos passam a ser recebidos pela gestora de vendas (titular da conta Asaas do empreendimento — hoje J R P BEZERRA LTDA, CNPJ 17.261.987/0001-09), por conta e ordem da vendedora; a quitação final continua sendo da vendedora (cláusulas 4ª e 19.3)
+- O nome e o CNPJ da recebedora vêm da conta Asaas; sem conta configurada, a minuta avisa e o definitivo não é gerado
+
 ## 1.27.0 — 2026-10-25
 tipo: minor
 obrigatoria: nao
