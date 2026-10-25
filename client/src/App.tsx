@@ -35,6 +35,7 @@ const EmpreendimentoFolder = lazy(() => import("./pages/EmpreendimentoFolder"));
 const EmpreendimentoProposta = lazy(() => import("./pages/EmpreendimentoProposta"));
 const Financeiro = lazy(() => import("./pages/Financeiro"));
 const Contratos = lazy(() => import("./pages/Contratos"));
+const Carteirinhas = lazy(() => import("./pages/Carteirinhas"));
 const ContratoNovo = lazy(() => import("./pages/ContratoNovo"));
 const ContratoDetalhe = lazy(() => import("./pages/ContratoDetalhe"));
 const PosicionarAssinaturas = lazy(() => import("./pages/PosicionarAssinaturas"));
@@ -139,6 +140,9 @@ function Router() {
       </Route>
       <Route path={"/contratos"}>
         {() => <SetupGuard component={Contratos} />}
+      </Route>
+      <Route path={"/carteirinhas"}>
+        {() => <SetupGuard component={Carteirinhas} />}
       </Route>
       <Route path={"/financeiro"}>
         {() => <SetupGuard component={Financeiro} />}

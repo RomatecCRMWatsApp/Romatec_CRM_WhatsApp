@@ -129,59 +129,137 @@ async function fotoPng(chave: string | null): Promise<Buffer | null> {
   } catch { return null; }
 }
 
-/** PDF da gráfica (CR80, frente e verso) das carteiras emitidas; sem nenhuma apta, recusa com o que falta */
-export async function carteirinhasPdf(contratoId: number): Promise<{ pdf: Buffer; nome: string; bloqueadas: PessoaCarteirinha[] }> {
-  const { c, emp, lote } = await contexto(contratoId);
-  const { emitidas, bloqueadas } = await emitirCarteiras(contratoId);
-  if (!emitidas.length) throw new ContratoErro('PENDENCIAS', 'Nenhuma carteirinha pode ser emitida ainda', 409, Object.fromEntries(bloqueadas.map(b => [b.nome, `falta ${b.pendencias.join(', ')}`])));
-  const { novoKit, qrPng, quebrar, texto, textoCentro, retArredondado, COR } = await import('../financeiro/render/comum');
-  const { CONTATO_PADRAO } = await import('../financeiro/render/documentos');
-  const k = await novoKit({ titulo: `Carteirinhas ${c.numero}` });
-  const [W, H] = CR80;
-  const unidade = `Chácara ${c.loteCodigo}${lote?.quadra ? ` · Quadra ${lote.quadra}` : ''}`;
-  for (const p of emitidas) {
-    // Frente: faixa da marca, foto 3×4 e dados
-    const f = k.doc.addPage(CR80);
-    f.drawRectangle({ x: 0, y: 0, width: W, height: H, color: COR.verde });
-    f.drawRectangle({ x: 0, y: H - 2.5, width: W, height: 2.5, color: COR.dourado });
-    const lw = 18 * MM, lh = (lw * k.logo.height) / k.logo.width;
-    f.drawImage(k.logo, { x: 3.5 * MM, y: H - 3 * MM - lh, width: lw, height: lh });
-    texto(f, 'CARTEIRINHA DO CONDOMÍNIO', 3.5 * MM + lw + 2.5 * MM, H - 6.5 * MM, 5.4, k.fb, COR.dourado);
-    texto(f, String(emp?.nome ?? '').toUpperCase(), 3.5 * MM + lw + 2.5 * MM, H - 9.3 * MM, 4.3, k.f, COR.creme, W - lw - 10 * MM);
-    const fw = 19 * MM, fh = 25 * MM, fx = 3.5 * MM, fy = 3.5 * MM;
-    const png = await fotoPng(p.foto);
-    retArredondado(f, fx - 0.6, fy - 0.6, fw + 1.2, fh + 1.2, 2, { cor: COR.dourado });
-    if (png) f.drawImage(await k.doc.embedPng(png), { x: fx, y: fy, width: fw, height: fh });
-    else {
-      f.drawRectangle({ x: fx, y: fy, width: fw, height: fh, color: COR.creme });
-      const ini = p.nome.split(/\s+/).filter(Boolean).slice(0, 2).map(s => s[0]).join('').toUpperCase();
-      textoCentro(f, ini, fx + fw / 2, fy + fh / 2 - 5, 14, k.fb, COR.verde);
-    }
-    const xT = fx + fw + 3.5 * MM, lT = W - xT - 3 * MM;
-    let y = fy + fh - 6;
-    for (const l of quebrar(k.fb, p.nome.toUpperCase(), 7.6, lT).slice(0, 2)) { texto(f, l, xT, y, 7.6, k.fb, COR.branco); y -= 9.5; }
-    texto(f, p.vinculo, xT, y - 1, 6, k.fb, COR.dourado, lT); y -= 11;
-    texto(f, unidade, xT, y, 5.4, k.f, COR.creme, lT); y -= 8;
-    texto(f, `Nº ${p.numero}`, xT, y, 5.4, k.fb, COR.creme, lT); y -= 8;
-    texto(f, `Válida até ${dataBR(p.validade)}`, xT, y, 5.4, k.f, COR.creme, lT);
+/** O que vai impresso numa carteirinha */
+export interface CartaoImpresso {
+  nome: string; vinculo: string; unidade: string; numero: string; validade: string; qrToken: string; foto: string | null;
+  contratoNumero: string; empreendimento: string;
+}
+export type FormatoCarteirinha = 'cr80' | 'a4';
 
-    // Verso: QR de autenticidade, regras e contatos
-    const v = k.doc.addPage(CR80);
-    v.drawRectangle({ x: 0, y: 0, width: W, height: H, color: COR.creme });
-    v.drawRectangle({ x: 0, y: 0, width: W, height: 2.5, color: COR.dourado });
+/** CR80 = uma face por página (gráfica/PVC); A4 = 4 por folha, frente e verso lado a lado (recortar, dobrar, plastificar) */
+export async function renderCarteirinhas(cartoes: CartaoImpresso[], formato: FormatoCarteirinha = 'cr80'): Promise<Buffer> {
+  const { novoKit, qrPng, quebrar, texto, textoCentro, retArredondado, COR, A4 } = await import('../financeiro/render/comum');
+  const { CONTATO_PADRAO } = await import('../financeiro/render/documentos');
+  const { rgb } = await import('pdf-lib');
+  const k = await novoKit({ titulo: 'Carteirinhas do condomínio' });
+  const [W, H] = CR80;
+
+  const frente = async (pg: any, x0: number, y0: number, c: CartaoImpresso) => {
+    pg.drawRectangle({ x: x0, y: y0, width: W, height: H, color: COR.verde });
+    pg.drawRectangle({ x: x0, y: y0 + H - 2.5, width: W, height: 2.5, color: COR.dourado });
+    const lw = 18 * MM, lh = (lw * k.logo.height) / k.logo.width;
+    pg.drawImage(k.logo, { x: x0 + 3.5 * MM, y: y0 + H - 3 * MM - lh, width: lw, height: lh });
+    texto(pg, 'CARTEIRINHA DO CONDOMÍNIO', x0 + 3.5 * MM + lw + 2.5 * MM, y0 + H - 6.5 * MM, 5.4, k.fb, COR.dourado);
+    texto(pg, c.empreendimento.toUpperCase(), x0 + 3.5 * MM + lw + 2.5 * MM, y0 + H - 9.3 * MM, 4.3, k.f, COR.creme, W - lw - 10 * MM);
+    const fw = 19 * MM, fh = 25 * MM, fx = x0 + 3.5 * MM, fy = y0 + 3.5 * MM;
+    const png = await fotoPng(c.foto);
+    retArredondado(pg, fx - 0.6, fy - 0.6, fw + 1.2, fh + 1.2, 2, { cor: COR.dourado });
+    if (png) pg.drawImage(await k.doc.embedPng(png), { x: fx, y: fy, width: fw, height: fh });
+    else {
+      pg.drawRectangle({ x: fx, y: fy, width: fw, height: fh, color: COR.creme });
+      const ini = c.nome.split(/\s+/).filter(Boolean).slice(0, 2).map(p => p[0]).join('').toUpperCase();
+      textoCentro(pg, ini, fx + fw / 2, fy + fh / 2 - 5, 14, k.fb, COR.verde);
+    }
+    const xT = fx + fw + 3.5 * MM, lT = x0 + W - xT - 3 * MM;
+    let y = fy + fh - 6;
+    for (const l of quebrar(k.fb, c.nome.toUpperCase(), 7.6, lT).slice(0, 2)) { texto(pg, l, xT, y, 7.6, k.fb, COR.branco); y -= 9.5; }
+    texto(pg, c.vinculo, xT, y - 1, 6, k.fb, COR.dourado, lT); y -= 11;
+    texto(pg, c.unidade, xT, y, 5.4, k.f, COR.creme, lT); y -= 8;
+    texto(pg, `Nº ${c.numero}`, xT, y, 5.4, k.fb, COR.creme, lT); y -= 8;
+    texto(pg, `Válida até ${dataBR(c.validade)}`, xT, y, 5.4, k.f, COR.creme, lT);
+  };
+  const verso = async (pg: any, x0: number, y0: number, c: CartaoImpresso) => {
+    pg.drawRectangle({ x: x0, y: y0, width: W, height: H, color: COR.creme });
+    pg.drawRectangle({ x: x0, y: y0, width: W, height: 2.5, color: COR.dourado });
     const lado = 30 * MM;
-    v.drawImage(await qrPng(k, linkCarteirinha(p.qrToken)), { x: 4 * MM, y: (H - lado) / 2, width: lado, height: lado });
-    const xv = 4 * MM + lado + 4 * MM, lv = W - xv - 4 * MM;
-    let yv = H - 7 * MM;
+    pg.drawImage(await qrPng(k, linkCarteirinha(c.qrToken)), { x: x0 + 4 * MM, y: y0 + (H - lado) / 2, width: lado, height: lado });
+    const xv = x0 + 4 * MM + lado + 4 * MM, lv = x0 + W - xv - 4 * MM;
+    let yv = y0 + H - 7 * MM;
     for (const r of ['Uso pessoal e intransferível.', 'Apresente na portaria com um documento com foto.', 'Aponte a câmera para o QR para conferir a autenticidade.']) {
-      for (const l of quebrar(k.f, r, 5.4, lv)) { texto(v, l, xv, yv, 5.4, k.f, COR.verde); yv -= 7.2; }
+      for (const l of quebrar(k.f, r, 5.4, lv)) { texto(pg, l, xv, yv, 5.4, k.f, COR.verde); yv -= 7.2; }
     }
     yv -= 3;
-    texto(v, `Administração: ${CONTATO_PADRAO.atendimento}`, xv, yv, 5.2, k.fb, COR.verde, lv);
-    texto(v, `Vendas: ${CONTATO_PADRAO.vendas}`, xv, yv - 7, 5.2, k.fb, COR.verde, lv);
-    textoCentro(v, `${p.numero} · contrato ${c.numero}`, xv + lv / 2, 4.5 * MM, 4.6, k.f, COR.cinza);
+    texto(pg, `Administração: ${CONTATO_PADRAO.atendimento}`, xv, yv, 5.2, k.fb, COR.verde, lv);
+    texto(pg, `Vendas: ${CONTATO_PADRAO.vendas}`, xv, yv - 7, 5.2, k.fb, COR.verde, lv);
+    textoCentro(pg, `${c.numero} · contrato ${c.contratoNumero}`, xv + lv / 2, y0 + 4.5 * MM, 4.6, k.f, COR.cinza);
+  };
+
+  if (formato === 'cr80') {
+    for (const c of cartoes) {
+      await frente(k.doc.addPage(CR80), 0, 0, c);
+      await verso(k.doc.addPage(CR80), 0, 0, c);
+    }
+  } else {
+    // A4: 4 por folha; cada linha = frente | verso, com linha de corte (contorno) e de dobra (meio), ambas tracejadas
+    const [PW, PH] = A4, gap = 10 * MM, larg = 2 * W, x0 = (PW - larg) / 2;
+    const alturaBloco = 4 * H + 3 * gap, topo = (PH + alturaBloco) / 2;
+    const tracejado = { color: rgb(0.45, 0.45, 0.45), thickness: 0.6, dashArray: [3, 3] };
+    for (let i = 0; i < cartoes.length; i += 4) {
+      const pg = k.doc.addPage(A4);
+      textoCentro(pg, 'Recorte na linha tracejada externa, dobre na linha do meio (frente com verso) e plastifique.', PW / 2, PH - 12 * MM, 7.5, k.f, COR.cinza);
+      for (let j = 0; j < 4 && i + j < cartoes.length; j++) {
+        const y = topo - (j + 1) * H - j * gap;
+        await frente(pg, x0, y, cartoes[i + j]);
+        await verso(pg, x0 + W, y, cartoes[i + j]);
+        pg.drawRectangle({ x: x0, y, width: larg, height: H, borderColor: tracejado.color, borderWidth: tracejado.thickness, borderDashArray: tracejado.dashArray });
+        pg.drawLine({ start: { x: x0 + W, y: y - 3 * MM }, end: { x: x0 + W, y: y + H + 3 * MM }, ...tracejado });
+      }
+    }
   }
-  return { pdf: Buffer.from(await k.doc.save()), nome: `CARTEIRINHAS-${c.numero}.pdf`, bloqueadas };
+  return Buffer.from(await k.doc.save());
+}
+
+async function cartoesDoContrato(contratoId: number, filtro?: (p: PessoaCarteirinha) => boolean) {
+  const { c, emp, lote } = await contexto(contratoId);
+  const { emitidas, bloqueadas } = await emitirCarteiras(contratoId);
+  const unidade = `Chácara ${c.loteCodigo}${lote?.quadra ? ` · Quadra ${lote.quadra}` : ''}`;
+  const escolhidas = filtro ? emitidas.filter(filtro) : emitidas;
+  return {
+    c, bloqueadas: filtro ? bloqueadas.filter(filtro) : bloqueadas,
+    cartoes: escolhidas.map(p => ({ nome: p.nome, vinculo: p.vinculo, unidade, numero: p.numero, validade: p.validade, qrToken: p.qrToken, foto: p.foto, contratoNumero: c.numero, empreendimento: String(emp?.nome ?? '') })),
+  };
+}
+
+/** PDF das carteiras de um contrato (sem nenhuma apta, recusa com o que falta) */
+export async function carteirinhasPdf(contratoId: number, formato: FormatoCarteirinha = 'cr80'): Promise<{ pdf: Buffer; nome: string; bloqueadas: PessoaCarteirinha[] }> {
+  const { c, cartoes, bloqueadas } = await cartoesDoContrato(contratoId);
+  if (!cartoes.length) throw new ContratoErro('PENDENCIAS', 'Nenhuma carteirinha pode ser emitida ainda', 409, Object.fromEntries(bloqueadas.map(b => [b.nome, `falta ${b.pendencias.join(', ')}`])));
+  return { pdf: await renderCarteirinhas(cartoes, formato), nome: `CARTEIRINHAS-${c.numero}${formato === 'a4' ? '-A4' : ''}.pdf`, bloqueadas };
+}
+
+export interface ItemCarteirinha { contratoId: number; tipo: TipoTitular; ref: number }
+
+/** PDF de várias pessoas de vários contratos (tela de Carteirinhas): só quem está apta e com contrato assinado */
+export async function carteirinhasSelecaoPdf(itens: ItemCarteirinha[], formato: FormatoCarteirinha): Promise<{ pdf: Buffer; quantidade: number; foraDoPdf: number }> {
+  const porContrato = new Map<number, ItemCarteirinha[]>();
+  for (const i of itens) porContrato.set(i.contratoId, [...(porContrato.get(i.contratoId) ?? []), i]);
+  const cartoes: CartaoImpresso[] = [];
+  let fora = 0;
+  for (const [contratoId, sel] of Array.from(porContrato.entries())) {
+    try {
+      const r = await cartoesDoContrato(contratoId, p => sel.some(x => x.tipo === p.tipo && x.ref === p.ref));
+      cartoes.push(...r.cartoes);
+      fora += sel.length - r.cartoes.length;
+    } catch { fora += sel.length; }
+  }
+  if (!cartoes.length) throw new ContratoErro('PENDENCIAS', 'Nenhuma das carteirinhas marcadas pode ser emitida (contrato não assinado ou cadastro incompleto)', 409);
+  return { pdf: await renderCarteirinhas(cartoes, formato), quantidade: cartoes.length, foraDoPdf: fora };
+}
+
+/** Lista da tela de Carteirinhas: todas as pessoas dos contratos visíveis (não cancelados), com a situação de cada uma */
+export async function listaCarteirinhas(contratoIds: number[]) {
+  const linhas: any[] = [];
+  for (const id of contratoIds) {
+    try {
+      const { c, emp } = await contexto(id);
+      if (['cancelado', 'distratado'].includes(c.status)) continue;
+      const sit = await situacaoCarteirinhas(id);
+      for (const p of sit.pessoas) {
+        linhas.push({ contratoId: id, contratoNumero: c.numero, contratoStatus: c.status, liberado: sit.liberado, loteCodigo: c.loteCodigo, empreendimento: String(emp?.nome ?? ''), ...p });
+      }
+    } catch { /* contrato sem comprador: fica de fora */ }
+  }
+  return linhas;
 }
 
 // ─── Fotos ───────────────────────────────────────────────────────────────────

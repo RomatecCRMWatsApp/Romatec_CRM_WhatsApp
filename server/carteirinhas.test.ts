@@ -91,6 +91,24 @@ describe('carteirinhas (chacaraDependentes + carteiras + /p/c/:qrToken)', () => 
     expect(db.all(sql`SELECT COUNT(*) AS n FROM carteiras`)[0].n).toBe(antes + 1);
   });
 
+  it('tela de Carteirinhas: lista com a situação e PDF A4 (4 por folha) das marcadas; quem não pode sai fora', async () => {
+    const lista = await K.listaCarteirinhas([1]);
+    expect(lista.map(l => [l.nome, !!l.carteira])).toEqual([
+      ['Carlos Eduardo Mendes da Silva', true], ['Ana Paula Ribeiro Mendes', true], ['Pedro Mendes Silva', true], ['Maria Mendes Silva', true],
+    ]);
+    expect(lista[0]).toMatchObject({ contratoNumero: 'BJ-2026-0001', loteCodigo: 'A05', liberado: true });
+    const itens = lista.map(l => ({ contratoId: 1, tipo: l.tipo, ref: l.ref }));
+    const a4 = await K.carteirinhasSelecaoPdf([...itens, { contratoId: 99, tipo: 'comprador', ref: 1 }], 'a4');
+    expect(a4).toMatchObject({ quantidade: 4, foraDoPdf: 1 });
+    const { PDFDocument } = await import('pdf-lib');
+    const doc = await PDFDocument.load(a4.pdf);
+    expect(doc.getPageCount()).toBe(1); // 4 carteirinhas = 1 folha A4
+    expect(Math.round(doc.getPage(0).getSize().width)).toBe(595);
+    const cr80 = await K.carteirinhasSelecaoPdf(itens.slice(0, 1), 'cr80');
+    expect((await PDFDocument.load(cr80.pdf)).getPageCount()).toBe(2); // frente e verso
+    if (process.env.CARTEIRINHA_SAIDA) (await import('node:fs')).writeFileSync(`${process.env.CARTEIRINHA_SAIDA}/CARTEIRINHAS-A4.pdf`, a4.pdf);
+  });
+
   it('/p/c/:qrToken: válida com foto e sem CPF; dependente removido → cancelada; contrato cancelado → inválida', async () => {
     const [titular, , pedro] = db.all(sql`SELECT * FROM carteiras ORDER BY id`);
     const ok = await K.conferirCarteirinha(pedro.qrToken);

@@ -133,6 +133,15 @@ export const contratosRouter = router({
     }, ctx.user.id));
   }),
 
+  /** Tela de Carteirinhas: todas as pessoas dos contratos visíveis (corretor: só os dele) */
+  carteirinhasLista: protectedProcedure.query(async ({ ctx }) => {
+    const perfil = perfilDe(ctx.user as any);
+    if (perfil === "empreendedor") throw new TRPCError({ code: "FORBIDDEN" });
+    const cs = await listarContratos({ corretorUserId: perfil === "corretor" ? ctx.user.id : undefined });
+    const { listaCarteirinhas } = await import("../contratos/carteirinhas");
+    return listaCarteirinhas(cs.map((c: any) => c.id));
+  }),
+
   /** Carteirinhas: cada pessoa (titular, cônjuge, dependentes) com a carteira vigente e o que falta para emitir */
   carteirinhas: protectedProcedure.input(z.object({ id: z.number().int() })).query(async ({ ctx, input }) => {
     const c = await contratoVisivel(ctx, input.id);

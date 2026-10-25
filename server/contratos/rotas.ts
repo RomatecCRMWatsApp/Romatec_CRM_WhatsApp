@@ -106,7 +106,7 @@ export function registrarRotasContratos(app: Express) {
       const a = await contratoDaEquipe(req);
       if (!a) return res.status(404).json({ error: 'Não encontrado' });
       const { carteirinhasPdf } = await import('./carteirinhas');
-      const { pdf, nome, bloqueadas } = await carteirinhasPdf(a.c.id);
+      const { pdf, nome, bloqueadas } = await carteirinhasPdf(a.c.id, req.query.formato === 'a4' ? 'a4' : 'cr80');
       res.setHeader('Content-Type', 'application/pdf');
       res.setHeader('Content-Disposition', `attachment; filename="${nome}"`);
       res.setHeader('X-Carteirinhas-Bloqueadas', String(bloqueadas.length));
@@ -118,6 +118,42 @@ export function registrarRotasContratos(app: Express) {
       res.status(500).json({ error: 'Falha ao gerar as carteirinhas' });
     }
   });
+  // Tela de Carteirinhas: PDF das pessoas marcadas, de vários contratos (?itens=contrato:tipo:ref,…&formato=cr80|a4)
+  app.get('/api/carteirinhas.pdf', async (req, res) => {
+    try {
+      const { sdk } = await import('../_core/sdk');
+      const user: any = await sdk.authenticateRequest(req).catch(() => null);
+      if (!user || user.ativo === false || user.ativo === 0) return res.status(401).json({ error: 'Faça login' });
+      const { perfilDe } = await import('../../shared/equipe');
+      const perfil = perfilDe(user);
+      if (!['admin', 'secretario', 'corretor'].includes(String(perfil))) return res.status(404).json({ error: 'Não encontrado' });
+      const itens = String(req.query.itens ?? '').split(',').slice(0, 600).map(t => {
+        const [c, tipo, ref] = t.split(':');
+        return { contratoId: Number(c) || 0, tipo: tipo as any, ref: Number(ref) || 0 };
+      }).filter(i => i.contratoId > 0 && i.ref > 0 && ['comprador', 'conjuge', 'dependente'].includes(i.tipo));
+      if (!itens.length) return res.status(400).json({ error: 'Marque ao menos uma carteirinha' });
+      // Corretor: só dos contratos dele
+      if (perfil === 'corretor') {
+        for (const id of Array.from(new Set(itens.map(i => i.contratoId)))) {
+          const c = await contratoPorId(id).catch(() => null);
+          if (!c || c.corretorUserId !== user.id) return res.status(404).json({ error: 'Não encontrado' });
+        }
+      }
+      const { carteirinhasSelecaoPdf } = await import('./carteirinhas');
+      const formato = req.query.formato === 'a4' ? 'a4' : 'cr80';
+      const { pdf, quantidade, foraDoPdf } = await carteirinhasSelecaoPdf(itens, formato);
+      res.setHeader('Content-Type', 'application/pdf');
+      res.setHeader('Content-Disposition', `inline; filename="CARTEIRINHAS-${quantidade}${formato === 'a4' ? '-A4' : ''}.pdf"`);
+      res.setHeader('X-Carteirinhas-Fora', String(foraDoPdf));
+      res.setHeader('Cache-Control', 'private, no-store');
+      res.send(pdf);
+    } catch (e: any) {
+      if (e instanceof ContratoErro) return res.status(e.status).json({ error: e.message });
+      console.error('[Carteirinhas] seleção:', e);
+      res.status(500).json({ error: 'Falha ao gerar as carteirinhas' });
+    }
+  });
+
   // Foto 3×4 (titular, cônjuge ou dependente)
   app.post('/api/contratos/:id/carteirinhas/foto', express.raw({ type: '*/*', limit: '8mb' }), async (req, res) => {
     try {

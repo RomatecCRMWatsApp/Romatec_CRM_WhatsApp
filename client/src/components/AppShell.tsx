@@ -42,6 +42,7 @@ const MENU: Grupo[] = [
     itens: [
       { rotulo: "Empreendimentos", rota: "/empreendimentos", icone: MapIcon, modulo: "empreendimentos" },
       { rotulo: "Contratos", rota: "/contratos", icone: FileSignature, modulo: "contratos" },
+      { rotulo: "Carteirinhas", rota: "/carteirinhas", icone: IdCard, modulo: "contratos" },
       { rotulo: "Financeiro", rota: "/financeiro", icone: Wallet, modulo: "financeiro" },
       { rotulo: "Imóveis", rota: "/properties", icone: Building2, modulo: "imoveis" },
       { rotulo: "Materiais", rota: "/materiais", icone: Images, modulo: "materiais" },

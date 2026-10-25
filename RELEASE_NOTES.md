@@ -3,6 +3,17 @@
 Cada versão nova vai no TOPO. Depois rode `npm run release` (valida e atualiza o package.json);
 ao subir, o servidor grava a versão no banco e todos recebem o aviso "Novidades da versão".
 
+## 1.25.0 — 2026-10-25
+tipo: minor
+obrigatoria: nao
+titulo: Tela de Carteirinhas
+
+### Novo
+- Menu "Carteirinhas": titulares, cônjuges e dependentes de todos os contratos, com foto, nº, validade e o que falta para cada um
+- Filtros (emitidas, prontas, com pendência, sem foto, contrato não assinado) e busca por nome, chácara, contrato ou nº
+- Foto 3×4 direto na lista; prévia de cada carteirinha; PDF dos marcados ou de todos
+- Dois formatos: A4 com 4 por folha (frente e verso lado a lado, para recortar, dobrar e plastificar) ou cartão para a gráfica
+
 ## 1.24.0 — 2026-10-25
 tipo: minor
 obrigatoria: nao
