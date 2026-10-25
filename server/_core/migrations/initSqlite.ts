@@ -548,6 +548,20 @@ export function initSqliteTables(sqlite: any): void {
   // Mensagens do link de agendamento (server/_core/migrations/addMensagensAgendamento.ts)
   addColumn(`ALTER TABLE leadVisitas ADD COLUMN pedidoJson TEXT`);
   addColumn(`ALTER TABLE leadVisitas ADD COLUMN confirmacaoEnviadaAt INTEGER`);
+  // Recrutamento e senha provisória (server/_core/migrations/addRecrutamento.ts)
+  addColumn(`ALTER TABLE users ADD COLUMN trocarSenha INTEGER NOT NULL DEFAULT 0`);
+  addColumn(`ALTER TABLE users ADD COLUMN senhaProvisoriaExpira INTEGER`);
+  run(`CREATE TABLE IF NOT EXISTS recrutamentos (
+    id INTEGER PRIMARY KEY AUTOINCREMENT, perfil TEXT NOT NULL, nome TEXT NOT NULL, telefone TEXT NOT NULL, email TEXT, empreendimentoSlug TEXT,
+    token TEXT NOT NULL UNIQUE, tokenExpira INTEGER NOT NULL, status TEXT NOT NULL DEFAULT 'convidado', dadosJson TEXT, usuarioId INTEGER,
+    criadoPor INTEGER NOT NULL, enviadoEm INTEGER, preenchidoEm INTEGER, decididoEm INTEGER, decididoPor INTEGER, motivo TEXT,
+    createdAt INTEGER NOT NULL DEFAULT (strftime('%s','now')), updatedAt INTEGER NOT NULL DEFAULT (strftime('%s','now'))
+  )`);
+  run(`CREATE TABLE IF NOT EXISTS recrutamentoDocs (
+    id INTEGER PRIMARY KEY AUTOINCREMENT, recrutamentoId INTEGER NOT NULL, tipo TEXT NOT NULL, nome TEXT NOT NULL, mime TEXT NOT NULL,
+    tamanhoBytes INTEGER NOT NULL, conteudoBase64 TEXT NOT NULL, validade TEXT, createdAt INTEGER NOT NULL DEFAULT (strftime('%s','now')),
+    UNIQUE (recrutamentoId, tipo)
+  )`);
   // Reuniões com clientes (server/_core/migrations/addReunioes.ts)
   run(`CREATE TABLE IF NOT EXISTS reunioes (
     id INTEGER PRIMARY KEY AUTOINCREMENT, leadId INTEGER, titulo TEXT NOT NULL, tipo TEXT NOT NULL DEFAULT 'presencial',

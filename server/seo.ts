@@ -211,6 +211,8 @@ export function metaDaRota(path: string): MetaPagina | 'imovel' {
   if (p === AGENDAR_BOM_JARDIMS) return META_AGENDAR_BOM_JARDIMS;
   // Agendamento de outros empreendimentos: funciona, mas fica fora do Google
   if (p.startsWith('/agendar/')) return { ...META_PADRAO, title: 'Agende sua visita — Romatec Imóveis', path: p, indexavel: false };
+  // Formulário do recrutamento (link pessoal do candidato): fora do Google
+  if (p.startsWith('/formulario/')) return { ...META_PADRAO, title: 'Cadastro — Romatec CRM', path: '/formulario', indexavel: false };
   if (p === '/imoveis') return { ...META_PADRAO, title: 'Imóveis à venda em Açailândia/MA — Romatec', path: '/imoveis' };
   if (p === '/links') return { ...META_PADRAO, title: 'Romatec Imóveis — links e contato', path: '/links' };
   if (/^\/i\/IMV-\d{4}$/i.test(p) || /^\/imovel\/[^/]+$/.test(p)) return 'imovel';

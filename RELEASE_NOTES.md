@@ -3,6 +3,19 @@
 Cada versão nova vai no TOPO. Depois rode `npm run release` (valida e atualiza o package.json);
 ao subir, o servidor grava a versão no banco e todos recebem o aviso "Novidades da versão".
 
+## 1.31.0 — 2026-10-25
+tipo: minor
+obrigatoria: nao
+titulo: Recrutamento de corretores, secretárias e empreendedores
+
+### Novo
+- Menu "Recrutamento" (só administrador e secretária): convide um corretor(a) ou secretária com nome, WhatsApp e o empreendimento da convocação. O sistema manda pelo WhatsApp o texto com o link do formulário e o formulário em PDF e em DOC, com a marca do Romatec CRM
+- Formulário pelo link: o candidato preenche os dados pessoais, CRECI, endereço e cônjuge e anexa a selfie, o documento com foto, o Cartão e a Certidão do CRECI. Dá para salvar e terminar depois. Quando ele envia, o administrador recebe o aviso no WhatsApp
+- Conferência e aprovação: veja os dados e os documentos; "Aprovar e criar acesso" cria o usuário com o cadastro e os documentos e manda pelo WhatsApp o login (CRECI ou CPF) com uma senha provisória (vale 7 dias)
+- No primeiro acesso com a senha provisória, a pessoa cria a própria senha antes de usar o sistema
+- Empreendedor: escolha o empreendimento — nome e CPF vêm do proprietário cadastrado; confira o e-mail e o WhatsApp e o acesso sai na hora, com senha provisória
+- "Reenviar acesso (nova senha)" para quem perdeu ou deixou vencer a senha provisória
+
 ## 1.30.6 — 2026-10-25
 tipo: patch
 obrigatoria: nao

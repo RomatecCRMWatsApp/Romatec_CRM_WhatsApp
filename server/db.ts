@@ -8,6 +8,13 @@ let _dbDriver: 'mysql' | 'sqlite' = 'mysql';
 
 export function getDbDriver(): 'mysql' | 'sqlite' { return _dbDriver; }
 
+/**
+ * Transação no MySQL; no SQLite dos testes (better-sqlite3 só aceita transação síncrona) roda direto no banco.
+ */
+export function transacao<T>(db: any, f: (tx: any) => Promise<T>): Promise<T> {
+  return _dbDriver === 'sqlite' ? f(db) : db.transaction(f);
+}
+
 export async function getDb(): Promise<any> {
   if (_db) return _db;
 
@@ -20,6 +27,18 @@ export async function getDb(): Promise<any> {
       const sqlite = new BetterSQLite3(dbPath);
       sqlite.pragma('journal_mode = WAL'); // melhor performance concorrente
       sqlite.pragma('foreign_keys = ON');
+      // O esquema é MySQL (boolean): no SQLite, true/false viram 1/0 (o better-sqlite3 não aceita booleano)
+      const preparar = sqlite.prepare.bind(sqlite);
+      const conv = (v: unknown): unknown => (typeof v === 'boolean' ? (v ? 1 : 0) : Array.isArray(v) ? v.map(conv) : v);
+      (sqlite as any).prepare = (fonte: string) => {
+        // defaultNow() do esquema MySQL gera now(), que o SQLite não tem
+        const st: any = preparar(fonte.replace(/\bnow\(\)/gi, 'CURRENT_TIMESTAMP'));
+        for (const m of ['run', 'get', 'all', 'iterate'] as const) {
+          const orig = st[m].bind(st);
+          st[m] = (...args: unknown[]) => orig(...args.map(conv));
+        }
+        return st;
+      };
       _db = drizzle(sqlite);
       _dbDriver = 'sqlite';
       console.log(`[Database] SQLite conectado: ${dbPath}`);

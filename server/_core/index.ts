@@ -989,6 +989,8 @@ async function startServer() {
   registrarRotasReunioes(app);
   const { registrarRotaEspaco } = await import('../sistema/espaco');
   registrarRotaEspaco(app);
+  const { registrarRotasRecrutamento } = await import('../recrutamento/rotas');
+  registrarRotasRecrutamento(app);
   const { registrarRotasContratos } = await import('../contratos/rotas');
   registrarRotasContratos(app);
   // Cartão de vendas público dos links de divulgação (?c=<ref>): contato de quem compartilhou
@@ -1121,6 +1123,8 @@ async function startServer() {
     await addMensagensAgendamento();
     const { addReunioes } = await import('./migrations/addReunioes');
     await addReunioes();
+    const { addRecrutamento } = await import('./migrations/addRecrutamento');
+    await addRecrutamento();
     const { addControleLotes } = await import('./migrations/addControleLotes');
     await addControleLotes();
   } catch (e) {

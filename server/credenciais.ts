@@ -11,7 +11,7 @@ import os from "node:os";
 import path from "node:path";
 import crypto from "node:crypto";
 import { and, asc, eq, inArray } from "drizzle-orm";
-import { getDb } from "./db";
+import { getDb, transacao } from "./db";
 import { configCredenciais, users, usuarioDocumentoPaginas, usuarioDocumentos } from "../drizzle/schema";
 import {
   CREDENCIAIS, LINK_CERTIDAO_PADRAO, PRAZOS_PADRAO, ROTULO_DOCUMENTO, detectarMime, linkCrecUf, maisDias, problemaArquivo, statusValidade, tipoUnico,
@@ -132,7 +132,7 @@ export async function enviarDocumento(usuarioId: number, tipo: string, buf: Buff
   const cfg = await configuracao();
   const validade = meta.validade || (tipo === "certidao_creci" ? maisDias(cfg.certidaoValidadeDias) : null);
   let id = 0;
-  await db.transaction(async (tx: any) => {
+  await transacao(db, async (tx: any) => {
     if (tipoUnico(tipo)) {
       await tx.delete(usuarioDocumentos).where(and(eq(usuarioDocumentos.usuarioId, usuarioId), eq(usuarioDocumentos.tipo, tipo), eq(usuarioDocumentos.titular, "usuario")));
     }
@@ -157,7 +157,7 @@ export async function trocarArquivo(documentoId: number, buf: Buffer, nome: stri
   const p = problemaArquivo(doc.tipo, buf);
   if (p) throw new ErroArquivo(p.status, p.erro);
   const arq = await converter(buf);
-  await db.transaction(async (tx: any) => {
+  await transacao(db, async (tx: any) => {
     await tx.update(usuarioDocumentos).set({
       nome: nome.slice(0, 200), mime: arq.mime, tamanhoBytes: buf.length, conteudoBase64: buf.toString("base64"),
       thumbBase64: arq.thumb.toString("base64"), paginasQtd: arq.paginas.length, alertaEnviadoEm: null,
@@ -181,7 +181,7 @@ export async function paginaDoDocumento(documentoId: number, n: number): Promise
   const [doc]: any[] = await db.select().from(usuarioDocumentos).where(eq(usuarioDocumentos.id, documentoId)).limit(1);
   if (!doc || doc.paginasQtd) return null;
   const arq = await converter(Buffer.from(doc.conteudoBase64, "base64"));
-  await db.transaction(async (tx: any) => {
+  await transacao(db, async (tx: any) => {
     await gravarPaginas(tx, documentoId, arq.paginas);
     await tx.update(usuarioDocumentos).set({ thumbBase64: arq.thumb.toString("base64"), paginasQtd: arq.paginas.length } as any).where(eq(usuarioDocumentos.id, documentoId));
   });
@@ -228,7 +228,7 @@ export async function atualizarDocumento(documentoId: number, m: MetaDocumento) 
 export async function removerDocumento(documentoId: number) {
   const db = await dbOrThrow();
   const [doc]: any[] = await db.select({ usuarioId: usuarioDocumentos.usuarioId, tipo: usuarioDocumentos.tipo }).from(usuarioDocumentos).where(eq(usuarioDocumentos.id, documentoId)).limit(1);
-  await db.transaction(async (tx: any) => {
+  await transacao(db, async (tx: any) => {
     await tx.delete(usuarioDocumentoPaginas).where(eq(usuarioDocumentoPaginas.documentoId, documentoId));
     await tx.delete(usuarioDocumentos).where(eq(usuarioDocumentos.id, documentoId));
   });

@@ -16,6 +16,7 @@ import { empreendimentosAdminRouter } from "./routers/empreendimentosAdmin.route
 import { simuladorRouter } from "./routers/simulador.router";
 import { financeiroRouter } from "./routers/financeiro.router";
 import { reunioesRouter } from "./routers/reunioes.router";
+import { recrutamentoRouter } from "./routers/recrutamento.router";
 import { contratosRouter, pessoaZ } from "./routers/contratos.router";
 import { permissoesRouter } from "./routers/permissoes.router";
 import { cadastroRouter } from "./routers/cadastro.router";
@@ -67,6 +68,7 @@ export const appRouter = router({
   simulador: simuladorRouter,
   financeiro: financeiroRouter,
   reunioes: reunioesRouter,
+  recrutamento: recrutamentoRouter,
   contratos: contratosRouter,
   permissoes: permissoesRouter,
   cadastro: cadastroRouter,
@@ -131,6 +133,11 @@ export const appRouter = router({
             }
             throw new Error("Usuário ou senha incorretos.");
           }
+          // Senha provisória (recrutamento): vence em senhaProvisoriaExpira; no 1º login vai direto para "Criar sua senha"
+          const provisoria = !!(user as any).trocarSenha;
+          if (provisoria && (user as any).senhaProvisoriaExpira && new Date((user as any).senhaProvisoriaExpira).getTime() < Date.now()) {
+            throw new Error("Sua senha provisória venceu. Peça uma nova à Romatec pelo WhatsApp.");
+          }
           if (check.setPasswordHash) {
             await db.update(users).set({ passwordScrypt: check.setPasswordHash, passwordHash: null }).where(eq(users.id, user.id));
           }
@@ -139,7 +146,7 @@ export const appRouter = router({
           const cookieOptions = getSessionCookieOptions(ctx.req);
           const token = await sdk.createSessionToken(user.openId, { name: user.name || "", sessaoVersao: Number((user as any).sessaoVersao) || 0 });
           ctx.res.cookie(COOKIE_NAME, token, { ...cookieOptions, maxAge: ONE_YEAR_MS });
-          return { success: true, destino: telaInicial(perfilDe(user as any)) };
+          return { success: true, destino: provisoria ? "/trocar-senha" : telaInicial(perfilDe(user as any)) };
         } catch (error) {
           console.error("[Login] Erro:", (error as any)?.message || error);
           throw error;
@@ -157,8 +164,10 @@ export const appRouter = router({
         if (!user) throw new Error("Usuário não encontrado");
         const check = await checkLogin(input.currentPassword, { scryptHash: user.passwordScrypt, legacySha256: user.passwordHash });
         if (!check.ok) throw new Error("Senha atual incorreta.");
-        await db.update(users).set({ passwordScrypt: await hashPassword(input.newPassword), passwordHash: null }).where(eq(users.id, user.id));
-        return { success: true };
+        if (input.newPassword === input.currentPassword) throw new Error("A senha nova precisa ser diferente da atual.");
+        await db.update(users).set({ passwordScrypt: await hashPassword(input.newPassword), passwordHash: null, trocarSenha: false, senhaProvisoriaExpira: null } as any).where(eq(users.id, user.id));
+        const { perfilDe: perfil, telaInicial: inicio } = await import("@shared/equipe");
+        return { success: true, destino: inicio(perfil(user as any)) };
       }),
   }),
   contacts: router({

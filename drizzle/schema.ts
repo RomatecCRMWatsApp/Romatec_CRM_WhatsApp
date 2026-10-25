@@ -1,4 +1,5 @@
 import { int, bigint, smallint, tinyint, mysqlEnum, mysqlTable, text, longtext, timestamp, datetime, date, time, varchar, char, decimal, boolean, json, index, uniqueIndex, primaryKey } from "drizzle-orm/mysql-core";
+import { sql } from "drizzle-orm";
 
 /**
  * Core user table backing auth flow.
@@ -35,6 +36,10 @@ export const users = mysqlTable("users", {
   /** Convite de primeiro acesso: sha256 do token (o token em si só vai no link) */
   conviteHash: varchar("conviteHash", { length: 64 }),
   conviteExpira: timestamp("conviteExpira"),
+  /** Senha provisória (recrutamento): no 1º login a pessoa troca a senha; vence em senhaProvisoriaExpira */
+  // Padrão como SQL (0), não como valor JS: o "false" iria como parâmetro em todo insert de users e o SQLite dos testes recusa
+  trocarSenha: boolean("trocarSenha").default(sql`0`).notNull(),
+  senhaProvisoriaExpira: datetime("senhaProvisoriaExpira"),
   /** Entra na roleta de leads (responsável por lead novo) */
   recebeLeads: boolean("recebeLeads").default(false).notNull(),
   // ─── Cadastro completo (shared/cadastro.ts) — o contrato puxa do corretor (intermediador) ───
@@ -803,6 +808,53 @@ export const leadVisitas = mysqlTable("leadVisitas", {
 }, (t) => ({
   idxQuando: index("idx_visita_quando").on(t.quando),
   idxLead: index("idx_visita_lead").on(t.leadId),
+}));
+
+/**
+ * Recrutamento (shared/recrutamento.ts): convite com link do formulário público; o candidato preenche e anexa
+ * os documentos; o administrador aprova e o sistema cria o acesso com senha provisória.
+ */
+export const recrutamentos = mysqlTable("recrutamentos", {
+  id: int("id").autoincrement().primaryKey(),
+  /** corretor | secretario | empreendedor */
+  perfil: varchar("perfil", { length: 15 }).notNull(),
+  nome: varchar("nome", { length: 150 }).notNull(),
+  telefone: varchar("telefone", { length: 20 }).notNull(),
+  email: varchar("email", { length: 160 }),
+  empreendimentoSlug: varchar("empreendimentoSlug", { length: 80 }),
+  /** Link do formulário (capacidade só deste candidato) */
+  token: varchar("token", { length: 64 }).notNull(),
+  tokenExpira: datetime("tokenExpira").notNull(),
+  /** convidado | preenchido | aprovado | recusado | cancelado */
+  status: varchar("status", { length: 12 }).notNull().default("convidado"),
+  dadosJson: longtext("dadosJson"),
+  usuarioId: int("usuarioId"),
+  criadoPor: int("criadoPor").notNull(),
+  enviadoEm: datetime("enviadoEm"),
+  preenchidoEm: datetime("preenchidoEm"),
+  decididoEm: datetime("decididoEm"),
+  decididoPor: int("decididoPor"),
+  motivo: varchar("motivo", { length: 300 }),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().notNull(),
+}, (t) => ({
+  uqToken: uniqueIndex("uq_recrutamento_token").on(t.token),
+}));
+
+/** Documentos que o candidato anexou (um por tipo); na aprovação vão para usuarioDocumentos/usuarioFoto */
+export const recrutamentoDocs = mysqlTable("recrutamentoDocs", {
+  id: int("id").autoincrement().primaryKey(),
+  recrutamentoId: int("recrutamentoId").notNull(),
+  /** Tipo de shared/cadastro (cartao_creci, certidao_creci, cnh…) ou "foto" */
+  tipo: varchar("tipo", { length: 30 }).notNull(),
+  nome: varchar("nome", { length: 200 }).notNull(),
+  mime: varchar("mime", { length: 60 }).notNull(),
+  tamanhoBytes: int("tamanhoBytes").notNull(),
+  conteudoBase64: longtext("conteudoBase64").notNull(),
+  validade: date("validade", { mode: "string" }),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+}, (t) => ({
+  uqTipo: uniqueIndex("uq_recrutamento_doc").on(t.recrutamentoId, t.tipo),
 }));
 
 /** Reuniões com clientes (shared/reunioes.ts): transcrição e resumo; o áudio não fica guardado */

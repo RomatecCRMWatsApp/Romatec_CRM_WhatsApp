@@ -74,6 +74,8 @@ export function podeAbrir(perfil: Perfil | null, caminho: string): boolean {
   if (perfil === 'admin') return true;
   if (caminho === '/meu-cadastro') return true;
   if (perfil === 'empreendedor') return caminho === '/empreendedor' || caminho.startsWith('/empreendedor/');
+  // Recrutamento: administrador e secretária
+  if (caminho === '/recrutamento' || caminho.startsWith('/recrutamento/')) return perfil === 'secretario';
   return !['/equipe', '/settings', '/setup'].some(p => caminho === p || caminho.startsWith(`${p}/`)) && !caminho.startsWith('/empreendedor');
 }
 

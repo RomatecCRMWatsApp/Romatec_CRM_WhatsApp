@@ -29,6 +29,9 @@ const Materiais = lazy(() => import("./pages/Materiais"));
 const ListaInteresse = lazy(() => import("./pages/ListaInteresse"));
 const AgendaVisitas = lazy(() => import("./pages/AgendaVisitas"));
 const Reunioes = lazy(() => import("./pages/Reunioes"));
+const Recrutamento = lazy(() => import("./pages/Recrutamento"));
+const FormularioRecrutamento = lazy(() => import("./pages/FormularioRecrutamento"));
+const TrocarSenha = lazy(() => import("./pages/TrocarSenha"));
 const Empreendimentos = lazy(() => import("./pages/Empreendimentos"));
 const Empreendimento = lazy(() => import("./pages/Empreendimento"));
 const EmpreendimentoDocumentos = lazy(() => import("./pages/EmpreendimentoDocumentos"));
@@ -73,6 +76,11 @@ function SetupGuard({ component: Component }: { component: React.ComponentType }
 
   useEffect(() => {
     // Cada perfil só abre as telas dele (shared/equipe.ts)
+    // Senha provisória (recrutamento): antes de qualquer tela, criar a própria senha
+    if (isAuthenticated && (user as any)?.trocarSenha) {
+      navigate("/trocar-senha");
+      return;
+    }
     if (isAuthenticated && !podeAbrir(perfil, location)) {
       navigate(telaInicial(perfil));
       return;
@@ -80,7 +88,7 @@ function SetupGuard({ component: Component }: { component: React.ComponentType }
     if (!isLoading && isAuthenticated && perfil === "admin" && !config?.companyName) {
       navigate("/setup");
     }
-  }, [isLoading, isAuthenticated, config, navigate, perfil, location]);
+  }, [isLoading, isAuthenticated, config, navigate, perfil, location, user]);
 
   if (!permitido) return null;
   // Telas internas dentro do menu lateral; o empreendedor tem o painel próprio, sem menu do CRM
@@ -127,6 +135,11 @@ function Router() {
         {() => <SetupGuard component={MeuCadastro} />}
       </Route>
       <Route path={"/primeiro-acesso"} component={PrimeiroAcesso} />
+      <Route path={"/trocar-senha"} component={TrocarSenha} />
+      <Route path={"/formulario/:token"} component={FormularioRecrutamento} />
+      <Route path={"/recrutamento"}>
+        {() => <SetupGuard component={Recrutamento} />}
+      </Route>
       <Route path={"/empreendimentos/:slug/folder"}>
         {() => <SetupGuard component={EmpreendimentoFolder} />}
       </Route>
@@ -204,7 +217,7 @@ function Router() {
 }
 
 /** Páginas do site público (landing, imóveis, links): sem splash nem overlay do app */
-const rotaDoSite = (p: string) => ["/imoveis", "/i/", "/imovel/", "/links", "/bom-jardims", "/agendar/"].some(r => p === r || p.startsWith(r.endsWith("/") ? r : `${r}/`));
+const rotaDoSite = (p: string) => ["/imoveis", "/i/", "/imovel/", "/links", "/bom-jardims", "/agendar/", "/formulario/"].some(r => p === r || p.startsWith(r.endsWith("/") ? r : `${r}/`));
 
 function CamadaDoSistema() {
   const [location] = useLocation();

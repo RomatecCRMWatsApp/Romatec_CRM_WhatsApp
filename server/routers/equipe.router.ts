@@ -15,7 +15,7 @@ import { MSG_SEM_CARTAO, pendenciasCredenciais } from "../../shared/cadastro";
 import { MODULOS, ajustesNovoCorretor } from "../../shared/permissoes";
 import { appUrl } from "../leads/config";
 import { createRateLimiter } from "../lead-intake";
-import { ErroCadastro, cadastroSchema, errosPorCampo, salvarCadastro, temCartaoCreci } from "../cadastroUsuario";
+import { criarUsuarioComCadastro, temCartaoCreci } from "../cadastroUsuario";
 
 async function dbOrThrow() {
   const db = await getDb();
@@ -75,35 +75,8 @@ export const equipeRouter = router({
     empreendimentosIds: z.array(z.number().int()).max(500).default([]),
     imoveisIds: z.array(z.number().int()).max(5000).default([]),
   })).mutation(async ({ input, ctx }) => {
-    const r = cadastroSchema.safeParse(input.dados);
-    if (!r.success) {
-      const campos = errosPorCampo(r.error);
-      throw new ErroCadastro("UNPROCESSABLE_CONTENT", `Confira o cadastro: ${Object.values(campos)[0]}`, campos);
-    }
-    const perfil = r.data.perfil ?? "corretor";
-    const db = await dbOrThrow();
     const c = novoConvite();
-    const res: any = await db.insert(users).values({
-      openId: `equipe:${crypto.randomUUID()}`, name: r.data.nome, email: `pendente-${crypto.randomUUID()}@cadastro.local`, loginMethod: "senha",
-      role: "user", perfil: perfil === "admin" ? "corretor" : perfil, ativo: true, conviteHash: c.hash, conviteExpira: c.expira, recebeLeads: false,
-    } as any);
-    let id = Number(res?.[0]?.insertId ?? res?.insertId ?? 0);
-    if (!id) [{ id }] = await db.select({ id: users.id }).from(users).where(eq(users.conviteHash, c.hash)).limit(1);
-    try {
-      // Grava tudo pela mesma regra do cadastro (duplicados, perfil, cônjuge); "Recebe leads" fica para depois do cartão
-      await salvarCadastro(id, { ...input.dados, recebeLeads: false }, ctx.user as any);
-    } catch (e) {
-      await db.delete(users).where(eq(users.id, id));
-      throw e;
-    }
-    if (perfil === "secretario" || perfil === "corretor") {
-      await db.insert(permissoesUsuario).values(ajustesNovoCorretor(input.modulos).map(a => ({ usuarioId: id, ...a, atualizadoPor: ctx.user.id })) as any);
-      const acessos = perfil === "corretor" ? [
-        ...input.empreendimentosIds.map(refId => ({ usuarioId: id, tipo: "empreendimento", refId, habilitadoPor: ctx.user.id })),
-        ...input.imoveisIds.map(refId => ({ usuarioId: id, tipo: "imovel", refId, habilitadoPor: ctx.user.id })),
-      ] : [];
-      if (acessos.length) await db.insert(acessosCorretor).values(acessos as any);
-    }
+    const { id } = await criarUsuarioComCadastro(input.dados, input, ctx.user as any, { conviteHash: c.hash, conviteExpira: c.expira });
     return { id, link: linkConvite(c.token), expira: c.expira };
   }),
 

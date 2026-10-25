@@ -3,10 +3,11 @@
  * gravação do usuário + cônjuge na mesma transação, regras de perfil e "Recebe leads",
  * busca de pessoa por CPF e qualificação para contrato. Regras puras em shared/cadastro.ts.
  */
+import crypto from "node:crypto";
 import { TRPCError } from "@trpc/server";
 import { z } from "zod";
 import { and, eq, ne } from "drizzle-orm";
-import { getDb } from "./db";
+import { getDb, transacao } from "./db";
 import { users, usuarioConjuge, usuarioDocumentos } from "../drizzle/schema";
 import { cleanRG, isValidCPF, onlyDigits } from "../shared/masks";
 import { ESTADOS_CIVIS, MSG_SEM_CARTAO, REGIMES_BENS, UFS, normalizarProfissao, temConjuge } from "../shared/cadastro";
@@ -188,7 +189,7 @@ export async function salvarCadastro(alvoId: number, entrada: unknown, autor: { 
     } : perfil === "empreendedor" && admin ? { empreendimentoSlug: d.empreendimentoSlug } : {}),
   };
 
-  await db.transaction(async (tx: any) => {
+  await transacao(db, async (tx: any) => {
     await tx.update(users).set(dadosUser as any).where(eq(users.id, alvoId));
     const [ja]: any[] = await tx.select({ id: usuarioConjuge.id }).from(usuarioConjuge).where(eq(usuarioConjuge.usuarioId, alvoId)).limit(1);
     if (temConjuge(d.estadoCivil) && d.conjuge) {
@@ -215,6 +216,51 @@ export async function salvarCadastro(alvoId: number, entrada: unknown, autor: { 
   });
   if (mudouPerfil) console.log(`[Cadastro] Perfil de ${alvoId}: ${perfilAtual} → ${perfil} (por ${autor.id}); sessões antigas encerradas`);
   return { ok: true, perfil, sessaoEncerrada: mudouPerfil };
+}
+
+/**
+ * Novo acesso com o cadastro completo (Equipe → Novo e aprovação do Recrutamento): mesma validação do "Salvar
+ * cadastro". Secretário/Corretor: só os módulos, empreendimentos e imóveis marcados (não herda o pacote base).
+ */
+export async function criarUsuarioComCadastro(
+  dados: Record<string, unknown>,
+  acesso: { modulos: string[]; empreendimentosIds: number[]; imoveisIds: number[] },
+  autor: { id: number; role?: string | null },
+  extra: Record<string, unknown> = {},
+): Promise<{ id: number; perfil: Perfil }> {
+  const r = cadastroSchema.safeParse(dados);
+  if (!r.success) {
+    const campos = errosPorCampo(r.error);
+    throw new ErroCadastro("UNPROCESSABLE_CONTENT", `Confira o cadastro: ${Object.values(campos)[0]}`, campos);
+  }
+  const perfil = (r.data.perfil ?? "corretor") as Perfil;
+  const db = await dbOrThrow();
+  const marca = crypto.randomUUID();
+  const res: any = await db.insert(users).values({
+    openId: `equipe:${marca}`, name: r.data.nome, email: `pendente-${marca}@cadastro.local`, loginMethod: "senha",
+    role: "user", perfil: perfil === "admin" ? "corretor" : perfil, ativo: 1, recebeLeads: 0,
+    createdAt: new Date(), updatedAt: new Date(), lastSignedIn: new Date(), ...extra,
+  } as any);
+  let id = Number(res?.[0]?.insertId ?? res?.insertId ?? res?.lastInsertRowid ?? 0);
+  if (!id) [{ id }] = await db.select({ id: users.id }).from(users).where(eq(users.openId, `equipe:${marca}`)).limit(1);
+  try {
+    // Grava tudo pela mesma regra do cadastro (duplicados, perfil, cônjuge); "Recebe leads" fica para depois do cartão
+    await salvarCadastro(id, { ...dados, recebeLeads: false }, autor);
+  } catch (e) {
+    await db.delete(users).where(eq(users.id, id));
+    throw e;
+  }
+  if (perfil === "secretario" || perfil === "corretor") {
+    const { ajustesNovoCorretor } = await import("../shared/permissoes");
+    const { permissoesUsuario, acessosCorretor } = await import("../drizzle/schema");
+    await db.insert(permissoesUsuario).values(ajustesNovoCorretor(acesso.modulos).map(a => ({ usuarioId: id, ...a, atualizadoPor: autor.id })) as any);
+    const acessos = perfil === "corretor" ? [
+      ...acesso.empreendimentosIds.map(refId => ({ usuarioId: id, tipo: "empreendimento", refId, habilitadoPor: autor.id })),
+      ...acesso.imoveisIds.map(refId => ({ usuarioId: id, tipo: "imovel", refId, habilitadoPor: autor.id })),
+    ] : [];
+    if (acessos.length) await db.insert(acessosCorretor).values(acessos as any);
+  }
+  return { id, perfil };
 }
 
 /** Cadastro completo para a tela (sem hashes, sem conteúdo dos arquivos) */

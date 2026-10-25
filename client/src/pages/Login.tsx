@@ -14,8 +14,8 @@ export default function Login() {
 
   useEffect(() => {
     if (isAuthenticated) {
-      // Empreendedor vai direto para o painel dele
-      navigate(telaInicial(perfilDe(user as any)));
+      // Senha provisória (recrutamento): primeiro cria a senha; empreendedor vai direto para o painel dele
+      navigate((user as any)?.trocarSenha ? "/trocar-senha" : telaInicial(perfilDe(user as any)));
     }
   }, [isAuthenticated, user, navigate]);
 

@@ -7,7 +7,7 @@ import AvisoRotinas from "./AvisoRotinas";
 import { MobileTabBar, RomatecAppIcon, RomatecLockup, TAB_ICONS, type TabItem } from "@/brand";
 import {
   BarChart3, Building2, Flame, Images, KanbanSquare, LayoutDashboard, LineChart, LogOut, Megaphone, Menu, Send,
-  Settings, UserCog, Users, X, Eye, ClipboardList, CalendarDays, Map as MapIcon, Smartphone, Wallet, IdCard, Bell, FileSignature, Mic,
+  Settings, UserCog, Users, X, Eye, ClipboardList, CalendarDays, Map as MapIcon, Smartphone, Wallet, IdCard, Bell, FileSignature, Mic, UserPlus,
 } from "lucide-react";
 import { abrirNovidades, SinoNovidades, useNovidadesNaoLidas } from "./sistema/Novidades";
 import { useNotificacoes } from "./sistema/Notificacoes";
@@ -24,6 +24,8 @@ const MENU: Grupo[] = [
       { rotulo: "Área do corretor", rota: "/corretor", icone: Smartphone },
       { rotulo: "Meu cadastro", rota: "/meu-cadastro", icone: IdCard },
       { rotulo: "Notificações", rota: "#novidades", icone: Bell },
+      // Administrador e secretária (shared/equipe.ts → podeAbrir)
+      { rotulo: "Recrutamento", rota: "/recrutamento", icone: UserPlus },
     ],
   },
   {
