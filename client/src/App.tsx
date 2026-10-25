@@ -4,6 +4,7 @@ import NotFound from "@/pages/NotFound";
 import { Route, Switch, useLocation } from "wouter";
 import ErrorBoundary from "./components/ErrorBoundary";
 import BarraVersao from "./components/BarraVersao";
+import AvisoCookies from "./components/AvisoCookies";
 import { ThemeProvider } from "./contexts/ThemeContext";
 // Protetor de tela, novidades da versão e alertas: só no CRM (o site público não baixa)
 const CamadaSistema = lazy(() => import("./components/sistema/CamadaSistema"));
@@ -227,6 +228,7 @@ function App() {
             <Router />
           </Suspense>
           <CamadaDoSistema />
+          <AvisoCookies />
         </TooltipProvider>
       </ThemeProvider>
     </ErrorBoundary>

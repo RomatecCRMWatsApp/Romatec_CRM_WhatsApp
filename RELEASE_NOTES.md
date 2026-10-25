@@ -3,6 +3,20 @@
 Cada versão nova vai no TOPO. Depois rode `npm run release` (valida e atualiza o package.json);
 ao subir, o servidor grava a versão no banco e todos recebem o aviso "Novidades da versão".
 
+## 1.19.0 — 2026-10-25
+tipo: minor
+obrigatoria: nao
+titulo: Medição de anúncios e visitas
+
+### Novo
+- Página do Bom Jardims e link de agendamento prontos para Google Analytics e Google Ads: agendamento enviado, clique no WhatsApp e chácara escolhida no mapa
+- Aviso de cookies nessas páginas (só quando a medição estiver ligada); nada do Google é carregado antes do visitante aceitar
+- As telas do sistema nunca carregam a medição
+
+### Melhorias
+- Página do Bom Jardims mais leve no celular (imagem do topo e logotipo no tamanho certo) e com mais texto para quem busca chácara ou terreno em Açailândia
+- Endereços que não existem ficam fora do Google
+
 ## 1.18.0 — 2026-10-25
 tipo: minor
 obrigatoria: nao

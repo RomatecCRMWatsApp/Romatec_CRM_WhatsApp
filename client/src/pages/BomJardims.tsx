@@ -7,6 +7,8 @@ import { AGENDAR_BOM_JARDIMS, FAQ_BOM_JARDIMS, IMAGENS_BOM_JARDIMS, SOBRE_BOM_JA
 import LoteMap, { formatArea, STATUS_LABEL, type LoteInfo } from "@/components/bom-jardims/LoteMap";
 import { C, SERIF, SANS, GALERIA, VIDEO, waLink, useBrandFonts, ContatosBotoes, GaleriaProjeto, useContatos } from "@/components/bom-jardims/marca";
 import { codigoChacaraValido, rotaAteEntrada } from "@shared/chacaraLink";
+import { EVENTOS } from "@shared/rastreamento";
+import { registrarEvento } from "@/lib/rastreamento";
 
 /**
  * Landing do Condomínio de Chácaras Bom Jardims — /bom-jardims
@@ -89,6 +91,7 @@ function Formulario({ loteCodigo, onClearLote, lotes }: { loteCodigo?: string; o
       const data = await res.json().catch(() => ({}));
       if (!res.ok || !data.ok) throw new Error(data.error || "Não foi possível enviar.");
       setStatus("done");
+      registrarEvento(EVENTOS.agendamento, { formulario: "mapa_de_vendas", empreendimento: "bom-jardims", chacara: loteCodigo ?? null }, "agendamento");
     } catch (err: any) {
       setStatus("error"); setError(err?.message || "Não foi possível enviar. Fale pelo WhatsApp.");
     }
@@ -198,12 +201,12 @@ export default function BomJardims() {
     <div style={{ background: C.creme, color: C.texto, fontFamily: SANS, minHeight: "100vh" }}>
       {/* 1. Hero */}
       <header style={{ position: "relative", minHeight: "88vh", display: "flex", alignItems: "flex-end", overflow: "hidden", background: C.verde }}>
-        <img src={IMAGENS_BOM_JARDIMS[0].src} alt={IMAGENS_BOM_JARDIMS[0].alt} width={IMAGENS_BOM_JARDIMS[0].w} height={IMAGENS_BOM_JARDIMS[0].h}
+        <img src={IMAGENS_BOM_JARDIMS[0].src} srcSet={IMAGENS_BOM_JARDIMS[0].srcset} sizes="100vw" alt={IMAGENS_BOM_JARDIMS[0].alt} width={IMAGENS_BOM_JARDIMS[0].w} height={IMAGENS_BOM_JARDIMS[0].h}
           fetchPriority="high" decoding="async"
           style={{ position: "absolute", inset: 0, width: "100%", height: "100%", objectFit: "cover" }} />
         <div style={{ position: "absolute", inset: 0, background: "linear-gradient(180deg, rgba(12,51,32,0.15) 0%, rgba(12,51,32,0.55) 45%, rgba(12,51,32,0.95) 100%)" }} />
         <div style={{ position: "relative", maxWidth: 1080, margin: "0 auto", padding: "32px 16px 40px", width: "100%", boxSizing: "border-box" }}>
-          <img src="/bom-jardims/logo.webp" alt="Logotipo do Condomínio de Chácaras Bom Jardims" decoding="async" style={{ width: "min(260px, 60vw)", height: "auto", display: "block", marginBottom: 16 }} />
+          <img src="/bom-jardims/logo-520.webp" alt="Logotipo do Condomínio de Chácaras Bom Jardims" width={520} height={293} decoding="async" style={{ width: "min(260px, 60vw)", height: "auto", display: "block", marginBottom: 16 }} />
           <span style={{ display: "inline-block", padding: "6px 12px", borderRadius: 999, background: C.dourado, color: C.verde, fontWeight: 700, fontSize: 13, letterSpacing: 0.5 }}>
             PRÉ-LANÇAMENTO · AÇAILÂNDIA/MA
           </span>
@@ -268,7 +271,7 @@ export default function BomJardims() {
           Toque numa chácara para ver a área e a situação.
           {disponiveis !== undefined && <> Hoje são <b style={{ color: C.verde }}>{disponiveis} chácaras disponíveis</b>.</>}
         </p>
-        <LoteMap lotes={lotes} selected={selected} onSelect={setSelected} onMapLoaded={setFallbackLotes} />
+        <LoteMap lotes={lotes} selected={selected} onSelect={c => { setSelected(c); if (c) registrarEvento(EVENTOS.mapa, { empreendimento: "bom-jardims", chacara: c }); }} onMapLoaded={setFallbackLotes} />
         {semSituacao && (
           <p style={{ fontSize: 13, color: "#8A5A00", marginTop: 8 }}>Não foi possível confirmar a situação das chácaras agora. Fale com o corretor para confirmar a disponibilidade.</p>
         )}

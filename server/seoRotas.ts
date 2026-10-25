@@ -7,7 +7,7 @@ import { and, eq, isNotNull } from 'drizzle-orm';
 import { getDb } from './db';
 import { properties } from '../drizzle/schema';
 import { appUrl } from './leads/config';
-import { metaDaRota, metaDoImovel, injetarMeta, robotsTxt, sitemapXml, type MetaPagina } from './seo';
+import { metaDaRota, metaDoImovel, injetarMeta, injetarRastreamento, robotsTxt, sitemapXml, type MetaPagina } from './seo';
 import { AGENDAR_BOM_JARDIMS } from '../shared/bomJardimsSeo';
 
 const INICIO = new Date();
@@ -37,7 +37,7 @@ export async function htmlComMeta(html: string, urlOriginal: string): Promise<st
   try {
     const r = metaDaRota(path);
     const meta = r === 'imovel' ? await metaDoImovelDaRota(path) : r;
-    return injetarMeta(html, meta, appUrl());
+    return injetarRastreamento(injetarMeta(html, meta, appUrl()), path);
   } catch (e: any) {
     console.warn('[SEO] Meta não aplicada:', e?.message);
     return html;

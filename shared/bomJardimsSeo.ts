@@ -42,6 +42,13 @@ export const SOBRE_BOM_JARDIMS: { titulo: string; paragrafos: string[] }[] = [
     ],
   },
   {
+    titulo: 'Chácara à venda na BR-222: terreno grande perto da cidade',
+    paragrafos: [
+      'Quem procura chácara à venda em Açailândia geralmente quer duas coisas: um terreno grande, com espaço para casa, pomar, horta e criação, e acesso fácil à cidade. No Bom Jardims cada lote de chácara tem a partir de 3.025 m² — muito mais que um lote urbano — e o condomínio fica na altura do km 15 da BR-222, pela Estrada do Piquiá dos Baianos, com acesso direto até o portal.',
+      'Diferente de comprar um terreno solto na zona rural, aqui o lote em Açailândia/MA já vem dentro de um condomínio planejado: portal, ruas abertas, água encanada e área de lazer comum, com a localização exata de cada chácara no mapa e no Google Earth.',
+    ],
+  },
+  {
     titulo: 'Infraestrutura do condomínio',
     paragrafos: [
       'Portal de acesso com guarita e controle de acesso, 8 ruas internas de 12 m (9 m de rolamento e calçada dos dois lados), água encanada de poço artesiano do condomínio com reservatório elevado de 50 m³ e hidrômetro individual em cada chácara.',
@@ -92,9 +99,10 @@ export const FAQ_BOM_JARDIMS: { pergunta: string; resposta: string }[] = [
   },
 ];
 
-/** Imagens da página com o texto alternativo (HTML inicial e prévia) */
+/** Imagens da página com o texto alternativo (HTML inicial e prévia). A do topo tem 3 tamanhos: o celular baixa a de 800 px */
+export const SRCSET_TOPO = '/bom-jardims/portal-dia-800.webp 800w, /bom-jardims/portal-dia-1200.webp 1200w, /bom-jardims/portal-dia.webp 1600w';
 export const IMAGENS_BOM_JARDIMS = [
-  { src: '/bom-jardims/portal-dia.webp', alt: 'Portal de acesso do Condomínio de Chácaras Bom Jardims, em Açailândia/MA (perspectiva ilustrativa)', w: 1600, h: 900 },
+  { src: '/bom-jardims/portal-dia-1200.webp', alt: 'Portal de acesso do Condomínio de Chácaras Bom Jardims, em Açailândia/MA (perspectiva ilustrativa)', w: 1600, h: 900, srcset: SRCSET_TOPO },
   { src: '/bom-jardims/stand-aerea.webp', alt: 'Stand de vendas do Bom Jardims — vista aérea (perspectiva ilustrativa)', w: 1200, h: 676 },
 ];
 
@@ -105,7 +113,7 @@ export function htmlEstaticoBomJardims(): string {
   const botao = 'display:inline-block;padding:14px 20px;border-radius:12px;background:#C9A24A;color:#0C3320;font-weight:700;text-decoration:none;margin:4px 8px 4px 0';
   return [
     '<main style="font-family:sans-serif;max-width:860px;margin:0 auto;padding:24px 16px;color:#E8F0EB;line-height:1.55">',
-    `<img src="${hero.src}" alt="${esc(hero.alt)}" width="${hero.w}" height="${hero.h}" fetchpriority="high" style="width:100%;height:auto;border-radius:16px" />`,
+    `<img src="${hero.src}" srcset="${SRCSET_TOPO}" sizes="(max-width: 860px) 100vw, 860px" alt="${esc(hero.alt)}" width="${hero.w}" height="${hero.h}" fetchpriority="high" style="width:100%;height:auto;border-radius:16px" />`,
     '<h1>Chácaras Bom Jardims — Condomínio de Chácaras em Açailândia/MA</h1>',
     '<p>Chácaras à venda em Açailândia, Maranhão: o Condomínio de Chácaras Bom Jardims tem 82 chácaras a partir de 3.025 m², portal de acesso, ruas internas de 12 m e área de vivência às margens do córrego, na BR-222 (Estrada do Piquiá dos Baianos, km 15).</p>',
     `<p><a href="${AGENDAR_BOM_JARDIMS}" style="${botao}">Agendar visita</a><a href="#mapa" style="color:#E8F0EB">Ver as chácaras no mapa</a></p>`,

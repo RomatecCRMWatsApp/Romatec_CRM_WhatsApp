@@ -6,8 +6,9 @@
  */
 import {
   AGENDAR_BOM_JARDIMS, DESCRICAO_BOM_JARDIMS, FAQ_BOM_JARDIMS, IMAGENS_BOM_JARDIMS, NOMES_ALTERNATIVOS, TITULO_BOM_JARDIMS,
-  htmlEstaticoBomJardims,
+  SRCSET_TOPO, htmlEstaticoBomJardims,
 } from '../shared/bomJardimsSeo';
+import { configRastreamento, rotaDeMarketing } from '../shared/rastreamento';
 
 export interface MetaPagina {
   title: string;
@@ -18,8 +19,9 @@ export interface MetaPagina {
   /** Texto alternativo e tamanho da imagem de prévia (WhatsApp, Instagram, Facebook) */
   imageAlt?: string | null;
   imageSize?: { w: number; h: number } | null;
-  /** Imagem principal da página: pré-carregada (LCP) */
+  /** Imagem principal da página: pré-carregada (LCP), com os tamanhos para o navegador escolher */
   preloadImage?: string | null;
+  preloadSrcset?: string | null;
   /** false = noindex (telas internas do CRM) */
   indexavel: boolean;
   jsonLd?: Record<string, unknown> | null;
@@ -61,6 +63,7 @@ export const META_BOM_JARDIMS: MetaPagina = {
   imageAlt: 'Portal de acesso do Condomínio de Chácaras Bom Jardims, em Açailândia/MA',
   imageSize: { w: 1200, h: 630 },
   preloadImage: IMAGENS_BOM_JARDIMS[0].src,
+  preloadSrcset: SRCSET_TOPO,
   indexavel: true,
   conteudoHtml: htmlEstaticoBomJardims(),
   jsonLd: {
@@ -210,7 +213,9 @@ export function metaDaRota(path: string): MetaPagina | 'imovel' {
   if (p === '/imoveis') return { ...META_PADRAO, title: 'Imóveis à venda em Açailândia/MA — Romatec', path: '/imoveis' };
   if (p === '/links') return { ...META_PADRAO, title: 'Romatec Imóveis — links e contato', path: '/links' };
   if (/^\/i\/IMV-\d{4}$/i.test(p) || /^\/imovel\/[^/]+$/.test(p)) return 'imovel';
-  return { ...META_PADRAO, path: p };
+  if (p === '/') return META_PADRAO;
+  // Endereço que não existe: a SPA mostra "não encontrada" com status 200 — fora do Google (sem "soft 404")
+  return { ...META_PADRAO, title: 'Página não encontrada — Romatec Imóveis', path: p, indexavel: false };
 }
 
 const esc = (s: string) => s.replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
@@ -223,7 +228,7 @@ export function injetarMeta(html: string, meta: MetaPagina, base: string): strin
   const tags = [
     `<link rel="canonical" href="${esc(url)}" />`,
     `<meta name="robots" content="${meta.indexavel ? 'index, follow, max-image-preview:large' : 'noindex, nofollow'}" />`,
-    ...(meta.preloadImage ? [`<link rel="preload" as="image" href="${esc(meta.preloadImage)}" fetchpriority="high" />`] : []),
+    ...(meta.preloadImage ? [`<link rel="preload" as="image" href="${esc(meta.preloadImage)}"${meta.preloadSrcset ? ` imagesrcset="${esc(meta.preloadSrcset)}" imagesizes="100vw"` : ''} fetchpriority="high" />`] : []),
     `<meta property="og:type" content="website" />`,
     `<meta property="og:locale" content="pt_BR" />`,
     `<meta property="og:site_name" content="Romatec Imóveis" />`,
@@ -249,6 +254,17 @@ export function injetarMeta(html: string, meta: MetaPagina, base: string): strin
     .replace(/<meta name="description" content="[^"]*"\s*\/?>/, `<meta name="description" content="${esc(meta.description)}" />`)
     .replace('</head>', `    ${tags}\n  </head>`)
     .replace('<div id="root"></div>', meta.conteudoHtml ? `<div id="root">${meta.conteudoHtml}</div>` : '<div id="root"></div>');
+}
+
+/**
+ * IDs do Google Analytics 4 / Google Ads para a página — só nas rotas públicas de marketing e só se as
+ * variáveis existirem. O gtag em si só é baixado depois que o visitante aceita os cookies (client/src/lib/rastreamento.ts).
+ */
+export function injetarRastreamento(html: string, path: string, env: Record<string, string | undefined> = process.env): string {
+  if (!rotaDeMarketing(path)) return html;
+  const cfg = configRastreamento(env);
+  if (!cfg) return html;
+  return html.replace('</head>', `    <script>window.__RASTREAMENTO=${JSON.stringify(cfg).replace(/</g, '\\u003c')}</script>\n  </head>`);
 }
 
 export function robotsTxt(base: string): string {

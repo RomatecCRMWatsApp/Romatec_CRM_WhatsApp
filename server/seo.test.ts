@@ -56,7 +56,9 @@ describe('SEO das páginas públicas', () => {
     expect(ld['@graph'][1].about['@id']).toBe(ld['@graph'][0]['@id']);
     expect(ld['@graph'][0].geo).toMatchObject({ latitude: expect.any(Number), longitude: expect.any(Number) });
     for (const t of ['og:site_name', 'og:image:width" content="1200', 'og:image:height" content="630', 'og:image:alt', 'twitter:title', 'twitter:description', 'twitter:image"']) expect(html).toContain(t);
-    expect(html).toContain('<link rel="preload" as="image" href="/bom-jardims/portal-dia.webp" fetchpriority="high" />');
+    // Imagem do topo pré-carregada no tamanho certo (o celular baixa a de 800 px)
+    expect(html).toContain('<link rel="preload" as="image" href="/bom-jardims/portal-dia-1200.webp" imagesrcset="/bom-jardims/portal-dia-800.webp 800w, ');
+    expect(html).toContain('imagesizes="100vw" fetchpriority="high" />');
   });
 
   it('/agendar/bom-jardims indexável com título próprio e canonical sem o ?c= do corretor; outros agendamentos fora do Google', () => {

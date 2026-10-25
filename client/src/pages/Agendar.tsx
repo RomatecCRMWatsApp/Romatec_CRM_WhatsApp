@@ -7,6 +7,8 @@ import MapaTematico from "@/components/empreendimento/MapaTematico";
 import { FORMAS_PAGAMENTO, HORARIOS } from "@shared/agendamento";
 import { brl } from "@shared/simulador";
 import type { CartaoVendas } from "@shared/cartaoVendas";
+import { EVENTOS } from "@shared/rastreamento";
+import { registrarEvento } from "@/lib/rastreamento";
 
 type Dados = {
   empreendimento: { slug: string; nome: string; municipio: string | null; uf: string | null; areaHa: string | null };
@@ -55,6 +57,7 @@ export default function Agendar() {
     if (l.situacao !== "disponivel") { setAvisoMapa(`A chácara ${l.codigo} não está disponível. Escolha uma das chácaras coloridas.`); return; }
     setAvisoMapa(null);
     setSelecionado(id);
+    registrarEvento(EVENTOS.mapa, { empreendimento: slug, chacara: l.codigo });
     setF(x => ({ ...x, unidade: l.codigo }));
   };
   const loteEscolhido = dados?.mapa.lotes.find(x => x.id === selecionado) ?? null;
@@ -79,6 +82,7 @@ export default function Agendar() {
       const j = await r.json().catch(() => ({ ok: false }));
       if (!j.ok) throw new Error(j.error || "Não foi possível enviar agora.");
       setEnviado(true);
+      registrarEvento(EVENTOS.agendamento, { formulario: "agendamento", empreendimento: slug }, "agendamento");
       window.scrollTo({ top: 0, behavior: "smooth" });
     } catch (err: any) { setErro(err?.message || "Não foi possível enviar agora."); } finally { setEnviando(false); }
   };

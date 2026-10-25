@@ -84,7 +84,8 @@ export function serveStatic(app: Express) {
   let indexHtml: string | null = null;
   app.use("*", async (_req, res) => {
     // Don't serve index.html for API routes
-    if (_req.path.startsWith('/api/')) {
+    // Montado em "*": aqui req.path é sempre "/", então confere o endereço original
+    if (_req.originalUrl.startsWith('/api/')) {
       return res.status(404).json({ error: 'Not Found' });
     }
     try {
