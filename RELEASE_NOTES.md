@@ -3,6 +3,18 @@
 Cada versão nova vai no TOPO. Depois rode `npm run release` (valida e atualiza o package.json);
 ao subir, o servidor grava a versão no banco e todos recebem o aviso "Novidades da versão".
 
+## 1.21.0 — 2026-10-25
+tipo: minor
+obrigatoria: nao
+titulo: Modelos para baixar, agenda com links e cadastro completo de clientes
+
+### Novo
+- Contratos: botão "Baixar modelos (PDF)" com o contrato de compra e venda, o contrato de intermediação, o carnê e o recibo — com cliente exemplo e a faixa "modelo", baixam direto
+- Contratos: botões em cada contrato para editar e cancelar (administrador, com a senha) ou pedir o cancelamento (corretor e secretária)
+- Agenda de visitas: links para divulgar de cada empreendimento — o de agendamento e o da página do empreendimento — para copiar ou compartilhar
+- Agenda de visitas: os pedidos que chegam pelo formulário de agendamento aparecem no topo, com os dados do pedido, para confirmar com o cliente
+- Clientes: novo cliente e editar cliente com o cadastro completo (CPF, RG, estado civil, profissão, endereço); com o CPF, o contrato desse cliente já sai preenchido
+
 ## 1.20.0 — 2026-10-25
 tipo: minor
 obrigatoria: nao

@@ -21,7 +21,7 @@ import {
   cancelarCobrancaAdmin, cancelarContratoAdmin, cancelarReciboAdmin, recusarSolicitacao, solicitacoesDo, solicitarCancelamento, trilhaDoContrato,
 } from "../contratos/cancelamento";
 
-const pessoaZ = z.object({
+export const pessoaZ = z.object({
   nome: z.string().trim().max(160), cpf: z.string().max(20), sexo: z.string().max(1).nullable().optional(),
   nacionalidade: z.string().max(40).nullable().optional(), estadoCivil: z.string().max(20).nullable().optional(), regimeBens: z.string().max(30).nullable().optional(),
   pactoAntenupcial: z.string().max(160).nullable().optional(), profissao: z.string().max(80).nullable().optional(),

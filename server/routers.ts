@@ -15,7 +15,7 @@ import { empreendedorRouter } from "./routers/empreendedor.router";
 import { empreendimentosAdminRouter } from "./routers/empreendimentosAdmin.router";
 import { simuladorRouter } from "./routers/simulador.router";
 import { financeiroRouter } from "./routers/financeiro.router";
-import { contratosRouter } from "./routers/contratos.router";
+import { contratosRouter, pessoaZ } from "./routers/contratos.router";
 import { permissoesRouter } from "./routers/permissoes.router";
 import { cadastroRouter } from "./routers/cadastro.router";
 import { novidadesRouter } from "./routers/novidades.router";
@@ -23,6 +23,7 @@ import { notificacoesRouter } from "./routers/notificacoes.router";
 import { exigirAcesso, exigirLead, leadsVisiveis } from "./permissoes";
 import { acessosCorretor } from "../drizzle/schema";
 import { z } from "zod";
+import { TRPCError } from "@trpc/server";
 import { createRateLimiter } from "./lead-intake";
 import { publicCompanyConfig, stripMaskedFields } from "./auth-security";
 
@@ -160,6 +161,16 @@ export const appRouter = router({
   }),
   contacts: router({
     list: protectedProcedure.query(async () => getAllContacts()),
+    /** Ficha completa do cliente (mesma de comprador nos contratos), ligada pelo telefone */
+    cadastro: protectedProcedure.input(z.object({ id: z.number().int() })).query(async ({ input }) => {
+      const { cadastroDoContato, CadastroErro } = await import('./contatosCadastro');
+      try { return await cadastroDoContato(input.id); } catch (e: any) { if (e instanceof CadastroErro) throw new TRPCError({ code: 'NOT_FOUND', message: e.message }); throw e; }
+    }),
+    /** Novo/editar contato com o cadastro completo (com CPF, grava a ficha da pessoa) */
+    salvarCompleto: protectedProcedure.input(z.object({ id: z.number().int().nullable(), pessoa: pessoaZ })).mutation(async ({ input }) => {
+      const { salvarContatoCompleto, CadastroErro } = await import('./contatosCadastro');
+      try { return await salvarContatoCompleto(input.id, input.pessoa as any); } catch (e: any) { if (e instanceof CadastroErro) throw new TRPCError({ code: 'BAD_REQUEST', message: e.message }); throw e; }
+    }),
     getById: protectedProcedure.input(z.object({ id: z.number() })).query(async ({ input }) => getContactById(input.id)),
     create: protectedProcedure
       .input(z.object({ 

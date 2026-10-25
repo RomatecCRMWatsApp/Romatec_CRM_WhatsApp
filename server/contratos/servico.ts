@@ -139,7 +139,7 @@ export interface NovoContrato {
   condicoes?: { especificas?: string; modoAssinatura?: 'eletronica' | 'manuscrita' };
 }
 
-const pessoaParaLinha = (p: PessoaForm) => ({
+export const pessoaParaLinha = (p: PessoaForm) => ({
   tipo: 'PF', nome: p.nome.trim(), cpfCnpj: soDigitos(p.cpf), sexo: p.sexo || null, nacionalidade: p.nacionalidade || 'brasileira',
   estadoCivil: p.estadoCivil || null, regimeBens: p.regimeBens || null, pactoAntenupcial: p.pactoAntenupcial || null, profissao: p.profissao || null,
   nascimento: p.nascimento || null, rg: p.rg || null, rgOrgao: p.rgOrgao || null, rgUf: p.rgUf || null, email: p.email || null,
@@ -148,7 +148,7 @@ const pessoaParaLinha = (p: PessoaForm) => ({
 });
 
 /** Cadastro único por CPF: atualiza quem já existe, cria quem não existe */
-async function salvarPessoa(p: PessoaForm, leadId: number | null): Promise<number> {
+export async function salvarPessoa(p: PessoaForm, leadId: number | null): Promise<number> {
   const d = await db();
   const linha = pessoaParaLinha(p);
   const [ja] = await d.select({ id: pessoas.id }).from(pessoas).where(eq(pessoas.cpfCnpj, linha.cpfCnpj)).limit(1);

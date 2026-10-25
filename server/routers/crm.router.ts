@@ -160,7 +160,7 @@ export const crmRouter = router({
     const L = new Map(leads.map(l => [l.id, l])), P = new Map(props.map(p => [p.id, p.t])), U = new Map(pessoas.map(u => [u.id, u.name]));
     return rows.map(r => ({
       id: r.id, leadId: r.leadId, nome: L.get(r.leadId)?.nome || "Lead", telefone: L.get(r.leadId)?.phone || "",
-      quando: r.quando, local: r.local, status: r.status, imovel: r.propertyId ? P.get(r.propertyId) ?? null : null,
+      quando: r.quando, local: r.local, status: r.status, observacao: r.observacao ?? null, imovel: r.propertyId ? P.get(r.propertyId) ?? null : null,
       responsavel: r.responsavelId ? U.get(r.responsavelId) ?? null : null,
       lembreteEnviado: !!r.lembreteClienteAt, confirmadaPeloCliente: !!r.confirmadaAt,
       semResultado: ["agendada", "confirmada"].includes(r.status) && new Date(r.quando).getTime() < agora,

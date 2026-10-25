@@ -27,6 +27,31 @@ export function registrarRotasContratos(app: Express) {
     }
   });
 
+  // Modelos (intermediação, carnê, recibo) com o contrato fictício — mesmas permissões do contrato modelo; nada é gravado
+  app.get('/api/contratos/modelos/:tipo.pdf', async (req, res) => {
+    try {
+      const { sdk } = await import('../_core/sdk');
+      const user: any = await sdk.authenticateRequest(req).catch(() => null);
+      if (!user || user.ativo === false || user.ativo === 0) return res.status(401).send('Faça login');
+      const { perfilDe } = await import('../../shared/equipe');
+      const { podeCriarContrato } = await import('../../shared/contratos');
+      if (!podeCriarContrato(perfilDe(user))) return res.status(403).send('Sem permissão');
+      const { modeloDocumento, TIPOS_MODELO } = await import('./modelosDocs');
+      const tipo = req.params.tipo as any;
+      if (!TIPOS_MODELO.includes(tipo)) return res.status(404).send('Modelo não encontrado');
+      const slug = typeof req.query.slug === 'string' && /^[a-z0-9-]{1,80}$/.test(req.query.slug) ? req.query.slug : 'bom-jardims';
+      const { pdf, nome } = await modeloDocumento(tipo, slug, user.id);
+      res.setHeader('Content-Type', 'application/pdf');
+      res.setHeader('Content-Disposition', `attachment; filename="${nome}"`);
+      res.setHeader('Cache-Control', 'private, no-store');
+      res.send(pdf);
+    } catch (e: any) {
+      if (e instanceof ContratoErro) return res.status(e.status).send(e.message);
+      console.error('[Contratos] modelo de documento:', e);
+      res.status(500).send('Falha ao gerar o modelo');
+    }
+  });
+
   // Contrato de comissão Empreendedora × Romatec (5%): SÓ o administrador — nunca corretor nem secretária
   app.get('/api/contratos/:id/comissao-romatec.pdf', async (req, res) => {
     try {

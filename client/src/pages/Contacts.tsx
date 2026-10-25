@@ -3,8 +3,7 @@ import { useAuth } from "@/_core/hooks/useAuth";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
+import FichaCliente from "@/components/cadastro/FichaCliente";
 import { Users, Search, Trash2, Edit, Plus, Phone, Mail, ArrowLeft, UserCheck, UserX, ChevronLeft, ChevronRight } from "lucide-react";
 import PageHeader from "@/components/PageHeader";
 import { useLocation } from "wouter";
@@ -25,19 +24,8 @@ export default function Contacts() {
   const [deleteOpen, setDeleteOpen] = useState(false);
   const [addOpen, setAddOpen] = useState(false);
   const [selectedContact, setSelectedContact] = useState<any>(null);
-  const [editForm, setEditForm] = useState({ name: "", phone: "", email: "" });
-  const [addForm, setAddForm] = useState({ name: "", phone: "", email: "" });
-
-  const updateMutation = trpc.contacts.update.useMutation({
-    onSuccess: () => { toast.success("Contato atualizado!"); refetch(); setEditOpen(false); },
-    onError: (e) => toast.error("Erro: " + e.message),
-  });
   const deleteMutation = trpc.contacts.delete.useMutation({
     onSuccess: () => { toast.success("Contato removido!"); refetch(); setDeleteOpen(false); },
-    onError: (e) => toast.error("Erro: " + e.message),
-  });
-  const createMutation = trpc.contacts.create.useMutation({
-    onSuccess: () => { toast.success("Contato adicionado!"); refetch(); setAddOpen(false); setAddForm({ name: "", phone: "", email: "" }); },
     onError: (e) => toast.error("Erro: " + e.message),
   });
 
@@ -54,7 +42,6 @@ export default function Contacts() {
 
   const openEdit = (contact: any) => {
     setSelectedContact(contact);
-    setEditForm({ name: contact.name || "", phone: contact.phone || "", email: contact.email || "" });
     setEditOpen(true);
   };
 
@@ -196,41 +183,9 @@ export default function Contacts() {
         </Card>
       </div>
 
-      {/* Edit Dialog */}
-      <Dialog open={editOpen} onOpenChange={setEditOpen}>
-        <DialogContent className="bg-card border-border">
-          <DialogHeader>
-            <DialogTitle className="text-foreground">Editar Contato</DialogTitle>
-          </DialogHeader>
-          <div className="space-y-4">
-            <div>
-              <Label className="text-muted-foreground">Nome</Label>
-              <Input value={editForm.name} onChange={e => setEditForm(f => ({ ...f, name: e.target.value }))} className="bg-secondary border-border" />
-            </div>
-            <div>
-              <Label className="text-muted-foreground">Telefone</Label>
-              <Input value={editForm.phone} onChange={e => setEditForm(f => ({ ...f, phone: e.target.value }))} className="bg-secondary border-border" />
-            </div>
-            <div>
-              <Label className="text-muted-foreground">Email</Label>
-              <Input value={editForm.email} onChange={e => setEditForm(f => ({ ...f, email: e.target.value }))} className="bg-secondary border-border" />
-            </div>
-          </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setEditOpen(false)}>Cancelar</Button>
-            <Button
-              className="bg-emerald-600 hover:bg-emerald-700"
-              onClick={() => {
-                if (!selectedContact) return;
-                updateMutation.mutate({ id: selectedContact.id, ...editForm });
-              }}
-              disabled={updateMutation.isPending}
-            >
-              {updateMutation.isPending ? "Salvando..." : "Salvar"}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+      {/* Novo / editar: formulário completo (o mesmo do comprador no contrato) */}
+      <FichaCliente aberto={editOpen || addOpen} contatoId={editOpen ? selectedContact?.id ?? null : null}
+        onFechar={() => { setEditOpen(false); setAddOpen(false); }} onSalvo={() => refetch()} />
 
       {/* Delete Dialog */}
       <Dialog open={deleteOpen} onOpenChange={setDeleteOpen}>
@@ -258,41 +213,6 @@ export default function Contacts() {
         </DialogContent>
       </Dialog>
 
-      {/* Add Dialog */}
-      <Dialog open={addOpen} onOpenChange={setAddOpen}>
-        <DialogContent className="bg-card border-border">
-          <DialogHeader>
-            <DialogTitle className="text-foreground">Novo Contato</DialogTitle>
-          </DialogHeader>
-          <div className="space-y-4">
-            <div>
-              <Label className="text-muted-foreground">Nome *</Label>
-              <Input value={addForm.name} onChange={e => setAddForm(f => ({ ...f, name: e.target.value }))} placeholder="Nome completo" className="bg-secondary border-border" />
-            </div>
-            <div>
-              <Label className="text-muted-foreground">Telefone *</Label>
-              <Input value={addForm.phone} onChange={e => setAddForm(f => ({ ...f, phone: e.target.value }))} placeholder="+55 99 99999-9999" className="bg-secondary border-border" />
-            </div>
-            <div>
-              <Label className="text-muted-foreground">Email</Label>
-              <Input value={addForm.email} onChange={e => setAddForm(f => ({ ...f, email: e.target.value }))} placeholder="email@exemplo.com" className="bg-secondary border-border" />
-            </div>
-          </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setAddOpen(false)}>Cancelar</Button>
-            <Button
-              className="bg-emerald-600 hover:bg-emerald-700"
-              onClick={() => {
-                if (!addForm.name || !addForm.phone) { toast.error("Nome e telefone são obrigatórios"); return; }
-                createMutation.mutate(addForm);
-              }}
-              disabled={createMutation.isPending}
-            >
-              {createMutation.isPending ? "Adicionando..." : "Adicionar"}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
     </div>
   );
 }

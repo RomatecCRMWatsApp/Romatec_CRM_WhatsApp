@@ -39,11 +39,8 @@ const proximoDia10 = () => {
 const cache = new Map<string, { em: number; pdf: Buffer }>();
 const VALIDADE_MS = 30 * 60_000;
 
-export async function contratoModelo(slug: string, loteCodigo = 'A01', usuarioId?: number | null): Promise<Buffer> {
-  const chave = `${slug}:${loteCodigo}:${usuarioId ?? 0}:${hojeIso()}`;
-  const c = cache.get(chave);
-  if (c && Date.now() - c.em < VALIDADE_MS) return c.pdf;
-
+/** Contrato fictício montado do zero (cliente exemplo, chácara, plano 6× + maior prazo) — base de todos os modelos */
+export async function prepararModelo(slug: string, loteCodigo = 'A01', usuarioId?: number | null) {
   const d = (await getDb()) as any;
   if (!d) throw new ContratoErro('DB', 'Banco indisponível', 503);
   const [emp]: any[] = await d.select().from(empreendimentos).where(eq(empreendimentos.slug, slug)).limit(1);
@@ -82,6 +79,19 @@ export async function contratoModelo(slug: string, loteCodigo = 'A01', usuarioId
     verticesUtm: geom(lote), memorial, outros: todos.filter(l => l.id !== lote.id && geom(l).length >= 3).map(l => ({ codigo: l.codigo, verticesUtm: geom(l) })),
     perimetroUtm, ruas, fuso, responsavelTecnico: emp.responsavelTecnico ?? null, camadas: await carregarCamadas(emp.slug, fuso),
   };
+  // Corretor intermediador do modelo = quem baixa (se não for o responsável técnico), como num contrato real dele
+  if (usuarioId && usuarioId !== resp) {
+    const eu = await credenciaisDoUsuario(usuarioId).catch(() => null);
+    if (eu?.nome) entrada.parceiro = eu;
+  }
+  return { emp, j, lote, plano, entrada, unidade };
+}
+
+export async function contratoModelo(slug: string, loteCodigo = 'A01', usuarioId?: number | null): Promise<Buffer> {
+  const chave = `${slug}:${loteCodigo}:${usuarioId ?? 0}:${hojeIso()}`;
+  const c = cache.get(chave);
+  if (c && Date.now() - c.em < VALIDADE_MS) return c.pdf;
+  const { j, plano, entrada, unidade } = await prepararModelo(slug, loteCodigo, usuarioId);
   const { pdf } = await gerarContratoPdf(montarContexto(entrada), plano, { alvo: 'minuta', modelo: j.modeloCpcv, marca: j.marcaSlug, unidade });
   cache.set(chave, { em: Date.now(), pdf });
   return pdf;
