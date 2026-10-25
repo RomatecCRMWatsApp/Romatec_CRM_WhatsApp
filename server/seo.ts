@@ -110,6 +110,7 @@ export const META_BOM_JARDIMS: MetaPagina = {
         telephone: TELEFONE,
         address: { '@type': 'PostalAddress', streetAddress: 'Rua São Raimundo, 10, Centro', addressLocality: 'Açailândia', addressRegion: 'MA', addressCountry: 'BR' },
         areaServed: ['Açailândia', 'Imperatriz', 'Maranhão'],
+        sameAs: ['https://www.instagram.com/avalieimob'],
         employee: { '@type': 'Person', name: 'José Romário Pinto Bezerra', jobTitle: 'Corretor de imóveis — CRECI/MA 4.705' },
       },
       {

@@ -3,6 +3,16 @@
 Cada versão nova vai no TOPO. Depois rode `npm run release` (valida e atualiza o package.json);
 ao subir, o servidor grava a versão no banco e todos recebem o aviso "Novidades da versão".
 
+## 1.28.1 — 2026-10-25
+tipo: patch
+obrigatoria: nao
+titulo: Instagram na página do Bom Jardims e nas peças
+
+### Melhorias
+- Página pública do Bom Jardims: botão "Siga no Instagram @avalieimob" junto dos contatos e no rodapé (abre em nova aba)
+- Cadastro do usuário: campo opcional "Instagram". Quem cadastrar o seu tem ele no link que compartilha, no folder, na proposta e nas mensagens; sem cadastro, vai o institucional @avalieimob
+- Materiais de divulgação: quadro do Instagram com abrir, copiar link e compartilhar o perfil
+
 ## 1.28.0 — 2026-10-25
 tipo: minor
 obrigatoria: nao

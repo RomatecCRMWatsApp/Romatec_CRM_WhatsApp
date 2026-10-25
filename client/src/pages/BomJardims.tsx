@@ -5,7 +5,7 @@ import { readUtm } from "@/components/LeadForm";
 import { origemDaVisita } from "@/lib/origemVisita";
 import { AGENDAR_BOM_JARDIMS, FAQ_BOM_JARDIMS, IMAGENS_BOM_JARDIMS, SOBRE_BOM_JARDIMS, TITULO_BOM_JARDIMS } from "@shared/bomJardimsSeo";
 import LoteMap, { formatArea, STATUS_LABEL, type LoteInfo } from "@/components/bom-jardims/LoteMap";
-import { C, SERIF, SANS, GALERIA, VIDEO, waLink, useBrandFonts, ContatosBotoes, GaleriaProjeto, useContatos } from "@/components/bom-jardims/marca";
+import { C, SERIF, SANS, GALERIA, VIDEO, waLink, useBrandFonts, ContatosBotoes, GaleriaProjeto, useContatos, useInstagram, BotaoInstagram } from "@/components/bom-jardims/marca";
 import { codigoChacaraValido, rotaAteEntrada } from "@shared/chacaraLink";
 import { EVENTOS } from "@shared/rastreamento";
 import { registrarEvento } from "@/lib/rastreamento";
@@ -170,6 +170,7 @@ function Formulario({ loteCodigo, onClearLote, lotes }: { loteCodigo?: string; o
 export default function BomJardims() {
   useBrandFonts();
   const contatos = useContatos();
+  const instagram = useInstagram();
   const { data: emp, isFetched } = trpc.empreendimentos.publicBySlug.useQuery({ slug: "bom-jardims" });
   const [fallbackLotes, setFallbackLotes] = useState<LoteInfo[]>([]);
   // ?chacara=C05 (vindo do link da chácara): já chega com ela escolhida no formulário
@@ -393,6 +394,7 @@ export default function BomJardims() {
             <p style={{ margin: 0 }}>Romatec Consultoria Total · CNPJ 17.261.987/0001-09</p>
             <p style={{ margin: 0 }}>Rua São Raimundo, n.º 10, Centro, Açailândia/MA</p>
             <p style={{ margin: 0 }}>José Romário Pinto Bezerra — Corretor CRECI/MA 4.705</p>
+            <div style={{ marginTop: 12 }}><BotaoInstagram usuario={instagram} claro /></div>
           </div>
         </div>
       </footer>

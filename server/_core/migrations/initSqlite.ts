@@ -317,7 +317,7 @@ export function initSqliteTables(sqlite: any): void {
   addColumn(`ALTER TABLE condicoesPagamento ADD COLUMN descontoAvistaTotal TEXT NOT NULL DEFAULT '${DESCONTO_AVISTA_TOTAL_PADRAO.toFixed(2)}'`);
   // Cadastro completo dos usuários (server/_core/migrations/addCadastroUsuarios.ts)
   for (const c of ['creciUf', 'cpf', 'rg', 'rgOrgao', 'nacionalidade', 'estadoCivil', 'enderecoLogradouro', 'enderecoNumero', 'enderecoComplemento',
-    'enderecoBairro', 'enderecoCidade', 'enderecoUf', 'enderecoCep', 'certidaoCreciValidade', 'fotoUrl']) {
+    'enderecoBairro', 'enderecoCidade', 'enderecoUf', 'enderecoCep', 'certidaoCreciValidade', 'fotoUrl', 'instagram']) {
     addColumn(`ALTER TABLE users ADD COLUMN ${c} TEXT`);
   }
   run(`CREATE TABLE IF NOT EXISTS usuarioDocumentos (

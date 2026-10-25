@@ -123,7 +123,7 @@ export function htmlEstaticoBomJardims(): string {
     '<h2>Perguntas frequentes sobre o Bom Jardims</h2>',
     ...FAQ_BOM_JARDIMS.map(f => `<h3>${esc(f.pergunta)}</h3><p>${esc(f.resposta)}</p>`),
     `<p><a href="${AGENDAR_BOM_JARDIMS}" style="${botao}">Agendar visita ao Bom Jardims</a></p>`,
-    '<p>Romatec Consultoria Total · Rua São Raimundo, 10, Centro, Açailândia/MA · Corretor José Romário · CRECI/MA 4.705 · (99) 99181-1246</p>',
+    '<p>Romatec Consultoria Total · Rua São Raimundo, 10, Centro, Açailândia/MA · Corretor José Romário · CRECI/MA 4.705 · (99) 99181-1246 · <a href="https://www.instagram.com/avalieimob" target="_blank" rel="noopener">Instagram @avalieimob</a></p>',
     '</main>',
   ].join('');
 }

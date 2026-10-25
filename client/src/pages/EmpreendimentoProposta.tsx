@@ -100,6 +100,7 @@ export default function EmpreendimentoProposta() {
             <p style={{ margin: 0, fontWeight: 700 }}>{cartao.papel} {cartao.nome}{cartao.creci ? ` · ${cartao.creci}` : ""}</p>
             {cartao.telefones.length > 0 && <p style={{ margin: 0, color: "#374151" }}>WhatsApp {cartao.telefones.join(" · ")}</p>}
             {cartao.email && <p style={{ margin: 0, color: "#374151" }}>{cartao.email}</p>}
+            {cartao.instagram && <p style={{ margin: 0, color: "#374151" }}>Instagram @{cartao.instagram}</p>}
             <p style={{ margin: "4px 0 0", color: "#6b7280" }}>Romatec Consultoria Total · Valores sujeitos a alteração e disponibilidade.</p>
           </div>
         </div>

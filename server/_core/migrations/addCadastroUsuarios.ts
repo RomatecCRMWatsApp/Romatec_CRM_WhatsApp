@@ -12,7 +12,7 @@ const COLUNAS: [string, string][] = [
   ['nacionalidade', 'VARCHAR(40) NULL'], ['estadoCivil', 'VARCHAR(30) NULL'],
   ['enderecoLogradouro', 'VARCHAR(160) NULL'], ['enderecoNumero', 'VARCHAR(20) NULL'], ['enderecoComplemento', 'VARCHAR(80) NULL'],
   ['enderecoBairro', 'VARCHAR(80) NULL'], ['enderecoCidade', 'VARCHAR(80) NULL'], ['enderecoUf', 'VARCHAR(2) NULL'], ['enderecoCep', 'VARCHAR(8) NULL'],
-  ['certidaoCreciValidade', 'DATE NULL'], ['fotoUrl', 'VARCHAR(500) NULL'],
+  ['certidaoCreciValidade', 'DATE NULL'], ['fotoUrl', 'VARCHAR(500) NULL'], ['instagram', 'VARCHAR(40) NULL'],
 ];
 
 const COMANDOS: { nome: string; stmt: ReturnType<typeof sql> }[] = [

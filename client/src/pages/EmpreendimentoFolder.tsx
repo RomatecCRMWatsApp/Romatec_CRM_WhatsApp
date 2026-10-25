@@ -11,6 +11,7 @@ import { comRef, useCartaoVendas } from "@/lib/cartaoVendas";
 import { gerarImagemFolder } from "@/lib/imagemFolder";
 import { exibirTelefoneBR } from "@shared/telefone";
 import { SLUG_BOM_JARDIMS } from "@shared/chacaraLink";
+import { linkInstagram } from "@shared/cartaoVendas";
 import { PROJETO } from "@/components/bom-jardims/marca";
 
 /**
@@ -108,7 +109,7 @@ export default function EmpreendimentoFolder() {
         qr, textoQr: "Aponte a câmera para ver fotos, vídeo e o mapa",
         whatsapp: zapFmt,
         aviso: AVISO,
-        assinatura: [`${cartao.papel} ${cartao.nome}`, cartao.creci].filter(Boolean).join(" · "),
+        assinatura: [`${cartao.papel} ${cartao.nome}`, cartao.creci, cartao.instagram && `Instagram @${cartao.instagram}`].filter(Boolean).join(" · "),
       });
       envio.mutate({ slug, codigo: lote?.codigo, telefone: destino, imagem, formato });
     } catch (e: any) {
@@ -187,6 +188,7 @@ export default function EmpreendimentoFolder() {
             <p className="text-xs opacity-80">Aponte a câmera para ver fotos, vídeo e o mapa</p>
             <a href={zap} target="_blank" rel="noreferrer" className="mt-3 inline-block rounded-full px-4 py-2 text-sm font-bold" style={{ background: OURO, color: VERDE }}>WhatsApp {zapFmt}</a>
             <p className="mt-3 text-[11px] opacity-80">{[`${cartao.papel} ${cartao.nome}`, cartao.creci, cartao.email].filter(Boolean).join(" · ")} · Romatec Consultoria Total</p>
+            {cartao.instagram && <a href={linkInstagram(cartao.instagram)} target="_blank" rel="noopener noreferrer" className="mt-1 text-[11px] font-semibold" style={{ color: OURO }}>Instagram @{cartao.instagram}</a>}
           </div>
         </div>
 

@@ -39,6 +39,8 @@ export const users = mysqlTable("users", {
   recebeLeads: boolean("recebeLeads").default(false).notNull(),
   // ─── Cadastro completo (shared/cadastro.ts) — o contrato puxa do corretor (intermediador) ───
   creciUf: varchar("creciUf", { length: 2 }),
+  /** Instagram do usuário, sem @ (opcional; nas peças, sem ele vai o institucional @avalieimob) */
+  instagram: varchar("instagram", { length: 40 }),
   cpf: varchar("cpf", { length: 11 }),
   rg: varchar("rg", { length: 20 }),
   rgOrgao: varchar("rgOrgao", { length: 30 }),

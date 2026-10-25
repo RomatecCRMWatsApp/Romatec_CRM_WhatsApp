@@ -18,17 +18,35 @@ export interface CartaoVendas {
   fotoUrl: string | null;
   /** Papel exibido: "Corretor(a)", "Atendimento" … */
   papel: string;
+  /** Usuário do Instagram, sem @ — o do corretor ou o institucional (@avalieimob) */
+  instagram: string;
 }
 
 export interface UsuarioCartao {
   name?: string | null; role?: string | null; perfil?: string | null; creci?: string | null; creciUf?: string | null;
-  telefone?: string | null; email?: string | null; fotoUrl?: string | null;
+  telefone?: string | null; email?: string | null; fotoUrl?: string | null; instagram?: string | null;
 }
+
+/** Instagram institucional — usado quando o corretor não cadastrou o dele */
+export const INSTAGRAM_PADRAO = 'avalieimob';
+
+/** "@Fulano", "instagram.com/fulano/?utm…" ou "fulano" → "fulano"; inválido → null */
+export function normalizarInstagram(v: string | null | undefined): string | null {
+  let s = String(v ?? '').trim();
+  if (!s) return null;
+  const m = /instagram\.com\/([^/?#\s]+)/i.exec(s);
+  if (m) s = m[1];
+  s = s.replace(/^@+/, '').toLowerCase();
+  return /^[a-z0-9._]{1,30}$/.test(s) ? s : null;
+}
+
+/** Link limpo do perfil (sem parâmetros) */
+export const linkInstagram = (usuario: string) => `https://www.instagram.com/${usuario}`;
 
 /** Contato padrão (fallback sem cadastro): o corretor responsável da Romatec */
 export const CARTAO_PADRAO: CartaoVendas = {
   nome: 'José Romário', creci: 'CRECI/MA 4.705', telefones: ['(99) 9 9181-1246', '(99) 9 9206-2871'], whatsapp: '5599991811246',
-  email: 'romateccrm@gmail.com', fotoUrl: null, papel: 'Corretor',
+  email: 'romateccrm@gmail.com', fotoUrl: null, papel: 'Corretor', instagram: INSTAGRAM_PADRAO,
 };
 
 /** De quem são os dados do material: do próprio usuário ou do administrador */
@@ -64,10 +82,11 @@ export function cartaoDe(u: UsuarioCartao, perfil: string | null | undefined): C
     email: String(u.email ?? '').trim() || (admin ? CARTAO_PADRAO.email : null),
     fotoUrl: String(u.fotoUrl ?? '').trim() || null,
     papel: perfil === 'secretario' ? 'Atendimento' : 'Corretor(a)',
+    instagram: normalizarInstagram(u.instagram) ?? INSTAGRAM_PADRAO,
   };
 }
 
 /** Linha de texto (mensagem de WhatsApp): "Corretor(a) Fulano · CRECI/MA 1.234 · (99) 9 9999-9999" */
 export function linhaCartao(c: CartaoVendas): string {
-  return [`${c.papel} ${c.nome}`, c.creci, c.telefones[0], c.email].filter(Boolean).join(' · ');
+  return [`${c.papel} ${c.nome}`, c.creci, c.telefones[0], c.email, c.instagram && `@${c.instagram}`].filter(Boolean).join(' · ');
 }

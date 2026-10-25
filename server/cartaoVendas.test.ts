@@ -16,12 +16,12 @@ describe('cartão de vendas por usuário logado', () => {
   it('corretor com CRECI, telefone, e-mail e foto; CRECI some quando não há (secretária)', () => {
     const c = cartaoDe({ name: 'Maria Souza', creci: '12345', creciUf: 'ma', telefone: '99981234567', email: 'maria@x.com', fotoUrl: 'https://f/m.jpg' }, 'corretor');
     expect(c).toMatchObject({ nome: 'Maria Souza', creci: 'CRECI/MA 12.345', telefones: ['(99) 9 8123-4567'], whatsapp: '5599981234567', fotoUrl: 'https://f/m.jpg' });
-    expect(linhaCartao(c)).toBe('Corretor(a) Maria Souza · CRECI/MA 12.345 · (99) 9 8123-4567 · maria@x.com');
+    expect(linhaCartao(c)).toBe('Corretor(a) Maria Souza · CRECI/MA 12.345 · (99) 9 8123-4567 · maria@x.com · @avalieimob');
     const s = cartaoDe({ name: 'Ana Secretária', telefone: '(99) 99111-2222', cpf: '52998224725' } as any, 'secretario');
     expect(s.creci).toBeNull();
     expect(s.papel).toBe('Atendimento');
     expect(JSON.stringify(s)).not.toContain('52998224725'); // CPF nunca vai para material de divulgação
-    expect(linhaCartao(s)).toBe('Atendimento Ana Secretária · (99) 9 9111-2222');
+    expect(linhaCartao(s)).toBe('Atendimento Ana Secretária · (99) 9 9111-2222 · @avalieimob');
   });
 
   it('sem foto e sem telefone: fallback (admin herda os contatos padrão)', () => {
@@ -66,5 +66,22 @@ describe('intermediação: o cliente vê só os 2% do corretor', () => {
     expect(Object.values(t).join(' ')).not.toMatch(/5%|8\.000,00/);
     expect(tagsIntermediacao({ corretor: cred('José'), parceiro: null, plano }).intermed_nome).toBe('JOSÉ');
     expect(tagsIntermediacao({ corretor: cred('José'), parceiro: null, plano: { ...plano, modalidade: 'avista', total_pagar: 150000 } }).intermed_comissao_valor).toBe('3.000,00');
+  });
+});
+
+describe('Instagram nas peças', () => {
+  it('normaliza @, link (com parâmetros) e maiúsculas; inválido vira null', async () => {
+    const { normalizarInstagram, linkInstagram } = await import('../shared/cartaoVendas');
+    expect(normalizarInstagram('@AvalieImob')).toBe('avalieimob');
+    expect(normalizarInstagram('https://www.instagram.com/avalieimob/?utm_source=qr&igsh=x')).toBe('avalieimob');
+    expect(normalizarInstagram('fulano.corretor_1')).toBe('fulano.corretor_1');
+    expect(normalizarInstagram('')).toBeNull();
+    expect(normalizarInstagram('com espaço')).toBeNull();
+    expect(linkInstagram('avalieimob')).toBe('https://www.instagram.com/avalieimob');
+  });
+  it('corretor com Instagram usa o dele; sem cadastro, o institucional @avalieimob', () => {
+    expect(cartaoDe({ name: 'Ana', telefone: '99999990000', instagram: 'ana.imoveis' }, 'corretor').instagram).toBe('ana.imoveis');
+    expect(cartaoDe({ name: 'Ana', telefone: '99999990000' }, 'corretor').instagram).toBe('avalieimob');
+    expect(CARTAO_PADRAO.instagram).toBe('avalieimob');
   });
 });

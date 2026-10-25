@@ -1,6 +1,7 @@
 import { useEffect } from "react";
 import { useCartaoDoLink } from "@/lib/cartaoVendas";
-import { MessageCircle } from "lucide-react";
+import { Instagram, MessageCircle } from "lucide-react";
+import { INSTAGRAM_PADRAO, linkInstagram } from "@shared/cartaoVendas";
 
 /**
  * Identidade e conteúdo comuns das páginas públicas do Bom Jardims (/bom-jardims e /bom-jardims/chacara/:codigo).
@@ -85,9 +86,27 @@ export function useContatos() {
   return [{ papel, nome: cartao.nome, telefone: cartao.telefones[0] ?? "", whatsapp: cartao.whatsapp }, CONTATOS[1]];
 }
 
+/** Instagram de quem compartilhou o link (?c=…); sem ele, o institucional @avalieimob */
+export function useInstagram(): string {
+  return useCartaoDoLink()?.instagram || INSTAGRAM_PADRAO;
+}
+
+/** "Siga no Instagram @…" — abre o perfil (link limpo) em nova aba */
+export function BotaoInstagram({ usuario, claro }: { usuario: string; claro?: boolean }) {
+  return (
+    <a href={linkInstagram(usuario)} target="_blank" rel="noopener noreferrer" aria-label={`Siga no Instagram @${usuario}`}
+      style={{ display: "inline-flex", alignItems: "center", gap: 8, padding: "10px 16px", borderRadius: 12, fontWeight: 700, textDecoration: "none",
+        ...(claro ? { border: "1px solid rgba(243,238,223,0.4)", color: "#fff" } : { background: "linear-gradient(45deg,#F58529,#DD2A7B 55%,#8134AF)", color: "#fff" }) }}>
+      <Instagram size={20} /> Siga no Instagram @{usuario}
+    </a>
+  );
+}
+
 export function ContatosBotoes({ codigo }: { codigo?: string }) {
   const contatos = useContatos();
+  const instagram = useInstagram();
   return (
+    <>
     <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))", gap: 12 }}>
       {contatos.map(c => (
         <a key={c.whatsapp} href={waLink(c.whatsapp, codigo)} target="_blank" rel="noopener noreferrer"
@@ -100,5 +119,7 @@ export function ContatosBotoes({ codigo }: { codigo?: string }) {
         </a>
       ))}
     </div>
+    <div style={{ marginTop: 12 }}><BotaoInstagram usuario={instagram} /></div>
+    </>
   );
 }

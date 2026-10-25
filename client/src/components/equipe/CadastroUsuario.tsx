@@ -52,7 +52,7 @@ const CONJUGE_VAZIO = {
   mesmoEndereco: true, cep: "", logradouro: "", numero: "", complemento: "", bairro: "", cidade: "", uf: "",
 };
 const FORM_VAZIO = {
-  ...PESSOA_VAZIA, email: "", telefone: "", perfil: "corretor" as Perfil, recebeLeads: false, creci: "", creciUf: "MA", estadoCivil: "",
+  ...PESSOA_VAZIA, email: "", telefone: "", perfil: "corretor" as Perfil, recebeLeads: false, creci: "", creciUf: "MA", instagram: "", estadoCivil: "",
   enderecoCep: "", enderecoLogradouro: "", enderecoNumero: "", enderecoComplemento: "", enderecoBairro: "", enderecoCidade: "", enderecoUf: "", empreendimentoSlug: "",
 };
 type Form = typeof FORM_VAZIO;
@@ -206,7 +206,7 @@ export default function CadastroUsuario({ id, admin, listas, onSalvo, onCancelar
     return {
       ...pessoa(f), email: f.email, telefone: f.telefone,
       ...(admin ? { perfil: f.perfil, recebeLeads: f.recebeLeads } : {}),
-      creci: ouNull(f.creci), creciUf: f.creci ? f.creciUf : null, estadoCivil: f.estadoCivil || undefined,
+      creci: ouNull(f.creci), creciUf: f.creci ? f.creciUf : null, instagram: ouNull(f.instagram), estadoCivil: f.estadoCivil || undefined,
       enderecoCep: f.enderecoCep, enderecoLogradouro: f.enderecoLogradouro, enderecoNumero: f.enderecoNumero, enderecoComplemento: ouNull(f.enderecoComplemento),
       enderecoBairro: f.enderecoBairro, enderecoCidade: f.enderecoCidade, enderecoUf: f.enderecoUf,
       empreendimentoSlug: f.perfil === "empreendedor" ? ouNull(f.empreendimentoSlug) : null,
@@ -309,6 +309,7 @@ export default function CadastroUsuario({ id, admin, listas, onSalvo, onCancelar
           </Campo>
           <Campo rotulo="E-mail" erro={erros.email}><input type="email" {...inp("email")} autoComplete="email" /></Campo>
           <Campo rotulo="Telefone / WhatsApp" erro={erros.telefone}><InputMascara valor={f.telefone} mascara={maskPhone} onMudar={v => set("telefone", v)} inputMode="tel" placeholder="(99) 9 9999-9999" erro={erros.telefone} /></Campo>
+          <Campo rotulo="Instagram (opcional — sem ele, as peças usam @avalieimob)" erro={(erros as any).instagram}><input {...inp("instagram")} placeholder="@seuperfil" autoCapitalize="none" /></Campo>
         </div>
       </Secao>
 

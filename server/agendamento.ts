@@ -26,7 +26,7 @@ const json = <T>(v: unknown): T | null => (v == null ? null : typeof v === 'stri
 
 const camposUsuario = {
   id: users.id, name: users.name, role: users.role, perfil: (users as any).perfil, creci: users.creci, creciUf: (users as any).creciUf,
-  telefone: (users as any).telefone, email: users.email, fotoUrl: (users as any).fotoUrl, ativo: users.ativo,
+  telefone: (users as any).telefone, email: users.email, fotoUrl: (users as any).fotoUrl, instagram: (users as any).instagram, ativo: users.ativo,
 };
 
 /** Dono do link: corretor/secretária/admin ativo da ref; sem ref válida (ou empreendedor), o administrador */

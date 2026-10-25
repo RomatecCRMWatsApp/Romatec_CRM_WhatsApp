@@ -11,6 +11,7 @@ import { users, usuarioConjuge, usuarioDocumentos } from "../drizzle/schema";
 import { cleanRG, isValidCPF, onlyDigits } from "../shared/masks";
 import { ESTADOS_CIVIS, MSG_SEM_CARTAO, REGIMES_BENS, UFS, normalizarProfissao, temConjuge } from "../shared/cadastro";
 import { PERFIS, normalizarCreci, perfilDe, type Perfil } from "../shared/equipe";
+import { normalizarInstagram } from "../shared/cartaoVendas";
 import { qualificacao, type ConjugeQualif, type CredenciaisQualif } from "../shared/qualificacao";
 
 const opc = (max: number) => z.string().trim().max(max).optional().nullable().transform(v => (v ? v : null));
@@ -69,6 +70,9 @@ export const cadastroSchema = z.object({
   recebeLeads: z.boolean().optional(),
   creci: z.string().optional().nullable().transform(v => normalizarCreci(v) ?? null),
   creciUf: ufOpc,
+  /** Opcional: "@fulano" ou o link do perfil; guardado só o usuário */
+  instagram: z.string().optional().nullable().refine(v => !String(v ?? "").trim() || !!normalizarInstagram(v), "Instagram inválido (ex.: @avalieimob)")
+    .transform(v => normalizarInstagram(v)),
   estadoCivil: z.enum(ESTADOS_CIVIS, { message: "Informe o estado civil" }),
   enderecoCep: z.string().transform(onlyDigits).refine(v => v.length === 8, "CEP inválido"),
   enderecoLogradouro: z.string().trim().min(2, "Informe o logradouro").max(160),
@@ -172,7 +176,7 @@ export async function salvarCadastro(alvoId: number, entrada: unknown, autor: { 
     nacionalidade: d.nacionalidade, paisOrigem: d.nacionalidade === "estrangeira" ? d.paisOrigem : null,
     docEstrangeiroTipo: d.nacionalidade === "estrangeira" ? d.docEstrangeiroTipo ?? "RNM" : null,
     docEstrangeiroNumero: d.nacionalidade === "estrangeira" ? d.docEstrangeiroNumero : null,
-    profissao: d.profissao, creci: d.creci, creciUf: d.creciUf, estadoCivil: d.estadoCivil,
+    profissao: d.profissao, creci: d.creci, creciUf: d.creciUf, instagram: d.instagram, estadoCivil: d.estadoCivil,
     enderecoCep: d.enderecoCep, enderecoLogradouro: d.enderecoLogradouro, enderecoNumero: d.enderecoNumero,
     enderecoComplemento: d.enderecoComplemento, enderecoBairro: d.enderecoBairro, enderecoCidade: d.enderecoCidade, enderecoUf: d.enderecoUf,
     updatedAt: new Date(),
@@ -223,7 +227,7 @@ export async function carregarCadastro(usuarioId: number) {
     id: u.id, perfil: perfilDe(u), nome: u.name ?? "", email: u.email ?? "", telefone: u.telefone ?? "", sexo: u.sexo ?? null,
     cpf: u.cpf ?? "", rg: u.rg ?? "", rgOrgao: u.rgOrgao ?? "", nacionalidade: u.nacionalidade === "estrangeira" ? "estrangeira" : "brasileira",
     paisOrigem: u.paisOrigem ?? "", docEstrangeiroTipo: u.docEstrangeiroTipo ?? "RNM", docEstrangeiroNumero: u.docEstrangeiroNumero ?? "",
-    profissao: u.profissao ?? "", creci: u.creci ?? "", creciUf: u.creciUf ?? "", estadoCivil: u.estadoCivil ?? null,
+    profissao: u.profissao ?? "", creci: u.creci ?? "", creciUf: u.creciUf ?? "", instagram: u.instagram ?? "", estadoCivil: u.estadoCivil ?? null,
     enderecoCep: u.enderecoCep ?? "", enderecoLogradouro: u.enderecoLogradouro ?? "", enderecoNumero: u.enderecoNumero ?? "",
     enderecoComplemento: u.enderecoComplemento ?? "", enderecoBairro: u.enderecoBairro ?? "", enderecoCidade: u.enderecoCidade ?? "", enderecoUf: u.enderecoUf ?? "",
     empreendimentoSlug: u.empreendimentoSlug ?? null, recebeLeads: !!u.recebeLeads, fotoUrl: u.fotoUrl ?? null,
