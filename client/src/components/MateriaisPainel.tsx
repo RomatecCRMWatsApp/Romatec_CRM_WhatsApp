@@ -1,9 +1,10 @@
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
 import { trpc } from "@/lib/trpc";
 import { Button } from "@/components/ui/button";
 import { Copy, Download, Eye, EyeOff, FileText, Lock, Share2, Trash2, Upload, Video } from "lucide-react";
-import { ROTULO_TIPO_MATERIAL, TIPOS_MATERIAL, bloqueadaPorNome, problemaArquivo, tipoPorNome, tituloPorNome, type TipoMaterial } from "@shared/materiais";
+import { ROTULO_TIPO_MATERIAL, TIPOS_ARQUIVO_ACEITOS, TIPOS_MATERIAL, bloqueadaPorNome, tipoPorNome, tituloPorNome, type TipoMaterial } from "@shared/materiais";
+import { enviarParaCloudinary, mimeDoArquivo } from "@/lib/uploadCloudinary";
 
 type Destino = { propertyId?: number | null; empreendimentoSlug?: string | null };
 
@@ -135,6 +136,11 @@ export default function MateriaisPainel({ propertyId, empreendimentoSlug }: Dest
   const [destino, setDestino] = useState("");
   const [filtro, setFiltro] = useState("");
   const [enviando, setEnviando] = useState<string | null>(null);
+  // Limites reais do plano de armazenamento (Cloudinary), para o texto e a checagem antes de enviar
+  const [limites, setLimites] = useState<{ imagemMB: number; videoMB: number; pdfMB: number } | null>(null);
+  useEffect(() => {
+    fetch("/api/materiais/limites", { credentials: "include" }).then(r => (r.ok ? r.json() : null)).then(j => j?.success && setLimites(j)).catch(() => {});
+  }, []);
   const input = useRef<HTMLInputElement>(null);
   const recarregar = () => utils.materiais.list.invalidate();
 
@@ -150,20 +156,16 @@ export default function MateriaisPainel({ propertyId, empreendimentoSlug }: Dest
     const lista = Array.from(files);
     for (let i = 0; i < lista.length; i++) {
       const f = lista[i];
-      setEnviando(`Enviando ${i + 1} de ${lista.length}: ${f.name}`);
-      const erro = problemaArquivo(f.type, f.size);
-      if (erro) { toast.error(`${f.name}: ${erro}`); continue; }
+      const mime = mimeDoArquivo(f);
+      const mb = (f.size / 1048576).toFixed(f.size > 10 * 1048576 ? 0 : 1);
+      setEnviando(`Enviando ${i + 1} de ${lista.length}: ${f.name} (${mb} MB)…`);
+      if (!TIPOS_ARQUIVO_ACEITOS.includes(mime)) { toast.error(`${f.name}: tipo não aceito. Use JPG, PNG, WEBP, GIF, MP4, MOV, WEBM ou PDF.`); continue; }
       try {
-        const r = await fetch("/api/materiais/upload", {
-          method: "POST",
-          headers: { "Content-Type": f.type, "X-File-Name": encodeURIComponent(f.name), "X-File-Type": f.type },
-          body: await f.arrayBuffer(),
-        });
-        const up = await r.json();
-        if (!up.success) { toast.error(`${f.name}: ${up.error || "falha no upload"}`); continue; }
+        // Direto para o armazenamento, em partes (não passa pelo servidor do CRM)
+        const up = await enviarParaCloudinary(f, pct => setEnviando(`Enviando ${i + 1} de ${lista.length}: ${f.name} (${mb} MB) — ${pct}%`));
         const bloqueada = bloqueadaPorNome(f.name);
         await criar.mutateAsync({
-          ...alvo, titulo: tituloPorNome(f.name), tipo: tipoPorNome(f.name, f.type), url: up.url,
+          ...alvo, titulo: tituloPorNome(f.name), tipo: tipoPorNome(f.name, mime), url: up.url,
           mime: up.mime, tamanhoBytes: up.tamanhoBytes, liberado: !bloqueada,
           observacao: bloqueada ? "Bloqueada automaticamente: o nome indica condições/preço" : null,
         });
@@ -209,7 +211,7 @@ export default function MateriaisPainel({ propertyId, empreendimentoSlug }: Dest
       </div>
       {enviando && <p className="text-xs text-emerald-300">{enviando}</p>}
       <p className="text-[11px] text-muted-foreground">
-        Imagem e PDF até 10 MB, vídeo até 100 MB. Peças com "condições", "preço" ou "tabela" no nome entram bloqueadas. Os arquivos ficam com link público para poder compartilhar; não envie documentos internos.
+        Imagem até {limites?.imagemMB ?? 10} MB, PDF até {limites?.pdfMB ?? 10} MB, vídeo até {limites?.videoMB ?? 100} MB (enviado em partes; deixe a tela aberta até 100%). Peças com "condições", "preço" ou "tabela" no nome entram bloqueadas. Os arquivos ficam com link público para poder compartilhar; não envie documentos internos.
       </p>
 
       {isLoading && <p className="text-sm text-muted-foreground">Carregando materiais...</p>}

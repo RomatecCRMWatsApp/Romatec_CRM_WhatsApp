@@ -3,6 +3,15 @@
 Cada versão nova vai no TOPO. Depois rode `npm run release` (valida e atualiza o package.json);
 ao subir, o servidor grava a versão no banco e todos recebem o aviso "Novidades da versão".
 
+## 1.15.1 — 2026-10-25
+tipo: patch
+obrigatoria: nao
+titulo: Envio de vídeos grandes nos materiais
+
+### Correções
+- Vídeos grandes nos Materiais de divulgação voltam a subir: o arquivo vai direto para o armazenamento, em partes, com a porcentagem na tela
+- O limite mostrado é o real do plano de armazenamento, e o erro diz exatamente o que aconteceu
+
 ## 1.15.0 — 2026-10-25
 tipo: minor
 obrigatoria: nao

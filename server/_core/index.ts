@@ -541,6 +541,35 @@ async function startServer() {
   });
 
   // Materiais de divulgação: só com login; vai para o Cloudinary (romatec_materiais), PDF como raw
+  // Upload direto do navegador para o Cloudinary (em partes): o servidor só valida e assina — o arquivo não passa aqui
+  app.post('/api/materiais/assinatura', async (req, res) => {
+    try {
+      const { sdk } = await import('./sdk');
+      const user = await sdk.authenticateRequest(req).catch(() => null);
+      if (!user || (user as any).ativo === false) return res.status(401).json({ success: false, error: 'Faça login para enviar materiais' });
+      const { perfilDe } = await import('../../shared/equipe');
+      if (perfilDe(user as any) === 'empreendedor') return res.status(403).json({ success: false, error: 'Seu acesso não envia materiais' });
+      const { assinaturaUpload } = await import('../materiaisUpload');
+      const b = req.body ?? {};
+      const a = await assinaturaUpload(String(b.nome ?? 'material').slice(0, 200), String(b.mime ?? ''), Number(b.tamanho) || 0);
+      console.log(`[Materiais] Assinatura para ${b.nome} (${b.mime}, ${((Number(b.tamanho) || 0) / 1048576).toFixed(1)} MB) — usuário ${(user as any).id}`);
+      res.json({ success: true, ...a });
+    } catch (e: any) {
+      if (e?.name === 'ErroUpload') return res.status(e.status).json({ success: false, error: e.message });
+      console.error('[Materiais] Assinatura falhou:', e?.message);
+      res.status(500).json({ success: false, error: 'Não foi possível preparar o envio. Tente de novo.' });
+    }
+  });
+  app.get('/api/materiais/limites', async (req, res) => {
+    const { sdk } = await import('./sdk');
+    const user = await sdk.authenticateRequest(req).catch(() => null);
+    if (!user) return res.status(401).json({ success: false });
+    const { limitesDoPlano } = await import('../materiaisUpload');
+    const l = await limitesDoPlano();
+    const mb = (x: number) => Math.floor(x / 1048576);
+    res.json({ success: true, imagemMB: mb(l.imagem), videoMB: mb(l.video), pdfMB: mb(l.raw), plano: l.plano, fonte: l.fonte });
+  });
+
   app.post('/api/materiais/upload', express.raw({ type: '*/*', limit: '110mb' }), async (req, res) => {
     try {
       const { sdk } = await import('./sdk');
