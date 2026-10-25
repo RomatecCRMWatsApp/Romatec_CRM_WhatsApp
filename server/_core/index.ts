@@ -313,8 +313,9 @@ async function startServer() {
       if (!parsed.success) return res.status(400).json({ ok: false, error: parsed.error.issues[0]?.message || 'Dados inválidos' });
       if (parsed.data.website) return res.json({ ok: true }); // honeypot
       const { registrarAgendamento } = await import('../agendamento');
-      await registrarAgendamento(String(req.params.slug).slice(0, 80), parsed.data, ip);
-      res.json({ ok: true });
+      const r = await registrarAgendamento(String(req.params.slug).slice(0, 80), parsed.data, ip);
+      // Tela de obrigado: a confirmação (enviada ou não pelo WhatsApp do sistema)
+      res.json({ ok: true, confirmacao: (r as any).confirmacao ?? null, confirmacaoEnviada: !!(r as any).confirmacaoEnviada });
     } catch (e: any) {
       if (e?.name === 'AgendamentoErro') return res.status(e.status).json({ ok: false, error: e.message });
       console.error('[Agendamento] envio:', e);
@@ -1112,6 +1113,8 @@ async function startServer() {
   try {
     const { addVisitas } = await import('./migrations/addVisitas');
     await addVisitas();
+    const { addMensagensAgendamento } = await import('./migrations/addMensagensAgendamento');
+    await addMensagensAgendamento();
     const { addControleLotes } = await import('./migrations/addControleLotes');
     await addControleLotes();
   } catch (e) {

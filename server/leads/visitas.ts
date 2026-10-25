@@ -140,10 +140,12 @@ export async function avisarVisitaAgendada(visitaId: number): Promise<void> {
 }
 
 /** Pedido do cliente pelo link de agendamento: o responsável confirma o horário com ele */
-export async function avisarPedidoDeAgendamento(visitaId: number): Promise<void> {
+export async function avisarPedidoDeAgendamento(visitaId: number, mensagemPronta?: string | null): Promise<void> {
   const v = await carregar(visitaId);
   if (!v) return;
-  await avisarCorretor(v.responsavelId, `🗓️ Pedido de agendamento pelo link — ${quandoPorExtenso(v.quando)}\n${resumo(v)}${v.observacao ? `\n📝 ${v.observacao}` : ''}\nConfirme o horário com o cliente e marque "Confirmar agendamento".\n🔗 ${appUrl()}/leads/lead/${v.leadId}`);
+  // Pedido do link: o resumo do modelo "agendamento_corretor" (o mesmo do botão Copiar no card)
+  const corpo = mensagemPronta || `🗓️ Pedido de agendamento pelo link — ${quandoPorExtenso(v.quando)}\n${resumo(v)}${v.observacao ? `\n📝 ${v.observacao}` : ''}`;
+  await avisarCorretor(v.responsavelId, `${corpo}\nConfirme o horário com o cliente e marque "Confirmar agendamento".\n🔗 ${appUrl()}/leads/lead/${v.leadId}`);
 }
 
 async function carregar(visitaId: number): Promise<any | null> {

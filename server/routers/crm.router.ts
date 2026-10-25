@@ -5,6 +5,7 @@ import { z } from "zod";
 import { and, desc, eq, gte, inArray, lte } from "drizzle-orm";
 import { protectedProcedure, router } from "../_core/trpc";
 import { getDb } from "../db";
+import { TRPCError } from "@trpc/server";
 import { leadQualifications, leadInteresses, leadEventos, leadCampanhas, leadMensagens, properties, users } from "../../drizzle/schema";
 import { ETAPAS, ROTULO_ETAPA, MOTIVOS_PERDA, ROTULO_MOTIVO, etapaDoLead, validarMovimento, escolherSimilar, imovelDoProprietario, resumoProprietario } from "../leads/kanban";
 import { mesclarSlots, slotsDoFunil, slotsPendentes, tagsDoLead, tipoImovelDe, type SlotsLead } from "../leads/slots";
@@ -32,6 +33,16 @@ async function leadOuErro(db: any, id: number, ctx: Ctx) {
   if (!lead) throw new Error("Lead não encontrado");
   exigirLead(ctx.permissoes, ctx.user.id, lead);
   return lead;
+}
+
+async function comErroMensagem<T>(f: () => Promise<T>): Promise<T> {
+  try { return await f(); } catch (e: any) {
+    if (e?.name === "MensagemErro") {
+      const code = e.status === 404 ? "NOT_FOUND" : e.status === 412 ? "PRECONDITION_FAILED" : e.status >= 500 ? "INTERNAL_SERVER_ERROR" : "BAD_REQUEST";
+      throw new TRPCError({ code, message: e.message });
+    }
+    throw e;
+  }
 }
 
 const funilDo = (l: any): Funil => (l.funil === "proprietario" ? "proprietario" : "comprador");
@@ -138,8 +149,39 @@ export const crmRouter = router({
       if (p) props.set(pid, p.t);
     }
     return rows
-      .map(r => ({ id: r.id, quando: r.quando, local: r.local, status: r.status, observacao: r.observacao, imovel: r.propertyId ? props.get(r.propertyId) ?? null : null, lembreteEnviado: !!r.lembreteClienteAt, confirmadaPeloCliente: !!r.confirmadaAt }))
+      .map(r => ({ id: r.id, quando: r.quando, local: r.local, status: r.status, observacao: r.observacao, imovel: r.propertyId ? props.get(r.propertyId) ?? null : null, lembreteEnviado: !!r.lembreteClienteAt, confirmadaPeloCliente: !!r.confirmadaAt, doLink: !!r.pedidoJson, confirmacaoEnviada: !!r.confirmacaoEnviadaAt }))
       .sort((a, b) => new Date(b.quando).getTime() - new Date(a.quando).getTime());
+  }),
+
+  /** Pedido do link de agendamento: confirmação do cliente e resumo do corretor (modelos atuais), wa.me e Z-API */
+  mensagensAgendamento: protectedProcedure.input(z.object({ visitaId: z.number().int() })).query(async ({ input, ctx }) => {
+    const db = await dbOrThrow();
+    const { leadVisitas } = await import("../../drizzle/schema");
+    const [v]: any[] = await db.select({ leadId: leadVisitas.leadId }).from(leadVisitas).where(eq(leadVisitas.id, input.visitaId)).limit(1);
+    if (!v) throw new TRPCError({ code: "NOT_FOUND", message: "Agendamento não encontrado" });
+    await leadOuErro(db, v.leadId, ctx);
+    const M = await import("../leads/mensagensAgendamento");
+    return comErroMensagem(() => M.mensagensDaVisita(input.visitaId));
+  }),
+  /** (Re)envia a confirmação ao cliente pelo WhatsApp do sistema, com o texto editado */
+  enviarConfirmacaoAgendamento: protectedProcedure.input(z.object({ visitaId: z.number().int(), texto: z.string().trim().min(1).max(3000) })).mutation(async ({ input, ctx }) => {
+    const db = await dbOrThrow();
+    const { leadVisitas } = await import("../../drizzle/schema");
+    const [v]: any[] = await db.select({ leadId: leadVisitas.leadId }).from(leadVisitas).where(eq(leadVisitas.id, input.visitaId)).limit(1);
+    if (!v) throw new TRPCError({ code: "NOT_FOUND", message: "Agendamento não encontrado" });
+    await leadOuErro(db, v.leadId, ctx);
+    const M = await import("../leads/mensagensAgendamento");
+    return comErroMensagem(() => M.enviarConfirmacao(input.visitaId, input.texto));
+  }),
+  /** Modelos das mensagens do agendamento (Configurações) */
+  modelosMensagem: protectedProcedure.query(async () => {
+    const M = await import("../leads/mensagensAgendamento");
+    return M.listarModelos();
+  }),
+  salvarModeloMensagem: protectedProcedure.input(z.object({ chave: z.enum(["agendamento_cliente", "agendamento_corretor"]), texto: z.string().max(3000) })).mutation(async ({ input, ctx }) => {
+    if (ctx.permissoes.perfil !== "admin") throw new TRPCError({ code: "FORBIDDEN", message: "Só o administrador edita as mensagens." });
+    const M = await import("../leads/mensagensAgendamento");
+    return M.salvarModelo(input.chave, input.texto, ctx.user.id);
   }),
 
   agenda: protectedProcedure.input(z.object({ diasAtras: z.number().int().min(0).max(60).default(7), diasFrente: z.number().int().min(1).max(120).default(30) }).optional()).query(async ({ input, ctx }) => {
@@ -162,7 +204,7 @@ export const crmRouter = router({
       id: r.id, leadId: r.leadId, nome: L.get(r.leadId)?.nome || "Lead", telefone: L.get(r.leadId)?.phone || "",
       quando: r.quando, local: r.local, status: r.status, observacao: r.observacao ?? null, imovel: r.propertyId ? P.get(r.propertyId) ?? null : null,
       responsavel: r.responsavelId ? U.get(r.responsavelId) ?? null : null,
-      lembreteEnviado: !!r.lembreteClienteAt, confirmadaPeloCliente: !!r.confirmadaAt,
+      lembreteEnviado: !!r.lembreteClienteAt, confirmadaPeloCliente: !!r.confirmadaAt, doLink: !!r.pedidoJson, confirmacaoEnviada: !!r.confirmacaoEnviadaAt,
       semResultado: ["agendada", "confirmada"].includes(r.status) && new Date(r.quando).getTime() < agora,
     })).sort((a, b) => new Date(a.quando).getTime() - new Date(b.quando).getTime());
   }),

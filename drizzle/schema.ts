@@ -794,12 +794,24 @@ export const leadVisitas = mysqlTable("leadVisitas", {
   avisoCorretorAt: timestamp("avisoCorretorAt"),
   resultadoPedidoAt: timestamp("resultadoPedidoAt"),
   confirmadaAt: timestamp("confirmadaAt"),
+  /** Dados do formulário do link de agendamento (shared/mensagensAgendamento.ts → DadosPedido) */
+  pedidoJson: text("pedidoJson"),
+  /** Quando a confirmação saiu pelo WhatsApp do sistema (automática ou reenviada) */
+  confirmacaoEnviadaAt: timestamp("confirmacaoEnviadaAt"),
   createdAt: timestamp("createdAt").defaultNow().notNull(),
   updatedAt: timestamp("updatedAt").defaultNow().notNull(),
 }, (t) => ({
   idxQuando: index("idx_visita_quando").on(t.quando),
   idxLead: index("idx_visita_lead").on(t.leadId),
 }));
+
+/** Modelos de mensagem editáveis (chave → texto); sem linha, vale o padrão do código */
+export const modelosMensagem = mysqlTable("modelosMensagem", {
+  chave: varchar("chave", { length: 60 }).primaryKey(),
+  texto: text("texto").notNull(),
+  atualizadoPor: int("atualizadoPor"),
+  updatedAt: timestamp("updatedAt").defaultNow().notNull(),
+});
 
 /** Histórico do score: grava só quando o valor muda */
 export const leadScoreHistorico = mysqlTable("leadScoreHistorico", {

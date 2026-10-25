@@ -9,10 +9,14 @@ vi.mock('./leads/notificacao', async orig => ({ ...(await orig<any>()), notifica
 vi.mock('./leads/zapiClient', async orig => ({ ...(await orig<any>()), enviarTexto: vi.fn(async () => ({})) }));
 // ingestLead grava colunas JSON que o SQLite dos testes não aceita: aqui só cria/atualiza o lead e registra a chamada
 const chamadas: any[] = [];
+const enviadasSistema: [string, string][] = [];
+let zapiOn = false;
 vi.mock('./lead-intake', async orig => {
   const real = await orig<any>();
   return {
     ...real,
+    zapiDisponivel: () => zapiOn,
+    enviarMensagemSistema: vi.fn(async (fone: string, msg: string) => { enviadasSistema.push([fone, msg]); return true; }),
     ingestLead: vi.fn(async (input: any) => {
       chamadas.push(input);
       const phone = real.normalizePhoneBR(input.phone);
@@ -93,7 +97,7 @@ describe('link de agendamento', () => {
     expect(v.observacao).toContain('3 pessoa(s)');
     const notifs = await db.select().from(schema.notificacoes).where(eq(schema.notificacoes.usuarioId, 2));
     expect(notifs.find((n: any) => n.tipo === 'agendamento')).toMatchObject({ url: `/leads/lead/${r.leadId}` });
-    expect((zap.enviarTexto as any).mock.calls.some(([fone, t]: [string, string]) => fone === '5599981112222' && /Pedido de agendamento/.test(t))).toBe(true);
+    expect((zap.enviarTexto as any).mock.calls.some(([fone, t]: [string, string]) => fone === '5599981112222' && /Novo agendamento/.test(t) && /Origem: link de Maria Corretora/.test(t))).toBe(true);
   });
 
   it('sem ref: cai no administrador; lead que já tem corretor continua com ele', async () => {
@@ -125,5 +129,56 @@ describe('link de agendamento', () => {
     await notificarNovoLead(r.leadId!, undefined, null);
     expect((await db.select().from(schema.notificacoes)).filter((n: any) => n.chave === `novo_lead:${r.leadId}`)).toHaveLength(4);
     expect(SOM_POR_TIPO.novo_lead).toBe('/sons/novo_lead.wav');
+  });
+});
+
+describe('mensagens do agendamento', () => {
+  it('confirmação automática ao cliente com o corretor do agendamento; resumo para copiar; modelo editável', async () => {
+    const M = await import('./leads/mensagensAgendamento');
+    zapiOn = true;
+    const r: any = await A.registrarAgendamento('bom-jardims', pedido({ nome: 'Bia Confirma', telefone: '99955443322', ref: refDoUsuario(2) }));
+    expect(r.confirmacaoEnviada).toBe(true);
+    const [fone, msg] = enviadasSistema.at(-1)!;
+    expect(fone).toBe('5599955443322');
+    expect(msg).toContain('Olá, Bia Confirma!');
+    expect(msg).toContain('• Unidade de interesse: A01');
+    expect(msg).toContain('• Pessoas: 3');
+    expect(msg).toContain('corretor Maria Corretora (CRECI/MA 1.234) confirma seu atendimento pelo número (99) 9 8111-2222');
+    expect(chamadas.at(-1)).toMatchObject({ semBoasVindas: true });
+    const [v] = await db.select().from(schema.leadVisitas).where(eq(schema.leadVisitas.id, r.visitaId));
+    expect(v.confirmacaoEnviadaAt).toBeTruthy();
+    const m = await M.mensagensDaVisita(r.visitaId);
+    expect(m.corretor).toContain('🔔 Novo agendamento — Bom Jardims');
+    expect(m.corretor).toContain('Cliente: Bia Confirma · (99) 9 5544-3322');
+    expect(m.corretor).toContain('Forma de pagamento: Entrada parcelada');
+    expect(m.corretor).toContain('Origem: link de Maria Corretora');
+    expect(m.waCliente).toBe('https://wa.me/5599955443322');
+    // Modelo editado nas Configurações vale para os próximos; vazio volta ao padrão
+    await M.salvarModelo('agendamento_corretor', 'Agendou: {nome} ({cidade})', 1);
+    expect((await M.mensagensDaVisita(r.visitaId)).corretor).toBe('Agendou: Bia Confirma (Imperatriz)');
+    await M.salvarModelo('agendamento_corretor', '', 1);
+    expect((await M.mensagensDaVisita(r.visitaId)).corretor).toContain('Novo agendamento');
+    // Reenvio com texto editado
+    await M.enviarConfirmacao(r.visitaId, 'Texto editado');
+    expect(enviadasSistema.at(-1)).toEqual(['5599955443322', 'Texto editado']);
+  });
+
+  it('sem Z-API: não quebra — confirmação volta para a tela e o reenvio pede copiar/wa.me', async () => {
+    const M = await import('./leads/mensagensAgendamento');
+    zapiOn = false;
+    const n = enviadasSistema.length;
+    const r: any = await A.registrarAgendamento('bom-jardims', pedido({ nome: 'Caio Sem Zap', telefone: '99944332211' }));
+    expect(r.confirmacaoEnviada).toBe(false);
+    expect(r.confirmacao).toContain('Olá, Caio Sem Zap!');
+    expect(r.confirmacao).toContain('corretor José Romário (CRECI/MA 4.705)');
+    expect(enviadasSistema.length).toBe(n);
+    expect((await M.mensagensDaVisita(r.visitaId)).zapi).toBe(false);
+    await expect(M.enviarConfirmacao(r.visitaId, 'x')).rejects.toMatchObject({ name: 'MensagemErro', status: 412 });
+  });
+
+  it('corretor sem CRECI: some o "(CRECI/MA …)" sem deixar buraco', async () => {
+    const { preencherModelo, MODELO_PADRAO } = await import('../shared/mensagensAgendamento');
+    const t = preencherModelo(MODELO_PADRAO.agendamento_cliente, { nome: 'X', corretor_nome: 'Secretária', corretor_creci: '', corretor_telefone: '' });
+    expect(t).toContain('o corretor Secretária confirma seu atendimento. Qualquer');
   });
 });

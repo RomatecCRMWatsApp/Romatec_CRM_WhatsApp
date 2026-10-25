@@ -7,6 +7,7 @@ import { Settings as SettingsIcon, ArrowLeft, Save, Wifi, WifiOff, RefreshCw, Lo
 import PageHeader from "@/components/PageHeader";
 import PublicarAtualizacao from "@/components/sistema/PublicarAtualizacao";
 import { TesteNotificacoes } from "@/components/sistema/Notificacoes";
+import ModelosMensagem from "@/components/sistema/ModelosMensagem";
 import { useLocation } from "wouter";
 import { trpc } from "@/lib/trpc";
 import { toast } from "sonner";
@@ -432,6 +433,9 @@ export default function Settings() {
             </div>
           </div>
         </div>
+
+        {/* Mensagens do link de agendamento (v1.29.0): modelos editáveis */}
+        {me?.role === "admin" && <ModelosMensagem />}
 
         {/* Publicar atualização (v1.7.0): aviso ou correção de texto sem deploy */}
         <PublicarAtualizacao />

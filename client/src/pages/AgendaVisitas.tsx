@@ -6,6 +6,7 @@ import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { AcoesVisita, COR_STATUS_VISITA, ROTULO_STATUS_VISITA } from "@/components/VisitasLead";
 import LinkAgendamento from "@/components/LinkAgendamento";
+import MensagensAgendamento from "@/components/MensagensAgendamento";
 import { comRef, useCartaoVendas } from "@/lib/cartaoVendas";
 
 const diaChave = (d: string | Date) => new Date(d).toLocaleDateString("en-CA", { timeZone: "America/Fortaleza" });
@@ -15,6 +16,7 @@ const hora = (d: string | Date) => new Date(d).toLocaleTimeString("pt-BR", { tim
 type Visita = {
   id: number; leadId: number; nome: string; telefone: string; quando: string | Date; local: string | null; status: string; observacao?: string | null;
   imovel: string | null; responsavel: string | null; lembreteEnviado: boolean; confirmadaPeloCliente: boolean; semResultado: boolean;
+  doLink?: boolean; confirmacaoEnviada?: boolean;
 };
 
 function Linha({ v, onMudou }: { v: Visita; onMudou: () => void }) {
@@ -30,6 +32,7 @@ function Linha({ v, onMudou }: { v: Visita; onMudou: () => void }) {
       </div>
       {(v.imovel || v.local) && <p className="text-xs text-muted-foreground">{[v.imovel, v.local].filter(Boolean).join(" · ")}</p>}
       {v.status === "solicitada" && v.observacao && <p className="text-xs text-amber-100/80 whitespace-pre-line">{v.observacao}</p>}
+      {v.doLink && <MensagensAgendamento visitaId={v.id} enviada={v.confirmacaoEnviada} />}
       <div className="flex flex-wrap items-center gap-2">
         {v.telefone && <a href={`https://wa.me/${v.telefone.replace(/\D/g, "")}`} target="_blank" rel="noreferrer" className="text-xs text-emerald-300 hover:underline">💬 WhatsApp</a>}
         <AcoesVisita visita={v} onMudou={onMudou} />

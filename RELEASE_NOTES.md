@@ -3,6 +3,17 @@
 Cada versão nova vai no TOPO. Depois rode `npm run release` (valida e atualiza o package.json);
 ao subir, o servidor grava a versão no banco e todos recebem o aviso "Novidades da versão".
 
+## 1.29.0 — 2026-10-25
+tipo: minor
+obrigatoria: nao
+titulo: Confirmação automática do agendamento pelo WhatsApp
+
+### Novo
+- Link de agendamento: ao enviar o formulário, o cliente recebe na hora, pelo WhatsApp do sistema, a confirmação com dia, horário, unidade, pessoas e o corretor que vai atender (nome, CRECI e telefone). A tela de obrigado mostra a mesma confirmação
+- O corretor recebe o resumo do novo agendamento (cliente, cidade, unidade, dia, horário, forma de pagamento, pessoas e de qual link veio) no aviso do WhatsApp e no card do agendamento, com o botão "Copiar"
+- No card do agendamento (Agenda e ficha do lead): "Enviar confirmação por WhatsApp" (dá para editar o texto e reenviar) e "Abrir no WhatsApp" para continuar a conversa. Sem o WhatsApp do sistema no momento, aparece a mensagem para copiar e o link do WhatsApp com o texto
+- Configurações → "Mensagens do agendamento" (administrador): os dois textos são editáveis, com as variáveis, prévia e "voltar ao padrão"
+
 ## 1.28.1 — 2026-10-25
 tipo: patch
 obrigatoria: nao

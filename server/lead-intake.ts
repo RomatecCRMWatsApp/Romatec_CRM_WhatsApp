@@ -41,6 +41,8 @@ export interface LeadIntakeInput {
   answers?: Record<string, string>;
   /** Substitui a mensagem genérica de boas-vindas */
   welcomeMessage?: string;
+  /** Não manda boas-vindas: quem chama envia a própria mensagem (ex.: confirmação do link de agendamento) */
+  semBoasVindas?: boolean;
   /** Cookie rmt_vid da landing: liga os eventos de navegação ao lead */
   visitanteId?: string;
   /** form_id do Meta Lead Ads → campanha cadastrada (leadCampanhas.metaFormId) */
@@ -279,7 +281,7 @@ export async function ingestLead(input: LeadIntakeInput): Promise<LeadIntakeResu
 
   let messageSent = false;
   let welcome: string | null = null;
-  if (shouldMessage) {
+  if (shouldMessage && !input.semBoasVindas) {
     // Lead de empreendimento: boas-vindas com a lista exclusiva do empreendimento (nome do cadastro)
     if (!input.welcomeMessage && input.empreendimentoSlug) {
       const { boasVindasListaExclusiva, nomeDoEmpreendimento } = await import('./leads/listaComunicacao');
@@ -357,7 +359,7 @@ export async function ingestLead(input: LeadIntakeInput): Promise<LeadIntakeResu
         ...(campanha && !campanhaCad ? [`📢 Campanha: ${campanha}`] : []),
         ...(input.origemVisita ? [`🌐 De: ${linhaOrigem(origemWeb?.rotulo || rotuloUtm(input.utm), input.origemVisita)}`] : []),
         ...Object.entries(input.answers || {}).filter(([k, v]) => v && k !== 'nome').map(([k, v]) => `📝 ${k}: ${v}`),
-        messageSent || !shouldMessage ? '🤖 1ª mensagem enviada no WhatsApp' : '⚠️ 1ª mensagem NÃO saiu no WhatsApp — contate manualmente',
+        ...(input.semBoasVindas ? [] : [messageSent || !shouldMessage ? '🤖 1ª mensagem enviada no WhatsApp' : '⚠️ 1ª mensagem NÃO saiu no WhatsApp — contate manualmente']),
       ],
     });
   } catch (e) {
@@ -365,6 +367,14 @@ export async function ingestLead(input: LeadIntakeInput): Promise<LeadIntakeResu
   }
 
   return { ok: true, created: !lead, messageSent, phone };
+}
+
+/** WhatsApp do sistema (Z-API) disponível? — sem ele, a tela mostra a mensagem para copiar e o wa.me */
+export const zapiDisponivel = () => !!(process.env.ZAPI_INSTANCE_ID && process.env.ZAPI_TOKEN);
+
+/** Mensagem avulsa pelo WhatsApp do sistema, pelo mesmo envio das boas-vindas (sem follow-up do bot) */
+export function enviarMensagemSistema(phone: string, message: string, nome = ''): Promise<boolean> {
+  return sendWelcome(phone, message, { registerFollowUp: false, nome });
 }
 
 async function sendWelcome(phone: string, message: string, opts: { registerFollowUp: boolean; nome: string }): Promise<boolean> {

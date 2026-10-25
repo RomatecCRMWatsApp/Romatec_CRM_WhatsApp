@@ -14,6 +14,7 @@ import {
   diaValido, observacaoDoPedido, quandoDoPedido, respostasDoPedido, rotuloHorario, type PedidoAgendamento,
 } from '../shared/agendamento';
 import { usuarioDaRef } from './cartaoVendas';
+import type { DadosPedido } from '../shared/mensagensAgendamento';
 
 export class AgendamentoErro extends Error { constructor(msg: string, public status = 400) { super(msg); this.name = 'AgendamentoErro'; } }
 
@@ -107,6 +108,8 @@ export async function registrarAgendamento(slug: string, p: PedidoAgendamento, i
     nome: p.nome, phone: p.telefone, origem: 'site', campanha: 'Link de agendamento', empreendimentoSlug: emp.slug,
     loteCodigo: /^[A-Z]\d{2}$/i.test(p.unidade || '') ? p.unidade!.toUpperCase() : undefined,
     answers: respostasDoPedido(p), funil: 'comprador', responsavelId: dono?.id ?? null,
+    // A 1ª mensagem é a confirmação do agendamento (abaixo), já com o corretor responsável
+    semBoasVindas: true,
     consentimento: { at: new Date(agora).toISOString(), texto: 'Aceito ser contatado(a) sobre o agendamento e o empreendimento.', origem: 'link_agendamento', ...(ip ? { ip } : {}) },
   });
   if (!r.ok) {
@@ -125,11 +128,26 @@ export async function registrarAgendamento(slug: string, p: PedidoAgendamento, i
     await d.update(leadQualifications).set({ responsavelId, updatedAt: new Date(agora) } as any).where(eq(leadQualifications.id, lead.id));
   }
   const quando = quandoDoPedido(p.dia, p.horario);
+  const pedido: DadosPedido = { nome: p.nome, telefone: r.phone, cidade: p.cidade || '', unidade: p.unidade || '', dia: p.dia, horario: p.horario, pagamento: p.pagamento, pessoas: p.pessoas };
   const vr: any = await d.insert(leadVisitas).values({
-    leadId: lead.id, quando, local: emp.nome, status: 'solicitada', observacao: observacaoDoPedido(p),
+    leadId: lead.id, quando, local: emp.nome, status: 'solicitada', observacao: observacaoDoPedido(p), pedidoJson: JSON.stringify(pedido),
     responsavelId, criadoPor: null, createdAt: new Date(agora), updatedAt: new Date(agora),
   } as any);
   const visitaId = Number(vr?.[0]?.insertId ?? vr?.insertId ?? vr?.lastInsertRowid ?? 0) || null;
+
+  // Confirmação ao cliente na hora, pelo WhatsApp do sistema; se não sair, a tela de obrigado mostra o texto e o wa.me
+  const { montarMensagens } = await import('./leads/mensagensAgendamento');
+  const msgs = await montarMensagens(pedido, responsavelId);
+  let confirmacaoEnviada = false;
+  const { enviarMensagemSistema, zapiDisponivel } = await import('./lead-intake');
+  if (zapiDisponivel()) {
+    confirmacaoEnviada = await enviarMensagemSistema(r.phone, msgs.cliente, p.nome).catch(() => false);
+    if (confirmacaoEnviada) {
+      if (visitaId) await d.update(leadVisitas).set({ confirmacaoEnviadaAt: new Date(agora) } as any).where(eq(leadVisitas.id, visitaId));
+      const { registrarMensagem } = await import('./leads/qualificacaoService');
+      await registrarMensagem(lead.id, 'out', 'sistema', msgs.cliente).catch(() => {});
+    }
+  }
 
   const quandoTexto = `${p.dia.split('-').reverse().join('/')}, ${rotuloHorario(p.horario)}`;
   if (responsavelId) {
@@ -139,8 +157,8 @@ export async function registrarAgendamento(slug: string, p: PedidoAgendamento, i
       detalhe: `${p.pessoas} pessoa(s), ${respostasDoPedido(p)['forma de pagamento']}`,
     }).catch(e => console.warn('[Agendamento] sininho/push:', e?.message));
     const { avisarPedidoDeAgendamento } = await import('./leads/visitas');
-    if (visitaId) await avisarPedidoDeAgendamento(visitaId).catch(e => console.warn('[Agendamento] WhatsApp do responsável:', e?.message));
+    if (visitaId) await avisarPedidoDeAgendamento(visitaId, msgs.corretor).catch(e => console.warn('[Agendamento] WhatsApp do responsável:', e?.message));
   }
-  console.log(`[Agendamento] ${emp.slug}: lead ${lead.id} (${r.created ? 'novo' : 'existente'}) → responsável ${responsavelId ?? '-'} · ${quandoTexto}`);
-  return { ok: true as const, leadId: lead.id as number, visitaId, responsavelId };
+  console.log(`[Agendamento] ${emp.slug}: lead ${lead.id} (${r.created ? 'novo' : 'existente'}) → responsável ${responsavelId ?? '-'} · ${quandoTexto} · confirmação ${confirmacaoEnviada ? 'enviada' : 'não enviada'}`);
+  return { ok: true as const, leadId: lead.id as number, visitaId, responsavelId, confirmacao: msgs.cliente, confirmacaoEnviada };
 }

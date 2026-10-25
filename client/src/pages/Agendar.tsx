@@ -47,6 +47,7 @@ export default function Agendar() {
   const [enviando, setEnviando] = useState(false);
   const [erro, setErro] = useState<string | null>(null);
   const [enviado, setEnviado] = useState(false);
+  const [confirmacao, setConfirmacao] = useState<{ texto: string; enviada: boolean } | null>(null);
   // Unidade escolhida no mapa (id do lote) e aviso de lote indisponível
   const [selecionado, setSelecionado] = useState<number | null>(null);
   const [avisoMapa, setAvisoMapa] = useState<string | null>(null);
@@ -81,6 +82,7 @@ export default function Agendar() {
       });
       const j = await r.json().catch(() => ({ ok: false }));
       if (!j.ok) throw new Error(j.error || "Não foi possível enviar agora.");
+      setConfirmacao(j.confirmacao ? { texto: j.confirmacao, enviada: !!j.confirmacaoEnviada } : null);
       setEnviado(true);
       registrarEvento(EVENTOS.agendamento, { formulario: "agendamento", empreendimento: slug }, "agendamento");
       window.scrollTo({ top: 0, behavior: "smooth" });
@@ -115,6 +117,15 @@ export default function Agendar() {
             <p style={{ margin: 0, fontSize: 17, lineHeight: 1.5 }}>
               Obrigado, {f.nome.split(" ")[0]}! {contato.nome.split(" ")[0]} vai falar com você no WhatsApp {f.telefone} para confirmar o dia e o horário.
             </p>
+            {confirmacao && (
+              <div style={{ marginTop: 20, textAlign: "left" }}>
+                <p style={{ margin: "0 0 8px", fontWeight: 700, color: C.verde }}>
+                  {confirmacao.enviada ? `✅ Enviamos esta confirmação para o seu WhatsApp ${f.telefone}:` : "Sua confirmação:"}
+                </p>
+                <div style={{ whiteSpace: "pre-wrap", background: "#E7F6EC", border: "1px solid #BFE3CB", borderRadius: 14, padding: 16, fontSize: 15, lineHeight: 1.5 }}>{confirmacao.texto}</div>
+                {!confirmacao.enviada && <p style={{ margin: "8px 0 0", fontSize: 13, color: C.suave }}>Guarde esta mensagem. Para falar com o corretor agora, toque no botão abaixo.</p>}
+              </div>
+            )}
             {zap && <a href={zap} target="_blank" rel="noopener noreferrer" style={{ display: "inline-flex", alignItems: "center", gap: 8, marginTop: 20, padding: "12px 20px", borderRadius: 999, background: "#1F8A4C", color: "#fff", fontWeight: 700, textDecoration: "none" }}><MessageCircle size={20} /> Falar agora no WhatsApp</a>}
           </div>
         </main>

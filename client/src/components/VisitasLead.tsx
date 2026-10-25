@@ -4,6 +4,7 @@ import { trpc } from "@/lib/trpc";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { CalendarDays } from "lucide-react";
+import MensagensAgendamento from "@/components/MensagensAgendamento";
 
 export const ROTULO_STATUS_VISITA: Record<string, string> = {
   solicitada: "Pedido do cliente", agendada: "Agendada", confirmada: "Confirmada", realizada: "Realizada", nao_veio: "Não veio", cancelada: "Cancelada",
@@ -68,6 +69,7 @@ export default function VisitasLead({ leadId, imoveis, onMudou }: { leadId: numb
               {!v.confirmadaPeloCliente && v.lembreteEnviado && v.status === "agendada" && <span className="text-[11px] text-muted-foreground">lembrete enviado</span>}
             </div>
             {(v.imovel || v.local) && <p className="text-xs text-muted-foreground">{[v.imovel, v.local].filter(Boolean).join(" · ")}</p>}
+            {v.doLink && <MensagensAgendamento visitaId={v.id} enviada={v.confirmacaoEnviada} aberto={v.status === "solicitada"} />}
             <AcoesVisita visita={v} onMudou={atualizar} />
           </div>
         ))}
