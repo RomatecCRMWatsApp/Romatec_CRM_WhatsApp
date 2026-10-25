@@ -288,6 +288,39 @@ async function startServer() {
   // ─── Formulário público de captação (página do lote / link da bio do Instagram) ───
   const { createRateLimiter } = await import('../lead-intake');
   const allowPublicLead = createRateLimiter(5, 10 * 60 * 1000); // 5 envios / 10 min por IP
+
+  // ─── Link de agendamento por empreendimento (/agendar/:slug?c=<ref>) ───
+  const allowAgendamento = createRateLimiter(5, 10 * 60 * 1000);
+  app.get('/api/public/agendamento/:slug', async (req, res) => {
+    try {
+      const { dadosDaPagina } = await import('../agendamento');
+      const ref = typeof req.query.c === 'string' ? req.query.c.slice(0, 20) : null;
+      res.setHeader('Cache-Control', 'no-store');
+      res.json({ ok: true, ...(await dadosDaPagina(String(req.params.slug).slice(0, 80), ref)) });
+    } catch (e: any) {
+      if (e?.name === 'AgendamentoErro') return res.status(e.status).json({ ok: false, error: e.message });
+      console.error('[Agendamento] página:', e);
+      res.status(500).json({ ok: false, error: 'Falha ao carregar' });
+    }
+  });
+  app.post('/api/public/agendamento/:slug', async (req, res) => {
+    try {
+      const fwd = String(req.headers['x-forwarded-for'] ?? '').split(',').map(s => s.trim()).filter(Boolean);
+      const ip = fwd[fwd.length - 1] || req.socket.remoteAddress || 'unknown';
+      if (!allowAgendamento(ip)) return res.status(429).json({ ok: false, error: 'Muitas tentativas. Tente novamente em alguns minutos.' });
+      const { agendamentoSchema } = await import('../../shared/agendamento');
+      const parsed = agendamentoSchema.safeParse(req.body ?? {});
+      if (!parsed.success) return res.status(400).json({ ok: false, error: parsed.error.issues[0]?.message || 'Dados inválidos' });
+      if (parsed.data.website) return res.json({ ok: true }); // honeypot
+      const { registrarAgendamento } = await import('../agendamento');
+      await registrarAgendamento(String(req.params.slug).slice(0, 80), parsed.data, ip);
+      res.json({ ok: true });
+    } catch (e: any) {
+      if (e?.name === 'AgendamentoErro') return res.status(e.status).json({ ok: false, error: e.message });
+      console.error('[Agendamento] envio:', e);
+      res.status(500).json({ ok: false, error: 'Não foi possível enviar agora. Fale pelo WhatsApp.' });
+    }
+  });
   app.post('/api/public/lead', async (req, res) => {
     try {
       // Atrás do proxy do Railway: o último IP do x-forwarded-for é o que o proxy viu

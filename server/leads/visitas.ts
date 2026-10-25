@@ -13,10 +13,10 @@
 import { and, eq, gte, inArray, isNull, lte } from 'drizzle-orm';
 import { appUrl } from './config';
 
-export const STATUS_VISITA = ['agendada', 'confirmada', 'realizada', 'nao_veio', 'cancelada'] as const;
+export const STATUS_VISITA = ['solicitada', 'agendada', 'confirmada', 'realizada', 'nao_veio', 'cancelada'] as const;
 export type StatusVisita = typeof STATUS_VISITA[number];
 export const ROTULO_STATUS_VISITA: Record<StatusVisita, string> = {
-  agendada: 'Agendada', confirmada: 'Confirmada', realizada: 'Realizada', nao_veio: 'Não veio', cancelada: 'Cancelada',
+  solicitada: 'Solicitada pelo cliente', agendada: 'Agendada', confirmada: 'Confirmada', realizada: 'Realizada', nao_veio: 'Não veio', cancelada: 'Cancelada',
 };
 export const ABERTAS: StatusVisita[] = ['agendada', 'confirmada'];
 
@@ -137,6 +137,13 @@ export async function avisarVisitaAgendada(visitaId: number): Promise<void> {
   const v = await carregar(visitaId);
   if (!v) return;
   await avisarCorretor(v.responsavelId, `📅 Visita agendada ${quandoPorExtenso(v.quando)}\n${resumo(v)}\n🔗 ${appUrl()}/leads/lead/${v.leadId}`);
+}
+
+/** Pedido do cliente pelo link de agendamento: o responsável confirma o horário com ele */
+export async function avisarPedidoDeAgendamento(visitaId: number): Promise<void> {
+  const v = await carregar(visitaId);
+  if (!v) return;
+  await avisarCorretor(v.responsavelId, `🗓️ Pedido de agendamento pelo link — ${quandoPorExtenso(v.quando)}\n${resumo(v)}${v.observacao ? `\n📝 ${v.observacao}` : ''}\nConfirme o horário com o cliente e marque "Confirmar agendamento".\n🔗 ${appUrl()}/leads/lead/${v.leadId}`);
 }
 
 async function carregar(visitaId: number): Promise<any | null> {

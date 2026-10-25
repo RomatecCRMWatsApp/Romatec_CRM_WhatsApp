@@ -38,6 +38,7 @@ import PosicionarAssinaturas from "./pages/PosicionarAssinaturas";
 import AssinarContrato from "./pages/AssinarContrato";
 import VerificarContrato from "./pages/VerificarContrato";
 import CarneDigital from "./pages/CarneDigital";
+import Agendar from "./pages/Agendar";
 import AreaCorretor from "./pages/AreaCorretor";
 import Equipe from "./pages/Equipe";
 import MeuCadastro from "./pages/MeuCadastro";
@@ -179,6 +180,7 @@ function Router() {
       <Route path={"/assinar/:token"} component={AssinarContrato} />
       <Route path={"/c/v/:codigo"} component={VerificarContrato} />
       <Route path={"/c/:codigo"} component={CarneDigital} />
+      <Route path={"/agendar/:slug"} component={Agendar} />
       <Route path={"/bom-jardims/chacara/:codigo"} component={BomJardimsChacara} />
       <Route path={"/bom-jardims"} component={BomJardims} />
       <Route path={"/404"} component={NotFound} />
@@ -188,7 +190,7 @@ function Router() {
 }
 
 /** Páginas do site público (landing, imóveis, links): sem splash nem overlay do app */
-const rotaDoSite = (p: string) => ["/imoveis", "/i/", "/imovel/", "/links", "/bom-jardims"].some(r => p === r || p.startsWith(r.endsWith("/") ? r : `${r}/`));
+const rotaDoSite = (p: string) => ["/imoveis", "/i/", "/imovel/", "/links", "/bom-jardims", "/agendar/"].some(r => p === r || p.startsWith(r.endsWith("/") ? r : `${r}/`));
 
 /** Splash na abertura do app/PWA + barra do topo e overlay do carregamento (identidade visual v1.0) */
 function CarregamentoDoApp() {

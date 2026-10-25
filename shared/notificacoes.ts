@@ -11,7 +11,7 @@ import type { Perfil } from './equipe';
 import { VENDIDOS, type SituacaoLote } from './lotes';
 import { temAcesso, type AcessoCorretor } from './permissoes';
 
-export const TIPOS_NOTIFICACAO = ['atualizacao_sistema', 'reserva', 'venda_contrato', 'liberacao', 'solicitacao_cancelamento'] as const;
+export const TIPOS_NOTIFICACAO = ['atualizacao_sistema', 'reserva', 'venda_contrato', 'liberacao', 'solicitacao_cancelamento', 'agendamento'] as const;
 export type TipoNotificacao = typeof TIPOS_NOTIFICACAO[number];
 
 /** Som de cada tipo (client/public/sons) — trocar o arquivo troca o som, sem mexer no código */
@@ -21,6 +21,7 @@ export const SOM_POR_TIPO: Record<TipoNotificacao, string> = {
   venda_contrato: '/sons/venda.wav',
   liberacao: '/sons/liberacao.wav',
   solicitacao_cancelamento: '/sons/cancelamento.wav',
+  agendamento: '/sons/agendamento.wav',
 };
 
 export const ROTULO_NOTIFICACAO: Record<TipoNotificacao, string> = {
@@ -29,6 +30,7 @@ export const ROTULO_NOTIFICACAO: Record<TipoNotificacao, string> = {
   venda_contrato: 'Venda / contrato',
   liberacao: 'Lote liberado',
   solicitacao_cancelamento: 'Pedido de cancelamento',
+  agendamento: 'Pedido de agendamento',
 };
 
 /** Cor do selo na lista do sininho */
@@ -38,6 +40,7 @@ export const COR_NOTIFICACAO: Record<TipoNotificacao, string> = {
   venda_contrato: '#B05FC9',
   liberacao: '#5FB04A',
   solicitacao_cancelamento: '#C0504D',
+  agendamento: '#2C7FB8',
 };
 
 const RESERVAS: SituacaoLote[] = ['reservado', 'entrada'];
@@ -59,7 +62,7 @@ export function eventoDaMudanca(de: string | null | undefined, para: SituacaoLot
 /** Título e mensagem (sininho e push) */
 export function textoNotificacao(
   tipo: TipoNotificacao,
-  d: { lote?: string; empreendimento?: string; versao?: string; autor?: string | null; contrato?: string; comprador?: string; motivo?: string },
+  d: { lote?: string; empreendimento?: string; versao?: string; autor?: string | null; contrato?: string; comprador?: string; motivo?: string; quando?: string },
 ): { titulo: string; mensagem: string } {
   const onde = `Chácara ${d.lote ?? '?'}${d.empreendimento ? ` · ${d.empreendimento}` : ''}`;
   const por = d.autor ? ` (por ${d.autor})` : '';
@@ -68,6 +71,10 @@ export function textoNotificacao(
     case 'reserva': return { titulo: `${onde} reservada`, mensagem: `A ${onde} foi reservada${por}.` };
     case 'venda_contrato': return { titulo: `${onde} vendida`, mensagem: `Venda/contrato fechado da ${onde}${por}.` };
     case 'liberacao': return { titulo: `${onde} liberada`, mensagem: `A ${onde} voltou a ficar disponível${por} — oportunidade aberta.` };
+    case 'agendamento': return {
+      titulo: `Pedido de agendamento — ${d.comprador ?? 'cliente'}`,
+      mensagem: `${d.comprador ?? 'Um cliente'} pediu atendimento${d.empreendimento ? ` no ${d.empreendimento}` : ''}${d.quando ? ` para ${d.quando}` : ''}${d.motivo ? ` (${d.motivo})` : ''}. Confirme o horário com ele.`.slice(0, 500),
+    };
     case 'solicitacao_cancelamento': return {
       titulo: `Pedido de cancelamento — contrato ${d.contrato ?? '?'}`,
       mensagem: `${d.autor ?? 'Alguém da equipe'} pediu o cancelamento do contrato ${d.contrato ?? '?'} (${onde}${d.comprador ? `, comprador ${d.comprador}` : ''}). Motivo: ${d.motivo ?? '—'}`.slice(0, 500),
@@ -95,6 +102,8 @@ export function destinatarios(
     if (tipo === 'atualizacao_sistema') return true;
     // Pedido de cancelamento: só o administrador decide (e cancela com a senha)
     if (tipo === 'solicitacao_cancelamento') return perfilDe(u) === 'admin' && u.id !== alvo?.autorId;
+    // Pedido de agendamento: vai direto para o responsável (notificarAgendamento), não por escopo
+    if (tipo === 'agendamento') return false;
     if (!alvo || u.id === alvo.autorId) return false;
     const perfil = perfilDe(u);
     if (perfil === 'empreendedor') return !!u.empreendimentoSlug && u.empreendimentoSlug === alvo.empreendimentoSlug;
@@ -107,8 +116,9 @@ export function destinatarios(
  * empreendedor; atualização do sistema abre o sininho.
  */
 export function urlDaNotificacao(
-  tipo: TipoNotificacao, d: { empreendimentoSlug?: string | null; lote?: string | null; contratoId?: number | null }, perfil?: Perfil | null,
+  tipo: TipoNotificacao, d: { empreendimentoSlug?: string | null; lote?: string | null; contratoId?: number | null; leadId?: number | null }, perfil?: Perfil | null,
 ): string {
+  if (tipo === 'agendamento') return d.leadId ? `/leads/lead/${d.leadId}` : '/agenda';
   if (tipo === 'solicitacao_cancelamento') return d.contratoId ? `/contratos/${d.contratoId}` : '/contratos';
   if (perfil === 'empreendedor') return '/empreendedor?notificacoes=1';
   if (tipo === 'atualizacao_sistema' || !d.empreendimentoSlug) return '/dashboard?notificacoes=1';

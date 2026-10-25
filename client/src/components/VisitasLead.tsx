@@ -6,10 +6,10 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { CalendarDays } from "lucide-react";
 
 export const ROTULO_STATUS_VISITA: Record<string, string> = {
-  agendada: "Agendada", confirmada: "Confirmada", realizada: "Realizada", nao_veio: "Não veio", cancelada: "Cancelada",
+  solicitada: "Pedido do cliente", agendada: "Agendada", confirmada: "Confirmada", realizada: "Realizada", nao_veio: "Não veio", cancelada: "Cancelada",
 };
 export const COR_STATUS_VISITA: Record<string, string> = {
-  agendada: "bg-sky-500/15 text-sky-300", confirmada: "bg-emerald-500/15 text-emerald-300", realizada: "bg-violet-500/15 text-violet-300",
+  solicitada: "bg-amber-500/20 text-amber-200", agendada: "bg-sky-500/15 text-sky-300", confirmada: "bg-emerald-500/15 text-emerald-300", realizada: "bg-violet-500/15 text-violet-300",
   nao_veio: "bg-amber-500/15 text-amber-300", cancelada: "bg-zinc-500/15 text-zinc-400",
 };
 
@@ -24,15 +24,16 @@ export function AcoesVisita({ visita, onMudou }: { visita: { id: number; status:
   const status = trpc.crm.statusVisita.useMutation({ onSuccess: () => { toast.success("Visita atualizada"); onMudou(); }, onError: e => toast.error(e.message) });
   const remarcar = trpc.crm.remarcarVisita.useMutation({ onSuccess: () => { toast.success("Visita remarcada"); setNova(""); onMudou(); }, onError: e => toast.error(e.message) });
   const [nova, setNova] = useState("");
-  if (!["agendada", "confirmada"].includes(visita.status)) return null;
+  if (!["solicitada", "agendada", "confirmada"].includes(visita.status)) return null;
   const passou = new Date(visita.quando).getTime() < Date.now();
   const b = (rotulo: string, s: string, cls = "") => (
     <Button key={s} size="sm" variant="outline" className={`h-7 px-2 text-xs ${cls}`} disabled={status.isPending} onClick={() => status.mutate({ id: visita.id, status: s as any })}>{rotulo}</Button>
   );
   return (
     <div className="flex flex-wrap items-center gap-1.5">
+      {visita.status === "solicitada" && b("📅 Confirmar agendamento", "agendada", "border-sky-500/40")}
       {visita.status === "agendada" && !passou && b("Confirmada", "confirmada")}
-      {b("✅ Realizada", "realizada", "border-violet-500/40")}
+      {visita.status !== "solicitada" && b("✅ Realizada", "realizada", "border-violet-500/40")}
       {passou && b("Não veio", "nao_veio")}
       {b("Cancelar", "cancelada", "text-muted-foreground")}
       <input type="datetime-local" value={nova} onChange={e => setNova(e.target.value)} className="h-7 rounded-md border border-border bg-secondary px-2 text-xs" aria-label="Nova data" />

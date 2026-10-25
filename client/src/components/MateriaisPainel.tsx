@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Copy, Download, Eye, EyeOff, FileText, Lock, Share2, Trash2, Upload, Video } from "lucide-react";
 import { ROTULO_TIPO_MATERIAL, TIPOS_ARQUIVO_ACEITOS, TIPOS_MATERIAL, bloqueadaPorNome, tipoPorNome, tituloPorNome, type TipoMaterial } from "@shared/materiais";
 import { enviarParaCloudinary, mimeDoArquivo } from "@/lib/uploadCloudinary";
+import LinkAgendamento from "@/components/LinkAgendamento";
 
 type Destino = { propertyId?: number | null; empreendimentoSlug?: string | null };
 
@@ -209,6 +210,7 @@ export default function MateriaisPainel({ propertyId, empreendimentoSlug }: Dest
           </label>
         )}
       </div>
+      {(empreendimentoSlug || destino.startsWith("e:")) && <LinkAgendamento slug={empreendimentoSlug || destino.slice(2)} />}
       {enviando && <p className="text-xs text-emerald-300">{enviando}</p>}
       <p className="text-[11px] text-muted-foreground">
         Imagem até {limites?.imagemMB ?? 10} MB, PDF até {limites?.pdfMB ?? 10} MB, vídeo até {limites?.videoMB ?? 100} MB (enviado em partes; deixe a tela aberta até 100%). Peças com "condições", "preço" ou "tabela" no nome entram bloqueadas. Os arquivos ficam com link público para poder compartilhar; não envie documentos internos.

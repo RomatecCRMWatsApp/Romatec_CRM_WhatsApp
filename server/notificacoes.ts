@@ -133,7 +133,7 @@ export async function enviarPushes(repo: RepoNotificacoes, enviar: EnviadorPush 
 /** Grava a notificação para cada destinatário (endereço conforme o perfil) e dispara o push */
 async function emitir(
   repo: RepoNotificacoes, enviar: EnviadorPush | null, usuarios: UsuarioDestino[], ids: number[],
-  base: Omit<NovaNotificacao, "usuarioId" | "url">, alvo: { empreendimentoSlug?: string | null; lote?: string | null; contratoId?: number | null },
+  base: Omit<NovaNotificacao, "usuarioId" | "url">, alvo: { empreendimentoSlug?: string | null; lote?: string | null; contratoId?: number | null; leadId?: number | null },
 ) {
   if (!ids.length) return { destinatarios: [] as number[], enviados: 0, removidos: 0 };
   const P = new Map(usuarios.map(u => [u.id, perfilDe(u as any)]));
@@ -175,6 +175,20 @@ export async function notificarSolicitacaoCancelamento(
   return emitir(repo, enviar === undefined ? await enviadorWebPush() : enviar, usuarios, ids,
     { tipo: "solicitacao_cancelamento", titulo, mensagem, empreendimentoId: p.empreendimentoId, chave: `solicitacao:${p.contratoId}` },
     { contratoId: p.contratoId });
+}
+
+/** Pedido de agendamento pelo link público → sininho e push de quem recebeu o lead */
+export async function notificarAgendamento(
+  p: { responsavelId: number; leadId: number; cliente: string; empreendimentoId?: number | null; empreendimentoNome?: string | null; quando: string; detalhe?: string },
+  repo: RepoNotificacoes = repoBanco(), enviar?: EnviadorPush | null,
+) {
+  const usuarios = await repo.usuarios();
+  const dono = usuarios.find(u => u.id === p.responsavelId && u.ativo !== false && u.ativo !== 0);
+  if (!dono) return null;
+  const { titulo, mensagem } = textoNotificacao("agendamento", { comprador: p.cliente, empreendimento: p.empreendimentoNome ?? undefined, quando: p.quando, motivo: p.detalhe });
+  return emitir(repo, enviar === undefined ? await enviadorWebPush() : enviar, usuarios, [dono.id],
+    { tipo: "agendamento", titulo, mensagem, empreendimentoId: p.empreendimentoId ?? null, chave: `agendamento:${p.leadId}` },
+    { leadId: p.leadId });
 }
 
 /** Ao subir uma versão nova: "Sistema atualizado para vX.Y.Z" para todos (uma vez por versão) */

@@ -194,7 +194,7 @@ export const crmRouter = router({
     }),
 
   statusVisita: protectedProcedure
-    .input(z.object({ id: z.number().int(), status: z.enum(["agendada", "confirmada", "realizada", "nao_veio", "cancelada"]) }))
+    .input(z.object({ id: z.number().int(), status: z.enum(["solicitada", "agendada", "confirmada", "realizada", "nao_veio", "cancelada"]) }))
     .mutation(async ({ input, ctx }) => {
       const db = await dbOrThrow();
       const { leadVisitas } = await import("../../drizzle/schema");

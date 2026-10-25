@@ -3,6 +3,20 @@
 Cada versão nova vai no TOPO. Depois rode `npm run release` (valida e atualiza o package.json);
 ao subir, o servidor grava a versão no banco e todos recebem o aviso "Novidades da versão".
 
+## 1.16.0 — 2026-10-25
+tipo: minor
+obrigatoria: nao
+titulo: Link de agendamento com formulário
+
+### Novo
+- Link de agendamento por empreendimento: página com as condições e um formulário (nome, WhatsApp, cidade, unidade de interesse, melhor dia e horário, forma de pagamento e número de pessoas)
+- O envio vira lead e pedido de agendamento na agenda, com aviso no sininho, no celular e no WhatsApp de quem recebeu
+- Botões "Copiar link de agendamento" e "Compartilhar" nos Materiais do empreendimento e na Área do corretor
+
+### Melhorias
+- O link sai com os seus dados e a sua foto, e o lead cai com você; sem link de corretor, fica com o administrador
+- Na agenda, o pedido aparece como "Pedido do cliente" com o botão "Confirmar agendamento"
+
 ## 1.15.1 — 2026-10-25
 tipo: patch
 obrigatoria: nao
