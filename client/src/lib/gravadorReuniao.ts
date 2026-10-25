@@ -9,7 +9,8 @@ export type EstadoEnvio = { enviadas: number; pendentes: number; erro: string | 
 
 const tipoAudio = () => ["audio/webm;codecs=opus", "audio/webm", "audio/ogg;codecs=opus", "audio/mp4"].find(t => (window as any).MediaRecorder?.isTypeSupported?.(t)) ?? "";
 
-export async function enviarParte(reuniaoId: number, ordem: number, audio: Blob, duracaoSeg: number): Promise<void> {
+/** Sobe a parte; devolve o aviso quando ela foi guardada mas ainda não transcrita (ex.: OpenAI sem crédito) */
+export async function enviarParte(reuniaoId: number, ordem: number, audio: Blob, duracaoSeg: number): Promise<string | null> {
   let ultimo = "";
   for (let tentativa = 0; tentativa < 4; tentativa++) {
     try {
@@ -17,7 +18,7 @@ export async function enviarParte(reuniaoId: number, ordem: number, audio: Blob,
         method: "POST", credentials: "include", headers: { "Content-Type": (audio.type || "audio/webm").split(";")[0] }, body: audio,
       });
       const j = await r.json().catch(() => ({}));
-      if (r.ok && j.ok) return;
+      if (r.ok && j.ok) return j.pendente ? String(j.aviso || "trecho guardado, transcrição pendente") : null;
       ultimo = j.error || `Erro ${r.status}`;
       // Erro de configuração/permissão não melhora tentando de novo
       if ([400, 401, 403, 404, 409, 412, 413].includes(r.status)) break;
@@ -91,8 +92,8 @@ export class GravadorReuniao {
     this.aoMudar(this.estado);
     this.fila = this.fila.then(async () => {
       try {
-        await enviarParte(this.reuniaoId, ordem, audio, duracao);
-        this.estado = { ...this.estado, enviadas: this.estado.enviadas + 1, pendentes: this.estado.pendentes - 1 };
+        const aviso = await enviarParte(this.reuniaoId, ordem, audio, duracao);
+        this.estado = { ...this.estado, enviadas: this.estado.enviadas + 1, pendentes: this.estado.pendentes - 1, erro: aviso ?? this.estado.erro };
       } catch (e: any) {
         this.estado = { ...this.estado, pendentes: this.estado.pendentes - 1, erro: `Parte ${ordem + 1}: ${e?.message || "falhou"}` };
       }

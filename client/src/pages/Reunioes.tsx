@@ -219,7 +219,7 @@ function Detalhe({ id }: { id: number }) {
       {!r.leadId && <div className="max-w-md text-xs text-muted-foreground">Vincular a um cliente<EscolherLead valor={null} onEscolher={l => l && atualizar.mutate({ id, leadId: l.id })} /></div>}
       {r.status === "processando" && <p className="flex items-center gap-2 rounded-xl border border-amber-500/30 bg-amber-500/10 p-3 text-sm"><Loader2 className="h-4 w-4 animate-spin" /> Transcrevendo e resumindo… pode sair desta tela, o resumo fica salvo aqui.</p>}
       {r.status === "gravando" && <p className="rounded-xl border border-border p-3 text-sm text-muted-foreground">Esta reunião não foi finalizada ({r.partes.length} trecho(s) recebido(s)). <button className="text-primary hover:underline" onClick={() => refazer.mutate({ id })}>Finalizar e resumir agora</button></p>}
-      {r.erro && <p className="flex items-start gap-1.5 rounded-xl border border-red-500/30 bg-red-500/10 p-3 text-sm text-red-200"><TriangleAlert className="mt-0.5 h-4 w-4 shrink-0" /><span>{r.erro} {r.status === "erro" && <button className="ml-1 text-primary hover:underline" onClick={() => refazer.mutate({ id })}>Tentar de novo</button>}</span></p>}
+      {r.erro && <p className="flex items-start gap-1.5 rounded-xl border border-red-500/30 bg-red-500/10 p-3 text-sm text-red-200"><TriangleAlert className="mt-0.5 h-4 w-4 shrink-0" /><span>{r.erro} <button className="ml-1 text-primary hover:underline" disabled={refazer.isPending} onClick={() => refazer.mutate({ id })}>Tentar de novo</button></span></p>}
       {resumo && (
         <div className="space-y-3 rounded-xl border border-border bg-card p-4">
           <div className="flex items-center gap-2"><h3 className="font-semibold">Resumo</h3>

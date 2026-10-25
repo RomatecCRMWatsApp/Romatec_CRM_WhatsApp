@@ -27,8 +27,12 @@ export async function transcreverAudio(audio: Buffer, mime: string): Promise<str
   form.append('prompt', 'Reunião de corretor de imóveis com cliente sobre chácaras, lotes, entrada, parcelas, visita e contrato. Português do Brasil.');
   const r = await fetch(`${base}v1/audio/transcriptions`, { method: 'POST', headers: { authorization: `Bearer ${chave}` }, body: form });
   if (!r.ok) {
-    const t = (await r.text().catch(() => '')).slice(0, 200);
-    throw new IaReuniaoErro(`A transcrição falhou (${r.status}). ${r.status === 401 ? 'Confira a OPENAI_API_KEY.' : t}`);
+    const t = await r.text().catch(() => '');
+    if (r.status === 429 && /insufficient_quota|no credits|credit/i.test(t)) {
+      throw new IaReuniaoErro('A conta da OpenAI está sem créditos. Adicione créditos em platform.openai.com → Billing e clique em "Tentar de novo" (o áudio ficou guardado).', 402);
+    }
+    if (r.status === 401) throw new IaReuniaoErro('A chave da OpenAI (OPENAI_API_KEY) foi recusada. Confira a variável no Railway.', 412);
+    throw new IaReuniaoErro(`A transcrição falhou agora (erro ${r.status}). Clique em "Tentar de novo" daqui a pouco.`);
   }
   const j: any = await r.json();
   return String(j?.text ?? '').trim();

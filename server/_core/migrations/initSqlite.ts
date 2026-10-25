@@ -553,6 +553,8 @@ export function initSqliteTables(sqlite: any): void {
     id INTEGER PRIMARY KEY AUTOINCREMENT, reuniaoId INTEGER NOT NULL, ordem INTEGER NOT NULL, duracaoSeg INTEGER NOT NULL DEFAULT 0,
     texto TEXT, erro TEXT, createdAt INTEGER NOT NULL DEFAULT (strftime('%s','now')), UNIQUE (reuniaoId, ordem)
   )`);
+  addColumn(`ALTER TABLE reuniaoPartes ADD COLUMN audioBase64 TEXT`);
+  addColumn(`ALTER TABLE reuniaoPartes ADD COLUMN mime TEXT`);
   run(`CREATE TABLE IF NOT EXISTS modelosMensagem (
     chave TEXT PRIMARY KEY, texto TEXT NOT NULL, atualizadoPor INTEGER, updatedAt INTEGER NOT NULL DEFAULT (strftime('%s','now'))
   )`);

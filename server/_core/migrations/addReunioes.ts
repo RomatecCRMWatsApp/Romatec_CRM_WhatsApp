@@ -36,9 +36,14 @@ export async function addReunioes(): Promise<void> {
       UNIQUE KEY uq_reuniao_parte (reuniaoId, ordem),
       CONSTRAINT fk_reuniao_parte FOREIGN KEY (reuniaoId) REFERENCES reunioes(id) ON DELETE CASCADE
     )`,
+    // v1.30.1: áudio guardado só até a transcrição sair
+    sql`ALTER TABLE reuniaoPartes ADD COLUMN audioBase64 LONGTEXT NULL`,
+    sql`ALTER TABLE reuniaoPartes ADD COLUMN mime VARCHAR(60) NULL`,
   ];
   for (const c of comandos) {
-    try { await (db as any).execute(c); } catch (e: any) { console.warn('[Migration] addReunioes:', e?.message); }
+    try { await (db as any).execute(c); } catch (e: any) {
+      if (!/Duplicate column/.test(e?.message ?? '') && (e?.code ?? e?.cause?.code) !== 'ER_DUP_FIELDNAME') console.warn('[Migration] addReunioes:', e?.message);
+    }
   }
   console.log('[Migration] ✅ addReunioes (reuniões com clientes)');
 }

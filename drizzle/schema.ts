@@ -837,6 +837,9 @@ export const reuniaoPartes = mysqlTable("reuniaoPartes", {
   duracaoSeg: int("duracaoSeg").notNull().default(0),
   texto: longtext("texto"),
   erro: varchar("erro", { length: 300 }),
+  /** Áudio só enquanto a transcrição não sai (ex.: OpenAI sem crédito); apagado ao transcrever */
+  audioBase64: longtext("audioBase64"),
+  mime: varchar("mime", { length: 60 }),
   createdAt: timestamp("createdAt").defaultNow().notNull(),
 }, (t) => ({
   uqParte: uniqueIndex("uq_reuniao_parte").on(t.reuniaoId, t.ordem),

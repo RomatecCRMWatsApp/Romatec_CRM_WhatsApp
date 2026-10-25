@@ -3,6 +3,15 @@
 Cada versão nova vai no TOPO. Depois rode `npm run release` (valida e atualiza o package.json);
 ao subir, o servidor grava a versão no banco e todos recebem o aviso "Novidades da versão".
 
+## 1.30.1 — 2026-10-25
+tipo: patch
+obrigatoria: nao
+titulo: Reuniões: nada se perde se a transcrição falhar
+
+### Correções
+- Se a transcrição falhar (por exemplo, conta da OpenAI sem créditos), o trecho gravado fica guardado e "Tentar de novo" transcreve depois. O áudio é apagado assim que vira texto
+- Mensagem clara quando a OpenAI está sem créditos ou com a chave recusada, no lugar do erro técnico
+
 ## 1.30.0 — 2026-10-25
 tipo: minor
 obrigatoria: nao

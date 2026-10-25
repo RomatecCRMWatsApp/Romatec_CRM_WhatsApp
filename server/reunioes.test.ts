@@ -54,16 +54,25 @@ describe('reuniões com clientes', () => {
     await expect(S.obterReuniao(id, admin)).rejects.toMatchObject({ status: 404 });
   });
 
-  it('falha de transcrição numa parte não perde as outras; sem áudio nenhum, fica com erro', async () => {
+  it('sem crédito na OpenAI: o trecho fica guardado e "Tentar de novo" transcreve e apaga o áudio', async () => {
+    const db: any = await getDb();
     const { id } = await S.criarReuniao({ titulo: 'Ligação', tipo: 'ligacao', consentimento: true }, maria);
     await S.receberParte(id, 0, Buffer.from('ok'), 'audio/webm', 60, maria);
     const real = S.ia.transcrever;
-    S.ia.transcrever = async () => { throw new Error('serviço fora'); };
-    await expect(S.receberParte(id, 1, Buffer.from('ruim'), 'audio/webm', 60, maria)).rejects.toMatchObject({ name: 'ReuniaoErro' });
+    S.ia.transcrever = async () => { throw new Error('A conta da OpenAI está sem créditos.'); };
+    expect(await S.receberParte(id, 1, Buffer.from('dois'), 'audio/webm', 60, maria)).toMatchObject({ pendente: true });
+    // Finaliza ainda sem crédito: resumo do que saiu, avisa o trecho pendente e o áudio continua guardado
+    await S.finalizarReuniao(id, maria, false);
+    let r = await S.obterReuniao(id, maria);
+    expect(r).toMatchObject({ status: 'pronta', transcricao: 'trecho ok' });
+    expect(r.erro).toContain('1 trecho(s) ainda sem transcrição: A conta da OpenAI está sem créditos.');
+    expect(db.all(sql`SELECT COUNT(*) AS n FROM reuniaoPartes WHERE reuniaoId = ${id} AND audioBase64 IS NOT NULL`)[0].n).toBe(1);
+    // Créditos de volta: tentar de novo transcreve o trecho guardado, na ordem, e apaga o áudio
     S.ia.transcrever = real;
     await S.finalizarReuniao(id, maria, false);
-    const r = await S.obterReuniao(id, maria);
-    expect(r).toMatchObject({ status: 'pronta', transcricao: 'trecho ok', erro: '1 parte(s) não foram transcritas' });
+    r = await S.obterReuniao(id, maria);
+    expect(r).toMatchObject({ status: 'pronta', transcricao: 'trecho ok\n\ntrecho dois', erro: null });
+    expect(db.all(sql`SELECT COUNT(*) AS n FROM reuniaoPartes WHERE reuniaoId = ${id} AND audioBase64 IS NOT NULL`)[0].n).toBe(0);
 
     const vazia = await S.criarReuniao({ titulo: 'Vazia', tipo: 'video', consentimento: true }, maria);
     await S.finalizarReuniao(vazia.id, maria, false);

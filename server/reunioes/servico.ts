@@ -69,7 +69,10 @@ export async function criarReuniao(dados: { leadId?: number | null; titulo: stri
   return { id };
 }
 
-/** Uma parte da gravação: transcreve e guarda o texto (reenvio da mesma parte substitui) */
+/**
+ * Uma parte da gravação: transcreve e guarda o texto (reenvio da mesma parte substitui). Se a transcrição falhar
+ * (ex.: OpenAI sem crédito), o áudio fica guardado na parte até "Tentar de novo" — e é apagado ao transcrever.
+ */
 export async function receberParte(id: number, ordem: number, audio: Buffer, mime: string, duracaoSeg: number, q: Quem) {
   const r = await reuniaoDoUsuario(id, q);
   if (r.status !== 'gravando' && r.status !== 'erro') throw new ReuniaoErro('Esta reunião já foi finalizada.', 409);
@@ -78,9 +81,28 @@ export async function receberParte(id: number, ordem: number, audio: Buffer, mim
   let texto: string | null = null, erro: string | null = null;
   try { texto = await ia.transcrever(audio, mime); } catch (e: any) { erro = String(e?.message || 'falha na transcrição').slice(0, 300); }
   await d.delete(reuniaoPartes).where(and(eq(reuniaoPartes.reuniaoId, id), eq(reuniaoPartes.ordem, ordem)));
-  await d.insert(reuniaoPartes).values({ reuniaoId: id, ordem, duracaoSeg: Math.max(0, Math.round(duracaoSeg || 0)), texto, erro, createdAt: new Date() } as any);
-  if (erro) throw new ReuniaoErro(erro, (e => (e.includes('OPENAI_API_KEY') ? 412 : 502))(erro));
-  return { ordem, caracteres: texto?.length ?? 0 };
+  await d.insert(reuniaoPartes).values({
+    reuniaoId: id, ordem, duracaoSeg: Math.max(0, Math.round(duracaoSeg || 0)), texto, erro,
+    audioBase64: erro ? audio.toString('base64') : null, mime: erro ? String(mime).slice(0, 60) : null, createdAt: new Date(),
+  } as any);
+  // A gravação segue: a parte guardada é transcrita de novo ao finalizar
+  return { ordem, caracteres: texto?.length ?? 0, pendente: !!erro, aviso: erro };
+}
+
+/** Partes que ficaram com o áudio guardado: tenta transcrever de novo e apaga o áudio das que saírem */
+async function retranscrever(d: any, partes: any[]) {
+  for (const p of partes) {
+    if (!p.erro || !p.audioBase64) continue;
+    try {
+      const texto = await ia.transcrever(Buffer.from(String(p.audioBase64), 'base64'), p.mime || 'audio/webm');
+      await d.update(reuniaoPartes).set({ texto, erro: null, audioBase64: null, mime: null } as any).where(eq(reuniaoPartes.id, p.id));
+      Object.assign(p, { texto, erro: null, audioBase64: null });
+    } catch (e: any) {
+      const erro = String(e?.message || 'falha na transcrição').slice(0, 300);
+      await d.update(reuniaoPartes).set({ erro } as any).where(eq(reuniaoPartes.id, p.id));
+      p.erro = erro;
+    }
+  }
 }
 
 /** Junta as partes e gera o resumo (em segundo plano na produção; os testes aguardam) */
@@ -99,6 +121,7 @@ export async function processarReuniao(id: number) {
   const [r]: any[] = await d.select().from(reunioes).where(eq(reunioes.id, id)).limit(1);
   if (!r) return;
   const partes: any[] = (await d.select().from(reuniaoPartes).where(eq(reuniaoPartes.reuniaoId, id))).sort((a: any, b: any) => a.ordem - b.ordem);
+  await retranscrever(d, partes);
   const transcricao = partes.map(p => String(p.texto ?? '').trim()).filter(Boolean).join('\n\n');
   const duracaoSeg = partes.reduce((s, p) => s + (Number(p.duracaoSeg) || 0), 0);
   const falhas = partes.filter(p => p.erro).length;
@@ -109,7 +132,7 @@ export async function processarReuniao(id: number) {
     const resumo = await ia.resumir(transcricao, { titulo: r.titulo, tipo: rotuloTipoReuniao(r.tipo), cliente: lead?.nome ?? null });
     await d.update(reunioes).set({
       status: 'pronta', transcricao, duracaoSeg, resumoJson: JSON.stringify(resumo),
-      erro: falhas ? `${falhas} parte(s) não foram transcritas` : null, updatedAt: new Date(),
+      erro: falhas ? `${falhas} trecho(s) ainda sem transcrição: ${partes.find(p => p.erro)?.erro}` : null, updatedAt: new Date(),
     } as any).where(eq(reunioes.id, id));
   } catch (e: any) {
     await falhar(`Transcrição pronta, mas o resumo falhou: ${e?.message || 'erro'}`);
