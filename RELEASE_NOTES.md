@@ -3,6 +3,14 @@
 Cada versão nova vai no TOPO. Depois rode `npm run release` (valida e atualiza o package.json);
 ao subir, o servidor grava a versão no banco e todos recebem o aviso "Novidades da versão".
 
+## 1.30.4 — 2026-10-25
+tipo: patch
+obrigatoria: nao
+titulo: Espaço do banco: detalhes do MySQL
+
+### Melhorias
+- "Ver espaço" também mostra os outros bancos do mesmo MySQL, os arquivos internos e as configurações de logs (só consulta)
+
 ## 1.30.3 — 2026-10-25
 tipo: patch
 obrigatoria: nao

@@ -27,10 +27,18 @@ export function registrarRotaEspaco(app: Express) {
       try {
         const b = linhas(await db.execute(sql`SHOW BINARY LOGS`));
         binlogs = { arquivos: b.length, mb: mb(b.reduce((s: number, x: any) => s + Number(x.File_size ?? x.file_size ?? 0), 0)) };
-      } catch { /* sem privilégio ou binlog desligado */ }
+      } catch (e: any) { binlogs = `não consultável: ${String(e?.message ?? '').slice(0, 120)}`; }
       const total = tabelas.reduce((s, t) => s + Number(t.dados || 0) + Number(t.indices || 0), 0);
+      // O resto do volume: outros bancos no mesmo MySQL e os arquivos internos do InnoDB (redo, undo, temporários)
+      const tentar = async (q: any) => { try { return linhas(await db.execute(q)); } catch { return []; } };
+      const bancos = (await tentar(sql`SELECT TABLE_SCHEMA AS banco, SUM(DATA_LENGTH + INDEX_LENGTH) AS tamanho FROM information_schema.TABLES GROUP BY TABLE_SCHEMA ORDER BY tamanho DESC`))
+        .map((b: any) => ({ banco: b.banco, mb: mb(b.tamanho) }));
+      const arquivos = (await tentar(sql`SELECT FILE_NAME AS arquivo, FILE_TYPE AS tipo, TOTAL_EXTENTS * EXTENT_SIZE AS tamanho FROM information_schema.FILES WHERE TOTAL_EXTENTS * EXTENT_SIZE > 5242880 ORDER BY tamanho DESC LIMIT 15`))
+        .map((f: any) => ({ arquivo: String(f.arquivo), tipo: f.tipo, mb: mb(f.tamanho) }));
+      const variaveis = Object.fromEntries((await tentar(sql`SHOW VARIABLES WHERE Variable_name IN ('version', 'log_bin', 'binlog_expire_logs_seconds', 'expire_logs_days', 'innodb_redo_log_capacity', 'innodb_log_file_size', 'innodb_undo_log_truncate', 'max_binlog_size')`))
+        .map((v: any) => [v.Variable_name ?? v.variable_name, v.Value ?? v.value]));
       res.json({
-        ok: true, totalTabelasMB: mb(total), binlogs,
+        ok: true, totalTabelasMB: mb(total), binlogs, bancos, arquivos, variaveis,
         tabelas: tabelas.slice(0, 25).map(t => ({ tabela: t.tabela, linhas: Number(t.linhas) || 0, mb: mb(Number(t.dados || 0) + Number(t.indices || 0)), livreMB: mb(t.livre) })),
       });
     } catch (e: any) {
