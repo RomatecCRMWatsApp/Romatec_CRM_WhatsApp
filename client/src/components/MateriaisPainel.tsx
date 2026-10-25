@@ -3,7 +3,10 @@ import { toast } from "sonner";
 import { trpc } from "@/lib/trpc";
 import { Button } from "@/components/ui/button";
 import { Copy, Download, Eye, EyeOff, FileText, Lock, Share2, Trash2, Upload, Video } from "lucide-react";
-import { ROTULO_TIPO_MATERIAL, TIPOS_ARQUIVO_ACEITOS, TIPOS_MATERIAL, bloqueadaPorNome, tipoPorNome, tituloPorNome, type TipoMaterial } from "@shared/materiais";
+import {
+  ABA_ARQUIVO, CATEGORIAS_ARQUIVO, ROTULO_TIPO_MATERIAL, TIPOS_ARQUIVO_ACEITOS, TIPOS_MATERIAL, bloqueadaPorNome, categoriaDoArquivo, tipoPorNome, tituloPorNome,
+  type CategoriaArquivo, type TipoMaterial,
+} from "@shared/materiais";
 import { enviarParaCloudinary, mimeDoArquivo } from "@/lib/uploadCloudinary";
 import LinkAgendamento from "@/components/LinkAgendamento";
 
@@ -136,6 +139,11 @@ export default function MateriaisPainel({ propertyId, empreendimentoSlug }: Dest
   const criar = trpc.materiais.create.useMutation();
   const [destino, setDestino] = useState("");
   const [filtro, setFiltro] = useState("");
+  // Aba (Todos / Imagens / Vídeos / PDFs): cada arquivo cai na sua pelo tipo; a aba fica lembrada neste aparelho
+  const [aba, setAbaEstado] = useState<"" | CategoriaArquivo>(() => {
+    try { const v = localStorage.getItem("materiais_aba"); return (CATEGORIAS_ARQUIVO as readonly string[]).includes(v ?? "") ? (v as CategoriaArquivo) : ""; } catch { return ""; }
+  });
+  const setAba = (v: "" | CategoriaArquivo) => { setAbaEstado(v); try { localStorage.setItem("materiais_aba", v); } catch { /* sem armazenamento */ } };
   const [enviando, setEnviando] = useState<string | null>(null);
   // Limites reais do plano de armazenamento (Cloudinary), para o texto e a checagem antes de enviar
   const [limites, setLimites] = useState<{ imagemMB: number; videoMB: number; pdfMB: number } | null>(null);
@@ -161,6 +169,7 @@ export default function MateriaisPainel({ propertyId, empreendimentoSlug }: Dest
       const mb = (f.size / 1048576).toFixed(f.size > 10 * 1048576 ? 0 : 1);
       setEnviando(`Enviando ${i + 1} de ${lista.length}: ${f.name} (${mb} MB)…`);
       if (!TIPOS_ARQUIVO_ACEITOS.includes(mime)) { toast.error(`${f.name}: tipo não aceito. Use JPG, PNG, WEBP, GIF, MP4, MOV, WEBM ou PDF.`); continue; }
+      if (aba && categoriaDoArquivo(mime, f.name) !== aba) { toast.error(`${f.name}: esta é a aba ${ABA_ARQUIVO[aba].rotulo}. Envie pela aba certa ou por "Todos".`); continue; }
       try {
         // Direto para o armazenamento, em partes (não passa pelo servidor do CRM)
         const up = await enviarParaCloudinary(f, pct => setEnviando(`Enviando ${i + 1} de ${lista.length}: ${f.name} (${mb} MB) — ${pct}%`));
@@ -182,7 +191,10 @@ export default function MateriaisPainel({ propertyId, empreendimentoSlug }: Dest
     recarregar();
   };
 
-  const grupos = (data?.grupos ?? []).filter(g => !filtro || g.chave === filtro);
+  const naAba = (m: any) => !aba || categoriaDoArquivo(m.mime, m.url) === aba;
+  const doFiltro = (data?.grupos ?? []).filter(g => !filtro || g.chave === filtro);
+  const contagem = (c: "" | CategoriaArquivo) => doFiltro.reduce((n, g) => n + g.itens.filter((m: any) => !c || categoriaDoArquivo(m.mime, m.url) === c).length, 0);
+  const grupos = doFiltro.map(g => ({ ...g, itens: g.itens.filter(naAba) })).filter(g => g.itens.length > 0);
 
   return (
     <div className="space-y-4">
@@ -196,9 +208,9 @@ export default function MateriaisPainel({ propertyId, empreendimentoSlug }: Dest
             </select>
           </label>
         )}
-        <input ref={input} type="file" multiple accept="image/*,video/mp4,video/webm,video/quicktime,application/pdf" className="hidden" onChange={e => enviar(e.target.files)} />
+        <input ref={input} type="file" multiple accept={aba ? ABA_ARQUIVO[aba].aceita : "image/*,video/mp4,video/webm,video/quicktime,application/pdf"} className="hidden" onChange={e => enviar(e.target.files)} />
         <Button type="button" onClick={() => input.current?.click()} disabled={!!enviando || (!fixo && !destino)} className="bg-emerald-600 hover:bg-emerald-700 text-white">
-          <Upload className="h-4 w-4 mr-1.5" /> Enviar artes, vídeos ou PDF
+          <Upload className="h-4 w-4 mr-1.5" /> {aba ? ABA_ARQUIVO[aba].botao : "Enviar artes, vídeos ou PDF"}
         </Button>
         {!fixo && (data?.grupos.length ?? 0) > 1 && (
           <label className="flex flex-col gap-1 text-xs text-muted-foreground ml-auto">
@@ -210,6 +222,16 @@ export default function MateriaisPainel({ propertyId, empreendimentoSlug }: Dest
           </label>
         )}
       </div>
+      <div role="tablist" aria-label="Tipo de arquivo" className="grid grid-cols-4 gap-1 rounded-lg border border-border bg-secondary/20 p-1">
+        {([["", "Todos"], ...CATEGORIAS_ARQUIVO.map(c => [c, ABA_ARQUIVO[c].rotulo])] as ["" | CategoriaArquivo, string][]).map(([c, rotulo]) => (
+          <button key={c || "todos"} type="button" role="tab" aria-selected={aba === c} onClick={() => setAba(c)}
+            className={`whitespace-nowrap rounded-md px-1 py-1.5 text-xs sm:text-sm font-medium transition-colors ${aba === c ? "bg-emerald-600 text-white" : "text-muted-foreground hover:text-foreground"}`}>
+            {c === "video" && <Video className="hidden sm:inline h-3.5 w-3.5 mr-1 -mt-0.5" />}
+            {c === "pdf" && <FileText className="hidden sm:inline h-3.5 w-3.5 mr-1 -mt-0.5" />}
+            {rotulo} <span className="opacity-70">({contagem(c)})</span>
+          </button>
+        ))}
+      </div>
       {(empreendimentoSlug || destino.startsWith("e:")) && <LinkAgendamento slug={empreendimentoSlug || destino.slice(2)} />}
       {enviando && <p className="text-xs text-emerald-300">{enviando}</p>}
       <p className="text-[11px] text-muted-foreground">
@@ -217,7 +239,7 @@ export default function MateriaisPainel({ propertyId, empreendimentoSlug }: Dest
       </p>
 
       {isLoading && <p className="text-sm text-muted-foreground">Carregando materiais...</p>}
-      {!isLoading && grupos.length === 0 && <p className="text-sm text-muted-foreground">Nenhum material ainda.</p>}
+      {!isLoading && grupos.length === 0 && <p className="text-sm text-muted-foreground">{aba ? `Nenhum material em ${ABA_ARQUIVO[aba].rotulo} ainda.` : "Nenhum material ainda."}</p>}
       {grupos.map(g => (
         <section key={g.chave} className="space-y-2">
           {!fixo && <h2 className="text-base font-semibold text-foreground">{g.nome} <span className="text-xs text-muted-foreground font-normal">· {g.itens.length}</span></h2>}

@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { tipoPorNome, tituloPorNome, bloqueadaPorNome, resourceTypeDe, problemaArquivo, agruparMateriais } from '../shared/materiais';
+import { tipoPorNome, tituloPorNome, bloqueadaPorNome, resourceTypeDe, problemaArquivo, agruparMateriais, categoriaDoArquivo, ABA_ARQUIVO } from '../shared/materiais';
 
 describe('Materiais — arquivos do pacote', () => {
   it('tipo pelo nome do arquivo', () => {
@@ -51,5 +51,18 @@ describe('Materiais — arquivos do pacote', () => {
     expect(grupos.map(g => g.nome)).toEqual(['Condomínio Bom Jardims', 'IMV-0003 — Casa']);
     expect(grupos[0].itens.map(i => i.id)).toEqual([3, 2]);
     expect(grupos[1].itens.map(i => i.id)).toEqual([4, 1]);
+  });
+  it('abas Imagens / Vídeos / PDFs: o arquivo cai na aba pelo tipo (mime ou endereço), inclusive os antigos sem mime', () => {
+    expect(categoriaDoArquivo('video/mp4')).toBe('video');
+    expect(categoriaDoArquivo('video/quicktime')).toBe('video');
+    expect(categoriaDoArquivo(null, 'https://res.cloudinary.com/x/video/upload/v1/romatec_materiais/campanha')).toBe('video');
+    expect(categoriaDoArquivo('', 'https://res.cloudinary.com/x/raw/upload/v1/folder.pdf')).toBe('pdf');
+    expect(categoriaDoArquivo(null, 'https://res.cloudinary.com/x/image/upload/v1/folder.pdf?v=2')).toBe('pdf');
+    expect(categoriaDoArquivo('application/pdf')).toBe('pdf');
+    expect(categoriaDoArquivo('image/png', 'https://res.cloudinary.com/x/image/upload/v1/feed.png')).toBe('imagem');
+    expect(categoriaDoArquivo(undefined, 'Status_01.webp')).toBe('imagem');
+    // Na aba, o seletor de arquivo só oferece aquele tipo
+    expect(ABA_ARQUIVO.video.aceita).toBe('video/mp4,video/webm,video/quicktime');
+    expect(ABA_ARQUIVO.pdf.aceita).toBe('application/pdf');
   });
 });

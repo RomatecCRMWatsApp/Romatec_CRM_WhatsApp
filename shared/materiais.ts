@@ -36,6 +36,24 @@ export function bloqueadaPorNome(nome: string): boolean {
   return /condic|pre[cç]o|tabela|parcela|financiamento/i.test(nome);
 }
 
+/** Abas da tela de materiais: o arquivo cai na aba pelo tipo (não depende do que o corretor escolheu no select) */
+export const CATEGORIAS_ARQUIVO = ['imagem', 'video', 'pdf'] as const;
+export type CategoriaArquivo = typeof CATEGORIAS_ARQUIVO[number];
+
+export const ABA_ARQUIVO: Record<CategoriaArquivo, { rotulo: string; aceita: string; botao: string }> = {
+  imagem: { rotulo: 'Imagens', aceita: 'image/jpeg,image/png,image/webp,image/gif', botao: 'Enviar imagens' },
+  video: { rotulo: 'Vídeos', aceita: 'video/mp4,video/webm,video/quicktime', botao: 'Enviar vídeos' },
+  pdf: { rotulo: 'PDFs', aceita: 'application/pdf', botao: 'Enviar PDF' },
+};
+
+export function categoriaDoArquivo(mime: string | null | undefined, url = ''): CategoriaArquivo {
+  const m = (mime || '').toLowerCase();
+  const u = url.split('?')[0].toLowerCase();
+  if (m.startsWith('video/') || /\.(mp4|mov|webm|m4v)$/.test(u) || u.includes('/video/upload/')) return 'video';
+  if (m === 'application/pdf' || /\.pdf$/.test(u)) return 'pdf';
+  return 'imagem';
+}
+
 export type ResourceType = 'image' | 'video' | 'raw';
 
 /** PDF vai como raw (o Cloudinary bloqueia a entrega de PDF como imagem em contas novas) */

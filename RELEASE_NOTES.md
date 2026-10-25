@@ -3,6 +3,16 @@
 Cada versão nova vai no TOPO. Depois rode `npm run release` (valida e atualiza o package.json);
 ao subir, o servidor grava a versão no banco e todos recebem o aviso "Novidades da versão".
 
+## 1.20.0 — 2026-10-25
+tipo: minor
+obrigatoria: nao
+titulo: Materiais organizados em abas
+
+### Novo
+- Materiais de divulgação em abas: Todos, Imagens, Vídeos e PDFs, com a quantidade de cada
+- Cada arquivo enviado cai sozinho na aba do seu tipo; dentro de uma aba, o botão de envio só aceita aquele tipo
+- A aba escolhida fica lembrada no aparelho
+
 ## 1.19.0 — 2026-10-25
 tipo: minor
 obrigatoria: nao
