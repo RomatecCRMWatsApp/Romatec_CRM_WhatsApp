@@ -17,6 +17,7 @@ import { montarContexto, type CredenciaisCorretor, type EntradaContexto, type Pe
 import { planoDoContrato, type EscolhaPlano, type PlanoContrato } from './plano';
 import { gerarContratoPdf } from './gerar';
 import type { DadosUnidade } from './anexosLote';
+import { carregarCamadas } from './mapaEmpreendimento';
 import { lerArquivo, salvarArquivo } from './arquivos';
 import { avaliarGate } from './gate';
 import { hojeIso } from './formato';
@@ -256,7 +257,7 @@ export async function entradaDoContrato(contratoId: number): Promise<{ entrada: 
   const unidade: DadosUnidade = {
     codigo: lote.codigo, quadra: lote.quadra, numero: lote.numero, areaM2: Number(lote.areaM2), perimetroM: Number(lote.perimetroM ?? 0),
     verticesUtm: geom(lote), memorial, outros: todos.filter(l => l.id !== lote.id && geom(l).length >= 3).map(l => ({ codigo: l.codigo, verticesUtm: geom(l) })),
-    perimetroUtm, ruas, fuso, responsavelTecnico: emp?.responsavelTecnico ?? null,
+    perimetroUtm, ruas, fuso, responsavelTecnico: emp?.responsavelTecnico ?? null, camadas: await carregarCamadas(emp?.slug, fuso),
   };
   return { entrada, unidade, plano, marca: j.marcaSlug, modelo: j.modeloCpcv };
 }

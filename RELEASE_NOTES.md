@@ -3,6 +3,15 @@
 Cada versão nova vai no TOPO. Depois rode `npm run release` (valida e atualiza o package.json);
 ao subir, o servidor grava a versão no banco e todos recebem o aviso "Novidades da versão".
 
+## 1.13.1 — 2026-10-24
+tipo: patch
+obrigatoria: nao
+titulo: Mapa da unidade no contrato igual ao do sistema
+
+### Melhorias
+- Anexo V do contrato com a planta real do empreendimento, a mesma do mapa do sistema: ruas com os nomes, portal de entrada, rio, APP de 30 m, trilha ecológica, área de vivência e todas as chácaras, com a chácara do contrato em destaque
+- Detalhe da chácara em página própria: vértices V1, V2… com coordenadas (UTM SIRGAS 2000 e latitude/longitude), azimute e distância de cada lado, área e perímetro
+
 ## 1.13.0 — 2026-10-24
 tipo: minor
 obrigatoria: nao

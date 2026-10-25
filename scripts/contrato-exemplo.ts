@@ -1,12 +1,12 @@
 /**
- * Contrato de exemplo (prévia para revisão do layout): Chácara A01 do Bom Jardims, comprador fictício casado,
+ * Contrato de exemplo (prévia para revisão do layout): Chácara A02 (ou LOTE=<código>) do Bom Jardims, comprador fictício casado,
  * entrada em 6× + saldo em 120×. Gera a minuta e uma prévia do definitivo com dados fictícios nos campos de registro.
  *
  *   SOFFICE_BIN="C:\Program Files\LibreOffice\program\soffice.exe" npx tsx scripts/contrato-exemplo.ts <pasta de saída>
  *
  * Não usa o banco: o jurídico vem do seed (templates/defaults_empreendimento.json) e o lote, do mapa público.
  */
-import { mkdir, writeFile } from 'node:fs/promises';
+import { mkdir, readFile, writeFile } from 'node:fs/promises';
 import path from 'node:path';
 import mapa from '../client/public/bom-jardims/mapa.json';
 import { simular } from '../shared/simulador';
@@ -17,10 +17,14 @@ import { montarContexto, type EntradaContexto } from '../server/contratos/contex
 import { planoDoContrato } from '../server/contratos/plano';
 import { gerarContratoPdf } from '../server/contratos/gerar';
 import type { DadosUnidade } from '../server/contratos/anexosLote';
+import { carregarCamadas } from '../server/contratos/mapaEmpreendimento';
+import { importarLotesDxf } from '../server/lotes/dxf';
 import { hojeIso } from '../server/contratos/formato';
 
 const saida = path.resolve(process.argv[2] ?? 'contrato-exemplo');
 const FUSO = 23;
+const CODIGO = process.env.LOTE ?? 'A02';
+const dxf = process.env.DXF ? importarLotesDxf(await readFile(process.env.DXF, 'latin1'), { fuso: FUSO }) : null;
 
 // Condições vigentes do Bom Jardims (seed de condicoesPagamento — addSimulador.ts)
 const condicoes = {
@@ -31,17 +35,19 @@ const condicoes = {
 
 // Geometria do mapa público em UTM (no banco os vértices já vêm do DXF em UTM)
 const utm = (poly: number[][]) => poly.slice(0, -1).map(([lon, lat]) => geoParaUtm(lon, lat, FUSO));
-const todos: LoteMemorial[] = (mapa as any).lotes.map((l: any) => ({
+const todos: LoteMemorial[] = dxf
+  ? dxf.lotes.map(l => ({ codigo: l.codigo, quadra: l.quadra, numero: l.numero, areaM2: l.areaM2, perimetroM: l.perimetroM, verticesUtm: l.verticesUtm }))
+  : (mapa as any).lotes.map((l: any) => ({
   codigo: l.codigo, quadra: l.quadra, numero: l.numero, areaM2: l.areaM2, perimetroM: 0, verticesUtm: utm(l.poly),
 }));
-for (const l of todos) l.perimetroM = l.verticesUtm.reduce((s, a, i, v) => s + Math.hypot(v[(i + 1) % v.length][0] - a[0], v[(i + 1) % v.length][1] - a[1]), 0);
-const ruas: RuaMemorial[] = (mapa as any).ruas.filter((r: any) => r.line.every((p: any[]) => p[0] != null)).flatMap((r: any) => r.line.slice(1).map((b: number[], i: number) => {
+if (!dxf) for (const l of todos) l.perimetroM = l.verticesUtm.reduce((s, a, i, v) => s + Math.hypot(v[(i + 1) % v.length][0] - a[0], v[(i + 1) % v.length][1] - a[1]), 0);
+const ruas: RuaMemorial[] = dxf ? dxf.ruas.map(r => ({ nome: r.nome, e: r.e, n: r.n, angulo: r.angulo })) : (mapa as any).ruas.filter((r: any) => r.line.every((p: any[]) => p[0] != null)).flatMap((r: any) => r.line.slice(1).map((b: number[], i: number) => {
   const p = geoParaUtm(r.line[i][0], r.line[i][1], FUSO), q = geoParaUtm(b[0], b[1], FUSO);
   return { nome: r.nome, e: (p[0] + q[0]) / 2, n: (p[1] + q[1]) / 2, angulo: (Math.atan2(q[1] - p[1], q[0] - p[0]) * 180) / Math.PI };
 }));
-const perimetroUtm = utm((mapa as any).perimetro);
+const perimetroUtm = dxf?.perimetro?.verticesUtm ?? utm((mapa as any).perimetro);
 
-const lote = todos.find(l => l.codigo === 'A01')!;
+const lote = todos.find(l => l.codigo === CODIGO)!;
 const memorial = memorialDoLote(lote, todos, { nome: 'Condomínio de Chácaras Bom Jardims', municipio: 'Açailândia', uf: 'MA', fuso: FUSO, ruas, perimetroUtm });
 const v = memorial.vertices.map(x => [x.e, x.n] as [number, number]);
 // O mapa público não traz o traçado de todas as ruas; no sistema a frente vem de lotes.viaFrente
@@ -50,7 +56,7 @@ const viaFrente = v.map((a, i) => ruaDoLado(a, v[(i + 1) % v.length], ruas)).fin
 // Geometria da unidade para o memorial (Anexo I) e o mapa individual (Anexo V)
 const unidade: DadosUnidade = {
   codigo: lote.codigo, quadra: lote.quadra, numero: lote.numero, areaM2: lote.areaM2, perimetroM: Math.round(lote.perimetroM * 100) / 100,
-  verticesUtm: lote.verticesUtm, memorial, outros: todos.filter(l => l.codigo !== lote.codigo), perimetroUtm, ruas, fuso: FUSO,
+  verticesUtm: lote.verticesUtm, memorial, outros: todos.filter(l => l.codigo !== lote.codigo), perimetroUtm, ruas, fuso: FUSO, camadas: await carregarCamadas('bom-jardims', FUSO),
   responsavelTecnico: 'José Romário Pinto Bezerra — Técnico em Agrimensura CFT/MA 01209185369 · INCRA FQNS',
 };
 
@@ -91,13 +97,13 @@ const ficticios = {
 await mkdir(saida, { recursive: true });
 const ctxMinuta = montarContexto(base);
 const minuta = await gerarContratoPdf(ctxMinuta, plano, { alvo: 'minuta', modelo: 'MODELO-CPCV-BOM-JARDIMS-v2.docx', marca: 'bomjardims', unidade });
-await writeFile(path.join(saida, 'CPCV-BJ-2026-0001-A01-MINUTA.pdf'), minuta.pdf);
+await writeFile(path.join(saida, `CPCV-BJ-2026-0001-${lote.codigo}-MINUTA.pdf`), minuta.pdf);
 
 const ctxDef = montarContexto({ ...base, lote: { ...base.lote, matricula: '00.001 (exemplo)', viaFrente: base.lote.viaFrente || 'via interna do condomínio (exemplo)' }, overrides: ficticios });
 const definitivo = await gerarContratoPdf(ctxDef, plano, {
   alvo: 'definitivo', modelo: 'MODELO-CPCV-BOM-JARDIMS-v2.docx', marca: 'bomjardims', unidade, previaSemValor: 'EXEMPLO — DADOS FICTÍCIOS',
 });
-await writeFile(path.join(saida, 'CPCV-BJ-2026-0001-A01-DEFINITIVO-EXEMPLO.pdf'), definitivo.pdf);
+await writeFile(path.join(saida, `CPCV-BJ-2026-0001-${lote.codigo}-DEFINITIVO-EXEMPLO.pdf`), definitivo.pdf);
 
 console.log(JSON.stringify({
   saida,

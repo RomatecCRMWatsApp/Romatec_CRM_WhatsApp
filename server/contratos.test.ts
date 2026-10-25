@@ -103,6 +103,31 @@ describe('anexos da unidade (I memorial, V mapa, VI licença)', () => {
     const lo = Buffer.from('%PDF-LO');
     expect(await anexoLicenca(ctx, 'bomjardims', lo)).toBe(lo);
   });
+
+  it('Anexo V usa as camadas do mapa do sistema (portal na coordenada do mapa.json) e traz o detalhe em página própria', async () => {
+    const { PDFDocument } = await import('pdf-lib');
+    const { anexoMapa } = await import('./contratos/anexosLote');
+    const { carregarCamadas } = await import('./contratos/mapaEmpreendimento');
+    const { memorialDoLote } = await import('./lotes/memorial');
+    const { geoParaUtm, utmParaGeo } = await import('../shared/utm');
+    const camadas = await carregarCamadas('bom-jardims', 23);
+    expect(camadas?.rio?.line.length).toBeGreaterThan(10);
+    expect(camadas?.app?.poly.length).toBeGreaterThan(10);
+    expect(camadas?.trilha?.line.length).toBeGreaterThan(1);
+    expect(camadas?.areas.some(a => /vivência/i.test(a.nome))).toBe(true);
+    const portal = camadas!.pontos.find(p => /portal/i.test(p.nome))!;
+    const [lon, lat] = utmParaGeo(portal.pt[0], portal.pt[1], 23);
+    expect(lat).toBeCloseTo(-4.92754264, 6);
+    expect(lon).toBeCloseTo(-47.38171366, 6);
+    expect(await carregarCamadas('../etc', 23)).toBeNull();
+
+    const v = [[-47.3770209, -4.9232288], [-47.3772805, -4.9228053], [-47.3768604, -4.9225413], [-47.3766009, -4.9229649]].map(([o, a]) => geoParaUtm(o, a, 23));
+    const lote = { codigo: 'A02', quadra: 'A', numero: 2, areaM2: 3025.11, perimetroM: 220.01, verticesUtm: v };
+    const memorial = memorialDoLote(lote, [lote], { nome: 'Bom Jardims', fuso: 23 });
+    const unidade = { ...lote, memorial, outros: [], perimetroUtm: null, ruas: [{ nome: 'Rua Sapucaia', e: v[0][0], n: v[0][1], angulo: 301 }], fuso: 23, camadas };
+    const pdf = await anexoMapa(unidade, montarContexto(entrada()), 'bomjardims');
+    expect((await PDFDocument.load(pdf)).getPageCount()).toBe(2);
+  });
 });
 
 describe('marca do empreendimento', () => {
