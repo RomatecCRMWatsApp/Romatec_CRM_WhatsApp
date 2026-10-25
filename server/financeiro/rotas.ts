@@ -104,6 +104,29 @@ button{padding:10px;background:#0C3320;color:#fff;border:0;border-radius:8px;fon
 export function registrarRotasFinanceiro(app: Express) {
   const base = '/api/financeiro';
 
+  // Diagnóstico do Asaas (só administrador; nunca mostra a chave): ambiente, se a chave é aceita e o titular da conta
+  app.get(`${base}/diagnostico`, async (req, res) => {
+    const { sdk } = await import('../_core/sdk');
+    const user: any = await sdk.authenticateRequest(req).catch(() => null);
+    const { perfilDe } = await import('../../shared/equipe');
+    if (!user || perfilDe(user) !== 'admin') return res.status(404).json({ success: false });
+    const slug = typeof req.query.emp === 'string' && /^[a-z0-9-]{1,80}$/.test(req.query.emp) ? req.query.emp : 'bom-jardims';
+    const { configAsaas, beneficiarioDaConta, chaveDoEmpreendimento, sufixoEnv } = await import('./asaas');
+    const chave = chaveDoEmpreendimento(slug);
+    const cfg = configAsaas(process.env, slug);
+    const base_ = {
+      empreendimento: slug, variavel: `ASAAS_API_KEY_${sufixoEnv(slug)}`, chaveDefinida: !!chave, chaveFinal: chave ? `…${chave.slice(-4)}` : null,
+      ambiente: cfg?.ambiente ?? null, webhookToken: !!(process.env.ASAAS_WEBHOOK_TOKEN || '').trim(), webhookUrl: 'https://romateccrm.com/api/webhook/asaas',
+    };
+    if (!cfg) return res.json({ success: true, ...base_, chaveValida: false, erro: 'Chave não definida — cobrança desligada' });
+    try {
+      const b = await beneficiarioDaConta(cfg);
+      res.json({ success: true, ...base_, chaveValida: true, titular: b.nome, documentoFinal: b.cpfCnpj ? `…${b.cpfCnpj.slice(-4)}` : null, agenciaConta: b.agenciaConta || null });
+    } catch (e: any) {
+      res.json({ success: true, ...base_, chaveValida: false, erro: e?.message ?? 'Falha ao consultar o Asaas' });
+    }
+  });
+
   // Tabelas de financiamento (aba Financeiro): PDF de um lote/área/valor e a tabela geral — escopo do usuário
   const tabelaPdf = (geral: boolean) => async (req: any, res: any) => {
     try {

@@ -3,6 +3,14 @@
 Cada versão nova vai no TOPO. Depois rode `npm run release` (valida e atualiza o package.json);
 ao subir, o servidor grava a versão no banco e todos recebem o aviso "Novidades da versão".
 
+## 1.23.2 — 2026-10-25
+tipo: patch
+obrigatoria: nao
+titulo: Conferência da ligação com o Asaas
+
+### Melhorias
+- Diagnóstico do Asaas para o administrador: mostra se a chave do empreendimento foi aceita, o ambiente (produção ou teste), o titular da conta e se o webhook está configurado — sem mostrar a chave
+
 ## 1.23.1 — 2026-10-25
 tipo: patch
 obrigatoria: nao
