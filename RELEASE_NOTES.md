@@ -3,6 +3,18 @@
 Cada versão nova vai no TOPO. Depois rode `npm run release` (valida e atualiza o package.json);
 ao subir, o servidor grava a versão no banco e todos recebem o aviso "Novidades da versão".
 
+## 1.30.0 — 2026-10-25
+tipo: minor
+obrigatoria: nao
+titulo: Reuniões — grave, transcreva e resuma as conversas com clientes
+
+### Novo
+- Menu "Reuniões" (em Leads): grave a reunião pelo celular ou pelo computador — o CRM transcreve em português e faz o resumo com o interesse do cliente, dúvidas e objeções, próximos passos e os dados que ele contou
+- No computador dá para incluir o som da chamada (Meet, Zoom ou WhatsApp Web). Também dá para importar um áudio (áudio do WhatsApp, MP3, M4A, gravação de ligação)
+- A gravação sobe em trechos de 5 minutos enquanto acontece: se a internet cair ou a aba fechar, o que já subiu não se perde
+- A reunião fica ligada ao cliente: a ficha do lead mostra as reuniões e tem o botão "Gravar reunião". Botões para copiar o resumo e a transcrição
+- Antes de gravar é preciso confirmar que o cliente foi avisado (LGPD). O áudio não fica guardado — só o texto e o resumo. O corretor vê as reuniões dele e as dos clientes dele; o administrador e a secretária veem todas
+
 ## 1.29.0 — 2026-10-25
 tipo: minor
 obrigatoria: nao

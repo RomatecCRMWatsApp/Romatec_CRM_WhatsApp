@@ -985,6 +985,8 @@ async function startServer() {
   // Bloco Financeiro: boletos, carnê, 2ª via, recibos, declaração, verificação pública (/r/:numero) e webhook do Asaas
   const { registrarRotasFinanceiro } = await import('../financeiro/rotas');
   registrarRotasFinanceiro(app);
+  const { registrarRotasReunioes } = await import('../reunioes/rotas');
+  registrarRotasReunioes(app);
   const { registrarRotasContratos } = await import('../contratos/rotas');
   registrarRotasContratos(app);
   // Cartão de vendas público dos links de divulgação (?c=<ref>): contato de quem compartilhou
@@ -1115,6 +1117,8 @@ async function startServer() {
     await addVisitas();
     const { addMensagensAgendamento } = await import('./migrations/addMensagensAgendamento');
     await addMensagensAgendamento();
+    const { addReunioes } = await import('./migrations/addReunioes');
+    await addReunioes();
     const { addControleLotes } = await import('./migrations/addControleLotes');
     await addControleLotes();
   } catch (e) {

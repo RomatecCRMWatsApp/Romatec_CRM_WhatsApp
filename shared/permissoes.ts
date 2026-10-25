@@ -31,7 +31,7 @@ export const MODULOS: Modulo[] = [
   { chave: 'contratos', rotulo: 'Contratos (minuta; o corretor só dos leads dele)', procedimentos: ['contratos.'], padrao: AMBOS },
   { chave: 'materiais', rotulo: 'Materiais e links de divulgação', procedimentos: ['materiais.'], padrao: AMBOS },
   { chave: 'imoveis', rotulo: 'Imóveis (cadastro e divulgação)', procedimentos: ['properties.'], padrao: AMBOS },
-  { chave: 'leads', rotulo: 'Leads e funil', procedimentos: ['crm.', 'leadCampanhas.'], padrao: AMBOS },
+  { chave: 'leads', rotulo: 'Leads e funil', procedimentos: ['crm.', 'leadCampanhas.', 'reunioes.'], padrao: AMBOS },
   { chave: 'contatos', rotulo: 'Contatos', procedimentos: ['contacts.'], padrao: AMBOS },
   { chave: 'campanhas', rotulo: 'Campanhas de WhatsApp', procedimentos: ['campaigns.', 'scheduler.'], padrao: AMBOS },
   { chave: 'desempenho', rotulo: 'Desempenho', procedimentos: ['performance.'], padrao: { corretor: false, secretario: false } },

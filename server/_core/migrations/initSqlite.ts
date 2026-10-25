@@ -542,6 +542,17 @@ export function initSqliteTables(sqlite: any): void {
   // Mensagens do link de agendamento (server/_core/migrations/addMensagensAgendamento.ts)
   addColumn(`ALTER TABLE leadVisitas ADD COLUMN pedidoJson TEXT`);
   addColumn(`ALTER TABLE leadVisitas ADD COLUMN confirmacaoEnviadaAt INTEGER`);
+  // Reuniões com clientes (server/_core/migrations/addReunioes.ts)
+  run(`CREATE TABLE IF NOT EXISTS reunioes (
+    id INTEGER PRIMARY KEY AUTOINCREMENT, leadId INTEGER, titulo TEXT NOT NULL, tipo TEXT NOT NULL DEFAULT 'presencial',
+    status TEXT NOT NULL DEFAULT 'gravando', criadoPor INTEGER NOT NULL, consentimento INTEGER NOT NULL DEFAULT 0,
+    duracaoSeg INTEGER NOT NULL DEFAULT 0, transcricao TEXT, resumoJson TEXT, erro TEXT,
+    createdAt INTEGER NOT NULL DEFAULT (strftime('%s','now')), updatedAt INTEGER NOT NULL DEFAULT (strftime('%s','now'))
+  )`);
+  run(`CREATE TABLE IF NOT EXISTS reuniaoPartes (
+    id INTEGER PRIMARY KEY AUTOINCREMENT, reuniaoId INTEGER NOT NULL, ordem INTEGER NOT NULL, duracaoSeg INTEGER NOT NULL DEFAULT 0,
+    texto TEXT, erro TEXT, createdAt INTEGER NOT NULL DEFAULT (strftime('%s','now')), UNIQUE (reuniaoId, ordem)
+  )`);
   run(`CREATE TABLE IF NOT EXISTS modelosMensagem (
     chave TEXT PRIMARY KEY, texto TEXT NOT NULL, atualizadoPor INTEGER, updatedAt INTEGER NOT NULL DEFAULT (strftime('%s','now'))
   )`);

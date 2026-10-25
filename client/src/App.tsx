@@ -28,6 +28,7 @@ const LeadsRelatorio = lazy(() => import("./pages/LeadsRelatorio"));
 const Materiais = lazy(() => import("./pages/Materiais"));
 const ListaInteresse = lazy(() => import("./pages/ListaInteresse"));
 const AgendaVisitas = lazy(() => import("./pages/AgendaVisitas"));
+const Reunioes = lazy(() => import("./pages/Reunioes"));
 const Empreendimentos = lazy(() => import("./pages/Empreendimentos"));
 const Empreendimento = lazy(() => import("./pages/Empreendimento"));
 const EmpreendimentoDocumentos = lazy(() => import("./pages/EmpreendimentoDocumentos"));
@@ -164,6 +165,12 @@ function Router() {
       </Route>
       <Route path={"/leads/agenda"}>
         {() => <SetupGuard component={AgendaVisitas} />}
+      </Route>
+      <Route path={"/reunioes"}>
+        {() => <SetupGuard component={Reunioes} />}
+      </Route>
+      <Route path={"/reunioes/:id"}>
+        {() => <SetupGuard component={Reunioes} />}
       </Route>
       <Route path={"/leads/lista-interesse"}>
         {() => <SetupGuard component={ListaInteresse} />}

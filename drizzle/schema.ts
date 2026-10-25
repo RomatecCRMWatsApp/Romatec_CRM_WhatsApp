@@ -805,6 +805,43 @@ export const leadVisitas = mysqlTable("leadVisitas", {
   idxLead: index("idx_visita_lead").on(t.leadId),
 }));
 
+/** Reuniões com clientes (shared/reunioes.ts): transcrição e resumo; o áudio não fica guardado */
+export const reunioes = mysqlTable("reunioes", {
+  id: int("id").autoincrement().primaryKey(),
+  leadId: int("leadId"),
+  titulo: varchar("titulo", { length: 160 }).notNull(),
+  /** presencial | ligacao | video */
+  tipo: varchar("tipo", { length: 15 }).notNull().default("presencial"),
+  /** gravando | processando | pronta | erro */
+  status: varchar("status", { length: 15 }).notNull().default("gravando"),
+  criadoPor: int("criadoPor").notNull(),
+  /** O cliente foi avisado da gravação (LGPD) */
+  consentimento: boolean("consentimento").notNull().default(false),
+  duracaoSeg: int("duracaoSeg").notNull().default(0),
+  transcricao: longtext("transcricao"),
+  /** ResumoReuniao em JSON */
+  resumoJson: text("resumoJson"),
+  erro: varchar("erro", { length: 300 }),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().notNull(),
+}, (t) => ({
+  idxLead: index("idx_reuniao_lead").on(t.leadId),
+  idxAutor: index("idx_reuniao_autor").on(t.criadoPor),
+}));
+
+/** Partes da gravação (alguns minutos cada), transcritas ao chegar */
+export const reuniaoPartes = mysqlTable("reuniaoPartes", {
+  id: int("id").autoincrement().primaryKey(),
+  reuniaoId: int("reuniaoId").notNull(),
+  ordem: int("ordem").notNull(),
+  duracaoSeg: int("duracaoSeg").notNull().default(0),
+  texto: longtext("texto"),
+  erro: varchar("erro", { length: 300 }),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+}, (t) => ({
+  uqParte: uniqueIndex("uq_reuniao_parte").on(t.reuniaoId, t.ordem),
+}));
+
 /** Modelos de mensagem editáveis (chave → texto); sem linha, vale o padrão do código */
 export const modelosMensagem = mysqlTable("modelosMensagem", {
   chave: varchar("chave", { length: 60 }).primaryKey(),

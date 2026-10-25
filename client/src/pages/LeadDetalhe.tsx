@@ -7,6 +7,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { ArrowLeft, Building2, ExternalLink, Headset, MessageCircle, Bot, Send, XCircle, FileText, Save } from "lucide-react";
 import PageHeader from "@/components/PageHeader";
 import VisitasLead from "@/components/VisitasLead";
+import ReunioesLead from "@/components/ReunioesLead";
 import { CLASSE_COR, MOTIVOS, MotivoPerda, desde } from "./LeadsFunil";
 
 const ROTULO_SLOT: Record<string, string> = {
@@ -267,6 +268,7 @@ export default function LeadDetalhe() {
           </Card>
 
           <VisitasLead leadId={id} imoveis={lead.imoveis as any} onMudou={atualizar} />
+          <ReunioesLead leadId={id} />
 
           <Card className="bg-card border-border">
             <CardHeader className="pb-2"><CardTitle className="text-base">Follow-up automático</CardTitle></CardHeader>
