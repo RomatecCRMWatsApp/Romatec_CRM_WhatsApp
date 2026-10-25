@@ -73,6 +73,8 @@ export async function persistLeadState(
       } as any);
 
       console.log(`[Lead Update] phone=${cleanPhone} stage=${stage} name=${realName || 'sem nome'} [CRIADO]`);
+      const { avisarNovoLead } = await import('./notificacoes');
+      avisarNovoLead({ phone: cleanPhone });
     }
   } catch (error) {
     console.error('[Persistence] ❌ Erro ao persistir lead:', error);

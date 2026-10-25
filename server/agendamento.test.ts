@@ -43,7 +43,10 @@ beforeAll(async () => {
   db = await getDb();
   db.run(sql`INSERT INTO users (id, openId, name, role, creci, telefone) VALUES (1, 'u1', 'José Romário', 'admin', '4705', '99991811246')`);
   db.run(sql`INSERT INTO users (id, openId, name, role, perfil, creci, telefone) VALUES (2, 'u2', 'Maria Corretora', 'user', 'corretor', '1234', '99981112222')`);
-  db.run(sql`INSERT INTO users (id, openId, name, role, perfil) VALUES (3, 'u3', 'Dona Empreendedora', 'user', 'empreendedor')`);
+  db.run(sql`INSERT INTO users (id, openId, name, role, perfil, empreendimentoSlug) VALUES (3, 'u3', 'Dona Empreendedora', 'user', 'empreendedor', 'outro-emp')`);
+  db.run(sql`INSERT INTO users (id, openId, name, role, perfil) VALUES (4, 'u4', 'Secretária', 'user', 'secretario')`);
+  db.run(sql`INSERT INTO users (id, openId, name, role, perfil, creci) VALUES (5, 'u5', 'Outro Corretor', 'user', 'corretor', '5555')`);
+  db.run(sql`INSERT INTO users (id, openId, name, role, perfil, empreendimentoSlug) VALUES (6, 'u6', 'Empreendedora BJ', 'user', 'empreendedor', 'bom-jardims')`);
   db.run(sql`INSERT INTO empreendimentos (id, slug, nome, municipio, uf) VALUES (1, 'bom-jardims', 'Condomínio de Chácaras Bom Jardims', 'Açailândia', 'MA')`);
   db.run(sql`INSERT INTO lotes (empreendimentoId, codigo, quadra, numero, areaM2, situacao) VALUES (1, 'A01', 'A', 1, '3025.11', 'disponivel')`);
   db.run(sql`INSERT INTO lotes (empreendimentoId, codigo, quadra, numero, areaM2, situacao) VALUES (1, 'A12', 'A', 12, '3661.42', 'vendido_parcelado')`);
@@ -75,7 +78,7 @@ describe('link de agendamento', () => {
     const r = await A.registrarAgendamento('bom-jardims', pedido({ ref: refDoUsuario(2) }), '1.2.3.4');
     expect(r).toMatchObject({ ok: true, responsavelId: 2 });
     // Lead pelo ingestLead (o mesmo da captação: dedupe, boas-vindas e aviso no Telegram/WhatsApp)
-    expect(chamadas.at(-1)).toMatchObject({ origem: 'site', campanha: 'Link de agendamento', empreendimentoSlug: 'bom-jardims', loteCodigo: 'A01', funil: 'comprador',
+    expect(chamadas.at(-1)).toMatchObject({ responsavelId: 2, origem: 'site', campanha: 'Link de agendamento', empreendimentoSlug: 'bom-jardims', loteCodigo: 'A01', funil: 'comprador',
       consentimento: expect.objectContaining({ origem: 'link_agendamento', ip: '1.2.3.4' }) });
     const [lead] = await db.select().from(schema.leadQualifications).where(eq(schema.leadQualifications.id, r.leadId));
     expect(lead).toMatchObject({ nome: 'Carlos Cliente', phone: '5599988776655', responsavelId: 2, empreendimentoSlug: 'bom-jardims', loteCodigo: 'A01' });
@@ -103,5 +106,21 @@ describe('link de agendamento', () => {
     expect(agendamentoSchema.safeParse({ nome: 'X' }).success).toBe(false);
     expect(agendamentoSchema.safeParse({ ...pedido(), consentimento: false }).success).toBe(false);
     await expect(A.dadosDaPagina('nao-existe', null)).rejects.toMatchObject({ status: 404 });
+  });
+
+  it('novo lead: admin, secretária e o corretor do lead (não outro corretor); empreendedor só do empreendimento dele; som próprio', async () => {
+    const { notificarNovoLead } = await import('./notificacoes');
+    const { SOM_POR_TIPO } = await import('../shared/notificacoes');
+    const r = await A.registrarAgendamento('bom-jardims', pedido({ nome: 'Lead Novo Teste', telefone: '99966554433', ref: refDoUsuario(2) }));
+    await notificarNovoLead(r.leadId!, undefined, null);
+    const doLead = (await db.select().from(schema.notificacoes)).filter((n: any) => n.tipo === 'novo_lead' && n.chave === `novo_lead:${r.leadId}`);
+    expect(doLead.map((n: any) => n.usuarioId).sort()).toEqual([1, 2, 4, 6]);
+    expect(doLead[0].titulo).toBe('Novo lead: Lead Novo Teste · Condomínio de Chácaras Bom Jardims');
+    expect(doLead[0].mensagem).toContain('de Imperatriz · interesse: A01');
+    expect(doLead.find((n: any) => n.usuarioId === 2).url).toBe(`/leads/lead/${r.leadId}`);
+    // Uma vez só por lead
+    await notificarNovoLead(r.leadId!, undefined, null);
+    expect((await db.select().from(schema.notificacoes)).filter((n: any) => n.chave === `novo_lead:${r.leadId}`)).toHaveLength(4);
+    expect(SOM_POR_TIPO.novo_lead).toBe('/sons/novo_lead.wav');
   });
 });

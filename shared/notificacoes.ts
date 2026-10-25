@@ -11,7 +11,7 @@ import type { Perfil } from './equipe';
 import { VENDIDOS, type SituacaoLote } from './lotes';
 import { temAcesso, type AcessoCorretor } from './permissoes';
 
-export const TIPOS_NOTIFICACAO = ['atualizacao_sistema', 'reserva', 'venda_contrato', 'liberacao', 'solicitacao_cancelamento', 'agendamento'] as const;
+export const TIPOS_NOTIFICACAO = ['atualizacao_sistema', 'reserva', 'venda_contrato', 'liberacao', 'solicitacao_cancelamento', 'agendamento', 'novo_lead'] as const;
 export type TipoNotificacao = typeof TIPOS_NOTIFICACAO[number];
 
 /** Som de cada tipo (client/public/sons) — trocar o arquivo troca o som, sem mexer no código */
@@ -22,6 +22,7 @@ export const SOM_POR_TIPO: Record<TipoNotificacao, string> = {
   liberacao: '/sons/liberacao.wav',
   solicitacao_cancelamento: '/sons/cancelamento.wav',
   agendamento: '/sons/agendamento.wav',
+  novo_lead: '/sons/novo_lead.wav',
 };
 
 export const ROTULO_NOTIFICACAO: Record<TipoNotificacao, string> = {
@@ -31,6 +32,7 @@ export const ROTULO_NOTIFICACAO: Record<TipoNotificacao, string> = {
   liberacao: 'Lote liberado',
   solicitacao_cancelamento: 'Pedido de cancelamento',
   agendamento: 'Pedido de agendamento',
+  novo_lead: 'Novo lead',
 };
 
 /** Cor do selo na lista do sininho */
@@ -41,6 +43,7 @@ export const COR_NOTIFICACAO: Record<TipoNotificacao, string> = {
   liberacao: '#5FB04A',
   solicitacao_cancelamento: '#C0504D',
   agendamento: '#2C7FB8',
+  novo_lead: '#1F8A4C',
 };
 
 const RESERVAS: SituacaoLote[] = ['reservado', 'entrada'];
@@ -71,6 +74,10 @@ export function textoNotificacao(
     case 'reserva': return { titulo: `${onde} reservada`, mensagem: `A ${onde} foi reservada${por}.` };
     case 'venda_contrato': return { titulo: `${onde} vendida`, mensagem: `Venda/contrato fechado da ${onde}${por}.` };
     case 'liberacao': return { titulo: `${onde} liberada`, mensagem: `A ${onde} voltou a ficar disponível${por} — oportunidade aberta.` };
+    case 'novo_lead': return {
+      titulo: `Novo lead: ${d.comprador ?? 'sem nome'}${d.empreendimento ? ` · ${d.empreendimento}` : ''}`,
+      mensagem: [`Novo lead: ${d.comprador ?? 'sem nome'}${d.empreendimento ? ` · ${d.empreendimento}` : ''}`, d.motivo].filter(Boolean).join(' — ').slice(0, 500),
+    };
     case 'agendamento': return {
       titulo: `Pedido de agendamento — ${d.comprador ?? 'cliente'}`,
       mensagem: `${d.comprador ?? 'Um cliente'} pediu atendimento${d.empreendimento ? ` no ${d.empreendimento}` : ''}${d.quando ? ` para ${d.quando}` : ''}${d.motivo ? ` (${d.motivo})` : ''}. Confirme o horário com ele.`.slice(0, 500),
@@ -95,7 +102,7 @@ export function destinatarios(
   usuarios: UsuarioDestino[],
   acessos: (AcessoCorretor & { usuarioId: number })[],
   perfilDe: (u: UsuarioDestino) => Perfil | null,
-  alvo?: { empreendimentoId: number; empreendimentoSlug: string; autorId?: number | null },
+  alvo?: { empreendimentoId: number; empreendimentoSlug: string; autorId?: number | null; responsavelId?: number | null },
 ): number[] {
   return usuarios.filter(u => {
     if (u.ativo === false || u.ativo === 0) return false;
@@ -104,6 +111,15 @@ export function destinatarios(
     if (tipo === 'solicitacao_cancelamento') return perfilDe(u) === 'admin' && u.id !== alvo?.autorId;
     // Pedido de agendamento: vai direto para o responsável (notificarAgendamento), não por escopo
     if (tipo === 'agendamento') return false;
+    // Novo lead: admin e secretária (no escopo do empreendimento); corretor só o lead atribuído a ele;
+    // empreendedor só o do empreendimento dele
+    if (tipo === 'novo_lead') {
+      const perfil = perfilDe(u);
+      if (perfil === 'corretor') return !!alvo?.responsavelId && alvo.responsavelId === u.id;
+      if (perfil === 'empreendedor') return !!alvo?.empreendimentoSlug && u.empreendimentoSlug === alvo.empreendimentoSlug;
+      if (perfil === 'admin') return true;
+      return !alvo?.empreendimentoId || temAcesso(perfil, acessos.filter(a => a.usuarioId === u.id), 'empreendimento', alvo.empreendimentoId);
+    }
     if (!alvo || u.id === alvo.autorId) return false;
     const perfil = perfilDe(u);
     if (perfil === 'empreendedor') return !!u.empreendimentoSlug && u.empreendimentoSlug === alvo.empreendimentoSlug;
@@ -118,7 +134,10 @@ export function destinatarios(
 export function urlDaNotificacao(
   tipo: TipoNotificacao, d: { empreendimentoSlug?: string | null; lote?: string | null; contratoId?: number | null; leadId?: number | null }, perfil?: Perfil | null,
 ): string {
-  if (tipo === 'agendamento') return d.leadId ? `/leads/lead/${d.leadId}` : '/agenda';
+  if (tipo === 'agendamento' || tipo === 'novo_lead') {
+    if (tipo === 'novo_lead' && perfil === 'empreendedor') return '/empreendedor?notificacoes=1';
+    return d.leadId ? `/leads/lead/${d.leadId}` : tipo === 'agendamento' ? '/agenda' : '/leads';
+  }
   if (tipo === 'solicitacao_cancelamento') return d.contratoId ? `/contratos/${d.contratoId}` : '/contratos';
   if (perfil === 'empreendedor') return '/empreendedor?notificacoes=1';
   if (tipo === 'atualizacao_sistema' || !d.empreendimentoSlug) return '/dashboard?notificacoes=1';

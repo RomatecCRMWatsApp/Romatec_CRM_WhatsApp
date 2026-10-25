@@ -177,6 +177,47 @@ export async function notificarSolicitacaoCancelamento(
     { contratoId: p.contratoId });
 }
 
+/**
+ * Novo lead captado (formulário, link de agendamento, WhatsApp/bot da Zayra, Meta…): sininho, aviso na tela e push.
+ * Uma vez por lead (chave novo_lead:<id>). Destinatários em shared/notificacoes.ts (destinatarios).
+ */
+export async function notificarNovoLead(leadId: number, repo: RepoNotificacoes = repoBanco(), enviar?: EnviadorPush | null) {
+  if (!leadId) return null;
+  const chave = `novo_lead:${leadId}`;
+  if (await repo.jaEmitida("novo_lead", chave)) return null;
+  const db = await dbOrThrow();
+  const { leadQualifications } = await import("../drizzle/schema");
+  const [l]: any[] = await db.select().from(leadQualifications).where(eq(leadQualifications.id, leadId)).limit(1);
+  if (!l) return null;
+  let emp: any = null;
+  if (l.empreendimentoSlug) {
+    [emp] = await db.select({ id: empreendimentos.id, nome: empreendimentos.nome, slug: empreendimentos.slug }).from(empreendimentos).where(eq(empreendimentos.slug, l.empreendimentoSlug)).limit(1);
+  }
+  const ans = (typeof l.answers === "string" ? JSON.parse(l.answers) : l.answers) ?? {};
+  const unidade = l.loteCodigo || ans["unidade de interesse"] || null;
+  const detalhe = [ans.cidade ? `de ${ans.cidade}` : null, unidade ? `interesse: ${unidade}` : null].filter(Boolean).join(" · ") || undefined;
+  const usuarios = await repo.usuarios();
+  const ids = destinatarios("novo_lead", usuarios, await repo.acessos(), perfilDe as any,
+    { empreendimentoId: emp?.id ?? 0, empreendimentoSlug: emp?.slug ?? "", responsavelId: l.responsavelId ?? null });
+  const { titulo, mensagem } = textoNotificacao("novo_lead", { comprador: l.nome || "sem nome", empreendimento: emp?.nome ?? undefined, motivo: detalhe });
+  return emitir(repo, enviar === undefined ? await enviadorWebPush() : enviar, usuarios, ids,
+    { tipo: "novo_lead", titulo, mensagem, empreendimentoId: emp?.id ?? null, chave }, { leadId, empreendimentoSlug: emp?.slug ?? null });
+}
+
+/** Mesmo aviso a partir do telefone (pontos que gravam o lead sem devolver o id) */
+export async function notificarNovoLeadPorTelefone(phone: string) {
+  const db = await dbOrThrow();
+  const { leadQualifications } = await import("../drizzle/schema");
+  const [l]: any[] = await db.select({ id: leadQualifications.id }).from(leadQualifications).where(eq(leadQualifications.phone, phone)).limit(1);
+  return l ? notificarNovoLead(l.id) : null;
+}
+
+/** Dispara sem travar quem captou o lead (falha no aviso nunca derruba a captação) */
+export function avisarNovoLead(ref: { leadId?: number | null; phone?: string | null }) {
+  const p = ref.leadId ? notificarNovoLead(ref.leadId) : ref.phone ? notificarNovoLeadPorTelefone(ref.phone) : Promise.resolve(null);
+  p.catch(e => console.warn("[Notificações] novo lead:", e?.message ?? e));
+}
+
 /** Pedido de agendamento pelo link público → sininho e push de quem recebeu o lead */
 export async function notificarAgendamento(
   p: { responsavelId: number; leadId: number; cliente: string; empreendimentoId?: number | null; empreendimentoNome?: string | null; quando: string; detalhe?: string },

@@ -95,7 +95,7 @@ export async function registrarAgendamento(slug: string, p: PedidoAgendamento, i
   const r = await ingestLead({
     nome: p.nome, phone: p.telefone, origem: 'site', campanha: 'Link de agendamento', empreendimentoSlug: emp.slug,
     loteCodigo: /^[A-Z]\d{2}$/i.test(p.unidade || '') ? p.unidade!.toUpperCase() : undefined,
-    answers: respostasDoPedido(p), funil: 'comprador',
+    answers: respostasDoPedido(p), funil: 'comprador', responsavelId: dono?.id ?? null,
     consentimento: { at: new Date(agora).toISOString(), texto: 'Aceito ser contatado(a) sobre o agendamento e o empreendimento.', origem: 'link_agendamento', ...(ip ? { ip } : {}) },
   });
   if (!r.ok) {

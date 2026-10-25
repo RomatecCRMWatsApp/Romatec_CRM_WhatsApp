@@ -3,6 +3,18 @@
 Cada versão nova vai no TOPO. Depois rode `npm run release` (valida e atualiza o package.json);
 ao subir, o servidor grava a versão no banco e todos recebem o aviso "Novidades da versão".
 
+## 1.17.0 — 2026-10-25
+tipo: minor
+obrigatoria: nao
+titulo: Aviso de novo lead
+
+### Novo
+- Notificação "Novo lead" com som próprio: aviso na tela, sininho e celular sempre que um lead entra (formulário, link de agendamento, WhatsApp e bot)
+- Mostra o nome, o empreendimento e, se houver, a cidade e a unidade de interesse
+
+### Melhorias
+- Administrador e secretária recebem; o corretor recebe só o lead que é dele; o empreendedor, só os do empreendimento dele
+
 ## 1.16.1 — 2026-10-25
 tipo: patch
 obrigatoria: nao

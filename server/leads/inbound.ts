@@ -201,6 +201,9 @@ export async function processarEntradaWhatsApp(input: { phone: string; texto: st
     } as any);
     const leadId = Number(inserted?.[0]?.insertId ?? inserted?.lastInsertRowid);
     if (leadId) await gravarInteresses(leadId, imoveis.map((i: any) => i.id));
+    // Novo lead: sininho, aviso na tela e push (admin, secretária e o corretor responsável)
+    const { avisarNovoLead } = await import('../notificacoes');
+    avisarNovoLead({ leadId, phone });
     // Quem clicou no botão do WhatsApp da landing nos últimos 30 min vira este lead
     if (leadId) {
       const { vincularPorCliqueWhatsApp } = await import('./rastreio');
@@ -308,6 +311,8 @@ export async function registrarWhatsappDireto(input: { phone: string; nome?: str
       lastActivityAt: now, createdAt: now, updatedAt: now,
     } as any);
     leadId = Number(r?.[0]?.insertId ?? r?.lastInsertRowid ?? 0);
+    const { avisarNovoLead } = await import('../notificacoes');
+    avisarNovoLead({ leadId, phone });
   }
 
   // No modo IA a própria qualificação grava a mensagem e a resposta

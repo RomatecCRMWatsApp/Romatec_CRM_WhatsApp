@@ -46,6 +46,8 @@ export interface LeadIntakeInput {
   /** form_id do Meta Lead Ads → campanha cadastrada (leadCampanhas.metaFormId) */
   metaFormId?: string;
   funil?: 'comprador' | 'proprietario';
+  /** Responsável já definido na captação (ex.: corretor do link de agendamento); só vale para lead sem dono */
+  responsavelId?: number | null;
 }
 
 /** Canal de atribuição (leadCampanhas.canal) a partir da origem do lead */
@@ -231,6 +233,7 @@ export async function ingestLead(input: LeadIntakeInput): Promise<LeadIntakeResu
       ...(input.consentimento ? { consentimento: input.consentimento } : {}),
       ...(input.answers ? { answers: { ...((lead.answers as any) || {}), ...input.answers } } : {}),
       ...(lead.nome ? {} : { nome }),
+      ...(input.responsavelId && !lead.responsavelId ? { responsavelId: input.responsavelId } : {}),
       // 1º toque fica; último toque e slots do formulário atualizam
       ...(lead.origemCanal ? {} : { origemCanal: canal, origemCampanhaId: campanhaCad?.id ?? null }),
       ultimoCanal: canal,
@@ -265,6 +268,7 @@ export async function ingestLead(input: LeadIntakeInput): Promise<LeadIntakeResu
       ultimoCanal: canal,
       ultimaCampanhaId: campanhaCad?.id ?? null,
       slots,
+      responsavelId: input.responsavelId ?? null,
       lastActivityAt: now,
       createdAt: now,
       updatedAt: now,
@@ -321,6 +325,12 @@ export async function ingestLead(input: LeadIntakeInput): Promise<LeadIntakeResu
     } catch (e) {
       console.warn('[LeadIntake] Score não calculado (não crítico):', e);
     }
+  }
+
+  // Novo lead: sininho, aviso na tela e push (admin, secretária e o corretor responsável)
+  if (!lead && leadRow) {
+    const { avisarNovoLead } = await import('./notificacoes');
+    avisarNovoLead({ leadId: leadRow.id });
   }
 
   // Aviso ao José pelos canais configurados (NOTIFY_CANAIS; padrão Telegram)

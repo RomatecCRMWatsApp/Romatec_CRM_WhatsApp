@@ -457,6 +457,8 @@ async function saveLeadQualification(
     } else {
       await db.insert(leadQualifications).values({ phone: cleanPhone, ...qualFields } as any);
       console.log(`[Lead Update] phone=${cleanPhone} stage=qualificado score=${score.toUpperCase()} name=${nome} [QUALIFICADO/INSERIDO]`);
+      const { avisarNovoLead } = await import('./notificacoes');
+      avisarNovoLead({ phone: cleanPhone });
     }
     // A nota final vem das regras do score (com detalhamento), não do contador do bot
     await slotsDoBotEScore(cleanPhone, answers as any);
