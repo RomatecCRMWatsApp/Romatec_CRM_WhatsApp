@@ -104,6 +104,39 @@ button{padding:10px;background:#0C3320;color:#fff;border:0;border-radius:8px;fon
 export function registrarRotasFinanceiro(app: Express) {
   const base = '/api/financeiro';
 
+  // Tabelas de financiamento (aba Financeiro): PDF de um lote/área/valor e a tabela geral — escopo do usuário
+  const tabelaPdf = (geral: boolean) => async (req: any, res: any) => {
+    try {
+      const { sdk } = await import('../_core/sdk');
+      const user: any = await sdk.authenticateRequest(req).catch(() => null);
+      if (!user || user.ativo === false || user.ativo === 0) return res.status(401).send('Faça login');
+      const { carregarPermissoes } = await import('../permissoes');
+      const { moduloLiberado } = await import('../../shared/permissoes');
+      const perm = await carregarPermissoes(user);
+      if (!moduloLiberado(perm.perfil, perm.modulos, 'financeiro.tabela')) return res.status(403).send('Sem acesso ao Financeiro');
+      const T = await import('./tabelas');
+      const { cartaoDoUsuario } = await import('../cartaoVendas');
+      const q = req.query as Record<string, string | undefined>;
+      const slug = q.slug && /^[a-z0-9-]{1,80}$/.test(q.slug) ? q.slug : 'bom-jardims';
+      const b = await T.baseDoEmpreendimento(slug, perm);
+      const cartao = await cartaoDoUsuario(user.id).catch(() => null);
+      if (geral) return pdf(res, await T.pdfTabelaGeral(b, cartao), `Tabela-geral-${slug}.pdf`);
+      const n = (v?: string) => (v && Number.isFinite(Number(v)) && Number(v) > 0 ? Number(v) : null);
+      const t = T.calcularTabela(b, {
+        lote: q.lote && /^[A-Za-z0-9]{1,10}$/.test(q.lote) ? q.lote : null, areaM2: n(q.area), preco: n(q.preco),
+        entrada: Number(q.entrada) || 6, prazo: Number(q.prazo) || 120, dataPrimeiro: q.data ?? null,
+      });
+      const nome = t.origem.tipo === 'lote' ? t.origem.codigo : t.origem.tipo === 'area' ? `area-${Math.round(t.origem.areaM2)}` : `valor-${Math.round(t.origem.preco)}`;
+      pdf(res, await T.pdfTabelaFinanciamento(b, t, cartao), `Tabela-financiamento-${slug}-${nome}.pdf`);
+    } catch (e: any) {
+      if (e?.name === 'TabelaErro') return res.status(e.status).send(e.message);
+      console.error('[Financeiro] tabela:', e);
+      res.status(500).send('Falha ao gerar a tabela');
+    }
+  };
+  app.get(`${base}/tabela.pdf`, tabelaPdf(false));
+  app.get(`${base}/tabela-geral.pdf`, tabelaPdf(true));
+
   app.get(`${base}/cobrancas/:id/boleto-a4.pdf`, async (req, res) => {
     try {
       const a = await acesso(req, req.path);

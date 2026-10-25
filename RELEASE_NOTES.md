@@ -3,6 +3,19 @@
 Cada versão nova vai no TOPO. Depois rode `npm run release` (valida e atualiza o package.json);
 ao subir, o servidor grava a versão no banco e todos recebem o aviso "Novidades da versão".
 
+## 1.15.0 — 2026-10-25
+tipo: minor
+obrigatoria: nao
+titulo: Tabelas de financiamento no Financeiro
+
+### Novo
+- Financeiro › Tabelas de financiamento: escolha o empreendimento e veja as condições (à vista total, entrada à vista ou parcelada, saldo em 12 a 120×, juros de 6% a.a.)
+- Evolutivo mês a mês (vencimento, parcela, juros, amortização e saldo devedor), igual ao do simulador, por chácara, por área ou por valor
+- Baixar PDF da tabela com a marca do empreendimento e "Baixar tabela geral" com todas as chácaras
+
+### Melhorias
+- Só aparecem os empreendimentos que você acessa; o PDF sai com os seus dados de contato
+
 ## 1.14.0 — 2026-10-25
 tipo: minor
 obrigatoria: nao

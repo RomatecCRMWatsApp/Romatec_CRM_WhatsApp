@@ -11,10 +11,47 @@ import { condicoesPagamento, empreendimentos, leadQualifications, lotes, users }
 import { condicoesDaLinha, r2 } from "../../shared/simulador";
 import { SITUACOES_VENDA, linhaFinanceira, temAcesso } from "../../shared/permissoes";
 import { pctComissaoCorretor } from "../permissoes";
+import { TRPCError } from "@trpc/server";
+
+/** Pedido da tabela de financiamento: lote, área ou valor (sem nada, a área padrão das condições) */
+const pedidoTabela = z.object({
+  slug: z.string().max(80),
+  lote: z.string().trim().max(10).nullable().optional(),
+  areaM2: z.number().positive().max(10_000_000).nullable().optional(),
+  preco: z.number().positive().max(100_000_000).nullable().optional(),
+  entrada: z.number().int().min(1).max(60).default(6),
+  prazo: z.number().int().min(1).max(600).default(120),
+  dataPrimeiro: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).nullable().optional(),
+});
+
+async function comErro<T>(f: () => Promise<T> | T): Promise<T> {
+  try { return await f(); } catch (e: any) {
+    if (e?.name === "TabelaErro" || e?.constructor?.name === "TabelaErro") {
+      throw new TRPCError({ code: e.status === 404 ? "NOT_FOUND" : e.status === 412 ? "PRECONDITION_FAILED" : "BAD_REQUEST", message: e.message });
+    }
+    throw e;
+  }
+}
 
 const num = (v: unknown) => (v === null || v === undefined || v === "" ? null : Number(v));
 
 export const financeiroRouter = router({
+  /** Tabelas de financiamento: empreendimentos que o usuário acessa (com condições cadastradas) */
+  tabelasEmpreendimentos: protectedProcedure.query(async ({ ctx }) => {
+    const { empreendimentosComTabela } = await import("../financeiro/tabelas");
+    return empreendimentosComTabela(ctx.permissoes);
+  }),
+
+  /** Condições + evolutivo (mesmo cálculo do simulador) de um lote, área ou valor, e a lista de lotes */
+  tabela: protectedProcedure.input(pedidoTabela).query(async ({ input, ctx }) => {
+    const T = await import("../financeiro/tabelas");
+    return comErro(async () => {
+      const base = await T.baseDoEmpreendimento(input.slug, ctx.permissoes);
+      const t = T.calcularTabela(base, input);
+      return { empreendimento: base.emp, lotes: base.lotes, ...t };
+    });
+  }),
+
   vendas: protectedProcedure.input(z.object({ slug: z.string().max(80).optional() }).optional()).query(async ({ input, ctx }) => {
     const db = (await getDb()) as any;
     if (!db) throw new Error("Banco indisponível");
