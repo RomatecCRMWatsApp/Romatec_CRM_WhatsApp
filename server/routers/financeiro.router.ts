@@ -86,6 +86,32 @@ export const financeiroRouter = router({
     const { sincronizarComAsaas } = await import("../financeiro/sincronizar");
     return sincronizarComAsaas();
   }),
+  /** Extrato por comprador (um por contrato) com os totais */
+  extrato: protectedProcedure.query(async ({ ctx }) => {
+    await operador(ctx);
+    const { extratoCompradores } = await import("../financeiro/relatorios");
+    return extratoCompradores();
+  }),
+  /** Fluxo de caixa: recebimentos no período e previsão de entradas */
+  fluxoCaixa: protectedProcedure.input(z.object({ de: z.string().regex(/^\d{4}-\d{2}-\d{2}$/), ate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/), agrupar: z.enum(["dia", "mes"]).default("mes") }))
+    .query(async ({ ctx, input }) => {
+      await operador(ctx);
+      const { fluxoCaixa } = await import("../financeiro/relatorios");
+      return comErroFin(() => fluxoCaixa(input.de, input.ate, input.agrupar));
+    }),
+  /** Quem cobrar (vencidos e a vencer em N dias), com a mensagem pronta */
+  aCobrar: protectedProcedure.input(z.object({ dias: z.number().int().min(0).max(30).default(5) })).query(async ({ ctx, input }) => {
+    await operador(ctx);
+    const { aCobrar } = await import("../financeiro/relatorios");
+    return aCobrar(input.dias);
+  }),
+  /** Envia a cobrança por WhatsApp aos contratos escolhidos — só o administrador (régua sempre manual) */
+  enviarCobrancas: protectedProcedure.input(z.object({ contratoIds: z.array(z.number().int()).min(1).max(200), dias: z.number().int().min(0).max(30).default(5) })).mutation(async ({ ctx, input }) => {
+    const { perfilDe } = await import("../../shared/equipe");
+    if (perfilDe(ctx.user as any) !== "admin") throw new TRPCError({ code: "FORBIDDEN", message: "Só o administrador envia cobranças." });
+    const { enviarCobrancas } = await import("../financeiro/relatorios");
+    return comErroFin(() => enviarCobrancas(input.contratoIds, ctx.user.id, { dias: input.dias }));
+  }),
   pagamentosRecentes: protectedProcedure.query(async ({ ctx }) => {
     await operador(ctx);
     const { pagamentosRecentes } = await import("../financeiro/pagamentoManual");

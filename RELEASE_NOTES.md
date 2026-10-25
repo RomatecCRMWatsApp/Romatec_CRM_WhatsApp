@@ -3,6 +3,16 @@
 Cada versão nova vai no TOPO. Depois rode `npm run release` (valida e atualiza o package.json);
 ao subir, o servidor grava a versão no banco e todos recebem o aviso "Novidades da versão".
 
+## 1.28.0 — 2026-10-25
+tipo: minor
+obrigatoria: nao
+titulo: Extrato por comprador, fluxo de caixa e cobrança por WhatsApp
+
+### Novo
+- Financeiro com abas (administrador e secretária): "Extrato por comprador" — cada contrato com contratado, recebido, vencido, a vencer, % pago, situação (em dia, em atraso, quitado), último pagamento e próximo vencimento, com busca, filtro e planilha Excel
+- "Fluxo de caixa": recebimentos do período por dia ou por mês com o acumulado, por forma de pagamento, e a previsão de entradas (parcelas em aberto por mês, com o que está em atraso)
+- "Cobrança por WhatsApp": lista quem está vencido ou vence nos próximos dias, com a mensagem pronta e o link do carnê digital; só o administrador marca e envia (um por vez, com intervalo), e cada envio fica registrado. Nada é enviado sozinho
+
 ## 1.27.1 — 2026-10-25
 tipo: patch
 obrigatoria: nao

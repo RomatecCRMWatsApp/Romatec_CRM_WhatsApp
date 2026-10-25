@@ -6,6 +6,15 @@ import { Wallet } from "lucide-react";
 import TabelasFinanciamento from "@/components/financeiro/TabelasFinanciamento";
 import TesteAsaas from "@/components/financeiro/TesteAsaas";
 import LancarPagamento from "@/components/financeiro/LancarPagamento";
+import ExtratoCompradores from "@/components/financeiro/ExtratoCompradores";
+import FluxoCaixa from "@/components/financeiro/FluxoCaixa";
+import CobrancaWhatsapp from "@/components/financeiro/CobrancaWhatsapp";
+import { useState } from "react";
+import { useAuth } from "@/_core/hooks/useAuth";
+import { perfilDe } from "@shared/equipe";
+import { podeOperarCobranca } from "@shared/contratos";
+
+const ABAS = [["vendas", "Vendas e cobrança"], ["extrato", "Extrato por comprador"], ["fluxo", "Fluxo de caixa"]] as const;
 
 const data = (d: unknown) => (d ? new Date(d as any).toLocaleDateString("pt-BR", { timeZone: "America/Fortaleza" }) : "—");
 const v = (n: number | null | undefined) => (n == null ? "—" : brl(n));
@@ -18,10 +27,23 @@ export default function Financeiro() {
   const { data: d, isLoading, error } = trpc.financeiro.vendas.useQuery();
   const vendas = d?.vendas ?? [];
   const admin = vendas.some(x => x.comissao);
+  const { user } = useAuth();
+  const operador = podeOperarCobranca(perfilDe(user as any));
+  const [aba, setAba] = useState<(typeof ABAS)[number][0]>("vendas");
   return (
     <div>
       <PageHeader icone={Wallet} titulo="Financeiro" subtitulo="Vendas com sinal, parceladas, à vista e quitadas dos empreendimentos que você acessa" />
-      <div className="px-4 md:px-6 pb-8 max-w-[1400px] mx-auto space-y-3">
+      {operador && (
+        <div className="px-4 md:px-6 max-w-[1400px] mx-auto mb-3 flex flex-wrap gap-1 border-b border-border">
+          {ABAS.map(([k, r]) => (
+            <button key={k} type="button" onClick={() => setAba(k)}
+              className={`-mb-px border-b-2 px-3 py-2 text-sm ${aba === k ? "border-primary font-semibold text-foreground" : "border-transparent text-muted-foreground hover:text-foreground"}`}>{r}</button>
+          ))}
+        </div>
+      )}
+      {operador && aba === "extrato" && <div className="px-4 md:px-6 pb-8 max-w-[1400px] mx-auto"><ExtratoCompradores /></div>}
+      {operador && aba === "fluxo" && <div className="px-4 md:px-6 pb-8 max-w-[1400px] mx-auto"><FluxoCaixa /></div>}
+      <div className={`px-4 md:px-6 pb-8 max-w-[1400px] mx-auto space-y-3 ${operador && aba !== "vendas" ? "hidden" : ""}`}>
         {error && <p className="text-sm text-red-400">{error.message}</p>}
         {isLoading && <p className="text-sm text-muted-foreground">Carregando…</p>}
         {d && (
@@ -64,6 +86,7 @@ export default function Financeiro() {
           ))}
         </div>
         <LancarPagamento />
+        {operador && <CobrancaWhatsapp />}
         <TesteAsaas />
         <TabelasFinanciamento />
       </div>

@@ -104,6 +104,23 @@ button{padding:10px;background:#0C3320;color:#fff;border:0;border-radius:8px;fon
 export function registrarRotasFinanceiro(app: Express) {
   const base = '/api/financeiro';
 
+  // Extrato por comprador em planilha (administrador e secretária)
+  app.get(`${base}/extrato.xlsx`, async (req, res) => {
+    try {
+      const { sdk } = await import('../_core/sdk');
+      const user: any = await sdk.authenticateRequest(req).catch(() => null);
+      const { perfilDe } = await import('../../shared/equipe');
+      const { podeOperarCobranca } = await import('../../shared/contratos');
+      if (!user || !podeOperarCobranca(perfilDe(user))) return res.status(404).json({ erro: 'Não encontrado' });
+      const { extratoXlsx } = await import('./relatorios');
+      const buf = await extratoXlsx();
+      res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+      res.setHeader('Content-Disposition', `attachment; filename="Extrato-compradores-${new Date().toISOString().slice(0, 10)}.xlsx"`);
+      res.setHeader('Cache-Control', 'private, no-store');
+      res.send(buf);
+    } catch (e) { erro(res, e); }
+  });
+
   // Boleto de TESTE da integração (só administrador): cria, PDF, situação e cancelamento — só cobranças "crm-teste-"
   const soAdmin = async (req: Request) => {
     const { sdk } = await import('../_core/sdk');
