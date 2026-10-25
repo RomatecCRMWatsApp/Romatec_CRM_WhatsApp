@@ -3,6 +3,14 @@
 Cada versão nova vai no TOPO. Depois rode `npm run release` (valida e atualiza o package.json);
 ao subir, o servidor grava a versão no banco e todos recebem o aviso "Novidades da versão".
 
+## 1.30.3 — 2026-10-25
+tipo: patch
+obrigatoria: nao
+titulo: Espaço do banco nas Configurações
+
+### Melhorias
+- Configurações → "Espaço do banco de dados" (administrador): botão "Ver espaço" mostra o tamanho de cada tabela, sem precisar abrir endereço
+
 ## 1.30.2 — 2026-10-25
 tipo: patch
 obrigatoria: nao

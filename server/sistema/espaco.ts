@@ -15,7 +15,8 @@ export function registrarRotaEspaco(app: Express) {
       const { sdk } = await import('../_core/sdk');
       const user: any = await sdk.authenticateRequest(req).catch(() => null);
       const { perfilDe } = await import('../../shared/equipe');
-      if (!user || perfilDe(user) !== 'admin') return res.status(404).json({ ok: false });
+      if (!user) return res.status(401).json({ ok: false, erro: 'Entre no CRM (romateccrm.com) neste navegador e abra de novo.' });
+      if (perfilDe(user) !== 'admin') return res.status(403).json({ ok: false, erro: 'Só o administrador consulta.' });
       const { getDb, getDbDriver } = await import('../db');
       const db: any = await getDb();
       if (!db || getDbDriver() !== 'mysql') return res.json({ ok: false, erro: 'Só no MySQL de produção' });
