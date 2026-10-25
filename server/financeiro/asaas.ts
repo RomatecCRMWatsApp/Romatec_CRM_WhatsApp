@@ -198,6 +198,11 @@ export const atualizarCobranca = (cfg: AsaasConfig, id: string, payload: ReturnT
 export const obterCobranca = (cfg: AsaasConfig, id: string, fetchFn?: FetchFn) =>
   asaasReq<AsaasCobranca>(cfg, 'GET', `/payments/${encodeURIComponent(id)}`, undefined, fetchFn);
 
+/** Pagamento recebido por fora do boleto (PIX direto, transferência, dinheiro): o boleto deixa de poder ser pago */
+export const receberEmDinheiro = (cfg: AsaasConfig, id: string, i: { data: string; valor: number }, fetchFn?: FetchFn) =>
+  asaasReq<AsaasCobranca>(cfg, 'POST', `/payments/${encodeURIComponent(id)}/receiveInCash`,
+    { paymentDate: i.data, value: Math.round(i.valor * 100) / 100, notifyCustomer: false }, fetchFn);
+
 export const cancelarCobranca = (cfg: AsaasConfig, id: string, fetchFn?: FetchFn) =>
   asaasReq<{ deleted?: boolean }>(cfg, 'DELETE', `/payments/${encodeURIComponent(id)}`, undefined, fetchFn);
 

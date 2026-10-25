@@ -1172,6 +1172,8 @@ async function startServer() {
     await addContratos();
     const { addFinanceiro } = await import('./migrations/addFinanceiro');
     await addFinanceiro();
+    const { addPagamentosManuais } = await import('./migrations/addPagamentosManuais');
+    await addPagamentosManuais();
     const { addAssinatura } = await import('./migrations/addAssinatura');
     await addAssinatura();
     const { addCancelamento } = await import('./migrations/addCancelamento');

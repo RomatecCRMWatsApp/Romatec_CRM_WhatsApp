@@ -35,7 +35,57 @@ async function comErro<T>(f: () => Promise<T> | T): Promise<T> {
 
 const num = (v: unknown) => (v === null || v === undefined || v === "" ? null : Number(v));
 
+/** Lançar pagamento: administrador e secretária (quem opera cobrança) */
+async function operador(ctx: any) {
+  const { perfilDe } = await import("../../shared/equipe");
+  const { podeOperarCobranca } = await import("../../shared/contratos");
+  if (!podeOperarCobranca(perfilDe(ctx.user as any))) throw new TRPCError({ code: "FORBIDDEN", message: "Só o administrador e a secretária lançam pagamentos." });
+}
+async function comErroFin<T>(f: () => Promise<T>): Promise<T> {
+  try { return await f(); } catch (e: any) {
+    if (e?.codigo && typeof e?.status === "number") {
+      const code = e.status === 404 ? "NOT_FOUND" : e.status === 409 ? "CONFLICT" : e.status >= 500 ? "INTERNAL_SERVER_ERROR" : "BAD_REQUEST";
+      throw new TRPCError({ code, message: e.message });
+    }
+    throw e;
+  }
+}
+const lancamentoZ = z.object({
+  forma: z.enum(["PIX", "TRANSFERENCIA", "DINHEIRO", "CARTAO", "OUTRO"]), valor: z.number().positive().max(10_000_000),
+  pagoEm: z.string().regex(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}/), idTransacao: z.string().trim().max(80).nullable().optional(),
+  pagadorNome: z.string().trim().max(160).nullable().optional(), pagadorCpfParcial: z.string().trim().max(20).nullable().optional(),
+  pagadorInstituicao: z.string().trim().max(120).nullable().optional(), vinculoPagador: z.string().trim().max(120).nullable().optional(),
+  urlRecibo: z.string().trim().max(300).nullable().optional(), observacao: z.string().trim().max(500).nullable().optional(),
+  rateio: z.array(z.object({ cobrancaId: z.number().int(), valor: z.number().positive() })).min(1).max(60),
+});
+
 export const financeiroRouter = router({
+  /** Lê o recibo público da InfinitePay (valor, data, pagador, CPF parcial, ID da transação) — confere se o destino é a Romatec */
+  lerRecibo: protectedProcedure.input(z.object({ url: z.string().trim().max(400) })).mutation(async ({ ctx, input }) => {
+    await operador(ctx);
+    const { parseRecibo, destinoEhRomatec } = await import("../financeiro/infinitepay");
+    return comErroFin(async () => {
+      const r = await parseRecibo(input.url);
+      return { ...r, destinoRomatec: destinoEhRomatec(r) };
+    });
+  }),
+  /** Parcelas em aberto de um contrato (para o rateio do pagamento) */
+  parcelasEmAberto: protectedProcedure.input(z.object({ contratoId: z.number().int() })).query(async ({ ctx, input }) => {
+    await operador(ctx);
+    const { parcelasEmAberto } = await import("../financeiro/pagamentoManual");
+    return parcelasEmAberto(input.contratoId);
+  }),
+  lancarPagamento: protectedProcedure.input(lancamentoZ).mutation(async ({ ctx, input }) => {
+    await operador(ctx);
+    const { lancarPagamento } = await import("../financeiro/pagamentoManual");
+    return comErroFin(() => lancarPagamento(input as any, ctx.user.id));
+  }),
+  pagamentosRecentes: protectedProcedure.query(async ({ ctx }) => {
+    await operador(ctx);
+    const { pagamentosRecentes } = await import("../financeiro/pagamentoManual");
+    return pagamentosRecentes(30);
+  }),
+
   /** Tabelas de financiamento: empreendimentos que o usuário acessa (com condições cadastradas) */
   tabelasEmpreendimentos: protectedProcedure.query(async ({ ctx }) => {
     const { empreendimentosComTabela } = await import("../financeiro/tabelas");

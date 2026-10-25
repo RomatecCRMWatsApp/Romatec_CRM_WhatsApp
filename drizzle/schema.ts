@@ -1277,6 +1277,41 @@ export const eventosAutorizacoes = mysqlTable("eventosAutorizacoes", {
 // ════════════════════ Bloco Financeiro v1.0 (v1.10.0 — server/_core/migrations/addFinanceiro.ts) ════════════════════
 
 /** Um recibo por cobrança paga (índice único em cobrancaId: webhook repetido não duplica) */
+/** Pagamento lançado à mão (PIX/transferência/dinheiro fora do boleto), com o comprovante — v1.26.0 */
+export const pagamentosManuais = mysqlTable("pagamentosManuais", {
+  id: int("id").autoincrement().primaryKey(),
+  /** PIX | TRANSFERENCIA | DINHEIRO | CARTAO | OUTRO */
+  forma: varchar("forma", { length: 14 }).notNull(),
+  valor: decimal("valor", { precision: 12, scale: 2 }).notNull(),
+  pagoEm: datetime("pagoEm").notNull(),
+  /** E2E do PIX / AUT-NSU — único: o mesmo comprovante não dá baixa duas vezes */
+  idTransacao: varchar("idTransacao", { length: 80 }),
+  pagadorNome: varchar("pagadorNome", { length: 160 }),
+  pagadorCpfParcial: varchar("pagadorCpfParcial", { length: 20 }),
+  pagadorInstituicao: varchar("pagadorInstituicao", { length: 120 }),
+  /** Quando quem pagou não é o comprador/cônjuge (pai, filho, empresa…) */
+  vinculoPagador: varchar("vinculoPagador", { length: 120 }),
+  urlRecibo: varchar("urlRecibo", { length: 300 }),
+  observacao: varchar("observacao", { length: 500 }),
+  lancadoPor: int("lancadoPor").notNull(),
+  criadoEm: timestamp("criadoEm").defaultNow().notNull(),
+}, (t) => ({
+  uxTransacao: uniqueIndex("ux_pagman_transacao").on(t.idTransacao),
+}));
+
+/** Quanto do pagamento foi para cada parcela (um PIX pode quitar parcelas de mais de um contrato) */
+export const pagamentoRateio = mysqlTable("pagamentoRateio", {
+  id: int("id").autoincrement().primaryKey(),
+  pagamentoId: int("pagamentoId").notNull(),
+  cobrancaId: int("cobrancaId").notNull(),
+  contratoId: int("contratoId").notNull(),
+  valor: decimal("valor", { precision: 12, scale: 2 }).notNull(),
+  reciboId: int("reciboId"),
+}, (t) => ({
+  ixPagamento: index("ix_rateio_pagamento").on(t.pagamentoId),
+  uxCobranca: uniqueIndex("ux_rateio_cobranca").on(t.cobrancaId),
+}));
+
 export const recibos = mysqlTable("recibos", {
   id: int("id").autoincrement().primaryKey(),
   /** REC-BJ-AAAA-NNNNNN */

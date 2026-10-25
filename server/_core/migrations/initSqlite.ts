@@ -465,6 +465,16 @@ export function initSqliteTables(sqlite: any): void {
   // v1.12.0 — assinatura eletrônica (server/_core/migrations/addAssinatura.ts)
   for (const c of ['expiraEm INTEGER', 'revisaoManual INTEGER NOT NULL DEFAULT 0']) addColumn(`ALTER TABLE assinaturaSignatarios ADD COLUMN ${c}`);
   for (const c of ['assinaturaIniciadaEm INTEGER', 'manifestoArquivo TEXT']) addColumn(`ALTER TABLE contratos ADD COLUMN ${c}`);
+  // v1.26.0 — pagamento manual (comprovante InfinitePay, transferência, dinheiro)
+  run(`CREATE TABLE IF NOT EXISTS pagamentosManuais (
+    id INTEGER PRIMARY KEY AUTOINCREMENT, forma TEXT NOT NULL, valor TEXT NOT NULL, pagoEm INTEGER NOT NULL, idTransacao TEXT UNIQUE,
+    pagadorNome TEXT, pagadorCpfParcial TEXT, pagadorInstituicao TEXT, vinculoPagador TEXT, urlRecibo TEXT, observacao TEXT,
+    lancadoPor INTEGER NOT NULL, criadoEm ${agora}
+  )`);
+  run(`CREATE TABLE IF NOT EXISTS pagamentoRateio (
+    id INTEGER PRIMARY KEY AUTOINCREMENT, pagamentoId INTEGER NOT NULL, cobrancaId INTEGER NOT NULL UNIQUE, contratoId INTEGER NOT NULL,
+    valor TEXT NOT NULL, reciboId INTEGER
+  )`);
   run(`CREATE TABLE IF NOT EXISTS recibos (
     id INTEGER PRIMARY KEY AUTOINCREMENT, numero TEXT NOT NULL UNIQUE, cobrancaId INTEGER NOT NULL UNIQUE, contratoId INTEGER NOT NULL,
     codigoVerif TEXT NOT NULL, valorPago TEXT NOT NULL, pagoEm TEXT NOT NULL, pdfArquivo TEXT, enviadoEm INTEGER, envioErro TEXT, criadoEm ${agora}

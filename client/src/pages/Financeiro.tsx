@@ -5,6 +5,7 @@ import { brl } from "@shared/simulador";
 import { Wallet } from "lucide-react";
 import TabelasFinanciamento from "@/components/financeiro/TabelasFinanciamento";
 import TesteAsaas from "@/components/financeiro/TesteAsaas";
+import LancarPagamento from "@/components/financeiro/LancarPagamento";
 
 const data = (d: unknown) => (d ? new Date(d as any).toLocaleDateString("pt-BR", { timeZone: "America/Fortaleza" }) : "—");
 const v = (n: number | null | undefined) => (n == null ? "—" : brl(n));
@@ -62,6 +63,7 @@ export default function Financeiro() {
             </div>
           ))}
         </div>
+        <LancarPagamento />
         <TesteAsaas />
         <TabelasFinanciamento />
       </div>

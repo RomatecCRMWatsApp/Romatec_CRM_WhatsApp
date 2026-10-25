@@ -3,6 +3,18 @@
 Cada versão nova vai no TOPO. Depois rode `npm run release` (valida e atualiza o package.json);
 ao subir, o servidor grava a versão no banco e todos recebem o aviso "Novidades da versão".
 
+## 1.26.0 — 2026-10-25
+tipo: minor
+obrigatoria: nao
+titulo: Lançar pagamento com o recibo da InfinitePay
+
+### Novo
+- No Financeiro, "Lançar pagamento" (administrador e secretária): PIX, transferência, dinheiro ou cartão recebidos fora do boleto
+- Cole o link do recibo da InfinitePay e o sistema preenche valor, data, pagador, CPF parcial e ID da transação — e avisa se o recebedor não for a Romatec / J R P BEZERRA LTDA
+- Um pagamento pode quitar parcelas de mais de um contrato (rateio); cada parcela é quitada inteira, com recibo emitido e enviado ao comprador
+- Parcela com boleto no Asaas: o Asaas é avisado do recebimento e o boleto deixa de poder ser pago em dobro
+- Proteções: PIX exige o ID da transação, o mesmo comprovante não é lançado duas vezes, e CPF de outra pessoa exige o vínculo de quem pagou
+
 ## 1.25.0 — 2026-10-25
 tipo: minor
 obrigatoria: nao
