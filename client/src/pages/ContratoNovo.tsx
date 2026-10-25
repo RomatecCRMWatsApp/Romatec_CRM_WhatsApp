@@ -12,7 +12,8 @@ import { buscarCep } from "@/components/equipe/CadastroUsuario";
 import { maskCEP, maskCPF, maskPhone, onlyDigits } from "@shared/masks";
 import { UFS } from "@shared/cadastro";
 import { perfilDe } from "@shared/equipe";
-import { ESTADOS_CIVIS, REGIMES_BENS, exigeConjuge, exigePacto, pendenciasComprador, type PessoaForm } from "@shared/contratos";
+import { ESTADOS_CIVIS, REGIMES_BENS, exigeConjuge, exigePacto, pendenciasComprador, pendenciasDependentes, rotuloParentesco, type Dependente, type PessoaForm } from "@shared/contratos";
+import DependentesCampos from "@/components/contratos/Dependentes";
 import { brl } from "@shared/simulador";
 
 const PASSOS = ["Unidade e plano", "Comprador", "Revisão"];
@@ -47,6 +48,8 @@ export default function ContratoNovo() {
   const [especificas, setEspecificas] = useState("");
   const [modoAssinatura, setModo] = useState<"eletronica" | "manuscrita">("eletronica");
   const [erros, setErros] = useState<Record<string, string>>({});
+  // null = sem dependentes; lista = carteirinhas extras (até 6)
+  const [dependentes, setDependentes] = useState<Dependente[] | null>(null);
 
   useEffect(() => { if (op && corretorUserId == null) setCorretor(op.euId); }, [op, corretorUserId]);
   useEffect(() => {
@@ -80,7 +83,7 @@ export default function ContratoNovo() {
 
   const avancar = () => {
     if (passo === 1) {
-      const e = pendenciasComprador(comprador, casado ? conjuge : null);
+      const e = { ...pendenciasComprador(comprador, casado ? conjuge : null), ...pendenciasDependentes(dependentes ?? []) };
       setErros(e);
       if (Object.keys(e).length) { toast.error("Confira os campos destacados"); return; }
     }
@@ -88,7 +91,7 @@ export default function ContratoNovo() {
   };
   const enviar = () => criar.mutate({
     slug, lote, leadId, corretorUserId: corretorUserId ?? undefined, plano,
-    comprador, conjuge: casado ? conjuge : null, condicoes: { especificas, modoAssinatura },
+    comprador, conjuge: casado ? conjuge : null, dependentes: dependentes ?? [], condicoes: { especificas, modoAssinatura },
   });
 
   const opcoesEmp = useMemo(() => (emps ?? []).filter(e => e.acesso), [emps]);
@@ -194,6 +197,9 @@ export default function ContratoNovo() {
                 <PessoaCampos p={conjuge} set={setJ} erros={erros} prefixo="conjuge" conjuge />
               </div>
             )}
+            <div className="rounded-xl border border-border bg-card p-4">
+              <DependentesCampos lista={dependentes} onMudar={setDependentes} erros={erros} comConjuge={casado} />
+            </div>
           </section>
         )}
 
@@ -203,6 +209,7 @@ export default function ContratoNovo() {
               <p>Chácara: <b>{lote}</b> · {op?.empreendimento.nome}</p>
               <p>Comprador: <b>{comprador.nome}</b> — CPF {comprador.cpf}</p>
               {casado && <p>Cônjuge: <b>{conjuge.nome}</b> — CPF {conjuge.cpf}</p>}
+              <p>Carteirinhas: <b>{1 + (casado ? 1 : 0) + (dependentes?.length ?? 0)}</b>{dependentes?.length ? ` — dependentes: ${dependentes.map(d => `${d.nome.split(" ")[0]} (${rotuloParentesco(d.parentesco)})`).join(", ")}` : " (sem dependentes)"}</p>
               <p>Plano: <b>{sim.data.modalidade === "avista" ? `à vista ${brl(sim.data.total_pagar)}` : `entrada ${sim.data.entrada_qtd}× ${brl(sim.data.entrada_parcela)} + ${sim.data.saldo_qtd}× ${brl(sim.data.saldo_parcela)}`}</b></p>
               <p>Total a pagar: <b>{brl(sim.data.total_pagar)}</b></p>
             </div>

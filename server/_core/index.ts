@@ -1176,6 +1176,8 @@ async function startServer() {
     await addAssinatura();
     const { addCancelamento } = await import('./migrations/addCancelamento');
     await addCancelamento();
+    const { addDependentes } = await import('./migrations/addDependentes');
+    await addDependentes();
   } catch (e) {
     console.error('❌ Erro na migration addContratos/addFinanceiro:', e);
   }

@@ -3,15 +3,15 @@
  * geração de versões (nunca sobrescritas), ativação e cancelamento.
  */
 import { randomBytes } from 'node:crypto';
-import { and, eq, inArray, or, sql } from 'drizzle-orm';
+import { and, asc, eq, inArray, or, sql } from 'drizzle-orm';
 import { getDb } from '../db';
 import {
-  condicoesPagamento, contratoPessoas, contratos, contratoSeq, contratoVersoes, empJuridico, empreendimentos, loteHistorico, lotes, pessoas,
+  condicoesPagamento, contratoDependentes, contratoPessoas, contratos, contratoSeq, contratoVersoes, empJuridico, empreendimentos, loteHistorico, lotes, pessoas,
   usuarioDocumentos, users,
 } from '../../drizzle/schema';
 import { condicoesDaLinha, simular, type CondicoesPagamento } from '../../shared/simulador';
 import { statusPublicoDe } from '../../shared/lotes';
-import { exigeConjuge, pendenciasComprador, type PessoaForm } from '../../shared/contratos';
+import { exigeConjuge, pendenciasComprador, pendenciasDependentes, type Dependente, type PessoaForm } from '../../shared/contratos';
 import { memorialDoLote, type RuaMemorial } from '../lotes/memorial';
 import { montarContexto, type CredenciaisCorretor, type EntradaContexto, type PessoaContrato } from './contexto';
 import { planoDoContrato, type EscolhaPlano, type PlanoContrato } from './plano';
@@ -136,6 +136,8 @@ export interface NovoContrato {
   plano: { modalidade: 'financiado' | 'avista'; entradaParcelas: number; prazo?: number; dataPrimeiroPagamento: string };
   comprador: PessoaForm;
   conjuge?: PessoaForm | null;
+  /** Dependentes para as carteirinhas (até 6; opcional) */
+  dependentes?: Dependente[] | null;
   condicoes?: { especificas?: string; modoAssinatura?: 'eletronica' | 'manuscrita' };
 }
 
@@ -167,7 +169,7 @@ export function planoEscolhido(n: NovoContrato['plano'], areaM2: number, precoTa
 }
 
 export async function criarContrato(n: NovoContrato, autorId: number): Promise<{ id: number; numero: string }> {
-  const campos = pendenciasComprador(n.comprador, exigeConjuge(n.comprador.estadoCivil) ? n.conjuge : null);
+  const campos = { ...pendenciasComprador(n.comprador, exigeConjuge(n.comprador.estadoCivil) ? n.conjuge : null), ...pendenciasDependentes(n.dependentes) };
   if (Object.keys(campos).length) throw new ContratoErro('CAMPOS', 'Confira os dados do comprador', 400, campos);
   if (!/^\d{4}-\d{2}-\d{2}$/.test(n.plano.dataPrimeiroPagamento)) throw new ContratoErro('DATA', 'Data do 1º pagamento inválida', 400);
   const d = await db();
@@ -212,7 +214,32 @@ export async function criarContrato(n: NovoContrato, autorId: number): Promise<{
     const conjugeId = await salvarPessoa({ ...n.conjuge, estadoCivil: n.comprador.estadoCivil, regimeBens: n.comprador.regimeBens }, null);
     await d.insert(contratoPessoas).values({ contratoId: c.id, pessoaId: conjugeId, papel: 'conjuge' });
   }
+  await salvarDependentes(c.id, n.dependentes ?? []);
   return { id: c.id, numero };
+}
+
+// ─── Dependentes (carteirinhas) ──────────────────────────────────────────────
+
+/** Grava a lista inteira (troca a anterior): até 6, na ordem informada */
+export async function salvarDependentes(contratoId: number, deps: Dependente[]): Promise<void> {
+  const erros = pendenciasDependentes(deps);
+  if (Object.keys(erros).length) throw new ContratoErro('CAMPOS', 'Confira os dependentes', 400, erros);
+  const d = await db();
+  await d.delete(contratoDependentes).where(eq(contratoDependentes.contratoId, contratoId));
+  const agora = new Date();
+  for (let i = 0; i < deps.length; i++) {
+    const x = deps[i];
+    await d.insert(contratoDependentes).values({
+      contratoId, ordem: i + 1, nome: x.nome.trim(), parentesco: x.parentesco, nascimento: x.nascimento,
+      cpf: soDigitos(x.cpf ?? '') || null, criadoEm: agora,
+    } as any);
+  }
+}
+
+export async function dependentesDo(contratoId: number): Promise<(Dependente & { ordem: number })[]> {
+  const d = await db();
+  const r: any[] = await d.select().from(contratoDependentes).where(eq(contratoDependentes.contratoId, contratoId)).orderBy(asc(contratoDependentes.ordem));
+  return r.map(x => ({ ordem: Number(x.ordem), nome: x.nome, parentesco: x.parentesco, nascimento: String(x.nascimento).slice(0, 10), cpf: x.cpf ?? null }));
 }
 
 // ─── Contexto do merge a partir do banco ─────────────────────────────────────

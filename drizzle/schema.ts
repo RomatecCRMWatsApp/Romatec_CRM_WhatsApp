@@ -1329,6 +1329,22 @@ export const indicesIpca = mysqlTable("indicesIpca", {
  * Pedido de cancelamento do contrato (corretor/secretária → administrador). O administrador
  * cancela ele mesmo, com a senha; o pedido fica como "atendida" ou "recusada" (nunca é apagado).
  */
+/** Dependentes do comprador (carteirinhas do condomínio): até 6 por contrato; titular e cônjuge vêm de contratoPessoas */
+export const contratoDependentes = mysqlTable("contratoDependentes", {
+  id: int("id").autoincrement().primaryKey(),
+  contratoId: int("contratoId").notNull(),
+  ordem: int("ordem").notNull(),
+  nome: varchar("nome", { length: 160 }).notNull(),
+  /** filho | filha | enteado | … (shared/contratos.ts PARENTESCOS) */
+  parentesco: varchar("parentesco", { length: 20 }).notNull(),
+  nascimento: date("nascimento", { mode: "string" }).notNull(),
+  /** Só dígitos; opcional */
+  cpf: varchar("cpf", { length: 11 }),
+  criadoEm: timestamp("criadoEm").defaultNow().notNull(),
+}, (t) => ({
+  ixContrato: index("ix_dep_contrato").on(t.contratoId, t.ordem),
+}));
+
 export const contratoSolicitacoes = mysqlTable("contratoSolicitacoes", {
   id: int("id").autoincrement().primaryKey(),
   contratoId: int("contratoId").notNull(),

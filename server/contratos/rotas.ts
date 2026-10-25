@@ -82,6 +82,33 @@ export function registrarRotasContratos(app: Express) {
     }
   });
 
+  // Carteirinhas do condomínio (CR80, frente e verso): administrador, secretária ou o corretor do contrato
+  app.get('/api/contratos/:id/carteirinhas.pdf', async (req, res) => {
+    try {
+      const { sdk } = await import('../_core/sdk');
+      const user: any = await sdk.authenticateRequest(req).catch(() => null);
+      if (!user || user.ativo === false || user.ativo === 0) return res.status(401).send('Faça login');
+      const { perfilDe } = await import('../../shared/equipe');
+      const perfil = perfilDe(user);
+      const c = await contratoPorId(Number(req.params.id) || 0);
+      if (!(perfil === 'admin' || perfil === 'secretario' || (perfil === 'corretor' && c.corretorUserId === user.id))) return res.status(404).send('Não encontrado');
+      const { carteirinhasPdf } = await import('./carteirinhas');
+      const { pdf, nome } = await carteirinhasPdf(c.id);
+      res.setHeader('Content-Type', 'application/pdf');
+      res.setHeader('Content-Disposition', `attachment; filename="${nome}"`);
+      res.setHeader('Cache-Control', 'private, no-store');
+      res.send(pdf);
+    } catch (e: any) { res.status(e instanceof ContratoErro ? e.status : 500).send(e instanceof ContratoErro ? e.message : 'Falha ao gerar as carteirinhas'); }
+  });
+  // QR do verso da carteirinha (portaria): pública, sem CPF
+  app.get('/api/public/carteirinha/:codigo/:n', async (req, res) => {
+    const { conferirCarteirinha } = await import('./carteirinhas');
+    const r = await conferirCarteirinha(String(req.params.codigo).toUpperCase().slice(0, 20), Number(req.params.n) || 0);
+    res.status(r.status).setHeader('Content-Type', 'text/html; charset=utf-8');
+    res.setHeader('X-Robots-Tag', 'noindex');
+    res.send(r.html);
+  });
+
   // PDF atual do contrato (tela de posicionar as assinaturas)
   app.get('/api/contratos/:id/atual.pdf', async (req, res) => {
     try {

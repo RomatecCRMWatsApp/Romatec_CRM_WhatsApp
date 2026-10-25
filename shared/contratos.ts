@@ -40,6 +40,31 @@ export const REGIMES_BENS = [
 ] as const;
 
 export const exigeConjuge = (estadoCivil: string | null | undefined) => estadoCivil === 'casado' || estadoCivil === 'uniao_estavel';
+
+// ─── Dependentes (carteirinhas do condomínio) ────────────────────────────────
+// Titular e cônjuge têm carteirinha sempre; os dependentes são opcionais, até 6 por contrato.
+export const MAX_DEPENDENTES = 6;
+export const PARENTESCOS: [string, string][] = [
+  ['filho', 'Filho'], ['filha', 'Filha'], ['enteado', 'Enteado'], ['enteada', 'Enteada'], ['pai', 'Pai'], ['mae', 'Mãe'],
+  ['sogro', 'Sogro'], ['sogra', 'Sogra'], ['neto', 'Neto'], ['neta', 'Neta'], ['irmao', 'Irmão'], ['irma', 'Irmã'], ['outro', 'Outro'],
+];
+export const rotuloParentesco = (v: string) => PARENTESCOS.find(([k]) => k === v)?.[1] ?? v;
+export interface Dependente { nome: string; parentesco: string; nascimento: string; cpf?: string | null }
+
+/** Erros por campo (chave dependentes.<i>.<campo>); CPF é opcional (criança muitas vezes não tem), mas se vier tem de ser válido */
+export function pendenciasDependentes(deps: Dependente[] | null | undefined, hoje = new Date()): Record<string, string> {
+  const e: Record<string, string> = {};
+  const lista = deps ?? [];
+  if (lista.length > MAX_DEPENDENTES) e['dependentes'] = `No máximo ${MAX_DEPENDENTES} dependentes`;
+  const hojeIso = new Date(hoje.getTime() - 3 * 3600_000).toISOString().slice(0, 10);
+  lista.forEach((d, i) => {
+    if (String(d.nome ?? '').trim().split(/\s+/).filter(Boolean).length < 2) e[`dependentes.${i}.nome`] = 'Nome completo';
+    if (!PARENTESCOS.some(([k]) => k === d.parentesco)) e[`dependentes.${i}.parentesco`] = 'Parentesco';
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(String(d.nascimento ?? '')) || d.nascimento > hojeIso || d.nascimento < '1900-01-01') e[`dependentes.${i}.nascimento`] = 'Data de nascimento';
+    if (d.cpf && String(d.cpf).replace(/\D/g, '') && !cpfValido(d.cpf)) e[`dependentes.${i}.cpf`] = 'CPF inválido';
+  });
+  return e;
+}
 /** Regime diferente da comunhão parcial exige pacto antenupcial (spec §13.2) */
 export const exigePacto = (estadoCivil: string | null | undefined, regime: string | null | undefined) =>
   estadoCivil === 'casado' && !!regime && regime !== 'comunhao_parcial';

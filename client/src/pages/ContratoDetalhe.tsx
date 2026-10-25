@@ -11,6 +11,7 @@ import { maskPhone } from "@shared/masks";
 import { SeloStatus } from "./Contratos";
 import PainelAssinaturas from "@/components/contratos/PainelAssinaturas";
 import ConfirmarCancelamento from "@/components/contratos/ConfirmarCancelamento";
+import CarteirinhasContrato from "@/components/contratos/Carteirinhas";
 
 const br = (iso?: string | null) => (iso ? String(iso).slice(0, 10).split("-").reverse().join("/") : "—");
 const ROTULO_TIPO: Record<string, string> = { entrada: "Entrada", saldo: "Saldo", avista: "À vista", antecipacao: "Antecipação" };
@@ -168,6 +169,9 @@ export default function ContratoDetalhe() {
                 </div>
                 <p className="mt-2 text-xs text-muted-foreground">A geração leva alguns segundos (contrato + 6 anexos). Cada geração vira uma versão nova; nenhuma é sobrescrita.</p>
               </section>
+
+              <CarteirinhasContrato id={id} status={c.status} titular={d.comprador?.nome ?? null} conjuge={(d as any).conjuge?.nome ?? null}
+                dependentes={d.dependentes} podeEditar={d.pode.definitivo || d.pode.solicitarCancelamento || d.pode.cancelar} onMudou={recarregar} />
 
               <section className="rounded-xl border border-border bg-card p-4">
                 <h2 className="mb-2 text-sm font-semibold">Versões</h2>

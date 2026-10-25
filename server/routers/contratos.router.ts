@@ -13,7 +13,7 @@ import { acoesDaParcela, podeCancelarContrato, podeCriarContrato, podeGerarDefin
 import { leadsVisiveis } from "../permissoes";
 import { temAcesso } from "../../shared/permissoes";
 import {
-  ContratoErro, condicoesDe, contratoPorId, criarContrato, gateDoContrato, gerarVersao, listarContratos, pessoasDe, planoEscolhido,
+  ContratoErro, condicoesDe, contratoPorId, criarContrato, dependentesDo, salvarDependentes, gateDoContrato, gerarVersao, listarContratos, pessoasDe, planoEscolhido,
   registrarAssinado, responsavelTecnicoId, juridicoDe,
 } from "../contratos/servico";
 import { contratoVersoes } from "../../drizzle/schema";
@@ -30,6 +30,9 @@ export const pessoaZ = z.object({
   telefone1: z.string().max(20).nullable().optional(), cep: z.string().max(10).nullable().optional(), logradouro: z.string().max(160).nullable().optional(),
   numero: z.string().max(10).nullable().optional(), complemento: z.string().max(80).nullable().optional(), bairro: z.string().max(80).nullable().optional(),
   cidade: z.string().max(80).nullable().optional(), uf: z.string().max(2).nullable().optional(),
+});
+const dependenteZ = z.object({
+  nome: z.string().trim().max(160), parentesco: z.string().max(20), nascimento: z.string().max(10), cpf: z.string().max(20).nullable().optional(),
 });
 const planoZ = z.object({
   modalidade: z.enum(["financiado", "avista"]), entradaParcelas: z.number().int().min(1).max(12), prazo: z.number().int().min(1).max(360).optional(),
@@ -107,7 +110,7 @@ export const contratosRouter = router({
 
   criar: protectedProcedure.input(z.object({
     slug: z.string().max(80), lote: z.string().max(10), leadId: z.number().int().nullable().optional(), corretorUserId: z.number().int().optional(),
-    plano: planoZ, comprador: pessoaZ, conjuge: pessoaZ.nullable().optional(),
+    plano: planoZ, comprador: pessoaZ, conjuge: pessoaZ.nullable().optional(), dependentes: z.array(dependenteZ).max(6).optional(),
     condicoes: z.object({ especificas: z.string().max(2000).optional(), modoAssinatura: z.enum(["eletronica", "manuscrita"]).optional() }).optional(),
   })).mutation(async ({ ctx, input }) => {
     const perfil = perfilDe(ctx.user as any);
@@ -125,8 +128,17 @@ export const contratosRouter = router({
     return tratar(() => criarContrato({
       empreendimentoSlug: input.slug, loteCodigo: input.lote, leadId: input.leadId ?? null,
       corretorUserId: perfil === "corretor" ? ctx.user.id : input.corretorUserId ?? ctx.user.id,
-      plano: input.plano, comprador: input.comprador as any, conjuge: (input.conjuge ?? null) as any, condicoes: input.condicoes,
+      plano: input.plano, comprador: input.comprador as any, conjuge: (input.conjuge ?? null) as any, dependentes: input.dependentes ?? [], condicoes: input.condicoes,
     }, ctx.user.id));
+  }),
+
+  /** Dependentes das carteirinhas: dá para incluir/corrigir depois de criado (contrato não cancelado) */
+  salvarDependentes: protectedProcedure.input(z.object({ id: z.number().int(), dependentes: z.array(dependenteZ).max(6) })).mutation(async ({ ctx, input }) => {
+    const c = await contratoVisivel(ctx, input.id);
+    exigir(podeCriarContrato(perfilDe(ctx.user as any)), "Seu perfil não altera contratos.");
+    if (["cancelado", "distratado"].includes(c.status)) throw new TRPCError({ code: "CONFLICT", message: "Contrato cancelado" });
+    await tratar(() => salvarDependentes(c.id, input.dependentes as any));
+    return { ok: true };
   }),
 
   detalhe: protectedProcedure.input(z.object({ id: z.number().int() })).query(async ({ ctx, input }) => {
@@ -178,6 +190,7 @@ export const contratosRouter = router({
       },
       cancelamento: c.canceladoEm ? { em: c.canceladoEm, motivo: c.canceladoMotivo, por: c.canceladoPor } : null,
       solicitacoes: await solicitacoesDo(c.id),
+      dependentes: await dependentesDo(c.id),
       financeiro,
     };
   }),

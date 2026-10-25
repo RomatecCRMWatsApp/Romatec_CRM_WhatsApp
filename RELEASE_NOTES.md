@@ -3,6 +3,17 @@
 Cada versão nova vai no TOPO. Depois rode `npm run release` (valida e atualiza o package.json);
 ao subir, o servidor grava a versão no banco e todos recebem o aviso "Novidades da versão".
 
+## 1.23.0 — 2026-10-25
+tipo: minor
+obrigatoria: nao
+titulo: Dependentes e carteirinhas do condomínio
+
+### Novo
+- No cadastro do comprador (novo contrato), a opção de incluir até 6 dependentes — nome, parentesco, nascimento e CPF opcional — ou seguir sem dependentes
+- Titular e cônjuge recebem carteirinha automaticamente
+- Na ficha do contrato, o quadro "Carteirinhas do condomínio": quem recebe, editar os dependentes e baixar o PDF para a gráfica (tamanho cartão, frente e verso), liberado depois do contrato assinado
+- O QR do verso abre a conferência para a portaria: mostra se a carteirinha está válida, sem CPF
+
 ## 1.22.0 — 2026-10-25
 tipo: minor
 obrigatoria: nao
