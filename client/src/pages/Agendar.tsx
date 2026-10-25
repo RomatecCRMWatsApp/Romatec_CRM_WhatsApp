@@ -3,6 +3,7 @@ import { useRoute } from "wouter";
 import { CalendarCheck, CheckCircle2, Loader2, MessageCircle } from "lucide-react";
 import { C, SERIF, SANS, useBrandFonts, waLink } from "@/components/bom-jardims/marca";
 import { FotoCorretor } from "@/lib/cartaoVendas";
+import MapaTematico from "@/components/empreendimento/MapaTematico";
 import { FORMAS_PAGAMENTO, HORARIOS } from "@shared/agendamento";
 import { brl } from "@shared/simulador";
 import type { CartaoVendas } from "@shared/cartaoVendas";
@@ -14,6 +15,11 @@ type Dados = {
   sigef: boolean;
   disponiveis: string[];
   contato: CartaoVendas;
+  mapa: {
+    lotes: { id: number; codigo: string; quadra: string | null; situacao: "disponivel" | "reservado"; poligono: [number, number][] | null }[];
+    ruas: { nome: string; lon: number; lat: number; angulo: number }[];
+    perimetro: [number, number][] | null;
+  };
 };
 
 const pct = (v: number, d = 0) => `${(v * 100).toLocaleString("pt-BR", { minimumFractionDigits: d, maximumFractionDigits: 2 })}%`;
@@ -39,6 +45,19 @@ export default function Agendar() {
   const [enviando, setEnviando] = useState(false);
   const [erro, setErro] = useState<string | null>(null);
   const [enviado, setEnviado] = useState(false);
+  // Unidade escolhida no mapa (id do lote) e aviso de lote indisponível
+  const [selecionado, setSelecionado] = useState<number | null>(null);
+  const [avisoMapa, setAvisoMapa] = useState<string | null>(null);
+  const [digitar, setDigitar] = useState(false);
+  const escolher = (id: number) => {
+    const l = dados?.mapa.lotes.find(x => x.id === id);
+    if (!l) return;
+    if (l.situacao !== "disponivel") { setAvisoMapa(`A chácara ${l.codigo} não está disponível. Escolha uma das chácaras coloridas.`); return; }
+    setAvisoMapa(null);
+    setSelecionado(id);
+    setF(x => ({ ...x, unidade: l.codigo }));
+  };
+  const loteEscolhido = dados?.mapa.lotes.find(x => x.id === selecionado) ?? null;
   const set = (k: keyof typeof f) => (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) =>
     setF(x => ({ ...x, [k]: e.target.type === "checkbox" ? (e.target as HTMLInputElement).checked : e.target.value }));
 
@@ -125,9 +144,33 @@ export default function Agendar() {
             <div><label style={rotulo} htmlFor="nome">Nome completo *</label><input id="nome" style={campo} required minLength={3} maxLength={120} autoComplete="name" value={f.nome} onChange={set("nome")} /></div>
             <div><label style={rotulo} htmlFor="tel">Telefone / WhatsApp *</label><input id="tel" style={campo} required inputMode="tel" autoComplete="tel" placeholder="(99) 9 9999-9999" value={f.telefone} onChange={set("telefone")} /></div>
             <div><label style={rotulo} htmlFor="cidade">Cidade</label><input id="cidade" style={campo} maxLength={80} autoComplete="address-level2" value={f.cidade} onChange={set("cidade")} /></div>
-            <div><label style={rotulo} htmlFor="unidade">Unidade ou quadra de interesse (se souber)</label>
-              <input id="unidade" style={campo} maxLength={60} list="disponiveis" placeholder="Ex.: A05 ou Quadra B" value={f.unidade} onChange={set("unidade")} />
-              <datalist id="disponiveis">{dados.disponiveis.map(cod => <option key={cod} value={cod} />)}</datalist>
+            <div>
+              <span style={rotulo}>Unidade ou quadra de interesse (se souber)</span>
+              {dados.mapa.lotes.length > 0 && (
+                <>
+                  <p style={{ margin: "0 0 8px", fontSize: 14, color: C.suave }}>Toque na chácara que você quer conhecer. Use + e − (ou dois dedos) para aproximar.</p>
+                  <div style={{ borderRadius: 14, overflow: "hidden", background: "#fff" }}>
+                    <MapaTematico slug={emp.slug} lotes={dados.mapa.lotes.map(l => ({ id: l.id, codigo: l.codigo, situacao: l.situacao, poligono: l.poligono }))}
+                      ruas={dados.mapa.ruas} perimetro={dados.mapa.perimetro} selecionado={selecionado} onSelecionar={escolher} destacar={["disponivel"]} />
+                  </div>
+                  <p style={{ margin: "6px 0 0", fontSize: 13, color: C.suave }}>Coloridas: disponíveis · cinza: indisponíveis</p>
+                </>
+              )}
+              {avisoMapa && <p role="status" style={{ margin: "8px 0 0", color: "#B54708", fontWeight: 700, fontSize: 14 }}>{avisoMapa}</p>}
+              {loteEscolhido ? (
+                <div style={{ marginTop: 10, display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap", padding: "10px 14px", borderRadius: 12, background: "#EAF5EC", border: "2px solid #1F8A4C" }}>
+                  <span style={{ fontSize: 16 }}>Chácara escolhida: <b>{loteEscolhido.codigo}{loteEscolhido.quadra ? ` · Quadra ${loteEscolhido.quadra}` : ""}</b></span>
+                  <button type="button" onClick={() => { setSelecionado(null); setF(x => ({ ...x, unidade: "" })); }} style={{ marginLeft: "auto", background: "none", border: "none", color: C.verde, textDecoration: "underline", cursor: "pointer", fontSize: 14 }}>Limpar</button>
+                </div>
+              ) : (digitar || dados.mapa.lotes.length === 0) ? (
+                <div style={{ marginTop: 10 }}>
+                  <input id="unidade" style={campo} maxLength={60} list="disponiveis" placeholder="Ex.: A05 ou Quadra B" value={f.unidade}
+                    onChange={e => { setSelecionado(null); set("unidade")(e); }} aria-label="Unidade ou quadra de interesse" />
+                  <datalist id="disponiveis">{dados.disponiveis.map(cod => <option key={cod} value={cod} />)}</datalist>
+                </div>
+              ) : (
+                <button type="button" onClick={() => setDigitar(true)} style={{ marginTop: 8, background: "none", border: "none", padding: 0, color: C.verde, textDecoration: "underline", cursor: "pointer", fontSize: 14 }}>Prefiro digitar a unidade ou a quadra</button>
+              )}
             </div>
             <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))", gap: 16 }}>
               <div><label style={rotulo} htmlFor="dia">Melhor dia para atendimento *</label><input id="dia" type="date" style={campo} required min={hoje()} value={f.dia} onChange={set("dia")} /></div>

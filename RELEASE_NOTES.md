@@ -3,6 +3,16 @@
 Cada versão nova vai no TOPO. Depois rode `npm run release` (valida e atualiza o package.json);
 ao subir, o servidor grava a versão no banco e todos recebem o aviso "Novidades da versão".
 
+## 1.17.1 — 2026-10-25
+tipo: patch
+obrigatoria: nao
+titulo: Escolha da chácara no mapa do agendamento
+
+### Melhorias
+- No link de agendamento, o cliente escolhe a chácara de interesse tocando no mapa do empreendimento (o mesmo do sistema, com zoom e o portal de entrada)
+- A chácara escolhida fica destacada e preenche o campo; as indisponíveis aparecem em cinza e avisam ao tocar
+- Quem preferir ainda pode digitar a unidade ou a quadra
+
 ## 1.17.0 — 2026-10-25
 tipo: minor
 obrigatoria: nao

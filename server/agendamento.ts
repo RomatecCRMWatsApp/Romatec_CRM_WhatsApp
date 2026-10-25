@@ -59,7 +59,7 @@ export async function dadosDaPagina(slug: string, ref: string | null) {
   const cond = conds.filter(x => x.ativo === true || Number(x.ativo) === 1)
     .sort((x, y) => String(y.vigenteDesde).localeCompare(String(x.vigenteDesde)) || y.id - x.id)[0];
   const c = cond ? (condicoesDaLinha(cond) as CondicoesPagamento) : null;
-  const ls: any[] = await d.select({ codigo: lotes.codigo, areaM2: lotes.areaM2, precoTabela: lotes.precoTabela, situacao: lotes.situacao, comercializavel: lotes.comercializavel })
+  const ls: any[] = await d.select({ id: lotes.id, codigo: lotes.codigo, quadra: lotes.quadra, areaM2: lotes.areaM2, precoTabela: lotes.precoTabela, situacao: lotes.situacao, comercializavel: lotes.comercializavel, poligono: lotes.poligono })
     .from(lotes).where(eq(lotes.empreendimentoId, emp.id));
   const vendaveis = ls.filter(l => (l.comercializavel === true || Number(l.comercializavel) === 1) && Number(l.areaM2) > 0);
   const disponiveis = vendaveis.filter(l => (l.situacao || 'disponivel') === 'disponivel').map(l => l.codigo as string).sort((a, b) => a.localeCompare(b, 'pt-BR', { numeric: true }));
@@ -76,7 +76,18 @@ export async function dadosDaPagina(slug: string, ref: string | null) {
   const [j]: any[] = await d.select({ defaultsJson: empJuridico.defaultsJson }).from(empJuridico).where(eq(empJuridico.empreendimentoId, emp.id)).limit(1);
   const def = json<Record<string, string>>(j?.defaultsJson) ?? {};
   const dono = await donoDoLink(ref);
+  // Mapa público (mesmo MapaTematico do sistema): só "disponível" ou "indisponível" — nada da negociação interna
+  const mapa = {
+    lotes: vendaveis.map(l => ({
+      id: l.id as number, codigo: l.codigo as string, quadra: (l.quadra ?? null) as string | null,
+      situacao: (l.situacao || 'disponivel') === 'disponivel' ? 'disponivel' as const : 'reservado' as const,
+      poligono: json<[number, number][]>(l.poligono),
+    })),
+    ruas: (json<{ nome: string; lon: number; lat: number; angulo?: number }[]>(emp.ruas) ?? []).filter(r => Number.isFinite(r.lon) && Number.isFinite(r.lat)).map(r => ({ nome: r.nome, lon: r.lon, lat: r.lat, angulo: r.angulo ?? 0 })),
+    perimetro: json<{ poligono?: [number, number][] }>(emp.perimetro)?.poligono ?? null,
+  };
   return {
+    mapa,
     empreendimento: { slug: emp.slug, nome: emp.nome, municipio: emp.municipio ?? null, uf: emp.uf ?? null, areaHa: def.emp_area_ha ?? null },
     condicoes,
     licenca: def.emp_licenca_ambiental ? { texto: def.emp_licenca_ambiental, orgao: def.emp_licenca_orgao ?? null } : null,

@@ -67,6 +67,9 @@ describe('link de agendamento', () => {
     expect(p.condicoes).toMatchObject({ areaMin: 3025.11, entradaPct: 0.3, entradaMaxParcelas: 6, prazoMax: 120, descontoAvistaTotal: 10000, parcelaMin: 1234.51 });
     expect(p.licenca?.texto).toBe('Licença de Operação n.º 018/2026');
     expect(p.disponiveis).toEqual(['A01']);
+    // Mapa público: todos os lotes, só "disponível"/"indisponível" (A12 vendido aparece como indisponível, sem detalhe da venda)
+    expect(p.mapa.lotes.map(l => [l.codigo, l.situacao])).toEqual([['A01', 'disponivel'], ['A12', 'reservado']]);
+    expect(JSON.stringify(p.mapa)).not.toMatch(/vendido|cliente|corretor|valor/i);
     expect(p.contato).toMatchObject({ nome: 'Maria Corretora', creci: 'CRECI/MA 1.234' });
     // Sem ref, ref adulterada ou link do empreendedor: contato do administrador
     expect((await A.dadosDaPagina('bom-jardims', null)).contato.nome).toBe('José Romário');
