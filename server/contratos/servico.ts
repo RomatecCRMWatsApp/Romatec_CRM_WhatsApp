@@ -6,7 +6,7 @@ import { randomBytes } from 'node:crypto';
 import { and, asc, eq, inArray, or, sql } from 'drizzle-orm';
 import { getDb } from '../db';
 import {
-  condicoesPagamento, contratoDependentes, contratoPessoas, contratos, contratoSeq, contratoVersoes, empJuridico, empreendimentos, loteHistorico, lotes, pessoas,
+  carteiras, chacaraDependentes, condicoesPagamento, contratoPessoas, contratos, contratoSeq, contratoVersoes, empJuridico, empreendimentos, loteHistorico, lotes, pessoas,
   usuarioDocumentos, users,
 } from '../../drizzle/schema';
 import { condicoesDaLinha, simular, type CondicoesPagamento } from '../../shared/simulador';
@@ -220,26 +220,47 @@ export async function criarContrato(n: NovoContrato, autorId: number): Promise<{
 
 // ─── Dependentes (carteirinhas) ──────────────────────────────────────────────
 
-/** Grava a lista inteira (troca a anterior): até 6, na ordem informada */
+const ativoSql = (v: boolean) => (v ? sql`TRUE` : sql`FALSE`) as any;
+const ehAtivo = (v: unknown) => v === true || v === 1 || v === '1';
+
+/**
+ * Grava os dependentes da chácara (chacaraDependentes): atualiza os que vêm com id, cria os novos e desativa os que
+ * saíram da lista — a carteirinha deles é cancelada (nada é apagado). Até 6 ativos por contrato.
+ */
 export async function salvarDependentes(contratoId: number, deps: Dependente[]): Promise<void> {
   const erros = pendenciasDependentes(deps);
   if (Object.keys(erros).length) throw new ContratoErro('CAMPOS', 'Confira os dependentes', 400, erros);
   const d = await db();
-  await d.delete(contratoDependentes).where(eq(contratoDependentes.contratoId, contratoId));
-  const agora = new Date();
-  for (let i = 0; i < deps.length; i++) {
-    const x = deps[i];
-    await d.insert(contratoDependentes).values({
-      contratoId, ordem: i + 1, nome: x.nome.trim(), parentesco: x.parentesco, nascimento: x.nascimento,
-      cpf: soDigitos(x.cpf ?? '') || null, criadoEm: agora,
-    } as any);
+  const atuais: any[] = (await d.select().from(chacaraDependentes).where(eq(chacaraDependentes.contratoId, contratoId))).filter((x: any) => ehAtivo(x.ativo));
+  const idsAtuais = new Set(atuais.map(x => Number(x.id)));
+  const linha = (x: Dependente) => ({
+    nome: x.nome.trim(), parentesco: x.parentesco, cpf: soDigitos(x.cpf), nascimento: x.nascimento || null,
+    telefone1: soDigitos(x.telefone1).replace(/^55(?=\d{10,11}$)/, ''), telefone2: soDigitos(x.telefone2 ?? '') || null, email: x.email.trim().toLowerCase(),
+  });
+  const mantidos = new Set<number>();
+  for (const x of deps) {
+    if (x.id && idsAtuais.has(Number(x.id))) {
+      await d.update(chacaraDependentes).set(linha(x)).where(eq(chacaraDependentes.id, Number(x.id)));
+      mantidos.add(Number(x.id));
+    } else {
+      await d.insert(chacaraDependentes).values({ contratoId, ...linha(x), ativo: ativoSql(true), criadoEm: new Date() } as any);
+    }
+  }
+  for (const x of atuais) {
+    if (mantidos.has(Number(x.id))) continue;
+    await d.update(chacaraDependentes).set({ ativo: ativoSql(false) } as any).where(eq(chacaraDependentes.id, x.id));
+    await d.update(carteiras).set({ status: 'cancelada' }).where(and(eq(carteiras.contratoId, contratoId), eq(carteiras.titularTipo, 'dependente'), eq(carteiras.titularId, x.id)));
   }
 }
 
-export async function dependentesDo(contratoId: number): Promise<(Dependente & { ordem: number })[]> {
+/** Dependentes ativos do contrato, na ordem de cadastro */
+export async function dependentesDo(contratoId: number): Promise<(Dependente & { id: number; foto: string | null })[]> {
   const d = await db();
-  const r: any[] = await d.select().from(contratoDependentes).where(eq(contratoDependentes.contratoId, contratoId)).orderBy(asc(contratoDependentes.ordem));
-  return r.map(x => ({ ordem: Number(x.ordem), nome: x.nome, parentesco: x.parentesco, nascimento: String(x.nascimento).slice(0, 10), cpf: x.cpf ?? null }));
+  const r: any[] = await d.select().from(chacaraDependentes).where(eq(chacaraDependentes.contratoId, contratoId)).orderBy(asc(chacaraDependentes.id));
+  return r.filter(x => ehAtivo(x.ativo)).map(x => ({
+    id: Number(x.id), nome: x.nome, parentesco: x.parentesco, cpf: x.cpf ?? '', nascimento: x.nascimento ? String(x.nascimento).slice(0, 10) : null,
+    telefone1: x.telefone1 ?? '', telefone2: x.telefone2 ?? null, email: x.email ?? '', foto: x.foto ?? null, temFoto: !!x.foto,
+  }));
 }
 
 // ─── Contexto do merge a partir do banco ─────────────────────────────────────

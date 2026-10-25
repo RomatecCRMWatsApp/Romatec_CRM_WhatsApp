@@ -3,6 +3,18 @@
 Cada versão nova vai no TOPO. Depois rode `npm run release` (valida e atualiza o package.json);
 ao subir, o servidor grava a versão no banco e todos recebem o aviso "Novidades da versão".
 
+## 1.23.1 — 2026-10-25
+tipo: patch
+obrigatoria: nao
+titulo: Cadastro completo dos dependentes e carteirinha com foto
+
+### Melhorias
+- Dependentes com cadastro completo: nome, grau de parentesco, CPF, nascimento, telefone/WhatsApp e e-mail (CPF, telefone e e-mail conferidos)
+- Foto 3×4 de cada pessoa no quadro de carteirinhas do contrato — sai na frente da carteirinha
+- A carteirinha do dependente só é emitida com nome, CPF, telefone, e-mail e foto; a tela mostra o que falta de cada um
+- Cada carteirinha ganha número (ex.: BJ-A05-03), validade de 24 meses e QR de autenticidade próprio, que mostra a foto para a portaria conferir
+- Dependente retirado da lista tem a carteirinha cancelada (o histórico fica guardado)
+
 ## 1.23.0 — 2026-10-25
 tipo: minor
 obrigatoria: nao

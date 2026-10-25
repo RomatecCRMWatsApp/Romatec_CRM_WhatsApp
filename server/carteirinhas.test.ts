@@ -3,70 +3,97 @@ import { beforeAll, describe, expect, it } from 'vitest';
 process.env.DATABASE_DRIVER = 'sqlite';
 process.env.SQLITE_PATH = ':memory:';
 
-const { pendenciasDependentes, MAX_DEPENDENTES } = await import('../shared/contratos');
+const { pendenciasDependentes, pendenciasCarteirinhaDependente, MAX_DEPENDENTES } = await import('../shared/contratos');
 const S = await import('./contratos/servico');
 const K = await import('./contratos/carteirinhas');
 const { getDb } = await import('./db');
 const { sql } = await import('drizzle-orm');
+const sharp = (await import('sharp')).default;
 
-const dep = (x: Record<string, unknown> = {}) => ({ nome: 'Pedro Mendes Silva', parentesco: 'filho', nascimento: '2015-04-10', cpf: '', ...x }) as any;
+const dep = (x: Record<string, unknown> = {}) => ({
+  nome: 'Pedro Mendes Silva', parentesco: 'filho', cpf: '935.411.347-80', nascimento: '2010-04-10', telefone1: '(99) 9 8877-6655', email: 'pedro@exemplo.com', ...x,
+}) as any;
 
-describe('dependentes: validação', () => {
-  it('nome completo, parentesco, nascimento; CPF opcional mas válido; no máximo 6', () => {
+describe('dependentes: cadastro completo', () => {
+  it('nome, parentesco, CPF (dígito), telefone e e-mail obrigatórios; nascimento opcional; no máximo 6', () => {
     expect(pendenciasDependentes([dep()])).toEqual({});
-    expect(pendenciasDependentes([dep({ cpf: '529.982.247-25' })])).toEqual({});
-    expect(pendenciasDependentes([dep({ nome: 'Pedro', parentesco: 'primo', nascimento: '2999-01-01', cpf: '111.111.111-11' })])).toEqual({
-      'dependentes.0.nome': 'Nome completo', 'dependentes.0.parentesco': 'Parentesco', 'dependentes.0.nascimento': 'Data de nascimento', 'dependentes.0.cpf': 'CPF inválido',
+    expect(pendenciasDependentes([dep({ nascimento: '' })])).toEqual({});
+    expect(pendenciasDependentes([dep({ nome: 'Pedro', parentesco: '', cpf: '111.111.111-11', telefone1: '9988', email: 'pedro@', nascimento: '2999-01-01' })])).toEqual({
+      'dependentes.0.nome': 'Nome completo', 'dependentes.0.parentesco': 'Grau de parentesco', 'dependentes.0.cpf': 'CPF inválido',
+      'dependentes.0.telefone1': 'Telefone/WhatsApp com DDD', 'dependentes.0.email': 'E-mail inválido', 'dependentes.0.nascimento': 'Data de nascimento',
     });
-    expect(pendenciasDependentes(Array.from({ length: MAX_DEPENDENTES + 1 }, () => dep())).dependentes).toBe('No máximo 6 dependentes');
+    expect(pendenciasDependentes([dep({ cpf: '' })])['dependentes.0.cpf']).toBe('CPF inválido');
+    expect(pendenciasDependentes([dep(), dep({ nome: 'Ana Mendes Silva' })])['dependentes.1.cpf']).toBe('CPF repetido');
+    expect(pendenciasDependentes(Array.from({ length: MAX_DEPENDENTES + 1 }, () => dep())).dependentes).toBe('No máximo 6 dependentes por chácara');
+  });
+  it('gate da carteirinha: nome, CPF, telefone, e-mail válidos + foto', () => {
+    expect(pendenciasCarteirinhaDependente({ ...dep(), temFoto: true })).toEqual([]);
+    expect(pendenciasCarteirinhaDependente({ ...dep({ email: '', cpf: '123' }), temFoto: false })).toEqual(['CPF válido', 'e-mail válido', 'foto']);
   });
 });
 
-describe('carteirinhas do contrato', () => {
+describe('carteirinhas (chacaraDependentes + carteiras + /p/c/:qrToken)', () => {
   let db: any;
+  const foto = async (cor: string) => sharp({ create: { width: 300, height: 400, channels: 3, background: cor } }).jpeg().toBuffer();
   beforeAll(async () => {
     db = await getDb();
     db.run(sql`INSERT INTO empreendimentos (id, slug, nome, municipio, uf) VALUES (1, 'bom-jardims', 'Condomínio de Chácaras Bom Jardims', 'Açailândia', 'MA')`);
     db.run(sql`INSERT INTO lotes (id, empreendimentoId, codigo, quadra, numero, areaM2, situacao) VALUES (5, 1, 'A05', 'A', 5, '3025.11', 'vendido_parcelado')`);
+    db.run(sql`INSERT INTO empJuridico (empreendimentoId, defaultsJson, vendedoraJson) VALUES (1, '{"validade_carteira_meses":24}', '{}')`);
     db.run(sql`INSERT INTO contratos (id, numero, empreendimentoId, loteId, loteCodigo, corretorUserId, simulacaoJson, dadosJson, status, codigoVerificacao)
       VALUES (1, 'BJ-2026-0001', 1, 5, 'A05', 1, '{}', '{}', 'ativo', 'EX7K2M9P4Q1R')`);
     db.run(sql`INSERT INTO pessoas (id, nome, cpfCnpj) VALUES (1, 'Carlos Eduardo Mendes da Silva', '52998224725'), (2, 'Ana Paula Ribeiro Mendes', '11144477735')`);
     db.run(sql`INSERT INTO contratoPessoas (contratoId, pessoaId, papel) VALUES (1, 1, 'comprador'), (1, 2, 'conjuge')`);
   });
 
-  it('salva até 6 dependentes (troca a lista) e a numeração é titular 1, cônjuge 2, dependentes 3…', async () => {
-    await S.salvarDependentes(1, [dep(), dep({ nome: 'Maria Mendes Silva', parentesco: 'filha', nascimento: '2018-09-01' })]);
-    await expect(S.salvarDependentes(1, [dep({ nome: 'X' })])).rejects.toMatchObject({ campos: { 'dependentes.0.nome': 'Nome completo' } });
-    expect((await S.dependentesDo(1)).map(d => d.nome)).toEqual(['Pedro Mendes Silva', 'Maria Mendes Silva']);
-    expect(await K.pessoasDaCarteirinha(1)).toEqual([
-      { n: 1, nome: 'Carlos Eduardo Mendes da Silva', vinculo: 'Titular' },
-      { n: 2, nome: 'Ana Paula Ribeiro Mendes', vinculo: 'Cônjuge' },
-      { n: 3, nome: 'Pedro Mendes Silva', vinculo: 'Dependente · Filho' },
-      { n: 4, nome: 'Maria Mendes Silva', vinculo: 'Dependente · Filha' },
+  it('grava em chacaraDependentes (atualiza por id; quem sai fica inativo)', async () => {
+    await S.salvarDependentes(1, [dep(), dep({ nome: 'Maria Mendes Silva', parentesco: 'filha', cpf: '529.982.247-25', email: 'maria@exemplo.com' })]);
+    const [a, b] = await S.dependentesDo(1);
+    expect(a).toMatchObject({ nome: 'Pedro Mendes Silva', cpf: '93541134780', telefone1: '99988776655', email: 'pedro@exemplo.com', temFoto: false });
+    await S.salvarDependentes(1, [{ ...a, telefone1: '(99) 9 1111-2222' }, b]);
+    expect((await S.dependentesDo(1)).map(d => [d.id, d.telefone1])).toEqual([[a.id, '99911112222'], [b.id, b.telefone1]]);
+    expect(db.all(sql`SELECT COUNT(*) AS n FROM chacaraDependentes`)[0].n).toBe(2);
+  });
+
+  it('emite só quem passa no gate: dependente sem foto fica bloqueado com o motivo', async () => {
+    const [pedro, maria] = await S.dependentesDo(1);
+    await K.salvarFoto(1, 'dependente', pedro.id, await foto('#aa6633'), 1);
+    await K.salvarFoto(1, 'comprador', 1, await foto('#336699'), 1);
+    const sit = await K.situacaoCarteirinhas(1);
+    expect(sit.pessoas.map(p => [p.vinculo, p.temFoto, p.pendencias])).toEqual([
+      ['Titular', true, []], ['Cônjuge', false, []], ['Dependente · Filho', true, []], ['Dependente · Filha', false, ['foto']],
     ]);
-  });
-
-  it('PDF tamanho cartão: frente e verso de cada pessoa', async () => {
-    const { pdf, nome } = await K.carteirinhasPdf(1);
+    const { pdf, bloqueadas } = await K.carteirinhasPdf(1);
+    expect(bloqueadas.map(b => b.nome)).toEqual(['Maria Mendes Silva']);
     const { PDFDocument } = await import('pdf-lib');
-    const doc = await PDFDocument.load(pdf);
-    expect(doc.getPageCount()).toBe(8);
-    const { width, height } = doc.getPage(0).getSize();
-    expect(Math.round((width * 25.4) / 72 * 10) / 10).toBe(85.6);
-    expect(Math.round((height * 25.4) / 72)).toBe(54);
-    expect(nome).toBe('CARTEIRINHAS-BJ-2026-0001.pdf');
-    if (process.env.CARTEIRINHA_SAIDA) (await import('node:fs')).writeFileSync(`${process.env.CARTEIRINHA_SAIDA}/${nome}`, pdf);
+    expect((await PDFDocument.load(pdf)).getPageCount()).toBe(6); // 3 pessoas × frente e verso
+    const cart: any[] = db.all(sql`SELECT * FROM carteiras ORDER BY id`);
+    expect(cart.map(c => c.numero)).toEqual(['BJ-A05-01', 'BJ-A05-02', 'BJ-A05-03']);
+    expect(cart.every(c => /^[a-f0-9]{32}$/.test(c.qrToken))).toBe(true);
+    // Validade: 24 meses (validade_carteira_meses do empreendimento)
+    expect(cart[0].validade.slice(0, 4)).toBe(String(new Date().getUTCFullYear() + 2));
+    // Reemitir não cria carteira nova (mesmo número e QR)
+    await K.carteirinhasPdf(1);
+    expect(db.all(sql`SELECT COUNT(*) AS n FROM carteiras`)[0].n).toBe(3);
+    if (process.env.CARTEIRINHA_SAIDA) (await import('node:fs')).writeFileSync(`${process.env.CARTEIRINHA_SAIDA}/CARTEIRINHAS-BJ-2026-0001.pdf`, pdf);
+    void maria;
   });
 
-  it('QR da portaria: válida com contrato ativo; inválida cancelado; número que não existe', async () => {
-    const ok = await K.conferirCarteirinha('EX7K2M9P4Q1R', 3);
+  it('/p/c/:qrToken: válida com foto e sem CPF; dependente removido → cancelada; contrato cancelado → inválida', async () => {
+    const [titular, , pedro] = db.all(sql`SELECT * FROM carteiras ORDER BY id`);
+    const ok = await K.conferirCarteirinha(pedro.qrToken);
     expect(ok.html).toContain('Carteirinha válida');
     expect(ok.html).toContain('Pedro Mendes Silva');
-    expect(ok.html).not.toContain('52998224725');
-    expect((await K.conferirCarteirinha('EX7K2M9P4Q1R', 7)).status).toBe(404);
-    expect((await K.conferirCarteirinha('NAOEXISTE00', 1)).status).toBe(404);
+    expect(ok.html).toContain(`/p/c/${pedro.qrToken}/foto`);
+    expect(ok.html).not.toContain('93541134780');
+    expect(await K.fotoDaCarteirinha(pedro.qrToken)).toBeInstanceOf(Buffer);
+    expect((await K.conferirCarteirinha('0'.repeat(32))).status).toBe(404);
+    // Pedro sai da lista: fica inativo e a carteira dele é cancelada
+    const [, maria] = await S.dependentesDo(1);
+    await S.salvarDependentes(1, [maria]);
+    expect((await K.conferirCarteirinha(pedro.qrToken)).html).toContain('não está válida');
     db.run(sql`UPDATE contratos SET status = 'cancelado' WHERE id = 1`);
-    expect((await K.conferirCarteirinha('EX7K2M9P4Q1R', 1)).html).toContain('não está válida');
+    expect((await K.conferirCarteirinha(titular.qrToken)).html).toContain('Contrato sem efeito');
     await expect(K.carteirinhasPdf(1)).rejects.toMatchObject({ status: 409 });
   });
 });

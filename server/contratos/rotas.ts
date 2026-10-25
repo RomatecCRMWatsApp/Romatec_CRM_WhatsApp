@@ -1,5 +1,5 @@
 /** Download das versões do contrato (PDF guardado no banco): admin/secretário, ou o corretor do contrato */
-import type { Express } from 'express';
+import express, { type Express } from 'express';
 import { contratoPorId, pdfDaVersao, ContratoErro } from './servico';
 
 export function registrarRotasContratos(app: Express) {
@@ -82,31 +82,84 @@ export function registrarRotasContratos(app: Express) {
     }
   });
 
-  // Carteirinhas do condomínio (CR80, frente e verso): administrador, secretária ou o corretor do contrato
+  // ─── Carteirinhas do condomínio: administrador, secretária ou o corretor do contrato ───
+  const contratoDaEquipe = async (req: any) => {
+    const { sdk } = await import('../_core/sdk');
+    const user: any = await sdk.authenticateRequest(req).catch(() => null);
+    if (!user || user.ativo === false || user.ativo === 0) return null;
+    const { perfilDe } = await import('../../shared/equipe');
+    const perfil = perfilDe(user);
+    const c = await contratoPorId(Number(req.params.id) || 0);
+    if (!(perfil === 'admin' || perfil === 'secretario' || (perfil === 'corretor' && c.corretorUserId === user.id))) return null;
+    return { user, c };
+  };
+  const tipoRef = (q: any) => {
+    const tipo = String(q.tipo ?? '');
+    if (!['comprador', 'conjuge', 'dependente'].includes(tipo)) return null;
+    const ref = Number(q.ref) || 0;
+    return ref > 0 ? { tipo: tipo as 'comprador' | 'conjuge' | 'dependente', ref } : null;
+  };
+
+  // PDF da gráfica (CR80, frente e verso): emite as carteiras das pessoas aptas; dependente com pendência fica de fora
   app.get('/api/contratos/:id/carteirinhas.pdf', async (req, res) => {
     try {
-      const { sdk } = await import('../_core/sdk');
-      const user: any = await sdk.authenticateRequest(req).catch(() => null);
-      if (!user || user.ativo === false || user.ativo === 0) return res.status(401).send('Faça login');
-      const { perfilDe } = await import('../../shared/equipe');
-      const perfil = perfilDe(user);
-      const c = await contratoPorId(Number(req.params.id) || 0);
-      if (!(perfil === 'admin' || perfil === 'secretario' || (perfil === 'corretor' && c.corretorUserId === user.id))) return res.status(404).send('Não encontrado');
+      const a = await contratoDaEquipe(req);
+      if (!a) return res.status(404).json({ error: 'Não encontrado' });
       const { carteirinhasPdf } = await import('./carteirinhas');
-      const { pdf, nome } = await carteirinhasPdf(c.id);
+      const { pdf, nome, bloqueadas } = await carteirinhasPdf(a.c.id);
       res.setHeader('Content-Type', 'application/pdf');
       res.setHeader('Content-Disposition', `attachment; filename="${nome}"`);
+      res.setHeader('X-Carteirinhas-Bloqueadas', String(bloqueadas.length));
       res.setHeader('Cache-Control', 'private, no-store');
       res.send(pdf);
-    } catch (e: any) { res.status(e instanceof ContratoErro ? e.status : 500).send(e instanceof ContratoErro ? e.message : 'Falha ao gerar as carteirinhas'); }
+    } catch (e: any) {
+      if (e instanceof ContratoErro) return res.status(e.status).json({ error: e.message, pendencias: e.campos ?? null });
+      console.error('[Carteirinhas] PDF:', e);
+      res.status(500).json({ error: 'Falha ao gerar as carteirinhas' });
+    }
   });
-  // QR do verso da carteirinha (portaria): pública, sem CPF
-  app.get('/api/public/carteirinha/:codigo/:n', async (req, res) => {
+  // Foto 3×4 (titular, cônjuge ou dependente)
+  app.post('/api/contratos/:id/carteirinhas/foto', express.raw({ type: '*/*', limit: '8mb' }), async (req, res) => {
+    try {
+      const a = await contratoDaEquipe(req);
+      if (!a) return res.status(404).json({ error: 'Não encontrado' });
+      const alvo = tipoRef(req.query);
+      if (!alvo || !Buffer.isBuffer(req.body) || !req.body.length) return res.status(400).json({ error: 'Envie a foto' });
+      const { salvarFoto } = await import('./carteirinhas');
+      await salvarFoto(a.c.id, alvo.tipo, alvo.ref, req.body, a.user.id);
+      res.json({ ok: true });
+    } catch (e: any) { res.status(e instanceof ContratoErro ? e.status : 500).json({ error: e instanceof ContratoErro ? e.message : 'Falha ao salvar a foto' }); }
+  });
+  app.get('/api/contratos/:id/carteirinhas/foto', async (req, res) => {
+    try {
+      const a = await contratoDaEquipe(req);
+      const alvo = tipoRef(req.query);
+      if (!a || !alvo) return res.status(404).send('Não encontrado');
+      const { lerFoto } = await import('./carteirinhas');
+      const buf = await lerFoto(a.c.id, alvo.tipo, alvo.ref);
+      if (!buf) return res.status(404).send('Sem foto');
+      res.setHeader('Content-Type', 'image/jpeg');
+      res.setHeader('Cache-Control', 'private, max-age=300');
+      res.send(buf);
+    } catch { res.status(404).send('Não encontrado'); }
+  });
+  // QR de autenticidade (portaria): pública, sem CPF; a foto ajuda a conferir quem apresenta
+  app.get('/p/c/:token', async (req, res) => {
     const { conferirCarteirinha } = await import('./carteirinhas');
-    const r = await conferirCarteirinha(String(req.params.codigo).toUpperCase().slice(0, 20), Number(req.params.n) || 0);
+    const r = await conferirCarteirinha(String(req.params.token).toLowerCase().slice(0, 40));
     res.status(r.status).setHeader('Content-Type', 'text/html; charset=utf-8');
     res.setHeader('X-Robots-Tag', 'noindex');
+    res.setHeader('Cache-Control', 'no-store');
     res.send(r.html);
+  });
+  app.get('/p/c/:token/foto', async (req, res) => {
+    const { fotoDaCarteirinha } = await import('./carteirinhas');
+    const buf = await fotoDaCarteirinha(String(req.params.token).toLowerCase().slice(0, 40));
+    if (!buf) return res.status(404).send('Sem foto');
+    res.setHeader('Content-Type', 'image/jpeg');
+    res.setHeader('X-Robots-Tag', 'noindex');
+    res.setHeader('Cache-Control', 'no-store');
+    res.send(buf);
   });
 
   // PDF atual do contrato (tela de posicionar as assinaturas)

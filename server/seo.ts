@@ -275,6 +275,8 @@ export function robotsTxt(base: string): string {
     ...ROTAS_INTERNAS.map(r => (r.length <= 2 || r === '/assinar' ? `Disallow: ${r}/` : `Disallow: ${r}`)),
     'Disallow: /api/',
     'Disallow: /q/',
+    // Conferência das carteirinhas (QR da portaria)
+    'Disallow: /p/',
     '',
     `Sitemap: ${base}/sitemap.xml`,
     '',

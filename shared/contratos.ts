@@ -49,21 +49,58 @@ export const PARENTESCOS: [string, string][] = [
   ['sogro', 'Sogro'], ['sogra', 'Sogra'], ['neto', 'Neto'], ['neta', 'Neta'], ['irmao', 'Irmão'], ['irma', 'Irmã'], ['outro', 'Outro'],
 ];
 export const rotuloParentesco = (v: string) => PARENTESCOS.find(([k]) => k === v)?.[1] ?? v;
-export interface Dependente { nome: string; parentesco: string; nascimento: string; cpf?: string | null }
+/** Dependente da chácara (tabela chacaraDependentes): cadastro completo para a carteirinha */
+export interface Dependente {
+  /** chacaraDependentes.id (ausente = novo) */
+  id?: number | null;
+  nome: string; parentesco: string; cpf: string; nascimento?: string | null;
+  telefone1: string; telefone2?: string | null; email: string;
+  /** Já tem foto enviada (só leitura: a foto sobe pelo endpoint próprio) */
+  temFoto?: boolean;
+}
 
-/** Erros por campo (chave dependentes.<i>.<campo>); CPF é opcional (criança muitas vezes não tem), mas se vier tem de ser válido */
+const EMAIL_OK = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/;
+/** Celular/fixo brasileiro com DDD (10 ou 11 dígitos, sem contar o 55) */
+export const telefoneValido = (t: unknown) => {
+  const d = String(t ?? '').replace(/\D/g, '').replace(/^55(?=\d{10,11}$)/, '');
+  return (d.length === 10 || d.length === 11) && Number(d.slice(0, 2)) >= 11 && (d.length === 10 || d[2] === '9');
+};
+export const emailValido = (e: unknown) => EMAIL_OK.test(String(e ?? '').trim());
+
+/** Erros por campo (chave dependentes.<i>.<campo>): nome, parentesco, CPF, telefone e e-mail obrigatórios; nascimento opcional */
 export function pendenciasDependentes(deps: Dependente[] | null | undefined, hoje = new Date()): Record<string, string> {
   const e: Record<string, string> = {};
   const lista = deps ?? [];
-  if (lista.length > MAX_DEPENDENTES) e['dependentes'] = `No máximo ${MAX_DEPENDENTES} dependentes`;
+  if (lista.length > MAX_DEPENDENTES) e['dependentes'] = `No máximo ${MAX_DEPENDENTES} dependentes por chácara`;
   const hojeIso = new Date(hoje.getTime() - 3 * 3600_000).toISOString().slice(0, 10);
+  const cpfs = new Map<string, number>();
   lista.forEach((d, i) => {
     if (String(d.nome ?? '').trim().split(/\s+/).filter(Boolean).length < 2) e[`dependentes.${i}.nome`] = 'Nome completo';
-    if (!PARENTESCOS.some(([k]) => k === d.parentesco)) e[`dependentes.${i}.parentesco`] = 'Parentesco';
-    if (!/^\d{4}-\d{2}-\d{2}$/.test(String(d.nascimento ?? '')) || d.nascimento > hojeIso || d.nascimento < '1900-01-01') e[`dependentes.${i}.nascimento`] = 'Data de nascimento';
-    if (d.cpf && String(d.cpf).replace(/\D/g, '') && !cpfValido(d.cpf)) e[`dependentes.${i}.cpf`] = 'CPF inválido';
+    if (!PARENTESCOS.some(([k]) => k === d.parentesco)) e[`dependentes.${i}.parentesco`] = 'Grau de parentesco';
+    const cpf = String(d.cpf ?? '').replace(/\D/g, '');
+    if (!cpfValido(cpf)) e[`dependentes.${i}.cpf`] = 'CPF inválido';
+    else if (cpfs.has(cpf)) e[`dependentes.${i}.cpf`] = 'CPF repetido';
+    else cpfs.set(cpf, i);
+    if (d.nascimento && (!/^\d{4}-\d{2}-\d{2}$/.test(d.nascimento) || d.nascimento > hojeIso || d.nascimento < '1900-01-01')) e[`dependentes.${i}.nascimento`] = 'Data de nascimento';
+    if (!telefoneValido(d.telefone1)) e[`dependentes.${i}.telefone1`] = 'Telefone/WhatsApp com DDD';
+    if (d.telefone2 && !telefoneValido(d.telefone2)) e[`dependentes.${i}.telefone2`] = 'Telefone inválido';
+    if (!emailValido(d.email)) e[`dependentes.${i}.email`] = 'E-mail inválido';
   });
   return e;
+}
+
+/**
+ * O que falta para EMITIR a carteirinha de um dependente (gate): nome, CPF, telefone e e-mail válidos + foto.
+ * Vazio = pode emitir.
+ */
+export function pendenciasCarteirinhaDependente(d: Partial<Dependente> & { temFoto?: boolean }): string[] {
+  const out: string[] = [];
+  if (String(d.nome ?? '').trim().split(/\s+/).filter(Boolean).length < 2) out.push('nome completo');
+  if (!cpfValido(String(d.cpf ?? ''))) out.push('CPF válido');
+  if (!telefoneValido(d.telefone1)) out.push('telefone/WhatsApp');
+  if (!emailValido(d.email)) out.push('e-mail válido');
+  if (!d.temFoto) out.push('foto');
+  return out;
 }
 /** Regime diferente da comunhão parcial exige pacto antenupcial (spec §13.2) */
 export const exigePacto = (estadoCivil: string | null | undefined, regime: string | null | undefined) =>

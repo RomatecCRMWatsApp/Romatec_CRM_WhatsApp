@@ -482,11 +482,6 @@ export function initSqliteTables(sqlite: any): void {
     id INTEGER PRIMARY KEY AUTOINCREMENT, contratoId INTEGER NOT NULL, tipo TEXT NOT NULL, motivo TEXT NOT NULL, solicitanteId INTEGER NOT NULL,
     status TEXT NOT NULL, resolvidoPor INTEGER, resolvidoEm INTEGER, resposta TEXT, criadoEm ${agora}
   )`);
-  // v1.23.0 — dependentes (carteirinhas)
-  run(`CREATE TABLE IF NOT EXISTS contratoDependentes (
-    id INTEGER PRIMARY KEY AUTOINCREMENT, contratoId INTEGER NOT NULL, ordem INTEGER NOT NULL, nome TEXT NOT NULL, parentesco TEXT NOT NULL,
-    nascimento TEXT NOT NULL, cpf TEXT, criadoEm ${agora}
-  )`);
   run(`CREATE TABLE IF NOT EXISTS financeiroAuditoria (
     id INTEGER PRIMARY KEY AUTOINCREMENT, acao TEXT NOT NULL, contratoId INTEGER, cobrancaId INTEGER, usuarioId INTEGER, origem TEXT NOT NULL,
     ip TEXT, detalhe TEXT, criadoEm ${agora}

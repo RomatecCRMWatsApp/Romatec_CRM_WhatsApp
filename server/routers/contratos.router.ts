@@ -32,7 +32,8 @@ export const pessoaZ = z.object({
   cidade: z.string().max(80).nullable().optional(), uf: z.string().max(2).nullable().optional(),
 });
 const dependenteZ = z.object({
-  nome: z.string().trim().max(160), parentesco: z.string().max(20), nascimento: z.string().max(10), cpf: z.string().max(20).nullable().optional(),
+  id: z.number().int().nullable().optional(), nome: z.string().trim().max(160), parentesco: z.string().max(10), cpf: z.string().max(20),
+  nascimento: z.string().max(10).nullable().optional(), telefone1: z.string().max(20), telefone2: z.string().max(20).nullable().optional(), email: z.string().trim().max(160),
 });
 const planoZ = z.object({
   modalidade: z.enum(["financiado", "avista"]), entradaParcelas: z.number().int().min(1).max(12), prazo: z.number().int().min(1).max(360).optional(),
@@ -130,6 +131,13 @@ export const contratosRouter = router({
       corretorUserId: perfil === "corretor" ? ctx.user.id : input.corretorUserId ?? ctx.user.id,
       plano: input.plano, comprador: input.comprador as any, conjuge: (input.conjuge ?? null) as any, dependentes: input.dependentes ?? [], condicoes: input.condicoes,
     }, ctx.user.id));
+  }),
+
+  /** Carteirinhas: cada pessoa (titular, cônjuge, dependentes) com a carteira vigente e o que falta para emitir */
+  carteirinhas: protectedProcedure.input(z.object({ id: z.number().int() })).query(async ({ ctx, input }) => {
+    const c = await contratoVisivel(ctx, input.id);
+    const { situacaoCarteirinhas } = await import("../contratos/carteirinhas");
+    return tratar(() => situacaoCarteirinhas(c.id));
   }),
 
   /** Dependentes das carteirinhas: dá para incluir/corrigir depois de criado (contrato não cancelado) */
