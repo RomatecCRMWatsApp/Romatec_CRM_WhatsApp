@@ -3,6 +3,24 @@
 Cada versão nova vai no TOPO. Depois rode `npm run release` (valida e atualiza o package.json);
 ao subir, o servidor grava a versão no banco e todos recebem o aviso "Novidades da versão".
 
+## 1.14.0 — 2026-10-25
+tipo: minor
+obrigatoria: nao
+titulo: Cancelamento só do administrador, contrato modelo e materiais com a sua foto
+
+### Novo
+- Contratos › Baixar contrato modelo (PDF): minuta completa com cliente fictício e todos os anexos, sem criar contrato
+- Cancelar contrato, cobrança ou recibo é só do administrador, confirmando com a senha de login
+- Corretor e secretária: botão "Solicitar cancelamento do contrato" — o pedido chega ao administrador no sininho e no celular
+- Contrato de Intermediação Imobiliária assinado pelo cliente junto com o contrato (ciência dos 2% do corretor, pagos no sinal e não restituíveis)
+- Contrato de comissão Empreendedora × Romatec (5%), visível só para o administrador
+
+### Melhorias
+- Propostas, folders, links e mensagens saem com o nome, CRECI, telefone, e-mail e foto de quem gera (empreendedor sai com os dados do administrador)
+- Quem abre um link compartilhado vê o contato de quem compartilhou
+- Cancelar contrato libera a chácara (com o aviso de lote liberado) e cancela as cobranças futuras; tudo fica registrado
+- Recibo cancelado aparece como cancelado na verificação pública
+
 ## 1.13.1 — 2026-10-24
 tipo: patch
 obrigatoria: nao

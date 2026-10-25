@@ -126,10 +126,10 @@ describe('notificações — evento gera sininho e push para os destinatários c
     for (const tipo of TIPOS_NOTIFICACAO) {
       await N.notificarTeste({ id: 1, role: 'admin' }, tipo, repo, async (i, p) => { enviados.push([i.usuarioId, p]); });
     }
-    expect(gravadas).toHaveLength(4);
+    expect(gravadas).toHaveLength(TIPOS_NOTIFICACAO.length);
     expect(gravadas.every(g => g.usuarioId === 1 && g.chave === 'teste' && g.titulo.startsWith('[Teste] ') && !g.loteId)).toBe(true);
     expect(gravadas.map(g => g.tipo)).toEqual([...TIPOS_NOTIFICACAO]);
-    expect(enviados).toHaveLength(8);                                   // 4 tipos × 2 aparelhos do admin
+    expect(enviados).toHaveLength(TIPOS_NOTIFICACAO.length * 2);         // cada tipo × 2 aparelhos do admin
     expect(enviados.every(([u]) => u === 1)).toBe(true);                 // o corretor (3) não recebe
     expect(gravadas[1].mensagem).toContain('nenhum lote foi alterado');
     // o teste de "sistema atualizado" não impede o aviso real da versão

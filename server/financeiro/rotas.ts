@@ -72,6 +72,8 @@ export async function verificarRecibo(numero: string, codigo?: string): Promise<
   const db = (await getDb()) as any;
   const [r] = await db.select().from(recibos).where(eq(recibos.numero, numero)).limit(1);
   if (!r) return { status: 404, html: pagina('Recibo não encontrado', '<p>Confira o número impresso no recibo.</p>') };
+  // Recibo cancelado pelo administrador: a verificação pública avisa e não entrega o PDF
+  if (r.canceladoEm) return { status: 410, html: pagina(`Recibo ${r.numero} — CANCELADO`, '<p>Este recibo foi cancelado pela administração e não tem mais validade. Em caso de dúvida, fale com a Romatec.</p>') };
   if (codigo) {
     const ok = codigo.trim().toUpperCase() === String(r.codigoVerif).toUpperCase();
     if (!ok) return { status: 403, html: pagina('Código de verificação incorreto', '<p>Confira o código impresso no recibo.</p>') };

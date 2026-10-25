@@ -1,4 +1,5 @@
 import { useEffect } from "react";
+import { useCartaoDoLink } from "@/lib/cartaoVendas";
 import { MessageCircle } from "lucide-react";
 
 /**
@@ -73,10 +74,22 @@ export function useBrandFonts() {
   }, []);
 }
 
+/**
+ * Contatos da página: quem compartilhou o link (?c=…) aparece no lugar do corretor padrão — com CRECI
+ * quando tiver; o contato do empreendimento continua.
+ */
+export function useContatos() {
+  const cartao = useCartaoDoLink();
+  if (!cartao?.whatsapp) return CONTATOS;
+  const papel = cartao.creci ? `${cartao.papel} · ${cartao.creci}` : cartao.papel;
+  return [{ papel, nome: cartao.nome, telefone: cartao.telefones[0] ?? "", whatsapp: cartao.whatsapp }, CONTATOS[1]];
+}
+
 export function ContatosBotoes({ codigo }: { codigo?: string }) {
+  const contatos = useContatos();
   return (
     <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))", gap: 12 }}>
-      {CONTATOS.map(c => (
+      {contatos.map(c => (
         <a key={c.whatsapp} href={waLink(c.whatsapp, codigo)} target="_blank" rel="noopener noreferrer"
           style={{ display: "flex", alignItems: "center", gap: 12, padding: "14px 16px", borderRadius: 14, background: "#1F8A4C", color: "#fff", textDecoration: "none" }}>
           <MessageCircle size={26} />

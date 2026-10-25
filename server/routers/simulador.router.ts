@@ -137,7 +137,9 @@ export const simuladorRouter = router({
       const sim = calcular(areaM2, input.entrada, c, num(lote.precoTabela));
       const { enviarTexto, ZApiError } = await import("../leads/zapiClient");
       try {
-        await enviarTexto(telefone, mensagemSimulacao(lote.codigo, sim, input.prazo, c));
+        const { cartaoDoUsuario } = await import("../cartaoVendas");
+        const { linhaCartao } = await import("../../shared/cartaoVendas");
+        await enviarTexto(telefone, mensagemSimulacao(lote.codigo, sim, input.prazo, c, linhaCartao(await cartaoDoUsuario(ctx.user.id))));
       } catch (e: any) {
         const msg = e instanceof ZApiError ? `${e.codigo}: ${e.message}` : (e?.message || "falha no envio");
         throw new Error(`WhatsApp não enviou a simulação (${msg})`);

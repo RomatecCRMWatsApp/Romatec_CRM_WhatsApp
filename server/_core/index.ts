@@ -868,6 +868,16 @@ async function startServer() {
   registrarRotasFinanceiro(app);
   const { registrarRotasContratos } = await import('../contratos/rotas');
   registrarRotasContratos(app);
+  // Cartão de vendas público dos links de divulgação (?c=<ref>): contato de quem compartilhou
+  app.get('/api/cartao/:ref', async (req, res) => {
+    try {
+      const { cartaoDaRef } = await import('../cartaoVendas');
+      const c = await cartaoDaRef(String(req.params.ref));
+      if (!c) return res.status(404).json({ erro: 'não encontrado' });
+      res.setHeader('Cache-Control', 'public, max-age=300');
+      res.json(c);
+    } catch { res.status(500).json({ erro: 'falha' }); }
+  });
   // Assinatura eletrônica (links individuais, sem login) e verificação pública do contrato (/c/v/:codigo)
   const { registrarRotasAssinatura } = await import('../assinatura/rotas');
   registrarRotasAssinatura(app);
@@ -1046,6 +1056,8 @@ async function startServer() {
     await addFinanceiro();
     const { addAssinatura } = await import('./migrations/addAssinatura');
     await addAssinatura();
+    const { addCancelamento } = await import('./migrations/addCancelamento');
+    await addCancelamento();
   } catch (e) {
     console.error('❌ Erro na migration addContratos/addFinanceiro:', e);
   }

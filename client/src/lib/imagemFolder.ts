@@ -27,6 +27,8 @@ export interface DadosFolder {
   textoQr: string;                     // "Aponte a câmera para ver fotos, vídeo e o mapa"
   whatsapp: string;                    // "(99) 9 9181-1246"
   aviso: string;
+  /** "Corretor(a) Fulano · CRECI/MA 1.234" — quem gera o folder */
+  assinatura?: string;
 }
 
 type Recursos = { foto: HTMLImageElement | null; mapa: { img: HTMLImageElement; altura: number }; qr: HTMLImageElement | null; projeto: HTMLImageElement[] };
@@ -137,7 +139,7 @@ function compor(ctx: CanvasRenderingContext2D, d: DadosFolder, r: Recursos, dese
   }
   fill(VERDE); centro(zap, yc + 39);
   yc += 64 + 30;
-  fill("#DCE8DF"); ctx.font = `400 20px ${SANS}`; centro("Romatec Consultoria Total · José Romário — CRECI/MA 4.705", yc);
+  fill("#DCE8DF"); ctx.font = `400 20px ${SANS}`; centro(`${d.assinatura || "José Romário · CRECI/MA 4.705"} · Romatec Consultoria Total`, yc);
   y = topo + alturaQuadro;
 
   // ── Projeto do portal e do stand: cada prancha inteira (a planta alta do stand fica mais estreita)

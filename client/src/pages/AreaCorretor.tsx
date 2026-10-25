@@ -4,6 +4,7 @@ import { trpc } from "@/lib/trpc";
 import { useAuth } from "@/_core/hooks/useAuth";
 import { Button } from "@/components/ui/button";
 import { linkEmpreendimento, linkKml } from "@shared/chacaraLink";
+import { comRef, useCartaoVendas } from "@/lib/cartaoVendas";
 import { brl } from "@shared/simulador";
 import { Building2, Calculator, Globe2, Link2, Lock, Map as MapIcon, Plus, Smartphone, Wallet } from "lucide-react";
 
@@ -37,6 +38,7 @@ export default function AreaCorretor() {
   const admin = minhas?.perfil === "admin";
   const habilitado = (id: number) => admin || (minhas?.imoveis ?? []).includes(id);
   const origem = window.location.origin;
+  const { ref } = useCartaoVendas();
 
   const cadastros = [
     { rotulo: "Novo lead", rota: "/leads", modulo: "leads" },
@@ -85,7 +87,7 @@ export default function AreaCorretor() {
                   <Button size="sm" onClick={() => navigate(`/empreendimentos/${e.slug}`)}>Abrir mapa e lotes</Button>
                   {m.simulador && <Button size="sm" variant="outline" onClick={() => navigate(`/empreendimentos/${e.slug}`)}><Calculator className="mr-1 h-3.5 w-3.5" /> Simulador</Button>}
                   {e.slug === "bom-jardims" && <>
-                    <Button size="sm" variant="outline" onClick={() => copiar(linkEmpreendimento(origem), "Link do empreendimento")}><Link2 className="mr-1 h-3.5 w-3.5" /> Link de divulgação</Button>
+                    <Button size="sm" variant="outline" onClick={() => copiar(comRef(linkEmpreendimento(origem), ref), "Link do empreendimento")}><Link2 className="mr-1 h-3.5 w-3.5" /> Link de divulgação</Button>
                     <Button asChild size="sm" variant="outline"><a href={linkKml(origem)} download><Globe2 className="mr-1 h-3.5 w-3.5" /> KML</a></Button>
                   </>}
                 </div>

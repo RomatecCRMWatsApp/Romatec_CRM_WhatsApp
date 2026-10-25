@@ -50,6 +50,8 @@ const metaDocumento = z.object({
 });
 
 export const cadastroRouter = router({
+  /** Cartão de vendas do usuário logado (propostas, folders, links); empreendedor recebe o do administrador */
+  cartaoVendas: protectedProcedure.query(async ({ ctx }) => (await import("../cartaoVendas")).cartaoDoUsuario(ctx.user.id)),
   dados: protectedProcedure.input(alvo).query(async ({ input, ctx }) => carregarCadastro(alvoDe(ctx, input.id))),
 
   salvar: protectedProcedure.input(z.object({ id: z.number().int().positive().optional(), dados: z.record(z.string(), z.unknown()) }))

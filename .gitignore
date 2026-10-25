@@ -118,3 +118,6 @@ temp/
 client/public/__manus__/version.json
 
 # railway cache bust 20260411
+
+# PDFs gerados localmente (contrato modelo/exemplos)
+contrato-modelo/

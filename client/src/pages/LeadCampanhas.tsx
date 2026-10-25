@@ -7,6 +7,7 @@ import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { ArrowLeft, Copy, ExternalLink, Globe2, Link2, Megaphone, Plus, Trash2 } from "lucide-react";
 import { SLUG_BOM_JARDIMS, linkEmpreendimento, linkKml } from "@shared/chacaraLink";
+import { comRef, useCartaoVendas } from "@/lib/cartaoVendas";
 import PageHeader from "@/components/PageHeader";
 
 const CANAL_LABEL: Record<string, string> = {
@@ -48,7 +49,8 @@ function LinkGerado({ propertyId, campanhaId, funil }: { propertyId?: number; ca
 
 /** Campanha do Bom Jardims: link da página do empreendimento (poligonal geral) + KML para o Google Earth */
 function LinkEmpreendimento({ codigoCampanha }: { codigoCampanha: string }) {
-  const pagina = linkEmpreendimento(window.location.origin, codigoCampanha);
+  const { ref } = useCartaoVendas();
+  const pagina = comRef(linkEmpreendimento(window.location.origin, codigoCampanha), ref);
   const kml = linkKml(window.location.origin);
   const copiar = async (texto: string, rotulo: string) => {
     try { await navigator.clipboard.writeText(texto); toast.success(`${rotulo} copiado`); } catch { toast.error("Não foi possível copiar"); }

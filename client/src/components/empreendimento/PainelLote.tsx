@@ -5,6 +5,7 @@ import { trpc } from "@/lib/trpc";
 import { Button } from "@/components/ui/button";
 import { COM_CLIENTE, COR_SITUACAO, ROTULO_SITUACAO, SITUACOES_LOTE, type SituacaoLote } from "@shared/lotes";
 import { SLUG_BOM_JARDIMS, codigoChacaraValido, linkChacara, linkKml } from "@shared/chacaraLink";
+import { comRef, useCartaoVendas } from "@/lib/cartaoVendas";
 import { exibirTelefoneBR } from "@shared/telefone";
 import EnviarWhatsAppModal from "@/components/EnviarWhatsAppModal";
 import { Link2, Send, ExternalLink, Globe2 } from "lucide-react";
@@ -59,7 +60,8 @@ function LinkChacara({ slug, lote }: { slug: string; lote: LotePainel }) {
     onSuccess: r => { toast.success(`Link da chácara ${lote.codigo} enviado para ${exibirTelefoneBR(r.telefone)}`); setEnviar(false); },
     onError: e => toast.error(e.message),
   });
-  const link = linkChacara(window.location.origin, lote.codigo);
+  const { ref } = useCartaoVendas();
+  const link = comRef(linkChacara(window.location.origin, lote.codigo), ref);
   const copiar = async () => {
     try { await navigator.clipboard.writeText(link); toast.success(`Link da chácara ${lote.codigo} copiado`); }
     catch { window.prompt("Copie o link:", link); }

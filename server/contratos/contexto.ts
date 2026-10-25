@@ -172,6 +172,25 @@ function tagsCorretor(c: CredenciaisCorretor, prefixo: 'corr' | 'corr_parceiro')
   };
 }
 
+/**
+ * Corretor intermediador (o parceiro, se houver; senão o corretor responsável) e a parte dele na corretagem
+ * (2% do valor da venda), paga no ato do sinal — o que o cliente vê na cláusula 19.1.2 e no Contrato de
+ * Intermediação. Nunca expõe o percentual nem o valor da administradora.
+ */
+export function tagsIntermediacao(e: Pick<EntradaContexto, 'corretor' | 'parceiro' | 'plano'>): Ctx {
+  const c = e.parceiro ?? e.corretor;
+  const s = e.plano;
+  const pctCorretor = s.comissao_corretor_percentual ?? 0.02;
+  const base = s.modalidade === 'avista' ? s.total_pagar : s.preco_tabela;
+  const valor = Math.round(base * pctCorretor * 100) / 100;
+  return {
+    intermed_nome: (c.nome || '').toUpperCase(), intermed_cpf: docMascara(c.cpf),
+    intermed_creci: [c.creciUf, c.creci].filter(Boolean).join(' '), intermed_creci_validade: dataBR(c.creciValidade),
+    intermed_comissao_pct: pct(pctCorretor, 0), intermed_comissao_valor: brl(valor), intermed_comissao_extenso: reaisExtenso(valor),
+    intermed_base_valor: brl(base),
+  };
+}
+
 export function montarContexto(e: EntradaContexto): Ctx {
   const emp = { ...e.juridico.defaults, ...(e.overrides ?? {}) } as Record<string, unknown>;
   const l = e.lote;
@@ -190,6 +209,7 @@ export function montarContexto(e: EntradaContexto): Ctx {
     ...tagsCorretor(e.corretor, 'corr'),
     corr_parceiro: false, corr_parceiro_resumo: '',
     ...(e.parceiro ? tagsCorretor(e.parceiro, 'corr_parceiro') : {}),
+    ...tagsIntermediacao(e),
     assinatura_manuscrita: e.contrato.modoAssinatura === 'manuscrita',
     ctr_taxa_cessao: emp.emp_salario_minimo ? brl(Number(String(emp.emp_salario_minimo).replace(/\./g, '').replace(',', '.'))) : '',
     ...(e.condicionantes ?? {}),

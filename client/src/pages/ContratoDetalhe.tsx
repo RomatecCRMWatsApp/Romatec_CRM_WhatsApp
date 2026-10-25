@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { useLocation, useParams } from "wouter";
 import { toast } from "sonner";
-import { AlertTriangle, CheckCircle2, Copy, Download, FileSignature, FileText, Loader2, Receipt, RefreshCw, Send, Upload, XCircle } from "lucide-react";
+import { AlertTriangle, Ban, CheckCircle2, Copy, Download, FileSignature, FileText, Loader2, Receipt, RefreshCw, Send, ShieldAlert, Upload, XCircle } from "lucide-react";
 import { trpc } from "@/lib/trpc";
 import PageHeader from "@/components/PageHeader";
 import { Button } from "@/components/ui/button";
@@ -10,6 +10,7 @@ import { brl } from "@shared/simulador";
 import { maskPhone } from "@shared/masks";
 import { SeloStatus } from "./Contratos";
 import PainelAssinaturas from "@/components/contratos/PainelAssinaturas";
+import ConfirmarCancelamento from "@/components/contratos/ConfirmarCancelamento";
 
 const br = (iso?: string | null) => (iso ? String(iso).slice(0, 10).split("-").reverse().join("/") : "—");
 const ROTULO_TIPO: Record<string, string> = { entrada: "Entrada", saldo: "Saldo", avista: "À vista", antecipacao: "Antecipação" };
@@ -51,6 +52,8 @@ export default function ContratoDetalhe() {
   const [aba, setAba] = useState<"contrato" | "assinaturas" | "financeiro">("contrato");
   const [bloco, setBloco] = useState<string>("1");
   const [ocupado, setOcupado] = useState<string | null>(null);
+  type Modal = { tipo: "contrato" } | { tipo: "solicitar" } | { tipo: "recusar"; solicitacaoId: number } | { tipo: "cobranca"; id: number; rotulo: string } | { tipo: "recibo"; id: number; numero: string };
+  const [modal, setModal] = useState<Modal | null>(null);
   const utils = trpc.useUtils();
   const { data: d, isLoading, error } = trpc.contratos.detalhe.useQuery({ id }, { enabled: id > 0 });
   const recarregar = () => utils.contratos.detalhe.invalidate({ id });
@@ -59,7 +62,19 @@ export default function ContratoDetalhe() {
     onError: e => toast.error(e.message),
   });
   const assinado = trpc.contratos.registrarAssinado.useMutation({ onSuccess: r => { toast.success(`Contrato ativo — ${r.cobrancas} parcelas no plano de cobrança`); recarregar(); }, onError: e => toast.error(e.message) });
-  const cancelar = trpc.contratos.cancelar.useMutation({ onSuccess: () => { toast.success("Contrato cancelado e chácara liberada"); recarregar(); }, onError: e => toast.error(e.message) });
+  const fechar = () => { setModal(null); recarregar(); };
+  const cancelar = trpc.contratos.cancelar.useMutation({
+    onSuccess: r => {
+      toast.success(r.jaCancelado ? "Contrato já estava cancelado" : `Contrato cancelado${r.loteLiberado ? " · chácara liberada" : ""}${r.cobrancasCanceladas ? ` · ${r.cobrancasCanceladas} cobrança(s) futura(s) cancelada(s)` : ""}`);
+      if (r.falhasAsaas) toast.error(`${r.falhasAsaas} cobrança(s) não foram canceladas no Asaas — tente de novo pela aba Financeiro`);
+      fechar();
+    },
+    onError: e => toast.error(e.message),
+  });
+  const solicitar = trpc.contratos.solicitarCancelamento.useMutation({ onSuccess: () => { toast.success("Pedido enviado ao administrador"); fechar(); }, onError: e => toast.error(e.message) });
+  const recusar = trpc.contratos.recusarSolicitacao.useMutation({ onSuccess: () => { toast.success("Pedido recusado"); fechar(); }, onError: e => toast.error(e.message) });
+  const cancelarCob = trpc.contratos.cancelarCobranca.useMutation({ onSuccess: () => { toast.success("Cobrança cancelada"); fechar(); }, onError: e => toast.error(e.message) });
+  const cancelarRec = trpc.contratos.cancelarRecibo.useMutation({ onSuccess: () => { toast.success("Recibo cancelado"); fechar(); }, onError: e => toast.error(e.message) });
   const emitir = trpc.contratos.emitirCarne.useMutation({ onSuccess: r => { toast.success(`${r.emitidas} cobranças emitidas no Asaas`); recarregar(); }, onError: e => toast.error(e.message) });
   const link = trpc.contratos.linkComprador.useMutation({
     onSuccess: async r => { try { await navigator.clipboard.writeText(r.url); toast.success("Link copiado (vale 7 dias)"); } catch { toast.message(r.url); } },
@@ -72,6 +87,8 @@ export default function ContratoDetalhe() {
   const gate = d.gate as any;
   const definitivoOk = gate?.definitivo?.ok;
   const encerrado = ["ativo", "quitado", "distratado", "cancelado", "assinado"].includes(c.status);
+  const pendentes = d.solicitacoes.filter(x => x.status === "pendente");
+  const pedidoAberto = pendentes.length > 0;
 
   const enviarAssinado = () => {
     const inp = document.createElement("input");
@@ -100,6 +117,22 @@ export default function ContratoDetalhe() {
           ))}
         </div>
 
+        {d.cancelamento && (
+          <p className="rounded-lg border border-red-500/40 bg-red-500/10 p-3 text-sm text-red-200">
+            Contrato cancelado em {new Date(d.cancelamento.em as any).toLocaleString("pt-BR")} pelo administrador. Motivo: {d.cancelamento.motivo}. O histórico e as versões continuam guardados.
+          </p>
+        )}
+        {pendentes.map(x => (
+          <div key={x.id} className="flex flex-wrap items-center gap-3 rounded-lg border border-amber-500/40 bg-amber-500/10 p-3 text-sm text-amber-100">
+            <ShieldAlert className="h-5 w-5 shrink-0" />
+            <span className="flex-1"><b>Pedido de cancelamento</b> de {x.solicitante} em {new Date(x.criadoEm as any).toLocaleString("pt-BR")} — motivo: {x.motivo}</span>
+            {d.pode.cancelar ? <>
+              <Button size="sm" variant="destructive" onClick={() => setModal({ tipo: "contrato" })}>Cancelar com minha senha</Button>
+              <Button size="sm" variant="outline" onClick={() => setModal({ tipo: "recusar", solicitacaoId: x.id })}>Recusar</Button>
+            </> : <span className="text-xs">Aguardando o administrador</span>}
+          </div>
+        ))}
+
         {aba === "contrato" && (
           <div className="grid gap-4 lg:grid-cols-[1fr_380px]">
             <div className="space-y-4">
@@ -118,9 +151,18 @@ export default function ContratoDetalhe() {
                   {d.pode.definitivo && ["apto_assinatura", "em_assinatura", "assinado"].includes(c.status) && (
                     <Button variant="outline" disabled={assinado.isPending} onClick={enviarAssinado}><Upload className="h-4 w-4" /> Registrar contrato assinado</Button>
                   )}
-                  {d.pode.cancelar && !["cancelado", "distratado", "ativo", "quitado"].includes(c.status) && (
-                    <Button variant="outline" className="text-red-400" onClick={() => { const m = prompt("Motivo do cancelamento (a chácara volta a ficar disponível):"); if (m && m.trim().length >= 3) cancelar.mutate({ id, motivo: m.trim() }); }}>
-                      <XCircle className="h-4 w-4" /> Cancelar
+                  {d.pode.cancelar && (
+                    <Button variant="outline" onClick={() => abrir(`/api/contratos/${id}/comissao-romatec.pdf`)} title="Documento interno (só o administrador vê)">
+                      <Receipt className="h-4 w-4" /> Comissão Romatec (interno)
+                    </Button>
+                  )}
+                  {d.pode.cancelar && !["cancelado", "distratado"].includes(c.status) && (
+                    <Button variant="outline" className="text-red-400" onClick={() => setModal({ tipo: "contrato" })}><XCircle className="h-4 w-4" /> Cancelar contrato</Button>
+                  )}
+                  {d.pode.solicitarCancelamento && (
+                    <Button variant="outline" className="text-red-400" disabled={pedidoAberto} onClick={() => setModal({ tipo: "solicitar" })}
+                      title={pedidoAberto ? "Já existe um pedido aguardando o administrador" : ""}>
+                      <Ban className="h-4 w-4" /> Solicitar cancelamento do contrato
                     </Button>
                   )}
                 </div>
@@ -237,7 +279,7 @@ export default function ContratoDetalhe() {
                               {rot}{x.acoes.vencida && ` · ${x.acoes.atraso} dias`}
                               {x.acoes.negociacao && <span className="ml-2 rounded bg-red-500/15 px-1.5 py-0.5 text-[10px] font-semibold text-red-300">Negociação</span>}
                             </td>
-                            <td className="p-2 text-xs">{x.pagoEm ? `${br(x.pagoEm)} · ${brl(x.valorPago ?? x.valor)}` : "—"}{x.reciboNumero && <span className="block text-muted-foreground">{x.reciboNumero}{x.reciboErro ? ` · envio: ${x.reciboErro}` : x.reciboEnviado ? " · enviado" : ""}</span>}</td>
+                            <td className="p-2 text-xs">{x.pagoEm ? `${br(x.pagoEm)} · ${brl(x.valorPago ?? x.valor)}` : "—"}{x.reciboNumero && <span className="block text-muted-foreground">{x.reciboNumero}{x.reciboCancelado && <b className="ml-1 text-red-400">CANCELADO</b>}{x.reciboErro ? ` · envio: ${x.reciboErro}` : x.reciboEnviado ? " · enviado" : ""}</span>}</td>
                             <td className="p-2">
                               <div className="flex justify-end gap-1">
                                 {x.acoes.boleto && <Button size="sm" variant="outline" onClick={() => abrir(`/api/financeiro/cobrancas/${x.id}/boleto-a4.pdf`)}>Boleto A4</Button>}
@@ -247,6 +289,14 @@ export default function ContratoDetalhe() {
                                   </Button>
                                 )}
                                 {x.acoes.recibo && x.reciboId && <Button size="sm" variant="outline" onClick={() => abrir(`/api/financeiro/recibos/${x.reciboId}.pdf`)}>Recibo</Button>}
+                                {d.pode.cancelar && ["prevista", "emitida", "vencida"].includes(x.status) && (
+                                  <Button size="sm" variant="ghost" className="text-red-400" title="Cancelar esta cobrança (só administrador, com senha)"
+                                    onClick={() => setModal({ tipo: "cobranca", id: x.id, rotulo: `${ROTULO_TIPO[x.tipo] ?? x.tipo} ${x.numero}/${x.total}` })}><XCircle className="h-3 w-3" /></Button>
+                                )}
+                                {d.pode.cancelar && x.reciboId && !x.reciboCancelado && (
+                                  <Button size="sm" variant="ghost" className="text-red-400" title="Cancelar o recibo (só administrador, com senha)"
+                                    onClick={() => setModal({ tipo: "recibo", id: x.reciboId, numero: x.reciboNumero })}><Ban className="h-3 w-3" /></Button>
+                                )}
                                 {x.acoes.recibo && x.reciboId && d.pode.cobranca && (
                                   <Button size="sm" variant="ghost" title="Reenviar recibo" disabled={ocupado === `rr${x.id}`}
                                     onClick={() => acao(`rr${x.id}`, async () => {
@@ -278,6 +328,30 @@ export default function ContratoDetalhe() {
           )
         )}
       </div>
+
+      <ConfirmarCancelamento aberto={modal?.tipo === "contrato"} onFechar={() => setModal(null)} comSenha pendente={cancelar.isPending}
+        titulo={`Cancelar o contrato ${c.numero}`} rotuloBotao="Cancelar contrato" motivoInicial={pendentes[0]?.motivo ?? ""}
+        descricao={<>
+          <p>O contrato fica <b>cancelado</b> (não é apagado), a <b>Chácara {c.loteCodigo}</b> volta a ficar disponível e as <b>cobranças futuras não pagas</b> são canceladas{f?.asaasConfigurado ? " no Asaas" : ""}.</p>
+          {["ativo", "quitado"].includes(c.status) && <p className="mt-2 text-amber-300">Contrato ativo: parcelas já pagas e vencidas ficam registradas para o acerto do distrato (Lei 6.766, art. 32-A).</p>}
+        </>}
+        onConfirmar={(motivo, senha) => cancelar.mutate({ id, motivo, senha })} />
+      <ConfirmarCancelamento aberto={modal?.tipo === "solicitar"} onFechar={() => setModal(null)} comSenha={false} pendente={solicitar.isPending}
+        titulo="Solicitar cancelamento do contrato" rotuloBotao="Enviar pedido"
+        descricao={<p>O pedido vai para o administrador (sininho e celular) com o nº do contrato, o comprador e o motivo. Só ele pode cancelar.</p>}
+        onConfirmar={motivo => solicitar.mutate({ id, motivo })} />
+      <ConfirmarCancelamento aberto={modal?.tipo === "recusar"} onFechar={() => setModal(null)} comSenha pendente={recusar.isPending}
+        titulo="Recusar o pedido de cancelamento" rotuloBotao="Recusar pedido"
+        descricao={<p>O contrato continua valendo. Escreva a resposta para quem pediu.</p>}
+        onConfirmar={(resposta, senha) => { if (modal?.tipo === "recusar") recusar.mutate({ solicitacaoId: modal.solicitacaoId, resposta, senha }); }} />
+      <ConfirmarCancelamento aberto={modal?.tipo === "cobranca"} onFechar={() => setModal(null)} comSenha pendente={cancelarCob.isPending}
+        titulo={`Cancelar a cobrança ${modal?.tipo === "cobranca" ? modal.rotulo : ""}`} rotuloBotao="Cancelar cobrança"
+        descricao={<p>A cobrança é cancelada{f?.asaasConfigurado ? " no Asaas" : ""} e deixa de valer para o cliente. Parcela paga não se cancela.</p>}
+        onConfirmar={(motivo, senha) => { if (modal?.tipo === "cobranca") cancelarCob.mutate({ cobrancaId: modal.id, motivo, senha }); }} />
+      <ConfirmarCancelamento aberto={modal?.tipo === "recibo"} onFechar={() => setModal(null)} comSenha pendente={cancelarRec.isPending}
+        titulo={`Cancelar o recibo ${modal?.tipo === "recibo" ? modal.numero : ""}`} rotuloBotao="Cancelar recibo"
+        descricao={<p>O recibo não é apagado: a verificação pública passa a mostrar "cancelado" e a ação fica na auditoria.</p>}
+        onConfirmar={(motivo, senha) => { if (modal?.tipo === "recibo") cancelarRec.mutate({ reciboId: modal.id, motivo, senha }); }} />
     </div>
   );
 }

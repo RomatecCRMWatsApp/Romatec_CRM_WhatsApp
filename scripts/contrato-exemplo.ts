@@ -20,10 +20,13 @@ import type { DadosUnidade } from '../server/contratos/anexosLote';
 import { carregarCamadas } from '../server/contratos/mapaEmpreendimento';
 import { importarLotesDxf } from '../server/lotes/dxf';
 import { hojeIso } from '../server/contratos/formato';
+import { docComissaoRomatec, docIntermediacao } from '../server/contratos/docsComissao';
 
 const saida = path.resolve(process.argv[2] ?? 'contrato-exemplo');
 const FUSO = 23;
-const CODIGO = process.env.LOTE ?? 'A02';
+// MODELO=1: contrato modelo (minuta com o cliente fictício padrão, para apresentar e revisar com o jurídico)
+const MODELO = process.env.MODELO === '1';
+const CODIGO = process.env.LOTE ?? (MODELO ? 'A01' : 'A02');
 const dxf = process.env.DXF ? importarLotesDxf(await readFile(process.env.DXF, 'latin1'), { fuso: FUSO }) : null;
 
 // Condições vigentes do Bom Jardims (seed de condicoesPagamento — addSimulador.ts)
@@ -63,7 +66,7 @@ const unidade: DadosUnidade = {
 const sim = simular(lote.areaM2, 6, condicoes);
 const plano = planoDoContrato(sim, { modalidade: 'financiado', prazo: 120, dataPrimeiroPagamento: '2026-11-10' }, condicoes, false);
 
-const base: EntradaContexto = {
+const base0: EntradaContexto = {
   contrato: { numero: 'BJ-2026-0001', codigoVerificacao: 'EX7K2M9P4Q1R', modoAssinatura: 'eletronica', dataGeracao: hojeIso() },
   juridico: { defaults: SEED_EMP_JURIDICO.defaults, vendedoraTipo: 'PF', vendedora: SEED_EMP_JURIDICO.vendedora, modeloVersao: 'CPCV-BJ v2.0' },
   lote: { codigo: lote.codigo, quadra: lote.quadra, numero: lote.numero, areaM2: lote.areaM2, perimetroM: Math.round(lote.perimetroM * 100) / 100,
@@ -82,6 +85,24 @@ const base: EntradaContexto = {
   // Credenciais do responsável técnico: no sistema vêm do cadastro (usuarioDocumentos); aqui, de exemplo
   corretor: { nome: 'José Romário Pinto Bezerra', cpf: '', creci: '4.705', creciUf: 'MA', creciValidade: '2027-03-31',
     certidaoCodigo: '0000/2026 (exemplo)', certidaoEmissao: '2026-10-20', certidaoValidade: '2026-11-19' },
+  // Corretor parceiro FICTÍCIO (mostra a parte de 2% do corretor intermediador)
+  parceiro: { nome: 'Corretor Exemplo da Silva', cpf: '00000000000', creci: '0.000', creciUf: 'MA', creciValidade: '2027-12-31',
+    certidaoCodigo: '0000/2026 (exemplo)', certidaoEmissao: '2026-10-20', certidaoValidade: '2026-11-19' },
+};
+
+const base: EntradaContexto = !MODELO ? base0 : {
+  ...base0,
+  parceiro: null,
+  contrato: { ...base0.contrato, numero: 'BJ-MODELO', codigoVerificacao: 'MODELO000000' },
+  comprador: {
+    nome: 'Cliente Exemplo', cpfCnpj: '00000000000', nacionalidade: 'brasileira', estadoCivil: 'casado', regimeBens: 'comunhao_parcial',
+    profissao: 'profissão do cliente', nascimento: '1980-01-01', sexo: 'M', rg: '00.000.000', rgOrgao: 'SSP', rgUf: 'MA', email: 'cliente@exemplo.com',
+    telefone1: '99900000000', cep: '65930000', logradouro: 'Rua Exemplo', numero: '00', bairro: 'Centro', cidade: 'Açailândia', uf: 'MA',
+  },
+  conjuge: {
+    nome: 'Cônjuge Exemplo', cpfCnpj: '00000000000', nacionalidade: 'brasileira', estadoCivil: 'casado', profissao: 'profissão do cônjuge',
+    sexo: 'F', rg: '00.000.000', rgOrgao: 'SSP', rgUf: 'MA',
+  },
 };
 
 // Prévia do definitivo: campos que hoje estão em branco no jurídico, com valores visivelmente fictícios
@@ -97,7 +118,13 @@ const ficticios = {
 await mkdir(saida, { recursive: true });
 const ctxMinuta = montarContexto(base);
 const minuta = await gerarContratoPdf(ctxMinuta, plano, { alvo: 'minuta', modelo: 'MODELO-CPCV-BOM-JARDIMS-v2.docx', marca: 'bomjardims', unidade });
-await writeFile(path.join(saida, `CPCV-BJ-2026-0001-${lote.codigo}-MINUTA.pdf`), minuta.pdf);
+await writeFile(path.join(saida, MODELO ? `CONTRATO-MODELO-CPCV-BOM-JARDIMS-${lote.codigo}.pdf` : `CPCV-BJ-2026-0001-${lote.codigo}-MINUTA.pdf`), minuta.pdf);
+if (!MODELO) {
+  await writeFile(path.join(saida, `CONTRATO-INTERMEDIACAO-EXEMPLO-${lote.codigo}.pdf`), await docIntermediacao(ctxMinuta, 'bomjardims'));
+  await writeFile(path.join(saida, `CONTRATO-COMISSAO-ROMATEC-EXEMPLO-${lote.codigo}.pdf`), await docComissaoRomatec(ctxMinuta, plano, 'bomjardims',
+    { corretorDaVenda: base.parceiro!.nome, creciDaVenda: 'MA 0.000', comprador: base.comprador.nome }));
+}
+if (MODELO) { console.log(path.join(saida, `CONTRATO-MODELO-CPCV-BOM-JARDIMS-${lote.codigo}.pdf`), minuta.pdf.length); process.exit(0); }
 
 const ctxDef = montarContexto({ ...base, lote: { ...base.lote, matricula: '00.001 (exemplo)', viaFrente: base.lote.viaFrente || 'via interna do condomínio (exemplo)' }, overrides: ficticios });
 const definitivo = await gerarContratoPdf(ctxDef, plano, {

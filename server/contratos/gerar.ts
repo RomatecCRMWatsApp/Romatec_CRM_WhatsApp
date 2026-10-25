@@ -8,6 +8,7 @@ import type { PlanoContrato } from './plano';
 import { anexar, docxParaPdf, marcaDagua, mergeDocx, sha256, TEXTO_MINUTA } from './render';
 import { anexoDiretrizes, anexoEstatuto, anexoTabelaPagamento } from './anexos';
 import { anexoLicenca, anexoMapa, anexoMemorial, type DadosUnidade } from './anexosLote';
+import { docIntermediacao } from './docsComissao';
 
 export class GateBloqueadoError extends Error {
   constructor(public gate: GateResult) {
@@ -34,7 +35,7 @@ export async function gerarContratoPdf(ctx: Ctx, plano: PlanoContrato, o: Opcoes
   if (minuta && gate.faltantes.length) throw new GateBloqueadoError(gate);
 
   const opcoes = { minuta, marca: o.marca };
-  const [principal, memorial, tabela, estatuto, diretrizes, mapa, licenca] = await Promise.all([
+  const [principal, memorial, tabela, estatuto, diretrizes, mapa, licenca, intermediacao] = await Promise.all([
     mergeDocx(o.modelo, ctx, opcoes).then(docxParaPdf),
     anexoMemorial(o.unidade, ctx, o.marca),
     anexoTabelaPagamento(plano, ctx, o.marca),
@@ -42,9 +43,11 @@ export async function gerarContratoPdf(ctx: Ctx, plano: PlanoContrato, o: Opcoes
     anexoDiretrizes(),
     anexoMapa(o.unidade, ctx, o.marca),
     anexoLicenca(ctx, o.marca, o.licenca),
+    docIntermediacao(ctx, o.marca),
   ]);
-  // Ordem do contrato (Cláusula 23.4): I memorial, II tabela, III estatuto, IV diretrizes, V mapa, VI licença/registro
-  let pdf = await anexar(principal, [memorial, tabela, estatuto, diretrizes, mapa, licenca]);
+  // Ordem do contrato (Cláusula 23.4): I memorial, II tabela, III estatuto, IV diretrizes, V mapa, VI licença/registro;
+  // depois, o Contrato de Intermediação (ciência dos 2% do corretor), assinado pelo cliente no mesmo fluxo
+  let pdf = await anexar(principal, [memorial, tabela, estatuto, diretrizes, mapa, licenca, intermediacao]);
   if (minuta) pdf = await marcaDagua(pdf, TEXTO_MINUTA);
   else if (o.previaSemValor) pdf = await marcaDagua(pdf, o.previaSemValor);
   return { pdf, sha256: sha256(pdf), gate };

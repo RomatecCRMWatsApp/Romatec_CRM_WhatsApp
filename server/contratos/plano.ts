@@ -59,6 +59,8 @@ export interface PlanoContrato {
   comissao_percentual: number;
   comissao_corretor: number;
   comissao_romatec: number;
+  /** % do corretor intermediador sobre o valor da venda (2%) — o que o cliente vê no Contrato de Intermediação */
+  comissao_corretor_percentual?: number;
   parcelas: ParcelaPlano[];
 }
 
@@ -68,6 +70,7 @@ export function planoDoContrato(sim: Simulacao, escolha: EscolhaPlano, c: Condic
   const base = {
     area_m2: sim.areaM2, preco_tabela: sim.preco, preco_avista: sim.avistaTotal.valor, desconto_avista_total: sim.avistaTotal.desconto,
     taxa_aa: c.jurosAaEfetivo, taxa_am: sim.taxaMensal, comissao_percentual: c.comissaoTotalPct,
+    comissao_corretor_percentual: c.comissaoCorretorPct,
   };
 
   if (escolha.modalidade === 'avista') {

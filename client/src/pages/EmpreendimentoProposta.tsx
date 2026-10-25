@@ -2,7 +2,8 @@ import { useLocation, useRoute } from "wouter";
 import { trpc } from "@/lib/trpc";
 import { Button } from "@/components/ui/button";
 import { ArrowLeft, Printer } from "lucide-react";
-import { brl, CORRETOR_SIMULACAO, textoEntrada } from "@shared/simulador";
+import { brl, textoEntrada } from "@shared/simulador";
+import { FotoCorretor, useCartaoVendas } from "@/lib/cartaoVendas";
 
 /**
  * Proposta da simulação (A4, "Imprimir → Salvar como PDF"): lote, entrada e plano escolhidos,
@@ -22,6 +23,7 @@ const IMPRESSAO = `
 `;
 
 export default function EmpreendimentoProposta() {
+  const cartao = useCartaoVendas();
   const [, params] = useRoute("/empreendimentos/:slug/proposta");
   const [, navigate] = useLocation();
   const slug = params?.slug ?? "";
@@ -92,11 +94,12 @@ export default function EmpreendimentoProposta() {
         <p style={{ marginTop: "18px", fontSize: "10.5px", color: "#4b5563", lineHeight: 1.45 }}>{data.avisoLegal}</p>
 
         <div style={{ marginTop: "24px", borderTop: `1px solid ${OURO}`, paddingTop: "10px", display: "flex", alignItems: "center", gap: "14px" }}>
-          {/* Selo oficial da Romatec (identidade visual v1.0) */}
-          <img src="/brand/selo-romatec.svg" alt="Selo Romatec Consultoria Total" style={{ width: "62px", height: "62px", flexShrink: 0 }} />
+          {/* Foto de quem gerou a proposta (sem foto: selo da Romatec) */}
+          <FotoCorretor cartao={cartao} />
           <div>
-            <p style={{ margin: 0, fontWeight: 700 }}>Corretor {CORRETOR_SIMULACAO.nome} · {CORRETOR_SIMULACAO.creci}</p>
-            <p style={{ margin: 0, color: "#374151" }}>WhatsApp {CORRETOR_SIMULACAO.telefones.join(" · ")}</p>
+            <p style={{ margin: 0, fontWeight: 700 }}>{cartao.papel} {cartao.nome}{cartao.creci ? ` · ${cartao.creci}` : ""}</p>
+            {cartao.telefones.length > 0 && <p style={{ margin: 0, color: "#374151" }}>WhatsApp {cartao.telefones.join(" · ")}</p>}
+            {cartao.email && <p style={{ margin: 0, color: "#374151" }}>{cartao.email}</p>}
             <p style={{ margin: "4px 0 0", color: "#6b7280" }}>Romatec Consultoria Total · Valores sujeitos a alteração e disponibilidade.</p>
           </div>
         </div>

@@ -133,7 +133,7 @@ export async function enviarPushes(repo: RepoNotificacoes, enviar: EnviadorPush 
 /** Grava a notificação para cada destinatário (endereço conforme o perfil) e dispara o push */
 async function emitir(
   repo: RepoNotificacoes, enviar: EnviadorPush | null, usuarios: UsuarioDestino[], ids: number[],
-  base: Omit<NovaNotificacao, "usuarioId" | "url">, alvo: { empreendimentoSlug?: string | null; lote?: string | null },
+  base: Omit<NovaNotificacao, "usuarioId" | "url">, alvo: { empreendimentoSlug?: string | null; lote?: string | null; contratoId?: number | null },
 ) {
   if (!ids.length) return { destinatarios: [] as number[], enviados: 0, removidos: 0 };
   const P = new Map(usuarios.map(u => [u.id, perfilDe(u as any)]));
@@ -160,6 +160,21 @@ export async function notificarMudancaLote(m: MudancaLote, repo: RepoNotificacoe
   return { tipo, ...(await emitir(repo, enviar === undefined ? await enviadorWebPush() : enviar, usuarios, ids,
     { tipo, titulo, mensagem, empreendimentoId: m.empreendimentoId, loteId: m.loteId, chave: null },
     { empreendimentoSlug: m.empreendimentoSlug, lote: m.codigo })) };
+}
+
+/** Pedido de cancelamento de contrato (corretor/secretária) → sininho e push só para o administrador */
+export async function notificarSolicitacaoCancelamento(
+  p: { contratoId: number; contrato: string; lote: string; empreendimentoId: number; empreendimentoNome?: string | null; comprador?: string | null; motivo: string; autorId: number; autorNome?: string | null },
+  repo: RepoNotificacoes = repoBanco(), enviar?: EnviadorPush | null,
+) {
+  const usuarios = await repo.usuarios();
+  const ids = destinatarios("solicitacao_cancelamento", usuarios, [], perfilDe as any, { empreendimentoId: p.empreendimentoId, empreendimentoSlug: "", autorId: p.autorId });
+  const { titulo, mensagem } = textoNotificacao("solicitacao_cancelamento", {
+    contrato: p.contrato, lote: p.lote, empreendimento: p.empreendimentoNome ?? undefined, comprador: p.comprador ?? undefined, motivo: p.motivo, autor: p.autorNome,
+  });
+  return emitir(repo, enviar === undefined ? await enviadorWebPush() : enviar, usuarios, ids,
+    { tipo: "solicitacao_cancelamento", titulo, mensagem, empreendimentoId: p.empreendimentoId, chave: `solicitacao:${p.contratoId}` },
+    { contratoId: p.contratoId });
 }
 
 /** Ao subir uma versão nova: "Sistema atualizado para vX.Y.Z" para todos (uma vez por versão) */

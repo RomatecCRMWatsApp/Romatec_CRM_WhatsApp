@@ -980,6 +980,10 @@ export const contratos = mysqlTable("contratos", {
   assinaturaIniciadaEm: datetime("assinaturaIniciadaEm"),
   /** Manifesto de assinaturas (Anexo VII) — chave em contratoArquivos */
   manifestoArquivo: varchar("manifestoArquivo", { length: 255 }),
+  /** Cancelamento (v1.14): só o administrador, com a senha de login (step-up) */
+  canceladoEm: datetime("canceladoEm"),
+  canceladoPor: int("canceladoPor"),
+  canceladoMotivo: varchar("canceladoMotivo", { length: 300 }),
   criadoEm: timestamp("criadoEm").defaultNow().notNull(),
   atualizadoEm: timestamp("atualizadoEm").defaultNow().onUpdateNow().notNull(),
 }, (t) => ({
@@ -1286,6 +1290,10 @@ export const recibos = mysqlTable("recibos", {
   pdfArquivo: varchar("pdfArquivo", { length: 255 }),
   enviadoEm: datetime("enviadoEm"),
   envioErro: varchar("envioErro", { length: 255 }),
+  /** Recibo nunca é apagado: o cancelamento (só admin, com senha) marca e fica na auditoria */
+  canceladoEm: datetime("canceladoEm"),
+  canceladoPor: int("canceladoPor"),
+  canceladoMotivo: varchar("canceladoMotivo", { length: 300 }),
   criadoEm: timestamp("criadoEm").defaultNow().notNull(),
 }, (t) => ({
   uxNumero: uniqueIndex("ux_recibo_numero").on(t.numero),
@@ -1317,7 +1325,28 @@ export const indicesIpca = mysqlTable("indicesIpca", {
   atualizadoEm: timestamp("atualizadoEm").defaultNow().onUpdateNow().notNull(),
 });
 
-/** Auditoria do bloco financeiro: geração, download, 2ª via, reenvio */
+/**
+ * Pedido de cancelamento do contrato (corretor/secretária → administrador). O administrador
+ * cancela ele mesmo, com a senha; o pedido fica como "atendida" ou "recusada" (nunca é apagado).
+ */
+export const contratoSolicitacoes = mysqlTable("contratoSolicitacoes", {
+  id: int("id").autoincrement().primaryKey(),
+  contratoId: int("contratoId").notNull(),
+  /** cancelamento */
+  tipo: varchar("tipo", { length: 20 }).notNull(),
+  motivo: varchar("motivo", { length: 300 }).notNull(),
+  solicitanteId: int("solicitanteId").notNull(),
+  /** pendente | atendida | recusada */
+  status: varchar("status", { length: 12 }).notNull(),
+  resolvidoPor: int("resolvidoPor"),
+  resolvidoEm: datetime("resolvidoEm"),
+  resposta: varchar("resposta", { length: 300 }),
+  criadoEm: timestamp("criadoEm").defaultNow().notNull(),
+}, (t) => ({
+  ixContrato: index("ix_solic_contrato").on(t.contratoId, t.status),
+}));
+
+/** Auditoria do bloco financeiro: geração, download, 2ª via, reenvio (só INSERT; no MySQL, gatilhos barram UPDATE/DELETE) */
 export const financeiroAuditoria = mysqlTable("financeiroAuditoria", {
   id: bigint("id", { mode: "number" }).autoincrement().primaryKey(),
   acao: varchar("acao", { length: 40 }).notNull(),

@@ -5,6 +5,8 @@ process.env.DATABASE_DRIVER = 'sqlite';
 process.env.SQLITE_PATH = ':memory:';
 
 const S = await import('./contratos/servico');
+const X = await import('./contratos/cancelamento');
+const { hashPassword } = await import('./auth-security');
 const { acoesDaParcela, cpfValido, pendenciasComprador, exigePacto } = await import('../shared/contratos');
 const schema = await import('../drizzle/schema');
 const { getDb } = await import('./db');
@@ -23,6 +25,9 @@ beforeAll(async () => {
   const q = (e: number, n: number) => JSON.stringify([[e, n], [e + 55, n], [e + 55, n - 55], [e, n - 55]]);
   db.run(sql`INSERT INTO users (id, openId, name, role, creci) VALUES (1, 'u1', 'José Romário', 'admin', '4705')`);
   db.run(sql`INSERT INTO users (id, openId, name, role, perfil, creci) VALUES (2, 'u2', 'Corretor Parceiro', 'user', 'corretor', '9999')`);
+  db.run(sql`INSERT INTO users (id, openId, name, role, perfil) VALUES (3, 'u3', 'Secretária', 'user', 'secretario')`);
+  const h = await hashPassword('senha-do-admin-123');
+  db.run(sql`UPDATE users SET password_hash = ${h} WHERE id = 1`);
   db.run(sql`INSERT INTO empreendimentos (id, slug, nome, municipio, uf) VALUES (1, 'bom-jardims', 'Condomínio de Chácaras Bom Jardims', 'Açailândia', 'MA')`);
   db.run(sql`INSERT INTO lotes (empreendimentoId, codigo, quadra, numero, areaM2, perimetroM, situacao, verticesUtm) VALUES (1, 'A01', 'A', 1, '3025.11', '220.01', 'disponivel', ${q(236000, 9455000)})`);
   db.run(sql`INSERT INTO lotes (empreendimentoId, codigo, quadra, numero, areaM2, perimetroM, situacao, verticesUtm) VALUES (1, 'A02', 'A', 2, '3025.11', '220.01', 'disponivel', ${q(236055, 9455000)})`);
@@ -82,15 +87,51 @@ describe('contrato: contexto, gate, ativação e cancelamento', () => {
     expect(r.cobrancas).toBe(126);
     expect((await S.contratoPorId(1)).status).toBe('ativo');
     expect((await lote('A01')).situacao).toBe('vendido_parcelado');
-    await expect(S.cancelarContrato(1, 1, 'teste')).rejects.toMatchObject({ codigo: 'STATUS' });
   });
 
-  it('cancelar contrato em andamento libera a chácara', async () => {
-    await S.cancelarContrato(2, 1, 'desistência antes da assinatura');
-    expect((await S.contratoPorId(2)).status).toBe('cancelado');
+  it('cancelamento: só o admin, com a senha de login; corretor e secretária só solicitam', async () => {
+    const admin = { id: 1, name: 'José Romário', role: 'admin' }, corretor = { id: 2, name: 'Corretor Parceiro', role: 'user', perfil: 'corretor' };
+    const secretaria = { id: 3, name: 'Secretária', role: 'user', perfil: 'secretario' };
+    // Nenhum outro perfil cancela, nem com a senha certa do admin
+    for (const quem of [corretor, secretaria]) {
+      await expect(X.cancelarContratoAdmin(2, quem, 'senha-do-admin-123', 'teste')).rejects.toMatchObject({ codigo: 'SO_ADMIN' });
+      await expect(X.cancelarCobrancaAdmin(1, quem, 'senha-do-admin-123', 'teste')).rejects.toMatchObject({ codigo: 'SO_ADMIN' });
+    }
+    // Admin com a senha errada: não cancela
+    await expect(X.cancelarContratoAdmin(2, admin, 'errada', 'teste')).rejects.toMatchObject({ codigo: 'SENHA' });
+    expect((await S.contratoPorId(2)).status).not.toBe('cancelado');
+    // Corretor pede; o pedido duplicado é barrado; o admin não "pede", cancela
+    await X.solicitarCancelamento(2, corretor, 'cliente desistiu antes de assinar');
+    await expect(X.solicitarCancelamento(2, secretaria, 'de novo')).rejects.toMatchObject({ codigo: 'JA_SOLICITADO' });
+    await expect(X.solicitarCancelamento(2, admin, 'x')).rejects.toMatchObject({ codigo: 'PERFIL' });
+    expect((await X.solicitacoesDo(2))[0]).toMatchObject({ status: 'pendente', solicitante: 'Corretor Parceiro' });
+    // Admin cancela com a senha: libera a chácara e atende o pedido
+    const r = await X.cancelarContratoAdmin(2, admin, 'senha-do-admin-123', 'desistência antes da assinatura');
+    expect(r).toMatchObject({ ok: true, loteLiberado: true });
+    expect(await S.contratoPorId(2)).toMatchObject({ status: 'cancelado', canceladoPor: 1, canceladoMotivo: 'desistência antes da assinatura' });
     expect(await lote('A02')).toMatchObject({ situacao: 'disponivel', contratoReservaId: null, clienteNome: null });
-    const lista = await S.listarContratos({ corretorUserId: 2 });
-    expect(lista.map(c => c.id)).toEqual([2]);
+    expect((await X.solicitacoesDo(2))[0]).toMatchObject({ status: 'atendida', resolvidoPor: 'José Romário' });
+    expect((await S.listarContratos({ corretorUserId: 2 })).map(c => c.status)).toEqual(['cancelado']);
+  });
+
+  it('cancelar contrato ATIVO: chácara de volta, cobranças futuras canceladas (Asaas dormente), recibo marcado e trilha completa', async () => {
+    const admin = { id: 1, name: 'José Romário', role: 'admin' };
+    db.run(sql`INSERT INTO recibos (numero, cobrancaId, contratoId, codigoVerif, valorPago, pagoEm) VALUES ('REC-BJ-2026-000001', 1, 1, 'AAAA-BBBB-CCCC', '8000', '2026-12-10')`);
+    await db.update(schema.cobrancas).set({ status: 'paga' }).where(eq(schema.cobrancas.id, 1));
+    await expect(X.cancelarCobrancaAdmin(1, admin, 'senha-do-admin-123', 'x')).rejects.toMatchObject({ codigo: 'PAGA' });
+    const r = await X.cancelarContratoAdmin(1, admin, 'senha-do-admin-123', 'inadimplência — decisão do administrador');
+    expect(r).toMatchObject({ loteLiberado: true, cobrancasCanceladas: 125, falhasAsaas: 0 });
+    expect((await lote('A01')).situacao).toBe('disponivel');
+    const cobs = await db.select().from(schema.cobrancas).where(eq(schema.cobrancas.contratoId, 1));
+    expect(cobs.filter((x: any) => x.status === 'paga')).toHaveLength(1);
+    expect(cobs.filter((x: any) => x.status === 'cancelada')).toHaveLength(125);
+    const [rec] = await db.select().from(schema.recibos);
+    await X.cancelarReciboAdmin(rec.id, admin, 'senha-do-admin-123', 'emitido por engano');
+    expect((await db.select().from(schema.recibos))[0].canceladoMotivo).toBe('emitido por engano');
+    const trilha = await X.trilhaDoContrato(1);
+    expect(trilha.map(t => t.acao)).toEqual(expect.arrayContaining(['contrato.cancelado', 'recibo.cancelado']));
+    expect(trilha.find(t => t.acao === 'contrato.cancelado')).toMatchObject({ usuario: 'José Romário', detalhe: expect.objectContaining({ motivo: 'inadimplência — decisão do administrador', statusAnterior: 'ativo' }) });
+    expect((await X.trilhaDoContrato(2)).map(t => t.acao)).toEqual(expect.arrayContaining(['contrato.cancel_solicitado', 'contrato.cancelado', 'seguranca.senha_incorreta']));
   });
 });
 

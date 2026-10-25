@@ -5,7 +5,7 @@ import { readUtm } from "@/components/LeadForm";
 import { origemDaVisita } from "@/lib/origemVisita";
 import { FAQ_BOM_JARDIMS } from "@shared/bomJardimsSeo";
 import LoteMap, { formatArea, STATUS_LABEL, type LoteInfo } from "@/components/bom-jardims/LoteMap";
-import { C, SERIF, SANS, CONTATOS, GALERIA, VIDEO, waLink, useBrandFonts, ContatosBotoes, GaleriaProjeto } from "@/components/bom-jardims/marca";
+import { C, SERIF, SANS, GALERIA, VIDEO, waLink, useBrandFonts, ContatosBotoes, GaleriaProjeto, useContatos } from "@/components/bom-jardims/marca";
 import { codigoChacaraValido, rotaAteEntrada } from "@shared/chacaraLink";
 
 /**
@@ -166,6 +166,7 @@ function Formulario({ loteCodigo, onClearLote, lotes }: { loteCodigo?: string; o
 
 export default function BomJardims() {
   useBrandFonts();
+  const contatos = useContatos();
   const { data: emp, isFetched } = trpc.empreendimentos.publicBySlug.useQuery({ slug: "bom-jardims" });
   const [fallbackLotes, setFallbackLotes] = useState<LoteInfo[]>([]);
   // ?chacara=C05 (vindo do link da chácara): já chega com ela escolhida no formulário
@@ -354,7 +355,7 @@ export default function BomJardims() {
       {/* 8. Rodapé */}
       <footer style={{ background: "#08261A", color: C.creme }}>
         <div style={{ ...section, padding: "32px 16px", display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(240px, 1fr))", gap: 24 }}>
-          {CONTATOS.map(c => (
+          {contatos.map(c => (
             <div key={c.whatsapp}>
               <p style={{ margin: 0, fontSize: 13, color: C.dourado, fontWeight: 700, textTransform: "uppercase", letterSpacing: 0.5 }}>{c.papel}</p>
               <p style={{ margin: "4px 0 0", fontFamily: SERIF, fontSize: 20 }}>{c.nome}</p>

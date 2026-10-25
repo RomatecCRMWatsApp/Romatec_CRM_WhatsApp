@@ -316,7 +316,9 @@ export const empreendimentosAdminRouter = router({
         .where(and(eq(lotes.empreendimentoId, emp.id), eq(lotes.codigo, input.codigo))).limit(1);
       if (!lote) throw new Error(`Chácara ${input.codigo} não encontrada`);
       const { appUrl } = await import("../leads/config");
-      const link = linkChacara(appUrl(), lote.codigo);
+      const { cartaoDoUsuario } = await import("../cartaoVendas");
+      const { ref } = await cartaoDoUsuario(ctx.user.id);
+      const link = `${linkChacara(appUrl(), lote.codigo)}${ref ? `?c=${ref}` : ""}`;
       const { enviarTexto, ZApiError } = await import("../leads/zapiClient");
       try {
         await enviarTexto(telefone, mensagemLinkChacara({ codigo: lote.codigo, quadra: lote.quadra, areaM2: num(lote.areaM2) }, link));

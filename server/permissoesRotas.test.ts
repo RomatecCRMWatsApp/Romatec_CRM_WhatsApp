@@ -76,7 +76,7 @@ describe('bloqueio no servidor (não confia no front)', () => {
     await expect(corretor.contratos.criar({ slug: 'bom-jardims', lote: 'A01', plano: pl, comprador: { nome: 'X Y', cpf: '52998224725' } })).rejects.toMatchObject({ code: 'FORBIDDEN' });
     await expect(corretor.contratos.gerar({ id: 1, alvo: 'definitivo' })).rejects.toMatchObject({ code: 'FORBIDDEN' });
     await expect(corretor.contratos.registrarAssinado({ id: 1 })).rejects.toMatchObject({ code: 'FORBIDDEN' });
-    await expect(corretor.contratos.cancelar({ id: 1, motivo: 'teste' })).rejects.toMatchObject({ code: 'FORBIDDEN' });
+    await expect(corretor.contratos.cancelar({ id: 1, motivo: 'teste', senha: 'qualquer' })).rejects.toMatchObject({ code: 'FORBIDDEN' });
     await expect(corretor.contratos.emitirCarne({ id: 1, bloco: 1 })).rejects.toMatchObject({ code: 'FORBIDDEN' });
     await expect(corretor.contratos.linkComprador({ id: 1 })).rejects.toMatchObject({ code: 'FORBIDDEN' });
     await expect(caller({ id: 7, role: 'user', perfil: 'empreendedor' }).contratos.listar()).rejects.toMatchObject({ code: 'FORBIDDEN' });

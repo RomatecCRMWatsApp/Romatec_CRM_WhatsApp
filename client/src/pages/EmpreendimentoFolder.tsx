@@ -7,6 +7,7 @@ import MapaTematico from "@/components/empreendimento/MapaTematico";
 import { ArrowLeft, Printer, Send } from "lucide-react";
 import { toast } from "sonner";
 import EnviarWhatsAppModal, { btnWhats } from "@/components/EnviarWhatsAppModal";
+import { comRef, useCartaoVendas } from "@/lib/cartaoVendas";
 import { gerarImagemFolder } from "@/lib/imagemFolder";
 import { exibirTelefoneBR } from "@shared/telefone";
 import { SLUG_BOM_JARDIMS } from "@shared/chacaraLink";
@@ -62,7 +63,8 @@ export default function EmpreendimentoFolder() {
     onError: e => toast.error(e.message),
   });
 
-  const pagina = `${window.location.origin}/${slug}?utm_source=folder&utm_medium=impresso&utm_campaign=folder-${(codigo || "geral").toLowerCase()}`;
+  const cartao = useCartaoVendas();
+  const pagina = comRef(`${window.location.origin}/${slug}?utm_source=folder&utm_medium=impresso&utm_campaign=folder-${(codigo || "geral").toLowerCase()}`, cartao.ref);
   useEffect(() => {
     QRCode.toDataURL(pagina, { margin: 1, width: 360, color: { dark: VERDE, light: "#FFFFFF" } }).then(setQr).catch(() => setQr(""));
   }, [pagina]);
@@ -74,8 +76,10 @@ export default function EmpreendimentoFolder() {
   const disponiveis = det.lotes.filter(l => l.situacao === "disponivel");
   const areas = disponiveis.map(l => l.areaM2 ?? 0).filter(Boolean);
   const ruasDoLote = m ? Array.from(new Set(m.vertices.filter(v => v.confronta.startsWith("a ")).map(v => v.confronta.slice(2)))) : [];
-  const zap = `https://wa.me/${det.whatsapp}?text=${encodeURIComponent(lote ? `Olá! Vi o folder do ${emp.nome} e quero saber da chácara ${lote.codigo}.` : `Olá! Vi o folder do ${emp.nome} e quero saber mais.`)}`;
-  const zapFmt = det.whatsapp.replace(/^55(\d{2})(\d)(\d{4})(\d{4})$/, "($1) $2 $3-$4");
+  // WhatsApp de quem gera o folder (sem telefone no cadastro: o do empreendimento)
+  const numeroZap = cartao.whatsapp ?? det.whatsapp;
+  const zap = `https://wa.me/${numeroZap}?text=${encodeURIComponent(lote ? `Olá! Vi o folder do ${emp.nome} e quero saber da chácara ${lote.codigo}.` : `Olá! Vi o folder do ${emp.nome} e quero saber mais.`)}`;
+  const zapFmt = numeroZap.replace(/^55(\d{2})(\d)(\d{4})(\d{4})$/, "($1) $2 $3-$4");
   const linhaCapa = lote
     ? `Chácara ${lote.codigo} · Quadra ${lote.quadra} · ${n2(lote.areaM2 ?? 0)} m²`
     : `${disponiveis.length} chácaras disponíveis${areas.length ? ` · de ${n2(Math.min(...areas))} a ${n2(Math.max(...areas))} m²` : ""}`;
@@ -104,6 +108,7 @@ export default function EmpreendimentoFolder() {
         qr, textoQr: "Aponte a câmera para ver fotos, vídeo e o mapa",
         whatsapp: zapFmt,
         aviso: AVISO,
+        assinatura: [`${cartao.papel} ${cartao.nome}`, cartao.creci].filter(Boolean).join(" · "),
       });
       envio.mutate({ slug, codigo: lote?.codigo, telefone: destino, imagem, formato });
     } catch (e: any) {
@@ -181,7 +186,7 @@ export default function EmpreendimentoFolder() {
             {qr && <img src={qr} alt="QR Code da página do empreendimento" className="my-3 h-36 w-36 rounded-lg bg-white p-1.5" />}
             <p className="text-xs opacity-80">Aponte a câmera para ver fotos, vídeo e o mapa</p>
             <a href={zap} target="_blank" rel="noreferrer" className="mt-3 inline-block rounded-full px-4 py-2 text-sm font-bold" style={{ background: OURO, color: VERDE }}>WhatsApp {zapFmt}</a>
-            <p className="mt-3 text-[11px] opacity-80">Romatec Consultoria Total · José Romário — CRECI/MA 4.705</p>
+            <p className="mt-3 text-[11px] opacity-80">{[`${cartao.papel} ${cartao.nome}`, cartao.creci, cartao.email].filter(Boolean).join(" · ")} · Romatec Consultoria Total</p>
           </div>
         </div>
 

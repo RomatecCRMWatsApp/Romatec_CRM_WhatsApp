@@ -1,6 +1,7 @@
 import { useMemo, useState } from "react";
 import { useLocation } from "wouter";
-import { FileSignature, Plus } from "lucide-react";
+import { Download, FileSignature, Loader2, Plus } from "lucide-react";
+import { toast } from "sonner";
 import { trpc } from "@/lib/trpc";
 import PageHeader from "@/components/PageHeader";
 import { Button } from "@/components/ui/button";
@@ -29,6 +30,19 @@ export default function Contratos() {
   const [, navigate] = useLocation();
   const [filtro, setFiltro] = useState(0);
   const [busca, setBusca] = useState("");
+  const [baixando, setBaixando] = useState(false);
+  // Contrato modelo: minuta com o cliente fictício, gerada na hora (nada é gravado)
+  const baixarModelo = async () => {
+    setBaixando(true);
+    try {
+      const r = await fetch("/api/contratos/modelo.pdf?slug=bom-jardims&lote=A01", { credentials: "include" });
+      if (!r.ok) throw new Error(await r.text());
+      const url = URL.createObjectURL(await r.blob());
+      const a = document.createElement("a");
+      a.href = url; a.download = "CONTRATO-MODELO-CPCV-BOM-JARDIMS-A01.pdf"; a.click();
+      setTimeout(() => URL.revokeObjectURL(url), 60_000);
+    } catch (e: any) { toast.error(e?.message || "Falha ao gerar o contrato modelo"); } finally { setBaixando(false); }
+  };
   const { data, isLoading, error } = trpc.contratos.listar.useQuery();
   const lista = useMemo(() => {
     const f = FILTROS[filtro].status;
@@ -40,7 +54,12 @@ export default function Contratos() {
   return (
     <div>
       <PageHeader icone={FileSignature} titulo="Contratos" subtitulo="Compromissos de compra e venda: minuta, definitivo, assinatura e cobrança"
-        acoes={<Button onClick={() => navigate("/contratos/novo")}><Plus className="h-4 w-4" /> Novo contrato</Button>} />
+        acoes={<div className="flex flex-wrap gap-2">
+          <Button variant="outline" disabled={baixando} onClick={baixarModelo} title="Minuta do CPCV com cliente fictício, todas as cláusulas e anexos — sem criar contrato">
+            {baixando ? <Loader2 className="h-4 w-4 animate-spin" /> : <Download className="h-4 w-4" />} {baixando ? "Gerando (até 1 min)…" : "Baixar contrato modelo (PDF)"}
+          </Button>
+          <Button onClick={() => navigate("/contratos/novo")}><Plus className="h-4 w-4" /> Novo contrato</Button>
+        </div>} />
       <div className="mx-auto max-w-[1400px] space-y-3 px-4 pb-8 md:px-6">
         <div className="flex flex-wrap items-center gap-2">
           {FILTROS.map((f, i) => (

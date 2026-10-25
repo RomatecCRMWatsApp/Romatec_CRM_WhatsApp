@@ -476,6 +476,12 @@ export function initSqliteTables(sqlite: any): void {
   run(`CREATE TABLE IF NOT EXISTS indicesIpca (
     competencia TEXT PRIMARY KEY, variacao TEXT NOT NULL, fonte TEXT NOT NULL DEFAULT 'IBGE/SIDRA 1737', atualizadoEm ${agora}
   )`);
+  // v1.14.0 — trava de cancelamento (server/_core/migrations/addCancelamento.ts)
+  for (const t of ['contratos', 'recibos']) for (const c of ['canceladoEm INTEGER', 'canceladoPor INTEGER', 'canceladoMotivo TEXT']) addColumn(`ALTER TABLE ${t} ADD COLUMN ${c}`);
+  run(`CREATE TABLE IF NOT EXISTS contratoSolicitacoes (
+    id INTEGER PRIMARY KEY AUTOINCREMENT, contratoId INTEGER NOT NULL, tipo TEXT NOT NULL, motivo TEXT NOT NULL, solicitanteId INTEGER NOT NULL,
+    status TEXT NOT NULL, resolvidoPor INTEGER, resolvidoEm INTEGER, resposta TEXT, criadoEm ${agora}
+  )`);
   run(`CREATE TABLE IF NOT EXISTS financeiroAuditoria (
     id INTEGER PRIMARY KEY AUTOINCREMENT, acao TEXT NOT NULL, contratoId INTEGER, cobrancaId INTEGER, usuarioId INTEGER, origem TEXT NOT NULL,
     ip TEXT, detalhe TEXT, criadoEm ${agora}

@@ -334,23 +334,7 @@ export async function registrarAssinado(contratoId: number, pdfAssinado: Buffer 
   return { cobrancas };
 }
 
-export async function cancelarContrato(contratoId: number, usuarioId: number, motivo: string) {
-  const d = await db();
-  const c = await contratoPorId(contratoId);
-  if (['cancelado', 'distratado'].includes(c.status)) return { ok: true };
-  if (['ativo', 'quitado'].includes(c.status)) throw new ContratoErro('STATUS', 'Contrato ativo só sai por distrato (com as retenções da Lei 6.766, art. 32-A)', 409);
-  const agora = new Date();
-  await d.update(contratos).set({ status: 'cancelado', atualizadoEm: agora }).where(eq(contratos.id, contratoId));
-  if (c.loteId) {
-    const r = await d.update(lotes).set({
-      situacao: 'disponivel', status: statusPublicoDe('disponivel'), contratoReservaId: null, reservadoAte: null, leadId: null, corretorId: null,
-      clienteNome: null, valorVenda: null, valorEntrada: null, numParcelas: null, dataSituacao: agora,
-    } as any).where(and(eq(lotes.id, c.loteId), eq(lotes.contratoReservaId, contratoId)));
-    if (afetadas(r)) await d.insert(loteHistorico).values({ loteId: c.loteId, de: 'reservado', para: 'disponivel', usuarioId,
-      detalhe: `Contrato ${c.numero} cancelado: ${motivo}`.slice(0, 500), createdAt: agora } as any);
-  }
-  return { ok: true };
-}
+// Cancelamento: server/contratos/cancelamento.ts (só admin, com a senha de login)
 
 /** Lista para a tela */
 export async function listarContratos(filtro: { corretorUserId?: number; status?: string[] } = {}) {

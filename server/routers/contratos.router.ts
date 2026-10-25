@@ -13,10 +13,13 @@ import { acoesDaParcela, podeCancelarContrato, podeCriarContrato, podeGerarDefin
 import { leadsVisiveis } from "../permissoes";
 import { temAcesso } from "../../shared/permissoes";
 import {
-  ContratoErro, cancelarContrato, condicoesDe, contratoPorId, criarContrato, gateDoContrato, gerarVersao, listarContratos, pessoasDe, planoEscolhido,
+  ContratoErro, condicoesDe, contratoPorId, criarContrato, gateDoContrato, gerarVersao, listarContratos, pessoasDe, planoEscolhido,
   registrarAssinado, responsavelTecnicoId, juridicoDe,
 } from "../contratos/servico";
 import { contratoVersoes } from "../../drizzle/schema";
+import {
+  cancelarCobrancaAdmin, cancelarContratoAdmin, cancelarReciboAdmin, recusarSolicitacao, solicitacoesDo, solicitarCancelamento, trilhaDoContrato,
+} from "../contratos/cancelamento";
 
 const pessoaZ = z.object({
   nome: z.string().trim().max(160), cpf: z.string().max(20), sexo: z.string().max(1).nullable().optional(),
@@ -153,7 +156,7 @@ export const contratosRouter = router({
           return {
             id: x.id, tipo: x.tipo, numero: x.numero, total: x.total, vencimento: x.vencimento, valor: x.valor, status: x.status, pagoEm: x.pagoEm || null,
             valorPago: x.valorPago, valorOriginal: x.valorOriginal, juros: x.juros, amortizacao: x.amortizacao, saldoApos: x.saldoDevedor,
-            reciboId: rec?.id ?? null, reciboNumero: rec?.numero ?? null, reciboEnviado: !!rec?.enviadoEm, reciboErro: rec?.envioErro ?? null,
+            reciboId: rec?.id ?? null, reciboNumero: rec?.numero ?? null, reciboCancelado: !!rec?.canceladoEm, reciboEnviado: !!rec?.enviadoEm, reciboErro: rec?.envioErro ?? null,
             acoes: acoesDaParcela({ status: x.status, vencimento: x.vencimento, vencimentoOriginal: x.vencimentoOriginal, asaas: !!x.asaasPaymentId, recibo: !!rec }, h),
           };
         }),
@@ -169,7 +172,12 @@ export const contratosRouter = router({
       comprador, conjuge,
       versoes: versoes.sort((a, b) => b.versao - a.versao).map(v => ({ versao: v.versao, etapa: v.etapa, bytes: v.bytes, sha256: v.sha256, criadoEm: v.criadoEm })),
       gate,
-      pode: { definitivo: podeGerarDefinitivo(perfil), cobranca: operar, cancelar: podeCancelarContrato(perfil) },
+      pode: {
+        definitivo: podeGerarDefinitivo(perfil), cobranca: operar, cancelar: podeCancelarContrato(perfil),
+        solicitarCancelamento: (perfil === "corretor" || perfil === "secretario") && !["cancelado", "distratado"].includes(c.status),
+      },
+      cancelamento: c.canceladoEm ? { em: c.canceladoEm, motivo: c.canceladoMotivo, por: c.canceladoPor } : null,
+      solicitacoes: await solicitacoesDo(c.id),
       financeiro,
     };
   }),
@@ -187,10 +195,47 @@ export const contratosRouter = router({
       return tratar(() => registrarAssinado(input.id, input.pdfBase64 ? Buffer.from(input.pdfBase64, "base64") : null, ctx.user.id));
     }),
 
-  cancelar: protectedProcedure.input(z.object({ id: z.number().int(), motivo: z.string().trim().min(3).max(300) })).mutation(async ({ ctx, input }) => {
-    exigir(podeCancelarContrato(perfilDe(ctx.user as any)), "Só o administrador cancela contratos.");
+  /**
+   * Cancelamento: SÓ o administrador, confirmando com a SENHA DE LOGIN dele (step-up, validada no servidor).
+   * Libera a chácara, cancela as cobranças futuras no Asaas e grava a trilha. Vale para contrato em qualquer etapa.
+   */
+  cancelar: protectedProcedure.input(z.object({ id: z.number().int(), motivo: z.string().trim().min(3).max(300), senha: z.string().min(1).max(200) }))
+    .mutation(async ({ ctx, input }) => {
+      exigir(podeCancelarContrato(perfilDe(ctx.user as any)), "Só o administrador cancela contratos.");
+      await contratoVisivel(ctx, input.id);
+      return tratar(() => cancelarContratoAdmin(input.id, ctx.user as any, input.senha, input.motivo, (ctx as any).req?.ip ?? null));
+    }),
+
+  /** Corretor (só os dele) e secretária: pedem o cancelamento; vai para o sininho/push do administrador */
+  solicitarCancelamento: protectedProcedure.input(z.object({ id: z.number().int(), motivo: z.string().trim().min(5).max(300) })).mutation(async ({ ctx, input }) => {
     await contratoVisivel(ctx, input.id);
-    return tratar(() => cancelarContrato(input.id, ctx.user.id, input.motivo));
+    return tratar(() => solicitarCancelamento(input.id, ctx.user as any, input.motivo));
+  }),
+
+  recusarSolicitacao: protectedProcedure.input(z.object({ solicitacaoId: z.number().int(), resposta: z.string().trim().min(3).max(300), senha: z.string().min(1).max(200) }))
+    .mutation(async ({ ctx, input }) => {
+      exigir(podeCancelarContrato(perfilDe(ctx.user as any)), "Só o administrador decide os pedidos de cancelamento.");
+      return tratar(() => recusarSolicitacao(input.solicitacaoId, ctx.user as any, input.senha, input.resposta, (ctx as any).req?.ip ?? null));
+    }),
+
+  /** Cancelar UMA cobrança (não paga): só admin + senha */
+  cancelarCobranca: protectedProcedure.input(z.object({ cobrancaId: z.number().int(), motivo: z.string().trim().min(3).max(300), senha: z.string().min(1).max(200) }))
+    .mutation(async ({ ctx, input }) => {
+      exigir(podeCancelarContrato(perfilDe(ctx.user as any)), "Só o administrador cancela cobranças.");
+      return tratar(() => cancelarCobrancaAdmin(input.cobrancaId, ctx.user as any, input.senha, input.motivo, (ctx as any).req?.ip ?? null));
+    }),
+
+  /** Cancelar recibo (nunca apaga; a verificação pública passa a dizer "cancelado"): só admin + senha */
+  cancelarRecibo: protectedProcedure.input(z.object({ reciboId: z.number().int(), motivo: z.string().trim().min(3).max(300), senha: z.string().min(1).max(200) }))
+    .mutation(async ({ ctx, input }) => {
+      exigir(podeCancelarContrato(perfilDe(ctx.user as any)), "Só o administrador cancela recibos.");
+      return tratar(() => cancelarReciboAdmin(input.reciboId, ctx.user as any, input.senha, input.motivo, (ctx as any).req?.ip ?? null));
+    }),
+
+  /** Trilha de auditoria do contrato (cancelamentos, pedidos, tentativas): só admin */
+  trilha: protectedProcedure.input(z.object({ id: z.number().int() })).query(async ({ ctx, input }) => {
+    exigir(podeCancelarContrato(perfilDe(ctx.user as any)), "Só o administrador vê a trilha.");
+    return trilhaDoContrato(input.id);
   }),
 
   /** Emite no Asaas as parcelas do carnê (bloco de 12) — contrato ativo e chave configurada */

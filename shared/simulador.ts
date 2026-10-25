@@ -256,7 +256,7 @@ export function textoAvistaTotal(sim: Simulacao): string {
 const area = (v: number) => v.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 
 /** Mensagem do WhatsApp com a simulação escolhida */
-export function mensagemSimulacao(codigo: string, sim: Simulacao, prazo: number, c: Pick<CondicoesPagamento, 'jurosAaEfetivo' | 'entradaPct'>): string {
+export function mensagemSimulacao(codigo: string, sim: Simulacao, prazo: number, c: Pick<CondicoesPagamento, 'jurosAaEfetivo' | 'entradaPct'>, assinatura?: string): string {
   const plano = sim.planos.find(p => p.prazo === prazo);
   if (!plano) throw new Error(`Prazo de ${prazo} meses não está nas condições`);
   return [
@@ -266,7 +266,8 @@ export function mensagemSimulacao(codigo: string, sim: Simulacao, prazo: number,
     `Saldo: *${prazo}× de ${brl(plano.parcela)}* fixas — juros ${pct(c.jurosAaEfetivo, 0)}% a.a. efetivos (Tabela Price)`,
     `Total a pagar: ${brl(plano.totalPago)}`,
     `Ou pagamento integral: *${textoAvistaTotal(sim)}*`,
-    `Corretor ${CORRETOR_SIMULACAO.nome} · ${CORRETOR_SIMULACAO.creci} · ${CORRETOR_SIMULACAO.telefones[0]}`,
+    // Quem envia assina (cartão de vendas do usuário logado); sem ele, o corretor padrão
+    assinatura ?? `Corretor ${CORRETOR_SIMULACAO.nome} · ${CORRETOR_SIMULACAO.creci} · ${CORRETOR_SIMULACAO.telefones[0]}`,
     'Valores sujeitos a alteração e disponibilidade.',
   ].join('\n');
 }
