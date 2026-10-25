@@ -987,6 +987,8 @@ async function startServer() {
   registrarRotasFinanceiro(app);
   const { registrarRotasReunioes } = await import('../reunioes/rotas');
   registrarRotasReunioes(app);
+  const { registrarRotaEspaco } = await import('../sistema/espaco');
+  registrarRotaEspaco(app);
   const { registrarRotasContratos } = await import('../contratos/rotas');
   registrarRotasContratos(app);
   // Cartão de vendas público dos links de divulgação (?c=<ref>): contato de quem compartilhou

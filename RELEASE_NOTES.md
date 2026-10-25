@@ -3,6 +3,14 @@
 Cada versão nova vai no TOPO. Depois rode `npm run release` (valida e atualiza o package.json);
 ao subir, o servidor grava a versão no banco e todos recebem o aviso "Novidades da versão".
 
+## 1.30.2 — 2026-10-25
+tipo: patch
+obrigatoria: nao
+titulo: Diagnóstico do espaço do banco
+
+### Melhorias
+- Administrador: endereço /api/sistema/espaco mostra o tamanho de cada tabela do banco (só leitura), para acompanhar o espaço do volume do MySQL
+
 ## 1.30.1 — 2026-10-25
 tipo: patch
 obrigatoria: nao
