@@ -79,6 +79,18 @@ describe('carteirinhas (chacaraDependentes + carteiras + /p/c/:qrToken)', () => 
     void maria;
   });
 
+  it('automática: em contrato assinado, a foto que faltava já registra a carteira do dependente (sem PDF)', async () => {
+    const antes = db.all(sql`SELECT COUNT(*) AS n FROM carteiras`)[0].n;
+    const maria = (await S.dependentesDo(1)).find(d => d.nome === 'Maria Mendes Silva')!;
+    await K.salvarFoto(1, 'dependente', maria.id, await foto('#884488'), 1);
+    const nova: any[] = db.all(sql`SELECT * FROM carteiras WHERE titularTipo = 'dependente' AND titularId = ${maria.id}`);
+    expect(nova).toHaveLength(1);
+    expect(nova[0].numero).toBe('BJ-A05-04');
+    expect(db.all(sql`SELECT COUNT(*) AS n FROM carteiras`)[0].n).toBe(antes + 1);
+    expect(await K.emitirCarteirasAuto(1)).toBe(4); // titular, cônjuge e os 2 dependentes; nada duplicado
+    expect(db.all(sql`SELECT COUNT(*) AS n FROM carteiras`)[0].n).toBe(antes + 1);
+  });
+
   it('/p/c/:qrToken: válida com foto e sem CPF; dependente removido → cancelada; contrato cancelado → inválida', async () => {
     const [titular, , pedro] = db.all(sql`SELECT * FROM carteiras ORDER BY id`);
     const ok = await K.conferirCarteirinha(pedro.qrToken);

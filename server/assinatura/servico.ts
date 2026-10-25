@@ -358,6 +358,8 @@ export async function concluirSeTodos(contratoId: number): Promise<{ concluido: 
   const chave = `contratos/${contratoId}/manifesto-${c.numero}.pdf`;
   await salvarArquivo(chave, manifesto);
   await d.update(contratos).set({ manifestoArquivo: chave, status: 'assinado' }).where(eq(contratos.id, contratoId));
+  const { emitirCarteirasAuto } = await import('../contratos/carteirinhas');
+  await emitirCarteirasAuto(contratoId);
   await evento(contratoId, null, 'manifesto_gerado', { detalhe: { sha256: sha256(final) } });
   // Todas as assinaturas + manifesto: contrato ativo (lote vendido e plano de cobranças gravado)
   await registrarAssinado(contratoId, null, 0);

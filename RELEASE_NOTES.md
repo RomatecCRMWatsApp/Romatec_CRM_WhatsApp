@@ -3,6 +3,15 @@
 Cada versão nova vai no TOPO. Depois rode `npm run release` (valida e atualiza o package.json);
 ao subir, o servidor grava a versão no banco e todos recebem o aviso "Novidades da versão".
 
+## 1.23.3 — 2026-10-25
+tipo: patch
+obrigatoria: nao
+titulo: Carteirinhas automáticas
+
+### Melhorias
+- As carteirinhas são emitidas sozinhas: titular e cônjuge quando o contrato é assinado; cada dependente assim que o cadastro dele fica completo, com a foto
+- O botão do quadro de carteirinhas passa a ser só para imprimir o PDF da gráfica
+
 ## 1.23.2 — 2026-10-25
 tipo: patch
 obrigatoria: nao

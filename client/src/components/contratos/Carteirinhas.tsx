@@ -84,7 +84,7 @@ export default function CarteirinhasContrato({ id, status, dependentes, podeEdit
           )}
           <Button size="sm" variant="outline" className="h-8 text-xs" disabled={!liberado || baixando || !prontas} onClick={baixar}
             title={!liberado ? "Disponível depois do contrato assinado" : "PDF tamanho cartão (85,6 × 54 mm), frente e verso, para a gráfica"}>
-            {baixando ? <Loader2 className="mr-1 h-3.5 w-3.5 animate-spin" /> : <Download className="mr-1 h-3.5 w-3.5" />} Emitir carteirinhas (PDF)
+            {baixando ? <Loader2 className="mr-1 h-3.5 w-3.5 animate-spin" /> : <Download className="mr-1 h-3.5 w-3.5" />} Imprimir carteirinhas (PDF)
           </Button>
         </div>
       </div>
@@ -108,7 +108,7 @@ export default function CarteirinhasContrato({ id, status, dependentes, podeEdit
                     ? <p className="flex items-center gap-1 text-xs text-emerald-300"><CheckCircle2 className="h-3.5 w-3.5" /> Nº {p.carteira.numero} · válida até {dataBR(p.carteira.validade)}</p>
                     : p.pendencias.length
                       ? <p className="flex items-center gap-1 text-xs text-amber-300"><TriangleAlert className="h-3.5 w-3.5" /> Para emitir, falta: {p.pendencias.join(", ")}</p>
-                      : <p className="text-xs text-muted-foreground">Pronta para emitir{p.temFoto ? "" : " (sem foto: sai com as iniciais)"}</p>}
+                      : <p className="text-xs text-muted-foreground">Será emitida automaticamente{p.temFoto ? "" : " (sem foto: sai com as iniciais)"}</p>}
                 </div>
                 {podeEditar && !encerrado && (
                   <Button size="sm" variant="ghost" className="h-8 text-xs" onClick={() => escolherFoto(p.tipo, p.ref)}><Camera className="mr-1 h-3.5 w-3.5" /> {p.temFoto ? "Trocar foto" : "Foto"}</Button>
@@ -116,7 +116,7 @@ export default function CarteirinhasContrato({ id, status, dependentes, podeEdit
               </li>
             );
           })}
-          {!liberado && !encerrado && <li className="text-xs text-muted-foreground">As carteirinhas são emitidas depois do contrato assinado; as fotos já podem ser enviadas.</li>}
+          {!liberado && !encerrado && <li className="text-xs text-muted-foreground">As carteirinhas são emitidas automaticamente quando o contrato é assinado; as fotos já podem ser enviadas.</li>}
         </ul>
       ) : (
         <div className="space-y-3">

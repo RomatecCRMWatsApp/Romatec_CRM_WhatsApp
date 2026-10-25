@@ -379,6 +379,9 @@ export async function registrarAssinado(contratoId: number, pdfAssinado: Buffer 
   }
   const { gerarCobrancasDoPlano } = await import('../financeiro/emissao');
   const cobrancas = await gerarCobrancasDoPlano(contratoId, plano);
+  // Carteirinhas do titular, do cônjuge e dos dependentes já completos saem registradas na hora
+  const { emitirCarteirasAuto } = await import('./carteirinhas');
+  await emitirCarteirasAuto(contratoId);
   return { cobrancas };
 }
 

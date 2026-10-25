@@ -146,7 +146,9 @@ export const contratosRouter = router({
     exigir(podeCriarContrato(perfilDe(ctx.user as any)), "Seu perfil não altera contratos.");
     if (["cancelado", "distratado"].includes(c.status)) throw new TRPCError({ code: "CONFLICT", message: "Contrato cancelado" });
     await tratar(() => salvarDependentes(c.id, input.dependentes as any));
-    return { ok: true };
+    // Dependente completo (com foto) em contrato assinado: carteirinha registrada na hora
+    const { emitirCarteirasAuto } = await import("../contratos/carteirinhas");
+    return { ok: true, emitidas: await emitirCarteirasAuto(c.id) };
   }),
 
   detalhe: protectedProcedure.input(z.object({ id: z.number().int() })).query(async ({ ctx, input }) => {

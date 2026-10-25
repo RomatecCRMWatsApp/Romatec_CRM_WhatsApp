@@ -103,6 +103,22 @@ export async function emitirCarteiras(contratoId: number) {
   return { emitidas, bloqueadas };
 }
 
+/**
+ * Emissão automática (sem PDF): registra/renova as carteiras de quem já está apto assim que o contrato é assinado,
+ * um dependente é cadastrado/corrigido ou chega a foto. Contrato ainda não assinado ou erro: não faz nada.
+ */
+export async function emitirCarteirasAuto(contratoId: number): Promise<number> {
+  try {
+    const c = await contratoPorId(contratoId);
+    if (!STATUS_COM_CARTEIRINHA.includes(c.status)) return 0;
+    const { emitidas } = await emitirCarteiras(contratoId);
+    return emitidas.length;
+  } catch (e: any) {
+    console.warn('[Carteirinhas] emissão automática:', e?.message);
+    return 0;
+  }
+}
+
 async function fotoPng(chave: string | null): Promise<Buffer | null> {
   if (!chave) return null;
   try {
@@ -183,6 +199,7 @@ export async function salvarFoto(contratoId: number, tipo: TipoTitular, ref: num
   const d: any = await getDb();
   if (tipo === 'dependente') await d.update(chacaraDependentes).set({ foto: chave }).where(eq(chacaraDependentes.id, ref));
   else await d.insert(pessoaDocumentos).values({ pessoaId: ref, tipo: 'foto_3x4', arquivo: chave, sha256: createHash('sha256').update(jpg).digest('hex'), mime: 'image/jpeg', validadoPor: autorId, enviadoEm: new Date() } as any);
+  await emitirCarteirasAuto(contratoId);
 }
 
 export async function lerFoto(contratoId: number, tipo: TipoTitular, ref: number): Promise<Buffer | null> {
