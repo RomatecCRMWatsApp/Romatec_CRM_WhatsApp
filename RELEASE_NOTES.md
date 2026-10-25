@@ -3,6 +3,15 @@
 Cada versão nova vai no TOPO. Depois rode `npm run release` (valida e atualiza o package.json);
 ao subir, o servidor grava a versão no banco e todos recebem o aviso "Novidades da versão".
 
+## 1.23.4 — 2026-10-25
+tipo: patch
+obrigatoria: nao
+titulo: Chave do Asaas aceita sem o cifrão
+
+### Correções
+- A chave do Asaas pode ser cadastrada sem o "$" do começo (alguns painéis apagam o valor por causa dele); espaços e quebras de linha da colagem são ignorados
+- O diagnóstico do Asaas mostra como a variável chega ao servidor (tamanho e começo), sem mostrar a chave
+
 ## 1.23.3 — 2026-10-25
 tipo: patch
 obrigatoria: nao

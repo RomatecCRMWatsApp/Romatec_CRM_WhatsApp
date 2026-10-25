@@ -27,7 +27,16 @@ export const sufixoEnv = (slug: string) => slug.toUpperCase().replace(/[^A-Z0-9]
  */
 export function chaveDoEmpreendimento(slug: string, env: NodeJS.ProcessEnv = process.env): string {
   const s = sufixoEnv(slug);
-  return (env[`ASAAS_API_KEY_${s}`] || env[`ASAAS_API_KEY_${s.replace(/_/g, '')}`] || env.ASAAS_API_KEY || '').trim();
+  return normalizarChave(env[`ASAAS_API_KEY_${s}`] || env[`ASAAS_API_KEY_${s.replace(/_/g, '')}`] || env.ASAAS_API_KEY || '');
+}
+
+/**
+ * Chave como o Asaas espera: sem espaços/quebras de linha (colagem) e com o "$" inicial. Alguns painéis tratam
+ * "$aact_…" como referência a outra variável e entregam vazio — então dá para cadastrar sem o "$" (aact_prod_…).
+ */
+export function normalizarChave(v: string): string {
+  const k = String(v ?? '').replace(/\s+/g, '').replace(/^['"]|['"]$/g, '');
+  return /^aact_/.test(k) ? `$${k}` : k;
 }
 
 export function configAsaas(env: NodeJS.ProcessEnv = process.env, slug = 'bom-jardims'): AsaasConfig | null {

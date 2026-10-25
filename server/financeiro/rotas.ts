@@ -116,6 +116,13 @@ export function registrarRotasFinanceiro(app: Express) {
     const cfg = configAsaas(process.env, slug);
     const base_ = {
       empreendimento: slug, variavel: `ASAAS_API_KEY_${sufixoEnv(slug)}`, chaveDefinida: !!chave, chaveFinal: chave ? `…${chave.slice(-4)}` : null,
+      // Como a variável chega ao servidor (sem mostrar a chave): mostra se o painel apagou o valor por causa do "$"
+      variavelNoServidor: (() => {
+        const v = process.env[`ASAAS_API_KEY_${sufixoEnv(slug)}`];
+        if (v == null) return 'ausente';
+        const inicio = v.trim().startsWith('$') ? ', começa com $' : v.trim().startsWith('aact_') ? ', sem o $ (o sistema completa)' : '';
+        return `${v.length} caracteres${inicio}`;
+      })(),
       ambiente: cfg?.ambiente ?? null, webhookToken: !!(process.env.ASAAS_WEBHOOK_TOKEN || '').trim(), webhookUrl: 'https://romateccrm.com/api/webhook/asaas',
     };
     if (!cfg) return res.json({ success: true, ...base_, chaveValida: false, erro: 'Chave não definida — cobrança desligada' });
