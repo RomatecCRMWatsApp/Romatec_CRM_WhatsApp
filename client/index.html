@@ -33,7 +33,9 @@
     <!-- Fontes da marca: Cinzel (títulos), Manrope (texto), JetBrains Mono (números/versão) -->
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-    <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@600;700&family=Manrope:wght@400;500;600;700;800&family=JetBrains+Mono:wght@500&display=swap" rel="stylesheet" />
+    <!-- Sem bloquear a primeira pintura (Core Web Vitals): carrega como "print" e troca para "all" ao terminar -->
+    <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@600;700&family=Manrope:wght@400;500;600;700;800&family=JetBrains+Mono:wght@500&display=swap" rel="stylesheet" media="print" onload="this.media='all'" />
+    <noscript><link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@600;700&family=Manrope:wght@400;500;600;700;800&family=JetBrains+Mono:wght@500&display=swap" rel="stylesheet" /></noscript>
     <!-- Fundo preto antes do JS carregar (evita flash branco) -->
     <style>html,body{background:#000;margin:0}</style>
   </head>

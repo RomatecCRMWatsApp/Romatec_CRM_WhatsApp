@@ -76,6 +76,8 @@ function writeToLogFile(source: LogSource, entries: unknown[]) {
 function vitePluginManusDebugCollector(): Plugin {
   return {
     name: "manus-debug-collector",
+    // Só no servidor de desenvolvimento: o build nunca leva o coletor (pesava ~25 KB na landing)
+    apply: "serve",
 
     transformIndexHtml(html) {
       if (process.env.NODE_ENV === "production") {

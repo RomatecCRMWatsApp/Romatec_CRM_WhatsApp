@@ -72,7 +72,12 @@ export function serveStatic(app: Express) {
   app.use(express.static(distPath, { index: false, redirect: false, setHeaders: (res, path) => {
     if (path.endsWith('.html')) {
       res.setHeader('Content-Type', 'text/html; charset=utf-8');
+      return;
     }
+    // JS/CSS do build têm hash no nome: podem ficar no cache para sempre (Core Web Vitals na 2.ª visita)
+    if (/[\\/]assets[\\/]/.test(path)) res.setHeader('Cache-Control', 'public, max-age=31536000, immutable');
+    // Fotos, ícones e vídeo do site: 1 semana (o nome não muda quando a imagem muda, então nada de "immutable")
+    else if (/\.(webp|png|jpe?g|svg|ico|mp4|woff2?)$/i.test(path)) res.setHeader('Cache-Control', 'public, max-age=604800');
   }}));
 
   // fall through to index.html if the file doesn't exist (skip API routes)
@@ -85,6 +90,8 @@ export function serveStatic(app: Express) {
     try {
       indexHtml ??= await fs.promises.readFile(path.resolve(distPath, "index.html"), "utf-8");
       res.setHeader('Content-Type', 'text/html; charset=utf-8');
+      // O HTML aponta para os arquivos com hash da versão atual: sempre revalida
+      res.setHeader('Cache-Control', 'no-cache');
       res.send(await htmlComMeta(indexHtml, _req.originalUrl));
     } catch {
       res.setHeader('Content-Type', 'text/html; charset=utf-8');

@@ -4,55 +4,57 @@ import NotFound from "@/pages/NotFound";
 import { Route, Switch, useLocation } from "wouter";
 import ErrorBoundary from "./components/ErrorBoundary";
 import BarraVersao from "./components/BarraVersao";
-import CamadaSistema from "./components/sistema/CamadaSistema";
 import { ThemeProvider } from "./contexts/ThemeContext";
-import Login from "./pages/Login";
-import Home from "./pages/Home";
-import Dashboard from "./pages/Dashboard";
-import Contacts from "./pages/Contacts";
-import Properties from "./pages/Properties";
-import Campaigns from "./pages/Campaigns";
-import Settings from "./pages/Settings";
-import PropertyPublic from "./pages/PropertyPublic";
-import PropertiesCatalog from "./pages/PropertiesCatalog";
-import LinkPortal from "./pages/LinkPortal";
-import BomJardims from "./pages/BomJardims";
-import BomJardimsChacara from "./pages/BomJardimsChacara";
-import Performance from "./pages/Performance";
-import Leads from "./pages/Leads";
-import LeadCampanhas from "./pages/LeadCampanhas";
-import LeadsRelatorio from "./pages/LeadsRelatorio";
-import Materiais from "./pages/Materiais";
-import ListaInteresse from "./pages/ListaInteresse";
-import AgendaVisitas from "./pages/AgendaVisitas";
-import Empreendimentos from "./pages/Empreendimentos";
-import Empreendimento from "./pages/Empreendimento";
-import EmpreendimentoDocumentos from "./pages/EmpreendimentoDocumentos";
-import EmpreendimentoFolder from "./pages/EmpreendimentoFolder";
-import EmpreendimentoProposta from "./pages/EmpreendimentoProposta";
-import Financeiro from "./pages/Financeiro";
-import Contratos from "./pages/Contratos";
-import ContratoNovo from "./pages/ContratoNovo";
-import ContratoDetalhe from "./pages/ContratoDetalhe";
-import PosicionarAssinaturas from "./pages/PosicionarAssinaturas";
-import AssinarContrato from "./pages/AssinarContrato";
-import VerificarContrato from "./pages/VerificarContrato";
-import CarneDigital from "./pages/CarneDigital";
-import Agendar from "./pages/Agendar";
-import AreaCorretor from "./pages/AreaCorretor";
-import Equipe from "./pages/Equipe";
-import MeuCadastro from "./pages/MeuCadastro";
-import Empreendedor from "./pages/Empreendedor";
-import PrimeiroAcesso from "./pages/PrimeiroAcesso";
+// Protetor de tela, novidades da versão e alertas: só no CRM (o site público não baixa)
+const CamadaSistema = lazy(() => import("./components/sistema/CamadaSistema"));
+// Cada tela num arquivo separado: o site público (landing do Bom Jardims, agendamento) não baixa o CRM inteiro
+const Login = lazy(() => import("./pages/Login"));
+const Home = lazy(() => import("./pages/Home"));
+const Dashboard = lazy(() => import("./pages/Dashboard"));
+const Contacts = lazy(() => import("./pages/Contacts"));
+const Properties = lazy(() => import("./pages/Properties"));
+const Campaigns = lazy(() => import("./pages/Campaigns"));
+const Settings = lazy(() => import("./pages/Settings"));
+const PropertyPublic = lazy(() => import("./pages/PropertyPublic"));
+const PropertiesCatalog = lazy(() => import("./pages/PropertiesCatalog"));
+const LinkPortal = lazy(() => import("./pages/LinkPortal"));
+const BomJardims = lazy(() => import("./pages/BomJardims"));
+const BomJardimsChacara = lazy(() => import("./pages/BomJardimsChacara"));
+const Performance = lazy(() => import("./pages/Performance"));
+const Leads = lazy(() => import("./pages/Leads"));
+const LeadCampanhas = lazy(() => import("./pages/LeadCampanhas"));
+const LeadsRelatorio = lazy(() => import("./pages/LeadsRelatorio"));
+const Materiais = lazy(() => import("./pages/Materiais"));
+const ListaInteresse = lazy(() => import("./pages/ListaInteresse"));
+const AgendaVisitas = lazy(() => import("./pages/AgendaVisitas"));
+const Empreendimentos = lazy(() => import("./pages/Empreendimentos"));
+const Empreendimento = lazy(() => import("./pages/Empreendimento"));
+const EmpreendimentoDocumentos = lazy(() => import("./pages/EmpreendimentoDocumentos"));
+const EmpreendimentoFolder = lazy(() => import("./pages/EmpreendimentoFolder"));
+const EmpreendimentoProposta = lazy(() => import("./pages/EmpreendimentoProposta"));
+const Financeiro = lazy(() => import("./pages/Financeiro"));
+const Contratos = lazy(() => import("./pages/Contratos"));
+const ContratoNovo = lazy(() => import("./pages/ContratoNovo"));
+const ContratoDetalhe = lazy(() => import("./pages/ContratoDetalhe"));
+const PosicionarAssinaturas = lazy(() => import("./pages/PosicionarAssinaturas"));
+const AssinarContrato = lazy(() => import("./pages/AssinarContrato"));
+const VerificarContrato = lazy(() => import("./pages/VerificarContrato"));
+const CarneDigital = lazy(() => import("./pages/CarneDigital"));
+const Agendar = lazy(() => import("./pages/Agendar"));
+const AreaCorretor = lazy(() => import("./pages/AreaCorretor"));
+const Equipe = lazy(() => import("./pages/Equipe"));
+const MeuCadastro = lazy(() => import("./pages/MeuCadastro"));
+const Empreendedor = lazy(() => import("./pages/Empreendedor"));
+const PrimeiroAcesso = lazy(() => import("./pages/PrimeiroAcesso"));
 import { perfilDe, podeAbrir, telaInicial } from "@shared/equipe";
-import AppShell from "./components/AppShell";
-import ImovelLanding from "./pages/ImovelLanding";
-import LeadsFunil from "./pages/LeadsFunil";
-import LeadDetalhe from "./pages/LeadDetalhe";
-import Setup from "./pages/Setup";
+const AppShell = lazy(() => import("./components/AppShell"));
+const ImovelLanding = lazy(() => import("./pages/ImovelLanding"));
+const LeadsFunil = lazy(() => import("./pages/LeadsFunil"));
+const LeadDetalhe = lazy(() => import("./pages/LeadDetalhe"));
+const Setup = lazy(() => import("./pages/Setup"));
 import { trpc } from "@/lib/trpc";
 import { useAuth } from "@/_core/hooks/useAuth";
-import { useEffect } from "react";
+import { Suspense, lazy, useEffect } from "react";
 import { APP_VERSION, LocationChangeLoading, PageLoader, QueryLoading, SplashScreen } from "@/brand";
 
 // Redireciona para /setup se companyConfig não tiver nome de empresa
@@ -79,7 +81,7 @@ function SetupGuard({ component: Component }: { component: React.ComponentType }
 
   if (!permitido) return null;
   // Telas internas dentro do menu lateral; o empreendedor tem o painel próprio, sem menu do CRM
-  return perfil === "empreendedor" || location.startsWith("/empreendedor") ? <Component /> : <AppShell><Component /></AppShell>;
+  return perfil === "empreendedor" || location.startsWith("/empreendedor") ? <Suspense fallback={null}><Component /></Suspense> : <AppShell><Suspense fallback={null}><Component /></Suspense></AppShell>;
 }
 
 function Router() {
@@ -192,6 +194,12 @@ function Router() {
 /** Páginas do site público (landing, imóveis, links): sem splash nem overlay do app */
 const rotaDoSite = (p: string) => ["/imoveis", "/i/", "/imovel/", "/links", "/bom-jardims", "/agendar/"].some(r => p === r || p.startsWith(r.endsWith("/") ? r : `${r}/`));
 
+function CamadaDoSistema() {
+  const [location] = useLocation();
+  if (rotaDoSite(location)) return null;
+  return <Suspense fallback={null}><CamadaSistema /></Suspense>;
+}
+
 /** Splash na abertura do app/PWA + barra do topo e overlay do carregamento (identidade visual v1.0) */
 function CarregamentoDoApp() {
   const [location] = useLocation();
@@ -215,8 +223,10 @@ function App() {
           <Toaster />
           <CarregamentoDoApp />
           <BarraVersao />
-          <Router />
-          <CamadaSistema />
+          <Suspense fallback={null}>
+            <Router />
+          </Suspense>
+          <CamadaDoSistema />
         </TooltipProvider>
       </ThemeProvider>
     </ErrorBoundary>

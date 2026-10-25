@@ -3,6 +3,21 @@
 Cada versão nova vai no TOPO. Depois rode `npm run release` (valida e atualiza o package.json);
 ao subir, o servidor grava a versão no banco e todos recebem o aviso "Novidades da versão".
 
+## 1.18.0 — 2026-10-25
+tipo: minor
+obrigatoria: nao
+titulo: Bom Jardims no Google
+
+### Novo
+- Página do Bom Jardims preparada para o Google: título, descrição e texto sobre o condomínio de chácaras em Açailândia/MA, localização, infraestrutura e documentação
+- Perguntas frequentes ampliadas (preço, formas de pagamento, documentação) e dados estruturados para o Google mostrar o empreendimento em destaque
+- Botão "Agendar visita" no topo e no fim da página, levando ao formulário de agendamento
+- Prévia mais bonita ao compartilhar o link no WhatsApp, Instagram e Facebook
+
+### Melhorias
+- Site público abre mais rápido no celular: carrega só a página aberta, não o sistema inteiro
+- Mapa do site (sitemap) com a página do Bom Jardims e o agendamento; telas internas, contratos e carnês fora da busca
+
 ## 1.17.2 — 2026-10-25
 tipo: patch
 obrigatoria: nao

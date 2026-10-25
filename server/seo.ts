@@ -1,10 +1,13 @@
 /**
  * SEO das páginas públicas: o site é uma SPA, então o HTML que o Google recebe
  * vinha sempre com "Romatec CRM". Aqui o servidor troca título, descrição,
- * canonical, Open Graph e JSON-LD conforme a rota, e gera robots.txt e sitemap.xml.
+ * canonical, Open Graph, Twitter e JSON-LD conforme a rota, e gera robots.txt e sitemap.xml.
  * Regra do pacote Bom Jardims: nada de preço em meta tag (nem de imóvel com exibirPreco=false).
  */
-import { FAQ_BOM_JARDIMS, NOMES_ALTERNATIVOS, htmlEstaticoBomJardims } from '../shared/bomJardimsSeo';
+import {
+  AGENDAR_BOM_JARDIMS, DESCRICAO_BOM_JARDIMS, FAQ_BOM_JARDIMS, IMAGENS_BOM_JARDIMS, NOMES_ALTERNATIVOS, TITULO_BOM_JARDIMS,
+  htmlEstaticoBomJardims,
+} from '../shared/bomJardimsSeo';
 
 export interface MetaPagina {
   title: string;
@@ -12,6 +15,11 @@ export interface MetaPagina {
   /** Caminho canônico, ex.: /bom-jardims */
   path: string;
   image?: string | null;
+  /** Texto alternativo e tamanho da imagem de prévia (WhatsApp, Instagram, Facebook) */
+  imageAlt?: string | null;
+  imageSize?: { w: number; h: number } | null;
+  /** Imagem principal da página: pré-carregada (LCP) */
+  preloadImage?: string | null;
   /** false = noindex (telas internas do CRM) */
   indexavel: boolean;
   jsonLd?: Record<string, unknown> | null;
@@ -30,42 +38,76 @@ export interface ImovelSeo {
   publicSlug?: string | null;
 }
 
-/** Telas do CRM (login obrigatório): fora do Google */
-export const ROTAS_INTERNAS = ['/dashboard', '/contacts', '/properties', '/campaigns', '/settings', '/performance', '/leads', '/materiais', '/setup', '/login', '/equipe', '/empreendedor', '/primeiro-acesso'];
+/** Telas do CRM (login obrigatório) e documentos de clientes: fora do Google */
+export const ROTAS_INTERNAS = [
+  '/dashboard', '/contacts', '/properties', '/campaigns', '/settings', '/performance', '/leads', '/materiais', '/setup', '/login',
+  '/equipe', '/empreendedor', '/primeiro-acesso', '/meu-cadastro', '/empreendimentos', '/contratos', '/financeiro', '/corretor',
+  '/assinar', '/c',
+];
 
 const CRECI = 'Corretor José Romário · CRECI/MA 4.705';
+const SITE = 'https://romateccrm.com';
+const TELEFONE = '+55 99 99181-1246';
+const IMAGEM_OG = '/bom-jardims/og.jpg';
+
+const LUGAR_ID = `${SITE}/bom-jardims#condominio`;
+const ROMATEC_ID = `${SITE}/#romatec`;
 
 export const META_BOM_JARDIMS: MetaPagina = {
-  // Começa pelo nome que as pessoas buscam ("Chácaras Bom Jardims"); a cidade vem depois
-  title: 'Chácaras Bom Jardims | Condomínio de Chácaras em Açailândia - MA',
-  description: 'Chácaras Bom Jardims: chácaras à venda em Açailândia/MA, na BR-222 (região de Imperatriz). Condomínio de chácaras com 82 chácaras a partir de 3.025 m², portal, ruas de 12 m e área de vivência. Veja o mapa e agende sua visita. ' + CRECI + '.',
+  title: TITULO_BOM_JARDIMS,
+  description: DESCRICAO_BOM_JARDIMS,
   path: '/bom-jardims',
-  image: '/bom-jardims/og.jpg',
+  image: IMAGEM_OG,
+  imageAlt: 'Portal de acesso do Condomínio de Chácaras Bom Jardims, em Açailândia/MA',
+  imageSize: { w: 1200, h: 630 },
+  preloadImage: IMAGENS_BOM_JARDIMS[0].src,
   indexavel: true,
   conteudoHtml: htmlEstaticoBomJardims(),
   jsonLd: {
     '@context': 'https://schema.org',
     '@graph': [
       {
-        '@type': 'Place',
-        '@id': 'https://romateccrm.com/bom-jardims#lugar',
+        // Condomínio fechado de chácaras (Residence › GatedResidenceCommunity)
+        '@type': 'GatedResidenceCommunity',
+        '@id': LUGAR_ID,
         name: 'Condomínio de Chácaras Bom Jardims',
         alternateName: NOMES_ALTERNATIVOS,
-        description: 'Condomínio de chácaras em Açailândia/MA, na BR-222 — 82 chácaras a partir de 3.025 m², portal de acesso, ruas internas de 12 m e área de vivência.',
-        address: { '@type': 'PostalAddress', addressLocality: 'Açailândia', addressRegion: 'MA', addressCountry: 'BR', streetAddress: 'Estrada do Piquiá dos Baianos, altura do km 15 da BR-222' },
+        description: 'Condomínio fechado de chácaras em Açailândia/MA, na BR-222: 82 chácaras a partir de 3.025 m², portal com guarita, ruas internas de 12 m, água encanada e área de vivência às margens do córrego.',
+        address: { '@type': 'PostalAddress', streetAddress: 'Estrada do Piquiá dos Baianos, altura do km 15 da BR-222', addressLocality: 'Açailândia', addressRegion: 'MA', addressCountry: 'BR' },
         geo: { '@type': 'GeoCoordinates', latitude: -4.92754264, longitude: -47.38171366 },
+        hasMap: 'https://www.google.com/maps?q=-4.92754264,-47.38171366',
         containedInPlace: { '@type': 'City', name: 'Açailândia', address: { '@type': 'PostalAddress', addressRegion: 'MA', addressCountry: 'BR' } },
-        telephone: '+55 99 99181-1246',
-        image: 'https://romateccrm.com/bom-jardims/og.jpg',
-        url: 'https://romateccrm.com/bom-jardims',
+        amenityFeature: [
+          'Portal com guarita e controle de acesso', 'Ruas internas de 12 m', 'Água encanada de poço artesiano com hidrômetro individual',
+          'Área de vivência às margens do córrego', 'Quiosques e churrasqueira', 'Trilha',
+        ].map(name => ({ '@type': 'LocationFeatureSpecification', name, value: true })),
+        telephone: TELEFONE,
+        image: [`${SITE}${IMAGEM_OG}`, ...IMAGENS_BOM_JARDIMS.map(i => `${SITE}${i.src}`)],
+        url: `${SITE}/bom-jardims`,
+      },
+      {
+        '@type': 'RealEstateListing',
+        '@id': `${SITE}/bom-jardims#anuncio`,
+        name: 'Chácaras à venda em Açailândia/MA — Condomínio de Chácaras Bom Jardims',
+        description: DESCRICAO_BOM_JARDIMS,
+        url: `${SITE}/bom-jardims`,
+        image: `${SITE}${IMAGEM_OG}`,
+        inLanguage: 'pt-BR',
+        about: { '@id': LUGAR_ID },
+        provider: { '@id': ROMATEC_ID },
+        potentialAction: { '@type': 'ReserveAction', name: 'Agendar visita', target: `${SITE}${AGENDAR_BOM_JARDIMS}` },
       },
       {
         '@type': 'RealEstateAgent',
+        '@id': ROMATEC_ID,
         name: 'Romatec Consultoria Total',
-        url: 'https://romateccrm.com',
-        telephone: '+55 99 99181-1246',
+        url: SITE,
+        logo: `${SITE}/icon-512x512.png`,
+        image: `${SITE}${IMAGEM_OG}`,
+        telephone: TELEFONE,
         address: { '@type': 'PostalAddress', streetAddress: 'Rua São Raimundo, 10, Centro', addressLocality: 'Açailândia', addressRegion: 'MA', addressCountry: 'BR' },
         areaServed: ['Açailândia', 'Imperatriz', 'Maranhão'],
+        employee: { '@type': 'Person', name: 'José Romário Pinto Bezerra', jobTitle: 'Corretor de imóveis — CRECI/MA 4.705' },
       },
       {
         '@type': 'FAQPage',
@@ -74,10 +116,30 @@ export const META_BOM_JARDIMS: MetaPagina = {
       {
         '@type': 'BreadcrumbList',
         itemListElement: [
-          { '@type': 'ListItem', position: 1, name: 'Romatec Imóveis', item: 'https://romateccrm.com/' },
-          { '@type': 'ListItem', position: 2, name: 'Chácaras Bom Jardims', item: 'https://romateccrm.com/bom-jardims' },
+          { '@type': 'ListItem', position: 1, name: 'Romatec Imóveis', item: `${SITE}/` },
+          { '@type': 'ListItem', position: 2, name: 'Chácaras Bom Jardims', item: `${SITE}/bom-jardims` },
         ],
       },
+    ],
+  },
+};
+
+/** Formulário público de agendamento do Bom Jardims (o link que o corretor compartilha, com ?c=) */
+export const META_AGENDAR_BOM_JARDIMS: MetaPagina = {
+  title: 'Agende sua visita — Chácaras Bom Jardims, Açailândia/MA',
+  description: 'Agende uma visita ao Condomínio de Chácaras Bom Jardims, em Açailândia/MA: escolha o dia, o horário e a chácara no mapa. O corretor confirma pelo WhatsApp.',
+  path: AGENDAR_BOM_JARDIMS,
+  image: IMAGEM_OG,
+  imageAlt: META_BOM_JARDIMS.imageAlt,
+  imageSize: META_BOM_JARDIMS.imageSize,
+  indexavel: true,
+  jsonLd: {
+    '@context': 'https://schema.org',
+    '@type': 'BreadcrumbList',
+    itemListElement: [
+      { '@type': 'ListItem', position: 1, name: 'Romatec Imóveis', item: `${SITE}/` },
+      { '@type': 'ListItem', position: 2, name: 'Chácaras Bom Jardims', item: `${SITE}/bom-jardims` },
+      { '@type': 'ListItem', position: 3, name: 'Agendar visita', item: `${SITE}${AGENDAR_BOM_JARDIMS}` },
     ],
   },
 };
@@ -128,7 +190,9 @@ export function metaDaChacara(codigo: string): MetaPagina {
     title: `Chácara ${codigo} · Quadra ${codigo[0]} — Chácaras Bom Jardims, Açailândia/MA`,
     description: `Chácara ${codigo} (Quadra ${codigo[0]}) no Condomínio de Chácaras Bom Jardims, em Açailândia/MA: fotos, mapa e localização exata. Condições e valores com o corretor. ${CRECI}.`,
     path: `/bom-jardims/chacara/${codigo}`,
-    image: '/bom-jardims/og.jpg',
+    image: IMAGEM_OG,
+    imageAlt: META_BOM_JARDIMS.imageAlt,
+    imageSize: META_BOM_JARDIMS.imageSize,
     indexavel: false,
   };
 }
@@ -140,6 +204,9 @@ export function metaDaRota(path: string): MetaPagina | 'imovel' {
   if (p === '/bom-jardims') return META_BOM_JARDIMS;
   const chacara = /^\/bom-jardims\/chacara\/([A-Da-d]\d{2})$/.exec(p);
   if (chacara) return metaDaChacara(chacara[1].toUpperCase());
+  if (p === AGENDAR_BOM_JARDIMS) return META_AGENDAR_BOM_JARDIMS;
+  // Agendamento de outros empreendimentos: funciona, mas fica fora do Google
+  if (p.startsWith('/agendar/')) return { ...META_PADRAO, title: 'Agende sua visita — Romatec Imóveis', path: p, indexavel: false };
   if (p === '/imoveis') return { ...META_PADRAO, title: 'Imóveis à venda em Açailândia/MA — Romatec', path: '/imoveis' };
   if (p === '/links') return { ...META_PADRAO, title: 'Romatec Imóveis — links e contato', path: '/links' };
   if (/^\/i\/IMV-\d{4}$/i.test(p) || /^\/imovel\/[^/]+$/.test(p)) return 'imovel';
@@ -149,18 +216,31 @@ export function metaDaRota(path: string): MetaPagina | 'imovel' {
 const esc = (s: string) => s.replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
 const abs = (base: string, u: string) => (/^https?:\/\//.test(u) ? u : `${base}${u.startsWith('/') ? '' : '/'}${u}`);
 
-/** Troca <title> e description do index.html e acrescenta canonical, robots, Open Graph e JSON-LD */
+/** Troca <title> e description do index.html e acrescenta canonical, robots, Open Graph, Twitter e JSON-LD */
 export function injetarMeta(html: string, meta: MetaPagina, base: string): string {
   const url = abs(base, meta.path);
+  const img = meta.image ? abs(base, meta.image) : null;
   const tags = [
     `<link rel="canonical" href="${esc(url)}" />`,
-    `<meta name="robots" content="${meta.indexavel ? 'index, follow' : 'noindex, nofollow'}" />`,
+    `<meta name="robots" content="${meta.indexavel ? 'index, follow, max-image-preview:large' : 'noindex, nofollow'}" />`,
+    ...(meta.preloadImage ? [`<link rel="preload" as="image" href="${esc(meta.preloadImage)}" fetchpriority="high" />`] : []),
     `<meta property="og:type" content="website" />`,
     `<meta property="og:locale" content="pt_BR" />`,
+    `<meta property="og:site_name" content="Romatec Imóveis" />`,
     `<meta property="og:title" content="${esc(meta.title)}" />`,
     `<meta property="og:description" content="${esc(meta.description)}" />`,
     `<meta property="og:url" content="${esc(url)}" />`,
-    ...(meta.image ? [`<meta property="og:image" content="${esc(abs(base, meta.image))}" />`, `<meta name="twitter:card" content="summary_large_image" />`] : []),
+    ...(img ? [
+      `<meta property="og:image" content="${esc(img)}" />`,
+      `<meta property="og:image:secure_url" content="${esc(img)}" />`,
+      ...(meta.imageSize ? [`<meta property="og:image:width" content="${meta.imageSize.w}" />`, `<meta property="og:image:height" content="${meta.imageSize.h}" />`] : []),
+      ...(meta.imageAlt ? [`<meta property="og:image:alt" content="${esc(meta.imageAlt)}" />`] : []),
+      `<meta name="twitter:card" content="summary_large_image" />`,
+      `<meta name="twitter:image" content="${esc(img)}" />`,
+      ...(meta.imageAlt ? [`<meta name="twitter:image:alt" content="${esc(meta.imageAlt)}" />`] : []),
+    ] : [`<meta name="twitter:card" content="summary" />`]),
+    `<meta name="twitter:title" content="${esc(meta.title)}" />`,
+    `<meta name="twitter:description" content="${esc(meta.description)}" />`,
     // JSON dentro de <script>: escapa "<" para não fechar a tag
     ...(meta.jsonLd ? [`<script type="application/ld+json">${JSON.stringify(meta.jsonLd).replace(/</g, '\\u003c')}</script>`] : []),
   ].join('\n    ');
@@ -175,7 +255,8 @@ export function robotsTxt(base: string): string {
   return [
     'User-agent: *',
     'Allow: /',
-    ...ROTAS_INTERNAS.map(r => `Disallow: ${r}`),
+    // Com barra no fim: "/c" sozinho também bloquearia /campaigns... e qualquer rota pública que comece com "c"
+    ...ROTAS_INTERNAS.map(r => (r.length <= 2 || r === '/assinar' ? `Disallow: ${r}/` : `Disallow: ${r}`)),
     'Disallow: /api/',
     'Disallow: /q/',
     '',
@@ -184,10 +265,10 @@ export function robotsTxt(base: string): string {
   ].join('\n');
 }
 
-export function sitemapXml(base: string, caminhos: { path: string; lastmod?: Date | string | null }[]): string {
+export function sitemapXml(base: string, caminhos: { path: string; lastmod?: Date | string | null; prioridade?: number }[]): string {
   const itens = caminhos.map(c => {
     const lm = c.lastmod ? new Date(c.lastmod) : null;
-    return `  <url><loc>${esc(abs(base, c.path))}</loc>${lm && !isNaN(+lm) ? `<lastmod>${lm.toISOString().slice(0, 10)}</lastmod>` : ''}</url>`;
+    return `  <url><loc>${esc(abs(base, c.path))}</loc>${lm && !isNaN(+lm) ? `<lastmod>${lm.toISOString().slice(0, 10)}</lastmod>` : ''}${c.prioridade != null ? `<priority>${c.prioridade.toFixed(1)}</priority>` : ''}</url>`;
   });
   return `<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n${itens.join('\n')}\n</urlset>\n`;
 }

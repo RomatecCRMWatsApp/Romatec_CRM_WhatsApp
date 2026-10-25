@@ -3,7 +3,7 @@ import { MessageCircle, MapPin, Droplets, Trees, ShieldCheck, Route, FileCheck2,
 import { trpc } from "@/lib/trpc";
 import { readUtm } from "@/components/LeadForm";
 import { origemDaVisita } from "@/lib/origemVisita";
-import { FAQ_BOM_JARDIMS } from "@shared/bomJardimsSeo";
+import { AGENDAR_BOM_JARDIMS, FAQ_BOM_JARDIMS, IMAGENS_BOM_JARDIMS, SOBRE_BOM_JARDIMS, TITULO_BOM_JARDIMS } from "@shared/bomJardimsSeo";
 import LoteMap, { formatArea, STATUS_LABEL, type LoteInfo } from "@/components/bom-jardims/LoteMap";
 import { C, SERIF, SANS, GALERIA, VIDEO, waLink, useBrandFonts, ContatosBotoes, GaleriaProjeto, useContatos } from "@/components/bom-jardims/marca";
 import { codigoChacaraValido, rotaAteEntrada } from "@shared/chacaraLink";
@@ -185,7 +185,7 @@ export default function BomJardims() {
   const disponiveis = emp?.resumo.disponivel;
 
   useEffect(() => {
-    document.title = "Condomínio de Chácaras Bom Jardims — Açailândia/MA";
+    document.title = TITULO_BOM_JARDIMS;
   }, []);
 
   const goForm = () => formRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
@@ -198,23 +198,31 @@ export default function BomJardims() {
     <div style={{ background: C.creme, color: C.texto, fontFamily: SANS, minHeight: "100vh" }}>
       {/* 1. Hero */}
       <header style={{ position: "relative", minHeight: "88vh", display: "flex", alignItems: "flex-end", overflow: "hidden", background: C.verde }}>
-        <img src="/bom-jardims/portal-dia.webp" alt="Portal de entrada do Bom Jardims (perspectiva ilustrativa)"
+        <img src={IMAGENS_BOM_JARDIMS[0].src} alt={IMAGENS_BOM_JARDIMS[0].alt} width={IMAGENS_BOM_JARDIMS[0].w} height={IMAGENS_BOM_JARDIMS[0].h}
+          fetchPriority="high" decoding="async"
           style={{ position: "absolute", inset: 0, width: "100%", height: "100%", objectFit: "cover" }} />
         <div style={{ position: "absolute", inset: 0, background: "linear-gradient(180deg, rgba(12,51,32,0.15) 0%, rgba(12,51,32,0.55) 45%, rgba(12,51,32,0.95) 100%)" }} />
         <div style={{ position: "relative", maxWidth: 1080, margin: "0 auto", padding: "32px 16px 40px", width: "100%", boxSizing: "border-box" }}>
-          <img src="/bom-jardims/logo.webp" alt="Condomínio de chácara Bom Jardims" style={{ width: "min(260px, 60vw)", height: "auto", display: "block", marginBottom: 16 }} />
+          <img src="/bom-jardims/logo.webp" alt="Logotipo do Condomínio de Chácaras Bom Jardims" decoding="async" style={{ width: "min(260px, 60vw)", height: "auto", display: "block", marginBottom: 16 }} />
           <span style={{ display: "inline-block", padding: "6px 12px", borderRadius: 999, background: C.dourado, color: C.verde, fontWeight: 700, fontSize: 13, letterSpacing: 0.5 }}>
             PRÉ-LANÇAMENTO · AÇAILÂNDIA/MA
           </span>
-          <h1 style={{ fontFamily: SERIF, color: "#fff", fontSize: "clamp(34px, 7vw, 60px)", lineHeight: 1.05, margin: "14px 0 10px", maxWidth: 760 }}>
-            Seu pedaço de natureza em Açailândia
+          {/* H1 com o que as pessoas buscam (condomínio de chácaras / chácaras à venda em Açailândia) + o slogan */}
+          <h1 style={{ margin: "14px 0 10px", maxWidth: 760 }}>
+            <span style={{ display: "block", fontFamily: SERIF, color: "#fff", fontSize: "clamp(34px, 7vw, 60px)", lineHeight: 1.05 }}>Seu pedaço de natureza em Açailândia</span>
+            <span style={{ display: "block", fontFamily: SANS, color: C.destaque, fontSize: "clamp(16px, 2.8vw, 22px)", fontWeight: 700, lineHeight: 1.3, marginTop: 10 }}>
+              Condomínio de Chácaras Bom Jardims · chácaras à venda em Açailândia/MA
+            </span>
           </h1>
           <p style={{ color: "#F3EEDF", fontSize: "clamp(16px, 2.6vw, 20px)", margin: "0 0 24px", maxWidth: 640 }}>
             Condomínio fechado de chácaras a partir de 3.025 m², com portal, água encanada e área de vivência às margens do córrego.
           </p>
           <div style={{ display: "flex", flexWrap: "wrap", gap: 12 }}>
-            <button onClick={goForm} style={{ padding: "15px 22px", borderRadius: 14, border: "none", background: C.dourado, color: C.verde, fontWeight: 700, fontSize: 16, cursor: "pointer", fontFamily: SANS }}>
-              Quero receber o mapa de vendas
+            <a href={AGENDAR_BOM_JARDIMS} style={{ padding: "15px 22px", borderRadius: 14, background: C.dourado, color: C.verde, fontWeight: 700, fontSize: 16, textDecoration: "none", fontFamily: SANS }}>
+              Agendar visita
+            </a>
+            <button onClick={goForm} style={{ padding: "15px 22px", borderRadius: 14, border: "1.5px solid #fff", background: "transparent", color: "#fff", fontWeight: 700, fontSize: 16, cursor: "pointer", fontFamily: SANS }}>
+              Receber o mapa de vendas
             </button>
             <a href="#mapa" style={{ padding: "15px 22px", borderRadius: 14, border: "1.5px solid #fff", color: "#fff", fontWeight: 700, fontSize: 16, textDecoration: "none" }}>
               Ver as chácaras no mapa
@@ -300,12 +308,25 @@ export default function BomJardims() {
           </figure>
           {GALERIA.map(g => (
             <figure key={g.src} style={{ margin: 0, borderRadius: 18, overflow: "hidden", background: "#DDD5BD" }}>
-              <img src={g.src} alt={g.alt} loading="lazy" style={{ width: "100%", height: "100%", aspectRatio: "16 / 10", objectFit: "cover", display: "block" }} />
+              <img src={g.src} alt={g.alt} loading="lazy" decoding="async" width={1200} height={676} style={{ width: "100%", height: "100%", aspectRatio: "16 / 10", objectFit: "cover", display: "block" }} />
             </figure>
           ))}
         </div>
         <p style={{ fontSize: 12, color: C.suave, marginTop: 10 }}>Imagens em perspectiva, de caráter ilustrativo.</p>
         <GaleriaProjeto />
+      </section>
+
+      {/* Sobre (texto para quem busca — o mesmo vai no HTML inicial: shared/bomJardimsSeo.ts) */}
+      <section style={{ ...section, paddingTop: 0 }}>
+        <h2 style={h2}>Sobre o Condomínio de Chácaras Bom Jardims</h2>
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(300px, 1fr))", gap: 16, marginTop: 20 }}>
+          {SOBRE_BOM_JARDIMS.map(b => (
+            <article key={b.titulo} style={{ padding: 20, borderRadius: 18, background: "#fff", border: "1px solid #E2D9BF" }}>
+              <h3 style={{ fontFamily: SERIF, color: C.verde, fontSize: 20, margin: "0 0 8px" }}>{b.titulo}</h3>
+              {b.paragrafos.map(p => <p key={p} style={{ margin: "0 0 10px", lineHeight: 1.6 }}>{p}</p>)}
+            </article>
+          ))}
+        </div>
       </section>
 
       {/* Perguntas frequentes (também vão para o Google como FAQ — server/seo.ts) */}
@@ -319,6 +340,9 @@ export default function BomJardims() {
             </details>
           ))}
         </div>
+        <a href={AGENDAR_BOM_JARDIMS} style={{ display: "inline-block", marginTop: 20, padding: "15px 22px", borderRadius: 14, background: C.verde, color: "#fff", fontWeight: 700, fontSize: 16, textDecoration: "none" }}>
+          Agendar visita ao Bom Jardims
+        </a>
       </section>
 
       {/* 6. Localização */}

@@ -8,6 +8,9 @@ import { getDb } from './db';
 import { properties } from '../drizzle/schema';
 import { appUrl } from './leads/config';
 import { metaDaRota, metaDoImovel, injetarMeta, robotsTxt, sitemapXml, type MetaPagina } from './seo';
+import { AGENDAR_BOM_JARDIMS } from '../shared/bomJardimsSeo';
+
+const INICIO = new Date();
 
 const PADRAO_NAO_ACHADO = (path: string): MetaPagina => ({
   title: 'Imóvel não encontrado — Romatec Imóveis', description: 'Este imóvel não está mais disponível. Veja outros imóveis da Romatec em Açailândia/MA.', path, indexavel: false,
@@ -47,15 +50,17 @@ export function registrarRotasSeo(app: Express) {
   });
 
   app.get('/sitemap.xml', async (_req, res) => {
-    const caminhos: { path: string; lastmod?: Date | null }[] = [
-      { path: '/' }, { path: '/bom-jardims' }, { path: '/imoveis' }, { path: '/links' },
+    // A landing do Bom Jardims muda a cada versão do site: lastmod = data do build (início do servidor)
+    const caminhos: { path: string; lastmod?: Date | null; prioridade?: number }[] = [
+      { path: '/bom-jardims', lastmod: INICIO, prioridade: 1 }, { path: AGENDAR_BOM_JARDIMS, lastmod: INICIO, prioridade: 0.8 },
+      { path: '/', prioridade: 0.6 }, { path: '/imoveis', prioridade: 0.6 }, { path: '/links', prioridade: 0.3 },
     ];
     try {
       const db = await getDb();
       if (db) {
         const rows: any[] = await db.select({ codigo: properties.codigo, updatedAt: properties.updatedAt })
           .from(properties).where(and(eq(properties.status, 'available'), isNotNull(properties.codigo)));
-        for (const p of rows) if (p.codigo) caminhos.push({ path: `/i/${p.codigo}`, lastmod: p.updatedAt });
+        for (const p of rows) if (p.codigo) caminhos.push({ path: `/i/${p.codigo}`, lastmod: p.updatedAt, prioridade: 0.5 });
       }
     } catch (e: any) {
       console.warn('[SEO] Sitemap sem imóveis:', e?.message);
