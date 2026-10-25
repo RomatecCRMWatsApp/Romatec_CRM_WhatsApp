@@ -3,6 +3,14 @@
 Cada versão nova vai no TOPO. Depois rode `npm run release` (valida e atualiza o package.json);
 ao subir, o servidor grava a versão no banco e todos recebem o aviso "Novidades da versão".
 
+## 1.30.5 — 2026-10-25
+tipo: patch
+obrigatoria: nao
+titulo: Espaço do banco: tabelas compartilhadas com a ZAYRA
+
+### Melhorias
+- "Ver espaço" mostra as colunas das tabelas que têm o mesmo nome no CRM e na ZAYRA (recibos, users e outras), para conferir conflitos (só consulta)
+
 ## 1.30.4 — 2026-10-25
 tipo: patch
 obrigatoria: nao

@@ -37,8 +37,13 @@ export function registrarRotaEspaco(app: Express) {
         .map((f: any) => ({ arquivo: String(f.arquivo), tipo: f.tipo, mb: mb(f.tamanho) }));
       const variaveis = Object.fromEntries((await tentar(sql`SHOW VARIABLES WHERE Variable_name IN ('version', 'log_bin', 'binlog_expire_logs_seconds', 'expire_logs_days', 'innodb_redo_log_capacity', 'innodb_log_file_size', 'innodb_undo_log_truncate', 'max_binlog_size')`))
         .map((v: any) => [v.Variable_name ?? v.variable_name, v.Value ?? v.value]));
+      // Tabelas com o mesmo nome no CRM e na ZAYRA (mesmo banco): colunas que existem de fato
+      const compartilhadas: Record<string, string[]> = {};
+      for (const t of ['recibos', 'users', 'contacts', 'properties', 'campaigns', 'messages']) {
+        compartilhadas[t] = (await tentar(sql`SELECT COLUMN_NAME AS c FROM information_schema.COLUMNS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = ${t} ORDER BY ORDINAL_POSITION`)).map((r: any) => String(r.c));
+      }
       res.json({
-        ok: true, totalTabelasMB: mb(total), binlogs, bancos, arquivos, variaveis,
+        ok: true, totalTabelasMB: mb(total), binlogs, bancos, arquivos, variaveis, compartilhadas,
         tabelas: tabelas.slice(0, 25).map(t => ({ tabela: t.tabela, linhas: Number(t.linhas) || 0, mb: mb(Number(t.dados || 0) + Number(t.indices || 0)), livreMB: mb(t.livre) })),
       });
     } catch (e: any) {

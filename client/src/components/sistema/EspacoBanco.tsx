@@ -6,6 +6,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 type Resp = {
   ok: boolean; erro?: string; totalTabelasMB?: number; binlogs?: { arquivos: number; mb: number } | string; tabelas?: { tabela: string; linhas: number; mb: number; livreMB: number }[];
   bancos?: { banco: string; mb: number }[]; arquivos?: { arquivo: string; tipo: string; mb: number }[]; variaveis?: Record<string, string>;
+  compartilhadas?: Record<string, string[]>;
 };
 
 /** Configurações → Espaço do banco: tamanho das tabelas (só leitura) para acompanhar o volume do MySQL */
@@ -37,6 +38,12 @@ export default function EspacoBanco() {
             {!!dados.bancos?.length && <p className="text-xs text-muted-foreground">Bancos neste MySQL: {dados.bancos.map(b => `${b.banco} ${b.mb} MB`).join(" · ")}</p>}
             {!!dados.arquivos?.length && <p className="text-xs text-muted-foreground">Arquivos internos: {dados.arquivos.map(f => `${f.arquivo.split(/[\\/]/).pop()} (${f.tipo}) ${f.mb} MB`).join(" · ")}</p>}
             {dados.variaveis && <p className="break-all font-mono text-[11px] text-muted-foreground">{Object.entries(dados.variaveis).map(([k, v]) => `${k}=${v}`).join(" · ")}</p>}
+            {dados.compartilhadas && (
+              <div className="space-y-1 rounded-md bg-secondary/30 p-2 text-[11px]">
+                <p className="font-semibold">Tabelas com o mesmo nome no CRM e na ZAYRA (colunas existentes)</p>
+                {Object.entries(dados.compartilhadas).map(([t, cols]) => <p key={t} className="break-all font-mono"><b>{t}</b>: {cols.join(", ") || "—"}</p>)}
+              </div>
+            )}
           </>
         )}
       </CardContent>
