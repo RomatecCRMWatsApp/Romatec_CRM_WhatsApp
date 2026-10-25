@@ -252,7 +252,7 @@ export function CredencialCard({ uid, tipo, doc, linkCertidaoPadrao, validadeSug
 export function DocumentosPessoais({ uid, docs, temConjuge, versao, onMudou, onVer }: {
   uid: number; docs: Doc[]; temConjuge: boolean; versao: number; onMudou: () => void; onVer: (d: Doc) => void;
 }) {
-  const [tipo, setTipo] = useState<TipoDocumento>("rg");
+  const [tipo, setTipo] = useState<TipoDocumento>("cnh");
   const [titular, setTitular] = useState<"usuario" | "conjuge">("usuario");
   const [progresso, setProgresso] = useState<number | null>(null);
   const input = useRef<HTMLInputElement>(null);
@@ -294,6 +294,9 @@ export function DocumentosPessoais({ uid, docs, temConjuge, versao, onMudou, onV
       </div>
       {progresso != null && <span data-block-idle="true" hidden />}
       {progresso != null && <div className="h-1.5 overflow-hidden rounded-full bg-secondary"><div className="h-full bg-primary transition-all" style={{ width: `${progresso}%` }} /></div>}
+      {!docs.some(d => d.tipo === "cnh" && (d.titular ?? "usuario") === "usuario") && (
+        <p className="text-xs text-amber-300">Envie a CNH (frente e verso): é obrigatória e vai anexada na ficha de credenciamento.</p>
+      )}
       {docs.length === 0 ? <p className="text-xs text-muted-foreground">Nenhum documento pessoal. Arraste os arquivos para cá.</p> : (
         <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
           {docs.map(d => (

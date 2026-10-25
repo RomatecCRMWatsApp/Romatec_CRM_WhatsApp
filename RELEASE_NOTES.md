@@ -3,6 +3,19 @@
 Cada versão nova vai no TOPO. Depois rode `npm run release` (valida e atualiza o package.json);
 ao subir, o servidor grava a versão no banco e todos recebem o aviso "Novidades da versão".
 
+## 1.22.0 — 2026-10-25
+tipo: minor
+obrigatoria: nao
+titulo: Ficha de credenciamento do corretor
+
+### Novo
+- No cadastro de cada corretor, a ficha de credenciamento no empreendimento: dados do empreendimento e do corretor, com o Cartão CRECI, a Certidão de Regularidade e a CNH anexados
+- Baixar em PDF ou enviar pelo WhatsApp; o QR da ficha abre uma página que mostra, na hora, se o corretor continua credenciado e com o CRECI em dia
+- A ficha só sai com o cadastro completo — a tela mostra o que falta (só o CNAI é opcional)
+
+### Melhorias
+- Documentos pessoais começam pela CNH, com o aviso de que ela é obrigatória
+
 ## 1.21.0 — 2026-10-25
 tipo: minor
 obrigatoria: nao

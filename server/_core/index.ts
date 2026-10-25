@@ -779,6 +779,37 @@ async function startServer() {
       res.status(500).json({ success: false, error: 'Falha no upload da foto' });
     }
   });
+  // Ficha de credenciamento do corretor no empreendimento (PDF com as comprovações): o próprio usuário ou o administrador
+  app.get('/api/usuarios/:id/credenciamento.pdf', async (req, res) => {
+    try {
+      const { sdk } = await import('./sdk');
+      const user: any = await sdk.authenticateRequest(req).catch(() => null);
+      if (!user || user.ativo === false || user.ativo === 0) return res.status(401).json({ error: 'Faça login' });
+      const { podeGerirCadastroDe } = await import('../../shared/cadastro');
+      const alvo = Number(req.params.id) || 0;
+      if (!podeGerirCadastroDe(user, alvo)) return res.status(403).json({ error: 'Sem permissão para este cadastro' });
+      const slug = typeof req.query.emp === 'string' && /^[a-z0-9-]{1,80}$/.test(req.query.emp) ? req.query.emp : 'bom-jardims';
+      const { fichaCredenciamentoPdf } = await import('../credenciamento');
+      const { pdf, nome } = await fichaCredenciamentoPdf(alvo, slug);
+      res.setHeader('Content-Type', 'application/pdf');
+      res.setHeader('Content-Disposition', `attachment; filename="${nome}"`);
+      res.setHeader('Cache-Control', 'private, no-store');
+      res.send(pdf);
+    } catch (e: any) {
+      if (e?.name === 'CredenciamentoErro') return res.status(e.status).json({ error: e.message, pendencias: e.pendencias });
+      console.error('[Credenciamento] PDF:', e);
+      res.status(500).json({ error: 'Falha ao gerar a ficha de credenciamento' });
+    }
+  });
+  // QR da ficha: situação atual do credenciamento (pública, sem CPF nem documentos)
+  app.get('/api/public/credenciamento/:slug/:ref', async (req, res) => {
+    const { verificacaoPublica } = await import('../credenciamento');
+    const r = await verificacaoPublica(String(req.params.slug).slice(0, 80), String(req.params.ref).slice(0, 40));
+    res.status(r.status).setHeader('Content-Type', 'text/html; charset=utf-8');
+    res.setHeader('X-Robots-Tag', 'noindex');
+    res.send(r.html);
+  });
+
   app.get('/api/usuarios/:id/foto', async (req, res) => {
     try {
       if (!(await usuarioLogado(req))) return res.status(401).send('Faça login');

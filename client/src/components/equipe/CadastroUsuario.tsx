@@ -11,6 +11,7 @@ import {
 import { isValidCPF, maskCEP, maskCPF, maskPhone, maskRG, onlyDigits } from "@shared/masks";
 import AvatarPicker from "@/components/cadastro/AvatarPicker";
 import { Campo, InputMascara, Interruptor, classeCampo, sel } from "@/components/cadastro/campos";
+import FichaCredenciamento from "./FichaCredenciamento";
 import { CredencialCard, DocumentosPessoais, Visualizador, type DocumentoCadastro } from "@/components/cadastro/Credenciais";
 
 interface Listas {
@@ -170,7 +171,7 @@ export default function CadastroUsuario({ id, admin, listas, onSalvo, onCancelar
   const comConjuge = temConjuge(f.estadoCivil);
   const equipe = f.perfil === "corretor" || f.perfil === "secretario";
   const modulosItens = useMemo(() => (listas?.modulos ?? []).map(m => ({ id: m.chave, nome: m.rotulo })), [listas?.modulos]);
-  const recarregarDocs = () => { setVersao(v => v + 1); docs.refetch(); utils.cadastro.minhasPendencias.invalidate(); };
+  const recarregarDocs = () => { setVersao(v => v + 1); docs.refetch(); utils.cadastro.minhasPendencias.invalidate(); utils.cadastro.credenciamento.invalidate(); };
 
   const mudarEstadoCivil = (v: string) => {
     if (temConjuge(f.estadoCivil) && !temConjuge(v) && conjugeSalvo) {
@@ -234,6 +235,7 @@ export default function CadastroUsuario({ id, admin, listas, onSalvo, onCancelar
         toast.success(r.sessaoEncerrada ? "Cadastro salvo. O perfil mudou: a pessoa precisa entrar de novo." : "Cadastro salvo");
         setConjugeSalvo(comConjuge);
         utils.cadastro.dados.invalidate();
+        utils.cadastro.credenciamento.invalidate();
         onSalvo?.({ id: uid!, nome: f.nome, login: "", telefone: f.telefone });
       }
     } catch (err: any) {
@@ -293,7 +295,8 @@ export default function CadastroUsuario({ id, admin, listas, onSalvo, onCancelar
       <datalist id="profissoes">{PROFISSOES.map(o => <option key={o} value={o} />)}</datalist>
 
       <div className="flex flex-wrap items-center gap-4">
-        <AvatarPicker usuarioId={uid} fotoUrl={dados.data?.fotoUrl} nome={f.nome} onMudou={() => utils.equipe.list.invalidate()} />
+        <AvatarPicker usuarioId={uid} fotoUrl={dados.data?.fotoUrl} nome={f.nome} onMudou={() => { utils.equipe.list.invalidate(); utils.cadastro.credenciamento.invalidate(); }} />
+        {!novo && uid && f.perfil !== "empreendedor" && <FichaCredenciamento uid={uid} />}
         <div className="ml-auto flex items-center gap-2">{!novo && <SeloPerfil perfil={f.perfil} />}</div>
       </div>
 

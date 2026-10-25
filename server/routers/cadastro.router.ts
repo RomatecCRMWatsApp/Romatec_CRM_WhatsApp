@@ -85,6 +85,12 @@ export const cadastroRouter = router({
     return { ok: true };
   }),
 
+  /** Ficha de credenciamento: o que falta para emitir (por empreendimento) e o link do QR */
+  credenciamento: protectedProcedure.input(alvo.extend({ slug: z.string().regex(/^[a-z0-9-]{1,80}$/) })).query(async ({ input, ctx }) => {
+    const { situacaoCredenciamento } = await import("../credenciamento");
+    return situacaoCredenciamento(alvoDe(ctx, input.id), input.slug);
+  }),
+
   /** Pendências do próprio usuário (bolinha vermelha no menu "Meu cadastro") */
   minhasPendencias: protectedProcedure.query(async ({ ctx }) => {
     const db = (await getDb()) as any;
