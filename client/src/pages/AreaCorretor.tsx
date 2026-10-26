@@ -76,7 +76,8 @@ export default function AreaCorretor() {
 
       {m.empreendimentos && (
         <Secao titulo="Empreendimentos" icone={MapIcon}>
-          {(emps ?? []).map(e => (
+          {emps && !emps.some(e => e.acesso) && <p className="text-xs text-muted-foreground">Nenhum empreendimento liberado para você ainda.</p>}
+          {(emps ?? []).filter(e => e.acesso).map(e => (
             <div key={e.slug} className={`rounded-xl border p-3 ${e.acesso ? "border-border" : "border-dashed border-border opacity-60"}`}>
               <div className="flex items-center gap-2">
                 <p className="flex-1 font-semibold">{e.nome}</p>
@@ -96,7 +97,6 @@ export default function AreaCorretor() {
               ) : <p className="mt-1 text-[11px] text-muted-foreground">Peça ao administrador para habilitar materiais, cadastro e links deste empreendimento.</p>}
             </div>
           ))}
-          {emps && emps.length === 0 && <p className="text-xs text-muted-foreground">Nenhum empreendimento cadastrado.</p>}
         </Secao>
       )}
 

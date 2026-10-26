@@ -3,6 +3,14 @@
 Cada versão nova vai no TOPO. Depois rode `npm run release` (valida e atualiza o package.json);
 ao subir, o servidor grava a versão no banco e todos recebem o aviso "Novidades da versão".
 
+## 1.37.4 — 2026-10-26
+tipo: patch
+obrigatoria: nao
+titulo: Empreendimentos: corretor vê só os liberados
+
+### Correções
+- Área do corretor e tela Empreendimentos: o corretor vê só os empreendimentos liberados para ele. Os bloqueados não aparecem mais. Administrador e secretária continuam vendo todos
+
 ## 1.37.3 — 2026-10-26
 tipo: patch
 obrigatoria: nao

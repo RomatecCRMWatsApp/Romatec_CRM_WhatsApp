@@ -59,7 +59,9 @@ export default function Empreendimentos() {
       <div className="px-4 md:px-6 pb-8 max-w-[1300px] mx-auto space-y-4">
         {error && <p className="text-sm text-red-400">{error.message}</p>}
         {isLoading && <p className="text-sm text-muted-foreground">Carregando…</p>}
-        {(data ?? []).map(e => <Cartao key={e.slug} e={e} />)}
+        {/* Só os liberados para quem está vendo (admin e secretária: todos) */}
+        {(data ?? []).filter(e => e.acesso).map(e => <Cartao key={e.slug} e={e} />)}
+        {data && !data.some(e => e.acesso) && <p className="text-sm text-muted-foreground">Nenhum empreendimento liberado para você ainda — peça ao administrador.</p>}
       </div>
     </div>
   );
