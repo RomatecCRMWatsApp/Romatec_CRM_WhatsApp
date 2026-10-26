@@ -57,6 +57,7 @@ function MedidasLote({ slug, codigo }: { slug: string; codigo: string }) {
 /** Link público da chácara (fotos, mapa e localização exata) — copiar ou mandar pelo WhatsApp */
 function LinkChacara({ slug, lote }: { slug: string; lote: LotePainel }) {
   const [enviar, setEnviar] = useState(false);
+  const { user } = useAuth();
   const { data: det } = trpc.empreendimentosAdmin.detalhe.useQuery({ slug });
   const envio = trpc.empreendimentosAdmin.enviarLinkChacara.useMutation({
     onSuccess: r => { toast.success(`Link da chácara ${lote.codigo} enviado para ${exibirTelefoneBR(r.telefone)}`); setEnviar(false); },
@@ -76,9 +77,12 @@ function LinkChacara({ slug, lote }: { slug: string; lote: LotePainel }) {
       </a>
       <div className="flex flex-wrap gap-1.5">
         <Button size="sm" variant="outline" className="h-7 text-xs" onClick={copiar}><Link2 className="mr-1 h-3.5 w-3.5" /> Copiar link da chácara</Button>
-        <Button size="sm" variant="outline" className="h-7 text-xs border-[#25d366]/40 text-[#1fa855] hover:text-[#1fa855]" onClick={() => setEnviar(true)}>
-          <Send className="mr-1 h-3.5 w-3.5" /> Enviar no WhatsApp
-        </Button>
+        {/* Envio pelo WhatsApp do sistema é da equipe (o empreendedor copia o link e manda do próprio celular) */}
+        {perfilDe(user as any) !== "empreendedor" && (
+          <Button size="sm" variant="outline" className="h-7 text-xs border-[#25d366]/40 text-[#1fa855] hover:text-[#1fa855]" onClick={() => setEnviar(true)}>
+            <Send className="mr-1 h-3.5 w-3.5" /> Enviar no WhatsApp
+          </Button>
+        )}
         <Button asChild size="sm" variant="outline" className="h-7 text-xs">
           <a href={linkKml(window.location.origin, lote.codigo)} download><Globe2 className="mr-1 h-3.5 w-3.5" /> KML (Google Earth)</a>
         </Button>
@@ -120,8 +124,10 @@ export default function PainelLote({ slug, lote, onMudou, onFechar }: { slug: st
   // Corretor só consulta: situação, cliente e valores são do escritório (o servidor também recusa)
   const { user } = useAuth();
   const soLeitura = perfilDe(user as any) === "corretor";
-  const { data: corretores } = trpc.crm.responsaveis.useQuery(undefined, { enabled: !soLeitura });
-  const { data: achados } = trpc.empreendimentosAdmin.buscarLeads.useQuery({ q: busca }, { enabled: !soLeitura && busca.trim().length >= 2 });
+  // Empreendedor muda situação, cliente e valores; lead e corretor ficam como estão (o servidor preserva)
+  const empreendedor = perfilDe(user as any) === "empreendedor";
+  const { data: corretores } = trpc.crm.responsaveis.useQuery(undefined, { enabled: !soLeitura && !empreendedor });
+  const { data: achados } = trpc.empreendimentosAdmin.buscarLeads.useQuery({ q: busca }, { enabled: !soLeitura && !empreendedor && busca.trim().length >= 2 });
   const { data: historico } = trpc.empreendimentosAdmin.historico.useQuery({ loteId: lote.id }, { enabled: !soLeitura });
   const utils = trpc.useUtils();
   const salvar = trpc.empreendimentosAdmin.atualizarLote.useMutation({
@@ -162,8 +168,8 @@ export default function PainelLote({ slug, lote, onMudou, onFechar }: { slug: st
 
       {precisaCliente && (
         <div className="space-y-1">
-          <span className="text-xs text-muted-foreground">Cliente (lead do CRM)</span>
-          {leadId ? (
+          <span className="text-xs text-muted-foreground">{empreendedor ? "Cliente" : "Cliente (lead do CRM)"}</span>
+          {empreendedor ? (lote.leadNome ? <p className="text-xs text-muted-foreground">Interessado: {lote.leadNome} (contato com o corretor)</p> : null) : leadId ? (
             <div className="flex items-center gap-2">
               <button onClick={() => navigate(`/leads/lead/${leadId}`)} className="flex-1 truncate text-left text-primary hover:underline">{leadRotulo || `Lead ${leadId}`}</button>
               <button onClick={() => { setLeadId(null); setLeadRotulo(""); }} className="text-xs text-muted-foreground hover:text-foreground">trocar</button>
@@ -185,7 +191,10 @@ export default function PainelLote({ slug, lote, onMudou, onFechar }: { slug: st
         </div>
       )}
 
-      {situacao !== "disponivel" && situacao !== "bloqueado" && (
+      {empreendedor && lote.corretorNome && situacao !== "disponivel" && situacao !== "bloqueado" && (
+        <p className="text-xs text-muted-foreground">Corretor: <b className="text-foreground">{lote.corretorNome}</b></p>
+      )}
+      {!empreendedor && situacao !== "disponivel" && situacao !== "bloqueado" && (
         <label className="block space-y-1">
           <span className="text-xs text-muted-foreground">Corretor</span>
           <select value={corretorId ?? ""} onChange={e => setCorretorId(e.target.value ? Number(e.target.value) : null)} className={campo}>

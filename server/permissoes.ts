@@ -5,9 +5,9 @@
 import { TRPCError } from "@trpc/server";
 import { eq } from "drizzle-orm";
 import { getDb } from "./db";
-import { acessosCorretor, permissoesPerfil, permissoesUsuario } from "../drizzle/schema";
+import { acessosCorretor, empreendimentos, permissoesPerfil, permissoesUsuario } from "../drizzle/schema";
 import { daEquipe, perfilDe, type Perfil } from "../shared/equipe";
-import { leadVisivel, permissoesEfetivas, podeDistribuirLeads, temAcesso, type AcessoCorretor, type Permissoes, type TipoAcesso } from "../shared/permissoes";
+import { MODULOS, leadVisivel, permissoesEfetivas, podeDistribuirLeads, temAcesso, type AcessoCorretor, type Permissoes, type TipoAcesso } from "../shared/permissoes";
 
 export interface PermissoesUsuario {
   perfil: Perfil | null;
@@ -18,6 +18,15 @@ export interface PermissoesUsuario {
 /** Admin: sem consulta. Corretor: pacote base do perfil + ajustes dele + empreendimentos/imóveis habilitados */
 export async function carregarPermissoes(user: { id: number; role?: string | null; perfil?: string | null }): Promise<PermissoesUsuario> {
   const perfil = perfilDe(user);
+  // Empreendedor: acesso só ao empreendimento dele (mapa, situação das chácaras, vendas) — o resto é barrado por podeChamar
+  if (perfil === 'empreendedor') {
+    const slug = (user as any).empreendimentoSlug as string | null | undefined;
+    const db = slug ? ((await getDb()) as any) : null;
+    const [emp]: any[] = db && slug ? await db.select({ id: empreendimentos.id }).from(empreendimentos).where(eq(empreendimentos.slug, String(slug))).limit(1).catch(() => []) : [];
+    // Módulos do portal (a lista de procedimentos em shared/equipe.ts continua sendo o filtro principal)
+    const modulos = Object.fromEntries(MODULOS.map(m => [m.chave, m.chave === 'empreendimentos' || m.chave === 'financeiro'])) as Permissoes;
+    return { perfil, modulos, acessos: emp ? [{ tipo: 'empreendimento', refId: Number(emp.id) }] : [] };
+  }
   if (!daEquipe(perfil)) return { perfil, modulos: null, acessos: [] };
   const db = (await getDb()) as any;
   if (!db) return { perfil, modulos: permissoesEfetivas([], [], perfil), acessos: [] };

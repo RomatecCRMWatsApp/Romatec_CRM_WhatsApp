@@ -66,6 +66,46 @@ export const empreendedorRouter = router({
     };
   }),
 
+  /**
+   * Financeiro do empreendimento: contratos (recebido, em aberto, vencido) e os boletos/parcelas emitidos.
+   * Só do empreendimento do empreendedor; sem telefone do comprador.
+   */
+  financeiro: protectedProcedure.query(async ({ ctx }) => {
+    const { db, emp } = await contexto(ctx);
+    if (!emp) return { totais: null, contratos: [], boletos: [], hoje: null };
+    const { extratoCompradores } = await import("../financeiro/relatorios");
+    const { rotuloParcela } = await import("../financeiro/dados");
+    const { contratos, cobrancas } = await import("../../drizzle/schema");
+    const { inArray } = await import("drizzle-orm");
+    const meus: any[] = await db.select({ id: contratos.id, numero: contratos.numero, loteCodigo: contratos.loteCodigo, status: contratos.status })
+      .from(contratos).where(eq(contratos.empreendimentoId, emp.id));
+    const ids = new Set(meus.map(c => Number(c.id)));
+    const ext = await extratoCompradores();
+    const linhas = ext.linhas.filter(l => ids.has(Number(l.contratoId)));
+    const soma = (k: "contratado" | "recebido" | "emAberto" | "vencido" | "aVencer") => Math.round(linhas.reduce((s, l) => s + l[k], 0) * 100) / 100;
+    const cobs: any[] = ids.size ? await db.select().from(cobrancas).where(inArray(cobrancas.contratoId, Array.from(ids))) : [];
+    const C = new Map(meus.map(c => [Number(c.id), c]));
+    const L = new Map(linhas.map(l => [Number(l.contratoId), l.comprador]));
+    const boletos = cobs
+      .filter(x => x.tipo !== "antecipacao" && x.status !== "cancelada" && x.status !== "prevista")
+      .map(x => ({
+        id: x.id, contrato: C.get(Number(x.contratoId))?.numero ?? "", lote: C.get(Number(x.contratoId))?.loteCodigo ?? "", comprador: L.get(Number(x.contratoId)) ?? "—",
+        parcela: rotuloParcela({ tipo: x.tipo, numero: Number(x.numero), total: Number(x.total) }), vencimento: String(x.vencimento).slice(0, 10),
+        valor: Number(x.valor), status: x.status as string, pagoEm: x.pagoEm ? String(x.pagoEm).slice(0, 10) : null, valorPago: x.valorPago != null ? Number(x.valorPago) : null,
+        boleto: x.bankSlipUrl ?? null,
+      }))
+      .sort((a, b) => b.vencimento.localeCompare(a.vencimento))
+      .slice(0, 300);
+    return {
+      hoje: ext.hoje,
+      totais: { contratos: linhas.length, contratado: soma("contratado"), recebido: soma("recebido"), emAberto: soma("emAberto"), vencido: soma("vencido"), aVencer: soma("aVencer"),
+        emAtraso: linhas.filter(l => l.situacao === "EM_ATRASO").length, quitados: linhas.filter(l => l.situacao === "QUITADO").length },
+      contratos: linhas.map(l => ({ contratoId: l.contratoId, numero: l.contratoNumero, lote: l.loteCodigo, comprador: l.comprador, contratado: l.contratado, recebido: l.recebido,
+        vencido: l.vencido, pctPago: l.pctPago, situacao: l.situacao, parcelasPagas: l.parcelasPagas, parcelasTotal: l.parcelasTotal, proximoVencimento: l.proximoVencimento, diasAtraso: l.diasAtraso })),
+      boletos,
+    };
+  }),
+
   /** Artes liberadas do empreendimento (as bloqueadas — preço/condições — não aparecem) */
   materiais: protectedProcedure.query(async ({ ctx }) => {
     const { db, slug, emp } = await contexto(ctx);

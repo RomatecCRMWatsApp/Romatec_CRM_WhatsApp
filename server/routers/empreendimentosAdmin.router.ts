@@ -78,11 +78,13 @@ export const empreendimentosAdminRouter = router({
       id: empreendimentoArquivos.id, nome: empreendimentoArquivos.nome, categoria: empreendimentoArquivos.categoria,
       mime: empreendimentoArquivos.mime, tamanhoBytes: empreendimentoArquivos.tamanhoBytes, createdAt: empreendimentoArquivos.createdAt,
     }).from(empreendimentoArquivos).where(eq(empreendimentoArquivos.empreendimentoId, emp.id)).orderBy(desc(empreendimentoArquivos.createdAt));
+    // Empreendedor vê o nome do interessado, não o telefone (o contato fica com o corretor — LGPD)
+    const semContato = (ctx as any).permissoes?.perfil === "empreendedor";
     const lotesOut = rows.map(r => {
       const situacao: SituacaoLote = situacaoValida(r.situacao) ? r.situacao : "disponivel";
       return {
         id: r.id, codigo: r.codigo, quadra: r.quadra, numero: r.numero, areaM2: num(r.areaM2), perimetroM: num(r.perimetroM),
-        situacao, leadId: r.leadId, leadNome: r.leadId ? L.get(r.leadId)?.nome ?? null : null, leadTelefone: r.leadId ? L.get(r.leadId)?.phone ?? null : null,
+        situacao, leadId: semContato ? null : r.leadId, leadNome: r.leadId ? L.get(r.leadId)?.nome ?? null : null, leadTelefone: !semContato && r.leadId ? L.get(r.leadId)?.phone ?? null : null,
         clienteNome: r.clienteNome, corretorId: r.corretorId, corretorNome: r.corretorId ? U.get(r.corretorId) ?? null : null,
         valorVenda: num(r.valorVenda), valorEntrada: num(r.valorEntrada), numParcelas: r.numParcelas, dataSituacao: r.dataSituacao,
         observacao: r.observacao, poligono: json<[number, number][]>(r.poligono), centro: r.lonCentro != null ? [num(r.lonCentro), num(r.latCentro)] : null,
@@ -132,11 +134,13 @@ export const empreendimentosAdminRouter = router({
       const db = await dbOrThrow();
       const lote = await loteAutorizado(db, input.loteId, ctx);
       const livre = input.situacao === "disponivel" || input.situacao === "bloqueado";
+      // Empreendedor não escolhe lead nem corretor (não vê a equipe nem os contatos): mantém os que já estão na chácara
+      const empreendedor = (ctx as any).permissoes?.perfil === "empreendedor";
       const dados = {
         situacao: input.situacao,
-        leadId: livre ? null : input.leadId ?? null,
+        leadId: livre ? null : empreendedor ? lote.leadId ?? null : input.leadId ?? null,
         clienteNome: livre ? null : input.clienteNome || null,
-        corretorId: livre ? null : input.corretorId ?? null,
+        corretorId: livre ? null : empreendedor ? lote.corretorId ?? null : input.corretorId ?? null,
         valorVenda: livre ? null : input.valorVenda ?? null,
         valorEntrada: livre ? null : input.valorEntrada ?? null,
         numParcelas: livre ? null : input.numParcelas ?? null,
@@ -144,7 +148,7 @@ export const empreendimentosAdminRouter = router({
       const problema = problemaVenda(dados);
       if (problema) throw new Error(problema);
       // Corretor só vincula lead dele (confere antes de gravar o lote)
-      if (dados.leadId) {
+      if (dados.leadId && !empreendedor) {
         const [l]: any[] = await db.select({ responsavelId: leadQualifications.responsavelId }).from(leadQualifications).where(eq(leadQualifications.id, dados.leadId)).limit(1);
         if (l) exigirLead(ctx.permissoes, ctx.user.id, l);
       }

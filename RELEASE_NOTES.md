@@ -3,6 +3,17 @@
 Cada versão nova vai no TOPO. Depois rode `npm run release` (valida e atualiza o package.json);
 ao subir, o servidor grava a versão no banco e todos recebem o aviso "Novidades da versão".
 
+## 1.40.0 — 2026-10-27
+tipo: minor
+obrigatoria: nao
+titulo: Portal da empreendedora de cara nova
+
+### Novo
+- Portal da empreendedora começa como o Painel do corretor: logo e portal do empreendimento em destaque, total vendido e o mapa de vendas logo no início. O mapa se atualiza sozinho a cada minuto e tem tela cheia para apresentar
+- Clicando numa chácara, a empreendedora vê e atualiza a situação (reservada, vendida, bloqueada), o cliente e os valores. O lead e o corretor da chácara continuam como estão
+- Abaixo do mapa, na mesma tela: Vendas (chácaras vendidas, valores, entrada e parcelas), Financeiro e boletos (contratado, recebido, a receber, vencido, contratos e boletos expedidos), Leads e divulgação (gráficos e campanhas), Tabelas de financiamento e Artes. Atalhos no topo levam a cada parte
+- Tudo só do empreendimento dela. O telefone dos interessados continua com o corretor (LGPD)
+
 ## 1.39.0 — 2026-10-26
 tipo: minor
 obrigatoria: nao

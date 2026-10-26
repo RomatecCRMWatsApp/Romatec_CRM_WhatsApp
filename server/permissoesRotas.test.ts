@@ -58,9 +58,11 @@ describe('bloqueio no servidor (não confia no front)', () => {
     await expect(corretor.notificacoes.inscreverPush({ endpoint: 'https://push.exemplo/x', keys: { p256dh: 'curta', auth: 'a' } })).rejects.toMatchObject({ code: 'BAD_REQUEST' });
   });
 
-  it('empreendedor não chega ao financeiro nem ao simulador', async () => {
+  it('empreendedor: vendas do empreendimento dele passam (escopo no servidor); simulador e o resto do financeiro não', async () => {
     const emp = caller({ id: 7, role: 'user', perfil: 'empreendedor' });
-    await expect(emp.financeiro.vendas()).rejects.toMatchObject({ code: 'FORBIDDEN' });
+    // Sem banco neste teste: passa da regra de acesso e só para no banco
+    await expect(emp.financeiro.vendas()).rejects.toThrow(/Banco indisponível/);
+    await expect(emp.financeiro.extrato()).rejects.toMatchObject({ code: 'FORBIDDEN' });
     await expect(emp.simulador.simular({ slug: 'bom-jardims', lote: 'A01', entrada: 1 })).rejects.toMatchObject({ code: 'FORBIDDEN' });
   });
 

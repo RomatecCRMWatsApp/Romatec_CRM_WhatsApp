@@ -3,7 +3,7 @@ import {
   MODULOS, ajustesNovoCorretor, comissaoNaSimulacao, comissaoPropria, leadVisivel, linhaFinanceira, marcarAcesso, minhaComissaoNaVenda, moduloDoCaminho, moduloLiberado, permissoesEfetivas, temAcesso,
 } from '../shared/permissoes';
 import type { CondicoesPagamento } from '../shared/simulador';
-import { podeAbrir } from '../shared/equipe';
+import { podeAbrir, podeChamar } from '../shared/equipe';
 import { exigirDistribuicao, exigirLead, leadsVisiveis, pctComissaoCorretor } from './permissoes';
 
 const acessos = [{ tipo: 'empreendimento' as const, refId: 1 }, { tipo: 'imovel' as const, refId: 7 }];
@@ -15,6 +15,14 @@ describe('permissões — pacote base e ajuste por corretor', () => {
     const p = permissoesEfetivas([{ modulo: 'contatos', permitido: 0 }], [{ modulo: 'contatos', permitido: 1 }, { modulo: 'financeiro', permitido: false }]);
     expect(p.contatos).toBe(true);
     expect(p.financeiro).toBe(false);
+  });
+
+  it('empreendedor: mapa, situação das chácaras, vendas e tabelas só do empreendimento dele; lead e equipe não', () => {
+    expect(temAcesso('empreendedor', [{ tipo: 'empreendimento', refId: 1 }], 'empreendimento', 1)).toBe(true);
+    expect(temAcesso('empreendedor', [{ tipo: 'empreendimento', refId: 1 }], 'empreendimento', 2)).toBe(false);
+    expect(temAcesso('empreendedor', [], 'empreendimento', 1)).toBe(false);
+    for (const ok of ['empreendimentosAdmin.detalhe', 'empreendimentosAdmin.atualizarLote', 'financeiro.vendas', 'financeiro.tabela', 'empreendedor.financeiro']) expect(podeChamar('empreendedor', ok)).toBe(true);
+    for (const nao of ['empreendimentosAdmin.buscarLeads', 'crm.responsaveis', 'financeiro.extrato', 'contratos.listar', 'campaigns.list']) expect(podeChamar('empreendedor', nao)).toBe(false);
   });
 
   it('Disparos WhatsApp (campanhas) é só do escritório: o corretor nunca recebe, a secretária sim', () => {
@@ -81,7 +89,9 @@ describe('permissões — escopo por empreendimento/imóvel', () => {
     expect(temAcesso('corretor', acessos, 'empreendimento', 2)).toBe(false);
     expect(temAcesso('corretor', acessos, 'imovel', 1)).toBe(false);
     expect(temAcesso('admin', [], 'empreendimento', 2)).toBe(true);
-    expect(temAcesso('empreendedor', acessos, 'empreendimento', 1)).toBe(false);
+    // Empreendedor: só o empreendimento carregado para ele (server/permissoes.ts) — portal de 27/10/2026
+    expect(temAcesso('empreendedor', acessos, 'empreendimento', 2)).toBe(false);
+    expect(temAcesso('empreendedor', [], 'empreendimento', 1)).toBe(false);
   });
 
   it('lista mostra todos, marcando os sem acesso', () => {

@@ -90,7 +90,8 @@ export interface AcessoCorretor { tipo: TipoAcesso; refId: number; comissaoPct?:
 /** Habilitado para o empreendimento/imóvel: admin e secretário sempre; corretor só os habilitados */
 export function temAcesso(perfil: Perfil | null, acessos: AcessoCorretor[], tipo: TipoAcesso, refId: number): boolean {
   if (perfil === 'admin' || perfil === 'secretario') return true;
-  if (perfil !== 'corretor') return false;
+  // Empreendedor: só o empreendimento dele (server/permissoes.ts carrega esse acesso pelo empreendimentoSlug)
+  if (perfil !== 'corretor' && perfil !== 'empreendedor') return false;
   return acessos.some(a => a.tipo === tipo && a.refId === refId);
 }
 

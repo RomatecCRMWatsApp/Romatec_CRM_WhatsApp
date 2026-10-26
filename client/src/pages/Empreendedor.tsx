@@ -5,29 +5,51 @@ import { useAuth } from "@/_core/hooks/useAuth";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Bar, BarChart, CartesianGrid, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
-import { Copy, Download, FileText, LogOut, Share2, Video } from "lucide-react";
+import { BarChart3, Copy, Download, ExternalLink, FileText, Images, LogOut, Map as MapIcon, Receipt, Share2, Table2, TrendingUp, Video } from "lucide-react";
 import { FotoUsuario } from "@/components/AppShell";
 import { SinoNovidades } from "@/components/sistema/Novidades";
 import { APP_VERSION, AppFooter, RomatecAppIcon } from "@/brand";
 import { baixarBlob, ehImagem, ehVideo, miniatura, nomeArquivo } from "@/components/MateriaisPainel";
 import { ROTULO_TIPO_MATERIAL, type TipoMaterial } from "@shared/materiais";
+import { ROTULO_SITUACAO, type SituacaoLote } from "@shared/lotes";
+import { CabecalhoEmpreendimento, MapaVendas } from "@/components/empreendimento/Vitrine";
+import TabelasFinanciamento from "@/components/financeiro/TabelasFinanciamento";
 
-const STATUS_LOTE: Record<string, { rotulo: string; cor: string }> = {
-  disponivel: { rotulo: "Disponíveis", cor: "text-emerald-300" },
-  reservado: { rotulo: "Reservadas", cor: "text-amber-300" },
-  em_negociacao: { rotulo: "Em negociação", cor: "text-sky-300" },
-  vendido: { rotulo: "Vendidas", cor: "text-red-300" },
-};
 const ROTULO_TIPO: Record<string, string> = { pago: "Anúncios (pago)", organico: "Orgânico", outro: "Portais e outros" };
 const pct = (a: number, b: number) => (b ? `${Math.round((a / b) * 100)}%` : "—");
+const brl = (n: number | null | undefined) => (n == null ? "—" : n.toLocaleString("pt-BR", { style: "currency", currency: "BRL" }));
+const dataBr = (d: string | Date | null | undefined) => {
+  if (!d) return "—";
+  if (typeof d === "string" && /^\d{4}-\d{2}-\d{2}/.test(d) && d.length <= 10) return d.split("-").reverse().join("/");
+  const t = new Date(d as any);
+  return Number.isFinite(t.getTime()) ? t.toLocaleDateString("pt-BR", { timeZone: "America/Fortaleza" }) : "—";
+};
+const SITUACAO_CONTRATO: Record<string, [string, string]> = {
+  EM_DIA: ["Em dia", "bg-emerald-500/15 text-emerald-300"], EM_ATRASO: ["Em atraso", "bg-red-500/15 text-red-300"],
+  QUITADO: ["Quitado", "bg-sky-500/15 text-sky-300"], AGUARDANDO_ASSINATURA: ["Aguardando assinatura", "bg-secondary text-muted-foreground"],
+};
+const STATUS_BOLETO: Record<string, [string, string]> = {
+  emitida: ["Emitido", "bg-amber-500/15 text-amber-300"], paga: ["Pago", "bg-emerald-500/15 text-emerald-300"],
+  vencida: ["Vencido", "bg-red-500/15 text-red-300"], estornada: ["Estornado", "bg-secondary text-muted-foreground"],
+};
+const SECOES = [["mapa", "Mapa", MapIcon], ["vendas", "Vendas", TrendingUp], ["financeiro", "Financeiro e boletos", Receipt], ["leads", "Leads", BarChart3], ["tabelas", "Tabelas", Table2], ["artes", "Artes", Images]] as const;
 
-function Numero({ titulo, valor, sub }: { titulo: string; valor: string | number; sub?: string }) {
+function Numero({ titulo, valor, sub, cor }: { titulo: string; valor: string | number; sub?: string; cor?: string }) {
   return (
     <Card className="bg-card border-border"><CardContent className="p-4">
       <p className="text-xs text-muted-foreground">{titulo}</p>
-      <p className="text-2xl font-bold text-foreground mt-1">{valor}</p>
+      <p className={`text-2xl font-bold mt-1 ${cor ?? "text-foreground"}`}>{valor}</p>
       {sub && <p className="text-[11px] text-muted-foreground mt-1">{sub}</p>}
     </CardContent></Card>
+  );
+}
+
+function Titulo({ id, icone: Icone, children, sub }: { id: string; icone: React.ComponentType<{ className?: string }>; children: React.ReactNode; sub?: string }) {
+  return (
+    <div id={id} className="scroll-mt-20 pt-4">
+      <h2 className="flex items-center gap-2 text-lg font-semibold text-[var(--rt-gold-light)] [font-family:var(--rt-font-title)]"><Icone className="h-5 w-5" />{children}</h2>
+      {sub && <p className="text-xs text-muted-foreground">{sub}</p>}
+    </div>
   );
 }
 
@@ -76,43 +98,172 @@ function Arte({ m }: { m: any }) {
   );
 }
 
+/**
+ * Portal do empreendedor: começa como o Painel do corretor (logo, portal e o mapa de vendas — atualizado sozinho,
+ * com a situação das chácaras editável por ela) e, abaixo, vendas, financeiro e boletos, leads e gráficos, tabelas e artes.
+ */
 export default function Empreendedor() {
   const { user, logout } = useAuth();
+  const slug = String((user as any)?.empreendimentoSlug || "bom-jardims");
   const { data: p, isLoading, error } = trpc.empreendedor.painel.useQuery();
   const { data: artes = [] } = trpc.empreendedor.materiais.useQuery();
-  const [aba, setAba] = useState<"leads" | "artes">("leads");
+  const { data: det } = trpc.empreendimentosAdmin.detalhe.useQuery({ slug }, { refetchInterval: 60_000 });
+  const { data: vendas } = trpc.financeiro.vendas.useQuery({ slug }, { refetchInterval: 60_000 });
+  const { data: fin } = trpc.empreendedor.financeiro.useQuery(undefined, { refetchInterval: 120_000 });
 
   const serie = (p?.porDia ?? []).map(d => ({ ...d, rotulo: d.dia.slice(8, 10) + "/" + d.dia.slice(5, 7) }));
   const ult7 = (p?.porDia ?? []).slice(-7).reduce((a, d) => a + d.leads, 0);
-  const lotes = p?.lotes ? Object.entries(p.lotes) : [];
+  const emp = det?.empreendimento;
+  const nome = emp?.nome || p?.empreendimento.nome || "Meu empreendimento";
+  const ir = (id: string) => document.getElementById(id)?.scrollIntoView({ behavior: "smooth", block: "start" });
 
   return (
     <div className="min-h-screen bg-background">
-      <div className="bg-gradient-to-r from-[#0C3320] to-black text-white border-b border-[var(--rt-border)]">
-        <div className="container py-4 flex items-center gap-3">
-          <RomatecAppIcon size={40} />
-          <div className="flex-1 min-w-0">
-            <h1 className="text-lg font-bold truncate">{p?.empreendimento.nome || "Meu empreendimento"}</h1>
-            <p className="text-xs text-white/70">Olá, {String((user as any)?.name || "").split(" ")[0] || "empreendedor"} · leads e artes para divulgar</p>
-          </div>
+      {/* Barra do topo */}
+      <div className="sticky top-0 z-30 border-b border-[var(--rt-border)] bg-black/85 backdrop-blur">
+        <div className="mx-auto flex max-w-[1500px] items-center gap-3 px-3 py-2 sm:px-4 md:px-6">
+          <RomatecAppIcon size={34} />
+          <p className="min-w-0 flex-1 truncate text-sm text-white/80">Portal do empreendedor · <b className="text-white">{String((user as any)?.name || "").split(" ")[0]}</b></p>
           <SinoNovidades className="text-white/80 hover:text-white" />
           <FotoUsuario />
-          <Button size="sm" variant="ghost" className="text-white hover:bg-white/15" onClick={() => logout()}><LogOut className="h-4 w-4" /></Button>
+          <Button size="sm" variant="ghost" className="text-white hover:bg-white/15" title="Sair" onClick={() => logout()}><LogOut className="h-4 w-4" /></Button>
         </div>
-        <div className="container flex gap-1 pb-0">
-          {(["leads", "artes"] as const).map(a => (
-            <button key={a} onClick={() => setAba(a)} className={`px-4 py-2 text-sm font-semibold rounded-t-lg ${aba === a ? "bg-background text-foreground" : "text-white/80 hover:bg-white/10"}`}>
-              {a === "leads" ? "📊 Leads" : `🎨 Artes (${artes.length})`}
+        {/* Navegação das seções da página */}
+        <div className="mx-auto flex max-w-[1500px] gap-1.5 overflow-x-auto px-3 pb-2 sm:px-4 md:px-6 [scrollbar-width:none]">
+          {SECOES.map(([id, rotulo, Icone]) => (
+            <button key={id} onClick={() => ir(id)} className="flex shrink-0 items-center gap-1.5 rounded-full border border-border px-3 py-1 text-xs font-medium text-white/80 transition hover:border-[var(--rt-gold)]/60 hover:text-white">
+              <Icone className="h-3.5 w-3.5" />{rotulo}
             </button>
           ))}
         </div>
       </div>
 
-      <div className="container py-6 space-y-4">
+      <div className="mx-auto max-w-[1500px] space-y-4 px-3 pb-10 pt-3 sm:px-4 md:px-6 md:pt-4">
         {error && <p className="text-sm text-red-400">{error.message}</p>}
-        {isLoading && <p className="text-sm text-muted-foreground">Carregando...</p>}
 
-        {p && aba === "leads" && (
+        {/* 1. Vitrine: logo, portal e o mapa sempre atualizado */}
+        <CabecalhoEmpreendimento slug={slug} nome={nome} municipio={emp?.municipio} uf={emp?.uf} disponiveis={det?.resumo?.disponivel ?? null}
+          nomeUsuario={String((user as any)?.name || "").split(" ")[0] || undefined}
+          acao={vendas ? (
+            <div className="rounded-2xl border border-white/15 bg-black/40 px-4 py-3 text-center backdrop-blur sm:text-right">
+              <p className="text-[11px] uppercase tracking-wide text-white/60">Vendido</p>
+              <p className="text-xl font-bold text-[var(--rt-gold-light)]">{brl(vendas.resumo.valorVendido)}</p>
+              <p className="text-[11px] text-white/60">{vendas.resumo.quantidade} venda(s)</p>
+            </div>
+          ) : null} />
+        <div id="mapa" className="scroll-mt-24">
+          <MapaVendas slug={slug} atualizarCadaMs={60_000}
+            ajuda="Veja a situação, o cliente e os valores de cada chácara. Você pode atualizar a situação (reservada, vendida, bloqueada) — o mapa se atualiza sozinho a cada minuto." />
+        </div>
+
+        {/* 2. Vendas */}
+        <Titulo id="vendas" icone={TrendingUp} sub="Chácaras com sinal, parceladas, à vista e quitadas">Vendas</Titulo>
+        {vendas && (
+          <>
+            <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
+              <Numero titulo="Vendas" valor={vendas.resumo.quantidade} />
+              <Numero titulo="Valor vendido" valor={brl(vendas.resumo.valorVendido)} cor="text-[var(--rt-gold-light)]" />
+              <Numero titulo="Disponíveis" valor={det?.resumo?.disponivel ?? "—"} cor="text-emerald-300" />
+              <Numero titulo="Reservadas / com sinal" valor={det ? (det.resumo.reservado ?? 0) + (det.resumo.entrada ?? 0) : "—"} cor="text-amber-300" />
+            </div>
+            <div className="overflow-x-auto rounded-xl border border-border bg-card">
+              <table className="w-full min-w-[640px] text-sm">
+                <thead><tr className="border-b border-border text-left text-xs text-muted-foreground">
+                  {["Chácara", "Cliente", "Situação", "Corretor", "Valor", "Entrada", "Parcelas", "Desde"].map(h => <th key={h} className="px-3 py-2 font-medium">{h}</th>)}
+                </tr></thead>
+                <tbody>
+                  {vendas.vendas.map((v: any) => (
+                    <tr key={v.loteId} className="border-b border-border/50 last:border-0">
+                      <td className="px-3 py-2 font-semibold">{v.codigo}</td>
+                      <td className="px-3 py-2">{v.cliente || "—"}</td>
+                      <td className="px-3 py-2 text-xs">{ROTULO_SITUACAO[v.situacao as SituacaoLote] ?? v.situacao}</td>
+                      <td className="px-3 py-2 text-xs text-muted-foreground">{v.corretorNome || "—"}</td>
+                      <td className="px-3 py-2 tabular-nums">{brl(v.valorVenda)}</td>
+                      <td className="px-3 py-2 tabular-nums">{brl(v.valorEntrada)}</td>
+                      <td className="px-3 py-2 tabular-nums">{v.numParcelas ?? "—"}</td>
+                      <td className="px-3 py-2 text-xs text-muted-foreground">{dataBr(v.dataSituacao)}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+              {!vendas.vendas.length && <p className="p-4 text-sm text-muted-foreground">Nenhuma venda registrada ainda.</p>}
+            </div>
+          </>
+        )}
+
+        {/* 3. Financeiro e boletos */}
+        <Titulo id="financeiro" icone={Receipt} sub="Recebimentos dos contratos e os boletos expedidos">Financeiro e boletos</Titulo>
+        {fin?.totais ? (
+          <>
+            <div className="grid grid-cols-2 gap-3 lg:grid-cols-5">
+              <Numero titulo="Contratado" valor={brl(fin.totais.contratado)} sub={`${fin.totais.contratos} contrato(s)`} />
+              <Numero titulo="Recebido" valor={brl(fin.totais.recebido)} cor="text-emerald-300" />
+              <Numero titulo="A receber" valor={brl(fin.totais.aVencer)} />
+              <Numero titulo="Vencido" valor={brl(fin.totais.vencido)} cor={fin.totais.vencido > 0 ? "text-red-300" : undefined} sub={`${fin.totais.emAtraso} contrato(s) em atraso`} />
+              <Numero titulo="Quitados" valor={fin.totais.quitados} />
+            </div>
+            <div className="overflow-x-auto rounded-xl border border-border bg-card">
+              <table className="w-full min-w-[720px] text-sm">
+                <thead><tr className="border-b border-border text-left text-xs text-muted-foreground">
+                  {["Contrato", "Chácara", "Comprador", "Situação", "Pago", "Recebido", "Vencido", "Próximo vencimento"].map(h => <th key={h} className="px-3 py-2 font-medium">{h}</th>)}
+                </tr></thead>
+                <tbody>
+                  {fin.contratos.map(c => {
+                    const [r, cor] = SITUACAO_CONTRATO[c.situacao] ?? [c.situacao, ""];
+                    return (
+                      <tr key={c.contratoId} className="border-b border-border/50 last:border-0">
+                        <td className="px-3 py-2 font-mono text-xs">{c.numero}</td>
+                        <td className="px-3 py-2 font-semibold">{c.lote}</td>
+                        <td className="px-3 py-2">{c.comprador}</td>
+                        <td className="px-3 py-2"><span className={`rounded-full px-2 py-0.5 text-[11px] ${cor}`}>{r}{c.diasAtraso ? ` · ${c.diasAtraso} d` : ""}</span></td>
+                        <td className="px-3 py-2 text-xs">{c.parcelasPagas}/{c.parcelasTotal} · {c.pctPago.toLocaleString("pt-BR")}%</td>
+                        <td className="px-3 py-2 tabular-nums">{brl(c.recebido)}</td>
+                        <td className={`px-3 py-2 tabular-nums ${c.vencido > 0 ? "text-red-300" : ""}`}>{brl(c.vencido)}</td>
+                        <td className="px-3 py-2 text-xs">{dataBr(c.proximoVencimento)}</td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+              {!fin.contratos.length && <p className="p-4 text-sm text-muted-foreground">Nenhum contrato com parcelas ainda.</p>}
+            </div>
+            <Card className="bg-card border-border">
+              <CardHeader className="pb-2"><CardTitle className="text-base">Boletos expedidos ({fin.boletos.length})</CardTitle></CardHeader>
+              <CardContent>
+                {!fin.boletos.length ? <p className="text-sm text-muted-foreground">Nenhum boleto emitido ainda.</p> : (
+                  <div className="max-h-[420px] overflow-auto -mx-2">
+                    <table className="w-full min-w-[640px] text-xs">
+                      <thead className="sticky top-0 bg-card"><tr className="border-b border-border text-left text-muted-foreground">
+                        {["Vencimento", "Chácara", "Comprador", "Parcela", "Valor", "Situação", ""].map(h => <th key={h} className="px-2 py-2 font-medium">{h}</th>)}
+                      </tr></thead>
+                      <tbody>
+                        {fin.boletos.map(b => {
+                          const [r, cor] = STATUS_BOLETO[b.status] ?? [b.status, ""];
+                          return (
+                            <tr key={b.id} className="border-b border-border/40">
+                              <td className="px-2 py-1.5 font-mono">{dataBr(b.vencimento)}</td>
+                              <td className="px-2 py-1.5 font-semibold">{b.lote}</td>
+                              <td className="px-2 py-1.5">{b.comprador}</td>
+                              <td className="px-2 py-1.5">{b.parcela}</td>
+                              <td className="px-2 py-1.5 tabular-nums">{brl(b.valor)}</td>
+                              <td className="px-2 py-1.5"><span className={`rounded-full px-2 py-0.5 ${cor}`}>{r}{b.pagoEm ? ` em ${dataBr(b.pagoEm)}` : ""}</span></td>
+                              <td className="px-2 py-1.5">{b.boleto && <a href={b.boleto} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1 text-primary hover:underline">boleto <ExternalLink className="h-3 w-3" /></a>}</td>
+                            </tr>
+                          );
+                        })}
+                      </tbody>
+                    </table>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          </>
+        ) : <p className="text-sm text-muted-foreground">{fin ? "Sem dados financeiros ainda." : "Carregando…"}</p>}
+
+        {/* 4. Leads e divulgação */}
+        <Titulo id="leads" icone={BarChart3} sub="Números da divulgação — os contatos dos interessados ficam com o corretor (LGPD)">Leads e divulgação</Titulo>
+        {isLoading && <p className="text-sm text-muted-foreground">Carregando…</p>}
+        {p && (
           <>
             <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
               <Numero titulo="Leads no total" valor={p.total.leads} sub={`${ult7} nos últimos 7 dias`} />
@@ -156,18 +307,10 @@ export default function Empreendedor() {
               </Card>
 
               <Card className="bg-card border-border">
-                <CardHeader className="pb-2"><CardTitle className="text-base">Situação das chácaras</CardTitle></CardHeader>
-                <CardContent className="space-y-3">
-                  {lotes.length === 0 ? <p className="text-sm text-muted-foreground">Sem dados das chácaras.</p> : (
-                    <div className="grid grid-cols-2 gap-2">
-                      {lotes.map(([s, n]) => <div key={s} className="rounded border border-border p-2"><p className={`text-xl font-bold ${STATUS_LOTE[s]?.cor || ""}`}>{n as number}</p><p className="text-[11px] text-muted-foreground">{STATUS_LOTE[s]?.rotulo || s}</p></div>)}
-                    </div>
-                  )}
-                  {p.lotesMaisProcurados.length > 0 && (
-                    <div>
-                      <p className="text-xs text-muted-foreground mb-1">Chácaras mais procuradas</p>
-                      <div className="flex flex-wrap gap-1">{p.lotesMaisProcurados.map(l => <span key={l.codigo} className="text-xs px-2 py-0.5 rounded bg-emerald-500/15 text-emerald-300">{l.codigo} · {l.leads}</span>)}</div>
-                    </div>
+                <CardHeader className="pb-2"><CardTitle className="text-base">Chácaras mais procuradas</CardTitle></CardHeader>
+                <CardContent>
+                  {p.lotesMaisProcurados.length === 0 ? <p className="text-sm text-muted-foreground">Ainda sem interesse registrado por chácara.</p> : (
+                    <div className="flex flex-wrap gap-1">{p.lotesMaisProcurados.map(l => <span key={l.codigo} className="text-xs px-2 py-0.5 rounded bg-emerald-500/15 text-emerald-300">{l.codigo} · {l.leads}</span>)}</div>
                   )}
                 </CardContent>
               </Card>
@@ -196,17 +339,16 @@ export default function Empreendedor() {
                 )}
               </CardContent>
             </Card>
-            <p className="text-[11px] text-muted-foreground">Os contatos dos interessados ficam com o corretor (LGPD). Aqui você acompanha os números da divulgação.</p>
           </>
         )}
 
-        {aba === "artes" && (
-          artes.length === 0 ? <p className="text-sm text-muted-foreground">Nenhuma arte liberada ainda.</p> : (
-            <>
-              <p className="text-xs text-muted-foreground">Toque em <b>Enviar</b> no celular para mandar direto para o WhatsApp, status ou Instagram. Nas legendas, sempre o CRECI e os contatos do corretor; não publique valores.</p>
-              <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3">{artes.map((m: any) => <Arte key={m.id} m={m} />)}</div>
-            </>
-          )
+        {/* 5. Tabelas de financiamento (mesmo cálculo do simulador) */}
+        <div id="tabelas" className="scroll-mt-24 pt-4"><TabelasFinanciamento /></div>
+
+        {/* 6. Artes para divulgar */}
+        <Titulo id="artes" icone={Images} sub="Toque em Enviar no celular para mandar direto para o WhatsApp, status ou Instagram. Nas legendas, sempre o CRECI e os contatos do corretor; não publique valores.">Artes ({artes.length})</Titulo>
+        {artes.length === 0 ? <p className="text-sm text-muted-foreground">Nenhuma arte liberada ainda.</p> : (
+          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3">{artes.map((m: any) => <Arte key={m.id} m={m} />)}</div>
         )}
       </div>
       {/* Rodapé oficial (sem a coluna "Sistema": o empreendedor não abre as telas do CRM) */}
