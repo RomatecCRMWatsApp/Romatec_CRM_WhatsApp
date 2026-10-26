@@ -3,6 +3,16 @@
 Cada versão nova vai no TOPO. Depois rode `npm run release` (valida e atualiza o package.json);
 ao subir, o servidor grava a versão no banco e todos recebem o aviso "Novidades da versão".
 
+## 1.36.0 — 2026-10-26
+tipo: minor
+obrigatoria: nao
+titulo: Painel do corretor: mapa do empreendimento e atalhos
+
+### Novo
+- O Painel do corretor agora abre direto no mapa do empreendimento em que ele está habilitado. Clicando numa chácara, aparecem a situação e o valor, e um botão "Fazer contrato" quando ela está disponível
+- Atalhos no topo: Leads, Novo contrato, Meus contratos, Simulador, Agenda de visitas, Materiais e Novo cliente. Logo abaixo, os links para o cliente (divulgação, agendamento, KML e folder)
+- Quem está em mais de um empreendimento escolhe qual ver, e o painel lembra a escolha. Os números e gráficos continuam no painel do escritório
+
 ## 1.35.3 — 2026-10-26
 tipo: patch
 obrigatoria: nao
