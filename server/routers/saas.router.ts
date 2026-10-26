@@ -63,6 +63,8 @@ export const saasRouter = router({
     const { mpConfigurado } = await import("../saas/mercadopago");
     return { modo: await C.modoMp(), teste: mpConfigurado("teste"), producao: mpConfigurado("producao"), webhook: !!process.env.MP_WEBHOOK_SECRET, eventos: await C.eventosRecentes() };
   }),
+  /** Confere no MP, agora, as faturas Pix/boleto em aberto (a rotina faz isso a cada 10 min) */
+  conciliarMp: protectedProcedure.mutation(async ({ ctx }) => { admin(ctx); return (await import("../saas/cobranca")).conciliarFaturasAbertas(); }),
   definirModoMp: protectedProcedure.input(z.object({ modo: z.enum(["teste", "producao"]) })).mutation(async ({ ctx, input }) => {
     admin(ctx);
     const C = await import("../saas/cobranca");

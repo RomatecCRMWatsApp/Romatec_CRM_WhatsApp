@@ -3,6 +3,15 @@
 Cada versão nova vai no TOPO. Depois rode `npm run release` (valida e atualiza o package.json);
 ao subir, o servidor grava a versão no banco e todos recebem o aviso "Novidades da versão".
 
+## 1.35.1 — 2026-10-26
+tipo: patch
+obrigatoria: nao
+titulo: Pagamentos Pix/boleto conferidos direto no Mercado Pago
+
+### Correções
+- Pix e boleto pagos são conferidos direto no Mercado Pago a cada 10 minutos e liberam o acesso mesmo que o aviso automático não chegue. Em Admin › SaaS, o botão "Conferir pagamentos agora" faz a conferência na hora
+- Admin › SaaS: se o painel de números falhar, a tela mostra o motivo, e os quadros do Mercado Pago e do AvalieImob continuam disponíveis
+
 ## 1.35.0 — 2026-10-26
 tipo: minor
 obrigatoria: nao

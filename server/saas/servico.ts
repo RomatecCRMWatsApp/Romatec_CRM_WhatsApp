@@ -379,7 +379,7 @@ export async function metricas(agora = Date.now()) {
     conversao: trialistas.length ? Math.round((trialistas.filter(id => pagantes.has(id)).length / trialistas.length) * 1000) / 10 : null,
     inadimplentes: as.filter(a => a.status === 'INADIMPLENTE').length,
     bloqueados: as.filter(a => a.status === 'BLOQUEADO').length,
-    receitaMes: Math.round(fs.filter(f => f.status === 'PAGA' && f.pagoEm && new Date(new Date(f.pagoEm).getTime() - 3 * 3600_000).toISOString().slice(0, 7) === mes)
+    receitaMes: Math.round(fs.filter(f => { const t = f.pagoEm ? new Date(f.pagoEm).getTime() : NaN; return f.status === 'PAGA' && Number.isFinite(t) && new Date(t - 3 * 3600_000).toISOString().slice(0, 7) === mes; })
       .reduce((s, f) => s + Number(f.valor), 0) * 100) / 100,
   };
 }

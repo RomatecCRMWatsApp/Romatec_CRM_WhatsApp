@@ -384,6 +384,26 @@ export async function rotinaFaturas(agora = Date.now()) {
   return { geradas };
 }
 
+/**
+ * Rede de segurança do webhook: consulta no MP as faturas Pix/boleto ainda ABERTAS (últimos 35 dias) e aplica as pagas,
+ * vencidas ou canceladas — aviso perdido ou painel do MP sem o webhook configurado não deixam pagamento parado.
+ * Idempotente (aplicarAprovado não aplica duas vezes o mesmo pagamento).
+ */
+export async function conciliarFaturasAbertas(agora = Date.now()) {
+  const d = await banco();
+  const abertas: any[] = (await d.select().from(saasFaturas).where(eq(saasFaturas.status, 'ABERTA')))
+    .filter((f: any) => f.mpPaymentId && agora - new Date(f.createdAt).getTime() < 35 * 86_400_000);
+  const res = { conferidas: 0, aplicadas: 0, erros: [] as string[] };
+  for (const f of abertas) {
+    try {
+      const acao = await processarPagamento(String(f.mpPaymentId), agora);
+      res.conferidas++;
+      if (acao === 'aprovado') res.aplicadas++;
+    } catch (e: any) { res.erros.push(`fatura ${f.id}: ${String(e?.message ?? e).slice(0, 200)}`); }
+  }
+  return res;
+}
+
 /** Admin: eventos recentes do webhook (diagnóstico) */
 export async function eventosRecentes() {
   const d = await banco();
@@ -397,7 +417,7 @@ export function iniciarJobsCobranca() {
     if (rodando) return;
     rodando = true;
     try {
-      await retryEventos(); await rotinaFaturas(); await sincronizarFilaNfse();
+      await retryEventos(); await conciliarFaturasAbertas(); await rotinaFaturas(); await sincronizarFilaNfse();
       await (await import('./avalieimob')).sincronizarAvalieimob();
     } catch (e: any) { console.warn('[MP] rotina:', e?.message); } finally { rodando = false; }
   };

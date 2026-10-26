@@ -160,4 +160,14 @@ describe('empreendedor avulso: implantação na 1ª fatura', () => {
     // Plano de corretor não serve para empreendedor
     await expect(C.iniciarCheckout(usuario(3), { plano: 'CORRETOR_PRO', ciclo: 'MENSAL', metodo: 'PIX' })).rejects.toThrow(/indisponível/);
   });
+
+  it('webhook perdido: a conciliação consulta o MP e aplica o pagamento da fatura aberta (uma vez só)', async () => {
+    const a = assinatura(3);
+    const f = faturas(a.id).find((x: any) => x.status === 'ABERTA')!;
+    pagamentosMp.get(f.mpPaymentId).status = 'approved';
+    expect(await C.conciliarFaturasAbertas()).toMatchObject({ aplicadas: 1, erros: [] });
+    expect(faturas(a.id).find((x: any) => x.id === f.id).status).toBe('PAGA');
+    expect(assinatura(3)).toMatchObject({ status: 'ATIVA', origem: 'PAGA' });
+    expect(await C.conciliarFaturasAbertas()).toMatchObject({ conferidas: 0, aplicadas: 0 });
+  });
 });

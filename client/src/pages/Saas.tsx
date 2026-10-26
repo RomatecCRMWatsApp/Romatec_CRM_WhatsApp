@@ -17,13 +17,20 @@ const pedir = (msg: string) => { const m = window.prompt(msg); return m && m.tri
 
 function VisaoGeral() {
   const utils = trpc.useUtils();
-  const { data: m } = trpc.saas.metricas.useQuery();
+  const { data: m, error } = trpc.saas.metricas.useQuery();
   const [cortesia, setCortesia] = useState(() => new Date(Date.now() + 30 * 86_400_000).toISOString().slice(0, 10));
   const definir = trpc.saas.definirLicenciamento.useMutation({
     onSuccess: r => { toast.success(r.ativo ? `Licenciamento ligado${r.cortesias ? ` · ${r.cortesias} cortesia(s) criadas` : ""}` : "Licenciamento desligado"); utils.saas.invalidate(); utils.auth.me.invalidate(); },
     onError: e => toast.error(e.message),
   });
-  if (!m) return <p className="text-sm text-muted-foreground">Carregando…</p>;
+  // Sem as métricas, os quadros do Mercado Pago e do AvalieImob continuam disponíveis (diagnóstico e "Conferir pagamentos")
+  if (!m) return (
+    <div className="space-y-4">
+      {error ? <p className="text-sm text-red-300">Não foi possível carregar o painel: {error.message}</p> : <p className="text-sm text-muted-foreground">Carregando…</p>}
+      <MercadoPago />
+      <Avalieimob />
+    </div>
+  );
   const cards: [string, string][] = [
     ["MRR", brl(m.mrr)], ["Assinantes ativos", String(m.ativos)], ["Trials em curso", String(m.trials)],
     ["Conversão trial → pago", m.conversao == null ? "—" : `${m.conversao.toLocaleString("pt-BR")}%`], ["Inadimplentes", String(m.inadimplentes)], ["Receita do mês", brl(m.receitaMes)],
@@ -65,6 +72,10 @@ function MercadoPago() {
   const utils = trpc.useUtils();
   const { data } = trpc.saas.mercadoPago.useQuery(undefined, { refetchInterval: 30_000 });
   const definir = trpc.saas.definirModoMp.useMutation({ onSuccess: r => { toast.success(`Mercado Pago em modo ${r.modo === "producao" ? "PRODUÇÃO" : "teste"}`); utils.saas.mercadoPago.invalidate(); }, onError: e => toast.error(e.message) });
+  const conciliar = trpc.saas.conciliarMp.useMutation({
+    onSuccess: r => { (r.erros.length ? toast.error : toast.success)(`${r.conferidas} fatura(s) conferida(s) · ${r.aplicadas} pagamento(s) aplicado(s)${r.erros.length ? ` · ${r.erros.join(" | ")}` : ""}`); utils.saas.invalidate(); },
+    onError: e => toast.error(e.message),
+  });
   if (!data) return null;
   const ok = (v: boolean) => (v ? <span className="text-emerald-300">configurado</span> : <span className="text-red-300">faltando</span>);
   return (
@@ -76,6 +87,9 @@ function MercadoPago() {
       ) : (
         <Button size="sm" variant="outline" disabled={definir.isPending} onClick={() => definir.mutate({ modo: "teste" })}>Voltar para o modo teste</Button>
       )}
+      <Button size="sm" variant="outline" className="ml-2" disabled={conciliar.isPending} onClick={() => conciliar.mutate()}>
+        {conciliar.isPending ? <Loader2 className="mr-1 h-4 w-4 animate-spin" /> : null} Conferir pagamentos agora
+      </Button>
       <details className="text-xs">
         <summary className="cursor-pointer text-muted-foreground">Últimos avisos do webhook ({data.eventos.length})</summary>
         <div className="mt-1 space-y-0.5">
