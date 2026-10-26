@@ -811,6 +811,30 @@ export const autoRespostaMidias = mysqlTable("autoRespostaMidias", {
   updatedAt: timestamp("updatedAt").defaultNow().notNull(),
 }, (t) => ({ uq: uniqueIndex("uq_autoresp_midia").on(t.empreendimentoId, t.codigo) }));
 
+/** Link pessoal da página de oferta (/o/:slug?l=token) — saber quem abriu e quantas vezes */
+export const linksOferta = mysqlTable("linksOferta", {
+  token: varchar("token", { length: 24 }).primaryKey(),
+  leadId: int("leadId").notNull(),
+  empreendimentoId: int("empreendimentoId").notNull(),
+  aberturas: int("aberturas").default(0).notNull(),
+  primeiraAberturaAt: timestamp("primeiraAberturaAt"),
+  ultimaAberturaAt: timestamp("ultimaAberturaAt"),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+}, (t) => ({ uq: uniqueIndex("uq_link_oferta_lead").on(t.leadId, t.empreendimentoId) }));
+
+/** Régua do robô (24 h escassez, 72 h follow-up, 7 dias três livres) por lead; some quando o lead sai do robô */
+export const autoRespostaRegua = mysqlTable("autoRespostaRegua", {
+  leadId: int("leadId").primaryKey(),
+  empreendimentoId: int("empreendimentoId").notNull(),
+  /** Base da régua: a última mensagem do lead */
+  desde: timestamp("desde").notNull(),
+  passo: int("passo").default(0).notNull(),
+  proximoAt: timestamp("proximoAt"),
+  /** Mensagens automáticas seguidas sem resposta do lead (máx. 3) */
+  seguidas: int("seguidas").default(0).notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().notNull(),
+});
+
 /** Conversa do lead no WhatsApp (contexto da IA e tela do lead) */
 export const leadMensagens = mysqlTable("leadMensagens", {
   id: int("id").autoincrement().primaryKey(),

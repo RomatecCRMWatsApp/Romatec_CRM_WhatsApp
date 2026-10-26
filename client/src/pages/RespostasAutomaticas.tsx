@@ -97,6 +97,8 @@ export default function RespostasAutomaticas() {
   useEffect(() => { if (!slug && emps?.length) setSlug((emps.find(e => e.slug === "bom-jardims") ?? emps[0]).slug); }, [emps, slug]);
   const { data, isLoading, error, refetch } = trpc.autoResposta.obter.useQuery({ slug }, { enabled: !!slug });
   const { data: hist } = trpc.autoResposta.historico.useQuery({ slug }, { enabled: !!slug, refetchInterval: 60_000 });
+  const [dias, setDias] = useState(30);
+  const { data: met } = trpc.autoResposta.metricas.useQuery({ slug, dias }, { enabled: !!slug, refetchInterval: 120_000 });
   const utils = trpc.useUtils();
 
   const [cfg, setCfg] = useState({ condicaoValidaAte: "", avisoLegal: "", loteAncora: "", entradaParcelas: 6 });
@@ -148,6 +150,36 @@ export default function RespostasAutomaticas() {
             </div>
             {!data.temCondicoes && <p className="flex items-center gap-2 text-xs text-amber-300"><AlertTriangle className="h-4 w-4" /> Sem condições de pagamento ativas no simulador: o robô não fala de valores e não pode ser ligado.</p>}
 
+            {met && (
+              <div className="space-y-2">
+                <div className="flex items-center gap-2">
+                  <p className="text-sm font-semibold">Números do robô</p>
+                  {[7, 30, 90].map(n => (
+                    <button key={n} onClick={() => setDias(n)} className={`rounded-full border px-2 py-0.5 text-[11px] ${dias === n ? "border-primary bg-primary/15 text-primary" : "border-border text-muted-foreground"}`}>{n} dias</button>
+                  ))}
+                  <a href={`/o/${slug}`} target="_blank" rel="noreferrer" className="ml-auto text-xs text-primary hover:underline">Ver a página de oferta ↗</a>
+                </div>
+                <div className="grid grid-cols-2 gap-2 sm:grid-cols-4 lg:grid-cols-8">
+                  {([
+                    ["Conversas", met.conversas, "leads que o robô atendeu"],
+                    ["Respostas", met.respostas, "mensagens respondidas"],
+                    ["Régua", met.regua, `${met.emRegua} leads na régua agora`],
+                    ["Links abertos", `${met.linksAbertos}/${met.linksEnviados}`, `${met.aberturas} aberturas no período`],
+                    ["Querem fechar", met.querFechar, "passados ao corretor"],
+                    ["Pediram visita", met.visitas, "corretor avisado"],
+                    ["Com o corretor", met.passaram, "fora do roteiro ou fechamento"],
+                    ["Descadastros", met.optout, `${met.foraHorario} fora do horário`],
+                  ] as const).map(([r, v, s]) => (
+                    <div key={r} className="rounded-xl border border-border bg-card p-3">
+                      <p className="text-[11px] text-muted-foreground">{r}</p>
+                      <p className="text-xl font-semibold">{v}</p>
+                      <p className="text-[10px] text-muted-foreground">{s}</p>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
             <div className="grid gap-4 lg:grid-cols-2">
               <div className="space-y-3 rounded-xl border border-border bg-card p-4">
                 <p className="text-sm font-semibold">Oferta</p>
@@ -185,7 +217,9 @@ export default function RespostasAutomaticas() {
                     <p className="text-xs text-muted-foreground">Intenção: <b className="text-foreground">{previa.data.intencao}</b>{previa.data.chacara ? ` · chácara ${previa.data.chacara}` : ""}</p>
                     {previa.data.envios.map((e: any, i: number) => e.tipo === "texto"
                       ? <Balao key={i} texto={e.texto} />
-                      : <p key={i} className="inline-flex items-center gap-1 rounded-md bg-secondary/40 px-2 py-1 text-xs">{e.tipo === "pdf" ? <FileText className="h-3.5 w-3.5" /> : <ImageIcon className="h-3.5 w-3.5" />} {ROTULO_MIDIA[e.codigo as CodigoMidia] ?? e.codigo}</p>)}
+                      : e.codigo === "FOLDER_CHACARA"
+                        ? <a key={i} href={e.url} target="_blank" rel="noreferrer" className="block w-40"><img src={e.url} alt={e.nomeArquivo} className="w-full rounded-md border border-border" /></a>
+                        : <p key={i} className="inline-flex items-center gap-1 rounded-md bg-secondary/40 px-2 py-1 text-xs">{e.tipo === "pdf" ? <FileText className="h-3.5 w-3.5" /> : <ImageIcon className="h-3.5 w-3.5" />} {ROTULO_MIDIA[e.codigo as CodigoMidia] ?? e.codigo}</p>)}
                     {previa.data.obs && <p className="text-xs text-amber-300">{previa.data.obs}</p>}
                   </div>
                 )}
@@ -215,7 +249,11 @@ export default function RespostasAutomaticas() {
                       <tr key={h.id} className="border-b border-border/50 last:border-0">
                         <td className="p-2 text-xs">{dataHora(h.createdAt as any)}</td>
                         <td className="p-2"><button className="text-primary hover:underline" onClick={() => navigate(`/leads/lead/${h.leadId}`)}>{h.nome || `Lead ${h.leadId}`}</button></td>
-                        <td className="p-2 text-xs">{h.tipo === "handoff" ? `Passou para o corretor${h.motivo ? ` — ${h.motivo}` : ""}` : h.tipo === "fora_horario" ? `Fora do horário (${h.intencao ?? "—"}): espera o corretor` : `Respondeu: ${h.intencao ?? "—"}`}</td>
+                        <td className="p-2 text-xs">{h.tipo === "handoff" ? `Passou para o corretor${h.motivo ? ` — ${h.motivo}` : ""}`
+                          : h.tipo === "fora_horario" ? `Fora do horário (${h.intencao ?? "—"}): espera o corretor`
+                          : h.tipo === "regua" ? `Régua, passo ${h.passo ?? "?"}: ${h.intencao ?? "—"}`
+                          : h.tipo === "abriu_oferta" ? "Abriu a página de oferta"
+                          : `Respondeu: ${h.intencao ?? "—"}`}</td>
                       </tr>
                     ))}</tbody>
                   </table>

@@ -52,6 +52,7 @@ const AssinarContrato = lazy(() => import("./pages/AssinarContrato"));
 const VerificarContrato = lazy(() => import("./pages/VerificarContrato"));
 const CarneDigital = lazy(() => import("./pages/CarneDigital"));
 const Agendar = lazy(() => import("./pages/Agendar"));
+const Oferta = lazy(() => import("./pages/Oferta"));
 const AreaCorretor = lazy(() => import("./pages/AreaCorretor"));
 const PainelCorretor = lazy(() => import("./pages/PainelCorretor"));
 /** Painel: o corretor vê o mapa do empreendimento e os atalhos; o escritório, os números */
@@ -241,6 +242,7 @@ function Router() {
       <Route path={"/c/v/:codigo"} component={VerificarContrato} />
       <Route path={"/c/:codigo"} component={CarneDigital} />
       <Route path={"/agendar/:slug"} component={Agendar} />
+      <Route path={"/o/:slug"} component={Oferta} />
       <Route path={"/bom-jardims/chacara/:codigo"} component={BomJardimsChacara} />
       <Route path={"/bom-jardims"} component={BomJardims} />
       <Route path={"/404"} component={NotFound} />
@@ -250,7 +252,7 @@ function Router() {
 }
 
 /** Páginas do site público (landing, imóveis, links): sem splash nem overlay do app */
-const rotaDoSite = (p: string) => ["/imoveis", "/i/", "/imovel/", "/links", "/bom-jardims", "/agendar/", "/formulario/"].some(r => p === r || p.startsWith(r.endsWith("/") ? r : `${r}/`));
+const rotaDoSite = (p: string) => ["/imoveis", "/i/", "/imovel/", "/links", "/bom-jardims", "/agendar/", "/o/", "/formulario/"].some(r => p === r || p.startsWith(r.endsWith("/") ? r : `${r}/`));
 
 function CamadaDoSistema() {
   const [location] = useLocation();

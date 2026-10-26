@@ -7,9 +7,10 @@
  */
 import { and, eq } from 'drizzle-orm';
 import { getDb } from '../db';
-import { autoRespostaConfig, autoRespostaMidias, autoRespostaTextos, condicoesPagamento, empreendimentos, leadEventos, leadQualifications, lotes, users } from '../../drizzle/schema';
+import { randomBytes } from 'crypto';
+import { autoRespostaConfig, autoRespostaMidias, autoRespostaRegua, autoRespostaTextos, condicoesPagamento, empreendimentos, leadEventos, leadQualifications, linksOferta, lotes, users } from '../../drizzle/schema';
 import {
-  avisoLegal, classificar, comAvisoLegal, dentroDoHorario, INTENCOES, MIDIAS, preencher, TEXTOS_PADRAO, variaveisDaOferta,
+  avisoLegal, classificar, comAvisoLegal, dentroDoHorario, INTENCOES, MAX_SEGUIDAS, MIDIAS, preencher, proximaJanela, REGUA, SO_DA_REGUA, TEXTOS_PADRAO, variaveisDaOferta,
   type CodigoMidia, type Intencao,
 } from '../../shared/autoresposta';
 import { condicoesDaLinha, simular, precoLote, type CondicoesPagamento } from '../../shared/simulador';
@@ -115,9 +116,11 @@ export interface Corretor { nome: string; creci: string | null; telefone: string
  */
 export function montarResposta(ctx: ContextoEmp, p: { intencao: Intencao; chacara?: string | null; nome?: string | null; corretor: Corretor; extra?: Record<string, string> }): Envio[] {
   const disponiveis = ctx.lotes.filter(l => l.situacao === 'disponivel').length;
+  const ref = p.chacara || ctx.cfg.loteAncora;
+  const livres = ref && ctx.lotes.some(l => l.codigo === ref) ? maisProximas(ctx, ref) : ctx.lotes.filter(l => l.situacao === 'disponivel').slice(0, 3).map(l => l.codigo);
   const base: Record<string, string> = {
     nome: primeiroNome(p.nome) || 'tudo bem', corretor: p.corretor.nome, creci: p.corretor.creci ?? '', telefone_corretor: p.corretor.telefone ?? '',
-    disponiveis: String(disponiveis), lote: p.chacara || 'que você escolher', link_oferta: `${urlPublica()}/${ctx.emp.slug}`, ...p.extra,
+    disponiveis: String(disponiveis), lote: p.chacara || 'que você escolher', link_oferta: `${urlPublica()}/o/${ctx.emp.slug}`, livres: livres.join(', '), ...p.extra,
   };
   let intencao = p.intencao;
   // Chácara citada: simulação dela; se já saiu, avisa e oferece as livres mais perto
@@ -144,7 +147,38 @@ export function montarResposta(ctx: ContextoEmp, p: { intencao: Intencao; chacar
   const aviso = avisoLegal(vars, ctx.cfg.avisoLegal);
   const out: Envio[] = [{ tipo: 'texto', texto: comAvisoLegal(preencher(t.texto, vars).trim(), aviso) }];
   for (const k of t.midias) { const m = ctx.midias[k]; if (m) out.push({ tipo: m.tipo, codigo: k, url: m.url, nomeArquivo: m.nomeArquivo, legenda: m.legenda }); }
+  // Chácara livre pedida: folder dela gerado na hora (server/autoresposta/folderChacara.ts)
+  if (intencao === 'chacara_especifica' && lote && lote.situacao === 'disponivel' && ctx.cond) {
+    out.push({ tipo: 'imagem', codigo: 'FOLDER_CHACARA', url: `/api/public/oferta/${ctx.emp.slug}/chacara/${lote.codigo}.png`, nomeArquivo: `CHACARA-${lote.codigo}.png`, legenda: null });
+  }
   return out;
+}
+
+/** Link pessoal da página de oferta (cria na primeira vez) — /o/:slug?l=token */
+export async function linkDeOferta(leadId: number, emp: { id: number; slug: string }): Promise<string> {
+  const d = await banco();
+  const onde = and(eq(linksOferta.leadId, leadId), eq(linksOferta.empreendimentoId, emp.id));
+  let [l]: any[] = await d.select().from(linksOferta).where(onde).limit(1);
+  if (!l) {
+    const token = randomBytes(9).toString('base64url');
+    await d.insert(linksOferta).values({ token, leadId, empreendimentoId: emp.id, createdAt: new Date() } as any).catch(() => {});
+    [l] = await d.select().from(linksOferta).where(onde).limit(1);
+  }
+  return `${urlPublica()}/o/${emp.slug}${l?.token ? `?l=${l.token}` : ''}`;
+}
+
+/** O lead falou: a régua recomeça a contar da mensagem dele (e zera as automáticas seguidas) */
+async function agendarRegua(leadId: number, empreendimentoId: number, agora: number) {
+  const d = await banco();
+  const valores = { empreendimentoId, desde: new Date(agora), passo: 0, proximoAt: new Date(proximaJanela(agora + REGUA[0].horas * 3_600_000)), seguidas: 0, updatedAt: new Date(agora) };
+  const [ja]: any[] = await d.select({ leadId: autoRespostaRegua.leadId }).from(autoRespostaRegua).where(eq(autoRespostaRegua.leadId, leadId)).limit(1);
+  if (ja) await d.update(autoRespostaRegua).set(valores as any).where(eq(autoRespostaRegua.leadId, leadId));
+  else await d.insert(autoRespostaRegua).values({ leadId, ...valores } as any);
+}
+
+export async function pararRegua(leadId: number) {
+  const d = await banco();
+  await d.delete(autoRespostaRegua).where(eq(autoRespostaRegua.leadId, leadId)).catch(() => {});
 }
 
 async function corretorDoLead(responsavelId: number | null): Promise<Corretor> {
@@ -166,10 +200,25 @@ async function evento(leadId: number, tipo: string, dados: Record<string, unknow
 async function passarParaCorretor(lead: any, ctx: ContextoEmp, motivo: string) {
   const d = await banco();
   await d.update(leadQualifications).set({ humano: true, updatedAt: new Date() } as any).where(eq(leadQualifications.id, lead.id));
+  await pararRegua(lead.id);
   await evento(lead.id, 'handoff', { motivo });
   const { notificarAtendimento } = await import('../notificacoes');
   await notificarAtendimento({ leadId: lead.id, responsavelId: lead.responsavelId ?? null, cliente: lead.nome || 'Cliente', empreendimentoId: ctx.emp.id, empreendimentoSlug: ctx.emp.slug, empreendimentoNome: ctx.emp.nome, motivo })
     .catch((e: any) => console.warn('[Auto-resposta] aviso ao corretor:', e?.message));
+}
+
+/** Envia as mensagens (texto na conversa do lead, mídia como evento); devolve quantas saíram */
+async function enviar(phone: string, leadId: number, envios: Envio[]): Promise<number> {
+  let enviados = 0;
+  const { registrarMensagemPorTelefone } = await import('../leads/qualificacaoService');
+  for (const e of envios) {
+    try {
+      if (e.tipo === 'texto') { await transporte.texto(phone, e.texto); await registrarMensagemPorTelefone(phone, 'out', 'bot', e.texto).catch(() => {}); }
+      else { await transporte.midia(phone, e); await evento(leadId, 'midia_enviada', { codigo: e.codigo }); }
+      enviados++;
+    } catch (err: any) { console.warn(`[Auto-resposta] envio para ${phone}:`, err?.message); }
+  }
+  return enviados;
 }
 
 export interface Resultado { tratado: boolean; intencao?: Intencao | 'indefinida' | 'outra'; enviados?: number; motivo?: string }
@@ -188,13 +237,17 @@ export async function processarMensagem(p: { phone: string; texto: string; nome?
   if (!ctx?.cfg.ativo) return { tratado: false };
   // Descadastrado ou com o corretor: não responde (só registra)
   if (lead.blockedUntil && new Date(lead.blockedUntil).getTime() > agora) return { tratado: true, motivo: 'optout' };
-  if (lead.humano === true || lead.humano === 1) { await evento(lead.id, 'mensagem_humano', { texto: p.texto.slice(0, 300) }); return { tratado: true, motivo: 'humano' }; }
+  if (lead.humano === true || lead.humano === 1) {
+    await pararRegua(lead.id);
+    await evento(lead.id, 'mensagem_humano', { texto: p.texto.slice(0, 300) });
+    return { tratado: true, motivo: 'humano' };
+  }
 
   let { intencao, chacara } = classificar(p.texto, !!p.primeira, new Set(ctx.lotes.map(l => l.codigo))) as { intencao: Intencao | 'indefinida' | 'outra'; chacara?: string };
   if (intencao === 'indefinida') {
     try {
       const r = await Promise.race([classificador.claude(p.texto), new Promise<string>((_, rej) => setTimeout(() => rej(new Error('tempo esgotado')), 5000))]);
-      intencao = (INTENCOES as readonly string[]).includes(r) && !['escassez', 'followup', 'chacara_especifica'].includes(r) ? (r as Intencao) : 'outra';
+      intencao = (INTENCOES as readonly string[]).includes(r) && r !== 'chacara_especifica' && !(SO_DA_REGUA as string[]).includes(r) ? (r as Intencao) : 'outra';
     } catch { intencao = 'outra'; }
     if (intencao === 'outra') {
       await passarParaCorretor(lead, ctx, `mensagem fora do roteiro: "${p.texto.slice(0, 160)}"`);
@@ -203,27 +256,24 @@ export async function processarMensagem(p: { phone: string; texto: string; nome?
   }
   const foraDoHorario = !dentroDoHorario(agora);
   if (foraDoHorario && intencao !== 'primeiro_contato' && intencao !== 'optout') {
+    await agendarRegua(lead.id, ctx.emp.id, agora);
     await evento(lead.id, 'fora_horario', { intencao, texto: p.texto.slice(0, 300) });
     return { tratado: true, intencao, motivo: 'fora_horario' };
   }
 
   const corretor = await corretorDoLead(lead.responsavelId ?? null);
-  const envios = montarResposta(ctx, { intencao: intencao as Intencao, chacara: chacara ?? lead.loteCodigo ?? null, nome: lead.nome || p.nome, corretor });
+  const link = await linkDeOferta(lead.id, ctx.emp).catch(() => null);
+  const envios = montarResposta(ctx, { intencao: intencao as Intencao, chacara: chacara ?? lead.loteCodigo ?? null, nome: lead.nome || p.nome, corretor, extra: link ? { link_oferta: link } : undefined });
   if (foraDoHorario && envios[0]?.tipo === 'texto') envios[0] = { tipo: 'texto', texto: `${envios[0].texto}\n\n🕗 Nosso atendimento é das 8 h às 20 h — o ${corretor.nome.split(' ')[0]} te responde logo cedo.` };
 
   if (intencao === 'optout') {
+    await pararRegua(lead.id);
     const { discardLead } = await import('../lead-persistence');
     await discardLead(phone, `opt-out (${ctx.emp.slug}, respostas automáticas)`, 24 * 365 * 5);
+  } else if (intencao !== 'fechar') {
+    await agendarRegua(lead.id, ctx.emp.id, agora);
   }
-  let enviados = 0;
-  const { registrarMensagemPorTelefone } = await import('../leads/qualificacaoService');
-  for (const e of envios) {
-    try {
-      if (e.tipo === 'texto') { await transporte.texto(phone, e.texto); await registrarMensagemPorTelefone(phone, 'out', 'bot', e.texto).catch(() => {}); }
-      else { await transporte.midia(phone, e); await evento(lead.id, 'midia_enviada', { codigo: e.codigo }); }
-      enviados++;
-    } catch (err: any) { console.warn(`[Auto-resposta] envio para ${phone}:`, err?.message); }
-  }
+  const enviados = await enviar(phone, lead.id, envios);
   await evento(lead.id, 'auto_resposta', { intencao, chacara: chacara ?? null, enviados, foraDoHorario });
   // Com o robô no comando, a régua antiga (1, 3, 7, 14, 30 dias) não sai para este lead
   await import('../leads/followup').then(m => m.cancelarFollowUp(phone)).catch(() => {});
@@ -234,6 +284,54 @@ export async function processarMensagem(p: { phone: string; texto: string; nome?
     await notificarAtendimento({ leadId: lead.id, responsavelId: lead.responsavelId ?? null, cliente: lead.nome || 'Cliente', empreendimentoId: ctx.emp.id, empreendimentoSlug: ctx.emp.slug, empreendimentoNome: ctx.emp.nome, motivo: 'quer agendar uma visita' }).catch(() => {});
   }
   return { tratado: true, intencao, enviados };
+}
+
+/**
+ * Régua: manda o passo vencido aos leads que não responderam (24 h escassez, 72 h follow-up, 7 dias três livres).
+ * Para quando o lead sai do robô (corretor assumiu, descadastro, robô desligado) ou depois de 3 mensagens seguidas.
+ */
+export async function processarRegua(agora = Date.now(), limite = 20): Promise<number> {
+  if (!dentroDoHorario(agora)) return 0;
+  const d = await banco();
+  const { lte } = await import('drizzle-orm');
+  const { linhasAfetadas } = await import('../leads/rotinas');
+  const vencidos: any[] = await d.select().from(autoRespostaRegua).where(lte(autoRespostaRegua.proximoAt, new Date(agora))).limit(limite);
+  const contextos = new Map<string, ContextoEmp | null>();
+  let n = 0;
+  for (const r of vencidos) {
+    const passo = Number(r.passo) || 0;
+    const seguidas = Number(r.seguidas) || 0;
+    const etapa = REGUA[passo];
+    const [lead]: any[] = await d.select().from(leadQualifications).where(eq(leadQualifications.id, r.leadId)).limit(1);
+    const fora = !lead?.empreendimentoSlug || lead.humano === true || lead.humano === 1 || (lead.blockedUntil && new Date(lead.blockedUntil).getTime() > agora);
+    if (!etapa || seguidas >= MAX_SEGUIDAS || fora) { await pararRegua(r.leadId); continue; }
+    if (!contextos.has(lead.empreendimentoSlug)) contextos.set(lead.empreendimentoSlug, await contextoDoEmpreendimento(lead.empreendimentoSlug).catch(() => null));
+    const ctx = contextos.get(lead.empreendimentoSlug);
+    if (!ctx?.cfg.ativo) { await pararRegua(r.leadId); continue; }
+    // Reserva atômica do passo (dois servidores no ar durante o deploy não mandam em dobro)
+    const seguinte = REGUA[passo + 1];
+    const prox = seguinte ? new Date(proximaJanela(new Date(r.desde).getTime() + seguinte.horas * 3_600_000)) : null;
+    const reserva = await d.update(autoRespostaRegua).set({ passo: passo + 1, proximoAt: prox, seguidas: seguidas + 1, updatedAt: new Date(agora) } as any)
+      .where(and(eq(autoRespostaRegua.leadId, r.leadId), eq(autoRespostaRegua.passo, passo)));
+    if (linhasAfetadas(reserva) === 0) continue;
+    const corretor = await corretorDoLead(lead.responsavelId ?? null);
+    const link = await linkDeOferta(lead.id, ctx.emp).catch(() => null);
+    const envios = montarResposta(ctx, { intencao: etapa.intencao, chacara: lead.loteCodigo ?? null, nome: lead.nome, corretor, extra: link ? { link_oferta: link } : undefined });
+    const enviados = await enviar(lead.phone, lead.id, envios);
+    await evento(lead.id, 'regua', { passo: passo + 1, intencao: etapa.intencao, enviados });
+    if (enviados) n++;
+  }
+  return n;
+}
+
+let timerRegua: NodeJS.Timeout | null = null;
+/** Rotina da régua (a cada 10 min); sem robô ligado não há linha na tabela e nada sai */
+export function iniciarJobRegua(intervaloMs = 10 * 60_000) {
+  if (timerRegua) return;
+  import('../leads/rotinas').then(({ registrarRotina, rodarRotina }) => {
+    registrarRotina('regua_robo', intervaloMs);
+    timerRegua = setInterval(() => { void rodarRotina('regua_robo', () => processarRegua()); }, intervaloMs);
+  }).catch(e => console.warn('[Auto-resposta] Régua não iniciada:', e?.message));
 }
 
 /** O robô responde por este empreendimento? (para o fluxo de entrada decidir) */

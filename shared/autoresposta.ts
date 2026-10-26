@@ -6,14 +6,36 @@
 import { brl, type CondicoesPagamento, type Simulacao } from './simulador';
 
 export const INTENCOES = [
-  'primeiro_contato', 'valores', 'a_vista', 'escassez', 'followup', 'mapa', 'visita', 'juros', 'documentacao', 'fechar', 'chacara_especifica', 'optout',
+  'primeiro_contato', 'valores', 'a_vista', 'escassez', 'followup', 'mapa', 'visita', 'juros', 'documentacao', 'fechar', 'chacara_especifica', 'optout', 'ultimas_livres',
 ] as const;
 export type Intencao = typeof INTENCOES[number];
 export const ROTULO_INTENCAO: Record<Intencao, string> = {
   primeiro_contato: '1. Primeiro contato', valores: '2. Condições completas', a_vista: '3. Pagamento à vista', escassez: '4. Escassez (régua 24 h)',
   followup: '5. Follow-up (régua 3 dias)', mapa: '6. Mapa e estrutura', visita: '7. Agendar visita', juros: '8. Objeção: juros',
   documentacao: '9. Objeção: documentação', fechar: '10. Fechamento', chacara_especifica: 'Chácara específica (simulação)', optout: 'Descadastro',
+  ultimas_livres: 'Régua 7 dias: três chácaras livres',
 };
+
+/** Intenções que só a régua usa (o cliente não "pede" por elas) */
+export const SO_DA_REGUA: Intencao[] = ['escassez', 'followup', 'ultimas_livres'];
+
+/**
+ * Régua do robô depois da última mensagem do lead: 24 h escassez (+ story), 72 h follow-up, 7 dias três chácaras livres.
+ * No máximo 3 mensagens automáticas seguidas sem resposta; fora do horário espera a próxima janela.
+ */
+export const REGUA: { intencao: Intencao; horas: number }[] = [
+  { intencao: 'escassez', horas: 24 }, { intencao: 'followup', horas: 72 }, { intencao: 'ultimas_livres', horas: 168 },
+];
+export const MAX_SEGUIDAS = 3;
+
+/** Próximo instante dentro do horário de atendimento (08:00–20:00, UTC−3) */
+export function proximaJanela(t: number): number {
+  if (dentroDoHorario(t)) return t;
+  const local = new Date(t - 3 * 3_600_000);
+  const h = local.getUTCHours();
+  const base = Date.UTC(local.getUTCFullYear(), local.getUTCMonth(), local.getUTCDate() + (h >= 20 ? 1 : 0), 8) + 3 * 3_600_000;
+  return base;
+}
 
 /** Mídias da biblioteca de divulgação (códigos) */
 export const MIDIAS = ['OFERTA', 'CONDICOES', 'STORY_ESCASSEZ', 'ESTRUTURA', 'MAPA', 'FOLDER_PDF'] as const;
@@ -174,5 +196,11 @@ export const TEXTOS_PADRAO: Record<Intencao, { texto: string; midias: CodigoMidi
   optout: {
     midias: [],
     texto: 'Tudo bem, {{nome}}! Seu cadastro foi cancelado e não enviaremos mais mensagens. Obrigado! 😊',
+  },
+  ultimas_livres: {
+    midias: [],
+    texto: '{{nome}}, separei *3 chácaras que ainda estão livres* e são ótimas posições: *{{livres}}*. 🌳\n\n' +
+      'Hoje são {{disponiveis}} disponíveis. A condição de *{{entrada_parcelas}}× {{entrada_parcela}} + {{prazo_maior}}× {{parcela_maior}}* é {{validade_condicao}}.\n\n' +
+      'Veja a sua oferta e simule a que você gostar: {{link_oferta}}\n\nQuer que eu te mande os valores de alguma delas?',
   },
 };

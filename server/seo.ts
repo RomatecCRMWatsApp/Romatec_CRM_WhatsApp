@@ -44,7 +44,7 @@ export interface ImovelSeo {
 export const ROTAS_INTERNAS = [
   '/dashboard', '/contacts', '/properties', '/campaigns', '/settings', '/performance', '/leads', '/materiais', '/setup', '/login',
   '/equipe', '/empreendedor', '/primeiro-acesso', '/meu-cadastro', '/empreendimentos', '/contratos', '/financeiro', '/corretor',
-  '/assinar', '/c', '/carteirinhas',
+  '/assinar', '/c', '/carteirinhas', '/reservas', '/respostas-automaticas',
 ];
 
 const CRECI = 'Corretor José Romário · CRECI/MA 4.705';
@@ -209,6 +209,19 @@ export function metaDaRota(path: string): MetaPagina | 'imovel' {
   const chacara = /^\/bom-jardims\/chacara\/([A-Da-d]\d{2})$/.exec(p);
   if (chacara) return metaDaChacara(chacara[1].toUpperCase());
   if (p === AGENDAR_BOM_JARDIMS) return META_AGENDAR_BOM_JARDIMS;
+  // Página de oferta (link pessoal do robô no WhatsApp): prévia com o folder, fora do Google, sem preço na meta
+  const oferta = /^\/o\/([a-z0-9-]+)$/.exec(p);
+  if (oferta) {
+    const bj = oferta[1] === 'bom-jardims';
+    return {
+      title: bj ? 'Sua oferta — Chácaras Bom Jardims, Açailândia/MA' : 'Sua oferta — Romatec Imóveis',
+      description: bj ? 'Simule a sua chácara de 3.025 m² no Condomínio Bom Jardims: entrada sem juros e saldo direto com a empreendedora, sem banco. Veja as chácaras livres agora.'
+        : 'Simule a sua unidade e veja as livres agora. Atendimento pelo WhatsApp.',
+      path: p,
+      image: bj ? '/bom-jardims/divulgacao/01-oferta.png' : IMAGEM_OG,
+      indexavel: false,
+    };
+  }
   // Agendamento de outros empreendimentos: funciona, mas fica fora do Google
   if (p.startsWith('/agendar/')) return { ...META_PADRAO, title: 'Agende sua visita — Romatec Imóveis', path: p, indexavel: false };
   // Formulário do recrutamento (link pessoal do candidato): fora do Google

@@ -141,6 +141,47 @@ export const autoRespostaRouter = router({
     return { intencao: r.intencao, chacara: r.chacara ?? null, envios, obs };
   }),
 
+  /** Números do robô no período: conversas, respostas, régua, links abertos e passagens para o corretor */
+  metricas: protectedProcedure.input(slugIn.extend({ dias: z.number().int().min(1).max(365).default(30) })).query(async ({ ctx, input }) => {
+    escritorio(ctx);
+    const e = await empPorSlug(input.slug);
+    const d = await banco();
+    const { leadQualifications, linksOferta, autoRespostaRegua } = await import("../../drizzle/schema");
+    const { gte, inArray } = await import("drizzle-orm");
+    const desde = new Date(Date.now() - input.dias * 86_400_000);
+    const tipos = ["auto_resposta", "regua", "handoff", "pediu_visita", "abriu_oferta", "fora_horario"];
+    const evs: any[] = await d.select({ leadId: leadEventos.leadId, tipo: leadEventos.tipo, dados: leadEventos.dados })
+      .from(leadEventos).where(and(inArray(leadEventos.tipo, tipos), gte(leadEventos.createdAt, desde)));
+    const ids = Array.from(new Set(evs.map(x => Number(x.leadId)).filter(Boolean)));
+    const doEmp = new Set<number>(ids.length
+      ? (await d.select({ id: leadQualifications.id }).from(leadQualifications).where(and(inArray(leadQualifications.id, ids), eq(leadQualifications.empreendimentoSlug, e.slug)))).map((l: any) => Number(l.id))
+      : []);
+    const meus = evs.filter(x => doEmp.has(Number(x.leadId)));
+    const dadosDe = (x: any) => (typeof x.dados === "string" ? (() => { try { return JSON.parse(x.dados); } catch { return {}; } })() : (x.dados ?? {}));
+    const conta = (tipo: string, f?: (dd: any) => boolean) => meus.filter(x => x.tipo === tipo && (!f || f(dadosDe(x)))).length;
+    const leadsCom = (tipo: string) => new Set(meus.filter(x => x.tipo === tipo).map(x => Number(x.leadId))).size;
+    const porIntencao: Record<string, number> = {};
+    for (const x of meus.filter(y => y.tipo === "auto_resposta")) { const i = dadosDe(x).intencao ?? "—"; porIntencao[i] = (porIntencao[i] ?? 0) + 1; }
+    const links: any[] = await d.select({ aberturas: linksOferta.aberturas, primeira: linksOferta.primeiraAberturaAt }).from(linksOferta).where(eq(linksOferta.empreendimentoId, e.id));
+    const regua: any[] = await d.select({ leadId: autoRespostaRegua.leadId }).from(autoRespostaRegua).where(eq(autoRespostaRegua.empreendimentoId, e.id));
+    return {
+      dias: input.dias,
+      conversas: leadsCom("auto_resposta"),
+      respostas: conta("auto_resposta"),
+      regua: conta("regua"),
+      emRegua: regua.length,
+      linksEnviados: links.length,
+      linksAbertos: links.filter(l => Number(l.aberturas) > 0).length,
+      aberturas: conta("abriu_oferta"),
+      passaram: leadsCom("handoff"),
+      querFechar: conta("auto_resposta", dd => dd.intencao === "fechar"),
+      visitas: conta("pediu_visita"),
+      optout: conta("auto_resposta", dd => dd.intencao === "optout"),
+      foraHorario: conta("fora_horario"),
+      porIntencao,
+    };
+  }),
+
   /** Últimas respostas do robô (para conferir o que saiu) */
   historico: protectedProcedure.input(slugIn).query(async ({ ctx, input }) => {
     escritorio(ctx);
@@ -149,13 +190,13 @@ export const autoRespostaRouter = router({
     const { leadQualifications } = await import("../../drizzle/schema");
     const { desc, inArray } = await import("drizzle-orm");
     const evs: any[] = await d.select({ id: leadEventos.id, leadId: leadEventos.leadId, tipo: leadEventos.tipo, dados: leadEventos.dados, createdAt: leadEventos.createdAt })
-      .from(leadEventos).where(inArray(leadEventos.tipo, ["auto_resposta", "handoff", "fora_horario"])).orderBy(desc(leadEventos.id)).limit(200);
+      .from(leadEventos).where(inArray(leadEventos.tipo, ["auto_resposta", "handoff", "fora_horario", "regua", "abriu_oferta"])).orderBy(desc(leadEventos.id)).limit(200);
     const ids = Array.from(new Set(evs.map(e => e.leadId).filter(Boolean)));
     const leads: any[] = ids.length ? await d.select({ id: leadQualifications.id, nome: leadQualifications.nome, slug: leadQualifications.empreendimentoSlug }).from(leadQualifications).where(inArray(leadQualifications.id, ids)) : [];
     const porId = new Map(leads.map(l => [Number(l.id), l]));
     return evs.filter(e => porId.get(Number(e.leadId))?.slug === input.slug).slice(0, 50).map(e => {
       const dados = typeof e.dados === "string" ? (() => { try { return JSON.parse(e.dados); } catch { return {}; } })() : (e.dados ?? {});
-      return { id: e.id, leadId: e.leadId, nome: porId.get(Number(e.leadId))?.nome ?? null, tipo: e.tipo, intencao: dados.intencao ?? null, motivo: dados.motivo ?? null, createdAt: e.createdAt };
+      return { id: e.id, leadId: e.leadId, nome: porId.get(Number(e.leadId))?.nome ?? null, tipo: e.tipo, intencao: dados.intencao ?? null, motivo: dados.motivo ?? null, passo: dados.passo ?? null, createdAt: e.createdAt };
     });
   }),
 });

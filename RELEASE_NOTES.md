@@ -3,6 +3,19 @@
 Cada versão nova vai no TOPO. Depois rode `npm run release` (valida e atualiza o package.json);
 ao subir, o servidor grava a versão no banco e todos recebem o aviso "Novidades da versão".
 
+## 1.47.0 — 2026-10-27
+tipo: minor
+obrigatoria: nao
+titulo: Página de oferta, folder por chácara e régua do robô
+
+### Novo
+- Página de oferta (romateccrm.com/o/bom-jardims): o cliente simula a chácara que quiser entre as livres, vê quantas restam (atualiza sozinho) e o corretor dele, e toca em "Quero a chácara…" para chamar no WhatsApp
+- O robô manda um link pessoal da oferta para cada cliente, e a tela "Respostas automáticas" mostra quem abriu e quantas vezes
+- Quando o cliente pergunta por uma chácara livre, o robô manda também o folder dela, gerado na hora com os valores do simulador e o aviso legal
+- Régua do robô para quem parou de responder: 24 h (escassez + story), 3 dias (follow-up) e 7 dias (três chácaras livres). No máximo 3 mensagens seguidas, só das 8 h às 20 h. Para sozinha quando o cliente responde, quando o corretor assume ou quando ele pede para sair
+- "Respostas automáticas" ganhou os números do robô (conversas, respostas, régua, links abertos, pedidos de fechamento e de visita, descadastros) em 7, 30 ou 90 dias
+- Tudo isso só funciona com o robô ligado (continua desligado)
+
 ## 1.46.0 — 2026-10-27
 tipo: minor
 obrigatoria: nao

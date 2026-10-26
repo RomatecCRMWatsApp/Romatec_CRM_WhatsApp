@@ -303,6 +303,42 @@ async function startServer() {
   const { createRateLimiter } = await import('../lead-intake');
   const allowPublicLead = createRateLimiter(5, 10 * 60 * 1000); // 5 envios / 10 min por IP
 
+  // ─── Página de oferta (/o/:slug?l=<token>) e folder da chácara gerado na hora ───
+  app.get('/api/public/oferta/:slug/chacara/:arquivo', async (req, res) => {
+    try {
+      const codigo = String(req.params.arquivo).replace(/\.png$/i, '');
+      const { folderDaChacara } = await import('../autoresposta/folderChacara');
+      const png = await folderDaChacara(String(req.params.slug).slice(0, 80), codigo);
+      res.setHeader('Content-Type', 'image/png');
+      res.setHeader('Cache-Control', 'public, max-age=300');
+      res.send(png);
+    } catch (e: any) {
+      if (e?.name === 'FolderErro') return res.status(e.status).json({ ok: false, error: e.message });
+      console.error('[Oferta] folder:', e);
+      res.status(500).json({ ok: false, error: 'Falha ao gerar o folder' });
+    }
+  });
+  app.get('/api/public/oferta/:slug/disponiveis', async (req, res) => {
+    try {
+      const { disponiveisAgora } = await import('../autoresposta/oferta');
+      res.json({ ok: true, ...(await disponiveisAgora(String(req.params.slug).slice(0, 80))) });
+    } catch (e: any) {
+      if (e?.name === 'OfertaErro') return res.status(e.status).json({ ok: false, error: e.message });
+      res.status(500).json({ ok: false, error: 'Falha ao carregar' });
+    }
+  });
+  app.get('/api/public/oferta/:slug', async (req, res) => {
+    try {
+      const { dadosDaOferta } = await import('../autoresposta/oferta');
+      const token = typeof req.query.l === 'string' ? req.query.l.slice(0, 24) : null;
+      res.json({ ok: true, ...(await dadosDaOferta(String(req.params.slug).slice(0, 80), token)) });
+    } catch (e: any) {
+      if (e?.name === 'OfertaErro') return res.status(e.status).json({ ok: false, error: e.message });
+      console.error('[Oferta] página:', e);
+      res.status(500).json({ ok: false, error: 'Falha ao carregar' });
+    }
+  });
+
   // ─── Link de agendamento por empreendimento (/agendar/:slug?c=<ref>) ───
   const allowAgendamento = createRateLimiter(5, 10 * 60 * 1000);
   app.get('/api/public/agendamento/:slug', async (req, res) => {
@@ -1249,6 +1285,8 @@ async function startServer() {
   import('../saas/cobranca').then(m => m.iniciarJobsCobranca()).catch(e => console.warn('[MP] Jobs não iniciados:', e));
   // Follow-up persistente (1/3/7/14/30 dias) e prazo de atendimento — não dependem das campanhas
   import('../leads/followup').then(m => m.iniciarJobFollowUp()).catch(e => console.warn('[FollowUp] Job não iniciado:', e));
+  // Régua do robô de respostas automáticas (24 h, 72 h, 7 dias) — só age em leads de empreendimento com o robô ligado
+  import('../autoresposta/motor').then(m => m.iniciarJobRegua()).catch(e => console.warn('[Auto-resposta] Régua não iniciada:', e));
   import('../leads/sla').then(m => m.iniciarJobSla()).catch(e => console.warn('[SLA] Job não iniciado:', e));
   // Agenda de visitas: lembrete ao cliente, aviso ao corretor e pedido de resultado
   import('../leads/visitas').then(m => m.iniciarJobVisitas()).catch(e => console.warn('[Visitas] Job não iniciado:', e));
