@@ -3,6 +3,19 @@
 Cada versão nova vai no TOPO. Depois rode `npm run release` (valida e atualiza o package.json);
 ao subir, o servidor grava a versão no banco e todos recebem o aviso "Novidades da versão".
 
+## 1.38.0 — 2026-10-26
+tipo: minor
+obrigatoria: nao
+titulo: Painel do corretor de cara nova
+
+### Novo
+- Painel do corretor redesenhado, no computador e no celular: cabeçalho com a foto do portal e o logo do empreendimento em destaque, "Novo contrato" em dourado e atalhos com ícones coloridos (Leads, Agenda, Simulador, Contratos, Materiais e Novo cliente)
+- Quem trabalha em mais de um empreendimento troca de um para outro pelas abas com o logo de cada um
+- Mapa de vendas num quadro próprio, com a legenda das situações. No celular, ao tocar numa chácara a tela desce até ela, com o botão "Fazer contrato"
+
+### Correções
+- A situação da chácara (disponível, reservada, vendida, bloqueada) só pode ser mudada pelo administrador, pela secretária e pela empreendedora. O corretor vê a chácara e faz o contrato, que reserva por 72 h
+
 ## 1.37.4 — 2026-10-26
 tipo: patch
 obrigatoria: nao

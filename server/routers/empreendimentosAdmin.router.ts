@@ -124,6 +124,11 @@ export const empreendimentosAdminRouter = router({
       observacao: z.string().trim().max(500).nullable().optional(),
     }))
     .mutation(async ({ input, ctx }) => {
+      // Situação da chácara (bloquear, reservar, vender…) é do escritório; o corretor reserva fazendo o contrato
+      if ((ctx as any).permissoes?.perfil === "corretor") {
+        const { TRPCError } = await import("@trpc/server");
+        throw new TRPCError({ code: "FORBIDDEN", message: "Só o escritório muda a situação da chácara. Para reservar, faça o contrato." });
+      }
       const db = await dbOrThrow();
       const lote = await loteAutorizado(db, input.loteId, ctx);
       const livre = input.situacao === "disponivel" || input.situacao === "bloqueado";

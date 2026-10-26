@@ -2,6 +2,8 @@ import { useEffect, useState } from "react";
 import { useLocation } from "wouter";
 import { toast } from "sonner";
 import { trpc } from "@/lib/trpc";
+import { useAuth } from "@/_core/hooks/useAuth";
+import { perfilDe } from "@shared/equipe";
 import { Button } from "@/components/ui/button";
 import { COM_CLIENTE, COR_SITUACAO, ROTULO_SITUACAO, SITUACOES_LOTE, type SituacaoLote } from "@shared/lotes";
 import { SLUG_BOM_JARDIMS, codigoChacaraValido, linkChacara, linkKml } from "@shared/chacaraLink";
@@ -115,9 +117,12 @@ export default function PainelLote({ slug, lote, onMudou, onFechar }: { slug: st
     setNumParcelas(lote.numParcelas?.toString() ?? ""); setObservacao(lote.observacao ?? ""); setBusca("");
   }, [lote.id, lote.situacao, lote.dataSituacao]);
 
-  const { data: corretores } = trpc.crm.responsaveis.useQuery();
-  const { data: achados } = trpc.empreendimentosAdmin.buscarLeads.useQuery({ q: busca }, { enabled: busca.trim().length >= 2 });
-  const { data: historico } = trpc.empreendimentosAdmin.historico.useQuery({ loteId: lote.id });
+  // Corretor só consulta: situação, cliente e valores são do escritório (o servidor também recusa)
+  const { user } = useAuth();
+  const soLeitura = perfilDe(user as any) === "corretor";
+  const { data: corretores } = trpc.crm.responsaveis.useQuery(undefined, { enabled: !soLeitura });
+  const { data: achados } = trpc.empreendimentosAdmin.buscarLeads.useQuery({ q: busca }, { enabled: !soLeitura && busca.trim().length >= 2 });
+  const { data: historico } = trpc.empreendimentosAdmin.historico.useQuery({ loteId: lote.id }, { enabled: !soLeitura });
   const utils = trpc.useUtils();
   const salvar = trpc.empreendimentosAdmin.atualizarLote.useMutation({
     onSuccess: () => { toast.success(`Lote ${lote.codigo}: ${ROTULO_SITUACAO[situacao]}`); utils.empreendimentosAdmin.historico.invalidate({ loteId: lote.id }); onMudou(); },
@@ -143,6 +148,11 @@ export default function PainelLote({ slug, lote, onMudou, onFechar }: { slug: st
 
       {slug === SLUG_BOM_JARDIMS && codigoChacaraValido(lote.codigo) && <LinkChacara slug={slug} lote={lote} />}
 
+      {soLeitura ? (
+        <p className="rounded-lg border border-border bg-secondary/40 p-2.5 text-xs text-muted-foreground">
+          {lote.situacao === "disponivel" ? "Para reservar esta chácara, faça o contrato — ela fica reservada por 72 h." : "Situação definida pelo escritório. Dúvidas sobre esta chácara, fale com o escritório."}
+        </p>
+      ) : <>
       <label className="block space-y-1">
         <span className="text-xs text-muted-foreground">Situação</span>
         <select value={situacao} onChange={e => setSituacao(e.target.value as SituacaoLote)} className={campo}>
@@ -207,6 +217,7 @@ export default function PainelLote({ slug, lote, onMudou, onFechar }: { slug: st
         loteId: lote.id, situacao, leadId, clienteNome: clienteNome || null, corretorId,
         valorVenda: numero(valorVenda), valorEntrada: numero(valorEntrada), numParcelas: numParcelas ? Number(numParcelas) : null, observacao: observacao || null,
       })}>Salvar</Button>
+      </>}
 
       {(historico ?? []).length > 0 && (
         <div className="border-t border-border pt-2 space-y-1">

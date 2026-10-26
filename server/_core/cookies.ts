@@ -42,7 +42,8 @@ export function getSessionCookieOptions(
   return {
     httpOnly: true,
     path: "/",
-    sameSite: "none",
+    // SameSite=None exige Secure; em http (sandbox local) o navegador recusaria o cookie — lá vai Lax
+    sameSite: isSecureRequest(req) ? "none" : "lax",
     secure: isSecureRequest(req),
   };
 }
