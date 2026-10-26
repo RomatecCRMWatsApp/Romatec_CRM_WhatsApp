@@ -3,6 +3,16 @@
 Cada versão nova vai no TOPO. Depois rode `npm run release` (valida e atualiza o package.json);
 ao subir, o servidor grava a versão no banco e todos recebem o aviso "Novidades da versão".
 
+## 1.42.0 — 2026-10-27
+tipo: minor
+obrigatoria: nao
+titulo: Modelos da carteirinha e do crachá
+
+### Novo
+- Aba Carteirinhas: quadro "Modelos para apresentar ao cliente" com a carteirinha do condomínio (frente e verso, igual à impressa) e o crachá de visitante, convidado ou prestador da portaria
+- Prévia ao vivo: conforme se digita o nome, o vínculo, a chácara (ou o evento e o nº do crachá) e se escolhe a foto, o cartão se monta na tela. A foto fica só no aparelho e não é gravada
+- "Baixar modelo em PDF": a carteirinha preenchida, no mesmo formato que vai para a gráfica
+
 ## 1.41.0 — 2026-10-27
 tipo: minor
 obrigatoria: nao

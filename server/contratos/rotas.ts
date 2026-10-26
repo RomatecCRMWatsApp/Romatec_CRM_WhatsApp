@@ -118,6 +118,31 @@ export function registrarRotasContratos(app: Express) {
       res.status(500).json({ error: 'Falha ao gerar as carteirinhas' });
     }
   });
+  // Modelo da carteirinha (para apresentar ao cliente): dados digitados na tela, sem foto e sem gravar nada
+  app.get('/api/carteirinhas/modelo.pdf', async (req, res) => {
+    try {
+      const { sdk } = await import('../_core/sdk');
+      const user: any = await sdk.authenticateRequest(req).catch(() => null);
+      if (!user || user.ativo === false || user.ativo === 0) return res.status(401).json({ error: 'Faça login' });
+      const { perfilDe } = await import('../../shared/equipe');
+      if (!['admin', 'secretario', 'corretor'].includes(String(perfilDe(user)))) return res.status(404).json({ error: 'Não encontrado' });
+      const campo = (k: string, padrao: string, max: number) => String(req.query[k] ?? '').trim().slice(0, max) || padrao;
+      const validade = new Date(Date.now() + 365 * 86_400_000).toISOString().slice(0, 10);
+      const { renderCarteirinhas } = await import('./carteirinhas');
+      const pdf = await renderCarteirinhas([{
+        nome: campo('nome', 'Nome do Titular', 80), vinculo: campo('vinculo', 'Titular', 40), unidade: campo('unidade', 'Chácara A01 · Quadra A', 60),
+        numero: 'MODELO', validade, qrToken: 'modelo', foto: null, contratoNumero: 'MODELO', empreendimento: 'Condomínio de Chácaras Bom Jardims',
+      }], req.query.formato === 'cr80' ? 'cr80' : 'a4');
+      res.setHeader('Content-Type', 'application/pdf');
+      res.setHeader('Content-Disposition', 'inline; filename="MODELO-CARTEIRINHA.pdf"');
+      res.setHeader('Cache-Control', 'private, no-store');
+      res.send(pdf);
+    } catch (e: any) {
+      console.error('[Carteirinhas] modelo:', e);
+      res.status(500).json({ error: 'Falha ao gerar o modelo' });
+    }
+  });
+
   // Tela de Carteirinhas: PDF das pessoas marcadas, de vários contratos (?itens=contrato:tipo:ref,…&formato=cr80|a4)
   app.get('/api/carteirinhas.pdf', async (req, res) => {
     try {

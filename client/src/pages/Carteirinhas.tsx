@@ -4,6 +4,7 @@ import { toast } from "sonner";
 import { Camera, CheckCircle2, Eye, FileDown, IdCard, Loader2, TriangleAlert } from "lucide-react";
 import { trpc } from "@/lib/trpc";
 import PageHeader from "@/components/PageHeader";
+import ModelosCarteirinha from "@/components/contratos/ModelosCarteirinha";
 import { Button } from "@/components/ui/button";
 
 type Linha = {
@@ -78,6 +79,7 @@ export default function Carteirinhas() {
       <PageHeader icone={IdCard} titulo="Carteirinhas" subtitulo="Titulares, cônjuges e dependentes de todos os contratos — emitidas sozinhas; aqui você confere, completa e imprime" />
       <div className="mx-auto max-w-[1400px] space-y-3 px-4 pb-8 md:px-6">
         <input ref={input} type="file" accept="image/jpeg,image/png,image/webp" capture="user" hidden onChange={e => enviarFoto(e.target.files?.[0])} />
+        <ModelosCarteirinha />
         <div className="flex flex-wrap items-end gap-2 rounded-xl border border-border bg-card p-3">
           <input value={busca} onChange={e => setBusca(e.target.value)} placeholder="Buscar nome, chácara, contrato ou nº da carteirinha…" aria-label="Buscar"
             className="h-9 min-w-[220px] flex-1 rounded-lg border border-border bg-background px-3 text-sm" />
