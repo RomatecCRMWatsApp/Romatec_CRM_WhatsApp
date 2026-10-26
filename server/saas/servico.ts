@@ -410,7 +410,8 @@ async function transferirParaEscritorio(usuarioId: number) {
   const leads: any[] = await d.select({ id: leadQualifications.id }).from(leadQualifications).where(eq(leadQualifications.responsavelId, usuarioId));
   if (leads.length) await d.update(leadQualifications).set({ responsavelId: null, updatedAt: new Date() } as any).where(eq(leadQualifications.responsavelId, usuarioId));
   const reservas: any[] = (await d.select({ id: lotes.id, codigo: lotes.codigo, situacao: lotes.situacao }).from(lotes).where(eq(lotes.corretorId, usuarioId)))
-    .filter((l: any) => ['reservado', 'sinal'].includes(String(l.situacao)));
+    // Interesse, reserva e entrada (antes procurava "sinal", que não existe — as com entrada não chegavam ao aviso)
+    .filter((l: any) => ['interesse', 'reservado', 'entrada'].includes(String(l.situacao)));
   return { leads: leads.length, reservas: reservas.map(r => r.codigo as string) };
 }
 
@@ -426,7 +427,7 @@ async function bloquear(a: any, u: any, motivoTexto: string, evento: string) {
   await auditar(a.usuarioId, evento, { assinaturaId: a.id, leadsDevolvidos: t.leads, reservas: t.reservas });
   await avisar(u?.telefone, MSG.bloqueio(u?.name, motivoTexto));
   if (t.leads || t.reservas.length) {
-    await avisarEscritorio(`🔒 Acesso pausado: ${u?.name ?? 'usuário'} (${motivoTexto}). ${t.leads} lead(s) voltaram para a distribuição${t.reservas.length ? ` · reservas ativas para o escritório acompanhar: ${t.reservas.join(', ')}` : ''}.`);
+    await avisarEscritorio(`🔒 Acesso pausado: ${u?.name ?? 'usuário'} (${motivoTexto}). ${t.leads} lead(s) voltaram para a distribuição${t.reservas.length ? ` · reservas ativas na Fila de reservas do escritório: ${t.reservas.join(', ')} — ${urlBase()}/reservas` : ''}.`);
   }
 }
 

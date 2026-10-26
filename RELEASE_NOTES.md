@@ -3,6 +3,18 @@
 Cada versão nova vai no TOPO. Depois rode `npm run release` (valida e atualiza o package.json);
 ao subir, o servidor grava a versão no banco e todos recebem o aviso "Novidades da versão".
 
+## 1.43.0 — 2026-10-27
+tipo: minor
+obrigatoria: nao
+titulo: Fila de reservas do escritório
+
+### Novo
+- Vendas → "Fila de reservas" (administrador e secretária): as reservas que precisam do escritório, ou seja, vencidas (as 72 horas passaram), de corretor sem acesso (pausado, cancelado ou desativado) ou sem corretor. A aba "Todas as reservas" mostra o prazo de cada uma
+- Ações em cada chácara: passar para outro corretor habilitado no empreendimento (o lead do cliente vai junto), assumir pelo escritório, prorrogar por 72 horas e liberar para venda. Se houver contrato ligado, cancele pela tela do contrato. Tudo fica no histórico da chácara
+
+### Correções
+- Ao pausar o acesso de um corretor, as reservas com entrada também entram no aviso ao escritório (antes só as reservadas). O aviso traz o link da fila
+
 ## 1.42.0 — 2026-10-27
 tipo: minor
 obrigatoria: nao

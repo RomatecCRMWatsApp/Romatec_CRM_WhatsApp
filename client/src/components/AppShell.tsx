@@ -7,7 +7,7 @@ import AvisoRotinas from "./AvisoRotinas";
 import { MobileTabBar, RomatecAppIcon, RomatecLockup, TAB_ICONS, type TabItem } from "@/brand";
 import {
   BarChart3, Building2, Flame, Images, KanbanSquare, LayoutDashboard, LineChart, LogOut, Megaphone, Menu, Send,
-  Settings, UserCog, Users, X, Eye, ClipboardList, CalendarDays, Map as MapIcon, Smartphone, Wallet, IdCard, Bell, FileSignature, Mic, UserPlus, BookCopy, BadgeDollarSign,
+  Settings, UserCog, Users, X, Eye, ClipboardList, CalendarDays, Map as MapIcon, Smartphone, Wallet, IdCard, Bell, FileSignature, Mic, UserPlus, BookCopy, BadgeDollarSign, Hourglass,
 } from "lucide-react";
 import { abrirNovidades, SinoNovidades, useNovidadesNaoLidas } from "./sistema/Novidades";
 import { useNotificacoes } from "./sistema/Notificacoes";
@@ -45,6 +45,8 @@ const MENU: Grupo[] = [
     itens: [
       { rotulo: "Empreendimentos", rota: "/empreendimentos", icone: MapIcon, modulo: "empreendimentos" },
       { rotulo: "Contratos", rota: "/contratos", icone: FileSignature, modulo: "contratos" },
+      // Administrador e secretária (shared/equipe.ts → podeAbrir)
+      { rotulo: "Fila de reservas", rota: "/reservas", icone: Hourglass },
       { rotulo: "Carteirinhas", rota: "/carteirinhas", icone: IdCard, modulo: "contratos" },
       { rotulo: "Talonários", rota: "/talonarios", icone: BookCopy },
       { rotulo: "Financeiro", rota: "/financeiro", icone: Wallet, modulo: "financeiro" },
