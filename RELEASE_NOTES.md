@@ -8,7 +8,7 @@ tipo: patch
 obrigatoria: nao
 titulo: Folder da chácara sem símbolo quebrado
 
-### Corrigido
+### Correções
 - No folder da chácara, a estrela do prazo mais escolhido aparecia como um quadradinho. Agora está escrito "o mais escolhido"
 
 ## 1.47.0 — 2026-10-27
