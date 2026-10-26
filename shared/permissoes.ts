@@ -58,8 +58,13 @@ export function permissoesEfetivas(
   const out: Permissoes = Object.fromEntries(MODULOS.map(m => [m.chave, m.padrao[perfil]]));
   for (const b of base) if (b.modulo in out) out[b.modulo] = !!b.permitido;
   for (const a of ajustes) if (a.modulo in out) out[a.modulo] = !!a.permitido;
+  // Só do escritório: o corretor nunca recebe, nem por ajuste individual
+  if (perfil === 'corretor') for (const k of SO_ESCRITORIO) out[k] = false;
   return out;
 }
+
+/** Módulos que só administrador e secretária usam (Disparos WhatsApp — decisão de 26/10/2026) */
+export const SO_ESCRITORIO = ['campanhas'];
 
 /**
  * Corretor NOVO: ajuste explícito de todos os módulos — só o que o admin marcou fica liberado

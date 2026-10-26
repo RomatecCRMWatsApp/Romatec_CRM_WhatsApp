@@ -3,6 +3,7 @@ import {
   MODULOS, ajustesNovoCorretor, comissaoNaSimulacao, comissaoPropria, leadVisivel, linhaFinanceira, marcarAcesso, minhaComissaoNaVenda, moduloDoCaminho, moduloLiberado, permissoesEfetivas, temAcesso,
 } from '../shared/permissoes';
 import type { CondicoesPagamento } from '../shared/simulador';
+import { podeAbrir } from '../shared/equipe';
 import { exigirDistribuicao, exigirLead, leadsVisiveis, pctComissaoCorretor } from './permissoes';
 
 const acessos = [{ tipo: 'empreendimento' as const, refId: 1 }, { tipo: 'imovel' as const, refId: 7 }];
@@ -11,9 +12,17 @@ describe('permissões — pacote base e ajuste por corretor', () => {
   it('sem linhas no banco = padrão do código; ajuste do corretor prevalece sobre o pacote base', () => {
     const padrao = permissoesEfetivas([], []);
     expect(Object.keys(padrao).sort()).toEqual(MODULOS.map(m => m.chave).sort());
-    const p = permissoesEfetivas([{ modulo: 'campanhas', permitido: 0 }], [{ modulo: 'campanhas', permitido: 1 }, { modulo: 'financeiro', permitido: false }]);
-    expect(p.campanhas).toBe(true);
+    const p = permissoesEfetivas([{ modulo: 'contatos', permitido: 0 }], [{ modulo: 'contatos', permitido: 1 }, { modulo: 'financeiro', permitido: false }]);
+    expect(p.contatos).toBe(true);
     expect(p.financeiro).toBe(false);
+  });
+
+  it('Disparos WhatsApp (campanhas) é só do escritório: o corretor nunca recebe, a secretária sim', () => {
+    expect(permissoesEfetivas([{ modulo: 'campanhas', permitido: 1 }], [{ modulo: 'campanhas', permitido: 1 }], 'corretor').campanhas).toBe(false);
+    expect(permissoesEfetivas([], [], 'secretario').campanhas).toBe(true);
+    expect(podeAbrir('corretor', '/campaigns')).toBe(false);
+    expect(podeAbrir('empreendedor', '/campaigns')).toBe(false);
+    expect(podeAbrir('secretario', '/campaigns')).toBe(true);
   });
 
   it('corretor NOVO começa sem nada: só o que o admin marcou fica liberado, mesmo com o pacote base todo ligado', () => {

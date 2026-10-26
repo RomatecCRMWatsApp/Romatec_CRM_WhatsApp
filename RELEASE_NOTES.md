@@ -3,6 +3,19 @@
 Cada versão nova vai no TOPO. Depois rode `npm run release` (valida e atualiza o package.json);
 ao subir, o servidor grava a versão no banco e todos recebem o aviso "Novidades da versão".
 
+## 1.39.0 — 2026-10-26
+tipo: minor
+obrigatoria: nao
+titulo: Tabela de financiamento por chácara e mapa em tela cheia
+
+### Novo
+- Financeiro › Tabelas de financiamento: seletor de chácara sempre à mão, com as setas ‹ › para passar uma a uma e ver o preço, a entrada, as parcelas e o evolutivo de cada chácara
+- Quadro "O que é a Tabela Price?", com uma explicação simples para o corretor e o cliente: parcelas iguais, juros sobre o saldo e amortização crescendo mês a mês
+- Painel do corretor: mapa de vendas maior e botão "Tela cheia" para apresentar ao cliente
+
+### Correções
+- Disparos WhatsApp só para o administrador e a secretária. Some do menu do corretor e da empreendedora e o sistema também recusa o acesso
+
 ## 1.38.0 — 2026-10-26
 tipo: minor
 obrigatoria: nao

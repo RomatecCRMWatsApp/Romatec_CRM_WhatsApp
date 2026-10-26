@@ -10,7 +10,7 @@ import { comRef, useCartaoVendas } from "@/lib/cartaoVendas";
 import { linkAgendamento } from "@/components/LinkAgendamento";
 import { COR_SITUACAO, ROTULO_SITUACAO, SITUACOES_LOTE } from "@shared/lotes";
 import {
-  CalendarDays, Calculator, FileSignature, FileText, Flame, FolderOpen, Globe2, Link2, Lock, MapPin, MousePointerClick, Share2, UserPlus,
+  CalendarDays, Calculator, FileSignature, FileText, Flame, FolderOpen, Globe2, Link2, Lock, MapPin, Maximize2, Minimize2, MousePointerClick, Share2, UserPlus,
 } from "lucide-react";
 
 const copiar = async (texto: string, rotulo: string) => {
@@ -61,6 +61,20 @@ export default function PainelCorretor() {
   const lotes = (data?.lotes ?? []) as (LotePainel & { poligono: [number, number][] | null })[];
   const selecionado = useMemo(() => lotes.find(l => l.id === sel) ?? null, [lotes, sel]);
   const painelRef = useRef<HTMLDivElement>(null);
+  // Apresentação ao cliente: o quadro do mapa em tela cheia (computador, tablet e Android; no iPhone o navegador não deixa)
+  const mapaRef = useRef<HTMLElement>(null);
+  const [cheia, setCheia] = useState(false);
+  useEffect(() => {
+    const f = () => setCheia(document.fullscreenElement === mapaRef.current);
+    document.addEventListener("fullscreenchange", f);
+    return () => document.removeEventListener("fullscreenchange", f);
+  }, []);
+  const telaCheia = () => {
+    if (document.fullscreenElement) { document.exitFullscreen?.().catch(() => {}); return; }
+    const el = mapaRef.current;
+    if (el?.requestFullscreen) el.requestFullscreen().catch(() => toast.error("Este navegador não permite tela cheia — use o botão de ampliar do mapa"));
+    else toast.error("Este navegador não permite tela cheia — use o botão de ampliar do mapa");
+  };
   // Celular: ao tocar numa chácara, desce até o painel dela
   useEffect(() => {
     if (sel && window.innerWidth < 1024) painelRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
@@ -171,8 +185,8 @@ export default function PainelCorretor() {
       ) : isLoading || !data ? (
         <div className="h-[420px] animate-pulse rounded-2xl border border-border bg-card" />
       ) : (
-        <div className="grid items-start gap-4 lg:grid-cols-[1fr_380px]">
-          <section className="overflow-hidden rounded-2xl border border-border bg-card">
+        <div className="grid items-start gap-4 lg:grid-cols-[1fr_340px] xl:grid-cols-[1fr_360px]">
+          <section ref={mapaRef} className="overflow-hidden rounded-2xl border border-border bg-card [&:fullscreen]:overflow-auto [&:fullscreen]:rounded-none">
             <div className="flex flex-wrap items-center gap-x-4 gap-y-1 border-b border-border px-4 py-2.5">
               <h2 className="text-sm font-semibold">Mapa de vendas</h2>
               <div className="flex flex-wrap gap-x-3 gap-y-1 text-[11px] text-muted-foreground">
@@ -180,8 +194,12 @@ export default function PainelCorretor() {
                   <span key={s} className="inline-flex items-center gap-1"><span className="h-2.5 w-2.5 rounded-sm" style={{ background: COR_SITUACAO[s] }} />{ROTULO_SITUACAO[s]} <b className="text-foreground">{data.resumo[s]}</b></span>
                 ))}
               </div>
+              <button type="button" onClick={telaCheia}
+                className="ml-auto flex items-center gap-1.5 rounded-full border border-[var(--rt-gold)]/50 px-3 py-1 text-xs font-semibold text-[var(--rt-gold-light)] transition hover:bg-[var(--rt-gold)]/15">
+                {cheia ? <Minimize2 className="h-3.5 w-3.5" /> : <Maximize2 className="h-3.5 w-3.5" />} {cheia ? "Sair da tela cheia" : "Tela cheia"}
+              </button>
             </div>
-            <div className="p-2">
+            <div className="p-1 sm:p-2">
               <MapaTematico slug={slug} lotes={lotes} ruas={data.ruas} perimetro={data.perimetro?.poligono} selecionado={sel} onSelecionar={setSel} semLegenda />
             </div>
           </section>

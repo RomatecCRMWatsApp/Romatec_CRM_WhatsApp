@@ -4,7 +4,7 @@ import { trpc } from "@/lib/trpc";
 import { Button } from "@/components/ui/button";
 import { brl } from "@shared/simulador";
 import { ROTULO_SITUACAO, type SituacaoLote } from "@shared/lotes";
-import { Download, FileSpreadsheet, Loader2, Table2 } from "lucide-react";
+import { ChevronLeft, ChevronRight, Download, FileSpreadsheet, Info, Loader2, Table2 } from "lucide-react";
 
 const num = (v: number) => v.toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 const dataBr = (iso: string) => iso.slice(0, 10).split("-").reverse().join("/");
@@ -74,6 +74,15 @@ export default function TabelasFinanciamento() {
     } catch (e: any) { toast.error(e?.message ?? "Falha ao gerar o PDF"); } finally { setBaixando(null); }
   };
 
+  // Setas: próxima/anterior chácara (disponíveis primeiro na ordem da lista do servidor)
+  const passo = (d: number) => {
+    const ls = t?.lotes ?? [];
+    if (!ls.length) return;
+    const i = origem === "lote" ? ls.findIndex(l => l.codigo === lote) : -1;
+    const n = i < 0 ? (d > 0 ? 0 : ls.length - 1) : (i + d + ls.length) % ls.length;
+    setLote(ls[n].codigo); setOrigem("lote");
+  };
+
   if (carregandoEmps) return null;
   if (!emps?.length) return null;
   const c = t?.condicoes, s = t?.simulacao;
@@ -99,17 +108,9 @@ export default function TabelasFinanciamento() {
         </label>
         <label className="space-y-1"><span className="block text-xs text-muted-foreground">Calcular por</span>
           <select className={campo} value={origem} onChange={e => setOrigem(e.target.value as any)}>
-            <option value="area">Área (m²)</option><option value="lote">Chácara</option><option value="valor">Valor (R$)</option>
+            <option value="area">Área (m²)</option><option value="lote">Chácara (escolha ao lado)</option><option value="valor">Valor (R$)</option>
           </select>
         </label>
-        {origem === "lote" && (
-          <label className="space-y-1"><span className="block text-xs text-muted-foreground">Chácara</span>
-            <select className={`${campo} min-w-[220px]`} value={lote} onChange={e => setLote(e.target.value)}>
-              <option value="">Escolha…</option>
-              {t?.lotes.map(l => <option key={l.codigo} value={l.codigo}>{l.codigo} · {num(l.areaM2)} m² · {brl(l.preco)}{l.situacao !== "disponivel" ? ` · ${ROTULO_SITUACAO[l.situacao as SituacaoLote] ?? l.situacao}` : ""}</option>)}
-            </select>
-          </label>
-        )}
         {origem === "area" && (
           <label className="space-y-1"><span className="block text-xs text-muted-foreground">Área (m²){c ? ` — padrão ${num(c.areaBaseM2)}` : ""}</span>
             <input className={`${campo} w-36`} inputMode="decimal" placeholder={c ? num(c.areaBaseM2) : ""} value={area} onChange={e => setArea(e.target.value)} />
@@ -133,6 +134,20 @@ export default function TabelasFinanciamento() {
         <label className="space-y-1"><span className="block text-xs text-muted-foreground">1º pagamento</span>
           <input type="date" className={campo} value={data1 || t?.dataPrimeiro || ""} onChange={e => setData1(e.target.value)} />
         </label>
+        {/* Chácara sempre à mão (como no simulador): escolher ou passar uma a uma com as setas */}
+        {!!t?.lotes.length && (
+          <label className="space-y-1"><span className="block text-xs text-muted-foreground">Chácara</span>
+            <span className="flex items-center gap-1">
+              <button type="button" aria-label="Chácara anterior" className={`${campo} px-2`} onClick={() => passo(-1)}><ChevronLeft className="h-4 w-4" /></button>
+              <select className={`${campo} min-w-[230px] ${origem === "lote" && lote ? "border-primary" : ""}`} value={origem === "lote" ? lote : ""}
+                onChange={e => { setLote(e.target.value); setOrigem(e.target.value ? "lote" : "area"); }}>
+                <option value="">Escolha a chácara…</option>
+                {t.lotes.map(l => <option key={l.codigo} value={l.codigo}>{l.codigo} · {num(l.areaM2)} m² · {brl(l.preco)}{l.situacao !== "disponivel" ? ` · ${ROTULO_SITUACAO[l.situacao as SituacaoLote] ?? l.situacao}` : ""}</option>)}
+              </select>
+              <button type="button" aria-label="Próxima chácara" className={`${campo} px-2`} onClick={() => passo(1)}><ChevronRight className="h-4 w-4" /></button>
+            </span>
+          </label>
+        )}
         {isFetching && <Loader2 className="mb-2 h-4 w-4 animate-spin text-muted-foreground" />}
       </div>
       {error && <p className="text-sm text-red-400">{error.message}</p>}
@@ -168,6 +183,18 @@ export default function TabelasFinanciamento() {
               </tbody>
             </table>
           </div>
+
+          <details className="group rounded-xl border border-primary/30 bg-primary/5 p-3 text-sm">
+            <summary className="flex cursor-pointer list-none items-center gap-2 font-semibold">
+              <Info className="h-4 w-4 text-primary" /> O que é a Tabela Price?
+              <span className="ml-auto text-xs font-normal text-muted-foreground group-open:hidden">toque para ler</span>
+            </summary>
+            <div className="mt-2 space-y-1.5 text-[13px] leading-relaxed text-muted-foreground">
+              <p>A <b className="text-foreground">Tabela Price</b> (sistema francês de amortização) é o jeito mais comum de parcelar com juros no Brasil: <b className="text-foreground">todas as parcelas do saldo têm o mesmo valor</b>, do começo ao fim, o que facilita o cliente se planejar.</p>
+              <p>Cada parcela tem duas partes: <b className="text-foreground">juros</b>, calculados sobre o que ainda falta pagar, e <b className="text-foreground">amortização</b>, que é o que de fato abate a dívida. No início o saldo é maior, então a parcela leva mais juros; mês a mês o saldo cai, os juros diminuem e a amortização cresce — veja as colunas "Juros" e "Amortização" no evolutivo abaixo.</p>
+              <p>Aqui a taxa é de <b className="text-foreground">{pct(c.jurosAaEfetivo)} ao ano</b> ({pct(s.taxaMensal, 4)} ao mês), só sobre o saldo — a entrada parcelada é sem juros. Prazo maior deixa a parcela menor, mas soma mais juros no total; antecipar parcelas reduz os juros que faltam. Financiamento direto com o empreendedor, sem banco.</p>
+            </div>
+          </details>
 
           <div className="flex flex-wrap items-center gap-2 text-sm">
             <p className="flex-1 font-semibold">Evolutivo — {nomeOrigem} · entrada {entrada === 1 ? "à vista" : `${entrada}×`} · saldo {prazo}× de {brl(t.resumo.parcela)}</p>
