@@ -56,6 +56,17 @@ export const saasRouter = router({
       throw e;
     }
   }),
+  /** Upgrade Essencial → Pro: prévia da diferença proporcional e a fatura Pix/boleto (o plano troca ao pagar) */
+  minhaUpgrade: protectedProcedure.query(async ({ ctx }) => (await import("../saas/cobranca")).previaUpgrade(ctx.user)),
+  minhaUpgradeCheckout: protectedProcedure.input(z.object({ metodo: z.enum(["PIX", "BOLETO"]) })).mutation(async ({ ctx, input }) => {
+    const C = await import("../saas/cobranca");
+    const { mpConfigurado } = await import("../saas/mercadopago");
+    if (!mpConfigurado(await C.modoMp())) throw new TRPCError({ code: "PRECONDITION_FAILED", message: "O pagamento online ainda não está disponível. Fale com a Romatec pelo WhatsApp." });
+    try { return await C.iniciarUpgrade(ctx.user, input); } catch (e: any) {
+      if (e?.name === "CobrancaErro" || e?.name === "MpErro") throw new TRPCError({ code: e.status >= 500 ? "BAD_GATEWAY" as any : "BAD_REQUEST", message: e.message });
+      throw e;
+    }
+  }),
   /** Admin: modo do Mercado Pago (teste/produção) e eventos do webhook */
   mercadoPago: protectedProcedure.query(async ({ ctx }) => {
     admin(ctx);

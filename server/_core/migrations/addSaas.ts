@@ -72,6 +72,7 @@ const COLUNAS: [string, string][] = [
   ['saasAssinaturas', 'metodo VARCHAR(20) NULL'], ['saasAssinaturas', 'cancelarNoFim BOOLEAN NOT NULL DEFAULT FALSE'],
   ['saasFaturas', 'pixCopiaCola TEXT NULL'], ['saasFaturas', 'modo VARCHAR(10) NULL'],
   ['saasAssinaturas', 'avalieimobEstado VARCHAR(10) NULL'], ['saasAssinaturas', 'avalieimobErro VARCHAR(300) NULL'],
+  ['saasFaturas', 'upgradePlanoId INT NULL'],
 ];
 
 export async function addSaas(): Promise<void> {

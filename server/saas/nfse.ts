@@ -57,7 +57,11 @@ export async function sincronizarFilaNfse(agora = Date.now()): Promise<{ criadas
       const u = U.get(a.usuarioId) ?? {};
       const plano = P.get(a.planoId);
       const emp = a.empreendimentoId ? E.get(a.empreendimentoId) : null;
-      const discriminacao = `Licença de uso do software Romatec CRM — plano ${plano?.nome ?? 'assinatura'}${a.ciclo === 'ANUAL' ? ' (anual)' : ''}${emp ? ` — ${emp}` : ''}, competência ${mesAno(f.competencia)}.`;
+      // Fatura de upgrade (competência U+AAMMDD): diferença proporcional do plano novo até o fim do período já pago
+      const novoPlano = f.upgradePlanoId ? P.get(Number(f.upgradePlanoId)) : null;
+      const discriminacao = f.upgradePlanoId
+        ? `Licença de uso do software Romatec CRM — upgrade para o plano ${novoPlano?.nome ?? plano?.nome ?? 'superior'} (diferença proporcional até o fim do período vigente)${emp ? ` — ${emp}` : ''}, pago em ${new Date(f.pagoEm ?? agora).toLocaleDateString('pt-BR', { timeZone: 'America/Fortaleza' })}.`
+        : `Licença de uso do software Romatec CRM — plano ${plano?.nome ?? 'assinatura'}${a.ciclo === 'ANUAL' ? ' (anual)' : ''}${emp ? ` — ${emp}` : ''}, competência ${mesAno(f.competencia)}.`;
       const [ja]: any[] = await d.select({ id: saasNfse.id }).from(saasNfse).where(eq(saasNfse.faturaId, f.id)).limit(1);
       let id = ja?.id;
       if (!id) {

@@ -581,7 +581,7 @@ export function initSqliteTables(sqlite: any): void {
     competencia TEXT NOT NULL, valor TEXT NOT NULL, itemServico TEXT NOT NULL, discriminacao TEXT NOT NULL, tomadorNome TEXT NOT NULL, tomadorDoc TEXT, tomadorEmail TEXT,
     tomadorTelefone TEXT, tomadorEndereco TEXT, numero TEXT, codigoVerificacao TEXT, emitidaEm TEXT, emitidaPor INTEGER, observacao TEXT, createdAt ${agoraS}, updatedAt ${agoraS})`);
   for (const c of ['metodo TEXT', 'cancelarNoFim INTEGER NOT NULL DEFAULT 0', 'avalieimobEstado TEXT', 'avalieimobErro TEXT']) addColumn(`ALTER TABLE saasAssinaturas ADD COLUMN ${c}`);
-  for (const c of ['pixCopiaCola TEXT', 'modo TEXT']) addColumn(`ALTER TABLE saasFaturas ADD COLUMN ${c}`);
+  for (const c of ['pixCopiaCola TEXT', 'modo TEXT', 'upgradePlanoId INTEGER']) addColumn(`ALTER TABLE saasFaturas ADD COLUMN ${c}`);
   run(`CREATE TABLE IF NOT EXISTS saasTrials (cpfCnpj TEXT PRIMARY KEY, usuarioId INTEGER, usadoEm ${agoraS})`);
   run(`CREATE TABLE IF NOT EXISTS auditoriaAcesso (id INTEGER PRIMARY KEY AUTOINCREMENT, usuarioId INTEGER NOT NULL, evento TEXT NOT NULL, detalheJson TEXT, ip TEXT, criadoEm ${agoraS})`);
   run(`CREATE TABLE IF NOT EXISTS corretoresExternos (

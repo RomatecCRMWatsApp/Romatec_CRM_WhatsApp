@@ -171,3 +171,46 @@ describe('empreendedor avulso: implantação na 1ª fatura', () => {
     expect(await C.conciliarFaturasAbertas()).toMatchObject({ conferidas: 0, aplicadas: 0 });
   });
 });
+
+describe('upgrade Essencial → Pro com a diferença proporcional', () => {
+  it('cálculo: diferença do ciclo × dias que faltam ÷ 30 (anual ÷ 365); sem dias ou sem diferença = null', async () => {
+    const { valorUpgrade } = await import('../shared/saas');
+    const agora = Date.parse('2026-10-27T12:00:00Z');
+    expect(valorUpgrade({ precoAtual: 89.9, precoNovo: 159.9, ciclo: 'MENSAL', periodoFim: '2026-11-11T12:00:00Z', agora })).toMatchObject({ valor: 35, diasRestantes: 15, diasCiclo: 30, diferenca: 70 });
+    expect(valorUpgrade({ precoAtual: 899, precoNovo: 1599, ciclo: 'ANUAL', periodoFim: '2027-04-27T12:00:00Z', agora })!.diasRestantes).toBe(182);
+    expect(valorUpgrade({ precoAtual: 69.9, precoNovo: 129.9, ciclo: 'MENSAL', periodoFim: '2026-11-26T12:00:00Z', agora })!.valor).toBe(60);
+    expect(valorUpgrade({ precoAtual: 89.9, precoNovo: 159.9, ciclo: 'MENSAL', periodoFim: '2026-10-20T12:00:00Z', agora })).toBeNull();
+    expect(valorUpgrade({ precoAtual: 159.9, precoNovo: 159.9, ciclo: 'MENSAL', periodoFim: '2026-11-11T12:00:00Z', agora })).toBeNull();
+  });
+
+  it('Pix do upgrade aprovado: plano vira Pro sem mudar o vencimento; fatura marcada; nova prévia some; NFS-e de upgrade', async () => {
+    db.run(sql`INSERT INTO users (id, openId, name, role, perfil, cpf, email, telefone, ativo) VALUES (5, 'u5', 'Rita Essencial', 'user', 'corretor', '74682489070', 'rita@x.com', '99955556666', 1)`);
+    const fim = new Date(Date.now() + 15 * DIA).toISOString().slice(0, 10);
+    await S.definirAssinatura({ usuarioId: 5, planoCodigo: 'CORRETOR_ESSENCIAL', origem: 'PAGA', periodoFim: fim, motivo: 'teste upgrade' }, 1);
+    const antes = assinatura(5);
+    const prev = await C.previaUpgrade(usuario(5));
+    expect(prev).toMatchObject({ de: 'Corretor Essencial', para: 'Corretor Pro', diferenca: 70 });
+    expect(prev!.valor).toBeGreaterThan(30);
+    expect(prev!.valor).toBeLessThan(40);
+    const r = await C.iniciarUpgrade(usuario(5), { metodo: 'PIX' });
+    expect(r).toMatchObject({ tipo: 'pix', valor: prev!.valor });
+    const f = faturas(antes.id).find((x: any) => x.upgradePlanoId);
+    expect(f).toMatchObject({ status: 'ABERTA', competencia: expect.stringMatching(/^U\d{6}$/) });
+    pagamentosMp.get(f.mpPaymentId).status = 'approved';
+    expect(await avisar('payment', f.mpPaymentId)).toMatchObject({ ok: true, acao: 'upgrade' });
+    const depois = assinatura(5);
+    const pro = db.all(sql`SELECT id FROM saasPlanos WHERE codigo = 'CORRETOR_PRO'`)[0].id;
+    expect(depois.planoId).toBe(pro);
+    expect(depois.periodoFim).toBe(antes.periodoFim);
+    expect(faturas(antes.id).find((x: any) => x.id === f.id).status).toBe('PAGA');
+    expect(await C.previaUpgrade(usuario(5))).toBeNull();
+    const N = await import('./saas/nfse');
+    await N.sincronizarFilaNfse();
+    expect((await N.listarNfse()).find(n => n.faturaId === f.id)!.discriminacao).toMatch(/upgrade para o plano Corretor Pro/);
+  });
+
+  it('sem plano pago ativo (teste grátis, cortesia, bloqueado) não há upgrade', async () => {
+    expect(await C.previaUpgrade(usuario(3))).toBeNull(); // empreendedor (sem plano superior com AvalieImob)
+    await expect(C.iniciarUpgrade({ id: 999, perfil: 'corretor' }, { metodo: 'PIX' })).rejects.toThrow(/Upgrade indisponível/);
+  });
+});

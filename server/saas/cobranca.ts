@@ -12,7 +12,7 @@ import { and, desc, eq } from 'drizzle-orm';
 import { getDb, transacao } from '../db';
 import { empreendimentos, saasAssinaturas, saasConfig, saasCupons, saasEventosPagamento, saasFaturas, users } from '../../drizzle/schema';
 import { perfilDe } from '../../shared/equipe';
-import { precoComCupom, problemaCupom } from '../../shared/saas';
+import { cupomValePara, precoComCupom, problemaCupom, valorUpgrade } from '../../shared/saas';
 import { assinaturaValida, mp, type ModoMp } from './mercadopago';
 import { sincronizarFilaNfse } from './nfse';
 import * as S from './servico';
@@ -116,8 +116,49 @@ export async function iniciarCheckout(u: any, p: { plano: string; ciclo: 'MENSAL
   return { tipo: p.metodo === 'PIX' ? 'pix' : 'boleto', url: fatura.link ?? undefined, copiaCola: fatura.copiaCola, qrBase64: fatura.qrBase64, valor: fatura.valor, modo, faturaId: fatura.id };
 }
 
+// ─── Upgrade de plano (ex.: Essencial → Pro) com a diferença proporcional ──
+
+/** Preço do ciclo que o assinante paga de fato: preço negociado (só no plano atual) > cupom em vigor > tabela */
+async function precoDoCiclo(a: any, plano: { codigo: string; precoMensal: number; precoAnual: number | null }, atual: boolean): Promise<number> {
+  if (atual && a.precoOverride != null) return Number(a.precoOverride);
+  const lista = a.ciclo === 'ANUAL' && plano.precoAnual != null ? plano.precoAnual : plano.precoMensal;
+  const cupomVigente = a.cupomId && (a.ciclosCupomRestantes == null || Number(a.ciclosCupomRestantes) > 0);
+  if (!cupomVigente) return lista;
+  const d = await banco();
+  const [c]: any[] = await d.select().from(saasCupons).where(eq(saasCupons.id, a.cupomId)).limit(1);
+  const lin = c ? { ...c, valor: Number(c.valor), precosFixos: json(c.precosFixosJson) } : null;
+  return cupomValePara(lin, plano.codigo) ? precoComCupom(lista, lin, plano.codigo) : lista;
+}
+
+/** Prévia do upgrade: só com assinatura paga e ativa, com dias a vencer, de plano sem o AvalieImob para o que inclui */
+export async function previaUpgrade(u: any, agora = Date.now()) {
+  const a = await S.assinaturaDoUsuario(u);
+  if (!a || a.status !== 'ATIVA' || a.origem !== 'PAGA') return null;
+  const planos = await S.listarPlanos();
+  const atual = planos.find(p => p.id === a.planoId);
+  const novo = planos.find(p => p.ativo && !p.unico && p.incluiAvalieimob && p.publico === atual?.publico && p.id !== atual?.id);
+  if (!atual || !novo || atual.incluiAvalieimob) return null;
+  const precoAtual = await precoDoCiclo(a, atual, true);
+  const precoNovo = await precoDoCiclo(a, novo, false);
+  const v = valorUpgrade({ precoAtual, precoNovo, ciclo: a.ciclo, periodoFim: a.periodoFim, agora });
+  if (!v) return null;
+  return { de: atual.nome, para: novo.nome, planoCodigo: novo.codigo, planoId: novo.id, ...v, precoNovoCiclo: precoNovo, ciclo: a.ciclo as string, periodoFim: new Date(a.periodoFim).toISOString(), assinaturaId: a.id };
+}
+
+/** Fatura Pix/boleto do upgrade (competência U+AAMMDD); paga, o plano troca na hora sem mudar o vencimento */
+export async function iniciarUpgrade(u: any, p: { metodo: 'PIX' | 'BOLETO' }, agora = Date.now()): Promise<ResultadoCheckout> {
+  const prev = await previaUpgrade(u, agora);
+  if (!prev) throw new CobrancaErro('Upgrade indisponível: é preciso ter o plano Essencial pago e em dia.');
+  const a = await S.assinaturaDoUsuario(u);
+  const modo = await modoMp();
+  const competencia = `U${hojeIso(agora).slice(2).replace(/-/g, '')}`;
+  await S.auditar(u.id, 'UPGRADE_INICIADO', { de: prev.de, para: prev.para, valor: prev.valor, dias: prev.diasRestantes, metodo: p.metodo, modo });
+  const fatura = await gerarFatura(a, u, { valor: prev.valor, metodo: p.metodo, incluiImplantacao: false, competencia, descricao: `Romatec CRM — upgrade para ${prev.para} (${prev.diasRestantes} dias)`, modo, upgradePlanoId: prev.planoId }, agora);
+  return { tipo: p.metodo === 'PIX' ? 'pix' : 'boleto', url: fatura.link ?? undefined, copiaCola: fatura.copiaCola, qrBase64: fatura.qrBase64, valor: fatura.valor, modo, faturaId: fatura.id };
+}
+
 /** Cria (ou refaz) a fatura Pix/boleto da competência no MP */
-async function gerarFatura(a: any, u: any, p: { valor: number; metodo: 'PIX' | 'BOLETO'; incluiImplantacao: boolean; competencia: string; descricao: string; modo: ModoMp }, agora: number) {
+async function gerarFatura(a: any, u: any, p: { valor: number; metodo: 'PIX' | 'BOLETO'; incluiImplantacao: boolean; competencia: string; descricao: string; modo: ModoMp; upgradePlanoId?: number | null }, agora: number) {
   const d = await banco();
   const cpf = soDig(u.cpf);
   if (cpf.length !== 11) throw new CobrancaErro('Cadastre o seu CPF em "Meu cadastro" para gerar Pix ou boleto');
@@ -130,7 +171,7 @@ async function gerarFatura(a: any, u: any, p: { valor: number; metodo: 'PIX' | '
     [f] = await d.select().from(saasFaturas).where(and(eq(saasFaturas.assinaturaId, a.id), eq(saasFaturas.competencia, p.competencia))).limit(1);
   }
   const vencimento = new Date(agora + 3 * 86_400_000);
-  const dados = { valor: p.valor.toFixed(2), metodo: p.metodo, status: 'ABERTA', vencimento: hojeIso(vencimento.getTime()), incluiImplantacao: p.incluiImplantacao ? 1 : 0, modo: p.modo, mpPaymentId: null, linkPagamento: null, pixCopiaCola: null };
+  const dados = { valor: p.valor.toFixed(2), metodo: p.metodo, status: 'ABERTA', vencimento: hojeIso(vencimento.getTime()), incluiImplantacao: p.incluiImplantacao ? 1 : 0, modo: p.modo, mpPaymentId: null, linkPagamento: null, pixCopiaCola: null, upgradePlanoId: p.upgradePlanoId ?? null };
   let faturaId: number;
   if (f) { faturaId = f.id; await d.update(saasFaturas).set(dados as any).where(eq(saasFaturas.id, f.id)); }
   else {
@@ -260,6 +301,17 @@ async function aplicarAprovado(ref: { assinaturaId: number; faturaId: number | n
     if (!a) return { acao: 'assinatura_inexistente' as const };
     const valor = Number(pg.transaction_amount) || 0;
     const pagoEm = pg.date_approved ? new Date(pg.date_approved) : new Date(agora);
+    // Upgrade (diferença proporcional): troca o plano e NÃO estende o período nem conta ciclo de cupom
+    if (ref.faturaId) {
+      const [fu]: any[] = await tx.select({ upgradePlanoId: saasFaturas.upgradePlanoId }).from(saasFaturas).where(eq(saasFaturas.id, ref.faturaId)).limit(1);
+      if (fu?.upgradePlanoId) {
+        await tx.update(saasFaturas).set({ status: 'PAGA', pagoEm, mpPaymentId: mpId, modo } as any).where(eq(saasFaturas.id, ref.faturaId));
+        const r: any = await tx.update(saasAssinaturas).set({ planoId: Number(fu.upgradePlanoId), version: (Number(a.version) || 0) + 1, updatedAt: new Date(agora) } as any)
+          .where(and(eq(saasAssinaturas.id, a.id), eq(saasAssinaturas.version, Number(a.version) || 0)));
+        if (!Number(r?.[0]?.affectedRows ?? r?.affectedRows ?? r?.changes ?? 1)) throw new CobrancaErro('Assinatura alterada ao mesmo tempo — tenta de novo no retry', 409);
+        return { acao: 'upgrade' as const, a, valor, novoPlanoId: Number(fu.upgradePlanoId) };
+      }
+    }
     // Fatura: a do Pix/boleto (ref) ou uma nova para a cobrança do cartão recorrente
     if (ref.faturaId) {
       await tx.update(saasFaturas).set({ status: 'PAGA', pagoEm, mpPaymentId: mpId, modo } as any).where(eq(saasFaturas.id, ref.faturaId));
@@ -294,6 +346,7 @@ async function aplicarAprovado(ref: { assinaturaId: number; faturaId: number | n
     if (!afetadas) throw new CobrancaErro('Assinatura alterada ao mesmo tempo — tenta de novo no retry', 409);
     return { acao: 'aprovado' as const, a, periodoFim, valor, voltarPrecoNormal };
   });
+  if (resultado.acao === 'upgrade') return posUpgrade(resultado.a, resultado.novoPlanoId, resultado.valor, modo, mpId, agora);
   if (resultado.acao !== 'aprovado') return resultado.acao;
   const { a, periodoFim, valor, voltarPrecoNormal } = resultado;
   S.limparCaches();
@@ -314,6 +367,28 @@ async function aplicarAprovado(ref: { assinaturaId: number; faturaId: number | n
     await S.envio.texto(`55${soDig(u.telefone).replace(/^55/, '')}`, `✅ Pagamento confirmado — ${valor.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}. Sua assinatura do Romatec CRM está ativa até ${fim}. Obrigado!`).catch(() => {});
   }
   return 'aprovado';
+}
+
+/** Depois do upgrade pago: cartão recorrente passa a cobrar o plano novo, NFS-e na fila, AvalieImob liberado e aviso ao assinante */
+async function posUpgrade(a: any, novoPlanoId: number, valor: number, modo: ModoMp, mpId: string, agora: number): Promise<string> {
+  S.limparCaches();
+  const planos = await S.listarPlanos();
+  const novo = planos.find(p => p.id === novoPlanoId);
+  await S.auditar(a.usuarioId, 'UPGRADE_PLANO', { assinaturaId: a.id, para: novo?.codigo ?? novoPlanoId, valor, mpPaymentId: mpId, modo });
+  await sincronizarFilaNfse(agora).catch((e: any) => console.warn('[NFS-e] fila:', e?.message));
+  if (a.mpPreapprovalId && novo) {
+    try {
+      const preco = await precoDoCiclo({ ...a, planoId: novo.id }, novo, false);
+      await mp.req(modo, 'PUT', `/preapproval/${a.mpPreapprovalId}`, { reason: `Romatec CRM — ${novo.nome}`, auto_recurring: { transaction_amount: preco, currency_id: 'BRL' } });
+    } catch (e: any) { console.warn('[MP] upgrade da recorrência:', e?.message); }
+  }
+  await (await import('./avalieimob')).sincronizarAvalieimob(agora).catch((e: any) => console.warn('[AvalieImob] após upgrade:', e?.message));
+  const d = await banco();
+  const [u]: any[] = await d.select({ telefone: users.telefone }).from(users).where(eq(users.id, a.usuarioId)).limit(1);
+  if (u?.telefone && S.envio.disponivel()) {
+    await S.envio.texto(`55${soDig(u.telefone).replace(/^55/, '')}`, `🚀 Upgrade confirmado — ${valor.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}. Seu plano agora é o ${novo?.nome ?? 'Pro'}${novo?.incluiAvalieimob ? ', com o AvalieImob incluído (botão "Abrir AvalieImob" em Sua assinatura)' : ''}. Obrigado!`).catch(() => {});
+  }
+  return 'upgrade';
 }
 
 /** Estorno/chargeback: só derruba se não houver pagamento aprovado posterior (renovação) — regra do AvalieImob */
@@ -398,7 +473,7 @@ export async function conciliarFaturasAbertas(agora = Date.now()) {
     try {
       const acao = await processarPagamento(String(f.mpPaymentId), agora);
       res.conferidas++;
-      if (acao === 'aprovado') res.aplicadas++;
+      if (acao === 'aprovado' || acao === 'upgrade') res.aplicadas++;
     } catch (e: any) { res.erros.push(`fatura ${f.id}: ${String(e?.message ?? e).slice(0, 200)}`); }
   }
   return res;

@@ -38,6 +38,10 @@ export default function Assinatura() {
   });
   const { data: aval } = trpc.saas.minhaAvalieimob.useQuery(undefined, { enabled: !!data?.planos.some(p => p.incluiAvalieimob) });
   const sso = useAbrirAvalieimob();
+  // Upgrade Essencial → Pro com a diferença proporcional (só aparece para quem pode)
+  const { data: up } = trpc.saas.minhaUpgrade.useQuery(undefined, { enabled: !!data?.licenca.liberado });
+  const [pagUp, setPagUp] = useState<{ tipo: string; url?: string; copiaCola?: string | null; qrBase64?: string | null; valor: number; modo: string } | null>(null);
+  const upgrade = trpc.saas.minhaUpgradeCheckout.useMutation({ onSuccess: r => setPagUp(r as any), onError: e => toast.error(e.message) });
   // Volta do Mercado Pago (cartão): a confirmação chega pelo webhook em segundos
   const retorno = typeof window !== "undefined" && new URLSearchParams(window.location.search).has("retorno");
 
@@ -70,6 +74,43 @@ export default function Assinatura() {
             </p>
           ) : <p className="mt-1 text-sm text-[var(--rt-text-2)]">O seu acesso está liberado.</p>}
         </section>
+
+        {up && (
+          <section className="space-y-3 rounded-[18px] border border-[var(--rt-gold)]/60 bg-[var(--rt-surface)] p-5">
+            <div className="flex flex-wrap items-start justify-between gap-3">
+              <div>
+                <p className="flex items-center gap-2 text-lg font-semibold"><Crown className="h-5 w-5 text-[var(--rt-gold)]" /> Fazer upgrade para o {up.para}</p>
+                <p className="text-sm text-[var(--rt-text-2)]">Inclui o AvalieImob. Você paga hoje só a diferença pelos <b>{up.diasRestantes} dia(s)</b> que faltam do período já pago (até {dataBr(up.periodoFim)}); o vencimento não muda.</p>
+                <p className="mt-1 text-xs text-[var(--rt-text-3)]">Da próxima cobrança em diante: {brl(up.precoNovoCiclo)}/{up.ciclo === "ANUAL" ? "ano" : "mês"}.</p>
+              </div>
+              <div className="text-right">
+                <p className="text-xs text-[var(--rt-text-2)]">Pagar hoje</p>
+                <p className="text-3xl font-bold text-[var(--rt-gold-light)]">{brl(up.valor)}</p>
+              </div>
+            </div>
+            {!pagUp ? (
+              <div className="flex flex-wrap gap-2">
+                {(["PIX", "BOLETO"] as const).map(m => (
+                  <Button key={m} variant={m === "PIX" ? "default" : "outline"} disabled={upgrade.isPending} onClick={() => upgrade.mutate({ metodo: m })}>
+                    {upgrade.isPending ? <Loader2 className="mr-1 h-4 w-4 animate-spin" /> : null} Pagar com {m === "PIX" ? "Pix" : "boleto"}
+                  </Button>
+                ))}
+              </div>
+            ) : (
+              <div className="space-y-2 text-sm">
+                {pagUp.modo === "teste" && <p className="rounded bg-amber-500/15 px-2 py-1 text-xs text-amber-200">Ambiente de TESTE do Mercado Pago — nenhum valor real é cobrado.</p>}
+                <p className="font-semibold">{pagUp.tipo === "pix" ? "Pague com Pix" : "Boleto gerado"} — {brl(pagUp.valor)}</p>
+                {pagUp.qrBase64 && <img src={`data:image/png;base64,${pagUp.qrBase64}`} alt="QR Code Pix do upgrade" className="h-48 w-48 rounded-lg bg-white p-2" />}
+                {pagUp.copiaCola && (
+                  <div className="flex gap-2"><input readOnly value={pagUp.copiaCola} className="h-9 flex-1 rounded-md border border-border bg-background px-2 font-mono text-xs" />
+                    <Button size="sm" variant="outline" onClick={() => { navigator.clipboard.writeText(pagUp.copiaCola!).then(() => toast.success("Código Pix copiado")); }}>Copiar</Button></div>
+                )}
+                {pagUp.url && <a href={pagUp.url} target="_blank" rel="noopener noreferrer" className="inline-block text-[var(--rt-gold)] underline">{pagUp.tipo === "pix" ? "Abrir a página do Pix" : "Abrir o boleto"}</a>}
+                <p className="text-xs text-[var(--rt-text-2)]">Assim que o pagamento for confirmado, seu plano vira {up.para} automaticamente (Pix: em poucos minutos; boleto: até 2 dias úteis).</p>
+              </div>
+            )}
+          </section>
+        )}
 
         {aval?.configurado && aval.liberado && (
           <section className="flex flex-wrap items-center justify-between gap-3 rounded-[18px] border border-[var(--rt-gold)]/40 bg-[var(--rt-surface)] p-5">
@@ -158,7 +199,7 @@ export default function Assinatura() {
             <h2 className="mb-2 text-sm font-semibold">Faturas</h2>
             {data.faturas.map(f => (
               <p key={f.id} className="flex flex-wrap justify-between border-t border-[var(--rt-border)] py-1.5 text-sm first:border-0">
-                <span>{f.competencia} · {brl(f.valor)}</span>
+                <span>{f.competencia.startsWith("U") ? "Upgrade de plano" : f.competencia} · {brl(f.valor)}</span>
                 <span className={f.status === "PAGA" ? "text-emerald-300" : "text-amber-300"}>{f.status === "PAGA" ? <><CheckCircle2 className="mr-1 inline h-3.5 w-3.5" />paga em {dataBr(f.pagoEm)}</> : `${f.status.toLowerCase()} · vence ${dataBr(f.vencimento)}`}</span>
               </p>
             ))}

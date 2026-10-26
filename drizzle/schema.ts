@@ -907,6 +907,8 @@ export const saasFaturas = mysqlTable("saasFaturas", {
   /** Pix copia e cola */
   pixCopiaCola: text("pixCopiaCola"),
   modo: varchar("modo", { length: 10 }),
+  /** Fatura de upgrade (diferença proporcional): paga, troca o plano para este e NÃO estende o período */
+  upgradePlanoId: int("upgradePlanoId"),
   nfseId: int("nfseId"),
   observacao: varchar("observacao", { length: 300 }),
   criadoPor: int("criadoPor"),

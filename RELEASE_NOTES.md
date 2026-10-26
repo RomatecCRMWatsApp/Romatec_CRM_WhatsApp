@@ -3,6 +3,16 @@
 Cada versão nova vai no TOPO. Depois rode `npm run release` (valida e atualiza o package.json);
 ao subir, o servidor grava a versão no banco e todos recebem o aviso "Novidades da versão".
 
+## 1.41.0 — 2026-10-27
+tipo: minor
+obrigatoria: nao
+titulo: Upgrade do Essencial para o Pro
+
+### Novo
+- Quem tem o Corretor Essencial pago e em dia vê em "Sua assinatura" o cartão "Fazer upgrade para o Corretor Pro", com o AvalieImob incluído
+- Paga hoje só a diferença proporcional aos dias que faltam do período já pago (por exemplo, 15 dias restantes = metade da diferença do mês), por Pix ou boleto. O vencimento não muda e da próxima cobrança em diante vale o preço do Pro. Cupom em vigor (como o FUNDADOR) entra no cálculo
+- Confirmado o pagamento, o plano vira Pro na hora, o acesso ao AvalieImob é liberado, a recorrência do cartão passa para o valor do Pro, chega o aviso no WhatsApp e a NFS-e entra na fila como "upgrade de plano"
+
 ## 1.40.0 — 2026-10-27
 tipo: minor
 obrigatoria: nao

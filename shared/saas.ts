@@ -117,6 +117,31 @@ export function precoComCupom(preco: number, c: CupomSaas | null | undefined, pl
   return r2(c.precosFixos?.[planoCodigo] ?? preco);
 }
 
+/** Cupom que o assinante já tem (mesmo esgotado para novos) vale para este plano? */
+export function cupomValePara(c: CupomSaas | null | undefined, planoCodigo: string): boolean {
+  if (!c) return false;
+  if (c.planoAlvo && c.planoAlvo !== planoCodigo) return false;
+  return c.tipo !== 'PRECO_FIXO' || !!(c.precosFixos && planoCodigo in c.precosFixos);
+}
+
+/**
+ * Upgrade de plano no meio do período pago (ex.: Essencial → Pro): paga hoje só a diferença do preço do ciclo,
+ * proporcional aos dias que faltam (ciclo mensal = 30 dias, anual = 365). O vencimento não muda; da próxima
+ * cobrança em diante vale o preço do plano novo. null = sem dias a cobrar (período vencido) ou sem diferença.
+ */
+export function valorUpgrade(p: { precoAtual: number; precoNovo: number; ciclo: 'MENSAL' | 'ANUAL' | string; periodoFim: Date | string | null | undefined; agora?: number }) {
+  const agora = p.agora ?? Date.now();
+  const diasCiclo = p.ciclo === 'ANUAL' ? 365 : 30;
+  if (!p.periodoFim) return null;
+  const restam = (new Date(p.periodoFim).getTime() - agora) / 86_400_000;
+  if (!(restam > 0)) return null;
+  const diasRestantes = Math.min(diasCiclo, Math.ceil(restam));
+  const diferenca = r2(p.precoNovo - p.precoAtual);
+  if (!(diferenca > 0)) return null;
+  const valor = Math.max(1, r2((diferenca * diasRestantes) / diasCiclo));
+  return { valor, diasRestantes, diasCiclo, diferenca };
+}
+
 /** Valor mensal efetivo da assinatura (override > plano; anual ÷ 12) — base do MRR */
 export function valorMensal(a: { ciclo?: string | null; precoOverride?: number | string | null }, p: { precoMensal: number | string; precoAnual?: number | string | null }): number {
   if (a.precoOverride != null && a.precoOverride !== '') {
