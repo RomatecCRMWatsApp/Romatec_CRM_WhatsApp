@@ -3,6 +3,14 @@
 Cada versão nova vai no TOPO. Depois rode `npm run release` (valida e atualiza o package.json);
 ao subir, o servidor grava a versão no banco e todos recebem o aviso "Novidades da versão".
 
+## 1.35.2 — 2026-10-26
+tipo: patch
+obrigatoria: nao
+titulo: Imóveis: mesmo acesso da Área do corretor
+
+### Correções
+- Tela Imóveis: o corretor vê "sem acesso" nos imóveis que o administrador ainda não habilitou para ele, igual à Área do corretor. Editar, excluir, QR e link ficam só nos imóveis liberados (o sistema já recusava a ação; agora o botão nem aparece)
+
 ## 1.35.1 — 2026-10-26
 tipo: patch
 obrigatoria: nao

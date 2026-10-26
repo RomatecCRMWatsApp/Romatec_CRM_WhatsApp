@@ -5,9 +5,10 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Home, Search, Edit, MapPin, DollarSign, Plus, ArrowLeft, Image, Video, FileImage, Ruler, BedDouble, Bath, Car, Sparkles, ExternalLink, Loader2, X, Eye, Heart, Phone, MessageCircle, ChevronLeft, ChevronRight, Trash2, Upload, CloudUpload, Share2 } from "lucide-react";
+import { Home, Search, Edit, MapPin, DollarSign, Plus, ArrowLeft, Image, Video, FileImage, Ruler, BedDouble, Bath, Car, Sparkles, ExternalLink, Loader2, Lock, X, Eye, Heart, Phone, MessageCircle, ChevronLeft, ChevronRight, Trash2, Upload, CloudUpload, Share2 } from "lucide-react";
 import { useLocation } from "wouter";
 import { trpc } from "@/lib/trpc";
+import { temAcesso } from "@shared/permissoes";
 import { toast } from "sonner";
 import MateriaisPainel from "@/components/MateriaisPainel";
 
@@ -77,6 +78,9 @@ export default function Properties() {
   const { user } = useAuth();
   const [, navigate] = useLocation();
   const { data: properties, refetch } = trpc.properties.list.useQuery();
+  // Mesmo escopo da Área do corretor: sem o imóvel habilitado, só "Ver Detalhes" (o servidor recusa editar/excluir)
+  const { data: minhas } = trpc.permissoes.minhas.useQuery();
+  const habilitado = (id: number) => !minhas || temAcesso(minhas.perfil as any, (minhas.imoveis ?? []).map(refId => ({ tipo: "imovel" as const, refId })), "imovel", id);
   const [searchTerm, setSearchTerm] = useState("");
   const [showForm, setShowForm] = useState(false);
   const [qrDe, setQrDe] = useState<{ id: number; codigo: string } | null>(null);
@@ -718,6 +722,11 @@ export default function Properties() {
                     <button onClick={() => setSelectedProperty(property)} className="flex-1 py-2.5 rounded-xl bg-emerald/10 hover:bg-emerald/20 text-emerald font-semibold text-sm transition-all flex items-center justify-center gap-1.5">
                       <Eye className="h-4 w-4" /> Ver Detalhes
                     </button>
+                    {!habilitado(property.id) ? (
+                      <span className="flex-1 inline-flex items-center justify-center gap-1 text-xs text-muted-foreground" title="Peça ao administrador para habilitar este imóvel">
+                        <Lock className="h-3.5 w-3.5" /> sem acesso
+                      </span>
+                    ) : <>
                     <button onClick={() => handleEdit(property)} className="flex-1 py-2.5 rounded-xl bg-gold/10 hover:bg-gold/20 text-gold font-semibold text-sm transition-all flex items-center justify-center gap-1.5">
                       <Edit className="h-4 w-4" /> Editar
                     </button>
@@ -734,6 +743,7 @@ export default function Properties() {
                         <ExternalLink className="h-4 w-4" />
                       </button>
                     )}
+                    </>}
                   </div>
                 </div>
               </div>
