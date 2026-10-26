@@ -3,6 +3,15 @@
 Cada versão nova vai no TOPO. Depois rode `npm run release` (valida e atualiza o package.json);
 ao subir, o servidor grava a versão no banco e todos recebem o aviso "Novidades da versão".
 
+## 1.44.0 — 2026-10-27
+tipo: minor
+obrigatoria: nao
+titulo: Crachá do corretor
+
+### Novo
+- Aba Carteirinhas → Modelos → "Crachá do corretor": crachá vertical (54 × 86 mm) com a marca Romatec, foto, nome, função, CRECI, telefone e um QR que abre o WhatsApp do corretor. É só o cliente apontar a câmera
+- Já vem preenchido com o cadastro de quem está logado (nome, CRECI, telefone e foto). Dá para ajustar antes e "Imprimir no tamanho real"
+
 ## 1.43.0 — 2026-10-27
 tipo: minor
 obrigatoria: nao

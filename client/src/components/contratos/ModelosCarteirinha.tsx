@@ -1,7 +1,10 @@
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
-import { Camera, FileDown, IdCard, Loader2, QrCode, X } from "lucide-react";
+import { brandAssets } from "@/brand/assets";
+import { useAuth } from "@/_core/hooks/useAuth";
+import { exibirTelefoneBR } from "@shared/telefone";
+import { Camera, FileDown, IdCard, Loader2, Printer, QrCode, X } from "lucide-react";
 
 /**
  * Modelos para apresentar ao cliente (aba Carteirinhas): a carteirinha do condomínio (frente e verso, igual ao PDF da
@@ -106,6 +109,65 @@ function Cracha({ nome, tipo, evento, numero, foto }: { nome: string; tipo: stri
   );
 }
 
+/** QR (data URL) do link — gerado no navegador */
+function useQr(texto: string | null) {
+  const [url, setUrl] = useState<string | null>(null);
+  useEffect(() => {
+    let vivo = true;
+    if (!texto) { setUrl(null); return; }
+    import("qrcode").then(Q => Q.toDataURL(texto, { margin: 0, width: 320, color: { dark: VERDE, light: "#FFFFFF" } })).then(u => { if (vivo) setUrl(u); }).catch(() => setUrl(null));
+    return () => { vivo = false; };
+  }, [texto]);
+  return url;
+}
+
+/** Crachá do corretor (vertical, 54 × 86 mm): marca Romatec, foto, nome, função, CRECI, telefone e QR do WhatsApp dele */
+function CrachaCorretor({ nome, funcao, creci, telefone, whatsapp, foto }: { nome: string; funcao: string; creci: string; telefone: string; whatsapp: string | null; foto: string | null }) {
+  const qr = useQr(whatsapp ? `https://wa.me/${whatsapp}` : null);
+  return (
+    <div data-cracha-corretor className="relative mx-auto flex aspect-[54/86] w-full max-w-[260px] flex-col overflow-hidden rounded-xl shadow-xl shadow-black/40" style={{ background: "#0B0F0D", color: "#FFFFFF", containerType: "inline-size" } as any}>
+      <div className="relative flex flex-col items-center px-[8%] pb-[5%] pt-[7%]" style={{ background: VERDE }}>
+        <img src={brandAssets.rosa} alt="" aria-hidden className="pointer-events-none absolute -right-[18%] -top-[12%] w-[70%] opacity-[0.12]" />
+        <img src={brandAssets.wordmark} alt="Romatec Consultoria Total" className="relative w-[78%] object-contain" />
+      </div>
+      <div className="h-[1.2%]" style={{ background: DOURADO }} />
+      <div className="flex flex-1 flex-col items-center justify-center gap-[1.6cqw] px-[7%] py-[3%] text-center">
+        <div className="aspect-[3/4] w-[40%] overflow-hidden rounded-lg border-2" style={{ borderColor: DOURADO }}>
+          <Foto url={foto} nome={nome} className="h-full w-full" />
+        </div>
+        <p className="line-clamp-2 font-bold leading-tight [font-family:var(--rt-font-title)]" style={{ color: DOURADO, fontSize: "8cqw" }}>{nome || "Nome do Corretor"}</p>
+        <p className="font-semibold uppercase tracking-[0.12em] opacity-90" style={{ fontSize: "4.4cqw" }}>{funcao}</p>
+        {creci && <p className="rounded-full px-[4cqw] py-[0.8cqw] font-bold" style={{ background: `${DOURADO}26`, color: DOURADO, fontSize: "5.6cqw" }}>{creci}</p>}
+      </div>
+      <div className="flex items-center gap-[4cqw] border-t px-[7%] py-[4%]" style={{ borderColor: `${DOURADO}55` }}>
+        {qr ? <img src={qr} alt="QR do WhatsApp" className="w-[30%] rounded bg-white p-[1.2cqw]" /> : <div className="flex aspect-square w-[30%] items-center justify-center rounded bg-white/90"><QrCode className="h-[70%] w-[70%]" style={{ color: VERDE }} /></div>}
+        <div className="min-w-0 text-left leading-tight">
+          <p className="opacity-70" style={{ fontSize: "3.8cqw" }}>Fale comigo no WhatsApp</p>
+          <p className="font-bold" style={{ fontSize: "5cqw" }}>{telefone || "(99) 9 0000-0000"}</p>
+          <p className="opacity-70" style={{ fontSize: "3.6cqw" }}>romateccrm.com</p>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/** Imprime o crachá no tamanho real (54 × 86 mm) numa janela só com ele */
+function imprimirCracha() {
+  const el = document.querySelector("[data-cracha-corretor]") as HTMLElement | null;
+  const w = window.open("", "_blank", "width=480,height=720");
+  if (!el || !w) { toast.error("Não foi possível abrir a impressão (libere pop-ups para este site)"); return; }
+  const estilos = Array.from(document.querySelectorAll('link[rel="stylesheet"], style')).map(n => n.outerHTML).join("");
+  w.document.write(`<!doctype html><html><head><meta charset="utf-8"><title>Crachá do corretor</title>${estilos}
+    <style>@page{size:54mm 86mm;margin:0}html,body{margin:0;background:#fff}body{-webkit-print-color-adjust:exact;print-color-adjust:exact}
+    [data-cracha-corretor]{width:54mm!important;max-width:none!important;border-radius:3mm!important;box-shadow:none!important}</style>
+    </head><body>${el.outerHTML}</body></html>`);
+  w.document.close();
+  const ir = () => { w.focus(); w.print(); };
+  // Espera as imagens (logo, foto, QR) carregarem antes de imprimir
+  const imgs = Array.from(w.document.images);
+  Promise.all(imgs.map(i => (i.complete ? Promise.resolve() : new Promise(r => { i.onload = i.onerror = () => r(null); })))).then(() => setTimeout(ir, 200));
+}
+
 function EscolherFoto({ foto }: { foto: ReturnType<typeof useFotoLocal> }) {
   return (
     <div className="flex items-center gap-2">
@@ -120,7 +182,19 @@ function EscolherFoto({ foto }: { foto: ReturnType<typeof useFotoLocal> }) {
 }
 
 export default function ModelosCarteirinha() {
-  const [aba, setAba] = useState<"carteirinha" | "cracha">("carteirinha");
+  const [aba, setAba] = useState<"carteirinha" | "cracha" | "corretor">("carteirinha");
+  // Crachá do corretor: começa com o cadastro de quem está logado (nunca o contato padrão do escritório)
+  const { user } = useAuth();
+  const [cc, setCc] = useState({ nome: "", funcao: "Corretor(a) de imóveis", creci: "", telefone: "" });
+  const [ccIniciado, setCcIniciado] = useState(false);
+  useEffect(() => {
+    const u = user as any;
+    if (ccIniciado || !u?.name) return;
+    const creci = u.creci ? `CRECI${u.creciUf ? `/${u.creciUf}` : ""} ${u.creci}` : "";
+    setCc(c => ({ ...c, nome: String(u.name).split(/\s+/).slice(0, 3).join(" "), creci, telefone: u.telefone ? exibirTelefoneBR(String(u.telefone)) : "" }));
+    setCcIniciado(true);
+  }, [user, ccIniciado]);
+  const whatsappDoCracha = (() => { const d = cc.telefone.replace(/\D/g, ""); return d.length >= 10 ? (d.startsWith("55") ? d : `55${d}`) : null; })();
   const [nome, setNome] = useState("");
   const [vinculo, setVinculo] = useState(VINCULOS[0]);
   const [unidade, setUnidade] = useState("");
@@ -146,7 +220,7 @@ export default function ModelosCarteirinha() {
         <IdCard className="h-5 w-5 text-[var(--rt-gold)]" />
         <h2 className="flex-1 text-base font-semibold">Modelos para apresentar ao cliente</h2>
         <div role="tablist" className="flex gap-1 rounded-lg border border-border p-1">
-          {([["carteirinha", "Carteirinha do condomínio"], ["cracha", "Crachá de visitante"]] as const).map(([k, r]) => (
+          {([["carteirinha", "Carteirinha do condomínio"], ["cracha", "Crachá de visitante"], ["corretor", "Crachá do corretor"]] as const).map(([k, r]) => (
             <button key={k} role="tab" aria-selected={aba === k} onClick={() => setAba(k)}
               className={`rounded-md px-3 py-1 text-xs ${aba === k ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:text-foreground"}`}>{r}</button>
           ))}
@@ -155,6 +229,27 @@ export default function ModelosCarteirinha() {
 
       <div className="grid items-start gap-4 lg:grid-cols-[320px_1fr]">
         {/* Campos: a prévia acompanha o que se digita */}
+        {aba === "corretor" ? (
+          <div className="space-y-2.5 rounded-xl border border-border p-3">
+            <p className="text-xs text-muted-foreground">Já vem com os seus dados do cadastro — ajuste o que quiser antes de imprimir.</p>
+            <label className="block space-y-1 text-xs text-muted-foreground">Nome no crachá
+              <input value={cc.nome} onChange={e => setCc({ ...cc, nome: e.target.value })} maxLength={60} className={campo} />
+            </label>
+            <label className="block space-y-1 text-xs text-muted-foreground">Função
+              <select value={cc.funcao} onChange={e => setCc({ ...cc, funcao: e.target.value })} className={campo}>
+                {["Corretor(a) de imóveis", "Consultor(a) de vendas", "Secretária", "Gestor(a) comercial"].map(v => <option key={v}>{v}</option>)}
+              </select>
+            </label>
+            <label className="block space-y-1 text-xs text-muted-foreground">CRECI
+              <input value={cc.creci} onChange={e => setCc({ ...cc, creci: e.target.value })} maxLength={30} placeholder="CRECI/MA 0.000" className={campo} />
+            </label>
+            <label className="block space-y-1 text-xs text-muted-foreground">Telefone / WhatsApp
+              <input value={cc.telefone} onChange={e => setCc({ ...cc, telefone: e.target.value })} maxLength={20} className={campo} />
+            </label>
+            <EscolherFoto foto={foto} />
+            <Button size="sm" className="w-full" onClick={imprimirCracha}><Printer className="mr-1 h-4 w-4" /> Imprimir no tamanho real (54 × 86 mm)</Button>
+          </div>
+        ) : (
         <div className="space-y-2.5 rounded-xl border border-border p-3">
           <p className="text-xs text-muted-foreground">Preencha para ver como fica — é só uma prévia.</p>
           <label className="block space-y-1 text-xs text-muted-foreground">Nome
@@ -189,9 +284,15 @@ export default function ModelosCarteirinha() {
             </Button>
           )}
         </div>
+        )}
 
         {/* Prévia */}
-        {aba === "carteirinha" ? (
+        {aba === "corretor" ? (
+          <div className="grid items-start gap-4 sm:grid-cols-[minmax(0,260px)_1fr]">
+            <CrachaCorretor nome={cc.nome} funcao={cc.funcao} creci={cc.creci} telefone={cc.telefone} whatsapp={whatsappDoCracha} foto={foto.url ?? ((user as any)?.fotoUrl ?? null)} />
+            <p className="text-[11px] text-muted-foreground">Crachá de 54 × 86 mm para usar no plantão de vendas e nas visitas. O QR abre o WhatsApp do corretor: o cliente aponta a câmera e já fala com ele. A foto vem do seu cadastro (Meu cadastro); a escolhida aqui vale só para esta impressão.</p>
+          </div>
+        ) : aba === "carteirinha" ? (
           <div className="grid gap-4 sm:grid-cols-2">
             <div className="space-y-1"><p className="text-xs text-muted-foreground">Frente</p><CarteirinhaFrente nome={nome} vinculo={vinculo} unidade={unidade} foto={foto.url} /></div>
             <div className="space-y-1"><p className="text-xs text-muted-foreground">Verso</p><CarteirinhaVerso /></div>
