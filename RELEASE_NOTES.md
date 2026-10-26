@@ -3,6 +3,14 @@
 Cada versão nova vai no TOPO. Depois rode `npm run release` (valida e atualiza o package.json);
 ao subir, o servidor grava a versão no banco e todos recebem o aviso "Novidades da versão".
 
+## 1.37.3 — 2026-10-26
+tipo: patch
+obrigatoria: nao
+titulo: Área do corretor: só imóveis liberados
+
+### Correções
+- Área do corretor: a lista de imóveis mostra só os liberados para o corretor, igual à tela Imóveis. Os bloqueados não aparecem mais
+
 ## 1.37.2 — 2026-10-26
 tipo: patch
 obrigatoria: nao

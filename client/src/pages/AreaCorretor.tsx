@@ -103,7 +103,8 @@ export default function AreaCorretor() {
       {m.imoveis && (
         <Secao titulo="Imóveis" icone={Building2}>
           <div className="max-h-[420px] space-y-1.5 overflow-auto">
-            {(imoveis ?? []).map((p: any) => {
+            {(imoveis ?? []).filter((p: any) => habilitado(p.id)).length === 0 && <p className="text-xs text-muted-foreground">Nenhum imóvel liberado para você ainda.</p>}
+            {(imoveis ?? []).filter((p: any) => habilitado(p.id)).map((p: any) => {
               const ok = habilitado(p.id);
               const link = p.codigo ? `${origem}/i/${p.codigo}` : p.publicSlug ? `${origem}/imovel/${p.publicSlug}` : null;
               return (
