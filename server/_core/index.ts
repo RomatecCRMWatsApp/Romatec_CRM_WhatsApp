@@ -991,6 +991,28 @@ async function startServer() {
   registrarRotaEspaco(app);
   const { registrarRotasRecrutamento } = await import('../recrutamento/rotas');
   registrarRotasRecrutamento(app);
+
+  // Enviar arquivo pelo WhatsApp do CRM (Configurações) — só o administrador; corpo = arquivo
+  app.post('/api/whatsapp/enviar-arquivo', express.raw({ type: '*/*', limit: '16mb' }), async (req, res) => {
+    try {
+      const { sdk } = await import('./sdk');
+      const user: any = await sdk.authenticateRequest(req).catch(() => null);
+      const { perfilDe } = await import('../../shared/equipe');
+      if (!user || perfilDe(user) !== 'admin') return res.status(403).json({ ok: false, error: 'Só o administrador envia arquivos pelo WhatsApp do sistema.' });
+      const h = (k: string) => (typeof req.headers[k] === 'string' ? decodeURIComponent(String(req.headers[k])) : '');
+      const { enviarArquivoWhatsapp } = await import('../whatsapp/enviarArquivo');
+      const r = await enviarArquivoWhatsapp({
+        telefone: h('x-telefone'), nome: h('x-nome-arquivo'), legenda: h('x-legenda'),
+        buf: Buffer.isBuffer(req.body) ? req.body : Buffer.alloc(0), autorId: user.id,
+      });
+      res.json(r);
+    } catch (e: any) {
+      if (e?.name === 'EnvioArquivoErro') return res.status(e.status).json({ ok: false, error: e.message });
+      if (e?.type === 'entity.too.large') return res.status(413).json({ ok: false, error: 'Arquivo acima de 15 MB' });
+      console.error('[WhatsApp] envio de arquivo:', e?.message);
+      res.status(500).json({ ok: false, error: 'Não foi possível enviar agora.' });
+    }
+  });
   const { registrarRotasContratos } = await import('../contratos/rotas');
   registrarRotasContratos(app);
   // Cartão de vendas público dos links de divulgação (?c=<ref>): contato de quem compartilhou

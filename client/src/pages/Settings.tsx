@@ -9,6 +9,7 @@ import PublicarAtualizacao from "@/components/sistema/PublicarAtualizacao";
 import { TesteNotificacoes } from "@/components/sistema/Notificacoes";
 import ModelosMensagem from "@/components/sistema/ModelosMensagem";
 import EspacoBanco from "@/components/sistema/EspacoBanco";
+import EnviarArquivoWhatsapp from "@/components/sistema/EnviarArquivoWhatsapp";
 import { useLocation } from "wouter";
 import { trpc } from "@/lib/trpc";
 import { toast } from "sonner";
@@ -437,6 +438,7 @@ export default function Settings() {
 
         {/* Mensagens do link de agendamento (v1.29.0): modelos editáveis */}
         {me?.role === "admin" && <ModelosMensagem />}
+        {me?.role === "admin" && <EnviarArquivoWhatsapp />}
         {me?.role === "admin" && <EspacoBanco />}
 
         {/* Publicar atualização (v1.7.0): aviso ou correção de texto sem deploy */}

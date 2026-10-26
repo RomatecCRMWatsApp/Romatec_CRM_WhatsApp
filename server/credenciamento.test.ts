@@ -9,7 +9,8 @@ const { getDb } = await import('./db');
 const { sql } = await import('drizzle-orm');
 const sharp = (await import('sharp')).default;
 
-const futuro = (dias: number) => new Date(Date.now() + dias * 86400_000).toISOString().slice(0, 10);
+// Data local (como statusValidade compara), não UTC: entre 21h e meia-noite em Brasília o UTC já é o dia seguinte
+const futuro = (dias: number) => { const d = new Date(Date.now() + dias * 86400_000); return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`; };
 const COMPLETO = {
   id: 2, name: 'Maria Corretora da Silva', cpf: '52998224725', rg: '123456', creci: '1234', creciUf: 'MA', estadoCivil: 'solteiro', profissao: 'Corretor(a) de Imóveis',
   sexo: 'F', email: 'maria@exemplo.com', telefone: '99981112222', enderecoCep: '65930000', enderecoLogradouro: 'Rua A', enderecoNumero: '10',

@@ -3,6 +3,14 @@
 Cada versão nova vai no TOPO. Depois rode `npm run release` (valida e atualiza o package.json);
 ao subir, o servidor grava a versão no banco e todos recebem o aviso "Novidades da versão".
 
+## 1.32.0 — 2026-10-25
+tipo: minor
+obrigatoria: nao
+titulo: Enviar arquivo pelo WhatsApp do sistema
+
+### Novo
+- Configurações → "Enviar arquivo pelo WhatsApp" (administrador): escolha o arquivo (PDF, imagem, Word ou Excel, até 15 MB), a pessoa da equipe ou digite o número, escreva o texto e envie pelo WhatsApp do sistema. Pede confirmação antes de enviar
+
 ## 1.31.0 — 2026-10-25
 tipo: minor
 obrigatoria: nao
