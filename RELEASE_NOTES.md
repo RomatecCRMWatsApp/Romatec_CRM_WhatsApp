@@ -3,6 +3,16 @@
 Cada versão nova vai no TOPO. Depois rode `npm run release` (valida e atualiza o package.json);
 ao subir, o servidor grava a versão no banco e todos recebem o aviso "Novidades da versão".
 
+## 1.49.0 — 2026-10-27
+tipo: minor
+obrigatoria: nao
+titulo: Menu lateral novo
+
+### Melhorias
+- Ícones coloridos por grupo para achar mais rápido: geral em rosa, Leads em laranja, Vendas em verde, Financeiro em dourado e Administração em azul
+- Os grupos (Leads, Vendas, Administração) abrem e fecham na setinha do título. O grupo da tela em que você está fica sempre aberto
+- No computador, "Recolher menu" (embaixo do menu) deixa só os ícones e libera espaço na tela. Passando o mouse, aparece o nome. As escolhas ficam guardadas no seu navegador
+
 ## 1.48.0 — 2026-10-27
 tipo: minor
 obrigatoria: nao
