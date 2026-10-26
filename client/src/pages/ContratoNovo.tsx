@@ -78,8 +78,7 @@ export default function ContratoNovo() {
   const casado = exigeConjuge(comprador.estadoCivil);
   const setC = (k: keyof PessoaForm, v: string) => setComprador(p => ({ ...p, [k]: v }));
   const setJ = (k: keyof PessoaForm, v: string) => setConjuge(p => ({ ...p, [k]: v }));
-  const precisaLead = perfil === "corretor";
-  const passo0ok = !!lote && !!sim.data && (!precisaLead || !!leadId);
+  const passo0ok = !!lote && !!sim.data;
 
   const avancar = () => {
     if (passo === 1) {
@@ -124,9 +123,9 @@ export default function ContratoNovo() {
                   {op.lotes.map(l => <option key={l.codigo} value={l.codigo}>{l.codigo} · {l.areaM2.toLocaleString("pt-BR")} m²{l.precoTabela ? ` · ${brl(l.precoTabela)}` : ""}</option>)}
                 </select>
               </Campo>
-              <Campo rotulo={precisaLead ? "Lead (obrigatório)" : "Lead (opcional)"}>
+              <Campo rotulo="Lead (opcional)">
                 <select className={sel} value={leadId ?? ""} onChange={e => setLeadId(e.target.value ? Number(e.target.value) : null)}>
-                  <option value="">{precisaLead ? "Escolha um lead seu…" : "Sem lead"}</option>
+                  <option value="">{perfil === "corretor" ? "Cliente próprio (sem lead)" : "Sem lead"}</option>
                   {op.leads.map(l => <option key={l.id} value={l.id}>{l.nome}{l.loteCodigo ? ` · ${l.loteCodigo}` : ""}</option>)}
                 </select>
               </Campo>

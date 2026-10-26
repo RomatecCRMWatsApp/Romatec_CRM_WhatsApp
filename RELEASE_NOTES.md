@@ -3,6 +3,14 @@
 Cada versão nova vai no TOPO. Depois rode `npm run release` (valida e atualiza o package.json);
 ao subir, o servidor grava a versão no banco e todos recebem o aviso "Novidades da versão".
 
+## 1.35.3 — 2026-10-26
+tipo: patch
+obrigatoria: nao
+titulo: Contrato com cliente próprio, sem lead
+
+### Melhorias
+- Novo contrato: o lead passou a ser opcional também para o corretor. Com cliente próprio, escolha "Cliente próprio (sem lead)" e faça a reserva e a venda normalmente. O contrato e a comissão ficam com o corretor que criou, e ele continua vendo só os contratos dele
+
 ## 1.35.2 — 2026-10-26
 tipo: patch
 obrigatoria: nao

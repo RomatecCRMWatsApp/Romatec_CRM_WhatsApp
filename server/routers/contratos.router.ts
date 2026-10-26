@@ -117,13 +117,13 @@ export const contratosRouter = router({
     const perfil = perfilDe(ctx.user as any);
     exigir(podeCriarContrato(perfil), "Seu perfil não cria contratos.");
     const db = (await getDb()) as any;
+    if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Banco indisponível" });
     if (input.leadId) {
       const [l] = await db.select({ responsavelId: leadQualifications.responsavelId }).from(leadQualifications).where(eq(leadQualifications.id, input.leadId)).limit(1);
       if (!l) throw new TRPCError({ code: "NOT_FOUND", message: "Lead não encontrado" });
       if (leadsVisiveis(ctx.permissoes, ctx.user.id, [l]).length === 0) throw new TRPCError({ code: "FORBIDDEN", message: "Este lead está com outro responsável." });
-    } else if (perfil === "corretor") {
-      throw new TRPCError({ code: "FORBIDDEN", message: "O corretor cria contrato a partir de um lead dele." });
     }
+    // Sem lead = cliente próprio do corretor: o contrato (e a comissão) fica com quem cria (corretorUserId)
     const [emp] = await db.select({ id: empreendimentos.id }).from(empreendimentos).where(eq(empreendimentos.slug, input.slug)).limit(1);
     if (!emp || !temAcesso(ctx.permissoes.perfil, ctx.permissoes.acessos, "empreendimento", emp.id)) throw new TRPCError({ code: "FORBIDDEN", message: "Empreendimento não habilitado para você." });
     return tratar(() => criarContrato({

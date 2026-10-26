@@ -71,9 +71,11 @@ describe('bloqueio no servidor (não confia no front)', () => {
     expect(() => exigirAcesso({ perfil: 'admin', modulos: null, acessos: [] }, 'empreendimento', 2)).not.toThrow();
   });
 
-  it('contratos (spec §9): corretor só cria a partir de lead dele; definitivo, ativação, cobrança e cancelamento não são dele', async () => {
+  it('contratos (spec §9): corretor cria com ou sem lead (cliente próprio), só no empreendimento habilitado; definitivo, ativação, cobrança e cancelamento não são dele', async () => {
     const pl = { modalidade: 'financiado' as const, entradaParcelas: 6, prazo: 120, dataPrimeiroPagamento: '2026-12-10' };
-    await expect(corretor.contratos.criar({ slug: 'bom-jardims', lote: 'A01', plano: pl, comprador: { nome: 'X Y', cpf: '52998224725' } })).rejects.toMatchObject({ code: 'FORBIDDEN' });
+    const semLead = corretor.contratos.criar({ slug: 'bom-jardims', lote: 'A01', plano: pl, comprador: { nome: 'X Y', cpf: '52998224725' } });
+    // Sem banco neste teste: passa da regra do lead e só para no banco (o escopo do empreendimento vem depois)
+    await expect(semLead).rejects.toThrow(/Banco indisponível/);
     await expect(corretor.contratos.gerar({ id: 1, alvo: 'definitivo' })).rejects.toMatchObject({ code: 'FORBIDDEN' });
     await expect(corretor.contratos.registrarAssinado({ id: 1 })).rejects.toMatchObject({ code: 'FORBIDDEN' });
     await expect(corretor.contratos.cancelar({ id: 1, motivo: 'teste', senha: 'qualquer' })).rejects.toMatchObject({ code: 'FORBIDDEN' });
