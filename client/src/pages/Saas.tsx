@@ -51,10 +51,11 @@ function VisaoGeral() {
         )}
       </section>
       <MercadoPago />
+      <Avalieimob />
       <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
         {cards.map(([r, v]) => <div key={r} className="rounded-xl border border-border bg-card p-3"><p className="text-xs text-muted-foreground">{r}</p><p className="text-xl font-bold">{v}</p></div>)}
       </div>
-      <p className="text-xs text-muted-foreground">MRR: assinaturas ativas pagas (anual ÷ 12, preço negociado quando houver). Pagamentos fora do Mercado Pago (Pix direto, transferência) são registrados em "Assinaturas". NFS-e e o acesso ao AvalieImob vêm na próxima etapa.</p>
+      <p className="text-xs text-muted-foreground">MRR: assinaturas ativas pagas (anual ÷ 12, preço negociado quando houver). Pagamentos fora do Mercado Pago (Pix direto, transferência) são registrados em "Assinaturas". Cada pagamento gera uma NFS-e pendente na aba "NFS-e".</p>
     </div>
   );
 }
@@ -221,7 +222,95 @@ function PlanosECupons() {
   );
 }
 
-const ABAS = [["geral", "Visão geral"], ["assinaturas", "Assinaturas"], ["planos", "Planos e cupons"]] as const;
+const COR_NFSE: Record<string, string> = { PENDENTE: "bg-amber-500/15 text-amber-300", EMITIDA: "bg-emerald-500/15 text-emerald-300", CANCELADA: "bg-secondary text-muted-foreground" };
+
+/** NFS-e em fila: cada fatura paga vira uma nota pendente com o tomador congelado; emitida no portal da prefeitura e marcada aqui */
+function Nfse() {
+  const utils = trpc.useUtils();
+  const [status, setStatus] = useState<"PENDENTE" | "EMITIDA" | "CANCELADA" | "">("PENDENTE");
+  const { data } = trpc.saas.nfse.useQuery(status ? { status } : undefined);
+  const ok = (msg: string) => () => { toast.success(msg); utils.saas.nfse.invalidate(); };
+  const emitida = trpc.saas.nfseEmitida.useMutation({ onSuccess: ok("Nota marcada como emitida"), onError: e => toast.error(e.message) });
+  const tomador = trpc.saas.nfseAtualizarTomador.useMutation({ onSuccess: ok("Tomador atualizado com o cadastro atual"), onError: e => toast.error(e.message) });
+  const cancelar = trpc.saas.nfseCancelar.useMutation({ onSuccess: ok("Nota cancelada"), onError: e => toast.error(e.message) });
+  const csv = trpc.saas.nfseCsv.useMutation({
+    onSuccess: r => {
+      const a = document.createElement("a");
+      a.href = URL.createObjectURL(new Blob([r.csv], { type: "text/csv;charset=utf-8" }));
+      a.download = `nfse-${status ? status.toLowerCase() : "todas"}-${new Date().toISOString().slice(0, 10)}.csv`;
+      a.click();
+      URL.revokeObjectURL(a.href);
+    },
+    onError: e => toast.error(e.message),
+  });
+  const copiar = (t: string) => { navigator.clipboard?.writeText(t).then(() => toast.success("Copiado")); };
+  const total = (data ?? []).reduce((s, n) => s + n.valor, 0);
+  return (
+    <div className="space-y-3">
+      <p className="text-xs text-muted-foreground">Toda fatura paga (Mercado Pago ou registrada à mão) entra aqui com os dados do cliente do momento do pagamento. Emita no portal da prefeitura e marque como emitida com o número. A transmissão automática entra depois sobre esta mesma fila. Item de serviço padrão 1.05 (licenciamento de software) — confirme com a contabilidade.</p>
+      <div className="flex flex-wrap items-center gap-2">
+        <select className={`${campo} w-auto`} value={status} onChange={e => setStatus(e.target.value as any)}>
+          <option value="PENDENTE">Pendentes</option><option value="EMITIDA">Emitidas</option><option value="CANCELADA">Canceladas</option><option value="">Todas</option>
+        </select>
+        <span className="text-sm text-muted-foreground">{data?.length ?? 0} nota(s) · {brl(total)}</span>
+        <Button size="sm" variant="outline" className="ml-auto" disabled={csv.isPending || !data?.length} onClick={() => csv.mutate(status ? { status } : undefined)}>Exportar CSV</Button>
+      </div>
+      <div className="overflow-x-auto rounded-xl border border-border bg-card">
+        <table className="w-full text-sm">
+          <thead><tr className="border-b border-border text-left text-xs text-muted-foreground"><th className="p-2">Tomador</th><th className="p-2">Serviço</th><th className="p-2">Valor</th><th className="p-2">Situação</th><th className="p-2">Ações</th></tr></thead>
+          <tbody>
+            {(data ?? []).map(n => (
+              <tr key={n.id} className="border-b border-border/50 align-top last:border-0">
+                <td className="p-2">
+                  <b>{n.tomadorNome}</b>
+                  <p className="text-[11px] text-muted-foreground">{n.tomadorDoc ? `CPF/CNPJ ${n.tomadorDoc}` : <span className="text-amber-300">sem CPF</span>}{n.tomadorEmail ? ` · ${n.tomadorEmail}` : ""}</p>
+                  <p className="text-[11px] text-muted-foreground">{n.tomadorEndereco ?? <span className="text-amber-300">sem endereço</span>}</p>
+                </td>
+                <td className="p-2 max-w-[360px]"><p className="text-xs">{n.discriminacao}</p><p className="text-[11px] text-muted-foreground">item {n.itemServico} · pago em {dataBr(n.pagoEm)}{n.metodo ? ` · ${n.metodo.toLowerCase()}` : ""}{n.modo === "teste" ? " · TESTE" : ""}</p></td>
+                <td className="p-2 whitespace-nowrap">{brl(n.valor)}</td>
+                <td className="p-2">
+                  <span className={`rounded-full px-2 py-0.5 text-[11px] ${COR_NFSE[n.status] ?? ""}`}>{n.status.toLowerCase()}</span>
+                  {n.numero && <p className="mt-0.5 text-[11px]">nº {n.numero}{n.codigoVerificacao ? ` · ${n.codigoVerificacao}` : ""}</p>}
+                  {n.observacao && <p className={`mt-0.5 text-[11px] ${n.observacao.startsWith("ESTORNO") ? "text-red-300" : "text-muted-foreground"}`}>{n.observacao}</p>}
+                </td>
+                <td className="p-2">
+                  {n.status === "PENDENTE" && (
+                    <div className="flex flex-wrap gap-1">
+                      <Button size="sm" variant="outline" className="h-7 text-xs" onClick={() => copiar(n.discriminacao)}>Copiar descrição</Button>
+                      {n.faltaCadastro && <Button size="sm" variant="ghost" className="h-7 text-xs" onClick={() => tomador.mutate({ id: n.id })}>Puxar cadastro atual</Button>}
+                      <Button size="sm" className="h-7 text-xs" onClick={() => { const numero = window.prompt("Número da NFS-e emitida:"); if (!numero?.trim()) return; emitida.mutate({ id: n.id, numero, codigoVerificacao: window.prompt("Código de verificação (opcional):") || null }); }}>Marcar emitida</Button>
+                      <Button size="sm" variant="ghost" className="h-7 text-xs text-red-300" onClick={() => { const motivo = pedir("Motivo do cancelamento:"); if (motivo) cancelar.mutate({ id: n.id, motivo }); }}>Cancelar</Button>
+                    </div>
+                  )}
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+        {data && !data.length && <p className="p-4 text-sm text-muted-foreground">Nenhuma nota {status ? status.toLowerCase() : ""}.</p>}
+      </div>
+    </div>
+  );
+}
+
+/** Situação da integração com o AvalieImob (acesso do plano Corretor Pro) */
+function Avalieimob() {
+  const { data } = trpc.saas.avalieimobIntegracao.useQuery();
+  if (!data) return null;
+  return (
+    <section className="space-y-1 rounded-xl border border-border bg-card p-4 text-sm">
+      <h2 className="text-sm font-semibold">AvalieImob (incluído no Corretor Pro) — {data.configurado ? <span className="text-emerald-300">integração ligada</span> : <span className="text-amber-300">aguardando configuração</span>}</h2>
+      <p className="text-xs text-muted-foreground">
+        {data.configurado
+          ? `${data.ativos} assinatura(s) com acesso liberado em ${data.url}. O acesso é ativado e suspenso sozinho conforme a assinatura.`
+          : "Falta o segredo compartilhado nas variáveis do Railway: AVALIEIMOB_INTEGRACAO_SECRET aqui e ROMATEC_CRM_INTEGRACAO_SECRET no AvalieImob (o mesmo valor)."}
+      </p>
+      {data.erros.length > 0 && <details className="text-xs"><summary className="cursor-pointer text-amber-300">Falhas recentes ({data.erros.length})</summary>{data.erros.map((e, i) => <p key={i} className="font-mono">{e}</p>)}</details>}
+    </section>
+  );
+}
+
+const ABAS = [["geral", "Visão geral"], ["assinaturas", "Assinaturas"], ["planos", "Planos e cupons"], ["nfse", "NFS-e"]] as const;
 
 /** Admin › SaaS (camada SaaS fase 1) — só o administrador */
 export default function Saas() {
@@ -233,7 +322,7 @@ export default function Saas() {
         <div className="flex flex-wrap gap-1 border-b border-border">
           {ABAS.map(([k, r]) => <button key={k} type="button" onClick={() => setAba(k)} className={`-mb-px border-b-2 px-3 py-2 text-sm ${aba === k ? "border-primary font-semibold" : "border-transparent text-muted-foreground"}`}>{r}</button>)}
         </div>
-        {aba === "geral" ? <VisaoGeral /> : aba === "assinaturas" ? <Assinaturas /> : <PlanosECupons />}
+        {aba === "geral" ? <VisaoGeral /> : aba === "assinaturas" ? <Assinaturas /> : aba === "nfse" ? <Nfse /> : <PlanosECupons />}
       </div>
     </div>
   );

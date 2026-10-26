@@ -57,12 +57,21 @@ const TABELAS: [string, string][] = [
     id INT AUTO_INCREMENT PRIMARY KEY, provedor VARCHAR(20) NOT NULL DEFAULT 'mercadopago', eventoId VARCHAR(120) NOT NULL, tipo VARCHAR(60) NOT NULL,
     recursoId VARCHAR(64) NULL, payloadJson TEXT NULL, processado BOOLEAN NOT NULL DEFAULT FALSE, tentativas INT NOT NULL DEFAULT 0, erro TEXT NULL,
     recebidoEm TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP, processadoEm DATETIME NULL, UNIQUE KEY uq_saas_evento (eventoId))`],
+  // Fase 3 (NFS-e em fila)
+  ['saasNfse', `CREATE TABLE IF NOT EXISTS saasNfse (
+    id INT AUTO_INCREMENT PRIMARY KEY, faturaId INT NOT NULL, assinaturaId INT NOT NULL, usuarioId INT NOT NULL, status VARCHAR(10) NOT NULL DEFAULT 'PENDENTE',
+    competencia VARCHAR(7) NOT NULL, valor DECIMAL(10,2) NOT NULL, itemServico VARCHAR(10) NOT NULL, discriminacao VARCHAR(500) NOT NULL,
+    tomadorNome VARCHAR(160) NOT NULL, tomadorDoc VARCHAR(14) NULL, tomadorEmail VARCHAR(160) NULL, tomadorTelefone VARCHAR(20) NULL, tomadorEndereco VARCHAR(300) NULL,
+    numero VARCHAR(30) NULL, codigoVerificacao VARCHAR(60) NULL, emitidaEm DATETIME NULL, emitidaPor INT NULL, observacao VARCHAR(300) NULL,
+    createdAt TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP, updatedAt TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    UNIQUE KEY uq_saas_nfse_fatura (faturaId), KEY idx_saas_nfse_status (status))`],
 ];
 
 /** Colunas da fase 2 (ALTER idempotente) */
 const COLUNAS: [string, string][] = [
   ['saasAssinaturas', 'metodo VARCHAR(20) NULL'], ['saasAssinaturas', 'cancelarNoFim BOOLEAN NOT NULL DEFAULT FALSE'],
   ['saasFaturas', 'pixCopiaCola TEXT NULL'], ['saasFaturas', 'modo VARCHAR(10) NULL'],
+  ['saasAssinaturas', 'avalieimobEstado VARCHAR(10) NULL'], ['saasAssinaturas', 'avalieimobErro VARCHAR(300) NULL'],
 ];
 
 export async function addSaas(): Promise<void> {

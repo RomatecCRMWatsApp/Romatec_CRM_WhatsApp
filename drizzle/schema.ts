@@ -882,6 +882,9 @@ export const saasAssinaturas = mysqlTable("saasAssinaturas", {
   metodo: varchar("metodo", { length: 20 }),
   /** Cancelada pelo assinante: vale até periodoFim e não renova */
   cancelarNoFim: boolean("cancelarNoFim").notNull().default(sql`0`),
+  /** Acesso ao AvalieImob já informado a ele: ATIVO | SUSPENSO (null = nunca provisionado) — server/saas/avalieimob.ts */
+  avalieimobEstado: varchar("avalieimobEstado", { length: 10 }),
+  avalieimobErro: varchar("avalieimobErro", { length: 300 }),
   version: int("version").notNull().default(0),
   createdAt: timestamp("createdAt").defaultNow().notNull(),
   updatedAt: timestamp("updatedAt").defaultNow().notNull(),
@@ -909,6 +912,32 @@ export const saasFaturas = mysqlTable("saasFaturas", {
   criadoPor: int("criadoPor"),
   createdAt: timestamp("createdAt").defaultNow().notNull(),
 }, (t) => ({ uqComp: uniqueIndex("uq_saas_fatura_comp").on(t.assinaturaId, t.competencia) }));
+
+/** Fila de NFS-e: uma por fatura paga, com os dados do tomador congelados no pagamento (emissão manual por enquanto) */
+export const saasNfse = mysqlTable("saasNfse", {
+  id: int("id").autoincrement().primaryKey(),
+  faturaId: int("faturaId").notNull(),
+  assinaturaId: int("assinaturaId").notNull(),
+  usuarioId: int("usuarioId").notNull(),
+  /** PENDENTE | EMITIDA | CANCELADA */
+  status: varchar("status", { length: 10 }).notNull().default("PENDENTE"),
+  competencia: varchar("competencia", { length: 7 }).notNull(),
+  valor: decimal("valor", { precision: 10, scale: 2 }).notNull(),
+  itemServico: varchar("itemServico", { length: 10 }).notNull(),
+  discriminacao: varchar("discriminacao", { length: 500 }).notNull(),
+  tomadorNome: varchar("tomadorNome", { length: 160 }).notNull(),
+  tomadorDoc: varchar("tomadorDoc", { length: 14 }),
+  tomadorEmail: varchar("tomadorEmail", { length: 160 }),
+  tomadorTelefone: varchar("tomadorTelefone", { length: 20 }),
+  tomadorEndereco: varchar("tomadorEndereco", { length: 300 }),
+  numero: varchar("numero", { length: 30 }),
+  codigoVerificacao: varchar("codigoVerificacao", { length: 60 }),
+  emitidaEm: datetime("emitidaEm"),
+  emitidaPor: int("emitidaPor"),
+  observacao: varchar("observacao", { length: 300 }),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().notNull(),
+}, (t) => ({ uqFatura: uniqueIndex("uq_saas_nfse_fatura").on(t.faturaId), idxStatus: index("idx_saas_nfse_status").on(t.status) }));
 
 /** Webhook do Mercado Pago: um registro por evento (idempotência) e reprocessamento dos que falharam */
 export const saasEventosPagamento = mysqlTable("saasEventosPagamento", {

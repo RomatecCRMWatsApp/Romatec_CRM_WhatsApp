@@ -14,6 +14,7 @@ import { empreendimentos, saasAssinaturas, saasConfig, saasCupons, saasEventosPa
 import { perfilDe } from '../../shared/equipe';
 import { precoComCupom, problemaCupom } from '../../shared/saas';
 import { assinaturaValida, mp, type ModoMp } from './mercadopago';
+import { sincronizarFilaNfse } from './nfse';
 import * as S from './servico';
 
 export class CobrancaErro extends Error { constructor(msg: string, public status = 400) { super(msg); this.name = 'CobrancaErro'; } }
@@ -296,6 +297,7 @@ async function aplicarAprovado(ref: { assinaturaId: number; faturaId: number | n
   if (resultado.acao !== 'aprovado') return resultado.acao;
   const { a, periodoFim, valor, voltarPrecoNormal } = resultado;
   S.limparCaches();
+  await sincronizarFilaNfse(agora).catch((e: any) => console.warn('[NFS-e] fila:', e?.message)); // a rotina repete se falhar
   await S.auditar(a.usuarioId, 'PAGAMENTO_CONFIRMADO', { assinaturaId: a.id, mpPaymentId: mpId, valor, modo, ate: periodoFim.toISOString() });
   if (a.status !== 'ATIVA') await S.auditar(a.usuarioId, 'DESBLOQUEIO', { assinaturaId: a.id, por: 'webhook' });
   if (voltarPrecoNormal) {
@@ -319,7 +321,10 @@ async function aplicarEstorno(ref: { assinaturaId: number }, pg: any): Promise<s
   const d = await banco();
   const mpId = String(pg.id);
   const [f]: any[] = await d.select().from(saasFaturas).where(eq(saasFaturas.mpPaymentId, mpId)).limit(1);
-  if (f) await d.update(saasFaturas).set({ status: 'ESTORNADA' } as any).where(eq(saasFaturas.id, f.id));
+  if (f) {
+    await d.update(saasFaturas).set({ status: 'ESTORNADA' } as any).where(eq(saasFaturas.id, f.id));
+    await sincronizarFilaNfse().catch((e: any) => console.warn('[NFS-e] fila:', e?.message));
+  }
   const pagas: any[] = (await d.select().from(saasFaturas).where(eq(saasFaturas.assinaturaId, ref.assinaturaId)).orderBy(desc(saasFaturas.pagoEm)))
     .filter((x: any) => x.status === 'PAGA' && x.mpPaymentId !== mpId);
   const posterior = f?.pagoEm && pagas.some(x => x.pagoEm && new Date(x.pagoEm).getTime() > new Date(f.pagoEm).getTime());
@@ -391,7 +396,10 @@ export function iniciarJobsCobranca() {
   const tick = async () => {
     if (rodando) return;
     rodando = true;
-    try { await retryEventos(); await rotinaFaturas(); } catch (e: any) { console.warn('[MP] rotina:', e?.message); } finally { rodando = false; }
+    try {
+      await retryEventos(); await rotinaFaturas(); await sincronizarFilaNfse();
+      await (await import('./avalieimob')).sincronizarAvalieimob();
+    } catch (e: any) { console.warn('[MP] rotina:', e?.message); } finally { rodando = false; }
   };
   setTimeout(tick, 90_000).unref?.();
   setInterval(tick, 10 * 60_000).unref?.();

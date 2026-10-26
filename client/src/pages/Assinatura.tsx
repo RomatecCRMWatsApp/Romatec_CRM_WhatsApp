@@ -1,7 +1,8 @@
 import { useState } from "react";
 import { toast } from "sonner";
-import { CheckCircle2, Crown, Loader2, LogOut, MessageCircle, Ticket } from "lucide-react";
+import { CheckCircle2, Crown, ExternalLink, Loader2, LogOut, MessageCircle, Ticket } from "lucide-react";
 import { trpc } from "@/lib/trpc";
+import { useAbrirAvalieimob } from "@/lib/avalieimob";
 import { useAuth } from "@/_core/hooks/useAuth";
 import { RomatecLockup } from "@/brand";
 import { Button } from "@/components/ui/button";
@@ -35,6 +36,8 @@ export default function Assinatura() {
     onSuccess: r => { toast.success(`Renovação cancelada. Seu acesso continua até ${dataBr(r.ate)}.`); utils.saas.minhaAssinatura.invalidate(); },
     onError: e => toast.error(e.message),
   });
+  const { data: aval } = trpc.saas.minhaAvalieimob.useQuery(undefined, { enabled: !!data?.planos.some(p => p.incluiAvalieimob) });
+  const sso = useAbrirAvalieimob();
   // Volta do Mercado Pago (cartão): a confirmação chega pelo webhook em segundos
   const retorno = typeof window !== "undefined" && new URLSearchParams(window.location.search).has("retorno");
 
@@ -67,6 +70,18 @@ export default function Assinatura() {
             </p>
           ) : <p className="mt-1 text-sm text-[var(--rt-text-2)]">O seu acesso está liberado.</p>}
         </section>
+
+        {aval?.configurado && aval.liberado && (
+          <section className="flex flex-wrap items-center justify-between gap-3 rounded-[18px] border border-[var(--rt-gold)]/40 bg-[var(--rt-surface)] p-5">
+            <div>
+              <p className="flex items-center gap-2 font-semibold"><Crown className="h-5 w-5 text-[var(--rt-gold)]" /> AvalieImob incluído no seu plano</p>
+              <p className="text-sm text-[var(--rt-text-2)]">Laudos e PTAM com a mesma conta, sem outra senha.</p>
+            </div>
+            <Button disabled={sso.isPending} onClick={() => sso.mutate()}>
+              {sso.isPending ? <Loader2 className="mr-1 h-4 w-4 animate-spin" /> : <ExternalLink className="mr-1 h-4 w-4" />} Abrir AvalieImob
+            </Button>
+          </section>
+        )}
 
         <section className="space-y-3">
           <div className="flex flex-wrap items-center gap-3">

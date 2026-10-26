@@ -3,6 +3,16 @@
 Cada versão nova vai no TOPO. Depois rode `npm run release` (valida e atualiza o package.json);
 ao subir, o servidor grava a versão no banco e todos recebem o aviso "Novidades da versão".
 
+## 1.35.0 — 2026-10-26
+tipo: minor
+obrigatoria: nao
+titulo: Assinaturas: NFS-e em fila e AvalieImob no plano Pro
+
+### Novo
+- Admin › SaaS → aba "NFS-e": cada fatura paga (Mercado Pago ou registrada à mão) vira uma nota pendente com os dados do cliente do momento do pagamento (nome, CPF, e-mail, endereço) e a descrição pronta. Emita no portal da prefeitura e marque como emitida com o número; exporta CSV para a contabilidade. Pagamento estornado cancela a nota pendente ou avisa para cancelar a já emitida
+- Plano Corretor Pro: botão "Abrir AvalieImob" na tela "Sua assinatura" entra no AvalieImob com a mesma conta, sem outra senha (link de uso único, válido por 60 segundos). O acesso é liberado e suspenso sozinho conforme a assinatura, sem mexer em quem já tem plano próprio no AvalieImob
+- Admin › SaaS: quadro da integração com o AvalieImob (fica desligada até o segredo compartilhado ser configurado nos dois sistemas)
+
 ## 1.34.0 — 2026-10-26
 tipo: minor
 obrigatoria: nao

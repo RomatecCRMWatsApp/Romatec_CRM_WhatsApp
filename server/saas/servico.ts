@@ -6,6 +6,7 @@
  */
 import { desc, eq, inArray } from 'drizzle-orm';
 import { getDb } from '../db';
+import { sincronizarFilaNfse } from './nfse';
 import {
   auditoriaAcesso, empreendimentos, leadQualifications, lotes, saasAssinaturas, saasConfig, saasCupons, saasFaturas, saasPlanos, saasTrials, users,
 } from '../../drizzle/schema';
@@ -264,6 +265,7 @@ export async function registrarPagamentoManual(id: number, p: { ciclo: 'MENSAL' 
   } as any);
   await atualizar(a, { origem: 'PAGA', status: 'ATIVA', ciclo: p.ciclo, periodoFim: fim, trialFim: null, motivo: null });
   await auditar(a.usuarioId, 'PAGAMENTO_CONFIRMADO', { assinaturaId: id, valor: p.valor, metodo: 'MANUAL', ate: fim.toISOString(), por: autorId });
+  await sincronizarFilaNfse(agora).catch((e: any) => console.warn('[NFS-e] fila:', e?.message));
   return { ok: true as const, periodoFim: fim.toISOString() };
 }
 

@@ -18,8 +18,8 @@ const escritorio = (ctx: any) => exigir(ctx, ["admin", "secretario"]);
 
 async function comErro<T>(f: () => Promise<T>): Promise<T> {
   try { return await f(); } catch (e: any) {
-    if (e?.name === "SaasErro" || e?.name === "TalonarioErro") {
-      const code = e.status === 404 ? "NOT_FOUND" : e.status === 403 ? "FORBIDDEN" : e.status === 409 ? "CONFLICT" : e.status >= 500 ? "INTERNAL_SERVER_ERROR" : "BAD_REQUEST";
+    if (["SaasErro", "TalonarioErro", "NfseErro", "AvalieimobErro"].includes(e?.name)) {
+      const code = e.status === 404 ? "NOT_FOUND" : e.status === 403 ? "FORBIDDEN" : e.status === 409 ? "CONFLICT" : e.status === 412 ? "PRECONDITION_FAILED" : e.status >= 500 ? "INTERNAL_SERVER_ERROR" : "BAD_REQUEST";
       throw new TRPCError({ code, message: e.message });
     }
     throw e;
@@ -68,6 +68,9 @@ export const saasRouter = router({
     const C = await import("../saas/cobranca");
     return C.definirModoMp(input.modo, ctx.user.id);
   }),
+  /** AvalieImob incluído no plano (Corretor Pro): situação do botão e o link de entrada única (JWT de 60 s) */
+  minhaAvalieimob: protectedProcedure.query(async ({ ctx }) => (await import("../saas/avalieimob")).acessoDoUsuario(ctx.user)),
+  minhaAvalieimobSso: protectedProcedure.mutation(async ({ ctx }) => comErro(async () => (await import("../saas/avalieimob")).linkSso(ctx.user))),
   cupomValidar: protectedProcedure.input(z.object({ codigo: z.string().trim().min(2).max(40), plano: z.string().max(40), ciclo: z.enum(["MENSAL", "ANUAL"]) }))
     .mutation(async ({ input }) => comErro(async () => (await S()).validarCupom(input.codigo, input.plano, input.ciclo))),
 
@@ -98,6 +101,28 @@ export const saasRouter = router({
     validade: dataZ.nullable().optional(), duracaoCiclos: z.number().int().min(1).max(36).optional(), descricao: z.string().max(200).nullable().optional(),
   })).mutation(async ({ ctx, input }) => { admin(ctx); return comErro(async () => (await S()).criarCupom(input, ctx.user.id)); }),
   cancelarCupom: protectedProcedure.input(z.object({ id: z.number().int() })).mutation(async ({ ctx, input }) => { admin(ctx); return (await S()).cancelarCupom(input.id); }),
+
+  // ─── NFS-e em fila (emissão no portal da prefeitura; transmissão automática depois) ───
+  nfse: protectedProcedure.input(z.object({ status: z.enum(["PENDENTE", "EMITIDA", "CANCELADA"]).optional() }).optional())
+    .query(async ({ ctx, input }) => { admin(ctx); const N = await import("../saas/nfse"); await N.sincronizarFilaNfse(); return N.listarNfse(input?.status); }),
+  nfseEmitida: protectedProcedure.input(z.object({ id: z.number().int(), numero: z.string().trim().min(1).max(30), codigoVerificacao: z.string().trim().max(60).nullable().optional() }))
+    .mutation(async ({ ctx, input }) => { admin(ctx); return comErro(async () => (await import("../saas/nfse")).marcarEmitida(input.id, input, ctx.user.id)); }),
+  nfseAtualizarTomador: protectedProcedure.input(z.object({ id: z.number().int() }))
+    .mutation(async ({ ctx, input }) => { admin(ctx); return comErro(async () => (await import("../saas/nfse")).atualizarTomador(input.id)); }),
+  nfseCancelar: protectedProcedure.input(z.object({ id: z.number().int(), motivo: z.string().trim().min(3).max(300) }))
+    .mutation(async ({ ctx, input }) => { admin(ctx); return comErro(async () => (await import("../saas/nfse")).cancelarNfse(input.id, input.motivo)); }),
+  nfseCsv: protectedProcedure.input(z.object({ status: z.enum(["PENDENTE", "EMITIDA", "CANCELADA"]).optional() }).optional())
+    .mutation(async ({ ctx, input }) => { admin(ctx); return { csv: await (await import("../saas/nfse")).exportarCsv(input?.status) }; }),
+  /** Situação da integração com o AvalieImob (sem expor o segredo) */
+  avalieimobIntegracao: protectedProcedure.query(async ({ ctx }) => {
+    admin(ctx);
+    const A = await import("../saas/avalieimob");
+    const { getDb } = await import("../db");
+    const { saasAssinaturas } = await import("../../drizzle/schema");
+    const db: any = await getDb();
+    const as: any[] = db ? await db.select({ estado: saasAssinaturas.avalieimobEstado, erro: saasAssinaturas.avalieimobErro }).from(saasAssinaturas) : [];
+    return { configurado: A.integracaoConfigurada(), url: A.urlAvalieimob(), ativos: as.filter(a => a.estado === "ATIVO").length, erros: as.filter(a => a.erro).map(a => a.erro as string).slice(0, 10) };
+  }),
 
   // ─── Talonários e corretor externo (administrador e secretária) ───
   externos: protectedProcedure.query(async ({ ctx }) => { escritorio(ctx); return (await T()).listarExternos(); }),
