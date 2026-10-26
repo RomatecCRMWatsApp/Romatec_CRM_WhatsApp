@@ -3,6 +3,20 @@
 Cada versão nova vai no TOPO. Depois rode `npm run release` (valida e atualiza o package.json);
 ao subir, o servidor grava a versão no banco e todos recebem o aviso "Novidades da versão".
 
+## 1.34.0 — 2026-10-26
+tipo: minor
+obrigatoria: nao
+titulo: Assinaturas: pagamento pelo Mercado Pago (fase 2)
+
+### Novo
+- Tela "Sua assinatura": assinar com cartão (cobrança recorrente no Mercado Pago), Pix (QR Code e copia e cola na hora) ou boleto. O acesso é liberado sozinho assim que o pagamento é confirmado
+- Cupom (inclusive o FUNDADOR) conta o uso no 1º pagamento e, acabados os ciclos do desconto, a recorrência volta ao preço normal
+- Empreendedor avulso: a 1ª fatura inclui a implantação (Pix ou boleto)
+- "Cancelar assinatura": o acesso continua até o fim do período já pago
+- Pix/boleto mensal: a fatura do próximo mês sai 5 dias antes do vencimento e o link vai pelo WhatsApp
+- Admin › SaaS: quadro do Mercado Pago com o modo (TESTE por padrão, sem dinheiro real), as credenciais e os avisos recebidos. A cobrança real só liga quando o administrador muda para produção
+- Segurança: avisos do Mercado Pago só são aceitos com a assinatura secreta; cada pagamento é conferido direto no Mercado Pago; aviso repetido não estende o período duas vezes; estorno só derruba o acesso se não houver pagamento posterior
+
 ## 1.33.0 — 2026-10-26
 tipo: minor
 obrigatoria: nao

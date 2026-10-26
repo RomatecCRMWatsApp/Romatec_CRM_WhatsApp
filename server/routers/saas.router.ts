@@ -30,13 +30,44 @@ const dataZ = z.string().regex(/^\d{4}-\d{2}-\d{2}$/);
 export const saasRouter = router({
   // ─── Área do assinante (corretor/empreendedor; liberada mesmo bloqueado) ───
   minhaAssinatura: protectedProcedure.query(async ({ ctx }) => (await S()).minhaAssinatura(ctx.user)),
-  /** Checkout online chega na fase 2 (Mercado Pago): registra o interesse e devolve o contato da Romatec */
+  /** Checkout pelo Mercado Pago: cartão recorrente (link do MP) ou fatura Pix/boleto (QR/link na hora) */
   minhaCheckout: protectedProcedure.input(z.object({ plano: z.string().max(40), ciclo: z.enum(["MENSAL", "ANUAL"]), metodo: z.enum(["CARTAO_RECORRENTE", "PIX", "BOLETO"]), cupom: z.string().max(40).nullable().optional() }))
     .mutation(async ({ ctx, input }) => {
-      const s = await S();
-      await s.auditar(ctx.user.id, "CHECKOUT_INICIADO", input, null);
-      return { disponivel: false as const, mensagem: "O pagamento online chega em breve. Fale com a Romatec pelo WhatsApp para assinar agora — o acesso é liberado assim que o pagamento for confirmado.", whatsapp: "5599991811246" };
+      const C = await import("../saas/cobranca");
+      const { mpConfigurado } = await import("../saas/mercadopago");
+      const modo = await C.modoMp();
+      if (!mpConfigurado(modo)) {
+        const s = await S();
+        await s.auditar(ctx.user.id, "CHECKOUT_INICIADO", { ...input, semMercadoPago: true }, null);
+        return { disponivel: false as const, mensagem: "O pagamento online ainda não está disponível. Fale com a Romatec pelo WhatsApp para assinar — o acesso é liberado assim que o pagamento for confirmado.", whatsapp: "5599991811246" };
+      }
+      try {
+        return { disponivel: true as const, ...(await C.iniciarCheckout(ctx.user, input)) };
+      } catch (e: any) {
+        if (e?.name === "CobrancaErro" || e?.name === "MpErro") throw new TRPCError({ code: e.status === 412 ? "PRECONDITION_FAILED" : e.status >= 500 ? "BAD_GATEWAY" as any : "BAD_REQUEST", message: e.message });
+        throw e;
+      }
     }),
+  /** Cancela a renovação: o acesso vale até o fim do período pago */
+  minhaCancelar: protectedProcedure.mutation(async ({ ctx }) => {
+    const C = await import("../saas/cobranca");
+    try { return await C.cancelarAssinatura(ctx.user); } catch (e: any) {
+      if (e?.name === "CobrancaErro" || e?.name === "MpErro") throw new TRPCError({ code: "BAD_REQUEST", message: e.message });
+      throw e;
+    }
+  }),
+  /** Admin: modo do Mercado Pago (teste/produção) e eventos do webhook */
+  mercadoPago: protectedProcedure.query(async ({ ctx }) => {
+    admin(ctx);
+    const C = await import("../saas/cobranca");
+    const { mpConfigurado } = await import("../saas/mercadopago");
+    return { modo: await C.modoMp(), teste: mpConfigurado("teste"), producao: mpConfigurado("producao"), webhook: !!process.env.MP_WEBHOOK_SECRET, eventos: await C.eventosRecentes() };
+  }),
+  definirModoMp: protectedProcedure.input(z.object({ modo: z.enum(["teste", "producao"]) })).mutation(async ({ ctx, input }) => {
+    admin(ctx);
+    const C = await import("../saas/cobranca");
+    return C.definirModoMp(input.modo, ctx.user.id);
+  }),
   cupomValidar: protectedProcedure.input(z.object({ codigo: z.string().trim().min(2).max(40), plano: z.string().max(40), ciclo: z.enum(["MENSAL", "ANUAL"]) }))
     .mutation(async ({ input }) => comErro(async () => (await S()).validarCupom(input.codigo, input.plano, input.ciclo))),
 

@@ -878,6 +878,10 @@ export const saasAssinaturas = mysqlTable("saasAssinaturas", {
   /** Lembretes já enviados ("trial:3", "cortesia:1"…) */
   lembretesJson: text("lembretesJson"),
   motivo: varchar("motivo", { length: 300 }),
+  /** Fase 2: CARTAO_RECORRENTE | PIX | BOLETO (escolhido no checkout) */
+  metodo: varchar("metodo", { length: 20 }),
+  /** Cancelada pelo assinante: vale até periodoFim e não renova */
+  cancelarNoFim: boolean("cancelarNoFim").notNull().default(sql`0`),
   version: int("version").notNull().default(0),
   createdAt: timestamp("createdAt").defaultNow().notNull(),
   updatedAt: timestamp("updatedAt").defaultNow().notNull(),
@@ -897,11 +901,29 @@ export const saasFaturas = mysqlTable("saasFaturas", {
   pagoEm: datetime("pagoEm"),
   mpPaymentId: varchar("mpPaymentId", { length: 64 }),
   linkPagamento: varchar("linkPagamento", { length: 500 }),
+  /** Pix copia e cola */
+  pixCopiaCola: text("pixCopiaCola"),
+  modo: varchar("modo", { length: 10 }),
   nfseId: int("nfseId"),
   observacao: varchar("observacao", { length: 300 }),
   criadoPor: int("criadoPor"),
   createdAt: timestamp("createdAt").defaultNow().notNull(),
 }, (t) => ({ uqComp: uniqueIndex("uq_saas_fatura_comp").on(t.assinaturaId, t.competencia) }));
+
+/** Webhook do Mercado Pago: um registro por evento (idempotência) e reprocessamento dos que falharam */
+export const saasEventosPagamento = mysqlTable("saasEventosPagamento", {
+  id: int("id").autoincrement().primaryKey(),
+  provedor: varchar("provedor", { length: 20 }).notNull().default("mercadopago"),
+  eventoId: varchar("eventoId", { length: 120 }).notNull(),
+  tipo: varchar("tipo", { length: 60 }).notNull(),
+  recursoId: varchar("recursoId", { length: 64 }),
+  payloadJson: text("payloadJson"),
+  processado: boolean("processado").notNull().default(sql`0`),
+  tentativas: int("tentativas").notNull().default(0),
+  erro: text("erro"),
+  recebidoEm: timestamp("recebidoEm").defaultNow().notNull(),
+  processadoEm: datetime("processadoEm"),
+}, (t) => ({ uqEvento: uniqueIndex("uq_saas_evento").on(t.eventoId) }));
 
 /** Um trial por CPF/CNPJ */
 export const saasTrials = mysqlTable("saasTrials", {

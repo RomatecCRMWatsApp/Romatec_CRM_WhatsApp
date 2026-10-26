@@ -1232,6 +1232,8 @@ async function startServer() {
   import('../financeiro/jobs').then(m => m.iniciarJobsFinanceiro()).catch(e => console.warn('[Financeiro] Jobs não iniciados:', e));
   // Camada SaaS: expirações, inadimplência e lembretes (só age com o licenciamento ligado)
   import('../saas/servico').then(m => m.iniciarJobsSaas()).catch(e => console.warn('[SaaS] Jobs não iniciados:', e));
+  // Mercado Pago: retry dos eventos do webhook e faturas Pix/boleto do próximo ciclo
+  import('../saas/cobranca').then(m => m.iniciarJobsCobranca()).catch(e => console.warn('[MP] Jobs não iniciados:', e));
   // Follow-up persistente (1/3/7/14/30 dias) e prazo de atendimento — não dependem das campanhas
   import('../leads/followup').then(m => m.iniciarJobFollowUp()).catch(e => console.warn('[FollowUp] Job não iniciado:', e));
   import('../leads/sla').then(m => m.iniciarJobSla()).catch(e => console.warn('[SLA] Job não iniciado:', e));

@@ -50,11 +50,43 @@ function VisaoGeral() {
           </div>
         )}
       </section>
+      <MercadoPago />
       <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
         {cards.map(([r, v]) => <div key={r} className="rounded-xl border border-border bg-card p-3"><p className="text-xs text-muted-foreground">{r}</p><p className="text-xl font-bold">{v}</p></div>)}
       </div>
-      <p className="text-xs text-muted-foreground">MRR: assinaturas ativas pagas (anual ÷ 12, preço negociado quando houver). Pagamento online (Mercado Pago), NFS-e e o acesso ao AvalieImob entram na fase 2; até lá, registre os pagamentos recebidos em "Assinaturas".</p>
+      <p className="text-xs text-muted-foreground">MRR: assinaturas ativas pagas (anual ÷ 12, preço negociado quando houver). Pagamentos fora do Mercado Pago (Pix direto, transferência) são registrados em "Assinaturas". NFS-e e o acesso ao AvalieImob vêm na próxima etapa.</p>
     </div>
+  );
+}
+
+/** Mercado Pago: credenciais, modo teste/produção e eventos do webhook */
+function MercadoPago() {
+  const utils = trpc.useUtils();
+  const { data } = trpc.saas.mercadoPago.useQuery(undefined, { refetchInterval: 30_000 });
+  const definir = trpc.saas.definirModoMp.useMutation({ onSuccess: r => { toast.success(`Mercado Pago em modo ${r.modo === "producao" ? "PRODUÇÃO" : "teste"}`); utils.saas.mercadoPago.invalidate(); }, onError: e => toast.error(e.message) });
+  if (!data) return null;
+  const ok = (v: boolean) => (v ? <span className="text-emerald-300">configurado</span> : <span className="text-red-300">faltando</span>);
+  return (
+    <section className="space-y-2 rounded-xl border border-border bg-card p-4 text-sm">
+      <h2 className="text-sm font-semibold">Mercado Pago — modo {data.modo === "producao" ? <span className="text-emerald-300">PRODUÇÃO (cobrança real)</span> : <span className="text-amber-300">TESTE (sem dinheiro real)</span>}</h2>
+      <p className="text-xs text-muted-foreground">Credencial de teste: {ok(data.teste)} · produção: {ok(data.producao)} · segredo do webhook: {ok(data.webhook)}</p>
+      {data.modo === "teste" ? (
+        <Button size="sm" variant="outline" disabled={!data.producao || definir.isPending} onClick={() => { if (confirm("Ligar a cobrança REAL no Mercado Pago? Só com a autorização do José.")) definir.mutate({ modo: "producao" }); }}>Ligar produção (cobrança real)</Button>
+      ) : (
+        <Button size="sm" variant="outline" disabled={definir.isPending} onClick={() => definir.mutate({ modo: "teste" })}>Voltar para o modo teste</Button>
+      )}
+      <details className="text-xs">
+        <summary className="cursor-pointer text-muted-foreground">Últimos avisos do webhook ({data.eventos.length})</summary>
+        <div className="mt-1 space-y-0.5">
+          {data.eventos.map(e => (
+            <p key={e.id} className="font-mono">
+              {new Date(e.recebidoEm as any).toLocaleString("pt-BR", { timeZone: "America/Fortaleza" })} · {e.eventoId} · {e.processado ? <span className="text-emerald-300">ok</span> : <span className="text-amber-300">pendente ({e.tentativas})</span>}{e.erro ? <span className="text-red-300"> · {e.erro}</span> : null}
+            </p>
+          ))}
+          {!data.eventos.length && <p className="text-muted-foreground">Nenhum aviso recebido ainda.</p>}
+        </div>
+      </details>
+    </section>
   );
 }
 

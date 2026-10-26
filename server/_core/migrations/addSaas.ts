@@ -52,6 +52,17 @@ const TABELAS: [string, string][] = [
     talonarioId INT NOT NULL, numero INT NOT NULL, status VARCHAR(12) NOT NULL DEFAULT 'EM_BRANCO', contratoId INT NULL, referencia VARCHAR(160) NULL,
     arquivoNome VARCHAR(200) NULL, arquivoMime VARCHAR(60) NULL, arquivoBase64 LONGTEXT NULL, lancadoPor INT NULL, lancadoEm DATETIME NULL,
     PRIMARY KEY (talonarioId, numero), CONSTRAINT fk_talonario_folha FOREIGN KEY (talonarioId) REFERENCES talonarios(id))`],
+  // Fase 2 (Mercado Pago)
+  ['saasEventosPagamento', `CREATE TABLE IF NOT EXISTS saasEventosPagamento (
+    id INT AUTO_INCREMENT PRIMARY KEY, provedor VARCHAR(20) NOT NULL DEFAULT 'mercadopago', eventoId VARCHAR(120) NOT NULL, tipo VARCHAR(60) NOT NULL,
+    recursoId VARCHAR(64) NULL, payloadJson TEXT NULL, processado BOOLEAN NOT NULL DEFAULT FALSE, tentativas INT NOT NULL DEFAULT 0, erro TEXT NULL,
+    recebidoEm TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP, processadoEm DATETIME NULL, UNIQUE KEY uq_saas_evento (eventoId))`],
+];
+
+/** Colunas da fase 2 (ALTER idempotente) */
+const COLUNAS: [string, string][] = [
+  ['saasAssinaturas', 'metodo VARCHAR(20) NULL'], ['saasAssinaturas', 'cancelarNoFim BOOLEAN NOT NULL DEFAULT FALSE'],
+  ['saasFaturas', 'pixCopiaCola TEXT NULL'], ['saasFaturas', 'modo VARCHAR(10) NULL'],
 ];
 
 export async function addSaas(): Promise<void> {
@@ -59,6 +70,11 @@ export async function addSaas(): Promise<void> {
   if (!db || getDbDriver() !== 'mysql') return;
   for (const [nome, ddl] of TABELAS) {
     try { await (db as any).execute(sql.raw(ddl)); } catch (e: any) { console.warn(`[Migration] addSaas (${nome}):`, e?.message); }
+  }
+  for (const [t, c] of COLUNAS) {
+    try { await (db as any).execute(sql.raw(`ALTER TABLE ${t} ADD COLUMN ${c}`)); } catch (e: any) {
+      if (!/Duplicate column/.test(e?.message ?? '') && (e?.code ?? e?.cause?.code) !== 'ER_DUP_FIELDNAME') console.warn(`[Migration] addSaas (${t}.${c}):`, e?.message);
+    }
   }
   for (const p of PLANOS_PADRAO) {
     try {

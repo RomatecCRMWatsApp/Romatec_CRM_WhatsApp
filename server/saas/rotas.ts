@@ -34,6 +34,22 @@ export function registrarRotasSaas(app: Express) {
     }
   });
 
+  // Webhook do Mercado Pago (painel ▸ Webhooks, assinado com MP_WEBHOOK_SECRET): grava uma vez, responde 200 e processa
+  app.post('/api/webhooks/mercadopago', async (req, res) => {
+    const dataId = String((req.query as any)['data.id'] ?? req.body?.data?.id ?? req.body?.id ?? '').slice(0, 64);
+    if (!dataId) return res.sendStatus(400);
+    try {
+      const { registrarEvento, processarEvento } = await import('./cobranca');
+      const r = await registrarEvento({ xSignature: req.header('x-signature') ?? undefined, xRequestId: req.header('x-request-id') ?? undefined }, dataId, req.body);
+      res.sendStatus(200);
+      if (r.novo) setImmediate(() => { processarEvento(r.eventoId).catch(e => console.error('[MP] webhook', r.eventoId, e?.message)); });
+    } catch (e: any) {
+      if (e?.name === 'CobrancaErro' && e.status === 401) { console.warn('[MP] webhook recusado: assinatura inválida'); return res.sendStatus(401); }
+      console.error('[MP] webhook (gravação):', e?.message);
+      if (!res.headersSent) res.sendStatus(500);
+    }
+  });
+
   async function escritorio(req: Request) {
     const user = await usuarioDaRequisicao(req);
     const { perfilDe } = await import('../../shared/equipe');

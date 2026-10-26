@@ -19,9 +19,24 @@ export default function Assinatura() {
   const [metodo, setMetodo] = useState<(typeof METODOS)[number][0]>("PIX");
   const [cupom, setCupom] = useState("");
   const [desconto, setDesconto] = useState<Record<string, { preco: number; ciclos: number }>>({});
-  const [checkout, setCheckout] = useState<{ mensagem: string; whatsapp: string } | null>(null);
+  type Resultado = { disponivel: false; mensagem: string; whatsapp: string } | { disponivel: true; tipo: "redirecionar" | "pix" | "boleto"; url?: string; copiaCola?: string | null; qrBase64?: string | null; valor: number; modo: string };
+  const [checkout, setCheckout] = useState<Resultado | null>(null);
+  const utils = trpc.useUtils();
   const validar = trpc.saas.cupomValidar.useMutation();
-  const assinar = trpc.saas.minhaCheckout.useMutation({ onSuccess: r => setCheckout(r), onError: e => toast.error(e.message) });
+  const assinar = trpc.saas.minhaCheckout.useMutation({
+    onSuccess: r => {
+      const res = r as Resultado;
+      if (res.disponivel && res.tipo === "redirecionar" && res.url) { window.location.href = res.url; return; }
+      setCheckout(res);
+    },
+    onError: e => toast.error(e.message),
+  });
+  const cancelar = trpc.saas.minhaCancelar.useMutation({
+    onSuccess: r => { toast.success(`Renovação cancelada. Seu acesso continua até ${dataBr(r.ate)}.`); utils.saas.minhaAssinatura.invalidate(); },
+    onError: e => toast.error(e.message),
+  });
+  // Volta do Mercado Pago (cartão): a confirmação chega pelo webhook em segundos
+  const retorno = typeof window !== "undefined" && new URLSearchParams(window.location.search).has("retorno");
 
   const aplicarCupom = async () => {
     if (!data) return;
@@ -97,13 +112,30 @@ export default function Assinatura() {
               </select>
             </label>
           </div>
-          {checkout && (
+          {checkout && !checkout.disponivel && (
             <div className="rounded-[18px] border border-[var(--rt-gold)]/50 bg-[var(--rt-surface)] p-4 text-sm">
               <p>{checkout.mensagem}</p>
               <a href={`https://wa.me/${checkout.whatsapp}?text=${encodeURIComponent("Olá! Quero assinar o Romatec CRM.")}`} target="_blank" rel="noopener noreferrer"
                 className="mt-3 inline-flex items-center gap-2 rounded-full bg-[#1F8A4C] px-4 py-2 font-semibold text-white"><MessageCircle className="h-4 w-4" /> Falar com a Romatec</a>
             </div>
           )}
+          {checkout && checkout.disponivel && checkout.tipo !== "redirecionar" && (
+            <div className="space-y-3 rounded-[18px] border border-[var(--rt-gold)]/50 bg-[var(--rt-surface)] p-4 text-sm">
+              {checkout.modo === "teste" && <p className="rounded bg-amber-500/15 px-2 py-1 text-xs text-amber-200">Ambiente de TESTE do Mercado Pago — nenhum valor real é cobrado.</p>}
+              <p className="font-semibold">{checkout.tipo === "pix" ? "Pague com Pix" : "Boleto gerado"} — {brl(checkout.valor)}</p>
+              {checkout.qrBase64 && <img src={`data:image/png;base64,${checkout.qrBase64}`} alt="QR Code Pix" className="h-48 w-48 rounded-lg bg-white p-2" />}
+              {checkout.copiaCola && (
+                <div>
+                  <p className="text-xs text-[var(--rt-text-2)]">Pix copia e cola:</p>
+                  <div className="flex gap-2"><input readOnly value={checkout.copiaCola} className="h-9 flex-1 rounded-md border border-border bg-background px-2 font-mono text-xs" />
+                    <Button size="sm" variant="outline" onClick={() => { navigator.clipboard.writeText(checkout.copiaCola!).then(() => toast.success("Código Pix copiado")); }}>Copiar</Button></div>
+                </div>
+              )}
+              {checkout.url && <a href={checkout.url} target="_blank" rel="noopener noreferrer" className="inline-block text-[var(--rt-gold)] underline">{checkout.tipo === "pix" ? "Abrir a página do Pix" : "Abrir o boleto"}</a>}
+              <p className="text-xs text-[var(--rt-text-2)]">Assim que o pagamento for confirmado, o acesso é liberado automaticamente (Pix: em segundos; boleto: até 2 dias úteis).</p>
+            </div>
+          )}
+          {retorno && !l.liberado && <p className="rounded-[18px] border border-[var(--rt-border)] bg-[var(--rt-surface)] p-3 text-sm">Recebemos o seu retorno do Mercado Pago. A confirmação do cartão chega em instantes — atualize a página em 1 minuto.</p>}
         </section>
 
         {data.faturas.length > 0 && (
@@ -117,8 +149,11 @@ export default function Assinatura() {
             ))}
           </section>
         )}
-        <div className="flex justify-center gap-3">
+        <div className="flex flex-wrap justify-center gap-3">
           {l.liberado && <a href="/" className="text-sm text-[var(--rt-gold)] hover:underline">Voltar ao CRM</a>}
+          {l.liberado && l.origem === "PAGA" && (
+            <button type="button" disabled={cancelar.isPending} onClick={() => { if (confirm("Cancelar a renovação? Seu acesso continua até o fim do período já pago.")) cancelar.mutate(); }} className="text-sm text-red-300 hover:underline">Cancelar assinatura</button>
+          )}
           <button type="button" onClick={() => logout()} className="inline-flex items-center gap-1 text-sm text-[var(--rt-text-2)] hover:underline"><LogOut className="h-4 w-4" /> Sair</button>
         </div>
       </main>

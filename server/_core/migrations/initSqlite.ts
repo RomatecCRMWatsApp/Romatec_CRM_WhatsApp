@@ -569,6 +569,11 @@ export function initSqliteTables(sqlite: any): void {
     id INTEGER PRIMARY KEY AUTOINCREMENT, assinaturaId INTEGER NOT NULL, competencia TEXT NOT NULL, valor TEXT NOT NULL, incluiImplantacao INTEGER NOT NULL DEFAULT 0,
     metodo TEXT NOT NULL, status TEXT NOT NULL DEFAULT 'ABERTA', vencimento TEXT NOT NULL, pagoEm TEXT, mpPaymentId TEXT UNIQUE, linkPagamento TEXT, nfseId INTEGER,
     observacao TEXT, criadoPor INTEGER, createdAt ${agoraS}, UNIQUE (assinaturaId, competencia))`);
+  run(`CREATE TABLE IF NOT EXISTS saasEventosPagamento (
+    id INTEGER PRIMARY KEY AUTOINCREMENT, provedor TEXT NOT NULL DEFAULT 'mercadopago', eventoId TEXT NOT NULL UNIQUE, tipo TEXT NOT NULL, recursoId TEXT,
+    payloadJson TEXT, processado INTEGER NOT NULL DEFAULT 0, tentativas INTEGER NOT NULL DEFAULT 0, erro TEXT, recebidoEm ${agoraS}, processadoEm TEXT)`);
+  for (const c of ['metodo TEXT', 'cancelarNoFim INTEGER NOT NULL DEFAULT 0']) addColumn(`ALTER TABLE saasAssinaturas ADD COLUMN ${c}`);
+  for (const c of ['pixCopiaCola TEXT', 'modo TEXT']) addColumn(`ALTER TABLE saasFaturas ADD COLUMN ${c}`);
   run(`CREATE TABLE IF NOT EXISTS saasTrials (cpfCnpj TEXT PRIMARY KEY, usuarioId INTEGER, usadoEm ${agoraS})`);
   run(`CREATE TABLE IF NOT EXISTS auditoriaAcesso (id INTEGER PRIMARY KEY AUTOINCREMENT, usuarioId INTEGER NOT NULL, evento TEXT NOT NULL, detalheJson TEXT, ip TEXT, criadoEm ${agoraS})`);
   run(`CREATE TABLE IF NOT EXISTS corretoresExternos (

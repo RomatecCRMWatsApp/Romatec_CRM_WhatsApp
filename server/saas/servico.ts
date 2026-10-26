@@ -445,6 +445,10 @@ export async function rotinaSaas(agora = Date.now()) {
     // Expirações
     if (a.status === 'TRIAL' && a.trialFim && new Date(a.trialFim).getTime() <= agora) { await bloquear(a, u, 'Seu período de teste terminou.', 'TRIAL_EXPIRADO'); bloqueados++; continue; }
     if (a.status === 'ATIVA' && a.origem === 'CORTESIA' && fimPeriodo && fimPeriodo <= agora) { await bloquear(a, u, 'O seu período de cortesia terminou.', 'CORTESIA_EXPIRADA'); bloqueados++; continue; }
+    // Cancelada pelo assinante: termina no fim do período, sem cobrança de atraso
+    if (['ATIVA', 'INADIMPLENTE'].includes(a.status) && a.origem === 'PAGA' && (a.cancelarNoFim === true || a.cancelarNoFim === 1) && fimPeriodo && fimPeriodo <= agora) {
+      await atualizar(a, { status: 'CANCELADA', motivo: 'Cancelada pelo assinante' }); continue;
+    }
     if (a.status === 'ATIVA' && a.origem === 'PAGA' && fimPeriodo && fimPeriodo <= agora) { await atualizar(a, { status: 'INADIMPLENTE' }); a.status = 'INADIMPLENTE'; }
     if (a.status === 'INADIMPLENTE' && fimPeriodo && fimPeriodo + (Number(a.diasTolerancia) || 0) * DIA <= agora) { await bloquear(a, u, 'Pagamento em atraso.', 'BLOQUEIO_INADIMPLENCIA'); bloqueados++; continue; }
     if (a.status === 'ATIVA' && a.origem === 'PACOTE_GESTAO' && fimPeriodo && fimPeriodo <= agora) {
