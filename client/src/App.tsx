@@ -70,6 +70,7 @@ const Setup = lazy(() => import("./pages/Setup"));
 import { trpc } from "@/lib/trpc";
 import { useAuth } from "@/_core/hooks/useAuth";
 import { Suspense, lazy, useEffect } from "react";
+import { useIsMutating } from "@tanstack/react-query";
 import { APP_VERSION, LocationChangeLoading, PageLoader, QueryLoading, SplashScreen } from "@/brand";
 
 // Redireciona para /setup se companyConfig não tiver nome de empresa
@@ -253,13 +254,15 @@ function CamadaDoSistema() {
 function CarregamentoDoApp() {
   const [location] = useLocation();
   const { loading } = useAuth();
+  // Tela cheia só para ação demorada (salvar, gerar documento…); consulta acende apenas a barra do topo
+  const acoes = useIsMutating({ predicate: m => !m.meta?.silencioso });
   if (rotaDoSite(location)) return null;
   return (
     <>
       <SplashScreen ready={!loading} version={APP_VERSION} message="Sincronizando leads e WhatsApp…" />
       <LocationChangeLoading />
       <QueryLoading />
-      <PageLoader />
+      <PageLoader overlayActive={acoes > 0} overlayDelay={1200} />
     </>
   );
 }

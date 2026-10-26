@@ -3,6 +3,16 @@
 Cada versão nova vai no TOPO. Depois rode `npm run release` (valida e atualiza o package.json);
 ao subir, o servidor grava a versão no banco e todos recebem o aviso "Novidades da versão".
 
+## 1.37.1 — 2026-10-26
+tipo: patch
+obrigatoria: nao
+titulo: Sistema mais rápido: sair e troca de telas
+
+### Correções
+- Sair: encerra a sessão e vai direto para o login, sem a tela ficar parada
+- Troca de telas sem travar: o carregamento das informações aparece só na barra fina do topo. A tela inteira só é coberta em ações demoradas (salvar, gerar documento) depois de 1 segundo
+- Cada informação da tela chega assim que fica pronta, sem esperar a mais lenta. Voltar para a janela do navegador não recarrega tudo de novo
+
 ## 1.37.0 — 2026-10-26
 tipo: minor
 obrigatoria: nao

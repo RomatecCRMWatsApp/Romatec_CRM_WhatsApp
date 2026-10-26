@@ -29,6 +29,8 @@ export interface PageLoaderProps {
   active?: boolean;
   /** ms até abrir o overlay central (padrão 400) */
   overlayDelay?: number;
+  /** o que abre o overlay (padrão: o mesmo da barra); o app passa só as ações, para consulta não travar a tela */
+  overlayActive?: boolean;
   label?: string;
 }
 
@@ -36,10 +38,10 @@ export interface PageLoaderProps {
  * Montar UMA vez no layout raiz. Barra no topo aparece imediatamente;
  * overlay com o loader oficial abre se a espera passar de 400 ms.
  */
-export function PageLoader({ active, overlayDelay = 400, label = "Carregando" }: PageLoaderProps) {
+export function PageLoader({ active, overlayDelay = 400, overlayActive, label = "Carregando" }: PageLoaderProps) {
   const busGlobal = useGlobalLoading();
   const isActive = active ?? busGlobal;
-  const showOverlay = useDelayedFlag(isActive, overlayDelay);
+  const showOverlay = useDelayedFlag(overlayActive ?? isActive, overlayDelay);
   return (
     <>
       <TopProgressBar active={isActive} />

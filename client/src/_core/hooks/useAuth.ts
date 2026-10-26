@@ -30,18 +30,13 @@ export function useAuth(options?: UseAuthOptions) {
     },
   });
 
+  // Sair: apaga o cookie (espera no máximo 3 s) e recarrega direto no login — sem a tela ficar de pé, vazia, refazendo consultas
   const logout = useCallback(async () => {
     try {
-      await logoutMutation.mutateAsync();
-    } catch (error: unknown) {
-      if (error instanceof TRPCClientError && error.data?.code === "UNAUTHORIZED") {
-        return;
-      }
-      throw error;
-    } finally {
-      utils.auth.me.setData(undefined, null);
-      await utils.auth.me.invalidate();
-    }
+      await Promise.race([logoutMutation.mutateAsync(), new Promise(r => setTimeout(r, 3000))]);
+    } catch { /* sessão já encerrada ou rede: segue para o login */ }
+    utils.auth.me.setData(undefined, null);
+    window.location.replace("/login");
   }, [logoutMutation, utils]);
 
   /** null = entrou; string = mensagem de erro do servidor (senha errada, muitas tentativas...) */
