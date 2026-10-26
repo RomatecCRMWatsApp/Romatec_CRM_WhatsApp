@@ -232,6 +232,12 @@ const TABELAS: [nome: string, ddl: string][] = [
     criadoEm TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
     CONSTRAINT fk_dep_contrato FOREIGN KEY (contratoId) REFERENCES contratos(id)
   )`],
+  ['contratoAnexos', `CREATE TABLE IF NOT EXISTS contratoAnexos (
+    id INT AUTO_INCREMENT PRIMARY KEY, contratoId INT NOT NULL, alvo VARCHAR(12) NOT NULL, dependenteId INT NULL, tipo VARCHAR(30) NOT NULL,
+    nome VARCHAR(200) NOT NULL, arquivo VARCHAR(255) NOT NULL, mime VARCHAR(60) NOT NULL, bytes INT NOT NULL, enviadoPor INT NOT NULL,
+    enviadoEm TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP, INDEX ix_canexo_contrato (contratoId),
+    CONSTRAINT fk_canexo_contrato FOREIGN KEY (contratoId) REFERENCES contratos(id)
+  )`],
   ['carteiras', `CREATE TABLE IF NOT EXISTS carteiras (
     id INT AUTO_INCREMENT PRIMARY KEY,
     contratoId INT NOT NULL,

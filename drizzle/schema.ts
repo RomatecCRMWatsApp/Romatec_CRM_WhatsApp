@@ -1546,6 +1546,25 @@ export const chacaraDependentes = mysqlTable("chacaraDependentes", {
   criadoEm: timestamp("criadoEm").defaultNow().notNull(),
 });
 
+/** Anexos do contrato: documentos do comprador, do cônjuge e dos dependentes (server/contratos/anexos.ts) */
+export const contratoAnexos = mysqlTable("contratoAnexos", {
+  id: int("id").autoincrement().primaryKey(),
+  contratoId: int("contratoId").notNull(),
+  /** comprador | conjuge | dependente */
+  alvo: varchar("alvo", { length: 12 }).notNull(),
+  /** dependente: chacaraDependentes.id (null para comprador/cônjuge) */
+  dependenteId: int("dependenteId"),
+  /** shared/contratos TIPOS_ANEXO */
+  tipo: varchar("tipo", { length: 30 }).notNull(),
+  nome: varchar("nome", { length: 200 }).notNull(),
+  /** chave em contratoArquivos */
+  arquivo: varchar("arquivo", { length: 255 }).notNull(),
+  mime: varchar("mime", { length: 60 }).notNull(),
+  bytes: int("bytes").notNull(),
+  enviadoPor: int("enviadoPor").notNull(),
+  enviadoEm: timestamp("enviadoEm").defaultNow().notNull(),
+}, (t) => ({ ixContrato: index("ix_canexo_contrato").on(t.contratoId) }));
+
 /** Carteira de chacreiro (CR80 com QR) */
 export const carteiras = mysqlTable("carteiras", {
   id: int("id").autoincrement().primaryKey(),

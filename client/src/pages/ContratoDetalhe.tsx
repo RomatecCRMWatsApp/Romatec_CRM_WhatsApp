@@ -12,6 +12,7 @@ import { SeloStatus } from "./Contratos";
 import PainelAssinaturas from "@/components/contratos/PainelAssinaturas";
 import ConfirmarCancelamento from "@/components/contratos/ConfirmarCancelamento";
 import CarteirinhasContrato from "@/components/contratos/Carteirinhas";
+import { AnexosContrato } from "@/components/contratos/Anexos";
 
 const br = (iso?: string | null) => (iso ? String(iso).slice(0, 10).split("-").reverse().join("/") : "—");
 const ROTULO_TIPO: Record<string, string> = { entrada: "Entrada", saldo: "Saldo", avista: "À vista", antecipacao: "Antecipação" };
@@ -173,6 +174,8 @@ export default function ContratoDetalhe() {
 
               <CarteirinhasContrato id={id} status={c.status} dependentes={d.dependentes}
                 podeEditar={d.pode.definitivo || d.pode.solicitarCancelamento || d.pode.cancelar} onMudou={recarregar} />
+
+              <AnexosContrato contratoId={id} casado={!!d.conjuge} dependentes={d.dependentes.map((x: any) => ({ id: x.id, nome: x.nome }))} />
 
               <section className="rounded-xl border border-border bg-card p-4">
                 <h2 className="mb-2 text-sm font-semibold">Versões</h2>

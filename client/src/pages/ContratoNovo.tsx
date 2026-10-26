@@ -14,6 +14,7 @@ import { UFS } from "@shared/cadastro";
 import { perfilDe } from "@shared/equipe";
 import { ESTADOS_CIVIS, REGIMES_BENS, exigeConjuge, exigePacto, pendenciasComprador, pendenciasDependentes, rotuloParentesco, type Dependente, type PessoaForm } from "@shared/contratos";
 import DependentesCampos from "@/components/contratos/Dependentes";
+import { AnexosNovoContrato, enviarAnexo, vagasDoContrato, type AnexoPendente } from "@/components/contratos/Anexos";
 import { brl } from "@shared/simulador";
 
 const PASSOS = ["Unidade e plano", "Comprador", "Revisão"];
@@ -65,8 +66,24 @@ export default function ContratoNovo() {
 
   const plano = { modalidade, entradaParcelas: modalidade === "avista" ? 1 : entradaParcelas, prazo: modalidade === "avista" ? undefined : prazo, dataPrimeiroPagamento: data1 };
   const sim = trpc.contratos.simular.useQuery({ slug, lote, plano, corretorUserId: corretorUserId ?? undefined }, { enabled: !!lote && /^\d{4}-\d{2}-\d{2}$/.test(data1) });
+  // Documentos escolhidos no passo 2: sobem logo depois de criar (dependente pela posição na lista)
+  const [anexos, setAnexos] = useState<AnexoPendente[]>([]);
+  const vagas = vagasDoContrato(exigeConjuge(comprador.estadoCivil), (dependentes ?? []).map((d, i) => ({ nome: d.nome, ref: i })));
+  const anexosValidos = anexos.filter(a => vagas.some(v => v.alvo === a.alvo && v.tipo === a.tipo && v.dependente === a.dependente));
+  const [subindo, setSubindo] = useState(false);
   const criar = trpc.contratos.criar.useMutation({
-    onSuccess: r => { toast.success(`Contrato ${r.numero} criado — chácara reservada`); navigate(`/contratos/${r.id}`); },
+    onSuccess: async r => {
+      toast.success(`Contrato ${r.numero} criado — chácara reservada`);
+      if (anexosValidos.length) {
+        setSubindo(true);
+        let falhas = 0;
+        for (const a of anexosValidos) { try { await enviarAnexo(r.id, a, a.arquivo); } catch { falhas++; } }
+        setSubindo(false);
+        if (falhas) toast.error(`${falhas} documento(s) não subiram — envie pela tela do contrato`);
+        else toast.success(`${anexosValidos.length} documento(s) anexados`);
+      }
+      navigate(`/contratos/${r.id}`);
+    },
     onError: e => {
       const campos = (e.data as any)?.campos as Record<string, string> | undefined;
       if (campos) { setErros(campos); setPasso(1); }
@@ -199,6 +216,9 @@ export default function ContratoNovo() {
             <div className="rounded-xl border border-border bg-card p-4">
               <DependentesCampos lista={dependentes} onMudar={setDependentes} erros={erros} comConjuge={casado} />
             </div>
+            <div className="rounded-xl border border-border bg-card p-4">
+              <AnexosNovoContrato vagas={vagas} pendentes={anexos} onMudar={setAnexos} />
+            </div>
           </section>
         )}
 
@@ -208,6 +228,7 @@ export default function ContratoNovo() {
               <p>Chácara: <b>{lote}</b> · {op?.empreendimento.nome}</p>
               <p>Comprador: <b>{comprador.nome}</b> — CPF {comprador.cpf}</p>
               {casado && <p>Cônjuge: <b>{conjuge.nome}</b> — CPF {conjuge.cpf}</p>}
+              <p>Documentos anexados: <b>{anexosValidos.length}</b>{anexosValidos.length ? ` — ${anexosValidos.map(a => a.titulo.split(" — ")[0]).join(", ")}` : " (envie depois pela tela do contrato)"}</p>
               <p>Carteirinhas: <b>{1 + (casado ? 1 : 0) + (dependentes?.length ?? 0)}</b>{dependentes?.length ? ` — dependentes: ${dependentes.map(d => `${d.nome.split(" ")[0]} (${rotuloParentesco(d.parentesco)})`).join(", ")}` : " (sem dependentes)"}</p>
               <p>Plano: <b>{sim.data.modalidade === "avista" ? `à vista ${brl(sim.data.total_pagar)}` : `entrada ${sim.data.entrada_qtd}× ${brl(sim.data.entrada_parcela)} + ${sim.data.saldo_qtd}× ${brl(sim.data.saldo_parcela)}`}</b></p>
               <p>Total a pagar: <b>{brl(sim.data.total_pagar)}</b></p>
@@ -232,7 +253,7 @@ export default function ContratoNovo() {
           <Button variant="outline" disabled={passo === 0} onClick={() => setPasso(p => p - 1)}>Voltar</Button>
           {passo < PASSOS.length - 1
             ? <Button disabled={passo === 0 && !passo0ok} onClick={avancar}>Continuar</Button>
-            : <Button disabled={criar.isPending} onClick={enviar}>{criar.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : null} Criar contrato e reservar a chácara</Button>}
+            : <Button disabled={criar.isPending || subindo} onClick={enviar}>{criar.isPending || subindo ? <Loader2 className="h-4 w-4 animate-spin" /> : null} {subindo ? "Enviando documentos…" : "Criar contrato e reservar a chácara"}</Button>}
         </div>
       </div>
     </div>

@@ -3,6 +3,15 @@
 Cada versão nova vai no TOPO. Depois rode `npm run release` (valida e atualiza o package.json);
 ao subir, o servidor grava a versão no banco e todos recebem o aviso "Novidades da versão".
 
+## 1.37.0 — 2026-10-26
+tipo: minor
+obrigatoria: nao
+titulo: Documentos anexados ao contrato
+
+### Novo
+- Novo contrato, passo "Comprador": seção "Documentos — anexos do contrato" com documento com foto (frente e verso), CPF, comprovante de endereço, comprovante de renda (se precisar), certidão de casamento e documento do cônjuge (quando casado) e o documento de cada dependente. Aceita PDF ou foto (até 10 MB); os arquivos sobem assim que o contrato é criado
+- Tela do contrato: quadro "Documentos anexados" mostra o que já veio e o que falta, e permite enviar, abrir e remover depois. Só o escritório e o corretor do contrato veem os documentos
+
 ## 1.36.0 — 2026-10-26
 tipo: minor
 obrigatoria: nao

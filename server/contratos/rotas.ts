@@ -179,6 +179,57 @@ export function registrarRotasContratos(app: Express) {
       res.send(buf);
     } catch { res.status(404).send('Não encontrado'); }
   });
+  // ─── Anexos do contrato (documentos do comprador, cônjuge e dependentes): escritório ou o corretor do contrato ───
+  const erroAnexo = (res: any, e: any, msg: string) => {
+    if (e instanceof ContratoErro) return res.status(e.status).json({ error: e.message });
+    console.error(`[Contratos] ${msg}:`, e);
+    res.status(500).json({ error: msg });
+  };
+  app.post('/api/contratos/:id/anexos', express.raw({ type: '*/*', limit: '11mb' }), async (req, res) => {
+    try {
+      const a = await contratoDaEquipe(req);
+      if (!a) return res.status(404).json({ error: 'Não encontrado' });
+      const alvo = String(req.query.alvo ?? '');
+      if (!['comprador', 'conjuge', 'dependente'].includes(alvo) || !Buffer.isBuffer(req.body)) return res.status(400).json({ error: 'Envie o arquivo' });
+      const { salvarAnexo } = await import('./documentosContrato');
+      res.json(await salvarAnexo(a.c.id, {
+        alvo: alvo as any, dependente: req.query.dependente != null ? Number(req.query.dependente) : null,
+        tipo: String(req.query.tipo ?? ''), nome: String(req.query.nome ?? '').slice(0, 200),
+      }, req.body, a.user.id));
+    } catch (e: any) { erroAnexo(res, e, 'Falha ao salvar o anexo'); }
+  });
+  app.get('/api/contratos/:id/anexos', async (req, res) => {
+    try {
+      const a = await contratoDaEquipe(req);
+      if (!a) return res.status(404).json({ error: 'Não encontrado' });
+      const { listarAnexos } = await import('./documentosContrato');
+      res.json(await listarAnexos(a.c.id));
+    } catch (e: any) { erroAnexo(res, e, 'Falha ao listar os anexos'); }
+  });
+  app.get('/api/contratos/:id/anexos/:anexoId', async (req, res) => {
+    try {
+      const a = await contratoDaEquipe(req);
+      if (!a) return res.status(404).send('Não encontrado');
+      const { lerAnexo } = await import('./documentosContrato');
+      const f = await lerAnexo(a.c.id, Number(req.params.anexoId) || 0);
+      if (!f) return res.status(404).send('Não encontrado');
+      res.setHeader('Content-Type', f.mime);
+      res.setHeader('Content-Disposition', `inline; filename="${encodeURIComponent(f.nome)}"`);
+      res.setHeader('Cache-Control', 'private, no-store');
+      res.setHeader('X-Content-Type-Options', 'nosniff');
+      res.send(f.buf);
+    } catch { res.status(404).send('Não encontrado'); }
+  });
+  app.delete('/api/contratos/:id/anexos/:anexoId', async (req, res) => {
+    try {
+      const a = await contratoDaEquipe(req);
+      if (!a) return res.status(404).json({ error: 'Não encontrado' });
+      const { perfilDe } = await import('../../shared/equipe');
+      const { removerAnexo } = await import('./documentosContrato');
+      res.json(await removerAnexo(a.c.id, Number(req.params.anexoId) || 0, a.user, ['admin', 'secretario'].includes(String(perfilDe(a.user)))));
+    } catch (e: any) { erroAnexo(res, e, 'Falha ao remover o anexo'); }
+  });
+
   // QR de autenticidade (portaria): pública, sem CPF; a foto ajuda a conferir quem apresenta
   app.get('/p/c/:token', async (req, res) => {
     const { conferirCarteirinha } = await import('./carteirinhas');

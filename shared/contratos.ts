@@ -167,3 +167,19 @@ export function telefoneWhatsApp(t: string | null | undefined): string | null {
   if ((d.length === 12 || d.length === 13) && d.startsWith('55')) return d;
   return null;
 }
+
+// ─── Anexos do contrato (documentos do comprador, cônjuge e dependentes) ───
+export type AlvoAnexo = 'comprador' | 'conjuge' | 'dependente';
+export const TIPOS_ANEXO = {
+  documento_foto: 'Documento com foto (RG/CNH) — frente',
+  documento_foto_verso: 'Documento com foto — verso',
+  cpf: 'CPF',
+  comprovante_residencia: 'Comprovante de endereço',
+  comprovante_renda: 'Comprovante de renda',
+  certidao_casamento: 'Certidão de casamento / união estável',
+  documento_dependente: 'Documento do dependente (RG ou certidão de nascimento)',
+  outro: 'Outro documento',
+} as const;
+export type TipoAnexo = keyof typeof TIPOS_ANEXO;
+export const MIMES_ANEXO = ['application/pdf', 'image/jpeg', 'image/png', 'image/webp'];
+export const LIMITE_ANEXO_MB = 10;
