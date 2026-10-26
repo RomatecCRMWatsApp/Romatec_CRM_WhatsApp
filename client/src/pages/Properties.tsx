@@ -203,13 +203,14 @@ export default function Properties() {
     }
   };
 
+  // Corretor só vê os imóveis que o administrador habilitou para ele (admin e secretária veem todos)
+  const visiveis = useMemo(() => (properties && minhas ? properties.filter((p: any) => habilitado(p.id)) : []), [properties, minhas]);
   const filteredProperties = useMemo(() => {
-    if (!properties) return [];
-    return properties.filter(p =>
+    return visiveis.filter(p =>
       p.denomination?.toLowerCase().includes(searchTerm.toLowerCase()) ||
       p.address?.toLowerCase().includes(searchTerm.toLowerCase())
     );
-  }, [properties, searchTerm]);
+  }, [visiveis, searchTerm]);
 
   const handleEdit = (property: any) => {
     setEditingId(property.id);
@@ -271,7 +272,7 @@ export default function Properties() {
                     </div>
                     Imóveis
                   </h1>
-                  <p className="text-muted-foreground text-sm mt-1">{properties?.length || 0} propriedades cadastradas</p>
+                  <p className="text-muted-foreground text-sm mt-1">{visiveis.length} {minhas?.perfil === "corretor" ? "imóveis liberados para você" : "propriedades cadastradas"}</p>
                 </div>
               </div>
               <div className="flex items-center gap-2">
@@ -754,7 +755,7 @@ export default function Properties() {
                 <Home className="h-12 w-12 text-muted-foreground/30" />
               </div>
               <p className="text-foreground text-lg font-medium">Nenhum imóvel encontrado</p>
-              <p className="text-muted-foreground text-sm mt-2">Cadastre um novo imóvel ou ajuste a busca</p>
+              <p className="text-muted-foreground text-sm mt-2">{minhas?.perfil === "corretor" && !visiveis.length ? "Nenhum imóvel liberado para você ainda — peça ao administrador ou cadastre um novo" : "Cadastre um novo imóvel ou ajuste a busca"}</p>
             </div>
           )}
         </div>
