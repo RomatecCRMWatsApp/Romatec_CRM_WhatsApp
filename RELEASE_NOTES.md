@@ -3,6 +3,18 @@
 Cada versão nova vai no TOPO. Depois rode `npm run release` (valida e atualiza o package.json);
 ao subir, o servidor grava a versão no banco e todos recebem o aviso "Novidades da versão".
 
+## 1.33.0 — 2026-10-26
+tipo: minor
+obrigatoria: nao
+titulo: Assinaturas do CRM (fase 1) e talonários
+
+### Novo
+- Administração → "SaaS e assinaturas" (administrador): planos com valores editáveis (Corretor Essencial, Corretor Pro, Empreendedor avulso, pacote de gestão e implantação), cupons (inclusive o FUNDADOR para os 20 primeiros corretores) e o painel com MRR, assinantes, testes em curso, conversão, inadimplentes e receita do mês
+- O licenciamento começa DESLIGADO: ninguém é cobrado nem bloqueado. Ao ligar, quem já usa o CRM ganha cortesia até a data escolhida e os convites novos têm 7 dias de teste a partir do 1º acesso (um teste por CPF), com lembretes pelo WhatsApp 3 dias antes, na véspera e no dia
+- Sem assinatura, o corretor ou o empreendedor vê a tela "Sua assinatura" com os planos, cupom e forma de pagamento; leads atribuídos voltam para a distribuição do escritório e o escritório é avisado das reservas ativas. Pagamento recebido fora do sistema é registrado pelo administrador e libera na hora
+- Talonários (administrador e secretária): cadastro de corretor externo (sem login), entrega de blocos numerados de contratos e recibos, lançamento de cada folha com a cópia digitalizada (só do corretor que recebeu o bloco e uma vez só), folhas canceladas/extraviadas e relatório das folhas ainda não devolvidas. Botão "Convidar para o digital"
+- Pagamento online (Mercado Pago), NFS-e e acesso ao AvalieImob vêm na fase 2
+
 ## 1.32.0 — 2026-10-25
 tipo: minor
 obrigatoria: nao

@@ -32,6 +32,9 @@ const Reunioes = lazy(() => import("./pages/Reunioes"));
 const Recrutamento = lazy(() => import("./pages/Recrutamento"));
 const FormularioRecrutamento = lazy(() => import("./pages/FormularioRecrutamento"));
 const TrocarSenha = lazy(() => import("./pages/TrocarSenha"));
+const Assinatura = lazy(() => import("./pages/Assinatura"));
+const Saas = lazy(() => import("./pages/Saas"));
+const Talonarios = lazy(() => import("./pages/Talonarios"));
 const Empreendimentos = lazy(() => import("./pages/Empreendimentos"));
 const Empreendimento = lazy(() => import("./pages/Empreendimento"));
 const EmpreendimentoDocumentos = lazy(() => import("./pages/EmpreendimentoDocumentos"));
@@ -81,6 +84,12 @@ function SetupGuard({ component: Component }: { component: React.ComponentType }
       navigate("/trocar-senha");
       return;
     }
+    // Camada SaaS: sem licença, só a área do assinante
+    const lic = (user as any)?.licenca;
+    if (isAuthenticated && lic?.exigida && !lic.liberado && location !== "/assinatura") {
+      navigate("/assinatura");
+      return;
+    }
     if (isAuthenticated && !podeAbrir(perfil, location)) {
       navigate(telaInicial(perfil));
       return;
@@ -92,7 +101,7 @@ function SetupGuard({ component: Component }: { component: React.ComponentType }
 
   if (!permitido) return null;
   // Telas internas dentro do menu lateral; o empreendedor tem o painel próprio, sem menu do CRM
-  return perfil === "empreendedor" || location.startsWith("/empreendedor") ? <Suspense fallback={null}><Component /></Suspense> : <AppShell><Suspense fallback={null}><Component /></Suspense></AppShell>;
+  return perfil === "empreendedor" || location.startsWith("/empreendedor") || location === "/assinatura" ? <Suspense fallback={null}><Component /></Suspense> : <AppShell><Suspense fallback={null}><Component /></Suspense></AppShell>;
 }
 
 function Router() {
@@ -139,6 +148,15 @@ function Router() {
       <Route path={"/formulario/:token"} component={FormularioRecrutamento} />
       <Route path={"/recrutamento"}>
         {() => <SetupGuard component={Recrutamento} />}
+      </Route>
+      <Route path={"/assinatura"}>
+        {() => <SetupGuard component={Assinatura} />}
+      </Route>
+      <Route path={"/saas"}>
+        {() => <SetupGuard component={Saas} />}
+      </Route>
+      <Route path={"/talonarios"}>
+        {() => <SetupGuard component={Talonarios} />}
       </Route>
       <Route path={"/empreendimentos/:slug/folder"}>
         {() => <SetupGuard component={EmpreendimentoFolder} />}

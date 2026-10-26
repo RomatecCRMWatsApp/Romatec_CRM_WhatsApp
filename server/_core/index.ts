@@ -39,6 +39,9 @@ async function startServer() {
   }));
   app.use(express.urlencoded({ limit: "50mb", extended: true }));
   registerOAuthRoutes(app);
+  // Camada SaaS: licença nas rotas REST (antes das demais /api) + talonários — só age com o licenciamento ligado
+  const { registrarRotasSaas } = await import('../saas/rotas');
+  registrarRotasSaas(app);
 
   app.post('/api/webhook/zapi', async (req, res) => {
     try {
@@ -1147,6 +1150,8 @@ async function startServer() {
     await addReunioes();
     const { addRecrutamento } = await import('./migrations/addRecrutamento');
     await addRecrutamento();
+    const { addSaas } = await import('./migrations/addSaas');
+    await addSaas();
     const { addControleLotes } = await import('./migrations/addControleLotes');
     await addControleLotes();
   } catch (e) {
@@ -1225,6 +1230,8 @@ async function startServer() {
   import('../leads/scoreService').then(m => m.iniciarJobInatividade()).catch(e => console.warn('[Score] Job não iniciado:', e));
   // IPCA mensal (dia 15) e declaração anual de quitação (2º dia útil de maio)
   import('../financeiro/jobs').then(m => m.iniciarJobsFinanceiro()).catch(e => console.warn('[Financeiro] Jobs não iniciados:', e));
+  // Camada SaaS: expirações, inadimplência e lembretes (só age com o licenciamento ligado)
+  import('../saas/servico').then(m => m.iniciarJobsSaas()).catch(e => console.warn('[SaaS] Jobs não iniciados:', e));
   // Follow-up persistente (1/3/7/14/30 dias) e prazo de atendimento — não dependem das campanhas
   import('../leads/followup').then(m => m.iniciarJobFollowUp()).catch(e => console.warn('[FollowUp] Job não iniciado:', e));
   import('../leads/sla').then(m => m.iniciarJobSla()).catch(e => console.warn('[SLA] Job não iniciado:', e));

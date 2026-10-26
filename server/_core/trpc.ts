@@ -4,6 +4,7 @@ import superjson from "superjson";
 import type { TrpcContext } from "./context";
 import { perfilDe, podeChamar } from "../../shared/equipe";
 import { moduloLiberado } from "../../shared/permissoes";
+import { caminhoLivre, precisaLicenca } from "../../shared/saas";
 import { carregarPermissoes, type PermissoesUsuario } from "../permissoes";
 
 const t = initTRPC.context<TrpcContext>().create({
@@ -33,6 +34,21 @@ const requireUser = t.middleware(async opts => {
   const permissoes = await carregarPermissoes(ctx.user as any);
   if (!moduloLiberado(permissoes.perfil, permissoes.modulos, path)) {
     throw new TRPCError({ code: "FORBIDDEN", message: "Este módulo não está liberado para você. Peça ao administrador." });
+  }
+  // Camada SaaS (shared/saas.ts): corretor/empreendedor sem licença → 402 e o app abre /assinatura.
+  // Só com o licenciamento ligado; fail-closed: erro ao conferir nunca libera.
+  // Sem banco conectado nenhum procedimento devolve dados (e os testes de permissão rodam sem banco): não há o que licenciar
+  const { getDb } = await import("../db");
+  if (precisaLicenca(permissoes.perfil) && !caminhoLivre(path) && (await getDb())) {
+    let liberado = false;
+    try {
+      const { resumoLicenca } = await import("../saas/servico");
+      liberado = (await resumoLicenca(ctx.user as any)).liberado;
+    } catch (e: any) {
+      console.error("[licenca]", e?.message);
+      throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Não foi possível conferir a sua assinatura agora. Tente de novo." });
+    }
+    if (!liberado) throw new TRPCError({ code: "PAYMENT_REQUIRED", message: "ASSINATURA_NECESSARIA" });
   }
 
   return next({

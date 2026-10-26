@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { useLocation } from "wouter";
+import { Link, useLocation } from "wouter";
 import { useAuth } from "@/_core/hooks/useAuth";
 import { daEquipe, perfilDe, podeAbrir, ROTULO_PERFIL } from "@shared/equipe";
 import { trpc } from "@/lib/trpc";
@@ -7,7 +7,7 @@ import AvisoRotinas from "./AvisoRotinas";
 import { MobileTabBar, RomatecAppIcon, RomatecLockup, TAB_ICONS, type TabItem } from "@/brand";
 import {
   BarChart3, Building2, Flame, Images, KanbanSquare, LayoutDashboard, LineChart, LogOut, Megaphone, Menu, Send,
-  Settings, UserCog, Users, X, Eye, ClipboardList, CalendarDays, Map as MapIcon, Smartphone, Wallet, IdCard, Bell, FileSignature, Mic, UserPlus,
+  Settings, UserCog, Users, X, Eye, ClipboardList, CalendarDays, Map as MapIcon, Smartphone, Wallet, IdCard, Bell, FileSignature, Mic, UserPlus, BookCopy, BadgeDollarSign,
 } from "lucide-react";
 import { abrirNovidades, SinoNovidades, useNovidadesNaoLidas } from "./sistema/Novidades";
 import { useNotificacoes } from "./sistema/Notificacoes";
@@ -46,6 +46,7 @@ const MENU: Grupo[] = [
       { rotulo: "Empreendimentos", rota: "/empreendimentos", icone: MapIcon, modulo: "empreendimentos" },
       { rotulo: "Contratos", rota: "/contratos", icone: FileSignature, modulo: "contratos" },
       { rotulo: "Carteirinhas", rota: "/carteirinhas", icone: IdCard, modulo: "contratos" },
+      { rotulo: "Talonários", rota: "/talonarios", icone: BookCopy },
       { rotulo: "Financeiro", rota: "/financeiro", icone: Wallet, modulo: "financeiro" },
       { rotulo: "Imóveis", rota: "/properties", icone: Building2, modulo: "imoveis" },
       { rotulo: "Materiais", rota: "/materiais", icone: Images, modulo: "materiais" },
@@ -58,6 +59,7 @@ const MENU: Grupo[] = [
     titulo: "Administração",
     itens: [
       { rotulo: "Equipe", rota: "/equipe", icone: UserCog },
+      { rotulo: "SaaS e assinaturas", rota: "/saas", icone: BadgeDollarSign },
       { rotulo: "Visão do empreendedor", rota: "/empreendedor", icone: Eye },
       { rotulo: "Configurações", rota: "/settings", icone: Settings },
     ],
@@ -182,6 +184,23 @@ function BarraInferior({ modulos }: { modulos?: Record<string, boolean> | null }
 }
 
 /** Layout das telas internas: menu lateral fixo (desktop) / gaveta (celular) + barra do topo */
+/** Camada SaaS: contagem regressiva do teste/cortesia (últimos 7 dias) e inadimplência dentro da tolerância */
+function BannerLicenca({ licenca }: { licenca?: { exigida: boolean; liberado: boolean; status: string | null; origem: string | null; diasRestantes: number | null } | null }) {
+  if (!licenca?.exigida || !licenca.liberado) return null;
+  const teste = licenca.status === "TRIAL", cortesia = licenca.status === "ATIVA" && licenca.origem === "CORTESIA";
+  const atraso = licenca.status === "INADIMPLENTE";
+  const d = licenca.diasRestantes;
+  if (!atraso && !((teste || cortesia) && d != null && d <= 7)) return null;
+  const texto = atraso ? "Pagamento em atraso: regularize para não perder o acesso."
+    : `${teste ? "Teste grátis" : "Cortesia"}: ${d === 0 ? "termina hoje" : `faltam ${d} dia(s)`}.`;
+  return (
+    <div className={`flex flex-wrap items-center justify-center gap-3 px-4 py-2 text-sm ${atraso || (d ?? 9) <= 1 ? "bg-red-500/15 text-red-200" : "bg-[var(--rt-gold)]/15 text-[var(--rt-gold-light,#E8C766)]"}`}>
+      <span>{texto}</span>
+      <Link href="/assinatura" className="rounded-full bg-[var(--rt-gold)] px-3 py-1 text-xs font-semibold text-black">Assinar</Link>
+    </div>
+  );
+}
+
 export default function AppShell({ children }: { children: React.ReactNode }) {
   const [loc] = useLocation();
   const [aberto, setAberto] = useState(false);
@@ -220,6 +239,7 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
       </header>
 
       <AvisoRotinas />
+      <BannerLicenca licenca={(user as any)?.licenca} />
       {/* No celular, espaço para a barra inferior (96 px) */}
       <main className="min-w-0 pb-24 min-[900px]:pb-0">{children}</main>
       <BarraInferior modulos={minhas?.modulos} />

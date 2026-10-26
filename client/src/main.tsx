@@ -19,6 +19,12 @@ const redirectToLoginIfUnauthorized = (error: unknown) => {
   if (!(error instanceof TRPCClientError)) return;
   if (typeof window === "undefined") return;
 
+  // Camada SaaS: sem licença (402) → área do assinante
+  if ((error.data as any)?.code === "PAYMENT_REQUIRED" || error.message === "ASSINATURA_NECESSARIA") {
+    if (window.location.pathname !== "/assinatura") window.location.href = "/assinatura";
+    return;
+  }
+
   const isUnauthorized = error.message === UNAUTHED_ERR_MSG;
 
   if (!isUnauthorized) return;

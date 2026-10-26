@@ -810,6 +810,161 @@ export const leadVisitas = mysqlTable("leadVisitas", {
   idxLead: index("idx_visita_lead").on(t.leadId),
 }));
 
+// ─── Camada SaaS (shared/saas.ts) — fase 1: planos, cupons, assinaturas, trial, talonários ───
+
+/** Configurações da camada SaaS (licenciamento_ativo, cortesia_ate…) */
+export const saasConfig = mysqlTable("saasConfig", {
+  chave: varchar("chave", { length: 60 }).primaryKey(),
+  valor: text("valor"),
+  atualizadoPor: int("atualizadoPor"),
+  updatedAt: timestamp("updatedAt").defaultNow().notNull(),
+});
+
+export const saasPlanos = mysqlTable("saasPlanos", {
+  id: int("id").autoincrement().primaryKey(),
+  codigo: varchar("codigo", { length: 40 }).notNull(),
+  publico: varchar("publico", { length: 15 }).notNull(),
+  nome: varchar("nome", { length: 80 }).notNull(),
+  precoMensal: decimal("precoMensal", { precision: 10, scale: 2 }).notNull(),
+  precoAnual: decimal("precoAnual", { precision: 10, scale: 2 }),
+  storageGb: int("storageGb").notNull().default(5),
+  incluiAvalieimob: boolean("incluiAvalieimob").notNull().default(sql`0`),
+  unico: boolean("unico").notNull().default(sql`0`),
+  conteudo: text("conteudo"),
+  ativo: boolean("ativo").notNull().default(sql`1`),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+}, (t) => ({ uqCodigo: uniqueIndex("uq_saas_plano").on(t.codigo) }));
+
+/** Cupons (portados do AvalieImob): valor fixo, percentual ou preço fixo por plano; limite de usos; validade; ciclos */
+export const saasCupons = mysqlTable("saasCupons", {
+  id: int("id").autoincrement().primaryKey(),
+  codigo: varchar("codigo", { length: 40 }).notNull(),
+  /** PERCENTUAL | VALOR_FIXO | PRECO_FIXO */
+  tipo: varchar("tipo", { length: 12 }).notNull(),
+  valor: decimal("valor", { precision: 10, scale: 2 }).notNull().default("0"),
+  precosFixosJson: text("precosFixosJson"),
+  planoAlvo: varchar("planoAlvo", { length: 40 }),
+  limiteUsos: int("limiteUsos").notNull().default(1),
+  usosRealizados: int("usosRealizados").notNull().default(0),
+  validade: datetime("validade"),
+  /** Quantos ciclos o desconto vale (1 = só a 1ª mensalidade, como no AvalieImob) */
+  duracaoCiclos: int("duracaoCiclos").notNull().default(1),
+  /** ativo | utilizado | expirado | cancelado */
+  status: varchar("status", { length: 12 }).notNull().default("ativo"),
+  descricao: varchar("descricao", { length: 200 }),
+  criadoPor: int("criadoPor"),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().notNull(),
+}, (t) => ({ uqCodigo: uniqueIndex("uq_saas_cupom").on(t.codigo) }));
+
+export const saasAssinaturas = mysqlTable("saasAssinaturas", {
+  id: int("id").autoincrement().primaryKey(),
+  usuarioId: int("usuarioId").notNull(),
+  planoId: int("planoId").notNull(),
+  empreendimentoId: int("empreendimentoId"),
+  /** usuarioId:empreendimentoId (0 = corretor) — o UNIQUE do MySQL não barra NULL repetido */
+  chave: varchar("chave", { length: 40 }).notNull(),
+  origem: varchar("origem", { length: 15 }).notNull(),
+  ciclo: varchar("ciclo", { length: 8 }).notNull().default("MENSAL"),
+  status: varchar("status", { length: 20 }).notNull(),
+  precoOverride: decimal("precoOverride", { precision: 10, scale: 2 }),
+  cupomId: int("cupomId"),
+  ciclosCupomRestantes: int("ciclosCupomRestantes"),
+  trialFim: datetime("trialFim"),
+  periodoFim: datetime("periodoFim"),
+  diasTolerancia: int("diasTolerancia").notNull().default(3),
+  contratoGestaoNr: varchar("contratoGestaoNr", { length: 40 }),
+  mpPreapprovalId: varchar("mpPreapprovalId", { length: 64 }),
+  /** Lembretes já enviados ("trial:3", "cortesia:1"…) */
+  lembretesJson: text("lembretesJson"),
+  motivo: varchar("motivo", { length: 300 }),
+  version: int("version").notNull().default(0),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().notNull(),
+}, (t) => ({ uqChave: uniqueIndex("uq_saas_assinatura").on(t.chave), idxStatus: index("idx_saas_status_fim").on(t.status, t.periodoFim) }));
+
+export const saasFaturas = mysqlTable("saasFaturas", {
+  id: int("id").autoincrement().primaryKey(),
+  assinaturaId: int("assinaturaId").notNull(),
+  competencia: varchar("competencia", { length: 7 }).notNull(),
+  valor: decimal("valor", { precision: 10, scale: 2 }).notNull(),
+  incluiImplantacao: boolean("incluiImplantacao").notNull().default(sql`0`),
+  /** CARTAO_RECORRENTE | PIX | BOLETO | MANUAL */
+  metodo: varchar("metodo", { length: 20 }).notNull(),
+  /** ABERTA | PAGA | VENCIDA | CANCELADA | ESTORNADA */
+  status: varchar("status", { length: 12 }).notNull().default("ABERTA"),
+  vencimento: date("vencimento", { mode: "string" }).notNull(),
+  pagoEm: datetime("pagoEm"),
+  mpPaymentId: varchar("mpPaymentId", { length: 64 }),
+  linkPagamento: varchar("linkPagamento", { length: 500 }),
+  nfseId: int("nfseId"),
+  observacao: varchar("observacao", { length: 300 }),
+  criadoPor: int("criadoPor"),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+}, (t) => ({ uqComp: uniqueIndex("uq_saas_fatura_comp").on(t.assinaturaId, t.competencia) }));
+
+/** Um trial por CPF/CNPJ */
+export const saasTrials = mysqlTable("saasTrials", {
+  cpfCnpj: varchar("cpfCnpj", { length: 18 }).primaryKey(),
+  usuarioId: int("usuarioId"),
+  usadoEm: timestamp("usadoEm").defaultNow().notNull(),
+});
+
+/** LOGIN, BLOQUEIO_402, CHECKOUT_INICIADO, PAGAMENTO_CONFIRMADO, DESBLOQUEIO, TRIAL_INICIADO, TRIAL_EXPIRADO… */
+export const auditoriaAcesso = mysqlTable("auditoriaAcesso", {
+  id: int("id").autoincrement().primaryKey(),
+  usuarioId: int("usuarioId").notNull(),
+  evento: varchar("evento", { length: 30 }).notNull(),
+  detalheJson: text("detalheJson"),
+  ip: varchar("ip", { length: 45 }),
+  criadoEm: timestamp("criadoEm").defaultNow().notNull(),
+}, (t) => ({ idxUsuario: index("idx_aud_acesso_usuario").on(t.usuarioId, t.criadoEm) }));
+
+/** Corretor sem assinatura (modo arcaico): só registro, sem login */
+export const corretoresExternos = mysqlTable("corretoresExternos", {
+  id: int("id").autoincrement().primaryKey(),
+  nome: varchar("nome", { length: 150 }).notNull(),
+  cpf: varchar("cpf", { length: 11 }).notNull(),
+  creci: varchar("creci", { length: 20 }),
+  creciUf: varchar("creciUf", { length: 2 }),
+  telefone: varchar("telefone", { length: 20 }),
+  email: varchar("email", { length: 160 }),
+  observacao: varchar("observacao", { length: 300 }),
+  recrutamentoId: int("recrutamentoId"),
+  ativo: boolean("ativo").notNull().default(sql`1`),
+  criadoPor: int("criadoPor"),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+}, (t) => ({ uqCpf: uniqueIndex("uq_corretor_externo_cpf").on(t.cpf) }));
+
+/** Bloco numerado de contratos ou recibos entregue a um corretor (externo ou com login) */
+export const talonarios = mysqlTable("talonarios", {
+  id: int("id").autoincrement().primaryKey(),
+  /** CONTRATO | RECIBO */
+  tipo: varchar("tipo", { length: 10 }).notNull(),
+  numeroInicial: int("numeroInicial").notNull(),
+  numeroFinal: int("numeroFinal").notNull(),
+  externoId: int("externoId"),
+  usuarioId: int("usuarioId"),
+  entregueEm: date("entregueEm", { mode: "string" }).notNull(),
+  entreguePor: int("entreguePor").notNull(),
+  observacao: varchar("observacao", { length: 255 }),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+});
+
+export const talonarioFolhas = mysqlTable("talonarioFolhas", {
+  talonarioId: int("talonarioId").notNull(),
+  numero: int("numero").notNull(),
+  /** EM_BRANCO | UTILIZADA | CANCELADA | EXTRAVIADA */
+  status: varchar("status", { length: 12 }).notNull().default("EM_BRANCO"),
+  contratoId: int("contratoId"),
+  referencia: varchar("referencia", { length: 160 }),
+  arquivoNome: varchar("arquivoNome", { length: 200 }),
+  arquivoMime: varchar("arquivoMime", { length: 60 }),
+  arquivoBase64: longtext("arquivoBase64"),
+  lancadoPor: int("lancadoPor"),
+  lancadoEm: datetime("lancadoEm"),
+}, (t) => ({ pk: primaryKey({ columns: [t.talonarioId, t.numero] }) }));
+
 /**
  * Recrutamento (shared/recrutamento.ts): convite com link do formulário público; o candidato preenche e anexa
  * os documentos; o administrador aprova e o sistema cria o acesso com senha provisória.

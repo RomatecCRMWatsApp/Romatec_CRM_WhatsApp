@@ -5,6 +5,7 @@
  */
 import { DESCONTO_AVISTA_TOTAL_PADRAO } from '../../../shared/simulador';
 import { SEED_EMP_JURIDICO } from './seedContratos';
+import { PLANOS_PADRAO } from '../../../shared/saas';
 
 export function initSqliteTables(sqlite: any): void {
   const run = (sql: string) => {
@@ -548,6 +549,43 @@ export function initSqliteTables(sqlite: any): void {
   // Mensagens do link de agendamento (server/_core/migrations/addMensagensAgendamento.ts)
   addColumn(`ALTER TABLE leadVisitas ADD COLUMN pedidoJson TEXT`);
   addColumn(`ALTER TABLE leadVisitas ADD COLUMN confirmacaoEnviadaAt INTEGER`);
+  // Camada SaaS fase 1 (server/_core/migrations/addSaas.ts)
+  const agoraS = `INTEGER NOT NULL DEFAULT (strftime('%s','now'))`;
+  run(`CREATE TABLE IF NOT EXISTS saasConfig (chave TEXT PRIMARY KEY, valor TEXT, atualizadoPor INTEGER, updatedAt ${agoraS})`);
+  run(`CREATE TABLE IF NOT EXISTS saasPlanos (
+    id INTEGER PRIMARY KEY AUTOINCREMENT, codigo TEXT NOT NULL UNIQUE, publico TEXT NOT NULL, nome TEXT NOT NULL, precoMensal TEXT NOT NULL,
+    precoAnual TEXT, storageGb INTEGER NOT NULL DEFAULT 5, incluiAvalieimob INTEGER NOT NULL DEFAULT 0, unico INTEGER NOT NULL DEFAULT 0, conteudo TEXT,
+    ativo INTEGER NOT NULL DEFAULT 1, createdAt ${agoraS})`);
+  run(`CREATE TABLE IF NOT EXISTS saasCupons (
+    id INTEGER PRIMARY KEY AUTOINCREMENT, codigo TEXT NOT NULL UNIQUE, tipo TEXT NOT NULL, valor TEXT NOT NULL DEFAULT '0', precosFixosJson TEXT, planoAlvo TEXT,
+    limiteUsos INTEGER NOT NULL DEFAULT 1, usosRealizados INTEGER NOT NULL DEFAULT 0, validade TEXT, duracaoCiclos INTEGER NOT NULL DEFAULT 1,
+    status TEXT NOT NULL DEFAULT 'ativo', descricao TEXT, criadoPor INTEGER, createdAt ${agoraS}, updatedAt ${agoraS})`);
+  run(`CREATE TABLE IF NOT EXISTS saasAssinaturas (
+    id INTEGER PRIMARY KEY AUTOINCREMENT, usuarioId INTEGER NOT NULL, planoId INTEGER NOT NULL, empreendimentoId INTEGER, chave TEXT NOT NULL UNIQUE,
+    origem TEXT NOT NULL, ciclo TEXT NOT NULL DEFAULT 'MENSAL', status TEXT NOT NULL, precoOverride TEXT, cupomId INTEGER, ciclosCupomRestantes INTEGER,
+    trialFim TEXT, periodoFim TEXT, diasTolerancia INTEGER NOT NULL DEFAULT 3, contratoGestaoNr TEXT, mpPreapprovalId TEXT, lembretesJson TEXT, motivo TEXT,
+    version INTEGER NOT NULL DEFAULT 0, createdAt ${agoraS}, updatedAt ${agoraS})`);
+  run(`CREATE TABLE IF NOT EXISTS saasFaturas (
+    id INTEGER PRIMARY KEY AUTOINCREMENT, assinaturaId INTEGER NOT NULL, competencia TEXT NOT NULL, valor TEXT NOT NULL, incluiImplantacao INTEGER NOT NULL DEFAULT 0,
+    metodo TEXT NOT NULL, status TEXT NOT NULL DEFAULT 'ABERTA', vencimento TEXT NOT NULL, pagoEm TEXT, mpPaymentId TEXT UNIQUE, linkPagamento TEXT, nfseId INTEGER,
+    observacao TEXT, criadoPor INTEGER, createdAt ${agoraS}, UNIQUE (assinaturaId, competencia))`);
+  run(`CREATE TABLE IF NOT EXISTS saasTrials (cpfCnpj TEXT PRIMARY KEY, usuarioId INTEGER, usadoEm ${agoraS})`);
+  run(`CREATE TABLE IF NOT EXISTS auditoriaAcesso (id INTEGER PRIMARY KEY AUTOINCREMENT, usuarioId INTEGER NOT NULL, evento TEXT NOT NULL, detalheJson TEXT, ip TEXT, criadoEm ${agoraS})`);
+  run(`CREATE TABLE IF NOT EXISTS corretoresExternos (
+    id INTEGER PRIMARY KEY AUTOINCREMENT, nome TEXT NOT NULL, cpf TEXT NOT NULL UNIQUE, creci TEXT, creciUf TEXT, telefone TEXT, email TEXT, observacao TEXT,
+    recrutamentoId INTEGER, ativo INTEGER NOT NULL DEFAULT 1, criadoPor INTEGER, createdAt ${agoraS})`);
+  run(`CREATE TABLE IF NOT EXISTS talonarios (
+    id INTEGER PRIMARY KEY AUTOINCREMENT, tipo TEXT NOT NULL, numeroInicial INTEGER NOT NULL, numeroFinal INTEGER NOT NULL, externoId INTEGER, usuarioId INTEGER,
+    entregueEm TEXT NOT NULL, entreguePor INTEGER NOT NULL, observacao TEXT, createdAt ${agoraS})`);
+  run(`CREATE TABLE IF NOT EXISTS talonarioFolhas (
+    talonarioId INTEGER NOT NULL, numero INTEGER NOT NULL, status TEXT NOT NULL DEFAULT 'EM_BRANCO', contratoId INTEGER, referencia TEXT, arquivoNome TEXT,
+    arquivoMime TEXT, arquivoBase64 TEXT, lancadoPor INTEGER, lancadoEm TEXT, PRIMARY KEY (talonarioId, numero))`);
+  {
+    for (const p of PLANOS_PADRAO) {
+      sqlite.prepare(`INSERT OR IGNORE INTO saasPlanos (codigo, publico, nome, precoMensal, precoAnual, storageGb, incluiAvalieimob, unico, conteudo) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`)
+        .run(p.codigo, p.publico, p.nome, String(p.precoMensal), p.precoAnual == null ? null : String(p.precoAnual), p.storageGb, p.incluiAvalieimob ? 1 : 0, p.unico ? 1 : 0, p.conteudo);
+    }
+  }
   // Recrutamento e senha provisória (server/_core/migrations/addRecrutamento.ts)
   addColumn(`ALTER TABLE users ADD COLUMN trocarSenha INTEGER NOT NULL DEFAULT 0`);
   addColumn(`ALTER TABLE users ADD COLUMN senhaProvisoriaExpira INTEGER`);

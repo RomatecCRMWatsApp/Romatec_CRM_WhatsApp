@@ -17,6 +17,7 @@ import { simuladorRouter } from "./routers/simulador.router";
 import { financeiroRouter } from "./routers/financeiro.router";
 import { reunioesRouter } from "./routers/reunioes.router";
 import { recrutamentoRouter } from "./routers/recrutamento.router";
+import { saasRouter } from "./routers/saas.router";
 import { contratosRouter, pessoaZ } from "./routers/contratos.router";
 import { permissoesRouter } from "./routers/permissoes.router";
 import { cadastroRouter } from "./routers/cadastro.router";
@@ -69,6 +70,7 @@ export const appRouter = router({
   financeiro: financeiroRouter,
   reunioes: reunioesRouter,
   recrutamento: recrutamentoRouter,
+  saas: saasRouter,
   contratos: contratosRouter,
   permissoes: permissoesRouter,
   cadastro: cadastroRouter,
@@ -77,12 +79,15 @@ export const appRouter = router({
   system: systemRouter,
   auth: router({
     // Sem os hashes de senha (a linha do usuário inteira ia para o navegador)
-    me: publicProcedure.query(opts => {
+    me: publicProcedure.query(async opts => {
       if (!opts.ctx.user) return opts.ctx.user;
       // Acesso desativado na tela Equipe = deslogado
       if ((opts.ctx.user as any).ativo === false || (opts.ctx.user as any).ativo === 0) return null;
       const { passwordScrypt: _s, passwordHash: _h, conviteHash: _c, ...safe } = opts.ctx.user as any;
-      return safe as Omit<typeof opts.ctx.user, 'passwordScrypt' | 'passwordHash'>;
+      // Camada SaaS: situação da licença (banner do teste e redirecionamento para /assinatura)
+      const { resumoLicenca } = await import("./saas/servico");
+      const licenca = await resumoLicenca(opts.ctx.user).catch(() => null);
+      return { ...safe, licenca } as Omit<typeof opts.ctx.user, 'passwordScrypt' | 'passwordHash'> & { licenca: Awaited<ReturnType<typeof resumoLicenca>> | null };
     }),
     logout: publicProcedure.mutation(({ ctx }) => {
       const cookieOptions = getSessionCookieOptions(ctx.req);
@@ -146,6 +151,12 @@ export const appRouter = router({
           const cookieOptions = getSessionCookieOptions(ctx.req);
           const token = await sdk.createSessionToken(user.openId, { name: user.name || "", sessaoVersao: Number((user as any).sessaoVersao) || 0 });
           ctx.res.cookie(COOKIE_NAME, token, { ...cookieOptions, maxAge: ONE_YEAR_MS });
+          // Camada SaaS: 1º login do corretor com o licenciamento ligado inicia o teste de 7 dias (um por CPF)
+          try {
+            const S = await import("./saas/servico");
+            await S.auditar(user.id, "LOGIN", null, ip);
+            await S.iniciarTrialSeNecessario(user, ip);
+          } catch (e: any) { console.warn("[SaaS] trial no login:", e?.message); }
           return { success: true, destino: provisoria ? "/trocar-senha" : telaInicial(perfilDe(user as any)) };
         } catch (error) {
           console.error("[Login] Erro:", (error as any)?.message || error);
