@@ -3,6 +3,14 @@
 Cada versão nova vai no TOPO. Depois rode `npm run release` (valida e atualiza o package.json);
 ao subir, o servidor grava a versão no banco e todos recebem o aviso "Novidades da versão".
 
+## 1.47.1 — 2026-10-27
+tipo: patch
+obrigatoria: nao
+titulo: Folder da chácara sem símbolo quebrado
+
+### Corrigido
+- No folder da chácara, a estrela do prazo mais escolhido aparecia como um quadradinho. Agora está escrito "o mais escolhido"
+
 ## 1.47.0 — 2026-10-27
 tipo: minor
 obrigatoria: nao

@@ -48,7 +48,7 @@ export function svgDoFolder(p: { empreendimento: string; codigo: string; vars: R
     const y = 905 + i * 46;
     const destaque = i === prazos.length - 1;
     return `<text x="120" y="${y}" font-family="${SANS}" font-size="30" fill="${destaque ? COR.verde : COR.texto}" font-weight="${destaque ? 700 : 400}">${esc(n)}</text>` +
-      `<text x="${W - 120}" y="${y}" font-family="${SANS}" font-size="30" text-anchor="end" fill="${destaque ? COR.verde : COR.texto}" font-weight="${destaque ? 700 : 400}">${esc(resto.join(' '))}${destaque ? ' ★' : ''}</text>`;
+      `<text x="${W - 120}" y="${y}" font-family="${SANS}" font-size="30" text-anchor="end" fill="${destaque ? COR.verde : COR.texto}" font-weight="${destaque ? 700 : 400}">${destaque ? '<tspan font-size="22" font-weight="400" fill="' + COR.suave + '">o mais escolhido · </tspan>' : ''}${esc(resto.join(' '))}</text>`;
   };
   const aviso = linhas(p.aviso, 92).slice(0, 4);
   return `<svg xmlns="http://www.w3.org/2000/svg" width="${W}" height="${H}" viewBox="0 0 ${W} ${H}">
