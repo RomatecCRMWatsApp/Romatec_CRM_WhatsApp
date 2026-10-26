@@ -55,7 +55,9 @@ export function tipoLogin(entrada: string): 'email' | 'cpf' | 'creci' {
 const TRPC_EMPREENDEDOR = ['auth.', 'empreendedor.', 'system.versao', 'cadastro.', 'novidades.naoLidas', 'novidades.historico', 'novidades.marcarLida', 'novidades.marcarTodas', 'novidades.novosLeads', 'novidades.definirDescanso', 'notificacoes.', 'saas.minhaAssinatura', 'saas.minhaCheckout', 'saas.cupomValidar',
   // Portal do empreendedor: mapa e situação das chácaras do empreendimento dele, vendas e tabelas (escopo conferido no servidor)
   'empreendimentosAdmin.detalhe', 'empreendimentosAdmin.atualizarLote', 'empreendimentosAdmin.historico', 'empreendimentosAdmin.memoriais',
-  'financeiro.vendas', 'financeiro.tabelasEmpreendimentos', 'financeiro.tabela'];
+  'financeiro.vendas', 'financeiro.tabelasEmpreendimentos', 'financeiro.tabela',
+  // Carteirinhas oficiais do empreendimento dele (o corretor só baixa rascunho)
+  'contratos.carteirinhasLista'];
 /** Secretário e corretor não mexem em configurações, na equipe nem na ZAYRA */
 const TRPC_SO_ADMIN = ['companyConfig.update', 'equipe.', 'zaira.'];
 

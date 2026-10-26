@@ -3,6 +3,8 @@ import { useLocation } from "wouter";
 import { toast } from "sonner";
 import { Camera, CheckCircle2, Eye, FileDown, IdCard, Loader2, TriangleAlert } from "lucide-react";
 import { trpc } from "@/lib/trpc";
+import { useAuth } from "@/_core/hooks/useAuth";
+import { perfilDe } from "@shared/equipe";
 import PageHeader from "@/components/PageHeader";
 import ModelosCarteirinha from "@/components/contratos/ModelosCarteirinha";
 import { Button } from "@/components/ui/button";
@@ -26,7 +28,20 @@ const situacao = (l: Linha): Filtro => (!l.liberado ? "aguardando" : l.carteira 
  * dos marcados ou de todos — no formato da gráfica (cartão) ou em A4 com 4 por folha para recortar e plastificar.
  */
 export default function Carteirinhas() {
+  return (
+    <div>
+      <PageHeader icone={IdCard} titulo="Carteirinhas" subtitulo="Titulares, cônjuges e dependentes de todos os contratos — emitidas sozinhas; aqui você confere, completa e imprime" />
+      <div className="mx-auto max-w-[1400px] px-4 pb-8 md:px-6"><PainelCarteirinhas /></div>
+    </div>
+  );
+}
+
+/** Modelos + lista das carteirinhas. `portal` = empreendedor: baixa o oficial, sem enviar foto nem abrir o contrato */
+export function PainelCarteirinhas({ portal = false }: { portal?: boolean }) {
   const [, navigate] = useLocation();
+  const { user } = useAuth();
+  // O corretor baixa só rascunho (tarja "sem validade" no PDF — conferido no servidor)
+  const rascunho = perfilDe(user as any) === "corretor";
   const { data, isLoading, error, refetch } = trpc.contratos.carteirinhasLista.useQuery();
   const [busca, setBusca] = useState("");
   const [filtro, setFiltro] = useState<Filtro>("todos");
@@ -76,8 +91,7 @@ export default function Carteirinhas() {
 
   return (
     <div>
-      <PageHeader icone={IdCard} titulo="Carteirinhas" subtitulo="Titulares, cônjuges e dependentes de todos os contratos — emitidas sozinhas; aqui você confere, completa e imprime" />
-      <div className="mx-auto max-w-[1400px] space-y-3 px-4 pb-8 md:px-6">
+      <div className="space-y-3">
         <input ref={input} type="file" accept="image/jpeg,image/png,image/webp" capture="user" hidden onChange={e => enviarFoto(e.target.files?.[0])} />
         <ModelosCarteirinha />
         <div className="flex flex-wrap items-end gap-2 rounded-xl border border-border bg-card p-3">
@@ -90,11 +104,12 @@ export default function Carteirinhas() {
             ))}
           </div>
           <Button variant="outline" disabled={gerando || !selecionadas.length} onClick={() => abrirPdf(selecionadas, "Marcadas")}>
-            {gerando ? <Loader2 className="mr-1 h-4 w-4 animate-spin" /> : <FileDown className="mr-1 h-4 w-4" />} PDF dos marcados ({selecionadas.length})
+            {gerando ? <Loader2 className="mr-1 h-4 w-4 animate-spin" /> : <FileDown className="mr-1 h-4 w-4" />} PDF dos marcados ({selecionadas.length}){rascunho ? " · rascunho" : ""}
           </Button>
           <Button disabled={gerando || !visiveis.some(imprimiveis)} onClick={() => abrirPdf(visiveis, "Todas da lista")}>
-            <FileDown className="mr-1 h-4 w-4" /> PDF de todos ({visiveis.filter(imprimiveis).length})
+            <FileDown className="mr-1 h-4 w-4" /> PDF de todos ({visiveis.filter(imprimiveis).length}){rascunho ? " · rascunho" : ""}
           </Button>
+          {rascunho && <p className="w-full text-[11px] text-amber-300">Seus PDFs saem com a tarja "RASCUNHO · SEM VALIDADE". As carteirinhas oficiais são impressas pelo escritório e pela empreendedora.</p>}
         </div>
         <div className="flex flex-wrap gap-1.5">
           {FILTROS.map(([f, r]) => (
@@ -123,7 +138,7 @@ export default function Carteirinhas() {
                   <tr key={chave(l)} className="border-b border-border/50 last:border-0">
                     <td className="p-2"><input type="checkbox" aria-label={`Marcar ${l.nome}`} checked={marcados.has(chave(l))} onChange={e => marcar(chave(l), e.target.checked)} /></td>
                     <td className="p-2">
-                      <button type="button" title="Enviar ou trocar a foto 3×4" onClick={() => { alvo.current = l; input.current?.click(); }}
+                      <button type="button" title={portal ? "Foto 3×4" : "Enviar ou trocar a foto 3×4"} disabled={portal} onClick={() => { alvo.current = l; input.current?.click(); }}
                         className="flex h-12 w-9 items-center justify-center overflow-hidden rounded border border-border bg-black/30">
                         {l.temFoto ? <img src={`/api/contratos/${l.contratoId}/carteirinhas/foto?tipo=${l.tipo}&ref=${l.ref}&v=${versao}`} alt={`Foto de ${l.nome}`} className="h-full w-full object-cover" loading="lazy" />
                           : <Camera className="h-4 w-4 text-muted-foreground" />}
@@ -140,7 +155,7 @@ export default function Carteirinhas() {
                     <td className="p-2">
                       <div className="flex justify-end gap-1">
                         <Button size="sm" variant="ghost" className="h-8 px-2 text-xs" disabled={!imprimiveis(l) || gerando} onClick={() => abrirPdf([l], "Prévia")} title="Ver a carteirinha em PDF"><Eye className="mr-1 h-3.5 w-3.5" /> Prévia</Button>
-                        <Button size="sm" variant="ghost" className="h-8 px-2 text-xs" onClick={() => navigate(`/contratos/${l.contratoId}`)} title="Abrir o contrato (dependentes e dados)">Contrato</Button>
+                        {!portal && <Button size="sm" variant="ghost" className="h-8 px-2 text-xs" onClick={() => navigate(`/contratos/${l.contratoId}`)} title="Abrir o contrato (dependentes e dados)">Contrato</Button>}
                       </div>
                     </td>
                   </tr>

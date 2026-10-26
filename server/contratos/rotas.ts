@@ -93,6 +93,16 @@ export function registrarRotasContratos(app: Express) {
     if (!(perfil === 'admin' || perfil === 'secretario' || (perfil === 'corretor' && c.corretorUserId === user.id))) return null;
     return { user, c };
   };
+  /** Id do empreendimento do empreendedor (pelo empreendimentoSlug do cadastro) */
+  const empreendimentoDoEmpreendedor = async (user: any): Promise<number | null> => {
+    if (!user?.empreendimentoSlug) return null;
+    const { getDb } = await import('../db');
+    const { empreendimentos } = await import('../../drizzle/schema');
+    const { eq } = await import('drizzle-orm');
+    const d: any = await getDb();
+    const [e]: any[] = d ? await d.select({ id: empreendimentos.id }).from(empreendimentos).where(eq(empreendimentos.slug, String(user.empreendimentoSlug))).limit(1) : [];
+    return e ? Number(e.id) : null;
+  };
   const tipoRef = (q: any) => {
     const tipo = String(q.tipo ?? '');
     if (!['comprador', 'conjuge', 'dependente'].includes(tipo)) return null;
@@ -106,7 +116,9 @@ export function registrarRotasContratos(app: Express) {
       const a = await contratoDaEquipe(req);
       if (!a) return res.status(404).json({ error: 'Não encontrado' });
       const { carteirinhasPdf } = await import('./carteirinhas');
-      const { pdf, nome, bloqueadas } = await carteirinhasPdf(a.c.id, req.query.formato === 'a4' ? 'a4' : 'cr80');
+      const { perfilDe } = await import('../../shared/equipe');
+      // Oficial: escritório e empreendedor; o corretor baixa só rascunho (tarja "sem validade")
+      const { pdf, nome, bloqueadas } = await carteirinhasPdf(a.c.id, req.query.formato === 'a4' ? 'a4' : 'cr80', perfilDe(a.user) === 'corretor');
       res.setHeader('Content-Type', 'application/pdf');
       res.setHeader('Content-Disposition', `attachment; filename="${nome}"`);
       res.setHeader('X-Carteirinhas-Bloqueadas', String(bloqueadas.length));
@@ -125,16 +137,17 @@ export function registrarRotasContratos(app: Express) {
       const user: any = await sdk.authenticateRequest(req).catch(() => null);
       if (!user || user.ativo === false || user.ativo === 0) return res.status(401).json({ error: 'Faça login' });
       const { perfilDe } = await import('../../shared/equipe');
-      if (!['admin', 'secretario', 'corretor'].includes(String(perfilDe(user)))) return res.status(404).json({ error: 'Não encontrado' });
+      const perfilModelo = String(perfilDe(user));
+      if (!['admin', 'secretario', 'corretor', 'empreendedor'].includes(perfilModelo)) return res.status(404).json({ error: 'Não encontrado' });
       const campo = (k: string, padrao: string, max: number) => String(req.query[k] ?? '').trim().slice(0, max) || padrao;
       const validade = new Date(Date.now() + 365 * 86_400_000).toISOString().slice(0, 10);
       const { renderCarteirinhas } = await import('./carteirinhas');
       const pdf = await renderCarteirinhas([{
         nome: campo('nome', 'Nome do Titular', 80), vinculo: campo('vinculo', 'Titular', 40), unidade: campo('unidade', 'Chácara A01 · Quadra A', 60),
         numero: 'MODELO', validade, qrToken: 'modelo', foto: null, contratoNumero: 'MODELO', empreendimento: 'Condomínio de Chácaras Bom Jardims',
-      }], req.query.formato === 'cr80' ? 'cr80' : 'a4');
+      }], req.query.formato === 'cr80' ? 'cr80' : 'a4', { rascunho: perfilModelo === 'corretor' });
       res.setHeader('Content-Type', 'application/pdf');
-      res.setHeader('Content-Disposition', 'inline; filename="MODELO-CARTEIRINHA.pdf"');
+      res.setHeader('Content-Disposition', `inline; filename="MODELO-CARTEIRINHA${perfilModelo === 'corretor' ? '-RASCUNHO' : ''}.pdf"`);
       res.setHeader('Cache-Control', 'private, no-store');
       res.send(pdf);
     } catch (e: any) {
@@ -151,24 +164,29 @@ export function registrarRotasContratos(app: Express) {
       if (!user || user.ativo === false || user.ativo === 0) return res.status(401).json({ error: 'Faça login' });
       const { perfilDe } = await import('../../shared/equipe');
       const perfil = perfilDe(user);
-      if (!['admin', 'secretario', 'corretor'].includes(String(perfil))) return res.status(404).json({ error: 'Não encontrado' });
+      if (!['admin', 'secretario', 'corretor', 'empreendedor'].includes(String(perfil))) return res.status(404).json({ error: 'Não encontrado' });
       const itens = String(req.query.itens ?? '').split(',').slice(0, 600).map(t => {
         const [c, tipo, ref] = t.split(':');
         return { contratoId: Number(c) || 0, tipo: tipo as any, ref: Number(ref) || 0 };
       }).filter(i => i.contratoId > 0 && i.ref > 0 && ['comprador', 'conjuge', 'dependente'].includes(i.tipo));
       if (!itens.length) return res.status(400).json({ error: 'Marque ao menos uma carteirinha' });
-      // Corretor: só dos contratos dele
-      if (perfil === 'corretor') {
+      // Corretor: só dos contratos dele; empreendedor: só do empreendimento dele
+      const empDoEmpreendedor = perfil === 'empreendedor' ? await empreendimentoDoEmpreendedor(user) : null;
+      if (perfil === 'empreendedor' && !empDoEmpreendedor) return res.status(404).json({ error: 'Não encontrado' });
+      if (perfil === 'corretor' || perfil === 'empreendedor') {
         for (const id of Array.from(new Set(itens.map(i => i.contratoId)))) {
           const c = await contratoPorId(id).catch(() => null);
-          if (!c || c.corretorUserId !== user.id) return res.status(404).json({ error: 'Não encontrado' });
+          const dele = perfil === 'corretor' ? c?.corretorUserId === user.id : Number(c?.empreendimentoId) === empDoEmpreendedor;
+          if (!c || !dele) return res.status(404).json({ error: 'Não encontrado' });
         }
       }
       const { carteirinhasSelecaoPdf } = await import('./carteirinhas');
       const formato = req.query.formato === 'a4' ? 'a4' : 'cr80';
-      const { pdf, quantidade, foraDoPdf } = await carteirinhasSelecaoPdf(itens, formato);
+      // Oficial: escritório e empreendedor; o corretor baixa só rascunho (tarja "sem validade")
+      const rascunho = perfil === 'corretor';
+      const { pdf, quantidade, foraDoPdf } = await carteirinhasSelecaoPdf(itens, formato, rascunho);
       res.setHeader('Content-Type', 'application/pdf');
-      res.setHeader('Content-Disposition', `inline; filename="CARTEIRINHAS-${quantidade}${formato === 'a4' ? '-A4' : ''}.pdf"`);
+      res.setHeader('Content-Disposition', `inline; filename="CARTEIRINHAS-${quantidade}${formato === 'a4' ? '-A4' : ''}${rascunho ? '-RASCUNHO' : ''}.pdf"`);
       res.setHeader('X-Carteirinhas-Fora', String(foraDoPdf));
       res.setHeader('Cache-Control', 'private, no-store');
       res.send(pdf);

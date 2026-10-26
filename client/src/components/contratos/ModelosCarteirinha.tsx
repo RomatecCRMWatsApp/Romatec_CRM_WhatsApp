@@ -3,6 +3,7 @@ import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { brandAssets } from "@/brand/assets";
 import { useAuth } from "@/_core/hooks/useAuth";
+import { perfilDe } from "@shared/equipe";
 import { exibirTelefoneBR } from "@shared/telefone";
 import { Camera, FileDown, IdCard, Loader2, Printer, QrCode, X } from "lucide-react";
 
@@ -151,16 +152,18 @@ function CrachaCorretor({ nome, funcao, creci, telefone, whatsapp, foto }: { nom
   );
 }
 
-/** Imprime o crachá no tamanho real (54 × 86 mm) numa janela só com ele */
-function imprimirCracha() {
+/** Imprime o crachá no tamanho real (54 × 86 mm) numa janela só com ele; rascunho = tarja "sem validade" (corretor) */
+function imprimirCracha(rascunho: boolean) {
   const el = document.querySelector("[data-cracha-corretor]") as HTMLElement | null;
   const w = window.open("", "_blank", "width=480,height=720");
   if (!el || !w) { toast.error("Não foi possível abrir a impressão (libere pop-ups para este site)"); return; }
   const estilos = Array.from(document.querySelectorAll('link[rel="stylesheet"], style')).map(n => n.outerHTML).join("");
   w.document.write(`<!doctype html><html><head><meta charset="utf-8"><title>Crachá do corretor</title>${estilos}
     <style>@page{size:54mm 86mm;margin:0}html,body{margin:0;background:#fff}body{-webkit-print-color-adjust:exact;print-color-adjust:exact}
-    [data-cracha-corretor]{width:54mm!important;max-width:none!important;border-radius:3mm!important;box-shadow:none!important}</style>
-    </head><body>${el.outerHTML}</body></html>`);
+    [data-cracha-corretor]{width:54mm!important;max-width:none!important;border-radius:3mm!important;box-shadow:none!important}
+    .tarja{position:fixed;left:0;top:0;width:54mm;height:86mm;display:flex;align-items:center;justify-content:center;pointer-events:none}
+    .tarja span{transform:rotate(-58deg);white-space:nowrap;font:800 15pt Arial,sans-serif;color:rgba(192,38,31,.88);border:2.5pt solid rgba(192,38,31,.88);padding:1.5mm 3mm;background:rgba(255,255,255,.55)}</style>
+    </head><body>${el.outerHTML}${rascunho ? '<div class="tarja"><span>RASCUNHO · SEM VALIDADE</span></div>' : ""}</body></html>`);
   w.document.close();
   const ir = () => { w.focus(); w.print(); };
   // Espera as imagens (logo, foto, QR) carregarem antes de imprimir
@@ -185,6 +188,8 @@ export default function ModelosCarteirinha() {
   const [aba, setAba] = useState<"carteirinha" | "cracha" | "corretor">("carteirinha");
   // Crachá do corretor: começa com o cadastro de quem está logado (nunca o contato padrão do escritório)
   const { user } = useAuth();
+  // Oficial (sem tarja) só para administrador, secretária e empreendedor; o corretor vê a prévia e baixa rascunho
+  const oficial = ["admin", "secretario", "empreendedor"].includes(perfilDe(user as any) ?? "");
   const [cc, setCc] = useState({ nome: "", funcao: "Corretor(a) de imóveis", creci: "", telefone: "" });
   const [ccIniciado, setCcIniciado] = useState(false);
   useEffect(() => {
@@ -218,7 +223,9 @@ export default function ModelosCarteirinha() {
     <section className="space-y-3 rounded-2xl border border-[var(--rt-gold)]/40 bg-card p-4">
       <div className="flex flex-wrap items-center gap-2">
         <IdCard className="h-5 w-5 text-[var(--rt-gold)]" />
-        <h2 className="flex-1 text-base font-semibold">Modelos para apresentar ao cliente</h2>
+        <h2 className="flex-1 text-base font-semibold">Modelos para apresentar ao cliente
+          {!oficial && <span className="ml-2 align-middle text-[11px] font-normal text-amber-300">prévia à vontade · baixar e imprimir saem como rascunho, sem validade</span>}
+        </h2>
         <div role="tablist" className="flex gap-1 rounded-lg border border-border p-1">
           {([["carteirinha", "Carteirinha do condomínio"], ["cracha", "Crachá de visitante"], ["corretor", "Crachá do corretor"]] as const).map(([k, r]) => (
             <button key={k} role="tab" aria-selected={aba === k} onClick={() => setAba(k)}
@@ -247,7 +254,9 @@ export default function ModelosCarteirinha() {
               <input value={cc.telefone} onChange={e => setCc({ ...cc, telefone: e.target.value })} maxLength={20} className={campo} />
             </label>
             <EscolherFoto foto={foto} />
-            <Button size="sm" className="w-full" onClick={imprimirCracha}><Printer className="mr-1 h-4 w-4" /> Imprimir no tamanho real (54 × 86 mm)</Button>
+            <Button size="sm" className="w-full" variant={oficial ? "default" : "outline"} onClick={() => imprimirCracha(!oficial)}>
+              <Printer className="mr-1 h-4 w-4" /> {oficial ? "Imprimir no tamanho real (54 × 86 mm)" : "Imprimir rascunho (sem validade)"}
+            </Button>
           </div>
         ) : (
         <div className="space-y-2.5 rounded-xl border border-border p-3">
@@ -280,7 +289,7 @@ export default function ModelosCarteirinha() {
           <EscolherFoto foto={foto} />
           {aba === "carteirinha" && (
             <Button size="sm" variant="outline" className="w-full" disabled={baixando} onClick={baixarPdf}>
-              {baixando ? <Loader2 className="mr-1 h-4 w-4 animate-spin" /> : <FileDown className="mr-1 h-4 w-4" />} Baixar modelo em PDF (sem foto)
+              {baixando ? <Loader2 className="mr-1 h-4 w-4 animate-spin" /> : <FileDown className="mr-1 h-4 w-4" />} {oficial ? "Baixar modelo em PDF (sem foto)" : "Baixar rascunho em PDF (sem validade)"}
             </Button>
           )}
         </div>

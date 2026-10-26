@@ -3,6 +3,16 @@
 Cada versão nova vai no TOPO. Depois rode `npm run release` (valida e atualiza o package.json);
 ao subir, o servidor grava a versão no banco e todos recebem o aviso "Novidades da versão".
 
+## 1.45.0 — 2026-10-27
+tipo: minor
+obrigatoria: nao
+titulo: Carteirinhas oficiais só pelo escritório e pela empreendedora
+
+### Novo
+- O corretor continua vendo a prévia dos modelos (carteirinha e crachás), mas o que ele baixa ou imprime sai com a tarja "RASCUNHO · SEM VALIDADE". Isso vale para os modelos, o crachá dele e o PDF das carteirinhas dos contratos dele
+- As carteirinhas oficiais, sem tarja, são baixadas pelo administrador, pela secretária e pela empreendedora
+- Portal da empreendedora: nova parte "Carteirinhas", com os modelos e a lista dos compradores, cônjuges e dependentes do empreendimento dela, para baixar o PDF oficial (gráfica ou A4)
+
 ## 1.44.0 — 2026-10-27
 tipo: minor
 obrigatoria: nao

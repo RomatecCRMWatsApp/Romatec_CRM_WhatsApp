@@ -7,7 +7,7 @@ import { TRPCError } from "@trpc/server";
 import { and, eq, inArray } from "drizzle-orm";
 import { protectedProcedure, router } from "../_core/trpc";
 import { getDb } from "../db";
-import { declaracoesQuitacao, empreendimentos, leadQualifications, lotes, recibos, users } from "../../drizzle/schema";
+import { contratos, declaracoesQuitacao, empreendimentos, leadQualifications, lotes, recibos, users } from "../../drizzle/schema";
 import { perfilDe } from "../../shared/equipe";
 import { acoesDaParcela, podeCancelarContrato, podeCriarContrato, podeGerarDefinitivo, podeOperarCobranca } from "../../shared/contratos";
 import { leadsVisiveis } from "../permissoes";
@@ -136,10 +136,14 @@ export const contratosRouter = router({
   /** Tela de Carteirinhas: todas as pessoas dos contratos visíveis (corretor: só os dele) */
   carteirinhasLista: protectedProcedure.query(async ({ ctx }) => {
     const perfil = perfilDe(ctx.user as any);
-    if (perfil === "empreendedor") throw new TRPCError({ code: "FORBIDDEN" });
+    // Empreendedor: só os contratos do empreendimento dele (baixa as carteirinhas oficiais no portal)
+    const empId = perfil === "empreendedor" ? ctx.permissoes.acessos.find(a => a.tipo === "empreendimento")?.refId ?? null : null;
+    if (perfil === "empreendedor" && !empId) throw new TRPCError({ code: "FORBIDDEN" });
     const cs = await listarContratos({ corretorUserId: perfil === "corretor" ? ctx.user.id : undefined });
+    const db = empId ? ((await getDb()) as any) : null;
+    const permitidos = db ? new Set(((await db.select({ id: contratos.id }).from(contratos).where(eq(contratos.empreendimentoId, Number(empId)))) as any[]).map(c => Number(c.id))) : null;
     const { listaCarteirinhas } = await import("../contratos/carteirinhas");
-    return listaCarteirinhas(cs.map((c: any) => c.id));
+    return listaCarteirinhas(cs.map((c: any) => c.id).filter((id: number) => !permitidos || permitidos.has(Number(id))));
   }),
 
   /** Carteirinhas: cada pessoa (titular, cônjuge, dependentes) com a carteira vigente e o que falta para emitir */

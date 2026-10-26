@@ -5,7 +5,7 @@ import { useAuth } from "@/_core/hooks/useAuth";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Bar, BarChart, CartesianGrid, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
-import { BarChart3, Copy, Download, ExternalLink, FileText, Images, LogOut, Map as MapIcon, Receipt, Share2, Table2, TrendingUp, Video } from "lucide-react";
+import { BarChart3, Copy, Download, ExternalLink, FileText, IdCard, Images, LogOut, Map as MapIcon, Receipt, Share2, Table2, TrendingUp, Video } from "lucide-react";
 import { FotoUsuario } from "@/components/AppShell";
 import { SinoNovidades } from "@/components/sistema/Novidades";
 import { APP_VERSION, AppFooter, RomatecAppIcon } from "@/brand";
@@ -14,6 +14,7 @@ import { ROTULO_TIPO_MATERIAL, type TipoMaterial } from "@shared/materiais";
 import { ROTULO_SITUACAO, type SituacaoLote } from "@shared/lotes";
 import { CabecalhoEmpreendimento, MapaVendas } from "@/components/empreendimento/Vitrine";
 import TabelasFinanciamento from "@/components/financeiro/TabelasFinanciamento";
+import { PainelCarteirinhas } from "@/pages/Carteirinhas";
 
 const ROTULO_TIPO: Record<string, string> = { pago: "Anúncios (pago)", organico: "Orgânico", outro: "Portais e outros" };
 const pct = (a: number, b: number) => (b ? `${Math.round((a / b) * 100)}%` : "—");
@@ -32,7 +33,7 @@ const STATUS_BOLETO: Record<string, [string, string]> = {
   emitida: ["Emitido", "bg-amber-500/15 text-amber-300"], paga: ["Pago", "bg-emerald-500/15 text-emerald-300"],
   vencida: ["Vencido", "bg-red-500/15 text-red-300"], estornada: ["Estornado", "bg-secondary text-muted-foreground"],
 };
-const SECOES = [["mapa", "Mapa", MapIcon], ["vendas", "Vendas", TrendingUp], ["financeiro", "Financeiro e boletos", Receipt], ["leads", "Leads", BarChart3], ["tabelas", "Tabelas", Table2], ["artes", "Artes", Images]] as const;
+const SECOES = [["mapa", "Mapa", MapIcon], ["vendas", "Vendas", TrendingUp], ["financeiro", "Financeiro e boletos", Receipt], ["leads", "Leads", BarChart3], ["carteirinhas", "Carteirinhas", IdCard], ["tabelas", "Tabelas", Table2], ["artes", "Artes", Images]] as const;
 
 function Numero({ titulo, valor, sub, cor }: { titulo: string; valor: string | number; sub?: string; cor?: string }) {
   return (
@@ -342,7 +343,11 @@ export default function Empreendedor() {
           </>
         )}
 
-        {/* 5. Tabelas de financiamento (mesmo cálculo do simulador) */}
+        {/* 5. Carteirinhas oficiais do empreendimento e os modelos (carteirinha, crachás) */}
+        <Titulo id="carteirinhas" icone={IdCard} sub="Carteirinhas dos compradores, cônjuges e dependentes — PDF oficial para a gráfica ou A4">Carteirinhas</Titulo>
+        <PainelCarteirinhas portal />
+
+        {/* 6. Tabelas de financiamento (mesmo cálculo do simulador) */}
         <div id="tabelas" className="scroll-mt-24 pt-4"><TabelasFinanciamento /></div>
 
         {/* 6. Artes para divulgar */}

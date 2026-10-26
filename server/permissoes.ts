@@ -24,7 +24,7 @@ export async function carregarPermissoes(user: { id: number; role?: string | nul
     const db = slug ? ((await getDb()) as any) : null;
     const [emp]: any[] = db && slug ? await db.select({ id: empreendimentos.id }).from(empreendimentos).where(eq(empreendimentos.slug, String(slug))).limit(1).catch(() => []) : [];
     // Módulos do portal (a lista de procedimentos em shared/equipe.ts continua sendo o filtro principal)
-    const modulos = Object.fromEntries(MODULOS.map(m => [m.chave, m.chave === 'empreendimentos' || m.chave === 'financeiro'])) as Permissoes;
+    const modulos = Object.fromEntries(MODULOS.map(m => [m.chave, ['empreendimentos', 'financeiro', 'contratos'].includes(m.chave)])) as Permissoes;
     return { perfil, modulos, acessos: emp ? [{ tipo: 'empreendimento', refId: Number(emp.id) }] : [] };
   }
   if (!daEquipe(perfil)) return { perfil, modulos: null, acessos: [] };

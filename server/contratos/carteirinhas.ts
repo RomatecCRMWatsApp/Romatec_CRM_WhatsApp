@@ -137,12 +137,23 @@ export interface CartaoImpresso {
 export type FormatoCarteirinha = 'cr80' | 'a4';
 
 /** CR80 = uma face por página (gráfica/PVC); A4 = 4 por folha, frente e verso lado a lado (recortar, dobrar, plastificar) */
-export async function renderCarteirinhas(cartoes: CartaoImpresso[], formato: FormatoCarteirinha = 'cr80'): Promise<Buffer> {
+export async function renderCarteirinhas(cartoes: CartaoImpresso[], formato: FormatoCarteirinha = 'cr80', opcoes: { rascunho?: boolean } = {}): Promise<Buffer> {
   const { novoKit, qrPng, quebrar, texto, textoCentro, retArredondado, COR, A4 } = await import('../financeiro/render/comum');
   const { CONTATO_PADRAO } = await import('../financeiro/render/documentos');
-  const { rgb } = await import('pdf-lib');
-  const k = await novoKit({ titulo: 'Carteirinhas do condomínio' });
+  const { rgb, degrees } = await import('pdf-lib');
+  const k = await novoKit({ titulo: opcoes.rascunho ? 'Carteirinhas — RASCUNHO sem validade' : 'Carteirinhas do condomínio' });
   const [W, H] = CR80;
+  /** Corretor baixa só rascunho: tarja diagonal em cada face (o oficial é do escritório e do empreendedor) */
+  const tarja = (pg: any, x0: number, y0: number) => {
+    if (!opcoes.rascunho) return;
+    const t = 'RASCUNHO · SEM VALIDADE', tam = 11, larg = k.fb.widthOfTextAtSize(t, tam), ang = Math.atan2(H, W);
+    const cx = x0 + W / 2, cy = y0 + H / 2;
+    pg.drawRectangle({ x: x0, y: y0, width: W, height: H, color: rgb(1, 1, 1), opacity: 0.18 });
+    pg.drawText(t, {
+      x: cx - (Math.cos(ang) * larg) / 2 + (Math.sin(ang) * tam) / 3, y: cy - (Math.sin(ang) * larg) / 2 - (Math.cos(ang) * tam) / 3,
+      size: tam, font: k.fb, color: COR.vermelho, opacity: 0.85, rotate: degrees((ang * 180) / Math.PI),
+    });
+  };
 
   const frente = async (pg: any, x0: number, y0: number, c: CartaoImpresso) => {
     pg.drawRectangle({ x: x0, y: y0, width: W, height: H, color: COR.verde });
@@ -186,8 +197,8 @@ export async function renderCarteirinhas(cartoes: CartaoImpresso[], formato: For
 
   if (formato === 'cr80') {
     for (const c of cartoes) {
-      await frente(k.doc.addPage(CR80), 0, 0, c);
-      await verso(k.doc.addPage(CR80), 0, 0, c);
+      const pf = k.doc.addPage(CR80); await frente(pf, 0, 0, c); tarja(pf, 0, 0);
+      const pv = k.doc.addPage(CR80); await verso(pv, 0, 0, c); tarja(pv, 0, 0);
     }
   } else {
     // A4: 4 por folha; cada linha = frente | verso, com linha de corte (contorno) e de dobra (meio), ambas tracejadas
@@ -199,8 +210,8 @@ export async function renderCarteirinhas(cartoes: CartaoImpresso[], formato: For
       textoCentro(pg, 'Recorte na linha tracejada externa, dobre na linha do meio (frente com verso) e plastifique.', PW / 2, PH - 12 * MM, 7.5, k.f, COR.cinza);
       for (let j = 0; j < 4 && i + j < cartoes.length; j++) {
         const y = topo - (j + 1) * H - j * gap;
-        await frente(pg, x0, y, cartoes[i + j]);
-        await verso(pg, x0 + W, y, cartoes[i + j]);
+        await frente(pg, x0, y, cartoes[i + j]); tarja(pg, x0, y);
+        await verso(pg, x0 + W, y, cartoes[i + j]); tarja(pg, x0 + W, y);
         pg.drawRectangle({ x: x0, y, width: larg, height: H, borderColor: tracejado.color, borderWidth: tracejado.thickness, borderDashArray: tracejado.dashArray });
         pg.drawLine({ start: { x: x0 + W, y: y - 3 * MM }, end: { x: x0 + W, y: y + H + 3 * MM }, ...tracejado });
       }
@@ -221,16 +232,16 @@ async function cartoesDoContrato(contratoId: number, filtro?: (p: PessoaCarteiri
 }
 
 /** PDF das carteiras de um contrato (sem nenhuma apta, recusa com o que falta) */
-export async function carteirinhasPdf(contratoId: number, formato: FormatoCarteirinha = 'cr80'): Promise<{ pdf: Buffer; nome: string; bloqueadas: PessoaCarteirinha[] }> {
+export async function carteirinhasPdf(contratoId: number, formato: FormatoCarteirinha = 'cr80', rascunho = false): Promise<{ pdf: Buffer; nome: string; bloqueadas: PessoaCarteirinha[] }> {
   const { c, cartoes, bloqueadas } = await cartoesDoContrato(contratoId);
   if (!cartoes.length) throw new ContratoErro('PENDENCIAS', 'Nenhuma carteirinha pode ser emitida ainda', 409, Object.fromEntries(bloqueadas.map(b => [b.nome, `falta ${b.pendencias.join(', ')}`])));
-  return { pdf: await renderCarteirinhas(cartoes, formato), nome: `CARTEIRINHAS-${c.numero}${formato === 'a4' ? '-A4' : ''}.pdf`, bloqueadas };
+  return { pdf: await renderCarteirinhas(cartoes, formato, { rascunho }), nome: `CARTEIRINHAS-${c.numero}${formato === 'a4' ? '-A4' : ''}${rascunho ? '-RASCUNHO' : ''}.pdf`, bloqueadas };
 }
 
 export interface ItemCarteirinha { contratoId: number; tipo: TipoTitular; ref: number }
 
 /** PDF de várias pessoas de vários contratos (tela de Carteirinhas): só quem está apta e com contrato assinado */
-export async function carteirinhasSelecaoPdf(itens: ItemCarteirinha[], formato: FormatoCarteirinha): Promise<{ pdf: Buffer; quantidade: number; foraDoPdf: number }> {
+export async function carteirinhasSelecaoPdf(itens: ItemCarteirinha[], formato: FormatoCarteirinha, rascunho = false): Promise<{ pdf: Buffer; quantidade: number; foraDoPdf: number }> {
   const porContrato = new Map<number, ItemCarteirinha[]>();
   for (const i of itens) porContrato.set(i.contratoId, [...(porContrato.get(i.contratoId) ?? []), i]);
   const cartoes: CartaoImpresso[] = [];
@@ -243,7 +254,7 @@ export async function carteirinhasSelecaoPdf(itens: ItemCarteirinha[], formato: 
     } catch { fora += sel.length; }
   }
   if (!cartoes.length) throw new ContratoErro('PENDENCIAS', 'Nenhuma das carteirinhas marcadas pode ser emitida (contrato não assinado ou cadastro incompleto)', 409);
-  return { pdf: await renderCarteirinhas(cartoes, formato), quantidade: cartoes.length, foraDoPdf: fora };
+  return { pdf: await renderCarteirinhas(cartoes, formato, { rascunho }), quantidade: cartoes.length, foraDoPdf: fora };
 }
 
 /** Lista da tela de Carteirinhas: todas as pessoas dos contratos visíveis (não cancelados), com a situação de cada uma */
