@@ -811,6 +811,31 @@ export const autoRespostaMidias = mysqlTable("autoRespostaMidias", {
   updatedAt: timestamp("updatedAt").defaultNow().notNull(),
 }, (t) => ({ uq: uniqueIndex("uq_autoresp_midia").on(t.empreendimentoId, t.codigo) }));
 
+/** Despesas do fluxo de caixa (saídas). Nunca apagadas: cancelada fica no histórico. Recorrência = uma linha por mês, mesmo grupo */
+export const financeiroDespesas = mysqlTable("financeiroDespesas", {
+  id: int("id").autoincrement().primaryKey(),
+  /** null = despesa geral do escritório */
+  empreendimentoId: int("empreendimentoId"),
+  descricao: varchar("descricao", { length: 200 }).notNull(),
+  categoria: varchar("categoria", { length: 30 }).notNull(),
+  fornecedor: varchar("fornecedor", { length: 120 }),
+  valor: decimal("valor", { precision: 12, scale: 2 }).notNull(),
+  vencimento: varchar("vencimento", { length: 10 }).notNull(),
+  /** aberta | paga | cancelada */
+  status: varchar("status", { length: 12 }).default("aberta").notNull(),
+  pagoEm: varchar("pagoEm", { length: 10 }),
+  valorPago: decimal("valorPago", { precision: 12, scale: 2 }),
+  formaPagamento: varchar("formaPagamento", { length: 20 }),
+  /** Recorrência: grupo e "3/12" */
+  grupo: varchar("grupo", { length: 24 }),
+  parcela: varchar("parcela", { length: 10 }),
+  comprovanteUrl: varchar("comprovanteUrl", { length: 500 }),
+  observacao: text("observacao"),
+  criadoPor: int("criadoPor"),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().notNull(),
+});
+
 /** Link pessoal da página de oferta (/o/:slug?l=token) — saber quem abriu e quantas vezes */
 export const linksOferta = mysqlTable("linksOferta", {
   token: varchar("token", { length: 24 }).primaryKey(),

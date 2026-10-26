@@ -48,8 +48,68 @@ describe('fluxo de caixa', () => {
     const f = await R.fluxoCaixa('2026-11-01', '2026-11-30', 'mes', HOJE);
     expect(f).toMatchObject({ saldoInicial: 8000, totalEntradas: 150000, saldoFinal: 158000, serie: [{ periodo: '2026-11', entradas: 150000, acumulado: 158000 }] });
     expect(f.porForma).toEqual([{ forma: 'BOLETO', valor: 150000 }]);
-    expect(f.previsao).toEqual([{ mes: 'ATRASADO', valor: 8000 }, { mes: '2026-12', valor: 8000 }]);
+    expect(f.previsao).toEqual([{ mes: 'ATRASADO', valor: 8000, pagar: 0, liquido: 8000 }, { mes: '2026-12', valor: 8000, pagar: 0, liquido: 8000 }]);
     await expect(R.fluxoCaixa('2026-12-01', '2026-11-01')).rejects.toMatchObject({ codigo: 'PERIODO' });
+  });
+});
+
+describe('despesas do fluxo de caixa', () => {
+  let D: typeof import('./financeiro/despesas');
+  beforeAll(async () => { D = await import('./financeiro/despesas'); });
+  const linha = (id: number) => db.all(sql`SELECT * FROM financeiroDespesas WHERE id = ${id}`)[0];
+
+  it('recorrência mensal no mesmo dia (31 vira o último dia do mês curto)', async () => {
+    const { vencimentosRecorrentes } = await import('../shared/despesas');
+    expect(vencimentosRecorrentes('2027-01-31', 4)).toEqual(['2027-01-31', '2027-02-28', '2027-03-31', '2027-04-30']);
+    expect(vencimentosRecorrentes('2026-11-10', 1)).toEqual(['2026-11-10']);
+  });
+
+  it('lança avulsa já paga e recorrente; valida campos', async () => {
+    await expect(D.lancarDespesa({ descricao: 'x', categoria: 'xyz' as any, valor: 10, vencimento: '2026-11-01' }, 1)).rejects.toMatchObject({ codigo: 'CATEGORIA' });
+    await expect(D.lancarDespesa({ descricao: 'x', categoria: 'obras', valor: 0, vencimento: '2026-11-01' }, 1)).rejects.toMatchObject({ codigo: 'VALOR' });
+    const a = await D.lancarDespesa({ empreendimentoId: 1, descricao: 'Cascalho das ruas', categoria: 'obras', fornecedor: 'Pedreira X', valor: 12000, vencimento: '2026-11-08', pagoEm: '2026-11-08', formaPagamento: 'PIX' }, 1);
+    expect(linha(a.ids[0])).toMatchObject({ status: 'paga', pagoEm: '2026-11-08', formaPagamento: 'PIX' });
+    const r = await D.lancarDespesa({ empreendimentoId: 1, descricao: 'Tráfego pago', categoria: 'marketing', valor: 1500, vencimento: '2026-11-15', meses: 3 }, 1);
+    expect(r.quantidade).toBe(3);
+    expect(r.ids.map(id => [linha(id).vencimento, linha(id).parcela, linha(id).status])).toEqual([['2026-11-15', '1/3', 'aberta'], ['2026-12-15', '2/3', 'aberta'], ['2027-01-15', '3/3', 'aberta']]);
+    await D.lancarDespesa({ descricao: 'Contador', categoria: 'administrativo', valor: 800, vencimento: '2026-11-05' }, 1); // do escritório (sem empreendimento), vencida
+  });
+
+  it('lista com situação e totais; pagar, reabrir e cancelar as seguintes do grupo', async () => {
+    let l = await D.listarDespesas({ de: '2026-11-01', ate: '2026-11-30' }, HOJE);
+    expect(l.linhas.map(x => [x.descricao, x.situacao])).toEqual([['Contador', 'vencida'], ['Cascalho das ruas', 'paga'], ['Tráfego pago', 'vencida']]);
+    expect(l.totais).toMatchObject({ aPagar: 0, vencido: 2300, pago: 12000, quantidade: 3 });
+    expect((await D.listarDespesas({ situacao: 'a_pagar' }, HOJE)).linhas.map(x => x.vencimento)).toEqual(['2026-12-15', '2027-01-15']);
+    const contador = l.linhas[0].id;
+    await expect(D.pagarDespesa(contador, { pagoEm: '2099-01-01', formaPagamento: 'PIX' }, 1, HOJE)).rejects.toMatchObject({ codigo: 'PAGAMENTO' });
+    await D.pagarDespesa(contador, { pagoEm: '2026-11-18', formaPagamento: 'TRANSFERENCIA', valorPago: 820 }, 1, HOJE);
+    await expect(D.pagarDespesa(contador, { pagoEm: '2026-11-18', formaPagamento: 'PIX' }, 1, HOJE)).rejects.toMatchObject({ codigo: 'STATUS' });
+    await expect(D.cancelarDespesa(contador, 'engano', 1)).rejects.toMatchObject({ codigo: 'STATUS' }); // paga: reabrir antes
+    await D.reabrirDespesa(contador, 1);
+    expect(linha(contador)).toMatchObject({ status: 'aberta', pagoEm: null });
+    await D.pagarDespesa(contador, { pagoEm: '2026-11-18', formaPagamento: 'TRANSFERENCIA', valorPago: 820 }, 1, HOJE);
+    const trafego = l.linhas[2].id;
+    expect((await D.cancelarDespesa(trafego + 1, 'campanha encerrada', 1, true)).canceladas).toBe(2); // dez e jan
+    expect(linha(trafego).status).toBe('aberta');
+    expect(linha(trafego + 2).observacao).toContain('Cancelada: campanha encerrada');
+    expect(db.all(sql`SELECT COUNT(*) AS n FROM financeiroDespesas`)[0].n).toBe(5); // nada apagado
+    l = await D.listarDespesas({ situacao: 'cancelada' }, HOJE);
+    expect(l.linhas).toHaveLength(2);
+    expect((await D.despesasXlsx({})).subarray(0, 2).toString()).toBe('PK');
+    expect(db.all(sql`SELECT COUNT(*) AS n FROM financeiroAuditoria WHERE acao LIKE 'despesa_%'`)[0].n).toBeGreaterThanOrEqual(7);
+  });
+
+  it('fluxo com saídas: saldo = entradas − saídas, por categoria, previsão a receber × a pagar, filtro por empreendimento', async () => {
+    const f = await R.fluxoCaixa('2026-11-01', '2026-11-30', 'mes', HOJE);
+    expect(f).toMatchObject({ saldoInicial: 8000, totalEntradas: 150000, totalSaidas: 12820, resultado: 137180, saldoFinal: 145180 });
+    expect(f.serie).toEqual([{ periodo: '2026-11', entradas: 150000, saidas: 12820, saldo: 137180, acumulado: 145180 }]);
+    expect(f.porCategoria).toEqual([{ categoria: 'Obras e infraestrutura', valor: 12000 }, { categoria: 'Administrativo', valor: 820 }]);
+    // Tráfego de novembro (aberto, 15/11 < hoje) entra no atrasado a pagar; dez/jan cancelados não contam
+    expect(f.previsao).toEqual([{ mes: 'ATRASADO', valor: 8000, pagar: 1500, liquido: 6500 }, { mes: '2026-12', valor: 8000, pagar: 0, liquido: 8000 }]);
+    const soEmp = await R.fluxoCaixa('2026-11-01', '2026-11-30', 'mes', HOJE, 1);
+    expect(soEmp.totalSaidas).toBe(12000);
+    const escritorio = await R.fluxoCaixa('2026-11-01', '2026-11-30', 'mes', HOJE, 0);
+    expect(escritorio).toMatchObject({ totalEntradas: 0, totalSaidas: 820 });
   });
 });
 

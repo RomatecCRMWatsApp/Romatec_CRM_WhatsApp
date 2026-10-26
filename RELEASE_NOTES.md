@@ -3,6 +3,18 @@
 Cada versão nova vai no TOPO. Depois rode `npm run release` (valida e atualiza o package.json);
 ao subir, o servidor grava a versão no banco e todos recebem o aviso "Novidades da versão".
 
+## 1.48.0 — 2026-10-27
+tipo: minor
+obrigatoria: nao
+titulo: Despesas no fluxo de caixa
+
+### Novo
+- Financeiro → nova aba "Despesas" (administrador e secretária): lance as saídas com descrição, categoria (obras, comissões, marketing, cartório, impostos, projetos, pessoal, administrativo, outros), empreendimento ou escritório, fornecedor, valor e vencimento
+- Despesa fixa: "Repetir todo mês por N meses" lança uma por mês no mesmo dia. Dá para lançar já paga
+- Pagar (data, valor pago e forma), desfazer o pagamento, editar a que está em aberto, anexar o comprovante (PDF ou foto) e cancelar. Cancelada não some: fica no histórico com o motivo. Na recorrente, dá para cancelar também as próximas
+- Filtro por vencimento, empreendimento, categoria e situação (a pagar, vencida, paga, cancelada), totais e planilha
+- Fluxo de caixa agora mostra entradas, saídas e o saldo de cada mês, as saídas por categoria e a previsão de cada mês (a receber − a pagar). Filtra por empreendimento ou só o escritório
+
 ## 1.47.1 — 2026-10-27
 tipo: patch
 obrigatoria: nao

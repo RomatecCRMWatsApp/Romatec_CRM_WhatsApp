@@ -83,34 +83,61 @@ export async function extratoXlsx(hoje = hojeBrasil()): Promise<Buffer> {
   ] as any, [14, 9, 30, 20, 15, 15, 15, 14, 14, 8, 12, 12, 11, 15, 16]);
 }
 
-/** Fluxo de caixa: recebimentos no período (dia/mês) com saldo acumulado, por forma, e a previsão de entradas */
-export async function fluxoCaixa(de: string, ate: string, agrupar: 'dia' | 'mes' = 'mes', hoje = hojeBrasil()) {
+/**
+ * Fluxo de caixa: entradas (parcelas recebidas) e saídas (despesas pagas) no período, por dia/mês, com o saldo
+ * acumulado; entradas por forma, saídas por categoria; previsão por mês (a receber × a pagar). `empreendimentoId`:
+ * só aquele empreendimento (0 = só as despesas do escritório, sem entradas); sem ele, tudo.
+ */
+export async function fluxoCaixa(de: string, ate: string, agrupar: 'dia' | 'mes' = 'mes', hoje = hojeBrasil(), empreendimentoId: number | null = null) {
   if (!/^\d{4}-\d{2}-\d{2}$/.test(de) || !/^\d{4}-\d{2}-\d{2}$/.test(ate) || de > ate) throw new FinanceiroErro('PERIODO', 'Período inválido', 400);
-  const { cobs } = await base();
+  const { d, cs, cobs: todasCobs } = await base();
+  const contratosDoFiltro = new Set(cs.filter(c => empreendimentoId == null || Number(c.empreendimentoId) === empreendimentoId).map(c => c.id));
+  const cobs = todasCobs.filter(x => contratosDoFiltro.has(x.contratoId));
+  const { financeiroDespesas } = await import('../../drizzle/schema');
+  const { ROTULO_CATEGORIA } = await import('../../shared/despesas');
+  const despesas = ((await d.select().from(financeiroDespesas)) as any[])
+    .filter(x => x.status !== 'cancelada')
+    .filter(x => empreendimentoId == null || (empreendimentoId === 0 ? x.empreendimentoId == null : Number(x.empreendimentoId) === empreendimentoId));
+
   const pagas = cobs.filter(x => x.status === 'paga' && x.pagoEm).map(x => ({ data: String(x.pagoEm).slice(0, 10), valor: Number(x.valorPago ?? x.valor), forma: String(x.formaPagamento ?? 'BOLETO') }));
-  const chave = (d: string) => (agrupar === 'mes' ? d.slice(0, 7) : d);
-  const saldoInicial = centavos(pagas.filter(p => p.data < de).reduce((s, p) => s + p.valor, 0));
+  const saidas = despesas.filter(x => x.status === 'paga' && x.pagoEm).map(x => ({ data: String(x.pagoEm).slice(0, 10), valor: Number(x.valorPago ?? x.valor), categoria: String(x.categoria) }));
+  const chave = (dt: string) => (agrupar === 'mes' ? dt.slice(0, 7) : dt);
+  const somar = (l: { valor: number }[]) => centavos(l.reduce((s, p) => s + p.valor, 0));
+  const saldoInicial = centavos(somar(pagas.filter(p => p.data < de)) - somar(saidas.filter(p => p.data < de)));
   const periodo = pagas.filter(p => p.data >= de && p.data <= ate);
-  const grupos = new Map<string, number>();
-  for (const p of periodo) grupos.set(chave(p.data), centavos((grupos.get(chave(p.data)) ?? 0) + p.valor));
+  const saidasPeriodo = saidas.filter(p => p.data >= de && p.data <= ate);
+  const grupos = new Map<string, { entradas: number; saidas: number }>();
+  const grupo = (k: string) => grupos.get(k) ?? (grupos.set(k, { entradas: 0, saidas: 0 }), grupos.get(k)!);
+  for (const p of periodo) { const g = grupo(chave(p.data)); g.entradas = centavos(g.entradas + p.valor); }
+  for (const p of saidasPeriodo) { const g = grupo(chave(p.data)); g.saidas = centavos(g.saidas + p.valor); }
   let acumulado = saldoInicial;
-  const serie = Array.from(grupos.entries()).sort(([a], [b]) => a.localeCompare(b)).map(([periodo, entradas]) => {
-    acumulado = centavos(acumulado + entradas);
-    return { periodo, entradas, acumulado };
+  const serie = Array.from(grupos.entries()).sort(([a], [b]) => a.localeCompare(b)).map(([periodo, g]) => {
+    const saldo = centavos(g.entradas - g.saidas);
+    acumulado = centavos(acumulado + saldo);
+    return { periodo, entradas: g.entradas, saidas: g.saidas, saldo, acumulado };
   });
   const porForma = new Map<string, number>();
   for (const p of periodo) porForma.set(p.forma, centavos((porForma.get(p.forma) ?? 0) + p.valor));
-  // Previsão: parcelas em aberto por mês de vencimento; as já vencidas num grupo "ATRASADO"
-  const previsto = new Map<string, number>();
-  for (const x of cobs.filter(c => ABERTAS.includes(c.status))) {
-    const v = String(x.vencimento).slice(0, 10);
-    const k = v < hoje ? 'ATRASADO' : v.slice(0, 7);
-    previsto.set(k, centavos((previsto.get(k) ?? 0) + Number(x.valor)));
+  const porCategoria = new Map<string, number>();
+  for (const p of saidasPeriodo) {
+    const r = ROTULO_CATEGORIA[p.categoria as keyof typeof ROTULO_CATEGORIA] ?? p.categoria;
+    porCategoria.set(r, centavos((porCategoria.get(r) ?? 0) + p.valor));
   }
+  // Previsão: a receber (parcelas em aberto) e a pagar (despesas em aberto) por mês; as já vencidas em "ATRASADO"
+  const previsto = new Map<string, { valor: number; pagar: number }>();
+  const mes = (v: string) => (v < hoje ? 'ATRASADO' : v.slice(0, 7));
+  const prev = (k: string) => previsto.get(k) ?? (previsto.set(k, { valor: 0, pagar: 0 }), previsto.get(k)!);
+  for (const x of cobs.filter(c => ABERTAS.includes(c.status))) { const p = prev(mes(String(x.vencimento).slice(0, 10))); p.valor = centavos(p.valor + Number(x.valor)); }
+  for (const x of despesas.filter(y => y.status === 'aberta')) { const p = prev(mes(String(x.vencimento))); p.pagar = centavos(p.pagar + Number(x.valor)); }
+  const totalEntradas = somar(periodo);
+  const totalSaidas = somar(saidasPeriodo);
   return {
-    de, ate, agrupar, saldoInicial, totalEntradas: centavos(periodo.reduce((s, p) => s + p.valor, 0)), saldoFinal: acumulado, serie,
+    de, ate, agrupar, empreendimentoId, saldoInicial, totalEntradas, totalSaidas, resultado: centavos(totalEntradas - totalSaidas), saldoFinal: acumulado, serie,
     porForma: Array.from(porForma.entries()).map(([forma, valor]) => ({ forma, valor })).sort((a, b) => b.valor - a.valor),
-    previsao: Array.from(previsto.entries()).map(([mes, valor]) => ({ mes, valor })).sort((a, b) => (a.mes === 'ATRASADO' ? -1 : b.mes === 'ATRASADO' ? 1 : a.mes.localeCompare(b.mes))),
+    porCategoria: Array.from(porCategoria.entries()).map(([categoria, valor]) => ({ categoria, valor })).sort((a, b) => b.valor - a.valor),
+    // valor = a receber (nome mantido); pagar = despesas em aberto; liquido = valor − pagar
+    previsao: Array.from(previsto.entries()).map(([mes, p]) => ({ mes, valor: p.valor, pagar: p.pagar, liquido: centavos(p.valor - p.pagar) }))
+      .sort((a, b) => (a.mes === 'ATRASADO' ? -1 : b.mes === 'ATRASADO' ? 1 : a.mes.localeCompare(b.mes))),
   };
 }
 

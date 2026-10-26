@@ -1201,6 +1201,8 @@ async function startServer() {
     await addSaas();
     const { addAutoResposta } = await import('./migrations/addAutoResposta');
     await addAutoResposta();
+    const { addDespesas } = await import('./migrations/addDespesas');
+    await addDespesas();
     const { addControleLotes } = await import('./migrations/addControleLotes');
     await addControleLotes();
   } catch (e) {

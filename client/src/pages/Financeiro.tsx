@@ -8,13 +8,14 @@ import TesteAsaas from "@/components/financeiro/TesteAsaas";
 import LancarPagamento from "@/components/financeiro/LancarPagamento";
 import ExtratoCompradores from "@/components/financeiro/ExtratoCompradores";
 import FluxoCaixa from "@/components/financeiro/FluxoCaixa";
+import Despesas from "@/components/financeiro/Despesas";
 import CobrancaWhatsapp from "@/components/financeiro/CobrancaWhatsapp";
 import { useState } from "react";
 import { useAuth } from "@/_core/hooks/useAuth";
 import { perfilDe } from "@shared/equipe";
 import { podeOperarCobranca } from "@shared/contratos";
 
-const ABAS = [["vendas", "Vendas e cobrança"], ["extrato", "Extrato por comprador"], ["fluxo", "Fluxo de caixa"]] as const;
+const ABAS = [["vendas", "Vendas e cobrança"], ["extrato", "Extrato por comprador"], ["fluxo", "Fluxo de caixa"], ["despesas", "Despesas"]] as const;
 
 const data = (d: unknown) => (d ? new Date(d as any).toLocaleDateString("pt-BR", { timeZone: "America/Fortaleza" }) : "—");
 const v = (n: number | null | undefined) => (n == null ? "—" : brl(n));
@@ -43,6 +44,7 @@ export default function Financeiro() {
       )}
       {operador && aba === "extrato" && <div className="px-4 md:px-6 pb-8 max-w-[1400px] mx-auto"><ExtratoCompradores /></div>}
       {operador && aba === "fluxo" && <div className="px-4 md:px-6 pb-8 max-w-[1400px] mx-auto"><FluxoCaixa /></div>}
+      {operador && aba === "despesas" && <div className="px-4 md:px-6 pb-8 max-w-[1400px] mx-auto"><Despesas /></div>}
       <div className={`px-4 md:px-6 pb-8 max-w-[1400px] mx-auto space-y-3 ${operador && aba !== "vendas" ? "hidden" : ""}`}>
         {error && <p className="text-sm text-red-400">{error.message}</p>}
         {isLoading && <p className="text-sm text-muted-foreground">Carregando…</p>}

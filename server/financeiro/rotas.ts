@@ -121,6 +121,25 @@ export function registrarRotasFinanceiro(app: Express) {
     } catch (e) { erro(res, e); }
   });
 
+  // Despesas filtradas em planilha (administrador e secretária)
+  app.get(`${base}/despesas.xlsx`, async (req, res) => {
+    try {
+      const { sdk } = await import('../_core/sdk');
+      const user: any = await sdk.authenticateRequest(req).catch(() => null);
+      const { perfilDe } = await import('../../shared/equipe');
+      const { podeOperarCobranca } = await import('../../shared/contratos');
+      if (!user || !podeOperarCobranca(perfilDe(user))) return res.status(404).json({ erro: 'Não encontrado' });
+      const q = (k: string) => (typeof req.query[k] === 'string' && req.query[k] ? String(req.query[k]) : null);
+      const emp = q('empreendimentoId');
+      const { despesasXlsx } = await import('./despesas');
+      const buf = await despesasXlsx({ de: q('de'), ate: q('ate'), categoria: q('categoria'), empreendimentoId: emp == null ? null : Number(emp), situacao: (q('situacao') as any) ?? 'todas' });
+      res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+      res.setHeader('Content-Disposition', `attachment; filename="Despesas-${new Date().toISOString().slice(0, 10)}.xlsx"`);
+      res.setHeader('Cache-Control', 'private, no-store');
+      res.send(buf);
+    } catch (e) { erro(res, e); }
+  });
+
   // Boleto de TESTE da integração (só administrador): cria, PDF, situação e cancelamento — só cobranças "crm-teste-"
   const soAdmin = async (req: Request) => {
     const { sdk } = await import('../_core/sdk');

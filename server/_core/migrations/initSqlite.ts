@@ -585,6 +585,10 @@ export function initSqliteTables(sqlite: any): void {
   run(`CREATE TABLE IF NOT EXISTS autoRespostaMidias (
     id INTEGER PRIMARY KEY AUTOINCREMENT, empreendimentoId INTEGER NOT NULL, codigo TEXT NOT NULL, tipo TEXT NOT NULL, url TEXT NOT NULL,
     nomeArquivo TEXT, legenda TEXT, ativo INTEGER NOT NULL DEFAULT 1, updatedAt ${agoraS}, UNIQUE (empreendimentoId, codigo))`);
+  run(`CREATE TABLE IF NOT EXISTS financeiroDespesas (
+    id INTEGER PRIMARY KEY AUTOINCREMENT, empreendimentoId INTEGER, descricao TEXT NOT NULL, categoria TEXT NOT NULL, fornecedor TEXT,
+    valor TEXT NOT NULL, vencimento TEXT NOT NULL, status TEXT NOT NULL DEFAULT 'aberta', pagoEm TEXT, valorPago TEXT, formaPagamento TEXT,
+    grupo TEXT, parcela TEXT, comprovanteUrl TEXT, observacao TEXT, criadoPor INTEGER, createdAt ${agoraS}, updatedAt ${agoraS})`);
   run(`CREATE TABLE IF NOT EXISTS linksOferta (
     token TEXT PRIMARY KEY, leadId INTEGER NOT NULL, empreendimentoId INTEGER NOT NULL, aberturas INTEGER NOT NULL DEFAULT 0,
     primeiraAberturaAt INTEGER, ultimaAberturaAt INTEGER, createdAt ${agoraS}, UNIQUE (leadId, empreendimentoId))`);

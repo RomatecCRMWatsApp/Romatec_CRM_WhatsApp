@@ -12,6 +12,7 @@ import { condicoesDaLinha, r2 } from "../../shared/simulador";
 import { SITUACOES_VENDA, linhaFinanceira, temAcesso } from "../../shared/permissoes";
 import { pctComissaoCorretor } from "../permissoes";
 import { TRPCError } from "@trpc/server";
+import { CATEGORIAS_DESPESA, FORMAS_DESPESA } from "../../shared/despesas";
 
 /** Pedido da tabela de financiamento: lote, área ou valor (sem nada, a área padrão das condições) */
 const pedidoTabela = z.object({
@@ -32,6 +33,17 @@ async function comErro<T>(f: () => Promise<T> | T): Promise<T> {
     throw e;
   }
 }
+
+/** Campos de uma despesa (lançar e editar) */
+const despesaZ = z.object({
+  empreendimentoId: z.number().int().positive().nullable().optional(),
+  descricao: z.string().trim().min(2).max(200),
+  categoria: z.enum(CATEGORIAS_DESPESA),
+  fornecedor: z.string().trim().max(120).nullable().optional(),
+  valor: z.number().positive().max(100_000_000),
+  vencimento: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
+  observacao: z.string().trim().max(2000).nullable().optional(),
+});
 
 const num = (v: unknown) => (v === null || v === undefined || v === "" ? null : Number(v));
 
@@ -92,13 +104,73 @@ export const financeiroRouter = router({
     const { extratoCompradores } = await import("../financeiro/relatorios");
     return extratoCompradores();
   }),
-  /** Fluxo de caixa: recebimentos no período e previsão de entradas */
-  fluxoCaixa: protectedProcedure.input(z.object({ de: z.string().regex(/^\d{4}-\d{2}-\d{2}$/), ate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/), agrupar: z.enum(["dia", "mes"]).default("mes") }))
-    .query(async ({ ctx, input }) => {
-      await operador(ctx);
-      const { fluxoCaixa } = await import("../financeiro/relatorios");
-      return comErroFin(() => fluxoCaixa(input.de, input.ate, input.agrupar));
-    }),
+  /** Fluxo de caixa: entradas e saídas no período e a previsão (a receber × a pagar); empreendimentoId 0 = só o escritório */
+  fluxoCaixa: protectedProcedure.input(z.object({
+    de: z.string().regex(/^\d{4}-\d{2}-\d{2}$/), ate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/), agrupar: z.enum(["dia", "mes"]).default("mes"),
+    empreendimentoId: z.number().int().min(0).nullable().optional(),
+  })).query(async ({ ctx, input }) => {
+    await operador(ctx);
+    const { fluxoCaixa } = await import("../financeiro/relatorios");
+    return comErroFin(() => fluxoCaixa(input.de, input.ate, input.agrupar, undefined, input.empreendimentoId ?? null));
+  }),
+
+  // ─── Despesas (saídas do fluxo de caixa): administrador e secretária ───
+  despesas: protectedProcedure.input(z.object({
+    de: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).nullable().optional(), ate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).nullable().optional(),
+    empreendimentoId: z.number().int().min(0).nullable().optional(), categoria: z.string().max(30).nullable().optional(),
+    situacao: z.enum(["todas", "a_pagar", "vencida", "paga", "cancelada"]).default("todas"),
+  })).query(async ({ ctx, input }) => {
+    await operador(ctx);
+    const { listarDespesas } = await import("../financeiro/despesas");
+    return listarDespesas(input as any);
+  }),
+  lancarDespesa: protectedProcedure.input(despesaZ.extend({
+    meses: z.number().int().min(1).max(60).default(1),
+    pagoEm: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).nullable().optional(), formaPagamento: z.enum(FORMAS_DESPESA).nullable().optional(),
+  })).mutation(async ({ ctx, input }) => {
+    await operador(ctx);
+    const { lancarDespesa } = await import("../financeiro/despesas");
+    return comErroFin(() => lancarDespesa(input, ctx.user.id));
+  }),
+  editarDespesa: protectedProcedure.input(despesaZ.extend({ id: z.number().int() })).mutation(async ({ ctx, input }) => {
+    await operador(ctx);
+    const { editarDespesa } = await import("../financeiro/despesas");
+    const { id, ...p } = input;
+    return comErroFin(() => editarDespesa(id, p, ctx.user.id));
+  }),
+  pagarDespesa: protectedProcedure.input(z.object({
+    id: z.number().int(), pagoEm: z.string().regex(/^\d{4}-\d{2}-\d{2}$/), valorPago: z.number().positive().max(100_000_000).nullable().optional(), formaPagamento: z.enum(FORMAS_DESPESA),
+  })).mutation(async ({ ctx, input }) => {
+    await operador(ctx);
+    const { pagarDespesa } = await import("../financeiro/despesas");
+    const { id, ...p } = input;
+    return comErroFin(() => pagarDespesa(id, p, ctx.user.id));
+  }),
+  reabrirDespesa: protectedProcedure.input(z.object({ id: z.number().int() })).mutation(async ({ ctx, input }) => {
+    await operador(ctx);
+    const { reabrirDespesa } = await import("../financeiro/despesas");
+    return comErroFin(() => reabrirDespesa(input.id, ctx.user.id));
+  }),
+  cancelarDespesa: protectedProcedure.input(z.object({ id: z.number().int(), motivo: z.string().trim().min(3).max(300), seguintes: z.boolean().default(false) })).mutation(async ({ ctx, input }) => {
+    await operador(ctx);
+    const { cancelarDespesa } = await import("../financeiro/despesas");
+    return comErroFin(() => cancelarDespesa(input.id, input.motivo, ctx.user.id, input.seguintes));
+  }),
+  comprovanteDespesa: protectedProcedure.input(z.object({
+    id: z.number().int(), nomeArquivo: z.string().trim().min(1).max(120), mime: z.enum(["image/png", "image/jpeg", "application/pdf"]), base64: z.string().min(10).max(14_000_000),
+  })).mutation(async ({ ctx, input }) => {
+    await operador(ctx);
+    const { anexarComprovante } = await import("../financeiro/despesas");
+    return comErroFin(() => anexarComprovante(input.id, input, ctx.user.id));
+  }),
+  /** Empreendimentos para o filtro e o lançamento */
+  empreendimentosDespesa: protectedProcedure.query(async ({ ctx }) => {
+    await operador(ctx);
+    const db = await getDb();
+    if (!db) return [];
+    const es: any[] = await (db as any).select({ id: empreendimentos.id, nome: empreendimentos.nome }).from(empreendimentos);
+    return es.map(e => ({ id: Number(e.id), nome: String(e.nome) }));
+  }),
   /** Quem cobrar (vencidos e a vencer em N dias), com a mensagem pronta */
   aCobrar: protectedProcedure.input(z.object({ dias: z.number().int().min(0).max(30).default(5) })).query(async ({ ctx, input }) => {
     await operador(ctx);
