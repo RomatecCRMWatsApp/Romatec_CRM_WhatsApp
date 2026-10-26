@@ -11,7 +11,7 @@ import type { Perfil } from './equipe';
 import { VENDIDOS, type SituacaoLote } from './lotes';
 import { temAcesso, type AcessoCorretor } from './permissoes';
 
-export const TIPOS_NOTIFICACAO = ['atualizacao_sistema', 'reserva', 'venda_contrato', 'liberacao', 'solicitacao_cancelamento', 'agendamento', 'novo_lead'] as const;
+export const TIPOS_NOTIFICACAO = ['atualizacao_sistema', 'reserva', 'venda_contrato', 'liberacao', 'solicitacao_cancelamento', 'agendamento', 'novo_lead', 'atendimento'] as const;
 export type TipoNotificacao = typeof TIPOS_NOTIFICACAO[number];
 
 /** Som de cada tipo (client/public/sons) — trocar o arquivo troca o som, sem mexer no código */
@@ -23,6 +23,7 @@ export const SOM_POR_TIPO: Record<TipoNotificacao, string> = {
   solicitacao_cancelamento: '/sons/cancelamento.wav',
   agendamento: '/sons/agendamento.wav',
   novo_lead: '/sons/novo_lead.wav',
+  atendimento: '/sons/atendimento.wav',
 };
 
 export const ROTULO_NOTIFICACAO: Record<TipoNotificacao, string> = {
@@ -33,6 +34,7 @@ export const ROTULO_NOTIFICACAO: Record<TipoNotificacao, string> = {
   solicitacao_cancelamento: 'Pedido de cancelamento',
   agendamento: 'Pedido de agendamento',
   novo_lead: 'Novo lead',
+  atendimento: 'Cliente aguardando',
 };
 
 /** Cor do selo na lista do sininho */
@@ -44,6 +46,7 @@ export const COR_NOTIFICACAO: Record<TipoNotificacao, string> = {
   solicitacao_cancelamento: '#C0504D',
   agendamento: '#2C7FB8',
   novo_lead: '#1F8A4C',
+  atendimento: '#D9822B',
 };
 
 const RESERVAS: SituacaoLote[] = ['reservado', 'entrada'];
@@ -78,6 +81,10 @@ export function textoNotificacao(
       titulo: `Novo lead: ${d.comprador ?? 'sem nome'}${d.empreendimento ? ` · ${d.empreendimento}` : ''}`,
       mensagem: [`Novo lead: ${d.comprador ?? 'sem nome'}${d.empreendimento ? ` · ${d.empreendimento}` : ''}`, d.motivo].filter(Boolean).join(' — ').slice(0, 500),
     };
+    case 'atendimento': return {
+      titulo: `${d.comprador ?? 'Cliente'} aguarda você${d.empreendimento ? ` · ${d.empreendimento}` : ''}`,
+      mensagem: `${d.comprador ?? 'O cliente'} precisa de atendimento humano no WhatsApp${d.motivo ? `: ${d.motivo}` : ''}.`.slice(0, 500),
+    };
     case 'agendamento': return {
       titulo: `Pedido de agendamento — ${d.comprador ?? 'cliente'}`,
       mensagem: `${d.comprador ?? 'Um cliente'} pediu atendimento${d.empreendimento ? ` no ${d.empreendimento}` : ''}${d.quando ? ` para ${d.quando}` : ''}${d.motivo ? ` (${d.motivo})` : ''}. Confirme o horário com ele.`.slice(0, 500),
@@ -110,7 +117,7 @@ export function destinatarios(
     // Pedido de cancelamento: só o administrador decide (e cancela com a senha)
     if (tipo === 'solicitacao_cancelamento') return perfilDe(u) === 'admin' && u.id !== alvo?.autorId;
     // Pedido de agendamento: vai direto para o responsável (notificarAgendamento), não por escopo
-    if (tipo === 'agendamento') return false;
+    if (tipo === 'agendamento' || tipo === 'atendimento') return false;
     // Novo lead: admin e secretária (no escopo do empreendimento); corretor só o lead atribuído a ele;
     // empreendedor só o do empreendimento dele
     if (tipo === 'novo_lead') {
@@ -134,7 +141,7 @@ export function destinatarios(
 export function urlDaNotificacao(
   tipo: TipoNotificacao, d: { empreendimentoSlug?: string | null; lote?: string | null; contratoId?: number | null; leadId?: number | null }, perfil?: Perfil | null,
 ): string {
-  if (tipo === 'agendamento' || tipo === 'novo_lead') {
+  if (tipo === 'agendamento' || tipo === 'novo_lead' || tipo === 'atendimento') {
     if (tipo === 'novo_lead' && perfil === 'empreendedor') return '/empreendedor?notificacoes=1';
     return d.leadId ? `/leads/lead/${d.leadId}` : tipo === 'agendamento' ? '/agenda' : '/leads';
   }

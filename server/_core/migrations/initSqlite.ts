@@ -576,6 +576,15 @@ export function initSqliteTables(sqlite: any): void {
   run(`CREATE TABLE IF NOT EXISTS saasEventosPagamento (
     id INTEGER PRIMARY KEY AUTOINCREMENT, provedor TEXT NOT NULL DEFAULT 'mercadopago', eventoId TEXT NOT NULL UNIQUE, tipo TEXT NOT NULL, recursoId TEXT,
     payloadJson TEXT, processado INTEGER NOT NULL DEFAULT 0, tentativas INTEGER NOT NULL DEFAULT 0, erro TEXT, recebidoEm ${agoraS}, processadoEm TEXT)`);
+  run(`CREATE TABLE IF NOT EXISTS autoRespostaConfig (
+    empreendimentoId INTEGER PRIMARY KEY, ativo INTEGER NOT NULL DEFAULT 0, condicaoValidaAte TEXT, avisoLegal TEXT, loteAncora TEXT,
+    entradaParcelas INTEGER NOT NULL DEFAULT 6, atualizadoPor INTEGER, updatedAt ${agoraS})`);
+  run(`CREATE TABLE IF NOT EXISTS autoRespostaTextos (
+    id INTEGER PRIMARY KEY AUTOINCREMENT, empreendimentoId INTEGER NOT NULL, intencao TEXT NOT NULL, texto TEXT NOT NULL, midias TEXT,
+    ativo INTEGER NOT NULL DEFAULT 1, updatedAt ${agoraS}, UNIQUE (empreendimentoId, intencao))`);
+  run(`CREATE TABLE IF NOT EXISTS autoRespostaMidias (
+    id INTEGER PRIMARY KEY AUTOINCREMENT, empreendimentoId INTEGER NOT NULL, codigo TEXT NOT NULL, tipo TEXT NOT NULL, url TEXT NOT NULL,
+    nomeArquivo TEXT, legenda TEXT, ativo INTEGER NOT NULL DEFAULT 1, updatedAt ${agoraS}, UNIQUE (empreendimentoId, codigo))`);
   run(`CREATE TABLE IF NOT EXISTS saasNfse (
     id INTEGER PRIMARY KEY AUTOINCREMENT, faturaId INTEGER NOT NULL UNIQUE, assinaturaId INTEGER NOT NULL, usuarioId INTEGER NOT NULL, status TEXT NOT NULL DEFAULT 'PENDENTE',
     competencia TEXT NOT NULL, valor TEXT NOT NULL, itemServico TEXT NOT NULL, discriminacao TEXT NOT NULL, tomadorNome TEXT NOT NULL, tomadorDoc TEXT, tomadorEmail TEXT,

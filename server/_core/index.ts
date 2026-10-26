@@ -185,6 +185,17 @@ async function startServer() {
         try {
           const { processarEntradaWhatsApp } = await import('../leads/inbound');
           const entrada = await processarEntradaWhatsApp({ phone: payload.phone, texto: msgText, nome: senderName, messageId: payload.messageId });
+          if (entrada.acao === 'abertura' && entrada.empreendimento) {
+            // Robô de respostas automáticas ligado: ele responde o primeiro contato (sem a régua antiga de follow-up)
+            const { roboAtivo, processarMensagem } = await import('../autoresposta/motor');
+            if (await roboAtivo(entrada.empreendimento)) {
+              const { registrarMensagemPorTelefone } = await import('../leads/qualificacaoService');
+              await registrarMensagemPorTelefone(payload.phone, 'in', 'lead', msgText).catch(() => {});
+              await processarMensagem({ phone: payload.phone, texto: msgText, nome: senderName, primeira: true })
+                .catch((e: any) => console.error(`[Entrada] ❌ Resposta automática para ${payload.phone}: ${e?.message}`));
+              return res.json({ received: true, processed: true, lead: 'novo' });
+            }
+          }
           if (entrada.acao === 'abertura') {
             const { enviarTexto } = await import('../leads/zapiClient');
             try {
@@ -1152,6 +1163,8 @@ async function startServer() {
     await addRecrutamento();
     const { addSaas } = await import('./migrations/addSaas');
     await addSaas();
+    const { addAutoResposta } = await import('./migrations/addAutoResposta');
+    await addAutoResposta();
     const { addControleLotes } = await import('./migrations/addControleLotes');
     await addControleLotes();
   } catch (e) {

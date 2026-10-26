@@ -232,6 +232,23 @@ export async function notificarAgendamento(
     { leadId: p.leadId });
 }
 
+/** Respostas automáticas passaram o cliente para atendimento humano → o responsável (sem responsável: o escritório) */
+export async function notificarAtendimento(
+  p: { leadId: number; responsavelId: number | null; cliente: string; empreendimentoId?: number | null; empreendimentoSlug?: string | null; empreendimentoNome?: string | null; motivo: string },
+  repo: RepoNotificacoes = repoBanco(), enviar?: EnviadorPush | null,
+) {
+  const usuarios = await repo.usuarios();
+  const ativo = (u: UsuarioDestino) => u.ativo !== false && u.ativo !== 0;
+  const dono = p.responsavelId ? usuarios.find(u => u.id === p.responsavelId && ativo(u)) : null;
+  const ids = dono ? [dono.id] : destinatarios("novo_lead", usuarios, await repo.acessos(), perfilDe as any,
+    { empreendimentoId: p.empreendimentoId ?? 0, empreendimentoSlug: p.empreendimentoSlug ?? "", responsavelId: null })
+    .filter(id => ["admin", "secretario"].includes(perfilDe(usuarios.find(u => u.id === id) as any) ?? ""));
+  const { titulo, mensagem } = textoNotificacao("atendimento", { comprador: p.cliente, empreendimento: p.empreendimentoNome ?? undefined, motivo: p.motivo });
+  return emitir(repo, enviar === undefined ? await enviadorWebPush() : enviar, usuarios, ids,
+    { tipo: "atendimento", titulo, mensagem, empreendimentoId: p.empreendimentoId ?? null, chave: `atendimento:${p.leadId}:${Date.now()}` },
+    { leadId: p.leadId });
+}
+
 /** Ao subir uma versão nova: "Sistema atualizado para vX.Y.Z" para todos (uma vez por versão) */
 export async function notificarAtualizacaoSistema(versao: string, repo: RepoNotificacoes = repoBanco(), enviar?: EnviadorPush | null) {
   const chave = `v${versao}`;

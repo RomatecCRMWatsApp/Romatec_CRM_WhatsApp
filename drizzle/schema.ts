@@ -770,6 +770,47 @@ export const leadEventos = mysqlTable("leadEventos", {
   idxVisitante: index("idx_evento_visitante").on(t.visitanteId),
 }));
 
+/** Respostas automáticas no WhatsApp por empreendimento (server/autoresposta) — começa DESLIGADO */
+export const autoRespostaConfig = mysqlTable("autoRespostaConfig", {
+  empreendimentoId: int("empreendimentoId").primaryKey(),
+  ativo: boolean("ativo").default(sql`0`).notNull(),
+  /** Data limite da condição; vazio = "de lançamento e pode mudar sem aviso" (nunca inventar data) */
+  condicaoValidaAte: date("condicaoValidaAte", { mode: "string" }),
+  /** Aviso legal com {{variaveis}}; vazio = o padrão de shared/autoresposta.ts */
+  avisoLegal: text("avisoLegal"),
+  /** Chácara âncora da divulgação (vazio = área padrão das condições) */
+  loteAncora: varchar("loteAncora", { length: 10 }),
+  entradaParcelas: int("entradaParcelas").default(6).notNull(),
+  atualizadoPor: int("atualizadoPor"),
+  updatedAt: timestamp("updatedAt").defaultNow().notNull(),
+});
+
+/** Texto de cada intenção (com {{variaveis}}) e as mídias que vão depois dele */
+export const autoRespostaTextos = mysqlTable("autoRespostaTextos", {
+  id: int("id").autoincrement().primaryKey(),
+  empreendimentoId: int("empreendimentoId").notNull(),
+  intencao: varchar("intencao", { length: 40 }).notNull(),
+  texto: text("texto").notNull(),
+  /** Códigos separados por vírgula (OFERTA,CONDICOES…) */
+  midias: varchar("midias", { length: 200 }),
+  ativo: boolean("ativo").default(sql`1`).notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().notNull(),
+}, (t) => ({ uq: uniqueIndex("uq_autoresp_texto").on(t.empreendimentoId, t.intencao) }));
+
+/** Biblioteca de mídias de divulgação (folders, mapa, PDF) por código */
+export const autoRespostaMidias = mysqlTable("autoRespostaMidias", {
+  id: int("id").autoincrement().primaryKey(),
+  empreendimentoId: int("empreendimentoId").notNull(),
+  codigo: varchar("codigo", { length: 40 }).notNull(),
+  /** imagem | pdf */
+  tipo: varchar("tipo", { length: 10 }).notNull(),
+  url: varchar("url", { length: 500 }).notNull(),
+  nomeArquivo: varchar("nomeArquivo", { length: 200 }),
+  legenda: varchar("legenda", { length: 500 }),
+  ativo: boolean("ativo").default(sql`1`).notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().notNull(),
+}, (t) => ({ uq: uniqueIndex("uq_autoresp_midia").on(t.empreendimentoId, t.codigo) }));
+
 /** Conversa do lead no WhatsApp (contexto da IA e tela do lead) */
 export const leadMensagens = mysqlTable("leadMensagens", {
   id: int("id").autoincrement().primaryKey(),

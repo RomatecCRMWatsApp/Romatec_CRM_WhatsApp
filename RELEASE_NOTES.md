@@ -3,6 +3,18 @@
 Cada versão nova vai no TOPO. Depois rode `npm run release` (valida e atualiza o package.json);
 ao subir, o servidor grava a versão no banco e todos recebem o aviso "Novidades da versão".
 
+## 1.46.0 — 2026-10-27
+tipo: minor
+obrigatoria: nao
+titulo: Respostas automáticas no WhatsApp (desligadas até a aprovação)
+
+### Novo
+- Administração → "Respostas automáticas" (administrador e secretária): o robô responde no WhatsApp os leads do empreendimento com os valores do simulador, os folders e o aviso legal. Ele vem DESLIGADO, e nada muda no atendimento até alguém clicar em "Ligar robô"
+- O robô entende a pergunta (valores, à vista, mapa, visita, juros, documentação, uma chácara específica, quero fechar, sair da lista). Se a chácara pedida já saiu, ele oferece as livres mais perto. Se não entender, passa a conversa para o corretor do lead e avisa no sininho
+- Pedido de fechamento ou de visita: o corretor do lead é avisado na hora ("Cliente aguardando"). Fora das 8 h às 20 h, o robô só responde o primeiro contato
+- Na tela dá para editar o texto de cada intenção, trocar os folders (PNG, JPG ou PDF) e testar na prévia o que o robô responderia, sem enviar nada
+- O botão "Assumir conversa" do lead cala o robô para aquele cliente; "Devolver ao bot" volta
+
 ## 1.45.0 — 2026-10-27
 tipo: minor
 obrigatoria: nao

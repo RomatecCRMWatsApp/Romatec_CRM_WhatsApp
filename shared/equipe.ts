@@ -86,6 +86,8 @@ export function podeAbrir(perfil: Perfil | null, caminho: string): boolean {
   if (caminho === '/saas') return false;
   // Fila de reservas do escritório: administrador e secretária
   if (caminho === '/reservas') return perfil === 'secretario';
+  // Respostas automáticas no WhatsApp (robô por empreendimento): administrador e secretária
+  if (caminho === '/respostas-automaticas') return perfil === 'secretario';
   // Disparos WhatsApp: administrador e secretária
   if (caminho === '/campaigns' || caminho.startsWith('/campaigns/')) return perfil === 'secretario';
   return !['/equipe', '/settings', '/setup'].some(p => caminho === p || caminho.startsWith(`${p}/`)) && !caminho.startsWith('/empreendedor');

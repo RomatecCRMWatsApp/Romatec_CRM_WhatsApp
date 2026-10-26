@@ -973,6 +973,22 @@ export async function processBotMessage(context: BotContext): Promise<BotRespons
   }
 
   // ═══════════════════════════════════════════════════════════════════════
+  // RESPOSTAS AUTOMÁTICAS (empreendimento com o robô ligado em Admin): o motor
+  // responde ou fica calado de propósito; desligado, segue o fluxo abaixo.
+  // ═══════════════════════════════════════════════════════════════════════
+  try {
+    const { processarMensagem } = await import('./autoresposta/motor');
+    const r = await processarMensagem({ phone: clean, texto: messageText, nome: senderName });
+    if (r.tratado) {
+      registerUserReply(context.phone);
+      console.log(`[Bot] 🤖 Resposta automática para ${clean}: ${r.intencao ?? r.motivo ?? '—'}`);
+      return { text: '', qualified: true };
+    }
+  } catch (e: any) {
+    console.warn('[Bot] Respostas automáticas indisponíveis, seguindo no fluxo:', e?.message);
+  }
+
+  // ═══════════════════════════════════════════════════════════════════════
   // QUALIFICAÇÃO POR IA (leads da captação): a IA conduz e extrai os slots;
   // 2 falhas seguidas → o roteiro de perguntas abaixo assume (§7.3)
   // ═══════════════════════════════════════════════════════════════════════
