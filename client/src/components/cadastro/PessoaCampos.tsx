@@ -49,9 +49,9 @@ export default function PessoaCampos({ p, set, erros, prefixo, conjuge }: {
       <Campo rotulo="Nascimento"><input type="date" className={classeCampo()} value={p.nascimento ?? ""} onChange={x => set("nascimento", x.target.value)} /></Campo>
       <Campo rotulo="RG"><input className={classeCampo()} value={p.rg ?? ""} onChange={x => set("rg", x.target.value)} /></Campo>
       <Campo rotulo="Órgão / UF">
-        <div className="flex gap-2">
+        <div className="grid grid-cols-[minmax(0,1fr)_5.5rem] gap-2">
           <input className={classeCampo()} value={p.rgOrgao ?? ""} onChange={x => set("rgOrgao", x.target.value)} />
-          <select className={`${sel} w-20`} value={p.rgUf ?? ""} onChange={x => set("rgUf", x.target.value)}>{UFS.map(u => <option key={u}>{u}</option>)}</select>
+          <select className={sel} value={p.rgUf ?? ""} onChange={x => set("rgUf", x.target.value)}>{UFS.map(u => <option key={u}>{u}</option>)}</select>
         </div>
       </Campo>
       <Campo rotulo="Telefone (WhatsApp)" erro={e("telefone1")}><InputMascara valor={p.telefone1 ?? ""} mascara={maskPhone} onMudar={v => set("telefone1", v)} inputMode="tel" erro={e("telefone1")} /></Campo>

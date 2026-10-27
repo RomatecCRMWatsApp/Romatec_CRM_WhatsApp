@@ -51,7 +51,7 @@ export function Visualizador({ uid, doc, versao, onFechar }: { uid: number; doc:
   const nomePag = (n: number) => (total === 2 ? (n === 1 ? "Frente" : "Verso") : `Página ${n}`);
   return (
     <Dialog open={!!doc} onOpenChange={o => !o && onFechar()}>
-      <DialogContent className="max-w-3xl">
+      <DialogContent className="sm:max-w-3xl">
         <DialogHeader><DialogTitle className="text-base">{doc?.rotulo}</DialogTitle></DialogHeader>
         {doc && (
           <div className="space-y-3">

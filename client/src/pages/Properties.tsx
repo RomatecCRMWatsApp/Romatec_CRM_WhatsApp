@@ -764,7 +764,7 @@ export default function Properties() {
       {/* Modal de Detalhes Premium */}
       {selectedProperty && (
         <Dialog open={!!selectedProperty} onOpenChange={() => { setSelectedProperty(null); setImageIndex(0); }}>
-          <DialogContent className="max-w-4xl w-[calc(100vw-16px)] sm:w-auto max-h-[90vh] overflow-y-auto bg-card border-border/50 p-0">
+          <DialogContent className="sm:max-w-4xl w-[calc(100vw-16px)] max-h-[90vh] overflow-y-auto bg-card border-border/50 p-0">
             {/* Header com imagem */}
             <div className="relative">
               {selectedProperty.images?.length > 0 ? (

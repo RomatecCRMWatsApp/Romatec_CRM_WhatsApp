@@ -39,7 +39,8 @@ export default function FichaCliente({ aberto, contatoId, onFechar, onSalvo }: {
 
   return (
     <Dialog open={aberto} onOpenChange={v => !v && !salvar.isPending && onFechar()}>
-      <DialogContent className="bg-card border-border max-w-4xl max-h-[90vh] overflow-y-auto">
+      {/* sm:max-w-4xl vence o sm:max-w-lg do Dialog base: a ficha tem 4 colunas no computador, 2 no tablet e 1 no celular */}
+      <DialogContent className="bg-card border-border sm:max-w-4xl max-h-[90vh] overflow-y-auto p-4 sm:p-6">
         <DialogHeader>
           <DialogTitle className="text-foreground">{contatoId ? "Editar cliente" : "Novo cliente"}</DialogTitle>
           <DialogDescription>Nome e telefone são obrigatórios. Com o CPF, a ficha completa fica guardada e o contrato desse cliente já sai preenchido.</DialogDescription>

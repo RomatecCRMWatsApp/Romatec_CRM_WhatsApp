@@ -8,6 +8,8 @@ import { Users, Send, Settings, LogOut, WifiOff, TrendingUp, Building2, BarChart
 import { useLocation } from "wouter";
 import { trpc } from "@/lib/trpc";
 import RelogioPainel from "@/components/RelogioPainel";
+import { CabecalhoEmpreendimento } from "@/components/empreendimento/Vitrine";
+import { Map as MapIcon } from "lucide-react";
 
 
 const COLORS = {
@@ -449,6 +451,38 @@ function CredenciaisPendentes() {
   );
 }
 
+/**
+ * Cabeçalho do empreendimento no Painel do escritório — o mesmo dos portais do corretor e da empreendedora
+ * (portal de entrada ao fundo, logo, cidade e disponíveis). Com mais de um empreendimento, abas para trocar.
+ */
+function CabecalhoPainel({ nomeUsuario }: { nomeUsuario: string }) {
+  const [, navigate] = useLocation();
+  const { data: emps } = trpc.empreendimentosAdmin.lista.useQuery(undefined, { staleTime: 60_000 });
+  const lista = (emps ?? []).filter(e => e.acesso);
+  const [slug, setSlug] = useState("");
+  const emp = lista.find(e => e.slug === slug) ?? lista.find(e => e.slug === "bom-jardims") ?? lista[0];
+  if (!emp) return null;
+  return (
+    <div className="space-y-2">
+      {lista.length > 1 && (
+        <div className="flex gap-2 overflow-x-auto pb-1">
+          {lista.map(e => (
+            <button key={e.slug} onClick={() => setSlug(e.slug)}
+              className={`shrink-0 rounded-full border px-3 py-1 text-xs ${e.slug === emp.slug ? "border-[var(--rt-gold)] bg-[var(--rt-gold)]/15 text-foreground" : "border-border text-muted-foreground hover:text-foreground"}`}>{e.nome}</button>
+          ))}
+        </div>
+      )}
+      <CabecalhoEmpreendimento slug={emp.slug} nome={emp.nome} municipio={emp.municipio} uf={emp.uf} disponiveis={emp.disponiveis} nomeUsuario={nomeUsuario || undefined}
+        acao={(
+          <button onClick={() => navigate(`/empreendimentos/${emp.slug}`)}
+            className="flex items-center justify-center gap-2 rounded-2xl bg-[var(--rt-gold)] px-5 py-3 text-sm font-bold text-black shadow-lg shadow-black/40 transition hover:brightness-110 active:scale-[0.98]">
+            <MapIcon className="h-5 w-5" /> Mapa de vendas
+          </button>
+        )} />
+    </div>
+  );
+}
+
 export default function Dashboard() {
   const { user } = useAuth();
   const [, navigate] = useLocation();
@@ -504,6 +538,8 @@ export default function Dashboard() {
         </div>
         <p className="text-xs text-muted-foreground">{config?.companyName || "Romatec"}</p>
       </div>
+
+      <CabecalhoPainel nomeUsuario={primeiroNome} />
 
       <RelogioPainel />
 

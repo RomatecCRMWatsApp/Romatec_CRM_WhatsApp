@@ -3,6 +3,16 @@
 Cada versão nova vai no TOPO. Depois rode `npm run release` (valida e atualiza o package.json);
 ao subir, o servidor grava a versão no banco e todos recebem o aviso "Novidades da versão".
 
+## 1.54.0 — 2026-10-27
+tipo: minor
+obrigatoria: nao
+titulo: Cabeçalho do empreendimento para o escritório e ficha do cliente arrumada
+
+### Melhorias
+- Painel do administrador e da secretária e a tela Empreendimentos ganharam o mesmo cabeçalho dos portais: imagem do portal de entrada ao fundo, logo do empreendimento, cidade e chácaras disponíveis, com o botão para abrir o mapa
+- Clientes → Novo cliente / Editar: a ficha abre larga no computador (4 colunas), com 2 colunas no tablet e 1 no celular, sem campos cortados. Órgão e UF do RG ficam lado a lado
+- As janelas de credenciais, cadastro de usuário e imóvel também abrem na largura certa no computador
+
 ## 1.53.1 — 2026-10-27
 tipo: patch
 obrigatoria: nao

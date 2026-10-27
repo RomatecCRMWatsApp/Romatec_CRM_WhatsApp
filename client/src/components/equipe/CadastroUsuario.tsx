@@ -95,7 +95,7 @@ function ModalQualificacao({ id, aberto, onFechar }: { id: number; aberto: boole
   };
   return (
     <Dialog open={aberto} onOpenChange={o => !o && onFechar()}>
-      <DialogContent className="max-w-2xl">
+      <DialogContent className="sm:max-w-2xl">
         <DialogHeader><DialogTitle>Qualificação para contratos</DialogTitle></DialogHeader>
         {isLoading ? <Loader2 className="h-5 w-5 animate-spin" /> : error ? <p className="text-sm text-red-400">{error.message}</p> : (
           <div className="space-y-3">

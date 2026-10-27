@@ -2,6 +2,7 @@ import { useLocation } from "wouter";
 import { trpc } from "@/lib/trpc";
 import PageHeader from "@/components/PageHeader";
 import MapaTematico from "@/components/empreendimento/MapaTematico";
+import { CabecalhoEmpreendimento } from "@/components/empreendimento/Vitrine";
 import { AlertTriangle, Lock, Map as MapIcon } from "lucide-react";
 
 type Resumo = { slug: string; nome: string; municipio: string | null; uf: string | null; totalLotes: number; disponiveis: number; vendidos: number; semRegistro: boolean; acesso: boolean };
@@ -31,22 +32,31 @@ function Cartao({ e }: { e: Resumo }) {
       </div>
     );
   }
+  const abrir = () => navigate(`/empreendimentos/${e.slug}`);
   return (
-    <button onClick={() => navigate(`/empreendimentos/${e.slug}`)}
-      className="grid w-full gap-4 rounded-xl border border-border bg-card p-4 text-left transition-colors hover:border-primary/50 md:grid-cols-[minmax(0,1fr)_minmax(0,1.3fr)]">
-      <div className="flex flex-col">
-        <p className="text-lg font-semibold">{e.nome}</p>
-        <p className="text-xs text-muted-foreground">{[e.municipio, e.uf].filter(Boolean).join("/")}</p>
-        <div className="mt-4 grid grid-cols-3 gap-2 text-center">
-          <div className="rounded-lg bg-white/5 p-2"><p className="text-2xl font-bold">{e.totalLotes}</p><p className="text-[11px] text-muted-foreground">lotes</p></div>
-          <div className="rounded-lg bg-emerald-500/10 p-2"><p className="text-2xl font-bold text-emerald-300">{e.disponiveis}</p><p className="text-[11px] text-muted-foreground">disponíveis</p></div>
-          <div className="rounded-lg bg-rose-500/10 p-2"><p className="text-2xl font-bold text-rose-300">{e.vendidos}</p><p className="text-[11px] text-muted-foreground">vendidos</p></div>
+    <div className="space-y-3">
+      {/* Mesmo cabeçalho dos portais (corretor e empreendedora): portal de entrada ao fundo e o logo em destaque */}
+      <CabecalhoEmpreendimento slug={e.slug} nome={e.nome} municipio={e.municipio} uf={e.uf} disponiveis={e.disponiveis}
+        acao={(
+          <button onClick={abrir}
+            className="flex items-center justify-center gap-2 rounded-2xl bg-[var(--rt-gold)] px-5 py-3 text-sm font-bold text-black shadow-lg shadow-black/40 transition hover:brightness-110 active:scale-[0.98]">
+            <MapIcon className="h-5 w-5" /> Abrir mapa
+          </button>
+        )} />
+      <button onClick={abrir}
+        className="grid w-full gap-4 rounded-2xl border border-border bg-card p-4 text-left transition-colors hover:border-primary/50 md:grid-cols-[minmax(0,1fr)_minmax(0,1.3fr)]">
+        <div className="flex flex-col">
+          <div className="grid grid-cols-3 gap-2 text-center">
+            <div className="rounded-lg bg-white/5 p-2"><p className="text-2xl font-bold">{e.totalLotes}</p><p className="text-[11px] text-muted-foreground">lotes</p></div>
+            <div className="rounded-lg bg-emerald-500/10 p-2"><p className="text-2xl font-bold text-emerald-300">{e.disponiveis}</p><p className="text-[11px] text-muted-foreground">disponíveis</p></div>
+            <div className="rounded-lg bg-rose-500/10 p-2"><p className="text-2xl font-bold text-rose-300">{e.vendidos}</p><p className="text-[11px] text-muted-foreground">vendidos</p></div>
+          </div>
+          {e.semRegistro && <p className="mt-3 inline-flex items-center gap-1 text-[11px] text-amber-300"><AlertTriangle className="h-3 w-3" /> sem registro no cartório informado</p>}
+          <p className="mt-auto pt-3 text-xs text-primary">Abrir mapa, lotes e documentos →</p>
         </div>
-        {e.semRegistro && <p className="mt-3 inline-flex items-center gap-1 text-[11px] text-amber-300"><AlertTriangle className="h-3 w-3" /> sem registro no cartório informado</p>}
-        <p className="mt-auto pt-3 text-xs text-primary">Abrir mapa, lotes e documentos →</p>
-      </div>
-      <PreviaMapa slug={e.slug} />
-    </button>
+        <PreviaMapa slug={e.slug} />
+      </button>
+    </div>
   );
 }
 
