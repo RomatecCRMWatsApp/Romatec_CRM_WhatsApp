@@ -3,6 +3,14 @@
 Cada versão nova vai no TOPO. Depois rode `npm run release` (valida e atualiza o package.json);
 ao subir, o servidor grava a versão no banco e todos recebem o aviso "Novidades da versão".
 
+## 1.58.1 — 2026-10-28
+tipo: patch
+obrigatoria: nao
+titulo: Formulário de cadastro do corretor não apaga mais o que foi digitado ao anexar documento
+
+### Correções
+- Formulário de cadastro do recrutamento: ao anexar ou remover uma certidão ou documento, os campos já preenchidos (e ainda não salvos) eram apagados. Agora o anexo entra sem mexer no resto do formulário
+
 ## 1.58.0 — 2026-10-28
 tipo: minor
 obrigatoria: nao

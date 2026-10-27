@@ -78,8 +78,12 @@ export default function FormularioRecrutamento() {
   const [erros, setErros] = useState<Record<string, string>>({});
   const [enviado, setEnviado] = useState(false);
   const [aviso, setAviso] = useState<string | null>(null);
+  // Preenche com o rascunho salvo só na 1ª carga: o refetch depois de anexar/remover documento atualiza a lista
+  // de anexos, mas não pode sobrescrever o que a pessoa digitou e ainda não salvou
+  const carregado = useRef(false);
   useEffect(() => {
-    if (!data) return;
+    if (!data || carregado.current) return;
+    carregado.current = true;
     setF({ nacionalidade: "brasileira", rgOrgao: "SSP", creciUf: "MA", enderecoUf: "MA", ...data.dados, conjuge: { nacionalidade: "brasileira", mesmoEndereco: true, ...(data.dados?.conjuge ?? {}) } });
     if (data.status === "preenchido") setEnviado(true);
   }, [data]);
