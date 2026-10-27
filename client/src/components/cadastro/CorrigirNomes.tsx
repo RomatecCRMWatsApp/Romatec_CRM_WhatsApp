@@ -5,7 +5,9 @@ import { trpc } from "@/lib/trpc";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 
-type Sugestao = { id: number; telefone: string; atual: string; sugerido: string | null; outros: string[]; compativel: boolean };
+type Sugestao = { id: number; telefone: string; atual: string; sugerido: string | null; outros: string[]; compativel: boolean; origem: "agenda" | "grafia" | null; certeza: boolean };
+type Grupo = "compativel" | "diferente" | "grafia" | "sem";
+const grupoDe = (x: Sugestao): Grupo => (x.origem === "agenda" ? (x.compativel ? "compativel" : "diferente") : x.origem === "grafia" ? "grafia" : "sem");
 
 /**
  * Nomes com "?" (carga inicial do Manus estragou acentos e emojis): busca o nome original pelo telefone na agenda do
@@ -16,11 +18,12 @@ export default function CorrigirNomes({ onAplicado }: { onAplicado: () => void }
   const [aberto, setAberto] = useState(false);
   const [lista, setLista] = useState<Sugestao[] | null>(null);
   const [marcados, setMarcados] = useState<Record<number, string>>({});
-  const [filtro, setFiltro] = useState<"compativel" | "diferente" | "sem">("compativel");
+  const [filtro, setFiltro] = useState<Grupo>("compativel");
   const receber = (s: Sugestao[]) => {
     setLista(s);
-    setMarcados(Object.fromEntries(s.filter(x => x.compativel && x.sugerido).map(x => [x.id, x.sugerido!])));
-    setFiltro(s.some(x => x.compativel) ? "compativel" : "diferente");
+    // Marcados: os que batem com a agenda e os reconstruídos pela grafia com palavra conhecida
+    setMarcados(Object.fromEntries(s.filter(x => x.sugerido && x.certeza).map(x => [x.id, x.sugerido!])));
+    setFiltro((["compativel", "grafia", "diferente", "sem"] as Grupo[]).find(g => s.some(x => grupoDe(x) === g)) ?? "compativel");
   };
   const zapi = trpc.contatosNomes.pelaAgendaZapi.useMutation({ onSuccess: receber, onError: e => toast.error(e.message) });
   const vcf = trpc.contatosNomes.peloVcf.useMutation({ onSuccess: receber, onError: e => toast.error(e.message) });
@@ -29,8 +32,8 @@ export default function CorrigirNomes({ onAplicado }: { onAplicado: () => void }
     onError: e => toast.error(e.message),
   });
   if (!sit?.corrompidos) return null;
-  const n = (k: typeof filtro) => (lista ?? []).filter(x => (k === "compativel" ? x.compativel : k === "diferente" ? !x.compativel && x.sugerido : !x.sugerido)).length;
-  const visiveis = (lista ?? []).filter(x => (filtro === "compativel" ? x.compativel : filtro === "diferente" ? !x.compativel && x.sugerido : !x.sugerido));
+  const n = (k: Grupo) => (lista ?? []).filter(x => grupoDe(x) === k).length;
+  const visiveis = (lista ?? []).filter(x => grupoDe(x) === filtro);
   const ocupado = zapi.isPending || vcf.isPending;
   return (
     <>
@@ -65,11 +68,12 @@ export default function CorrigirNomes({ onAplicado }: { onAplicado: () => void }
           {lista && (
             <div className="space-y-2">
               <div className="flex flex-wrap gap-1">
-                {([["compativel", "Batem com o nome"], ["diferente", "Nome diferente na agenda"], ["sem", "Não achados"]] as const).map(([k, r]) => (
+                {([["compativel", "Batem com o nome"], ["grafia", "Sugestão pela grafia"], ["diferente", "Nome diferente na agenda"], ["sem", "Sem sugestão"]] as const).map(([k, r]) => (
                   <button key={k} onClick={() => setFiltro(k)} className={`rounded-full border px-3 py-1 text-xs ${filtro === k ? "border-primary bg-primary/15 text-primary" : "border-border text-muted-foreground"}`}>{r} ({n(k)})</button>
                 ))}
               </div>
               {filtro === "diferente" && <p className="text-xs text-amber-300">O nome salvo na agenda é outro — confira antes de marcar.</p>}
+              {filtro === "grafia" && <p className="text-xs text-muted-foreground">Números fora da agenda: o nome foi reconstruído pelo que restou. Acento de palavra conhecida vem marcado; palpite vem desmarcado. Emojis não dá para recuperar e saem.</p>}
               <div className="max-h-[45vh] space-y-1 overflow-y-auto rounded-lg border border-border p-1">
                 {!visiveis.length && <p className="p-3 text-xs text-muted-foreground">Nada aqui.</p>}
                 {visiveis.map(x => (
@@ -78,7 +82,8 @@ export default function CorrigirNomes({ onAplicado }: { onAplicado: () => void }
                       onChange={e => setMarcados(m => { const n2 = { ...m }; if (e.target.checked && x.sugerido) n2[x.id] = x.sugerido; else delete n2[x.id]; return n2; })} />
                     <span className="min-w-0 flex-1">
                       <span className="block truncate text-muted-foreground line-through decoration-red-400/60">{x.atual}</span>
-                      {x.sugerido ? <span className="block truncate font-medium">{x.sugerido}</span> : <span className="block text-xs text-muted-foreground">não está na agenda</span>}
+                      {x.sugerido ? <span className="block truncate font-medium">{x.sugerido}{x.origem === "grafia" && !x.certeza && <span className="ml-1 text-[11px] font-normal text-amber-300">(palpite — confira)</span>}</span>
+                        : <span className="block text-xs text-muted-foreground">sem sugestão — edite à mão pela lista</span>}
                       {x.outros.length > 0 && <span className="block truncate text-[11px] text-muted-foreground">também: {x.outros.join(" · ")}</span>}
                     </span>
                     <span className="shrink-0 text-[11px] text-muted-foreground">{x.telefone}</span>

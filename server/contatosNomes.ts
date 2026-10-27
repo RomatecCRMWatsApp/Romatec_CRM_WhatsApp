@@ -99,9 +99,66 @@ export function agendaVcf(texto: string): Agenda {
   return agenda;
 }
 
+// ─── Sugestão pela grafia (quando o número não está em nenhuma agenda) ───────
+
+const ACENTOS = ['ã', 'á', 'é', 'í', 'ó', 'ú', 'ê', 'ô', 'õ', 'ç', 'â', 'à', 'ü'];
+/** Nomes e palavras comuns com acento (nomes de pessoas, sobrenomes, profissões, comércio da região) */
+const PALAVRAS = new Set(`
+joão josé antônio antonio mário márcio márcia marcia lúcia lucia luís luis luísa luíza luiza sônia sonia vitória vitoria glória gloria
+patrícia patricia flávio flávia fábio fábia cláudio cláudia júlio júlia sérgio rogério inácio emília cecília letícia otávio
+otávia tânia vânia cássio cássia thaís taís andréia andréa andré cícero sebastião adão damião estêvão estevão simão leão
+gavião falcão brandão romão ribeirão conceição assunção natividade jesus araújo gonçalves simões magalhães guimarães
+lázaro jéssica jessica mônica monica verônica veronica fátima fatima raí rafaél rúbia rúben benedito benedita zé zézinho zezão
+joãozinho conceiçao tião irmão irmã mãe pai avó avô tia tio dona seu dr dra açaí açailândia açailandia imperatriz maranhão
+pará goiás paraná ceará piauí amapá rondônia são josé nazaré belém conceição tocantinópolis buriticupu marabá
+jurídica jurídico advocacia advogado advogada contábil contabilidade crédito agrícola agrônomo agrônoma técnico técnica
+elétrica eletrônica mecânica gráfica ótica óptica clínica médico médica odontológica farmácia drogaria imóveis imobiliária
+construção construções acabamentos pré moldados móveis eletrodomésticos veículos peças serviços comércio indústria
+agência associação educação saúde administração secretária secretário escritório negócios investimentos fazenda sítio
+chácara chácaras condomínio loteamento terraplenagem topografia agrimensura avaliação perícia corretor corretora cartório
+escola faculdade universidade graduação pós música lanchonete padaria pão café açougue mercadinho distribuidora calçados
+confecções transportes logística segurança vigilância elétrica hidráulica refrigeração climatização energia solar
+`.split(/\s+/).filter(Boolean));
+
+/**
+ * Reconstrói o nome estragado pela grafia: cada "??" dentro de uma palavra vira a letra acentuada que forma uma palavra
+ * conhecida (certeza) ou, sem achado, a mais provável pelo contexto (sem certeza); sequências que não são de uma letra
+ * acentuada (emojis: 3, 4, 6, 8 "?"…) saem. null = não sobra nome.
+ */
+const LETRA = new RegExp('\\p{L}', 'u');
+const TRECHO_DE_LETRAS = new RegExp('[\\p{L}?]+', 'gu');
+
+export function sugerirGrafia(corrompido: string): { nome: string; certeza: boolean } | null {
+  let certeza = true;
+  // Emoji ou símbolo: sequência de "?" que não é exatamente 2 dentro de uma palavra
+  const semEmoji = corrompido.replace(/\?+/g, (m, pos: number, s: string) => {
+    const antes = s[pos - 1] ?? '', depois = s[pos + m.length] ?? '';
+    return m.length === 2 && LETRA.test(antes) && LETRA.test(depois) ? m : ' ';
+  }).replace(/\s+/g, ' ').replace(/^[\s~•·\-_.,;:|]+|[\s\-_.,;:|]+$/g, '').trim();
+  // Cada trecho de letras com "??" (em "A.Lu??s", só "Lu??s") é resolvido separado
+  const nome = semEmoji.replace(TRECHO_DE_LETRAS, palavra => {
+    if (!palavra.includes('??')) return palavra;
+    const partes = palavra.split('??');
+    // Todas as combinações de acento para os "??" da palavra (no máximo 3 por palavra)
+    let opcoes = [partes[0]];
+    for (let i = 1; i < partes.length && i <= 3; i++) opcoes = opcoes.flatMap(o => ACENTOS.map(a => o + a + partes[i]));
+    const achadas = opcoes.filter(o => PALAVRAS.has(o.toLowerCase()));
+    if (achadas.length >= 1) return achadas[0];
+    certeza = false;
+    // Sem achado: "??o"/"??e" no fim → ã (Leão, mãe); "??ão" → ç; "??ri[ao]" → ó; senão í
+    return palavra.replace(/\?\?(?=[oe]$)/i, 'ã').replace(/\?\?(?=ão)/i, 'ç').replace(/\?\?(?=ri[ao])/i, 'ó').replace(/\?\?/g, 'í');
+  }).trim();
+  if (!nome || nomeCorrompido(nome) || !LETRA.test(nome)) return null;
+  return { nome, certeza };
+}
+
 // ─── Sugestões e aplicação ───────────────────────────────────────────────────
 
-export interface Sugestao { id: number; telefone: string; atual: string; sugerido: string | null; outros: string[]; compativel: boolean }
+/** origem: agenda (Z-API ou .vcf) | grafia (reconstruído) | null (sem sugestão) */
+export interface Sugestao {
+  id: number; telefone: string; atual: string; sugerido: string | null; outros: string[]; compativel: boolean;
+  origem: 'agenda' | 'grafia' | null; certeza: boolean;
+}
 
 export async function contatosCorrompidos() {
   const d = await banco();
@@ -116,7 +173,11 @@ export function sugerir(corrompidos: { id: number; nome: string; telefone: strin
     const nomes = (k ? agenda.get(k) : undefined) ?? [];
     const bate = nomes.find(n => compativel(c.nome, n));
     const limpos = nomes.filter(n => !nomeCorrompido(n));
-    return { id: c.id, telefone: c.telefone, atual: c.nome, sugerido: bate ?? limpos[0] ?? null, outros: limpos.filter(n => n !== (bate ?? limpos[0])), compativel: !!bate };
+    const daAgenda = bate ?? limpos[0] ?? null;
+    if (daAgenda) return { id: c.id, telefone: c.telefone, atual: c.nome, sugerido: daAgenda, outros: limpos.filter(n => n !== daAgenda), compativel: !!bate, origem: 'agenda', certeza: !!bate };
+    // Fora de qualquer agenda: reconstrói pela grafia
+    const g = sugerirGrafia(c.nome);
+    return { id: c.id, telefone: c.telefone, atual: c.nome, sugerido: g?.nome ?? null, outros: [], compativel: false, origem: g ? 'grafia' : null, certeza: !!g?.certeza };
   });
 }
 

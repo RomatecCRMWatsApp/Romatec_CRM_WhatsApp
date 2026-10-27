@@ -3,6 +3,14 @@
 Cada versão nova vai no TOPO. Depois rode `npm run release` (valida e atualiza o package.json);
 ao subir, o servidor grava a versão no banco e todos recebem o aviso "Novidades da versão".
 
+## 1.55.1 — 2026-10-27
+tipo: patch
+obrigatoria: nao
+titulo: Corrigir nomes: sugestão pela grafia
+
+### Melhorias
+- Corrigir nomes com "?": quem não está na agenda ganha a "Sugestão pela grafia" — o nome é reconstruído pelo que restou ("Alana Vit??ria" → Alana Vitória, "Bruno Le??o" → Bruno Leão) e os emojis, que não dá para recuperar, saem. Acento de palavra conhecida vem marcado; palpite vem desmarcado para você conferir
+
 ## 1.55.0 — 2026-10-27
 tipo: minor
 obrigatoria: nao

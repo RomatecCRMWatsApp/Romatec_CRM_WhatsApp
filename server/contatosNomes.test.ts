@@ -43,6 +43,20 @@ describe('nomes com "?"', () => {
     expect(a.get(N.chaveTelefone('5599900000000')!)).toContain('João Silva');
   });
 
+  it('sugestão pela grafia: os 7 que não estavam na agenda', () => {
+    const g = (s: string) => N.sugerirGrafia(s);
+    expect(g('Alana Vit??ria')).toEqual({ nome: 'Alana Vitória', certeza: true });
+    expect(g('Bruno Le??o Corretor')).toEqual({ nome: 'Bruno Leão Corretor', certeza: true });
+    expect(g('A.Lu??s INEC BNB Credito Agro')).toEqual({ nome: 'A.Luís INEC BNB Credito Agro', certeza: true });
+    expect(g('Aline Neres Advocacia e Consultoria Jur??dica')).toEqual({ nome: 'Aline Neres Advocacia e Consultoria Jurídica', certeza: true });
+    expect(g('????Antonio Agfravd')).toEqual({ nome: 'Antonio Agfravd', certeza: true });
+    expect(g('??????Suellen Lopez?????? CPC')).toEqual({ nome: 'Suellen Lopez CPC', certeza: true });
+    expect(g('Adrianny Melissa ???????? Cuso De Direito')).toEqual({ nome: 'Adrianny Melissa Cuso De Direito', certeza: true });
+    // Palavra fora da lista: palpite pelo contexto, sem certeza
+    expect(g('Fulano Tr??s')).toEqual({ nome: 'Fulano Trís', certeza: false });
+    expect(g('???????')).toBeNull();
+  });
+
   it('sugestões pela agenda da Z-API e aplicação só em quem ainda está com "?"', async () => {
     const respostas = [[
       { phone: '5599991234567', name: 'Zezão Seixas', notify: 'Zezão' },
@@ -56,7 +70,7 @@ describe('nomes com "?"', () => {
     expect(porId[1]).toMatchObject({ sugerido: 'Zezão Seixas', compativel: true });
     expect(porId[2]).toMatchObject({ sugerido: '🌹Marcio', compativel: true });
     expect(porId[3]).toMatchObject({ sugerido: 'Pedro Ramos', compativel: false }); // nome diferente: fica para o administrador decidir
-    expect(porId[5]).toMatchObject({ sugerido: null, compativel: false }); // fora da agenda
+    expect(porId[5]).toMatchObject({ sugerido: 'João Silva', origem: 'grafia', certeza: true }); // fora da agenda: pela grafia
     expect(s.some(x => x.id === 4)).toBe(false); // nome bom não entra
     const r = await N.aplicarNomes([{ id: 1, nome: 'Zezão Seixas' }, { id: 4, nome: 'Outro' }, { id: 2, nome: 'Ma??' }]);
     expect(r.aplicadas).toBe(1);
