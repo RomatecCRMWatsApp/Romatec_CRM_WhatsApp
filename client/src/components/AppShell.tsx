@@ -75,6 +75,8 @@ const MENU: Grupo[] = [
       { rotulo: "Respostas automáticas", rota: "/respostas-automaticas", icone: Bot },
       { rotulo: "SaaS e assinaturas", rota: "/saas", icone: BadgeDollarSign },
       { rotulo: "Visão do empreendedor", rota: "/empreendedor", icone: Eye },
+      // Administrador e secretária (shared/equipe.ts → podeAbrir)
+      { rotulo: "Visão do corretor", rota: "/visao-corretor", icone: Smartphone },
       { rotulo: "Configurações", rota: "/settings", icone: Settings },
     ],
   },

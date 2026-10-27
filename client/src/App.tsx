@@ -55,6 +55,7 @@ const Agendar = lazy(() => import("./pages/Agendar"));
 const Oferta = lazy(() => import("./pages/Oferta"));
 const AreaCorretor = lazy(() => import("./pages/AreaCorretor"));
 const PainelCorretor = lazy(() => import("./pages/PainelCorretor"));
+const VisaoCorretor = lazy(() => import("./pages/VisaoCorretor"));
 /** Painel: o corretor vê o mapa do empreendimento e os atalhos; o escritório, os números */
 function Inicio() {
   const { user } = useAuth();
@@ -149,6 +150,9 @@ function Router() {
       </Route>
       <Route path={"/empreendedor"}>
         {() => <SetupGuard component={Empreendedor} />}
+      </Route>
+      <Route path={"/visao-corretor"}>
+        {() => <SetupGuard component={VisaoCorretor} />}
       </Route>
       <Route path={"/meu-cadastro"}>
         {() => <SetupGuard component={MeuCadastro} />}

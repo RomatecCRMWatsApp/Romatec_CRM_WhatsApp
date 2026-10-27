@@ -3,6 +3,18 @@
 Cada versão nova vai no TOPO. Depois rode `npm run release` (valida e atualiza o package.json);
 ao subir, o servidor grava a versão no banco e todos recebem o aviso "Novidades da versão".
 
+## 1.51.0 — 2026-10-27
+tipo: minor
+obrigatoria: nao
+titulo: Visão do corretor e volta da Visão do empreendedor
+
+### Novo
+- Administração → "Visão do corretor" (administrador e secretária): mostra a página inicial como o corretor vê, com o mapa, os atalhos e o painel da chácara só leitura, e o botão "Voltar ao CRM"
+
+### Melhorias
+- Visão do empreendedor: botão "Voltar ao CRM" no topo para o administrador e a secretária (a empreendedora não vê)
+- Rodapé do portal: o site do responsável técnico agora é romatecavalieimob.com.br
+
 ## 1.50.0 — 2026-10-27
 tipo: minor
 obrigatoria: nao

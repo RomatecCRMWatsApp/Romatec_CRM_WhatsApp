@@ -29,7 +29,8 @@ export const ROMATEC_CONTACT = {
   whatsappLabel: "(99) 9 9181-1246",
   whatsappHref: "https://wa.me/5599991811246",
   email: "contato@consultoriaromatec.com.br",
-  site: "https://consultoriaromatec.com.br",
+  site: "https://www.romatecavalieimob.com.br/",
+  siteRotulo: "romatecavalieimob.com.br",
   endereco1: "Rua São Raimundo, n.º 10, Centro",
   endereco2: "Açailândia/MA — CEP 65.930-000",
   horario: "Seg a Sex · 09h–12h e 14h–17h",
@@ -76,7 +77,7 @@ export function AppFooter({ version, online, links = DEFAULT_LINKS, renderLink }
             <span style={{ fontWeight: 700, color: "var(--rt-text)", lineHeight: 1.4 }}>{ROMATEC_CONTACT.rt}</span>
           </div>
           <span style={{ fontSize: 13, lineHeight: 1.7 }}>{ROMATEC_CONTACT.registros.join(" · ")}</span>
-          <a href={ROMATEC_CONTACT.site} target="_blank" rel="noopener noreferrer" style={{ color: "var(--rt-glow)", fontSize: 13 }}>consultoriaromatec.com.br</a>
+          <a href={ROMATEC_CONTACT.site} target="_blank" rel="noopener noreferrer" style={{ color: "var(--rt-glow)", fontSize: 13 }}>{ROMATEC_CONTACT.siteRotulo}</a>
         </div>
       </div>
       <div className="rt-footer__bottom">

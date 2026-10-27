@@ -44,7 +44,7 @@ export interface ImovelSeo {
 export const ROTAS_INTERNAS = [
   '/dashboard', '/contacts', '/properties', '/campaigns', '/settings', '/performance', '/leads', '/materiais', '/setup', '/login',
   '/equipe', '/empreendedor', '/primeiro-acesso', '/meu-cadastro', '/empreendimentos', '/contratos', '/financeiro', '/corretor',
-  '/assinar', '/c', '/carteirinhas', '/reservas', '/respostas-automaticas',
+  '/assinar', '/c', '/carteirinhas', '/reservas', '/respostas-automaticas', '/visao-corretor',
 ];
 
 const CRECI = 'Corretor José Romário · CRECI/MA 4.705';

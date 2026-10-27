@@ -1,11 +1,13 @@
 import { useState } from "react";
+import { useLocation } from "wouter";
 import { toast } from "sonner";
+import { perfilDe } from "@shared/equipe";
 import { trpc } from "@/lib/trpc";
 import { useAuth } from "@/_core/hooks/useAuth";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Bar, BarChart, CartesianGrid, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
-import { BarChart3, Copy, Download, ExternalLink, FileText, IdCard, Images, LogOut, Map as MapIcon, Receipt, Share2, Table2, TrendingUp, Video } from "lucide-react";
+import { ArrowLeft, BarChart3, Copy, Download, ExternalLink, FileText, IdCard, Images, LogOut, Map as MapIcon, Receipt, Share2, Table2, TrendingUp, Video } from "lucide-react";
 import { FotoUsuario } from "@/components/AppShell";
 import { SinoNovidades } from "@/components/sistema/Novidades";
 import { APP_VERSION, AppFooter, RomatecAppIcon } from "@/brand";
@@ -105,6 +107,8 @@ function Arte({ m }: { m: any }) {
  */
 export default function Empreendedor() {
   const { user, logout } = useAuth();
+  const [, navigate] = useLocation();
+  const ehEmpreendedor = perfilDe(user as any) === "empreendedor";
   const slug = String((user as any)?.empreendimentoSlug || "bom-jardims");
   const { data: p, isLoading, error } = trpc.empreendedor.painel.useQuery();
   const { data: artes = [] } = trpc.empreendedor.materiais.useQuery();
@@ -123,8 +127,16 @@ export default function Empreendedor() {
       {/* Barra do topo */}
       <div className="sticky top-0 z-30 border-b border-[var(--rt-border)] bg-black/85 backdrop-blur">
         <div className="mx-auto flex max-w-[1500px] items-center gap-3 px-3 py-2 sm:px-4 md:px-6">
+          {/* Administrador/secretária olhando a Visão do empreendedor: volta para o CRM */}
+          {!ehEmpreendedor && (
+            <Button size="sm" variant="outline" className="shrink-0 border-white/30 text-white hover:bg-white/15" onClick={() => navigate("/dashboard")}>
+              <ArrowLeft className="mr-1 h-4 w-4" /> Voltar ao CRM
+            </Button>
+          )}
           <RomatecAppIcon size={34} />
-          <p className="min-w-0 flex-1 truncate text-sm text-white/80">Portal do empreendedor · <b className="text-white">{String((user as any)?.name || "").split(" ")[0]}</b></p>
+          <p className="min-w-0 flex-1 truncate text-sm text-white/80">
+            {ehEmpreendedor ? "Portal do empreendedor" : "Visão do empreendedor (prévia)"} · <b className="text-white">{String((user as any)?.name || "").split(" ")[0]}</b>
+          </p>
           <SinoNovidades className="text-white/80 hover:text-white" />
           <FotoUsuario />
           <Button size="sm" variant="ghost" className="text-white hover:bg-white/15" title="Sair" onClick={() => logout()}><LogOut className="h-4 w-4" /></Button>
