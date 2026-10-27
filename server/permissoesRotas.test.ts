@@ -91,6 +91,14 @@ describe('bloqueio no servidor (não confia no front)', () => {
     await expect(caller({ id: 7, role: 'user', perfil: 'empreendedor' }).contratos.listar()).rejects.toMatchObject({ code: 'FORBIDDEN' });
   });
 
+  it('portal do empreendedor (financeiro dos compradores) não abre para corretor nem secretária; importar contatos é do escritório', async () => {
+    await expect(corretor.empreendedor.financeiro()).rejects.toMatchObject({ code: 'FORBIDDEN' });
+    await expect(corretor.empreendedor.painel()).rejects.toMatchObject({ code: 'FORBIDDEN' });
+    await expect(caller({ id: 6, role: 'user', perfil: 'secretario' }).empreendedor.financeiro()).rejects.toMatchObject({ code: 'FORBIDDEN' });
+    await expect(caller({ id: 7, role: 'user', perfil: 'empreendedor' }).empreendedor.financeiro()).rejects.toThrow(/Banco indisponível/);
+    await expect(corretor.contacts.importBatch([{ name: 'X', phone: '99999' }])).rejects.toMatchObject({ code: 'FORBIDDEN' });
+  });
+
   it('sem login: UNAUTHORIZED', async () => {
     const anon = appRouter.createCaller({ user: null, req: { headers: {} } as any, res: {} as any } as any);
     await expect(anon.financeiro.vendas()).rejects.toMatchObject({ code: 'UNAUTHORIZED' });

@@ -4,6 +4,7 @@
  * gasto/custo — e as artes LIBERADAS para baixar e postar.
  */
 import { and, eq, gte } from "drizzle-orm";
+import { TRPCError } from "@trpc/server";
 import { protectedProcedure, router } from "../_core/trpc";
 import { getDb } from "../db";
 import { leadQualifications, leadCampanhas, materiais, empreendimentos, lotes, leadEventos } from "../../drizzle/schema";
@@ -13,10 +14,13 @@ import { agruparMateriais } from "../../shared/materiais";
 import { serieLeadsPorDia } from "../leads/painelEmpreendedor";
 
 async function contexto(ctx: any) {
+  // Portal da empreendedora: só ela e o administrador (corretor e secretária veriam o financeiro dos compradores)
+  const perfil = perfilDe(ctx.user);
+  if (perfil !== "empreendedor" && perfil !== "admin") throw new TRPCError({ code: "FORBIDDEN", message: "O portal do empreendedor é só da empreendedora e do administrador." });
   const db = await getDb();
   if (!db) throw new Error("Banco indisponível");
   // Admin pode abrir o painel para ver como o empreendedor vê (Bom Jardims por padrão)
-  const slug: string | null = perfilDe(ctx.user) === "empreendedor" ? ctx.user.empreendimentoSlug : (ctx.user.empreendimentoSlug || "bom-jardims");
+  const slug: string | null = perfil === "empreendedor" ? ctx.user.empreendimentoSlug : (ctx.user.empreendimentoSlug || "bom-jardims");
   if (!slug) throw new Error("Seu acesso não tem empreendimento definido. Fale com o administrador.");
   const [emp]: any[] = await db.select().from(empreendimentos).where(eq(empreendimentos.slug, slug)).limit(1);
   return { db, slug, emp };

@@ -94,6 +94,33 @@ describe('trial, bloqueio e pagamento', () => {
     expect(db.all(sql`SELECT COUNT(*) AS n FROM auditoriaAcesso WHERE usuarioId = 5 AND evento = 'TRIAL_EXPIRADO'`)[0].n).toBe(1);
   });
 
+  it('cortesia que acaba 23:59: bloqueia na hora, mas os WhatsApps só saem a partir das 9h (e uma vez)', async () => {
+    db.run(sql`DELETE FROM saasAssinaturas WHERE usuarioId = 2`);
+    db.run(sql`INSERT INTO saasAssinaturas (usuarioId, planoId, chave, origem, status, periodoFim) SELECT 2, id, '2:0', 'CORTESIA', 'ATIVA', '2026-10-31 02:59:59' FROM saasPlanos WHERE codigo = 'CORRETOR_ESSENCIAL'`);
+    S.limparCaches();
+    const antes = enviados.length;
+    const madrugada = Date.parse('2026-10-31T00:05:00-03:00');
+    await S.rotinaSaas(madrugada);
+    expect(assinatura(2)[0].status).toBe('BLOQUEADO');
+    expect(enviados.length).toBe(antes); // nada de madrugada
+    expect(String(assinatura(2)[0].lembretesJson)).toContain('aviso:');
+    await S.rotinaSaas(Date.parse('2026-10-31T08:59:00-03:00'));
+    expect(enviados.length).toBe(antes);
+    await S.rotinaSaas(Date.parse('2026-10-31T09:00:00-03:00'));
+    expect(enviados.filter(([f, m]) => f === '5599911112222' && m.includes('cortesia terminou'))).toHaveLength(1);
+    expect(String(assinatura(2)[0].lembretesJson)).not.toContain('aviso:');
+    await S.rotinaSaas(Date.parse('2026-10-31T09:15:00-03:00'));
+    expect(enviados.filter(([f, m]) => f === '5599911112222' && m.includes('cortesia terminou'))).toHaveLength(1);
+  });
+
+  it('bloqueado de madrugada e pago antes das 9h: o aviso guardado é descartado', async () => {
+    db.run(sql`UPDATE saasAssinaturas SET status = 'BLOQUEADO', lembretesJson = ${JSON.stringify(['aviso:' + JSON.stringify({ usuario: 'AVISO VELHO', escritorio: null })])} WHERE usuarioId = 2`);
+    db.run(sql`UPDATE saasAssinaturas SET status = 'ATIVA', origem = 'PAGA', periodoFim = '2026-12-31 02:59:59' WHERE usuarioId = 2`);
+    await S.rotinaSaas(Date.parse('2026-10-31T10:00:00-03:00'));
+    expect(enviados.some(([, m]) => m === 'AVISO VELHO')).toBe(false);
+    expect(String(assinatura(2)[0].lembretesJson)).not.toContain('aviso:');
+  });
+
   it('pagamento manual desbloqueia; vencido fica na tolerância (inadimplente) e depois bloqueia', async () => {
     const id = assinatura(5)[0].id;
     const agora = Date.now();

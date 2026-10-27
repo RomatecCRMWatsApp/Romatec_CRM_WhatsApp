@@ -18,7 +18,7 @@ export default function FichaCliente({ aberto, contatoId, onFechar, onSalvo }: {
   aberto: boolean; contatoId: number | null; onFechar: () => void; onSalvo: () => void;
 }) {
   const [p, setP] = useState<PessoaForm>(PESSOA_VAZIA);
-  const { data, isLoading } = trpc.contacts.cadastro.useQuery({ id: contatoId ?? 0 }, { enabled: aberto && !!contatoId });
+  const { data, isLoading, error } = trpc.contacts.cadastro.useQuery({ id: contatoId ?? 0 }, { enabled: aberto && !!contatoId, retry: false });
   useEffect(() => {
     if (!aberto) return;
     if (!contatoId) { setP({ ...PESSOA_VAZIA }); return; }
@@ -45,12 +45,12 @@ export default function FichaCliente({ aberto, contatoId, onFechar, onSalvo }: {
           <DialogTitle className="text-foreground">{contatoId ? "Editar cliente" : "Novo cliente"}</DialogTitle>
           <DialogDescription>Nome e telefone são obrigatórios. Com o CPF, a ficha completa fica guardada e o contrato desse cliente já sai preenchido.</DialogDescription>
         </DialogHeader>
-        {carregando ? <p className="flex items-center gap-2 text-sm text-muted-foreground"><Loader2 className="h-4 w-4 animate-spin" /> Carregando…</p> : (
+        {carregando ? <p className="flex items-center gap-2 text-sm text-muted-foreground"><Loader2 className="h-4 w-4 animate-spin" /> Carregando…</p> : contatoId && error ? <p className="text-sm text-red-500">{error.message}</p> : (
           <PessoaCampos p={p} set={set} erros={{}} prefixo="comprador" />
         )}
         <DialogFooter>
           <Button variant="outline" disabled={salvar.isPending} onClick={onFechar}>Cancelar</Button>
-          <Button className="bg-emerald-600 hover:bg-emerald-700" disabled={salvar.isPending || carregando}
+          <Button className="bg-emerald-600 hover:bg-emerald-700" disabled={salvar.isPending || carregando || (!!contatoId && !!error)}
             onClick={() => {
               if (!p.nome.trim() || !p.telefone1) { toast.error("Nome e telefone são obrigatórios"); return; }
               salvar.mutate({ id: contatoId, pessoa: { ...p, nascimento: p.nascimento || null } as any });

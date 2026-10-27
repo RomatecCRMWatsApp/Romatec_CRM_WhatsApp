@@ -3,6 +3,18 @@
 Cada versão nova vai no TOPO. Depois rode `npm run release` (valida e atualiza o package.json);
 ao subir, o servidor grava a versão no banco e todos recebem o aviso "Novidades da versão".
 
+## 1.56.0 — 2026-10-27
+tipo: minor
+obrigatoria: nao
+titulo: Cobrança mais segura e acesso à ficha do cliente
+
+### Correções
+- Assinatura do corretor: o aviso de acesso suspenso no WhatsApp não sai mais de madrugada — quem é bloqueado fora do horário recebe às 9h, e se pagar antes disso o aviso é descartado
+- Pix ou boleto estornado/contestado no Mercado Pago agora marca a fatura como estornada (antes o aviso do estorno era ignorado). O sistema também confere de hora em hora as faturas pagas nos últimos 6 meses
+- Trocar de plano, ciclo ou forma de pagamento só vale depois que o pagamento é aprovado. Checkout abandonado não muda mais nada na assinatura; ao trocar de cartão, a recorrência antiga é cancelada
+- Portal do empreendedor (vendas e financeiro dos compradores): só a empreendedora e o administrador abrem
+- Clientes: a ficha completa (CPF, RG, endereço), editar e excluir ficam com o escritório; o corretor só abre o cliente de um lead em que é o responsável. Cadastrar cliente novo continua liberado. Importar contatos em lote é do escritório
+
 ## 1.55.1 — 2026-10-27
 tipo: patch
 obrigatoria: nao

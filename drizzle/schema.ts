@@ -972,6 +972,8 @@ export const saasAssinaturas = mysqlTable("saasAssinaturas", {
   metodo: varchar("metodo", { length: 20 }),
   /** Cancelada pelo assinante: vale até periodoFim e não renova */
   cancelarNoFim: boolean("cancelarNoFim").notNull().default(sql`0`),
+  /** Checkout no cartão ainda não pago: { planoId, ciclo, metodo, cupomId, preapprovalId } — aplicado no 1º pagamento dessa assinatura do MP */
+  checkoutPendenteJson: text("checkoutPendenteJson"),
   /** Acesso ao AvalieImob já informado a ele: ATIVO | SUSPENSO (null = nunca provisionado) — server/saas/avalieimob.ts */
   avalieimobEstado: varchar("avalieimobEstado", { length: 10 }),
   avalieimobErro: varchar("avalieimobErro", { length: 300 }),
@@ -999,6 +1001,8 @@ export const saasFaturas = mysqlTable("saasFaturas", {
   modo: varchar("modo", { length: 10 }),
   /** Fatura de upgrade (diferença proporcional): paga, troca o plano para este e NÃO estende o período */
   upgradePlanoId: int("upgradePlanoId"),
+  /** Escolha do checkout (Pix/boleto): { planoId, ciclo, metodo, cupomId } — vai para a assinatura só quando esta fatura é paga */
+  escolhaJson: text("escolhaJson"),
   nfseId: int("nfseId"),
   observacao: varchar("observacao", { length: 300 }),
   criadoPor: int("criadoPor"),

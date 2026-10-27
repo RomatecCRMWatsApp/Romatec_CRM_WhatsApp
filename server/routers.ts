@@ -49,6 +49,18 @@ async function leadDoUsuario(id: number, ctx: { user: { id: number }; permissoes
   return lead;
 }
 
+/** Ficha, edição e exclusão de um cliente: admin e secretário; corretor só o cliente de um lead em que é o responsável (pelo telefone) */
+async function exigirContato(id: number, ctx: { user: { id: number }; permissoes: { perfil: string | null } }) {
+  const perfil = ctx.permissoes.perfil;
+  if (perfil === "admin" || perfil === "secretario") return;
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  const final11 = (v: unknown) => String(v ?? "").replace(/\D/g, "").slice(-11);
+  const [c] = await db.select({ phone: contacts.phone }).from(contacts).where(eq(contacts.id, id)).limit(1);
+  const meus = perfil === "corretor" && c ? await db.select({ phone: leadQualifications.phone }).from(leadQualifications).where(eq(leadQualifications.responsavelId, ctx.user.id)) : [];
+  if (!c || !final11(c.phone) || !meus.some((l: { phone: string }) => final11(l.phone) === final11(c.phone))) throw new TRPCError({ code: "FORBIDDEN", message: "Este cliente é de um lead de outro responsável." });
+}
+
 /** exibirPreco = false: visitante não recebe preço nem preço de oferta */
 function semPrecoSeOculto<T extends Record<string, any>>(p: T, logado: boolean): T {
   if (logado || p.exibirPreco !== false) return p;
@@ -194,16 +206,18 @@ export const appRouter = router({
   contacts: router({
     list: protectedProcedure.query(async () => getAllContacts()),
     /** Ficha completa do cliente (mesma de comprador nos contratos), ligada pelo telefone */
-    cadastro: protectedProcedure.input(z.object({ id: z.number().int() })).query(async ({ input }) => {
+    cadastro: protectedProcedure.input(z.object({ id: z.number().int() })).query(async ({ input, ctx }) => {
+      await exigirContato(input.id, ctx);
       const { cadastroDoContato, CadastroErro } = await import('./contatosCadastro');
       try { return await cadastroDoContato(input.id); } catch (e: any) { if (e instanceof CadastroErro) throw new TRPCError({ code: 'NOT_FOUND', message: e.message }); throw e; }
     }),
     /** Novo/editar contato com o cadastro completo (com CPF, grava a ficha da pessoa) */
-    salvarCompleto: protectedProcedure.input(z.object({ id: z.number().int().nullable(), pessoa: pessoaZ })).mutation(async ({ input }) => {
+    salvarCompleto: protectedProcedure.input(z.object({ id: z.number().int().nullable(), pessoa: pessoaZ })).mutation(async ({ input, ctx }) => {
+      if (input.id != null) await exigirContato(input.id, ctx); // criar cliente novo continua aberto ao corretor
       const { salvarContatoCompleto, CadastroErro } = await import('./contatosCadastro');
       try { return await salvarContatoCompleto(input.id, input.pessoa as any); } catch (e: any) { if (e instanceof CadastroErro) throw new TRPCError({ code: 'BAD_REQUEST', message: e.message }); throw e; }
     }),
-    getById: protectedProcedure.input(z.object({ id: z.number() })).query(async ({ input }) => getContactById(input.id)),
+    getById: protectedProcedure.input(z.object({ id: z.number() })).query(async ({ input, ctx }) => { await exigirContato(input.id, ctx); return getContactById(input.id); }),
     create: protectedProcedure
       .input(z.object({ 
         name: z.string().min(1), 
@@ -222,9 +236,10 @@ export const appRouter = router({
         name: z.string().optional(), 
         phone: z.string().optional(), 
         email: z.string().email().optional(), 
-        status: z.enum(["active", "inactive", "blocked"]).optional() 
+        status: z.enum(["active", "inactive", "blocked"]).optional()
       }))
-      .mutation(async ({ input }) => {
+      .mutation(async ({ input, ctx }) => {
+        await exigirContato(input.id, ctx);
         const db = await getDb();
         if (!db) throw new Error("Database not available");
         const { id, ...data } = input;
@@ -235,7 +250,8 @@ export const appRouter = router({
       }),
     delete: protectedProcedure
       .input(z.object({ id: z.number() }))
-      .mutation(async ({ input }) => {
+      .mutation(async ({ input, ctx }) => {
+        await exigirContato(input.id, ctx);
         const db = await getDb();
         if (!db) throw new Error("Database not available");
         await db.delete(messages).where(eq(messages.contactId, input.id));
@@ -248,9 +264,10 @@ export const appRouter = router({
       .input(z.array(z.object({ 
         name: z.string().min(1), 
         phone: z.string().min(2), 
-        email: z.string().email().optional() 
+        email: z.string().email().optional()
       })))
-      .mutation(async ({ input }) => {
+      .mutation(async ({ input, ctx }) => {
+        if (ctx.permissoes.perfil !== "admin" && ctx.permissoes.perfil !== "secretario") throw new TRPCError({ code: "FORBIDDEN", message: "Importar contatos é do escritório." });
         const db = await getDb();
         if (!db) throw new Error("Database not available");
         const results = [];

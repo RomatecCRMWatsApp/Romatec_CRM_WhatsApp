@@ -421,17 +421,32 @@ async function avisarEscritorio(texto: string) {
   for (const u of equipe) await avisar(u.telefone, texto);
 }
 
-async function bloquear(a: any, u: any, motivoTexto: string, evento: string) {
+const horaFortaleza = (agora: number) => new Date(agora - 3 * 3600_000).getUTCHours();
+const horarioDeAviso = (agora: number) => horaFortaleza(agora) >= 9 && horaFortaleza(agora) < 20;
+/** Aviso guardado em lembretesJson para sair no horário (cortesia acaba 23:59 — sem WhatsApp de madrugada) */
+const PENDENTE = 'aviso:';
+
+/** Bloqueia na hora; os WhatsApps (usuário e escritório) só saem das 9h às 20h — fora disso ficam guardados */
+async function bloquear(a: any, u: any, motivoTexto: string, evento: string, agora: number) {
   await atualizar(a, { status: 'BLOQUEADO', motivo: motivoTexto });
+  a.version = (Number(a.version) || 0) + 1;
   const t = await transferirParaEscritorio(a.usuarioId);
   await auditar(a.usuarioId, evento, { assinaturaId: a.id, leadsDevolvidos: t.leads, reservas: t.reservas });
-  await avisar(u?.telefone, MSG.bloqueio(u?.name, motivoTexto));
-  if (t.leads || t.reservas.length) {
-    await avisarEscritorio(`🔒 Acesso pausado: ${u?.name ?? 'usuário'} (${motivoTexto}). ${t.leads} lead(s) voltaram para a distribuição${t.reservas.length ? ` · reservas ativas na Fila de reservas do escritório: ${t.reservas.join(', ')} — ${urlBase()}/reservas` : ''}.`);
+  const aviso = {
+    usuario: MSG.bloqueio(u?.name, motivoTexto),
+    escritorio: t.leads || t.reservas.length
+      ? `🔒 Acesso pausado: ${u?.name ?? 'usuário'} (${motivoTexto}). ${t.leads} lead(s) voltaram para a distribuição${t.reservas.length ? ` · reservas ativas na Fila de reservas do escritório: ${t.reservas.join(', ')} — ${urlBase()}/reservas` : ''}.`
+      : null,
+  };
+  if (horarioDeAviso(agora)) {
+    await avisar(u?.telefone, aviso.usuario);
+    if (aviso.escritorio) await avisarEscritorio(aviso.escritorio);
+    return;
   }
+  const lista = json<string[]>(a.lembretesJson) ?? [];
+  await atualizar(a, { lembretesJson: JSON.stringify([...lista, PENDENTE + JSON.stringify(aviso)]) });
+  a.version = (Number(a.version) || 0) + 1;
 }
-
-const horaFortaleza = (agora: number) => new Date(agora - 3 * 3600_000).getUTCHours();
 
 export async function rotinaSaas(agora = Date.now()) {
   const cfg = await lerConfig(agora);
@@ -446,23 +461,37 @@ export async function rotinaSaas(agora = Date.now()) {
     const u = U.get(a.usuarioId);
     const fimPeriodo = a.periodoFim ? new Date(a.periodoFim).getTime() : null;
     // Expirações
-    if (a.status === 'TRIAL' && a.trialFim && new Date(a.trialFim).getTime() <= agora) { await bloquear(a, u, 'Seu período de teste terminou.', 'TRIAL_EXPIRADO'); bloqueados++; continue; }
-    if (a.status === 'ATIVA' && a.origem === 'CORTESIA' && fimPeriodo && fimPeriodo <= agora) { await bloquear(a, u, 'O seu período de cortesia terminou.', 'CORTESIA_EXPIRADA'); bloqueados++; continue; }
+    if (a.status === 'TRIAL' && a.trialFim && new Date(a.trialFim).getTime() <= agora) { await bloquear(a, u, 'Seu período de teste terminou.', 'TRIAL_EXPIRADO', agora); bloqueados++; continue; }
+    if (a.status === 'ATIVA' && a.origem === 'CORTESIA' && fimPeriodo && fimPeriodo <= agora) { await bloquear(a, u, 'O seu período de cortesia terminou.', 'CORTESIA_EXPIRADA', agora); bloqueados++; continue; }
     // Cancelada pelo assinante: termina no fim do período, sem cobrança de atraso
     if (['ATIVA', 'INADIMPLENTE'].includes(a.status) && a.origem === 'PAGA' && (a.cancelarNoFim === true || a.cancelarNoFim === 1) && fimPeriodo && fimPeriodo <= agora) {
       await atualizar(a, { status: 'CANCELADA', motivo: 'Cancelada pelo assinante' }); continue;
     }
     if (a.status === 'ATIVA' && a.origem === 'PAGA' && fimPeriodo && fimPeriodo <= agora) { await atualizar(a, { status: 'INADIMPLENTE' }); a.status = 'INADIMPLENTE'; }
-    if (a.status === 'INADIMPLENTE' && fimPeriodo && fimPeriodo + (Number(a.diasTolerancia) || 0) * DIA <= agora) { await bloquear(a, u, 'Pagamento em atraso.', 'BLOQUEIO_INADIMPLENCIA'); bloqueados++; continue; }
+    if (a.status === 'INADIMPLENTE' && fimPeriodo && fimPeriodo + (Number(a.diasTolerancia) || 0) * DIA <= agora) { await bloquear(a, u, 'Pagamento em atraso.', 'BLOQUEIO_INADIMPLENCIA', agora); bloqueados++; continue; }
     if (a.status === 'ATIVA' && a.origem === 'PACOTE_GESTAO' && fimPeriodo && fimPeriodo <= agora) {
       await atualizar(a, { status: 'PENDENTE_CONVERSAO' });
       await avisarEscritorio(`📄 O contrato de gestão ${a.contratoGestaoNr ?? ''} de ${u?.name ?? 'empreendedor'} venceu: converta em avulso ou encerre em Admin › SaaS.`);
       continue;
     }
     // Lembretes (09h–20h): fim do teste/cortesia D-3, D-1, D0; pacote ao administrador D-30 e D-7
-    if (horaFortaleza(agora) < 9 || horaFortaleza(agora) >= 20) continue;
+    if (!horarioDeAviso(agora)) continue;
     const enviados = new Set(json<string[]>(a.lembretesJson) ?? []);
     const marcar = async (k: string) => { enviados.add(k); await atualizar(a, { lembretesJson: JSON.stringify(Array.from(enviados)) }); a.version = (Number(a.version) || 0) + 1; };
+    // Avisos de bloqueio guardados fora do horário: saem agora (e saem da lista)
+    const pendentes = Array.from(enviados).filter(k => k.startsWith(PENDENTE));
+    if (pendentes.length) {
+      for (const k of pendentes) enviados.delete(k);
+      await atualizar(a, { lembretesJson: JSON.stringify(Array.from(enviados)) });
+      a.version = (Number(a.version) || 0) + 1;
+      // Pagou antes das 9h: o aviso de bloqueio já não vale e é descartado
+      for (const k of a.status === 'BLOQUEADO' ? pendentes : []) {
+        const aviso = json<{ usuario: string; escritorio: string | null }>(k.slice(PENDENTE.length));
+        if (!aviso) continue;
+        await avisar(u?.telefone, aviso.usuario);
+        if (aviso.escritorio) await avisarEscritorio(aviso.escritorio);
+      }
+    }
     const tipo = a.status === 'TRIAL' ? 'teste' : a.status === 'ATIVA' && a.origem === 'CORTESIA' ? 'cortesia' : null;
     if (tipo) {
       const dias = diasAte(a.status === 'TRIAL' ? a.trialFim : a.periodoFim, agora);

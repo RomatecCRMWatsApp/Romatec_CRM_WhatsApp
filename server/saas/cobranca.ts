@@ -77,6 +77,13 @@ async function implantacaoPendente(a: any, planoCodigo: string): Promise<number>
   return impl?.ativo ? impl.precoMensal : 0;
 }
 
+/** O que o assinante escolheu no checkout; só vai para a assinatura com o pagamento aprovado */
+type Escolha = { planoId: number; ciclo: 'MENSAL' | 'ANUAL'; metodo: string; cupomId: number | null; preapprovalId?: string };
+const escolhaDe = (v: unknown): Escolha | null => {
+  const e = json(v) as Escolha | null;
+  return e && Number(e.planoId) > 0 && (e.ciclo === 'MENSAL' || e.ciclo === 'ANUAL') ? e : null;
+};
+
 export async function iniciarCheckout(u: any, p: { plano: string; ciclo: 'MENSAL' | 'ANUAL'; metodo: 'CARTAO_RECORRENTE' | 'PIX' | 'BOLETO'; cupom?: string | null }, agora = Date.now()): Promise<ResultadoCheckout> {
   const perfil = perfilDe(u);
   const planos = await S.listarPlanos();
@@ -97,8 +104,9 @@ export async function iniciarCheckout(u: any, p: { plano: string; ciclo: 'MENSAL
   const impl = await implantacaoPendente(a, plano.codigo);
   if (impl && p.metodo === 'CARTAO_RECORRENTE') throw new CobrancaErro('A primeira fatura (com a implantação) é por Pix ou boleto; o cartão recorrente fica para as seguintes.');
   const modo = await modoMp();
-  // Escolhas do checkout ficam na assinatura; o status só muda com o pagamento confirmado
-  await d.update(saasAssinaturas).set({ planoId: plano.id, ciclo: p.ciclo, metodo: p.metodo, cupomId: cupom?.id ?? null, ciclosCupomRestantes: null, updatedAt: new Date(agora) } as any).where(eq(saasAssinaturas.id, a.id));
+  // A escolha (plano, ciclo, forma, cupom) NÃO vai para a assinatura agora: fica na fatura (Pix/boleto) ou pendente da
+  // assinatura nova do MP (cartão) e só vale quando o pagamento for aprovado (aplicarAprovado)
+  const escolha: Escolha = { planoId: plano.id, ciclo: p.ciclo, metodo: p.metodo, cupomId: cupom?.id ?? null };
   await S.auditar(u.id, 'CHECKOUT_INICIADO', { plano: plano.codigo, ciclo: p.ciclo, metodo: p.metodo, cupom: cupom?.codigo ?? null, valor: valorCiclo + impl, modo });
 
   if (p.metodo === 'CARTAO_RECORRENTE') {
@@ -107,12 +115,12 @@ export async function iniciarCheckout(u: any, p: { plano: string; ciclo: 'MENSAL
       reason: `Romatec CRM — ${plano.nome}`, external_reference: `saas:${a.id}`, payer_email: u.email, back_url: `${urlBase()}/assinatura?retorno=1`, status: 'pending',
       auto_recurring: { frequency: p.ciclo === 'ANUAL' ? 12 : 1, frequency_type: 'months', transaction_amount: valorCiclo, currency_id: 'BRL' },
     });
-    await d.update(saasAssinaturas).set({ mpPreapprovalId: String(pre.id), updatedAt: new Date() } as any).where(eq(saasAssinaturas.id, a.id));
+    await d.update(saasAssinaturas).set({ checkoutPendenteJson: JSON.stringify({ ...escolha, preapprovalId: String(pre.id) }), updatedAt: new Date() } as any).where(eq(saasAssinaturas.id, a.id));
     const url = modo === 'teste' ? pre.sandbox_init_point || pre.init_point : pre.init_point || pre.sandbox_init_point;
     if (!url) throw new CobrancaErro('O Mercado Pago não devolveu o link da assinatura', 502);
     return { tipo: 'redirecionar', url, valor: valorCiclo, modo };
   }
-  const fatura = await gerarFatura(a, u, { valor: r2(valorCiclo + impl), metodo: p.metodo, incluiImplantacao: impl > 0, competencia: competenciaDe(agora), descricao: `Romatec CRM — ${plano.nome}${impl ? ' + implantação' : ''}`, modo }, agora);
+  const fatura = await gerarFatura(a, u, { valor: r2(valorCiclo + impl), metodo: p.metodo, incluiImplantacao: impl > 0, competencia: competenciaDe(agora), descricao: `Romatec CRM — ${plano.nome}${impl ? ' + implantação' : ''}`, modo, escolha }, agora);
   return { tipo: p.metodo === 'PIX' ? 'pix' : 'boleto', url: fatura.link ?? undefined, copiaCola: fatura.copiaCola, qrBase64: fatura.qrBase64, valor: fatura.valor, modo, faturaId: fatura.id };
 }
 
@@ -158,7 +166,7 @@ export async function iniciarUpgrade(u: any, p: { metodo: 'PIX' | 'BOLETO' }, ag
 }
 
 /** Cria (ou refaz) a fatura Pix/boleto da competência no MP */
-async function gerarFatura(a: any, u: any, p: { valor: number; metodo: 'PIX' | 'BOLETO'; incluiImplantacao: boolean; competencia: string; descricao: string; modo: ModoMp; upgradePlanoId?: number | null }, agora: number) {
+async function gerarFatura(a: any, u: any, p: { valor: number; metodo: 'PIX' | 'BOLETO'; incluiImplantacao: boolean; competencia: string; descricao: string; modo: ModoMp; upgradePlanoId?: number | null; escolha?: Escolha | null }, agora: number) {
   const d = await banco();
   const cpf = soDig(u.cpf);
   if (cpf.length !== 11) throw new CobrancaErro('Cadastre o seu CPF em "Meu cadastro" para gerar Pix ou boleto');
@@ -171,7 +179,7 @@ async function gerarFatura(a: any, u: any, p: { valor: number; metodo: 'PIX' | '
     [f] = await d.select().from(saasFaturas).where(and(eq(saasFaturas.assinaturaId, a.id), eq(saasFaturas.competencia, p.competencia))).limit(1);
   }
   const vencimento = new Date(agora + 3 * 86_400_000);
-  const dados = { valor: p.valor.toFixed(2), metodo: p.metodo, status: 'ABERTA', vencimento: hojeIso(vencimento.getTime()), incluiImplantacao: p.incluiImplantacao ? 1 : 0, modo: p.modo, mpPaymentId: null, linkPagamento: null, pixCopiaCola: null, upgradePlanoId: p.upgradePlanoId ?? null };
+  const dados = { valor: p.valor.toFixed(2), metodo: p.metodo, status: 'ABERTA', vencimento: hojeIso(vencimento.getTime()), incluiImplantacao: p.incluiImplantacao ? 1 : 0, modo: p.modo, mpPaymentId: null, linkPagamento: null, pixCopiaCola: null, upgradePlanoId: p.upgradePlanoId ?? null, escolhaJson: p.escolha ? JSON.stringify(p.escolha) : null };
   let faturaId: number;
   if (f) { faturaId = f.id; await d.update(saasFaturas).set(dados as any).where(eq(saasFaturas.id, f.id)); }
   else {
@@ -215,7 +223,15 @@ export async function registrarEvento(h: { xSignature?: string; xRequestId?: str
   const eventoId = `${tipo}:${dataId}:${String(corpo?.action ?? '').slice(0, 40)}`.slice(0, 120);
   const d = await banco();
   const [ja]: any[] = await d.select({ id: saasEventosPagamento.id }).from(saasEventosPagamento).where(eq(saasEventosPagamento.eventoId, eventoId)).limit(1);
-  if (ja) return { novo: false, eventoId };
+  if (ja) {
+    // Pagamento: o estorno/chargeback chega com o mesmo id e ação da aprovação ("payment.updated") — reprocessa.
+    // É seguro: processarPagamento consulta o status no MP, e aprovação e estorno não se aplicam duas vezes.
+    if (tipo === 'payment') {
+      await d.update(saasEventosPagamento).set({ processado: 0, payloadJson: JSON.stringify(corpo ?? {}).slice(0, 20_000) } as any).where(eq(saasEventosPagamento.id, ja.id));
+      return { novo: true, eventoId };
+    }
+    return { novo: false, eventoId };
+  }
   try {
     await d.insert(saasEventosPagamento).values({ eventoId, tipo, recursoId: dataId.slice(0, 64), payloadJson: JSON.stringify(corpo ?? {}).slice(0, 20_000), processado: 0, tentativas: 0, recebidoEm: new Date() } as any);
   } catch (e: any) {
@@ -264,8 +280,15 @@ async function processarPreapproval(id: string) {
   const d = await banco();
   const [a]: any[] = await d.select().from(saasAssinaturas).where(eq(saasAssinaturas.id, ref.assinaturaId)).limit(1);
   if (!a) return 'assinatura_inexistente';
-  if (pre.status === 'cancelled') await d.update(saasAssinaturas).set({ cancelarNoFim: 1, updatedAt: new Date() } as any).where(eq(saasAssinaturas.id, a.id));
-  else await d.update(saasAssinaturas).set({ mpPreapprovalId: String(pre.id), updatedAt: new Date() } as any).where(eq(saasAssinaturas.id, a.id));
+  const pendente = escolhaDe(a.checkoutPendenteJson);
+  if (pre.status === 'cancelled') {
+    // Só a assinatura do MP em uso cancela a renovação; a de um checkout não concluído só descarta a escolha
+    if (String(pre.id) === String(a.mpPreapprovalId)) await d.update(saasAssinaturas).set({ cancelarNoFim: 1, updatedAt: new Date() } as any).where(eq(saasAssinaturas.id, a.id));
+    else if (pendente?.preapprovalId === String(pre.id)) await d.update(saasAssinaturas).set({ checkoutPendenteJson: null, updatedAt: new Date() } as any).where(eq(saasAssinaturas.id, a.id));
+  } else if (!a.mpPreapprovalId && !pendente) {
+    // Assinatura antiga sem o id guardado: registra (a escolha de um checkout novo só vale no 1º pagamento — aplicarAprovado)
+    await d.update(saasAssinaturas).set({ mpPreapprovalId: String(pre.id), updatedAt: new Date() } as any).where(eq(saasAssinaturas.id, a.id));
+  }
   S.limparCaches();
   return `preapproval_${pre.status}`;
 }
@@ -294,11 +317,35 @@ async function processarPagamento(paymentId: string, agora: number): Promise<str
 async function aplicarAprovado(ref: { assinaturaId: number; faturaId: number | null }, pg: any, modo: ModoMp, agora: number): Promise<string> {
   const d = await banco();
   const mpId = String(pg.id);
+  // Cartão: a escolha de um checkout novo só vale se este pagamento é da assinatura nova do MP (a antiga pode seguir cobrando)
+  let pendenteCartao: Escolha | null = null;
+  if (!ref.faturaId) {
+    const [a0]: any[] = await d.select({ checkoutPendenteJson: saasAssinaturas.checkoutPendenteJson }).from(saasAssinaturas).where(eq(saasAssinaturas.id, ref.assinaturaId)).limit(1);
+    const p = escolhaDe(a0?.checkoutPendenteJson);
+    if (p?.preapprovalId) {
+      const doPagamento = String(pg?.metadata?.preapproval_id ?? '');
+      const daNova = doPagamento ? doPagamento === p.preapprovalId
+        : (await buscarMp(`/preapproval/${p.preapprovalId}`).catch(() => null))?.dado?.status === 'authorized';
+      if (daNova) pendenteCartao = p;
+    }
+  }
   const resultado = await transacao(d, async (tx: any) => {
     const [ja]: any[] = await tx.select().from(saasFaturas).where(eq(saasFaturas.mpPaymentId, mpId)).limit(1);
     if (ja?.status === 'PAGA') return { acao: 'ja_aplicado' as const };
-    const [a]: any[] = await tx.select().from(saasAssinaturas).where(eq(saasAssinaturas.id, ref.assinaturaId)).limit(1);
-    if (!a) return { acao: 'assinatura_inexistente' as const };
+    const [atual]: any[] = await tx.select().from(saasAssinaturas).where(eq(saasAssinaturas.id, ref.assinaturaId)).limit(1);
+    if (!atual) return { acao: 'assinatura_inexistente' as const };
+    // Escolha do checkout (plano, ciclo, forma, cupom) passa a valer agora, com o pagamento aprovado
+    let escolha: Escolha | null = pendenteCartao;
+    if (ref.faturaId) {
+      const [fe]: any[] = await tx.select({ escolhaJson: saasFaturas.escolhaJson }).from(saasFaturas).where(eq(saasFaturas.id, ref.faturaId)).limit(1);
+      escolha = escolhaDe(fe?.escolhaJson);
+    }
+    const a = escolha ? {
+      ...atual, planoId: Number(escolha.planoId), ciclo: escolha.ciclo, metodo: escolha.metodo, cupomId: escolha.cupomId ?? null,
+      // Cupom trocado: a contagem de ciclos recomeça no 1º pagamento dele
+      ciclosCupomRestantes: Number(escolha.cupomId ?? 0) === Number(atual.cupomId ?? 0) ? atual.ciclosCupomRestantes : null,
+      ...(escolha.preapprovalId ? { mpPreapprovalId: escolha.preapprovalId } : {}),
+    } : atual;
     const valor = Number(pg.transaction_amount) || 0;
     const pagoEm = pg.date_approved ? new Date(pg.date_approved) : new Date(agora);
     // Upgrade (diferença proporcional): troca o plano e NÃO estende o período nem conta ciclo de cupom
@@ -340,16 +387,27 @@ async function aplicarAprovado(ref: { assinaturaId: number; faturaId: number | n
     // Controle de versão: se outro processo mexeu na assinatura no meio, este evento volta para o retry
     const r: any = await tx.update(saasAssinaturas).set({
       status: 'ATIVA', origem: 'PAGA', periodoFim, trialFim: null, motivo: null, ciclosCupomRestantes: ciclos,
+      // Escolha do checkout gravada só agora; pagou de novo pelo checkout = a renovação volta a valer
+      ...(escolha ? {
+        planoId: a.planoId, ciclo: a.ciclo, metodo: a.metodo, cupomId: a.cupomId, cancelarNoFim: 0,
+        ...(escolha.preapprovalId ? { mpPreapprovalId: escolha.preapprovalId, checkoutPendenteJson: null } : {}),
+      } : {}),
       ...(ciclos === 0 && a.cupomId ? { cupomId: null } : {}), version: (Number(a.version) || 0) + 1, updatedAt: new Date(agora),
     } as any).where(and(eq(saasAssinaturas.id, a.id), eq(saasAssinaturas.version, Number(a.version) || 0)));
     const afetadas = Number(r?.[0]?.affectedRows ?? r?.affectedRows ?? r?.changes ?? 1);
     if (!afetadas) throw new CobrancaErro('Assinatura alterada ao mesmo tempo — tenta de novo no retry', 409);
-    return { acao: 'aprovado' as const, a, periodoFim, valor, voltarPrecoNormal };
+    // Assinatura nova do MP no lugar da antiga: a antiga é cancelada (senão as duas cobram)
+    const preapprovalAntigo = escolha?.preapprovalId && atual.mpPreapprovalId && String(atual.mpPreapprovalId) !== escolha.preapprovalId ? String(atual.mpPreapprovalId) : null;
+    return { acao: 'aprovado' as const, a, periodoFim, valor, voltarPrecoNormal, preapprovalAntigo };
   });
   if (resultado.acao === 'upgrade') return posUpgrade(resultado.a, resultado.novoPlanoId, resultado.valor, modo, mpId, agora);
   if (resultado.acao !== 'aprovado') return resultado.acao;
-  const { a, periodoFim, valor, voltarPrecoNormal } = resultado;
+  const { a, periodoFim, valor, voltarPrecoNormal, preapprovalAntigo } = resultado;
   S.limparCaches();
+  if (preapprovalAntigo) {
+    await mp.req(modo, 'PUT', `/preapproval/${preapprovalAntigo}`, { status: 'cancelled' })
+      .catch((e: any) => console.warn(`[MP] cancelar a assinatura antiga ${preapprovalAntigo}:`, e?.message));
+  }
   await sincronizarFilaNfse(agora).catch((e: any) => console.warn('[NFS-e] fila:', e?.message)); // a rotina repete se falhar
   await S.auditar(a.usuarioId, 'PAGAMENTO_CONFIRMADO', { assinaturaId: a.id, mpPaymentId: mpId, valor, modo, ate: periodoFim.toISOString() });
   if (a.status !== 'ATIVA') await S.auditar(a.usuarioId, 'DESBLOQUEIO', { assinaturaId: a.id, por: 'webhook' });
@@ -426,6 +484,8 @@ async function aplicarEstorno(ref: { assinaturaId: number }, pg: any): Promise<s
   const d = await banco();
   const mpId = String(pg.id);
   const [f]: any[] = await d.select().from(saasFaturas).where(eq(saasFaturas.mpPaymentId, mpId)).limit(1);
+  // Aviso repetido do mesmo estorno: já aplicado (não empurra o fim do período nem audita de novo)
+  if (f?.status === 'ESTORNADA') return 'ja_estornado';
   if (f) {
     await d.update(saasFaturas).set({ status: 'ESTORNADA' } as any).where(eq(saasFaturas.id, f.id));
     await sincronizarFilaNfse().catch((e: any) => console.warn('[NFS-e] fila:', e?.message));
@@ -510,6 +570,26 @@ export async function conciliarFaturasAbertas(agora = Date.now()) {
   return res;
 }
 
+/**
+ * Estornos e chargebacks das faturas já pagas (até 180 dias, prazo de contestação do cartão): o aviso do MP pode não
+ * chegar ao CRM, e a conciliação acima só olha as abertas. processarPagamento consulta o status no MP; aprovado de
+ * novo não muda nada e estorno se aplica uma vez só.
+ */
+export async function conferirEstornos(agora = Date.now()) {
+  const d = await banco();
+  const pagas: any[] = (await d.select().from(saasFaturas).where(eq(saasFaturas.status, 'PAGA')))
+    .filter((f: any) => f.mpPaymentId && f.pagoEm && agora - new Date(f.pagoEm).getTime() < 180 * 86_400_000);
+  const res = { conferidas: 0, estornadas: 0, erros: [] as string[] };
+  for (const f of pagas) {
+    try {
+      const acao = await processarPagamento(String(f.mpPaymentId), agora);
+      res.conferidas++;
+      if (acao === 'estornado') res.estornadas++;
+    } catch (e: any) { res.erros.push(`fatura ${f.id}: ${String(e?.message ?? e).slice(0, 200)}`); }
+  }
+  return res;
+}
+
 /** Admin: eventos recentes do webhook (diagnóstico) */
 export async function eventosRecentes() {
   const d = await banco();
@@ -518,12 +598,15 @@ export async function eventosRecentes() {
 }
 
 let rodando = false;
+let ultimaConferenciaEstornos = 0;
 export function iniciarJobsCobranca() {
   const tick = async () => {
     if (rodando) return;
     rodando = true;
     try {
       await retryEventos(); await conciliarFaturasAbertas(); await rotinaFaturas(); await sincronizarFilaNfse();
+      // Estornos das faturas pagas: uma vez por hora (a conciliação de 10 em 10 min só olha as abertas)
+      if (Date.now() - ultimaConferenciaEstornos >= 60 * 60_000) { ultimaConferenciaEstornos = Date.now(); await conferirEstornos(); }
       await (await import('./avalieimob')).sincronizarAvalieimob();
       // NFS-e enviadas à Spedy: reconcilia o status (webhook perdido ou ainda não configurado)
       await (await import('./spedy')).acompanharEnviadas();

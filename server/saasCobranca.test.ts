@@ -17,6 +17,9 @@ const chamadas: { metodo: string; caminho: string; corpo?: any }[] = [];
 /** Mercado Pago simulado: pagamentos e preapprovals guardados em memória */
 const pagamentosMp = new Map<string, any>();
 let proximoId = 1000;
+let proximoPre = 0;
+/** Assinaturas do cartão (preapproval) que o cliente já autorizou no MP */
+const preAutorizadas = new Set<string>();
 let falharGet = false;
 
 const usuario = (id: number) => db.all(sql`SELECT * FROM users WHERE id = ${id}`)[0];
@@ -48,7 +51,8 @@ beforeAll(async () => {
       pagamentosMp.set(id, { id, status: 'pending', external_reference: corpo.external_reference, transaction_amount: corpo.transaction_amount });
       return { id, point_of_interaction: { transaction_data: { qr_code: `00020126PIX${id}`, qr_code_base64: 'iVBORw0K', ticket_url: `https://mp.test/pix/${id}` } }, transaction_details: { external_resource_url: `https://mp.test/boleto/${id}` } };
     }
-    if (metodo === 'POST' && caminho === '/preapproval') return { id: 'pre-1', init_point: 'https://mp.test/assinar', sandbox_init_point: 'https://sandbox.mp.test/assinar' };
+    if (metodo === 'POST' && caminho === '/preapproval') return { id: `pre-${++proximoPre}`, init_point: 'https://mp.test/assinar', sandbox_init_point: 'https://sandbox.mp.test/assinar' };
+    if (metodo === 'GET' && caminho.startsWith('/preapproval/')) return { id: caminho.split('/').pop(), status: preAutorizadas.has(caminho.split('/').pop()!) ? 'authorized' : 'pending' };
     if (metodo === 'PUT') return { ok: true };
     if (metodo === 'GET' && caminho.startsWith('/v1/payments/')) {
       if (falharGet) throw new M.MpErro('Mercado Pago indisponível', 502);
@@ -77,25 +81,35 @@ describe('Pix: checkout → webhook → desbloqueio', () => {
     const r = await C.iniciarCheckout(usuario(2), { plano: 'CORRETOR_ESSENCIAL', ciclo: 'MENSAL', metodo: 'PIX', cupom: 'fundador' });
     expect(r).toMatchObject({ tipo: 'pix', valor: 69.9, modo: 'teste', copiaCola: expect.stringContaining('PIX') });
     const a = assinatura(2);
-    expect(a).toMatchObject({ status: 'BLOQUEADO', metodo: 'PIX' });
+    // A escolha fica na fatura; a assinatura só muda quando o pagamento for aprovado
+    expect(a).toMatchObject({ status: 'BLOQUEADO', metodo: null, cupomId: null });
     const [f] = faturas(a.id);
     expect(f).toMatchObject({ status: 'ABERTA', metodo: 'PIX', valor: '69.90' });
+    expect(JSON.parse(f.escolhaJson)).toMatchObject({ ciclo: 'MENSAL', metodo: 'PIX' });
     // Pendente: nada muda
     expect(await avisar('payment', f.mpPaymentId)).toMatchObject({ ok: true, acao: 'pagamento_pending' });
     // Aprovado
     pagamentosMp.get(f.mpPaymentId).status = 'approved';
     expect(await avisar('payment', f.mpPaymentId, 'payment.created')).toMatchObject({ ok: true, acao: 'aprovado' });
     const depois = assinatura(2);
-    expect(depois).toMatchObject({ status: 'ATIVA', origem: 'PAGA', ciclosCupomRestantes: 11 });
+    expect(depois).toMatchObject({ status: 'ATIVA', origem: 'PAGA', metodo: 'PIX', ciclosCupomRestantes: 11 });
+    expect(depois.cupomId).toBeTruthy();
     const fim1 = depois.periodoFim;
     expect(faturas(a.id)[0].status).toBe('PAGA');
     S.limparCaches();
     expect(await S.resumoLicenca(usuario(2))).toMatchObject({ liberado: true, origem: 'PAGA' });
-    // O mesmo aviso de novo (idêntico) é descartado; outro aviso do mesmo pagamento aprovado não estende de novo
-    expect(await avisar('payment', f.mpPaymentId, 'payment.created')).toMatchObject({ acao: 'duplicado' });
+    // O mesmo aviso de novo (idêntico) é reprocessado sem efeito; outro aviso do mesmo pagamento aprovado não estende de novo
+    expect(await avisar('payment', f.mpPaymentId, 'payment.created')).toMatchObject({ acao: 'ja_aplicado' });
     expect(await avisar('payment', f.mpPaymentId, 'payment.updated2')).toMatchObject({ acao: 'ja_aplicado' });
     expect(assinatura(2).periodoFim).toBe(fim1);
     expect(db.all(sql`SELECT usosRealizados FROM saasCupons WHERE codigo = 'FUNDADOR'`)[0].usosRealizados).toBe(1);
+  });
+
+  it('checkout não pago não troca nada: abrir o Pro anual sem pagar mantém Essencial mensal (sem AvalieImob de graça)', async () => {
+    const antes = assinatura(2);
+    const essencial = antes.planoId;
+    await C.iniciarCheckout(usuario(2), { plano: 'CORRETOR_PRO', ciclo: 'ANUAL', metodo: 'PIX' });
+    expect(assinatura(2)).toMatchObject({ planoId: essencial, ciclo: 'MENSAL', metodo: 'PIX', status: 'ATIVA', periodoFim: antes.periodoFim });
   });
 
   it('aviso com assinatura inválida é recusado (401) e nada é gravado', async () => {
@@ -128,18 +142,29 @@ describe('cartão recorrente, estorno e cancelamento', () => {
     const pre = chamadas.find(c => c.caminho === '/preapproval')!.corpo;
     expect(pre).toMatchObject({ payer_email: 'paula@x.com', auto_recurring: { frequency: 12, frequency_type: 'months', transaction_amount: 1599 } });
     const a = assinatura(4);
-    expect(a.mpPreapprovalId).toBe('pre-1');
+    // Até o 1º pagamento, a assinatura do cartão fica pendente (não troca nada)
+    expect(a.mpPreapprovalId).toBeNull();
+    expect(JSON.parse(a.checkoutPendenteJson)).toMatchObject({ preapprovalId: 'pre-1', ciclo: 'ANUAL', metodo: 'CARTAO_RECORRENTE' });
+    preAutorizadas.add('pre-1');
     pagamentosMp.set('5001', { id: '5001', status: 'approved', external_reference: `saas:${a.id}`, transaction_amount: 1599 });
     expect(await avisar('payment', '5001')).toMatchObject({ acao: 'aprovado' });
     expect(faturas(a.id)).toEqual([expect.objectContaining({ metodo: 'CARTAO_RECORRENTE', status: 'PAGA', mpPaymentId: '5001' })]);
+    expect(assinatura(4)).toMatchObject({ mpPreapprovalId: 'pre-1', checkoutPendenteJson: null, ciclo: 'ANUAL', metodo: 'CARTAO_RECORRENTE' });
     const fim = new Date(assinatura(4).periodoFim.replace(' ', 'T') + 'Z').getTime();
     expect(fim - Date.now()).toBeGreaterThan(360 * DIA);
   });
 
   it('estorno sem pagamento posterior derruba (inadimplente); cancelar mantém até o fim e depois vira CANCELADA', async () => {
+    // O MP manda o estorno com o MESMO id e ação da aprovação ("payment.updated") — não pode ser descartado como repetido
     pagamentosMp.get('5001').status = 'refunded';
-    expect(await avisar('payment', '5001', 'payment.refunded')).toMatchObject({ acao: 'estornado' });
+    expect(await avisar('payment', '5001')).toMatchObject({ acao: 'estornado' });
     expect(assinatura(4)).toMatchObject({ status: 'INADIMPLENTE' });
+    expect(faturas(assinatura(4).id)[0].status).toBe('ESTORNADA');
+    // Aviso do estorno repetido: não aplica de novo (o fim do período e a auditoria ficam como estão)
+    const fimEstorno = assinatura(4).periodoFim;
+    expect(await avisar('payment', '5001')).toMatchObject({ acao: 'ja_estornado' });
+    expect(assinatura(4).periodoFim).toBe(fimEstorno);
+    expect(db.all(sql`SELECT COUNT(*) AS n FROM auditoriaAcesso WHERE evento = 'PAGAMENTO_ESTORNADO'`)[0].n).toBe(1);
     // Corretor 2 (pago): cancela a renovação
     await C.cancelarAssinatura(usuario(2));
     const a = assinatura(2);
@@ -147,6 +172,25 @@ describe('cartão recorrente, estorno e cancelamento', () => {
     const fim = new Date(a.periodoFim.replace(' ', 'T') + 'Z').getTime();
     await S.rotinaSaas(fim + 1000);
     expect(assinatura(2).status).toBe('CANCELADA');
+  });
+
+  it('troca de cartão: cobrança da assinatura antiga não aplica a escolha nova; a nova paga, vale e cancela a antiga', async () => {
+    const id = assinatura(4).id;
+    await C.iniciarCheckout(usuario(4), { plano: 'CORRETOR_ESSENCIAL', ciclo: 'MENSAL', metodo: 'CARTAO_RECORRENTE' });
+    const pendente = JSON.parse(assinatura(4).checkoutPendenteJson);
+    const proPlanoId = assinatura(4).planoId;
+    // Cobrança da assinatura antiga (pre-1) chega antes de autorizar a nova
+    pagamentosMp.set('5002', { id: '5002', status: 'approved', external_reference: `saas:${id}`, transaction_amount: 1599 });
+    expect(await avisar('payment', '5002')).toMatchObject({ acao: 'aprovado' });
+    expect(assinatura(4)).toMatchObject({ planoId: proPlanoId, ciclo: 'ANUAL', mpPreapprovalId: 'pre-1' });
+    // Autorizou a nova e ela cobrou
+    preAutorizadas.add(pendente.preapprovalId);
+    chamadas.length = 0;
+    pagamentosMp.set('5003', { id: '5003', status: 'approved', external_reference: `saas:${id}`, transaction_amount: 149.9 });
+    expect(await avisar('payment', '5003')).toMatchObject({ acao: 'aprovado' });
+    expect(assinatura(4)).toMatchObject({ ciclo: 'MENSAL', mpPreapprovalId: pendente.preapprovalId, checkoutPendenteJson: null });
+    expect(assinatura(4).planoId).not.toBe(proPlanoId);
+    expect(chamadas).toContainEqual(expect.objectContaining({ metodo: 'PUT', caminho: '/preapproval/pre-1', corpo: { status: 'cancelled' } }));
   });
 });
 
@@ -169,6 +213,16 @@ describe('empreendedor avulso: implantação na 1ª fatura', () => {
     expect(faturas(a.id).find((x: any) => x.id === f.id).status).toBe('PAGA');
     expect(assinatura(3)).toMatchObject({ status: 'ATIVA', origem: 'PAGA' });
     expect(await C.conciliarFaturasAbertas()).toMatchObject({ conferidas: 0, aplicadas: 0 });
+  });
+
+  it('estorno de fatura já paga sem aviso do MP: a conferência de estornos acha e aplica (uma vez só)', async () => {
+    const a = assinatura(3);
+    const f = faturas(a.id).find((x: any) => x.status === 'PAGA')!;
+    pagamentosMp.get(f.mpPaymentId).status = 'charged_back';
+    expect(await C.conferirEstornos()).toMatchObject({ estornadas: 1, erros: [] });
+    expect(faturas(a.id).find((x: any) => x.id === f.id).status).toBe('ESTORNADA');
+    expect(assinatura(3).status).toBe('INADIMPLENTE');
+    expect((await C.conferirEstornos()).estornadas).toBe(0);
   });
 });
 

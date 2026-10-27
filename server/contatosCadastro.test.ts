@@ -49,3 +49,25 @@ describe('Clientes: cadastro completo (mesma ficha do comprador nos contratos)',
     await expect(C.salvarContatoCompleto(null, { ...PESSOA_VAZIA_SERVIDOR, nome: 'Outro', telefone1: '99 99127-4759' })).rejects.toThrow('Já existe um contato com este telefone');
   });
 });
+
+describe('Clientes: quem abre a ficha (CPF/RG), edita e exclui', () => {
+  it('corretor só o cliente de um lead dele (pelo telefone); escritório qualquer um; criar novo continua aberto', async () => {
+    const { appRouter } = await import('./routers');
+    const caller = (user: Record<string, unknown>) => appRouter.createCaller({ user: { ativo: true, role: 'user', ...user }, req: { headers: {} } as any, res: {} as any } as any);
+    const [z] = db.all(sql`SELECT id FROM contacts WHERE phone = '+5599991274759'`);
+    db.run(sql`INSERT INTO leadQualifications (phone, nome, stage, score, responsavelId, createdAt, updatedAt) VALUES ('99991274759', 'Zenaide', 'novo_lead', 'frio', 21, ${Date.now()}, ${Date.now()})`);
+    const dono = caller({ id: 21, perfil: 'corretor' });
+    const outro = caller({ id: 22, perfil: 'corretor' });
+
+    await expect(outro.contacts.cadastro({ id: z.id })).rejects.toMatchObject({ code: 'FORBIDDEN' });
+    await expect(outro.contacts.getById({ id: z.id })).rejects.toMatchObject({ code: 'FORBIDDEN' });
+    await expect(outro.contacts.update({ id: z.id, name: 'Trocado' })).rejects.toMatchObject({ code: 'FORBIDDEN' });
+    await expect(outro.contacts.delete({ id: z.id })).rejects.toMatchObject({ code: 'FORBIDDEN' });
+    await expect(outro.contacts.salvarCompleto({ id: z.id, pessoa: { ...PESSOA_VAZIA_SERVIDOR, nome: 'Trocado', telefone1: '99991274759' } as any })).rejects.toMatchObject({ code: 'FORBIDDEN' });
+
+    expect((await dono.contacts.cadastro({ id: z.id })).contato.id).toBe(z.id);
+    expect((await caller({ id: 30, perfil: 'secretario' }).contacts.cadastro({ id: z.id })).contato.id).toBe(z.id);
+    const novo = await outro.contacts.salvarCompleto({ id: null, pessoa: { ...PESSOA_VAZIA_SERVIDOR, nome: 'Cliente Novo', telefone1: '(99) 98111-2233' } as any });
+    expect(novo.id).toBeGreaterThan(0);
+  });
+});
