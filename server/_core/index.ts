@@ -32,9 +32,9 @@ async function startServer() {
   const server = createServer(app);
   app.use(express.json({
     limit: "50mb",
-    // Webhook da Meta assina o corpo cru (X-Hub-Signature-256): guarda só nessa rota
+    // Webhooks da Meta (X-Hub-Signature-256) e da Spedy (Standard Webhooks) assinam o corpo cru: guarda só nessas rotas
     verify: (req, _res, buf) => {
-      if (req.url?.startsWith('/api/webhook/meta')) (req as any).rawBody = Buffer.from(buf);
+      if (req.url?.startsWith('/api/webhook/meta') || req.url?.startsWith('/api/webhook/spedy')) (req as any).rawBody = Buffer.from(buf);
     },
   }));
   app.use(express.urlencoded({ limit: "50mb", extended: true }));

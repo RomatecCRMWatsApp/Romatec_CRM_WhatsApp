@@ -3,6 +3,17 @@
 Cada versão nova vai no TOPO. Depois rode `npm run release` (valida e atualiza o package.json);
 ao subir, o servidor grava a versão no banco e todos recebem o aviso "Novidades da versão".
 
+## 1.50.0 — 2026-10-27
+tipo: minor
+obrigatoria: nao
+titulo: NFS-e pela Spedy (homologação)
+
+### Novo
+- Admin → SaaS → NFS-e: botão "Emitir NFS-e" em cada nota da fila. A nota vai para a Spedy, fica "enviada · aguardando" e muda sozinha para emitida (com número e os links do PDF e do XML) ou rejeitada (com a mensagem da prefeitura). A rejeitada pode ser corrigida e reenviada sem duplicar
+- Painel da integração na mesma aba: ambiente (sandbox ou produção), ambiente da NFS-e na empresa, alíquota de ISS e o webhook, com botão para cadastrar o webhook na Spedy
+- Começa em homologação (sandbox). Em sandbox, o CRM recusa emitir se a empresa na Spedy estiver configurada para produção. A chave fica só no servidor
+- Nota enviada pela Spedy é cancelada no painel da Spedy; o cancelamento volta para cá sozinho
+
 ## 1.49.0 — 2026-10-27
 tipo: minor
 obrigatoria: nao

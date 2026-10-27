@@ -73,6 +73,10 @@ const COLUNAS: [string, string][] = [
   ['saasFaturas', 'pixCopiaCola TEXT NULL'], ['saasFaturas', 'modo VARCHAR(10) NULL'],
   ['saasAssinaturas', 'avalieimobEstado VARCHAR(10) NULL'], ['saasAssinaturas', 'avalieimobErro VARCHAR(300) NULL'],
   ['saasFaturas', 'upgradePlanoId INT NULL'],
+  // NFS-e pela Spedy (server/saas/spedy.ts)
+  ['saasNfse', 'provedor VARCHAR(12) NULL'], ['saasNfse', 'externoId VARCHAR(64) NULL'], ['saasNfse', 'externoStatus VARCHAR(20) NULL'],
+  ['saasNfse', 'ambiente VARCHAR(12) NULL'], ['saasNfse', 'pdfUrl VARCHAR(300) NULL'], ['saasNfse', 'xmlUrl VARCHAR(300) NULL'],
+  ['saasNfse', 'mensagem VARCHAR(500) NULL'], ['saasNfse', 'enviadaEm DATETIME NULL'],
 ];
 
 export async function addSaas(): Promise<void> {

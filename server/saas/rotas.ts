@@ -50,6 +50,20 @@ export function registrarRotasSaas(app: Express) {
     }
   });
 
+  // Webhook da Spedy (NFS-e): assinatura conferida no corpo cru, idempotente pelo id do evento (server/saas/spedy.ts)
+  app.post('/api/webhook/spedy', async (req, res) => {
+    try {
+      const cru = (req as any).rawBody ? (req as any).rawBody.toString('utf8') : JSON.stringify(req.body ?? {});
+      const { receberWebhook } = await import('./spedy');
+      const r = await receberWebhook(cru, { 'webhook-id': req.header('webhook-id'), 'webhook-timestamp': req.header('webhook-timestamp'), 'webhook-signature': req.header('webhook-signature') });
+      if (!r.ok) console.warn(`[Spedy] webhook recusado: ${r.motivo}`);
+      res.sendStatus(r.status);
+    } catch (e: any) {
+      console.error('[Spedy] webhook:', e?.message);
+      if (!res.headersSent) res.sendStatus(500);
+    }
+  });
+
   async function escritorio(req: Request) {
     const user = await usuarioDaRequisicao(req);
     const { perfilDe } = await import('../../shared/equipe');

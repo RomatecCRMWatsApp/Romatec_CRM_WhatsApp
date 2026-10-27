@@ -236,14 +236,56 @@ function PlanosECupons() {
   );
 }
 
-const COR_NFSE: Record<string, string> = { PENDENTE: "bg-amber-500/15 text-amber-300", EMITIDA: "bg-emerald-500/15 text-emerald-300", CANCELADA: "bg-secondary text-muted-foreground" };
+const COR_NFSE: Record<string, string> = {
+  PENDENTE: "bg-amber-500/15 text-amber-300", ENVIADA: "bg-sky-500/15 text-sky-300", EMITIDA: "bg-emerald-500/15 text-emerald-300",
+  REJEITADA: "bg-red-500/15 text-red-300", CANCELADA: "bg-secondary text-muted-foreground",
+};
+const AMBIENTE_NFSE: Record<string, string> = { simulation: "simulação", development: "homologação", production: "PRODUÇÃO" };
 
-/** NFS-e em fila: cada fatura paga vira uma nota pendente com o tomador congelado; emitida no portal da prefeitura e marcada aqui */
+/** Situação da integração com a Spedy (ambiente, empresa, webhook) — a chave nunca vem para cá */
+function PainelSpedy() {
+  const utils = trpc.useUtils();
+  const { data: s, isLoading } = trpc.saas.spedySituacao.useQuery();
+  const webhook = trpc.saas.spedyWebhook.useMutation({
+    onSuccess: r => { toast.success(r.criado ? "Webhook cadastrado na Spedy" : r.reativado ? "Webhook reativado" : "Webhook já estava cadastrado"); utils.saas.spedySituacao.invalidate(); },
+    onError: e => toast.error(e.message),
+  });
+  if (isLoading || !s) return null;
+  return (
+    <section className={`space-y-1 rounded-xl border p-3 text-sm ${s.conectada ? "border-emerald-500/30 bg-emerald-500/5" : "border-border bg-card"}`}>
+      <h3 className="font-semibold">
+        Spedy (emissão automática) — {!s.configurada ? <span className="text-amber-300">aguardando configuração</span>
+          : s.conectada ? <span className="text-emerald-300">conectada · {s.ambiente === "producao" ? "PRODUÇÃO" : "sandbox"}</span> : <span className="text-red-300">sem conexão</span>}
+      </h3>
+      {!s.configurada && <p className="text-xs text-muted-foreground">{s.erro}. Configure as variáveis no Railway: SPEDY_API_KEY, SPEDY_AMBIENTE (sandbox ou producao) e SPEDY_EMPRESA_ID.</p>}
+      {s.configurada && (
+        <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-muted-foreground">
+          <span>NFS-e na empresa: <b className={s.ambienteNfse === "production" ? "text-red-300" : "text-foreground"}>{s.ambienteNfse ? AMBIENTE_NFSE[s.ambienteNfse] ?? s.ambienteNfse : "—"}</b></span>
+          <span>Alíquota de ISS: <b className="text-foreground">{s.issAliquota != null ? `${s.issAliquota}%` : "a da empresa na Spedy"}</b></span>
+          <span>Webhook: {s.webhook ? <b className={s.webhook.enabled ? "text-emerald-300" : "text-amber-300"}>{s.webhook.enabled ? "ativo" : "desabilitado"}</b> : <b className="text-amber-300">não cadastrado</b>}</span>
+          {(!s.webhook || !s.webhook.enabled) && s.conectada && <Button size="sm" variant="outline" className="h-7 text-xs" disabled={webhook.isPending} onClick={() => webhook.mutate()}>{s.webhook ? "Reativar webhook" : "Cadastrar webhook"}</Button>}
+        </div>
+      )}
+      {s.falha && <p className="text-xs text-red-300">{s.falha}</p>}
+    </section>
+  );
+}
+
+/** NFS-e em fila: cada fatura paga vira uma nota pendente com o tomador congelado; emitida pela Spedy ou no portal da prefeitura */
 function Nfse() {
   const utils = trpc.useUtils();
-  const [status, setStatus] = useState<"PENDENTE" | "EMITIDA" | "CANCELADA" | "">("PENDENTE");
-  const { data } = trpc.saas.nfse.useQuery(status ? { status } : undefined);
+  const [status, setStatus] = useState<"PENDENTE" | "ENVIADA" | "EMITIDA" | "REJEITADA" | "CANCELADA" | "">("PENDENTE");
+  const { data } = trpc.saas.nfse.useQuery(status ? { status } : undefined, { refetchInterval: status === "ENVIADA" ? 15_000 : false });
+  const { data: spedy } = trpc.saas.spedySituacao.useQuery();
   const ok = (msg: string) => () => { toast.success(msg); utils.saas.nfse.invalidate(); };
+  const emitir = trpc.saas.spedyEmitir.useMutation({
+    onSuccess: r => { toast.success(r.status === "EMITIDA" ? "NFS-e autorizada" : `Enviada à Spedy (${r.ambiente}) — aguardando a prefeitura`); utils.saas.nfse.invalidate(); },
+    onError: e => toast.error(e.message),
+  });
+  const consultar = trpc.saas.spedyConsultar.useMutation({
+    onSuccess: r => { toast.success(`Status na Spedy: ${r.externoStatus ?? "—"}${r.mensagem ? ` — ${r.mensagem}` : ""}`); utils.saas.nfse.invalidate(); },
+    onError: e => toast.error(e.message),
+  });
   const emitida = trpc.saas.nfseEmitida.useMutation({ onSuccess: ok("Nota marcada como emitida"), onError: e => toast.error(e.message) });
   const tomador = trpc.saas.nfseAtualizarTomador.useMutation({ onSuccess: ok("Tomador atualizado com o cadastro atual"), onError: e => toast.error(e.message) });
   const cancelar = trpc.saas.nfseCancelar.useMutation({ onSuccess: ok("Nota cancelada"), onError: e => toast.error(e.message) });
@@ -261,10 +303,12 @@ function Nfse() {
   const total = (data ?? []).reduce((s, n) => s + n.valor, 0);
   return (
     <div className="space-y-3">
-      <p className="text-xs text-muted-foreground">Toda fatura paga (Mercado Pago ou registrada à mão) entra aqui com os dados do cliente do momento do pagamento. Emita no portal da prefeitura e marque como emitida com o número. A transmissão automática entra depois sobre esta mesma fila. Item de serviço padrão 1.05 (licenciamento de software) — confirme com a contabilidade.</p>
+      <p className="text-xs text-muted-foreground">Toda fatura paga (Mercado Pago ou registrada à mão) entra aqui com os dados do cliente do momento do pagamento. Emita pela Spedy (botão "Emitir NFS-e") ou no portal da prefeitura, marcando como emitida com o número. Item de serviço padrão 1.05 (licenciamento de software) — confirme com a contabilidade.</p>
+      <PainelSpedy />
       <div className="flex flex-wrap items-center gap-2">
         <select className={`${campo} w-auto`} value={status} onChange={e => setStatus(e.target.value as any)}>
-          <option value="PENDENTE">Pendentes</option><option value="EMITIDA">Emitidas</option><option value="CANCELADA">Canceladas</option><option value="">Todas</option>
+          <option value="PENDENTE">Pendentes</option><option value="ENVIADA">Enviadas (aguardando)</option><option value="EMITIDA">Emitidas</option>
+          <option value="REJEITADA">Rejeitadas</option><option value="CANCELADA">Canceladas</option><option value="">Todas</option>
         </select>
         <span className="text-sm text-muted-foreground">{data?.length ?? 0} nota(s) · {brl(total)}</span>
         <Button size="sm" variant="outline" className="ml-auto" disabled={csv.isPending || !data?.length} onClick={() => csv.mutate(status ? { status } : undefined)}>Exportar CSV</Button>
@@ -283,18 +327,35 @@ function Nfse() {
                 <td className="p-2 max-w-[360px]"><p className="text-xs">{n.discriminacao}</p><p className="text-[11px] text-muted-foreground">item {n.itemServico} · pago em {dataBr(n.pagoEm)}{n.metodo ? ` · ${n.metodo.toLowerCase()}` : ""}{n.modo === "teste" ? " · TESTE" : ""}</p></td>
                 <td className="p-2 whitespace-nowrap">{brl(n.valor)}</td>
                 <td className="p-2">
-                  <span className={`rounded-full px-2 py-0.5 text-[11px] ${COR_NFSE[n.status] ?? ""}`}>{n.status.toLowerCase()}</span>
+                  <span className={`rounded-full px-2 py-0.5 text-[11px] ${COR_NFSE[n.status] ?? ""}`}>{n.status === "ENVIADA" ? "enviada · aguardando" : n.status.toLowerCase()}</span>
+                  {n.provedor === "spedy" && <p className="mt-0.5 text-[11px] text-muted-foreground">Spedy{n.ambiente ? ` · ${AMBIENTE_NFSE[n.ambiente] ?? n.ambiente}` : ""}{n.externoStatus ? ` · ${n.externoStatus}` : ""}</p>}
                   {n.numero && <p className="mt-0.5 text-[11px]">nº {n.numero}{n.codigoVerificacao ? ` · ${n.codigoVerificacao}` : ""}</p>}
+                  {n.mensagem && <p className={`mt-0.5 max-w-[260px] text-[11px] ${n.status === "REJEITADA" ? "text-red-300" : "text-muted-foreground"}`}>{n.mensagem}</p>}
+                  {(n.pdfUrl || n.xmlUrl) && (
+                    <p className="mt-0.5 flex gap-2 text-[11px]">
+                      {n.pdfUrl && <a href={n.pdfUrl} target="_blank" rel="noreferrer" className="text-primary hover:underline">PDF</a>}
+                      {n.xmlUrl && <a href={n.xmlUrl} target="_blank" rel="noreferrer" className="text-primary hover:underline">XML</a>}
+                    </p>
+                  )}
                   {n.observacao && <p className={`mt-0.5 text-[11px] ${n.observacao.startsWith("ESTORNO") ? "text-red-300" : "text-muted-foreground"}`}>{n.observacao}</p>}
                 </td>
                 <td className="p-2">
-                  {n.status === "PENDENTE" && (
+                  {(n.status === "PENDENTE" || n.status === "REJEITADA") && (
                     <div className="flex flex-wrap gap-1">
+                      {spedy?.configurada && (
+                        <Button size="sm" className="h-7 text-xs" disabled={emitir.isPending}
+                          onClick={() => { if (confirm(`Emitir a NFS-e de ${brl(n.valor)} para ${n.tomadorNome} pela Spedy (${spedy.ambiente === "producao" ? "PRODUÇÃO — nota com validade fiscal" : "sandbox"})?`)) emitir.mutate({ id: n.id }); }}>
+                          {emitir.isPending && emitir.variables?.id === n.id ? <Loader2 className="mr-1 h-3.5 w-3.5 animate-spin" /> : null}{n.status === "REJEITADA" ? "Reenviar NFS-e" : "Emitir NFS-e"}
+                        </Button>
+                      )}
                       <Button size="sm" variant="outline" className="h-7 text-xs" onClick={() => copiar(n.discriminacao)}>Copiar descrição</Button>
                       {n.faltaCadastro && <Button size="sm" variant="ghost" className="h-7 text-xs" onClick={() => tomador.mutate({ id: n.id })}>Puxar cadastro atual</Button>}
-                      <Button size="sm" className="h-7 text-xs" onClick={() => { const numero = window.prompt("Número da NFS-e emitida:"); if (!numero?.trim()) return; emitida.mutate({ id: n.id, numero, codigoVerificacao: window.prompt("Código de verificação (opcional):") || null }); }}>Marcar emitida</Button>
+                      {n.status === "PENDENTE" && <Button size="sm" variant="ghost" className="h-7 text-xs" onClick={() => { const numero = window.prompt("Número da NFS-e emitida no portal da prefeitura:"); if (!numero?.trim()) return; emitida.mutate({ id: n.id, numero, codigoVerificacao: window.prompt("Código de verificação (opcional):") || null }); }}>Marcar emitida</Button>}
                       <Button size="sm" variant="ghost" className="h-7 text-xs text-red-300" onClick={() => { const motivo = pedir("Motivo do cancelamento:"); if (motivo) cancelar.mutate({ id: n.id, motivo }); }}>Cancelar</Button>
                     </div>
+                  )}
+                  {n.status === "ENVIADA" && n.provedor === "spedy" && (
+                    <Button size="sm" variant="outline" className="h-7 text-xs" disabled={consultar.isPending} onClick={() => consultar.mutate({ id: n.id })}>Consultar agora</Button>
                   )}
                 </td>
               </tr>

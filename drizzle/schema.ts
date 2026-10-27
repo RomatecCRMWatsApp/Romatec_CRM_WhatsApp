@@ -1027,6 +1027,15 @@ export const saasNfse = mysqlTable("saasNfse", {
   emitidaEm: datetime("emitidaEm"),
   emitidaPor: int("emitidaPor"),
   observacao: varchar("observacao", { length: 300 }),
+  /** Emissão automática (server/saas/spedy.ts): provedor 'spedy', id e status lá, ambiente, links e a mensagem da prefeitura */
+  provedor: varchar("provedor", { length: 12 }),
+  externoId: varchar("externoId", { length: 64 }),
+  externoStatus: varchar("externoStatus", { length: 20 }),
+  ambiente: varchar("ambiente", { length: 12 }),
+  pdfUrl: varchar("pdfUrl", { length: 300 }),
+  xmlUrl: varchar("xmlUrl", { length: 300 }),
+  mensagem: varchar("mensagem", { length: 500 }),
+  enviadaEm: datetime("enviadaEm"),
   createdAt: timestamp("createdAt").defaultNow().notNull(),
   updatedAt: timestamp("updatedAt").defaultNow().notNull(),
 }, (t) => ({ uqFatura: uniqueIndex("uq_saas_nfse_fatura").on(t.faturaId), idxStatus: index("idx_saas_nfse_status").on(t.status) }));

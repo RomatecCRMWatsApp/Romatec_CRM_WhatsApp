@@ -418,7 +418,8 @@ async function aplicarEstorno(ref: { assinaturaId: number }, pg: any): Promise<s
 export async function retryEventos(agora = Date.now()) {
   const d = await banco();
   const pendentes: any[] = (await d.select().from(saasEventosPagamento).where(eq(saasEventosPagamento.processado, false as any)))
-    .filter((e: any) => (Number(e.tentativas) || 0) < 10 && agora - new Date(e.recebidoEm).getTime() > 60_000);
+    // Só do Mercado Pago (a tabela também guarda os eventos da Spedy, reconciliados pela consulta em acompanharEnviadas)
+    .filter((e: any) => (e.provedor ?? 'mercadopago') === 'mercadopago' && (Number(e.tentativas) || 0) < 10 && agora - new Date(e.recebidoEm).getTime() > 60_000);
   let ok = 0;
   for (const e of pendentes) if ((await processarEvento(e.eventoId, agora)).ok) ok++;
   return { pendentes: pendentes.length, ok };
@@ -494,6 +495,8 @@ export function iniciarJobsCobranca() {
     try {
       await retryEventos(); await conciliarFaturasAbertas(); await rotinaFaturas(); await sincronizarFilaNfse();
       await (await import('./avalieimob')).sincronizarAvalieimob();
+      // NFS-e enviadas à Spedy: reconcilia o status (webhook perdido ou ainda não configurado)
+      await (await import('./spedy')).acompanharEnviadas();
     } catch (e: any) { console.warn('[MP] rotina:', e?.message); } finally { rodando = false; }
   };
   setTimeout(tick, 90_000).unref?.();

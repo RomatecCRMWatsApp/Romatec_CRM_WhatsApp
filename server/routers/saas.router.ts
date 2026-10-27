@@ -26,6 +26,7 @@ async function comErro<T>(f: () => Promise<T>): Promise<T> {
   }
 }
 const dataZ = z.string().regex(/^\d{4}-\d{2}-\d{2}$/);
+const STATUS_NFSE = ["PENDENTE", "ENVIADA", "EMITIDA", "REJEITADA", "CANCELADA"] as const;
 
 export const saasRouter = router({
   // ─── Área do assinante (corretor/empreendedor; liberada mesmo bloqueado) ───
@@ -115,8 +116,8 @@ export const saasRouter = router({
   })).mutation(async ({ ctx, input }) => { admin(ctx); return comErro(async () => (await S()).criarCupom(input, ctx.user.id)); }),
   cancelarCupom: protectedProcedure.input(z.object({ id: z.number().int() })).mutation(async ({ ctx, input }) => { admin(ctx); return (await S()).cancelarCupom(input.id); }),
 
-  // ─── NFS-e em fila (emissão no portal da prefeitura; transmissão automática depois) ───
-  nfse: protectedProcedure.input(z.object({ status: z.enum(["PENDENTE", "EMITIDA", "CANCELADA"]).optional() }).optional())
+  // ─── NFS-e em fila (emissão pela Spedy ou no portal da prefeitura) ───
+  nfse: protectedProcedure.input(z.object({ status: z.enum(STATUS_NFSE).optional() }).optional())
     .query(async ({ ctx, input }) => { admin(ctx); const N = await import("../saas/nfse"); await N.sincronizarFilaNfse(); return N.listarNfse(input?.status); }),
   nfseEmitida: protectedProcedure.input(z.object({ id: z.number().int(), numero: z.string().trim().min(1).max(30), codigoVerificacao: z.string().trim().max(60).nullable().optional() }))
     .mutation(async ({ ctx, input }) => { admin(ctx); return comErro(async () => (await import("../saas/nfse")).marcarEmitida(input.id, input, ctx.user.id)); }),
@@ -124,8 +125,18 @@ export const saasRouter = router({
     .mutation(async ({ ctx, input }) => { admin(ctx); return comErro(async () => (await import("../saas/nfse")).atualizarTomador(input.id)); }),
   nfseCancelar: protectedProcedure.input(z.object({ id: z.number().int(), motivo: z.string().trim().min(3).max(300) }))
     .mutation(async ({ ctx, input }) => { admin(ctx); return comErro(async () => (await import("../saas/nfse")).cancelarNfse(input.id, input.motivo)); }),
-  nfseCsv: protectedProcedure.input(z.object({ status: z.enum(["PENDENTE", "EMITIDA", "CANCELADA"]).optional() }).optional())
+  nfseCsv: protectedProcedure.input(z.object({ status: z.enum(STATUS_NFSE).optional() }).optional())
     .mutation(async ({ ctx, input }) => { admin(ctx); return { csv: await (await import("../saas/nfse")).exportarCsv(input?.status) }; }),
+  /** Spedy: situação da integração (ambiente, empresa, webhook) — sem a chave */
+  spedySituacao: protectedProcedure.query(async ({ ctx }) => { admin(ctx); return (await import("../saas/spedy")).situacaoSpedy(); }),
+  /** Spedy: emite (ou reenvia a rejeitada) a NFS-e da fila */
+  spedyEmitir: protectedProcedure.input(z.object({ id: z.number().int() }))
+    .mutation(async ({ ctx, input }) => { admin(ctx); return comErro(async () => (await import("../saas/spedy")).emitirPelaSpedy(input.id, ctx.user.id)); }),
+  /** Spedy: consulta o status da nota agora */
+  spedyConsultar: protectedProcedure.input(z.object({ id: z.number().int() }))
+    .mutation(async ({ ctx, input }) => { admin(ctx); return comErro(async () => (await import("../saas/spedy")).consultarNaSpedy(input.id)); }),
+  /** Spedy: cadastra o webhook invoice.status_changed apontando para o CRM */
+  spedyWebhook: protectedProcedure.mutation(async ({ ctx }) => { admin(ctx); return comErro(async () => (await import("../saas/spedy")).configurarWebhook()); }),
   /** Situação da integração com o AvalieImob (sem expor o segredo) */
   avalieimobIntegracao: protectedProcedure.query(async ({ ctx }) => {
     admin(ctx);

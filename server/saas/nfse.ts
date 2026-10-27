@@ -1,7 +1,7 @@
 /**
  * Camada SaaS — NFS-e em fila. Toda fatura PAGA entra como PENDENTE com o tomador congelado no momento do pagamento
- * (nome, CPF, e-mail, endereço do cadastro). A emissão é feita fora (portal da prefeitura) e o administrador marca como
- * emitida com o número; a transmissão automática (ABRASF, como no AvalieImob) liga depois sobre esta mesma fila.
+ * (nome, CPF, e-mail, endereço do cadastro). Emissão: pela Spedy (server/saas/spedy.ts — ENVIADA → EMITIDA ou
+ * REJEITADA) ou fora, no portal da prefeitura, com o administrador marcando como emitida com o número.
  * Fatura estornada com nota ainda pendente: a nota é cancelada sozinha; já emitida, fica sinalizada para cancelar na prefeitura.
  */
 import { and, desc, eq, inArray, isNull } from 'drizzle-orm';
@@ -86,15 +86,17 @@ export async function sincronizarFilaNfse(agora = Date.now()): Promise<{ criadas
       if (n.status === 'PENDENTE') {
         await d.update(saasNfse).set({ status: 'CANCELADA', observacao: 'Pagamento estornado antes da emissão', updatedAt: new Date(agora) } as any).where(eq(saasNfse.id, n.id));
         canceladas++;
-      } else if (n.status === 'EMITIDA' && !String(n.observacao ?? '').startsWith('ESTORNO')) {
-        await d.update(saasNfse).set({ observacao: 'ESTORNO: pagamento estornado — cancelar esta nota no portal da prefeitura', updatedAt: new Date(agora) } as any).where(eq(saasNfse.id, n.id));
+      } else if (['EMITIDA', 'ENVIADA'].includes(n.status) && !String(n.observacao ?? '').startsWith('ESTORNO')) {
+        await d.update(saasNfse).set({ observacao: `ESTORNO: pagamento estornado — cancelar esta nota ${n.provedor === 'spedy' ? 'na Spedy' : 'no portal da prefeitura'}`, updatedAt: new Date(agora) } as any).where(eq(saasNfse.id, n.id));
       }
     }
   }
   return { criadas, canceladas };
 }
 
-export async function listarNfse(status?: 'PENDENTE' | 'EMITIDA' | 'CANCELADA') {
+export type StatusNfse = 'PENDENTE' | 'ENVIADA' | 'EMITIDA' | 'REJEITADA' | 'CANCELADA';
+
+export async function listarNfse(status?: StatusNfse) {
   const d = await banco();
   const q = d.select().from(saasNfse);
   const linhas: any[] = await (status ? q.where(eq(saasNfse.status, status)) : q).orderBy(desc(saasNfse.id)).limit(500);
@@ -136,12 +138,14 @@ export async function cancelarNfse(id: number, motivo: string, agora = Date.now(
   const [n]: any[] = await d.select().from(saasNfse).where(eq(saasNfse.id, id)).limit(1);
   if (!n) throw new NfseErro('Nota não encontrada', 404);
   if (n.status === 'CANCELADA') return { ok: true as const };
+  // Nota que passou pela Spedy: o cancelamento é lá (a prefeitura precisa saber); aqui só a pendente/rejeitada
+  if (n.provedor === 'spedy' && ['ENVIADA', 'EMITIDA'].includes(n.status)) throw new NfseErro('Nota enviada pela Spedy: cancele no painel da Spedy; o status volta para cá pelo webhook', 409);
   await d.update(saasNfse).set({ status: 'CANCELADA', observacao: motivo.trim().slice(0, 300), updatedAt: new Date(agora) } as any).where(eq(saasNfse.id, id));
   return { ok: true as const };
 }
 
 /** CSV (separador ;) para a contabilidade ou para lançar no portal da prefeitura */
-export async function exportarCsv(status?: 'PENDENTE' | 'EMITIDA' | 'CANCELADA'): Promise<string> {
+export async function exportarCsv(status?: StatusNfse): Promise<string> {
   const linhas = await listarNfse(status);
   const cel = (v: unknown) => `"${String(v ?? '').replace(/"/g, '""')}"`;
   const cab = ['id', 'status', 'competencia', 'valor', 'item_servico', 'tomador', 'cpf_cnpj', 'email', 'telefone', 'endereco', 'discriminacao', 'pago_em', 'numero_nfse', 'emitida_em'];
