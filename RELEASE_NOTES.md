@@ -3,6 +3,14 @@
 Cada versão nova vai no TOPO. Depois rode `npm run release` (valida e atualiza o package.json);
 ao subir, o servidor grava a versão no banco e todos recebem o aviso "Novidades da versão".
 
+## 1.51.1 — 2026-10-27
+tipo: patch
+obrigatoria: nao
+titulo: Nome "Visão portal do corretor"
+
+### Melhorias
+- O item do menu e o aviso da tela passam a se chamar "Visão portal do corretor"
+
 ## 1.51.0 — 2026-10-27
 tipo: minor
 obrigatoria: nao
