@@ -66,4 +66,17 @@ describe('modelos em PDF da aba Contratos', () => {
     for (const t of [cpcv, est]) expect(t).not.toMatch(/proporcional(mente)? à área/);
     expect(SEED_EMP_JURIDICO.defaults.limite_veiculos).toBe(3);
   });
+
+  it('Diretrizes de Uso: 45 itens, cada um com uma única opção válida, e a contribuição vem da configuração', async () => {
+    const { readFile } = await import('node:fs/promises');
+    const d = JSON.parse(await readFile('templates/diretrizes-uso-bom-jardims.json', 'utf8'));
+    const itens = d.secoes.flatMap((s: any) => s.itens);
+    expect(itens.map((i: any) => i[0])).toEqual(Array.from({ length: 45 }, (_, k) => k + 1));
+    for (const i of itens) expect(['P', 'CC', 'PR']).toContain(i[2]);
+    const { anexoDiretrizes } = await import('./contratos/anexos');
+    const pdf = await anexoDiretrizes({ ...SEED_EMP_JURIDICO.defaults, ...SEED_EMP_JURIDICO.vendedora } as any, 'bomjardims');
+    const { PDFDocument } = await import('pdf-lib');
+    expect((await PDFDocument.load(pdf)).getPageCount()).toBeGreaterThanOrEqual(2);
+    expect(d.parametros[0][1]).toContain('{{emp_contribuicao_mensal}}');
+  });
 });

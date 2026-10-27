@@ -1,0 +1,71 @@
+{
+  "versao": "v1.0 (out/2026)",
+  "titulo": "ANEXO IV — DIRETRIZES DE USO DO CONDOMÍNIO DE CHÁCARAS BOM JARDIMS",
+  "subtitulo": "Permissões e restrições definidas pela proprietária/instituidora",
+  "intro": "Para cada atividade vale a opção marcada. Quando marcada \"Com condições\", a atividade só é admitida nos termos da regra indicada. Estas Diretrizes integram o Estatuto e o Regimento Interno da associação e o contrato de compra e venda (Anexo IV), e só podem ser alteradas pela Assembleia Geral, no quórum do Estatuto.",
+  "secoes": [
+    { "titulo": "1. USO DAS CHÁCARAS", "itens": [
+      [1, "Residência unifamiliar (1 casa principal por chácara)", "P", "Permitido"],
+      [2, "Segunda edificação (casa de caseiro, edícula, galpão)", "CC", "Até 1 por chácara, com aprovação de projeto"],
+      [3, "Locação por temporada (diárias, plataformas digitais)", "CC", "Cadastro prévio na portaria; vedada para eventos"],
+      [4, "Pousada, hospedagem comercial ou camping", "PR", "Proibido"],
+      [5, "Eventos pagos (festas, casamentos, shows)", "PR", "Proibido"],
+      [6, "Comércio ou prestação de serviço com atendimento ao público", "PR", "Proibido"],
+      [7, "Escritório ou trabalho remoto sem atendimento ao público", "P", "Permitido"],
+      [8, "Desmembramento ou subdivisão da chácara", "PR", "Proibido"]
+    ]},
+    { "titulo": "2. CRIAÇÃO DE ANIMAIS", "itens": [
+      [9, "Suinocultura (porcos)", "CC", "Pocilga com piso de concreto, cobertura e esterqueira/biodigestor; afastamento de 30 m das divisas e 50 m de residências; até 10 animais"],
+      [10, "Avicultura (galinhas, patos) para consumo próprio", "CC", "Galinheiro coberto e cercado; até 50 aves; sem galo junto às divisas"],
+      [11, "Avicultura comercial (granja)", "PR", "Proibido"],
+      [12, "Bovinos e bubalinos", "CC", "Piquete cercado; até 2 cabeças por chácara"],
+      [13, "Equinos (cavalos, muares)", "CC", "Baia coberta e piquete; até 2 animais; trânsito nas vias só montado ou conduzido"],
+      [14, "Caprinos e ovinos", "CC", "Aprisco coberto; até 10 animais"],
+      [15, "Piscicultura (tanques escavados)", "CC", "Sem captação no córrego e sem lançamento de efluentes"],
+      [16, "Apicultura (abelhas com ferrão)", "CC", "Afastamento de 50 m das divisas; meliponas (sem ferrão) livres"],
+      [17, "Cães e gatos", "P", "Vacinados; nas vias somente com guia"],
+      [18, "Canil comercial / criação para venda", "PR", "Proibido"],
+      [19, "Animais silvestres ou exóticos", "PR", "Proibido, salvo autorização do IBAMA"]
+    ]},
+    { "titulo": "3. EDIFICAÇÕES E FECHAMENTOS", "itens": [
+      [20, "Recuo frontal mínimo", "CC", "Mínimo de 10,00 m"],
+      [21, "Recuos laterais e de fundos mínimos", "CC", "Mínimo de 5,00 m"],
+      [22, "Taxa de ocupação máxima", "CC", "Máximo de 30% da área da chácara"],
+      [23, "Edificações com mais de 2 pavimentos", "PR", "Proibido"],
+      [24, "Muro de alvenaria fechado na frente da chácara", "PR", "Proibido — padrão de mureta + alambrado ou mourões"],
+      [25, "Muro de alvenaria nas divisas laterais e de fundos", "CC", "Altura máxima de 2,00 m"],
+      [26, "Piscina", "CC", "Afastamento de 1,50 m das divisas; descarte da água na rede pluvial interna da chácara"],
+      [27, "Placas publicitárias ou outdoors", "PR", "Proibido — exceto placa de identificação da chácara"],
+      [28, "Antenas e torres acima de 12 m", "CC", "Aprovação da administração"]
+    ]},
+    { "titulo": "4. SANEAMENTO, ÁGUA E MEIO AMBIENTE", "itens": [
+      [29, "Fossa séptica + sumidouro (NBR 7229/13969)", "CC", "Obrigatório"],
+      [30, "Poço individual (cacimba ou tubular)", "CC", "Autorização da administração e outorga ambiental"],
+      [31, "Irrigação com água da rede do condomínio", "CC", "Horário e limite definidos em assembleia; consumo medido"],
+      [32, "Queimadas e queima de lixo", "PR", "Proibido"],
+      [33, "Supressão de árvores nativas dentro da chácara", "CC", "Autorização ambiental quando exigível"],
+      [34, "Supressão de vegetação na APP e na Quadra F", "PR", "Proibido"],
+      [35, "Caça; pesca com rede ou tarrafa no córrego", "PR", "Proibido"],
+      [36, "Pesca esportiva (anzol) e banho nos pontos definidos", "CC", "Somente pelos chacreiros e convidados acompanhados"],
+      [37, "Uso de agrotóxicos", "CC", "Receituário agronômico; proibido a menos de 30 m do córrego"],
+      [38, "Compostagem doméstica", "P", "Permitido"]
+    ]},
+    { "titulo": "5. CONVIVÊNCIA E CIRCULAÇÃO", "itens": [
+      [39, "Som amplificado (22h às 7h)", "PR", "Proibido"],
+      [40, "Som amplificado (7h às 22h)", "CC", "Dentro dos limites da NBR 10151"],
+      [41, "Fogos de artifício com estampido", "PR", "Proibido — fauna e animais domésticos"],
+      [42, "Quadriciclos, motos de trilha e similares nas vias", "CC", "Somente para acesso à chácara, a até 20 km/h"],
+      [43, "Caminhões e máquinas pesadas nas vias", "CC", "Para obras, com aviso prévio; das 7h às 17h"],
+      [44, "Uso da área de vivência (Qd. F) por não condôminos", "CC", "Somente acompanhados de condômino; limite por chácara"],
+      [45, "Armas de fogo (uso ou disparo nas áreas do condomínio)", "PR", "Proibido, ressalvado o porte legal"]
+    ]}
+  ],
+  "parametros": [
+    ["Contribuição condominial (por chácara)", "R$ {{emp_contribuicao_mensal}} por mês"],
+    ["Critério de rateio", "Igual por unidade (mesmo valor para todas as chácaras)"],
+    ["Limite de veículos por chácara no cadastro da portaria", "3 (três)"],
+    ["Taxa de cessão de direitos (Cláusula 16.2 do contrato)", "1 (um) salário mínimo nacional vigente"],
+    ["Recuo frontal mínimo · recuos laterais e de fundos", "10,00 m · 5,00 m"],
+    ["Taxa de ocupação máxima · pavimentos", "30% · até 2 pavimentos"]
+  ]
+}

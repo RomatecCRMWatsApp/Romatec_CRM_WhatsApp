@@ -40,7 +40,7 @@ export async function gerarContratoPdf(ctx: Ctx, plano: PlanoContrato, o: Opcoes
     anexoMemorial(o.unidade, ctx, o.marca),
     anexoTabelaPagamento(plano, ctx, o.marca),
     anexoEstatuto(ctx, opcoes),
-    anexoDiretrizes(),
+    anexoDiretrizes(ctx, o.marca),
     anexoMapa(o.unidade, ctx, o.marca),
     anexoLicenca(ctx, o.marca, o.licenca),
     docIntermediacao(ctx, o.marca),

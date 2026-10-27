@@ -48,11 +48,11 @@ export async function modeloDocumento(tipo: TipoModelo, slug: string, usuarioId?
     const pdf = await marcaDagua(await docIntermediacao(montarContexto(m.entrada), m.j.marcaSlug), SEM_VALOR);
     return { pdf, nome: `MODELO-CONTRATO-INTERMEDIACAO-${S}.pdf` };
   }
-  // Anexos do CPCV: os mesmos arquivos que entram em cada contrato (Estatuto e Diretrizes valem como estão, sem faixa)
-  if (tipo === 'diretrizes') return { pdf: await anexoDiretrizes(), nome: `DIRETRIZES-DE-USO-${S}.pdf` };
-  if (tipo === 'estatuto' || tipo === 'tabela') {
+  // Anexos do CPCV: os mesmos documentos que entram em cada contrato (Estatuto e Diretrizes valem como estão, sem faixa)
+  if (tipo === 'estatuto' || tipo === 'tabela' || tipo === 'diretrizes') {
     const m = await prepararModelo(slug, 'A01', usuarioId);
     const ctx = montarContexto(m.entrada);
+    if (tipo === 'diretrizes') return { pdf: await anexoDiretrizes(ctx, m.j.marcaSlug), nome: `DIRETRIZES-DE-USO-${S}.pdf` };
     if (tipo === 'estatuto') return { pdf: await anexoEstatuto(ctx, { minuta: false, marca: m.j.marcaSlug }), nome: `ESTATUTO-${S}.pdf` };
     return { pdf: await marcaDagua(await anexoTabelaPagamento(m.plano as any, ctx, m.j.marcaSlug), SEM_VALOR), nome: `MODELO-TABELA-PAGAMENTO-ANEXO-II-${S}.pdf` };
   }

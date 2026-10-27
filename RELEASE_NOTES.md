@@ -3,6 +3,14 @@
 Cada versão nova vai no TOPO. Depois rode `npm run release` (valida e atualiza o package.json);
 ao subir, o servidor grava a versão no banco e todos recebem o aviso "Novidades da versão".
 
+## 1.57.1 — 2026-10-28
+tipo: patch
+obrigatoria: nao
+titulo: Diretrizes de Uso em documento digital com a marca Bom Jardims
+
+### Melhorias
+- As Diretrizes de Uso que vão em cada contrato agora são um documento digital, com o timbre do Bom Jardims e uma tabela organizada: as 45 atividades com a opção escolhida pela proprietária (Permitido, Com condições ou Proibido), a regra de cada uma e os parâmetros (R$ 100,00 por chácara, rateio igual por unidade, 3 veículos, recuos de 10 m e 5 m, ocupação de 30%, até 2 pavimentos). Antes ia a cópia escaneada
+
 ## 1.57.0 — 2026-10-28
 tipo: minor
 obrigatoria: nao
