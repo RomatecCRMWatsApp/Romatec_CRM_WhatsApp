@@ -369,6 +369,36 @@ async function aplicarAprovado(ref: { assinaturaId: number; faturaId: number | n
   return 'aprovado';
 }
 
+/**
+ * Preço do plano mudou: o Pix/boleto já sai com o valor novo na próxima fatura, mas o cartão recorrente guarda o valor
+ * na assinatura do Mercado Pago — aqui cada uma passa a cobrar o preço do ciclo (preço negociado e cupom em vigor
+ * continuam valendo; precoDoCiclo decide). Falha numa não para as outras; tudo fica na auditoria.
+ */
+export async function reajustarRecorrencias(planoId: number, autorId: number, agora = Date.now()) {
+  const plano = (await S.listarPlanos()).find(p => p.id === planoId);
+  if (!plano) return { atualizadas: 0, falhas: [] as string[] };
+  const d = await banco();
+  const as: any[] = (await d.select().from(saasAssinaturas).where(eq(saasAssinaturas.planoId, planoId)))
+    .filter((a: any) => a.mpPreapprovalId && a.status !== 'CANCELADA');
+  if (!as.length) return { atualizadas: 0, falhas: [] as string[] };
+  const modo = await modoMp();
+  let atualizadas = 0;
+  const falhas: string[] = [];
+  for (const a of as) {
+    try {
+      const preco = await precoDoCiclo(a, plano, true);
+      await mp.req(modo, 'PUT', `/preapproval/${a.mpPreapprovalId}`, { auto_recurring: { transaction_amount: preco, currency_id: 'BRL' } });
+      await S.auditar(a.usuarioId, 'REAJUSTE_RECORRENCIA', { assinaturaId: a.id, plano: plano.codigo, valor: preco, por: autorId, modo });
+      atualizadas++;
+    } catch (e: any) {
+      falhas.push(`assinatura ${a.id}: ${String(e?.message ?? e).slice(0, 120)}`);
+      console.warn(`[MP] reajuste da recorrência ${a.id}:`, e?.message);
+    }
+  }
+  void agora;
+  return { atualizadas, falhas };
+}
+
 /** Depois do upgrade pago: cartão recorrente passa a cobrar o plano novo, NFS-e na fila, AvalieImob liberado e aviso ao assinante */
 async function posUpgrade(a: any, novoPlanoId: number, valor: number, modo: ModoMp, mpId: string, agora: number): Promise<string> {
   S.limparCaches();

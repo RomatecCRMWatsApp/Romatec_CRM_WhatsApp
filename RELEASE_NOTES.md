@@ -3,6 +3,14 @@
 Cada versão nova vai no TOPO. Depois rode `npm run release` (valida e atualiza o package.json);
 ao subir, o servidor grava a versão no banco e todos recebem o aviso "Novidades da versão".
 
+## 1.53.0 — 2026-10-27
+tipo: minor
+obrigatoria: nao
+titulo: Mudança de preço vale também para o cartão recorrente
+
+### Melhorias
+- Admin → SaaS → Planos e cupons: ao mudar o preço de um plano, o sistema pede confirmação e atualiza também as assinaturas pagas no cartão recorrente do Mercado Pago, que passam a cobrar o valor novo na próxima cobrança. Pix e boleto já saem com o valor novo na próxima fatura. Preço negociado e cupom em vigor continuam valendo
+
 ## 1.52.0 — 2026-10-27
 tipo: minor
 obrigatoria: nao

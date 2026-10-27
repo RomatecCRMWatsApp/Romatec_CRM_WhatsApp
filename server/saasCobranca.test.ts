@@ -214,3 +214,24 @@ describe('upgrade Essencial → Pro com a diferença proporcional', () => {
     await expect(C.iniciarUpgrade({ id: 999, perfil: 'corretor' }, { metodo: 'PIX' })).rejects.toThrow(/Upgrade indisponível/);
   });
 });
+
+describe('preço do plano mudou: cartão recorrente acompanha', () => {
+  it('cada assinatura no cartão passa a cobrar o preço novo; preço negociado fica; cancelada e Pix ficam de fora', async () => {
+    const plano = (await S.listarPlanos()).find(p => p.codigo === 'CORRETOR_ESSENCIAL')!;
+    db.run(sql`INSERT INTO users (id, openId, name, role, perfil, ativo) VALUES (40, 'u40', 'R1', 'user', 'corretor', 1), (41, 'u41', 'R2', 'user', 'corretor', 1), (42, 'u42', 'R3', 'user', 'corretor', 1), (43, 'u43', 'R4', 'user', 'corretor', 1)`);
+    db.run(sql`INSERT INTO saasAssinaturas (usuarioId, planoId, chave, origem, ciclo, status, precoOverride, mpPreapprovalId) VALUES
+      (40, ${plano.id}, '40:0', 'PAGA', 'MENSAL', 'ATIVA', NULL, 'pre-reaj'),
+      (41, ${plano.id}, '41:0', 'PAGA', 'MENSAL', 'ATIVA', '79.90', 'pre-neg'),
+      (42, ${plano.id}, '42:0', 'PAGA', 'MENSAL', 'CANCELADA', NULL, 'pre-canc'),
+      (43, ${plano.id}, '43:0', 'PAGA', 'MENSAL', 'ATIVA', NULL, NULL)`);
+    await S.atualizarPlano(plano.id, { precoMensal: 149.9 });
+    chamadas.length = 0;
+    const r = await C.reajustarRecorrencias(plano.id, 1);
+    const puts = Object.fromEntries(chamadas.filter(c => c.metodo === 'PUT').map(c => [c.caminho, c.corpo.auto_recurring.transaction_amount]));
+    expect(puts['/preapproval/pre-reaj']).toBe(149.9);
+    expect(puts['/preapproval/pre-neg']).toBe(79.9);
+    expect(puts['/preapproval/pre-canc']).toBeUndefined();
+    expect(r.falhas).toEqual([]);
+    expect(r.atualizadas).toBeGreaterThanOrEqual(2);
+  });
+});

@@ -179,7 +179,15 @@ function PlanosECupons() {
   const utils = trpc.useUtils();
   const { data: planos } = trpc.saas.planos.useQuery();
   const { data: cupons } = trpc.saas.cupons.useQuery();
-  const salvarPlano = trpc.saas.atualizarPlano.useMutation({ onSuccess: () => { toast.success("Plano salvo"); utils.saas.planos.invalidate(); }, onError: e => toast.error(e.message) });
+  const salvarPlano = trpc.saas.atualizarPlano.useMutation({
+    onSuccess: r => {
+      const rj = r.reajuste;
+      toast.success(rj ? `Plano salvo. Cartão recorrente: ${rj.atualizadas} assinatura(s) atualizada(s) para o valor novo${rj.falhas.length ? `, ${rj.falhas.length} com falha` : ""}.` : "Plano salvo");
+      if (rj?.falhas.length) toast.error(`Não atualizou no Mercado Pago: ${rj.falhas.join(" · ")}`);
+      utils.saas.planos.invalidate();
+    },
+    onError: e => toast.error(e.message),
+  });
   const criar = trpc.saas.criarCupom.useMutation({ onSuccess: r => { toast.success(`Cupom ${r.codigo} criado`); utils.saas.cupons.invalidate(); }, onError: e => toast.error(e.message) });
   const cancelar = trpc.saas.cancelarCupom.useMutation({ onSuccess: () => utils.saas.cupons.invalidate() });
   const [c, setC] = useState({ codigo: "", tipo: "PERCENTUAL" as "PERCENTUAL" | "VALOR_FIXO", valor: "10", planoAlvo: "", limiteUsos: "10", validade: "", duracaoCiclos: "1" });
@@ -193,7 +201,10 @@ function PlanosECupons() {
           {(planos ?? []).map(p => (
             <form key={p.id} className="grid items-end gap-2 md:grid-cols-[2fr_1fr_1fr_auto]" onSubmit={e => {
               e.preventDefault(); const f = new FormData(e.currentTarget);
-              salvarPlano.mutate({ id: p.id, precoMensal: num(String(f.get("m"))), precoAnual: String(f.get("a")).trim() ? num(String(f.get("a"))) : null });
+              const m = num(String(f.get("m"))), a = String(f.get("a")).trim() ? num(String(f.get("a"))) : null;
+              const mudou = m !== Number(p.precoMensal) || (a ?? null) !== (p.precoAnual == null ? null : Number(p.precoAnual));
+              if (mudou && !confirm(`Mudar o preço de ${p.nome}? Vale para a próxima fatura de todos os assinantes deste plano (Pix, boleto e cartão recorrente). Preço negociado e cupom em vigor continuam valendo.`)) return;
+              salvarPlano.mutate({ id: p.id, precoMensal: m, precoAnual: a });
             }}>
               <p className="text-sm"><b>{p.nome}</b><span className="block text-[11px] text-muted-foreground">{p.codigo}{p.unico ? " · cobrança única" : ""}</span></p>
               <label className="text-xs text-muted-foreground">{p.unico ? "Valor" : "Mensal"}<input name="m" className={campo} defaultValue={String(p.precoMensal).replace(".", ",")} /></label>

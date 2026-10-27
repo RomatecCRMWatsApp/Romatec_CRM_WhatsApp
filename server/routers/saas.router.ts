@@ -107,7 +107,19 @@ export const saasRouter = router({
   })).mutation(async ({ ctx, input }) => { admin(ctx); return comErro(async () => (await S()).acaoAssinatura(input.id, input, ctx.user.id)); }),
   planos: protectedProcedure.query(async ({ ctx }) => { admin(ctx); return (await S()).listarPlanos(); }),
   atualizarPlano: protectedProcedure.input(z.object({ id: z.number().int(), nome: z.string().trim().min(3).max(80).optional(), precoMensal: z.number().min(0).max(100000).optional(), precoAnual: z.number().min(0).max(1000000).nullable().optional(), conteudo: z.string().max(2000).optional(), ativo: z.boolean().optional() }))
-    .mutation(async ({ ctx, input }) => { admin(ctx); return (await S()).atualizarPlano(input.id, input); }),
+    .mutation(async ({ ctx, input }) => {
+      admin(ctx);
+      const antes = (await (await S()).listarPlanos()).find(p => p.id === input.id);
+      const r = await (await S()).atualizarPlano(input.id, input);
+      // Preço mudou: as assinaturas no cartão recorrente passam a cobrar o valor novo (Pix/boleto já usam o plano)
+      const mudou = !!antes && ((input.precoMensal !== undefined && Number(input.precoMensal) !== Number(antes.precoMensal))
+        || (input.precoAnual !== undefined && (input.precoAnual == null ? antes.precoAnual != null : Number(input.precoAnual) !== Number(antes.precoAnual))));
+      if (mudou) {
+        const reajuste = await (await import("../saas/cobranca")).reajustarRecorrencias(input.id, ctx.user.id);
+        return { ...r, reajuste };
+      }
+      return { ...r, reajuste: null };
+    }),
   cupons: protectedProcedure.query(async ({ ctx }) => { admin(ctx); return (await S()).listarCupons(); }),
   criarCupom: protectedProcedure.input(z.object({
     codigo: z.string().trim().max(40).nullable().optional(), tipo: z.enum(["PERCENTUAL", "VALOR_FIXO", "PRECO_FIXO"]), valor: z.number().min(0).max(100000).optional(),
