@@ -3,6 +3,15 @@
 Cada versão nova vai no TOPO. Depois rode `npm run release` (valida e atualiza o package.json);
 ao subir, o servidor grava a versão no banco e todos recebem o aviso "Novidades da versão".
 
+## 1.55.0 — 2026-10-27
+tipo: minor
+obrigatoria: nao
+titulo: Corrigir nomes de contatos com "?"
+
+### Novo
+- Clientes (administrador): aviso com quantos contatos estão com o nome estragado ("?" no lugar de acentos e emojis, da carga inicial dos contatos) e o botão "Corrigir nomes"
+- O nome original é buscado pelo telefone na agenda do celular conectado ao WhatsApp do sistema ou num arquivo .vcf (contatos exportados do celular ou do Google). Vem marcado só o nome que bate com o que restou (ex.: "Zez??o" aceita "Zezão"); os diferentes ficam para você conferir. Só muda contato que ainda está com "?"
+
 ## 1.54.0 — 2026-10-27
 tipo: minor
 obrigatoria: nao

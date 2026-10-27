@@ -4,6 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import FichaCliente from "@/components/cadastro/FichaCliente";
+import CorrigirNomes from "@/components/cadastro/CorrigirNomes";
 import { Users, Search, Trash2, Edit, Plus, Phone, Mail, ArrowLeft, UserCheck, UserX, ChevronLeft, ChevronRight } from "lucide-react";
 import PageHeader from "@/components/PageHeader";
 import { useLocation } from "wouter";
@@ -62,6 +63,8 @@ export default function Contacts() {
 
       {/* Content */}
       <div className="px-4 md:px-6 pb-8 max-w-[1500px] mx-auto">
+        {/* Nomes com "?" da carga inicial: correção pela agenda (só o administrador) */}
+        {user?.role === "admin" && <CorrigirNomes onAplicado={() => refetch()} />}
         {/* Search Bar */}
         <div className="mb-6">
           <div className="relative">
