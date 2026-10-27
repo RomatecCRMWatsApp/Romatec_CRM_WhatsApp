@@ -1206,6 +1206,8 @@ async function startServer() {
     await addAutoResposta();
     const { addDespesas } = await import('./migrations/addDespesas');
     await addDespesas();
+    const { reajustePrecos20261027 } = await import('./migrations/reajustePrecos20261027');
+    await reajustePrecos20261027();
     const { addControleLotes } = await import('./migrations/addControleLotes');
     await addControleLotes();
   } catch (e) {

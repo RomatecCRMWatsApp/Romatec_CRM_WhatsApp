@@ -3,6 +3,15 @@
 Cada versão nova vai no TOPO. Depois rode `npm run release` (valida e atualiza o package.json);
 ao subir, o servidor grava a versão no banco e todos recebem o aviso "Novidades da versão".
 
+## 1.53.1 — 2026-10-27
+tipo: patch
+obrigatoria: nao
+titulo: Novos preços dos planos do corretor
+
+### Avisos
+- Corretor Essencial: R$ 149,90 por mês ou R$ 1.499,00 por ano. Corretor Pro: R$ 299,90 por mês ou R$ 2.999,00 por ano
+- O teste grátis continua de 7 dias. Quem já assina passa ao valor novo na próxima cobrança (Pix, boleto e cartão recorrente). Preço negociado e cupom FUNDADOR em vigor continuam valendo até o fim
+
 ## 1.53.0 — 2026-10-27
 tipo: minor
 obrigatoria: nao
