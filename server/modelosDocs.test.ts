@@ -36,18 +36,34 @@ vi.mock('./financeiro/servico', async orig => ({
 }));
 
 describe('modelos em PDF da aba Contratos', () => {
-  it('intermediação, carnê e recibo: PDFs com faixa de modelo, sem dado pagável', async () => {
+  it('intermediação, carnê, boleto, recibo, tabela (Anexo II) e Diretrizes: PDFs prontos, sem dado pagável', async () => {
     const { modeloDocumento } = await import('./contratos/modelosDocs');
     const { writeFile, mkdir } = await import('node:fs/promises');
     const { PDFDocument } = await import('pdf-lib');
     const pasta = process.env.MODELOS_SAIDA;
     if (pasta) await mkdir(pasta, { recursive: true });
-    for (const tipo of ['intermediacao', 'carne', 'recibo'] as const) {
+    // O Estatuto passa pelo LibreOffice (fora daqui); o texto dele é conferido no teste abaixo
+    for (const tipo of ['intermediacao', 'carne', 'boleto', 'recibo', 'tabela', 'diretrizes'] as const) {
       const { pdf, nome } = await modeloDocumento(tipo, 'bom-jardims', 2);
       expect(pdf.subarray(0, 5).toString()).toBe('%PDF-');
-      expect(nome).toMatch(/^MODELO-.*-BOM-JARDIMS\.pdf$/);
+      expect(nome).toMatch(/-BOM-JARDIMS\.pdf$/);
       expect((await PDFDocument.load(pdf)).getPageCount()).toBeGreaterThan(0);
       if (pasta) await writeFile(`${pasta}/${nome}`, pdf);
     }
   }, 60_000);
+
+  it('parâmetros da proprietária: rateio por unidade, R$ 100,00 e até 3 veículos no CPCV e no Estatuto', async () => {
+    const { mergeDocx } = await import('./contratos/render');
+    const { ESTATUTO } = await import('./contratos/anexos');
+    const PizZip = (await import('pizzip')).default;
+    const texto = async (modelo: string) => new PizZip(await mergeDocx(modelo, SEED_EMP_JURIDICO.defaults as any, { minuta: false, marca: 'bomjardims' }))
+      .file('word/document.xml')!.asText().replace(/<[^>]+>/g, '');
+    const cpcv = await texto('MODELO-CPCV-BOM-JARDIMS-v2.docx');
+    expect(cpcv).toContain('R$ 100,00/mês por chácara, rateada igualmente por unidade');
+    const est = await texto(ESTATUTO.arquivo);
+    expect(est).toContain('rateadas igualmente por unidade');
+    expect(est).toContain('até 3 (três) veículos');
+    for (const t of [cpcv, est]) expect(t).not.toMatch(/proporcional(mente)? à área/);
+    expect(SEED_EMP_JURIDICO.defaults.limite_veiculos).toBe(3);
+  });
 });

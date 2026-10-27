@@ -108,11 +108,17 @@ export async function anexoTabelaPagamento(plano: PlanoContrato, ctx: Ctx, marca
   return Buffer.from(await doc.save({ useObjectStreams: false }));
 }
 
+/**
+ * Estatuto (Anexo III): para mudar o texto, edite o DOCX em templates/ e suba a versão aqui — os contratos
+ * gerados depois saem com o texto novo; os já gerados guardam o PDF da época (contratoVersoes).
+ */
+export const ESTATUTO = { arquivo: 'MODELO-ESTATUTO-ASSOCIACAO-BOM-JARDIMS-v1.docx', versao: 'v1.1 (out/2026)' };
+
 /** Tags do Estatuto (Anexo III) a partir do contexto do contrato */
 export function contextoEstatuto(ctx: Ctx): Ctx {
   return {
     ...ctx,
-    est_versao: String(ctx.est_versao ?? 'v1.0 (out/2026)'),
+    est_versao: String(ctx.est_versao ?? ESTATUTO.versao),
     est_data_extenso: String(ctx.ctr_data_extenso ?? ''),
     inst_nome: String(ctx.vend_pj ? ctx.vend_razao_social ?? '' : ctx.vend_nome ?? ''),
     inst_documento: ctx.vend_pj ? `CNPJ ${ctx.vend_cnpj ?? ''}` : `CPF ${ctx.vend_cpf ?? ''}`,
@@ -121,10 +127,10 @@ export function contextoEstatuto(ctx: Ctx): Ctx {
 
 /** Anexo III — Estatuto da associação (merge do modelo, mesma marca) */
 export async function anexoEstatuto(ctx: Ctx, opcoes: { minuta: boolean; marca: string }): Promise<Buffer> {
-  return docxParaPdf(await mergeDocx('MODELO-ESTATUTO-ASSOCIACAO-BOM-JARDIMS-v1.docx', contextoEstatuto(ctx), opcoes));
+  return docxParaPdf(await mergeDocx(ESTATUTO.arquivo, contextoEstatuto(ctx), opcoes));
 }
 
-/** Anexo IV — Diretrizes de Uso (PDF pronto do empreendimento) */
+/** Anexo IV — Diretrizes de Uso: o checklist marcado pela proprietária (PDF escaneado, anexado como está) */
 export async function anexoDiretrizes(): Promise<Buffer> {
-  return readFile(path.join(pastaTemplates(), 'CHECKLIST-Diretrizes-Uso-Bom-Jardims.pdf'));
+  return readFile(path.join(pastaTemplates(), 'DIRETRIZES-USO-Bom-Jardims-preenchida.pdf'));
 }

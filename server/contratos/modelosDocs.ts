@@ -1,5 +1,6 @@
 /**
- * Modelos em PDF para baixar na aba Contratos (sem criar nada no banco): Contrato de Intermediação, carnê e recibo,
+ * Modelos em PDF para baixar na aba Contratos (sem criar nada no banco): Contrato de Intermediação, carnê, boleto, recibo,
+ * os anexos do CPCV (II tabela de pagamento, III Estatuto, IV Diretrizes de Uso),
  * preenchidos com o mesmo contrato fictício do contrato modelo (cliente exemplo, chácara A01, entrada 6× + maior prazo).
  *
  * Carnê e recibo: linha digitável, código de barras, nosso número e PIX ZERADOS — no sistema eles vêm sempre do Asaas;
@@ -9,11 +10,12 @@ import { montarContexto } from './contexto';
 import { docIntermediacao } from './docsComissao';
 import { marcaDagua } from './render';
 import { prepararModelo, CLIENTE_EXEMPLO } from './modelo';
-import { blocoDoCarne, dadosCarne, rotuloParcela, type CobrancaDoc, type ContextoDocs } from '../financeiro/dados';
-import { renderCarneV2, renderRecibo } from '../financeiro/render/documentos';
+import { anexoDiretrizes, anexoEstatuto, anexoTabelaPagamento } from './anexos';
+import { blocoDoCarne, dadosCarne, dadosParcela, rotuloParcela, type CobrancaDoc, type ContextoDocs } from '../financeiro/dados';
+import { renderBoletoA4, renderCarneV2, renderRecibo } from '../financeiro/render/documentos';
 import { beneficiarioDoEmpreendimento, urlPublica } from '../financeiro/servico';
 
-export const TIPOS_MODELO = ['intermediacao', 'carne', 'recibo'] as const;
+export const TIPOS_MODELO = ['intermediacao', 'carne', 'boleto', 'recibo', 'tabela', 'estatuto', 'diretrizes'] as const;
 export type TipoModelo = typeof TIPOS_MODELO[number];
 
 const SEM_VALOR = 'MODELO — SEM VALOR';
@@ -46,6 +48,14 @@ export async function modeloDocumento(tipo: TipoModelo, slug: string, usuarioId?
     const pdf = await marcaDagua(await docIntermediacao(montarContexto(m.entrada), m.j.marcaSlug), SEM_VALOR);
     return { pdf, nome: `MODELO-CONTRATO-INTERMEDIACAO-${S}.pdf` };
   }
+  // Anexos do CPCV: os mesmos arquivos que entram em cada contrato (Estatuto e Diretrizes valem como estão, sem faixa)
+  if (tipo === 'diretrizes') return { pdf: await anexoDiretrizes(), nome: `DIRETRIZES-DE-USO-${S}.pdf` };
+  if (tipo === 'estatuto' || tipo === 'tabela') {
+    const m = await prepararModelo(slug, 'A01', usuarioId);
+    const ctx = montarContexto(m.entrada);
+    if (tipo === 'estatuto') return { pdf: await anexoEstatuto(ctx, { minuta: false, marca: m.j.marcaSlug }), nome: `ESTATUTO-${S}.pdf` };
+    return { pdf: await marcaDagua(await anexoTabelaPagamento(m.plano as any, ctx, m.j.marcaSlug), SEM_VALOR), nome: `MODELO-TABELA-PAGAMENTO-ANEXO-II-${S}.pdf` };
+  }
   const { ctx, cobrancas } = await contextoModelo(slug, usuarioId);
   if (tipo === 'carne') {
     // Carnê anual 1 (12 parcelas: entrada + início do saldo)
@@ -53,6 +63,7 @@ export async function modeloDocumento(tipo: TipoModelo, slug: string, usuarioId?
     return { pdf: await renderCarneV2(dadosCarne(ctx, bloco, 1), { modelo: true }), nome: `MODELO-CARNE-${S}.pdf` };
   }
   const c = cobrancas.find(x => x.tipo === 'saldo') ?? cobrancas[0];
+  if (tipo === 'boleto') return { pdf: await renderBoletoA4(dadosParcela(ctx, c, cobrancas), { modelo: true }), nome: `MODELO-BOLETO-${S}.pdf` };
   const pdf = await renderRecibo({
     numero: 'REC-MODELO-000000', codigoVerif: '0000-0000-0000', urlVerificacao: `${ctx.urlPublica}/r/REC-MODELO-000000`,
     pagadorNome: ctx.comprador.nome, pagadorDoc: 'CPF 000.000.000-00', contratoNumero: ctx.contrato.numero,

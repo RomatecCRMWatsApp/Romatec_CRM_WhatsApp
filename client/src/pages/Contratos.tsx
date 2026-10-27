@@ -24,7 +24,11 @@ const FILTROS: { rotulo: string; status?: StatusContrato[] }[] = [
 const MODELOS = [
   { url: "/api/contratos/modelo.pdf?slug=bom-jardims&lote=A01", nome: "CONTRATO-MODELO-CPCV-BOM-JARDIMS-A01.pdf", rotulo: "Contrato de compra e venda (CPCV)", demora: true },
   { url: "/api/contratos/modelos/intermediacao.pdf?slug=bom-jardims", nome: "MODELO-CONTRATO-INTERMEDIACAO-BOM-JARDIMS.pdf", rotulo: "Contrato de intermediação" },
+  { url: "/api/contratos/modelos/diretrizes.pdf?slug=bom-jardims", nome: "DIRETRIZES-DE-USO-BOM-JARDIMS.pdf", rotulo: "Diretrizes de Uso (preenchidas pela proprietária)" },
+  { url: "/api/contratos/modelos/estatuto.pdf?slug=bom-jardims", nome: "ESTATUTO-BOM-JARDIMS.pdf", rotulo: "Estatuto da associação", demora: true },
+  { url: "/api/contratos/modelos/tabela.pdf?slug=bom-jardims", nome: "MODELO-TABELA-PAGAMENTO-ANEXO-II-BOM-JARDIMS.pdf", rotulo: "Tabela de pagamento (Anexo II)" },
   { url: "/api/contratos/modelos/carne.pdf?slug=bom-jardims", nome: "MODELO-CARNE-BOM-JARDIMS.pdf", rotulo: "Carnê de pagamento" },
+  { url: "/api/contratos/modelos/boleto.pdf?slug=bom-jardims", nome: "MODELO-BOLETO-BOM-JARDIMS.pdf", rotulo: "Boleto de pagamento" },
   { url: "/api/contratos/modelos/recibo.pdf?slug=bom-jardims", nome: "MODELO-RECIBO-BOM-JARDIMS.pdf", rotulo: "Recibo de pagamento" },
 ];
 const ENCERRADOS = ["cancelado", "distratado"];

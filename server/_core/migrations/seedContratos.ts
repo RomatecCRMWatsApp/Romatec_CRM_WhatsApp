@@ -7,6 +7,7 @@ export const SEED_EMP_JURIDICO = {
     ...defaultsBomJardims.empreendimento_defaults,
     // Portaria (spec §14.1)
     limite_dependentes: 6,
+    limite_veiculos: 3, // Diretrizes de Uso marcadas pela proprietária (out/2026)
     limite_convidados_evento: { chacara: 30, area_vivencia: 15, quadra_e: 50 },
     antecedencia_evento_horas: 48,
     validade_carteira_meses: 24,

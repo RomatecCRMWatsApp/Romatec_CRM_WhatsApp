@@ -287,6 +287,19 @@ const COMANDOS: { nome: string; stmt: ReturnType<typeof sql> }[] = [
       FROM empreendimentos e
       WHERE e.slug = ${SEED_EMP_JURIDICO.slug} AND NOT EXISTS (SELECT 1 FROM empJuridico j WHERE j.empreendimentoId = e.id)`,
   },
+  // Parâmetros das Diretrizes de Uso (proprietária, out/2026): só preenche o que ainda está vazio — nunca sobrescreve
+  {
+    nome: 'empJuridico: contribuição mensal (Bom Jardims)',
+    stmt: sql`UPDATE empJuridico j JOIN empreendimentos e ON e.id = j.empreendimentoId
+      SET j.defaultsJson = JSON_SET(j.defaultsJson, '$.emp_contribuicao_mensal', ${SEED_EMP_JURIDICO.defaults.emp_contribuicao_mensal})
+      WHERE e.slug = ${SEED_EMP_JURIDICO.slug} AND COALESCE(JSON_UNQUOTE(JSON_EXTRACT(j.defaultsJson, '$.emp_contribuicao_mensal')), '') = ''`,
+  },
+  {
+    nome: 'empJuridico: limite de veículos (Bom Jardims)',
+    stmt: sql`UPDATE empJuridico j JOIN empreendimentos e ON e.id = j.empreendimentoId
+      SET j.defaultsJson = JSON_SET(j.defaultsJson, '$.limite_veiculos', ${SEED_EMP_JURIDICO.defaults.limite_veiculos})
+      WHERE e.slug = ${SEED_EMP_JURIDICO.slug} AND JSON_EXTRACT(j.defaultsJson, '$.limite_veiculos') IS NULL`,
+  },
 ];
 
 export async function addContratos(): Promise<void> {

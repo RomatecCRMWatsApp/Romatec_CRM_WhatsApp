@@ -3,6 +3,22 @@
 Cada versão nova vai no TOPO. Depois rode `npm run release` (valida e atualiza o package.json);
 ao subir, o servidor grava a versão no banco e todos recebem o aviso "Novidades da versão".
 
+## 1.57.0 — 2026-10-28
+tipo: minor
+obrigatoria: nao
+titulo: Contratos: Diretrizes de Uso da proprietária, Estatuto e todos os modelos na aba Contratos
+
+### Novo
+- Aba Contratos: além do CPCV, da intermediação, do carnê e do recibo, agora também dá para baixar as Diretrizes de Uso, o Estatuto da associação, a tabela de pagamento (Anexo II) e o modelo de boleto
+
+### Melhorias
+- Todo contrato novo leva as Diretrizes de Uso marcadas e preenchidas pela proprietária, no lugar do checklist em branco
+- Contribuição associativa: R$ 100,00 por mês por chácara, com valor igual para todas, seja qual for a área (antes o texto dizia "proporcional à área"). Mudou no contrato e no Estatuto
+- Estatuto (versão 1.1): cada chácara pode cadastrar até 3 veículos na portaria. O texto pode ser ajustado ao longo do tempo, e os contratos seguintes já saem com a versão nova
+
+### Avisos
+- Contratos já gerados continuam com os documentos da época em que foram feitos
+
 ## 1.56.1 — 2026-10-28
 tipo: patch
 obrigatoria: nao
