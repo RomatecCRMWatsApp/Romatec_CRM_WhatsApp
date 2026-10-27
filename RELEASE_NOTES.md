@@ -3,6 +3,16 @@
 Cada versão nova vai no TOPO. Depois rode `npm run release` (valida e atualiza o package.json);
 ao subir, o servidor grava a versão no banco e todos recebem o aviso "Novidades da versão".
 
+## 1.56.1 — 2026-10-28
+tipo: patch
+obrigatoria: nao
+titulo: WhatsApp: descadastro respeitado, sem resposta em dobro e alertas de atendimento
+
+### Correções
+- Campanhas: quem pede para sair ("sair", "parar", "não me mande") sai da fila de vez, e o disparo pula quem está descadastrado. Antes, qualquer resposta, até o "parar", recolocava o contato na campanha
+- O robô não responde mais duas vezes à mesma mensagem quando o WhatsApp reenvia (resposta demorada) ou quando há duas cópias do sistema no ar
+- Alerta de lead sem atendimento: os leads esquecidos que já receberam os 3 avisos não travam mais a fila; o lead novo sempre é avisado, do mais antigo para o mais novo
+
 ## 1.56.0 — 2026-10-27
 tipo: minor
 obrigatoria: nao

@@ -23,6 +23,8 @@ const TABELAS: [string, string][] = [
   ['autoRespostaRegua', `CREATE TABLE IF NOT EXISTS autoRespostaRegua (
     leadId INT PRIMARY KEY, empreendimentoId INT NOT NULL, desde TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP, passo INT NOT NULL DEFAULT 0,
     proximoAt TIMESTAMP NULL, seguidas INT NOT NULL DEFAULT 0, updatedAt TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP, KEY ix_regua_proximo (proximoAt))`],
+  ['zapiMensagensVistas', `CREATE TABLE IF NOT EXISTS zapiMensagensVistas (
+    messageId VARCHAR(120) PRIMARY KEY, createdAt TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP, KEY ix_zapi_vista_data (createdAt))`],
 ];
 
 export async function addAutoResposta(): Promise<void> {

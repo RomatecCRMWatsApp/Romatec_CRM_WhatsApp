@@ -7,8 +7,8 @@
  */
 
 import { getDb } from '../db';
-import { contacts, campaignContacts } from '../../drizzle/schema';
-import { eq, and } from 'drizzle-orm';
+import { contacts, campaignContacts, leadQualifications } from '../../drizzle/schema';
+import { eq, and, gt } from 'drizzle-orm';
 import { CONTACTS_PER_CAMPAIGN } from './constants';
 
 /**
@@ -37,11 +37,17 @@ export async function getNextContact(campaignId: number): Promise<typeof contact
       ));
   }
 
+  // Lead descadastrado ou descartado (blockedUntil no futuro) não recebe campanha
+  const final11 = (v: unknown) => String(v ?? '').replace(/\D/g, '').slice(-11);
+  const bloqueados = new Set((await db.select({ phone: leadQualifications.phone }).from(leadQualifications)
+    .where(gt(leadQualifications.blockedUntil, new Date()))).map((l: { phone: string }) => final11(l.phone)));
+
   const shuffled = [...ccList].sort(() => Math.random() - 0.5);
   for (const cc of shuffled) {
     const result = await db.select().from(contacts).where(eq(contacts.id, cc.contactId)).limit(1);
     const contact = result[0];
     if (!contact || contact.status !== 'active') continue;
+    if (bloqueados.has(final11(contact.phone))) continue;
     return contact;
   }
 

@@ -119,6 +119,31 @@ export function jaProcessada(messageId?: string | null, now = Date.now()): boole
   return false;
 }
 
+/**
+ * Idempotência no banco: vale entre reenvios da Z-API (quando a resposta demora) e entre cópias do servidor.
+ * true = mensagem nova (pode processar); false = já recebida antes.
+ */
+let gravadas = 0;
+export async function mensagemNova(messageId?: string | null): Promise<boolean> {
+  if (!messageId) return true;
+  const { getDb } = await import('../db');
+  const { zapiMensagensVistas } = await import('../../drizzle/schema');
+  const db = await getDb();
+  if (!db) return !jaProcessada(messageId);
+  try {
+    await db.insert(zapiMensagensVistas).values({ messageId: String(messageId).slice(0, 120) });
+  } catch (e: any) {
+    const erro = `${e?.message ?? ''} ${e?.cause?.message ?? ''} ${e?.cause?.code ?? e?.code ?? ''}`;
+    if (/Duplicate entry|ER_DUP_ENTRY|UNIQUE constraint|SQLITE_CONSTRAINT/i.test(erro)) return false;
+    return !jaProcessada(messageId); // banco com problema: cai na memória deste processo
+  }
+  if (++gravadas % 500 === 0) {
+    const { lt } = await import('drizzle-orm');
+    await db.delete(zapiMensagensVistas).where(lt(zapiMensagensVistas.createdAt, new Date(Date.now() - 3 * 24 * 3600_000))).catch(() => {});
+  }
+  return true;
+}
+
 export type ResultadoEntrada = { acao: 'nenhuma' | 'atualizado' } | { acao: 'abertura'; mensagem: string; funil: Funil; empreendimento?: string | null };
 
 export async function processarEntradaWhatsApp(input: { phone: string; texto: string; nome?: string | null; messageId?: string | null }): Promise<ResultadoEntrada> {

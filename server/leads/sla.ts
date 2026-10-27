@@ -11,7 +11,7 @@
  * - Alertas só entre 7h e 21h (Maranhão).
  */
 import crypto from 'crypto';
-import { and, eq, isNotNull, isNull } from 'drizzle-orm';
+import { and, asc, eq, isNotNull, isNull, lt, or } from 'drizzle-orm';
 import { appUrl } from './config';
 import type { TipoAviso } from './notificacao';
 
@@ -123,7 +123,10 @@ export async function processarSla(agora = Date.now()): Promise<number> {
   const { db, leadQualifications, users } = await banco();
   if (!db) return 0;
   const esperando: any[] = await db.select().from(leadQualifications)
-    .where(and(isNotNull(leadQualifications.aguardandoCorretorDesde), isNull(leadQualifications.atendidoAt))).limit(50);
+    // Sem os que já tiveram os 3 alertas (senão 50 leads esquecidos travam a fila) e do mais antigo para o mais novo
+    .where(and(isNotNull(leadQualifications.aguardandoCorretorDesde), isNull(leadQualifications.atendidoAt),
+      or(isNull(leadQualifications.alertaSlaNivel), lt(leadQualifications.alertaSlaNivel, NIVEL_DA_ACAO.avisar_admin))))
+    .orderBy(asc(leadQualifications.aguardandoCorretorDesde)).limit(50);
   if (!esperando.length) return 0;
   const { roleta, admin, todos } = await candidatos(db, users);
   const { enviarTexto } = await import('./zapiClient');

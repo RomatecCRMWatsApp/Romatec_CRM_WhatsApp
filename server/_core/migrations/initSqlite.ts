@@ -592,6 +592,7 @@ export function initSqliteTables(sqlite: any): void {
   run(`CREATE TABLE IF NOT EXISTS linksOferta (
     token TEXT PRIMARY KEY, leadId INTEGER NOT NULL, empreendimentoId INTEGER NOT NULL, aberturas INTEGER NOT NULL DEFAULT 0,
     primeiraAberturaAt INTEGER, ultimaAberturaAt INTEGER, createdAt ${agoraS}, UNIQUE (leadId, empreendimentoId))`);
+  run(`CREATE TABLE IF NOT EXISTS zapiMensagensVistas (messageId TEXT PRIMARY KEY, createdAt ${agoraS})`);
   run(`CREATE TABLE IF NOT EXISTS autoRespostaRegua (
     leadId INTEGER PRIMARY KEY, empreendimentoId INTEGER NOT NULL, desde INTEGER NOT NULL, passo INTEGER NOT NULL DEFAULT 0,
     proximoAt INTEGER, seguidas INTEGER NOT NULL DEFAULT 0, updatedAt ${agoraS})`);

@@ -86,6 +86,13 @@ async function startServer() {
         return res.json({ received: true, processed: false });
       }
 
+      // Reenvio da Z-API (a resposta demorou) ou outra cópia do servidor: não responde de novo
+      const { mensagemNova } = await import('../leads/inbound');
+      if (!(await mensagemNova(payload.messageId))) {
+        console.log(`[Webhook] ↩️ Mensagem ${payload.messageId} já recebida — ignorada`);
+        return res.json({ received: true, processed: false, reason: 'duplicate' });
+      }
+
       const msgText = String(payload.message || '').trim();
       if (!msgText && !payload.audioUrl) {
         console.log(`[Webhook] Ignorado: mensagem vazia de ${payload.phone}`);
@@ -164,10 +171,18 @@ async function startServer() {
             try {
               const { campaignContacts } = await import('../../drizzle/schema');
               const { eq } = await import('drizzle-orm');
-              await db.update(campaignContacts)
-                .set({ messagesSent: 0, status: "pending" })
-                .where(eq(campaignContacts.contactId, contact.id));
-              console.log(`[Webhook] ✅ Tentativas resetadas para ${senderName} (respondeu)`);
+              const { pediuOptout } = await import('../leads/iaQualificacao');
+              if (!req.body?.fromMe && pediuOptout(msgText)) {
+                // Pediu para sair: fora das campanhas de vez (não volta para a fila)
+                await db.update(campaignContacts).set({ status: "blocked" }).where(eq(campaignContacts.contactId, contact.id));
+                await db.update(contacts).set({ status: "blocked" }).where(eq(contacts.id, contact.id));
+                console.log(`[Webhook] 🚫 ${senderName} pediu para sair — fora das campanhas`);
+              } else {
+                await db.update(campaignContacts)
+                  .set({ messagesSent: 0, status: "pending" })
+                  .where(eq(campaignContacts.contactId, contact.id));
+                console.log(`[Webhook] ✅ Tentativas resetadas para ${senderName} (respondeu)`);
+              }
             } catch (resetErr) {
               console.warn('[Webhook] Erro ao resetar tentativas (não crítico):', resetErr);
             }

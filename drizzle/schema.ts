@@ -836,6 +836,12 @@ export const financeiroDespesas = mysqlTable("financeiroDespesas", {
   updatedAt: timestamp("updatedAt").defaultNow().notNull(),
 });
 
+/** Mensagens da Z-API já recebidas (messageId): reenvio da Z-API ou outra cópia do servidor não respondem de novo */
+export const zapiMensagensVistas = mysqlTable("zapiMensagensVistas", {
+  messageId: varchar("messageId", { length: 120 }).primaryKey(),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+});
+
 /** Link pessoal da página de oferta (/o/:slug?l=token) — saber quem abriu e quantas vezes */
 export const linksOferta = mysqlTable("linksOferta", {
   token: varchar("token", { length: 24 }).primaryKey(),
