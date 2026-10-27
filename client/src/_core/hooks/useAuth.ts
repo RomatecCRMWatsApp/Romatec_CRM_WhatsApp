@@ -1,6 +1,7 @@
 import { trpc } from "@/lib/trpc";
 import { TRPCClientError } from "@trpc/client";
 import { useCallback, useEffect, useMemo } from "react";
+import { sairVerComo, verComoAtual } from "@/lib/verComo";
 
 type UseAuthOptions = {
   redirectOnUnauthenticated?: boolean;
@@ -32,6 +33,8 @@ export function useAuth(options?: UseAuthOptions) {
 
   // Sair: apaga o cookie (espera no máximo 3 s) e recarrega direto no login — sem a tela ficar de pé, vazia, refazendo consultas
   const logout = useCallback(async () => {
+    // No "ver como" do administrador, o botão Sair da pessoa só encerra a visualização (o administrador continua logado)
+    if (verComoAtual()) { sairVerComo(); return; }
     try {
       await Promise.race([logoutMutation.mutateAsync(), new Promise(r => setTimeout(r, 3000))]);
     } catch { /* sessão já encerrada ou rede: segue para o login */ }

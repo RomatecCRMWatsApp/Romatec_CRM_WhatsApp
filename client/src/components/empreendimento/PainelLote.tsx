@@ -8,7 +8,6 @@ import { Button } from "@/components/ui/button";
 import { COM_CLIENTE, COR_SITUACAO, ROTULO_SITUACAO, SITUACOES_LOTE, type SituacaoLote } from "@shared/lotes";
 import { SLUG_BOM_JARDIMS, codigoChacaraValido, linkChacara, linkKml } from "@shared/chacaraLink";
 import { comRef, useCartaoVendas } from "@/lib/cartaoVendas";
-import { useVisaoComo } from "@/lib/visaoComo";
 import { exibirTelefoneBR } from "@shared/telefone";
 import EnviarWhatsAppModal from "@/components/EnviarWhatsAppModal";
 import { Link2, Send, ExternalLink, Globe2 } from "lucide-react";
@@ -122,11 +121,9 @@ export default function PainelLote({ slug, lote, onMudou, onFechar }: { slug: st
     setNumParcelas(lote.numParcelas?.toString() ?? ""); setObservacao(lote.observacao ?? ""); setBusca("");
   }, [lote.id, lote.situacao, lote.dataSituacao]);
 
-  // Corretor só consulta: situação, cliente e valores são do escritório (o servidor também recusa).
-  // Na "Visão do corretor" do administrador, a tela fica igual à dele.
+  // Corretor só consulta: situação, cliente e valores são do escritório (o servidor também recusa)
   const { user } = useAuth();
-  const visao = useVisaoComo();
-  const soLeitura = perfilDe(user as any) === "corretor" || visao === "corretor";
+  const soLeitura = perfilDe(user as any) === "corretor";
   // Empreendedor muda situação, cliente e valores; lead e corretor ficam como estão (o servidor preserva)
   const empreendedor = perfilDe(user as any) === "empreendedor";
   const { data: corretores } = trpc.crm.responsaveis.useQuery(undefined, { enabled: !soLeitura && !empreendedor });

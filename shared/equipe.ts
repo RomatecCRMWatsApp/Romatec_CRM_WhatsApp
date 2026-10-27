@@ -88,8 +88,8 @@ export function podeAbrir(perfil: Perfil | null, caminho: string): boolean {
   if (caminho === '/reservas') return perfil === 'secretario';
   // Respostas automáticas no WhatsApp (robô por empreendimento): administrador e secretária
   if (caminho === '/respostas-automaticas') return perfil === 'secretario';
-  // Visão do corretor (prévia da página inicial dele): administrador e secretária
-  if (caminho === '/visao-corretor') return perfil === 'secretario';
+  // "Ver como" (o sistema como cada pessoa vê, só leitura): só o administrador
+  if (caminho === '/ver-como' || caminho.startsWith('/ver-como?') || caminho === '/visao-corretor') return false;
   // Disparos WhatsApp: administrador e secretária
   if (caminho === '/campaigns' || caminho.startsWith('/campaigns/')) return perfil === 'secretario';
   return !['/equipe', '/settings', '/setup'].some(p => caminho === p || caminho.startsWith(`${p}/`)) && !caminho.startsWith('/empreendedor');

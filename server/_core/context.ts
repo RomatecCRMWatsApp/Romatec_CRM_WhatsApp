@@ -6,6 +6,8 @@ export type TrpcContext = {
   req: CreateExpressContextOptions["req"];
   res: CreateExpressContextOptions["res"];
   user: User | null;
+  /** "Ver como" do administrador (server/_core/verComo.ts): só leitura */
+  verComo?: import("./verComo").VerComo | null;
 };
 
 export async function createContext(
@@ -24,5 +26,6 @@ export async function createContext(
     req: opts.req,
     res: opts.res,
     user,
+    verComo: (opts.req as any).verComo ?? null,
   };
 }

@@ -38,6 +38,9 @@ async function startServer() {
     },
   }));
   app.use(express.urlencoded({ limit: "50mb", extended: true }));
+  // "Ver como" do administrador: só leitura também nas rotas REST (server/_core/verComo.ts)
+  const { bloquearEscritaRest } = await import('./verComo');
+  app.use(bloquearEscritaRest);
   registerOAuthRoutes(app);
   // Camada SaaS: licença nas rotas REST (antes das demais /api) + talonários — só age com o licenciamento ligado
   const { registrarRotasSaas } = await import('../saas/rotas');

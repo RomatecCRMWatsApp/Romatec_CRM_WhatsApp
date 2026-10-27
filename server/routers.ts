@@ -20,6 +20,7 @@ import { recrutamentoRouter } from "./routers/recrutamento.router";
 import { saasRouter } from "./routers/saas.router";
 import { reservasRouter } from "./routers/reservas.router";
 import { autoRespostaRouter } from "./routers/autoResposta.router";
+import { verComoRouter } from "./routers/verComo.router";
 import { contratosRouter, pessoaZ } from "./routers/contratos.router";
 import { permissoesRouter } from "./routers/permissoes.router";
 import { cadastroRouter } from "./routers/cadastro.router";
@@ -75,6 +76,7 @@ export const appRouter = router({
   saas: saasRouter,
   reservas: reservasRouter,
   autoResposta: autoRespostaRouter,
+  verComo: verComoRouter,
   contratos: contratosRouter,
   permissoes: permissoesRouter,
   cadastro: cadastroRouter,
@@ -91,7 +93,9 @@ export const appRouter = router({
       // Camada SaaS: situação da licença (banner do teste e redirecionamento para /assinatura)
       const { resumoLicenca } = await import("./saas/servico");
       const licenca = await resumoLicenca(opts.ctx.user).catch(() => null);
-      return { ...safe, licenca } as Omit<typeof opts.ctx.user, 'passwordScrypt' | 'passwordHash'> & { licenca: Awaited<ReturnType<typeof resumoLicenca>> | null };
+      // "Ver como" do administrador: a tela mostra a faixa "vendo como … · só leitura"
+      const verComo = opts.ctx.verComo ? { adminNome: opts.ctx.verComo.adminNome } : null;
+      return { ...safe, licenca, verComo } as Omit<typeof opts.ctx.user, 'passwordScrypt' | 'passwordHash'> & { licenca: Awaited<ReturnType<typeof resumoLicenca>> | null; verComo: { adminNome: string } | null };
     }),
     logout: publicProcedure.mutation(({ ctx }) => {
       const cookieOptions = getSessionCookieOptions(ctx.req);

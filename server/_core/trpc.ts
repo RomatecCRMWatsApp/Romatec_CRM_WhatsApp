@@ -6,6 +6,7 @@ import { perfilDe, podeChamar } from "../../shared/equipe";
 import { moduloLiberado } from "../../shared/permissoes";
 import { caminhoLivre, precisaLicenca } from "../../shared/saas";
 import { carregarPermissoes, type PermissoesUsuario } from "../permissoes";
+import { MENSAGEM_SO_LEITURA } from "./verComo";
 
 const t = initTRPC.context<TrpcContext>().create({
   transformer: superjson,
@@ -17,7 +18,15 @@ const t = initTRPC.context<TrpcContext>().create({
 });
 
 export const router = t.router;
-export const publicProcedure = t.procedure;
+
+/** "Ver como" do administrador (server/_core/verComo.ts): só leitura — nenhuma ação é gravada em nome da pessoa */
+const somenteLeituraNoVerComo = t.middleware(({ ctx, type, next }) => {
+  if (ctx.verComo && type !== "query") throw new TRPCError({ code: "FORBIDDEN", message: MENSAGEM_SO_LEITURA });
+  return next();
+});
+const base = t.procedure.use(somenteLeituraNoVerComo);
+
+export const publicProcedure = base;
 
 const requireUser = t.middleware(async opts => {
   const { ctx, next, path } = opts;
@@ -60,9 +69,9 @@ const requireUser = t.middleware(async opts => {
   });
 });
 
-export const protectedProcedure = t.procedure.use(requireUser);
+export const protectedProcedure = base.use(requireUser);
 
-export const adminProcedure = t.procedure.use(
+export const adminProcedure = base.use(
   t.middleware(async opts => {
     const { ctx, next } = opts;
 

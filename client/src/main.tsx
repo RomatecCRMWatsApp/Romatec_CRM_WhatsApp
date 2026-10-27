@@ -9,9 +9,12 @@ import { getLoginUrl } from "./const";
 import "./brand"; // identidade visual: tokens.css (cores, fontes, animações) uma única vez
 import "./index.css";
 import { capturarOrigem } from "./lib/origemVisita";
+import { instalarVerComo, sairVerComo, verComoAtual } from "./lib/verComo";
 
 // De onde veio o visitante (UTM, referrer, página de entrada) — vai junto nos formulários
 capturarOrigem();
+// "Ver como" do administrador (lib/verComo.ts): o cabeçalho vai em toda chamada ao servidor desta aba
+instalarVerComo();
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -39,6 +42,8 @@ const redirectToLoginIfUnauthorized = (error: unknown) => {
 
   if (!isUnauthorized) return;
 
+  // No "ver como", a pessoa perdeu o acesso (desativada) ou a sessão do administrador caiu: sai do modo
+  if (verComoAtual()) { sairVerComo("/login"); return; }
   window.location.href = getLoginUrl();
 };
 

@@ -3,6 +3,15 @@
 Cada versão nova vai no TOPO. Depois rode `npm run release` (valida e atualiza o package.json);
 ao subir, o servidor grava a versão no banco e todos recebem o aviso "Novidades da versão".
 
+## 1.52.0 — 2026-10-27
+tipo: minor
+obrigatoria: nao
+titulo: Ver como (corretor, secretária e empreendedora)
+
+### Novo
+- Administração → "Visão portal do corretor", "Visão da secretária" e "Visão do empreendedor" (só o administrador): escolha a pessoa e clique em "Ver como". O sistema abre exatamente como ela vê, com o menu, os empreendimentos e imóveis liberados, os módulos e os dados dela. Serve para conferir na hora se o que você liberou apareceu para a pessoa
+- É só visualização: nada pode ser alterado em nome dela (o servidor recusa qualquer ação). Uma faixa embaixo da tela mostra quem está sendo visto e o botão "Sair" para voltar. Vale só na aba aberta, e cada visualização fica registrada
+
 ## 1.51.1 — 2026-10-27
 tipo: patch
 obrigatoria: nao

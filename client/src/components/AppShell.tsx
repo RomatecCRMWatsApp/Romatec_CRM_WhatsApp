@@ -74,9 +74,10 @@ const MENU: Grupo[] = [
       // Administrador e secretária (shared/equipe.ts → podeAbrir)
       { rotulo: "Respostas automáticas", rota: "/respostas-automaticas", icone: Bot },
       { rotulo: "SaaS e assinaturas", rota: "/saas", icone: BadgeDollarSign },
-      { rotulo: "Visão do empreendedor", rota: "/empreendedor", icone: Eye },
-      // Administrador e secretária (shared/equipe.ts → podeAbrir)
-      { rotulo: "Visão portal do corretor", rota: "/visao-corretor", icone: Smartphone },
+      // "Ver como" (só o administrador): o sistema exatamente como cada pessoa vê, só leitura
+      { rotulo: "Visão portal do corretor", rota: "/ver-como?perfil=corretor", icone: Smartphone },
+      { rotulo: "Visão da secretária", rota: "/ver-como?perfil=secretario", icone: UserCog },
+      { rotulo: "Visão do empreendedor", rota: "/ver-como?perfil=empreendedor", icone: Eye },
       { rotulo: "Configurações", rota: "/settings", icone: Settings },
     ],
   },

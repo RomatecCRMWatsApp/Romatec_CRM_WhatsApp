@@ -82,7 +82,9 @@ class SDKServer {
     if (!sessaoValida(session.sv, (user as any).sessaoVersao)) throw ForbiddenError("Session expired");
 
     await db.upsertUser({ openId: user.openId, lastSignedIn: new Date() });
-    return user;
+    // "Ver como" do administrador (server/_core/verComo.ts): responde como o usuário escolhido, só leitura
+    const { aplicarVerComo } = await import('./verComo');
+    return aplicarVerComo(req, user);
   }
 }
 

@@ -5,6 +5,7 @@ import { Route, Switch, useLocation } from "wouter";
 import ErrorBoundary from "./components/ErrorBoundary";
 import BarraVersao from "./components/BarraVersao";
 import AvisoCookies from "./components/AvisoCookies";
+import FaixaVerComo from "./components/sistema/FaixaVerComo";
 import { ThemeProvider } from "./contexts/ThemeContext";
 // Protetor de tela, novidades da versão e alertas: só no CRM (o site público não baixa)
 const CamadaSistema = lazy(() => import("./components/sistema/CamadaSistema"));
@@ -55,7 +56,7 @@ const Agendar = lazy(() => import("./pages/Agendar"));
 const Oferta = lazy(() => import("./pages/Oferta"));
 const AreaCorretor = lazy(() => import("./pages/AreaCorretor"));
 const PainelCorretor = lazy(() => import("./pages/PainelCorretor"));
-const VisaoCorretor = lazy(() => import("./pages/VisaoCorretor"));
+const VerComo = lazy(() => import("./pages/VerComo"));
 /** Painel: o corretor vê o mapa do empreendimento e os atalhos; o escritório, os números */
 function Inicio() {
   const { user } = useAuth();
@@ -151,8 +152,11 @@ function Router() {
       <Route path={"/empreendedor"}>
         {() => <SetupGuard component={Empreendedor} />}
       </Route>
+      <Route path={"/ver-como"}>
+        {() => <SetupGuard component={VerComo} />}
+      </Route>
       <Route path={"/visao-corretor"}>
-        {() => <SetupGuard component={VisaoCorretor} />}
+        {() => <SetupGuard component={VerComo} />}
       </Route>
       <Route path={"/meu-cadastro"}>
         {() => <SetupGuard component={MeuCadastro} />}
@@ -294,6 +298,8 @@ function App() {
           </Suspense>
           <CamadaDoSistema />
           <AvisoCookies />
+          {/* "Ver como" do administrador: faixa com quem está sendo visto e o botão Sair */}
+          <FaixaVerComo />
         </TooltipProvider>
       </ThemeProvider>
     </ErrorBoundary>
