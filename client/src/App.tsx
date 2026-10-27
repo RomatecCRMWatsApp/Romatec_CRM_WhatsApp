@@ -1,3 +1,5 @@
+// No dev o Vite troca o import do React (CJS) por um `const` na mesma linha: tem que vir antes dos lazy()
+import { Suspense, lazy, useEffect } from "react";
 import { Toaster } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import NotFound from "@/pages/NotFound";
@@ -76,7 +78,6 @@ const LeadDetalhe = lazy(() => import("./pages/LeadDetalhe"));
 const Setup = lazy(() => import("./pages/Setup"));
 import { trpc } from "@/lib/trpc";
 import { useAuth } from "@/_core/hooks/useAuth";
-import { Suspense, lazy, useEffect } from "react";
 import { useIsMutating } from "@tanstack/react-query";
 import { APP_VERSION, LocationChangeLoading, PageLoader, QueryLoading, SplashScreen } from "@/brand";
 
