@@ -3,6 +3,18 @@
 Cada versão nova vai no TOPO. Depois rode `npm run release` (valida e atualiza o package.json);
 ao subir, o servidor grava a versão no banco e todos recebem o aviso "Novidades da versão".
 
+## 1.58.0 — 2026-10-28
+tipo: minor
+obrigatoria: nao
+titulo: Convites de reunião com link de confirmação de presença
+
+### Novo
+- Convites de reunião (menu Leads): o escritório cria a reunião com título, empreendimento, data, hora, local ou link de videochamada, descrição e um folder (imagem ou PDF), e vê quem confirmou, quem não pode ir e quem ainda não respondeu, com a contagem
+- Cada convidado da lista (nome e WhatsApp) recebe um link próprio, e o sistema já sabe quem respondeu. Há também um link geral para mandar em grupos: quem abre informa nome e WhatsApp antes de responder
+- O convite sai pelo WhatsApp com um clique, para todos os pendentes ou para uma pessoa só (reenviar), e cada link pode ser copiado
+- Quando alguém confirma presença, o administrador e a secretária recebem a notificação no sininho e no celular
+- Corretor e empreendedor veem as reuniões dos empreendimentos deles e quem confirmou, sem editar. O empreendedor abre pelo botão "Reuniões" no portal
+
 ## 1.57.1 — 2026-10-28
 tipo: patch
 obrigatoria: nao

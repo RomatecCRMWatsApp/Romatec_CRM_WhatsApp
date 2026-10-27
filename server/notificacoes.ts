@@ -133,7 +133,7 @@ export async function enviarPushes(repo: RepoNotificacoes, enviar: EnviadorPush 
 /** Grava a notificação para cada destinatário (endereço conforme o perfil) e dispara o push */
 async function emitir(
   repo: RepoNotificacoes, enviar: EnviadorPush | null, usuarios: UsuarioDestino[], ids: number[],
-  base: Omit<NovaNotificacao, "usuarioId" | "url">, alvo: { empreendimentoSlug?: string | null; lote?: string | null; contratoId?: number | null; leadId?: number | null },
+  base: Omit<NovaNotificacao, "usuarioId" | "url">, alvo: { empreendimentoSlug?: string | null; lote?: string | null; contratoId?: number | null; leadId?: number | null; reuniaoId?: number | null },
 ) {
   if (!ids.length) return { destinatarios: [] as number[], enviados: 0, removidos: 0 };
   const P = new Map(usuarios.map(u => [u.id, perfilDe(u as any)]));
@@ -247,6 +247,19 @@ export async function notificarAtendimento(
   return emitir(repo, enviar === undefined ? await enviadorWebPush() : enviar, usuarios, ids,
     { tipo: "atendimento", titulo, mensagem, empreendimentoId: p.empreendimentoId ?? null, chave: `atendimento:${p.leadId}:${Date.now()}` },
     { leadId: p.leadId });
+}
+
+/** Convidado confirmou presença numa reunião (link de confirmação) → sininho e push do escritório */
+export async function notificarConfirmacaoReuniao(
+  p: { reuniaoId: number; convidadoId: number; convidado: string; titulo: string; quando: string; empreendimentoId?: number | null; empreendimentoNome?: string | null },
+  repo: RepoNotificacoes = repoBanco(), enviar?: EnviadorPush | null,
+) {
+  const usuarios = await repo.usuarios();
+  const ids = destinatarios("confirmacao_reuniao", usuarios, [], perfilDe as any);
+  const { titulo, mensagem } = textoNotificacao("confirmacao_reuniao", { comprador: p.convidado, motivo: p.titulo, empreendimento: p.empreendimentoNome ?? undefined, quando: p.quando });
+  return emitir(repo, enviar === undefined ? await enviadorWebPush() : enviar, usuarios, ids,
+    { tipo: "confirmacao_reuniao", titulo, mensagem, empreendimentoId: p.empreendimentoId ?? null, chave: `reuniao:${p.convidadoId}:${Date.now()}` },
+    { reuniaoId: p.reuniaoId });
 }
 
 /** Ao subir uma versão nova: "Sistema atualizado para vX.Y.Z" para todos (uma vez por versão) */

@@ -57,7 +57,9 @@ const TRPC_EMPREENDEDOR = ['auth.', 'empreendedor.', 'system.versao', 'cadastro.
   'empreendimentosAdmin.detalhe', 'empreendimentosAdmin.atualizarLote', 'empreendimentosAdmin.historico', 'empreendimentosAdmin.memoriais',
   'financeiro.vendas', 'financeiro.tabelasEmpreendimentos', 'financeiro.tabela',
   // Carteirinhas oficiais do empreendimento dele (o corretor só baixa rascunho)
-  'contratos.carteirinhasLista'];
+  'contratos.carteirinhasLista',
+  // Reuniões do empreendimento dele e quem confirmou presença (só leitura)
+  'convites.listar', 'convites.detalhe'];
 /** Secretário e corretor não mexem em configurações, na equipe nem na ZAYRA */
 const TRPC_SO_ADMIN = ['companyConfig.update', 'equipe.', 'zaira.'];
 
@@ -80,7 +82,7 @@ export function podeAbrir(perfil: Perfil | null, caminho: string): boolean {
   if (caminho === '/meu-cadastro') return true;
   // Área do assinante (camada SaaS): corretor e empreendedor
   if (caminho === '/assinatura') return perfil === 'corretor' || perfil === 'empreendedor';
-  if (perfil === 'empreendedor') return caminho === '/empreendedor' || caminho.startsWith('/empreendedor/');
+  if (perfil === 'empreendedor') return caminho === '/empreendedor' || caminho.startsWith('/empreendedor/') || caminho === '/convites' || caminho.startsWith('/convites/');
   // Recrutamento e talonários: administrador e secretária; Admin › SaaS: só o administrador
   if (caminho === '/recrutamento' || caminho.startsWith('/recrutamento/') || caminho === '/talonarios') return perfil === 'secretario';
   if (caminho === '/saas') return false;

@@ -1214,6 +1214,49 @@ export const reuniaoPartes = mysqlTable("reuniaoPartes", {
   uqParte: uniqueIndex("uq_reuniao_parte").on(t.reuniaoId, t.ordem),
 }));
 
+/** Convites de reunião com confirmação de presença (shared/convites.ts) — não confundir com `reunioes` (gravação) */
+export const reunioesAgenda = mysqlTable("reunioesAgenda", {
+  id: int("id").autoincrement().primaryKey(),
+  titulo: varchar("titulo", { length: 160 }).notNull(),
+  empreendimentoId: int("empreendimentoId"),
+  quando: timestamp("quando").notNull(),
+  local: varchar("local", { length: 250 }),
+  linkVideo: varchar("linkVideo", { length: 300 }),
+  descricao: text("descricao"),
+  /** Link geral (/reuniao/<tokenGeral>): quem abre informa nome e telefone */
+  tokenGeral: varchar("tokenGeral", { length: 24 }).notNull(),
+  /** Folder/material da reunião (imagem ou PDF, até 10 MB), mostrado na página de confirmação */
+  folderMime: varchar("folderMime", { length: 40 }),
+  folderNome: varchar("folderNome", { length: 160 }),
+  folderBase64: longtext("folderBase64"),
+  criadoPor: int("criadoPor").notNull(),
+  canceladaEm: timestamp("canceladaEm"),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+}, (t) => ({
+  uqToken: uniqueIndex("uq_reuniao_agenda_token").on(t.tokenGeral),
+  ixEmp: index("ix_reuniao_agenda_emp").on(t.empreendimentoId, t.quando),
+}));
+
+/** Convidados e respostas: da lista (link individual) ou de quem respondeu pelo link geral */
+export const reuniaoConvidados = mysqlTable("reuniaoConvidados", {
+  id: int("id").autoincrement().primaryKey(),
+  reuniaoId: int("reuniaoId").notNull(),
+  nome: varchar("nome", { length: 120 }).notNull(),
+  /** 55 + DDD + número, só dígitos */
+  telefone: varchar("telefone", { length: 15 }).notNull(),
+  token: varchar("token", { length: 24 }).notNull(),
+  /** lista | link_geral */
+  origem: varchar("origem", { length: 12 }).notNull().default("lista"),
+  /** pendente | confirmado | recusado */
+  status: varchar("status", { length: 12 }).notNull().default("pendente"),
+  respondidoEm: timestamp("respondidoEm"),
+  conviteEnviadoEm: timestamp("conviteEnviadoEm"),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+}, (t) => ({
+  uqToken: uniqueIndex("uq_reuniao_conv_token").on(t.token),
+  uqFone: uniqueIndex("uq_reuniao_conv_fone").on(t.reuniaoId, t.telefone),
+}));
+
 /** Modelos de mensagem editáveis (chave → texto); sem linha, vale o padrão do código */
 export const modelosMensagem = mysqlTable("modelosMensagem", {
   chave: varchar("chave", { length: 60 }).primaryKey(),

@@ -11,7 +11,7 @@ import type { Perfil } from './equipe';
 import { VENDIDOS, type SituacaoLote } from './lotes';
 import { temAcesso, type AcessoCorretor } from './permissoes';
 
-export const TIPOS_NOTIFICACAO = ['atualizacao_sistema', 'reserva', 'venda_contrato', 'liberacao', 'solicitacao_cancelamento', 'agendamento', 'novo_lead', 'atendimento'] as const;
+export const TIPOS_NOTIFICACAO = ['atualizacao_sistema', 'reserva', 'venda_contrato', 'liberacao', 'solicitacao_cancelamento', 'agendamento', 'novo_lead', 'atendimento', 'confirmacao_reuniao'] as const;
 export type TipoNotificacao = typeof TIPOS_NOTIFICACAO[number];
 
 /** Som de cada tipo (client/public/sons) — trocar o arquivo troca o som, sem mexer no código */
@@ -24,6 +24,7 @@ export const SOM_POR_TIPO: Record<TipoNotificacao, string> = {
   agendamento: '/sons/agendamento.wav',
   novo_lead: '/sons/novo_lead.wav',
   atendimento: '/sons/atendimento.wav',
+  confirmacao_reuniao: '/sons/confirmacao_reuniao.wav',
 };
 
 export const ROTULO_NOTIFICACAO: Record<TipoNotificacao, string> = {
@@ -35,6 +36,7 @@ export const ROTULO_NOTIFICACAO: Record<TipoNotificacao, string> = {
   agendamento: 'Pedido de agendamento',
   novo_lead: 'Novo lead',
   atendimento: 'Cliente aguardando',
+  confirmacao_reuniao: 'Presença confirmada',
 };
 
 /** Cor do selo na lista do sininho */
@@ -47,6 +49,7 @@ export const COR_NOTIFICACAO: Record<TipoNotificacao, string> = {
   agendamento: '#2C7FB8',
   novo_lead: '#1F8A4C',
   atendimento: '#D9822B',
+  confirmacao_reuniao: '#3BA99C',
 };
 
 const RESERVAS: SituacaoLote[] = ['reservado', 'entrada'];
@@ -89,6 +92,10 @@ export function textoNotificacao(
       titulo: `Pedido de agendamento — ${d.comprador ?? 'cliente'}`,
       mensagem: `${d.comprador ?? 'Um cliente'} pediu atendimento${d.empreendimento ? ` no ${d.empreendimento}` : ''}${d.quando ? ` para ${d.quando}` : ''}${d.motivo ? ` (${d.motivo})` : ''}. Confirme o horário com ele.`.slice(0, 500),
     };
+    case 'confirmacao_reuniao': return {
+      titulo: `${d.comprador ?? 'Convidado'} confirmou presença`,
+      mensagem: `${d.comprador ?? 'Um convidado'} confirmou presença na reunião ${d.motivo ?? ''}${d.empreendimento ? ` (${d.empreendimento})` : ''}${d.quando ? ` — ${d.quando}` : ''}.`.slice(0, 500),
+    };
     case 'solicitacao_cancelamento': return {
       titulo: `Pedido de cancelamento — contrato ${d.contrato ?? '?'}`,
       mensagem: `${d.autor ?? 'Alguém da equipe'} pediu o cancelamento do contrato ${d.contrato ?? '?'} (${onde}${d.comprador ? `, comprador ${d.comprador}` : ''}). Motivo: ${d.motivo ?? '—'}`.slice(0, 500),
@@ -116,6 +123,8 @@ export function destinatarios(
     if (tipo === 'atualizacao_sistema') return true;
     // Pedido de cancelamento: só o administrador decide (e cancela com a senha)
     if (tipo === 'solicitacao_cancelamento') return perfilDe(u) === 'admin' && u.id !== alvo?.autorId;
+    // Presença confirmada em reunião: o escritório (quem cria e acompanha as reuniões)
+    if (tipo === 'confirmacao_reuniao') return ['admin', 'secretario'].includes(perfilDe(u) ?? '');
     // Pedido de agendamento: vai direto para o responsável (notificarAgendamento), não por escopo
     if (tipo === 'agendamento' || tipo === 'atendimento') return false;
     // Novo lead: admin e secretária (no escopo do empreendimento); corretor só o lead atribuído a ele;
@@ -139,8 +148,9 @@ export function destinatarios(
  * empreendedor; atualização do sistema abre o sininho.
  */
 export function urlDaNotificacao(
-  tipo: TipoNotificacao, d: { empreendimentoSlug?: string | null; lote?: string | null; contratoId?: number | null; leadId?: number | null }, perfil?: Perfil | null,
+  tipo: TipoNotificacao, d: { empreendimentoSlug?: string | null; lote?: string | null; contratoId?: number | null; leadId?: number | null; reuniaoId?: number | null }, perfil?: Perfil | null,
 ): string {
+  if (tipo === 'confirmacao_reuniao') return d.reuniaoId ? `/convites/${d.reuniaoId}` : '/convites';
   if (tipo === 'agendamento' || tipo === 'novo_lead' || tipo === 'atendimento') {
     if (tipo === 'novo_lead' && perfil === 'empreendedor') return '/empreendedor?notificacoes=1';
     return d.leadId ? `/leads/lead/${d.leadId}` : tipo === 'agendamento' ? '/agenda' : '/leads';

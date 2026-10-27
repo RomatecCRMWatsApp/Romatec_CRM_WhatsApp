@@ -25,6 +25,18 @@ const TABELAS: [string, string][] = [
     proximoAt TIMESTAMP NULL, seguidas INT NOT NULL DEFAULT 0, updatedAt TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP, KEY ix_regua_proximo (proximoAt))`],
   ['zapiMensagensVistas', `CREATE TABLE IF NOT EXISTS zapiMensagensVistas (
     messageId VARCHAR(120) PRIMARY KEY, createdAt TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP, KEY ix_zapi_vista_data (createdAt))`],
+  // Convites de reunião com confirmação de presença (shared/convites.ts)
+  ['reunioesAgenda', `CREATE TABLE IF NOT EXISTS reunioesAgenda (
+    id INT AUTO_INCREMENT PRIMARY KEY, titulo VARCHAR(160) NOT NULL, empreendimentoId INT NULL, quando TIMESTAMP NOT NULL,
+    local VARCHAR(250) NULL, linkVideo VARCHAR(300) NULL, descricao TEXT NULL, tokenGeral VARCHAR(24) NOT NULL,
+    folderMime VARCHAR(40) NULL, folderNome VARCHAR(160) NULL, folderBase64 LONGTEXT NULL, criadoPor INT NOT NULL, canceladaEm TIMESTAMP NULL,
+    createdAt TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    UNIQUE KEY uq_reuniao_agenda_token (tokenGeral), KEY ix_reuniao_agenda_emp (empreendimentoId, quando))`],
+  ['reuniaoConvidados', `CREATE TABLE IF NOT EXISTS reuniaoConvidados (
+    id INT AUTO_INCREMENT PRIMARY KEY, reuniaoId INT NOT NULL, nome VARCHAR(120) NOT NULL, telefone VARCHAR(15) NOT NULL,
+    token VARCHAR(24) NOT NULL, origem VARCHAR(12) NOT NULL DEFAULT 'lista', status VARCHAR(12) NOT NULL DEFAULT 'pendente',
+    respondidoEm TIMESTAMP NULL, conviteEnviadoEm TIMESTAMP NULL, createdAt TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    UNIQUE KEY uq_reuniao_conv_token (token), UNIQUE KEY uq_reuniao_conv_fone (reuniaoId, telefone))`],
 ];
 
 export async function addAutoResposta(): Promise<void> {

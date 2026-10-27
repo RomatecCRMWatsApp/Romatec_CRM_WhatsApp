@@ -390,6 +390,63 @@ async function startServer() {
       res.status(500).json({ ok: false, error: 'Não foi possível enviar agora. Fale pelo WhatsApp.' });
     }
   });
+  // ─── Convite de reunião: confirmação de presença (/reuniao/:token — server/convites.ts) ───
+  const allowReuniao = createRateLimiter(20, 10 * 60 * 1000);
+  const erroConvite = (res: express.Response, e: any, onde: string) => {
+    if (e?.name === 'ConviteErro') return res.status(e.status).json({ ok: false, error: e.message });
+    console.error(`[Convites] ${onde}:`, e);
+    res.status(500).json({ ok: false, error: 'Falha ao carregar o convite' });
+  };
+  app.get('/api/public/reuniao/:token', async (req, res) => {
+    try {
+      const { paginaPublica } = await import('../convites');
+      res.setHeader('Cache-Control', 'no-store');
+      res.json({ ok: true, ...(await paginaPublica(String(req.params.token))) });
+    } catch (e) { erroConvite(res, e, 'página'); }
+  });
+  app.post('/api/public/reuniao/:token', async (req, res) => {
+    try {
+      const fwd = String(req.headers['x-forwarded-for'] ?? '').split(',').map(s => s.trim()).filter(Boolean);
+      const ip = fwd[fwd.length - 1] || req.socket.remoteAddress || 'unknown';
+      if (!allowReuniao(ip)) return res.status(429).json({ ok: false, error: 'Muitas tentativas. Tente novamente em alguns minutos.' });
+      const { respostaSchema } = await import('../../shared/convites');
+      const parsed = respostaSchema.safeParse(req.body ?? {});
+      if (!parsed.success) return res.status(400).json({ ok: false, error: parsed.error.issues[0]?.message || 'Dados inválidos' });
+      if (parsed.data.website) return res.json({ ok: true, status: parsed.data.resposta }); // honeypot
+      const { responder } = await import('../convites');
+      res.json({ ok: true, ...(await responder(String(req.params.token), parsed.data.resposta, parsed.data)) });
+    } catch (e) { erroConvite(res, e, 'resposta'); }
+  });
+  app.get('/api/public/reuniao/:token/folder', async (req, res) => {
+    try {
+      const { folderPorToken } = await import('../convites');
+      const f = await folderPorToken(String(req.params.token));
+      res.setHeader('Content-Type', f.mime);
+      res.setHeader('Content-Disposition', `inline; filename="${encodeURIComponent(f.nome || 'folder')}"`);
+      res.setHeader('Cache-Control', 'private, max-age=300');
+      res.send(f.conteudo);
+    } catch (e: any) { res.status(e?.status ?? 500).send(e?.name === 'ConviteErro' ? e.message : 'Falha ao abrir o folder'); }
+  });
+  // Folder/material da reunião (imagem ou PDF): só administrador e secretária
+  app.post('/api/convites/:id/folder', express.raw({ type: '*/*', limit: '11mb' }), async (req, res) => {
+    try {
+      const { sdk } = await import('./sdk');
+      const user: any = await sdk.authenticateRequest(req).catch(() => null);
+      if (!user || user.ativo === false || user.ativo === 0) return res.status(401).json({ ok: false, error: 'Faça login' });
+      const { perfilDe } = await import('../../shared/equipe');
+      if (!['admin', 'secretario'].includes(perfilDe(user) ?? '')) return res.status(403).json({ ok: false, error: 'Só o administrador e a secretária' });
+      const { detectarMime } = await import('../../shared/cadastro');
+      const { MAX_FOLDER_BYTES } = await import('../../shared/convites');
+      const buffer = req.body as Buffer;
+      const mime = buffer?.length ? detectarMime(buffer) : null;
+      if (!mime) return res.status(415).json({ ok: false, error: 'Envie uma imagem (JPG, PNG, WEBP) ou um PDF' });
+      if (buffer.length > MAX_FOLDER_BYTES) return res.status(413).json({ ok: false, error: 'Arquivo acima de 10 MB' });
+      const { salvarFolder } = await import('../convites');
+      const nome = String(req.query.nome ?? 'folder').replace(/[^\w .()-]/g, '_').slice(0, 160);
+      await salvarFolder(Number(req.params.id) || 0, { mime, nome, conteudo: buffer });
+      res.json({ ok: true });
+    } catch (e) { erroConvite(res, e, 'folder'); }
+  });
   app.post('/api/public/lead', async (req, res) => {
     try {
       // Atrás do proxy do Railway: o último IP do x-forwarded-for é o que o proxy viu

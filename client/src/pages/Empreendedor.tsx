@@ -7,7 +7,7 @@ import { useAuth } from "@/_core/hooks/useAuth";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Bar, BarChart, CartesianGrid, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
-import { ArrowLeft, BarChart3, Copy, Download, ExternalLink, FileText, IdCard, Images, LogOut, Map as MapIcon, Receipt, Share2, Table2, TrendingUp, Video } from "lucide-react";
+import { ArrowLeft, BarChart3, CalendarCheck, Copy, Download, ExternalLink, FileText, IdCard, Images, LogOut, Map as MapIcon, Receipt, Share2, Table2, TrendingUp, Video } from "lucide-react";
 import { FotoUsuario } from "@/components/AppShell";
 import { SinoNovidades } from "@/components/sistema/Novidades";
 import { APP_VERSION, AppFooter, RomatecAppIcon } from "@/brand";
@@ -137,6 +137,7 @@ export default function Empreendedor() {
           <p className="min-w-0 flex-1 truncate text-sm text-white/80">
             {ehEmpreendedor ? "Portal do empreendedor" : "Visão do empreendedor (prévia)"} · <b className="text-white">{String((user as any)?.name || "").split(" ")[0]}</b>
           </p>
+          <Button size="sm" variant="ghost" className="text-white hover:bg-white/15" title="Reuniões e quem confirmou presença" onClick={() => navigate("/convites")}><CalendarCheck className="h-4 w-4 sm:mr-1" /><span className="hidden sm:inline">Reuniões</span></Button>
           <SinoNovidades className="text-white/80 hover:text-white" />
           <FotoUsuario />
           <Button size="sm" variant="ghost" className="text-white hover:bg-white/15" title="Sair" onClick={() => logout()}><LogOut className="h-4 w-4" /></Button>
