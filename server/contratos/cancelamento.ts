@@ -36,7 +36,7 @@ const tentativas = new Map<number, { falhas: number; ate: number }>();
 export async function exigirAdminComSenha(ator: Ator, senha: string, acao: string, ref: { contratoId?: number | null; cobrancaId?: number | null; ip?: string | null } = {}) {
   if (perfilDe(ator as any) !== 'admin') {
     await auditar('seguranca.acao_negada', { ...ref, usuarioId: ator.id, origem: 'perfil', detalhe: { acao, perfil: perfilDe(ator as any) } });
-    throw new ContratoErro('SO_ADMIN', 'Só o administrador pode cancelar contrato, cobrança ou recibo.', 403);
+    throw new ContratoErro('SO_ADMIN', 'Só o administrador pode cancelar ou excluir.', 403);
   }
   const t = tentativas.get(ator.id);
   if (t && t.ate > Date.now()) throw new ContratoErro('SENHA_BLOQUEADA', 'Muitas tentativas com a senha errada. Aguarde 15 minutos.', 429);
@@ -49,7 +49,7 @@ export async function exigirAdminComSenha(ator: Ator, senha: string, acao: strin
     const falhas = (t && t.ate === 0 ? t.falhas : 0) + 1;
     tentativas.set(ator.id, { falhas, ate: falhas >= LIMITE_TENTATIVAS ? Date.now() + BLOQUEIO_MS : 0 });
     await auditar('seguranca.senha_incorreta', { ...ref, usuarioId: ator.id, origem: 'perfil', detalhe: { acao, tentativa: falhas } });
-    throw new ContratoErro('SENHA', 'Senha incorreta. O cancelamento não foi feito.', 403);
+    throw new ContratoErro('SENHA', 'Senha incorreta. Nada foi alterado.', 403);
   }
   tentativas.delete(ator.id);
 }

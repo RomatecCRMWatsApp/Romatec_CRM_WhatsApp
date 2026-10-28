@@ -3,6 +3,24 @@
 Cada versão nova vai no TOPO. Depois rode `npm run release` (valida e atualiza o package.json);
 ao subir, o servidor grava a versão no banco e todos recebem o aviso "Novidades da versão".
 
+## 1.59.0 — 2026-10-28
+tipo: minor
+obrigatoria: nao
+titulo: Excluir de vez convites, leads e usuários desativados (só o administrador, com senha)
+
+### Novo
+- Recrutamento: convite cancelado sai da lista (botão "Cancelados" para ver) e o administrador pode excluir o convite de vez, com a lixeira
+- Leads: o administrador exclui de vez os leads descartados e os que vieram de número da equipe (sai também a conversa, os interesses e as visitas)
+- Equipe: usuário desativado ganha o botão "Remover". Sem histórico, o cadastro é apagado; com contrato, lead ou lançamento, fica arquivado (sai da lista, botão "Arquivados" para ver) e os contratos e relatórios continuam com o nome dele
+
+### Melhorias
+- Recrutamento: convidar de novo o mesmo WhatsApp atualiza o convite que já existe (o cancelado volta a valer) em vez de criar outro; os duplicados antigos aparecem marcados como "duplicado"
+
+### Avisos
+- Toda exclusão pede a senha de login do administrador e fica registrada na auditoria. Corretor e secretária não excluem
+- Contratos não têm exclusão: continuam como "cancelado" pela retenção legal
+- Lead com contrato ou chácara vinculada não pode ser excluído (só descartado)
+
 ## 1.58.2 — 2026-10-28
 tipo: patch
 obrigatoria: nao

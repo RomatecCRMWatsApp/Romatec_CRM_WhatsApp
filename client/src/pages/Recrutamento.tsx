@@ -1,7 +1,9 @@
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
-import { Check, Copy, FileDown, Loader2, MessageCircle, RefreshCw, Send, UserPlus, X } from "lucide-react";
+import { Check, Copy, FileDown, Loader2, MessageCircle, RefreshCw, Send, Trash2, UserPlus, X } from "lucide-react";
 import { trpc } from "@/lib/trpc";
+import { useAuth } from "@/_core/hooks/useAuth";
+import ConfirmarExclusao from "@/components/sistema/ConfirmarExclusao";
 import PageHeader from "@/components/PageHeader";
 import { Button } from "@/components/ui/button";
 import { maskPhone } from "@shared/masks";
@@ -42,6 +44,7 @@ function NovoConvite({ emps, onCriado }: { emps: { slug: string; nome: string }[
   useEffect(() => { if (!emp && emps.length === 1) setEmp(emps[0].slug); }, [emps, emp]);
   const criar = trpc.recrutamento.criarConvite.useMutation({
     onSuccess: r => {
+      if (r.reaproveitado) toast.info("Já havia convite para este WhatsApp: ele foi atualizado (sem duplicar)");
       if (r.enviado) toast.success("Convite enviado pelo WhatsApp (texto + formulário em PDF e DOC)");
       else { copiar(r.texto || r.link, "WhatsApp do sistema indisponível: mensagem copiada para você enviar"); }
       setNome(""); setTel(""); onCriado();
@@ -162,6 +165,17 @@ export default function Recrutamento() {
   });
   const novaSenha = trpc.recrutamento.reenviarAcesso.useMutation({ onSuccess: r => setAcesso(r), onError: e => toast.error(e.message) });
   const cancelar = trpc.recrutamento.recusar.useMutation({ onSuccess: atualizar, onError: e => toast.error(e.message) });
+  // Cancelado sai da lista (filtro "Cancelados" para ver); excluir definitivo é só do administrador, com senha
+  const { user } = useAuth();
+  const admin = (user as any)?.role === "admin";
+  const [verCancelados, setVerCancelados] = useState(false);
+  const [excluindo, setExcluindo] = useState<{ id: number; nome: string } | null>(null);
+  const excluir = trpc.exclusao.convite.useMutation({
+    onSuccess: () => { toast.success("Convite excluído"); setExcluindo(null); atualizar(); },
+    onError: e => toast.error(e.message),
+  });
+  const cancelados = (lista ?? []).filter(r => r.status === "cancelado");
+  const visiveis = (lista ?? []).filter(r => (r.status === "cancelado") === verCancelados);
   return (
     <div>
       <PageHeader icone={UserPlus} titulo="Recrutamento" subtitulo="Convide corretores, secretárias e empreendedores para o Romatec CRM" />
@@ -173,14 +187,24 @@ export default function Recrutamento() {
         </div>
         {aberto && <Conferir id={aberto} onFechar={() => setAberto(null)} onAcesso={setAcesso} />}
         {isLoading && <p className="text-sm text-muted-foreground">Carregando…</p>}
-        {lista && !lista.length && <p className="rounded-xl border border-dashed border-border p-4 text-sm text-muted-foreground">Nenhum recrutamento ainda.</p>}
+        <ConfirmarExclusao pendente={excluir.isPending} onFechar={() => setExcluindo(null)} onConfirmar={senha => excluindo && excluir.mutate({ id: excluindo.id, senha })}
+          alvo={excluindo && { titulo: "Excluir convite", descricao: <>O convite de <b>{excluindo.nome}</b> some da lista de vez, com o que já foi preenchido e os anexos. O link deixa de funcionar.</> }} />
+        {(cancelados.length > 0 || verCancelados) && (
+          <div className="flex justify-end">
+            <Button size="sm" variant={verCancelados ? "default" : "outline"} className="h-7 text-xs" onClick={() => setVerCancelados(v => !v)}>
+              {verCancelados ? "Voltar aos convites" : `Cancelados (${cancelados.length})`}
+            </Button>
+          </div>
+        )}
+        {lista && !visiveis.length && <p className="rounded-xl border border-dashed border-border p-4 text-sm text-muted-foreground">{verCancelados ? "Nenhum convite cancelado." : "Nenhum recrutamento ainda."}</p>}
         <div className="space-y-2">
-          {(lista ?? []).map(r => (
+          {visiveis.map(r => (
             <div key={r.id} className="rounded-xl border border-border bg-card p-3 text-sm">
               <div className="flex flex-wrap items-center gap-2">
                 <b>{r.nome}</b>
                 <span className="text-xs text-muted-foreground">{ROTULO_PERFIL_RECRUTAMENTO[r.perfil]} · {maskPhone(r.telefone)}{r.empreendimentoSlug ? ` · ${emps?.find(e => e.slug === r.empreendimentoSlug)?.nome ?? r.empreendimentoSlug}` : ""}</span>
                 <span className={`rounded-full px-2 py-0.5 text-[11px] ${COR[r.status] ?? ""}`}>{STATUS_RECRUTAMENTO[r.status] ?? r.status}</span>
+                {r.duplicado && r.status !== "aprovado" && <span className="rounded-full bg-amber-500/15 px-2 py-0.5 text-[11px] text-amber-300" title="Há outro convite com o mesmo WhatsApp">duplicado</span>}
                 <span className="ml-auto text-[11px] text-muted-foreground">
                   {r.preenchidoEm ? `formulário em ${data(r.preenchidoEm)}` : r.enviadoEm ? `enviado em ${data(r.enviadoEm)}` : `criado em ${data(r.createdAt)}`}
                 </span>
@@ -201,6 +225,11 @@ export default function Recrutamento() {
                 {r.status === "aprovado" && r.usuarioId && (
                   <Button size="sm" variant="outline" className="h-7 text-xs" disabled={novaSenha.isPending} onClick={() => { if (confirm("Gerar uma nova senha provisória e enviar pelo WhatsApp? A senha atual deixa de valer.")) novaSenha.mutate({ usuarioId: r.usuarioId! }); }}>
                     <RefreshCw className="mr-1 h-3.5 w-3.5" /> Reenviar acesso (nova senha)
+                  </Button>
+                )}
+                {admin && r.status !== "aprovado" && (
+                  <Button size="sm" variant="ghost" className="h-7 text-xs text-red-300" onClick={() => setExcluindo({ id: r.id, nome: r.nome })}>
+                    <Trash2 className="mr-1 h-3.5 w-3.5" /> Excluir
                   </Button>
                 )}
               </div>

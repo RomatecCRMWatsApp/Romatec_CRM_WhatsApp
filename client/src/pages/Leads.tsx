@@ -2,6 +2,7 @@ import { useState, useEffect, useMemo } from "react";
 import { useLocation } from "wouter";
 import { trpc } from "@/lib/trpc";
 import { useAuth } from "@/_core/hooks/useAuth";
+import ConfirmarExclusao from "@/components/sistema/ConfirmarExclusao";
 import { toast } from "sonner";
 import {
   ArrowLeft, Search, Filter, Users, TrendingUp, Flame, Thermometer,
@@ -145,8 +146,15 @@ export default function Leads() {
 
   // Leads que vieram de número da equipe (corretor, secretária…): o admin decide descartar um a um
   const { user } = useAuth();
-  const daEquipe = trpc.leads.daEquipe.useQuery(undefined, { enabled: (user as any)?.role === 'admin', retry: false });
-  const equipePendentes = (daEquipe.data || []).filter(l => l.stage !== 'descartado');
+  const isAdmin = (user as any)?.role === 'admin';
+  const daEquipe = trpc.leads.daEquipe.useQuery(undefined, { enabled: isAdmin, retry: false });
+  const equipePendentes = daEquipe.data || [];
+  // Excluir definitivo (descartados e números da equipe): só o administrador, com a senha
+  const [excluindo, setExcluindo] = useState<{ id: number; nome: string } | null>(null);
+  const excluirLead = trpc.exclusao.lead.useMutation({
+    onSuccess: () => { toast.success('Lead excluído'); setExcluindo(null); refetch(); daEquipe.refetch(); },
+    onError: e => toast.error(e.message),
+  });
 
   const discardLead = trpc.leads.discard.useMutation({
     onSuccess: () => { toast.success('Lead descartado'); refetch(); daEquipe.refetch(); },
@@ -258,6 +266,9 @@ export default function Leads() {
 
       <div style={{ padding: '16px', display: 'flex', flexDirection: 'column', gap: '14px' }}>
 
+        <ConfirmarExclusao pendente={excluirLead.isPending} onFechar={() => setExcluindo(null)} onConfirmar={senha => excluindo && excluirLead.mutate({ id: excluindo.id, senha })}
+          alvo={excluindo && { titulo: 'Excluir lead', descricao: <>O lead <b>{excluindo.nome}</b> some de vez, com a conversa, os interesses e as visitas. Lead com contrato ou chácara vinculada não pode ser excluído.</> }} />
+
         {equipePendentes.length > 0 && (
           <div className="ld-card" style={{ borderColor: 'rgba(245,158,11,0.4)' }}>
             <div style={{ fontSize: '12px', fontWeight: 700, color: '#f59e0b', marginBottom: '8px' }}>
@@ -266,12 +277,20 @@ export default function Leads() {
             {equipePendentes.map(l => (
               <div key={l.id} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '8px', fontSize: '11px', padding: '4px 0', flexWrap: 'wrap' }}>
                 <span>#{l.id} {l.nome || 'sem nome'} · {l.phone} · <b>{l.quem}</b></span>
-                <button className="ld-action-btn" style={{ borderColor: 'rgba(239,68,68,0.3)', color: '#ef4444', background: 'transparent' }}
-                  disabled={discardLead.isPending}
-                  onClick={() => confirm(`Descartar o lead #${l.id} (${l.quem})? Ele sai da lista de leads e não volta a ser atendido pelo bot.`)
-                    && discardLead.mutate({ id: l.id, reason: 'Número da equipe — não é lead', blockDays: 3650 })}>
-                  Descartar
-                </button>
+                <span style={{ display: 'flex', gap: '6px' }}>
+                  {l.stage !== 'descartado' && (
+                    <button className="ld-action-btn" style={{ borderColor: 'rgba(239,68,68,0.3)', color: '#ef4444', background: 'transparent' }}
+                      disabled={discardLead.isPending}
+                      onClick={() => confirm(`Descartar o lead #${l.id} (${l.quem})? Ele sai da lista de leads e não volta a ser atendido pelo bot.`)
+                        && discardLead.mutate({ id: l.id, reason: 'Número da equipe — não é lead', blockDays: 3650 })}>
+                      Descartar
+                    </button>
+                  )}
+                  <button className="ld-action-btn" style={{ borderColor: 'rgba(239,68,68,0.5)', color: '#fff', background: 'rgba(239,68,68,0.35)' }}
+                    onClick={() => setExcluindo({ id: l.id, nome: `${l.nome || 'sem nome'} (${l.quem})` })}>
+                    <Trash2 size={11} /> Excluir
+                  </button>
+                </span>
               </div>
             ))}
           </div>
@@ -569,7 +588,14 @@ export default function Leads() {
                           >
                             <RefreshCw size={11} /> Reativar
                           </button>
-                        ) : (
+                        ) : null}
+                        {(isDescartado || isBlocked) && isAdmin && (
+                          <button className="ld-action-btn" onClick={() => setExcluindo({ id: lead.id, nome })}
+                            style={{ background: 'rgba(200,60,60,0.08)', borderColor: 'rgba(200,60,60,0.3)', color: '#ef4444' }}>
+                            <Trash2 size={11} /> Excluir
+                          </button>
+                        )}
+                        {isDescartado || isBlocked ? null : (
                           <button
                             className="ld-action-btn"
                             onClick={() => { if (confirm(`Descartar lead ${nome}?`)) discardLead.mutate({ id: lead.id }); }}

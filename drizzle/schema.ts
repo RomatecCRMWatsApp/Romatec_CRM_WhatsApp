@@ -74,6 +74,8 @@ export const users = mysqlTable("users", {
   ultimoLeadAt: timestamp("ultimoLeadAt"),
   /** v1.7.0 — tela de descanso: minutos sem interação (0 = desativada) */
   descansoMinutos: int("descansoMinutos").default(3).notNull(),
+  /** Desativado com histórico (contratos, leads, financeiro): fora da lista da Equipe, sem apagar */
+  arquivadoEm: timestamp("arquivadoEm"),
 });
 
 export type User = typeof users.$inferSelect;

@@ -362,6 +362,7 @@ export function initSqliteTables(sqlite: any): void {
   )`);
   // v1.7.0 — notas de versão e tela de descanso (server/_core/migrations/addReleases.ts)
   addColumn(`ALTER TABLE users ADD COLUMN descansoMinutos INTEGER NOT NULL DEFAULT 3`);
+  addColumn(`ALTER TABLE users ADD COLUMN arquivadoEm INTEGER`);
   // v1.8.0 — notificações e Web Push (server/_core/migrations/addNotificacoes.ts)
   run(`CREATE TABLE IF NOT EXISTS notificacoes (
     id INTEGER PRIMARY KEY AUTOINCREMENT, usuarioId INTEGER NOT NULL, tipo TEXT NOT NULL, titulo TEXT NOT NULL, mensagem TEXT NOT NULL,

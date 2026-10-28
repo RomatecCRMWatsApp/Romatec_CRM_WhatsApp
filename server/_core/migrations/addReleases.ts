@@ -9,6 +9,8 @@ import { getDb, getDbDriver } from '../../db';
  */
 const COMANDOS: { nome: string; stmt: ReturnType<typeof sql> }[] = [
   { nome: 'users.descansoMinutos', stmt: sql`ALTER TABLE users ADD COLUMN descansoMinutos INT NOT NULL DEFAULT 3` },
+  // v1.59.0 — usuário desativado com histórico sai da lista da Equipe (server/exclusao.ts)
+  { nome: 'users.arquivadoEm', stmt: sql`ALTER TABLE users ADD COLUMN arquivadoEm TIMESTAMP NULL` },
   {
     nome: 'systemRelease',
     stmt: sql`CREATE TABLE IF NOT EXISTS systemRelease (

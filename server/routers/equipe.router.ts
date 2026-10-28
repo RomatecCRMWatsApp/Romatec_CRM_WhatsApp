@@ -53,6 +53,7 @@ export const equipeRouter = router({
         return {
           id: u.id, nome: u.name, email: u.email, creci: u.creci, telefone: u.telefone, perfil, role: u.role, empreendimentoSlug: u.empreendimentoSlug,
           ativo: u.ativo !== false && u.ativo !== 0,
+          arquivado: !!u.arquivadoEm,
           temSenha: !!(u.passwordScrypt || u.passwordHash),
           convitePendente: !!u.conviteHash && conviteValido(u.conviteExpira),
           recebeLeads: u.recebeLeads === true || u.recebeLeads === 1,
@@ -88,7 +89,8 @@ export const equipeRouter = router({
     if (atual.id === ctx.user.id && input.ativo === false) throw new Error("Você não pode desativar o seu próprio acesso");
     if (input.recebeLeads && perfilDe(atual) === "corretor" && !(await temCartaoCreci(db, atual.id))) throw new Error(MSG_SEM_CARTAO);
     await db.update(users).set({
-      ...(input.ativo !== undefined ? { ativo: input.ativo } : {}),
+      // Reativar tira do arquivo
+      ...(input.ativo !== undefined ? { ativo: input.ativo, ...(input.ativo ? { arquivadoEm: null } : {}) } : {}),
       ...(input.recebeLeads !== undefined ? { recebeLeads: input.recebeLeads } : {}),
       updatedAt: new Date(),
     } as any).where(eq(users.id, input.id));

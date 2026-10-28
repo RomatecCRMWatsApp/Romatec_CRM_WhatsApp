@@ -5,7 +5,8 @@ import { trpc } from "@/lib/trpc";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Copy, IdCard, KeyRound, MessageCircle, Plus, ShieldCheck, UserCheck, UserX, Users } from "lucide-react";
+import { Copy, IdCard, KeyRound, MessageCircle, Plus, ShieldCheck, Trash2, UserCheck, UserX, Users } from "lucide-react";
+import ConfirmarExclusao from "@/components/sistema/ConfirmarExclusao";
 import { daEquipe, type Perfil } from "@shared/equipe";
 import PageHeader from "@/components/PageHeader";
 import PermissoesCorretor, { PacoteBase } from "@/components/equipe/PermissoesCorretor";
@@ -67,6 +68,19 @@ export default function Equipe() {
   const listas = { modulos: data?.modulos ?? [], empreendimentos: (data?.empreendimentos ?? []) as any[], imoveis: data?.imoveis ?? [] };
   const atualizar = trpc.equipe.update.useMutation({ onSuccess: () => { toast.success("Acesso atualizado"); recarregar(); }, onError: e => toast.error(e.message) });
   const reconvite = trpc.equipe.novoConvite.useMutation({ onError: e => toast.error(e.message) });
+  // Desativado sai da lista: sem vínculo é apagado; com histórico (contrato, lead, financeiro) é arquivado
+  const [verArquivados, setVerArquivados] = useState(false);
+  const [removendo, setRemovendo] = useState<{ id: number; nome: string } | null>(null);
+  const remover = trpc.exclusao.usuario.useMutation({
+    onSuccess: r => {
+      if (r.modo === "excluido") toast.success("Usuário excluído");
+      else toast.info(`Usuário arquivado (fora da lista). Não foi apagado porque tem histórico: ${r.vinculos.join(", ")}.`, { duration: 9000 });
+      setRemovendo(null); recarregar();
+    },
+    onError: e => toast.error(e.message),
+  });
+  const pessoas = (data?.pessoas ?? []).filter((p: any) => !!p.arquivado === verArquivados);
+  const arquivados = (data?.pessoas ?? []).filter((p: any) => p.arquivado).length;
 
   const emps = data?.empreendimentos ?? [];
   const nomeEmp = (slug?: string | null) => emps.find((e: any) => e.slug === slug)?.nome || slug || "";
@@ -81,7 +95,13 @@ export default function Equipe() {
 
         <PacoteBase />
 
-        <div className="flex justify-end">
+        <ConfirmarExclusao pendente={remover.isPending} onFechar={() => setRemovendo(null)} onConfirmar={senha => removendo && remover.mutate({ id: removendo.id, senha })}
+          alvo={removendo && { titulo: "Remover usuário", descricao: <><b>{removendo.nome}</b> sai da lista da Equipe. Se não tiver contratos, leads ou lançamentos, o cadastro é apagado; se tiver histórico, fica arquivado (os contratos e relatórios continuam com o nome dele).</> }} />
+
+        <div className="flex justify-end gap-2">
+          {(arquivados > 0 || verArquivados) && (
+            <Button variant={verArquivados ? "default" : "outline"} onClick={() => setVerArquivados(v => !v)}>{verArquivados ? "Voltar à equipe" : `Arquivados (${arquivados})`}</Button>
+          )}
           <Button onClick={() => setAbrirForm(v => !v)} className="bg-emerald-600 hover:bg-emerald-700 text-white"><Plus className="mr-1.5 h-4 w-4" /> Novo acesso</Button>
         </div>
 
@@ -97,7 +117,7 @@ export default function Equipe() {
 
         {isLoading ? <p className="text-sm text-muted-foreground">Carregando...</p> : (
           <div className="space-y-2">
-            {(data?.pessoas ?? []).map((p: any) => (
+            {pessoas.map((p: any) => (
               <Card key={p.id} className={`bg-card border-border ${p.ativo ? "" : "opacity-60"}`}>
                 <CardContent className="py-3 space-y-2">
                   <div className="flex flex-col md:flex-row md:items-center gap-2">
@@ -143,6 +163,11 @@ export default function Equipe() {
                         }}>
                           {p.ativo ? <><UserX className="mr-1.5 h-3.5 w-3.5" /> Desativar</> : <><UserCheck className="mr-1.5 h-3.5 w-3.5" /> Reativar</>}
                         </Button>
+                        {!p.ativo && !p.arquivado && (
+                          <Button size="sm" variant="ghost" className="text-red-300" onClick={() => setRemovendo({ id: p.id, nome: p.nome })}>
+                            <Trash2 className="mr-1.5 h-3.5 w-3.5" /> Remover
+                          </Button>
+                        )}
                         {daEquipe(p.perfil as Perfil) && (
                           <Button size="sm" variant={permissoesDe === p.id ? "default" : "outline"} onClick={() => setPermissoesDe(v => (v === p.id ? null : p.id))}>
                             <ShieldCheck className="mr-1.5 h-3.5 w-3.5" /> Permissões

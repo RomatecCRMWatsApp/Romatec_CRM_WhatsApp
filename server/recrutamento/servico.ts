@@ -48,13 +48,26 @@ export async function criarConvite(dados: { perfil: PerfilRecrutamento; nome: st
   if (tel.length < 10 || tel.length > 11) throw new RecrutamentoErro('Informe o WhatsApp com DDD');
   const d = await banco();
   if (dados.empreendimentoSlug) await nomeDoEmpreendimento(dados.empreendimentoSlug);
+  // Mesmo WhatsApp e perfil: reaproveita o convite que já existe (cancelado volta a valer) em vez de duplicar
+  const { chaveTelefone } = await import('../leads/numerosDaEquipe');
+  const mesmos: any[] = (await d.select().from(recrutamentos).where(and(eq(recrutamentos.perfil, dados.perfil), ne(recrutamentos.status, 'aprovado'))).orderBy(desc(recrutamentos.id)))
+    .filter((x: any) => chaveTelefone(x.telefone) === chaveTelefone(tel));
+  if (mesmos[0]) {
+    const x = mesmos[0];
+    const reabre = x.status === 'cancelado' || x.status === 'recusado';
+    await d.update(recrutamentos).set({
+      nome: dados.nome.trim().slice(0, 150), telefone: tel, empreendimentoSlug: dados.empreendimentoSlug || null, tokenExpira: dias(DIAS_LINK_FORMULARIO, agora),
+      ...(reabre ? { status: 'convidado', motivo: null, decididoEm: null, decididoPor: null } : {}), updatedAt: new Date(agora),
+    } as any).where(eq(recrutamentos.id, x.id));
+    return { id: x.id as number, link: linkFormulario(urlBase(), x.token), reaproveitado: true };
+  }
   const token = crypto.randomBytes(24).toString('base64url');
   const r: any = await d.insert(recrutamentos).values({
     perfil: dados.perfil, nome: dados.nome.trim().slice(0, 150), telefone: tel, empreendimentoSlug: dados.empreendimentoSlug || null, token, tokenExpira: dias(DIAS_LINK_FORMULARIO, agora), status: 'convidado',
     dadosJson: JSON.stringify({ nome: dados.nome.trim(), telefone: tel }), criadoPor: autorId, createdAt: new Date(agora), updatedAt: new Date(agora),
   } as any);
   const id = Number(r?.[0]?.insertId ?? r?.insertId ?? r?.lastInsertRowid ?? 0);
-  return { id, link: linkFormulario(urlBase(), token) };
+  return { id, link: linkFormulario(urlBase(), token), reaproveitado: false };
 }
 
 /** Nome do empreendimento da convocação (erro se o slug não existe) */
@@ -99,6 +112,9 @@ export async function listarRecrutamentos() {
   const d = await banco();
   const rows: any[] = await d.select().from(recrutamentos).orderBy(desc(recrutamentos.createdAt)).limit(300);
   const docs: any[] = await d.select({ recrutamentoId: recrutamentoDocs.recrutamentoId, tipo: recrutamentoDocs.tipo }).from(recrutamentoDocs);
+  const { chaveTelefone } = await import('../leads/numerosDaEquipe');
+  const porFone = new Map<string, number>();
+  for (const r of rows) { const k = `${r.perfil}:${chaveTelefone(r.telefone)}`; porFone.set(k, (porFone.get(k) ?? 0) + 1); }
   return rows.map(r => {
     const meus = docs.filter(x => x.recrutamentoId === r.id).map(x => x.tipo);
     const faltam = r.perfil === 'empreendedor' ? [] : documentosDoPerfil(r.perfil).filter(x => x.obrigatorio && !meus.includes(x.tipo)).map(x => x.rotulo);
@@ -108,6 +124,8 @@ export async function listarRecrutamentos() {
       link: linkFormulario(urlBase(), r.token), linkVencido: new Date(r.tokenExpira).getTime() < Date.now(), docs: meus.length, faltam,
       usuarioId: r.usuarioId ?? null, enviadoEm: r.enviadoEm ?? null, preenchidoEm: r.preenchidoEm ?? null, decididoEm: r.decididoEm ?? null,
       motivo: r.motivo ?? null, createdAt: r.createdAt,
+      /** Outro convite com o mesmo WhatsApp e perfil (sobra de antes da v1.59): dá para excluir */
+      duplicado: (porFone.get(`${r.perfil}:${chaveTelefone(r.telefone)}`) ?? 0) > 1,
     };
   });
 }
