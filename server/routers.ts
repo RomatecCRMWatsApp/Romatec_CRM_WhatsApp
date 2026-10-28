@@ -900,6 +900,12 @@ export const appRouter = router({
   // ══════════════════════════════════════════════════════════════════════
   leads: router({
 
+    // Leads criados por engano a partir de número da equipe (corretor, secretária…): só leitura, a limpeza é manual
+    daEquipe: adminProcedure.query(async () => {
+      const { leadsDaEquipe } = await import('./leads/numerosDaEquipe');
+      return leadsDaEquipe();
+    }),
+
     // Lista todos os leads com filtros e paginação
     list: protectedProcedure
       .input(z.object({

@@ -126,6 +126,14 @@ async function startServer() {
         }
       }
 
+      // Número da equipe (corretor, secretária, admin, empreendedor, corretor externo, a própria empresa):
+      // conversa interna — nunca vira lead e o bot de captação não responde
+      const { ehNumeroDaEquipe } = await import('../leads/numerosDaEquipe');
+      if (await ehNumeroDaEquipe(payload.phone).catch(() => false)) {
+        console.log(`[Webhook] 👥 ${payload.phone} é da equipe — não vira lead`);
+        return res.json({ received: true, processed: false, reason: 'equipe' });
+      }
+
       // Resposta automática de outra empresa ("mensagem automática", "fora do horário"…):
       // não responde (dois robôs conversando viram um loop) e não conta como resposta do lead
       const { ehRespostaAutomatica, podeResponder } = await import('../leads/antiLoop');

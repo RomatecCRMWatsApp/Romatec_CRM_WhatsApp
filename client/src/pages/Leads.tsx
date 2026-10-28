@@ -1,6 +1,7 @@
 import { useState, useEffect, useMemo } from "react";
 import { useLocation } from "wouter";
 import { trpc } from "@/lib/trpc";
+import { useAuth } from "@/_core/hooks/useAuth";
 import { toast } from "sonner";
 import {
   ArrowLeft, Search, Filter, Users, TrendingUp, Flame, Thermometer,
@@ -142,8 +143,13 @@ export default function Leads() {
     onError: e => toast.error(`Erro: ${e.message}`),
   });
 
+  // Leads que vieram de número da equipe (corretor, secretária…): o admin decide descartar um a um
+  const { user } = useAuth();
+  const daEquipe = trpc.leads.daEquipe.useQuery(undefined, { enabled: (user as any)?.role === 'admin', retry: false });
+  const equipePendentes = (daEquipe.data || []).filter(l => l.stage !== 'descartado');
+
   const discardLead = trpc.leads.discard.useMutation({
-    onSuccess: () => { toast.success('Lead descartado'); refetch(); },
+    onSuccess: () => { toast.success('Lead descartado'); refetch(); daEquipe.refetch(); },
     onError: e => toast.error(`Erro: ${e.message}`),
   });
 
@@ -251,6 +257,25 @@ export default function Leads() {
       `}</style>
 
       <div style={{ padding: '16px', display: 'flex', flexDirection: 'column', gap: '14px' }}>
+
+        {equipePendentes.length > 0 && (
+          <div className="ld-card" style={{ borderColor: 'rgba(245,158,11,0.4)' }}>
+            <div style={{ fontSize: '12px', fontWeight: 700, color: '#f59e0b', marginBottom: '8px' }}>
+              ⚠️ {equipePendentes.length} lead(s) vieram de número da equipe — não são clientes
+            </div>
+            {equipePendentes.map(l => (
+              <div key={l.id} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '8px', fontSize: '11px', padding: '4px 0', flexWrap: 'wrap' }}>
+                <span>#{l.id} {l.nome || 'sem nome'} · {l.phone} · <b>{l.quem}</b></span>
+                <button className="ld-action-btn" style={{ borderColor: 'rgba(239,68,68,0.3)', color: '#ef4444', background: 'transparent' }}
+                  disabled={discardLead.isPending}
+                  onClick={() => confirm(`Descartar o lead #${l.id} (${l.quem})? Ele sai da lista de leads e não volta a ser atendido pelo bot.`)
+                    && discardLead.mutate({ id: l.id, reason: 'Número da equipe — não é lead', blockDays: 3650 })}>
+                  Descartar
+                </button>
+              </div>
+            ))}
+          </div>
+        )}
 
         {/* ── Stats cards ──────────────────────────────────────────── */}
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(6,1fr)', gap: '8px' }}>

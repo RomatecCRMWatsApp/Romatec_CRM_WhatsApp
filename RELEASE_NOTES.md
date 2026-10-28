@@ -3,6 +3,17 @@
 Cada versão nova vai no TOPO. Depois rode `npm run release` (valida e atualiza o package.json);
 ao subir, o servidor grava a versão no banco e todos recebem o aviso "Novidades da versão".
 
+## 1.58.2 — 2026-10-28
+tipo: patch
+obrigatoria: nao
+titulo: Mensagem de corretor, secretária e equipe no WhatsApp não vira mais lead
+
+### Correções
+- WhatsApp: quando alguém da equipe (corretor, corretora, secretária, administrador, empreendedor, corretor externo) ou o próprio número da empresa manda mensagem, o sistema não cria lead nem dispara o aviso de "Novo lead", e o robô de captação não responde. O número é reconhecido com ou sem 55, com ou sem o 9 e com qualquer máscara
+
+### Avisos
+- Na tela de Leads, o administrador vê a lista dos leads que já tinham sido criados por engano a partir de número da equipe, com o nome de quem é, e pode descartar cada um (nada é apagado sozinho)
+
 ## 1.58.1 — 2026-10-28
 tipo: patch
 obrigatoria: nao
