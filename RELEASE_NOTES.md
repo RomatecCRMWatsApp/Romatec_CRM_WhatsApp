@@ -3,6 +3,17 @@
 Cada versão nova vai no TOPO. Depois rode `npm run release` (valida e atualiza o package.json);
 ao subir, o servidor grava a versão no banco e todos recebem o aviso "Novidades da versão".
 
+## 1.69.1 — 2026-10-29
+tipo: patch
+obrigatoria: nao
+titulo: Água do Bom Jardims — reservatório de 10.000 litros com bombeamento automático
+
+### Correções
+- Página do Bom Jardims, buscadores e resposta automática do WhatsApp agora dizem o mesmo: poço artesiano com bombeamento automático e reservatório elevado de 10.000 litros (antes 50 m³ na página e 150 m³ no WhatsApp)
+
+### Avisos
+- Memorial de cálculo da reservação e do bombeamento em docs/agua (demanda de 98,4 m³ no dia de maior consumo; bomba e poço de no mínimo 6,2 m³/h)
+
 ## 1.69.0 — 2026-10-29
 tipo: minor
 obrigatoria: nao

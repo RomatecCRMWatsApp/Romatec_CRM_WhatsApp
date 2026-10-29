@@ -165,7 +165,7 @@ export const TEXTOS_PADRAO: Record<Intencao, { texto: string; midias: CodigoMidi
   },
   mapa: {
     midias: ['ESTRUTURA', 'MAPA'],
-    texto: 'Aqui está o mapa do condomínio 🗺️ Cada chácara tem 3.025 m², com ruas de 12 m, portal com guarita, poço com reservatório de 150 m³, rede elétrica com iluminação em LED e a área de vivência com rio e pontos de banho.\n\n' +
+    texto: 'Aqui está o mapa do condomínio 🗺️ Cada chácara tem 3.025 m², com ruas de 12 m, portal com guarita, poço artesiano com bombeamento automático e reservatório elevado de 10.000 litros, rede elétrica com iluminação em LED e a área de vivência com rio e pontos de banho.\n\n' +
       'Hoje são *{{disponiveis}} chácaras disponíveis*. Me fala qual quadra te chamou mais atenção que eu te passo as livres nela.',
   },
   visita: {

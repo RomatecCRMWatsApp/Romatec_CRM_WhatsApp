@@ -24,7 +24,7 @@ const CONSENT_TEXT =
 const DIFERENCIAIS = [
   { icon: ShieldCheck, titulo: "Portal com guarita", texto: "Portal em tijolo aparente e troncos, portão de correr estilo fazenda e controle de acesso." },
   { icon: Trees, titulo: "Área de vivência e reserva preservada", texto: "Reserva de mata nativa ao longo do córrego, com trilha ecológica e pontos de banho. Cada chácara tem um espaço exclusivo de 100 m² com tenda e churrasqueira. Flora e fauna intactas." },
-  { icon: Droplets, titulo: "Água encanada", texto: "Poço artesiano do condomínio, reservatório elevado de 50 m³ e ponto de água na frente de cada chácara, com medição individual." },
+  { icon: Droplets, titulo: "Água encanada", texto: "Poço artesiano do condomínio com bombeamento automático para reservatório elevado de 10.000 litros, e ponto de água na frente de cada chácara, com medição individual." },
   { icon: Route, titulo: "Ruas internas de 12 m", texto: "8 ruas internas com sarjeta e passeio — 9 m de rolamento e 1,50 m de calçada de cada lado." },
   { icon: FileCheck2, titulo: "Documentação técnica", texto: "Área georreferenciada e certificada no SIGEF/INCRA, Licença de Operação da SEMMA e memorial descritivo de cada chácara." },
   { icon: Handshake, titulo: "Pagamento direto", texto: "Financiamento direto com o empreendimento, sem banco. Condições apresentadas pelo corretor no atendimento." },
