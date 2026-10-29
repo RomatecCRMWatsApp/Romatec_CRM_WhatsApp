@@ -1,0 +1,87 @@
+---
+title: "CPCV Bom Jardims — Proposta de alterações (v2 → v3)"
+subtitle: "Para revisão do José Romário antes de subir ao sistema · 29/10/2026"
+---
+
+<p class="leg"><span class="del">Texto riscado em vermelho</span> = sai do contrato · <mark>texto grifado em amarelo</mark> = entra no contrato · <span class="pend">[PENDENTE]</span> = valor que o senhor ainda vai informar</p>
+
+# Resumo das alterações
+
+| # | Tema | Onde muda | O que muda |
+|---|---|---|---|
+| 1 | Energia elétrica | Cl. 11.1 (e) e nova 11.6 | Empreendimento executa a rede e os postes, aprova na Equatorial e entrega a rede; ligação, tipo (mono/trifásica) e consumo ficam entre o comprador e a Equatorial |
+| 2 | Água | Cl. 11.1 (d), 12.1 (c), 13.1 (b) e nova 11.7 | Poço, reservatório e rede nas ruas com ponto na frente de cada chácara; **hidrômetro por conta do comprador**; fatura impressa com o m³ pela tabela CAEMA/SAAE |
+| 3 | Taxa de condomínio | Quadro-Resumo item 18 e nova 14.4 | De "estimada" para **fixada inicialmente em R$ 100,00** por chácara |
+| 4 | Carteirinhas | Nova 14.5 | 1ª via gratuita para titular e dependentes; reimpressão paga |
+| 5 | Área de recreação | Nova 2.5 | Espaço de uso exclusivo por chácara na área de vivência, com tenda e churrasqueira; demais benfeitorias por conta do comprador |
+
+# 1. Energia elétrica (Equatorial)
+
+**Cláusula 11.1, alínea (e)**
+
+> (e) <span class="del">rede de energia elétrica e iluminação conforme projeto aprovado pela concessionária ({{emp_energia_especificacao}});</span>
+> <mark>(e) sistema de distribuição de energia elétrica — rede de média e baixa tensão, posteamento, estruturas, transformadores e iluminação das vias — executado conforme projeto aprovado pela concessionária EQUATORIAL MARANHÃO DISTRIBUIDORA DE ENERGIA S.A. ({{emp_energia_especificacao}}), com previsão de atendimento em tensão monofásica e trifásica;</mark>
+
+**Nova Cláusula 11.6**
+
+> <mark>11.6. Concluída, vistoriada e energizada a rede, ela será incorporada à concessionária Equatorial Maranhão, nos termos da regulamentação da ANEEL (Resolução Normativa n.º 1.000/2021), passando a operação, a manutenção e o fornecimento de energia elétrica à sua responsabilidade exclusiva. Competem ao(à) COMPRADOR(A), diretamente perante a concessionária e conforme as normas técnicas desta: (a) o pedido de ligação da unidade; (b) a escolha do tipo de fornecimento — monofásico, bifásico ou trifásico — conforme a carga que pretende instalar; (c) o padrão de entrada e o ramal da unidade; e (d) o pagamento das faturas de consumo. A VENDEDORA não responde pela continuidade, pela qualidade nem pelas tarifas do fornecimento após a incorporação da rede.</mark>
+
+# 2. Água (poço, rede e hidrômetro)
+
+**Cláusula 11.1, alínea (d)**
+
+> (d) abastecimento de água por {{emp_agua_especificacao}}, com outorga do órgão estadual, cloração e reservação mínima de 24 horas de consumo, <span class="del">com hidrômetro por chácara;</span> <mark>com rede de distribuição em todas as vias e ponto de alimentação (ramal com registro) deixado na testada de cada chácara;</mark>
+
+**Nova Cláusula 11.7**
+
+> <mark>11.7. A aquisição e a instalação do hidrômetro e do cavalete da unidade são de responsabilidade e às expensas do(a) COMPRADOR(A), que solicitará a ligação à administração do sistema de água. O consumo será medido individualmente e cobrado mensalmente por fatura impressa entregue a cada condômino, com o valor do metro cúbico (m³) fixado com base nas tabelas tarifárias praticadas na região pela CAEMA e pelo SAAE de Açailândia — hoje R$ <span class="pend">[PENDENTE: valor do m³]</span> por m³ —, reajustado sempre que essas tabelas forem reajustadas. A fatura não paga, após notificação com prazo mínimo de 30 (trinta) dias, autoriza a suspensão do fornecimento até a regularização.</mark>
+
+**Cláusula 12.1, alínea (c)** — obrigações da VENDEDORA
+
+> (c) <span class="del">manter o sistema de abastecimento de água até sua transferência ao SAAE ou à associação, na forma do instrumento previsto na lei municipal;</span>
+> <mark>(c) operar e manter o sistema de abastecimento de água (poço, reservatório e rede até o ponto de alimentação de cada chácara), diretamente ou por meio da associação, emitindo as faturas de consumo na forma da Cláusula 11.7, até sua eventual transferência ao SAAE ou a outra concessionária, na forma do instrumento previsto na lei municipal;</mark>
+
+**Cláusula 13.1, alínea (b)** — obrigações do(a) COMPRADOR(A)
+
+> (b) a partir da imissão na posse, arcar com o IPTU, as taxas, o consumo de água medido <mark>e faturado na forma da Cláusula 11.7, a energia elétrica perante a concessionária (Cláusula 11.6)</mark> e a contribuição associativa;
+
+# 3. Taxa de condomínio (contribuição associativa)
+
+**Quadro-Resumo, item 18**
+
+> 18\. Contribuição associativa — <span class="del">Estimada em R$ {{emp_contribuicao_mensal}}/mês por chácara,</span> <mark>Fixada inicialmente em R$ 100,00 (cem reais) mensais por chácara,</mark> rateada igualmente por unidade (todas as chácaras pagam o mesmo valor), devida a partir da imissão na posse <mark>e reajustável por deliberação da assembleia</mark> (Cláusula 14ª)
+
+**Nova Cláusula 14.4**
+
+> <mark>14.4. A contribuição associativa inicial é de R$ 100,00 (cem reais) mensais por chácara, igual para todas as unidades, devida a partir da imissão na posse. Seu valor somente será alterado por deliberação da assembleia, na forma do Estatuto (Anexo III).</mark>
+
+# 4. Carteirinhas
+
+**Nova Cláusula 14.5**
+
+> <mark>14.5. Para o controle de acesso, a associação entregará, sem custo, a primeira via das carteirinhas de identificação do titular e dos dependentes cadastrados. A emissão de nova via, por perda, extravio, dano ou inclusão posterior de dependente, será feita mediante o pagamento da taxa de reimpressão de R$ <span class="pend">[PENDENTE: valor da reimpressão]</span> por carteirinha, fixada pela administração.</mark>
+
+# 5. Área de recreação de uso exclusivo
+
+**Nova Cláusula 2.5**
+
+> <mark>2.5. Na área de vivência (Quadra F), fora da Área de Preservação Permanente, será destinado a cada chácara um espaço de uso exclusivo de aproximadamente <span class="pend">[PENDENTE: tamanho em m²]</span> m², identificado em planta própria entregue com o Mapa de Vendas (Anexo V), vinculado à unidade e transmitido com ela. O condomínio disponibilizará em cada espaço uma tenda e uma churrasqueira. Quaisquer outras benfeitorias — cabana, banheiro, quiosque, chalé ou similar — correrão por conta exclusiva do(a) COMPRADOR(A), dependerão de aprovação prévia da administração, observarão o padrão construtivo das Diretrizes de Uso (Anexo IV) e a legislação ambiental, e não geram direito de propriedade sobre a área nem de indenização. A área continua sendo de uso comum, com destinação exclusiva à unidade.</mark>
+
+# Pontos de atenção (recomendo conferir antes de subir)
+
+1. **Natureza da Quadra F.** O espaço exclusivo só é possível se a Quadra F for área **privada do empreendimento** (área comum da associação). Se ela consta no projeto aprovado como **área pública doada ao Município**, o uso exclusivo não pode ser concedido. Convém conferir no quadro de áreas e na matrícula.
+2. **APP do córrego.** A Quadra F inclui a Área de Preservação Permanente. Nenhum espaço exclusivo nem benfeitoria pode ficar dentro da APP (Código Florestal, Lei n.º 12.651/2012). Por isso a redação diz "fora da APP".
+3. **Chalé ou casa na área comum.** Construção fechada e permanente em área comum costuma gerar conflito na assembleia e pode exigir aprovação municipal. Sugestão: permitir apenas estruturas leves e removíveis (cabana, banheiro, quiosque) ou condicionar à aprovação da prefeitura.
+4. **Estatuto e Diretrizes de Uso.** O uso exclusivo, a taxa de reimpressão e a cobrança da água também devem entrar no Estatuto (Anexo III) e nas Diretrizes (Anexo IV), para que valham perante todos os associados e sucessores.
+5. **Padrão de entrada de energia.** Coloquei o padrão de entrada da unidade por conta do comprador, que é a prática da Equatorial. Se o empreendimento for entregar o padrão instalado, essa alínea sai.
+6. **Corte da água por falta de pagamento.** Incluí a suspensão após 30 dias de aviso. É usual e protege a associação; se preferir, essa frase sai.
+
+# Valores que faltam (o senhor informa e eu completo)
+
+| Campo | Onde entra |
+|---|---|
+| Valor do m³ de água (tabela CAEMA/SAAE) e, se houver, consumo mínimo | Cl. 11.7 |
+| Taxa de reimpressão da carteirinha | Cl. 14.5 |
+| Tamanho do espaço exclusivo (m²) e planta da Quadra F | Cl. 2.5 e Anexo V |
+
+**Depois da aprovação:** aplico as alterações no modelo do contrato (CPCV v3). Isso vale para o PDF que o corretor gera e para os campos de preenchimento padrão do empreendimento: valor do m³, taxa de reimpressão e área exclusiva viram campos editáveis no cadastro do empreendimento. Contratos já assinados não mudam.
