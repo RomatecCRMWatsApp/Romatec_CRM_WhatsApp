@@ -3,6 +3,20 @@
 Cada versão nova vai no TOPO. Depois rode `npm run release` (valida e atualiza o package.json);
 ao subir, o servidor grava a versão no banco e todos recebem o aviso "Novidades da versão".
 
+## 1.67.0 — 2026-10-29
+tipo: minor
+obrigatoria: nao
+titulo: Girar o mapa (como no Google Maps)
+
+### Novo
+- Mapa de vendas (site) e mapa temático do empreendimento (CRM) agora giram: dois dedos girando no celular, botões de girar para a esquerda e para a direita, ou Shift + roda do mouse no computador
+- Bússola no canto do mapa mostra para onde fica o norte; um toque volta o mapa ao norte
+- Códigos das chácaras e nomes ficam sempre de pé, mesmo com o mapa girado
+- Girado, dá para afastar até o empreendimento inteiro caber na tela
+
+### Avisos
+- O botão "Mapa inteiro" volta ao zoom normal com o norte para cima
+
 ## 1.66.1 — 2026-10-29
 tipo: patch
 obrigatoria: nao

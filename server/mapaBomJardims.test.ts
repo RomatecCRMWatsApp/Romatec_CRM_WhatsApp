@@ -208,3 +208,36 @@ describe('Mapa do Bom Jardims — desenho', () => {
     expect(cantoDaLupa(1000, 800, 300, 110, [], [900, 700], [[900, 750]])).toMatchObject({ x: 690, y: 10 });
   });
 });
+
+describe('mapa: rotação (como no Google Maps)', async () => {
+  const { girarEm, limitar, zoomMinimo, VISTA_INICIAL } = await import('../client/src/components/mapa/ZoomSvg');
+  const W = 1000, H = 600;
+  // Ponto da tela correspondente a um ponto do desenho (mesma conta do <g>: translate·scale·rotate em torno do centro)
+  const naTela = (v: { s: number; tx: number; ty: number; r?: number }, q: { x: number; y: number }) => {
+    const a = ((v.r ?? 0) * Math.PI) / 180, ux = q.x - W / 2, uy = q.y - H / 2;
+    return { x: v.s * (Math.cos(a) * ux - Math.sin(a) * uy + W / 2) + v.tx, y: v.s * (Math.sin(a) * ux + Math.cos(a) * uy + H / 2) + v.ty };
+  };
+
+  it('gira mantendo parado o ponto entre os dedos', () => {
+    const v0 = { s: 3, tx: -800, ty: -500, r: 0 };
+    const q = { x: 450, y: 320 };
+    const m = naTela(v0, q);
+    const v1 = girarEm(v0, 37, m.x, m.y, W, H);
+    expect(v1.r).toBeCloseTo(37);
+    const m1 = naTela(v1, q);
+    expect(m1.x).toBeCloseTo(m.x, 6);
+    expect(m1.y).toBeCloseTo(m.y, 6);
+  });
+
+  it('volta ao norte e normaliza o ângulo em (−180, 180]', () => {
+    const v = girarEm(girarEm(VISTA_INICIAL, 200, W / 2, H / 2, W, H), 0, W / 2, H / 2, W, H);
+    expect(v.r).toBeCloseTo(-160);
+    expect(girarEm(v, 160, W / 2, H / 2, W, H).r ?? 0).toBeCloseTo(0);
+  });
+
+  it('girado, dá para afastar até caber o desenho inteiro; sem giro, o mínimo continua 1', () => {
+    expect(zoomMinimo(0, W, H)).toBe(1);
+    expect(zoomMinimo(90, W, H)).toBeCloseTo(0.6);
+    expect(limitar({ s: 0.1, tx: 0, ty: 0, r: 45 }, W, H).s).toBeCloseTo(zoomMinimo(45, W, H));
+  });
+});
