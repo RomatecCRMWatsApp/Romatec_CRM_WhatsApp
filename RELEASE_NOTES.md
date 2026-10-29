@@ -3,6 +3,16 @@
 Cada versão nova vai no TOPO. Depois rode `npm run release` (valida e atualiza o package.json);
 ao subir, o servidor grava a versão no banco e todos recebem o aviso "Novidades da versão".
 
+## 1.72.0 — 2026-10-29
+tipo: minor
+obrigatoria: nao
+titulo: Atender agora
+
+### Novo
+- Leads › Atender agora: seus leads em ordem de prioridade, cada um com o motivo — esperando corretor (com o tempo), chácara da fila de espera livre, visita hoje ou amanhã, mensagem do cliente sem resposta, lead novo sem atendimento, quente e esfriando
+- Marcação Agora / Hoje / Quando der; botão do WhatsApp (conta como atendido) e "Já atendi" direto na lista
+- Atualiza sozinha a cada 30 segundos; o corretor vê só os leads dele, o escritório vê todos
+
 ## 1.71.0 — 2026-10-29
 tipo: minor
 obrigatoria: nao

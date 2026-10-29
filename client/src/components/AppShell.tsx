@@ -7,7 +7,7 @@ import AvisoRotinas from "./AvisoRotinas";
 import { MobileTabBar, RomatecAppIcon, RomatecLockup, TAB_ICONS, type TabItem } from "@/brand";
 import {
   BarChart3, Building2, Flame, Images, KanbanSquare, LayoutDashboard, LineChart, LogOut, Megaphone, Menu, Send,
-  Settings, UserCog, Users, X, Eye, ClipboardList, CalendarDays, Map as MapIcon, Smartphone, Wallet, IdCard, FolderOpen, Bell, FileSignature, Mic, CalendarCheck, UserPlus, BookCopy, BadgeDollarSign, Hourglass, Bot, Trophy, Link2,
+  Settings, UserCog, Users, X, Eye, ClipboardList, CalendarDays, Map as MapIcon, Smartphone, Wallet, IdCard, FolderOpen, Bell, FileSignature, Mic, CalendarCheck, UserPlus, BookCopy, BadgeDollarSign, Hourglass, Bot, Trophy, Link2, Zap,
   ChevronRight, ChevronsLeft, ChevronsRight,
 } from "lucide-react";
 import { abrirNovidades, SinoNovidades, useNovidadesNaoLidas } from "./sistema/Novidades";
@@ -39,6 +39,7 @@ const MENU: Grupo[] = [
     titulo: "Leads",
     cor: COR.leads,
     itens: [
+      { rotulo: "Atender agora", rota: "/leads/atender", icone: Zap, modulo: "leads" },
       { rotulo: "Leads", rota: "/leads", icone: Flame, exato: true, modulo: "leads" },
       { rotulo: "Funil", rota: "/leads/funil", icone: KanbanSquare, modulo: "leads" },
       { rotulo: "Agenda de visitas", rota: "/leads/agenda", icone: CalendarDays, modulo: "leads" },

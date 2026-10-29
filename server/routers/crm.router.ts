@@ -129,6 +129,57 @@ export const crmRouter = router({
       return { success: true };
     }),
 
+  /**
+   * "Atender agora": leads visíveis em ordem de prioridade (shared/atenderAgora.ts) — esperando corretor, fila de espera
+   * com a chácara livre, visita hoje, mensagem sem resposta, lead novo, temperatura e esfriando. Até 60 leads.
+   */
+  atenderAgora: protectedProcedure.query(async ({ ctx }) => {
+    const db = await dbOrThrow();
+    const { prioridadeDoLead, ETAPAS_ENCERRADAS } = await import("../../shared/atenderAgora");
+    const { leadVisitas, loteFilaEspera } = await import("../../drizzle/schema");
+    const agora = Date.now();
+    const ts = (v: any) => (v ? new Date(v).getTime() : null);
+    const todos = leadsVisiveis(ctx.permissoes, ctx.user.id, await db.select().from(leadQualifications)) as any[];
+    const vivos = todos.filter(l => !ETAPAS_ENCERRADAS.includes(etapaDoLead(l)));
+    const ids = vivos.map(l => Number(l.id));
+    if (!ids.length) return { itens: [], total: 0 };
+    // Mensagens dos últimos 21 dias: última do cliente e última nossa
+    const msgs: any[] = await db.select({ leadId: leadMensagens.leadId, direcao: leadMensagens.direcao, em: leadMensagens.createdAt })
+      .from(leadMensagens).where(and(inArray(leadMensagens.leadId, ids), gte(leadMensagens.createdAt, new Date(agora - 21 * 86_400_000)))).catch(() => []);
+    const ultCli = new Map<number, number>(), ultNossa = new Map<number, number>();
+    for (const m of msgs) {
+      const alvo = m.direcao === "in" ? ultCli : ultNossa;
+      const t = new Date(m.em).getTime();
+      if (t > (alvo.get(Number(m.leadId)) ?? 0)) alvo.set(Number(m.leadId), t);
+    }
+    const vis: any[] = await db.select({ leadId: leadVisitas.leadId, quando: leadVisitas.quando, status: leadVisitas.status }).from(leadVisitas)
+      .where(and(inArray(leadVisitas.leadId, ids), gte(leadVisitas.quando, new Date(agora - 2 * 3_600_000)), lte(leadVisitas.quando, new Date(agora + 2 * 86_400_000)))).catch(() => []);
+    const proxVisita = new Map<number, number>();
+    for (const v of vis) if (["agendada", "confirmada"].includes(v.status)) {
+      const t = new Date(v.quando).getTime();
+      if (!proxVisita.has(Number(v.leadId)) || t < proxVisita.get(Number(v.leadId))!) proxVisita.set(Number(v.leadId), t);
+    }
+    const fila: any[] = await db.select({ leadId: loteFilaEspera.leadId, codigo: loteFilaEspera.loteCodigo }).from(loteFilaEspera)
+      .where(and(inArray(loteFilaEspera.leadId, ids), eq(loteFilaEspera.status, "avisado"))).catch(() => []);
+    const filaAvisado = new Map<number, string>(fila.map(f => [Number(f.leadId), String(f.codigo)]));
+    const nomes = new Map<number, string>(((await db.select({ id: users.id, name: users.name }).from(users)) as any[]).map(u => [Number(u.id), String(u.name ?? "—")]));
+    const itens = vivos.map(l => {
+      const id = Number(l.id);
+      const p = prioridadeDoLead({
+        score: l.leadScore ?? null, classe: l.score ?? null, etapa: etapaDoLead(l), criadoEm: ts(l.createdAt) ?? agora, ultimaAtividade: ts(l.lastActivityAt) ?? ts(l.updatedAt),
+        aguardandoDesde: ts(l.aguardandoCorretorDesde), atendidoEm: ts(l.atendidoAt), ultimaDoCliente: ultCli.get(id) ?? null, ultimaNossa: ultNossa.get(id) ?? null,
+        proximaVisita: proxVisita.get(id) ?? null, filaAvisado: filaAvisado.get(id) ?? null, bloqueadoAte: ts(l.blockedUntil),
+      }, agora);
+      if (!p) return null;
+      return {
+        id, nome: l.nome || (l.answers as any)?.nome || "Sem nome", phone: String(l.phone ?? ""), score: l.leadScore ?? null, classe: l.score ?? "frio",
+        etapa: etapaDoLead(l), rotuloEtapa: ROTULO_ETAPA[etapaDoLead(l)] ?? etapaDoLead(l), chacara: l.loteCodigo ?? null,
+        responsavel: l.responsavelId ? nomes.get(Number(l.responsavelId)) ?? null : null, ...p,
+      };
+    }).filter((x): x is NonNullable<typeof x> => !!x).sort((a, b) => b.pontos - a.pontos);
+    return { itens: itens.slice(0, 60), total: itens.length };
+  }),
+
   /** Abriu o WhatsApp do cliente pelo CRM: conta como atendido (encerra o alerta e tira o card de "Novo") */
   abriuWhatsApp: protectedProcedure.input(z.object({ id: z.number().int() })).mutation(async ({ input, ctx }) => {
     await leadOuErro(await dbOrThrow(), input.id, ctx);

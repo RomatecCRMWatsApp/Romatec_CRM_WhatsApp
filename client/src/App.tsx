@@ -77,6 +77,7 @@ import { perfilDe, podeAbrir, telaInicial } from "@shared/equipe";
 const AppShell = lazy(() => import("./components/AppShell"));
 const ImovelLanding = lazy(() => import("./pages/ImovelLanding"));
 const LeadsFunil = lazy(() => import("./pages/LeadsFunil"));
+const AtenderAgora = lazy(() => import("./pages/AtenderAgora"));
 const LeadDetalhe = lazy(() => import("./pages/LeadDetalhe"));
 const Setup = lazy(() => import("./pages/Setup"));
 import { trpc } from "@/lib/trpc";
@@ -148,6 +149,9 @@ function Router() {
       </Route>
       <Route path={"/leads/funil"}>
         {() => <SetupGuard component={LeadsFunil} />}
+      </Route>
+      <Route path={"/leads/atender"}>
+        {() => <SetupGuard component={AtenderAgora} />}
       </Route>
       <Route path={"/leads/lead/:id"}>
         {() => <SetupGuard component={LeadDetalhe} />}
