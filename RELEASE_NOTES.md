@@ -3,6 +3,14 @@
 Cada versão nova vai no TOPO. Depois rode `npm run release` (valida e atualiza o package.json);
 ao subir, o servidor grava a versão no banco e todos recebem o aviso "Novidades da versão".
 
+## 1.67.1 — 2026-10-29
+tipo: patch
+obrigatoria: nao
+titulo: Telas internas com o título certo na aba do navegador
+
+### Correções
+- Ranking de vendas, Convites de reunião, Recrutamento, Reuniões, Talonários, Assinatura e SaaS apareciam como "Página não encontrada" no título da aba e no link compartilhado; agora mostram "Romatec CRM"
+
 ## 1.67.0 — 2026-10-29
 tipo: minor
 obrigatoria: nao

@@ -46,6 +46,7 @@ export const ROTAS_INTERNAS = [
   '/dashboard', '/contacts', '/properties', '/campaigns', '/settings', '/performance', '/leads', '/materiais', '/setup', '/login',
   '/equipe', '/empreendedor', '/primeiro-acesso', '/meu-cadastro', '/empreendimentos', '/contratos', '/financeiro', '/corretor',
   '/assinar', '/c', '/carteirinhas', '/reservas', '/respostas-automaticas', '/visao-corretor', '/ver-como',
+  '/ranking', '/convites', '/recrutamento', '/reunioes', '/talonarios', '/assinatura', '/saas',
 ];
 
 const CRECI = 'Corretor José Romário · CRECI/MA 4.705';
