@@ -41,7 +41,7 @@ function Foto({ url, nome, className }: { url: string | null; nome: string; clas
 }
 
 /** Carteirinha CR80 (85,6 × 54 mm) — frente */
-function CarteirinhaFrente({ nome, vinculo, unidade, foto }: { nome: string; vinculo: string; unidade: string; foto: string | null }) {
+export function CarteirinhaFrente({ nome, vinculo, unidade, foto }: { nome: string; vinculo: string; unidade: string; foto: string | null }) {
   return (
     <div className="relative aspect-[85.6/54] w-full overflow-hidden rounded-xl text-white shadow-xl shadow-black/40" style={{ background: VERDE, containerType: "inline-size" } as any}>
       <div className="absolute inset-x-0 top-0 h-[3%]" style={{ background: DOURADO }} />
@@ -67,7 +67,7 @@ function CarteirinhaFrente({ nome, vinculo, unidade, foto }: { nome: string; vin
 }
 
 /** Carteirinha — verso (QR de autenticidade e contatos) */
-function CarteirinhaVerso() {
+export function CarteirinhaVerso() {
   return (
     <div className="relative aspect-[85.6/54] w-full overflow-hidden rounded-xl shadow-xl shadow-black/40" style={{ background: CREME, color: VERDE, containerType: "inline-size" } as any}>
       <div className="absolute inset-x-0 bottom-0 h-[3%]" style={{ background: DOURADO }} />
@@ -87,7 +87,7 @@ function CarteirinhaVerso() {
 }
 
 /** Crachá de visitante/convidado da portaria (vertical, 54 × 86 mm) */
-function Cracha({ nome, tipo, evento, numero, foto }: { nome: string; tipo: string; evento: string; numero: string; foto: string | null }) {
+export function Cracha({ nome, tipo, evento, numero, foto }: { nome: string; tipo: string; evento: string; numero: string; foto: string | null }) {
   return (
     <div className="relative mx-auto flex aspect-[54/86] w-full max-w-[260px] flex-col overflow-hidden rounded-xl shadow-xl shadow-black/40" style={{ background: CREME, color: VERDE, containerType: "inline-size" } as any}>
       <div className="flex flex-col items-center gap-[2cqw] px-[6%] pb-[5%] pt-[6%]" style={{ background: VERDE }}>

@@ -50,6 +50,8 @@ const EmpreendimentoProposta = lazy(() => import("./pages/EmpreendimentoProposta
 const Financeiro = lazy(() => import("./pages/Financeiro"));
 const Contratos = lazy(() => import("./pages/Contratos"));
 const Carteirinhas = lazy(() => import("./pages/Carteirinhas"));
+const DocumentosCliente = lazy(() => import("./pages/DocumentosCliente"));
+const DocumentosPublicos = lazy(() => import("./pages/DocumentosPublicos"));
 const FilaReservas = lazy(() => import("./pages/FilaReservas"));
 const RespostasAutomaticas = lazy(() => import("./pages/RespostasAutomaticas"));
 const ContratoNovo = lazy(() => import("./pages/ContratoNovo"));
@@ -199,6 +201,9 @@ function Router() {
       <Route path={"/carteirinhas"}>
         {() => <SetupGuard component={Carteirinhas} />}
       </Route>
+      <Route path={"/documentos-cliente"}>
+        {() => <SetupGuard component={DocumentosCliente} />}
+      </Route>
       <Route path={"/respostas-automaticas"}>
         {() => <SetupGuard component={RespostasAutomaticas} />}
       </Route>
@@ -268,6 +273,8 @@ function Router() {
       <Route path={"/o/:slug"} component={Oferta} />
       <Route path={"/bom-jardims/chacara/:codigo"} component={BomJardimsChacara} />
       <Route path={"/obras-bom-jardim"} component={ObrasBomJardim} />
+      <Route path={"/documentos/:emp/:doc"} component={DocumentosPublicos} />
+      <Route path={"/documentos/:emp"} component={DocumentosPublicos} />
       <Route path={"/bom-jardims"} component={BomJardims} />
       <Route path={"/404"} component={NotFound} />
       <Route component={NotFound} />
@@ -276,7 +283,7 @@ function Router() {
 }
 
 /** Páginas do site público (landing, imóveis, links): sem splash nem overlay do app */
-const rotaDoSite = (p: string) => ["/imoveis", "/i/", "/imovel/", "/links", "/bom-jardims", "/agendar/", "/o/", "/formulario/", "/reuniao/", "/obras-bom-jardim"].some(r => p === r || p.startsWith(r.endsWith("/") ? r : `${r}/`));
+const rotaDoSite = (p: string) => ["/imoveis", "/i/", "/imovel/", "/links", "/bom-jardims", "/agendar/", "/o/", "/formulario/", "/reuniao/", "/obras-bom-jardim", "/documentos/"].some(r => p === r || p.startsWith(r.endsWith("/") ? r : `${r}/`));
 
 function CamadaDoSistema() {
   const [location] = useLocation();

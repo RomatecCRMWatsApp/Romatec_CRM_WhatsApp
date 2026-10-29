@@ -3,6 +3,17 @@
 Cada versão nova vai no TOPO. Depois rode `npm run release` (valida e atualiza o package.json);
 ao subir, o servidor grava a versão no banco e todos recebem o aviso "Novidades da versão".
 
+## 1.69.0 — 2026-10-29
+tipo: minor
+obrigatoria: nao
+titulo: Documentos para o cliente — links só de leitura
+
+### Novo
+- Nova tela Vendas › Documentos para o cliente: contrato (minuta), Estatuto, Diretrizes de Uso, tarifa da água, tabela de pagamento, carnê, carteirinha e crachá de visitante, cada um com link para mandar ao cliente
+- O link e o texto do WhatsApp saem com o seu código, nome, CRECI e WhatsApp; a página mostra o seu contato
+- Página pública no padrão do Bom Jardims: principais pontos em cima e o documento completo embaixo, só para leitura — páginas como imagem com a tarja "somente leitura", sem copiar texto, baixar ou editar, com zoom próprio
+- Link único com a lista de todos os documentos
+
 ## 1.68.2 — 2026-10-29
 tipo: patch
 obrigatoria: nao
