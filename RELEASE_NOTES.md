@@ -3,6 +3,18 @@
 Cada versão nova vai no TOPO. Depois rode `npm run release` (valida e atualiza o package.json);
 ao subir, o servidor grava a versão no banco e todos recebem o aviso "Novidades da versão".
 
+## 1.76.0 — 2026-10-29
+tipo: minor
+obrigatoria: nao
+titulo: Sequências de follow-up por etapa do funil
+
+### Novo
+- Leads › Sequências de follow-up: cada etapa do funil tem a sua sequência de mensagens automáticas — Novo, Qualificando, Qualificado, Visita agendada, Visitou e Proposta
+- Sequências prontas (sem preço, com a saída SAIR): pedir a forma de pagamento, oferecer a simulação, convidar para a visita, pós-visita e documentos para a reserva
+- O administrador edita os textos e os dias, liga/desliga cada etapa e vê a prévia com o nome do cliente; variáveis {oi}, {nome}, {empreendimento}, {link} e {corretor}
+- Mudou o lead de etapa no funil, a sequência recomeça pela da nova etapa; o lead respondeu, ela para (como antes)
+- Na tela do lead aparece qual sequência está rodando e quantas mensagens já saíram
+
 ## 1.75.0 — 2026-10-29
 tipo: minor
 obrigatoria: nao

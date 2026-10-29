@@ -7,7 +7,7 @@ import AvisoRotinas from "./AvisoRotinas";
 import { MobileTabBar, RomatecAppIcon, RomatecLockup, TAB_ICONS, type TabItem } from "@/brand";
 import {
   BarChart3, Building2, Flame, Images, KanbanSquare, LayoutDashboard, LineChart, LogOut, Megaphone, Menu, Send,
-  Settings, UserCog, Users, X, Eye, ClipboardList, CalendarDays, Map as MapIcon, Smartphone, Wallet, IdCard, FolderOpen, Bell, FileSignature, Mic, CalendarCheck, UserPlus, BookCopy, BadgeDollarSign, Hourglass, Bot, Trophy, Link2, Zap, MessagesSquare,
+  Settings, UserCog, Users, X, Eye, ClipboardList, CalendarDays, Map as MapIcon, Smartphone, Wallet, IdCard, FolderOpen, Bell, FileSignature, Mic, CalendarCheck, UserPlus, BookCopy, BadgeDollarSign, Hourglass, Bot, Trophy, Link2, Zap, MessagesSquare, ListOrdered,
   ChevronRight, ChevronsLeft, ChevronsRight,
 } from "lucide-react";
 import { abrirNovidades, SinoNovidades, useNovidadesNaoLidas } from "./sistema/Novidades";
@@ -47,6 +47,7 @@ const MENU: Grupo[] = [
       { rotulo: "Convites de reunião", rota: "/convites", icone: CalendarCheck },
       { rotulo: "Campanhas de captação", rota: "/leads/campanhas", icone: Megaphone, modulo: "leads" },
       { rotulo: "Links de divulgação", rota: "/leads/campanhas?aba=links", icone: Link2, modulo: "leads" },
+      { rotulo: "Sequências de follow-up", rota: "/leads/sequencias", icone: ListOrdered, modulo: "leads" },
       { rotulo: "Relatório", rota: "/leads/relatorio", icone: BarChart3, modulo: "leads" },
       { rotulo: "Lista de interesse", rota: "/leads/lista-interesse", icone: ClipboardList, modulo: "leads" },
     ],

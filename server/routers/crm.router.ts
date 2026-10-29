@@ -126,6 +126,8 @@ export const crmRouter = router({
       } as any).where(eq(leadQualifications.id, input.id));
       // Mexer no lead conta como atendimento (para o alerta de 5 minutos)
       await import("../leads/sla").then(m => m.marcarAtendido(input.id)).catch(() => {});
+      // Nova etapa, nova sequência de follow-up (shared/followupSequencias.ts)
+      await import("../leads/followup").then(m => m.reiniciarFollowUpDoLead(input.id)).catch(() => {});
       return { success: true };
     }),
 
@@ -188,6 +190,43 @@ export const crmRouter = router({
       if (e instanceof IaResumoErro) throw new TRPCError({ code: e.status === 404 ? "NOT_FOUND" : e.status === 412 ? "PRECONDITION_FAILED" : "INTERNAL_SERVER_ERROR", message: e.message });
       throw e;
     }
+  }),
+
+  // ─── Sequências de follow-up por etapa (shared/followupSequencias.ts) ───
+  sequencias: protectedProcedure.query(async () => {
+    const { sequenciasEmVigor } = await import("../leads/followup");
+    const { ETAPAS_COM_SEQUENCIA, SEQUENCIAS_PADRAO, ROTULO_ETAPA_SEQ } = await import("../../shared/followupSequencias");
+    const m = await sequenciasEmVigor(0);
+    return ETAPAS_COM_SEQUENCIA.map(e => {
+      const s = m.get(e)!;
+      return { etapa: e, rotulo: ROTULO_ETAPA_SEQ[e], ativo: s.ativo, passos: s.passos, padrao: JSON.stringify(s.passos) === JSON.stringify(SEQUENCIAS_PADRAO[e].passos) && s.ativo === SEQUENCIAS_PADRAO[e].ativo };
+    });
+  }),
+  salvarSequencia: protectedProcedure.input(z.object({
+    etapa: z.string(), ativo: z.boolean(), passos: z.array(z.object({ dias: z.number().int(), texto: z.string().max(700) })).max(8),
+  })).mutation(async ({ ctx, input }) => {
+    if (ctx.permissoes.perfil !== "admin") throw new TRPCError({ code: "FORBIDDEN", message: "Só o administrador edita as sequências." });
+    const { ETAPAS_COM_SEQUENCIA, problemaSequencia } = await import("../../shared/followupSequencias");
+    if (!(ETAPAS_COM_SEQUENCIA as readonly string[]).includes(input.etapa)) throw new TRPCError({ code: "BAD_REQUEST", message: "Etapa inválida" });
+    const passos = input.passos.map(p => ({ dias: p.dias, texto: p.texto.trim() }));
+    const prob = problemaSequencia(passos);
+    if (prob) throw new TRPCError({ code: "BAD_REQUEST", message: prob });
+    const db = await dbOrThrow();
+    const { followUpSequencias } = await import("../../drizzle/schema");
+    const valores = { ativo: input.ativo, passosJson: JSON.stringify(passos), atualizadoPor: ctx.user.id, updatedAt: new Date() };
+    const ja: any[] = await db.select({ etapa: followUpSequencias.etapa }).from(followUpSequencias).where(eq(followUpSequencias.etapa, input.etapa));
+    if (ja.length) await db.update(followUpSequencias).set(valores as any).where(eq(followUpSequencias.etapa, input.etapa));
+    else await db.insert(followUpSequencias).values({ etapa: input.etapa, ...valores } as any);
+    (await import("../leads/followup")).limparCacheSequencias();
+    return { ok: true as const };
+  }),
+  restaurarSequencia: protectedProcedure.input(z.object({ etapa: z.string() })).mutation(async ({ ctx, input }) => {
+    if (ctx.permissoes.perfil !== "admin") throw new TRPCError({ code: "FORBIDDEN", message: "Só o administrador edita as sequências." });
+    const db = await dbOrThrow();
+    const { followUpSequencias } = await import("../../drizzle/schema");
+    await db.delete(followUpSequencias).where(eq(followUpSequencias.etapa, input.etapa));
+    (await import("../leads/followup")).limparCacheSequencias();
+    return { ok: true as const };
   }),
 
   /** Abriu o WhatsApp do cliente pelo CRM: conta como atendido (encerra o alerta e tira o card de "Novo") */
@@ -439,6 +478,11 @@ export const crmRouter = router({
       })(),
       // Follow-up automático: passo enviado (de 5), quando sai o próximo e o último erro de envio
       followUp: {
+        ...(await (async () => {
+          const F = await import("../leads/followup");
+          const seq = F.sequenciaDoLead(l, await F.sequenciasEmVigor());
+          return { total: seq ? seq.passos.length : F.CADENCIA_DIAS.length, sequencia: seq ? (ROTULO_ETAPA[seq.etapa] ?? seq.etapa) : null };
+        })()),
         passo: Number(l.followUpPasso) || 0,
         proximoEm: l.proximoFollowUpAt ?? null,
         tentativas: Number(l.followUpTentativas) || 0,

@@ -78,6 +78,7 @@ const AppShell = lazy(() => import("./components/AppShell"));
 const ImovelLanding = lazy(() => import("./pages/ImovelLanding"));
 const LeadsFunil = lazy(() => import("./pages/LeadsFunil"));
 const AtenderAgora = lazy(() => import("./pages/AtenderAgora"));
+const SequenciasFollowUp = lazy(() => import("./pages/SequenciasFollowUp"));
 const PortalComprador = lazy(() => import("./pages/PortalComprador"));
 const AssinarAditivo = lazy(() => import("./pages/AssinarAditivo"));
 const LeadDetalhe = lazy(() => import("./pages/LeadDetalhe"));
@@ -151,6 +152,9 @@ function Router() {
       </Route>
       <Route path={"/leads/funil"}>
         {() => <SetupGuard component={LeadsFunil} />}
+      </Route>
+      <Route path={"/leads/sequencias"}>
+        {() => <SetupGuard component={SequenciasFollowUp} />}
       </Route>
       <Route path={"/leads/atender"}>
         {() => <SetupGuard component={AtenderAgora} />}

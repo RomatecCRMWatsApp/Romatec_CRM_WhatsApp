@@ -2034,3 +2034,12 @@ export const contratoAditivos = mysqlTable("contratoAditivos", {
   uxNumero: uniqueIndex("ux_aditivo_numero").on(t.contratoId, t.numero),
   uxToken: uniqueIndex("ux_aditivo_token").on(t.token),
 }));
+
+/** Sequências de follow-up por etapa do funil (shared/followupSequencias.ts) — sem linha = sequência padrão da etapa */
+export const followUpSequencias = mysqlTable("followUpSequencias", {
+  etapa: varchar("etapa", { length: 30 }).primaryKey(),
+  ativo: boolean("ativo").default(true).notNull(),
+  passosJson: text("passosJson").notNull(),
+  atualizadoPor: int("atualizadoPor"),
+  updatedAt: timestamp("updatedAt").defaultNow().notNull(),
+});

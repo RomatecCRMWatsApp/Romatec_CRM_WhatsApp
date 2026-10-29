@@ -14,6 +14,8 @@
  */
 import { and, eq, inArray, isNotNull, isNull, lte } from 'drizzle-orm';
 import { appUrl } from './config';
+import { etapaDoLead } from './kanban';
+import { SEQUENCIAS_PADRAO, renderizarPasso, type Sequencia } from '../../shared/followupSequencias';
 
 /** Dias desde a última conversa em que sai cada follow-up (passo 1..5) */
 export const CADENCIA_DIAS = [1, 3, 7, 14, 30] as const;
@@ -25,8 +27,8 @@ export function followUpLigado(): boolean {
 }
 
 /** Data em que sai o passo `passo` (1..5), contando da última conversa; null = acabou */
-export function quandoSai(passo: number, ultimaConversa: number): number | null {
-  const d = CADENCIA_DIAS[passo - 1];
+export function quandoSai(passo: number, ultimaConversa: number, cadencia: readonly number[] = CADENCIA_DIAS): number | null {
+  const d = cadencia[passo - 1];
   return d === undefined ? null : ultimaConversa + d * DIA;
 }
 
@@ -103,6 +105,36 @@ async function db() {
   return getDb();
 }
 
+// ─── Sequências por etapa (shared/followupSequencias.ts) ─────────────────────
+let cacheSeq: { em: number; m: Map<string, Sequencia> } | null = null;
+export const limparCacheSequencias = () => { cacheSeq = null; };
+
+/** Sequências em vigor: as editadas no banco por cima das padrão (cache de 1 min) */
+export async function sequenciasEmVigor(agora = Date.now()): Promise<Map<string, Sequencia>> {
+  if (cacheSeq && agora - cacheSeq.em < 60_000) return cacheSeq.m;
+  const m = new Map<string, Sequencia>(Object.values(SEQUENCIAS_PADRAO).map(x => [x.etapa, x]));
+  try {
+    const d = await db();
+    if (d) {
+      const { followUpSequencias } = await import('../../drizzle/schema');
+      const rs: any[] = await d.select().from(followUpSequencias);
+      for (const r of rs) {
+        const passos = JSON.parse(r.passosJson || '[]');
+        if (Array.isArray(passos) && passos.length) m.set(r.etapa, { etapa: r.etapa, ativo: r.ativo === true || r.ativo === 1, passos });
+      }
+    }
+  } catch (e: any) { console.warn('[FollowUp] sequências:', e?.message); }
+  cacheSeq = { em: agora, m };
+  return m;
+}
+
+/** Sequência que vale para o lead agora (só funil comprador, etapa com sequência ativa); null = follow-up padrão */
+export function sequenciaDoLead(l: { funil?: string | null; etapa?: string | null; stage?: string | null }, seqs: Map<string, Sequencia>): Sequencia | null {
+  if (l.funil === 'proprietario') return null;
+  const s = seqs.get(etapaDoLead(l as any));
+  return s && s.ativo && s.passos.length ? s : null;
+}
+
 /** O CRM falou com o lead (abertura, bot ou IA): o follow-up recomeça do dia 1 */
 export async function agendarFollowUp(phone: string, agora = Date.now()): Promise<void> {
   if (!followUpLigado()) return;
@@ -110,10 +142,31 @@ export async function agendarFollowUp(phone: string, agora = Date.now()): Promis
   if (!d) return;
   const { leadQualifications } = await import('../../drizzle/schema');
   const fone = phone.replace(/\D/g, '');
-  const prox = quandoSai(1, agora);
+  const [l]: any[] = await d.select({ funil: leadQualifications.funil, etapa: leadQualifications.etapa, stage: leadQualifications.stage }).from(leadQualifications).where(eq(leadQualifications.phone, fone)).limit(1);
+  const seq = l ? sequenciaDoLead(l, await sequenciasEmVigor(agora)) : null;
+  const prox = quandoSai(1, agora, seq ? seq.passos.map(p => p.dias) : CADENCIA_DIAS);
   await d.update(leadQualifications)
     .set({ followUpPasso: 0, proximoFollowUpAt: prox ? new Date(proximoHorarioComercial(prox)) : null, followUpTentativas: 0 } as any)
     .where(eq(leadQualifications.phone, fone));
+}
+
+/** Lead mudou de etapa: a sequência recomeça pela da nova etapa (contando de agora) */
+export async function reiniciarFollowUpDoLead(leadId: number, agora = Date.now()): Promise<void> {
+  if (!followUpLigado()) return;
+  const d = await db();
+  if (!d) return;
+  const { leadQualifications } = await import('../../drizzle/schema');
+  const [l]: any[] = await d.select().from(leadQualifications).where(eq(leadQualifications.id, leadId)).limit(1);
+  if (!l) return;
+  if (followUpPausado(l, agora)) {
+    await d.update(leadQualifications).set({ proximoFollowUpAt: null } as any).where(eq(leadQualifications.id, leadId));
+    return;
+  }
+  const seq = sequenciaDoLead(l, await sequenciasEmVigor(agora));
+  const prox = quandoSai(1, agora, seq ? seq.passos.map(p => p.dias) : CADENCIA_DIAS);
+  await d.update(leadQualifications)
+    .set({ followUpPasso: 0, proximoFollowUpAt: prox ? new Date(proximoHorarioComercial(prox)) : null, followUpTentativas: 0, followUpErro: null } as any)
+    .where(eq(leadQualifications.id, leadId));
 }
 
 /** O lead respondeu: cancela o follow-up pendente */
@@ -140,6 +193,11 @@ export async function processarFollowUps(agora = Date.now(), limite = 15): Promi
   const slugs = Array.from(new Set(vencidos.map(l => l.empreendimentoSlug).filter(Boolean))) as string[];
   const emps: any[] = slugs.length ? await d.select({ slug: empreendimentos.slug, nome: empreendimentos.nome }).from(empreendimentos).where(inArray(empreendimentos.slug, slugs)) : [];
   const nomeEmp = new Map(emps.map(e => [e.slug, e.nome]));
+  const seqs = await sequenciasEmVigor(agora);
+  const { users } = await import('../../drizzle/schema');
+  const respIds = Array.from(new Set(vencidos.map(l => Number(l.responsavelId)).filter(Boolean)));
+  const resps: any[] = respIds.length ? await d.select({ id: users.id, name: users.name, creci: users.creci }).from(users).where(inArray(users.id, respIds)) : [];
+  const corretorDe = (id: unknown) => { const u = resps.find(x => Number(x.id) === Number(id)); return u ? `${String(u.name ?? '').trim()}${u.creci ? ` (${u.creci})` : ''}` : null; };
   const { enviarTexto } = await import('./zapiClient');
   const { registrarMensagem } = await import('./qualificacaoService');
   const { linhasAfetadas, registrarEnvio } = await import('./rotinas');
@@ -148,14 +206,22 @@ export async function processarFollowUps(agora = Date.now(), limite = 15): Promi
     const anterior = Number(l.followUpPasso) || 0;
     const passo = anterior + 1;
     const pausa = followUpPausado(l, agora);
-    const texto = pausa ? null : mensagemFollowUp(passo, { ...l, empreendimentoNome: nomeEmp.get(l.empreendimentoSlug) });
+    const seq = sequenciaDoLead(l, seqs);
+    const cadencia = seq ? seq.passos.map(p => p.dias) : CADENCIA_DIAS;
+    const bj = l.empreendimentoSlug === 'bom-jardims';
+    const texto = pausa ? null : seq
+      ? (seq.passos[passo - 1] ? renderizarPasso(seq.passos[passo - 1].texto, {
+          nome: l.nome, empreendimento: bj ? 'Condomínio de Chácaras Bom Jardims' : nomeEmp.get(l.empreendimentoSlug) ?? null,
+          link: bj ? `${appUrl()}/bom-jardims` : `${appUrl()}/imoveis`, corretor: corretorDe(l.responsavelId),
+        }) : null)
+      : mensagemFollowUp(passo, { ...l, empreendimentoNome: nomeEmp.get(l.empreendimentoSlug) });
     if (!texto) {
       await d.update(leadQualifications).set({ proximoFollowUpAt: null } as any).where(eq(leadQualifications.id, l.id));
       continue;
     }
     // Reserva atômica: só um servidor (ex.: dois no ar durante o deploy) consegue
     // avançar o passo; quem não conseguiu pula o lead — nada sai em duplicidade.
-    const prox = proximoPassoEm(passo, agora);
+    const prox = proximoPassoEm(passo, agora, cadencia);
     const reserva = await d.update(leadQualifications).set({ followUpPasso: passo, proximoFollowUpAt: prox ? new Date(prox) : null } as any)
       .where(and(
         eq(leadQualifications.id, l.id),
@@ -195,8 +261,8 @@ export async function processarFollowUps(agora = Date.now(), limite = 15): Promi
 }
 
 /** Quando sai o passo seguinte a `passo`, contado do envio de agora (null = acabou a cadência) */
-export function proximoPassoEm(passo: number, agora: number): number | null {
-  const atual = CADENCIA_DIAS[passo - 1], seguinte = CADENCIA_DIAS[passo];
+export function proximoPassoEm(passo: number, agora: number, cadencia: readonly number[] = CADENCIA_DIAS): number | null {
+  const atual = cadencia[passo - 1], seguinte = cadencia[passo];
   if (atual === undefined || seguinte === undefined) return null;
   return proximoHorarioComercial(agora + (seguinte - atual) * DIA);
 }

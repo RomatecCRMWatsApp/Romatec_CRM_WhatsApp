@@ -280,7 +280,7 @@ export default function LeadDetalhe() {
           <Card className="bg-card border-border">
             <CardHeader className="pb-2"><CardTitle className="text-base">Follow-up automático</CardTitle></CardHeader>
             <CardContent className="space-y-1 text-sm">
-              <p><span className="text-muted-foreground">Mensagens enviadas:</span> {lead.followUp.passo} de 5</p>
+              <p><span className="text-muted-foreground">Mensagens enviadas:</span> {lead.followUp.passo} de {lead.followUp.total}{lead.followUp.sequencia ? ` · sequência "${lead.followUp.sequencia}"` : " · sequência padrão"}</p>
               <p>
                 <span className="text-muted-foreground">Próxima:</span>{" "}
                 {lead.followUp.proximoEm

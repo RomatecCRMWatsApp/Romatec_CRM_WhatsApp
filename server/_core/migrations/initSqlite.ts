@@ -623,6 +623,8 @@ export function initSqliteTables(sqlite: any): void {
     token TEXT NOT NULL UNIQUE, otpHash TEXT, otpExpira INTEGER, otpTentativas INTEGER NOT NULL DEFAULT 0, otpEnvios INTEGER NOT NULL DEFAULT 0,
     assinadoEm INTEGER, assinaturaIp TEXT, assinaturaUa TEXT, resultadoJson TEXT, criadoPor INTEGER, canceladoPor INTEGER, criadoEm ${agoraS},
     UNIQUE (contratoId, numero))`);
+  run(`CREATE TABLE IF NOT EXISTS followUpSequencias (
+    etapa TEXT PRIMARY KEY, ativo INTEGER NOT NULL DEFAULT 1, passosJson TEXT NOT NULL, atualizadoPor INTEGER, updatedAt ${agoraS})`);
   run(`CREATE TABLE IF NOT EXISTS campanhaCliques (
     id INTEGER PRIMARY KEY AUTOINCREMENT, campanha TEXT NOT NULL, acao TEXT NOT NULL, corretorId INTEGER, utmSource TEXT, criadoEm ${agoraS})`);
   run(`CREATE TABLE IF NOT EXISTS rankingCampanhas (
