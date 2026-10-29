@@ -5,6 +5,7 @@ import { trpc } from "@/lib/trpc";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { ArrowLeft, Building2, ExternalLink, Headset, MessageCircle, Bot, Send, XCircle, FileText, Save } from "lucide-react";
+import FilaEsperaLead from "@/components/lotes/FilaEsperaLead";
 import PageHeader from "@/components/PageHeader";
 import VisitasLead from "@/components/VisitasLead";
 import ReunioesLead from "@/components/ReunioesLead";
@@ -271,6 +272,7 @@ export default function LeadDetalhe() {
           </Card>
 
           <VisitasLead leadId={id} imoveis={lead.imoveis as any} onMudou={atualizar} />
+          {lead.funil !== "proprietario" && <FilaEsperaLead leadId={id} />}
           <ReunioesLead leadId={id} />
 
           <Card className="bg-card border-border">

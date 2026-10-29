@@ -80,21 +80,59 @@ function Linha({ item, onFeito }: { item: Item; onFeito: () => void }) {
  * Fila de reservas do escritório (administrador e secretária): reservas vencidas, de corretor sem acesso ou sem
  * corretor — passar para outro corretor, assumir, prorrogar 72 h ou liberar. Aba "Todas" com o prazo de cada reserva.
  */
+/** Filas de espera por chácara: quem aguarda a reserva cair (server/lotes/filaEspera.ts) */
+function FilasEspera() {
+  const [, navigate] = useLocation();
+  const { data, isLoading, refetch } = trpc.reservas.filas.useQuery(undefined, { refetchInterval: 60_000 });
+  const encerrar = trpc.reservas.encerrarFila.useMutation({
+    onSuccess: r => { toast.success(r.proximo ? `${r.proximo.nome} (próximo da fila) foi avisado` : "Fila atualizada"); refetch(); },
+    onError: e => toast.error(e.message),
+  });
+  if (isLoading) return <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />;
+  if (!data?.length) return <p className="rounded-xl border border-dashed border-border p-4 text-sm text-muted-foreground">Ninguém na fila de espera. O corretor põe o cliente na fila pela tela do lead.</p>;
+  return (
+    <div className="space-y-3">
+      {data.map(f => (
+        <div key={f.loteId} className="rounded-xl border border-border bg-card p-3">
+          <p className="mb-2 font-semibold">Chácara {f.codigo} <span className="text-xs font-normal text-muted-foreground">· {f.situacao} · {f.pessoas.length} na fila</span></p>
+          <div className="divide-y divide-border text-sm">
+            {f.pessoas.map(p => (
+              <div key={p.id} className="flex flex-wrap items-center justify-between gap-2 py-1.5">
+                <span>
+                  <b>{p.posicao}º</b> · {p.leadId ? <button className="underline-offset-2 hover:underline" onClick={() => navigate(`/leads/lead/${p.leadId}`)}>{p.nome}</button> : p.nome}
+                  <span className="text-xs text-muted-foreground"> · {p.corretor}{p.status === "avisado" ? ` · avisado ${dataHora(p.avisadoEm)}` : ` · desde ${dataHora(p.criadoEm)}`}</span>
+                </span>
+                <span className="flex gap-1">
+                  {p.status === "avisado" && <Button size="sm" variant="outline" className="h-7 text-xs" disabled={encerrar.isPending} onClick={() => encerrar.mutate({ id: p.id, leadId: null, status: "convertido" })}>Reservou</Button>}
+                  <Button size="sm" variant="ghost" className="h-7 text-xs text-red-300" disabled={encerrar.isPending}
+                    onClick={() => { if (confirm(`Tirar ${p.nome} da fila da chácara ${f.codigo}?`)) encerrar.mutate({ id: p.id, leadId: null, status: "desistiu" }); }}>Tirar da fila</Button>
+                </span>
+              </div>
+            ))}
+          </div>
+        </div>
+      ))}
+    </div>
+  );
+}
+
 export default function FilaReservas() {
   const { data, isLoading, error, refetch } = trpc.reservas.lista.useQuery(undefined, { refetchInterval: 60_000 });
-  const [aba, setAba] = useState<"fila" | "todas">("fila");
-  const lista = (aba === "fila" ? data?.fila : data?.todas) as Item[] | undefined;
+  const { data: filas } = trpc.reservas.filas.useQuery(undefined, { refetchInterval: 60_000 });
+  const [aba, setAba] = useState<"fila" | "todas" | "espera">("fila");
+  const lista = (aba === "espera" ? undefined : aba === "fila" ? data?.fila : data?.todas) as Item[] | undefined;
   return (
     <div>
       <PageHeader icone={Hourglass} titulo="Fila de reservas" subtitulo="Reservas que precisam do escritório: vencidas, de corretor sem acesso ou sem corretor" />
       <div className="mx-auto max-w-[1400px] space-y-3 px-4 pb-8 md:px-6">
         <div className="flex flex-wrap items-center gap-2">
-          {([["fila", `Na fila do escritório (${data?.fila.length ?? 0})`], ["todas", `Todas as reservas (${data?.todas.length ?? 0})`]] as const).map(([k, r]) => (
+          {([["fila", `Na fila do escritório (${data?.fila.length ?? 0})`], ["todas", `Todas as reservas (${data?.todas.length ?? 0})`], ["espera", `Fila de espera (${filas?.reduce((n, f) => n + f.pessoas.length, 0) ?? 0})`]] as const).map(([k, r]) => (
             <button key={k} onClick={() => setAba(k)} className={`rounded-full border px-3 py-1 text-xs ${aba === k ? "border-primary bg-primary/15 text-primary" : "border-border text-muted-foreground hover:text-foreground"}`}>{r}</button>
           ))}
           {isLoading && <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />}
         </div>
         {error && <p className="text-sm text-red-400">{error.message}</p>}
+        {aba === "espera" && <FilasEspera />}
         {lista && !lista.length && (
           <p className="flex items-center gap-2 rounded-xl border border-dashed border-border p-4 text-sm text-muted-foreground">
             {aba === "fila" ? <><CheckCircle2 className="h-4 w-4 text-emerald-400" /> Nada na fila: todas as reservas estão em dia e com corretor ativo.</> : "Nenhuma chácara reservada no momento."}

@@ -1944,3 +1944,23 @@ export const linksDivulgacao = mysqlTable("linksDivulgacao", {
   criadoPor: int("criadoPor"),
   criadoEm: timestamp("criadoEm").defaultNow().notNull(),
 });
+
+/** Fila de espera por chácara (server/lotes/filaEspera.ts): quando a reserva cai, o 1º da fila é avisado */
+export const loteFilaEspera = mysqlTable("loteFilaEspera", {
+  id: int("id").autoincrement().primaryKey(),
+  empreendimentoId: int("empreendimentoId").notNull(),
+  loteId: int("loteId").notNull(),
+  loteCodigo: varchar("loteCodigo", { length: 10 }).notNull(),
+  leadId: int("leadId"),
+  nome: varchar("nome", { length: 160 }).notNull(),
+  telefone: varchar("telefone", { length: 20 }),
+  corretorId: int("corretorId"),
+  /** aguardando | avisado | convertido | desistiu */
+  status: varchar("status", { length: 12 }).default("aguardando").notNull(),
+  avisadoEm: timestamp("avisadoEm"),
+  observacao: varchar("observacao", { length: 300 }),
+  criadoPor: int("criadoPor"),
+  criadoEm: timestamp("criadoEm").defaultNow().notNull(),
+}, (t) => ({
+  ixLote: index("ix_fila_espera_lote").on(t.loteId, t.status, t.criadoEm),
+}));

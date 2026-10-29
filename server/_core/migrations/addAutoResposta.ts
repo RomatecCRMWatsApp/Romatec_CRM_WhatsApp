@@ -46,6 +46,12 @@ const TABELAS: [string, string][] = [
   ['campanhaCliques', `CREATE TABLE IF NOT EXISTS campanhaCliques (
     id INT AUTO_INCREMENT PRIMARY KEY, campanha VARCHAR(60) NOT NULL, acao VARCHAR(12) NOT NULL, corretorId INT NULL,
     utmSource VARCHAR(100) NULL, criadoEm TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP, KEY ix_campanha_cliques (campanha, criadoEm))`],
+  // Fila de espera por chácara (server/lotes/filaEspera.ts)
+  ['loteFilaEspera', `CREATE TABLE IF NOT EXISTS loteFilaEspera (
+    id INT AUTO_INCREMENT PRIMARY KEY, empreendimentoId INT NOT NULL, loteId INT NOT NULL, loteCodigo VARCHAR(10) NOT NULL, leadId INT NULL,
+    nome VARCHAR(160) NOT NULL, telefone VARCHAR(20) NULL, corretorId INT NULL, status VARCHAR(12) NOT NULL DEFAULT 'aguardando',
+    avisadoEm TIMESTAMP NULL, observacao VARCHAR(300) NULL, criadoPor INT NULL, criadoEm TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    KEY ix_fila_espera_lote (loteId, status, criadoEm))`],
   // Links de divulgação cadastrados pelo escritório (Campanhas de captação › Links de divulgação)
   ['linksDivulgacao', `CREATE TABLE IF NOT EXISTS linksDivulgacao (
     id INT AUTO_INCREMENT PRIMARY KEY, titulo VARCHAR(120) NOT NULL, descricao VARCHAR(300) NULL, url VARCHAR(500) NOT NULL,

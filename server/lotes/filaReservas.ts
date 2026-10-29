@@ -140,5 +140,7 @@ export async function acaoReserva(loteId: number, acao: AcaoFila, autorId: numbe
     leadId: null, corretorId: null, clienteNome: null, valorVenda: null, valorEntrada: null, numParcelas: null, dataSituacao: new Date(agora), updatedAt: new Date(agora),
   } as any).where(eq(lotes.id, l.id));
   await historico('disponivel', `Fila do escritório: chácara liberada — ${acao.motivo.trim()}`, null);
-  return { ok: true as const, mensagem: `Chácara ${l.codigo} liberada` };
+  // Fila de espera: o 1º da fila é avisado (cliente e corretor)
+  const vez = await import('./filaEspera').then(F => F.avisarProximoDaFila(l.id)).catch((e: any) => { console.warn('[FilaEspera] aviso:', e?.message ?? e); return null; });
+  return { ok: true as const, mensagem: `Chácara ${l.codigo} liberada${vez ? ` · ${vez.nome} (1º da fila de espera) foi avisado` : ''}` };
 }

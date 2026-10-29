@@ -3,6 +3,17 @@
 Cada versão nova vai no TOPO. Depois rode `npm run release` (valida e atualiza o package.json);
 ao subir, o servidor grava a versão no banco e todos recebem o aviso "Novidades da versão".
 
+## 1.71.0 — 2026-10-29
+tipo: minor
+obrigatoria: nao
+titulo: Fila de espera por chácara
+
+### Novo
+- Na tela do lead, "Fila de espera": o corretor põe o cliente na fila de uma chácara já reservada e vê a posição dele (1º, 2º…)
+- Quando a reserva cai (liberada pelo escritório, contrato cancelado ou mudança no mapa), o 1º da fila recebe a mensagem no WhatsApp e o corretor dele recebe o aviso no sininho, no celular e no WhatsApp
+- Se o avisado desistir, o próximo é avisado na hora (enquanto a chácara continuar livre)
+- Fila de reservas › "Fila de espera": o escritório vê todas as filas, quem já foi avisado, e marca "Reservou" ou "Tirar da fila"
+
 ## 1.70.0 — 2026-10-29
 tipo: minor
 obrigatoria: nao

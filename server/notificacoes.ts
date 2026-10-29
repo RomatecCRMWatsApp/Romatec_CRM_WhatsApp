@@ -151,6 +151,10 @@ export interface MudancaLote {
 
 /** Reserva / venda / liberação de lote → sininho e push (escopo do corretor respeitado) */
 export async function notificarMudancaLote(m: MudancaLote, repo: RepoNotificacoes = repoBanco(), enviar?: EnviadorPush | null) {
+  // Chácara livre de novo: avisa o 1º da fila de espera (sem travar o aviso da liberação)
+  if (m.para === 'disponivel' && m.de && m.de !== 'disponivel') {
+    import('./lotes/filaEspera').then(F => F.avisarProximoDaFila(m.loteId)).catch(e => console.warn('[FilaEspera] aviso:', e?.message ?? e));
+  }
   const tipo = eventoDaMudanca(m.de, m.para);
   if (!tipo) return null;
   const usuarios = await repo.usuarios();
@@ -160,6 +164,27 @@ export async function notificarMudancaLote(m: MudancaLote, repo: RepoNotificacoe
   return { tipo, ...(await emitir(repo, enviar === undefined ? await enviadorWebPush() : enviar, usuarios, ids,
     { tipo, titulo, mensagem, empreendimentoId: m.empreendimentoId, loteId: m.loteId, chave: null },
     { empreendimentoSlug: m.empreendimentoSlug, lote: m.codigo })) };
+}
+
+/**
+ * Fila de espera: a chácara ficou livre e a vez é de um cliente (server/lotes/filaEspera.ts) → sininho e push para o
+ * corretor do cliente e o escritório (administrador e secretária); o link abre o lead.
+ */
+export async function notificarFilaEspera(
+  f: { loteId: number; codigo: string; empreendimentoId: number; empreendimentoSlug: string; empreendimentoNome?: string | null; cliente: string; corretorId: number | null; leadId: number | null },
+  repo: RepoNotificacoes = repoBanco(), enviar?: EnviadorPush | null,
+) {
+  const usuarios = await repo.usuarios();
+  const ativo = (u: any) => u.ativo !== false && u.ativo !== 0;
+  const ids = Array.from(new Set([
+    ...(f.corretorId ? [f.corretorId] : []),
+    ...usuarios.filter(u => ativo(u) && ['admin', 'secretario'].includes(String(perfilDe(u as any)))).map(u => u.id),
+  ])).filter(id => usuarios.some(u => u.id === id));
+  const titulo = `Fila de espera: chácara ${f.codigo} livre`;
+  const mensagem = `A vez é de ${f.cliente}${f.empreendimentoNome ? ` (${f.empreendimentoNome})` : ''}. O cliente já foi avisado no WhatsApp — faça a reserva.`;
+  return emitir(repo, enviar === undefined ? await enviadorWebPush() : enviar, usuarios, ids,
+    { tipo: "atendimento", titulo, mensagem, empreendimentoId: f.empreendimentoId, loteId: f.loteId, chave: null },
+    { empreendimentoSlug: f.empreendimentoSlug, lote: f.codigo, leadId: f.leadId });
 }
 
 /** Pedido de cancelamento de contrato (corretor/secretária) → sininho e push só para o administrador */
