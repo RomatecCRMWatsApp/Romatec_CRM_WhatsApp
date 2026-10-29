@@ -37,7 +37,7 @@ subtitle: "Para revisão do José Romário antes de subir ao sistema · 29/10/20
 
 **Nova Cláusula 11.7**
 
-> <mark>11.7. A aquisição e a instalação do hidrômetro e do cavalete da unidade são de responsabilidade e às expensas do(a) COMPRADOR(A), que solicitará a ligação à administração do sistema de água. O consumo será medido individualmente e cobrado mensalmente por fatura impressa entregue a cada condômino, com o valor do metro cúbico (m³) fixado com base nas tabelas tarifárias praticadas na região pela CAEMA e pelo SAAE de Açailândia — hoje R$ <span class="pend">[PENDENTE: valor do m³]</span> por m³ —, reajustado sempre que essas tabelas forem reajustadas. A fatura não paga, após notificação com prazo mínimo de 30 (trinta) dias, autoriza a suspensão do fornecimento até a regularização.</mark>
+> <mark>11.7. A aquisição e a instalação do hidrômetro e do cavalete da unidade são de responsabilidade e às expensas do(a) COMPRADOR(A), que solicitará a ligação à administração do sistema de água. O consumo será medido individualmente e cobrado mensalmente por fatura impressa entregue a cada condômino, com o valor do metro cúbico (m³) e da tarifa mínima fixados com base nas tabelas tarifárias oficiais praticadas na região pela CAEMA e pelo SAAE de Açailândia, que integram este contrato como **Anexo VIII — Tabelas tarifárias de água (origem das taxas)**, e reajustados sempre que essas tabelas forem reajustadas, mediante simples comunicação ao(à) COMPRADOR(A) com a nova tabela. A fatura não paga, após notificação com prazo mínimo de 30 (trinta) dias, autoriza a suspensão do fornecimento até a regularização.</mark>
 
 **Cláusula 12.1, alínea (c)** — obrigações da VENDEDORA
 
@@ -133,8 +133,10 @@ subtitle: "Para revisão do José Romário antes de subir ao sistema · 29/10/20
 
 | Campo | Onde entra |
 |---|---|
-| Valor do m³ de água (tabela CAEMA/SAAE) e, se houver, consumo mínimo | Cl. 11.7 |
+| Tabelas oficiais da CAEMA e do SAAE (o senhor vai buscar) — entram como **Anexo VIII**; o valor do m³ fica sem número no texto | Cl. 11.7 e Anexo VIII |
 | Taxa de reimpressão da carteirinha | Cl. 14.5 |
 | Tamanho do espaço exclusivo (m²) e planta da Quadra F | Cl. 2.5 e Anexo V |
+
+**Novo anexo:** Anexo VIII — Tabelas tarifárias de água (CAEMA e SAAE de Açailândia), anexado ao contrato junto com o Estatuto e as Diretrizes. Quando as tabelas forem reajustadas, o sistema troca o anexo e avisa os compradores.
 
 **Depois da aprovação:** aplico as alterações no modelo do contrato (CPCV v3). Isso vale para o PDF que o corretor gera e para os campos de preenchimento padrão do empreendimento: valor do m³, taxa de reimpressão e área exclusiva viram campos editáveis no cadastro do empreendimento. Contratos já assinados não mudam.
