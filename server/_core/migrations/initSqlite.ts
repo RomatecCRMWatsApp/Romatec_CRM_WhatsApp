@@ -382,7 +382,7 @@ export function initSqliteTables(sqlite: any): void {
   )`);
   run(`CREATE TABLE IF NOT EXISTS empJuridico (
     empreendimentoId INTEGER PRIMARY KEY, defaultsJson TEXT NOT NULL, vendedoraTipo TEXT NOT NULL DEFAULT 'PF', vendedoraJson TEXT NOT NULL,
-    modeloCpcv TEXT NOT NULL DEFAULT 'MODELO-CPCV-BOM-JARDIMS-v2.docx', modeloVersao TEXT NOT NULL DEFAULT 'CPCV-BJ v2.0',
+    modeloCpcv TEXT NOT NULL DEFAULT 'MODELO-CPCV-BOM-JARDIMS-v3.docx', modeloVersao TEXT NOT NULL DEFAULT 'CPCV-BJ v3.0',
     marcaSlug TEXT NOT NULL DEFAULT 'bomjardims', atualizadoPor INTEGER, atualizadoEm ${agora}
   )`);
   run(`CREATE TABLE IF NOT EXISTS contratoSeq (ano INTEGER PRIMARY KEY, ultimo INTEGER NOT NULL)`);
@@ -514,6 +514,8 @@ export function initSqliteTables(sqlite: any): void {
       WHERE e.slug = ? AND NOT EXISTS (SELECT 1 FROM empJuridico j WHERE j.empreendimentoId = e.id)`)
       .run(JSON.stringify(SEED_EMP_JURIDICO.defaults), JSON.stringify(SEED_EMP_JURIDICO.vendedora), SEED_EMP_JURIDICO.slug);
   } catch (e: any) { console.error('[SQLite] Seed empJuridico:', e.message); }
+  // CPCV v3 (out/2026): Bom Jardims deixa o modelo v2
+  run(`UPDATE empJuridico SET modeloCpcv = 'MODELO-CPCV-BOM-JARDIMS-v3.docx', modeloVersao = 'CPCV-BJ v3.0' WHERE modeloCpcv = 'MODELO-CPCV-BOM-JARDIMS-v2.docx'`);
   run(`CREATE TABLE IF NOT EXISTS systemRelease (
     id INTEGER PRIMARY KEY AUTOINCREMENT, versao TEXT NOT NULL UNIQUE, tipo TEXT NOT NULL DEFAULT 'patch', titulo TEXT NOT NULL, itens TEXT NOT NULL,
     obrigatoria INTEGER NOT NULL DEFAULT 0, publico TEXT NOT NULL DEFAULT 'todos', publicadoEm INTEGER NOT NULL DEFAULT (strftime('%s','now')),

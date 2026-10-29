@@ -37,8 +37,8 @@ const TABELAS: [nome: string, ddl: string][] = [
     defaultsJson JSON NOT NULL,
     vendedoraTipo VARCHAR(2) NOT NULL DEFAULT 'PF',
     vendedoraJson JSON NOT NULL,
-    modeloCpcv VARCHAR(120) NOT NULL DEFAULT 'MODELO-CPCV-BOM-JARDIMS-v2.docx',
-    modeloVersao VARCHAR(30) NOT NULL DEFAULT 'CPCV-BJ v2.0',
+    modeloCpcv VARCHAR(120) NOT NULL DEFAULT 'MODELO-CPCV-BOM-JARDIMS-v3.docx',
+    modeloVersao VARCHAR(30) NOT NULL DEFAULT 'CPCV-BJ v3.0',
     marcaSlug VARCHAR(40) NOT NULL DEFAULT 'bomjardims',
     atualizadoPor INT NULL,
     atualizadoEm TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
@@ -299,6 +299,21 @@ const COMANDOS: { nome: string; stmt: ReturnType<typeof sql> }[] = [
     stmt: sql`UPDATE empJuridico j JOIN empreendimentos e ON e.id = j.empreendimentoId
       SET j.defaultsJson = JSON_SET(j.defaultsJson, '$.limite_veiculos', ${SEED_EMP_JURIDICO.defaults.limite_veiculos})
       WHERE e.slug = ${SEED_EMP_JURIDICO.slug} AND JSON_EXTRACT(j.defaultsJson, '$.limite_veiculos') IS NULL`,
+  },
+  // CPCV v3 (out/2026): taxa de reimpressão da carteirinha e espaço de recreação exclusivo — só preenche o que está vazio
+  ...(['emp_taxa_carteirinha', 'emp_area_recreacao_m2'] as const).map(campo => ({
+    nome: `empJuridico: ${campo} (Bom Jardims)`,
+    stmt: sql`UPDATE empJuridico j JOIN empreendimentos e ON e.id = j.empreendimentoId
+      SET j.defaultsJson = JSON_SET(j.defaultsJson, ${'$.' + campo}, ${String(SEED_EMP_JURIDICO.defaults[campo])})
+      WHERE e.slug = ${SEED_EMP_JURIDICO.slug} AND COALESCE(JSON_UNQUOTE(JSON_EXTRACT(j.defaultsJson, ${'$.' + campo})), '') = ''`,
+  })),
+  // Modelo do contrato: Bom Jardims passa do CPCV v2 ao v3 (energia, água/hidrômetro, esgoto, venda na planta, recreação,
+  // carteirinha, medição). Contratos já emitidos guardam o PDF da versão deles; só os novos usam o v3.
+  {
+    nome: 'empJuridico: CPCV v3 (Bom Jardims)',
+    stmt: sql`UPDATE empJuridico j JOIN empreendimentos e ON e.id = j.empreendimentoId
+      SET j.modeloCpcv = 'MODELO-CPCV-BOM-JARDIMS-v3.docx', j.modeloVersao = 'CPCV-BJ v3.0'
+      WHERE e.slug = ${SEED_EMP_JURIDICO.slug} AND j.modeloCpcv = 'MODELO-CPCV-BOM-JARDIMS-v2.docx'`,
   },
 ];
 

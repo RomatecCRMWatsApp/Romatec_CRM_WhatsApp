@@ -3,6 +3,26 @@
 Cada versão nova vai no TOPO. Depois rode `npm run release` (valida e atualiza o package.json);
 ao subir, o servidor grava a versão no banco e todos recebem o aviso "Novidades da versão".
 
+## 1.68.0 — 2026-10-29
+tipo: minor
+obrigatoria: nao
+titulo: Contrato do Bom Jardims v3 (energia, água, esgoto, venda na planta, recreação e carteirinha)
+
+### Novo
+- Contrato CPCV do Bom Jardims na versão 3, no PDF que o corretor gera e no contrato modelo
+- Energia: o empreendimento executa a rede, os postes e a iluminação pelo projeto aprovado na Equatorial e entrega a rede; ligação, tipo (monofásico/trifásico) e consumo ficam entre o comprador e a Equatorial
+- Água: poço, reservatório e rede em todas as ruas com ponto na frente de cada chácara; hidrômetro e cavalete por conta do comprador; fatura impressa com a tarifa pela média CAEMA × SAAE (novo Anexo VIII, com as tabelas de origem)
+- Esgoto: sistema individual obrigatório em cada chácara (fossa séptica + sumidouro ou filtro anaeróbio, ABNT NBR 7229/13969), afastamentos mínimos, projeto-padrão com anuência do SAAE e vistoria antes de ocupar
+- Venda na planta: cada aprovação (Equatorial com os ofícios, matrículas individuais, licenças, vistoria) gera termo aditivo
+- Espaço de recreação de uso exclusivo de 100 m² por chácara na área de vivência, com tenda e churrasqueira
+- Contribuição associativa fixada em R$ 100,00; carteirinhas com 1ª via grátis e reimpressão de R$ 25,00
+- Liberação para cercar e construir depois da entrada e da 3ª parcela, com vistoria de medição (1ª grátis; as seguintes pagas ao agrimensor credenciado)
+
+### Avisos
+- Contratos já emitidos ou assinados continuam com o PDF da versão deles (v2); só os novos saem na v3
+- Valor da contribuição, da reimpressão da carteirinha e do espaço de recreação ficam na configuração do empreendimento
+- Reajustou a CAEMA ou o SAAE: troca-se o Anexo VIII (média recalculada), sem aditivo
+
 ## 1.67.1 — 2026-10-29
 tipo: patch
 obrigatoria: nao

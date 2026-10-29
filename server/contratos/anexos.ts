@@ -257,3 +257,13 @@ export async function anexoDiretrizes(ctx: Ctx, marcaSlug: string): Promise<Buff
   });
   return Buffer.from(await doc.save({ useObjectStreams: false }));
 }
+
+/**
+ * Anexo VIII — Tabela Tarifária de Água (média CAEMA × SAAE de Açailândia, com as tabelas de origem): PDF fixo do
+ * empreendimento em templates/anexos/<marca>/ANEXO-VIII-TARIFA-AGUA.pdf. Reajustou a CAEMA ou o SAAE: troca-se o arquivo.
+ * Sem o arquivo (outro empreendimento), o contrato sai sem este anexo.
+ */
+export async function anexoTarifaAgua(marcaSlug: string): Promise<Buffer | null> {
+  if (!/^[a-z0-9-]+$/.test(marcaSlug)) return null;
+  return readFile(path.join(pastaTemplates(), 'anexos', marcaSlug, 'ANEXO-VIII-TARIFA-AGUA.pdf')).catch(() => null);
+}
