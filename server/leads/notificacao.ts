@@ -31,6 +31,8 @@ export interface DadosAviso {
   /** Preenchidos por notificarLead (server/leads/sla.ts) */
   responsavelNome?: string | null;
   linkAtendido?: string | null;
+  /** Link do CRM que marca o atendimento e abre o WhatsApp do cliente (sla.linkWhatsAppAtendido) */
+  linkWhatsApp?: string | null;
 }
 
 const TITULO: Record<TipoAviso, string> = {
@@ -77,7 +79,8 @@ export function montarAviso(d: DadosAviso): string {
   linhas.push(`🏷️ Tags: ${d.tags?.length ? d.tags.join(', ') : '—'}`);
   if (d.responsavelNome) linhas.push(`🧑‍💼 Responsável: ${d.responsavelNome}`);
   linhas.push(`🔗 Painel: ${appUrl()}/leads/lead/${d.leadId}`);
-  linhas.push(`💬 Responder: https://wa.me/${fone}`);
+  // Pelo link do CRM: abrir a conversa já marca o lead como atendido
+  linhas.push(d.linkWhatsApp ? `💬 Atender no WhatsApp (já conta como atendido): ${d.linkWhatsApp}` : `💬 Responder: https://wa.me/${fone}`);
   if (d.linkAtendido) linhas.push(`✅ Já atendi (para o alerta de 5 min): ${d.linkAtendido}`);
   return linhas.join('\n');
 }
@@ -123,6 +126,7 @@ export async function notificarLead(
       const resp = await sla.garantirResponsavel(dados.leadId);
       if (resp) dados = { ...dados, responsavelNome: resp.name ?? null };
       destinoWhats = await sla.telefoneDoResponsavel(dados.leadId);
+      dados = { ...dados, linkWhatsApp: sla.linkWhatsAppAtendido(dados.leadId) };
       if (precisa) dados = { ...dados, linkAtendido: sla.linkAtendido(dados.leadId) };
     } catch (e: any) {
       console.warn('[Notificação] Responsável/SLA indisponível:', e?.message);

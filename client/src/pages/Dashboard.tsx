@@ -484,6 +484,8 @@ function CabecalhoPainel({ nomeUsuario }: { nomeUsuario: string }) {
 }
 
 export default function Dashboard() {
+  // Abrir a conversa com o lead conta como atendido
+  const abriuWhatsApp = trpc.crm.abriuWhatsApp.useMutation();
   const { user } = useAuth();
   const [, navigate] = useLocation();
   const logoutMutation = trpc.auth.logout.useMutation({
@@ -587,7 +589,7 @@ export default function Dashboard() {
                     </button>
                     {phone && (
                       <Button size="sm" variant="outline" asChild className="shrink-0 border-primary/30 text-primary hover:bg-primary/10">
-                        <a href={`https://wa.me/${phone}`} target="_blank" rel="noreferrer" title={`Abrir conversa com ${nome}`}>
+                        <a href={`https://wa.me/${phone}`} onClick={() => abriuWhatsApp.mutate({ id: l.id })} target="_blank" rel="noreferrer" title={`Abrir conversa com ${nome} (conta como atendido)`}>
                           <MessageCircle className="h-4 w-4 md:mr-1.5" /><span className="hidden md:inline">WhatsApp</span>
                         </a>
                       </Button>

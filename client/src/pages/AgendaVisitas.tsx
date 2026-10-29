@@ -20,6 +20,7 @@ type Visita = {
 };
 
 function Linha({ v, onMudou }: { v: Visita; onMudou: () => void }) {
+  const abriuWhatsApp = trpc.crm.abriuWhatsApp.useMutation();
   const [, navigate] = useLocation();
   return (
     <div className="rounded-xl border border-border bg-card p-3 space-y-2">
@@ -34,7 +35,7 @@ function Linha({ v, onMudou }: { v: Visita; onMudou: () => void }) {
       {v.status === "solicitada" && v.observacao && <p className="text-xs text-amber-100/80 whitespace-pre-line">{v.observacao}</p>}
       {v.doLink && <MensagensAgendamento visitaId={v.id} enviada={v.confirmacaoEnviada} />}
       <div className="flex flex-wrap items-center gap-2">
-        {v.telefone && <a href={`https://wa.me/${v.telefone.replace(/\D/g, "")}`} target="_blank" rel="noreferrer" className="text-xs text-emerald-300 hover:underline">💬 WhatsApp</a>}
+        {v.telefone && <a href={`https://wa.me/${v.telefone.replace(/\D/g, "")}`} onClick={() => v.leadId && abriuWhatsApp.mutate({ id: v.leadId })} target="_blank" rel="noreferrer" className="text-xs text-emerald-300 hover:underline">💬 WhatsApp</a>}
         <AcoesVisita visita={v} onMudou={onMudou} />
       </div>
     </div>

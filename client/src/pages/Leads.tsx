@@ -174,6 +174,10 @@ export default function Leads() {
     onError: e => toast.error(`Erro: ${e.message}`),
   });
 
+  // Abrir o chat do cliente conta como atendido (alerta de 5 min, card sai de "Novo")
+  const utilsLeads = trpc.useUtils();
+  const abriuWhatsApp = trpc.crm.abriuWhatsApp.useMutation({ onSuccess: () => utilsLeads.invalidate() });
+
   const testTelegram = trpc.testTelegram.useMutation({
     onSuccess: (r) => {
       if (r.success) toast.success(r.message || 'Telegram enviado!');
@@ -547,6 +551,7 @@ export default function Leads() {
                         {/* WhatsApp link direto */}
                         <a
                           href={`https://wa.me/${lead.phone.replace(/\D/g,'')}`}
+                          onClick={() => abriuWhatsApp.mutate({ id: lead.id })}
                           target="_blank"
                           rel="noopener noreferrer"
                           className="ld-action-btn"
@@ -674,7 +679,7 @@ export default function Leads() {
               </button>
               <button
                 disabled={!msgText.trim() || sendWhatsApp.isPending}
-                onClick={() => sendWhatsApp.mutate({ phone: sendMsg.phone, message: msgText.trim() })}
+                onClick={() => sendWhatsApp.mutate({ phone: sendMsg.phone, message: msgText.trim(), leadId: sendMsg.id })}
                 style={{
                   padding: '8px 20px', borderRadius: '8px', background: 'rgba(37,211,102,0.15)',
                   border: '1px solid rgba(37,211,102,0.3)', color: '#25d366', fontWeight: 700,

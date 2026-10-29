@@ -129,6 +129,15 @@ export const crmRouter = router({
       return { success: true };
     }),
 
+  /** Abriu o WhatsApp do cliente pelo CRM: conta como atendido (encerra o alerta e tira o card de "Novo") */
+  abriuWhatsApp: protectedProcedure.input(z.object({ id: z.number().int() })).mutation(async ({ input, ctx }) => {
+    await leadOuErro(await dbOrThrow(), input.id, ctx);
+    if ((ctx as any).verComo) return { success: true }; // "ver como" do admin é só leitura
+    const { registrarAtendimento } = await import("../leads/sla");
+    await registrarAtendimento(input.id, { como: "whatsapp_crm", usuarioId: ctx.user.id });
+    return { success: true };
+  }),
+
   /** "Já atendi" pela tela do lead (encerra o alerta de 5 minutos) */
   marcarAtendido: protectedProcedure.input(z.object({ id: z.number().int() })).mutation(async ({ input, ctx }) => {
     await leadOuErro(await dbOrThrow(), input.id, ctx);
@@ -269,15 +278,25 @@ export const crmRouter = router({
       return { success: true };
     }),
 
-  /** Responsável pelo lead (rodízio da equipe) — trocar manualmente: distribuição, só o admin */
+  /**
+   * Responsável pelo lead — trocar manualmente (distribuição): administrador e secretária. Encaminhar para outra
+   * pessoa conta como "encaminhado para atendimento" e avisa quem recebeu (sininho, push e WhatsApp com o link de atender).
+   */
   definirResponsavel: protectedProcedure
     .input(z.object({ id: z.number().int(), responsavelId: z.number().int().nullable() }))
     .mutation(async ({ input, ctx }) => {
       exigirDistribuicao(ctx.permissoes);
       const db = await dbOrThrow();
-      await leadOuErro(db, input.id, ctx);
+      const lead = await leadOuErro(db, input.id, ctx);
       await db.update(leadQualifications).set({ responsavelId: input.responsavelId, updatedAt: new Date() } as any).where(eq(leadQualifications.id, input.id));
-      return { success: true };
+      const para = input.responsavelId;
+      if (para && para !== lead.responsavelId && para !== ctx.user.id) {
+        const { registrarAtendimento } = await import("../leads/sla");
+        await registrarAtendimento(input.id, { como: "encaminhado", usuarioId: ctx.user.id, paraId: para });
+        const { avisarEncaminhamento } = await import("../leads/encaminhamento");
+        avisarEncaminhamento({ leadId: input.id, paraId: para, porNome: String((ctx.user as any).name ?? "o escritório") }).catch(e => console.warn("[Leads] aviso de encaminhamento:", e?.message));
+      }
+      return { success: true, encaminhado: !!para && para !== lead.responsavelId && para !== ctx.user.id };
     }),
 
   /** Quem pode ser responsável (equipe e administrador ativos) */
@@ -348,6 +367,11 @@ export const crmRouter = router({
       responsavelId: l.responsavelId ?? null,
       // Esperando um corretor (alerta de 5 minutos): desde quando
       aguardandoDesde: l.atendidoAt ? null : l.aguardandoCorretorDesde ?? null,
+      // Último atendimento (abriu o WhatsApp, mexeu no lead ou foi encaminhado a um corretor)
+      atendidoEm: l.atendidoAt ?? null,
+      ultimoAtendimento: await db.select({ tipo: leadEventos.tipo }).from(leadEventos)
+        .where(and(eq(leadEventos.leadId, l.id), inArray(leadEventos.tipo, ["encaminhado", "atendido_whatsapp"])))
+        .orderBy(desc(leadEventos.createdAt)).limit(1).then((r: any[]) => (r[0]?.tipo as string | undefined) ?? null).catch(() => null),
       cliqueAnuncio: (() => {
         const u = (l.utm || {}) as Record<string, string | undefined>;
         return u.gclid ? "Google Ads" : u.fbclid ? "Meta (Facebook/Instagram)" : null;

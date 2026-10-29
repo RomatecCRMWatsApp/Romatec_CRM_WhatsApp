@@ -63,8 +63,10 @@ export default function LeadDetalhe() {
   const erro = (e: { message: string }) => toast.error(e.message);
   const mover = trpc.crm.moverEtapa.useMutation({ onSuccess: atualizar, onError: erro });
   const { data: responsaveis } = trpc.crm.responsaveis.useQuery();
-  const definirResp = trpc.crm.definirResponsavel.useMutation({ onSuccess: atualizar, onError: erro });
+  const definirResp = trpc.crm.definirResponsavel.useMutation({ onSuccess: r => { if (r.encaminhado) toast.success("Lead encaminhado — o corretor foi avisado no sistema e no WhatsApp."); atualizar(); }, onError: erro });
   const marcarAtendido = trpc.crm.marcarAtendido.useMutation({ onSuccess: atualizar, onError: erro });
+  // Abrir o WhatsApp do cliente conta como atendido
+  const abriuWhatsApp = trpc.crm.abriuWhatsApp.useMutation({ onSuccess: atualizar });
   const salvar = trpc.crm.salvarSlots.useMutation({
     onSuccess: r => { toast.success(`Salvo${r.score !== null ? ` · score ${r.score}` : ""}${r.recusados.length ? ` · valor inválido em: ${r.recusados.join(", ")}` : ""}`); atualizar(); },
     onError: erro,
@@ -105,7 +107,7 @@ export default function LeadDetalhe() {
           </span>
           <br />+{fone} · entrou há {desde(lead.criadoEm)} · última atividade há {desde(lead.ultimaAtividade)}
         </>}
-        acoes={<Button size="sm" asChild className="bg-[#25D366] hover:bg-[#1fb956] text-white"><a href={`https://wa.me/${fone}`} target="_blank" rel="noreferrer"><MessageCircle className="mr-1.5 h-4 w-4" /> WhatsApp</a></Button>}
+        acoes={<Button size="sm" asChild className="bg-[#25D366] hover:bg-[#1fb956] text-white"><a href={`https://wa.me/${fone}`} onClick={() => abriuWhatsApp.mutate({ id })} target="_blank" rel="noreferrer" title="Abrir a conversa (conta como atendido)"><MessageCircle className="mr-1.5 h-4 w-4" /> WhatsApp</a></Button>}
       />
 
       <div className="px-4 md:px-6 pb-6 max-w-[1500px] mx-auto grid grid-cols-1 lg:grid-cols-3 gap-4">
@@ -127,6 +129,7 @@ export default function LeadDetalhe() {
                 <option value="">— sem responsável —</option>
                 {(responsaveis ?? []).map(r => <option key={r.id} value={r.id}>{r.nome}</option>)}
               </select>
+              {lead.atendidoEm && <span className="text-xs text-emerald-300">✅ {lead.ultimoAtendimento === "encaminhado" ? "Encaminhado para atendimento" : "Atendido"} {new Date(lead.atendidoEm).toLocaleString("pt-BR", { timeZone: "America/Fortaleza", day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit" })}</span>}
               <label className="text-sm text-muted-foreground">Etapa</label>
               <select value={lead.etapa} onChange={e => (e.target.value === "perdido" ? setPerder(true) : mover.mutate({ id, etapa: e.target.value }))}
                 className="h-9 px-2 rounded-md border border-border bg-secondary/30 text-sm text-foreground">

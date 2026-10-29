@@ -1143,12 +1143,16 @@ export const appRouter = router({
 
     // Enviar mensagem manual via WhatsApp
     sendWhatsApp: protectedProcedure
-      .input(z.object({ phone: z.string(), message: z.string().min(1) }))
+      .input(z.object({ phone: z.string(), message: z.string().min(1), leadId: z.number().int().optional() }))
       .mutation(async ({ input, ctx }) => {
         const config = await getCompanyConfig();
         if (!config?.zApiInstanceId || !config?.zApiToken) return { success: false, error: 'Z-API nao configurado' };
+        const lead = input.leadId ? await leadDoUsuario(input.leadId, ctx) : null;
         const { sendMessageViaZAPI } = await import('./zapi-integration');
-        return sendMessageViaZAPI({ instanceId: config.zApiInstanceId, token: config.zApiToken, clientToken: config.zApiClientToken || undefined, phone: input.phone, message: input.message });
+        const r: any = await sendMessageViaZAPI({ instanceId: config.zApiInstanceId, token: config.zApiToken, clientToken: config.zApiClientToken || undefined, phone: input.phone, message: input.message });
+        // Mensagem enviada ao cliente pelo CRM: conta como atendido
+        if (lead && r?.success !== false) await import('./leads/sla').then(m => m.registrarAtendimento(lead.id, { como: 'whatsapp_crm', usuarioId: ctx.user.id })).catch(() => {});
+        return r;
       }),
   }),
 });

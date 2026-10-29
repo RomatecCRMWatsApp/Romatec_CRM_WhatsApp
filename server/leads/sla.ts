@@ -56,6 +56,15 @@ export function tokenAtendidoValido(leadId: number, token: string): boolean {
   return token.length === esperado.length && crypto.timingSafeEqual(Buffer.from(token), Buffer.from(esperado));
 }
 export const linkAtendido = (leadId: number) => `${appUrl()}/a/${leadId}/${tokenAtendido(leadId)}`;
+/** "Atender no WhatsApp" do aviso: passa pelo CRM (marca o atendimento) e abre a conversa com o cliente */
+export const linkWhatsAppAtendido = (leadId: number) => `${appUrl()}/w/${leadId}/${tokenAtendido(leadId)}`;
+
+/** Robôs de pré-visualização de link (WhatsApp, Telegram, Facebook…) não contam como atendimento */
+export function ehRoboDePrevia(ua: string | null | undefined): boolean {
+  return /bot|crawler|spider|preview|facebookexternalhit|whatsapp|telegram|slack|discord|skype|curl|wget|python-requests|node-fetch|axios/i.test(String(ua ?? ''));
+}
+
+export type ComoAtendeu = 'whatsapp_aviso' | 'whatsapp_crm' | 'encaminhado';
 
 // ─── Banco ───────────────────────────────────────────────────────────────────
 async function banco() {
@@ -104,6 +113,29 @@ export async function marcarAtendido(leadId: number): Promise<void> {
   await db.update(leadQualifications)
     .set({ atendidoAt: new Date(), aguardandoCorretorDesde: null, alertaSlaNivel: 0 } as any)
     .where(eq(leadQualifications.id, leadId));
+}
+
+/**
+ * Atendimento automático: abriu o WhatsApp do cliente (link do aviso ou botão do CRM) ou a secretária/admin
+ * encaminhou para um corretor. Encerra o alerta de 5 min, tira o card de "Novo" e registra no histórico.
+ */
+export async function registrarAtendimento(leadId: number, o: { como: ComoAtendeu; usuarioId?: number | null; paraId?: number | null }): Promise<{ phone: string } | null> {
+  const { db, leadQualifications } = await banco();
+  if (!db || !leadId) return null;
+  const [l]: any[] = await db.select({ id: leadQualifications.id, phone: leadQualifications.phone, etapa: leadQualifications.etapa, stage: leadQualifications.stage, funil: leadQualifications.funil })
+    .from(leadQualifications).where(eq(leadQualifications.id, leadId)).limit(1);
+  if (!l) return null;
+  await marcarAtendido(leadId);
+  const { etapaDoLead } = await import('./kanban');
+  if (etapaDoLead(l) === 'novo') {
+    await db.update(leadQualifications).set({ etapa: 'qualificando', updatedAt: new Date() } as any).where(eq(leadQualifications.id, leadId)).catch(() => {});
+  }
+  const { leadEventos } = await import('../../drizzle/schema');
+  await db.insert(leadEventos).values({
+    leadId, tipo: o.como === 'encaminhado' ? 'encaminhado' : 'atendido_whatsapp',
+    dados: { como: o.como, usuarioId: o.usuarioId ?? null, paraId: o.paraId ?? null }, createdAt: new Date(),
+  } as any).catch(() => {});
+  return { phone: String(l.phone ?? '') };
 }
 
 /** Telefone para o aviso por WhatsApp: o do responsável, se tiver */

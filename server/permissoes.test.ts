@@ -60,15 +60,16 @@ describe('leads do corretor (v1.6.0)', () => {
     expect(leadVisivel('empreendedor', 7, { responsavelId: 7 })).toBe(false);
   });
 
-  it('servidor: filtra listas e recusa (403) lead de outro responsável; distribuição só admin', () => {
+  it('servidor: filtra listas e recusa (403) lead de outro responsável; distribuição: admin e secretária (v1.66.0)', () => {
     const corretor = { perfil: 'corretor' as const, modulos: null, acessos: [] };
     const leads = [{ id: 1, responsavelId: 5 }, { id: 2, responsavelId: 9 }, { id: 3, responsavelId: null }];
     expect(leadsVisiveis(corretor, 5, leads).map(l => l.id)).toEqual([1]);
     expect(leadsVisiveis({ ...corretor, perfil: 'secretario' }, 5, leads)).toHaveLength(3);
     expect(() => exigirLead(corretor, 5, { responsavelId: 9 })).toThrow(/outro responsável/);
     expect(() => exigirLead(corretor, 5, { responsavelId: 5 })).not.toThrow();
-    expect(() => exigirDistribuicao({ ...corretor, perfil: 'secretario' })).toThrow(/administrador/);
+    expect(() => exigirDistribuicao({ ...corretor, perfil: 'secretario' })).not.toThrow();
     expect(() => exigirDistribuicao({ ...corretor, perfil: 'admin' })).not.toThrow();
+    expect(() => exigirDistribuicao(corretor)).toThrow(/secretária/);
   });
 
   it('pacote base por perfil: Desempenho fica desligado para corretor e secretário (matriz)', () => {

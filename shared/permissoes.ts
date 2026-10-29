@@ -105,7 +105,8 @@ export function leadVisivel(perfil: Perfil | null, usuarioId: number, lead: { re
 }
 
 /** Distribuição/roteamento de leads (trocar o responsável): só o admin */
-export const podeDistribuirLeads = (perfil: Perfil | null) => perfil === 'admin';
+/** Trocar o responsável (encaminhar o lead para um corretor): administrador e secretária */
+export const podeDistribuirLeads = (perfil: Perfil | null) => perfil === 'admin' || perfil === 'secretario';
 
 /** Lista com marcação de acesso: os não habilitados aparecem, mas sem acesso */
 export function marcarAcesso<T extends { id: number }>(perfil: Perfil | null, acessos: AcessoCorretor[], tipo: TipoAcesso, itens: T[]): (T & { acesso: boolean })[] {

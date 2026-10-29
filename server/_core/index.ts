@@ -569,6 +569,29 @@ async function startServer() {
     );
   });
 
+  // "💬 Atender no WhatsApp" do aviso: marca o lead como atendido e abre a conversa (robô de pré-visualização não conta)
+  app.get('/w/:id/:token', async (req, res) => {
+    const id = Number(req.params.id);
+    const { tokenAtendidoValido, registrarAtendimento, ehRoboDePrevia } = await import('../leads/sla');
+    if (!Number.isInteger(id) || id <= 0 || !tokenAtendidoValido(id, String(req.params.token || ''))) return res.status(400).type('text/plain').send('Link inválido. Abra o lead no CRM.');
+    res.setHeader('Cache-Control', 'no-store');
+    res.setHeader('X-Robots-Tag', 'noindex');
+    let phone: string | null = null;
+    if (ehRoboDePrevia(req.get('user-agent'))) {
+      const { getDb } = await import('../db');
+      const { leadQualifications } = await import('../../drizzle/schema');
+      const { eq } = await import('drizzle-orm');
+      const d: any = await getDb();
+      const [l]: any[] = d ? await d.select({ phone: leadQualifications.phone }).from(leadQualifications).where(eq(leadQualifications.id, id)).limit(1) : [];
+      phone = l?.phone ?? null;
+    } else {
+      phone = (await registrarAtendimento(id, { como: 'whatsapp_aviso' }).catch(() => null))?.phone ?? null;
+    }
+    const fone = String(phone ?? '').replace(/\D/g, '');
+    if (!fone) return res.redirect(302, `/leads/lead/${id}`);
+    res.redirect(302, `https://wa.me/${fone}`);
+  });
+
   app.get('/q/:codigo', async (req, res) => {
     try {
       const codigo = String(req.params.codigo || '').toUpperCase();

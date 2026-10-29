@@ -3,6 +3,21 @@
 Cada versão nova vai no TOPO. Depois rode `npm run release` (valida e atualiza o package.json);
 ao subir, o servidor grava a versão no banco e todos recebem o aviso "Novidades da versão".
 
+## 1.66.0 — 2026-10-29
+tipo: minor
+obrigatoria: nao
+titulo: Abriu o WhatsApp do lead = atendido; encaminhou para o corretor = em atendimento
+
+### Novo
+- Aviso de lead novo (Telegram/WhatsApp): o link "💬 Atender no WhatsApp" abre a conversa com o cliente e já marca o lead como atendido — acaba o alerta de 5 minutos e o card sai de "Novo"
+- Dentro do CRM, os botões de WhatsApp da ficha do lead, da lista de leads, do Painel e da Agenda de visitas também marcam o atendimento; mensagem enviada ao cliente pelo CRM também conta
+- Secretária pode encaminhar o lead para um corretor (campo Responsável na ficha). Encaminhado conta como "em atendimento" e o corretor recebe o aviso no sininho/push e no WhatsApp, com o link de atender
+- Ficha do lead mostra "✅ Atendido" ou "✅ Encaminhado para atendimento" com data e hora
+
+### Avisos
+- A pré-visualização automática do link (robôs do WhatsApp/Telegram) não marca atendimento — só o toque de uma pessoa
+- Corretor continua sem poder trocar o responsável do lead
+
 ## 1.65.0 — 2026-10-29
 tipo: minor
 obrigatoria: nao

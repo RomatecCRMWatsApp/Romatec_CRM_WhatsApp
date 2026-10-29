@@ -60,9 +60,9 @@ export function exigirLead(p: PermissoesUsuario, usuarioId: number, lead: { resp
 export const leadsVisiveis = <T extends { responsavelId?: number | null }>(p: PermissoesUsuario, usuarioId: number, leads: T[]) =>
   p.perfil === "admin" || p.perfil === "secretario" ? leads : leads.filter(l => leadVisivel(p.perfil, usuarioId, l));
 
-/** Trocar o responsável de um lead (distribuição): só o admin */
+/** Trocar o responsável de um lead (distribuição): administrador e secretária */
 export function exigirDistribuicao(p: PermissoesUsuario) {
-  if (!podeDistribuirLeads(p.perfil)) throw new TRPCError({ code: "FORBIDDEN", message: "Só o administrador distribui os leads." });
+  if (!podeDistribuirLeads(p.perfil)) throw new TRPCError({ code: "FORBIDDEN", message: "Só o administrador e a secretária encaminham os leads." });
 }
 
 /** % de comissão do corretor no empreendimento: a do vínculo dele ou a das condições do empreendimento */
