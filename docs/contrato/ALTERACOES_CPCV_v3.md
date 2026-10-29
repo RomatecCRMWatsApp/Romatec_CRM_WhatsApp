@@ -37,7 +37,7 @@ subtitle: "Para revisão do José Romário antes de subir ao sistema · 29/10/20
 
 **Nova Cláusula 11.7**
 
-> <mark>11.7. A aquisição e a instalação do hidrômetro e do cavalete da unidade são de responsabilidade e às expensas do(a) COMPRADOR(A), que solicitará a ligação à administração do sistema de água. O consumo será medido individualmente e cobrado mensalmente por fatura impressa entregue a cada condômino, com o valor do metro cúbico (m³) e da tarifa mínima fixados com base nas tabelas tarifárias oficiais praticadas na região pela CAEMA e pelo SAAE de Açailândia, que integram este contrato como **Anexo VIII — Tabelas tarifárias de água (origem das taxas)**, e reajustados sempre que essas tabelas forem reajustadas, mediante simples comunicação ao(à) COMPRADOR(A) com a nova tabela. A fatura não paga, após notificação com prazo mínimo de 30 (trinta) dias, autoriza a suspensão do fornecimento até a regularização.</mark>
+> <mark>11.7. A aquisição e a instalação do hidrômetro e do cavalete da unidade são de responsabilidade e às expensas do(a) COMPRADOR(A), que solicitará a ligação à administração do sistema de água. O consumo será medido individualmente e cobrado mensalmente por fatura impressa entregue a cada condômino, com o valor do metro cúbico (m³) e do consumo mínimo correspondentes à **média aritmética simples, faixa a faixa, das tarifas residenciais** praticadas na região pela CAEMA e pelo SAAE de Açailândia, conforme o **Anexo VIII — Tabela tarifária de água (origem das taxas)**, recalculada sempre que qualquer dessas tabelas for reajustada, mediante simples comunicação ao(à) COMPRADOR(A) com a nova tabela. A fatura não paga, após notificação com prazo mínimo de 30 (trinta) dias, autoriza a suspensão do fornecimento até a regularização.</mark>
 
 **Cláusula 12.1, alínea (c)** — obrigações da VENDEDORA
 
@@ -133,7 +133,7 @@ subtitle: "Para revisão do José Romário antes de subir ao sistema · 29/10/20
 
 | Campo | Onde entra |
 |---|---|
-| Tabelas oficiais da CAEMA e do SAAE (o senhor vai buscar) — entram como **Anexo VIII**; o valor do m³ fica sem número no texto | Cl. 11.7 e Anexo VIII |
+| ✅ Resolvido — Anexo VIII pronto: média CAEMA × SAAE (até 10 m³ R$ 31,54; 11–20 R$ 5,72/m³; 21–30 R$ 8,14; 31–50 R$ 10,54; acima de 50 R$ 15,94) | Cl. 11.7 e Anexo VIII |
 | Taxa de reimpressão da carteirinha | Cl. 14.5 |
 | Tamanho do espaço exclusivo (m²) e planta da Quadra F | Cl. 2.5 e Anexo V |
 
