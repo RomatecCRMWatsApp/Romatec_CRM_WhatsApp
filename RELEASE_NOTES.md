@@ -3,6 +3,16 @@
 Cada versão nova vai no TOPO. Depois rode `npm run release` (valida e atualiza o package.json);
 ao subir, o servidor grava a versão no banco e todos recebem o aviso "Novidades da versão".
 
+## 1.69.2 — 2026-10-29
+tipo: patch
+obrigatoria: nao
+titulo: Links para o cliente dentro da tela de Contratos
+
+### Melhorias
+- Os links de leitura para o cliente agora ficam na própria tela de Contratos, na aba "Links para o cliente" (o atalho do menu abre direto nela)
+- Novo link do Contrato de Intermediação Imobiliária (modelo), com os principais pontos da corretagem
+- As Diretrizes de Uso aparecem como "Checklist de restrições — Diretrizes de Uso"
+
 ## 1.69.1 — 2026-10-29
 tipo: patch
 obrigatoria: nao

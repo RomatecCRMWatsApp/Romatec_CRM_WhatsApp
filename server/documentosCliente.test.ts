@@ -8,7 +8,7 @@ describe('documentos para o cliente — catálogo', () => {
   it('tem contrato, Estatuto, anexos, carteirinha e crachá, com slugs únicos e texto com {link}', () => {
     const slugs = DOCUMENTOS_CLIENTE.map(d => d.slug);
     expect(new Set(slugs).size).toBe(slugs.length);
-    expect(slugs).toEqual(expect.arrayContaining(['contrato', 'estatuto', 'diretrizes', 'tarifa-agua', 'carteirinha', 'cracha-visitante']));
+    expect(slugs).toEqual(expect.arrayContaining(['contrato', 'intermediacao', 'estatuto', 'diretrizes', 'tarifa-agua', 'carteirinha', 'cracha-visitante']));
     for (const d of DOCUMENTOS_CLIENTE) expect(d.textoWhatsapp).toContain('{link}');
     expect(documentoCliente('carteirinha')?.forma).toBe('cartao');
   });
@@ -45,7 +45,7 @@ describe('documentos para o cliente — rotas públicas (só imagens)', () => {
 
   it('recusa empreendimento, documento ou cartão que não é PDF', async () => {
     expect((await fetch(`${base}/api/public/documentos/outro/estatuto`)).status).toBe(404);
-    expect((await fetch(`${base}/api/public/documentos/bom-jardims/intermediacao`)).status).toBe(404);
+    expect((await fetch(`${base}/api/public/documentos/bom-jardims/boleto`)).status).toBe(404);
     expect((await fetch(`${base}/api/public/documentos/bom-jardims/carteirinha`)).status).toBe(404);
   });
 });

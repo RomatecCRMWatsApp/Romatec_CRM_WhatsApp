@@ -1,6 +1,5 @@
 import { toast } from "sonner";
-import { Copy, ExternalLink, FileText, FolderOpen, IdCard, Link2, MessageCircle, Share2 } from "lucide-react";
-import PageHeader from "@/components/PageHeader";
+import { Copy, ExternalLink, FileText, IdCard, Link2, MessageCircle, Share2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { useCartaoVendas } from "@/lib/cartaoVendas";
@@ -8,7 +7,7 @@ import { comAssinatura } from "@shared/cartaoVendas";
 import { DOCUMENTOS_CLIENTE, linkDocumento, linkIndiceDocumentos, type DocumentoCliente } from "@shared/documentosCliente";
 
 /**
- * Vendas › Documentos para o cliente: contrato, Estatuto, anexos e modelos de carteirinha e crachá com link público só
+ * Contratos › aba "Links para o cliente": contrato, intermediação, checklist de restrições (Diretrizes), Estatuto, anexos e modelos de carteirinha e crachá com link público só
  * de leitura (/documentos/:emp/:doc — sem copiar, baixar ou editar). O link e o texto saem com o ?c=, o nome, o CRECI
  * e o WhatsApp de quem compartilha.
  */
@@ -60,14 +59,13 @@ function CardDocumento({ d, cartao }: { d: DocumentoCliente; cartao: ReturnType<
   );
 }
 
-export default function DocumentosCliente() {
+export default function LinksDocumentos() {
   const cartao = useCartaoVendas();
   const indice = linkIndiceDocumentos(window.location.origin, EMP, cartao.ref);
-  const textoIndice = comAssinatura(`📂 *Documentos do Condomínio de Chácaras Bom Jardims*\n\nContrato, Estatuto, regras de uso, tarifa da água e modelos de carteirinha e crachá — tudo para leitura:\n${indice}`, cartao);
+  const textoIndice = comAssinatura(`📂 *Documentos do Condomínio de Chácaras Bom Jardims*\n\nContrato de compra e venda, contrato de intermediação, Estatuto, checklist de restrições, tarifa da água e modelos de carteirinha e crachá — tudo para leitura:\n${indice}`, cartao);
   return (
-    <div>
-      <PageHeader icone={FolderOpen} titulo="Documentos para o cliente" subtitulo="Links só de leitura (sem copiar, baixar ou editar) — saem com o seu nome, CRECI e WhatsApp" />
-      <div className="mx-auto max-w-[1400px] space-y-4 px-4 pb-8 md:px-6">
+    <div className="space-y-4">
+      <p className="text-sm text-muted-foreground">Links só de leitura (sem copiar, baixar ou editar) — saem com o seu código, nome, CRECI e WhatsApp.</p>
         <Card className="border-amber-300/50 bg-card">
           <CardContent className="space-y-3 py-4">
             <div>
@@ -84,7 +82,6 @@ export default function DocumentosCliente() {
         <p className="text-xs text-muted-foreground">
           O contrato e os anexos aparecem com o cliente de exemplo e a chácara A01 (tarja "somente leitura"). O cliente lê as páginas como imagem: não há texto para copiar nem arquivo para baixar.
         </p>
-      </div>
     </div>
   );
 }

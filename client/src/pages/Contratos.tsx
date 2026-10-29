@@ -1,5 +1,5 @@
 import { useMemo, useState } from "react";
-import { useLocation } from "wouter";
+import { useLocation, useSearch } from "wouter";
 import { Ban, ChevronDown, Download, FileSignature, Loader2, Pencil, Plus, XCircle } from "lucide-react";
 import { toast } from "sonner";
 import { trpc } from "@/lib/trpc";
@@ -7,6 +7,7 @@ import PageHeader from "@/components/PageHeader";
 import { Button } from "@/components/ui/button";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import ConfirmarCancelamento from "@/components/contratos/ConfirmarCancelamento";
+import LinksDocumentos from "@/components/contratos/LinksDocumentos";
 import { useAuth } from "@/_core/hooks/useAuth";
 import { perfilDe } from "@shared/equipe";
 import { COR_STATUS_CONTRATO, ROTULO_STATUS_CONTRATO, podeCancelarContrato, type StatusContrato } from "@shared/contratos";
@@ -45,6 +46,9 @@ export function SeloStatus({ status }: { status: string }) {
 /** Contratos (CPCV): lista com filtro por situação; o corretor vê só os dele */
 export default function Contratos() {
   const [, navigate] = useLocation();
+  // Aba: lista de contratos ou links de leitura para o cliente (?aba=links abre direto)
+  const aba: "contratos" | "links" = new URLSearchParams(useSearch()).get("aba") === "links" ? "links" : "contratos";
+  const setAba = (a: "contratos" | "links") => navigate(a === "links" ? "/contratos?aba=links" : "/contratos", { replace: true });
   const [filtro, setFiltro] = useState(0);
   const [busca, setBusca] = useState("");
   const [baixando, setBaixando] = useState<string | null>(null);
@@ -112,7 +116,16 @@ export default function Contratos() {
           </DropdownMenu>
           <Button onClick={() => navigate("/contratos/novo")}><Plus className="h-4 w-4" /> Novo contrato</Button>
         </div>} />
-      <div className="mx-auto max-w-[1400px] space-y-3 px-4 pb-8 md:px-6">
+      <div className="mx-auto max-w-[1400px] px-4 md:px-6">
+        <div className="mb-3 flex gap-1 border-b border-border">
+          {([["contratos", "Contratos"], ["links", "Links para o cliente"]] as const).map(([k, r]) => (
+            <button key={k} onClick={() => setAba(k)}
+              className={`-mb-px border-b-2 px-3 py-2 text-sm ${aba === k ? "border-primary font-semibold text-foreground" : "border-transparent text-muted-foreground hover:text-foreground"}`}>{r}</button>
+          ))}
+        </div>
+      </div>
+      {aba === "links" && <div className="mx-auto max-w-[1400px] px-4 pb-8 md:px-6"><LinksDocumentos /></div>}
+      <div className={`mx-auto max-w-[1400px] space-y-3 px-4 pb-8 md:px-6 ${aba === "links" ? "hidden" : ""}`}>
         <div className="flex flex-wrap items-center gap-2">
           {FILTROS.map((f, i) => (
             <button key={f.rotulo} onClick={() => setFiltro(i)}

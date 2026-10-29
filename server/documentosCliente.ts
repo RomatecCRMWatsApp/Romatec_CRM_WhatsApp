@@ -34,7 +34,7 @@ export async function pdfDoDocumento(emp: string, doc: string): Promise<Buffer> 
     if (!pdf) throw new DocErro(404, 'Tabela tarifária ainda não anexada');
     return pdf;
   }
-  if (doc === 'estatuto' || doc === 'diretrizes' || doc === 'tabela' || doc === 'carne') {
+  if (doc === 'intermediacao' || doc === 'estatuto' || doc === 'diretrizes' || doc === 'tabela' || doc === 'carne') {
     const { modeloDocumento } = await import('./contratos/modelosDocs');
     return (await modeloDocumento(doc, emp, null)).pdf;
   }

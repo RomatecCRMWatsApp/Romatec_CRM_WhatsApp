@@ -3,7 +3,7 @@ import { Suspense, lazy, useEffect } from "react";
 import { Toaster } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import NotFound from "@/pages/NotFound";
-import { Route, Switch, useLocation } from "wouter";
+import { Redirect, Route, Switch, useLocation } from "wouter";
 import ErrorBoundary from "./components/ErrorBoundary";
 import BarraVersao from "./components/BarraVersao";
 import AvisoCookies from "./components/AvisoCookies";
@@ -50,7 +50,6 @@ const EmpreendimentoProposta = lazy(() => import("./pages/EmpreendimentoProposta
 const Financeiro = lazy(() => import("./pages/Financeiro"));
 const Contratos = lazy(() => import("./pages/Contratos"));
 const Carteirinhas = lazy(() => import("./pages/Carteirinhas"));
-const DocumentosCliente = lazy(() => import("./pages/DocumentosCliente"));
 const DocumentosPublicos = lazy(() => import("./pages/DocumentosPublicos"));
 const FilaReservas = lazy(() => import("./pages/FilaReservas"));
 const RespostasAutomaticas = lazy(() => import("./pages/RespostasAutomaticas"));
@@ -202,7 +201,7 @@ function Router() {
         {() => <SetupGuard component={Carteirinhas} />}
       </Route>
       <Route path={"/documentos-cliente"}>
-        {() => <SetupGuard component={DocumentosCliente} />}
+        {() => <Redirect to="/contratos?aba=links" />}
       </Route>
       <Route path={"/respostas-automaticas"}>
         {() => <SetupGuard component={RespostasAutomaticas} />}

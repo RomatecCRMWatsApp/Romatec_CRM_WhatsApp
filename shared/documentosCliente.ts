@@ -39,6 +39,18 @@ export const DOCUMENTOS_CLIENTE: DocumentoCliente[] = [
     textoWhatsapp: '📄 *Contrato do Condomínio de Chácaras Bom Jardims*\n\nVeja a minuta completa do contrato de compra e venda (só leitura):\n{link}',
   },
   {
+    slug: 'intermediacao', forma: 'pdf',
+    titulo: 'Contrato de Intermediação Imobiliária',
+    subtitulo: 'Assinado junto com o contrato de compra e venda: ciência da corretagem do corretor (modelo de exemplo)',
+    destaques: [
+      'A corretagem já está incluída no preço da chácara, sem acréscimo ao valor contratado',
+      'Paga no ato do sinal pela plataforma de pagamentos do empreendimento — nunca em espécie nem direto ao corretor',
+      'Devida pelo resultado útil da intermediação (Código Civil, arts. 722 a 729; Lei n.º 6.530/1978)',
+      'Não é restituída em caso de desistência (Lei n.º 6.766/1979, art. 32-A, V)',
+    ],
+    textoWhatsapp: '🤝 *Contrato de Intermediação — Bom Jardims*\n\nVeja o modelo do contrato de intermediação que acompanha a compra (só leitura):\n{link}',
+  },
+  {
     slug: 'estatuto', forma: 'pdf',
     titulo: 'Estatuto da Associação',
     subtitulo: 'Estatuto e Regimento Interno da associação dos proprietários (Anexo III do contrato)',
@@ -53,7 +65,7 @@ export const DOCUMENTOS_CLIENTE: DocumentoCliente[] = [
   },
   {
     slug: 'diretrizes', forma: 'pdf',
-    titulo: 'Diretrizes de Uso',
+    titulo: 'Checklist de restrições — Diretrizes de Uso',
     subtitulo: 'O que é permitido, permitido com condições e proibido nas chácaras (Anexo IV do contrato)',
     destaques: [
       'Uso das chácaras: residência, segunda edificação, locação por temporada',

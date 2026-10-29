@@ -60,7 +60,7 @@ const MENU: Grupo[] = [
       // Administrador e secretária (shared/equipe.ts → podeAbrir)
       { rotulo: "Fila de reservas", rota: "/reservas", icone: Hourglass },
       { rotulo: "Carteirinhas", rota: "/carteirinhas", icone: IdCard, modulo: "contratos" },
-      { rotulo: "Documentos para o cliente", rota: "/documentos-cliente", icone: FolderOpen, modulo: "contratos" },
+      { rotulo: "Links de contratos e documentos", rota: "/contratos?aba=links", icone: FolderOpen, modulo: "contratos" },
       { rotulo: "Talonários", rota: "/talonarios", icone: BookCopy },
       { rotulo: "Financeiro", rota: "/financeiro", icone: Wallet, modulo: "financeiro", cor: COR.financeiro },
       { rotulo: "Imóveis", rota: "/properties", icone: Building2, modulo: "imoveis" },
