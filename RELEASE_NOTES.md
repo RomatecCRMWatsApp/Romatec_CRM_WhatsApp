@@ -3,6 +3,16 @@
 Cada versão nova vai no TOPO. Depois rode `npm run release` (valida e atualiza o package.json);
 ao subir, o servidor grava a versão no banco e todos recebem o aviso "Novidades da versão".
 
+## 1.70.0 — 2026-10-29
+tipo: minor
+obrigatoria: nao
+titulo: Retorno por campanha
+
+### Novo
+- Leads › Campanhas de captação: cada campanha mostra o funil completo — visitas realizadas, vendas (contrato assinado) e contratos em andamento — com custo por lead, por visita e por venda, conversão lead → venda, valor vendido e retorno sobre a comissão
+- Quadro "Retorno das campanhas" no topo, com o total de todas
+- Atribuição pelo 1º toque do lead (a campanha que trouxe o contato)
+
 ## 1.69.4 — 2026-10-29
 tipo: patch
 obrigatoria: nao

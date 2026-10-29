@@ -10,6 +10,31 @@ import { SLUG_BOM_JARDIMS, linkEmpreendimento, linkKml } from "@shared/chacaraLi
 import { comRef, useCartaoVendas } from "@/lib/cartaoVendas";
 import PageHeader from "@/components/PageHeader";
 import LinksDivulgacao from "@/components/campanhas/LinksDivulgacao";
+import { somarRoi, type Roi } from "@shared/roiCampanhas";
+
+const brl = (v: number | null) => (v == null ? "—" : v.toLocaleString("pt-BR", { style: "currency", currency: "BRL", maximumFractionDigits: v >= 1000 ? 0 : 2 }));
+
+/** Funil e custos de uma campanha (ou do total): leads → visitas → vendas, custo por etapa e retorno sobre a comissão */
+function RetornoCampanha({ r, total }: { r: Roi; total?: boolean }) {
+  const cel = (valor: string, rotulo: string, destaque?: string) => (
+    <div className="min-w-[88px]"><p className={`text-base font-bold ${destaque ?? "text-foreground"}`}>{valor}</p><p className="text-[11px] text-muted-foreground">{rotulo}</p></div>
+  );
+  const corRoi = r.roi == null ? undefined : r.roi >= 0 ? "text-emerald-300" : "text-red-300";
+  return (
+    <div className={`flex flex-wrap gap-x-5 gap-y-2 rounded-lg border p-3 text-xs ${total ? "border-amber-300/40 bg-amber-300/5" : "border-border bg-secondary/20"}`}>
+      {total && cel(brl(r.gasto), "gasto total")}
+      {total && cel(String(r.leads), "leads")}
+      {cel(String(r.visitas), "visitas realizadas")}
+      {cel(`${r.vendas}${r.emAndamento ? ` (+${r.emAndamento})` : ""}`, r.emAndamento ? "vendas (+ em andamento)" : "vendas")}
+      {cel(brl(r.cpl), "custo por lead")}
+      {cel(brl(r.custoVisita), "custo por visita")}
+      {cel(brl(r.custoVenda), "custo por venda", r.vendas ? "text-amber-300" : undefined)}
+      {cel(r.conversao == null ? "—" : `${r.conversao.toLocaleString("pt-BR")}%`, "lead → venda")}
+      {cel(brl(r.vgv), "vendido (VGV)")}
+      {cel(r.roi == null ? "—" : `${r.roi.toLocaleString("pt-BR")}%`, "retorno s/ comissão", corRoi)}
+    </div>
+  );
+}
 
 const CANAL_LABEL: Record<string, string> = {
   meta_ctwa: "Anúncio Click-to-WhatsApp", meta_leadads: "Meta Lead Ads", google_ads: "Google Ads",
@@ -212,6 +237,12 @@ export default function LeadCampanhas() {
           </Card>
         ) : (
           <div className="space-y-3">
+            <Card className="bg-card border-border">
+              <CardContent className="space-y-2 py-4">
+                <p className="text-sm font-semibold">Retorno das campanhas <span className="font-normal text-muted-foreground">— atribuído ao 1º toque do lead; venda = contrato assinado</span></p>
+                <RetornoCampanha r={somarRoi((campanhas as any[]).map(c => c.retorno))} total />
+              </CardContent>
+            </Card>
             {(campanhas as any[]).map(c => {
               const imovel = c.propertyId ? imovelPorId.get(c.propertyId) : null;
               return (
@@ -241,6 +272,7 @@ export default function LeadCampanhas() {
                         <Button size="sm" variant="ghost" className="text-red-300" onClick={() => { if (confirm(`Excluir a campanha #${c.codigo}?`)) excluir.mutate({ id: c.id }); }}><Trash2 className="h-4 w-4" /></Button>
                       </div>
                     </div>
+                    {c.retorno && <RetornoCampanha r={c.retorno} />}
                     <div className="flex flex-wrap items-center gap-3 text-xs text-muted-foreground">
                       <label className="flex items-center gap-2">
                         Empreendimento

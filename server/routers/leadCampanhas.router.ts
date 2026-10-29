@@ -6,7 +6,8 @@ import { z } from "zod";
 import { desc, eq } from "drizzle-orm";
 import { protectedProcedure, adminProcedure, router } from "../_core/trpc";
 import { getDb } from "../db";
-import { leadCampanhas, leadQualifications, properties, empreendimentos } from "../../drizzle/schema";
+import { contratos, leadCampanhas, leadQualifications, leadVisitas, properties, empreendimentos } from "../../drizzle/schema";
+import { STATUS_EM_ANDAMENTO, STATUS_VENDIDO, calcularRoi, valorDoPlano } from "../../shared/roiCampanhas";
 import { normalizarCodigoCampanha, mensagemPreenchida, linkWhatsApp } from "../leads/atribuicao";
 import { numeroWhatsAppLeads, appUrl } from "../leads/config";
 import { CANAIS_CAMPANHA } from "../leads/inbound";
@@ -49,13 +50,35 @@ export const leadCampanhasRouter = router({
   list: protectedProcedure.query(async () => {
     const db = await dbOrThrow();
     const rows = await db.select().from(leadCampanhas).orderBy(desc(leadCampanhas.createdAt));
-    const leads = await db.select({ origem: leadQualifications.origemCampanhaId, ultima: leadQualifications.ultimaCampanhaId }).from(leadQualifications);
-    return rows.map((c: any) => ({
-      ...c,
-      gastoTotal: Number(c.gastoTotal) || 0,
-      leadsPrimeiroToque: leads.filter((l: any) => l.origem === c.id).length,
-      leadsUltimoToque: leads.filter((l: any) => l.ultima === c.id).length,
-    }));
+    const leads = await db.select({ id: leadQualifications.id, origem: leadQualifications.origemCampanhaId, ultima: leadQualifications.ultimaCampanhaId }).from(leadQualifications);
+    // Retorno (1º toque): visitas realizadas e contratos dos leads de cada campanha
+    const visitas: any[] = await db.select({ leadId: leadVisitas.leadId }).from(leadVisitas).where(eq(leadVisitas.status, "realizada")).catch(() => []);
+    const ctrs: any[] = await db.select({ leadId: contratos.leadId, status: contratos.status, plano: contratos.simulacaoJson }).from(contratos).catch(() => []);
+    const campanhaDoLead = new Map<number, number>();
+    for (const l of leads as any[]) if (l.origem) campanhaDoLead.set(Number(l.id), Number(l.origem));
+    const base = new Map<number, { leads: number; visitas: number; vendas: number; emAndamento: number; vgv: number; comissao: number }>();
+    const de = (id: number) => { let b = base.get(id); if (!b) base.set(id, b = { leads: 0, visitas: 0, vendas: 0, emAndamento: 0, vgv: 0, comissao: 0 }); return b; };
+    campanhaDoLead.forEach(cid => { de(cid).leads++; });
+    // Visitas: uma por lead (o lead que voltou duas vezes conta uma)
+    Array.from(new Set(visitas.map(v => Number(v.leadId)))).forEach(leadId => { const cid = campanhaDoLead.get(leadId); if (cid) de(cid).visitas++; });
+    for (const c of ctrs) {
+      const cid = c.leadId ? campanhaDoLead.get(Number(c.leadId)) : undefined;
+      if (!cid) continue;
+      if (STATUS_VENDIDO.includes(c.status)) {
+        const v = valorDoPlano(typeof c.plano === "string" ? JSON.parse(c.plano) : c.plano);
+        const b = de(cid); b.vendas++; b.vgv += v.vgv; b.comissao += v.comissao;
+      } else if (STATUS_EM_ANDAMENTO.includes(c.status)) de(cid).emAndamento++;
+    }
+    return rows.map((c: any) => {
+      const gasto = Number(c.gastoTotal) || 0;
+      return {
+        ...c,
+        gastoTotal: gasto,
+        leadsPrimeiroToque: leads.filter((l: any) => l.origem === c.id).length,
+        leadsUltimoToque: leads.filter((l: any) => l.ultima === c.id).length,
+        retorno: calcularRoi({ gasto, ...(base.get(c.id) ?? { leads: 0, visitas: 0, vendas: 0, emAndamento: 0, vgv: 0, comissao: 0 }) }),
+      };
+    });
   }),
 
   create: protectedProcedure
