@@ -62,7 +62,7 @@ subtitle: "Para revisão do José Romário antes de subir ao sistema · 29/10/20
 
 **Nova Cláusula 14.5**
 
-> <mark>14.5. Para o controle de acesso, a associação entregará, sem custo, a primeira via das carteirinhas de identificação do titular e dos dependentes cadastrados. A emissão de nova via, por perda, extravio, dano ou inclusão posterior de dependente, será feita mediante o pagamento da taxa de reimpressão de R$ <span class="pend">[PENDENTE: valor da reimpressão]</span> por carteirinha, fixada pela administração.</mark>
+> <mark>14.5. Para o controle de acesso, a associação entregará, sem custo, a primeira via das carteirinhas de identificação do titular e dos dependentes cadastrados. A emissão de nova via, por perda, extravio, dano ou inclusão posterior de dependente, será feita mediante o pagamento da taxa de reimpressão de R$ 25,00 (vinte e cinco reais) por carteirinha, valor que poderá ser atualizado pela administração com aprovação da assembleia.</mark>
 
 # 5. Área de recreação de uso exclusivo
 
@@ -154,7 +154,7 @@ subtitle: "Para revisão do José Romário antes de subir ao sistema · 29/10/20
 | Campo | Onde entra |
 |---|---|
 | ✅ Resolvido — Anexo VIII pronto: média CAEMA × SAAE (até 10 m³ R$ 31,54; 11–20 R$ 5,72/m³; 21–30 R$ 8,14; 31–50 R$ 10,54; acima de 50 R$ 15,94) | Cl. 11.7 e Anexo VIII |
-| Taxa de reimpressão da carteirinha | Cl. 14.5 |
+| ✅ Resolvido — taxa de reimpressão da carteirinha: R$ 25,00 | Cl. 14.5 |
 | Tamanho do espaço exclusivo (m²) e planta da Quadra F | Cl. 2.5 e Anexo V |
 
 **Novo anexo:** Anexo VIII — Tabelas tarifárias de água (CAEMA e SAAE de Açailândia), anexado ao contrato junto com o Estatuto e as Diretrizes. Quando as tabelas forem reajustadas, o sistema troca o anexo e avisa os compradores.
