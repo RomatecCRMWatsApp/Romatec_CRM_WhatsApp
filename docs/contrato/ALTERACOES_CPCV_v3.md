@@ -68,7 +68,7 @@ subtitle: "Para revisão do José Romário antes de subir ao sistema · 29/10/20
 
 **Nova Cláusula 2.5**
 
-> <mark>2.5. Na área de vivência (Quadra F), fora da Área de Preservação Permanente, será destinado a cada chácara um espaço de uso exclusivo de aproximadamente <span class="pend">[PENDENTE: tamanho em m²]</span> m², identificado em planta própria entregue com o Mapa de Vendas (Anexo V), vinculado à unidade e transmitido com ela. O condomínio disponibilizará em cada espaço uma tenda e uma churrasqueira. Quaisquer outras benfeitorias — cabana, banheiro, quiosque, chalé ou similar — correrão por conta exclusiva do(a) COMPRADOR(A), dependerão de aprovação prévia da administração, observarão o padrão construtivo das Diretrizes de Uso (Anexo IV) e a legislação ambiental, e não geram direito de propriedade sobre a área nem de indenização. A área continua sendo de uso comum, com destinação exclusiva à unidade.</mark>
+> <mark>2.5. Na área de vivência (Quadra F), fora da Área de Preservação Permanente, será destinado a cada chácara um espaço de uso exclusivo de 100,00 m² (cem metros quadrados), identificado e numerado em planta própria entregue com o Mapa de Vendas (Anexo V), vinculado à unidade e transmitido com ela. O condomínio disponibilizará em cada espaço uma tenda e uma churrasqueira. Quaisquer outras benfeitorias — cabana, banheiro, quiosque, chalé ou similar — correrão por conta exclusiva do(a) COMPRADOR(A), dependerão de aprovação prévia da administração, observarão o padrão construtivo das Diretrizes de Uso (Anexo IV) e a legislação ambiental, e não geram direito de propriedade sobre a área nem de indenização. A área continua sendo de uso comum, com destinação exclusiva à unidade.</mark>
 
 # 6. Esgotamento sanitário — exigências (campo próprio)
 
@@ -155,7 +155,7 @@ subtitle: "Para revisão do José Romário antes de subir ao sistema · 29/10/20
 |---|---|
 | ✅ Resolvido — Anexo VIII pronto: média CAEMA × SAAE (até 10 m³ R$ 31,54; 11–20 R$ 5,72/m³; 21–30 R$ 8,14; 31–50 R$ 10,54; acima de 50 R$ 15,94) | Cl. 11.7 e Anexo VIII |
 | ✅ Resolvido — taxa de reimpressão da carteirinha: R$ 25,00 | Cl. 14.5 |
-| Tamanho do espaço exclusivo (m²) e planta da Quadra F | Cl. 2.5 e Anexo V |
+| ✅ Resolvido — espaço exclusivo de 100 m² por chácara (82 × 100 m² = 8.200 m², cabe com folga fora da APP); falta só a planta de locação dos espaços | Cl. 2.5 e Anexo V |
 
 **Novo anexo:** Anexo VIII — Tabelas tarifárias de água (CAEMA e SAAE de Açailândia), anexado ao contrato junto com o Estatuto e as Diretrizes. Quando as tabelas forem reajustadas, o sistema troca o anexo e avisa os compradores.
 
