@@ -14,7 +14,7 @@ subtitle: "Para revisão do José Romário antes de subir ao sistema · 29/10/20
 | 3 | Taxa de condomínio | Quadro-Resumo item 18 e nova 14.4 | De "estimada" para **fixada inicialmente em R$ 100,00** por chácara |
 | 4 | Carteirinhas | Nova 14.5 | 1ª via gratuita para titular e dependentes; reimpressão paga |
 | 5 | Área de recreação | Nova 2.5 | Espaço de uso exclusivo por chácara na área de vivência, com tenda e churrasqueira; demais benfeitorias por conta do comprador |
-| 6 | Esgoto | Cl. 6.2 (e), 13.1 (e) e nova 6.4 | Tratamento obrigatório dentro do próprio lote (fossa séptica + sumidouro), por conta do comprador; proibido lançar em vias, áreas comuns, APP ou córrego |
+| 6 | Esgoto (exigências, não tarifa) | Quadro-Resumo item 21, Cl. 6.2 (e), 13.1 (e) e nova 6.4 | Sistema individual obrigatório em cada chácara: fossa séptica (NBR 7229) + sumidouro ou filtro anaeróbio (NBR 13969), afastamentos mínimos, projeto-padrão com anuência do SAAE, vistoria antes de ocupar, manutenção pelo comprador — base: minuta da lei municipal de chacreamento, art. 11 |
 | 8 | Venda na planta e aditivos | Nova Cláusula 2.6 e Quadro-Resumo | Deixa claro que a venda é na planta (obras e aprovações complementares em andamento); cada aprovação gera um aditivo: Equatorial (com os ofícios), matrículas individuais do cartório e demais licenças |
 | 7 | Liberação para investir e medição | Cl. 6.1.1 e nova 6.1.2 | Só depois de quitar a entrada e pagar a 3ª parcela do financiamento; antes da liberação, vistoria de medição e locação; 1ª medição gratuita (condomínio), da 2ª em diante paga ao agrimensor credenciado |
 
@@ -70,15 +70,35 @@ subtitle: "Para revisão do José Romário antes de subir ao sistema · 29/10/20
 
 > <mark>2.5. Na área de vivência (Quadra F), fora da Área de Preservação Permanente, será destinado a cada chácara um espaço de uso exclusivo de aproximadamente <span class="pend">[PENDENTE: tamanho em m²]</span> m², identificado em planta própria entregue com o Mapa de Vendas (Anexo V), vinculado à unidade e transmitido com ela. O condomínio disponibilizará em cada espaço uma tenda e uma churrasqueira. Quaisquer outras benfeitorias — cabana, banheiro, quiosque, chalé ou similar — correrão por conta exclusiva do(a) COMPRADOR(A), dependerão de aprovação prévia da administração, observarão o padrão construtivo das Diretrizes de Uso (Anexo IV) e a legislação ambiental, e não geram direito de propriedade sobre a área nem de indenização. A área continua sendo de uso comum, com destinação exclusiva à unidade.</mark>
 
-# 6. Tratamento de esgoto no próprio lote
+# 6. Esgotamento sanitário — exigências (campo próprio)
+
+> Base: **Minuta do Projeto de Lei Municipal de Chacreamento Urbano de Açailândia (out/2026), Capítulo VI, art. 11** — dispensa a ETE coletiva em lotes a partir de 2.000 m² e torna **obrigatório o sistema individual em cada lote**: fossa séptica (ABNT NBR 7229:1993) + sumidouro **ou** filtro anaeróbio (ABNT NBR 13969:1997), com os afastamentos da legislação sanitária; projeto-padrão por profissional habilitado com anuência do **SAAE**; ocupação só depois do sistema instalado e funcionando. Esgoto **não é tarifa** no empreendimento — é exigência técnica.
+
+**Quadro-Resumo — novo item 21**
+
+> <mark>21\. Esgotamento sanitário — Não há rede coletora nem tarifa de esgoto. É obrigatório o sistema individual em cada chácara, por conta do(a) COMPRADOR(A): fossa séptica (NBR 7229) + sumidouro ou filtro anaeróbio (NBR 13969), conforme projeto-padrão com anuência do SAAE. A edificação só pode ser ocupada após vistoria do sistema (Cláusula 6.4).</mark>
 
 **Cláusula 6.2, alínea (e)**
 
-> (e) da implantação prévia do sistema individual de esgotamento sanitário (fossa séptica e sumidouro — ABNT NBR 7229 e NBR 13969), <mark>dentro dos limites da própria chácara e às expensas do(a) COMPRADOR(A),</mark> sem o qual nenhuma edificação poderá ser ocupada (Lei Municipal n.º {{emp_lei_municipal}}).
+> (e) da implantação prévia do sistema individual de esgotamento sanitário <mark>exigido na Cláusula 6.4, dentro dos limites da própria chácara e às expensas do(a) COMPRADOR(A),</mark> sem o qual nenhuma edificação poderá ser ocupada <mark>(legislação municipal de chacreamento urbano, art. 11, § 4º)</mark>.
 
-**Nova Cláusula 6.4**
+**Nova Cláusula 6.4 — Do esgotamento sanitário**
 
-> <mark>6.4. O empreendimento não possui rede coletora de esgoto. Todo efluente sanitário gerado na unidade deverá ser tratado e disposto no próprio lote, por meio de fossa séptica, filtro anaeróbio e/ou sumidouro dimensionados conforme as normas ABNT NBR 7229 e NBR 13969, cuja construção, manutenção e limpeza periódica são obrigação exclusiva do(a) COMPRADOR(A). O sistema observará as distâncias mínimas das divisas, de poços e de cursos d'água previstas nessas normas e nas Diretrizes de Uso, e sua localização constará do projeto aprovado pela administração. É expressamente proibido lançar esgoto, águas servidas ou efluentes de qualquer natureza nas vias, sarjetas, áreas comuns, Área de Preservação Permanente ou no córrego, sujeitando o infrator às multas do Estatuto, à obrigação de reparar o dano e às sanções ambientais (Lei n.º 9.605/1998).</mark>
+> <mark>6.4. O empreendimento não possui rede coletora nem Estação de Tratamento de Esgoto (ETE) coletiva, dispensada pela legislação municipal de chacreamento urbano para lotes com área mínima de 2.000 m². Todo esgoto sanitário gerado na unidade deverá ser tratado e disposto dentro do próprio lote, por sistema individual de esgotamento sanitário composto, obrigatoriamente, por:</mark>
+>
+> <mark>(a) **fossa séptica** (tanque séptico) dimensionada conforme a ABNT NBR 7229:1993, de acordo com o número de usuários e o uso da edificação; e</mark>
+>
+> <mark>(b) **unidade de pós-tratamento e disposição final**: sumidouro, ou filtro anaeróbio seguido de sumidouro ou de vala de infiltração, conforme a ABNT NBR 13969:1997 e a capacidade de absorção do solo, comprovada por teste de percolação quando exigido.</mark>
+>
+> <mark>6.4.1. Afastamentos mínimos. O sistema observará os afastamentos da legislação sanitária vigente e da ABNT NBR 7229, no mínimo: 1,50 m de construções, divisas da chácara e outro sumidouro; 3,00 m de árvores e de qualquer ponto da rede de água; 15,00 m de poços, nascentes e cursos d'água, inclusive o córrego e a sua Área de Preservação Permanente. O fundo do sumidouro e das valas de infiltração ficará, no mínimo, 1,50 m acima do nível máximo do lençol freático (ABNT NBR 13969).</mark>
+>
+> <mark>6.4.2. Projeto-padrão. A VENDEDORA disponibilizará projeto-padrão do sistema individual, elaborado por profissional habilitado e submetido à anuência do SAAE, que poderá ser adotado pelo(a) COMPRADOR(A). Optando por projeto próprio, o(a) COMPRADOR(A) o apresentará com a respectiva ART/TRT do profissional responsável, para aprovação da administração antes do início da obra.</mark>
+>
+> <mark>6.4.3. Vistoria e ocupação. A administração vistoriará o sistema antes do fechamento das tampas e do aterro, e a edificação somente poderá ser ocupada após a instalação e a comprovação do funcionamento adequado do sistema, sujeitando-se também à fiscalização do SAAE, órgão municipal competente.</mark>
+>
+> <mark>6.4.4. Manutenção. A operação, a manutenção e a limpeza periódica (remoção do lodo da fossa por empresa licenciada, no intervalo previsto no projeto) são obrigação exclusiva do(a) COMPRADOR(A).</mark>
+>
+> <mark>6.4.5. Vedações. É proibido lançar esgoto, águas servidas ou efluentes de qualquer natureza nas vias, sarjetas, rede de drenagem pluvial, áreas comuns, Área de Preservação Permanente ou no córrego, bem como ligar águas de chuva ao sistema de esgoto. A infração sujeita o(a) COMPRADOR(A) às multas do Estatuto, à obrigação de reparar o dano e às sanções administrativas e ambientais (Lei n.º 9.605/1998).</mark>
 
 **Cláusula 13.1, alínea (e)** — obrigações do(a) COMPRADOR(A)
 
@@ -126,7 +146,7 @@ subtitle: "Para revisão do José Romário antes de subir ao sistema · 29/10/20
 4. **Estatuto e Diretrizes de Uso.** O uso exclusivo, a taxa de reimpressão e a cobrança da água também devem entrar no Estatuto (Anexo III) e nas Diretrizes (Anexo IV), para que valham perante todos os associados e sucessores.
 5. **Padrão de entrada de energia.** Coloquei o padrão de entrada da unidade por conta do comprador, que é a prática da Equatorial. Se o empreendimento for entregar o padrão instalado, essa alínea sai.
 6. **Corte da água por falta de pagamento.** Incluí a suspensão após 30 dias de aviso. É usual e protege a associação; se preferir, essa frase sai.
-7. **Esgoto e poço.** Como cada chácara trata o esgoto no lote e a água vem do poço coletivo na A03, a distância mínima entre sumidouro e poço/córrego (NBR 7229/13969) deve constar também nas Diretrizes de Uso, com um croqui padrão de locação da fossa para o comprador seguir.
+7. **Esgoto — lei ainda em minuta.** As exigências da Cláusula 6.4 seguem a **minuta** do Projeto de Lei de Chacreamento (documento "sob análise"). Por isso o contrato cita "a legislação municipal de chacreamento urbano" sem número; quando a lei for sancionada, o número entra no campo {{emp_lei_municipal}} e, se o texto final mudar, ajusta-se por aditivo. O **projeto-padrão** da fossa/sumidouro com anuência do SAAE precisa ser providenciado pelo empreendimento (art. 11, § 1º) — vale fazer com um croqui de locação na chácara, respeitando os 15 m do poço coletivo (A03) e do córrego.
 8. **Agrimensor credenciado.** Convém definir no Estatuto/Regimento quem credencia o agrimensor e publicar a tabela da diligência, para o valor não ser questionado depois.
 
 # Valores que faltam (o senhor informa e eu completo)
