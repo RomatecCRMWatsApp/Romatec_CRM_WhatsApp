@@ -3,6 +3,16 @@
 Cada versão nova vai no TOPO. Depois rode `npm run release` (valida e atualiza o package.json);
 ao subir, o servidor grava a versão no banco e todos recebem o aviso "Novidades da versão".
 
+## 1.68.1 — 2026-10-29
+tipo: patch
+obrigatoria: nao
+titulo: Contrato v3.1 — Quadra F como reserva de preservação
+
+### Melhorias
+- Contrato do Bom Jardims: a área de vivência (Quadra F) passa a constar como área privada do empreendimento, fora da doação ao Município, e reserva de preservação do condomínio
+- Espaços exclusivos de 100 m² só em área já aberta, sem desmatar e fora da faixa de preservação do córrego; benfeitorias só leves e removíveis (proibidos casa e chalé); banheiro só com fossa e sumidouro a 15 m do córrego
+- Nova cláusula 15.3: flora e fauna intactas (sem desmatar, caçar, pesca predatória, fogo fora das churrasqueiras, sabão ou lixo no córrego), córrego só para banho e lazer de baixo impacto, averbado na matrícula
+
 ## 1.68.0 — 2026-10-29
 tipo: minor
 obrigatoria: nao

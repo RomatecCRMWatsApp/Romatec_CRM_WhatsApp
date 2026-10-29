@@ -33,10 +33,17 @@ describe('CPCV Bom Jardims v3', () => {
       'agrimensor credenciado pelo condomínio',
       'Anexo VIII — Tabela Tarifária de Água',
       '20. Venda na planta', '21. Esgotamento sanitário', '22. Condições específicas',
+      // Quadra F: área privada e reserva de preservação (v3.1)
+      'área privada do empreendimento, não integrante das áreas públicas doadas ao Município',
+      'somente em área já aberta, sem supressão de vegetação nativa',
+      'São vedadas edificações permanentes (casa, chalé ou similar)',
+      '15.3. Reserva de preservação da Quadra F.',
+      'O uso do córrego limita-se ao banho e à recreação de baixo impacto',
     ]) expect(t, trecho).toContain(trecho);
     // Saiu o hidrômetro por conta do empreendimento e a contribuição "estimada"
     expect(t).not.toContain('com hidrômetro por chácara');
     expect(t).not.toContain('Estimada em R$');
+    expect(t).not.toContain('cabana, banheiro, quiosque, chalé ou similar');
     // Nenhuma tag sem valor no padrão do empreendimento novo
     expect(t).not.toMatch(/emp_(taxa_carteirinha|area_recreacao_m2)/);
   });
