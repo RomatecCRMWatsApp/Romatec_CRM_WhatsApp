@@ -3,6 +3,23 @@
 Cada versão nova vai no TOPO. Depois rode `npm run release` (valida e atualiza o package.json);
 ao subir, o servidor grava a versão no banco e todos recebem o aviso "Novidades da versão".
 
+## 1.60.0 — 2026-10-29
+tipo: minor
+obrigatoria: nao
+titulo: Ranking de vendas por corretor e campanha Bonificação Surpresa
+
+### Novo
+- Ranking de vendas (menu Vendas › Ranking de vendas): classificação dos corretores por chácaras vendidas, em tempo real
+- Seletor de empreendimento no topo (padrão: por empreendimento) e opção "Todos os empreendimentos"
+- Campanha Bonificação Surpresa: prêmio ao 1º lugar — Honda Biz 125 EX 2026 0km ou R$ 19.265,00 (FIPE), além dos 2% de comissão
+- Prazo da campanha por empreendimento, definido pelo administrador (com a senha): tempo indeterminado (padrão), data de encerramento (editável) ou esgotamento do estoque
+- Envio da classificação pelo WhatsApp (administrador e secretária) e botão para copiar a mensagem
+
+### Avisos
+- Venda válida = contrato assinado + sinal pago. Empate: vence quem chegou primeiro ao total
+- Quando a data chega ou o estoque esgota, a campanha encerra sozinha e o ranking congela para a apuração do vencedor
+- Corretor e empreendedor veem só os empreendimentos que acessam; administrador e secretária veem todos
+
 ## 1.59.0 — 2026-10-28
 tipo: minor
 obrigatoria: nao

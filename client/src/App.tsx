@@ -33,6 +33,7 @@ const ListaInteresse = lazy(() => import("./pages/ListaInteresse"));
 const AgendaVisitas = lazy(() => import("./pages/AgendaVisitas"));
 const Reunioes = lazy(() => import("./pages/Reunioes"));
 const Convites = lazy(() => import("./pages/Convites"));
+const Ranking = lazy(() => import("./pages/Ranking"));
 const ReuniaoPublica = lazy(() => import("./pages/ReuniaoPublica"));
 const Recrutamento = lazy(() => import("./pages/Recrutamento"));
 const FormularioRecrutamento = lazy(() => import("./pages/FormularioRecrutamento"));
@@ -229,6 +230,9 @@ function Router() {
       </Route>
       <Route path={"/reunioes/:id"}>
         {() => <SetupGuard component={Reunioes} />}
+      </Route>
+      <Route path={"/ranking"}>
+        {() => <SetupGuard component={Ranking} />}
       </Route>
       <Route path={"/convites"}>
         {() => <SetupGuard component={Convites} />}

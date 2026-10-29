@@ -37,6 +37,11 @@ const TABELAS: [string, string][] = [
     token VARCHAR(24) NOT NULL, origem VARCHAR(12) NOT NULL DEFAULT 'lista', status VARCHAR(12) NOT NULL DEFAULT 'pendente',
     respondidoEm TIMESTAMP NULL, conviteEnviadoEm TIMESTAMP NULL, createdAt TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
     UNIQUE KEY uq_reuniao_conv_token (token), UNIQUE KEY uq_reuniao_conv_fone (reuniaoId, telefone))`],
+  // Ranking de vendas: prazo da campanha por empreendimento (shared/ranking.ts) — sem linha = tempo indeterminado
+  ['rankingCampanhas', `CREATE TABLE IF NOT EXISTS rankingCampanhas (
+    empreendimentoId INT PRIMARY KEY, modo VARCHAR(14) NOT NULL DEFAULT 'indeterminado', dataEncerramento VARCHAR(10) NULL,
+    premio VARCHAR(200) NULL, encerradaEm DATETIME NULL, motivoEncerramento VARCHAR(12) NULL, congeladoJson TEXT NULL,
+    atualizadoPor INT NULL, updatedAt TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP)`],
 ];
 
 export async function addAutoResposta(): Promise<void> {

@@ -21,6 +21,7 @@ import { saasRouter } from "./routers/saas.router";
 import { reservasRouter } from "./routers/reservas.router";
 import { convitesRouter } from "./routers/convites.router";
 import { exclusaoRouter } from "./routers/exclusao.router";
+import { rankingRouter } from "./routers/ranking.router";
 import { autoRespostaRouter } from "./routers/autoResposta.router";
 import { verComoRouter } from "./routers/verComo.router";
 import { contatosNomesRouter } from "./routers/contatosNomes.router";
@@ -92,6 +93,7 @@ export const appRouter = router({
   reservas: reservasRouter,
   convites: convitesRouter,
   exclusao: exclusaoRouter,
+  ranking: rankingRouter,
   autoResposta: autoRespostaRouter,
   verComo: verComoRouter,
   contatosNomes: contatosNomesRouter,

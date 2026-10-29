@@ -1900,3 +1900,18 @@ export const eventosConvidados = mysqlTable("eventosConvidados", {
   entradaEm: datetime("entradaEm"),
   saidaEm: datetime("saidaEm"),
 });
+
+/** Campanha de vendas por empreendimento (shared/ranking.ts): prazo definido pelo administrador; encerrada → ranking congelado */
+export const rankingCampanhas = mysqlTable("rankingCampanhas", {
+  empreendimentoId: int("empreendimentoId").primaryKey(),
+  /** indeterminado | data | estoque */
+  modo: varchar("modo", { length: 14 }).default("indeterminado").notNull(),
+  dataEncerramento: varchar("dataEncerramento", { length: 10 }),
+  premio: varchar("premio", { length: 200 }),
+  /** Encerramento automático (data ou estoque): classificação congelada para a apuração */
+  encerradaEm: datetime("encerradaEm"),
+  motivoEncerramento: varchar("motivoEncerramento", { length: 12 }),
+  congeladoJson: text("congeladoJson"),
+  atualizadoPor: int("atualizadoPor"),
+  updatedAt: timestamp("updatedAt").defaultNow().notNull(),
+});
