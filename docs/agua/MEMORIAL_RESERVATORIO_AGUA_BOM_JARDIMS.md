@@ -92,15 +92,13 @@ Na ocupação plena a bomba trabalha cerca de 16 h por dia, ainda com folga de 8
 4. **Altura do reservatório elevado:** pressão dinâmica mínima de 10 mca no ponto mais desfavorável da rede e estática máxima de 40 mca (NBR 12218).
 5. **Hidrômetro geral** na saída do poço, para comparar com a soma dos hidrômetros das chácaras e controlar as perdas.
 6. **Potabilidade:** clorador na entrada do reservatório e análises periódicas (Portaria GM/MS 888/2021).
+7. **Previsão de ampliação (definida):** a torre/base do reservatório elevado é executada desde já para **dois módulos de 10 m³** (carga de projeto de no mínimo 2 × 10 t de água, mais o peso das caixas e a ação do vento), com o espaço do segundo módulo livre no topo. A tubulação de recalque e a de saída para a rede recebem **tê com registro e ponta tamponada (flange cego ou cap)** para a ligação do segundo módulo, que trabalhará em paralelo (vasos comunicantes), com a mesma boia/sensor de nível.
 
 # 6. Conclusão
 
 O **reservatório elevado de 10.000 litros com bombeamento automático contínuo atende à demanda das 82 chácaras** na ocupação plena (98,4 m³ no dia de maior consumo), desde que o poço e a bomba forneçam pelo menos **6,2 m³/h** e que haja automação por nível. O volume de 32,8 a 50 m³ só é necessário quando a bomba funciona por horário.
 
-Ponto de atenção: com 10 m³, a autonomia sem bomba é de cerca de 2 horas na ocupação plena. Recomenda-se:
-
-- **deixar base e conexões prontas para um segundo módulo de 10 m³**, a instalar se as quedas de energia forem frequentes ou quando a ocupação passar de ~60%; ou
-- ter uma **bomba reserva / gerador** para o conjunto do poço.
+Ponto de atenção: com 10 m³, a autonomia sem bomba é de cerca de 2 horas na ocupação plena. Por isso fica **definido que a base e as conexões do segundo módulo de 10 m³ serão executadas já na implantação** (item 5.2-7). O segundo reservatório será instalado quando as quedas de energia forem frequentes ou quando a ocupação passar de ~60%, levando a reservação a **20 m³** e a autonomia a **≈ 4 h 50 min** na ocupação plena, sem obra civil nova.
 
 Este é um estudo preliminar de concepção. O projeto executivo da captação, da adução, da reservação e da rede deve ser elaborado por profissional habilitado, com a respectiva ART/TRT, e submetido à anuência do SAAE de Açailândia.
 
