@@ -3,6 +3,19 @@
 Cada versão nova vai no TOPO. Depois rode `npm run release` (valida e atualiza o package.json);
 ao subir, o servidor grava a versão no banco e todos recebem o aviso "Novidades da versão".
 
+## 1.65.0 — 2026-10-29
+tipo: minor
+obrigatoria: nao
+titulo: Simulador de financiamento nos Links de divulgação
+
+### Novo
+- Links de divulgação: novo link "Simulador de financiamento (com valores)" — a página em que o cliente escolhe a chácara livre, arrasta a barra da entrada e vê na hora a entrada, as parcelas e o à vista
+- O link sai com o código do corretor: a página mostra o cartão dele (foto, nome, CRECI e telefone) e o botão "Quero a chácara" abre o WhatsApp dele com a simulação escolhida (chácara, entrada e parcelas)
+- Texto pronto do WhatsApp com a assinatura do corretor, como nos outros links
+
+### Avisos
+- O link pessoal que o robô manda para o lead continua igual (atendimento pelo número do sistema)
+
 ## 1.64.0 — 2026-10-29
 tipo: minor
 obrigatoria: nao

@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import { useRoute } from "wouter";
 import { FileImage, Flame, MessageCircle } from "lucide-react";
 import { C, SERIF, SANS, useBrandFonts } from "@/components/bom-jardims/marca";
-import { FotoCorretor } from "@/lib/cartaoVendas";
+import { FotoCorretor, refDaSessao } from "@/lib/cartaoVendas";
 import { brl, simular, type CondicoesPagamento } from "@shared/simulador";
 import type { CartaoVendas } from "@shared/cartaoVendas";
 
@@ -18,6 +18,8 @@ type Dados = {
   sugerida: string | null;
   contato: CartaoVendas;
   whatsapp: string;
+  /** Link de corretor (?c=): o WhatsApp é o dele */
+  doCorretor?: boolean;
   imagem: string | null;
 };
 
@@ -34,6 +36,8 @@ export default function Oferta() {
   const [, params] = useRoute("/o/:slug");
   const slug = params?.slug ?? "bom-jardims";
   const token = useMemo(() => new URLSearchParams(window.location.search).get("l") ?? "", []);
+  // Código do corretor que divulgou o link (aba Links de divulgação)
+  const ref = useMemo(() => refDaSessao() ?? "", []);
   const [dados, setDados] = useState<Dados | null>(null);
   const [erro, setErro] = useState<string | null>(null);
   const [livres, setLivres] = useState<string[] | null>(null);
@@ -42,7 +46,8 @@ export default function Oferta() {
   const [prazo, setPrazo] = useState(0);
 
   useEffect(() => {
-    fetch(`/api/public/oferta/${encodeURIComponent(slug)}${token ? `?l=${encodeURIComponent(token)}` : ""}`)
+    const qs = new URLSearchParams({ ...(token ? { l: token } : {}), ...(ref ? { c: ref } : {}) }).toString();
+    fetch(`/api/public/oferta/${encodeURIComponent(slug)}${qs ? `?${qs}` : ""}`)
       .then(r => r.json()).then(j => {
         if (!j.ok) { setErro(j.error || "Página não encontrada"); return; }
         setDados(j);
@@ -51,7 +56,7 @@ export default function Oferta() {
         setPrazo(Math.max(...j.condicoes.prazos));
         document.title = `Sua oferta — ${j.empreendimento.nome}`;
       }).catch(() => setErro("Não foi possível carregar a página."));
-  }, [slug, token]);
+  }, [slug, token, ref]);
 
   // Disponíveis ao vivo (de minuto em minuto)
   useEffect(() => {
@@ -69,7 +74,12 @@ export default function Oferta() {
   const lote = dados.lotes.find(l => l.codigo === codigo) ?? null;
   const sim = lote ? simular(lote.areaM2, entrada, c, lote.preco) : null;
   const plano = sim?.planos.find(p => p.prazo === prazo) ?? sim?.planos.at(-1) ?? null;
-  const zap = `https://wa.me/${dados.whatsapp}?text=${encodeURIComponent(lote ? `Quero a chácara ${lote.codigo}${plano ? ` em ${plano.prazo}×` : ""}` : `Tenho interesse no ${dados.empreendimento.nome}`)}`;
+  // Link de corretor: a mensagem leva a simulação escolhida (o corretor já responde com a proposta)
+  const textoZap = !lote ? `Tenho interesse no ${dados.empreendimento.nome}`
+    : dados.doCorretor && sim && plano
+      ? `Olá, ${dados.contato.nome.split(" ")[0]}! Simulei a chácara ${lote.codigo} (${m2(lote.areaM2)} m²) do ${dados.empreendimento.nome}: entrada em ${entrada}× de ${brl(sim.parcelasEntrada[0] ?? sim.entrada30)} + ${plano.prazo}× de ${brl(plano.parcela)}. Quero falar sobre ela.`
+      : `Quero a chácara ${lote.codigo}${plano ? ` em ${plano.prazo}×` : ""}`;
+  const zap = `https://wa.me/${dados.whatsapp}?text=${encodeURIComponent(textoZap)}`;
   const logo = logoDe(dados.empreendimento.slug);
   const secao: React.CSSProperties = { maxWidth: 760, margin: "0 auto", padding: "0 16px" };
 

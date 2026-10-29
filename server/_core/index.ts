@@ -357,7 +357,8 @@ async function startServer() {
     try {
       const { dadosDaOferta } = await import('../autoresposta/oferta');
       const token = typeof req.query.l === 'string' ? req.query.l.slice(0, 24) : null;
-      res.json({ ok: true, ...(await dadosDaOferta(String(req.params.slug).slice(0, 80), token)) });
+      const ref = typeof req.query.c === 'string' ? req.query.c.slice(0, 20) : null;
+      res.json({ ok: true, ...(await dadosDaOferta(String(req.params.slug).slice(0, 80), token, Date.now(), ref)) });
     } catch (e: any) {
       if (e?.name === 'OfertaErro') return res.status(e.status).json({ ok: false, error: e.message });
       console.error('[Oferta] página:', e);

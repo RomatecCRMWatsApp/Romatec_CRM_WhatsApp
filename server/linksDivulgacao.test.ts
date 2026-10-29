@@ -60,3 +60,11 @@ describe('dados do corretor em tudo que ele divulga', () => {
     expect(linhasRodape(alan)).toEqual({ nome: 'Alan Martins · CRECI/MA 8.662', detalhe: 'WhatsApp (99) 9 8888-7777  ·  @alanmartins' });
   });
 });
+
+describe('simulador de financiamento na aba Links de divulgação', () => {
+  it('vai por último, para a /o/bom-jardims com o código do corretor', () => {
+    const sim = LINKS_FIXOS[LINKS_FIXOS.length - 1];
+    expect(sim.chave).toBe('fixo:simulador');
+    expect(montarLink('https://romateccrm.com', sim, 'abc123XYZ9')).toBe('https://romateccrm.com/o/bom-jardims?utm_source=whatsapp&utm_campaign=BJ-SIMULADOR&c=abc123XYZ9');
+  });
+});

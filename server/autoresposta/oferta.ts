@@ -31,7 +31,8 @@ export async function registrarAbertura(token: string, empreendimentoId: number,
   return lead ?? null;
 }
 
-export async function dadosDaOferta(slug: string, token: string | null, agora = Date.now()) {
+/** ref = ?c= do corretor que divulgou o link (aba Links de divulgação); o token do lead (robô) tem prioridade */
+export async function dadosDaOferta(slug: string, token: string | null, agora = Date.now(), ref: string | null = null) {
   const ctx = await contextoDoEmpreendimento(slug);
   if (!ctx) throw new OfertaErro('Página não encontrada');
   if (!ctx.cond) throw new OfertaErro('Oferta indisponível no momento', 404);
@@ -44,6 +45,13 @@ export async function dadosDaOferta(slug: string, token: string | null, agora = 
     const [u]: any[] = await d.select().from(users).where(eq(users.id, lead.responsavelId)).limit(1);
     const perfil = u ? perfilDe(u) : null;
     if (u && u.ativo !== false && u.ativo !== 0 && perfil && perfil !== 'empreendedor') contato = cartaoDe(u, perfil);
+  }
+  // Link do corretor (?c=): cartão e WhatsApp dele
+  let doCorretor = false;
+  if (!lead && ref) {
+    const { donoDoLink } = await import('../agendamento');
+    const dono = await donoDoLink(ref).catch(() => null);
+    if (dono?.cartao?.whatsapp) { contato = dono.cartao; doCorretor = true; }
   }
 
   const c = ctx.cond;
@@ -65,7 +73,9 @@ export async function dadosDaOferta(slug: string, token: string | null, agora = 
     lotes: livres.map(l => ({ codigo: l.codigo, areaM2: l.areaM2, preco: l.precoTabela ?? precoLote(l.areaM2, c) })),
     sugerida: ancora?.codigo ?? null,
     contato,
-    whatsapp: numeroWhatsAppLeads(),
+    // Link do corretor: o "Quero esta chácara" vai para o WhatsApp dele; link do robô: para o número do atendimento
+    whatsapp: doCorretor ? contato.whatsapp! : numeroWhatsAppLeads(),
+    doCorretor,
     imagem: ctx.midias.OFERTA?.url ?? null,
   };
 }

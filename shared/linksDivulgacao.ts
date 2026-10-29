@@ -50,6 +50,12 @@ export const LINKS_FIXOS: LinkDivulgacao[] = [
     url: '/bom-jardims.kml', utmSource: null, utmCampaign: null,
     textoWhatsapp: `🗺️ Localização exata do *Condomínio de Chácaras Bom Jardims* (abre no Google Earth):\n${MARCA_LINK}`,
   },
+  {
+    chave: 'fixo:simulador', titulo: 'Simulador de financiamento (com valores)', fixo: true, destaque: false, empreendimento: 'Bom Jardims',
+    descricao: 'Página com os valores: o cliente escolhe a chácara livre, arrasta a barra da entrada (mais ou menos parcelas) e vê na hora a entrada, as parcelas e o à vista. O botão "Quero a chácara" vem para o seu WhatsApp com a simulação.',
+    url: '/o/bom-jardims', utmSource: 'whatsapp', utmCampaign: 'BJ-SIMULADOR',
+    textoWhatsapp: `💰 *Simule a sua chácara no Condomínio Bom Jardims*\n\nEscolha a chácara, ajuste a entrada e veja na hora as parcelas — financiamento direto com a empreendedora, sem banco:\n${MARCA_LINK}`,
+  },
 ];
 
 /** Link final de quem compartilha: base do site + UTM + ?c= (só nos links do próprio site) */
