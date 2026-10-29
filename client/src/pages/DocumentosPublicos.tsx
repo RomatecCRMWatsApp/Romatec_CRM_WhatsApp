@@ -193,13 +193,67 @@ function Documento({ emp, d }: { emp: string; d: DocumentoCliente }) {
   );
 }
 
+/**
+ * Proteção do leitor: impressão sai em branco (CSS de impressão + Ctrl/Cmd+P bloqueado), Ctrl/Cmd+S, C, A e U
+ * bloqueados, e o documento some quando a página perde o foco ou fica oculta (ferramenta de recorte, troca de app,
+ * tecla Print Screen) — como o "ocultar" dos apps. Print do celular o navegador não consegue impedir.
+ */
+function useProtecaoLeitura() {
+  const [oculto, setOculto] = useState(false);
+  useEffect(() => {
+    const css = document.createElement("style");
+    css.textContent = "@media print { html, body { display: none !important; } }";
+    document.head.appendChild(css);
+    let t: ReturnType<typeof setTimeout> | undefined;
+    const esconder = (ms?: number) => { setOculto(true); clearTimeout(t); if (ms) t = setTimeout(() => setOculto(false), ms); };
+    const tecla = (e: KeyboardEvent) => {
+      const k = e.key.toLowerCase();
+      if ((e.ctrlKey || e.metaKey) && ["p", "s", "c", "a", "u"].includes(k)) { e.preventDefault(); e.stopPropagation(); }
+      if (k === "printscreen" || (e.metaKey && e.shiftKey && ["3", "4", "5", "s"].includes(k))) {
+        esconder(1500);
+        navigator.clipboard?.writeText("").catch(() => {});
+      }
+    };
+    const blur = () => esconder();
+    const focus = () => setOculto(false);
+    const vis = () => (document.hidden ? esconder() : setOculto(false));
+    const antesImprimir = () => esconder();
+    window.addEventListener("keydown", tecla, true);
+    window.addEventListener("keyup", tecla, true);
+    window.addEventListener("blur", blur);
+    window.addEventListener("focus", focus);
+    window.addEventListener("beforeprint", antesImprimir);
+    window.addEventListener("afterprint", focus);
+    document.addEventListener("visibilitychange", vis);
+    return () => {
+      css.remove(); clearTimeout(t);
+      window.removeEventListener("keydown", tecla, true);
+      window.removeEventListener("keyup", tecla, true);
+      window.removeEventListener("blur", blur);
+      window.removeEventListener("focus", focus);
+      window.removeEventListener("beforeprint", antesImprimir);
+      window.removeEventListener("afterprint", focus);
+      document.removeEventListener("visibilitychange", vis);
+    };
+  }, []);
+  return oculto;
+}
+
 export default function DocumentosPublicos() {
   useBrandFonts();
   const { emp = "", doc } = useParams<{ emp: string; doc?: string }>();
   const d = doc ? documentoCliente(doc) : null;
   const valido = empDocsValido(emp) && (!doc || d);
+  const oculto = useProtecaoLeitura();
   return (
     <div style={{ minHeight: "100vh", background: C.creme, color: C.texto, fontFamily: SANS }}>
+      {oculto && (
+        <div onClick={() => window.dispatchEvent(new Event("focus"))} style={{ position: "fixed", inset: 0, zIndex: 50, background: C.verde, color: C.creme, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 10, textAlign: "center", padding: 24, fontFamily: SANS }}>
+          <Lock size={32} color={C.dourado} />
+          <p style={{ fontFamily: SERIF, fontSize: 22, margin: 0 }}>Documento protegido</p>
+          <p style={{ margin: 0, opacity: 0.85 }}>Somente leitura. Toque aqui para continuar lendo.</p>
+        </div>
+      )}
       {!valido ? (
         <>
           <Topo titulo="Documento não encontrado" subtitulo="Confira o link recebido ou fale com o seu corretor." />

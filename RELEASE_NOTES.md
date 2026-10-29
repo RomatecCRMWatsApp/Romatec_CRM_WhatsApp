@@ -3,6 +3,15 @@
 Cada versão nova vai no TOPO. Depois rode `npm run release` (valida e atualiza o package.json);
 ao subir, o servidor grava a versão no banco e todos recebem o aviso "Novidades da versão".
 
+## 1.69.3 — 2026-10-29
+tipo: patch
+obrigatoria: nao
+titulo: Documentos do cliente protegidos contra impressão
+
+### Melhorias
+- Páginas de leitura dos documentos: imprimir ou "salvar como PDF" sai em branco; Ctrl/Cmd + P, S, C, A e U bloqueados
+- O documento é coberto pela tela "Documento protegido" quando a página perde o foco, vai para segundo plano ou quando se aperta Print Screen (como o ocultar dos apps); um toque volta à leitura
+
 ## 1.69.2 — 2026-10-29
 tipo: patch
 obrigatoria: nao
