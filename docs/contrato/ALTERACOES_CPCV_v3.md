@@ -15,6 +15,7 @@ subtitle: "Para revisão do José Romário antes de subir ao sistema · 29/10/20
 | 4 | Carteirinhas | Nova 14.5 | 1ª via gratuita para titular e dependentes; reimpressão paga |
 | 5 | Área de recreação | Nova 2.5 | Espaço de uso exclusivo por chácara na área de vivência, com tenda e churrasqueira; demais benfeitorias por conta do comprador |
 | 6 | Esgoto | Cl. 6.2 (e), 13.1 (e) e nova 6.4 | Tratamento obrigatório dentro do próprio lote (fossa séptica + sumidouro), por conta do comprador; proibido lançar em vias, áreas comuns, APP ou córrego |
+| 8 | Venda na planta e aditivos | Nova Cláusula 2.6 e Quadro-Resumo | Deixa claro que a venda é na planta (obras e aprovações complementares em andamento); cada aprovação gera um aditivo: Equatorial (com os ofícios), matrículas individuais do cartório e demais licenças |
 | 7 | Liberação para investir e medição | Cl. 6.1.1 e nova 6.1.2 | Só depois de quitar a entrada e pagar a 3ª parcela do financiamento; antes da liberação, vistoria de medição e locação; 1ª medição gratuita (condomínio), da 2ª em diante paga ao agrimensor credenciado |
 
 # 1. Energia elétrica (Equatorial)
@@ -97,7 +98,27 @@ subtitle: "Para revisão do José Romário antes de subir ao sistema · 29/10/20
 
 > 19\. Liberação de uso — Cercas, muros, edificações, <mark>benfeitorias,</mark> criações e plantios somente após a quitação da entrada e o pagamento da 3ª (terceira) parcela do saldo<mark>, com vistoria de medição prévia (1ª medição sem custo; as seguintes pagas ao agrimensor credenciado)</mark> (Cláusula 6ª)
 
+# 8. Venda na planta e aditivos de cada aprovação
+
+**Nova Cláusula 2.6**
+
+> <mark>2.6. Venda na planta. O(A) COMPRADOR(A) declara ciência de que a unidade é adquirida na planta, com a infraestrutura em execução (Cláusula 11ª) e com aprovações complementares ainda em curso junto aos órgãos e concessionárias competentes. À medida que cada uma for obtida, a VENDEDORA emitirá **termo aditivo** a este contrato, que dele passará a fazer parte integrante, independentemente de nova manifestação de vontade, salvo se alterar preço, prazo, área ou obrigação do(a) COMPRADOR(A), hipótese em que dependerá da assinatura das partes. Serão objeto de aditivo, entre outros:</mark>
+>
+> <mark>(a) a **aprovação do projeto de energia elétrica pela Equatorial Maranhão**, com cópia do projeto aprovado e de todos os ofícios, pareceres e termos emitidos pela concessionária, e, depois, o termo de incorporação/energização da rede;</mark>
+>
+> <mark>(b) a **abertura das matrículas individuais** das chácaras no Registro de Imóveis, com a indicação do número da matrícula da unidade, que substituirá a referência à matrícula-mãe em todos os efeitos deste contrato;</mark>
+>
+> <mark>(c) a outorga de uso da água, a Licença de Operação e demais licenças ambientais, o termo de vistoria municipal das obras (Cláusula 11.5) e qualquer outra aprovação que modifique ou complemente as informações do Quadro-Resumo e dos Anexos.</mark>
+>
+> <mark>Parágrafo único. Os aditivos serão enviados ao(à) COMPRADOR(A) pelos contatos do Quadro-Resumo, com assinatura eletrônica quando exigida, e ficarão disponíveis no sistema, com os documentos que os originaram.</mark>
+
+**Quadro-Resumo — novo item 20**
+
+> <mark>20\. Venda na planta — Unidade vendida com obras de infraestrutura em execução e aprovações complementares em curso (Equatorial, matrículas individuais, licenças e vistoria municipal). Cada aprovação gera termo aditivo com os respectivos documentos (Cláusula 2.6).</mark>
+
 # Pontos de atenção (recomendo conferir antes de subir)
+
+0. **⚠️ Registro do parcelamento — o mais importante.** A Cláusula 2.2 do contrato atual declara que o parcelamento **já está aprovado pelo Município e registrado no Registro de Imóveis**, porque a Lei n.º 6.766/1979 **proíbe vender lote de parcelamento não registrado** (art. 37) e trata isso como **crime** (art. 50, I), com nulidade do contrato e devolução dos valores. A "venda na planta" da nova Cláusula 2.6 está redigida para obras e aprovações **complementares** (energia, matrículas individuais, licenças, vistoria), **com o parcelamento já registrado**. Se o registro do parcelamento ainda não saiu, o contrato não pode ser assinado nem receber pagamento até sair: nesse caso o caminho é só lista de interesse/reserva **sem pagamento**. Recomendo confirmar o número do registro (item 6 do Quadro-Resumo) com o cartório e com o advogado antes do lançamento de 14/11.
 
 1. **Natureza da Quadra F.** O espaço exclusivo só é possível se a Quadra F for área **privada do empreendimento** (área comum da associação). Se ela consta no projeto aprovado como **área pública doada ao Município**, o uso exclusivo não pode ser concedido. Convém conferir no quadro de áreas e na matrícula.
 2. **APP do córrego.** A Quadra F inclui a Área de Preservação Permanente. Nenhum espaço exclusivo nem benfeitoria pode ficar dentro da APP (Código Florestal, Lei n.º 12.651/2012). Por isso a redação diz "fora da APP".
