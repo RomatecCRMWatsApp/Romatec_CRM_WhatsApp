@@ -3,6 +3,16 @@
 Cada versão nova vai no TOPO. Depois rode `npm run release` (valida e atualiza o package.json);
 ao subir, o servidor grava a versão no banco e todos recebem o aviso "Novidades da versão".
 
+## 1.81.0 — 2026-10-29
+tipo: minor
+obrigatoria: nao
+titulo: Instalar o app no celular
+
+### Novo
+- Botão "Instalar o app" no menu: no Android e no computador abre a instalação na hora; no iPhone mostra o passo a passo (Safari › Compartilhar › Adicionar à Tela de Início)
+- Página /instalar com as instruções de cada aparelho e o QR para mandar à equipe
+- Atalhos do ícone do app (toque longo): Atender agora, Caixa de entrada, Área do corretor e Leads
+
 ## 1.80.0 — 2026-10-29
 tipo: minor
 obrigatoria: nao

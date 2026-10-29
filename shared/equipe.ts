@@ -81,7 +81,7 @@ export function telaInicial(perfil: Perfil | null): string {
 export function podeAbrir(perfil: Perfil | null, caminho: string): boolean {
   if (!perfil) return false;
   if (perfil === 'admin') return true;
-  if (caminho === '/meu-cadastro') return true;
+  if (caminho === '/meu-cadastro' || caminho === '/instalar') return true;
   // Área do assinante (camada SaaS): corretor e empreendedor
   if (caminho === '/assinatura') return perfil === 'corretor' || perfil === 'empreendedor';
   if (perfil === 'empreendedor') return caminho === '/empreendedor' || caminho.startsWith('/empreendedor/') || caminho === '/convites' || caminho.startsWith('/convites/') || caminho === '/ranking';

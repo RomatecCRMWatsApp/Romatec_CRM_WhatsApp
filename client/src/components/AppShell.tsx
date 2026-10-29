@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { Link, useLocation } from "wouter";
 import { useAuth } from "@/_core/hooks/useAuth";
+import BotaoInstalarApp from "@/components/sistema/BotaoInstalarApp";
 import { daEquipe, perfilDe, podeAbrir, ROTULO_PERFIL } from "@shared/equipe";
 import { trpc } from "@/lib/trpc";
 import AvisoRotinas from "./AvisoRotinas";
@@ -302,6 +303,7 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
       <aside className={`hidden lg:flex fixed inset-y-0 left-0 z-30 flex-col bg-sidebar border-r border-sidebar-border transition-[width] duration-200 ${recolhido ? "w-[72px]" : "w-64"}`}>
         <Marca recolhido={recolhido} />
         <Navegacao recolhido={recolhido} />
+        <BotaoInstalarApp recolhido={recolhido} />
         <BotaoRecolher recolhido={recolhido} onAlternar={alternarMenu} />
         <Rodape recolhido={recolhido} />
       </aside>
@@ -313,6 +315,7 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
           <aside className="relative z-10 flex w-72 max-w-[85vw] flex-col bg-sidebar border-r border-sidebar-border">
             <div className="flex items-center justify-between pr-3"><Marca /><button onClick={() => setAberto(false)} className="p-2 text-sidebar-foreground/70"><X className="h-5 w-5" /></button></div>
             <Navegacao onNavegar={() => setAberto(false)} />
+            <BotaoInstalarApp />
             <Rodape />
           </aside>
         </div>
