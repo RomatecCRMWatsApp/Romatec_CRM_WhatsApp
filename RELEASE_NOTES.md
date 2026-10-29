@@ -3,6 +3,21 @@
 Cada versão nova vai no TOPO. Depois rode `npm run release` (valida e atualiza o package.json);
 ao subir, o servidor grava a versão no banco e todos recebem o aviso "Novidades da versão".
 
+## 1.79.0 — 2026-10-29
+tipo: minor
+obrigatoria: nao
+titulo: Caixa de entrada única — WhatsApp e Instagram
+
+### Novo
+- Leads › Caixa de entrada: as conversas do WhatsApp e do Instagram Direct numa lista só, da mais recente para a mais antiga, com filtro "Aguardando resposta", busca e a conversa ao lado
+- Responda pela própria tela: no WhatsApp sai pelo número do sistema (você assume a conversa e o robô para); no Instagram sai pelo Direct da página
+- Mensagens do Instagram Direct chegam pelo webhook da Meta e avisam no sininho e no celular
+- Quando o cliente do Instagram passa o WhatsApp, um clique cria ou liga o lead e a conversa segue pelo WhatsApp
+- Regra da Meta respeitada: resposta no Direct só até 24 h depois da última mensagem do cliente
+
+### Avisos
+- Para o Instagram: no app da Meta, assine o campo "messages" do Instagram no mesmo webhook dos leads e use a META_PAGE_ACCESS_TOKEN com a permissão instagram_manage_messages
+
 ## 1.78.0 — 2026-10-29
 tipo: minor
 obrigatoria: nao

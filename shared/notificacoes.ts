@@ -152,8 +152,9 @@ export function destinatarios(
  * empreendedor; atualização do sistema abre o sininho.
  */
 export function urlDaNotificacao(
-  tipo: TipoNotificacao, d: { empreendimentoSlug?: string | null; lote?: string | null; contratoId?: number | null; leadId?: number | null; reuniaoId?: number | null }, perfil?: Perfil | null,
+  tipo: TipoNotificacao, d: { empreendimentoSlug?: string | null; lote?: string | null; contratoId?: number | null; leadId?: number | null; reuniaoId?: number | null; url?: string | null }, perfil?: Perfil | null,
 ): string {
+  if (d.url) return d.url;
   if (tipo === 'confirmacao_reuniao') return d.reuniaoId ? `/convites/${d.reuniaoId}` : '/convites';
   if (tipo === 'chamado') return '/portal-comprador';
   if (tipo === 'agendamento' || tipo === 'novo_lead' || tipo === 'atendimento') {

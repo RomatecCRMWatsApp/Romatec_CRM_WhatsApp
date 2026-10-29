@@ -45,7 +45,7 @@ async function dbx() {
   return getDb();
 }
 
-export async function registrarMensagem(leadId: number, direcao: 'in' | 'out', autor: 'lead' | 'ia' | 'bot' | 'sistema', texto: string) {
+export async function registrarMensagem(leadId: number, direcao: 'in' | 'out', autor: 'lead' | 'ia' | 'bot' | 'sistema' | 'corretor', texto: string) {
   const db = await dbx();
   if (!db || !texto) return;
   const { leadMensagens } = await import('../../drizzle/schema');

@@ -81,6 +81,7 @@ const AtenderAgora = lazy(() => import("./pages/AtenderAgora"));
 const SequenciasFollowUp = lazy(() => import("./pages/SequenciasFollowUp"));
 const PortalComprador = lazy(() => import("./pages/PortalComprador"));
 const Integracoes = lazy(() => import("./pages/Integracoes"));
+const CaixaEntrada = lazy(() => import("./pages/CaixaEntrada"));
 const AssinarAditivo = lazy(() => import("./pages/AssinarAditivo"));
 const LeadDetalhe = lazy(() => import("./pages/LeadDetalhe"));
 const Setup = lazy(() => import("./pages/Setup"));
@@ -210,6 +211,9 @@ function Router() {
       </Route>
       <Route path={"/carteirinhas"}>
         {() => <SetupGuard component={Carteirinhas} />}
+      </Route>
+      <Route path={"/caixa-entrada"}>
+        {() => <SetupGuard component={CaixaEntrada} />}
       </Route>
       <Route path={"/integracoes"}>
         {() => <SetupGuard component={Integracoes} />}

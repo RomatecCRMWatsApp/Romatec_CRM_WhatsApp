@@ -644,6 +644,12 @@ async function startServer() {
         return res.sendStatus(401);
       }
 
+      // Instagram Direct (object: "instagram"): mensagens para a caixa de entrada
+      if (req.body?.object === 'instagram') {
+        const { receberInstagram } = await import('../caixaEntrada');
+        await receberInstagram(req.body);
+        return res.sendStatus(200);
+      }
       const { ingestLead } = await import('../lead-intake');
       const outcomes = await processMetaWebhook(req.body, {
         accessToken: ENV.metaPageAccessToken,

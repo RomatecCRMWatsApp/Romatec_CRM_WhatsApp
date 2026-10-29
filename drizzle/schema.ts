@@ -2070,3 +2070,33 @@ export const apiChaves = mysqlTable("apiChaves", {
 }, (t) => ({
   uxPrefixo: uniqueIndex("ux_api_prefixo").on(t.prefixo),
 }));
+
+/** Conversas do Instagram Direct (server/caixaEntrada.ts) — ligadas a um lead quando o cliente passa o telefone */
+export const igConversas = mysqlTable("igConversas", {
+  id: int("id").autoincrement().primaryKey(),
+  igsid: varchar("igsid", { length: 64 }).notNull(),
+  nome: varchar("nome", { length: 160 }),
+  username: varchar("username", { length: 80 }),
+  leadId: int("leadId"),
+  responsavelId: int("responsavelId"),
+  ultimaEm: timestamp("ultimaEm").defaultNow().notNull(),
+  /** Última mensagem DO CLIENTE (a Meta só deixa responder até 24 h depois dela) */
+  ultimaDoClienteEm: timestamp("ultimaDoClienteEm"),
+  criadoEm: timestamp("criadoEm").defaultNow().notNull(),
+}, (t) => ({
+  uxIgsid: uniqueIndex("ux_ig_igsid").on(t.igsid),
+}));
+
+export const igMensagens = mysqlTable("igMensagens", {
+  id: int("id").autoincrement().primaryKey(),
+  conversaId: int("conversaId").notNull(),
+  /** in | out */
+  direcao: varchar("direcao", { length: 3 }).notNull(),
+  texto: text("texto").notNull(),
+  mid: varchar("mid", { length: 160 }),
+  autorId: int("autorId"),
+  criadoEm: timestamp("criadoEm", { fsp: 3 }).defaultNow().notNull(),
+}, (t) => ({
+  ixConversa: index("ix_igmsg_conversa").on(t.conversaId, t.criadoEm),
+  uxMid: uniqueIndex("ux_igmsg_mid").on(t.mid),
+}));

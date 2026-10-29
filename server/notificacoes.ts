@@ -133,7 +133,7 @@ export async function enviarPushes(repo: RepoNotificacoes, enviar: EnviadorPush 
 /** Grava a notificação para cada destinatário (endereço conforme o perfil) e dispara o push */
 async function emitir(
   repo: RepoNotificacoes, enviar: EnviadorPush | null, usuarios: UsuarioDestino[], ids: number[],
-  base: Omit<NovaNotificacao, "usuarioId" | "url">, alvo: { empreendimentoSlug?: string | null; lote?: string | null; contratoId?: number | null; leadId?: number | null; reuniaoId?: number | null },
+  base: Omit<NovaNotificacao, "usuarioId" | "url">, alvo: { empreendimentoSlug?: string | null; lote?: string | null; contratoId?: number | null; leadId?: number | null; reuniaoId?: number | null; url?: string | null },
 ) {
   if (!ids.length) return { destinatarios: [] as number[], enviados: 0, removidos: 0 };
   const P = new Map(usuarios.map(u => [u.id, perfilDe(u as any)]));
@@ -197,6 +197,21 @@ export async function notificarChamado(
   return emitir(repo, enviar === undefined ? await enviadorWebPush() : enviar, usuarios, ids,
     { tipo: "chamado", titulo: `Chamado · contrato ${f.contrato} (chácara ${f.lote})`, mensagem: f.assunto.slice(0, 400), empreendimentoId: f.empreendimentoId, chave: null },
     { empreendimentoSlug: f.empreendimentoSlug });
+}
+
+/** Mensagem nova no Instagram Direct (caixa de entrada) → responsável da conversa ou o escritório */
+export async function notificarMensagemInstagram(
+  f: { conversaId: number; nome: string; texto: string; responsavelId: number | null },
+  repo: RepoNotificacoes = repoBanco(), enviar?: EnviadorPush | null,
+) {
+  const usuarios = await repo.usuarios();
+  const ativo = (u: any) => u.ativo !== false && u.ativo !== 0;
+  const ids = f.responsavelId && usuarios.some(u => u.id === f.responsavelId)
+    ? [f.responsavelId]
+    : usuarios.filter(u => ativo(u) && ['admin', 'secretario'].includes(String(perfilDe(u as any)))).map(u => u.id);
+  return emitir(repo, enviar === undefined ? await enviadorWebPush() : enviar, usuarios, ids,
+    { tipo: "atendimento", titulo: `Instagram: ${f.nome}`, mensagem: f.texto.slice(0, 300), empreendimentoId: null, chave: null } as any,
+    { url: `/caixa-entrada?ig=${f.conversaId}` });
 }
 
 /** Pedido de cancelamento de contrato (corretor/secretária) → sininho e push só para o administrador */

@@ -81,6 +81,14 @@ const TABELAS: [string, string][] = [
     id INT AUTO_INCREMENT PRIMARY KEY, nome VARCHAR(120) NOT NULL, prefixo VARCHAR(12) NOT NULL, hash CHAR(64) NOT NULL, escopos VARCHAR(120) NOT NULL,
     corretorId INT NULL, ativo BOOLEAN NOT NULL DEFAULT TRUE, ultimoUso TIMESTAMP NULL, usos INT NOT NULL DEFAULT 0, criadoPor INT NULL,
     criadoEm TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP, UNIQUE KEY ux_api_prefixo (prefixo))`],
+  // Caixa de entrada: Instagram Direct (server/caixaEntrada.ts)
+  ['igConversas', `CREATE TABLE IF NOT EXISTS igConversas (
+    id INT AUTO_INCREMENT PRIMARY KEY, igsid VARCHAR(64) NOT NULL, nome VARCHAR(160) NULL, username VARCHAR(80) NULL, leadId INT NULL, responsavelId INT NULL,
+    ultimaEm TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP, ultimaDoClienteEm TIMESTAMP NULL, criadoEm TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    UNIQUE KEY ux_ig_igsid (igsid))`],
+  ['igMensagens', `CREATE TABLE IF NOT EXISTS igMensagens (
+    id INT AUTO_INCREMENT PRIMARY KEY, conversaId INT NOT NULL, direcao VARCHAR(3) NOT NULL, texto TEXT NOT NULL, mid VARCHAR(160) NULL, autorId INT NULL,
+    criadoEm TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3), KEY ix_igmsg_conversa (conversaId, criadoEm), UNIQUE KEY ux_igmsg_mid (mid))`],
   // Links de divulgação cadastrados pelo escritório (Campanhas de captação › Links de divulgação)
   ['linksDivulgacao', `CREATE TABLE IF NOT EXISTS linksDivulgacao (
     id INT AUTO_INCREMENT PRIMARY KEY, titulo VARCHAR(120) NOT NULL, descricao VARCHAR(300) NULL, url VARCHAR(500) NOT NULL,
