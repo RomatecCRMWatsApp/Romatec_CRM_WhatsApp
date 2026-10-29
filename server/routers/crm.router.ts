@@ -180,6 +180,16 @@ export const crmRouter = router({
     return { itens: itens.slice(0, 60), total: itens.length };
   }),
 
+  /** Resumo da conversa e próxima mensagem sugerida pela IA (server/leads/iaResumo.ts) — só quando o corretor pede */
+  resumoIa: protectedProcedure.input(z.object({ id: z.number().int(), forcar: z.boolean().optional() })).mutation(async ({ input, ctx }) => {
+    await leadOuErro(await dbOrThrow(), input.id, ctx);
+    const { resumoDoLead, IaResumoErro } = await import("../leads/iaResumo");
+    try { return await resumoDoLead(input.id, !!input.forcar); } catch (e: any) {
+      if (e instanceof IaResumoErro) throw new TRPCError({ code: e.status === 404 ? "NOT_FOUND" : e.status === 412 ? "PRECONDITION_FAILED" : "INTERNAL_SERVER_ERROR", message: e.message });
+      throw e;
+    }
+  }),
+
   /** Abriu o WhatsApp do cliente pelo CRM: conta como atendido (encerra o alerta e tira o card de "Novo") */
   abriuWhatsApp: protectedProcedure.input(z.object({ id: z.number().int() })).mutation(async ({ input, ctx }) => {
     await leadOuErro(await dbOrThrow(), input.id, ctx);

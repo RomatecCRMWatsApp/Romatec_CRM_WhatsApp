@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { ArrowLeft, Building2, ExternalLink, Headset, MessageCircle, Bot, Send, XCircle, FileText, Save } from "lucide-react";
 import FilaEsperaLead from "@/components/lotes/FilaEsperaLead";
+import ResumoIaLead from "@/components/leads/ResumoIaLead";
 import PageHeader from "@/components/PageHeader";
 import VisitasLead from "@/components/VisitasLead";
 import ReunioesLead from "@/components/ReunioesLead";
@@ -121,6 +122,7 @@ export default function LeadDetalhe() {
               <Button size="sm" variant="outline" onClick={() => marcarAtendido.mutate({ id })}>✅ Já atendi</Button>
             </div>
           )}
+          <ResumoIaLead leadId={id} phone={String(lead.phone)} onEnviou={atualizar} />
           {/* Ações */}
           <Card className="bg-card border-border">
             <CardContent className="py-4 flex flex-wrap items-center gap-2">

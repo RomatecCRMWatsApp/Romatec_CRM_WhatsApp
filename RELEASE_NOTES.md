@@ -3,6 +3,16 @@
 Cada versão nova vai no TOPO. Depois rode `npm run release` (valida e atualiza o package.json);
 ao subir, o servidor grava a versão no banco e todos recebem o aviso "Novidades da versão".
 
+## 1.73.0 — 2026-10-29
+tipo: minor
+obrigatoria: nao
+titulo: Resumo da conversa e próxima mensagem pela IA
+
+### Novo
+- Na tela do lead, "Resumo da IA": um toque e a IA lê a conversa e os dados do lead e devolve o resumo, o interesse, as dúvidas em aberto e o próximo passo
+- Próxima mensagem sugerida, pronta para ajustar e enviar no WhatsApp (conta como atendido) ou copiar
+- A IA não inventa preço, parcela, prazo nem disponibilidade: quando o cliente pede valores, sugere a simulação ou a visita
+
 ## 1.72.0 — 2026-10-29
 tipo: minor
 obrigatoria: nao
