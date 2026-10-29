@@ -50,7 +50,7 @@ const db = async () => {
 export async function parcelasEmAberto(contratoId: number) {
   const d = await db();
   const rs: any[] = await d.select().from(cobrancas).where(eq(cobrancas.contratoId, contratoId));
-  const ordem: Record<string, number> = { entrada: 0, avista: 0, saldo: 1, antecipacao: 2 };
+  const ordem: Record<string, number> = { entrada: 0, avista: 0, saldo: 1, renegociacao: 2, antecipacao: 3 };
   return rs.filter(r => ABERTAS.includes(r.status))
     .sort((a, b) => (ordem[a.tipo] ?? 3) - (ordem[b.tipo] ?? 3) || Number(a.numero) - Number(b.numero))
     .map(r => ({

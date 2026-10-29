@@ -13,9 +13,10 @@ import PainelAssinaturas from "@/components/contratos/PainelAssinaturas";
 import ConfirmarCancelamento from "@/components/contratos/ConfirmarCancelamento";
 import CarteirinhasContrato from "@/components/contratos/Carteirinhas";
 import { AnexosContrato } from "@/components/contratos/Anexos";
+import RenegociacaoContrato from "@/components/contratos/Renegociacao";
 
 const br = (iso?: string | null) => (iso ? String(iso).slice(0, 10).split("-").reverse().join("/") : "—");
-const ROTULO_TIPO: Record<string, string> = { entrada: "Entrada", saldo: "Saldo", avista: "À vista", antecipacao: "Antecipação" };
+const ROTULO_TIPO: Record<string, string> = { entrada: "Entrada", saldo: "Saldo", avista: "À vista", antecipacao: "Antecipação", renegociacao: "Renegociação" };
 const STATUS_COB: Record<string, [string, string]> = {
   prevista: ["Prevista", "text-muted-foreground"], emitida: ["Emitida", "text-sky-400"], vencida: ["Vencida", "text-red-400"],
   paga: ["Paga", "text-emerald-400"], cancelada: ["Cancelada", "text-muted-foreground line-through"], estornada: ["Estornada", "text-amber-400"],
@@ -268,6 +269,10 @@ export default function ContratoDetalhe() {
                 <Button variant="outline" disabled={!f.cobrancas.length || link.isPending} onClick={() => link.mutate({ id, bloco: bloco === "completo" ? "completo" : Number(bloco) })}><Copy className="h-4 w-4" /> Link do carnê p/ o comprador</Button>
                 <Button variant="outline" onClick={() => abrir(`/api/financeiro/contratos/${id}/plano.xlsx`)}><Download className="h-4 w-4" /> Plano completo (XLSX)</Button>
               </section>
+
+              {!!f.cobrancas.length && ["ativo", "assinado"].includes(c.status) && (
+                <RenegociacaoContrato contratoId={id} cobrancas={f.cobrancas} taxaContrato={Number(p?.taxa_am ?? 0)} admin={!!d.pode.cancelar} />
+              )}
 
               {!!f.cobrancas.length && (
                 <section className="overflow-x-auto rounded-xl border border-border bg-card">

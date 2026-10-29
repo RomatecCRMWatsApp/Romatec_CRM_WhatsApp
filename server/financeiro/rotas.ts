@@ -413,6 +413,60 @@ export function registrarRotasFinanceiro(app: Express) {
     } catch (e) { erro(res, e); }
   });
 
+  // Termo aditivo de renegociação: página do comprador (/aditivo/:token), código no WhatsApp e assinatura
+  app.get('/api/aditivo/:token', async (req, res) => {
+    try {
+      if (!(await limitePortal(req, res))) return;
+      const { paginaAditivo } = await import('./renegociacao');
+      res.setHeader('Cache-Control', 'no-store');
+      res.json(await paginaAditivo(String(req.params.token)));
+    } catch (e) { erro(res, e); }
+  });
+  app.get('/api/aditivo/:token/termo.pdf', async (req, res) => {
+    try {
+      if (!(await limitePortal(req, res))) return;
+      const { pdfDoToken } = await import('./renegociacao');
+      const r = await pdfDoToken(String(req.params.token));
+      if (!r) return res.status(404).json({ erro: 'arquivo', mensagem: 'Termo indisponível' });
+      res.setHeader('Cache-Control', 'private, no-store');
+      res.setHeader('Content-Type', 'application/pdf');
+      res.setHeader('Content-Disposition', `inline; filename="${r.nome}"`);
+      res.send(r.buf);
+    } catch (e) { erro(res, e); }
+  });
+  app.post('/api/aditivo/:token/codigo', async (req, res) => {
+    try {
+      if (!(await limitePortal(req, res))) return;
+      const { enviarCodigo } = await import('./renegociacao');
+      res.json(await enviarCodigo(String(req.params.token)));
+    } catch (e) { erro(res, e); }
+  });
+  app.post('/api/aditivo/:token/assinar', async (req, res) => {
+    try {
+      if (!(await limitePortal(req, res))) return;
+      const { assinarAditivo } = await import('./renegociacao');
+      res.json(await assinarAditivo(String(req.params.token), String(req.body?.codigo ?? '').trim(), {
+        // IP de evidência: o que o proxy do Railway acrescentou (último da lista), não o informado pelo navegador
+        aceite: req.body?.aceite === true, ip: String(req.headers['x-forwarded-for'] ?? '').split(',').map(x => x.trim()).filter(Boolean).pop() || req.socket.remoteAddress || '',
+        ua: String(req.headers['user-agent'] ?? ''),
+      }));
+    } catch (e) { erro(res, e); }
+  });
+  // PDF do termo para o escritório (administrador e secretária)
+  app.get('/api/financeiro/aditivos/:id.pdf', async (req, res) => {
+    try {
+      const { sdk } = await import('../_core/sdk');
+      const user: any = await sdk.authenticateRequest(req).catch(() => null);
+      const { perfilDe } = await import('../../shared/equipe');
+      if (!user || !['admin', 'secretario'].includes(String(perfilDe(user)))) return res.status(403).json({ erro: 'nao_autorizado' });
+      const { pdfDoAditivo } = await import('./renegociacao');
+      const r = await pdfDoAditivo(Number(req.params.id) || 0);
+      if (!r) return res.status(404).json({ erro: 'arquivo' });
+      await auditar('aditivo_pdf', { contratoId: r.contratoId, usuarioId: user.id, origem: 'perfil', ip: req.ip });
+      pdf(res, r.buf, r.nome);
+    } catch (e) { erro(res, e); }
+  });
+
   // Verificação pública do recibo (sem CPF; PDF só com o código de verificação)
   app.get('/r/:numero', async (req, res) => {
     try {

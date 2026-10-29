@@ -116,7 +116,7 @@ export async function recusarSolicitacao(solicitacaoId: number, ator: Ator, senh
 // ─── Cancelamentos (só admin + senha) ─────────────────────────────────────────────────
 
 /** Cancela no Asaas (com a chave do empreendimento) e marca a cobrança; paga não se cancela (vai para o distrato) */
-async function cancelarCobrancaInterna(cob: any, slug: string): Promise<{ asaas: 'cancelada' | 'sem_chave' | 'sem_id' | 'erro'; erro?: string }> {
+export async function cancelarCobrancaInterna(cob: any, slug: string): Promise<{ asaas: 'cancelada' | 'sem_chave' | 'sem_id' | 'erro'; erro?: string }> {
   const d = await db();
   let asaas: 'cancelada' | 'sem_chave' | 'sem_id' | 'erro' = 'sem_id';
   let erro: string | undefined;

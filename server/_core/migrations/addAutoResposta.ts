@@ -61,6 +61,14 @@ const TABELAS: [string, string][] = [
     id INT AUTO_INCREMENT PRIMARY KEY, contratoId INT NOT NULL, tipo VARCHAR(20) NOT NULL, assunto VARCHAR(160) NOT NULL, mensagem TEXT NOT NULL,
     dadosJson TEXT NULL, status VARCHAR(12) NOT NULL DEFAULT 'aberto', resposta TEXT NULL, respondidoPor INT NULL, respondidoEm TIMESTAMP NULL,
     criadoEm TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP, KEY ix_chamado_contrato (contratoId, criadoEm), KEY ix_chamado_status (status))`],
+  // Termos aditivos de renegociação (server/financeiro/renegociacao.ts)
+  ['contratoAditivos', `CREATE TABLE IF NOT EXISTS contratoAditivos (
+    id INT AUTO_INCREMENT PRIMARY KEY, contratoId INT NOT NULL, numero INT NOT NULL, tipo VARCHAR(20) NOT NULL DEFAULT 'renegociacao',
+    status VARCHAR(12) NOT NULL DEFAULT 'aguardando', dadosJson TEXT NOT NULL, pdfArquivo VARCHAR(255) NOT NULL, pdfSha256 CHAR(64) NOT NULL,
+    pdfAssinadoArquivo VARCHAR(255) NULL, token CHAR(32) NOT NULL, otpHash CHAR(64) NULL, otpExpira DATETIME NULL, otpTentativas INT NOT NULL DEFAULT 0,
+    otpEnvios INT NOT NULL DEFAULT 0, assinadoEm DATETIME NULL, assinaturaIp VARCHAR(64) NULL, assinaturaUa VARCHAR(300) NULL, resultadoJson TEXT NULL,
+    criadoPor INT NULL, canceladoPor INT NULL, criadoEm TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    UNIQUE KEY ux_aditivo_numero (contratoId, numero), UNIQUE KEY ux_aditivo_token (token))`],
   // Links de divulgação cadastrados pelo escritório (Campanhas de captação › Links de divulgação)
   ['linksDivulgacao', `CREATE TABLE IF NOT EXISTS linksDivulgacao (
     id INT AUTO_INCREMENT PRIMARY KEY, titulo VARCHAR(120) NOT NULL, descricao VARCHAR(300) NULL, url VARCHAR(500) NOT NULL,

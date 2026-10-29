@@ -24,7 +24,7 @@ type Trecho = { t: string; b?: boolean };
 const s = (v: unknown) => String(v ?? '').trim();
 
 /** Escritor de documento: parágrafos justificados com negrito por trecho, quebra de página com a marca */
-async function escritor(titulo: string, marca: string, rodapeDoc: string) {
+export async function escritor(titulo: string, marca: string, rodapeDoc: string) {
   const doc = await PDFDocument.create();
   doc.setTitle(titulo);
   const m = await embutirMarca(doc, marca);

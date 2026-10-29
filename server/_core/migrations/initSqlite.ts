@@ -617,6 +617,12 @@ export function initSqliteTables(sqlite: any): void {
   run(`CREATE TABLE IF NOT EXISTS portalChamados (
     id INTEGER PRIMARY KEY AUTOINCREMENT, contratoId INTEGER NOT NULL, tipo TEXT NOT NULL, assunto TEXT NOT NULL, mensagem TEXT NOT NULL,
     dadosJson TEXT, status TEXT NOT NULL DEFAULT 'aberto', resposta TEXT, respondidoPor INTEGER, respondidoEm INTEGER, criadoEm ${agoraS})`);
+  run(`CREATE TABLE IF NOT EXISTS contratoAditivos (
+    id INTEGER PRIMARY KEY AUTOINCREMENT, contratoId INTEGER NOT NULL, numero INTEGER NOT NULL, tipo TEXT NOT NULL DEFAULT 'renegociacao',
+    status TEXT NOT NULL DEFAULT 'aguardando', dadosJson TEXT NOT NULL, pdfArquivo TEXT NOT NULL, pdfSha256 TEXT NOT NULL, pdfAssinadoArquivo TEXT,
+    token TEXT NOT NULL UNIQUE, otpHash TEXT, otpExpira INTEGER, otpTentativas INTEGER NOT NULL DEFAULT 0, otpEnvios INTEGER NOT NULL DEFAULT 0,
+    assinadoEm INTEGER, assinaturaIp TEXT, assinaturaUa TEXT, resultadoJson TEXT, criadoPor INTEGER, canceladoPor INTEGER, criadoEm ${agoraS},
+    UNIQUE (contratoId, numero))`);
   run(`CREATE TABLE IF NOT EXISTS campanhaCliques (
     id INTEGER PRIMARY KEY AUTOINCREMENT, campanha TEXT NOT NULL, acao TEXT NOT NULL, corretorId INTEGER, utmSource TEXT, criadoEm ${agoraS})`);
   run(`CREATE TABLE IF NOT EXISTS rankingCampanhas (

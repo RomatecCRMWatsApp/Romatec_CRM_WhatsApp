@@ -2002,3 +2002,35 @@ export const portalChamados = mysqlTable("portalChamados", {
   ixContrato: index("ix_chamado_contrato").on(t.contratoId, t.criadoEm),
   ixStatus: index("ix_chamado_status").on(t.status),
 }));
+
+/** Termos aditivos ao CPCV (renegociação de parcelas — server/financeiro/renegociacao.ts): assinatura do comprador por código no WhatsApp */
+export const contratoAditivos = mysqlTable("contratoAditivos", {
+  id: int("id").autoincrement().primaryKey(),
+  contratoId: int("contratoId").notNull(),
+  /** 1, 2, 3… por contrato */
+  numero: int("numero").notNull(),
+  tipo: varchar("tipo", { length: 20 }).default("renegociacao").notNull(),
+  /** aguardando | assinado | cancelado */
+  status: varchar("status", { length: 12 }).default("aguardando").notNull(),
+  /** Renegociacao (shared/renegociacao.ts) */
+  dadosJson: text("dadosJson").notNull(),
+  pdfArquivo: varchar("pdfArquivo", { length: 255 }).notNull(),
+  pdfSha256: char("pdfSha256", { length: 64 }).notNull(),
+  pdfAssinadoArquivo: varchar("pdfAssinadoArquivo", { length: 255 }),
+  token: char("token", { length: 32 }).notNull(),
+  otpHash: char("otpHash", { length: 64 }),
+  otpExpira: datetime("otpExpira"),
+  otpTentativas: int("otpTentativas").default(0).notNull(),
+  otpEnvios: int("otpEnvios").default(0).notNull(),
+  assinadoEm: datetime("assinadoEm"),
+  assinaturaIp: varchar("assinaturaIp", { length: 64 }),
+  assinaturaUa: varchar("assinaturaUa", { length: 300 }),
+  /** Aplicação nas cobranças: canceladas, criadas, emitidas no Asaas, falhas */
+  resultadoJson: text("resultadoJson"),
+  criadoPor: int("criadoPor"),
+  canceladoPor: int("canceladoPor"),
+  criadoEm: timestamp("criadoEm").defaultNow().notNull(),
+}, (t) => ({
+  uxNumero: uniqueIndex("ux_aditivo_numero").on(t.contratoId, t.numero),
+  uxToken: uniqueIndex("ux_aditivo_token").on(t.token),
+}));

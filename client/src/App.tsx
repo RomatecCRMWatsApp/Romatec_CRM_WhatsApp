@@ -79,6 +79,7 @@ const ImovelLanding = lazy(() => import("./pages/ImovelLanding"));
 const LeadsFunil = lazy(() => import("./pages/LeadsFunil"));
 const AtenderAgora = lazy(() => import("./pages/AtenderAgora"));
 const PortalComprador = lazy(() => import("./pages/PortalComprador"));
+const AssinarAditivo = lazy(() => import("./pages/AssinarAditivo"));
 const LeadDetalhe = lazy(() => import("./pages/LeadDetalhe"));
 const Setup = lazy(() => import("./pages/Setup"));
 import { trpc } from "@/lib/trpc";
@@ -273,6 +274,7 @@ function Router() {
       <Route path={"/imovel/:slug"} component={PropertyPublic} />
       <Route path={"/links"} component={LinkPortal} />
       <Route path={"/assinar/:token"} component={AssinarContrato} />
+      <Route path={"/aditivo/:token"} component={AssinarAditivo} />
       <Route path={"/c/v/:codigo"} component={VerificarContrato} />
       <Route path={"/c/:codigo"} component={CarneDigital} />
       <Route path={"/agendar/:slug"} component={Agendar} />
@@ -290,7 +292,7 @@ function Router() {
 }
 
 /** Páginas do site público (landing, imóveis, links): sem splash nem overlay do app */
-const rotaDoSite = (p: string) => ["/imoveis", "/i/", "/imovel/", "/links", "/bom-jardims", "/agendar/", "/o/", "/formulario/", "/reuniao/", "/obras-bom-jardim", "/documentos/"].some(r => p === r || p.startsWith(r.endsWith("/") ? r : `${r}/`));
+const rotaDoSite = (p: string) => ["/imoveis", "/i/", "/imovel/", "/links", "/bom-jardims", "/agendar/", "/o/", "/formulario/", "/reuniao/", "/obras-bom-jardim", "/documentos/", "/aditivo/"].some(r => p === r || p.startsWith(r.endsWith("/") ? r : `${r}/`));
 
 function CamadaDoSistema() {
   const [location] = useLocation();

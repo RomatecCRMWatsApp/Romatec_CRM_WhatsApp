@@ -17,7 +17,7 @@ export interface SnapshotAsaas {
 
 export interface CobrancaDoc {
   id: number;
-  tipo: 'entrada' | 'saldo' | 'avista';
+  tipo: 'entrada' | 'saldo' | 'avista' | 'renegociacao';
   numero: number;
   total: number;
   vencimento: string;
@@ -41,7 +41,7 @@ export interface ContextoDocs {
   plano: PlanoContrato;
 }
 
-const ROTULO = { entrada: 'Entrada', saldo: 'Saldo', avista: 'À vista' } as const;
+const ROTULO = { entrada: 'Entrada', saldo: 'Saldo', avista: 'À vista', renegociacao: 'Renegociação' } as const;
 export const rotuloParcela = (c: Pick<CobrancaDoc, 'tipo' | 'numero' | 'total'>) => `${ROTULO[c.tipo]} ${c.numero}/${c.total}`;
 const area = (m2: number) => m2.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 export const docMascarado = (d: string) => {
@@ -56,7 +56,7 @@ export class SemDadosAsaasError extends Error {
 export function dadosLamina(ctx: ContextoDocs, c: CobrancaDoc): DadosLamina {
   if (!c.asaas?.identificationField || !c.asaas.barCode) throw new SemDadosAsaasError(c);
   const parcela = rotuloParcela(c);
-  const prefixo = c.tipo === 'entrada' ? 'E' : c.tipo === 'saldo' ? 'S' : 'V';
+  const prefixo = c.tipo === 'entrada' ? 'E' : c.tipo === 'saldo' ? 'S' : c.tipo === 'renegociacao' ? 'R' : 'V';
   return {
     contratoNumero: ctx.contrato.numero, loteCodigo: ctx.lote.codigo, parcela, vencimento: c.vencimento, valor: c.valor,
     nossoNumero: c.asaas.nossoNumero, linhaDigitavel: c.asaas.identificationField, codigoBarras: c.asaas.barCode,
@@ -81,7 +81,7 @@ export function dadosParcela(ctx: ContextoDocs, c: CobrancaDoc, todas: CobrancaD
 
 /** Parcelas por carnê: carnê anual, como nos escritórios (vencido o ano, o cliente pede o próximo) */
 export const PARCELAS_POR_CARNE = 12;
-const ORDEM_TIPO: Record<string, number> = { avista: 0, entrada: 0, saldo: 1, antecipacao: 2 };
+const ORDEM_TIPO: Record<string, number> = { avista: 0, entrada: 0, saldo: 1, renegociacao: 2, antecipacao: 3 };
 const emOrdem = <T extends { tipo: string; numero: number }>(l: T[]) =>
   [...l].sort((a, b) => ORDEM_TIPO[a.tipo] - ORDEM_TIPO[b.tipo] || a.numero - b.numero);
 
@@ -90,7 +90,8 @@ const emOrdem = <T extends { tipo: string; numero: number }>(l: T[]) =>
  * entrada 6× + 120× → carnê 1 = Entrada 1–6 + Saldo 1–6, carnê 2 = Saldo 7–18… 'completo' = todas as parcelas (controle).
  */
 export function blocoDoCarne<T extends { tipo: string; numero: number }>(cobrancas: T[], bloco: number | 'completo'): T[] {
-  const todas = emOrdem(cobrancas.filter(c => c.tipo !== 'antecipacao'));
+  // Carnê anual = parcelas do plano; renegociação e antecipação saem avulsas (boleto/PIX de cada uma)
+  const todas = emOrdem(cobrancas.filter(c => c.tipo !== 'antecipacao' && c.tipo !== 'renegociacao'));
   if (bloco === 'completo') return todas;
   if (!Number.isInteger(bloco) || bloco < 1) throw new Error('Bloco inválido');
   return todas.slice((bloco - 1) * PARCELAS_POR_CARNE, bloco * PARCELAS_POR_CARNE);

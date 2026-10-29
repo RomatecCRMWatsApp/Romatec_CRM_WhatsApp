@@ -3,6 +3,18 @@
 Cada versão nova vai no TOPO. Depois rode `npm run release` (valida e atualiza o package.json);
 ao subir, o servidor grava a versão no banco e todos recebem o aviso "Novidades da versão".
 
+## 1.75.0 — 2026-10-29
+tipo: minor
+obrigatoria: nao
+titulo: Renegociação de parcelas com termo aditivo assinado
+
+### Novo
+- Contrato › Financeiro › "Renegociação de parcelas": escolha as parcelas em aberto, o número de novas parcelas, os juros, o desconto e o 1º vencimento e veja na hora o valor renegociado (as vencidas entram com IPCA, multa e juros do contrato)
+- O administrador gera o Termo Aditivo (confirmando a senha): PDF com cláusulas de objeto, reconhecimento do débito, nova forma de pagamento, inadimplemento, ausência de novação e foro de Açailândia/MA
+- O comprador recebe o link no WhatsApp, lê o termo, recebe um código de 6 dígitos e assina; o PDF ganha o manifesto de assinatura eletrônica (código, IP, aparelho, data/hora e SHA-256)
+- Assinado, o sistema cancela as parcelas antigas (também no Asaas) e cria as novas com boleto e PIX, que aparecem no portal do comprador
+- Lista dos termos no contrato, com PDF, link, reenvio e cancelamento enquanto não assinado
+
 ## 1.74.0 — 2026-10-29
 tipo: minor
 obrigatoria: nao
