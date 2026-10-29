@@ -5,12 +5,13 @@ import { origemDaVisita } from "@/lib/origemVisita";
 import { C, SERIF, SANS, useBrandFonts, BotaoInstagram, useCorretorDoLink, rotuloCorretor } from "@/components/bom-jardims/marca";
 import { EVENTOS } from "@shared/rastreamento";
 import { registrarEvento } from "@/lib/rastreamento";
-import { LANCAMENTO_OBRAS, MSG_VALOR_OBRAS, utmObras } from "@shared/obrasBomJardim";
+import { FINALIDADES_OBRAS, LANCAMENTO_OBRAS, PAGAMENTOS_OBRAS, PRAZOS_OBRAS, fichaObrasSchema, msgValorComFicha, utmObras } from "@shared/obrasBomJardim";
 
 /**
  * Campanha das obras — /obras-bom-jardim (CCBJ · Condomínio de Chácaras Bom Jardim).
- * Vídeo das obras no topo, cadastro curto (nome + WhatsApp → lead "Instagram/Obras"), "Agendar visita" e
- * "Quero saber o valor" com o corretor da vez no rodízio (server/obrasBomJardim.ts). Sem preço na página.
+ * Vídeo das obras no topo, ficha completa (lead "Instagram/Obras" com todos os dados), "Agendar visita" e
+ * "Quero saber o valor" — este só abre o WhatsApp do corretor depois da ficha enviada (server/obrasBomJardim.ts).
+ * Sem preço na página.
  */
 
 const VIDEO = { src: "/obras-bom-jardim/video-obras.mp4", poster: "/obras-bom-jardim/video-obras-poster.webp" };
@@ -38,14 +39,14 @@ function refDoLink(): string | undefined {
   return ref && /^[A-Za-z0-9_-]{9,16}$/.test(ref) ? ref : undefined;
 }
 
-/** Pede ao servidor o corretor da vez (rodízio) para a ação e devolve o link */
-async function linkDoCorretor(acao: "valor" | "visita"): Promise<string> {
+/** Agendamento com o corretor do link ou o da vez (rodízio) */
+async function linkDeVisita(): Promise<string> {
   try {
-    const r = await fetch("/api/public/obras-bom-jardim/corretor", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ acao, utm: utmAtual(), ref: refDoLink() }) });
+    const r = await fetch("/api/public/obras-bom-jardim/corretor", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ acao: "visita", utm: utmAtual(), ref: refDoLink() }) });
     const j = await r.json();
     if (j?.ok && j.url) return j.url;
   } catch { /* sem rede: cai no padrão */ }
-  return acao === "visita" ? "/agendar/bom-jardims" : `https://wa.me/${WHATS_PADRAO}?text=${encodeURIComponent(MSG_VALOR_OBRAS)}`;
+  return "/agendar/bom-jardims";
 }
 
 const btn = (fundo: string, cor: string, borda?: string): React.CSSProperties => ({
@@ -84,67 +85,111 @@ function VideoObras() {
   );
 }
 
-function Cadastro() {
-  const [f, setF] = useState({ nome: "", phone: "" });
+const labelStyle: React.CSSProperties = { display: "block", fontSize: 14, fontWeight: 700, color: C.verde, marginBottom: 6 };
+
+function Opcoes({ nome, valor, opcoes, onChange }: { nome: string; valor: string; opcoes: readonly (readonly [string, string])[]; onChange: (v: string) => void }) {
+  return (
+    <div role="radiogroup" aria-label={nome} style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
+      {opcoes.map(([v, r]) => {
+        const on = valor === v;
+        return (
+          <button key={v} type="button" role="radio" aria-checked={on} onClick={() => onChange(v)}
+            style={{ padding: "9px 14px", borderRadius: 999, fontSize: 14, fontFamily: SANS, cursor: "pointer", border: `1.5px solid ${on ? C.verde : "#CFC6AD"}`, background: on ? C.verde : "#fff", color: on ? "#fff" : C.texto }}>
+            {r}
+          </button>
+        );
+      })}
+    </div>
+  );
+}
+
+/**
+ * Ficha completa (shared/obrasBomJardim.ts): nome completo, WhatsApp, e-mail, cidade, finalidade, pagamento e prazo.
+ * Só depois dela o cliente vai ao WhatsApp do corretor — e o lead já está no CRM com todos os dados.
+ * Veio do "Quero saber o valor": ao enviar, abre o WhatsApp direto.
+ */
+function Ficha({ querValor, aoEnviar }: { querValor: boolean; aoEnviar?: () => void }) {
+  const [f, setF] = useState({ nome: "", phone: "", email: "", cidade: "", finalidade: "", pagamento: "", prazo: "" });
   const [consent, setConsent] = useState(false);
   const [website, setWebsite] = useState("");
   const [status, setStatus] = useState<"idle" | "sending" | "done" | "error">("idle");
   const [erro, setErro] = useState("");
-  const [corretor, setCorretor] = useState<{ nome: string; creci: string | null; whatsapp: string } | null>(null);
+  const [res, setRes] = useState<{ corretor: { nome: string; creci: string | null } | null; whatsappUrl: string } | null>(null);
+  const set = (k: keyof typeof f) => (v: string) => setF(x => ({ ...x, [k]: v }));
 
   const enviar = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!consent) { setStatus("error"); setErro("Marque a autorização de contato para continuar."); return; }
+    const v = fichaObrasSchema.safeParse({ ...f, consent: consent || undefined });
+    if (!v.success) { setStatus("error"); setErro(v.error.issues[0]?.message || "Preencha todos os campos."); return; }
     setStatus("sending"); setErro("");
     try {
       const r = await fetch("/api/public/obras-bom-jardim/lead", {
         method: "POST", headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ ...f, consent, utm: utmAtual(), origemVisita: origemDaVisita(), ref: refDoLink(), website }),
+        body: JSON.stringify({ ...v.data, utm: utmAtual(), origemVisita: origemDaVisita(), ref: refDoLink(), website }),
       });
       const j = await r.json().catch(() => ({}));
       if (!r.ok || !j.ok) throw new Error(j.error || "Não foi possível enviar.");
-      setCorretor(j.corretor ?? null);
+      const url = j.whatsappUrl || `https://wa.me/${WHATS_PADRAO}?text=${encodeURIComponent(msgValorComFicha(v.data))}`;
+      setRes({ corretor: j.corretor ?? null, whatsappUrl: url });
       setStatus("done");
-      registrarEvento(EVENTOS.agendamento, { formulario: "obras_bom_jardim", empreendimento: "bom-jardims" }, "agendamento");
+      aoEnviar?.();
+      registrarEvento(EVENTOS.agendamento, { formulario: querValor ? "obras_valor" : "obras_bom_jardim", empreendimento: "bom-jardims" }, "agendamento");
+      if (querValor) { registrarEvento(EVENTOS.whatsapp, { origem: "obras_bom_jardim", empreendimento: "bom-jardims" }, "whatsapp"); window.location.href = url; }
     } catch (err: any) {
-      setStatus("error"); setErro(err?.message || "Não foi possível enviar. Fale pelo WhatsApp.");
+      setStatus("error"); setErro(err?.message || "Não foi possível enviar. Tente de novo.");
     }
   };
 
-  if (status === "done") {
-    const wa = `https://wa.me/${corretor?.whatsapp ?? WHATS_PADRAO}?text=${encodeURIComponent(MSG_VALOR_OBRAS)}`;
+  if (status === "done" && res) {
     return (
       <div style={{ padding: 26, borderRadius: 20, background: "#fff", textAlign: "center", border: `2px solid ${C.dourado}` }}>
         <CheckCircle2 size={44} color={C.verde} />
-        <h3 style={{ fontFamily: SERIF, color: C.verde, fontSize: 24, margin: "8px 0" }}>Cadastro recebido!</h3>
+        <h3 style={{ fontFamily: SERIF, color: C.verde, fontSize: 24, margin: "8px 0" }}>Cadastro completo!</h3>
         <p style={{ margin: "0 0 14px" }}>
-          Em instantes você recebe uma mensagem no WhatsApp.{corretor ? <> Seu atendimento é com <b>{corretor.nome}</b>{corretor.creci ? ` (CRECI ${corretor.creci})` : ""}.</> : null}
+          {res.corretor ? <>Seu atendimento é com <b>{res.corretor.nome}</b>{res.corretor.creci ? ` (CRECI ${res.corretor.creci})` : ""}. </> : null}
+          Toque abaixo para receber os valores e as condições no WhatsApp.
         </p>
-        <a href={wa} target="_blank" rel="noopener noreferrer" style={btn("#25D366", "#fff")}><MessageCircle size={20} /> Falar agora no WhatsApp</a>
+        <a href={res.whatsappUrl} target="_blank" rel="noopener noreferrer" style={btn("#25D366", "#fff")}><MessageCircle size={20} /> Receber os valores no WhatsApp</a>
       </div>
     );
   }
 
   return (
-    <form onSubmit={enviar} style={{ padding: "22px 18px", borderRadius: 20, background: "#fff", border: "1px solid #E2D9BF", display: "grid", gap: 14 }}>
-      <h2 style={{ fontFamily: SERIF, color: C.verde, fontSize: 24, margin: 0 }}>Garanta prioridade no lançamento</h2>
-      <p style={{ margin: 0, color: C.suave }}>Deixe seu nome e WhatsApp: um corretor fala com você antes do lançamento oficial.</p>
+    <form id="ficha" onSubmit={enviar} noValidate style={{ padding: "22px 18px", borderRadius: 20, background: "#fff", border: `${querValor ? 2 : 1}px solid ${querValor ? C.dourado : "#E2D9BF"}`, display: "grid", gap: 14, scrollMarginTop: 16 }}>
+      <h2 style={{ fontFamily: SERIF, color: C.verde, fontSize: 24, margin: 0 }}>{querValor ? "Receba os valores no WhatsApp" : "Garanta prioridade no lançamento"}</h2>
+      <p style={{ margin: 0, color: C.suave }}>
+        {querValor ? "Preencha a ficha completa: assim que enviar, o WhatsApp do corretor abre para você receber a tabela e as condições."
+          : "Preencha a ficha completa: o corretor fala com você com os valores e as condições antes do lançamento oficial."}
+      </p>
       <div>
-        <label htmlFor="ob-nome" style={{ display: "block", fontSize: 14, fontWeight: 700, color: C.verde, marginBottom: 6 }}>Nome *</label>
-        <input id="ob-nome" required minLength={2} maxLength={120} autoComplete="name" value={f.nome} onChange={e => setF({ ...f, nome: e.target.value })} style={inputStyle} />
+        <label htmlFor="ob-nome" style={labelStyle}>Nome completo *</label>
+        <input id="ob-nome" required maxLength={120} autoComplete="name" value={f.nome} onChange={e => set("nome")(e.target.value)} style={inputStyle} />
+      </div>
+      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))", gap: 14 }}>
+        <div>
+          <label htmlFor="ob-fone" style={labelStyle}>WhatsApp *</label>
+          <input id="ob-fone" required inputMode="tel" autoComplete="tel" placeholder="(99) 9 9999-9999" value={f.phone} onChange={e => set("phone")(maskPhone(e.target.value))} style={inputStyle} />
+        </div>
+        <div>
+          <label htmlFor="ob-email" style={labelStyle}>E-mail *</label>
+          <input id="ob-email" required type="email" maxLength={160} autoComplete="email" value={f.email} onChange={e => set("email")(e.target.value)} style={inputStyle} />
+        </div>
       </div>
       <div>
-        <label htmlFor="ob-fone" style={{ display: "block", fontSize: 14, fontWeight: 700, color: C.verde, marginBottom: 6 }}>WhatsApp *</label>
-        <input id="ob-fone" required inputMode="tel" autoComplete="tel" placeholder="(99) 9 9999-9999" value={f.phone} onChange={e => setF({ ...f, phone: maskPhone(e.target.value) })} style={inputStyle} />
+        <label htmlFor="ob-cidade" style={labelStyle}>Cidade onde mora *</label>
+        <input id="ob-cidade" required maxLength={80} autoComplete="address-level2" value={f.cidade} onChange={e => set("cidade")(e.target.value)} style={inputStyle} />
       </div>
+      <div><span style={labelStyle}>A chácara é para *</span><Opcoes nome="Finalidade" valor={f.finalidade} opcoes={FINALIDADES_OBRAS} onChange={set("finalidade")} /></div>
+      <div><span style={labelStyle}>Forma de pagamento *</span><Opcoes nome="Forma de pagamento" valor={f.pagamento} opcoes={PAGAMENTOS_OBRAS} onChange={set("pagamento")} /></div>
+      <div><span style={labelStyle}>Quando pretende comprar *</span><Opcoes nome="Prazo" valor={f.prazo} opcoes={PRAZOS_OBRAS} onChange={set("prazo")} /></div>
       {/* Honeypot */}
       <input tabIndex={-1} autoComplete="off" aria-hidden="true" value={website} onChange={e => setWebsite(e.target.value)} style={{ position: "absolute", left: -9999, width: 1, height: 1, opacity: 0 }} />
       <label style={{ display: "flex", gap: 10, alignItems: "flex-start", fontSize: 12, color: C.suave, lineHeight: 1.45 }}>
         <input type="checkbox" checked={consent} onChange={e => setConsent(e.target.checked)} style={{ marginTop: 2, width: 18, height: 18 }} /> {CONSENT}
       </label>
-      {status === "error" && <p role="alert" style={{ margin: 0, color: "#A12A2A", fontSize: 14 }}>{erro}</p>}
-      <button type="submit" disabled={status === "sending"} style={{ ...btn(C.verde, "#fff"), flex: "none", width: "100%", opacity: status === "sending" ? 0.7 : 1 }}>
-        {status === "sending" ? <><Loader2 size={18} className="animate-spin" /> Enviando…</> : "Quero ser atendido"}
+      {status === "error" && <p role="alert" style={{ margin: 0, color: "#A12A2A", fontSize: 14, fontWeight: 700 }}>{erro}</p>}
+      <button type="submit" disabled={status === "sending"} style={{ ...btn(querValor ? "#25D366" : C.verde, "#fff"), flex: "none", width: "100%", opacity: status === "sending" ? 0.7 : 1 }}>
+        {status === "sending" ? <><Loader2 size={18} className="animate-spin" /> Enviando…</> : querValor ? <><MessageCircle size={20} /> Enviar e receber os valores no WhatsApp</> : "Quero ser atendido"}
       </button>
     </form>
   );
@@ -153,21 +198,22 @@ function Cadastro() {
 export default function ObrasBomJardim() {
   useBrandFonts();
   const corretor = useCorretorDoLink();
-  const [abrindo, setAbrindo] = useState<"valor" | "visita" | null>(null);
+  const [abrindo, setAbrindo] = useState<"visita" | null>(null);
 
   const agendar = async () => {
     setAbrindo("visita");
     registrarEvento(EVENTOS.agendamento, { formulario: "obras_agendar_clique", empreendimento: "bom-jardims" });
-    window.location.href = await linkDoCorretor("visita");
+    window.location.href = await linkDeVisita();
   };
-  const saberValor = async () => {
-    setAbrindo("valor");
-    // A aba abre já no clique (o bloqueador de pop-up do celular não deixa abrir depois do fetch)
-    const aba = window.open("about:blank", "_blank");
-    registrarEvento(EVENTOS.whatsapp, { origem: "obras_bom_jardim", empreendimento: "bom-jardims" });
-    const url = await linkDoCorretor("valor");
-    if (aba && !aba.closed) aba.location.href = url; else window.location.href = url;
-    setAbrindo(null);
+  // "Quero saber o valor": sem atalho para o WhatsApp — leva à ficha completa (o WhatsApp abre depois de enviada)
+  const [querValor, setQuerValor] = useState(false);
+  const saberValor = () => {
+    setQuerValor(true);
+    registrarEvento("obras_quero_valor", { empreendimento: "bom-jardims" });
+    setTimeout(() => {
+      document.getElementById("ficha")?.scrollIntoView({ behavior: "smooth", block: "start" });
+      (document.getElementById("ob-nome") as HTMLInputElement | null)?.focus({ preventScroll: true });
+    }, 50);
   };
 
   const DESTAQUES = [
@@ -200,8 +246,8 @@ export default function ObrasBomJardim() {
               Só <b>82 chácaras</b>, a partir de <b>3.025 m²</b>. <b>100% documentado</b> — escritura, licença ambiental e georreferenciamento INCRA/SIGEF — e <b>liberado para vendas</b>.
             </p>
             <div style={{ display: "flex", flexWrap: "wrap", gap: 12 }}>
-              <button type="button" onClick={saberValor} disabled={abrindo === "valor"} style={btn("#25D366", "#fff")}>
-                {abrindo === "valor" ? <Loader2 size={20} className="animate-spin" /> : <MessageCircle size={20} />} Quero saber o valor
+              <button type="button" onClick={saberValor} style={btn("#25D366", "#fff")}>
+                <MessageCircle size={20} /> Quero saber o valor
               </button>
               <button type="button" onClick={agendar} disabled={abrindo === "visita"} style={btn(C.dourado, C.verde)}>
                 {abrindo === "visita" ? <Loader2 size={20} className="animate-spin" /> : <CalendarCheck size={20} />} Agendar visita
@@ -236,7 +282,7 @@ export default function ObrasBomJardim() {
       </section>
 
       <main style={{ maxWidth: 1080, margin: "0 auto", padding: "32px 16px 40px", display: "grid", gap: 28, gridTemplateColumns: "repeat(auto-fit, minmax(300px, 1fr))", alignItems: "start" }}>
-        <Cadastro />
+        <Ficha querValor={querValor} />
         <div style={{ display: "grid", gap: 14 }}>
           <h2 style={{ fontFamily: SERIF, color: C.verde, fontSize: 26, margin: 0 }}>Por que agora?</h2>
           {[

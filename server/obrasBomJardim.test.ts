@@ -36,3 +36,28 @@ describe('campanha das obras (/obras-bom-jardim)', () => {
 import { FORMAS_PAGAMENTO, HORARIOS } from '../shared/agendamento';
 function HORARIO_QUALQUER() { return HORARIOS[0][0]; }
 function PAGAMENTO_QUALQUER() { return FORMAS_PAGAMENTO[0][0]; }
+
+import { fichaObrasSchema, msgValorComFicha } from '../shared/obrasBomJardim';
+
+describe('"Quero saber o valor" só depois da ficha completa', () => {
+  const ok = { nome: 'Maria da Silva', phone: '(99) 9 9181-1246', email: 'maria@gmail.com', cidade: 'Açailândia', finalidade: 'lazer', pagamento: 'parcelado', prazo: '3m', consent: true };
+
+  it('ficha completa passa', () => {
+    expect(fichaObrasSchema.safeParse(ok).success).toBe(true);
+  });
+
+  it('falta qualquer dado → recusa (nome sem sobrenome, sem e-mail, sem cidade, sem escolhas, fixo, sem autorização)', () => {
+    for (const ruim of [
+      { nome: 'Maria' }, { email: '' }, { email: 'maria' }, { cidade: '' }, { finalidade: '' }, { pagamento: undefined }, { prazo: 'x' },
+      { phone: '(99) 3538-1234' }, { phone: '9918' }, { consent: false },
+    ]) expect(fichaObrasSchema.safeParse({ ...ok, ...ruim }).success).toBe(false);
+  });
+
+  it('a mensagem do WhatsApp já leva quem é o cliente', () => {
+    const m = msgValorComFicha(ok as any);
+    expect(m).toContain('quero saber os valores');
+    expect(m).toContain('Sou Maria da Silva, de Açailândia');
+    expect(m).toContain('lazer de fim de semana');
+    expect(m).toContain('parcelado direto');
+  });
+});

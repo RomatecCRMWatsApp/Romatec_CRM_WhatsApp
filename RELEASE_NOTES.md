@@ -3,6 +3,20 @@
 Cada versão nova vai no TOPO. Depois rode `npm run release` (valida e atualiza o package.json);
 ao subir, o servidor grava a versão no banco e todos recebem o aviso "Novidades da versão".
 
+## 1.64.0 — 2026-10-29
+tipo: minor
+obrigatoria: nao
+titulo: "Quero saber o valor" só depois da ficha completa
+
+### Melhorias
+- /obras-bom-jardim (o mesmo link da campanha): "Quero saber o valor" não abre mais o WhatsApp direto — leva à ficha completa (nome e sobrenome, WhatsApp, e-mail, cidade, finalidade, forma de pagamento, prazo e autorização LGPD)
+- Só depois da ficha enviada o WhatsApp do corretor abre, com a mensagem já dizendo quem é o cliente, de onde é e o que procura
+- O lead entra no CRM com todos esses dados e com a nota calculada (prazo, pagamento e cidade), pronto para o corretor mandar a tabela
+
+### Avisos
+- O servidor também recusa o atalho antigo: sem ficha completa não sai link de WhatsApp
+- Os links já divulgados continuam valendo, sem precisar trocar nada
+
 ## 1.63.0 — 2026-10-29
 tipo: minor
 obrigatoria: nao
