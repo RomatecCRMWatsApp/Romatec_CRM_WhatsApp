@@ -3,6 +3,23 @@
 Cada versão nova vai no TOPO. Depois rode `npm run release` (valida e atualiza o package.json);
 ao subir, o servidor grava a versão no banco e todos recebem o aviso "Novidades da versão".
 
+## 1.61.0 — 2026-10-29
+tipo: minor
+obrigatoria: nao
+titulo: Página da campanha das obras do Bom Jardim (/obras-bom-jardim)
+
+### Novo
+- Página pública romateccrm.com/obras-bom-jardim com o vídeo das obras no topo (autoplay mudo, botão de som), lançamento oficial em 14 de novembro e os destaques do empreendimento
+- Cadastro curto (nome + WhatsApp): o lead entra no CRM com origem Instagram e campanha IG-OBRAS-NOV26, com corretor do rodízio e o aviso de lead novo (sininho, som e push)
+- "Quero saber o valor" abre o WhatsApp do corretor da vez com a mensagem pronta; "Agendar visita" leva ao agendamento do Bom Jardims já com o corretor da vez
+- Prévia bonita ao compartilhar o link (título, descrição e imagem do vídeo) e botão do Instagram @avalieimob
+
+### Melhorias
+- Agendamento público: o link com UTM (ex.: utm_source=instagram) grava a origem e a campanha no lead, em vez de "site"
+
+### Avisos
+- Cliques e cadastros da campanha ficam registrados por corretor (tabela campanhaCliques) para medir o resultado
+
 ## 1.60.0 — 2026-10-29
 tipo: minor
 obrigatoria: nao

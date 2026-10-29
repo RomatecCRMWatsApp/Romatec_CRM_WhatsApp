@@ -103,9 +103,11 @@ export async function registrarAgendamento(slug: string, p: PedidoAgendamento, i
   if (!diaValido(p.dia, agora)) throw new AgendamentoErro('Escolha um dia a partir de hoje (até 90 dias).');
   const emp = await empreendimentoPublico(slug);
   const dono = await donoDoLink(p.ref || null);
-  const { ingestLead } = await import('./lead-intake');
+  const { ingestLead, origemFromUtm } = await import('./lead-intake');
+  // Link com UTM (ex.: campanha das obras no Instagram): a origem e a campanha vêm do link
+  const utm = p.utm?.source ? p.utm : undefined;
   const r = await ingestLead({
-    nome: p.nome, phone: p.telefone, origem: 'site', campanha: 'Link de agendamento', empreendimentoSlug: emp.slug,
+    nome: p.nome, phone: p.telefone, origem: utm ? origemFromUtm(utm) : 'site', campanha: utm?.campaign || 'Link de agendamento', utm, empreendimentoSlug: emp.slug,
     loteCodigo: /^[A-Z]\d{2}$/i.test(p.unidade || '') ? p.unidade!.toUpperCase() : undefined,
     answers: respostasDoPedido(p), funil: 'comprador', responsavelId: dono?.id ?? null,
     // A 1ª mensagem é a confirmação do agendamento (abaixo), já com o corretor responsável

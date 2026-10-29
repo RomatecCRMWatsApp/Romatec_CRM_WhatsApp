@@ -505,6 +505,9 @@ async function startServer() {
 
   const { registerBomJardimsRoutes, registrarKmlBomJardims } = await import('../bom-jardims');
   registerBomJardimsRoutes(app, allowPublicLead);
+  // Campanha das obras (/obras-bom-jardim): lead e cliques com corretor do rodízio
+  const { registrarRotasObras } = await import('../obrasBomJardim');
+  registrarRotasObras(app, allowPublicLead);
   // KML público (Google Earth): empreendimento e chácara — antes dos arquivos estáticos e da SPA
   const { appUrl } = await import('../leads/config');
   registrarKmlBomJardims(app, appUrl);

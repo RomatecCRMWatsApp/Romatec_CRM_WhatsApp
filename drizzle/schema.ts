@@ -1915,3 +1915,16 @@ export const rankingCampanhas = mysqlTable("rankingCampanhas", {
   atualizadoPor: int("atualizadoPor"),
   updatedAt: timestamp("updatedAt").defaultNow().notNull(),
 });
+
+/** Cliques e cadastros das páginas de campanha (ex.: /obras-bom-jardim): corretor do rodízio e origem, para medir a campanha */
+export const campanhaCliques = mysqlTable("campanhaCliques", {
+  id: int("id").autoincrement().primaryKey(),
+  campanha: varchar("campanha", { length: 60 }).notNull(),
+  /** cadastro | valor | visita */
+  acao: varchar("acao", { length: 12 }).notNull(),
+  corretorId: int("corretorId"),
+  utmSource: varchar("utmSource", { length: 100 }),
+  criadoEm: timestamp("criadoEm").defaultNow().notNull(),
+}, (t) => ({
+  ixCampanha: index("ix_campanha_cliques").on(t.campanha, t.criadoEm),
+}));

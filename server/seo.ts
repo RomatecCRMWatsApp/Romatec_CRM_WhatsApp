@@ -9,6 +9,7 @@ import {
   SRCSET_TOPO, htmlEstaticoBomJardims,
 } from '../shared/bomJardimsSeo';
 import { configRastreamento, rotaDeMarketing } from '../shared/rastreamento';
+import { DESCRICAO_OBRAS, ROTA_OBRAS, TITULO_OBRAS } from '../shared/obrasBomJardim';
 
 export interface MetaPagina {
   title: string;
@@ -148,6 +149,26 @@ export const META_AGENDAR_BOM_JARDIMS: MetaPagina = {
   },
 };
 
+/** Campanha das obras (Instagram): prévia com o frame do vídeo "Liberado para vendas" */
+export const META_OBRAS: MetaPagina = {
+  title: TITULO_OBRAS,
+  description: DESCRICAO_OBRAS,
+  path: ROTA_OBRAS,
+  image: '/obras-bom-jardim/og.jpg',
+  imageAlt: 'Vista aérea das obras do Condomínio de Chácaras Bom Jardim — liberado para vendas',
+  imageSize: { w: 1200, h: 630 },
+  indexavel: true,
+  jsonLd: {
+    '@context': 'https://schema.org',
+    '@type': 'BreadcrumbList',
+    itemListElement: [
+      { '@type': 'ListItem', position: 1, name: 'Romatec Imóveis', item: `${SITE}/` },
+      { '@type': 'ListItem', position: 2, name: 'Chácaras Bom Jardims', item: `${SITE}/bom-jardims` },
+      { '@type': 'ListItem', position: 3, name: 'Obras iniciadas', item: `${SITE}${ROTA_OBRAS}` },
+    ],
+  },
+};
+
 const META_PADRAO: MetaPagina = {
   title: 'Romatec Consultoria Imobiliária — Imóveis em Açailândia/MA',
   description: 'Casas, lotes, chácaras e imóveis rurais em Açailândia e região. Atendimento pelo WhatsApp com o ' + CRECI + '.',
@@ -209,6 +230,7 @@ export function metaDaRota(path: string): MetaPagina | 'imovel' {
   const chacara = /^\/bom-jardims\/chacara\/([A-Da-d]\d{2})$/.exec(p);
   if (chacara) return metaDaChacara(chacara[1].toUpperCase());
   if (p === AGENDAR_BOM_JARDIMS) return META_AGENDAR_BOM_JARDIMS;
+  if (p === ROTA_OBRAS) return META_OBRAS;
   // Página de oferta (link pessoal do robô no WhatsApp): prévia com o folder, fora do Google, sem preço na meta
   const oferta = /^\/o\/([a-z0-9-]+)$/.exec(p);
   if (oferta) {

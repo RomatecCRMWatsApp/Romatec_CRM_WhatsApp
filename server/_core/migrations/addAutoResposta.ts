@@ -42,6 +42,10 @@ const TABELAS: [string, string][] = [
     empreendimentoId INT PRIMARY KEY, modo VARCHAR(14) NOT NULL DEFAULT 'indeterminado', dataEncerramento VARCHAR(10) NULL,
     premio VARCHAR(200) NULL, encerradaEm DATETIME NULL, motivoEncerramento VARCHAR(12) NULL, congeladoJson TEXT NULL,
     atualizadoPor INT NULL, updatedAt TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP)`],
+  // Páginas de campanha (/obras-bom-jardim): cadastros e cliques por corretor do rodízio
+  ['campanhaCliques', `CREATE TABLE IF NOT EXISTS campanhaCliques (
+    id INT AUTO_INCREMENT PRIMARY KEY, campanha VARCHAR(60) NOT NULL, acao VARCHAR(12) NOT NULL, corretorId INT NULL,
+    utmSource VARCHAR(100) NULL, criadoEm TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP, KEY ix_campanha_cliques (campanha, criadoEm))`],
 ];
 
 export async function addAutoResposta(): Promise<void> {

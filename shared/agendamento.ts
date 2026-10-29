@@ -28,6 +28,8 @@ export const agendamentoSchema = z.object({
   pessoas: z.coerce.number().int().min(1, 'Quantas pessoas?').max(20, 'Até 20 pessoas'),
   consentimento: z.literal(true, { message: 'É preciso aceitar o contato' }),
   ref: z.string().max(20).optional().or(z.literal('')),
+  /** UTMs da visita (ex.: campanha das obras no Instagram): definem a origem do lead */
+  utm: z.object({ source: z.string().max(100).optional(), medium: z.string().max(100).optional(), campaign: z.string().max(100).optional(), content: z.string().max(100).optional() }).optional(),
   // Honeypot: robô preenche, gente não vê
   website: z.string().max(300).optional(),
 });

@@ -9,6 +9,7 @@ import { brl } from "@shared/simulador";
 import type { CartaoVendas } from "@shared/cartaoVendas";
 import { EVENTOS } from "@shared/rastreamento";
 import { registrarEvento } from "@/lib/rastreamento";
+import { readUtm } from "@/components/LeadForm";
 
 type Dados = {
   empreendimento: { slug: string; nome: string; municipio: string | null; uf: string | null; areaHa: string | null };
@@ -78,7 +79,7 @@ export default function Agendar() {
     try {
       const r = await fetch(`/api/public/agendamento/${encodeURIComponent(slug)}`, {
         method: "POST", headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ ...f, pessoas: Number(f.pessoas) || 1, ref }),
+        body: JSON.stringify({ ...f, pessoas: Number(f.pessoas) || 1, ref, utm: readUtm() }),
       });
       const j = await r.json().catch(() => ({ ok: false }));
       if (!j.ok) throw new Error(j.error || "Não foi possível enviar agora.");

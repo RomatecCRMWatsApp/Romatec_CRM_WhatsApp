@@ -12,7 +12,7 @@
 /** Páginas públicas de marketing (landing, link da chácara, agendamento) */
 export function rotaDeMarketing(path: string): boolean {
   const p = (path.split('?')[0] || '/').replace(/\/+$/, '') || '/';
-  return p === '/bom-jardims' || p.startsWith('/bom-jardims/') || p.startsWith('/agendar/');
+  return p === '/bom-jardims' || p.startsWith('/bom-jardims/') || p.startsWith('/agendar/') || p === '/obras-bom-jardim';
 }
 
 export interface ConfigRastreamento {
