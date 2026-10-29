@@ -14,6 +14,7 @@ import ConfirmarCancelamento from "@/components/contratos/ConfirmarCancelamento"
 import CarteirinhasContrato from "@/components/contratos/Carteirinhas";
 import { AnexosContrato } from "@/components/contratos/Anexos";
 import RenegociacaoContrato from "@/components/contratos/Renegociacao";
+import RegistroCartorio from "@/components/contratos/RegistroCartorio";
 
 const br = (iso?: string | null) => (iso ? String(iso).slice(0, 10).split("-").reverse().join("/") : "—");
 const ROTULO_TIPO: Record<string, string> = { entrada: "Entrada", saldo: "Saldo", avista: "À vista", antecipacao: "Antecipação", renegociacao: "Renegociação" };
@@ -172,6 +173,7 @@ export default function ContratoDetalhe() {
                 </div>
                 <p className="mt-2 text-xs text-muted-foreground">A geração leva alguns segundos (contrato + 6 anexos). Cada geração vira uma versão nova; nenhuma é sobrescrita.</p>
               </section>
+              {d.financeiro && <RegistroCartorio contratoId={id} statusContrato={c.status} />}
 
               <CarteirinhasContrato id={id} status={c.status} dependentes={d.dependentes}
                 podeEditar={d.pode.definitivo || d.pode.solicitarCancelamento || d.pode.cancelar} onMudou={recarregar} />

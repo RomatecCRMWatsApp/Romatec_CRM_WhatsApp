@@ -641,6 +641,9 @@ export function initSqliteTables(sqlite: any): void {
   run(`CREATE TABLE IF NOT EXISTS tours360 (
     id INTEGER PRIMARY KEY AUTOINCREMENT, empreendimentoId INTEGER NOT NULL, loteCodigo TEXT, titulo TEXT NOT NULL, arquivo TEXT NOT NULL, largura INTEGER,
     ordem INTEGER NOT NULL DEFAULT 0, criadoPor INTEGER, criadoEm ${agoraS})`);
+  run(`CREATE TABLE IF NOT EXISTS registrosCartorio (
+    contratoId INTEGER PRIMARY KEY, status TEXT NOT NULL DEFAULT 'preparando', cartorio TEXT, protocolo TEXT, dataProtocolo TEXT, exigencias TEXT, matricula TEXT,
+    emolumentos TEXT, registradoEm TEXT, observacoes TEXT, historicoJson TEXT, atualizadoPor INTEGER, updatedAt ${agoraS})`);
   run(`CREATE TABLE IF NOT EXISTS campanhaCliques (
     id INTEGER PRIMARY KEY AUTOINCREMENT, campanha TEXT NOT NULL, acao TEXT NOT NULL, corretorId INTEGER, utmSource TEXT, criadoEm ${agoraS})`);
   run(`CREATE TABLE IF NOT EXISTS rankingCampanhas (

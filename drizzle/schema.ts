@@ -2139,3 +2139,21 @@ export const tours360 = mysqlTable("tours360", {
 }, (t) => ({
   ixLote: index("ix_tour_lote").on(t.empreendimentoId, t.loteCodigo),
 }));
+
+/** Registro do contrato no Cartório de Registro de Imóveis (server/cartorio.ts): protocolo, prazo, exigências, matrícula */
+export const registrosCartorio = mysqlTable("registrosCartorio", {
+  contratoId: int("contratoId").primaryKey(),
+  /** preparando | protocolado | exigencia | registrado | devolvido */
+  status: varchar("status", { length: 12 }).default("preparando").notNull(),
+  cartorio: varchar("cartorio", { length: 200 }),
+  protocolo: varchar("protocolo", { length: 60 }),
+  dataProtocolo: varchar("dataProtocolo", { length: 10 }),
+  exigencias: text("exigencias"),
+  matricula: varchar("matricula", { length: 40 }),
+  emolumentos: decimal("emolumentos", { precision: 10, scale: 2 }),
+  registradoEm: varchar("registradoEm", { length: 10 }),
+  observacoes: text("observacoes"),
+  historicoJson: text("historicoJson"),
+  atualizadoPor: int("atualizadoPor"),
+  updatedAt: timestamp("updatedAt").defaultNow().notNull(),
+});

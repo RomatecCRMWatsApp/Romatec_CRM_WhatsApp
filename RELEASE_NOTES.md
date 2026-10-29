@@ -3,6 +3,20 @@
 Cada versão nova vai no TOPO. Depois rode `npm run release` (valida e atualiza o package.json);
 ao subir, o servidor grava a versão no banco e todos recebem o aviso "Novidades da versão".
 
+## 1.83.0 — 2026-10-29
+tipo: minor
+obrigatoria: nao
+titulo: Registro do contrato em cartório
+
+### Novo
+- Contrato › "Registro em cartório": kit para protocolo em ZIP com o requerimento ao Oficial do Registro de Imóveis (Lei 6.766/1979, arts. 25 e 26; Lei 6.015/1973, art. 167, I; Código Civil, art. 1.417), o contrato assinado, o manifesto, os termos aditivos e os documentos das partes
+- Acompanhamento do protocolo: situação (preparando, protocolado, com exigência, registrado), número e data do protocolo, prazo de referência de 10 dias com alerta de atraso, exigências, matrícula, emolumentos e histórico
+- O comprador vê a situação do registro no portal do comprador (aba Documentos)
+- Atalhos para o e-Protocolo do ONR e o e-Notariado
+
+### Avisos
+- O protocolo eletrônico é feito no e-Protocolo do ONR com certificado ICP-Brasil; a integração automática por API depende do credenciamento da Romatec como integradora no ONR
+
 ## 1.82.0 — 2026-10-29
 tipo: minor
 obrigatoria: nao

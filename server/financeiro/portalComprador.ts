@@ -57,7 +57,10 @@ export async function portalDoComprador(codigo: string, hoje = hojeBrasil()) {
   const chamados: any[] = await d.select().from(portalChamados).where(eq(portalChamados.contratoId, c.id)).orderBy(desc(portalChamados.criadoEm));
   const abertas = await abertasDo(c.id);
   const ctx = await contextoDocs(c.id).catch(() => null);
+  const { situacaoRegistro } = await import('../cartorio');
+  const reg = await situacaoRegistro(Number(c.id)).catch(() => null);
   return {
+    registro: reg ? { rotulo: reg.rotulo, status: reg.status, protocolo: reg.protocolo, dataProtocolo: reg.dataProtocolo, matricula: reg.matricula, registradoEm: reg.registradoEm } : null,
     documentos: docs,
     carteirinhas: carts.map(x => ({ numero: String(x.numero), validade: String(x.validade).slice(0, 10), titular: x.titularTipo === 'comprador' ? 'Titular' : x.titularTipo === 'conjuge' ? 'Cônjuge' : 'Dependente', url: `/p/c/${x.qrToken}` })),
     obra: obra.map(o => ({ id: Number(o.id), titulo: String(o.titulo), texto: String(o.texto), percentual: o.percentual == null ? null : Number(o.percentual), data: String(o.data), foto: o.fotoArquivo ? `/api/c/${codigo}/obra/${o.id}.webp` : null })),

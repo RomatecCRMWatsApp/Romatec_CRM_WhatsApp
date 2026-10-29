@@ -18,6 +18,7 @@ export interface DadosPortal {
   obra: { id: number; titulo: string; texto: string; percentual: number | null; data: string; foto: string | null }[];
   chamados: { id: number; tipo: TipoChamado; rotulo: string; assunto: string; mensagem: string; status: string; resposta: string | null; criadoEm: string; respondidoEm: string | null }[];
   antecipacao: { maximo: number; taxaMensal: number };
+  registro?: { rotulo: string; status: string; protocolo: string | null; dataProtocolo: string | null; matricula: string | null; registradoEm: string | null } | null;
 }
 
 export function usePortal(codigo: string) {
@@ -82,6 +83,15 @@ export function AbaAntecipar({ codigo, d, onPedido }: { codigo: string; d: Dados
 export function AbaDocumentos({ d }: { d: DadosPortal }) {
   return (
     <section className="space-y-2">
+      {d.registro && (
+        <div className="rounded-xl border bg-white p-3 text-sm" style={borda}>
+          <p className="font-semibold" style={{ color: VERDE }}>Registro do contrato no cartório: {d.registro.rotulo}</p>
+          <p className="text-xs text-neutral-600">
+            {d.registro.protocolo ? `Protocolo ${d.registro.protocolo}${d.registro.dataProtocolo ? ` em ${br(d.registro.dataProtocolo)}` : ""}` : "Em preparação pela administração"}
+            {d.registro.matricula ? ` · registrado na matrícula ${d.registro.matricula}${d.registro.registradoEm ? ` em ${br(d.registro.registradoEm)}` : ""}` : ""}
+          </p>
+        </div>
+      )}
       {d.documentos.map(x => (
         <a key={x.url} href={x.url} target="_blank" rel="noreferrer" className="flex items-center gap-3 rounded-xl border bg-white p-3 text-sm" style={borda}>
           <FileText className="h-5 w-5 shrink-0" style={{ color: VERDE }} />

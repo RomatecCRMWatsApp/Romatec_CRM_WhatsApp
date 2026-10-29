@@ -99,6 +99,11 @@ const TABELAS: [string, string][] = [
   ['tours360', `CREATE TABLE IF NOT EXISTS tours360 (
     id INT AUTO_INCREMENT PRIMARY KEY, empreendimentoId INT NOT NULL, loteCodigo VARCHAR(10) NULL, titulo VARCHAR(120) NOT NULL, arquivo VARCHAR(255) NOT NULL,
     largura INT NULL, ordem INT NOT NULL DEFAULT 0, criadoPor INT NULL, criadoEm TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP, KEY ix_tour_lote (empreendimentoId, loteCodigo))`],
+  // Registro do contrato no cartório (server/cartorio.ts)
+  ['registrosCartorio', `CREATE TABLE IF NOT EXISTS registrosCartorio (
+    contratoId INT PRIMARY KEY, status VARCHAR(12) NOT NULL DEFAULT 'preparando', cartorio VARCHAR(200) NULL, protocolo VARCHAR(60) NULL,
+    dataProtocolo VARCHAR(10) NULL, exigencias TEXT NULL, matricula VARCHAR(40) NULL, emolumentos DECIMAL(10,2) NULL, registradoEm VARCHAR(10) NULL,
+    observacoes TEXT NULL, historicoJson TEXT NULL, atualizadoPor INT NULL, updatedAt TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP)`],
   // Links de divulgação cadastrados pelo escritório (Campanhas de captação › Links de divulgação)
   ['linksDivulgacao', `CREATE TABLE IF NOT EXISTS linksDivulgacao (
     id INT AUTO_INCREMENT PRIMARY KEY, titulo VARCHAR(120) NOT NULL, descricao VARCHAR(300) NULL, url VARCHAR(500) NOT NULL,

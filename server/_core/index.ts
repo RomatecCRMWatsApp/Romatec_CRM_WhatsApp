@@ -521,6 +521,9 @@ async function startServer() {
   // Tour 360° das chácaras
   const { registrarRotasTour360 } = await import('../tour360');
   registrarRotasTour360(app);
+  // Kit de registro em cartório (ZIP)
+  const { registrarRotasCartorio } = await import('../cartorio');
+  registrarRotasCartorio(app);
   // Documentos para o cliente (/documentos/:emp/:doc): páginas como imagem, só leitura
   const { registrarRotasDocumentosCliente } = await import('../documentosCliente');
   registrarRotasDocumentosCliente(app);
