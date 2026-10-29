@@ -1,7 +1,8 @@
 import express from 'express';
 import type { AddressInfo } from 'node:net';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
-import { definirGerador, registrarRotasDocumentosCliente } from './documentosCliente';
+import sharp from 'sharp';
+import { definirGerador, registrarRotasDocumentosCliente, remetenteDoLink, textoCarimbo } from './documentosCliente';
 import { DOCUMENTOS_CLIENTE, documentoCliente, linkDocumento, linkIndiceDocumentos } from '../shared/documentosCliente';
 
 describe('documentos para o cliente — catálogo', () => {
@@ -24,7 +25,8 @@ describe('documentos para o cliente — rotas públicas (só imagens)', () => {
   let server: any;
   let chamadas = 0;
   beforeAll(async () => {
-    definirGerador(async () => { chamadas++; return [Buffer.from('p1'), Buffer.from('p2')]; });
+    const pag = await sharp({ create: { width: 600, height: 850, channels: 3, background: '#ffffff' } }).webp().toBuffer();
+    definirGerador(async () => { chamadas++; return [pag, pag]; });
     const app = express();
     registrarRotasDocumentosCliente(app);
     server = app.listen(0);
@@ -41,6 +43,17 @@ describe('documentos para o cliente — rotas públicas (só imagens)', () => {
     expect(img.headers.get('x-robots-tag')).toBe('noindex');
     expect((await fetch(`${base}/api/public/documentos/bom-jardims/estatuto/3.webp`)).status).toBe(404);
     expect(chamadas).toBe(1); // cache: gera uma vez
+  });
+
+  it('carimba a página (a imagem muda) e identifica quem enviou', async () => {
+    const img = Buffer.from(await (await fetch(`${base}/api/public/documentos/bom-jardims/estatuto/1.webp`)).arrayBuffer());
+    const { width } = await sharp(img).metadata();
+    expect(width).toBe(600);
+    const st = await sharp(img).stats();
+    expect(st.channels[0].min).toBeLessThan(255); // tem o carimbo por cima da página branca
+    const r = await remetenteDoLink(undefined);
+    expect(textoCarimbo(r)).toMatch(/^Enviado por Romatec Consultoria Total · CRECI\/MA 4\.705 · \d{2}\/\d{2}\/\d{4}$/);
+    expect(textoCarimbo({ id: 3, nome: 'Ana', creci: 'CRECI/MA 9.999', ref: 'abc123XYZ' })).toContain('Enviado por Ana · CRECI/MA 9.999 · cód. abc123XYZ · ');
   });
 
   it('recusa empreendimento, documento ou cartão que não é PDF', async () => {

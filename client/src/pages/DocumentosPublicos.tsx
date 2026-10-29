@@ -3,6 +3,7 @@ import { Link, useParams } from "wouter";
 import { ArrowLeft, BookOpen, ChevronRight, FileText, IdCard, Loader2, Lock, ZoomIn, ZoomOut } from "lucide-react";
 import { C, SERIF, SANS, useBrandFonts, ContatosBotoes } from "@/components/bom-jardims/marca";
 import { CarteirinhaFrente, CarteirinhaVerso, Cracha } from "@/components/contratos/ModelosCarteirinha";
+import { refDaSessao } from "@/lib/cartaoVendas";
 import { DOCUMENTOS_CLIENTE, documentoCliente, empDocsValido, type DocumentoCliente } from "@shared/documentosCliente";
 
 /**
@@ -80,17 +81,20 @@ function Destaques({ d }: { d: DocumentoCliente }) {
 function LeitorPdf({ emp, doc }: { emp: string; doc: string }) {
   const [paginas, setPaginas] = useState<number | null>(null);
   const [erro, setErro] = useState<string | null>(null);
+  // Código de quem enviou: o servidor carimba as páginas com ele e registra a abertura
+  const ref = refDaSessao();
+  const qsRef = ref ? `?c=${encodeURIComponent(ref)}` : "";
   // O app trava o zoom de pinça (index.html): o leitor tem o próprio zoom, com rolagem lateral
   const [zoom, setZoom] = useState(1);
   useEffect(() => {
     let vivo = true;
     setPaginas(null); setErro(null);
-    fetch(`/api/public/documentos/${emp}/${doc}`).then(r => r.json()).then(j => {
+    fetch(`/api/public/documentos/${emp}/${doc}${qsRef}`).then(r => r.json()).then(j => {
       if (!vivo) return;
       if (j?.ok) setPaginas(j.paginas); else setErro(j?.error || "Documento indisponível");
     }).catch(() => vivo && setErro("Não foi possível abrir o documento. Verifique a internet e tente de novo."));
     return () => { vivo = false; };
-  }, [emp, doc]);
+  }, [emp, doc, qsRef]);
 
   if (erro) return <p style={{ padding: 24, textAlign: "center", color: "#8A2D2D" }}>{erro}</p>;
   if (paginas == null) return (
@@ -110,7 +114,7 @@ function LeitorPdf({ emp, doc }: { emp: string; doc: string }) {
     <div {...bloquear} style={{ display: "grid", gap: 14, width: `${zoom * 100}%`, userSelect: "none", WebkitUserSelect: "none", WebkitTouchCallout: "none" } as React.CSSProperties}>
       {Array.from({ length: paginas }, (_, i) => (
         <div key={i} style={{ position: "relative", background: "#fff", borderRadius: 6, boxShadow: "0 4px 18px rgba(12,51,32,0.14)", overflow: "hidden" }}>
-          <img src={`/api/public/documentos/${emp}/${doc}/${i + 1}.webp`} alt={`Página ${i + 1} de ${paginas}`} loading={i < 2 ? "eager" : "lazy"} draggable={false}
+          <img src={`/api/public/documentos/${emp}/${doc}/${i + 1}.webp${qsRef}`} alt={`Página ${i + 1} de ${paginas}`} loading={i < 2 ? "eager" : "lazy"} draggable={false}
             style={{ display: "block", width: "100%", height: "auto", pointerEvents: "none" }} />
           {/* Camada por cima: toque longo e "salvar imagem" pegam ela, não a página */}
           <div style={{ position: "absolute", inset: 0 }} />

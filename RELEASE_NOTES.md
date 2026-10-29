@@ -3,6 +3,15 @@
 Cada versão nova vai no TOPO. Depois rode `npm run release` (valida e atualiza o package.json);
 ao subir, o servidor grava a versão no banco e todos recebem o aviso "Novidades da versão".
 
+## 1.69.4 — 2026-10-29
+tipo: patch
+obrigatoria: nao
+titulo: Rastreio dos links de documentos
+
+### Melhorias
+- Cada página dos documentos lidos pelo cliente sai carimbada com "Enviado por" — nome, CRECI, código do link e data — no topo e em marca d'água discreta: um print que vazar mostra de qual link saiu
+- Cada abertura fica registrada; na aba Contratos › Links para o cliente cada documento mostra quantas vezes foi aberto e quando, e a lista das últimas aberturas (o escritório vê de todos os corretores)
+
 ## 1.69.3 — 2026-10-29
 tipo: patch
 obrigatoria: nao

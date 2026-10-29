@@ -2,6 +2,10 @@
  * Páginas públicas só de leitura dos documentos (shared/documentosCliente.ts): o PDF é gerado como no modelo da aba
  * Contratos, convertido em imagens (pdftoppm → sharp, WEBP com a tarja "somente leitura") e só as imagens saem do
  * servidor — o cliente lê, mas não copia o texto, não baixa o PDF e não edita. Cache em memória por dia.
+ *
+ * Rastreio: cada página sai carimbada com quem enviou o link (?c=: nome, CRECI, código e data) e cada abertura fica
+ * registrada em campanhaCliques (campanha "DOC:<doc>", ação "leitura", utmSource = código do link) — um print que
+ * vazar mostra de qual link saiu.
  */
 import { execFile } from 'node:child_process';
 import { promisify } from 'node:util';
@@ -9,6 +13,9 @@ import fs from 'node:fs/promises';
 import os from 'node:os';
 import path from 'node:path';
 import type { Express } from 'express';
+import { getDb } from './db';
+import { campanhaCliques } from '../drizzle/schema';
+import { corretorDoLink } from './obrasBomJardim';
 import { documentoCliente, empDocsValido } from '../shared/documentosCliente';
 
 const run = promisify(execFile);
@@ -72,6 +79,78 @@ export async function paginasDoPdf(pdf: Buffer): Promise<Buffer[]> {
   }
 }
 
+// ─── Rastreio ────────────────────────────────────────────────────────────────
+export interface Remetente { id: number | null; nome: string; creci: string | null; ref: string | null }
+const refValida = (v: unknown) => (typeof v === 'string' && /^[A-Za-z0-9_-]{9,16}$/.test(v) ? v : null);
+const remetentes = new Map<string, { em: number; r: Remetente }>();
+
+/** Quem enviou o link (?c=); sem código válido, "Romatec" */
+export async function remetenteDoLink(ref: unknown): Promise<Remetente> {
+  const c = refValida(ref);
+  if (!c) return { id: null, nome: 'Romatec Consultoria Total', creci: 'CRECI/MA 4.705', ref: null };
+  const x = remetentes.get(c);
+  if (x && Date.now() - x.em < 10 * 60_000) return x.r;
+  const u = await corretorDoLink(c).catch(() => null);
+  const r: Remetente = u ? { id: u.id, nome: u.nome, creci: u.creci, ref: c } : { id: null, nome: 'Link não identificado', creci: null, ref: c };
+  remetentes.set(c, { em: Date.now(), r });
+  return r;
+}
+
+const esc = (t: string) => t.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+const dataBR = () => hoje().split('-').reverse().join('/');
+
+/** Linha do carimbo: "Enviado por NOME · CRECI · cód. XXXX · 29/10/2026" */
+export const textoCarimbo = (r: Remetente) =>
+  ['Enviado por ' + r.nome, r.creci, r.ref ? `cód. ${r.ref}` : null, dataBR()].filter(Boolean).join(' · ');
+
+const carimboSvg = (w: number, h: number, r: Remetente) => {
+  const linha = esc(textoCarimbo(r));
+  const marca = esc(`${r.nome}${r.ref ? ` · ${r.ref}` : ''}`);
+  const fs_ = Math.round(w / 48);
+  const diagonais = Array.from({ length: Math.ceil(h / (w * 0.55)) + 1 }, (_, i) => {
+    const y = Math.round(w * 0.58 + i * w * 0.55);
+    return `<text x="${w / 2}" y="${y}" transform="rotate(-30 ${w / 2} ${y})" text-anchor="middle" font-family="Arial, Helvetica, sans-serif" font-weight="700" font-size="${Math.round(w / 34)}" fill="#8A2D2D" fill-opacity="0.07">${marca}</text>`;
+  }).join('');
+  const faixa = Math.round(fs_ * 2.2);
+  return Buffer.from(`<svg xmlns="http://www.w3.org/2000/svg" width="${w}" height="${h}">${diagonais}
+<rect x="0" y="0" width="${w}" height="${faixa}" fill="#F3EEDF" fill-opacity="0.92"/>
+<text x="${w / 2}" y="${Math.round(faixa * 0.68)}" text-anchor="middle" font-family="Arial, Helvetica, sans-serif" font-size="${fs_}" fill="#0C3320">${linha}</text></svg>`);
+};
+
+const carimbadas = new Map<string, Buffer>();
+/** Página com o carimbo de quem enviou (cache curto por link, página e dia) */
+export async function paginaCarimbada(base: Buffer, r: Remetente, chave: string): Promise<Buffer> {
+  const k = `${chave}:${r.ref ?? '-'}:${hoje()}`;
+  const c = carimbadas.get(k);
+  if (c) return c;
+  const sharp = (await import('sharp')).default;
+  const img = sharp(base);
+  const { width = LARGURA, height = LARGURA } = await img.metadata();
+  const out = await img.composite([{ input: carimboSvg(width, height, r) }]).webp({ quality: 82 }).toBuffer();
+  if (carimbadas.size > 400) carimbadas.delete(carimbadas.keys().next().value!);
+  carimbadas.set(k, out);
+  return out;
+}
+
+const vistos = new Map<string, number>();
+/** Uma abertura por IP + documento + link a cada 30 min */
+export async function registrarLeitura(doc: string, r: Remetente, ip: string) {
+  const k = `${ip}:${doc}:${r.ref ?? '-'}`;
+  const ult = vistos.get(k);
+  if (ult && Date.now() - ult < 30 * 60_000) return;
+  vistos.set(k, Date.now());
+  if (vistos.size > 5000) vistos.clear();
+  try {
+    const d: any = await getDb();
+    if (d) await d.insert(campanhaCliques).values({ campanha: `DOC:${doc}`, acao: 'leitura', corretorId: r.id, utmSource: r.ref, criadoEm: new Date() });
+  } catch (e: any) { console.warn('[Documentos] leitura não registrada:', e?.message); }
+}
+
+const ipDe = (req: any) => {
+  const fwd = String(req.headers['x-forwarded-for'] ?? '').split(',').map((x: string) => x.trim()).filter(Boolean);
+  return fwd[fwd.length - 1] || req.socket?.remoteAddress || 'unknown';
+};
+
 type Gerador = (emp: string, doc: string) => Promise<Buffer[]>;
 let gerador: Gerador = async (emp, doc) => paginasDoPdf(await pdfDoDocumento(emp, doc));
 /** Testes trocam o gerador (sem LibreOffice/poppler na máquina) */
@@ -106,23 +185,25 @@ export function registrarRotasDocumentosCliente(app: Express) {
   app.get('/api/public/documentos/:emp/:doc', async (req, res) => {
     try {
       const paginas = await paginasDoDocumento(req.params.emp, req.params.doc);
+      registrarLeitura(req.params.doc, await remetenteDoLink(req.query.c), ipDe(req)).catch(() => {});
       res.setHeader('Cache-Control', 'no-store');
       res.setHeader('X-Robots-Tag', 'noindex');
       res.json({ ok: true, paginas: paginas.length });
     } catch (e: any) { erro(res, e, 'páginas'); }
   });
 
-  /** Uma página como imagem (nunca o PDF) */
+  /** Uma página como imagem (nunca o PDF), carimbada com quem enviou o link */
   app.get('/api/public/documentos/:emp/:doc/:n.webp', async (req, res) => {
     try {
       const n = Number(req.params.n);
       if (!Number.isInteger(n) || n < 1 || n > 500) return res.status(404).end();
       const paginas = await paginasDoDocumento(req.params.emp, req.params.doc);
-      const img = paginas[n - 1];
-      if (!img) return res.status(404).end();
+      const base = paginas[n - 1];
+      if (!base) return res.status(404).end();
+      const img = await paginaCarimbada(base, await remetenteDoLink(req.query.c), `${req.params.emp}:${req.params.doc}:${n}`);
       res.setHeader('Content-Type', 'image/webp');
       res.setHeader('Content-Disposition', 'inline');
-      res.setHeader('Cache-Control', 'public, max-age=1800');
+      res.setHeader('Cache-Control', 'private, max-age=1800');
       res.setHeader('X-Robots-Tag', 'noindex');
       res.send(img);
     } catch (e: any) { erro(res, e, 'imagem'); }

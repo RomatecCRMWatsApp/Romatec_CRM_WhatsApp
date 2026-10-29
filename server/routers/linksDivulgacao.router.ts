@@ -4,10 +4,10 @@
  */
 import { z } from "zod";
 import { TRPCError } from "@trpc/server";
-import { desc, eq } from "drizzle-orm";
+import { and, desc, eq, like } from "drizzle-orm";
 import { protectedProcedure, router } from "../_core/trpc";
 import { getDb } from "../db";
-import { linksDivulgacao } from "../../drizzle/schema";
+import { campanhaCliques, linksDivulgacao, users } from "../../drizzle/schema";
 import { LINKS_FIXOS, linkSchema, type LinkDivulgacao } from "../../shared/linksDivulgacao";
 
 const escritorio = (ctx: any) => ["admin", "secretario"].includes(ctx.permissoes?.perfil ?? "");
@@ -52,5 +52,27 @@ export const linksDivulgacaoRouter = router({
     const d = await banco();
     await d.delete(linksDivulgacao).where(eq(linksDivulgacao.id, input.id));
     return { ok: true as const };
+  }),
+  /**
+   * Rastreio dos links de documentos (server/documentosCliente.ts): aberturas por documento e as últimas 30 com quem
+   * enviou o link. O corretor vê só as dos links dele; o escritório vê todas.
+   */
+  leiturasDocumentos: protectedProcedure.query(async ({ ctx }) => {
+    const d = await banco();
+    const filtro = escritorio(ctx) ? like(campanhaCliques.campanha, "DOC:%") : and(like(campanhaCliques.campanha, "DOC:%"), eq(campanhaCliques.corretorId, ctx.user.id));
+    const linhas: any[] = await d.select({ campanha: campanhaCliques.campanha, corretorId: campanhaCliques.corretorId, codigo: campanhaCliques.utmSource, em: campanhaCliques.criadoEm, nome: users.name })
+      .from(campanhaCliques).leftJoin(users, eq(users.id, campanhaCliques.corretorId)).where(filtro).orderBy(desc(campanhaCliques.criadoEm)).limit(2000).catch(() => []);
+    const porDoc: Record<string, { total: number; ultima: string | null }> = {};
+    for (const l of linhas) {
+      const doc = String(l.campanha).slice(4);
+      const x = (porDoc[doc] ??= { total: 0, ultima: null });
+      x.total++;
+      if (!x.ultima) x.ultima = new Date(l.em).toISOString();
+    }
+    return {
+      porDoc,
+      ultimas: linhas.slice(0, 30).map(l => ({ doc: String(l.campanha).slice(4), corretor: l.nome ?? (l.codigo ? "Link não identificado" : "Sem código (Romatec)"), codigo: l.codigo ?? null, em: new Date(l.em).toISOString() })),
+      escritorio: escritorio(ctx),
+    };
   }),
 });
