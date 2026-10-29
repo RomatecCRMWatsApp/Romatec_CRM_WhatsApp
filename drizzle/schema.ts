@@ -2051,3 +2051,22 @@ export const visitaOfertas = mysqlTable("visitaOfertas", {
   expiraEm: datetime("expiraEm").notNull(),
   criadoEm: timestamp("criadoEm").defaultNow().notNull(),
 });
+
+/** Chaves da API para parceiros (server/apiParceiros.ts) — guarda só o hash; o segredo aparece uma vez */
+export const apiChaves = mysqlTable("apiChaves", {
+  id: int("id").autoincrement().primaryKey(),
+  nome: varchar("nome", { length: 120 }).notNull(),
+  prefixo: varchar("prefixo", { length: 12 }).notNull(),
+  hash: char("hash", { length: 64 }).notNull(),
+  /** lotes:ler, imoveis:ler, leads:criar */
+  escopos: varchar("escopos", { length: 120 }).notNull(),
+  /** Corretor que recebe os leads enviados por esta chave (vazio = rodízio) */
+  corretorId: int("corretorId"),
+  ativo: boolean("ativo").default(true).notNull(),
+  ultimoUso: timestamp("ultimoUso"),
+  usos: int("usos").default(0).notNull(),
+  criadoPor: int("criadoPor"),
+  criadoEm: timestamp("criadoEm").defaultNow().notNull(),
+}, (t) => ({
+  uxPrefixo: uniqueIndex("ux_api_prefixo").on(t.prefixo),
+}));

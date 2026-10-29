@@ -3,6 +3,17 @@
 Cada versão nova vai no TOPO. Depois rode `npm run release` (valida e atualiza o package.json);
 ao subir, o servidor grava a versão no banco e todos recebem o aviso "Novidades da versão".
 
+## 1.78.0 — 2026-10-29
+tipo: minor
+obrigatoria: nao
+titulo: Integração com ZAP, VivaReal e OLX e API para parceiros
+
+### Novo
+- Admin › Integrações › Portais: link do feed XML (padrão VRSync) para o Canal Pro do Grupo OLX — ZAP Imóveis, VivaReal e OLX recebem os imóveis ativos e, com os preços liberados, as chácaras disponíveis, atualizando sozinhos
+- Link do webhook de leads: cada contato que chega pelos portais vira lead no CRM com o portal (ZAP, VivaReal ou OLX) e o anúncio de origem
+- A tela mostra o que está no feed e o que ficou de fora e por quê (preço sob consulta, preços do empreendimento travados, sem foto)
+- Admin › Integrações › API para parceiros: chaves para imobiliárias e sites parceiros consultarem chácaras e imóveis e enviarem leads (com consentimento LGPD), cada chave com permissões, corretor dos leads, contador de uso e revogação
+
 ## 1.77.0 — 2026-10-29
 tipo: minor
 obrigatoria: nao

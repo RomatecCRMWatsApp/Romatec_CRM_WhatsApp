@@ -7,7 +7,7 @@ import AvisoRotinas from "./AvisoRotinas";
 import { MobileTabBar, RomatecAppIcon, RomatecLockup, TAB_ICONS, type TabItem } from "@/brand";
 import {
   BarChart3, Building2, Flame, Images, KanbanSquare, LayoutDashboard, LineChart, LogOut, Megaphone, Menu, Send,
-  Settings, UserCog, Users, X, Eye, ClipboardList, CalendarDays, Map as MapIcon, Smartphone, Wallet, IdCard, FolderOpen, Bell, FileSignature, Mic, CalendarCheck, UserPlus, BookCopy, BadgeDollarSign, Hourglass, Bot, Trophy, Link2, Zap, MessagesSquare, ListOrdered,
+  Settings, UserCog, Users, X, Eye, ClipboardList, CalendarDays, Map as MapIcon, Smartphone, Wallet, IdCard, FolderOpen, Bell, FileSignature, Mic, CalendarCheck, UserPlus, BookCopy, BadgeDollarSign, Hourglass, Bot, Trophy, Link2, Zap, MessagesSquare, ListOrdered, Plug,
   ChevronRight, ChevronsLeft, ChevronsRight,
 } from "lucide-react";
 import { abrirNovidades, SinoNovidades, useNovidadesNaoLidas } from "./sistema/Novidades";
@@ -82,6 +82,7 @@ const MENU: Grupo[] = [
       // Administrador e secretária (shared/equipe.ts → podeAbrir)
       { rotulo: "Respostas automáticas", rota: "/respostas-automaticas", icone: Bot },
       { rotulo: "SaaS e assinaturas", rota: "/saas", icone: BadgeDollarSign },
+      { rotulo: "Integrações", rota: "/integracoes", icone: Plug },
       // "Ver como" (só o administrador): o sistema exatamente como cada pessoa vê, só leitura
       { rotulo: "Visão portal do corretor", rota: "/ver-como?perfil=corretor", icone: Smartphone },
       { rotulo: "Visão da secretária", rota: "/ver-como?perfil=secretario", icone: UserCog },

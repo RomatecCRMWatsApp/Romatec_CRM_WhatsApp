@@ -509,6 +509,12 @@ async function startServer() {
   // Campanha das obras (/obras-bom-jardim): lead e cliques com corretor do rodízio
   const { registrarRotasObras } = await import('../obrasBomJardim');
   registrarRotasObras(app, allowPublicLead);
+  // Portais (ZAP, VivaReal, OLX): feed VRSync e leads do Canal Pro
+  const { registrarRotasPortais } = await import('../portais');
+  registrarRotasPortais(app);
+  // API para parceiros (/api/v1) com chave Bearer
+  const { registrarApiParceiros } = await import('../apiParceiros');
+  registrarApiParceiros(app);
   // Documentos para o cliente (/documentos/:emp/:doc): páginas como imagem, só leitura
   const { registrarRotasDocumentosCliente } = await import('../documentosCliente');
   registrarRotasDocumentosCliente(app);

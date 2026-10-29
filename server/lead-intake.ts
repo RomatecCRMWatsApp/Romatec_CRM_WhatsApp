@@ -18,7 +18,7 @@ import { normalizarCodigoCampanha } from './leads/atribuicao';
 import { classificarOrigem, linhaOrigem, idsDeClique, type OrigemVisita } from '../shared/origemTrafego';
 import { normalizePhoneBR } from '../shared/telefone';
 
-export const LEAD_ORIGENS = ['instagram_ads', 'instagram_dm', 'instagram_bio', 'google_ads', 'site', 'indicacao', 'whatsapp', 'whatsapp_empreendimento'] as const;
+export const LEAD_ORIGENS = ['instagram_ads', 'instagram_dm', 'instagram_bio', 'google_ads', 'site', 'indicacao', 'whatsapp', 'whatsapp_empreendimento', 'portal_zap', 'portal_vivareal', 'portal_olx', 'parceiro'] as const;
 export type LeadOrigem = typeof LEAD_ORIGENS[number];
 
 export interface LeadIntakeInput {
@@ -57,7 +57,7 @@ export function canalDaOrigem(origem: LeadOrigem): string {
   const map: Record<string, string> = {
     instagram_ads: 'meta_leadads', instagram_dm: 'instagram_organico', instagram_bio: 'instagram_organico',
     google_ads: 'google_ads', site: 'site', indicacao: 'indicacao', whatsapp: 'whatsapp_direto',
-    whatsapp_empreendimento: 'whatsapp_direto',
+    whatsapp_empreendimento: 'whatsapp_direto', portal_zap: 'portal_zap', portal_vivareal: 'portal_vivareal', portal_olx: 'portal_olx', parceiro: 'indicacao',
   };
   return map[origem] || 'outro';
 }

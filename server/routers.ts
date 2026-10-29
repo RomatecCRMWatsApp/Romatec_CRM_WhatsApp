@@ -25,6 +25,7 @@ import { rankingRouter } from "./routers/ranking.router";
 import { linksDivulgacaoRouter } from "./routers/linksDivulgacao.router";
 import { portalCompradorRouter } from "./routers/portalComprador.router";
 import { renegociacaoRouter } from "./routers/renegociacao.router";
+import { integracoesRouter } from "./routers/integracoes.router";
 import { autoRespostaRouter } from "./routers/autoResposta.router";
 import { verComoRouter } from "./routers/verComo.router";
 import { contatosNomesRouter } from "./routers/contatosNomes.router";
@@ -100,6 +101,7 @@ export const appRouter = router({
   linksDivulgacao: linksDivulgacaoRouter,
   portalComprador: portalCompradorRouter,
   renegociacao: renegociacaoRouter,
+  integracoes: integracoesRouter,
   autoResposta: autoRespostaRouter,
   verComo: verComoRouter,
   contatosNomes: contatosNomesRouter,

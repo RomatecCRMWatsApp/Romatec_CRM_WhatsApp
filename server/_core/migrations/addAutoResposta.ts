@@ -76,6 +76,11 @@ const TABELAS: [string, string][] = [
   // Horários de visita oferecidos pelo robô (server/autoresposta/visitaConversa.ts)
   ['visitaOfertas', `CREATE TABLE IF NOT EXISTS visitaOfertas (
     leadId INT PRIMARY KEY, opcoesJson TEXT NOT NULL, expiraEm DATETIME NOT NULL, criadoEm TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP)`],
+  // Chaves da API para parceiros (server/apiParceiros.ts)
+  ['apiChaves', `CREATE TABLE IF NOT EXISTS apiChaves (
+    id INT AUTO_INCREMENT PRIMARY KEY, nome VARCHAR(120) NOT NULL, prefixo VARCHAR(12) NOT NULL, hash CHAR(64) NOT NULL, escopos VARCHAR(120) NOT NULL,
+    corretorId INT NULL, ativo BOOLEAN NOT NULL DEFAULT TRUE, ultimoUso TIMESTAMP NULL, usos INT NOT NULL DEFAULT 0, criadoPor INT NULL,
+    criadoEm TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP, UNIQUE KEY ux_api_prefixo (prefixo))`],
   // Links de divulgação cadastrados pelo escritório (Campanhas de captação › Links de divulgação)
   ['linksDivulgacao', `CREATE TABLE IF NOT EXISTS linksDivulgacao (
     id INT AUTO_INCREMENT PRIMARY KEY, titulo VARCHAR(120) NOT NULL, descricao VARCHAR(300) NULL, url VARCHAR(500) NOT NULL,

@@ -80,6 +80,7 @@ const LeadsFunil = lazy(() => import("./pages/LeadsFunil"));
 const AtenderAgora = lazy(() => import("./pages/AtenderAgora"));
 const SequenciasFollowUp = lazy(() => import("./pages/SequenciasFollowUp"));
 const PortalComprador = lazy(() => import("./pages/PortalComprador"));
+const Integracoes = lazy(() => import("./pages/Integracoes"));
 const AssinarAditivo = lazy(() => import("./pages/AssinarAditivo"));
 const LeadDetalhe = lazy(() => import("./pages/LeadDetalhe"));
 const Setup = lazy(() => import("./pages/Setup"));
@@ -209,6 +210,9 @@ function Router() {
       </Route>
       <Route path={"/carteirinhas"}>
         {() => <SetupGuard component={Carteirinhas} />}
+      </Route>
+      <Route path={"/integracoes"}>
+        {() => <SetupGuard component={Integracoes} />}
       </Route>
       <Route path={"/portal-comprador"}>
         {() => <SetupGuard component={PortalComprador} />}
