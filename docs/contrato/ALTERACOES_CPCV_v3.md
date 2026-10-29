@@ -14,6 +14,8 @@ subtitle: "Para revisão do José Romário antes de subir ao sistema · 29/10/20
 | 3 | Taxa de condomínio | Quadro-Resumo item 18 e nova 14.4 | De "estimada" para **fixada inicialmente em R$ 100,00** por chácara |
 | 4 | Carteirinhas | Nova 14.5 | 1ª via gratuita para titular e dependentes; reimpressão paga |
 | 5 | Área de recreação | Nova 2.5 | Espaço de uso exclusivo por chácara na área de vivência, com tenda e churrasqueira; demais benfeitorias por conta do comprador |
+| 6 | Esgoto | Cl. 6.2 (e), 13.1 (e) e nova 6.4 | Tratamento obrigatório dentro do próprio lote (fossa séptica + sumidouro), por conta do comprador; proibido lançar em vias, áreas comuns, APP ou córrego |
+| 7 | Liberação para investir e medição | Cl. 6.1.1 e nova 6.1.2 | Só depois de quitar a entrada e pagar a 3ª parcela do financiamento; antes da liberação, vistoria de medição e locação; 1ª medição gratuita (condomínio), da 2ª em diante paga ao agrimensor credenciado |
 
 # 1. Energia elétrica (Equatorial)
 
@@ -67,6 +69,34 @@ subtitle: "Para revisão do José Romário antes de subir ao sistema · 29/10/20
 
 > <mark>2.5. Na área de vivência (Quadra F), fora da Área de Preservação Permanente, será destinado a cada chácara um espaço de uso exclusivo de aproximadamente <span class="pend">[PENDENTE: tamanho em m²]</span> m², identificado em planta própria entregue com o Mapa de Vendas (Anexo V), vinculado à unidade e transmitido com ela. O condomínio disponibilizará em cada espaço uma tenda e uma churrasqueira. Quaisquer outras benfeitorias — cabana, banheiro, quiosque, chalé ou similar — correrão por conta exclusiva do(a) COMPRADOR(A), dependerão de aprovação prévia da administração, observarão o padrão construtivo das Diretrizes de Uso (Anexo IV) e a legislação ambiental, e não geram direito de propriedade sobre a área nem de indenização. A área continua sendo de uso comum, com destinação exclusiva à unidade.</mark>
 
+# 6. Tratamento de esgoto no próprio lote
+
+**Cláusula 6.2, alínea (e)**
+
+> (e) da implantação prévia do sistema individual de esgotamento sanitário (fossa séptica e sumidouro — ABNT NBR 7229 e NBR 13969), <mark>dentro dos limites da própria chácara e às expensas do(a) COMPRADOR(A),</mark> sem o qual nenhuma edificação poderá ser ocupada (Lei Municipal n.º {{emp_lei_municipal}}).
+
+**Nova Cláusula 6.4**
+
+> <mark>6.4. O empreendimento não possui rede coletora de esgoto. Todo efluente sanitário gerado na unidade deverá ser tratado e disposto no próprio lote, por meio de fossa séptica, filtro anaeróbio e/ou sumidouro dimensionados conforme as normas ABNT NBR 7229 e NBR 13969, cuja construção, manutenção e limpeza periódica são obrigação exclusiva do(a) COMPRADOR(A). O sistema observará as distâncias mínimas das divisas, de poços e de cursos d'água previstas nessas normas e nas Diretrizes de Uso, e sua localização constará do projeto aprovado pela administração. É expressamente proibido lançar esgoto, águas servidas ou efluentes de qualquer natureza nas vias, sarjetas, áreas comuns, Área de Preservação Permanente ou no córrego, sujeitando o infrator às multas do Estatuto, à obrigação de reparar o dano e às sanções ambientais (Lei n.º 9.605/1998).</mark>
+
+**Cláusula 13.1, alínea (e)** — obrigações do(a) COMPRADOR(A)
+
+> (e) não usar fogo para limpeza, não lançar efluentes sem tratamento <mark>— que devem ser tratados no próprio lote, na forma da Cláusula 6.4 —</mark> e não descartar resíduos em vias, áreas comuns ou APP (condicionantes n.º 12, 15 e 17 da licença);
+
+# 7. Liberação para investir na chácara e vistoria de medição
+
+**Cláusula 6.1.1** — liberação de uso (ajuste)
+
+> 6.1.1. Liberação de uso. A delimitação da chácara por cerca, muro ou qualquer outro fechamento, o início de qualquer edificação <mark>ou benfeitoria</mark>, a criação de animais e o plantio de culturas, para qualquer finalidade, só são permitidos após <mark>a quitação integral da entrada (sinal) e</mark> o pagamento da 3ª (terceira) parcela do saldo, comprovado pelo Termo de Liberação de Uso emitido pela administração <mark>depois da vistoria de medição do item 6.1.2</mark>. No pagamento integral à vista, a liberação ocorre com a compensação do preço<mark>, também precedida da vistoria de medição</mark>.
+
+**Nova Cláusula 6.1.2**
+
+> <mark>6.1.2. Vistoria de medição e locação. Antes da emissão do Termo de Liberação de Uso, a administração realizará vistoria de medição e locação da chácara, conferindo os marcos, as divisas e o posicionamento correto da unidade, para que nenhuma cerca, construção ou benfeitoria avance sobre chácara vizinha, via ou área comum. A primeira medição é de responsabilidade do condomínio e não tem custo para o(a) COMPRADOR(A). Se for necessária nova medição — por marcos removidos, alterados ou não preservados, por pedido do(a) COMPRADOR(A) ou por divergência causada por ele(a) —, ela será executada pelo agrimensor credenciado pelo condomínio para esse serviço, e o valor da diligência, fixado pelo profissional e informado previamente, será pago pelo(a) COMPRADOR(A) diretamente ao agrimensor ou à administração.</mark>
+
+**Quadro-Resumo, item 19** — liberação de uso (ajuste)
+
+> 19\. Liberação de uso — Cercas, muros, edificações, <mark>benfeitorias,</mark> criações e plantios somente após a quitação da entrada e o pagamento da 3ª (terceira) parcela do saldo<mark>, com vistoria de medição prévia (1ª medição sem custo; as seguintes pagas ao agrimensor credenciado)</mark> (Cláusula 6ª)
+
 # Pontos de atenção (recomendo conferir antes de subir)
 
 1. **Natureza da Quadra F.** O espaço exclusivo só é possível se a Quadra F for área **privada do empreendimento** (área comum da associação). Se ela consta no projeto aprovado como **área pública doada ao Município**, o uso exclusivo não pode ser concedido. Convém conferir no quadro de áreas e na matrícula.
@@ -75,6 +105,8 @@ subtitle: "Para revisão do José Romário antes de subir ao sistema · 29/10/20
 4. **Estatuto e Diretrizes de Uso.** O uso exclusivo, a taxa de reimpressão e a cobrança da água também devem entrar no Estatuto (Anexo III) e nas Diretrizes (Anexo IV), para que valham perante todos os associados e sucessores.
 5. **Padrão de entrada de energia.** Coloquei o padrão de entrada da unidade por conta do comprador, que é a prática da Equatorial. Se o empreendimento for entregar o padrão instalado, essa alínea sai.
 6. **Corte da água por falta de pagamento.** Incluí a suspensão após 30 dias de aviso. É usual e protege a associação; se preferir, essa frase sai.
+7. **Esgoto e poço.** Como cada chácara trata o esgoto no lote e a água vem do poço coletivo na A03, a distância mínima entre sumidouro e poço/córrego (NBR 7229/13969) deve constar também nas Diretrizes de Uso, com um croqui padrão de locação da fossa para o comprador seguir.
+8. **Agrimensor credenciado.** Convém definir no Estatuto/Regimento quem credencia o agrimensor e publicar a tabela da diligência, para o valor não ser questionado depois.
 
 # Valores que faltam (o senhor informa e eu completo)
 
