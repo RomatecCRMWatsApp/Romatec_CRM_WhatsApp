@@ -84,6 +84,7 @@ const Integracoes = lazy(() => import("./pages/Integracoes"));
 const CaixaEntrada = lazy(() => import("./pages/CaixaEntrada"));
 const ImobiliariasParceiras = lazy(() => import("./pages/ImobiliariasParceiras"));
 const InstalarApp = lazy(() => import("./pages/InstalarApp"));
+const Tours360 = lazy(() => import("./pages/Tours360"));
 const PortalParceira = lazy(() => import("./pages/PortalParceira"));
 const AssinarAditivo = lazy(() => import("./pages/AssinarAditivo"));
 const LeadDetalhe = lazy(() => import("./pages/LeadDetalhe"));
@@ -214,6 +215,9 @@ function Router() {
       </Route>
       <Route path={"/carteirinhas"}>
         {() => <SetupGuard component={Carteirinhas} />}
+      </Route>
+      <Route path={"/tour-360"}>
+        {() => <SetupGuard component={Tours360} />}
       </Route>
       <Route path={"/instalar"}>
         {() => <SetupGuard component={InstalarApp} />}

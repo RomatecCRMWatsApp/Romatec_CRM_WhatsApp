@@ -2123,3 +2123,19 @@ export const imobiliariasParceiras = mysqlTable("imobiliariasParceiras", {
   uxCodigo: uniqueIndex("ux_parceira_codigo").on(t.codigo),
   uxToken: uniqueIndex("ux_parceira_token").on(t.token),
 }));
+
+/** Fotos 360° (equirretangulares) por chácara ou pontos do empreendimento (server/tour360.ts) */
+export const tours360 = mysqlTable("tours360", {
+  id: int("id").autoincrement().primaryKey(),
+  empreendimentoId: int("empreendimentoId").notNull(),
+  /** null = ponto geral do empreendimento (portal, área de vivência, ruas…) */
+  loteCodigo: varchar("loteCodigo", { length: 10 }),
+  titulo: varchar("titulo", { length: 120 }).notNull(),
+  arquivo: varchar("arquivo", { length: 255 }).notNull(),
+  largura: int("largura"),
+  ordem: int("ordem").default(0).notNull(),
+  criadoPor: int("criadoPor"),
+  criadoEm: timestamp("criadoEm").defaultNow().notNull(),
+}, (t) => ({
+  ixLote: index("ix_tour_lote").on(t.empreendimentoId, t.loteCodigo),
+}));

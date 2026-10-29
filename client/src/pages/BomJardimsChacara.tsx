@@ -4,6 +4,7 @@ import { MapPin, Navigation, Copy, Play, ArrowLeft, Globe2 } from "lucide-react"
 import { trpc } from "@/lib/trpc";
 import LoteMap, { STATUS_LABEL, type LoteInfo, type MapaData } from "@/components/bom-jardims/LoteMap";
 import { C, SERIF, SANS, GALERIA, VIDEO, useBrandFonts, ContatosBotoes, GaleriaProjeto, useCorretorDoLink, rotuloCorretor } from "@/components/bom-jardims/marca";
+import BotaoTour360 from "@/components/bom-jardims/BotaoTour360";
 import { codigoChacaraValido, localizacaoDoLote, tituloChacara, rotaAteEntrada, NOME_BOM_JARDIMS, SLUG_BOM_JARDIMS } from "@shared/chacaraLink";
 
 /**
@@ -129,6 +130,7 @@ export function ChacaraView({ codigo, mapa, lotes, falhou = false }: { codigo: s
       <section style={{ ...secao, paddingTop: 0 }}>
         <h2 style={h2}>A chácara {codigo} no mapa</h2>
         <p style={{ color: C.suave, margin: "0 0 18px" }}>Em dourado. Portal de entrada, rio, APP, trilha ecológica e área de vivência e recreação.</p>
+        <div style={{ margin: "0 0 18px" }}><BotaoTour360 lote={codigo} /></div>
         {mapa ? (
           <LoteMap dados={mapa} lotes={lotes} selected={codigo} destaque
             onSelect={c => { if (c !== codigo) window.location.href = `/bom-jardims/chacara/${c}`; }} />

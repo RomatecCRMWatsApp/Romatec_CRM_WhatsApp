@@ -3,6 +3,16 @@
 Cada versão nova vai no TOPO. Depois rode `npm run release` (valida e atualiza o package.json);
 ao subir, o servidor grava a versão no banco e todos recebem o aviso "Novidades da versão".
 
+## 1.82.0 — 2026-10-29
+tipo: minor
+obrigatoria: nao
+titulo: Tour 360° das chácaras
+
+### Novo
+- Vendas › Tour 360°: o escritório publica fotos 360° (câmera 360 ou panorama 360 do celular) de cada chácara ou de pontos do condomínio (portal, área de vivência, ruas)
+- Na página da chácara e na página do Bom Jardims aparece o botão "Ver em 360°": o cliente arrasta para olhar em volta, aproxima com a pinça e troca de ponto pelas miniaturas
+- A foto é conferida (proporção 2:1) e reduzida para abrir rápido no celular
+
 ## 1.81.0 — 2026-10-29
 tipo: minor
 obrigatoria: nao

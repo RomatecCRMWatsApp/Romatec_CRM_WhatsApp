@@ -518,6 +518,9 @@ async function startServer() {
   // Portal das imobiliárias parceiras (/parceiro/:token)
   const { registrarRotasParceiros } = await import('../parceiros');
   registrarRotasParceiros(app, allowPublicLead);
+  // Tour 360° das chácaras
+  const { registrarRotasTour360 } = await import('../tour360');
+  registrarRotasTour360(app);
   // Documentos para o cliente (/documentos/:emp/:doc): páginas como imagem, só leitura
   const { registrarRotasDocumentosCliente } = await import('../documentosCliente');
   registrarRotasDocumentosCliente(app);

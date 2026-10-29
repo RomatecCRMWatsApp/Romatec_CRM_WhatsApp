@@ -5,6 +5,7 @@ import { readUtm } from "@/components/LeadForm";
 import { origemDaVisita } from "@/lib/origemVisita";
 import { AGENDAR_BOM_JARDIMS, FAQ_BOM_JARDIMS, IMAGENS_BOM_JARDIMS, SOBRE_BOM_JARDIMS, TITULO_BOM_JARDIMS } from "@shared/bomJardimsSeo";
 import LoteMap, { formatArea, STATUS_LABEL, type LoteInfo } from "@/components/bom-jardims/LoteMap";
+import BotaoTour360 from "@/components/bom-jardims/BotaoTour360";
 import { C, SERIF, SANS, GALERIA, VIDEO, waLink, useBrandFonts, ContatosBotoes, GaleriaProjeto, useContatos, useInstagram, BotaoInstagram, useCorretorDoLink, rotuloCorretor } from "@/components/bom-jardims/marca";
 import { codigoChacaraValido, rotaAteEntrada } from "@shared/chacaraLink";
 import { EVENTOS } from "@shared/rastreamento";
@@ -320,6 +321,7 @@ export default function BomJardims() {
           ))}
         </div>
         <p style={{ fontSize: 12, color: C.suave, marginTop: 10 }}>Imagens em perspectiva, de caráter ilustrativo.</p>
+        <div style={{ marginTop: 14 }}><BotaoTour360 /></div>
         <GaleriaProjeto />
       </section>
 

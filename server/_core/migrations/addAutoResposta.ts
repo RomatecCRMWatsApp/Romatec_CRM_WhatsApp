@@ -95,6 +95,10 @@ const TABELAS: [string, string][] = [
     telefone VARCHAR(20) NULL, email VARCHAR(160) NULL, codigo VARCHAR(8) NOT NULL, token CHAR(32) NOT NULL, comissaoPct DECIMAL(6,4) NOT NULL DEFAULT 0.0200,
     corretorInternoId INT NULL, ativo BOOLEAN NOT NULL DEFAULT TRUE, criadoPor INT NULL, criadoEm TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
     UNIQUE KEY ux_parceira_codigo (codigo), UNIQUE KEY ux_parceira_token (token))`],
+  // Tour 360° (server/tour360.ts)
+  ['tours360', `CREATE TABLE IF NOT EXISTS tours360 (
+    id INT AUTO_INCREMENT PRIMARY KEY, empreendimentoId INT NOT NULL, loteCodigo VARCHAR(10) NULL, titulo VARCHAR(120) NOT NULL, arquivo VARCHAR(255) NOT NULL,
+    largura INT NULL, ordem INT NOT NULL DEFAULT 0, criadoPor INT NULL, criadoEm TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP, KEY ix_tour_lote (empreendimentoId, loteCodigo))`],
   // Links de divulgação cadastrados pelo escritório (Campanhas de captação › Links de divulgação)
   ['linksDivulgacao', `CREATE TABLE IF NOT EXISTS linksDivulgacao (
     id INT AUTO_INCREMENT PRIMARY KEY, titulo VARCHAR(120) NOT NULL, descricao VARCHAR(300) NULL, url VARCHAR(500) NOT NULL,
