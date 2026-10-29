@@ -63,7 +63,7 @@ export async function portalDoComprador(codigo: string, hoje = hojeBrasil()) {
     registro: reg ? { rotulo: reg.rotulo, status: reg.status, protocolo: reg.protocolo, dataProtocolo: reg.dataProtocolo, matricula: reg.matricula, registradoEm: reg.registradoEm } : null,
     documentos: docs,
     carteirinhas: carts.map(x => ({ numero: String(x.numero), validade: String(x.validade).slice(0, 10), titular: x.titularTipo === 'comprador' ? 'Titular' : x.titularTipo === 'conjuge' ? 'Cônjuge' : 'Dependente', url: `/p/c/${x.qrToken}` })),
-    obra: obra.map(o => ({ id: Number(o.id), titulo: String(o.titulo), texto: String(o.texto), percentual: o.percentual == null ? null : Number(o.percentual), data: String(o.data), foto: o.fotoArquivo ? `/api/c/${codigo}/obra/${o.id}.webp` : null })),
+    obra: obra.map(o => ({ id: Number(o.id), titulo: String(o.titulo), texto: String(o.texto), percentual: o.percentual == null ? null : Number(o.percentual), data: String(o.data), foto: o.fotoArquivo ? (String(o.fotoArquivo).startsWith('/') ? String(o.fotoArquivo) : `/api/c/${codigo}/obra/${o.id}.webp`) : null })),
     chamados: chamados.map(x => ({ id: Number(x.id), tipo: x.tipo as TipoChamado, rotulo: ROTULO_CHAMADO[x.tipo as TipoChamado] ?? x.tipo, assunto: String(x.assunto), mensagem: String(x.mensagem), status: String(x.status), resposta: x.resposta ?? null, criadoEm: new Date(x.criadoEm).toISOString(), respondidoEm: x.respondidoEm ? new Date(x.respondidoEm).toISOString() : null })),
     antecipacao: { maximo: c.status === 'quitado' ? 0 : antecipaveis(abertas, hoje), taxaMensal: Number(ctx?.plano?.taxa_am ?? 0) },
   };
@@ -194,7 +194,7 @@ export async function fotoObra(codigo: string, id: number): Promise<Buffer | nul
   const { emp } = await contratoDoCodigo(codigo);
   const d = await banco();
   const [o]: any[] = await d.select().from(obraAtualizacoes).where(eq(obraAtualizacoes.id, id)).limit(1);
-  if (!o || !emp || Number(o.empreendimentoId) !== Number(emp.id) || !o.fotoArquivo) return null;
+  if (!o || !emp || Number(o.empreendimentoId) !== Number(emp.id) || !o.fotoArquivo || String(o.fotoArquivo).startsWith('/')) return null;
   const { lerArquivo } = await import('../contratos/arquivos');
   return (await lerArquivo(o.fotoArquivo))?.buf ?? null;
 }

@@ -1341,6 +1341,9 @@ async function startServer() {
     await reajustePrecos20261027();
     const { addControleLotes } = await import('./migrations/addControleLotes');
     await addControleLotes();
+    // Fotos do drone de 28/10/2026 no Andamento da obra (uma vez só)
+    const { obraBomJardims20261028 } = await import('./migrations/obraBomJardims20261028');
+    await obraBomJardims20261028().catch((e: any) => console.warn('[Migration] obra 28/10:', e?.message));
   } catch (e) {
     console.error('❌ Erro na migration addVisitas:', e);
   }

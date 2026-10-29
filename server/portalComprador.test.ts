@@ -58,9 +58,17 @@ describe('portal do comprador — banco', () => {
     expect(await P.listarChamados('aberto')).toEqual([]);
   });
 
+  it('fotos do drone de 28/10 entram uma vez só, com a foto do site', async () => {
+    const { obraBomJardims20261028 } = await import('./_core/migrations/obraBomJardims20261028');
+    expect(await obraBomJardims20261028()).toBe(4);
+    expect(await obraBomJardims20261028()).toBe(0);
+    const p = await P.portalDoComprador('EX7K2M9P4Q1R', '2026-10-29');
+    expect(p.obra.find(o => o.titulo === 'Início das obras: abertura das ruas')?.foto).toBe('/bom-jardims/obra/2026-10-28-abertura-das-ruas.webp');
+  });
+
   it('portal traz obra, documentos e chamados do contrato', async () => {
     const p = await P.portalDoComprador('EX7K2M9P4Q1R', '2026-10-29');
-    expect(p.obra[0]).toMatchObject({ titulo: 'Rede de água', percentual: 35, foto: null });
+    expect(p.obra.find(o => o.titulo === 'Rede de água')).toMatchObject({ percentual: 35, foto: null });
     expect(p.documentos.map(d => d.url)).toEqual(expect.arrayContaining(['/documentos/bom-jardims/estatuto', '/c/v/EX7K2M9P4Q1R']));
     expect(p.chamados[0]).toMatchObject({ status: 'respondido', resposta: 'Previsão: dezembro.' });
   });

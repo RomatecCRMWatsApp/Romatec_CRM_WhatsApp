@@ -3,6 +3,14 @@
 Cada versão nova vai no TOPO. Depois rode `npm run release` (valida e atualiza o package.json);
 ao subir, o servidor grava a versão no banco e todos recebem o aviso "Novidades da versão".
 
+## 1.84.1 — 2026-10-29
+tipo: patch
+obrigatoria: nao
+titulo: Fotos do drone no andamento da obra
+
+### Melhorias
+- Portal do comprador › Obra: publicadas 4 atualizações de 28/10/2026 com as fotos do drone — início das obras com a abertura das ruas, demarcação das chácaras, chácaras vistas de cima e acessos da área de vivência
+
 ## 1.84.0 — 2026-10-29
 tipo: minor
 obrigatoria: nao
