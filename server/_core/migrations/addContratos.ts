@@ -1,6 +1,6 @@
 import { sql } from 'drizzle-orm';
 import { getDb, getDbDriver } from '../../db';
-import { SEED_EMP_JURIDICO } from './seedContratos';
+import { QUADRA_F_REGIME_ANTIGO, SEED_EMP_JURIDICO } from './seedContratos';
 
 /**
  * Migration v1.9.0 — contratos (CPCV), assinatura, cobrança Asaas, cadastro do comprador e portaria.
@@ -307,6 +307,13 @@ const COMANDOS: { nome: string; stmt: ReturnType<typeof sql> }[] = [
       SET j.defaultsJson = JSON_SET(j.defaultsJson, ${'$.' + campo}, ${String(SEED_EMP_JURIDICO.defaults[campo])})
       WHERE e.slug = ${SEED_EMP_JURIDICO.slug} AND COALESCE(JSON_UNQUOTE(JSON_EXTRACT(j.defaultsJson, ${'$.' + campo})), '') = ''`,
   })),
+  // Quadra F é área privada (reserva de preservação), não área pública doada: troca o texto antigo, sem mexer em edição manual
+  {
+    nome: 'empJuridico: regime da Quadra F (Bom Jardims)',
+    stmt: sql`UPDATE empJuridico j JOIN empreendimentos e ON e.id = j.empreendimentoId
+      SET j.defaultsJson = JSON_SET(j.defaultsJson, '$.emp_quadra_f_regime', ${String(SEED_EMP_JURIDICO.defaults.emp_quadra_f_regime)})
+      WHERE e.slug = ${SEED_EMP_JURIDICO.slug} AND JSON_UNQUOTE(JSON_EXTRACT(j.defaultsJson, '$.emp_quadra_f_regime')) = ${QUADRA_F_REGIME_ANTIGO}`,
+  },
   // Modelo do contrato: Bom Jardims passa do CPCV v2 ao v3 (energia, água/hidrômetro, esgoto, venda na planta, recreação,
   // carteirinha, medição). Contratos já emitidos guardam o PDF da versão deles; só os novos usam o v3.
   {

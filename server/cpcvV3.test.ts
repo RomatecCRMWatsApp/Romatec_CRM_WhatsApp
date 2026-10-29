@@ -59,3 +59,31 @@ describe('CPCV Bom Jardims v3', () => {
     expect(await anexoTarifaAgua('../x')).toBeNull();
   });
 });
+
+describe('Estatuto v1.2 (Quadra F privada como reserva)', () => {
+  it('traz o regime privado, os espaços exclusivos, as proibições e a reimpressão da carteirinha', async () => {
+    const { mergeDocx } = await import('./contratos/render');
+    const { ESTATUTO, contextoEstatuto } = await import('./contratos/anexos');
+    expect(ESTATUTO.arquivo).toBe('MODELO-ESTATUTO-ASSOCIACAO-BOM-JARDIMS-v2.docx');
+    const docx = await mergeDocx(ESTATUTO.arquivo, contextoEstatuto({ ...SEED_EMP_JURIDICO.defaults } as any), { minuta: false, marca: 'bomjardims' });
+    const t = new PizZip(docx).file('word/document.xml')!.asText().replace(/<[^>]+>/g, '');
+    for (const trecho of [
+      'área privada do empreendimento, de uso comum dos associados, não integrante das áreas públicas doadas ao Município',
+      'espaço de uso exclusivo de 100,00 m² na Quadra F',
+      'São vedadas edificações permanentes (casa, chalé ou similar)',
+      'Reserva de preservação.',
+      'O uso do córrego limita-se ao banho e à recreação de baixo impacto',
+      'a reimpressão por perda, extravio, dano ou inclusão posterior de dependente custa R$ 25,00 por carteira',
+      'O hidrômetro e o cavalete são adquiridos e instalados pelo associado',
+      'fixadas inicialmente em R$ 100,00 por chácara',
+      'rateadas igualmente por unidade', 'até 3 (três) veículos',
+    ]) expect(t, trecho).toContain(trecho);
+    expect(t).not.toContain('área pública integrante dos 25% doados ao Município');
+  }, 60_000);
+
+  it('a migração só troca o regime antigo (área pública) pelo novo', async () => {
+    const { QUADRA_F_REGIME_ANTIGO } = await import('./_core/migrations/seedContratos');
+    expect(QUADRA_F_REGIME_ANTIGO).toMatch(/^área pública integrante dos 25% doados ao Município/);
+    expect(SEED_EMP_JURIDICO.defaults.emp_quadra_f_regime).toMatch(/^área privada do empreendimento/);
+  });
+});

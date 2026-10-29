@@ -112,7 +112,7 @@ export async function anexoTabelaPagamento(plano: PlanoContrato, ctx: Ctx, marca
  * Estatuto (Anexo III): para mudar o texto, edite o DOCX em templates/ e suba a versão aqui — os contratos
  * gerados depois saem com o texto novo; os já gerados guardam o PDF da época (contratoVersoes).
  */
-export const ESTATUTO = { arquivo: 'MODELO-ESTATUTO-ASSOCIACAO-BOM-JARDIMS-v1.docx', versao: 'v1.1 (out/2026)' };
+export const ESTATUTO = { arquivo: 'MODELO-ESTATUTO-ASSOCIACAO-BOM-JARDIMS-v2.docx', versao: 'v1.2 (out/2026)' };
 
 /** Tags do Estatuto (Anexo III) a partir do contexto do contrato */
 export function contextoEstatuto(ctx: Ctx): Ctx {

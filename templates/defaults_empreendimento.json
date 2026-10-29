@@ -49,7 +49,7 @@
   "emp_associacao_nome_caixa": "ASSOCIAÇÃO DOS PROPRIETÁRIOS DO CONDOMÍNIO DE CHÁCARAS BOM JARDIMS",
   "emp_associacao_cnpj": "",
   "emp_associacao_registro": "",
-  "emp_quadra_f_regime": "área pública integrante dos 25% doados ao Município, juntamente com o sistema viário, com uso, conservação e gestão concedidos à ASSOCIAÇÃO por ato do Poder Executivo Municipal (Lei n.º 6.766/1979, art. 2º, § 8º), mantida a destinação de lazer e recreação coletiva; a APP do córrego permanece protegida e não é computada como área institucional",
+  "emp_quadra_f_regime": "área privada do empreendimento, de uso comum dos associados, não integrante das áreas públicas doadas ao Município, constituída como reserva de preservação da flora e da fauna nativas e destinada ao lazer de baixo impacto, com espaços de uso exclusivo vinculados às chácaras na forma do § 1º; a APP do córrego permanece protegida",
   "emp_parcelamento_registrado": false,
   "emp_slug": "bomjardims"
  },

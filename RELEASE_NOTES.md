@@ -3,6 +3,19 @@
 Cada versão nova vai no TOPO. Depois rode `npm run release` (valida e atualiza o package.json);
 ao subir, o servidor grava a versão no banco e todos recebem o aviso "Novidades da versão".
 
+## 1.68.2 — 2026-10-29
+tipo: patch
+obrigatoria: nao
+titulo: Estatuto v1.2 e página do Bom Jardims alinhados ao contrato
+
+### Melhorias
+- Estatuto da associação v1.2: Quadra F como área privada e reserva de preservação (fora da doação ao Município), espaços exclusivos de 100 m² só com estruturas removíveis, proibições ambientais e penalidades
+- Estatuto: contribuição de R$ 100,00, água faturada pela média CAEMA × SAAE com hidrômetro por conta do associado e reimpressão de carteirinha a R$ 25,00 (1ª via grátis)
+- Página do Bom Jardims: textos da água (medição individual por hidrômetro) e da área de vivência (reserva de mata nativa e espaço exclusivo de 100 m²) atualizados
+
+### Correções
+- O regime padrão da Quadra F, que ainda dizia "área pública doada ao Município", foi corrigido nos empreendimentos que usavam o texto antigo
+
 ## 1.68.1 — 2026-10-29
 tipo: patch
 obrigatoria: nao
