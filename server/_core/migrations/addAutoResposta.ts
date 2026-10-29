@@ -52,6 +52,15 @@ const TABELAS: [string, string][] = [
     nome VARCHAR(160) NOT NULL, telefone VARCHAR(20) NULL, corretorId INT NULL, status VARCHAR(12) NOT NULL DEFAULT 'aguardando',
     avisadoEm TIMESTAMP NULL, observacao VARCHAR(300) NULL, criadoPor INT NULL, criadoEm TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
     KEY ix_fila_espera_lote (loteId, status, criadoEm))`],
+  // Portal do comprador: andamento da obra e chamados (server/financeiro/portalComprador.ts)
+  ['obraAtualizacoes', `CREATE TABLE IF NOT EXISTS obraAtualizacoes (
+    id INT AUTO_INCREMENT PRIMARY KEY, empreendimentoId INT NOT NULL, titulo VARCHAR(160) NOT NULL, texto TEXT NOT NULL, percentual INT NULL,
+    fotoArquivo VARCHAR(255) NULL, data VARCHAR(10) NOT NULL, criadoPor INT NULL, criadoEm TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    KEY ix_obra_emp (empreendimentoId, data))`],
+  ['portalChamados', `CREATE TABLE IF NOT EXISTS portalChamados (
+    id INT AUTO_INCREMENT PRIMARY KEY, contratoId INT NOT NULL, tipo VARCHAR(20) NOT NULL, assunto VARCHAR(160) NOT NULL, mensagem TEXT NOT NULL,
+    dadosJson TEXT NULL, status VARCHAR(12) NOT NULL DEFAULT 'aberto', resposta TEXT NULL, respondidoPor INT NULL, respondidoEm TIMESTAMP NULL,
+    criadoEm TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP, KEY ix_chamado_contrato (contratoId, criadoEm), KEY ix_chamado_status (status))`],
   // Links de divulgação cadastrados pelo escritório (Campanhas de captação › Links de divulgação)
   ['linksDivulgacao', `CREATE TABLE IF NOT EXISTS linksDivulgacao (
     id INT AUTO_INCREMENT PRIMARY KEY, titulo VARCHAR(120) NOT NULL, descricao VARCHAR(300) NULL, url VARCHAR(500) NOT NULL,

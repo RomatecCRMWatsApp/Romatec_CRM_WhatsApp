@@ -78,6 +78,7 @@ const AppShell = lazy(() => import("./components/AppShell"));
 const ImovelLanding = lazy(() => import("./pages/ImovelLanding"));
 const LeadsFunil = lazy(() => import("./pages/LeadsFunil"));
 const AtenderAgora = lazy(() => import("./pages/AtenderAgora"));
+const PortalComprador = lazy(() => import("./pages/PortalComprador"));
 const LeadDetalhe = lazy(() => import("./pages/LeadDetalhe"));
 const Setup = lazy(() => import("./pages/Setup"));
 import { trpc } from "@/lib/trpc";
@@ -203,6 +204,9 @@ function Router() {
       </Route>
       <Route path={"/carteirinhas"}>
         {() => <SetupGuard component={Carteirinhas} />}
+      </Route>
+      <Route path={"/portal-comprador"}>
+        {() => <SetupGuard component={PortalComprador} />}
       </Route>
       <Route path={"/documentos-cliente"}>
         {() => <Redirect to="/contratos?aba=links" />}

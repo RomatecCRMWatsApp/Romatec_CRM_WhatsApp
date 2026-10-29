@@ -11,7 +11,7 @@ import type { Perfil } from './equipe';
 import { VENDIDOS, type SituacaoLote } from './lotes';
 import { temAcesso, type AcessoCorretor } from './permissoes';
 
-export const TIPOS_NOTIFICACAO = ['atualizacao_sistema', 'reserva', 'venda_contrato', 'liberacao', 'solicitacao_cancelamento', 'agendamento', 'novo_lead', 'atendimento', 'confirmacao_reuniao'] as const;
+export const TIPOS_NOTIFICACAO = ['atualizacao_sistema', 'reserva', 'venda_contrato', 'liberacao', 'solicitacao_cancelamento', 'agendamento', 'novo_lead', 'atendimento', 'confirmacao_reuniao', 'chamado'] as const;
 export type TipoNotificacao = typeof TIPOS_NOTIFICACAO[number];
 
 /** Som de cada tipo (client/public/sons) — trocar o arquivo troca o som, sem mexer no código */
@@ -25,6 +25,7 @@ export const SOM_POR_TIPO: Record<TipoNotificacao, string> = {
   novo_lead: '/sons/novo_lead.wav',
   atendimento: '/sons/atendimento.wav',
   confirmacao_reuniao: '/sons/confirmacao_reuniao.wav',
+  chamado: '/sons/chamado.wav',
 };
 
 export const ROTULO_NOTIFICACAO: Record<TipoNotificacao, string> = {
@@ -37,6 +38,7 @@ export const ROTULO_NOTIFICACAO: Record<TipoNotificacao, string> = {
   novo_lead: 'Novo lead',
   atendimento: 'Cliente aguardando',
   confirmacao_reuniao: 'Presença confirmada',
+  chamado: 'Chamado do comprador',
 };
 
 /** Cor do selo na lista do sininho */
@@ -50,6 +52,7 @@ export const COR_NOTIFICACAO: Record<TipoNotificacao, string> = {
   novo_lead: '#1F8A4C',
   atendimento: '#D9822B',
   confirmacao_reuniao: '#3BA99C',
+  chamado: '#7A5FC9',
 };
 
 const RESERVAS: SituacaoLote[] = ['reservado', 'entrada'];
@@ -100,6 +103,7 @@ export function textoNotificacao(
       titulo: `Pedido de cancelamento — contrato ${d.contrato ?? '?'}`,
       mensagem: `${d.autor ?? 'Alguém da equipe'} pediu o cancelamento do contrato ${d.contrato ?? '?'} (${onde}${d.comprador ? `, comprador ${d.comprador}` : ''}). Motivo: ${d.motivo ?? '—'}`.slice(0, 500),
     };
+    case 'chamado': return { titulo: `Chamado · contrato ${d.contrato ?? '?'}`, mensagem: (d.motivo ?? 'Novo chamado no portal do comprador').slice(0, 500) };
   }
 }
 
@@ -151,6 +155,7 @@ export function urlDaNotificacao(
   tipo: TipoNotificacao, d: { empreendimentoSlug?: string | null; lote?: string | null; contratoId?: number | null; leadId?: number | null; reuniaoId?: number | null }, perfil?: Perfil | null,
 ): string {
   if (tipo === 'confirmacao_reuniao') return d.reuniaoId ? `/convites/${d.reuniaoId}` : '/convites';
+  if (tipo === 'chamado') return '/portal-comprador';
   if (tipo === 'agendamento' || tipo === 'novo_lead' || tipo === 'atendimento') {
     if (tipo === 'novo_lead' && perfil === 'empreendedor') return '/empreendedor?notificacoes=1';
     return d.leadId ? `/leads/lead/${d.leadId}` : tipo === 'agendamento' ? '/agenda' : '/leads';

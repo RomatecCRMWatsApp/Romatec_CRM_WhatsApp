@@ -187,6 +187,18 @@ export async function notificarFilaEspera(
     { empreendimentoSlug: f.empreendimentoSlug, lote: f.codigo, leadId: f.leadId });
 }
 
+/** Chamado aberto no portal do comprador (server/financeiro/portalComprador.ts) → sininho e push do escritório */
+export async function notificarChamado(
+  f: { contrato: string; lote: string; empreendimentoId: number; empreendimentoSlug: string; tipo: string; assunto: string },
+  repo: RepoNotificacoes = repoBanco(), enviar?: EnviadorPush | null,
+) {
+  const usuarios = await repo.usuarios();
+  const ids = usuarios.filter(u => u.ativo !== false && u.ativo !== 0 && ['admin', 'secretario'].includes(String(perfilDe(u as any)))).map(u => u.id);
+  return emitir(repo, enviar === undefined ? await enviadorWebPush() : enviar, usuarios, ids,
+    { tipo: "chamado", titulo: `Chamado · contrato ${f.contrato} (chácara ${f.lote})`, mensagem: f.assunto.slice(0, 400), empreendimentoId: f.empreendimentoId, chave: null },
+    { empreendimentoSlug: f.empreendimentoSlug });
+}
+
 /** Pedido de cancelamento de contrato (corretor/secretária) → sininho e push só para o administrador */
 export async function notificarSolicitacaoCancelamento(
   p: { contratoId: number; contrato: string; lote: string; empreendimentoId: number; empreendimentoNome?: string | null; comprador?: string | null; motivo: string; autorId: number; autorNome?: string | null },

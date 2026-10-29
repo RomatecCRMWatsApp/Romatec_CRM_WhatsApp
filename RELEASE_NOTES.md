@@ -3,6 +3,20 @@
 Cada versão nova vai no TOPO. Depois rode `npm run release` (valida e atualiza o package.json);
 ao subir, o servidor grava a versão no banco e todos recebem o aviso "Novidades da versão".
 
+## 1.74.0 — 2026-10-29
+tipo: minor
+obrigatoria: nao
+titulo: Portal do comprador
+
+### Novo
+- O carnê digital do comprador (/c/código, pelo QR do carnê) virou o Portal do comprador, com novas abas:
+- Antecipar: o comprador escolhe quantas parcelas quer quitar antes e vê na hora quanto paga com o desconto dos juros (CDC, art. 52, § 2º); o pedido chega ao escritório
+- Documentos: contrato assinado em PDF, Estatuto, Diretrizes de Uso, tarifa da água, verificação do contrato e as carteirinhas
+- Obra: percentual concluído e as atualizações com foto publicadas pelo escritório
+- Chamados: o comprador abre um chamado e recebe a resposta no portal e o aviso no WhatsApp
+- Vendas › Portal do comprador (administrador e secretária): responder chamados e pedidos de antecipação, e publicar o andamento da obra
+- Novo aviso no sininho e no celular a cada chamado aberto
+
 ## 1.73.0 — 2026-10-29
 tipo: minor
 obrigatoria: nao

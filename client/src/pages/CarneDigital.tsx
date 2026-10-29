@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { useParams } from "wouter";
 import { AlertTriangle, CheckCircle2, Clock, Download, FileText, Loader2, Receipt, RefreshCw } from "lucide-react";
+import { AbaAntecipar, AbaChamados, AbaDocumentos, AbaObra, usePortal } from "@/components/portal/PortalComprador";
 
 const VERDE = "#0C3320", DOURADO = "#C9A646", CREME = "#F7F3E8";
 const brl = (v: number | null | undefined) => (v == null ? "—" : v.toLocaleString("pt-BR", { style: "currency", currency: "BRL" }));
@@ -18,12 +19,13 @@ async function segundaVia(url: string) {
   window.open(URL.createObjectURL(await r.blob()), "_blank", "noopener");
 }
 
-/** Carnê digital do comprador: parcelas, boleto, 2ª via atualizada, recibos e carnês (aberto pelo QR do carnê) */
+/** Portal do comprador (carnê digital): parcelas, boleto, 2ª via, recibos, carnês, antecipação, documentos, obra e chamados (aberto pelo QR do carnê) */
 export default function CarneDigital() {
   const { codigo } = useParams<{ codigo: string }>();
   const [d, setD] = useState<any>(null);
   const [erro, setErro] = useState<string | null>(null);
-  const [aba, setAba] = useState<"parcelas" | "recibos">("parcelas");
+  const [aba, setAba] = useState<"parcelas" | "recibos" | "antecipar" | "documentos" | "obra" | "chamados">("parcelas");
+  const portal = usePortal(codigo);
   const [ocupado, setOcupado] = useState<number | null>(null);
   const [msg, setMsg] = useState<string | null>(null);
   const carregar = () => fetch(`/api/c/${encodeURIComponent(codigo)}`).then(async r => { const j = await r.json(); if (!r.ok) throw new Error(j.mensagem); setD(j); }).catch(e => setErro(e.message));
@@ -42,7 +44,7 @@ export default function CarneDigital() {
       <header className="border-b-4 px-4 py-3 text-white" style={{ background: VERDE, borderColor: DOURADO }}>
         <div className="mx-auto max-w-3xl">
           <p className="font-bold" style={{ fontFamily: "'Playfair Display', Georgia, serif" }}>Condomínio de Chácaras Bom Jardims</p>
-          <p className="text-xs" style={{ color: DOURADO }}>Carnê digital</p>
+          <p className="text-xs" style={{ color: DOURADO }}>Portal do comprador</p>
         </div>
       </header>
       <main className="mx-auto max-w-3xl space-y-4 px-4 py-5">
@@ -85,14 +87,20 @@ export default function CarneDigital() {
                   </section>
                 )}
 
-                <div className="flex gap-2 border-b" style={{ borderColor: DOURADO }}>
-                  {(["parcelas", "recibos"] as const).map(a => (
-                    <button key={a} onClick={() => setAba(a)} className="-mb-px border-b-2 px-3 py-2 text-sm font-semibold"
-                      style={{ borderColor: aba === a ? VERDE : "transparent", color: aba === a ? VERDE : "#777" }}>
-                      {a === "parcelas" ? `Parcelas em aberto (${abertas.length})` : `Meus recibos (${pagas.length})`}
-                    </button>
+                <div className="flex gap-1 overflow-x-auto border-b" style={{ borderColor: DOURADO }}>
+                  {([
+                    ["parcelas", `Parcelas (${abertas.length})`], ["recibos", `Recibos (${pagas.length})`],
+                    ...(portal.d ? [["antecipar", "Antecipar"], ["documentos", "Documentos"], ["obra", "Obra"],
+                      ["chamados", `Chamados${portal.d.chamados.some(c => c.status === "respondido") ? " •" : ""}`]] : []),
+                  ] as [typeof aba, string][]).map(([a, r]) => (
+                    <button key={a} onClick={() => setAba(a)} className="-mb-px shrink-0 border-b-2 px-3 py-2 text-sm font-semibold"
+                      style={{ borderColor: aba === a ? VERDE : "transparent", color: aba === a ? VERDE : "#777" }}>{r}</button>
                   ))}
                 </div>
+                {portal.d && aba === "antecipar" && <AbaAntecipar codigo={codigo} d={portal.d} onPedido={portal.recarregar} />}
+                {portal.d && aba === "documentos" && <AbaDocumentos d={portal.d} />}
+                {portal.d && aba === "obra" && <AbaObra d={portal.d} />}
+                {portal.d && aba === "chamados" && <AbaChamados codigo={codigo} d={portal.d} onNovo={portal.recarregar} />}
                 {msg && <p role="alert" className="rounded-lg bg-red-50 p-2 text-sm text-red-800">{msg}</p>}
 
                 {aba === "parcelas" && (

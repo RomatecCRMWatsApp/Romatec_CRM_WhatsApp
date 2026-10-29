@@ -1964,3 +1964,41 @@ export const loteFilaEspera = mysqlTable("loteFilaEspera", {
 }, (t) => ({
   ixLote: index("ix_fila_espera_lote").on(t.loteId, t.status, t.criadoEm),
 }));
+
+/** Andamento da obra por empreendimento (portal do comprador /c/:codigo › Obra) — publicado pelo escritório */
+export const obraAtualizacoes = mysqlTable("obraAtualizacoes", {
+  id: int("id").autoincrement().primaryKey(),
+  empreendimentoId: int("empreendimentoId").notNull(),
+  titulo: varchar("titulo", { length: 160 }).notNull(),
+  texto: text("texto").notNull(),
+  /** % geral da obra nesta data (0–100) */
+  percentual: int("percentual"),
+  /** Foto (chave em contratoArquivos) */
+  fotoArquivo: varchar("fotoArquivo", { length: 255 }),
+  data: varchar("data", { length: 10 }).notNull(),
+  criadoPor: int("criadoPor"),
+  criadoEm: timestamp("criadoEm").defaultNow().notNull(),
+}, (t) => ({
+  ixEmp: index("ix_obra_emp").on(t.empreendimentoId, t.data),
+}));
+
+/** Chamados do comprador (portal /c/:codigo › Chamados), respondidos pelo escritório (Vendas › Portal do comprador) */
+export const portalChamados = mysqlTable("portalChamados", {
+  id: int("id").autoincrement().primaryKey(),
+  contratoId: int("contratoId").notNull(),
+  /** duvida | financeiro | antecipacao | documento | obra | outro */
+  tipo: varchar("tipo", { length: 20 }).notNull(),
+  assunto: varchar("assunto", { length: 160 }).notNull(),
+  mensagem: text("mensagem").notNull(),
+  /** Antecipação: parcelas e valores simulados */
+  dadosJson: text("dadosJson"),
+  /** aberto | respondido | fechado */
+  status: varchar("status", { length: 12 }).default("aberto").notNull(),
+  resposta: text("resposta"),
+  respondidoPor: int("respondidoPor"),
+  respondidoEm: timestamp("respondidoEm"),
+  criadoEm: timestamp("criadoEm").defaultNow().notNull(),
+}, (t) => ({
+  ixContrato: index("ix_chamado_contrato").on(t.contratoId, t.criadoEm),
+  ixStatus: index("ix_chamado_status").on(t.status),
+}));

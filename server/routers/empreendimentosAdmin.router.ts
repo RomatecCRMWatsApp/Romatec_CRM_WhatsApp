@@ -57,7 +57,7 @@ export const empreendimentosAdminRouter = router({
       const meus = ls.filter(l => l.empreendimentoId === e.id);
       const por = (s: string) => meus.filter(l => (l.situacao || "disponivel") === s).length;
       return {
-        slug: e.slug, nome: e.nome, municipio: e.municipio, uf: e.uf, totalLotes: meus.length,
+        id: Number(e.id), slug: e.slug, nome: e.nome, municipio: e.municipio, uf: e.uf, totalLotes: meus.length,
         disponiveis: por("disponivel"), vendidos: por("vendido_parcelado") + por("vendido_avista") + por("quitado"),
         semRegistro: !e.registroMatricula,
         /** Corretor: os não habilitados aparecem na lista, mas não abrem */

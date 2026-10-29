@@ -359,6 +359,60 @@ export function registrarRotasFinanceiro(app: Express) {
     } catch (e) { erro(res, e); }
   });
 
+  // Portal do comprador (/c/:codigo): documentos, obra, chamados e antecipação — mesmo limite por IP do carnê
+  const ipPortal = (req: any) => String(req.headers['x-forwarded-for'] ?? '').split(',')[0].trim() || req.socket.remoteAddress || '';
+  const codigoDe = (req: any) => String(req.params.codigo).toUpperCase();
+  const limitePortal = async (req: any, res: Response) => {
+    const { dentroDoLimite } = await import('./carneDigital');
+    if (dentroDoLimite(ipPortal(req))) return true;
+    res.status(429).json({ erro: 'limite', mensagem: 'Muitas consultas — tente de novo em alguns minutos' });
+    return false;
+  };
+  app.get('/api/c/:codigo/portal', async (req, res) => {
+    try {
+      if (!(await limitePortal(req, res))) return;
+      const { portalDoComprador } = await import('./portalComprador');
+      res.setHeader('Cache-Control', 'no-store');
+      res.json(await portalDoComprador(codigoDe(req)));
+    } catch (e) { erro(res, e); }
+  });
+  app.post('/api/c/:codigo/antecipacao/simular', async (req, res) => {
+    try {
+      if (!(await limitePortal(req, res))) return;
+      const { simularDoCodigo } = await import('./portalComprador');
+      res.json(await simularDoCodigo(codigoDe(req), Number(req.body?.quantidade) || 0));
+    } catch (e) { erro(res, e); }
+  });
+  app.post('/api/c/:codigo/chamados', async (req, res) => {
+    try {
+      if (!(await limitePortal(req, res))) return;
+      const { abrirChamado } = await import('./portalComprador');
+      const b = req.body ?? {};
+      res.json(await abrirChamado(codigoDe(req), { tipo: String(b.tipo ?? ''), assunto: b.assunto, mensagem: b.mensagem, quantidade: Number(b.quantidade) || 0 }));
+    } catch (e) { erro(res, e); }
+  });
+  app.get('/api/c/:codigo/contrato.pdf', async (req, res) => {
+    try {
+      if (!(await limitePortal(req, res))) return;
+      const { contratoPdfDoCodigo } = await import('./portalComprador');
+      const r = await contratoPdfDoCodigo(codigoDe(req));
+      if (!r) return res.status(404).json({ erro: 'arquivo', mensagem: 'O PDF do contrato ainda não está disponível' });
+      await auditar('portal_contrato_pdf', { origem: 'publico', ip: ipPortal(req), detalhe: { numero: r.numero } });
+      res.setHeader('Cache-Control', 'private, no-store');
+      pdf(res, r.buf, `Contrato-${r.numero}.pdf`);
+    } catch (e) { erro(res, e); }
+  });
+  app.get('/api/c/:codigo/obra/:id.webp', async (req, res) => {
+    try {
+      const { fotoObra } = await import('./portalComprador');
+      const buf = await fotoObra(codigoDe(req), Number(req.params.id) || 0);
+      if (!buf) return res.status(404).end();
+      res.setHeader('Content-Type', 'image/webp');
+      res.setHeader('Cache-Control', 'private, max-age=3600');
+      res.send(buf);
+    } catch (e) { erro(res, e); }
+  });
+
   // Verificação pública do recibo (sem CPF; PDF só com o código de verificação)
   app.get('/r/:numero', async (req, res) => {
     try {
