@@ -115,6 +115,9 @@ export type PublicLeadInput = z.infer<typeof publicLeadSchema>;
 export function origemFromUtm(utm?: PublicLeadInput['utm']): LeadOrigem {
   const src = (utm?.source || '').toLowerCase();
   const medium = (utm?.medium || '').toLowerCase();
+  // Tráfego pago (anúncio): utm_medium paid / cpc / ads / paid_social / lead_ads
+  const pago = /^(cpc|ppc|paid|ads?|paid_?social|lead_ads|anuncio|patrocinado)$/.test(medium);
+  if (pago && (src === 'meta' || src.includes('instagram') || src === 'ig' || src.includes('facebook') || src === 'fb')) return 'instagram_ads';
   if (src === 'meta' && (medium === 'cpc' || medium === 'lead_ads')) return 'instagram_ads';
   if (src === 'google') return 'google_ads';
   if (src === 'indicacao') return 'indicacao';
@@ -339,7 +342,11 @@ export async function ingestLead(input: LeadIntakeInput): Promise<LeadIntakeResu
   try {
     const { notificarLead } = await import('./leads/notificacao');
     const { rotuloCanal } = await import('./leads/inbound');
-    const titulo = input.loteCodigo ? `${imovel || input.empreendimentoSlug} — chácara ${input.loteCodigo}` : (imovel || input.empreendimentoSlug);
+    // Nome do empreendimento no aviso (não o código "bom-jardims")
+    const nomeEmp = !imovel && input.empreendimentoSlug
+      ? await import('./leads/listaComunicacao').then(m => m.nomeDoEmpreendimento(input.empreendimentoSlug!)).catch(() => null) : null;
+    const alvo = imovel || nomeEmp || input.empreendimentoSlug;
+    const titulo = input.loteCodigo ? `${alvo} — chácara ${input.loteCodigo}` : alvo;
     const score = scoreCalc?.score ?? input.leadScore ?? null;
     const classe = scoreCalc?.classe ?? null;
     await notificarLead({

@@ -192,7 +192,8 @@ export async function processarSla(agora = Date.now()): Promise<number> {
       ));
     if (linhasAfetadas(reserva) === 0) continue;
     const nome = l.nome || 'Lead';
-    const contato = `📱 +${String(l.phone).replace(/\D/g, '')} · 💬 https://wa.me/${String(l.phone).replace(/\D/g, '')}`;
+    // Atender pelo link do CRM: abrir a conversa já marca o lead como atendido
+    const contato = `📱 +${String(l.phone).replace(/\D/g, '')}\n💬 Atender no WhatsApp (já conta como atendido): ${linkWhatsAppAtendido(l.id)}`;
     if (acao === 'lembrar') {
       await avisar(resp, `⏰ ${nome} está esperando atendimento há ${minutos} min.\n${contato}\n✅ Já atendi: ${linkAtendido(l.id)}`);
     } else if (acao === 'repassar') {

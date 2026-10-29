@@ -69,6 +69,11 @@ describe('Lead intake - formulário público', () => {
     expect(origemFromUtm({ source: 'ig' })).toBe('instagram_bio');
     expect(origemFromUtm({ source: 'google' })).toBe('google_ads');
     expect(origemFromUtm({ source: 'meta', medium: 'lead_ads' })).toBe('instagram_ads');
+    // Anúncio pago do Instagram (link da campanha com utm_medium=paid) não é orgânico
+    expect(origemFromUtm({ source: 'instagram', medium: 'paid' })).toBe('instagram_ads');
+    expect(origemFromUtm({ source: 'instagram', medium: 'cpc' })).toBe('instagram_ads');
+    expect(origemFromUtm({ source: 'facebook', medium: 'paid_social' })).toBe('instagram_ads');
+    expect(origemFromUtm({ source: 'instagram', medium: 'bio' })).toBe('instagram_bio');
     expect(origemFromUtm({ source: 'site-parceiro' })).toBe('site');
     expect(origemFromUtm(undefined)).toBe('site');
   });

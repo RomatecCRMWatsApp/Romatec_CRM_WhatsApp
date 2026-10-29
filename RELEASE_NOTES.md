@@ -3,6 +3,16 @@
 Cada versão nova vai no TOPO. Depois rode `npm run release` (valida e atualiza o package.json);
 ao subir, o servidor grava a versão no banco e todos recebem o aviso "Novidades da versão".
 
+## 1.66.1 — 2026-10-29
+tipo: patch
+obrigatoria: nao
+titulo: Alerta de 5 minutos com o link que marca o atendimento
+
+### Correções
+- Alerta "está esperando atendimento há 5 min": o link do WhatsApp agora passa pelo CRM e já marca o lead como atendido (antes ia direto para o wa.me e não contava)
+- Origem do lead: link com utm_medium=paid (anúncio pago do Instagram/Facebook) entra como "Anúncio", não mais como "Instagram orgânico"
+- Aviso de lead novo mostra o nome do empreendimento ("Condomínio de Chácaras Bom Jardims") em vez do código "bom-jardims"
+
 ## 1.66.0 — 2026-10-29
 tipo: minor
 obrigatoria: nao
