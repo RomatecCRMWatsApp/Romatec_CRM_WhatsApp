@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import { CalendarCheck, CheckCircle2, FileCheck2, Loader2, MessageCircle, Ruler, Trees, Volume2, VolumeX } from "lucide-react";
 import { readUtm } from "@/components/LeadForm";
 import { origemDaVisita } from "@/lib/origemVisita";
-import { C, SERIF, SANS, useBrandFonts, BotaoInstagram } from "@/components/bom-jardims/marca";
+import { C, SERIF, SANS, useBrandFonts, BotaoInstagram, useCorretorDoLink, rotuloCorretor } from "@/components/bom-jardims/marca";
 import { EVENTOS } from "@shared/rastreamento";
 import { registrarEvento } from "@/lib/rastreamento";
 import { LANCAMENTO_OBRAS, MSG_VALOR_OBRAS, utmObras } from "@shared/obrasBomJardim";
@@ -152,6 +152,7 @@ function Cadastro() {
 
 export default function ObrasBomJardim() {
   useBrandFonts();
+  const corretor = useCorretorDoLink();
   const [abrindo, setAbrindo] = useState<"valor" | "visita" | null>(null);
 
   const agendar = async () => {
@@ -206,6 +207,18 @@ export default function ObrasBomJardim() {
                 {abrindo === "visita" ? <Loader2 size={20} className="animate-spin" /> : <CalendarCheck size={20} />} Agendar visita
               </button>
             </div>
+            {corretor.doLink && (
+              <div style={{ marginTop: 16, display: "flex", alignItems: "center", gap: 12, padding: "12px 14px", borderRadius: 14, background: "rgba(243,238,223,0.08)", border: "1px solid rgba(201,168,76,0.45)" }}>
+                {corretor.fotoUrl
+                  ? <img src={corretor.fotoUrl} alt={corretor.nome} style={{ width: 54, height: 54, borderRadius: "50%", objectFit: "cover", border: `2px solid ${C.dourado}`, flexShrink: 0 }} />
+                  : <div style={{ width: 54, height: 54, borderRadius: "50%", background: C.dourado, color: C.verde, display: "flex", alignItems: "center", justifyContent: "center", fontWeight: 800, fontSize: 22, flexShrink: 0 }}>{corretor.nome.charAt(0)}</div>}
+                <div style={{ minWidth: 0, color: "#fff", lineHeight: 1.35 }}>
+                  <p style={{ margin: 0, fontSize: 12, color: C.destaque, fontWeight: 700, letterSpacing: 0.4 }}>SEU CORRETOR</p>
+                  <p style={{ margin: 0, fontWeight: 700 }}>{corretor.nome}</p>
+                  <p style={{ margin: 0, fontSize: 13, color: C.creme }}>{[corretor.creci, corretor.telefones[0]].filter(Boolean).join(" · ")}</p>
+                </div>
+              </div>
+            )}
           </div>
         </div>
       </header>
@@ -239,14 +252,15 @@ export default function ObrasBomJardim() {
           ))}
           <div style={{ display: "flex", flexWrap: "wrap", gap: 10 }}>
             <a href="/bom-jardims" style={{ ...btn("transparent", C.verde, C.verde), flex: "1 1 200px", fontSize: 15 }}>Ver o mapa das chácaras</a>
-            <BotaoInstagram usuario="avalieimob" />
+            <BotaoInstagram usuario={corretor.instagram || "avalieimob"} />
           </div>
         </div>
       </main>
 
       <footer style={{ background: C.verde, color: C.creme, padding: "24px 16px", textAlign: "center", fontSize: 13, lineHeight: 1.6 }}>
         <p style={{ margin: 0 }}>CCBJ — Condomínio de Chácaras Bom Jardim · Estrada do Piquiá dos Baianos, km 15 da BR-222 · Açailândia/MA</p>
-        <p style={{ margin: "6px 0 0", opacity: 0.85 }}>Romatec Consultoria Total · José Romário — CRECI/MA 4.705 · (99) 9 9181-1246</p>
+        {corretor.doLink && <p style={{ margin: "6px 0 0", fontWeight: 700 }}>Atendimento: {rotuloCorretor(corretor)}{corretor.telefones[0] ? ` · ${corretor.telefones[0]}` : ""}</p>}
+        <p style={{ margin: "6px 0 0", opacity: 0.85 }}>Romatec Consultoria Total · Responsável: José Romário — CRECI/MA 4.705{corretor.doLink ? "" : " · (99) 9 9181-1246"}</p>
         <p style={{ margin: "6px 0 0", opacity: 0.7 }}>Imagens reais do início das obras. Valores e condições informados pelo corretor no atendimento.</p>
       </footer>
     </div>

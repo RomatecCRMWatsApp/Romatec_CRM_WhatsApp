@@ -163,6 +163,8 @@ export const bomJardimsLeadSchema = z.object({
   consent: z.literal(true, { message: 'É preciso aceitar o contato' }),
   utm: z.object({ source: utmField, medium: utmField, campaign: utmField, content: utmField }).optional(),
   origemVisita: origemVisitaSchema,
+  /** ?c= de quem compartilhou o link: o lead vai para esse corretor */
+  ref: z.string().max(20).optional(),
   website: z.string().max(500).optional(), // honeypot
 });
 
@@ -248,7 +250,12 @@ export function registerBomJardimsRoutes(app: Express, allow: (key: string) => b
 
       const leadScore = scoreBomJardims({ prazo: d.prazo, pagamento: d.pagamento, cidade: d.cidade, loteCodigo });
 
+      // Link de corretor (?c=): o lead é dele; sem link, o rodízio decide
+      const { corretorDoLink } = await import('./obrasBomJardim');
+      const dono = await corretorDoLink(d.ref).catch(() => null);
+
       const result = await ingestLead({
+        responsavelId: dono?.id ?? null,
         nome: d.nome,
         phone: d.phone,
         origem: origemFromUtm(utm),

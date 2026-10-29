@@ -3,7 +3,7 @@ import { useRoute } from "wouter";
 import { MapPin, Navigation, Copy, Play, ArrowLeft, Globe2 } from "lucide-react";
 import { trpc } from "@/lib/trpc";
 import LoteMap, { STATUS_LABEL, type LoteInfo, type MapaData } from "@/components/bom-jardims/LoteMap";
-import { C, SERIF, SANS, GALERIA, VIDEO, useBrandFonts, ContatosBotoes, GaleriaProjeto } from "@/components/bom-jardims/marca";
+import { C, SERIF, SANS, GALERIA, VIDEO, useBrandFonts, ContatosBotoes, GaleriaProjeto, useCorretorDoLink, rotuloCorretor } from "@/components/bom-jardims/marca";
 import { codigoChacaraValido, localizacaoDoLote, tituloChacara, rotaAteEntrada, NOME_BOM_JARDIMS, SLUG_BOM_JARDIMS } from "@shared/chacaraLink";
 
 /**
@@ -34,6 +34,7 @@ export default function BomJardimsChacara() {
 /** A página em si, a partir dos dados (geometria pública e situação dos lotes) */
 export function ChacaraView({ codigo, mapa, lotes, falhou = false }: { codigo: string; mapa: MapaData | null; lotes: LoteInfo[]; falhou?: boolean }) {
   const valido = codigoChacaraValido(codigo);
+  const corretor = useCorretorDoLink();
   const [copiado, setCopiado] = useState(false);
 
   const geo = mapa?.lotes.find(l => l.codigo === codigo);
@@ -88,7 +89,7 @@ export function ChacaraView({ codigo, mapa, lotes, falhou = false }: { codigo: s
               {tecnica ? "Área técnica do condomínio" : STATUS_LABEL[info.status]}
             </span>
           )}
-          <p style={{ color: "#D9D3BF", fontSize: 13, margin: "14px 0 0" }}>Corretor José Romário · CRECI/MA 4.705</p>
+          <p style={{ color: "#D9D3BF", fontSize: 13, margin: "14px 0 0" }}>{rotuloCorretor(corretor)}</p>
         </div>
       </header>
 

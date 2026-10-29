@@ -8,6 +8,7 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent } from "@/components/ui/card";
 import { useCartaoVendas } from "@/lib/cartaoVendas";
+import { comAssinatura } from "@shared/cartaoVendas";
 import { MARCA_LINK, montarLink, textoComLink, type DadosLink, type LinkDivulgacao } from "@shared/linksDivulgacao";
 
 const copiar = async (texto: string, rotulo: string) => {
@@ -33,12 +34,13 @@ function QrDoLink({ url }: { url: string }) {
   );
 }
 
-function CardLink({ l, ref_, podeEditar, onEditar }: { l: Item; ref_: string | null; podeEditar: boolean; onEditar: (l: Item) => void }) {
+function CardLink({ l, cartao, podeEditar, onEditar }: { l: Item; cartao: ReturnType<typeof useCartaoVendas>; podeEditar: boolean; onEditar: (l: Item) => void }) {
   const utils = trpc.useUtils();
   const excluir = trpc.linksDivulgacao.excluir.useMutation({ onSuccess: () => { toast.success("Link excluído"); utils.linksDivulgacao.invalidate(); }, onError: e => toast.error(e.message) });
   const [verQr, setVerQr] = useState(false);
-  const link = montarLink(window.location.origin, l, ref_);
-  const texto = textoComLink(l.textoWhatsapp, link);
+  const link = montarLink(window.location.origin, l, cartao.ref);
+  // Texto + assinatura de quem divulga (nome, CRECI, WhatsApp, Instagram)
+  const texto = comAssinatura(textoComLink(l.textoWhatsapp, link), cartao);
   const compartilhar = async () => {
     if ((navigator as any).share) { try { await navigator.share({ text: texto }); return; } catch { /* cancelou */ return; } }
     copiar(texto, "Texto");
@@ -151,7 +153,8 @@ export default function LinksDivulgacao() {
     <div className="space-y-3">
       <div className="flex flex-wrap items-center gap-2">
         <p className="flex-1 text-sm text-muted-foreground">
-          Os links já saem com o seu código{cartao.ref ? "" : " (carregando…)"}: quem se cadastrar por eles cai com <b className="text-foreground">{cartao.nome}</b>.
+          Tudo sai com os seus dados{cartao.ref ? "" : " (carregando…)"}: o link leva o seu código (quem se cadastra cai com <b className="text-foreground">{cartao.nome}</b>) e o texto termina com o seu nome, {cartao.creci ?? "CRECI"} e WhatsApp.
+          {!cartao.creci && <> <a href="/meu-cadastro" className="text-amber-300 underline">Cadastre o seu CRECI</a> para ele aparecer.</>}
         </p>
         <Input className="h-9 w-full sm:w-56" placeholder="Buscar link…" value={busca} onChange={e => setBusca(e.target.value)} />
         {data?.podeEditar && form === null && <Button onClick={() => setForm("novo")} className="bg-emerald-600 text-white hover:bg-emerald-700"><Plus className="mr-1.5 h-4 w-4" /> Novo link</Button>}
@@ -161,7 +164,7 @@ export default function LinksDivulgacao() {
       {isLoading && <p className="text-sm text-muted-foreground">Carregando…</p>}
       {data && links.length === 0 && <p className="rounded-xl border border-dashed border-border p-4 text-sm text-muted-foreground">Nenhum link encontrado.</p>}
       <div className="grid gap-3 lg:grid-cols-2">
-        {links.map(l => <CardLink key={l.chave} l={l} ref_={cartao.ref} podeEditar={!!data?.podeEditar} onEditar={editar} />)}
+        {links.map(l => <CardLink key={l.chave} l={l} cartao={cartao} podeEditar={!!data?.podeEditar} onEditar={editar} />)}
       </div>
     </div>
   );

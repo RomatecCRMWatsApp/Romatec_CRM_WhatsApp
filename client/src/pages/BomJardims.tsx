@@ -5,10 +5,11 @@ import { readUtm } from "@/components/LeadForm";
 import { origemDaVisita } from "@/lib/origemVisita";
 import { AGENDAR_BOM_JARDIMS, FAQ_BOM_JARDIMS, IMAGENS_BOM_JARDIMS, SOBRE_BOM_JARDIMS, TITULO_BOM_JARDIMS } from "@shared/bomJardimsSeo";
 import LoteMap, { formatArea, STATUS_LABEL, type LoteInfo } from "@/components/bom-jardims/LoteMap";
-import { C, SERIF, SANS, GALERIA, VIDEO, waLink, useBrandFonts, ContatosBotoes, GaleriaProjeto, useContatos, useInstagram, BotaoInstagram } from "@/components/bom-jardims/marca";
+import { C, SERIF, SANS, GALERIA, VIDEO, waLink, useBrandFonts, ContatosBotoes, GaleriaProjeto, useContatos, useInstagram, BotaoInstagram, useCorretorDoLink, rotuloCorretor } from "@/components/bom-jardims/marca";
 import { codigoChacaraValido, rotaAteEntrada } from "@shared/chacaraLink";
 import { EVENTOS } from "@shared/rastreamento";
 import { registrarEvento } from "@/lib/rastreamento";
+import { refDaSessao } from "@/lib/cartaoVendas";
 
 /**
  * Landing do Condomínio de Chácaras Bom Jardims — /bom-jardims
@@ -65,6 +66,7 @@ function Opcoes<T extends string>({ name, value, onChange, options }: {
 }
 
 function Formulario({ loteCodigo, onClearLote, lotes }: { loteCodigo?: string; onClearLote: () => void; lotes: LoteInfo[] }) {
+  const corretor = useCorretorDoLink();
   const [f, setF] = useState({ nome: "", phone: "", email: "", cidade: "" });
   const [finalidade, setFinalidade] = useState<"morar" | "lazer" | "investimento">();
   const [prazo, setPrazo] = useState<"imediato" | "3m" | "12m" | "pesquisando">();
@@ -85,7 +87,7 @@ function Formulario({ loteCodigo, onClearLote, lotes }: { loteCodigo?: string; o
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           ...f, finalidade, prazo, pagamento, loteCodigo: lote?.status === "disponivel" ? loteCodigo : undefined,
-          consent, utm: readUtm(), origemVisita: origemDaVisita(), website,
+          consent, utm: readUtm(), origemVisita: origemDaVisita(), website, ref: refDaSessao(),
         }),
       });
       const data = await res.json().catch(() => ({}));
@@ -102,7 +104,7 @@ function Formulario({ loteCodigo, onClearLote, lotes }: { loteCodigo?: string; o
       <div style={{ padding: 28, borderRadius: 20, background: "#fff", textAlign: "center", border: `2px solid ${C.dourado}` }}>
         <p style={{ fontSize: 40, margin: 0 }}>✅</p>
         <h3 style={{ fontFamily: SERIF, color: C.verde, fontSize: 24, margin: "8px 0" }}>Cadastro recebido!</h3>
-        <p style={{ color: C.texto, margin: 0 }}>Em instantes você recebe uma mensagem no WhatsApp. O corretor José Romário (CRECI/MA 4.705) vai falar com você.</p>
+        <p style={{ color: C.texto, margin: 0 }}>Em instantes você recebe uma mensagem no WhatsApp. {corretor.nome}{corretor.creci ? ` (${corretor.creci})` : ""} vai falar com você.</p>
       </div>
     );
   }
@@ -169,6 +171,7 @@ function Formulario({ loteCodigo, onClearLote, lotes }: { loteCodigo?: string; o
 
 export default function BomJardims() {
   useBrandFonts();
+  const corretor = useCorretorDoLink();
   const contatos = useContatos();
   const instagram = useInstagram();
   const { data: emp, isFetched } = trpc.empreendimentos.publicBySlug.useQuery({ slug: "bom-jardims" });
@@ -232,7 +235,7 @@ export default function BomJardims() {
               Ver as chácaras no mapa
             </a>
           </div>
-          <p style={{ color: "#D9D3BF", fontSize: 13, marginTop: 18 }}>Corretor José Romário · CRECI/MA 4.705</p>
+          <p style={{ color: "#D9D3BF", fontSize: 13, marginTop: 18 }}>{rotuloCorretor(corretor)}</p>
         </div>
       </header>
 

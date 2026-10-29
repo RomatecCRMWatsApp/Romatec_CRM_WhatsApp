@@ -2,7 +2,11 @@ import { useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
 import { trpc } from "@/lib/trpc";
 import { Button } from "@/components/ui/button";
-import { Copy, Download, Eye, EyeOff, FileText, Lock, Share2, Trash2, Upload, Video } from "lucide-react";
+import { Copy, Download, Eye, EyeOff, FileText, Loader2, Lock, Share2, Trash2, Upload, Video } from "lucide-react";
+import { useCartaoVendas } from "@/lib/cartaoVendas";
+import { bannerDoCorretor, legendaDoMaterial, linkDoMaterial, pdfDoCorretor, urlVideoDoCorretor, videoDoCorretor } from "@/lib/materialDoCorretor";
+import { useAuth } from "@/_core/hooks/useAuth";
+import { perfilDe } from "@shared/equipe";
 import {
   ABA_ARQUIVO, CATEGORIAS_ARQUIVO, ROTULO_TIPO_MATERIAL, TIPOS_ARQUIVO_ACEITOS, TIPOS_MATERIAL, bloqueadaPorNome, categoriaDoArquivo, tipoPorNome, tituloPorNome,
   type CategoriaArquivo, type TipoMaterial,
@@ -33,44 +37,88 @@ export async function baixarBlob(m: any): Promise<Blob | null> {
   }
 }
 
-function CardMaterial({ m, onMudou }: { m: any; onMudou: () => void }) {
+type Cartao = ReturnType<typeof useCartaoVendas>;
+type Grupo = { empreendimentoSlug?: string | null; propertyId?: number | null; nome?: string };
+
+/**
+ * Arquivo com os dados de quem divulga (lib/materialDoCorretor): banner com faixa, PDF com rodapé e vídeo
+ * com a faixa do Cloudinary. Falhou o carimbo: segue o original (a legenda continua com os dados).
+ */
+async function arquivoDoCorretor(m: any, c: Cartao, link: string, aviso: (t: string) => void): Promise<{ blob: Blob; nome: string; carimbado: boolean; url: string }> {
+  const nome = nomeArquivo(m);
+  try {
+    if (ehImagem(m) && !/\.gif$/i.test(m.url)) return { blob: await bannerDoCorretor(m.url, c, link), nome: nome.replace(/\.[a-z0-9]+$/i, ".jpg"), carimbado: true, url: m.url };
+    if (ehVideo(m)) {
+      aviso("Preparando o vídeo com os seus dados…");
+      const v = await videoDoCorretor(m.url, c, s => aviso(`Gerando o vídeo com os seus dados (${s}s)…`));
+      if (v) return { blob: v.blob, nome: nome.replace(/\.[a-z0-9]+$/i, ".mp4"), carimbado: true, url: v.url };
+    } else if (!ehImagem(m)) {
+      return { blob: await pdfDoCorretor(m.url, c, link), nome, carimbado: true, url: m.url };
+    }
+  } catch (e) { console.warn("[Materiais] carimbo do corretor:", e); }
+  const blob = await baixarBlob(m);
+  if (!blob) throw new Error("Não foi possível baixar o arquivo");
+  return { blob, nome, carimbado: false, url: m.url };
+}
+
+function CardMaterial({ m, onMudou, grupo, cartao, escritorio }: { m: any; onMudou: () => void; grupo: Grupo; cartao: Cartao; escritorio: boolean }) {
   const atualizar = trpc.materiais.update.useMutation({ onSuccess: onMudou, onError: e => toast.error(e.message) });
   const excluir = trpc.materiais.delete.useMutation({ onSuccess: () => { toast.success("Material removido do CRM"); onMudou(); }, onError: e => toast.error(e.message) });
-  const [ocupado, setOcupado] = useState(false);
+  const [ocupado, setOcupado] = useState<string | null>(null);
+  const [pronto, setPronto] = useState<File | null>(null);
+  const enviarPronto = async () => {
+    if (!pronto) return;
+    try { await navigator.share({ files: [pronto], text: legenda, title: m.titulo }); setPronto(null); } catch (e: any) { if (e?.name !== "AbortError") toast.error("Não foi possível compartilhar"); }
+  };
+  const link = linkDoMaterial(grupo, cartao.ref);
+  const legenda = legendaDoMaterial(m.titulo, link, cartao);
 
-  const baixar = async () => {
-    setOcupado(true);
-    const blob = await baixarBlob(m);
-    setOcupado(false);
-    if (!blob) { window.open(m.url, "_blank", "noopener"); return; }
+  const preparar = async () => {
+    setOcupado("Colocando os seus dados no material…");
+    try {
+      const a = await arquivoDoCorretor(m, cartao, link, setOcupado);
+      if (!a.carimbado) toast.warning("Não deu para carimbar este arquivo: ele vai sem a faixa, mas o texto leva os seus dados.");
+      return a;
+    } finally { setOcupado(null); }
+  };
+
+  const baixarArquivo = (blob: Blob, nome: string) => {
     const a = document.createElement("a");
     a.href = URL.createObjectURL(blob);
-    a.download = nomeArquivo(m);
+    a.download = nome;
     a.click();
     setTimeout(() => URL.revokeObjectURL(a.href), 2000);
   };
 
-  // No celular manda o arquivo para o WhatsApp/Instagram; no computador copia o link
+  const baixar = async () => {
+    try { const a = await preparar(); baixarArquivo(a.blob, a.nome); } catch (e: any) { toast.error(e?.message || "Não foi possível baixar"); }
+  };
+
+  // No celular manda o arquivo (com os dados do corretor) e o texto para o WhatsApp; no computador baixa e copia o texto
   const compartilhar = async () => {
-    setOcupado(true);
     try {
-      const blob = await baixarBlob(m);
-      const arquivo = blob ? new File([blob], nomeArquivo(m), { type: blob.type || m.mime || "" }) : null;
-      if (arquivo && (navigator as any).canShare?.({ files: [arquivo] })) {
-        await navigator.share({ files: [arquivo], title: m.titulo });
+      const a = await preparar();
+      try { await navigator.clipboard.writeText(legenda); } catch { /* sem área de transferência */ }
+      const arquivo = new File([a.blob], a.nome, { type: a.blob.type || m.mime || "" });
+      if ((navigator as any).canShare?.({ files: [arquivo] })) {
+        try { await navigator.share({ files: [arquivo], text: legenda, title: m.titulo }); }
+        catch (e: any) {
+          // Demorou para gerar (vídeo): o celular exige um toque novo para abrir o compartilhamento
+          if (e?.name === "NotAllowedError") { setPronto(arquivo); toast.success("Material pronto com os seus dados — toque em \"Enviar agora\"."); return; }
+          throw e;
+        }
         return;
       }
-      await navigator.clipboard.writeText(m.url);
-      toast.success("Link copiado. No celular, este botão envia o arquivo direto para o WhatsApp.");
+      baixarArquivo(a.blob, a.nome);
+      toast.success("Arquivo baixado com os seus dados e o texto copiado — cole no WhatsApp junto com o arquivo.");
     } catch (e: any) {
-      if (e?.name !== "AbortError") toast.error("Não foi possível compartilhar");
-    } finally {
-      setOcupado(false);
+      if (e?.name !== "AbortError") toast.error(e?.message || "Não foi possível compartilhar");
     }
   };
 
   const copiar = async () => {
-    try { await navigator.clipboard.writeText(m.url); toast.success("Link copiado"); } catch { toast.error("Não foi possível copiar"); }
+    const extra = ehVideo(m) ? urlVideoDoCorretor(m.url, cartao) ?? m.url : null;
+    try { await navigator.clipboard.writeText(extra ? `${legenda}\n\n🎬 Vídeo: ${extra}` : legenda); toast.success("Texto com o seu link e os seus dados copiado"); } catch { toast.error("Não foi possível copiar"); }
   };
 
   return (
@@ -94,6 +142,8 @@ function CardMaterial({ m, onMudou }: { m: any; onMudou: () => void }) {
       </a>
       <div className="p-2 space-y-1.5 flex-1 flex flex-col">
         <p className="text-sm font-medium text-foreground leading-tight line-clamp-2" title={m.titulo}>{m.titulo}</p>
+        {pronto && <Button size="sm" className="h-7 bg-emerald-600 px-2 text-xs text-white hover:bg-emerald-700" onClick={enviarPronto}><Share2 className="mr-1 h-3.5 w-3.5" /> Enviar agora</Button>}
+        {ocupado && <p className="flex items-center gap-1 text-[11px] text-emerald-300"><Loader2 className="h-3 w-3 animate-spin" /> {ocupado}</p>}
         <div className="flex items-center gap-2">
           <select
             value={m.tipo}
@@ -105,9 +155,10 @@ function CardMaterial({ m, onMudou }: { m: any; onMudou: () => void }) {
           <span className="text-[10px] text-muted-foreground whitespace-nowrap">{tamanho(m.tamanhoBytes)}</span>
         </div>
         <div className="flex flex-wrap gap-1 mt-auto pt-1">
-          <Button size="sm" variant="outline" className="h-7 px-2 text-xs" onClick={baixar} disabled={ocupado}><Download className="h-3.5 w-3.5 mr-1" />Baixar</Button>
-          {m.liberado && <Button size="sm" variant="outline" className="h-7 px-2 text-xs" onClick={compartilhar} disabled={ocupado}><Share2 className="h-3.5 w-3.5 mr-1" />Enviar</Button>}
-          <Button size="sm" variant="ghost" className="h-7 px-2" title="Copiar link" onClick={copiar}><Copy className="h-3.5 w-3.5" /></Button>
+          <Button size="sm" variant="outline" className="h-7 px-2 text-xs" onClick={baixar} disabled={!!ocupado} title="Baixar com os seus dados (nome, CRECI, WhatsApp e QR do seu link)"><Download className="h-3.5 w-3.5 mr-1" />Baixar</Button>
+          {m.liberado && <Button size="sm" variant="outline" className="h-7 px-2 text-xs" onClick={compartilhar} disabled={!!ocupado} title="Enviar com os seus dados e o texto com o seu link"><Share2 className="h-3.5 w-3.5 mr-1" />Enviar</Button>}
+          <Button size="sm" variant="ghost" className="h-7 px-2" title="Copiar o texto com o seu link e os seus dados" onClick={copiar}><Copy className="h-3.5 w-3.5" /></Button>
+          {escritorio && <Button size="sm" variant="ghost" className="h-7 px-2 text-[10px]" title="Arquivo original, sem os dados do corretor" asChild><a href={m.url} target="_blank" rel="noreferrer">Original</a></Button>}
           <Button
             size="sm" variant="ghost" className="h-7 px-2" title={m.liberado ? "Bloquear (não divulgar)" : "Liberar para divulgar"}
             onClick={() => {
@@ -151,6 +202,9 @@ export default function MateriaisPainel({ propertyId, empreendimentoSlug }: Dest
   useEffect(() => {
     fetch("/api/materiais/limites", { credentials: "include" }).then(r => (r.ok ? r.json() : null)).then(j => j?.success && setLimites(j)).catch(() => {});
   }, []);
+  const cartao = useCartaoVendas();
+  const { user } = useAuth();
+  const escritorio = ["admin", "secretario"].includes(perfilDe(user as any) ?? "");
   const input = useRef<HTMLInputElement>(null);
   const recarregar = () => utils.materiais.list.invalidate();
 
@@ -236,6 +290,10 @@ export default function MateriaisPainel({ propertyId, empreendimentoSlug }: Dest
       {(empreendimentoSlug || destino.startsWith("e:")) && <LinkAgendamento slug={empreendimentoSlug || destino.slice(2)} />}
       <LinkInstagram />
       {enviando && <p className="text-xs text-emerald-300">{enviando}</p>}
+      <p className="rounded-md border border-emerald-500/30 bg-emerald-500/5 px-3 py-2 text-xs text-emerald-200">
+        Tudo o que você baixa ou envia daqui sai com os <b>seus dados</b>: banner com a faixa (nome, {cartao.creci ?? "CRECI"}, WhatsApp e QR do seu link), vídeo com a faixa, PDF com o rodapé e o texto com o seu link — o cliente cai direto com você.
+        {!cartao.creci && " Cadastre o seu CRECI em Meu cadastro para ele aparecer."}
+      </p>
       <p className="text-[11px] text-muted-foreground">
         Imagem até {limites?.imagemMB ?? 10} MB, PDF até {limites?.pdfMB ?? 10} MB, vídeo até {limites?.videoMB ?? 100} MB (enviado em partes; deixe a tela aberta até 100%). Peças com "condições", "preço" ou "tabela" no nome entram bloqueadas. Os arquivos ficam com link público para poder compartilhar; não envie documentos internos.
       </p>
@@ -246,7 +304,7 @@ export default function MateriaisPainel({ propertyId, empreendimentoSlug }: Dest
         <section key={g.chave} className="space-y-2">
           {!fixo && <h2 className="text-base font-semibold text-foreground">{g.nome} <span className="text-xs text-muted-foreground font-normal">· {g.itens.length}</span></h2>}
           <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3">
-            {g.itens.map((m: any) => <CardMaterial key={m.id} m={m} onMudou={recarregar} />)}
+            {g.itens.map((m: any) => <CardMaterial key={m.id} m={m} onMudou={recarregar} grupo={g} cartao={cartao} escritorio={escritorio} />)}
           </div>
         </section>
       ))}

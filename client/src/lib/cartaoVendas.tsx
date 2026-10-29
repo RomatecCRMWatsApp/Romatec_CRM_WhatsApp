@@ -17,6 +17,16 @@ export function comRef(url: string, ref: string | null | undefined): string {
   return `${url}${url.includes("?") ? "&" : "?"}c=${encodeURIComponent(ref)}`;
 }
 
+/** ?c= de quem compartilhou (URL ou o guardado na sessão) para mandar junto com o formulário público */
+export function refDaSessao(): string | undefined {
+  let ref: string | null = null;
+  try {
+    ref = new URLSearchParams(window.location.search).get("c");
+    if (ref) sessionStorage.setItem("romatec-ref", ref); else ref = sessionStorage.getItem("romatec-ref");
+  } catch { /* sem sessionStorage */ }
+  return ref && /^[A-Za-z0-9_-]{9,16}$/.test(ref) ? ref : undefined;
+}
+
 /** Página pública: cartão de quem compartilhou o link (?c=…), guardado na sessão para as próximas páginas */
 export function useCartaoDoLink(): CartaoVendas | null {
   const [cartao, setCartao] = useState<CartaoVendas | null>(null);

@@ -1,7 +1,7 @@
 import { useEffect } from "react";
 import { useCartaoDoLink } from "@/lib/cartaoVendas";
 import { Instagram, MessageCircle } from "lucide-react";
-import { INSTAGRAM_PADRAO, linkInstagram } from "@shared/cartaoVendas";
+import { CARTAO_PADRAO, INSTAGRAM_PADRAO, linkInstagram, type CartaoVendas } from "@shared/cartaoVendas";
 
 /**
  * Identidade e conteúdo comuns das páginas públicas do Bom Jardims (/bom-jardims e /bom-jardims/chacara/:codigo).
@@ -123,3 +123,12 @@ export function ContatosBotoes({ codigo }: { codigo?: string }) {
     </>
   );
 }
+
+/** Corretor de quem compartilhou o link (?c=…); sem link de corretor, o padrão (José Romário) */
+export function useCorretorDoLink(): CartaoVendas & { doLink: boolean } {
+  const c = useCartaoDoLink();
+  return c?.whatsapp ? { ...c, doLink: true } : { ...CARTAO_PADRAO, doLink: false };
+}
+
+/** "Corretor(a) Fulano · CRECI/MA 8.662" */
+export const rotuloCorretor = (c: CartaoVendas) => [`${c.papel} ${c.nome}`, c.creci].filter(Boolean).join(" · ");

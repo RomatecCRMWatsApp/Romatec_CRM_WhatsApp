@@ -90,3 +90,32 @@ export function cartaoDe(u: UsuarioCartao, perfil: string | null | undefined): C
 export function linhaCartao(c: CartaoVendas): string {
   return [`${c.papel} ${c.nome}`, c.creci, c.telefones[0], c.email, c.instagram && `@${c.instagram}`].filter(Boolean).join(' · ');
 }
+
+/**
+ * Assinatura de quem divulga, no fim de todo texto de WhatsApp (links, banners, vídeos, folders):
+ * nome, CRECI, WhatsApp e Instagram do corretor logado — o cliente responde direto para ele.
+ */
+export function assinaturaWhatsApp(c: CartaoVendas): string {
+  return [
+    '—',
+    `👤 *${c.nome}* · ${c.papel}`,
+    c.creci ? `🪪 ${c.creci}` : null,
+    c.telefones[0] ? `📲 WhatsApp: ${c.telefones[0]}` : null,
+    c.instagram ? `📸 @${c.instagram}` : null,
+  ].filter(Boolean).join('\n');
+}
+
+/** Texto + assinatura (sem repetir a assinatura se o texto já tiver) */
+export function comAssinatura(texto: string, c: CartaoVendas): string {
+  const a = assinaturaWhatsApp(c);
+  const t = texto.trim();
+  return t.endsWith(a) ? t : `${t}\n\n${a}`;
+}
+
+/** Linhas do rodapé carimbado em banner, vídeo e PDF (sem emoji: fontes padrão do PDF não têm) */
+export function linhasRodape(c: CartaoVendas): { nome: string; detalhe: string } {
+  return {
+    nome: `${c.nome}${c.creci ? ` · ${c.creci}` : ''}`,
+    detalhe: [c.telefones[0] ? `WhatsApp ${c.telefones[0]}` : null, c.instagram ? `@${c.instagram}` : null].filter(Boolean).join('  ·  '),
+  };
+}

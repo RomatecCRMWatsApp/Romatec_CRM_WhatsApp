@@ -3,6 +3,26 @@
 Cada versão nova vai no TOPO. Depois rode `npm run release` (valida e atualiza o package.json);
 ao subir, o servidor grava a versão no banco e todos recebem o aviso "Novidades da versão".
 
+## 1.63.0 — 2026-10-29
+tipo: minor
+obrigatoria: nao
+titulo: Tudo que o corretor divulga sai com os dados dele
+
+### Novo
+- Materiais: Baixar e Enviar agora geram a peça com os dados de quem está logado — banner com faixa (nome, CRECI, WhatsApp, Instagram e QR do link dele), vídeo com a faixa do corretor e PDF com rodapé em todas as páginas
+- O texto que acompanha o material (e o botão de copiar) leva o link com o código do corretor e a assinatura dele
+- Links de divulgação: o texto do WhatsApp termina com nome, CRECI, WhatsApp e Instagram do corretor
+- /obras-bom-jardim: link de corretor mostra o cartão "Seu corretor" (foto, nome, CRECI e telefone)
+
+### Correções
+- /bom-jardims: o cadastro pelo link de um corretor agora vai para ele (antes caía no rodízio)
+- /bom-jardims e página da chácara: o topo e a confirmação mostram o corretor do link, não mais o José fixo
+
+### Avisos
+- O CRECI só aparece se estiver em Meu cadastro — corretor sem CRECI cadastrado sai só com nome e telefone
+- Administrador e secretária têm o botão "Original" para baixar a peça sem os dados do corretor
+- Vídeo: se o servidor de mídia não gerar a faixa, o vídeo vai sem ela, mas o texto leva os dados do corretor
+
 ## 1.62.0 — 2026-10-29
 tipo: minor
 obrigatoria: nao

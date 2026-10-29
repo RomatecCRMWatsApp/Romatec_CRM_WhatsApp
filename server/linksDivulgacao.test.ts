@@ -36,3 +36,27 @@ describe('links de divulgação', () => {
     expect(podeChamar('empreendedor', 'linksDivulgacao.listar')).toBe(false);
   });
 });
+
+import { CARTAO_PADRAO, assinaturaWhatsApp, comAssinatura, linhasRodape } from '../shared/cartaoVendas';
+
+describe('dados do corretor em tudo que ele divulga', () => {
+  const alan = { ...CARTAO_PADRAO, nome: 'Alan Martins', creci: 'CRECI/MA 8.662', telefones: ['(99) 9 8888-7777'], whatsapp: '5599988887777', instagram: 'alanmartins', papel: 'Corretor(a)' };
+
+  it('texto do WhatsApp termina com nome, CRECI, WhatsApp e Instagram do corretor', () => {
+    const t = comAssinatura('Veja: https://x', alan);
+    expect(t).toContain('*Alan Martins*');
+    expect(t).toContain('CRECI/MA 8.662');
+    expect(t).toContain('(99) 9 8888-7777');
+    expect(t).toContain('@alanmartins');
+    expect(comAssinatura(t, alan)).toBe(t);
+  });
+
+  it('sem CRECI cadastrado a linha some (não sai "null")', () => {
+    expect(assinaturaWhatsApp({ ...alan, creci: null })).not.toMatch(/null|CRECI/);
+    expect(linhasRodape({ ...alan, creci: null }).nome).toBe('Alan Martins');
+  });
+
+  it('rodapé do banner/vídeo/PDF', () => {
+    expect(linhasRodape(alan)).toEqual({ nome: 'Alan Martins · CRECI/MA 8.662', detalhe: 'WhatsApp (99) 9 8888-7777  ·  @alanmartins' });
+  });
+});
