@@ -6,6 +6,9 @@ import { origemDaVisita } from "@/lib/origemVisita";
 import { AGENDAR_BOM_JARDIMS, FAQ_BOM_JARDIMS, IMAGENS_BOM_JARDIMS, SOBRE_BOM_JARDIMS, TITULO_BOM_JARDIMS } from "@shared/bomJardimsSeo";
 import LoteMap, { formatArea, STATUS_LABEL, type LoteInfo } from "@/components/bom-jardims/LoteMap";
 import BotaoTour360 from "@/components/bom-jardims/BotaoTour360";
+import { lazy, Suspense } from "react";
+import { webglDisponivel } from "@/components/bom-jardims/Mapa3D";
+const Mapa3D = lazy(() => import("@/components/bom-jardims/Mapa3D"));
 import { C, SERIF, SANS, GALERIA, VIDEO, waLink, useBrandFonts, ContatosBotoes, GaleriaProjeto, useContatos, useInstagram, BotaoInstagram, useCorretorDoLink, rotuloCorretor } from "@/components/bom-jardims/marca";
 import { codigoChacaraValido, rotaAteEntrada } from "@shared/chacaraLink";
 import { EVENTOS } from "@shared/rastreamento";
@@ -170,6 +173,24 @@ function Formulario({ loteCodigo, onClearLote, lotes }: { loteCodigo?: string; o
   );
 }
 
+/** Mapa 3D (girar, inclinar) ou planta 2D; sem WebGL, só a planta */
+function AlternarMapa({ render }: { render: (tres: boolean) => React.ReactNode }) {
+  const [tres, setTres] = useState(() => typeof window !== "undefined" && webglDisponivel());
+  const pode3d = typeof window !== "undefined" && webglDisponivel();
+  const aba = (ativo: boolean): React.CSSProperties => ({ padding: "8px 16px", borderRadius: 999, border: `1px solid ${C.verde}`, background: ativo ? C.verde : "#fff", color: ativo ? "#fff" : C.verde, fontWeight: 700, cursor: "pointer" });
+  return (
+    <div>
+      {pode3d && (
+        <div style={{ display: "flex", gap: 8, marginBottom: 12 }}>
+          <button type="button" style={aba(tres)} onClick={() => setTres(true)}>Mapa 3D</button>
+          <button type="button" style={aba(!tres)} onClick={() => setTres(false)}>Planta</button>
+        </div>
+      )}
+      {render(tres && pode3d)}
+    </div>
+  );
+}
+
 export default function BomJardims() {
   useBrandFonts();
   const corretor = useCorretorDoLink();
@@ -276,7 +297,9 @@ export default function BomJardims() {
           Toque numa chácara para ver a área e a situação.
           {disponiveis !== undefined && <> Hoje são <b style={{ color: C.verde }}>{disponiveis} chácaras disponíveis</b>.</>}
         </p>
-        <LoteMap lotes={lotes} selected={selected} onSelect={c => { setSelected(c); if (c) registrarEvento(EVENTOS.mapa, { empreendimento: "bom-jardims", chacara: c }); }} onMapLoaded={setFallbackLotes} />
+        <AlternarMapa render={tres => tres
+          ? <Suspense fallback={<p>Carregando o mapa 3D…</p>}><Mapa3D lotes={lotes} selected={selected} onSelect={c => { setSelected(c); if (c) registrarEvento(EVENTOS.mapa, { empreendimento: "bom-jardims", chacara: c }); }} /></Suspense>
+          : <LoteMap lotes={lotes} selected={selected} onSelect={c => { setSelected(c); if (c) registrarEvento(EVENTOS.mapa, { empreendimento: "bom-jardims", chacara: c }); }} onMapLoaded={setFallbackLotes} />} />
         {semSituacao && (
           <p style={{ fontSize: 13, color: "#8A5A00", marginTop: 8 }}>Não foi possível confirmar a situação das chácaras agora. Fale com o corretor para confirmar a disponibilidade.</p>
         )}

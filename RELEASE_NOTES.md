@@ -3,6 +3,18 @@
 Cada versão nova vai no TOPO. Depois rode `npm run release` (valida e atualiza o package.json);
 ao subir, o servidor grava a versão no banco e todos recebem o aviso "Novidades da versão".
 
+## 1.84.0 — 2026-10-29
+tipo: minor
+obrigatoria: nao
+titulo: Mapa 3D do Bom Jardims
+
+### Novo
+- Página do Bom Jardims: "Mapa 3D" com o relevo real do terreno, as chácaras em blocos coloridos pela situação ao vivo, ruas, córrego, APP, trilha e área de vivência
+- Dois dedos giram e inclinam (no computador, botão direito ou Ctrl + arrastar); um toque escolhe a chácara, que sobe em dourado
+- "Buscar chácaras": mostrar só as disponíveis e filtrar pela área mínima — as outras ficam apagadas
+- "Girar" (vitrine para o stand) e "Vista de cima"; a planta 2D continua no botão "Planta"
+- Preparado para receber o ortomosaico do drone como imagem do chão (VITE_MAPA_ORTOFOTO)
+
 ## 1.83.0 — 2026-10-29
 tipo: minor
 obrigatoria: nao
