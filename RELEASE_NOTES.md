@@ -3,6 +3,20 @@
 Cada versão nova vai no TOPO. Depois rode `npm run release` (valida e atualiza o package.json);
 ao subir, o servidor grava a versão no banco e todos recebem o aviso "Novidades da versão".
 
+## 1.62.0 — 2026-10-29
+tipo: minor
+obrigatoria: nao
+titulo: Links de divulgação com o texto pronto do WhatsApp
+
+### Novo
+- Campanhas de captação ganhou a aba "Links de divulgação" (também no menu Leads): cada link com o texto do WhatsApp pronto, botões Enviar no WhatsApp, Copiar texto, Copiar link, Compartilhar, QR para baixar e Abrir
+- Os links já saem com o código de quem está logado: o cliente que se cadastra por eles cai com aquele corretor, e a campanha (UTM) fica marcada no lead
+- Links prontos: Obras iniciadas (campanha do Instagram), página do Bom Jardims, agendamento de visita e localização no Google Earth (KML)
+- Administrador e secretária cadastram, editam, pausam e excluem links e textos novos, sem precisar de atualização do sistema
+
+### Melhorias
+- Página /obras-bom-jardim: o link compartilhado por um corretor leva o lead e o "Quero saber o valor" para ele; sem código no link, continua o rodízio
+
 ## 1.61.0 — 2026-10-29
 tipo: minor
 obrigatoria: nao

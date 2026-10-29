@@ -46,6 +46,11 @@ const TABELAS: [string, string][] = [
   ['campanhaCliques', `CREATE TABLE IF NOT EXISTS campanhaCliques (
     id INT AUTO_INCREMENT PRIMARY KEY, campanha VARCHAR(60) NOT NULL, acao VARCHAR(12) NOT NULL, corretorId INT NULL,
     utmSource VARCHAR(100) NULL, criadoEm TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP, KEY ix_campanha_cliques (campanha, criadoEm))`],
+  // Links de divulgação cadastrados pelo escritório (Campanhas de captação › Links de divulgação)
+  ['linksDivulgacao', `CREATE TABLE IF NOT EXISTS linksDivulgacao (
+    id INT AUTO_INCREMENT PRIMARY KEY, titulo VARCHAR(120) NOT NULL, descricao VARCHAR(300) NULL, url VARCHAR(500) NOT NULL,
+    utmSource VARCHAR(60) NULL, utmCampaign VARCHAR(60) NULL, textoWhatsapp TEXT NOT NULL, empreendimento VARCHAR(80) NULL,
+    destaque BOOLEAN NOT NULL DEFAULT FALSE, ativo BOOLEAN NOT NULL DEFAULT TRUE, criadoPor INT NULL, criadoEm TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP)`],
 ];
 
 export async function addAutoResposta(): Promise<void> {

@@ -28,10 +28,20 @@ function maskPhone(v: string) {
 
 const utmAtual = () => utmObras(readUtm());
 
+/** ?c= de quem compartilhou o link (guardado na sessão, como nas outras páginas públicas): o lead vai para ele */
+function refDoLink(): string | undefined {
+  let ref: string | null = null;
+  try {
+    ref = new URLSearchParams(window.location.search).get("c");
+    if (ref) sessionStorage.setItem("romatec-ref", ref); else ref = sessionStorage.getItem("romatec-ref");
+  } catch { /* sem sessionStorage */ }
+  return ref && /^[A-Za-z0-9_-]{9,16}$/.test(ref) ? ref : undefined;
+}
+
 /** Pede ao servidor o corretor da vez (rodízio) para a ação e devolve o link */
 async function linkDoCorretor(acao: "valor" | "visita"): Promise<string> {
   try {
-    const r = await fetch("/api/public/obras-bom-jardim/corretor", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ acao, utm: utmAtual() }) });
+    const r = await fetch("/api/public/obras-bom-jardim/corretor", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ acao, utm: utmAtual(), ref: refDoLink() }) });
     const j = await r.json();
     if (j?.ok && j.url) return j.url;
   } catch { /* sem rede: cai no padrão */ }
@@ -89,7 +99,7 @@ function Cadastro() {
     try {
       const r = await fetch("/api/public/obras-bom-jardim/lead", {
         method: "POST", headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ ...f, consent, utm: utmAtual(), origemVisita: origemDaVisita(), website }),
+        body: JSON.stringify({ ...f, consent, utm: utmAtual(), origemVisita: origemDaVisita(), ref: refDoLink(), website }),
       });
       const j = await r.json().catch(() => ({}));
       if (!r.ok || !j.ok) throw new Error(j.error || "Não foi possível enviar.");

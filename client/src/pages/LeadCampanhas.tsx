@@ -1,5 +1,5 @@
 import { useMemo, useState } from "react";
-import { useLocation } from "wouter";
+import { useLocation, useSearch } from "wouter";
 import { toast } from "sonner";
 import { trpc } from "@/lib/trpc";
 import { Button } from "@/components/ui/button";
@@ -9,6 +9,7 @@ import { ArrowLeft, Copy, ExternalLink, Globe2, Link2, Megaphone, Plus, Trash2 }
 import { SLUG_BOM_JARDIMS, linkEmpreendimento, linkKml } from "@shared/chacaraLink";
 import { comRef, useCartaoVendas } from "@/lib/cartaoVendas";
 import PageHeader from "@/components/PageHeader";
+import LinksDivulgacao from "@/components/campanhas/LinksDivulgacao";
 
 const CANAL_LABEL: Record<string, string> = {
   meta_ctwa: "Anúncio Click-to-WhatsApp", meta_leadads: "Meta Lead Ads", google_ads: "Google Ads",
@@ -101,6 +102,10 @@ export default function LeadCampanhas() {
     onError: (e) => toast.error(e.message),
   });
 
+  // Aba: campanhas (códigos e resultados) ou links de divulgação (?aba=links abre direto)
+  const aba: "campanhas" | "links" = new URLSearchParams(useSearch()).get("aba") === "links" ? "links" : "campanhas";
+  const setAba = (a: "campanhas" | "links") => navigate(a === "links" ? "/leads/campanhas?aba=links" : "/leads/campanhas", { replace: true });
+
   const imovelPorId = useMemo(() => new Map((imoveis as any[]).map(i => [i.id, i])), [imoveis]);
 
   const salvar = (e: React.FormEvent) => {
@@ -121,7 +126,16 @@ export default function LeadCampanhas() {
     <div>
       <PageHeader icone={Megaphone} titulo="Campanhas de captação" subtitulo="Código da campanha + código do imóvel na mensagem do WhatsApp = origem de cada lead" />
 
-      <div className="px-4 md:px-6 pb-6 max-w-[1500px] mx-auto space-y-4">
+      <div className="px-4 md:px-6 max-w-[1500px] mx-auto mb-3 flex flex-wrap gap-1 border-b border-border">
+        {([["campanhas", "Campanhas"], ["links", "Links de divulgação"]] as const).map(([k, r]) => (
+          <button key={k} type="button" onClick={() => setAba(k)}
+            className={`-mb-px border-b-2 px-3 py-2 text-sm ${aba === k ? "border-primary font-semibold text-foreground" : "border-transparent text-muted-foreground hover:text-foreground"}`}>{r}</button>
+        ))}
+      </div>
+
+      {aba === "links" && <div className="px-4 md:px-6 pb-6 max-w-[1500px] mx-auto"><LinksDivulgacao /></div>}
+
+      <div className={`px-4 md:px-6 pb-6 max-w-[1500px] mx-auto space-y-4 ${aba === "links" ? "hidden" : ""}`}>
         <div className="flex justify-end">
           <Button onClick={() => setAbrirForm(v => !v)} className="bg-emerald-600 hover:bg-emerald-700 text-white">
             <Plus className="mr-1.5 h-4 w-4" /> Nova campanha

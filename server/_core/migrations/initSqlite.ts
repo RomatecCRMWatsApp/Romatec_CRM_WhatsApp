@@ -602,6 +602,9 @@ export function initSqliteTables(sqlite: any): void {
     id INTEGER PRIMARY KEY AUTOINCREMENT, reuniaoId INTEGER NOT NULL, nome TEXT NOT NULL, telefone TEXT NOT NULL, token TEXT NOT NULL UNIQUE,
     origem TEXT NOT NULL DEFAULT 'lista', status TEXT NOT NULL DEFAULT 'pendente', respondidoEm INTEGER, conviteEnviadoEm INTEGER,
     createdAt ${agoraS}, UNIQUE (reuniaoId, telefone))`);
+  run(`CREATE TABLE IF NOT EXISTS linksDivulgacao (
+    id INTEGER PRIMARY KEY AUTOINCREMENT, titulo TEXT NOT NULL, descricao TEXT, url TEXT NOT NULL, utmSource TEXT, utmCampaign TEXT,
+    textoWhatsapp TEXT NOT NULL, empreendimento TEXT, destaque INTEGER NOT NULL DEFAULT 0, ativo INTEGER NOT NULL DEFAULT 1, criadoPor INTEGER, criadoEm ${agoraS})`);
   run(`CREATE TABLE IF NOT EXISTS campanhaCliques (
     id INTEGER PRIMARY KEY AUTOINCREMENT, campanha TEXT NOT NULL, acao TEXT NOT NULL, corretorId INTEGER, utmSource TEXT, criadoEm ${agoraS})`);
   run(`CREATE TABLE IF NOT EXISTS rankingCampanhas (

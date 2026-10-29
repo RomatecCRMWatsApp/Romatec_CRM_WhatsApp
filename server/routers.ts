@@ -22,6 +22,7 @@ import { reservasRouter } from "./routers/reservas.router";
 import { convitesRouter } from "./routers/convites.router";
 import { exclusaoRouter } from "./routers/exclusao.router";
 import { rankingRouter } from "./routers/ranking.router";
+import { linksDivulgacaoRouter } from "./routers/linksDivulgacao.router";
 import { autoRespostaRouter } from "./routers/autoResposta.router";
 import { verComoRouter } from "./routers/verComo.router";
 import { contatosNomesRouter } from "./routers/contatosNomes.router";
@@ -94,6 +95,7 @@ export const appRouter = router({
   convites: convitesRouter,
   exclusao: exclusaoRouter,
   ranking: rankingRouter,
+  linksDivulgacao: linksDivulgacaoRouter,
   autoResposta: autoRespostaRouter,
   verComo: verComoRouter,
   contatosNomes: contatosNomesRouter,

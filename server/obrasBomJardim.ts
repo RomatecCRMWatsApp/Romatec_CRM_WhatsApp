@@ -9,7 +9,7 @@ import { z } from 'zod';
 import { getDb } from './db';
 import { acessosCorretor, campanhaCliques, empreendimentos, users } from '../drizzle/schema';
 import { escolherResponsavel } from './leads/sla';
-import { refDoUsuario } from './cartaoVendas';
+import { refDoUsuario, usuarioDaRef } from './cartaoVendas';
 import { ingestLead, origemFromUtm, origemVisitaSchema } from './lead-intake';
 import { BOM_JARDIMS_CONSENT_TEXT, BOM_JARDIMS_SLUG, bomJardimsWelcome } from './bom-jardims';
 import { CAMPANHA_OBRAS, MSG_VALOR_OBRAS, utmObras } from '../shared/obrasBomJardim';
@@ -51,6 +51,20 @@ export async function corretorDoRodizio(slug = BOM_JARDIMS_SLUG): Promise<Corret
   return { id: escolhido.id, nome: String(escolhido.name ?? 'Corretor'), creci: escolhido.creci ?? null, whatsapp: fone(escolhido.telefone)!, ref: refDoUsuario(escolhido.id) };
 }
 
+/** Corretor do link (?c=): quem compartilhou recebe o lead e o clique; inválido, inativo ou sem WhatsApp → rodízio */
+export async function corretorDoLink(ref: string | null | undefined): Promise<CorretorRodizio | null> {
+  const id = ref ? usuarioDaRef(ref) : null;
+  if (!id) return null;
+  const d: any = await getDb();
+  if (!d) return null;
+  const [u]: any[] = await d.select({ id: users.id, name: users.name, telefone: users.telefone, creci: users.creci, perfil: users.perfil, ativo: users.ativo }).from(users).where(eq(users.id, id)).limit(1);
+  if (!u || u.ativo === false || u.ativo === 0 || u.perfil === 'empreendedor' || !fone(u.telefone)) return null;
+  return { id: u.id, nome: String(u.name ?? 'Corretor'), creci: u.creci ?? null, whatsapp: fone(u.telefone)!, ref: refDoUsuario(u.id) };
+}
+
+/** Quem atende: o dono do link compartilhado ou o próximo do rodízio */
+const corretorPara = async (ref?: string | null) => (await corretorDoLink(ref)) ?? (await corretorDoRodizio());
+
 async function registrarClique(acao: string, corretorId: number | null, utm: { source?: string; campaign?: string }) {
   try {
     const d: any = await getDb();
@@ -67,10 +81,11 @@ export const obrasLeadSchema = z.object({
   consent: z.literal(true, { message: 'É preciso aceitar o contato' }),
   utm: utmSchema,
   origemVisita: origemVisitaSchema,
+  ref: z.string().max(20).optional(),
   website: z.string().max(500).optional(), // honeypot
 });
 
-const cliqueSchema = z.object({ acao: z.enum(['valor', 'visita']), utm: utmSchema });
+const cliqueSchema = z.object({ acao: z.enum(['valor', 'visita']), utm: utmSchema, ref: z.string().max(20).optional() });
 
 const ipDe = (req: any) => {
   const fwd = String(req.headers['x-forwarded-for'] ?? '').split(',').map((s: string) => s.trim()).filter(Boolean);
@@ -88,7 +103,7 @@ export function registrarRotasObras(app: Express, allow: (key: string) => boolea
       const p = parsed.data;
       if (p.website) return res.json({ ok: true });
       const utm = utmObras(p.utm);
-      const corretor = await corretorDoRodizio();
+      const corretor = await corretorPara(p.ref);
       const r = await ingestLead({
         nome: p.nome, phone: p.phone, origem: origemFromUtm(utm), campanha: utm.campaign, utm, origemVisita: p.origemVisita,
         empreendimentoSlug: BOM_JARDIMS_SLUG, funil: 'comprador', responsavelId: corretor?.id ?? null,
@@ -114,7 +129,7 @@ export function registrarRotasObras(app: Express, allow: (key: string) => boolea
       const ip = ipDe(req);
       const utm = utmObras(parsed.data.utm);
       // Excesso de cliques do mesmo IP não gira o rodízio: vai para o WhatsApp padrão
-      const corretor = allow(`obras:${ip}`) ? await corretorDoRodizio() : null;
+      const corretor = (await corretorDoLink(parsed.data.ref)) ?? (allow(`obras:${ip}`) ? await corretorDoRodizio() : null);
       await registrarClique(parsed.data.acao, corretor?.id ?? null, utm);
       const qs = new URLSearchParams({ utm_source: utm.source, utm_campaign: utm.campaign, ...(utm.medium ? { utm_medium: utm.medium } : {}) });
       if (parsed.data.acao === 'visita') {

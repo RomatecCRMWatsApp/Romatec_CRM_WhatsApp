@@ -1928,3 +1928,19 @@ export const campanhaCliques = mysqlTable("campanhaCliques", {
 }, (t) => ({
   ixCampanha: index("ix_campanha_cliques").on(t.campanha, t.criadoEm),
 }));
+
+/** Links de divulgação cadastrados pelo escritório (shared/linksDivulgacao.ts; os fixos ficam no código) */
+export const linksDivulgacao = mysqlTable("linksDivulgacao", {
+  id: int("id").autoincrement().primaryKey(),
+  titulo: varchar("titulo", { length: 120 }).notNull(),
+  descricao: varchar("descricao", { length: 300 }),
+  url: varchar("url", { length: 500 }).notNull(),
+  utmSource: varchar("utmSource", { length: 60 }),
+  utmCampaign: varchar("utmCampaign", { length: 60 }),
+  textoWhatsapp: text("textoWhatsapp").notNull(),
+  empreendimento: varchar("empreendimento", { length: 80 }),
+  destaque: boolean("destaque").default(false).notNull(),
+  ativo: boolean("ativo").default(true).notNull(),
+  criadoPor: int("criadoPor"),
+  criadoEm: timestamp("criadoEm").defaultNow().notNull(),
+});
