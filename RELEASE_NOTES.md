@@ -3,6 +3,17 @@
 Cada versão nova vai no TOPO. Depois rode `npm run release` (valida e atualiza o package.json);
 ao subir, o servidor grava a versão no banco e todos recebem o aviso "Novidades da versão".
 
+## 1.77.0 — 2026-10-29
+tipo: minor
+obrigatoria: nao
+titulo: Robô marca a visita na própria conversa
+
+### Novo
+- Quando o cliente pede visita no WhatsApp, o robô do empreendimento já responde com 3 horários livres (a partir de amanhã, de segunda a sábado, sem bater com outras visitas)
+- O cliente responde o número da opção ("2") e a visita entra na agenda como agendada; o lead vai para "Visita agendada", o corretor é avisado e os lembretes de sempre seguem
+- Se o cliente escreve outro dia e hora ("sábado às 9h"), a IA entende e registra o pedido para o corretor confirmar
+- Domingo, fora do horário ou data confusa: o robô pede para escolher de novo, sem marcar nada
+
 ## 1.76.0 — 2026-10-29
 tipo: minor
 obrigatoria: nao

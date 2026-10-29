@@ -2043,3 +2043,11 @@ export const followUpSequencias = mysqlTable("followUpSequencias", {
   atualizadoPor: int("atualizadoPor"),
   updatedAt: timestamp("updatedAt").defaultNow().notNull(),
 });
+
+/** Horários de visita oferecidos pelo robô na conversa (server/autoresposta/visitaConversa.ts) — vale 48 h */
+export const visitaOfertas = mysqlTable("visitaOfertas", {
+  leadId: int("leadId").primaryKey(),
+  opcoesJson: text("opcoesJson").notNull(),
+  expiraEm: datetime("expiraEm").notNull(),
+  criadoEm: timestamp("criadoEm").defaultNow().notNull(),
+});

@@ -73,6 +73,9 @@ const TABELAS: [string, string][] = [
   ['followUpSequencias', `CREATE TABLE IF NOT EXISTS followUpSequencias (
     etapa VARCHAR(30) PRIMARY KEY, ativo BOOLEAN NOT NULL DEFAULT TRUE, passosJson TEXT NOT NULL, atualizadoPor INT NULL,
     updatedAt TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP)`],
+  // Horários de visita oferecidos pelo robô (server/autoresposta/visitaConversa.ts)
+  ['visitaOfertas', `CREATE TABLE IF NOT EXISTS visitaOfertas (
+    leadId INT PRIMARY KEY, opcoesJson TEXT NOT NULL, expiraEm DATETIME NOT NULL, criadoEm TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP)`],
   // Links de divulgação cadastrados pelo escritório (Campanhas de captação › Links de divulgação)
   ['linksDivulgacao', `CREATE TABLE IF NOT EXISTS linksDivulgacao (
     id INT AUTO_INCREMENT PRIMARY KEY, titulo VARCHAR(120) NOT NULL, descricao VARCHAR(300) NULL, url VARCHAR(500) NOT NULL,

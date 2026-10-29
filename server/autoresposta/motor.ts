@@ -243,6 +243,15 @@ export async function processarMensagem(p: { phone: string; texto: string; nome?
     return { tratado: true, motivo: 'humano' };
   }
 
+  // Resposta a horários de visita oferecidos pelo robô: marca a visita na agenda (server/autoresposta/visitaConversa.ts)
+  const vis = await import('./visitaConversa').then(m => m.tratarRespostaDeVisita(lead, ctx.emp, p.texto, agora)).catch((e: any) => { console.warn('[Auto-resposta] visita:', e?.message); return null; });
+  if (vis) {
+    const enviadosVis = await enviar(phone, lead.id, [{ tipo: 'texto', texto: vis.texto }]);
+    await evento(lead.id, vis.visitaId ? 'visita_marcada_robo' : 'visita_nao_entendida', { status: vis.status, visitaId: vis.visitaId, texto: p.texto.slice(0, 300) });
+    if (vis.visitaId) await pararRegua(lead.id);
+    return { tratado: true, intencao: 'visita', enviados: enviadosVis };
+  }
+
   let { intencao, chacara } = classificar(p.texto, !!p.primeira, new Set(ctx.lotes.map(l => l.codigo))) as { intencao: Intencao | 'indefinida' | 'outra'; chacara?: string };
   if (intencao === 'indefinida') {
     try {
@@ -264,6 +273,11 @@ export async function processarMensagem(p: { phone: string; texto: string; nome?
   const corretor = await corretorDoLead(lead.responsavelId ?? null);
   const link = await linkDeOferta(lead.id, ctx.emp).catch(() => null);
   const envios = montarResposta(ctx, { intencao: intencao as Intencao, chacara: chacara ?? lead.loteCodigo ?? null, nome: lead.nome || p.nome, corretor, extra: link ? { link_oferta: link } : undefined });
+  // Pediu visita: o robô já oferece 3 horários livres para o cliente escolher
+  if (intencao === 'visita' && envios[0]?.tipo === 'texto') {
+    const intro = envios[0].texto.split('\n\n')[0];
+    envios[0] = { tipo: 'texto', texto: await import('./visitaConversa').then(m => m.ofertarHorarios(lead.id, intro, agora)).catch(() => envios[0].tipo === 'texto' ? (envios[0] as any).texto : intro) };
+  }
   if (foraDoHorario && envios[0]?.tipo === 'texto') envios[0] = { tipo: 'texto', texto: `${envios[0].texto}\n\n🕗 Nosso atendimento é das 8 h às 20 h — o ${corretor.nome.split(' ')[0]} te responde logo cedo.` };
 
   if (intencao === 'optout') {
@@ -281,7 +295,7 @@ export async function processarMensagem(p: { phone: string; texto: string; nome?
   if (intencao === 'visita') {
     await evento(lead.id, 'pediu_visita', {});
     const { notificarAtendimento } = await import('../notificacoes');
-    await notificarAtendimento({ leadId: lead.id, responsavelId: lead.responsavelId ?? null, cliente: lead.nome || 'Cliente', empreendimentoId: ctx.emp.id, empreendimentoSlug: ctx.emp.slug, empreendimentoNome: ctx.emp.nome, motivo: 'quer agendar uma visita' }).catch(() => {});
+    await notificarAtendimento({ leadId: lead.id, responsavelId: lead.responsavelId ?? null, cliente: lead.nome || 'Cliente', empreendimentoId: ctx.emp.id, empreendimentoSlug: ctx.emp.slug, empreendimentoNome: ctx.emp.nome, motivo: 'quer agendar uma visita (o robô ofereceu horários)' }).catch(() => {});
   }
   return { tratado: true, intencao, enviados };
 }
