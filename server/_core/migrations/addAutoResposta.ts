@@ -89,6 +89,12 @@ const TABELAS: [string, string][] = [
   ['igMensagens', `CREATE TABLE IF NOT EXISTS igMensagens (
     id INT AUTO_INCREMENT PRIMARY KEY, conversaId INT NOT NULL, direcao VARCHAR(3) NOT NULL, texto TEXT NOT NULL, mid VARCHAR(160) NULL, autorId INT NULL,
     criadoEm TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3), KEY ix_igmsg_conversa (conversaId, criadoEm), UNIQUE KEY ux_igmsg_mid (mid))`],
+  // Imobiliárias parceiras (server/parceiros.ts)
+  ['imobiliariasParceiras', `CREATE TABLE IF NOT EXISTS imobiliariasParceiras (
+    id INT AUTO_INCREMENT PRIMARY KEY, nome VARCHAR(160) NOT NULL, cnpj VARCHAR(18) NULL, creci VARCHAR(30) NULL, responsavel VARCHAR(160) NULL,
+    telefone VARCHAR(20) NULL, email VARCHAR(160) NULL, codigo VARCHAR(8) NOT NULL, token CHAR(32) NOT NULL, comissaoPct DECIMAL(6,4) NOT NULL DEFAULT 0.0200,
+    corretorInternoId INT NULL, ativo BOOLEAN NOT NULL DEFAULT TRUE, criadoPor INT NULL, criadoEm TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    UNIQUE KEY ux_parceira_codigo (codigo), UNIQUE KEY ux_parceira_token (token))`],
   // Links de divulgação cadastrados pelo escritório (Campanhas de captação › Links de divulgação)
   ['linksDivulgacao', `CREATE TABLE IF NOT EXISTS linksDivulgacao (
     id INT AUTO_INCREMENT PRIMARY KEY, titulo VARCHAR(120) NOT NULL, descricao VARCHAR(300) NULL, url VARCHAR(500) NOT NULL,

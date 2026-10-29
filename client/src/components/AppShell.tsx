@@ -7,7 +7,7 @@ import AvisoRotinas from "./AvisoRotinas";
 import { MobileTabBar, RomatecAppIcon, RomatecLockup, TAB_ICONS, type TabItem } from "@/brand";
 import {
   BarChart3, Building2, Flame, Images, KanbanSquare, LayoutDashboard, LineChart, LogOut, Megaphone, Menu, Send,
-  Settings, UserCog, Users, X, Eye, ClipboardList, CalendarDays, Map as MapIcon, Smartphone, Wallet, IdCard, FolderOpen, Bell, FileSignature, Mic, CalendarCheck, UserPlus, BookCopy, BadgeDollarSign, Hourglass, Bot, Trophy, Link2, Zap, MessagesSquare, ListOrdered, Plug, Inbox,
+  Settings, UserCog, Users, X, Eye, ClipboardList, CalendarDays, Map as MapIcon, Smartphone, Wallet, IdCard, FolderOpen, Bell, FileSignature, Mic, CalendarCheck, UserPlus, BookCopy, BadgeDollarSign, Hourglass, Bot, Trophy, Link2, Zap, MessagesSquare, ListOrdered, Plug, Inbox, Building,
   ChevronRight, ChevronsLeft, ChevronsRight,
 } from "lucide-react";
 import { abrirNovidades, SinoNovidades, useNovidadesNaoLidas } from "./sistema/Novidades";
@@ -66,6 +66,7 @@ const MENU: Grupo[] = [
       { rotulo: "Links de contratos e documentos", rota: "/contratos?aba=links", icone: FolderOpen, modulo: "contratos" },
       // Administrador e secretária (shared/equipe.ts → podeAbrir)
       { rotulo: "Portal do comprador", rota: "/portal-comprador", icone: MessagesSquare },
+      { rotulo: "Imobiliárias parceiras", rota: "/imobiliarias-parceiras", icone: Building },
       { rotulo: "Talonários", rota: "/talonarios", icone: BookCopy },
       { rotulo: "Financeiro", rota: "/financeiro", icone: Wallet, modulo: "financeiro", cor: COR.financeiro },
       { rotulo: "Imóveis", rota: "/properties", icone: Building2, modulo: "imoveis" },

@@ -2100,3 +2100,26 @@ export const igMensagens = mysqlTable("igMensagens", {
   ixConversa: index("ix_igmsg_conversa").on(t.conversaId, t.criadoEm),
   uxMid: uniqueIndex("ux_igmsg_mid").on(t.mid),
 }));
+
+/** Imobiliárias parceiras (server/parceiros.ts): portal próprio /parceiro/:token; leads marcados com utm_campaign PARC-<codigo> */
+export const imobiliariasParceiras = mysqlTable("imobiliariasParceiras", {
+  id: int("id").autoincrement().primaryKey(),
+  nome: varchar("nome", { length: 160 }).notNull(),
+  cnpj: varchar("cnpj", { length: 18 }),
+  creci: varchar("creci", { length: 30 }),
+  responsavel: varchar("responsavel", { length: 160 }),
+  telefone: varchar("telefone", { length: 20 }),
+  email: varchar("email", { length: 160 }),
+  codigo: varchar("codigo", { length: 8 }).notNull(),
+  token: char("token", { length: 32 }).notNull(),
+  /** Comissão da parceira sobre o valor da venda (0.02 = 2%) */
+  comissaoPct: decimal("comissaoPct", { precision: 6, scale: 4 }).default("0.0200").notNull(),
+  /** Corretor da casa que recebe e acompanha os leads da parceira */
+  corretorInternoId: int("corretorInternoId"),
+  ativo: boolean("ativo").default(true).notNull(),
+  criadoPor: int("criadoPor"),
+  criadoEm: timestamp("criadoEm").defaultNow().notNull(),
+}, (t) => ({
+  uxCodigo: uniqueIndex("ux_parceira_codigo").on(t.codigo),
+  uxToken: uniqueIndex("ux_parceira_token").on(t.token),
+}));

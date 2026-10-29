@@ -3,6 +3,17 @@
 Cada versão nova vai no TOPO. Depois rode `npm run release` (valida e atualiza o package.json);
 ao subir, o servidor grava a versão no banco e todos recebem o aviso "Novidades da versão".
 
+## 1.80.0 — 2026-10-29
+tipo: minor
+obrigatoria: nao
+titulo: Painel para imobiliárias parceiras
+
+### Novo
+- Vendas › Imobiliárias parceiras: cadastro da parceira (CNPJ, CRECI, responsável, % de comissão e o corretor da casa que recebe os leads) e o link do portal de cada uma
+- Portal da parceira (link próprio, sem login): chácaras com a situação de cada uma, links de divulgação já com o código dela, "Indicar cliente" com consentimento LGPD, "Meus clientes" com a etapa de cada um e as vendas com a comissão prevista
+- Todo cliente que chega pelos links da parceira ou pela indicação fica marcado como dela e vai para o corretor da casa definido
+- Na lista do escritório: leads, vendas e comissão prevista de cada parceira; novo link (o antigo para) e desativação
+
 ## 1.79.0 — 2026-10-29
 tipo: minor
 obrigatoria: nao

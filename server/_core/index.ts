@@ -515,6 +515,9 @@ async function startServer() {
   // API para parceiros (/api/v1) com chave Bearer
   const { registrarApiParceiros } = await import('../apiParceiros');
   registrarApiParceiros(app);
+  // Portal das imobiliárias parceiras (/parceiro/:token)
+  const { registrarRotasParceiros } = await import('../parceiros');
+  registrarRotasParceiros(app, allowPublicLead);
   // Documentos para o cliente (/documentos/:emp/:doc): páginas como imagem, só leitura
   const { registrarRotasDocumentosCliente } = await import('../documentosCliente');
   registrarRotasDocumentosCliente(app);

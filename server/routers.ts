@@ -27,6 +27,7 @@ import { portalCompradorRouter } from "./routers/portalComprador.router";
 import { renegociacaoRouter } from "./routers/renegociacao.router";
 import { integracoesRouter } from "./routers/integracoes.router";
 import { caixaEntradaRouter } from "./routers/caixaEntrada.router";
+import { parceirasRouter } from "./routers/parceiras.router";
 import { autoRespostaRouter } from "./routers/autoResposta.router";
 import { verComoRouter } from "./routers/verComo.router";
 import { contatosNomesRouter } from "./routers/contatosNomes.router";
@@ -104,6 +105,7 @@ export const appRouter = router({
   renegociacao: renegociacaoRouter,
   integracoes: integracoesRouter,
   caixaEntrada: caixaEntradaRouter,
+  parceiras: parceirasRouter,
   autoResposta: autoRespostaRouter,
   verComo: verComoRouter,
   contatosNomes: contatosNomesRouter,
