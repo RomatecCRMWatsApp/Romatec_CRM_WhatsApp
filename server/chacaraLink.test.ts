@@ -102,14 +102,14 @@ describe('Mapa público em modo destaque (página da chácara)', () => {
     (globalThis as any).React = React;
     ({ default: LoteMap, lotesDoMapa } = await import('../client/src/components/bom-jardims/LoteMap'));
   });
-  it('a chácara em dourado, sem a lista de escolha nem o cartão da seleção', () => {
+  it('a chácara em azul, sem a lista de escolha nem o cartão da seleção', () => {
     const html = renderToStaticMarkup(React.createElement(LoteMap, { lotes: lotesDoMapa(mapa), selected: 'C05', destaque: true, onSelect: () => {}, dados: mapa }));
-    expect((html.match(/fill="#E8B931"/g) || []).length).toBe(1);
+    expect((html.match(/fill="#1E3A8A"/g) || []).length).toBe(1);
     expect(html).not.toContain('Ou escolha pela lista');
     expect(html).not.toContain('Chácara selecionada');
     const normal = renderToStaticMarkup(React.createElement(LoteMap, { lotes: lotesDoMapa(mapa), selected: 'C05', onSelect: () => {}, dados: mapa }));
     expect(normal).toContain('Ou escolha pela lista');
-    // Mapa de vendas: a escolhida também fica em dourado (igual ao 3D)
-    expect((normal.match(/fill="#E8B931"/g) || []).length).toBe(1);
+    // Mapa de vendas: a escolhida também fica em azul (igual ao 3D)
+    expect((normal.match(/fill="#1E3A8A"/g) || []).length).toBe(1);
   });
 });

@@ -3,6 +3,14 @@
 Cada versão nova vai no TOPO. Depois rode `npm run release` (valida e atualiza o package.json);
 ao subir, o servidor grava a versão no banco e todos recebem o aviso "Novidades da versão".
 
+## 1.86.2 — 2026-10-30
+tipo: patch
+obrigatoria: nao
+titulo: Chácara escolhida em azul nos mapas 2D e 3D
+
+### Melhorias
+- A chácara escolhida passa a ficar em azul-marinho translúcido, com contorno azul escuro, nos mapas 2D e 3D — o dourado se confundia com o "Reservado" e outros tons da legenda
+
 ## 1.86.1 — 2026-10-30
 tipo: patch
 obrigatoria: nao

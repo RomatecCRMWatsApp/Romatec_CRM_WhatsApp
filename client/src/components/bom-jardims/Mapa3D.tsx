@@ -16,7 +16,7 @@ const ORTOFOTO = (import.meta.env.VITE_MAPA_ORTOFOTO as string | undefined) || "
 const ALTURA = 0.3;        // chácaras rentes ao chão…
 const ALTURA_SEL = 14;     // …só a escolhida sobe
 const ALTURA_RELEVO = 4;   // com o relevo ligado, um pouco acima do terreno
-const COR_SEL = "#E8B931";
+const COR_SEL = "#1E3A8A";
 
 const fechar = (p: Pt[]) => (p.length && (p[0][0] !== p[p.length - 1][0] || p[0][1] !== p[p.length - 1][1]) ? [...p, p[0]] : p);
 const poly = (p: Pt[], props: Record<string, unknown> = {}) => ({ type: "Feature" as const, properties: props, geometry: { type: "Polygon" as const, coordinates: [fechar(p)] } });
