@@ -66,10 +66,11 @@ function useVideos(): VideoGaleria[] {
 function CartaoVideo({ v, grande }: { v: VideoGaleria; grande?: boolean }) {
   const contou = useRef(false);
   return (
-    <figure style={{ margin: 0, borderRadius: 18, overflow: "hidden", background: "#000", position: "relative", gridColumn: grande ? "1 / -1" : undefined }}>
-      <video src={v.url} poster={v.poster ?? undefined} controls playsInline preload={grande ? "metadata" : "none"}
+    <figure style={{ margin: 0, borderRadius: 18, overflow: "hidden", background: "#000", position: "relative", gridColumn: grande ? "1 / -1" : undefined,
+      ...(v.vertical ? { width: "min(100%, 360px)", flexShrink: 0 } : {}) }}>
+      <video src={v.url} poster={v.poster ?? undefined} controls playsInline preload={grande || v.vertical ? "metadata" : "none"}
         onPlay={() => { if (!contou.current) { contou.current = true; registrarEvento("play_video", { pagina: "bom-jardims-3d", video: v.titulo }); } }}
-        style={{ width: "100%", aspectRatio: "16 / 9", objectFit: "cover", display: "block", background: "#000" }} />
+        style={{ width: "100%", aspectRatio: v.vertical ? "9 / 16" : "16 / 9", objectFit: "cover", display: "block", background: "#000" }} />
       <figcaption style={{ position: "absolute", top: 10, left: 10, display: "flex", alignItems: "center", gap: 6, padding: "4px 10px", borderRadius: 999, background: "rgba(12,51,32,0.85)", color: "#fff", fontSize: 12, maxWidth: "calc(100% - 20px)" }}>
         <Play size={12} style={{ flexShrink: 0 }} /> <span style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{v.titulo}</span>
       </figcaption>
@@ -81,6 +82,7 @@ export default function BomJardims3D() {
   useBrandFonts();
   const corretor = useCorretorDoLink();
   const videos = useVideos();
+  const reels = videos.filter(v => v.vertical), outros = videos.filter(v => !v.vertical);
   const { data: emp, isFetched } = trpc.empreendimentos.publicBySlug.useQuery({ slug: "bom-jardims" });
   const [fallbackLotes, setFallbackLotes] = useState<LoteInfo[]>([]);
   const [selected, setSelected] = useState<string>();
@@ -157,8 +159,27 @@ export default function BomJardims3D() {
       <section style={section}>
         <h2 style={h2}>Veja o Bom Jardims em vídeo</h2>
         <p style={{ color: C.suave, margin: "0 0 20px" }}>As imagens mais recentes do condomínio e das obras.</p>
+        {reels.map(v => (
+          <div key={v.url} style={{ display: "flex", flexWrap: "wrap", gap: "20px 28px", alignItems: "center", justifyContent: "center", marginBottom: 20 }}>
+            <CartaoVideo v={v} />
+            <div style={{ flex: "1 1 280px", maxWidth: 480 }}>
+              <h3 style={{ fontFamily: SERIF, color: C.verde, fontSize: 26, margin: "0 0 8px" }}>O Bom Jardims em 3D em 1 minuto</h3>
+              <p style={{ margin: "0 0 16px", lineHeight: 1.55 }}>
+                O terreno real em alto relevo, as 82 chácaras nos três tamanhos — 3.025 m², 3.140 m² e 3.600 m² junto à mata — e as imagens do início das obras.
+              </p>
+              <div style={{ display: "flex", flexWrap: "wrap", gap: 10 }}>
+                <button onClick={() => window.scrollTo({ top: 0, behavior: "smooth" })} style={{ padding: "13px 18px", borderRadius: 14, border: "none", background: C.verde, color: "#fff", fontWeight: 700, cursor: "pointer", fontFamily: SANS, fontSize: 15 }}>
+                  Abrir o mapa 3D
+                </button>
+                <button onClick={goForm} style={{ padding: "13px 18px", borderRadius: 14, border: "none", background: C.dourado, color: C.verde, fontWeight: 700, cursor: "pointer", fontFamily: SANS, fontSize: 15 }}>
+                  Reserve sua chácara
+                </button>
+              </div>
+            </div>
+          </div>
+        ))}
         <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(min(100%, 320px), 1fr))", gap: 14 }}>
-          {videos.map((v, i) => <CartaoVideo key={v.url} v={v} grande={i === 0} />)}
+          {outros.map((v, i) => <CartaoVideo key={v.url} v={v} grande={i === 0} />)}
         </div>
       </section>
 

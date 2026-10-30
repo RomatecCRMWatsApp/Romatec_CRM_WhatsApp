@@ -3,6 +3,14 @@
 Cada versão nova vai no TOPO. Depois rode `npm run release` (valida e atualiza o package.json);
 ao subir, o servidor grava a versão no banco e todos recebem o aviso "Novidades da versão".
 
+## 1.87.1 — 2026-10-30
+tipo: patch
+obrigatoria: nao
+titulo: Reels do mapa 3D na página da campanha
+
+### Melhorias
+- /bom-jardims/3d: o Reels "Bom Jardims em 3D — escolha sua chácara" abre a seção de vídeos, em pé (9:16), com os botões "Abrir o mapa 3D" e "Reserve sua chácara"
+
 ## 1.87.0 — 2026-10-30
 tipo: minor
 obrigatoria: nao

@@ -12,8 +12,9 @@ describe('campanha Mapa 3D (/bom-jardims/3d)', () => {
       { titulo: 'Com preço', tipo: 'video', url: 'https://res.cloudinary.com/x/video/upload/p.mp4', liberado: false },
       { titulo: 'Arte', tipo: 'feed', mime: 'image/png', url: 'https://res.cloudinary.com/x/image/upload/a.png', liberado: true },
     ]);
-    expect(v.map(x => x.titulo)).toEqual(['Drone', ...VIDEOS_FIXOS.map(f => f.titulo)]);
-    expect(v[0].poster).toBe('https://res.cloudinary.com/x/video/upload/so_1,w_960,c_limit,q_auto/v1/romatec_materiais/drone.jpg');
+    expect(v.map(x => x.titulo)).toEqual([VIDEOS_FIXOS[0].titulo, 'Drone', ...VIDEOS_FIXOS.slice(1).map(f => f.titulo)]);
+    expect(v[0].vertical).toBe(true);
+    expect(v[1].poster).toBe('https://res.cloudinary.com/x/video/upload/so_1,w_960,c_limit,q_auto/v1/romatec_materiais/drone.jpg');
     expect(posterCloudinary('/bom-jardims/video.mp4')).toBeNull();
   });
   it('link de divulgação com UTM e ?c= e meta própria', () => {
