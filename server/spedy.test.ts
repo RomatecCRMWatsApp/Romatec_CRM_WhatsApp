@@ -105,7 +105,7 @@ describe('Spedy — emissão', () => {
     expect(db.all(sql`SELECT provedor FROM saasEventosPagamento`).every((e: any) => e.provedor === 'spedy')).toBe(true);
   });
 
-  it('rejeitada pela consulta: REJEITADA com a mensagem, e pode ser reenviada com o mesmo integrationId', async () => {
+  it('rejeitada pela consulta: REJEITADA com a mensagem; o reenvio cria nota nova na Spedy e ignora aviso da tentativa antiga', async () => {
     db.run(sql`INSERT INTO saasFaturas (id, assinaturaId, competencia, valor, status, metodo, vencimento, pagoEm) VALUES (10, 5, '2026-11', '49.90', 'PAGA', 'PIX', '2026-11-30', '2026-11-26 12:00:00')`);
     await N.sincronizarFilaNfse();
     respostaPost = { id: 'inv-2', status: 'enqueued' };
@@ -114,8 +114,17 @@ describe('Spedy — emissão', () => {
     expect(await Sp.acompanharEnviadas(Date.now(), ENV)).toBe(1);
     expect(nota(2)).toMatchObject({ status: 'REJEITADA', mensagem: 'Código de serviço inválido' });
     chamadas = [];
-    await Sp.emitirPelaSpedy(2, 1, Date.now(), ENV);
-    expect(chamadas.find(c => c.metodo === 'POST')!.corpo.integrationId).toBe('romatec-nfse-2');
+    const agora = Date.now();
+    respostaPost = { id: 'inv-3', status: 'enqueued' };
+    await Sp.emitirPelaSpedy(2, 1, agora, ENV);
+    expect(chamadas.find(c => c.metodo === 'POST')!.corpo.integrationId).toBe(`romatec-nfse-2-r${agora.toString(36)}`);
+    expect(nota(2)).toMatchObject({ status: 'ENVIADA', externoId: 'inv-3' });
+    expect(Sp.nfseIdDoIntegration(`romatec-nfse-2-r${agora.toString(36)}`)).toBe(2);
+    // Aviso atrasado da tentativa rejeitada (inv-2) não derruba a nova
+    const velho = JSON.stringify({ id: 'evt-r2', event: 'invoice.status_changed', data: { id: 'inv-2', integrationId: 'romatec-nfse-2', model: 'serviceInvoice', status: 'rejected' } });
+    const r = await Sp.receberWebhook(velho, assinar(velho, 'evt-r2'), Date.now(), ENV);
+    expect(r).toMatchObject({ ok: true, motivo: 'ignorado' });
+    expect(nota(2)).toMatchObject({ status: 'ENVIADA', externoId: 'inv-3' });
   });
 
   it('sem chave configurada, nada é chamado e a tela mostra o que falta', async () => {

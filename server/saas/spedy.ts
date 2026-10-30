@@ -78,8 +78,13 @@ export function mensagemErro(j: any): string {
 const banco = async () => { const d = await getDb(); if (!d) throw new NfseErro('Banco indisponível', 503); return d as any; };
 const soDig = (v: unknown) => String(v ?? '').replace(/\D/g, '');
 
-/** Código da nota no nosso lado (idempotência da Spedy: reenvio com o mesmo integrationId atualiza, não duplica) */
-export const integrationIdDe = (nfseId: number) => `romatec-nfse-${nfseId}`;
+/**
+ * Código da nota no nosso lado. 1º envio: romatec-nfse-<id>. Reenvio de rejeitada: romatec-nfse-<id>-r<marca>, uma nota nova
+ * na Spedy — com o mesmo código ela atualiza a anterior e mantém o ambiente/método daquela tentativa (ex.: homologação).
+ */
+export const integrationIdDe = (nfseId: number, reenvio?: number) => `romatec-nfse-${nfseId}${reenvio ? `-r${reenvio.toString(36)}` : ''}`;
+/** id da nota da fila a partir do integrationId (com ou sem o sufixo do reenvio) */
+export const nfseIdDoIntegration = (v: string) => { const m = /^romatec-nfse-(\d+)(?:-r[0-9a-z]+)?$/.exec(v); return m ? Number(m[1]) : null; };
 
 /** Corpo do POST /v1/service-invoices a partir da nota da fila + cadastro atual do tomador (endereço estruturado) */
 export function montarNota(n: any, u: any | null, cfg: Pick<ConfigSpedy, 'issAliquota'>, agora = Date.now()) {
@@ -94,7 +99,7 @@ export function montarNota(n: any, u: any | null, cfg: Pick<ConfigSpedy, 'issAli
   } : undefined;
   const valor = Math.round(Number(n.valor) * 100) / 100;
   return {
-    integrationId: integrationIdDe(Number(n.id)),
+    integrationId: integrationIdDe(Number(n.id), n.status === 'REJEITADA' ? agora : undefined),
     effectiveDate: new Date(agora - 3 * 3600_000).toISOString().slice(0, 10),
     description: String(n.discriminacao).slice(0, 2000),
     federalServiceCode: String(n.itemServico || '1.05'),
@@ -264,7 +269,12 @@ export async function receberWebhook(corpoCru: string, headers: Record<string, s
   }
   const inv = ev?.data;
   const integ = String(inv?.integrationId ?? '');
-  let nfseId = /^romatec-nfse-(\d+)$/.exec(integ)?.[1] ? Number(/^romatec-nfse-(\d+)$/.exec(integ)![1]) : null;
+  let nfseId = nfseIdDoIntegration(integ);
+  // Aviso de uma tentativa antiga (reenvio já criou outra nota na Spedy): não mexe na fila
+  if (nfseId && inv?.id) {
+    const [n]: any[] = await d.select({ externoId: saasNfse.externoId }).from(saasNfse).where(eq(saasNfse.id, nfseId)).limit(1);
+    if (n?.externoId && n.externoId !== String(inv.id)) nfseId = null;
+  }
   if (!nfseId && inv?.id) {
     const [n]: any[] = await d.select({ id: saasNfse.id }).from(saasNfse).where(eq(saasNfse.externoId, String(inv.id))).limit(1);
     nfseId = n?.id ?? null;

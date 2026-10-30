@@ -296,7 +296,7 @@ function Nfse() {
   const { data: spedy } = trpc.saas.spedySituacao.useQuery();
   const ok = (msg: string) => () => { toast.success(msg); utils.saas.nfse.invalidate(); };
   const emitir = trpc.saas.spedyEmitir.useMutation({
-    onSuccess: r => { toast.success(r.status === "EMITIDA" ? "NFS-e autorizada" : `Enviada à Spedy (${r.ambiente}) — aguardando a prefeitura`); utils.saas.nfse.invalidate(); },
+    onSuccess: r => { toast.success(r.status === "EMITIDA" ? "NFS-e autorizada" : `Enviada à Spedy (${r.ambiente}${r.ambienteNfse ? ` · ${AMBIENTE_NFSE[r.ambienteNfse] ?? r.ambienteNfse}` : ""}) — aguardando a prefeitura`); utils.saas.nfse.invalidate(); utils.saas.spedySituacao.invalidate(); },
     onError: e => toast.error(e.message),
   });
   const consultar = trpc.saas.spedyConsultar.useMutation({
