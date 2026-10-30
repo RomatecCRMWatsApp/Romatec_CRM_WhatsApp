@@ -2,6 +2,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { toast } from "sonner";
 import { trpc } from "@/lib/trpc";
 import MapaTematico from "@/components/empreendimento/MapaTematico";
+import { AlternadorMapa, Mapa3DEmpreendimento } from "./Mapa3DEmpreendimento";
 import PainelLote, { type LotePainel } from "@/components/empreendimento/PainelLote";
 import { COR_SITUACAO, ROTULO_SITUACAO, SITUACOES_LOTE } from "@shared/lotes";
 import { MapPin, Maximize2, Minimize2, MousePointerClick } from "lucide-react";
@@ -106,7 +107,8 @@ export function MapaVendas({ slug, ajuda, acimaDoPainel, atualizarCadaMs }: {
           </button>
         </div>
         <div className="p-1 sm:p-2">
-          <MapaTematico slug={slug} lotes={lotes} ruas={data.ruas} perimetro={data.perimetro?.poligono} selecionado={sel} onSelecionar={setSel} semLegenda />
+          <AlternadorMapa dois={<MapaTematico slug={slug} lotes={lotes} ruas={data.ruas} perimetro={data.perimetro?.poligono} selecionado={sel} onSelecionar={setSel} semLegenda />}
+            tres={() => <Mapa3DEmpreendimento slug={slug} lotes={lotes as any} perimetro={data.perimetro?.poligono} selecionadoId={sel} onSelecionar={setSel} altura={cheia ? "calc(100vh - 120px)" : undefined} />} />
         </div>
       </section>
       <div ref={painelRef} className="scroll-mt-4 lg:sticky lg:top-4">

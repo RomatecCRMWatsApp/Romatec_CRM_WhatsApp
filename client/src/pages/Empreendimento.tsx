@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import PageHeader from "@/components/PageHeader";
 import MapaTematico from "@/components/empreendimento/MapaTematico";
+import { AlternadorMapa, Mapa3DEmpreendimento } from "@/components/empreendimento/Mapa3DEmpreendimento";
 import PainelLote, { type LotePainel } from "@/components/empreendimento/PainelLote";
 import Simulador from "@/components/empreendimento/Simulador";
 import { COR_SITUACAO, ROTULO_SITUACAO, SITUACOES_LOTE, VENDIDOS, type SituacaoLote } from "@shared/lotes";
@@ -188,7 +189,8 @@ export default function Empreendimento() {
 
           <TabsContent value="mapa" className="mt-3">
             <div className="grid lg:grid-cols-[1fr_360px] gap-4 items-start">
-              <MapaTematico slug={slug} lotes={lotes} ruas={data.ruas} perimetro={data.perimetro?.poligono} selecionado={sel} onSelecionar={setSel} />
+              <AlternadorMapa dois={<MapaTematico slug={slug} lotes={lotes} ruas={data.ruas} perimetro={data.perimetro?.poligono} selecionado={sel} onSelecionar={setSel} />}
+                tres={() => <Mapa3DEmpreendimento slug={slug} lotes={lotes as any} perimetro={data.perimetro?.poligono} selecionadoId={sel} onSelecionar={setSel} />} />
               {selecionado ? <PainelLote slug={slug} lote={selecionado} onMudou={atualizar} onFechar={() => setSel(null)} />
                 : <p className="rounded-xl border border-dashed border-border p-4 text-sm text-muted-foreground">Clique num lote para ver e mudar a situação (interesse, reserva, entrada, venda), o cliente e o corretor.</p>}
             </div>

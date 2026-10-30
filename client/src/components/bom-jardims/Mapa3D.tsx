@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import { Compass, Loader2, Rotate3d, SlidersHorizontal } from "lucide-react";
+import { Compass, Loader2, Mountain, Rotate3d, SlidersHorizontal } from "lucide-react";
 import type { Map as MapLibre, StyleSpecification } from "maplibre-gl";
 import { STATUS_COR, STATUS_LABEL, type LoteInfo, type MapaData } from "./LoteMap";
 
@@ -7,14 +7,15 @@ import { STATUS_COR, STATUS_LABEL, type LoteInfo, type MapaData } from "./LoteMa
  * Mapa 3D do Bom Jardims (MapLibre GL): relevo real do terreno (dados abertos de elevação da AWS/Mapzen), as chácaras
  * em blocos coloridos pela situação ao vivo, ruas, córrego, APP e área de vivência — tudo das coordenadas
  * georreferenciadas de /bom-jardims/mapa.json. Dois dedos giram e inclinam; um toque escolhe a chácara.
- * O "chão" é o ortomosaico do drone quando houver (VITE_MAPA_ORTOFOTO: URL de tiles {z}/{x}/{y}); sem ele, o relevo
- * sombreado.
+ * O "chão" é o ortomosaico do drone quando houver (VITE_MAPA_ORTOFOTO: URL de tiles {z}/{x}/{y}). Abre plano; o relevo
+ * entra no botão "Relevo". Fora do Bom Jardims (ou no sistema) as cores vêm de `corDoLote` (situação interna).
  */
 
 type Pt = [number, number];
 const ORTOFOTO = (import.meta.env.VITE_MAPA_ORTOFOTO as string | undefined) || "";
-const ALTURA = 3;          // metros do "bloco" de cada chácara
-const ALTURA_SEL = 14;     // a escolhida sobe
+const ALTURA = 0.3;        // chácaras rentes ao chão…
+const ALTURA_SEL = 14;     // …só a escolhida sobe
+const ALTURA_RELEVO = 4;   // com o relevo ligado, um pouco acima do terreno
 const COR_SEL = "#E8B931";
 
 const fechar = (p: Pt[]) => (p.length && (p[0][0] !== p[p.length - 1][0] || p[0][1] !== p[p.length - 1][1]) ? [...p, p[0]] : p);
@@ -36,14 +37,18 @@ function estilo(): StyleSpecification {
     },
     layers: [
       { id: "fundo", type: "background", paint: { "background-color": "#C9D9AE" } },
-      ...(ORTOFOTO ? [{ id: "orto", type: "raster" as const, source: "orto" }] : [{ id: "sombra", type: "hillshade" as const, source: "relevo", paint: { "hillshade-shadow-color": "#5F7A45", "hillshade-highlight-color": "#EEF3E1", "hillshade-exaggeration": 0.6 } }]),
+      ...(ORTOFOTO ? [{ id: "orto", type: "raster" as const, source: "orto" }] : [{ id: "sombra", type: "hillshade" as const, source: "relevo", layout: { visibility: "none" as const }, paint: { "hillshade-shadow-color": "#5F7A45", "hillshade-highlight-color": "#EEF3E1", "hillshade-exaggeration": 0.6 } }]),
     ],
-    terrain: { source: "relevo", exaggeration: 1.6 },
   } as StyleSpecification;
 }
 
-export default function Mapa3D({ lotes, selected, onSelect, dados, destaque, altura = 520 }: {
-  lotes: LoteInfo[]; selected?: string; onSelect: (codigo: string) => void; dados?: MapaData; destaque?: boolean; altura?: number;
+export default function Mapa3D({ lotes, selected, onSelect, dados, destaque, altura = 520, corDoLote, legenda, semBuscador }: {
+  lotes: LoteInfo[]; selected?: string; onSelect: (codigo: string) => void; dados?: MapaData; destaque?: boolean; altura?: number | string;
+  /** Cor de cada chácara (situação interna do sistema); sem isso, a situação pública */
+  corDoLote?: (codigo: string) => string | null;
+  /** Legenda própria (sistema); sem isso, a pública */
+  legenda?: { cor: string; rotulo: string }[];
+  semBuscador?: boolean;
 }) {
   const caixa = useRef<HTMLDivElement>(null);
   const mapa = useRef<MapLibre | null>(null);
@@ -53,6 +58,7 @@ export default function Mapa3D({ lotes, selected, onSelect, dados, destaque, alt
   const [erro, setErro] = useState(false);
   const [girando, setGirando] = useState(false);
   const [filtro, setFiltro] = useState({ aberto: false, soLivres: false, areaMin: 0 });
+  const [relevo, setRelevo] = useState(false);
   const byCodigo = useMemo(() => new Map(lotes.map(l => [l.codigo, l])), [lotes]);
 
   useEffect(() => {
@@ -67,9 +73,9 @@ export default function Mapa3D({ lotes, selected, onSelect, dados, destaque, alt
     const passa = (!filtro.soLivres || status === "disponivel") && (!filtro.areaMin || (l.areaM2 ?? 0) >= filtro.areaMin);
     const sel = l.codigo === selected;
     return poly(l.poly as Pt[], {
-      codigo: l.codigo, cor: sel ? COR_SEL : STATUS_COR[status], altura: sel ? ALTURA_SEL : ALTURA, opacidade: passa || sel ? 0.92 : 0.18,
+      codigo: l.codigo, cor: sel ? COR_SEL : corDoLote?.(l.codigo) ?? STATUS_COR[status], altura: sel ? ALTURA_SEL : relevo ? ALTURA_RELEVO : ALTURA, opacidade: passa || sel ? 0.92 : 0.18,
     });
-  })), [data, byCodigo, selected, filtro.soLivres, filtro.areaMin]);
+  })), [data, byCodigo, selected, filtro.soLivres, filtro.areaMin, corDoLote, relevo]);
 
   // Cria o mapa uma vez (MapLibre carregado só aqui: não pesa nas outras páginas)
   useEffect(() => {
@@ -138,6 +144,14 @@ export default function Mapa3D({ lotes, selected, onSelect, dados, destaque, alt
     m.easeTo({ center: centro(l.poly as Pt[]), zoom: destaque ? 17.6 : Math.max(m.getZoom(), 17), pitch: 60, duration: 900 });
   }, [selected, pronto, data, destaque]);
 
+  // Relevo só quando pedido (aberto plano)
+  useEffect(() => {
+    const m = mapa.current;
+    if (!pronto || !m) return;
+    m.setTerrain(relevo ? { source: "relevo", exaggeration: 1.6 } : null);
+    if (m.getLayer("sombra")) m.setLayoutProperty("sombra", "visibility", relevo ? "visible" : "none");
+  }, [relevo, pronto]);
+
   // Giro automático (vitrine do stand)
   useEffect(() => {
     if (!girando || !pronto) return;
@@ -155,12 +169,13 @@ export default function Mapa3D({ lotes, selected, onSelect, dados, destaque, alt
   if (erro) return <p style={{ color: "#0C3320" }}>Não foi possível abrir o mapa 3D agora.</p>;
   return (
     <div>
-      <div style={{ position: "relative", height: altura, borderRadius: 16, overflow: "hidden", border: "1px solid #CFD8BF", background: "#C9D9AE" }}>
+      <div style={{ position: "relative", height: altura, minHeight: 360, borderRadius: 16, overflow: "hidden", border: "1px solid #CFD8BF", background: "#C9D9AE" }}>
         <div ref={caixa} style={{ position: "absolute", inset: 0 }} />
         {!pronto && <div style={{ position: "absolute", inset: 0, display: "flex", alignItems: "center", justifyContent: "center", color: "#0C3320", gap: 8 }}><Loader2 className="h-5 w-5 animate-spin" /> Carregando o mapa 3D…</div>}
         {pronto && !destaque && (
           <div style={{ position: "absolute", left: 10, top: 10, display: "flex", gap: 6, flexWrap: "wrap", maxWidth: "calc(100% - 70px)" }}>
-            <button type="button" style={botao} onClick={() => setFiltro(f => ({ ...f, aberto: !f.aberto }))}><SlidersHorizontal size={15} /> Buscar chácaras</button>
+            {!semBuscador && <button type="button" style={botao} onClick={() => setFiltro(f => ({ ...f, aberto: !f.aberto }))}><SlidersHorizontal size={15} /> Buscar chácaras</button>}
+            <button type="button" style={{ ...botao, ...(relevo ? { background: "#0C3320", color: "#fff" } : {}) }} onClick={() => setRelevo(r => !r)}><Mountain size={15} /> Relevo</button>
             <button type="button" style={botao} onClick={() => setGirando(g => !g)}><Rotate3d size={15} /> {girando ? "Parar" : "Girar"}</button>
             <button type="button" style={botao} onClick={() => mapa.current?.easeTo({ pitch: 0, bearing: 0, duration: 700 })}><Compass size={15} /> Vista de cima</button>
           </div>
@@ -179,12 +194,12 @@ export default function Mapa3D({ lotes, selected, onSelect, dados, destaque, alt
       </div>
       {!destaque && (
         <div style={{ display: "flex", flexWrap: "wrap", gap: 12, marginTop: 10, fontSize: 13 }}>
-          {(["disponivel", "reservado", "em_negociacao", "vendido"] as const).map(s => (
-            <span key={s} style={{ display: "inline-flex", alignItems: "center", gap: 6 }}><span style={{ width: 14, height: 14, borderRadius: 3, background: STATUS_COR[s] }} />{STATUS_LABEL[s]}</span>
+          {(legenda ?? (["disponivel", "reservado", "em_negociacao", "vendido"] as const).map(s => ({ cor: STATUS_COR[s], rotulo: STATUS_LABEL[s] }))).map(x => (
+            <span key={x.rotulo} style={{ display: "inline-flex", alignItems: "center", gap: 6 }}><span style={{ width: 14, height: 14, borderRadius: 3, background: x.cor }} />{x.rotulo}</span>
           ))}
         </div>
       )}
-      {sel && !destaque && (
+      {sel && !destaque && !corDoLote && (
         <p style={{ marginTop: 8, fontSize: 14 }}><b>Chácara {sel.codigo}</b>{sel.areaM2 ? ` · ${sel.areaM2.toLocaleString("pt-BR", { maximumFractionDigits: 2 })} m²` : ""} · {STATUS_LABEL[sel.status]} · <a href={`/bom-jardims/chacara/${sel.codigo}`} style={{ color: "#0C3320", fontWeight: 700 }}>ver detalhes</a></p>
       )}
     </div>

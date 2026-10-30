@@ -3,6 +3,20 @@
 Cada versão nova vai no TOPO. Depois rode `npm run release` (valida e atualiza o package.json);
 ao subir, o servidor grava a versão no banco e todos recebem o aviso "Novidades da versão".
 
+## 1.85.0 — 2026-10-30
+tipo: minor
+obrigatoria: nao
+titulo: Mapa 3D no sistema e mapa plano por padrão
+
+### Novo
+- Mapa 3D na aba Mapa do empreendimento, para todos: administrador e secretária (tela do empreendimento), corretor (Área do corretor) e empreendedor (portal) — botão "Mapa 2D | Mapa 3D", com as cores da situação interna (interesse, reserva, entrada, vendido…), zoom, giro, inclinação e tela cheia
+- Tocar numa chácara no 3D abre o mesmo painel de sempre (situação, cliente, contrato)
+- A escolha 2D/3D fica guardada no aparelho
+
+### Melhorias
+- O mapa 3D abre plano (sem o relevo do terreno) e as chácaras ficam rentes ao chão — só a escolhida sobe em dourado
+- Botão "Relevo" para ligar o relevo do terreno quando quiser
+
 ## 1.84.1 — 2026-10-29
 tipo: patch
 obrigatoria: nao
