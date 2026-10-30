@@ -3,6 +3,7 @@ import { toast } from "sonner";
 import { trpc } from "@/lib/trpc";
 import { Button } from "@/components/ui/button";
 import MapaTematico from "@/components/empreendimento/MapaTematico";
+import { AlternadorMapa, Mapa3DEmpreendimento } from "./Mapa3DEmpreendimento";
 import EnviarWhatsAppModal from "@/components/EnviarWhatsAppModal";
 import { exibirTelefoneBR } from "@shared/telefone";
 import { brl, vencimento, type SeloLote } from "@shared/simulador";
@@ -179,8 +180,10 @@ export default function Simulador({ slug, lotes, ruas, perimetro, destinoSugerid
           )}
           {error && codigo && <p className="basis-full text-sm text-red-400">{error.message}</p>}
         </div>
-        <MapaTematico slug={slug} lotes={lotes} ruas={ruas} perimetro={perimetro} selecionado={sel}
-          onSelecionar={id => { const l = lotes.find(x => x.id === id); if (l) escolher(l.codigo); }} compacto />
+        <AlternadorMapa dois={<MapaTematico slug={slug} lotes={lotes} ruas={ruas} perimetro={perimetro} selecionado={sel}
+          onSelecionar={id => { const l = lotes.find(x => x.id === id); if (l) escolher(l.codigo); }} compacto />}
+          tres={() => <Mapa3DEmpreendimento slug={slug} lotes={lotes as any} perimetro={perimetro} selecionadoId={sel}
+            onSelecionar={id => { const l = lotes.find(x => x.id === id); if (l) escolher(l.codigo); }} altura="min(60vh, 520px)" />} />
       </div>
 
       <div className="space-y-3">

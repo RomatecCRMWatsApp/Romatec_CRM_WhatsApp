@@ -7,8 +7,8 @@ import { STATUS_COR, STATUS_LABEL, type LoteInfo, type MapaData } from "./LoteMa
  * Mapa 3D do Bom Jardims (MapLibre GL): relevo real do terreno (dados abertos de elevação da AWS/Mapzen), as chácaras
  * em blocos coloridos pela situação ao vivo, ruas, córrego, APP e área de vivência — tudo das coordenadas
  * georreferenciadas de /bom-jardims/mapa.json. Dois dedos giram e inclinam; um toque escolhe a chácara.
- * O "chão" é o ortomosaico do drone quando houver (VITE_MAPA_ORTOFOTO: URL de tiles {z}/{x}/{y}). Abre plano; o relevo
- * entra no botão "Relevo". Fora do Bom Jardims (ou no sistema) as cores vêm de `corDoLote` (situação interna).
+ * O "chão" é o ortomosaico do drone quando houver (VITE_MAPA_ORTOFOTO: URL de tiles {z}/{x}/{y}). Vistas: Plano (abre
+ * assim, inclinado e sem relevo), Alto relevo (terreno realçado) e Vista de cima (planta, sem inclinação). Fora do Bom Jardims (ou no sistema) as cores vêm de `corDoLote` (situação interna).
  */
 
 type Pt = [number, number];
@@ -53,12 +53,14 @@ export default function Mapa3D({ lotes, selected, onSelect, dados, destaque, alt
   const caixa = useRef<HTMLDivElement>(null);
   const mapa = useRef<MapLibre | null>(null);
   const rotulos = useRef<any[]>([]);
+  const limites = useRef<[[number, number], [number, number]] | null>(null);
   const [data, setData] = useState<MapaData | null>(dados ?? null);
   const [pronto, setPronto] = useState(false);
   const [erro, setErro] = useState(false);
   const [girando, setGirando] = useState(false);
   const [filtro, setFiltro] = useState({ aberto: false, soLivres: false, areaMin: 0 });
-  const [relevo, setRelevo] = useState(false);
+  const [vista, setVista] = useState<"plano" | "relevo" | "cima">("plano");
+  const relevo = vista === "relevo";
   const byCodigo = useMemo(() => new Map(lotes.map(l => [l.codigo, l])), [lotes]);
 
   useEffect(() => {
@@ -87,6 +89,7 @@ export default function Mapa3D({ lotes, selected, onSelect, dados, destaque, alt
       if (!vivo || !caixa.current) return;
       const per = data.perimetro as Pt[];
       const lons = per.map(p => p[0]), lats = per.map(p => p[1]);
+      limites.current = [[Math.min(...lons), Math.min(...lats)], [Math.max(...lons), Math.max(...lats)]];
       const m = new maplibre.Map({
         container: caixa.current, style: estilo(), pitch: 58, bearing: -28, maxPitch: 78, attributionControl: { compact: true },
         bounds: [[Math.min(...lons), Math.min(...lats)], [Math.max(...lons), Math.max(...lats)]], fitBoundsOptions: { padding: 30 },
@@ -141,16 +144,26 @@ export default function Mapa3D({ lotes, selected, onSelect, dados, destaque, alt
     const m = mapa.current;
     const l = data?.lotes.find(x => x.codigo === selected);
     if (!pronto || !m || !l) return;
-    m.easeTo({ center: centro(l.poly as Pt[]), zoom: destaque ? 17.6 : Math.max(m.getZoom(), 17), pitch: 60, duration: 900 });
-  }, [selected, pronto, data, destaque]);
+    m.easeTo({ center: centro(l.poly as Pt[]), zoom: destaque ? 17.6 : Math.max(m.getZoom(), 17), pitch: vista === "cima" ? 0 : 60, duration: 900 });
+  }, [selected, pronto, data, destaque]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  // Relevo só quando pedido (aberto plano)
+  // Vista: plano (inclinado, sem relevo), alto relevo (terreno realçado) ou de cima (planta)
+  const primeira = useRef(true);
   useEffect(() => {
     const m = mapa.current;
     if (!pronto || !m) return;
-    m.setTerrain(relevo ? { source: "relevo", exaggeration: 1.6 } : null);
+    m.setTerrain(relevo ? { source: "relevo", exaggeration: 2 } : null);
     if (m.getLayer("sombra")) m.setLayoutProperty("sombra", "visibility", relevo ? "visible" : "none");
-  }, [relevo, pronto]);
+    if (primeira.current) { primeira.current = false; return; }
+    // Reenquadra o empreendimento na nova inclinação (com o relevo ligado o centro muda de altura)
+    const pitch = vista === "cima" ? 0 : relevo ? 62 : 58;
+    const bearing = vista === "cima" ? 0 : m.getBearing();
+    // Centro no meio do empreendimento: com o relevo, a câmera mira o chão nessa altura (fitBounds ignora a elevação)
+    const b = limites.current;
+    const centroEmp: [number, number] | undefined = b ? [(b[0][0] + b[1][0]) / 2, (b[0][1] + b[1][1]) / 2] : undefined;
+    const zoom = b ? m.cameraForBounds(b, { padding: 30, bearing })?.zoom : undefined;
+    m.easeTo({ center: centroEmp, zoom: zoom != null ? zoom - (vista === "cima" ? 0 : 0.2) : undefined, pitch, bearing, duration: 800 });
+  }, [vista, relevo, pronto]);
 
   // Giro automático (vitrine do stand)
   useEffect(() => {
@@ -175,9 +188,16 @@ export default function Mapa3D({ lotes, selected, onSelect, dados, destaque, alt
         {pronto && !destaque && (
           <div style={{ position: "absolute", left: 10, top: 10, display: "flex", gap: 6, flexWrap: "wrap", maxWidth: "calc(100% - 70px)" }}>
             {!semBuscador && <button type="button" style={botao} onClick={() => setFiltro(f => ({ ...f, aberto: !f.aberto }))}><SlidersHorizontal size={15} /> Buscar chácaras</button>}
-            <button type="button" style={{ ...botao, ...(relevo ? { background: "#0C3320", color: "#fff" } : {}) }} onClick={() => setRelevo(r => !r)}><Mountain size={15} /> Relevo</button>
+
             <button type="button" style={botao} onClick={() => setGirando(g => !g)}><Rotate3d size={15} /> {girando ? "Parar" : "Girar"}</button>
-            <button type="button" style={botao} onClick={() => mapa.current?.easeTo({ pitch: 0, bearing: 0, duration: 700 })}><Compass size={15} /> Vista de cima</button>
+            <div role="group" aria-label="Vista do mapa" style={{ display: "inline-flex", borderRadius: 10, border: "1px solid #CFD8BF", overflow: "hidden", background: "#fff" }}>
+              {([["plano", "Plano", Rotate3d], ["relevo", "Alto relevo", Mountain], ["cima", "Vista de cima", Compass]] as const).map(([k, r, Icone]) => (
+                <button key={k} type="button" aria-pressed={vista === k} onClick={() => setVista(k)}
+                  style={{ display: "inline-flex", alignItems: "center", gap: 5, padding: "8px 10px", border: "none", fontWeight: 700, fontSize: 12, cursor: "pointer", background: vista === k ? "#0C3320" : "transparent", color: vista === k ? "#fff" : "#0C3320" }}>
+                  <Icone size={14} /> {r}
+                </button>
+              ))}
+            </div>
           </div>
         )}
         {filtro.aberto && (

@@ -3,6 +3,19 @@
 Cada versão nova vai no TOPO. Depois rode `npm run release` (valida e atualiza o package.json);
 ao subir, o servidor grava a versão no banco e todos recebem o aviso "Novidades da versão".
 
+## 1.86.0 — 2026-10-30
+tipo: minor
+obrigatoria: nao
+titulo: Mapa 3D no simulador e nas páginas das chácaras; vistas Plano, Alto relevo e Vista de cima
+
+### Novo
+- Simulador (aba do empreendimento): botão "Mapa 2D | Mapa 3D"; ao escolher a chácara pelo número ou no mapa, ela sobe em dourado no 3D
+- Página de cada chácara (/bom-jardims/chacara/…): abre no mapa 3D já focado na chácara, com a planta no outro botão
+- Seletor de vista em todos os mapas 3D: Plano (inclinado, sem relevo), Alto relevo (terreno realçado) e Vista de cima — o empreendimento é reenquadrado a cada troca
+
+### Avisos
+- Os links já divulgados continuam os mesmos e mostram o novo mapa automaticamente
+
 ## 1.85.0 — 2026-10-30
 tipo: minor
 obrigatoria: nao

@@ -5,6 +5,9 @@ import { trpc } from "@/lib/trpc";
 import LoteMap, { STATUS_LABEL, type LoteInfo, type MapaData } from "@/components/bom-jardims/LoteMap";
 import { C, SERIF, SANS, GALERIA, VIDEO, useBrandFonts, ContatosBotoes, GaleriaProjeto, useCorretorDoLink, rotuloCorretor } from "@/components/bom-jardims/marca";
 import BotaoTour360 from "@/components/bom-jardims/BotaoTour360";
+import { lazy, Suspense } from "react";
+import { webglDisponivel } from "@/components/bom-jardims/Mapa3D";
+const Mapa3D = lazy(() => import("@/components/bom-jardims/Mapa3D"));
 import { codigoChacaraValido, localizacaoDoLote, tituloChacara, rotaAteEntrada, NOME_BOM_JARDIMS, SLUG_BOM_JARDIMS } from "@shared/chacaraLink";
 
 /**
@@ -12,6 +15,27 @@ import { codigoChacaraValido, localizacaoDoLote, tituloChacara, rotaAteEntrada, 
  * Fotos e vídeo do empreendimento (não há galeria por chácara), mapa com a chácara destacada e a
  * localização exata (centro do lote oficial do KMZ) com botões do Google Maps. Sem preço.
  */
+/** Mapa da chácara: 3D (abre nela, em dourado) ou planta; sem WebGL, só a planta */
+function MapaDaChacara({ dados, lotes, codigo }: { dados: MapaData; lotes: any[]; codigo: string }) {
+  const pode3d = typeof window !== "undefined" && webglDisponivel();
+  const [tres, setTres] = useState(pode3d);
+  const ir = (c: string) => { if (c !== codigo) window.location.href = `/bom-jardims/chacara/${c}`; };
+  const aba = (ativo: boolean): React.CSSProperties => ({ padding: "8px 16px", borderRadius: 999, border: `1px solid ${C.verde}`, background: ativo ? C.verde : "#fff", color: ativo ? "#fff" : C.verde, fontWeight: 700, cursor: "pointer" });
+  return (
+    <div>
+      {pode3d && (
+        <div style={{ display: "flex", gap: 8, marginBottom: 12 }}>
+          <button type="button" style={aba(tres)} onClick={() => setTres(true)}>Mapa 3D</button>
+          <button type="button" style={aba(!tres)} onClick={() => setTres(false)}>Planta</button>
+        </div>
+      )}
+      {tres && pode3d
+        ? <Suspense fallback={<p>Carregando o mapa 3D…</p>}><Mapa3D dados={dados} lotes={lotes} selected={codigo} onSelect={ir} semBuscador /></Suspense>
+        : <LoteMap dados={dados} lotes={lotes} selected={codigo} destaque onSelect={ir} />}
+    </div>
+  );
+}
+
 export default function BomJardimsChacara() {
   useBrandFonts();
   const [, params] = useRoute("/bom-jardims/chacara/:codigo");
@@ -132,8 +156,7 @@ export function ChacaraView({ codigo, mapa, lotes, falhou = false }: { codigo: s
         <p style={{ color: C.suave, margin: "0 0 18px" }}>Em dourado. Portal de entrada, rio, APP, trilha ecológica e área de vivência e recreação.</p>
         <div style={{ margin: "0 0 18px" }}><BotaoTour360 lote={codigo} /></div>
         {mapa ? (
-          <LoteMap dados={mapa} lotes={lotes} selected={codigo} destaque
-            onSelect={c => { if (c !== codigo) window.location.href = `/bom-jardims/chacara/${c}`; }} />
+          <MapaDaChacara dados={mapa} lotes={lotes} codigo={codigo} />
         ) : <p>Carregando mapa…</p>}
       </section>
 
