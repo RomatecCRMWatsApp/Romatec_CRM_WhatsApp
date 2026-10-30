@@ -253,6 +253,12 @@ const COR_NFSE: Record<string, string> = {
 };
 const AMBIENTE_NFSE: Record<string, string> = { simulation: "simulação", development: "homologação", production: "PRODUÇÃO" };
 
+/** Status da nota na Spedy (externoStatus), em português */
+const STATUS_SPEDY: Record<string, string> = {
+  enqueued: "na fila da Spedy", processing: "em processamento", authorized: "autorizada", rejected: "rejeitada",
+  canceled: "cancelada", cancelled: "cancelada", denied: "denegada", pending: "pendente",
+};
+
 /** Situação da integração com a Spedy (ambiente, empresa, webhook) — a chave nunca vem para cá */
 function PainelSpedy() {
   const utils = trpc.useUtils();
@@ -338,8 +344,8 @@ function Nfse() {
                 <td className="p-2 max-w-[360px]"><p className="text-xs">{n.discriminacao}</p><p className="text-[11px] text-muted-foreground">item {n.itemServico} · pago em {dataBr(n.pagoEm)}{n.metodo ? ` · ${n.metodo.toLowerCase()}` : ""}{n.modo === "teste" ? " · TESTE" : ""}</p></td>
                 <td className="p-2 whitespace-nowrap">{brl(n.valor)}</td>
                 <td className="p-2">
-                  <span className={`rounded-full px-2 py-0.5 text-[11px] ${COR_NFSE[n.status] ?? ""}`}>{n.status === "ENVIADA" ? "enviada · aguardando" : n.status.toLowerCase()}</span>
-                  {n.provedor === "spedy" && <p className="mt-0.5 text-[11px] text-muted-foreground">Spedy{n.ambiente ? ` · ${AMBIENTE_NFSE[n.ambiente] ?? n.ambiente}` : ""}{n.externoStatus ? ` · ${n.externoStatus}` : ""}</p>}
+                  <span className={`inline-block whitespace-nowrap rounded-full px-2 py-0.5 text-[11px] ${COR_NFSE[n.status] ?? ""}`}>{n.status === "ENVIADA" ? "enviada · aguardando" : n.status.toLowerCase()}</span>
+                  {n.provedor === "spedy" && <p className="mt-0.5 text-[11px] text-muted-foreground">Spedy{n.ambiente ? ` · ${AMBIENTE_NFSE[n.ambiente] ?? n.ambiente}` : ""}{n.externoStatus ? ` · ${STATUS_SPEDY[n.externoStatus] ?? n.externoStatus}` : ""}</p>}
                   {n.numero && <p className="mt-0.5 text-[11px]">nº {n.numero}{n.codigoVerificacao ? ` · ${n.codigoVerificacao}` : ""}</p>}
                   {n.mensagem && <p className={`mt-0.5 max-w-[260px] text-[11px] ${n.status === "REJEITADA" ? "text-red-300" : "text-muted-foreground"}`}>{n.mensagem}</p>}
                   {(n.pdfUrl || n.xmlUrl) && (
