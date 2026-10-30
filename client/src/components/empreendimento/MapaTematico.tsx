@@ -38,6 +38,9 @@ const centro = (pts: [number, number][]) => {
 /** Inclinação do texto na tela, sempre legível (nunca de cabeça para baixo) */
 const inclinacao = (anguloDxf: number) => { let a = -anguloDxf; while (a <= -90) a += 180; while (a > 90) a -= 180; return a; };
 
+/** Mesmo dourado da chácara escolhida no mapa 3D */
+const COR_SELECIONADO = "#E8B931";
+
 export default function MapaTematico({ slug, lotes, ruas, perimetro, selecionado, onSelecionar, destacar, realce, compacto, semLegenda, contexto }: {
   slug: string;
   /** Dados do /<slug>/mapa.json já carregados (testes); sem isso, busca no servidor */
@@ -177,10 +180,10 @@ export default function MapaTematico({ slug, lotes, ruas, perimetro, selecionado
             return (
               <g key={l.id} onClick={() => onSelecionar?.(l.id)} style={{ cursor: onSelecionar ? "pointer" : "default" }}
                 role={onSelecionar ? "button" : undefined} aria-label={`${l.codigo} — ${ROTULO_SITUACAO[l.situacao]}`} filter={sel ? "url(#sombra)" : undefined}>
-                <path d={d} fill={apagado ? "#EEF1F3" : COR_SITUACAO[l.situacao]} fillOpacity={apagado ? 1 : 0.92} />
+                <path d={d} fill={sel ? COR_SELECIONADO : apagado ? "#EEF1F3" : COR_SITUACAO[l.situacao]} fillOpacity={apagado && !sel ? 1 : 0.95} />
                 <path d={d} fill="none" stroke="#FFFFFF" strokeWidth={2.2} strokeOpacity={0.9} />
                 <path d={d} fill="none" stroke="#6B4F2A" strokeWidth={1.3} strokeDasharray="0.1 4" strokeLinecap="round" />
-                {sel && <path d={d} fill="none" stroke="#0C3320" strokeWidth={3.5} />}
+                {sel && <path d={d} fill="none" stroke="#5C4500" strokeWidth={3.5} />}
                 <text x={cx} y={cy + fonte / 3} textAnchor="middle" fontSize={fonte} fontWeight={800} fill={apagado ? "#9AA3AB" : "#0C3320"}
                   stroke="#FFFFFF" strokeWidth={2.5} paintOrder="stroke" pointerEvents="none">{l.codigo}</text>
                 <title>{`${l.codigo} — ${ROTULO_SITUACAO[l.situacao]}`}</title>

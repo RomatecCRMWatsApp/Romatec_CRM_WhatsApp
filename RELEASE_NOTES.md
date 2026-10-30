@@ -3,6 +3,14 @@
 Cada versão nova vai no TOPO. Depois rode `npm run release` (valida e atualiza o package.json);
 ao subir, o servidor grava a versão no banco e todos recebem o aviso "Novidades da versão".
 
+## 1.86.1 — 2026-10-30
+tipo: patch
+obrigatoria: nao
+titulo: Chácara escolhida em dourado também no mapa 2D
+
+### Melhorias
+- Mapa 2D (sistema: empreendimento, simulador, área do corretor, portal do empreendedor; e site: mapa de vendas): a chácara escolhida fica pintada no mesmo dourado do mapa 3D, com contorno escuro, em vez de só o contorno
+
 ## 1.86.0 — 2026-10-30
 tipo: minor
 obrigatoria: nao

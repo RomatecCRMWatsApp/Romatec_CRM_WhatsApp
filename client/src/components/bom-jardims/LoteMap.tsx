@@ -161,7 +161,7 @@ export default function LoteMap({ lotes, selected, onSelect, onMapLoaded, dados,
             const status = info?.status ?? (NAO_COMERCIAL_LABEL[l.codigo] ? "nao_comercializavel" : "disponivel");
             const pts = l.poly.map(project);
             const [cx, cy] = centroid(pts);
-            const fill = destaque && selected === l.codigo ? "#E8B931" : l.codigo === "B14" ? COR_B14 : STATUS_COR[status];
+            const fill = selected === l.codigo ? "#E8B931" : l.codigo === "B14" ? COR_B14 : STATUS_COR[status];
             const clickable = status !== "nao_comercializavel";
             const isSel = selected === l.codigo;
             return (
@@ -172,7 +172,7 @@ export default function LoteMap({ lotes, selected, onSelect, onMapLoaded, dados,
                 aria-label={`Chácara ${l.codigo} — ${STATUS_LABEL[status]}`}
                 tabIndex={clickable ? 0 : undefined}
                 onKeyDown={e => { if (clickable && (e.key === "Enter" || e.key === " ")) { e.preventDefault(); onSelect(l.codigo); } }}>
-                <path d={pathOf(pts)} fill={fill} stroke={isSel ? "#0C3320" : "#FFFFFF"} strokeWidth={isSel ? 4 : 1.5} />
+                <path d={pathOf(pts)} fill={fill} stroke={isSel ? "#5C4500" : "#FFFFFF"} strokeWidth={isSel ? 3.5 : 1.5} />
                 <text x={cx} y={cy + 4} textAnchor="middle" fontSize={11} fontWeight={700} fill="#0C3320" pointerEvents="none">
                   {l.codigo}
                 </text>
