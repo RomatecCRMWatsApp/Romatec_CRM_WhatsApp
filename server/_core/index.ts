@@ -366,6 +366,26 @@ async function startServer() {
     }
   });
 
+  // ─── Campanha Mapa 3D (/bom-jardims/3d): vídeos liberados da galeria do empreendimento + os fixos do site ───
+  app.get('/api/public/bom-jardims/videos', async (_req, res) => {
+    try {
+      const { videosDaGaleria } = await import('../../shared/mapa3dBomJardims');
+      const { materiais } = await import('../../drizzle/schema');
+      const { and, asc, desc, eq } = await import('drizzle-orm');
+      const { getDb } = await import('../db');
+      const db = await getDb();
+      const rows: any[] = db ? await db.select({ titulo: materiais.titulo, tipo: materiais.tipo, mime: materiais.mime, url: materiais.url, liberado: materiais.liberado })
+        .from(materiais).where(and(eq(materiais.empreendimentoSlug, 'bom-jardims'), eq(materiais.liberado, true)))
+        .orderBy(asc(materiais.ordem), desc(materiais.createdAt)) : [];
+      res.setHeader('Cache-Control', 'public, max-age=300');
+      res.json({ ok: true, videos: videosDaGaleria(rows) });
+    } catch (e: any) {
+      console.error('[Mapa3D] vídeos:', e?.message || e);
+      const { VIDEOS_FIXOS } = await import('../../shared/mapa3dBomJardims');
+      res.json({ ok: true, videos: VIDEOS_FIXOS });
+    }
+  });
+
   // ─── Link de agendamento por empreendimento (/agendar/:slug?c=<ref>) ───
   const allowAgendamento = createRateLimiter(5, 10 * 60 * 1000);
   app.get('/api/public/agendamento/:slug', async (req, res) => {

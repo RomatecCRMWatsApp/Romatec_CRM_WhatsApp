@@ -10,6 +10,7 @@ import {
 } from '../shared/bomJardimsSeo';
 import { configRastreamento, rotaDeMarketing } from '../shared/rastreamento';
 import { DESCRICAO_OBRAS, ROTA_OBRAS, TITULO_OBRAS } from '../shared/obrasBomJardim';
+import { DESCRICAO_MAPA3D, ROTA_MAPA3D, TITULO_MAPA3D } from '../shared/mapa3dBomJardims';
 
 export interface MetaPagina {
   title: string;
@@ -170,6 +171,26 @@ export const META_OBRAS: MetaPagina = {
   },
 };
 
+/** Campanha do mapa 3D: prévia com a foto do drone (chácaras demarcadas vistas de cima) */
+export const META_MAPA3D: MetaPagina = {
+  title: TITULO_MAPA3D,
+  description: DESCRICAO_MAPA3D,
+  path: ROTA_MAPA3D,
+  image: '/bom-jardims/og-3d.jpg',
+  imageAlt: 'Chácaras demarcadas do Condomínio de Chácaras Bom Jardims vistas de cima (drone)',
+  imageSize: { w: 1200, h: 630 },
+  indexavel: true,
+  jsonLd: {
+    '@context': 'https://schema.org',
+    '@type': 'BreadcrumbList',
+    itemListElement: [
+      { '@type': 'ListItem', position: 1, name: 'Romatec Imóveis', item: `${SITE}/` },
+      { '@type': 'ListItem', position: 2, name: 'Chácaras Bom Jardims', item: `${SITE}/bom-jardims` },
+      { '@type': 'ListItem', position: 3, name: 'Mapa 3D', item: `${SITE}${ROTA_MAPA3D}` },
+    ],
+  },
+};
+
 const META_PADRAO: MetaPagina = {
   title: 'Romatec Consultoria Imobiliária — Imóveis em Açailândia/MA',
   description: 'Casas, lotes, chácaras e imóveis rurais em Açailândia e região. Atendimento pelo WhatsApp com o ' + CRECI + '.',
@@ -232,6 +253,7 @@ export function metaDaRota(path: string): MetaPagina | 'imovel' {
   if (chacara) return metaDaChacara(chacara[1].toUpperCase());
   if (p === AGENDAR_BOM_JARDIMS) return META_AGENDAR_BOM_JARDIMS;
   if (p === ROTA_OBRAS) return META_OBRAS;
+  if (p === ROTA_MAPA3D) return META_MAPA3D;
   // Página de oferta (link pessoal do robô no WhatsApp): prévia com o folder, fora do Google, sem preço na meta
   const oferta = /^\/o\/([a-z0-9-]+)$/.exec(p);
   if (oferta) {

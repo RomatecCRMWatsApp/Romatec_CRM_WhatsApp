@@ -3,6 +3,16 @@
 Cada versão nova vai no TOPO. Depois rode `npm run release` (valida e atualiza o package.json);
 ao subir, o servidor grava a versão no banco e todos recebem o aviso "Novidades da versão".
 
+## 1.87.0 — 2026-10-30
+tipo: minor
+obrigatoria: nao
+titulo: Página da campanha Mapa 3D (/bom-jardims/3d)
+
+### Novo
+- Nova página /bom-jardims/3d: mapa 3D em destaque logo no topo, vídeos da galeria (os vídeos liberados em Materiais entram sozinhos, os mais novos primeiro), fotos do drone das obras, cadastro e botões do WhatsApp
+- Faixa no início da página com o botão piscando para seguir o Instagram @avalieimob
+- Campanhas › Links de divulgação: novo link "Mapa 3D + vídeos — nova campanha", com UTM e o ?c= de quem compartilha
+
 ## 1.86.2 — 2026-10-30
 tipo: patch
 obrigatoria: nao

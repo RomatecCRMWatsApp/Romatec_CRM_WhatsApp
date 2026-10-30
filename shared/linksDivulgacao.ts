@@ -5,6 +5,7 @@
  */
 import { z } from 'zod';
 import { CAMPANHA_OBRAS, LANCAMENTO_OBRAS, ROTA_OBRAS } from './obrasBomJardim';
+import { CAMPANHA_MAPA3D, ROTA_MAPA3D } from './mapa3dBomJardims';
 
 /** Marcador do link no texto: trocado pelo link de quem compartilha */
 export const MARCA_LINK = '{link}';
@@ -26,6 +27,12 @@ export interface LinkDivulgacao {
 }
 
 export const LINKS_FIXOS: LinkDivulgacao[] = [
+  {
+    chave: 'fixo:mapa3d', titulo: 'Mapa 3D + vídeos — nova campanha', fixo: true, destaque: true, empreendimento: 'Bom Jardims',
+    descricao: 'Página com o mapa 3D em destaque (girar, aproximar e tocar na chácara), os vídeos da galeria, as fotos do drone das obras, cadastro e o convite para seguir o @avalieimob.',
+    url: ROTA_MAPA3D, utmSource: 'instagram', utmCampaign: CAMPANHA_MAPA3D,
+    textoWhatsapp: `🌳 *Condomínio de Chácaras Bom Jardims* agora em *3D*!\n\nGire o mapa, aproxime e escolha a sua chácara — a partir de *3.025 m²*, em Açailândia/MA. Veja também os vídeos das obras.\n\n📍 Abra o mapa 3D:\n${MARCA_LINK}`,
+  },
   {
     chave: 'fixo:obras', titulo: 'Obras iniciadas — campanha do Instagram', fixo: true, destaque: true, empreendimento: 'Bom Jardims',
     descricao: `Página com o vídeo das obras, cadastro rápido e botões "Quero saber o valor" e "Agendar visita". Lançamento oficial em ${LANCAMENTO_OBRAS}.`,

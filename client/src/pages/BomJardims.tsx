@@ -69,7 +69,7 @@ function Opcoes<T extends string>({ name, value, onChange, options }: {
   );
 }
 
-function Formulario({ loteCodigo, onClearLote, lotes }: { loteCodigo?: string; onClearLote: () => void; lotes: LoteInfo[] }) {
+export function Formulario({ loteCodigo, onClearLote, lotes }: { loteCodigo?: string; onClearLote: () => void; lotes: LoteInfo[] }) {
   const corretor = useCorretorDoLink();
   const [f, setF] = useState({ nome: "", phone: "", email: "", cidade: "" });
   const [finalidade, setFinalidade] = useState<"morar" | "lazer" | "investimento">();

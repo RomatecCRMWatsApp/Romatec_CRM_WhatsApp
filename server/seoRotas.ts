@@ -52,7 +52,7 @@ export function registrarRotasSeo(app: Express) {
   app.get('/sitemap.xml', async (_req, res) => {
     // A landing do Bom Jardims muda a cada versão do site: lastmod = data do build (início do servidor)
     const caminhos: { path: string; lastmod?: Date | null; prioridade?: number }[] = [
-      { path: '/bom-jardims', lastmod: INICIO, prioridade: 1 }, { path: AGENDAR_BOM_JARDIMS, lastmod: INICIO, prioridade: 0.8 }, { path: '/obras-bom-jardim', lastmod: INICIO, prioridade: 0.9 },
+      { path: '/bom-jardims', lastmod: INICIO, prioridade: 1 }, { path: AGENDAR_BOM_JARDIMS, lastmod: INICIO, prioridade: 0.8 }, { path: '/obras-bom-jardim', lastmod: INICIO, prioridade: 0.9 }, { path: '/bom-jardims/3d', lastmod: INICIO, prioridade: 0.9 },
       { path: '/', prioridade: 0.6 }, { path: '/imoveis', prioridade: 0.6 }, { path: '/links', prioridade: 0.3 },
     ];
     try {
