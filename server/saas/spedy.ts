@@ -31,7 +31,8 @@ export function configSpedy(env: Record<string, string | undefined> = process.en
   const baseUrl = (env.SPEDY_BASE_URL?.trim() || (ambiente === 'producao' ? PRODUCAO : SANDBOX)).replace(/\/+$/, '');
   const aliq = Number(String(env.SPEDY_ISS_ALIQUOTA ?? '').replace(',', '.'));
   // Trava: o host precisa bater com o ambiente (sandbox nunca aponta para a API de produção, e vice-versa)
-  const hostSandbox = /sandbox-api\.spedy\.com\.br/.test(baseUrl);
+  // stage-api: a API do painel de testes stage-app.spedy.com.br (conta de homologação)
+  const hostSandbox = /(sandbox|stage)-api\.spedy\.com\.br/.test(baseUrl);
   const erro = !apiKey ? 'SPEDY_API_KEY não configurada'
     : ambiente === 'sandbox' && !hostSandbox ? 'SPEDY_AMBIENTE=sandbox, mas SPEDY_BASE_URL não é o sandbox da Spedy'
     : ambiente === 'producao' && hostSandbox ? 'SPEDY_AMBIENTE=producao, mas SPEDY_BASE_URL aponta para o sandbox' : null;
