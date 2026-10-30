@@ -109,6 +109,7 @@ describe('Mapa público em modo destaque (página da chácara)', () => {
     expect(html).not.toContain('Chácara selecionada');
     const normal = renderToStaticMarkup(React.createElement(LoteMap, { lotes: lotesDoMapa(mapa), selected: 'C05', onSelect: () => {}, dados: mapa }));
     expect(normal).toContain('Ou escolha pela lista');
-    expect(normal).not.toContain('fill="#E8B931"');
+    // Mapa de vendas: a escolhida também fica em dourado (igual ao 3D)
+    expect((normal.match(/fill="#E8B931"/g) || []).length).toBe(1);
   });
 });
