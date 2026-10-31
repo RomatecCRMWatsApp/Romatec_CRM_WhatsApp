@@ -44,7 +44,7 @@ export default function BomJardimsRota() {
       </header>
 
       <section style={{ ...sec, paddingTop: 20 }}>
-        <h2 style={{ fontFamily: SERIF, color: C.verde, fontSize: 28, margin: "0 0 12px" }}>Veja o caminho em vídeo</h2>
+        <h2 style={{ fontFamily: SERIF, color: C.verde, fontSize: 28, margin: "0 0 12px" }}>Veja o caminho em vídeo (com narração)</h2>
         <video src={VIDEO.src} poster={VIDEO.poster} controls playsInline preload="metadata" onPlay={() => abriu("video")}
           style={{ display: "block", width: "100%", maxWidth: 400, aspectRatio: "9 / 16", margin: "0 auto", borderRadius: 18, background: "#000", objectFit: "cover" }} />
       </section>
@@ -92,6 +92,7 @@ export default function BomJardimsRota() {
         </a>
         <div style={{ textAlign: "center", marginTop: 12 }}>
           <a href={FOLDER} download="Como_chegar_Bom_Jardims.png" onClick={() => abriu("folder")} style={{ ...btn(C.dourado, C.verde), display: "inline-flex" }}><Download size={20} /> Baixar o folder</a>
+          <a href="/bom-jardims/divulgacao/como-chegar.pdf" download="Como_chegar_Bom_Jardims.pdf" onClick={() => abriu("pdf")} style={{ ...btn(C.verde, "#fff"), display: "inline-flex", marginLeft: 10, marginTop: 10 }}><Download size={20} /> Apresentação em PDF</a>
         </div>
       </section>
 

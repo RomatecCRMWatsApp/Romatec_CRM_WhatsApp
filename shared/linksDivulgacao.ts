@@ -48,9 +48,15 @@ export const LINKS_FIXOS: LinkDivulgacao[] = [
   },
   {
     chave: 'fixo:rota', titulo: 'Como chegar — rota do centro de Açailândia até o portal', fixo: true, destaque: true, empreendimento: 'Bom Jardims',
-    descricao: 'Página com os pontos de referência (Prefeitura, BR-222, PRF, estação ferroviária, duas ferrovias, Balneário Walter Figueiredo), botões do Google Maps, Waze e Apple Maps, arquivo da rota (GPX/KML) e o folder para baixar.',
+    descricao: 'Página com o vídeo narrado do caminho, os pontos de referência (Prefeitura, BR-222, PRF, estação ferroviária, duas ferrovias, Balneário Walter Figueiredo), botões do Google Maps, Waze e Apple Maps, arquivo da rota (GPX/KML), folder e PDF de apresentação.',
     url: ROTA_COMO_CHEGAR, utmSource: 'whatsapp', utmCampaign: CAMPANHA_ROTA,
-    textoWhatsapp: `🧭 *Como chegar ao Condomínio de Chácaras Bom Jardims*\n\nSaindo do centro de Açailândia: Prefeitura → BR-222 → posto da PRF → entrada da estação ferroviária → duas ferrovias → Balneário Walter Figueiredo → portal (300 a 500 m).\n\n📍 Rota no Google Maps / Waze e o folder do percurso:\n${MARCA_LINK}`,
+    textoWhatsapp: `Quer conhecer o *Condomínio de Chácaras Bom Jardims*? Preparamos um vídeo mostrando o caminho do centro de Açailândia até o portal do condomínio.\n\nAbra o link, escolha seu aplicativo de navegação e confira os pontos de referência:\n${MARCA_LINK}\n\nPara tirar dúvidas e combinar uma visita, é só me chamar.`,
+  },
+  {
+    chave: 'fixo:rota-resposta', titulo: 'Como chegar — resposta pronta para quem pedir a rota', fixo: true, destaque: false, empreendimento: 'Bom Jardims',
+    descricao: 'Mensagem curta para responder no WhatsApp quando o cliente pedir a localização: o link da rota com o vídeo e os apps de navegação.',
+    url: ROTA_COMO_CHEGAR, utmSource: 'whatsapp', utmCampaign: CAMPANHA_ROTA,
+    textoWhatsapp: `Aqui está o caminho até o Condomínio de Chácaras Bom Jardims:\n${MARCA_LINK}\n\nA página abre a navegação no Google Maps, Waze ou Apple Maps e mostra os pontos de referência. Posso ajudar você a combinar uma visita?`,
   },
   {
     chave: 'fixo:agendar', titulo: 'Agendar visita ao Bom Jardims', fixo: true, destaque: false, empreendimento: 'Bom Jardims',
