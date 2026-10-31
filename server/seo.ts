@@ -11,6 +11,7 @@ import {
 import { configRastreamento, rotaDeMarketing } from '../shared/rastreamento';
 import { DESCRICAO_OBRAS, ROTA_OBRAS, TITULO_OBRAS } from '../shared/obrasBomJardim';
 import { DESCRICAO_MAPA3D, ROTA_MAPA3D, TITULO_MAPA3D } from '../shared/mapa3dBomJardims';
+import { DESCRICAO_ROTA, ROTA_COMO_CHEGAR, TITULO_ROTA } from '../shared/rotaBomJardims';
 
 export interface MetaPagina {
   title: string;
@@ -191,6 +192,17 @@ export const META_MAPA3D: MetaPagina = {
   },
 };
 
+/** Como chegar: prévia com o folder do percurso */
+export const META_ROTA: MetaPagina = {
+  title: TITULO_ROTA,
+  description: DESCRICAO_ROTA,
+  path: ROTA_COMO_CHEGAR,
+  image: '/bom-jardims/divulgacao/como-chegar.png',
+  imageAlt: 'Folder Como chegar ao Condomínio de Chácaras Bom Jardims com os pontos de referência',
+  imageSize: { w: 1080, h: 1920 },
+  indexavel: true,
+};
+
 const META_PADRAO: MetaPagina = {
   title: 'Romatec Consultoria Imobiliária — Imóveis em Açailândia/MA',
   description: 'Casas, lotes, chácaras e imóveis rurais em Açailândia e região. Atendimento pelo WhatsApp com o ' + CRECI + '.',
@@ -254,6 +266,7 @@ export function metaDaRota(path: string): MetaPagina | 'imovel' {
   if (p === AGENDAR_BOM_JARDIMS) return META_AGENDAR_BOM_JARDIMS;
   if (p === ROTA_OBRAS) return META_OBRAS;
   if (p === ROTA_MAPA3D) return META_MAPA3D;
+  if (p === ROTA_COMO_CHEGAR) return META_ROTA;
   // Página de oferta (link pessoal do robô no WhatsApp): prévia com o folder, fora do Google, sem preço na meta
   const oferta = /^\/o\/([a-z0-9-]+)$/.exec(p);
   if (oferta) {

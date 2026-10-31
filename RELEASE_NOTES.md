@@ -3,6 +3,17 @@
 Cada versão nova vai no TOPO. Depois rode `npm run release` (valida e atualiza o package.json);
 ao subir, o servidor grava a versão no banco e todos recebem o aviso "Novidades da versão".
 
+## 1.88.0 — 2026-10-31
+tipo: minor
+obrigatoria: nao
+titulo: Como chegar ao Bom Jardims: página, folder e arquivo da rota
+
+### Novo
+- Página /bom-jardims/rota: percurso do centro de Açailândia até o portal com os pontos de referência (Prefeitura, BR-222, PRF, entrada da estação ferroviária, duas ferrovias, Balneário Walter Figueiredo e os 300 a 500 m finais), botões do Google Maps, Waze e Apple Maps, distância e tempo
+- Arquivo da rota para qualquer app de navegação: /bom-jardims/rota.gpx e /bom-jardims/rota.kml, com o traçado pelas estradas calculado pelo servidor
+- Folder "Como chegar" (story 1080×1920) com o percurso e o QR da rota, para baixar e mandar no WhatsApp
+- Campanhas › Links de divulgação: novo link "Como chegar — rota do centro de Açailândia até o portal"
+
 ## 1.87.1 — 2026-10-30
 tipo: patch
 obrigatoria: nao

@@ -6,6 +6,7 @@
 import { z } from 'zod';
 import { CAMPANHA_OBRAS, LANCAMENTO_OBRAS, ROTA_OBRAS } from './obrasBomJardim';
 import { CAMPANHA_MAPA3D, ROTA_MAPA3D } from './mapa3dBomJardims';
+import { CAMPANHA_ROTA, ROTA_COMO_CHEGAR } from './rotaBomJardims';
 
 /** Marcador do link no texto: trocado pelo link de quem compartilha */
 export const MARCA_LINK = '{link}';
@@ -44,6 +45,12 @@ export const LINKS_FIXOS: LinkDivulgacao[] = [
     descricao: 'Landing completa: fotos, vídeo, diferenciais e o mapa com as chácaras disponíveis.',
     url: '/bom-jardims', utmSource: 'whatsapp', utmCampaign: 'BJ-LANDING',
     textoWhatsapp: `🌳 *Condomínio de Chácaras Bom Jardims* — Açailândia/MA\n\nChácaras a partir de 3.025 m², portal com guarita, água encanada e área de vivência às margens do córrego.\n\n📍 Veja o mapa com as chácaras disponíveis:\n${MARCA_LINK}`,
+  },
+  {
+    chave: 'fixo:rota', titulo: 'Como chegar — rota do centro de Açailândia até o portal', fixo: true, destaque: true, empreendimento: 'Bom Jardims',
+    descricao: 'Página com os pontos de referência (Prefeitura, BR-222, PRF, estação ferroviária, duas ferrovias, Balneário Walter Figueiredo), botões do Google Maps, Waze e Apple Maps, arquivo da rota (GPX/KML) e o folder para baixar.',
+    url: ROTA_COMO_CHEGAR, utmSource: 'whatsapp', utmCampaign: CAMPANHA_ROTA,
+    textoWhatsapp: `🧭 *Como chegar ao Condomínio de Chácaras Bom Jardims*\n\nSaindo do centro de Açailândia: Prefeitura → BR-222 → posto da PRF → entrada da estação ferroviária → duas ferrovias → Balneário Walter Figueiredo → portal (300 a 500 m).\n\n📍 Rota no Google Maps / Waze e o folder do percurso:\n${MARCA_LINK}`,
   },
   {
     chave: 'fixo:agendar', titulo: 'Agendar visita ao Bom Jardims', fixo: true, destaque: false, empreendimento: 'Bom Jardims',

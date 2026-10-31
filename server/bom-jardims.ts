@@ -189,6 +189,33 @@ export async function geometriaBomJardims(): Promise<import('../shared/kmlBomJar
   return geometriaCache;
 }
 
+/**
+ * Traçado do centro de Açailândia até o acesso do condomínio pelas estradas (OSRM sobre o OpenStreetMap), em cache por 24 h.
+ * Sem o serviço, devolve linha vazia: o GPX/KML sai só com os pontos e o app de navegação traça a rota.
+ */
+let rotaCache: { em: number; km: number | null; minutos: number | null; linha: [number, number][] } | null = null;
+export async function tracadoRota(agora = Date.now()) {
+  if (rotaCache && agora - rotaCache.em < 24 * 3600_000) return rotaCache;
+  const { ORIGEM_ROTA } = await import('../shared/rotaBomJardims');
+  const { ACESSO_ESTRADA } = await import('../shared/chacaraLink');
+  const coords = `${ORIGEM_ROTA.lon},${ORIGEM_ROTA.lat};${ACESSO_ESTRADA.lon},${ACESSO_ESTRADA.lat}`;
+  for (const host of ['https://router.project-osrm.org', 'https://routing.openstreetmap.de/routed-car']) {
+    try {
+      const r = await fetch(`${host}/route/v1/driving/${coords}?overview=full&geometries=geojson`, { signal: AbortSignal.timeout(8000), headers: { 'User-Agent': 'RomatecCRM/1.0 (romateccrm.com)' } });
+      if (!r.ok) continue;
+      const j: any = await r.json();
+      const rt = j?.routes?.[0];
+      const linha = rt?.geometry?.coordinates;
+      if (!Array.isArray(linha) || linha.length < 2) continue;
+      rotaCache = { em: agora, km: Math.round(rt.distance / 100) / 10, minutos: Math.round(rt.duration / 60), linha };
+      return rotaCache;
+    } catch (e: any) { console.warn(`[Rota] ${host}: ${e?.message ?? e}`); }
+  }
+  // Falhou: tenta de novo em 30 min (não guarda por 24 h)
+  rotaCache = { em: agora - 24 * 3600_000 + 30 * 60_000, km: null, minutos: null, linha: [] };
+  return rotaCache;
+}
+
 /** /bom-jardims.kml (empreendimento) e /bom-jardims/chacara/C05.kml (chácara) — públicos, sem login */
 export function registrarKmlBomJardims(app: Express, base: () => string) {
   const enviar = (res: any, kml: string, arquivo: string) => {
@@ -202,6 +229,22 @@ export function registrarKmlBomJardims(app: Express, base: () => string) {
     if (!g) return res.status(503).type('text/plain').send('Mapa indisponível');
     const { kmlEmpreendimento, nomeArquivoKml } = await import('../shared/kmlBomJardims');
     enviar(res, kmlEmpreendimento(g, { link: `${base()}/${BOM_JARDIMS_SLUG}` }), nomeArquivoKml());
+  });
+  // Como chegar: arquivo da rota (GPX/KML) e resumo (distância/tempo) para a página /bom-jardims/rota
+  app.get(`/${BOM_JARDIMS_SLUG}/rota.:ext(gpx|kml)`, async (req, res) => {
+    const R = await import('../shared/rotaBomJardims');
+    const { linha } = await tracadoRota();
+    const link = `${base()}${R.ROTA_COMO_CHEGAR}`;
+    const gpx = req.params.ext === 'gpx';
+    res.setHeader('Content-Type', gpx ? 'application/gpx+xml; charset=utf-8' : 'application/vnd.google-earth.kml+xml; charset=utf-8');
+    res.setHeader('Content-Disposition', `attachment; filename="Rota_Bom_Jardims.${req.params.ext}"`);
+    res.setHeader('Cache-Control', 'public, max-age=3600');
+    res.send(gpx ? R.gpxRota(linha, link) : R.kmlRota(linha, link));
+  });
+  app.get('/api/public/bom-jardims/rota', async (_req, res) => {
+    const { km, minutos, linha } = await tracadoRota();
+    res.setHeader('Cache-Control', 'public, max-age=3600');
+    res.json({ ok: true, km, minutos, tracado: linha.length > 1 });
   });
   app.get(`/${BOM_JARDIMS_SLUG}/chacara/:arquivo`, async (req, res, next) => {
     const m = /^([A-Da-d]\d{2})\.kml$/.exec(req.params.arquivo);
