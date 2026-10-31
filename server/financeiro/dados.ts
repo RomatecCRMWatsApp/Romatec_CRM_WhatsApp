@@ -17,7 +17,8 @@ export interface SnapshotAsaas {
 
 export interface CobrancaDoc {
   id: number;
-  tipo: 'entrada' | 'saldo' | 'avista' | 'renegociacao';
+  /** reforco = reforço anual (Plano A); complemento = resto da entrada sem juros (Plano C) */
+  tipo: 'entrada' | 'saldo' | 'avista' | 'renegociacao' | 'reforco' | 'complemento';
   numero: number;
   total: number;
   vencimento: string;
@@ -41,7 +42,7 @@ export interface ContextoDocs {
   plano: PlanoContrato;
 }
 
-const ROTULO = { entrada: 'Entrada', saldo: 'Saldo', avista: 'À vista', renegociacao: 'Renegociação' } as const;
+const ROTULO = { entrada: 'Entrada', saldo: 'Saldo', avista: 'À vista', renegociacao: 'Renegociação', reforco: 'Reforço anual', complemento: 'Complemento da entrada' } as const;
 export const rotuloParcela = (c: Pick<CobrancaDoc, 'tipo' | 'numero' | 'total'>) => `${ROTULO[c.tipo]} ${c.numero}/${c.total}`;
 const area = (m2: number) => m2.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 export const docMascarado = (d: string) => {
@@ -56,7 +57,7 @@ export class SemDadosAsaasError extends Error {
 export function dadosLamina(ctx: ContextoDocs, c: CobrancaDoc): DadosLamina {
   if (!c.asaas?.identificationField || !c.asaas.barCode) throw new SemDadosAsaasError(c);
   const parcela = rotuloParcela(c);
-  const prefixo = c.tipo === 'entrada' ? 'E' : c.tipo === 'saldo' ? 'S' : c.tipo === 'renegociacao' ? 'R' : 'V';
+  const prefixo = c.tipo === 'entrada' ? 'E' : c.tipo === 'saldo' ? 'S' : c.tipo === 'renegociacao' ? 'R' : c.tipo === 'reforco' ? 'F' : c.tipo === 'complemento' ? 'C' : 'V';
   return {
     contratoNumero: ctx.contrato.numero, loteCodigo: ctx.lote.codigo, parcela, vencimento: c.vencimento, valor: c.valor,
     nossoNumero: c.asaas.nossoNumero, linhaDigitavel: c.asaas.identificationField, codigoBarras: c.asaas.barCode,
@@ -69,7 +70,7 @@ export function dadosLamina(ctx: ContextoDocs, c: CobrancaDoc): DadosLamina {
 }
 
 export function dadosParcela(ctx: ContextoDocs, c: CobrancaDoc, todas: CobrancaDoc[]): DadosParcela {
-  const restantes = c.tipo === 'saldo' ? `${c.total - c.numero} do saldo` : c.tipo === 'entrada' ? `${c.total - c.numero} da entrada + ${ctx.plano.saldo_qtd} do saldo` : '—';
+  const restantes = restantesDe(c, ctx.plano);
   void todas;
   return {
     ...dadosLamina(ctx, c),
@@ -79,11 +80,21 @@ export function dadosParcela(ctx: ContextoDocs, c: CobrancaDoc, todas: CobrancaD
   };
 }
 
+/** "N do saldo", "N da entrada + M do saldo", "N reforços" … — o que falta depois desta parcela */
+export function restantesDe(c: Pick<CobrancaDoc, 'tipo' | 'numero' | 'total'>, plano: Pick<PlanoContrato, 'saldo_qtd'>): string {
+  if (c.tipo === 'saldo') return `${c.total - c.numero} do saldo`;
+  if (c.tipo === 'entrada') return `${c.total - c.numero} da entrada + ${plano.saldo_qtd} do saldo`;
+  if (c.tipo === 'reforco') return `${c.total - c.numero} reforço(s) anual(is)`;
+  if (c.tipo === 'complemento') return `${c.total - c.numero} do complemento da entrada`;
+  return '—';
+}
+
 /** Parcelas por carnê: carnê anual, como nos escritórios (vencido o ano, o cliente pede o próximo) */
 export const PARCELAS_POR_CARNE = 12;
-const ORDEM_TIPO: Record<string, number> = { avista: 0, entrada: 0, saldo: 1, renegociacao: 2, antecipacao: 3 };
-const emOrdem = <T extends { tipo: string; numero: number }>(l: T[]) =>
-  [...l].sort((a, b) => ORDEM_TIPO[a.tipo] - ORDEM_TIPO[b.tipo] || a.numero - b.numero);
+const ORDEM_TIPO: Record<string, number> = { avista: 0, entrada: 0, complemento: 1, saldo: 1, reforco: 2, renegociacao: 3, antecipacao: 4 };
+/** Ordem dos vencimentos (planos de lançamento têm complemento/reforço no mesmo mês da parcela); empate pelo tipo e nº */
+const emOrdem = <T extends { tipo: string; numero: number; vencimento?: string }>(l: T[]) =>
+  [...l].sort((a, b) => String(a.vencimento ?? '').localeCompare(String(b.vencimento ?? '')) || (ORDEM_TIPO[a.tipo] ?? 9) - (ORDEM_TIPO[b.tipo] ?? 9) || a.numero - b.numero);
 
 /**
  * Carnê N = 12 parcelas seguidas, na ordem dos vencimentos (entrada e depois saldo), contando do início do contrato:
@@ -102,6 +113,7 @@ export const totalDeBlocos = (plano: Pick<PlanoContrato, 'parcelas'>) => Math.ma
 export function dadosCarne(ctx: ContextoDocs, bloco: CobrancaDoc[], n: number | 'completo'): DadosCarne {
   const s = ctx.plano;
   const ent = bloco.filter(c => c.tipo === 'entrada'), sal = bloco.filter(c => c.tipo === 'saldo');
+  const comp = bloco.filter(c => c.tipo === 'complemento'), ref = bloco.filter(c => c.tipo === 'reforco');
   const faixa = (l: CobrancaDoc[], nome: string) => (l.length ? `${nome} ${l[0].numero}/${l[0].total} a ${l.at(-1)!.numero}/${l.at(-1)!.total}` : '');
   const ultimaEntrada = s.parcelas.filter(p => p.tipo === 'entrada').at(-1);
   return {
@@ -111,7 +123,7 @@ export function dadosCarne(ctx: ContextoDocs, bloco: CobrancaDoc[], n: number | 
     precoTabela: s.preco_tabela,
     entradaResumo: s.entrada_qtd ? `${s.entrada_qtd} × ${brl(s.entrada_parcela)} — ${s.entrada_venc1.split('-').reverse().join('/')} a ${ultimaEntrada?.vencimento.split('-').reverse().join('/') ?? ''}` : '—',
     saldoResumo: s.saldo_qtd ? `${s.saldo_qtd} × ${brl(s.saldo_parcela)} fixas — Tabela Price, ${(s.taxa_aa * 100).toLocaleString('pt-BR')}% a.a. efetivos` : '—',
-    esteCarne: `${[faixa(ent, 'Entrada'), faixa(sal, 'Saldo')].filter(Boolean).join(' + ')} (${n === 'completo' ? 'carnê completo' : `carnê ${n} de ${totalDeBlocos(s)} — 12 meses`})`,
+    esteCarne: `${[faixa(ent, 'Entrada'), faixa(comp, 'Complemento'), faixa(sal, 'Saldo'), faixa(ref, 'Reforço')].filter(Boolean).join(' + ')} (${n === 'completo' ? 'carnê completo' : `carnê ${n} de ${totalDeBlocos(s)} — 12 meses`})`,
     saldoFinanciado: s.saldo_valor, taxaAA: s.taxa_aa, taxaAM: s.taxa_am, entradaQtd: s.entrada_qtd, entradaValor: s.entrada_parcela,
     saldoQtd: s.saldo_qtd, saldoParcela: s.saldo_parcela, totalJuros: s.total_juros,
     linhas: bloco.map(c => ({ parcela: rotuloParcela(c), vencimento: c.vencimento, valor: c.valor, juros: c.juros, amortizacao: c.amortizacao, saldoApos: c.saldoDevedor })),

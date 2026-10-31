@@ -23,7 +23,10 @@ const FILTROS: { rotulo: string; status?: StatusContrato[] }[] = [
 
 /** Modelos em PDF para baixar direto (nada é criado no sistema): contrato fictício, cliente exemplo, chácara A01 */
 const MODELOS = [
-  { url: "/api/contratos/modelo.pdf?slug=bom-jardims&lote=A01", nome: "CONTRATO-MODELO-CPCV-BOM-JARDIMS-A01.pdf", rotulo: "Contrato de compra e venda (CPCV)", demora: true },
+  { url: "/api/contratos/modelo.pdf?slug=bom-jardims&lote=A01", nome: "CONTRATO-MODELO-CPCV-BOM-JARDIMS-A01.pdf", rotulo: "Contrato de compra e venda (CPCV) — entrada de 30%", demora: true },
+  { url: "/api/contratos/modelo.pdf?slug=bom-jardims&lote=A01&plano=A", nome: "CONTRATO-MODELO-CPCV-BOM-JARDIMS-PLANO-A-A01.pdf", rotulo: "CPCV — Plano A (entrada R$ 10 mil + reforço anual)", demora: true },
+  { url: "/api/contratos/modelo.pdf?slug=bom-jardims&lote=A01&plano=B", nome: "CONTRATO-MODELO-CPCV-BOM-JARDIMS-PLANO-B-A01.pdf", rotulo: "CPCV — Plano B (entrada R$ 10 mil + até 180×)", demora: true },
+  { url: "/api/contratos/modelo.pdf?slug=bom-jardims&lote=A01&plano=C", nome: "CONTRATO-MODELO-CPCV-BOM-JARDIMS-PLANO-C-A01.pdf", rotulo: "CPCV — Plano C (entrada parcelada em 36× sem juros)", demora: true },
   { url: "/api/contratos/modelos/intermediacao.pdf?slug=bom-jardims", nome: "MODELO-CONTRATO-INTERMEDIACAO-BOM-JARDIMS.pdf", rotulo: "Contrato de intermediação" },
   { url: "/api/contratos/modelos/diretrizes.pdf?slug=bom-jardims", nome: "DIRETRIZES-DE-USO-BOM-JARDIMS.pdf", rotulo: "Diretrizes de Uso (preenchidas pela proprietária)" },
   { url: "/api/contratos/modelos/estatuto.pdf?slug=bom-jardims", nome: "ESTATUTO-BOM-JARDIMS.pdf", rotulo: "Estatuto da associação", demora: true },

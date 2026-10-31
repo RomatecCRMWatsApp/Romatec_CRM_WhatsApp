@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { ROTULO_CONDICAO, type CondicaoPagamento } from "@shared/condicoesLancamento";
 import { useLocation, useParams } from "wouter";
 import { toast } from "sonner";
 import { AlertTriangle, Ban, CheckCircle2, Copy, Download, FileSignature, FileText, Loader2, Receipt, RefreshCw, Send, ShieldAlert, Upload, XCircle } from "lucide-react";
@@ -17,7 +18,7 @@ import RenegociacaoContrato from "@/components/contratos/Renegociacao";
 import RegistroCartorio from "@/components/contratos/RegistroCartorio";
 
 const br = (iso?: string | null) => (iso ? String(iso).slice(0, 10).split("-").reverse().join("/") : "—");
-const ROTULO_TIPO: Record<string, string> = { entrada: "Entrada", saldo: "Saldo", avista: "À vista", antecipacao: "Antecipação", renegociacao: "Renegociação" };
+const ROTULO_TIPO: Record<string, string> = { entrada: "Entrada", saldo: "Saldo", avista: "À vista", antecipacao: "Antecipação", renegociacao: "Renegociação", reforco: "Reforço anual", complemento: "Compl. entrada" };
 const STATUS_COB: Record<string, [string, string]> = {
   prevista: ["Prevista", "text-muted-foreground"], emitida: ["Emitida", "text-sky-400"], vencida: ["Vencida", "text-red-400"],
   paga: ["Paga", "text-emerald-400"], cancelada: ["Cancelada", "text-muted-foreground line-through"], estornada: ["Estornada", "text-amber-400"],
@@ -215,8 +216,11 @@ export default function ContratoDetalhe() {
                 <h2 className="mb-2 text-sm font-semibold">Plano</h2>
                 <Linha rotulo="Preço de tabela" valor={brl(p.preco_tabela)} />
                 {p.modalidade === "avista" ? <Linha rotulo="À vista" valor={`${brl(p.total_pagar)} em ${br(p.avista_vencimento)}`} /> : <>
+                  {p.condicao && p.condicao !== "padrao" && <Linha rotulo="Condição" valor={ROTULO_CONDICAO[p.condicao as CondicaoPagamento]?.titulo ?? p.condicao} />}
                   <Linha rotulo="Entrada" valor={`${p.entrada_qtd}× ${brl(p.entrada_parcela)}`} />
+                  {p.complemento_qtd ? <Linha rotulo="Resto da entrada" valor={`${p.complemento_qtd}× ${brl(p.complemento_parcela)} sem juros`} /> : null}
                   <Linha rotulo="Saldo" valor={`${p.saldo_qtd}× ${brl(p.saldo_parcela)}`} />
+                  {p.reforco_qtd ? <Linha rotulo="Reforço anual" valor={`${p.reforco_qtd}× ${brl(p.reforco_valor)}`} /> : null}
                   <Linha rotulo="1º do saldo" valor={br(p.saldo_venc1)} />
                   <Linha rotulo="Total a pagar" valor={brl(p.total_pagar)} />
                 </>}

@@ -14,7 +14,7 @@ import { salvarArquivo, lerArquivo } from '../contratos/arquivos';
 import { enderecoCompleto } from '../contratos/contexto';
 import { atualizarCobranca, beneficiarioDaConta, configAsaas, dadosDePagamento, payloadSegundaVia, statusLocal, type AsaasConfig, type FetchFn } from './asaas';
 import { calcularEncargos, diasEntre, DIAS_MAX_SEGUNDA_VIA, somarDiasUteis } from './encargos';
-import { docMascarado, rotuloParcela, type CobrancaDoc, type ContextoDocs, type SnapshotAsaas, dadosParcela } from './dados';
+import { docMascarado, restantesDe, rotuloParcela, type CobrancaDoc, type ContextoDocs, type SnapshotAsaas, dadosParcela } from './dados';
 import { renderBoletoA4, renderRecibo } from './render/documentos';
 
 export class FinanceiroErro extends Error {
@@ -217,7 +217,7 @@ export async function dadosRecibo(reciboId: number, publico = false) {
   if (!r) throw new FinanceiroErro('NAO_ENCONTRADO', 'Recibo não encontrado', 404);
   const c = await cobrancaPorId(r.cobrancaId);
   const ctx = await contextoDocs(r.contratoId);
-  const restantes = c.tipo === 'saldo' ? `${c.total - c.numero} do saldo` : c.tipo === 'entrada' ? `${c.total - c.numero} da entrada + ${ctx.plano.saldo_qtd} do saldo` : '—';
+  const restantes = restantesDe(c, ctx.plano);
   return {
     recibo: r, cobranca: c, ctx,
     dados: {

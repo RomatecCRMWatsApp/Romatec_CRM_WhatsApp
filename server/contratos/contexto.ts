@@ -8,7 +8,7 @@
  * corretor parceiro (corr_parceiro_*).
  */
 import { areaExtenso, brl, dataBR, dataExtenso, docMascara, extenso, pct, reaisExtenso } from './formato';
-import type { PlanoContrato } from './plano';
+import { tituloCondicao, type PlanoContrato } from './plano';
 
 export type Ctx = Record<string, string | boolean | number>;
 
@@ -142,7 +142,12 @@ export function tagsPessoas(comprador: PessoaContrato, conjuge?: PessoaContrato 
 /** Tags do plano (plano_*, pagamento_*, com_*) */
 export function tagsPlano(s: PlanoContrato): Ctx {
   const financiado = s.modalidade === 'financiado';
-  const entradaForma = !financiado ? '' : s.entrada_qtd === 1
+  const lancamento = financiado && !!s.condicao && s.condicao !== 'padrao';
+  const entradaForma = !financiado ? '' : lancamento
+    ? (s.complemento_qtd
+      ? `R$ ${brl(s.complemento_ato ?? s.entrada_parcela)} no ato, com vencimento em ${dataBR(s.entrada_venc1)}, e o complemento de R$ ${brl(s.complemento_valor ?? 0)} em ${s.complemento_qtd} (${extenso(s.complemento_qtd)}) parcelas mensais de R$ ${brl(s.complemento_parcela ?? 0)}, sem juros, a primeira com vencimento em ${dataBR(s.complemento_venc1 ?? '')}`
+      : `em parcela única de R$ ${brl(s.entrada_parcela)}, sem desconto, com vencimento em ${dataBR(s.entrada_venc1)}`)
+    : s.entrada_qtd === 1
     ? `à vista, com desconto de R$ ${brl(s.entrada_desconto)}, vencimento em ${dataBR(s.entrada_venc1)}`
     : `em ${s.entrada_qtd} (${extenso(s.entrada_qtd)}) parcelas mensais de R$ ${brl(s.entrada_parcela)}, sem desconto, a primeira com vencimento em ${dataBR(s.entrada_venc1)}`;
   return {
@@ -150,8 +155,15 @@ export function tagsPlano(s: PlanoContrato): Ctx {
     plano_preco_tabela: brl(s.preco_tabela), plano_preco_tabela_extenso: reaisExtenso(s.preco_tabela),
     plano_preco_avista: brl(s.preco_avista),
     plano_avista_forma: financiado ? '' : `parcela única com vencimento em ${dataBR(s.avista_vencimento)}`,
-    plano_entrada_valor: financiado ? brl(s.entrada_valor) : '', plano_entrada_percentual: financiado ? pct(s.entrada_percentual, 0) : '',
+    plano_entrada_valor: financiado ? brl(s.entrada_valor) : '', plano_entrada_percentual: financiado ? pct(s.entrada_percentual, lancamento && Math.round(s.entrada_percentual * 100) !== s.entrada_percentual * 100 ? 2 : 0) : '',
     plano_entrada_forma: entradaForma,
+    // Condições de lançamento (modelos …-PLANO-A/B/C): título, reforços anuais (A) e complemento da entrada (C)
+    plano_condicao_titulo: financiado ? tituloCondicao(s) : '',
+    plano_reforco_qtd: s.reforco_qtd ? String(s.reforco_qtd) : '', plano_reforco_valor: s.reforco_valor ? brl(s.reforco_valor) : '',
+    plano_reforco_extenso: s.reforco_valor ? reaisExtenso(s.reforco_valor) : '', plano_reforco_venc1: s.reforco_venc1 ? dataBR(s.reforco_venc1) : '',
+    plano_complemento_ato: s.complemento_ato ? brl(s.complemento_ato) : '', plano_complemento_valor: s.complemento_valor ? brl(s.complemento_valor) : '',
+    plano_complemento_qtd: s.complemento_qtd ? String(s.complemento_qtd) : '', plano_complemento_parcela: s.complemento_parcela ? brl(s.complemento_parcela) : '',
+    plano_complemento_venc1: s.complemento_venc1 ? dataBR(s.complemento_venc1) : '',
     plano_saldo_valor: financiado ? brl(s.saldo_valor) : '', plano_saldo_qtd: financiado ? String(s.saldo_qtd) : '',
     plano_saldo_parcela: financiado ? brl(s.saldo_parcela) : '', plano_saldo_venc1: financiado ? dataBR(s.saldo_venc1) : '',
     plano_taxa_aa: pct(s.taxa_aa), plano_taxa_am: pct(s.taxa_am, 4), plano_cet_aa: pct(s.taxa_aa),
@@ -207,7 +219,7 @@ export function montarContexto(e: EntradaContexto): Ctx {
   const ctx: Ctx = {
     ...(emp as Ctx), ...(e.juridico.vendedora as Ctx),
     vend_pf: e.juridico.vendedoraTipo === 'PF', vend_pj: e.juridico.vendedoraTipo === 'PJ',
-    ctr_numero: e.contrato.numero, ctr_versao_modelo: e.juridico.modeloVersao, ctr_codigo_verificacao: e.contrato.codigoVerificacao,
+    ctr_numero: e.contrato.numero, ctr_versao_modelo: e.plano.modalidade === 'financiado' && e.plano.condicao && e.plano.condicao !== 'padrao' ? `${e.juridico.modeloVersao} · ${tituloCondicao(e.plano)}` : e.juridico.modeloVersao, ctr_codigo_verificacao: e.contrato.codigoVerificacao,
     ctr_data_extenso: dataExtenso(e.contrato.dataGeracao),
     ctr_parcelas_minimas_obra: '3', ctr_condicoes_especificas: 'Não há.',
     ...tagsRecebedor(e.recebedor),

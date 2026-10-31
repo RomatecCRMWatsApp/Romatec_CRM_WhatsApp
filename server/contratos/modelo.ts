@@ -13,6 +13,7 @@ import { gerarContratoPdf } from './gerar';
 import type { DadosUnidade } from './anexosLote';
 import { carregarCamadas } from './mapaEmpreendimento';
 import { hojeIso } from './formato';
+import { modeloDaCondicao } from './plano';
 import { ContratoErro, condicoesDe, credenciaisDoUsuario, juridicoDe, planoEscolhido, recebedorDoEmpreendimento, responsavelTecnicoId } from './servico';
 
 const json = <T>(v: unknown): T | null => (v == null ? null : typeof v === 'string' ? JSON.parse(v) : (v as T));
@@ -40,7 +41,7 @@ const cache = new Map<string, { em: number; pdf: Buffer }>();
 const VALIDADE_MS = 30 * 60_000;
 
 /** Contrato fictício montado do zero (cliente exemplo, chácara, plano 6× + maior prazo) — base de todos os modelos */
-export async function prepararModelo(slug: string, loteCodigo = 'A01', usuarioId?: number | null) {
+export async function prepararModelo(slug: string, loteCodigo = 'A01', usuarioId?: number | null, condicao: 'padrao' | 'A' | 'B' | 'C' = 'padrao') {
   const d = (await getDb()) as any;
   if (!d) throw new ContratoErro('DB', 'Banco indisponível', 503);
   const [emp]: any[] = await d.select().from(empreendimentos).where(eq(empreendimentos.slug, slug)).limit(1);
@@ -63,7 +64,9 @@ export async function prepararModelo(slug: string, loteCodigo = 'A01', usuarioId
 
   const resp = await responsavelTecnicoId(j.defaults);
   const corretor = resp ? await credenciaisDoUsuario(resp) : { nome: '', cpf: '', creci: '', creciUf: 'MA', creciValidade: '', certidaoCodigo: '', certidaoEmissao: '', certidaoValidade: '' };
-  const plano = planoEscolhido({ modalidade: 'financiado', entradaParcelas: Math.min(6, cond.entradaMaxParcelas), prazo: Math.max(...cond.prazos), dataPrimeiroPagamento: proximoDia10() },
+  // Planos de lançamento: o prazo de cada um (B em 180×, os demais no maior prazo das condições)
+  const prazo = condicao === 'B' ? 180 : Math.max(...cond.prazos);
+  const plano = planoEscolhido({ modalidade: 'financiado', entradaParcelas: Math.min(6, cond.entradaMaxParcelas), prazo, dataPrimeiroPagamento: proximoDia10(), condicao },
     Number(lote.areaM2), lote.precoTabela != null ? Number(lote.precoTabela) : null, cond, false);
 
   const entrada: EntradaContexto = {
@@ -88,12 +91,12 @@ export async function prepararModelo(slug: string, loteCodigo = 'A01', usuarioId
   return { emp, j, lote, plano, entrada, unidade };
 }
 
-export async function contratoModelo(slug: string, loteCodigo = 'A01', usuarioId?: number | null): Promise<Buffer> {
-  const chave = `${slug}:${loteCodigo}:${usuarioId ?? 0}:${hojeIso()}`;
+export async function contratoModelo(slug: string, loteCodigo = 'A01', usuarioId?: number | null, condicao: 'padrao' | 'A' | 'B' | 'C' = 'padrao'): Promise<Buffer> {
+  const chave = `${slug}:${loteCodigo}:${usuarioId ?? 0}:${condicao}:${hojeIso()}`;
   const c = cache.get(chave);
   if (c && Date.now() - c.em < VALIDADE_MS) return c.pdf;
-  const { j, plano, entrada, unidade } = await prepararModelo(slug, loteCodigo, usuarioId);
-  const { pdf } = await gerarContratoPdf(montarContexto(entrada), plano, { alvo: 'minuta', modelo: j.modeloCpcv, marca: j.marcaSlug, unidade });
+  const { j, plano, entrada, unidade } = await prepararModelo(slug, loteCodigo, usuarioId, condicao);
+  const { pdf } = await gerarContratoPdf(montarContexto(entrada), plano, { alvo: 'minuta', modelo: modeloDaCondicao(j.modeloCpcv, condicao), marca: j.marcaSlug, unidade });
   cache.set(chave, { em: Date.now(), pdf });
   return pdf;
 }

@@ -3,6 +3,20 @@
 Cada versão nova vai no TOPO. Depois rode `npm run release` (valida e atualiza o package.json);
 ao subir, o servidor grava a versão no banco e todos recebem o aviso "Novidades da versão".
 
+## 1.90.0 — 2026-10-31
+tipo: minor
+obrigatoria: nao
+titulo: Contratos por forma de pagamento: CPCV da entrada de 30% e dos Planos A, B e C
+
+### Novo
+- Novo contrato: campo "Condição (modelo do contrato)" — Entrada de 30%, Plano A, Plano B ou Plano C; o sistema gera o CPCV no modelo da condição escolhida (v3 para a entrada de 30%; MODELO-CPCV-BOM-JARDIMS-v3-PLANO-A/B/C para os planos)
+- Plano A: Quadro-Resumo com os reforços anuais e a nova Cláusula 3.3.1 (reforço no 13º, parcela do preço para mora, resolução e antecipação)
+- Plano B: saldo em até 180 parcelas (já abre em 180×)
+- Plano C: entrada de 30% com R$ 10 mil no ato e o complemento em até 36× sem juros, junto com o saldo; nova Cláusula 3.2.1 (posse e liberação de uso com o valor do ato)
+- Corretagem dos planos retida integralmente na entrada do ato (Quadro-Resumo item 14 e Cláusula 19.1)
+- Cobranças, carnê, boletos, Anexo II e planilha do contrato com "Reforço anual" e "Complemento da entrada"; tela do contrato mostra a condição
+- Contratos › Modelos: CPCV de exemplo de cada forma de pagamento para baixar
+
 ## 1.89.0 — 2026-10-31
 tipo: minor
 obrigatoria: nao

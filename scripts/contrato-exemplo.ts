@@ -2,6 +2,7 @@
  * Contrato de exemplo (prévia para revisão do layout): Chácara A02 (ou LOTE=<código>) do Bom Jardims, comprador fictício casado,
  * entrada em 6× + saldo em 120×. Gera a minuta e uma prévia do definitivo com dados fictícios nos campos de registro.
  *
+ *   PLANO=A|B|C: contrato da condição de lançamento (modelo …-v3-PLANO-X.docx, entrada R$ 10 mil)
  *   SOFFICE_BIN="C:\Program Files\LibreOffice\program\soffice.exe" npx tsx scripts/contrato-exemplo.ts <pasta de saída>
  *
  * Não usa o banco: o jurídico vem do seed (templates/defaults_empreendimento.json) e o lote, do mapa público.
@@ -63,8 +64,11 @@ const unidade: DadosUnidade = {
   responsavelTecnico: 'José Romário Pinto Bezerra — Técnico em Agrimensura CFT/MA 01209185369 · INCRA FQNS',
 };
 
-const sim = simular(lote.areaM2, 6, condicoes);
-const plano = planoDoContrato(sim, { modalidade: 'financiado', prazo: 120, dataPrimeiroPagamento: '2026-11-10' }, condicoes, false);
+const PLANO = process.env.PLANO === 'A' || process.env.PLANO === 'B' || process.env.PLANO === 'C' ? process.env.PLANO : null;
+const MODELO_DOCX = PLANO ? `MODELO-CPCV-BOM-JARDIMS-v3-PLANO-${PLANO}.docx` : 'MODELO-CPCV-BOM-JARDIMS-v2.docx';
+const SUF = PLANO ? `-PLANO-${PLANO}` : '';
+const sim = simular(lote.areaM2, PLANO ? 1 : 6, condicoes);
+const plano = planoDoContrato(sim, { modalidade: 'financiado', prazo: PLANO === 'B' ? 180 : 120, dataPrimeiroPagamento: '2026-11-10', condicao: PLANO ?? 'padrao' }, condicoes, false);
 
 const base0: EntradaContexto = {
   contrato: { numero: 'BJ-2026-0001', codigoVerificacao: 'EX7K2M9P4Q1R', modoAssinatura: 'eletronica', dataGeracao: hojeIso() },
@@ -119,8 +123,8 @@ const ficticios = {
 
 await mkdir(saida, { recursive: true });
 const ctxMinuta = montarContexto(base);
-const minuta = await gerarContratoPdf(ctxMinuta, plano, { alvo: 'minuta', modelo: 'MODELO-CPCV-BOM-JARDIMS-v2.docx', marca: 'bomjardims', unidade });
-await writeFile(path.join(saida, MODELO ? `CONTRATO-MODELO-CPCV-BOM-JARDIMS-${lote.codigo}.pdf` : `CPCV-BJ-2026-0001-${lote.codigo}-MINUTA.pdf`), minuta.pdf);
+const minuta = await gerarContratoPdf(ctxMinuta, plano, { alvo: 'minuta', modelo: MODELO_DOCX, marca: 'bomjardims', unidade });
+await writeFile(path.join(saida, MODELO ? `CONTRATO-MODELO-CPCV-BOM-JARDIMS${SUF}-${lote.codigo}.pdf` : `CPCV-BJ-2026-0001-${lote.codigo}${SUF}-MINUTA.pdf`), minuta.pdf);
 if (!MODELO) {
   await writeFile(path.join(saida, `CONTRATO-INTERMEDIACAO-EXEMPLO-${lote.codigo}.pdf`), await docIntermediacao(ctxMinuta, 'bomjardims'));
   await writeFile(path.join(saida, `CONTRATO-COMISSAO-ROMATEC-EXEMPLO-${lote.codigo}.pdf`), await docComissaoRomatec(ctxMinuta, plano, 'bomjardims',
@@ -130,9 +134,9 @@ if (MODELO) { console.log(path.join(saida, `CONTRATO-MODELO-CPCV-BOM-JARDIMS-${l
 
 const ctxDef = montarContexto({ ...base, lote: { ...base.lote, matricula: '00.001 (exemplo)', viaFrente: base.lote.viaFrente || 'via interna do condomínio (exemplo)' }, overrides: ficticios });
 const definitivo = await gerarContratoPdf(ctxDef, plano, {
-  alvo: 'definitivo', modelo: 'MODELO-CPCV-BOM-JARDIMS-v2.docx', marca: 'bomjardims', unidade, previaSemValor: 'EXEMPLO — DADOS FICTÍCIOS',
+  alvo: 'definitivo', modelo: MODELO_DOCX, marca: 'bomjardims', unidade, previaSemValor: 'EXEMPLO — DADOS FICTÍCIOS',
 });
-await writeFile(path.join(saida, `CPCV-BJ-2026-0001-${lote.codigo}-DEFINITIVO-EXEMPLO.pdf`), definitivo.pdf);
+await writeFile(path.join(saida, `CPCV-BJ-2026-0001-${lote.codigo}${SUF}-DEFINITIVO-EXEMPLO.pdf`), definitivo.pdf);
 
 console.log(JSON.stringify({
   saida,

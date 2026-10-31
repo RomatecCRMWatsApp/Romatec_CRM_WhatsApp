@@ -14,10 +14,12 @@ export function registrarRotasContratos(app: Express) {
       if (!podeCriarContrato(perfilDe(user))) return res.status(403).send('Sem permissão');
       const slug = typeof req.query.slug === 'string' && /^[a-z0-9-]{1,80}$/.test(req.query.slug) ? req.query.slug : 'bom-jardims';
       const lote = typeof req.query.lote === 'string' && /^[A-Z0-9]{1,6}$/.test(req.query.lote) ? req.query.lote : 'A01';
+      // ?plano=A|B|C: modelo da condição de lançamento; sem ele, o da entrada de 30%
+      const plano = req.query.plano === 'A' || req.query.plano === 'B' || req.query.plano === 'C' ? req.query.plano : 'padrao';
       const { contratoModelo } = await import('./modelo');
-      const pdf = await contratoModelo(slug, lote, user.id);
+      const pdf = await contratoModelo(slug, lote, user.id, plano);
       res.setHeader('Content-Type', 'application/pdf');
-      res.setHeader('Content-Disposition', `attachment; filename="CONTRATO-MODELO-CPCV-${slug.toUpperCase()}-${lote}.pdf"`);
+      res.setHeader('Content-Disposition', `attachment; filename="CONTRATO-MODELO-CPCV-${slug.toUpperCase()}-${plano === 'padrao' ? '' : `PLANO-${plano}-`}${lote}.pdf"`);
       res.setHeader('Cache-Control', 'private, no-store');
       res.send(pdf);
     } catch (e: any) {

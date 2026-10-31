@@ -7,6 +7,7 @@
  * o que o cliente viu no simulador e na proposta (entrada + parcela × prazo).
  */
 import { comissao, vencimento, type CondicoesPagamento, type Simulacao } from '../../shared/simulador';
+import { cronograma, planoCondicao, ROTULO_CONDICAO, type CondicaoPagamento } from '../../shared/condicoesLancamento';
 import { gerarPlano } from '../financeiro/plano';
 
 export type Modalidade = 'financiado' | 'avista';
@@ -18,10 +19,13 @@ export interface EscolhaPlano {
   prazo?: number;
   /** Vencimento do 1º pagamento (entrada ou parcela única), "AAAA-MM-DD" */
   dataPrimeiroPagamento: string;
+  /** Forma de pagamento do financiado: entrada 30% (padrão) ou condições de lançamento A, B, C */
+  condicao?: CondicaoPagamento;
 }
 
 export interface ParcelaPlano {
-  tipo: 'entrada' | 'saldo' | 'avista';
+  /** reforco = reforço anual (Plano A); complemento = resto da entrada sem juros (Plano C) */
+  tipo: 'entrada' | 'saldo' | 'avista' | 'reforco' | 'complemento';
   /** Nº dentro do tipo (1..n) */
   numero: number;
   total: number;
@@ -61,6 +65,18 @@ export interface PlanoContrato {
   comissao_romatec: number;
   /** % do corretor intermediador sobre o valor da venda (2%) — o que o cliente vê no Contrato de Intermediação */
   comissao_corretor_percentual?: number;
+  /** Forma de pagamento (ausente = padrão: contratos anteriores aos planos de lançamento) */
+  condicao?: CondicaoPagamento;
+  /** Plano A: reforços anuais */
+  reforco_qtd?: number;
+  reforco_valor?: number;
+  reforco_venc1?: string;
+  /** Plano C: valor do ato e complemento da entrada sem juros */
+  complemento_ato?: number;
+  complemento_valor?: number;
+  complemento_qtd?: number;
+  complemento_parcela?: number;
+  complemento_venc1?: string;
   parcelas: ParcelaPlano[];
 }
 
@@ -86,6 +102,8 @@ export function planoDoContrato(sim: Simulacao, escolha: EscolhaPlano, c: Condic
     };
   }
 
+  if (escolha.condicao && escolha.condicao !== 'padrao') return planoDeLancamento(sim, escolha, c, comCorretor, base);
+
   const plano = sim.planos.find(p => p.prazo === escolha.prazo);
   if (!plano) throw new Error(`Prazo de ${escolha.prazo} meses não está nas condições do empreendimento`);
   const nEnt = sim.parcelasEntrada.length;
@@ -104,4 +122,47 @@ export function planoDoContrato(sim: Simulacao, escolha: EscolhaPlano, c: Condic
     comissao_total: com.total, comissao_corretor: com.corretor, comissao_romatec: com.romatec,
     parcelas,
   };
+}
+
+/**
+ * Planos de lançamento (A, B, C — shared/condicoesLancamento.ts): entrada no ato (dataPrimeiroPagamento) e as parcelas
+ * do cronograma (saldo pela Price; reforços anuais no A; complemento da entrada sem juros no C) a partir do mês seguinte.
+ * A corretagem é retida integralmente no ato (entrada em parcela única).
+ */
+function planoDeLancamento(sim: Simulacao, escolha: EscolhaPlano, c: CondicoesPagamento, comCorretor: boolean,
+  base: Pick<PlanoContrato, 'area_m2' | 'preco_tabela' | 'preco_avista' | 'desconto_avista_total' | 'taxa_aa' | 'taxa_am' | 'comissao_percentual' | 'comissao_corretor_percentual'>): PlanoContrato {
+  const cond = escolha.condicao as Exclude<CondicaoPagamento, 'padrao'>;
+  const d1 = escolha.dataPrimeiroPagamento;
+  let pc;
+  try { pc = planoCondicao(sim.preco, cond, Number(escolha.prazo), c); }
+  catch (e: any) { throw new Error(e?.message || 'Condição de pagamento inválida'); }
+  const parcelas: ParcelaPlano[] = cronograma(pc).map(l => ({
+    tipo: l.tipo, numero: l.numero, total: l.total, vencimento: vencimento(d1, l.mes), valor: l.parcela, juros: l.juros, amortizacao: l.amortizacao, saldoDevedor: l.saldoDevedor,
+  }));
+  const com = comissao(sim.preco, comCorretor, true, c);
+  const primeiroReforco = parcelas.find(p => p.tipo === 'reforco');
+  const primeiroComp = parcelas.find(p => p.tipo === 'complemento');
+  return {
+    ...base, modalidade: 'financiado', avista_vencimento: '', condicao: cond,
+    entrada_valor: pc.entradaTotal, entrada_percentual: pc.entradaTotal / sim.preco, entrada_qtd: 1,
+    entrada_parcela: pc.entradaAto, entrada_desconto: 0, entrada_venc1: d1,
+    saldo_valor: pc.saldoFinanciado, saldo_qtd: pc.prazo, saldo_parcela: pc.parcela, saldo_venc1: vencimento(d1, 1),
+    total_pagar: pc.totalPago, total_juros: pc.juros,
+    comissao_total: com.total, comissao_corretor: com.corretor, comissao_romatec: com.romatec,
+    ...(pc.reforco ? { reforco_qtd: pc.reforco.qtd, reforco_valor: pc.reforco.valor, reforco_venc1: primeiroReforco?.vencimento ?? '' } : {}),
+    ...(pc.complemento ? {
+      complemento_ato: pc.entradaAto, complemento_valor: pc.complemento.total, complemento_qtd: pc.complemento.qtd,
+      complemento_parcela: pc.complemento.parcela, complemento_venc1: primeiroComp?.vencimento ?? '',
+    } : {}),
+    parcelas,
+  };
+}
+
+/** Título da forma de pagamento do contrato ("Plano A — Plano 13º"); padrão = entrada de 30% */
+export const tituloCondicao = (p: Pick<PlanoContrato, 'condicao'>) => ROTULO_CONDICAO[p.condicao ?? 'padrao'].titulo;
+
+/** Modelo do CPCV da forma de pagamento: o v3 é o da entrada de 30%; os planos têm modelo próprio (…-PLANO-A.docx) */
+export function modeloDaCondicao(modeloBase: string, condicao: CondicaoPagamento | undefined | null): string {
+  if (!condicao || condicao === 'padrao') return modeloBase;
+  return modeloBase.replace(/\.docx$/i, `-PLANO-${condicao}.docx`);
 }

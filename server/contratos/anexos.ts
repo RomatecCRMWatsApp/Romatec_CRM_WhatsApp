@@ -36,7 +36,7 @@ export function desenharMarca(p: PDFPage, m: MarcaPdf): { topo: number; base: nu
   return { topo: height - 0.8 * cm - hc - 10, base: 0.6 * cm + hr + 10 };
 }
 
-const ROTULO_TIPO = { entrada: 'Entrada', saldo: 'Saldo', avista: 'À vista' } as const;
+const ROTULO_TIPO = { entrada: 'Entrada', saldo: 'Saldo', avista: 'À vista', reforco: 'Reforço anual', complemento: 'Compl. entrada' } as const;
 
 /** Anexo II — tabela de pagamento do plano (A4 paisagem, com a marca do empreendimento) */
 export async function anexoTabelaPagamento(plano: PlanoContrato, ctx: Ctx, marcaSlug: string): Promise<Buffer> {

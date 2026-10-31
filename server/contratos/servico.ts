@@ -14,7 +14,7 @@ import { statusPublicoDe } from '../../shared/lotes';
 import { exigeConjuge, pendenciasComprador, pendenciasDependentes, type Dependente, type PessoaForm } from '../../shared/contratos';
 import { memorialDoLote, type RuaMemorial } from '../lotes/memorial';
 import { montarContexto, type CredenciaisCorretor, type EntradaContexto, type PessoaContrato } from './contexto';
-import { planoDoContrato, type EscolhaPlano, type PlanoContrato } from './plano';
+import { modeloDaCondicao, planoDoContrato, type EscolhaPlano, type PlanoContrato } from './plano';
 import { gerarContratoPdf } from './gerar';
 import type { DadosUnidade } from './anexosLote';
 import { carregarCamadas } from './mapaEmpreendimento';
@@ -133,7 +133,7 @@ export interface NovoContrato {
   leadId?: number | null;
   /** Corretor que vendeu (admin/secretário escolhem; corretor = ele mesmo) */
   corretorUserId: number;
-  plano: { modalidade: 'financiado' | 'avista'; entradaParcelas: number; prazo?: number; dataPrimeiroPagamento: string };
+  plano: { modalidade: 'financiado' | 'avista'; entradaParcelas: number; prazo?: number; dataPrimeiroPagamento: string; condicao?: 'padrao' | 'A' | 'B' | 'C' };
   comprador: PessoaForm;
   conjuge?: PessoaForm | null;
   /** Dependentes para as carteirinhas (até 6; opcional) */
@@ -163,8 +163,9 @@ export async function salvarPessoa(p: PessoaForm, leadId: number | null): Promis
 }
 
 export function planoEscolhido(n: NovoContrato['plano'], areaM2: number, precoTabela: number | null, c: CondicoesPagamento, comCorretor: boolean): PlanoContrato {
-  const sim = simular(areaM2, n.modalidade === 'avista' ? 1 : n.entradaParcelas, c, precoTabela);
-  const escolha: EscolhaPlano = { modalidade: n.modalidade, prazo: n.prazo, dataPrimeiroPagamento: n.dataPrimeiroPagamento };
+  const lancamento = n.modalidade === 'financiado' && !!n.condicao && n.condicao !== 'padrao';
+  const sim = simular(areaM2, n.modalidade === 'avista' || lancamento ? 1 : n.entradaParcelas, c, precoTabela);
+  const escolha: EscolhaPlano = { modalidade: n.modalidade, prazo: n.prazo, dataPrimeiroPagamento: n.dataPrimeiroPagamento, condicao: n.modalidade === 'financiado' ? n.condicao ?? 'padrao' : 'padrao' };
   return planoDoContrato(sim, escolha, c, comCorretor);
 }
 
@@ -316,7 +317,8 @@ export async function entradaDoContrato(contratoId: number): Promise<{ entrada: 
     verticesUtm: geom(lote), memorial, outros: todos.filter(l => l.id !== lote.id && geom(l).length >= 3).map(l => ({ codigo: l.codigo, verticesUtm: geom(l) })),
     perimetroUtm, ruas, fuso, responsavelTecnico: emp?.responsavelTecnico ?? null, camadas: await carregarCamadas(emp?.slug, fuso),
   };
-  return { entrada, unidade, plano, marca: j.marcaSlug, modelo: j.modeloCpcv };
+  // Modelo do CPCV da forma de pagamento: v3 (entrada de 30%) ou o do plano de lançamento (…-PLANO-A/B/C.docx)
+  return { entrada, unidade, plano, marca: j.marcaSlug, modelo: modeloDaCondicao(j.modeloCpcv, plano.condicao) };
 }
 
 /** Gate atual do contrato (para a tela: o que falta e o que bloqueia) */

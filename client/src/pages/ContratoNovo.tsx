@@ -16,6 +16,7 @@ import { ESTADOS_CIVIS, REGIMES_BENS, exigeConjuge, exigePacto, pendenciasCompra
 import DependentesCampos from "@/components/contratos/Dependentes";
 import { AnexosNovoContrato, enviarAnexo, vagasDoContrato, type AnexoPendente } from "@/components/contratos/Anexos";
 import { brl } from "@shared/simulador";
+import { CONDICOES, ROTULO_CONDICAO, prazosDaCondicao, type CondicaoPagamento } from "@shared/condicoesLancamento";
 
 const PASSOS = ["Unidade e plano", "Comprador", "Revisão"];
 
@@ -43,6 +44,8 @@ export default function ContratoNovo() {
   const [modalidade, setModalidade] = useState<"financiado" | "avista">("financiado");
   const [entradaParcelas, setEntrada] = useState(1);
   const [prazo, setPrazo] = useState(120);
+  /** Forma de pagamento do financiado — define o modelo do CPCV (entrada 30% ou Plano A, B, C) */
+  const [condicao, setCondicao] = useState<CondicaoPagamento>(() => { const c = q.get("condicao"); return c === "A" || c === "B" || c === "C" ? c : "padrao"; });
   const [data1, setData1] = useState(dataSugerida());
   const [comprador, setComprador] = useState<PessoaForm>(PESSOA_VAZIA);
   const [conjuge, setConjuge] = useState<PessoaForm>({ ...PESSOA_VAZIA });
@@ -54,8 +57,10 @@ export default function ContratoNovo() {
 
   useEffect(() => { if (op && corretorUserId == null) setCorretor(op.euId); }, [op, corretorUserId]);
   useEffect(() => {
-    if (op?.condicoes.prazos.length && !op.condicoes.prazos.includes(prazo)) setPrazo(op.condicoes.prazos.at(-1)!);
-  }, [op, prazo]);
+    if (!op?.condicoes.prazos.length) return;
+    const ps = prazosDaCondicao(condicao, op.condicoes);
+    if (!ps.includes(prazo)) setPrazo(condicao === "B" ? 180 : ps.at(-1)!);
+  }, [op, prazo, condicao]);
   // Lead escolhido: traz nome, telefone e a chácara de interesse
   useEffect(() => {
     const l = op?.leads.find(x => x.id === leadId);
@@ -64,7 +69,7 @@ export default function ContratoNovo() {
     if (l.loteCodigo && !lote && op?.lotes.some(x => x.codigo === l.loteCodigo)) setLote(l.loteCodigo);
   }, [leadId, op]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  const plano = { modalidade, entradaParcelas: modalidade === "avista" ? 1 : entradaParcelas, prazo: modalidade === "avista" ? undefined : prazo, dataPrimeiroPagamento: data1 };
+  const plano = { modalidade, entradaParcelas: modalidade === "avista" || condicao !== "padrao" ? 1 : entradaParcelas, prazo: modalidade === "avista" ? undefined : prazo, dataPrimeiroPagamento: data1, condicao: modalidade === "avista" ? "padrao" as const : condicao };
   const sim = trpc.contratos.simular.useQuery({ slug, lote, plano, corretorUserId: corretorUserId ?? undefined }, { enabled: !!lote && /^\d{4}-\d{2}-\d{2}$/.test(data1) });
   // Documentos escolhidos no passo 2: sobem logo depois de criar (dependente pela posição na lista)
   const [anexos, setAnexos] = useState<AnexoPendente[]>([]);
@@ -163,14 +168,19 @@ export default function ContratoNovo() {
               </Campo>
               {modalidade === "financiado" && (
                 <>
-                  <Campo rotulo={`Entrada (${Math.round(op.condicoes.entradaPct * 100)}%)`}>
+                  <Campo rotulo="Condição (modelo do contrato)">
+                    <select className={sel} value={condicao} onChange={e => { const k = e.target.value as CondicaoPagamento; setCondicao(k); setPrazo(k === "B" ? 180 : 120); }}>
+                      {CONDICOES.map(k => <option key={k} value={k}>{ROTULO_CONDICAO[k].titulo}</option>)}
+                    </select>
+                  </Campo>
+                  {condicao === "padrao" && <Campo rotulo={`Entrada (${Math.round(op.condicoes.entradaPct * 100)}%)`}>
                     <select className={sel} value={entradaParcelas} onChange={e => setEntrada(Number(e.target.value))}>
                       {Array.from({ length: op.condicoes.entradaMaxParcelas }, (_, i) => i + 1).map(n => <option key={n} value={n}>{n === 1 ? "À vista (com desconto)" : `${n}× sem juros`}</option>)}
                     </select>
-                  </Campo>
+                  </Campo>}
                   <Campo rotulo="Saldo">
                     <select className={sel} value={prazo} onChange={e => setPrazo(Number(e.target.value))}>
-                      {op.condicoes.prazos.map(p => <option key={p} value={p}>{p} meses</option>)}
+                      {prazosDaCondicao(condicao, op.condicoes).map(p => <option key={p} value={p}>{p} meses</option>)}
                     </select>
                   </Campo>
                 </>
@@ -188,8 +198,11 @@ export default function ContratoNovo() {
                     {sim.data.modalidade === "avista"
                       ? <p>À vista: <b>{brl(sim.data.total_pagar)}</b> em {br(sim.data.avista_vencimento)}</p>
                       : <>
+                        {sim.data.condicao && sim.data.condicao !== "padrao" && <p className="sm:col-span-2 lg:col-span-3">Condição: <b>{ROTULO_CONDICAO[sim.data.condicao].titulo}</b> — contrato no modelo do {ROTULO_CONDICAO[sim.data.condicao].curto}</p>}
                         <p>Entrada: <b>{sim.data.entrada_qtd}× {brl(sim.data.entrada_parcela)}</b> (total {brl(sim.data.entrada_valor)})</p>
+                        {sim.data.complemento_qtd ? <p>Resto da entrada: <b>{sim.data.complemento_qtd}× {brl(sim.data.complemento_parcela ?? 0)}</b> sem juros, de {br(sim.data.complemento_venc1 ?? "")}</p> : null}
                         <p>Saldo: <b>{sim.data.saldo_qtd}× {brl(sim.data.saldo_parcela)}</b> a partir de {br(sim.data.saldo_venc1)}</p>
+                        {sim.data.reforco_qtd ? <p>Reforço anual: <b>{sim.data.reforco_qtd}× {brl(sim.data.reforco_valor ?? 0)}</b>, o 1º em {br(sim.data.reforco_venc1 ?? "")}</p> : null}
                         <p>Total a pagar: <b>{brl(sim.data.total_pagar)}</b> · juros {brl(sim.data.total_juros)}</p>
                       </>}
                     <p className="text-xs text-muted-foreground">Comissão: {brl(sim.data.comissao_total)}</p>
@@ -230,7 +243,7 @@ export default function ContratoNovo() {
               {casado && <p>Cônjuge: <b>{conjuge.nome}</b> — CPF {conjuge.cpf}</p>}
               <p>Documentos anexados: <b>{anexosValidos.length}</b>{anexosValidos.length ? ` — ${anexosValidos.map(a => a.titulo.split(" — ")[0]).join(", ")}` : " (envie depois pela tela do contrato)"}</p>
               <p>Carteirinhas: <b>{1 + (casado ? 1 : 0) + (dependentes?.length ?? 0)}</b>{dependentes?.length ? ` — dependentes: ${dependentes.map(d => `${d.nome.split(" ")[0]} (${rotuloParentesco(d.parentesco)})`).join(", ")}` : " (sem dependentes)"}</p>
-              <p>Plano: <b>{sim.data.modalidade === "avista" ? `à vista ${brl(sim.data.total_pagar)}` : `entrada ${sim.data.entrada_qtd}× ${brl(sim.data.entrada_parcela)} + ${sim.data.saldo_qtd}× ${brl(sim.data.saldo_parcela)}`}</b></p>
+              <p>Plano: <b>{sim.data.modalidade === "avista" ? `à vista ${brl(sim.data.total_pagar)}` : `${sim.data.condicao && sim.data.condicao !== "padrao" ? `${ROTULO_CONDICAO[sim.data.condicao].curto} · ` : ""}entrada ${sim.data.entrada_qtd}× ${brl(sim.data.entrada_parcela)}${sim.data.complemento_qtd ? ` + ${sim.data.complemento_qtd}× ${brl(sim.data.complemento_parcela ?? 0)} (resto da entrada)` : ""} + ${sim.data.saldo_qtd}× ${brl(sim.data.saldo_parcela)}${sim.data.reforco_qtd ? ` + ${sim.data.reforco_qtd} reforços de ${brl(sim.data.reforco_valor ?? 0)}` : ""}`}</b></p>
               <p>Total a pagar: <b>{brl(sim.data.total_pagar)}</b></p>
             </div>
             <Campo rotulo="Condições específicas deste contrato (opcional)">
