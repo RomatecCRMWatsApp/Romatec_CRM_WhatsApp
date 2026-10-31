@@ -23,6 +23,8 @@ const pedidoTabela = z.object({
   entrada: z.number().int().min(1).max(60).default(6),
   prazo: z.number().int().min(1).max(600).default(120),
   dataPrimeiro: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).nullable().optional(),
+  /** Forma de pagamento: entrada 30% (padrão) ou planos de lançamento A, B, C */
+  condicao: z.enum(["padrao", "A", "B", "C"]).nullable().optional(),
 });
 
 async function comErro<T>(f: () => Promise<T> | T): Promise<T> {

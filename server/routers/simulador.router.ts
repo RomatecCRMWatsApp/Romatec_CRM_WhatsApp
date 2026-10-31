@@ -55,6 +55,15 @@ function calcular(areaM2: number, entrada: number, c: CondicoesPagamento, precoT
 }
 
 const base = { slug: z.string().max(80).default("bom-jardims"), lote: z.string().trim().min(2).max(10), entrada: z.number().int().min(1).max(60) };
+/** Condição de pagamento escolhida (entrada 30% ou planos A, B e C — shared/condicoesLancamento.ts) */
+const condicaoInput = z.enum(["padrao", "A", "B", "C"]).default("padrao");
+
+/** Plano da condição escolhida (planos A/B/C); prazo fora da condição → 422 */
+async function planoDaCondicao(preco: number, condicao: "A" | "B" | "C", prazo: number, c: CondicoesPagamento) {
+  const { planoCondicao } = await import("../../shared/condicoesLancamento");
+  try { return planoCondicao(preco, condicao, prazo, c); }
+  catch (e: any) { throw new TRPCError({ code: "UNPROCESSABLE_CONTENT", message: e?.message || "Condição inválida" }); }
+}
 
 export const simuladorRouter = router({
   /** Lote + simulação com a entrada escolhida, opções de entrada e (só administrador) a comissão */
@@ -90,14 +99,17 @@ export const simuladorRouter = router({
 
   /** Grava a simulação (centavos) e, com lead, avança o lead para "Proposta" */
   salvar: protectedProcedure
-    .input(z.object({ ...base, prazo: z.number().int().min(1).max(600), leadId: z.number().int().nullable().optional() }))
+    .input(z.object({ ...base, prazo: z.number().int().min(1).max(600), leadId: z.number().int().nullable().optional(), condicao: condicaoInput }))
     .mutation(async ({ input, ctx }) => {
       const db = await dbOrThrow();
       const { emp, lote, areaM2, selo, c } = await contexto(db, input.slug, input.lote, ctx.permissoes);
       if (selo === "vendido") throw new TRPCError({ code: "CONFLICT", message: `Chácara ${lote.codigo} já vendida — sem proposta` });
-      if (!c.prazos.includes(input.prazo)) throw new TRPCError({ code: "UNPROCESSABLE_CONTENT", message: `Prazo de ${input.prazo} meses não está nas condições` });
-      const sim = calcular(areaM2, input.entrada, c, num(lote.precoTabela));
-      const plano = sim.planos.find(p => p.prazo === input.prazo)!;
+      if (input.condicao === "padrao" && !c.prazos.includes(input.prazo)) throw new TRPCError({ code: "UNPROCESSABLE_CONTENT", message: `Prazo de ${input.prazo} meses não está nas condições` });
+      const sim = calcular(areaM2, input.condicao === "padrao" ? input.entrada : 1, c, num(lote.precoTabela));
+      const pc = input.condicao === "padrao" ? null : await planoDaCondicao(sim.preco, input.condicao, input.prazo, c);
+      const plano = pc
+        ? { prazo: pc.prazo, parcela: pc.parcela, totalSaldo: 0, juros: pc.juros, totalPago: pc.totalPago }
+        : sim.planos.find(p => p.prazo === input.prazo)!;
       let lead: any = null;
       if (input.leadId) {
         [lead] = await db.select().from(leadQualifications).where(eq(leadQualifications.id, input.leadId)).limit(1);
@@ -106,10 +118,11 @@ export const simuladorRouter = router({
       }
       await db.insert(simulacoes).values({
         empreendimentoId: emp.id, loteId: lote.id, leadId: lead?.id ?? null, usuarioId: ctx.user.id,
-        entradaParcelas: input.entrada, prazoSaldo: input.prazo,
-        precoCents: centavos(sim.preco), entradaCents: centavos(sim.entradaEfetiva), saldoCents: centavos(sim.saldo),
+        entradaParcelas: pc ? 1 : input.entrada, prazoSaldo: input.prazo,
+        precoCents: centavos(sim.preco), entradaCents: centavos(pc ? pc.entradaTotal : sim.entradaEfetiva), saldoCents: centavos(pc ? pc.saldoFinanciado : sim.saldo),
         parcelaSaldoCents: centavos(plano.parcela), totalPagoCents: centavos(plano.totalPago),
-        payload: { codigo: lote.codigo, areaM2, condicoes: c, parcelasEntrada: sim.parcelasEntrada, plano },
+        // condicao: a forma de pagamento a que o cliente aderiu (padrao = entrada 30%; A, B, C = planos de lançamento)
+        payload: { codigo: lote.codigo, areaM2, condicoes: c, condicao: input.condicao, parcelasEntrada: pc ? pc.parcelasEntrada : sim.parcelasEntrada, plano, planoCondicao: pc },
       } as any);
       let etapa: string | null = null;
       if (lead) {
@@ -125,7 +138,7 @@ export const simuladorRouter = router({
 
   /** Manda a simulação escolhida só para o número digitado */
   enviarWhatsApp: protectedProcedure
-    .input(z.object({ ...base, prazo: z.number().int().min(1).max(600), telefone: z.string().trim().min(8).max(25) }))
+    .input(z.object({ ...base, prazo: z.number().int().min(1).max(600), telefone: z.string().trim().min(8).max(25), condicao: condicaoInput }))
     .mutation(async ({ input, ctx }) => {
       const { normalizePhoneBR } = await import("../../shared/telefone");
       const telefone = normalizePhoneBR(input.telefone);
@@ -133,18 +146,21 @@ export const simuladorRouter = router({
       const db = await dbOrThrow();
       const { lote, areaM2, selo, c } = await contexto(db, input.slug, input.lote, ctx.permissoes);
       if (selo === "vendido") throw new TRPCError({ code: "CONFLICT", message: `Chácara ${lote.codigo} já vendida — sem proposta` });
-      if (!c.prazos.includes(input.prazo)) throw new TRPCError({ code: "UNPROCESSABLE_CONTENT", message: `Prazo de ${input.prazo} meses não está nas condições` });
-      const sim = calcular(areaM2, input.entrada, c, num(lote.precoTabela));
+      if (input.condicao === "padrao" && !c.prazos.includes(input.prazo)) throw new TRPCError({ code: "UNPROCESSABLE_CONTENT", message: `Prazo de ${input.prazo} meses não está nas condições` });
+      const sim = calcular(areaM2, input.condicao === "padrao" ? input.entrada : 1, c, num(lote.precoTabela));
+      const pc = input.condicao === "padrao" ? null : await planoDaCondicao(sim.preco, input.condicao, input.prazo, c);
       const { enviarTexto, ZApiError } = await import("../leads/zapiClient");
       try {
         const { cartaoDoUsuario } = await import("../cartaoVendas");
         const { linhaCartao } = await import("../../shared/cartaoVendas");
-        await enviarTexto(telefone, mensagemSimulacao(lote.codigo, sim, input.prazo, c, linhaCartao(await cartaoDoUsuario(ctx.user.id))));
+        const assinatura = linhaCartao(await cartaoDoUsuario(ctx.user.id));
+        const { mensagemCondicao } = await import("../../shared/condicoesLancamento");
+        await enviarTexto(telefone, pc ? mensagemCondicao(lote.codigo, areaM2, pc, c, assinatura) : mensagemSimulacao(lote.codigo, sim, input.prazo, c, assinatura));
       } catch (e: any) {
         const msg = e instanceof ZApiError ? `${e.codigo}: ${e.message}` : (e?.message || "falha no envio");
         throw new Error(`WhatsApp não enviou a simulação (${msg})`);
       }
-      console.log(`[Simulador] Chácara ${lote.codigo} (${input.entrada}x + ${input.prazo}x) enviada para ${telefone}`);
+      console.log(`[Simulador] Chácara ${lote.codigo} (${pc ? `plano ${input.condicao}` : `${input.entrada}x`} + ${input.prazo}x) enviada para ${telefone}`);
       return { success: true, telefone };
     }),
 });

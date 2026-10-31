@@ -136,6 +136,8 @@ function tabela(ctx: { pagina: () => { p: PDFPage; topo: number; base: number };
 const assinatura = (c: CartaoVendas | null) => (c ? [`${c.papel} ${c.nome}`, c.creci, c.telefones[0], c.email].filter(Boolean).join(' · ') : '');
 
 /** PDF: condições + evolutivo de um lote/área/valor */
+const ROTULO_TIPO: Record<string, string> = { entrada: 'Entrada', saldo: 'Saldo', reforco: 'Reforço', complemento: 'Compl. entr.' };
+
 export async function pdfTabelaFinanciamento(base: Awaited<ReturnType<typeof baseDoEmpreendimento>>, t: ReturnType<typeof calcularTabela>, cartao: CartaoVendas | null): Promise<Buffer> {
   const { emp, c } = base, s = t.simulacao;
   const nome = t.origem.tipo === 'lote' ? `Chácara ${t.origem.codigo}${t.origem.quadra ? ` · Quadra ${t.origem.quadra}` : ''}` : t.origem.tipo === 'area' ? `Área de ${m2(t.origem.areaM2)} m²` : `Valor de ${brl(t.origem.preco)}`;
@@ -155,7 +157,8 @@ export async function pdfTabelaFinanciamento(base: Awaited<ReturnType<typeof bas
     [`Entrada parcelada (2 a ${c.entradaMaxParcelas}×)`, t.opcoesEntrada.filter(o => o.parcelas > 1).map(o => `${o.parcelas}× ${brl(o.valorParcela)}`).join(' · ')],
     [`Saldo (${pct(1 - c.entradaPct, 0)})`, brl(s.saldo)],
     ['Juros', `${pct(c.jurosAaEfetivo)} ao ano efetivos (${pct(s.taxaMensal, 4)} ao mês) · Tabela Price · parcelas fixas`],
-    ['Plano desta tabela', `Entrada ${t.entrada === 1 ? 'à vista' : `em ${t.entrada}×`} + saldo em ${t.prazo}× de ${brl(t.resumo.parcela)} · 1º pagamento em ${br(t.dataPrimeiro)}`],
+    ...(t.planoCondicao ? [['Forma de pagamento', t.rotuloCondicao] as [string, string]] : []),
+    ['Plano desta tabela', t.planoCondicao ? `${t.textoCondicao} · entrada em ${br(t.dataPrimeiro)}` : `Entrada ${t.entrada === 1 ? 'à vista' : `em ${t.entrada}×`} + saldo em ${t.prazo}× de ${brl(t.resumo.parcela)} · 1º pagamento em ${br(t.dataPrimeiro)}`],
     ['Total a pagar', `${brl(t.resumo.totalPago)} (juros de ${brl(t.resumo.juros)})`],
   ];
   const valores = quadro.map(([, v]) => quebrar(D.f, v, 8.4, L - 178));
@@ -169,24 +172,27 @@ export async function pdfTabelaFinanciamento(base: Awaited<ReturnType<typeof bas
   y -= 14;
 
   // Prazos do saldo
-  texto('SALDO — PARCELAS POR PRAZO', { bold: true, size: 9, cor: VERDE }); y -= 6;
+  texto(t.planoCondicao ? `${t.rotuloCondicao.toUpperCase()} — PARCELAS POR PRAZO` : 'SALDO — PARCELAS POR PRAZO', { bold: true, size: 9, cor: VERDE }); y -= 6;
   const est = { p, y, base: b };
   const wP = L / 5;
-  tabela({ pagina: D.pagina, f: D.f, fb: D.fb }, est, X0, [{ t: 'Prazo', w: wP }, { t: 'Parcela', w: wP, dir: true }, { t: 'Total do saldo', w: wP, dir: true }, { t: 'Juros', w: wP, dir: true }, { t: 'Total a pagar', w: wP, dir: true }],
+  if (t.planoCondicao) {
+    tabela({ pagina: D.pagina, f: D.f, fb: D.fb }, est, X0, [{ t: 'Prazo', w: wP }, { t: 'Parcela', w: wP, dir: true }, { t: 'Reforço / resto da entrada', w: wP, dir: true }, { t: 'Juros', w: wP, dir: true }, { t: 'Total a pagar', w: wP, dir: true }],
+      t.planosCondicao.map(pl => ({ v: [`${pl.prazo}×`, brl(pl.parcela), pl.reforco ? `${pl.reforco.qtd}× ${brl(pl.reforco.valor)}/ano` : pl.complemento ? `${pl.complemento.qtd}× ${brl(pl.complemento.parcela)}` : '—', brl(pl.juros), brl(pl.totalPago)], destaque: pl.prazo === t.prazo })), 8);
+  } else tabela({ pagina: D.pagina, f: D.f, fb: D.fb }, est, X0, [{ t: 'Prazo', w: wP }, { t: 'Parcela', w: wP, dir: true }, { t: 'Total do saldo', w: wP, dir: true }, { t: 'Juros', w: wP, dir: true }, { t: 'Total a pagar', w: wP, dir: true }],
     s.planos.map(pl => ({ v: [`${pl.prazo}×`, brl(pl.parcela), brl(pl.totalSaldo), brl(pl.juros), brl(pl.totalPago)], destaque: pl.prazo === t.prazo })), 8);
   ({ p, y, base: b } = est); y -= 16;
   if (y < b + 60) { ({ p, topo: y, base: b } = D.pagina()); }
 
   // Evolutivo
-  texto(`EVOLUTIVO — ENTRADA ${t.entrada === 1 ? 'À VISTA' : `EM ${t.entrada}×`} + SALDO EM ${t.prazo}× (TABELA PRICE)`, { bold: true, size: 9, cor: VERDE }); y -= 6;
+  texto(t.planoCondicao ? `EVOLUTIVO — ${t.rotuloCondicao.toUpperCase()} · ${t.prazo}× (TABELA PRICE)` : `EVOLUTIVO — ENTRADA ${t.entrada === 1 ? 'À VISTA' : `EM ${t.entrada}×`} + SALDO EM ${t.prazo}× (TABELA PRICE)`, { bold: true, size: 9, cor: VERDE }); y -= 6;
   const est2 = { p, y, base: b };
   const w = [42, 60, 74, 84, 78, 84, L - 422];
   tabela({ pagina: D.pagina, f: D.f, fb: D.fb }, est2, X0, [
     { t: 'Nº', w: w[0] }, { t: 'Tipo', w: w[1] }, { t: 'Vencimento', w: w[2] }, { t: 'Parcela', w: w[3], dir: true },
     { t: 'Juros', w: w[4], dir: true }, { t: 'Amortização', w: w[5], dir: true }, { t: 'Saldo devedor', w: w[6], dir: true },
-  ], t.linhas.map((l: LinhaEvolucao & { vencimento: string }) => ({
-    v: [String(l.numero), l.tipo === 'entrada' ? 'Entrada' : 'Saldo', br(l.vencimento), brl(l.parcela), brl(l.juros), brl(l.amortizacao), brl(l.saldoDevedor)],
-    tom: l.tipo === 'entrada',
+  ], t.linhas.map(l => ({
+    v: [String(l.numero), ROTULO_TIPO[l.tipo] ?? l.tipo, br(l.vencimento), brl(l.parcela), brl(l.juros), brl(l.amortizacao), brl(l.saldoDevedor)],
+    tom: l.tipo !== 'saldo',
   })));
   ({ p, y, base: b } = est2); y -= 14;
 

@@ -7,6 +7,7 @@ import { AlternadorMapa, Mapa3DEmpreendimento } from "./Mapa3DEmpreendimento";
 import EnviarWhatsAppModal from "@/components/EnviarWhatsAppModal";
 import { exibirTelefoneBR } from "@shared/telefone";
 import { brl, vencimento, type SeloLote } from "@shared/simulador";
+import { CONDICOES, ROTULO_CONDICAO, ROTULO_LINHA, cronograma, planosDaCondicao, prazosDaCondicao, textoCondicao, type CondicaoPagamento, type PlanoCondicao } from "@shared/condicoesLancamento";
 import type { LotePainel } from "@/components/empreendimento/PainelLote";
 import { Calculator, Download, FileText, Link2, Send, X } from "lucide-react";
 
@@ -103,6 +104,64 @@ function Evolucao({ slug, codigo, entrada, prazo, onFechar }: { slug: string; co
   );
 }
 
+/** Cronograma dos planos de lançamento (A, B, C): mesma planilha da evolução, calculada aqui com shared/condicoesLancamento */
+function CronogramaPlano({ codigo, plano, onFechar }: { codigo: string; plano: PlanoCondicao; onFechar: () => void }) {
+  const linhas = useMemo(() => cronograma(plano), [plano]);
+  const [dataVenda, setDataVenda] = useState(hojeIso);
+  const valida = /^\d{4}-\d{2}-\d{2}$/.test(dataVenda);
+  const venc = (mes: number) => (valida ? dataBr(vencimento(dataVenda, mes)) : "—");
+  const exportar = () => {
+    const cab = ["Mês", "Vencimento", "Tipo", "Nº", "Valor", "Juros", "Amortização", "Saldo devedor"];
+    const ls = linhas.map(l => [l.mes, venc(l.mes), ROTULO_LINHA[l.tipo], `${l.numero}/${l.total}`, num(l.parcela), num(l.juros), num(l.amortizacao), num(l.saldoDevedor)]);
+    const csv = "\ufeff" + [[`${ROTULO_CONDICAO[plano.condicao].titulo} — chácara ${codigo} — ${textoCondicao(plano)}`], cab, ...ls].map(r => r.map(cel).join(";")).join("\r\n");
+    const a = document.createElement("a");
+    a.href = URL.createObjectURL(new Blob([csv], { type: "text/csv;charset=utf-8" }));
+    a.download = `simulacao-${codigo}-plano-${plano.condicao}-${plano.prazo}m.csv`;
+    a.click();
+    setTimeout(() => URL.revokeObjectURL(a.href), 2000);
+  };
+  const cor = (t: string) => (t === "entrada" ? "bg-secondary/30" : t === "reforco" ? "bg-amber-500/10" : t === "complemento" ? "bg-sky-500/10" : "");
+  return (
+    <div className="fixed inset-0 z-[1000] flex items-center justify-center bg-black/70 p-4" onClick={e => { if (e.target === e.currentTarget) onFechar(); }}>
+      <div role="dialog" aria-modal="true" className="flex max-h-[88vh] w-full max-w-4xl flex-col rounded-2xl border border-border bg-card">
+        <div className="flex flex-wrap items-center gap-2 border-b border-border p-4">
+          <p className="flex-1 min-w-[220px] font-semibold">Cronograma — chácara {codigo} · {ROTULO_CONDICAO[plano.condicao].titulo} · {plano.prazo}x</p>
+          <Button size="sm" variant="outline" onClick={exportar}><Download className="mr-1.5 h-4 w-4" /> CSV</Button>
+          <button onClick={onFechar} aria-label="Fechar" className="text-muted-foreground hover:text-foreground"><X className="h-5 w-5" /></button>
+        </div>
+        <div className="flex flex-wrap items-end gap-3 border-b border-border px-4 py-3 text-sm">
+          <label className="space-y-1">
+            <span className="block text-xs text-muted-foreground">Data da venda (entrada)</span>
+            <input type="date" value={dataVenda} onChange={e => setDataVenda(e.target.value)} className="h-9 rounded-md border border-border bg-secondary px-2 text-sm" />
+          </label>
+          <p className="flex-1 min-w-[200px] text-xs text-muted-foreground">{textoCondicao(plano)}. Total a pagar {brl(plano.totalPago)}. Última parcela: {venc(linhas[linhas.length - 1].mes)}.</p>
+        </div>
+        <div className="min-h-0 flex-1 overflow-y-auto overflow-x-auto [scrollbar-gutter:stable]">
+          <table className="w-full text-xs tabular-nums">
+            <thead className="sticky top-0 z-10 bg-card"><tr className="border-b border-border text-muted-foreground">
+              {["Mês", "Vencimento", "Tipo", "Nº", "Valor", "Juros", "Amortização", "Saldo devedor"].map(h => <th key={h} className="px-2 py-2 text-right font-medium first:text-left">{h}</th>)}
+            </tr></thead>
+            <tbody>
+              {linhas.map((l, k) => (
+                <tr key={k} className={`border-b border-border/40 ${cor(l.tipo)}`}>
+                  <td className="px-2 py-1">{l.mes}</td>
+                  <td className="px-2 py-1 text-right font-mono">{venc(l.mes)}</td>
+                  <td className="px-2 py-1 text-right">{ROTULO_LINHA[l.tipo]}</td>
+                  <td className="px-2 py-1 text-right">{l.numero}/{l.total}</td>
+                  <td className="px-2 py-1 text-right">{num(l.parcela)}</td>
+                  <td className="px-2 py-1 text-right">{num(l.juros)}</td>
+                  <td className="px-2 py-1 text-right">{num(l.amortizacao)}</td>
+                  <td className="px-2 py-1 text-right">{num(l.saldoDevedor)}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 /** Vincular a simulação a um lead do CRM (grava a simulação e leva o lead para "Proposta") */
 function VincularLead({ salvando, onFechar, onVincular }: { salvando: boolean; onFechar: () => void; onVincular: (leadId: number) => void }) {
   const [busca, setBusca] = useState("");
@@ -136,6 +195,8 @@ export default function Simulador({ slug, lotes, ruas, perimetro, destinoSugerid
   const [codigo, setCodigo] = useState("");
   const [entrada, setEntrada] = useState(1);
   const [prazo, setPrazo] = useState(120);
+  /** Forma de pagamento a que o cliente vai aderir: entrada 30% (padrão) ou planos de lançamento A, B, C */
+  const [condicao, setCondicao] = useState<CondicaoPagamento>("padrao");
   const [modal, setModal] = useState<"evolucao" | "whatsapp" | "lead" | null>(null);
 
   const escolher = (c: string) => { const v = c.trim().toUpperCase(); setDigitado(v); if (/^[A-Z]\d{2}$/.test(v)) setCodigo(v); };
@@ -143,7 +204,11 @@ export default function Simulador({ slug, lotes, ruas, perimetro, destinoSugerid
     { slug, lote: codigo, entrada },
     { enabled: !!codigo, retry: false, placeholderData: prev => (prev && prev.lote.codigo === codigo ? prev : undefined) },
   );
-  useEffect(() => { if (data && !data.condicoes.prazos.includes(prazo)) setPrazo(data.condicoes.prazos[data.condicoes.prazos.length - 1]); }, [data, prazo]);
+  useEffect(() => {
+    if (!data) return;
+    const ps = prazosDaCondicao(condicao, data.condicoes);
+    if (!ps.includes(prazo)) setPrazo(ps.includes(120) ? 120 : ps[ps.length - 1]);
+  }, [data, prazo, condicao]);
 
   const salvar = trpc.simulador.salvar.useMutation({
     onSuccess: r => { toast.success(`Simulação vinculada ao lead${r.etapa === "proposta" ? " — lead em Proposta" : ""}`); setModal(null); },
@@ -156,7 +221,9 @@ export default function Simulador({ slug, lotes, ruas, perimetro, destinoSugerid
 
   const sel = lotes.find(l => l.codigo === codigo)?.id ?? null;
   const sim = data?.simulacao;
-  const plano = sim?.planos.find(p => p.prazo === prazo);
+  const planosCond = useMemo(() => (sim && data && condicao !== "padrao" ? planosDaCondicao(sim.preco, condicao, data.condicoes) : []), [sim, data, condicao]);
+  const planoCond = condicao === "padrao" ? null : planosCond.find(p => p.prazo === prazo) ?? null;
+  const plano = condicao === "padrao" ? sim?.planos.find(p => p.prazo === prazo) : planoCond ?? undefined;
   const vendido = data?.lote.selo === "vendido";
   const proposta = () => window.open(`/empreendimentos/${slug}/proposta?lote=${codigo}&entrada=${entrada}&prazo=${prazo}`, "_blank");
 
@@ -198,6 +265,43 @@ export default function Simulador({ slug, lotes, ruas, perimetro, destinoSugerid
               </div>
             </div>
 
+            <div className="space-y-2 rounded-xl border border-primary/40 bg-card p-4">
+              <p className="text-sm font-semibold">Forma de pagamento <span className="font-normal text-muted-foreground">— a condição a que o cliente vai aderir</span></p>
+              <div className="grid grid-cols-2 gap-1.5 sm:grid-cols-4">
+                {CONDICOES.map(k => (
+                  <button key={k} onClick={() => { setCondicao(k); setPrazo(k === "B" ? 180 : 120); }}
+                    className={`rounded-lg border px-2 py-2 text-left text-xs ${condicao === k ? "border-primary bg-primary/15 text-foreground" : "border-border hover:bg-secondary/50"}`}>
+                    <b className="block text-sm">{ROTULO_CONDICAO[k].curto}</b>
+                    {k === "padrao" ? `${Math.round(data.condicoes.entradaPct * 100)}% = ${brl(sim.entrada30)}` : "entrada R$ 10 mil"}
+                  </button>
+                ))}
+              </div>
+              <p className="text-[11px] text-muted-foreground">{ROTULO_CONDICAO[condicao].resumo}</p>
+            </div>
+
+            {condicao !== "padrao" && (
+              <div className="space-y-2 rounded-xl border border-border bg-card p-4">
+                <p className="text-sm font-semibold">{ROTULO_CONDICAO[condicao].titulo} · entrada {brl(planosCond[0]?.entradaAto ?? 10000)} no ato</p>
+                <div className="grid grid-cols-1 gap-1.5 sm:grid-cols-2">
+                  {planosCond.map(p => (
+                    <button key={p.prazo} onClick={() => setPrazo(p.prazo)}
+                      className={`rounded-lg border p-2.5 text-left ${prazo === p.prazo ? "border-primary bg-primary/10" : "border-border hover:bg-secondary/40"}`}>
+                      <p className="text-xs text-muted-foreground">{p.prazo} parcelas fixas de</p>
+                      <p className="text-lg font-bold tabular-nums">{brl(p.parcela)}</p>
+                      <p className="text-[11px] leading-snug text-muted-foreground">
+                        {p.reforco && <>+ {p.reforco.qtd} reforço{p.reforco.qtd > 1 ? "s" : ""} anua{p.reforco.qtd > 1 ? "is" : "l"} de <b className="text-foreground">{brl(p.reforco.valor)}</b><br /></>}
+                        {p.complemento && <>+ resto da entrada {p.complemento.qtd}× {brl(p.complemento.parcela)} sem juros (mensal inicial <b className="text-foreground">{brl(p.mensalInicial)}</b>)<br /></>}
+                        Juros {brl(p.juros)} · Total pago <b className="text-foreground">{brl(p.totalPago)}</b>
+                      </p>
+                    </button>
+                  ))}
+                </div>
+                {planoCond && <p className="rounded-lg bg-secondary/40 p-2 text-xs"><b>Escolhida:</b> {textoCondicao(planoCond)}</p>}
+                <p className="text-[11px] text-muted-foreground">{data.textoJuros} · preço da chácara {brl(sim.preco)} (o mesmo da tabela)</p>
+              </div>
+            )}
+
+            {condicao === "padrao" && (<>
             <div className={`space-y-2 rounded-xl border border-border bg-card p-4 ${isFetching ? "opacity-80" : ""}`}>
               <p className="text-sm font-semibold">Entrada ({Math.round(data.condicoes.entradaPct * 100)}% = {brl(sim.entrada30)})</p>
               <div className="flex flex-wrap gap-1.5">
@@ -225,11 +329,12 @@ export default function Simulador({ slug, lotes, ruas, perimetro, destinoSugerid
               </div>
               <p className="text-[11px] text-muted-foreground">{data.textoJuros} · preço da chácara {brl(sim.preco)}</p>
             </div>
+            </>)}
 
             {vendido && <p className="rounded-xl border border-red-500/50 bg-red-500/10 p-3 text-sm text-red-300">Chácara vendida: simulação só para consulta, sem proposta, envio ou vínculo.</p>}
             <div className="flex flex-wrap gap-1.5">
-              <Button size="sm" variant="outline" onClick={() => setModal("evolucao")}>Ver evolução</Button>
-              <Button size="sm" variant="outline" disabled={vendido || !plano} onClick={proposta}><FileText className="mr-1 h-4 w-4" /> Gerar proposta PDF</Button>
+              <Button size="sm" variant="outline" onClick={() => setModal("evolucao")}>{condicao === "padrao" ? "Ver evolução" : "Ver cronograma"}</Button>
+              <Button size="sm" variant="outline" disabled={vendido || !plano || condicao !== "padrao"} title={condicao !== "padrao" ? "Proposta em PDF: por enquanto só na entrada de 30%. Use o cronograma (CSV) ou o envio no WhatsApp." : undefined} onClick={proposta}><FileText className="mr-1 h-4 w-4" /> Gerar proposta PDF</Button>
               <Button size="sm" variant="outline" disabled={vendido || !plano} className="border-[#25d366]/40 text-[#1fa855] hover:text-[#1fa855]" onClick={() => setModal("whatsapp")}><Send className="mr-1 h-4 w-4" /> Enviar no WhatsApp</Button>
               <Button size="sm" variant="outline" disabled={vendido || !plano} onClick={() => setModal("lead")}><Link2 className="mr-1 h-4 w-4" /> Vincular ao lead</Button>
             </div>
@@ -271,18 +376,19 @@ export default function Simulador({ slug, lotes, ruas, perimetro, destinoSugerid
         )}
       </div>
 
-      {modal === "evolucao" && codigo && <Evolucao slug={slug} codigo={codigo} entrada={entrada} prazo={prazo} onFechar={() => setModal(null)} />}
+      {modal === "evolucao" && codigo && condicao === "padrao" && <Evolucao slug={slug} codigo={codigo} entrada={entrada} prazo={prazo} onFechar={() => setModal(null)} />}
+      {modal === "evolucao" && codigo && planoCond && <CronogramaPlano codigo={codigo} plano={planoCond} onFechar={() => setModal(null)} />}
       {modal === "whatsapp" && (
         <EnviarWhatsAppModal
           titulo={`Enviar a simulação da chácara ${codigo}`}
-          descricao={`Preço, entrada ${entrada === 1 ? "à vista" : `em ${entrada}x`} e saldo em ${prazo}x fixas — só para o número que você digitar.`}
+          descricao={planoCond ? `${ROTULO_CONDICAO[condicao].titulo}: ${textoCondicao(planoCond)} — só para o número que você digitar.` : `Preço, entrada ${entrada === 1 ? "à vista" : `em ${entrada}x`} e saldo em ${prazo}x fixas — só para o número que você digitar.`}
           sugestao={destinoSugerido}
           enviando={envio.isPending}
           onFechar={() => setModal(null)}
-          onEnviar={destino => envio.mutate({ slug, lote: codigo, entrada, prazo, telefone: destino })}
+          onEnviar={destino => envio.mutate({ slug, lote: codigo, entrada, prazo, telefone: destino, condicao })}
         />
       )}
-      {modal === "lead" && <VincularLead salvando={salvar.isPending} onFechar={() => setModal(null)} onVincular={leadId => salvar.mutate({ slug, lote: codigo, entrada, prazo, leadId })} />}
+      {modal === "lead" && <VincularLead salvando={salvar.isPending} onFechar={() => setModal(null)} onVincular={leadId => salvar.mutate({ slug, lote: codigo, entrada, prazo, leadId, condicao })} />}
     </div>
   );
 }

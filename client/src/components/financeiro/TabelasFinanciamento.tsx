@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react";
+import { CONDICOES, ROTULO_CONDICAO, ROTULO_LINHA, type CondicaoPagamento } from "@shared/condicoesLancamento";
 import { toast } from "sonner";
 import { trpc } from "@/lib/trpc";
 import { Button } from "@/components/ui/button";
@@ -37,6 +38,8 @@ export default function TabelasFinanciamento() {
   const [valor, setValor] = useState("");
   const [entrada, setEntrada] = useState(6);
   const [prazo, setPrazo] = useState(120);
+  /** Forma de pagamento: entrada 30% (padrão) ou planos de lançamento A, B, C */
+  const [condicao, setCondicao] = useState<CondicaoPagamento>("padrao");
   const [data1, setData1] = useState("");
   const [baixando, setBaixando] = useState<"pdf" | "geral" | null>(null);
   const rolagem = useRef<HTMLDivElement>(null);
@@ -46,19 +49,19 @@ export default function TabelasFinanciamento() {
     lote: origem === "lote" && lote ? lote : null,
     areaM2: origem === "area" ? valorBr(area) : null,
     preco: origem === "valor" ? valorBr(valor) : null,
-    entrada, prazo, dataPrimeiro: /^\d{4}-\d{2}-\d{2}$/.test(data1) ? data1 : null,
-  }), [slug, origem, lote, area, valor, entrada, prazo, data1]);
+    entrada, prazo, dataPrimeiro: /^\d{4}-\d{2}-\d{2}$/.test(data1) ? data1 : null, condicao,
+  }), [slug, origem, lote, area, valor, entrada, prazo, data1, condicao]);
   const { data: t, isFetching, error } = trpc.financeiro.tabela.useQuery(pedido, { enabled: !!slug, placeholderData: p => p });
 
   // Prazo e entrada sempre dentro das condições do empreendimento escolhido
   useEffect(() => {
     if (!t) return;
-    if (!t.condicoes.prazos.includes(prazo)) setPrazo(Math.max(...t.condicoes.prazos));
+    if (!t.prazos.includes(prazo)) setPrazo(t.prazos.includes(120) ? 120 : Math.max(...t.prazos));
     if (entrada > t.condicoes.entradaMaxParcelas) setEntrada(t.condicoes.entradaMaxParcelas);
   }, [t, prazo, entrada]);
 
   const query = () => {
-    const q = new URLSearchParams({ slug, entrada: String(entrada), prazo: String(prazo) });
+    const q = new URLSearchParams({ slug, entrada: String(entrada), prazo: String(prazo), condicao });
     if (pedido.lote) q.set("lote", pedido.lote);
     if (pedido.areaM2) q.set("area", String(pedido.areaM2));
     if (pedido.preco) q.set("preco", String(pedido.preco));
@@ -121,14 +124,19 @@ export default function TabelasFinanciamento() {
             <input className={`${campo} w-40`} inputMode="decimal" placeholder="160.000,00" value={valor} onChange={e => setValor(e.target.value)} />
           </label>
         )}
+        <label className="space-y-1"><span className="block text-xs text-muted-foreground">Forma de pagamento</span>
+          <select className={`${campo} ${condicao !== "padrao" ? "border-primary" : ""}`} value={condicao} onChange={e => { const k = e.target.value as CondicaoPagamento; setCondicao(k); setPrazo(k === "B" ? 180 : 120); }}>
+            {CONDICOES.map(k => <option key={k} value={k}>{ROTULO_CONDICAO[k].titulo}</option>)}
+          </select>
+        </label>
         <label className="space-y-1"><span className="block text-xs text-muted-foreground">Entrada</span>
-          <select className={campo} value={entrada} onChange={e => setEntrada(Number(e.target.value))}>
+          <select className={campo} value={entrada} disabled={condicao !== "padrao"} title={condicao !== "padrao" ? "Nos planos A, B e C a entrada é de R$ 10.000,00 no ato" : undefined} onChange={e => setEntrada(Number(e.target.value))}>
             {Array.from({ length: c?.entradaMaxParcelas ?? 6 }, (_, k) => k + 1).map(n => <option key={n} value={n}>{n === 1 ? "À vista (com desconto)" : `${n}× sem juros`}</option>)}
           </select>
         </label>
         <label className="space-y-1"><span className="block text-xs text-muted-foreground">Saldo</span>
           <select className={campo} value={prazo} onChange={e => setPrazo(Number(e.target.value))}>
-            {(c?.prazos ?? [12, 24, 36, 60, 120]).map(n => <option key={n} value={n}>{n}×</option>)}
+            {(t?.prazos ?? c?.prazos ?? [12, 24, 36, 60, 120]).map(n => <option key={n} value={n}>{n}×</option>)}
           </select>
         </label>
         <label className="space-y-1"><span className="block text-xs text-muted-foreground">1º pagamento</span>
@@ -165,6 +173,33 @@ export default function TabelasFinanciamento() {
             <div className="rounded-xl border border-border p-3"><p className="text-xs text-muted-foreground">Saldo {pct(1 - c.entradaPct, 0)} · juros {pct(c.jurosAaEfetivo)} a.a. ({pct(s.taxaMensal, 4)} a.m.)</p><p className="text-lg font-bold">{brl(s.saldo)}</p><p className="text-xs text-muted-foreground">Tabela Price · parcelas fixas</p></div>
           </div>
 
+          {t.planoCondicao && (
+            <div className="rounded-xl border border-primary/50 bg-primary/5 p-3 text-sm">
+              <p className="font-semibold">{t.rotuloCondicao}</p>
+              <p className="text-muted-foreground">{ROTULO_CONDICAO[t.condicao].resumo}</p>
+              <p className="mt-1"><b>{t.textoCondicao}</b> · total a pagar {brl(t.planoCondicao.totalPago)}</p>
+            </div>
+          )}
+          {t.planoCondicao ? (
+          <div className="overflow-x-auto rounded-xl border border-border">
+            <table className="w-full min-w-[560px] text-sm tabular-nums">
+              <thead className="bg-secondary/40 text-xs text-muted-foreground"><tr>
+                {["Prazo", "Parcela", "Reforço / resto da entrada", "Juros", "Total a pagar"].map(h => <th key={h} className="px-3 py-2 text-right font-medium first:text-left">{h}</th>)}
+              </tr></thead>
+              <tbody>
+                {t.planosCondicao.map(p => (
+                  <tr key={p.prazo} onClick={() => setPrazo(p.prazo)} className={`cursor-pointer border-t border-border/50 ${p.prazo === prazo ? "bg-primary/15 font-semibold" : "hover:bg-secondary/30"}`}>
+                    <td className="px-3 py-1.5">{p.prazo}×</td>
+                    <td className="px-3 py-1.5 text-right">{brl(p.parcela)}</td>
+                    <td className="px-3 py-1.5 text-right">{p.reforco ? `${p.reforco.qtd}× ${brl(p.reforco.valor)} por ano` : p.complemento ? `${p.complemento.qtd}× ${brl(p.complemento.parcela)} sem juros` : "—"}</td>
+                    <td className="px-3 py-1.5 text-right">{brl(p.juros)}</td>
+                    <td className="px-3 py-1.5 text-right">{brl(p.totalPago)}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+          ) : (
           <div className="overflow-x-auto rounded-xl border border-border">
             <table className="w-full min-w-[560px] text-sm tabular-nums">
               <thead className="bg-secondary/40 text-xs text-muted-foreground"><tr>
@@ -183,6 +218,7 @@ export default function TabelasFinanciamento() {
               </tbody>
             </table>
           </div>
+          )}
 
           <details className="group rounded-xl border border-primary/30 bg-primary/5 p-3 text-sm">
             <summary className="flex cursor-pointer list-none items-center gap-2 font-semibold">
@@ -197,7 +233,7 @@ export default function TabelasFinanciamento() {
           </details>
 
           <div className="flex flex-wrap items-center gap-2 text-sm">
-            <p className="flex-1 font-semibold">Evolutivo — {nomeOrigem} · entrada {entrada === 1 ? "à vista" : `${entrada}×`} · saldo {prazo}× de {brl(t.resumo.parcela)}</p>
+            <p className="flex-1 font-semibold">Evolutivo — {nomeOrigem} · {t.planoCondicao ? `${t.rotuloCondicao} · ${prazo}× de ${brl(t.resumo.parcela)}` : `entrada ${entrada === 1 ? "à vista" : `${entrada}×`} · saldo ${prazo}× de ${brl(t.resumo.parcela)}`}</p>
             <p className="text-xs text-muted-foreground">Total a pagar {brl(t.resumo.totalPago)} · última parcela {dataBr(t.linhas[t.linhas.length - 1].vencimento)}</p>
             <Button size="sm" variant="outline" className="h-8 text-xs" onClick={() => rolagem.current?.scrollTo({ top: 0, behavior: "smooth" })}>Início</Button>
             <Button size="sm" variant="outline" className="h-8 text-xs" onClick={() => rolagem.current?.scrollTo({ top: rolagem.current.scrollHeight, behavior: "smooth" })}>Última parcela</Button>
@@ -209,10 +245,10 @@ export default function TabelasFinanciamento() {
               </tr></thead>
               <tbody>
                 {t.linhas.map((l, k) => (
-                  <tr key={k} className={`border-b border-border/40 ${l.tipo === "entrada" ? "bg-secondary/30" : ""}`}>
+                  <tr key={k} className={`border-b border-border/40 ${l.tipo === "entrada" ? "bg-secondary/30" : l.tipo === "reforco" ? "bg-amber-500/10" : l.tipo === "complemento" ? "bg-sky-500/10" : ""}`}>
                     <td className="px-2 py-1">{l.mes}</td>
                     <td className="px-2 py-1 text-right font-mono">{dataBr(l.vencimento)}</td>
-                    <td className="px-2 py-1 text-right">{l.tipo === "entrada" ? "Entrada" : "Saldo"}</td>
+                    <td className="px-2 py-1 text-right">{l.tipo === "saldo" ? "Saldo" : ROTULO_LINHA[l.tipo]}</td>
                     <td className="px-2 py-1 text-right">{l.numero}</td>
                     <td className="px-2 py-1 text-right">{num(l.parcela)}</td>
                     <td className="px-2 py-1 text-right">{num(l.juros)}</td>

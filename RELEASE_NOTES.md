@@ -3,6 +3,21 @@
 Cada versão nova vai no TOPO. Depois rode `npm run release` (valida e atualiza o package.json);
 ao subir, o servidor grava a versão no banco e todos recebem o aviso "Novidades da versão".
 
+## 1.89.0 — 2026-10-31
+tipo: minor
+obrigatoria: nao
+titulo: Condição de lançamento: entrada a partir de R$ 10 mil (planos A, B e C)
+
+### Novo
+- Simulador (aba do empreendimento): escolha da forma de pagamento a que o cliente vai aderir — Entrada de 30% (como antes), Plano A (R$ 10 mil + a mesma parcela + reforço anual no 13º), Plano B (R$ 10 mil + saldo em até 180×) ou Plano C (R$ 10 mil + resto da entrada em até 36× sem juros, junto com a parcela) — com os prazos de 12, 24, 36, 60 e 120 meses (e 180 no Plano B, que já abre em 180×)
+- Cronograma de cada plano mês a mês (parcela, reforço, complemento, juros, amortização e saldo) com exportação em CSV; envio no WhatsApp e vínculo ao lead gravam a condição escolhida
+- Financeiro › Tabelas de financiamento: campo "Forma de pagamento" na tela, no evolutivo e no PDF
+- Folder interativo /bom-jardims/formas-de-pagamento: o cliente escolhe a chácara, a forma e o prazo, vê o que paga no ato, por mês, por ano e no total, compara as quatro formas e manda a escolha no WhatsApp de quem divulgou
+- Links de divulgação: "Formas de pagamento — entrada a partir de R$ 10 mil (folder interativo)"
+
+### Avisos
+- Contratos e cobranças continuam na entrada de 30%: as cláusulas do reforço anual e do complemento da entrada entram no CPCV numa próxima versão
+
 ## 1.88.4 — 2026-10-31
 tipo: patch
 obrigatoria: nao

@@ -7,6 +7,7 @@ import { z } from 'zod';
 import { CAMPANHA_OBRAS, LANCAMENTO_OBRAS, ROTA_OBRAS } from './obrasBomJardim';
 import { CAMPANHA_MAPA3D, ROTA_MAPA3D } from './mapa3dBomJardims';
 import { CAMPANHA_ROTA, ROTA_COMO_CHEGAR } from './rotaBomJardims';
+import { CAMPANHA_PAGAMENTO, ROTA_PAGAMENTO } from './pagamentoBomJardims';
 
 /** Marcador do link no texto: trocado pelo link de quem compartilha */
 export const MARCA_LINK = '{link}';
@@ -28,6 +29,12 @@ export interface LinkDivulgacao {
 }
 
 export const LINKS_FIXOS: LinkDivulgacao[] = [
+  {
+    chave: 'fixo:pagamento', titulo: 'Formas de pagamento — entrada a partir de R$ 10 mil (folder interativo)', fixo: true, destaque: true, empreendimento: 'Bom Jardims',
+    descricao: 'O cliente escolhe a chácara, a forma (entrada 30%, Plano A com reforço no 13º, Plano B em até 180× ou Plano C com entrada parcelada) e o prazo, vê quanto paga por mês e por ano e manda a escolha no seu WhatsApp.',
+    url: ROTA_PAGAMENTO, utmSource: 'whatsapp', utmCampaign: CAMPANHA_PAGAMENTO,
+    textoWhatsapp: `🌳 *Condomínio de Chácaras Bom Jardims* — condição de lançamento\n\nAgora com *entrada a partir de R$ 10 mil*! Escolha a forma que cabe no seu bolso:\n\n✅ *Entrada de 30%* — o menor total\n✅ *Plano A* — R$ 10 mil + parcela de ≈ R$ 1.234 + reforço no 13º\n✅ *Plano B* — R$ 10 mil + até 180× fixas, sem reforço\n✅ *Plano C* — R$ 10 mil + resto da entrada em 36× sem juros\n\n👉 Simule a sua chácara e escolha o prazo:\n${MARCA_LINK}`,
+  },
   {
     chave: 'fixo:mapa3d', titulo: 'Mapa 3D + vídeos — nova campanha', fixo: true, destaque: true, empreendimento: 'Bom Jardims',
     descricao: 'Página com o mapa 3D em destaque (girar, aproximar e tocar na chácara), os vídeos da galeria, as fotos do drone das obras, cadastro e o convite para seguir o @avalieimob.',

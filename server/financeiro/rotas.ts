@@ -235,6 +235,7 @@ export function registrarRotasFinanceiro(app: Express) {
       const t = T.calcularTabela(b, {
         lote: q.lote && /^[A-Za-z0-9]{1,10}$/.test(q.lote) ? q.lote : null, areaM2: n(q.area), preco: n(q.preco),
         entrada: Number(q.entrada) || 6, prazo: Number(q.prazo) || 120, dataPrimeiro: q.data ?? null,
+        condicao: q.condicao === 'A' || q.condicao === 'B' || q.condicao === 'C' ? q.condicao : 'padrao',
       });
       const nome = t.origem.tipo === 'lote' ? t.origem.codigo : t.origem.tipo === 'area' ? `area-${Math.round(t.origem.areaM2)}` : `valor-${Math.round(t.origem.preco)}`;
       pdf(res, await T.pdfTabelaFinanciamento(b, t, cartao), `Tabela-financiamento-${slug}-${nome}.pdf`);
