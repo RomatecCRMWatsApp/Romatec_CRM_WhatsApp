@@ -7,6 +7,8 @@
  *
  * Textos em padrão jurídico brasileiro para revisão do José/jurídico antes do uso.
  */
+import { divisaoComissaoLancamento } from '../../shared/condicoesLancamento';
+import { tituloCondicao } from './plano';
 import { PDFDocument, StandardFonts, popGraphicsState, pushGraphicsState, rgb, setWordSpacing, type PDFPage } from 'pdf-lib';
 import type { Ctx } from './contexto';
 import type { PlanoContrato } from './plano';
@@ -190,8 +192,12 @@ export async function docIntermediacao(c: Ctx, marca: string): Promise<Buffer> {
   w.clausula('CLÁUSULA 2ª — DA REMUNERAÇÃO DO(A) CORRETOR(A) INTERMEDIADOR(A)');
   w.paragrafo([{ t: '2.1. Pela intermediação, o(a) CORRETOR(A) INTERMEDIADOR(A) faz jus a ' }, { t: `${s(c.intermed_comissao_pct)} do valor da venda, correspondentes a R$ ${s(c.intermed_comissao_valor)} (${s(c.intermed_comissao_extenso)})`, b: true },
     { t: ', valor que integra a corretagem prevista no item 14 do Quadro-Resumo do CPCV e já está incluído no preço, sem qualquer acréscimo ao valor contratado.' }]);
-  w.paragrafo([{ t: '2.2. O valor da cláusula 2.1 é ' }, { t: 'pago e extraído no ato do sinal', b: true },
-    { t: ' — primeiro pagamento da entrada ou, na compra à vista, o pagamento único —, retido pela plataforma de pagamentos do empreendimento no momento da compensação, vedado o pagamento em espécie ou diretamente ao(à) corretor(a).' }]);
+  w.paragrafo(c.intermed_lancamento
+    // Condições de lançamento (Planos A, B, C): 50% no ato e o restante em 4 partes, com as 4 primeiras parcelas do saldo
+    ? [{ t: '2.2. O valor da cláusula 2.1 é pago ' }, { t: `50% (cinquenta por cento) no ato do sinal, R$ ${s(c.intermed_ato_valor)}, e os 50% (cinquenta por cento) restantes em 4 (quatro) partes iguais de R$ ${s(c.intermed_parcela_valor)}`, b: true },
+      { t: ', à medida da compensação da 1ª (primeira) à 4ª (quarta) parcela do saldo do CPCV, retidos pela plataforma de pagamentos do empreendimento e repassados pela gestora de vendas, vedado o pagamento em espécie ou diretamente ao(à) corretor(a).' }]
+    : [{ t: '2.2. O valor da cláusula 2.1 é ' }, { t: 'pago e extraído no ato do sinal', b: true },
+      { t: ' — primeiro pagamento da entrada ou, na compra à vista, o pagamento único —, retido pela plataforma de pagamentos do empreendimento no momento da compensação, vedado o pagamento em espécie ou diretamente ao(à) corretor(a).' }]);
 
   w.clausula('CLÁUSULA 3ª — DA NÃO RESTITUIÇÃO DO VALOR DA INTERMEDIAÇÃO');
   w.paragrafo([{ t: '3.1. A remuneração do(a) corretor(a) é devida pelo resultado útil da intermediação, alcançado com a celebração do CPCV (Código Civil, art. 725). Por isso, ' },
@@ -248,7 +254,12 @@ export async function docComissaoRomatec(c: Ctx, plano: PlanoContrato, marca: st
     : [{ t: `2.2. Venda direta: a comissão total de R$ ${brl(com.total)} fica integralmente com a GESTORA.` }]);
 
   w.clausula('CLÁUSULA 3ª — DA FORMA E DO MOMENTO DO PAGAMENTO');
-  w.paragrafo(sinalAvista
+  const lanc = plano.modalidade === 'financiado' && !!plano.condicao && plano.condicao !== 'padrao'
+    ? divisaoComissaoLancamento(com.total, com.corretor) : null;
+  if (lanc) w.paragrafo([{ t: `3.1. Condição de lançamento (${tituloCondicao(plano)}): a comissão é paga ` },
+    { t: `50% (cinquenta por cento) no pagamento da entrada do ato, R$ ${brl(lanc.ato.total)}, e os 50% (cinquenta por cento) restantes em 4 (quatro) partes iguais de R$ ${brl(lanc.parcelas[0].total)}`, b: true },
+    { t: `, retidas da 1ª à 4ª parcela do saldo${o.corretorDaVenda ? `. O(A) corretor(a) recebe na mesma proporção: R$ ${brl(lanc.ato.corretor)} no ato e R$ ${brl(lanc.parcelas[0].corretor)} em cada uma das 4 (quatro) parcelas` : ''}.` }]);
+  else w.paragrafo(sinalAvista
     ? [{ t: '3.1. Sinal ou venda à vista: ' }, { t: `a comissão é paga integralmente no ato, R$ ${brl(com.total)}`, b: true }, { t: o.corretorDaVenda ? ` (dos quais R$ ${brl(com.corretor)} ao corretor).` : '.' }]
     : [{ t: '3.1. Sinal parcelado: a comissão é paga em ' }, { t: '2 (duas) parcelas de 50% (cinquenta por cento)', b: true },
       { t: `: R$ ${brl(com.no1oPagamento.total)} no 1º pagamento da entrada${o.corretorDaVenda ? ` (R$ ${brl(com.no1oPagamento.corretor)} ao corretor)` : ''} e R$ ${brl(com.no2oPagamento.total)} no 2º pagamento da entrada${o.corretorDaVenda ? ` (R$ ${brl(com.no2oPagamento.corretor)} ao corretor)` : ''}.` }]);

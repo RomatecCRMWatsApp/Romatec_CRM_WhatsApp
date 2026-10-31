@@ -61,6 +61,8 @@
   "plano_diferenca_avista",
   "com_valor",
   "com_percentual",
+  "com_ato_valor",
+  "com_parcela_valor",
   "com_beneficiario",
   "emp_prazo_obras_meses",
   "emp_li_numero",

@@ -31,8 +31,9 @@ describe('CPCV por forma de pagamento (entrada 30%, Planos A, B e C)', () => {
     expect(p).toMatchObject({ condicao: 'A', entrada_valor: 10000, entrada_qtd: 1, saldo_valor: 150000, saldo_qtd: 120, saldo_parcela: 1234.51, reforco_qtd: 10, reforco_valor: 5162.97, reforco_venc1: '2027-11-10', saldo_venc1: '2026-12-10' });
     expect(p.parcelas.filter(x => x.tipo === 'reforco')).toHaveLength(10);
     expect(p.parcelas.at(-1)!.saldoDevedor).toBe(0);
-    // Corretagem inteira na entrada do ato (Cláusula 19.1 do modelo do plano)
-    expect([...splitDaComissao(p)]).toEqual([['entrada:1', 8000]]);
+    // Corretagem: 50% na entrada do ato e 4 × R$ 1.000 nas parcelas 1 a 4 do saldo (Cláusula 19.1 do modelo do plano)
+    expect([...splitDaComissao(p)]).toEqual([['entrada:1', 4000], ['saldo:1', 1000], ['saldo:2', 1000], ['saldo:3', 1000], ['saldo:4', 1000]]);
+    expect(tagsPlano(p)).toMatchObject({ com_ato_valor: '4.000,00', com_parcela_valor: '1.000,00' });
     const t = tagsPlano(p);
     expect(t).toMatchObject({ plano_condicao_titulo: 'Plano A — Plano 13º', plano_entrada_percentual: '6,25%', plano_reforco_qtd: '10', plano_reforco_valor: '5.162,97', plano_reforco_venc1: '10/11/2027' });
     expect(String(t.plano_entrada_forma)).toBe('em parcela única de R$ 10.000,00, sem desconto, com vencimento em 10/11/2026');
@@ -44,6 +45,16 @@ describe('CPCV por forma de pagamento (entrada 30%, Planos A, B e C)', () => {
     expect(c).toMatchObject({ condicao: 'C', entrada_valor: 48000, entrada_parcela: 10000, complemento_valor: 38000, complemento_qtd: 36, complemento_parcela: 1055.56, saldo_valor: 112000 });
     expect(c.parcelas.filter(x => x.tipo === 'complemento')).toHaveLength(36);
     expect(String(tagsPlano(c).plano_entrada_forma)).toContain('complemento de R$ 38.000,00 em 36 (trinta e seis) parcelas mensais de R$ 1.055,56, sem juros');
+  });
+
+  it('divisão proporcional da comissão (chácara maior) e o padrão segue 50/50 nos 2 pagamentos da entrada', async () => {
+    const { divisaoComissaoLancamento } = await import('../shared/condicoesLancamento');
+    const d = divisaoComissaoLancamento(9520.31, 3808.13);
+    expect(d.ato).toEqual({ total: 4760.16, corretor: 1904.07, romatec: 2856.09 });
+    expect(d.parcelas.map(x => x.total)).toEqual([1190.04, 1190.04, 1190.04, 1190.03]);
+    expect(Math.round((d.ato.total + d.parcelas.reduce((a, x) => a + x.total, 0)) * 100) / 100).toBe(9520.31);
+    expect(Math.round((d.ato.corretor + d.parcelas.reduce((a, x) => a + x.corretor, 0)) * 100) / 100).toBe(3808.13);
+    expect([...splitDaComissao(plano('padrao'))]).toEqual([['entrada:1', 4000], ['entrada:2', 4000]]);
   });
 
   it('o padrão (entrada 30%) não muda', () => {
@@ -61,7 +72,9 @@ describe('CPCV por forma de pagamento (entrada 30%, Planos A, B e C)', () => {
     const a = await texto('MODELO-CPCV-BOM-JARDIMS-v3-PLANO-A.docx', plano('A'));
     expect(a).toContain('e em 10 reforços anuais de R$ 5.162,97, vencendo o primeiro em 10/11/2027');
     expect(a).toContain('3.3.1. Reforços anuais (Plano A — Plano 13º).');
-    expect(a).toContain('na entrada à vista ou em parcela única das condições de lançamento, integralmente no ato.');
+    expect(a).toContain('retida em 50% (R$ 4.000,00) no pagamento da entrada do ato e nos 50% restantes em 4 (quatro) partes iguais de R$ 1.000,00, retidas da 1ª à 4ª parcela do saldo');
+    expect(a).toContain('Nesta condição de lançamento, será retida, pela própria plataforma de pagamentos, em 50% (cinquenta por cento) no pagamento da entrada do ato (R$ 4.000,00)');
+    expect(a).toContain('e é pago na mesma proporção das retenções da Cláusula 19.1: 50% (cinquenta por cento) NO ATO DO SINAL');
     expect(a).not.toMatch(/PREENCHER: plano_/);
     const b = await texto('MODELO-CPCV-BOM-JARDIMS-v3-PLANO-B.docx', plano('B', 180));
     expect(b).toContain('R$ 150.000,00 em 180 parcelas mensais');

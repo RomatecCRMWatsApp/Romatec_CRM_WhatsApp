@@ -10,13 +10,23 @@ import type { PlanoContrato } from '../contratos/plano';
 import { buscarOuCriarCliente, criarCobranca, dadosDePagamento, exigirConfigAsaas, payloadCliente, payloadCobranca, type FetchFn } from './asaas';
 import { auditar, contextoDocs, FinanceiroErro, hojeBrasil, pessoasDoContrato, slugDoContrato } from './servico';
 import { blocoDoCarne, rotuloParcela } from './dados';
+import { divisaoComissaoLancamento } from '../../shared/condicoesLancamento';
 import { r2 } from '../../shared/simulador';
 
-/** Split da comissão (Romatec): 50% no 1º e 50% no 2º pagamento da entrada; entrada à vista ou à vista total = 100% no 1º */
+/**
+ * Split da comissão (Romatec): 50% no 1º e 50% no 2º pagamento da entrada; entrada à vista ou à vista total = 100% no 1º.
+ * Condições de lançamento (Planos A, B, C): 50% na entrada do ato e o resto em 4 partes nas parcelas 1 a 4 do saldo.
+ */
 export function splitDaComissao(plano: PlanoContrato): Map<string, number> {
   const m = new Map<string, number>();
   const total = plano.comissao_total;
   if (!total) return m;
+  if (plano.modalidade === 'financiado' && plano.condicao && plano.condicao !== 'padrao') {
+    const d = divisaoComissaoLancamento(total, plano.comissao_corretor ?? 0);
+    m.set('entrada:1', d.ato.total);
+    d.parcelas.forEach((f, k) => m.set(`saldo:${k + 1}`, f.total));
+    return m;
+  }
   const unico = plano.modalidade === 'avista' || plano.entrada_qtd <= 1;
   const primeira = plano.parcelas[0];
   if (unico) { m.set(`${primeira.tipo}:${primeira.numero}`, r2(Math.min(total, primeira.valor))); return m; }

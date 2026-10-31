@@ -233,3 +233,25 @@ export function mensagemCondicao(codigo: string, areaM2: number, p: PlanoCondica
     'Valores sujeitos a alteração e disponibilidade.',
   ].join('\n');
 }
+
+/**
+ * Comissão nas condições de lançamento (aprovada em 31/10/2026): 50% retida no pagamento da entrada do ato e os 50%
+ * restantes em 4 partes iguais, retidas da 1ª à 4ª parcela do saldo (ex.: R$ 8.000 → R$ 4.000 + 4 × R$ 1.000).
+ * O corretor recebe na mesma proporção de cada retenção. A entrada de 30% segue a regra antiga (50/50 nos 2 primeiros
+ * pagamentos da entrada, ou 100% na entrada à vista).
+ */
+export const COMISSAO_LANCAMENTO = { pctAto: 0.5, parcelasSaldo: 4 } as const;
+
+export interface FatiaComissao { total: number; corretor: number; romatec: number }
+export function divisaoComissaoLancamento(total: number, corretor: number): { ato: FatiaComissao; parcelas: FatiaComissao[] } {
+  const n = COMISSAO_LANCAMENTO.parcelasSaldo;
+  const atoT = r2(total * COMISSAO_LANCAMENTO.pctAto), atoC = r2(corretor * COMISSAO_LANCAMENTO.pctAto);
+  const restoT = r2(total - atoT), restoC = r2(corretor - atoC);
+  const pt = r2(restoT / n), pcor = r2(restoC / n);
+  const parcelas = Array.from({ length: n }, (_, k) => {
+    const ult = k === n - 1;
+    const t = ult ? r2(restoT - pt * (n - 1)) : pt, cr = ult ? r2(restoC - pcor * (n - 1)) : pcor;
+    return { total: t, corretor: cr, romatec: r2(t - cr) };
+  });
+  return { ato: { total: atoT, corretor: atoC, romatec: r2(atoT - atoC) }, parcelas };
+}

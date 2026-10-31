@@ -9,6 +9,7 @@
  */
 import { areaExtenso, brl, dataBR, dataExtenso, docMascara, extenso, pct, reaisExtenso } from './formato';
 import { tituloCondicao, type PlanoContrato } from './plano';
+import { divisaoComissaoLancamento } from '../../shared/condicoesLancamento';
 
 export type Ctx = Record<string, string | boolean | number>;
 
@@ -170,6 +171,8 @@ export function tagsPlano(s: PlanoContrato): Ctx {
     plano_total_pagar: brl(s.total_pagar), plano_total_juros: brl(s.total_juros),
     plano_diferenca_avista: brl(s.total_pagar - s.preco_avista),
     com_valor: brl(s.comissao_total), com_percentual: pct(s.comissao_percentual, 0),
+    // Planos de lançamento: 50% no ato e o resto em 4 partes nas 4 primeiras parcelas do saldo
+    ...(lancamento ? (d => ({ com_ato_valor: brl(d.ato.total), com_parcela_valor: brl(d.parcelas[0].total) }))(divisaoComissaoLancamento(s.comissao_total, s.comissao_corretor ?? 0)) : { com_ato_valor: '', com_parcela_valor: '' }),
   };
 }
 
@@ -202,6 +205,10 @@ export function tagsIntermediacao(e: Pick<EntradaContexto, 'corretor' | 'parceir
     intermed_creci: [c.creciUf, c.creci].filter(Boolean).join(' '), intermed_creci_validade: dataBR(c.creciValidade),
     intermed_comissao_pct: pct(pctCorretor, 0), intermed_comissao_valor: brl(valor), intermed_comissao_extenso: reaisExtenso(valor),
     intermed_base_valor: brl(base),
+    // Planos de lançamento: o corretor recebe 50% no ato e o resto em 4 partes, junto com as retenções da corretagem
+    ...(s.modalidade === 'financiado' && s.condicao && s.condicao !== 'padrao'
+      ? (d => ({ intermed_lancamento: true, intermed_ato_valor: brl(d.ato.corretor), intermed_parcela_valor: brl(d.parcelas[0].corretor) }))(divisaoComissaoLancamento(valor, valor))
+      : { intermed_lancamento: false, intermed_ato_valor: '', intermed_parcela_valor: '' }),
   };
 }
 

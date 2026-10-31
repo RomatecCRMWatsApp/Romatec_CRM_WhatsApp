@@ -3,6 +3,17 @@
 Cada versão nova vai no TOPO. Depois rode `npm run release` (valida e atualiza o package.json);
 ao subir, o servidor grava a versão no banco e todos recebem o aviso "Novidades da versão".
 
+## 1.91.0 — 2026-10-31
+tipo: minor
+obrigatoria: nao
+titulo: Comissão dos planos A, B e C: 50% no ato + 4 partes nas primeiras parcelas
+
+### Melhorias
+- Planos A, B e C: a comissão (5%) é retida 50% na entrada do ato e os outros 50% em 4 partes iguais, da 1ª à 4ª parcela do saldo (chácara de R$ 160 mil: R$ 4.000 + 4 × R$ 1.000); o corretor recebe na mesma proporção
+- Entrada de 30%: continua como antes (50% no 1º e 50% no 2º pagamento da entrada; à vista, 100% no ato)
+- Split do boleto, CPCV dos planos (Quadro-Resumo item 14, Cláusulas 19.1 e 19.1.2), Contrato de Intermediação e Contrato de Comissão Empreendedora × Romatec com a nova divisão
+- Simulador: quadro de comissão (administrador) e "Sua comissão" (corretor) mostram o ato e as 4 parcelas nos planos
+
 ## 1.90.1 — 2026-10-31
 tipo: patch
 obrigatoria: nao

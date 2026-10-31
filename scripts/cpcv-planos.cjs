@@ -6,7 +6,8 @@
  *   MODELO-CPCV-BOM-JARDIMS-v3-PLANO-B.docx  — entrada R$ 10 mil + saldo em até 180 parcelas (prazo longo)
  *   MODELO-CPCV-BOM-JARDIMS-v3-PLANO-C.docx  — entrada 30%: R$ 10 mil no ato + complemento em até 36× sem juros
  *
- * Reescreve só o Quadro-Resumo (itens 10 e 14) e as Cláusulas 3.2, 3.3 e 19.1, e insere as cláusulas próprias de cada
+ * Reescreve só o Quadro-Resumo (itens 10 e 14) e as Cláusulas 3.2, 3.3, 19.1 e 19.1.2 (comissão: 50% no ato + 4 partes
+ * nas 4 primeiras parcelas do saldo), e insere as cláusulas próprias de cada
  * plano (3.2.1 no C; 3.3.1 no A), mantendo o estilo de cada parágrafo (texto inteiro no 1º trecho, para as marcas {{…}}
  * ficarem inteiras). Valores sempre por marca (plano_*), nunca fixos no modelo.
  *
@@ -38,7 +39,7 @@ const ITEM10 = {
   C: 'R$ {{plano_saldo_valor}} em {{plano_saldo_qtd}} parcelas mensais, fixas e consecutivas de R$ {{plano_saldo_parcela}}, vencendo a primeira em {{plano_saldo_venc1}}, pagas juntamente com as parcelas do complemento da entrada do item 9 — Sistema de Amortização Francês (Tabela Price) · {{plano_condicao_titulo}}',
 };
 
-const ITEM14 = 'R$ {{com_valor}} ({{com_percentual}} do preço de tabela), paga pela PROMITENTE VENDEDORA e já incluída no preço, à beneficiária {{com_beneficiario}}, retida integralmente no pagamento da entrada do ato (Cláusula 19ª); dela, {{intermed_comissao_pct}} (R$ {{intermed_comissao_valor}}) remuneram o(a) corretor(a) intermediador(a), pagos no ato do sinal e não restituíveis na desistência do(a) COMPRADOR(A) (Cláusula 19.1.2)';
+const ITEM14 = 'R$ {{com_valor}} ({{com_percentual}} do preço de tabela), paga pela PROMITENTE VENDEDORA e já incluída no preço, à beneficiária {{com_beneficiario}}, retida em 50% (R$ {{com_ato_valor}}) no pagamento da entrada do ato e nos 50% restantes em 4 (quatro) partes iguais de R$ {{com_parcela_valor}}, retidas da 1ª à 4ª parcela do saldo (Cláusula 19ª); dela, {{intermed_comissao_pct}} (R$ {{intermed_comissao_valor}}) remuneram o(a) corretor(a) intermediador(a), na mesma proporção das retenções, e não são restituíveis na desistência do(a) COMPRADOR(A) (Cláusula 19.1.2)';
 
 const C32 = {
   A: '3.2. Entrada. A entrada de R$ {{plano_entrada_valor}}, equivalente a {{plano_entrada_percentual}} do preço de tabela, é a da condição de lançamento {{plano_condicao_titulo}}, constitui sinal e princípio de pagamento, com natureza de arras confirmatórias (Código Civil, arts. 417 a 419), e não confere direito de arrependimento. É paga {{plano_entrada_forma}}. A diferença entre essa entrada e a de 30% (trinta por cento) da condição padrão integra o saldo do item 10 do Quadro-Resumo e é paga pelas parcelas mensais e pelos reforços anuais da Cláusula 3.3.1.',
@@ -55,8 +56,10 @@ const FIM_33 = {
 };
 const C331 = '3.3.1. Reforços anuais ({{plano_condicao_titulo}}). Além das parcelas mensais, o saldo é amortizado por {{plano_reforco_qtd}} reforços anuais de R$ {{plano_reforco_valor}} ({{plano_reforco_extenso}}), fixos e sem correção monetária enquanto adimplidos, vencendo o primeiro em {{plano_reforco_venc1}}, junto com a 12ª (décima segunda) parcela do saldo, e os demais a cada 12 (doze) meses, coincidindo com o período de pagamento do 13º salário. Cada reforço é parcela do preço para todos os efeitos deste contrato, inclusive mora (Cláusula 7ª), resolução por inadimplemento (Cláusula 8ª) e liquidação antecipada (Cláusula 5ª); seu valor foi calculado pela Tabela Price à taxa contratada e está discriminado, com juros, amortização e saldo devedor, no Anexo II.';
 
-const C191_DE = 'na entrada à vista, integralmente no ato.';
-const C191_PARA = 'na entrada à vista ou em parcela única das condições de lançamento, integralmente no ato.';
+const C191_DE = 'Será retida, pela própria plataforma de pagamentos, em 50% (cinquenta por cento) no primeiro e 50% (cinquenta por cento) no segundo pagamento da entrada; na entrada à vista, integralmente no ato.';
+const C191_PARA = 'Nesta condição de lançamento, será retida, pela própria plataforma de pagamentos, em 50% (cinquenta por cento) no pagamento da entrada do ato (R$ {{com_ato_valor}}) e nos 50% (cinquenta por cento) restantes em 4 (quatro) partes iguais de R$ {{com_parcela_valor}}, retidas no pagamento da 1ª (primeira) à 4ª (quarta) parcela do saldo.';
+const C1912_DE = 'e é pago e extraído NO ATO DO SINAL (primeiro pagamento da entrada ou pagamento à vista).';
+const C1912_PARA = 'e é pago na mesma proporção das retenções da Cláusula 19.1: 50% (cinquenta por cento) NO ATO DO SINAL (pagamento da entrada do ato) e os 50% (cinquenta por cento) restantes em 4 (quatro) partes iguais, à medida da compensação da 1ª (primeira) à 4ª (quarta) parcela do saldo.';
 
 function gerar(plano) {
   const zip = new PizZip(fs.readFileSync(BASE));
@@ -78,9 +81,14 @@ function gerar(plano) {
       feitos.add('19.1');
       return comTexto(p, t.replace(C191_DE, C191_PARA));
     }
+    if (t.startsWith('19.1.2. ')) {
+      if (!t.includes(C1912_DE)) throw new Error('19.1.2 mudou no v3: confira o pagamento do corretor');
+      feitos.add('19.1.2');
+      return comTexto(p, t.replace(C1912_DE, C1912_PARA));
+    }
     return p;
   });
-  for (const k of ['item10', 'item14', '3.2', '3.3', '19.1']) if (!feitos.has(k)) throw new Error(`Plano ${plano}: não achei ${k} no v3`);
+  for (const k of ['item10', 'item14', '3.2', '3.3', '19.1', '19.1.2']) if (!feitos.has(k)) throw new Error(`Plano ${plano}: não achei ${k} no v3`);
   zip.file('word/document.xml', xml);
   const destino = path.join(DIR, `MODELO-CPCV-BOM-JARDIMS-v3-PLANO-${plano}.docx`);
   fs.writeFileSync(destino, zip.generate({ type: 'nodebuffer', compression: 'DEFLATE' }));

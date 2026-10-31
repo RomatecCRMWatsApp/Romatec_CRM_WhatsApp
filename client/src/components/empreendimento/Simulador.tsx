@@ -7,7 +7,7 @@ import { AlternadorMapa, Mapa3DEmpreendimento } from "./Mapa3DEmpreendimento";
 import EnviarWhatsAppModal from "@/components/EnviarWhatsAppModal";
 import { exibirTelefoneBR } from "@shared/telefone";
 import { brl, vencimento, type SeloLote } from "@shared/simulador";
-import { CONDICOES, ROTULO_CONDICAO, ROTULO_LINHA, cronograma, planosDaCondicao, prazosDaCondicao, textoCondicao, type CondicaoPagamento, type PlanoCondicao } from "@shared/condicoesLancamento";
+import { CONDICOES, ROTULO_CONDICAO, ROTULO_LINHA, cronograma, divisaoComissaoLancamento, planosDaCondicao, prazosDaCondicao, textoCondicao, type CondicaoPagamento, type PlanoCondicao } from "@shared/condicoesLancamento";
 import type { LotePainel } from "@/components/empreendimento/PainelLote";
 import { Calculator, Download, FileText, Link2, Send, X } from "lucide-react";
 
@@ -348,7 +348,8 @@ export default function Simulador({ slug, lotes, ruas, perimetro, destinoSugerid
                     <p className="font-semibold">{rotulo}: {brl(k.total)} ({(data.condicoes.comissaoTotalPct * 100).toLocaleString("pt-BR")}% do preço de tabela)</p>
                     <p>Corretor {brl(k.corretor)} · Romatec {brl(k.romatec)}</p>
                     <p className="text-muted-foreground">
-                      {entrada === 1 ? <>Sinal à vista: 100% no ato ({brl(k.no1oPagamento.total)})</>
+                      {condicao !== "padrao" ? (d => <>Plano {condicao}: 50% no ato ({brl(d.ato.total)} — corretor {brl(d.ato.corretor)} · Romatec {brl(d.ato.romatec)}) + 4× {brl(d.parcelas[0].total)} da 1ª à 4ª parcela do saldo (corretor {brl(d.parcelas[0].corretor)} · Romatec {brl(d.parcelas[0].romatec)} cada)</>)(divisaoComissaoLancamento(k.total, k.corretor))
+                        : entrada === 1 ? <>Sinal à vista: 100% no ato ({brl(k.no1oPagamento.total)})</>
                         : <>1º pagamento do sinal: {brl(k.no1oPagamento.total)} (corretor {brl(k.no1oPagamento.corretor)} · Romatec {brl(k.no1oPagamento.romatec)}) · 2º pagamento: {brl(k.no2oPagamento.total)} (corretor {brl(k.no2oPagamento.corretor)} · Romatec {brl(k.no2oPagamento.romatec)})</>}
                     </p>
                   </div>
@@ -365,8 +366,14 @@ export default function Simulador({ slug, lotes, ruas, perimetro, destinoSugerid
             {data.minhaComissao && (
               <div className="space-y-1 rounded-xl border border-border bg-card p-4 text-sm">
                 <p className="font-semibold">Sua comissão nesta venda: {brl(data.minhaComissao.valor)} <span className="text-xs font-normal text-muted-foreground">({(data.minhaComissao.pct * 100).toLocaleString("pt-BR")}% do preço)</span></p>
-                {data.minhaComissao.pagamentos.map(p => <p key={p.quando} className="text-xs">{p.quando}: <b>{brl(p.valor)}</b></p>)}
-                <p className="text-[11px] text-muted-foreground">{data.minhaComissao.regra}</p>
+                {condicao === "padrao" ? <>
+                  {data.minhaComissao.pagamentos.map(p => <p key={p.quando} className="text-xs">{p.quando}: <b>{brl(p.valor)}</b></p>)}
+                  <p className="text-[11px] text-muted-foreground">{data.minhaComissao.regra}</p>
+                </> : (d => <>
+                  <p className="text-xs">No ato (entrada de R$ 10 mil): <b>{brl(d.ato.corretor)}</b></p>
+                  <p className="text-xs">1ª a 4ª parcela do saldo: <b>4× {brl(d.parcelas[0].corretor)}</b></p>
+                  <p className="text-[11px] text-muted-foreground">Planos A, B e C: 50% no ato e o restante em 4 partes iguais, à medida que o cliente paga as 4 primeiras parcelas.</p>
+                </>)(divisaoComissaoLancamento(data.minhaComissao.valor, data.minhaComissao.valor))}
                 {data.minhaComissaoAvistaTotal && (
                   <p className="border-t border-border pt-1.5 text-xs">Se fechar à vista total ({brl(sim.avistaTotal.valor)}): <b>{brl(data.minhaComissaoAvistaTotal.valor)}</b>, 100% no ato.</p>
                 )}
