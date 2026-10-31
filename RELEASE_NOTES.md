@@ -3,6 +3,14 @@
 Cada versão nova vai no TOPO. Depois rode `npm run release` (valida e atualiza o package.json);
 ao subir, o servidor grava a versão no banco e todos recebem o aviso "Novidades da versão".
 
+## 1.90.1 — 2026-10-31
+tipo: patch
+obrigatoria: nao
+titulo: Simulador: comissão dos planos A, B e C no ato
+
+### Correções
+- Simulador: no Plano A, B ou C o quadro de comissão mostra 100% no ato (entrada única), como no contrato e no split do boleto
+
 ## 1.90.0 — 2026-10-31
 tipo: minor
 obrigatoria: nao

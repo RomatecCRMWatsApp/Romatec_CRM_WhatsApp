@@ -200,8 +200,9 @@ export default function Simulador({ slug, lotes, ruas, perimetro, destinoSugerid
   const [modal, setModal] = useState<"evolucao" | "whatsapp" | "lead" | null>(null);
 
   const escolher = (c: string) => { const v = c.trim().toUpperCase(); setDigitado(v); if (/^[A-Z]\d{2}$/.test(v)) setCodigo(v); };
+  // Planos A, B e C: entrada única no ato — a comissão do quadro sai 100% no ato (como no contrato)
   const { data, error, isFetching } = trpc.simulador.simular.useQuery(
-    { slug, lote: codigo, entrada },
+    { slug, lote: codigo, entrada: condicao === "padrao" ? entrada : 1 },
     { enabled: !!codigo, retry: false, placeholderData: prev => (prev && prev.lote.codigo === codigo ? prev : undefined) },
   );
   useEffect(() => {
