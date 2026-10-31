@@ -11,6 +11,8 @@ import { registrarEvento } from "@/lib/rastreamento";
  */
 
 const FOLDER = "/bom-jardims/divulgacao/como-chegar.png";
+/** Vídeo do percurso (globo → satélite → rota desenhada); trocar o arquivo mantém o link */
+const VIDEO = { src: "/bom-jardims/rota-video.mp4", poster: "/bom-jardims/rota-video-poster.webp" };
 
 export default function BomJardimsRota() {
   useBrandFonts();
@@ -40,6 +42,12 @@ export default function BomJardimsRota() {
           </p>
         )}
       </header>
+
+      <section style={{ ...sec, paddingTop: 20 }}>
+        <h2 style={{ fontFamily: SERIF, color: C.verde, fontSize: 28, margin: "0 0 12px" }}>Veja o caminho em vídeo</h2>
+        <video src={VIDEO.src} poster={VIDEO.poster} controls playsInline preload="metadata" onPlay={() => abriu("video")}
+          style={{ display: "block", width: "100%", maxWidth: 400, aspectRatio: "9 / 16", margin: "0 auto", borderRadius: 18, background: "#000", objectFit: "cover" }} />
+      </section>
 
       <section style={{ ...sec, paddingTop: 20 }}>
         <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))", gap: 10 }}>

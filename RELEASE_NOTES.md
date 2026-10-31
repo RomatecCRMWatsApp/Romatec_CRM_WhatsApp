@@ -3,6 +3,14 @@
 Cada versão nova vai no TOPO. Depois rode `npm run release` (valida e atualiza o package.json);
 ao subir, o servidor grava a versão no banco e todos recebem o aviso "Novidades da versão".
 
+## 1.88.1 — 2026-10-31
+tipo: patch
+obrigatoria: nao
+titulo: Vídeo do percurso na página Como chegar
+
+### Melhorias
+- /bom-jardims/rota: vídeo do caminho (globo, satélite e a rota desenhada com os pontos de referência) logo no início da página
+
 ## 1.88.0 — 2026-10-31
 tipo: minor
 obrigatoria: nao
