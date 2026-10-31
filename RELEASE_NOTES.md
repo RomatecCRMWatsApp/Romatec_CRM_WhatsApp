@@ -3,6 +3,14 @@
 Cada versão nova vai no TOPO. Depois rode `npm run release` (valida e atualiza o package.json);
 ao subir, o servidor grava a versão no banco e todos recebem o aviso "Novidades da versão".
 
+## 1.88.4 — 2026-10-31
+tipo: patch
+obrigatoria: nao
+titulo: Textos prontos do Status do WhatsApp e do Reels da rota
+
+### Melhorias
+- Links de divulgação: novos itens "Como chegar — texto para o Status do WhatsApp" e "Como chegar — legenda do Reels no Instagram", com o link e a assinatura de quem divulga
+
 ## 1.88.3 — 2026-10-31
 tipo: patch
 obrigatoria: nao

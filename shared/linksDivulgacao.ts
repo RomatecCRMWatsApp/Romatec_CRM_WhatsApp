@@ -59,6 +59,18 @@ export const LINKS_FIXOS: LinkDivulgacao[] = [
     textoWhatsapp: `Aqui está o caminho até o Condomínio de Chácaras Bom Jardims:\n${MARCA_LINK}\n\nA página abre a navegação no Google Maps, Waze ou Apple Maps e mostra os pontos de referência. Posso ajudar você a combinar uma visita?`,
   },
   {
+    chave: 'fixo:rota-status', titulo: 'Como chegar — texto para o Status do WhatsApp', fixo: true, destaque: false, empreendimento: 'Bom Jardims',
+    descricao: 'Poste o vídeo narrado da rota no Status e cole este texto na legenda (o link abre a página com o vídeo, Google Maps e Waze).',
+    url: ROTA_COMO_CHEGAR, utmSource: 'whatsapp-status', utmCampaign: CAMPANHA_ROTA,
+    textoWhatsapp: `🧭 *Como chegar ao Bom Jardims*\nDo centro de Açailândia ao portal: 17 km, uns 24 min de carro.\n\n🎥 Veja o caminho com os pontos de referência e abra no Google Maps ou Waze 👇\n${MARCA_LINK}\n\n🌳 Chácaras a partir de 3.025 m² · Lançamento oficial 14/11`,
+  },
+  {
+    chave: 'fixo:rota-instagram', titulo: 'Como chegar — legenda do Reels no Instagram', fixo: true, destaque: false, empreendimento: 'Bom Jardims',
+    descricao: 'Legenda para o Reels do vídeo narrado da rota. No Instagram o link não fica clicável: quem comentar ROTA recebe o link pelo Direct ou WhatsApp.',
+    url: ROTA_COMO_CHEGAR, utmSource: 'instagram', utmCampaign: CAMPANHA_ROTA,
+    textoWhatsapp: `📍 Como chegar ao Condomínio de Chácaras Bom Jardims\n\nDo centro de Açailândia até o portal em 17 km, cerca de 24 minutos de carro. No vídeo você vê o caminho inteiro com os pontos de referência:\n\n1️⃣ Prefeitura Municipal\n2️⃣ BR-222, sentido Piquiá\n3️⃣ Posto da PRF\n4️⃣ Entrada da estação ferroviária\n5️⃣ Duas ferrovias (atenção à passagem dos trens 🚆)\n6️⃣ Balneário Walter Figueiredo\n7️⃣ Portal do Bom Jardims 🌳\n\nQuer a rota no seu celular, com Google Maps, Waze e o vídeo narrado? Comente ROTA ou chame no WhatsApp que eu te mando o link.\n\n🌿 Chácaras a partir de 3.025 m² · Lançamento oficial em 14/11\n\n🔗 ${MARCA_LINK}\n\n#BomJardims #Açailândia #Chácaras #ComoChegar #Maranhão #ChácarasÀVenda #Imperatriz #CondomínioDeChácaras`,
+  },
+  {
     chave: 'fixo:agendar', titulo: 'Agendar visita ao Bom Jardims', fixo: true, destaque: false, empreendimento: 'Bom Jardims',
     descricao: 'O cliente escolhe o dia, o horário e a chácara no mapa; a visita cai na sua agenda.',
     url: '/agendar/bom-jardims', utmSource: 'whatsapp', utmCampaign: 'BJ-VISITA',
