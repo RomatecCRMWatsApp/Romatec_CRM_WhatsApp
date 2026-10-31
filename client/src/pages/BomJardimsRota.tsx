@@ -11,8 +11,8 @@ import { registrarEvento } from "@/lib/rastreamento";
  */
 
 const FOLDER = "/bom-jardims/divulgacao/como-chegar.png";
-/** Vídeo do percurso (globo → satélite → rota desenhada); trocar o arquivo mantém o link */
-const VIDEO = { src: "/bom-jardims/rota-video.mp4", poster: "/bom-jardims/rota-video-poster.webp" };
+/** Vídeo narrado do percurso. Ao trocar, use um nome novo de arquivo: vídeos ficam 1 semana em cache no celular */
+const VIDEO = { src: "/bom-jardims/rota-video-narrado-v2.mp4", poster: "/bom-jardims/rota-video-narrado-v2.webp" };
 
 export default function BomJardimsRota() {
   useBrandFonts();

@@ -3,6 +3,14 @@
 Cada versão nova vai no TOPO. Depois rode `npm run release` (valida e atualiza o package.json);
 ao subir, o servidor grava a versão no banco e todos recebem o aviso "Novidades da versão".
 
+## 1.88.3 — 2026-10-31
+tipo: patch
+obrigatoria: nao
+titulo: Como chegar: vídeo narrado aparece para todos
+
+### Correções
+- /bom-jardims/rota: o vídeo narrado ganhou nome de arquivo novo — quem já tinha aberto a página continuava vendo o vídeo antigo guardado no celular
+
 ## 1.88.2 — 2026-10-31
 tipo: patch
 obrigatoria: nao
