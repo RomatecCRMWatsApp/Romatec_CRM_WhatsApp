@@ -36,6 +36,12 @@ export const LINKS_FIXOS: LinkDivulgacao[] = [
     textoWhatsapp: `🌳 *Condomínio de Chácaras Bom Jardims* — condição de lançamento\n\nAgora com *entrada a partir de R$ 10 mil*! Escolha a forma que cabe no seu bolso:\n\n✅ *Entrada de 30%* — o menor total\n✅ *Plano A* — R$ 10 mil + parcela de ≈ R$ 1.234 + reforço no 13º\n✅ *Plano B* — R$ 10 mil + até 180× fixas, sem reforço\n✅ *Plano C* — R$ 10 mil + resto da entrada em 36× sem juros\n\n👉 Simule a sua chácara e escolha o prazo:\n${MARCA_LINK}`,
   },
   {
+    chave: 'fixo:pagamento-status', titulo: 'Entrada de R$ 10 mil — texto para o Status do WhatsApp', fixo: true, destaque: false, empreendimento: 'Bom Jardims',
+    descricao: 'Poste no Status o Reel "Entrada R$ 10 mil" (romateccrm.com/bom-jardims/ig/reel-entrada-10mil.mp4) e cole este texto na legenda; o link abre a simulação dos planos.',
+    url: ROTA_PAGAMENTO, utmSource: 'whatsapp-status', utmCampaign: CAMPANHA_PAGAMENTO,
+    textoWhatsapp: `🌳 *Chácara de 3.025 m² em Açailândia com entrada de R$ 10 mil!*\n\nEscolha o plano que cabe no seu bolso:\n💰 *13º* — R$ 1.234,51/mês + reforço no 13º\n📅 *Prazo longo* — até 180× fixas, sem reforço\n🧩 *Entrada parcelada* — resto da entrada em 36× sem juros\n\nSem banco · só 82 chácaras · lançamento 14/11\n\n👉 Simule a sua:\n${MARCA_LINK}\n\nJosé Romário · CRECI/MA 4.705`,
+  },
+  {
     chave: 'fixo:mapa3d', titulo: 'Mapa 3D + vídeos — nova campanha', fixo: true, destaque: true, empreendimento: 'Bom Jardims',
     descricao: 'Página com o mapa 3D em destaque (girar, aproximar e tocar na chácara), os vídeos da galeria, as fotos do drone das obras, cadastro e o convite para seguir o @avalieimob.',
     url: ROTA_MAPA3D, utmSource: 'instagram', utmCampaign: CAMPANHA_MAPA3D,
