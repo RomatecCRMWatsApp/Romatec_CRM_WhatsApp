@@ -39,7 +39,7 @@ centro, com entrada de R$ 10 mil e parcela fixa, que não sobe.**
 | 24–32,5 s | Zoom no Bom Jardims (perímetro dourado, chácaras desenhadas). Cartão: "Chácaras de 3.025 m² · a partir de R$ 160 mil" | "…fica o Condomínio de Chácaras Bom Jardims: chácaras de 3.025 metros quadrados a partir de 160 mil reais." |
 | 32,5–41 s | Painel "Mesmo dinheiro, 10× mais terreno": comparativo lado a lado, quadrado pequeno × quadrado grande, "O m² sai quase 9× mais barato" | "É praticamente o mesmo dinheiro, com dez vezes mais terreno. O metro quadrado sai quase nove vezes mais barato." |
 | 41–50 s | Painel "Entrada de R$ 10 mil e parcela que não sobe": 120× de R$ 1.234,51. Gráfico de barras fixa × reajustada; IPCA, IGP-M, INCC e salário mínimo riscados | "E você entra com apenas 10 mil reais e paga em até 120 parcelas fixas de R$ 1.234. Enquanto muita parcela por aí sobe todo ano com IPCA, IGP-M ou salário mínimo, aqui a parcela não muda até o fim." |
-| 50–57 s | Painel "Condomínio fechado": portaria e controle de acesso, segurança, água encanada, energia, sinal de celular e internet, córrego, mata e área de lazer | "Condomínio fechado, com portaria, segurança, água encanada, energia e sinal, no meio da natureza." |
+| 50–57 s | Painel "Condomínio fechado": portaria e controle de acesso, segurança, água encanada, energia, sinal 5G em todo o condomínio, córrego, mata e área de lazer | "Condomínio fechado, com portaria, segurança, água encanada, energia e sinal 5G em todo o condomínio, no meio da natureza." |
 | 57–64 s | Final: logo, "Lançamento oficial · 14 de novembro", QR do WhatsApp, (99) 9 9181-1246, José Romário · CRECI/MA 4.705 | "Lançamento no dia 14 de novembro. Chama no WhatsApp e garanta a sua chácara antes que acabe." |
 
 **Tom:** de vizinho para vizinho, animado mas sem exagero. Use frases curtas e destaque os números falando devagar.
@@ -54,7 +54,7 @@ centro, com entrada de R$ 10 mil e parcela fixa, que não sobe.**
 
 - **Mostrar o CRECI/MA 4.705** com o contato.
 - **Propaganda comparativa** (Código do CONAR, art. 32): compare só dados objetivos e comprováveis (área, preço médio, forma de reajuste). Não fale mal dos outros loteamentos. Se algum deles reclamar, troque os nomes por "loteamentos urbanos da cidade".
-- **Sinal:** o vídeo diz "sinal de celular e internet". Use "5G" ou "3G" só depois de confirmado com a operadora.
+- **Sinal:** 5G em todo o condomínio (confirmado pelo corretor em 01/11/2026).
 - **Distância:** 17,4 km pela estrada (rota medida). O tempo de carro calculado é ~24 min, e o vídeo diz "menos de 28 min".
 - **Não dizer** "8 vezes" para a entrada de 30%. Aqui a mensagem é a entrada de R$ 10 mil.
 
