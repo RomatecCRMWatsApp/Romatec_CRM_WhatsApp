@@ -15,7 +15,8 @@ import { empreendimentos, lotes, properties } from '../drizzle/schema';
 import { DESCRICAO_BOM_JARDIMS, IMAGENS_BOM_JARDIMS } from '../shared/bomJardimsSeo';
 
 const urlPublica = () => (process.env.APP_PUBLIC_URL || 'https://romateccrm.com').replace(/\/+$/, '');
-const segredo = () => process.env.PORTAIS_TOKEN || process.env.JWT_SECRET || process.env.SESSION_SECRET || 'romatec-portais';
+// Sem segredo em produção, falha (o token do feed seria forjável com o valor padrão do código-fonte)
+const segredo = () => process.env.PORTAIS_TOKEN || process.env.JWT_SECRET || process.env.SESSION_SECRET || (() => { if (process.env.NODE_ENV === 'production') throw new Error('Defina JWT_SECRET: sem ele os links assinados poderiam ser forjados'); return 'romatec-portais'; })();
 
 /** Token fixo do feed e do webhook (derivado do segredo do servidor; PORTAIS_TOKEN troca) */
 export const tokenPortais = () => createHmac('sha256', segredo()).update('portais:grupo-olx').digest('hex').slice(0, 32);

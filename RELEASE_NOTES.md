@@ -3,6 +3,17 @@
 Cada versão nova vai no TOPO. Depois rode `npm run release` (valida e atualiza o package.json);
 ao subir, o servidor grava a versão no banco e todos recebem o aviso "Novidades da versão".
 
+## 1.93.1 — 2026-11-01
+tipo: patch
+obrigatoria: nao
+titulo: Reforços de segurança
+
+### Correções
+- Carnê digital, portal do comprador e assinatura de contratos: o limite de consultas e o IP gravado como evidência da assinatura usam o IP real (visto pelo servidor), não o informado pelo navegador
+- Código de confirmação (assinatura de contrato e de termo aditivo): as tentativas são contadas de forma atômica — palpites em paralelo não passam do limite
+- Escritas com a sessão vindas de outro site são recusadas (proteção contra requisição forjada)
+- Links assinados (cartão do corretor, "já atendi" e feed dos portais) exigem o segredo do servidor em produção
+
 ## 1.93.0 — 2026-11-01
 tipo: minor
 obrigatoria: nao

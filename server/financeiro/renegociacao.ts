@@ -9,7 +9,7 @@
  *    "renegociacao"), emitindo boleto + PIX no Asaas quando a conta do empreendimento está configurada.
  */
 import { createHash, randomBytes, randomInt, timingSafeEqual } from 'node:crypto';
-import { and, desc, eq, inArray } from 'drizzle-orm';
+import { and, desc, eq, inArray, lt, sql } from 'drizzle-orm';
 import { PDFDocument, StandardFonts, rgb } from 'pdf-lib';
 import { getDb } from '../db';
 import { cobrancas, contratoAditivos, contratos, empreendimentos } from '../../drizzle/schema';
@@ -309,11 +309,12 @@ export async function assinarAditivo(token: string, codigo: string, o: { aceite:
   if (!o.aceite) throw new FinanceiroErro('ACEITE', 'Marque que leu e concorda com o termo', 400);
   if (!a.otpHash || !a.otpExpira || new Date(a.otpExpira).getTime() < Date.now()) throw new FinanceiroErro('CODIGO', 'Código expirado. Peça um novo.', 400);
   if (Number(a.otpTentativas) >= 5) throw new FinanceiroErro('CODIGO', 'Muitas tentativas. Peça um novo código.', 429);
+  // Reserva a tentativa no banco antes de comparar (atômico): palpites em paralelo não passam de 5
+  const reserva: any = await d.update(contratoAditivos).set({ otpTentativas: sql`${contratoAditivos.otpTentativas} + 1` } as any)
+    .where(and(eq(contratoAditivos.id, a.id), lt(contratoAditivos.otpTentativas, 5)));
+  if (!Number(reserva?.[0]?.affectedRows ?? reserva?.affectedRows ?? reserva?.changes ?? 1)) throw new FinanceiroErro('CODIGO', 'Muitas tentativas. Peça um novo código.', 429);
   const ok = /^\d{6}$/.test(codigo) && timingSafeEqual(Buffer.from(hashOtp(token, codigo)), Buffer.from(String(a.otpHash)));
-  if (!ok) {
-    await d.update(contratoAditivos).set({ otpTentativas: Number(a.otpTentativas) + 1 } as any).where(eq(contratoAditivos.id, a.id));
-    throw new FinanceiroErro('CODIGO', 'Código incorreto', 400);
-  }
+  if (!ok) throw new FinanceiroErro('CODIGO', 'Código incorreto', 400);
   const em = new Date();
   // Trava: só uma assinatura passa (corrida de dois cliques)
   const upd: any = await d.update(contratoAditivos).set({ status: 'assinado', assinadoEm: em, assinaturaIp: o.ip.slice(0, 64), assinaturaUa: o.ua.slice(0, 300), otpHash: null } as any)

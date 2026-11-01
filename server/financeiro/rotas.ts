@@ -353,7 +353,8 @@ export function registrarRotasFinanceiro(app: Express) {
   app.get('/api/c/:codigo', async (req, res) => {
     try {
       const { carneDigital, dentroDoLimite } = await import('./carneDigital');
-      const ip = String(req.headers['x-forwarded-for'] ?? '').split(',')[0].trim() || req.socket.remoteAddress || '';
+      // Último IP do X-Forwarded-For (o que o proxy do Railway viu); o primeiro pode ser forjado e furaria o limite
+      const ip = String(req.headers['x-forwarded-for'] ?? '').split(',').map(x => x.trim()).filter(Boolean).pop() || req.socket.remoteAddress || '';
       if (!dentroDoLimite(ip)) return res.status(429).json({ erro: 'limite', mensagem: 'Muitas consultas — tente de novo em alguns minutos' });
       res.setHeader('Cache-Control', 'no-store');
       res.json(await carneDigital(String(req.params.codigo).toUpperCase(), { ip }));
@@ -361,7 +362,7 @@ export function registrarRotasFinanceiro(app: Express) {
   });
 
   // Portal do comprador (/c/:codigo): documentos, obra, chamados e antecipação — mesmo limite por IP do carnê
-  const ipPortal = (req: any) => String(req.headers['x-forwarded-for'] ?? '').split(',')[0].trim() || req.socket.remoteAddress || '';
+  const ipPortal = (req: any) => String(req.headers['x-forwarded-for'] ?? '').split(',').map((x: string) => x.trim()).filter(Boolean).pop() || req.socket.remoteAddress || '';
   const codigoDe = (req: any) => String(req.params.codigo).toUpperCase();
   const limitePortal = async (req: any, res: Response) => {
     const { dentroDoLimite } = await import('./carneDigital');

@@ -13,8 +13,11 @@ import {
 import { ROTULO_METODO, ROTULO_PAPEL } from './pdf';
 import { temAssinaturaDigital } from './icp';
 
-/** IP real do signatário (o Railway fica na frente: primeiro endereço do X-Forwarded-For) */
-export const ipDe = (req: Request) => String(req.headers['x-forwarded-for'] ?? '').split(',')[0].trim() || req.socket.remoteAddress || '';
+/**
+ * IP real do signatário: o proxy do Railway ACRESCENTA no fim do X-Forwarded-For o endereço que viu; os primeiros
+ * vêm do navegador e podem ser forjados (evidência de assinatura e limite por IP usam sempre o último).
+ */
+export const ipDe = (req: Request) => String(req.headers['x-forwarded-for'] ?? '').split(',').map(x => x.trim()).filter(Boolean).pop() || req.socket.remoteAddress || '';
 
 function erro(res: Response, e: any) {
   if (e instanceof AssinaturaErro) return res.status(e.status).json({ erro: e.codigo, mensagem: e.message });

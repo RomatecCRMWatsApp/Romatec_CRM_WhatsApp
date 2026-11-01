@@ -47,7 +47,8 @@ export function escolherResponsavel<T extends { id: number; ultimoLeadAt?: Date 
 }
 
 // ─── Link "Já atendi" ────────────────────────────────────────────────────────
-const segredo = () => process.env.JWT_SECRET || process.env.SESSION_SECRET || 'romatec-sla';
+// Sem segredo em produção, falha (os links /a/ e /w/ seriam forjáveis com o valor padrão do código-fonte)
+const segredo = () => process.env.JWT_SECRET || process.env.SESSION_SECRET || (() => { if (process.env.NODE_ENV === 'production') throw new Error('Defina JWT_SECRET: sem ele os links assinados poderiam ser forjados'); return 'romatec-sla'; })();
 export function tokenAtendido(leadId: number): string {
   return crypto.createHmac('sha256', segredo()).update(`atendido:${leadId}`).digest('hex').slice(0, 20);
 }

@@ -6,7 +6,7 @@
  * concluídos todos, o manifesto (Anexo VII) é gerado e o contrato fica ativo.
  */
 import { createHash, randomBytes, randomInt, timingSafeEqual } from 'node:crypto';
-import { and, eq, isNull } from 'drizzle-orm';
+import { and, eq, isNull, lt, sql } from 'drizzle-orm';
 import { getDb } from '../db';
 import { assinaturaEventos, assinaturaOtp, assinaturaPosicoes, assinaturaSignatarios, contratos, contratoVersoes, empreendimentos, users } from '../../drizzle/schema';
 import { telefoneWhatsApp } from '../../shared/contratos';
@@ -271,9 +271,12 @@ export async function confirmarAvancada(token: string, codigo: string, o: { ip: 
   if (!otp) throw new AssinaturaErro('OTP', 'Peça o código de confirmação primeiro', 400);
   if (otp.tentativas >= OTP_TENTATIVAS) throw new AssinaturaErro('OTP_BLOQUEADO', 'Tentativas esgotadas — peça um novo código', 429);
   if (new Date(otp.expiraEm).getTime() < Date.now()) throw new AssinaturaErro('OTP_EXPIRADO', 'Código expirado — peça um novo', 400);
+  // Reserva a tentativa no banco antes de comparar (atômico): palpites em paralelo não passam do limite
+  const reserva: any = await d.update(assinaturaOtp).set({ tentativas: sql`${assinaturaOtp.tentativas} + 1` })
+    .where(and(eq(assinaturaOtp.signatarioId, s.id), lt(assinaturaOtp.tentativas, OTP_TENTATIVAS)));
+  if (!Number(reserva?.[0]?.affectedRows ?? reserva?.affectedRows ?? reserva?.changes ?? 1)) throw new AssinaturaErro('OTP_BLOQUEADO', 'Tentativas esgotadas — peça um novo código', 429);
   const esperado = Buffer.from(otp.codigoHash, 'hex'), recebido = Buffer.from(hashOtp(token, String(codigo).replace(/\D/g, '')), 'hex');
   if (esperado.length !== recebido.length || !timingSafeEqual(esperado, recebido)) {
-    await d.update(assinaturaOtp).set({ tentativas: otp.tentativas + 1 }).where(eq(assinaturaOtp.signatarioId, s.id));
     await evento(s.contratoId, s.id, 'otp_errado', { ip: o.ip, ua: o.ua });
     throw new AssinaturaErro('OTP_INVALIDO', `Código incorreto (${OTP_TENTATIVAS - otp.tentativas - 1} tentativa(s) restante(s))`, 400);
   }

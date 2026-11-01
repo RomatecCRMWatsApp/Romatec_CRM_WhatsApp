@@ -10,7 +10,8 @@ import { users } from '../drizzle/schema';
 import { perfilDe } from '../shared/equipe';
 import { CARTAO_PADRAO, cartaoDe, normalizarInstagram, origemDoCartao, type CartaoVendas } from '../shared/cartaoVendas';
 
-const segredo = () => process.env.CARTAO_LINK_SECRET || process.env.JWT_SECRET || 'romatec-cartao';
+// Sem segredo em produção, falha (a ref do link seria forjável com o valor padrão, que está no código-fonte)
+const segredo = () => process.env.CARTAO_LINK_SECRET || process.env.JWT_SECRET || (() => { if (process.env.NODE_ENV === 'production') throw new Error('Defina JWT_SECRET: sem ele os links assinados poderiam ser forjados'); return 'romatec-cartao'; })();
 const assinatura = (id: number) => createHmac('sha256', segredo()).update(`cartao:${id}`).digest('base64url').slice(0, 8);
 
 export const refDoUsuario = (id: number) => `${id.toString(36)}${assinatura(id)}`;

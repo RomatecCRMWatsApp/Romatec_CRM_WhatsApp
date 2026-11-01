@@ -30,6 +30,8 @@ async function findAvailablePort(startPort: number = 3000): Promise<number> {
 async function startServer() {
   const app = express();
   const server = createServer(app);
+  // CSRF: escrita com a sessão vinda de outro site é recusada (server/_core/origem.ts)
+  app.use((await import('./origem')).bloquearOrigemCruzada);
   app.use(express.json({
     limit: "50mb",
     // Webhooks da Meta (X-Hub-Signature-256) e da Spedy (Standard Webhooks) assinam o corpo cru: guarda só nessas rotas
