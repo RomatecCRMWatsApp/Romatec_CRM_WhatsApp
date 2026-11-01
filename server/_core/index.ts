@@ -32,14 +32,16 @@ async function startServer() {
   const server = createServer(app);
   // CSRF: escrita com a sessão vinda de outro site é recusada (server/_core/origem.ts)
   app.use((await import('./origem')).bloquearOrigemCruzada);
-  app.use(express.json({
-    limit: "50mb",
-    // Webhooks da Meta (X-Hub-Signature-256) e da Spedy (Standard Webhooks) assinam o corpo cru: guarda só nessas rotas
-    verify: (req, _res, buf) => {
-      if (req.url?.startsWith('/api/webhook/meta') || req.url?.startsWith('/api/webhook/spedy')) (req as any).rawBody = Buffer.from(buf);
-    },
+  // Proteções gerais (server/_core/protecoes.ts): cabeçalhos de segurança, limite por IP e tamanho do corpo
+  const protecoes = await import('./protecoes');
+  app.disable('x-powered-by');
+  app.use(protecoes.cabecalhosSeguranca);
+  app.use(protecoes.criarLimiteGlobal());
+  // JSON: 50 MB só para o CRM logado (fotos/documentos em base64); 1 MB nas rotas públicas e webhooks.
+  // Webhooks da Meta (X-Hub-Signature-256) e da Spedy (Standard Webhooks) assinam o corpo cru: guarda só nessas rotas
+  app.use(...protecoes.jsonComLimite((req, _res, buf) => {
+    if (req.url?.startsWith('/api/webhook/meta') || req.url?.startsWith('/api/webhook/spedy')) (req as any).rawBody = Buffer.from(buf);
   }));
-  app.use(express.urlencoded({ limit: "50mb", extended: true }));
   // "Ver como" do administrador: só leitura também nas rotas REST (server/_core/verComo.ts)
   const { bloquearEscritaRest } = await import('./verComo');
   app.use(bloquearEscritaRest);

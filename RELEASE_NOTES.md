@@ -3,6 +3,16 @@
 Cada versão nova vai no TOPO. Depois rode `npm run release` (valida e atualiza o package.json);
 ao subir, o servidor grava a versão no banco e todos recebem o aviso "Novidades da versão".
 
+## 1.93.2 — 2026-11-01
+tipo: patch
+obrigatoria: nao
+titulo: Proteções gerais do servidor
+
+### Melhorias
+- Rotas públicas e webhooks aceitam até 1 MB por requisição (antes 50 MB); o CRM logado continua com 50 MB para fotos e documentos, e os uploads de arquivo mantêm os limites de cada tela
+- Limite de requisições por IP nas rotas da API: 180 por minuto sem login e 1.200 com login; webhooks (Asaas, Meta, Spedy, Z-API) ficam de fora
+- Cabeçalhos de segurança: o CRM só pode ser exibido dentro dos domínios da Romatec (proteção contra roubo de clique), HTTPS obrigatório no navegador, câmera, microfone e localização só no próprio site, sem expor a versão do servidor
+
 ## 1.93.1 — 2026-11-01
 tipo: patch
 obrigatoria: nao
