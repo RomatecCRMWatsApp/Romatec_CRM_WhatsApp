@@ -121,3 +121,6 @@ client/public/__manus__/version.json
 
 # PDFs gerados localmente (contrato modelo/exemplos)
 contrato-modelo/
+
+# Saída do scripts/contrato-exemplo.ts (PDFs de exemplo gerados)
+/contrato-exemplo/
