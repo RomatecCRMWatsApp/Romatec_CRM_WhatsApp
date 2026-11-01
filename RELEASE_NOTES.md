@@ -3,6 +3,14 @@
 Cada versão nova vai no TOPO. Depois rode `npm run release` (valida e atualiza o package.json);
 ao subir, o servidor grava a versão no banco e todos recebem o aviso "Novidades da versão".
 
+## 1.93.3 — 2026-11-01
+tipo: patch
+obrigatoria: nao
+titulo: Webhook do WhatsApp (Z-API) protegido por token
+
+### Correções
+- O webhook da Z-API exige o token (?k=) em produção; sem a variável ZAPI_WEBHOOK_TOKEN ele fica fechado, em vez de aceitar avisos só pelo ID da instância
+
 ## 1.93.2 — 2026-11-01
 tipo: patch
 obrigatoria: nao

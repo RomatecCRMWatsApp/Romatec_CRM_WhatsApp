@@ -48,3 +48,15 @@ describe('Ritmo seguro dos Disparos', () => {
     expect(inicioDoDia(Date.UTC(2026, 9, 20, 1)).toISOString()).toBe('2026-10-19T03:00:00.000Z'); // segunda 22h
   });
 });
+
+describe('webhook da Z-API: token obrigatório em produção', () => {
+  it('sem token configurado e exigido, fecha (503); com token, exige o ?k= certo', () => {
+    const inst = ['3F1A2B3C4D5E'];
+    const corpo = { instanceId: '3F1A2B3C4D5E' };
+    expect(motivoRecusaWebhook(corpo, { instancias: inst, exigirToken: true })).toBe('token_nao_configurado');
+    expect(motivoRecusaWebhook(corpo, { instancias: inst, token: 'segredo', tokenRecebido: 'segredo', exigirToken: true })).toBeNull();
+    expect(motivoRecusaWebhook(corpo, { instancias: inst, token: 'segredo', tokenRecebido: 'errado', exigirToken: true })).toBe('token_invalido');
+    expect(motivoRecusaWebhook(corpo, { instancias: inst, token: 'segredo', exigirToken: true })).toBe('token_invalido');
+  });
+});
+

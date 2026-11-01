@@ -52,11 +52,12 @@ async function startServer() {
 
   app.post('/api/webhook/zapi', async (req, res) => {
     try {
-      // Só aceita avisos da instância do CRM (e, se configurado, com ?k=ZAPI_WEBHOOK_TOKEN)
+      // Só aceita avisos da instância do CRM com ?k=ZAPI_WEBHOOK_TOKEN (obrigatório em produção)
       const { recusarWebhook } = await import('../zapiWebhookGuard');
       const recusa = await recusarWebhook(req.body, req.query?.k);
       if (recusa) {
         console.warn(`[Webhook] Recusado (${recusa}) — instanceId=${String(req.body?.instanceId ?? '').slice(0, 8)}…`);
+        if (recusa === 'token_nao_configurado') return res.status(503).json({ error: 'webhook_not_configured' });
         return res.status(403).json({ error: 'forbidden' });
       }
 

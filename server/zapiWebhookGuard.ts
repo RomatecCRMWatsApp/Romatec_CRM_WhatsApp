@@ -4,12 +4,13 @@
  * A Z-API não assina os avisos, então qualquer pessoa que descobrisse a URL poderia
  * injetar "mensagens" falsas (aciona o bot, a IA e os alertas). Conferimos:
  * 1. instanceId do aviso = a instância do CRM (Configurações ou ZAPI_INSTANCE_ID);
- * 2. opcional: ?k=<ZAPI_WEBHOOK_TOKEN> na URL cadastrada no painel da Z-API.
+ * 2. ?k=<ZAPI_WEBHOOK_TOKEN> na URL cadastrada no painel da Z-API — OBRIGATÓRIO em produção desde 01/11/2026
+ *    (sem a variável, o webhook fica fechado: só o instanceId, que não é segredo, não basta).
  * Desliga a conferência da instância com ZAPI_WEBHOOK_CHECAR=off (emergência).
  */
 import crypto from 'crypto';
 
-export type MotivoRecusa = 'token_invalido' | 'instancia_ausente' | 'instancia_desconhecida' | null;
+export type MotivoRecusa = 'token_invalido' | 'token_nao_configurado' | 'instancia_ausente' | 'instancia_desconhecida' | null;
 
 const igual = (a: string, b: string) => {
   const x = Buffer.from(a), y = Buffer.from(b);
@@ -19,8 +20,9 @@ const igual = (a: string, b: string) => {
 /** Por que recusar este aviso (null = aceitar). Função pura. */
 export function motivoRecusaWebhook(
   body: any,
-  opts: { instancias: (string | null | undefined)[]; token?: string | null; tokenRecebido?: unknown; checarInstancia?: boolean },
+  opts: { instancias: (string | null | undefined)[]; token?: string | null; tokenRecebido?: unknown; checarInstancia?: boolean; exigirToken?: boolean },
 ): MotivoRecusa {
+  if (!opts.token && opts.exigirToken) return 'token_nao_configurado';
   if (opts.token) {
     const recebido = typeof opts.tokenRecebido === 'string' ? opts.tokenRecebido : '';
     if (!recebido || !igual(recebido, opts.token)) return 'token_invalido';
@@ -45,5 +47,6 @@ export async function recusarWebhook(body: any, tokenRecebido: unknown): Promise
     token: process.env.ZAPI_WEBHOOK_TOKEN || null,
     tokenRecebido,
     checarInstancia: (process.env.ZAPI_WEBHOOK_CHECAR || 'on').toLowerCase() !== 'off',
+    exigirToken: process.env.NODE_ENV === 'production',
   });
 }
