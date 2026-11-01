@@ -47,8 +47,9 @@ export async function anexoTabelaPagamento(plano: PlanoContrato, ctx: Ctx, marca
   const fb = await doc.embedFont(StandardFonts.HelveticaBold);
   const W = 841.89, H = 595.28, X0 = 60, X1 = W - 60;
   const cols: { t: string; w: number; dir?: boolean }[] = [
-    { t: 'Nº', w: 40 }, { t: 'Parcela', w: 90 }, { t: 'Vencimento', w: 90 }, { t: 'Valor (R$)', w: 110, dir: true },
-    { t: 'Juros (R$)', w: 110, dir: true }, { t: 'Amortização (R$)', w: 140, dir: true }, { t: 'Saldo devedor (R$)', w: X1 - X0 - 580, dir: true },
+    // Parcela larga: no Plano C unificado o rótulo é "Saldo 1/120 + Compl. 1/36"
+    { t: 'Nº', w: 40 }, { t: 'Parcela', w: 150 }, { t: 'Vencimento', w: 70 }, { t: 'Valor (R$)', w: 95, dir: true },
+    { t: 'Juros (R$)', w: 90, dir: true }, { t: 'Amortização (R$)', w: 110, dir: true }, { t: 'Saldo devedor (R$)', w: X1 - X0 - 555, dir: true },
   ];
   const texto = (p: PDFPage, s: string, x: number, y: number, size: number, font: PDFFont = f, color = rgb(0, 0, 0)) => p.drawText(s, { x, y, size, font, color });
   const celula = (p: PDFPage, valores: string[], y: number, font: PDFFont, size: number) => {
@@ -61,7 +62,7 @@ export async function anexoTabelaPagamento(plano: PlanoContrato, ctx: Ctx, marca
     });
   };
 
-  const linhas = plano.parcelas.map((l, i) => [String(i + 1), `${ROTULO_TIPO[l.tipo]} ${l.numero}/${l.total}`, dataBR(l.vencimento),
+  const linhas = plano.parcelas.map((l, i) => [String(i + 1), `${ROTULO_TIPO[l.tipo]} ${l.numero}/${l.total}${l.complementoNumero ? ` + Compl. ${l.complementoNumero}/${l.complementoTotal}` : ''}`, dataBR(l.vencimento),
     brl(l.valor), brl(l.juros), brl(l.amortizacao), brl(l.saldoDevedor)]);
   const ALT = 13;
   let i = 0, pagina = 0;

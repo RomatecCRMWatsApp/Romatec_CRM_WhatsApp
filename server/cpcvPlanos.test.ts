@@ -12,8 +12,8 @@ const C: CondicoesPagamento = {
   precoBase: 160000, areaBaseM2: 3025.11, toleranciaAreaM2: 1, entradaPct: 0.3, entradaMaxParcelas: 6, descontoAvistaPct: 0.0625,
   descontoAvistaTotal: 10000, jurosAaEfetivo: 0.06, metodo: 'PRICE', prazos: [12, 24, 36, 60, 120], comissaoTotalPct: 0.05, comissaoCorretorPct: 0.02, comissao1aParcelaPct: 0.5,
 };
-const plano = (condicao: 'padrao' | 'A' | 'B' | 'C', prazo = 120) =>
-  planoDoContrato(simular(3025.11, condicao === 'padrao' ? 6 : 1, C, 160000), { modalidade: 'financiado', prazo, dataPrimeiroPagamento: '2026-11-10', condicao }, C, true);
+const plano = (condicao: 'padrao' | 'A' | 'B' | 'C', prazo = 120, modoC?: 'unificado' | 'sequencial') =>
+  planoDoContrato(simular(3025.11, condicao === 'padrao' ? 6 : 1, C, 160000), { modalidade: 'financiado', prazo, dataPrimeiroPagamento: '2026-11-10', condicao, modoC }, C, true);
 
 describe('CPCV por forma de pagamento (entrada 30%, Planos A, B e C)', () => {
   it('cada condição usa o seu modelo; o v3 continua sendo o da entrada de 30%', () => {
@@ -42,9 +42,32 @@ describe('CPCV por forma de pagamento (entrada 30%, Planos A, B e C)', () => {
   it('plano B em 180× e plano C com o complemento da entrada sem juros', () => {
     expect(plano('B', 180)).toMatchObject({ condicao: 'B', saldo_qtd: 180, saldo_parcela: 1252.94, saldo_valor: 150000 });
     const c = plano('C');
-    expect(c).toMatchObject({ condicao: 'C', entrada_valor: 48000, entrada_parcela: 10000, complemento_valor: 38000, complemento_qtd: 36, complemento_parcela: 1055.56, saldo_valor: 112000 });
-    expect(c.parcelas.filter(x => x.tipo === 'complemento')).toHaveLength(36);
+    expect(c).toMatchObject({ condicao: 'C', entrada_valor: 48000, entrada_parcela: 10000, complemento_valor: 38000, complemento_qtd: 36, complemento_parcela: 1055.56, saldo_valor: 112000, complemento_modo: 'unificado', complemento_venc1: '2026-12-10' });
+    // Boleto único: o complemento entra na parcela do saldo do mesmo mês (36 boletos de R$ 2.290,07 e depois R$ 1.234,51)
+    expect(c.parcelas.filter(x => x.tipo === 'complemento')).toHaveLength(0);
+    expect(c.parcelas.filter(x => x.tipo === 'saldo')).toHaveLength(120);
+    expect(c.parcelas[1]).toMatchObject({ tipo: 'saldo', numero: 1, vencimento: '2026-12-10', valor: 2290.07, complemento: 1055.56, complementoNumero: 1, complementoTotal: 36 });
+    expect(c.parcelas[36]).toMatchObject({ numero: 36, complementoNumero: 36 });
+    expect(c.parcelas[37]).toMatchObject({ numero: 37, valor: 1234.51 });
+    expect(c.parcelas[37].complemento).toBeUndefined();
+    const soma = (xs: number[]) => Math.round(xs.reduce((a, b) => a + b, 0) * 100) / 100;
+    expect(Math.abs(soma(c.parcelas.map(x => x.valor)) - c.total_pagar)).toBeLessThan(0.05);
+    expect([...splitDaComissao(c)].map(([k]) => k)).toEqual(['entrada:1', 'saldo:1', 'saldo:2', 'saldo:3', 'saldo:4']);
     expect(String(tagsPlano(c).plano_entrada_forma)).toContain('complemento de R$ 38.000,00 em 36 (trinta e seis) parcelas mensais de R$ 1.055,56, sem juros');
+  });
+
+  it('plano C sequencial: primeiro as 36 do complemento e depois as 120 do saldo, sem juros no intervalo', () => {
+    const s = plano('C', 120, 'sequencial');
+    expect(s).toMatchObject({ complemento_modo: 'sequencial', complemento_venc1: '2026-12-10', saldo_venc1: '2029-12-10', saldo_parcela: 1234.51, total_pagar: plano('C').total_pagar });
+    const comp = s.parcelas.filter(x => x.tipo === 'complemento'), sal = s.parcelas.filter(x => x.tipo === 'saldo');
+    expect(comp).toHaveLength(36);
+    expect(comp.at(-1)!.vencimento).toBe('2029-11-10');
+    expect(sal).toHaveLength(120);
+    expect(sal[0]).toMatchObject({ vencimento: '2029-12-10', valor: 1234.51 });
+    expect(sal.at(-1)!.saldoDevedor).toBe(0);
+    // Corretagem: 4 partes nas 4 primeiras do complemento (as primeiras depois do ato)
+    expect([...splitDaComissao(s)]).toEqual([['entrada:1', 4000], ['complemento:1', 1000], ['complemento:2', 1000], ['complemento:3', 1000], ['complemento:4', 1000]]);
+    expect(tagsPlano(s)).toMatchObject({ plano_c_item10: 'pagas após o vencimento da última parcela do complemento da entrada do item 9' });
   });
 
   it('divisão proporcional da comissão (chácara maior) e o padrão segue 50/50 nos 2 pagamentos da entrada', async () => {
@@ -81,7 +104,13 @@ describe('CPCV por forma de pagamento (entrada 30%, Planos A, B e C)', () => {
     expect(b).not.toContain('3.3.1. Reforços');
     const c = await texto('MODELO-CPCV-BOM-JARDIMS-v3-PLANO-C.docx', plano('C'));
     expect(c).toContain('3.2.1. Posse e liberação de uso no Plano C.');
-    expect(c).toContain('pagas juntamente com as parcelas do complemento da entrada do item 9');
+    expect(c).toContain('cobradas no mesmo boleto das parcelas do complemento da entrada do item 9, enquanto houver');
+    expect(c).toContain('a partir do mês seguinte ao do pagamento do ato, cobradas no mesmo boleto da parcela do saldo do mesmo mês');
+    expect(c).toContain('O primeiro vencimento do saldo ocorre no mês seguinte ao do pagamento do valor do ato da entrada, no mesmo boleto da 1ª parcela do complemento da entrada.');
+    const cs = await texto('MODELO-CPCV-BOM-JARDIMS-v3-PLANO-C.docx', plano('C', 120, 'sequencial'));
+    expect(cs).toContain('O primeiro vencimento do saldo ocorre no mês seguinte ao do vencimento da última parcela do complemento da entrada, não incidindo juros sobre o saldo durante o período do complemento.');
+    expect(cs).toContain('vencendo a primeira em 10/12/2029, pagas após o vencimento da última parcela do complemento da entrada do item 9');
+    expect(cs).not.toMatch(/PREENCHER: plano_/);
     expect(c).not.toMatch(/PREENCHER: plano_/);
     // O modelo da entrada de 30% segue sem as cláusulas dos planos
     const v3 = await texto('MODELO-CPCV-BOM-JARDIMS-v3.docx', plano('padrao'));

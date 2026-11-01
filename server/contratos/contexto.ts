@@ -140,6 +140,29 @@ export function tagsPessoas(comprador: PessoaContrato, conjuge?: PessoaContrato 
   return ctx;
 }
 
+/** Textos do Plano C conforme a forma do complemento (modelo …-PLANO-C: item 10, Cláusulas 3.2 e 3.3) */
+export function tagsModoC(s: Pick<PlanoContrato, 'complemento_qtd' | 'complemento_modo'>): Ctx {
+  if (!s.complemento_qtd) return { plano_c_forma: '', plano_c_item10: '', plano_c_cobranca: '', plano_c_inicio_saldo: '' };
+  if (s.complemento_modo === 'sequencial') return {
+    plano_c_forma: 'primeiro o complemento da entrada e, depois da última parcela dele, as parcelas do saldo',
+    plano_c_item10: 'pagas após o vencimento da última parcela do complemento da entrada do item 9',
+    plano_c_cobranca: ', antes do início das parcelas do saldo (Cláusula 3.3)',
+    plano_c_inicio_saldo: 'no mês seguinte ao do vencimento da última parcela do complemento da entrada, não incidindo juros sobre o saldo durante o período do complemento',
+  };
+  if (s.complemento_modo === 'unificado') return {
+    plano_c_forma: 'boleto único mensal com a parcela do complemento da entrada e a parcela do saldo',
+    plano_c_item10: 'cobradas no mesmo boleto das parcelas do complemento da entrada do item 9, enquanto houver',
+    plano_c_cobranca: ', cobradas no mesmo boleto da parcela do saldo do mesmo mês',
+    plano_c_inicio_saldo: 'no mês seguinte ao do pagamento do valor do ato da entrada, no mesmo boleto da 1ª parcela do complemento da entrada',
+  };
+  return {
+    plano_c_forma: 'complemento da entrada e parcela do saldo no mesmo mês',
+    plano_c_item10: 'pagas juntamente com as parcelas do complemento da entrada do item 9',
+    plano_c_cobranca: ', no mesmo dia das parcelas do saldo',
+    plano_c_inicio_saldo: 'no mês seguinte ao do pagamento do valor do ato da entrada, juntamente com a 1ª parcela do complemento da entrada',
+  };
+}
+
 /** Tags do plano (plano_*, pagamento_*, com_*) */
 export function tagsPlano(s: PlanoContrato): Ctx {
   const financiado = s.modalidade === 'financiado';
@@ -165,6 +188,9 @@ export function tagsPlano(s: PlanoContrato): Ctx {
     plano_complemento_ato: s.complemento_ato ? brl(s.complemento_ato) : '', plano_complemento_valor: s.complemento_valor ? brl(s.complemento_valor) : '',
     plano_complemento_qtd: s.complemento_qtd ? String(s.complemento_qtd) : '', plano_complemento_parcela: s.complemento_parcela ? brl(s.complemento_parcela) : '',
     plano_complemento_venc1: s.complemento_venc1 ? dataBR(s.complemento_venc1) : '',
+    // Plano C: forma do complemento (unificado = mesmo boleto da parcela; sequencial = antes do saldo); sem modo = contratos
+    // anteriores a 01/11/2026 (complemento e parcela em boletos separados, no mesmo mês)
+    ...tagsModoC(s),
     plano_saldo_valor: financiado ? brl(s.saldo_valor) : '', plano_saldo_qtd: financiado ? String(s.saldo_qtd) : '',
     plano_saldo_parcela: financiado ? brl(s.saldo_parcela) : '', plano_saldo_venc1: financiado ? dataBR(s.saldo_venc1) : '',
     plano_taxa_aa: pct(s.taxa_aa), plano_taxa_am: pct(s.taxa_am, 4), plano_cet_aa: pct(s.taxa_aa),

@@ -7,7 +7,7 @@
  * o que o cliente viu no simulador e na proposta (entrada + parcela × prazo).
  */
 import { comissao, vencimento, type CondicoesPagamento, type Simulacao } from '../../shared/simulador';
-import { cronograma, planoCondicao, ROTULO_CONDICAO, type CondicaoPagamento } from '../../shared/condicoesLancamento';
+import { cronograma, planoCondicao, ROTULO_CONDICAO, type CondicaoPagamento, type ModoPlanoC } from '../../shared/condicoesLancamento';
 import { gerarPlano } from '../financeiro/plano';
 
 export type Modalidade = 'financiado' | 'avista';
@@ -21,6 +21,8 @@ export interface EscolhaPlano {
   dataPrimeiroPagamento: string;
   /** Forma de pagamento do financiado: entrada 30% (padrão) ou condições de lançamento A, B, C */
   condicao?: CondicaoPagamento;
+  /** Plano C: 'unificado' (complemento + parcela no mesmo boleto, padrão) ou 'sequencial' (complemento antes do saldo) */
+  modoC?: ModoPlanoC;
 }
 
 export interface ParcelaPlano {
@@ -34,6 +36,10 @@ export interface ParcelaPlano {
   juros: number;
   amortizacao: number;
   saldoDevedor: number;
+  /** Plano C unificado: parte do valor que é do complemento da entrada (nº `complementoNumero` de `complementoTotal`) */
+  complemento?: number;
+  complementoNumero?: number;
+  complementoTotal?: number;
 }
 
 /** Snapshot do plano (nomes do spec, em snake_case, porque viram tags plano_* no merge) */
@@ -77,6 +83,8 @@ export interface PlanoContrato {
   complemento_qtd?: number;
   complemento_parcela?: number;
   complemento_venc1?: string;
+  /** Plano C: forma do complemento (ausente = unificado nos contratos novos; os anteriores tinham boletos separados) */
+  complemento_modo?: ModoPlanoC;
   parcelas: ParcelaPlano[];
 }
 
@@ -134,11 +142,13 @@ function planoDeLancamento(sim: Simulacao, escolha: EscolhaPlano, c: CondicoesPa
   const cond = escolha.condicao as Exclude<CondicaoPagamento, 'padrao'>;
   const d1 = escolha.dataPrimeiroPagamento;
   let pc;
-  try { pc = planoCondicao(sim.preco, cond, Number(escolha.prazo), c); }
+  try { pc = planoCondicao(sim.preco, cond, Number(escolha.prazo), c, 1, cond === 'C' ? escolha.modoC ?? 'unificado' : 'unificado'); }
   catch (e: any) { throw new Error(e?.message || 'Condição de pagamento inválida'); }
-  const parcelas: ParcelaPlano[] = cronograma(pc).map(l => ({
+  let parcelas: ParcelaPlano[] = cronograma(pc).map(l => ({
     tipo: l.tipo, numero: l.numero, total: l.total, vencimento: vencimento(d1, l.mes), valor: l.parcela, juros: l.juros, amortizacao: l.amortizacao, saldoDevedor: l.saldoDevedor,
   }));
+  const unificado = cond === 'C' && pc.complemento && pc.modoC !== 'sequencial';
+  if (unificado) parcelas = unificarComplemento(parcelas);
   const com = comissao(sim.preco, comCorretor, true, c);
   const primeiroReforco = parcelas.find(p => p.tipo === 'reforco');
   const primeiroComp = parcelas.find(p => p.tipo === 'complemento');
@@ -146,17 +156,41 @@ function planoDeLancamento(sim: Simulacao, escolha: EscolhaPlano, c: CondicoesPa
     ...base, modalidade: 'financiado', avista_vencimento: '', condicao: cond,
     entrada_valor: pc.entradaTotal, entrada_percentual: pc.entradaTotal / sim.preco, entrada_qtd: 1,
     entrada_parcela: pc.entradaAto, entrada_desconto: 0, entrada_venc1: d1,
-    saldo_valor: pc.saldoFinanciado, saldo_qtd: pc.prazo, saldo_parcela: pc.parcela, saldo_venc1: vencimento(d1, 1),
+    saldo_valor: pc.saldoFinanciado, saldo_qtd: pc.prazo, saldo_parcela: pc.parcela, saldo_venc1: parcelas.find(p => p.tipo === 'saldo')?.vencimento ?? vencimento(d1, 1),
     total_pagar: pc.totalPago, total_juros: pc.juros,
     comissao_total: com.total, comissao_corretor: com.corretor, comissao_romatec: com.romatec,
     ...(pc.reforco ? { reforco_qtd: pc.reforco.qtd, reforco_valor: pc.reforco.valor, reforco_venc1: primeiroReforco?.vencimento ?? '' } : {}),
     ...(pc.complemento ? {
       complemento_ato: pc.entradaAto, complemento_valor: pc.complemento.total, complemento_qtd: pc.complemento.qtd,
-      complemento_parcela: pc.complemento.parcela, complemento_venc1: primeiroComp?.vencimento ?? '',
+      complemento_parcela: pc.complemento.parcela, complemento_modo: pc.modoC ?? 'unificado',
+      complemento_venc1: primeiroComp?.vencimento ?? parcelas.find(p => p.complemento)?.vencimento ?? '',
     } : {}),
     parcelas,
   };
 }
+
+/**
+ * Plano C unificado: cada parcela do complemento entra na parcela do saldo do mesmo mês — um boleto só por mês
+ * (valor = parcela + complemento). Juros e saldo devedor continuam os da Price; a amortização soma a parte do complemento.
+ */
+export function unificarComplemento(parcelas: ParcelaPlano[]): ParcelaPlano[] {
+  const comps = new Map(parcelas.filter(p => p.tipo === 'complemento').map(p => [p.vencimento, p]));
+  const usados = new Set<string>();
+  const out = parcelas.filter(p => p.tipo !== 'complemento').map(p => {
+    const c = p.tipo === 'saldo' ? comps.get(p.vencimento) : undefined;
+    if (!c) return p;
+    usados.add(p.vencimento);
+    const r2 = (v: number) => Math.round(v * 100) / 100;
+    return { ...p, valor: r2(p.valor + c.valor), amortizacao: r2(p.amortizacao + c.valor), complemento: c.valor, complementoNumero: c.numero, complementoTotal: c.total };
+  });
+  // Segurança: complemento sem parcela do saldo no mesmo mês continua avulso
+  const soltos = parcelas.filter(p => p.tipo === 'complemento' && !usados.has(p.vencimento));
+  return soltos.length ? [...out, ...soltos].sort((a, b) => a.vencimento.localeCompare(b.vencimento)) : out;
+}
+
+/** "Saldo 1/120 + Complemento da entrada 1/36" (Plano C unificado) — rótulo do boleto */
+export const rotuloComComplemento = (base: string, p: Pick<ParcelaPlano, 'complementoNumero' | 'complementoTotal'> | undefined) =>
+  p?.complementoNumero ? `${base} + Complemento da entrada ${p.complementoNumero}/${p.complementoTotal}` : base;
 
 /** Título da forma de pagamento do contrato ("Plano A — Plano 13º"); padrão = entrada de 30% */
 export const tituloCondicao = (p: Pick<PlanoContrato, 'condicao'>) => ROTULO_CONDICAO[p.condicao ?? 'padrao'].titulo;

@@ -3,6 +3,7 @@
  * entrada em 6× + saldo em 120×. Gera a minuta e uma prévia do definitivo com dados fictícios nos campos de registro.
  *
  *   PLANO=A|B|C: contrato da condição de lançamento (modelo …-v3-PLANO-X.docx, entrada R$ 10 mil)
+ *   MODO_C=sequencial: no Plano C, primeiro o complemento da entrada e depois o saldo (padrão: boleto único)
  *   SOFFICE_BIN="C:\Program Files\LibreOffice\program\soffice.exe" npx tsx scripts/contrato-exemplo.ts <pasta de saída>
  *
  * Não usa o banco: o jurídico vem do seed (templates/defaults_empreendimento.json) e o lote, do mapa público.
@@ -66,9 +67,10 @@ const unidade: DadosUnidade = {
 
 const PLANO = process.env.PLANO === 'A' || process.env.PLANO === 'B' || process.env.PLANO === 'C' ? process.env.PLANO : null;
 const MODELO_DOCX = PLANO ? `MODELO-CPCV-BOM-JARDIMS-v3-PLANO-${PLANO}.docx` : 'MODELO-CPCV-BOM-JARDIMS-v2.docx';
-const SUF = PLANO ? `-PLANO-${PLANO}` : '';
+const MODO_C = process.env.MODO_C === 'sequencial' ? 'sequencial' as const : 'unificado' as const;
+const SUF = PLANO ? `-PLANO-${PLANO}${PLANO === 'C' && MODO_C === 'sequencial' ? '-SEQUENCIAL' : ''}` : '';
 const sim = simular(lote.areaM2, PLANO ? 1 : 6, condicoes);
-const plano = planoDoContrato(sim, { modalidade: 'financiado', prazo: PLANO === 'B' ? 180 : 120, dataPrimeiroPagamento: '2026-11-10', condicao: PLANO ?? 'padrao' }, condicoes, false);
+const plano = planoDoContrato(sim, { modalidade: 'financiado', prazo: PLANO === 'B' ? 180 : 120, dataPrimeiroPagamento: '2026-11-10', condicao: PLANO ?? 'padrao', modoC: MODO_C }, condicoes, false);
 
 const base0: EntradaContexto = {
   contrato: { numero: 'BJ-2026-0001', codigoVerificacao: 'EX7K2M9P4Q1R', modoAssinatura: 'eletronica', dataGeracao: hojeIso() },

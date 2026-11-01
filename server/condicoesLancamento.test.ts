@@ -41,6 +41,18 @@ describe('condições de lançamento (entrada 30%, planos A, B e C)', () => {
     }
   });
 
+  it('Plano C sequencial: complemento nos meses 1..36 e saldo nos meses 37..156, mesmo total', () => {
+    const u = planoCondicao(160000, 'C', 120, C), q = planoCondicao(160000, 'C', 120, C, 1, 'sequencial');
+    expect(q).toMatchObject({ modoC: 'sequencial', mensalInicial: 1055.56, parcela: u.parcela, totalPago: u.totalPago });
+    const ls = cronograma(q);
+    expect(ls.filter(l => l.tipo === 'complemento').map(l => l.mes)).toEqual(Array.from({ length: 36 }, (_, k) => k + 1));
+    const sal = ls.filter(l => l.tipo === 'saldo');
+    expect(sal[0].mes).toBe(37);
+    expect(sal.at(-1)).toMatchObject({ mes: 156, saldoDevedor: 0 });
+    expect(textoCondicao(q).replace(/\s/g, ' ')).toBe('R$ 10.000,00 de entrada + 36× de R$ 1.055,56 (resto da entrada, sem juros) + depois 120× fixas de R$ 1.234,51');
+    expect(desembolsoPorAno(q)[0]).toBeCloseTo(10000 + 12 * 1055.56, 2);
+  });
+
   it('desembolso do 1º ano: Plano A ≈ R$ 30 mil contra ≈ R$ 59,8 mil na entrada de 30% à vista', () => {
     expect(Math.round(desembolsoPorAno(planoCondicao(160000, 'A', 120, C))[0])).toBe(29977);
     expect(Math.round(desembolsoPorAno(planoCondicao(160000, 'padrao', 120, C, 1))[0])).toBe(59814);

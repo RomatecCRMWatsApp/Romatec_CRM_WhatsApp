@@ -3,7 +3,7 @@
  * Os campos de pagamento (linha digitável, código de barras, nosso número, PIX) são copiados do snapshot do Asaas
  * gravado na cobrança — sem nenhum cálculo.
  */
-import type { PlanoContrato } from '../contratos/plano';
+import { rotuloComComplemento, type PlanoContrato } from '../contratos/plano';
 import { brl, type DadosLamina } from './render/comum';
 import { CONTATO_PADRAO, instrucoesFicha, type DadosCarne, type DadosParcela } from './render/documentos';
 
@@ -44,6 +44,12 @@ export interface ContextoDocs {
 
 const ROTULO = { entrada: 'Entrada', saldo: 'Saldo', avista: 'À vista', renegociacao: 'Renegociação', reforco: 'Reforço anual', complemento: 'Complemento da entrada' } as const;
 export const rotuloParcela = (c: Pick<CobrancaDoc, 'tipo' | 'numero' | 'total'>) => `${ROTULO[c.tipo]} ${c.numero}/${c.total}`;
+/** Parcela do plano (snapshot do contrato) correspondente à cobrança — no Plano C unificado traz a parte do complemento */
+export const parcelaDoPlano = (plano: Pick<PlanoContrato, 'parcelas'>, c: { tipo: string; numero: number }) =>
+  plano.parcelas.find(p => p.tipo === c.tipo && p.numero === Number(c.numero));
+/** Rótulo do boleto: "Saldo 1/120" ou, no Plano C unificado, "Saldo 1/120 + Complemento da entrada 1/36" */
+export const rotuloDoBoleto = (plano: Pick<PlanoContrato, 'parcelas'>, c: Pick<CobrancaDoc, 'tipo' | 'numero' | 'total'>) =>
+  rotuloComComplemento(rotuloParcela(c), parcelaDoPlano(plano, c));
 const area = (m2: number) => m2.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 export const docMascarado = (d: string) => {
   const s = d.replace(/\D/g, '');
@@ -56,7 +62,7 @@ export class SemDadosAsaasError extends Error {
 
 export function dadosLamina(ctx: ContextoDocs, c: CobrancaDoc): DadosLamina {
   if (!c.asaas?.identificationField || !c.asaas.barCode) throw new SemDadosAsaasError(c);
-  const parcela = rotuloParcela(c);
+  const parcela = rotuloDoBoleto(ctx.plano, c);
   const prefixo = c.tipo === 'entrada' ? 'E' : c.tipo === 'saldo' ? 'S' : c.tipo === 'renegociacao' ? 'R' : c.tipo === 'reforco' ? 'F' : c.tipo === 'complemento' ? 'C' : 'V';
   return {
     contratoNumero: ctx.contrato.numero, loteCodigo: ctx.lote.codigo, parcela, vencimento: c.vencimento, valor: c.valor,
@@ -126,7 +132,7 @@ export function dadosCarne(ctx: ContextoDocs, bloco: CobrancaDoc[], n: number | 
     esteCarne: `${[faixa(ent, 'Entrada'), faixa(comp, 'Complemento'), faixa(sal, 'Saldo'), faixa(ref, 'Reforço')].filter(Boolean).join(' + ')} (${n === 'completo' ? 'carnê completo' : `carnê ${n} de ${totalDeBlocos(s)} — 12 meses`})`,
     saldoFinanciado: s.saldo_valor, taxaAA: s.taxa_aa, taxaAM: s.taxa_am, entradaQtd: s.entrada_qtd, entradaValor: s.entrada_parcela,
     saldoQtd: s.saldo_qtd, saldoParcela: s.saldo_parcela, totalJuros: s.total_juros,
-    linhas: bloco.map(c => ({ parcela: rotuloParcela(c), vencimento: c.vencimento, valor: c.valor, juros: c.juros, amortizacao: c.amortizacao, saldoApos: c.saldoDevedor })),
+    linhas: bloco.map(c => ({ parcela: rotuloDoBoleto(s, c), vencimento: c.vencimento, valor: c.valor, juros: c.juros, amortizacao: c.amortizacao, saldoApos: c.saldoDevedor })),
     laminas: bloco.map(c => dadosLamina(ctx, c)),
     urlCarneDigital: `${ctx.urlPublica}/c/${ctx.contrato.codigoVerificacao}`,
     beneficiario: ctx.beneficiario,

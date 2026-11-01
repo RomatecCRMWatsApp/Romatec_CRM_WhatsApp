@@ -218,7 +218,7 @@ export default function ContratoDetalhe() {
                 {p.modalidade === "avista" ? <Linha rotulo="À vista" valor={`${brl(p.total_pagar)} em ${br(p.avista_vencimento)}`} /> : <>
                   {p.condicao && p.condicao !== "padrao" && <Linha rotulo="Condição" valor={ROTULO_CONDICAO[p.condicao as CondicaoPagamento]?.titulo ?? p.condicao} />}
                   <Linha rotulo="Entrada" valor={`${p.entrada_qtd}× ${brl(p.entrada_parcela)}`} />
-                  {p.complemento_qtd ? <Linha rotulo="Resto da entrada" valor={`${p.complemento_qtd}× ${brl(p.complemento_parcela)} sem juros`} /> : null}
+                  {p.complemento_qtd ? <Linha rotulo="Resto da entrada" valor={`${p.complemento_qtd}× ${brl(p.complemento_parcela)} sem juros${p.complemento_modo === "sequencial" ? " · antes do financiamento" : p.complemento_modo === "unificado" ? " · boleto único com a parcela" : ""}`} /> : null}
                   <Linha rotulo="Saldo" valor={`${p.saldo_qtd}× ${brl(p.saldo_parcela)}`} />
                   {p.reforco_qtd ? <Linha rotulo="Reforço anual" valor={`${p.reforco_qtd}× ${brl(p.reforco_valor)}`} /> : null}
                   <Linha rotulo="1º do saldo" valor={br(p.saldo_venc1)} />

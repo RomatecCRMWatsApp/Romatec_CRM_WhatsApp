@@ -40,6 +40,8 @@ const planoZ = z.object({
   dataPrimeiroPagamento: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
   /** Forma de pagamento do financiado: entrada 30% (padrão) ou planos de lançamento A, B, C — define o modelo do CPCV */
   condicao: z.enum(["padrao", "A", "B", "C"]).optional(),
+  /** Plano C: "unificado" (complemento + parcela no mesmo boleto) ou "sequencial" (primeiro o complemento, depois o saldo) */
+  modoC: z.enum(["unificado", "sequencial"]).optional(),
 });
 
 /** Erros do serviço → tRPC (campos do formulário em error.data.campos) */

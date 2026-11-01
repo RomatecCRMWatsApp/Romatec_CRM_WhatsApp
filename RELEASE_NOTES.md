@@ -3,6 +3,20 @@
 Cada versão nova vai no TOPO. Depois rode `npm run release` (valida e atualiza o package.json);
 ao subir, o servidor grava a versão no banco e todos recebem o aviso "Novidades da versão".
 
+## 1.93.0 — 2026-11-01
+tipo: minor
+obrigatoria: nao
+titulo: Plano C: boleto único ou primeiro a entrada
+
+### Novo
+- Novo contrato › Plano C (entrada parcelada em 36×): botões para escolher como o cliente paga o resto da entrada
+- **Boleto único** (padrão): paga os R$ 10 mil no ato e, a partir do mês seguinte, um boleto só por mês com o resto da entrada + a parcela (ex.: R$ 2.290,07 nos 36 primeiros meses e depois R$ 1.234,51)
+- **Primeiro a entrada** (caso a caso): paga as 36 parcelas do resto da entrada e só depois começa o financiamento, com a mesma parcela e o mesmo total (sem juros sobre o saldo no período, como na entrada de 30% parcelada)
+
+### Melhorias
+- O contrato do Plano C sai com o texto da forma escolhida (Quadro-Resumo item 10 e Cláusulas 3.2 e 3.3); o Anexo II, o carnê e o boleto mostram "Saldo 1/120 + Compl. 1/36" no boleto único
+- Corretagem no "Primeiro a entrada": 50% no ato e as 4 partes nas 4 primeiras parcelas do resto da entrada
+
 ## 1.92.0 — 2026-11-01
 tipo: minor
 obrigatoria: nao

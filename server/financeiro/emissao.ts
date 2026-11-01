@@ -9,13 +9,15 @@ import { cobrancas, contratos } from '../../drizzle/schema';
 import type { PlanoContrato } from '../contratos/plano';
 import { buscarOuCriarCliente, criarCobranca, dadosDePagamento, exigirConfigAsaas, payloadCliente, payloadCobranca, type FetchFn } from './asaas';
 import { auditar, contextoDocs, FinanceiroErro, hojeBrasil, pessoasDoContrato, slugDoContrato } from './servico';
-import { blocoDoCarne, rotuloParcela } from './dados';
+import { blocoDoCarne, parcelaDoPlano, rotuloParcela } from './dados';
+import { rotuloComComplemento } from '../contratos/plano';
 import { divisaoComissaoLancamento } from '../../shared/condicoesLancamento';
 import { r2 } from '../../shared/simulador';
 
 /**
  * Split da comissão (Romatec): 50% no 1º e 50% no 2º pagamento da entrada; entrada à vista ou à vista total = 100% no 1º.
- * Condições de lançamento (Planos A, B, C): 50% na entrada do ato e o resto em 4 partes nas parcelas 1 a 4 do saldo.
+ * Condições de lançamento (Planos A, B, C): 50% na entrada do ato e o resto em 4 partes nas parcelas 1 a 4 do saldo
+ * (no Plano C sequencial, nas parcelas 1 a 4 do complemento da entrada, que são as primeiras depois do ato).
  */
 export function splitDaComissao(plano: PlanoContrato): Map<string, number> {
   const m = new Map<string, number>();
@@ -24,7 +26,8 @@ export function splitDaComissao(plano: PlanoContrato): Map<string, number> {
   if (plano.modalidade === 'financiado' && plano.condicao && plano.condicao !== 'padrao') {
     const d = divisaoComissaoLancamento(total, plano.comissao_corretor ?? 0);
     m.set('entrada:1', d.ato.total);
-    d.parcelas.forEach((f, k) => m.set(`saldo:${k + 1}`, f.total));
+    const tipo = plano.complemento_modo === 'sequencial' && plano.complemento_qtd ? 'complemento' : 'saldo';
+    d.parcelas.forEach((f, k) => m.set(`${tipo}:${k + 1}`, f.total));
     return m;
   }
   const unico = plano.modalidade === 'avista' || plano.entrada_qtd <= 1;
@@ -76,7 +79,7 @@ export async function emitirCarneNoAsaas(contratoId: number, bloco: number, o: {
     const venc = String(l.vencimento).slice(0, 10) >= hoje ? String(l.vencimento).slice(0, 10) : hoje;
     const pay = await criarCobranca(cfg, payloadCobranca({
       customerId, cobrancaId: l.id, valor: Number(l.valor), vencimento: venc,
-      descricao: `${ctx.contrato.numero} · Chácara ${ctx.lote.codigo} · ${rotuloParcela(l)} — Condomínio de Chácaras Bom Jardims`,
+      descricao: `${ctx.contrato.numero} · Chácara ${ctx.lote.codigo} · ${rotuloComComplemento(rotuloParcela(l), parcelaDoPlano(ctx.plano, l))} — Condomínio de Chácaras Bom Jardims`,
       splitValor: Number(l.splitValor ?? 0), walletComissao: cfg.walletComissao,
     }), o.fetchFn);
     const snap = await dadosDePagamento(cfg, pay.id, o.fetchFn);

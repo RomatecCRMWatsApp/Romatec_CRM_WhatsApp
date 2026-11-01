@@ -133,7 +133,7 @@ export interface NovoContrato {
   leadId?: number | null;
   /** Corretor que vendeu (admin/secretário escolhem; corretor = ele mesmo) */
   corretorUserId: number;
-  plano: { modalidade: 'financiado' | 'avista'; entradaParcelas: number; prazo?: number; dataPrimeiroPagamento: string; condicao?: 'padrao' | 'A' | 'B' | 'C' };
+  plano: { modalidade: 'financiado' | 'avista'; entradaParcelas: number; prazo?: number; dataPrimeiroPagamento: string; condicao?: 'padrao' | 'A' | 'B' | 'C'; modoC?: 'unificado' | 'sequencial' };
   comprador: PessoaForm;
   conjuge?: PessoaForm | null;
   /** Dependentes para as carteirinhas (até 6; opcional) */
@@ -165,7 +165,7 @@ export async function salvarPessoa(p: PessoaForm, leadId: number | null): Promis
 export function planoEscolhido(n: NovoContrato['plano'], areaM2: number, precoTabela: number | null, c: CondicoesPagamento, comCorretor: boolean): PlanoContrato {
   const lancamento = n.modalidade === 'financiado' && !!n.condicao && n.condicao !== 'padrao';
   const sim = simular(areaM2, n.modalidade === 'avista' || lancamento ? 1 : n.entradaParcelas, c, precoTabela);
-  const escolha: EscolhaPlano = { modalidade: n.modalidade, prazo: n.prazo, dataPrimeiroPagamento: n.dataPrimeiroPagamento, condicao: n.modalidade === 'financiado' ? n.condicao ?? 'padrao' : 'padrao' };
+  const escolha: EscolhaPlano = { modalidade: n.modalidade, prazo: n.prazo, dataPrimeiroPagamento: n.dataPrimeiroPagamento, condicao: n.modalidade === 'financiado' ? n.condicao ?? 'padrao' : 'padrao', modoC: n.modoC };
   return planoDoContrato(sim, escolha, c, comCorretor);
 }
 

@@ -5,8 +5,11 @@
  * - Plano A — Plano 13º: a mesma parcela do padrão (saldo de 70% pela Price) + reforço anual (a cada 12 meses,
  *   coincidindo com o 13º) que cobre a diferença da entrada. Prazos: os do padrão.
  * - Plano B — Prazo longo: saldo (preço − R$ 10 mil) pela Price, sem reforço. Prazos: os do padrão + 180.
- * - Plano C — Entrada parcelada: complemento da entrada (30% − R$ 10 mil) em até 36 parcelas mensais sem juros,
- *   pago junto com o saldo de 70% pela Price. Prazos: os do padrão.
+ * - Plano C — Entrada parcelada: complemento da entrada (30% − R$ 10 mil) em até 36 parcelas mensais sem juros e o
+ *   saldo de 70% pela Price. Prazos: os do padrão. Duas formas (escolhidas no contrato, 01/11/2026):
+ *     · 'unificado' (padrão): complemento e parcela no mesmo mês, cobrados num boleto só;
+ *     · 'sequencial' (caso a caso): primeiro as parcelas do complemento e, depois da última, as do saldo — sem juros
+ *       sobre o saldo nesse período, como na entrada de 30% parcelada (o saldo começa depois da última da entrada).
  *
  * Mesma taxa (juros efetivos ao ano → mensal equivalente), mesmo preço de tabela, sem correção. Mês 0 = ato
  * (entrada); as parcelas do saldo, do complemento e os reforços vencem a partir do mês 1.
@@ -22,6 +25,15 @@ export const ENTRADA_LANCAMENTO = 10000;
 export const PRAZO_LONGO_B = 180;
 /** Plano C: complemento da entrada em até 36 meses */
 export const MESES_COMPLEMENTO_C = 36;
+
+/** Plano C: boleto único (complemento + parcela juntos) ou primeiro o complemento e depois o saldo */
+export type ModoPlanoC = 'unificado' | 'sequencial';
+export const MODOS_C: ModoPlanoC[] = ['unificado', 'sequencial'];
+export const ROTULO_MODO_C: Record<ModoPlanoC, { titulo: string; resumo: string }> = {
+  unificado: { titulo: 'Boleto único', resumo: 'Paga os R$ 10 mil e já começa um boleto por mês com o resto da entrada + a parcela.' },
+  sequencial: { titulo: 'Primeiro a entrada', resumo: 'Paga primeiro as parcelas do resto da entrada e, depois da última, começa o financiamento.' },
+};
+export const modoCValido = (v: unknown): v is ModoPlanoC => v === 'unificado' || v === 'sequencial';
 
 export const ROTULO_CONDICAO: Record<CondicaoPagamento, { curto: string; titulo: string; resumo: string }> = {
   padrao: { curto: 'Entrada 30%', titulo: 'Entrada de 30%', resumo: 'Entrada de 30% (à vista com desconto ou em até 6× sem juros) e o saldo em parcelas fixas.' },
@@ -52,6 +64,8 @@ export interface PlanoCondicao {
   entradaTotal: number;
   /** Plano C: complemento da entrada parcelado sem juros */
   complemento: { total: number; qtd: number; parcela: number } | null;
+  /** Plano C: forma do complemento (unificado = junto com a parcela; sequencial = antes do saldo) */
+  modoC?: ModoPlanoC;
   /** Valor financiado pela Price (o que gera juros) */
   saldoFinanciado: number;
   /** Parcela mensal fixa do saldo */
@@ -69,7 +83,7 @@ export interface PlanoCondicao {
  * Plano de uma condição para um preço e prazo. entradaParcelas só vale para o padrão
  * (1 = à vista com desconto; 2..entradaMaxParcelas = sem desconto).
  */
-export function planoCondicao(preco: number, cond: CondicaoPagamento, prazo: number, c: CondicoesPagamento, entradaParcelas = 1): PlanoCondicao {
+export function planoCondicao(preco: number, cond: CondicaoPagamento, prazo: number, c: CondicoesPagamento, entradaParcelas = 1, modoC: ModoPlanoC = 'unificado'): PlanoCondicao {
   if (!prazosDaCondicao(cond, c).includes(prazo)) throw new Error(`Prazo de ${prazo} meses não está disponível no ${ROTULO_CONDICAO[cond].curto}`);
   const i = taxaMensal(c.jurosAaEfetivo);
   const saldoPadrao = r2(preco - r2(preco * c.entradaPct));
@@ -112,22 +126,23 @@ export function planoCondicao(preco: number, cond: CondicaoPagamento, prazo: num
     };
   }
 
-  // Plano C: complemento da entrada sem juros, junto com o saldo de 70% pela Price
+  // Plano C: complemento da entrada sem juros e o saldo de 70% pela Price (junto ou depois do complemento)
   const totalComp = r2(r2(preco * c.entradaPct) - entrada10);
   const qtd = Math.min(MESES_COMPLEMENTO_C, prazo);
   const parcComp = totalComp > 0 ? dividirEntrada(totalComp, qtd)[0] : 0;
   const total = r2(entrada10 + totalComp + parcelaPadrao * prazo);
+  const seq = modoC === 'sequencial' && totalComp > 0;
   return {
     condicao: cond, prazo, preco, entradaAto: entrada10, parcelasEntrada: [entrada10], entradaTotal: r2(entrada10 + totalComp),
-    complemento: totalComp > 0 ? { total: totalComp, qtd, parcela: parcComp } : null,
-    saldoFinanciado: saldoPadrao, parcela: parcelaPadrao, reforco: null, mensalInicial: r2(parcelaPadrao + parcComp),
+    complemento: totalComp > 0 ? { total: totalComp, qtd, parcela: parcComp } : null, modoC: seq ? 'sequencial' : 'unificado',
+    saldoFinanciado: saldoPadrao, parcela: parcelaPadrao, reforco: null, mensalInicial: seq ? parcComp : r2(parcelaPadrao + parcComp),
     totalPago: total, juros: r2(total - preco), taxaMensal: i,
   };
 }
 
 /** Todos os prazos de uma condição (cards do simulador e do folder) */
-export function planosDaCondicao(preco: number, cond: CondicaoPagamento, c: CondicoesPagamento, entradaParcelas = 1): PlanoCondicao[] {
-  return prazosDaCondicao(cond, c).flatMap(n => { try { return [planoCondicao(preco, cond, n, c, entradaParcelas)]; } catch { return []; } });
+export function planosDaCondicao(preco: number, cond: CondicaoPagamento, c: CondicoesPagamento, entradaParcelas = 1, modoC: ModoPlanoC = 'unificado'): PlanoCondicao[] {
+  return prazosDaCondicao(cond, c).flatMap(n => { try { return [planoCondicao(preco, cond, n, c, entradaParcelas, modoC)]; } catch { return []; } });
 }
 
 export type TipoLinha = 'entrada' | 'complemento' | 'saldo' | 'reforco';
@@ -149,22 +164,25 @@ export const ROTULO_LINHA: Record<TipoLinha, string> = { entrada: 'Entrada', com
 /**
  * Cronograma mês a mês (planilha). Padrão: entrada nos meses 0..n−1 e o saldo a partir do mês seguinte (como hoje).
  * Planos: entrada no mês 0; saldo (Price) nos meses 1..prazo; reforço (A) somado ao mês 12, 24, …; complemento (C)
- * nos meses 1..36. A última parcela zera o saldo.
+ * nos meses 1..36 — no C sequencial, o saldo começa no mês seguinte ao do último complemento. A última parcela zera o saldo.
  */
 export function cronograma(p: PlanoCondicao): LinhaCronograma[] {
   const linhas: LinhaCronograma[] = [];
   const i = p.taxaMensal;
   const nEnt = p.parcelasEntrada.length;
   p.parcelasEntrada.forEach((v, k) => linhas.push({ mes: k, tipo: 'entrada', numero: k + 1, total: nEnt, parcela: v, juros: 0, amortizacao: v, saldoDevedor: p.saldoFinanciado }));
-  const inicio = p.condicao === 'padrao' ? nEnt : 1;
+  const seq = p.modoC === 'sequencial' && !!p.complemento;
+  const inicio = p.condicao === 'padrao' ? nEnt : seq ? 1 + p.complemento!.qtd : 1;
   let saldo = p.saldoFinanciado;
+  const linhaComp = (k: number, mes: number) => {
+    const ult = k === p.complemento!.qtd;
+    const v = ult ? r2(p.complemento!.total - p.complemento!.parcela * (p.complemento!.qtd - 1)) : p.complemento!.parcela;
+    linhas.push({ mes, tipo: 'complemento', numero: k, total: p.complemento!.qtd, parcela: v, juros: 0, amortizacao: v, saldoDevedor: saldo });
+  };
+  if (seq) for (let k = 1; k <= p.complemento!.qtd; k++) linhaComp(k, k);
   for (let k = 1; k <= p.prazo; k++) {
     const mes = inicio + k - 1;
-    if (p.complemento && k <= p.complemento.qtd) {
-      const ult = k === p.complemento.qtd;
-      const v = ult ? r2(p.complemento.total - p.complemento.parcela * (p.complemento.qtd - 1)) : p.complemento.parcela;
-      linhas.push({ mes, tipo: 'complemento', numero: k, total: p.complemento.qtd, parcela: v, juros: 0, amortizacao: v, saldoDevedor: saldo });
-    }
+    if (!seq && p.complemento && k <= p.complemento.qtd) linhaComp(k, mes);
     const ultima = k === p.prazo;
     const juros = r2(saldo * i);
     const reforcoAqui = p.reforco && k % p.reforco.intervaloMeses === 0 && k / p.reforco.intervaloMeses <= p.reforco.qtd;
@@ -214,8 +232,8 @@ export function textoCondicao(p: PlanoCondicao): string {
   if (p.condicao === 'padrao') {
     partes.push(p.parcelasEntrada.length === 1 ? `entrada à vista ${brl(p.entradaAto)}` : `entrada em ${p.parcelasEntrada.length}× de ${brl(p.parcelasEntrada[0])}`);
   } else partes.push(`${brl(p.entradaAto)} de entrada`);
-  if (p.complemento) partes.push(`${p.complemento.qtd}× de ${brl(p.complemento.parcela)} (resto da entrada, sem juros)`);
-  partes.push(`${p.prazo}× fixas de ${brl(p.parcela)}`);
+  if (p.complemento) partes.push(`${p.complemento.qtd}× de ${brl(p.complemento.parcela)} (resto da entrada, sem juros${p.modoC === 'sequencial' ? '' : ', no mesmo boleto da parcela'})`);
+  partes.push(p.modoC === 'sequencial' && p.complemento ? `depois ${p.prazo}× fixas de ${brl(p.parcela)}` : `${p.prazo}× fixas de ${brl(p.parcela)}`);
   if (p.reforco) partes.push(`${p.reforco.qtd} reforço${p.reforco.qtd > 1 ? 's' : ''} anua${p.reforco.qtd > 1 ? 'is' : 'l'} de ${brl(p.reforco.valor)}`);
   return partes.join(' + ');
 }
