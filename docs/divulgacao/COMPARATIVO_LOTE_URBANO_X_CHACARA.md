@@ -1,7 +1,7 @@
 # Vídeo comparativo: lote urbano × chácara Bom Jardims
 
 > **Para a IA que vai narrar e finalizar o vídeo.** O vídeo-base já está pronto (9:16, 1080×1920, 64 s, só trilha
-> instrumental, sem narração): `BomJardims_Comparativo_LoteUrbano_x_Chacara_9x16.mp4`. Abaixo estão as cenas com o
+> instrumental, sem narração; mapa em 3D com o contorno luminoso de cada loteamento a partir dos KMLs): `BomJardims_Comparativo_LoteUrbano_x_Chacara_9x16.mp4`. Abaixo estão as cenas com o
 > tempo exato, o que aparece na tela e o texto de narração sugerido. **Use os números exatamente como estão.** Não
 > prometa valorização, não diga "retorno garantido" e não cite comissão de corretor.
 
@@ -32,12 +32,15 @@ centro, com entrada de R$ 10 mil e parcela fixa, que não sobe.**
 
 | Tempo | Na tela | Narração |
 |---|---|---|
-| 0–6 s | Globo girando até o Brasil, o Maranhão e Açailândia. Texto: "Lote de 300 m² ou chácara de 3.025 m² pelo mesmo preço?" | "Lote de 300 metros ou uma chácara de 3 mil metros… pelo mesmo preço? Olha só os números de Açailândia." |
-| 6–9,6 s | Satélite; perímetro do município em vermelho tracejado. Rótulo: "Município de Açailândia" | "Esse é o município de Açailândia." |
-| 9,6–19,5 s | Lupas abrem sobre **Park Jardins**, **Colina Park** e **Vale do Açaí**, com o perímetro em vermelho e um cartão "Lotes de 220 a 300 m² · R$ 100 a 150 mil" | "Nos loteamentos da cidade, como o Park Jardins, o Colina Park e o Vale do Açaí, um lote de 220 a 300 metros sai, em média, de 100 a 150 mil reais." |
-| 19,5–24 s | A câmera abre; a rota dourada sai do Centro até o Bom Jardims; contador de km até "17 km do centro · menos de 28 min" | "Agora olha pra cá: a 17 quilômetros do centro, menos de meia hora de carro…" |
-| 24–32,5 s | Zoom no Bom Jardims (perímetro dourado, chácaras desenhadas). Cartão: "Chácaras de 3.025 m² · a partir de R$ 160 mil" | "…fica o Condomínio de Chácaras Bom Jardims: chácaras de 3.025 metros quadrados a partir de 160 mil reais." |
-| 32,5–41 s | Painel "Mesmo dinheiro, 10× mais terreno": comparativo lado a lado, quadrado pequeno × quadrado grande, "O m² sai quase 9× mais barato" | "É praticamente o mesmo dinheiro, com dez vezes mais terreno. O metro quadrado sai quase nove vezes mais barato." |
+| 0–4,6 s | Globo girando até o Brasil e o Maranhão. Texto: "Lote de 300 m² ou chácara de 3.025 m² pelo mesmo preço?" | "Lote de 300 metros ou uma chácara de 3 mil metros… pelo mesmo preço?" |
+| 4,6–7,8 s | O contorno do **município de Açailândia** acende em vermelho neon no globo; a câmera desce para o satélite e inclina em 3D. Texto: "Município de Açailândia" | "Olha o município de Açailândia." |
+| 7,8–10,6 s | Contorno luminoso e nome flutuante: **PARK JARDINS** | "Aqui estão os loteamentos urbanos mais procurados da cidade: o Park Jardins…" |
+| 10,6–13,2 s | **COLINA PARK** | "…o Colina Park…" |
+| 13,2–15,8 s | **VALE DO AÇAÍ** | "…e o Vale do Açaí." |
+| 15,8–20,6 s | Os três acesos ao mesmo tempo. Faixa: "Lotes de 220 a 300 m² · R$ 100 a 150 mil" | "Neles, um lote de 220 a 300 metros sai, em média, de 100 a 150 mil reais." |
+| 20,6–24,6 s | A câmera abre; a rota dourada sai do Centro; contador de km. Texto: "Agora olhe para cá… A 17 km do centro, menos de 28 min" | "Agora olha pra cá: a 17 quilômetros do centro, menos de meia hora de carro…" |
+| 24,6–32,6 s | O **Bom Jardims** acende em dourado, com as chácaras desenhadas e o nome flutuante. Texto: "Açailândia ganhou um condomínio de chácaras com preço extraordinário". Cartão: "Chácaras de 3.025 m² · a partir de R$ 160 mil" | "…Açailândia ganhou o Condomínio de Chácaras Bom Jardims: chácaras de 3.025 metros quadrados a partir de 160 mil reais. Um preço extraordinário." |
+| 32,6–41 s | Painel "Mesmo dinheiro, 10× mais terreno": comparativo lado a lado, quadrado pequeno × quadrado grande, "O m² sai quase 9× mais barato" | "É praticamente o mesmo dinheiro, com dez vezes mais terreno. O metro quadrado sai quase nove vezes mais barato." |
 | 41–50 s | Painel "Entrada de R$ 10 mil e parcela que não sobe": 120× de R$ 1.234,51. Gráfico de barras fixa × reajustada; IPCA, IGP-M, INCC e salário mínimo riscados | "E você entra com apenas 10 mil reais e paga em até 120 parcelas fixas de R$ 1.234. Enquanto muita parcela por aí sobe todo ano com IPCA, IGP-M ou salário mínimo, aqui a parcela não muda até o fim." |
 | 50–57 s | Painel "Condomínio fechado": portaria e controle de acesso, segurança, água encanada, energia, sinal 5G em todo o condomínio, córrego, mata e área de lazer | "Condomínio fechado, com portaria, segurança, água encanada, energia e sinal 5G em todo o condomínio, no meio da natureza." |
 | 57–64 s | Final: logo, "Lançamento oficial · 14 de novembro", QR do WhatsApp, (99) 9 9181-1246, José Romário · CRECI/MA 4.705 | "Lançamento no dia 14 de novembro. Chama no WhatsApp e garanta a sua chácara antes que acabe." |
