@@ -42,6 +42,12 @@ export const LINKS_FIXOS: LinkDivulgacao[] = [
     textoWhatsapp: `🌳 *Chácara de 3.025 m² em Açailândia com entrada de R$ 10 mil!*\n\nEscolha o plano que cabe no seu bolso:\n💰 *13º* — R$ 1.234,51/mês + reforço no 13º\n📅 *Prazo longo* — até 180× fixas, sem reforço\n🧩 *Entrada parcelada* — resto da entrada em 36× sem juros\n\nSem banco · só 82 chácaras · lançamento 14/11\n\n👉 Simule a sua:\n${MARCA_LINK}`,
   },
   {
+    chave: 'fixo:lancamento-areia', titulo: 'Lançamento 14/11 — "Olha esse lugar!" (vídeo + texto para clientes)', fixo: true, destaque: true, empreendimento: 'Bom Jardims',
+    descricao: 'Mande o vídeo do lançamento (romateccrm.com/bom-jardims/ig/reel-areia-vendas-14nov.mp4, 33 s: córrego, deck, área de areia e chácaras vendidas) junto com este texto, no privado ou em grupos.',
+    url: ROTA_PAGAMENTO, utmSource: 'whatsapp', utmCampaign: CAMPANHA_PAGAMENTO,
+    textoWhatsapp: `🌊 *Olha esse lugar!*\n\nÉ o *Condomínio de Chácaras Bom Jardims*, pertinho de Açailândia: córrego de água limpa, deck em construção e área de areia liberada no lançamento.\n\n🔥 As vendas já começaram e várias chácaras já têm dono.\n\n📅 Lançamento oficial: *14 de novembro*\n🏡 Chácaras a partir de 3.025 m²\n💰 Entrada a partir de *R$ 10 mil*, financiamento direto, sem banco\n\n👉 Escolha a sua e simule a parcela:\n${MARCA_LINK}\n\nQuer conhecer? Me responde *QUERO* que eu agendo sua visita. 😉`,
+  },
+  {
     chave: 'fixo:deck-compartilhar', titulo: 'Deck no córrego — vídeo para compartilhar (WhatsApp e Status)', fixo: true, destaque: true, empreendimento: 'Bom Jardims',
     descricao: 'Baixe o vídeo do deck (romateccrm.com/bom-jardims/ig/video-deck-compartilhar.mp4, 21 s) e mande com este texto para clientes, grupos e Status. Quem responder QUERO cai com você.',
     url: ROTA_PAGAMENTO, utmSource: 'whatsapp', utmCampaign: CAMPANHA_PAGAMENTO,
