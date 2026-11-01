@@ -39,7 +39,13 @@ export const LINKS_FIXOS: LinkDivulgacao[] = [
     chave: 'fixo:pagamento-status', titulo: 'Entrada de R$ 10 mil — texto para o Status do WhatsApp', fixo: true, destaque: false, empreendimento: 'Bom Jardims',
     descricao: 'Poste no Status o Reel "Entrada R$ 10 mil" (romateccrm.com/bom-jardims/ig/reel-entrada-10mil.mp4) e cole este texto na legenda; o link abre a simulação dos planos.',
     url: ROTA_PAGAMENTO, utmSource: 'whatsapp-status', utmCampaign: CAMPANHA_PAGAMENTO,
-    textoWhatsapp: `🌳 *Chácara de 3.025 m² em Açailândia com entrada de R$ 10 mil!*\n\nEscolha o plano que cabe no seu bolso:\n💰 *13º* — R$ 1.234,51/mês + reforço no 13º\n📅 *Prazo longo* — até 180× fixas, sem reforço\n🧩 *Entrada parcelada* — resto da entrada em 36× sem juros\n\nSem banco · só 82 chácaras · lançamento 14/11\n\n👉 Simule a sua:\n${MARCA_LINK}\n\nJosé Romário · CRECI/MA 4.705`,
+    textoWhatsapp: `🌳 *Chácara de 3.025 m² em Açailândia com entrada de R$ 10 mil!*\n\nEscolha o plano que cabe no seu bolso:\n💰 *13º* — R$ 1.234,51/mês + reforço no 13º\n📅 *Prazo longo* — até 180× fixas, sem reforço\n🧩 *Entrada parcelada* — resto da entrada em 36× sem juros\n\nSem banco · só 82 chácaras · lançamento 14/11\n\n👉 Simule a sua:\n${MARCA_LINK}`,
+  },
+  {
+    chave: 'fixo:deck-compartilhar', titulo: 'Deck no córrego — vídeo para compartilhar (WhatsApp e Status)', fixo: true, destaque: true, empreendimento: 'Bom Jardims',
+    descricao: 'Baixe o vídeo do deck (romateccrm.com/bom-jardims/ig/video-deck-compartilhar.mp4, 21 s) e mande com este texto para clientes, grupos e Status. Quem responder QUERO cai com você.',
+    url: ROTA_PAGAMENTO, utmSource: 'whatsapp', utmCampaign: CAMPANHA_PAGAMENTO,
+    textoWhatsapp: `🌊 *Já imaginou o seu descanso com essa vista?*\n\nEsse é o deck do *Condomínio de Chácaras Bom Jardims*, em Açailândia: 5 m sobre a água e 15 m ao longo da margem do córrego, já em construção.\n\n🏡 Chácaras a partir de 3.025 m²\n💰 Entrada a partir de R$ 10 mil\n📅 Lançamento oficial: 14 de novembro\n\n👉 Simule a sua chácara:\n${MARCA_LINK}\n\nOu responda *QUERO* que eu te mando as informações. 😉\n\n_Imagem do deck ilustrativa._`,
   },
   {
     chave: 'fixo:mapa3d', titulo: 'Mapa 3D + vídeos — nova campanha', fixo: true, destaque: true, empreendimento: 'Bom Jardims',
