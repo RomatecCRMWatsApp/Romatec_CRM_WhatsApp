@@ -68,3 +68,22 @@ describe('simulador de financiamento na aba Links de divulgação', () => {
     expect(montarLink('https://romateccrm.com', sim, 'abc123XYZ9')).toBe('https://romateccrm.com/o/bom-jardims?utm_source=whatsapp&utm_campaign=BJ-SIMULADOR&c=abc123XYZ9');
   });
 });
+
+import { textoSeguirInstagram, VERSICULOS_AGRADECIMENTO } from '../shared/linksDivulgacao';
+import { linkInstagram, normalizarInstagram } from '../shared/cartaoVendas';
+
+describe('cartão "Siga meu Instagram"', () => {
+  it('aceita o link do perfil com parâmetros do QR e guarda só o usuário', () => {
+    expect(normalizarInstagram('https://www.instagram.com/avalieimob?mdxt=NzFodzdmM3Flemoy&utm_source=qr')).toBe('avalieimob');
+    expect(linkInstagram('avalieimob')).toBe('https://www.instagram.com/avalieimob');
+  });
+  it('agradece, traz o versículo escolhido e pede para seguir e compartilhar', () => {
+    const t = textoSeguirInstagram('fulano.corretor', linkInstagram('fulano.corretor'), 1);
+    expect(t.startsWith('🙏 *Muito obrigado pela confiança')).toBe(true);
+    expect(t).toContain(`(${VERSICULOS_AGRADECIMENTO[1].ref})`);
+    expect(t).toContain('*@fulano.corretor*');
+    expect(t).toContain('https://www.instagram.com/fulano.corretor');
+    expect(t).toContain('compartilhe este link com seus familiares e amigos');
+    expect(textoSeguirInstagram('x', 'l', 99)).toContain(VERSICULOS_AGRADECIMENTO[0].ref);
+  });
+});

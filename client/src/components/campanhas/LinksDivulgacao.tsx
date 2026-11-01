@@ -1,15 +1,15 @@
 import { useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
 import QRCode from "qrcode";
-import { Copy, ExternalLink, Link2, Loader2, MessageCircle, Pencil, Plus, QrCode, Share2, Star, Trash2 } from "lucide-react";
+import { Copy, ExternalLink, Instagram, Link2, Loader2, MessageCircle, Pencil, Plus, QrCode, Share2, Star, Trash2 } from "lucide-react";
 import { trpc } from "@/lib/trpc";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent } from "@/components/ui/card";
 import { useCartaoVendas } from "@/lib/cartaoVendas";
-import { comAssinatura } from "@shared/cartaoVendas";
-import { MARCA_LINK, montarLink, textoComLink, type DadosLink, type LinkDivulgacao } from "@shared/linksDivulgacao";
+import { comAssinatura, linkInstagram } from "@shared/cartaoVendas";
+import { MARCA_LINK, VERSICULOS_AGRADECIMENTO, montarLink, textoComLink, textoSeguirInstagram, type DadosLink, type LinkDivulgacao } from "@shared/linksDivulgacao";
 
 const copiar = async (texto: string, rotulo: string) => {
   try { await navigator.clipboard.writeText(texto); toast.success(`${rotulo} copiado`); } catch { window.prompt("Copie:", texto); }
@@ -80,6 +80,62 @@ function CardLink({ l, cartao, podeEditar, onEditar }: { l: Item; cartao: Return
           <Button size="sm" variant="outline" onClick={compartilhar}><Share2 className="mr-1.5 h-3.5 w-3.5" /> Compartilhar</Button>
           <Button size="sm" variant="ghost" onClick={() => setVerQr(v => !v)}><QrCode className="mr-1.5 h-3.5 w-3.5" /> QR</Button>
           <Button size="sm" variant="ghost" asChild><a href={link} target="_blank" rel="noreferrer"><ExternalLink className="mr-1.5 h-3.5 w-3.5" /> Abrir</a></Button>
+        </div>
+        {verQr && <QrDoLink url={link} />}
+      </CardContent>
+    </Card>
+  );
+}
+
+/**
+ * "Siga meu Instagram": agradecimento + versículo + pedido para seguir e compartilhar. Usa o Instagram do cadastro
+ * de quem está logado (Meu cadastro › Instagram); sem ele, o institucional, com o aviso para cadastrar.
+ */
+function CardInstagram({ cartao }: { cartao: ReturnType<typeof useCartaoVendas> }) {
+  const [versiculo, setVersiculo] = useState(0);
+  const [verQr, setVerQr] = useState(false);
+  const usuario = cartao.instagramProprio ?? cartao.instagram;
+  const link = linkInstagram(usuario);
+  const texto = comAssinatura(textoSeguirInstagram(usuario, link, versiculo), cartao);
+  const compartilhar = async () => {
+    if ((navigator as any).share) { try { await navigator.share({ text: texto }); return; } catch { return; } }
+    copiar(texto, "Texto");
+  };
+  return (
+    <Card className="border-[#DD2A7B]/50 bg-gradient-to-br from-[#DD2A7B]/10 via-card to-card lg:col-span-2">
+      <CardContent className="space-y-3 py-4">
+        <div className="flex flex-wrap items-start justify-between gap-2">
+          <div className="min-w-0">
+            <p className="flex items-center gap-2 font-semibold"><Instagram className="h-4 w-4 text-[#DD2A7B]" /> Siga meu Instagram — peça para o cliente seguir e compartilhar</p>
+            <p className="text-sm text-muted-foreground">
+              Mande no fim do atendimento: agradecimento, um versículo e o pedido para seguir <b className="text-foreground">@{usuario}</b> e compartilhar com familiares e amigos.
+            </p>
+            {!cartao.instagramProprio && (
+              <p className="mt-1 text-xs text-amber-300">
+                Você ainda não cadastrou o seu Instagram, então vai o institucional @{cartao.instagram}. <a href="/meu-cadastro" className="underline">Cadastre o seu em Meu cadastro</a> (pode colar o link do perfil).
+              </p>
+            )}
+          </div>
+          <label className="flex items-center gap-2 text-xs text-muted-foreground">Versículo
+            <select value={versiculo} onChange={e => setVersiculo(Number(e.target.value))} className="h-8 rounded-md border border-border bg-background px-2 text-xs text-foreground">
+              {VERSICULOS_AGRADECIMENTO.map((v, i) => <option key={v.ref} value={i}>{v.ref}</option>)}
+            </select>
+          </label>
+        </div>
+        <a href={link} target="_blank" rel="noreferrer" className="block break-all rounded-md border border-border bg-secondary/30 px-2 py-1.5 font-mono text-xs text-[#F58529]">{link}</a>
+        <div className="rounded-lg border border-border bg-secondary/20 p-3">
+          <p className="mb-1 text-[11px] uppercase tracking-wide text-muted-foreground">Texto para o WhatsApp</p>
+          <p className="whitespace-pre-wrap text-sm">{texto}</p>
+        </div>
+        <div className="flex flex-wrap gap-2">
+          <Button size="sm" className="bg-emerald-600 text-white hover:bg-emerald-700" asChild>
+            <a href={`https://wa.me/?text=${encodeURIComponent(texto)}`} target="_blank" rel="noreferrer"><MessageCircle className="mr-1.5 h-3.5 w-3.5" /> Enviar no WhatsApp</a>
+          </Button>
+          <Button size="sm" variant="outline" onClick={() => copiar(texto, "Texto com o link")}><Copy className="mr-1.5 h-3.5 w-3.5" /> Copiar texto</Button>
+          <Button size="sm" variant="outline" onClick={() => copiar(link, "Link do Instagram")}><Link2 className="mr-1.5 h-3.5 w-3.5" /> Copiar link</Button>
+          <Button size="sm" variant="outline" onClick={compartilhar}><Share2 className="mr-1.5 h-3.5 w-3.5" /> Compartilhar</Button>
+          <Button size="sm" variant="ghost" onClick={() => setVerQr(v => !v)}><QrCode className="mr-1.5 h-3.5 w-3.5" /> QR</Button>
+          <Button size="sm" variant="ghost" asChild><a href={link} target="_blank" rel="noreferrer"><ExternalLink className="mr-1.5 h-3.5 w-3.5" /> Abrir perfil</a></Button>
         </div>
         {verQr && <QrDoLink url={link} />}
       </CardContent>
@@ -164,6 +220,7 @@ export default function LinksDivulgacao() {
       {isLoading && <p className="text-sm text-muted-foreground">Carregando…</p>}
       {data && links.length === 0 && <p className="rounded-xl border border-dashed border-border p-4 text-sm text-muted-foreground">Nenhum link encontrado.</p>}
       <div className="grid gap-3 lg:grid-cols-2">
+        {!busca.trim() && <CardInstagram cartao={cartao} />}
         {links.map(l => <CardLink key={l.chave} l={l} cartao={cartao} podeEditar={!!data?.podeEditar} onEditar={editar} />)}
       </div>
     </div>

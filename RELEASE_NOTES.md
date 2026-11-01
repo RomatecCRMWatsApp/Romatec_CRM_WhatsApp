@@ -3,6 +3,18 @@
 Cada versão nova vai no TOPO. Depois rode `npm run release` (valida e atualiza o package.json);
 ao subir, o servidor grava a versão no banco e todos recebem o aviso "Novidades da versão".
 
+## 1.92.0 — 2026-11-01
+tipo: minor
+obrigatoria: nao
+titulo: "Siga meu Instagram" nos Links de divulgação
+
+### Novo
+- Campanhas › Links de divulgação: cartão "Siga meu Instagram" com o texto pronto para o fim do atendimento: agradecimento, versículo bíblico (Provérbios 16:3, Salmos 37:5 ou Números 6:24-25) e o pedido para o cliente seguir o perfil e compartilhar com familiares e amigos; botões Enviar no WhatsApp, Copiar, Compartilhar e QR
+- O cartão usa o Instagram do cadastro de quem está logado (corretor, secretária, empreendedor ou administrador); sem ele, vai o @avalieimob com o aviso para cadastrar
+
+### Melhorias
+- Meu cadastro e Equipe: o campo Instagram aceita o @usuário ou o link do perfil copiado do app (até o link do QR); o sistema guarda só o usuário
+
 ## 1.91.0 — 2026-10-31
 tipo: minor
 obrigatoria: nao

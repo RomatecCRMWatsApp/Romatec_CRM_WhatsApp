@@ -309,7 +309,7 @@ export default function CadastroUsuario({ id, admin, listas, onSalvo, onCancelar
           </Campo>
           <Campo rotulo="E-mail" erro={erros.email}><input type="email" {...inp("email")} autoComplete="email" /></Campo>
           <Campo rotulo="Telefone / WhatsApp" erro={erros.telefone}><InputMascara valor={f.telefone} mascara={maskPhone} onMudar={v => set("telefone", v)} inputMode="tel" placeholder="(99) 9 9999-9999" erro={erros.telefone} /></Campo>
-          <Campo rotulo="Instagram (opcional — sem ele, as peças usam @avalieimob)" erro={(erros as any).instagram}><input {...inp("instagram")} placeholder="@seuperfil" autoCapitalize="none" /></Campo>
+          <Campo rotulo="Instagram — @usuário ou o link do perfil (vai para o cartão “Siga meu Instagram” dos Links de divulgação e para as peças; sem ele, @avalieimob)" erro={(erros as any).instagram}><input {...inp("instagram")} placeholder="@seuperfil ou instagram.com/seuperfil" autoCapitalize="none" /></Campo>
         </div>
       </Secao>
 

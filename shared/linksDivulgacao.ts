@@ -137,3 +137,30 @@ export const linkSchema = z.object({
   ativo: z.boolean().optional().default(true),
 });
 export type DadosLink = z.infer<typeof linkSchema>;
+
+/**
+ * Cartão "Siga meu Instagram" (Links de divulgação): depois do atendimento, o corretor agradece, deixa uma
+ * mensagem bíblica e pede que o cliente siga o perfil e compartilhe com familiares e amigos. O Instagram é o do
+ * cadastro de quem está logado (Meu cadastro › Instagram); sem ele, o institucional.
+ */
+export const VERSICULOS_AGRADECIMENTO = [
+  { ref: 'Provérbios 16:3', texto: 'Confia ao Senhor as tuas obras, e os teus desígnios serão estabelecidos.' },
+  { ref: 'Salmos 37:5', texto: 'Entrega o teu caminho ao Senhor, confia nele, e o mais ele fará.' },
+  { ref: 'Números 6:24-25', texto: 'O Senhor te abençoe e te guarde; o Senhor faça resplandecer o seu rosto sobre ti e tenha misericórdia de ti.' },
+] as const;
+
+export function textoSeguirInstagram(usuario: string, link: string, versiculo = 0): string {
+  const v = VERSICULOS_AGRADECIMENTO[versiculo] ?? VERSICULOS_AGRADECIMENTO[0];
+  return [
+    '🙏 *Muito obrigado pela confiança e pelo seu tempo!*',
+    '',
+    `📖 _"${v.texto}"_ (${v.ref})`,
+    '',
+    'Que Deus abençoe você e toda a sua família! 🏡',
+    '',
+    `📸 Siga o meu Instagram *@${usuario}* e acompanhe as novidades de imóveis, os lançamentos e as oportunidades com que trabalho:`,
+    link,
+    '',
+    '🤝 E um favor: compartilhe este link com seus familiares e amigos, para que eles também fiquem por dentro das melhores oportunidades. Obrigado!',
+  ].join('\n');
+}

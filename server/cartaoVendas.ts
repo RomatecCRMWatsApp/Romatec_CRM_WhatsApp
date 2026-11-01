@@ -8,7 +8,7 @@ import { eq } from 'drizzle-orm';
 import { getDb } from './db';
 import { users } from '../drizzle/schema';
 import { perfilDe } from '../shared/equipe';
-import { CARTAO_PADRAO, cartaoDe, origemDoCartao, type CartaoVendas } from '../shared/cartaoVendas';
+import { CARTAO_PADRAO, cartaoDe, normalizarInstagram, origemDoCartao, type CartaoVendas } from '../shared/cartaoVendas';
 
 const segredo = () => process.env.CARTAO_LINK_SECRET || process.env.JWT_SECRET || 'romatec-cartao';
 const assinatura = (id: number) => createHmac('sha256', segredo()).update(`cartao:${id}`).digest('base64url').slice(0, 8);
@@ -35,16 +35,20 @@ async function administrador(d: any) {
   return ativos.find(a => a.creci) ?? ativos[0] ?? null;
 }
 
-/** Cartão de quem está logado (empreendedor → o do administrador) */
-export async function cartaoDoUsuario(usuarioId: number): Promise<CartaoVendas & { ref: string | null }> {
+/**
+ * Cartão de quem está logado (empreendedor → o do administrador). `instagramProprio` é sempre o Instagram do
+ * cadastro de quem está logado — inclusive do empreendedor —, para o cartão "Siga meu Instagram" dos links.
+ */
+export async function cartaoDoUsuario(usuarioId: number): Promise<CartaoVendas & { ref: string | null; instagramProprio: string | null }> {
   const d = (await getDb()) as any;
-  if (!d) return { ...CARTAO_PADRAO, ref: null };
+  if (!d) return { ...CARTAO_PADRAO, ref: null, instagramProprio: null };
   const [u]: any[] = await d.select(campos).from(users).where(eq(users.id, usuarioId)).limit(1);
-  if (!u) return { ...CARTAO_PADRAO, ref: null };
+  if (!u) return { ...CARTAO_PADRAO, ref: null, instagramProprio: null };
+  const instagramProprio = normalizarInstagram(u.instagram);
   const perfil = perfilDe(u);
   const dono = origemDoCartao(perfil) === 'admin' ? await administrador(d) : u;
-  if (!dono) return { ...CARTAO_PADRAO, ref: null };
-  return { ...cartaoDe(dono, perfilDe(dono)), ref: refDoUsuario(dono.id) };
+  if (!dono) return { ...CARTAO_PADRAO, ref: null, instagramProprio };
+  return { ...cartaoDe(dono, perfilDe(dono)), ref: refDoUsuario(dono.id), instagramProprio };
 }
 
 /** Cartão público da ref do link (só dados de contato profissional; nunca CPF) */

@@ -6,9 +6,9 @@ import { CARTAO_PADRAO, type CartaoVendas } from "@shared/cartaoVendas";
  * Cartão de vendas do usuário logado (nome, CRECI se houver, telefone, e-mail e foto). Propostas, folders e
  * links saem com ele; o empreendedor recebe o do administrador (regra no servidor).
  */
-export function useCartaoVendas(): CartaoVendas & { ref: string | null } {
+export function useCartaoVendas(): CartaoVendas & { ref: string | null; instagramProprio: string | null } {
   const { data } = trpc.cadastro.cartaoVendas.useQuery(undefined, { staleTime: 5 * 60_000 });
-  return data ?? { ...CARTAO_PADRAO, ref: null };
+  return data ?? { ...CARTAO_PADRAO, ref: null, instagramProprio: null };
 }
 
 /** Acrescenta a referência de quem compartilha (?c=…) ao link público */
