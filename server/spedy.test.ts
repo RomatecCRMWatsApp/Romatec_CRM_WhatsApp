@@ -151,3 +151,30 @@ describe('separarNumero (endereço do tomador)', async () => {
     expect(separarNumero('Rua Manoel Elzebrio da Costa', '13')).toEqual({ rua: 'Rua Manoel Elzebrio da Costa', numero: '13' });
   });
 });
+
+describe('virada para produção', () => {
+  const PROD = { ...ENV, SPEDY_AMBIENTE: 'producao' };
+  it('recusa se a empresa na Spedy ainda está em simulação; depois emite de verdade a nota que só foi simulada', async () => {
+    expect(nota(1)).toMatchObject({ status: 'EMITIDA', ambiente: 'simulation' });
+    expect(Sp.notaDeTeste(nota(1), { ambiente: 'producao' })).toBe(true);
+    expect(Sp.notaDeTeste(nota(1), { ambiente: 'sandbox' })).toBe(false);
+    ambienteNfse = 'simulation';
+    chamadas = [];
+    await expect(Sp.emitirPelaSpedy(1, 1, Date.now(), PROD)).rejects.toThrow(/mude a NFS-e da empresa para produção/);
+    expect(chamadas.some(c => c.metodo === 'POST')).toBe(false);
+    expect(nota(1).status).toBe('EMITIDA');
+    ambienteNfse = 'production';
+    respostaPost = { id: 'inv-real', status: 'enqueued', environmentType: 'production' };
+    const agora = Date.now();
+    const r = await Sp.emitirPelaSpedy(1, 1, agora, PROD);
+    expect(r).toMatchObject({ status: 'ENVIADA', ambiente: 'producao', ambienteNfse: 'production' });
+    const post = chamadas.find(c => c.metodo === 'POST')!;
+    expect(post.url).toBe('https://api.spedy.com.br/v1/service-invoices');
+    expect(post.corpo.integrationId).toBe(`romatec-nfse-1-r${agora.toString(36)}`);
+    expect(nota(1)).toMatchObject({ status: 'ENVIADA', externoId: 'inv-real', ambiente: 'production', numero: null, pdfUrl: null });
+    expect(nota(1).observacao).toMatch(/só em simulation/);
+    // Já real: não emite de novo
+    await expect(Sp.emitirPelaSpedy(1, 1, Date.now(), PROD)).rejects.toThrow(/já foi enviada/);
+    ambienteNfse = 'simulation';
+  });
+});

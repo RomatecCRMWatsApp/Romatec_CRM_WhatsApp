@@ -3,6 +3,15 @@
 Cada versão nova vai no TOPO. Depois rode `npm run release` (valida e atualiza o package.json);
 ao subir, o servidor grava a versão no banco e todos recebem o aviso "Novidades da versão".
 
+## 1.94.2 — 2026-11-02
+tipo: patch
+obrigatoria: nao
+titulo: NFS-e pronta para a produção
+
+### Melhorias
+- Com a Spedy em produção, o CRM não emite se a NFS-e da empresa no painel da Spedy ainda estiver em simulação ou homologação (evita nota "de mentira" com aviso de produção)
+- Notas emitidas só na simulação ganham o botão "Emitir NFS-e real" quando o CRM passa para produção
+
 ## 1.94.1 — 2026-11-02
 tipo: patch
 obrigatoria: nao

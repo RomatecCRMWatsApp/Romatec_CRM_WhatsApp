@@ -357,6 +357,12 @@ function Nfse() {
                   {n.observacao && <p className={`mt-0.5 text-[11px] ${n.observacao.startsWith("ESTORNO") ? "text-red-300" : "text-muted-foreground"}`}>{n.observacao}</p>}
                 </td>
                 <td className="p-2">
+                  {spedy?.configurada && spedy.ambiente === "producao" && n.status === "EMITIDA" && n.provedor === "spedy" && n.ambiente && n.ambiente !== "production" && (
+                    <Button size="sm" className="h-7 text-xs" disabled={emitir.isPending}
+                      onClick={() => { if (confirm(`Esta nota foi emitida só em ${AMBIENTE_NFSE[n.ambiente!] ?? n.ambiente} (sem validade fiscal). Emitir agora a NFS-e REAL de ${brl(n.valor)} para ${n.tomadorNome}?`)) emitir.mutate({ id: n.id }); }}>
+                      {emitir.isPending && emitir.variables?.id === n.id ? <Loader2 className="mr-1 h-3.5 w-3.5 animate-spin" /> : null}Emitir NFS-e real
+                    </Button>
+                  )}
                   {(n.status === "PENDENTE" || n.status === "REJEITADA") && (
                     <div className="flex flex-wrap gap-1">
                       {spedy?.configurada && (

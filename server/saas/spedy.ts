@@ -163,6 +163,9 @@ export async function conferirAmbienteDaEmpresa(cfg: ConfigSpedy): Promise<{ emp
   if (cfg.ambiente === 'sandbox' && ambienteNfse === 'production') {
     throw new SpedyErro('A empresa na Spedy está com a NFS-e em PRODUÇÃO dentro do sandbox. Troque para "simulation" ou "development" no painel antes de testar.', 412);
   }
+  if (cfg.ambiente === 'producao' && ambienteNfse && ambienteNfse !== 'production') {
+    throw new SpedyErro(`O CRM está em PRODUÇÃO, mas a NFS-e da empresa na Spedy está em "${ambienteNfse}". No painel da Spedy, mude a NFS-e da empresa para produção antes de emitir.`, 412);
+  }
   return { empresaId, ambienteNfse };
 }
 
@@ -195,6 +198,10 @@ export async function aplicarRetorno(nfseId: number, inv: any, cfg: ConfigSpedy,
   return novo ?? n.status;
 }
 
+/** Nota marcada como emitida só na simulação/homologação da Spedy, com o CRM já em produção */
+export const notaDeTeste = (n: any, cfg: Pick<ConfigSpedy, 'ambiente'>) =>
+  cfg.ambiente === 'producao' && n?.status === 'EMITIDA' && n?.provedor === 'spedy' && !!n?.ambiente && n.ambiente !== 'production';
+
 /** Emite (ou reenvia a rejeitada) a NFS-e da fila pela Spedy */
 export async function emitirPelaSpedy(nfseId: number, autorId: number, agora = Date.now(), env: Record<string, string | undefined> = process.env) {
   const cfg = configSpedy(env);
@@ -202,13 +209,20 @@ export async function emitirPelaSpedy(nfseId: number, autorId: number, agora = D
   const d = await banco();
   const [n]: any[] = await d.select().from(saasNfse).where(eq(saasNfse.id, nfseId)).limit(1);
   if (!n) throw new NfseErro('Nota não encontrada', 404);
-  if (!['PENDENTE', 'REJEITADA'].includes(n.status)) throw new NfseErro(n.status === 'ENVIADA' ? 'Esta nota já foi enviada e aguarda a prefeitura' : `Nota ${n.status.toLowerCase()} não pode ser emitida`, 409);
+  // Nota "emitida" só em simulação/homologação não vale fiscalmente: em produção ela pode ser emitida de verdade
+  const deTeste = notaDeTeste(n, cfg);
+  if (!deTeste && !['PENDENTE', 'REJEITADA'].includes(n.status)) throw new NfseErro(n.status === 'ENVIADA' ? 'Esta nota já foi enviada e aguarda a prefeitura' : `Nota ${n.status.toLowerCase()} não pode ser emitida`, 409);
   const [f]: any[] = await d.select({ status: saasFaturas.status }).from(saasFaturas).where(eq(saasFaturas.id, n.faturaId)).limit(1);
   if (f && f.status !== 'PAGA') throw new NfseErro('A fatura desta nota não está paga', 409);
   const [u]: any[] = await d.select().from(users).where(eq(users.id, n.usuarioId)).limit(1);
-  const corpo = montarNota(n, u ?? null, cfg, agora);
+  const corpo = montarNota(deTeste ? { ...n, status: 'REJEITADA' } : n, u ?? null, cfg, agora);
   if (!corpo.receiver.federalTaxNumber) throw new NfseErro('Tomador sem CPF/CNPJ: complete o cadastro e clique em "Atualizar tomador"', 400);
   const amb = await conferirAmbienteDaEmpresa(cfg);
+  if (deTeste) {
+    // Volta a pendente (sem os dados da simulação) antes do envio real; se o envio falhar, ela fica pendente, que é o certo
+    await d.update(saasNfse).set({ status: 'PENDENTE', numero: null, codigoVerificacao: null, pdfUrl: null, xmlUrl: null, emitidaEm: null, externoId: null, externoStatus: null, ambiente: null,
+      observacao: (n.observacao ? `${n.observacao} · ` : '') + `Emitida antes só em ${n.ambiente} (sem validade fiscal)`, updatedAt: new Date(agora) } as any).where(eq(saasNfse.id, nfseId));
+  }
   const inv: any = await chamar(cfg, 'POST', '/service-invoices', corpo);
   await d.update(saasNfse).set({ emitidaPor: autorId, enviadaEm: new Date(agora), updatedAt: new Date(agora) } as any).where(eq(saasNfse.id, nfseId));
   const status = await aplicarRetorno(nfseId, { ...inv, status: inv?.status ?? 'enqueued', environmentType: inv?.environmentType ?? amb.ambienteNfse }, cfg, agora);
