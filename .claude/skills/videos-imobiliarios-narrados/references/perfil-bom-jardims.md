@@ -35,3 +35,15 @@ As unidades explicitamente apontadas como vendidas pelo proprietário nesse trab
 As filmagens reais enviadas mostraram rio/vegetação e obra do deck. O texto identificou o condomínio como **em implantação**, com **projeto de portaria e lazer**. Verificar o estágio atual antes de novos materiais; não confundir a previsão, a simulação do projeto e a estrutura entregue.
 
 Não há filmagens completas nem ofertas atuais embutidas na habilidade. Solicitar os materiais do projeto atual ou localizar cópias autorizadas. Não depender de caminhos de uploads da sessão anterior.
+
+## Vinhetas oficiais da logo (geradas pelo proprietário no Google Flow, 02/11/2026)
+
+Arquivos no repositório, em `client/public/bom-jardims/vinhetas/`, também publicados em `https://romateccrm.com/bom-jardims/vinhetas/<arquivo>`. Cada uma tem 7,9 s, áudio de natureza e duas versões: a original `-16x9` (1280×720) e a vertical `-9x16` (1080×1920, com o vídeo centralizado sobre um fundo desfocado, pronta para Reels e Status). A grafia da placa foi conferida no último quadro de todas: "Condomínio de chácara" e "Bom Jardims".
+
+| Arquivo | O que mostra | Uso definido pelo proprietário |
+|---|---|---|
+| `abertura-16x9.mp4` / `abertura-9x16.mp4` | Placa na floresta com raios de sol e partículas douradas | **Abertura** dos vídeos |
+| `fechamento-16x9.mp4` / `fechamento-9x16.mp4` | Mesma cena, mais calma, terminando com a placa parada | **Fechamento** dos vídeos (antes ou junto do CTA e do CRECI) |
+| `promocao-explosao-16x9.mp4` / `promocao-explosao-9x16.mp4` | A placa explode em fogo e fumaça e reaparece inteira no fim | **Reservada** para o final de vídeos de promoção ou de lançamento. Não usar em vídeo comum |
+
+Cuidados com a vinheta de explosão: fogo e fumaça na mata podem lembrar queimada, um tema sensível na região e oposto à mensagem de natureza preservada. Antes de cada uso, confirmar com o proprietário que a peça é de promoção ou lançamento. Nunca usar em material sobre a área de vivência, a mata ou o córrego.
