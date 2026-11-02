@@ -207,6 +207,16 @@ async function startServer() {
         console.warn('[Webhook] Erro ao buscar contato (não crítico):', dbErr);
       }
 
+      // Prospecção B2B (AvalieImob): resposta de empresa já contatada fica no prospecto; o robô de compradores não responde
+      if (!req.body?.fromMe) {
+        try {
+          const { registrarRespostaWhatsApp } = await import('../prospeccao/servico');
+          if (await registrarRespostaWhatsApp(payload.phone, msgText)) return res.json({ received: true, processed: true, prospecto: true });
+        } catch (e: any) {
+          console.warn('[Prospecção] Falha ao registrar resposta (seguindo no fluxo):', e?.message);
+        }
+      }
+
       // Contato novo sem código: depois da 1ª resposta do bot vira lead "WhatsApp direto" (+ aviso)
       let contatoNovo = false;
       let respostaBot: string | null = null;

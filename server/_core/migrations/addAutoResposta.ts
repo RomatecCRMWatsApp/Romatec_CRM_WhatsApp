@@ -109,6 +109,14 @@ const TABELAS: [string, string][] = [
     id INT AUTO_INCREMENT PRIMARY KEY, titulo VARCHAR(120) NOT NULL, descricao VARCHAR(300) NULL, url VARCHAR(500) NOT NULL,
     utmSource VARCHAR(60) NULL, utmCampaign VARCHAR(60) NULL, textoWhatsapp TEXT NOT NULL, empreendimento VARCHAR(80) NULL,
     destaque BOOLEAN NOT NULL DEFAULT FALSE, ativo BOOLEAN NOT NULL DEFAULT TRUE, criadoPor INT NULL, criadoEm TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP)`],
+  // Prospecção B2B do AvalieImob (server/prospeccao/servico.ts)
+  ['prospectos', `CREATE TABLE IF NOT EXISTS prospectos (
+    id INT AUTO_INCREMENT PRIMARY KEY, nome VARCHAR(200) NOT NULL, categoria VARCHAR(20) NOT NULL DEFAULT 'outro', cidade VARCHAR(80) NULL, uf VARCHAR(2) NULL,
+    endereco VARCHAR(255) NULL, telefone VARCHAR(15) NULL, email VARCHAR(160) NULL, site VARCHAR(300) NULL, instagram VARCHAR(200) NULL, sobre TEXT NULL,
+    fato VARCHAR(300) NULL, fonte VARCHAR(20) NOT NULL DEFAULT 'manual', fonteId VARCHAR(80) NULL, status VARCHAR(16) NOT NULL DEFAULT 'novo', mensagem TEXT NULL,
+    ultimaResposta TEXT NULL, enriquecidoEm TIMESTAMP NULL, aprovadoPor INT NULL, enviadoEm TIMESTAMP NULL, respondeuEm TIMESTAMP NULL, observacoes TEXT NULL,
+    criadoPor INT NULL, criadoEm TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP, UNIQUE KEY ux_prospecto_fonte (fonte, fonteId),
+    KEY ix_prospecto_telefone (telefone), KEY ix_prospecto_status (status))`],
 ];
 
 export async function addAutoResposta(): Promise<void> {

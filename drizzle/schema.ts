@@ -2157,3 +2157,38 @@ export const registrosCartorio = mysqlTable("registrosCartorio", {
   atualizadoPor: int("atualizadoPor"),
   updatedAt: timestamp("updatedAt").defaultNow().notNull(),
 });
+
+/** Prospecção B2B do AvalieImob (server/prospeccao/servico.ts): empresas da região, rascunho por IA, envio só com aprovação */
+export const prospectos = mysqlTable("prospectos", {
+  id: int("id").autoincrement().primaryKey(),
+  nome: varchar("nome", { length: 200 }).notNull(),
+  /** imobiliaria | correspondente | engenharia | construtora | cartorio | banco | advocacia | outro (shared/prospeccao.ts) */
+  categoria: varchar("categoria", { length: 20 }).default("outro").notNull(),
+  cidade: varchar("cidade", { length: 80 }),
+  uf: varchar("uf", { length: 2 }),
+  endereco: varchar("endereco", { length: 255 }),
+  telefone: varchar("telefone", { length: 15 }),
+  email: varchar("email", { length: 160 }),
+  site: varchar("site", { length: 300 }),
+  instagram: varchar("instagram", { length: 200 }),
+  /** O que a empresa diz de si no site (título/descrição): base do "fato específico" da mensagem */
+  sobre: text("sobre"),
+  fato: varchar("fato", { length: 300 }),
+  fonte: varchar("fonte", { length: 20 }).default("manual").notNull(),
+  fonteId: varchar("fonteId", { length: 80 }),
+  /** novo | rascunho | aprovado | enviado | respondeu | interessado | sem_interesse | optout */
+  status: varchar("status", { length: 16 }).default("novo").notNull(),
+  mensagem: text("mensagem"),
+  ultimaResposta: text("ultimaResposta"),
+  enriquecidoEm: timestamp("enriquecidoEm"),
+  aprovadoPor: int("aprovadoPor"),
+  enviadoEm: timestamp("enviadoEm"),
+  respondeuEm: timestamp("respondeuEm"),
+  observacoes: text("observacoes"),
+  criadoPor: int("criadoPor"),
+  criadoEm: timestamp("criadoEm").defaultNow().notNull(),
+}, (t) => ({
+  uxFonte: uniqueIndex("ux_prospecto_fonte").on(t.fonte, t.fonteId),
+  ixTelefone: index("ix_prospecto_telefone").on(t.telefone),
+  ixStatus: index("ix_prospecto_status").on(t.status),
+}));

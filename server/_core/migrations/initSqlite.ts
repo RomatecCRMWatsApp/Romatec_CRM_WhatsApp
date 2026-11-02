@@ -638,6 +638,11 @@ export function initSqliteTables(sqlite: any): void {
   run(`CREATE TABLE IF NOT EXISTS imobiliariasParceiras (
     id INTEGER PRIMARY KEY AUTOINCREMENT, nome TEXT NOT NULL, cnpj TEXT, creci TEXT, responsavel TEXT, telefone TEXT, email TEXT, codigo TEXT NOT NULL UNIQUE,
     token TEXT NOT NULL UNIQUE, comissaoPct TEXT NOT NULL DEFAULT '0.0200', corretorInternoId INTEGER, ativo INTEGER NOT NULL DEFAULT 1, criadoPor INTEGER, criadoEm ${agoraS})`);
+  run(`CREATE TABLE IF NOT EXISTS prospectos (
+    id INTEGER PRIMARY KEY AUTOINCREMENT, nome TEXT NOT NULL, categoria TEXT NOT NULL DEFAULT 'outro', cidade TEXT, uf TEXT, endereco TEXT, telefone TEXT,
+    email TEXT, site TEXT, instagram TEXT, sobre TEXT, fato TEXT, fonte TEXT NOT NULL DEFAULT 'manual', fonteId TEXT, status TEXT NOT NULL DEFAULT 'novo',
+    mensagem TEXT, ultimaResposta TEXT, enriquecidoEm INTEGER, aprovadoPor INTEGER, enviadoEm INTEGER, respondeuEm INTEGER, observacoes TEXT, criadoPor INTEGER,
+    criadoEm ${agoraS}, UNIQUE (fonte, fonteId))`);
   run(`CREATE TABLE IF NOT EXISTS tours360 (
     id INTEGER PRIMARY KEY AUTOINCREMENT, empreendimentoId INTEGER NOT NULL, loteCodigo TEXT, titulo TEXT NOT NULL, arquivo TEXT NOT NULL, largura INTEGER,
     ordem INTEGER NOT NULL DEFAULT 0, criadoPor INTEGER, criadoEm ${agoraS})`);

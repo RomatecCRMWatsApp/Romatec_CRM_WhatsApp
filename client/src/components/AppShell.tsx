@@ -10,6 +10,7 @@ import {
   BarChart3, Building2, Flame, Images, KanbanSquare, LayoutDashboard, LineChart, LogOut, Megaphone, Menu, Send,
   Settings, UserCog, Users, X, Eye, ClipboardList, CalendarDays, Map as MapIcon, Smartphone, Wallet, IdCard, FolderOpen, Bell, FileSignature, Mic, CalendarCheck, UserPlus, BookCopy, BadgeDollarSign, Hourglass, Bot, Trophy, Link2, Zap, MessagesSquare, ListOrdered, Plug, Inbox, Building, Rotate3d,
   ChevronRight, ChevronsLeft, ChevronsRight,
+  Radar,
 } from "lucide-react";
 import { abrirNovidades, SinoNovidades, useNovidadesNaoLidas } from "./sistema/Novidades";
 import { useNotificacoes } from "./sistema/Notificacoes";
@@ -68,6 +69,7 @@ const MENU: Grupo[] = [
       // Administrador e secretária (shared/equipe.ts → podeAbrir)
       { rotulo: "Portal do comprador", rota: "/portal-comprador", icone: MessagesSquare },
       { rotulo: "Imobiliárias parceiras", rota: "/imobiliarias-parceiras", icone: Building },
+      { rotulo: "Prospecção B2B", rota: "/prospeccao", icone: Radar },
       { rotulo: "Tour 360°", rota: "/tour-360", icone: Rotate3d },
       { rotulo: "Talonários", rota: "/talonarios", icone: BookCopy },
       { rotulo: "Financeiro", rota: "/financeiro", icone: Wallet, modulo: "financeiro", cor: COR.financeiro },

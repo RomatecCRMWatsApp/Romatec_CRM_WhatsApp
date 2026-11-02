@@ -38,6 +38,7 @@ import { permissoesRouter } from "./routers/permissoes.router";
 import { cadastroRouter } from "./routers/cadastro.router";
 import { novidadesRouter } from "./routers/novidades.router";
 import { notificacoesRouter } from "./routers/notificacoes.router";
+import { prospeccaoRouter } from "./routers/prospeccao.router";
 import { exigirAcesso, exigirLead, leadsVisiveis } from "./permissoes";
 import { acessosCorretor } from "../drizzle/schema";
 import { z } from "zod";
@@ -108,6 +109,7 @@ export const appRouter = router({
   integracoes: integracoesRouter,
   caixaEntrada: caixaEntradaRouter,
   parceiras: parceirasRouter,
+  prospeccao: prospeccaoRouter,
   tour360: tour360Router,
   cartorio: cartorioRouter,
   autoResposta: autoRespostaRouter,

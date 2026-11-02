@@ -3,6 +3,19 @@
 Cada versão nova vai no TOPO. Depois rode `npm run release` (valida e atualiza o package.json);
 ao subir, o servidor grava a versão no banco e todos recebem o aviso "Novidades da versão".
 
+## 1.94.0 — 2026-11-02
+tipo: minor
+obrigatoria: nao
+titulo: Prospecção B2B para o AvalieImob
+
+### Novo
+- Vendas › Prospecção B2B: lista de imobiliárias, correspondentes, engenharia e topografia, construtoras, cartórios, bancos e escritórios de advocacia da região para apresentar o AvalieImob
+- Importação por CSV (sem repetir empresa) e cadastro manual; o script scripts/prospeccao/overture_lugares.py gera a lista de Açailândia, Imperatriz e cidades vizinhas a partir do Overture Maps
+- "Ler site": o CRM abre o site da empresa (início, contato e sobre) e completa WhatsApp, e-mail e Instagram
+- "Escrever mensagem": a IA escreve a primeira mensagem com um fato da empresa (só usa o que está no site ou no campo de fato) e sempre com a saída "SAIR"
+- Nada sai sem aprovação: só o administrador aprova e envia, uma vez por empresa, só para celular, com limite de 20 por dia (variável PROSPECCAO_LIMITE_DIA)
+- Respostas de empresas contatadas ficam no cartão da empresa e não acionam o robô de compradores; quem responde SAIR sai da lista e recebe a confirmação
+
 ## 1.93.3 — 2026-11-01
 tipo: patch
 obrigatoria: nao
