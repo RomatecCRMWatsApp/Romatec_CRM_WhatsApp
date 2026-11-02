@@ -3,6 +3,14 @@
 Cada versão nova vai no TOPO. Depois rode `npm run release` (valida e atualiza o package.json);
 ao subir, o servidor grava a versão no banco e todos recebem o aviso "Novidades da versão".
 
+## 1.94.5 — 2026-11-02
+tipo: patch
+obrigatoria: nao
+titulo: ID da empresa da Spedy na tela
+
+### Melhorias
+- O cartão da Spedy (SaaS e assinaturas › NFS-e) mostra o ID da empresa encontrado pela chave; um toque copia para colar em SPEDY_EMPRESA_ID no Railway
+
 ## 1.94.4 — 2026-11-02
 tipo: patch
 obrigatoria: nao

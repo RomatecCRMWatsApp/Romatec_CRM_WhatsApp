@@ -277,6 +277,8 @@ function PainelSpedy() {
       {!s.configurada && <p className="text-xs text-muted-foreground">{s.erro}. Configure as variáveis no Railway: SPEDY_API_KEY, SPEDY_AMBIENTE (sandbox ou producao) e SPEDY_EMPRESA_ID.</p>}
       {s.configurada && (
         <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-muted-foreground">
+          {s.empresaId && <span>ID da empresa: <button type="button" className="font-mono text-foreground underline decoration-dotted" title="Copiar"
+            onClick={() => { navigator.clipboard?.writeText(s.empresaId!).then(() => toast.success("ID copiado: cole em SPEDY_EMPRESA_ID no Railway"), () => window.prompt("Copie:", s.empresaId!)); }}>{s.empresaId}</button></span>}
           <span>NFS-e na empresa: <b className={s.ambienteNfse === "production" ? "text-red-300" : "text-foreground"}>{s.ambienteNfse ? AMBIENTE_NFSE[s.ambienteNfse] ?? s.ambienteNfse : "—"}</b></span>
           <span>Alíquota de ISS: <b className="text-foreground">{s.issAliquota != null ? `${s.issAliquota}%` : "a da empresa na Spedy"}</b></span>
           <span>Webhook: {s.webhook ? <b className={s.webhook.enabled ? "text-emerald-300" : "text-amber-300"}>{s.webhook.enabled ? "ativo" : "desabilitado"}</b> : <b className="text-amber-300">não cadastrado</b>}</span>
