@@ -42,6 +42,12 @@ export const LINKS_FIXOS: LinkDivulgacao[] = [
     textoWhatsapp: `🌳 *Chácara de 3.025 m² em Açailândia com entrada de R$ 10 mil!*\n\nEscolha o plano que cabe no seu bolso:\n💰 *13º* — R$ 1.234,51/mês + reforço no 13º\n📅 *Prazo longo* — até 180× fixas, sem reforço\n🧩 *Entrada parcelada* — resto da entrada em 36× sem juros\n\nSem banco · só 82 chácaras · lançamento 14/11\n\n👉 Simule a sua:\n${MARCA_LINK}`,
   },
   {
+    chave: 'fixo:comparativo', titulo: 'Lote urbano × chácara — vídeo comparativo (WhatsApp)', fixo: true, destaque: true, empreendimento: 'Bom Jardims',
+    descricao: 'Mande o vídeo comparativo narrado (romateccrm.com/bom-jardims/ig/video-comparativo-whatsapp.mp4, 70 s, versão leve) com este texto: lotes urbanos de 220–300 m² na faixa de R$ 100–150 mil × chácara de 3.025 m² no Bom Jardims.',
+    url: ROTA_PAGAMENTO, utmSource: 'whatsapp', utmCampaign: CAMPANHA_PAGAMENTO,
+    textoWhatsapp: `🌳 *Lote urbano ou chácara?*\n\nNos loteamentos urbanos de Açailândia, um lote de *220 a 300 m²* fica na faixa de *R$ 100 a 150 mil*.\n\nNo *Condomínio de Chácaras Bom Jardims*, a 17 km do centro, a chácara tem *3.025 m²* — mais de *10 vezes a área* — a partir de *R$ 160 mil*.\n\n💰 Entrada a partir de R$ 10 mil e parcelas fixas, financiamento direto\n🔐 Condomínio fechado, com portaria, água, energia e sinal 5G\n📅 Lançamento oficial: 14 de novembro\n\n👉 Simule a sua chácara:\n${MARCA_LINK}\n\n_Valores de referência, out/2026, sujeitos a variação e disponibilidade._`,
+  },
+  {
     chave: 'fixo:lancamento-areia', titulo: 'Lançamento 14/11 — "Olha esse lugar!" (vídeo + texto para clientes)', fixo: true, destaque: true, empreendimento: 'Bom Jardims',
     descricao: 'Mande o vídeo do lançamento (romateccrm.com/bom-jardims/ig/reel-areia-vendas-14nov.mp4, 33 s: córrego, deck, área de areia e chácaras vendidas) junto com este texto, no privado ou em grupos.',
     url: ROTA_PAGAMENTO, utmSource: 'whatsapp', utmCampaign: CAMPANHA_PAGAMENTO,
