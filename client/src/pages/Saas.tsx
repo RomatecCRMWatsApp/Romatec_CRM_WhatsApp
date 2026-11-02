@@ -272,7 +272,7 @@ function PainelSpedy() {
     <section className={`space-y-1 rounded-xl border p-3 text-sm ${s.conectada ? "border-emerald-500/30 bg-emerald-500/5" : "border-border bg-card"}`}>
       <h3 className="font-semibold">
         Spedy (emissão automática) — {!s.configurada ? <span className="text-amber-300">aguardando configuração</span>
-          : s.conectada ? <span className="text-emerald-300">conectada · {s.ambiente === "producao" ? "PRODUÇÃO" : "sandbox"}</span> : <span className="text-red-300">sem conexão</span>}
+          : s.conectada ? <span className="text-emerald-300">conectada · {s.ambiente === "producao" ? "PRODUÇÃO" : "sandbox"}</span> : <span className="text-red-300">sem conexão · {s.ambiente === "producao" ? "PRODUÇÃO" : "sandbox"}</span>}
       </h3>
       {!s.configurada && <p className="text-xs text-muted-foreground">{s.erro}. Configure as variáveis no Railway: SPEDY_API_KEY, SPEDY_AMBIENTE (sandbox ou producao) e SPEDY_EMPRESA_ID.</p>}
       {s.configurada && (

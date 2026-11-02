@@ -3,6 +3,14 @@
 Cada versão nova vai no TOPO. Depois rode `npm run release` (valida e atualiza o package.json);
 ao subir, o servidor grava a versão no banco e todos recebem o aviso "Novidades da versão".
 
+## 1.94.7 — 2026-11-02
+tipo: patch
+obrigatoria: nao
+titulo: Cartão da Spedy mostra o ambiente também sem conexão
+
+### Melhorias
+- Quando a Spedy recusa a chave, o cartão mostra se o CRM está em sandbox ou em produção, para saber qual chave conferir
+
 ## 1.94.6 — 2026-11-02
 tipo: patch
 obrigatoria: nao
