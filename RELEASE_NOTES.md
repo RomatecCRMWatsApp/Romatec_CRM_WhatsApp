@@ -3,6 +3,15 @@
 Cada versão nova vai no TOPO. Depois rode `npm run release` (valida e atualiza o package.json);
 ao subir, o servidor grava a versão no banco e todos recebem o aviso "Novidades da versão".
 
+## 1.94.6 — 2026-11-02
+tipo: patch
+obrigatoria: nao
+titulo: Cartão da Spedy mostra o erro real
+
+### Correções
+- O cartão da Spedy só mostra "conectada" quando a Spedy aceita a chave; chave de outro ambiente aparece como "sem conexão" com o motivo (403), em vez de "informe SPEDY_EMPRESA_ID"
+- Sem SPEDY_EMPRESA_ID, o cartão diz se a conta tem nenhuma ou várias empresas
+
 ## 1.94.5 — 2026-11-02
 tipo: patch
 obrigatoria: nao

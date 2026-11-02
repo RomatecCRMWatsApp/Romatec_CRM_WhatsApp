@@ -150,9 +150,12 @@ export async function conferirAmbienteDaEmpresa(cfg: ConfigSpedy): Promise<{ emp
   let empresaId = cfg.empresaId;
   if (!empresaId) {
     // Sem SPEDY_EMPRESA_ID: a chave da empresa titular lista as empresas da conta; com uma só, é ela
-    const r: any = await chamar(cfg, 'GET', '/companies?page=1&pageSize=5').catch(() => null);
+    // Erro aqui (ex.: 403 de chave de outro ambiente) sobe com a mensagem da Spedy, em vez de virar "informe o ID"
+    const r: any = await chamar(cfg, 'GET', '/companies?page=1&pageSize=5');
     const lista: any[] = Array.isArray(r) ? r : r?.items ?? r?.data ?? [];
     if (lista.length === 1) empresaId = String(lista[0].id);
+    else if (lista.length > 1) throw new SpedyErro(`A conta da Spedy tem ${lista.length} empresas: informe SPEDY_EMPRESA_ID com a da J R P BEZERRA`, 412);
+    else throw new SpedyErro('A chave não enxerga nenhuma empresa nesta conta da Spedy. Confira se é a chave do mesmo ambiente (produção = app.spedy.com.br; teste = stage-app)', 412);
   }
   // Sem saber a empresa não dá para conferir o ambiente da NFS-e: não emite (vale também em produção)
   if (!empresaId) throw new SpedyErro('Informe SPEDY_EMPRESA_ID para o CRM conferir o ambiente da NFS-e antes de emitir', 412);
@@ -324,7 +327,8 @@ export async function situacaoSpedy(env: Record<string, string | undefined> = pr
   if (!cfg.configurada) return { ...base, conectada: false, ambienteNfse: null, webhook: null, falha: null };
   try {
     const amb = await conferirAmbienteDaEmpresa(cfg).catch((e: any) => ({ empresaId: cfg.empresaId, ambienteNfse: null, falha: e?.message as string }));
-    const ws: any = await chamar(cfg, 'GET', '/webhooks?page=1&pageSize=50').catch(() => null);
+    // Só diz "conectada" se a Spedy aceitou a chave: a lista de webhooks é a prova (403 = chave de outro ambiente)
+    const ws: any = await chamar(cfg, 'GET', '/webhooks?page=1&pageSize=50');
     const lista: any[] = Array.isArray(ws) ? ws : ws?.items ?? ws?.data ?? [];
     const meu = lista.find(w => w?.url === urlWebhook()) ?? null;
     return { ...base, conectada: true, empresaId: amb.empresaId, ambienteNfse: amb.ambienteNfse, webhook: meu ? { event: meu.event, enabled: meu.enabled !== false } : null, falha: (amb as any).falha ?? null };

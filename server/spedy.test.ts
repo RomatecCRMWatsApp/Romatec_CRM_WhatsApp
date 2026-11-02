@@ -189,3 +189,14 @@ describe('link público da nota', async () => {
     expect(linkPublicoSpedy(null)).toBeNull();
   });
 });
+
+describe('situação da Spedy', () => {
+  it('chave de outro ambiente (403) não aparece como "conectada"', async () => {
+    const original = Sp.http.fetch;
+    Sp.http.fetch = async () => new Response('{"message":"Forbidden"}', { status: 403, headers: { 'Content-Type': 'application/json' } });
+    const s = await Sp.situacaoSpedy({ ...ENV, SPEDY_AMBIENTE: 'producao', SPEDY_EMPRESA_ID: '' });
+    Sp.http.fetch = original;
+    expect(s).toMatchObject({ configurada: true, conectada: false });
+    expect(s.falha).toMatch(/403/);
+  });
+});
