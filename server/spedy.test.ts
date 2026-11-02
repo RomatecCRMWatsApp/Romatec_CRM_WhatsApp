@@ -134,3 +134,20 @@ describe('Spedy — emissão', () => {
     expect(JSON.stringify(s)).not.toContain('chave-falsa');
   });
 });
+
+describe('separarNumero (endereço do tomador)', async () => {
+  const { separarNumero } = await import('./saas/spedy');
+  it('tira o número repetido do fim da rua', () => {
+    expect(separarNumero('Rua São Paulo, 161', '161')).toEqual({ rua: 'Rua São Paulo', numero: '161' });
+    expect(separarNumero('Rua São Paulo nº 161', '161')).toEqual({ rua: 'Rua São Paulo', numero: '161' });
+  });
+  it('usa o número da rua quando o campo está vazio', () => {
+    expect(separarNumero('Av. Brasil, 1200', '')).toEqual({ rua: 'Av. Brasil', numero: '1200' });
+    expect(separarNumero('Rua Sete, s/n', null)).toEqual({ rua: 'Rua Sete', numero: 'S/N' });
+  });
+  it('não mexe quando os números são diferentes ou a rua é um número', () => {
+    expect(separarNumero('Rua 7, 10', '25')).toEqual({ rua: 'Rua 7, 10', numero: '25' });
+    expect(separarNumero('Rua 15', '15')).toEqual({ rua: 'Rua 15', numero: '15' });
+    expect(separarNumero('Rua Manoel Elzebrio da Costa', '13')).toEqual({ rua: 'Rua Manoel Elzebrio da Costa', numero: '13' });
+  });
+});

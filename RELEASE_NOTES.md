@@ -3,6 +3,14 @@
 Cada versão nova vai no TOPO. Depois rode `npm run release` (valida e atualiza o package.json);
 ao subir, o servidor grava a versão no banco e todos recebem o aviso "Novidades da versão".
 
+## 1.94.1 — 2026-11-02
+tipo: patch
+obrigatoria: nao
+titulo: Endereço do tomador na NFS-e sem número repetido
+
+### Correções
+- NFS-e pela Spedy: quando o número da casa foi digitado junto com a rua ("Rua São Paulo, 161"), a nota saía como "Rua São Paulo, 161, N° 161"; agora vai "Rua São Paulo, N° 161"
+
 ## 1.94.0 — 2026-11-02
 tipo: minor
 obrigatoria: nao

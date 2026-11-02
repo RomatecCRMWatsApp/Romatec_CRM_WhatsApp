@@ -86,12 +86,30 @@ export const integrationIdDe = (nfseId: number, reenvio?: number) => `romatec-nf
 /** id da nota da fila a partir do integrationId (com ou sem o sufixo do reenvio) */
 export const nfseIdDoIntegration = (v: string) => { const m = /^romatec-nfse-(\d+)(?:-r[0-9a-z]+)?$/.exec(v); return m ? Number(m[1]) : null; };
 
+/**
+ * Logradouro digitado com o número junto ("Rua São Paulo, 161") + campo número "161" saía na nota como
+ * "Rua São Paulo, 161, N° 161". Tira o número repetido do fim da rua; sem campo número, aproveita o da rua.
+ */
+export function separarNumero(logradouro: unknown, numero: unknown): { rua: string; numero: string } {
+  const rua = String(logradouro ?? '').trim().replace(/\s+/g, ' ');
+  const num = String(numero ?? '').trim();
+  // Só com vírgula ou "nº" antes do número: "Rua 15" é nome de rua, não número
+  const m = /^(.*?)(?:\s*,\s*(?:n[º°o.]*\s*)?|\s+n[º°o.]+\s*)(\d+[A-Za-z]?|s\/?n)$/i.exec(rua);
+  if (m && m[1].trim().length >= 3) {
+    const doFim = m[2];
+    if (!num) return { rua: m[1].trim().replace(/[,\s]+$/, ''), numero: doFim.toUpperCase().replace('SN', 'S/N') };
+    if (doFim.toLowerCase() === num.toLowerCase()) return { rua: m[1].trim().replace(/[,\s]+$/, ''), numero: num };
+  }
+  return { rua, numero: num || 'S/N' };
+}
+
 /** Corpo do POST /v1/service-invoices a partir da nota da fila + cadastro atual do tomador (endereço estruturado) */
 export function montarNota(n: any, u: any | null, cfg: Pick<ConfigSpedy, 'issAliquota'>, agora = Date.now()) {
   const doc = soDig(n.tomadorDoc) || soDig(u?.cpf);
+  const rua = separarNumero(u?.enderecoLogradouro, u?.enderecoNumero);
   const endereco = u && (u.enderecoLogradouro || u.enderecoCep) ? {
-    street: String(u.enderecoLogradouro ?? '').slice(0, 100) || undefined,
-    number: String(u.enderecoNumero ?? 'S/N').slice(0, 10),
+    street: rua.rua.slice(0, 100) || undefined,
+    number: rua.numero.slice(0, 10),
     additionalInformation: u.enderecoComplemento ? String(u.enderecoComplemento).slice(0, 150) : undefined,
     district: String(u.enderecoBairro ?? '').slice(0, 100) || undefined,
     postalCode: soDig(u.enderecoCep) || undefined,
