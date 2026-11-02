@@ -19,7 +19,7 @@ centro, com entrada de R$ 10 mil e parcela fixa, que não sobe.**
 | Preço do m² | ≈ R$ 450 a 500 | **≈ R$ 53** (quase 9 vezes mais barato) |
 | Distância | dentro da cidade | **17 km do centro, menos de 28 min** de carro |
 | Entrada | conforme a loteadora | **a partir de R$ 10 mil** |
-| Parcela | normalmente reajustada por índice | **120× fixas de R$ 1.234,51**, sem reajuste |
+| Parcela | normalmente reajustada por índice | **parcelas fixas**, sem reajuste (3 planos com entrada de R$ 10 mil — ver abaixo) |
 
 - **Loteamentos usados na comparação:** Park Jardins, Colina Park e Vale do Açaí. São loteamentos urbanos de Açailândia, e os perímetros vieram de levantamento da Romatec. A faixa de preço é a média de mercado informada pelo corretor, que deve **confirmar os valores antes de publicar**.
 - **Reajuste nas outras loteadoras:** muitas corrigem a parcela por IPCA, IGP-M, INCC ou pelo salário mínimo.
@@ -27,6 +27,16 @@ centro, com entrada de R$ 10 mil e parcela fixa, que não sobe.**
   - Em 10 anos, a soma das parcelas reajustadas daria cerca de **R$ 38 mil a mais**.
   - Narre sempre como "por exemplo" e não cite o índice de nenhuma empresa específica.
 - **Bom Jardims:** financiamento direto com a empreendedora, sem banco. Juros de 6% a.a. efetivos (Tabela Price), parcelas fixas sem correção monetária. O total da condição com entrada de 30% é R$ 196.141,20 (chácara de R$ 160 mil). Gestão de vendas: Romatec.
+
+## ⚠️ Entrada de R$ 10 mil: nunca junte com "120× de R$ 1.234,51" sozinho
+
+Com entrada de R$ 10 mil, a parcela de R$ 1.234,51 só existe **com** o complemento do plano. Não anuncie "R$ 10 mil + 120× de R$ 1.234,51" como uma oferta única. Os três planos (chácara de R$ 160 mil) são:
+
+- **Plano A (13º):** R$ 10 mil + 120× de R$ 1.234,51 **+ 10 reforços anuais de R$ 5.162,97**.
+- **Plano B (prazo longo):** R$ 10 mil + **180× de R$ 1.252,94**, sem reforço.
+- **Plano C (entrada parcelada):** R$ 10 mil + 120× de R$ 1.234,51 **+ 36× de R$ 1.055,56** (resto da entrada, sem juros).
+
+Na narração, prefira "entrada a partir de R$ 10 mil e parcelas fixas". Os números vão para a simulação no link.
 
 ## Roteiro com tempos (narração sugerida)
 
@@ -41,7 +51,7 @@ centro, com entrada de R$ 10 mil e parcela fixa, que não sobe.**
 | 20,6–24,6 s | A câmera abre; a rota dourada sai do Centro; contador de km. Texto: "Agora olhe para cá… A 17 km do centro, menos de 28 min" | "Agora olha pra cá: a 17 quilômetros do centro, menos de meia hora de carro…" |
 | 24,6–32,6 s | O **Bom Jardims** acende em dourado, com as chácaras desenhadas e o nome flutuante. Texto: "Açailândia ganhou um condomínio de chácaras com preço extraordinário". Cartão: "Chácaras de 3.025 m² · a partir de R$ 160 mil" | "…Açailândia ganhou o Condomínio de Chácaras Bom Jardims: chácaras de 3.025 metros quadrados a partir de 160 mil reais. Um preço extraordinário." |
 | 32,6–41 s | Painel "Mesmo dinheiro, 10× mais terreno": comparativo lado a lado, quadrado pequeno × quadrado grande, "O m² sai quase 9× mais barato" | "É praticamente o mesmo dinheiro, com dez vezes mais terreno. O metro quadrado sai quase nove vezes mais barato." |
-| 41–50 s | Painel "Entrada de R$ 10 mil e parcela que não sobe": 120× de R$ 1.234,51. Gráfico de barras fixa × reajustada; IPCA, IGP-M, INCC e salário mínimo riscados | "E você entra com apenas 10 mil reais e paga em até 120 parcelas fixas de R$ 1.234. Enquanto muita parcela por aí sobe todo ano com IPCA, IGP-M ou salário mínimo, aqui a parcela não muda até o fim." |
+| 41–50 s | Painel "Entrada de R$ 10 mil e parcela que não sobe". Gráfico de barras fixa × reajustada; IPCA, IGP-M, INCC e salário mínimo riscados | "E você entra com apenas 10 mil reais, com parcelas fixas, direto com a empreendedora. Enquanto muita parcela por aí sobe todo ano com IPCA, IGP-M ou salário mínimo, aqui a parcela não muda até o fim." |
 | 50–57 s | Painel "Condomínio fechado": portaria e controle de acesso, segurança, água encanada, energia, sinal 5G em todo o condomínio, córrego, mata e área de lazer | "Condomínio fechado, com portaria, segurança, água encanada, energia e sinal 5G em todo o condomínio, no meio da natureza." |
 | 57–64 s | Final: logo, "Lançamento oficial · 14 de novembro", QR do WhatsApp, (99) 9 9181-1246, José Romário · CRECI/MA 4.705 | "Lançamento no dia 14 de novembro. Chama no WhatsApp e garanta a sua chácara antes que acabe." |
 
