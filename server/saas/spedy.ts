@@ -154,10 +154,8 @@ export async function conferirAmbienteDaEmpresa(cfg: ConfigSpedy): Promise<{ emp
     const lista: any[] = Array.isArray(r) ? r : r?.items ?? r?.data ?? [];
     if (lista.length === 1) empresaId = String(lista[0].id);
   }
-  if (!empresaId) {
-    if (cfg.ambiente === 'sandbox') throw new SpedyErro('Informe SPEDY_EMPRESA_ID para o CRM conferir o ambiente da NFS-e antes de emitir', 412);
-    return { empresaId: null, ambienteNfse: null };
-  }
+  // Sem saber a empresa não dá para conferir o ambiente da NFS-e: não emite (vale também em produção)
+  if (!empresaId) throw new SpedyErro('Informe SPEDY_EMPRESA_ID para o CRM conferir o ambiente da NFS-e antes de emitir', 412);
   const s: any = await chamar(cfg, 'GET', `/companies/${encodeURIComponent(empresaId)}/settings`);
   const ambienteNfse = s?.serviceInvoice?.environmentType ?? null;
   if (cfg.ambiente === 'sandbox' && ambienteNfse === 'production') {

@@ -3,6 +3,14 @@
 Cada versão nova vai no TOPO. Depois rode `npm run release` (valida e atualiza o package.json);
 ao subir, o servidor grava a versão no banco e todos recebem o aviso "Novidades da versão".
 
+## 1.94.3 — 2026-11-02
+tipo: patch
+obrigatoria: nao
+titulo: NFS-e só sai com a empresa da Spedy identificada
+
+### Correções
+- Em produção, se o CRM não conseguir identificar a empresa na Spedy (SPEDY_EMPRESA_ID ou conta com uma só empresa), a emissão é recusada em vez de seguir sem conferir o ambiente da NFS-e
+
 ## 1.94.2 — 2026-11-02
 tipo: patch
 obrigatoria: nao
