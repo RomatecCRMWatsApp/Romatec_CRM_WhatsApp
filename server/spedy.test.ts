@@ -95,7 +95,7 @@ describe('Spedy — emissão', () => {
     const r = await Sp.receberWebhook(corpo, assinar(corpo), Date.now(), ENV);
     expect(r).toMatchObject({ ok: true, motivo: 'aplicado', resultado: 'EMITIDA' });
     expect(nota(1)).toMatchObject({ status: 'EMITIDA', numero: '123', codigoVerificacao: 'ABC123', mensagem: 'NFS-e autorizada pelo município.',
-      pdfUrl: 'https://sandbox-api.spedy.com.br/v1/service-invoices/inv-1/pdf', xmlUrl: 'https://sandbox-api.spedy.com.br/v1/service-invoices/inv-1/xml' });
+      pdfUrl: 'https://stage-app.spedy.com.br/public/service-invoices/inv-1/pdf', xmlUrl: 'https://stage-app.spedy.com.br/public/service-invoices/inv-1/xml' });
     expect((await Sp.receberWebhook(corpo, assinar(corpo), Date.now(), ENV)).motivo).toBe('duplicado');
     // Evento atrasado de "enqueued" não faz a nota voltar
     const velho = JSON.stringify({ id: 'evt-0', event: 'invoice.status_changed', data: { id: 'inv-1', integrationId: 'romatec-nfse-1', status: 'enqueued' } });
@@ -176,5 +176,16 @@ describe('virada para produção', () => {
     // Já real: não emite de novo
     await expect(Sp.emitirPelaSpedy(1, 1, Date.now(), PROD)).rejects.toThrow(/já foi enviada/);
     ambienteNfse = 'simulation';
+  });
+});
+
+describe('link público da nota', async () => {
+  const { linkPublicoSpedy } = await import('./saas/nfse');
+  it('troca o link da API pelo público do painel (sandbox e produção); nota antiga também', () => {
+    expect(linkPublicoSpedy('https://sandbox-api.spedy.com.br/v1/service-invoices/23968ab3-593c-4982-b21e-92eeca78bb3e/pdf'))
+      .toBe('https://stage-app.spedy.com.br/public/service-invoices/23968ab3-593c-4982-b21e-92eeca78bb3e/pdf');
+    expect(linkPublicoSpedy('https://api.spedy.com.br/v1/service-invoices/abc-1/xml')).toBe('https://app.spedy.com.br/public/service-invoices/abc-1/xml');
+    expect(linkPublicoSpedy('https://prefeitura.exemplo/nota.pdf')).toBe('https://prefeitura.exemplo/nota.pdf');
+    expect(linkPublicoSpedy(null)).toBeNull();
   });
 });

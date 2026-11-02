@@ -16,7 +16,7 @@ import { createHmac, timingSafeEqual } from 'crypto';
 import { eq } from 'drizzle-orm';
 import { getDb } from '../db';
 import { saasEventosPagamento, saasFaturas, saasNfse, users } from '../../drizzle/schema';
-import { NfseErro } from './nfse';
+import { NfseErro, linkPublicoSpedy } from './nfse';
 
 const SANDBOX = 'https://sandbox-api.spedy.com.br/v1';
 const PRODUCAO = 'https://api.spedy.com.br/v1';
@@ -167,7 +167,7 @@ export async function conferirAmbienteDaEmpresa(cfg: ConfigSpedy): Promise<{ emp
   return { empresaId, ambienteNfse };
 }
 
-const urls = (cfg: ConfigSpedy, id: string) => ({ pdfUrl: `${cfg.baseUrl}/service-invoices/${id}/pdf`, xmlUrl: `${cfg.baseUrl}/service-invoices/${id}/xml` });
+const urls = (cfg: ConfigSpedy, id: string) => ({ pdfUrl: linkPublicoSpedy(`${cfg.baseUrl}/service-invoices/${id}/pdf`), xmlUrl: linkPublicoSpedy(`${cfg.baseUrl}/service-invoices/${id}/xml`) });
 
 /** Grava na fila o que a Spedy devolveu (POST, GET ou webhook). Não regride: EMITIDA/CANCELADA não voltam a ENVIADA. */
 export async function aplicarRetorno(nfseId: number, inv: any, cfg: ConfigSpedy, agora = Date.now()) {

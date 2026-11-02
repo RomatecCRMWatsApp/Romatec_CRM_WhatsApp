@@ -3,6 +3,14 @@
 Cada versão nova vai no TOPO. Depois rode `npm run release` (valida e atualiza o package.json);
 ao subir, o servidor grava a versão no banco e todos recebem o aviso "Novidades da versão".
 
+## 1.94.4 — 2026-11-02
+tipo: patch
+obrigatoria: nao
+titulo: PDF e XML da NFS-e abrem direto
+
+### Correções
+- Os botões PDF e XML das notas emitidas pela Spedy agora usam o link público do painel (abre no celular e pode ser enviado ao cliente); antes apontavam para a API, que pedia a chave e não abria. Vale também para as notas já emitidas
+
 ## 1.94.3 — 2026-11-02
 tipo: patch
 obrigatoria: nao

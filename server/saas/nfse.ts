@@ -96,6 +96,18 @@ export async function sincronizarFilaNfse(agora = Date.now()): Promise<{ criadas
 
 export type StatusNfse = 'PENDENTE' | 'ENVIADA' | 'EMITIDA' | 'REJEITADA' | 'CANCELADA';
 
+const APP_PUBLICO: Record<string, string> = { 'api.spedy.com.br': 'app.spedy.com.br', 'sandbox-api.spedy.com.br': 'stage-app.spedy.com.br', 'stage-api.spedy.com.br': 'stage-app.spedy.com.br' };
+/**
+ * Link da API da Spedy (/v1/service-invoices/<id>/pdf exige a chave no cabeçalho, não abre no navegador)
+ * → link público do painel (/public/service-invoices/<id>/pdf), que abre para nós e para o cliente. Outros links passam iguais.
+ */
+export function linkPublicoSpedy(url: string | null | undefined): string | null {
+  if (!url) return null;
+  const m = /^https:\/\/([a-z-]+\.spedy\.com\.br)\/v1\/service-invoices\/([A-Za-z0-9-]+)\/(pdf|xml)$/.exec(url);
+  const host = m && APP_PUBLICO[m[1]];
+  return host ? `https://${host}/public/service-invoices/${m![2]}/${m![3]}` : url;
+}
+
 export async function listarNfse(status?: StatusNfse) {
   const d = await banco();
   const q = d.select().from(saasNfse);
@@ -104,7 +116,7 @@ export async function listarNfse(status?: StatusNfse) {
   const F = new Map(fs.map(f => [f.id, f]));
   return linhas.map(n => ({
     ...n, valor: Number(n.valor), metodo: F.get(n.faturaId)?.metodo ?? null, pagoEm: F.get(n.faturaId)?.pagoEm ?? null, modo: F.get(n.faturaId)?.modo ?? null,
-    faltaCadastro: !n.tomadorDoc || !n.tomadorEndereco,
+    faltaCadastro: !n.tomadorDoc || !n.tomadorEndereco, pdfUrl: linkPublicoSpedy(n.pdfUrl), xmlUrl: linkPublicoSpedy(n.xmlUrl),
   }));
 }
 
