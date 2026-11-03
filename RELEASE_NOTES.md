@@ -3,6 +3,15 @@
 Cada versão nova vai no TOPO. Depois rode `npm run release` (valida e atualiza o package.json);
 ao subir, o servidor grava a versão no banco e todos recebem o aviso "Novidades da versão".
 
+## 1.96.1 — 2026-11-03
+tipo: patch
+obrigatoria: nao
+titulo: Vídeos de divulgação do Bom Jardims nos Materiais
+
+### Melhorias
+- Materiais › Bom Jardims: os 13 vídeos de divulgação (Reels do lançamento, comparativo, rota, deck, obras e versões para WhatsApp) e as 3 vinhetas da logo já entram prontos para baixar e enviar
+- As vinhetas ficam marcadas como "não divulgar" (são para edição); os Reels com preço não aparecem na galeria da página pública
+
 ## 1.96.0 — 2026-11-03
 tipo: minor
 obrigatoria: nao

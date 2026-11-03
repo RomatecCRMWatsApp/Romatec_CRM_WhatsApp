@@ -1370,6 +1370,8 @@ async function startServer() {
     await addSaas();
     const { addAutoResposta } = await import('./migrations/addAutoResposta');
     await addAutoResposta();
+    const { addMateriaisDivulgacaoBJ } = await import('./migrations/addMateriaisDivulgacaoBJ');
+    await addMateriaisDivulgacaoBJ().catch((e: any) => console.warn('[Migration] addMateriaisDivulgacaoBJ:', e?.message));
     const { addDespesas } = await import('./migrations/addDespesas');
     await addDespesas();
     const { reajustePrecos20261027 } = await import('./migrations/reajustePrecos20261027');

@@ -33,6 +33,8 @@ export function videosDaGaleria(materiais: { titulo: string; tipo?: string | nul
   const vistos = new Set<string>([REELS_MAPA3D.url]);
   const out: VideoGaleria[] = [REELS_MAPA3D];
   for (const m of materiais) {
+    // Reels de divulgação e vinhetas (bom-jardims/ig e /vinhetas) ficam só nos Materiais da equipe: alguns mostram preço, que a página pública não mostra
+    if (/\/bom-jardims\/(ig|vinhetas)\//.test(m.url)) continue;
     if (m.liberado === false || m.liberado === 0 || !ehVideo(m) || !/^https:\/\//.test(m.url) || vistos.has(m.url)) continue;
     vistos.add(m.url);
     out.push({ titulo: m.titulo, url: m.url, poster: posterCloudinary(m.url) });
