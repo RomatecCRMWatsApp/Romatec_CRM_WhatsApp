@@ -3,6 +3,14 @@
 Cada versão nova vai no TOPO. Depois rode `npm run release` (valida e atualiza o package.json);
 ao subir, o servidor grava a versão no banco e todos recebem o aviso "Novidades da versão".
 
+## 1.96.2 — 2026-11-03
+tipo: patch
+obrigatoria: nao
+titulo: Texto pronto para pedir os documentos do contrato
+
+### Novo
+- Contratos › Pedir documentos: texto pronto para o cliente com os documentos e dados do contrato (RG/CNH, CPF, comprovante de residência, certidão, estado civil e regime de bens, dados do cônjuge, forma de pagamento, dia do vencimento e dependentes para as carteirinhas). Preencha o nome e a chácara, copie ou abra direto no WhatsApp do cliente
+
 ## 1.96.1 — 2026-11-03
 tipo: patch
 obrigatoria: nao
