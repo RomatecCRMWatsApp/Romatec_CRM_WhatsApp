@@ -3,6 +3,15 @@
 Cada versão nova vai no TOPO. Depois rode `npm run release` (valida e atualiza o package.json);
 ao subir, o servidor grava a versão no banco e todos recebem o aviso "Novidades da versão".
 
+## 1.96.3 — 2026-11-03
+tipo: patch
+obrigatoria: nao
+titulo: Novos vídeos da obra nos Materiais
+
+### Melhorias
+- Materiais › Bom Jardims: Reels com imagens reais da obra de 03/11 (deck saindo do papel e ruas abertas) e a nova versão do vídeo do córrego, deck e areia
+- O vídeo antigo que falava em "chácaras vendidas" passa a "não divulgar"
+
 ## 1.96.2 — 2026-11-03
 tipo: patch
 obrigatoria: nao

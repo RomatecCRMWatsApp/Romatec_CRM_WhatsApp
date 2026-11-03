@@ -25,7 +25,7 @@ describe('vídeos de divulgação em Materiais do Bom Jardims', () => {
     const rows: any[] = await db.select().from(S.materiais);
     expect(rows).toHaveLength(VIDEOS_DIVULGACAO_BJ.length);
     expect(rows.every(r => r.empreendimentoSlug === 'bom-jardims' && r.tipo === 'video' && r.url.startsWith('https://romateccrm.com/bom-jardims/'))).toBe(true);
-    expect(rows.filter(r => !r.liberado).map(r => r.titulo).every((t: string) => t.startsWith('Vinheta'))).toBe(true);
+    expect(rows.filter(r => !r.liberado).map(r => r.titulo).every((t: string) => t.startsWith('Vinheta') || /vendas/.test(t))).toBe(true);
   });
   it('não aparecem na galeria da página pública (que não mostra preço)', () => {
     const g = videosDaGaleria(VIDEOS_DIVULGACAO_BJ.map(v => ({ titulo: v.titulo, tipo: 'video', mime: 'video/mp4', url: `https://romateccrm.com${v.caminho}`, liberado: true })));

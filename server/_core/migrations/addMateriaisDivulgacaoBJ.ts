@@ -1,4 +1,5 @@
 import { getDb } from '../../db';
+import { and, eq } from 'drizzle-orm';
 import { materiais } from '../../../drizzle/schema';
 
 /**
@@ -20,8 +21,11 @@ export const VIDEOS_DIVULGACAO_BJ: { titulo: string; caminho: string; bytes: num
   { titulo: 'Reel · Do centro à chácara em 24 minutos (rota)', caminho: '/bom-jardims/ig/reel-rota-24min.mp4', bytes: 16244257, liberado: true, observacao: '17 km do centro', ordem: 18 },
   { titulo: 'Vídeo · Banho de córrego e deck', caminho: '/bom-jardims/ig/reel-deck-corrego.mp4', bytes: 21926023, liberado: true, observacao: 'Córrego real · deck em simulação ilustrativa', ordem: 19 },
   { titulo: 'Vídeo · Deck para compartilhar (simulação)', caminho: '/bom-jardims/ig/video-deck-compartilhar.mp4', bytes: 5185906, liberado: true, observacao: 'Imagem ilustrativa do deck', ordem: 20 },
-  { titulo: 'Reel · Areia, deck e vendas (lançamento 14/11)', caminho: '/bom-jardims/ig/reel-areia-vendas-14nov.mp4', bytes: 12895640, liberado: true, observacao: 'Confirme o registro do loteamento antes de falar em vendas', ordem: 21 },
+  { titulo: 'Reel · Areia, deck e vendas (lançamento 14/11)', caminho: '/bom-jardims/ig/reel-areia-vendas-14nov.mp4', bytes: 12895640, liberado: false, observacao: 'Versão antiga: fala em chácaras vendidas · use a versão nova', ordem: 21 },
   { titulo: 'Vídeo · Rota narrada até o condomínio', caminho: '/bom-jardims/rota-video-narrado-v2.mp4', bytes: 16027414, liberado: true, observacao: 'Como chegar', ordem: 22 },
+  { titulo: 'Reel · Deck parte 3 · o deck saiu do papel', caminho: '/bom-jardims/ig/reel-deck-parte3.mp4', bytes: 11807175, liberado: true, observacao: 'Imagens reais da obra · 03/11/2026', ordem: 23 },
+  { titulo: 'Reel · Obras parte 3 · as ruas já estão abertas', caminho: '/bom-jardims/ig/reel-obras-parte3.mp4', bytes: 14669601, liberado: true, observacao: 'Imagens reais da obra · 03/11/2026', ordem: 24 },
+  { titulo: 'Reel · Córrego, deck e areia (lançamento 14/11)', caminho: '/bom-jardims/ig/reel-areia-14nov-v2.mp4', bytes: 20335381, liberado: true, observacao: 'Versão sem "chácaras vendidas"', ordem: 25 },
   { titulo: 'Vinheta · Abertura (logo animada)', caminho: '/bom-jardims/vinhetas/abertura-9x16.mp4', bytes: 3043313, liberado: false, observacao: 'Para edição: início dos vídeos', ordem: 30 },
   { titulo: 'Vinheta · Fechamento (logo animada)', caminho: '/bom-jardims/vinhetas/fechamento-9x16.mp4', bytes: 2939021, liberado: false, observacao: 'Para edição: final dos vídeos', ordem: 31 },
   { titulo: 'Vinheta · Explosão (só promoção ou lançamento)', caminho: '/bom-jardims/vinhetas/promocao-explosao-9x16.mp4', bytes: 5637373, liberado: false, observacao: 'Nunca em vídeo sobre a mata ou o córrego', ordem: 32 },
@@ -41,6 +45,9 @@ export async function addMateriaisDivulgacaoBJ(): Promise<number> {
     } as any);
     n++;
   }
+  // O Reel antigo da areia fala em "chácaras vendidas": se entrou como liberado na 1.96.1, passa a "não divulgar"
+  await db.update(materiais).set({ liberado: false, observacao: 'Versão antiga: fala em chácaras vendidas · use a versão nova' } as any)
+    .where(and(eq(materiais.url, `${base()}/bom-jardims/ig/reel-areia-vendas-14nov.mp4`), eq(materiais.liberado, true)));
   if (n) console.log(`[Migration] ✅ addMateriaisDivulgacaoBJ: ${n} vídeo(s) em Materiais do Bom Jardims`);
   return n;
 }
