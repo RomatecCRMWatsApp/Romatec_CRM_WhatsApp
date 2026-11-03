@@ -16,6 +16,7 @@ export default function ExtratoCompradores() {
   const [, navigate] = useLocation();
   const { data, isLoading, error } = trpc.financeiro.extrato.useQuery();
   const [filtro, setFiltro] = useState("");
+  const [anoDimob, setAnoDimob] = useState(new Date().getFullYear() - 1);
   const [busca, setBusca] = useState("");
   const linhas = useMemo(() => (data?.linhas ?? []).filter(l => (!filtro || l.situacao === filtro)
     && (!busca.trim() || [l.contratoNumero, l.comprador, l.loteCodigo].some(v => v.toLowerCase().includes(busca.trim().toLowerCase())))), [data, filtro, busca]);
@@ -40,6 +41,13 @@ export default function ExtratoCompradores() {
           <option value="">Todas as situações</option>{Object.entries(SITUACAO).map(([k, [r]]) => <option key={k} value={k}>{r}</option>)}
         </select>
         <Button variant="outline" onClick={() => window.open("/api/financeiro/extrato.xlsx", "_blank")}><FileSpreadsheet className="mr-1 h-4 w-4" /> Planilha (Excel)</Button>
+        <span className="inline-flex items-center gap-1">
+          <select value={anoDimob} onChange={e => setAnoDimob(Number(e.target.value))} aria-label="Ano para o contador" className="h-9 rounded-lg border border-border bg-background px-2 text-sm">
+            {Array.from({ length: 4 }, (_, i) => new Date().getFullYear() - i).map(a => <option key={a} value={a}>{a}</option>)}
+          </select>
+          <Button variant="outline" title="Contratos, CPF/CNPJ, valor da operação e valores pagos no ano: base da DIMOB para o contador"
+            onClick={() => window.open(`/api/financeiro/dimob.xlsx?ano=${anoDimob}`, "_blank")}><FileSpreadsheet className="mr-1 h-4 w-4" /> Contador / DIMOB</Button>
+        </span>
       </div>
       {t && <p className="text-xs text-muted-foreground">{t.contratos} contrato(s) · {t.emAtraso} em atraso · {t.quitados} quitado(s)</p>}
       {linhas.length > 0 && (

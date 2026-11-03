@@ -84,6 +84,47 @@ export async function extratoXlsx(hoje = hojeBrasil()): Promise<Buffer> {
 }
 
 /**
+ * Planilha anual para o contador (base da DIMOB, Declaração sobre Atividades Imobiliárias da Receita Federal): um contrato
+ * por linha, com o comprador e CPF/CNPJ, o valor da operação, o que foi pago no ano e o acumulado até 31/12.
+ * Entra o contrato com pagamento no ano ou feito no ano. É base de conferência: o contador valida antes de transmitir.
+ */
+export async function linhasDimob(ano: number) {
+  if (!Number.isInteger(ano) || ano < 2000 || ano > 2100) throw new FinanceiroErro('ANO', 'Ano inválido', 400);
+  const { cs, cobs } = await base();
+  const { valorDoPlano } = await import('../../shared/roiCampanhas');
+  const anoDe = (v: unknown) => Number(String(v ?? '').slice(0, 4));
+  const linhas = [];
+  for (const c of cs) {
+    const pagas = cobs.filter(x => x.contratoId === c.id && x.status === 'paga' && x.pagoEm);
+    const noAno = pagas.filter(x => anoDe(x.pagoEm) === ano);
+    const ce = c.criadoEm;
+    const dt = ce instanceof Date ? ce : typeof ce === 'number' ? new Date(ce < 1e12 ? ce * 1000 : ce) : new Date(String(ce ?? ''));
+    const dataContrato = Number.isNaN(dt.getTime()) ? '' : dt.toISOString().slice(0, 10);
+    if (!noAno.length && anoDe(dataContrato) !== ano) continue;
+    const { comprador } = await pessoasDoContrato(c.id);
+    const plano = typeof c.simulacaoJson === 'string' ? (() => { try { return JSON.parse(c.simulacaoJson); } catch { return null; } })() : c.simulacaoJson;
+    linhas.push({
+      contratoNumero: String(c.numero), dataContrato, loteCodigo: String(c.loteCodigo ?? ''), comprador: comprador?.nome ?? '—', cpfCnpj: comprador?.cpfCnpj ?? '',
+      valorOperacao: centavos(valorDoPlano(plano).vgv), pagoNoAno: centavos(noAno.reduce((t, x) => t + Number(x.valorPago ?? x.valor), 0)),
+      acumulado: centavos(pagas.filter(x => anoDe(x.pagoEm) <= ano).reduce((t, x) => t + Number(x.valorPago ?? x.valor), 0)),
+    });
+  }
+  return linhas.sort((a, b) => a.contratoNumero.localeCompare(b.contratoNumero));
+}
+
+export async function dimobXlsx(ano: number): Promise<Buffer> {
+  const { gerarXlsx } = await import('./planilha');
+  const ls = await linhasDimob(ano);
+  const soma = (k: 'valorOperacao' | 'pagoNoAno' | 'acumulado') => centavos(ls.reduce((t, l) => t + l[k], 0));
+  return gerarXlsx(`Contador ${ano}`, [
+    ['Contrato', 'Data do contrato', 'Chácara', 'Comprador', 'CPF/CNPJ', 'Valor da operação (R$)', `Pago em ${ano} (R$)`, `Pago até 31/12/${ano} (R$)`],
+    ...ls.map(l => [l.contratoNumero, br(l.dataContrato), l.loteCodigo, l.comprador, l.cpfCnpj, l.valorOperacao, l.pagoNoAno, l.acumulado]),
+    ['TOTAL', '', '', `${ls.length} contrato(s)`, '', soma('valorOperacao'), soma('pagoNoAno'), soma('acumulado')],
+    ['Base para a DIMOB e a contabilidade. Data do contrato = cadastro no sistema; confira com o contrato assinado antes de transmitir.', '', '', '', '', '', '', ''],
+  ] as any, [14, 14, 9, 32, 18, 18, 16, 18]);
+}
+
+/**
  * Fluxo de caixa: entradas (parcelas recebidas) e saídas (despesas pagas) no período, por dia/mês, com o saldo
  * acumulado; entradas por forma, saídas por categoria; previsão por mês (a receber × a pagar). `empreendimentoId`:
  * só aquele empreendimento (0 = só as despesas do escritório, sem entradas); sem ele, tudo.

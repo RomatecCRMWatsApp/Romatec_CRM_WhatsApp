@@ -121,6 +121,25 @@ export function registrarRotasFinanceiro(app: Express) {
     } catch (e) { erro(res, e); }
   });
 
+  // Planilha anual para o contador / DIMOB (administrador e secretária)
+  app.get(`${base}/dimob.xlsx`, async (req, res) => {
+    try {
+      const { sdk } = await import('../_core/sdk');
+      const user: any = await sdk.authenticateRequest(req).catch(() => null);
+      const { perfilDe } = await import('../../shared/equipe');
+      const { podeOperarCobranca } = await import('../../shared/contratos');
+      if (!user || !podeOperarCobranca(perfilDe(user))) return res.status(404).json({ erro: 'Não encontrado' });
+      const ano = Number(req.query.ano) || new Date().getFullYear() - 1;
+      const { dimobXlsx } = await import('./relatorios');
+      const buf = await dimobXlsx(ano);
+      await auditar('dimob_xlsx', { usuarioId: user.id, origem: 'admin', ip: req.ip, detalhe: { ano } }).catch(() => {});
+      res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+      res.setHeader('Content-Disposition', `attachment; filename="Contador-DIMOB-${ano}.xlsx"`);
+      res.setHeader('Cache-Control', 'private, no-store');
+      res.send(buf);
+    } catch (e) { erro(res, e); }
+  });
+
   // Despesas filtradas em planilha (administrador e secretária)
   app.get(`${base}/despesas.xlsx`, async (req, res) => {
     try {

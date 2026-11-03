@@ -132,3 +132,17 @@ describe('cobrança por WhatsApp', () => {
     expect(db.all(sql`SELECT COUNT(*) AS n FROM financeiroAuditoria WHERE acao = 'cobranca_whatsapp'`)[0].n).toBe(1);
   });
 });
+
+describe('planilha do contador (DIMOB)', () => {
+  it('contrato com pagamento no ano: comprador, CPF, pago no ano e acumulado; cancelado fica de fora', async () => {
+    const ls = await R.linhasDimob(2026);
+    const c1 = ls.find(l => l.contratoNumero === 'BJ-2026-0001');
+    const c2 = ls.find(l => l.contratoNumero === 'BJ-2026-0002');
+    expect(c1).toMatchObject({ comprador: 'Fulano de Tal', cpfCnpj: '52998224725', pagoNoAno: 8000, acumulado: 8000, loteCodigo: 'A01' });
+    expect(c2).toMatchObject({ comprador: 'Ciclana Souza', pagoNoAno: 150000, acumulado: 150000 });
+    expect(ls.some(l => l.contratoNumero === 'BJ-2026-0004')).toBe(false);
+    expect((await R.linhasDimob(2030)).some(l => l.pagoNoAno > 0)).toBe(false);
+    await expect(R.linhasDimob(1)).rejects.toMatchObject({ codigo: 'ANO' });
+    expect((await R.dimobXlsx(2026)).subarray(0, 2).toString()).toBe('PK');
+  });
+});

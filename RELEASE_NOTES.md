@@ -3,6 +3,16 @@
 Cada versão nova vai no TOPO. Depois rode `npm run release` (valida e atualiza o package.json);
 ao subir, o servidor grava a versão no banco e todos recebem o aviso "Novidades da versão".
 
+## 1.95.0 — 2026-11-03
+tipo: minor
+obrigatoria: nao
+titulo: Portal do comprador com Imposto de Renda e planilha do contador
+
+### Novo
+- Portal do comprador (carnê digital): aba "Imposto de Renda" com o demonstrativo anual dos valores pagos (pagos no ano, total até 31/12 do ano anterior e do ano), pronto para imprimir ou salvar em PDF, com a orientação para a ficha Bens e Direitos
+- Portal do comprador: barra da situação das parcelas (pagas, em atraso e a vencer) com o percentual pago
+- Financeiro › Extrato: planilha anual "Contador / DIMOB" com contrato, comprador, CPF/CNPJ, valor da operação, pago no ano e acumulado até 31/12
+
 ## 1.94.7 — 2026-11-02
 tipo: patch
 obrigatoria: nao
