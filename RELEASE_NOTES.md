@@ -3,6 +3,16 @@
 Cada versão nova vai no TOPO. Depois rode `npm run release` (valida e atualiza o package.json);
 ao subir, o servidor grava a versão no banco e todos recebem o aviso "Novidades da versão".
 
+## 1.96.0 — 2026-11-03
+tipo: minor
+obrigatoria: nao
+titulo: Base de conhecimento da equipe
+
+### Novo
+- Menu › Base de conhecimento: artigos para consultar e treinar a equipe, com busca (sem acento) e filtro por categoria
+- Já vem com 8 artigos: ficha do Bom Jardims, formas de pagamento e planos, regras de anúncio, do lead ao contrato, portal do comprador, cobrança e inadimplência, divulgação no Instagram e prospecção B2B
+- O administrador cria e edita os artigos em Markdown com pré-visualização, define se é para toda a equipe ou só para o escritório e pode deixar como rascunho
+
 ## 1.95.0 — 2026-11-03
 tipo: minor
 obrigatoria: nao

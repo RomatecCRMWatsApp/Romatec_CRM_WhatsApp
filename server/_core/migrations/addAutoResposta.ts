@@ -117,6 +117,11 @@ const TABELAS: [string, string][] = [
     ultimaResposta TEXT NULL, enriquecidoEm TIMESTAMP NULL, aprovadoPor INT NULL, enviadoEm TIMESTAMP NULL, respondeuEm TIMESTAMP NULL, observacoes TEXT NULL,
     criadoPor INT NULL, criadoEm TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP, UNIQUE KEY ux_prospecto_fonte (fonte, fonteId),
     KEY ix_prospecto_telefone (telefone), KEY ix_prospecto_status (status))`],
+  // Base de conhecimento (server/baseConhecimento.ts)
+  ['artigosConhecimento', `CREATE TABLE IF NOT EXISTS artigosConhecimento (
+    id INT AUTO_INCREMENT PRIMARY KEY, slug VARCHAR(80) NOT NULL, titulo VARCHAR(160) NOT NULL, categoria VARCHAR(20) NOT NULL DEFAULT 'sistema',
+    publico VARCHAR(12) NOT NULL DEFAULT 'todos', conteudo TEXT NOT NULL, ordem INT NOT NULL DEFAULT 0, ativo BOOLEAN NOT NULL DEFAULT TRUE,
+    atualizadoPor INT NULL, atualizadoEm TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP, UNIQUE KEY ux_artigo_slug (slug))`],
 ];
 
 export async function addAutoResposta(): Promise<void> {

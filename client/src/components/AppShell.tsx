@@ -10,7 +10,7 @@ import {
   BarChart3, Building2, Flame, Images, KanbanSquare, LayoutDashboard, LineChart, LogOut, Megaphone, Menu, Send,
   Settings, UserCog, Users, X, Eye, ClipboardList, CalendarDays, Map as MapIcon, Smartphone, Wallet, IdCard, FolderOpen, Bell, FileSignature, Mic, CalendarCheck, UserPlus, BookCopy, BadgeDollarSign, Hourglass, Bot, Trophy, Link2, Zap, MessagesSquare, ListOrdered, Plug, Inbox, Building, Rotate3d,
   ChevronRight, ChevronsLeft, ChevronsRight,
-  Radar,
+  Radar, BookOpen,
 } from "lucide-react";
 import { abrirNovidades, SinoNovidades, useNovidadesNaoLidas } from "./sistema/Novidades";
 import { useNotificacoes } from "./sistema/Notificacoes";
@@ -33,6 +33,7 @@ const MENU: Grupo[] = [
       { rotulo: "Área do corretor", rota: "/corretor", icone: Smartphone },
       { rotulo: "Meu cadastro", rota: "/meu-cadastro", icone: IdCard },
       { rotulo: "Notificações", rota: "#novidades", icone: Bell },
+      { rotulo: "Base de conhecimento", rota: "/ajuda", icone: BookOpen },
       // Administrador e secretária (shared/equipe.ts → podeAbrir)
       { rotulo: "Recrutamento", rota: "/recrutamento", icone: UserPlus },
     ],

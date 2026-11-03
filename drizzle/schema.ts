@@ -2192,3 +2192,21 @@ export const prospectos = mysqlTable("prospectos", {
   ixTelefone: index("ix_prospecto_telefone").on(t.telefone),
   ixStatus: index("ix_prospecto_status").on(t.status),
 }));
+
+/** Base de conhecimento (server/baseConhecimento.ts): artigos em Markdown para a equipe; o administrador edita */
+export const artigosConhecimento = mysqlTable("artigosConhecimento", {
+  id: int("id").autoincrement().primaryKey(),
+  slug: varchar("slug", { length: 80 }).notNull(),
+  titulo: varchar("titulo", { length: 160 }).notNull(),
+  /** empreendimento | vendas | financeiro | divulgacao | sistema (shared/baseConhecimento.ts) */
+  categoria: varchar("categoria", { length: 20 }).default("sistema").notNull(),
+  /** todos | escritorio */
+  publico: varchar("publico", { length: 12 }).default("todos").notNull(),
+  conteudo: text("conteudo").notNull(),
+  ordem: int("ordem").default(0).notNull(),
+  ativo: boolean("ativo").default(true).notNull(),
+  atualizadoPor: int("atualizadoPor"),
+  atualizadoEm: timestamp("atualizadoEm").defaultNow().notNull(),
+}, (t) => ({
+  uxSlug: uniqueIndex("ux_artigo_slug").on(t.slug),
+}));
