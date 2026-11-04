@@ -3,6 +3,15 @@
 Cada versão nova vai no TOPO. Depois rode `npm run release` (valida e atualiza o package.json);
 ao subir, o servidor grava a versão no banco e todos recebem o aviso "Novidades da versão".
 
+## 1.99.1 — 2026-11-04
+tipo: patch
+obrigatoria: nao
+titulo: Texto das mídias com o seu carimbo
+
+### Melhorias
+- Materiais: o texto que vai junto com a mídia (Enviar e Copiar texto) também sai com os dados do Meu carimbo: nome, CRECI, WhatsApp, Instagram e e-mail
+- Instagram e e-mail só aparecem no texto se estiverem preenchidos no carimbo
+
 ## 1.99.0 — 2026-11-04
 tipo: minor
 obrigatoria: nao

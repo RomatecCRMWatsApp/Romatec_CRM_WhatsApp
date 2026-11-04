@@ -3,7 +3,7 @@ import { beforeAll, describe, expect, it } from 'vitest';
 process.env.DATABASE_DRIVER = 'sqlite';
 process.env.SQLITE_PATH = ':memory:';
 
-const { normalizarCarimbo, aplicarCarimbo, linhasCarimbo, carimboDoCadastro } = await import('../shared/carimbo');
+const { normalizarCarimbo, aplicarCarimbo, linhasCarimbo, carimboDoCadastro, assinaturaDoCarimbo } = await import('../shared/carimbo');
 const S = await import('./carimbo');
 const { faixaCorretor, textosCorretor } = await import('./materialFormatado');
 const { getDb } = await import('./db');
@@ -34,6 +34,13 @@ describe('Meu carimbo', () => {
     // Sem Instagram no carimbo, não aparece o institucional
     expect(linhasCarimbo(aplicarCarimbo(cartao, null, { nome: 'Ana', telefone: null, instagram: null, email: null })).detalhe).toBe('');
     expect(carimboDoCadastro(cartao, 'ana.cad')).toEqual({ nome: 'Ana Silva', telefone: '(99) 9 8888-7777', instagram: 'ana.cad', email: 'ana@cad.com' });
+  });
+
+  it('a legenda (texto do WhatsApp) sai com o carimbo; sem Instagram/e-mail no carimbo, não aparecem', () => {
+    const a = aplicarCarimbo(cartao, null, { nome: 'Ana C.', telefone: '(99) 9 1111-2222', instagram: 'ana.imoveis', email: 'ana@mail.com' });
+    expect(assinaturaDoCarimbo(a)).toBe('—\n👤 *Ana C.* · Corretor(a)\n🪪 CRECI/MA 9.999\n📲 WhatsApp: (99) 9 1111-2222\n📸 @ana.imoveis\n✉️ ana@mail.com');
+    const b = aplicarCarimbo(cartao, null, { nome: 'Ana C.', telefone: null, instagram: null, email: null });
+    expect(assinaturaDoCarimbo(b)).toBe('—\n👤 *Ana C.* · Corretor(a)\n🪪 CRECI/MA 9.999');
   });
 
   it('salva uma vez e devolve o salvo; a faixa das mídias sai com ele', async () => {

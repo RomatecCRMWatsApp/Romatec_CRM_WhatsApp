@@ -16,7 +16,7 @@ import { enviarParaCloudinary, mimeDoArquivo } from "@/lib/uploadCloudinary";
 import LinkAgendamento from "@/components/LinkAgendamento";
 import LinkInstagram from "@/components/LinkInstagram";
 import CarimboPainel from "@/components/CarimboPainel";
-import { aplicarCarimbo, linhasCarimbo } from "@shared/carimbo";
+import { aplicarCarimbo, assinaturaDoCarimbo, linhasCarimbo } from "@shared/carimbo";
 
 type Destino = { propertyId?: number | null; empreendimentoSlug?: string | null };
 
@@ -79,7 +79,7 @@ async function arquivoDoCorretor(m: any, c: Cartao, link: string, formato: Forma
   }
 }
 
-function CardMaterial({ m, onMudou, grupo, cartao, escritorio, linhasPdf }: { m: any; onMudou: () => void; grupo: Grupo; cartao: Cartao; escritorio: boolean; linhasPdf?: { nome: string; detalhe: string } }) {
+function CardMaterial({ m, onMudou, grupo, cartao, escritorio, linhasPdf, assinatura }: { m: any; onMudou: () => void; grupo: Grupo; cartao: Cartao; escritorio: boolean; linhasPdf?: { nome: string; detalhe: string }; assinatura?: string }) {
   const atualizar = trpc.materiais.update.useMutation({ onSuccess: onMudou, onError: e => toast.error(e.message) });
   const excluir = trpc.materiais.delete.useMutation({ onSuccess: () => { toast.success("Material removido do CRM"); onMudou(); }, onError: e => toast.error(e.message) });
   const [ocupado, setOcupado] = useState<string | null>(null);
@@ -94,7 +94,7 @@ function CardMaterial({ m, onMudou, grupo, cartao, escritorio, linhasPdf }: { m:
     try { await navigator.share({ files: [pronto], text: legenda, title: m.titulo }); setPronto(null); } catch (e: any) { if (e?.name !== "AbortError") toast.error("Não foi possível compartilhar"); }
   };
   const link = linkDoMaterial(grupo, cartao.ref);
-  const legenda = legendaDoMaterial(m.titulo, link, cartao);
+  const legenda = legendaDoMaterial(m.titulo, link, cartao, assinatura);
 
   const preparar = async () => {
     setOcupado("Colocando os seus dados no material…");
@@ -251,11 +251,14 @@ export default function MateriaisPainel({ propertyId, empreendimentoSlug }: Dest
   const cartao = useCartaoVendas();
   // PDF é carimbado no navegador: usa o carimbo salvo (imagem e vídeo o servidor já carimba com ele)
   const carimbo = trpc.materiais.meuCarimbo.useQuery().data;
+  // O carimbo salvo vale também para o PDF e para o texto que acompanha a mídia (legenda copiada/enviada)
+  const comCarimbo = carimbo?.salvo ? aplicarCarimbo(cartao, cartao.instagramProprio, carimbo.carimbo) : null;
   const linhasPdf = (() => {
-    if (!carimbo?.salvo) return undefined;
-    const l = linhasCarimbo(aplicarCarimbo(cartao, cartao.instagramProprio, carimbo.carimbo));
+    if (!comCarimbo) return undefined;
+    const l = linhasCarimbo(comCarimbo);
     return { nome: l.nome, detalhe: [l.detalhe, l.email].filter(Boolean).join("  ·  ") };
   })();
+  const assinatura = comCarimbo ? assinaturaDoCarimbo(comCarimbo) : undefined;
   const { user } = useAuth();
   const escritorio = ["admin", "secretario"].includes(perfilDe(user as any) ?? "");
   const input = useRef<HTMLInputElement>(null);
@@ -358,7 +361,7 @@ export default function MateriaisPainel({ propertyId, empreendimentoSlug }: Dest
         <section key={g.chave} className="space-y-2">
           {!fixo && <h2 className="text-base font-semibold text-foreground">{g.nome} <span className="text-xs text-muted-foreground font-normal">· {g.itens.length}</span></h2>}
           <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3">
-            {g.itens.map((m: any) => <CardMaterial key={m.id} m={m} onMudou={recarregar} grupo={g} cartao={cartao} escritorio={escritorio} linhasPdf={linhasPdf} />)}
+            {g.itens.map((m: any) => <CardMaterial key={m.id} m={m} onMudou={recarregar} grupo={g} cartao={cartao} escritorio={escritorio} linhasPdf={linhasPdf} assinatura={assinatura} />)}
           </div>
         </section>
       ))}

@@ -24,8 +24,8 @@ export function linkDoMaterial(grupo: { empreendimentoSlug?: string | null; prop
 }
 
 /** Legenda do envio: título, link do corretor e assinatura */
-export function legendaDoMaterial(titulo: string, link: string, c: CartaoVendas): string {
-  return `${titulo}\n\n👉 Saiba mais: ${link}\n\n${assinaturaWhatsApp(c)}`;
+export function legendaDoMaterial(titulo: string, link: string, c: CartaoVendas, assinatura?: string): string {
+  return `${titulo}\n\n👉 Saiba mais: ${link}\n\n${assinatura ?? assinaturaWhatsApp(c)}`;
 }
 
 async function blobDe(url: string): Promise<Blob> {

@@ -45,6 +45,19 @@ export function aplicarCarimbo(cartao: CartaoVendas, instagramProprio: string | 
   };
 }
 
+/** Assinatura do texto que acompanha a mídia (WhatsApp), com os dados do carimbo — Instagram e e-mail só se preenchidos */
+export function assinaturaDoCarimbo(a: CarimboAplicado): string {
+  const c = a.cartao;
+  return [
+    '—',
+    `👤 *${c.nome}* · ${c.papel}`,
+    c.creci ? `🪪 ${c.creci}` : null,
+    c.telefones[0] ? `📲 WhatsApp: ${c.telefones[0]}` : null,
+    a.instagram ? `📸 @${a.instagram}` : null,
+    a.email ? `✉️ ${a.email}` : null,
+  ].filter(Boolean).join('\n');
+}
+
 /** Linhas da faixa: "Nome · CRECI" e "WhatsApp … · @insta"; o e-mail vai numa linha própria */
 export function linhasCarimbo(a: CarimboAplicado): { nome: string; detalhe: string; email: string | null } {
   const nome = `${a.cartao.nome}${a.cartao.creci ? ` · ${a.cartao.creci}` : ''}`;
