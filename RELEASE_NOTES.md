@@ -3,6 +3,19 @@
 Cada versão nova vai no TOPO. Depois rode `npm run release` (valida e atualiza o package.json);
 ao subir, o servidor grava a versão no banco e todos recebem o aviso "Novidades da versão".
 
+## 1.99.0 — 2026-11-04
+tipo: minor
+obrigatoria: nao
+titulo: Meu carimbo: os dados que saem nas suas mídias
+
+### Novo
+- Materiais › Meu carimbo: cada usuário (corretor, secretária, empreendedor e administrador) define uma vez o nome, o WhatsApp, o Instagram e o e-mail que saem na faixa das imagens, vídeos e PDFs, e clica em Salvar carimbo
+- Tudo o que você baixar ou enviar a partir daí sai com esses dados, sem precisar digitar de novo; o que ficar em branco não aparece
+
+### Avisos
+- O CRECI entra automático, pelo seu cadastro
+- Sem carimbo salvo, as mídias continuam saindo com os dados do seu cadastro
+
 ## 1.98.0 — 2026-11-04
 tipo: minor
 obrigatoria: nao

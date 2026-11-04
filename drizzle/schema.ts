@@ -2198,6 +2198,16 @@ export const prospectos = mysqlTable("prospectos", {
 }));
 
 /** Base de conhecimento (server/baseConhecimento.ts): artigos em Markdown para a equipe; o administrador edita */
+/** Carimbo das mídias do usuário (Materiais › Meu carimbo): o que sai na faixa das imagens, vídeos e PDFs */
+export const carimbosUsuario = mysqlTable("carimbosUsuario", {
+  usuarioId: int("usuarioId").primaryKey(),
+  nome: varchar("nome", { length: 80 }).notNull(),
+  telefone: varchar("telefone", { length: 20 }),
+  instagram: varchar("instagram", { length: 40 }),
+  email: varchar("email", { length: 120 }),
+  atualizadoEm: timestamp("atualizadoEm").defaultNow().notNull(),
+});
+
 export const artigosConhecimento = mysqlTable("artigosConhecimento", {
   id: int("id").autoincrement().primaryKey(),
   slug: varchar("slug", { length: 80 }).notNull(),

@@ -25,7 +25,7 @@ const MAX_BYTES = 150 * 1024 * 1024;
 const FIM_MS = 3000; // cartão final do corretor no vídeo
 
 export interface MaterialFonte { id: number; titulo: string; url: string; mime?: string | null; tipo?: string | null; recorteRodapePct?: number | null; corteFinalMs?: number | null }
-export interface DadosCorretor { cartao: CartaoVendas; instagram: string | null; link: string; empreendimento: string | null }
+export interface DadosCorretor { cartao: CartaoVendas; instagram: string | null; email?: string | null; link: string; empreendimento: string | null }
 
 export const ehVideoMaterial = (m: { mime?: string | null; url: string }) => (m.mime || '').startsWith('video/') || /\.(mp4|mov|webm|m4v)(\?|$)/i.test(m.url);
 export const ehPdfMaterial = (m: { mime?: string | null; url: string }) => m.mime === 'application/pdf' || /\.pdf(\?|$)/i.test(m.url);
@@ -73,7 +73,7 @@ export function textosCorretor(d: DadosCorretor) {
   const { nome } = linhasRodape(d.cartao);
   const zap = d.cartao.telefones[0] ? `WhatsApp ${d.cartao.telefones[0]}` : null;
   const detalhe = [zap, d.instagram ? `@${d.instagram}` : null].filter(Boolean).join('  ·  ');
-  return { nome, detalhe };
+  return { nome, detalhe, email: d.email ?? null };
 }
 
 async function qr(link: string, lado: number): Promise<Buffer> {
@@ -86,22 +86,27 @@ export async function faixaCorretor(w: number, h: number, d: DadosCorretor): Pro
   const pad = Math.round(h * 0.12);
   const qrLado = h - pad * 2;
   const larg = w - pad * 3 - qrLado;
-  const { nome, detalhe } = textosCorretor(d);
+  const { nome, detalhe, email } = textosCorretor(d);
   const t1 = 'FALE COM O SEU CORRETOR';
-  const f1 = caber(t1, Math.round(h * 0.13), larg, 0.62), f2 = caber(nome, Math.round(h * 0.22), larg, 0.58), f3 = caber(detalhe, Math.round(h * 0.16), larg, 0.52);
+  // Com e-mail a faixa ganha uma 4ª linha: as outras sobem um pouco e diminuem
+  const k = email ? 0.86 : 1;
+  const f1 = caber(t1, Math.round(h * 0.13 * k), larg, 0.62), f2 = caber(nome, Math.round(h * 0.22 * k), larg, 0.58), f3 = caber(detalhe, Math.round(h * 0.16 * k), larg, 0.52);
+  const f4 = email ? caber(email, Math.round(h * 0.13), larg, 0.52) : 0;
+  const yy = email ? [0.13, 0.36, 0.54, 0.7] : [0.17, 0.45, 0.68, 0];
   const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="${w}" height="${h}">
     <rect width="${w}" height="${h}" fill="${VERDE}"/><rect width="${w}" height="${Math.max(3, Math.round(h * 0.03))}" fill="${DOURADO}"/>
     <rect x="${w - pad - qrLado - 4}" y="${pad - 4}" width="${qrLado + 8}" height="${qrLado + 8}" fill="#fff"/>
-    <text x="${pad}" y="${Math.round(pad + h * 0.17)}" font-family="${FONTE}" font-weight="700" font-size="${f1}" fill="${DOURADO}" letter-spacing="1">${xml(t1)}</text>
-    <text x="${pad}" y="${Math.round(pad + h * 0.45)}" font-family="${FONTE}" font-weight="700" font-size="${f2}" fill="#fff">${xml(nome)}</text>
-    <text x="${pad}" y="${Math.round(pad + h * 0.68)}" font-family="${FONTE}" font-size="${f3}" fill="${CREME}">${xml(detalhe)}</text>
+    <text x="${pad}" y="${Math.round(pad + h * yy[0])}" font-family="${FONTE}" font-weight="700" font-size="${f1}" fill="${DOURADO}" letter-spacing="1">${xml(t1)}</text>
+    <text x="${pad}" y="${Math.round(pad + h * yy[1])}" font-family="${FONTE}" font-weight="700" font-size="${f2}" fill="#fff">${xml(nome)}</text>
+    <text x="${pad}" y="${Math.round(pad + h * yy[2])}" font-family="${FONTE}" font-size="${f3}" fill="${CREME}">${xml(detalhe)}</text>
+    ${email ? `<text x="${pad}" y="${Math.round(pad + h * yy[3])}" font-family="${FONTE}" font-size="${f4}" fill="${CREME}">${xml(email)}</text>` : ''}
   </svg>`;
   return sharp(Buffer.from(svg)).composite([{ input: await qr(d.link, qrLado), left: w - pad - qrLado, top: pad }]).png().toBuffer();
 }
 
 /** Cartão final do vídeo: no lugar do cartão do escritório, o do corretor com QR grande */
 export async function cartaoFinalCorretor(w: number, h: number, d: DadosCorretor): Promise<Buffer> {
-  const { nome, detalhe } = textosCorretor(d);
+  const { nome, detalhe, email } = textosCorretor(d);
   const m = Math.round(w * 0.08), larg = w - m * 2;
   const qrLado = Math.round(Math.min(w * 0.42, h * 0.28));
   const titulo = d.empreendimento ?? 'Fale com o seu corretor';
@@ -115,10 +120,11 @@ export async function cartaoFinalCorretor(w: number, h: number, d: DadosCorretor
     ${linha('FALE COM O SEU CORRETOR', y(0.27), caber('FALE COM O SEU CORRETOR', Math.round(w * 0.045), larg, 0.62), CREME, 700)}
     ${linha(nome, y(0.34), caber(nome, Math.round(w * 0.07), larg, 0.58), '#fff', 700)}
     ${linha(detalhe, y(0.4), caber(detalhe, Math.round(w * 0.045), larg, 0.52), CREME)}
-    <rect x="${Math.round((w - qrLado) / 2) - 8}" y="${y(0.46) - 8}" width="${qrLado + 16}" height="${qrLado + 16}" fill="#fff"/>
-    ${linha('Aponte a câmera e fale comigo', y(0.46) + qrLado + Math.round(w * 0.07), Math.round(w * 0.04), CREME)}
+    ${email ? linha(email, y(0.435), caber(email, Math.round(w * 0.038), larg, 0.52), CREME) : ''}
+    <rect x="${Math.round((w - qrLado) / 2) - 8}" y="${y(0.47) - 8}" width="${qrLado + 16}" height="${qrLado + 16}" fill="#fff"/>
+    ${linha('Aponte a câmera e fale comigo', y(0.47) + qrLado + Math.round(w * 0.07), Math.round(w * 0.04), CREME)}
   </svg>`;
-  return sharp(Buffer.from(svg)).composite([{ input: await qr(d.link, qrLado), left: Math.round((w - qrLado) / 2), top: y(0.46) }]).png().toBuffer();
+  return sharp(Buffer.from(svg)).composite([{ input: await qr(d.link, qrLado), left: Math.round((w - qrLado) / 2), top: y(0.47) }]).png().toBuffer();
 }
 
 // ─── Imagem ─────────────────────────────────────────────────────────────────────────────────────────────────
@@ -209,8 +215,8 @@ const jobs = new Map<string, { promessa: Promise<void>; erro?: string; inicio: n
 let fila: Promise<unknown> = Promise.resolve();
 
 export function chaveCache(m: MaterialFonte, formato: FormatoDownload, d: DadosCorretor): string {
-  const { nome, detalhe } = textosCorretor(d);
-  return createHash('sha1').update(JSON.stringify([m.id, m.url, recorteRodapeEfetivo(m), m.corteFinalMs ?? 0, formato, nome, detalhe, d.link, d.empreendimento, 3])).digest('hex').slice(0, 24);
+  const { nome, detalhe, email } = textosCorretor(d);
+  return createHash('sha1').update(JSON.stringify([m.id, m.url, recorteRodapeEfetivo(m), m.corteFinalMs ?? 0, formato, nome, detalhe, email, d.link, d.empreendimento, 3])).digest('hex').slice(0, 24);
 }
 
 async function limparCache(manter = 40) {

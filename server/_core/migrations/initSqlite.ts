@@ -643,6 +643,8 @@ export function initSqliteTables(sqlite: any): void {
     email TEXT, site TEXT, instagram TEXT, sobre TEXT, fato TEXT, fonte TEXT NOT NULL DEFAULT 'manual', fonteId TEXT, status TEXT NOT NULL DEFAULT 'novo',
     mensagem TEXT, ultimaResposta TEXT, enriquecidoEm INTEGER, aprovadoPor INTEGER, enviadoEm INTEGER, respondeuEm INTEGER, observacoes TEXT, criadoPor INTEGER,
     criadoEm ${agoraS}, UNIQUE (fonte, fonteId))`);
+  run(`CREATE TABLE IF NOT EXISTS carimbosUsuario (
+    usuarioId INTEGER PRIMARY KEY, nome TEXT NOT NULL, telefone TEXT, instagram TEXT, email TEXT, atualizadoEm ${agoraS})`);
   run(`CREATE TABLE IF NOT EXISTS artigosConhecimento (
     id INTEGER PRIMARY KEY AUTOINCREMENT, slug TEXT NOT NULL UNIQUE, titulo TEXT NOT NULL, categoria TEXT NOT NULL DEFAULT 'sistema',
     publico TEXT NOT NULL DEFAULT 'todos', conteudo TEXT NOT NULL, ordem INTEGER NOT NULL DEFAULT 0, ativo INTEGER NOT NULL DEFAULT 1,

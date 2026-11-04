@@ -8,7 +8,7 @@ import { empreendimentos, materiais, properties } from '../drizzle/schema';
 import { carregarPermissoes } from './permissoes';
 import { temAcesso } from '../shared/permissoes';
 import { FORMATOS_DOWNLOAD, type FormatoDownload } from '../shared/materiais';
-import { cartaoDoUsuario } from './cartaoVendas';
+import { dadosDoCarimbo } from './carimbo';
 import { FormatoErro, ehPdfMaterial, ehVideoMaterial, imagemDoMaterial, nomeDownload, pedirVideo, type DadosCorretor, type MaterialFonte } from './materialFormatado';
 
 const base = () => (process.env.APP_PUBLIC_URL || 'https://romateccrm.com').replace(/\/+$/, '');
@@ -48,8 +48,9 @@ export async function arquivoFormatado(user: { id: number; role?: string | null;
     codigoImovel = i?.codigo ?? null;
   }
   if (ehPdfMaterial(m)) throw new FormatoErro('PDF sai pelo botão Baixar (rodapé com os seus dados)', 415);
-  const c = await cartaoDoUsuario(user.id);
-  const dados: DadosCorretor = { cartao: c, instagram: c.instagramProprio, link: linkPublico({ empreendimentoSlug: m.empreendimentoSlug, codigoImovel }, c.ref), empreendimento };
+  // Faixa com o carimbo salvo pelo usuário em Materiais › Meu carimbo (sem ele, o cadastro)
+  const c = await dadosDoCarimbo(user.id);
+  const dados: DadosCorretor = { cartao: c.cartao, instagram: c.instagram, email: c.email, link: linkPublico({ empreendimentoSlug: m.empreendimentoSlug, codigoImovel }, c.ref), empreendimento };
   const fonte: MaterialFonte = { id: Number(m.id), titulo: String(m.titulo), url: String(m.url), mime: m.mime, tipo: m.tipo, recorteRodapePct: m.recorteRodapePct ?? null, corteFinalMs: m.corteFinalMs ?? null };
   if (ehVideoMaterial(fonte)) {
     const r = pedirVideo(fonte, formato, dados);

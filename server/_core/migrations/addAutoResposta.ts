@@ -122,6 +122,10 @@ const TABELAS: [string, string][] = [
     id INT AUTO_INCREMENT PRIMARY KEY, slug VARCHAR(80) NOT NULL, titulo VARCHAR(160) NOT NULL, categoria VARCHAR(20) NOT NULL DEFAULT 'sistema',
     publico VARCHAR(12) NOT NULL DEFAULT 'todos', conteudo TEXT NOT NULL, ordem INT NOT NULL DEFAULT 0, ativo BOOLEAN NOT NULL DEFAULT TRUE,
     atualizadoPor INT NULL, atualizadoEm TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP, UNIQUE KEY ux_artigo_slug (slug))`],
+  // Carimbo das mídias de cada usuário (Materiais › Meu carimbo; shared/carimbo.ts)
+  ['carimbosUsuario', `CREATE TABLE IF NOT EXISTS carimbosUsuario (
+    usuarioId INT PRIMARY KEY, nome VARCHAR(80) NOT NULL, telefone VARCHAR(20) NULL, instagram VARCHAR(40) NULL, email VARCHAR(120) NULL,
+    atualizadoEm TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP)`],
 ];
 
 export async function addAutoResposta(): Promise<void> {

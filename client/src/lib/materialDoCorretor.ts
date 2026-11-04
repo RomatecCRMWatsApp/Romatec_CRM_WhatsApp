@@ -92,12 +92,12 @@ export async function bannerDoCorretor(url: string, c: CartaoVendas, link: strin
 }
 
 /** PDF (folder, apresentação) com rodapé do corretor em todas as páginas */
-export async function pdfDoCorretor(url: string, c: CartaoVendas, link: string): Promise<Blob> {
+export async function pdfDoCorretor(url: string, c: CartaoVendas, link: string, linhas?: { nome: string; detalhe: string }): Promise<Blob> {
   const { PDFDocument, StandardFonts, rgb } = await import("pdf-lib");
   const pdf = await PDFDocument.load(await (await blobDe(url)).arrayBuffer(), { ignoreEncryption: true });
   const negrito = await pdf.embedFont(StandardFonts.HelveticaBold);
   const normal = await pdf.embedFont(StandardFonts.Helvetica);
-  const { nome, detalhe } = linhasRodape(c);
+  const { nome, detalhe } = linhas ?? linhasRodape(c);
   // Fontes padrão do PDF (WinAnsi): troca o que não existe nelas
   const seguro = (t: string) => t.replace(/[^\x20-\x7E -ÿ]/g, "");
   for (const p of pdf.getPages()) {

@@ -43,7 +43,7 @@ describe('formatos de download', () => {
   });
 
   it('faixa usa o Instagram do próprio corretor (não o institucional)', () => {
-    expect(textosCorretor(dados)).toEqual({ nome: 'Ana Corretora · CRECI/MA 9.999', detalhe: 'WhatsApp (99) 9 8888-7777  ·  @ana.imoveis' });
+    expect(textosCorretor(dados)).toEqual({ nome: 'Ana Corretora · CRECI/MA 9.999', detalhe: 'WhatsApp (99) 9 8888-7777  ·  @ana.imoveis', email: null });
     expect(textosCorretor({ ...dados, instagram: null }).detalhe).toBe('WhatsApp (99) 9 8888-7777');
   });
 

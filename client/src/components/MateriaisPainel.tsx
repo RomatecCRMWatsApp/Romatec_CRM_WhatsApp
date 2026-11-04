@@ -15,6 +15,8 @@ import {
 import { enviarParaCloudinary, mimeDoArquivo } from "@/lib/uploadCloudinary";
 import LinkAgendamento from "@/components/LinkAgendamento";
 import LinkInstagram from "@/components/LinkInstagram";
+import CarimboPainel from "@/components/CarimboPainel";
+import { aplicarCarimbo, linhasCarimbo } from "@shared/carimbo";
 
 type Destino = { propertyId?: number | null; empreendimentoSlug?: string | null };
 
@@ -54,9 +56,9 @@ const nomeDoCabecalho = (r: Response, padrao: string) => {
  * (server/materialFormatado.ts; o vídeo leva alguns segundos e o navegador pergunta até ficar pronto).
  * PDF: rodapé do corretor em todas as páginas, no navegador. GIF segue o original.
  */
-async function arquivoDoCorretor(m: any, c: Cartao, link: string, formato: FormatoDownload, aviso: (t: string) => void): Promise<{ blob: Blob; nome: string; carimbado: boolean }> {
+async function arquivoDoCorretor(m: any, c: Cartao, link: string, formato: FormatoDownload, aviso: (t: string) => void, linhasPdf?: { nome: string; detalhe: string }): Promise<{ blob: Blob; nome: string; carimbado: boolean }> {
   const nome = nomeArquivo(m);
-  if (!ehImagem(m) && !ehVideo(m)) return { blob: await pdfDoCorretor(m.url, c, link), nome, carimbado: true };
+  if (!ehImagem(m) && !ehVideo(m)) return { blob: await pdfDoCorretor(m.url, c, link, linhasPdf), nome, carimbado: true };
   if (/\.gif$/i.test(m.url)) {
     const blob = await baixarBlob(m);
     if (!blob) throw new Error("Não foi possível baixar o arquivo");
@@ -77,7 +79,7 @@ async function arquivoDoCorretor(m: any, c: Cartao, link: string, formato: Forma
   }
 }
 
-function CardMaterial({ m, onMudou, grupo, cartao, escritorio }: { m: any; onMudou: () => void; grupo: Grupo; cartao: Cartao; escritorio: boolean }) {
+function CardMaterial({ m, onMudou, grupo, cartao, escritorio, linhasPdf }: { m: any; onMudou: () => void; grupo: Grupo; cartao: Cartao; escritorio: boolean; linhasPdf?: { nome: string; detalhe: string } }) {
   const atualizar = trpc.materiais.update.useMutation({ onSuccess: onMudou, onError: e => toast.error(e.message) });
   const excluir = trpc.materiais.delete.useMutation({ onSuccess: () => { toast.success("Material removido do CRM"); onMudou(); }, onError: e => toast.error(e.message) });
   const [ocupado, setOcupado] = useState<string | null>(null);
@@ -97,7 +99,7 @@ function CardMaterial({ m, onMudou, grupo, cartao, escritorio }: { m: any; onMud
   const preparar = async () => {
     setOcupado("Colocando os seus dados no material…");
     try {
-      const a = await arquivoDoCorretor(m, cartao, link, temFormato ? formato : "original", setOcupado);
+      const a = await arquivoDoCorretor(m, cartao, link, temFormato ? formato : "original", setOcupado, linhasPdf);
       if (!a.carimbado) toast.warning("GIF vai como está (sem a faixa); o texto leva os seus dados.");
       return a;
     } finally { setOcupado(null); }
@@ -247,6 +249,13 @@ export default function MateriaisPainel({ propertyId, empreendimentoSlug }: Dest
     fetch("/api/materiais/limites", { credentials: "include" }).then(r => (r.ok ? r.json() : null)).then(j => j?.success && setLimites(j)).catch(() => {});
   }, []);
   const cartao = useCartaoVendas();
+  // PDF é carimbado no navegador: usa o carimbo salvo (imagem e vídeo o servidor já carimba com ele)
+  const carimbo = trpc.materiais.meuCarimbo.useQuery().data;
+  const linhasPdf = (() => {
+    if (!carimbo?.salvo) return undefined;
+    const l = linhasCarimbo(aplicarCarimbo(cartao, cartao.instagramProprio, carimbo.carimbo));
+    return { nome: l.nome, detalhe: [l.detalhe, l.email].filter(Boolean).join("  ·  ") };
+  })();
   const { user } = useAuth();
   const escritorio = ["admin", "secretario"].includes(perfilDe(user as any) ?? "");
   const input = useRef<HTMLInputElement>(null);
@@ -297,6 +306,7 @@ export default function MateriaisPainel({ propertyId, empreendimentoSlug }: Dest
 
   return (
     <div className="space-y-4">
+      <CarimboPainel />
       <div className="flex flex-wrap items-end gap-2">
         {!fixo && (
           <label className="flex flex-col gap-1 text-xs text-muted-foreground">
@@ -335,7 +345,7 @@ export default function MateriaisPainel({ propertyId, empreendimentoSlug }: Dest
       <LinkInstagram />
       {enviando && <p className="text-xs text-emerald-300">{enviando}</p>}
       <p className="rounded-md border border-emerald-500/30 bg-emerald-500/5 px-3 py-2 text-xs text-emerald-200">
-        Tudo o que você baixa ou envia daqui sai <b>só com o seu contato</b>: o rodapé e o cartão final do escritório saem da peça e entram a sua faixa (nome, {cartao.creci ?? "CRECI"}, WhatsApp, Instagram e QR do seu link) e, no vídeo, o seu cartão final. Escolha o <b>formato</b> em cada peça: Feed 4:5, Stories/Reels 9:16, Quadrado 1:1, WhatsApp (leve) ou Original. Vídeo leva alguns segundos para montar.
+        Tudo o que você baixa ou envia daqui sai <b>só com o seu contato</b>: o rodapé e o cartão final do escritório saem da peça e entram a sua faixa com os dados do <b>Meu carimbo</b> (nome, {cartao.creci ?? "CRECI"}, WhatsApp, Instagram, e-mail e QR do seu link) e, no vídeo, o seu cartão final. Escolha o <b>formato</b> em cada peça: Feed 4:5, Stories/Reels 9:16, Quadrado 1:1, WhatsApp (leve) ou Original. Vídeo leva alguns segundos para montar.
         {!cartao.creci && " Cadastre o seu CRECI em Meu cadastro para ele aparecer."}
       </p>
       <p className="text-[11px] text-muted-foreground">
@@ -348,7 +358,7 @@ export default function MateriaisPainel({ propertyId, empreendimentoSlug }: Dest
         <section key={g.chave} className="space-y-2">
           {!fixo && <h2 className="text-base font-semibold text-foreground">{g.nome} <span className="text-xs text-muted-foreground font-normal">· {g.itens.length}</span></h2>}
           <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3">
-            {g.itens.map((m: any) => <CardMaterial key={m.id} m={m} onMudou={recarregar} grupo={g} cartao={cartao} escritorio={escritorio} />)}
+            {g.itens.map((m: any) => <CardMaterial key={m.id} m={m} onMudou={recarregar} grupo={g} cartao={cartao} escritorio={escritorio} linhasPdf={linhasPdf} />)}
           </div>
         </section>
       ))}

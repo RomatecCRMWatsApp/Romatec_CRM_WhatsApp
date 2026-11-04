@@ -3,6 +3,7 @@
  * (depois do upload em /api/materiais/upload), edição e exclusão.
  */
 import { z } from "zod";
+import { TRPCError } from "@trpc/server";
 import { desc, eq } from "drizzle-orm";
 import { protectedProcedure, router } from "../_core/trpc";
 import { getDb } from "../db";
@@ -42,6 +43,19 @@ async function materialAutorizado(db: any, p: PermissoesUsuario, id: number) {
 
 export const materiaisRouter = router({
   tipos: protectedProcedure.query(() => ({ TIPOS_MATERIAL, ROTULO_TIPO_MATERIAL })),
+
+  /** Meu carimbo: o que sai na faixa das mídias de quem está logado (shared/carimbo.ts) */
+  meuCarimbo: protectedProcedure.query(async ({ ctx }) => {
+    const { meuCarimbo } = await import("../carimbo");
+    return meuCarimbo(ctx.user.id);
+  }),
+  salvarCarimbo: protectedProcedure
+    .input(z.object({ nome: z.string().max(200), telefone: z.string().max(40).nullable().optional(), instagram: z.string().max(200).nullable().optional(), email: z.string().max(200).nullable().optional() }))
+    .mutation(async ({ input, ctx }) => {
+      const { salvarCarimbo } = await import("../carimbo");
+      try { return await salvarCarimbo(ctx.user.id, input); }
+      catch (e: any) { if (e?.name === "CarimboErro") throw new TRPCError({ code: "BAD_REQUEST", message: e.message }); throw e; }
+    }),
 
   list: protectedProcedure.input(destino.optional()).query(async ({ input, ctx }) => {
     const db = await dbOrThrow();
