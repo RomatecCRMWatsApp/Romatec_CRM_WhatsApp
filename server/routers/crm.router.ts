@@ -390,6 +390,10 @@ export const crmRouter = router({
       const lead = await leadOuErro(db, input.id, ctx);
       await db.update(leadQualifications).set({ responsavelId: input.responsavelId, updatedAt: new Date() } as any).where(eq(leadQualifications.id, input.id));
       const para = input.responsavelId;
+      if (para && para !== lead.responsavelId) {
+        const { registrarEncaminhamento } = await import("../leads/distribuicao");
+        await registrarEncaminhamento({ leadId: input.id, deId: lead.responsavelId ?? null, paraId: para, porId: ctx.user.id, origem: "manual" });
+      }
       if (para && para !== lead.responsavelId && para !== ctx.user.id) {
         const { registrarAtendimento } = await import("../leads/sla");
         await registrarAtendimento(input.id, { como: "encaminhado", usuarioId: ctx.user.id, paraId: para });

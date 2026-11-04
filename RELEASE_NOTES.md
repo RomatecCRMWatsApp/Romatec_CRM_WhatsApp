@@ -3,6 +3,20 @@
 Cada versão nova vai no TOPO. Depois rode `npm run release` (valida e atualiza o package.json);
 ao subir, o servidor grava a versão no banco e todos recebem o aviso "Novidades da versão".
 
+## 1.100.0 — 2026-11-04
+tipo: minor
+obrigatoria: nao
+titulo: Distribuição manual de leads com relatório
+
+### Novo
+- Leads › Distribuição de leads (administrador e secretária): escolha um ou vários leads (sem responsável, aguardando atendimento ou dos últimos 30 dias), o corretor e clique em Encaminhar; o corretor recebe o aviso no sistema e no WhatsApp
+- Observação opcional em cada encaminhamento (vai para o relatório)
+- Aba Relatório: quais leads foram encaminhados para quais corretores, por quem, quando, de quem saiu e se o lead continua com ele; filtro por período, corretor e tipo (manual ou automático), total por corretor e planilha CSV
+
+### Melhorias
+- A troca de responsável na tela do lead também entra no relatório como encaminhamento manual
+- A roleta automática continua ligada e passa a registrar no relatório (tipo Automático) cada lead que entrega ou repassa
+
 ## 1.99.2 — 2026-11-04
 tipo: patch
 obrigatoria: nao

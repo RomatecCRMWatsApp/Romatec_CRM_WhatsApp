@@ -95,6 +95,8 @@ export async function garantirResponsavel(leadId: number): Promise<{ id: number;
   if (!escolhido) return null;
   await db.update(leadQualifications).set({ responsavelId: escolhido.id } as any).where(eq(leadQualifications.id, leadId));
   await db.update(users).set({ ultimoLeadAt: new Date() } as any).where(eq(users.id, escolhido.id));
+  const { registrarEncaminhamento } = await import('./distribuicao');
+  await registrarEncaminhamento({ leadId, deId: null, paraId: escolhido.id, origem: 'automatico', observacao: 'Roleta: lead novo' });
   return escolhido;
 }
 
@@ -192,6 +194,10 @@ export async function processarSla(agora = Date.now()): Promise<number> {
         l.alertaSlaNivel == null ? isNull(leadQualifications.alertaSlaNivel) : eq(leadQualifications.alertaSlaNivel, nivel),
       ));
     if (linhasAfetadas(reserva) === 0) continue;
+    if (proximo) {
+      const { registrarEncaminhamento } = await import('./distribuicao');
+      await registrarEncaminhamento({ leadId: l.id, deId: l.responsavelId ?? null, paraId: proximo.id, origem: 'automatico', observacao: `Roleta: sem atendimento em ${minutos} min` });
+    }
     const nome = l.nome || 'Lead';
     // Atender pelo link do CRM: abrir a conversa já marca o lead como atendido
     const contato = `📱 +${String(l.phone).replace(/\D/g, '')}\n💬 Atender no WhatsApp (já conta como atendido): ${linkWhatsAppAtendido(l.id)}`;

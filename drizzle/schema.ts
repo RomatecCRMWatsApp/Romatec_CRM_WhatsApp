@@ -2198,6 +2198,25 @@ export const prospectos = mysqlTable("prospectos", {
 }));
 
 /** Base de conhecimento (server/baseConhecimento.ts): artigos em Markdown para a equipe; o administrador edita */
+/** Encaminhamentos de lead: manual (secretária/admin em Leads › Distribuição ou no lead) ou automático (roleta) */
+export const leadEncaminhamentos = mysqlTable("leadEncaminhamentos", {
+  id: int("id").autoincrement().primaryKey(),
+  leadId: int("leadId").notNull(),
+  /** Responsável antes (null = sem responsável) */
+  deId: int("deId"),
+  paraId: int("paraId").notNull(),
+  /** Quem encaminhou (null no automático) */
+  porId: int("porId"),
+  /** manual | automatico */
+  origem: varchar("origem", { length: 12 }).notNull().default("manual"),
+  observacao: varchar("observacao", { length: 300 }),
+  criadoEm: timestamp("criadoEm", { fsp: 3 }).defaultNow().notNull(),
+}, (t) => ({
+  ixCriado: index("ix_enc_criado").on(t.criadoEm),
+  ixPara: index("ix_enc_para").on(t.paraId, t.criadoEm),
+  ixLead: index("ix_enc_lead").on(t.leadId),
+}));
+
 /** Carimbo das mídias do usuário (Materiais › Meu carimbo): o que sai na faixa das imagens, vídeos e PDFs */
 export const carimbosUsuario = mysqlTable("carimbosUsuario", {
   usuarioId: int("usuarioId").primaryKey(),

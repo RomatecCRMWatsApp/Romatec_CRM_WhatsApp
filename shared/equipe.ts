@@ -87,6 +87,8 @@ export function podeAbrir(perfil: Perfil | null, caminho: string): boolean {
   if (perfil === 'empreendedor') return caminho === '/empreendedor' || caminho.startsWith('/empreendedor/') || caminho === '/convites' || caminho.startsWith('/convites/') || caminho === '/ranking';
   // Recrutamento e talonários: administrador e secretária; Admin › SaaS: só o administrador
   if (caminho === '/recrutamento' || caminho.startsWith('/recrutamento/') || caminho === '/talonarios') return perfil === 'secretario';
+  // Distribuição manual de leads e relatório dos encaminhamentos: administrador e secretária
+  if (caminho === '/leads/distribuicao') return perfil === 'secretario';
   if (caminho === '/saas' || caminho === '/integracoes') return false;
   // Fila de reservas do escritório: administrador e secretária
   if (caminho === '/reservas' || caminho === '/portal-comprador' || caminho === '/imobiliarias-parceiras' || caminho === '/prospeccao' || caminho === '/tour-360') return perfil === 'secretario';

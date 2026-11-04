@@ -85,6 +85,7 @@ const SequenciasFollowUp = lazy(() => import("./pages/SequenciasFollowUp"));
 const PortalComprador = lazy(() => import("./pages/PortalComprador"));
 const Integracoes = lazy(() => import("./pages/Integracoes"));
 const CaixaEntrada = lazy(() => import("./pages/CaixaEntrada"));
+const DistribuicaoLeads = lazy(() => import("./pages/DistribuicaoLeads"));
 const ImobiliariasParceiras = lazy(() => import("./pages/ImobiliariasParceiras"));
 const ProspeccaoB2B = lazy(() => import("./pages/ProspeccaoB2B"));
 const BaseConhecimento = lazy(() => import("./pages/BaseConhecimento"));
@@ -295,6 +296,9 @@ function Router() {
       </Route>
       <Route path={"/materiais"}>
         {() => <SetupGuard component={Materiais} />}
+      </Route>
+      <Route path={"/leads/distribuicao"}>
+        {() => <SetupGuard component={DistribuicaoLeads} />}
       </Route>
       <Route path={"/leads/relatorio"}>
         {() => <SetupGuard component={LeadsRelatorio} />}

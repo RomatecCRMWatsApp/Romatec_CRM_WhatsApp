@@ -122,6 +122,11 @@ const TABELAS: [string, string][] = [
     id INT AUTO_INCREMENT PRIMARY KEY, slug VARCHAR(80) NOT NULL, titulo VARCHAR(160) NOT NULL, categoria VARCHAR(20) NOT NULL DEFAULT 'sistema',
     publico VARCHAR(12) NOT NULL DEFAULT 'todos', conteudo TEXT NOT NULL, ordem INT NOT NULL DEFAULT 0, ativo BOOLEAN NOT NULL DEFAULT TRUE,
     atualizadoPor INT NULL, atualizadoEm TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP, UNIQUE KEY ux_artigo_slug (slug))`],
+  // Encaminhamentos de lead (manual pela secretária/admin ou automático pela roleta): relatório em Leads › Distribuição
+  ['leadEncaminhamentos', `CREATE TABLE IF NOT EXISTS leadEncaminhamentos (
+    id INT AUTO_INCREMENT PRIMARY KEY, leadId INT NOT NULL, deId INT NULL, paraId INT NOT NULL, porId INT NULL, origem VARCHAR(12) NOT NULL DEFAULT 'manual',
+    observacao VARCHAR(300) NULL, criadoEm TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
+    KEY ix_enc_criado (criadoEm), KEY ix_enc_para (paraId, criadoEm), KEY ix_enc_lead (leadId))`],
   // Carimbo das mídias de cada usuário (Materiais › Meu carimbo; shared/carimbo.ts)
   ['carimbosUsuario', `CREATE TABLE IF NOT EXISTS carimbosUsuario (
     usuarioId INT PRIMARY KEY, nome VARCHAR(80) NOT NULL, telefone VARCHAR(20) NULL, instagram VARCHAR(40) NULL, email VARCHAR(120) NULL,
