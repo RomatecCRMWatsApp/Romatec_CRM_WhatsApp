@@ -32,10 +32,11 @@ describe('distribuição manual de leads', () => {
     expect((await D.equipe()).map(u => u.nome)).toEqual(['Corretor Caio', 'José', 'Secretária Bia']);
   });
 
-  it('encaminha em lote, avisa o corretor e não conta de novo quem já era dele', async () => {
+  it('encaminha em lote e avisa; lead que já era dele (sem registro) entra no controle; com registro aberto não repete', async () => {
     const r = await D.encaminharManual([10, 11, 12], 3, { id: 2, nome: 'Secretária Bia' }, 'Cliente prefere manhã');
-    expect(r).toEqual({ encaminhados: 2, jaEram: 1, naoEncontrados: 0, para: 'Corretor Caio' });
-    expect(avisos.map(a => a.leadId).sort()).toEqual([10, 11]);
+    expect(r).toEqual({ encaminhados: 3, jaEram: 0, naoEncontrados: 0, para: 'Corretor Caio' });
+    expect(avisos.map(a => a.leadId).sort()).toEqual([10, 11, 12]);
+    expect(await D.encaminharManual([12], 3, { id: 2, nome: 'Bia' })).toMatchObject({ encaminhados: 0, jaEram: 1 });
     const [l]: any[] = db.all(sql`SELECT responsavelId FROM leadQualifications WHERE id = 10`);
     expect(l.responsavelId).toBe(3);
     await expect(D.encaminharManual([10], 4, { id: 2, nome: 'Bia' })).rejects.toThrow(/não encontrado/);
@@ -45,12 +46,12 @@ describe('distribuição manual de leads', () => {
     await D.registrarEncaminhamento({ leadId: 12, deId: 3, paraId: 1, origem: 'automatico', observacao: 'Roleta: sem atendimento em 15 min' });
     const hoje = new Date(Date.now() - 3 * 3600_000).toISOString().slice(0, 10);
     const todos = await D.relatorioEncaminhamentos({ de: hoje, ate: hoje });
-    expect(todos.resumo).toMatchObject({ total: 3, manual: 2, automatico: 1, aguardando: 3 });
+    expect(todos.resumo).toMatchObject({ total: 4, manual: 3, automatico: 1, aguardando: 3 });
     const manual = await D.relatorioEncaminhamentos({ de: hoje, ate: hoje, origem: 'manual' });
     expect(manual.itens.map(i => [i.lead, i.de, i.para, i.por, i.observacao])).toEqual(expect.arrayContaining([
       ['Ana Lead', null, 'Corretor Caio', 'Secretária Bia', 'Cliente prefere manhã'], ['Beto Lead', null, 'Corretor Caio', 'Secretária Bia', 'Cliente prefere manhã'],
     ]));
-    expect(manual.porCorretor).toMatchObject([{ corretor: 'Corretor Caio', total: 2, manual: 2, automatico: 0, aguardando: 2 }]);
+    expect(manual.porCorretor).toMatchObject([{ corretor: 'Corretor Caio', total: 3, manual: 3, automatico: 0 }]);
     const auto = await D.relatorioEncaminhamentos({ de: hoje, ate: hoje, paraId: 1 });
     expect(auto.itens[0]).toMatchObject({ origem: 'automatico', por: 'Automático (roleta)', de: 'Corretor Caio', para: 'José', continuaCom: 'não' });
     const csv = D.csvRelatorio(manual.itens);
@@ -78,6 +79,15 @@ describe('distribuição manual de leads', () => {
     expect([b.situacao, b.desfecho, b.desfechoMotivo]).toEqual(['finalizado', 'desistiu', 'achou longe']);
     expect(b.recebidoEm).not.toBeNull();
     await expect(D.finalizarPeloCorretor(beto.id, { id: 3, escritorio: false }, 'sem_contato')).rejects.toThrow(/Já finalizado/);
+  });
+
+  it('reenviar aviso só para quem ainda não confirmou', async () => {
+    const pend = (await D.meusEncaminhamentos(1)).filter(m => m.situacao === 'aguardando_confirmacao').map(m => m.id);
+    const conf = (await D.meusEncaminhamentos(3)).filter(m => m.recebidoEm).map(m => m.id);
+    avisos.length = 0;
+    const r = await D.reenviarAvisos([...pend, ...conf], { id: 2, nome: 'Bia' });
+    expect(r).toEqual({ reenviados: pend.length, ignorados: conf.length });
+    expect(avisos.every(a => a.porNome === 'Bia (lembrete)')).toBe(true);
   });
 
   it('venda lançada finaliza sozinho; repassar fecha o anterior como repassado', async () => {

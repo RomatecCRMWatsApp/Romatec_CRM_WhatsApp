@@ -86,11 +86,17 @@ export async function encaminharManual(leadIds: number[], paraId: number, por: {
   let encaminhados = 0, jaEram = 0;
   for (const l of leads) {
     const de = l.responsavelId ? Number(l.responsavelId) : null;
-    if (de === paraId) { jaEram++; continue; }
-    await d.update(leadQualifications).set({ responsavelId: paraId, updatedAt: new Date() } as any).where(eq(leadQualifications.id, l.id));
+    if (de === paraId) {
+      // Já é dele: só registra (e pede a confirmação) se ainda não há encaminhamento em aberto — ex.: lead de antes do controle
+      const [aberto]: any[] = await d.select({ id: leadEncaminhamentos.id }).from(leadEncaminhamentos)
+        .where(and(eq(leadEncaminhamentos.leadId, l.id), eq(leadEncaminhamentos.paraId, paraId), isNull(leadEncaminhamentos.desfecho))).limit(1);
+      if (aberto) { jaEram++; continue; }
+    } else {
+      await d.update(leadQualifications).set({ responsavelId: paraId, updatedAt: new Date() } as any).where(eq(leadQualifications.id, l.id));
+    }
     await registrarEncaminhamento({ leadId: Number(l.id), deId: de, paraId, porId: por.id, origem: 'manual', observacao });
     if (paraId !== por.id) {
-      await registrarAtendimento(Number(l.id), { como: 'encaminhado', usuarioId: por.id, paraId }).catch(() => null);
+      if (de !== paraId) await registrarAtendimento(Number(l.id), { como: 'encaminhado', usuarioId: por.id, paraId }).catch(() => null);
       avisarEncaminhamento({ leadId: Number(l.id), paraId, porNome: por.nome }).catch(e => console.warn('[Distribuição] aviso:', e?.message));
     }
     encaminhados++;
@@ -245,4 +251,20 @@ export async function encaminhamentoAbertoDoLead(leadId: number, usuarioId: numb
   if (!e) return null;
   const [p]: any[] = e.porId ? await d.select({ name: users.name }).from(users).where(eq(users.id, e.porId)).limit(1) : [];
   return { id: Number(e.id), quando: iso(e.criadoEm), por: e.origem === 'automatico' ? 'Automático (roleta)' : p?.name ?? null, observacao: e.observacao ?? null, recebidoEm: iso(e.recebidoEm) };
+}
+
+/** Reenvia o aviso (sininho, push e WhatsApp com o link de confirmar) dos encaminhamentos ainda sem confirmação */
+export async function reenviarAvisos(ids: number[], por: { id: number; nome: string }) {
+  const lista = Array.from(new Set(ids.filter(n => Number.isInteger(n) && n > 0))).slice(0, 200);
+  if (!lista.length) throw new DistribuicaoErro('Escolha pelo menos um encaminhamento');
+  const d = await banco();
+  const rows: any[] = await d.select().from(leadEncaminhamentos).where(inArray(leadEncaminhamentos.id, lista));
+  const { avisarEncaminhamento } = await import('./encaminhamento');
+  let reenviados = 0, ignorados = 0;
+  for (const e of rows) {
+    if (e.desfecho || e.recebidoEm) { ignorados++; continue; }
+    await avisarEncaminhamento({ leadId: Number(e.leadId), paraId: Number(e.paraId), porNome: `${por.nome} (lembrete)` }).catch(err => console.warn('[Distribuição] reenvio:', err?.message));
+    reenviados++;
+  }
+  return { reenviados, ignorados };
 }

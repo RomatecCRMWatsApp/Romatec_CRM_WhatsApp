@@ -3,6 +3,15 @@
 Cada versão nova vai no TOPO. Depois rode `npm run release` (valida e atualiza o package.json);
 ao subir, o servidor grava a versão no banco e todos recebem o aviso "Novidades da versão".
 
+## 1.101.1 — 2026-11-04
+tipo: patch
+obrigatoria: nao
+titulo: Reenviar o aviso de lead para quem não confirmou
+
+### Melhorias
+- Relatório de distribuição: botão "Reenviar aviso aos sem confirmação" (todos de uma vez) e "Reenviar" em cada linha aguardando; o corretor recebe de novo o aviso no sistema e no WhatsApp com o link de confirmar
+- Distribuir: encaminhar um lead para o mesmo corretor que já é o responsável agora entra no controle e pede a confirmação (para os leads encaminhados antes do registro)
+
 ## 1.101.0 — 2026-11-04
 tipo: minor
 obrigatoria: nao

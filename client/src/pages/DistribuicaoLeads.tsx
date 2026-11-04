@@ -45,7 +45,7 @@ function Distribuir({ aoEncaminhar }: { aoEncaminhar: () => void }) {
   const { data: leads, isLoading } = trpc.distribuicao.leads.useQuery({ filtro, busca });
   const encaminhar = trpc.distribuicao.encaminhar.useMutation({
     onSuccess: r => {
-      toast.success(`${r.encaminhados} lead(s) encaminhado(s) para ${r.para}${r.jaEram ? ` · ${r.jaEram} já era(m) dele` : ""}. O corretor foi avisado no sistema e no WhatsApp.`, {
+      toast.success(`${r.encaminhados} lead(s) encaminhado(s) para ${r.para}${r.jaEram ? ` · ${r.jaEram} já estava(m) com ele aguardando confirmação` : ""}. O corretor foi avisado no sistema e no WhatsApp.`, {
         action: { label: "Ver relatório", onClick: aoEncaminhar },
       });
       setSel(new Set()); setObs("");
@@ -129,6 +129,11 @@ function Relatorio() {
   const filtro = useMemo(() => ({ de, ate, paraId: paraId || null, origem: origem || null }), [de, ate, paraId, origem]);
   const { data: equipe } = trpc.distribuicao.equipe.useQuery();
   const { data, isLoading, error } = trpc.distribuicao.relatorio.useQuery(filtro, { enabled: !!de && !!ate });
+  const reenviar = trpc.distribuicao.reenviar.useMutation({
+    onSuccess: r => toast.success(`Aviso reenviado para ${r.reenviados} lead(s)${r.ignorados ? ` · ${r.ignorados} já confirmado(s) ou finalizado(s)` : ""}`),
+    onError: e => toast.error(e.message),
+  });
+  const pendentes = (data?.itens ?? []).filter(i => i.situacao === "aguardando_confirmacao");
   const csv = trpc.distribuicao.csv.useMutation({
     onSuccess: r => {
       const a = document.createElement("a");
@@ -153,7 +158,12 @@ function Relatorio() {
             <option value="manual">Manual (secretária/escritório)</option><option value="automatico">Automático (roleta)</option><option value="">Todos</option>
           </select>
         </label>
-        <Button variant="outline" className="ml-auto" disabled={csv.isPending || !data?.itens.length} onClick={() => csv.mutate(filtro)}>
+        <Button variant="outline" className="ml-auto border-amber-500/60" disabled={reenviar.isPending || !pendentes.length}
+          title="Manda de novo o aviso (sistema e WhatsApp, com o link de confirmar) para quem ainda não confirmou o recebimento"
+          onClick={() => { if (confirm(`Reenviar o aviso de ${pendentes.length} lead(s) que ainda não tiveram o recebimento confirmado?`)) reenviar.mutate({ ids: pendentes.map(i => i.id) }); }}>
+          {reenviar.isPending ? <Loader2 className="mr-1 h-4 w-4 animate-spin" /> : <Send className="mr-1 h-4 w-4" />} Reenviar aviso aos sem confirmação ({pendentes.length})
+        </Button>
+        <Button variant="outline" disabled={csv.isPending || !data?.itens.length} onClick={() => csv.mutate(filtro)}>
           {csv.isPending ? <Loader2 className="mr-1 h-4 w-4 animate-spin" /> : <Download className="mr-1 h-4 w-4" />} Baixar planilha (CSV)
         </Button>
       </div>
@@ -192,7 +202,11 @@ function Relatorio() {
                       <td className="p-2 text-xs font-semibold">{i.para}</td>
                       <td className="p-2 text-xs">{i.por ?? "—"}</td>
                       <td className="p-2 text-xs">{i.continuaCom}</td>
-                      <td className="whitespace-nowrap p-2 text-xs">{i.recebidoEm ? <span className="text-emerald-300">✔ {dataHora(i.recebidoEm)}</span> : i.desfecho ? "—" : <span className="text-amber-300">aguardando</span>}</td>
+                      <td className="whitespace-nowrap p-2 text-xs">{i.recebidoEm ? <span className="text-emerald-300">✔ {dataHora(i.recebidoEm)}</span> : i.desfecho ? "—" : (
+                        <span className="flex items-center gap-1 text-amber-300">aguardando
+                          <button type="button" className="rounded border border-amber-500/60 px-1.5 py-0.5 text-[10px] text-amber-200 hover:bg-amber-500/20" disabled={reenviar.isPending}
+                            onClick={() => reenviar.mutate({ ids: [i.id] })} title="Reenviar o aviso para o corretor">Reenviar</button>
+                        </span>)}</td>
                       <td className="p-2 text-xs">{i.desfecho ? <><b>{ROTULO_DESFECHO[i.desfecho]}</b>{i.desfechoMotivo ? <span className="block text-muted-foreground">{i.desfechoMotivo}</span> : null}</> : ROTULO_SITUACAO[i.situacao]}</td>
                       <td className="p-2 text-xs text-muted-foreground">{i.observacao ?? ""}</td>
                     </tr>

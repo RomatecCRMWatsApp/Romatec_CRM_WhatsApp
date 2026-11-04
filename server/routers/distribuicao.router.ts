@@ -42,6 +42,13 @@ export const distribuicaoRouter = router({
       return (await import("../leads/distribuicao")).finalizarPeloCorretor(input.id, { id: ctx.user.id, escritorio: podeDistribuirLeads(ctx.permissoes.perfil) }, input.desfecho, input.motivo).catch(erro);
     }),
 
+  /** Reenviar o aviso para quem ainda não confirmou o recebimento */
+  reenviar: protectedProcedure.input(z.object({ ids: z.array(z.number().int().positive()).min(1).max(200) })).mutation(async ({ input, ctx }) => {
+    exigirDistribuicao(ctx.permissoes);
+    const { reenviarAvisos } = await import("../leads/distribuicao");
+    return reenviarAvisos(input.ids, { id: ctx.user.id, nome: String((ctx.user as any).name ?? "o escritório") }).catch(erro);
+  }),
+
   relatorio: protectedProcedure.input(filtroRelatorio).query(async ({ input, ctx }) => {
     exigirDistribuicao(ctx.permissoes);
     return (await import("../leads/distribuicao")).relatorioEncaminhamentos(input).catch(erro);
