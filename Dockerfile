@@ -7,7 +7,7 @@ ARG BUILD_DATE=unspecified
 # pdftoppm (poppler): converte o PDF das credenciais em PNG por página (server/credenciais.ts)
 # LibreOffice Writer + fontes Liberation: DOCX → PDF dos contratos (server/contratos/render.ts)
 # ffmpeg: materiais em vídeo no formato do corretor (server/materialFormatado.ts)
-RUN apt-get update && apt-get install -y --no-install-recommends poppler-utils libreoffice-writer fonts-liberation ffmpeg && rm -rf /var/lib/apt/lists/*
+RUN apt-get update && apt-get install -y --no-install-recommends poppler-utils libreoffice-writer fonts-liberation ffmpeg python3 make g++ && rm -rf /var/lib/apt/lists/*
 
 # Install pnpm
 RUN npm install -g pnpm@10.4.1
