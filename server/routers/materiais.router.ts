@@ -103,10 +103,16 @@ export const materiaisRouter = router({
       liberado: z.boolean().optional(),
       observacao: z.string().max(255).nullable().optional(),
       ordem: z.number().int().optional(),
+      /** Contato do escritório gravado na peça (só escritório ajusta): % do rodapé e ms do cartão final do vídeo */
+      recorteRodapePct: z.number().int().min(0).max(40).nullable().optional(),
+      corteFinalMs: z.number().int().min(0).max(30_000).nullable().optional(),
     }))
     .mutation(async ({ input, ctx }) => {
       const db = await dbOrThrow();
       await materialAutorizado(db, ctx.permissoes, input.id);
+      if ((input.recorteRodapePct !== undefined || input.corteFinalMs !== undefined) && !["admin", "secretario"].includes(String(ctx.permissoes.perfil))) {
+        throw new Error("Só o escritório ajusta o corte do contato");
+      }
       const { id, ...campos } = input;
       await db.update(materiais).set(campos as any).where(eq(materiais.id, id));
       return { ok: true };

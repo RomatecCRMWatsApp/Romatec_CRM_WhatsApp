@@ -1,5 +1,5 @@
-import { getDb } from '../../db';
-import { and, eq } from 'drizzle-orm';
+import { getDb, getDbDriver } from '../../db';
+import { and, eq, isNull, sql } from 'drizzle-orm';
 import { materiais } from '../../../drizzle/schema';
 
 /**
@@ -32,9 +32,48 @@ export const VIDEOS_DIVULGACAO_BJ: { titulo: string; caminho: string; bytes: num
   { titulo: 'Vinheta · Explosão (só promoção ou lançamento)', caminho: '/bom-jardims/vinhetas/promocao-explosao-9x16.mp4', bytes: 5637373, liberado: false, observacao: 'Nunca em vídeo sobre a mata ou o córrego', ordem: 32 },
 ];
 
+/**
+ * Onde está o contato do escritório (José Romário · CRECI · telefone · @avalieimob) em cada vídeo: rodapé gravado
+ * (% de baixo) e cartão final/CTA de comentar (ms do fim). Medido nos próprios arquivos em 04/11/2026.
+ * Ao baixar, o corretor recebe sem isso e com o contato dele (server/materialFormatado.ts).
+ */
+export const CONTATO_ESCRITORIO_BJ: Record<string, { recorteRodapePct: number; corteFinalMs: number }> = {
+  '/bom-jardims/ig/reel-r1-faltam-7-dias.mp4': { recorteRodapePct: 10, corteFinalMs: 6600 },
+  '/bom-jardims/ig/reel-obras-parte2.mp4': { recorteRodapePct: 10, corteFinalMs: 6600 },
+  '/bom-jardims/ig/reel-deck-parte2.mp4': { recorteRodapePct: 0, corteFinalMs: 0 },
+  '/bom-jardims/ig/reel-comparativo-v2.mp4': { recorteRodapePct: 0, corteFinalMs: 0 },
+  '/bom-jardims/ig/reel-comparativo-lote-x-chacara.mp4': { recorteRodapePct: 0, corteFinalMs: 9800 },
+  '/bom-jardims/ig/video-comparativo-whatsapp.mp4': { recorteRodapePct: 0, corteFinalMs: 9800 },
+  '/bom-jardims/ig/reel-entrada-10mil-v2.mp4': { recorteRodapePct: 10, corteFinalMs: 3600 },
+  '/bom-jardims/ig/reel-obras-82-chacaras.mp4': { recorteRodapePct: 10, corteFinalMs: 3600 },
+  '/bom-jardims/ig/reel-rota-24min.mp4': { recorteRodapePct: 0, corteFinalMs: 5000 },
+  '/bom-jardims/ig/reel-deck-corrego.mp4': { recorteRodapePct: 0, corteFinalMs: 10700 },
+  '/bom-jardims/ig/video-deck-compartilhar.mp4': { recorteRodapePct: 0, corteFinalMs: 6900 },
+  '/bom-jardims/ig/reel-areia-vendas-14nov.mp4': { recorteRodapePct: 0, corteFinalMs: 9100 },
+  '/bom-jardims/rota-video-narrado-v2.mp4': { recorteRodapePct: 0, corteFinalMs: 5500 },
+  '/bom-jardims/ig/reel-deck-parte3.mp4': { recorteRodapePct: 10, corteFinalMs: 0 },
+  '/bom-jardims/ig/reel-obras-parte3.mp4': { recorteRodapePct: 10, corteFinalMs: 0 },
+  '/bom-jardims/ig/reel-areia-14nov-v2.mp4': { recorteRodapePct: 0, corteFinalMs: 0 },
+  '/bom-jardims/ig/reel-obras-cadastro-03nov.mp4': { recorteRodapePct: 0, corteFinalMs: 3800 },
+};
+
+/** Colunas novas da tabela materiais (idempotente: coluna repetida é ignorada) */
+async function colunasContato(db: any) {
+  for (const [c, tipo] of [['recorteRodapePct', 'INT NULL'], ['corteFinalMs', 'INT NULL']]) {
+    try {
+      if (getDbDriver() === 'mysql') await db.execute(sql.raw(`ALTER TABLE materiais ADD COLUMN ${c} ${tipo}`));
+      else db.run(sql.raw(`ALTER TABLE materiais ADD COLUMN ${c} INTEGER`));
+    } catch (e: any) {
+      const msg = String(e?.message ?? e?.cause?.message ?? '');
+      if (!/duplicate|already exists|ER_DUP_FIELDNAME/i.test(msg + (e?.code ?? e?.cause?.code ?? ''))) console.warn(`[Migration] materiais.${c}:`, msg);
+    }
+  }
+}
+
 export async function addMateriaisDivulgacaoBJ(): Promise<number> {
   const db: any = await getDb();
   if (!db) return 0;
+  await colunasContato(db);
   const existentes = new Set(((await db.select({ url: materiais.url }).from(materiais)) as any[]).map(r => String(r.url)));
   let n = 0;
   for (const v of VIDEOS_DIVULGACAO_BJ) {
@@ -49,6 +88,10 @@ export async function addMateriaisDivulgacaoBJ(): Promise<number> {
   // O Reel antigo da areia fala em "chácaras vendidas": se entrou como liberado na 1.96.1, passa a "não divulgar"
   await db.update(materiais).set({ liberado: false, observacao: 'Versão antiga: fala em chácaras vendidas · use a versão nova' } as any)
     .where(and(eq(materiais.url, `${base()}/bom-jardims/ig/reel-areia-vendas-14nov.mp4`), eq(materiais.liberado, true)));
+  // Contato do escritório gravado nos vídeos: só preenche o que ainda não foi ajustado na tela
+  for (const [caminho, c] of Object.entries(CONTATO_ESCRITORIO_BJ)) {
+    await db.update(materiais).set(c as any).where(and(eq(materiais.url, `${base()}${caminho}`), isNull(materiais.recorteRodapePct)));
+  }
   if (n) console.log(`[Migration] ✅ addMateriaisDivulgacaoBJ: ${n} vídeo(s) em Materiais do Bom Jardims`);
   return n;
 }

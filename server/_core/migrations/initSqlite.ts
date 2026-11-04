@@ -727,6 +727,6 @@ export function initSqliteTables(sqlite: any): void {
   run(`CREATE TABLE IF NOT EXISTS materiais (
     id INTEGER PRIMARY KEY AUTOINCREMENT, propertyId INTEGER, empreendimentoSlug TEXT, titulo TEXT NOT NULL,
     tipo TEXT NOT NULL DEFAULT 'outro', url TEXT NOT NULL, mime TEXT, tamanhoBytes INTEGER, liberado INTEGER NOT NULL DEFAULT 1,
-    observacao TEXT, ordem INTEGER NOT NULL DEFAULT 0, createdAt INTEGER NOT NULL DEFAULT (strftime('%s','now'))
+    observacao TEXT, ordem INTEGER NOT NULL DEFAULT 0, recorteRodapePct INTEGER, corteFinalMs INTEGER, createdAt INTEGER NOT NULL DEFAULT (strftime('%s','now'))
   )`);
 }

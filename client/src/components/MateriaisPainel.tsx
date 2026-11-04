@@ -4,12 +4,13 @@ import { trpc } from "@/lib/trpc";
 import { Button } from "@/components/ui/button";
 import { Copy, Download, Eye, EyeOff, FileText, Loader2, Lock, Share2, Trash2, Upload, Video } from "lucide-react";
 import { useCartaoVendas } from "@/lib/cartaoVendas";
-import { bannerDoCorretor, legendaDoMaterial, linkDoMaterial, pdfDoCorretor, urlVideoDoCorretor, videoDoCorretor } from "@/lib/materialDoCorretor";
+import { legendaDoMaterial, linkDoMaterial, pdfDoCorretor } from "@/lib/materialDoCorretor";
 import { useAuth } from "@/_core/hooks/useAuth";
 import { perfilDe } from "@shared/equipe";
 import {
-  ABA_ARQUIVO, CATEGORIAS_ARQUIVO, ROTULO_TIPO_MATERIAL, TIPOS_ARQUIVO_ACEITOS, TIPOS_MATERIAL, bloqueadaPorNome, categoriaDoArquivo, tipoPorNome, tituloPorNome,
-  type CategoriaArquivo, type TipoMaterial,
+  ABA_ARQUIVO, CATEGORIAS_ARQUIVO, FORMATOS_DOWNLOAD, OPCOES_CORTE_FINAL_S, OPCOES_RECORTE_RODAPE, ROTULO_FORMATO, ROTULO_TIPO_MATERIAL, TIPOS_ARQUIVO_ACEITOS, TIPOS_MATERIAL,
+  bloqueadaPorNome, categoriaDoArquivo, recorteRodapeEfetivo, tipoPorNome, tituloPorNome,
+  type CategoriaArquivo, type FormatoDownload, type TipoMaterial,
 } from "@shared/materiais";
 import { enviarParaCloudinary, mimeDoArquivo } from "@/lib/uploadCloudinary";
 import LinkAgendamento from "@/components/LinkAgendamento";
@@ -40,25 +41,40 @@ export async function baixarBlob(m: any): Promise<Blob | null> {
 type Cartao = ReturnType<typeof useCartaoVendas>;
 type Grupo = { empreendimentoSlug?: string | null; propertyId?: number | null; nome?: string };
 
+/** Nome do arquivo que o servidor mandou (Content-Disposition) */
+const nomeDoCabecalho = (r: Response, padrao: string) => {
+  const cd = r.headers.get("content-disposition") || "";
+  const m = /filename\*=UTF-8''([^;]+)/i.exec(cd) || /filename="([^"]+)"/i.exec(cd);
+  return m ? decodeURIComponent(m[1]) : padrao;
+};
+
 /**
- * Arquivo com os dados de quem divulga (lib/materialDoCorretor): banner com faixa, PDF com rodapé e vídeo
- * com a faixa do Cloudinary. Falhou o carimbo: segue o original (a legenda continua com os dados).
+ * Arquivo no formato escolhido, SEM o contato do escritório gravado na peça e COM os dados de quem divulga.
+ * Imagem e vídeo: o servidor corta o rodapé/cartão final do escritório e põe a faixa e o cartão do corretor
+ * (server/materialFormatado.ts; o vídeo leva alguns segundos e o navegador pergunta até ficar pronto).
+ * PDF: rodapé do corretor em todas as páginas, no navegador. GIF segue o original.
  */
-async function arquivoDoCorretor(m: any, c: Cartao, link: string, aviso: (t: string) => void): Promise<{ blob: Blob; nome: string; carimbado: boolean; url: string }> {
+async function arquivoDoCorretor(m: any, c: Cartao, link: string, formato: FormatoDownload, aviso: (t: string) => void): Promise<{ blob: Blob; nome: string; carimbado: boolean }> {
   const nome = nomeArquivo(m);
-  try {
-    if (ehImagem(m) && !/\.gif$/i.test(m.url)) return { blob: await bannerDoCorretor(m.url, c, link), nome: nome.replace(/\.[a-z0-9]+$/i, ".jpg"), carimbado: true, url: m.url };
-    if (ehVideo(m)) {
-      aviso("Preparando o vídeo com os seus dados…");
-      const v = await videoDoCorretor(m.url, c, s => aviso(`Gerando o vídeo com os seus dados (${s}s)…`));
-      if (v) return { blob: v.blob, nome: nome.replace(/\.[a-z0-9]+$/i, ".mp4"), carimbado: true, url: v.url };
-    } else if (!ehImagem(m)) {
-      return { blob: await pdfDoCorretor(m.url, c, link), nome, carimbado: true, url: m.url };
+  if (!ehImagem(m) && !ehVideo(m)) return { blob: await pdfDoCorretor(m.url, c, link), nome, carimbado: true };
+  if (/\.gif$/i.test(m.url)) {
+    const blob = await baixarBlob(m);
+    if (!blob) throw new Error("Não foi possível baixar o arquivo");
+    return { blob, nome, carimbado: false };
+  }
+  const inicio = Date.now();
+  for (;;) {
+    const r = await fetch(`/api/materiais/${m.id}/arquivo?formato=${formato}`, { credentials: "include" });
+    if (r.status === 202) {
+      const s = Math.round((Date.now() - inicio) / 1000);
+      if (s > 600) throw new Error("O vídeo está demorando demais. Tente de novo em alguns minutos.");
+      aviso(`Montando o vídeo ${ROTULO_FORMATO[formato].rotulo} com os seus dados (${s}s)…`);
+      await new Promise(ok => setTimeout(ok, 4000));
+      continue;
     }
-  } catch (e) { console.warn("[Materiais] carimbo do corretor:", e); }
-  const blob = await baixarBlob(m);
-  if (!blob) throw new Error("Não foi possível baixar o arquivo");
-  return { blob, nome, carimbado: false, url: m.url };
+    if (!r.ok) throw new Error((await r.json().catch(() => null))?.error || `Não foi possível preparar o arquivo (${r.status})`);
+    return { blob: await r.blob(), nome: nomeDoCabecalho(r, nome), carimbado: true };
+  }
 }
 
 function CardMaterial({ m, onMudou, grupo, cartao, escritorio }: { m: any; onMudou: () => void; grupo: Grupo; cartao: Cartao; escritorio: boolean }) {
@@ -66,6 +82,11 @@ function CardMaterial({ m, onMudou, grupo, cartao, escritorio }: { m: any; onMud
   const excluir = trpc.materiais.delete.useMutation({ onSuccess: () => { toast.success("Material removido do CRM"); onMudou(); }, onError: e => toast.error(e.message) });
   const [ocupado, setOcupado] = useState<string | null>(null);
   const [pronto, setPronto] = useState<File | null>(null);
+  const [formato, setFormato] = useState<FormatoDownload>(() => {
+    try { const v = localStorage.getItem("materiais_formato"); return (FORMATOS_DOWNLOAD as readonly string[]).includes(v ?? "") ? (v as FormatoDownload) : "original"; } catch { return "original"; }
+  });
+  const escolherFormato = (f: FormatoDownload) => { setFormato(f); try { localStorage.setItem("materiais_formato", f); } catch { /* sem armazenamento */ } };
+  const temFormato = (ehImagem(m) && !/\.gif$/i.test(m.url)) || ehVideo(m);
   const enviarPronto = async () => {
     if (!pronto) return;
     try { await navigator.share({ files: [pronto], text: legenda, title: m.titulo }); setPronto(null); } catch (e: any) { if (e?.name !== "AbortError") toast.error("Não foi possível compartilhar"); }
@@ -76,8 +97,8 @@ function CardMaterial({ m, onMudou, grupo, cartao, escritorio }: { m: any; onMud
   const preparar = async () => {
     setOcupado("Colocando os seus dados no material…");
     try {
-      const a = await arquivoDoCorretor(m, cartao, link, setOcupado);
-      if (!a.carimbado) toast.warning("Não deu para carimbar este arquivo: ele vai sem a faixa, mas o texto leva os seus dados.");
+      const a = await arquivoDoCorretor(m, cartao, link, temFormato ? formato : "original", setOcupado);
+      if (!a.carimbado) toast.warning("GIF vai como está (sem a faixa); o texto leva os seus dados.");
       return a;
     } finally { setOcupado(null); }
   };
@@ -117,8 +138,7 @@ function CardMaterial({ m, onMudou, grupo, cartao, escritorio }: { m: any; onMud
   };
 
   const copiar = async () => {
-    const extra = ehVideo(m) ? urlVideoDoCorretor(m.url, cartao) ?? m.url : null;
-    try { await navigator.clipboard.writeText(extra ? `${legenda}\n\n🎬 Vídeo: ${extra}` : legenda); toast.success("Texto com o seu link e os seus dados copiado"); } catch { toast.error("Não foi possível copiar"); }
+    try { await navigator.clipboard.writeText(legenda); toast.success("Texto com o seu link e os seus dados copiado"); } catch { toast.error("Não foi possível copiar"); }
   };
 
   return (
@@ -154,8 +174,32 @@ function CardMaterial({ m, onMudou, grupo, cartao, escritorio }: { m: any; onMud
           </select>
           <span className="text-[10px] text-muted-foreground whitespace-nowrap">{tamanho(m.tamanhoBytes)}</span>
         </div>
+        {temFormato && (
+          <label className="flex items-center gap-1 text-[11px] text-muted-foreground">
+            Formato
+            <select value={formato} onChange={e => escolherFormato(e.target.value as FormatoDownload)} title={ROTULO_FORMATO[formato].dica}
+              className="h-7 flex-1 min-w-0 rounded border border-emerald-500/40 bg-secondary/30 px-1 text-[11px] text-foreground">
+              {FORMATOS_DOWNLOAD.map(f => <option key={f} value={f}>{ROTULO_FORMATO[f].rotulo}</option>)}
+            </select>
+          </label>
+        )}
+        {escritorio && temFormato && (
+          <div className="flex flex-wrap items-center gap-1 text-[10px] text-muted-foreground" title="Onde está o contato do escritório gravado na peça: sai do arquivo do corretor e entra o contato dele">
+            <span>Contato do escritório:</span>
+            <select value={recorteRodapeEfetivo(m)} onChange={e => atualizar.mutate({ id: m.id, recorteRodapePct: Number(e.target.value) })}
+              className="h-6 rounded border border-border bg-secondary/30 px-1 text-[10px]">
+              {OPCOES_RECORTE_RODAPE.map(p => <option key={p} value={p}>{p ? `rodapé ${p}%` : "sem rodapé"}</option>)}
+            </select>
+            {ehVideo(m) && (
+              <select value={Math.round((m.corteFinalMs ?? 0) / 1000)} onChange={e => atualizar.mutate({ id: m.id, corteFinalMs: Number(e.target.value) * 1000 })}
+                className="h-6 rounded border border-border bg-secondary/30 px-1 text-[10px]">
+                {Array.from(new Set([...OPCOES_CORTE_FINAL_S, Math.round((m.corteFinalMs ?? 0) / 1000)])).sort((a, b) => a - b).map(sg => <option key={sg} value={sg}>{sg ? `cartão final ${sg}s` : "sem cartão final"}</option>)}
+              </select>
+            )}
+          </div>
+        )}
         <div className="flex flex-wrap gap-1 mt-auto pt-1">
-          <Button size="sm" variant="outline" className="h-7 px-2 text-xs" onClick={baixar} disabled={!!ocupado} title="Baixar com os seus dados (nome, CRECI, WhatsApp e QR do seu link)"><Download className="h-3.5 w-3.5 mr-1" />Baixar</Button>
+          <Button size="sm" variant="outline" className="h-7 px-2 text-xs" onClick={baixar} disabled={!!ocupado} title={`Baixar ${temFormato ? ROTULO_FORMATO[formato].rotulo + " " : ""}com os seus dados (nome, CRECI, WhatsApp e QR do seu link), sem o contato do escritório`}><Download className="h-3.5 w-3.5 mr-1" />Baixar</Button>
           {m.liberado && <Button size="sm" variant="outline" className="h-7 px-2 text-xs" onClick={compartilhar} disabled={!!ocupado} title="Enviar com os seus dados e o texto com o seu link"><Share2 className="h-3.5 w-3.5 mr-1" />Enviar</Button>}
           <Button size="sm" variant="ghost" className="h-7 px-2" title="Copiar o texto com o seu link e os seus dados" onClick={copiar}><Copy className="h-3.5 w-3.5" /></Button>
           {escritorio && <Button size="sm" variant="ghost" className="h-7 px-2 text-[10px]" title="Arquivo original, sem os dados do corretor" asChild><a href={m.url} target="_blank" rel="noreferrer">Original</a></Button>}
@@ -291,7 +335,7 @@ export default function MateriaisPainel({ propertyId, empreendimentoSlug }: Dest
       <LinkInstagram />
       {enviando && <p className="text-xs text-emerald-300">{enviando}</p>}
       <p className="rounded-md border border-emerald-500/30 bg-emerald-500/5 px-3 py-2 text-xs text-emerald-200">
-        Tudo o que você baixa ou envia daqui sai com os <b>seus dados</b>: banner com a faixa (nome, {cartao.creci ?? "CRECI"}, WhatsApp e QR do seu link), vídeo com a faixa, PDF com o rodapé e o texto com o seu link — o cliente cai direto com você.
+        Tudo o que você baixa ou envia daqui sai <b>só com o seu contato</b>: o rodapé e o cartão final do escritório saem da peça e entram a sua faixa (nome, {cartao.creci ?? "CRECI"}, WhatsApp, Instagram e QR do seu link) e, no vídeo, o seu cartão final. Escolha o <b>formato</b> em cada peça: Feed 4:5, Stories/Reels 9:16, Quadrado 1:1, WhatsApp (leve) ou Original. Vídeo leva alguns segundos para montar.
         {!cartao.creci && " Cadastre o seu CRECI em Meu cadastro para ele aparecer."}
       </p>
       <p className="text-[11px] text-muted-foreground">

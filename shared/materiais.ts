@@ -115,3 +115,51 @@ export function agruparMateriais<T extends MaterialLinha>(
     .map(g => ({ ...g, itens: [...g.itens].sort((a, b) => ordemTipo(a.tipo) - ordemTipo(b.tipo) || a.ordem - b.ordem || a.titulo.localeCompare(b.titulo, 'pt-BR')) }))
     .sort((a, b) => peso(a) - peso(b) || a.nome.localeCompare(b.nome, 'pt-BR'));
 }
+
+// ─── Download no formato da rede (feed, stories/reels, quadrado, WhatsApp) com os dados do corretor ───────────
+/**
+ * O arquivo baixado pelo corretor sai SEM o contato do escritório que vem gravado na arte (rodapé com telefone,
+ * CRECI e Instagram da Romatec): o servidor corta a faixa de baixo (recorteRodapePct) e, no vídeo, o cartão
+ * final (corteFinalMs), e coloca no lugar a faixa e o cartão final de quem baixa (server/materialFormatado.ts).
+ */
+export const FORMATOS_DOWNLOAD = ['original', 'feed', 'stories', 'quadrado', 'whatsapp'] as const;
+export type FormatoDownload = typeof FORMATOS_DOWNLOAD[number];
+
+export const ROTULO_FORMATO: Record<FormatoDownload, { rotulo: string; dica: string }> = {
+  original: { rotulo: 'Original', dica: 'Mesmo tamanho da peça, com a sua faixa' },
+  feed: { rotulo: 'Feed 4:5', dica: 'Instagram e Facebook · 1080×1350' },
+  stories: { rotulo: 'Stories / Reels 9:16', dica: 'Stories, Reels, TikTok e status · 1080×1920' },
+  quadrado: { rotulo: 'Quadrado 1:1', dica: 'Feed quadrado e anúncios · 1080×1080' },
+  whatsapp: { rotulo: 'WhatsApp (leve)', dica: 'Arquivo menor para mandar no WhatsApp' },
+};
+
+/** Tamanho final; null = segue a largura da peça (original e WhatsApp de imagem) */
+export const DIMENSAO_FORMATO: Record<FormatoDownload, { w: number; h: number } | null> = {
+  original: null, feed: { w: 1080, h: 1350 }, stories: { w: 1080, h: 1920 }, quadrado: { w: 1080, h: 1080 }, whatsapp: null,
+};
+
+/** Faixa do escritório gravada na arte (% da altura, de baixo para cima). null = padrão pelo tipo */
+export const OPCOES_RECORTE_RODAPE = [0, 6, 10, 14, 18, 22, 26] as const;
+export const OPCOES_CORTE_FINAL_S = [0, 2, 3, 4, 5, 6, 7, 8, 10, 12] as const;
+export function recorteRodapeEfetivo(m: { recorteRodapePct?: number | null; tipo?: string | null; mime?: string | null; url?: string }): number {
+  if (m.recorteRodapePct != null) return Math.max(0, Math.min(40, Number(m.recorteRodapePct)));
+  if (categoriaDoArquivo(m.mime, m.url) !== 'imagem') return 0;
+  // Artes de divulgação da Romatec levam o contato no rodapé; render, mapa e outros não
+  return ['feed', 'status', 'card', 'folder'].includes(String(m.tipo)) ? 14 : 0;
+}
+
+export interface LayoutFormato { w: number; h: number; areaH: number; faixaH: number }
+
+/** Onde vai a peça e onde vai a faixa do corretor no quadro final (dimensões pares, como o vídeo exige) */
+export function layoutFormato(formato: FormatoDownload, largura: number, alturaUtil: number): LayoutFormato {
+  const par = (n: number) => Math.max(2, Math.round(n / 2) * 2);
+  const dim = DIMENSAO_FORMATO[formato];
+  if (dim) {
+    const faixaH = par(dim.h * (formato === 'stories' ? 0.1 : 0.12));
+    return { w: dim.w, h: dim.h, areaH: dim.h - faixaH, faixaH };
+  }
+  const escala = formato === 'whatsapp' && largura > 1080 ? 1080 / largura : 1;
+  const w = par(largura * escala), areaH = par(alturaUtil * escala);
+  const faixaH = par(Math.max(130, Math.min(w * 0.17, 320)));
+  return { w, h: areaH + faixaH, areaH, faixaH };
+}

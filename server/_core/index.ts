@@ -819,6 +819,26 @@ async function startServer() {
       res.status(500).json({ success: false, error: 'Não foi possível preparar o envio. Tente de novo.' });
     }
   });
+  // Material no formato escolhido (feed, stories, quadrado, WhatsApp), sem o contato do escritório e com o do corretor
+  app.get('/api/materiais/:id/arquivo', async (req, res) => {
+    try {
+      const { sdk } = await import('./sdk');
+      const user = await sdk.authenticateRequest(req).catch(() => null);
+      if (!user || (user as any).ativo === false) return res.status(401).json({ success: false, error: 'Faça login para baixar materiais' });
+      const { arquivoFormatado, formatoValido } = await import('../materiaisDownload');
+      const r = await arquivoFormatado(user as any, Number(req.params.id), formatoValido(req.query.formato));
+      if (r.tipo === 'gerando') return res.status(202).json({ success: true, gerando: true, segundos: r.segundos });
+      const disp = (n: string) => `attachment; filename="${n}"; filename*=UTF-8''${encodeURIComponent(n)}`;
+      res.setHeader('Content-Disposition', disp(r.nome));
+      if (r.tipo === 'imagem') { res.type('image/jpeg'); return res.send(r.corpo); }
+      res.type('video/mp4');
+      return res.sendFile(r.arquivo);
+    } catch (e: any) {
+      const status = e?.name === 'FormatoErro' ? e.status : 500;
+      if (status >= 500) console.warn('[Materiais] arquivo no formato:', e?.message);
+      res.status(status).json({ success: false, error: e?.name === 'FormatoErro' ? e.message : 'Não foi possível preparar o arquivo' });
+    }
+  });
   // Diagnóstico das credenciais do Cloudinary (só administrador; nunca mostra o segredo)
   app.get('/api/materiais/diagnostico', async (req, res) => {
     const { sdk } = await import('./sdk');

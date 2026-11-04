@@ -1305,6 +1305,10 @@ export const materiais = mysqlTable("materiais", {
   liberado: boolean("liberado").default(true).notNull(),
   observacao: varchar("observacao", { length: 255 }),
   ordem: int("ordem").default(0).notNull(),
+  /** % da altura (de baixo) com o contato do escritório gravado na arte; null = padrão pelo tipo (shared/materiais.ts) */
+  recorteRodapePct: int("recorteRodapePct"),
+  /** Vídeo: ms do final com o cartão de contato do escritório (sai e entra o cartão do corretor) */
+  corteFinalMs: int("corteFinalMs"),
   createdAt: timestamp("createdAt").defaultNow().notNull(),
 }, (t) => ({
   idxProperty: index("idx_material_property").on(t.propertyId),

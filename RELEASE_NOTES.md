@@ -3,6 +3,22 @@
 Cada versão nova vai no TOPO. Depois rode `npm run release` (valida e atualiza o package.json);
 ao subir, o servidor grava a versão no banco e todos recebem o aviso "Novidades da versão".
 
+## 1.98.0 — 2026-11-04
+tipo: minor
+obrigatoria: nao
+titulo: Materiais só com o seu contato e no formato que você quiser
+
+### Novo
+- Materiais: escolha o formato em cada peça antes de baixar ou enviar: Feed 4:5 (1080×1350), Stories/Reels 9:16 (1080×1920), Quadrado 1:1, WhatsApp (leve) ou Original
+- A peça encaixa no formato sem esticar nem cortar a arte (o fundo é a própria imagem desfocada)
+
+### Melhorias
+- O arquivo baixado sai só com o contato de quem baixa: o rodapé com o telefone, CRECI e Instagram do escritório sai da arte e do vídeo, e entram a sua faixa (nome, CRECI, WhatsApp, o seu Instagram e o QR do seu link) e, no vídeo, o seu cartão final no lugar do cartão do escritório
+- Os vídeos do Bom Jardims já vêm com o contato do escritório mapeado; o escritório ajusta em cada peça ("Contato do escritório": tamanho do rodapé e do cartão final)
+
+### Avisos
+- Vídeo leva alguns segundos para montar na primeira vez (deixe a tela aberta); depois sai na hora
+
 ## 1.97.0 — 2026-11-04
 tipo: minor
 obrigatoria: nao
