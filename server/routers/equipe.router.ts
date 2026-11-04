@@ -129,7 +129,16 @@ export const equipeRouter = router({
       conviteHash: c.hash, conviteExpira: c.expira,
       ...(input.zerarSenha ? { passwordScrypt: null, passwordHash: null } : {}),
     } as any).where(eq(users.id, u.id));
+    // Redefinir senha: derruba todos os aparelhos logados com a senha antiga
+    if (input.zerarSenha) { const { encerrarSessoes } = await import("../sessoes"); await encerrarSessoes(u.id); }
     return { link: linkConvite(c.token), expira: c.expira };
+  }),
+
+  /** Desconectar a pessoa de todos os aparelhos (senha emprestada, celular perdido); ela entra de novo com a senha */
+  encerrarSessoes: adminProcedure.input(z.object({ id: z.number().int() })).mutation(async ({ input }) => {
+    const { encerrarSessoes } = await import("../sessoes");
+    await encerrarSessoes(input.id);
+    return { ok: true as const };
   }),
 
   // ─── Primeiro acesso (público, pelo link) ──────────────────────────────────

@@ -3,6 +3,19 @@
 Cada versão nova vai no TOPO. Depois rode `npm run release` (valida e atualiza o package.json);
 ao subir, o servidor grava a versão no banco e todos recebem o aviso "Novidades da versão".
 
+## 1.102.0 — 2026-11-04
+tipo: minor
+obrigatoria: nao
+titulo: Alterar senha e sair de todos os aparelhos
+
+### Novo
+- Meu cadastro › Senha e acesso (para todos): alterar a senha informando a atual; por padrão já desconecta os outros celulares e computadores e você continua logado no aparelho em que está
+- Botão "Sair de todos os outros aparelhos": derruba na hora qualquer outro lugar logado na sua conta (celular perdido, senha emprestada, computador de outra pessoa)
+- Equipe (administrador): botão "Desconectar aparelhos" em cada pessoa
+
+### Melhorias
+- "Redefinir senha" da Equipe e a senha provisória nova do Recrutamento agora também desconectam todos os aparelhos que estavam com a senha antiga
+
 ## 1.101.2 — 2026-11-04
 tipo: patch
 obrigatoria: nao

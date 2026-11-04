@@ -5,7 +5,7 @@ import { trpc } from "@/lib/trpc";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Copy, IdCard, KeyRound, MessageCircle, Plus, ShieldCheck, Trash2, UserCheck, UserX, Users } from "lucide-react";
+import { Copy, IdCard, KeyRound, LogOut, MessageCircle, Plus, ShieldCheck, Trash2, UserCheck, UserX, Users } from "lucide-react";
 import ConfirmarExclusao from "@/components/sistema/ConfirmarExclusao";
 import { daEquipe, type Perfil } from "@shared/equipe";
 import PageHeader from "@/components/PageHeader";
@@ -66,6 +66,7 @@ export default function Equipe() {
   const recarregar = () => utils.equipe.list.invalidate();
 
   const listas = { modulos: data?.modulos ?? [], empreendimentos: (data?.empreendimentos ?? []) as any[], imoveis: data?.imoveis ?? [] };
+  const desconectar = trpc.equipe.encerrarSessoes.useMutation({ onSuccess: () => toast.success("Desconectado de todos os aparelhos. Para entrar de novo, ele(a) usa a senha."), onError: e => toast.error(e.message) });
   const atualizar = trpc.equipe.update.useMutation({ onSuccess: () => { toast.success("Acesso atualizado"); recarregar(); }, onError: e => toast.error(e.message) });
   const reconvite = trpc.equipe.novoConvite.useMutation({ onError: e => toast.error(e.message) });
   // Desativado sai da lista: sem vínculo é apagado; com histórico (contrato, lead, financeiro) é arquivado
@@ -157,6 +158,12 @@ export default function Equipe() {
                         }}>
                           <KeyRound className="mr-1.5 h-3.5 w-3.5" /> {p.temSenha ? "Redefinir senha" : "Gerar link"}
                         </Button>
+                        {p.ativo && p.temSenha && (
+                          <Button size="sm" variant="outline" disabled={desconectar.isPending} title="Senha emprestada, celular perdido: sai de todos os celulares e computadores"
+                            onClick={() => { if (confirm(`Desconectar ${p.nome} de todos os aparelhos? Se a senha foi passada para outra pessoa, use também "Redefinir senha".`)) desconectar.mutate({ id: p.id }); }}>
+                            <LogOut className="mr-1.5 h-3.5 w-3.5" /> Desconectar aparelhos
+                          </Button>
+                        )}
                         <Button size="sm" variant="ghost" className={p.ativo ? "text-red-300" : "text-emerald-300"} onClick={() => {
                           if (p.ativo && !confirm(`Desativar o acesso de ${p.nome}? Ele(a) sai do CRM na hora.`)) return;
                           atualizar.mutate({ id: p.id, ativo: !p.ativo });

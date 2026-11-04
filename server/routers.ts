@@ -213,8 +213,16 @@ export const appRouter = router({
           throw error;
         }
       }),
+    /** Sair de todos os outros aparelhos (continua logado só neste) */
+    sairDosOutrosAparelhos: protectedProcedure.mutation(async ({ ctx }) => {
+      if ((ctx.req as any).verComo) throw new Error("Indisponível no modo Ver como");
+      const { manterSoEsteAparelho } = await import("./sessoes");
+      await manterSoEsteAparelho(ctx, ctx.user as any);
+      try { const S = await import("./saas/servico"); await S.auditar(ctx.user.id, "SAIR_DE_TODOS", null, null); } catch { /* auditoria é complementar */ }
+      return { success: true };
+    }),
     changePassword: protectedProcedure
-      .input(z.object({ currentPassword: z.string(), newPassword: z.string().max(200) }))
+      .input(z.object({ currentPassword: z.string(), newPassword: z.string().max(200), sairDosOutros: z.boolean().default(true) }))
       .mutation(async ({ input, ctx }) => {
         const { checkLogin, hashPassword, passwordProblem } = await import("./auth-security");
         const problem = passwordProblem(input.newPassword);
@@ -227,6 +235,11 @@ export const appRouter = router({
         if (!check.ok) throw new Error("Senha atual incorreta.");
         if (input.newPassword === input.currentPassword) throw new Error("A senha nova precisa ser diferente da atual.");
         await db.update(users).set({ passwordScrypt: await hashPassword(input.newPassword), passwordHash: null, trocarSenha: false, senhaProvisoriaExpira: null } as any).where(eq(users.id, user.id));
+        // Senha nova: os outros aparelhos logados com a antiga saem; este continua
+        if (input.sairDosOutros) {
+          const { manterSoEsteAparelho } = await import("./sessoes");
+          await manterSoEsteAparelho(ctx, user as any);
+        }
         const { perfilDe: perfil, telaInicial: inicio } = await import("@shared/equipe");
         return { success: true, destino: inicio(perfil(user as any)) };
       }),

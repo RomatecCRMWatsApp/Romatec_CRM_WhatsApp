@@ -1,4 +1,5 @@
 import { useLocation } from "wouter";
+import SegurancaConta from "@/components/SegurancaConta";
 import { toast } from "sonner";
 import { AlertTriangle, ArrowLeft, IdCard, MonitorPause } from "lucide-react";
 import { DESCANSO_PADRAO, OPCOES_DESCANSO } from "@shared/releases";
@@ -33,6 +34,7 @@ export default function MeuCadastro() {
         <div className="rounded-xl border border-border bg-card p-4">
           <CadastroUsuario admin={perfil === "admin"} onSalvo={() => utils.auth.me.invalidate()} />
         </div>
+        <SegurancaConta />
         <Preferencias minutos={Number((user as any)?.descansoMinutos ?? DESCANSO_PADRAO)} />
       </div>
     </div>

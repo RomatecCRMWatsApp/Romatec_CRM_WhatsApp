@@ -163,6 +163,8 @@ async function definirSenhaProvisoria(usuarioId: number, agora = Date.now()) {
     passwordScrypt: await hashPassword(senha), passwordHash: null, trocarSenha: 1, senhaProvisoriaExpira: dias(DIAS_SENHA_PROVISORIA, agora),
     conviteHash: null, conviteExpira: null, ativo: 1,
   } as any).where(eq(users.id, usuarioId));
+  // Senha nova: quem estava logado com a antiga (outro celular/computador) sai na hora
+  await import('../sessoes').then(m => m.encerrarSessoes(usuarioId)).catch(() => 0);
   return senha;
 }
 
