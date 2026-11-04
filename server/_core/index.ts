@@ -692,6 +692,9 @@ async function startServer() {
       if (req.body?.object === 'instagram') {
         const { receberInstagram } = await import('../caixaEntrada');
         await receberInstagram(req.body);
+        // Comentário com palavra-chave (CHÁCARA, ROTA…) → simulação no Direct
+        const { responderComentarios } = await import('../instagramComentarios');
+        await responderComentarios(req.body);
         return res.sendStatus(200);
       }
       const { ingestLead } = await import('../lead-intake');

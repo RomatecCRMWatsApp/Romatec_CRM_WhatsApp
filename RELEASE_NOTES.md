@@ -3,6 +3,18 @@
 Cada versão nova vai no TOPO. Depois rode `npm run release` (valida e atualiza o package.json);
 ao subir, o servidor grava a versão no banco e todos recebem o aviso "Novidades da versão".
 
+## 1.97.0 — 2026-11-04
+tipo: minor
+obrigatoria: nao
+titulo: Comentou CHÁCARA no Instagram, recebe a simulação no Direct
+
+### Novo
+- Instagram: quem comenta CHÁCARA, QUERO, SIMULAÇÃO, VALOR ou INFO em qualquer post do @avalieimob recebe no Direct o link da simulação com as condições completas (e ROTA recebe o caminho até o Bom Jardims), com uma resposta curta embaixo do comentário
+- A conversa aparece na Caixa de entrada e quem atende recebe o aviso; uma resposta por pessoa por post
+
+### Avisos
+- Para funcionar, o app da Meta precisa da permissão instagram_manage_comments e do campo "comments" assinado no webhook do Instagram. Para desligar: IG_COMENTARIO_AUTO=off no Railway
+
 ## 1.96.3 — 2026-11-03
 tipo: patch
 obrigatoria: nao
