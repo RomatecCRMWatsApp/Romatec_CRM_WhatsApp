@@ -3,6 +3,15 @@
 Cada versão nova vai no TOPO. Depois rode `npm run release` (valida e atualiza o package.json);
 ao subir, o servidor grava a versão no banco e todos recebem o aviso "Novidades da versão".
 
+## 1.99.2 — 2026-11-04
+tipo: patch
+obrigatoria: nao
+titulo: Prévia do carimbo antes de salvar
+
+### Melhorias
+- Materiais › Meu carimbo: prévia ao vivo da faixa (nome, CRECI, WhatsApp, Instagram, e-mail e QR do seu link), igual à que sai nas artes e vídeos; muda enquanto você digita
+- No computador a prévia fica ao lado dos campos; no celular, logo abaixo
+
 ## 1.99.1 — 2026-11-04
 tipo: patch
 obrigatoria: nao
