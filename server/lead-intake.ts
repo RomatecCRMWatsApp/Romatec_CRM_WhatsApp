@@ -64,7 +64,7 @@ export function canalDaOrigem(origem: LeadOrigem): string {
 
 export type LeadIntakeResult =
   | { ok: true; created: boolean; messageSent: boolean; phone: string }
-  | { ok: false; reason: 'invalid_phone' | 'duplicate' | 'blocked' | 'db_unavailable' };
+  | { ok: false; reason: 'invalid_phone' | 'duplicate' | 'blocked' | 'db_unavailable' | 'equipe' };
 
 /** Lead que já conversou há menos que isso não recebe nova abordagem (evita spam) */
 const REENGAGE_AFTER_MS = 12 * 60 * 60 * 1000;
@@ -156,6 +156,14 @@ export async function ingestLead(input: LeadIntakeInput): Promise<LeadIntakeResu
   }
 
   if (await isLeadBlocked(phone)) return { ok: false, reason: 'blocked' };
+  // Equipe e candidatos do Recrutamento (corretor, secretária, empreendedor, admin) nunca viram lead, venha de onde vier
+  {
+    const { ehNumeroDaEquipe } = await import('./leads/numerosDaEquipe');
+    if (await ehNumeroDaEquipe(phone).catch(() => false)) {
+      console.log(`[LeadIntake] 👥 ${phone} é da equipe/recrutamento — não vira lead`);
+      return { ok: false, reason: 'equipe' };
+    }
+  }
 
   let imovel: string | undefined;
   let imovelInfo: { codigo: string | null; preco: number | null } | undefined;

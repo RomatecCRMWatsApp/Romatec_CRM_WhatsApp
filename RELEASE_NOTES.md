@@ -3,6 +3,18 @@
 Cada versão nova vai no TOPO. Depois rode `npm run release` (valida e atualiza o package.json);
 ao subir, o servidor grava a versão no banco e todos recebem o aviso "Novidades da versão".
 
+## 1.101.2 — 2026-11-04
+tipo: patch
+obrigatoria: nao
+titulo: Recrutamento nunca vira lead
+
+### Correções
+- Candidato do Recrutamento (convidado como corretor, secretária, empreendedor ou administrador) não vira lead nem recebe as mensagens do robô de captação quando responde o convite, mesmo antes de virar usuário do sistema
+- A regra vale para todas as entradas de lead (WhatsApp, formulários, Instagram, anúncios) e para o follow-up automático, que deixa de mandar mensagem para número da equipe ou do recrutamento
+
+### Avisos
+- Leads criados por engano antes desta correção aparecem na lista "Leads da equipe" (tela Leads, administrador) para apagar
+
 ## 1.101.1 — 2026-11-04
 tipo: patch
 obrigatoria: nao

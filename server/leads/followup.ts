@@ -202,7 +202,14 @@ export async function processarFollowUps(agora = Date.now(), limite = 15): Promi
   const { registrarMensagem } = await import('./qualificacaoService');
   const { linhasAfetadas, registrarEnvio } = await import('./rotinas');
   let enviados = 0;
+  // Lead criado por engano de número da equipe/recrutamento: o follow-up para (nunca manda "oferta" para corretor)
+  const { telefonesDaEquipe, chaveTelefone } = await import('./numerosDaEquipe');
+  const equipe = await telefonesDaEquipe().catch(() => new Map<string, string>());
   for (const l of vencidos) {
+    if (equipe.has(chaveTelefone(l.phone))) {
+      await d.update(leadQualifications).set({ proximoFollowUpAt: null } as any).where(eq(leadQualifications.id, l.id));
+      continue;
+    }
     const anterior = Number(l.followUpPasso) || 0;
     const passo = anterior + 1;
     const pausa = followUpPausado(l, agora);

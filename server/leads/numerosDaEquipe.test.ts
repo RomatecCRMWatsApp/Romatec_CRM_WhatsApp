@@ -15,6 +15,7 @@ beforeAll(async () => {
   const db: any = await getDb();
   await db.insert(S.users).values({ openId: 'corretora-1', name: 'Corretora Teste', perfil: 'equipe', telefone: '(99) 98888-7777' } as any);
   await db.insert(S.corretoresExternos).values({ nome: 'Externo', cpf: '12345678909', telefone: '99 8777-6666' } as any);
+  await db.insert(S.recrutamentos).values({ perfil: 'corretor', nome: 'Orlania Candidata', telefone: '5599992107411', token: 'tok-orlania', tokenExpira: new Date(Date.now() + 86400000), criadoPor: 1 } as any);
 });
 
 // O mesmo caminho do webhook (server/_core/index.ts): número da equipe para antes da captação
@@ -44,6 +45,16 @@ describe('número da equipe não vira lead', () => {
     expect(await mensagemRecebida('5599987776666')).toBe(false);
     expect(await leadsDo('5599988887777')).toHaveLength(0);
     expect(await leadsDo('559988887777')).toHaveLength(0);
+  });
+
+  it('candidato do Recrutamento (convite de corretor, mesmo antes de virar usuário): não vira lead por nenhuma porta', async () => {
+    expect(await mensagemRecebida('5599992107411')).toBe(false);
+    expect(await mensagemRecebida('(99) 9 9210-7411')).toBe(false);
+    const { ingestLead } = await import('../lead-intake');
+    expect(await ingestLead({ nome: 'Orlania', phone: '99992107411', origem: 'whatsapp' } as any)).toMatchObject({ ok: false, reason: 'equipe' });
+    expect(await leadsDo('5599992107411')).toHaveLength(0);
+    const { telefonesDaEquipe } = await import('./numerosDaEquipe');
+    expect((await telefonesDaEquipe()).get(chaveTelefone('5599992107411'))).toBe('Recrutamento: Orlania Candidata (corretor(a))');
   });
 
   it('o número da empresa / WhatsApp do CRM também não', async () => {

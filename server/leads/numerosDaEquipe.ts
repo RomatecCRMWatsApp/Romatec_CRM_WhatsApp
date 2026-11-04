@@ -1,6 +1,8 @@
 /**
  * Números que nunca viram lead: usuários do sistema (corretor, secretária, admin, empreendedor),
+ * candidatos do Recrutamento (convidados como corretor, secretária ou empreendedor — mesmo antes de virar usuário),
  * corretores externos, o número da empresa e o do próprio WhatsApp do CRM.
+ * Vale para TODA entrada de lead: webhook do WhatsApp (server/_core/index.ts) e ingestLead (server/lead-intake.ts).
  */
 import { normalizePhoneBR } from '../../shared/telefone';
 import { numeroWhatsAppLeads, telefonesNotificacao } from './config';
@@ -15,7 +17,7 @@ export function chaveTelefone(raw?: string | null): string {
 /** chave do telefone → de quem é (para a lista de limpeza) */
 export async function telefonesDaEquipe(): Promise<Map<string, string>> {
   const { getDb } = await import('../db');
-  const { users, corretoresExternos, companyConfig } = await import('../../drizzle/schema');
+  const { users, corretoresExternos, companyConfig, recrutamentos } = await import('../../drizzle/schema');
   const db: any = await getDb();
   const lista: { t?: string | null; quem: string }[] = [
     { t: process.env.CEO_WHATSAPP_PHONE, quem: 'CEO' },
@@ -23,14 +25,17 @@ export async function telefonesDaEquipe(): Promise<Map<string, string>> {
     ...telefonesNotificacao().map(t => ({ t, quem: 'Avisos de lead (José)' })),
   ];
   if (db) {
-    const [us, ext, emp] = await Promise.all([
+    const [us, ext, emp, rec] = await Promise.all([
       db.select({ t: users.telefone, nome: users.name }).from(users),
       db.select({ t: corretoresExternos.telefone, nome: corretoresExternos.nome }).from(corretoresExternos).catch(() => []),
       db.select({ t: companyConfig.phone }).from(companyConfig).catch(() => []),
+      db.select({ t: recrutamentos.telefone, nome: recrutamentos.nome, perfil: recrutamentos.perfil }).from(recrutamentos).catch(() => []),
     ]);
     for (const r of us) lista.push({ t: r.t, quem: `Usuário: ${r.nome || 'sem nome'}` });
     for (const r of ext) lista.push({ t: r.t, quem: `Corretor externo: ${r.nome}` });
     for (const r of emp) lista.push({ t: r.t, quem: 'Telefone da empresa' });
+    const PAPEL: Record<string, string> = { corretor: 'corretor(a)', secretario: 'secretária', empreendedor: 'empreendedor', admin: 'administrador' };
+    for (const r of rec) lista.push({ t: r.t, quem: `Recrutamento: ${r.nome} (${PAPEL[String(r.perfil)] ?? r.perfil})` });
   }
   const m = new Map<string, string>();
   for (const { t, quem } of lista) {
