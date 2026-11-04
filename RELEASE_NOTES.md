@@ -3,6 +3,16 @@
 Cada versão nova vai no TOPO. Depois rode `npm run release` (valida e atualiza o package.json);
 ao subir, o servidor grava a versão no banco e todos recebem o aviso "Novidades da versão".
 
+## 1.102.1 — 2026-11-04
+tipo: patch
+obrigatoria: nao
+titulo: Enviar a ficha de credenciamento pelo celular
+
+### Correções
+- Ficha de credenciamento › Enviar pelo WhatsApp: no iPhone aparecia "The request is not allowed by the user agent…" porque o PDF demora a ficar pronto e o celular nega o compartilhamento; agora a ficha fica pronta e aparece o botão "Enviar agora" (um toque abre o WhatsApp)
+- Em navegador que não compartilha arquivo (ex.: o navegador interno do Instagram ou computador), o PDF é baixado e o WhatsApp abre com o texto e o link de verificação para anexar
+- Painel do empreendedor: o mesmo ajuste ao enviar as artes
+
 ## 1.102.0 — 2026-11-04
 tipo: minor
 obrigatoria: nao

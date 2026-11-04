@@ -59,6 +59,8 @@ function Titulo({ id, icone: Icone, children, sub }: { id: string; icone: React.
 /** Arte só para divulgar: ver, baixar, mandar (no celular abre WhatsApp/Instagram) e copiar link */
 function Arte({ m }: { m: any }) {
   const [ocupado, setOcupado] = useState(false);
+  // Arquivo já baixado: no 2º toque o menu do celular abre na hora (o iPhone nega depois de uma espera)
+  const [pronto, setPronto] = useState<File | null>(null);
   const baixar = async () => {
     setOcupado(true);
     const blob = await baixarBlob(m);
@@ -71,9 +73,16 @@ function Arte({ m }: { m: any }) {
   const enviar = async () => {
     setOcupado(true);
     try {
-      const blob = await baixarBlob(m);
-      const arquivo = blob ? new File([blob], nomeArquivo(m), { type: blob.type || m.mime || "" }) : null;
-      if (arquivo && (navigator as any).canShare?.({ files: [arquivo] })) { await navigator.share({ files: [arquivo], title: m.titulo }); return; }
+      const blob = pronto ? null : await baixarBlob(m);
+      const arquivo = pronto ?? (blob ? new File([blob], nomeArquivo(m), { type: blob.type || m.mime || "" }) : null);
+      if (arquivo) {
+        const { compartilharArquivo } = await import("@/lib/compartilhar");
+        const r = await compartilharArquivo(arquivo, { title: m.titulo });
+        if (r === "ok" || r === "cancelado") { setPronto(null); return; }
+        // iPhone negou depois da espera do download: um toque novo no Enviar já abre o menu
+        if (r === "precisa_toque" && !pronto) { setPronto(arquivo); toast.message("Arquivo pronto: toque em Enviar de novo."); return; }
+        setPronto(null);
+      }
       await navigator.clipboard.writeText(m.url);
       toast.success("Link copiado. No celular, este botão envia o arquivo direto para o WhatsApp ou Instagram.");
     } catch (e: any) {

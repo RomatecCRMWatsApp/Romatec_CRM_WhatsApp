@@ -4,6 +4,7 @@ import { BadgeCheck, Copy, Download, Loader2, Share2, TriangleAlert } from "luci
 import { trpc } from "@/lib/trpc";
 import { Button } from "@/components/ui/button";
 import { sel } from "@/components/cadastro/campos";
+import { baixarArquivo, compartilharArquivo, planoBWhatsApp } from "@/lib/compartilhar";
 
 /**
  * Ficha de credenciamento do corretor no empreendimento (PDF com Cartão CRECI, Certidão e CNH anexados):
@@ -16,6 +17,8 @@ export default function FichaCredenciamento({ uid }: { uid: number }) {
   useEffect(() => { if (!slug && lista.length) setSlug(lista[0].slug); }, [lista.length]); // eslint-disable-line react-hooks/exhaustive-deps
   const { data: sit, isFetching } = trpc.cadastro.credenciamento.useQuery({ id: uid, slug }, { enabled: !!slug });
   const [gerando, setGerando] = useState<"baixar" | "enviar" | null>(null);
+  // PDF pronto esperando um toque novo (o iPhone nega o compartilhamento depois da espera do PDF)
+  const [pronto, setPronto] = useState<File | null>(null);
   const nomeEmp = lista.find(e => e.slug === slug)?.nome ?? "";
 
   const pdf = async (): Promise<File> => {
@@ -31,21 +34,23 @@ export default function FichaCredenciamento({ uid }: { uid: number }) {
     setGerando("baixar");
     try {
       const f = await pdf();
-      const url = URL.createObjectURL(f);
-      const a = document.createElement("a");
-      a.href = url; a.download = f.name; a.click();
-      setTimeout(() => URL.revokeObjectURL(url), 60_000);
+      baixarArquivo(f, f.name);
     } catch (e: any) { toast.error(e.message); } finally { setGerando(null); }
   };
-  // No celular manda o PDF direto para o WhatsApp; no computador abre o WhatsApp com o link de verificação
+  const texto = `Sou corretor(a) credenciado(a) no ${nomeEmp}. Confira minha ficha e a situação do meu CRECI: ${sit?.link ?? ""}`;
+  /** Manda o PDF pelo menu do celular; sem suporte (computador, navegador do Instagram): baixa e abre o WhatsApp */
+  const mandar = async (f: File, segundaVez: boolean) => {
+    const r = await compartilharArquivo(f, { title: "Ficha de credenciamento", text: texto });
+    if (r === "ok" || r === "cancelado") { setPronto(null); return; }
+    if (r === "precisa_toque" && !segundaVez) { setPronto(f); toast.success("Ficha pronta: toque em \"Enviar agora\"."); return; }
+    setPronto(null);
+    planoBWhatsApp(f, texto);
+    toast.message("O PDF foi baixado e o WhatsApp abriu com o texto e o link: anexe o PDF na conversa.");
+  };
   const enviar = async () => {
     setGerando("enviar");
-    try {
-      const texto = `Sou corretor(a) credenciado(a) no ${nomeEmp}. Confira minha ficha e a situação do meu CRECI: ${sit?.link ?? ""}`;
-      const f = await pdf();
-      if ((navigator as any).canShare?.({ files: [f] })) { await navigator.share({ files: [f], title: "Ficha de credenciamento", text: texto }); return; }
-      window.open(`https://wa.me/?text=${encodeURIComponent(texto)}`, "_blank", "noopener");
-    } catch (e: any) { if (e?.name !== "AbortError") toast.error(e.message); } finally { setGerando(null); }
+    try { await mandar(await pdf(), false); }
+    catch (e: any) { toast.error(e.message); } finally { setGerando(null); }
   };
   const copiar = async () => {
     if (!sit?.link) return;
@@ -82,6 +87,11 @@ export default function FichaCredenciamento({ uid }: { uid: number }) {
               </Button>
               <Button type="button" size="sm" variant="ghost" className="h-8 text-xs" onClick={copiar}><Copy className="mr-1 h-3.5 w-3.5" /> Link de verificação</Button>
             </div>
+            {pronto && (
+              <Button type="button" size="sm" className="h-9 w-full bg-[#25d366] text-xs text-white hover:bg-[#1fb956]" onClick={() => mandar(pronto, true)}>
+                <Share2 className="mr-1 h-4 w-4" /> Enviar agora
+              </Button>
+            )}
           </>
         ) : null}
     </div>
