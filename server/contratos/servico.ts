@@ -209,6 +209,8 @@ export async function criarContrato(n: NovoContrato, autorId: number): Promise<{
   await d.insert(loteHistorico).values({ loteId: lote.id, de: lote.situacao ?? 'disponivel', para: 'reservado', leadId: n.leadId ?? null,
     corretorId: n.corretorUserId, usuarioId: autorId, detalhe: `Contrato ${numero}`, createdAt: agora } as any);
 
+  // Contrato emitido para o lead: finaliza o atendimento do encaminhamento (relatório de distribuição)
+  if (n.leadId) await import('../leads/distribuicao').then(m => m.finalizarPorEvento(Number(n.leadId), 'vendido', `Contrato ${numero} · chácara ${lote.codigo}`, autorId)).catch(() => 0);
   const compradorId = await salvarPessoa(n.comprador, n.leadId ?? null);
   await d.insert(contratoPessoas).values({ contratoId: c.id, pessoaId: compradorId, papel: 'comprador' });
   if (exigeConjuge(n.comprador.estadoCivil) && n.conjuge) {

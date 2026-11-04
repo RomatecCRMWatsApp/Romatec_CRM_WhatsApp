@@ -45,17 +45,54 @@ describe('distribuição manual de leads', () => {
     await D.registrarEncaminhamento({ leadId: 12, deId: 3, paraId: 1, origem: 'automatico', observacao: 'Roleta: sem atendimento em 15 min' });
     const hoje = new Date(Date.now() - 3 * 3600_000).toISOString().slice(0, 10);
     const todos = await D.relatorioEncaminhamentos({ de: hoje, ate: hoje });
-    expect(todos.resumo).toEqual({ total: 3, manual: 2, automatico: 1 });
+    expect(todos.resumo).toMatchObject({ total: 3, manual: 2, automatico: 1, aguardando: 3 });
     const manual = await D.relatorioEncaminhamentos({ de: hoje, ate: hoje, origem: 'manual' });
     expect(manual.itens.map(i => [i.lead, i.de, i.para, i.por, i.observacao])).toEqual(expect.arrayContaining([
       ['Ana Lead', null, 'Corretor Caio', 'Secretária Bia', 'Cliente prefere manhã'], ['Beto Lead', null, 'Corretor Caio', 'Secretária Bia', 'Cliente prefere manhã'],
     ]));
-    expect(manual.porCorretor).toEqual([{ corretor: 'Corretor Caio', total: 2, manual: 2, automatico: 0 }]);
+    expect(manual.porCorretor).toMatchObject([{ corretor: 'Corretor Caio', total: 2, manual: 2, automatico: 0, aguardando: 2 }]);
     const auto = await D.relatorioEncaminhamentos({ de: hoje, ate: hoje, paraId: 1 });
     expect(auto.itens[0]).toMatchObject({ origem: 'automatico', por: 'Automático (roleta)', de: 'Corretor Caio', para: 'José', continuaCom: 'não' });
     const csv = D.csvRelatorio(manual.itens);
     expect(csv.startsWith('﻿Data e hora;Tipo;Lead')).toBe(true);
     expect(csv).toContain(';Manual;Ana Lead;+5599911110000;');
     await expect(D.relatorioEncaminhamentos({ de: hoje, ate: '2020-01-01' })).rejects.toThrow(/data final/);
+  });
+
+  it('corretor confirma o recebimento; só quem recebeu confirma', async () => {
+    const meus = await D.meusEncaminhamentos(3);
+    const ana = meus.find(m => m.lead === 'Ana Lead')!;
+    expect(ana.situacao).toBe('aguardando_confirmacao');
+    await expect(D.confirmarRecebimento(ana.id, 2)).rejects.toThrow(/outra pessoa/);
+    await D.confirmarRecebimento(ana.id, 3);
+    expect((await D.meusEncaminhamentos(3)).find(m => m.id === ana.id)!.situacao).toBe('em_atendimento');
+    expect((await D.encaminhamentoAbertoDoLead(10, 3))!.recebidoEm).not.toBeNull();
+  });
+
+  it('corretor informa que o cliente desistiu: fecha e leva o lead para Perdido', async () => {
+    const beto = (await D.meusEncaminhamentos(3)).find(m => m.lead === 'Beto Lead')!;
+    await D.finalizarPeloCorretor(beto.id, { id: 3, escritorio: false }, 'desistiu', 'achou longe');
+    const [l]: any[] = db.all(sql`SELECT etapa, motivoPerda FROM leadQualifications WHERE id = 11`);
+    expect(l).toEqual({ etapa: 'perdido', motivoPerda: 'outro:Desistiu' });
+    const b = (await D.meusEncaminhamentos(3)).find(m => m.id === beto.id)!;
+    expect([b.situacao, b.desfecho, b.desfechoMotivo]).toEqual(['finalizado', 'desistiu', 'achou longe']);
+    expect(b.recebidoEm).not.toBeNull();
+    await expect(D.finalizarPeloCorretor(beto.id, { id: 3, escritorio: false }, 'sem_contato')).rejects.toThrow(/Já finalizado/);
+  });
+
+  it('venda lançada finaliza sozinho; repassar fecha o anterior como repassado', async () => {
+    expect(await D.finalizarPorEvento(10, 'vendido', 'Contrato BJ-001 · chácara A01')).toBe(1);
+    const ana = (await D.meusEncaminhamentos(3)).find(m => m.lead === 'Ana Lead')!;
+    expect([ana.situacao, ana.desfecho]).toEqual(['finalizado', 'vendido']);
+    expect(await D.encaminhamentoAbertoDoLead(10, 3)).toBeNull();
+    db.run(sql`INSERT INTO leadQualifications (id, phone, nome) VALUES (13, '5599944440000', 'Duda Lead')`);
+    await D.encaminharManual([13], 3, { id: 2, nome: 'Bia' });
+    await D.encaminharManual([13], 1, { id: 2, nome: 'Bia' });
+    const hoje = new Date(Date.now() - 3 * 3600_000).toISOString().slice(0, 10);
+    const r = await D.relatorioEncaminhamentos({ de: hoje, ate: hoje, origem: 'manual' });
+    const duda = r.itens.filter(i => i.lead === 'Duda Lead');
+    expect(duda.map(i => [i.para, i.desfecho])).toEqual(expect.arrayContaining([['Corretor Caio', 'repassado'], ['José', null]]));
+    expect(r.resumo.vendidos).toBe(1);
+    expect(D.csvRelatorio(r.itens)).toContain(';Finalizado;');
   });
 });

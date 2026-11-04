@@ -16,6 +16,7 @@ export function textoEncaminhamento(o: { leadId: number; cliente: string; telefo
     o.empreendimento ? `🏡 ${o.empreendimento}` : null,
     `💬 Atender no WhatsApp: ${linkWhatsAppAtendido(o.leadId)}`,
     `🔗 Ficha no CRM: ${appUrl()}/leads/lead/${o.leadId}`,
+    `✅ Confirme que recebeu: ${appUrl()}/leads/recebidos`,
   ].filter(Boolean).join('\n');
 }
 

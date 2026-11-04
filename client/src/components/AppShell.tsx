@@ -11,7 +11,7 @@ import {
   Settings, UserCog, Users, X, Eye, ClipboardList, CalendarDays, Map as MapIcon, Smartphone, Wallet, IdCard, FolderOpen, Bell, FileSignature, Mic, CalendarCheck, UserPlus, BookCopy, BadgeDollarSign, Hourglass, Bot, Trophy, Link2, Zap, MessagesSquare, ListOrdered, Plug, Inbox, Building, Rotate3d,
   ChevronRight, ChevronsLeft, ChevronsRight,
   Radar, BookOpen,
- Shuffle,
+ Shuffle, CheckCheck,
 } from "lucide-react";
 import { abrirNovidades, SinoNovidades, useNovidadesNaoLidas } from "./sistema/Novidades";
 import { useNotificacoes } from "./sistema/Notificacoes";
@@ -45,6 +45,7 @@ const MENU: Grupo[] = [
     itens: [
       { rotulo: "Atender agora", rota: "/leads/atender", icone: Zap, modulo: "leads" },
       { rotulo: "Caixa de entrada", rota: "/caixa-entrada", icone: Inbox, modulo: "leads" },
+      { rotulo: "Leads recebidos", rota: "/leads/recebidos", icone: CheckCheck, modulo: "leads" },
       { rotulo: "Leads", rota: "/leads", icone: Flame, exato: true, modulo: "leads" },
       // Administrador e secretária (shared/equipe.ts → podeAbrir)
       { rotulo: "Distribuição de leads", rota: "/leads/distribuicao", icone: Shuffle, modulo: "leads" },

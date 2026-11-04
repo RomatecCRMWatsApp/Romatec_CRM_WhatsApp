@@ -3,6 +3,7 @@ import { toast } from "sonner";
 import { Link } from "wouter";
 import { Download, Loader2, Search, Send, Shuffle } from "lucide-react";
 import { trpc } from "@/lib/trpc";
+import { ROTULO_DESFECHO, ROTULO_SITUACAO } from "@shared/distribuicaoLeads";
 import PageHeader from "@/components/PageHeader";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -104,7 +105,7 @@ function Distribuir({ aoEncaminhar }: { aoEncaminhar: () => void }) {
               {lista.map(l => (
                 <tr key={l.id} className={`border-t border-border ${sel.has(l.id) ? "bg-emerald-500/10" : ""}`} onClick={() => alternar(l.id)}>
                   <td className="p-2"><input type="checkbox" aria-label={`Selecionar ${l.nome}`} checked={sel.has(l.id)} onChange={() => alternar(l.id)} onClick={e => e.stopPropagation()} /></td>
-                  <td className="p-2 font-medium"><Link href={`/leads/${l.id}`} onClick={(e: any) => e.stopPropagation()} className="hover:underline">{l.nome}</Link>{l.score === "quente" && <span className="ml-1 text-[10px] text-orange-400">🔥</span>}</td>
+                  <td className="p-2 font-medium"><Link href={`/leads/lead/${l.id}`} onClick={(e: any) => e.stopPropagation()} className="hover:underline">{l.nome}</Link>{l.score === "quente" && <span className="ml-1 text-[10px] text-orange-400">🔥</span>}</td>
                   <td className="p-2 whitespace-nowrap">{l.telefone}</td>
                   <td className="p-2 text-xs text-muted-foreground">{l.origem ?? "—"}</td>
                   <td className="p-2 text-xs text-muted-foreground">{[l.empreendimento, l.lote].filter(Boolean).join(" · ") || "—"}</td>
@@ -160,8 +161,8 @@ function Relatorio() {
       {isLoading && <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />}
       {data && (
         <>
-          <div className="grid gap-2 sm:grid-cols-3">
-            {[["Encaminhamentos", data.resumo.total], ["Manuais", data.resumo.manual], ["Automáticos", data.resumo.automatico]].map(([r, n]) => (
+          <div className="grid grid-cols-2 gap-2 sm:grid-cols-5">
+            {[["Encaminhamentos", data.resumo.total], ["Manuais", data.resumo.manual], ["Automáticos", data.resumo.automatico], ["Aguardando confirmação", data.resumo.aguardando], ["Vendidos", data.resumo.vendidos]].map(([r, n]) => (
               <div key={String(r)} className="rounded-lg border border-border bg-card p-3"><p className="text-xs text-muted-foreground">{r}</p><p className="text-2xl font-bold">{n}</p></div>
             ))}
           </div>
@@ -170,7 +171,7 @@ function Relatorio() {
               <p className="mb-2 text-xs font-semibold uppercase tracking-wider text-muted-foreground">Por corretor</p>
               <div className="flex flex-wrap gap-2">
                 {data.porCorretor.map(c => (
-                  <span key={c.corretor} className="rounded-md bg-secondary/40 px-2 py-1 text-xs"><b>{c.corretor}</b>: {c.total} ({c.manual} manual · {c.automatico} automático)</span>
+                  <span key={c.corretor} className="rounded-md bg-secondary/40 px-2 py-1 text-xs"><b>{c.corretor}</b>: {c.total} recebidos ({c.manual} manual · {c.automatico} automático) · {c.confirmados} confirmados{c.aguardando ? <span className="text-amber-300"> · {c.aguardando} sem confirmar</span> : null} · {c.vendidos} vendidos · {c.perdidos} perdidos</span>
                 ))}
               </div>
             </div>
@@ -179,18 +180,20 @@ function Relatorio() {
             <div className="overflow-x-auto rounded-lg border border-border">
               <table className="w-full text-sm">
                 <thead className="bg-secondary/30 text-left text-xs text-muted-foreground">
-                  <tr><th className="p-2">Data e hora</th><th className="p-2">Tipo</th><th className="p-2">Lead</th><th className="p-2">De</th><th className="p-2">Para</th><th className="p-2">Por</th><th className="p-2">Continua com ele</th><th className="p-2">Observação</th></tr>
+                  <tr><th className="p-2">Data e hora</th><th className="p-2">Tipo</th><th className="p-2">Lead</th><th className="p-2">De</th><th className="p-2">Para</th><th className="p-2">Por</th><th className="p-2">Continua com ele</th><th className="p-2">Recebimento</th><th className="p-2">Desfecho</th><th className="p-2">Observação</th></tr>
                 </thead>
                 <tbody>
                   {data.itens.map(i => (
                     <tr key={i.id} className="border-t border-border">
                       <td className="whitespace-nowrap p-2 text-xs">{dataHora(i.quando)}</td>
                       <td className="p-2"><span className={`rounded px-1.5 py-0.5 text-[10px] font-bold ${i.origem === "manual" ? "bg-emerald-600/30 text-emerald-200" : "bg-sky-600/30 text-sky-200"}`}>{i.origem === "manual" ? "MANUAL" : "AUTOMÁTICO"}</span></td>
-                      <td className="p-2"><Link href={`/leads/${i.leadId}`} className="font-medium hover:underline">{i.lead}</Link><span className="block text-[11px] text-muted-foreground">{i.telefone}</span></td>
+                      <td className="p-2"><Link href={`/leads/lead/${i.leadId}`} className="font-medium hover:underline">{i.lead}</Link><span className="block text-[11px] text-muted-foreground">{i.telefone}</span></td>
                       <td className="p-2 text-xs">{i.de ?? <span className="text-muted-foreground">sem responsável</span>}</td>
                       <td className="p-2 text-xs font-semibold">{i.para}</td>
                       <td className="p-2 text-xs">{i.por ?? "—"}</td>
                       <td className="p-2 text-xs">{i.continuaCom}</td>
+                      <td className="whitespace-nowrap p-2 text-xs">{i.recebidoEm ? <span className="text-emerald-300">✔ {dataHora(i.recebidoEm)}</span> : i.desfecho ? "—" : <span className="text-amber-300">aguardando</span>}</td>
+                      <td className="p-2 text-xs">{i.desfecho ? <><b>{ROTULO_DESFECHO[i.desfecho]}</b>{i.desfechoMotivo ? <span className="block text-muted-foreground">{i.desfechoMotivo}</span> : null}</> : ROTULO_SITUACAO[i.situacao]}</td>
                       <td className="p-2 text-xs text-muted-foreground">{i.observacao ?? ""}</td>
                     </tr>
                   ))}

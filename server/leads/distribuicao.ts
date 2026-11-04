@@ -6,6 +6,7 @@
 import { and, desc, eq, gte, inArray, isNotNull, isNull, lt, or, sql } from 'drizzle-orm';
 import { getDb } from '../db';
 import { leadEncaminhamentos, leadQualifications, users } from '../../drizzle/schema';
+import { DESFECHOS_CORRETOR, MOTIVO_PERDA_DO_DESFECHO, ROTULO_DESFECHO, ROTULO_SITUACAO, situacaoEncaminhamento, type Desfecho, type DesfechoCorretor } from '../../shared/distribuicaoLeads';
 
 export class DistribuicaoErro extends Error { constructor(msg: string) { super(msg); this.name = 'DistribuicaoErro'; } }
 export type OrigemEncaminhamento = 'manual' | 'automatico';
@@ -25,6 +26,9 @@ export async function registrarEncaminhamento(e: { leadId: number; deId?: number
   try {
     const d: any = await getDb();
     if (!d || !e.leadId || !e.paraId) return;
+    // O lead mudou de mãos: o encaminhamento anterior em aberto fecha como "repassado"
+    await d.update(leadEncaminhamentos).set({ desfecho: 'repassado', desfechoEm: e.quando ?? new Date(), desfechoPor: e.porId ?? null } as any)
+      .where(and(eq(leadEncaminhamentos.leadId, e.leadId), isNull(leadEncaminhamentos.desfecho)));
     await d.insert(leadEncaminhamentos).values({
       leadId: e.leadId, deId: e.deId ?? null, paraId: e.paraId, porId: e.porId ?? null, origem: e.origem,
       observacao: e.observacao?.trim().slice(0, 300) || null, criadoEm: e.quando ?? new Date(),
@@ -122,17 +126,26 @@ export async function relatorioEncaminhamentos(f: FiltroRelatorio) {
       lead: l?.nome || 'Sem nome', telefone: l ? `+${String(l.phone).replace(/\D/g, '')}` : null, empreendimento: l?.empreendimentoSlug ?? null, etapa: l?.etapa ?? null,
       de: nome(r.deId), para: nome(r.paraId) ?? '—', paraId: Number(r.paraId), por: r.origem === 'automatico' ? 'Automático (roleta)' : nome(r.porId),
       continuaCom: l ? (Number(l.responsavelId) === Number(r.paraId) ? 'sim' : 'não') : '—', observacao: r.observacao ?? null,
+      recebidoEm: iso(r.recebidoEm), situacao: situacaoEncaminhamento(r), desfecho: (r.desfecho ?? null) as Desfecho | null,
+      desfechoMotivo: r.desfechoMotivo ?? null, desfechoEm: iso(r.desfechoEm),
     };
   });
-  const porCorretor = new Map<string, { corretor: string; total: number; manual: number; automatico: number }>();
+  const porCorretor = new Map<string, { corretor: string; total: number; manual: number; automatico: number; aguardando: number; confirmados: number; vendidos: number; perdidos: number }>();
   for (const i of itens) {
-    const c = porCorretor.get(i.para) ?? { corretor: i.para, total: 0, manual: 0, automatico: 0 };
+    const c = porCorretor.get(i.para) ?? { corretor: i.para, total: 0, manual: 0, automatico: 0, aguardando: 0, confirmados: 0, vendidos: 0, perdidos: 0 };
     c.total++; c[i.origem]++;
+    if (i.situacao === 'aguardando_confirmacao') c.aguardando++;
+    if (i.recebidoEm) c.confirmados++;
+    if (i.desfecho === 'vendido') c.vendidos++;
+    else if (i.desfecho && i.desfecho !== 'repassado') c.perdidos++;
     porCorretor.set(i.para, c);
   }
   return {
     itens,
-    resumo: { total: itens.length, manual: itens.filter(i => i.origem === 'manual').length, automatico: itens.filter(i => i.origem === 'automatico').length },
+    resumo: {
+      total: itens.length, manual: itens.filter(i => i.origem === 'manual').length, automatico: itens.filter(i => i.origem === 'automatico').length,
+      aguardando: itens.filter(i => i.situacao === 'aguardando_confirmacao').length, vendidos: itens.filter(i => i.desfecho === 'vendido').length,
+    },
     porCorretor: Array.from(porCorretor.values()).sort((a, b) => b.total - a.total),
   };
 }
@@ -141,7 +154,95 @@ export async function relatorioEncaminhamentos(f: FiltroRelatorio) {
 export function csvRelatorio(itens: Awaited<ReturnType<typeof relatorioEncaminhamentos>>['itens']): string {
   const esc = (v: unknown) => { const s = String(v ?? ''); return /[;"\n]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s; };
   const dataBr = (iso: string) => new Date(iso).toLocaleString('pt-BR', { timeZone: 'America/Fortaleza' });
-  const cab = ['Data e hora', 'Tipo', 'Lead', 'Telefone', 'Empreendimento', 'De', 'Para', 'Encaminhado por', 'Continua com ele', 'Observação'];
-  const linhas = itens.map(i => [dataBr(i.quando), i.origem === 'manual' ? 'Manual' : 'Automático', i.lead, i.telefone, i.empreendimento, i.de ?? 'Sem responsável', i.para, i.por, i.continuaCom, i.observacao].map(esc).join(';'));
+  const cab = ['Data e hora', 'Tipo', 'Lead', 'Telefone', 'Empreendimento', 'De', 'Para', 'Encaminhado por', 'Continua com ele', 'Observação', 'Situação', 'Recebimento confirmado em', 'Desfecho', 'Motivo', 'Finalizado em'];
+  const linhas = itens.map(i => [dataBr(i.quando), i.origem === 'manual' ? 'Manual' : 'Automático', i.lead, i.telefone, i.empreendimento, i.de ?? 'Sem responsável', i.para, i.por, i.continuaCom, i.observacao,
+    ROTULO_SITUACAO[i.situacao], i.recebidoEm ? dataBr(i.recebidoEm) : '', i.desfecho ? ROTULO_DESFECHO[i.desfecho] : '', i.desfechoMotivo, i.desfechoEm ? dataBr(i.desfechoEm) : ''].map(esc).join(';'));
   return '﻿' + [cab.join(';'), ...linhas].join('\r\n');
+}
+
+// ─── Lado do corretor: confirmar recebimento e informar o desfecho ───────────────────────────────────────────
+
+async function encaminhamentoDo(d: any, id: number) {
+  const [e]: any[] = await d.select().from(leadEncaminhamentos).where(eq(leadEncaminhamentos.id, id)).limit(1);
+  if (!e) throw new DistribuicaoErro('Encaminhamento não encontrado');
+  return e;
+}
+
+/** Corretor confirma que recebeu o lead (só quem recebeu) */
+export async function confirmarRecebimento(id: number, usuarioId: number, agora = new Date()) {
+  const d = await banco();
+  const e = await encaminhamentoDo(d, id);
+  if (Number(e.paraId) !== usuarioId) throw new DistribuicaoErro('Este lead foi encaminhado para outra pessoa');
+  if (!e.recebidoEm) await d.update(leadEncaminhamentos).set({ recebidoEm: agora } as any).where(eq(leadEncaminhamentos.id, id));
+  return { ok: true as const };
+}
+
+/**
+ * Corretor (ou o escritório) informa o desfecho: desistiu, sem contato, não qualificado, comprou em outro lugar.
+ * Fecha o encaminhamento e leva o lead para "Perdido" no funil com o motivo. Venda o sistema fecha sozinho.
+ */
+export async function finalizarPeloCorretor(id: number, autor: { id: number; escritorio: boolean }, desfecho: DesfechoCorretor, motivo?: string | null, agora = new Date()) {
+  if (!(DESFECHOS_CORRETOR as readonly string[]).includes(desfecho)) throw new DistribuicaoErro('Desfecho inválido');
+  const d = await banco();
+  const e = await encaminhamentoDo(d, id);
+  if (Number(e.paraId) !== autor.id && !autor.escritorio) throw new DistribuicaoErro('Este lead foi encaminhado para outra pessoa');
+  if (e.desfecho) throw new DistribuicaoErro(`Já finalizado: ${ROTULO_DESFECHO[e.desfecho as Desfecho] ?? e.desfecho}`);
+  const obs = motivo?.trim().slice(0, 200) || null;
+  await d.update(leadEncaminhamentos).set({ desfecho, desfechoMotivo: obs, desfechoEm: agora, desfechoPor: autor.id, recebidoEm: e.recebidoEm ?? agora } as any)
+    .where(eq(leadEncaminhamentos.id, id));
+  const base = MOTIVO_PERDA_DO_DESFECHO[desfecho];
+  const motivoPerda = (base.startsWith('outro:') ? base : obs ? `${base}:${obs}` : base).slice(0, 120);
+  await d.update(leadQualifications).set({ etapa: 'perdido', motivoPerda, updatedAt: agora } as any).where(eq(leadQualifications.id, e.leadId));
+  await import('./sla').then(m => m.marcarAtendido(Number(e.leadId))).catch(() => {});
+  return { ok: true as const };
+}
+
+/** O sistema finaliza o atendimento do lead em aberto (venda, contrato, funil em Fechado/Perdido) */
+export async function finalizarPorEvento(leadId: number, desfecho: 'vendido' | DesfechoCorretor, motivo: string | null, usuarioId: number | null = null, agora = new Date()): Promise<number> {
+  try {
+    const d: any = await getDb();
+    if (!d || !leadId) return 0;
+    const abertos: any[] = await d.select().from(leadEncaminhamentos).where(and(eq(leadEncaminhamentos.leadId, leadId), isNull(leadEncaminhamentos.desfecho)));
+    for (const e of abertos) {
+      await d.update(leadEncaminhamentos).set({ desfecho, desfechoMotivo: motivo?.slice(0, 200) ?? null, desfechoEm: agora, desfechoPor: usuarioId, recebidoEm: e.recebidoEm ?? agora } as any)
+        .where(eq(leadEncaminhamentos.id, e.id));
+    }
+    return abertos.length;
+  } catch (err: any) { console.warn('[Distribuição] finalizar por evento:', err?.message); return 0; }
+}
+
+/** Leads recebidos de quem está logado: aguardando confirmação, em atendimento e finalizados nos últimos 30 dias */
+export async function meusEncaminhamentos(usuarioId: number, agora = Date.now()) {
+  const d = await banco();
+  const rows: any[] = await d.select().from(leadEncaminhamentos)
+    .where(and(eq(leadEncaminhamentos.paraId, usuarioId), or(isNull(leadEncaminhamentos.desfecho), gte(leadEncaminhamentos.criadoEm, new Date(agora - 30 * DIA)))))
+    .orderBy(desc(leadEncaminhamentos.criadoEm)).limit(300);
+  const ids = Array.from(new Set(rows.map(r => Number(r.leadId))));
+  const leads: any[] = ids.length ? await d.select({ id: leadQualifications.id, nome: leadQualifications.nome, phone: leadQualifications.phone, empreendimentoSlug: leadQualifications.empreendimentoSlug, loteCodigo: leadQualifications.loteCodigo, etapa: leadQualifications.etapa })
+    .from(leadQualifications).where(inArray(leadQualifications.id, ids)) : [];
+  const L = new Map(leads.map(l => [Number(l.id), l]));
+  const todos: any[] = await d.select({ id: users.id, name: users.name }).from(users);
+  const nome = (id: unknown) => (id ? todos.find(u => Number(u.id) === Number(id))?.name ?? null : null);
+  const ordem = { aguardando_confirmacao: 0, em_atendimento: 1, finalizado: 2 } as const;
+  return rows.map(r => {
+    const l = L.get(Number(r.leadId));
+    return {
+      id: Number(r.id), leadId: Number(r.leadId), lead: l?.nome || 'Sem nome', telefone: l ? `+${String(l.phone).replace(/\D/g, '')}` : null,
+      interesse: [l?.empreendimentoSlug, l?.loteCodigo].filter(Boolean).join(' · ') || null, etapa: l?.etapa ?? null,
+      quando: iso(r.criadoEm), origem: r.origem as OrigemEncaminhamento, por: r.origem === 'automatico' ? 'Automático (roleta)' : nome(r.porId), observacao: r.observacao ?? null,
+      situacao: situacaoEncaminhamento(r), recebidoEm: iso(r.recebidoEm), desfecho: (r.desfecho ?? null) as Desfecho | null, desfechoMotivo: r.desfechoMotivo ?? null,
+    };
+  }).sort((a, b) => ordem[a.situacao] - ordem[b.situacao]);
+}
+
+/** Encaminhamento em aberto deste lead para o usuário (aviso "Confirmar recebimento" na ficha do lead) */
+export async function encaminhamentoAbertoDoLead(leadId: number, usuarioId: number) {
+  const d: any = await getDb();
+  if (!d) return null;
+  const [e]: any[] = await d.select().from(leadEncaminhamentos)
+    .where(and(eq(leadEncaminhamentos.leadId, leadId), eq(leadEncaminhamentos.paraId, usuarioId), isNull(leadEncaminhamentos.desfecho)))
+    .orderBy(desc(leadEncaminhamentos.criadoEm)).limit(1);
+  if (!e) return null;
+  const [p]: any[] = e.porId ? await d.select({ name: users.name }).from(users).where(eq(users.id, e.porId)).limit(1) : [];
+  return { id: Number(e.id), quando: iso(e.criadoEm), por: e.origem === 'automatico' ? 'Automático (roleta)' : p?.name ?? null, observacao: e.observacao ?? null, recebidoEm: iso(e.recebidoEm) };
 }

@@ -126,6 +126,11 @@ export const crmRouter = router({
       } as any).where(eq(leadQualifications.id, input.id));
       // Mexer no lead conta como atendimento (para o alerta de 5 minutos)
       await import("../leads/sla").then(m => m.marcarAtendido(input.id)).catch(() => {});
+      // Fechado/captado ou perdido no funil: finaliza o atendimento do lead encaminhado (relatório de distribuição)
+      if (["fechado", "captado", "perdido"].includes(input.etapa) && lead.etapa !== input.etapa) {
+        const { finalizarPorEvento } = await import("../leads/distribuicao");
+        await finalizarPorEvento(input.id, input.etapa === "perdido" ? "desistiu" : "vendido", input.etapa === "perdido" ? `Perdido no funil: ${input.motivoPerda ?? ""}` : "Fechado no funil", ctx.user.id);
+      }
       // Nova etapa, nova sequência de follow-up (shared/followupSequencias.ts)
       await import("../leads/followup").then(m => m.reiniciarFollowUpDoLead(input.id)).catch(() => {});
       return { success: true };

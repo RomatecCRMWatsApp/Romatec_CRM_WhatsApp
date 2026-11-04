@@ -180,6 +180,11 @@ export const empreendimentosAdminRouter = router({
             loteCodigo: lote.codigo, empreendimentoSlug: lead.empreendimentoSlug || emp?.slug || null,
             ...(avanca ? { etapa: alvo } : {}), updatedAt: agora,
           } as any).where(eq(leadQualifications.id, lead.id));
+          // Venda lançada para o lead: finaliza o atendimento do encaminhamento (relatório de distribuição)
+          if (alvo === "fechado") {
+            const { finalizarPorEvento } = await import("../leads/distribuicao");
+            await finalizarPorEvento(lead.id, "vendido", `Venda lançada: chácara ${lote.codigo}`, ctx.user.id);
+          }
         }
       }
       // Reserva / venda / liberação: sininho e push de quem tem acesso ao empreendimento (sem travar a resposta)

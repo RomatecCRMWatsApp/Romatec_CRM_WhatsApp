@@ -1393,6 +1393,8 @@ async function startServer() {
     await addSaas();
     const { addAutoResposta } = await import('./migrations/addAutoResposta');
     await addAutoResposta();
+    const { addDesfechoEncaminhamento } = await import('./migrations/addDesfechoEncaminhamento');
+    await addDesfechoEncaminhamento().catch((e: any) => console.warn('[Migration] addDesfechoEncaminhamento:', e?.message));
     const { addMateriaisDivulgacaoBJ } = await import('./migrations/addMateriaisDivulgacaoBJ');
     await addMateriaisDivulgacaoBJ().catch((e: any) => console.warn('[Migration] addMateriaisDivulgacaoBJ:', e?.message));
     const { addDespesas } = await import('./migrations/addDespesas');

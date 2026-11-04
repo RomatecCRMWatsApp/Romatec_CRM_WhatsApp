@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
+import { AvisoLeadEncaminhado } from "@/components/AcoesRecebimento";
 import { useLocation, useRoute } from "wouter";
 import { toast } from "sonner";
 import { trpc } from "@/lib/trpc";
@@ -122,6 +123,7 @@ export default function LeadDetalhe() {
               <Button size="sm" variant="outline" onClick={() => marcarAtendido.mutate({ id })}>✅ Já atendi</Button>
             </div>
           )}
+          <AvisoLeadEncaminhado leadId={id} aoMudar={atualizar} />
           <ResumoIaLead leadId={id} phone={String(lead.phone)} onEnviou={atualizar} />
           {/* Ações */}
           <Card className="bg-card border-border">

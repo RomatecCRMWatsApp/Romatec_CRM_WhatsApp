@@ -2210,6 +2210,14 @@ export const leadEncaminhamentos = mysqlTable("leadEncaminhamentos", {
   /** manual | automatico */
   origem: varchar("origem", { length: 12 }).notNull().default("manual"),
   observacao: varchar("observacao", { length: 300 }),
+  /** Corretor confirmou que recebeu (botão em Leads recebidos ou na ficha do lead) */
+  recebidoEm: timestamp("recebidoEm"),
+  /** vendido | desistiu | sem_contato | nao_qualificado | comprou_outro | repassado — null = em atendimento */
+  desfecho: varchar("desfecho", { length: 20 }),
+  desfechoMotivo: varchar("desfechoMotivo", { length: 200 }),
+  desfechoEm: timestamp("desfechoEm"),
+  /** Quem finalizou (null = o sistema, ao lançar venda/contrato) */
+  desfechoPor: int("desfechoPor"),
   criadoEm: timestamp("criadoEm", { fsp: 3 }).defaultNow().notNull(),
 }, (t) => ({
   ixCriado: index("ix_enc_criado").on(t.criadoEm),

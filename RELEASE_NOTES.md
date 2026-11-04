@@ -3,6 +3,21 @@
 Cada versão nova vai no TOPO. Depois rode `npm run release` (valida e atualiza o package.json);
 ao subir, o servidor grava a versão no banco e todos recebem o aviso "Novidades da versão".
 
+## 1.101.0 — 2026-11-04
+tipo: minor
+obrigatoria: nao
+titulo: Corretor confirma o recebimento de cada lead
+
+### Novo
+- Leads › Leads recebidos: o corretor vê todos os leads encaminhados para ele e confirma o recebimento com um botão; o aviso no WhatsApp traz o link
+- Na ficha do lead aparece "Lead encaminhado para você" com o botão Confirmar recebimento
+- Botão "Não deu certo": o corretor informa que o cliente desistiu, não atendeu, não é qualificado ou comprou em outro lugar (com detalhe); o atendimento é finalizado e o lead vai para Perdido no funil com o motivo
+- O sistema finaliza sozinho como Vendido quando a venda é lançada na chácara, o contrato é emitido para o lead ou o lead vai para Fechado no funil
+
+### Melhorias
+- Relatório de distribuição: colunas Recebimento (data da confirmação ou "aguardando") e Desfecho, total aguardando confirmação e vendidos, e por corretor quantos confirmou, venderam e perderam
+- Lead repassado para outro corretor fecha o encaminhamento anterior como "Repassado"
+
 ## 1.100.0 — 2026-11-04
 tipo: minor
 obrigatoria: nao

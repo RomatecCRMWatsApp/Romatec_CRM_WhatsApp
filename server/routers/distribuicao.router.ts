@@ -29,6 +29,19 @@ export const distribuicaoRouter = router({
       const { encaminharManual } = await import("../leads/distribuicao");
       return encaminharManual(input.leadIds, input.paraId, { id: ctx.user.id, nome: String((ctx.user as any).name ?? "o escritório") }, input.observacao).catch(erro);
     }),
+  // ─── Corretor: leads recebidos, confirmar recebimento e informar o desfecho (toda a equipe) ───
+  meus: protectedProcedure.query(async ({ ctx }) => (await import("../leads/distribuicao")).meusEncaminhamentos(ctx.user.id)),
+  doLead: protectedProcedure.input(z.object({ leadId: z.number().int() })).query(async ({ input, ctx }) =>
+    (await import("../leads/distribuicao")).encaminhamentoAbertoDoLead(input.leadId, ctx.user.id)),
+  confirmar: protectedProcedure.input(z.object({ id: z.number().int() })).mutation(async ({ input, ctx }) =>
+    (await import("../leads/distribuicao")).confirmarRecebimento(input.id, ctx.user.id).catch(erro)),
+  finalizar: protectedProcedure
+    .input(z.object({ id: z.number().int(), desfecho: z.enum(["desistiu", "sem_contato", "nao_qualificado", "comprou_outro"]), motivo: z.string().max(200).nullable().optional() }))
+    .mutation(async ({ input, ctx }) => {
+      const { podeDistribuirLeads } = await import("../../shared/permissoes");
+      return (await import("../leads/distribuicao")).finalizarPeloCorretor(input.id, { id: ctx.user.id, escritorio: podeDistribuirLeads(ctx.permissoes.perfil) }, input.desfecho, input.motivo).catch(erro);
+    }),
+
   relatorio: protectedProcedure.input(filtroRelatorio).query(async ({ input, ctx }) => {
     exigirDistribuicao(ctx.permissoes);
     return (await import("../leads/distribuicao")).relatorioEncaminhamentos(input).catch(erro);
