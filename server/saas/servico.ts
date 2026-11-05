@@ -454,6 +454,29 @@ export async function avisarPagamentoConfirmado(p: { usuarioId: number; valor: n
   } catch (e: any) { console.warn('[SaaS] aviso de pagamento:', e?.message); return { cliente: false }; }
 }
 
+/** Ressalva: a confirmação anterior saiu com o vencimento errado (pagamento contado duas vezes) */
+export async function avisarCorrecaoVencimento(p: { usuarioId: number; valor: number; ate: Date }) {
+  try {
+    const d = await banco();
+    const [u]: any[] = await d.select().from(users).where(eq(users.id, p.usuarioId)).limit(1);
+    if (!u) return { cliente: false };
+    const valor = p.valor.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
+    const ate = p.ate.toLocaleDateString('pt-BR', { timeZone: 'America/Fortaleza' });
+    const nome = String(u.name || '').trim().split(/\s+/)[0] || 'tudo bem';
+    const cliente = await avisar(u.telefone, [
+      `⚠️ *Correção da mensagem anterior*`,
+      ``,
+      `Olá, ${nome}! Na confirmação que enviamos há pouco, a data de vencimento saiu errada por uma falha do nosso sistema: o seu pagamento de *${valor}* foi contado duas vezes.`,
+      `O correto é: assinatura ativa até *${ate}*.`,
+      ``,
+      `O seu pagamento está confirmado e nada muda para você. Pedimos desculpas pelo transtorno! 🙏`,
+      `Romatec Consultoria Imobiliária`,
+    ].join('\n'));
+    await avisarEscritorio(`🛠️ Corrigido o pagamento em dobro de ${u.name ?? 'assinante'} (${valor}): vencimento volta para ${ate}.${cliente ? ' Ressalva enviada a ele(a).' : ' Não consegui enviar a ressalva para ele(a).'}`);
+    return { cliente };
+  } catch (e: any) { console.warn('[SaaS] ressalva de vencimento:', e?.message); return { cliente: false }; }
+}
+
 const horaFortaleza = (agora: number) => new Date(agora - 3 * 3600_000).getUTCHours();
 const horarioDeAviso = (agora: number) => horaFortaleza(agora) >= 9 && horaFortaleza(agora) < 20;
 /** Aviso guardado em lembretesJson para sair no horário (cortesia acaba 23:59 — sem WhatsApp de madrugada) */

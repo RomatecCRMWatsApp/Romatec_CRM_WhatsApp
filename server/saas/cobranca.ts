@@ -356,6 +356,21 @@ async function processarPagamento(paymentId: string, agora: number): Promise<str
   return `pagamento_${status}`; // pending / in_process: aguarda o próximo aviso
 }
 
+/** Instante de uma coluna de data vinda do banco (Date, texto ou número); inválido → null */
+function ms(v: unknown): number | null {
+  if (v == null || v === '') return null;
+  const t = v instanceof Date ? v.getTime() : new Date(typeof v === 'string' && /^\d{4}-\d{2}-\d{2} /.test(v) ? v.replace(' ', 'T') + 'Z' : (v as any)).getTime();
+  return Number.isFinite(t) ? t : null;
+}
+/**
+ * O lançamento manual é deste pagamento (feito depois de aprovado, com folga de 1 h para diferença de fuso)?
+ * Data ilegível no banco conta como "depois": é melhor ligar ao lançamento do que somar o mês duas vezes.
+ */
+function lancadoDepois(m: any, aprovadoEm: number): boolean {
+  const t = ms(m.pagoEm) ?? ms(m.createdAt);
+  return t == null || t >= aprovadoEm - 3_600_000;
+}
+
 const FORMA: Record<string, string> = { pix: 'Pix', bolbradesco: 'boleto', pec: 'boleto' };
 
 async function aplicarAprovado(ref: { assinaturaId: number; faturaId: number | null }, pg: any, modo: ModoMp, agora: number): Promise<string> {
@@ -385,7 +400,7 @@ async function aplicarAprovado(ref: { assinaturaId: number; faturaId: number | n
       const aprovadoEm = pg.date_approved ? new Date(pg.date_approved).getTime() : agora;
       const manuais: any[] = await tx.select().from(saasFaturas).where(and(eq(saasFaturas.assinaturaId, ref.assinaturaId), eq(saasFaturas.metodo, 'MANUAL'), eq(saasFaturas.status, 'PAGA')));
       const manual = manuais.find(m => !m.mpPaymentId && !/Pix do MP \d+/.test(String(m.observacao ?? '')) && Math.abs(Number(m.valor) - Number(pg.transaction_amount)) <= Math.max(5, Number(pg.transaction_amount) * 0.03)
-        && new Date(m.createdAt ?? m.pagoEm).getTime() >= aprovadoEm - 60_000);
+        && lancadoDepois(m, aprovadoEm));
       if (manual) {
         await tx.update(saasFaturas).set({ observacao: `${String(manual.observacao ?? '').slice(0, 200)} · Pix do MP ${mpId}`.replace(/^ · /, '') } as any).where(eq(saasFaturas.id, manual.id));
         if (ref.faturaId) {
@@ -726,6 +741,42 @@ export async function conferirPagamentoPorId(paymentId: string, agora = Date.now
   return { ...resumo, acao: await processarPagamento(id, agora) };
 }
 
+/**
+ * Admin: desfaz um pagamento do MP aplicado EM DOBRO com um lançamento manual do mesmo dinheiro — a fatura do MP vira
+ * CANCELADA (ligada ao lançamento), o vencimento volta um ciclo, a NFS-e ainda pendente dessa fatura é cancelada e o
+ * assinante recebe a mensagem de ressalva com a data certa. Não mexe no dinheiro (o MP não é estornado).
+ */
+export async function corrigirPagamentoDuplicado(paymentId: string, autorId: number, agora = Date.now()) {
+  const id = String(paymentId).replace(/\D/g, '');
+  if (id.length < 8) throw new CobrancaErro('Informe o número da operação do Mercado Pago (só algarismos)');
+  const d = await banco();
+  const [f]: any[] = await d.select().from(saasFaturas).where(eq(saasFaturas.mpPaymentId, id)).limit(1);
+  if (!f || f.status !== 'PAGA') throw new CobrancaErro('Não há fatura PAGA com este pagamento do Mercado Pago (nada em dobro para corrigir)');
+  const manuais: any[] = await d.select().from(saasFaturas).where(and(eq(saasFaturas.assinaturaId, f.assinaturaId), eq(saasFaturas.metodo, 'MANUAL'), eq(saasFaturas.status, 'PAGA')));
+  const manual = manuais.find(m => !/Pix do MP \d+/.test(String(m.observacao ?? '')) && Math.abs(Number(m.valor) - Number(f.valor)) <= Math.max(5, Number(f.valor) * 0.03));
+  if (!manual) throw new CobrancaErro('Não achei um pagamento registrado à mão, de mesmo valor, nesta assinatura: não é duplicado');
+  const [a]: any[] = await d.select().from(saasAssinaturas).where(eq(saasAssinaturas.id, f.assinaturaId)).limit(1);
+  const fimAtual = ms(a?.periodoFim);
+  if (fimAtual == null) throw new CobrancaErro('Assinatura sem vencimento');
+  const novoFim = somarMeses(fimAtual, a.ciclo === 'ANUAL' ? -12 : -1);
+  await transacao(d, async (tx: any) => {
+    await tx.update(saasFaturas).set({ status: 'CANCELADA', observacao: `Pago no MP (${id}) e já registrado à mão · duplicado corrigido` } as any).where(eq(saasFaturas.id, f.id));
+    await tx.update(saasFaturas).set({ observacao: `${String(manual.observacao ?? '').slice(0, 200)} · Pix do MP ${id}`.replace(/^ · /, '') } as any).where(eq(saasFaturas.id, manual.id));
+    await tx.update(saasAssinaturas).set({ periodoFim: novoFim, version: (Number(a.version) || 0) + 1, updatedAt: new Date(agora) } as any).where(eq(saasAssinaturas.id, a.id));
+  });
+  let nfse: 'cancelada' | 'emitida' | 'nenhuma' = 'nenhuma';
+  const { saasNfse } = await import('../../drizzle/schema');
+  const notas: any[] = await d.select().from(saasNfse).where(eq(saasNfse.faturaId, f.id));
+  for (const n of notas) {
+    if (n.status === 'PENDENTE') { await d.update(saasNfse).set({ status: 'CANCELADA', observacao: 'Pagamento em dobro corrigido (já registrado à mão)', updatedAt: new Date(agora) } as any).where(eq(saasNfse.id, n.id)); nfse = 'cancelada'; }
+    else if (n.status !== 'CANCELADA') nfse = 'emitida';
+  }
+  S.limparCaches();
+  await S.auditar(a.usuarioId, 'PAGAMENTO_DUPLICADO_CORRIGIDO', { assinaturaId: a.id, mpPaymentId: id, faturaMp: f.id, faturaManual: manual.id, ate: novoFim.toISOString(), por: autorId, nfse });
+  const aviso = await S.avisarCorrecaoVencimento({ usuarioId: a.usuarioId, valor: Number(f.valor), ate: novoFim });
+  return { ok: true as const, ate: novoFim.toISOString(), nfse, avisado: aviso.cliente };
+}
+
 /** Admin: eventos recentes do webhook (diagnóstico) */
 export async function eventosRecentes() {
   const d = await banco();
@@ -750,4 +801,11 @@ export function iniciarJobsCobranca() {
   };
   setTimeout(tick, 90_000).unref?.();
   setInterval(tick, 10 * 60_000).unref?.();
+  // Correção pontual (05/11/2026): o Pix 186853615379 (Lidiany) foi somado em dobro com o lançamento à mão.
+  // Idempotente: depois de corrigido a fatura fica CANCELADA e isto não faz mais nada.
+  setTimeout(() => {
+    corrigirPagamentoDuplicado('186853615379', 0)
+      .then(r => console.log('[MP] pagamento em dobro 186853615379 corrigido:', JSON.stringify(r)))
+      .catch(e => { if (!/nada em dobro|não é duplicado/.test(String(e?.message))) console.warn('[MP] correção 186853615379:', e?.message); });
+  }, 60_000).unref?.();
 }

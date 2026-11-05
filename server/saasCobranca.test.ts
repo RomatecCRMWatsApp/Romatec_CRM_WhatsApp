@@ -292,6 +292,32 @@ describe('empreendedor avulso: implantação na 1ª fatura', () => {
     await expect(C.conferirPagamentoPorId('B33JK21M3K8K59B9F')).rejects.toThrow(/só com algarismos/);
   });
 
+  it('pagamento somado em dobro com o lançamento à mão: corrige o vencimento, cancela a NFS-e pendente e manda a ressalva', async () => {
+    db.run(sql`INSERT INTO users (id, openId, name, role, perfil, cpf, email, telefone, ativo) VALUES (10, 'u10', 'Lidi Corretora', 'user', 'corretor', '71428793860', 'lidi@x.com', '99912123434', 1)`);
+    await C.iniciarCheckout(usuario(10), { plano: 'CORRETOR_ESSENCIAL', ciclo: 'MENSAL', metodo: 'PIX' });
+    const a = assinatura(10);
+    await S.registrarPagamentoManual(a.id, { ciclo: 'MENSAL', valor: 149.9, observacao: 'conferido' }, 1);
+    // Simula o erro: o Pix foi aplicado como pagamento novo (fatura PAGA + um mês a mais)
+    const f = faturas(a.id).find((x: any) => x.metodo === 'PIX');
+    db.run(sql`UPDATE saasFaturas SET status = 'PAGA', valor = '149.90', mpPaymentId = '186853615379' WHERE id = ${f.id}`);
+    f.mpPaymentId = '186853615379';
+    const { saasAssinaturas } = await import('../drizzle/schema');
+    const { eq } = await import('drizzle-orm');
+    const [antes]: any[] = await db.select().from(saasAssinaturas).where(eq(saasAssinaturas.id, a.id));
+    const errado = new Date(antes.periodoFim); errado.setMonth(errado.getMonth() + 1);
+    await db.update(saasAssinaturas).set({ periodoFim: errado } as any).where(eq(saasAssinaturas.id, a.id));
+    await (await import('./saas/nfse')).sincronizarFilaNfse();
+    const enviados: string[] = [];
+    S.envio.disponivel = () => true; S.envio.texto = async (_f: string, m: string) => { enviados.push(m); };
+    const r = await C.corrigirPagamentoDuplicado(String(f.mpPaymentId), 1);
+    S.envio.disponivel = () => false;
+    expect(r).toMatchObject({ ok: true, nfse: 'cancelada', avisado: true });
+    expect(new Date(r.ate).toDateString()).toBe(new Date(antes.periodoFim).toDateString());
+    expect(faturas(a.id).find((x: any) => x.id === f.id).status).toBe('CANCELADA');
+    expect(enviados.some(m => /Correção da mensagem anterior/.test(m) && /contado duas vezes/.test(m))).toBe(true);
+    await expect(C.corrigirPagamentoDuplicado(String(f.mpPaymentId), 1)).rejects.toThrow(/nada em dobro/);
+  });
+
   it('estorno de fatura já paga sem aviso do MP: a conferência de estornos acha e aplica (uma vez só)', async () => {
     const a = assinatura(3);
     const f = faturas(a.id).find((x: any) => x.status === 'PAGA')!;

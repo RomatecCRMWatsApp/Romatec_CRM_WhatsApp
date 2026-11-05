@@ -3,6 +3,18 @@
 Cada versão nova vai no TOPO. Depois rode `npm run release` (valida e atualiza o package.json);
 ao subir, o servidor grava a versão no banco e todos recebem o aviso "Novidades da versão".
 
+## 1.105.4 — 2026-11-05
+tipo: patch
+obrigatoria: nao
+titulo: Correção do pagamento somado em dobro (Lidiany) e ressalva ao assinante
+
+### Correções
+- O Pix que já tinha sido registrado à mão foi somado como pagamento novo (vencimento 05/01/2027 em vez de 05/12/2026): a data do lançamento manual vinha ilegível do banco e a ligação falhava. Agora a data é lida em qualquer formato e, na dúvida, o sistema liga ao lançamento em vez de somar outro mês
+- O caso da Lidiany é corrigido sozinho ao subir: vencimento volta para 05/12/2026, a fatura em dobro é cancelada (com a NFS-e pendente dela) e ela recebe a mensagem de correção
+
+### Novo
+- Admin › SaaS › Mercado Pago: "Corrigir pagamento em dobro" pelo número da operação, para qualquer caso igual
+
 ## 1.105.3 — 2026-11-05
 tipo: patch
 obrigatoria: nao

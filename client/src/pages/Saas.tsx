@@ -90,6 +90,13 @@ function MercadoPago() {
     },
     onError: e => toast.error(e.message),
   });
+  const corrigir = trpc.saas.corrigirDuplicadoMp.useMutation({
+    onSuccess: r => {
+      toast.success(`Corrigido: vencimento volta para ${new Date(r.ate).toLocaleDateString("pt-BR", { timeZone: "America/Fortaleza" })}${r.avisado ? " · ressalva enviada ao assinante" : " · não consegui enviar a ressalva"}${r.nfse === "emitida" ? " · ATENÇÃO: a NFS-e desta fatura já foi emitida, cancele na Spedy" : r.nfse === "cancelada" ? " · NFS-e pendente cancelada" : ""}`);
+      setOpMp(""); utils.saas.invalidate();
+    },
+    onError: e => toast.error(e.message),
+  });
   if (!data) return null;
   const ok = (v: boolean) => (v ? <span className="text-emerald-300">configurado</span> : <span className="text-red-300">faltando</span>);
   return (
@@ -108,6 +115,10 @@ function MercadoPago() {
         <Input value={opMp} onChange={e => setOpMp(e.target.value)} placeholder="Nº da operação do MP (só algarismos, ex.: 186853615379)" className="h-8 max-w-xs text-xs" inputMode="numeric" />
         <Button size="sm" variant="outline" disabled={opMp.trim().length < 5 || conferirUm.isPending} onClick={() => conferirUm.mutate({ paymentId: opMp })}>
           {conferirUm.isPending ? <Loader2 className="mr-1 h-4 w-4 animate-spin" /> : null} Conferir este pagamento
+        </Button>
+        <Button size="sm" variant="outline" className="border-amber-500/50 text-amber-200" disabled={opMp.trim().length < 5 || corrigir.isPending}
+          onClick={() => { if (confirm("Este pagamento foi contado em dobro com um lançamento à mão? O vencimento volta um ciclo e o assinante recebe a mensagem de correção.")) corrigir.mutate({ paymentId: opMp }); }}>
+          {corrigir.isPending ? <Loader2 className="mr-1 h-4 w-4 animate-spin" /> : null} Corrigir pagamento em dobro
         </Button>
       </div>
       <details className="text-xs">

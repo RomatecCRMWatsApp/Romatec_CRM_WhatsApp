@@ -82,6 +82,11 @@ export const saasRouter = router({
     admin(ctx);
     return comErro(async () => (await import("../saas/cobranca")).conferirPagamentoPorId(input.paymentId));
   }),
+  /** Desfaz um pagamento do MP aplicado em dobro com o lançamento manual (volta o vencimento e manda a ressalva) */
+  corrigirDuplicadoMp: protectedProcedure.input(z.object({ paymentId: z.string().trim().min(5).max(30) })).mutation(async ({ ctx, input }) => {
+    admin(ctx);
+    return comErro(async () => (await import("../saas/cobranca")).corrigirPagamentoDuplicado(input.paymentId, ctx.user.id));
+  }),
   definirModoMp: protectedProcedure.input(z.object({ modo: z.enum(["teste", "producao"]) })).mutation(async ({ ctx, input }) => {
     admin(ctx);
     const C = await import("../saas/cobranca");
