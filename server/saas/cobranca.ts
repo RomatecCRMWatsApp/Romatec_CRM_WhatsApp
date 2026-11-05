@@ -714,8 +714,11 @@ export async function conferirEstornos(agora = Date.now()) {
  * certa — para o pagamento que não chegou pelo aviso nem foi achado pela conferência. Idempotente.
  */
 export async function conferirPagamentoPorId(paymentId: string, agora = Date.now()) {
-  const id = String(paymentId).replace(/\D/g, '');
-  if (!id) throw new CobrancaErro('Informe o número da operação do Mercado Pago');
+  const bruto = String(paymentId).trim();
+  // O app do MP mostra também um "N.º da transação" com letras (ex.: B33JK21M3K8K59B9F): esse não serve na API
+  if (/[a-z]/i.test(bruto)) throw new CobrancaErro('Use o número só com algarismos (ex.: 186853615379): no comprovante em PDF é o "Número da transação do Mercado Pago"; no Pix do banco aparece depois de "mpqrinter". O código com letras do app não serve.');
+  const id = bruto.replace(/\D/g, '');
+  if (id.length < 8) throw new CobrancaErro('Informe o número da operação do Mercado Pago (só algarismos, ex.: 186853615379)');
   const { dado: pg } = await buscarMp(`/v1/payments/${id}`);
   const ref = refSaas(pg?.external_reference);
   const resumo = { id, status: String(pg?.status ?? ''), valor: Number(pg?.transaction_amount) || 0, referencia: pg?.external_reference ?? null, descricao: pg?.description ?? null };

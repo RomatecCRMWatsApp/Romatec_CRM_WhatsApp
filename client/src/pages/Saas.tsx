@@ -105,8 +105,8 @@ function MercadoPago() {
         {conciliar.isPending ? <Loader2 className="mr-1 h-4 w-4 animate-spin" /> : null} Conferir pagamentos agora
       </Button>
       <div className="flex flex-wrap items-center gap-2 pt-1">
-        <Input value={opMp} onChange={e => setOpMp(e.target.value)} placeholder="Nº da operação do Mercado Pago (comprovante)" className="h-8 max-w-xs text-xs" inputMode="numeric" />
-        <Button size="sm" variant="outline" disabled={opMp.replace(/\D/g, "").length < 5 || conferirUm.isPending} onClick={() => conferirUm.mutate({ paymentId: opMp })}>
+        <Input value={opMp} onChange={e => setOpMp(e.target.value)} placeholder="Nº da operação do MP (só algarismos, ex.: 186853615379)" className="h-8 max-w-xs text-xs" inputMode="numeric" />
+        <Button size="sm" variant="outline" disabled={opMp.trim().length < 5 || conferirUm.isPending} onClick={() => conferirUm.mutate({ paymentId: opMp })}>
           {conferirUm.isPending ? <Loader2 className="mr-1 h-4 w-4 animate-spin" /> : null} Conferir este pagamento
         </Button>
       </div>

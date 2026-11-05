@@ -3,6 +3,14 @@
 Cada versão nova vai no TOPO. Depois rode `npm run release` (valida e atualiza o package.json);
 ao subir, o servidor grava a versão no banco e todos recebem o aviso "Novidades da versão".
 
+## 1.105.3 — 2026-11-05
+tipo: patch
+obrigatoria: nao
+titulo: Conferir pagamento: aviso quando o número usado é o código com letras
+
+### Correções
+- "Conferir este pagamento" explica que vale o número só com algarismos (no PDF: "Número da transação do Mercado Pago"; no Pix: o que vem depois de "mpqrinter"), e não o código com letras do app do Mercado Pago
+
 ## 1.105.2 — 2026-11-05
 tipo: patch
 obrigatoria: nao

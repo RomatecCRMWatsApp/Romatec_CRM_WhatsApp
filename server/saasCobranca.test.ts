@@ -289,6 +289,7 @@ describe('empreendedor avulso: implantação na 1ª fatura', () => {
     expect(await C.conferirPagamentoPorId('777002')).toMatchObject({ acao: 'ja_aplicado', valor: 149.9 });
     pagamentosMp.set('888001', { id: '888001', status: 'approved', external_reference: 'loja-x', transaction_amount: 10 });
     expect(await C.conferirPagamentoPorId('888001')).toMatchObject({ acao: 'nao_e_do_crm', referencia: 'loja-x' });
+    await expect(C.conferirPagamentoPorId('B33JK21M3K8K59B9F')).rejects.toThrow(/só com algarismos/);
   });
 
   it('estorno de fatura já paga sem aviso do MP: a conferência de estornos acha e aplica (uma vez só)', async () => {
