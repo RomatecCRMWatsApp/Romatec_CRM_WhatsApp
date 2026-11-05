@@ -240,7 +240,9 @@ export type Transcrever = (audioUrl: string) => Promise<string | null>;
 let transcrever: Transcrever = async (audioUrl) => {
   const { transcribeAudio } = await import('../_core/voiceTranscription');
   const r: any = await transcribeAudio({ audioUrl, language: 'pt', prompt: 'Corretor descrevendo um imóvel para cadastro: tipo, endereço, preço, área, quartos' });
-  return r && 'text' in r ? String(r.text || '').trim() || null : null;
+  if (r && 'text' in r) return String(r.text || '').trim() || null;
+  console.error('[agente-imovel] transcrição falhou:', r?.code, r?.error, String(r?.details || '').slice(0, 300));
+  return null;
 };
 export const definirTranscricaoAgente = (f: Transcrever) => { transcrever = f; };
 
@@ -403,11 +405,15 @@ async function processar(d: any, vinculoId: number, u: any, e: EntradaAgente, ag
     return;
   }
   if (cmd === 'cadastrar' || cmd === 'novo') {
+    // "1" e depois "cadastrar imóvel" (ou repetido) não abre outro rascunho vazio: reaproveita o atual ainda sem nada
+    const vazio = r && r.estado === 'collecting' && json<MensagemRascunho[]>(r.mensagensJson, []).length === 0
+      && !(await d.select({ id: imovelRascunhoMidias.id }).from(imovelRascunhoMidias).where(and(eq(imovelRascunhoMidias.rascunhoId, r.id), eq(imovelRascunhoMidias.removida, false as any))).limit(1)).length;
+    if (vazio) { await setModo('cadastro', { rascunhoAtivoId: r.id }); await enviar(tel, `🏡 O rascunho nº ${r.id} já está aberto. Pode mandar as informações por áudio ou texto e depois as fotos.`); return; }
     const id = await novoRascunho(d, u.id, vinculoId);
     const avulsas: any[] = await d.select({ id: imovelRascunhoMidias.id }).from(imovelRascunhoMidias)
       .where(and(eq(imovelRascunhoMidias.vinculoId, vinculoId), isNull(imovelRascunhoMidias.rascunhoId), eq(imovelRascunhoMidias.removida, false as any), eq(imovelRascunhoMidias.status, 'ok')));
     await setModo('cadastro', { rascunhoAtivoId: id, pergunta: avulsas.length ? 'fotos_avulsas' : null });
-    const antes = r ? `\n\n(O cadastro anterior, nº ${r.id}, ficou salvo: responda *CONTINUAR* para voltar a ele depois.)` : '';
+    const antes = r && !vazio ? `\n\n(O cadastro anterior, nº ${r.id}, ficou salvo: responda *CONTINUAR* para voltar a ele depois.)` : '';
     await enviar(tel, `🏡 Vamos cadastrar um imóvel (rascunho nº ${id}). Pode mandar as informações por áudio ou texto. Depois, envie as fotos. Vou organizar tudo e pedir sua confirmação antes de cadastrar.\n\n${checklist()}${antes}`);
     if (avulsas.length) await enviar(tel, `Você mandou ${avulsas.length} foto(s) antes de escolher a função. Usar neste cadastro?\n1. Sim\n2. Não`);
     return;

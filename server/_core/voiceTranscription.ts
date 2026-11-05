@@ -99,7 +99,7 @@ export async function transcribeAudio(
       }
       
       audioBuffer = Buffer.from(await response.arrayBuffer());
-      mimeType = response.headers.get('content-type') || 'audio/mpeg';
+      mimeType = tipoDoAudio(response.headers.get('content-type'), options.audioUrl);
       
       // Check file size (16MB limit)
       const sizeMB = audioBuffer.length / (1024 * 1024);
@@ -128,6 +128,7 @@ export async function transcribeAudio(
     
     formData.append("model", "whisper-1");
     formData.append("response_format", "verbose_json");
+    if (options.language) formData.append("language", options.language);
     
     // Add prompt - use custom prompt if provided, otherwise generate based on language
     const prompt = options.prompt || (
@@ -193,18 +194,31 @@ export async function transcribeAudio(
  * Helper function to get file extension from MIME type
  */
 function getFileExtension(mimeType: string): string {
-  const mimeToExt: Record<string, string> = {
-    'audio/webm': 'webm',
-    'audio/mp3': 'mp3',
-    'audio/mpeg': 'mp3',
-    'audio/wav': 'wav',
-    'audio/wave': 'wav',
-    'audio/ogg': 'ogg',
-    'audio/m4a': 'm4a',
-    'audio/mp4': 'm4a',
-  };
-  
-  return mimeToExt[mimeType] || 'audio';
+  return EXTENSAO_AUDIO[mimeType] || 'ogg';
+}
+
+const EXTENSAO_AUDIO: Record<string, string> = {
+  'audio/webm': 'webm', 'video/webm': 'webm',
+  'audio/mp3': 'mp3', 'audio/mpeg': 'mp3', 'audio/mpga': 'mp3',
+  'audio/wav': 'wav', 'audio/wave': 'wav', 'audio/x-wav': 'wav',
+  'audio/ogg': 'ogg', 'audio/opus': 'ogg', 'application/ogg': 'ogg',
+  'audio/m4a': 'm4a', 'audio/x-m4a': 'm4a', 'audio/mp4': 'm4a', 'audio/aac': 'm4a', 'video/mp4': 'mp4',
+  'audio/flac': 'flac',
+};
+const TIPO_POR_EXTENSAO: Record<string, string> = {
+  ogg: 'audio/ogg', oga: 'audio/ogg', opus: 'audio/ogg', mp3: 'audio/mpeg', mpga: 'audio/mpeg', wav: 'audio/wav',
+  m4a: 'audio/mp4', aac: 'audio/aac', mp4: 'video/mp4', webm: 'audio/webm', flac: 'audio/flac',
+};
+
+/**
+ * Tipo do áudio sem parâmetros. O WhatsApp manda "audio/ogg; codecs=opus" (ou octet-stream no storage da Z-API):
+ * sem limpar, o arquivo ia como "audio.audio" e a OpenAI recusava. Usa a extensão da URL e, por fim, ogg (padrão do WhatsApp).
+ */
+export function tipoDoAudio(contentType: string | null | undefined, url = ''): string {
+  const tipo = String(contentType || '').split(';')[0].trim().toLowerCase();
+  if (EXTENSAO_AUDIO[tipo]) return tipo;
+  const ext = (String(url).split('?')[0].match(/\.([a-z0-9]{2,5})$/i)?.[1] || '').toLowerCase();
+  return TIPO_POR_EXTENSAO[ext] || 'audio/ogg';
 }
 
 /**

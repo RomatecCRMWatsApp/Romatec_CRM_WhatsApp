@@ -3,6 +3,15 @@
 Cada versão nova vai no TOPO. Depois rode `npm run release` (valida e atualiza o package.json);
 ao subir, o servidor grava a versão no banco e todos recebem o aviso "Novidades da versão".
 
+## 1.103.4 — 2026-11-05
+tipo: patch
+obrigatoria: nao
+titulo: Áudio do WhatsApp transcrito no cadastro de imóveis
+
+### Correções
+- Cadastro pelo WhatsApp: o áudio respondia "Não consegui entender o áudio" porque o formato do WhatsApp (ogg/opus) não era reconhecido e o arquivo ia sem extensão válida para a transcrição; agora é reconhecido (vale também para o bot de leads)
+- Mandar "1" e depois "cadastrar imóvel" não abre mais um segundo rascunho vazio
+
 ## 1.103.3 — 2026-11-05
 tipo: patch
 obrigatoria: nao
