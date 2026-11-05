@@ -1112,6 +1112,15 @@ export const appRouter = router({
         const db = await getDb();
         if (!db) return { success: false };
         await leadDoUsuario(input.id, ctx);
+        // Escritório (administrador e secretária): descartar = excluir de vez — some de todas as telas, inclusive
+        // de "Descartados". Lead com contrato ou chácara não se apaga: esse fica descartado (fora das listas).
+        const { podeDistribuirLeads } = await import("../shared/permissoes");
+        if (podeDistribuirLeads(ctx.permissoes?.perfil)) {
+          try {
+            await (await import("./exclusao")).apagarLeadDefinitivo(input.id, ctx.user as any, (ctx as any).req?.ip ?? null, 'descartar');
+            return { success: true, excluido: true };
+          } catch (e: any) { if (e?.codigo !== 'VINCULO') throw e; }
+        }
         const blockedUntil = new Date(Date.now() + input.blockDays * 24 * 60 * 60 * 1000);
         await db.update(leadQualifications).set({
           stage: 'descartado',
@@ -1119,7 +1128,7 @@ export const appRouter = router({
           blockedUntil,
           updatedAt: new Date(),
         }).where(eq(leadQualifications.id, input.id));
-        return { success: true };
+        return { success: true, excluido: false };
       }),
 
     // Reativar lead bloqueado

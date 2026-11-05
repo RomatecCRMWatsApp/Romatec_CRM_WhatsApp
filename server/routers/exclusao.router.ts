@@ -23,5 +23,6 @@ const ip = (ctx: any) => ctx.req?.ip ?? null;
 export const exclusaoRouter = router({
   convite: protectedProcedure.input(alvo).mutation(({ ctx, input }) => tratar(async () => (await E()).excluirRecrutamento(input.id, ctx.user as any, input.senha, ip(ctx)))),
   lead: protectedProcedure.input(alvo).mutation(({ ctx, input }) => tratar(async () => (await E()).excluirLead(input.id, ctx.user as any, input.senha, ip(ctx)))),
+  descartados: protectedProcedure.input(z.object({ senha: z.string().min(1).max(200) })).mutation(({ ctx, input }) => tratar(async () => (await E()).excluirDescartados(ctx.user as any, input.senha, ip(ctx)))),
   usuario: protectedProcedure.input(alvo).mutation(({ ctx, input }) => tratar(async () => (await E()).removerUsuario(input.id, ctx.user as any, input.senha, ip(ctx)))),
 });

@@ -54,6 +54,18 @@ describe('leads', () => {
     expect(await db.select().from(S.leadMensagens).where(eq(S.leadMensagens.leadId, id))).toHaveLength(0);
     expect((await auditoria('exclusao.lead')).length).toBe(1);
   });
+
+  it('limpeza dos descartados: apaga de vez (com encaminhamentos); ativo fica; exige a senha', async () => {
+    const d1 = idDe(await db.insert(S.leadQualifications).values({ phone: '5599911112222', nome: 'Descartado 1', stage: 'descartado' } as any));
+    const d2 = idDe(await db.insert(S.leadQualifications).values({ phone: '5599911113333', nome: 'Sem interesse', stage: 'sem_interesse' } as any));
+    const ativo = idDe(await db.insert(S.leadQualifications).values({ phone: '5599911114444', nome: 'Ativo' } as any));
+    await db.insert(S.leadEncaminhamentos).values({ leadId: d1, paraId: admin.id, origem: 'manual' } as any);
+    await expect(E.excluirDescartados(admin, 'errada')).rejects.toThrow();
+    expect(await E.excluirDescartados(admin, SENHA)).toMatchObject({ excluidos: 2, comVinculo: 0 });
+    expect(await db.select().from(S.leadQualifications).where(eq(S.leadQualifications.id, d2))).toHaveLength(0);
+    expect(await db.select().from(S.leadEncaminhamentos).where(eq(S.leadEncaminhamentos.leadId, d1))).toHaveLength(0);
+    expect(await db.select().from(S.leadQualifications).where(eq(S.leadQualifications.id, ativo))).toHaveLength(1);
+  });
 });
 
 describe('usuários', () => {

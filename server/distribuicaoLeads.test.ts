@@ -32,6 +32,30 @@ describe('distribuição manual de leads', () => {
     expect((await D.equipe()).map(u => u.nome)).toEqual(['Corretor Caio', 'José', 'Secretária Bia']);
   });
 
+  it('"não encaminhados": frio, morno e quente com dono = escritório ou sem dono; descartado e já encaminhado ficam fora', async () => {
+    db.run(sql`INSERT INTO leadQualifications (id, phone, nome, responsavelId, score) VALUES (20, '5599944440000', 'Dora Fria', 1, 'frio'), (21, '5599955550000', 'Edu Morno', NULL, 'morno')`);
+    db.run(sql`INSERT INTO leadQualifications (id, phone, nome, stage) VALUES (22, '5599966660000', 'Fabi Descartada', 'descartado')`);
+    const nomes = (await D.leadsParaDistribuir('nao_encaminhados')).map(l => l.nome).sort();
+    expect(nomes).toEqual(['Ana Lead', 'Beto Lead', 'Dora Fria', 'Edu Morno']);
+    expect((await D.leadsParaDistribuir('todos')).map(l => l.nome)).toContain('Fabi Descartada');
+  });
+
+  it('modo da distribuição: automático por padrão; manual para a roleta (lead novo fica sem dono)', async () => {
+    const Cfg = await import('./configSistema');
+    expect(await Cfg.modoDistribuicao()).toBe('automatico');
+    await Cfg.gravarConfig('distribuicao_modo', 'manual', 1);
+    expect(await Cfg.modoDistribuicao()).toBe('manual');
+    db.run(sql`UPDATE users SET recebeLeads = 1 WHERE id = 3`);
+    db.run(sql`INSERT INTO leadQualifications (id, phone, nome) VALUES (23, '5599977770000', 'Gil Novo')`);
+    const { garantirResponsavel } = await import('./leads/sla');
+    expect(await garantirResponsavel(23)).toBeNull();
+    expect(db.all(sql`SELECT responsavelId FROM leadQualifications WHERE id = 23`)[0].responsavelId).toBeNull();
+    await Cfg.gravarConfig('distribuicao_modo', 'automatico', 1);
+    expect((await garantirResponsavel(23))?.id).toBe(3);
+    db.run(sql`DELETE FROM leadEncaminhamentos WHERE leadId = 23`);
+    db.run(sql`DELETE FROM leadQualifications WHERE id IN (20, 21, 22, 23)`);
+  });
+
   it('encaminha em lote e avisa; lead que já era dele (sem registro) entra no controle; com registro aberto não repete', async () => {
     const r = await D.encaminharManual([10, 11, 12], 3, { id: 2, nome: 'Secretária Bia' }, 'Cliente prefere manhã');
     expect(r).toEqual({ encaminhados: 3, jaEram: 0, naoEncontrados: 0, para: 'Corretor Caio' });

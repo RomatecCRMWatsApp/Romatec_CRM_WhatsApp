@@ -34,13 +34,22 @@ export async function excluirRecrutamento(id: number, ator: Ator, senha: string,
 
 export async function excluirLead(id: number, ator: Ator, senha: string, ip?: string | null) {
   await exigirAdminComSenha(ator, senha, 'excluir_lead', { ip });
+  return apagarLeadDefinitivo(id, ator, ip, 'perfil');
+}
+
+/**
+ * Apaga o lead de vez (conversa, interesses, visitas, reuniões, encaminhamentos e histórico de score): ele some de
+ * todas as telas, inclusive de "Descartados". Com contrato ou chácara vinculada não apaga (VINCULO). Quem chama
+ * decide a permissão: excluirLead (senha do administrador) e o "Descartar" do escritório (server/routers.ts).
+ */
+export async function apagarLeadDefinitivo(id: number, ator: Ator, ip?: string | null, origem = 'descartar') {
   const d = await db();
   const [l]: any[] = await d.select().from(S.leadQualifications).where(eq(S.leadQualifications.id, id)).limit(1);
   if (!l) throw new ContratoErro('NAO_ACHOU', 'Lead não encontrado', 404);
   if (await existe(d, S.contratos, eq(S.contratos.leadId, id)) || await existe(d, S.lotes, eq(S.lotes.leadId, id))) {
     throw new ContratoErro('VINCULO', 'Este lead tem contrato ou chácara vinculada: descarte em vez de excluir.', 409);
   }
-  for (const t of [S.leadInteresses, S.leadMensagens, S.leadScoreHistorico, S.autoRespostaRegua, S.linksOferta, S.leadVisitas, S.reunioes]) {
+  for (const t of [S.leadInteresses, S.leadMensagens, S.leadScoreHistorico, S.autoRespostaRegua, S.linksOferta, S.leadVisitas, S.reunioes, S.leadEncaminhamentos]) {
     await d.delete(t).where(eq((t as any).leadId, id));
   }
   // Histórico de outras telas fica, sem apontar para o lead
@@ -49,8 +58,21 @@ export async function excluirLead(id: number, ator: Ator, senha: string, ip?: st
   }
   await d.delete(S.leadQualifications).where(eq(S.leadQualifications.id, id));
   await import('./leads/followup').then(m => m.cancelarFollowUp(l.phone)).catch(() => {});
-  await auditar('exclusao.lead', { usuarioId: ator.id, origem: 'perfil', ip, detalhe: { id, nome: l.nome, telefone: l.phone, stage: l.stage } });
+  await auditar('exclusao.lead', { usuarioId: ator.id, origem, ip, detalhe: { id, nome: l.nome, telefone: l.phone, stage: l.stage } });
   return { ok: true as const };
+}
+
+/** Limpeza: apaga de vez os leads já descartados/sem interesse (os com contrato ou chácara ficam e são contados) */
+export async function excluirDescartados(ator: Ator, senha: string, ip?: string | null) {
+  await exigirAdminComSenha(ator, senha, 'excluir_descartados', { ip });
+  const d = await db();
+  const alvos: any[] = await d.select({ id: S.leadQualifications.id }).from(S.leadQualifications).where(inArray(S.leadQualifications.stage, ['descartado', 'sem_interesse']));
+  let excluidos = 0, comVinculo = 0;
+  for (const a of alvos) {
+    try { await apagarLeadDefinitivo(Number(a.id), ator, ip, 'limpeza_descartados'); excluidos++; }
+    catch (e: any) { if (e?.codigo === 'VINCULO') comVinculo++; else throw e; }
+  }
+  return { excluidos, comVinculo };
 }
 
 /** O que impede apagar o usuário (contrato, lead, financeiro…): com isso ele é arquivado */

@@ -659,6 +659,7 @@ export function initSqliteTables(sqlite: any): void {
     UNIQUE (vinculoId, messageId))`);
   run(`CREATE TABLE IF NOT EXISTS imovelAgenteEventos (
     id INTEGER PRIMARY KEY AUTOINCREMENT, usuarioId INTEGER, rascunhoId INTEGER, tipo TEXT NOT NULL, detalhe TEXT, criadoEm ${agoraS})`);
+  run(`CREATE TABLE IF NOT EXISTS configSistema (chave TEXT PRIMARY KEY, valor TEXT NOT NULL, atualizadoPor INTEGER, atualizadoEm ${agoraS})`);
   run(`CREATE TABLE IF NOT EXISTS leadEncaminhamentos (
     id INTEGER PRIMARY KEY AUTOINCREMENT, leadId INTEGER NOT NULL, deId INTEGER, paraId INTEGER NOT NULL, porId INTEGER, origem TEXT NOT NULL DEFAULT 'manual',
     observacao TEXT, recebidoEm INTEGER, desfecho TEXT, desfechoMotivo TEXT, desfechoEm INTEGER, desfechoPor INTEGER, criadoEm ${agoraS})`);

@@ -3,6 +3,20 @@
 Cada versão nova vai no TOPO. Depois rode `npm run release` (valida e atualiza o package.json);
 ao subir, o servidor grava a versão no banco e todos recebem o aviso "Novidades da versão".
 
+## 1.105.0 — 2026-11-05
+tipo: minor
+obrigatoria: nao
+titulo: Distribuição de todos os leads, modo manual, exclusão de vez e confirmação de pagamento
+
+### Novo
+- Leads › Distribuição abre em "Não encaminhados": todo lead ativo, quente, morno ou frio, que ainda não foi para um corretor (antes só apareciam os "sem responsável", e os que estavam com o escritório ficavam de fora). Mostra a temperatura e quantos faltam
+- Chave Distribuição AUTOMÁTICA × MANUAL: no manual a roleta para e todo lead novo espera a secretária ou o escritório encaminhar; no automático a roleta segue como antes
+- Pagamento recebido (Pix, boleto, cartão ou lançado pelo escritório): o assinante recebe no WhatsApp a confirmação do valor e um agradecimento, e o escritório recebe o aviso
+
+### Melhorias
+- Descartar um lead (administrador e secretária) agora exclui de vez: some de todas as telas, inclusive de "Descartados". Lead com contrato ou chácara fica descartado
+- Descartados › "Excluir todos de vez" (administrador, com a senha) limpa os que já estavam lá
+
 ## 1.104.4 — 2026-11-05
 tipo: patch
 obrigatoria: nao

@@ -2279,6 +2279,14 @@ export const imovelAgenteEventos = mysqlTable("imovelAgenteEventos", {
 }, (t) => ({ ixUsuario: index("ix_evt_usuario").on(t.usuarioId, t.criadoEm), ixRasc: index("ix_evt_rasc").on(t.rascunhoId) }));
 
 /** Encaminhamentos de lead: manual (secretária/admin em Leads › Distribuição ou no lead) ou automático (roleta) */
+/** Chaves simples do sistema (ex.: distribuicao_modo = automatico | manual) — server/configSistema.ts */
+export const configSistema = mysqlTable("configSistema", {
+  chave: varchar("chave", { length: 60 }).primaryKey(),
+  valor: varchar("valor", { length: 500 }).notNull(),
+  atualizadoPor: int("atualizadoPor"),
+  atualizadoEm: timestamp("atualizadoEm").defaultNow().notNull(),
+});
+
 export const leadEncaminhamentos = mysqlTable("leadEncaminhamentos", {
   id: int("id").autoincrement().primaryKey(),
   leadId: int("leadId").notNull(),

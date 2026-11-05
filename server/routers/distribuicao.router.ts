@@ -17,11 +17,21 @@ export const distribuicaoRouter = router({
     return (await import("../leads/distribuicao")).equipe();
   }),
   leads: protectedProcedure
-    .input(z.object({ filtro: z.enum(["sem_responsavel", "aguardando", "recentes"]), busca: z.string().max(80).default("") }))
+    .input(z.object({ filtro: z.enum(["nao_encaminhados", "sem_responsavel", "aguardando", "recentes", "todos"]), busca: z.string().max(80).default("") }))
     .query(async ({ input, ctx }) => {
       exigirDistribuicao(ctx.permissoes);
       return (await import("../leads/distribuicao")).leadsParaDistribuir(input.filtro, input.busca).catch(erro);
     }),
+  /** Modo da distribuição: automático (roleta) ou manual (a secretária/escritório encaminha cada lead) */
+  modo: protectedProcedure.query(async ({ ctx }) => {
+    exigirDistribuicao(ctx.permissoes);
+    return { modo: await (await import("../configSistema")).modoDistribuicao() };
+  }),
+  definirModo: protectedProcedure.input(z.object({ modo: z.enum(["automatico", "manual"]) })).mutation(async ({ input, ctx }) => {
+    exigirDistribuicao(ctx.permissoes);
+    await (await import("../configSistema")).gravarConfig("distribuicao_modo", input.modo, ctx.user.id);
+    return { modo: input.modo };
+  }),
   encaminhar: protectedProcedure
     .input(z.object({ leadIds: z.array(z.number().int().positive()).min(1).max(200), paraId: z.number().int().positive(), observacao: z.string().max(300).nullable().optional() }))
     .mutation(async ({ input, ctx }) => {

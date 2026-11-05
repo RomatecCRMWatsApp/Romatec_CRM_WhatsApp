@@ -10,7 +10,7 @@ import { DESFECHOS_CORRETOR, MOTIVO_PERDA_DO_DESFECHO, ROTULO_DESFECHO, ROTULO_S
 
 export class DistribuicaoErro extends Error { constructor(msg: string) { super(msg); this.name = 'DistribuicaoErro'; } }
 export type OrigemEncaminhamento = 'manual' | 'automatico';
-export type FiltroLeads = 'sem_responsavel' | 'aguardando' | 'recentes';
+export type FiltroLeads = 'nao_encaminhados' | 'sem_responsavel' | 'aguardando' | 'recentes' | 'todos';
 
 const DIA = 86_400_000;
 /** Data → ISO; valor inválido (ex.: banco local) → null em vez de derrubar a lista */
@@ -45,27 +45,53 @@ export async function equipe(): Promise<{ id: number; nome: string; recebeLeads:
     .sort((a, b) => a.nome.localeCompare(b.nome, 'pt-BR'));
 }
 
-/** Leads para a secretária distribuir */
+/**
+ * Leads para a secretária distribuir. "nao_encaminhados" (padrão): todo lead ativo — quente, morno ou frio — que ainda
+ * não foi encaminhado a um corretor (sem responsável, ou só com o administrador/escritório como dono), do mais novo
+ * para o mais antigo. Descartados, sem interesse, perdidos e bloqueados ficam fora (só "todos" mostra tudo).
+ */
 export async function leadsParaDistribuir(filtro: FiltroLeads, busca = '', agora = Date.now()) {
   const d = await banco();
   const cond = filtro === 'sem_responsavel' ? isNull(leadQualifications.responsavelId)
     : filtro === 'aguardando' ? and(isNotNull(leadQualifications.aguardandoCorretorDesde), isNull(leadQualifications.atendidoAt))
-    : gte(leadQualifications.createdAt, new Date(agora - 30 * DIA));
+    : filtro === 'recentes' ? gte(leadQualifications.createdAt, new Date(agora - 30 * DIA))
+    : undefined;
   const b = busca.trim();
   const digitos = b.replace(/\D/g, '');
   const filtroBusca = b ? or(sql`lower(${leadQualifications.nome}) like ${`%${b.toLowerCase()}%`}`, ...(digitos.length >= 4 ? [sql`${leadQualifications.phone} like ${`%${digitos}%`}`] : [])) : undefined;
-  const rows: any[] = await d.select({
+  const onde = cond && filtroBusca ? and(cond, filtroBusca) : cond ?? filtroBusca;
+  const q = d.select({
     id: leadQualifications.id, nome: leadQualifications.nome, phone: leadQualifications.phone, origem: leadQualifications.origem, origemCanal: leadQualifications.origemCanal,
     empreendimentoSlug: leadQualifications.empreendimentoSlug, loteCodigo: leadQualifications.loteCodigo, score: leadQualifications.score, etapa: leadQualifications.etapa,
+    stage: leadQualifications.stage, blockedUntil: leadQualifications.blockedUntil,
     responsavelId: leadQualifications.responsavelId, aguardandoDesde: leadQualifications.aguardandoCorretorDesde, createdAt: leadQualifications.createdAt,
-  }).from(leadQualifications).where(filtroBusca ? and(cond, filtroBusca) : cond).orderBy(desc(leadQualifications.createdAt)).limit(300);
+  }).from(leadQualifications);
+  let rows: any[] = await (onde ? q.where(onde) : q).orderBy(desc(leadQualifications.createdAt)).limit(1000);
+  const { leadInativo } = await import('./inativo');
+  if (filtro !== 'todos') rows = rows.filter(l => !leadInativo(l, agora));
+  if (filtro === 'nao_encaminhados') {
+    const escritorio = await idsDoEscritorio(d);
+    const ids = rows.map(l => Number(l.id));
+    const enviados = new Set<number>();
+    for (let i = 0; i < ids.length; i += 500) {
+      const parte: any[] = await d.select({ leadId: leadEncaminhamentos.leadId, paraId: leadEncaminhamentos.paraId }).from(leadEncaminhamentos).where(inArray(leadEncaminhamentos.leadId, ids.slice(i, i + 500)));
+      for (const e of parte) if (!escritorio.has(Number(e.paraId))) enviados.add(Number(e.leadId));
+    }
+    rows = rows.filter(l => !enviados.has(Number(l.id)) && (!l.responsavelId || escritorio.has(Number(l.responsavelId))));
+  }
   const nomes = new Map((await equipe()).map(u => [u.id, u.nome]));
-  return rows.map(l => ({
+  return rows.slice(0, 500).map(l => ({
     id: Number(l.id), nome: l.nome || 'Sem nome', telefone: `+${String(l.phone).replace(/\D/g, '')}`,
     origem: l.origemCanal || l.origem || null, empreendimento: l.empreendimentoSlug ?? null, lote: l.loteCodigo ?? null, score: l.score ?? null, etapa: l.etapa ?? null,
     responsavelId: l.responsavelId ? Number(l.responsavelId) : null, responsavel: l.responsavelId ? nomes.get(Number(l.responsavelId)) ?? 'Usuário removido' : null,
     aguardandoDesde: iso(l.aguardandoDesde), criadoEm: iso(l.createdAt),
   }));
+}
+
+/** Administrador(es): dono "padrão" quando ninguém foi escolhido — lead só com eles conta como não encaminhado */
+async function idsDoEscritorio(d: any): Promise<Set<number>> {
+  const us: any[] = await d.select({ id: users.id, role: users.role, perfil: (users as any).perfil }).from(users);
+  return new Set(us.filter(u => u.role === 'admin' || u.perfil === 'admin').map(u => Number(u.id)));
 }
 
 /**

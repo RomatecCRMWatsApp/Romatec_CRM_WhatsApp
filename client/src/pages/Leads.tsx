@@ -3,6 +3,7 @@ import { useLocation } from "wouter";
 import { trpc } from "@/lib/trpc";
 import { useAuth } from "@/_core/hooks/useAuth";
 import ConfirmarExclusao from "@/components/sistema/ConfirmarExclusao";
+import { podeDistribuirLeads } from "@shared/permissoes";
 import { toast } from "sonner";
 import {
   ArrowLeft, Search, Filter, Users, TrendingUp, Flame, Thermometer,
@@ -147,6 +148,9 @@ export default function Leads() {
   // Leads que vieram de número da equipe (corretor, secretária…): o admin decide descartar um a um
   const { user } = useAuth();
   const isAdmin = (user as any)?.role === 'admin';
+  // Escritório (administrador e secretária): "Descartar" exclui de vez (server/routers.ts › leads.discard)
+  const { data: minhasPerm } = trpc.permissoes.minhas.useQuery();
+  const podeDistribuir = podeDistribuirLeads((minhasPerm?.perfil ?? null) as any);
   const daEquipe = trpc.leads.daEquipe.useQuery(undefined, { enabled: isAdmin, retry: false });
   const equipePendentes = daEquipe.data || [];
   // Excluir definitivo (descartados e números da equipe): só o administrador, com a senha
@@ -156,8 +160,15 @@ export default function Leads() {
     onError: e => toast.error(e.message),
   });
 
+  // Limpeza: apaga de vez todos os descartados (administrador, com a senha)
+  const [limpando, setLimpando] = useState(false);
+  const excluirDescartados = trpc.exclusao.descartados.useMutation({
+    onSuccess: r => { toast.success(`${r.excluidos} lead(s) excluído(s) de vez${r.comVinculo ? ` · ${r.comVinculo} com contrato ou chácara ficaram descartados` : ''}`); setLimpando(false); refetch(); daEquipe.refetch(); },
+    onError: e => toast.error(e.message),
+  });
+
   const discardLead = trpc.leads.discard.useMutation({
-    onSuccess: () => { toast.success('Lead descartado'); refetch(); daEquipe.refetch(); },
+    onSuccess: (r: any) => { toast.success(r?.excluido ? 'Lead excluído de vez: não aparece em mais nenhuma tela' : 'Lead descartado'); refetch(); daEquipe.refetch(); },
     onError: e => toast.error(`Erro: ${e.message}`),
   });
 
@@ -270,6 +281,8 @@ export default function Leads() {
 
       <div style={{ padding: '16px', display: 'flex', flexDirection: 'column', gap: '14px' }}>
 
+        <ConfirmarExclusao pendente={excluirDescartados.isPending} onFechar={() => setLimpando(false)} onConfirmar={senha => limpando && excluirDescartados.mutate({ senha })}
+          alvo={limpando ? { titulo: 'Excluir todos os descartados', descricao: <>Todos os leads descartados somem <b>de vez</b>, com a conversa, os interesses e as visitas, e não voltam a aparecer em nenhuma tela. Os que têm contrato ou chácara vinculada continuam descartados.</> } : null} />
         <ConfirmarExclusao pendente={excluirLead.isPending} onFechar={() => setExcluindo(null)} onConfirmar={senha => excluindo && excluirLead.mutate({ id: excluindo.id, senha })}
           alvo={excluindo && { titulo: 'Excluir lead', descricao: <>O lead <b>{excluindo.nome}</b> some de vez, com a conversa, os interesses e as visitas. Lead com contrato ou chácara vinculada não pode ser excluído.</> }} />
 
@@ -376,6 +389,12 @@ export default function Leads() {
           >
             {verDescartados ? '← Voltar aos ativos' : `🗑️ Descartados (${stats?.descartado ?? 0})`}
           </button>
+          {verDescartados && isAdmin && (
+            <button type="button" onClick={() => setLimpando(true)} disabled={excluirDescartados.isPending}
+              style={{ padding: '7px 14px', borderRadius: '20px', fontSize: '11px', fontWeight: 700, cursor: 'pointer', background: 'rgba(239,68,68,0.15)', border: '1px solid rgba(239,68,68,0.5)', color: '#fca5a5' }}>
+              <Trash2 size={11} style={{ display: 'inline', marginRight: 4 }} /> Excluir todos de vez
+            </button>
+          )}
         </div>
 
         {/* ── Lead list ────────────────────────────────────────────── */}
@@ -603,7 +622,7 @@ export default function Leads() {
                         {isDescartado || isBlocked ? null : (
                           <button
                             className="ld-action-btn"
-                            onClick={() => { if (confirm(`Descartar lead ${nome}?`)) discardLead.mutate({ id: lead.id }); }}
+                            onClick={() => { if (confirm(isAdmin || podeDistribuir ? `Excluir o lead ${nome} de vez? Ele some de todas as telas (não fica em Descartados) e não dá para desfazer.` : `Descartar lead ${nome}?`)) discardLead.mutate({ id: lead.id }); }}
                             disabled={discardLead.isPending}
                             style={{ background: 'rgba(200,60,60,0.08)', borderColor: 'rgba(200,60,60,0.2)', color: '#e07070' }}
                           >

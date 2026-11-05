@@ -356,6 +356,8 @@ async function processarPagamento(paymentId: string, agora: number): Promise<str
   return `pagamento_${status}`; // pending / in_process: aguarda o próximo aviso
 }
 
+const FORMA: Record<string, string> = { pix: 'Pix', bolbradesco: 'boleto', pec: 'boleto' };
+
 async function aplicarAprovado(ref: { assinaturaId: number; faturaId: number | null }, pg: any, modo: ModoMp, agora: number): Promise<string> {
   const d = await banco();
   const mpId = String(pg.id);
@@ -387,7 +389,7 @@ async function aplicarAprovado(ref: { assinaturaId: number; faturaId: number | n
       if (manual) {
         await tx.update(saasFaturas).set({ observacao: `${String(manual.observacao ?? '').slice(0, 200)} · Pix do MP ${mpId}`.replace(/^ · /, '') } as any).where(eq(saasFaturas.id, manual.id));
         await tx.update(saasFaturas).set({ status: 'CANCELADA', pagoEm: new Date(aprovadoEm), modo, observacao: `Pago no MP (${mpId}) e já registrado à mão` } as any).where(eq(saasFaturas.id, ref.faturaId));
-        return { acao: 'registrado_manual' as const };
+        return { acao: 'registrado_manual' as const, manual };
       }
     }
     // Escolha do checkout (plano, ciclo, forma, cupom) passa a valer agora, com o pagamento aprovado
@@ -456,6 +458,18 @@ async function aplicarAprovado(ref: { assinaturaId: number; faturaId: number | n
     const preapprovalAntigo = escolha?.preapprovalId && atual.mpPreapprovalId && String(atual.mpPreapprovalId) !== escolha.preapprovalId ? String(atual.mpPreapprovalId) : null;
     return { acao: 'aprovado' as const, a, periodoFim, valor, voltarPrecoNormal, preapprovalAntigo };
   });
+  if (resultado.acao === 'registrado_manual' && (resultado as any).manual && !/cliente avisado/.test(String((resultado as any).manual.observacao ?? ''))) {
+    // Lançamento manual de antes da confirmação automática: o cliente ainda não recebeu o "pagamento recebido"
+    const m = (resultado as any).manual;
+    const [aa]: any[] = await d.select().from(saasAssinaturas).where(eq(saasAssinaturas.id, ref.assinaturaId)).limit(1);
+    if (aa) {
+      const r = await S.avisarPagamentoConfirmado({ usuarioId: aa.usuarioId, valor: Number(pg.transaction_amount) || Number(m.valor), ate: aa.periodoFim ? new Date(aa.periodoFim) : new Date(agora), forma: 'Pix', planoId: aa.planoId });
+      if (r.cliente) {
+        const [mf]: any[] = await d.select({ observacao: saasFaturas.observacao }).from(saasFaturas).where(eq(saasFaturas.id, m.id)).limit(1);
+        await d.update(saasFaturas).set({ observacao: `${String(mf?.observacao ?? '').slice(0, 250)} · cliente avisado` } as any).where(eq(saasFaturas.id, m.id));
+      }
+    }
+  }
   if (resultado.acao === 'upgrade') return posUpgrade(resultado.a, resultado.novoPlanoId, resultado.valor, modo, mpId, agora);
   if (resultado.acao !== 'aprovado') return resultado.acao;
   const { a, periodoFim, valor, voltarPrecoNormal, preapprovalAntigo } = resultado;
@@ -474,12 +488,7 @@ async function aplicarAprovado(ref: { assinaturaId: number; faturaId: number | n
       if (normal) await mp.req(modo, 'PUT', `/preapproval/${a.mpPreapprovalId}`, { auto_recurring: { transaction_amount: normal, currency_id: 'BRL' } });
     } catch (e: any) { console.warn('[MP] volta ao preço normal:', e?.message); }
   }
-  const d2 = await banco();
-  const [u]: any[] = await d2.select({ name: users.name, telefone: users.telefone }).from(users).where(eq(users.id, a.usuarioId)).limit(1);
-  if (u?.telefone && S.envio.disponivel()) {
-    const fim = periodoFim.toLocaleDateString('pt-BR', { timeZone: 'America/Fortaleza' });
-    await S.envio.texto(`55${soDig(u.telefone).replace(/^55/, '')}`, `✅ Pagamento confirmado — ${valor.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}. Sua assinatura do Romatec CRM está ativa até ${fim}. Obrigado!`).catch(() => {});
-  }
+  await S.avisarPagamentoConfirmado({ usuarioId: a.usuarioId, valor, ate: periodoFim, forma: FORMA[String(pg.payment_method_id ?? '')] ?? (ref.faturaId ? 'Pix/boleto' : 'cartão'), planoId: a.planoId });
   return 'aprovado';
 }
 

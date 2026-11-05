@@ -21,6 +21,7 @@ let proximoPre = 0;
 /** Assinaturas do cartão (preapproval) que o cliente já autorizou no MP */
 const preAutorizadas = new Set<string>();
 let falharGet = false;
+const enviadosWhats: [string, string][] = [];
 
 const usuario = (id: number) => db.all(sql`SELECT * FROM users WHERE id = ${id}`)[0];
 const assinatura = (usuarioId: number) => db.all(sql`SELECT * FROM saasAssinaturas WHERE usuarioId = ${usuarioId}`)[0];
@@ -248,13 +249,20 @@ describe('empreendedor avulso: implantação na 1ª fatura', () => {
     const a = assinatura(8);
     const f = faturas(a.id)[0];
     Object.assign(pagamentosMp.get(String(f.mpPaymentId)), { status: 'approved', date_approved: new Date(Date.now() - 5 * 3600_000).toISOString() });
+    // Lançamento à mão feito ANTES desta versão (sem aviso ao cliente): o envio só liga depois dele
     await S.registrarPagamentoManual(a.id, { ciclo: 'MENSAL', valor: Number(f.valor), observacao: 'Pix conferido no banco' }, 1);
     const fimManual = assinatura(8).periodoFim;
+    S.envio.disponivel = () => true;
+    S.envio.texto = async (f: string, m: string) => { enviadosWhats.push([f, m]); };
     await C.conciliarFaturasAbertas();
+    S.envio.disponivel = () => false;
     expect(assinatura(8).periodoFim).toBe(fimManual);
     const fs = faturas(a.id);
     expect(fs.find((x: any) => x.id === f.id).status).toBe('CANCELADA');
     expect(fs.find((x: any) => x.metodo === 'MANUAL').observacao).toMatch(new RegExp(`Pix do MP ${f.mpPaymentId}`));
+    // Lançamento manual de antes da confirmação automática: o cliente recebe o "pagamento recebido" ao ligar o Pix
+    expect(fs.find((x: any) => x.metodo === 'MANUAL').observacao).toMatch(/cliente avisado/);
+    expect(enviadosWhats.some(([f, m]) => f.endsWith('99966667777') && /Pagamento recebido/.test(m) && /obrigado/i.test(m))).toBe(true);
     // Aviso do webhook depois ou rodar de novo não muda nada
     await avisar('payment', String(f.mpPaymentId));
     await C.conciliarFaturasAbertas();

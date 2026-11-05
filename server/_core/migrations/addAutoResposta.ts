@@ -122,6 +122,9 @@ const TABELAS: [string, string][] = [
     id INT AUTO_INCREMENT PRIMARY KEY, slug VARCHAR(80) NOT NULL, titulo VARCHAR(160) NOT NULL, categoria VARCHAR(20) NOT NULL DEFAULT 'sistema',
     publico VARCHAR(12) NOT NULL DEFAULT 'todos', conteudo TEXT NOT NULL, ordem INT NOT NULL DEFAULT 0, ativo BOOLEAN NOT NULL DEFAULT TRUE,
     atualizadoPor INT NULL, atualizadoEm TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP, UNIQUE KEY ux_artigo_slug (slug))`],
+  // Chaves simples do sistema (server/configSistema.ts)
+  ['configSistema', `CREATE TABLE IF NOT EXISTS configSistema (
+    chave VARCHAR(60) PRIMARY KEY, valor VARCHAR(500) NOT NULL, atualizadoPor INT NULL, atualizadoEm TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP)`],
   // Encaminhamentos de lead (manual pela secretária/admin ou automático pela roleta): relatório em Leads › Distribuição
   ['leadEncaminhamentos', `CREATE TABLE IF NOT EXISTS leadEncaminhamentos (
     id INT AUTO_INCREMENT PRIMARY KEY, leadId INT NOT NULL, deId INT NULL, paraId INT NOT NULL, porId INT NULL, origem VARCHAR(12) NOT NULL DEFAULT 'manual',

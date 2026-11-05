@@ -91,6 +91,8 @@ export async function garantirResponsavel(leadId: number): Promise<{ id: number;
   if (!lead) return null;
   const { roleta, admin, todos } = await candidatos(db, users);
   if (lead.responsavelId) return todos.find(u => u.id === lead.responsavelId) ?? null;
+  // Distribuição manual: ninguém é escolhido sozinho — o lead fica em Leads › Distribuição › Não encaminhados
+  if ((await (await import('../configSistema')).modoDistribuicao()) === 'manual') return null;
   const escolhido = escolherResponsavel(roleta) ?? admin;
   if (!escolhido) return null;
   await db.update(leadQualifications).set({ responsavelId: escolhido.id } as any).where(eq(leadQualifications.id, leadId));
@@ -164,6 +166,7 @@ export async function processarSla(agora = Date.now()): Promise<number> {
     .orderBy(asc(leadQualifications.aguardandoCorretorDesde)).limit(50);
   if (!esperando.length) return 0;
   const { roleta, admin, todos } = await candidatos(db, users);
+  const manual = (await (await import('../configSistema')).modoDistribuicao()) === 'manual';
   const { enviarTexto } = await import('./zapiClient');
   const { enviarTelegram } = await import('./notificacao');
   const fone = (u: any) => { const f = String(u?.telefone || '').replace(/\D/g, ''); return f.length >= 10 ? (f.startsWith('55') ? f : `55${f}`) : null; };
@@ -185,7 +188,8 @@ export async function processarSla(agora = Date.now()): Promise<number> {
     const acao = acaoSla(minutos, nivel);
     if (acao === 'nada') continue;
     const resp = todos.find(u => u.id === l.responsavelId) ?? admin;
-    const proximo = acao === 'repassar' ? escolherResponsavel(roleta, l.responsavelId) : null;
+    // Manual: não repassa sozinho para o próximo da roleta (só lembra e avisa o administrador)
+    const proximo = acao === 'repassar' && !manual ? escolherResponsavel(roleta, l.responsavelId) : null;
     // Reserva o nível do alerta antes de avisar: com dois servidores no ar, só um avisa
     const reserva = await db.update(leadQualifications)
       .set({ alertaSlaNivel: NIVEL_DA_ACAO[acao], ...(proximo ? { responsavelId: proximo.id } : {}) } as any)

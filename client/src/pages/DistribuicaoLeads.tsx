@@ -8,8 +8,9 @@ import PageHeader from "@/components/PageHeader";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 
-type Filtro = "sem_responsavel" | "aguardando" | "recentes";
-const FILTROS: [Filtro, string][] = [["sem_responsavel", "Sem responsável"], ["aguardando", "Aguardando atendimento"], ["recentes", "Últimos 30 dias"]];
+type Filtro = "nao_encaminhados" | "sem_responsavel" | "aguardando" | "recentes" | "todos";
+const FILTROS: [Filtro, string][] = [["nao_encaminhados", "Não encaminhados (quente, morno e frio)"], ["sem_responsavel", "Sem responsável"], ["aguardando", "Aguardando atendimento"], ["recentes", "Últimos 30 dias"], ["todos", "Todos os leads"]];
+const VAZIO: Record<Filtro, string> = { nao_encaminhados: "ainda não encaminhado a um corretor", sem_responsavel: "sem responsável", aguardando: "aguardando atendimento", recentes: "nos últimos 30 dias", todos: "" };
 const selectCls = "h-9 rounded-md border border-border bg-background px-2 text-sm";
 const hoje = () => new Date(Date.now() - 3 * 3600_000).toISOString().slice(0, 10);
 const diasAtras = (n: number) => new Date(Date.now() - 3 * 3600_000 - n * 86_400_000).toISOString().slice(0, 10);
@@ -20,7 +21,7 @@ export default function DistribuicaoLeads() {
   const [aba, setAba] = useState<"distribuir" | "relatorio">("distribuir");
   return (
     <div>
-      <PageHeader icone={Shuffle} titulo="Distribuição de leads" subtitulo="Encaminhe os leads para os corretores e veja o relatório de quem recebeu cada um (a roleta automática continua ligada)" />
+      <PageHeader icone={Shuffle} titulo="Distribuição de leads" subtitulo="Encaminhe os leads para os corretores e veja o relatório de quem recebeu cada um" />
       <div className="mx-auto max-w-[1400px] space-y-3 px-4 pb-8 md:px-6">
         <div role="tablist" className="grid max-w-md grid-cols-2 gap-1 rounded-lg border border-border bg-secondary/20 p-1">
           {([["distribuir", "Distribuir"], ["relatorio", "Relatório"]] as const).map(([v, r]) => (
@@ -36,7 +37,7 @@ export default function DistribuicaoLeads() {
 
 function Distribuir({ aoEncaminhar }: { aoEncaminhar: () => void }) {
   const utils = trpc.useUtils();
-  const [filtro, setFiltro] = useState<Filtro>("sem_responsavel");
+  const [filtro, setFiltro] = useState<Filtro>("nao_encaminhados");
   const [busca, setBusca] = useState("");
   const [sel, setSel] = useState<Set<number>>(new Set());
   const [paraId, setParaId] = useState<number | "">("");
@@ -60,6 +61,7 @@ function Distribuir({ aoEncaminhar }: { aoEncaminhar: () => void }) {
 
   return (
     <div className="space-y-3">
+      <ModoDistribuicao />
       <div className="flex flex-wrap items-end gap-2">
         <label className="flex flex-col gap-1 text-xs text-muted-foreground">Mostrar
           <select id="dist-filtro" className={selectCls} value={filtro} onChange={e => { setFiltro(e.target.value as Filtro); setSel(new Set()); }}>
@@ -90,14 +92,15 @@ function Distribuir({ aoEncaminhar }: { aoEncaminhar: () => void }) {
       </div>
 
       {isLoading && <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />}
-      {!isLoading && !lista.length && <p className="rounded-xl border border-dashed border-border p-4 text-sm text-muted-foreground">Nenhum lead {filtro === "sem_responsavel" ? "sem responsável" : filtro === "aguardando" ? "aguardando atendimento" : "nos últimos 30 dias"}{busca ? ` para "${busca}"` : ""}.</p>}
+      {!isLoading && !lista.length && <p className="rounded-xl border border-dashed border-border p-4 text-sm text-muted-foreground">Nenhum lead {VAZIO[filtro]}{busca ? ` para "${busca}"` : ""}.</p>}
+      {!isLoading && !!lista.length && <p className="text-xs text-muted-foreground"><b className="text-foreground">{lista.length}</b> lead(s) {VAZIO[filtro] || "no total"}{busca ? ` para "${busca}"` : ""}.</p>}
       {!!lista.length && (
         <div className="overflow-x-auto rounded-lg border border-border">
           <table className="w-full text-sm">
             <thead className="bg-secondary/30 text-left text-xs text-muted-foreground">
               <tr>
                 <th className="p-2"><input type="checkbox" aria-label="Selecionar todos" checked={todos} onChange={() => setSel(todos ? new Set() : new Set(lista.map(l => l.id)))} /></th>
-                <th className="p-2">Lead</th><th className="p-2">Telefone</th><th className="p-2">Origem</th><th className="p-2">Interesse</th>
+                <th className="p-2">Lead</th><th className="p-2">Telefone</th><th className="p-2">Temperatura</th><th className="p-2">Origem</th><th className="p-2">Interesse</th>
                 <th className="p-2">Chegou em</th><th className="p-2">Responsável hoje</th>
               </tr>
             </thead>
@@ -107,6 +110,7 @@ function Distribuir({ aoEncaminhar }: { aoEncaminhar: () => void }) {
                   <td className="p-2"><input type="checkbox" aria-label={`Selecionar ${l.nome}`} checked={sel.has(l.id)} onChange={() => alternar(l.id)} onClick={e => e.stopPropagation()} /></td>
                   <td className="p-2 font-medium"><Link href={`/leads/lead/${l.id}`} onClick={(e: any) => e.stopPropagation()} className="hover:underline">{l.nome}</Link>{l.score === "quente" && <span className="ml-1 text-[10px] text-orange-400">🔥</span>}</td>
                   <td className="p-2 whitespace-nowrap">{l.telefone}</td>
+                  <td className="p-2 text-xs">{l.score === "quente" ? "🔥 quente" : l.score === "morno" ? "🌡️ morno" : "❄️ frio"}</td>
                   <td className="p-2 text-xs text-muted-foreground">{l.origem ?? "—"}</td>
                   <td className="p-2 text-xs text-muted-foreground">{[l.empreendimento, l.lote].filter(Boolean).join(" · ") || "—"}</td>
                   <td className="p-2 whitespace-nowrap text-xs">{dataHora(l.criadoEm)}{l.aguardandoDesde && <span className="ml-1 text-amber-400">· esperando</span>}</td>
@@ -117,6 +121,37 @@ function Distribuir({ aoEncaminhar }: { aoEncaminhar: () => void }) {
           </table>
         </div>
       )}
+    </div>
+  );
+}
+
+/** Chave automático × manual: no manual a roleta para e todo lead novo espera a secretária/escritório encaminhar */
+function ModoDistribuicao() {
+  const utils = trpc.useUtils();
+  const { data } = trpc.distribuicao.modo.useQuery();
+  const definir = trpc.distribuicao.definirModo.useMutation({
+    onSuccess: r => { toast.success(r.modo === "manual" ? "Distribuição MANUAL: a roleta parou; os leads novos esperam aqui para serem encaminhados" : "Distribuição AUTOMÁTICA: a roleta volta a escolher o corretor"); utils.distribuicao.modo.invalidate(); },
+    onError: e => toast.error(e.message),
+  });
+  if (!data) return null;
+  const manual = data.modo === "manual";
+  return (
+    <div className={`flex flex-wrap items-center gap-3 rounded-lg border p-3 ${manual ? "border-amber-500/50 bg-amber-500/5" : "border-emerald-500/40 bg-emerald-500/5"}`}>
+      <div className="min-w-[220px] flex-1 text-sm">
+        <b>Distribuição: {manual ? "MANUAL" : "AUTOMÁTICA"}</b>
+        <p className="text-xs text-muted-foreground">{manual
+          ? "A roleta está parada. Todo lead novo (quente, morno ou frio) fica em \"Não encaminhados\" até a secretária ou o escritório encaminhar."
+          : "A roleta escolhe o corretor quando o lead pede atendimento e repassa se ninguém atender. Os leads que ela não pegou aparecem em \"Não encaminhados\"."}</p>
+      </div>
+      <div role="group" aria-label="Modo da distribuição" className="grid grid-cols-2 gap-1 rounded-lg border border-border bg-secondary/20 p-1">
+        {(["automatico", "manual"] as const).map(m => (
+          <button key={m} type="button" aria-pressed={data.modo === m} disabled={definir.isPending || data.modo === m}
+            onClick={() => { if (confirm(m === "manual" ? "Mudar para distribuição MANUAL? A roleta para de escolher corretor sozinha." : "Voltar para distribuição AUTOMÁTICA (roleta)?")) definir.mutate({ modo: m }); }}
+            className={`rounded-md px-3 py-1.5 text-sm font-medium ${data.modo === m ? (m === "manual" ? "bg-amber-600 text-white" : "bg-emerald-600 text-white") : "text-muted-foreground hover:text-foreground"}`}>
+            {m === "manual" ? "Manual" : "Automática"}
+          </button>
+        ))}
+      </div>
     </div>
   );
 }

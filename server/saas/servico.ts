@@ -4,7 +4,7 @@
  * (expirar trial/cortesia, inadimplência, pacote vencido, lembretes D-3/D-1/D0). Com o licenciamento
  * DESLIGADO nada é cobrado, bloqueado nem enviado.
  */
-import { desc, eq, inArray } from 'drizzle-orm';
+import { and, desc, eq, inArray } from 'drizzle-orm';
 import { getDb } from '../db';
 import { sincronizarFilaNfse } from './nfse';
 import {
@@ -265,6 +265,12 @@ export async function registrarPagamentoManual(id: number, p: { ciclo: 'MENSAL' 
   } as any);
   await atualizar(a, { origem: 'PAGA', status: 'ATIVA', ciclo: p.ciclo, periodoFim: fim, trialFim: null, motivo: null });
   await auditar(a.usuarioId, 'PAGAMENTO_CONFIRMADO', { assinaturaId: id, valor: p.valor, metodo: 'MANUAL', ate: fim.toISOString(), por: autorId });
+  const aviso = await avisarPagamentoConfirmado({ usuarioId: a.usuarioId, valor: p.valor, ate: fim, forma: 'registrado pelo escritório', planoId: a.planoId });
+  // Marca na fatura que o cliente já recebeu a confirmação (o Pix ligado depois a este lançamento não manda de novo)
+  if (aviso.cliente) {
+    const [f]: any[] = await d.select({ id: saasFaturas.id, observacao: saasFaturas.observacao }).from(saasFaturas).where(and(eq(saasFaturas.assinaturaId, id), eq(saasFaturas.competencia, comp))).limit(1);
+    if (f) await d.update(saasFaturas).set({ observacao: `${String(f.observacao ?? '').slice(0, 250)} · cliente avisado`.replace(/^ · /, '') } as any).where(eq(saasFaturas.id, f.id));
+  }
   await sincronizarFilaNfse(agora).catch((e: any) => console.warn('[NFS-e] fila:', e?.message));
   return { ok: true as const, periodoFim: fim.toISOString() };
 }
@@ -419,6 +425,33 @@ async function avisarEscritorio(texto: string) {
   const d = await banco();
   const equipe: any[] = (await d.select().from(users)).filter((u: any) => u.ativo !== false && u.ativo !== 0 && ['admin', 'secretario'].includes(perfilDe(u) ?? ''));
   for (const u of equipe) await avisar(u.telefone, texto);
+}
+
+/**
+ * Pagamento recebido (Pix, boleto, cartão ou lançado à mão): WhatsApp de confirmação e agradecimento para quem pagou
+ * e aviso para o escritório (administrador e secretária). Não derruba quem chamou.
+ */
+export async function avisarPagamentoConfirmado(p: { usuarioId: number; valor: number; ate: Date; forma: string; planoId?: number | null }) {
+  try {
+    const d = await banco();
+    const [u]: any[] = await d.select().from(users).where(eq(users.id, p.usuarioId)).limit(1);
+    if (!u) return { cliente: false };
+    const plano = p.planoId ? (await listarPlanos()).find(x => x.id === p.planoId)?.nome ?? null : null;
+    const valor = p.valor.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
+    const ate = p.ate.toLocaleDateString('pt-BR', { timeZone: 'America/Fortaleza' });
+    const nome = String(u.name || '').trim().split(/\s+/)[0] || 'tudo bem';
+    const cliente = await avisar(u.telefone, [
+      `✅ *Pagamento recebido!*`,
+      ``,
+      `Olá, ${nome}! Confirmamos o recebimento de *${valor}* (${p.forma})${plano ? ` referente ao plano *${plano}*` : ''} do Romatec CRM.`,
+      `Sua assinatura está ativa até *${ate}*.`,
+      ``,
+      `Muito obrigado pela confiança e boas vendas! 🙏`,
+      `Romatec Consultoria Imobiliária`,
+    ].join('\n'));
+    await avisarEscritorio(`💰 Pagamento recebido: ${u.name ?? 'assinante'} · ${valor} (${p.forma})${plano ? ` · ${plano}` : ''} · ativo até ${ate}.${cliente ? ' Confirmação enviada a ele(a).' : ' Não consegui enviar a confirmação para ele(a) (sem WhatsApp no cadastro?).'}`);
+    return { cliente };
+  } catch (e: any) { console.warn('[SaaS] aviso de pagamento:', e?.message); return { cliente: false }; }
 }
 
 const horaFortaleza = (agora: number) => new Date(agora - 3 * 3600_000).getUTCHours();
