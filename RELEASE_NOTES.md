@@ -3,6 +3,15 @@
 Cada versão nova vai no TOPO. Depois rode `npm run release` (valida e atualiza o package.json);
 ao subir, o servidor grava a versão no banco e todos recebem o aviso "Novidades da versão".
 
+## 1.103.3 — 2026-11-05
+tipo: patch
+obrigatoria: nao
+titulo: Vínculo do WhatsApp sem "código inválido" repetido
+
+### Correções
+- Cadastro pelo WhatsApp: quem já está vinculado e manda o código de novo recebe "já está vinculado" e o menu, em vez de "código inválido"
+- A mensagem de código inválido agora explica que só vale o último código gerado, por 10 minutos
+
 ## 1.103.2 — 2026-11-05
 tipo: patch
 obrigatoria: nao

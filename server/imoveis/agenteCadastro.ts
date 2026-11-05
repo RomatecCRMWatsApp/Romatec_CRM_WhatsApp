@@ -98,7 +98,15 @@ async function verificarCodigo(origem: string, codigo: string, o: { agora?: numb
   tentativasPorNumero.set(chave, !t || agora - t.desde >= CODIGO_MIN * MIN ? { n: 1, desde: agora } : { n: t.n + 1, desde: t.desde });
   const d = await banco();
   const [v]: any[] = await d.select().from(whatsappVinculos).where(eq(whatsappVinculos.codigoHash, sha(`vinculo:${codigo}`))).limit(1);
-  if (!v || !v.codigoExpira || new Date(v.codigoExpira).getTime() < agora) return 'Código inválido ou vencido. Gere um novo no CRM em Imóveis › Cadastro pelo WhatsApp.';
+  if (!v || !v.codigoExpira || new Date(v.codigoExpira).getTime() < agora) {
+    // Código repetido/antigo vindo de um número que já está vinculado e autorizado: não assusta com "inválido"
+    const [ja]: any[] = await d.select().from(whatsappVinculos).where(eq(whatsappVinculos.telefoneChave, chave)).limit(1);
+    if (ja && autorizacaoValida(ja, await usuario(d, ja.usuarioId), agora).ok) {
+      tentativasPorNumero.delete(chave);
+      return `✅ Este WhatsApp já está vinculado e autorizado. Não precisa de código.\n\n${MENU_FUNCOES}`;
+    }
+    return 'Código inválido ou vencido. Gere um novo no CRM em Imóveis › Cadastro pelo WhatsApp (só vale o último código gerado, por 10 minutos).';
+  }
   const u = await usuario(d, v.usuarioId);
   if (!u || u.ativo === false || u.ativo === 0 || !podeUsarAgenteImovel(perfilDe(u))) return 'Este acesso não usa o cadastro de imóveis pelo WhatsApp.';
   // O número que mandou o código tem que ser o do cadastro (não basta conhecer o código)

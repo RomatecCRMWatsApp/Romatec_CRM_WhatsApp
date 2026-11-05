@@ -76,6 +76,8 @@ describe('Agente de Cadastro de Imóveis pelo WhatsApp', () => {
     expect(await msg(CORRETOR, c.mensagem)).toBe(true);
     expect(ultima()).toMatch(/WhatsApp vinculado/);
     expect(await msg(CORRETOR, c.mensagem)).toBe(true);
+    expect(ultima()).toMatch(/já está vinculado e autorizado/);
+    expect(await msg(EMPRE, 'VINCULAR 000001')).toBe(true);
     expect(ultima()).toMatch(/inválido ou vencido/);
     expect((await A.statusVinculo(21))).toMatchObject({ vinculado: true, autorizado: true, telefoneFinal: '2222' });
   });
