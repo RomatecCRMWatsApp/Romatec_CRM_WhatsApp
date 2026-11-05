@@ -31,7 +31,12 @@ export const mp = {
       const txt = await r.text();
       let j: any = {};
       try { j = txt ? JSON.parse(txt) : {}; } catch { j = { message: txt.slice(0, 200) }; }
-      if (!r.ok) throw new MpErro(`Mercado Pago recusou (${r.status}): ${j?.message || j?.error || 'erro'}`, r.status >= 500 ? 502 : 400, j);
+      if (!r.ok) {
+        const msg = String(j?.message || j?.error || 'erro');
+        console.error(`[MP] ${metodo} ${caminho} (${modo}) → ${r.status}: ${msg}`);
+        if (r.status === 401 || r.status === 403) throw new MpErro(mensagemCredencial(modo, msg), 400, j);
+        throw new MpErro(`Mercado Pago recusou (${r.status}): ${msg}`, r.status >= 500 ? 502 : 400, j);
+      }
       return j as T;
     } catch (e: any) {
       if (e?.name === 'MpErro') throw e;
@@ -39,6 +44,18 @@ export const mp = {
     } finally { clearTimeout(t); }
   },
 };
+
+/**
+ * 401/403 do MP é problema de credencial do escritório, não do assinante. "Unauthorized use of live credentials":
+ * token de produção (APP_USR) sem as credenciais de produção ativadas na conta, ou token de usuário de teste
+ * cobrando um e-mail real (modo teste). O assinante vê a orientação; o administrador vê o detalhe no log e em Admin › SaaS.
+ */
+export function mensagemCredencial(modo: ModoMp, msg: string): string {
+  const base = 'O pagamento online está indisponível no momento por um ajuste na conta do Mercado Pago da Romatec. Fale com a Romatec pelo WhatsApp: o acesso não é cortado por isso.';
+  if (modo === 'teste') return `${base} (Mercado Pago em modo TESTE: ligue a produção em Admin › SaaS.)`;
+  if (/live credentials/i.test(msg)) return `${base} (Credenciais de produção não ativadas no painel do Mercado Pago.)`;
+  return `${base} (Credencial recusada: confira MP_ACCESS_TOKEN no Railway.)`;
+}
 
 /** Manifest assinado pelo MP: id:{data.id};request-id:{x-request-id};ts:{ts}; — partes ausentes omitidas; id alfanumérico em minúsculas */
 export function montarManifest(dataId?: string | null, requestId?: string | null, ts?: string | null): string {

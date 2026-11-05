@@ -34,3 +34,12 @@ describe('tipoDe', () => {
     expect(tipoDe('imóvel')).toBeNull();
   });
 });
+
+import { mensagemCredencial } from './saas/mercadopago';
+describe('mensagemCredencial (MP 401)', () => {
+  it('orienta o assinante e diz ao escritório o que ajustar', () => {
+    expect(mensagemCredencial('teste', 'Unauthorized use of live credentials')).toMatch(/modo TESTE.*Admin › SaaS/);
+    expect(mensagemCredencial('producao', 'Unauthorized use of live credentials')).toMatch(/Credenciais de produção não ativadas/);
+    expect(mensagemCredencial('producao', 'invalid token')).toMatch(/MP_ACCESS_TOKEN/);
+  });
+});

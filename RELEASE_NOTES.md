@@ -3,6 +3,14 @@
 Cada versão nova vai no TOPO. Depois rode `npm run release` (valida e atualiza o package.json);
 ao subir, o servidor grava a versão no banco e todos recebem o aviso "Novidades da versão".
 
+## 1.104.1 — 2026-11-05
+tipo: patch
+obrigatoria: nao
+titulo: Assinatura: aviso claro quando o Mercado Pago recusa a credencial
+
+### Correções
+- Assinar plano: em vez de "Mercado Pago recusou (401): Unauthorized use of live credentials", o corretor vê que o pagamento online está em ajuste, que o acesso não é cortado por isso e que pode falar com a Romatec; o motivo técnico (modo teste, credencial de produção não ativada ou token recusado) aparece para o escritório e fica no log
+
 ## 1.104.0 — 2026-11-05
 tipo: minor
 obrigatoria: nao
