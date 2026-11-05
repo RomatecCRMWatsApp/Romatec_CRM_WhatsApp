@@ -165,6 +165,37 @@ export async function iniciarUpgrade(u: any, p: { metodo: 'PIX' | 'BOLETO' }, ag
   return { tipo: p.metodo === 'PIX' ? 'pix' : 'boleto', url: fatura.link ?? undefined, copiaCola: fatura.copiaCola, qrBase64: fatura.qrBase64, valor: fatura.valor, modo, faturaId: fatura.id };
 }
 
+type FaturaGerada = { id: number; valor: number; link: string | null; copiaCola: string | null; qrBase64: string | null };
+
+/**
+ * Pagamento que a fatura já tinha no MP, antes de gerar outro:
+ * - aprovado → aplica agora e avisa que já está pago (não gera cobrança nova);
+ * - pendente, mesmo valor e forma e ainda no prazo → devolve o MESMO Pix/boleto (um só QR válido por fatura);
+ * - senão → cancela o antigo no MP (o QR velho deixa de aceitar pagamento) e segue para um novo.
+ */
+async function anteriorDaFatura(f: any, p: { valor: number; metodo: 'PIX' | 'BOLETO' }, agora: number): Promise<FaturaGerada | null> {
+  const id = String(f.mpPaymentId);
+  let pg: any = null;
+  try { pg = (await buscarMp(`/v1/payments/${id}`)).dado; } catch (e: any) { console.warn(`[MP] fatura ${f.id}: consultar o pagamento ${id}:`, e?.message); }
+  if (pg?.status === 'approved') {
+    await processarPagamento(id, agora);
+    throw new CobrancaErro('Este pagamento já foi recebido e a sua assinatura foi atualizada. Atualize a página.', 409);
+  }
+  const expira = pg?.date_of_expiration ? new Date(pg.date_of_expiration).getTime() : 0;
+  const td = pg?.point_of_interaction?.transaction_data ?? {};
+  const mesmo = pg && ['pending', 'in_process'].includes(String(pg.status)) && Math.abs(Number(pg.transaction_amount) - p.valor) < 0.01
+    && String(f.metodo) === p.metodo && expira - agora > 3_600_000;
+  if (mesmo) {
+    const link = p.metodo === 'PIX' ? (td.ticket_url ?? f.linkPagamento ?? null) : (pg?.transaction_details?.external_resource_url ?? f.linkPagamento ?? null);
+    return { id: Number(f.id), valor: Number(pg.transaction_amount), link, copiaCola: (td.qr_code ?? f.pixCopiaCola ?? null), qrBase64: td.qr_code_base64 ?? null };
+  }
+  if (pg && ['pending', 'in_process'].includes(String(pg.status))) {
+    const modo: ModoMp = f.modo === 'producao' || f.modo === 'teste' ? f.modo : await modoMp();
+    await mp.req(modo, 'PUT', `/v1/payments/${id}`, { status: 'cancelled' }).catch((e: any) => console.warn(`[MP] cancelar o Pix/boleto antigo ${id}:`, e?.message));
+  }
+  return null;
+}
+
 /** Cria (ou refaz) a fatura Pix/boleto da competência no MP */
 async function gerarFatura(a: any, u: any, p: { valor: number; metodo: 'PIX' | 'BOLETO'; incluiImplantacao: boolean; competencia: string; descricao: string; modo: ModoMp; upgradePlanoId?: number | null; escolha?: Escolha | null }, agora: number) {
   const d = await banco();
@@ -179,6 +210,12 @@ async function gerarFatura(a: any, u: any, p: { valor: number; metodo: 'PIX' | '
     [f] = await d.select().from(saasFaturas).where(and(eq(saasFaturas.assinaturaId, a.id), eq(saasFaturas.competencia, p.competencia))).limit(1);
   }
   const vencimento = new Date(agora + 3 * 86_400_000);
+  // Fatura já tinha um Pix/boleto: nunca deixar um pagamento órfão (o id antigo era sobrescrito e, se o cliente pagasse
+  // o QR antigo, a conciliação olhava só o novo e o pagamento não compensava no sistema).
+  if (f?.mpPaymentId) {
+    const antigo = await anteriorDaFatura(f, p, agora);
+    if (antigo) return antigo;
+  }
   const dados = { valor: p.valor.toFixed(2), metodo: p.metodo, status: 'ABERTA', vencimento: hojeIso(vencimento.getTime()), incluiImplantacao: p.incluiImplantacao ? 1 : 0, modo: p.modo, mpPaymentId: null, linkPagamento: null, pixCopiaCola: null, upgradePlanoId: p.upgradePlanoId ?? null, escolhaJson: p.escolha ? JSON.stringify(p.escolha) : null };
   let faturaId: number;
   if (f) { faturaId = f.id; await d.update(saasFaturas).set(dados as any).where(eq(saasFaturas.id, f.id)); }
@@ -332,8 +369,22 @@ async function aplicarAprovado(ref: { assinaturaId: number; faturaId: number | n
   const resultado = await transacao(d, async (tx: any) => {
     const [ja]: any[] = await tx.select().from(saasFaturas).where(eq(saasFaturas.mpPaymentId, mpId)).limit(1);
     if (ja?.status === 'PAGA') return { acao: 'ja_aplicado' as const };
+    if (ja && /já registrado à mão/.test(String(ja.observacao ?? ''))) return { acao: 'registrado_manual' as const };
     const [atual]: any[] = await tx.select().from(saasAssinaturas).where(eq(saasAssinaturas.id, ref.assinaturaId)).limit(1);
     if (!atual) return { acao: 'assinatura_inexistente' as const };
+    // O escritório já registrou à mão ESTE dinheiro (pagamento manual de valor igual, ou líquido da taxa, lançado depois do Pix aprovado e
+    // ainda não ligado a nenhum pagamento do MP): marca a fatura como paga e liga as duas, sem estender o período de novo
+    if (ref.faturaId) {
+      const aprovadoEm = pg.date_approved ? new Date(pg.date_approved).getTime() : agora;
+      const manuais: any[] = await tx.select().from(saasFaturas).where(and(eq(saasFaturas.assinaturaId, ref.assinaturaId), eq(saasFaturas.metodo, 'MANUAL'), eq(saasFaturas.status, 'PAGA')));
+      const manual = manuais.find(m => !m.mpPaymentId && !/Pix do MP \d+/.test(String(m.observacao ?? '')) && Math.abs(Number(m.valor) - Number(pg.transaction_amount)) <= Math.max(5, Number(pg.transaction_amount) * 0.03)
+        && new Date(m.createdAt ?? m.pagoEm).getTime() >= aprovadoEm - 60_000);
+      if (manual) {
+        await tx.update(saasFaturas).set({ observacao: `${String(manual.observacao ?? '').slice(0, 200)} · Pix do MP ${mpId}`.replace(/^ · /, '') } as any).where(eq(saasFaturas.id, manual.id));
+        await tx.update(saasFaturas).set({ status: 'CANCELADA', pagoEm: new Date(aprovadoEm), modo, observacao: `Pago no MP (${mpId}) e já registrado à mão` } as any).where(eq(saasFaturas.id, ref.faturaId));
+        return { acao: 'registrado_manual' as const };
+      }
+    }
     // Escolha do checkout (plano, ciclo, forma, cupom) passa a valer agora, com o pagamento aprovado
     let escolha: Escolha | null = pendenteCartao;
     if (ref.faturaId) {
@@ -562,12 +613,34 @@ export async function conciliarFaturasAbertas(agora = Date.now()) {
   const res = { conferidas: 0, aplicadas: 0, erros: [] as string[] };
   for (const f of abertas) {
     try {
-      const acao = await processarPagamento(String(f.mpPaymentId), agora);
+      let acao = await processarPagamento(String(f.mpPaymentId), agora);
+      // Não pago no id atual: procura QUALQUER pagamento aprovado desta fatura no MP (QR gerado antes e pago depois)
+      if (!['aprovado', 'upgrade', 'ja_aplicado', 'registrado_manual'].includes(acao)) {
+        for (const outro of await aprovadosDaFatura(f)) {
+          if (outro === String(f.mpPaymentId)) continue;
+          acao = await processarPagamento(outro, agora);
+          if (['aprovado', 'upgrade', 'ja_aplicado', 'registrado_manual'].includes(acao)) break;
+        }
+      }
       res.conferidas++;
       if (acao === 'aprovado' || acao === 'upgrade') res.aplicadas++;
     } catch (e: any) { res.erros.push(`fatura ${f.id}: ${String(e?.message ?? e).slice(0, 200)}`); }
   }
+  if (res.erros.length) console.warn('[MP] conciliação:', res.erros.join(' | '));
   return res;
+}
+
+/** Ids dos pagamentos APROVADOS no MP com a referência desta fatura (nos modos configurados) */
+async function aprovadosDaFatura(f: any): Promise<string[]> {
+  const ref = encodeURIComponent(`saas:${f.assinaturaId}:${f.id}`);
+  const ids = new Set<string>();
+  for (const modo of ['producao', 'teste'] as ModoMp[]) {
+    try {
+      const r: any = await mp.req(modo, 'GET', `/v1/payments/search?external_reference=${ref}&sort=date_created&criteria=desc&limit=20`);
+      for (const pg of (r?.results ?? [])) if (pg?.status === 'approved' && pg?.id != null) ids.add(String(pg.id));
+    } catch (e: any) { if (e?.status !== 412) console.warn(`[MP] busca da fatura ${f.id} (${modo}):`, e?.message); } // 412: modo sem credencial
+  }
+  return Array.from(ids);
 }
 
 /**

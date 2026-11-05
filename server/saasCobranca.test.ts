@@ -48,17 +48,23 @@ beforeAll(async () => {
     chamadas.push({ metodo, caminho, corpo });
     if (metodo === 'POST' && caminho === '/v1/payments') {
       const id = String(proximoId++);
-      pagamentosMp.set(id, { id, status: 'pending', external_reference: corpo.external_reference, transaction_amount: corpo.transaction_amount });
+      pagamentosMp.set(id, { id, status: 'pending', external_reference: corpo.external_reference, transaction_amount: corpo.transaction_amount, date_of_expiration: corpo.date_of_expiration,
+        point_of_interaction: { transaction_data: { qr_code: `00020126PIX${id}`, qr_code_base64: 'iVBORw0K', ticket_url: `https://mp.test/pix/${id}` } } });
       return { id, point_of_interaction: { transaction_data: { qr_code: `00020126PIX${id}`, qr_code_base64: 'iVBORw0K', ticket_url: `https://mp.test/pix/${id}` } }, transaction_details: { external_resource_url: `https://mp.test/boleto/${id}` } };
     }
     if (metodo === 'POST' && caminho === '/preapproval') return { id: `pre-${++proximoPre}`, init_point: 'https://mp.test/assinar', sandbox_init_point: 'https://sandbox.mp.test/assinar' };
     if (metodo === 'GET' && caminho.startsWith('/preapproval/')) return { id: caminho.split('/').pop(), status: preAutorizadas.has(caminho.split('/').pop()!) ? 'authorized' : 'pending' };
+    if (metodo === 'PUT' && caminho.startsWith('/v1/payments/')) { const p = pagamentosMp.get(caminho.split('/').pop()!); if (p && p.status === 'pending') p.status = 'cancelled'; return { ok: true }; }
     if (metodo === 'PUT') return { ok: true };
+    if (metodo === 'GET' && caminho.startsWith('/v1/payments/search')) {
+      const ref = decodeURIComponent(/external_reference=([^&]+)/.exec(caminho)?.[1] ?? '');
+      return { results: Array.from(pagamentosMp.values()).filter(p => p.external_reference === ref).reverse() };
+    }
     if (metodo === 'GET' && caminho.startsWith('/v1/payments/')) {
       if (falharGet) throw new M.MpErro('Mercado Pago indisponível', 502);
       const p = pagamentosMp.get(caminho.split('/').pop()!);
       if (!p) throw new M.MpErro('Mercado Pago recusou (404): not found', 400, { status: 404 });
-      return { ...p, date_approved: new Date().toISOString() };
+      return { ...p, date_approved: p.date_approved ?? new Date().toISOString() };
     }
     throw new Error(`chamada inesperada ${metodo} ${caminho}`);
   }) as any;
@@ -213,6 +219,46 @@ describe('empreendedor avulso: implantação na 1ª fatura', () => {
     expect(faturas(a.id).find((x: any) => x.id === f.id).status).toBe('PAGA');
     expect(assinatura(3)).toMatchObject({ status: 'ATIVA', origem: 'PAGA' });
     expect(await C.conciliarFaturasAbertas()).toMatchObject({ conferidas: 0, aplicadas: 0 });
+  });
+
+  it('Pix gerado de novo: mesmo QR enquanto vale; QR antigo pago depois de gerar outro é achado pela conciliação', async () => {
+    db.run(sql`INSERT INTO users (id, openId, name, role, perfil, cpf, email, telefone, ativo) VALUES (7, 'u7', 'Lia Corretora', 'user', 'corretor', '74682489070', 'lia@x.com', '99977778888', 1)`);
+    const r1 = await C.iniciarCheckout(usuario(7), { plano: 'CORRETOR_ESSENCIAL', ciclo: 'MENSAL', metodo: 'PIX' });
+    const posts = chamadas.filter(c => c.metodo === 'POST' && c.caminho === '/v1/payments').length;
+    const r2 = await C.iniciarCheckout(usuario(7), { plano: 'CORRETOR_ESSENCIAL', ciclo: 'MENSAL', metodo: 'PIX' });
+    expect(r2.copiaCola).toBe(r1.copiaCola);
+    expect(chamadas.filter(c => c.metodo === 'POST' && c.caminho === '/v1/payments').length).toBe(posts);
+    // Valor muda (ex.: cupom): o QR antigo é cancelado no MP e sai outro
+    const a = assinatura(7);
+    const f = faturas(a.id)[0];
+    const antigo = String(f.mpPaymentId);
+    db.run(sql`UPDATE saasFaturas SET valor = '1.00' WHERE id = ${f.id}`);
+    pagamentosMp.get(antigo).transaction_amount = 1;
+    await C.iniciarCheckout(usuario(7), { plano: 'CORRETOR_ESSENCIAL', ciclo: 'MENSAL', metodo: 'PIX' });
+    expect(pagamentosMp.get(antigo).status).toBe('cancelled');
+    // Cliente tinha pago o antigo antes do cancelamento chegar: a busca pela referência acha e aplica
+    pagamentosMp.get(antigo).status = 'approved';
+    expect(await C.conciliarFaturasAbertas()).toMatchObject({ aplicadas: 1 });
+    expect(assinatura(7)).toMatchObject({ status: 'ATIVA', origem: 'PAGA' });
+  });
+
+  it('Pix aprovado que o escritório já registrou à mão: liga os dois e não estende o período de novo', async () => {
+    db.run(sql`INSERT INTO users (id, openId, name, role, perfil, cpf, email, telefone, ativo) VALUES (8, 'u8', 'Ana Corretora', 'user', 'corretor', '15350946056', 'ana@x.com', '99966667777', 1)`);
+    await C.iniciarCheckout(usuario(8), { plano: 'CORRETOR_ESSENCIAL', ciclo: 'MENSAL', metodo: 'PIX' });
+    const a = assinatura(8);
+    const f = faturas(a.id)[0];
+    Object.assign(pagamentosMp.get(String(f.mpPaymentId)), { status: 'approved', date_approved: new Date(Date.now() - 5 * 3600_000).toISOString() });
+    await S.registrarPagamentoManual(a.id, { ciclo: 'MENSAL', valor: Number(f.valor), observacao: 'Pix conferido no banco' }, 1);
+    const fimManual = assinatura(8).periodoFim;
+    await C.conciliarFaturasAbertas();
+    expect(assinatura(8).periodoFim).toBe(fimManual);
+    const fs = faturas(a.id);
+    expect(fs.find((x: any) => x.id === f.id).status).toBe('CANCELADA');
+    expect(fs.find((x: any) => x.metodo === 'MANUAL').observacao).toMatch(new RegExp(`Pix do MP ${f.mpPaymentId}`));
+    // Aviso do webhook depois ou rodar de novo não muda nada
+    await avisar('payment', String(f.mpPaymentId));
+    await C.conciliarFaturasAbertas();
+    expect(assinatura(8).periodoFim).toBe(fimManual);
   });
 
   it('estorno de fatura já paga sem aviso do MP: a conferência de estornos acha e aplica (uma vez só)', async () => {

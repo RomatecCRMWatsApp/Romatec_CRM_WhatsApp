@@ -3,6 +3,19 @@
 Cada versão nova vai no TOPO. Depois rode `npm run release` (valida e atualiza o package.json);
 ao subir, o servidor grava a versão no banco e todos recebem o aviso "Novidades da versão".
 
+## 1.104.3 — 2026-11-05
+tipo: patch
+obrigatoria: nao
+titulo: Pix pago sempre compensa na assinatura
+
+### Correções
+- Gerar o Pix de novo apagava o pagamento anterior da fatura: quem pagava o QR antigo tinha o dinheiro na conta, mas o sistema conferia só o QR novo e não liberava. Agora, enquanto o Pix vale, sai o MESMO QR; se precisar de outro, o antigo é cancelado no Mercado Pago
+- A conferência automática (a cada 10 min) e o botão "Conferir pagamentos agora" procuram no Mercado Pago qualquer pagamento aprovado da fatura, não só o último QR
+- Pix aprovado que o escritório já registrou à mão (mesmo valor, lançado depois): o sistema liga os dois e não soma outro mês
+
+### Avisos
+- Confira no Mercado Pago (Suas integrações › Webhooks) se a URL do CRM está no "Modo produtivo": sem ela a confirmação depende da conferência de 10 em 10 minutos
+
 ## 1.104.2 — 2026-11-05
 tipo: patch
 obrigatoria: nao
