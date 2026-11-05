@@ -12,3 +12,11 @@ describe('tipoDoAudio (áudio do WhatsApp para a transcrição)', () => {
     expect(tipoDoAudio(null, 'https://x/sem-extensao')).toBe('audio/ogg');
   });
 });
+
+import { avisoFalhaAudio } from './imoveis/agenteCadastro';
+describe('avisoFalhaAudio', () => {
+  it('sem créditos pede texto; sem motivo pede de novo', () => {
+    expect(avisoFalhaAudio('sem_creditos')).toMatch(/sem créditos/);
+    expect(avisoFalhaAudio(null)).toMatch(/Não consegui entender/);
+  });
+});

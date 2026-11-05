@@ -241,9 +241,21 @@ let transcrever: Transcrever = async (audioUrl) => {
   const { transcribeAudio } = await import('../_core/voiceTranscription');
   const r: any = await transcribeAudio({ audioUrl, language: 'pt', prompt: 'Corretor descrevendo um imóvel para cadastro: tipo, endereço, preço, área, quartos' });
   if (r && 'text' in r) return String(r.text || '').trim() || null;
-  console.error('[agente-imovel] transcrição falhou:', r?.code, r?.error, String(r?.details || '').slice(0, 300));
+  const det = String(r?.details || '');
+  console.error('[agente-imovel] transcrição falhou:', r?.code, r?.error, det.slice(0, 300));
+  if (/\b429\b/.test(det) && /insufficient_quota|quota|billing|credit/i.test(det)) throw new Error('sem_creditos');
+  if (/\b429\b/.test(det)) throw new Error('limite');
+  if (/\b401\b/.test(det) || r?.details === 'OPENAI_API_KEY is not set') throw new Error('chave');
   return null;
 };
+
+/** Resposta ao corretor quando o áudio não vira texto (o motivo técnico fica no log) */
+export function avisoFalhaAudio(motivo: string | null): string {
+  if (motivo === 'sem_creditos') return '🎙️ A transcrição de áudio está sem créditos no momento (OpenAI). Pode mandar as informações *por texto*? O administrador já foi avisado no log.';
+  if (motivo === 'limite') return '🎙️ A transcrição de áudio está sobrecarregada agora. Tente o áudio de novo em 1 minuto ou mande *por texto*.';
+  if (motivo === 'chave') return '🎙️ A transcrição de áudio não está configurada (chave da OpenAI). Mande as informações *por texto*.';
+  return '🎙️ Não consegui entender o áudio. Pode mandar de novo ou escrever?';
+}
 export const definirTranscricaoAgente = (f: Transcrever) => { transcrever = f; };
 
 /** Extrai os dados de TODAS as mensagens do rascunho (correções explícitas valem; conflito vira pergunta) */
@@ -378,8 +390,9 @@ async function processar(d: any, vinculoId: number, u: any, e: EntradaAgente, ag
   let tipo: 'texto' | 'audio' = 'texto';
   if (!texto && e.audioUrl) {
     tipo = 'audio';
-    texto = (await transcrever(e.audioUrl).catch(() => null)) || '';
-    if (!texto) { await enviar(tel, '🎙️ Não consegui entender o áudio. Pode mandar de novo ou escrever?'); return; }
+    let motivo: string | null = null;
+    texto = (await transcrever(e.audioUrl).catch((err: any) => { motivo = String(err?.message || '') || null; return null; })) || '';
+    if (!texto) { await enviar(tel, avisoFalhaAudio(motivo)); return; }
   }
   if (!texto) return;
 

@@ -3,6 +3,17 @@
 Cada versão nova vai no TOPO. Depois rode `npm run release` (valida e atualiza o package.json);
 ao subir, o servidor grava a versão no banco e todos recebem o aviso "Novidades da versão".
 
+## 1.103.5 — 2026-11-05
+tipo: patch
+obrigatoria: nao
+titulo: Aviso claro quando a transcrição de áudio está sem créditos
+
+### Correções
+- Cadastro pelo WhatsApp: quando a OpenAI recusa o áudio por falta de créditos ou limite, o corretor recebe o motivo e o pedido para mandar por texto, em vez de "não consegui entender"
+
+### Avisos
+- A transcrição de áudio usa a conta da OpenAI (OPENAI_API_KEY). Sem créditos em platform.openai.com › Billing, áudios não são transcritos (texto e fotos funcionam normalmente)
+
 ## 1.103.4 — 2026-11-05
 tipo: patch
 obrigatoria: nao
