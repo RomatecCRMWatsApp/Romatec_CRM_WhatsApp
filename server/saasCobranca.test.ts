@@ -269,6 +269,24 @@ describe('empreendedor avulso: implantação na 1ª fatura', () => {
     expect(assinatura(8).periodoFim).toBe(fimManual);
   });
 
+  it('pagamento pela tela de assinatura do MP (sem fatura) e sem webhook: a conferência acha; lançado à mão antes, não duplica', async () => {
+    db.run(sql`INSERT INTO users (id, openId, name, role, perfil, cpf, email, telefone, ativo) VALUES (9, 'u9', 'Rita Corretora', 'user', 'corretor', '52998224725', 'rita@x.com', '99955554444', 1)`);
+    await C.iniciarCheckout(usuario(9), { plano: 'CORRETOR_ESSENCIAL', ciclo: 'MENSAL', metodo: 'CARTAO_RECORRENTE' });
+    const a = assinatura(9);
+    pagamentosMp.set('777001', { id: '777001', status: 'approved', external_reference: `saas:${a.id}`, transaction_amount: 149.9, payment_method_id: 'pix', date_approved: new Date(Date.now() - 4 * 3600_000).toISOString() });
+    await S.registrarPagamentoManual(a.id, { ciclo: 'MENSAL', valor: 149.9, observacao: 'Pix conferido no banco' }, 1);
+    const fim = assinatura(9).periodoFim;
+    await C.conciliarFaturasAbertas();
+    expect(assinatura(9).periodoFim).toBe(fim);
+    expect(faturas(a.id).some((f: any) => f.mpPaymentId === '777001' && f.status === 'CANCELADA')).toBe(true);
+    await C.conciliarFaturasAbertas();
+    expect(assinatura(9).periodoFim).toBe(fim);
+    // Sem o lançamento à mão: aplica sozinho
+    pagamentosMp.set('777002', { id: '777002', status: 'approved', external_reference: `saas:${a.id}`, transaction_amount: 149.9, payment_method_id: 'pix', date_approved: new Date().toISOString() });
+    expect(await C.conciliarFaturasAbertas()).toMatchObject({ aplicadas: 1 });
+    expect(faturas(a.id).some((f: any) => f.mpPaymentId === '777002' && f.status === 'PAGA')).toBe(true);
+  });
+
   it('estorno de fatura já paga sem aviso do MP: a conferência de estornos acha e aplica (uma vez só)', async () => {
     const a = assinatura(3);
     const f = faturas(a.id).find((x: any) => x.status === 'PAGA')!;

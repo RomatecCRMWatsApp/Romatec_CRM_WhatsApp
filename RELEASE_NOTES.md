@@ -3,6 +3,15 @@
 Cada versão nova vai no TOPO. Depois rode `npm run release` (valida e atualiza o package.json);
 ao subir, o servidor grava a versão no banco e todos recebem o aviso "Novidades da versão".
 
+## 1.105.1 — 2026-11-05
+tipo: patch
+obrigatoria: nao
+titulo: Pagamento pela tela de assinatura do Mercado Pago também compensa sozinho
+
+### Correções
+- Quem assinava pela tela do Mercado Pago (cartão, saldo ou Pix pela página do MP) só tinha o pagamento reconhecido pelo aviso do webhook; sem ele, o dinheiro caía na conta e a assinatura ficava parada. A conferência automática e o botão "Conferir pagamentos agora" agora procuram também esses pagamentos
+- Se o escritório já registrou esse pagamento à mão, o sistema liga os dois, não soma outro mês e manda a confirmação ao assinante se ele ainda não tinha recebido
+
 ## 1.105.0 — 2026-11-05
 tipo: minor
 obrigatoria: nao
