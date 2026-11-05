@@ -3,6 +3,14 @@
 Cada versão nova vai no TOPO. Depois rode `npm run release` (valida e atualiza o package.json);
 ao subir, o servidor grava a versão no banco e todos recebem o aviso "Novidades da versão".
 
+## 1.103.1 — 2026-11-05
+tipo: patch
+obrigatoria: nao
+titulo: Publicação do cadastro de imóveis pelo WhatsApp
+
+### Correções
+- A publicação da 1.103.0 falhou no servidor de build (instabilidade de rede ao baixar pacotes); a montagem agora tenta de novo sozinha antes de desistir
+
 ## 1.103.0 — 2026-11-05
 tipo: minor
 obrigatoria: nao
