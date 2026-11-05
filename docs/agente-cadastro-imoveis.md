@@ -19,7 +19,8 @@ Implementação: `server/imoveis/agenteCadastro.ts` (motor), `shared/cadastroImo
 ## Acesso
 - Perfis: administrador, secretária e corretor (`podeUsarAgenteImovel`). Empreendedor bloqueado na tela, nas rotas (`exigir`) e no webhook.
 - Vínculo: no CRM logado, "Vincular meu WhatsApp" gera código de uso único (10 min); o usuário manda `VINCULAR 123456` **do número do cadastro**. Outro número com o código é recusado.
-- Autorização do canal: 30 dias, presa a `users.sessaoVersao`. Sair do CRM (logout), trocar a senha, "sair de todos os aparelhos", desativar o usuário ou mudar o perfil derrubam a autorização; o rascunho fica. Renovação em 1 toque no CRM.
+- Autorização do canal: presa a `users.sessaoVersao` e ao acesso ao CRM. Administrador e secretária: sem prazo. Corretor: acompanha o plano (teste/assinatura, `resumoLicenca` em `server/saas/servico.ts`) e renova junto com ele; plano vencido/bloqueado bloqueia o canal e o agente manda o link de `/assinatura`. Sair do CRM (logout), trocar a senha, "sair de todos os aparelhos", "Desligar", desativar o usuário ou mudar o perfil derrubam a autorização; o rascunho fica.
+- Excluir rascunho: tira o rascunho e as fotos da lista (o imóvel já gravado continua em Imóveis). Excluir o imóvel em Imóveis apaga o rascunho que o gerou (`aoExcluirImovel`). O "Imóvel cadastrado!" leva a `/properties?imovel=ID`, que abre o detalhe.
 - WhatsApp do CEO (ZAYRA): o agente só entra com pedido explícito ("cadastrar imóvel", "continuar cadastro") ou fluxo em andamento.
 
 ## Fluxo
