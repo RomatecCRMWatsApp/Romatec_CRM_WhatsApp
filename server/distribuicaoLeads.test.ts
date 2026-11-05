@@ -38,6 +38,10 @@ describe('distribuição manual de leads', () => {
     const nomes = (await D.leadsParaDistribuir('nao_encaminhados')).map(l => l.nome).sort();
     expect(nomes).toEqual(['Ana Lead', 'Beto Lead', 'Dora Fria', 'Edu Morno']);
     expect((await D.leadsParaDistribuir('todos')).map(l => l.nome)).toContain('Fabi Descartada');
+    // Tirar o escritório de dono: Dora (do administrador) fica sem responsável; os outros não mudam
+    expect(await D.liberarDoEscritorio({ id: 1 })).toEqual({ liberados: 1 });
+    expect(db.all(sql`SELECT responsavelId FROM leadQualifications WHERE id = 20`)[0].responsavelId).toBeNull();
+    expect((await D.leadsParaDistribuir('nao_encaminhados')).map(l => l.nome).sort()).toEqual(['Ana Lead', 'Beto Lead', 'Dora Fria', 'Edu Morno']);
   });
 
   it('modo da distribuição: automático por padrão; manual para a roleta (lead novo fica sem dono)', async () => {

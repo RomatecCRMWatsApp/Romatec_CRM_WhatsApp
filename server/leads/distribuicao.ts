@@ -88,6 +88,22 @@ export async function leadsParaDistribuir(filtro: FiltroLeads, busca = '', agora
   }));
 }
 
+/**
+ * Tira o escritório (administrador) de dono dos leads ainda não encaminhados: eles ficam "sem responsável",
+ * esperando a secretária/escritório encaminhar a um corretor de plantão. Não mexe em lead já de corretor.
+ */
+export async function liberarDoEscritorio(por: { id: number }) {
+  const d = await banco();
+  const escritorio = await idsDoEscritorio(d);
+  const alvos = (await leadsParaDistribuir('nao_encaminhados')).filter(l => l.responsavelId && escritorio.has(l.responsavelId));
+  const ids = alvos.map(l => l.id);
+  for (let i = 0; i < ids.length; i += 200) {
+    await d.update(leadQualifications).set({ responsavelId: null, updatedAt: new Date() } as any).where(and(inArray(leadQualifications.id, ids.slice(i, i + 200)), inArray(leadQualifications.responsavelId, Array.from(escritorio))));
+  }
+  console.log(`[Distribuição] ${ids.length} lead(s) sem o escritório como dono (por ${por.id})`);
+  return { liberados: ids.length };
+}
+
 /** Administrador(es): dono "padrão" quando ninguém foi escolhido — lead só com eles conta como não encaminhado */
 async function idsDoEscritorio(d: any): Promise<Set<number>> {
   const us: any[] = await d.select({ id: users.id, role: users.role, perfil: (users as any).perfil }).from(users);

@@ -32,6 +32,11 @@ export const distribuicaoRouter = router({
     await (await import("../configSistema")).gravarConfig("distribuicao_modo", input.modo, ctx.user.id);
     return { modo: input.modo };
   }),
+  /** Tira o administrador de dono dos não encaminhados (ficam sem responsável para encaminhar ao plantão) */
+  liberarDoEscritorio: protectedProcedure.mutation(async ({ ctx }) => {
+    exigirDistribuicao(ctx.permissoes);
+    return (await import("../leads/distribuicao")).liberarDoEscritorio({ id: ctx.user.id }).catch(erro);
+  }),
   encaminhar: protectedProcedure
     .input(z.object({ leadIds: z.array(z.number().int().positive()).min(1).max(200), paraId: z.number().int().positive(), observacao: z.string().max(300).nullable().optional() }))
     .mutation(async ({ input, ctx }) => {

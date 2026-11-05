@@ -3,6 +3,14 @@
 Cada versão nova vai no TOPO. Depois rode `npm run release` (valida e atualiza o package.json);
 ao subir, o servidor grava a versão no banco e todos recebem o aviso "Novidades da versão".
 
+## 1.105.6 — 2026-11-05
+tipo: patch
+obrigatoria: nao
+titulo: Tirar o escritório de responsável dos leads não encaminhados
+
+### Novo
+- Leads › Distribuição › Não encaminhados: botão "Tirar o escritório de todos" — os leads que estavam no nome do administrador ficam "sem responsável", aguardando o encaminhamento ao corretor de plantão (lead que já é de corretor não muda)
+
 ## 1.105.5 — 2026-11-05
 tipo: patch
 obrigatoria: nao

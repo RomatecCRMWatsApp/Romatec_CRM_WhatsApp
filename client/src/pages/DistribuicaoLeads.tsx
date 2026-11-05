@@ -54,7 +54,12 @@ function Distribuir({ aoEncaminhar }: { aoEncaminhar: () => void }) {
     },
     onError: e => toast.error(e.message),
   });
+  const liberar = trpc.distribuicao.liberarDoEscritorio.useMutation({
+    onSuccess: r => { toast.success(`${r.liberados} lead(s) sem o escritório como responsável: prontos para encaminhar ao plantão`); utils.distribuicao.leads.invalidate(); },
+    onError: e => toast.error(e.message),
+  });
   const lista = leads ?? [];
+  const comEscritorio = filtro === "nao_encaminhados" ? lista.filter(l => l.responsavelId).length : 0;
   const todos = lista.length > 0 && lista.every(l => sel.has(l.id));
   const alternar = (id: number) => { const n = new Set(sel); n.has(id) ? n.delete(id) : n.add(id); setSel(n); };
   const nomePara = equipe?.find(u => u.id === paraId)?.nome;
@@ -74,6 +79,14 @@ function Distribuir({ aoEncaminhar }: { aoEncaminhar: () => void }) {
         </div>
       </div>
 
+      {comEscritorio > 0 && (
+        <div className="flex flex-wrap items-center gap-2 rounded-lg border border-amber-500/40 bg-amber-500/5 p-3 text-sm">
+          <span className="flex-1"><b>{comEscritorio}</b> lead(s) ainda com o escritório como responsável. Tire o nome do escritório para eles ficarem só aguardando o corretor de plantão.</span>
+          <Button size="sm" variant="outline" disabled={liberar.isPending} onClick={() => { if (confirm(`Tirar o escritório de responsável de ${comEscritorio} lead(s)? Eles ficam "sem responsável" até serem encaminhados.`)) liberar.mutate(); }}>
+            {liberar.isPending ? <Loader2 className="mr-1 h-4 w-4 animate-spin" /> : null} Tirar o escritório de todos
+          </Button>
+        </div>
+      )}
       <div className="sticky top-0 z-10 flex flex-wrap items-end gap-2 rounded-lg border border-emerald-500/40 bg-card p-3 shadow">
         <span className="text-sm font-semibold">{sel.size} selecionado(s)</span>
         <label className="flex flex-col gap-1 text-xs text-muted-foreground">Encaminhar para
