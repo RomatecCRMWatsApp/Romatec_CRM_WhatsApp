@@ -58,15 +58,47 @@ async function usuario(d: any, id: number) {
   return u ?? null;
 }
 
-export function autorizacaoValida(v: any, u: any, agora = Date.now()): { ok: true } | { ok: false; motivo: string } {
+/** Licença do usuário para o canal: sem exigência (admin/secretária ou licenciamento desligado) = sem prazo; corretor = até o fim do plano */
+export interface LicencaCanal { exigida: boolean; liberado: boolean; fim: string | null; diasRestantes: number | null; motivo: string | null }
+export type LerLicenca = (u: any) => Promise<LicencaCanal>;
+let lerLicenca: LerLicenca = async (u) => {
+  try {
+    const { resumoLicenca } = await import('../saas/servico');
+    const r = await resumoLicenca(u);
+    return { exigida: r.exigida, liberado: r.liberado, fim: r.fim, diasRestantes: r.diasRestantes, motivo: r.motivo };
+  } catch (err: any) {
+    console.error('[agente-imovel] licença:', err?.message);
+    const escritorio = ['admin', 'secretario'].includes(String(perfilDe(u)));
+    return escritorio ? { exigida: false, liberado: true, fim: null, diasRestantes: null, motivo: null }
+      : { exigida: true, liberado: false, fim: null, diasRestantes: null, motivo: 'não foi possível verificar o seu plano agora' };
+  }
+};
+export const definirLicencaAgente = (f: LerLicenca | null) => { lerLicenca = f ?? lerLicencaPadrao; };
+const lerLicencaPadrao = lerLicenca;
+
+export type Autorizacao = { ok: true; prazo: string | null; diasRestantes: number | null } | { ok: false; motivo: string };
+
+/**
+ * O canal vale enquanto: o WhatsApp está vinculado e não foi desligado, a sessão do CRM é a mesma (sair/trocar senha derruba)
+ * e o acesso da pessoa ao CRM está liberado. Administrador/secretária: sem prazo. Corretor: acompanha o plano (teste/assinatura).
+ */
+export function autorizacaoValida(v: any, u: any, lic: LicencaCanal): Autorizacao {
   if (!u || u.ativo === false || u.ativo === 0) return { ok: false, motivo: 'usuário inativo' };
   if (!podeUsarAgenteImovel(perfilDe(u))) return { ok: false, motivo: 'perfil sem acesso ao cadastro de imóveis' };
   if (!v?.verificadoEm || !v.telefoneChave) return { ok: false, motivo: 'WhatsApp não vinculado' };
-  if (v.revogadoEm) return { ok: false, motivo: 'autorização revogada' };
-  if (!v.autorizadoAte || new Date(v.autorizadoAte).getTime() <= agora) return { ok: false, motivo: 'autorização vencida' };
+  if (v.revogadoEm || !v.autorizadoAte) return { ok: false, motivo: 'autorização desligada' };
   if ((Number(v.sessaoVersao) || 0) !== (Number(u.sessaoVersao) || 0)) return { ok: false, motivo: 'sessão encerrada no CRM' };
-  return { ok: true };
+  if (lic.exigida && !lic.liberado) return { ok: false, motivo: lic.motivo ? `plano: ${lic.motivo}` : 'plano vencido ou bloqueado' };
+  return { ok: true, prazo: lic.exigida ? lic.fim : null, diasRestantes: lic.exigida ? lic.diasRestantes : null };
 }
+
+async function autorizacao(v: any, u: any): Promise<Autorizacao> {
+  return autorizacaoValida(v, u, u ? await lerLicenca(u) : { exigida: false, liberado: false, fim: null, diasRestantes: null, motivo: null });
+}
+
+const textoPrazo = (a: Autorizacao) => !a.ok ? '' : a.prazo
+  ? `Autorização acompanha o seu plano: vale até ${new Date(a.prazo).toLocaleDateString('pt-BR', { timeZone: 'America/Sao_Paulo' })}${a.diasRestantes != null ? ` (${a.diasRestantes} dia(s))` : ''} e renova junto com ele.`
+  : 'Autorização sem prazo (vale enquanto você estiver com acesso ao CRM).';
 
 /** CRM logado: gera o código de uso único (10 min) que o usuário manda do próprio WhatsApp: VINCULAR 123456 */
 export async function gerarCodigoVinculo(usuarioId: number, o: { agora?: number } = {}) {
@@ -101,7 +133,7 @@ async function verificarCodigo(origem: string, codigo: string, o: { agora?: numb
   if (!v || !v.codigoExpira || new Date(v.codigoExpira).getTime() < agora) {
     // Código repetido/antigo vindo de um número que já está vinculado e autorizado: não assusta com "inválido"
     const [ja]: any[] = await d.select().from(whatsappVinculos).where(eq(whatsappVinculos.telefoneChave, chave)).limit(1);
-    if (ja && autorizacaoValida(ja, await usuario(d, ja.usuarioId), agora).ok) {
+    if (ja && (await autorizacao(ja, await usuario(d, ja.usuarioId))).ok) {
       tentativasPorNumero.delete(chave);
       return `✅ Este WhatsApp já está vinculado e autorizado. Não precisa de código.\n\n${MENU_FUNCOES}`;
     }
@@ -122,7 +154,9 @@ async function verificarCodigo(origem: string, codigo: string, o: { agora?: numb
   } as any).where(eq(whatsappVinculos.id, v.id));
   tentativasPorNumero.delete(chave);
   await auditar(u.id, null, 'vinculo_verificado', chave.slice(-4));
-  return `✅ WhatsApp vinculado, ${String(u.name || '').split(' ')[0]}! Autorização válida por ${VALIDADE_AUTORIZACAO_DIAS} dias.\n\n${MENU_FUNCOES}`;
+  const aut = await autorizacao({ ...v, telefoneChave: chave, verificadoEm: new Date(agora), autorizadoAte: new Date(agora + VALIDADE_AUTORIZACAO_DIAS * DIA), revogadoEm: null, sessaoVersao: Number(u.sessaoVersao) || 0 }, u);
+  if (!aut.ok) return `✅ WhatsApp vinculado, ${String(u.name || '').split(' ')[0]}, mas o cadastro por aqui está bloqueado: ${aut.motivo}.`;
+  return `✅ WhatsApp vinculado, ${String(u.name || '').split(' ')[0]}! ${textoPrazo(aut)}\n\n${MENU_FUNCOES}`;
 }
 
 /** CRM logado: renova a autorização do canal (vínculo já verificado não precisa de código novo) */
@@ -151,11 +185,11 @@ export async function statusVinculo(usuarioId: number) {
   const d = await banco();
   const u = await usuario(d, usuarioId);
   const [v]: any[] = await d.select().from(whatsappVinculos).where(eq(whatsappVinculos.usuarioId, usuarioId)).limit(1);
-  const a = autorizacaoValida(v, u);
+  const a = await autorizacao(v, u);
   const { numeroWhatsAppLeads } = await import('../leads/config');
   return {
     permitido: !!u && podeUsarAgenteImovel(perfilDe(u)), vinculado: !!v?.verificadoEm && !!v?.telefoneChave, telefoneFinal: v?.telefoneChave ? String(v.telefoneChave).slice(-4) : null,
-    autorizado: a.ok, motivo: a.ok ? null : a.motivo, autorizadoAte: v?.autorizadoAte ? new Date(v.autorizadoAte).toISOString() : null,
+    autorizado: a.ok, motivo: a.ok ? null : a.motivo, prazo: a.ok ? a.prazo : null, diasRestantes: a.ok ? a.diasRestantes : null, semPrazo: a.ok && !a.prazo,
     numeroCentral: numeroWhatsAppLeads(), iaDisponivel: iaDisponivel(), transcricaoDisponivel: !!(process.env.BUILT_IN_FORGE_API_KEY || process.env.OPENAI_API_KEY),
   };
 }
@@ -334,11 +368,13 @@ export async function tratarMensagemAgente(e: EntradaAgente, o: { ceo?: boolean;
   }
   if (o.ceo && !emFluxo && !pedeAgenteImovel(texto)) return false;
   const u = await usuario(d, v.usuarioId);
-  const a = autorizacaoValida(v, u, agora);
+  const a = await autorizacao(v, u);
   if (!a.ok) {
     if (perfilDe(u) === 'empreendedor') return false;
     if (emFluxo || pedeAgenteImovel(texto)) {
-      await enviar(e.phone, `🔒 Seu acesso ao cadastro pelo WhatsApp precisa ser renovado (${a.motivo}). Entre no CRM e toque em "Autorizar este WhatsApp": ${await linkCrm('/imoveis/whatsapp')}\nSeu rascunho continua salvo.`);
+      await enviar(e.phone, a.motivo.startsWith('plano')
+        ? `🔒 O cadastro pelo WhatsApp acompanha o seu plano no CRM, e ele não está ativo agora (${a.motivo.replace(/^plano: /, '')}). Renove em: ${await linkCrm('/assinatura')}\nSeu rascunho continua salvo e o canal volta sozinho quando o plano for renovado.`
+        : `🔒 Seu acesso ao cadastro pelo WhatsApp precisa ser autorizado de novo (${a.motivo}). Entre no CRM e toque em "Autorizar este WhatsApp": ${await linkCrm('/imoveis/whatsapp')}\nSeu rascunho continua salvo.`);
       await auditar(v.usuarioId, v.rascunhoAtivoId ?? null, 'acesso_negado', a.motivo);
       return true;
     }
@@ -622,7 +658,7 @@ export async function confirmarRascunho(id: number, autor: { id: number; canal: 
   if (!u || u.ativo === false || u.ativo === 0 || !podeUsarAgenteImovel(perfilDe(u))) return { ok: false, mensagem: 'Seu acesso não pode confirmar este cadastro.' };
   if (autor.canal === 'whatsapp') {
     const [v]: any[] = await d.select().from(whatsappVinculos).where(eq(whatsappVinculos.usuarioId, autor.id)).limit(1);
-    const a = autorizacaoValida(v, u, o.agora);
+    const a = await autorizacao(v, u);
     if (!a.ok) return { ok: false, mensagem: `🔒 Renove a autorização no CRM para confirmar (${a.motivo}). O rascunho continua salvo.` };
   }
   const escritorio = ['admin', 'secretario'].includes(String(perfilDe(u)));
@@ -665,7 +701,7 @@ export async function confirmarRascunho(id: number, autor: { id: number; canal: 
     await d.update(whatsappVinculos).set({ modo: null, rascunhoAtivoId: null } as any).where(eq(whatsappVinculos.rascunhoAtivoId, id));
     await auditar(autor.id, id, 'imovel_criado', `${novo.codigo ?? novo.id}`);
     return { ok: true, propertyId: novo.id, codigo: novo.codigo,
-      mensagem: `✅ Imóvel cadastrado! Código: ${novo.codigo ?? novo.id}. As informações e as ${lista.length} foto(s) estão organizadas; ele está *interno* (não publicado). Ele já está em Imóveis, com galeria e especificações, pronto para você conferir e criar campanha: ${await linkCrm('/properties')}` };
+      mensagem: `✅ Imóvel cadastrado! Código: ${novo.codigo ?? novo.id}. As informações e as ${lista.length} foto(s) estão organizadas; ele está *interno* (não publicado). Ele já está em Imóveis, com galeria e especificações, pronto para você conferir e criar campanha: ${await linkCrm(`/properties?imovel=${novo.id}`)}` };
   } catch (err: any) {
     await d.update(imovelRascunhos).set({ estado: 'failed', erro: `Gravação: ${String(err?.message ?? err).slice(0, 250)}` } as any).where(eq(imovelRascunhos.id, id));
     await auditar(autor.id, id, 'erro_gravacao', err?.message);
@@ -776,6 +812,33 @@ export async function cancelarRascunho(id: number, usuarioId: number, perfil: st
   return { ok: true as const };
 }
 
+/**
+ * Tela: exclui o rascunho da lista (aberto, cancelado, com falha ou já cadastrado) com as fotos dele.
+ * O imóvel já gravado em Imóveis NÃO é apagado aqui (exclua lá, se for o caso). Auditoria fica.
+ */
+export async function excluirRascunho(id: number, usuarioId: number, perfil: string) {
+  const d = await banco();
+  const r = await rascunhoPermitido(d, id, usuarioId, perfil);
+  if (r.estado === 'saving') throw new AgenteErro('Este rascunho está sendo gravado agora. Tente de novo em instantes.');
+  await apagarRascunho(d, id);
+  await auditar(usuarioId, id, 'rascunho_excluido', r.propertyId ? `imóvel ${r.propertyId} mantido` : 'tela');
+  return { ok: true as const, propertyId: r.propertyId ? Number(r.propertyId) : null };
+}
+
+async function apagarRascunho(d: any, id: number) {
+  await d.update(whatsappVinculos).set({ modo: null, rascunhoAtivoId: null } as any).where(eq(whatsappVinculos.rascunhoAtivoId, id));
+  await d.delete(imovelRascunhoMidias).where(eq(imovelRascunhoMidias.rascunhoId, id));
+  await d.delete(imovelRascunhos).where(eq(imovelRascunhos.id, id));
+}
+
+/** Imóvel excluído em Imóveis: o rascunho que o gerou sai da lista do cadastro pelo WhatsApp */
+export async function aoExcluirImovel(propertyId: number) {
+  const d = await banco();
+  const rows: any[] = await d.select({ id: imovelRascunhos.id }).from(imovelRascunhos).where(eq(imovelRascunhos.propertyId, propertyId));
+  for (const r of rows) await apagarRascunho(d, Number(r.id));
+  return rows.length;
+}
+
 /** Administrador: vínculos, fila, erros recentes e disponibilidade do motor */
 export async function painelAdmin() {
   const d = await banco();
@@ -790,8 +853,9 @@ export async function painelAdmin() {
       modelo: process.env.ANTHROPIC_MODEL_CADASTRO_IMOVEL || process.env.ANTHROPIC_MODEL || (process.env.ANTHROPIC_API_KEY ? 'claude-sonnet-5-5' : 'padrão do invokeLLM'),
       transcricao: !!(process.env.BUILT_IN_FORGE_API_KEY || process.env.OPENAI_API_KEY), visao: false },
     fotosEmProcessamento: Number(pendentes[0]?.n ?? 0), rascunhosPorEstado: porEstado.map(x => ({ estado: x.estado, n: Number(x.n) })),
-    vinculos: vs.map(v => { const u = us.find(x => Number(x.id) === Number(v.usuarioId)); const a = autorizacaoValida(v, u);
-      return { usuarioId: Number(v.usuarioId), nome: u?.name ?? '—', perfil: perfilDe(u), telefoneFinal: v.telefoneChave ? String(v.telefoneChave).slice(-4) : null, vinculado: !!v.verificadoEm, autorizado: a.ok, motivo: a.ok ? null : a.motivo }; }),
+    vinculos: await Promise.all(vs.map(async v => { const u = us.find(x => Number(x.id) === Number(v.usuarioId)); const a = await autorizacao(v, u);
+      return { usuarioId: Number(v.usuarioId), nome: u?.name ?? '—', perfil: perfilDe(u), telefoneFinal: v.telefoneChave ? String(v.telefoneChave).slice(-4) : null, vinculado: !!v.verificadoEm,
+        autorizado: a.ok, motivo: a.ok ? null : a.motivo, prazo: a.ok ? a.prazo : null }; })),
     erros: eventos.map(e => ({ quando: new Date(e.criadoEm).toISOString(), tipo: e.tipo, usuarioId: e.usuarioId, rascunhoId: e.rascunhoId, detalhe: e.detalhe })),
   };
 }

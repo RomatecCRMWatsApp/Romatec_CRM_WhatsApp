@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { Link, useRoute } from "wouter";
+import { Link, useLocation, useRoute } from "wouter";
 import { toast } from "sonner";
 import { CheckCircle2, Copy, Loader2, MessageCircle, ShieldCheck, Smartphone, Star, Trash2, XCircle } from "lucide-react";
 import { trpc } from "@/lib/trpc";
@@ -16,6 +16,10 @@ const ESTADO: Record<string, string> = {
 };
 const sel = "h-9 w-full rounded-md border border-border bg-background px-2 text-sm";
 const dataHora = (iso: string | null) => (iso ? new Date(iso).toLocaleString("pt-BR", { day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit" }) : "—");
+
+const avisoExcluir = (id: number, propertyId: number | null) => propertyId
+  ? `Excluir o rascunho nº ${id} desta lista? O imóvel já cadastrado continua em Imóveis (para apagá-lo, exclua lá).`
+  : `Excluir o rascunho nº ${id} e as fotos dele? Nada foi gravado em Imóveis.`;
 
 /** Imóveis › Cadastro pelo WhatsApp (Agente de Cadastro de Imóveis): vínculo, rascunhos, revisão e confirmação */
 export default function CadastroImovelWhatsApp() {
@@ -36,7 +40,7 @@ function Vinculo() {
   const { data: s, isLoading } = trpc.agenteImovel.status.useQuery();
   const [codigo, setCodigo] = useState<{ mensagem: string; numero: string; expira: string } | null>(null);
   const gerar = trpc.agenteImovel.gerarCodigo.useMutation({ onSuccess: r => setCodigo(r), onError: e => toast.error(e.message) });
-  const autorizar = trpc.agenteImovel.autorizar.useMutation({ onSuccess: () => { toast.success("WhatsApp autorizado por 30 dias"); utils.agenteImovel.status.invalidate(); }, onError: e => toast.error(e.message) });
+  const autorizar = trpc.agenteImovel.autorizar.useMutation({ onSuccess: () => { toast.success("WhatsApp autorizado"); utils.agenteImovel.status.invalidate(); }, onError: e => toast.error(e.message) });
   const revogar = trpc.agenteImovel.revogar.useMutation({ onSuccess: () => { toast.success("Autorização revogada"); utils.agenteImovel.status.invalidate(); } });
   useEffect(() => { if (!codigo) return; const t = setInterval(() => utils.agenteImovel.status.invalidate(), 5000); return () => clearInterval(t); }, [codigo, utils]);
   useEffect(() => { if (s?.vinculado && codigo) setCodigo(null); }, [s?.vinculado]); // eslint-disable-line react-hooks/exhaustive-deps
@@ -48,7 +52,7 @@ function Vinculo() {
         <ShieldCheck className={`h-5 w-5 ${s.autorizado ? "text-emerald-400" : "text-amber-400"}`} />
         <h2 className="text-base font-semibold">Meu WhatsApp</h2>
         <span className={`rounded px-2 py-0.5 text-[11px] font-bold ${s.autorizado ? "bg-emerald-600/30 text-emerald-200" : "bg-amber-600/30 text-amber-200"}`}>
-          {s.autorizado ? `AUTORIZADO até ${dataHora(s.autorizadoAte)}` : s.vinculado ? `VINCULADO · ${s.motivo}` : "NÃO VINCULADO"}
+          {s.autorizado ? (s.prazo ? `AUTORIZADO · acompanha o plano até ${new Date(s.prazo).toLocaleDateString("pt-BR")}${s.diasRestantes != null ? ` (${s.diasRestantes} dia(s))` : ""}` : "AUTORIZADO · sem prazo") : s.vinculado ? `VINCULADO · ${s.motivo}` : "NÃO VINCULADO"}
         </span>
       </div>
       {!s.iaDisponivel && <p className="rounded-md bg-amber-500/10 p-2 text-xs text-amber-200">A IA não está configurada no servidor (ANTHROPIC_API_KEY ou OPENAI_API_KEY): o agente recebe as mensagens, mas a organização automática fica indisponível.</p>}
@@ -71,11 +75,11 @@ function Vinculo() {
       )}
       {s.vinculado && (
         <div className="space-y-2 text-sm">
-          <p className="text-muted-foreground">WhatsApp final {s.telefoneFinal}. Para cadastrar, mande <b>"cadastrar imóvel"</b> (ou "menu") para o WhatsApp da Romatec ({s.numeroCentral}). Sair do CRM, trocar a senha ou "sair de todos os aparelhos" desligam a autorização; o rascunho fica salvo.</p>
+          <p className="text-muted-foreground">WhatsApp final {s.telefoneFinal}. Para cadastrar, mande <b>"cadastrar imóvel"</b> (ou "menu") para o WhatsApp da Romatec ({s.numeroCentral}). {s.autorizado && (s.prazo ? " A autorização acompanha o seu plano: renova sozinha quando o plano renovar." : " Seu acesso não tem prazo: a autorização vale enquanto você tiver acesso ao CRM.")} Sair do CRM, trocar a senha, "sair de todos os aparelhos" ou "Desligar" encerram a autorização; o rascunho fica salvo.</p>
           <div className="flex flex-wrap gap-2">
-            {!s.autorizado && <Button onClick={() => autorizar.mutate()} disabled={autorizar.isPending}><CheckCircle2 className="mr-1 h-4 w-4" /> Autorizar este WhatsApp</Button>}
-            {s.autorizado && <Button variant="outline" onClick={() => autorizar.mutate()} disabled={autorizar.isPending}>Renovar por 30 dias</Button>}
+            {!s.autorizado && !String(s.motivo ?? "").startsWith("plano") && <Button onClick={() => autorizar.mutate()} disabled={autorizar.isPending}><CheckCircle2 className="mr-1 h-4 w-4" /> Autorizar este WhatsApp</Button>}
             {s.autorizado && <Button variant="ghost" className="text-red-300" onClick={() => revogar.mutate()}><XCircle className="mr-1 h-4 w-4" /> Desligar</Button>}
+            {!s.autorizado && String(s.motivo ?? "").startsWith("plano") && <Button asChild><Link href="/assinatura">Renovar meu plano</Link></Button>}
             <Button asChild variant="outline"><a href={`https://wa.me/${s.numeroCentral}?text=${encodeURIComponent("cadastrar imóvel")}`} target="_blank" rel="noreferrer"><MessageCircle className="mr-1 h-4 w-4" /> Cadastrar agora pelo WhatsApp</a></Button>
           </div>
         </div>
@@ -86,6 +90,8 @@ function Vinculo() {
 
 function ListaRascunhos() {
   const { data, isLoading } = trpc.agenteImovel.rascunhos.useQuery(undefined, { refetchInterval: 15_000 });
+  const utils = trpc.useUtils();
+  const excluir = trpc.agenteImovel.excluir.useMutation({ onSuccess: () => { toast.success("Rascunho excluído"); utils.agenteImovel.rascunhos.invalidate(); }, onError: e => toast.error(e.message) });
   return (
     <section className="space-y-2">
       <h2 className="text-base font-semibold">Rascunhos</h2>
@@ -96,7 +102,16 @@ function ListaRascunhos() {
           <Link key={r.id} href={`/imoveis/whatsapp/${r.id}`} className="block space-y-1 rounded-xl border border-border bg-card p-3 hover:border-primary">
             <div className="flex items-center justify-between gap-2">
               <span className="font-semibold">nº {r.id} · {r.titulo || (r.tipo ? ROTULO_TIPO[r.tipo] : "Imóvel")}</span>
-              <span className="rounded bg-secondary/50 px-1.5 py-0.5 text-[10px] font-bold uppercase">{ESTADO[r.estado] ?? r.estado}</span>
+              <span className="flex items-center gap-1">
+                <span className="rounded bg-secondary/50 px-1.5 py-0.5 text-[10px] font-bold uppercase">{ESTADO[r.estado] ?? r.estado}</span>
+                {r.estado !== "saving" && (
+                  <button type="button" aria-label={`Excluir rascunho nº ${r.id}`} title="Excluir rascunho" disabled={excluir.isPending}
+                    className="rounded p-1.5 text-red-300 hover:bg-red-500/10"
+                    onClick={ev => { ev.preventDefault(); ev.stopPropagation(); if (confirm(avisoExcluir(r.id, r.propertyId))) excluir.mutate({ id: r.id }); }}>
+                    <Trash2 className="h-4 w-4" />
+                  </button>
+                )}
+              </span>
             </div>
             <p className="text-xs text-muted-foreground">{[r.cidade, r.preco ? formatarCampo("preco", r.preco) : null, `${r.fotos} foto(s)`].filter(Boolean).join(" · ")} · {r.responsavel} · {dataHora(r.atualizadoEm)}</p>
             {!!r.pendencias.length && r.estado !== "saved" && r.estado !== "cancelled" && <p className="text-xs text-amber-300">Falta: {r.pendencias.join(", ")}</p>}
@@ -147,6 +162,8 @@ function Rascunho({ id }: { id: number }) {
   const revisar = trpc.agenteImovel.revisar.useMutation({ onSuccess: () => { toast.success("Revisão montada"); atualizar(); }, onError: e => toast.error(e.message) });
   const confirmar = trpc.agenteImovel.confirmar.useMutation({ onSuccess: x => { (x.ok ? toast.success : toast.error)(x.mensagem.replace(/\*/g, "")); atualizar(); }, onError: e => toast.error(e.message) });
   const cancelar = trpc.agenteImovel.cancelar.useMutation({ onSuccess: () => { toast.success("Rascunho cancelado"); atualizar(); }, onError: e => toast.error(e.message) });
+  const [, irPara] = useLocation();
+  const excluir = trpc.agenteImovel.excluir.useMutation({ onSuccess: () => { toast.success("Rascunho excluído"); utils.agenteImovel.rascunhos.invalidate(); irPara("/imoveis/whatsapp"); }, onError: e => toast.error(e.message) });
   if (isLoading) return <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />;
   if (error || !r) return <p className="text-sm text-red-300">{error?.message ?? "Rascunho não encontrado"}</p>;
   const aberto = !["saved", "cancelled", "saving"].includes(r.estado);
@@ -157,7 +174,12 @@ function Rascunho({ id }: { id: number }) {
       <div className="flex flex-wrap items-center gap-2">
         <Link href="/imoveis/whatsapp" className="text-sm text-muted-foreground hover:underline">← Todos os rascunhos</Link>
         <span className="rounded bg-secondary/50 px-2 py-0.5 text-xs font-bold uppercase">{ESTADO[r.estado] ?? r.estado} · versão {r.versao}</span>
-        {r.propertyId && <Link href="/properties" className="text-sm text-emerald-300 underline">Abrir em Imóveis (cadastrado, interno)</Link>}
+        {r.propertyId && <Link href={`/properties?imovel=${r.propertyId}`} className="text-sm text-emerald-300 underline">Abrir em Imóveis (cadastrado, interno)</Link>}
+        {r.estado !== "saving" && (
+          <Button variant="ghost" size="sm" className="ml-auto text-red-300" disabled={excluir.isPending} onClick={() => { if (confirm(avisoExcluir(id, r.propertyId))) excluir.mutate({ id }); }}>
+            <Trash2 className="mr-1 h-4 w-4" /> Excluir rascunho
+          </Button>
+        )}
       </div>
       {r.erro && <p className="rounded-md bg-red-500/10 p-2 text-xs text-red-200">{r.erro}</p>}
       {!!r.pendencias.length && aberto && <p className="rounded-md bg-amber-500/10 p-2 text-sm text-amber-200">Falta: {r.pendencias.join(", ")}</p>}

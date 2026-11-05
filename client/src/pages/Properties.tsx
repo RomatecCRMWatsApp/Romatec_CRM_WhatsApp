@@ -1,4 +1,4 @@
-import { useState, useMemo, useRef, useCallback } from "react";
+import { useState, useMemo, useRef, useCallback, useEffect } from "react";
 import { useAuth } from "@/_core/hooks/useAuth";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
@@ -87,6 +87,18 @@ export default function Properties() {
   const [qrDe, setQrDe] = useState<{ id: number; codigo: string } | null>(null);
   const [editingId, setEditingId] = useState<number | null>(null);
   const [selectedProperty, setSelectedProperty] = useState<any>(null);
+  // Link direto (ex.: confirmação do cadastro pelo WhatsApp): /properties?imovel=ID abre o detalhe desse imóvel
+  const [abrirId, setAbrirId] = useState<number | null>(() => {
+    try { const n = Number(new URLSearchParams(window.location.search).get("imovel")); return Number.isInteger(n) && n > 0 ? n : null; } catch { return null; }
+  });
+  useEffect(() => {
+    if (!abrirId || !properties) return;
+    const alvo = (properties as any[]).find(p => p.id === abrirId);
+    if (alvo) setSelectedProperty(alvo);
+    else toast.error("Imóvel não encontrado ou não liberado para você");
+    setAbrirId(null);
+    try { window.history.replaceState(null, "", window.location.pathname); } catch { /* sem history: segue */ }
+  }, [abrirId, properties]);
   const [form, setForm] = useState<PropertyForm>({ ...emptyForm });
   const [newImageUrl, setNewImageUrl] = useState("");
   const [isGeneratingDesc, setIsGeneratingDesc] = useState(false);

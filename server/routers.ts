@@ -438,6 +438,8 @@ export const appRouter = router({
         await db.delete(messages).where(eq(messages.propertyId, input.id));
         await db.delete(campaigns).where(eq(campaigns.propertyId, input.id));
         await db.delete(properties).where(eq(properties.id, input.id));
+        // Rascunho do cadastro pelo WhatsApp que gerou este imóvel sai da lista junto
+        try { await (await import('./imoveis/agenteCadastro')).aoExcluirImovel(input.id); } catch (err) { console.error('[properties.delete] rascunho do WhatsApp:', err); }
         return { success: true };
       }),
     generateDescription: protectedProcedure

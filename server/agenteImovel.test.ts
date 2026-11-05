@@ -132,6 +132,11 @@ describe('Agente de Cadastro de Imóveis pelo WhatsApp', () => {
     expect(camp.map(c => c.status)).toEqual(['paused']);
     const [acesso]: any[] = db.all(sql`SELECT usuarioId FROM acessosCorretor WHERE refId = ${props[0].id}`);
     expect(acesso.usuarioId).toBe(21);
+    // Link da confirmação abre direto o imóvel
+    expect(enviados.some(([, m]) => m.includes(`/properties?imovel=${props[0].id}`))).toBe(true);
+    // Excluir o imóvel em Imóveis tira o rascunho que o gerou da lista
+    expect(await A.aoExcluirImovel(props[0].id)).toBe(1);
+    expect(db.all(sql`SELECT id FROM imovelRascunhos WHERE id = ${rasc.id}`)).toHaveLength(0);
   });
 
   it('valor contraditório vira pergunta, não é escolhido pela IA', async () => {
@@ -151,9 +156,19 @@ describe('Agente de Cadastro de Imóveis pelo WhatsApp', () => {
   it('sair de todos os aparelhos/trocar senha derruba a autorização do canal (rascunho fica)', async () => {
     db.run(sql`UPDATE users SET sessaoVersao = 5 WHERE id = 21`);
     expect(await msg(CORRETOR, 'cadastrar imóvel')).toBe(true);
-    expect(ultima()).toMatch(/precisa ser renovado \(sessão encerrada no CRM\)/);
+    expect(ultima()).toMatch(/precisa ser autorizado de novo \(sessão encerrada no CRM\)/);
     await A.autorizarCanal(21);
     expect((await A.statusVinculo(21)).autorizado).toBe(true);
+    // Corretor: a autorização acompanha o plano (sem os 30 dias fixos); plano vencido bloqueia e manda renovar o plano
+    A.definirLicencaAgente(async () => ({ exigida: true, liberado: true, fim: '2026-12-20T03:00:00.000Z', diasRestantes: 45, motivo: null }));
+    expect(await A.statusVinculo(21)).toMatchObject({ autorizado: true, prazo: '2026-12-20T03:00:00.000Z', diasRestantes: 45, semPrazo: false });
+    A.definirLicencaAgente(async () => ({ exigida: true, liberado: false, fim: null, diasRestantes: 0, motivo: 'Seu período de teste terminou.' }));
+    expect(await msg(CORRETOR, 'cadastrar imóvel')).toBe(true);
+    expect(ultima()).toMatch(/acompanha o seu plano.*Seu período de teste terminou.*\/assinatura/s);
+    // Escritório (sem licença exigida): sem prazo
+    A.definirLicencaAgente(async () => ({ exigida: false, liberado: true, fim: null, diasRestantes: null, motivo: null }));
+    expect(await A.statusVinculo(21)).toMatchObject({ autorizado: true, prazo: null, semPrazo: true });
+    A.definirLicencaAgente(null);
     await A.revogarCanal(21, 'logout');
     expect((await A.statusVinculo(21)).autorizado).toBe(false);
     expect(db.all(sql`SELECT id FROM imovelRascunhos WHERE autorId = 21`).length).toBeGreaterThan(0);

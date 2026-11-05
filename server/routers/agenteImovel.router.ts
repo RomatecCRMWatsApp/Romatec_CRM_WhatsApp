@@ -41,6 +41,7 @@ export const agenteImovelRouter = router({
     const u = exigir(ctx); const m = await A(); await m.detalheRascunho(input.id, u.id, u.perfil).catch(erro);
     return m.confirmarRascunho(input.id, { id: u.id, canal: "crm", versao: input.versao });
   }),
+  excluir: protectedProcedure.input(z.object({ id: z.number().int() })).mutation(async ({ input, ctx }) => { const u = exigir(ctx); return (await A()).excluirRascunho(input.id, u.id, u.perfil).catch(erro); }),
   cancelar: protectedProcedure.input(z.object({ id: z.number().int() })).mutation(async ({ input, ctx }) => { const u = exigir(ctx); return (await A()).cancelarRascunho(input.id, u.id, u.perfil).catch(erro); }),
   equipe: protectedProcedure.query(async ({ ctx }) => {
     const u = exigir(ctx);

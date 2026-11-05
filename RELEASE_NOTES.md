@@ -3,6 +3,21 @@
 Cada versão nova vai no TOPO. Depois rode `npm run release` (valida e atualiza o package.json);
 ao subir, o servidor grava a versão no banco e todos recebem o aviso "Novidades da versão".
 
+## 1.104.0 — 2026-11-05
+tipo: minor
+obrigatoria: nao
+titulo: Cadastro pelo WhatsApp: autorização pelo plano, link direto e excluir rascunho
+
+### Novo
+- A autorização do WhatsApp não tem mais os 30 dias fixos: administrador e secretária ficam sem prazo; o corretor acompanha o próprio plano (teste ou assinatura) e renova sozinho quando o plano renova
+- Plano vencido ou bloqueado: o agente avisa no WhatsApp e manda o link para renovar o plano; o rascunho fica salvo
+- Excluir rascunho (lixeira na lista e no detalhe): tira o rascunho e as fotos dele da lista; o imóvel já cadastrado continua em Imóveis
+- Excluir o imóvel em Imóveis tira da lista o rascunho que o gerou
+
+### Melhorias
+- "Imóvel cadastrado!" no WhatsApp abre direto o imóvel em Imóveis (não mais a lista)
+- Sai o botão "Renovar por 30 dias"
+
 ## 1.103.6 — 2026-11-05
 tipo: patch
 obrigatoria: nao
