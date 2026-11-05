@@ -11,7 +11,7 @@ import type { Perfil } from './equipe';
 import { VENDIDOS, type SituacaoLote } from './lotes';
 import { temAcesso, type AcessoCorretor } from './permissoes';
 
-export const TIPOS_NOTIFICACAO = ['atualizacao_sistema', 'reserva', 'venda_contrato', 'liberacao', 'solicitacao_cancelamento', 'agendamento', 'novo_lead', 'atendimento', 'confirmacao_reuniao', 'chamado'] as const;
+export const TIPOS_NOTIFICACAO = ['atualizacao_sistema', 'reserva', 'venda_contrato', 'liberacao', 'solicitacao_cancelamento', 'agendamento', 'novo_lead', 'atendimento', 'confirmacao_reuniao', 'chamado', 'empreendimento'] as const;
 export type TipoNotificacao = typeof TIPOS_NOTIFICACAO[number];
 
 /** Som de cada tipo (client/public/sons) — trocar o arquivo troca o som, sem mexer no código */
@@ -26,6 +26,7 @@ export const SOM_POR_TIPO: Record<TipoNotificacao, string> = {
   atendimento: '/sons/atendimento.wav',
   confirmacao_reuniao: '/sons/confirmacao_reuniao.wav',
   chamado: '/sons/chamado.wav',
+  empreendimento: '/sons/empreendimento.wav',
 };
 
 export const ROTULO_NOTIFICACAO: Record<TipoNotificacao, string> = {
@@ -39,6 +40,7 @@ export const ROTULO_NOTIFICACAO: Record<TipoNotificacao, string> = {
   atendimento: 'Cliente aguardando',
   confirmacao_reuniao: 'Presença confirmada',
   chamado: 'Chamado do comprador',
+  empreendimento: 'Novidade do empreendimento',
 };
 
 /** Cor do selo na lista do sininho */
@@ -53,6 +55,7 @@ export const COR_NOTIFICACAO: Record<TipoNotificacao, string> = {
   atendimento: '#D9822B',
   confirmacao_reuniao: '#3BA99C',
   chamado: '#7A5FC9',
+  empreendimento: '#2F9E6E',
 };
 
 const RESERVAS: SituacaoLote[] = ['reservado', 'entrada'];
@@ -104,6 +107,7 @@ export function textoNotificacao(
       mensagem: `${d.autor ?? 'Alguém da equipe'} pediu o cancelamento do contrato ${d.contrato ?? '?'} (${onde}${d.comprador ? `, comprador ${d.comprador}` : ''}). Motivo: ${d.motivo ?? '—'}`.slice(0, 500),
     };
     case 'chamado': return { titulo: `Chamado · contrato ${d.contrato ?? '?'}`, mensagem: (d.motivo ?? 'Novo chamado no portal do comprador').slice(0, 500) };
+    case 'empreendimento': return { titulo: `${d.motivo ?? 'Novidade'}${d.empreendimento ? ` · ${d.empreendimento}` : ''}`.slice(0, 150), mensagem: (d.comprador ?? d.motivo ?? 'Novidade no empreendimento').slice(0, 500) };
   }
 }
 
@@ -124,6 +128,7 @@ export function destinatarios(
 ): number[] {
   return usuarios.filter(u => {
     if (u.ativo === false || u.ativo === 0) return false;
+    // Atualização do sistema: o filtro por público da versão é feito em notificarAtualizacaoSistema
     if (tipo === 'atualizacao_sistema') return true;
     // Pedido de cancelamento: só o administrador decide (e cancela com a senha)
     if (tipo === 'solicitacao_cancelamento') return perfilDe(u) === 'admin' && u.id !== alvo?.autorId;

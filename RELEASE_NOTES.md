@@ -3,6 +3,17 @@
 Cada versão nova vai no TOPO. Depois rode `npm run release` (valida e atualiza o package.json);
 ao subir, o servidor grava a versão no banco e todos recebem o aviso "Novidades da versão".
 
+## 1.107.0 — 2026-11-05
+tipo: minor
+obrigatoria: nao
+titulo: Avisos certos para cada perfil: sistema para o escritório, empreendimento para a equipe de vendas
+publico: equipe
+
+### Novo
+- Atualização do sistema (sininho, push e "Novidades da versão") vai só para administrador e secretária; corretor e empreendedor só recebem quando muda uma ferramenta que eles usam
+- Novidades do empreendimento para corretores (com o empreendimento liberado), empreendedor e escritório: reserva, venda, chácara liberada/cancelada (como já era) e agora também material novo em Materiais, termo aditivo assinado e mudança nos planos de pagamento
+- Publicar atualização: escolha do público (só escritório, + corretores, + empreendedores, todos)
+
 ## 1.106.1 — 2026-11-05
 tipo: patch
 obrigatoria: nao
@@ -15,6 +26,7 @@ titulo: Caixa de entrada com a conversa completa do WhatsApp
 ## 1.106.0 — 2026-11-05
 tipo: minor
 obrigatoria: nao
+publico: corretor
 titulo: Robô encaminha na hora quem escolhe chácara; confirmação de lead em 1 toque
 
 ### Novo
@@ -118,6 +130,7 @@ titulo: Pix pago sempre compensa na assinatura
 ## 1.104.2 — 2026-11-05
 tipo: patch
 obrigatoria: nao
+publico: usuarios
 titulo: Dois reels novos do Bom Jardims em Materiais
 
 ### Novo
@@ -135,6 +148,7 @@ titulo: Assinatura: aviso claro quando o Mercado Pago recusa a credencial
 ## 1.104.0 — 2026-11-05
 tipo: minor
 obrigatoria: nao
+publico: corretor
 titulo: Cadastro pelo WhatsApp: autorização pelo plano, link direto e excluir rascunho
 
 ### Novo
@@ -150,6 +164,7 @@ titulo: Cadastro pelo WhatsApp: autorização pelo plano, link direto e excluir 
 ## 1.103.6 — 2026-11-05
 tipo: patch
 obrigatoria: nao
+publico: corretor
 titulo: Cadastro pelo WhatsApp entende o tipo do imóvel do jeito que você fala
 
 ### Correções
@@ -159,6 +174,7 @@ titulo: Cadastro pelo WhatsApp entende o tipo do imóvel do jeito que você fala
 ## 1.103.5 — 2026-11-05
 tipo: patch
 obrigatoria: nao
+publico: corretor
 titulo: Aviso claro quando a transcrição de áudio está sem créditos
 
 ### Correções
@@ -170,6 +186,7 @@ titulo: Aviso claro quando a transcrição de áudio está sem créditos
 ## 1.103.4 — 2026-11-05
 tipo: patch
 obrigatoria: nao
+publico: corretor
 titulo: Áudio do WhatsApp transcrito no cadastro de imóveis
 
 ### Correções
@@ -179,6 +196,7 @@ titulo: Áudio do WhatsApp transcrito no cadastro de imóveis
 ## 1.103.3 — 2026-11-05
 tipo: patch
 obrigatoria: nao
+publico: corretor
 titulo: Vínculo do WhatsApp sem "código inválido" repetido
 
 ### Correções
@@ -188,6 +206,7 @@ titulo: Vínculo do WhatsApp sem "código inválido" repetido
 ## 1.103.2 — 2026-11-05
 tipo: patch
 obrigatoria: nao
+publico: corretor
 titulo: Atalho do cadastro pelo WhatsApp na tela de Imóveis
 
 ### Melhorias
@@ -205,6 +224,7 @@ titulo: Publicação do cadastro de imóveis pelo WhatsApp
 ## 1.103.0 — 2026-11-05
 tipo: minor
 obrigatoria: nao
+publico: corretor
 titulo: Cadastro de imóveis pelo WhatsApp com IA
 
 ### Novo
@@ -221,6 +241,7 @@ titulo: Cadastro de imóveis pelo WhatsApp com IA
 ## 1.102.1 — 2026-11-04
 tipo: patch
 obrigatoria: nao
+publico: usuarios
 titulo: Enviar a ficha de credenciamento pelo celular
 
 ### Correções
@@ -231,6 +252,7 @@ titulo: Enviar a ficha de credenciamento pelo celular
 ## 1.102.0 — 2026-11-04
 tipo: minor
 obrigatoria: nao
+publico: todos
 titulo: Alterar senha e sair de todos os aparelhos
 
 ### Novo
@@ -265,6 +287,7 @@ titulo: Reenviar o aviso de lead para quem não confirmou
 ## 1.101.0 — 2026-11-04
 tipo: minor
 obrigatoria: nao
+publico: corretor
 titulo: Corretor confirma o recebimento de cada lead
 
 ### Novo
@@ -294,6 +317,7 @@ titulo: Distribuição manual de leads com relatório
 ## 1.99.2 — 2026-11-04
 tipo: patch
 obrigatoria: nao
+publico: usuarios
 titulo: Prévia do carimbo antes de salvar
 
 ### Melhorias
@@ -303,6 +327,7 @@ titulo: Prévia do carimbo antes de salvar
 ## 1.99.1 — 2026-11-04
 tipo: patch
 obrigatoria: nao
+publico: usuarios
 titulo: Texto das mídias com o seu carimbo
 
 ### Melhorias
@@ -312,6 +337,7 @@ titulo: Texto das mídias com o seu carimbo
 ## 1.99.0 — 2026-11-04
 tipo: minor
 obrigatoria: nao
+publico: usuarios
 titulo: Meu carimbo: os dados que saem nas suas mídias
 
 ### Novo
@@ -325,6 +351,7 @@ titulo: Meu carimbo: os dados que saem nas suas mídias
 ## 1.98.0 — 2026-11-04
 tipo: minor
 obrigatoria: nao
+publico: usuarios
 titulo: Materiais só com o seu contato e no formato que você quiser
 
 ### Novo
@@ -353,6 +380,7 @@ titulo: Comentou CHÁCARA no Instagram, recebe a simulação no Direct
 ## 1.96.3 — 2026-11-03
 tipo: patch
 obrigatoria: nao
+publico: usuarios
 titulo: Novos vídeos da obra nos Materiais
 
 ### Melhorias
@@ -370,6 +398,7 @@ titulo: Texto pronto para pedir os documentos do contrato
 ## 1.96.1 — 2026-11-03
 tipo: patch
 obrigatoria: nao
+publico: usuarios
 titulo: Vídeos de divulgação do Bom Jardims nos Materiais
 
 ### Melhorias

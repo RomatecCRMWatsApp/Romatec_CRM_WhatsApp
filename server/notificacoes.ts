@@ -314,12 +314,56 @@ export async function notificarConfirmacaoReuniao(
     { reuniaoId: p.reuniaoId });
 }
 
+/** Público da versão (RELEASE_NOTES.md → systemRelease); sem registro = só o escritório */
+async function publicoDaVersao(versao: string): Promise<string> {
+  try {
+    const { getDb } = await import("./db");
+    const { systemRelease } = await import("../drizzle/schema");
+    const d: any = await getDb();
+    const [r]: any[] = d ? await d.select({ publico: systemRelease.publico }).from(systemRelease).where(eq(systemRelease.versao, versao)).limit(1) : [];
+    return r?.publico || "equipe";
+  } catch { return "equipe"; }
+}
+
+/**
+ * Novidade do empreendimento (material novo, aditivo, plano de pagamento…): corretores com o empreendimento,
+ * o empreendedor dele e o escritório. Quem fez a mudança não recebe.
+ */
+export async function notificarEmpreendimento(
+  n: { empreendimentoId: number; empreendimentoSlug: string; empreendimentoNome?: string | null; titulo: string; mensagem: string; autorId?: number | null; url?: string | null; chave?: string | null },
+  repo: RepoNotificacoes = repoBanco(), enviar?: EnviadorPush | null,
+) {
+  if (n.chave && await repo.jaEmitida("empreendimento", n.chave)) return null;
+  const usuarios = await repo.usuarios();
+  const ids = destinatarios("empreendimento", usuarios, await repo.acessos(), perfilDe as any,
+    { empreendimentoId: n.empreendimentoId, empreendimentoSlug: n.empreendimentoSlug, autorId: n.autorId ?? null });
+  const { titulo, mensagem } = textoNotificacao("empreendimento", { motivo: n.titulo, comprador: n.mensagem, empreendimento: n.empreendimentoNome ?? undefined });
+  return emitir(repo, enviar === undefined ? await enviadorWebPush() : enviar, usuarios, ids,
+    { tipo: "empreendimento", titulo, mensagem, empreendimentoId: n.empreendimentoId, chave: n.chave ?? null },
+    { empreendimentoSlug: n.empreendimentoSlug, url: n.url ?? null });
+}
+
+/** Novidade pelo slug do empreendimento (acha id e nome); nunca derruba quem chamou */
+export async function notificarEmpreendimentoPorSlug(slug: string, n: { titulo: string; mensagem: string; autorId?: number | null; url?: string | null; chave?: string | null }) {
+  try {
+    const { getDb } = await import("./db");
+    const { empreendimentos } = await import("../drizzle/schema");
+    const d: any = await getDb();
+    const [e]: any[] = d ? await d.select({ id: empreendimentos.id, nome: empreendimentos.nome, slug: empreendimentos.slug }).from(empreendimentos).where(eq(empreendimentos.slug, slug)).limit(1) : [];
+    if (!e) return null;
+    return await notificarEmpreendimento({ empreendimentoId: Number(e.id), empreendimentoSlug: e.slug, empreendimentoNome: e.nome, ...n });
+  } catch (err: any) { console.warn("[Notificações] novidade do empreendimento:", err?.message); return null; }
+}
+
 /** Ao subir uma versão nova: "Sistema atualizado para vX.Y.Z" para todos (uma vez por versão) */
 export async function notificarAtualizacaoSistema(versao: string, repo: RepoNotificacoes = repoBanco(), enviar?: EnviadorPush | null) {
   const chave = `v${versao}`;
   if (await repo.jaEmitida("atualizacao_sistema", chave)) return null;
   const usuarios = await repo.usuarios();
-  const ids = destinatarios("atualizacao_sistema", usuarios, [], perfilDe as any);
+  // Só quem a versão interessa: escritório sempre; corretor/empreendedor só se mudou ferramenta que eles usam
+  const publico = await publicoDaVersao(versao);
+  const { releaseParaPerfil } = await import("../shared/releases");
+  const ids = destinatarios("atualizacao_sistema", usuarios, [], perfilDe as any).filter(id => releaseParaPerfil(publico, perfilDe(usuarios.find(u => u.id === id) as any) as any));
   const { titulo, mensagem } = textoNotificacao("atualizacao_sistema", { versao });
   const r = await emitir(repo, enviar === undefined ? await enviadorWebPush() : enviar, usuarios, ids,
     { tipo: "atualizacao_sistema", titulo, mensagem, chave }, {});

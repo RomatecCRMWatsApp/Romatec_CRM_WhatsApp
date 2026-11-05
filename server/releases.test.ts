@@ -27,7 +27,7 @@ describe('notas de versão (RELEASE_NOTES.md)', () => {
   it('lê os blocos do topo para baixo, com meta e seções', () => {
     const [a, b] = lerReleaseNotes(MD);
     expect(a).toEqual({
-      versao: '1.4.0', data: '2026-10-24', tipo: 'minor', obrigatoria: true, titulo: 'Cadastro completo', publico: 'todos',
+      versao: '1.4.0', data: '2026-10-24', tipo: 'minor', obrigatoria: true, titulo: 'Cadastro completo', publico: 'equipe',
       itens: { novo: ['Foto de perfil', 'Perfis de acesso'], melhorias: [], correcoes: ['Login aceita CPF'], avisos: [] },
     });
     expect(b).toMatchObject({ versao: '1.3.2', tipo: 'patch', obrigatoria: false, titulo: 'Atualização 1.3.2', itens: { avisos: ['Manutenção às 22h'] } });

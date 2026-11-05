@@ -336,6 +336,15 @@ export async function assinarAditivo(token: string, codigo: string, o: { aceite:
   }
   await auditar('aditivo_assinado', { contratoId: Number(a.contratoId), origem: 'publico', ip: o.ip, detalhe: { numero: a.numero } });
   const resultado = await aplicarAditivo(Number(a.id));
+  // Corretores e empreendedor: aditivo assinado no contrato da chácara (sem dados do comprador)
+  try {
+    const { empreendimentos } = await import('../../drizzle/schema');
+    const [e]: any[] = c?.empreendimentoId ? await d.select({ slug: empreendimentos.slug }).from(empreendimentos).where(eq(empreendimentos.id, Number(c.empreendimentoId))).limit(1) : [];
+    if (e?.slug) {
+      const { notificarEmpreendimentoPorSlug } = await import('../notificacoes');
+      notificarEmpreendimentoPorSlug(e.slug, { titulo: `Termo aditivo assinado · chácara ${c?.lote ?? ''}`.trim(), mensagem: `O comprador da chácara ${c?.lote ?? ''} assinou o Termo Aditivo n.º ${a.numero} ao contrato ${c?.numero ?? ''} (novas condições de pagamento).`, chave: `aditivo:${a.id}` }).catch(() => {});
+    }
+  } catch { /* aviso é complementar */ }
   const { notificarChamado } = await import('../notificacoes');
   notificarChamado({ contrato: String(c?.numero ?? ''), lote: String(c?.lote ?? ''), empreendimentoId: Number(c?.empreendimentoId ?? 0), empreendimentoSlug: '', tipo: 'financeiro',
     assunto: `Termo Aditivo n.º ${a.numero} assinado pelo comprador — ${resultado.criadas} parcela(s) nova(s)${resultado.falhasAsaas.length ? `, ${resultado.falhasAsaas.length} falha(s) no Asaas` : ''}` }).catch(() => {});

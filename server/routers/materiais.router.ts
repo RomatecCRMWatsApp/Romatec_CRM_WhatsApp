@@ -106,7 +106,10 @@ export const materiaisRouter = router({
         mime: input.mime ?? null, tamanhoBytes: input.tamanhoBytes ?? null,
         liberado: input.liberado, observacao: input.observacao ?? null,
       } as any);
-      return { id: Number(r?.[0]?.insertId ?? r?.insertId ?? r?.lastInsertRowid ?? 0) };
+      const id = Number(r?.[0]?.insertId ?? r?.insertId ?? r?.lastInsertRowid ?? 0);
+      // Material novo liberado para divulgar → corretores e empreendedor do empreendimento são avisados
+      if (input.empreendimentoSlug && input.liberado) avisarMaterialNovo(input.empreendimentoSlug, input.titulo, id, ctx.user.id);
+      return { id };
     }),
 
   update: protectedProcedure
@@ -128,7 +131,10 @@ export const materiaisRouter = router({
         throw new Error("Só o escritório ajusta o corte do contato");
       }
       const { id, ...campos } = input;
+      const [antes]: any[] = input.liberado === true ? await db.select({ liberado: materiais.liberado, slug: materiais.empreendimentoSlug, titulo: materiais.titulo }).from(materiais).where(eq(materiais.id, id)).limit(1) : [];
       await db.update(materiais).set(campos as any).where(eq(materiais.id, id));
+      // Passou a liberado para divulgação: é material novo para a equipe de vendas
+      if (antes?.slug && !(antes.liberado === true || antes.liberado === 1)) avisarMaterialNovo(antes.slug, input.titulo ?? antes.titulo, id, ctx.user.id);
       return { ok: true };
     }),
 
@@ -140,3 +146,8 @@ export const materiaisRouter = router({
     return { ok: true };
   }),
 });
+
+/** "Material novo" no sininho/push dos corretores e do empreendedor do empreendimento (uma vez por material) */
+function avisarMaterialNovo(slug: string, titulo: string, id: number, autorId: number) {
+  import("../notificacoes").then(N => N.notificarEmpreendimentoPorSlug(slug, { titulo: "Material novo para divulgar", mensagem: `Novo material em Materiais: ${titulo}. Baixe no seu formato, já com o seu carimbo.`, autorId, url: "/materiais", chave: `material:${id}` })).catch(e => console.warn("[Materiais] aviso:", e?.message));
+}

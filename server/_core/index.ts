@@ -1517,6 +1517,8 @@ async function startServer() {
     const { notificarAtualizacaoSistema } = await import('../notificacoes');
     const { infoVersao } = await import('./systemRouter');
     await notificarAtualizacaoSistema(infoVersao().versao);
+    // Novidade do empreendimento: plano de pagamento mudou desde a última subida → corretores e empreendedor
+    await (await import('../avisosEmpreendimento')).avisarMudancaDeCondicoes().catch((err: any) => console.warn('[Avisos] condições:', err?.message));
   } catch (e) {
     console.error('❌ Erro na migration addNotificacoes / aviso de versão:', e);
   }

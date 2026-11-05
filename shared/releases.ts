@@ -6,7 +6,11 @@
 
 export const TIPOS_RELEASE = ['major', 'minor', 'patch'] as const;
 export type TipoRelease = typeof TIPOS_RELEASE[number];
-export const PUBLICOS_RELEASE = ['todos', 'admin', 'secretario', 'corretor', 'empreendedor'] as const;
+/**
+ * Quem recebe a novidade da versão. Administrador e secretária recebem TODAS. equipe (padrão) = só eles;
+ * corretor / empreendedor = também quem usa a ferramenta mudada; todos = todo mundo.
+ */
+export const PUBLICOS_RELEASE = ['equipe', 'todos', 'admin', 'secretario', 'corretor', 'empreendedor', 'usuarios'] as const;
 export type PublicoRelease = typeof PUBLICOS_RELEASE[number];
 
 export interface ItensRelease { novo: string[]; melhorias: string[]; correcoes: string[]; avisos: string[] }
@@ -56,7 +60,7 @@ function lerBloco(bloco: string): Release {
     tipo: (TIPOS_RELEASE as readonly string[]).includes(meta.tipo) ? meta.tipo as TipoRelease : 'patch',
     obrigatoria: /^s(im)?$/i.test(meta.obrigatoria ?? ''),
     titulo: (meta.titulo || `Atualização ${head[1]}`).slice(0, 150),
-    publico: (PUBLICOS_RELEASE as readonly string[]).includes(meta.publico) ? meta.publico as PublicoRelease : 'todos',
+    publico: (PUBLICOS_RELEASE as readonly string[]).includes(meta.publico) ? meta.publico as PublicoRelease : 'equipe',
     itens,
   };
 }
@@ -79,7 +83,14 @@ export function problemaRelease(r: { versao: string; titulo: string; itens: Iten
 }
 
 /** Quem vê a release (publico = todos ou o perfil da pessoa) */
-export const releaseParaPerfil = (publico: string, perfil: string | null) => publico === 'todos' || publico === perfil;
+export const releaseParaPerfil = (publico: string, perfil: string | null) =>
+  perfil === 'admin' || perfil === 'secretario' || publico === 'todos' || publico === perfil
+  // usuarios = corretor e empreendedor (ferramenta usada pelos dois)
+  || (publico === 'usuarios' && (perfil === 'corretor' || perfil === 'empreendedor'));
+export const ROTULO_PUBLICO_RELEASE: Record<PublicoRelease, string> = {
+  equipe: 'Só administrador e secretária', todos: 'Todos', admin: 'Só administrador', secretario: 'Administrador e secretária',
+  corretor: 'Escritório + corretores', empreendedor: 'Escritório + empreendedores', usuarios: 'Escritório + corretores e empreendedores',
+};
 
 /** Tempo da tela de descanso (minutos; 0 = desativada) */
 export const OPCOES_DESCANSO = [0, 1, 3, 5, 10, 15] as const;

@@ -6,11 +6,10 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { RomatecSeal } from "@/brand";
-import { PUBLICOS_RELEASE, SECOES_RELEASE, TIPOS_RELEASE, problemaRelease, type ItensRelease } from "@shared/releases";
-import { ROTULO_PERFIL } from "@shared/equipe";
+import { PUBLICOS_RELEASE, ROTULO_PUBLICO_RELEASE, SECOES_RELEASE, TIPOS_RELEASE, problemaRelease, type ItensRelease } from "@shared/releases";
 import { ItensDaRelease } from "./Novidades";
 
-const VAZIO = { versao: "", tipo: "patch" as (typeof TIPOS_RELEASE)[number], titulo: "", obrigatoria: false, publico: "todos" as (typeof PUBLICOS_RELEASE)[number], texto: { novo: "", melhorias: "", correcoes: "", avisos: "" } };
+const VAZIO = { versao: "", tipo: "patch" as (typeof TIPOS_RELEASE)[number], titulo: "", obrigatoria: false, publico: "equipe" as (typeof PUBLICOS_RELEASE)[number], texto: { novo: "", melhorias: "", correcoes: "", avisos: "" } };
 type Form = typeof VAZIO;
 const sel = "h-9 rounded-md border border-border bg-secondary/30 px-2 text-sm";
 const proxima = (v: string) => { const [a, b, c] = v.split(".").map(Number); return `${a || 0}.${b || 0}.${(c || 0) + 1}`; };
@@ -43,7 +42,7 @@ export default function PublicarAtualizacao() {
     if (erro) { toast.error(erro); return; }
     const d = { tipo: f.tipo, titulo: f.titulo, itens, obrigatoria: f.obrigatoria, publico: f.publico };
     if (editando) editar.mutate({ id: editando, ...d });
-    else if (confirm(`Publicar a v${f.versao} para ${f.publico === "todos" ? "todos" : ROTULO_PERFIL[f.publico as keyof typeof ROTULO_PERFIL]}?`)) publicar.mutate({ versao: f.versao, ...d });
+    else if (confirm(`Publicar a v${f.versao} para ${ROTULO_PUBLICO_RELEASE[f.publico].toLowerCase()}?`)) publicar.mutate({ versao: f.versao, ...d });
   };
   const abrirEdicao = (r: any) => {
     setEditando(r.id);
@@ -67,7 +66,7 @@ export default function PublicarAtualizacao() {
           </label>
           <label className="flex flex-col gap-1 text-xs text-muted-foreground">Para
             <select value={f.publico} onChange={e => setF({ ...f, publico: e.target.value as any })} className={sel}>
-              {PUBLICOS_RELEASE.map(p => <option key={p} value={p}>{p === "todos" ? "Todos" : ROTULO_PERFIL[p as keyof typeof ROTULO_PERFIL]}</option>)}
+              {PUBLICOS_RELEASE.map(p => <option key={p} value={p}>{ROTULO_PUBLICO_RELEASE[p]}</option>)}
             </select>
           </label>
           <label className="flex items-end gap-2 pb-2 text-xs text-muted-foreground">

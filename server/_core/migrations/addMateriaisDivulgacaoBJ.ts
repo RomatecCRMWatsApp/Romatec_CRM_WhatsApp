@@ -88,6 +88,12 @@ export async function addMateriaisDivulgacaoBJ(): Promise<number> {
       liberado: v.liberado, observacao: v.observacao, ordem: v.ordem, createdAt: new Date(),
     } as any);
     n++;
+    // Material novo liberado → aviso aos corretores e ao empreendedor (não na 1ª carga de um banco vazio)
+    if (v.liberado && existentes.size) {
+      import('../../notificacoes').then(N => N.notificarEmpreendimentoPorSlug('bom-jardims', {
+        titulo: 'Material novo para divulgar', mensagem: `Novo material em Materiais: ${v.titulo}. Baixe no seu formato, já com o seu carimbo.`, url: '/materiais', chave: `material:${v.caminho}`,
+      })).catch(() => {});
+    }
   }
   // O Reel antigo da areia fala em "chácaras vendidas": se entrou como liberado na 1.96.1, passa a "não divulgar"
   await db.update(materiais).set({ liberado: false, observacao: 'Versão antiga: fala em chácaras vendidas · use a versão nova' } as any)

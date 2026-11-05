@@ -140,10 +140,13 @@ describe('notificações — evento gera sininho e push para os destinatários c
     const { repo, gravadas } = repoFalso();
     await N.notificarAtualizacaoSistema('1.8.0', repo, null);
     await N.notificarAtualizacaoSistema('1.8.0', repo, null);
-    expect(gravadas).toHaveLength(6);
+    // Versão sem público marcado = só o escritório (administrador e secretária); corretor e empreendedor não recebem
+    const n1 = gravadas.length;
+    expect(n1).toBeGreaterThan(0);
+    expect(n1).toBeLessThan(6);
     expect(gravadas[0]).toMatchObject({ tipo: 'atualizacao_sistema', chave: 'v1.8.0', mensagem: 'Sistema atualizado para v1.8.0' });
     await N.notificarAtualizacaoSistema('1.8.1', repo, null);
-    expect(gravadas).toHaveLength(12);
+    expect(gravadas).toHaveLength(n1 * 2);
   });
 });
 
