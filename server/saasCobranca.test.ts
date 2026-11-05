@@ -273,22 +273,22 @@ describe('empreendedor avulso: implantação na 1ª fatura', () => {
     db.run(sql`INSERT INTO users (id, openId, name, role, perfil, cpf, email, telefone, ativo) VALUES (9, 'u9', 'Rita Corretora', 'user', 'corretor', '52998224725', 'rita@x.com', '99955554444', 1)`);
     await C.iniciarCheckout(usuario(9), { plano: 'CORRETOR_ESSENCIAL', ciclo: 'MENSAL', metodo: 'CARTAO_RECORRENTE' });
     const a = assinatura(9);
-    pagamentosMp.set('777001', { id: '777001', status: 'approved', external_reference: `saas:${a.id}`, transaction_amount: 149.9, payment_method_id: 'pix', date_approved: new Date(Date.now() - 4 * 3600_000).toISOString() });
+    pagamentosMp.set('77700001', { id: '77700001', status: 'approved', external_reference: `saas:${a.id}`, transaction_amount: 149.9, payment_method_id: 'pix', date_approved: new Date(Date.now() - 4 * 3600_000).toISOString() });
     await S.registrarPagamentoManual(a.id, { ciclo: 'MENSAL', valor: 149.9, observacao: 'Pix conferido no banco' }, 1);
     const fim = assinatura(9).periodoFim;
     await C.conciliarFaturasAbertas();
     expect(assinatura(9).periodoFim).toBe(fim);
-    expect(faturas(a.id).some((f: any) => f.mpPaymentId === '777001' && f.status === 'CANCELADA')).toBe(true);
+    expect(faturas(a.id).some((f: any) => f.mpPaymentId === '77700001' && f.status === 'CANCELADA')).toBe(true);
     await C.conciliarFaturasAbertas();
     expect(assinatura(9).periodoFim).toBe(fim);
     // Sem o lançamento à mão: aplica sozinho
-    pagamentosMp.set('777002', { id: '777002', status: 'approved', external_reference: `saas:${a.id}`, transaction_amount: 149.9, payment_method_id: 'pix', date_approved: new Date().toISOString() });
+    pagamentosMp.set('77700002', { id: '77700002', status: 'approved', external_reference: `saas:${a.id}`, transaction_amount: 149.9, payment_method_id: 'pix', date_approved: new Date().toISOString() });
     expect(await C.conciliarFaturasAbertas()).toMatchObject({ aplicadas: 1 });
-    expect(faturas(a.id).some((f: any) => f.mpPaymentId === '777002' && f.status === 'PAGA')).toBe(true);
+    expect(faturas(a.id).some((f: any) => f.mpPaymentId === '77700002' && f.status === 'PAGA')).toBe(true);
     // Pelo número da operação (comprovante): já aplicado não muda nada; de outro sistema é recusado
-    expect(await C.conferirPagamentoPorId('777002')).toMatchObject({ acao: 'ja_aplicado', valor: 149.9 });
-    pagamentosMp.set('888001', { id: '888001', status: 'approved', external_reference: 'loja-x', transaction_amount: 10 });
-    expect(await C.conferirPagamentoPorId('888001')).toMatchObject({ acao: 'nao_e_do_crm', referencia: 'loja-x' });
+    expect(await C.conferirPagamentoPorId('77700002')).toMatchObject({ acao: 'ja_aplicado', valor: 149.9 });
+    pagamentosMp.set('88800001', { id: '88800001', status: 'approved', external_reference: 'loja-x', transaction_amount: 10 });
+    expect(await C.conferirPagamentoPorId('88800001')).toMatchObject({ acao: 'nao_e_do_crm', referencia: 'loja-x' });
     await expect(C.conferirPagamentoPorId('B33JK21M3K8K59B9F')).rejects.toThrow(/só com algarismos/);
   });
 
