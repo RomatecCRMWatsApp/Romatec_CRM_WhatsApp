@@ -5,10 +5,11 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Home, Search, Edit, MapPin, DollarSign, Plus, ArrowLeft, Image, Video, FileImage, Ruler, BedDouble, Bath, Car, Sparkles, ExternalLink, Loader2, Lock, X, Eye, Heart, Phone, MessageCircle, ChevronLeft, ChevronRight, Trash2, Upload, CloudUpload, Share2 } from "lucide-react";
+import { Home, Search, Edit, MapPin, DollarSign, Plus, ArrowLeft, Image, Video, FileImage, Ruler, BedDouble, Bath, Car, Sparkles, ExternalLink, Loader2, Lock, X, Eye, Heart, Phone, MessageCircle, ChevronLeft, ChevronRight, Trash2, Upload, CloudUpload, Share2, Smartphone } from "lucide-react";
 import { useLocation } from "wouter";
 import { trpc } from "@/lib/trpc";
 import { temAcesso } from "@shared/permissoes";
+import { podeUsarAgenteImovel } from "@shared/cadastroImovelAgente";
 import { toast } from "sonner";
 import MateriaisPainel from "@/components/MateriaisPainel";
 
@@ -263,7 +264,7 @@ export default function Properties() {
         <div className="absolute inset-0 bg-gradient-to-r from-emerald-dark/20 via-transparent to-gold-dark/20" />
         <div className="relative border-b border-border/50 backdrop-blur-sm">
           <div className="container py-6">
-            <div className="flex items-center justify-between">
+            <div className="flex flex-wrap items-center justify-between gap-3">
               <div className="flex items-center gap-4">
                 <div>
                   <h1 className="text-2xl md:text-3xl font-bold text-foreground flex items-center gap-3">
@@ -275,7 +276,12 @@ export default function Properties() {
                   <p className="text-muted-foreground text-sm mt-1">{visiveis.length} {minhas?.perfil === "corretor" ? "imóveis liberados para você" : "propriedades cadastradas"}</p>
                 </div>
               </div>
-              <div className="flex items-center gap-2">
+              <div className="flex flex-wrap items-center gap-2">
+                {podeUsarAgenteImovel(minhas?.perfil) && (
+                  <Button variant="outline" onClick={() => navigate("/imoveis/whatsapp")} className="border-emerald/30 text-emerald hover:bg-emerald/10 text-sm">
+                    <Smartphone className="mr-2 h-4 w-4" /> Pelo WhatsApp
+                  </Button>
+                )}
                 <Button
                   variant="outline"
                   onClick={() => {

@@ -3,6 +3,15 @@
 Cada versão nova vai no TOPO. Depois rode `npm run release` (valida e atualiza o package.json);
 ao subir, o servidor grava a versão no banco e todos recebem o aviso "Novidades da versão".
 
+## 1.103.2 — 2026-11-05
+tipo: patch
+obrigatoria: nao
+titulo: Atalho do cadastro pelo WhatsApp na tela de Imóveis
+
+### Melhorias
+- Imóveis: novo botão "Pelo WhatsApp" ao lado de "Novo Imóvel" (administrador, secretária e corretor) leva direto ao vínculo e aos rascunhos
+- No celular, os botões do topo de Imóveis quebram de linha em vez de ficarem cortados
+
 ## 1.103.1 — 2026-11-05
 tipo: patch
 obrigatoria: nao
