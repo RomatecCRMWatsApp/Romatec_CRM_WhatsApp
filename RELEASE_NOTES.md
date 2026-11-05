@@ -3,6 +3,14 @@
 Cada versão nova vai no TOPO. Depois rode `npm run release` (valida e atualiza o package.json);
 ao subir, o servidor grava a versão no banco e todos recebem o aviso "Novidades da versão".
 
+## 1.105.2 — 2026-11-05
+tipo: patch
+obrigatoria: nao
+titulo: Conferir um pagamento pelo número do comprovante
+
+### Novo
+- Admin › SaaS › Mercado Pago: campo "Nº da operação do Mercado Pago" + "Conferir este pagamento". Busca o pagamento no MP, aplica na assinatura certa (ou liga ao lançamento manual, sem somar outro mês) e manda a confirmação ao assinante
+
 ## 1.105.1 — 2026-11-05
 tipo: patch
 obrigatoria: nao

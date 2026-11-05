@@ -4,6 +4,7 @@ import { BadgeDollarSign, Loader2, Power, Ticket } from "lucide-react";
 import { trpc } from "@/lib/trpc";
 import PageHeader from "@/components/PageHeader";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import { CUPOM_FUNDADOR, ROTULO_ORIGEM, ROTULO_STATUS, type Origem, type StatusAssinatura } from "@shared/saas";
 
 const brl = (n: number) => n.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
@@ -76,6 +77,19 @@ function MercadoPago() {
     onSuccess: r => { (r.erros.length ? toast.error : toast.success)(`${r.conferidas} fatura(s) conferida(s) · ${r.aplicadas} pagamento(s) aplicado(s)${r.erros.length ? ` · ${r.erros.join(" | ")}` : ""}`); utils.saas.invalidate(); },
     onError: e => toast.error(e.message),
   });
+  const [opMp, setOpMp] = useState("");
+  const conferirUm = trpc.saas.conferirPagamentoMp.useMutation({
+    onSuccess: r => {
+      const brl = r.valor.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
+      const txt: Record<string, string> = {
+        aprovado: "pago e aplicado: assinatura ativa e confirmação enviada", registrado_manual: "já tinha sido registrado à mão: ligado ao lançamento, sem somar outro mês",
+        ja_aplicado: "já estava aplicado", nao_e_do_crm: `não é de uma assinatura do CRM (referência: ${r.referencia ?? "nenhuma"})`, upgrade: "upgrade aplicado",
+      };
+      (["aprovado", "registrado_manual", "ja_aplicado", "upgrade"].includes(r.acao) ? toast.success : toast.error)(`Operação ${r.id} · ${brl} · ${r.status}: ${txt[r.acao] ?? r.acao}`);
+      setOpMp(""); utils.saas.invalidate();
+    },
+    onError: e => toast.error(e.message),
+  });
   if (!data) return null;
   const ok = (v: boolean) => (v ? <span className="text-emerald-300">configurado</span> : <span className="text-red-300">faltando</span>);
   return (
@@ -90,6 +104,12 @@ function MercadoPago() {
       <Button size="sm" variant="outline" className="ml-2" disabled={conciliar.isPending} onClick={() => conciliar.mutate()}>
         {conciliar.isPending ? <Loader2 className="mr-1 h-4 w-4 animate-spin" /> : null} Conferir pagamentos agora
       </Button>
+      <div className="flex flex-wrap items-center gap-2 pt-1">
+        <Input value={opMp} onChange={e => setOpMp(e.target.value)} placeholder="Nº da operação do Mercado Pago (comprovante)" className="h-8 max-w-xs text-xs" inputMode="numeric" />
+        <Button size="sm" variant="outline" disabled={opMp.replace(/\D/g, "").length < 5 || conferirUm.isPending} onClick={() => conferirUm.mutate({ paymentId: opMp })}>
+          {conferirUm.isPending ? <Loader2 className="mr-1 h-4 w-4 animate-spin" /> : null} Conferir este pagamento
+        </Button>
+      </div>
       <details className="text-xs">
         <summary className="cursor-pointer text-muted-foreground">Últimos avisos do webhook ({data.eventos.length})</summary>
         <div className="mt-1 space-y-0.5">

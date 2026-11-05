@@ -709,6 +709,20 @@ export async function conferirEstornos(agora = Date.now()) {
   return res;
 }
 
+/**
+ * Admin: confere UM pagamento pelo número da operação do Mercado Pago (está no comprovante) e aplica na assinatura
+ * certa — para o pagamento que não chegou pelo aviso nem foi achado pela conferência. Idempotente.
+ */
+export async function conferirPagamentoPorId(paymentId: string, agora = Date.now()) {
+  const id = String(paymentId).replace(/\D/g, '');
+  if (!id) throw new CobrancaErro('Informe o número da operação do Mercado Pago');
+  const { dado: pg } = await buscarMp(`/v1/payments/${id}`);
+  const ref = refSaas(pg?.external_reference);
+  const resumo = { id, status: String(pg?.status ?? ''), valor: Number(pg?.transaction_amount) || 0, referencia: pg?.external_reference ?? null, descricao: pg?.description ?? null };
+  if (!ref) return { ...resumo, acao: 'nao_e_do_crm' };
+  return { ...resumo, acao: await processarPagamento(id, agora) };
+}
+
 /** Admin: eventos recentes do webhook (diagnóstico) */
 export async function eventosRecentes() {
   const d = await banco();

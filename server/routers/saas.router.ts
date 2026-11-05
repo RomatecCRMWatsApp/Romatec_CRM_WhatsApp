@@ -77,6 +77,11 @@ export const saasRouter = router({
   }),
   /** Confere no MP, agora, as faturas Pix/boleto em aberto (a rotina faz isso a cada 10 min) */
   conciliarMp: protectedProcedure.mutation(async ({ ctx }) => { admin(ctx); return (await import("../saas/cobranca")).conciliarFaturasAbertas(); }),
+  /** Confere um pagamento pelo número da operação do MP (comprovante) e aplica na assinatura */
+  conferirPagamentoMp: protectedProcedure.input(z.object({ paymentId: z.string().trim().min(5).max(30) })).mutation(async ({ ctx, input }) => {
+    admin(ctx);
+    return comErro(async () => (await import("../saas/cobranca")).conferirPagamentoPorId(input.paymentId));
+  }),
   definirModoMp: protectedProcedure.input(z.object({ modo: z.enum(["teste", "producao"]) })).mutation(async ({ ctx, input }) => {
     admin(ctx);
     const C = await import("../saas/cobranca");
