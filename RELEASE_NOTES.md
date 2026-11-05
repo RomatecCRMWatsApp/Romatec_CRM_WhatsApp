@@ -3,6 +3,15 @@
 Cada versão nova vai no TOPO. Depois rode `npm run release` (valida e atualiza o package.json);
 ao subir, o servidor grava a versão no banco e todos recebem o aviso "Novidades da versão".
 
+## 1.104.2 — 2026-11-05
+tipo: patch
+obrigatoria: nao
+titulo: Dois reels novos do Bom Jardims em Materiais
+
+### Novo
+- Materiais › Bom Jardims: "Obras avançando e lançamento 14/11" e "Área plana, alta e ventilada (topografia e natureza)", com imagens reais de 05/11
+- No download do corretor sai o WhatsApp do escritório e o cartão final da Romatec; entra o carimbo de cada um
+
 ## 1.104.1 — 2026-11-05
 tipo: patch
 obrigatoria: nao

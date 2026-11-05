@@ -10,6 +10,8 @@ import { materiais } from '../../../drizzle/schema';
 const base = () => (process.env.APP_PUBLIC_URL || 'https://romateccrm.com').replace(/\/+$/, '');
 
 export const VIDEOS_DIVULGACAO_BJ: { titulo: string; caminho: string; bytes: number; liberado: boolean; observacao: string; ordem: number }[] = [
+  { titulo: 'Reel · Obras avançando e lançamento 14/11 (05/11)', caminho: '/bom-jardims/ig/reel-obras-lancamento-05nov.mp4', bytes: 14435859, liberado: true, observacao: 'Imagens reais 05/11 · ruas, deck e mais de 18 unidades vendidas', ordem: 7 },
+  { titulo: 'Reel · Área plana, alta e ventilada (topografia e natureza)', caminho: '/bom-jardims/ig/reel-topografia-natureza-05nov.mp4', bytes: 11956011, liberado: true, observacao: 'Imagens reais 05/11 · drone, córrego e deck', ordem: 8 },
   { titulo: 'Reel · Faltam 7 dias (lançamento 14/11)', caminho: '/bom-jardims/ig/reel-r1-faltam-7-dias.mp4', bytes: 11326764, liberado: true, observacao: 'Campanha de lançamento · Instagram 07/11', ordem: 10 },
   { titulo: 'Reel · Obras parte 2 · o tamanho real da chácara', caminho: '/bom-jardims/ig/reel-obras-parte2.mp4', bytes: 14344696, liberado: true, observacao: '55 × 55 m = 3.025 m² · ruas de 12 m', ordem: 11 },
   { titulo: 'Reel · Deck parte 2 · onde vai ficar o deck', caminho: '/bom-jardims/ig/reel-deck-parte2.mp4', bytes: 12935873, liberado: true, observacao: 'Córrego real + simulação ilustrativa do deck', ordem: 12 },
@@ -38,6 +40,8 @@ export const VIDEOS_DIVULGACAO_BJ: { titulo: string; caminho: string; bytes: num
  * Ao baixar, o corretor recebe sem isso e com o contato dele (server/materialFormatado.ts).
  */
 export const CONTATO_ESCRITORIO_BJ: Record<string, { recorteRodapePct: number; corteFinalMs: number }> = {
+  '/bom-jardims/ig/reel-obras-lancamento-05nov.mp4': { recorteRodapePct: 18, corteFinalMs: 4400 },
+  '/bom-jardims/ig/reel-topografia-natureza-05nov.mp4': { recorteRodapePct: 18, corteFinalMs: 4000 },
   '/bom-jardims/ig/reel-r1-faltam-7-dias.mp4': { recorteRodapePct: 10, corteFinalMs: 6600 },
   '/bom-jardims/ig/reel-obras-parte2.mp4': { recorteRodapePct: 10, corteFinalMs: 6600 },
   '/bom-jardims/ig/reel-deck-parte2.mp4': { recorteRodapePct: 0, corteFinalMs: 0 },
