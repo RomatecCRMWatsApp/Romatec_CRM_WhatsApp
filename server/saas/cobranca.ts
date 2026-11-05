@@ -304,6 +304,11 @@ export async function processarEvento(eventoId: string, agora = Date.now()) {
     await d.update(saasEventosPagamento).set({ processado: 1, erro: null, processadoEm: new Date(agora), tentativas: (Number(ev.tentativas) || 0) + 1 } as any).where(eq(saasEventosPagamento.id, ev.id));
     return { ok: true as const, acao };
   } catch (e: any) {
+    // 404 nos dois modos: o recurso não existe no MP (ex.: "Simular notificação" do painel, id 123456) — encerra sem retry
+    if (e?.detalhe?.status === 404 || /\(404\)/.test(String(e?.message ?? ''))) {
+      await d.update(saasEventosPagamento).set({ processado: 1, erro: `Não existe no Mercado Pago (simulação ou id inválido): ${String(e?.message ?? '').slice(0, 300)}`, processadoEm: new Date(agora), tentativas: (Number(ev.tentativas) || 0) + 1 } as any).where(eq(saasEventosPagamento.id, ev.id));
+      return { ok: true as const, acao: 'nao_encontrado' };
+    }
     await d.update(saasEventosPagamento).set({ erro: String(e?.message ?? e).slice(0, 1000), tentativas: (Number(ev.tentativas) || 0) + 1 } as any).where(eq(saasEventosPagamento.id, ev.id));
     console.warn(`[MP] evento ${eventoId}:`, e?.message);
     return { ok: false as const, erro: e?.message };

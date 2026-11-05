@@ -3,6 +3,14 @@
 Cada versão nova vai no TOPO. Depois rode `npm run release` (valida e atualiza o package.json);
 ao subir, o servidor grava a versão no banco e todos recebem o aviso "Novidades da versão".
 
+## 1.104.4 — 2026-11-05
+tipo: patch
+obrigatoria: nao
+titulo: Simulação do webhook do Mercado Pago não fica pendente
+
+### Correções
+- Aviso de um recurso que não existe no Mercado Pago (como o "Simular notificação" do painel, id 123456) é encerrado na hora, sem 10 novas tentativas nem "pendente" na lista
+
 ## 1.104.3 — 2026-11-05
 tipo: patch
 obrigatoria: nao
