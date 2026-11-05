@@ -79,6 +79,8 @@ const MENU: Grupo[] = [
       { rotulo: "Talonários", rota: "/talonarios", icone: BookCopy },
       { rotulo: "Financeiro", rota: "/financeiro", icone: Wallet, modulo: "financeiro", cor: COR.financeiro },
       { rotulo: "Imóveis", rota: "/properties", icone: Building2, modulo: "imoveis" },
+      // Administrador, secretária e corretor (shared/equipe.ts → podeAbrir); empreendedor não vê
+      { rotulo: "Cadastro pelo WhatsApp", rota: "/imoveis/whatsapp", icone: Smartphone, modulo: "imoveis" },
       { rotulo: "Materiais", rota: "/materiais", icone: Images, modulo: "materiais" },
       { rotulo: "Clientes", rota: "/contacts", icone: Users, modulo: "contatos" },
       { rotulo: "Disparos WhatsApp", rota: "/campaigns", icone: Send, modulo: "campanhas" },

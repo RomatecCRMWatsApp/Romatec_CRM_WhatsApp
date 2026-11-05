@@ -3,6 +3,22 @@
 Cada versão nova vai no TOPO. Depois rode `npm run release` (valida e atualiza o package.json);
 ao subir, o servidor grava a versão no banco e todos recebem o aviso "Novidades da versão".
 
+## 1.103.0 — 2026-11-05
+tipo: minor
+obrigatoria: nao
+titulo: Cadastro de imóveis pelo WhatsApp com IA
+
+### Novo
+- Imóveis › Cadastro pelo WhatsApp (administrador, secretária e corretor): vincule o seu WhatsApp uma vez e cadastre imóveis conversando com o WhatsApp da Romatec, o mesmo dos leads
+- Mande "cadastrar imóvel": o agente manda o checklist, você envia áudio ou texto e as fotos reais, e a IA organiza tipo, finalidade, cidade, bairro, preço, áreas e características, perguntando só o que faltar ou estiver contraditório
+- Responda CONCLUIR: chega a revisão com os dados e o link da galeria; confirme e o imóvel é cadastrado em Imóveis com código IMV, galeria (capa primeiro), especificações e campanha pausada, como interno (não é publicado)
+- Na tela do CRM: corrigir campos, escolher a capa, tirar fotos, trocar o responsável (escritório) e confirmar
+
+### Avisos
+- Empreendedor não usa esta função
+- Sair do CRM, trocar a senha ou "sair de todos os aparelhos" desligam a autorização do WhatsApp; renove com 1 toque na tela (o rascunho fica salvo)
+- Precisa de ANTHROPIC_API_KEY ou OPENAI_API_KEY no Railway para a organização por IA, e OPENAI_API_KEY para transcrever áudio
+
 ## 1.102.1 — 2026-11-04
 tipo: patch
 obrigatoria: nao

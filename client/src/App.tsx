@@ -87,6 +87,7 @@ const Integracoes = lazy(() => import("./pages/Integracoes"));
 const CaixaEntrada = lazy(() => import("./pages/CaixaEntrada"));
 const DistribuicaoLeads = lazy(() => import("./pages/DistribuicaoLeads"));
 const LeadsRecebidos = lazy(() => import("./pages/LeadsRecebidos"));
+const CadastroImovelWhatsApp = lazy(() => import("./pages/CadastroImovelWhatsApp"));
 const ImobiliariasParceiras = lazy(() => import("./pages/ImobiliariasParceiras"));
 const ProspeccaoB2B = lazy(() => import("./pages/ProspeccaoB2B"));
 const BaseConhecimento = lazy(() => import("./pages/BaseConhecimento"));
@@ -297,6 +298,12 @@ function Router() {
       </Route>
       <Route path={"/materiais"}>
         {() => <SetupGuard component={Materiais} />}
+      </Route>
+      <Route path={"/imoveis/whatsapp/:id"}>
+        {() => <SetupGuard component={CadastroImovelWhatsApp} />}
+      </Route>
+      <Route path={"/imoveis/whatsapp"}>
+        {() => <SetupGuard component={CadastroImovelWhatsApp} />}
       </Route>
       <Route path={"/leads/recebidos"}>
         {() => <SetupGuard component={LeadsRecebidos} />}

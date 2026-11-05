@@ -190,6 +190,9 @@ export interface WebhookPayload {
   senderName?: string;
   audioUrl?: string;
   isAudio?: boolean;
+  /** Foto recebida (Z-API body.image): só o Agente de Cadastro de Imóveis usa; o fluxo de leads ignora */
+  imageUrl?: string;
+  legenda?: string;
 }
 
 export function parseWebhookPayload(body: any): WebhookPayload | null {
@@ -281,7 +284,9 @@ export function parseWebhookPayload(body: any): WebhookPayload | null {
     // ═══════════════════════════════════════════════════════════════
     // FASE 5: EXTRAIR ÁUDIO
     // ═══════════════════════════════════════════════════════════════
-    const audioUrl =
+    const imageUrl = String(body?.image?.imageUrl || body?.image?.url || '').trim();
+    const legenda = String(body?.image?.caption || '').trim();
+    const audioUrl = imageUrl ? '' :
       body?.audio?.audioUrl ||
       body?.audioUrl ||
       body?.mediaUrl ||
@@ -289,16 +294,16 @@ export function parseWebhookPayload(body: any): WebhookPayload | null {
       body?.media?.url ||
       '';
 
-    const isAudio =
+    const isAudio = !imageUrl && (
       body?.isAudio === true ||
       ['audio', 'ptt', 'voice'].includes(body?.type?.toLowerCase() || '') ||
       body?.data?.isAudio === true ||
-      !!audioUrl;
+      !!audioUrl);
 
     // ═══════════════════════════════════════════════════════════════
     // FASE 6: VALIDAR CONTEÚDO
     // ═══════════════════════════════════════════════════════════════
-    if (!message && !isAudio) {
+    if (!message && !isAudio && !imageUrl) {
       console.log('[Webhook] ⚠️  Mensagem vazia (não é áudio)');
       console.log('[Webhook] Payload:', fullPayload.substring(0, 800));
       return null;
@@ -324,6 +329,8 @@ export function parseWebhookPayload(body: any): WebhookPayload | null {
       senderName,
       audioUrl: audioUrl || undefined,
       isAudio,
+      imageUrl: imageUrl || undefined,
+      legenda: legenda || undefined,
     };
   } catch (err) {
     console.error('[Webhook] Erro ao parsear payload:', err);

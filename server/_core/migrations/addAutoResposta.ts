@@ -127,6 +127,26 @@ const TABELAS: [string, string][] = [
     id INT AUTO_INCREMENT PRIMARY KEY, leadId INT NOT NULL, deId INT NULL, paraId INT NOT NULL, porId INT NULL, origem VARCHAR(12) NOT NULL DEFAULT 'manual',
     observacao VARCHAR(300) NULL, criadoEm TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
     KEY ix_enc_criado (criadoEm), KEY ix_enc_para (paraId, criadoEm), KEY ix_enc_lead (leadId))`],
+  // Agente de cadastro de imóveis pelo WhatsApp (server/imoveis/agenteCadastro.ts)
+  ['whatsappVinculos', `CREATE TABLE IF NOT EXISTS whatsappVinculos (
+    id INT AUTO_INCREMENT PRIMARY KEY, usuarioId INT NOT NULL, telefoneChave VARCHAR(20) NULL, verificadoEm TIMESTAMP NULL, autorizadoAte TIMESTAMP NULL,
+    sessaoVersao INT NOT NULL DEFAULT 0, revogadoEm TIMESTAMP NULL, codigoHash CHAR(64) NULL, codigoExpira TIMESTAMP NULL, tentativas INT NOT NULL DEFAULT 0,
+    modo VARCHAR(16) NULL, pergunta VARCHAR(20) NULL, rascunhoAtivoId INT NULL, modoEm TIMESTAMP NULL, atualizadoEm TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    UNIQUE KEY ux_vinc_usuario (usuarioId), UNIQUE KEY ux_vinc_tel (telefoneChave))`],
+  ['imovelRascunhos', `CREATE TABLE IF NOT EXISTS imovelRascunhos (
+    id INT AUTO_INCREMENT PRIMARY KEY, autorId INT NOT NULL, responsavelId INT NOT NULL, vinculoId INT NULL, estado VARCHAR(20) NOT NULL DEFAULT 'collecting',
+    versao INT NOT NULL DEFAULT 1, dadosJson TEXT NULL, manualJson TEXT NULL, fontesJson TEXT NULL, conflitosJson TEXT NULL, duvidasJson TEXT NULL, mensagensJson LONGTEXT NULL,
+    titulo VARCHAR(160) NULL, descricao TEXT NULL, revisaoHash CHAR(64) NULL, versaoAprovada INT NULL, aprovadoPor INT NULL, aprovadoEm TIMESTAMP NULL,
+    propertyId INT NULL, erro VARCHAR(300) NULL, criadoEm TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP, atualizadoEm TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    KEY ix_rasc_autor (autorId), KEY ix_rasc_resp (responsavelId))`],
+  ['imovelRascunhoMidias', `CREATE TABLE IF NOT EXISTS imovelRascunhoMidias (
+    id INT AUTO_INCREMENT PRIMARY KEY, rascunhoId INT NULL, vinculoId INT NOT NULL, messageId VARCHAR(120) NOT NULL, tipo VARCHAR(10) NOT NULL DEFAULT 'foto',
+    status VARCHAR(12) NOT NULL DEFAULT 'pendente', url VARCHAR(500) NULL, hash CHAR(64) NULL, bytes INT NULL, legenda VARCHAR(200) NULL, ordem INT NOT NULL DEFAULT 0,
+    capa BOOLEAN NOT NULL DEFAULT FALSE, removida BOOLEAN NOT NULL DEFAULT FALSE, erro VARCHAR(200) NULL, criadoEm TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    UNIQUE KEY ux_midia_msg (vinculoId, messageId), KEY ix_midia_rasc (rascunhoId))`],
+  ['imovelAgenteEventos', `CREATE TABLE IF NOT EXISTS imovelAgenteEventos (
+    id INT AUTO_INCREMENT PRIMARY KEY, usuarioId INT NULL, rascunhoId INT NULL, tipo VARCHAR(30) NOT NULL, detalhe VARCHAR(500) NULL,
+    criadoEm TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP, KEY ix_evt_usuario (usuarioId, criadoEm), KEY ix_evt_rasc (rascunhoId))`],
   // Carimbo das mídias de cada usuário (Materiais › Meu carimbo; shared/carimbo.ts)
   ['carimbosUsuario', `CREATE TABLE IF NOT EXISTS carimbosUsuario (
     usuarioId INT PRIMARY KEY, nome VARCHAR(80) NOT NULL, telefone VARCHAR(20) NULL, instagram VARCHAR(40) NULL, email VARCHAR(120) NULL,

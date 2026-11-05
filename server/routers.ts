@@ -11,6 +11,7 @@ import { leadCampanhasRouter } from "./routers/leadCampanhas.router";
 import { crmRouter } from "./routers/crm.router";
 import { materiaisRouter } from "./routers/materiais.router";
 import { distribuicaoRouter } from "./routers/distribuicao.router";
+import { agenteImovelRouter } from "./routers/agenteImovel.router";
 import { equipeRouter } from "./routers/equipe.router";
 import { empreendedorRouter } from "./routers/empreendedor.router";
 import { empreendimentosAdminRouter } from "./routers/empreendimentosAdmin.router";
@@ -94,6 +95,7 @@ export const appRouter = router({
   crm: crmRouter,
   materiais: materiaisRouter,
   distribuicao: distribuicaoRouter,
+  agenteImovel: agenteImovelRouter,
   equipe: equipeRouter,
   empreendedor: empreendedorRouter,
   empreendimentosAdmin: empreendimentosAdminRouter,
@@ -139,7 +141,9 @@ export const appRouter = router({
       const verComo = opts.ctx.verComo ? { adminNome: opts.ctx.verComo.adminNome } : null;
       return { ...safe, licenca, verComo } as Omit<typeof opts.ctx.user, 'passwordScrypt' | 'passwordHash'> & { licenca: Awaited<ReturnType<typeof resumoLicenca>> | null; verComo: { adminNome: string } | null };
     }),
-    logout: publicProcedure.mutation(({ ctx }) => {
+    logout: publicProcedure.mutation(async ({ ctx }) => {
+      // Saiu do CRM: a autorização do WhatsApp para o cadastro de imóveis também para (o rascunho fica)
+      if (ctx.user?.id) await import("./imoveis/agenteCadastro").then(m => m.revogarCanal(ctx.user!.id, "logout")).catch(() => {});
       const cookieOptions = getSessionCookieOptions(ctx.req);
       ctx.res.clearCookie(COOKIE_NAME, { ...cookieOptions, maxAge: -1 });
       return { success: true } as const;
@@ -379,50 +383,9 @@ export const appRouter = router({
         exibirPreco: z.boolean().optional(),
       }))
       .mutation(async ({ input, ctx }) => {
-        const slug = input.denomination.toLowerCase().replace(/[^a-z0-9]+/g, '-') + '-' + Date.now().toString(36);
-        const db = await getDb();
-        if (!db) throw new Error("Database not available");
-        const result = await db.insert(properties).values({
-          ...input,
-          price: input.price as any,
-          offerPrice: input.offerPrice as any || null,
-          areaConstruida: input.areaConstruida as any || null,
-          areaTotal: input.areaTotal as any || null,
-          publicSlug: slug
-        });
-        const propertyId = Number((result as any)[0].insertId);
-        // Código de atribuição IMV-xxxx (vai na mensagem pré-preenchida do WhatsApp)
-        try {
-          const { formatCodigoImovel } = await import("./_core/migrations/addLeadsV1");
-          await db.update(properties).set({ codigo: formatCodigoImovel(propertyId) }).where(eq(properties.id, propertyId));
-        } catch (e) {
-          console.warn("[Properties] Código IMV não gravado:", e);
-        }
-        // Corretor que cadastrou fica habilitado no imóvel (segue editando o que ele mesmo inseriu)
-        if (ctx.permissoes.perfil === "corretor") {
-          await db.insert(acessosCorretor).values({ usuarioId: ctx.user.id, tipo: "imovel", refId: propertyId, habilitadoPor: ctx.user.id } as any).catch(() => {});
-        }
-        // Criar campanha automaticamente para o novo imóvel
-        try {
-          const defaultMessages = [
-            `Olá! Temos uma ótima oportunidade em ${input.denomination}. Gostaria de conhecer mais? 🏠`,
-            `Vimos que você pode estar interessado em ${input.denomination}. Vamos conversar? 📞`,
-            `Oportunidade especial em ${input.denomination}. Clique para saber mais! ✨`
-          ];
-          await db.insert(campaigns).values({
-            propertyId,
-            name: input.denomination,
-            messageVariations: JSON.stringify(defaultMessages),
-            totalContacts: 2,
-            sentCount: 0,
-            failedCount: 0,
-            status: "paused",
-            messagesPerHour: 1
-          });
-        } catch (campErr) {
-          console.warn('[Properties] Aviso: não foi possível criar campanha automática:', campErr);
-        }
-        return { id: propertyId, slug };
+        const { criarImovel } = await import("./imoveis/servico");
+        const r = await criarImovel(input as any, { responsavelId: ctx.user.id, responsavelPerfil: ctx.permissoes.perfil, habilitadoPor: ctx.user.id });
+        return { id: r.id, slug: r.slug };
       }),
     update: protectedProcedure
       .input(z.object({

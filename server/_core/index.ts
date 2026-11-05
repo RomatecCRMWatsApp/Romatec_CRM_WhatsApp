@@ -99,6 +99,19 @@ async function startServer() {
       }
 
       const msgText = String(payload.message || '').trim();
+
+      // Agente de Cadastro de Imóveis (mesmo WhatsApp): corretor/secretária/admin vinculados e autorizados no CRM.
+      // Vem antes dos leads e da ZAYRA; o que não é do agente segue o fluxo normal (cliente nunca cai aqui).
+      try {
+        const ceoDigitos = String(process.env.CEO_WHATSAPP_PHONE || '').replace(/\D/g, '');
+        const deDigitos = payload.phone.replace(/\D/g, '');
+        const ceo = !!ceoDigitos && (deDigitos === ceoDigitos || deDigitos.endsWith(ceoDigitos.slice(-10)));
+        const { tratarMensagemAgente } = await import('../imoveis/agenteCadastro');
+        if (await tratarMensagemAgente({ phone: payload.phone, texto: msgText, messageId: payload.messageId, audioUrl: payload.audioUrl, imageUrl: payload.imageUrl, legenda: payload.legenda }, { ceo })) {
+          return res.json({ received: true, processed: true, reason: 'agente_imovel' });
+        }
+      } catch (e: any) { console.warn('[Webhook] Agente de imóveis:', e?.message); }
+
       if (!msgText && !payload.audioUrl) {
         console.log(`[Webhook] Ignorado: mensagem vazia de ${payload.phone}`);
         return res.json({ received: true, processed: false, reason: 'empty' });

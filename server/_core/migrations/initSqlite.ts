@@ -70,6 +70,9 @@ export function initSqliteTables(sqlite: any): void {
     garageSpaces INTEGER,
     propertyType TEXT,
     publicSlug TEXT,
+    finalidade TEXT NOT NULL DEFAULT 'venda',
+    codigo TEXT,
+    exibirPreco INTEGER NOT NULL DEFAULT 1,
     status TEXT NOT NULL DEFAULT 'available',
     createdAt INTEGER NOT NULL DEFAULT (strftime('%s','now')),
     updatedAt INTEGER NOT NULL DEFAULT (strftime('%s','now'))
@@ -643,6 +646,19 @@ export function initSqliteTables(sqlite: any): void {
     email TEXT, site TEXT, instagram TEXT, sobre TEXT, fato TEXT, fonte TEXT NOT NULL DEFAULT 'manual', fonteId TEXT, status TEXT NOT NULL DEFAULT 'novo',
     mensagem TEXT, ultimaResposta TEXT, enriquecidoEm INTEGER, aprovadoPor INTEGER, enviadoEm INTEGER, respondeuEm INTEGER, observacoes TEXT, criadoPor INTEGER,
     criadoEm ${agoraS}, UNIQUE (fonte, fonteId))`);
+  run(`CREATE TABLE IF NOT EXISTS whatsappVinculos (
+    id INTEGER PRIMARY KEY AUTOINCREMENT, usuarioId INTEGER NOT NULL UNIQUE, telefoneChave TEXT UNIQUE, verificadoEm INTEGER, autorizadoAte INTEGER, sessaoVersao INTEGER NOT NULL DEFAULT 0,
+    revogadoEm INTEGER, codigoHash TEXT, codigoExpira INTEGER, tentativas INTEGER NOT NULL DEFAULT 0, modo TEXT, pergunta TEXT, rascunhoAtivoId INTEGER, modoEm INTEGER, atualizadoEm ${agoraS})`);
+  run(`CREATE TABLE IF NOT EXISTS imovelRascunhos (
+    id INTEGER PRIMARY KEY AUTOINCREMENT, autorId INTEGER NOT NULL, responsavelId INTEGER NOT NULL, vinculoId INTEGER, estado TEXT NOT NULL DEFAULT 'collecting', versao INTEGER NOT NULL DEFAULT 1,
+    dadosJson TEXT, manualJson TEXT, fontesJson TEXT, conflitosJson TEXT, duvidasJson TEXT, mensagensJson TEXT, titulo TEXT, descricao TEXT, revisaoHash TEXT, versaoAprovada INTEGER,
+    aprovadoPor INTEGER, aprovadoEm INTEGER, propertyId INTEGER, erro TEXT, criadoEm ${agoraS}, atualizadoEm ${agoraS})`);
+  run(`CREATE TABLE IF NOT EXISTS imovelRascunhoMidias (
+    id INTEGER PRIMARY KEY AUTOINCREMENT, rascunhoId INTEGER, vinculoId INTEGER NOT NULL, messageId TEXT NOT NULL, tipo TEXT NOT NULL DEFAULT 'foto', status TEXT NOT NULL DEFAULT 'pendente',
+    url TEXT, hash TEXT, bytes INTEGER, legenda TEXT, ordem INTEGER NOT NULL DEFAULT 0, capa INTEGER NOT NULL DEFAULT 0, removida INTEGER NOT NULL DEFAULT 0, erro TEXT, criadoEm ${agoraS},
+    UNIQUE (vinculoId, messageId))`);
+  run(`CREATE TABLE IF NOT EXISTS imovelAgenteEventos (
+    id INTEGER PRIMARY KEY AUTOINCREMENT, usuarioId INTEGER, rascunhoId INTEGER, tipo TEXT NOT NULL, detalhe TEXT, criadoEm ${agoraS})`);
   run(`CREATE TABLE IF NOT EXISTS leadEncaminhamentos (
     id INTEGER PRIMARY KEY AUTOINCREMENT, leadId INTEGER NOT NULL, deId INTEGER, paraId INTEGER NOT NULL, porId INTEGER, origem TEXT NOT NULL DEFAULT 'manual',
     observacao TEXT, recebidoEm INTEGER, desfecho TEXT, desfechoMotivo TEXT, desfechoEm INTEGER, desfechoPor INTEGER, criadoEm ${agoraS})`);
@@ -693,6 +709,10 @@ export function initSqliteTables(sqlite: any): void {
   }
   // Recrutamento e senha provisória (server/_core/migrations/addRecrutamento.ts)
   addColumn(`ALTER TABLE users ADD COLUMN trocarSenha INTEGER NOT NULL DEFAULT 0`);
+  // Banco local antigo: colunas de imóveis que o MySQL já tem (finalidade, código IMV, exibir preço)
+  addColumn(`ALTER TABLE properties ADD COLUMN finalidade TEXT NOT NULL DEFAULT 'venda'`);
+  addColumn(`ALTER TABLE properties ADD COLUMN codigo TEXT`);
+  addColumn(`ALTER TABLE properties ADD COLUMN exibirPreco INTEGER NOT NULL DEFAULT 1`);
   addColumn(`ALTER TABLE users ADD COLUMN senhaProvisoriaExpira INTEGER`);
   run(`CREATE TABLE IF NOT EXISTS recrutamentos (
     id INTEGER PRIMARY KEY AUTOINCREMENT, perfil TEXT NOT NULL, nome TEXT NOT NULL, telefone TEXT NOT NULL, email TEXT, empreendimentoSlug TEXT,

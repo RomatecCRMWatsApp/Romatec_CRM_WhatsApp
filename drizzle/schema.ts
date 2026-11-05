@@ -2198,6 +2198,86 @@ export const prospectos = mysqlTable("prospectos", {
 }));
 
 /** Base de conhecimento (server/baseConhecimento.ts): artigos em Markdown para a equipe; o administrador edita */
+// ─── Agente de cadastro de imóveis pelo WhatsApp (server/imoveis/agenteCadastro.ts) ───
+/** WhatsApp do usuário provado por código (VINCULAR 123456) + autorização do canal, presa à versão de sessão */
+export const whatsappVinculos = mysqlTable("whatsappVinculos", {
+  id: int("id").autoincrement().primaryKey(),
+  usuarioId: int("usuarioId").notNull(),
+  telefoneChave: varchar("telefoneChave", { length: 20 }),
+  verificadoEm: timestamp("verificadoEm"),
+  autorizadoAte: timestamp("autorizadoAte"),
+  sessaoVersao: int("sessaoVersao").default(0).notNull(),
+  revogadoEm: timestamp("revogadoEm"),
+  codigoHash: char("codigoHash", { length: 64 }),
+  codigoExpira: timestamp("codigoExpira"),
+  tentativas: int("tentativas").default(0).notNull(),
+  /** null | escolhendo | cadastro */
+  modo: varchar("modo", { length: 16 }),
+  /** pergunta aberta: fotos_avulsas | trocar_rascunho */
+  pergunta: varchar("pergunta", { length: 20 }),
+  rascunhoAtivoId: int("rascunhoAtivoId"),
+  modoEm: timestamp("modoEm"),
+  atualizadoEm: timestamp("atualizadoEm").defaultNow().notNull(),
+}, (t) => ({ uxUsuario: uniqueIndex("ux_vinc_usuario").on(t.usuarioId), uxTel: uniqueIndex("ux_vinc_tel").on(t.telefoneChave) }));
+
+/** Rascunho privado do imóvel (estados: collecting, processing, awaiting_information, awaiting_review, saving, saved, failed, cancelled) */
+export const imovelRascunhos = mysqlTable("imovelRascunhos", {
+  id: int("id").autoincrement().primaryKey(),
+  autorId: int("autorId").notNull(),
+  responsavelId: int("responsavelId").notNull(),
+  vinculoId: int("vinculoId"),
+  estado: varchar("estado", { length: 20 }).default("collecting").notNull(),
+  versao: int("versao").default(1).notNull(),
+  dadosJson: text("dadosJson"),
+  /** Correções feitas na tela do CRM (vencem a extração da IA) */
+  manualJson: text("manualJson"),
+  fontesJson: text("fontesJson"),
+  conflitosJson: text("conflitosJson"),
+  duvidasJson: text("duvidasJson"),
+  /** Textos e transcrições recebidos, em ordem: [{ id, tipo, texto, em }] */
+  mensagensJson: longtext("mensagensJson"),
+  titulo: varchar("titulo", { length: 160 }),
+  descricao: text("descricao"),
+  revisaoHash: char("revisaoHash", { length: 64 }),
+  versaoAprovada: int("versaoAprovada"),
+  aprovadoPor: int("aprovadoPor"),
+  aprovadoEm: timestamp("aprovadoEm"),
+  propertyId: int("propertyId"),
+  erro: varchar("erro", { length: 300 }),
+  criadoEm: timestamp("criadoEm").defaultNow().notNull(),
+  atualizadoEm: timestamp("atualizadoEm").defaultNow().notNull(),
+}, (t) => ({ ixAutor: index("ix_rasc_autor").on(t.autorId), ixResp: index("ix_rasc_resp").on(t.responsavelId) }));
+
+export const imovelRascunhoMidias = mysqlTable("imovelRascunhoMidias", {
+  id: int("id").autoincrement().primaryKey(),
+  /** null = foto recebida antes de escolher o cadastro (aguarda destino) */
+  rascunhoId: int("rascunhoId"),
+  vinculoId: int("vinculoId").notNull(),
+  messageId: varchar("messageId", { length: 120 }).notNull(),
+  tipo: varchar("tipo", { length: 10 }).default("foto").notNull(),
+  /** pendente | ok | erro */
+  status: varchar("status", { length: 12 }).default("pendente").notNull(),
+  url: varchar("url", { length: 500 }),
+  hash: char("hash", { length: 64 }),
+  bytes: int("bytes"),
+  legenda: varchar("legenda", { length: 200 }),
+  ordem: int("ordem").default(0).notNull(),
+  capa: boolean("capa").default(false).notNull(),
+  removida: boolean("removida").default(false).notNull(),
+  erro: varchar("erro", { length: 200 }),
+  criadoEm: timestamp("criadoEm").defaultNow().notNull(),
+}, (t) => ({ uxMsg: uniqueIndex("ux_midia_msg").on(t.vinculoId, t.messageId), ixRasc: index("ix_midia_rasc").on(t.rascunhoId) }));
+
+/** Auditoria do agente: vínculo, autorização, mensagens, revisão, confirmação, imóvel gerado, erros */
+export const imovelAgenteEventos = mysqlTable("imovelAgenteEventos", {
+  id: int("id").autoincrement().primaryKey(),
+  usuarioId: int("usuarioId"),
+  rascunhoId: int("rascunhoId"),
+  tipo: varchar("tipo", { length: 30 }).notNull(),
+  detalhe: varchar("detalhe", { length: 500 }),
+  criadoEm: timestamp("criadoEm").defaultNow().notNull(),
+}, (t) => ({ ixUsuario: index("ix_evt_usuario").on(t.usuarioId, t.criadoEm), ixRasc: index("ix_evt_rasc").on(t.rascunhoId) }));
+
 /** Encaminhamentos de lead: manual (secretária/admin em Leads › Distribuição ou no lead) ou automático (roleta) */
 export const leadEncaminhamentos = mysqlTable("leadEncaminhamentos", {
   id: int("id").autoincrement().primaryKey(),
