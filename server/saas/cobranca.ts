@@ -399,7 +399,7 @@ async function aplicarAprovado(ref: { assinaturaId: number; faturaId: number | n
     {
       const aprovadoEm = pg.date_approved ? new Date(pg.date_approved).getTime() : agora;
       const manuais: any[] = await tx.select().from(saasFaturas).where(and(eq(saasFaturas.assinaturaId, ref.assinaturaId), eq(saasFaturas.metodo, 'MANUAL'), eq(saasFaturas.status, 'PAGA')));
-      const manual = manuais.find(m => !m.mpPaymentId && !/Pix do MP \d+/.test(String(m.observacao ?? '')) && Math.abs(Number(m.valor) - Number(pg.transaction_amount)) <= Math.max(5, Number(pg.transaction_amount) * 0.03)
+      const manual = manuais.find(m => manualLivrePara(m, mpId) && Math.abs(Number(m.valor) - Number(pg.transaction_amount)) <= Math.max(5, Number(pg.transaction_amount) * 0.03)
         && lancadoDepois(m, aprovadoEm));
       if (manual) {
         await tx.update(saasFaturas).set({ observacao: `${String(manual.observacao ?? '').slice(0, 200)} · Pix do MP ${mpId}`.replace(/^ · /, '') } as any).where(eq(saasFaturas.id, manual.id));
@@ -751,30 +751,42 @@ export async function corrigirPagamentoDuplicado(paymentId: string, autorId: num
   if (id.length < 8) throw new CobrancaErro('Informe o número da operação do Mercado Pago (só algarismos)');
   const d = await banco();
   const [f]: any[] = await d.select().from(saasFaturas).where(eq(saasFaturas.mpPaymentId, id)).limit(1);
-  if (!f || f.status !== 'PAGA') throw new CobrancaErro('Não há fatura PAGA com este pagamento do Mercado Pago (nada em dobro para corrigir)');
-  const manuais: any[] = await d.select().from(saasFaturas).where(and(eq(saasFaturas.assinaturaId, f.assinaturaId), eq(saasFaturas.metodo, 'MANUAL'), eq(saasFaturas.status, 'PAGA')));
-  const manual = manuais.find(m => !/Pix do MP \d+/.test(String(m.observacao ?? '')) && Math.abs(Number(m.valor) - Number(f.valor)) <= Math.max(5, Number(f.valor) * 0.03));
-  if (!manual) throw new CobrancaErro('Não achei um pagamento registrado à mão, de mesmo valor, nesta assinatura: não é duplicado');
+  if (!f || f.status !== 'PAGA' || /vencimento corrigido|duplicado corrigido/.test(String(f.observacao ?? ''))) throw new CobrancaErro('Não há fatura PAGA com este pagamento do Mercado Pago (nada em dobro para corrigir)');
+  const manuais: any[] = (await d.select().from(saasFaturas).where(and(eq(saasFaturas.assinaturaId, f.assinaturaId), eq(saasFaturas.metodo, 'MANUAL'), eq(saasFaturas.status, 'PAGA'))))
+    .filter((m: any) => Math.abs(Number(m.valor) - Number(f.valor)) <= Math.max(5, Number(f.valor) * 0.03) && manualLivrePara(m, id))
+    .sort((x: any, y: any) => Number(y.id) - Number(x.id));
+  // Fica a fatura do Pix (o registro real do dinheiro, com a competência certa); o lançamento à mão do MESMO
+  // dinheiro é cancelado com a NFS-e pendente dele. Sem lançamento à mão (vencimento acertado direto na assinatura),
+  // só o vencimento volta um ciclo.
+  const manual = manuais[0] ?? null;
   const [a]: any[] = await d.select().from(saasAssinaturas).where(eq(saasAssinaturas.id, f.assinaturaId)).limit(1);
   const fimAtual = ms(a?.periodoFim);
   if (fimAtual == null) throw new CobrancaErro('Assinatura sem vencimento');
   const novoFim = somarMeses(fimAtual, a.ciclo === 'ANUAL' ? -12 : -1);
   await transacao(d, async (tx: any) => {
-    await tx.update(saasFaturas).set({ status: 'CANCELADA', observacao: `Pago no MP (${id}) e já registrado à mão · duplicado corrigido` } as any).where(eq(saasFaturas.id, f.id));
-    await tx.update(saasFaturas).set({ observacao: `${String(manual.observacao ?? '').slice(0, 200)} · Pix do MP ${id}`.replace(/^ · /, '') } as any).where(eq(saasFaturas.id, manual.id));
+    if (manual) await tx.update(saasFaturas).set({ status: 'CANCELADA', observacao: `${String(manual.observacao ?? '').slice(0, 150)} · duplicado do Pix do MP ${id} (corrigido)`.replace(/^ · /, '') } as any).where(eq(saasFaturas.id, manual.id));
+    await tx.update(saasFaturas).set({ observacao: `${String(f.observacao ?? '').slice(0, 200)} · vencimento corrigido${manual ? ' · duplicado corrigido' : ''}`.replace(/^ · /, '') } as any).where(eq(saasFaturas.id, f.id));
     await tx.update(saasAssinaturas).set({ periodoFim: novoFim, version: (Number(a.version) || 0) + 1, updatedAt: new Date(agora) } as any).where(eq(saasAssinaturas.id, a.id));
   });
   let nfse: 'cancelada' | 'emitida' | 'nenhuma' = 'nenhuma';
-  const { saasNfse } = await import('../../drizzle/schema');
-  const notas: any[] = await d.select().from(saasNfse).where(eq(saasNfse.faturaId, f.id));
-  for (const n of notas) {
-    if (n.status === 'PENDENTE') { await d.update(saasNfse).set({ status: 'CANCELADA', observacao: 'Pagamento em dobro corrigido (já registrado à mão)', updatedAt: new Date(agora) } as any).where(eq(saasNfse.id, n.id)); nfse = 'cancelada'; }
-    else if (n.status !== 'CANCELADA') nfse = 'emitida';
+  if (manual) {
+    const { saasNfse } = await import('../../drizzle/schema');
+    const notas: any[] = await d.select().from(saasNfse).where(eq(saasNfse.faturaId, manual.id));
+    for (const n of notas) {
+      if (n.status === 'PENDENTE') { await d.update(saasNfse).set({ status: 'CANCELADA', observacao: 'Pagamento em dobro corrigido (o mesmo Pix já tem nota)', updatedAt: new Date(agora) } as any).where(eq(saasNfse.id, n.id)); nfse = 'cancelada'; }
+      else if (n.status !== 'CANCELADA') nfse = 'emitida';
+    }
   }
   S.limparCaches();
-  await S.auditar(a.usuarioId, 'PAGAMENTO_DUPLICADO_CORRIGIDO', { assinaturaId: a.id, mpPaymentId: id, faturaMp: f.id, faturaManual: manual.id, ate: novoFim.toISOString(), por: autorId, nfse });
+  await S.auditar(a.usuarioId, 'PAGAMENTO_DUPLICADO_CORRIGIDO', { assinaturaId: a.id, mpPaymentId: id, faturaMp: f.id, faturaManual: manual?.id ?? null, ate: novoFim.toISOString(), por: autorId, nfse });
   const aviso = await S.avisarCorrecaoVencimento({ usuarioId: a.usuarioId, valor: Number(f.valor), ate: novoFim });
-  return { ok: true as const, ate: novoFim.toISOString(), nfse, avisado: aviso.cliente };
+  return { ok: true as const, ate: novoFim.toISOString(), nfse, avisado: aviso.cliente, manualCancelado: !!manual };
+}
+
+/** Lançamento à mão ainda sem dono, ou já marcado com ESTE pagamento do MP */
+function manualLivrePara(m: any, mpId: string): boolean {
+  const ids = Array.from(String(m.observacao ?? '').matchAll(/Pix do MP (\d+)/g)).map(x => x[1]);
+  return !m.mpPaymentId && (!ids.length || ids.includes(mpId));
 }
 
 /** Admin: eventos recentes do webhook (diagnóstico) */

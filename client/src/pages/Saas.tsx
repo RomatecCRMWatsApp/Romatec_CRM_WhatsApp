@@ -92,7 +92,7 @@ function MercadoPago() {
   });
   const corrigir = trpc.saas.corrigirDuplicadoMp.useMutation({
     onSuccess: r => {
-      toast.success(`Corrigido: vencimento volta para ${new Date(r.ate).toLocaleDateString("pt-BR", { timeZone: "America/Fortaleza" })}${r.avisado ? " · ressalva enviada ao assinante" : " · não consegui enviar a ressalva"}${r.nfse === "emitida" ? " · ATENÇÃO: a NFS-e desta fatura já foi emitida, cancele na Spedy" : r.nfse === "cancelada" ? " · NFS-e pendente cancelada" : ""}`);
+      toast.success(`Corrigido: vencimento volta para ${new Date(r.ate).toLocaleDateString("pt-BR", { timeZone: "America/Fortaleza" })}${r.avisado ? " · ressalva enviada ao assinante" : " · não consegui enviar a ressalva"}${r.nfse === "emitida" ? " · ATENÇÃO: a NFS-e do lançamento em dobro já foi emitida, cancele na Spedy" : r.nfse === "cancelada" ? " · a NFS-e em dobro foi cancelada (fica uma só)" : ""}`);
       setOpMp(""); utils.saas.invalidate();
     },
     onError: e => toast.error(e.message),

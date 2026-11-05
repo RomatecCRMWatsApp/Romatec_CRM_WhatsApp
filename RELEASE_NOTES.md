@@ -3,6 +3,16 @@
 Cada versão nova vai no TOPO. Depois rode `npm run release` (valida e atualiza o package.json);
 ao subir, o servidor grava a versão no banco e todos recebem o aviso "Novidades da versão".
 
+## 1.105.5 — 2026-11-05
+tipo: patch
+obrigatoria: nao
+titulo: Correção do pagamento em dobro acha o lançamento manual e deixa uma nota só
+
+### Correções
+- "Corrigir pagamento em dobro" não achava o lançamento à mão quando a observação já citava o Pix do MP. Agora acha, mantém a fatura do Pix (competência certa), cancela o lançamento em dobro com a NFS-e pendente dele, volta o vencimento um ciclo e manda a ressalva
+- A ligação automática Pix × lançamento à mão usa a mesma regra
+- O caso da Lidiany é corrigido sozinho 1 minuto depois de subir: vencimento 05/12/2026, uma NFS-e (competência 11/2026) e a mensagem de correção
+
 ## 1.105.4 — 2026-11-05
 tipo: patch
 obrigatoria: nao
