@@ -102,7 +102,8 @@ describe('Agente de Cadastro de Imóveis pelo WhatsApp', () => {
     await msg(CORRETOR, '', { imageUrl: 'https://z-api.io/repetida-a.jpg', messageId: 'img-2' });
     await msg(CORRETOR, '', { imageUrl: 'https://z-api.io/repetida-b.jpg', messageId: 'img-3' });
     await msg(CORRETOR, 'concluir');
-    expect(ultima()).toMatch(/preciso de/);
+    expect(ultima()).toMatch(/falta:\n• Preço/);
+    expect(ultima()).not.toMatch(/Cidade:/);
     await msg(CORRETOR, 'o preço é 320 mil');
     await msg(CORRETOR, 'concluir');
     expect(ultima()).toMatch(/Revisão do cadastro nº \d+\* \(versão \d+\)/);

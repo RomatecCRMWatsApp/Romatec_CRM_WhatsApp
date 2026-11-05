@@ -3,6 +3,15 @@
 Cada versão nova vai no TOPO. Depois rode `npm run release` (valida e atualiza o package.json);
 ao subir, o servidor grava a versão no banco e todos recebem o aviso "Novidades da versão".
 
+## 1.103.6 — 2026-11-05
+tipo: patch
+obrigatoria: nao
+titulo: Cadastro pelo WhatsApp entende o tipo do imóvel do jeito que você fala
+
+### Correções
+- O tipo agora é reconhecido por variações: "casa térrea", "sobrado", "residência", "apto", "cobertura", "sítio", "loja/ponto comercial", "barracão"… (antes só a palavra exata, e ficava "Falta: Tipo")
+- CONCLUIR com pendência mostra primeiro e só o que falta (o resumo completo vem na revisão)
+
 ## 1.103.5 — 2026-11-05
 tipo: patch
 obrigatoria: nao

@@ -20,3 +20,17 @@ describe('avisoFalhaAudio', () => {
     expect(avisoFalhaAudio(null)).toMatch(/Não consegui entender/);
   });
 });
+
+import { tipoDe } from '../shared/cadastroImovelAgente';
+describe('tipoDe', () => {
+  it('aceita variações faladas', () => {
+    expect(tipoDe('Casa residencial térrea')).toBe('casa');
+    expect(tipoDe('sobrado')).toBe('casa');
+    expect(tipoDe('casa com área gourmet')).toBe('casa');
+    expect(tipoDe('Apto duplex')).toBe('apartamento');
+    expect(tipoDe('chácara de lazer')).toBe('chacara');
+    expect(tipoDe('sala_comercial')).toBe('sala_comercial');
+    expect(tipoDe('lote em condomínio')).toBe('lote');
+    expect(tipoDe('imóvel')).toBeNull();
+  });
+});

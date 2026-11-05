@@ -58,13 +58,30 @@ export const DADOS_VAZIOS: DadosImovel = {
   areaConstruida: null, quartos: null, suites: null, banheiros: null, vagas: null, caracteristicas: null, situacao: null, observacoes: null, proprietario: null,
 };
 
+/** "Casa térrea", "sobrado", "apto duplex", "chácara de lazer"… → tipo do cadastro (palavra-chave; ordem importa) */
+export function tipoDe(texto: string): TipoImovel | null {
+  const t = texto.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[_-]+/g, ' ').trim();
+  if ((TIPOS_IMOVEL as readonly string[]).includes(t.replace(/\s+/g, '_'))) return t.replace(/\s+/g, '_') as TipoImovel;
+  const regras: [RegExp, TipoImovel][] = [
+    [/\b(apartamento|apto|ap|flat|cobertura|kitnet|kitinete|studio|loft)\b/, 'apartamento'],
+    [/\b(sala comercial|sala|conjunto comercial|consultorio|escritorio|loja|ponto comercial)\b/, 'sala_comercial'],
+    [/\b(galpao|barracao|armazem|deposito)\b/, 'galpao'],
+    [/\b(chacara|sitio|fazenda|rancho|granja)\b/, 'chacara'],
+    [/\b(casa|sobrado|residencia|geminada|edicula|bangalo)\b/, 'casa'],
+    [/\b(lote|loteamento)\b/, 'lote'],
+    [/\bterreno\b/, 'terreno'],
+  ];
+  for (const [re, tipo] of regras) if (re.test(t)) return tipo;
+  return null;
+}
+
 /** Valor vindo da IA (sempre texto) → tipo do campo; inválido/zero desconhecido → null (nunca vira 0 por falta de dado) */
 export function normalizarValor(campo: keyof DadosImovel, bruto: unknown): DadosImovel[keyof DadosImovel] {
   const def = CAMPOS.find(c => c.campo === campo);
   if (!def || bruto == null) return null;
   const s = String(bruto).trim();
   if (!s || /^(null|nenhum|n\/a|desconhecido|-)$/i.test(s)) return null;
-  if (campo === 'tipo') { const t = s.toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/\s+/g, '_'); return (TIPOS_IMOVEL as readonly string[]).includes(t) ? t as TipoImovel : null; }
+  if (campo === 'tipo') return tipoDe(s);
   if (campo === 'finalidade') { const t = s.toLowerCase(); return t.startsWith('vend') ? 'venda' : /alug|loca/.test(t) ? 'aluguel' : null; }
   if (campo === 'uf') { const t = s.toUpperCase(); return /^[A-Z]{2}$/.test(t) ? t : null; }
   if (def.tipo === 'bool') return /^(true|sim|s|1)$/i.test(s) ? true : /^(false|nao|não|n|0)$/i.test(s) ? false : null;

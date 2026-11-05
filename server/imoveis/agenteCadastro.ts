@@ -492,6 +492,19 @@ async function mensagemSituacao(d: any, id: number, abertura = 'Anotei.'): Promi
   return partes.join('\n');
 }
 
+/** CONCLUIR com pendência: primeiro e só o que falta (o resumo completo vem na revisão) */
+async function mensagemPendencias(d: any, id: number): Promise<string> {
+  const r = await rascunho(d, id);
+  const qtd = (await fotos(d, id)).length;
+  const conflitos = json<{ campo: string; valores: string[] }[]>(r.conflitosJson, []);
+  const falta = pendencias(dadosDe(r), qtd).filter(p => !conflitos.some(c => CAMPOS.find(x => x.campo === c.campo)?.rotulo === p));
+  const partes = ['📝 Para fazer a revisão, falta:'];
+  for (const f of falta) partes.push(f === 'Tipo' ? '• Tipo do imóvel (casa, apartamento, lote, terreno, chácara, sala comercial, galpão…)' : `• ${f}`);
+  for (const c of conflitos) partes.push(`• ${CAMPOS.find(x => x.campo === c.campo)?.rotulo}: você falou ${c.valores.map(x => `"${x}"`).join(' e ')}. Qual é o correto?`);
+  partes.push('\nResponda aqui (texto ou áudio) e mande *CONCLUIR* de novo.');
+  return partes.join('\n');
+}
+
 // ─── Fotos ───────────────────────────────────────────────────────────────────
 
 export type Baixar = (url: string) => Promise<{ bytes: Buffer; tipo: string }>;
@@ -561,7 +574,7 @@ export async function concluirEnvio(id: number, o: { agora?: number; esperaMs?: 
   const falta = pendencias(dados, lista.length);
   if (falta.length || conflitos.length) {
     await d.update(imovelRascunhos).set({ estado: 'awaiting_information', atualizadoEm: new Date() } as any).where(eq(imovelRascunhos.id, id));
-    return await mensagemSituacao(d, id, '📝 Antes da revisão, preciso de:');
+    return await mensagemPendencias(d, id);
   }
   let textos = { titulo: r.titulo as string | null, descricao: r.descricao as string | null };
   if (iaDisponivel() && (!textos.titulo || !textos.descricao)) {
