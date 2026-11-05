@@ -96,6 +96,11 @@ describe('distribuição manual de leads', () => {
     await D.confirmarRecebimento(ana.id, 3);
     expect((await D.meusEncaminhamentos(3)).find(m => m.id === ana.id)!.situacao).toBe('em_atendimento');
     expect((await D.encaminhamentoAbertoDoLead(10, 3))!.recebidoEm).not.toBeNull();
+    // Abrir a conversa pelo "Atender no WhatsApp" do aviso também confirma
+    const beto = (await D.meusEncaminhamentos(3)).find(m => m.lead === 'Beto Lead')!;
+    expect(beto.situacao).toBe('aguardando_confirmacao');
+    await (await import('./leads/sla')).registrarAtendimento(11, { como: 'whatsapp_aviso' });
+    expect((await D.meusEncaminhamentos(3)).find(m => m.id === beto.id)!.situacao).toBe('em_atendimento');
   });
 
   it('corretor informa que o cliente desistiu: fecha e leva o lead para Perdido', async () => {

@@ -6,17 +6,17 @@ import { eq } from 'drizzle-orm';
 import { getDb } from '../db';
 import { empreendimentos, leadQualifications, users } from '../../drizzle/schema';
 import { appUrl } from './config';
-import { linkWhatsAppAtendido } from './sla';
+import { linkRecebido, linkWhatsAppAtendido } from './sla';
 import { formatarTelefone } from './notificacao';
 
-export function textoEncaminhamento(o: { leadId: number; cliente: string; telefone: string; porNome: string; empreendimento?: string | null }): string {
+export function textoEncaminhamento(o: { leadId: number; cliente: string; telefone: string; porNome: string; empreendimento?: string | null; encaminhamentoId?: number | null }): string {
   return [
     `📨 *Lead encaminhado para você* por ${o.porNome}`,
     `👤 ${o.cliente || 'Sem nome'} · ${formatarTelefone(o.telefone)}`,
     o.empreendimento ? `🏡 ${o.empreendimento}` : null,
     `💬 Atender no WhatsApp: ${linkWhatsAppAtendido(o.leadId)}`,
     `🔗 Ficha no CRM: ${appUrl()}/leads/lead/${o.leadId}`,
-    `✅ Confirme que recebeu: ${appUrl()}/leads/recebidos`,
+    o.encaminhamentoId ? `✅ Confirmar que recebi (1 toque): ${linkRecebido(o.encaminhamentoId)}` : `✅ Confirme que recebeu: ${appUrl()}/leads/recebidos`,
   ].filter(Boolean).join('\n');
 }
 
@@ -38,7 +38,11 @@ export async function avisarEncaminhamento(o: { leadId: number; paraId: number; 
   const fone = String(u.telefone ?? '').replace(/\D/g, '');
   if (fone.length < 10) return;
   const { enviarTexto } = await import('./zapiClient');
+  const { leadEncaminhamentos } = await import('../../drizzle/schema');
+  const { and, desc, isNull } = await import('drizzle-orm');
+  const [aberto]: any[] = await d.select({ id: leadEncaminhamentos.id }).from(leadEncaminhamentos)
+    .where(and(eq(leadEncaminhamentos.leadId, o.leadId), eq(leadEncaminhamentos.paraId, o.paraId), isNull(leadEncaminhamentos.desfecho))).orderBy(desc(leadEncaminhamentos.id)).limit(1);
   await enviarTexto(fone.startsWith('55') ? fone : `55${fone}`, textoEncaminhamento({
-    leadId: o.leadId, cliente: String(l.nome ?? ''), telefone: String(l.phone ?? ''), porNome: o.porNome, empreendimento: emp?.nome ?? null,
+    leadId: o.leadId, cliente: String(l.nome ?? ''), telefone: String(l.phone ?? ''), porNome: o.porNome, empreendimento: emp?.nome ?? null, encaminhamentoId: aberto?.id ?? null,
   })).catch(e => console.warn('[Encaminhamento] WhatsApp:', e?.message));
 }

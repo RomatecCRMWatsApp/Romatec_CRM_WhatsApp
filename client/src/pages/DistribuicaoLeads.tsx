@@ -1,7 +1,7 @@
 import { useMemo, useState } from "react";
 import { toast } from "sonner";
 import { Link } from "wouter";
-import { Download, Loader2, Search, Send, Shuffle } from "lucide-react";
+import { Download, Loader2, RefreshCw, Search, Send, Shuffle } from "lucide-react";
 import { trpc } from "@/lib/trpc";
 import { ROTULO_DESFECHO, ROTULO_SITUACAO } from "@shared/distribuicaoLeads";
 import PageHeader from "@/components/PageHeader";
@@ -176,7 +176,8 @@ function Relatorio() {
   const [origem, setOrigem] = useState<"" | "manual" | "automatico">("manual");
   const filtro = useMemo(() => ({ de, ate, paraId: paraId || null, origem: origem || null }), [de, ate, paraId, origem]);
   const { data: equipe } = trpc.distribuicao.equipe.useQuery();
-  const { data, isLoading, error } = trpc.distribuicao.relatorio.useQuery(filtro, { enabled: !!de && !!ate });
+  // Atualiza sozinho a cada 20 s (confirmações chegando) e no botão "Atualizar"
+  const { data, isLoading, error, refetch, isFetching, dataUpdatedAt } = trpc.distribuicao.relatorio.useQuery(filtro, { enabled: !!de && !!ate, refetchInterval: 20_000, refetchOnWindowFocus: true });
   const reenviar = trpc.distribuicao.reenviar.useMutation({
     onSuccess: r => toast.success(`Aviso reenviado para ${r.reenviados} lead(s)${r.ignorados ? ` · ${r.ignorados} já confirmado(s) ou finalizado(s)` : ""}`),
     onError: e => toast.error(e.message),
@@ -210,6 +211,9 @@ function Relatorio() {
           title="Manda de novo o aviso (sistema e WhatsApp, com o link de confirmar) para quem ainda não confirmou o recebimento"
           onClick={() => { if (confirm(`Reenviar o aviso de ${pendentes.length} lead(s) que ainda não tiveram o recebimento confirmado?`)) reenviar.mutate({ ids: pendentes.map(i => i.id) }); }}>
           {reenviar.isPending ? <Loader2 className="mr-1 h-4 w-4 animate-spin" /> : <Send className="mr-1 h-4 w-4" />} Reenviar aviso aos sem confirmação ({pendentes.length})
+        </Button>
+        <Button variant="outline" disabled={isFetching} onClick={() => refetch()} title="As confirmações também chegam sozinhas a cada 20 segundos">
+          <RefreshCw className={`mr-1 h-4 w-4 ${isFetching ? "animate-spin" : ""}`} /> Atualizar{dataUpdatedAt ? <span className="ml-1 text-[10px] text-muted-foreground">({new Date(dataUpdatedAt).toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit", second: "2-digit" })})</span> : null}
         </Button>
         <Button variant="outline" disabled={csv.isPending || !data?.itens.length} onClick={() => csv.mutate(filtro)}>
           {csv.isPending ? <Loader2 className="mr-1 h-4 w-4 animate-spin" /> : <Download className="mr-1 h-4 w-4" />} Baixar planilha (CSV)

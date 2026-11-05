@@ -11,7 +11,7 @@ const COR = { aguardando_confirmacao: "border-amber-500/60 bg-amber-500/5", em_a
 
 /** Leads › Leads recebidos: o corretor confirma que recebeu cada lead encaminhado e informa o desfecho */
 export default function LeadsRecebidos() {
-  const { data, isLoading } = trpc.distribuicao.meus.useQuery();
+  const { data, isLoading } = trpc.distribuicao.meus.useQuery(undefined, { refetchInterval: 30_000, refetchOnWindowFocus: true });
   const lista = data ?? [];
   const pendentes = lista.filter(l => l.situacao === "aguardando_confirmacao").length;
   return (

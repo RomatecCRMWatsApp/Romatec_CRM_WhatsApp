@@ -56,6 +56,15 @@ export function tokenAtendidoValido(leadId: number, token: string): boolean {
   const esperado = tokenAtendido(leadId);
   return token.length === esperado.length && crypto.timingSafeEqual(Buffer.from(token), Buffer.from(esperado));
 }
+/** "✅ Confirmar recebimento" do aviso de encaminhamento: 1 toque, sem login (link assinado por encaminhamento) */
+export function tokenRecebido(encaminhamentoId: number): string {
+  return crypto.createHmac('sha256', segredo()).update(`recebido:${encaminhamentoId}`).digest('hex').slice(0, 20);
+}
+export function tokenRecebidoValido(encaminhamentoId: number, token: string): boolean {
+  const esperado = tokenRecebido(encaminhamentoId);
+  return token.length === esperado.length && crypto.timingSafeEqual(Buffer.from(token), Buffer.from(esperado));
+}
+export const linkRecebido = (encaminhamentoId: number) => `${appUrl()}/c/${encaminhamentoId}/${tokenRecebido(encaminhamentoId)}`;
 export const linkAtendido = (leadId: number) => `${appUrl()}/a/${leadId}/${tokenAtendido(leadId)}`;
 /** "Atender no WhatsApp" do aviso: passa pelo CRM (marca o atendimento) e abre a conversa com o cliente */
 export const linkWhatsAppAtendido = (leadId: number) => `${appUrl()}/w/${leadId}/${tokenAtendido(leadId)}`;
@@ -131,6 +140,15 @@ export async function registrarAtendimento(leadId: number, o: { como: ComoAtende
     .from(leadQualifications).where(eq(leadQualifications.id, leadId)).limit(1);
   if (!l) return null;
   await marcarAtendido(leadId);
+  // Abrir a conversa pelo aviso (ou atender pelo CRM) também confirma o recebimento do encaminhamento em aberto
+  if (o.como !== 'encaminhado') {
+    try {
+      const { leadEncaminhamentos } = await import('../../drizzle/schema');
+      const { isNull } = await import('drizzle-orm');
+      await db.update(leadEncaminhamentos).set({ recebidoEm: new Date() } as any).where(and(eq(leadEncaminhamentos.leadId, leadId), isNull(leadEncaminhamentos.desfecho), isNull(leadEncaminhamentos.recebidoEm),
+        ...(o.usuarioId ? [eq(leadEncaminhamentos.paraId, o.usuarioId)] : [])));
+    } catch (e: any) { console.warn('[SLA] confirmar recebimento:', e?.message); }
+  }
   const { etapaDoLead } = await import('./kanban');
   if (etapaDoLead(l) === 'novo') {
     await db.update(leadQualifications).set({ etapa: 'qualificando', updatedAt: new Date() } as any).where(eq(leadQualifications.id, leadId)).catch(() => {});

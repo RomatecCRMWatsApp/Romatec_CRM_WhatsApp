@@ -414,6 +414,54 @@ function getScoreResponse(score: LeadScore, fn: string, prop: PropertyEntry, ans
 }
 
 // ============ SALVAR QUALIFICACAO NO BANCO ============
+/** "4", "chácara", "sítio", "roça"… na pergunta do tipo de imóvel */
+export function escolheuChacara(msg: string): boolean {
+  const t = String(msg).toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').trim();
+  return /^4\b|^4[^\d]|^(opcao|numero)?\s*4$/.test(t) || /\b(chacara|chacaras|sitio|roca|fazendinha|rancho)\b/.test(t);
+}
+
+export function mensagemChacaraEncaminhada(fn: string): string {
+  return [
+    `Ótimo, *${fn}*! 🌳`,
+    ``,
+    `Para chácara, temos o *Condomínio de Chácaras Bom Jardims*, a 17 km do centro de Açailândia, com chácaras a partir de *3.025 m²*.`,
+    ``,
+    `✅ Já passei o seu contato para um corretor da nossa equipe, que vai te chamar *agora* por aqui para tirar as suas dúvidas e combinar uma visita.`,
+    ``,
+    `Romatec Consultoria Imobiliária · José Romário · CRECI/MA 4.705`,
+  ].join('\n');
+}
+
+/**
+ * Escolheu chácara: grava o que já respondeu, marca o lead como Bom Jardims e atendimento humano (o robô para de
+ * perguntar) e avisa o escritório/corretor na hora — em modo manual cai em Leads › Distribuição › Não encaminhados.
+ */
+async function encaminharChacaraAgora(phone: string, nome: string, respostas: Record<string, any>, prop: any, campaignId?: number) {
+  await saveLeadQualification(phone, nome, respostas as any, 'morno', prop, campaignId);
+  const db = await getDb();
+  if (!db) return;
+  const clean = phone.replace(/\D/g, '');
+  const [lead]: any[] = await db.select().from(leadQualifications).where(eq(leadQualifications.phone, clean)).limit(1);
+  if (!lead) return;
+  await db.update(leadQualifications).set({
+    empreendimentoSlug: lead.empreendimentoSlug || 'bom-jardims', humano: true, score: lead.score === 'quente' ? 'quente' : 'morno', updatedAt: new Date(),
+  } as any).where(eq(leadQualifications.id, lead.id));
+  const { aguardarCorretor } = await import('./leads/sla');
+  await aguardarCorretor(lead.id).catch(() => {});
+  const { notificarLead } = await import('./leads/notificacao');
+  await notificarLead({
+    tipo: 'humano', leadId: lead.id, nome: respostas.nome || nome || lead.nome || 'Lead', telefone: clean, funil: 'comprador', classe: 'morno',
+    origem: 'WhatsApp (robô)', empreendimento: true,
+    detalhes: [
+      '🌳 Escolheu *chácara* no robô — encaminhar a um corretor agora',
+      respostas.rendaMensal ? `Renda: ${respostas.rendaMensal}` : null,
+      respostas.financiamentoAtivo ? `Financiamento ativo: ${respostas.financiamentoAtivo}` : null,
+      respostas.fgtsDisponivel ? `FGTS: ${respostas.fgtsDisponivel}` : null,
+      respostas.entradaDisponivel ? `Entrada: ${respostas.entradaDisponivel}` : null,
+    ].filter(Boolean) as string[],
+  }).catch(e => console.warn('[Bot] Aviso da chácara:', e?.message));
+}
+
 async function saveLeadQualification(
   phone: string,
   nome: string,
@@ -620,12 +668,20 @@ async function processStage(context: BotContext, state: ConversationState): Prom
 
     // ---- ETAPA 6: Tipo de Imóvel (NOVO) ----
     case 'qual_etapa_6': {
+      // Chácara: é o Bom Jardims — o lead vai NA HORA para o sistema/corretor (sem seguir o questionário bancário)
+      if (escolheuChacara(msg)) {
+        const respostas = { ...state.qualAnswers, tipoImovelBusca: 'Chácara' };
+        setState(context.phone, { stage: 'qualificado', lastUserReplyAt: Date.now(), qualAnswers: respostas });
+        await encaminharChacaraAgora(context.phone, name, respostas, prop, state.campaignId).catch(e => console.warn('[Bot] Encaminhar chácara:', e?.message));
+        return { text: mensagemChacaraEncaminhada(fn), qualified: true };
+      }
       setState(context.phone, {
         stage: 'qual_etapa_7',
         lastUserReplyAt: Date.now(),
         qualAnswers: { ...state.qualAnswers, tipoImovelBusca: msg },
       });
-      return { text: QUAL_QUESTIONS.etapa_6(fn), qualified: true };
+      // Pergunta seguinte (região). Antes repetia a do tipo: o antirrepetição barrava e o robô ficava mudo
+      return { text: QUAL_QUESTIONS.etapa_7(fn), qualified: true };
     }
 
     // ---- ETAPA 7: Região/Bairro (NOVO) ----
@@ -635,7 +691,7 @@ async function processStage(context: BotContext, state: ConversationState): Prom
         lastUserReplyAt: Date.now(),
         qualAnswers: { ...state.qualAnswers, regiaoBairro: msg },
       });
-      return { text: QUAL_QUESTIONS.etapa_7(fn), qualified: true };
+      return { text: QUAL_QUESTIONS.etapa_8(fn), qualified: true };
     }
 
     // ---- ETAPA 8: Valor do Imóvel (NOVO) ----
@@ -645,7 +701,7 @@ async function processStage(context: BotContext, state: ConversationState): Prom
         lastUserReplyAt: Date.now(),
         qualAnswers: { ...state.qualAnswers, valorImovelPretendido: msg },
       });
-      return { text: QUAL_QUESTIONS.etapa_8(fn), qualified: true };
+      return { text: QUAL_QUESTIONS.etapa_9(fn), qualified: true };
     }
 
     // ---- ETAPA 9: Moradia ou Investimento? (NOVO) ----
@@ -655,7 +711,7 @@ async function processStage(context: BotContext, state: ConversationState): Prom
         lastUserReplyAt: Date.now(),
         qualAnswers: { ...state.qualAnswers, isMoradiaOuInvestimento: msg },
       });
-      return { text: QUAL_QUESTIONS.etapa_9(fn), qualified: true };
+      return { text: QUAL_QUESTIONS.etapa_10(fn), qualified: true };
     }
 
     // ---- ETAPA 10: Prazo Ideal — QUALIFICAÇÃO COMPLETA (NOVO) ----

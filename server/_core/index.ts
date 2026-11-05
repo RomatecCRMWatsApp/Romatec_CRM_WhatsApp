@@ -635,6 +635,38 @@ async function startServer() {
     );
   });
 
+  // "✅ Confirmar que recebi" do aviso de encaminhamento: 1 toque, sem login (robô de pré-visualização não confirma)
+  app.get('/c/:id/:token', async (req, res) => {
+    const id = Number(req.params.id);
+    const { tokenRecebidoValido, ehRoboDePrevia } = await import('../leads/sla');
+    const valido = Number.isInteger(id) && id > 0 && tokenRecebidoValido(id, String(req.params.token || ''));
+    res.setHeader('Cache-Control', 'no-store');
+    res.setHeader('X-Robots-Tag', 'noindex');
+    let leadId: number | null = null, ok = false;
+    if (valido) {
+      try {
+        const { getDb } = await import('../db');
+        const { leadEncaminhamentos } = await import('../../drizzle/schema');
+        const { eq } = await import('drizzle-orm');
+        const d: any = await getDb();
+        const [e]: any[] = d ? await d.select().from(leadEncaminhamentos).where(eq(leadEncaminhamentos.id, id)).limit(1) : [];
+        leadId = e ? Number(e.leadId) : null;
+        if (e && !ehRoboDePrevia(req.get('user-agent'))) {
+          if (!e.recebidoEm) await d.update(leadEncaminhamentos).set({ recebidoEm: new Date() } as any).where(eq(leadEncaminhamentos.id, id));
+          ok = true;
+        }
+      } catch (err: any) { console.warn('[Encaminhamento] confirmar pelo link:', err?.message); }
+    }
+    res.status(valido ? 200 : 400).type('html').send(
+      `<!doctype html><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="robots" content="noindex">` +
+      `<title>Romatec CRM</title><body style="font-family:system-ui,sans-serif;background:#1b1e22;color:#e8ece9;display:grid;place-items:center;min-height:90vh;margin:0;padding:16px">` +
+      `<div style="max-width:360px;text-align:center"><p style="font-size:48px;margin:0">${ok ? '✅' : '⚠️'}</p>` +
+      `<h1 style="font-size:20px">${ok ? 'Recebimento confirmado' : valido ? 'Não foi possível confirmar agora' : 'Link inválido'}</h1>` +
+      `<p style="color:#9aa5a0">${ok ? 'O escritório já vê que você recebeu este lead. Bom atendimento!' : 'Abra Leads recebidos no CRM e toque em Confirmar.'}</p>` +
+      `<p><a style="color:#5fd3b4" href="${leadId ? `/leads/lead/${leadId}` : '/leads/recebidos'}">Abrir no CRM</a></p></div></body>`,
+    );
+  });
+
   // "💬 Atender no WhatsApp" do aviso: marca o lead como atendido e abre a conversa (robô de pré-visualização não conta)
   app.get('/w/:id/:token', async (req, res) => {
     const id = Number(req.params.id);

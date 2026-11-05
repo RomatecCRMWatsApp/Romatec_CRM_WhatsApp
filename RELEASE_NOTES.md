@@ -3,6 +3,19 @@
 Cada versão nova vai no TOPO. Depois rode `npm run release` (valida e atualiza o package.json);
 ao subir, o servidor grava a versão no banco e todos recebem o aviso "Novidades da versão".
 
+## 1.106.0 — 2026-11-05
+tipo: minor
+obrigatoria: nao
+titulo: Robô encaminha na hora quem escolhe chácara; confirmação de lead em 1 toque
+
+### Novo
+- Robô do WhatsApp: quem escolhe "4 · Chácara" (ou escreve chácara/sítio) vai NA HORA para o sistema como lead do Bom Jardims, com aviso ao escritório/corretor — em modo manual cai em Distribuição › Não encaminhados. O cliente recebe que um corretor vai chamar agora
+- Aviso de lead encaminhado: "✅ Confirmar que recebi (1 toque)" confirma sem precisar entrar no CRM; tocar em "Atender no WhatsApp" também confirma
+- Distribuição › Relatório: botão "Atualizar" e atualização sozinha a cada 20 segundos
+
+### Correções
+- Robô parava depois da pergunta do tipo de imóvel: repetia a mesma pergunta (barrada pelo antirrepetição) e as seguintes ficavam uma atrasada
+
 ## 1.105.6 — 2026-11-05
 tipo: patch
 obrigatoria: nao
