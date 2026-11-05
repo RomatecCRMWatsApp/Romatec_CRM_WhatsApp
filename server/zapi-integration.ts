@@ -195,6 +195,23 @@ export interface WebhookPayload {
   legenda?: string;
 }
 
+/**
+ * Mensagem que a Romatec mandou (fromMe): digitada no celular/WhatsApp Web ou eco do que o sistema enviou.
+ * Só para o histórico da Caixa de entrada — o robô nunca responde a ela. Grupo e status ficam de fora.
+ */
+export function mensagemNossaDoWebhook(body: any): { phone: string; texto: string } | null {
+  if (!(body?.fromMe === true || body?.data?.fromMe === true)) return null;
+  if (body?.isGroup === true || body?.isGroupMsg === true || body?.data?.isGroup === true) return null;
+  const tipo = String(body?.type || body?.event || '');
+  if (/status|callback$/i.test(tipo) && !/ReceivedCallback/i.test(tipo)) return null;
+  const phone = String(body?.phone || body?.chatId?.replace('@c.us', '') || body?.data?.phone || '').replace(/\D/g, '');
+  let t: any = body?.text?.message ?? body?.text?.body ?? body?.text ?? body?.message ?? body?.body ?? '';
+  if (t && typeof t === 'object') t = t.message || t.body || t.text || t.caption || '';
+  const texto = String(t || '').trim() || (body?.image ? '[foto]' : body?.audio ? '[áudio]' : body?.document ? '[documento]' : '');
+  if (phone.length < 10 || phone.length > 13 || !texto) return null;
+  return { phone, texto };
+}
+
 export function parseWebhookPayload(body: any): WebhookPayload | null {
   try {
     // ═══════════════════════════════════════════════════════════════

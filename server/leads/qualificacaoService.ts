@@ -49,10 +49,23 @@ export async function registrarMensagem(leadId: number, direcao: 'in' | 'out', a
   const db = await dbx();
   if (!db || !texto) return;
   const { leadMensagens } = await import('../../drizzle/schema');
-  await db.insert(leadMensagens).values({ leadId, direcao, autor, texto: texto.slice(0, 4000) } as any).catch((e: any) => console.warn('[IA] Mensagem não gravada:', e?.message));
+  const t = texto.slice(0, 4000);
+  // Sem duplicar: a mesma mensagem (mesmo sentido e texto) gravada por dois caminhos em 3 minutos conta uma vez
+  try {
+    const { and, desc, eq: igual } = await import('drizzle-orm');
+    const [ultima]: any[] = await db.select({ id: leadMensagens.id, texto: leadMensagens.texto, autor: leadMensagens.autor, em: leadMensagens.createdAt }).from(leadMensagens)
+      .where(and(igual(leadMensagens.leadId, leadId), igual(leadMensagens.direcao, direcao))).orderBy(desc(leadMensagens.id)).limit(1);
+    const em = ultima?.em ? new Date(ultima.em).getTime() : NaN;
+    if (ultima && ultima.texto === t && (!Number.isFinite(em) || Date.now() - em < 3 * 60_000)) {
+      // O eco do WhatsApp (gravado como "equipe") chegou antes: fica o autor certo (robô, sistema ou IA)
+      if (ultima.autor === 'corretor' && autor !== 'corretor') await db.update(leadMensagens).set({ autor } as any).where(igual(leadMensagens.id, ultima.id));
+      return;
+    }
+  } catch { /* conferência de duplicado é só cuidado extra */ }
+  await db.insert(leadMensagens).values({ leadId, direcao, autor, texto: t } as any).catch((e: any) => console.warn('[IA] Mensagem não gravada:', e?.message));
 }
 
-export async function registrarMensagemPorTelefone(phone: string, direcao: 'in' | 'out', autor: 'lead' | 'ia' | 'bot' | 'sistema', texto: string) {
+export async function registrarMensagemPorTelefone(phone: string, direcao: 'in' | 'out', autor: 'lead' | 'ia' | 'bot' | 'sistema' | 'corretor', texto: string) {
   const db = await dbx();
   if (!db) return;
   const { leadQualifications } = await import('../../drizzle/schema');

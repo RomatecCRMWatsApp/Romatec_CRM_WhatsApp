@@ -88,6 +88,15 @@ async function startServer() {
       const payload = parseWebhookPayload(req.body);
 
       if (!payload) {
+        // Mensagem nossa (do celular da Romatec ou eco do sistema): entra no histórico da Caixa de entrada
+        try {
+          const { mensagemNossaDoWebhook } = await import('../zapi-integration');
+          const nossa = mensagemNossaDoWebhook(req.body);
+          if (nossa) {
+            const { registrarMensagemPorTelefone } = await import('../leads/qualificacaoService');
+            await registrarMensagemPorTelefone(nossa.phone, 'out', 'corretor', nossa.texto);
+          }
+        } catch (e: any) { console.warn('[Webhook] Histórico da mensagem enviada:', e?.message); }
         return res.json({ received: true, processed: false });
       }
 
@@ -299,6 +308,12 @@ async function startServer() {
         return res.json({ received: true, processed: false, reason: 'rate_limited' });
       }
 
+      // Caixa de entrada: toda mensagem do cliente fica no histórico do lead (antes só a do caminho da IA ficava)
+      if (!req.body?.fromMe && msgText) {
+        const { registrarMensagemPorTelefone } = await import('../leads/qualificacaoService');
+        await registrarMensagemPorTelefone(payload.phone, 'in', 'lead', msgText).catch(() => {});
+      }
+
       try {
         const botResponse = await processBotMessage({
           phone: payload.phone,
@@ -324,6 +339,8 @@ async function startServer() {
             if (sendResult.success) {
               respostaBot = botResponse.text;
               registerBotMessage(payload.phone, senderName);
+              const { registrarMensagemPorTelefone } = await import('../leads/qualificacaoService');
+              await registrarMensagemPorTelefone(payload.phone, 'out', 'bot', botResponse.text).catch(() => {});
               await import('../leads/followup').then(m => m.agendarFollowUp(payload.phone)).catch(() => {});
               console.log(`[Bot] ✅ Resposta enviada para ${senderName} (${payload.phone})`);
             } else {

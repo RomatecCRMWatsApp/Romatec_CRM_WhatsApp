@@ -3,6 +3,15 @@
 Cada versão nova vai no TOPO. Depois rode `npm run release` (valida e atualiza o package.json);
 ao subir, o servidor grava a versão no banco e todos recebem o aviso "Novidades da versão".
 
+## 1.106.1 — 2026-11-05
+tipo: patch
+obrigatoria: nao
+titulo: Caixa de entrada com a conversa completa do WhatsApp
+
+### Correções
+- A Caixa de entrada mostrava só os lembretes automáticos: as mensagens dos clientes e as respostas do robô não ficavam no histórico (só as do caminho da IA). Agora toda mensagem do cliente, toda resposta do robô e o que a equipe manda pelo celular da Romatec entram na conversa, sem repetir
+- Vale daqui para frente: as conversas de antes desta versão continuam só com o que já estava gravado
+
 ## 1.106.0 — 2026-11-05
 tipo: minor
 obrigatoria: nao
