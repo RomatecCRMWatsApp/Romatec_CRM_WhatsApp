@@ -6,6 +6,7 @@ import { daEquipe, perfilDe, podeAbrir, ROTULO_PERFIL } from "@shared/equipe";
 import { trpc } from "@/lib/trpc";
 import AvisoRotinas from "./AvisoRotinas";
 import { MobileTabBar, RomatecAppIcon, RomatecLockup, TAB_ICONS, type TabItem } from "@/brand";
+import BuscaGlobal, { type TelaBusca } from "@/components/BuscaGlobal";
 import {
   BarChart3, Building2, Flame, Images, KanbanSquare, LayoutDashboard, LineChart, LogOut, Megaphone, Menu, Send,
   Settings, UserCog, Users, X, Eye, ClipboardList, CalendarDays, Map as MapIcon, Smartphone, Wallet, IdCard, FolderOpen, Bell, FileSignature, Mic, CalendarCheck, UserPlus, BookCopy, BadgeDollarSign, Hourglass, Bot, Trophy, Link2, Zap, MessagesSquare, ListOrdered, Plug, Inbox, Building, Rotate3d,
@@ -308,12 +309,15 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
   // Menu recolhido só nos ícones (desktop); a escolha fica guardada no navegador
   const [recolhido, setRecolhido] = useState<boolean>(() => lerPref("menu.recolhido", false));
   const alternarMenu = () => setRecolhido(r => { gravarPref("menu.recolhido", !r); return !r; });
+  // Telas que a pessoa pode abrir, para a busca única também achar telas pelo nome
+  const telasBusca: TelaBusca[] = menuDoPerfil(perfilDe(user as any), minhas?.modulos).flatMap(g => g.itens.map(i => ({ rotulo: i.rotulo, rota: i.rota, icone: i.icone })));
 
   return (
     <div className={`min-h-screen bg-background transition-[padding] duration-200 print:!pl-0 ${recolhido ? "lg:pl-[72px]" : "lg:pl-64"}`}>
       {/* Menu fixo (desktop) */}
       <aside className={`hidden lg:flex fixed inset-y-0 left-0 z-30 flex-col bg-sidebar border-r border-sidebar-border duration-200 ${recolhido ? "w-[72px]" : "w-64"}`}>
         <Marca recolhido={recolhido} />
+        <div className={recolhido ? "flex justify-center pb-2" : "px-3 pb-2"}><BuscaGlobal telas={telasBusca} variante={recolhido ? "icone" : "campo"} atalho={false} /></div>
         <Navegacao recolhido={recolhido} />
         <BotaoInstalarApp recolhido={recolhido} />
         <BotaoRecolher recolhido={recolhido} onAlternar={alternarMenu} />
@@ -342,6 +346,8 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
         <button onClick={() => setAberto(true)} className="rounded-lg p-2 hover:bg-white/5" aria-label="Abrir menu"><Menu className="h-5 w-5" /></button>
         <RomatecAppIcon size={28} />
         <p className="font-semibold truncate flex-1">{tituloDaRota(loc)}</p>
+        {/* No computador a busca fica no menu lateral; aqui só no celular/tablet (o atalho Ctrl+K vale nos dois) */}
+        <BuscaGlobal telas={telasBusca} />
         <SinoNovidades className="text-foreground/70" />
         <FotoUsuario tamanho="h-8 w-8" />
       </header>

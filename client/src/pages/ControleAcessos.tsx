@@ -65,7 +65,8 @@ type Acao =
 
 export default function ControleAcessos() {
   const { data, isLoading, refetch, isFetching } = trpc.controleAcessos.lista.useQuery(undefined, { refetchInterval: 60_000 });
-  const [busca, setBusca] = useState("");
+  // ?busca=Nome (vindo da busca única do topo) já abre filtrado
+  const [busca, setBusca] = useState(() => { try { return new URLSearchParams(window.location.search).get("busca") ?? ""; } catch { return ""; } });
   const [fUso, setFUso] = useState<"" | SituacaoUso>("");
   const [fPag, setFPag] = useState<"" | SituacaoPagamento | "pendentes">("");
   const [fAtivo, setFAtivo] = useState<"" | "ativos" | "inativos">("ativos");

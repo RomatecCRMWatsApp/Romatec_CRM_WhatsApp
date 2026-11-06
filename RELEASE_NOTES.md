@@ -3,6 +3,19 @@
 Cada versão nova vai no TOPO. Depois rode `npm run release` (valida e atualiza o package.json);
 ao subir, o servidor grava a versão no banco e todos recebem o aviso "Novidades da versão".
 
+## 1.116.0 — 2026-11-06
+tipo: minor
+obrigatoria: nao
+titulo: Busca única: ache qualquer coisa no CRM em uma caixa só
+publico: usuarios
+
+### Novo
+- Lupa no topo (celular) e "Buscar no CRM" no menu (computador); no computador também abre com Ctrl+K ou a tecla /
+- Digite nome, telefone, CPF, código da chácara (B13), número do contrato ou CRECI: aparecem juntos leads, compradores, contratos, chácaras, imóveis, equipe, materiais e as telas do sistema
+- Um toque (ou Enter) abre direto: o lead, o contrato, a chácara já marcada no mapa, o imóvel
+- Cada pessoa só vê o que já pode ver: o corretor acha os leads e contratos dele e os empreendimentos habilitados; equipe e compradores só para o escritório; CPF aparece mascarado na lista
+- Busca sem acento e sem maiúscula ("jose" acha "José"); telefone e CPF com ou sem pontuação; as últimas buscas ficam guardadas no aparelho
+
 ## 1.115.1 — 2026-11-06
 tipo: patch
 obrigatoria: nao
