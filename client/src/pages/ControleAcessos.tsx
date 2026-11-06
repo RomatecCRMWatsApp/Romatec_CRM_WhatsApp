@@ -1,0 +1,287 @@
+/**
+ * Controle de acessos dos corretores (administrador e secretária): quem está ativo, quem está pago e quem está
+ * usando o sistema. Ações com motivo registrado: ativar/desativar o login, liberar/bloquear a licença,
+ * desconectar de todos os aparelhos e ver o histórico de entradas.
+ */
+import { useMemo, useState } from "react";
+import { toast } from "sonner";
+import { History, Loader2, LogOut, RefreshCw, Search, ShieldCheck, ShieldOff, UserCheck, UserX } from "lucide-react";
+import { trpc } from "@/lib/trpc";
+import PageHeader from "@/components/PageHeader";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import {
+  DICA_USO, PAGAMENTO, ROTULO_PAGAMENTO, ROTULO_USO, USO,
+  type SituacaoPagamento, type SituacaoUso,
+} from "@shared/controleAcessos";
+
+const dataBr = (d: unknown) => (d ? new Date(d as any).toLocaleDateString("pt-BR", { timeZone: "America/Fortaleza" }) : "—");
+const dataHoraBr = (d: unknown) => (d ? new Date(d as any).toLocaleString("pt-BR", { timeZone: "America/Fortaleza", day: "2-digit", month: "2-digit", year: "numeric", hour: "2-digit", minute: "2-digit" }) : "—");
+function haQuanto(d: unknown): string {
+  if (!d) return "nunca";
+  const min = Math.round((Date.now() - new Date(d as any).getTime()) / 60000);
+  if (min < 2) return "agora";
+  if (min < 60) return `há ${min} min`;
+  const h = Math.round(min / 60);
+  if (h < 24) return `há ${h} h`;
+  const dias = Math.round(h / 24);
+  return dias === 1 ? "ontem" : `há ${dias} dias`;
+}
+
+const COR_USO: Record<SituacaoUso, string> = {
+  usando: "bg-ok-500/15 text-ok-300 border-ok-500/40",
+  pouco: "bg-warn-500/15 text-warn-300 border-warn-500/40",
+  parado: "bg-danger-500/15 text-danger-300 border-danger-500/40",
+  nunca: "bg-white/5 text-muted-foreground border-border",
+};
+const COR_PAG: Record<SituacaoPagamento, string> = {
+  pago: "bg-ok-500/15 text-ok-300 border-ok-500/40",
+  cortesia: "bg-info-500/15 text-info-300 border-info-500/40",
+  teste: "bg-[var(--rt-gold)]/15 text-[var(--rt-gold-light)] border-[var(--rt-gold)]/40",
+  atrasado: "bg-warn-500/15 text-warn-300 border-warn-500/40",
+  bloqueado: "bg-danger-500/15 text-danger-300 border-danger-500/40",
+  vencido: "bg-danger-500/15 text-danger-300 border-danger-500/40",
+  cancelado: "bg-white/5 text-muted-foreground border-border",
+  sem_licenca: "bg-danger-500/10 text-danger-300 border-danger-500/30",
+  nao_exige: "bg-white/5 text-muted-foreground border-border",
+};
+
+type Linha = {
+  id: number; nome: string; perfil: string; creci: string | null; telefone: string | null; fotoUrl: string | null;
+  ativo: boolean; arquivado: boolean; temSenha: boolean; ultimoAcesso: string | null; uso: SituacaoUso; loginsMes: number; ultimoLogin: string | null;
+  pagamento: SituacaoPagamento; plano: string | null; licencaFim: string | null; diasRestantes: number | null; assinaturaId: number | null;
+  ultimoPagamento: string | null; faturasAbertas: number; podeEntrar: boolean;
+};
+
+type Acao =
+  | { tipo: "login"; pessoa: Linha; ativo: boolean }
+  | { tipo: "liberar"; pessoa: Linha }
+  | { tipo: "bloquear"; pessoa: Linha }
+  | { tipo: "desconectar"; pessoa: Linha };
+
+export default function ControleAcessos() {
+  const { data, isLoading, refetch, isFetching } = trpc.controleAcessos.lista.useQuery(undefined, { refetchInterval: 60_000 });
+  const [busca, setBusca] = useState("");
+  const [fUso, setFUso] = useState<"" | SituacaoUso>("");
+  const [fPag, setFPag] = useState<"" | SituacaoPagamento | "pendentes">("");
+  const [fAtivo, setFAtivo] = useState<"" | "ativos" | "inativos">("ativos");
+  const [acao, setAcao] = useState<Acao | null>(null);
+  const [historico, setHistorico] = useState<Linha | null>(null);
+
+  const linhas = (data?.linhas ?? []) as Linha[];
+  const visiveis = useMemo(() => {
+    const q = busca.trim().toLowerCase();
+    return linhas.filter(l =>
+      (!q || l.nome.toLowerCase().includes(q) || (l.creci ?? "").includes(q) || (l.telefone ?? "").includes(q)) &&
+      (!fUso || l.uso === fUso) &&
+      (!fPag || (fPag === "pendentes" ? ["atrasado", "bloqueado", "vencido", "sem_licenca"].includes(l.pagamento) : l.pagamento === fPag)) &&
+      (!fAtivo || (fAtivo === "ativos" ? l.ativo : !l.ativo)));
+  }, [linhas, busca, fUso, fPag, fAtivo]);
+  const r = data?.resumo;
+
+  return (
+    <div className="pb-6">
+      <PageHeader icone={ShieldCheck} titulo="Controle de acessos" subtitulo="Quem está ativo, quem está pago e quem está usando o sistema"
+        acoes={<Button size="sm" variant="outline" onClick={() => refetch()} disabled={isFetching}><RefreshCw className={`mr-1.5 h-4 w-4 ${isFetching ? "animate-spin motion-reduce:animate-none" : ""}`} /> Atualizar</Button>} />
+
+      <div className="mx-auto max-w-[1500px] space-y-4 px-4 md:px-6">
+        {data && !data.licenciamentoAtivo && (
+          <p className="rounded-md border border-border bg-secondary/30 px-3 py-2 text-xs text-muted-foreground">
+            A cobrança de licença está desligada no SaaS: todos com login ativo entram, pagos ou não. A coluna de pagamento mostra a situação de cada um.
+          </p>
+        )}
+
+        {r && (
+          <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-6">
+            <Numero rotulo="Ativos" valor={r.ativos} detalhe={`${r.inativos} desativados`} onClick={() => { setFAtivo("ativos"); setFUso(""); setFPag(""); }} />
+            <Numero rotulo="Usando" valor={r.usando} detalhe="entraram em 3 dias" cor="text-ok-300" onClick={() => { setFUso("usando"); setFPag(""); }} />
+            <Numero rotulo="Parados" valor={r.parados} detalhe="+15 dias ou nunca" cor="text-danger-300" onClick={() => { setFUso("parado"); setFPag(""); }} />
+            <Numero rotulo="Pagos" valor={r.pagos} detalhe={`${r.cortesia} cortesia`} cor="text-ok-300" onClick={() => { setFPag("pago"); setFUso(""); }} />
+            <Numero rotulo="Em teste" valor={r.teste} detalhe="7 dias grátis" cor="text-[var(--rt-gold-light)]" onClick={() => { setFPag("teste"); setFUso(""); }} />
+            <Numero rotulo="Pendentes" valor={r.pendentes} detalhe="atraso, bloqueio ou sem licença" cor="text-danger-300" onClick={() => { setFPag("pendentes"); setFUso(""); }} />
+          </div>
+        )}
+
+        <div className="flex flex-wrap items-end gap-2">
+          <label className="relative min-w-[200px] flex-1">
+            <span className="sr-only">Buscar</span>
+            <Search className="pointer-events-none absolute left-2.5 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" aria-hidden="true" />
+            <Input value={busca} onChange={e => setBusca(e.target.value)} placeholder="Nome, CRECI ou telefone" className="pl-8" />
+          </label>
+          <Filtro rotulo="Login" valor={fAtivo} onChange={v => setFAtivo(v as any)} opcoes={[["ativos", "Ativos"], ["inativos", "Desativados"], ["", "Todos"]]} />
+          <Filtro rotulo="Uso" valor={fUso} onChange={v => setFUso(v as any)} opcoes={[["", "Todos"], ...USO.map(u => [u, ROTULO_USO[u]] as [string, string])]} />
+          <Filtro rotulo="Pagamento" valor={fPag} onChange={v => setFPag(v as any)} opcoes={[["", "Todos"], ["pendentes", "Pendentes"], ...PAGAMENTO.map(p => [p, ROTULO_PAGAMENTO[p]] as [string, string])]} />
+        </div>
+
+        {isLoading && <p className="flex items-center gap-2 text-sm text-muted-foreground"><Loader2 className="h-4 w-4 animate-spin motion-reduce:animate-none" /> Carregando…</p>}
+        {!isLoading && visiveis.length === 0 && <p className="rounded-md border border-dashed border-border p-6 text-center text-sm text-muted-foreground">Ninguém neste filtro.</p>}
+
+        <div className="grid gap-2 md:grid-cols-2 xl:grid-cols-3">
+          {visiveis.map(l => <CartaoPessoa key={l.id} l={l} onAcao={setAcao} onHistorico={() => setHistorico(l)} />)}
+        </div>
+      </div>
+
+      {acao && <DialogoAcao acao={acao} onFechar={() => setAcao(null)} onFeito={() => { setAcao(null); refetch(); }} />}
+      {historico && <DialogoHistorico pessoa={historico} onFechar={() => setHistorico(null)} />}
+    </div>
+  );
+}
+
+function Numero({ rotulo, valor, detalhe, cor, onClick }: { rotulo: string; valor: number; detalhe: string; cor?: string; onClick: () => void }) {
+  return (
+    <button type="button" onClick={onClick} className="rounded-lg border border-border bg-card p-3 text-left transition-colors hover:border-[var(--rt-gold)]/50 focus-visible:outline-2 focus-visible:outline-[var(--rt-gold)]">
+      <p className="text-xs text-muted-foreground">{rotulo}</p>
+      <p className={`text-2xl font-semibold tabular-nums ${cor ?? "text-foreground"}`}>{valor}</p>
+      <p className="text-[11px] text-muted-foreground">{detalhe}</p>
+    </button>
+  );
+}
+
+function Filtro({ rotulo, valor, onChange, opcoes }: { rotulo: string; valor: string; onChange: (v: string) => void; opcoes: [string, string][] }) {
+  return (
+    <label className="flex flex-col gap-1 text-xs text-muted-foreground">
+      {rotulo}
+      <select value={valor} onChange={e => onChange(e.target.value)} className="h-9 rounded-md border border-border bg-secondary/30 px-2 text-sm text-foreground">
+        {opcoes.map(([v, t]) => <option key={v || "todos"} value={v}>{t}</option>)}
+      </select>
+    </label>
+  );
+}
+
+function Selo({ texto, cor, dica }: { texto: string; cor: string; dica?: string }) {
+  return <span title={dica} className={`inline-flex items-center rounded-full border px-2 py-0.5 text-[11px] font-medium ${cor}`}>{texto}</span>;
+}
+
+function CartaoPessoa({ l, onAcao, onHistorico }: { l: Linha; onAcao: (a: Acao) => void; onHistorico: () => void }) {
+  const licenca = l.licencaFim ? `${l.plano ?? "Licença"} até ${dataBr(l.licencaFim)}${l.diasRestantes != null && l.diasRestantes >= 0 ? ` (${l.diasRestantes} d)` : ""}` : l.plano ?? null;
+  return (
+    <div className={`flex flex-col gap-2 rounded-lg border bg-card p-3 ${l.ativo ? "border-border" : "border-danger-500/30 opacity-80"}`}>
+      <div className="flex items-start gap-3">
+        {l.fotoUrl
+          ? <img src={l.fotoUrl} alt="" className="h-10 w-10 shrink-0 rounded-full object-cover" />
+          : <span aria-hidden="true" className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-primary/20 font-semibold text-primary">{l.nome.charAt(0).toUpperCase()}</span>}
+        <div className="min-w-0 flex-1">
+          <p className="truncate font-medium text-foreground">{l.nome}</p>
+          <p className="truncate text-xs text-muted-foreground">
+            {l.perfil === "empreendedor" ? "Empreendedor" : "Corretor"}{l.creci ? `, CRECI ${l.creci}` : ""}{l.telefone ? `, ${l.telefone}` : ""}
+          </p>
+        </div>
+        <Selo texto={l.podeEntrar ? "Entra hoje" : "Sem acesso"} cor={l.podeEntrar ? "bg-ok-500/15 text-ok-300 border-ok-500/40" : "bg-danger-500/15 text-danger-300 border-danger-500/40"}
+          dica={l.podeEntrar ? "Login ativo e licença liberada" : "Login desativado ou licença bloqueada/vencida"} />
+      </div>
+
+      <div className="flex flex-wrap gap-1.5">
+        <Selo texto={l.ativo ? "Login ativo" : "Login desativado"} cor={l.ativo ? "bg-ok-500/10 text-ok-300 border-ok-500/30" : "bg-danger-500/15 text-danger-300 border-danger-500/40"} />
+        <Selo texto={ROTULO_PAGAMENTO[l.pagamento]} cor={COR_PAG[l.pagamento]} />
+        <Selo texto={ROTULO_USO[l.uso]} cor={COR_USO[l.uso]} dica={DICA_USO[l.uso]} />
+        {!l.temSenha && <Selo texto="Sem senha criada" cor="bg-white/5 text-muted-foreground border-border" dica="Ainda não fez o primeiro acesso pelo convite" />}
+      </div>
+
+      <dl className="grid grid-cols-2 gap-x-3 gap-y-1 text-xs">
+        <dt className="text-muted-foreground">Último uso</dt><dd className="text-right text-foreground" title={dataHoraBr(l.ultimoAcesso)}>{haQuanto(l.ultimoAcesso)}</dd>
+        <dt className="text-muted-foreground">Entradas em 30 dias</dt><dd className="text-right tabular-nums text-foreground">{l.loginsMes}</dd>
+        {licenca && <><dt className="text-muted-foreground">Licença</dt><dd className="truncate text-right text-foreground" title={licenca}>{licenca}</dd></>}
+        <dt className="text-muted-foreground">Último pagamento</dt><dd className="text-right text-foreground">{dataBr(l.ultimoPagamento)}{l.faturasAbertas ? `, ${l.faturasAbertas} em aberto` : ""}</dd>
+      </dl>
+
+      <div className="mt-auto flex flex-wrap gap-1.5 pt-1">
+        {l.ativo
+          ? <Button size="sm" variant="outline" className="h-8 border-danger-500/40 text-danger-300 hover:bg-danger-500/10" onClick={() => onAcao({ tipo: "login", pessoa: l, ativo: false })}><UserX className="mr-1 h-3.5 w-3.5" /> Desativar login</Button>
+          : <Button size="sm" variant="outline" className="h-8 border-ok-500/40 text-ok-300 hover:bg-ok-500/10" onClick={() => onAcao({ tipo: "login", pessoa: l, ativo: true })}><UserCheck className="mr-1 h-3.5 w-3.5" /> Ativar login</Button>}
+        {["bloqueado", "vencido", "sem_licenca", "atrasado", "cancelado"].includes(l.pagamento) || l.pagamento === "teste"
+          ? <Button size="sm" variant="outline" className="h-8" onClick={() => onAcao({ tipo: "liberar", pessoa: l })}><ShieldCheck className="mr-1 h-3.5 w-3.5" /> Liberar licença</Button>
+          : null}
+        {["pago", "cortesia", "teste", "atrasado"].includes(l.pagamento) && l.assinaturaId
+          ? <Button size="sm" variant="outline" className="h-8" onClick={() => onAcao({ tipo: "bloquear", pessoa: l })}><ShieldOff className="mr-1 h-3.5 w-3.5" /> Bloquear licença</Button>
+          : null}
+        <Button size="sm" variant="ghost" className="h-8 px-2" title="Desconectar de todos os aparelhos" aria-label="Desconectar de todos os aparelhos" onClick={() => onAcao({ tipo: "desconectar", pessoa: l })}><LogOut className="h-3.5 w-3.5" /></Button>
+        <Button size="sm" variant="ghost" className="h-8 px-2" title="Histórico de entradas e liberações" aria-label="Histórico de entradas e liberações" onClick={onHistorico}><History className="h-3.5 w-3.5" /></Button>
+      </div>
+    </div>
+  );
+}
+
+function DialogoAcao({ acao, onFechar, onFeito }: { acao: Acao; onFechar: () => void; onFeito: () => void }) {
+  const [motivo, setMotivo] = useState("");
+  const [ate, setAte] = useState("");
+  const ok = (msg: string) => () => { toast.success(msg); onFeito(); };
+  const erro = (e: { message: string }) => toast.error(e.message);
+  const login = trpc.controleAcessos.definirLogin.useMutation({ onSuccess: ok(acao.tipo === "login" && acao.ativo ? "Login ativado" : "Login desativado e aparelhos desconectados"), onError: erro });
+  const licenca = trpc.controleAcessos.definirLicenca.useMutation({ onSuccess: ok(acao.tipo === "liberar" ? "Licença liberada" : "Licença bloqueada"), onError: erro });
+  const desconectar = trpc.controleAcessos.desconectar.useMutation({ onSuccess: ok("Desconectado de todos os aparelhos"), onError: erro });
+  const ocupado = login.isPending || licenca.isPending || desconectar.isPending;
+  const p = acao.pessoa;
+
+  const titulo = acao.tipo === "login" ? (acao.ativo ? "Ativar login" : "Desativar login")
+    : acao.tipo === "liberar" ? "Liberar licença" : acao.tipo === "bloquear" ? "Bloquear licença" : "Desconectar de todos os aparelhos";
+  const texto = acao.tipo === "login" ? (acao.ativo ? `${p.nome} volta a entrar no sistema (se a licença estiver liberada).` : `${p.nome} não entra mais e é desconectado de todos os aparelhos. Os leads e o histórico continuam.`)
+    : acao.tipo === "liberar" ? (p.assinaturaId ? `A licença de ${p.nome} volta a valer. Deixe a data em branco para manter o vencimento atual.` : `${p.nome} ainda não tem licença: será criada uma cortesia. Informe até quando vale (em branco: sem data de fim).`)
+    : acao.tipo === "bloquear" ? `${p.nome} perde o acesso até a licença ser liberada de novo.`
+    : `${p.nome} sai de todos os celulares e computadores e precisa entrar de novo com a senha.`;
+  const precisaMotivo = acao.tipo !== "desconectar";
+  const podeConfirmar = !ocupado && (!precisaMotivo || motivo.trim().length >= 3);
+
+  const confirmar = () => {
+    if (acao.tipo === "login") login.mutate({ id: p.id, ativo: acao.ativo, motivo });
+    else if (acao.tipo === "liberar") licenca.mutate({ id: p.id, tipo: "liberar", ate: ate || null, motivo });
+    else if (acao.tipo === "bloquear") licenca.mutate({ id: p.id, tipo: "bloquear", motivo });
+    else desconectar.mutate({ id: p.id });
+  };
+
+  return (
+    <Dialog open onOpenChange={v => { if (!v) onFechar(); }}>
+      <DialogContent className="max-w-md">
+        <DialogHeader>
+          <DialogTitle>{titulo}</DialogTitle>
+          <DialogDescription>{texto}</DialogDescription>
+        </DialogHeader>
+        {acao.tipo === "liberar" && (
+          <label className="flex flex-col gap-1 text-sm">
+            Liberada até
+            <Input type="date" value={ate} onChange={e => setAte(e.target.value)} />
+          </label>
+        )}
+        {precisaMotivo && (
+          <label className="flex flex-col gap-1 text-sm">
+            Motivo (fica registrado)
+            <Input value={motivo} onChange={e => setMotivo(e.target.value)} maxLength={300} placeholder={acao.tipo === "liberar" ? "Ex.: pagou por Pix, comprovante no WhatsApp" : "Ex.: saiu da equipe"} />
+          </label>
+        )}
+        <DialogFooter className="gap-2">
+          <Button variant="outline" onClick={onFechar} disabled={ocupado}>Voltar</Button>
+          <Button onClick={confirmar} disabled={!podeConfirmar} className={acao.tipo === "liberar" || (acao.tipo === "login" && acao.ativo) ? "bg-ok-600 text-white hover:bg-ok-700" : "bg-danger-600 text-white hover:bg-danger-700"}>
+            {ocupado && <Loader2 className="mr-1.5 h-4 w-4 animate-spin motion-reduce:animate-none" />} Confirmar
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+function DialogoHistorico({ pessoa, onFechar }: { pessoa: Linha; onFechar: () => void }) {
+  const { data, isLoading } = trpc.controleAcessos.historico.useQuery({ id: pessoa.id });
+  return (
+    <Dialog open onOpenChange={v => { if (!v) onFechar(); }}>
+      <DialogContent className="max-h-[85dvh] max-w-lg overflow-y-auto">
+        <DialogHeader>
+          <DialogTitle>Histórico de {pessoa.nome}</DialogTitle>
+          <DialogDescription>Entradas no sistema, liberações e bloqueios (os 30 mais recentes)</DialogDescription>
+        </DialogHeader>
+        {isLoading && <p className="text-sm text-muted-foreground">Carregando…</p>}
+        {!isLoading && !data?.length && <p className="text-sm text-muted-foreground">Nada registrado ainda.</p>}
+        <ol className="space-y-2">
+          {data?.map(e => (
+            <li key={e.id} className="rounded-md border border-border bg-secondary/20 px-3 py-2 text-sm">
+              <div className="flex items-center justify-between gap-2">
+                <span className="font-medium text-foreground">{e.rotulo}</span>
+                <span className="shrink-0 text-xs text-muted-foreground">{dataHoraBr(e.quando)}</span>
+              </div>
+              {(e.motivo || e.por) && <p className="mt-0.5 text-xs text-muted-foreground">{e.motivo}{e.motivo && e.por ? ", " : ""}{e.por ? `por ${e.por}` : ""}</p>}
+            </li>
+          ))}
+        </ol>
+      </DialogContent>
+    </Dialog>
+  );
+}

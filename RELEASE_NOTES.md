@@ -3,6 +3,18 @@
 Cada versão nova vai no TOPO. Depois rode `npm run release` (valida e atualiza o package.json);
 ao subir, o servidor grava a versão no banco e todos recebem o aviso "Novidades da versão".
 
+## 1.112.0 — 2026-11-06
+tipo: minor
+obrigatoria: nao
+titulo: Controle de acessos dos corretores para o escritório
+publico: equipe
+
+### Novo
+- Administração › Controle de acessos (administrador e secretária): cada corretor e empreendedor com login ativo ou desativado, situação do pagamento (pago, cortesia, em teste, atrasado, bloqueado, sem licença), uso do sistema (usando, pouco uso, parado, nunca entrou), último uso, entradas nos últimos 30 dias e último pagamento
+- Números do topo (ativos, usando, parados, pagos, em teste, pendentes) filtram a lista com um toque; busca por nome, CRECI ou telefone
+- Ações com motivo registrado: ativar ou desativar o login, liberar a licença até uma data (quem não tem licença ganha uma cortesia), bloquear a licença e desconectar de todos os aparelhos
+- Histórico de cada pessoa: entradas no sistema, liberações e bloqueios, com quem fez e o motivo
+
 ## 1.111.0 — 2026-11-06
 tipo: minor
 obrigatoria: nao

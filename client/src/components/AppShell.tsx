@@ -11,7 +11,7 @@ import {
   Settings, UserCog, Users, X, Eye, ClipboardList, CalendarDays, Map as MapIcon, Smartphone, Wallet, IdCard, FolderOpen, Bell, FileSignature, Mic, CalendarCheck, UserPlus, BookCopy, BadgeDollarSign, Hourglass, Bot, Trophy, Link2, Zap, MessagesSquare, ListOrdered, Plug, Inbox, Building, Rotate3d,
   ChevronRight, ChevronsLeft, ChevronsRight,
   Radar, BookOpen,
- Shuffle, CheckCheck,
+ Shuffle, CheckCheck, ShieldCheck,
 } from "lucide-react";
 import { abrirNovidades, SinoNovidades, useNovidadesNaoLidas } from "./sistema/Novidades";
 import { useNotificacoes } from "./sistema/Notificacoes";
@@ -92,6 +92,8 @@ const MENU: Grupo[] = [
     cor: COR.admin,
     itens: [
       { rotulo: "Equipe", rota: "/equipe", icone: UserCog },
+      // Administrador e secretária: quem está ativo, pago e usando o sistema
+      { rotulo: "Controle de acessos", rota: "/controle-acessos", icone: ShieldCheck },
       // Administrador e secretária (shared/equipe.ts → podeAbrir)
       { rotulo: "Respostas automáticas", rota: "/respostas-automaticas", icone: Bot },
       { rotulo: "SaaS e assinaturas", rota: "/saas", icone: BadgeDollarSign },

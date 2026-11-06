@@ -44,6 +44,7 @@ const FormularioRecrutamento = lazy(() => import("./pages/FormularioRecrutamento
 const TrocarSenha = lazy(() => import("./pages/TrocarSenha"));
 const Assinatura = lazy(() => import("./pages/Assinatura"));
 const Saas = lazy(() => import("./pages/Saas"));
+const ControleAcessos = lazy(() => import("./pages/ControleAcessos"));
 const Talonarios = lazy(() => import("./pages/Talonarios"));
 const Empreendimentos = lazy(() => import("./pages/Empreendimentos"));
 const Empreendimento = lazy(() => import("./pages/Empreendimento"));
@@ -199,6 +200,9 @@ function Router() {
       </Route>
       <Route path={"/assinatura"}>
         {() => <SetupGuard component={Assinatura} />}
+      </Route>
+      <Route path={"/controle-acessos"}>
+        {() => <SetupGuard component={ControleAcessos} />}
       </Route>
       <Route path={"/saas"}>
         {() => <SetupGuard component={Saas} />}

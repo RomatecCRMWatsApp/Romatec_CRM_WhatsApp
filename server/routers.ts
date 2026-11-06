@@ -20,6 +20,7 @@ import { financeiroRouter } from "./routers/financeiro.router";
 import { reunioesRouter } from "./routers/reunioes.router";
 import { recrutamentoRouter } from "./routers/recrutamento.router";
 import { saasRouter } from "./routers/saas.router";
+import { controleAcessosRouter } from "./routers/controleAcessos.router";
 import { reservasRouter } from "./routers/reservas.router";
 import { convitesRouter } from "./routers/convites.router";
 import { exclusaoRouter } from "./routers/exclusao.router";
@@ -104,6 +105,7 @@ export const appRouter = router({
   reunioes: reunioesRouter,
   recrutamento: recrutamentoRouter,
   saas: saasRouter,
+  controleAcessos: controleAcessosRouter,
   reservas: reservasRouter,
   convites: convitesRouter,
   exclusao: exclusaoRouter,
