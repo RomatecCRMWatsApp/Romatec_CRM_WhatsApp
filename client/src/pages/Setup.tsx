@@ -28,17 +28,17 @@ function StepDot({ step, current }: { step: (typeof STEPS)[0]; current: number }
       <div
         className={`w-10 h-10 rounded-full flex items-center justify-center border-2 transition ${
           done
-            ? "bg-emerald-600 border-emerald-600 text-white"
+            ? "bg-ok-600 border-ok-600 text-white"
             : active
-            ? "bg-emerald-600/20 border-emerald-500 text-emerald-400"
-            : "bg-slate-800 border-slate-600 text-slate-500"
+            ? "bg-ok-600/20 border-ok-500 text-ok-400"
+            : "bg-ardosia-800 border-ardosia-600 text-ardosia-500"
         }`}
       >
         {done ? <CheckCircle2 className="w-5 h-5" /> : <Icon className="w-5 h-5" />}
       </div>
       <span
         className={`text-xs font-medium ${
-          active ? "text-emerald-400" : done ? "text-emerald-600" : "text-slate-500"
+          active ? "text-ok-400" : done ? "text-ok-600" : "text-ardosia-500"
         }`}
       >
         {step.label}
@@ -51,7 +51,7 @@ function StepLine({ done }: { done: boolean }) {
   return (
     <div
       className={`flex-1 h-0.5 mt-5 transition ${
-        done ? "bg-emerald-600" : "bg-slate-700"
+        done ? "bg-ok-600" : "bg-ardosia-700"
       }`}
     />
   );
@@ -119,7 +119,7 @@ export default function Setup() {
         <div className="text-center mb-8">
           <div className="mb-3 flex justify-center"><RomatecAppIcon size={64} /></div>
           <h1 className="text-2xl font-bold text-white">Configuração inicial</h1>
-          <p className="text-slate-400 text-sm mt-1">Configure o sistema antes de começar a usar</p>
+          <p className="text-ardosia-400 text-sm mt-1">Configure o sistema antes de começar a usar</p>
         </div>
 
         {/* Progress steps */}
@@ -133,40 +133,40 @@ export default function Setup() {
         </div>
 
         {/* Form card */}
-        <div className="bg-slate-900 border border-slate-700 rounded-2xl p-6 shadow-xl">
+        <div className="bg-ardosia-900 border border-ardosia-700 rounded-2xl p-6 shadow-xl">
 
           {/* ── STEP 1: Empresa ─────────────────────────────────────────── */}
           {step === 1 && (
             <div className="space-y-4">
               <h2 className="text-lg font-semibold text-white flex items-center gap-2">
-                <Building2 className="w-5 h-5 text-emerald-400" /> Dados da Empresa
+                <Building2 className="w-5 h-5 text-ok-400" /> Dados da Empresa
               </h2>
               <div className="space-y-1">
-                <Label className="text-slate-300">Nome da empresa <span className="text-red-400">*</span></Label>
+                <Label className="text-ardosia-300">Nome da empresa <span className="text-danger-400">*</span></Label>
                 <Input
                   value={empresa.companyName}
                   onChange={(e) => setEmpresa({ ...empresa, companyName: e.target.value })}
                   placeholder="Romatec Consultoria Imobiliária"
-                  className="bg-slate-800 border-slate-600 text-white"
+                  className="bg-ardosia-800 border-ardosia-600 text-white"
                 />
               </div>
               <div className="space-y-1">
-                <Label className="text-slate-300">Telefone / WhatsApp <span className="text-red-400">*</span></Label>
+                <Label className="text-ardosia-300">Telefone / WhatsApp <span className="text-danger-400">*</span></Label>
                 <Input
                   value={empresa.phone}
                   onChange={(e) => setEmpresa({ ...empresa, phone: e.target.value })}
                   placeholder="5598912345678"
-                  className="bg-slate-800 border-slate-600 text-white"
+                  className="bg-ardosia-800 border-ardosia-600 text-white"
                 />
-                <p className="text-xs text-slate-500">Formato: código do país + DDD + número (sem +)</p>
+                <p className="text-xs text-ardosia-500">Formato: código do país + DDD + número (sem +)</p>
               </div>
               <div className="space-y-1">
-                <Label className="text-slate-300">Endereço <span className="text-slate-500">(opcional)</span></Label>
+                <Label className="text-ardosia-300">Endereço <span className="text-ardosia-500">(opcional)</span></Label>
                 <Input
                   value={empresa.address}
                   onChange={(e) => setEmpresa({ ...empresa, address: e.target.value })}
                   placeholder="Rua São Raimundo, 15 – Centro, Açailândia – MA"
-                  className="bg-slate-800 border-slate-600 text-white"
+                  className="bg-ardosia-800 border-ardosia-600 text-white"
                 />
               </div>
             </div>
@@ -176,56 +176,56 @@ export default function Setup() {
           {step === 2 && (
             <div className="space-y-4">
               <h2 className="text-lg font-semibold text-white flex items-center gap-2">
-                <Wifi className="w-5 h-5 text-emerald-400" /> Conexão WhatsApp (Z-API)
+                <Wifi className="w-5 h-5 text-ok-400" /> Conexão WhatsApp (Z-API)
               </h2>
-              <p className="text-xs text-slate-400">Obtenha as credenciais em <span className="text-emerald-400">app.z-api.io</span> → sua instância</p>
+              <p className="text-xs text-ardosia-400">Obtenha as credenciais em <span className="text-ok-400">app.z-api.io</span> → sua instância</p>
               <div className="space-y-1">
-                <Label className="text-slate-300">Instance ID</Label>
+                <Label className="text-ardosia-300">Instance ID</Label>
                 <Input
                   value={zapi.zApiInstanceId}
                   onChange={(e) => setZapi({ ...zapi, zApiInstanceId: e.target.value })}
                   placeholder="3A20xxxxxxxxxxxxxxxx"
-                  className="bg-slate-800 border-slate-600 text-white font-mono text-sm"
+                  className="bg-ardosia-800 border-ardosia-600 text-white font-mono text-sm"
                 />
               </div>
               <div className="space-y-1">
-                <Label className="text-slate-300">Token</Label>
+                <Label className="text-ardosia-300">Token</Label>
                 <Input
                   type="password"
                   value={zapi.zApiToken}
                   onChange={(e) => setZapi({ ...zapi, zApiToken: e.target.value })}
                   placeholder="••••••••••••••••••••"
-                  className="bg-slate-800 border-slate-600 text-white"
+                  className="bg-ardosia-800 border-ardosia-600 text-white"
                 />
               </div>
               <div className="space-y-1">
-                <Label className="text-slate-300">Client Token <span className="text-slate-500">(opcional)</span></Label>
+                <Label className="text-ardosia-300">Client Token <span className="text-ardosia-500">(opcional)</span></Label>
                 <Input
                   type="password"
                   value={zapi.zApiClientToken}
                   onChange={(e) => setZapi({ ...zapi, zApiClientToken: e.target.value })}
                   placeholder="••••••••••••••••••••"
-                  className="bg-slate-800 border-slate-600 text-white"
+                  className="bg-ardosia-800 border-ardosia-600 text-white"
                 />
               </div>
               {/* Test button */}
               <Button
                 variant="outline"
-                className="w-full border-slate-600 text-slate-300 hover:border-emerald-500 hover:text-emerald-400"
+                className="w-full border-ardosia-600 text-ardosia-300 hover:border-ok-500 hover:text-ok-400"
                 onClick={handleTestZApi}
                 disabled={zapiStatus === "testing"}
               >
                 {zapiStatus === "testing" ? (
                   <><Loader2 className="w-4 h-4 mr-2 animate-spin" />Testando…</>
                 ) : zapiStatus === "ok" ? (
-                  <><CheckCircle2 className="w-4 h-4 mr-2 text-emerald-400" />Conectado!</>
+                  <><CheckCircle2 className="w-4 h-4 mr-2 text-ok-400" />Conectado!</>
                 ) : zapiStatus === "fail" ? (
-                  <><XCircle className="w-4 h-4 mr-2 text-red-400" />Falhou — verifique os dados</>
+                  <><XCircle className="w-4 h-4 mr-2 text-danger-400" />Falhou — verifique os dados</>
                 ) : (
                   <><WifiOff className="w-4 h-4 mr-2" />Testar conexão Z-API</>
                 )}
               </Button>
-              <p className="text-xs text-slate-500 text-center">Pode pular e configurar depois em Configurações</p>
+              <p className="text-xs text-ardosia-500 text-center">Pode pular e configurar depois em Configurações</p>
             </div>
           )}
 
@@ -233,54 +233,54 @@ export default function Setup() {
           {step === 3 && (
             <div className="space-y-4">
               <h2 className="text-lg font-semibold text-white flex items-center gap-2">
-                <Bell className="w-5 h-5 text-emerald-400" /> Notificações & IA
-                <span className="text-xs text-slate-500 font-normal">(opcional)</span>
+                <Bell className="w-5 h-5 text-ok-400" /> Notificações & IA
+                <span className="text-xs text-ardosia-500 font-normal">(opcional)</span>
               </h2>
 
               {/* Telegram */}
-              <div className="bg-slate-800/60 rounded-xl p-4 space-y-3">
-                <p className="text-sm font-medium text-slate-300 flex items-center gap-2">
-                  <Bell className="w-4 h-4 text-blue-400" /> Telegram — alertas do sistema
+              <div className="bg-ardosia-800/60 rounded-xl p-4 space-y-3">
+                <p className="text-sm font-medium text-ardosia-300 flex items-center gap-2">
+                  <Bell className="w-4 h-4 text-azul-400" /> Telegram — alertas do sistema
                 </p>
                 <div className="space-y-1">
-                  <Label className="text-slate-400 text-xs">Bot Token</Label>
+                  <Label className="text-ardosia-400 text-xs">Bot Token</Label>
                   <Input
                     value={extras.telegramBotToken}
                     onChange={(e) => setExtras({ ...extras, telegramBotToken: e.target.value })}
                     placeholder="110201543:AAHdqTcv..."
-                    className="bg-slate-700 border-slate-600 text-white text-sm font-mono"
+                    className="bg-ardosia-700 border-ardosia-600 text-white text-sm font-mono"
                   />
                 </div>
                 <div className="space-y-1">
-                  <Label className="text-slate-400 text-xs">Chat ID</Label>
+                  <Label className="text-ardosia-400 text-xs">Chat ID</Label>
                   <Input
                     value={extras.telegramChatId}
                     onChange={(e) => setExtras({ ...extras, telegramChatId: e.target.value })}
                     placeholder="-1001234567890"
-                    className="bg-slate-700 border-slate-600 text-white text-sm font-mono"
+                    className="bg-ardosia-700 border-ardosia-600 text-white text-sm font-mono"
                   />
                 </div>
               </div>
 
               {/* OpenAI */}
-              <div className="bg-slate-800/60 rounded-xl p-4 space-y-3">
-                <p className="text-sm font-medium text-slate-300 flex items-center gap-2">
-                  <Bot className="w-4 h-4 text-purple-400" /> OpenAI — qualificação de leads por IA
+              <div className="bg-ardosia-800/60 rounded-xl p-4 space-y-3">
+                <p className="text-sm font-medium text-ardosia-300 flex items-center gap-2">
+                  <Bot className="w-4 h-4 text-roxo-400" /> OpenAI — qualificação de leads por IA
                 </p>
                 <div className="space-y-1">
-                  <Label className="text-slate-400 text-xs">API Key</Label>
+                  <Label className="text-ardosia-400 text-xs">API Key</Label>
                   <Input
                     type="password"
                     value={extras.openAiApiKey}
                     onChange={(e) => setExtras({ ...extras, openAiApiKey: e.target.value })}
                     placeholder="sk-••••••••••••••••"
-                    className="bg-slate-700 border-slate-600 text-white text-sm font-mono"
+                    className="bg-ardosia-700 border-ardosia-600 text-white text-sm font-mono"
                   />
                 </div>
               </div>
 
-              <p className="text-xs text-slate-500 text-center">
-                Tudo pode ser alterado depois em <span className="text-emerald-400">Configurações</span>
+              <p className="text-xs text-ardosia-500 text-center">
+                Tudo pode ser alterado depois em <span className="text-ok-400">Configurações</span>
               </p>
             </div>
           )}
@@ -290,7 +290,7 @@ export default function Setup() {
             {step > 1 && (
               <Button
                 variant="outline"
-                className="flex-1 border-slate-600 text-slate-300"
+                className="flex-1 border-ardosia-600 text-ardosia-300"
                 onClick={() => setStep(step - 1)}
                 disabled={saving}
               >
@@ -298,7 +298,7 @@ export default function Setup() {
               </Button>
             )}
             <Button
-              className="flex-1 bg-emerald-600 hover:bg-emerald-700 text-white font-semibold"
+              className="flex-1 bg-ok-600 hover:bg-ok-700 text-white font-semibold"
               onClick={handleNext}
               disabled={saving}
             >
@@ -313,7 +313,7 @@ export default function Setup() {
           </div>
         </div>
 
-        <p className="text-center text-slate-600 text-xs mt-4">
+        <p className="text-center text-ardosia-600 text-xs mt-4">
           Romatec CRM v1.1.1 · romateccrm.com
         </p>
       </div>

@@ -49,19 +49,19 @@ function Vinculo() {
   return (
     <section className="space-y-3 rounded-xl border border-border bg-card p-4">
       <div className="flex flex-wrap items-center gap-2">
-        <ShieldCheck className={`h-5 w-5 ${s.autorizado ? "text-emerald-400" : "text-amber-400"}`} />
+        <ShieldCheck className={`h-5 w-5 ${s.autorizado ? "text-ok-400" : "text-warn-400"}`} />
         <h2 className="text-base font-semibold">Meu WhatsApp</h2>
-        <span className={`rounded px-2 py-0.5 text-[11px] font-bold ${s.autorizado ? "bg-emerald-600/30 text-emerald-200" : "bg-amber-600/30 text-amber-200"}`}>
+        <span className={`rounded px-2 py-0.5 text-[11px] font-bold ${s.autorizado ? "bg-ok-600/30 text-ok-200" : "bg-warn-600/30 text-warn-200"}`}>
           {s.autorizado ? (s.prazo ? `AUTORIZADO · acompanha o plano até ${new Date(s.prazo).toLocaleDateString("pt-BR")}${s.diasRestantes != null ? ` (${s.diasRestantes} dia(s))` : ""}` : "AUTORIZADO · sem prazo") : s.vinculado ? `VINCULADO · ${s.motivo}` : "NÃO VINCULADO"}
         </span>
       </div>
-      {!s.iaDisponivel && <p className="rounded-md bg-amber-500/10 p-2 text-xs text-amber-200">A IA não está configurada no servidor (ANTHROPIC_API_KEY ou OPENAI_API_KEY): o agente recebe as mensagens, mas a organização automática fica indisponível.</p>}
+      {!s.iaDisponivel && <p className="rounded-md bg-warn-500/10 p-2 text-xs text-warn-200">A IA não está configurada no servidor (ANTHROPIC_API_KEY ou OPENAI_API_KEY): o agente recebe as mensagens, mas a organização automática fica indisponível.</p>}
       {!s.vinculado && (
         <div className="space-y-2 text-sm">
-          <p className="text-muted-foreground">1. Toque em "Vincular meu WhatsApp". 2. Mande o código, <b>do WhatsApp do seu cadastro</b>, para o WhatsApp da Romatec ({s.numeroCentral}). Só o seu número consegue usar o código.</p>
+          <p className="text-muted-foreground">1. Toque em “Vincular meu WhatsApp”. 2. Mande o código, <b>do WhatsApp do seu cadastro</b>, para o WhatsApp da Romatec ({s.numeroCentral}). Só o seu número consegue usar o código.</p>
           <Button onClick={() => gerar.mutate()} disabled={gerar.isPending}>{gerar.isPending ? <Loader2 className="mr-1 h-4 w-4 animate-spin" /> : <MessageCircle className="mr-1 h-4 w-4" />} Vincular meu WhatsApp</Button>
           {codigo && (
-            <div className="space-y-2 rounded-lg border border-emerald-500/40 bg-emerald-500/5 p-3">
+            <div className="space-y-2 rounded-lg border border-ok-500/40 bg-ok-500/5 p-3">
               <p>Mande esta mensagem em até 10 minutos:</p>
               <p className="font-mono text-2xl font-bold tracking-widest">{codigo.mensagem}</p>
               <div className="flex flex-wrap gap-2">
@@ -75,10 +75,10 @@ function Vinculo() {
       )}
       {s.vinculado && (
         <div className="space-y-2 text-sm">
-          <p className="text-muted-foreground">WhatsApp final {s.telefoneFinal}. Para cadastrar, mande <b>"cadastrar imóvel"</b> (ou "menu") para o WhatsApp da Romatec ({s.numeroCentral}). {s.autorizado && (s.prazo ? " A autorização acompanha o seu plano: renova sozinha quando o plano renovar." : " Seu acesso não tem prazo: a autorização vale enquanto você tiver acesso ao CRM.")} Sair do CRM, trocar a senha, "sair de todos os aparelhos" ou "Desligar" encerram a autorização; o rascunho fica salvo.</p>
+          <p className="text-muted-foreground">WhatsApp final {s.telefoneFinal}. Para cadastrar, mande <b>“cadastrar imóvel”</b> (ou “menu”) para o WhatsApp da Romatec ({s.numeroCentral}). {s.autorizado && (s.prazo ? " A autorização acompanha o seu plano: renova sozinha quando o plano renovar." : " Seu acesso não tem prazo: a autorização vale enquanto você tiver acesso ao CRM.")} Sair do CRM, trocar a senha, "sair de todos os aparelhos" ou "Desligar" encerram a autorização; o rascunho fica salvo.</p>
           <div className="flex flex-wrap gap-2">
             {!s.autorizado && !String(s.motivo ?? "").startsWith("plano") && <Button onClick={() => autorizar.mutate()} disabled={autorizar.isPending}><CheckCircle2 className="mr-1 h-4 w-4" /> Autorizar este WhatsApp</Button>}
-            {s.autorizado && <Button variant="ghost" className="text-red-300" onClick={() => revogar.mutate()}><XCircle className="mr-1 h-4 w-4" /> Desligar</Button>}
+            {s.autorizado && <Button variant="ghost" className="text-danger-300" onClick={() => revogar.mutate()}><XCircle className="mr-1 h-4 w-4" /> Desligar</Button>}
             {!s.autorizado && String(s.motivo ?? "").startsWith("plano") && <Button asChild><Link href="/assinatura">Renovar meu plano</Link></Button>}
             <Button asChild variant="outline"><a href={`https://wa.me/${s.numeroCentral}?text=${encodeURIComponent("cadastrar imóvel")}`} target="_blank" rel="noreferrer"><MessageCircle className="mr-1 h-4 w-4" /> Cadastrar agora pelo WhatsApp</a></Button>
           </div>
@@ -106,7 +106,7 @@ function ListaRascunhos() {
                 <span className="rounded bg-secondary/50 px-1.5 py-0.5 text-[10px] font-bold">{ESTADO[r.estado] ?? r.estado}</span>
                 {r.estado !== "saving" && (
                   <button type="button" aria-label={`Excluir rascunho nº ${r.id}`} title="Excluir rascunho" disabled={excluir.isPending}
-                    className="rounded p-1.5 text-red-300 hover:bg-red-500/10"
+                    className="rounded p-1.5 text-danger-300 hover:bg-danger-500/10"
                     onClick={ev => { ev.preventDefault(); ev.stopPropagation(); if (confirm(avisoExcluir(r.id, r.propertyId))) excluir.mutate({ id: r.id }); }}>
                     <Trash2 className="h-4 w-4" />
                   </button>
@@ -114,8 +114,8 @@ function ListaRascunhos() {
               </span>
             </div>
             <p className="text-xs text-muted-foreground">{[r.cidade, r.preco ? formatarCampo("preco", r.preco) : null, `${r.fotos} foto(s)`].filter(Boolean).join(" · ")} · {r.responsavel} · {dataHora(r.atualizadoEm)}</p>
-            {!!r.pendencias.length && r.estado !== "saved" && r.estado !== "cancelled" && <p className="text-xs text-amber-300">Falta: {r.pendencias.join(", ")}</p>}
-            {r.erro && r.estado === "failed" && <p className="text-xs text-red-300">{r.erro}</p>}
+            {!!r.pendencias.length && r.estado !== "saved" && r.estado !== "cancelled" && <p className="text-xs text-warn-300">Falta: {r.pendencias.join(", ")}</p>}
+            {r.erro && r.estado === "failed" && <p className="text-xs text-danger-300">{r.erro}</p>}
           </Link>
         ))}
       </div>
@@ -141,7 +141,7 @@ function PainelAdmin() {
         <tbody>{data.vinculos.map(v => (
           <tr key={v.usuarioId} className="border-t border-border"><td className="p-1">{v.nome}</td><td className="p-1">{v.perfil}</td><td className="p-1">{v.telefoneFinal ? `…${v.telefoneFinal}` : "—"}</td>
             <td className="p-1">{v.autorizado ? "autorizado" : v.motivo}</td>
-            <td className="p-1">{v.autorizado && <button className="text-red-300 underline" onClick={() => revogar.mutate({ usuarioId: v.usuarioId })}>desligar</button>}</td></tr>
+            <td className="p-1">{v.autorizado && <button className="text-danger-300 underline" onClick={() => revogar.mutate({ usuarioId: v.usuarioId })}>desligar</button>}</td></tr>
         ))}</tbody>
       </table></div>
       {!!data.erros.length && <details><summary className="cursor-pointer text-xs">Erros recentes ({data.erros.length})</summary>
@@ -165,7 +165,7 @@ function Rascunho({ id }: { id: number }) {
   const [, irPara] = useLocation();
   const excluir = trpc.agenteImovel.excluir.useMutation({ onSuccess: () => { toast.success("Rascunho excluído"); utils.agenteImovel.rascunhos.invalidate(); irPara("/imoveis/whatsapp"); }, onError: e => toast.error(e.message) });
   if (isLoading) return <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />;
-  if (error || !r) return <p className="text-sm text-red-300">{error?.message ?? "Rascunho não encontrado"}</p>;
+  if (error || !r) return <p className="text-sm text-danger-300">{error?.message ?? "Rascunho não encontrado"}</p>;
   const aberto = !["saved", "cancelled", "saving"].includes(r.estado);
   const valor = (c: keyof DadosImovel) => (c in edit ? edit[c] : (r.dados as any)[c]);
   const mudou = Object.keys(edit).length > 0 || textos.titulo !== undefined || textos.descricao !== undefined;
@@ -174,17 +174,17 @@ function Rascunho({ id }: { id: number }) {
       <div className="flex flex-wrap items-center gap-2">
         <Link href="/imoveis/whatsapp" className="text-sm text-muted-foreground hover:underline">← Todos os rascunhos</Link>
         <span className="rounded bg-secondary/50 px-2 py-0.5 text-xs font-bold">{ESTADO[r.estado] ?? r.estado} · versão {r.versao}</span>
-        {r.propertyId && <Link href={`/properties?imovel=${r.propertyId}`} className="text-sm text-emerald-300 underline">Abrir em Imóveis (cadastrado, interno)</Link>}
+        {r.propertyId && <Link href={`/properties?imovel=${r.propertyId}`} className="text-sm text-ok-300 underline">Abrir em Imóveis (cadastrado, interno)</Link>}
         {r.estado !== "saving" && (
-          <Button variant="ghost" size="sm" className="ml-auto text-red-300" disabled={excluir.isPending} onClick={() => { if (confirm(avisoExcluir(id, r.propertyId))) excluir.mutate({ id }); }}>
+          <Button variant="ghost" size="sm" className="ml-auto text-danger-300" disabled={excluir.isPending} onClick={() => { if (confirm(avisoExcluir(id, r.propertyId))) excluir.mutate({ id }); }}>
             <Trash2 className="mr-1 h-4 w-4" /> Excluir rascunho
           </Button>
         )}
       </div>
-      {r.erro && <p className="rounded-md bg-red-500/10 p-2 text-xs text-red-200">{r.erro}</p>}
-      {!!r.pendencias.length && aberto && <p className="rounded-md bg-amber-500/10 p-2 text-sm text-amber-200">Falta: {r.pendencias.join(", ")}</p>}
-      {r.conflitos.map((c: any) => <p key={c.campo} className="rounded-md bg-amber-500/10 p-2 text-sm text-amber-200">{CAMPOS.find(x => x.campo === c.campo)?.rotulo}: {c.valores.join(" ou ")} — corrija abaixo</p>)}
-      {r.duvidas.map((q: string, i: number) => <p key={i} className="rounded-md bg-amber-500/10 p-2 text-sm text-amber-200">{q}</p>)}
+      {r.erro && <p className="rounded-md bg-danger-500/10 p-2 text-xs text-danger-200">{r.erro}</p>}
+      {!!r.pendencias.length && aberto && <p className="rounded-md bg-warn-500/10 p-2 text-sm text-warn-200">Falta: {r.pendencias.join(", ")}</p>}
+      {r.conflitos.map((c: any) => <p key={c.campo} className="rounded-md bg-warn-500/10 p-2 text-sm text-warn-200">{CAMPOS.find(x => x.campo === c.campo)?.rotulo}: {c.valores.join(" ou ")} — corrija abaixo</p>)}
+      {r.duvidas.map((q: string, i: number) => <p key={i} className="rounded-md bg-warn-500/10 p-2 text-sm text-warn-200">{q}</p>)}
 
       <section className="grid gap-3 rounded-xl border border-border bg-card p-4 md:grid-cols-2 lg:grid-cols-3">
         {CAMPOS.map(c => {
@@ -235,13 +235,13 @@ function Rascunho({ id }: { id: number }) {
         <h3 className="text-sm font-semibold">Fotos ({r.fotos.filter(f => f.status === "ok").length})</h3>
         <div className="grid grid-cols-2 gap-2 sm:grid-cols-4 lg:grid-cols-6">
           {r.fotos.map(f => (
-            <div key={f.id} className={`relative overflow-hidden rounded-lg border ${f.capa ? "border-amber-400" : "border-border"} bg-black/40`}>
+            <div key={f.id} className={`relative overflow-hidden rounded-lg border ${f.capa ? "border-warn-400" : "border-border"} bg-black/40`}>
               {f.url ? <img src={f.url.replace("/image/upload/", "/image/upload/c_limit,w_480,q_auto/")} alt="" className="aspect-square w-full object-cover" /> : <div className="flex aspect-square items-center justify-center text-xs text-muted-foreground">{f.status === "pendente" ? "processando…" : f.status === "duplicada" ? "repetida" : f.erro ?? f.status}</div>}
-              {f.capa && <span className="absolute left-1 top-1 rounded bg-amber-400 px-1 text-[10px] font-bold text-black">CAPA</span>}
+              {f.capa && <span className="absolute left-1 top-1 rounded bg-warn-400 px-1 text-[10px] font-bold text-black">CAPA</span>}
               {aberto && f.status === "ok" && (
                 <div className="absolute bottom-1 right-1 flex gap-1">
-                  {!f.capa && <button title="Usar como capa" className="rounded bg-black/70 p-1" onClick={() => foto.mutate({ id, fotoId: f.id, acao: "capa" })}><Star className="h-3.5 w-3.5 text-amber-300" /></button>}
-                  <button title="Tirar do cadastro" className="rounded bg-black/70 p-1" onClick={() => foto.mutate({ id, fotoId: f.id, acao: "remover" })}><Trash2 className="h-3.5 w-3.5 text-red-300" /></button>
+                  {!f.capa && <button title="Usar como capa" className="rounded bg-black/70 p-1" onClick={() => foto.mutate({ id, fotoId: f.id, acao: "capa" })}><Star className="h-3.5 w-3.5 text-warn-300" /></button>}
+                  <button title="Tirar do cadastro" className="rounded bg-black/70 p-1" onClick={() => foto.mutate({ id, fotoId: f.id, acao: "remover" })}><Trash2 className="h-3.5 w-3.5 text-danger-300" /></button>
                 </div>
               )}
             </div>
@@ -250,17 +250,17 @@ function Rascunho({ id }: { id: number }) {
       </section>
 
       {aberto && (
-        <div className="sticky bottom-2 flex flex-wrap gap-2 rounded-xl border border-emerald-500/40 bg-card p-3 shadow">
+        <div className="sticky bottom-2 flex flex-wrap gap-2 rounded-xl border border-ok-500/40 bg-card p-3 shadow">
           {!r.revisaoPronta ? (
             <Button disabled={revisar.isPending || mudou} onClick={() => revisar.mutate({ id })}>{revisar.isPending ? <Loader2 className="mr-1 h-4 w-4 animate-spin" /> : null} Montar revisão</Button>
           ) : (
-            <Button className="bg-emerald-600 text-white hover:bg-emerald-700" disabled={confirmar.isPending || mudou}
+            <Button className="bg-ok-600 text-white hover:bg-ok-700" disabled={confirmar.isPending || mudou}
               onClick={() => { if (confirm(`Cadastrar este imóvel no CRM (versão ${r.versao})? Ele entra interno, sem publicar.`)) confirmar.mutate({ id, versao: r.versao }); }}>
               {confirmar.isPending ? <Loader2 className="mr-1 h-4 w-4 animate-spin" /> : <CheckCircle2 className="mr-1 h-4 w-4" />} Confirmar cadastro (versão {r.versao})
             </Button>
           )}
-          <Button variant="ghost" className="text-red-300" onClick={() => { if (confirm("Cancelar este rascunho? Nada é gravado em Imóveis.")) cancelar.mutate({ id }); }}>Cancelar rascunho</Button>
-          {mudou && <span className="self-center text-xs text-amber-300">Salve as correções antes de revisar/confirmar.</span>}
+          <Button variant="ghost" className="text-danger-300" onClick={() => { if (confirm("Cancelar este rascunho? Nada é gravado em Imóveis.")) cancelar.mutate({ id }); }}>Cancelar rascunho</Button>
+          {mudou && <span className="self-center text-xs text-warn-300">Salve as correções antes de revisar/confirmar.</span>}
         </div>
       )}
 

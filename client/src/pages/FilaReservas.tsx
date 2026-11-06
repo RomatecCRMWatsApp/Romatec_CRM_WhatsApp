@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button";
 import { AlertTriangle, CheckCircle2, Clock, FileSignature, Hourglass, Loader2, Map as MapIcon, UserCheck, Building, Unlock } from "lucide-react";
 
 const COR_MOTIVO: Record<string, string> = {
-  vencida: "bg-red-500/15 text-red-300", corretor_sem_acesso: "bg-amber-500/15 text-amber-300", sem_corretor: "bg-sky-500/15 text-sky-300",
+  vencida: "bg-danger-500/15 text-danger-300", corretor_sem_acesso: "bg-warn-500/15 text-warn-300", sem_corretor: "bg-info-500/15 text-info-300",
 };
 const dataHora = (iso: string | null) => (iso ? new Date(iso).toLocaleString("pt-BR", { timeZone: "America/Fortaleza", day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit" }) : "—");
 const prazo = (h: number | null) => (h == null ? "—" : h < 0 ? `venceu há ${Math.abs(h) >= 48 ? `${Math.round(-h / 24)} dias` : `${-h} h`}` : h >= 48 ? `${Math.round(h / 24)} dias` : `${h} h`);
@@ -51,11 +51,11 @@ function Linha({ item, onFeito }: { item: Item; onFeito: () => void }) {
       </td>
       <td className="p-2">{item.cliente || <span className="text-muted-foreground">—</span>}</td>
       <td className="p-2">
-        {item.corretorNome ? <p className={item.corretorAtivo === false ? "text-amber-300" : ""}>{item.corretorNome}{item.corretorAtivo === false ? " (sem acesso)" : ""}</p> : <span className="text-muted-foreground">Escritório</span>}
+        {item.corretorNome ? <p className={item.corretorAtivo === false ? "text-warn-300" : ""}>{item.corretorNome}{item.corretorAtivo === false ? " (sem acesso)" : ""}</p> : <span className="text-muted-foreground">Escritório</span>}
       </td>
       <td className="p-2 text-xs">
         {item.situacao === "reservado" && item.reservadoAte
-          ? <span className={`inline-flex items-center gap-1 ${vencida ? "text-red-300" : item.horasRestantes! < 24 ? "text-amber-300" : ""}`}><Clock className="h-3 w-3" />{prazo(item.horasRestantes)}<span className="text-muted-foreground"> · {dataHora(item.reservadoAte)}</span></span>
+          ? <span className={`inline-flex items-center gap-1 ${vencida ? "text-danger-300" : item.horasRestantes! < 24 ? "text-warn-300" : ""}`}><Clock className="h-3 w-3" />{prazo(item.horasRestantes)}<span className="text-muted-foreground"> · {dataHora(item.reservadoAte)}</span></span>
           : <span className="text-muted-foreground">{item.situacao === "entrada" ? "com entrada (sem prazo)" : "sem prazo"}</span>}
         {item.contrato && <p className="mt-0.5"><button className="text-primary hover:underline" onClick={() => navigate(`/contratos/${item.contrato!.id}`)}>{item.contrato.numero}</button> <span className="text-muted-foreground">· {item.contrato.status}</span></p>}
       </td>
@@ -64,7 +64,7 @@ function Linha({ item, onFeito }: { item: Item; onFeito: () => void }) {
           <Reatribuir item={item} onFeito={onFeito} />
           {item.corretorId && <Button size="sm" variant="ghost" className="h-7 text-xs" disabled={acao.isPending} onClick={() => { if (confirm(`Assumir a reserva da ${item.codigo} pelo escritório?`)) acao.mutate({ loteId: item.loteId, acao: { tipo: "assumir" } }); }}><Building className="mr-1 h-3.5 w-3.5" /> Assumir</Button>}
           {item.situacao === "reservado" && <Button size="sm" variant="ghost" className="h-7 text-xs" disabled={acao.isPending} onClick={() => acao.mutate({ loteId: item.loteId, acao: { tipo: "prorrogar" } })}><Hourglass className="mr-1 h-3.5 w-3.5" /> +72 h</Button>}
-          <Button size="sm" variant="ghost" className="h-7 text-xs text-red-300" disabled={acao.isPending} onClick={() => {
+          <Button size="sm" variant="ghost" className="h-7 text-xs text-danger-300" disabled={acao.isPending} onClick={() => {
             if (item.contrato && !["cancelado", "distratado"].includes(item.contrato.status)) { toast.error(`Presa ao contrato ${item.contrato.numero}: cancele o contrato pela tela dele para liberar.`); return; }
             const motivo = window.prompt(`Liberar a chácara ${item.codigo}? Ela volta a ficar disponível. Motivo:`);
             if (motivo && motivo.trim().length >= 3) acao.mutate({ loteId: item.loteId, acao: { tipo: "liberar", motivo } });
@@ -104,7 +104,7 @@ function FilasEspera() {
                 </span>
                 <span className="flex gap-1">
                   {p.status === "avisado" && <Button size="sm" variant="outline" className="h-7 text-xs" disabled={encerrar.isPending} onClick={() => encerrar.mutate({ id: p.id, leadId: null, status: "convertido" })}>Reservou</Button>}
-                  <Button size="sm" variant="ghost" className="h-7 text-xs text-red-300" disabled={encerrar.isPending}
+                  <Button size="sm" variant="ghost" className="h-7 text-xs text-danger-300" disabled={encerrar.isPending}
                     onClick={() => { if (confirm(`Tirar ${p.nome} da fila da chácara ${f.codigo}?`)) encerrar.mutate({ id: p.id, leadId: null, status: "desistiu" }); }}>Tirar da fila</Button>
                 </span>
               </div>
@@ -131,11 +131,11 @@ export default function FilaReservas() {
           ))}
           {isLoading && <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />}
         </div>
-        {error && <p className="text-sm text-red-400">{error.message}</p>}
+        {error && <p className="text-sm text-danger-400">{error.message}</p>}
         {aba === "espera" && <FilasEspera />}
         {lista && !lista.length && (
           <p className="flex items-center gap-2 rounded-xl border border-dashed border-border p-4 text-sm text-muted-foreground">
-            {aba === "fila" ? <><CheckCircle2 className="h-4 w-4 text-emerald-400" /> Nada na fila: todas as reservas estão em dia e com corretor ativo.</> : "Nenhuma chácara reservada no momento."}
+            {aba === "fila" ? <><CheckCircle2 className="h-4 w-4 text-ok-400" /> Nada na fila: todas as reservas estão em dia e com corretor ativo.</> : "Nenhuma chácara reservada no momento."}
           </p>
         )}
         {!!lista?.length && (
@@ -149,7 +149,7 @@ export default function FilaReservas() {
           </div>
         )}
         <div className="flex items-start gap-2 rounded-xl border border-border bg-card/50 p-3 text-xs text-muted-foreground">
-          <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0 text-amber-300" />
+          <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0 text-warn-300" />
           <p>
             A reserva feita pelo contrato vale <b>72 horas</b>. Vencida, o site já mostra a chácara livre, mas ela segue reservada aqui até o escritório decidir:
             <b> +72 h</b> prorroga, <b>Passar para corretor</b> leva a reserva e o lead do cliente para outro corretor habilitado, <b>Assumir</b> deixa com o escritório

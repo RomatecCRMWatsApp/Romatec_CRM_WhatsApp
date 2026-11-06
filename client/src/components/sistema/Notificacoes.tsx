@@ -110,7 +110,7 @@ export function ListaNotificacoes({ habilitado, onAbrir }: { habilitado: boolean
           <span className="min-w-0 flex-1">
             <span className="flex items-center gap-2 text-[11px] text-muted-foreground">
               {ROTULO_NOTIFICACAO[n.tipo]}
-              {!n.lida && <span className="rounded bg-red-500 px-1.5 text-[10px] font-bold normal-case tracking-normal text-white">nova</span>}
+              {!n.lida && <span className="rounded bg-danger-500 px-1.5 text-[10px] font-bold normal-case tracking-normal text-white">nova</span>}
               <span className="ml-auto normal-case tracking-normal">{quando(n.criadoEm)}</span>
             </span>
             <span className="block text-sm font-semibold">{n.titulo}</span>
@@ -213,7 +213,7 @@ export function AtivarPush({ compacto }: { compacto?: boolean }) {
   return (
     <div className={`rounded-lg border border-border p-3 text-sm ${compacto ? "bg-secondary/30" : ""}`}>
       <p className="flex items-center gap-2 font-medium">
-        {estado === "ativo" ? <BellRing className="h-4 w-4 text-emerald-400" /> : estado === "disponivel" ? <Smartphone className="h-4 w-4 text-[var(--rt-gold)]" /> : <BellOff className="h-4 w-4 text-muted-foreground" />}
+        {estado === "ativo" ? <BellRing className="h-4 w-4 text-ok-400" /> : estado === "disponivel" ? <Smartphone className="h-4 w-4 text-[var(--rt-gold)]" /> : <BellOff className="h-4 w-4 text-muted-foreground" />}
         Notificações no celular
       </p>
       <p className="mt-1 text-xs text-muted-foreground">{TEXTO_ESTADO[estado]}</p>

@@ -10,7 +10,7 @@ export default function BotaoInstalarApp({ recolhido = false }: { recolhido?: bo
   return (
     <>
       <button type="button" onClick={() => (app.podeInstalar ? app.instalar() : setDicaIos(true))} title="Instalar o app no celular ou no computador"
-        className={`mx-2 mb-1 flex items-center gap-2 rounded-lg bg-emerald-600/20 px-2 py-1.5 text-xs font-semibold text-emerald-300 hover:bg-emerald-600/30 ${recolhido ? "justify-center" : ""}`}>
+        className={`mx-2 mb-1 flex items-center gap-2 rounded-lg bg-ok-600/20 px-2 py-1.5 text-xs font-semibold text-ok-300 hover:bg-ok-600/30 ${recolhido ? "justify-center" : ""}`}>
         <Download className="h-4 w-4" />{!recolhido && "Instalar o app"}
       </button>
       {dicaIos && (
@@ -21,7 +21,7 @@ export default function BotaoInstalarApp({ recolhido = false }: { recolhido?: bo
               <li>Abra o CRM no <b>Safari</b>.</li>
               <li>Toque em <Share className="inline h-4 w-4" /> <b>Compartilhar</b> (barra de baixo).</li>
               <li>Escolha <b>Adicionar à Tela de Início</b> e toque em <b>Adicionar</b>.</li>
-              <li>Abra pelo ícone "Romatec CRM" e aceite as notificações.</li>
+              <li>Abra pelo ícone “Romatec CRM” e aceite as notificações.</li>
             </ol>
           </div>
         </div>

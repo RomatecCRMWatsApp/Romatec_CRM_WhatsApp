@@ -249,7 +249,7 @@ export default function Campaigns() {
         <div className="text-center">
           <Loader2 className="h-10 w-10 animate-spin mx-auto mb-4" style={{ color: "var(--c-3ec87a)" }} />
           <p style={{ color: "var(--c-4a7a55)", fontSize: "14px", letterSpacing: "0.05em" }}>
-            Carregando campanhas...
+            Carregando campanhas…
           </p>
         </div>
       </div>

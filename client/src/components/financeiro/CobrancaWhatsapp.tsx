@@ -54,7 +54,7 @@ export default function CobrancaWhatsapp() {
             <div className="flex flex-wrap items-center gap-2">
               {admin && <input type="checkbox" aria-label={`Marcar ${x.comprador}`} disabled={!x.telefone} checked={marcados.has(x.contratoId)} onChange={e => marcar(x.contratoId, e.target.checked)} />}
               <b>{x.comprador}</b><span className="text-xs text-muted-foreground">{x.contratoNumero} · Chácara {x.loteCodigo}</span>
-              <span className={`text-xs ${x.diasAtraso ? "text-red-300" : "text-amber-200"}`}>{x.diasAtraso ? `${x.diasAtraso} dia(s) em atraso` : "a vencer"} · {x.parcelas.length} parcela(s) · {brl(x.total)}</span>
+              <span className={`text-xs ${x.diasAtraso ? "text-danger-300" : "text-warn-200"}`}>{x.diasAtraso ? `${x.diasAtraso} dia(s) em atraso` : "a vencer"} · {x.parcelas.length} parcela(s) · {brl(x.total)}</span>
               <span className="ml-auto text-[11px] text-muted-foreground">{x.telefone ? (x.ultimoEnvio ? `último envio ${br(x.ultimoEnvio)}` : "nunca cobrado") : "sem WhatsApp no cadastro"}</span>
               <button type="button" className="text-xs text-primary hover:underline" onClick={() => setAberta(aberta === x.contratoId ? null : x.contratoId)}>{aberta === x.contratoId ? "fechar" : "ver mensagem"}</button>
             </div>

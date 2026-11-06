@@ -82,9 +82,9 @@ export function Visualizador({ uid, doc, versao, onFechar }: { uid: number; doc:
 function FaixaValidade({ d }: { d: Doc }) {
   if (d.status === "sem_validade") return null;
   const cfg = {
-    vencida: ["bg-red-600/15 text-red-300 border-red-500/40", `Vencida há ${Math.abs(d.dias ?? 0)} dia(s)`],
-    a_vencer: ["bg-amber-500/15 text-amber-200 border-amber-500/40", d.dias === 0 ? "Vence hoje" : `Vence em ${d.dias} dia(s) — ${dataBr(d.validade)}`],
-    valida: ["bg-emerald-600/15 text-emerald-300 border-emerald-500/40", `Válida até ${dataBr(d.validade)}`],
+    vencida: ["bg-danger-600/15 text-danger-300 border-danger-500/40", `Vencida há ${Math.abs(d.dias ?? 0)} dia(s)`],
+    a_vencer: ["bg-warn-500/15 text-warn-200 border-warn-500/40", d.dias === 0 ? "Vence hoje" : `Vence em ${d.dias} dia(s) — ${dataBr(d.validade)}`],
+    valida: ["bg-ok-600/15 text-ok-300 border-ok-500/40", `Válida até ${dataBr(d.validade)}`],
   }[d.status];
   return <div className={`rounded-md border px-2 py-1 text-xs ${cfg[0]}`}>{cfg[1]}</div>;
 }
@@ -176,7 +176,7 @@ export function CredencialCard({ uid, tipo, doc, linkCertidaoPadrao, validadeSug
           <p className="text-[11px] text-muted-foreground">{TEXTO_CRED[tipo].ajuda}</p>
         </div>
         {estado === "salvando" && <Loader2 className="h-3.5 w-3.5 animate-spin text-muted-foreground" />}
-        {estado === "salvo" && <span className="flex items-center gap-1 text-[11px] text-emerald-400"><Check className="h-3 w-3" /> Salvo</span>}
+        {estado === "salvo" && <span className="flex items-center gap-1 text-[11px] text-ok-400"><Check className="h-3 w-3" /> Salvo</span>}
       </div>
 
       {doc ? (
@@ -191,7 +191,7 @@ export function CredencialCard({ uid, tipo, doc, linkCertidaoPadrao, validadeSug
             <div className="flex flex-wrap gap-1.5">
               <Button type="button" size="sm" variant="outline" className="h-7 px-2 text-xs" onClick={() => onVer(doc)}><Eye className="mr-1 h-3 w-3" /> Visualizar</Button>
               <Button type="button" size="sm" variant="outline" className="h-7 px-2 text-xs" onClick={() => input.current?.click()}><RefreshCw className="mr-1 h-3 w-3" /> Trocar</Button>
-              <Button type="button" size="sm" variant="ghost" className="h-7 px-2 text-xs text-red-300" disabled={remover.isPending}
+              <Button type="button" size="sm" variant="ghost" className="h-7 px-2 text-xs text-danger-300" disabled={remover.isPending}
                 onClick={async () => { if (!confirm(`Remover ${TEXTO_CRED[tipo].titulo}?`)) return; await remover.mutateAsync({ documentoId: doc.id }); onMudou(); }}>
                 <Trash2 className="mr-1 h-3 w-3" /> Remover</Button>
             </div>
@@ -295,7 +295,7 @@ export function DocumentosPessoais({ uid, docs, temConjuge, versao, onMudou, onV
       {progresso != null && <span data-block-idle="true" hidden />}
       {progresso != null && <div className="h-1.5 overflow-hidden rounded-full bg-secondary"><div className="h-full bg-primary transition" style={{ width: `${progresso}%` }} /></div>}
       {!docs.some(d => d.tipo === "cnh" && (d.titular ?? "usuario") === "usuario") && (
-        <p className="text-xs text-amber-300">Envie a CNH (frente e verso): é obrigatória e vai anexada na ficha de credenciamento.</p>
+        <p className="text-xs text-warn-300">Envie a CNH (frente e verso): é obrigatória e vai anexada na ficha de credenciamento.</p>
       )}
       {docs.length === 0 ? <p className="text-xs text-muted-foreground">Nenhum documento pessoal. Arraste os arquivos para cá.</p> : (
         <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
@@ -309,7 +309,7 @@ export function DocumentosPessoais({ uid, docs, temConjuge, versao, onMudou, onV
                 <p className="truncate text-[11px] text-muted-foreground" title={d.nome}>{d.nome}</p>
                 <div className="mt-1 flex gap-2 text-[11px]">
                   <button type="button" className="text-primary hover:underline" onClick={() => onVer(d)}>Ver</button>
-                  <button type="button" className="text-red-300 hover:underline" disabled={remover.isPending}
+                  <button type="button" className="text-danger-300 hover:underline" disabled={remover.isPending}
                     onClick={async () => { if (!confirm(`Remover ${d.nome}?`)) return; await remover.mutateAsync({ documentoId: d.id }); onMudou(); }}>Remover</button>
                 </div>
               </div>

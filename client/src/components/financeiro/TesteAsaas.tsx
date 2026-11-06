@@ -64,24 +64,24 @@ export default function TesteAsaas() {
       {!diag ? <p className="flex items-center gap-1.5 text-xs text-muted-foreground"><Loader2 className="h-3.5 w-3.5 animate-spin" /> Conferindo a conta…</p>
         : diag.chaveValida ? (
           <div className="grid gap-1 text-xs sm:grid-cols-2">
-            <p className="flex items-center gap-1 text-emerald-300"><CheckCircle2 className="h-3.5 w-3.5" /> Chave aceita · {diag.ambiente === "producao" ? "produção" : "teste (sandbox)"}</p>
+            <p className="flex items-center gap-1 text-ok-300"><CheckCircle2 className="h-3.5 w-3.5" /> Chave aceita · {diag.ambiente === "producao" ? "produção" : "teste (sandbox)"}</p>
             <p>Beneficiário dos boletos: <b>{diag.titular}</b>{diag.documentoFinal ? ` (…${diag.documentoFinal.slice(-4)})` : ""}</p>
             <p>Agência/conta: {diag.agenciaConta ?? "—"}</p>
-            <p className={diag.webhookToken ? "" : "text-amber-300"}>Webhook: {diag.webhookToken ? "token configurado" : "sem token — a baixa automática não funciona"}</p>
+            <p className={diag.webhookToken ? "" : "text-warn-300"}>Webhook: {diag.webhookToken ? "token configurado" : "sem token — a baixa automática não funciona"}</p>
           </div>
-        ) : <p className="flex items-center gap-1.5 text-xs text-amber-300"><TriangleAlert className="h-3.5 w-3.5" /> {diag.erro ?? "Chave do Asaas não aceita"}</p>}
+        ) : <p className="flex items-center gap-1.5 text-xs text-warn-300"><TriangleAlert className="h-3.5 w-3.5" /> {diag.erro ?? "Chave do Asaas não aceita"}</p>}
 
       {diag?.chaveValida && (
         teste ? (
           <div className="rounded-lg border border-border p-3 space-y-2 text-sm">
             <p>Boleto de teste <span className="font-mono text-xs">{teste.paymentId}</span> · {brl(teste.valor)} · vence {br(teste.vencimento)}
-              {teste.status && <> · <b className={pago ? "text-emerald-300" : ""}>{pago ? `pago em ${br(teste.pagoEm)}` : teste.status}</b></>}</p>
+              {teste.status && <> · <b className={pago ? "text-ok-300" : ""}>{pago ? `pago em ${br(teste.pagoEm)}` : teste.status}</b></>}</p>
             <div className="flex flex-wrap gap-1.5">
               <Button size="sm" variant="outline" className="h-8 text-xs" onClick={() => window.open(`/api/financeiro/teste-boleto/${teste.paymentId}.pdf`, "_blank", "noopener")}><FileText className="mr-1 h-3.5 w-3.5" /> Boleto (PDF)</Button>
               {teste.faturaAsaas && <Button size="sm" variant="ghost" className="h-8 text-xs" onClick={() => window.open(teste.faturaAsaas!, "_blank", "noopener")}><ExternalLink className="mr-1 h-3.5 w-3.5" /> Fatura no Asaas</Button>}
               <Button size="sm" variant="ghost" className="h-8 text-xs" onClick={async () => { try { await navigator.clipboard.writeText(teste.paymentId); toast.success("Id copiado"); } catch { /* */ } }}><Copy className="mr-1 h-3.5 w-3.5" /> Id</Button>
               <Button size="sm" variant="outline" className="h-8 text-xs" disabled={!!ocupado} onClick={conferir}>{ocupado === "conferir" ? <Loader2 className="mr-1 h-3.5 w-3.5 animate-spin" /> : <RefreshCw className="mr-1 h-3.5 w-3.5" />} Conferir pagamento</Button>
-              {!pago && <Button size="sm" variant="outline" className="h-8 text-xs text-red-400" disabled={!!ocupado} onClick={cancelar}><XCircle className="mr-1 h-3.5 w-3.5" /> Cancelar</Button>}
+              {!pago && <Button size="sm" variant="outline" className="h-8 text-xs text-danger-400" disabled={!!ocupado} onClick={cancelar}><XCircle className="mr-1 h-3.5 w-3.5" /> Cancelar</Button>}
               {pago && <Button size="sm" variant="ghost" className="h-8 text-xs" onClick={() => guardar(null)}>Concluir teste</Button>}
             </div>
           </div>

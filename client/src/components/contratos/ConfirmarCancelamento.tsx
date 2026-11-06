@@ -22,7 +22,7 @@ export default function ConfirmarCancelamento({ aberto, onFechar, titulo, descri
     <Dialog open={aberto} onOpenChange={v => !v && !pendente && onFechar()}>
       <DialogContent className="max-w-md">
         <DialogHeader>
-          <DialogTitle className="flex items-center gap-2 text-red-300"><XCircle className="h-5 w-5" /> {titulo}</DialogTitle>
+          <DialogTitle className="flex items-center gap-2 text-danger-300"><XCircle className="h-5 w-5" /> {titulo}</DialogTitle>
           <DialogDescription asChild><div className="text-sm text-muted-foreground">{descricao}</div></DialogDescription>
         </DialogHeader>
         <form className="space-y-3" onSubmit={e => { e.preventDefault(); if (ok && !pendente) onConfirmar(motivo.trim(), senha); }}>

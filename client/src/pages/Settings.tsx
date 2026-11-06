@@ -152,7 +152,7 @@ export default function Settings() {
             <div className="flex items-center justify-between">
               <CardTitle className="text-foreground">Integração Z-API (WhatsApp)</CardTitle>
               <span className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-medium ${
-                config?.zApiConnected ? "bg-emerald-500/20 text-emerald-400" : "bg-red-500/20 text-red-400"
+                config?.zApiConnected ? "bg-ok-500/20 text-ok-400" : "bg-danger-500/20 text-danger-400"
               }`}>
                 {config?.zApiConnected ? <Wifi className="h-3 w-3" /> : <WifiOff className="h-3 w-3" />}
                 {config?.zApiConnected ? "Conectado" : "Desconectado"}
@@ -188,7 +188,7 @@ export default function Settings() {
         <Card className="bg-card border-border">
           <CardHeader>
             <CardTitle className="text-foreground flex items-center gap-2">
-              <MessageSquare className="h-5 w-5 text-blue-400" />
+              <MessageSquare className="h-5 w-5 text-azul-400" />
               Teste de Envio WhatsApp
             </CardTitle>
           </CardHeader>
@@ -214,7 +214,7 @@ export default function Settings() {
                 value={testMessage}
                 onChange={e => setTestMessage(e.target.value)}
                 rows={3}
-                className="w-full rounded-md border border-border bg-secondary px-3 py-2 text-sm text-foreground resize-none focus:outline-none focus:ring-1 focus:ring-emerald-500"
+                className="w-full rounded-md border border-border bg-secondary px-3 py-2 text-sm text-foreground resize-none focus:outline-none focus:ring-1 focus:ring-ok-500"
               />
             </div>
 
@@ -222,8 +222,8 @@ export default function Settings() {
             {testResult && (
               <div className={`flex items-center gap-2 p-3 rounded-lg border ${
                 testResult.success
-                  ? "bg-emerald-500/10 border-emerald-500/30 text-emerald-400"
-                  : "bg-red-500/10 border-red-500/30 text-red-400"
+                  ? "bg-ok-500/10 border-ok-500/30 text-ok-400"
+                  : "bg-danger-500/10 border-danger-500/30 text-danger-400"
               }`}>
                 {testResult.success
                   ? <CheckCircle2 className="h-5 w-5 flex-shrink-0" />
@@ -236,17 +236,17 @@ export default function Settings() {
             <Button
               onClick={handleSendTest}
               disabled={sendTestMessage.isPending || !config?.zApiConnected}
-              className="w-full bg-blue-600 hover:bg-blue-700 text-white"
+              className="w-full bg-azul-600 hover:bg-azul-700 text-white"
             >
               {sendTestMessage.isPending ? (
-                <><RefreshCw className="mr-2 h-4 w-4 animate-spin" /> Enviando...</>
+                <><RefreshCw className="mr-2 h-4 w-4 animate-spin" /> Enviando…</>
               ) : (
                 <><Send className="mr-2 h-4 w-4" /> Enviar Mensagem de Teste</>
               )}
             </Button>
 
             {!config?.zApiConnected && (
-              <p className="text-xs text-amber-400 text-center">
+              <p className="text-xs text-warn-400 text-center">
                 Z-API não está conectado. Salve e teste a conexão primeiro.
               </p>
             )}
@@ -257,7 +257,7 @@ export default function Settings() {
         <Card className="bg-card border-border">
           <CardHeader>
             <CardTitle className="text-foreground flex items-center gap-2">
-              <Bell className="h-5 w-5 text-blue-400" />
+              <Bell className="h-5 w-5 text-azul-400" />
               Notificações e IA
             </CardTitle>
           </CardHeader>
@@ -299,7 +299,7 @@ export default function Settings() {
             {/* OpenAI */}
             <div className="space-y-3">
               <p className="text-sm font-semibold text-foreground flex items-center gap-2">
-                <Bot className="h-4 w-4 text-emerald-400" /> OpenAI (Bot IA)
+                <Bot className="h-4 w-4 text-ok-400" /> OpenAI (Bot IA)
               </p>
               <p className="text-xs text-muted-foreground">
                 Chave usada pelo bot para qualificar leads e responder automaticamente no WhatsApp.
@@ -323,20 +323,20 @@ export default function Settings() {
         <Card className="bg-card border-border">
           <CardHeader>
             <CardTitle className="text-foreground flex items-center gap-2">
-              <Lock className="h-5 w-5 text-emerald-400" />
+              <Lock className="h-5 w-5 text-ok-400" />
               Acesso ao Sistema
             </CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
             <div className="flex items-center gap-3 p-3 bg-secondary/30 rounded-lg border border-border/50">
-              <div className="p-2 rounded-full bg-emerald-500/20">
-                <User className="h-5 w-5 text-emerald-400" />
+              <div className="p-2 rounded-full bg-ok-500/20">
+                <User className="h-5 w-5 text-ok-400" />
               </div>
               <div>
                 <p className="text-sm font-semibold text-foreground">{me?.name || "Usuário"}</p>
                 <p className="text-xs text-muted-foreground">{me?.email || "—"}</p>
               </div>
-              <span className="ml-auto px-2 py-0.5 rounded-full text-xs font-bold bg-emerald-500/15 text-emerald-400 border border-emerald-500/30">
+              <span className="ml-auto px-2 py-0.5 rounded-full text-xs font-bold bg-ok-500/15 text-ok-400 border border-ok-500/30">
                 {me?.role === "admin" ? "Administrador" : "Usuário"}
               </span>
             </div>
@@ -398,7 +398,7 @@ export default function Settings() {
               <Button
                 onClick={handleChangePassword}
                 disabled={changePassword.isPending || !passForm.newPassword}
-                className="w-full bg-blue-600 hover:bg-blue-700 text-white"
+                className="w-full bg-azul-600 hover:bg-azul-700 text-white"
               >
                 <Lock className="mr-2 h-4 w-4" />
                 {changePassword.isPending ? "Alterando..." : "Alterar Senha"}
@@ -411,7 +411,7 @@ export default function Settings() {
         <Button
           onClick={() => updateMutation.mutate(form)}
           disabled={updateMutation.isPending}
-          className="w-full bg-emerald-600 hover:bg-emerald-700 h-12 text-lg font-bold"
+          className="w-full bg-ok-600 hover:bg-ok-700 h-12 text-lg font-bold"
         >
           <Save className="mr-2 h-5 w-5" />
           {updateMutation.isPending ? "Salvando..." : "Salvar configurações"}
@@ -431,7 +431,7 @@ export default function Settings() {
             </div>
             <div className="flex justify-between text-sm">
               <span className="text-muted-foreground">Banco de dados</span>
-              <span className="text-emerald-400">MySQL · Railway</span>
+              <span className="text-ok-400">MySQL · Railway</span>
             </div>
           </div>
         </div>

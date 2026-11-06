@@ -25,7 +25,7 @@ const compartilhar = async (texto: string) => {
 function Acoes({ link, texto }: { link: string; texto: string }) {
   return (
     <div className="flex flex-wrap gap-2">
-      <Button size="sm" className="bg-emerald-600 text-white hover:bg-emerald-700" asChild>
+      <Button size="sm" className="bg-ok-600 text-white hover:bg-ok-700" asChild>
         <a href={`https://wa.me/?text=${encodeURIComponent(texto)}`} target="_blank" rel="noreferrer"><MessageCircle className="mr-1.5 h-3.5 w-3.5" /> Enviar no WhatsApp</a>
       </Button>
       <Button size="sm" variant="outline" onClick={() => copiar(link, "Link")}><Link2 className="mr-1.5 h-3.5 w-3.5" /> Copiar link</Button>
@@ -48,20 +48,20 @@ function CardDocumento({ d, cartao, leituras }: { d: DocumentoCliente; cartao: R
     <Card className="border-border bg-card">
       <CardContent className="space-y-3 py-4">
         <div className="flex items-start gap-3">
-          <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-emerald-900/60 text-amber-300">
+          <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-ok-900/60 text-warn-300">
             {d.forma === "cartao" ? <IdCard className="h-5 w-5" /> : <FileText className="h-5 w-5" />}
           </span>
           <div className="min-w-0">
             <p className="font-semibold">{d.titulo}</p>
             <p className="text-sm text-muted-foreground">{d.subtitulo}</p>
             {d.forma === "pdf" && (
-              <p className="mt-1 flex items-center gap-1 text-xs text-emerald-300">
+              <p className="mt-1 flex items-center gap-1 text-xs text-ok-300">
                 <Eye className="h-3.5 w-3.5" /> {leituras?.total ? `Aberto ${leituras.total}× · último ${quando(leituras.ultima!)}` : "Ainda não aberto"}
               </p>
             )}
           </div>
         </div>
-        <a href={link} target="_blank" rel="noreferrer" className="block break-all rounded-md border border-border bg-secondary/30 px-2 py-1.5 font-mono text-xs text-emerald-300">{link}</a>
+        <a href={link} target="_blank" rel="noreferrer" className="block break-all rounded-md border border-border bg-secondary/30 px-2 py-1.5 font-mono text-xs text-ok-300">{link}</a>
         <Acoes link={link} texto={texto} />
       </CardContent>
     </Card>
@@ -76,13 +76,13 @@ export default function LinksDocumentos() {
   return (
     <div className="space-y-4">
       <p className="text-sm text-muted-foreground">Links só de leitura (sem copiar, baixar ou editar) — saem com o seu código, nome, CRECI e WhatsApp.</p>
-        <Card className="border-amber-300/50 bg-card">
+        <Card className="border-warn-300/50 bg-card">
           <CardContent className="space-y-3 py-4">
             <div>
               <p className="font-semibold">Todos os documentos — Bom Jardims</p>
               <p className="text-sm text-muted-foreground">Uma página com a lista completa; o cliente escolhe o que quer ler.</p>
             </div>
-            <a href={indice} target="_blank" rel="noreferrer" className="block break-all rounded-md border border-border bg-secondary/30 px-2 py-1.5 font-mono text-xs text-emerald-300">{indice}</a>
+            <a href={indice} target="_blank" rel="noreferrer" className="block break-all rounded-md border border-border bg-secondary/30 px-2 py-1.5 font-mono text-xs text-ok-300">{indice}</a>
             <Acoes link={indice} texto={textoIndice} />
           </CardContent>
         </Card>

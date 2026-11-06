@@ -16,10 +16,10 @@ const cel = (v: unknown) => { const s = v == null ? "" : String(v); return /[;"\
 const num = (v: number) => v.toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 
 const SELO: Record<SeloLote, { rotulo: string; classe: string }> = {
-  disponivel: { rotulo: "Disponível", classe: "bg-emerald-500/15 text-emerald-300 border-emerald-500/40" },
-  negociacao: { rotulo: "Reservado / em negociação", classe: "bg-amber-500/15 text-amber-300 border-amber-500/40" },
-  vendido: { rotulo: "Vendido — sem proposta", classe: "bg-red-500/20 text-red-300 border-red-500/50" },
-  nao_comercializavel: { rotulo: "Não comercializável", classe: "bg-zinc-500/20 text-zinc-300 border-zinc-500/40" },
+  disponivel: { rotulo: "Disponível", classe: "bg-ok-500/15 text-ok-300 border-ok-500/40" },
+  negociacao: { rotulo: "Reservado / em negociação", classe: "bg-warn-500/15 text-warn-300 border-warn-500/40" },
+  vendido: { rotulo: "Vendido — sem proposta", classe: "bg-danger-500/20 text-danger-300 border-danger-500/50" },
+  nao_comercializavel: { rotulo: "Não comercializável", classe: "bg-grafite-500/20 text-grafite-300 border-grafite-500/40" },
 };
 
 type Lote = LotePainel & { poligono: [number, number][] | null };
@@ -76,7 +76,7 @@ function Evolucao({ slug, codigo, entrada, prazo, onFechar }: { slug: string; co
         {/* min-h-0: sem isso o flex não deixa a tabela rolar e as últimas linhas ficam cortadas */}
         <div ref={rolagem} className="min-h-0 flex-1 overflow-y-auto overflow-x-auto [scrollbar-gutter:stable]">
           {isLoading && <p className="p-4 text-sm text-muted-foreground">Calculando…</p>}
-          {error && <p className="p-4 text-sm text-red-400">{error.message}</p>}
+          {error && <p className="p-4 text-sm text-danger-400">{error.message}</p>}
           {data && (
             <table className="w-full text-xs tabular-nums">
               <thead className="sticky top-0 z-10 bg-secondary"><tr className="border-b border-border text-muted-foreground">
@@ -120,7 +120,7 @@ function CronogramaPlano({ codigo, plano, onFechar }: { codigo: string; plano: P
     a.click();
     setTimeout(() => URL.revokeObjectURL(a.href), 2000);
   };
-  const cor = (t: string) => (t === "entrada" ? "bg-secondary/30" : t === "reforco" ? "bg-amber-500/10" : t === "complemento" ? "bg-sky-500/10" : "");
+  const cor = (t: string) => (t === "entrada" ? "bg-secondary/30" : t === "reforco" ? "bg-warn-500/10" : t === "complemento" ? "bg-info-500/10" : "");
   return (
     <div className="fixed inset-0 z-[1000] flex items-center justify-center bg-black/70 p-4" onClick={e => { if (e.target === e.currentTarget) onFechar(); }}>
       <div role="dialog" aria-modal="true" className="flex max-h-[88vh] w-full max-w-4xl flex-col rounded-2xl border border-border bg-card">
@@ -246,7 +246,7 @@ export default function Simulador({ slug, lotes, ruas, perimetro, destinoSugerid
               <span className={`rounded-full border px-2 py-0.5 text-[11px] font-semibold ${SELO[data.lote.selo].classe}`}>{SELO[data.lote.selo].rotulo}</span>
             </div>
           )}
-          {error && codigo && <p className="basis-full text-sm text-red-400">{error.message}</p>}
+          {error && codigo && <p className="basis-full text-sm text-danger-400">{error.message}</p>}
         </div>
         <AlternadorMapa dois={<MapaTematico slug={slug} lotes={lotes} ruas={ruas} perimetro={perimetro} selecionado={sel}
           onSelecionar={id => { const l = lotes.find(x => x.id === id); if (l) escolher(l.codigo); }} compacto />}
@@ -258,10 +258,10 @@ export default function Simulador({ slug, lotes, ruas, perimetro, destinoSugerid
         {!codigo && <p className="rounded-xl border border-dashed border-border p-4 text-sm text-muted-foreground"><Calculator className="mr-1 inline h-4 w-4" /> Escolha a chácara pelo número ou clicando no mapa.</p>}
         {sim && data && (
           <>
-            <div className="flex flex-wrap items-center justify-between gap-2 rounded-xl border border-emerald-500/50 bg-emerald-500/10 p-4">
+            <div className="flex flex-wrap items-center justify-between gap-2 rounded-xl border border-ok-500/50 bg-ok-500/10 p-4">
               <div>
-                <p className="text-xs font-semibold text-emerald-400">À vista (total)</p>
-                <p className="text-lg font-bold tabular-nums">À vista {brl(sim.avistaTotal.valor)} <span className="text-sm font-semibold text-emerald-400">— economize {brl(sim.avistaTotal.desconto)}</span></p>
+                <p className="text-xs font-semibold text-ok-400">À vista (total)</p>
+                <p className="text-lg font-bold tabular-nums">À vista {brl(sim.avistaTotal.valor)} <span className="text-sm font-semibold text-ok-400">— economize {brl(sim.avistaTotal.desconto)}</span></p>
                 <p className="text-[11px] text-muted-foreground">Preço cheio {brl(sim.preco)} pago de uma só vez, sem entrada nem parcelas.</p>
               </div>
             </div>
@@ -309,7 +309,7 @@ export default function Simulador({ slug, lotes, ruas, perimetro, destinoSugerid
                 {data.opcoesEntrada.map(o => (
                   <button key={o.parcelas} onClick={() => setEntrada(o.parcelas)}
                     className={`rounded-lg border px-2.5 py-1.5 text-left text-xs ${entrada === o.parcelas ? "border-primary bg-primary/15 text-foreground" : "border-border hover:bg-secondary/50"}`}>
-                    {o.parcelas === 1 ? <>Entrada à vista <b>{brl(o.total)}</b> <span className="text-emerald-400">(economize {brl(o.desconto)})</span></> : <>{o.parcelas}x de <b>{brl(o.valorParcela)}</b></>}
+                    {o.parcelas === 1 ? <>Entrada à vista <b>{brl(o.total)}</b> <span className="text-ok-400">(economize {brl(o.desconto)})</span></> : <>{o.parcelas}x de <b>{brl(o.valorParcela)}</b></>}
                   </button>
                 ))}
               </div>
@@ -332,7 +332,7 @@ export default function Simulador({ slug, lotes, ruas, perimetro, destinoSugerid
             </div>
             </>)}
 
-            {vendido && <p className="rounded-xl border border-red-500/50 bg-red-500/10 p-3 text-sm text-red-300">Chácara vendida: simulação só para consulta, sem proposta, envio ou vínculo.</p>}
+            {vendido && <p className="rounded-xl border border-danger-500/50 bg-danger-500/10 p-3 text-sm text-danger-300">Chácara vendida: simulação só para consulta, sem proposta, envio ou vínculo.</p>}
             <div className="flex flex-wrap gap-1.5">
               <Button size="sm" variant="outline" onClick={() => setModal("evolucao")}>{condicao === "padrao" ? "Ver evolução" : "Ver cronograma"}</Button>
               <Button size="sm" variant="outline" disabled={vendido || !plano || condicao !== "padrao"} title={condicao !== "padrao" ? "Proposta em PDF: por enquanto só na entrada de 30%. Use o cronograma (CSV) ou o envio no WhatsApp." : undefined} onClick={proposta}><FileText className="mr-1 h-4 w-4" /> Gerar proposta PDF</Button>
@@ -355,7 +355,7 @@ export default function Simulador({ slug, lotes, ruas, perimetro, destinoSugerid
                   </div>
                 ))}
                 {data.comissaoAvistaTotal && (
-                  <div className="rounded-lg border border-emerald-500/40 p-2 text-xs">
+                  <div className="rounded-lg border border-ok-500/40 p-2 text-xs">
                     <p className="font-semibold">À vista total ({brl(sim.avistaTotal.valor)}): {brl(data.comissaoAvistaTotal.comCorretor.total)} com corretor · {brl(data.comissaoAvistaTotal.vendaDireta.total)} venda direta</p>
                     <p>Corretor {brl(data.comissaoAvistaTotal.comCorretor.corretor)} · Romatec {brl(data.comissaoAvistaTotal.comCorretor.romatec)}</p>
                     <p className="text-muted-foreground">100% no ato, sobre o valor à vista (não parcela).</p>

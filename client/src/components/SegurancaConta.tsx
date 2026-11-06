@@ -36,7 +36,7 @@ export default function SegurancaConta() {
   return (
     <section className="space-y-4 rounded-xl border border-border bg-card p-4">
       <div className="flex items-center gap-2">
-        <ShieldCheck className="h-5 w-5 text-emerald-400" />
+        <ShieldCheck className="h-5 w-5 text-ok-400" />
         <h2 className="text-base font-semibold">Senha e acesso</h2>
       </div>
       <div className="grid gap-4 lg:grid-cols-2">
@@ -58,7 +58,7 @@ export default function SegurancaConta() {
             <input id="senha-sair-outros" type="checkbox" checked={sairDosOutros} onChange={e => setSairDosOutros(e.target.checked)} className="h-4 w-4" />
             Desconectar os outros celulares e computadores
           </label>
-          {erro && <p className="text-sm text-red-400">{erro}</p>}
+          {erro && <p className="text-sm text-danger-400">{erro}</p>}
           <Button type="submit" disabled={trocar.isPending}>{trocar.isPending ? <Loader2 className="mr-1 h-4 w-4 animate-spin" /> : null} Alterar senha</Button>
         </form>
         <div className="space-y-2 rounded-lg border border-border bg-secondary/20 p-3">

@@ -39,7 +39,7 @@ function Conversa({ canal, id, info, onVoltar }: { canal: Canal; id: number; inf
       <div className="flex items-center justify-between gap-2 border-b border-border p-3">
         <div className="flex min-w-0 items-center gap-2">
           <button className="md:hidden" onClick={onVoltar} aria-label="Voltar"><ArrowLeft className="h-5 w-5" /></button>
-          {canal === "instagram" ? <Instagram className="h-5 w-5 shrink-0 text-pink-400" /> : <MessageCircle className="h-5 w-5 shrink-0 text-emerald-400" />}
+          {canal === "instagram" ? <Instagram className="h-5 w-5 shrink-0 text-rosa-400" /> : <MessageCircle className="h-5 w-5 shrink-0 text-ok-400" />}
           <div className="min-w-0"><p className="truncate font-semibold">{info?.nome}</p><p className="truncate text-xs text-muted-foreground">{info?.contato}{info?.responsavel ? ` · ${info.responsavel}` : ""}</p></div>
         </div>
         {info?.leadId && <Button size="sm" variant="ghost" onClick={() => navigate(`/leads/lead/${info.leadId}`)}><ExternalLink className="h-4 w-4" /></Button>}
@@ -48,7 +48,7 @@ function Conversa({ canal, id, info, onVoltar }: { canal: Canal; id: number; inf
         {isLoading && <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />}
         {data?.map(m => (
           <div key={m.id} className={`flex ${m.direcao === "in" ? "justify-start" : "justify-end"}`}>
-            <div className={`max-w-[80%] rounded-2xl px-3 py-2 text-sm ${m.direcao === "in" ? "bg-secondary" : "bg-emerald-700/60"}`}>
+            <div className={`max-w-[80%] rounded-2xl px-3 py-2 text-sm ${m.direcao === "in" ? "bg-secondary" : "bg-ok-700/60"}`}>
               {m.direcao === "out" && ROTULO_AUTOR[m.autor] && <p className="text-[10px] opacity-70">{ROTULO_AUTOR[m.autor]}</p>}
               <p className="whitespace-pre-wrap break-words">{m.texto}</p>
               <p className="mt-0.5 text-right text-[10px] opacity-60">{hora(m.em)}</p>
@@ -65,7 +65,7 @@ function Conversa({ canal, id, info, onVoltar }: { canal: Canal; id: number; inf
         </div>
       )}
       <div className="border-t border-border p-2">
-        {bloqueado && <p className="mb-1 text-xs text-amber-300">A Meta só deixa responder no Direct até 24 h depois da última mensagem do cliente.</p>}
+        {bloqueado && <p className="mb-1 text-xs text-warn-300">A Meta só deixa responder no Direct até 24 h depois da última mensagem do cliente.</p>}
         <div className="flex gap-2">
           <Textarea value={texto} onChange={e => setTexto(e.target.value)} rows={2} disabled={bloqueado} placeholder={canal === "whatsapp" ? "Responder no WhatsApp (você assume a conversa; o robô para)" : "Responder no Instagram Direct"}
             onKeyDown={e => { if (e.key === "Enter" && !e.shiftKey && texto.trim()) { e.preventDefault(); responder.mutate({ canal, id, texto }); } }} />
@@ -109,10 +109,10 @@ export default function CaixaEntrada() {
               {lista.map(c => (
                 <button key={`${c.canal}-${c.id}`} onClick={() => setSel({ canal: c.canal, id: c.id })}
                   className={`flex w-full gap-2 border-b border-border/50 p-3 text-left hover:bg-secondary/40 ${sel?.canal === c.canal && sel.id === c.id ? "bg-secondary/60" : ""}`}>
-                  {c.canal === "instagram" ? <Instagram className="mt-0.5 h-4 w-4 shrink-0 text-pink-400" /> : <MessageCircle className="mt-0.5 h-4 w-4 shrink-0 text-emerald-400" />}
+                  {c.canal === "instagram" ? <Instagram className="mt-0.5 h-4 w-4 shrink-0 text-rosa-400" /> : <MessageCircle className="mt-0.5 h-4 w-4 shrink-0 text-ok-400" />}
                   <span className="min-w-0 flex-1">
                     <span className="flex justify-between gap-2"><span className={`truncate ${c.aguardando ? "font-semibold" : ""}`}>{c.nome}</span><span className="shrink-0 text-[11px] text-muted-foreground">{hora(c.ultimaEm)}</span></span>
-                    <span className="flex items-center gap-1"><span className="truncate text-xs text-muted-foreground">{c.ultima}</span>{c.aguardando && <span className="ml-auto h-2 w-2 shrink-0 rounded-full bg-emerald-400" />}</span>
+                    <span className="flex items-center gap-1"><span className="truncate text-xs text-muted-foreground">{c.ultima}</span>{c.aguardando && <span className="ml-auto h-2 w-2 shrink-0 rounded-full bg-ok-400" />}</span>
                   </span>
                 </button>
               ))}

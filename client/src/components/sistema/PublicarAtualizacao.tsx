@@ -55,7 +55,7 @@ export default function PublicarAtualizacao() {
       <CardHeader><CardTitle className="text-foreground flex items-center gap-2"><Megaphone className="h-5 w-5 text-[var(--rt-gold)]" /> Publicar atualização</CardTitle></CardHeader>
       <CardContent className="space-y-4">
         <p className="text-xs text-muted-foreground">
-          As versões do deploy vêm do <code>RELEASE_NOTES.md</code>. Aqui você publica um aviso ou corrige um texto sem deploy. O público escolhido recebe no "Novidades da versão" e no sino.
+          As versões do deploy vêm do <code>RELEASE_NOTES.md</code>. Aqui você publica um aviso ou corrige um texto sem deploy. O público escolhido recebe no “Novidades da versão” e no sino.
         </p>
         <div className="grid gap-3 sm:grid-cols-4">
           <label className="flex flex-col gap-1 text-xs text-muted-foreground">Versão
@@ -86,7 +86,7 @@ export default function PublicarAtualizacao() {
           <Button variant="outline" onClick={() => setPrevia(true)} disabled={!!erro && erro !== "Versão no formato 1.7.1"}><Eye className="mr-1.5 h-4 w-4" /> Pré-visualizar</Button>
           <Button onClick={enviar} disabled={publicar.isPending || editar.isPending} className="bg-[var(--rt-gold)] text-black hover:bg-[var(--rt-gold-light)]">{editando ? "Salvar texto" : "Publicar"}</Button>
           {editando && <Button variant="ghost" onClick={() => { setEditando(null); setF({ ...VAZIO, versao: proxima(data?.ultimaVersao ?? "0.0.0") }); }}>Cancelar edição</Button>}
-          {erro && <span className="self-center text-xs text-amber-300">{erro}</span>}
+          {erro && <span className="self-center text-xs text-warn-300">{erro}</span>}
         </div>
 
         <div className="space-y-1.5 border-t border-border pt-3">

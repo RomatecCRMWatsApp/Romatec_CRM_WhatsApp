@@ -14,8 +14,8 @@ const br = (iso: string | null) => (iso ? iso.split("-").reverse().join("/") : "
 const paraNumero = (s: string) => { const t = s.trim().replace(/[R$\s]/g, ""); return Number(t.includes(",") ? t.replace(/\./g, "").replace(",", ".") : t); };
 const FORMA: Record<FormaDespesa, string> = { PIX: "PIX", BOLETO: "Boleto", TRANSFERENCIA: "Transferência", DINHEIRO: "Dinheiro", CARTAO: "Cartão", OUTRO: "Outro" };
 const SITUACAO: Record<string, [string, string]> = {
-  a_pagar: ["A pagar", "bg-sky-500/15 text-sky-300"], vencida: ["Vencida", "bg-red-500/15 text-red-300"],
-  paga: ["Paga", "bg-emerald-500/15 text-emerald-300"], cancelada: ["Cancelada", "bg-secondary text-muted-foreground"],
+  a_pagar: ["A pagar", "bg-info-500/15 text-info-300"], vencida: ["Vencida", "bg-danger-500/15 text-danger-300"],
+  paga: ["Paga", "bg-ok-500/15 text-ok-300"], cancelada: ["Cancelada", "bg-secondary text-muted-foreground"],
 };
 const campo = "h-9 rounded-lg border border-border bg-background px-2 text-sm";
 const paraBase64 = (f: File) => new Promise<string>((ok, erro) => { const r = new FileReader(); r.onload = () => ok(String(r.result).split(",")[1] ?? ""); r.onerror = () => erro(r.error); r.readAsDataURL(f); });
@@ -117,7 +117,7 @@ function Acoes({ l, onFeito, onEditar }: { l: Linha; onFeito: () => void; onEdit
         {comprovante.isPending ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Paperclip className="h-3.5 w-3.5" />}
         <input type="file" accept="application/pdf,image/png,image/jpeg" className="hidden" onChange={e => { anexar(e.target.files?.[0]); e.target.value = ""; }} />
       </label>
-      {l.status === "aberta" && <Button size="sm" variant="ghost" className="h-7 px-2 text-red-300" title="Cancelar" disabled={cancelar.isPending} onClick={() => {
+      {l.status === "aberta" && <Button size="sm" variant="ghost" className="h-7 px-2 text-danger-300" title="Cancelar" disabled={cancelar.isPending} onClick={() => {
         const motivo = window.prompt(`Cancelar "${l.descricao}" (${br(l.vencimento)})? Ela não é apagada, fica como cancelada. Motivo:`);
         if (!motivo || motivo.trim().length < 3) return;
         const seguintes = !!l.grupo && confirm("Cancelar também as próximas parcelas desta despesa recorrente?");
@@ -173,12 +173,12 @@ export default function Despesas() {
         ))}
         {isLoading && <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />}
       </div>
-      {error && <p className="text-sm text-red-400">{error.message}</p>}
+      {error && <p className="text-sm text-danger-400">{error.message}</p>}
 
       {data && (
         <>
           <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
-            {([["A pagar", data.totais.aPagar, ""], ["Vencido", data.totais.vencido, "text-red-300"], ["Pago", data.totais.pago, "text-emerald-300"], ["Lançamentos", data.totais.quantidade, ""]] as const).map(([r, v, cor]) => (
+            {([["A pagar", data.totais.aPagar, ""], ["Vencido", data.totais.vencido, "text-danger-300"], ["Pago", data.totais.pago, "text-ok-300"], ["Lançamentos", data.totais.quantidade, ""]] as const).map(([r, v, cor]) => (
               <div key={r} className="rounded-xl border border-border bg-card p-3"><p className="text-xs text-muted-foreground">{r}</p><p className={`text-lg font-bold ${cor}`}>{r === "Lançamentos" ? v : brl(v as number)}</p></div>
             ))}
           </div>

@@ -64,9 +64,9 @@ export default function Assinatura() {
     <div className="min-h-screen px-4 pb-12" style={fundo}>
       <header className="flex flex-col items-center gap-2 pt-8 pb-4"><RomatecLockup variant="stack" height={64} /></header>
       <main className="mx-auto max-w-4xl space-y-5">
-        <section className={`rounded-[18px] border p-5 ${l.liberado ? "border-[var(--rt-gold)]/40" : "border-red-500/50"} bg-[var(--rt-surface)]`}>
+        <section className={`rounded-[18px] border p-5 ${l.liberado ? "border-[var(--rt-gold)]/40" : "border-danger-500/50"} bg-[var(--rt-surface)]`}>
           <h1 className="text-xl font-semibold">{l.liberado ? "Sua assinatura" : "Acesso pausado"}</h1>
-          {!l.liberado && <p className="mt-1 text-red-300">{l.motivo} Escolha um plano para continuar usando o Romatec CRM — seus dados estão guardados.</p>}
+          {!l.liberado && <p className="mt-1 text-danger-300">{l.motivo} Escolha um plano para continuar usando o Romatec CRM — seus dados estão guardados.</p>}
           {l.exigida ? (
             <p className="mt-1 text-sm text-[var(--rt-text-2)]">
               {l.plano ?? "Sem plano"} · {l.status ? ROTULO_STATUS[l.status as StatusAssinatura] ?? l.status : "sem assinatura"}{l.origem ? ` · ${ROTULO_ORIGEM[l.origem as Origem] ?? l.origem}` : ""}
@@ -98,7 +98,7 @@ export default function Assinatura() {
               </div>
             ) : (
               <div className="space-y-2 text-sm">
-                {pagUp.modo === "teste" && <p className="rounded bg-amber-500/15 px-2 py-1 text-xs text-amber-200">Ambiente de TESTE do Mercado Pago — nenhum valor real é cobrado.</p>}
+                {pagUp.modo === "teste" && <p className="rounded bg-warn-500/15 px-2 py-1 text-xs text-warn-200">Ambiente de TESTE do Mercado Pago — nenhum valor real é cobrado.</p>}
                 <p className="font-semibold">{pagUp.tipo === "pix" ? "Pague com Pix" : "Boleto gerado"} — {brl(pagUp.valor)}</p>
                 {pagUp.qrBase64 && <img src={`data:image/png;base64,${pagUp.qrBase64}`} alt="QR Code Pix do upgrade" className="h-48 w-48 rounded-lg bg-white p-2" />}
                 {pagUp.copiaCola && (
@@ -133,7 +133,7 @@ export default function Assinatura() {
                 </button>
               ))}
             </div>
-            {ciclo === "ANUAL" && <span className="rounded-full bg-emerald-500/15 px-3 py-1 text-xs font-semibold text-emerald-300">2 meses grátis</span>}
+            {ciclo === "ANUAL" && <span className="rounded-full bg-ok-500/15 px-3 py-1 text-xs font-semibold text-ok-300">2 meses grátis</span>}
           </div>
           <div className="grid gap-4 md:grid-cols-2">
             {data.planos.map(p => {
@@ -146,7 +146,7 @@ export default function Assinatura() {
                     {d ? <><span className="mr-2 text-base font-normal text-[var(--rt-text-3)] line-through">{brl(preco)}</span>{brl(d.preco)}</> : brl(preco)}
                     <span className="text-sm font-normal text-[var(--rt-text-2)]">/{ciclo === "ANUAL" ? "ano" : "mês"}</span>
                   </p>
-                  {d && d.ciclos > 1 && <p className="text-xs text-emerald-300">Preço com cupom por {d.ciclos} ciclos</p>}
+                  {d && d.ciclos > 1 && <p className="text-xs text-ok-300">Preço com cupom por {d.ciclos} ciclos</p>}
                   <p className="mt-3 flex-1 text-sm text-[var(--rt-text-2)]">{p.conteudo}</p>
                   <Button className="mt-4" disabled={assinar.isPending} onClick={() => assinar.mutate({ plano: p.codigo, ciclo, metodo, cupom: d ? cupom : null })}>
                     {assinar.isPending ? <Loader2 className="mr-1 h-4 w-4 animate-spin" /> : null} Assinar {p.nome}
@@ -177,7 +177,7 @@ export default function Assinatura() {
           )}
           {checkout && checkout.disponivel && checkout.tipo !== "redirecionar" && (
             <div className="space-y-3 rounded-[18px] border border-[var(--rt-gold)]/50 bg-[var(--rt-surface)] p-4 text-sm">
-              {checkout.modo === "teste" && <p className="rounded bg-amber-500/15 px-2 py-1 text-xs text-amber-200">Ambiente de TESTE do Mercado Pago — nenhum valor real é cobrado.</p>}
+              {checkout.modo === "teste" && <p className="rounded bg-warn-500/15 px-2 py-1 text-xs text-warn-200">Ambiente de TESTE do Mercado Pago — nenhum valor real é cobrado.</p>}
               <p className="font-semibold">{checkout.tipo === "pix" ? "Pague com Pix" : "Boleto gerado"} — {brl(checkout.valor)}</p>
               {checkout.qrBase64 && <img src={`data:image/png;base64,${checkout.qrBase64}`} alt="QR Code Pix" className="h-48 w-48 rounded-lg bg-white p-2" />}
               {checkout.copiaCola && (
@@ -200,7 +200,7 @@ export default function Assinatura() {
             {data.faturas.map(f => (
               <p key={f.id} className="flex flex-wrap justify-between border-t border-[var(--rt-border)] py-1.5 text-sm first:border-0">
                 <span>{f.competencia.startsWith("U") ? "Upgrade de plano" : f.competencia} · {brl(f.valor)}</span>
-                <span className={f.status === "PAGA" ? "text-emerald-300" : "text-amber-300"}>{f.status === "PAGA" ? <><CheckCircle2 className="mr-1 inline h-3.5 w-3.5" />paga em {dataBr(f.pagoEm)}</> : `${f.status.toLowerCase()} · vence ${dataBr(f.vencimento)}`}</span>
+                <span className={f.status === "PAGA" ? "text-ok-300" : "text-warn-300"}>{f.status === "PAGA" ? <><CheckCircle2 className="mr-1 inline h-3.5 w-3.5" />paga em {dataBr(f.pagoEm)}</> : `${f.status.toLowerCase()} · vence ${dataBr(f.vencimento)}`}</span>
               </p>
             ))}
           </section>
@@ -208,7 +208,7 @@ export default function Assinatura() {
         <div className="flex flex-wrap justify-center gap-3">
           {l.liberado && <a href="/" className="text-sm text-[var(--rt-gold)] hover:underline">Voltar ao CRM</a>}
           {l.liberado && l.origem === "PAGA" && (
-            <button type="button" disabled={cancelar.isPending} onClick={() => { if (confirm("Cancelar a renovação? Seu acesso continua até o fim do período já pago.")) cancelar.mutate(); }} className="text-sm text-red-300 hover:underline">Cancelar assinatura</button>
+            <button type="button" disabled={cancelar.isPending} onClick={() => { if (confirm("Cancelar a renovação? Seu acesso continua até o fim do período já pago.")) cancelar.mutate(); }} className="text-sm text-danger-300 hover:underline">Cancelar assinatura</button>
           )}
           <button type="button" onClick={() => logout()} className="inline-flex items-center gap-1 text-sm text-[var(--rt-text-2)] hover:underline"><LogOut className="h-4 w-4" /> Sair</button>
         </div>

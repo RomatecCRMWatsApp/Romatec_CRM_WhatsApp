@@ -16,7 +16,7 @@ export default function FaixaVerComo() {
   }, [p, loading, user, aceito]);
   if (!p) return null;
   return (
-    <div role="status" className="fixed bottom-24 left-1/2 z-[200] flex max-w-[95vw] -translate-x-1/2 items-center gap-2 rounded-full border border-[var(--rt-gold)] bg-black/90 py-1.5 pl-3 pr-1.5 text-xs text-white shadow-2xl shadow-black/60 backdrop-blur min-[900px]:bottom-4">
+    <div role="status" className="fixed bottom-24 left-1/2 z-[200] flex max-w-[95vw] -translate-x-1/2 items-center gap-2 rounded-full border border-[var(--rt-gold)] bg-black py-1.5 pl-3 pr-1.5 text-xs text-white min-[900px]:bottom-4">
       <Eye className="h-4 w-4 shrink-0 text-[var(--rt-gold)]" />
       <span className="truncate">Vendo como <b>{p.nome}</b> ({p.rotuloPerfil}) · só leitura</span>
       <button onClick={() => sairVerComo()} className="flex shrink-0 items-center gap-1 rounded-full bg-[var(--rt-gold)] px-3 py-1 font-semibold text-black hover:brightness-110">

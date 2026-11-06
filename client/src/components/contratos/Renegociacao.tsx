@@ -63,7 +63,7 @@ export default function RenegociacaoContrato({ contratoId, cobrancas, taxaContra
               <label key={x.id} className="flex items-center gap-2 rounded border border-border/60 px-2 py-1 text-sm">
                 <input type="checkbox" checked={ids.includes(x.id)} onChange={e => setIds(e.target.checked ? [...ids, x.id] : ids.filter(i => i !== x.id))} />
                 <span className="flex-1">{ROTULO_TIPO[x.tipo] ?? x.tipo} {x.numero}/{x.total} · {br(x.vencimento)}</span>
-                <span className={x.vencimento < hoje() ? "text-red-300" : ""}>{brl(x.valor)}</span>
+                <span className={x.vencimento < hoje() ? "text-danger-300" : ""}>{brl(x.valor)}</span>
               </label>
             ))}
           </div>
@@ -73,14 +73,14 @@ export default function RenegociacaoContrato({ contratoId, cobrancas, taxaContra
             <label className="text-xs text-muted-foreground">Desconto (R$)<Input inputMode="decimal" value={desconto} onChange={e => setDesconto(e.target.value)} placeholder="0" /></label>
             <label className="text-xs text-muted-foreground">1º vencimento<Input type="date" value={venc} min={hoje()} onChange={e => setVenc(e.target.value)} /></label>
           </div>
-          {sim.error && <p className="text-sm text-red-300">{sim.error.message}</p>}
+          {sim.error && <p className="text-sm text-danger-300">{sim.error.message}</p>}
           {sim.data && (
             <div className="space-y-2 rounded-md bg-secondary/30 p-3 text-sm">
               <div className="flex flex-wrap gap-x-6 gap-y-1">
                 <span>Original: <b>{brl(sim.data.totalOriginal)}</b></span>
                 <span>Encargos: <b>{brl(sim.data.encargos)}</b></span>
                 {sim.data.desconto > 0 && <span>Desconto: <b>−{brl(sim.data.desconto)}</b></span>}
-                <span>Renegociado: <b className="text-emerald-300">{brl(sim.data.valorRenegociado)}</b></span>
+                <span>Renegociado: <b className="text-ok-300">{brl(sim.data.valorRenegociado)}</b></span>
                 <span>Total a pagar: <b>{brl(sim.data.totalAPagar)}</b></span>
               </div>
               <p className="text-xs text-muted-foreground">{sim.data.parcelas.map(p => `${p.numero}ª ${br(p.vencimento)} ${brl(p.valor)}`).join(" · ")}</p>
@@ -101,7 +101,7 @@ export default function RenegociacaoContrato({ contratoId, cobrancas, taxaContra
       )}
 
       {aditivos?.map(a => (
-        <div key={a.id} className={`flex flex-wrap items-center justify-between gap-2 rounded-lg border p-2 text-sm ${a.status === "aguardando" ? "border-amber-400/50" : "border-border"}`}>
+        <div key={a.id} className={`flex flex-wrap items-center justify-between gap-2 rounded-lg border p-2 text-sm ${a.status === "aguardando" ? "border-warn-400/50" : "border-border"}`}>
           <div>
             <p><b>Termo Aditivo n.º {a.numero}</b> · {brl(a.valorRenegociado)} em {a.parcelas}× de {brl(a.valorParcela)} · <span className="text-muted-foreground">{a.rotuloStatus}{a.assinadoEm ? ` em ${new Date(a.assinadoEm).toLocaleString("pt-BR", { timeZone: "America/Fortaleza" })}` : ""}</span></p>
             <p className="text-xs text-muted-foreground">Parcelas: {a.itens.join(", ")}</p>
@@ -111,7 +111,7 @@ export default function RenegociacaoContrato({ contratoId, cobrancas, taxaContra
             <Button size="sm" variant="outline" asChild><a href={`/api/financeiro/aditivos/${a.id}.pdf`} target="_blank" rel="noreferrer"><FileText className="mr-1 h-3.5 w-3.5" /> PDF</a></Button>
             {a.link && <Button size="sm" variant="outline" onClick={() => copiar(a.link!)}><Copy className="mr-1 h-3.5 w-3.5" /> Link</Button>}
             {a.status === "aguardando" && <Button size="sm" variant="outline" disabled={reenviar.isPending} onClick={() => reenviar.mutate({ id: a.id })}><Send className="mr-1 h-3.5 w-3.5" /> Reenviar</Button>}
-            {admin && a.status === "aguardando" && <Button size="sm" variant="ghost" className="text-red-300" onClick={() => { if (confirm(`Cancelar o Termo Aditivo n.º ${a.numero}? O link deixa de valer.`)) cancelar.mutate({ id: a.id }); }}><X className="h-4 w-4" /></Button>}
+            {admin && a.status === "aguardando" && <Button size="sm" variant="ghost" className="text-danger-300" onClick={() => { if (confirm(`Cancelar o Termo Aditivo n.º ${a.numero}? O link deixa de valer.`)) cancelar.mutate({ id: a.id }); }}><X className="h-4 w-4" /></Button>}
           </div>
         </div>
       ))}

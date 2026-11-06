@@ -29,15 +29,15 @@ export default function MensagensAgendamento({ visitaId, enviada, aberto: inicia
   return (
     <div className="rounded-lg border border-border/70 bg-secondary/20">
       <button type="button" onClick={() => setAberto(a => !a)} className="flex w-full items-center gap-2 px-2.5 py-1.5 text-left text-xs">
-        <MessageCircle className="h-3.5 w-3.5 text-emerald-400" />
+        <MessageCircle className="h-3.5 w-3.5 text-ok-400" />
         <span className="font-semibold">Mensagens do agendamento</span>
-        <span className={enviada ? "text-emerald-300" : "text-amber-300"}>{enviada ? "· confirmação enviada ao cliente" : "· confirmação ainda não enviada"}</span>
+        <span className={enviada ? "text-ok-300" : "text-warn-300"}>{enviada ? "· confirmação enviada ao cliente" : "· confirmação ainda não enviada"}</span>
         {aberto ? <ChevronUp className="ml-auto h-3.5 w-3.5" /> : <ChevronDown className="ml-auto h-3.5 w-3.5" />}
       </button>
       {aberto && (
         <div className="space-y-3 border-t border-border/70 p-2.5 text-xs">
           {isLoading && <p className="text-muted-foreground">Carregando…</p>}
-          {error && <p className="text-red-400">{error.message}</p>}
+          {error && <p className="text-danger-400">{error.message}</p>}
           {data && (
             <>
               <div className="space-y-1.5">
@@ -47,12 +47,12 @@ export default function MensagensAgendamento({ visitaId, enviada, aberto: inicia
               </div>
               <div className="space-y-1.5">
                 <p className="font-semibold text-muted-foreground">
-                  Confirmação para o cliente {data.enviadaEm ? <span className="font-normal text-emerald-300">(enviada em {dataHora(data.enviadaEm)})</span> : <span className="font-normal text-amber-300">(não enviada)</span>}
+                  Confirmação para o cliente {data.enviadaEm ? <span className="font-normal text-ok-300">(enviada em {dataHora(data.enviadaEm)})</span> : <span className="font-normal text-warn-300">(não enviada)</span>}
                 </p>
                 <textarea value={texto} onChange={e => setTexto(e.target.value)} rows={9} maxLength={3000} aria-label="Confirmação para o cliente"
                   className="w-full rounded-md border border-border bg-background p-2 text-xs" />
                 <div className="flex flex-wrap gap-1.5">
-                  <Button size="sm" className="h-7 text-xs bg-emerald-600 hover:bg-emerald-700 text-white" disabled={!data.zapi || !texto.trim() || enviar.isPending}
+                  <Button size="sm" className="h-7 text-xs bg-ok-600 hover:bg-ok-700 text-white" disabled={!data.zapi || !texto.trim() || enviar.isPending}
                     onClick={() => { if (!data.enviadaEm || confirm("A confirmação já foi enviada. Enviar de novo?")) enviar.mutate({ visitaId, texto }); }}>
                     {enviar.isPending ? <Loader2 className="mr-1 h-3.5 w-3.5 animate-spin" /> : <Send className="mr-1 h-3.5 w-3.5" />}
                     {data.enviadaEm ? "Reenviar confirmação por WhatsApp" : "Enviar confirmação por WhatsApp"}
@@ -66,7 +66,7 @@ export default function MensagensAgendamento({ visitaId, enviada, aberto: inicia
                       className="inline-flex h-7 items-center rounded-md border border-border px-2 text-xs hover:bg-secondary/40">Abrir no WhatsApp com a confirmação</a>
                   )}
                 </div>
-                {!data.zapi && <p className="text-amber-300">O WhatsApp do sistema está indisponível agora: copie a confirmação ou abra no seu WhatsApp para mandar.</p>}
+                {!data.zapi && <p className="text-warn-300">O WhatsApp do sistema está indisponível agora: copie a confirmação ou abra no seu WhatsApp para mandar.</p>}
               </div>
             </>
           )}

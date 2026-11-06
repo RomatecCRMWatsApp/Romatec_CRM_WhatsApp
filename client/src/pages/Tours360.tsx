@@ -56,7 +56,7 @@ export default function Tours360() {
                 <p className="truncate"><b>{t.titulo}</b><span className="block text-xs text-muted-foreground">{t.loteCodigo ? `Chácara ${t.loteCodigo}` : "Condomínio (geral)"}</span></p>
                 <div className="flex shrink-0">
                   <Button size="sm" variant="ghost" onClick={() => setVer(i)}><Eye className="h-4 w-4" /></Button>
-                  <Button size="sm" variant="ghost" className="text-red-300" onClick={() => { if (confirm(`Excluir "${t.titulo}"?`)) excluir.mutate({ id: t.id }); }}><Trash2 className="h-4 w-4" /></Button>
+                  <Button size="sm" variant="ghost" className="text-danger-300" onClick={() => { if (confirm(`Excluir "${t.titulo}"?`)) excluir.mutate({ id: t.id }); }}><Trash2 className="h-4 w-4" /></Button>
                 </div>
               </div>
             </div>

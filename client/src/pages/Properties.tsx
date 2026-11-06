@@ -12,6 +12,7 @@ import { temAcesso } from "@shared/permissoes";
 import { podeUsarAgenteImovel } from "@shared/cadastroImovelAgente";
 import { toast } from "sonner";
 import MateriaisPainel from "@/components/MateriaisPainel";
+import { capaDoVideo } from "@/lib/capaVideo";
 
 interface PropertyForm {
   denomination: string;
@@ -59,7 +60,7 @@ function QrPlaca({ propertyId, codigo, onClose }: { propertyId: number; codigo: 
     <Dialog open onOpenChange={o => { if (!o) onClose(); }}>
       <DialogContent className="max-w-sm">
         <DialogHeader><DialogTitle>QR da placa — {codigo}</DialogTitle></DialogHeader>
-        {isLoading ? <p className="text-sm text-muted-foreground">Gerando QR...</p> : error ? <p className="text-sm text-red-400">{error.message}</p> : data && (
+        {isLoading ? <p className="text-sm text-muted-foreground">Gerando QR…</p> : error ? <p className="text-sm text-danger-400">{error.message}</p> : data && (
           <div className="space-y-3">
             <div className="bg-white rounded-xl p-3"><img src={data.qrPng} alt={`QR do imóvel ${codigo}`} className="w-full" /></div>
             <p className="text-xs text-muted-foreground">Quem escanear cai no WhatsApp com a mensagem do {codigo} e a campanha PLACA-{codigo} (criada no 1º scan).</p>
@@ -342,7 +343,7 @@ export default function Properties() {
                   <div>
                     <label className="text-sm font-medium text-muted-foreground mb-1 block">Tipo do Imóvel</label>
                     <select value={form.propertyType} onChange={e => setForm(p => ({ ...p, propertyType: e.target.value }))} className="w-full h-10 px-3 rounded-md border border-border/50 bg-secondary/30 text-foreground text-sm">
-                      <option value="">Selecione...</option>
+                      <option value="">Selecione…</option>
                       <option value="Casa">Casa</option>
                       <option value="Apartamento">Apartamento</option>
                       <option value="Terreno">Terreno</option>
@@ -363,7 +364,7 @@ export default function Properties() {
                     <input type="checkbox" className="mt-1" checked={form.exibirPreco} onChange={e => setForm(p => ({ ...p, exibirPreco: e.target.checked }))} />
                     <span>
                       Exibir preço para o cliente
-                      <span className="block text-xs text-muted-foreground">Desmarcado: a landing e as mensagens automáticas mostram "Valor sob consulta".</span>
+                      <span className="block text-xs text-muted-foreground">Desmarcado: a landing e as mensagens automáticas mostram “Valor sob consulta”.</span>
                     </span>
                   </label>
                 </div>
@@ -429,7 +430,7 @@ export default function Properties() {
                   <div className="flex items-center justify-between mb-1">
                     <label className="text-sm font-medium text-muted-foreground">Descrição</label>
                     <Button type="button" variant="outline" size="sm" onClick={handleGenerateDescription} disabled={isGeneratingDesc} className="text-gold border-gold/30 hover:bg-gold/10">
-                      {isGeneratingDesc ? <><Loader2 className="mr-1 h-3 w-3 animate-spin" /> Gerando...</> : <><Sparkles className="mr-1 h-3 w-3" /> Gerar com IA</>}
+                      {isGeneratingDesc ? <><Loader2 className="mr-1 h-3 w-3 animate-spin" /> Gerando…</> : <><Sparkles className="mr-1 h-3 w-3" /> Gerar com IA</>}
                     </Button>
                   </div>
                   <Textarea value={form.description} onChange={e => setForm(p => ({ ...p, description: e.target.value }))} placeholder="Descrição atrativa do imóvel (ou clique em 'Gerar com IA')" rows={5} className="bg-secondary/30 border-border/50" />
@@ -475,12 +476,12 @@ export default function Properties() {
                         style={{ borderColor: idx === 0 ? 'var(--c-10b981)' : undefined }}>
                         <img src={img} alt={`Foto ${idx + 1}`} className="w-full h-40 object-cover" />
                         {/* Botão remover */}
-                        <button onClick={() => removeImage(idx)} className="absolute top-2 right-2 bg-red-500/90 text-white rounded-full p-1.5 opacity-0 group-hover:opacity-100 transition-opacity">
+                        <button onClick={() => removeImage(idx)} className="absolute top-2 right-2 bg-danger-500/90 text-white rounded-full p-1.5 opacity-0 group-hover:opacity-100 transition-opacity">
                           <X className="h-3 w-3" />
                         </button>
                         {/* Badge capa ou botão definir capa */}
                         {idx === 0 ? (
-                          <span className="absolute bottom-2 left-2 bg-emerald-500/90 text-white text-xs px-2 py-0.5 rounded-full font-bold flex items-center gap-1">
+                          <span className="absolute bottom-2 left-2 bg-ok-500/90 text-white text-xs px-2 py-0.5 rounded-full font-bold flex items-center gap-1">
                             Capa
                           </span>
                         ) : (
@@ -491,7 +492,7 @@ export default function Properties() {
                               newImages.unshift(img);
                               setForm(prev => ({ ...prev, images: newImages }));
                             }}
-                            className="absolute bottom-2 left-2 bg-black/70 text-white text-xs px-2 py-0.5 rounded-full opacity-0 group-hover:opacity-100 transition-opacity hover:bg-emerald-600"
+                            className="absolute bottom-2 left-2 bg-black/70 text-white text-xs px-2 py-0.5 rounded-full opacity-0 group-hover:opacity-100 transition-opacity hover:bg-ok-600"
                           >
                             Definir como Capa
                           </button>
@@ -507,7 +508,7 @@ export default function Properties() {
 
               <TabsContent value="video" className="space-y-4">
                 <div className="flex items-center gap-2 mb-2">
-                  <Video className="h-5 w-5 text-red-500" />
+                  <Video className="h-5 w-5 text-danger-500" />
                   <h3 className="font-semibold text-foreground">V\u00eddeo do Im\u00f3vel</h3>
                 </div>
                 {/* Upload drag&drop de v\u00eddeo */}
@@ -516,16 +517,16 @@ export default function Properties() {
                   onDrop={e => handleDrop(e, 'video')}
                   onDragOver={handleDragOver}
                   onClick={() => !isUploading && videoInputRef.current?.click()}
-                  className="p-6 border-2 border-dashed border-red-500/40 rounded-xl text-center cursor-pointer hover:border-red-500 hover:bg-red-500/5 transition"
+                  className="p-6 border-2 border-dashed border-danger-500/40 rounded-xl text-center cursor-pointer hover:border-danger-500 hover:bg-danger-500/5 transition"
                 >
                   {isUploading && uploadProgress.includes('v\u00eddeo') ? (
                     <div className="flex flex-col items-center gap-2">
-                      <Loader2 className="h-8 w-8 text-red-500 animate-spin" />
-                      <p className="text-red-500 font-medium">{uploadProgress}</p>
+                      <Loader2 className="h-8 w-8 text-danger-500 animate-spin" />
+                      <p className="text-danger-500 font-medium">{uploadProgress}</p>
                     </div>
                   ) : (
                     <div className="flex flex-col items-center gap-2">
-                      <CloudUpload className="h-10 w-10 text-red-500/60" />
+                      <CloudUpload className="h-10 w-10 text-danger-500/60" />
                       <p className="text-foreground font-medium">Arraste o v\u00eddeo aqui ou clique para buscar</p>
                       <p className="text-muted-foreground text-xs">Aceita MP4, WebM, MOV (m\u00e1x 50MB)</p>
                     </div>
@@ -538,7 +539,7 @@ export default function Properties() {
                     {form.videoUrl.includes("youtube") || form.videoUrl.includes("youtu.be") ? (
                       <iframe src={form.videoUrl.replace("watch?v=", "embed/").replace("youtu.be/", "youtube.com/embed/")} className="w-full h-full" allowFullScreen />
                     ) : (
-                      <video preload="metadata" src={form.videoUrl} controls className="w-full h-full" />
+                      <video preload="metadata" src={form.videoUrl} poster={capaDoVideo(form.videoUrl)} controls className="w-full h-full" />
                     )}
                   </div>
                 ) : null}
@@ -576,20 +577,20 @@ export default function Properties() {
                   <div className="rounded-xl overflow-hidden border border-border/50">
                     {(form.plantaBaixaUrl.toLowerCase().includes('.pdf') || form.plantaBaixaUrl.includes('/raw/upload/') || form.plantaBaixaUrl.startsWith('data:application/pdf')) ? (
                       <div className="flex items-center gap-4 p-4 bg-secondary/30 rounded-xl border border-border/40">
-                        <div className="w-12 h-14 flex-shrink-0 flex items-center justify-center rounded-lg bg-red-500/15 border border-red-500/20">
-                          <svg aria-hidden="true" width="24" height="24" viewBox="0 0 24 24" fill="none" className="text-red-400"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/><polyline points="14 2 14 8 20 8" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/><line x1="16" y1="13" x2="8" y2="13" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/><line x1="16" y1="17" x2="8" y2="17" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/></svg>
+                        <div className="w-12 h-14 flex-shrink-0 flex items-center justify-center rounded-lg bg-danger-500/15 border border-danger-500/20">
+                          <svg aria-hidden="true" width="24" height="24" viewBox="0 0 24 24" fill="none" className="text-danger-400"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/><polyline points="14 2 14 8 20 8" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/><line x1="16" y1="13" x2="8" y2="13" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/><line x1="16" y1="17" x2="8" y2="17" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/></svg>
                         </div>
                         <div className="flex-1 min-w-0">
                           <p className="text-sm font-medium text-foreground truncate">{form.plantaBaixaUrl.startsWith('data:application/pdf') ? 'planta.pdf' : form.plantaBaixaUrl.split('/').pop()}</p>
                           <p className="text-xs text-muted-foreground mt-0.5">Planta Baixa — PDF</p>
                         </div>
-                        <a href={form.plantaBaixaUrl.startsWith('data:application/pdf') && editingId ? `/api/imoveis/${editingId}/planta` : form.plantaBaixaUrl} target="_blank" rel="noopener noreferrer" className="text-xs text-emerald-400 font-medium hover:underline flex-shrink-0">Abrir ↗</a>
-                        <button type="button" onClick={() => setForm(p => ({ ...p, plantaBaixaUrl: '' }))} className="text-xs text-red-400 hover:text-red-300 font-medium flex-shrink-0 ml-1">Remover</button>
+                        <a href={form.plantaBaixaUrl.startsWith('data:application/pdf') && editingId ? `/api/imoveis/${editingId}/planta` : form.plantaBaixaUrl} target="_blank" rel="noopener noreferrer" className="text-xs text-ok-400 font-medium hover:underline flex-shrink-0">Abrir ↗</a>
+                        <button type="button" onClick={() => setForm(p => ({ ...p, plantaBaixaUrl: '' }))} className="text-xs text-danger-400 hover:text-danger-300 font-medium flex-shrink-0 ml-1">Remover</button>
                       </div>
                     ) : (
                       <div className="relative">
                         <img src={form.plantaBaixaUrl} alt="Planta Baixa" className="w-full max-h-96 object-contain bg-secondary/20" />
-                        <button type="button" onClick={() => setForm(p => ({ ...p, plantaBaixaUrl: '' }))} className="absolute top-2 right-2 text-xs bg-red-500/80 hover:bg-red-500 text-white px-2 py-1 rounded font-medium">Remover</button>
+                        <button type="button" onClick={() => setForm(p => ({ ...p, plantaBaixaUrl: '' }))} className="absolute top-2 right-2 text-xs bg-danger-500/80 hover:bg-danger-500 text-white px-2 py-1 rounded font-medium">Remover</button>
                       </div>
                     )}
                   </div>
@@ -633,7 +634,7 @@ export default function Properties() {
                     <>
                       <img src={property.images[0]} alt={property.denomination} className="w-full h-48 sm:h-56 object-cover max-w-full" />
                       {property.images.length > 1 && (
-                        <div className="absolute bottom-3 right-3 bg-black/60 backdrop-blur-sm text-white text-xs px-2.5 py-1 rounded-full flex items-center gap-1">
+                        <div className="absolute bottom-3 right-3 bg-black/75 text-white text-xs px-2.5 py-1 rounded-full flex items-center gap-1">
                           <Image className="h-3 w-3" /> {property.images.length}
                         </div>
                       )}
@@ -647,7 +648,7 @@ export default function Properties() {
                   <div className="absolute top-3 left-3">
                     <span className={`px-3 py-1 rounded-full text-xs font-bold backdrop-blur-sm ${
                       property.status === "available" ? "bg-emerald/20 text-emerald border border-emerald/30" :
-                      property.status === "sold" ? "bg-red-500/20 text-red-400 border border-red-500/30" : "bg-secondary/50 text-muted-foreground border border-border/30"
+                      property.status === "sold" ? "bg-danger-500/20 text-danger-400 border border-danger-500/30" : "bg-secondary/50 text-muted-foreground border border-border/30"
                     }`}>
                       {property.status === "available" ? "Disponível" : property.status === "sold" ? "Vendido" : "Inativo"}
                     </span>
@@ -680,12 +681,12 @@ export default function Properties() {
                   {/* Nome e Endereço */}
                   <div className="flex items-center gap-2 mb-1">
                     <h3 className="font-bold text-lg text-foreground">
-                      {property.codigo && <span className="font-mono text-xs text-emerald-300 mr-2 align-middle">{property.codigo}</span>}
+                      {property.codigo && <span className="font-mono text-xs text-ok-300 mr-2 align-middle">{property.codigo}</span>}
                       {property.denomination}
                     </h3>
                     <span className={`px-2 py-0.5 rounded-full text-xs font-bold shrink-0 ${
                       property.finalidade === "aluguel"
-                        ? "bg-blue-500/20 text-blue-400 border border-blue-500/30"
+                        ? "bg-azul-500/20 text-azul-400 border border-azul-500/30"
                         : "bg-emerald/20 text-emerald border border-emerald/30"
                     }`}>
                       {property.finalidade === "aluguel" ? "🔑 Aluguel" : "🏠 Venda"}
@@ -732,7 +733,7 @@ export default function Properties() {
                   {/* Mídia badges */}
                   <div className="flex gap-2 mb-4">
                     {property.images?.length > 0 && <span className="badge-success text-xs py-1 px-2"><Image className="h-3 w-3" /> {property.images.length} fotos</span>}
-                    {property.videoUrl && <span className="text-xs py-1 px-2 rounded-full bg-red-500/15 text-red-400 border border-red-500/20 inline-flex items-center gap-1"><Video className="h-3 w-3" /> Vídeo</span>}
+                    {property.videoUrl && <span className="text-xs py-1 px-2 rounded-full bg-danger-500/15 text-danger-400 border border-danger-500/20 inline-flex items-center gap-1"><Video className="h-3 w-3" /> Vídeo</span>}
                     {property.plantaBaixaUrl && <span className="badge-gold text-xs py-1 px-2"><FileImage className="h-3 w-3" /> Planta</span>}
                   </div>
 
@@ -749,11 +750,11 @@ export default function Properties() {
                     <button onClick={() => handleEdit(property)} className="flex-1 py-2.5 rounded-xl bg-gold/10 hover:bg-gold/20 text-gold font-semibold text-sm transition flex items-center justify-center gap-1.5">
                       <Edit className="h-4 w-4" /> Editar
                     </button>
-                    <button onClick={() => handleDelete(property.id, property.denomination)} className="py-2.5 px-3 rounded-xl bg-red-500/10 hover:bg-red-500/20 text-red-400 transition">
+                    <button onClick={() => handleDelete(property.id, property.denomination)} className="py-2.5 px-3 rounded-xl bg-danger-500/10 hover:bg-danger-500/20 text-danger-400 transition">
                       <Trash2 className="h-4 w-4" />
                     </button>
                     {property.codigo && (
-                      <button title="QR da placa e página do imóvel" onClick={() => setQrDe({ id: property.id, codigo: property.codigo })} className="py-2.5 px-3 rounded-xl bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-300 text-xs font-bold transition">
+                      <button title="QR da placa e página do imóvel" onClick={() => setQrDe({ id: property.id, codigo: property.codigo })} className="py-2.5 px-3 rounded-xl bg-ok-500/10 hover:bg-ok-500/20 text-ok-300 text-xs font-bold transition">
                         QR
                       </button>
                     )}
@@ -912,12 +913,12 @@ export default function Properties() {
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
                 {selectedProperty.videoUrl && (
                   <div>
-                    <h3 className="text-sm font-semibold text-muted-foreground mb-2 flex items-center gap-1"><Video className="h-4 w-4 text-red-400" /> Vídeo</h3>
+                    <h3 className="text-sm font-semibold text-muted-foreground mb-2 flex items-center gap-1"><Video className="h-4 w-4 text-danger-400" /> Vídeo</h3>
                     <div className="aspect-video rounded-xl overflow-hidden border border-border/30">
                       {selectedProperty.videoUrl.includes("youtube") || selectedProperty.videoUrl.includes("youtu.be") ? (
                         <iframe src={selectedProperty.videoUrl.replace("watch?v=", "embed/")} className="w-full h-full" allowFullScreen />
                       ) : (
-                        <video preload="metadata" src={selectedProperty.videoUrl} controls className="w-full h-full" />
+                        <video preload="metadata" src={selectedProperty.videoUrl} poster={capaDoVideo(selectedProperty.videoUrl)} controls className="w-full h-full" />
                       )}
                     </div>
                   </div>
@@ -929,14 +930,14 @@ export default function Properties() {
                       {(selectedProperty.plantaBaixaUrl.toLowerCase().includes('.pdf') || selectedProperty.plantaBaixaUrl.includes('/raw/upload/') || selectedProperty.plantaBaixaUrl.startsWith('data:application/pdf')) ? (
                         <a href={`/api/imoveis/${selectedProperty.id}/planta`} target="_blank" rel="noopener noreferrer"
                           className="flex items-center gap-4 p-4 bg-secondary/30 hover:bg-secondary/50 transition rounded-xl border border-border/40 group">
-                          <div className="w-12 h-14 flex-shrink-0 flex items-center justify-center rounded-lg bg-red-500/15 border border-red-500/20">
-                            <svg aria-hidden="true" width="24" height="24" viewBox="0 0 24 24" fill="none" className="text-red-400"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/><polyline points="14 2 14 8 20 8" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/><line x1="16" y1="13" x2="8" y2="13" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/><line x1="16" y1="17" x2="8" y2="17" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/></svg>
+                          <div className="w-12 h-14 flex-shrink-0 flex items-center justify-center rounded-lg bg-danger-500/15 border border-danger-500/20">
+                            <svg aria-hidden="true" width="24" height="24" viewBox="0 0 24 24" fill="none" className="text-danger-400"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/><polyline points="14 2 14 8 20 8" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/><line x1="16" y1="13" x2="8" y2="13" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/><line x1="16" y1="17" x2="8" y2="17" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/></svg>
                           </div>
                           <div className="flex-1 min-w-0">
                             <p className="text-sm font-medium text-foreground truncate">planta.pdf</p>
                             <p className="text-xs text-muted-foreground mt-0.5">Planta Baixa — PDF</p>
                           </div>
-                          <span className="text-xs text-emerald-400 font-medium group-hover:underline flex-shrink-0">Abrir ↗</span>
+                          <span className="text-xs text-ok-400 font-medium group-hover:underline flex-shrink-0">Abrir ↗</span>
                         </a>
                       ) : (
                         <img src={selectedProperty.plantaBaixaUrl} alt="Planta Baixa" className="w-full max-h-64 object-contain bg-secondary/20" />
@@ -1010,7 +1011,7 @@ export default function Properties() {
             {/* Seta esquerda */}
             {lightboxIndex > 0 && (
               <button
-                className="absolute left-0 top-1/2 -translate-y-1/2 p-3 rounded-full bg-white/10 hover:bg-white/20 text-white transition backdrop-blur-sm"
+                className="absolute left-0 top-1/2 -translate-y-1/2 p-3 rounded-full bg-black/60 hover:bg-black/80 text-white transition"
                 onClick={() => setLightboxIndex(i => i - 1)}
               >
                 <ChevronLeft className="h-7 w-7" />
@@ -1020,7 +1021,7 @@ export default function Properties() {
             {/* Seta direita */}
             {lightboxIndex < selectedProperty.images.length - 1 && (
               <button
-                className="absolute right-0 top-1/2 -translate-y-1/2 p-3 rounded-full bg-white/10 hover:bg-white/20 text-white transition backdrop-blur-sm"
+                className="absolute right-0 top-1/2 -translate-y-1/2 p-3 rounded-full bg-black/60 hover:bg-black/80 text-white transition"
                 onClick={() => setLightboxIndex(i => i + 1)}
               >
                 <ChevronRight className="h-7 w-7" />

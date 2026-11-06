@@ -71,7 +71,7 @@ export default function FichaCredenciamento({ uid }: { uid: number }) {
       </div>
       {isFetching && !sit ? <p className="flex items-center gap-1.5 text-xs text-muted-foreground"><Loader2 className="h-3.5 w-3.5 animate-spin" /> Conferindo o cadastro…</p>
         : sit && !sit.apto ? (
-          <div className="rounded-lg border border-amber-500/40 bg-amber-500/10 p-2 text-xs text-amber-100">
+          <div className="rounded-lg border border-warn-500/40 bg-warn-500/10 p-2 text-xs text-warn-100">
             <p className="flex items-center gap-1.5 font-semibold"><TriangleAlert className="h-3.5 w-3.5" /> Para gerar a ficha, falta:</p>
             <ul className="mt-1 list-disc pl-5 space-y-0.5">{sit.pendencias.map(p => <li key={p}>{p}</li>)}</ul>
           </div>

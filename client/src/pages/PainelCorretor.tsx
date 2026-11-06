@@ -44,12 +44,12 @@ export default function PainelCorretor() {
 
   const atalhos: Atalho[] = [
     m.contratos && slug ? { rotulo: "Novo contrato", dica: "Reservar uma chácara", icone: FileSignature, cor: "", acao: () => navigate(`/contratos/novo?slug=${slug}`), destaque: true } : null,
-    m.leads ? { rotulo: "Leads", dica: "Seus clientes", icone: Flame, cor: "bg-orange-500/15 text-orange-300", acao: () => navigate("/leads") } : null,
-    m.leads ? { rotulo: "Agenda", dica: "Visitas marcadas", icone: CalendarDays, cor: "bg-sky-500/15 text-sky-300", acao: () => navigate("/leads/agenda") } : null,
-    m.simulador && slug ? { rotulo: "Simulador", dica: "Parcelas", icone: Calculator, cor: "bg-violet-500/15 text-violet-300", acao: () => navigate(`/empreendimentos/${slug}`) } : null,
-    m.contratos ? { rotulo: "Contratos", dica: "Seus contratos", icone: FileText, cor: "bg-emerald-500/15 text-emerald-300", acao: () => navigate("/contratos") } : null,
-    m.materiais ? { rotulo: "Materiais", dica: "Fotos e vídeos", icone: FolderOpen, cor: "bg-pink-500/15 text-pink-300", acao: () => navigate("/materiais") } : null,
-    m.contatos ? { rotulo: "Novo cliente", dica: "Cadastrar contato", icone: UserPlus, cor: "bg-teal-500/15 text-teal-300", acao: () => navigate("/contacts") } : null,
+    m.leads ? { rotulo: "Leads", dica: "Seus clientes", icone: Flame, cor: "bg-heat-500/15 text-heat-300", acao: () => navigate("/leads") } : null,
+    m.leads ? { rotulo: "Agenda", dica: "Visitas marcadas", icone: CalendarDays, cor: "bg-info-500/15 text-info-300", acao: () => navigate("/leads/agenda") } : null,
+    m.simulador && slug ? { rotulo: "Simulador", dica: "Parcelas", icone: Calculator, cor: "bg-lilas-500/15 text-lilas-300", acao: () => navigate(`/empreendimentos/${slug}`) } : null,
+    m.contratos ? { rotulo: "Contratos", dica: "Seus contratos", icone: FileText, cor: "bg-ok-500/15 text-ok-300", acao: () => navigate("/contratos") } : null,
+    m.materiais ? { rotulo: "Materiais", dica: "Fotos e vídeos", icone: FolderOpen, cor: "bg-rosa-500/15 text-rosa-300", acao: () => navigate("/materiais") } : null,
+    m.contatos ? { rotulo: "Novo cliente", dica: "Cadastrar contato", icone: UserPlus, cor: "bg-mar-500/15 text-mar-300", acao: () => navigate("/contacts") } : null,
   ].filter(Boolean) as Atalho[];
 
   const links = emp && m.materiais ? [

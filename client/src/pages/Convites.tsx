@@ -13,7 +13,7 @@ const campo = "h-9 w-full rounded-md border border-border bg-background px-2 tex
 const dataHora = (d: unknown) => new Date(d as any).toLocaleString("pt-BR", { timeZone: "America/Fortaleza", weekday: "short", day: "2-digit", month: "2-digit", year: "numeric", hour: "2-digit", minute: "2-digit" });
 const copiar = async (t: string, o = "Link") => { try { await navigator.clipboard.writeText(t); toast.success(`${o} copiado`); } catch { window.prompt("Copie:", t); } };
 const fone = (t: string) => { const d = t.replace(/^55/, ""); return d.length === 11 ? `(${d.slice(0, 2)}) ${d.slice(2, 7)}-${d.slice(7)}` : `(${d.slice(0, 2)}) ${d.slice(2, 6)}-${d.slice(6)}`; };
-const COR: Record<StatusConvidado, string> = { confirmado: "text-emerald-400", recusado: "text-red-400", pendente: "text-amber-300" };
+const COR: Record<StatusConvidado, string> = { confirmado: "text-ok-400", recusado: "text-danger-400", pendente: "text-warn-300" };
 
 /** Data/hora no fuso do Maranhão para os campos do formulário */
 function partes(d?: Date | string | null) {
@@ -82,7 +82,7 @@ function Lista() {
             {(emps ?? []).map(x => <option key={x.id} value={x.id}>{x.nome}</option>)}
           </select>
         </div>
-        {isLoading ? <Loader2 className="h-5 w-5 animate-spin" /> : error ? <p className="text-sm text-red-400">{error.message}</p>
+        {isLoading ? <Loader2 className="h-5 w-5 animate-spin" /> : error ? <p className="text-sm text-danger-400">{error.message}</p>
           : !data?.length ? <p className="text-sm text-muted-foreground">Nenhuma reunião ainda.</p> : (
             <div className="grid gap-2">
               {data.map(r => (
@@ -93,9 +93,9 @@ function Lista() {
                       <span className="text-xs text-muted-foreground">{dataHora(r.quando)}{r.empreendimento ? ` · ${r.empreendimento}` : ""}{r.local ? ` · ${r.local}` : ""}</span>
                     </div>
                     <div className="flex gap-3 text-sm">
-                      <span className="text-emerald-400 font-semibold">{r.contagem.confirmado} confirmado(s)</span>
-                      <span className="text-red-400">{r.contagem.recusado} não vão</span>
-                      <span className="text-amber-300">{r.contagem.pendente} pendente(s)</span>
+                      <span className="text-ok-400 font-semibold">{r.contagem.confirmado} confirmado(s)</span>
+                      <span className="text-danger-400">{r.contagem.recusado} não vão</span>
+                      <span className="text-warn-300">{r.contagem.pendente} pendente(s)</span>
                     </div>
                   </div>
                 </button>
@@ -140,7 +140,7 @@ function Detalhe({ id }: { id: number }) {
   };
 
   if (isLoading) return <div className="p-6"><Loader2 className="h-5 w-5 animate-spin" /></div>;
-  if (error || !r) return <div className="p-6 text-sm text-red-400">{error?.message ?? "Reunião não encontrada"}</div>;
+  if (error || !r) return <div className="p-6 text-sm text-danger-400">{error?.message ?? "Reunião não encontrada"}</div>;
   const grupos: StatusConvidado[] = ["confirmado", "pendente", "recusado"];
   return (
     <div>

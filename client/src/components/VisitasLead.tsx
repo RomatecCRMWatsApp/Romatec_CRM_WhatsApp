@@ -10,8 +10,8 @@ export const ROTULO_STATUS_VISITA: Record<string, string> = {
   solicitada: "Pedido do cliente", agendada: "Agendada", confirmada: "Confirmada", realizada: "Realizada", nao_veio: "Não veio", cancelada: "Cancelada",
 };
 export const COR_STATUS_VISITA: Record<string, string> = {
-  solicitada: "bg-amber-500/20 text-amber-200", agendada: "bg-sky-500/15 text-sky-300", confirmada: "bg-emerald-500/15 text-emerald-300", realizada: "bg-violet-500/15 text-violet-300",
-  nao_veio: "bg-amber-500/15 text-amber-300", cancelada: "bg-zinc-500/15 text-zinc-400",
+  solicitada: "bg-warn-500/20 text-warn-200", agendada: "bg-info-500/15 text-info-300", confirmada: "bg-ok-500/15 text-ok-300", realizada: "bg-lilas-500/15 text-lilas-300",
+  nao_veio: "bg-warn-500/15 text-warn-300", cancelada: "bg-grafite-500/15 text-grafite-400",
 };
 
 export const dataHora = (d: string | Date) =>
@@ -32,9 +32,9 @@ export function AcoesVisita({ visita, onMudou }: { visita: { id: number; status:
   );
   return (
     <div className="flex flex-wrap items-center gap-1.5">
-      {visita.status === "solicitada" && b("📅 Confirmar agendamento", "agendada", "border-sky-500/40")}
+      {visita.status === "solicitada" && b("📅 Confirmar agendamento", "agendada", "border-info-500/40")}
       {visita.status === "agendada" && !passou && b("Confirmada", "confirmada")}
-      {visita.status !== "solicitada" && b("✅ Realizada", "realizada", "border-violet-500/40")}
+      {visita.status !== "solicitada" && b("✅ Realizada", "realizada", "border-lilas-500/40")}
       {passou && b("Não veio", "nao_veio")}
       {b("Cancelar", "cancelada", "text-muted-foreground")}
       <input type="datetime-local" value={nova} onChange={e => setNova(e.target.value)} className="h-7 rounded-md border border-border bg-secondary px-2 text-xs" aria-label="Nova data" />
@@ -65,7 +65,7 @@ export default function VisitasLead({ leadId, imoveis, onMudou }: { leadId: numb
             <div className="flex flex-wrap items-center gap-2">
               <span className="font-semibold">{dataHora(v.quando)}</span>
               <span className={`rounded-full px-2 py-0.5 text-[11px] ${COR_STATUS_VISITA[v.status] ?? ""}`}>{ROTULO_STATUS_VISITA[v.status] ?? v.status}</span>
-              {v.confirmadaPeloCliente && <span className="text-[11px] text-emerald-300">cliente confirmou pelo WhatsApp</span>}
+              {v.confirmadaPeloCliente && <span className="text-[11px] text-ok-300">cliente confirmou pelo WhatsApp</span>}
               {!v.confirmadaPeloCliente && v.lembreteEnviado && v.status === "agendada" && <span className="text-[11px] text-muted-foreground">lembrete enviado</span>}
             </div>
             {(v.imovel || v.local) && <p className="text-xs text-muted-foreground">{[v.imovel, v.local].filter(Boolean).join(" · ")}</p>}

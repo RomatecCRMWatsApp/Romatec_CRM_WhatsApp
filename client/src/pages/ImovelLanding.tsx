@@ -6,6 +6,7 @@ import { Input } from "@/components/ui/input";
 import { BedDouble, Bath, Car, ChevronLeft, ChevronRight, ImageIcon, MapPin, MessageCircle, Ruler, FileImage, CheckCircle2 } from "lucide-react";
 import { campanhaDaVisita, enviarEvento, gravarConsentimento, lerConsentimento, utmsDaVisita, visitanteId, type Consentimento } from "@/lib/rastreio";
 import { origemDaVisita } from "@/lib/origemVisita";
+import { capaDoVideo } from "@/lib/capaVideo";
 
 const TEMPO_PASSO_S = 15;
 const TEMPO_MAX_S = 300;
@@ -18,13 +19,13 @@ function reais(v: unknown): string | null {
 function BannerCookies({ onEscolha }: { onEscolha: (v: "sim" | "nao") => void }) {
   return (
     <div className="fixed inset-x-0 bottom-0 z-50 p-3">
-      <div className="max-w-3xl mx-auto rounded-2xl border border-border bg-card/95 backdrop-blur p-4 shadow-2xl flex flex-col sm:flex-row sm:items-center gap-3">
+      <div className="max-w-3xl mx-auto rounded-2xl border border-border bg-card p-4 shadow-md flex flex-col sm:flex-row sm:items-center gap-3">
         <p className="text-sm text-foreground flex-1">
           Usamos cookies próprios para melhorar o atendimento. Nada é compartilhado com terceiros.
         </p>
         <div className="flex gap-2 shrink-0">
           <Button size="sm" variant="ghost" onClick={() => onEscolha("nao")}>Recusar</Button>
-          <Button size="sm" className="bg-emerald-600 hover:bg-emerald-700 text-white" onClick={() => onEscolha("sim")}>Aceitar</Button>
+          <Button size="sm" className="bg-ok-600 hover:bg-ok-700 text-white" onClick={() => onEscolha("sim")}>Aceitar</Button>
         </div>
       </div>
     </div>
@@ -117,7 +118,7 @@ export default function ImovelLanding() {
         <div>
           <h1 className="text-2xl font-bold text-foreground">Imóvel não encontrado</h1>
           <p className="text-muted-foreground mt-2">Confira o código do anúncio ou veja nossos imóveis disponíveis.</p>
-          <a href="/imoveis" className="inline-block mt-6 text-emerald-400 underline">Ver imóveis da Romatec</a>
+          <a href="/imoveis" className="inline-block mt-6 text-ok-400 underline">Ver imóveis da Romatec</a>
         </div>
       </div>
     );
@@ -125,7 +126,7 @@ export default function ImovelLanding() {
   if (isLoading || !imovel) {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center">
-        <div className="w-10 h-10 border-4 border-emerald-500/30 border-t-emerald-500 rounded-full animate-spin" />
+        <div className="w-10 h-10 border-4 border-ok-500/30 border-t-ok-500 rounded-full animate-spin" />
       </div>
     );
   }
@@ -150,34 +151,34 @@ export default function ImovelLanding() {
         ) : (
           <div className="w-full h-full flex items-center justify-center"><ImageIcon className="h-16 w-16 text-white/20" /></div>
         )}
-        <span className="absolute top-3 left-3 text-xs font-mono font-bold text-white bg-emerald-700/90 px-2 py-1 rounded-md">{imovel.codigo}</span>
+        <span className="absolute top-3 left-3 text-xs font-mono font-bold text-white bg-ok-700/90 px-2 py-1 rounded-md">{imovel.codigo}</span>
       </div>
 
       <div className="max-w-3xl mx-auto px-4 pt-5 space-y-5">
         <div>
-          <p className="text-xs text-emerald-400 font-semibold">{imovel.propertyType || "Imóvel"} · {imovel.finalidade === "aluguel" ? "Aluguel" : "Venda"}</p>
+          <p className="text-xs text-ok-400 font-semibold">{imovel.propertyType || "Imóvel"} · {imovel.finalidade === "aluguel" ? "Aluguel" : "Venda"}</p>
           <h1 className="text-2xl sm:text-3xl font-bold text-foreground mt-1">{imovel.denomination}</h1>
           <p className="flex items-start gap-1 text-sm text-muted-foreground mt-1">
-            <MapPin className="h-4 w-4 shrink-0 mt-0.5 text-emerald-400" />
+            <MapPin className="h-4 w-4 shrink-0 mt-0.5 text-ok-400" />
             {[imovel.address, imovel.city, imovel.state].filter(Boolean).join(", ")}
           </p>
-          <p className="text-2xl font-bold text-emerald-300 mt-3">{preco ?? "Valor sob consulta"}</p>
+          <p className="text-2xl font-bold text-ok-300 mt-3">{preco ?? "Valor sob consulta"}</p>
         </div>
 
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
-          {area > 0 && <div className="glass-card p-3 text-center"><Ruler className="h-4 w-4 mx-auto text-emerald-400" /><p className="text-sm font-semibold mt-1">{area.toLocaleString("pt-BR")} m²</p></div>}
-          {!!imovel.bedrooms && <div className="glass-card p-3 text-center"><BedDouble className="h-4 w-4 mx-auto text-emerald-400" /><p className="text-sm font-semibold mt-1">{imovel.bedrooms} quarto(s)</p></div>}
-          {!!imovel.bathrooms && <div className="glass-card p-3 text-center"><Bath className="h-4 w-4 mx-auto text-emerald-400" /><p className="text-sm font-semibold mt-1">{imovel.bathrooms} banheiro(s)</p></div>}
-          {!!imovel.garageSpaces && <div className="glass-card p-3 text-center"><Car className="h-4 w-4 mx-auto text-emerald-400" /><p className="text-sm font-semibold mt-1">{imovel.garageSpaces} vaga(s)</p></div>}
+          {area > 0 && <div className="glass-card p-3 text-center"><Ruler className="h-4 w-4 mx-auto text-ok-400" /><p className="text-sm font-semibold mt-1">{area.toLocaleString("pt-BR")} m²</p></div>}
+          {!!imovel.bedrooms && <div className="glass-card p-3 text-center"><BedDouble className="h-4 w-4 mx-auto text-ok-400" /><p className="text-sm font-semibold mt-1">{imovel.bedrooms} quarto(s)</p></div>}
+          {!!imovel.bathrooms && <div className="glass-card p-3 text-center"><Bath className="h-4 w-4 mx-auto text-ok-400" /><p className="text-sm font-semibold mt-1">{imovel.bathrooms} banheiro(s)</p></div>}
+          {!!imovel.garageSpaces && <div className="glass-card p-3 text-center"><Car className="h-4 w-4 mx-auto text-ok-400" /><p className="text-sm font-semibold mt-1">{imovel.garageSpaces} vaga(s)</p></div>}
         </div>
 
         {imovel.description && <p className="text-sm text-foreground/90 whitespace-pre-line leading-relaxed">{imovel.description}</p>}
 
         {imovel.videoUrl && (
           /\.(mp4|webm|mov)(\?|$)/i.test(imovel.videoUrl) ? (
-            <video preload="metadata" src={imovel.videoUrl} controls playsInline className="w-full rounded-xl bg-black" onPlay={() => uma("play_video")} />
+            <video preload="metadata" src={imovel.videoUrl} poster={capaDoVideo(imovel.videoUrl)} controls playsInline className="w-full rounded-xl bg-black" onPlay={() => uma("play_video")} />
           ) : (
-            <a href={imovel.videoUrl} target="_blank" rel="noreferrer" onClick={() => uma("play_video")} className="block text-sm text-emerald-400 underline">▶ Ver vídeo do imóvel</a>
+            <a href={imovel.videoUrl} target="_blank" rel="noreferrer" onClick={() => uma("play_video")} className="block text-sm text-ok-400 underline">▶ Ver vídeo do imóvel</a>
           )
         )}
 
@@ -196,7 +197,7 @@ export default function ImovelLanding() {
         <div className="glass-card p-4 sm:p-5 rounded-2xl">
           {enviado ? (
             <div className="text-center py-4">
-              <CheckCircle2 className="h-10 w-10 text-emerald-400 mx-auto" />
+              <CheckCircle2 className="h-10 w-10 text-ok-400 mx-auto" />
               <p className="font-semibold text-foreground mt-2">Recebemos seu contato!</p>
               <p className="text-sm text-muted-foreground">Em instantes você recebe as informações no WhatsApp.</p>
             </div>
@@ -211,8 +212,8 @@ export default function ImovelLanding() {
                 <input type="checkbox" className="mt-0.5" checked={form.consent} onChange={e => setForm(f => ({ ...f, consent: e.target.checked }))} />
                 Autorizo a Romatec Consultoria Total a entrar em contato comigo por WhatsApp sobre este imóvel (Lei 13.709/2018). Posso cancelar a qualquer momento.
               </label>
-              {erro && <p className="text-sm text-red-400">{erro}</p>}
-              <Button type="submit" disabled={enviando} className="w-full bg-emerald-600 hover:bg-emerald-700 text-white">{enviando ? "Enviando..." : "Enviar"}</Button>
+              {erro && <p className="text-sm text-danger-400">{erro}</p>}
+              <Button type="submit" disabled={enviando} className="w-full bg-ok-600 hover:bg-ok-700 text-white">{enviando ? "Enviando..." : "Enviar"}</Button>
             </form>
           )}
         </div>

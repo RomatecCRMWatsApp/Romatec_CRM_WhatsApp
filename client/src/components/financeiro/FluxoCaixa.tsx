@@ -7,7 +7,7 @@ const inicioDoAno = () => `${hoje().slice(0, 4)}-01-01`;
 const MESES = ["jan", "fev", "mar", "abr", "mai", "jun", "jul", "ago", "set", "out", "nov", "dez"];
 const rotuloPeriodo = (p: string) => (p === "ATRASADO" ? "Em atraso" : p.length === 7 ? `${MESES[Number(p.slice(5, 7)) - 1]}/${p.slice(0, 4)}` : p.split("-").reverse().join("/"));
 const FORMA: Record<string, string> = { PIX: "PIX", BOLETO: "Boleto", TRANSFERENCIA: "Transferência", DINHEIRO: "Dinheiro", CARTAO: "Cartão", OUTRO: "Outro" };
-const cor = (v: number) => (v < 0 ? "text-red-300" : "");
+const cor = (v: number) => (v < 0 ? "text-danger-300" : "");
 
 /**
  * Fluxo de caixa: entradas (parcelas recebidas) e saídas (despesas pagas) do período, por dia/mês, com o saldo
@@ -36,12 +36,12 @@ export default function FluxoCaixa() {
           <select value={emp} onChange={e => setEmp(e.target.value)} className={campo}><option value="">Todos</option><option value="0">Só o escritório</option>{(emps ?? []).map(e => <option key={e.id} value={e.id}>{e.nome}</option>)}</select>
         </label>
       </div>
-      {error && <p className="text-sm text-red-400">{error.message}</p>}
+      {error && <p className="text-sm text-danger-400">{error.message}</p>}
       {isLoading && <p className="text-sm text-muted-foreground">Carregando…</p>}
       {data && (
         <>
           <div className="grid grid-cols-2 gap-3 md:grid-cols-5">
-            {([["Saldo antes do período", data.saldoInicial, cor(data.saldoInicial)], ["Entradas", data.totalEntradas, "text-emerald-300"], ["Saídas", data.totalSaidas, "text-red-300"],
+            {([["Saldo antes do período", data.saldoInicial, cor(data.saldoInicial)], ["Entradas", data.totalEntradas, "text-ok-300"], ["Saídas", data.totalSaidas, "text-danger-300"],
               ["Resultado do período", data.resultado, cor(data.resultado)], ["Saldo no fim", data.saldoFinal, cor(data.saldoFinal)]] as const).map(([r, v, c]) => (
               <div key={r} className="rounded-xl border border-border bg-card p-3"><p className="text-xs text-muted-foreground">{r}</p><p className={`text-lg font-bold ${c}`}>{brl(v)}</p></div>
             ))}
@@ -57,11 +57,11 @@ export default function FluxoCaixa() {
                       <tr key={s.periodo} className="border-t border-border/50">
                         <td className="whitespace-nowrap py-1.5">{rotuloPeriodo(s.periodo)}</td>
                         <td className="space-y-0.5 py-1.5 pr-2">
-                          <div className="h-2 rounded bg-emerald-500/70" style={{ width: `${s.entradas ? Math.max(2, (s.entradas / maior) * 100) : 0}%` }} />
-                          <div className="h-2 rounded bg-red-500/60" style={{ width: `${s.saidas ? Math.max(2, (s.saidas / maior) * 100) : 0}%` }} />
+                          <div className="h-2 rounded bg-ok-500/70" style={{ width: `${s.entradas ? Math.max(2, (s.entradas / maior) * 100) : 0}%` }} />
+                          <div className="h-2 rounded bg-danger-500/60" style={{ width: `${s.saidas ? Math.max(2, (s.saidas / maior) * 100) : 0}%` }} />
                         </td>
                         <td className="py-1.5 text-right">{brl(s.entradas)}</td>
-                        <td className="py-1.5 text-right text-red-300">{s.saidas ? `− ${brl(s.saidas)}` : "—"}</td>
+                        <td className="py-1.5 text-right text-danger-300">{s.saidas ? `− ${brl(s.saidas)}` : "—"}</td>
                         <td className={`py-1.5 text-right font-medium ${cor(s.saldo)}`}>{brl(s.saldo)}</td>
                         <td className={`py-1.5 text-right text-muted-foreground ${cor(s.acumulado)}`}>{brl(s.acumulado)}</td>
                       </tr>
@@ -80,8 +80,8 @@ export default function FluxoCaixa() {
             </div>
             <div className="rounded-xl border border-border bg-card p-3">
               <h3 className="mb-2 text-sm font-semibold">Saídas por categoria</h3>
-              {!data.porCategoria.length ? <p className="text-xs text-muted-foreground">Nenhuma despesa paga no período. Lance na aba "Despesas".</p> : data.porCategoria.map(c => (
-                <p key={c.categoria} className="flex justify-between border-t border-border/50 py-1.5 text-sm first:border-0"><span>{c.categoria}</span><b className="text-red-300">{brl(c.valor)}</b></p>
+              {!data.porCategoria.length ? <p className="text-xs text-muted-foreground">Nenhuma despesa paga no período. Lance na aba “Despesas”.</p> : data.porCategoria.map(c => (
+                <p key={c.categoria} className="flex justify-between border-t border-border/50 py-1.5 text-sm first:border-0"><span>{c.categoria}</span><b className="text-danger-300">{brl(c.valor)}</b></p>
               ))}
             </div>
           </div>
@@ -91,14 +91,14 @@ export default function FluxoCaixa() {
               <div className="space-y-2">
                 {data.previsao.slice(0, 24).map(p => (
                   <div key={p.mes} className="grid grid-cols-[6rem_1fr_auto] items-center gap-2 text-sm">
-                    <span className={p.mes === "ATRASADO" ? "font-semibold text-red-300" : ""}>{rotuloPeriodo(p.mes)}</span>
+                    <span className={p.mes === "ATRASADO" ? "font-semibold text-danger-300" : ""}>{rotuloPeriodo(p.mes)}</span>
                     <div className="space-y-0.5">
-                      <div className="h-2 rounded bg-secondary"><div className={`h-full rounded ${p.mes === "ATRASADO" ? "bg-amber-500/70" : "bg-sky-500/60"}`} style={{ width: `${p.valor ? Math.max(2, (p.valor / maiorPrev) * 100) : 0}%` }} /></div>
-                      {p.pagar > 0 && <div className="h-2 rounded bg-secondary"><div className="h-full rounded bg-red-500/60" style={{ width: `${Math.max(2, (p.pagar / maiorPrev) * 100)}%` }} /></div>}
+                      <div className="h-2 rounded bg-secondary"><div className={`h-full rounded ${p.mes === "ATRASADO" ? "bg-warn-500/70" : "bg-info-500/60"}`} style={{ width: `${p.valor ? Math.max(2, (p.valor / maiorPrev) * 100) : 0}%` }} /></div>
+                      {p.pagar > 0 && <div className="h-2 rounded bg-secondary"><div className="h-full rounded bg-danger-500/60" style={{ width: `${Math.max(2, (p.pagar / maiorPrev) * 100)}%` }} /></div>}
                     </div>
                     <span className="w-56 text-right text-xs">
-                      <span className="text-sky-300">{brl(p.valor)}</span>
-                      {p.pagar > 0 && <span className="text-red-300"> − {brl(p.pagar)}</span>}
+                      <span className="text-info-300">{brl(p.valor)}</span>
+                      {p.pagar > 0 && <span className="text-danger-300"> − {brl(p.pagar)}</span>}
                       <b className={`ml-1 ${cor(p.liquido)}`}>= {brl(p.liquido)}</b>
                     </span>
                   </div>

@@ -126,12 +126,12 @@ export default function ContratoNovo() {
       <div className="mx-auto max-w-[1100px] space-y-4 px-4 pb-10 md:px-6">
         <ol className="flex flex-wrap gap-2 text-xs">
           {PASSOS.map((p, i) => (
-            <li key={p} className={`rounded-full border px-3 py-1 ${i === passo ? "border-primary bg-primary/15 text-primary" : i < passo ? "border-emerald-600/50 text-emerald-400" : "border-border text-muted-foreground"}`}>
+            <li key={p} className={`rounded-full border px-3 py-1 ${i === passo ? "border-primary bg-primary/15 text-primary" : i < passo ? "border-ok-600/50 text-ok-400" : "border-border text-muted-foreground"}`}>
               {i + 1}. {p}
             </li>
           ))}
         </ol>
-        {erroOp && <p className="rounded-lg border border-red-500/40 bg-red-500/10 p-3 text-sm text-red-300">{erroOp.message}</p>}
+        {erroOp && <p className="rounded-lg border border-danger-500/40 bg-danger-500/10 p-3 text-sm text-danger-300">{erroOp.message}</p>}
 
         {passo === 0 && op && (
           <section className="space-y-4 rounded-xl border border-border bg-card p-4">
@@ -190,14 +190,14 @@ export default function ContratoNovo() {
               <Campo rotulo="1º pagamento"><input type="date" className={classeCampo()} value={data1} onChange={e => setData1(e.target.value)} /></Campo>
             </div>
             {modalidade === "financiado" && condicao === "C" && (
-              <div className="rounded-lg border border-amber-400/40 bg-amber-400/5 p-3">
+              <div className="rounded-lg border border-warn-400/40 bg-warn-400/5 p-3">
                 <p className="mb-2 text-sm font-semibold">Plano C — como o cliente paga o resto da entrada?</p>
                 <div className="grid gap-2 sm:grid-cols-2" role="radiogroup" aria-label="Forma do Plano C">
                   {MODOS_C.map(m => (
                     <button key={m} type="button" role="radio" aria-checked={modoC === m} onClick={() => setModoC(m)}
-                      className={`rounded-lg border p-3 text-left text-sm transition ${modoC === m ? "border-amber-400 bg-amber-400/15 ring-1 ring-amber-400" : "border-border hover:border-amber-400/50"}`}>
+                      className={`rounded-lg border p-3 text-left text-sm transition ${modoC === m ? "border-warn-400 bg-warn-400/15 ring-1 ring-warn-400" : "border-border hover:border-warn-400/50"}`}>
                       <span className="flex items-center gap-2 font-semibold">
-                        <span className={`inline-block h-3.5 w-3.5 rounded-full border-2 ${modoC === m ? "border-amber-400 bg-amber-400" : "border-muted-foreground"}`} />
+                        <span className={`inline-block h-3.5 w-3.5 rounded-full border-2 ${modoC === m ? "border-warn-400 bg-warn-400" : "border-muted-foreground"}`} />
                         {ROTULO_MODO_C[m].titulo}{m === "sequencial" && <span className="rounded bg-secondary px-1.5 text-[10px] font-normal text-muted-foreground">caso a caso</span>}
                       </span>
                       <span className="mt-1 block text-xs text-muted-foreground">{ROTULO_MODO_C[m].resumo}</span>
@@ -210,7 +210,7 @@ export default function ContratoNovo() {
             {lote && (
               <div className="rounded-lg border border-primary/30 bg-primary/5 p-3 text-sm">
                 {sim.isLoading && <p className="text-muted-foreground"><Loader2 className="mr-1 inline h-4 w-4 animate-spin" /> Calculando…</p>}
-                {sim.error && <p className="text-red-400">{sim.error.message}</p>}
+                {sim.error && <p className="text-danger-400">{sim.error.message}</p>}
                 {sim.data && (
                   <div className="grid gap-x-6 gap-y-1 sm:grid-cols-2 lg:grid-cols-3">
                     <p>Chácara <b>{lote}</b> · {loteSel?.areaM2.toLocaleString("pt-BR")} m²</p>

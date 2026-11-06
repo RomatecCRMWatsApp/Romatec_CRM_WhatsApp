@@ -24,8 +24,8 @@ export default function PropertiesCatalog() {
       {/* Header */}
       <header className="border-b border-border/50 bg-card/80 backdrop-blur-sm sticky top-0 z-20">
         <div className="max-w-5xl mx-auto px-4 py-4 flex items-center gap-3">
-          <div className="p-2 rounded-xl bg-gradient-to-br from-emerald-500/20 to-emerald-700/20 border border-emerald-500/30">
-            <Building2 className="h-6 w-6 text-emerald-500" />
+          <div className="p-2 rounded-xl bg-gradient-to-br from-ok-500/20 to-ok-700/20 border border-ok-500/30">
+            <Building2 className="h-6 w-6 text-ok-500" />
           </div>
           <div>
             <h1 className="text-xl font-bold text-foreground leading-tight">Romatec Imóveis</h1>
@@ -44,7 +44,7 @@ export default function PropertiesCatalog() {
             value={search}
             onChange={e => setSearch(e.target.value)}
             placeholder="Buscar por nome ou endereço..."
-            className="w-full h-10 pl-9 pr-4 rounded-lg border border-border/50 bg-secondary/30 text-foreground text-sm placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-emerald-500/40"
+            className="w-full h-10 pl-9 pr-4 rounded-lg border border-border/50 bg-secondary/30 text-foreground text-sm placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ok-500/40"
           />
         </div>
 
@@ -54,8 +54,8 @@ export default function PropertiesCatalog() {
             onClick={() => setTab('venda')}
             className={`px-4 py-2 rounded-lg text-sm font-semibold border transition ${
               tab === 'venda'
-                ? 'bg-emerald-500 text-white border-emerald-500 shadow-md shadow-emerald-500/20'
-                : 'border-border/50 text-muted-foreground hover:border-emerald-500/40 hover:text-emerald-500'
+                ? 'bg-ok-500 text-white border-ok-500 shadow-md shadow-ok-500/20'
+                : 'border-border/50 text-muted-foreground hover:border-ok-500/40 hover:text-ok-500'
             }`}
           >
             Venda
@@ -64,8 +64,8 @@ export default function PropertiesCatalog() {
             onClick={() => setTab('aluguel')}
             className={`px-4 py-2 rounded-lg text-sm font-semibold border transition ${
               tab === 'aluguel'
-                ? 'bg-emerald-500 text-white border-emerald-500 shadow-md shadow-emerald-500/20'
-                : 'border-border/50 text-muted-foreground hover:border-emerald-500/40 hover:text-emerald-500'
+                ? 'bg-ok-500 text-white border-ok-500 shadow-md shadow-ok-500/20'
+                : 'border-border/50 text-muted-foreground hover:border-ok-500/40 hover:text-ok-500'
             }`}
           >
             Aluguel
@@ -77,7 +77,7 @@ export default function PropertiesCatalog() {
       <main className="max-w-5xl mx-auto w-full px-4 pb-10 flex-1">
         {isLoading ? (
           <div className="flex items-center justify-center py-24">
-            <div className="w-10 h-10 border-4 border-emerald-500/30 border-t-emerald-500 rounded-full animate-spin" />
+            <div className="w-10 h-10 border-4 border-ok-500/30 border-t-ok-500 rounded-full animate-spin" />
           </div>
         ) : filtered.length === 0 ? (
           <div className="text-center py-24">
@@ -92,7 +92,7 @@ export default function PropertiesCatalog() {
               return (
                 <div
                   key={property.id}
-                  className="bg-card border border-border/40 rounded-2xl overflow-hidden flex flex-col hover:border-emerald-500/40 hover:shadow-lg hover:shadow-emerald-500/5 transition"
+                  className="bg-card border border-border/40 rounded-2xl overflow-hidden flex flex-col hover:border-ok-500/40 hover:shadow-lg hover:shadow-ok-500/5 transition"
                 >
                   {/* Photo */}
                   <div className="relative h-44 bg-secondary/30 overflow-hidden">
@@ -108,7 +108,7 @@ export default function PropertiesCatalog() {
                       </div>
                     )}
                     {/* Finalidade badge */}
-                    <span className="absolute top-2 left-2 px-2 py-0.5 rounded-full text-xs font-bold bg-emerald-500/90 text-white">
+                    <span className="absolute top-2 left-2 px-2 py-0.5 rounded-full text-xs font-bold bg-ok-500/90 text-white">
                       {tab === 'venda' ? 'Venda' : 'Aluguel'}
                     </span>
                   </div>
@@ -122,7 +122,7 @@ export default function PropertiesCatalog() {
                       {property.address}{property.city ? `, ${property.city}` : ''}
                     </p>
 
-                    <p className="text-lg font-bold text-emerald-500 mb-3">
+                    <p className="text-lg font-bold text-ok-500 mb-3">
                       R$ {formatCurrency(property.price)}
                     </p>
 
@@ -155,7 +155,7 @@ export default function PropertiesCatalog() {
                       {property.publicSlug ? (
                         <a
                           href={`/imovel/${property.publicSlug}`}
-                          className="block w-full py-2.5 rounded-xl text-sm font-semibold text-center bg-emerald-500 hover:bg-emerald-600 text-white transition-colors no-underline"
+                          className="block w-full py-2.5 rounded-xl text-sm font-semibold text-center bg-ok-500 hover:bg-ok-600 text-white transition-colors no-underline"
                         >
                           Ver Detalhes
                         </a>

@@ -46,12 +46,12 @@ function CardLink({ l, cartao, podeEditar, onEditar }: { l: Item; cartao: Return
     copiar(texto, "Texto");
   };
   return (
-    <Card className={`bg-card ${l.destaque ? "border-amber-300/50" : "border-border"} ${l.ativo ? "" : "opacity-60"}`}>
+    <Card className={`bg-card ${l.destaque ? "border-warn-300/50" : "border-border"} ${l.ativo ? "" : "opacity-60"}`}>
       <CardContent className="space-y-3 py-4">
         <div className="flex flex-wrap items-start justify-between gap-2">
           <div className="min-w-0">
             <p className="flex items-center gap-2 font-semibold">
-              {l.destaque && <Star className="h-4 w-4 shrink-0 fill-amber-300 text-amber-300" />}{l.titulo}
+              {l.destaque && <Star className="h-4 w-4 shrink-0 fill-warn-300 text-warn-300" />}{l.titulo}
               {!l.ativo && <span className="rounded border border-border px-1.5 text-[10px] text-muted-foreground">pausado</span>}
             </p>
             <p className="text-xs text-muted-foreground">
@@ -62,17 +62,17 @@ function CardLink({ l, cartao, podeEditar, onEditar }: { l: Item; cartao: Return
           {podeEditar && !l.fixo && l.id && (
             <div className="flex gap-1">
               <Button size="sm" variant="ghost" onClick={() => onEditar(l)}><Pencil className="h-4 w-4" /></Button>
-              <Button size="sm" variant="ghost" className="text-red-300" disabled={excluir.isPending} onClick={() => { if (confirm(`Excluir o link "${l.titulo}"?`)) excluir.mutate({ id: l.id! }); }}><Trash2 className="h-4 w-4" /></Button>
+              <Button size="sm" variant="ghost" className="text-danger-300" disabled={excluir.isPending} onClick={() => { if (confirm(`Excluir o link "${l.titulo}"?`)) excluir.mutate({ id: l.id! }); }}><Trash2 className="h-4 w-4" /></Button>
             </div>
           )}
         </div>
-        <a href={link} target="_blank" rel="noreferrer" className="block break-all rounded-md border border-border bg-secondary/30 px-2 py-1.5 font-mono text-xs text-emerald-300">{link}</a>
+        <a href={link} target="_blank" rel="noreferrer" className="block break-all rounded-md border border-border bg-secondary/30 px-2 py-1.5 font-mono text-xs text-ok-300">{link}</a>
         <div className="rounded-lg border border-border bg-secondary/20 p-3">
           <p className="mb-1 text-[11px] text-muted-foreground">Texto para o WhatsApp</p>
           <p className="whitespace-pre-wrap text-sm">{texto}</p>
         </div>
         <div className="flex flex-wrap gap-2">
-          <Button size="sm" className="bg-emerald-600 text-white hover:bg-emerald-700" asChild>
+          <Button size="sm" className="bg-ok-600 text-white hover:bg-ok-700" asChild>
             <a href={`https://wa.me/?text=${encodeURIComponent(texto)}`} target="_blank" rel="noreferrer"><MessageCircle className="mr-1.5 h-3.5 w-3.5" /> Enviar no WhatsApp</a>
           </Button>
           <Button size="sm" variant="outline" onClick={() => copiar(texto, "Texto com o link")}><Copy className="mr-1.5 h-3.5 w-3.5" /> Copiar texto</Button>
@@ -111,7 +111,7 @@ function CardInstagram({ cartao }: { cartao: ReturnType<typeof useCartaoVendas> 
               Mande no fim do atendimento: agradecimento, um versículo e o pedido para seguir <b className="text-foreground">@{usuario}</b> e compartilhar com familiares e amigos.
             </p>
             {!cartao.instagramProprio && (
-              <p className="mt-1 text-xs text-amber-300">
+              <p className="mt-1 text-xs text-warn-300">
                 Você ainda não cadastrou o seu Instagram, então vai o institucional @{cartao.instagram}. <a href="/meu-cadastro" className="underline">Cadastre o seu em Meu cadastro</a> (pode colar o link do perfil).
               </p>
             )}
@@ -128,7 +128,7 @@ function CardInstagram({ cartao }: { cartao: ReturnType<typeof useCartaoVendas> 
           <p className="whitespace-pre-wrap text-sm">{texto}</p>
         </div>
         <div className="flex flex-wrap gap-2">
-          <Button size="sm" className="bg-emerald-600 text-white hover:bg-emerald-700" asChild>
+          <Button size="sm" className="bg-ok-600 text-white hover:bg-ok-700" asChild>
             <a href={`https://wa.me/?text=${encodeURIComponent(texto)}`} target="_blank" rel="noreferrer"><MessageCircle className="mr-1.5 h-3.5 w-3.5" /> Enviar no WhatsApp</a>
           </Button>
           <Button size="sm" variant="outline" onClick={() => copiar(texto, "Texto com o link")}><Copy className="mr-1.5 h-3.5 w-3.5" /> Copiar texto</Button>
@@ -158,7 +158,7 @@ function FormLink({ inicial, onFechar }: { inicial: (DadosLink & { id?: number }
     if (inicial?.id) editar.mutate({ ...f, id: inicial.id }); else criar.mutate(f);
   };
   return (
-    <Card className="border-emerald-500/40 bg-card">
+    <Card className="border-ok-500/40 bg-card">
       <CardContent className="py-4">
         <form onSubmit={salvar} className="grid grid-cols-1 gap-3 md:grid-cols-2">
           <label className="space-y-1 text-sm"><span className="text-muted-foreground">Título</span>
@@ -180,7 +180,7 @@ function FormLink({ inicial, onFechar }: { inicial: (DadosLink & { id?: number }
             <label className="flex items-center gap-2"><input type="checkbox" checked={f.ativo} onChange={e => setF(x => ({ ...x, ativo: e.target.checked }))} /> Visível para a equipe</label>
             <div className="ml-auto flex gap-2">
               <Button type="button" variant="ghost" onClick={onFechar} disabled={ocupado}>Cancelar</Button>
-              <Button type="submit" disabled={ocupado} className="bg-emerald-600 text-white hover:bg-emerald-700">{ocupado && <Loader2 className="mr-1.5 h-4 w-4 animate-spin" />} Salvar link</Button>
+              <Button type="submit" disabled={ocupado} className="bg-ok-600 text-white hover:bg-ok-700">{ocupado && <Loader2 className="mr-1.5 h-4 w-4 animate-spin" />} Salvar link</Button>
             </div>
           </div>
         </form>
@@ -210,13 +210,13 @@ export default function LinksDivulgacao() {
       <div className="flex flex-wrap items-center gap-2">
         <p className="flex-1 text-sm text-muted-foreground">
           Tudo sai com os seus dados{cartao.ref ? "" : " (carregando…)"}: o link leva o seu código (quem se cadastra cai com <b className="text-foreground">{cartao.nome}</b>) e o texto termina com o seu nome, {cartao.creci ?? "CRECI"} e WhatsApp.
-          {!cartao.creci && <> <a href="/meu-cadastro" className="text-amber-300 underline">Cadastre o seu CRECI</a> para ele aparecer.</>}
+          {!cartao.creci && <> <a href="/meu-cadastro" className="text-warn-300 underline">Cadastre o seu CRECI</a> para ele aparecer.</>}
         </p>
         <Input className="h-9 w-full sm:w-56" placeholder="Buscar link…" value={busca} onChange={e => setBusca(e.target.value)} />
-        {data?.podeEditar && form === null && <Button onClick={() => setForm("novo")} className="bg-emerald-600 text-white hover:bg-emerald-700"><Plus className="mr-1.5 h-4 w-4" /> Novo link</Button>}
+        {data?.podeEditar && form === null && <Button onClick={() => setForm("novo")} className="bg-ok-600 text-white hover:bg-ok-700"><Plus className="mr-1.5 h-4 w-4" /> Novo link</Button>}
       </div>
       {form !== null && <FormLink inicial={form === "novo" ? null : form} onFechar={() => setForm(null)} />}
-      {error && <p className="text-sm text-red-400">{error.message}</p>}
+      {error && <p className="text-sm text-danger-400">{error.message}</p>}
       {isLoading && <p className="text-sm text-muted-foreground">Carregando…</p>}
       {data && links.length === 0 && <p className="rounded-xl border border-dashed border-border p-4 text-sm text-muted-foreground">Nenhum link encontrado.</p>}
       <div className="grid gap-3 lg:grid-cols-2">

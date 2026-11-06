@@ -142,7 +142,7 @@ export default function Contratos() {
           <input value={busca} onChange={e => setBusca(e.target.value)} placeholder="Buscar nº, comprador, chácara…" aria-label="Buscar contrato"
             className="ml-auto h-8 w-full rounded-lg border border-border bg-background px-3 text-sm sm:w-64" />
         </div>
-        {error && <p className="text-sm text-red-400">{error.message}</p>}
+        {error && <p className="text-sm text-danger-400">{error.message}</p>}
         {isLoading && <p className="text-sm text-muted-foreground">Carregando…</p>}
         {data && !lista.length && (
           <p className="rounded-xl border border-dashed border-border p-4 text-sm text-muted-foreground">
@@ -163,13 +163,13 @@ export default function Contratos() {
                     <Pencil className="h-3.5 w-3.5" /> Editar
                   </Button>
                   {!ENCERRADOS.includes(c.status) && admin && (
-                    <Button size="sm" variant="outline" className="h-7 px-2 text-xs text-red-400" onClick={() => setAlvo({ id: c.id, numero: c.numero })}
+                    <Button size="sm" variant="outline" className="h-7 px-2 text-xs text-danger-400" onClick={() => setAlvo({ id: c.id, numero: c.numero })}
                       title="Cancela com a sua senha: libera a chácara e cancela as cobranças futuras. O histórico fica guardado.">
                       <XCircle className="h-3.5 w-3.5" /> Cancelar
                     </Button>
                   )}
                   {!ENCERRADOS.includes(c.status) && podePedir && (
-                    <Button size="sm" variant="outline" className="h-7 px-2 text-xs text-red-400" onClick={() => setAlvo({ id: c.id, numero: c.numero })}
+                    <Button size="sm" variant="outline" className="h-7 px-2 text-xs text-danger-400" onClick={() => setAlvo({ id: c.id, numero: c.numero })}
                       title="Só o administrador cancela: o pedido vai para ele">
                       <Ban className="h-3.5 w-3.5" /> Pedir cancelamento
                     </Button>

@@ -74,7 +74,7 @@ export default function Contacts() {
               placeholder="Buscar por nome ou telefone..."
               value={searchTerm}
               onChange={(e) => { setSearchTerm(e.target.value); setPage(1); }}
-              className="w-full pl-12 pr-4 py-3 rounded-xl bg-secondary border border-border text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-emerald-500/50 transition"
+              className="w-full pl-12 pr-4 py-3 rounded-xl bg-secondary border border-border text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ok-500/50 transition"
             />
           </div>
           <p className="text-sm text-muted-foreground mt-2">
@@ -101,7 +101,7 @@ export default function Contacts() {
                     <tr key={contact.id} className="border-b border-border/50 hover:bg-secondary/30 transition-colors">
                       <td className="p-4">
                         <div className="flex items-center gap-3">
-                          <div className="w-10 h-10 rounded-full bg-emerald-500/20 flex items-center justify-center text-emerald-400 font-bold text-sm">
+                          <div className="w-10 h-10 rounded-full bg-ok-500/20 flex items-center justify-center text-ok-400 font-bold text-sm">
                             {(contact.name || "?")[0]?.toUpperCase()}
                           </div>
                           <span className="font-medium text-foreground">{contact.name || "Sem nome"}</span>
@@ -119,9 +119,9 @@ export default function Contacts() {
                       </td>
                       <td className="p-4 hidden lg:table-cell">
                         <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium ${
-                          contact.status === "active" ? "bg-emerald-500/20 text-emerald-400" :
-                          contact.status === "blocked" ? "bg-red-500/20 text-red-400" :
-                          "bg-amber-500/20 text-amber-400"
+                          contact.status === "active" ? "bg-ok-500/20 text-ok-400" :
+                          contact.status === "blocked" ? "bg-danger-500/20 text-danger-400" :
+                          "bg-warn-500/20 text-warn-400"
                         }`}>
                           {contact.status === "active" ? <UserCheck className="h-3 w-3" /> : <UserX className="h-3 w-3" />}
                           {contact.status === "active" ? "Ativo" : contact.status === "blocked" ? "Bloqueado" : "Inativo"}
@@ -131,13 +131,13 @@ export default function Contacts() {
                         <div className="flex gap-2 justify-end">
                           <button
                             onClick={() => openEdit(contact)}
-                            className="p-2 rounded-lg bg-blue-500/20 hover:bg-blue-500/30 text-blue-400 transition-colors"
+                            className="p-2 rounded-lg bg-azul-500/20 hover:bg-azul-500/30 text-azul-400 transition-colors"
                           >
                             <Edit className="h-4 w-4" />
                           </button>
                           <button
                             onClick={() => openDelete(contact)}
-                            className="p-2 rounded-lg bg-red-500/20 hover:bg-red-500/30 text-red-400 transition-colors"
+                            className="p-2 rounded-lg bg-danger-500/20 hover:bg-danger-500/30 text-danger-400 transition-colors"
                           >
                             <Trash2 className="h-4 w-4" />
                           </button>

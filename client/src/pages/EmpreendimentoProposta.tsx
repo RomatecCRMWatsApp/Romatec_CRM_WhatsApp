@@ -33,13 +33,13 @@ export default function EmpreendimentoProposta() {
   const prazo = Number(q.get("prazo")) || 120;
   const { data, error, isLoading } = trpc.simulador.simular.useQuery({ slug, lote, entrada }, { enabled: !!slug && !!lote, retry: false });
 
-  if (!lote) return <p className="p-6 text-sm text-red-400">Informe a chácara.</p>;
-  if (error) return <p className="p-6 text-sm text-red-400">{error.message}</p>;
+  if (!lote) return <p className="p-6 text-sm text-danger-400">Informe a chácara.</p>;
+  if (error) return <p className="p-6 text-sm text-danger-400">{error.message}</p>;
   if (isLoading || !data) return <p className="p-6 text-sm text-muted-foreground">Carregando…</p>;
   const sim = data.simulacao;
   const plano = sim.planos.find(p => p.prazo === prazo);
-  if (data.lote.selo === "vendido") return <p className="p-6 text-sm text-red-400">Chácara {data.lote.codigo} vendida — sem proposta.</p>;
-  if (!plano) return <p className="p-6 text-sm text-red-400">Prazo de {prazo} meses não está nas condições.</p>;
+  if (data.lote.selo === "vendido") return <p className="p-6 text-sm text-danger-400">Chácara {data.lote.codigo} vendida — sem proposta.</p>;
+  if (!plano) return <p className="p-6 text-sm text-danger-400">Prazo de {prazo} meses não está nas condições.</p>;
   const hoje = new Date().toLocaleDateString("pt-BR", { timeZone: "America/Fortaleza" });
 
   const Linha = ({ r, v, forte }: { r: string; v: string; forte?: boolean }) => (

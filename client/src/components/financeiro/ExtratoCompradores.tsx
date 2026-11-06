@@ -6,8 +6,8 @@ import { Button } from "@/components/ui/button";
 import { brl } from "@shared/simulador";
 
 const SITUACAO: Record<string, [string, string]> = {
-  EM_ATRASO: ["Em atraso", "bg-red-500/15 text-red-300"], EM_DIA: ["Em dia", "bg-emerald-500/15 text-emerald-300"],
-  QUITADO: ["Quitado", "bg-sky-500/15 text-sky-300"], AGUARDANDO_ASSINATURA: ["Aguardando assinatura", "bg-secondary text-muted-foreground"],
+  EM_ATRASO: ["Em atraso", "bg-danger-500/15 text-danger-300"], EM_DIA: ["Em dia", "bg-ok-500/15 text-ok-300"],
+  QUITADO: ["Quitado", "bg-info-500/15 text-info-300"], AGUARDANDO_ASSINATURA: ["Aguardando assinatura", "bg-secondary text-muted-foreground"],
 };
 const br = (iso?: string | null) => (iso ? iso.split("-").reverse().join("/") : "—");
 
@@ -23,13 +23,13 @@ export default function ExtratoCompradores() {
   const t = data?.totais;
   return (
     <section className="space-y-3">
-      {error && <p className="text-sm text-red-400">{error.message}</p>}
+      {error && <p className="text-sm text-danger-400">{error.message}</p>}
       {isLoading && <p className="text-sm text-muted-foreground">Carregando…</p>}
       {t && (
         <div className="grid grid-cols-2 gap-3 md:grid-cols-5">
           {[["Contratado", t.contratado], ["Recebido", t.recebido], ["Em aberto", t.emAberto], ["Vencido", t.vencido], ["A vencer", t.aVencer]].map(([r, v]) => (
             <div key={r as string} className="rounded-xl border border-border bg-card p-3">
-              <p className="text-xs text-muted-foreground">{r}</p><p className={`text-lg font-bold ${r === "Vencido" && (v as number) > 0 ? "text-red-300" : ""}`}>{brl(v as number)}</p>
+              <p className="text-xs text-muted-foreground">{r}</p><p className={`text-lg font-bold ${r === "Vencido" && (v as number) > 0 ? "text-danger-300" : ""}`}>{brl(v as number)}</p>
             </div>
           ))}
         </div>
@@ -64,7 +64,7 @@ export default function ExtratoCompradores() {
                   <td className="p-2">{l.comprador}</td>
                   <td className="p-2"><span className={`rounded-full px-2 py-0.5 text-[11px] ${SITUACAO[l.situacao][1]}`}>{SITUACAO[l.situacao][0]}{l.diasAtraso ? ` · ${l.diasAtraso} d` : ""}</span></td>
                   <td className="p-2 text-right">{brl(l.recebido)}</td>
-                  <td className={`p-2 text-right ${l.vencido > 0 ? "text-red-300" : ""}`}>{brl(l.vencido)}</td>
+                  <td className={`p-2 text-right ${l.vencido > 0 ? "text-danger-300" : ""}`}>{brl(l.vencido)}</td>
                   <td className="p-2 text-right">{brl(l.aVencer)}</td>
                   <td className="p-2 text-right">{l.pctPago.toLocaleString("pt-BR")}%<p className="text-[11px] text-muted-foreground">{l.parcelasPagas}/{l.parcelasTotal}</p></td>
                   <td className="p-2 whitespace-nowrap">{br(l.ultimoPagamento)}</td>

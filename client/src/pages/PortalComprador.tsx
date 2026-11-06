@@ -19,7 +19,7 @@ function Chamado({ c, onFeito }: { c: any; onFeito: () => void }) {
     onError: e => toast.error(e.message),
   });
   return (
-    <div className={`space-y-2 rounded-xl border p-3 text-sm ${c.status === "aberto" ? "border-amber-400/50 bg-amber-500/5" : "border-border bg-card"}`}>
+    <div className={`space-y-2 rounded-xl border p-3 text-sm ${c.status === "aberto" ? "border-warn-400/50 bg-warn-500/5" : "border-border bg-card"}`}>
       <div className="flex flex-wrap items-start justify-between gap-2">
         <div>
           <p className="font-semibold">{c.assunto}</p>
@@ -28,7 +28,7 @@ function Chamado({ c, onFeito }: { c: any; onFeito: () => void }) {
         <span className="rounded border border-border px-2 py-0.5 text-[11px] text-muted-foreground">{c.status}</span>
       </div>
       <p className="whitespace-pre-wrap">{c.mensagem}</p>
-      {c.resposta && <p className="whitespace-pre-wrap rounded-md bg-emerald-500/10 p-2"><b>Resposta</b>{c.respondidoPor ? ` (${c.respondidoPor}, ${quando(c.respondidoEm)})` : ""}: {c.resposta}</p>}
+      {c.resposta && <p className="whitespace-pre-wrap rounded-md bg-ok-500/10 p-2"><b>Resposta</b>{c.respondidoPor ? ` (${c.respondidoPor}, ${quando(c.respondidoEm)})` : ""}: {c.resposta}</p>}
       {c.status !== "fechado" && (
         <div className="space-y-2">
           <Textarea value={texto} onChange={e => setTexto(e.target.value)} rows={3} placeholder={c.tipo === "antecipacao" ? "Ex.: Confirmado! O boleto/PIX da antecipação vai no seu WhatsApp até amanhã." : "Escreva a resposta ao comprador"} />
@@ -103,7 +103,7 @@ function Obra() {
       {itens?.map(o => (
         <div key={o.id} className="flex items-start justify-between gap-2 rounded-xl border border-border bg-card p-3 text-sm">
           <div><p className="text-xs text-muted-foreground">{br(o.data)}{o.percentual != null ? ` · ${o.percentual}%` : ""}{o.temFoto ? " · com foto" : ""}</p><p className="font-semibold">{o.titulo}</p><p className="whitespace-pre-wrap text-muted-foreground">{o.texto}</p></div>
-          <Button size="sm" variant="ghost" className="text-red-300" onClick={() => { if (confirm(`Excluir "${o.titulo}"?`)) excluir.mutate({ id: o.id }); }}><Trash2 className="h-4 w-4" /></Button>
+          <Button size="sm" variant="ghost" className="text-danger-300" onClick={() => { if (confirm(`Excluir "${o.titulo}"?`)) excluir.mutate({ id: o.id }); }}><Trash2 className="h-4 w-4" /></Button>
         </div>
       ))}
       {itens && !itens.length && <p className="text-sm text-muted-foreground">Nenhuma atualização publicada ainda.</p>}

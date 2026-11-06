@@ -7,7 +7,7 @@ import AcoesRecebimento from "@/components/AcoesRecebimento";
 import { ROTULO_DESFECHO, ROTULO_SITUACAO } from "@shared/distribuicaoLeads";
 
 const dataHora = (iso: string | null) => !iso ? "—" : new Date(iso).toLocaleString("pt-BR", { day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit" });
-const COR = { aguardando_confirmacao: "border-amber-500/60 bg-amber-500/5", em_atendimento: "border-emerald-500/40", finalizado: "border-border opacity-70" } as const;
+const COR = { aguardando_confirmacao: "border-warn-500/60 bg-warn-500/5", em_atendimento: "border-ok-500/40", finalizado: "border-border opacity-70" } as const;
 
 /** Leads › Leads recebidos: o corretor confirma que recebeu cada lead encaminhado e informa o desfecho */
 export default function LeadsRecebidos() {
@@ -18,7 +18,7 @@ export default function LeadsRecebidos() {
     <div>
       <PageHeader icone={Inbox} titulo="Leads recebidos" subtitulo="Confirme que recebeu cada lead encaminhado para você e, se não der certo, informe o motivo. Venda lançada no sistema finaliza sozinha." />
       <div className="mx-auto max-w-[1100px] space-y-3 px-4 pb-8 md:px-6">
-        {pendentes > 0 && <p className="rounded-lg border border-amber-500/60 bg-amber-500/10 p-3 text-sm font-medium text-amber-200">{pendentes} lead(s) aguardando a sua confirmação de recebimento.</p>}
+        {pendentes > 0 && <p className="rounded-lg border border-warn-500/60 bg-warn-500/10 p-3 text-sm font-medium text-warn-200">{pendentes} lead(s) aguardando a sua confirmação de recebimento.</p>}
         {isLoading && <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />}
         {!isLoading && !lista.length && <p className="rounded-xl border border-dashed border-border p-4 text-sm text-muted-foreground">Nenhum lead encaminhado para você nos últimos 30 dias.</p>}
         <div className="grid gap-3 md:grid-cols-2">

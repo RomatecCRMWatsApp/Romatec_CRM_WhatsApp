@@ -69,7 +69,7 @@ export default function PosicionarAssinaturas() {
   const soltar = () => { setTimeout(() => { arrasto.current = null; }, 0); };
 
   if (isLoading) return <p className="p-6 text-sm text-muted-foreground">Carregando…</p>;
-  if (error || !data) return <p className="p-6 text-sm text-red-400">{error?.message ?? "Contrato não encontrado"}</p>;
+  if (error || !data) return <p className="p-6 text-sm text-danger-400">{error?.message ?? "Contrato não encontrado"}</p>;
   const bloqueado = !["rascunho", "minuta", "apto_assinatura"].includes(data.status);
   const faltam = data.papeis.filter(p => !caixas.some(c => c.papel === p.papel));
 
@@ -87,12 +87,12 @@ export default function PosicionarAssinaturas() {
                   className={`flex w-full items-center gap-2 rounded-lg border px-2 py-1.5 text-left text-xs ${papel === p.papel ? "border-primary bg-primary/10" : "border-border"}`}>
                   <span className="h-3 w-3 shrink-0 rounded-sm" style={{ background: cor(p.papel) }} />
                   <span className="min-w-0 flex-1"><b className="block truncate">{p.rotulo}</b><span className="block truncate text-muted-foreground">{p.nome}</span></span>
-                  {posta ? <span className="text-[10px] text-emerald-400">pág. {posta.pagina === -1 ? "última" : posta.pagina}</span> : <span className="text-[10px] text-muted-foreground">—</span>}
+                  {posta ? <span className="text-[10px] text-ok-400">pág. {posta.pagina === -1 ? "última" : posta.pagina}</span> : <span className="text-[10px] text-muted-foreground">—</span>}
                 </button>
               );
             })}
           </div>
-          {!!faltam.length && <p className="text-xs text-amber-300">Sem posição: {faltam.map(f => f.rotulo).join(", ")} — sem todas, vale o quadro de assinaturas automático.</p>}
+          {!!faltam.length && <p className="text-xs text-warn-300">Sem posição: {faltam.map(f => f.rotulo).join(", ")} — sem todas, vale o quadro de assinaturas automático.</p>}
           <label className="flex items-center gap-2 text-xs"><input type="checkbox" checked={gabarito} onChange={e => setGabarito(e.target.checked)} /> Salvar também como gabarito do modelo ({data.modeloVersao})</label>
           <div className="flex flex-wrap gap-2">
             <Button disabled={bloqueado || salvar.isPending} onClick={() => salvar.mutate({ id, caixas, gabarito })}>

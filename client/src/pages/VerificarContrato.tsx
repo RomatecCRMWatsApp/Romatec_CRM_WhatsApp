@@ -39,14 +39,14 @@ export default function VerificarContrato() {
         <p className="mx-auto max-w-3xl font-bold" style={{ fontFamily: "'Playfair Display', Georgia, serif" }}>Condomínio de Chácaras Bom Jardims · Verificação de contrato</p>
       </header>
       <main className="mx-auto max-w-3xl space-y-4 px-4 py-6">
-        {erro && <p className="rounded-lg border border-red-300 bg-red-50 p-4 text-red-800">{erro}</p>}
+        {erro && <p className="rounded-lg border border-danger-300 bg-danger-50 p-4 text-danger-800">{erro}</p>}
         {!d && !erro && <p className="flex items-center gap-2"><Loader2 className="h-4 w-4 animate-spin" /> Consultando…</p>}
         {d && (
           <>
             <section className="rounded-xl border bg-white p-4" style={{ borderColor: DOURADO }}>
               <h1 className="flex items-center gap-2 text-lg font-bold" style={{ color: VERDE }}><ShieldCheck className="h-5 w-5" /> Contrato {d.numero}</h1>
               <p className="text-sm">{d.empreendimento} · <b>{STATUS[d.status] ?? d.status}</b></p>
-              {d.sha256 && <p className="mt-2 break-all tabular-nums text-[11px] text-neutral-600">SHA-256 da versão atual: {d.sha256}</p>}
+              {d.sha256 && <p className="mt-2 break-all tabular-nums text-[11px] text-neutro-600">SHA-256 da versão atual: {d.sha256}</p>}
             </section>
             <section className="rounded-xl border bg-white p-4" style={{ borderColor: DOURADO }}>
               <h2 className="mb-2 font-semibold" style={{ color: VERDE }}>Signatários</h2>
@@ -54,22 +54,22 @@ export default function VerificarContrato() {
                 {d.signatarios.map((s: any, i: number) => (
                   <li key={i} className="flex flex-wrap items-center justify-between gap-2 py-2">
                     <span><b>{s.nome}</b> · CPF {s.cpf}</span>
-                    <span className={s.status === "assinado" ? "text-emerald-700" : "text-neutral-500"}>
+                    <span className={s.status === "assinado" ? "text-ok-700" : "text-neutro-500"}>
                       {s.status === "assinado" ? `✓ ${METODO[s.metodo] ?? s.metodo} · ${new Date(s.assinadoEm).toLocaleString("pt-BR")}` : "pendente"}
                     </span>
                   </li>
                 ))}
-                {!d.signatarios.length && <li className="py-2 text-neutral-500">Ainda não enviado para assinatura.</li>}
+                {!d.signatarios.length && <li className="py-2 text-neutro-500">Ainda não enviado para assinatura.</li>}
               </ul>
             </section>
             <section className="rounded-xl border bg-white p-4" style={{ borderColor: DOURADO }}>
               <h2 className="mb-1 font-semibold" style={{ color: VERDE }}>Conferir um arquivo</h2>
-              <p className="mb-2 text-xs text-neutral-600">Escolha o PDF do contrato: o aparelho calcula a impressão digital (SHA-256) e compara com a registrada. O arquivo não é enviado.</p>
+              <p className="mb-2 text-xs text-neutro-600">Escolha o PDF do contrato: o aparelho calcula a impressão digital (SHA-256) e compara com a registrada. O arquivo não é enviado.</p>
               <input type="file" accept="application/pdf" onChange={e => conferir(e.target.files?.[0])} className="text-sm" />
               {ocupado && <p className="mt-2 flex items-center gap-2 text-sm"><Loader2 className="h-4 w-4 animate-spin" /> Conferindo…</p>}
               {res && (res.confere
-                ? <p className="mt-2 flex items-center gap-2 text-sm text-emerald-700"><CheckCircle2 className="h-4 w-4" /> Arquivo autêntico{res.versaoFinal ? " — é a versão final do contrato" : " — versão anterior do contrato"}.</p>
-                : <p className="mt-2 flex items-center gap-2 text-sm text-red-700"><XCircle className="h-4 w-4" /> Este arquivo não corresponde a nenhuma versão registrada.</p>)}
+                ? <p className="mt-2 flex items-center gap-2 text-sm text-ok-700"><CheckCircle2 className="h-4 w-4" /> Arquivo autêntico{res.versaoFinal ? " — é a versão final do contrato" : " — versão anterior do contrato"}.</p>
+                : <p className="mt-2 flex items-center gap-2 text-sm text-danger-700"><XCircle className="h-4 w-4" /> Este arquivo não corresponde a nenhuma versão registrada.</p>)}
             </section>
           </>
         )}

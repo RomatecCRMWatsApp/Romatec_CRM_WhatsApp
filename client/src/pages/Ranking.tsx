@@ -13,7 +13,7 @@ import { MODOS_TERMINO, ROTULO_MODO_TERMINO, type ModoTermino } from "@shared/ra
 
 const campo = "h-9 w-full rounded-md border border-border bg-background px-2 text-sm";
 const TODOS = "todos";
-const MEDALHA = ["text-amber-300", "text-slate-300", "text-orange-400"];
+const MEDALHA = ["text-warn-300", "text-ardosia-300", "text-heat-400"];
 const dataBr = (d: string) => d.split("-").reverse().join("/");
 const dataHora = (d: unknown) => new Date(d as any).toLocaleString("pt-BR", { timeZone: "America/Fortaleza", day: "2-digit", month: "2-digit", year: "numeric", hour: "2-digit", minute: "2-digit" });
 const LS_EMP = "ranking.empreendimento";
@@ -113,13 +113,13 @@ export default function Ranking() {
           </label>
           <div className="text-xs text-muted-foreground">Prazo da campanha
             <div className="mt-1 flex h-9 items-center justify-between gap-2 rounded-md border border-border bg-card px-2 text-sm">
-              <span className={`truncate ${r?.encerrada ? "text-amber-300" : "text-foreground"}`}>{empreendimentoId ? prazoTexto || "…" : "Escolha um empreendimento"}</span>
+              <span className={`truncate ${r?.encerrada ? "text-warn-300" : "text-foreground"}`}>{empreendimentoId ? prazoTexto || "…" : "Escolha um empreendimento"}</span>
               {r?.podeConfigurar && <Button size="sm" variant="ghost" className="h-7 px-2" onClick={() => setPrazoAberto(true)}><CalendarClock className="h-4 w-4 mr-1" /> Definir</Button>}
             </div>
           </div>
         </div>
 
-        {q.error && <p className="text-sm text-red-400">{q.error.message}</p>}
+        {q.error && <p className="text-sm text-danger-400">{q.error.message}</p>}
         {(q.isLoading || !sel) && <p className="text-sm text-muted-foreground">Carregando…</p>}
 
         {r && (
@@ -134,11 +134,11 @@ export default function Ranking() {
               <div className="rounded-xl border border-border bg-card p-3"><p className="text-xs text-muted-foreground">Corretores</p><p className="text-2xl font-bold">{r.linhas.length}</p></div>
               <div className="rounded-xl border border-border bg-card p-3"><p className="text-xs text-muted-foreground">Disponíveis</p><p className="text-2xl font-bold">{r.estoqueRestante ?? "—"}</p></div>
             </div>
-            {r.encerrada && <p className="rounded-xl border border-amber-400/40 bg-amber-400/10 p-3 text-sm text-amber-200">Campanha encerrada — classificação congelada para a apuração do vencedor.</p>}
+            {r.encerrada && <p className="rounded-xl border border-warn-400/40 bg-warn-400/10 p-3 text-sm text-warn-200">Campanha encerrada — classificação congelada para a apuração do vencedor.</p>}
             <div className="space-y-2">
               {r.linhas.length === 0 && <p className="rounded-xl border border-dashed border-border p-4 text-sm text-muted-foreground">Nenhum corretor ativo habilitado neste empreendimento.</p>}
               {r.linhas.map(l => (
-                <div key={l.id} className={`flex items-center gap-3 rounded-xl border bg-card p-3 ${l.posicao === 1 && l.vendas > 0 ? "border-amber-300/60" : "border-border"}`}>
+                <div key={l.id} className={`flex items-center gap-3 rounded-xl border bg-card p-3 ${l.posicao === 1 && l.vendas > 0 ? "border-warn-300/60" : "border-border"}`}>
                   <div className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-background font-bold ${l.vendas > 0 ? MEDALHA[l.posicao - 1] ?? "" : "text-muted-foreground"}`}>
                     {l.vendas > 0 && l.posicao <= 3 ? <Medal className="h-5 w-5" /> : `${l.posicao}º`}
                   </div>

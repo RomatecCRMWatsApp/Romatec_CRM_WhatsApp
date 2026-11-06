@@ -25,7 +25,7 @@ export default function ResumoIaLead({ leadId, phone, onEnviou }: { leadId: numb
   return (
     <Card className="bg-card border-border">
       <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-        <CardTitle className="flex items-center gap-2 text-base"><Sparkles className="h-4 w-4 text-violet-300" /> Resumo da IA</CardTitle>
+        <CardTitle className="flex items-center gap-2 text-base"><Sparkles className="h-4 w-4 text-lilas-300" /> Resumo da IA</CardTitle>
         <Button size="sm" variant={r ? "ghost" : "default"} disabled={gerar.isPending} onClick={() => gerar.mutate({ id: leadId, forcar: !!r })} title={r ? "Gerar de novo" : undefined}>
           {gerar.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : r ? <RefreshCw className="h-4 w-4" /> : <Sparkles className="mr-1.5 h-4 w-4" />}
           {r ? "" : "Resumir conversa"}
@@ -42,7 +42,7 @@ export default function ResumoIaLead({ leadId, phone, onEnviou }: { leadId: numb
               <div><p className="text-muted-foreground">Dúvidas / objeções em aberto:</p>
                 <ul className="ml-4 list-disc">{r.objecoes.map(o => <li key={o}>{o}</li>)}</ul></div>
             )}
-            {r.proximoPasso && <p className="rounded-md bg-violet-500/10 px-2 py-1.5"><span className="font-semibold">Próximo passo:</span> {r.proximoPasso}</p>}
+            {r.proximoPasso && <p className="rounded-md bg-lilas-500/10 px-2 py-1.5"><span className="font-semibold">Próximo passo:</span> {r.proximoPasso}</p>}
             <div className="space-y-2">
               <p className="text-xs text-muted-foreground">Mensagem sugerida (ajuste se quiser):</p>
               <Textarea value={texto} onChange={e => setTexto(e.target.value)} rows={5} />

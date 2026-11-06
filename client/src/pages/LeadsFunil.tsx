@@ -10,9 +10,9 @@ import PageHeader from "@/components/PageHeader";
 type Funil = "comprador" | "proprietario";
 
 export const CLASSE_COR: Record<string, string> = {
-  quente: "bg-red-500/15 text-red-300 border-red-500/40",
-  morno: "bg-amber-500/15 text-amber-300 border-amber-500/40",
-  frio: "bg-sky-500/15 text-sky-300 border-sky-500/40",
+  quente: "bg-danger-500/15 text-danger-300 border-danger-500/40",
+  morno: "bg-warn-500/15 text-warn-300 border-warn-500/40",
+  frio: "bg-info-500/15 text-info-300 border-info-500/40",
 };
 
 export const MOTIVOS: Record<string, string> = {
@@ -39,13 +39,13 @@ export function MotivoPerda({ onConfirmar, onCancelar }: { onConfirmar: (motivo:
         <div className="grid grid-cols-2 gap-2">
           {Object.entries(MOTIVOS).map(([k, l]) => (
             <button key={k} onClick={() => setMotivo(k)}
-              className={`rounded-lg border px-3 py-2 text-sm text-left ${motivo === k ? "border-emerald-500 bg-emerald-500/10 text-emerald-200" : "border-border text-foreground"}`}>{l}</button>
+              className={`rounded-lg border px-3 py-2 text-sm text-left ${motivo === k ? "border-ok-500 bg-ok-500/10 text-ok-200" : "border-border text-foreground"}`}>{l}</button>
           ))}
         </div>
         {motivo === "outro" && <input value={obs} onChange={e => setObs(e.target.value)} maxLength={100} placeholder="Qual?" className="w-full h-9 px-3 rounded-md border border-border bg-secondary/30 text-sm" />}
         <div className="flex justify-end gap-2">
           <Button variant="ghost" onClick={onCancelar}>Cancelar</Button>
-          <Button disabled={!motivo} className="bg-red-600 hover:bg-red-700 text-white" onClick={() => onConfirmar(motivo === "outro" && obs ? `outro: ${obs}` : motivo)}>Marcar perdido</Button>
+          <Button disabled={!motivo} className="bg-danger-600 hover:bg-danger-700 text-white" onClick={() => onConfirmar(motivo === "outro" && obs ? `outro: ${obs}` : motivo)}>Marcar perdido</Button>
         </div>
       </DialogContent>
     </Dialog>
@@ -93,7 +93,7 @@ export default function LeadsFunil() {
       />
 
       {isLoading ? (
-        <p className="container py-8 text-sm text-muted-foreground">Carregando...</p>
+        <p className="container py-8 text-sm text-muted-foreground">Carregando…</p>
       ) : (
         <div className="overflow-x-auto">
           <div className="flex gap-3 p-4 min-w-max">
@@ -104,7 +104,7 @@ export default function LeadsFunil() {
                   onDragOver={e => { e.preventDefault(); setSobre(etapa); }}
                   onDragLeave={() => setSobre(s => (s === etapa ? null : s))}
                   onDrop={e => { e.preventDefault(); setSobre(null); if (arrastando !== null) pedirMover(arrastando, etapa); setArrastando(null); }}
-                  className={`w-72 shrink-0 rounded-xl border p-2 transition-colors ${sobre === etapa ? "border-emerald-500 bg-emerald-500/5" : "border-border bg-card/40"} ${etapa === "perdido" ? "opacity-80" : ""}`}>
+                  className={`w-72 shrink-0 rounded-xl border p-2 transition-colors ${sobre === etapa ? "border-ok-500 bg-ok-500/5" : "border-border bg-card/40"} ${etapa === "perdido" ? "opacity-80" : ""}`}>
                   <div className="flex items-center justify-between px-2 py-1.5">
                     <span className="text-sm font-semibold text-foreground">{data?.rotulos[etapa] ?? etapa}</span>
                     <span className="text-xs text-muted-foreground">{daColuna.length}</span>
@@ -113,7 +113,7 @@ export default function LeadsFunil() {
                     {daColuna.map(c => (
                       <div key={c.id} draggable onDragStart={() => setArrastando(c.id)} onDragEnd={() => setArrastando(null)}
                         onClick={() => navigate(`/leads/lead/${c.id}`)}
-                        className="rounded-lg border border-border bg-card p-3 cursor-pointer hover:border-emerald-500/50">
+                        className="rounded-lg border border-border bg-card p-3 cursor-pointer hover:border-ok-500/50">
                         <div className="flex items-start justify-between gap-2">
                           <p className="text-sm font-semibold text-foreground truncate">{c.nome}</p>
                           <span className={`text-[11px] font-bold px-1.5 py-0.5 rounded border shrink-0 ${CLASSE_COR[c.classe] || CLASSE_COR.frio}`}>{c.score ?? "–"}</span>
@@ -124,9 +124,9 @@ export default function LeadsFunil() {
                         <p className="text-[11px] text-muted-foreground/80 mt-1">{c.canal} · {desde(c.ultimaAtividade)}</p>
                         {(c.tags.length > 0 || c.humano || c.motivoPerda) && (
                           <div className="flex flex-wrap gap-1 mt-2">
-                            {c.humano && <span className="text-[10px] px-1.5 py-0.5 rounded bg-violet-500/15 text-violet-300 flex items-center gap-1"><Headset className="h-3 w-3" /> corretor</span>}
-                            {c.motivoPerda && <span className="text-[10px] px-1.5 py-0.5 rounded bg-red-500/10 text-red-300">{MOTIVOS[c.motivoPerda.split(":")[0]] || c.motivoPerda}</span>}
-                            {c.tags.map(t => <span key={t} className="text-[10px] px-1.5 py-0.5 rounded bg-amber-500/10 text-amber-300">{t.replace(/^oportunidade_/, "")}</span>)}
+                            {c.humano && <span className="text-[10px] px-1.5 py-0.5 rounded bg-lilas-500/15 text-lilas-300 flex items-center gap-1"><Headset className="h-3 w-3" /> corretor</span>}
+                            {c.motivoPerda && <span className="text-[10px] px-1.5 py-0.5 rounded bg-danger-500/10 text-danger-300">{MOTIVOS[c.motivoPerda.split(":")[0]] || c.motivoPerda}</span>}
+                            {c.tags.map(t => <span key={t} className="text-[10px] px-1.5 py-0.5 rounded bg-warn-500/10 text-warn-300">{t.replace(/^oportunidade_/, "")}</span>)}
                           </div>
                         )}
                         <select value="" onClick={e => e.stopPropagation()} onChange={e => { if (e.target.value) pedirMover(c.id, e.target.value); }}

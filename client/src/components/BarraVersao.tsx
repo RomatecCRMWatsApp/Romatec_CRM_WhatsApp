@@ -31,7 +31,7 @@ export default function BarraVersao() {
   if (!isAuthenticated || !interna) return null;
 
   return (
-    <div className={`w-full bg-black/40 border-b border-white/5 text-[11px] text-zinc-400 px-3 py-0.5 flex flex-wrap gap-x-3 gap-y-0 tabular-nums ${location.startsWith("/empreendedor") ? "" : "lg:pl-[17rem]"}`}>
+    <div className={`w-full bg-black/40 border-b border-white/5 text-[11px] text-grafite-400 px-3 py-0.5 flex flex-wrap gap-x-3 gap-y-0 tabular-nums ${location.startsWith("/empreendedor") ? "" : "lg:pl-[17rem]"}`}>
       <span>{dataHora(agora)}</span>
       {data && (
         <>
@@ -40,7 +40,7 @@ export default function BarraVersao() {
           </span>
           <span>último deploy: {dataHora(new Date(data.deployAt))}</span>
           {versaoNova && (
-            <button onClick={() => window.location.reload()} className="rounded bg-emerald-500/20 px-2 font-semibold text-emerald-300 hover:bg-emerald-500/30">
+            <button onClick={() => window.location.reload()} className="rounded bg-ok-500/20 px-2 font-semibold text-ok-300 hover:bg-ok-500/30">
               Nova versão no ar — toque para atualizar
             </button>
           )}

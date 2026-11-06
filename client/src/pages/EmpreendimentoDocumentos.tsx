@@ -47,7 +47,7 @@ export default function EmpreendimentoDocumentos() {
     onError: e => toast.error(e.message),
   });
 
-  if (error) return <p className="p-6 text-sm text-red-400">{error.message}</p>;
+  if (error) return <p className="p-6 text-sm text-danger-400">{error.message}</p>;
   if (isLoading || !data || !det) return <p className="p-6 text-sm text-muted-foreground">Gerando documentos…</p>;
   const emp = data.empreendimento;
   const hoje = new Date().toLocaleDateString("pt-BR", { timeZone: "America/Fortaleza" });
@@ -90,7 +90,7 @@ export default function EmpreendimentoDocumentos() {
             <Send className="mr-1.5 h-4 w-4" /> Enviar no WhatsApp
           </Button>
         )}
-        {data.semGeometria > 0 && <span className="text-xs text-amber-300">{data.semGeometria} lote(s) sem desenho importado ficaram de fora — importe o DXF na aba Arquivos.</span>}
+        {data.semGeometria > 0 && <span className="text-xs text-warn-300">{data.semGeometria} lote(s) sem desenho importado ficaram de fora — importe o DXF na aba Arquivos.</span>}
       </div>
 
       <div className="mx-auto max-w-[900px] rounded-xl bg-white p-6 text-[color:var(--c-111111)] shadow print:shadow-none">
@@ -132,7 +132,7 @@ export default function EmpreendimentoDocumentos() {
             <p className="text-[10px] font-bold text-[color:var(--c-aa3333)]">{AVISO_RASCUNHO_MEMORIAL}</p>
             <h2 className="text-base font-bold">Memorial descritivo — {m.titulo}</h2>
             <ul className="mt-1 text-xs">{m.cabecalho.map(c => <li key={c}>{c}</li>)}</ul>
-            <p className="mt-2 text-justify text-xs leading-relaxed">{m.descricao}</p>
+            <p className="mt-2 text-left text-xs leading-relaxed">{m.descricao}</p>
             {/* Celular: um cartão por vértice (nada corta) */}
             <ul className="vertices-cartoes mt-2 space-y-2 sm:hidden">
               {m.vertices.map(v => (

@@ -72,12 +72,11 @@ export default function RelogioPainel() {
 
   return (
     <div className="relative overflow-hidden rounded-2xl border border-primary/25 bg-gradient-to-br from-[color:var(--c-0d1f17)] via-card to-[color:var(--c-0b1512)] p-4 md:p-5">
-      <div className="pointer-events-none absolute -right-10 -top-10 h-40 w-40 rounded-full bg-primary/10 blur-3xl" />
       <div className="relative flex flex-wrap items-center gap-x-8 gap-y-3">
         {/* Hora digital */}
-        <div className="font-mono tabular-nums leading-none text-emerald-300 [text-shadow:0_0_18px_color-mix(in_srgb,_var(--c-3ec87a)_45%,_transparent)]" aria-live="off">
+        <div className="font-mono tabular-nums leading-none text-ok-300 [text-shadow:0_0_18px_color-mix(in_srgb,_var(--c-3ec87a)_45%,_transparent)]" aria-live="off">
           <span className="text-5xl md:text-6xl font-bold">{dois(agora.getHours())}:{dois(agora.getMinutes())}</span>
-          <span className="text-3xl md:text-4xl font-bold text-emerald-400/80">:{dois(agora.getSeconds())}</span>
+          <span className="text-3xl md:text-4xl font-bold text-ok-400/80">:{dois(agora.getSeconds())}</span>
         </div>
 
         {/* Data e dia da semana */}

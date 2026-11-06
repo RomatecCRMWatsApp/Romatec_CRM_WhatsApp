@@ -45,12 +45,12 @@ export default function FichaCliente({ aberto, contatoId, onFechar, onSalvo }: {
           <DialogTitle className="text-foreground">{contatoId ? "Editar cliente" : "Novo cliente"}</DialogTitle>
           <DialogDescription>Nome e telefone são obrigatórios. Com o CPF, a ficha completa fica guardada e o contrato desse cliente já sai preenchido.</DialogDescription>
         </DialogHeader>
-        {carregando ? <p className="flex items-center gap-2 text-sm text-muted-foreground"><Loader2 className="h-4 w-4 animate-spin" /> Carregando…</p> : contatoId && error ? <p className="text-sm text-red-500">{error.message}</p> : (
+        {carregando ? <p className="flex items-center gap-2 text-sm text-muted-foreground"><Loader2 className="h-4 w-4 animate-spin" /> Carregando…</p> : contatoId && error ? <p className="text-sm text-danger-500">{error.message}</p> : (
           <PessoaCampos p={p} set={set} erros={{}} prefixo="comprador" />
         )}
         <DialogFooter>
           <Button variant="outline" disabled={salvar.isPending} onClick={onFechar}>Cancelar</Button>
-          <Button className="bg-emerald-600 hover:bg-emerald-700" disabled={salvar.isPending || carregando || (!!contatoId && !!error)}
+          <Button className="bg-ok-600 hover:bg-ok-700" disabled={salvar.isPending || carregando || (!!contatoId && !!error)}
             onClick={() => {
               if (!p.nome.trim() || !p.telefone1) { toast.error("Nome e telefone são obrigatórios"); return; }
               salvar.mutate({ id: contatoId, pessoa: { ...p, nascimento: p.nascimento || null } as any });

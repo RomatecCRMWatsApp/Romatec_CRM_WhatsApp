@@ -158,13 +158,13 @@ export default function TabelasFinanciamento() {
         )}
         {isFetching && <Loader2 className="mb-2 h-4 w-4 animate-spin text-muted-foreground" />}
       </div>
-      {error && <p className="text-sm text-red-400">{error.message}</p>}
+      {error && <p className="text-sm text-danger-400">{error.message}</p>}
 
       {t && c && s && (
         <>
           <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-4">
             <div className="rounded-xl border border-border p-3"><p className="text-xs text-muted-foreground">{nomeOrigem} · preço de tabela</p><p className="text-lg font-bold">{brl(s.preco)}</p></div>
-            <div className="rounded-xl border border-emerald-500/40 p-3"><p className="text-xs text-muted-foreground">À vista total (−{brl(s.avistaTotal.desconto)})</p><p className="text-lg font-bold text-emerald-400">{brl(s.avistaTotal.valor)}</p></div>
+            <div className="rounded-xl border border-ok-500/40 p-3"><p className="text-xs text-muted-foreground">À vista total (−{brl(s.avistaTotal.desconto)})</p><p className="text-lg font-bold text-ok-400">{brl(s.avistaTotal.valor)}</p></div>
             <div className="rounded-xl border border-border p-3">
               <p className="text-xs text-muted-foreground">Entrada {pct(c.entradaPct, 0)}</p>
               <p className="text-sm"><b>{brl(s.entradaAvista)}</b> à vista (−{brl(s.descontoAvista)})</p>
@@ -245,7 +245,7 @@ export default function TabelasFinanciamento() {
               </tr></thead>
               <tbody>
                 {t.linhas.map((l, k) => (
-                  <tr key={k} className={`border-b border-border/40 ${l.tipo === "entrada" ? "bg-secondary/30" : l.tipo === "reforco" ? "bg-amber-500/10" : l.tipo === "complemento" ? "bg-sky-500/10" : ""}`}>
+                  <tr key={k} className={`border-b border-border/40 ${l.tipo === "entrada" ? "bg-secondary/30" : l.tipo === "reforco" ? "bg-warn-500/10" : l.tipo === "complemento" ? "bg-info-500/10" : ""}`}>
                     <td className="px-2 py-1">{l.mes}</td>
                     <td className="px-2 py-1 text-right font-mono">{dataBr(l.vencimento)}</td>
                     <td className="px-2 py-1 text-right">{l.tipo === "saldo" ? "Saldo" : ROTULO_LINHA[l.tipo]}</td>

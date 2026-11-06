@@ -55,13 +55,13 @@ export function AnexosNovoContrato({ vagas, pendentes, onMudar }: { vagas: Vaga[
         {vagas.map(v => {
           const p = pendentes.find(x => chave(x) === chave(v));
           return (
-            <div key={chave(v)} className={`flex items-center gap-2 rounded-lg border p-2 text-sm ${p ? "border-emerald-600/50" : "border-border"}`}>
-              {p ? <CheckCircle2 className="h-4 w-4 shrink-0 text-emerald-400" /> : <FileUp className="h-4 w-4 shrink-0 text-muted-foreground" />}
+            <div key={chave(v)} className={`flex items-center gap-2 rounded-lg border p-2 text-sm ${p ? "border-ok-600/50" : "border-border"}`}>
+              {p ? <CheckCircle2 className="h-4 w-4 shrink-0 text-ok-400" /> : <FileUp className="h-4 w-4 shrink-0 text-muted-foreground" />}
               <div className="min-w-0 flex-1">
                 <p className="truncate">{v.titulo}{v.opcional ? <span className="text-muted-foreground"> (opcional)</span> : null}</p>
                 {p && <p className="truncate text-[11px] text-muted-foreground">{p.arquivo.name}</p>}
               </div>
-              {p && <button type="button" className="text-xs text-red-300 hover:underline" onClick={() => tirar(v)}>tirar</button>}
+              {p && <button type="button" className="text-xs text-danger-300 hover:underline" onClick={() => tirar(v)}>tirar</button>}
               <label className="cursor-pointer rounded-md border border-border px-2 py-1 text-xs hover:bg-secondary">
                 {p ? "Trocar" : "Escolher"}
                 <input type="file" accept={ACEITA} className="hidden" onChange={e => { escolher(v, e.target.files?.[0]); e.target.value = ""; }} />
@@ -101,7 +101,7 @@ export function AnexosContrato({ contratoId, casado, dependentes }: { contratoId
   return (
     <section className="space-y-2 rounded-xl border border-border bg-card p-4">
       <h2 className="flex items-center gap-2 text-sm font-semibold"><Paperclip className="h-4 w-4" /> Documentos anexados
-        {lista && <span className={`text-xs font-normal ${faltam ? "text-amber-300" : "text-emerald-400"}`}>{faltam ? `faltam ${faltam}` : "completos"}</span>}
+        {lista && <span className={`text-xs font-normal ${faltam ? "text-warn-300" : "text-ok-400"}`}>{faltam ? `faltam ${faltam}` : "completos"}</span>}
       </h2>
       {!lista ? <p className="text-sm text-muted-foreground">Carregando…</p> : (
         <div className="divide-y divide-border/50">
@@ -113,7 +113,7 @@ export function AnexosContrato({ contratoId, casado, dependentes }: { contratoId
                 {salvos.map(a => (
                   <span key={a.id} className="inline-flex items-center gap-1 rounded-md border border-border px-2 py-0.5 text-xs">
                     <a className="max-w-[180px] truncate text-primary hover:underline" href={`/api/contratos/${contratoId}/anexos/${a.id}`} target="_blank" rel="noreferrer"><Download className="mr-0.5 inline h-3 w-3" />{a.nome}</a>
-                    <button type="button" title="Remover" onClick={() => remover(a)}><Trash2 className="h-3 w-3 text-red-300" /></button>
+                    <button type="button" title="Remover" onClick={() => remover(a)}><Trash2 className="h-3 w-3 text-danger-300" /></button>
                   </span>
                 ))}
                 <label className="cursor-pointer rounded-md border border-border px-2 py-1 text-xs hover:bg-secondary">

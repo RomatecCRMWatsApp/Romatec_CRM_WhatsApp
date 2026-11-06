@@ -46,7 +46,7 @@ export default function Financeiro() {
       {operador && aba === "fluxo" && <div className="px-4 md:px-6 pb-8 max-w-[1400px] mx-auto"><FluxoCaixa /></div>}
       {operador && aba === "despesas" && <div className="px-4 md:px-6 pb-8 max-w-[1400px] mx-auto"><Despesas /></div>}
       <div className={`px-4 md:px-6 pb-8 max-w-[1400px] mx-auto space-y-3 ${operador && aba !== "vendas" ? "hidden" : ""}`}>
-        {error && <p className="text-sm text-red-400">{error.message}</p>}
+        {error && <p className="text-sm text-danger-400">{error.message}</p>}
         {isLoading && <p className="text-sm text-muted-foreground">Carregando…</p>}
         {d && (
           <div className="grid grid-cols-2 gap-3 md:grid-cols-3">

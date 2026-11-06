@@ -4,6 +4,7 @@ import { useRoute } from "wouter";
 import { trpc } from "@/lib/trpc";
 import { especialistas } from "@/lib/especialistas";
 import LeadForm from "@/components/LeadForm";
+import { capaDoVideo } from "@/lib/capaVideo";
 
 function formatCurrency(value: number | string) {
   return Number(value).toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
@@ -22,7 +23,7 @@ export default function PropertyPublic() {
       <div className="min-h-screen bg-background flex items-center justify-center">
         <div className="text-center">
           <div className="w-12 h-12 border-4 border-emerald/30 border-t-emerald rounded-full animate-spin mx-auto mb-4" />
-          <p className="text-muted-foreground">Carregando imóvel...</p>
+          <p className="text-muted-foreground">Carregando imóvel…</p>
         </div>
       </div>
     );
@@ -102,14 +103,14 @@ export default function PropertyPublic() {
         <div className="glass-card p-4 sm:p-5 rounded-2xl mb-6">
           <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3">
             <div className="flex-1 min-w-0">
-              <span className="inline-block px-2 py-0.5 rounded-full text-xs font-bold bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 mb-2">
+              <span className="inline-block px-2 py-0.5 rounded-full text-xs font-bold bg-ok-500/20 text-ok-400 border border-ok-500/30 mb-2">
                 {property.status === "available" ? "Disponível" : property.status}
               </span>
               <h1 className="text-2xl font-bold text-foreground break-words">{property.denomination}</h1>
               {property.address && (
                 <div className="flex items-start gap-1 mt-1">
                   <MapPin className="h-3 w-3 text-emerald flex-shrink-0 mt-0.5" />
-                  <p className="text-sm text-green-400 break-words">
+                  <p className="text-sm text-go-400 break-words">
                     {property.address}{property.city ? `, ${property.city}` : ""}{property.state ? ` - ${property.state}` : ""}
                   </p>
                 </div>
@@ -129,45 +130,45 @@ export default function PropertyPublic() {
           <div className="glass-card mb-6 p-4">
             <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
               {property.bedrooms && (
-                <div className="flex flex-col items-center justify-center gap-1 bg-gray-900 border border-gray-800 rounded-xl p-4 w-full">
-                  <BedDouble className="w-6 h-6 text-green-400" />
+                <div className="flex flex-col items-center justify-center gap-1 bg-cinza-900 border border-cinza-800 rounded-xl p-4 w-full">
+                  <BedDouble className="w-6 h-6 text-go-400" />
                   <span className="text-lg font-bold text-white">{property.bedrooms}</span>
-                  <span className="text-xs text-gray-400 text-center">Quartos</span>
+                  <span className="text-xs text-cinza-400 text-center">Quartos</span>
                 </div>
               )}
               {property.bathrooms && (
-                <div className="flex flex-col items-center justify-center gap-1 bg-gray-900 border border-gray-800 rounded-xl p-4 w-full">
-                  <Bath className="w-6 h-6 text-green-400" />
+                <div className="flex flex-col items-center justify-center gap-1 bg-cinza-900 border border-cinza-800 rounded-xl p-4 w-full">
+                  <Bath className="w-6 h-6 text-go-400" />
                   <span className="text-lg font-bold text-white">{property.bathrooms}</span>
-                  <span className="text-xs text-gray-400 text-center">Banheiros</span>
+                  <span className="text-xs text-cinza-400 text-center">Banheiros</span>
                 </div>
               )}
               {property.garageSpaces && (
-                <div className="flex flex-col items-center justify-center gap-1 bg-gray-900 border border-gray-800 rounded-xl p-4 w-full">
-                  <Car className="w-6 h-6 text-green-400" />
+                <div className="flex flex-col items-center justify-center gap-1 bg-cinza-900 border border-cinza-800 rounded-xl p-4 w-full">
+                  <Car className="w-6 h-6 text-go-400" />
                   <span className="text-lg font-bold text-white">{property.garageSpaces}</span>
-                  <span className="text-xs text-gray-400 text-center">Vagas</span>
+                  <span className="text-xs text-cinza-400 text-center">Vagas</span>
                 </div>
               )}
               {property.areaConstruida && (
-                <div className="flex flex-col items-center justify-center gap-1 bg-gray-900 border border-gray-800 rounded-xl p-4 w-full">
-                  <Ruler className="w-6 h-6 text-green-400" />
+                <div className="flex flex-col items-center justify-center gap-1 bg-cinza-900 border border-cinza-800 rounded-xl p-4 w-full">
+                  <Ruler className="w-6 h-6 text-go-400" />
                   <span className="text-lg font-bold text-white">{property.areaConstruida}m²</span>
-                  <span className="text-xs text-gray-400 text-center">Área Construída</span>
+                  <span className="text-xs text-cinza-400 text-center">Área Construída</span>
                 </div>
               )}
               {property.areaCasa && (
-                <div className="flex flex-col items-center justify-center gap-1 bg-gray-900 border border-gray-800 rounded-xl p-4 w-full">
-                  <Ruler className="w-6 h-6 text-green-400" />
+                <div className="flex flex-col items-center justify-center gap-1 bg-cinza-900 border border-cinza-800 rounded-xl p-4 w-full">
+                  <Ruler className="w-6 h-6 text-go-400" />
                   <span className="text-lg font-bold text-white">{property.areaCasa}m²</span>
-                  <span className="text-xs text-gray-400 text-center">Área da Casa</span>
+                  <span className="text-xs text-cinza-400 text-center">Área da Casa</span>
                 </div>
               )}
               {property.areaTerreno && (
-                <div className="flex flex-col items-center justify-center gap-1 bg-gray-900 border border-gray-800 rounded-xl p-4 w-full">
-                  <Ruler className="w-6 h-6 text-green-400" />
+                <div className="flex flex-col items-center justify-center gap-1 bg-cinza-900 border border-cinza-800 rounded-xl p-4 w-full">
+                  <Ruler className="w-6 h-6 text-go-400" />
                   <span className="text-lg font-bold text-white">{property.areaTerreno}m²</span>
-                  <span className="text-xs text-gray-400 text-center">Área do Terreno</span>
+                  <span className="text-xs text-cinza-400 text-center">Área do Terreno</span>
                 </div>
               )}
             </div>
@@ -223,14 +224,14 @@ export default function PropertyPublic() {
                 return isPdf ? (
                   <a href={pdfHref} target="_blank" rel="noopener noreferrer"
                     className="flex items-center gap-4 p-5 rounded-2xl border border-white/10 bg-white/5 hover:bg-white/10 transition group">
-                    <div className="w-14 h-16 flex-shrink-0 flex items-center justify-center rounded-xl bg-red-500/15 border border-red-500/20">
-                      <svg aria-hidden="true" width="28" height="28" viewBox="0 0 24 24" fill="none" className="text-red-400"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/><polyline points="14 2 14 8 20 8" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/><line x1="16" y1="13" x2="8" y2="13" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/><line x1="16" y1="17" x2="8" y2="17" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/></svg>
+                    <div className="w-14 h-16 flex-shrink-0 flex items-center justify-center rounded-xl bg-danger-500/15 border border-danger-500/20">
+                      <svg aria-hidden="true" width="28" height="28" viewBox="0 0 24 24" fill="none" className="text-danger-400"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/><polyline points="14 2 14 8 20 8" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/><line x1="16" y1="13" x2="8" y2="13" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/><line x1="16" y1="17" x2="8" y2="17" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/></svg>
                     </div>
                     <div className="flex-1">
                       <p className="font-semibold text-white">Planta Baixa</p>
                       <p className="text-sm text-white/50 mt-0.5">Clique para abrir o PDF</p>
                     </div>
-                    <span className="text-emerald-400 font-medium group-hover:underline">Abrir ↗</span>
+                    <span className="text-ok-400 font-medium group-hover:underline">Abrir ↗</span>
                   </a>
                 ) : (
                   <img src={url} alt="Planta Baixa" className="w-full rounded-xl" />
@@ -239,7 +240,7 @@ export default function PropertyPublic() {
             )}
 
             {activeTab === "video" && property.videoUrl && (
-              <video preload="metadata" src={property.videoUrl} controls className="w-full rounded-xl" />
+              <video preload="metadata" src={property.videoUrl} poster={capaDoVideo(property.videoUrl)} controls className="w-full rounded-xl" />
             )}
           </div>
         )}
@@ -302,7 +303,7 @@ export default function PropertyPublic() {
       </div>
 
       {/* Fixed Bottom CTA */}
-      <div className="fixed bottom-0 inset-x-0 z-50 p-4 bg-background/80 backdrop-blur-xl border-t border-border/30">
+      <div className="fixed bottom-0 inset-x-0 z-50 p-4 bg-background border-t border-border/30">
         <div className="max-w-3xl mx-auto">
           <p className="text-xs text-center text-muted-foreground mb-2">
             Falar com <span className="font-bold text-emerald">{esp.nome}</span> — {esp.display}

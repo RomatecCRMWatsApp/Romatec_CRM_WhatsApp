@@ -97,7 +97,7 @@ function ModalQualificacao({ id, aberto, onFechar }: { id: number; aberto: boole
     <Dialog open={aberto} onOpenChange={o => !o && onFechar()}>
       <DialogContent className="sm:max-w-2xl">
         <DialogHeader><DialogTitle>Qualificação para contratos</DialogTitle></DialogHeader>
-        {isLoading ? <Loader2 className="h-5 w-5 animate-spin" /> : error ? <p className="text-sm text-red-400">{error.message}</p> : (
+        {isLoading ? <Loader2 className="h-5 w-5 animate-spin" /> : error ? <p className="text-sm text-danger-400">{error.message}</p> : (
           <div className="space-y-3">
             <div className="rounded-lg border border-border bg-secondary/30 p-3"><TextoQualificacao texto={data?.texto ?? ""} /></div>
             <p className="text-[11px] text-muted-foreground">Salve o cadastro antes de copiar: o texto usa os dados gravados.</p>
@@ -248,7 +248,7 @@ export default function CadastroUsuario({ id, admin, listas, onSalvo, onCancelar
   };
 
   if (!novo && dados.isLoading) return <p className="text-sm text-muted-foreground"><Loader2 className="mr-2 inline h-4 w-4 animate-spin" />Carregando cadastro…</p>;
-  if (!novo && dados.error) return <p className="text-sm text-red-400">{dados.error.message}</p>;
+  if (!novo && dados.error) return <p className="text-sm text-danger-400">{dados.error.message}</p>;
 
   const documentos = (docs.data?.documentos ?? []) as DocumentoCadastro[];
   const cred = (t: string) => documentos.find(d => d.tipo === t && d.titular === "usuario");
@@ -261,7 +261,7 @@ export default function CadastroUsuario({ id, admin, listas, onSalvo, onCancelar
       <div className="grid grid-cols-1 gap-3 md:grid-cols-6">
         <Campo rotulo="Nome completo" erro={e("nome")} className="md:col-span-4"><input value={p.nome} onChange={x => mudar("nome", x.target.value)} className={cl("nome")} placeholder="Como vai no contrato" autoComplete="off" /></Campo>
         <Campo rotulo="Sexo" erro={e("sexo")} className="md:col-span-2">
-          <select value={p.sexo} onChange={x => mudar("sexo", x.target.value)} className={`${sel} ${e("sexo") ? "border-red-500" : ""}`}><option value="">—</option><option value="M">Masculino</option><option value="F">Feminino</option></select>
+          <select value={p.sexo} onChange={x => mudar("sexo", x.target.value)} className={`${sel} ${e("sexo") ? "border-danger-500" : ""}`}><option value="">—</option><option value="M">Masculino</option><option value="F">Feminino</option></select>
         </Campo>
         <Campo rotulo="CPF" erro={e("cpf") || (p.cpf && onlyDigits(p.cpf).length === 11 && !isValidCPF(p.cpf) ? "CPF inválido" : undefined)} className="md:col-span-2">
           <span className="flex gap-1">
@@ -303,7 +303,7 @@ export default function CadastroUsuario({ id, admin, listas, onSalvo, onCancelar
       <Secao titulo="Dados pessoais">{blocoPessoa(f, "", set)}
         <div className="grid grid-cols-1 gap-3 md:grid-cols-3">
           <Campo rotulo="Estado civil" erro={erros.estadoCivil}>
-            <select value={f.estadoCivil} onChange={e => mudarEstadoCivil(e.target.value)} className={`${sel} ${erros.estadoCivil ? "border-red-500" : ""}`}>
+            <select value={f.estadoCivil} onChange={e => mudarEstadoCivil(e.target.value)} className={`${sel} ${erros.estadoCivil ? "border-danger-500" : ""}`}>
               <option value="">—</option>{ESTADOS_CIVIS.map(e => <option key={e} value={e}>{ROTULO_ESTADO_CIVIL[e]}</option>)}
             </select>
           </Campo>
@@ -339,7 +339,7 @@ export default function CadastroUsuario({ id, admin, listas, onSalvo, onCancelar
             </div>
           )}
         </div>
-        {erros.recebeLeads && <p className="text-[11px] text-red-400">{erros.recebeLeads}</p>}
+        {erros.recebeLeads && <p className="text-[11px] text-danger-400">{erros.recebeLeads}</p>}
         {admin && <p className="text-[11px] text-muted-foreground">Entra com CRECI, CPF ou e-mail. Trocar o perfil encerra a sessão da pessoa.</p>}
       </Secao>
 
@@ -351,13 +351,13 @@ export default function CadastroUsuario({ id, admin, listas, onSalvo, onCancelar
           <Campo rotulo="Complemento"><input {...inp("enderecoComplemento")} /></Campo>
           <Campo rotulo="Bairro" erro={erros.enderecoBairro} className="md:col-span-2"><input {...inp("enderecoBairro")} /></Campo>
           <Campo rotulo="Cidade" erro={erros.enderecoCidade} className="md:col-span-3"><input {...inp("enderecoCidade")} /></Campo>
-          <Campo rotulo="UF" erro={erros.enderecoUf}><select {...inp("enderecoUf")} className={`${sel} ${erros.enderecoUf ? "border-red-500" : ""}`}><option value="">—</option>{UFS.map(u => <option key={u}>{u}</option>)}</select></Campo>
+          <Campo rotulo="UF" erro={erros.enderecoUf}><select {...inp("enderecoUf")} className={`${sel} ${erros.enderecoUf ? "border-danger-500" : ""}`}><option value="">—</option>{UFS.map(u => <option key={u}>{u}</option>)}</select></Campo>
         </div>
       </Secao>
 
       {comConjuge && (
         <Secao titulo={f.estadoCivil === "casado" ? "Cônjuge" : "Companheiro(a)"}>
-          {erros.conjuge && <p className="text-[11px] text-red-400">{erros.conjuge}</p>}
+          {erros.conjuge && <p className="text-[11px] text-danger-400">{erros.conjuge}</p>}
           {blocoPessoa(c, "conjuge.", setCj, procurarConjuge)}
           <div className="grid grid-cols-1 gap-3 md:grid-cols-6">
             <Campo rotulo="Nascimento" className="md:col-span-2"><input type="date" {...inpC("dataNascimento")} /></Campo>
@@ -399,12 +399,12 @@ export default function CadastroUsuario({ id, admin, listas, onSalvo, onCancelar
       )}
 
       <div className="flex flex-wrap items-center gap-2">
-        <Button type="submit" disabled={salvando} className="bg-emerald-600 hover:bg-emerald-700 text-white">
+        <Button type="submit" disabled={salvando} className="bg-ok-600 hover:bg-ok-700 text-white">
           {salvando ? "Salvando…" : novo ? "Cadastrar e gerar link" : "Salvar cadastro"}
         </Button>
         {!novo && uid && <Button type="button" variant="outline" onClick={() => setQualif(true)}><FileSignature className="mr-1.5 h-4 w-4" /> Ver qualificação</Button>}
         {onCancelar && <Button type="button" variant="ghost" onClick={onCancelar}>Cancelar</Button>}
-        {Object.values(erros).some(Boolean) && <span className="text-xs text-red-400">Confira os campos em vermelho.</span>}
+        {Object.values(erros).some(Boolean) && <span className="text-xs text-danger-400">Confira os campos em vermelho.</span>}
       </div>
 
       {!novo && uid && f.perfil !== "empreendedor" && (

@@ -28,14 +28,14 @@ function Linha({ v, onMudou }: { v: Visita; onMudou: () => void }) {
         <span className="font-mono text-sm font-semibold">{hora(v.quando)}</span>
         <button onClick={() => navigate(`/leads/lead/${v.leadId}`)} className="font-semibold hover:underline">{v.nome}</button>
         <span className={`rounded-full px-2 py-0.5 text-[11px] ${COR_STATUS_VISITA[v.status] ?? ""}`}>{ROTULO_STATUS_VISITA[v.status] ?? v.status}</span>
-        {v.confirmadaPeloCliente && <span className="text-[11px] text-emerald-300">confirmou pelo WhatsApp</span>}
+        {v.confirmadaPeloCliente && <span className="text-[11px] text-ok-300">confirmou pelo WhatsApp</span>}
         {v.responsavel && <span className="ml-auto text-xs text-muted-foreground">{v.responsavel}</span>}
       </div>
       {(v.imovel || v.local) && <p className="text-xs text-muted-foreground">{[v.imovel, v.local].filter(Boolean).join(" · ")}</p>}
-      {v.status === "solicitada" && v.observacao && <p className="text-xs text-amber-100/80 whitespace-pre-line">{v.observacao}</p>}
+      {v.status === "solicitada" && v.observacao && <p className="text-xs text-warn-100/80 whitespace-pre-line">{v.observacao}</p>}
       {v.doLink && <MensagensAgendamento visitaId={v.id} enviada={v.confirmacaoEnviada} />}
       <div className="flex flex-wrap items-center gap-2">
-        {v.telefone && <a href={`https://wa.me/${v.telefone.replace(/\D/g, "")}`} onClick={() => v.leadId && abriuWhatsApp.mutate({ id: v.leadId })} target="_blank" rel="noreferrer" className="text-xs text-emerald-300 hover:underline">WhatsApp</a>}
+        {v.telefone && <a href={`https://wa.me/${v.telefone.replace(/\D/g, "")}`} onClick={() => v.leadId && abriuWhatsApp.mutate({ id: v.leadId })} target="_blank" rel="noreferrer" className="text-xs text-ok-300 hover:underline">WhatsApp</a>}
         <AcoesVisita visita={v} onMudou={onMudou} />
       </div>
     </div>
@@ -100,8 +100,8 @@ export default function AgendaVisitas() {
     <div>
       <PageHeader icone={CalendarDays} titulo="Agenda de visitas" subtitulo="Próximas visitas, confirmações pelo WhatsApp e resultado de cada uma" />
       <div className="px-4 md:px-6 pb-8 max-w-[1100px] mx-auto space-y-5">
-        {error && <p className="text-sm text-red-400">{error.message}</p>}
-        {isLoading && <p className="text-sm text-muted-foreground">Carregando...</p>}
+        {error && <p className="text-sm text-danger-400">{error.message}</p>}
+        {isLoading && <p className="text-sm text-muted-foreground">Carregando…</p>}
 
         <LinksDivulgacao />
 
@@ -122,14 +122,14 @@ export default function AgendaVisitas() {
 
         {pedidos.length > 0 && (
           <section className="space-y-2">
-            <h2 className="text-sm font-semibold text-amber-300">Pedidos de agendamento pelo link ({pedidos.length}) — confirme o dia com o cliente</h2>
+            <h2 className="text-sm font-semibold text-warn-300">Pedidos de agendamento pelo link ({pedidos.length}) — confirme o dia com o cliente</h2>
             {pedidos.map(v => <Linha key={v.id} v={v} onMudou={atualizar} />)}
           </section>
         )}
 
         {pendentes.length > 0 && (
           <section className="space-y-2">
-            <h2 className="text-sm font-semibold text-amber-300">Marque o resultado ({pendentes.length})</h2>
+            <h2 className="text-sm font-semibold text-warn-300">Marque o resultado ({pendentes.length})</h2>
             {pendentes.map(v => <Linha key={v.id} v={v} onMudou={atualizar} />)}
           </section>
         )}

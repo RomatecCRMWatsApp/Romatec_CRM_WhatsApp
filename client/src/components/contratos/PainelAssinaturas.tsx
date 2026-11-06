@@ -28,7 +28,7 @@ export default function PainelAssinaturas({ id, status, podeEnviar }: { id: numb
   const copiar = async (t: string) => { try { await navigator.clipboard.writeText(t); toast.success("Link copiado"); } catch { toast.message(t); } };
 
   if (isLoading) return <p className="text-sm text-muted-foreground">Carregando…</p>;
-  if (error || !data) return <p className="text-sm text-red-400">{error?.message}</p>;
+  if (error || !data) return <p className="text-sm text-danger-400">{error?.message}</p>;
 
   if (!data.enviado) {
     const apto = status === "apto_assinatura";
@@ -48,7 +48,7 @@ export default function PainelAssinaturas({ id, status, podeEnviar }: { id: numb
             ))}
           </div>
           {!!data.pendencias.length && (
-            <div className="mt-3 rounded-lg border border-amber-500/40 bg-amber-500/10 p-2 text-xs text-amber-200">
+            <div className="mt-3 rounded-lg border border-warn-500/40 bg-warn-500/10 p-2 text-xs text-warn-200">
               <p className="flex items-center gap-1 font-semibold"><AlertTriangle className="h-4 w-4" /> Complete antes de enviar:</p>
               <ul className="list-disc pl-5">{data.pendencias.map((x: string) => <li key={x}>{x}</li>)}</ul>
             </div>
@@ -79,12 +79,12 @@ export default function PainelAssinaturas({ id, status, podeEnviar }: { id: numb
         <div className="divide-y divide-border/50">
           {data.signatarios.map((s: any) => (
             <div key={s.id} className="flex flex-wrap items-center gap-3 py-2 text-sm">
-              {s.status === "assinado" ? <CheckCircle2 className="h-5 w-5 text-emerald-400" /> : <Clock className="h-5 w-5 text-muted-foreground" />}
+              {s.status === "assinado" ? <CheckCircle2 className="h-5 w-5 text-ok-400" /> : <Clock className="h-5 w-5 text-muted-foreground" />}
               <div className="min-w-[200px] flex-1">
                 <b>{s.nome}</b>
                 <span className="block text-xs text-muted-foreground">{s.papelRotulo} · {s.metodoRotulo}</span>
                 {s.status === "assinado"
-                  ? <span className="text-xs text-emerald-400">assinou em {new Date(s.assinadoEm).toLocaleString("pt-BR")}{s.revisaoManual ? " · conferir: certificado sem CPF" : ""}</span>
+                  ? <span className="text-xs text-ok-400">assinou em {new Date(s.assinadoEm).toLocaleString("pt-BR")}{s.revisaoManual ? " · conferir: certificado sem CPF" : ""}</span>
                   : <span className="text-xs text-muted-foreground">{s.status === "convidado" ? "convite enviado" : "pendente"}{s.expiraEm ? ` · link vale até ${new Date(s.expiraEm).toLocaleDateString("pt-BR")}` : ""}</span>}
               </div>
               {s.status !== "assinado" && s.link && (

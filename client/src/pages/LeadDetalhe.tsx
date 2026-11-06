@@ -37,7 +37,7 @@ function ScorePainel({ leadId }: { leadId: number }) {
       ) : data.itens.map(i => (
         <div key={i.regra} className="flex justify-between text-sm">
           <span className="text-foreground">{i.rotulo}</span>
-          <span className={i.pontos >= 0 ? "text-emerald-300 font-semibold" : "text-red-300 font-semibold"}>{i.pontos >= 0 ? "+" : ""}{i.pontos}</span>
+          <span className={i.pontos >= 0 ? "text-ok-300 font-semibold" : "text-danger-300 font-semibold"}>{i.pontos >= 0 ? "+" : ""}{i.pontos}</span>
         </div>
       ))}
       <div className="flex justify-between text-sm font-bold border-t border-border pt-1">
@@ -90,7 +90,7 @@ export default function LeadDetalhe() {
     return out;
   }, [lead, edicao]);
 
-  if (isLoading) return <p className="container py-8 text-sm text-muted-foreground">Carregando...</p>;
+  if (isLoading) return <p className="container py-8 text-sm text-muted-foreground">Carregando…</p>;
   if (!lead) return <p className="container py-8 text-sm text-muted-foreground">Lead não encontrado.</p>;
 
   const etapas = etapasCfg?.ETAPAS[lead.funil] ?? [];
@@ -106,7 +106,7 @@ export default function LeadDetalhe() {
           <span className="inline-flex flex-wrap items-center gap-2 mb-1">
             <span className={`text-xs font-bold px-2 py-0.5 rounded border ${CLASSE_COR[lead.classe || "frio"]}`}>{lead.score ?? "–"} · {(lead.classe || "frio").toUpperCase()}</span>
             <span className="text-[11px] px-2 py-0.5 rounded bg-white/10">{lead.funil === "proprietario" ? "Proprietário" : "Comprador"}</span>
-            {lead.humano && <span className="text-[11px] px-2 py-0.5 rounded bg-violet-500/30 inline-flex items-center gap-1"><Headset className="h-3 w-3" /> com o corretor</span>}
+            {lead.humano && <span className="text-[11px] px-2 py-0.5 rounded bg-lilas-500/30 inline-flex items-center gap-1"><Headset className="h-3 w-3" /> com o corretor</span>}
           </span>
           <br />+{fone} · entrou há {desde(lead.criadoEm)} · última atividade há {desde(lead.ultimaAtividade)}
         </>}
@@ -118,8 +118,8 @@ export default function LeadDetalhe() {
         <div className="lg:col-span-2 space-y-4">
           {/* Esperando corretor (alerta de 5 minutos) */}
           {lead.aguardandoDesde && (
-            <div className="rounded-xl border border-amber-500/40 bg-amber-500/10 px-4 py-3 flex flex-wrap items-center justify-between gap-2">
-              <p className="text-sm text-amber-200">Esperando um corretor desde {new Date(lead.aguardandoDesde).toLocaleTimeString("pt-BR", { timeZone: "America/Fortaleza", hour: "2-digit", minute: "2-digit" })}</p>
+            <div className="rounded-xl border border-warn-500/40 bg-warn-500/10 px-4 py-3 flex flex-wrap items-center justify-between gap-2">
+              <p className="text-sm text-warn-200">Esperando um corretor desde {new Date(lead.aguardandoDesde).toLocaleTimeString("pt-BR", { timeZone: "America/Fortaleza", hour: "2-digit", minute: "2-digit" })}</p>
               <Button size="sm" variant="outline" onClick={() => marcarAtendido.mutate({ id })}>Já atendi</Button>
             </div>
           )}
@@ -134,13 +134,13 @@ export default function LeadDetalhe() {
                 <option value="">— sem responsável —</option>
                 {(responsaveis ?? []).map(r => <option key={r.id} value={r.id}>{r.nome}</option>)}
               </select>
-              {lead.atendidoEm && <span className="text-xs text-emerald-300">{lead.ultimoAtendimento === "encaminhado" ? "Encaminhado para atendimento" : "Atendido"} {new Date(lead.atendidoEm).toLocaleString("pt-BR", { timeZone: "America/Fortaleza", day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit" })}</span>}
+              {lead.atendidoEm && <span className="text-xs text-ok-300">{lead.ultimoAtendimento === "encaminhado" ? "Encaminhado para atendimento" : "Atendido"} {new Date(lead.atendidoEm).toLocaleString("pt-BR", { timeZone: "America/Fortaleza", day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit" })}</span>}
               <label className="text-sm text-muted-foreground">Etapa</label>
               <select value={lead.etapa} onChange={e => (e.target.value === "perdido" ? setPerder(true) : mover.mutate({ id, etapa: e.target.value }))}
                 className="h-9 px-2 rounded-md border border-border bg-secondary/30 text-sm text-foreground">
                 {etapas.map(x => <option key={x} value={x}>{rotulos[x] ?? x}</option>)}
               </select>
-              {lead.motivoPerda && <span className="text-xs text-red-300">Perdido: {MOTIVOS[lead.motivoPerda.split(":")[0]] || lead.motivoPerda}</span>}
+              {lead.motivoPerda && <span className="text-xs text-danger-300">Perdido: {MOTIVOS[lead.motivoPerda.split(":")[0]] || lead.motivoPerda}</span>}
               <div className="flex-1" />
               {lead.humano || lead.funil === "proprietario"
                 ? lead.funil === "comprador" && <Button size="sm" variant="outline" disabled={devolver.isPending} onClick={() => devolver.mutate({ id })}><Bot className="mr-1.5 h-4 w-4" /> Devolver ao bot</Button>
@@ -148,7 +148,7 @@ export default function LeadDetalhe() {
               {lead.funil === "comprador" && lead.imoveis.length > 0 && (
                 <Button size="sm" variant="outline" disabled={similar.isPending} onClick={() => similar.mutate({ id })}><Send className="mr-1.5 h-4 w-4" /> {similar.isPending ? "Enviando..." : "Enviar imóvel similar"}</Button>
               )}
-              {lead.etapa !== "perdido" && <Button size="sm" variant="ghost" className="text-red-300" onClick={() => setPerder(true)}><XCircle className="mr-1.5 h-4 w-4" /> Marcar perdido</Button>}
+              {lead.etapa !== "perdido" && <Button size="sm" variant="ghost" className="text-danger-300" onClick={() => setPerder(true)}><XCircle className="mr-1.5 h-4 w-4" /> Marcar perdido</Button>}
             </CardContent>
           </Card>
 
@@ -165,7 +165,7 @@ export default function LeadDetalhe() {
                       <Button size="sm" variant="outline" asChild><a href={lead.avalieImob.exclusividade} target="_blank" rel="noreferrer"><FileText className="mr-1.5 h-4 w-4" /> Gerar contrato de exclusividade</a></Button>
                     </>
                   ) : <p className="text-xs text-muted-foreground">Defina AVALIEIMOB_URL no Railway para os botões de PTAM e exclusividade.</p>}
-                  <Button size="sm" className="bg-emerald-600 hover:bg-emerald-700 text-white" disabled={cadastrar.isPending}
+                  <Button size="sm" className="bg-ok-600 hover:bg-ok-700 text-white" disabled={cadastrar.isPending}
                     onClick={() => { if (confirm("Cadastrar este imóvel na carteira (inativo e sem preço público)?")) cadastrar.mutate({ id }); }}>
                     <Building2 className="mr-1.5 h-4 w-4" /> Cadastrar como imóvel
                   </Button>
@@ -178,19 +178,19 @@ export default function LeadDetalhe() {
           <Card className="bg-card border-border">
             <CardHeader className="pb-2 flex flex-row items-center justify-between space-y-0">
               <CardTitle className="text-base">Qualificação</CardTitle>
-              <Button size="sm" disabled={!Object.keys(alterados).length || salvar.isPending} onClick={() => salvar.mutate({ id, slots: alterados })} className="bg-emerald-600 hover:bg-emerald-700 text-white">
+              <Button size="sm" disabled={!Object.keys(alterados).length || salvar.isPending} onClick={() => salvar.mutate({ id, slots: alterados })} className="bg-ok-600 hover:bg-ok-700 text-white">
                 <Save className="mr-1.5 h-4 w-4" /> {salvar.isPending ? "Salvando..." : "Salvar"}
               </Button>
             </CardHeader>
             <CardContent>
-              {lead.pendentes.length > 0 && <p className="text-xs text-amber-300 mb-3">Faltam: {lead.pendentes.map(p => ROTULO_SLOT[p] || p).join(", ")}</p>}
+              {lead.pendentes.length > 0 && <p className="text-xs text-warn-300 mb-3">Faltam: {lead.pendentes.map(p => ROTULO_SLOT[p] || p).join(", ")}</p>}
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 {lead.definicaoSlots.map(d => {
                   const s = lead.slots[d.nome];
                   const pendente = lead.pendentes.includes(d.nome);
                   return (
                     <label key={d.nome} className="space-y-1">
-                      <span className={`text-xs ${pendente ? "text-amber-300" : "text-muted-foreground"}`}>
+                      <span className={`text-xs ${pendente ? "text-warn-300" : "text-muted-foreground"}`}>
                         {ROTULO_SLOT[d.nome] || d.nome}{s ? ` · ${ROTULO_FONTE[s.fonte] || s.fonte}` : ""}
                       </span>
                       {d.opcoes ? (
@@ -223,7 +223,7 @@ export default function LeadDetalhe() {
                 <div className="space-y-2 max-h-96 overflow-y-auto pr-1">
                   {lead.mensagens.map((m: any) => (
                     <div key={m.id} className={`flex ${m.direcao === "in" ? "justify-start" : "justify-end"}`}>
-                      <div className={`max-w-[85%] rounded-xl px-3 py-2 text-sm whitespace-pre-line ${m.direcao === "in" ? "bg-secondary/60 text-foreground" : "bg-emerald-600/20 text-emerald-50"}`}>
+                      <div className={`max-w-[85%] rounded-xl px-3 py-2 text-sm whitespace-pre-line ${m.direcao === "in" ? "bg-secondary/60 text-foreground" : "bg-ok-600/20 text-ok-50"}`}>
                         {m.texto}
                         <p className="text-[10px] opacity-60 mt-1 text-right">{m.autor === "lead" ? "" : `${m.autor} · `}{new Date(m.createdAt).toLocaleString("pt-BR", { day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit" })}</p>
                       </div>
@@ -290,7 +290,7 @@ export default function LeadDetalhe() {
                   : "nenhuma programada"}
                 {lead.followUp.tentativas > 0 && ` (nova tentativa ${lead.followUp.tentativas + 1} de 3)`}
               </p>
-              {lead.followUp.erro && <p className="text-xs text-red-300">{lead.followUp.erro}</p>}
+              {lead.followUp.erro && <p className="text-xs text-danger-300">{lead.followUp.erro}</p>}
             </CardContent>
           </Card>
 
@@ -300,7 +300,7 @@ export default function LeadDetalhe() {
               <CardContent className="space-y-2">
                 {lead.imoveis.map((i: any) => (
                   <div key={i.id} className="flex items-center justify-between gap-2 text-sm">
-                    <span className="truncate"><span className="font-mono text-xs text-emerald-300 mr-1">{i.codigo}</span>{i.titulo}</span>
+                    <span className="truncate"><span className="font-mono text-xs text-ok-300 mr-1">{i.codigo}</span>{i.titulo}</span>
                     {i.link && <a href={i.link} target="_blank" rel="noreferrer" className="text-muted-foreground hover:text-foreground"><ExternalLink className="h-4 w-4" /></a>}
                   </div>
                 ))}
@@ -311,7 +311,7 @@ export default function LeadDetalhe() {
           {lead.tags.length > 0 && (
             <Card className="bg-card border-border">
               <CardContent className="py-3 flex flex-wrap gap-1">
-                {lead.tags.map(t => <span key={t} className="text-xs px-2 py-0.5 rounded bg-amber-500/10 text-amber-300">{t}</span>)}
+                {lead.tags.map(t => <span key={t} className="text-xs px-2 py-0.5 rounded bg-warn-500/10 text-warn-300">{t}</span>)}
               </CardContent>
             </Card>
           )}

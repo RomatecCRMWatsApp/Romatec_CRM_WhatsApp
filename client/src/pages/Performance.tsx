@@ -29,7 +29,7 @@ const CAMPAIGN_COLORS = [COLORS.emerald, COLORS.gold, COLORS.blue, COLORS.purple
 function CustomTooltip({ active, payload, label }: any) {
   if (!active || !payload?.length) return null;
   return (
-    <div className="bg-[color:var(--c-1a1f2e)] border border-emerald/20 rounded-lg px-3 py-2 shadow-xl">
+    <div className="bg-[color:var(--c-1a1f2e)] border border-emerald/20 rounded-lg px-3 py-2 shadow-md">
       <p className="text-xs text-muted-foreground mb-1">{label}</p>
       {payload.map((entry: any, i: number) => (
         <p key={i} className="text-sm font-semibold" style={{ color: entry.color }}>
@@ -90,7 +90,7 @@ export default function Performance() {
       <div className="min-h-screen bg-background flex items-center justify-center">
         <div className="text-center">
           <div className="w-12 h-12 border-4 border-emerald/30 border-t-emerald rounded-full animate-spin mx-auto mb-4" />
-          <p className="text-muted-foreground">Carregando dados de performance...</p>
+          <p className="text-muted-foreground">Carregando dados de performance…</p>
         </div>
       </div>
     );
@@ -137,9 +137,9 @@ export default function Performance() {
           <div className="glass-card p-4">
             <div className="flex items-center justify-between mb-2">
               <span className="text-xs text-muted-foreground">Falhas</span>
-              <XCircle className="h-4 w-4 text-red-400" />
+              <XCircle className="h-4 w-4 text-danger-400" />
             </div>
-            <p className="text-3xl font-bold text-red-400">{totals.failed}</p>
+            <p className="text-3xl font-bold text-danger-400">{totals.failed}</p>
             <p className="text-xs text-muted-foreground mt-1">{totals.blocked} bloqueadas</p>
           </div>
         </div>
@@ -209,7 +209,7 @@ export default function Performance() {
           {/* Gráfico: Evolução 30 dias */}
           <div className="glass-card p-5">
             <h3 className="text-base font-bold text-foreground mb-4 flex items-center gap-2">
-              <TrendingUp className="h-4 w-4 text-blue-400" />
+              <TrendingUp className="h-4 w-4 text-azul-400" />
               Evolução - Últimos 30 Dias
             </h3>
             <div className="h-[250px]">
@@ -235,7 +235,7 @@ export default function Performance() {
           {/* Gráfico: Distribuição por Hora */}
           <div className="glass-card p-5">
             <h3 className="text-base font-bold text-foreground mb-4 flex items-center gap-2">
-              <Clock className="h-4 w-4 text-purple-400" />
+              <Clock className="h-4 w-4 text-roxo-400" />
               Distribuição por Hora do Dia
             </h3>
             <div className="h-[250px]">
@@ -303,7 +303,7 @@ export default function Performance() {
                       style={{ width: `${camp.total > 0 ? (camp.sent / camp.total) * 100 : 0}%` }}
                     />
                     <div
-                      className="h-full bg-red-500 transition"
+                      className="h-full bg-danger-500 transition"
                       style={{ width: `${camp.total > 0 ? (camp.failed / camp.total) * 100 : 0}%` }}
                     />
                   </div>
@@ -315,7 +315,7 @@ export default function Performance() {
                     <p className="text-[10px] text-muted-foreground">Enviadas</p>
                   </div>
                   <div>
-                    <p className="text-lg font-bold text-red-400">{camp.failed}</p>
+                    <p className="text-lg font-bold text-danger-400">{camp.failed}</p>
                     <p className="text-[10px] text-muted-foreground">Falhas</p>
                   </div>
                   <div>

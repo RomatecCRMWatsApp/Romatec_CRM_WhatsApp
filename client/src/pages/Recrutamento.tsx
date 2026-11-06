@@ -12,8 +12,8 @@ import { ROTULO_PERFIL_RECRUTAMENTO, STATUS_RECRUTAMENTO } from "@shared/recruta
 
 const campo = "h-9 w-full rounded-md border border-border bg-background px-2 text-sm";
 const COR: Record<string, string> = {
-  convidado: "bg-sky-500/15 text-sky-300", preenchido: "bg-amber-500/15 text-amber-300", aprovado: "bg-emerald-500/15 text-emerald-300",
-  recusado: "bg-red-500/15 text-red-300", cancelado: "bg-secondary text-muted-foreground",
+  convidado: "bg-info-500/15 text-info-300", preenchido: "bg-warn-500/15 text-warn-300", aprovado: "bg-ok-500/15 text-ok-300",
+  recusado: "bg-danger-500/15 text-danger-300", cancelado: "bg-secondary text-muted-foreground",
 };
 const data = (d: unknown) => (d ? new Date(d as any).toLocaleDateString("pt-BR", { timeZone: "America/Fortaleza" }) : "");
 const copiar = async (t: string, o = "Copiado") => { try { await navigator.clipboard.writeText(t); toast.success(o); } catch { window.prompt("Copie:", t); } };
@@ -24,8 +24,8 @@ type Acesso = { enviado: boolean; login: string; senha: string; texto: string } 
 function ResultadoAcesso({ r, onFechar }: { r: Acesso; onFechar: () => void }) {
   if (!r) return null;
   return (
-    <div className="rounded-xl border border-emerald-500/40 bg-emerald-500/10 p-4 text-sm space-y-2">
-      <p className="font-semibold text-emerald-300">{r.enviado ? "✅ Acesso criado e enviado pelo WhatsApp." : "✅ Acesso criado — o WhatsApp do sistema não enviou: repasse a mensagem abaixo."}</p>
+    <div className="rounded-xl border border-ok-500/40 bg-ok-500/10 p-4 text-sm space-y-2">
+      <p className="font-semibold text-ok-300">{r.enviado ? "✅ Acesso criado e enviado pelo WhatsApp." : "✅ Acesso criado — o WhatsApp do sistema não enviou: repasse a mensagem abaixo."}</p>
       <p>Login: <b>{r.login}</b> · Senha provisória: <b className="font-mono">{r.senha}</b></p>
       {!r.enviado && <pre className="whitespace-pre-wrap rounded bg-background/60 p-2 text-xs">{r.texto}</pre>}
       <div className="flex gap-2">
@@ -98,7 +98,7 @@ function AcessoEmpreendedor({ emps, onCriado }: { emps: { slug: string; nome: st
         <label className="text-xs text-muted-foreground">E-mail<input className={campo} value={email} onChange={e => setEmail(e.target.value)} type="email" /></label>
         <label className="text-xs text-muted-foreground">WhatsApp<input className={campo} value={tel} onChange={e => setTel(maskPhone(e.target.value))} inputMode="tel" /></label>
       </div>
-      {error && <p className="text-xs text-red-400">{error.message}</p>}
+      {error && <p className="text-xs text-danger-400">{error.message}</p>}
       {prop && <p className="text-xs">Proprietário: <b>{prop.nome || "— sem dados no empreendimento —"}</b>{prop.cpf ? ` · CPF ${prop.cpf.replace(/(\d{3})(\d{3})(\d{3})(\d{2})/, "$1.$2.$3-$4")}` : ""}</p>}
       <Button disabled={!slug || !prop?.nome || !email || criar.isPending} onClick={() => criar.mutate({ slug, email, telefone: tel })}>
         {criar.isPending ? <Loader2 className="mr-1 h-4 w-4 animate-spin" /> : <Send className="mr-1 h-4 w-4" />} Criar acesso e enviar
@@ -136,15 +136,15 @@ function Conferir({ id, onFechar, onAcesso }: { id: number; onFechar: () => void
         <p className="text-xs font-semibold">Documentos</p>
         {r.exigidos.map(x => {
           const doc = r.docs.find((y: any) => y.tipo === x.tipo);
-          return <p key={x.tipo} className="text-xs">{doc ? <a className="text-primary hover:underline" href={`/api/recrutamento/docs/${doc.id}`} target="_blank" rel="noreferrer">{x.rotulo}</a> : <span className={x.obrigatorio ? "text-red-300" : "text-muted-foreground"}>{x.obrigatorio ? "" : "—"} {x.rotulo}</span>}{doc?.validade ? ` (válida até ${doc.validade.split("-").reverse().join("/")})` : ""}</p>;
+          return <p key={x.tipo} className="text-xs">{doc ? <a className="text-primary hover:underline" href={`/api/recrutamento/docs/${doc.id}`} target="_blank" rel="noreferrer">{x.rotulo}</a> : <span className={x.obrigatorio ? "text-danger-300" : "text-muted-foreground"}>{x.obrigatorio ? "" : "—"} {x.rotulo}</span>}{doc?.validade ? ` (válida até ${doc.validade.split("-").reverse().join("/")})` : ""}</p>;
         })}
       </div>
       {r.status === "preenchido" && (
         <div className="flex flex-wrap gap-2">
-          <Button disabled={aprovar.isPending} onClick={() => { if (confirm(`Aprovar ${r.nome} e criar o acesso com senha provisória?`)) aprovar.mutate({ id }); }} className="bg-emerald-600 hover:bg-emerald-700 text-white">
+          <Button disabled={aprovar.isPending} onClick={() => { if (confirm(`Aprovar ${r.nome} e criar o acesso com senha provisória?`)) aprovar.mutate({ id }); }} className="bg-ok-600 hover:bg-ok-700 text-white">
             {aprovar.isPending ? <Loader2 className="mr-1 h-4 w-4 animate-spin" /> : <Check className="mr-1 h-4 w-4" />} Aprovar e criar acesso
           </Button>
-          <Button variant="outline" className="text-red-300" disabled={recusar.isPending} onClick={() => { const m = prompt("Motivo da recusa (opcional):"); if (m !== null) recusar.mutate({ id, motivo: m }); }}>Recusar</Button>
+          <Button variant="outline" className="text-danger-300" disabled={recusar.isPending} onClick={() => { const m = prompt("Motivo da recusa (opcional):"); if (m !== null) recusar.mutate({ id, motivo: m }); }}>Recusar</Button>
         </div>
       )}
     </div>
@@ -204,7 +204,7 @@ export default function Recrutamento() {
                 <b>{r.nome}</b>
                 <span className="text-xs text-muted-foreground">{ROTULO_PERFIL_RECRUTAMENTO[r.perfil]} · {maskPhone(r.telefone)}{r.empreendimentoSlug ? ` · ${emps?.find(e => e.slug === r.empreendimentoSlug)?.nome ?? r.empreendimentoSlug}` : ""}</span>
                 <span className={`rounded-full px-2 py-0.5 text-[11px] ${COR[r.status] ?? ""}`}>{STATUS_RECRUTAMENTO[r.status] ?? r.status}</span>
-                {r.duplicado && r.status !== "aprovado" && <span className="rounded-full bg-amber-500/15 px-2 py-0.5 text-[11px] text-amber-300" title="Há outro convite com o mesmo WhatsApp">duplicado</span>}
+                {r.duplicado && r.status !== "aprovado" && <span className="rounded-full bg-warn-500/15 px-2 py-0.5 text-[11px] text-warn-300" title="Há outro convite com o mesmo WhatsApp">duplicado</span>}
                 <span className="ml-auto text-[11px] text-muted-foreground">
                   {r.preenchidoEm ? `formulário em ${data(r.preenchidoEm)}` : r.enviadoEm ? `enviado em ${data(r.enviadoEm)}` : `criado em ${data(r.createdAt)}`}
                 </span>
@@ -219,7 +219,7 @@ export default function Recrutamento() {
                     <Button size="sm" variant="outline" className="h-7 text-xs" onClick={() => copiar(r.link, "Link copiado")}><Copy className="mr-1 h-3.5 w-3.5" /> Link</Button>
                     <Button size="sm" variant="outline" className="h-7 text-xs" disabled={reenviar.isPending} onClick={() => reenviar.mutate({ id: r.id })}><MessageCircle className="mr-1 h-3.5 w-3.5" /> Reenviar convite</Button>
                     {r.status === "convidado" && <Button size="sm" variant="ghost" className="h-7 text-xs" onClick={() => setAberto(r.id)}>Ver o que já preencheu</Button>}
-                    <Button size="sm" variant="ghost" className="h-7 text-xs text-red-300" onClick={() => { if (confirm("Cancelar este convite? O link deixa de funcionar.")) cancelar.mutate({ id: r.id, motivo: "", cancelar: true }); }}>Cancelar</Button>
+                    <Button size="sm" variant="ghost" className="h-7 text-xs text-danger-300" onClick={() => { if (confirm("Cancelar este convite? O link deixa de funcionar.")) cancelar.mutate({ id: r.id, motivo: "", cancelar: true }); }}>Cancelar</Button>
                   </>
                 )}
                 {r.status === "aprovado" && r.usuarioId && (
@@ -228,7 +228,7 @@ export default function Recrutamento() {
                   </Button>
                 )}
                 {admin && r.status !== "aprovado" && (
-                  <Button size="sm" variant="ghost" className="h-7 text-xs text-red-300" onClick={() => setExcluindo({ id: r.id, nome: r.nome })}>
+                  <Button size="sm" variant="ghost" className="h-7 text-xs text-danger-300" onClick={() => setExcluindo({ id: r.id, nome: r.nome })}>
                     <Trash2 className="mr-1 h-3.5 w-3.5" /> Excluir
                   </Button>
                 )}

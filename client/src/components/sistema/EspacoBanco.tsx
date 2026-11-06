@@ -25,7 +25,7 @@ export default function EspacoBanco() {
       <CardContent className="space-y-3">
         <p className="text-xs text-muted-foreground">Mostra o que ocupa o volume do MySQL no Railway. Só consulta: não apaga nada.</p>
         <Button size="sm" variant="outline" onClick={ver} disabled={carregando}>{carregando ? <Loader2 className="mr-1 h-4 w-4 animate-spin" /> : <Database className="mr-1 h-4 w-4" />} Ver espaço</Button>
-        {dados && !dados.ok && <p className="text-sm text-red-400">{dados.erro || "Só o administrador consulta. Saia e entre de novo como administrador."}</p>}
+        {dados && !dados.ok && <p className="text-sm text-danger-400">{dados.erro || "Só o administrador consulta. Saia e entre de novo como administrador."}</p>}
         {dados?.ok && (
           <>
             <p className="text-sm">Tabelas: <b>{dados.totalTabelasMB} MB</b> · Logs internos do MySQL (binlog): <b>{typeof dados.binlogs === "string" ? dados.binlogs : `${dados.binlogs?.mb} MB em ${dados.binlogs?.arquivos} arquivo(s)`}</b></p>

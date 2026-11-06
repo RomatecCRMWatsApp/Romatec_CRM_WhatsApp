@@ -48,10 +48,10 @@ function Cartao({ e }: { e: Resumo }) {
         <div className="flex flex-col">
           <div className="grid grid-cols-3 gap-2 text-center">
             <div className="rounded-lg bg-white/5 p-2"><p className="text-2xl font-bold">{e.totalLotes}</p><p className="text-[11px] text-muted-foreground">lotes</p></div>
-            <div className="rounded-lg bg-emerald-500/10 p-2"><p className="text-2xl font-bold text-emerald-300">{e.disponiveis}</p><p className="text-[11px] text-muted-foreground">disponíveis</p></div>
-            <div className="rounded-lg bg-rose-500/10 p-2"><p className="text-2xl font-bold text-rose-300">{e.vendidos}</p><p className="text-[11px] text-muted-foreground">vendidos</p></div>
+            <div className="rounded-lg bg-ok-500/10 p-2"><p className="text-2xl font-bold text-ok-300">{e.disponiveis}</p><p className="text-[11px] text-muted-foreground">disponíveis</p></div>
+            <div className="rounded-lg bg-alert-500/10 p-2"><p className="text-2xl font-bold text-alert-300">{e.vendidos}</p><p className="text-[11px] text-muted-foreground">vendidos</p></div>
           </div>
-          {e.semRegistro && <p className="mt-3 inline-flex items-center gap-1 text-[11px] text-amber-300"><AlertTriangle className="h-3 w-3" /> sem registro no cartório informado</p>}
+          {e.semRegistro && <p className="mt-3 inline-flex items-center gap-1 text-[11px] text-warn-300"><AlertTriangle className="h-3 w-3" /> sem registro no cartório informado</p>}
           <p className="mt-auto pt-3 text-xs text-primary">Abrir mapa, lotes e documentos →</p>
         </div>
         <PreviaMapa slug={e.slug} />
@@ -67,7 +67,7 @@ export default function Empreendimentos() {
     <div>
       <PageHeader icone={MapIcon} titulo="Empreendimentos" subtitulo="Mapa dos lotes, reservas e vendas, arquivos e memoriais" />
       <div className="px-4 md:px-6 pb-8 max-w-[1300px] mx-auto space-y-4">
-        {error && <p className="text-sm text-red-400">{error.message}</p>}
+        {error && <p className="text-sm text-danger-400">{error.message}</p>}
         {isLoading && <p className="text-sm text-muted-foreground">Carregando…</p>}
         {/* Só os liberados para quem está vendo (admin e secretária: todos) */}
         {(data ?? []).filter(e => e.acesso).map(e => <Cartao key={e.slug} e={e} />)}

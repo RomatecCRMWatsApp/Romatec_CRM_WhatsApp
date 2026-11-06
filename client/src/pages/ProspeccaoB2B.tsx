@@ -14,8 +14,8 @@ import { Input } from "@/components/ui/input";
 
 const POR_PAGINA = 40;
 const COR_STATUS: Record<StatusProspecto, string> = {
-  novo: "bg-muted text-foreground", rascunho: "bg-amber-100 text-amber-900", aprovado: "bg-sky-100 text-sky-900", enviado: "bg-blue-100 text-blue-900",
-  respondeu: "bg-emerald-100 text-emerald-900", interessado: "bg-green-200 text-green-950", sem_interesse: "bg-zinc-200 text-zinc-700", optout: "bg-red-100 text-red-900",
+  novo: "bg-muted text-foreground", rascunho: "bg-warn-100 text-warn-900", aprovado: "bg-info-100 text-info-900", enviado: "bg-azul-100 text-azul-900",
+  respondeu: "bg-ok-100 text-ok-900", interessado: "bg-go-200 text-go-950", sem_interesse: "bg-grafite-200 text-grafite-700", optout: "bg-danger-100 text-danger-900",
 };
 const copiar = async (t: string) => { try { await navigator.clipboard.writeText(t); toast.success("Copiado"); } catch { window.prompt("Copie:", t); } };
 const fone = (t: string | null) => (t ? t.replace(/^55(\d{2})(\d{4,5})(\d{4})$/, "($1) $2-$3") : "sem telefone");
@@ -188,7 +188,7 @@ function Cartao({ p, admin, onMudou }: { p: Prospecto; admin: boolean; onMudou: 
           <Button size="sm" variant="ghost" onClick={() => setAberto(v => !v)}>{aberto ? "Fechar" : "Abrir"}</Button>
         </div>
       </div>
-      {p.ultimaResposta && <pre className="whitespace-pre-wrap rounded-lg bg-emerald-50 p-2 text-xs text-emerald-950">{p.ultimaResposta}</pre>}
+      {p.ultimaResposta && <pre className="whitespace-pre-wrap rounded-lg bg-ok-50 p-2 text-xs text-ok-950">{p.ultimaResposta}</pre>}
       {aberto && (
         <div className="space-y-2">
           {p.sobre && <p className="rounded-lg bg-muted p-2 text-xs"><b>No site:</b> {p.sobre}</p>}
@@ -197,7 +197,7 @@ function Cartao({ p, admin, onMudou }: { p: Prospecto; admin: boolean; onMudou: 
           </label>
           <textarea value={msg} onChange={e => setMsg(e.target.value)} rows={8} maxLength={1500} disabled={jaEnviado}
             className="w-full rounded-md border border-border bg-background p-2 text-sm" placeholder='Clique em "Escrever mensagem" ou escreva aqui' />
-          {problema && msg && <p className="text-xs text-red-600">{problema}</p>}
+          {problema && msg && <p className="text-xs text-danger-600">{problema}</p>}
           <div className="flex flex-wrap gap-1.5">
             {!jaEnviado && alterado && <Button size="sm" variant="outline" disabled={ocupado} onClick={() => atualizar.mutate({ id: p.id, dados: { fato: fato || null, mensagem: msg || null } })}>Salvar</Button>}
             {admin && !jaEnviado && p.status !== "optout" && (
@@ -215,7 +215,7 @@ function Cartao({ p, admin, onMudou }: { p: Prospecto; admin: boolean; onMudou: 
               <Button key={s} size="sm" variant={p.status === s ? "default" : "outline"} onClick={() => marcar.mutate({ id: p.id, status: s })}>{ROTULO_STATUS[s]}</Button>
             ))}
             {p.status !== "optout" && <Button size="sm" variant="ghost" onClick={() => { if (confirm("Marcar que esta empresa não quer contato?")) marcar.mutate({ id: p.id, status: "optout" }); }}>Não quer contato</Button>}
-            {admin && <Button size="sm" variant="ghost" className="text-red-600" onClick={() => { if (confirm(`Excluir ${p.nome} de vez?`)) excluir.mutate({ id: p.id }); }}><Trash2 className="mr-1 h-3.5 w-3.5" /> Excluir</Button>}
+            {admin && <Button size="sm" variant="ghost" className="text-danger-600" onClick={() => { if (confirm(`Excluir ${p.nome} de vez?`)) excluir.mutate({ id: p.id }); }}><Trash2 className="mr-1 h-3.5 w-3.5" /> Excluir</Button>}
           </div>
         </div>
       )}

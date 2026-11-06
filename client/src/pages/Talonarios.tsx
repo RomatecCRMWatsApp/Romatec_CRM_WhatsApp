@@ -8,7 +8,7 @@ import { maskCPF, maskPhone } from "@shared/masks";
 
 const campo = "h-9 w-full rounded-md border border-border bg-background px-2 text-sm";
 const hoje = () => new Date(Date.now() - 3 * 3600_000).toISOString().slice(0, 10);
-const COR_FOLHA: Record<string, string> = { EM_BRANCO: "bg-secondary/40", UTILIZADA: "bg-emerald-500/25 text-emerald-200", CANCELADA: "bg-zinc-500/30 text-zinc-300 line-through", EXTRAVIADA: "bg-red-500/25 text-red-200" };
+const COR_FOLHA: Record<string, string> = { EM_BRANCO: "bg-secondary/40", UTILIZADA: "bg-ok-500/25 text-ok-200", CANCELADA: "bg-grafite-500/30 text-grafite-300 line-through", EXTRAVIADA: "bg-danger-500/25 text-danger-200" };
 
 function Externos() {
   const utils = trpc.useUtils();
@@ -35,7 +35,7 @@ function Externos() {
         {(data ?? []).map(x => (
           <p key={x.id} className="flex flex-wrap items-center gap-2 border-t border-border/50 pt-1 text-sm">
             <b>{x.nome}</b><span className="text-xs text-muted-foreground">CPF {maskCPF(x.cpf)}{x.creci ? ` · CRECI ${x.creci}` : ""}{x.telefone ? ` · ${maskPhone(x.telefone)}` : ""}</span>
-            {x.recrutamentoId ? <span className="ml-auto text-xs text-emerald-300">convidado para o digital</span>
+            {x.recrutamentoId ? <span className="ml-auto text-xs text-ok-300">convidado para o digital</span>
               : <Button size="sm" variant="outline" className="ml-auto h-7 text-xs" disabled={convidar.isPending} onClick={() => { if (confirm(`Convidar ${x.nome} para o digital (formulário + trial de 7 dias)?`)) convidar.mutate({ externoId: x.id }); }}><Send className="mr-1 h-3.5 w-3.5" /> Convidar para o digital</Button>}
           </p>
         ))}
@@ -112,7 +112,7 @@ function Folhas({ t, onMudou }: { t: any; onMudou: () => void }) {
           <input ref={input} type="file" hidden accept="application/pdf,image/jpeg,image/png,image/webp" onChange={e => lancar("UTILIZADA", e.target.files?.[0])} />
           <Button size="sm" disabled={!referencia.trim() || enviando} onClick={() => input.current?.click()}>{enviando ? <Loader2 className="mr-1 h-4 w-4 animate-spin" /> : <FileUp className="mr-1 h-4 w-4" />} Anexar cópia e lançar</Button>
           <Button size="sm" variant="outline" disabled={enviando} onClick={() => { if (confirm(`Marcar a folha ${numero} como CANCELADA?`)) lancar("CANCELADA"); }}>Cancelada</Button>
-          <Button size="sm" variant="ghost" className="text-red-300" disabled={enviando} onClick={() => { if (confirm(`Marcar a folha ${numero} como EXTRAVIADA?`)) lancar("EXTRAVIADA"); }}>Extraviada</Button>
+          <Button size="sm" variant="ghost" className="text-danger-300" disabled={enviando} onClick={() => { if (confirm(`Marcar a folha ${numero} como EXTRAVIADA?`)) lancar("EXTRAVIADA"); }}>Extraviada</Button>
         </div>
       )}
     </div>

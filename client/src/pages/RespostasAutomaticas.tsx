@@ -14,7 +14,7 @@ const paraBase64 = (f: File) => new Promise<string>((ok, erro) => { const r = ne
 /** Balão no estilo WhatsApp (negrito/itálico de *x* e _x_) */
 function Balao({ texto }: { texto: string }) {
   const html = texto.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/\*([^*\n]+)\*/g, "<b>$1</b>").replace(/(^|\s)_([^_\n]+)_/g, "$1<i>$2</i>");
-  return <div className="max-w-[460px] whitespace-pre-wrap rounded-lg rounded-tl-none bg-emerald-900/40 px-3 py-2 text-[13px] leading-snug text-foreground" dangerouslySetInnerHTML={{ __html: html }} />;
+  return <div className="max-w-[460px] whitespace-pre-wrap rounded-lg rounded-tl-none bg-ok-900/40 px-3 py-2 text-[13px] leading-snug text-foreground" dangerouslySetInnerHTML={{ __html: html }} />;
 }
 
 type Texto = { intencao: string; rotulo: string; texto: string; midias: CodigoMidia[]; ativo: boolean; personalizado: boolean; padrao: { texto: string; midias: CodigoMidia[] } };
@@ -31,7 +31,7 @@ function EditorTexto({ slug, t, onSalvo }: { slug: string; t: Texto; onSalvo: ()
       <summary className="flex cursor-pointer items-center gap-2 p-3 text-sm">
         <span className="font-medium">{t.rotulo}</span>
         {t.personalizado && <span className="rounded-full bg-primary/15 px-2 py-0.5 text-[11px] text-primary">editado</span>}
-        {!t.ativo && <span className="rounded-full bg-red-500/15 px-2 py-0.5 text-[11px] text-red-300">não responde</span>}
+        {!t.ativo && <span className="rounded-full bg-danger-500/15 px-2 py-0.5 text-[11px] text-danger-300">não responde</span>}
         {t.midias.length > 0 && <span className="text-[11px] text-muted-foreground">+ {t.midias.map(m => ROTULO_MIDIA[m]).join(", ")}</span>}
       </summary>
       <div className="space-y-2 border-t border-border p-3">
@@ -70,7 +70,7 @@ function Midia({ slug, m, onSalvo }: { slug: string; m: { codigo: CodigoMidia; r
   return (
     <div className="flex flex-col overflow-hidden rounded-xl border border-border bg-card">
       <div className="flex h-36 items-center justify-center bg-secondary/30">
-        {!m.url ? <span className="text-xs text-amber-300">Sem arquivo</span>
+        {!m.url ? <span className="text-xs text-warn-300">Sem arquivo</span>
           : m.tipo === "pdf" ? <a href={m.url} target="_blank" rel="noreferrer" className="flex flex-col items-center gap-1 text-xs text-primary"><FileText className="h-10 w-10" />{m.nomeArquivo}</a>
           : <a href={m.url} target="_blank" rel="noreferrer" className="h-full w-full"><img src={m.url} alt={m.rotulo} className="h-full w-full object-contain" /></a>}
       </div>
@@ -125,17 +125,17 @@ export default function RespostasAutomaticas() {
         <div className="flex flex-wrap items-center gap-2">
           {(emps ?? []).map(e => (
             <button key={e.slug} onClick={() => { setSlug(e.slug); previa.reset(); }} className={`rounded-full border px-3 py-1 text-xs ${slug === e.slug ? "border-primary bg-primary/15 text-primary" : "border-border text-muted-foreground hover:text-foreground"}`}>
-              {e.nome}{e.ativo && <span className="ml-1 text-emerald-400">●</span>}
+              {e.nome}{e.ativo && <span className="ml-1 text-ok-400">●</span>}
             </button>
           ))}
           {isLoading && <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />}
         </div>
-        {error && <p className="text-sm text-red-400">{error.message}</p>}
+        {error && <p className="text-sm text-danger-400">{error.message}</p>}
 
         {data && (
           <>
-            <div className={`flex flex-wrap items-center gap-3 rounded-xl border p-4 ${ligado ? "border-emerald-500/40 bg-emerald-500/10" : "border-border bg-card"}`}>
-              <Power className={`h-6 w-6 ${ligado ? "text-emerald-400" : "text-muted-foreground"}`} />
+            <div className={`flex flex-wrap items-center gap-3 rounded-xl border p-4 ${ligado ? "border-ok-500/40 bg-ok-500/10" : "border-border bg-card"}`}>
+              <Power className={`h-6 w-6 ${ligado ? "text-ok-400" : "text-muted-foreground"}`} />
               <div className="flex-1">
                 <p className="font-semibold">{ligado ? "Robô LIGADO" : "Robô desligado"} · {data.emp.nome}</p>
                 <p className="text-xs text-muted-foreground">
@@ -148,7 +148,7 @@ export default function RespostasAutomaticas() {
                 {salvarCfg.isPending ? <Loader2 className="mr-1 h-4 w-4 animate-spin" /> : <Power className="mr-1 h-4 w-4" />}{ligado ? "Desligar" : "Ligar robô"}
               </Button>
             </div>
-            {!data.temCondicoes && <p className="flex items-center gap-2 text-xs text-amber-300"><AlertTriangle className="h-4 w-4" /> Sem condições de pagamento ativas no simulador: o robô não fala de valores e não pode ser ligado.</p>}
+            {!data.temCondicoes && <p className="flex items-center gap-2 text-xs text-warn-300"><AlertTriangle className="h-4 w-4" /> Sem condições de pagamento ativas no simulador: o robô não fala de valores e não pode ser ligado.</p>}
 
             {met && (
               <div className="space-y-2">
@@ -220,7 +220,7 @@ export default function RespostasAutomaticas() {
                       : e.codigo === "FOLDER_CHACARA"
                         ? <a key={i} href={e.url} target="_blank" rel="noreferrer" className="block w-40"><img src={e.url} alt={e.nomeArquivo} className="w-full rounded-md border border-border" /></a>
                         : <p key={i} className="inline-flex items-center gap-1 rounded-md bg-secondary/40 px-2 py-1 text-xs">{e.tipo === "pdf" ? <FileText className="h-3.5 w-3.5" /> : <ImageIcon className="h-3.5 w-3.5" />} {ROTULO_MIDIA[e.codigo as CodigoMidia] ?? e.codigo}</p>)}
-                    {previa.data.obs && <p className="text-xs text-amber-300">{previa.data.obs}</p>}
+                    {previa.data.obs && <p className="text-xs text-warn-300">{previa.data.obs}</p>}
                   </div>
                 )}
               </div>

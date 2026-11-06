@@ -26,7 +26,7 @@ export default function DistribuicaoLeads() {
         <div role="tablist" className="grid max-w-md grid-cols-2 gap-1 rounded-lg border border-border bg-secondary/20 p-1">
           {([["distribuir", "Distribuir"], ["relatorio", "Relatório"]] as const).map(([v, r]) => (
             <button key={v} type="button" role="tab" aria-selected={aba === v} onClick={() => setAba(v)}
-              className={`rounded-md px-2 py-1.5 text-sm font-medium ${aba === v ? "bg-emerald-600 text-white" : "text-muted-foreground hover:text-foreground"}`}>{r}</button>
+              className={`rounded-md px-2 py-1.5 text-sm font-medium ${aba === v ? "bg-ok-600 text-white" : "text-muted-foreground hover:text-foreground"}`}>{r}</button>
           ))}
         </div>
         {aba === "distribuir" ? <Distribuir aoEncaminhar={() => setAba("relatorio")} /> : <Relatorio />}
@@ -80,14 +80,14 @@ function Distribuir({ aoEncaminhar }: { aoEncaminhar: () => void }) {
       </div>
 
       {comEscritorio > 0 && (
-        <div className="flex flex-wrap items-center gap-2 rounded-lg border border-amber-500/40 bg-amber-500/5 p-3 text-sm">
+        <div className="flex flex-wrap items-center gap-2 rounded-lg border border-warn-500/40 bg-warn-500/5 p-3 text-sm">
           <span className="flex-1"><b>{comEscritorio}</b> lead(s) ainda com o escritório como responsável. Tire o nome do escritório para eles ficarem só aguardando o corretor de plantão.</span>
           <Button size="sm" variant="outline" disabled={liberar.isPending} onClick={() => { if (confirm(`Tirar o escritório de responsável de ${comEscritorio} lead(s)? Eles ficam "sem responsável" até serem encaminhados.`)) liberar.mutate(); }}>
             {liberar.isPending ? <Loader2 className="mr-1 h-4 w-4 animate-spin" /> : null} Tirar o escritório de todos
           </Button>
         </div>
       )}
-      <div className="sticky top-0 z-10 flex flex-wrap items-end gap-2 rounded-lg border border-emerald-500/40 bg-card p-3 shadow">
+      <div className="sticky top-0 z-10 flex flex-wrap items-end gap-2 rounded-lg border border-ok-500/40 bg-card p-3 shadow">
         <span className="text-sm font-semibold">{sel.size} selecionado(s)</span>
         <label className="flex flex-col gap-1 text-xs text-muted-foreground">Encaminhar para
           <select id="dist-para" className={`${selectCls} min-w-[200px]`} value={paraId} onChange={e => setParaId(e.target.value ? Number(e.target.value) : "")}>
@@ -98,7 +98,7 @@ function Distribuir({ aoEncaminhar }: { aoEncaminhar: () => void }) {
         <label className="flex min-w-[200px] flex-1 flex-col gap-1 text-xs text-muted-foreground">Observação (opcional, vai no relatório)
           <Input id="dist-obs" value={obs} onChange={e => setObs(e.target.value)} maxLength={300} placeholder="Ex.: cliente pediu atendimento de manhã" />
         </label>
-        <Button disabled={!sel.size || !paraId || encaminhar.isPending} className="bg-emerald-600 text-white hover:bg-emerald-700"
+        <Button disabled={!sel.size || !paraId || encaminhar.isPending} className="bg-ok-600 text-white hover:bg-ok-700"
           onClick={() => { if (confirm(`Encaminhar ${sel.size} lead(s) para ${nomePara}? Ele(a) recebe o aviso no sistema e no WhatsApp.`)) encaminhar.mutate({ leadIds: Array.from(sel), paraId: Number(paraId), observacao: obs || null }); }}>
           {encaminhar.isPending ? <Loader2 className="mr-1 h-4 w-4 animate-spin" /> : <Send className="mr-1 h-4 w-4" />} Encaminhar
         </Button>
@@ -119,15 +119,15 @@ function Distribuir({ aoEncaminhar }: { aoEncaminhar: () => void }) {
             </thead>
             <tbody>
               {lista.map(l => (
-                <tr key={l.id} className={`border-t border-border ${sel.has(l.id) ? "bg-emerald-500/10" : ""}`} onClick={() => alternar(l.id)}>
+                <tr key={l.id} className={`border-t border-border ${sel.has(l.id) ? "bg-ok-500/10" : ""}`} onClick={() => alternar(l.id)}>
                   <td className="p-2"><input type="checkbox" aria-label={`Selecionar ${l.nome}`} checked={sel.has(l.id)} onChange={() => alternar(l.id)} onClick={e => e.stopPropagation()} /></td>
-                  <td className="p-2 font-medium"><Link href={`/leads/lead/${l.id}`} onClick={(e: any) => e.stopPropagation()} className="hover:underline">{l.nome}</Link>{l.score === "quente" && <span className="ml-1 text-[10px] text-orange-400"></span>}</td>
+                  <td className="p-2 font-medium"><Link href={`/leads/lead/${l.id}`} onClick={(e: any) => e.stopPropagation()} className="hover:underline">{l.nome}</Link>{l.score === "quente" && <span className="ml-1 text-[10px] text-heat-400"></span>}</td>
                   <td className="p-2 whitespace-nowrap">{l.telefone}</td>
                   <td className="p-2 text-xs">{l.score === "quente" ? "🔥 quente" : l.score === "morno" ? "🌡️ morno" : "❄️ frio"}</td>
                   <td className="p-2 text-xs text-muted-foreground">{l.origem ?? "—"}</td>
                   <td className="p-2 text-xs text-muted-foreground">{[l.empreendimento, l.lote].filter(Boolean).join(" · ") || "—"}</td>
-                  <td className="p-2 whitespace-nowrap text-xs">{dataHora(l.criadoEm)}{l.aguardandoDesde && <span className="ml-1 text-amber-400">· esperando</span>}</td>
-                  <td className="p-2 text-xs">{l.responsavel ?? <span className="text-red-400">sem responsável</span>}</td>
+                  <td className="p-2 whitespace-nowrap text-xs">{dataHora(l.criadoEm)}{l.aguardandoDesde && <span className="ml-1 text-warn-400">· esperando</span>}</td>
+                  <td className="p-2 text-xs">{l.responsavel ?? <span className="text-danger-400">sem responsável</span>}</td>
                 </tr>
               ))}
             </tbody>
@@ -149,7 +149,7 @@ function ModoDistribuicao() {
   if (!data) return null;
   const manual = data.modo === "manual";
   return (
-    <div className={`flex flex-wrap items-center gap-3 rounded-lg border p-3 ${manual ? "border-amber-500/50 bg-amber-500/5" : "border-emerald-500/40 bg-emerald-500/5"}`}>
+    <div className={`flex flex-wrap items-center gap-3 rounded-lg border p-3 ${manual ? "border-warn-500/50 bg-warn-500/5" : "border-ok-500/40 bg-ok-500/5"}`}>
       <div className="min-w-[220px] flex-1 text-sm">
         <b>Distribuição: {manual ? "MANUAL" : "AUTOMÁTICA"}</b>
         <p className="text-xs text-muted-foreground">{manual
@@ -160,7 +160,7 @@ function ModoDistribuicao() {
         {(["automatico", "manual"] as const).map(m => (
           <button key={m} type="button" aria-pressed={data.modo === m} disabled={definir.isPending || data.modo === m}
             onClick={() => { if (confirm(m === "manual" ? "Mudar para distribuição MANUAL? A roleta para de escolher corretor sozinha." : "Voltar para distribuição AUTOMÁTICA (roleta)?")) definir.mutate({ modo: m }); }}
-            className={`rounded-md px-3 py-1.5 text-sm font-medium ${data.modo === m ? (m === "manual" ? "bg-amber-600 text-white" : "bg-emerald-600 text-white") : "text-muted-foreground hover:text-foreground"}`}>
+            className={`rounded-md px-3 py-1.5 text-sm font-medium ${data.modo === m ? (m === "manual" ? "bg-warn-600 text-white" : "bg-ok-600 text-white") : "text-muted-foreground hover:text-foreground"}`}>
             {m === "manual" ? "Manual" : "Automática"}
           </button>
         ))}
@@ -207,7 +207,7 @@ function Relatorio() {
             <option value="manual">Manual (secretária/escritório)</option><option value="automatico">Automático (roleta)</option><option value="">Todos</option>
           </select>
         </label>
-        <Button variant="outline" className="ml-auto border-amber-500/60" disabled={reenviar.isPending || !pendentes.length}
+        <Button variant="outline" className="ml-auto border-warn-500/60" disabled={reenviar.isPending || !pendentes.length}
           title="Manda de novo o aviso (sistema e WhatsApp, com o link de confirmar) para quem ainda não confirmou o recebimento"
           onClick={() => { if (confirm(`Reenviar o aviso de ${pendentes.length} lead(s) que ainda não tiveram o recebimento confirmado?`)) reenviar.mutate({ ids: pendentes.map(i => i.id) }); }}>
           {reenviar.isPending ? <Loader2 className="mr-1 h-4 w-4 animate-spin" /> : <Send className="mr-1 h-4 w-4" />} Reenviar aviso aos sem confirmação ({pendentes.length})
@@ -219,7 +219,7 @@ function Relatorio() {
           {csv.isPending ? <Loader2 className="mr-1 h-4 w-4 animate-spin" /> : <Download className="mr-1 h-4 w-4" />} Baixar planilha (CSV)
         </Button>
       </div>
-      {error && <p className="text-sm text-red-400">{error.message}</p>}
+      {error && <p className="text-sm text-danger-400">{error.message}</p>}
       {isLoading && <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />}
       {data && (
         <>
@@ -233,7 +233,7 @@ function Relatorio() {
               <p className="mb-2 text-xs font-semibold text-muted-foreground">Por corretor</p>
               <div className="flex flex-wrap gap-2">
                 {data.porCorretor.map(c => (
-                  <span key={c.corretor} className="rounded-md bg-secondary/40 px-2 py-1 text-xs"><b>{c.corretor}</b>: {c.total} recebidos ({c.manual} manual, {c.automatico} automático), {c.confirmados} confirmados{c.aguardando ? <span className="text-amber-300">, {c.aguardando} sem confirmar</span> : null}, {c.vendidos} vendidos, {c.perdidos} perdidos</span>
+                  <span key={c.corretor} className="rounded-md bg-secondary/40 px-2 py-1 text-xs"><b>{c.corretor}</b>: {c.total} recebidos ({c.manual} manual, {c.automatico} automático), {c.confirmados} confirmados{c.aguardando ? <span className="text-warn-300">, {c.aguardando} sem confirmar</span> : null}, {c.vendidos} vendidos, {c.perdidos} perdidos</span>
                 ))}
               </div>
             </div>
@@ -248,15 +248,15 @@ function Relatorio() {
                   {data.itens.map(i => (
                     <tr key={i.id} className="border-t border-border">
                       <td className="whitespace-nowrap p-2 text-xs">{dataHora(i.quando)}</td>
-                      <td className="p-2"><span className={`rounded px-1.5 py-0.5 text-[10px] font-bold ${i.origem === "manual" ? "bg-emerald-600/30 text-emerald-200" : "bg-sky-600/30 text-sky-200"}`}>{i.origem === "manual" ? "MANUAL" : "AUTOMÁTICO"}</span></td>
+                      <td className="p-2"><span className={`rounded px-1.5 py-0.5 text-[10px] font-bold ${i.origem === "manual" ? "bg-ok-600/30 text-ok-200" : "bg-info-600/30 text-info-200"}`}>{i.origem === "manual" ? "MANUAL" : "AUTOMÁTICO"}</span></td>
                       <td className="p-2"><Link href={`/leads/lead/${i.leadId}`} className="font-medium hover:underline">{i.lead}</Link><span className="block text-[11px] text-muted-foreground">{i.telefone}</span></td>
                       <td className="p-2 text-xs">{i.de ?? <span className="text-muted-foreground">sem responsável</span>}</td>
                       <td className="p-2 text-xs font-semibold">{i.para}</td>
                       <td className="p-2 text-xs">{i.por ?? "—"}</td>
                       <td className="p-2 text-xs">{i.continuaCom}</td>
-                      <td className="whitespace-nowrap p-2 text-xs">{i.recebidoEm ? <span className="text-emerald-300">{dataHora(i.recebidoEm)}</span> : i.desfecho ? "—" : (
-                        <span className="flex items-center gap-1 text-amber-300">aguardando
-                          <button type="button" className="rounded border border-amber-500/60 px-1.5 py-0.5 text-[10px] text-amber-200 hover:bg-amber-500/20" disabled={reenviar.isPending}
+                      <td className="whitespace-nowrap p-2 text-xs">{i.recebidoEm ? <span className="text-ok-300">{dataHora(i.recebidoEm)}</span> : i.desfecho ? "—" : (
+                        <span className="flex items-center gap-1 text-warn-300">aguardando
+                          <button type="button" className="rounded border border-warn-500/60 px-1.5 py-0.5 text-[10px] text-warn-200 hover:bg-warn-500/20" disabled={reenviar.isPending}
                             onClick={() => reenviar.mutate({ ids: [i.id] })} title="Reenviar o aviso para o corretor">Reenviar</button>
                         </span>)}</td>
                       <td className="p-2 text-xs">{i.desfecho ? <><b>{ROTULO_DESFECHO[i.desfecho]}</b>{i.desfechoMotivo ? <span className="block text-muted-foreground">{i.desfechoMotivo}</span> : null}</> : ROTULO_SITUACAO[i.situacao]}</td>

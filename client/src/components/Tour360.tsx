@@ -43,7 +43,7 @@ export function Visualizador360({ tours, inicial = 0, onFechar }: { tours: Tour[
       {tours.length > 1 && (
         <div className="flex gap-2 overflow-x-auto p-2">
           {tours.map((t, k) => (
-            <button key={t.id} onClick={() => setI(k)} className={`shrink-0 overflow-hidden rounded-lg border-2 ${k === i ? "border-amber-400" : "border-transparent opacity-70"}`}>
+            <button key={t.id} onClick={() => setI(k)} className={`shrink-0 overflow-hidden rounded-lg border-2 ${k === i ? "border-warn-400" : "border-transparent opacity-70"}`}>
               <div className="h-14 w-28 bg-cover bg-center" style={{ backgroundImage: `url(${t.url})` }} />
               <p className="w-28 truncate bg-black/60 px-1 text-[10px] text-white">{t.titulo}</p>
             </button>

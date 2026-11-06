@@ -27,12 +27,12 @@ function Portais() {
             <div className="flex gap-2"><code className="flex-1 break-all rounded-md bg-secondary/40 px-2 py-1.5 text-xs">{v}</code><Button size="sm" variant="outline" onClick={() => copiar(v, `${r} copiado`)}><Copy className="h-3.5 w-3.5" /></Button></div>
           </div>
         ))}
-        <p className="text-xs text-amber-200">Os links têm um código secreto: não publique. Para trocar, defina PORTAIS_TOKEN no Railway.</p>
+        <p className="text-xs text-warn-200">Os links têm um código secreto: não publique. Para trocar, defina PORTAIS_TOKEN no Railway.</p>
       </div>
       <div className="rounded-xl border border-border bg-card p-4 text-sm">
         <p className="mb-2 font-semibold">{data.anuncios.length} anúncio(s) no feed</p>
         <div className="max-h-64 divide-y divide-border overflow-y-auto">
-          {data.anuncios.map(a => <a key={a.id} href={a.url} target="_blank" rel="noreferrer" className="flex justify-between gap-2 py-1.5"><span><code className="text-xs text-emerald-300">{a.id}</code> {a.titulo}</span><span>{brl(a.preco)}</span></a>)}
+          {data.anuncios.map(a => <a key={a.id} href={a.url} target="_blank" rel="noreferrer" className="flex justify-between gap-2 py-1.5"><span><code className="text-xs text-ok-300">{a.id}</code> {a.titulo}</span><span>{brl(a.preco)}</span></a>)}
           {!data.anuncios.length && <p className="text-muted-foreground">Nenhum anúncio com preço público ainda.</p>}
         </div>
       </div>
@@ -74,8 +74,8 @@ function Api() {
           <Button disabled={nome.trim().length < 2 || !escopos.length || criar.isPending} onClick={() => criar.mutate({ nome, escopos: escopos as any, corretorId: corretor ? Number(corretor) : null })}><Plus className="mr-1 h-4 w-4" /> Criar</Button>
         </div>
         {nova && (
-          <div className="rounded-md border border-amber-400/50 bg-amber-500/10 p-2">
-            <p className="text-xs text-amber-200">Copie agora e envie ao parceiro por um canal seguro — a chave não aparece de novo.</p>
+          <div className="rounded-md border border-warn-400/50 bg-warn-500/10 p-2">
+            <p className="text-xs text-warn-200">Copie agora e envie ao parceiro por um canal seguro — a chave não aparece de novo.</p>
             <div className="flex gap-2"><code className="flex-1 break-all text-xs">{nova}</code><Button size="sm" variant="outline" onClick={() => copiar(nova, "Chave copiada")}><Copy className="h-3.5 w-3.5" /></Button></div>
           </div>
         )}
@@ -87,7 +87,7 @@ function Api() {
               <p className="font-semibold"><KeyRound className="mr-1 inline h-4 w-4" />{k.nome} <code className="text-xs text-muted-foreground">rmt_{k.prefixo}_…</code></p>
               <p className="text-xs text-muted-foreground">{k.escopos.join(", ")} · {k.usos} chamada(s){k.ultimoUso ? ` · última ${new Date(k.ultimoUso).toLocaleString("pt-BR")}` : ""}</p>
             </div>
-            <Button size="sm" variant={k.ativo ? "ghost" : "outline"} className={k.ativo ? "text-red-300" : ""} onClick={() => alterar.mutate({ id: k.id, ativo: !k.ativo })}>{k.ativo ? "Revogar" : "Reativar"}</Button>
+            <Button size="sm" variant={k.ativo ? "ghost" : "outline"} className={k.ativo ? "text-danger-300" : ""} onClick={() => alterar.mutate({ id: k.id, ativo: !k.ativo })}>{k.ativo ? "Revogar" : "Reativar"}</Button>
           </div>
         ))}
         {data && !data.length && <p className="p-3 text-muted-foreground">Nenhuma chave criada.</p>}

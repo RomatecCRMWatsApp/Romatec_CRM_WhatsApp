@@ -42,7 +42,7 @@ export default function DependentesCampos({ lista, onMudar, erros, comConjuge }:
             <div key={d.id ?? `novo-${i}`} className="rounded-lg border border-border p-3">
               <div className="mb-2 flex items-center justify-between">
                 <span className="text-xs font-semibold text-muted-foreground">Dependente {i + 1}</span>
-                <Button type="button" variant="ghost" className="h-7 px-2 text-xs text-red-400" title="Remover dependente"
+                <Button type="button" variant="ghost" className="h-7 px-2 text-xs text-danger-400" title="Remover dependente"
                   onClick={() => { const l = (lista ?? []).filter((_, j) => j !== i); onMudar(l.length ? l : null); }}>
                   <Trash2 className="mr-1 h-3.5 w-3.5" /> Remover
                 </Button>

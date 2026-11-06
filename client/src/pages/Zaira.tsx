@@ -333,7 +333,7 @@ export default function Zaira() {
                     {ry.error && <div style={{ fontSize: 11, color: COLORS.red, marginTop: 4 }}>{ry.error}</div>}
                   </>
                 ) : (
-                  <div style={{ color: COLORS.textDim, fontSize: 12 }}>Verificando...</div>
+                  <div style={{ color: COLORS.textDim, fontSize: 12 }}>Verificando…</div>
                 )}
               </div>
             </div>

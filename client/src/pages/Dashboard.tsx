@@ -81,7 +81,7 @@ function PerformanceCharts({ perfData }: { perfData: any }) {
   if (!Recharts) {
     return (
       <div className="flex items-center justify-center py-12">
-        <div className="w-8 h-8 border-4 border-emerald-500/30 border-t-emerald-500 rounded-full animate-spin" />
+        <div className="w-8 h-8 border-4 border-ok-500/30 border-t-ok-500 rounded-full animate-spin" />
       </div>
     );
   }
@@ -108,7 +108,7 @@ function PerformanceCharts({ perfData }: { perfData: any }) {
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
         <div className="glass-card p-5">
           <h3 className="text-base font-bold text-foreground mb-4 flex items-center gap-2">
-            <Activity className="h-4 w-4 text-emerald-400" />
+            <Activity className="h-4 w-4 text-ok-400" />
             Envios - Últimos 7 Dias
           </h3>
           <div className="h-[250px]">
@@ -131,7 +131,7 @@ function PerformanceCharts({ perfData }: { perfData: any }) {
 
         <div className="glass-card p-5">
           <h3 className="text-base font-bold text-foreground mb-4 flex items-center gap-2">
-            <Zap className="h-4 w-4 text-amber-400" />
+            <Zap className="h-4 w-4 text-warn-400" />
             Distribuição de Status
           </h3>
           <div className="h-[250px] flex items-center">
@@ -170,7 +170,7 @@ function PerformanceCharts({ perfData }: { perfData: any }) {
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
         <div className="glass-card p-5">
           <h3 className="text-base font-bold text-foreground mb-4 flex items-center gap-2">
-            <TrendingUp className="h-4 w-4 text-blue-400" />
+            <TrendingUp className="h-4 w-4 text-azul-400" />
             Evolução - Últimos 30 Dias
           </h3>
           <div className="h-[250px]">
@@ -199,7 +199,7 @@ function PerformanceCharts({ perfData }: { perfData: any }) {
 
         <div className="glass-card p-5">
           <h3 className="text-base font-bold text-foreground mb-4 flex items-center gap-2">
-            <Clock className="h-4 w-4 text-purple-400" />
+            <Clock className="h-4 w-4 text-roxo-400" />
             Distribuição por Hora do Dia
           </h3>
           <div className="h-[250px]">
@@ -223,7 +223,7 @@ function PerformanceCharts({ perfData }: { perfData: any }) {
       {/* Performance por Campanha */}
       <div className="glass-card p-5">
         <h3 className="text-base font-bold text-foreground mb-4 flex items-center gap-2">
-          <BarChart3 className="h-4 w-4 text-emerald-400" />
+          <BarChart3 className="h-4 w-4 text-ok-400" />
           Performance por Campanha
         </h3>
 
@@ -256,8 +256,8 @@ function PerformanceCharts({ perfData }: { perfData: any }) {
                 </div>
                 <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${
                   camp.status === "running"
-                    ? "bg-emerald-500/15 text-emerald-400"
-                    : "bg-gray-500/15 text-muted-foreground"
+                    ? "bg-ok-500/15 text-ok-400"
+                    : "bg-cinza-500/15 text-muted-foreground"
                 }`}>
                   {camp.status === "running" ? "ATIVA" : "PAUSADA"}
                 </span>
@@ -266,11 +266,11 @@ function PerformanceCharts({ perfData }: { perfData: any }) {
               <div className="w-full h-2 rounded-full bg-secondary/50 mb-3 overflow-hidden">
                 <div className="h-full flex">
                   <div
-                    className="h-full bg-emerald-500 transition"
+                    className="h-full bg-ok-500 transition"
                     style={{ width: `${camp.total > 0 ? (camp.sent / camp.total) * 100 : 0}%` }}
                   />
                   <div
-                    className="h-full bg-red-500 transition"
+                    className="h-full bg-danger-500 transition"
                     style={{ width: `${camp.total > 0 ? (camp.failed / camp.total) * 100 : 0}%` }}
                   />
                 </div>
@@ -278,15 +278,15 @@ function PerformanceCharts({ perfData }: { perfData: any }) {
 
               <div className="grid grid-cols-4 gap-2 text-center">
                 <div>
-                  <p className="text-lg font-bold text-emerald-400">{camp.sent}</p>
+                  <p className="text-lg font-bold text-ok-400">{camp.sent}</p>
                   <p className="text-[10px] text-muted-foreground">Enviadas</p>
                 </div>
                 <div>
-                  <p className="text-lg font-bold text-red-400">{camp.failed}</p>
+                  <p className="text-lg font-bold text-danger-400">{camp.failed}</p>
                   <p className="text-[10px] text-muted-foreground">Falhas</p>
                 </div>
                 <div>
-                  <p className="text-lg font-bold text-amber-400">{camp.pending}</p>
+                  <p className="text-lg font-bold text-warn-400">{camp.pending}</p>
                   <p className="text-[10px] text-muted-foreground">Pendentes</p>
                 </div>
                 <div>
@@ -318,9 +318,9 @@ const ORIGEM_LABEL: Record<string, string> = {
 };
 
 const SCORE_STYLE: Record<string, string> = {
-  quente: "bg-red-500/15 text-red-300 border-red-500/30",
-  morno: "bg-amber-500/15 text-amber-300 border-amber-500/30",
-  frio: "bg-sky-500/15 text-sky-300 border-sky-500/30",
+  quente: "bg-danger-500/15 text-danger-300 border-danger-500/30",
+  morno: "bg-warn-500/15 text-warn-300 border-warn-500/30",
+  frio: "bg-info-500/15 text-info-300 border-info-500/30",
 };
 
 function timeAgo(date?: string | Date | null): string {
@@ -368,7 +368,7 @@ function WhatsAppStatusPanel() {
   if (!s) {
     return (
       <div className="glass-card p-4 flex items-center gap-3 text-sm text-muted-foreground">
-        <RefreshCw className="h-4 w-4 animate-spin" /> Verificando o WhatsApp...
+        <RefreshCw className="h-4 w-4 animate-spin" /> Verificando o WhatsApp…
       </div>
     );
   }
@@ -378,11 +378,11 @@ function WhatsAppStatusPanel() {
       <div className="glass-card px-4 py-3 flex items-center justify-between gap-3">
         <div className="flex items-center gap-3">
           <span className="relative flex h-3 w-3">
-            <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-60" />
-            <span className="relative inline-flex rounded-full h-3 w-3 bg-emerald-500" />
+            <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-ok-400 opacity-60" />
+            <span className="relative inline-flex rounded-full h-3 w-3 bg-ok-500" />
           </span>
           <div>
-            <p className="text-sm font-semibold text-emerald-300">WhatsApp conectado</p>
+            <p className="text-sm font-semibold text-ok-300">WhatsApp conectado</p>
             <p className="text-xs text-muted-foreground">Verificado {timeAgo(s.checkedAt)} · campanhas, bot e boas-vindas de leads funcionando</p>
           </div>
         </div>
@@ -394,35 +394,35 @@ function WhatsAppStatusPanel() {
   }
 
   return (
-    <div className="rounded-xl border border-red-500/40 bg-red-950/40 p-5">
+    <div className="rounded-xl border border-danger-500/40 bg-danger-950/40 p-5">
       <div className="flex flex-col md:flex-row md:items-start gap-4">
-        <div className="p-2.5 rounded-lg bg-red-500/20 self-start">
-          <WifiOff className="h-6 w-6 text-red-300" />
+        <div className="p-2.5 rounded-lg bg-danger-500/20 self-start">
+          <WifiOff className="h-6 w-6 text-danger-300" />
         </div>
         <div className="flex-1 min-w-0">
-          <p className="font-bold text-red-200">{s.title}</p>
-          <p className="text-sm text-red-100/80 mt-0.5">{s.detail}</p>
+          <p className="font-bold text-danger-200">{s.title}</p>
+          <p className="text-sm text-danger-100/80 mt-0.5">{s.detail}</p>
           {s.steps.length > 0 && (
             <ol className="mt-3 space-y-1.5">
               {s.steps.map((step, i) => (
-                <li key={i} className="flex gap-2 text-sm text-red-50/90">
-                  <span className="flex-shrink-0 h-5 w-5 rounded-full bg-red-500/30 text-red-100 text-xs flex items-center justify-center font-bold">{i + 1}</span>
+                <li key={i} className="flex gap-2 text-sm text-danger-50/90">
+                  <span className="flex-shrink-0 h-5 w-5 rounded-full bg-danger-500/30 text-danger-100 text-xs flex items-center justify-center font-bold">{i + 1}</span>
                   <span>{step}</span>
                 </li>
               ))}
             </ol>
           )}
-          <p className="text-xs text-red-200/50 mt-3">Verificado {timeAgo(s.checkedAt)}</p>
+          <p className="text-xs text-danger-200/50 mt-3">Verificado {timeAgo(s.checkedAt)}</p>
         </div>
         <div className="flex flex-row md:flex-col gap-2 shrink-0">
-          <Button size="sm" onClick={verificar} disabled={checking} className="bg-red-600 hover:bg-red-700 text-white">
+          <Button size="sm" onClick={verificar} disabled={checking} className="bg-danger-600 hover:bg-danger-700 text-white">
             <RefreshCw className={`mr-1.5 h-4 w-4 ${checking ? "animate-spin" : ""}`} />
             {checking ? "Verificando..." : "Verificar agora"}
           </Button>
-          <Button size="sm" variant="outline" onClick={() => navigate("/settings")} className="border-red-400/40 text-red-100 hover:bg-red-500/20">
+          <Button size="sm" variant="outline" onClick={() => navigate("/settings")} className="border-danger-400/40 text-danger-100 hover:bg-danger-500/20">
             <Settings className="mr-1.5 h-4 w-4" /> Configurações
           </Button>
-          <Button size="sm" variant="outline" asChild className="border-red-400/40 text-red-100 hover:bg-red-500/20">
+          <Button size="sm" variant="outline" asChild className="border-danger-400/40 text-danger-100 hover:bg-danger-500/20">
             <a href="https://app.z-api.io" target="_blank" rel="noreferrer"><ExternalLink className="mr-1.5 h-4 w-4" /> Painel Z-API</a>
           </Button>
         </div>
@@ -437,14 +437,14 @@ function CredenciaisPendentes() {
   const { data } = trpc.equipe.credenciaisPendentes.useQuery(undefined, { staleTime: 5 * 60_000 });
   if (!data?.length) return null;
   return (
-    <div className="rounded-xl border border-amber-500/40 bg-amber-500/10 p-4">
+    <div className="rounded-xl border border-warn-500/40 bg-warn-500/10 p-4">
       <div className="mb-2 flex items-center gap-2">
-        <p className="flex-1 text-sm font-semibold text-amber-200">Credenciais pendentes ({data.length})</p>
-        <Button size="sm" variant="ghost" className="text-amber-200" onClick={() => navigate("/equipe")}>Equipe <ChevronRight className="ml-1 h-4 w-4" /></Button>
+        <p className="flex-1 text-sm font-semibold text-warn-200">Credenciais pendentes ({data.length})</p>
+        <Button size="sm" variant="ghost" className="text-warn-200" onClick={() => navigate("/equipe")}>Equipe <ChevronRight className="ml-1 h-4 w-4" /></Button>
       </div>
       <ul className="space-y-1 text-sm">
         {data.map(p => (
-          <li key={p.id} className="flex flex-wrap gap-x-2"><b className="text-foreground">{p.nome}</b><span className="text-amber-100/80">{p.pendencias.join(" · ")}</span></li>
+          <li key={p.id} className="flex flex-wrap gap-x-2"><b className="text-foreground">{p.nome}</b><span className="text-warn-100/80">{p.pendencias.join(" · ")}</span></li>
         ))}
       </ul>
     </div>
@@ -519,10 +519,10 @@ export default function Dashboard() {
   );
 
   const kpis = [
-    { label: "Leads novos hoje", value: leadsHoje, hint: `${leadsData?.stats.total ?? 0} no total`, icon: UserPlus, accent: "text-emerald-300", route: "/leads" },
-    { label: "Leads quentes", value: leadsData?.stats.quente ?? 0, hint: "prontos para o corretor", icon: Flame, accent: "text-red-300", route: "/leads" },
-    { label: "Clientes", value: contacts?.length ?? 0, hint: "na base de contatos", icon: Users, accent: "text-sky-300", route: "/contacts" },
-    { label: "Imóveis", value: properties?.length ?? 0, hint: `${activeCampaigns} em campanha ativa`, icon: Building2, accent: "text-amber-300", route: "/properties" },
+    { label: "Leads novos hoje", value: leadsHoje, hint: `${leadsData?.stats.total ?? 0} no total`, icon: UserPlus, accent: "text-ok-300", route: "/leads" },
+    { label: "Leads quentes", value: leadsData?.stats.quente ?? 0, hint: "prontos para o corretor", icon: Flame, accent: "text-danger-300", route: "/leads" },
+    { label: "Clientes", value: contacts?.length ?? 0, hint: "na base de contatos", icon: Users, accent: "text-info-300", route: "/contacts" },
+    { label: "Imóveis", value: properties?.length ?? 0, hint: `${activeCampaigns} em campanha ativa`, icon: Building2, accent: "text-warn-300", route: "/properties" },
   ];
 
   const totals = stablePerfData?.totals || { sent: 0, failed: 0, pending: 0, blocked: 0, successRate: 0, avgPerDay: 0, activeCampaigns: 0 };
@@ -607,15 +607,15 @@ export default function Dashboard() {
         <div className="pt-2">
           <div className="flex items-center justify-between mb-4">
             <div className="flex items-center gap-3">
-              <div className="p-2 rounded-lg bg-emerald-500/20">
-                <BarChart3 className="h-5 w-5 text-emerald-400" />
+              <div className="p-2 rounded-lg bg-ok-500/20">
+                <BarChart3 className="h-5 w-5 text-ok-400" />
               </div>
               <div>
                 <h2 className="text-lg font-bold text-foreground">Campanhas no WhatsApp</h2>
                 <p className="text-xs text-muted-foreground">{activeCampaigns} ativa(s) · atualizado a cada 30 segundos</p>
               </div>
             </div>
-            <Button size="sm" variant="ghost" onClick={() => navigate("/campaigns")} className="text-emerald-300 hover:text-emerald-200">
+            <Button size="sm" variant="ghost" onClick={() => navigate("/campaigns")} className="text-ok-300 hover:text-ok-200">
               Gerenciar <ChevronRight className="ml-1 h-4 w-4" />
             </Button>
           </div>
@@ -624,33 +624,33 @@ export default function Dashboard() {
             <div className="glass-card p-4">
               <div className="flex items-center justify-between mb-2">
                 <span className="text-xs text-muted-foreground">Enviadas</span>
-                <Send className="h-4 w-4 text-emerald-400" />
+                <Send className="h-4 w-4 text-ok-400" />
               </div>
-              <p className="text-3xl font-bold text-emerald-400">{totals.sent}</p>
+              <p className="text-3xl font-bold text-ok-400">{totals.sent}</p>
               <p className="text-xs text-muted-foreground mt-1">com sucesso</p>
             </div>
             <div className="glass-card p-4">
               <div className="flex items-center justify-between mb-2">
                 <span className="text-xs text-muted-foreground">Taxa de sucesso</span>
-                <CheckCircle2 className="h-4 w-4 text-emerald-400" />
+                <CheckCircle2 className="h-4 w-4 text-ok-400" />
               </div>
-              <p className="text-3xl font-bold text-emerald-400">{totals.successRate}%</p>
+              <p className="text-3xl font-bold text-ok-400">{totals.successRate}%</p>
               <p className="text-xs text-muted-foreground mt-1">de {totals.sent + totals.failed} tentativas</p>
             </div>
             <div className="glass-card p-4">
               <div className="flex items-center justify-between mb-2">
                 <span className="text-xs text-muted-foreground">Média por dia</span>
-                <TrendingUp className="h-4 w-4 text-amber-400" />
+                <TrendingUp className="h-4 w-4 text-warn-400" />
               </div>
-              <p className="text-3xl font-bold text-amber-400">{totals.avgPerDay}</p>
+              <p className="text-3xl font-bold text-warn-400">{totals.avgPerDay}</p>
               <p className="text-xs text-muted-foreground mt-1">últimos 7 dias</p>
             </div>
             <div className="glass-card p-4">
               <div className="flex items-center justify-between mb-2">
                 <span className="text-xs text-muted-foreground">Falhas</span>
-                <XCircle className="h-4 w-4 text-red-400" />
+                <XCircle className="h-4 w-4 text-danger-400" />
               </div>
-              <p className="text-3xl font-bold text-red-400">{totals.failed}</p>
+              <p className="text-3xl font-bold text-danger-400">{totals.failed}</p>
               <p className="text-xs text-muted-foreground mt-1">{totals.blocked} bloqueada(s)</p>
             </div>
           </div>
@@ -660,8 +660,8 @@ export default function Dashboard() {
           ) : (
             <div className="flex items-center justify-center py-12">
               <div className="text-center">
-                <div className="w-10 h-10 border-4 border-emerald-500/30 border-t-emerald-500 rounded-full animate-spin mx-auto mb-3" />
-                <p className="text-sm text-muted-foreground">Carregando gráficos...</p>
+                <div className="w-10 h-10 border-4 border-ok-500/30 border-t-ok-500 rounded-full animate-spin mx-auto mb-3" />
+                <p className="text-sm text-muted-foreground">Carregando gráficos…</p>
               </div>
             </div>
           )}

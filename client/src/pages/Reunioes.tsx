@@ -11,7 +11,7 @@ import {
 } from "@shared/reunioes";
 
 const COR_STATUS: Record<string, string> = {
-  gravando: "bg-red-500/15 text-red-300", processando: "bg-amber-500/15 text-amber-300", pronta: "bg-emerald-500/15 text-emerald-300", erro: "bg-red-500/15 text-red-300",
+  gravando: "bg-danger-500/15 text-danger-300", processando: "bg-warn-500/15 text-warn-300", pronta: "bg-ok-500/15 text-ok-300", erro: "bg-danger-500/15 text-danger-300",
 };
 const dataHora = (d: unknown) => new Date(d as any).toLocaleString("pt-BR", { timeZone: "America/Fortaleza", day: "2-digit", month: "2-digit", year: "numeric", hour: "2-digit", minute: "2-digit" });
 const copiar = async (t: string, o = "Texto") => { try { await navigator.clipboard.writeText(t); toast.success(`${o} copiado`); } catch { window.prompt("Copie:", t); } };
@@ -116,9 +116,9 @@ function NovaReuniao({ leadInicial, onPronta }: { leadInicial: { id: number; nom
 
   if (gravando) {
     return (
-      <section className="space-y-3 rounded-xl border border-red-500/40 bg-card p-4">
+      <section className="space-y-3 rounded-xl border border-danger-500/40 bg-card p-4">
         <div className="flex flex-wrap items-center gap-3">
-          <span className="relative flex h-3 w-3"><span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-red-400 opacity-75" /><span className="relative inline-flex h-3 w-3 rounded-full bg-red-500" /></span>
+          <span className="relative flex h-3 w-3"><span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-danger-400 opacity-75" /><span className="relative inline-flex h-3 w-3 rounded-full bg-danger-500" /></span>
           <b className="font-mono text-2xl">{duracaoTexto((agora - gravando.inicio) / 1000)}</b>
           <span className="text-sm text-muted-foreground">{tituloFinal()}</span>
         </div>
@@ -126,8 +126,8 @@ function NovaReuniao({ leadInicial, onPronta }: { leadInicial: { id: number; nom
           Gravando{somPc ? " o microfone e o som do computador" : " o microfone"}. A cada 5 minutos um trecho é enviado e transcrito
           ({envio.enviadas} enviado(s){envio.pendentes ? `, ${envio.pendentes} enviando` : ""}). Deixe esta tela aberta e o aparelho com a tela acesa.
         </p>
-        {envio.erro && <p className="flex items-center gap-1 text-xs text-red-300"><TriangleAlert className="h-3.5 w-3.5" /> {envio.erro}</p>}
-        <Button onClick={parar} disabled={!!ocupado} className="bg-red-600 hover:bg-red-700 text-white">
+        {envio.erro && <p className="flex items-center gap-1 text-xs text-danger-300"><TriangleAlert className="h-3.5 w-3.5" /> {envio.erro}</p>}
+        <Button onClick={parar} disabled={!!ocupado} className="bg-danger-600 hover:bg-danger-700 text-white">
           {ocupado ? <Loader2 className="mr-1.5 h-4 w-4 animate-spin" /> : <Square className="mr-1.5 h-4 w-4" />} {ocupado ?? "Parar e transcrever"}
         </Button>
       </section>
@@ -138,7 +138,7 @@ function NovaReuniao({ leadInicial, onPronta }: { leadInicial: { id: number; nom
     <section className="space-y-3 rounded-xl border border-border bg-card p-4">
       <h2 className="text-sm font-semibold">Nova reunião</h2>
       {servicos && !servicos.transcricao && (
-        <p className="rounded-md bg-amber-500/10 p-2 text-xs text-amber-200">A transcrição ainda não está configurada no servidor (falta a chave da OpenAI). Avise o administrador.</p>
+        <p className="rounded-md bg-warn-500/10 p-2 text-xs text-warn-200">A transcrição ainda não está configurada no servidor (falta a chave da OpenAI). Avise o administrador.</p>
       )}
       <div className="grid gap-2 md:grid-cols-3">
         <label className="text-xs text-muted-foreground md:col-span-2">Título<input value={titulo} onChange={e => setTitulo(e.target.value)} maxLength={160} placeholder="Ex.: Visita ao Bom Jardims com a família" className={campo} /></label>
@@ -158,7 +158,7 @@ function NovaReuniao({ leadInicial, onPronta }: { leadInicial: { id: number; nom
         <span>Avisei o cliente que a reunião será gravada e transcrita (LGPD). <span className="text-xs text-muted-foreground">O áudio não fica guardado: só o texto e o resumo.</span></span>
       </label>
       <div className="flex flex-wrap gap-2">
-        <Button onClick={iniciar} disabled={!consentimento || !!ocupado} className="bg-red-600 hover:bg-red-700 text-white">
+        <Button onClick={iniciar} disabled={!consentimento || !!ocupado} className="bg-danger-600 hover:bg-danger-700 text-white">
           {ocupado ? <Loader2 className="mr-1.5 h-4 w-4 animate-spin" /> : <Mic className="mr-1.5 h-4 w-4" />} {ocupado ?? "Começar a gravar"}
         </Button>
         <input ref={arquivo} type="file" accept="audio/*,video/mp4,.ogg,.opus,.m4a,.mp3,.wav,.webm" hidden onChange={e => importar(e.target.files?.[0])} />
@@ -202,7 +202,7 @@ function Detalhe({ id }: { id: number }) {
   const atualizar = trpc.reunioes.atualizar.useMutation({ onSuccess: () => { toast.success("Reunião atualizada"); utils.reunioes.obter.invalidate({ id }); utils.reunioes.listar.invalidate(); }, onError: e => toast.error(e.message) });
   const refazer = trpc.reunioes.finalizar.useMutation({ onSuccess: () => utils.reunioes.obter.invalidate({ id }), onError: e => toast.error(e.message) });
   const excluir = trpc.reunioes.excluir.useMutation({ onSuccess: () => { toast.success("Reunião excluída"); utils.reunioes.listar.invalidate(); navigate("/reunioes"); }, onError: e => toast.error(e.message) });
-  if (error) return <p className="text-sm text-red-400">{error.message}</p>;
+  if (error) return <p className="text-sm text-danger-400">{error.message}</p>;
   if (!r) return <p className="text-sm text-muted-foreground">Carregando…</p>;
   const resumo = r.resumo as ResumoReuniao | null;
   return (
@@ -217,9 +217,9 @@ function Detalhe({ id }: { id: number }) {
         {r.leadId ? <> · cliente: <button className="text-primary hover:underline" onClick={() => navigate(`/leads/lead/${r.leadId}`)}>{r.cliente}</button></> : " · sem cliente vinculado"}
       </p>
       {!r.leadId && <div className="max-w-md text-xs text-muted-foreground">Vincular a um cliente<EscolherLead valor={null} onEscolher={l => l && atualizar.mutate({ id, leadId: l.id })} /></div>}
-      {r.status === "processando" && <p className="flex items-center gap-2 rounded-xl border border-amber-500/30 bg-amber-500/10 p-3 text-sm"><Loader2 className="h-4 w-4 animate-spin" /> Transcrevendo e resumindo… pode sair desta tela, o resumo fica salvo aqui.</p>}
+      {r.status === "processando" && <p className="flex items-center gap-2 rounded-xl border border-warn-500/30 bg-warn-500/10 p-3 text-sm"><Loader2 className="h-4 w-4 animate-spin" /> Transcrevendo e resumindo… pode sair desta tela, o resumo fica salvo aqui.</p>}
       {r.status === "gravando" && <p className="rounded-xl border border-border p-3 text-sm text-muted-foreground">Esta reunião não foi finalizada ({r.partes.length} trecho(s) recebido(s)). <button className="text-primary hover:underline" onClick={() => refazer.mutate({ id })}>Finalizar e resumir agora</button></p>}
-      {r.erro && <p className="flex items-start gap-1.5 rounded-xl border border-red-500/30 bg-red-500/10 p-3 text-sm text-red-200"><TriangleAlert className="mt-0.5 h-4 w-4 shrink-0" /><span>{r.erro} <button className="ml-1 text-primary hover:underline" disabled={refazer.isPending} onClick={() => refazer.mutate({ id })}>Tentar de novo</button></span></p>}
+      {r.erro && <p className="flex items-start gap-1.5 rounded-xl border border-danger-500/30 bg-danger-500/10 p-3 text-sm text-danger-200"><TriangleAlert className="mt-0.5 h-4 w-4 shrink-0" /><span>{r.erro} <button className="ml-1 text-primary hover:underline" disabled={refazer.isPending} onClick={() => refazer.mutate({ id })}>Tentar de novo</button></span></p>}
       {resumo && (
         <div className="space-y-3 rounded-xl border border-border bg-card p-4">
           <div className="flex items-center gap-2"><h3 className="font-semibold">Resumo</h3>
@@ -244,7 +244,7 @@ function Detalhe({ id }: { id: number }) {
         </div>
       )}
       {r.podeExcluir && (
-        <Button variant="ghost" size="sm" className="text-red-300" disabled={excluir.isPending} onClick={() => { if (confirm("Excluir esta reunião, a transcrição e o resumo? Não dá para desfazer.")) excluir.mutate({ id }); }}>
+        <Button variant="ghost" size="sm" className="text-danger-300" disabled={excluir.isPending} onClick={() => { if (confirm("Excluir esta reunião, a transcrição e o resumo? Não dá para desfazer.")) excluir.mutate({ id }); }}>
           <Trash2 className="mr-1 h-4 w-4" /> Excluir reunião
         </Button>
       )}

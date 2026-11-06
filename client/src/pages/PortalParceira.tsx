@@ -42,14 +42,14 @@ export default function PortalParceira() {
         </div>
       </header>
       <main className="mx-auto max-w-4xl space-y-4 px-4 py-5 text-sm">
-        {erro && <p className="rounded-lg border border-red-300 bg-red-50 p-4 text-red-800">{erro}</p>}
+        {erro && <p className="rounded-lg border border-danger-300 bg-danger-50 p-4 text-danger-800">{erro}</p>}
         {!d && !erro && <p className="flex items-center gap-2"><Loader2 className="h-4 w-4 animate-spin" /> Carregando…</p>}
         {d && (
           <>
             <section className="grid grid-cols-2 gap-3 sm:grid-cols-4">
               {[["Chácaras livres", String(livres)], ["Seus clientes", String(d.leads.length)], ["Vendas", String(d.vendas.filter((v: any) => v.vendido).length)],
                 ["Sua comissão prevista", brl(d.vendas.filter((v: any) => v.vendido).reduce((s: number, v: any) => s + v.comissao, 0))]].map(([r, v]) => (
-                <div key={r} className="rounded-xl border bg-white p-3" style={{ borderColor: DOURADO }}><p className="text-[11px] text-neutral-500">{r}</p><p className="font-bold" style={{ color: VERDE }}>{v}</p></div>
+                <div key={r} className="rounded-xl border bg-white p-3" style={{ borderColor: DOURADO }}><p className="text-[11px] text-neutro-500">{r}</p><p className="font-bold" style={{ color: VERDE }}>{v}</p></div>
               ))}
             </section>
             {d.contato && <p className="flex items-center gap-2 rounded-xl border bg-white p-3" style={borda}><MessageCircle className="h-4 w-4" style={{ color: VERDE }} /> Seu contato na Romatec: <b>{d.contato.nome}</b>{d.contato.telefone ? ` · ${d.contato.telefone}` : ""} · comissão de {(d.parceira.comissaoPct * 100).toLocaleString("pt-BR")}% sobre o valor da venda</p>}
@@ -63,21 +63,21 @@ export default function PortalParceira() {
                 {d.chacaras.map((c: any) => (
                   <div key={c.codigo} className="rounded-lg border bg-white p-2" style={borda}>
                     <p className="font-bold">{c.codigo}<span className="ml-1 text-xs font-normal" style={{ color: COR_SIT[c.situacao] ?? "var(--c-555555)" }}>· {ROT_SIT[c.situacao] ?? c.situacao}</span></p>
-                    <p className="text-xs text-neutral-600">{c.areaM2 ? `${c.areaM2.toLocaleString("pt-BR", { maximumFractionDigits: 0 })} m²` : ""}{c.situacao === "disponivel" ? ` · ${brl(c.preco)}` : ""}</p>
+                    <p className="text-xs text-neutro-600">{c.areaM2 ? `${c.areaM2.toLocaleString("pt-BR", { maximumFractionDigits: 0 })} m²` : ""}{c.situacao === "disponivel" ? ` · ${brl(c.preco)}` : ""}</p>
                   </div>
                 ))}
               </div>
             )}
             {aba === "divulgar" && (
               <div className="space-y-2">
-                <p className="text-neutral-600">Os links já levam o seu código: todo cliente que chegar por eles fica marcado como seu.</p>
+                <p className="text-neutro-600">Os links já levam o seu código: todo cliente que chegar por eles fica marcado como seu.</p>
                 {d.links.map((l: any) => (
                   <div key={l.url} className="flex items-center gap-2 rounded-xl border bg-white p-3" style={borda}>
-                    <span className="flex-1"><b>{l.titulo}</b><span className="block break-all text-xs text-neutral-500">{l.url}</span></span>
+                    <span className="flex-1"><b>{l.titulo}</b><span className="block break-all text-xs text-neutro-500">{l.url}</span></span>
                     <button onClick={() => copiar(l.url)} className="rounded-lg border px-3 py-1.5" style={{ borderColor: DOURADO }}><Copy className="h-4 w-4" /></button>
                   </div>
                 ))}
-                {envio && <p className="text-emerald-700">{envio.t}</p>}
+                {envio && <p className="text-ok-700">{envio.t}</p>}
               </div>
             )}
             {aba === "indicar" && (
@@ -87,7 +87,7 @@ export default function PortalParceira() {
                 <input value={f.chacara} onChange={e => setF({ ...f, chacara: e.target.value.toUpperCase().slice(0, 3) })} placeholder="Chácara de interesse (opcional, ex.: A05)" className={campo} style={borda} />
                 <textarea value={f.mensagem} onChange={e => setF({ ...f, mensagem: e.target.value })} placeholder="Observações (opcional)" rows={3} className={campo} style={borda} />
                 <label className="flex items-start gap-2"><input type="checkbox" checked={f.consentimento} onChange={e => setF({ ...f, consentimento: e.target.checked })} className="mt-1" /> O cliente autorizou ser contatado pela Romatec sobre o Bom Jardims (LGPD).</label>
-                {envio && <p className={`rounded-lg p-2 ${envio.ok ? "bg-emerald-50 text-emerald-800" : "bg-red-50 text-red-800"}`}>{envio.t}</p>}
+                {envio && <p className={`rounded-lg p-2 ${envio.ok ? "bg-ok-50 text-ok-800" : "bg-danger-50 text-danger-800"}`}>{envio.t}</p>}
                 <button disabled={ocupado || !f.consentimento} className="inline-flex items-center gap-1 rounded-lg px-4 py-2 font-semibold text-white disabled:opacity-50" style={{ background: VERDE }}>
                   {ocupado ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />} Indicar cliente
                 </button>
@@ -95,22 +95,22 @@ export default function PortalParceira() {
             )}
             {aba === "leads" && (
               <div className="divide-y rounded-xl border bg-white" style={borda}>
-                {d.leads.map((l: any) => <div key={l.id} className="flex justify-between gap-2 p-3"><span><b>{l.nome}</b>{l.chacara ? ` · ${l.chacara}` : ""}</span><span className="text-neutral-600">{l.etapa} · {br(l.em)}</span></div>)}
-                {!d.leads.length && <p className="p-3 text-neutral-600">Nenhum cliente ainda. Use os links de divulgação ou indique um cliente.</p>}
+                {d.leads.map((l: any) => <div key={l.id} className="flex justify-between gap-2 p-3"><span><b>{l.nome}</b>{l.chacara ? ` · ${l.chacara}` : ""}</span><span className="text-neutro-600">{l.etapa} · {br(l.em)}</span></div>)}
+                {!d.leads.length && <p className="p-3 text-neutro-600">Nenhum cliente ainda. Use os links de divulgação ou indique um cliente.</p>}
               </div>
             )}
             {aba === "vendas" && (
               <div className="divide-y rounded-xl border bg-white" style={borda}>
                 {d.vendas.map((v: any, i: number) => (
                   <div key={i} className="flex flex-wrap justify-between gap-2 p-3">
-                    <span>{v.vendido ? <CheckCircle2 className="mr-1 inline h-4 w-4 text-emerald-600" /> : null}<b>Chácara {v.chacara}</b>, {v.situacao}, {br(v.data)}</span>
+                    <span>{v.vendido ? <CheckCircle2 className="mr-1 inline h-4 w-4 text-ok-600" /> : null}<b>Chácara {v.chacara}</b>, {v.situacao}, {br(v.data)}</span>
                     <span>{brl(v.valor)}, comissão <b>{brl(v.comissao)}</b></span>
                   </div>
                 ))}
-                {!d.vendas.length && <p className="p-3 text-neutral-600">Nenhuma venda ainda.</p>}
+                {!d.vendas.length && <p className="p-3 text-neutro-600">Nenhuma venda ainda.</p>}
               </div>
             )}
-            <p className="text-xs text-neutral-500">Comissão prevista conforme o acordo de parceria; o pagamento segue o contrato de parceria com a Romatec Consultoria Total (CRECI/MA 4.705). Link pessoal da sua imobiliária — não compartilhe.</p>
+            <p className="text-xs text-neutro-500">Comissão prevista conforme o acordo de parceria; o pagamento segue o contrato de parceria com a Romatec Consultoria Total (CRECI/MA 4.705). Link pessoal da sua imobiliária — não compartilhe.</p>
           </>
         )}
       </main>

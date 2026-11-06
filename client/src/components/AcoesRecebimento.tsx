@@ -23,7 +23,7 @@ export default function AcoesRecebimento({ id, recebido, aoMudar }: { id: number
     <div className="space-y-2">
       <div className="flex flex-wrap gap-2">
         {!recebido && (
-          <Button size="sm" className="bg-emerald-600 text-white hover:bg-emerald-700" disabled={confirmar.isPending} onClick={() => confirmar.mutate({ id })}>
+          <Button size="sm" className="bg-ok-600 text-white hover:bg-ok-700" disabled={confirmar.isPending} onClick={() => confirmar.mutate({ id })}>
             {confirmar.isPending ? <Loader2 className="mr-1 h-4 w-4 animate-spin" /> : <CheckCircle2 className="mr-1 h-4 w-4" />} Confirmar recebimento
           </Button>
         )}
@@ -44,7 +44,7 @@ export default function AcoesRecebimento({ id, recebido, aoMudar }: { id: number
             onClick={() => desfecho && finalizar.mutate({ id, desfecho, motivo: motivo || null })}>
             {finalizar.isPending ? <Loader2 className="mr-1 h-4 w-4 animate-spin" /> : null} Finalizar atendimento
           </Button>
-          <p className="w-full text-[11px] text-muted-foreground">O lead vai para "Perdido" no funil com esse motivo. Se vender, não precisa marcar nada: ao lançar a venda ou o contrato o sistema finaliza sozinho.</p>
+          <p className="w-full text-[11px] text-muted-foreground">O lead vai para “Perdido” no funil com esse motivo. Se vender, não precisa marcar nada: ao lançar a venda ou o contrato o sistema finaliza sozinho.</p>
         </div>
       )}
     </div>
@@ -57,7 +57,7 @@ export function AvisoLeadEncaminhado({ leadId, aoMudar }: { leadId: number; aoMu
   if (!data) return null;
   const quando = data.quando ? new Date(data.quando).toLocaleString("pt-BR", { day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit" }) : "";
   return (
-    <div className={`space-y-2 rounded-xl border px-4 py-3 ${data.recebidoEm ? "border-emerald-500/40 bg-emerald-500/5" : "border-amber-500/50 bg-amber-500/10"}`}>
+    <div className={`space-y-2 rounded-xl border px-4 py-3 ${data.recebidoEm ? "border-ok-500/40 bg-ok-500/5" : "border-warn-500/50 bg-warn-500/10"}`}>
       <p className="text-sm">Lead encaminhado para você {data.por ? `por ${data.por}` : ""} em {quando}{data.recebidoEm ? " · recebimento confirmado" : ""}</p>
       {data.observacao && <p className="text-xs text-muted-foreground">{data.observacao}</p>}
       <AcoesRecebimento id={data.id} recebido={!!data.recebidoEm} aoMudar={aoMudar} />

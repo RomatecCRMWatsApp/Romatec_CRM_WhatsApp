@@ -35,7 +35,7 @@ export default function FilaEsperaLead({ leadId }: { leadId: number }) {
         {data.minhas.length > 0 ? (
           <div className="space-y-2">
             {data.minhas.map(m => (
-              <div key={m.id} className={`flex flex-wrap items-center justify-between gap-2 rounded-lg border p-2 ${m.status === "avisado" ? "border-emerald-400/50 bg-emerald-500/10" : "border-border"}`}>
+              <div key={m.id} className={`flex flex-wrap items-center justify-between gap-2 rounded-lg border p-2 ${m.status === "avisado" ? "border-ok-400/50 bg-ok-500/10" : "border-border"}`}>
                 <div>
                   <p className="font-semibold">Chácara {m.loteCodigo} · {m.posicao ? `${m.posicao}º da fila` : "—"}</p>
                   <p className="text-xs text-muted-foreground">
@@ -44,7 +44,7 @@ export default function FilaEsperaLead({ leadId }: { leadId: number }) {
                 </div>
                 <div className="flex gap-1">
                   {m.status === "avisado" && <Button size="sm" variant="outline" className="h-7 text-xs" disabled={encerrar.isPending} onClick={() => encerrar.mutate({ id: m.id, leadId, status: "convertido" })}>Reservou</Button>}
-                  <Button size="sm" variant="ghost" className="h-7 text-xs text-red-300" disabled={encerrar.isPending}
+                  <Button size="sm" variant="ghost" className="h-7 text-xs text-danger-300" disabled={encerrar.isPending}
                     onClick={() => { if (confirm(`Tirar o cliente da fila da chácara ${m.loteCodigo}?${m.status === "avisado" ? " O próximo da fila será avisado." : ""}`)) encerrar.mutate({ id: m.id, leadId, status: "desistiu" }); }}>
                     <X className="mr-1 h-3.5 w-3.5" /> Sair
                   </Button>

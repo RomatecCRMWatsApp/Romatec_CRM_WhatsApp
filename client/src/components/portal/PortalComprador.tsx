@@ -54,25 +54,25 @@ export function AbaAntecipar({ codigo, d, onPedido }: { codigo: string; d: Dados
   return (
     <section className="space-y-3 rounded-xl border bg-white p-4 text-sm" style={borda}>
       <p className="flex items-center gap-2 font-semibold" style={{ color: VERDE }}><PiggyBank className="h-5 w-5" /> Antecipar parcelas com desconto dos juros</p>
-      <p className="text-neutral-600">Escolha quantas parcelas quer quitar antes (das últimas para as primeiras). Os juros do período são descontados — direito garantido pelo Código de Defesa do Consumidor (art. 52, § 2º).</p>
+      <p className="text-neutro-600">Escolha quantas parcelas quer quitar antes (das últimas para as primeiras). Os juros do período são descontados — direito garantido pelo Código de Defesa do Consumidor (art. 52, § 2º).</p>
       <label className="block">
-        <span className="text-xs text-neutral-500">Parcelas a antecipar: <b>{qtd}</b> de {d.antecipacao.maximo}</span>
+        <span className="text-xs text-neutro-500">Parcelas a antecipar: <b>{qtd}</b> de {d.antecipacao.maximo}</span>
         <input type="range" min={1} max={d.antecipacao.maximo} value={qtd} onChange={e => setQtd(Number(e.target.value))} className="w-full" style={{ accentColor: VERDE }} />
       </label>
       {sim && (
         <div className="grid grid-cols-3 gap-2 text-center">
-          <div className="rounded-lg bg-neutral-50 p-2"><p className="text-[11px] text-neutral-500">Valor das parcelas</p><p className="font-semibold">{brl(sim.totalNominal)}</p></div>
-          <div className="rounded-lg p-2" style={{ background: "var(--c-eef6ee)" }}><p className="text-[11px] text-neutral-500">Você paga</p><p className="font-bold" style={{ color: VERDE }}>{brl(sim.totalAPagar)}</p></div>
-          <div className="rounded-lg bg-amber-50 p-2"><p className="text-[11px] text-neutral-500">Economia</p><p className="font-semibold text-amber-800">{brl(sim.economia)}</p></div>
+          <div className="rounded-lg bg-neutro-50 p-2"><p className="text-[11px] text-neutro-500">Valor das parcelas</p><p className="font-semibold">{brl(sim.totalNominal)}</p></div>
+          <div className="rounded-lg p-2" style={{ background: "var(--c-eef6ee)" }}><p className="text-[11px] text-neutro-500">Você paga</p><p className="font-bold" style={{ color: VERDE }}>{brl(sim.totalAPagar)}</p></div>
+          <div className="rounded-lg bg-warn-50 p-2"><p className="text-[11px] text-neutro-500">Economia</p><p className="font-semibold text-warn-800">{brl(sim.economia)}</p></div>
         </div>
       )}
       {sim?.parcelas?.length > 0 && (
-        <details className="text-xs text-neutral-600"><summary className="cursor-pointer">Ver as parcelas</summary>
+        <details className="text-xs text-neutro-600"><summary className="cursor-pointer">Ver as parcelas</summary>
           <ul className="mt-1 space-y-0.5">{sim.parcelas.map((p: any) => <li key={p.id}>{p.rotulo} · vence {br(p.vencimento)} · {brl(p.valor)} → {brl(p.valorPresente)}</li>)}</ul>
         </details>
       )}
-      <p className="text-[11px] text-neutral-500">Simulação de hoje. O valor final é confirmado pela administração no boleto/PIX da antecipação.</p>
-      {msg && <p className={`rounded-lg p-2 ${msg.ok ? "bg-emerald-50 text-emerald-800" : "bg-red-50 text-red-800"}`}>{msg.texto}</p>}
+      <p className="text-[11px] text-neutro-500">Simulação de hoje. O valor final é confirmado pela administração no boleto/PIX da antecipação.</p>
+      {msg && <p className={`rounded-lg p-2 ${msg.ok ? "bg-ok-50 text-ok-800" : "bg-danger-50 text-danger-800"}`}>{msg.texto}</p>}
       <button disabled={ocupado || !sim?.parcelas?.length} onClick={pedir} className="inline-flex items-center gap-1 rounded-lg px-4 py-2 font-semibold text-white disabled:opacity-50" style={{ background: VERDE }}>
         {ocupado ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />} Quero antecipar
       </button>
@@ -86,7 +86,7 @@ export function AbaDocumentos({ d }: { d: DadosPortal }) {
       {d.registro && (
         <div className="rounded-xl border bg-white p-3 text-sm" style={borda}>
           <p className="font-semibold" style={{ color: VERDE }}>Registro do contrato no cartório: {d.registro.rotulo}</p>
-          <p className="text-xs text-neutral-600">
+          <p className="text-xs text-neutro-600">
             {d.registro.protocolo ? `Protocolo ${d.registro.protocolo}${d.registro.dataProtocolo ? ` em ${br(d.registro.dataProtocolo)}` : ""}` : "Em preparação pela administração"}
             {d.registro.matricula ? ` · registrado na matrícula ${d.registro.matricula}${d.registro.registradoEm ? ` em ${br(d.registro.registradoEm)}` : ""}` : ""}
           </p>
@@ -95,8 +95,8 @@ export function AbaDocumentos({ d }: { d: DadosPortal }) {
       {d.documentos.map(x => (
         <a key={x.url} href={x.url} target="_blank" rel="noreferrer" className="flex items-center gap-3 rounded-xl border bg-white p-3 text-sm" style={borda}>
           <FileText className="h-5 w-5 shrink-0" style={{ color: VERDE }} />
-          <span className="flex-1"><b>{x.titulo}</b><span className="block text-xs text-neutral-500">{x.descricao}</span></span>
-          <ExternalLink className="h-4 w-4 text-neutral-400" />
+          <span className="flex-1"><b>{x.titulo}</b><span className="block text-xs text-neutro-500">{x.descricao}</span></span>
+          <ExternalLink className="h-4 w-4 text-neutro-400" />
         </a>
       ))}
       {d.carteirinhas.length > 0 && (
@@ -104,7 +104,7 @@ export function AbaDocumentos({ d }: { d: DadosPortal }) {
           <p className="mb-1 flex items-center gap-2 font-semibold" style={{ color: VERDE }}><IdCard className="h-5 w-5" /> Carteirinhas</p>
           {d.carteirinhas.map(c => (
             <a key={c.numero} href={c.url} target="_blank" rel="noreferrer" className="flex justify-between border-t py-1.5 text-sm first:border-t-0" style={borda}>
-              <span>{c.titular} · Nº {c.numero}</span><span className="text-xs text-neutral-500">válida até {br(c.validade)}</span>
+              <span>{c.titular} · Nº {c.numero}</span><span className="text-xs text-neutro-500">válida até {br(c.validade)}</span>
             </a>
           ))}
         </div>
@@ -121,16 +121,16 @@ export function AbaObra({ d }: { d: DadosPortal }) {
       {atual != null && (
         <div className="rounded-xl border bg-white p-4" style={borda}>
           <p className="mb-1 flex items-center gap-2 text-sm font-semibold" style={{ color: VERDE }}><HardHat className="h-5 w-5" /> Obra {atual}% concluída</p>
-          <div className="h-3 overflow-hidden rounded-full bg-neutral-200"><div className="h-full rounded-full" style={{ width: `${atual}%`, background: VERDE }} /></div>
+          <div className="h-3 overflow-hidden rounded-full bg-neutro-200"><div className="h-full rounded-full" style={{ width: `${atual}%`, background: VERDE }} /></div>
         </div>
       )}
       {d.obra.map(o => (
         <article key={o.id} className="overflow-hidden rounded-xl border bg-white text-sm" style={borda}>
           {o.foto && <img src={o.foto} alt={o.titulo} loading="lazy" className="max-h-[360px] w-full object-cover" />}
           <div className="p-3">
-            <p className="text-xs text-neutral-500">{br(o.data)}{o.percentual != null ? ` · ${o.percentual}%` : ""}</p>
+            <p className="text-xs text-neutro-500">{br(o.data)}{o.percentual != null ? ` · ${o.percentual}%` : ""}</p>
             <p className="font-semibold" style={{ color: VERDE }}>{o.titulo}</p>
-            <p className="whitespace-pre-wrap text-neutral-700">{o.texto}</p>
+            <p className="whitespace-pre-wrap text-neutro-700">{o.texto}</p>
           </div>
         </article>
       ))}
@@ -161,7 +161,7 @@ export function AbaChamados({ codigo, d, onNovo }: { codigo: string; d: DadosPor
         </select>
         <input value={assunto} onChange={e => setAssunto(e.target.value)} maxLength={160} placeholder="Assunto" className={campo} style={borda} required minLength={3} />
         <textarea value={mensagem} onChange={e => setMensagem(e.target.value)} maxLength={3000} rows={4} placeholder="Escreva sua mensagem" className={campo} style={borda} required minLength={5} />
-        {msg && <p className={`rounded-lg p-2 ${msg.ok ? "bg-emerald-50 text-emerald-800" : "bg-red-50 text-red-800"}`}>{msg.texto}</p>}
+        {msg && <p className={`rounded-lg p-2 ${msg.ok ? "bg-ok-50 text-ok-800" : "bg-danger-50 text-danger-800"}`}>{msg.texto}</p>}
         <button disabled={ocupado} className="inline-flex items-center gap-1 rounded-lg px-4 py-2 font-semibold text-white disabled:opacity-50" style={{ background: VERDE }}>
           {ocupado ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />} Enviar
         </button>
@@ -170,10 +170,10 @@ export function AbaChamados({ codigo, d, onNovo }: { codigo: string; d: DadosPor
         <article key={c.id} className="rounded-xl border bg-white p-3 text-sm" style={borda}>
           <p className="flex flex-wrap items-center justify-between gap-2">
             <b>{c.assunto}</b>
-            <span className={`rounded px-2 py-0.5 text-xs ${c.status === "aberto" ? "bg-amber-100 text-amber-900" : "bg-emerald-100 text-emerald-900"}`}>{ROTULO_STATUS[c.status] ?? c.status}</span>
+            <span className={`rounded px-2 py-0.5 text-xs ${c.status === "aberto" ? "bg-warn-100 text-warn-900" : "bg-ok-100 text-ok-900"}`}>{ROTULO_STATUS[c.status] ?? c.status}</span>
           </p>
-          <p className="text-xs text-neutral-500">{c.rotulo} · {br(c.criadoEm)}</p>
-          <p className="mt-1 whitespace-pre-wrap text-neutral-700">{c.mensagem}</p>
+          <p className="text-xs text-neutro-500">{c.rotulo} · {br(c.criadoEm)}</p>
+          <p className="mt-1 whitespace-pre-wrap text-neutro-700">{c.mensagem}</p>
           {c.resposta && (
             <div className="mt-2 rounded-lg p-2" style={{ background: "var(--c-eef6ee)" }}>
               <p className="flex items-center gap-1 text-xs font-semibold" style={{ color: VERDE }}><CheckCircle2 className="h-3.5 w-3.5" /> Resposta da administração · {br(c.respondidoEm)}</p>

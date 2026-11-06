@@ -88,7 +88,7 @@ function Camera_({ onFoto, onCancelar }: { onFoto: (src: string) => void; onCanc
   };
   return (
     <div className="space-y-3">
-      {erro ? <p className="text-sm text-red-400">{erro}</p>
+      {erro ? <p className="text-sm text-danger-400">{erro}</p>
         : <video ref={video} playsInline muted className="mx-auto aspect-square w-[280px] rounded-full bg-black object-cover [transform:scaleX(-1)]" />}
       <div className="flex justify-end gap-2">
         <Button type="button" variant="ghost" onClick={onCancelar}>Cancelar</Button>
@@ -147,7 +147,7 @@ export default function AvatarPicker({ usuarioId, fotoUrl, nome, onMudou }: { us
         <div className="flex flex-wrap gap-2">
           <Button type="button" size="sm" variant="outline" onClick={() => arquivo.current?.click()}><ImagePlus className="mr-1.5 h-3.5 w-3.5" /> Enviar foto</Button>
           <Button type="button" size="sm" variant="outline" onClick={() => (celular ? selfie.current?.click() : setEtapa("camera"))}><Camera className="mr-1.5 h-3.5 w-3.5" /> Tirar selfie</Button>
-          {url && <Button type="button" size="sm" variant="ghost" className="text-red-300" disabled={remover.isPending}
+          {url && <Button type="button" size="sm" variant="ghost" className="text-danger-300" disabled={remover.isPending}
             onClick={async () => { if (!confirm("Remover a foto de perfil?")) return; await remover.mutateAsync({ id: usuarioId }); setUrl(null); onMudou?.(null); }}>
             <Trash2 className="mr-1.5 h-3.5 w-3.5" /> Remover</Button>}
           <input ref={arquivo} type="file" accept="image/jpeg,image/png,image/webp" hidden onChange={e => { abrirArquivo(e.target.files?.[0]); e.target.value = ""; }} />

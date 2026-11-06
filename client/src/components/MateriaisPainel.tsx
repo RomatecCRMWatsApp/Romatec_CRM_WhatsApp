@@ -25,6 +25,8 @@ export const ehVideo = (m: any) => (m.mime || "").startsWith("video/") || /\.(mp
 export const tamanho = (b?: number | null) => (!b ? "" : b > 1024 * 1024 ? `${(b / 1024 / 1024).toFixed(1)} MB` : `${Math.round(b / 1024)} KB`);
 /** Miniatura leve do Cloudinary para a grade (o original fica para baixar) */
 export const miniatura = (url: string) => url.includes("/image/upload/") ? url.replace("/image/upload/", "/image/upload/c_limit,w_480,q_auto,f_auto/") : url;
+export { capaDoVideo } from "@/lib/capaVideo";
+import { capaDoVideo } from "@/lib/capaVideo";
 export const nomeArquivo = (m: any) => {
   const ext = (m.url.split("?")[0].match(/\.[a-z0-9]+$/i)?.[0]) || (ehVideo(m) ? ".mp4" : ehImagem(m) ? ".png" : ".pdf");
   return `${m.titulo.replace(/[^\wÀ-ſ -]+/g, "").trim().replace(/\s+/g, "_") || "material"}${ext}`;
@@ -144,12 +146,12 @@ function CardMaterial({ m, onMudou, grupo, cartao, escritorio, linhasPdf, assina
   };
 
   return (
-    <div className={`rounded-lg border bg-card overflow-hidden flex flex-col ${m.liberado ? "border-border" : "border-red-500/40"}`}>
+    <div className={`rounded-lg border bg-card overflow-hidden flex flex-col ${m.liberado ? "border-border" : "border-danger-500/40"}`}>
       <a href={m.url} target="_blank" rel="noreferrer" className="block bg-black/40 aspect-[4/5] relative">
         {ehImagem(m) ? (
           <img src={miniatura(m.url)} alt={m.titulo} loading="lazy" className="w-full h-full object-contain" />
         ) : ehVideo(m) ? (
-          <video src={m.url} preload="metadata" muted className="w-full h-full object-contain" />
+          <video src={m.url} poster={capaDoVideo(m.url, m.empreendimentoSlug)} preload="metadata" muted className="w-full h-full object-contain" />
         ) : (
           <div className="w-full h-full flex flex-col items-center justify-center text-muted-foreground gap-2">
             <FileText className="h-10 w-10" /><span className="text-xs">PDF</span>
@@ -157,15 +159,15 @@ function CardMaterial({ m, onMudou, grupo, cartao, escritorio, linhasPdf, assina
         )}
         {ehVideo(m) && <Video className="absolute top-2 left-2 h-4 w-4 text-white drop-shadow" />}
         {!m.liberado && (
-          <span className="absolute top-2 right-2 rounded bg-red-600 px-1.5 py-0.5 text-[10px] font-bold text-white flex items-center gap-1">
+          <span className="absolute top-2 right-2 rounded bg-danger-600 px-1.5 py-0.5 text-[10px] font-bold text-white flex items-center gap-1">
             <Lock className="h-3 w-3" /> NÃO DIVULGAR
           </span>
         )}
       </a>
       <div className="p-2 space-y-1.5 flex-1 flex flex-col">
         <p className="text-sm font-medium text-foreground leading-tight line-clamp-2" title={m.titulo}>{m.titulo}</p>
-        {pronto && <Button size="sm" className="h-7 bg-emerald-600 px-2 text-xs text-white hover:bg-emerald-700" onClick={enviarPronto}><Share2 className="mr-1 h-3.5 w-3.5" /> Enviar agora</Button>}
-        {ocupado && <p className="flex items-center gap-1 text-[11px] text-emerald-300"><Loader2 className="h-3 w-3 animate-spin" /> {ocupado}</p>}
+        {pronto && <Button size="sm" className="h-7 bg-ok-600 px-2 text-xs text-white hover:bg-ok-700" onClick={enviarPronto}><Share2 className="mr-1 h-3.5 w-3.5" /> Enviar agora</Button>}
+        {ocupado && <p className="flex items-center gap-1 text-[11px] text-ok-300"><Loader2 className="h-3 w-3 animate-spin" /> {ocupado}</p>}
         <div className="flex items-center gap-2">
           <select
             value={m.tipo}
@@ -180,7 +182,7 @@ function CardMaterial({ m, onMudou, grupo, cartao, escritorio, linhasPdf, assina
           <label className="flex items-center gap-1 text-[11px] text-muted-foreground">
             Formato
             <select value={formato} onChange={e => escolherFormato(e.target.value as FormatoDownload)} title={ROTULO_FORMATO[formato].dica}
-              className="h-7 flex-1 min-w-0 rounded border border-emerald-500/40 bg-secondary/30 px-1 text-[11px] text-foreground">
+              className="h-7 flex-1 min-w-0 rounded border border-ok-500/40 bg-secondary/30 px-1 text-[11px] text-foreground">
               {FORMATOS_DOWNLOAD.map(f => <option key={f} value={f}>{ROTULO_FORMATO[f].rotulo}</option>)}
             </select>
           </label>
@@ -215,7 +217,7 @@ function CardMaterial({ m, onMudou, grupo, cartao, escritorio, linhasPdf, assina
             {m.liberado ? <EyeOff className="h-3.5 w-3.5" /> : <Eye className="h-3.5 w-3.5" />}
           </Button>
           <Button
-            size="sm" variant="ghost" className="h-7 px-2 text-red-400 hover:text-red-300" title="Remover do CRM"
+            size="sm" variant="ghost" className="h-7 px-2 text-danger-400 hover:text-danger-300" title="Remover do CRM"
             onClick={() => { if (confirm(`Remover "${m.titulo}" do CRM?`)) excluir.mutate({ id: m.id }); }}
           >
             <Trash2 className="h-3.5 w-3.5" />
@@ -321,7 +323,7 @@ export default function MateriaisPainel({ propertyId, empreendimentoSlug }: Dest
           </label>
         )}
         <input ref={input} type="file" multiple accept={aba ? ABA_ARQUIVO[aba].aceita : "image/*,video/mp4,video/webm,video/quicktime,application/pdf"} className="hidden" onChange={e => enviar(e.target.files)} />
-        <Button type="button" onClick={() => input.current?.click()} disabled={!!enviando || (!fixo && !destino)} className="bg-emerald-600 hover:bg-emerald-700 text-white">
+        <Button type="button" onClick={() => input.current?.click()} disabled={!!enviando || (!fixo && !destino)} className="bg-ok-600 hover:bg-ok-700 text-white">
           <Upload className="h-4 w-4 mr-1.5" /> {aba ? ABA_ARQUIVO[aba].botao : "Enviar artes, vídeos ou PDF"}
         </Button>
         {!fixo && (data?.grupos.length ?? 0) > 1 && (
@@ -337,7 +339,7 @@ export default function MateriaisPainel({ propertyId, empreendimentoSlug }: Dest
       <div role="tablist" aria-label="Tipo de arquivo" className="grid grid-cols-4 gap-1 rounded-lg border border-border bg-secondary/20 p-1">
         {([["", "Todos"], ...CATEGORIAS_ARQUIVO.map(c => [c, ABA_ARQUIVO[c].rotulo])] as ["" | CategoriaArquivo, string][]).map(([c, rotulo]) => (
           <button key={c || "todos"} type="button" role="tab" aria-selected={aba === c} onClick={() => setAba(c)}
-            className={`whitespace-nowrap rounded-md px-1 py-1.5 text-xs sm:text-sm font-medium transition-colors ${aba === c ? "bg-emerald-600 text-white" : "text-muted-foreground hover:text-foreground"}`}>
+            className={`whitespace-nowrap rounded-md px-1 py-1.5 text-xs sm:text-sm font-medium transition-colors ${aba === c ? "bg-ok-600 text-white" : "text-muted-foreground hover:text-foreground"}`}>
             {c === "video" && <Video className="hidden sm:inline h-3.5 w-3.5 mr-1 -mt-0.5" />}
             {c === "pdf" && <FileText className="hidden sm:inline h-3.5 w-3.5 mr-1 -mt-0.5" />}
             {rotulo} <span className="opacity-70">({contagem(c)})</span>
@@ -346,8 +348,8 @@ export default function MateriaisPainel({ propertyId, empreendimentoSlug }: Dest
       </div>
       {(empreendimentoSlug || destino.startsWith("e:")) && <LinkAgendamento slug={empreendimentoSlug || destino.slice(2)} />}
       <LinkInstagram />
-      {enviando && <p className="text-xs text-emerald-300">{enviando}</p>}
-      <p className="rounded-md border border-emerald-500/30 bg-emerald-500/5 px-3 py-2 text-xs text-emerald-200">
+      {enviando && <p className="text-xs text-ok-300">{enviando}</p>}
+      <p className="rounded-md border border-ok-500/30 bg-ok-500/5 px-3 py-2 text-xs text-ok-200">
         Tudo o que você baixa ou envia daqui sai <b>só com o seu contato</b>: o rodapé e o cartão final do escritório saem da peça e entram a sua faixa com os dados do <b>Meu carimbo</b> (nome, {cartao.creci ?? "CRECI"}, WhatsApp, Instagram, e-mail e QR do seu link) e, no vídeo, o seu cartão final. Escolha o <b>formato</b> em cada peça: Feed 4:5, Stories/Reels 9:16, Quadrado 1:1, WhatsApp (leve) ou Original. Vídeo leva alguns segundos para montar.
         {!cartao.creci && " Cadastre o seu CRECI em Meu cadastro para ele aparecer."}
       </p>
@@ -355,7 +357,7 @@ export default function MateriaisPainel({ propertyId, empreendimentoSlug }: Dest
         Imagem até {limites?.imagemMB ?? 10} MB, PDF até {limites?.pdfMB ?? 10} MB, vídeo até {limites?.videoMB ?? 100} MB (enviado em partes; deixe a tela aberta até 100%). Peças com "condições", "preço" ou "tabela" no nome entram bloqueadas. Os arquivos ficam com link público para poder compartilhar; não envie documentos internos.
       </p>
 
-      {isLoading && <p className="text-sm text-muted-foreground">Carregando materiais...</p>}
+      {isLoading && <p className="text-sm text-muted-foreground">Carregando materiais…</p>}
       {!isLoading && grupos.length === 0 && <p className="text-sm text-muted-foreground">{aba ? `Nenhum material em ${ABA_ARQUIVO[aba].rotulo} ainda.` : "Nenhum material ainda."}</p>}
       {grupos.map(g => (
         <section key={g.chave} className="space-y-2">

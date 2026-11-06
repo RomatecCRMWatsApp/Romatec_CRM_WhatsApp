@@ -31,7 +31,7 @@ export default function RegistroCartorio({ contratoId, statusContrato }: { contr
           {assinado ? <a href={`/api/contratos/${contratoId}/kit-registro.zip`}><Download className="mr-1 h-3.5 w-3.5" /> Kit para protocolo (ZIP)</a> : <span><Download className="mr-1 h-3.5 w-3.5" /> Kit para protocolo (ZIP)</span>}
         </Button>
       </div>
-      {atrasado && <p className="flex items-center gap-2 rounded-md bg-amber-500/10 p-2 text-amber-200"><AlertTriangle className="h-4 w-4" /> Prazo de referência do registro ({br(data!.prazo)}) já passou — cobre o cartório.</p>}
+      {atrasado && <p className="flex items-center gap-2 rounded-md bg-warn-500/10 p-2 text-warn-200"><AlertTriangle className="h-4 w-4" /> Prazo de referência do registro ({br(data!.prazo)}) já passou — cobre o cartório.</p>}
       {isLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : (
         <>
           <div className="grid gap-2 md:grid-cols-3">
@@ -63,7 +63,7 @@ export default function RegistroCartorio({ contratoId, statusContrato }: { contr
         </>
       )}
       <div className="flex flex-wrap gap-2 border-t border-border pt-2 text-xs">
-        {LINKS_CARTORIO.map(l => <a key={l.url} href={l.url} target="_blank" rel="noreferrer" title={l.descricao} className="inline-flex items-center gap-1 text-emerald-300 hover:underline"><ExternalLink className="h-3.5 w-3.5" /> {l.titulo}</a>)}
+        {LINKS_CARTORIO.map(l => <a key={l.url} href={l.url} target="_blank" rel="noreferrer" title={l.descricao} className="inline-flex items-center gap-1 text-ok-300 hover:underline"><ExternalLink className="h-3.5 w-3.5" /> {l.titulo}</a>)}
       </div>
       <p className="text-[11px] text-muted-foreground">O protocolo é feito no e-Protocolo do ONR com certificado ICP-Brasil (ou no balcão). A integração automática por API depende do credenciamento da Romatec como integradora no ONR.</p>
     </section>

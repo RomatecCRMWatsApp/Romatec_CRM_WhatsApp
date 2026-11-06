@@ -44,7 +44,7 @@ export default function VerComo() {
             <input value={busca} onChange={e => setBusca(e.target.value)} placeholder="Nome ou CRECI" className="h-9 bg-transparent text-sm outline-none" />
           </label>
         </div>
-        {error && <p className="text-sm text-red-400">{error.message}</p>}
+        {error && <p className="text-sm text-danger-400">{error.message}</p>}
         {isLoading && <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />}
         {data && !lista.length && <p className="rounded-xl border border-dashed border-border p-4 text-sm text-muted-foreground">Ninguém ativo nesta lista.</p>}
         <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">

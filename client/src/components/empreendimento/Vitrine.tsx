@@ -22,7 +22,7 @@ export function Logo({ slug, nome, className }: { slug: string; nome: string; cl
   const [falhou, setFalhou] = useState(false);
   const v = VISUAL[slug];
   if (!v || falhou) {
-    return <div className={`flex items-center justify-center rounded-2xl bg-gradient-to-br from-amber-500/80 to-emerald-700/80 text-2xl font-bold text-white [font-family:var(--rt-font-title)] ${className ?? ""}`}>{iniciais(nome)}</div>;
+    return <div className={`flex items-center justify-center rounded-2xl bg-gradient-to-br from-warn-500/80 to-ok-700/80 text-2xl font-bold text-white [font-family:var(--rt-font-title)] ${className ?? ""}`}>{iniciais(nome)}</div>;
   }
   return <img src={v.logo} alt={`Logo ${nome}`} onError={() => setFalhou(true)} className={`object-contain drop-shadow-[0_8px_24px_color-mix(in_srgb,_var(--c-000000)_60%,_transparent)] ${className ?? ""}`} />;
 }
@@ -43,8 +43,8 @@ export function CabecalhoEmpreendimento({ slug, nome, municipio, uf, disponiveis
           {nomeUsuario && <p className="text-sm text-white/70">{saudacaoDoDia()}, <b className="text-white">{nomeUsuario}</b></p>}
           <h1 className="text-2xl font-bold leading-tight text-[var(--rt-gold-light)] sm:text-3xl [font-family:var(--rt-font-title)]">{nome}</h1>
           <div className="mt-2 flex flex-wrap items-center justify-center gap-2 text-xs sm:justify-start">
-            {(municipio || uf) && <span className="inline-flex items-center gap-1 rounded-full bg-white/10 px-2.5 py-1 text-white/80 backdrop-blur"><MapPin className="h-3 w-3" />{[municipio, uf].filter(Boolean).join("/")}</span>}
-            {disponiveis != null && <span className="inline-flex items-center gap-1 rounded-full bg-emerald-500/25 px-2.5 py-1 font-semibold text-emerald-200 backdrop-blur">{disponiveis} chácaras disponíveis</span>}
+            {(municipio || uf) && <span className="inline-flex items-center gap-1 rounded-full bg-black/50 px-2.5 py-1 text-white/80"><MapPin className="h-3 w-3" />{[municipio, uf].filter(Boolean).join("/")}</span>}
+            {disponiveis != null && <span className="inline-flex items-center gap-1 rounded-full bg-ok-500/25 px-2.5 py-1 font-semibold text-ok-200 backdrop-blur">{disponiveis} chácaras disponíveis</span>}
           </div>
         </div>
         {acao}
@@ -89,7 +89,7 @@ export function MapaVendas({ slug, ajuda, acimaDoPainel, atualizarCadaMs }: {
     if (sel && window.innerWidth < 1024) painelRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
   }, [sel]);
 
-  if (error) return <p className="rounded-2xl border border-red-500/40 bg-red-500/10 p-4 text-sm text-red-300">{error.message}</p>;
+  if (error) return <p className="rounded-2xl border border-danger-500/40 bg-danger-500/10 p-4 text-sm text-danger-300">{error.message}</p>;
   if (isLoading || !data) return <div className="h-[420px] animate-pulse rounded-2xl border border-border bg-card" />;
   return (
     <div className="grid items-start gap-4 lg:grid-cols-[1fr_340px] xl:grid-cols-[1fr_360px]">

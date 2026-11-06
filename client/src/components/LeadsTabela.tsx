@@ -66,7 +66,7 @@ export default function LeadsTabela({ situacao, search }: { situacao: Situacao; 
       </div>
 
       {isLoading ? (
-        <div style={{ textAlign: "center", padding: "40px", color: "var(--c-3a6a45)" }}>Carregando leads...</div>
+        <div style={{ textAlign: "center", padding: "40px", color: "var(--c-3a6a45)" }}>Carregando leads…</div>
       ) : !linhas.length ? (
         <div className="ld-card" style={{ textAlign: "center", padding: "40px" }}>
           <Users size={32} style={{ color: "var(--c-1a3520)", margin: "0 auto 12px" }} />

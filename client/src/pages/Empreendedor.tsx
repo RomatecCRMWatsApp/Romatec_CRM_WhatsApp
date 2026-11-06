@@ -12,6 +12,7 @@ import { FotoUsuario } from "@/components/AppShell";
 import { SinoNovidades } from "@/components/sistema/Novidades";
 import { APP_VERSION, AppFooter, RomatecAppIcon } from "@/brand";
 import { baixarBlob, ehImagem, ehVideo, miniatura, nomeArquivo } from "@/components/MateriaisPainel";
+import { capaDoVideo } from "@/lib/capaVideo";
 import { ROTULO_TIPO_MATERIAL, type TipoMaterial } from "@shared/materiais";
 import { ROTULO_SITUACAO, type SituacaoLote } from "@shared/lotes";
 import { CabecalhoEmpreendimento, MapaVendas } from "@/components/empreendimento/Vitrine";
@@ -28,12 +29,12 @@ const dataBr = (d: string | Date | null | undefined) => {
   return Number.isFinite(t.getTime()) ? t.toLocaleDateString("pt-BR", { timeZone: "America/Fortaleza" }) : "—";
 };
 const SITUACAO_CONTRATO: Record<string, [string, string]> = {
-  EM_DIA: ["Em dia", "bg-emerald-500/15 text-emerald-300"], EM_ATRASO: ["Em atraso", "bg-red-500/15 text-red-300"],
-  QUITADO: ["Quitado", "bg-sky-500/15 text-sky-300"], AGUARDANDO_ASSINATURA: ["Aguardando assinatura", "bg-secondary text-muted-foreground"],
+  EM_DIA: ["Em dia", "bg-ok-500/15 text-ok-300"], EM_ATRASO: ["Em atraso", "bg-danger-500/15 text-danger-300"],
+  QUITADO: ["Quitado", "bg-info-500/15 text-info-300"], AGUARDANDO_ASSINATURA: ["Aguardando assinatura", "bg-secondary text-muted-foreground"],
 };
 const STATUS_BOLETO: Record<string, [string, string]> = {
-  emitida: ["Emitido", "bg-amber-500/15 text-amber-300"], paga: ["Pago", "bg-emerald-500/15 text-emerald-300"],
-  vencida: ["Vencido", "bg-red-500/15 text-red-300"], estornada: ["Estornado", "bg-secondary text-muted-foreground"],
+  emitida: ["Emitido", "bg-warn-500/15 text-warn-300"], paga: ["Pago", "bg-ok-500/15 text-ok-300"],
+  vencida: ["Vencido", "bg-danger-500/15 text-danger-300"], estornada: ["Estornado", "bg-secondary text-muted-foreground"],
 };
 const SECOES = [["mapa", "Mapa", MapIcon], ["vendas", "Vendas", TrendingUp], ["financeiro", "Financeiro e boletos", Receipt], ["leads", "Leads", BarChart3], ["carteirinhas", "Carteirinhas", IdCard], ["tabelas", "Tabelas", Table2], ["artes", "Artes", Images]] as const;
 
@@ -93,7 +94,7 @@ function Arte({ m }: { m: any }) {
     <div className="rounded-lg border border-border bg-card overflow-hidden flex flex-col">
       <a href={m.url} target="_blank" rel="noreferrer" className="block bg-black/40 aspect-[4/5] relative">
         {ehImagem(m) ? <img src={miniatura(m.url)} alt={m.titulo} loading="lazy" className="w-full h-full object-contain" />
-          : ehVideo(m) ? <video src={m.url} preload="metadata" muted className="w-full h-full object-contain" />
+          : ehVideo(m) ? <video src={m.url} poster={capaDoVideo(m.url, m.empreendimentoSlug)} preload="metadata" muted className="w-full h-full object-contain" />
           : <div className="w-full h-full flex flex-col items-center justify-center text-muted-foreground gap-2"><FileText className="h-10 w-10" /><span className="text-xs">PDF</span></div>}
         {ehVideo(m) && <Video className="absolute top-2 left-2 h-4 w-4 text-white drop-shadow" />}
       </a>
@@ -101,7 +102,7 @@ function Arte({ m }: { m: any }) {
         <p className="text-sm font-medium text-foreground leading-tight line-clamp-2">{m.titulo}</p>
         <p className="text-[10px] text-muted-foreground">{ROTULO_TIPO_MATERIAL[m.tipo as TipoMaterial] || m.tipo}</p>
         <div className="flex flex-wrap gap-1 mt-auto pt-1">
-          <Button size="sm" className="h-7 px-2 text-xs bg-emerald-600 hover:bg-emerald-700 text-white" onClick={enviar} disabled={ocupado}><Share2 className="h-3.5 w-3.5 mr-1" />Enviar</Button>
+          <Button size="sm" className="h-7 px-2 text-xs bg-ok-600 hover:bg-ok-700 text-white" onClick={enviar} disabled={ocupado}><Share2 className="h-3.5 w-3.5 mr-1" />Enviar</Button>
           <Button size="sm" variant="outline" className="h-7 px-2 text-xs" onClick={baixar} disabled={ocupado}><Download className="h-3.5 w-3.5 mr-1" />Baixar</Button>
           <Button size="sm" variant="ghost" className="h-7 px-2" title="Copiar link" onClick={async () => { try { await navigator.clipboard.writeText(m.url); toast.success("Link copiado"); } catch { toast.error("Não foi possível copiar"); } }}><Copy className="h-3.5 w-3.5" /></Button>
         </div>
@@ -134,7 +135,7 @@ export default function Empreendedor() {
   return (
     <div className="min-h-screen bg-background">
       {/* Barra do topo */}
-      <div className="sticky top-0 z-30 border-b border-[var(--rt-border)] bg-black/85 backdrop-blur">
+      <div className="sticky top-0 z-30 border-b border-[var(--rt-border)] bg-black">
         <div className="mx-auto flex max-w-[1500px] items-center gap-3 px-3 py-2 sm:px-4 md:px-6">
           {/* Administrador/secretária olhando a Visão do empreendedor: volta para o CRM */}
           {!ehEmpreendedor && (
@@ -163,7 +164,7 @@ export default function Empreendedor() {
       </div>
 
       <div className="mx-auto max-w-[1500px] space-y-4 px-3 pb-10 pt-3 sm:px-4 md:px-6 md:pt-4">
-        {error && <p className="text-sm text-red-400">{error.message}</p>}
+        {error && <p className="text-sm text-danger-400">{error.message}</p>}
 
         {/* 1. Vitrine: logo, portal e o mapa sempre atualizado */}
         <CabecalhoEmpreendimento slug={slug} nome={nome} municipio={emp?.municipio} uf={emp?.uf} disponiveis={det?.resumo?.disponivel ?? null}
@@ -187,8 +188,8 @@ export default function Empreendedor() {
             <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
               <Numero titulo="Vendas" valor={vendas.resumo.quantidade} />
               <Numero titulo="Valor vendido" valor={brl(vendas.resumo.valorVendido)} cor="text-[var(--rt-gold-light)]" />
-              <Numero titulo="Disponíveis" valor={det?.resumo?.disponivel ?? "—"} cor="text-emerald-300" />
-              <Numero titulo="Reservadas / com sinal" valor={det ? (det.resumo.reservado ?? 0) + (det.resumo.entrada ?? 0) : "—"} cor="text-amber-300" />
+              <Numero titulo="Disponíveis" valor={det?.resumo?.disponivel ?? "—"} cor="text-ok-300" />
+              <Numero titulo="Reservadas / com sinal" valor={det ? (det.resumo.reservado ?? 0) + (det.resumo.entrada ?? 0) : "—"} cor="text-warn-300" />
             </div>
             <div className="overflow-x-auto rounded-xl border border-border bg-card">
               <table className="w-full min-w-[640px] text-sm">
@@ -221,9 +222,9 @@ export default function Empreendedor() {
           <>
             <div className="grid grid-cols-2 gap-3 lg:grid-cols-5">
               <Numero titulo="Contratado" valor={brl(fin.totais.contratado)} sub={`${fin.totais.contratos} contrato(s)`} />
-              <Numero titulo="Recebido" valor={brl(fin.totais.recebido)} cor="text-emerald-300" />
+              <Numero titulo="Recebido" valor={brl(fin.totais.recebido)} cor="text-ok-300" />
               <Numero titulo="A receber" valor={brl(fin.totais.aVencer)} />
-              <Numero titulo="Vencido" valor={brl(fin.totais.vencido)} cor={fin.totais.vencido > 0 ? "text-red-300" : undefined} sub={`${fin.totais.emAtraso} contrato(s) em atraso`} />
+              <Numero titulo="Vencido" valor={brl(fin.totais.vencido)} cor={fin.totais.vencido > 0 ? "text-danger-300" : undefined} sub={`${fin.totais.emAtraso} contrato(s) em atraso`} />
               <Numero titulo="Quitados" valor={fin.totais.quitados} />
             </div>
             <div className="overflow-x-auto rounded-xl border border-border bg-card">
@@ -242,7 +243,7 @@ export default function Empreendedor() {
                         <td className="px-3 py-2"><span className={`rounded-full px-2 py-0.5 text-[11px] ${cor}`}>{r}{c.diasAtraso ? ` · ${c.diasAtraso} d` : ""}</span></td>
                         <td className="px-3 py-2 text-xs">{c.parcelasPagas}/{c.parcelasTotal} · {c.pctPago.toLocaleString("pt-BR")}%</td>
                         <td className="px-3 py-2 tabular-nums">{brl(c.recebido)}</td>
-                        <td className={`px-3 py-2 tabular-nums ${c.vencido > 0 ? "text-red-300" : ""}`}>{brl(c.vencido)}</td>
+                        <td className={`px-3 py-2 tabular-nums ${c.vencido > 0 ? "text-danger-300" : ""}`}>{brl(c.vencido)}</td>
                         <td className="px-3 py-2 text-xs">{dataBr(c.proximoVencimento)}</td>
                       </tr>
                     );
@@ -321,7 +322,7 @@ export default function Empreendedor() {
                   {p.porTipo.map(t => (
                     <div key={t.tipo}>
                       <div className="flex justify-between text-sm"><span>{ROTULO_TIPO[t.tipo] || t.rotulo}</span><span className="font-semibold">{t.leads} · {pct(t.leads, p.total.leads)}</span></div>
-                      <div className="h-2 rounded bg-secondary/40 overflow-hidden"><div className="h-full bg-emerald-500" style={{ width: pct(t.leads, p.total.leads) === "—" ? "0%" : pct(t.leads, p.total.leads) }} /></div>
+                      <div className="h-2 rounded bg-secondary/40 overflow-hidden"><div className="h-full bg-ok-500" style={{ width: pct(t.leads, p.total.leads) === "—" ? "0%" : pct(t.leads, p.total.leads) }} /></div>
                     </div>
                   ))}
                   <div className="pt-2 space-y-1">
@@ -334,7 +335,7 @@ export default function Empreendedor() {
                 <CardHeader className="pb-2"><CardTitle className="text-base">Chácaras mais procuradas</CardTitle></CardHeader>
                 <CardContent>
                   {p.lotesMaisProcurados.length === 0 ? <p className="text-sm text-muted-foreground">Ainda sem interesse registrado por chácara.</p> : (
-                    <div className="flex flex-wrap gap-1">{p.lotesMaisProcurados.map(l => <span key={l.codigo} className="text-xs px-2 py-0.5 rounded bg-emerald-500/15 text-emerald-300">{l.codigo} · {l.leads}</span>)}</div>
+                    <div className="flex flex-wrap gap-1">{p.lotesMaisProcurados.map(l => <span key={l.codigo} className="text-xs px-2 py-0.5 rounded bg-ok-500/15 text-ok-300">{l.codigo} · {l.leads}</span>)}</div>
                   )}
                 </CardContent>
               </Card>
@@ -352,7 +353,7 @@ export default function Empreendedor() {
                           <tr key={i} className="border-b border-border/50">
                             <td className="px-2 py-2"><p className="font-semibold text-foreground">{c.campanhaId ? `#${c.codigo}` : c.nome}</p><p className="text-[10px] text-muted-foreground">{c.campanhaId ? c.nome : ""}</p></td>
                             <td className="px-2 py-2 text-right font-semibold">{c.leads}</td>
-                            <td className="px-2 py-2 text-right text-orange-300">{c.quentes}</td>
+                            <td className="px-2 py-2 text-right text-heat-300">{c.quentes}</td>
                             <td className="px-2 py-2 text-right">{c.visitas}</td>
                             <td className="px-2 py-2 text-right">{c.cliques + c.scans}</td>
                           </tr>

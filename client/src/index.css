@@ -2,9 +2,12 @@
 /* Hallmark · pre-emit critique: P4 H4 E4 S5 R3 V3 · weakest: R, the legacy glow and glass cards stay because the brand uses them; only their tokens, motion and states were fixed */
 /* Hallmark · waive 7b · surface: absolute stamped, gold and green text pass contrast on it · the Romatec CRM black ground is the approved brand (brand/tokens.css) */
 /* Hallmark · waive 37 · Cinzel titles, Manrope body, Arial wordmark, JetBrains Mono version tag · the Romatec CRM brand book fixes these four faces */
+/* Hallmark · dismissed 28a · each flagged image is a thumbnail in a list or grid of materiais, fotos and imóveis, never the page hero; lazy keeps the phone data plan light */
+/* Hallmark · dismissed 49 · the flagged labels sit in narrow phone cards at 360px; nowrap would push them past the card, so they wrap on purpose */
 @import "tailwindcss";
 @import "tw-animate-css";
 @import "./styles/tokens.css";
+@import "./styles/palette.css";
 
 @custom-variant dark (&:is(.dark *));
 

@@ -28,7 +28,7 @@ export function PacoteBase() {
         </div>
       </div>
       <p className="text-xs text-muted-foreground">
-        Todo {ROTULO_PERFIL[perfil].toLowerCase()} herda estes módulos. Ajuste individual fica em "Permissões" de cada um.
+        Todo {ROTULO_PERFIL[perfil].toLowerCase()} herda estes módulos. Ajuste individual fica em “Permissões” de cada um.
         {perfil === "corretor" ? " O corretor só vê os leads em que é o responsável." : " O secretário vê todos os leads, empreendimentos e imóveis."}
       </p>
       {!data ? <p className="text-xs text-muted-foreground">Carregando…</p> : (
@@ -71,7 +71,7 @@ export default function PermissoesCorretor({ usuarioId }: { usuarioId: number })
   const modulo = trpc.permissoes.definirModulo.useMutation({ onSuccess: ok, onError: e => toast.error(e.message) });
   const acesso = trpc.permissoes.definirAcesso.useMutation({ onSuccess: ok, onError: e => toast.error(e.message) });
 
-  if (error) return <p className="text-xs text-red-400">{error.message}</p>;
+  if (error) return <p className="text-xs text-danger-400">{error.message}</p>;
   if (isLoading || !data) return <p className="text-xs text-muted-foreground">Carregando permissões…</p>;
   const imoveis = data.imoveis.filter(i => !buscaImovel.trim() || i.nome.toLowerCase().includes(buscaImovel.trim().toLowerCase()));
 

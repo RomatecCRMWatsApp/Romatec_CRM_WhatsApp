@@ -6,10 +6,10 @@ import PageHeader from "@/components/PageHeader";
 import { Button } from "@/components/ui/button";
 
 const COR_URGENCIA: Record<string, string> = {
-  agora: "border-red-400/60 bg-red-500/10", hoje: "border-amber-400/50 bg-amber-500/5", depois: "border-border bg-card",
+  agora: "border-danger-400/60 bg-danger-500/10", hoje: "border-warn-400/50 bg-warn-500/5", depois: "border-border bg-card",
 };
 const ROTULO_URGENCIA: Record<string, string> = { agora: "Agora", hoje: "Hoje", depois: "Quando der" };
-const COR_CLASSE: Record<string, string> = { quente: "text-red-300", morno: "text-amber-300", frio: "text-sky-300" };
+const COR_CLASSE: Record<string, string> = { quente: "text-danger-300", morno: "text-warn-300", frio: "text-info-300" };
 
 /**
  * Leads › Atender agora: a lista de quem atender primeiro, com o motivo (server crm.atenderAgora). Abrir o WhatsApp por
@@ -30,12 +30,12 @@ export default function AtenderAgora() {
       <div className="mx-auto max-w-[1100px] space-y-3 px-4 pb-8 md:px-6">
         <div className="flex flex-wrap items-center gap-2 text-sm">
           {isLoading && <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />}
-          {data && <span className="text-muted-foreground">{agora ? <b className="text-red-300">{agora} para atender agora</b> : "Nada urgente agora"} · {data.total} na lista</span>}
+          {data && <span className="text-muted-foreground">{agora ? <b className="text-danger-300">{agora} para atender agora</b> : "Nada urgente agora"} · {data.total} na lista</span>}
         </div>
-        {error && <p className="text-sm text-red-400">{error.message}</p>}
+        {error && <p className="text-sm text-danger-400">{error.message}</p>}
         {data && !itens.length && (
           <p className="flex items-center gap-2 rounded-xl border border-dashed border-border p-4 text-sm text-muted-foreground">
-            <CheckCircle2 className="h-4 w-4 text-emerald-400" /> Tudo em dia: nenhum lead esperando atendimento.
+            <CheckCircle2 className="h-4 w-4 text-ok-400" /> Tudo em dia: nenhum lead esperando atendimento.
           </p>
         )}
         {itens.map((l, i) => {

@@ -11,8 +11,8 @@ const brl = (n: number) => n.toLocaleString("pt-BR", { style: "currency", curren
 const dataBr = (d: unknown) => (d ? new Date(d as any).toLocaleDateString("pt-BR", { timeZone: "America/Fortaleza" }) : "—");
 const campo = "h-9 w-full rounded-md border border-border bg-background px-2 text-sm";
 const COR: Record<string, string> = {
-  TRIAL: "bg-sky-500/15 text-sky-300", ATIVA: "bg-emerald-500/15 text-emerald-300", INADIMPLENTE: "bg-amber-500/15 text-amber-300",
-  BLOQUEADO: "bg-red-500/15 text-red-300", CANCELADA: "bg-secondary text-muted-foreground", PENDENTE_CONVERSAO: "bg-amber-500/15 text-amber-300",
+  TRIAL: "bg-info-500/15 text-info-300", ATIVA: "bg-ok-500/15 text-ok-300", INADIMPLENTE: "bg-warn-500/15 text-warn-300",
+  BLOQUEADO: "bg-danger-500/15 text-danger-300", CANCELADA: "bg-secondary text-muted-foreground", PENDENTE_CONVERSAO: "bg-warn-500/15 text-warn-300",
 };
 const pedir = (msg: string) => { const m = window.prompt(msg); return m && m.trim().length >= 3 ? m.trim() : null; };
 
@@ -27,7 +27,7 @@ function VisaoGeral() {
   // Sem as métricas, os quadros do Mercado Pago e do AvalieImob continuam disponíveis (diagnóstico e "Conferir pagamentos")
   if (!m) return (
     <div className="space-y-4">
-      {error ? <p className="text-sm text-red-300">Não foi possível carregar o painel: {error.message}</p> : <p className="text-sm text-muted-foreground">Carregando…</p>}
+      {error ? <p className="text-sm text-danger-300">Não foi possível carregar o painel: {error.message}</p> : <p className="text-sm text-muted-foreground">Carregando…</p>}
       <MercadoPago />
       <Avalieimob />
     </div>
@@ -39,8 +39,8 @@ function VisaoGeral() {
   ];
   return (
     <div className="space-y-4">
-      <section className={`rounded-xl border p-4 ${m.licenciamentoAtivo ? "border-emerald-500/40" : "border-amber-500/40"} bg-card`}>
-        <h2 className="flex items-center gap-2 text-sm font-semibold"><Power className="h-4 w-4" /> Licenciamento: {m.licenciamentoAtivo ? <span className="text-emerald-300">LIGADO</span> : <span className="text-amber-300">DESLIGADO</span>}</h2>
+      <section className={`rounded-xl border p-4 ${m.licenciamentoAtivo ? "border-ok-500/40" : "border-warn-500/40"} bg-card`}>
+        <h2 className="flex items-center gap-2 text-sm font-semibold"><Power className="h-4 w-4" /> Licenciamento: {m.licenciamentoAtivo ? <span className="text-ok-300">LIGADO</span> : <span className="text-warn-300">DESLIGADO</span>}</h2>
         {m.licenciamentoAtivo ? (
           <div className="mt-2 flex flex-wrap items-center gap-3 text-sm">
             <span className="text-muted-foreground">Corretores e empreendedores precisam de assinatura (trial de 7 dias para convites novos{m.cortesiaAte ? `; cortesia até ${m.cortesiaAte.split("-").reverse().join("/")}` : ""}).</span>
@@ -98,10 +98,10 @@ function MercadoPago() {
     onError: e => toast.error(e.message),
   });
   if (!data) return null;
-  const ok = (v: boolean) => (v ? <span className="text-emerald-300">configurado</span> : <span className="text-red-300">faltando</span>);
+  const ok = (v: boolean) => (v ? <span className="text-ok-300">configurado</span> : <span className="text-danger-300">faltando</span>);
   return (
     <section className="space-y-2 rounded-xl border border-border bg-card p-4 text-sm">
-      <h2 className="text-sm font-semibold">Mercado Pago — modo {data.modo === "producao" ? <span className="text-emerald-300">PRODUÇÃO (cobrança real)</span> : <span className="text-amber-300">TESTE (sem dinheiro real)</span>}</h2>
+      <h2 className="text-sm font-semibold">Mercado Pago — modo {data.modo === "producao" ? <span className="text-ok-300">PRODUÇÃO (cobrança real)</span> : <span className="text-warn-300">TESTE (sem dinheiro real)</span>}</h2>
       <p className="text-xs text-muted-foreground">Credencial de teste: {ok(data.teste)}, produção: {ok(data.producao)}, segredo do webhook: {ok(data.webhook)}</p>
       {data.modo === "teste" ? (
         <Button size="sm" variant="outline" disabled={!data.producao || definir.isPending} onClick={() => { if (confirm("Ligar a cobrança REAL no Mercado Pago? Só com a autorização do José.")) definir.mutate({ modo: "producao" }); }}>Ligar produção (cobrança real)</Button>
@@ -116,7 +116,7 @@ function MercadoPago() {
         <Button size="sm" variant="outline" disabled={opMp.trim().length < 5 || conferirUm.isPending} onClick={() => conferirUm.mutate({ paymentId: opMp })}>
           {conferirUm.isPending ? <Loader2 className="mr-1 h-4 w-4 animate-spin" /> : null} Conferir este pagamento
         </Button>
-        <Button size="sm" variant="outline" className="border-amber-500/50 text-amber-200" disabled={opMp.trim().length < 5 || corrigir.isPending}
+        <Button size="sm" variant="outline" className="border-warn-500/50 text-warn-200" disabled={opMp.trim().length < 5 || corrigir.isPending}
           onClick={() => { if (confirm("Este pagamento foi contado em dobro com um lançamento à mão? O vencimento volta um ciclo e o assinante recebe a mensagem de correção.")) corrigir.mutate({ paymentId: opMp }); }}>
           {corrigir.isPending ? <Loader2 className="mr-1 h-4 w-4 animate-spin" /> : null} Corrigir pagamento em dobro
         </Button>
@@ -126,7 +126,7 @@ function MercadoPago() {
         <div className="mt-1 space-y-0.5">
           {data.eventos.map(e => (
             <p key={e.id} className="font-mono">
-              {new Date(e.recebidoEm as any).toLocaleString("pt-BR", { timeZone: "America/Fortaleza" })} · {e.eventoId} · {e.processado ? <span className="text-emerald-300">ok</span> : <span className="text-amber-300">pendente ({e.tentativas})</span>}{e.erro ? <span className="text-red-300"> · {e.erro}</span> : null}
+              {new Date(e.recebidoEm as any).toLocaleString("pt-BR", { timeZone: "America/Fortaleza" })} · {e.eventoId} · {e.processado ? <span className="text-ok-300">ok</span> : <span className="text-warn-300">pendente ({e.tentativas})</span>}{e.erro ? <span className="text-danger-300"> · {e.erro}</span> : null}
             </p>
           ))}
           {!data.eventos.length && <p className="text-muted-foreground">Nenhum aviso recebido ainda.</p>}
@@ -191,7 +191,7 @@ function Assinaturas() {
                     }}>Registrar pagamento</Button>
                     {a.status === "BLOQUEADO" || a.status === "PENDENTE_CONVERSAO"
                       ? <Button size="sm" variant="outline" className="h-7 text-xs" onClick={() => { const motivo = pedir("Motivo do desbloqueio:"); if (motivo) acao.mutate({ id: a.id, tipo: "desbloquear", motivo, ate: window.prompt("Liberado até (AAAA-MM-DD, vazio = sem data):") || null }); }}>Desbloquear</Button>
-                      : <Button size="sm" variant="ghost" className="h-7 text-xs text-red-300" onClick={() => { const motivo = pedir("Motivo do bloqueio:"); if (motivo) acao.mutate({ id: a.id, tipo: "bloquear", motivo }); }}>Bloquear</Button>}
+                      : <Button size="sm" variant="ghost" className="h-7 text-xs text-danger-300" onClick={() => { const motivo = pedir("Motivo do bloqueio:"); if (motivo) acao.mutate({ id: a.id, tipo: "bloquear", motivo }); }}>Bloquear</Button>}
                     <Button size="sm" variant="ghost" className="h-7 text-xs" onClick={() => { const v = window.prompt("Preço negociado por ciclo (vazio = tabela):", a.precoOverride != null ? String(a.precoOverride) : ""); if (v === null) return; const motivo = pedir("Motivo:"); if (motivo) acao.mutate({ id: a.id, tipo: "override", motivo, preco: v.trim() ? Number(v.replace(",", ".")) : null }); }}>Preço</Button>
                     <Button size="sm" variant="ghost" className="h-7 text-xs" onClick={() => { const v = window.prompt("Dias de tolerância após o vencimento:", String(a.diasTolerancia)); if (!v) return; const motivo = pedir("Motivo:"); if (motivo) acao.mutate({ id: a.id, tipo: "tolerancia", motivo, dias: Number(v) }); }}>Tolerância</Button>
                   </div>
@@ -268,8 +268,8 @@ function PlanosECupons() {
               <b className="font-mono">{x.codigo}</b>
               <span className="text-xs text-muted-foreground">{x.tipo === "PERCENTUAL" ? `${x.valor}%` : x.tipo === "VALOR_FIXO" ? `- ${brl(x.valor)}` : Object.entries(x.precosFixos ?? {}).map(([k, v]) => `${k}: ${brl(v)}`).join(" · ")}
                 {x.planoAlvo ? ` · ${x.planoAlvo}` : ""} · {x.usosRealizados}/{x.limiteUsos} usos · {x.duracaoCiclos} ciclo(s){x.validade ? ` · até ${dataBr(x.validade)}` : ""}</span>
-              <span className={`text-xs ${x.status === "ativo" ? "text-emerald-300" : "text-muted-foreground"}`}>{x.status}</span>
-              {x.status === "ativo" && <button className="ml-auto text-xs text-red-300 hover:underline" onClick={() => { if (confirm(`Cancelar o cupom ${x.codigo}?`)) cancelar.mutate({ id: x.id }); }}>cancelar</button>}
+              <span className={`text-xs ${x.status === "ativo" ? "text-ok-300" : "text-muted-foreground"}`}>{x.status}</span>
+              {x.status === "ativo" && <button className="ml-auto text-xs text-danger-300 hover:underline" onClick={() => { if (confirm(`Cancelar o cupom ${x.codigo}?`)) cancelar.mutate({ id: x.id }); }}>cancelar</button>}
             </p>
           ))}
         </div>
@@ -279,8 +279,8 @@ function PlanosECupons() {
 }
 
 const COR_NFSE: Record<string, string> = {
-  PENDENTE: "bg-amber-500/15 text-amber-300", ENVIADA: "bg-sky-500/15 text-sky-300", EMITIDA: "bg-emerald-500/15 text-emerald-300",
-  REJEITADA: "bg-red-500/15 text-red-300", CANCELADA: "bg-secondary text-muted-foreground",
+  PENDENTE: "bg-warn-500/15 text-warn-300", ENVIADA: "bg-info-500/15 text-info-300", EMITIDA: "bg-ok-500/15 text-ok-300",
+  REJEITADA: "bg-danger-500/15 text-danger-300", CANCELADA: "bg-secondary text-muted-foreground",
 };
 const AMBIENTE_NFSE: Record<string, string> = { simulation: "simulação", development: "homologação", production: "PRODUÇÃO" };
 
@@ -300,23 +300,23 @@ function PainelSpedy() {
   });
   if (isLoading || !s) return null;
   return (
-    <section className={`space-y-1 rounded-xl border p-3 text-sm ${s.conectada ? "border-emerald-500/30 bg-emerald-500/5" : "border-border bg-card"}`}>
+    <section className={`space-y-1 rounded-xl border p-3 text-sm ${s.conectada ? "border-ok-500/30 bg-ok-500/5" : "border-border bg-card"}`}>
       <h3 className="font-semibold">
-        Spedy (emissão automática) — {!s.configurada ? <span className="text-amber-300">aguardando configuração</span>
-          : s.conectada ? <span className="text-emerald-300">conectada · {s.ambiente === "producao" ? "PRODUÇÃO" : "sandbox"}</span> : <span className="text-red-300">sem conexão · {s.ambiente === "producao" ? "PRODUÇÃO" : "sandbox"}</span>}
+        Spedy (emissão automática) — {!s.configurada ? <span className="text-warn-300">aguardando configuração</span>
+          : s.conectada ? <span className="text-ok-300">conectada · {s.ambiente === "producao" ? "PRODUÇÃO" : "sandbox"}</span> : <span className="text-danger-300">sem conexão · {s.ambiente === "producao" ? "PRODUÇÃO" : "sandbox"}</span>}
       </h3>
       {!s.configurada && <p className="text-xs text-muted-foreground">{s.erro}. Configure as variáveis no Railway: SPEDY_API_KEY, SPEDY_AMBIENTE (sandbox ou producao) e SPEDY_EMPRESA_ID.</p>}
       {s.configurada && (
         <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-muted-foreground">
           {s.empresaId && <span>ID da empresa: <button type="button" className="font-mono text-foreground underline decoration-dotted" title="Copiar"
             onClick={() => { navigator.clipboard?.writeText(s.empresaId!).then(() => toast.success("ID copiado: cole em SPEDY_EMPRESA_ID no Railway"), () => window.prompt("Copie:", s.empresaId!)); }}>{s.empresaId}</button></span>}
-          <span>NFS-e na empresa: <b className={s.ambienteNfse === "production" ? "text-red-300" : "text-foreground"}>{s.ambienteNfse ? AMBIENTE_NFSE[s.ambienteNfse] ?? s.ambienteNfse : "—"}</b></span>
+          <span>NFS-e na empresa: <b className={s.ambienteNfse === "production" ? "text-danger-300" : "text-foreground"}>{s.ambienteNfse ? AMBIENTE_NFSE[s.ambienteNfse] ?? s.ambienteNfse : "—"}</b></span>
           <span>Alíquota de ISS: <b className="text-foreground">{s.issAliquota != null ? `${s.issAliquota}%` : "a da empresa na Spedy"}</b></span>
-          <span>Webhook: {s.webhook ? <b className={s.webhook.enabled ? "text-emerald-300" : "text-amber-300"}>{s.webhook.enabled ? "ativo" : "desabilitado"}</b> : <b className="text-amber-300">não cadastrado</b>}</span>
+          <span>Webhook: {s.webhook ? <b className={s.webhook.enabled ? "text-ok-300" : "text-warn-300"}>{s.webhook.enabled ? "ativo" : "desabilitado"}</b> : <b className="text-warn-300">não cadastrado</b>}</span>
           {(!s.webhook || !s.webhook.enabled) && s.conectada && <Button size="sm" variant="outline" className="h-7 text-xs" disabled={webhook.isPending} onClick={() => webhook.mutate()}>{s.webhook ? "Reativar webhook" : "Cadastrar webhook"}</Button>}
         </div>
       )}
-      {s.falha && <p className="text-xs text-red-300">{s.falha}</p>}
+      {s.falha && <p className="text-xs text-danger-300">{s.falha}</p>}
     </section>
   );
 }
@@ -371,8 +371,8 @@ function Nfse() {
               <tr key={n.id} className="border-b border-border/50 align-top last:border-0">
                 <td className="p-2">
                   <b>{n.tomadorNome}</b>
-                  <p className="text-[11px] text-muted-foreground">{n.tomadorDoc ? `CPF/CNPJ ${n.tomadorDoc}` : <span className="text-amber-300">sem CPF</span>}{n.tomadorEmail ? ` · ${n.tomadorEmail}` : ""}</p>
-                  <p className="text-[11px] text-muted-foreground">{n.tomadorEndereco ?? <span className="text-amber-300">sem endereço</span>}</p>
+                  <p className="text-[11px] text-muted-foreground">{n.tomadorDoc ? `CPF/CNPJ ${n.tomadorDoc}` : <span className="text-warn-300">sem CPF</span>}{n.tomadorEmail ? ` · ${n.tomadorEmail}` : ""}</p>
+                  <p className="text-[11px] text-muted-foreground">{n.tomadorEndereco ?? <span className="text-warn-300">sem endereço</span>}</p>
                 </td>
                 <td className="p-2 max-w-[360px]"><p className="text-xs">{n.discriminacao}</p><p className="text-[11px] text-muted-foreground">item {n.itemServico} · pago em {dataBr(n.pagoEm)}{n.metodo ? ` · ${n.metodo.toLowerCase()}` : ""}{n.modo === "teste" ? " · TESTE" : ""}</p></td>
                 <td className="p-2 whitespace-nowrap">{brl(n.valor)}</td>
@@ -380,14 +380,14 @@ function Nfse() {
                   <span className={`inline-block whitespace-nowrap rounded-full px-2 py-0.5 text-[11px] ${COR_NFSE[n.status] ?? ""}`}>{n.status === "ENVIADA" ? "enviada · aguardando" : n.status.toLowerCase()}</span>
                   {n.provedor === "spedy" && <p className="mt-0.5 text-[11px] text-muted-foreground">Spedy{n.ambiente ? ` · ${AMBIENTE_NFSE[n.ambiente] ?? n.ambiente}` : ""}{n.externoStatus ? ` · ${STATUS_SPEDY[n.externoStatus] ?? n.externoStatus}` : ""}</p>}
                   {n.numero && <p className="mt-0.5 text-[11px]">nº {n.numero}{n.codigoVerificacao ? ` · ${n.codigoVerificacao}` : ""}</p>}
-                  {n.mensagem && <p className={`mt-0.5 max-w-[260px] text-[11px] ${n.status === "REJEITADA" ? "text-red-300" : "text-muted-foreground"}`}>{n.mensagem}</p>}
+                  {n.mensagem && <p className={`mt-0.5 max-w-[260px] text-[11px] ${n.status === "REJEITADA" ? "text-danger-300" : "text-muted-foreground"}`}>{n.mensagem}</p>}
                   {(n.pdfUrl || n.xmlUrl) && (
                     <p className="mt-0.5 flex gap-2 text-[11px]">
                       {n.pdfUrl && <a href={n.pdfUrl} target="_blank" rel="noreferrer" className="text-primary hover:underline">PDF</a>}
                       {n.xmlUrl && <a href={n.xmlUrl} target="_blank" rel="noreferrer" className="text-primary hover:underline">XML</a>}
                     </p>
                   )}
-                  {n.observacao && <p className={`mt-0.5 text-[11px] ${n.observacao.startsWith("ESTORNO") ? "text-red-300" : "text-muted-foreground"}`}>{n.observacao}</p>}
+                  {n.observacao && <p className={`mt-0.5 text-[11px] ${n.observacao.startsWith("ESTORNO") ? "text-danger-300" : "text-muted-foreground"}`}>{n.observacao}</p>}
                 </td>
                 <td className="p-2">
                   {spedy?.configurada && spedy.ambiente === "producao" && n.status === "EMITIDA" && n.provedor === "spedy" && n.ambiente && n.ambiente !== "production" && (
@@ -407,7 +407,7 @@ function Nfse() {
                       <Button size="sm" variant="outline" className="h-7 text-xs" onClick={() => copiar(n.discriminacao)}>Copiar descrição</Button>
                       {n.faltaCadastro && <Button size="sm" variant="ghost" className="h-7 text-xs" onClick={() => tomador.mutate({ id: n.id })}>Puxar cadastro atual</Button>}
                       {n.status === "PENDENTE" && <Button size="sm" variant="ghost" className="h-7 text-xs" onClick={() => { const numero = window.prompt("Número da NFS-e emitida no portal da prefeitura:"); if (!numero?.trim()) return; emitida.mutate({ id: n.id, numero, codigoVerificacao: window.prompt("Código de verificação (opcional):") || null }); }}>Marcar emitida</Button>}
-                      <Button size="sm" variant="ghost" className="h-7 text-xs text-red-300" onClick={() => { const motivo = pedir("Motivo do cancelamento:"); if (motivo) cancelar.mutate({ id: n.id, motivo }); }}>Cancelar</Button>
+                      <Button size="sm" variant="ghost" className="h-7 text-xs text-danger-300" onClick={() => { const motivo = pedir("Motivo do cancelamento:"); if (motivo) cancelar.mutate({ id: n.id, motivo }); }}>Cancelar</Button>
                     </div>
                   )}
                   {n.status === "ENVIADA" && n.provedor === "spedy" && (
@@ -430,13 +430,13 @@ function Avalieimob() {
   if (!data) return null;
   return (
     <section className="space-y-1 rounded-xl border border-border bg-card p-4 text-sm">
-      <h2 className="text-sm font-semibold">AvalieImob (incluído no Corretor Pro) — {data.configurado ? <span className="text-emerald-300">integração ligada</span> : <span className="text-amber-300">aguardando configuração</span>}</h2>
+      <h2 className="text-sm font-semibold">AvalieImob (incluído no Corretor Pro) — {data.configurado ? <span className="text-ok-300">integração ligada</span> : <span className="text-warn-300">aguardando configuração</span>}</h2>
       <p className="text-xs text-muted-foreground">
         {data.configurado
           ? `${data.ativos} assinatura(s) com acesso liberado em ${data.url}. O acesso é ativado e suspenso sozinho conforme a assinatura.`
           : "Falta o segredo compartilhado nas variáveis do Railway: AVALIEIMOB_INTEGRACAO_SECRET aqui e ROMATEC_CRM_INTEGRACAO_SECRET no AvalieImob (o mesmo valor)."}
       </p>
-      {data.erros.length > 0 && <details className="text-xs"><summary className="cursor-pointer text-amber-300">Falhas recentes ({data.erros.length})</summary>{data.erros.map((e, i) => <p key={i} className="font-mono">{e}</p>)}</details>}
+      {data.erros.length > 0 && <details className="text-xs"><summary className="cursor-pointer text-warn-300">Falhas recentes ({data.erros.length})</summary>{data.erros.map((e, i) => <p key={i} className="font-mono">{e}</p>)}</details>}
     </section>
   );
 }

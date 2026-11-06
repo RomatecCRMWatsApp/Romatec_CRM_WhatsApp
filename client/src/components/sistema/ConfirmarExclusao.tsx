@@ -14,7 +14,7 @@ export default function ConfirmarExclusao({ alvo, onFechar, pendente, onConfirma
     <Dialog open={!!alvo} onOpenChange={v => !v && !pendente && onFechar()}>
       <DialogContent className="max-w-md">
         <DialogHeader>
-          <DialogTitle className="flex items-center gap-2 text-red-300"><Trash2 className="h-5 w-5" /> {alvo?.titulo}</DialogTitle>
+          <DialogTitle className="flex items-center gap-2 text-danger-300"><Trash2 className="h-5 w-5" /> {alvo?.titulo}</DialogTitle>
           <DialogDescription asChild><div className="text-sm text-muted-foreground">{alvo?.descricao}</div></DialogDescription>
         </DialogHeader>
         <form className="space-y-3" onSubmit={e => { e.preventDefault(); if (senha && !pendente) onConfirmar(senha); }}>

@@ -109,7 +109,7 @@ export function PainelCarteirinhas({ portal = false }: { portal?: boolean }) {
           <Button disabled={gerando || !visiveis.some(imprimiveis)} onClick={() => abrirPdf(visiveis, "Todas da lista")}>
             <FileDown className="mr-1 h-4 w-4" /> PDF de todos ({visiveis.filter(imprimiveis).length}){rascunho ? " · rascunho" : ""}
           </Button>
-          {rascunho && <p className="w-full text-[11px] text-amber-300">Seus PDFs saem com a tarja "RASCUNHO · SEM VALIDADE". As carteirinhas oficiais são impressas pelo escritório e pela empreendedora.</p>}
+          {rascunho && <p className="w-full text-[11px] text-warn-300">Seus PDFs saem com a tarja “RASCUNHO · SEM VALIDADE”. As carteirinhas oficiais são impressas pelo escritório e pela empreendedora.</p>}
         </div>
         <div className="flex flex-wrap gap-1.5">
           {FILTROS.map(([f, r]) => (
@@ -120,7 +120,7 @@ export function PainelCarteirinhas({ portal = false }: { portal?: boolean }) {
           ))}
         </div>
 
-        {error && <p className="text-sm text-red-400">{error.message}</p>}
+        {error && <p className="text-sm text-danger-400">{error.message}</p>}
         {isLoading && <p className="text-sm text-muted-foreground">Carregando…</p>}
         {data && !visiveis.length && <p className="rounded-xl border border-dashed border-border p-4 text-sm text-muted-foreground">Nenhuma carteirinha {filtro === "todos" ? "ainda — elas aparecem quando há contratos" : "neste filtro"}.</p>}
 
@@ -148,8 +148,8 @@ export function PainelCarteirinhas({ portal = false }: { portal?: boolean }) {
                     <td className="p-2"><b>{l.nome}</b><p className="text-[11px] text-muted-foreground">{l.vinculo}{l.carteira ? ` · Nº ${l.carteira.numero}` : ""}</p></td>
                     <td className="p-2 text-xs">
                       {!l.liberado ? <span className="text-muted-foreground">Contrato ainda não assinado</span>
-                        : l.carteira ? <span className="flex items-center gap-1 text-emerald-300"><CheckCircle2 className="h-3.5 w-3.5" /> Emitida · válida até {dataBR(l.carteira.validade)}</span>
-                        : l.pendencias.length ? <span className="flex items-center gap-1 text-amber-300"><TriangleAlert className="h-3.5 w-3.5" /> Falta: {l.pendencias.join(", ")}</span>
+                        : l.carteira ? <span className="flex items-center gap-1 text-ok-300"><CheckCircle2 className="h-3.5 w-3.5" /> Emitida · válida até {dataBR(l.carteira.validade)}</span>
+                        : l.pendencias.length ? <span className="flex items-center gap-1 text-warn-300"><TriangleAlert className="h-3.5 w-3.5" /> Falta: {l.pendencias.join(", ")}</span>
                         : <span className="text-muted-foreground">Pronta (sai na próxima impressão)</span>}
                     </td>
                     <td className="p-2">

@@ -89,13 +89,13 @@ function Arquivos({ slug, arquivos, admin, onMudou }: { slug: string; arquivos: 
         <div className="rounded-xl border border-primary/40 bg-card p-4 space-y-2 text-sm">
           <p className="font-semibold">Importar lotes do DXF</p>
           {previa.isLoading && <p className="text-muted-foreground">Lendo o desenho…</p>}
-          {previa.error && <p className="text-red-400">{previa.error.message}</p>}
+          {previa.error && <p className="text-danger-400">{previa.error.message}</p>}
           {previa.data && (
             <>
               <p>{previa.data.total} lotes no desenho, {previa.data.novos.length} novo(s), {previa.data.alterados.length} com área diferente, {previa.data.ausentes.length} cadastrado(s) que não estão no desenho</p>
               {previa.data.novos.length > 0 && <p className="text-xs">Novos (entram bloqueados para revisão): {previa.data.novos.map(n => `${n.codigo} (${m2(n.areaM2)} m²)`).join(", ")}</p>}
               {previa.data.alterados.length > 0 && <p className="text-xs">Área alterada: {previa.data.alterados.map(a => `${a.codigo} ${m2(a.antes)} → ${m2(a.depois)}`).join("; ")}</p>}
-              {previa.data.ausentes.length > 0 && <p className="text-xs text-amber-300">Não estão no desenho (ficam como estão): {previa.data.ausentes.join(", ")}</p>}
+              {previa.data.ausentes.length > 0 && <p className="text-xs text-warn-300">Não estão no desenho (ficam como estão): {previa.data.ausentes.join(", ")}</p>}
               {previa.data.perimetro && <p className="text-xs">Perímetro: {m2(previa.data.perimetro.areaM2)} m², {previa.data.perimetro.perimetroM.toLocaleString("pt-BR")} m</p>}
               {previa.data.ruas.length > 0 && <p className="text-xs">Ruas: {previa.data.ruas.join(", ")}</p>}
               {previa.data.avisos.map((a, i) => <p key={i} className="text-xs text-muted-foreground">{a}</p>)}
@@ -118,7 +118,7 @@ function Arquivos({ slug, arquivos, admin, onMudou }: { slug: string; arquivos: 
             <span className="text-xs text-muted-foreground">{tamanho(a.tamanhoBytes)}</span>
             <a href={`/api/empreendimentos/arquivos/${a.id}?baixar=1`} className="text-muted-foreground hover:text-foreground" aria-label="Baixar"><Download className="h-4 w-4" /></a>
             {admin && /\.dxf$/i.test(a.nome) && <Button size="sm" variant="outline" className="h-7 text-xs" onClick={() => setDxf(a.id)}>Importar lotes</Button>}
-            {admin && <button onClick={() => confirm(`Excluir ${a.nome}?`) && excluir.mutate({ id: a.id })} className="text-muted-foreground hover:text-red-400" aria-label="Excluir"><Trash2 className="h-4 w-4" /></button>}
+            {admin && <button onClick={() => confirm(`Excluir ${a.nome}?`) && excluir.mutate({ id: a.id })} className="text-muted-foreground hover:text-danger-400" aria-label="Excluir"><Trash2 className="h-4 w-4" /></button>}
           </div>
         ))}
       </div>
@@ -161,7 +161,7 @@ export default function Empreendimento() {
     setTimeout(() => URL.revokeObjectURL(a.href), 2000);
   };
 
-  if (error) return <p className="p-6 text-sm text-red-400">{error.message}</p>;
+  if (error) return <p className="p-6 text-sm text-danger-400">{error.message}</p>;
   if (isLoading || !data) return <p className="p-6 text-sm text-muted-foreground">Carregando…</p>;
   const emp = data.empreendimento;
   const vendidos = VENDIDOS.reduce((s, k) => s + data.resumo[k], 0);
@@ -171,7 +171,7 @@ export default function Empreendimento() {
       <PageHeader icone={MapIcon} titulo={emp.nome} subtitulo={[emp.municipio, emp.uf].filter(Boolean).join("/") + ` · ${lotes.length} lotes`} />
       <div className="px-4 md:px-6 pb-8 max-w-[1500px] mx-auto space-y-4">
         {!emp.registroMatricula && (
-          <div className="flex items-start gap-2 rounded-xl border border-amber-500/40 bg-amber-500/10 p-3 text-sm text-amber-200">
+          <div className="flex items-start gap-2 rounded-xl border border-warn-500/40 bg-warn-500/10 p-3 text-sm text-warn-200">
             <AlertTriangle className="h-4 w-4 mt-0.5 shrink-0" />
             <p><b>Empreendimento sem registro no cartório informado.</b> A Licença de Operação é ambiental e não substitui o registro do parcelamento (Lei 6.766/79). Reservas, entradas e vendas registradas aqui são controle interno sob sua responsabilidade.</p>
           </div>
@@ -261,7 +261,7 @@ export default function Empreendimento() {
           <TabsContent value="documentos" className="mt-3 space-y-3">
             <div className="rounded-xl border border-border bg-card p-4 space-y-2 text-sm">
               <p className="font-semibold">Mapa, anexo e memoriais descritivos</p>
-              <p className="text-xs text-muted-foreground">Gerados a partir do desenho importado (DXF). O memorial sai como <b>rascunho</b> para conferência e assinatura do responsável técnico. Use "Imprimir → Salvar como PDF".</p>
+              <p className="text-xs text-muted-foreground">Gerados a partir do desenho importado (DXF). O memorial sai como <b>rascunho</b> para conferência e assinatura do responsável técnico. Use “Imprimir → Salvar como PDF”.</p>
               <div className="flex flex-wrap gap-2">
                 <Button onClick={() => navigate(`/empreendimentos/${slug}/documentos?filtro=disponiveis`)}><Printer className="mr-1.5 h-4 w-4" /> Lotes disponíveis</Button>
                 <Button variant="outline" onClick={() => navigate(`/empreendimentos/${slug}/documentos?filtro=todos`)}><Printer className="mr-1.5 h-4 w-4" /> Todos os lotes</Button>

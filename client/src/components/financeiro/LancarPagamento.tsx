@@ -119,7 +119,7 @@ export default function LancarPagamento() {
           {ler.isPending ? <Loader2 className="mr-1 h-4 w-4 animate-spin" /> : <ScanSearch className="mr-1 h-4 w-4" />} Ler recibo
         </Button>
       </div>
-      {aviso && <p className="flex items-center gap-1.5 rounded-lg border border-amber-500/40 bg-amber-500/10 p-2 text-xs text-amber-100"><TriangleAlert className="h-3.5 w-3.5" /> {aviso}</p>}
+      {aviso && <p className="flex items-center gap-1.5 rounded-lg border border-warn-500/40 bg-warn-500/10 p-2 text-xs text-warn-100"><TriangleAlert className="h-3.5 w-3.5" /> {aviso}</p>}
       <div className="grid gap-3 sm:grid-cols-3">
         <label className={rotulo}>Forma<select value={f.forma} onChange={set("forma")} className={campo}>{FORMAS.map(([v, r]) => <option key={v} value={v}>{r}</option>)}</select></label>
         <label className={rotulo}>Valor (R$)<input value={f.valor} onChange={set("valor")} inputMode="decimal" placeholder="0,00" className={campo} /></label>
@@ -152,7 +152,7 @@ export default function LancarPagamento() {
             onRemover={() => setEscolhidos(x => x.filter(e => e.id !== c.id))} />
         ))}
         {marcadas.size > 0 && (
-          <p className={`text-xs ${soma > valor + 0.009 ? "text-red-400" : "text-muted-foreground"}`}>
+          <p className={`text-xs ${soma > valor + 0.009 ? "text-danger-400" : "text-muted-foreground"}`}>
             Parcelas marcadas: <b>{brl(soma)}</b> de {brl(valor)} pagos{valor - soma > 0.009 ? ` · sobra ${brl(valor - soma)} (fica anotada)` : ""}
           </p>
         )}

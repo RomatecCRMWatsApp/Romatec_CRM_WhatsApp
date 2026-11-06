@@ -26,9 +26,9 @@ export default function MeuCadastro() {
           <button onClick={() => navigate("/empreendedor")} className="flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground"><ArrowLeft className="h-4 w-4" /> Voltar ao painel</button>
         )}
         {!!pendencias?.length && (
-          <div className="flex items-start gap-2 rounded-lg border border-amber-500/40 bg-amber-500/10 p-3 text-sm text-amber-100">
-            <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0 text-amber-400" />
-            <div><b>Pendências:</b> {pendencias.join(" · ")}. Envie ou atualize em "Credenciais profissionais".</div>
+          <div className="flex items-start gap-2 rounded-lg border border-warn-500/40 bg-warn-500/10 p-3 text-sm text-warn-100">
+            <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0 text-warn-400" />
+            <div><b>Pendências:</b> {pendencias.join(" · ")}. Envie ou atualize em “Credenciais profissionais”.</div>
           </div>
         )}
         <div className="rounded-xl border border-border bg-card p-4">

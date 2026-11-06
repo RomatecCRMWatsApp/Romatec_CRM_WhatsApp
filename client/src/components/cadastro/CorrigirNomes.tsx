@@ -37,8 +37,8 @@ export default function CorrigirNomes({ onAplicado }: { onAplicado: () => void }
   const ocupado = zapi.isPending || vcf.isPending;
   return (
     <>
-      <div className="mb-4 flex flex-wrap items-center gap-2 rounded-xl border border-amber-500/30 bg-amber-500/10 p-3 text-sm">
-        <AlertTriangle className="h-4 w-4 shrink-0 text-amber-300" />
+      <div className="mb-4 flex flex-wrap items-center gap-2 rounded-xl border border-warn-500/30 bg-warn-500/10 p-3 text-sm">
+        <AlertTriangle className="h-4 w-4 shrink-0 text-warn-300" />
         <span className="flex-1">{sit.corrompidos} contato(s) com o nome estragado ("?" no lugar de acentos e emojis) — vieram da carga inicial dos contatos.</span>
         <Button size="sm" variant="outline" onClick={() => setAberto(true)}>Corrigir nomes</Button>
       </div>
@@ -72,7 +72,7 @@ export default function CorrigirNomes({ onAplicado }: { onAplicado: () => void }
                   <button key={k} onClick={() => setFiltro(k)} className={`rounded-full border px-3 py-1 text-xs ${filtro === k ? "border-primary bg-primary/15 text-primary" : "border-border text-muted-foreground"}`}>{r} ({n(k)})</button>
                 ))}
               </div>
-              {filtro === "diferente" && <p className="text-xs text-amber-300">O nome salvo na agenda é outro — confira antes de marcar.</p>}
+              {filtro === "diferente" && <p className="text-xs text-warn-300">O nome salvo na agenda é outro — confira antes de marcar.</p>}
               {filtro === "grafia" && <p className="text-xs text-muted-foreground">Números fora da agenda: o nome foi reconstruído pelo que restou. Acento de palavra conhecida vem marcado; palpite vem desmarcado. Emojis não dá para recuperar e saem.</p>}
               <div className="max-h-[45vh] space-y-1 overflow-y-auto rounded-lg border border-border p-1">
                 {!visiveis.length && <p className="p-3 text-xs text-muted-foreground">Nada aqui.</p>}
@@ -81,8 +81,8 @@ export default function CorrigirNomes({ onAplicado }: { onAplicado: () => void }
                     <input type="checkbox" disabled={!x.sugerido} checked={!!marcados[x.id]}
                       onChange={e => setMarcados(m => { const n2 = { ...m }; if (e.target.checked && x.sugerido) n2[x.id] = x.sugerido; else delete n2[x.id]; return n2; })} />
                     <span className="min-w-0 flex-1">
-                      <span className="block truncate text-muted-foreground line-through decoration-red-400/60">{x.atual}</span>
-                      {x.sugerido ? <span className="block truncate font-medium">{x.sugerido}{x.origem === "grafia" && !x.certeza && <span className="ml-1 text-[11px] font-normal text-amber-300">(palpite — confira)</span>}</span>
+                      <span className="block truncate text-muted-foreground line-through decoration-danger-400/60">{x.atual}</span>
+                      {x.sugerido ? <span className="block truncate font-medium">{x.sugerido}{x.origem === "grafia" && !x.certeza && <span className="ml-1 text-[11px] font-normal text-warn-300">(palpite — confira)</span>}</span>
                         : <span className="block text-xs text-muted-foreground">sem sugestão — edite à mão pela lista</span>}
                       {x.outros.length > 0 && <span className="block truncate text-[11px] text-muted-foreground">também: {x.outros.join(" · ")}</span>}
                     </span>
@@ -94,7 +94,7 @@ export default function CorrigirNomes({ onAplicado }: { onAplicado: () => void }
           )}
           <DialogFooter>
             <Button variant="outline" disabled={aplicar.isPending} onClick={() => setAberto(false)}>Fechar</Button>
-            <Button className="bg-emerald-600 hover:bg-emerald-700" disabled={!Object.keys(marcados).length || aplicar.isPending}
+            <Button className="bg-ok-600 hover:bg-ok-700" disabled={!Object.keys(marcados).length || aplicar.isPending}
               onClick={() => aplicar.mutate({ correcoes: Object.entries(marcados).map(([id, nome]) => ({ id: Number(id), nome })) })}>
               {aplicar.isPending ? <Loader2 className="mr-1 h-4 w-4 animate-spin" /> : <CheckCircle2 className="mr-1 h-4 w-4" />} Corrigir {Object.keys(marcados).length} nome(s)
             </Button>

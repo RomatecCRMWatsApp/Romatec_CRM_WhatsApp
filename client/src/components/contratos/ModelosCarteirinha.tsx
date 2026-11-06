@@ -224,7 +224,7 @@ export default function ModelosCarteirinha() {
       <div className="flex flex-wrap items-center gap-2">
         <IdCard className="h-5 w-5 text-[var(--rt-gold)]" />
         <h2 className="flex-1 text-base font-semibold">Modelos para apresentar ao cliente
-          {!oficial && <span className="ml-2 align-middle text-[11px] font-normal text-amber-300">prévia à vontade · baixar e imprimir saem como rascunho, sem validade</span>}
+          {!oficial && <span className="ml-2 align-middle text-[11px] font-normal text-warn-300">prévia à vontade · baixar e imprimir saem como rascunho, sem validade</span>}
         </h2>
         <div role="tablist" className="flex gap-1 rounded-lg border border-border p-1">
           {([["carteirinha", "Carteirinha do condomínio"], ["cracha", "Crachá de visitante"], ["corretor", "Crachá do corretor"]] as const).map(([k, r]) => (

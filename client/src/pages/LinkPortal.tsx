@@ -50,8 +50,8 @@ export default function LinkPortal() {
 
         {/* Cabeçalho */}
         <div className="text-center mb-6">
-          <div className="w-20 h-20 mx-auto rounded-full bg-gradient-to-br from-emerald-500/30 to-emerald-800/30 border-2 border-emerald-500/50 flex items-center justify-center mb-3">
-            <Building2 className="h-9 w-9 text-emerald-400" />
+          <div className="w-20 h-20 mx-auto rounded-full bg-gradient-to-br from-ok-500/30 to-ok-800/30 border-2 border-ok-500/50 flex items-center justify-center mb-3">
+            <Building2 className="h-9 w-9 text-ok-400" />
           </div>
           <h1 className="text-2xl font-bold text-foreground">Romatec Imóveis</h1>
           <p className="text-sm text-muted-foreground mt-1">Lotes, chácaras e imóveis em Açailândia - MA</p>

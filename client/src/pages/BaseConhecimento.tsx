@@ -75,10 +75,10 @@ export default function BaseConhecimento() {
           acoes={<div className="flex gap-2">
             <Button variant="outline" onClick={() => setAbertoId(null)}><ChevronLeft className="mr-1 h-4 w-4" /> Todos os artigos</Button>
             {admin && <Button variant="outline" onClick={() => setEditando({ id: aberto.id, dados: { titulo: aberto.titulo, categoria: aberto.categoria, publico: aberto.publico, conteudo: aberto.conteudo, ordem: aberto.ordem, ativo: aberto.ativo } })}><Pencil className="mr-1 h-4 w-4" /> Editar</Button>}
-            {admin && <Button variant="ghost" className="text-red-500" onClick={() => { if (confirm(`Excluir "${aberto.titulo}"?`)) excluir.mutate({ id: aberto.id }); }}><Trash2 className="h-4 w-4" /></Button>}
+            {admin && <Button variant="ghost" className="text-danger-500" onClick={() => { if (confirm(`Excluir "${aberto.titulo}"?`)) excluir.mutate({ id: aberto.id }); }}><Trash2 className="h-4 w-4" /></Button>}
           </div>} />
         <article className="prose prose-sm mx-auto max-w-[860px] px-4 pb-10 dark:prose-invert md:px-6">
-          {!aberto.ativo && <p className="rounded-md bg-amber-100 p-2 text-amber-900">Rascunho: só o administrador vê este artigo.</p>}
+          {!aberto.ativo && <p className="rounded-md bg-warn-100 p-2 text-warn-900">Rascunho: só o administrador vê este artigo.</p>}
           <Streamdown>{aberto.conteudo}</Streamdown>
         </article>
       </div>

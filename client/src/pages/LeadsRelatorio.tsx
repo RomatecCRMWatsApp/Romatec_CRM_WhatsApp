@@ -19,9 +19,9 @@ const tempo = (min: number | null | undefined) => {
 };
 
 const COR_TIPO: Record<string, string> = {
-  pago: "bg-sky-500/15 text-sky-300 border-sky-500/30",
-  organico: "bg-emerald-500/15 text-emerald-300 border-emerald-500/30",
-  outro: "bg-zinc-500/15 text-zinc-300 border-zinc-500/30",
+  pago: "bg-info-500/15 text-info-300 border-info-500/30",
+  organico: "bg-ok-500/15 text-ok-300 border-ok-500/30",
+  outro: "bg-grafite-500/15 text-grafite-300 border-grafite-500/30",
 };
 const ROTULO_TIPO: Record<string, string> = { pago: "Pago", organico: "Orgânico", outro: "Portais e outros" };
 
@@ -50,11 +50,11 @@ function Metricas({ c }: { c: any }) {
       <td className={`${td} font-semibold`}>{c.leads}</td>
       <td className={td}>{pct(c.comImovel, c.leads)}</td>
       <td className={td}>{pct(c.completa, c.leads)}</td>
-      <td className={`${td} text-orange-300 font-semibold`}>{c.quentes}</td>
+      <td className={`${td} text-heat-300 font-semibold`}>{c.quentes}</td>
       <td className={td}>{c.visitas}</td>
-      <td className={`${td} text-violet-300 font-semibold`}>{c.visitasRealizadas}</td>
+      <td className={`${td} text-lilas-300 font-semibold`}>{c.visitasRealizadas}</td>
       <td className={td}>{c.propostas}</td>
-      <td className={`${td} text-emerald-300 font-semibold`}>{c.fechados}</td>
+      <td className={`${td} text-ok-300 font-semibold`}>{c.fechados}</td>
       <td className={td}>{c.cliques}</td>
       <td className={td}>{c.scans}</td>
       <td className={td}>{c.views}</td>
@@ -70,11 +70,11 @@ function Metricas({ c }: { c: any }) {
 function Funil({ c }: { c: any }) {
   const etapas: [string, number, string][] = [
     ["Leads", c.leads, "text-foreground"],
-    ["Quentes", c.quentes, "text-orange-300"],
-    ["Pediram/agendaram visita", c.visitas, "text-sky-300"],
-    ["Visitaram", c.visitasRealizadas, "text-violet-300"],
-    ["Propostas", c.propostas, "text-amber-300"],
-    ["Vendas", c.fechados, "text-emerald-300"],
+    ["Quentes", c.quentes, "text-heat-300"],
+    ["Pediram/agendaram visita", c.visitas, "text-info-300"],
+    ["Visitaram", c.visitasRealizadas, "text-lilas-300"],
+    ["Propostas", c.propostas, "text-warn-300"],
+    ["Vendas", c.fechados, "text-ok-300"],
   ];
   return (
     <Card className="bg-card border-border">
@@ -176,14 +176,14 @@ export default function LeadsRelatorio() {
               </select>
             </label>
             <div className="flex-1" />
-            <Button onClick={baixarCsv} disabled={!r} className="bg-emerald-600 hover:bg-emerald-700 text-white">
+            <Button onClick={baixarCsv} disabled={!r} className="bg-ok-600 hover:bg-ok-700 text-white">
               <Download className="mr-1.5 h-4 w-4" /> Exportar CSV
             </Button>
           </CardContent>
         </Card>
 
-        {isLoading && <p className="text-sm text-muted-foreground">Carregando relatório...</p>}
-        {error && <p className="text-sm text-red-400">Não foi possível carregar: {error.message}</p>}
+        {isLoading && <p className="text-sm text-muted-foreground">Carregando relatório…</p>}
+        {error && <p className="text-sm text-danger-400">Não foi possível carregar: {error.message}</p>}
 
         {r && (
           <>
@@ -204,7 +204,7 @@ export default function LeadsRelatorio() {
                     <div className="flex items-center justify-between"><Tipo tipo={tipo} /><span className="text-xs text-muted-foreground">{pct(t?.leads ?? 0, r.total.leads)} dos leads</span></div>
                     <div className="grid grid-cols-4 gap-2 mt-3 text-center">
                       <div><p className="text-xl font-bold">{t?.leads ?? 0}</p><p className="text-[10px] text-muted-foreground">leads</p></div>
-                      <div><p className="text-xl font-bold text-orange-300">{t?.quentes ?? 0}</p><p className="text-[10px] text-muted-foreground">quentes</p></div>
+                      <div><p className="text-xl font-bold text-heat-300">{t?.quentes ?? 0}</p><p className="text-[10px] text-muted-foreground">quentes</p></div>
                       <div><p className="text-xl font-bold">{(t?.cliques ?? 0) + (t?.scans ?? 0)}</p><p className="text-[10px] text-muted-foreground">cliques + QR</p></div>
                       <div><p className="text-xl font-bold">{tipo === "pago" ? brl(t?.custoPorQuente) : pct(t?.completa ?? 0, t?.leads ?? 0)}</p><p className="text-[10px] text-muted-foreground">{tipo === "pago" ? "custo / quente" : "qualif. completa"}</p></div>
                     </div>
@@ -239,12 +239,12 @@ export default function LeadsRelatorio() {
                           <tr key={String(c.responsavelId)} className="border-b border-border/50">
                             <td className="px-2 py-2">{c.nome}</td>
                             <td className="px-2 py-2 text-right tabular-nums">{c.leads}</td>
-                            <td className="px-2 py-2 text-right tabular-nums text-violet-300">{c.visitasRealizadas} <span className="text-muted-foreground">({pct(c.visitasRealizadas, c.leads)})</span></td>
-                            <td className="px-2 py-2 text-right tabular-nums text-emerald-300">{c.fechados}</td>
+                            <td className="px-2 py-2 text-right tabular-nums text-lilas-300">{c.visitasRealizadas} <span className="text-muted-foreground">({pct(c.visitasRealizadas, c.leads)})</span></td>
+                            <td className="px-2 py-2 text-right tabular-nums text-ok-300">{c.fechados}</td>
                             <td className="px-2 py-2 text-right tabular-nums">{c.atendidos}</td>
                             <td className="px-2 py-2 text-right tabular-nums font-semibold">{tempo(c.medianaMin)}</td>
                             <td className="px-2 py-2 text-right tabular-nums">{tempo(c.p90Min)}</td>
-                            <td className={`px-2 py-2 text-right tabular-nums ${c.esperando ? "text-amber-300 font-semibold" : ""}`}>{c.esperando}</td>
+                            <td className={`px-2 py-2 text-right tabular-nums ${c.esperando ? "text-warn-300 font-semibold" : ""}`}>{c.esperando}</td>
                           </tr>
                         ))}
                       </tbody>
@@ -263,9 +263,9 @@ export default function LeadsRelatorio() {
                     {r.imoveis.slice(0, 10).map((i, n) => (
                       <li key={i.propertyId} className="flex items-center gap-3 text-sm">
                         <span className="w-5 text-right text-muted-foreground">{n + 1}.</span>
-                        <span className="font-mono text-xs text-emerald-300 w-20">{i.codigo ?? "—"}</span>
+                        <span className="font-mono text-xs text-ok-300 w-20">{i.codigo ?? "—"}</span>
                         <span className="flex-1 truncate">{i.titulo}</span>
-                        <span className="text-orange-300 font-semibold tabular-nums">{i.quentes} quente(s)</span>
+                        <span className="text-heat-300 font-semibold tabular-nums">{i.quentes} quente(s)</span>
                         <span className="text-muted-foreground tabular-nums w-16 text-right">{i.leads} lead(s)</span>
                       </li>
                     ))}

@@ -43,7 +43,7 @@ export default function TrocarSenha() {
         <label className="block space-y-1 text-sm text-[var(--rt-text-2)]">Repita a nova senha
           <input type="password" className={campo} value={confirma} onChange={e => setConfirma(e.target.value)} autoComplete="new-password" required minLength={8} />
         </label>
-        {erro && <p className="text-sm text-red-400">{erro}</p>}
+        {erro && <p className="text-sm text-danger-400">{erro}</p>}
         <LoadingButton type="submit" loading={trocar.isPending} className="w-full">Salvar e entrar</LoadingButton>
       </form>
     </div>

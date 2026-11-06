@@ -37,14 +37,14 @@ function ConviteGerado({ nome, link, login, telefone, onFechar }: { nome: string
     try { await navigator.clipboard.writeText(t); toast.success(`${r} copiado`); } catch { toast.error("Não foi possível copiar"); }
   };
   return (
-    <div className="rounded-lg border border-emerald-500/40 bg-emerald-500/5 p-3 space-y-2">
+    <div className="rounded-lg border border-ok-500/40 bg-ok-500/5 p-3 space-y-2">
       <p className="text-sm text-foreground font-medium">Link de primeiro acesso de {nome}</p>
       <p className="text-xs text-muted-foreground break-all">{link}</p>
-      <p className="text-[11px] text-amber-300">O link só aparece agora. Se perder, gere outro (o anterior deixa de valer).</p>
+      <p className="text-[11px] text-warn-300">O link só aparece agora. Se perder, gere outro (o anterior deixa de valer).</p>
       <div className="flex flex-wrap gap-2">
         <Button size="sm" variant="outline" onClick={() => copiar(msg, "Mensagem")}><Copy className="mr-1.5 h-3.5 w-3.5" /> Copiar mensagem</Button>
         <Button size="sm" variant="outline" onClick={() => copiar(link, "Link")}><Copy className="mr-1.5 h-3.5 w-3.5" /> Copiar só o link</Button>
-        <Button size="sm" className="bg-emerald-600 hover:bg-emerald-700 text-white" asChild>
+        <Button size="sm" className="bg-ok-600 hover:bg-ok-700 text-white" asChild>
           <a href={`https://wa.me/${fone.length >= 10 ? (fone.startsWith("55") ? fone : `55${fone}`) : ""}?text=${encodeURIComponent(msg)}`} target="_blank" rel="noreferrer">
             <MessageCircle className="mr-1.5 h-3.5 w-3.5" /> Enviar pelo WhatsApp
           </a>
@@ -91,7 +91,7 @@ export default function Equipe() {
       <PageHeader icone={Users} titulo="Equipe e acessos" subtitulo="Colaboradores entram com CRECI, CPF ou e-mail e a senha que eles mesmos criam no primeiro acesso" />
 
       <div className="px-4 md:px-6 pb-6 max-w-[1500px] mx-auto space-y-4">
-        {error && <p className="text-sm text-red-400">{error.message}</p>}
+        {error && <p className="text-sm text-danger-400">{error.message}</p>}
         {convite && <ConviteGerado {...convite} onFechar={() => setConvite(null)} />}
 
         <PacoteBase />
@@ -103,7 +103,7 @@ export default function Equipe() {
           {(arquivados > 0 || verArquivados) && (
             <Button variant={verArquivados ? "default" : "outline"} onClick={() => setVerArquivados(v => !v)}>{verArquivados ? "Voltar à equipe" : `Arquivados (${arquivados})`}</Button>
           )}
-          <Button onClick={() => setAbrirForm(v => !v)} className="bg-emerald-600 hover:bg-emerald-700 text-white"><Plus className="mr-1.5 h-4 w-4" /> Novo acesso</Button>
+          <Button onClick={() => setAbrirForm(v => !v)} className="bg-ok-600 hover:bg-ok-700 text-white"><Plus className="mr-1.5 h-4 w-4" /> Novo acesso</Button>
         </div>
 
         {abrirForm && (
@@ -116,7 +116,7 @@ export default function Equipe() {
           </Card>
         )}
 
-        {isLoading ? <p className="text-sm text-muted-foreground">Carregando...</p> : (
+        {isLoading ? <p className="text-sm text-muted-foreground">Carregando…</p> : (
           <div className="space-y-2">
             {pessoas.map((p: any) => (
               <Card key={p.id} className={`bg-card border-border ${p.ativo ? "" : "opacity-60"}`}>
@@ -129,10 +129,10 @@ export default function Equipe() {
                         <span className="font-semibold text-foreground">{p.nome || "Sem nome"}</span>
                         <SeloPerfil perfil={p.perfil as Perfil} />
                         {(p.pendencias as string[]).map(t => (
-                          <span key={t} className={`text-[10px] px-1.5 py-0.5 rounded ${/a vencer/.test(t) ? "bg-amber-500/80 text-black" : "bg-red-600/80 text-white"}`}>{t}</span>
+                          <span key={t} className={`text-[10px] px-1.5 py-0.5 rounded ${/a vencer/.test(t) ? "bg-warn-500/80 text-black" : "bg-danger-600/80 text-white"}`}>{t}</span>
                         ))}
-                        {!p.ativo && <span className="text-[10px] px-1.5 py-0.5 rounded bg-red-600/80 text-white">DESATIVADO</span>}
-                        {p.ativo && p.perfil !== "admin" && !p.temSenha && <span className="text-[10px] px-1.5 py-0.5 rounded bg-amber-500/80 text-black">{p.convitePendente ? "aguardando 1º acesso" : "sem senha — gere um link"}</span>}
+                        {!p.ativo && <span className="text-[10px] px-1.5 py-0.5 rounded bg-danger-600/80 text-white">DESATIVADO</span>}
+                        {p.ativo && p.perfil !== "admin" && !p.temSenha && <span className="text-[10px] px-1.5 py-0.5 rounded bg-warn-500/80 text-black">{p.convitePendente ? "aguardando 1º acesso" : "sem senha — gere um link"}</span>}
                       </div>
                       <p className="text-xs text-muted-foreground mt-0.5">
                         {p.creci ? `CRECI ${p.creci} · ` : ""}{p.email}{p.perfil === "empreendedor" ? ` · ${nomeEmp(p.empreendimentoSlug)}` : ""} · último acesso {dataHora(p.ultimoAcesso)}
@@ -164,14 +164,14 @@ export default function Equipe() {
                             <LogOut className="mr-1.5 h-3.5 w-3.5" /> Desconectar aparelhos
                           </Button>
                         )}
-                        <Button size="sm" variant="ghost" className={p.ativo ? "text-red-300" : "text-emerald-300"} onClick={() => {
+                        <Button size="sm" variant="ghost" className={p.ativo ? "text-danger-300" : "text-ok-300"} onClick={() => {
                           if (p.ativo && !confirm(`Desativar o acesso de ${p.nome}? Ele(a) sai do CRM na hora.`)) return;
                           atualizar.mutate({ id: p.id, ativo: !p.ativo });
                         }}>
                           {p.ativo ? <><UserX className="mr-1.5 h-3.5 w-3.5" /> Desativar</> : <><UserCheck className="mr-1.5 h-3.5 w-3.5" /> Reativar</>}
                         </Button>
                         {!p.ativo && !p.arquivado && (
-                          <Button size="sm" variant="ghost" className="text-red-300" onClick={() => setRemovendo({ id: p.id, nome: p.nome })}>
+                          <Button size="sm" variant="ghost" className="text-danger-300" onClick={() => setRemovendo({ id: p.id, nome: p.nome })}>
                             <Trash2 className="mr-1.5 h-3.5 w-3.5" /> Remover
                           </Button>
                         )}

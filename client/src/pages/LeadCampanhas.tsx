@@ -19,16 +19,16 @@ function RetornoCampanha({ r, total }: { r: Roi; total?: boolean }) {
   const cel = (valor: string, rotulo: string, destaque?: string) => (
     <div className="min-w-[88px]"><p className={`text-base font-bold ${destaque ?? "text-foreground"}`}>{valor}</p><p className="text-[11px] text-muted-foreground">{rotulo}</p></div>
   );
-  const corRoi = r.roi == null ? undefined : r.roi >= 0 ? "text-emerald-300" : "text-red-300";
+  const corRoi = r.roi == null ? undefined : r.roi >= 0 ? "text-ok-300" : "text-danger-300";
   return (
-    <div className={`flex flex-wrap gap-x-5 gap-y-2 rounded-lg border p-3 text-xs ${total ? "border-amber-300/40 bg-amber-300/5" : "border-border bg-secondary/20"}`}>
+    <div className={`flex flex-wrap gap-x-5 gap-y-2 rounded-lg border p-3 text-xs ${total ? "border-warn-300/40 bg-warn-300/5" : "border-border bg-secondary/20"}`}>
       {total && cel(brl(r.gasto), "gasto total")}
       {total && cel(String(r.leads), "leads")}
       {cel(String(r.visitas), "visitas realizadas")}
       {cel(`${r.vendas}${r.emAndamento ? ` (+${r.emAndamento})` : ""}`, r.emAndamento ? "vendas (+ em andamento)" : "vendas")}
       {cel(brl(r.cpl), "custo por lead")}
       {cel(brl(r.custoVisita), "custo por visita")}
-      {cel(brl(r.custoVenda), "custo por venda", r.vendas ? "text-amber-300" : undefined)}
+      {cel(brl(r.custoVenda), "custo por venda", r.vendas ? "text-warn-300" : undefined)}
       {cel(r.conversao == null ? "—" : `${r.conversao.toLocaleString("pt-BR")}%`, "lead → venda")}
       {cel(brl(r.vgv), "vendido (VGV)")}
       {cel(r.roi == null ? "—" : `${r.roi.toLocaleString("pt-BR")}%`, "retorno s/ comissão", corRoi)}
@@ -48,7 +48,7 @@ const reais = (v: string) => Number(v.includes(",") ? v.replace(/\./g, "").repla
 
 function LinkGerado({ propertyId, campanhaId, funil }: { propertyId?: number; campanhaId?: number; funil?: "comprador" | "proprietario" }) {
   const { data, isLoading } = trpc.leadCampanhas.linkWhatsApp.useQuery({ propertyId, campanhaId, funil });
-  if (isLoading || !data) return <p className="text-xs text-muted-foreground">Gerando link...</p>;
+  if (isLoading || !data) return <p className="text-xs text-muted-foreground">Gerando link…</p>;
   const copiar = async (texto: string, rotulo: string) => {
     try { await navigator.clipboard.writeText(texto); toast.success(`${rotulo} copiado`); } catch { toast.error("Não foi possível copiar"); }
   };
@@ -60,7 +60,7 @@ function LinkGerado({ propertyId, campanhaId, funil }: { propertyId?: number; ca
         <div className="bg-white rounded-lg p-2 w-32 h-32 shrink-0 [&>svg]:w-full [&>svg]:h-full" dangerouslySetInnerHTML={{ __html: data.qrSvg }} />
         <div className="text-xs text-muted-foreground space-y-1">
           <p>QR do link do WhatsApp (para criativo/post).</p>
-          {data.landing && <p>Página do imóvel com a campanha: <a className="text-emerald-300 underline break-all" href={data.landing} target="_blank" rel="noreferrer">{data.landing}</a></p>}
+          {data.landing && <p>Página do imóvel com a campanha: <a className="text-ok-300 underline break-all" href={data.landing} target="_blank" rel="noreferrer">{data.landing}</a></p>}
         </div>
       </div>
       <div className="flex flex-wrap gap-2">
@@ -82,13 +82,13 @@ function LinkEmpreendimento({ codigoCampanha }: { codigoCampanha: string }) {
     try { await navigator.clipboard.writeText(texto); toast.success(`${rotulo} copiado`); } catch { toast.error("Não foi possível copiar"); }
   };
   return (
-    <div className="space-y-2 rounded-lg border border-emerald-500/30 bg-emerald-500/5 p-3">
-      <p className="text-xs font-semibold text-emerald-300">Link do empreendimento (Condomínio de Chácaras Bom Jardims)</p>
+    <div className="space-y-2 rounded-lg border border-ok-500/30 bg-ok-500/5 p-3">
+      <p className="text-xs font-semibold text-ok-300">Link do empreendimento (Condomínio de Chácaras Bom Jardims)</p>
       <p className="text-xs text-muted-foreground">
         Página pública com fotos, vídeo e o mapa com a poligonal geral; os cadastros por este link entram nesta campanha.
         O KML traz a poligonal geral e todas as chácaras demarcadas (uma por uma, com o código oficial) para o Google Earth e apps de mapas.
       </p>
-      <a className="block text-xs text-emerald-300 underline break-all" href={pagina} target="_blank" rel="noreferrer">{pagina}</a>
+      <a className="block text-xs text-ok-300 underline break-all" href={pagina} target="_blank" rel="noreferrer">{pagina}</a>
       <div className="flex flex-wrap gap-2">
         <Button size="sm" variant="outline" onClick={() => copiar(pagina, "Link do empreendimento")}><Copy className="mr-1.5 h-3.5 w-3.5" /> Copiar link do empreendimento</Button>
         <Button size="sm" variant="outline" onClick={() => copiar(kml, "Link do KML")}><Copy className="mr-1.5 h-3.5 w-3.5" /> Copiar link do KML</Button>
@@ -162,7 +162,7 @@ export default function LeadCampanhas() {
 
       <div className={`px-4 md:px-6 pb-6 max-w-[1500px] mx-auto space-y-4 ${aba === "links" ? "hidden" : ""}`}>
         <div className="flex justify-end">
-          <Button onClick={() => setAbrirForm(v => !v)} className="bg-emerald-600 hover:bg-emerald-700 text-white">
+          <Button onClick={() => setAbrirForm(v => !v)} className="bg-ok-600 hover:bg-ok-700 text-white">
             <Plus className="mr-1.5 h-4 w-4" /> Nova campanha
           </Button>
         </div>
@@ -217,7 +217,7 @@ export default function LeadCampanhas() {
                   <Input inputMode="decimal" value={form.gastoTotal} onChange={e => setForm(f => ({ ...f, gastoTotal: e.target.value }))} placeholder="0" />
                 </label>
                 <div className="flex items-end gap-2">
-                  <Button type="submit" disabled={criar.isPending} className="bg-emerald-600 hover:bg-emerald-700 text-white">{criar.isPending ? "Salvando..." : "Salvar"}</Button>
+                  <Button type="submit" disabled={criar.isPending} className="bg-ok-600 hover:bg-ok-700 text-white">{criar.isPending ? "Salvando..." : "Salvar"}</Button>
                   <Button type="button" variant="ghost" onClick={() => setAbrirForm(false)}>Cancelar</Button>
                 </div>
               </form>
@@ -226,11 +226,11 @@ export default function LeadCampanhas() {
         )}
 
         {isLoading ? (
-          <p className="text-sm text-muted-foreground">Carregando...</p>
+          <p className="text-sm text-muted-foreground">Carregando…</p>
         ) : campanhas.length === 0 ? (
           <Card className="bg-card border-border">
             <CardContent className="py-10 text-center space-y-2">
-              <Megaphone className="h-8 w-8 mx-auto text-emerald-400" />
+              <Megaphone className="h-8 w-8 mx-auto text-ok-400" />
               <p className="text-sm text-foreground">Nenhuma campanha ainda.</p>
               <p className="text-xs text-muted-foreground">Crie uma campanha para cada anúncio, placa ou portal. O link de WhatsApp gerado já leva o código do imóvel e da campanha.</p>
             </CardContent>
@@ -251,7 +251,7 @@ export default function LeadCampanhas() {
                     <div className="flex flex-col md:flex-row md:items-center gap-3">
                       <div className="flex-1 min-w-0">
                         <div className="flex items-center gap-2 flex-wrap">
-                          <span className="font-mono text-sm font-bold text-emerald-300">#{c.codigo}</span>
+                          <span className="font-mono text-sm font-bold text-ok-300">#{c.codigo}</span>
                           <span className="text-sm text-foreground">{c.nome}</span>
                           <span className="text-[10px] px-1.5 py-0.5 rounded border border-border text-muted-foreground">{c.funil === "proprietario" ? "Proprietário" : "Comprador"}</span>
                         </div>
@@ -269,7 +269,7 @@ export default function LeadCampanhas() {
                       <div className="flex gap-2 shrink-0">
                         <Button size="sm" variant="outline" onClick={() => setLinkAberto(linkAberto === c.id ? null : c.id)}><Link2 className="mr-1.5 h-3.5 w-3.5" /> Link</Button>
                         <Button size="sm" variant="ghost" onClick={() => alternar.mutate({ id: c.id, ativa: !c.ativa })}>{c.ativa ? "Pausar" : "Ativar"}</Button>
-                        <Button size="sm" variant="ghost" className="text-red-300" onClick={() => { if (confirm(`Excluir a campanha #${c.codigo}?`)) excluir.mutate({ id: c.id }); }}><Trash2 className="h-4 w-4" /></Button>
+                        <Button size="sm" variant="ghost" className="text-danger-300" onClick={() => { if (confirm(`Excluir a campanha #${c.codigo}?`)) excluir.mutate({ id: c.id }); }}><Trash2 className="h-4 w-4" /></Button>
                       </div>
                     </div>
                     {c.retorno && <RetornoCampanha r={c.retorno} />}

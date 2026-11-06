@@ -63,7 +63,7 @@ function ScoreDetalhe({ leadId }: { leadId: number }) {
     onError: (e) => toast.error(e.message),
   });
   const titulo = { fontSize: '10px', color: '#3a6a45', textTransform: 'uppercase' as const, letterSpacing: '0.08em', margin: '0 0 8px', fontWeight: 700 };
-  if (isLoading) return <p style={{ fontSize: '11px', color: 'var(--c-4a7a55)' }}>Carregando score...</p>;
+  if (isLoading) return <p style={{ fontSize: '11px', color: 'var(--c-4a7a55)' }}>Carregando score…</p>;
   return (
     <div>
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
@@ -401,7 +401,7 @@ export default function Leads() {
         {visao === 'tabela' ? (
           <LeadsTabela situacao={verDescartados ? 'descartados' : 'ativos'} search={debouncedSearch || undefined} />
         ) : isLoading ? (
-          <div style={{ textAlign: 'center', padding: '40px', color: 'var(--c-3a6a45)' }}>Carregando leads...</div>
+          <div style={{ textAlign: 'center', padding: '40px', color: 'var(--c-3a6a45)' }}>Carregando leads…</div>
         ) : leads.length === 0 ? (
           <div className="ld-card" style={{ textAlign: 'center', padding: '40px' }}>
             <Users size={32} style={{ color: 'var(--c-1a3520)', margin: '0 auto 12px' }} />

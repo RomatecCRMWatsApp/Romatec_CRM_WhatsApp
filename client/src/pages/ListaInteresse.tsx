@@ -33,8 +33,8 @@ export default function ListaInteresse() {
         acoes={<Button onClick={exportar} disabled={!r?.total} className="bg-primary hover:bg-primary/90 text-primary-foreground"><Download className="mr-1.5 h-4 w-4" /> Exportar CSV</Button>}
       />
       <div className="px-4 md:px-6 pb-8 max-w-[1500px] mx-auto space-y-4">
-        {error && <p className="text-sm text-red-400">{error.message}</p>}
-        {isLoading && <p className="text-sm text-muted-foreground">Carregando...</p>}
+        {error && <p className="text-sm text-danger-400">{error.message}</p>}
+        {isLoading && <p className="text-sm text-muted-foreground">Carregando…</p>}
         {r && (
           <>
             <div className="grid grid-cols-2 md:grid-cols-3 gap-3">

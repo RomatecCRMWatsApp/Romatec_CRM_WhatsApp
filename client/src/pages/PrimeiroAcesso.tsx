@@ -39,7 +39,7 @@ export default function PrimeiroAcesso() {
         {!token || (!isLoading && !data?.valido) ? (
           <p className="text-center text-[var(--rt-text-2)] mt-4">Este link é inválido ou já venceu. Peça um novo link ao administrador do CRM.</p>
         ) : isLoading ? (
-          <p className="text-center text-[var(--rt-text-3)] mt-4">Carregando...</p>
+          <p className="text-center text-[var(--rt-text-3)] mt-4">Carregando…</p>
         ) : pronto ? (
           <div className="text-center space-y-4 mt-4">
             <p className="text-[var(--rt-text-2)]">Senha criada! A partir de agora, entre com <b className="text-[var(--rt-gold-light)]">{pronto}</b> e a sua senha.</p>

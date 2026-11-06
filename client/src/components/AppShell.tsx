@@ -182,12 +182,12 @@ function Navegacao({ onNavegar, recolhido = false }: { onNavegar?: () => void; r
                 >
                   <IconeMenu icone={it.icone} cor={it.cor ?? g.cor} on={on} />
                   {!recolhido && <span className="truncate">{it.rotulo}</span>}
-                  {recolhido && alerta && <span className="absolute right-1 top-1 h-2 w-2 rounded-full bg-red-500" />}
+                  {recolhido && alerta && <span className="absolute right-1 top-1 h-2 w-2 rounded-full bg-danger-500" />}
                   {!recolhido && it.rota === "/meu-cadastro" && !!pendencias?.length && (
-                    <span className="ml-auto h-2 w-2 shrink-0 rounded-full bg-red-500" title={pendencias.join(" · ")} />
+                    <span className="ml-auto h-2 w-2 shrink-0 rounded-full bg-danger-500" title={pendencias.join(" · ")} />
                   )}
                   {!recolhido && it.rota === "#novidades" && novidades > 0 && (
-                    <span className="ml-auto rounded-full bg-red-500 px-1.5 text-[10px] font-bold text-white">{novidades}</span>
+                    <span className="ml-auto rounded-full bg-danger-500 px-1.5 text-[10px] font-bold text-white">{novidades}</span>
                   )}
                 </button>
               );
@@ -219,7 +219,7 @@ function Rodape({ recolhido = false }: { recolhido?: boolean }) {
     <div className="flex flex-col items-center gap-2 border-t border-sidebar-border px-2 py-3">
       <FotoUsuario />
       <SinoNovidades />
-      <button onClick={() => logout()} title="Sair" aria-label="Sair" className="rounded-lg p-2 text-sidebar-foreground/60 hover:bg-white/10 hover:text-red-300"><LogOut className="h-4 w-4" /></button>
+      <button onClick={() => logout()} title="Sair" aria-label="Sair" className="rounded-lg p-2 text-sidebar-foreground/60 hover:bg-white/10 hover:text-danger-300"><LogOut className="h-4 w-4" /></button>
       <p className="text-[9px] text-sidebar-foreground/40">v{APP_VERSION}</p>
     </div>
   );
@@ -232,7 +232,7 @@ function Rodape({ recolhido = false }: { recolhido?: boolean }) {
           <p className="text-[10px] text-sidebar-foreground/50 truncate">{perfil ? ROTULO_PERFIL[perfil] : ""}</p>
         </div>
         <SinoNovidades />
-        <button onClick={() => logout()} title="Sair" className="rounded-lg p-2 text-sidebar-foreground/60 hover:bg-white/10 hover:text-red-300"><LogOut className="h-4 w-4" /></button>
+        <button onClick={() => logout()} title="Sair" className="rounded-lg p-2 text-sidebar-foreground/60 hover:bg-white/10 hover:text-danger-300"><LogOut className="h-4 w-4" /></button>
       </div>
       <p className="mt-2 text-center text-[10px] tracking-wide text-sidebar-foreground/40">CRM Romatec v{APP_VERSION}</p>
     </div>
@@ -290,7 +290,7 @@ function BannerLicenca({ licenca }: { licenca?: { exigida: boolean; liberado: bo
   const texto = atraso ? "Pagamento em atraso: regularize para não perder o acesso."
     : `${teste ? "Teste grátis" : "Cortesia"}: ${d === 0 ? "termina hoje" : `faltam ${d} dia(s)`}.`;
   return (
-    <div className={`flex flex-wrap items-center justify-center gap-3 px-4 py-2 text-sm ${atraso || (d ?? 9) <= 1 ? "bg-red-500/15 text-red-200" : "bg-[var(--rt-gold)]/15 text-[var(--rt-gold-light)]"}`}>
+    <div className={`flex flex-wrap items-center justify-center gap-3 px-4 py-2 text-sm ${atraso || (d ?? 9) <= 1 ? "bg-danger-500/15 text-danger-200" : "bg-[var(--rt-gold)]/15 text-[var(--rt-gold-light)]"}`}>
       <span>{texto}</span>
       <Link href="/assinatura" className="rounded-full bg-[var(--rt-gold)] px-3 py-1 text-xs font-semibold text-black">Assinar</Link>
     </div>
@@ -332,7 +332,7 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
       )}
 
       {/* Barra do topo (celular): abre a gaveta */}
-      <header className="lg:hidden sticky top-0 z-20 flex items-center gap-3 border-b border-border bg-background/90 backdrop-blur px-3 py-2">
+      <header className="lg:hidden sticky top-0 z-20 flex items-center gap-3 border-b border-border bg-background px-3 py-2">
         <button onClick={() => setAberto(true)} className="rounded-lg p-2 hover:bg-white/5" aria-label="Abrir menu"><Menu className="h-5 w-5" /></button>
         <RomatecAppIcon size={28} />
         <p className="font-semibold truncate flex-1">{tituloDaRota(loc)}</p>

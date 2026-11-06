@@ -10,12 +10,12 @@ export function Campo({ rotulo, erro, children, className = "" }: { rotulo: stri
     <label className={`flex flex-col gap-1 text-sm ${className}`}>
       <span className="text-muted-foreground text-xs">{rotulo}</span>
       {children}
-      {erro && <span className="text-[11px] text-red-400">{erro}</span>}
+      {erro && <span className="text-[11px] text-danger-400">{erro}</span>}
     </label>
   );
 }
 
-export const classeCampo = (erro?: string) => `${inp} ${erro ? "border-red-500" : "border-border"}`;
+export const classeCampo = (erro?: string) => `${inp} ${erro ? "border-danger-500" : "border-border"}`;
 
 /**
  * Input com máscara (CPF, RG, telefone, CEP): mostra formatado, devolve o texto formatado e
@@ -46,7 +46,7 @@ export function Interruptor({ ligado, onMudar, rotulo, disabled, title }: { liga
   return (
     <label className={`flex items-center gap-2 text-xs ${disabled ? "opacity-50" : "cursor-pointer"}`} title={title}>
       <button type="button" role="switch" aria-checked={ligado} disabled={disabled} onClick={() => onMudar(!ligado)}
-        className={`relative h-5 w-9 shrink-0 rounded-full transition-colors ${ligado ? "bg-emerald-600" : "bg-secondary border border-border"}`}>
+        className={`relative h-5 w-9 shrink-0 rounded-full transition-colors ${ligado ? "bg-ok-600" : "bg-secondary border border-border"}`}>
         <span className={`absolute top-0.5 h-4 w-4 rounded-full bg-white shadow transition ${ligado ? "left-[18px]" : "left-0.5"}`} />
       </button>
       {rotulo}

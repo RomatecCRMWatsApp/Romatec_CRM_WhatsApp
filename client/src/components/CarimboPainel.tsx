@@ -46,9 +46,9 @@ export default function CarimboPainel() {
   const resumo = data ? [data.carimbo.nome, data.creci, data.carimbo.telefone, data.carimbo.instagram && `@${data.carimbo.instagram}`, data.carimbo.email].filter(Boolean).join(" · ") : "";
 
   return (
-    <section className="rounded-lg border border-amber-500/40 bg-amber-500/5 p-3">
+    <section className="rounded-lg border border-warn-500/40 bg-warn-500/5 p-3">
       <div className="flex flex-wrap items-center gap-2">
-        <Stamp className="h-4 w-4 text-amber-400" />
+        <Stamp className="h-4 w-4 text-warn-400" />
         <h2 className="text-sm font-semibold text-foreground">Meu carimbo</h2>
         {isLoading ? <Loader2 className="h-3.5 w-3.5 animate-spin text-muted-foreground" /> : (
           <span className="min-w-0 flex-1 truncate text-xs text-muted-foreground" title={resumo}>
@@ -79,7 +79,7 @@ export default function CarimboPainel() {
           <PreviaCarimbo linhas={linhas} link={link} />
           </div>
           <div className="flex flex-wrap items-center gap-2">
-            <Button type="submit" size="sm" disabled={salvar.isPending} className="bg-amber-500 text-black hover:bg-amber-400">
+            <Button type="submit" size="sm" disabled={salvar.isPending} className="bg-warn-500 text-black hover:bg-warn-400">
               {salvar.isPending ? <Loader2 className="mr-1 h-3.5 w-3.5 animate-spin" /> : <Save className="mr-1 h-3.5 w-3.5" />} Salvar carimbo
             </Button>
             <span className="text-[11px] text-muted-foreground">{data?.creci ? <>O <b>{data.creci}</b> entra automático (vem do seu cadastro).</> : "Sem CRECI no cadastro: ele não aparece no carimbo."}</span>

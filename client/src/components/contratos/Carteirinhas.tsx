@@ -105,9 +105,9 @@ export default function CarteirinhasContrato({ id, status, dependentes, podeEdit
                 <div className="min-w-0 flex-1 text-sm">
                   <p className="truncate"><b>{p.nome}</b> <span className="text-xs text-muted-foreground">· {p.vinculo}</span></p>
                   {p.carteira
-                    ? <p className="flex items-center gap-1 text-xs text-emerald-300"><CheckCircle2 className="h-3.5 w-3.5" /> Nº {p.carteira.numero} · válida até {dataBR(p.carteira.validade)}</p>
+                    ? <p className="flex items-center gap-1 text-xs text-ok-300"><CheckCircle2 className="h-3.5 w-3.5" /> Nº {p.carteira.numero} · válida até {dataBR(p.carteira.validade)}</p>
                     : p.pendencias.length
-                      ? <p className="flex items-center gap-1 text-xs text-amber-300"><TriangleAlert className="h-3.5 w-3.5" /> Para emitir, falta: {p.pendencias.join(", ")}</p>
+                      ? <p className="flex items-center gap-1 text-xs text-warn-300"><TriangleAlert className="h-3.5 w-3.5" /> Para emitir, falta: {p.pendencias.join(", ")}</p>
                       : <p className="text-xs text-muted-foreground">Será emitida automaticamente{p.temFoto ? "" : " (sem foto: sai com as iniciais)"}</p>}
                 </div>
                 {podeEditar && !encerrado && (

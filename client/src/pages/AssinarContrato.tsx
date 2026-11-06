@@ -54,8 +54,8 @@ function LeitorContrato({ url, onFim }: { url: string; onFim: () => void }) {
   };
   return (
     <div>
-      <div ref={caixa} onScroll={rolar} className="h-[65vh] overflow-y-auto rounded-lg border bg-neutral-200 p-2" style={{ borderColor: DOURADO }} tabIndex={0} aria-label="Contrato para leitura" />
-      <p className="mt-1 text-xs text-neutral-600">
+      <div ref={caixa} onScroll={rolar} className="h-[65vh] overflow-y-auto rounded-lg border bg-neutro-200 p-2" style={{ borderColor: DOURADO }} tabIndex={0} aria-label="Contrato para leitura" />
+      <p className="mt-1 text-xs text-neutro-600">
         {erro ?? (paginas ? (lidas < paginas ? `Carregando página ${lidas + 1} de ${paginas}…` : `${paginas} páginas — role até o fim para liberar a assinatura`) : "Abrindo o contrato…")}
       </p>
     </div>
@@ -120,7 +120,7 @@ export default function AssinarContrato() {
         </div>
       </header>
       <main className="mx-auto max-w-5xl space-y-4 px-4 py-5">
-        {erro && <p className="rounded-lg border border-red-300 bg-red-50 p-4 text-red-800">{erro}</p>}
+        {erro && <p className="rounded-lg border border-danger-300 bg-danger-50 p-4 text-danger-800">{erro}</p>}
         {!info && !erro && <p className="flex items-center gap-2"><Loader2 className="h-4 w-4 animate-spin" /> Carregando…</p>}
         {info && s && (
           <>
@@ -129,7 +129,7 @@ export default function AssinarContrato() {
               <p className="text-sm">Olá, <b>{s.nome}</b>. Você assina como <b>{s.papelRotulo.toLowerCase()}</b> — {s.metodoRotulo}.</p>
               <div className="mt-2 flex flex-wrap gap-2 text-xs">
                 {info.outros.map((o, i) => (
-                  <span key={i} className={`rounded-full px-2 py-0.5 ${o.status === "assinado" ? "bg-emerald-100 text-emerald-800" : "bg-neutral-100 text-neutral-600"}`}>
+                  <span key={i} className={`rounded-full px-2 py-0.5 ${o.status === "assinado" ? "bg-ok-100 text-ok-800" : "bg-neutro-100 text-neutro-600"}`}>
                     {o.nome} · {o.papel} {o.status === "assinado" ? "✓" : ""}
                   </span>
                 ))}
@@ -138,10 +138,10 @@ export default function AssinarContrato() {
 
             {assinado ? (
               <section className="rounded-xl border bg-white p-6 text-center" style={{ borderColor: DOURADO }}>
-                <CheckCircle2 className="mx-auto h-12 w-12 text-emerald-600" />
+                <CheckCircle2 className="mx-auto h-12 w-12 text-ok-600" />
                 <h2 className="mt-2 text-lg font-bold" style={{ color: VERDE }}>Assinatura registrada</h2>
                 <p className="text-sm">Obrigado! Quando todos assinarem, você recebe o contrato pelo WhatsApp.</p>
-                <p className="mt-3 text-xs text-neutral-600">Confira a autenticidade em <a className="underline" href={`/c/v/${info.contrato.codigoVerificacao}`}>romateccrm.com/c/v/{info.contrato.codigoVerificacao}</a></p>
+                <p className="mt-3 text-xs text-neutro-600">Confira a autenticidade em <a className="underline" href={`/c/v/${info.contrato.codigoVerificacao}`}>romateccrm.com/c/v/{info.contrato.codigoVerificacao}</a></p>
                 <a className="mt-3 inline-flex items-center gap-1 text-sm underline" href={`${base}/contrato.pdf?baixar=1`}><Download className="h-4 w-4" /> Baixar o contrato</a>
               </section>
             ) : (
@@ -152,12 +152,12 @@ export default function AssinarContrato() {
                     <a className="inline-flex items-center gap-1 text-sm underline" href={`${base}/contrato.pdf?baixar=1`}><Download className="h-4 w-4" /> Baixar PDF</a>
                   </div>
                   <LeitorContrato url={`${base}/contrato.pdf`} onFim={() => setLeu(true)} />
-                  {leu && <p className="text-sm text-emerald-700">✓ Leitura concluída</p>}
+                  {leu && <p className="text-sm text-ok-700">✓ Leitura concluída</p>}
                 </section>
 
                 <section className="space-y-3 rounded-xl border bg-white p-4" style={{ borderColor: DOURADO }}>
                   <h2 className="font-semibold" style={{ color: VERDE }}>2. Assine</h2>
-                  {!info.vez && <p className="rounded-lg bg-amber-50 p-3 text-sm text-amber-900">{info.aguardando}</p>}
+                  {!info.vez && <p className="rounded-lg bg-warn-50 p-3 text-sm text-warn-900">{info.aguardando}</p>}
 
                   {s.metodo === "avancada" && (
                     <div className="space-y-3">
@@ -185,7 +185,7 @@ export default function AssinarContrato() {
 
                   {s.metodo === "icp_a1" && (
                     <div className="space-y-3">
-                      <p className="flex items-start gap-2 rounded-lg bg-emerald-50 p-3 text-xs text-emerald-900"><Lock className="mt-0.5 h-4 w-4 shrink-0" />
+                      <p className="flex items-start gap-2 rounded-lg bg-ok-50 p-3 text-xs text-ok-900"><Lock className="mt-0.5 h-4 w-4 shrink-0" />
                         Seu certificado e sua senha são usados só nesta assinatura e não ficam guardados no sistema. Ninguém pode assinar com o seu certificado por você.</p>
                       <div className="grid gap-2 sm:grid-cols-2">
                         <label className="text-sm">Certificado A1 (.pfx ou .p12)
@@ -215,8 +215,8 @@ export default function AssinarContrato() {
                       </li>
                     </ol>
                   )}
-                  {!leu && <p className="text-xs text-neutral-600">A assinatura é liberada depois que você rolar o contrato até o fim.</p>}
-                  {msg && <p role="alert" className="rounded-lg bg-red-50 p-2 text-sm text-red-800">{msg}</p>}
+                  {!leu && <p className="text-xs text-neutro-600">A assinatura é liberada depois que você rolar o contrato até o fim.</p>}
+                  {msg && <p role="alert" className="rounded-lg bg-danger-50 p-2 text-sm text-danger-800">{msg}</p>}
                 </section>
               </>
             )}

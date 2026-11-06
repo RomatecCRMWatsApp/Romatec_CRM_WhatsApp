@@ -87,10 +87,10 @@ export default function LeadForm({ propertyId, denomination, utm, title }: {
           style={{ position: "absolute", left: "-9999px", width: 1, height: 1, opacity: 0 }}
         />
         <label className="flex items-start gap-2 text-xs text-muted-foreground cursor-pointer">
-          <input type="checkbox" checked={consent} onChange={e => setConsent(e.target.checked)} className="mt-0.5 accent-emerald-500" />
-          <span>Autorizo a Romatec a entrar em contato pelo WhatsApp. Posso pedir para parar a qualquer momento respondendo "PARAR".</span>
+          <input type="checkbox" checked={consent} onChange={e => setConsent(e.target.checked)} className="mt-0.5 accent-ok-500" />
+          <span>Autorizo a Romatec a entrar em contato pelo WhatsApp. Posso pedir para parar a qualquer momento respondendo “PARAR”.</span>
         </label>
-        {status === "error" && <p className="text-sm text-red-400">{error}</p>}
+        {status === "error" && <p className="text-sm text-danger-400">{error}</p>}
         <button type="submit" disabled={status === "sending"} className="btn-premium py-3.5 rounded-xl flex items-center justify-center gap-2 text-base disabled:opacity-60">
           <MessageCircle className="h-5 w-5" /> {status === "sending" ? "Enviando..." : "Quero receber no WhatsApp"}
         </button>

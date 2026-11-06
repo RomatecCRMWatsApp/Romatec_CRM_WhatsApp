@@ -48,8 +48,8 @@ function Anexo({ token, doc, enviado, onMudou }: { token: string; doc: DocRecrut
     <div className="rounded-xl border border-[var(--rt-border)] p-3 text-sm">
       <div className="flex flex-wrap items-center gap-2">
         <b>{doc.rotulo}</b>
-        <span className={`text-xs ${doc.obrigatorio ? "text-amber-300" : "text-muted-foreground"}`}>{doc.obrigatorio ? "obrigatório" : "opcional"}</span>
-        {enviado && <span className="flex items-center gap-1 text-xs text-emerald-300"><CheckCircle2 className="h-3.5 w-3.5" /> {enviado}</span>}
+        <span className={`text-xs ${doc.obrigatorio ? "text-warn-300" : "text-muted-foreground"}`}>{doc.obrigatorio ? "obrigatório" : "opcional"}</span>
+        {enviado && <span className="flex items-center gap-1 text-xs text-ok-300"><CheckCircle2 className="h-3.5 w-3.5" /> {enviado}</span>}
       </div>
       {doc.dica && <p className="mt-0.5 text-xs text-muted-foreground">{doc.dica}</p>}
       <div className="mt-2 flex flex-wrap items-center gap-2">
@@ -62,8 +62,8 @@ function Anexo({ token, doc, enviado, onMudou }: { token: string; doc: DocRecrut
           {estado === "Enviando…" ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : enviado ? <Paperclip className="h-3.5 w-3.5" /> : <Upload className="h-3.5 w-3.5" />}
           {enviado ? "Trocar arquivo" : doc.tipo === "foto" ? "Tirar/enviar foto" : "Anexar (foto ou PDF)"}
         </button>
-        {enviado && <button type="button" onClick={() => remover.mutate({ token, tipo: doc.tipo })} className="inline-flex h-8 items-center gap-1 px-2 text-xs text-red-300"><Trash2 className="h-3.5 w-3.5" /> Remover</button>}
-        {estado && estado !== "Enviando…" && <span className="text-xs text-red-400">{estado}</span>}
+        {enviado && <button type="button" onClick={() => remover.mutate({ token, tipo: doc.tipo })} className="inline-flex h-8 items-center gap-1 px-2 text-xs text-danger-300"><Trash2 className="h-3.5 w-3.5" /> Remover</button>}
+        {estado && estado !== "Enviando…" && <span className="text-xs text-danger-400">{estado}</span>}
       </div>
     </div>
   );
@@ -136,7 +136,7 @@ export default function FormularioRecrutamento() {
     return (
       <div className="min-h-screen px-4" style={fundo}>{topo}
         <div className="mx-auto max-w-md space-y-3 rounded-[18px] border border-[var(--rt-gold)]/40 bg-[var(--rt-surface)] p-6 text-center">
-          <CheckCircle2 className="mx-auto h-12 w-12 text-emerald-400" />
+          <CheckCircle2 className="mx-auto h-12 w-12 text-ok-400" />
           <h1 className="text-xl font-semibold">Formulário enviado!</h1>
           <p className="text-sm text-[var(--rt-text-2)]">Obrigado, {s(f.nome).split(" ")[0]}. A Romatec vai conferir os seus dados e documentos. Assim que aprovado, você recebe pelo WhatsApp o login e uma senha provisória para entrar no Romatec CRM.</p>
           <button type="button" onClick={() => setEnviado(false)} className="text-xs text-[var(--rt-gold)] hover:underline">Corrigir alguma informação</button>
@@ -249,7 +249,7 @@ export default function FormularioRecrutamento() {
         <p className="px-1 text-xs text-[var(--rt-text-3)]">
           Ao enviar, você declara que as informações são verdadeiras e autoriza a Romatec Consultoria Total a usá-las no seu cadastro e nos contratos em que atuar (LGPD — Lei n.º 13.709/2018).
         </p>
-        {aviso && <p className={`rounded-xl p-3 text-sm ${Object.keys(erros).length || /Confira|Anexe|já tem/.test(aviso) ? "bg-red-500/10 text-red-300" : "bg-emerald-500/10 text-emerald-300"}`}>{aviso}</p>}
+        {aviso && <p className={`rounded-xl p-3 text-sm ${Object.keys(erros).length || /Confira|Anexe|já tem/.test(aviso) ? "bg-danger-500/10 text-danger-300" : "bg-ok-500/10 text-ok-300"}`}>{aviso}</p>}
         <div className="flex flex-wrap gap-2">
           <button type="button" disabled={salvar.isPending} onClick={() => enviar(true)} className="inline-flex h-11 items-center gap-2 rounded-xl bg-[var(--rt-gold)] px-6 font-semibold text-black disabled:opacity-60">
             {salvar.isPending && <Loader2 className="h-4 w-4 animate-spin" />} Enviar formulário

@@ -37,9 +37,9 @@ function Editor({ s, admin }: { s: { etapa: string; rotulo: string; ativo: boole
           </label>
           <div>
             <Textarea rows={3} value={p.texto} disabled={!admin} onChange={e => set(i, { texto: e.target.value })} />
-            {admin && passos.length > 1 && <Button size="sm" variant="ghost" className="mt-1 h-7 text-red-300" onClick={() => setPassos(passos.filter((_, k) => k !== i))}><Trash2 className="mr-1 h-3.5 w-3.5" /> Remover</Button>}
+            {admin && passos.length > 1 && <Button size="sm" variant="ghost" className="mt-1 h-7 text-danger-300" onClick={() => setPassos(passos.filter((_, k) => k !== i))}><Trash2 className="mr-1 h-3.5 w-3.5" /> Remover</Button>}
           </div>
-          <p className="whitespace-pre-wrap rounded-md bg-emerald-500/10 p-2 text-xs"><span className="mb-1 block text-[10px] text-muted-foreground">Prévia</span>{renderizarPasso(p.texto, EXEMPLO)}</p>
+          <p className="whitespace-pre-wrap rounded-md bg-ok-500/10 p-2 text-xs"><span className="mb-1 block text-[10px] text-muted-foreground">Prévia</span>{renderizarPasso(p.texto, EXEMPLO)}</p>
         </div>
       ))}
       {admin && (
@@ -47,7 +47,7 @@ function Editor({ s, admin }: { s: { etapa: string; rotulo: string; ativo: boole
           {passos.length < MAX_PASSOS && <Button size="sm" variant="outline" onClick={() => setPassos([...passos, { dias: (passos.at(-1)?.dias ?? 0) + 7, texto: "{oi} " }])}><Plus className="mr-1 h-3.5 w-3.5" /> Mensagem</Button>}
           <Button size="sm" disabled={!mudou || !!prob || salvar.isPending} onClick={() => salvar.mutate({ etapa: s.etapa, ativo, passos })}>{salvar.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : "Salvar"}</Button>
           {!s.padrao && <Button size="sm" variant="ghost" onClick={() => { if (confirm("Voltar para a sequência padrão desta etapa?")) restaurar.mutate({ etapa: s.etapa }); }}><RotateCcw className="mr-1 h-3.5 w-3.5" /> Restaurar padrão</Button>}
-          {prob && <span className="text-xs text-red-300">{prob}</span>}
+          {prob && <span className="text-xs text-danger-300">{prob}</span>}
         </div>
       )}
     </div>

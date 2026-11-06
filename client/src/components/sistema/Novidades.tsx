@@ -141,7 +141,7 @@ export function SinoNovidades({ className = "" }: { className?: string }) {
     <button type="button" onClick={() => abrirNovidades(avisos || !versoes ? "avisos" : "versoes")} title="Notificações" aria-label={`Notificações${n ? ` (${n} não lidas)` : ""}`}
       className={`relative rounded-lg p-2 text-sidebar-foreground/70 hover:bg-white/10 hover:text-sidebar-foreground ${className}`}>
       <Bell className="h-4 w-4" />
-      {n > 0 && <span className="absolute -right-0.5 -top-0.5 flex h-4 min-w-4 items-center justify-center rounded-full bg-red-500 px-1 text-[10px] font-bold text-white">{n}</span>}
+      {n > 0 && <span className="absolute -right-0.5 -top-0.5 flex h-4 min-w-4 items-center justify-center rounded-full bg-danger-500 px-1 text-[10px] font-bold text-white">{n}</span>}
     </button>
   );
 }
@@ -167,7 +167,7 @@ export function PainelNovidades({ habilitado }: { habilitado: boolean }) {
   const BotaoAba = ({ id, rotulo, n }: { id: Aba; rotulo: string; n: number }) => (
     <button type="button" onClick={() => setAba(id)}
       className={`flex-1 rounded-md px-3 py-1.5 text-sm ${aba === id ? "bg-primary/15 font-semibold text-foreground" : "text-muted-foreground hover:bg-secondary/50"}`}>
-      {rotulo}{n > 0 && <span className="ml-1.5 rounded-full bg-red-500 px-1.5 text-[10px] font-bold text-white">{n}</span>}
+      {rotulo}{n > 0 && <span className="ml-1.5 rounded-full bg-danger-500 px-1.5 text-[10px] font-bold text-white">{n}</span>}
     </button>
   );
 
@@ -199,7 +199,7 @@ export function PainelNovidades({ habilitado }: { habilitado: boolean }) {
                   <span className="min-w-0 flex-1">
                     <span className="flex items-center gap-2 text-sm font-semibold">
                       v{r.versao}
-                      {!r.lida && <span className="rounded bg-red-500 px-1.5 text-[10px] font-bold text-white">NOVA</span>}
+                      {!r.lida && <span className="rounded bg-danger-500 px-1.5 text-[10px] font-bold text-white">NOVA</span>}
                       <span className="ml-auto text-xs font-normal text-muted-foreground">{dataBr(r.publicadoEm)}</span>
                     </span>
                     <span className="block text-sm text-muted-foreground">{r.titulo}</span>

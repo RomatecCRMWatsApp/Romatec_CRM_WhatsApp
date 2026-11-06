@@ -3,6 +3,18 @@
 Cada versão nova vai no TOPO. Depois rode `npm run release` (valida e atualiza o package.json);
 ao subir, o servidor grava a versão no banco e todos recebem o aviso "Novidades da versão".
 
+## 1.107.2 — 2026-11-06
+tipo: patch
+obrigatoria: nao
+titulo: Capa nos vídeos e acabamento final das telas
+publico: equipe
+
+### Melhorias
+- Vídeos do Bom Jardims em Materiais e no painel do empreendedor mostram a capa oficial "Seu refúgio na natureza" antes de tocar
+- Vídeos de imóveis (cadastro, landing e página pública) mostram como capa o primeiro segundo do próprio vídeo
+- Cores de estado (verde, amarelo, vermelho, azul…) com nomes do CRM, mesmo visual de antes
+- Textos com aspas e reticências tipográficas, cabeçalhos e barras sem efeito de vidro, rodapé com contraste certo
+
 ## 1.107.1 — 2026-11-05
 tipo: patch
 obrigatoria: nao

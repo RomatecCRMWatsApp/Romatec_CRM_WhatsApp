@@ -20,8 +20,8 @@ import RegistroCartorio from "@/components/contratos/RegistroCartorio";
 const br = (iso?: string | null) => (iso ? String(iso).slice(0, 10).split("-").reverse().join("/") : "—");
 const ROTULO_TIPO: Record<string, string> = { entrada: "Entrada", saldo: "Saldo", avista: "À vista", antecipacao: "Antecipação", renegociacao: "Renegociação", reforco: "Reforço anual", complemento: "Compl. entrada" };
 const STATUS_COB: Record<string, [string, string]> = {
-  prevista: ["Prevista", "text-muted-foreground"], emitida: ["Emitida", "text-sky-400"], vencida: ["Vencida", "text-red-400"],
-  paga: ["Paga", "text-emerald-400"], cancelada: ["Cancelada", "text-muted-foreground line-through"], estornada: ["Estornada", "text-amber-400"],
+  prevista: ["Prevista", "text-muted-foreground"], emitida: ["Emitida", "text-info-400"], vencida: ["Vencida", "text-danger-400"],
+  paga: ["Paga", "text-ok-400"], cancelada: ["Cancelada", "text-muted-foreground line-through"], estornada: ["Estornada", "text-warn-400"],
 };
 /** Rótulos dos campos que faltam (tags do modelo) — o que não estiver aqui aparece como a própria tag */
 const ROTULO_CAMPO: Record<string, string> = {
@@ -88,7 +88,7 @@ export default function ContratoDetalhe() {
   });
 
   if (isLoading) return <p className="p-6 text-sm text-muted-foreground">Carregando…</p>;
-  if (error || !d) return <p className="p-6 text-sm text-red-400">{error?.message ?? "Contrato não encontrado"}</p>;
+  if (error || !d) return <p className="p-6 text-sm text-danger-400">{error?.message ?? "Contrato não encontrado"}</p>;
   const c = d.contrato, p = d.plano as any, f = d.financeiro;
   const gate = d.gate as any;
   const definitivoOk = gate?.definitivo?.ok;
@@ -124,12 +124,12 @@ export default function ContratoDetalhe() {
         </div>
 
         {d.cancelamento && (
-          <p className="rounded-lg border border-red-500/40 bg-red-500/10 p-3 text-sm text-red-200">
+          <p className="rounded-lg border border-danger-500/40 bg-danger-500/10 p-3 text-sm text-danger-200">
             Contrato cancelado em {new Date(d.cancelamento.em as any).toLocaleString("pt-BR")} pelo administrador. Motivo: {d.cancelamento.motivo}. O histórico e as versões continuam guardados.
           </p>
         )}
         {pendentes.map(x => (
-          <div key={x.id} className="flex flex-wrap items-center gap-3 rounded-lg border border-amber-500/40 bg-amber-500/10 p-3 text-sm text-amber-100">
+          <div key={x.id} className="flex flex-wrap items-center gap-3 rounded-lg border border-warn-500/40 bg-warn-500/10 p-3 text-sm text-warn-100">
             <ShieldAlert className="h-5 w-5 shrink-0" />
             <span className="flex-1"><b>Pedido de cancelamento</b> de {x.solicitante} em {new Date(x.criadoEm as any).toLocaleString("pt-BR")} — motivo: {x.motivo}</span>
             {d.pode.cancelar ? <>
@@ -163,10 +163,10 @@ export default function ContratoDetalhe() {
                     </Button>
                   )}
                   {d.pode.cancelar && !["cancelado", "distratado"].includes(c.status) && (
-                    <Button variant="outline" className="text-red-400" onClick={() => setModal({ tipo: "contrato" })}><XCircle className="h-4 w-4" /> Cancelar contrato</Button>
+                    <Button variant="outline" className="text-danger-400" onClick={() => setModal({ tipo: "contrato" })}><XCircle className="h-4 w-4" /> Cancelar contrato</Button>
                   )}
                   {d.pode.solicitarCancelamento && (
-                    <Button variant="outline" className="text-red-400" disabled={pedidoAberto} onClick={() => setModal({ tipo: "solicitar" })}
+                    <Button variant="outline" className="text-danger-400" disabled={pedidoAberto} onClick={() => setModal({ tipo: "solicitar" })}
                       title={pedidoAberto ? "Já existe um pedido aguardando o administrador" : ""}>
                       <Ban className="h-4 w-4" /> Solicitar cancelamento do contrato
                     </Button>
@@ -228,11 +228,11 @@ export default function ContratoDetalhe() {
               </section>
               <section className="rounded-xl border border-border bg-card p-4">
                 <h2 className="mb-2 text-sm font-semibold">Para o contrato definitivo</h2>
-                {gate?.erro && <p className="text-xs text-red-400">{gate.erro}</p>}
+                {gate?.erro && <p className="text-xs text-danger-400">{gate.erro}</p>}
                 {gate?.definitivo && (definitivoOk
-                  ? <p className="flex items-center gap-2 text-sm text-emerald-400"><CheckCircle2 className="h-4 w-4" /> Tudo pronto para o definitivo</p>
+                  ? <p className="flex items-center gap-2 text-sm text-ok-400"><CheckCircle2 className="h-4 w-4" /> Tudo pronto para o definitivo</p>
                   : <div className="space-y-2 text-xs">
-                    {gate.definitivo.bloqueios.map((b: string) => <p key={b} className="flex gap-2 text-red-300"><AlertTriangle className="h-4 w-4 shrink-0" />{b}</p>)}
+                    {gate.definitivo.bloqueios.map((b: string) => <p key={b} className="flex gap-2 text-danger-300"><AlertTriangle className="h-4 w-4 shrink-0" />{b}</p>)}
                     {!!gate.definitivo.faltantes.length && <>
                       <p className="text-muted-foreground">Campos a preencher ({gate.definitivo.faltantes.length}):</p>
                       <ul className="list-disc pl-5 text-muted-foreground">{gate.definitivo.faltantes.map((x: string) => <li key={x}>{ROTULO_CAMPO[x] ?? x}</li>)}</ul>
@@ -249,7 +249,7 @@ export default function ContratoDetalhe() {
           !f ? <p className="text-sm text-muted-foreground">O financeiro do contrato é com o administrador e a secretaria.</p> : (
             <div className="space-y-4">
               {!f.asaasConfigurado && (
-                <p className="rounded-lg border border-amber-500/40 bg-amber-500/10 p-3 text-sm text-amber-200">
+                <p className="rounded-lg border border-warn-500/40 bg-warn-500/10 p-3 text-sm text-warn-200">
                   Cobrança desligada: a chave do Asaas deste empreendimento ainda não foi configurada. Nada é emitido, cobrado nem enviado ao cliente.
                 </p>
               )}
@@ -292,13 +292,13 @@ export default function ContratoDetalhe() {
                         return (
                           <tr key={x.id} className="border-t border-border/50">
                             <td className="p-2">{ROTULO_TIPO[x.tipo] ?? x.tipo} {x.numero}/{x.total}</td>
-                            <td className="p-2">{br(x.vencimento)}{x.valorOriginal != null && <span className="ml-1 text-[10px] text-amber-400">2ª via</span>}</td>
+                            <td className="p-2">{br(x.vencimento)}{x.valorOriginal != null && <span className="ml-1 text-[10px] text-warn-400">2ª via</span>}</td>
                             <td className="p-2 text-right">{brl(x.valor)}</td>
                             <td className={`p-2 ${cor}`}>
                               {rot}{x.acoes.vencida && ` · ${x.acoes.atraso} dias`}
-                              {x.acoes.negociacao && <span className="ml-2 rounded bg-red-500/15 px-1.5 py-0.5 text-[10px] font-semibold text-red-300">Negociação</span>}
+                              {x.acoes.negociacao && <span className="ml-2 rounded bg-danger-500/15 px-1.5 py-0.5 text-[10px] font-semibold text-danger-300">Negociação</span>}
                             </td>
-                            <td className="p-2 text-xs">{x.pagoEm ? `${br(x.pagoEm)} · ${brl(x.valorPago ?? x.valor)}` : "—"}{x.reciboNumero && <span className="block text-muted-foreground">{x.reciboNumero}{x.reciboCancelado && <b className="ml-1 text-red-400">CANCELADO</b>}{x.reciboErro ? ` · envio: ${x.reciboErro}` : x.reciboEnviado ? " · enviado" : ""}</span>}</td>
+                            <td className="p-2 text-xs">{x.pagoEm ? `${br(x.pagoEm)} · ${brl(x.valorPago ?? x.valor)}` : "—"}{x.reciboNumero && <span className="block text-muted-foreground">{x.reciboNumero}{x.reciboCancelado && <b className="ml-1 text-danger-400">CANCELADO</b>}{x.reciboErro ? ` · envio: ${x.reciboErro}` : x.reciboEnviado ? " · enviado" : ""}</span>}</td>
                             <td className="p-2">
                               <div className="flex justify-end gap-1">
                                 {x.acoes.boleto && <Button size="sm" variant="outline" onClick={() => abrir(`/api/financeiro/cobrancas/${x.id}/boleto-a4.pdf`)}>Boleto A4</Button>}
@@ -309,11 +309,11 @@ export default function ContratoDetalhe() {
                                 )}
                                 {x.acoes.recibo && x.reciboId && <Button size="sm" variant="outline" onClick={() => abrir(`/api/financeiro/recibos/${x.reciboId}.pdf`)}>Recibo</Button>}
                                 {d.pode.cancelar && ["prevista", "emitida", "vencida"].includes(x.status) && (
-                                  <Button size="sm" variant="ghost" className="text-red-400" title="Cancelar esta cobrança (só administrador, com senha)"
+                                  <Button size="sm" variant="ghost" className="text-danger-400" title="Cancelar esta cobrança (só administrador, com senha)"
                                     onClick={() => setModal({ tipo: "cobranca", id: x.id, rotulo: `${ROTULO_TIPO[x.tipo] ?? x.tipo} ${x.numero}/${x.total}` })}><XCircle className="h-3 w-3" /></Button>
                                 )}
                                 {d.pode.cancelar && x.reciboId && !x.reciboCancelado && (
-                                  <Button size="sm" variant="ghost" className="text-red-400" title="Cancelar o recibo (só administrador, com senha)"
+                                  <Button size="sm" variant="ghost" className="text-danger-400" title="Cancelar o recibo (só administrador, com senha)"
                                     onClick={() => setModal({ tipo: "recibo", id: x.reciboId, numero: x.reciboNumero })}><Ban className="h-3 w-3" /></Button>
                                 )}
                                 {x.acoes.recibo && x.reciboId && d.pode.cobranca && (
@@ -340,7 +340,7 @@ export default function ContratoDetalhe() {
                 <div className="flex flex-wrap gap-2">
                   {f.declaracoes.sort((a: any, b: any) => b.ano - a.ano).map((x: any) => x.status === "emitida"
                     ? <Button key={x.ano} size="sm" variant="outline" onClick={() => abrir(`/api/financeiro/contratos/${id}/declaracao/${x.ano}.pdf`)}>{x.ano} · {x.valorTotal != null ? brl(x.valorTotal) : ""}</Button>
-                    : <span key={x.ano} className="rounded-lg border border-red-500/40 px-2 py-1 text-xs text-red-300">{x.ano}: {x.motivo ?? "retida — débito em aberto"}</span>)}
+                    : <span key={x.ano} className="rounded-lg border border-danger-500/40 px-2 py-1 text-xs text-danger-300">{x.ano}: {x.motivo ?? "retida — débito em aberto"}</span>)}
                 </div>
               </section>
             </div>
@@ -352,7 +352,7 @@ export default function ContratoDetalhe() {
         titulo={`Cancelar o contrato ${c.numero}`} rotuloBotao="Cancelar contrato" motivoInicial={pendentes[0]?.motivo ?? ""}
         descricao={<>
           <p>O contrato fica <b>cancelado</b> (não é apagado), a <b>Chácara {c.loteCodigo}</b> volta a ficar disponível e as <b>cobranças futuras não pagas</b> são canceladas{f?.asaasConfigurado ? " no Asaas" : ""}.</p>
-          {["ativo", "quitado"].includes(c.status) && <p className="mt-2 text-amber-300">Contrato ativo: parcelas já pagas e vencidas ficam registradas para o acerto do distrato (Lei 6.766, art. 32-A).</p>}
+          {["ativo", "quitado"].includes(c.status) && <p className="mt-2 text-warn-300">Contrato ativo: parcelas já pagas e vencidas ficam registradas para o acerto do distrato (Lei 6.766, art. 32-A).</p>}
         </>}
         onConfirmar={(motivo, senha) => cancelar.mutate({ id, motivo, senha })} />
       <ConfirmarCancelamento aberto={modal?.tipo === "solicitar"} onFechar={() => setModal(null)} comSenha={false} pendente={solicitar.isPending}
