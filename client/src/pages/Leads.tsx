@@ -216,7 +216,7 @@ export default function Leads() {
       {/* ── Header ──────────────────────────────────────────────────── */}
       <div style={{
         background: 'transparent', flexWrap: 'wrap', gap: '10px',
-        padding: '20px 24px 12px',
+        padding: '20px clamp(12px, 4vw, 24px) 12px',
         display: 'flex', alignItems: 'center', justifyContent: 'space-between',
       }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
@@ -230,7 +230,7 @@ export default function Leads() {
             </p>
           </div>
         </div>
-        <div style={{ display: 'flex', gap: '8px' }}>
+        <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
           <button onClick={() => navigate('/leads/funil')} style={{
             padding: '6px 14px', borderRadius: '8px', background: 'color-mix(in srgb, var(--c-8b5cf6) 12%, transparent)',
             border: '1px solid color-mix(in srgb, var(--c-8b5cf6) 30%, transparent)', color: 'var(--c-a78bfa)', fontSize: '11px',
@@ -314,7 +314,7 @@ export default function Leads() {
         )}
 
         {/* ── Stats cards ──────────────────────────────────────────── */}
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(6,1fr)', gap: '8px' }}>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(104px, 1fr))', gap: '8px' }}>
           {STAT_CARDS.map(sc => (
             <div key={sc.label} style={{
               background: 'var(--card)', border: '1px solid var(--border)', borderRadius: '10px',

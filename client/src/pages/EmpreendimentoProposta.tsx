@@ -67,6 +67,7 @@ export default function EmpreendimentoProposta() {
         </div>
 
         <p style={{ fontSize: "14px", fontWeight: 700, margin: "14px 0 4px" }}>Chácara {data.lote.codigo}{data.lote.quadra ? ` · Quadra ${data.lote.quadra}` : ""} · {m2(data.lote.areaM2)} m²</p>
+        <div style={{ overflowX: "auto" }}>
         <table style={{ width: "100%", borderCollapse: "collapse" }}>
           <tbody>
             <Linha r="Preço da chácara" v={brl(sim.preco)} forte />
@@ -78,6 +79,7 @@ export default function EmpreendimentoProposta() {
             <Linha r="Total a pagar (entrada + saldo)" v={brl(plano.totalPago)} forte />
           </tbody>
         </table>
+        </div>
         <p style={{ margin: "8px 0 0", color: "var(--c-374151)" }}>{data.textoJuros}. 1ª parcela do saldo no mês seguinte à {entrada === 1 ? "entrada à vista" : "última parcela da entrada"}.</p>
 
         <div style={{ marginTop: "14px", border: `1.5px solid ${OURO}`, borderRadius: "8px", padding: "10px 12px", background: "var(--c-fbf7ec)", display: "flex", justifyContent: "space-between", alignItems: "center", gap: "12px" }}>

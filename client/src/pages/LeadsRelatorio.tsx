@@ -202,7 +202,7 @@ export default function LeadsRelatorio() {
                 <Card key={tipo} className="bg-card border-border">
                   <CardContent className="p-4">
                     <div className="flex items-center justify-between"><Tipo tipo={tipo} /><span className="text-xs text-muted-foreground">{pct(t?.leads ?? 0, r.total.leads)} dos leads</span></div>
-                    <div className="grid grid-cols-4 gap-2 mt-3 text-center">
+                    <div className="grid grid-cols-2 gap-2 mt-3 text-center min-[420px]:grid-cols-4">
                       <div><p className="text-xl font-bold">{t?.leads ?? 0}</p><p className="text-[10px] text-muted-foreground">leads</p></div>
                       <div><p className="text-xl font-bold text-heat-300">{t?.quentes ?? 0}</p><p className="text-[10px] text-muted-foreground">quentes</p></div>
                       <div><p className="text-xl font-bold">{(t?.cliques ?? 0) + (t?.scans ?? 0)}</p><p className="text-[10px] text-muted-foreground">cliques + QR</p></div>

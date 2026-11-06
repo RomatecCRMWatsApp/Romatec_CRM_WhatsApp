@@ -3,6 +3,18 @@
 Cada versão nova vai no TOPO. Depois rode `npm run release` (valida e atualiza o package.json);
 ao subir, o servidor grava a versão no banco e todos recebem o aviso "Novidades da versão".
 
+## 1.110.3 — 2026-11-06
+tipo: patch
+obrigatoria: nao
+titulo: Telas ajustadas para o celular
+publico: usuarios
+
+### Correções
+- Menu lateral no celular: o seu nome, as notificações e o botão Sair aparecem inteiros, acima da barra de baixo
+- iPhone com o app instalado: o conteúdo não passa mais por trás do relógio e da bateria, e a barra de gestos não cobre os botões
+- Telas que passavam da largura do celular: botões do topo de Leads e do Painel quebram linha, números de Campanhas e Leads se ajustam à tela, topo do portal do empreendedor mais enxuto, abas do imóvel com rolagem
+- Tabelas largas rolam para o lado dentro do quadro, sem cortar a tela
+
 ## 1.110.2 — 2026-11-06
 tipo: patch
 obrigatoria: nao

@@ -29,12 +29,14 @@ export default function EspacoBanco() {
         {dados?.ok && (
           <>
             <p className="text-sm">Tabelas: <b>{dados.totalTabelasMB} MB</b> · Logs internos do MySQL (binlog): <b>{typeof dados.binlogs === "string" ? dados.binlogs : `${dados.binlogs?.mb} MB em ${dados.binlogs?.arquivos} arquivo(s)`}</b></p>
+            <div className="overflow-x-auto">
             <table className="w-full text-sm">
               <thead><tr className="text-left text-xs text-muted-foreground"><th className="py-1">Tabela</th><th className="py-1 text-right">Linhas</th><th className="py-1 text-right">Tamanho</th></tr></thead>
               <tbody>{dados.tabelas?.map(t => (
                 <tr key={t.tabela} className="border-t border-border/50"><td className="py-1 font-mono text-xs">{t.tabela}</td><td className="py-1 text-right">{t.linhas.toLocaleString("pt-BR")}</td><td className="py-1 text-right">{t.mb} MB</td></tr>
               ))}</tbody>
             </table>
+            </div>
             {!!dados.bancos?.length && <p className="text-xs text-muted-foreground">Bancos neste MySQL: {dados.bancos.map(b => `${b.banco} ${b.mb} MB`).join(" · ")}</p>}
             {!!dados.arquivos?.length && <p className="text-xs text-muted-foreground">Arquivos internos: {dados.arquivos.map(f => `${f.arquivo.split(/[\\/]/).pop()} (${f.tipo}) ${f.mb} MB`).join(" · ")}</p>}
             {dados.variaveis && <p className="break-all font-mono text-[11px] text-muted-foreground">{Object.entries(dados.variaveis).map(([k, v]) => `${k}=${v}`).join(" · ")}</p>}

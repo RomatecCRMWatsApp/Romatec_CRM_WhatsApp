@@ -22,7 +22,7 @@ export default function PropertiesCatalog() {
   return (
     <div className="min-h-screen bg-background flex flex-col">
       {/* Header */}
-      <header className="border-b border-border/50 bg-card/80 backdrop-blur-sm sticky top-0 z-20">
+      <header className="border-b border-border/50 bg-card/80 backdrop-blur-sm sticky top-[env(safe-area-inset-top)] z-20">
         <div className="max-w-5xl mx-auto px-4 py-4 flex items-center gap-3">
           <div className="p-2 rounded-xl bg-gradient-to-br from-ok-500/20 to-ok-700/20 border border-ok-500/30">
             <Building2 className="h-6 w-6 text-ok-500" />

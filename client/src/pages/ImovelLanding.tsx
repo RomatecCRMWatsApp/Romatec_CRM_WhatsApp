@@ -18,7 +18,7 @@ function reais(v: unknown): string | null {
 
 function BannerCookies({ onEscolha }: { onEscolha: (v: "sim" | "nao") => void }) {
   return (
-    <div className="fixed inset-x-0 bottom-0 z-50 p-3">
+    <div className="fixed inset-x-0 bottom-0 z-50 p-3 pb-[calc(0.75rem+env(safe-area-inset-bottom))]">
       <div className="max-w-3xl mx-auto rounded-2xl border border-border bg-card p-4 shadow-md flex flex-col sm:flex-row sm:items-center gap-3">
         <p className="text-sm text-foreground flex-1">
           Usamos cookies próprios para melhorar o atendimento. Nada é compartilhado com terceiros.

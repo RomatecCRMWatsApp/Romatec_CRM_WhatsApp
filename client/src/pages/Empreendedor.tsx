@@ -137,23 +137,23 @@ export default function Empreendedor() {
   return (
     <div className="min-h-screen bg-background">
       {/* Barra do topo */}
-      <div className="sticky top-0 z-30 border-b border-[var(--rt-border)] bg-black">
-        <div className="mx-auto flex max-w-[1500px] items-center gap-3 px-3 py-2 sm:px-4 md:px-6">
+      <div className="sticky top-[env(safe-area-inset-top)] z-30 border-b border-[var(--rt-border)] bg-black">
+        <div className="mx-auto flex max-w-[1500px] items-center gap-1 px-2 py-2 sm:gap-3 sm:px-4 md:px-6">
           {/* Administrador/secretária olhando a Visão do empreendedor: volta para o CRM */}
           {!ehEmpreendedor && (
             <Button size="sm" variant="outline" className="shrink-0 border-white/30 text-white hover:bg-white/15" onClick={() => navigate("/dashboard")}>
-              <ArrowLeft className="mr-1 h-4 w-4" /> Voltar ao CRM
+              <ArrowLeft className="mr-1 h-4 w-4" /><span className="hidden sm:inline">Voltar ao&nbsp;</span>CRM
             </Button>
           )}
-          <RomatecAppIcon size={34} />
+          <span className="hidden min-[400px]:inline-flex"><RomatecAppIcon size={34} /></span>
           <p className="min-w-0 flex-1 truncate text-sm text-white/80">
             {ehEmpreendedor ? "Portal do empreendedor" : "Visão do empreendedor (prévia)"} · <b className="text-white">{String((user as any)?.name || "").split(" ")[0]}</b>
           </p>
-          <Button size="sm" variant="ghost" className="text-white hover:bg-white/15" title="Ranking de vendas dos corretores" onClick={() => navigate("/ranking")}><Trophy className="h-4 w-4 sm:mr-1" /><span className="hidden sm:inline">Ranking</span></Button>
-          <Button size="sm" variant="ghost" className="text-white hover:bg-white/15" title="Reuniões e quem confirmou presença" onClick={() => navigate("/convites")}><CalendarCheck className="h-4 w-4 sm:mr-1" /><span className="hidden sm:inline">Reuniões</span></Button>
+          <Button size="sm" variant="ghost" className="px-2 text-white hover:bg-white/15 sm:px-3" title="Ranking de vendas dos corretores" onClick={() => navigate("/ranking")}><Trophy className="h-4 w-4 sm:mr-1" /><span className="hidden sm:inline">Ranking</span></Button>
+          <Button size="sm" variant="ghost" className="px-2 text-white hover:bg-white/15 sm:px-3" title="Reuniões e quem confirmou presença" onClick={() => navigate("/convites")}><CalendarCheck className="h-4 w-4 sm:mr-1" /><span className="hidden sm:inline">Reuniões</span></Button>
           <SinoNovidades className="text-white/80 hover:text-white" />
           <FotoUsuario />
-          <Button size="sm" variant="ghost" className="text-white hover:bg-white/15" title="Sair" onClick={() => logout()}><LogOut className="h-4 w-4" /></Button>
+          <Button size="sm" variant="ghost" className="px-2 text-white hover:bg-white/15 sm:px-3" title="Sair" onClick={() => logout()}><LogOut className="h-4 w-4" /></Button>
         </div>
         {/* Navegação das seções da página */}
         <div className="mx-auto flex max-w-[1500px] gap-1.5 overflow-x-auto px-3 pb-2 sm:px-4 md:px-6 [scrollbar-width:none]">
@@ -260,7 +260,7 @@ export default function Empreendedor() {
                 {!fin.boletos.length ? <p className="text-sm text-muted-foreground">Nenhum boleto emitido ainda.</p> : (
                   <div className="max-h-[420px] overflow-auto -mx-2">
                     <table className="w-full min-w-[640px] text-xs">
-                      <thead className="sticky top-0 bg-card"><tr className="border-b border-border text-left text-muted-foreground">
+                      <thead className="sticky top-[env(safe-area-inset-top)] bg-card"><tr className="border-b border-border text-left text-muted-foreground">
                         {["Vencimento", "Chácara", "Comprador", "Parcela", "Valor", "Situação", ""].map(h => <th key={h} className="px-2 py-2 font-medium">{h}</th>)}
                       </tr></thead>
                       <tbody>

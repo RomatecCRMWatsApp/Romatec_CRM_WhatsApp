@@ -87,7 +87,7 @@ function Distribuir({ aoEncaminhar }: { aoEncaminhar: () => void }) {
           </Button>
         </div>
       )}
-      <div className="sticky top-0 z-10 flex flex-wrap items-end gap-2 rounded-lg border border-ok-500/40 bg-card p-3 shadow">
+      <div className="sticky top-[env(safe-area-inset-top)] z-10 flex flex-wrap items-end gap-2 rounded-lg border border-ok-500/40 bg-card p-3 shadow">
         <span className="text-sm font-semibold">{sel.size} selecionado(s)</span>
         <label className="flex flex-col gap-1 text-xs text-muted-foreground">Encaminhar para
           <select id="dist-para" className={`${selectCls} min-w-[200px]`} value={paraId} onChange={e => setParaId(e.target.value ? Number(e.target.value) : "")}>

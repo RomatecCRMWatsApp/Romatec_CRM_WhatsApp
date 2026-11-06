@@ -326,7 +326,7 @@ export default function Properties() {
               </button>
             </div>
             <Tabs defaultValue="info" className="w-full">
-              <TabsList className="grid w-full grid-cols-5 mb-6 bg-secondary/50">
+              <TabsList className="mb-6 flex h-auto w-full justify-start overflow-x-auto bg-secondary/50 [scrollbar-width:none] sm:grid sm:grid-cols-5">
                 <TabsTrigger value="info">Informações</TabsTrigger>
                 <TabsTrigger value="media">Fotos</TabsTrigger>
                 <TabsTrigger value="video">Vídeo</TabsTrigger>

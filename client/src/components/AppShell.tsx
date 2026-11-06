@@ -320,19 +320,23 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
 
       {/* Gaveta (celular/tablet) */}
       {aberto && (
-        <div className="lg:hidden fixed inset-0 z-50 flex">
+        // z-[60]: acima da barra inferior (z-50), senão o rodapé da gaveta (usuário, sair) fica escondido atrás dela.
+        // Altura da tela visível (dvh) e margens do iPhone (entalhe em cima, barra de gestos embaixo).
+        <div className="lg:hidden fixed inset-0 z-[60] flex">
           <div className="absolute inset-0 bg-black/60" onClick={() => setAberto(false)} />
-          <aside className="relative z-10 flex w-72 max-w-[85vw] flex-col bg-sidebar border-r border-sidebar-border">
-            <div className="flex items-center justify-between pr-3"><Marca /><button onClick={() => setAberto(false)} className="p-2 text-sidebar-foreground/70"><X className="h-5 w-5" /></button></div>
+          <aside className="relative z-10 flex h-[100dvh] max-h-[100dvh] w-72 max-w-[85vw] flex-col overflow-hidden bg-sidebar border-r border-sidebar-border pt-[env(safe-area-inset-top)] pb-[env(safe-area-inset-bottom)]">
+            <div className="flex shrink-0 items-center justify-between pr-3"><Marca /><button onClick={() => setAberto(false)} className="p-2 text-sidebar-foreground/70" aria-label="Fechar menu"><X className="h-5 w-5" /></button></div>
             <Navegacao onNavegar={() => setAberto(false)} />
-            <BotaoInstalarApp />
-            <Rodape />
+            <div className="shrink-0">
+              <BotaoInstalarApp />
+              <Rodape />
+            </div>
           </aside>
         </div>
       )}
 
       {/* Barra do topo (celular): abre a gaveta */}
-      <header className="lg:hidden sticky top-0 z-20 flex items-center gap-3 border-b border-border bg-background px-3 py-2">
+      <header className="lg:hidden sticky top-[env(safe-area-inset-top)] z-20 flex items-center gap-3 border-b border-border bg-background px-3 py-2">
         <button onClick={() => setAberto(true)} className="rounded-lg p-2 hover:bg-white/5" aria-label="Abrir menu"><Menu className="h-5 w-5" /></button>
         <RomatecAppIcon size={28} />
         <p className="font-semibold truncate flex-1">{tituloDaRota(loc)}</p>
@@ -343,7 +347,7 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
       <AvisoRotinas />
       <BannerLicenca licenca={(user as any)?.licenca} />
       {/* No celular, espaço para a barra inferior (96 px) */}
-      <main className="min-w-0 pb-24 min-[900px]:pb-0">{children}</main>
+      <main className="min-w-0 pb-[calc(6rem+env(safe-area-inset-bottom))] min-[900px]:pb-0">{children}</main>
       <BarraInferior modulos={minhas?.modulos} />
     </div>
   );

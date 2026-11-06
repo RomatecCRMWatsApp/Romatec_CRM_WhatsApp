@@ -276,7 +276,7 @@ function PerformanceCharts({ perfData }: { perfData: any }) {
                 </div>
               </div>
 
-              <div className="grid grid-cols-4 gap-2 text-center">
+              <div className="grid grid-cols-2 gap-2 text-center min-[420px]:grid-cols-4">
                 <div>
                   <p className="text-lg font-bold text-ok-400">{camp.sent}</p>
                   <p className="text-[10px] text-muted-foreground">Enviadas</p>
@@ -414,7 +414,7 @@ function WhatsAppStatusPanel() {
           )}
           <p className="text-xs text-danger-200/50 mt-3">Verificado {timeAgo(s.checkedAt)}</p>
         </div>
-        <div className="flex flex-row md:flex-col gap-2 shrink-0">
+        <div className="flex flex-row flex-wrap md:flex-col gap-2 md:shrink-0">
           <Button size="sm" onClick={verificar} disabled={checking} className="bg-danger-600 hover:bg-danger-700 text-white">
             <RefreshCw className={`mr-1.5 h-4 w-4 ${checking ? "animate-spin" : ""}`} />
             {checking ? "Verificando..." : "Verificar agora"}

@@ -303,7 +303,7 @@ export default function PropertyPublic() {
       </div>
 
       {/* Fixed Bottom CTA */}
-      <div className="fixed bottom-0 inset-x-0 z-50 p-4 bg-background border-t border-border/30">
+      <div className="fixed bottom-0 inset-x-0 z-50 p-4 pb-[calc(1rem+env(safe-area-inset-bottom))] bg-background border-t border-border/30">
         <div className="max-w-3xl mx-auto">
           <p className="text-xs text-center text-muted-foreground mb-2">
             Falar com <span className="font-bold text-emerald">{esp.nome}</span> — {esp.display}

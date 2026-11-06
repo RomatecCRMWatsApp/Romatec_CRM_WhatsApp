@@ -431,3 +431,8 @@
 .rt-range::-webkit-slider-thumb { -webkit-appearance: none; appearance: none; width: 14px; height: 14px; border-radius: 50%; background: var(--rt-gold); border: 2px solid var(--rt-bg); }
 .rt-range::-moz-range-thumb { width: 14px; height: 14px; border-radius: 50%; background: var(--rt-gold); border: 2px solid var(--rt-bg); }
 .rt-range:focus-visible { outline: 2px solid var(--rt-gold); outline-offset: 3px; }
+
+/* iPhone instalado como app (status bar translúcida + viewport-fit=cover): o conteúdo começa abaixo do relógio e da
+   bateria, e uma faixa preta cobre essa área quando a tela rola (senão o texto passa por trás do relógio). */
+body { padding-top: env(safe-area-inset-top); }
+body::before { content: ""; position: fixed; inset: 0 0 auto 0; height: env(safe-area-inset-top); background: var(--rt-bg); z-index: 70; pointer-events: none; }

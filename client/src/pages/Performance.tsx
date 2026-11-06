@@ -309,7 +309,7 @@ export default function Performance() {
                   </div>
                 </div>
 
-                <div className="grid grid-cols-4 gap-2 text-center">
+                <div className="grid grid-cols-2 gap-2 text-center min-[420px]:grid-cols-4">
                   <div>
                     <p className="text-lg font-bold text-emerald">{camp.sent}</p>
                     <p className="text-[10px] text-muted-foreground">Enviadas</p>
