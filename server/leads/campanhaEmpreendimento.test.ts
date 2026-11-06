@@ -6,7 +6,7 @@ describe('Campanha ligada a empreendimento (BJ-IG-PAGO → Bom Jardims)', () => 
     const m = montarAbertura({ funil: 'comprador', nome: 'maria silva', empreendimento: { slug: 'bom-jardims', nome: 'Condomínio de Chácaras Bom Jardims' } });
     expect(m).toContain('Olá, Maria!');
     expect(m).toContain('*lista exclusiva* do empreendimento *Condomínio de Chácaras Bom Jardims*');
-    expect(m).toContain('CRECI/MA 4.705');
+    expect(m).toContain('CRECI/MA F-4.705');
     expect(m).toContain('vai te chamar pelo número pessoal dele, *(99) 9 9181-1246*');
     expect(m).toContain('Para sair da lista, responda SAIR.');
     expect(m).not.toMatch(/R\$|valor|3 perguntas/i);

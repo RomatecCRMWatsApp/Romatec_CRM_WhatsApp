@@ -13,6 +13,7 @@ import PageHeader from "@/components/PageHeader";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { numeroCreciPF } from "@shared/cartaoVendas";
 import {
   CATEGORIAS_MIDIA, DICA_USO, descreverMidias, PAGAMENTO, ROTULO_MIDIA, ROTULO_PAGAMENTO, ROTULO_USO, USO,
   type SituacaoPagamento, type SituacaoUso, type UsoMidias,
@@ -212,7 +213,7 @@ function CartaoPessoa({ l, onAcao, onHistorico }: { l: Linha; onAcao: (a: Acao) 
         <div className="min-w-0 flex-1">
           <p className="truncate font-medium text-foreground">{l.nome}</p>
           <p className="truncate text-xs text-muted-foreground">
-            {l.perfil === "empreendedor" ? "Empreendedor" : "Corretor"}{l.creci ? `, CRECI ${l.creci}` : ""}{l.telefone ? `, ${l.telefone}` : ""}
+            {l.perfil === "empreendedor" ? "Empreendedor" : "Corretor"}{l.creci ? `, CRECI ${numeroCreciPF(l.creci)}` : ""}{l.telefone ? `, ${l.telefone}` : ""}
           </p>
         </div>
         <Selo texto={l.podeEntrar ? "Entra hoje" : "Sem acesso"} cor={l.podeEntrar ? "bg-ok-500/15 text-ok-300 border-ok-500/40" : "bg-danger-500/15 text-danger-300 border-danger-500/40"}

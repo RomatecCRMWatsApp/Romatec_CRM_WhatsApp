@@ -35,7 +35,7 @@ export function legendaChacara(d: DadosLegenda): string {
     d.lote ? identificacaoChacara(d.lote) : `Mapa das chácaras${d.disponiveis ? ` · ${d.disponiveis} disponíveis` : ''}`,
     local ? `📍 ${local}` : '',
     '',
-    'Romatec Consultoria Total · CRECI J-1234 · José Romário — CRECI/MA 4.705',
+    'Romatec Consultoria Total · CRECI J-1234 · José Romário — CRECI/MA F-4.705',
   ].filter((l, i, a) => l !== '' || (i > 0 && a[i - 1] !== '')).join('\n');
 }
 

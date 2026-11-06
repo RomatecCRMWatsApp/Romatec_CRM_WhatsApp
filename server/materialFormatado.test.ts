@@ -9,7 +9,7 @@ import { caminhoLocal, imagemFormatada, nomeDownload, sondarVideo, textosCorreto
 import { linkPublico } from './materiaisDownload';
 
 const dados: DadosCorretor = {
-  cartao: { nome: 'Ana Corretora', creci: 'CRECI/MA 9.999', telefones: ['(99) 9 8888-7777'], whatsapp: '5599988887777', email: null, fotoUrl: null, papel: 'Corretor(a)', instagram: 'avalieimob' },
+  cartao: { nome: 'Ana Corretora', creci: 'CRECI/MA F-9.999', telefones: ['(99) 9 8888-7777'], whatsapp: '5599988887777', email: null, fotoUrl: null, papel: 'Corretor(a)', instagram: 'avalieimob' },
   instagram: 'ana.imoveis', link: 'https://romateccrm.com/bom-jardims?c=abc', empreendimento: 'Condomínio de Chácaras Bom Jardims',
 };
 
@@ -43,7 +43,7 @@ describe('formatos de download', () => {
   });
 
   it('faixa usa o Instagram do próprio corretor (não o institucional)', () => {
-    expect(textosCorretor(dados)).toEqual({ nome: 'Ana Corretora · CRECI/MA 9.999', detalhe: 'WhatsApp (99) 9 8888-7777  ·  @ana.imoveis', email: null });
+    expect(textosCorretor(dados)).toEqual({ nome: 'Ana Corretora · CRECI/MA F-9.999', detalhe: 'WhatsApp (99) 9 8888-7777  ·  @ana.imoveis', email: null });
     expect(textosCorretor({ ...dados, instagram: null }).detalhe).toBe('WhatsApp (99) 9 8888-7777');
   });
 

@@ -238,7 +238,7 @@ export const AVISO_LEGAL_SIMULACAO =
   'Financiamento direto com o empreendedor (não bancário). Conforme o art. 52 do Código de Defesa do Consumidor, ' +
   'informamos: preço à vista, taxa de juros efetiva mensal e anual, número e periodicidade das prestações e total a pagar com financiamento.';
 
-export const CORRETOR_SIMULACAO = { nome: 'José Romário', creci: 'CRECI/MA 4.705', telefones: ['(99) 9 9181-1246', '(99) 9 9206-2871'] };
+export const CORRETOR_SIMULACAO = { nome: 'José Romário', creci: 'CRECI/MA F-4.705', telefones: ['(99) 9 9181-1246', '(99) 9 9206-2871'] };
 
 /** "à vista R$ 45.000,00 (desconto de R$ 3.000,00)" ou "6× de R$ 8.000,00" */
 export function textoEntrada(sim: Simulacao): string {

@@ -191,7 +191,7 @@ export function ChacaraView({ codigo, mapa, lotes, falhou = false }: { codigo: s
             <a href={`/bom-jardims?chacara=${codigo}#cadastro`} style={{ ...botao(C.dourado, C.verde), justifySelf: "start" }}>Quero me cadastrar nesta chácara</a>
           )}
           <p style={{ color: "var(--c-b9c4b5)", fontSize: 12, margin: 0 }}>
-            Imagens e mapa ilustrativos; medidas do projeto de parcelamento. Romatec Consultoria Total · CRECI J-1234 · José Romário — CRECI/MA 4.705.
+            Imagens e mapa ilustrativos; medidas do projeto de parcelamento. Romatec Consultoria Total · CRECI J-1234 · José Romário — CRECI/MA F-4.705.
           </p>
         </div>
       </section>

@@ -5,6 +5,7 @@ import { trpc } from "@/lib/trpc";
 import PageHeader from "@/components/PageHeader";
 import { Button } from "@/components/ui/button";
 import { maskCPF, maskPhone } from "@shared/masks";
+import { numeroCreciPF } from "@shared/cartaoVendas";
 
 const campo = "h-9 w-full rounded-md border border-border bg-background px-2 text-sm";
 const hoje = () => new Date(Date.now() - 3 * 3600_000).toISOString().slice(0, 10);
@@ -34,7 +35,7 @@ function Externos() {
       <div className="space-y-1">
         {(data ?? []).map(x => (
           <p key={x.id} className="flex flex-wrap items-center gap-2 border-t border-border/50 pt-1 text-sm">
-            <b>{x.nome}</b><span className="text-xs text-muted-foreground">CPF {maskCPF(x.cpf)}{x.creci ? ` · CRECI ${x.creci}` : ""}{x.telefone ? ` · ${maskPhone(x.telefone)}` : ""}</span>
+            <b>{x.nome}</b><span className="text-xs text-muted-foreground">CPF {maskCPF(x.cpf)}{x.creci ? ` · CRECI ${numeroCreciPF(x.creci)}` : ""}{x.telefone ? ` · ${maskPhone(x.telefone)}` : ""}</span>
             {x.recrutamentoId ? <span className="ml-auto text-xs text-ok-300">convidado para o digital</span>
               : <Button size="sm" variant="outline" className="ml-auto h-7 text-xs" disabled={convidar.isPending} onClick={() => { if (confirm(`Convidar ${x.nome} para o digital (formulário + trial de 7 dias)?`)) convidar.mutate({ externoId: x.id }); }}><Send className="mr-1 h-3.5 w-3.5" /> Convidar para o digital</Button>}
           </p>

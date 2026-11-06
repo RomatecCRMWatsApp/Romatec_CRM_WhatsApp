@@ -6,6 +6,7 @@ import { C, SERIF, SANS, useBrandFonts, BotaoInstagram, useCorretorDoLink, rotul
 import { EVENTOS } from "@shared/rastreamento";
 import { registrarEvento } from "@/lib/rastreamento";
 import { FINALIDADES_OBRAS, LANCAMENTO_OBRAS, PAGAMENTOS_OBRAS, PRAZOS_OBRAS, fichaObrasSchema, msgValorComFicha, utmObras } from "@shared/obrasBomJardim";
+import { numeroCreciPF } from "@shared/cartaoVendas";
 
 /**
  * Campanha das obras — /obras-bom-jardim (CCBJ · Condomínio de Chácaras Bom Jardim).
@@ -146,7 +147,7 @@ function Ficha({ querValor, aoEnviar }: { querValor: boolean; aoEnviar?: () => v
         <CheckCircle2 size={44} color={C.verde} />
         <h3 style={{ fontFamily: SERIF, color: C.verde, fontSize: 24, margin: "8px 0" }}>Cadastro completo!</h3>
         <p style={{ margin: "0 0 14px" }}>
-          {res.corretor ? <>Seu atendimento é com <b>{res.corretor.nome}</b>{res.corretor.creci ? ` (CRECI ${res.corretor.creci})` : ""}. </> : null}
+          {res.corretor ? <>Seu atendimento é com <b>{res.corretor.nome}</b>{res.corretor.creci ? ` (CRECI ${numeroCreciPF(res.corretor.creci)})` : ""}. </> : null}
           Toque abaixo para receber os valores e as condições no WhatsApp.
         </p>
         <a href={res.whatsappUrl} target="_blank" rel="noopener noreferrer" style={btn("var(--c-25d366)", "var(--c-ffffff)")}><MessageCircle size={20} /> Receber os valores no WhatsApp</a>
@@ -306,7 +307,7 @@ export default function ObrasBomJardim() {
       <footer style={{ background: C.verde, color: C.creme, padding: "24px 16px", textAlign: "center", fontSize: 13, lineHeight: 1.6 }}>
         <p style={{ margin: 0 }}>CCBJ — Condomínio de Chácaras Bom Jardim, Estrada do Piquiá dos Baianos, km 15 da BR-222, Açailândia/MA</p>
         {corretor.doLink && <p style={{ margin: "6px 0 0", fontWeight: 700 }}>Atendimento: {rotuloCorretor(corretor)}{corretor.telefones[0] ? `, ${corretor.telefones[0]}` : ""}</p>}
-        <p style={{ margin: "6px 0 0", opacity: 0.85 }}>Romatec Consultoria Total, CRECI J-1234, Responsável: José Romário — CRECI/MA 4.705{corretor.doLink ? "" : ", (99) 9 9181-1246"}</p>
+        <p style={{ margin: "6px 0 0", opacity: 0.85 }}>Romatec Consultoria Total, CRECI J-1234, Responsável: José Romário — CRECI/MA F-4.705{corretor.doLink ? "" : ", (99) 9 9181-1246"}</p>
         <p style={{ margin: "6px 0 0", opacity: 0.7 }}>Imagens reais do início das obras. Valores e condições informados pelo corretor no atendimento.</p>
       </footer>
     </div>

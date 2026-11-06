@@ -14,6 +14,7 @@ import { perfilDe } from '../shared/equipe';
 import { pendenciasCadastro } from './contratoIntermediador';
 import { refDoUsuario, usuarioDaRef } from './cartaoVendas';
 import { ESCRITORIO } from '../shared/escritorio';
+import { numeroCreciPF } from '../shared/cartaoVendas';
 
 type Doc = { id?: number; tipo: string; titular?: string | null; validade?: string | null; numero?: string | null; exibirPerfil?: boolean | number | null };
 const vazio = (v: unknown) => v == null || String(v).trim() === '';
@@ -186,7 +187,7 @@ export async function verificacaoPublica(slug: string, ref: string): Promise<{ s
     return {
       status: 200,
       html: pagina(ok, ok ? 'Corretor(a) credenciado(a)' : 'Credenciamento não está em dia', [
-        `<b>${esc(String(u.name))}</b> · CRECI ${esc(`${u.creciUf ?? ''} ${u.creci ?? ''}`.trim())}`,
+        `<b>${esc(String(u.name))}</b> · CRECI ${esc(`${u.creciUf ?? ''} ${numeroCreciPF(u.creci) ?? ''}`.trim())}`,
         `Empreendimento: <b>${esc(emp.nome)}</b>${emp.municipio ? ` — ${esc(emp.municipio)}/${esc(emp.uf ?? '')}` : ''}`,
         `Cartão CRECI válido até ${dataBR(cartaoDoc?.validade)} · Certidão de Regularidade válida até ${dataBR(certidao?.validade)}`,
         ok ? 'Pode tratar com este(a) corretor(a) sobre as chácaras do empreendimento.' : 'Confirme com a Romatec antes de negociar: (99) 9 9181-1246.',

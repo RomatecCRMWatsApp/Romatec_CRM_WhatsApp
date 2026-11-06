@@ -4,6 +4,7 @@
  * Negrito em **markdown** nos nomes (o gerador de contrato converte).
  */
 import { maskCPF, maskRG } from './masks';
+import { numeroCreciPF } from './cartaoVendas';
 
 export type Sexo = 'M' | 'F';
 
@@ -55,7 +56,7 @@ function nacionalidade(p: PessoaQualif): string {
 }
 
 /** "4705" → "4.705" (CRECI como no cartão) */
-const creciFmt = (c: string) => (/^\d+$/.test(c) ? Number(c).toLocaleString('pt-BR') : c);
+const creciFmt = (c: string) => numeroCreciPF(c) ?? c;
 
 function docs(p: PessoaQualif, cred?: CredenciaisQualif): string {
   const parts: string[] = [];

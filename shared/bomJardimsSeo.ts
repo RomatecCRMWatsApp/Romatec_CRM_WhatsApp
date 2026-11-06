@@ -95,7 +95,7 @@ export const FAQ_BOM_JARDIMS: { pergunta: string; resposta: string }[] = [
   },
   {
     pergunta: 'Como visitar ou comprar uma chácara no Bom Jardims?',
-    resposta: 'Agende sua visita pelo formulário de agendamento ou pelo WhatsApp com o corretor José Romário (CRECI/MA 4.705), da Romatec Consultoria. Ele passa as condições e mostra o mapa das chácaras disponíveis.',
+    resposta: 'Agende sua visita pelo formulário de agendamento ou pelo WhatsApp com o corretor José Romário (CRECI/MA F-4.705), da Romatec Consultoria. Ele passa as condições e mostra o mapa das chácaras disponíveis.',
   },
 ];
 
@@ -123,7 +123,7 @@ export function htmlEstaticoBomJardims(): string {
     '<h2>Perguntas frequentes sobre o Bom Jardims</h2>',
     ...FAQ_BOM_JARDIMS.map(f => `<h3>${esc(f.pergunta)}</h3><p>${esc(f.resposta)}</p>`),
     `<p><a href="${AGENDAR_BOM_JARDIMS}" style="${botao}">Agendar visita ao Bom Jardims</a></p>`,
-    '<p>Romatec Consultoria Total · CRECI J-1234 · Rua São Raimundo, 10, Centro, Açailândia/MA · Corretor José Romário · CRECI/MA 4.705 · (99) 99181-1246 · <a href="https://www.instagram.com/avalieimob" target="_blank" rel="noopener">Instagram @avalieimob</a></p>',
+    '<p>Romatec Consultoria Total · CRECI J-1234 · Rua São Raimundo, 10, Centro, Açailândia/MA · Corretor José Romário · CRECI/MA F-4.705 · (99) 99181-1246 · <a href="https://www.instagram.com/avalieimob" target="_blank" rel="noopener">Instagram @avalieimob</a></p>',
     '</main>',
   ].join('');
 }

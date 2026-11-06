@@ -22,7 +22,7 @@ describe('SEO das páginas públicas', () => {
     expect(html).toContain('<link rel="canonical" href="https://romateccrm.com/bom-jardims" />');
     expect(html).toContain('<meta property="og:image" content="https://romateccrm.com/bom-jardims/og.jpg" />');
     expect(html).toContain('"@type":"GatedResidenceCommunity"');
-    expect(html).toContain('CRECI/MA 4.705');
+    expect(html).toContain('CRECI/MA F-4.705');
     expect(html).not.toMatch(/R\$|reais|parcela|entrada/i);
     expect(html).toContain('content="index, follow, max-image-preview:large"');
   });

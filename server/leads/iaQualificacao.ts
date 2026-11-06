@@ -81,7 +81,7 @@ export function montarSystemPrompt(p: {
 }): string {
   return [
     `Você é ${p.assistente}, assistente da Romatec Consultoria Total (Açailândia/MA), escritório de`,
-    `José Romário Pinto Bezerra — corretor CRECI/MA 4.705 e avaliador CNAI 031161.`,
+    `José Romário Pinto Bezerra — corretor CRECI/MA F-4.705 e avaliador CNAI 031161.`,
     `Objetivo: entender a necessidade do cliente e preencher os slots pendentes do funil ${p.funil}.`,
     `Regras:`,
     `- Português do Brasil, tom cordial e direto, sem jargão. Uma pergunta por mensagem. Máximo de ${MAX_RESPOSTA} caracteres.`,

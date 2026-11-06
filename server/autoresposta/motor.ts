@@ -15,6 +15,7 @@ import {
 } from '../../shared/autoresposta';
 import { condicoesDaLinha, simular, precoLote, type CondicoesPagamento } from '../../shared/simulador';
 import { CARTAO_PADRAO, formatarTelefone } from '../../shared/cartaoVendas';
+import { numeroCreciPF } from '../../shared/cartaoVendas';
 
 /** Mídias de partida (client/public/<slug>/divulgacao); a tela de configuração substitui por arquivo enviado */
 export const MIDIAS_PADRAO: Record<string, Partial<Record<CodigoMidia, { tipo: 'imagem' | 'pdf'; url: string; nomeArquivo: string }>>> = {
@@ -186,7 +187,7 @@ async function corretorDoLead(responsavelId: number | null): Promise<Corretor> {
     const d = await banco();
     const [u]: any[] = await d.select().from(users).where(eq(users.id, responsavelId)).limit(1);
     if (u && u.ativo !== false && u.ativo !== 0) {
-      return { nome: String(u.name).split(/\s+/).slice(0, 2).join(' '), creci: u.creci ? `CRECI${u.creciUf ? `/${u.creciUf}` : ''} ${u.creci}` : null, telefone: formatarTelefone(u.telefone) };
+      return { nome: String(u.name).split(/\s+/).slice(0, 2).join(' '), creci: u.creci ? `CRECI${u.creciUf ? `/${u.creciUf}` : ''} ${numeroCreciPF(u.creci)}` : null, telefone: formatarTelefone(u.telefone) };
     }
   }
   return { nome: CARTAO_PADRAO.nome, creci: CARTAO_PADRAO.creci, telefone: CARTAO_PADRAO.telefones[0] ?? null };

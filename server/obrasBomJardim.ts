@@ -14,7 +14,7 @@ import { ingestLead, origemFromUtm, origemVisitaSchema } from './lead-intake';
 import { BOM_JARDIMS_CONSENT_TEXT, BOM_JARDIMS_SLUG, bomJardimsWelcome, scoreBomJardims } from './bom-jardims';
 import { CAMPANHA_OBRAS, FINALIDADES_OBRAS, PAGAMENTOS_OBRAS, PRAZOS_OBRAS, fichaObrasSchema, msgValorComFicha, rotuloObras, utmObras } from '../shared/obrasBomJardim';
 
-/** WhatsApp do José (CRECI/MA 4.705): quando ninguém da equipe tem telefone cadastrado */
+/** WhatsApp do José (CRECI/MA F-4.705): quando ninguém da equipe tem telefone cadastrado */
 const WHATS_PADRAO = '5599991811246';
 
 const fone = (v: unknown) => {

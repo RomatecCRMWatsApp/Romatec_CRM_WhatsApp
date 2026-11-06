@@ -13,7 +13,7 @@ export const SERIF = "'Playfair Display', Georgia, 'Times New Roman', serif";
 export const SANS = "Lato, 'Segoe UI', Arial, sans-serif";
 
 export const CONTATOS = [
-  { papel: "Corretor · CRECI/MA 4.705", nome: "José Romário", telefone: "(99) 9 9181-1246", whatsapp: "5599991811246" },
+  { papel: "Corretor · CRECI/MA F-4.705", nome: "José Romário", telefone: "(99) 9 9181-1246", whatsapp: "5599991811246" },
   { papel: "Empreendimento", nome: "Bom Jardims", telefone: "(99) 9 9101-1970", whatsapp: "5599991011970" },
 ];
 

@@ -1,6 +1,7 @@
 /** Download das versões do contrato (PDF guardado no banco): admin/secretário, ou o corretor do contrato */
 import express, { type Express } from 'express';
 import { contratoPorId, pdfDaVersao, ContratoErro } from './servico';
+import { numeroCreciPF } from '../../shared/cartaoVendas';
 
 export function registrarRotasContratos(app: Express) {
   // Contrato modelo: minuta com o cliente fictício (nada é gravado) — admin, secretária e corretor
@@ -70,7 +71,7 @@ export function registrarRotasContratos(app: Express) {
       const { entrada, plano, marca } = await entradaDoContrato(c.id);
       const parceiro = entrada.parceiro;
       const pdf = await docComissaoRomatec(montarContexto(entrada), plano, marca, {
-        corretorDaVenda: parceiro?.nome ?? null, creciDaVenda: parceiro ? [parceiro.creciUf, parceiro.creci].filter(Boolean).join(' ') : null, comprador: entrada.comprador.nome,
+        corretorDaVenda: parceiro?.nome ?? null, creciDaVenda: parceiro ? [parceiro.creciUf, numeroCreciPF(parceiro.creci)].filter(Boolean).join(' ') : null, comprador: entrada.comprador.nome,
       });
       await auditar('comissao_romatec_pdf', { contratoId: c.id, usuarioId: user.id, origem: 'perfil', ip: req.ip });
       res.setHeader('Content-Type', 'application/pdf');

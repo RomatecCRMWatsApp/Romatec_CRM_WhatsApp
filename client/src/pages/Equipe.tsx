@@ -11,6 +11,7 @@ import { daEquipe, type Perfil } from "@shared/equipe";
 import PageHeader from "@/components/PageHeader";
 import PermissoesCorretor, { PacoteBase } from "@/components/equipe/PermissoesCorretor";
 import CadastroUsuario, { SeloPerfil } from "@/components/equipe/CadastroUsuario";
+import { numeroCreciPF } from "@shared/cartaoVendas";
 
 const dataHora = (d?: string | Date | null) =>
   d ? new Date(d).toLocaleString("pt-BR", { timeZone: "America/Fortaleza", day: "2-digit", month: "2-digit", year: "numeric", hour: "2-digit", minute: "2-digit" }) : "—";
@@ -135,7 +136,7 @@ export default function Equipe() {
                         {p.ativo && p.perfil !== "admin" && !p.temSenha && <span className="text-[10px] px-1.5 py-0.5 rounded bg-warn-500/80 text-black">{p.convitePendente ? "aguardando 1º acesso" : "sem senha — gere um link"}</span>}
                       </div>
                       <p className="text-xs text-muted-foreground mt-0.5">
-                        {p.creci ? `CRECI ${p.creci} · ` : ""}{p.email}{p.perfil === "empreendedor" ? ` · ${nomeEmp(p.empreendimentoSlug)}` : ""} · último acesso {dataHora(p.ultimoAcesso)}
+                        {p.creci ? `CRECI ${numeroCreciPF(p.creci)} · ` : ""}{p.email}{p.perfil === "empreendedor" ? ` · ${nomeEmp(p.empreendimentoSlug)}` : ""} · último acesso {dataHora(p.ultimoAcesso)}
                       </p>
                     </div>
                     {p.perfil !== "empreendedor" && p.ativo && (

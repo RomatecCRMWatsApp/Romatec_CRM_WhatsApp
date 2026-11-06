@@ -40,7 +40,7 @@ describe('comentário com palavra-chave → Direct', () => {
     const { priv, pub, e } = envio();
     expect(await C.responderComentarios(corpo('c1', 'CHÁCARA'), { envio: e, sortear: () => 0 })).toBe(1);
     expect(priv[0][0]).toBe('c1');
-    expect(priv[0][1]).toContain('CRECI/MA 4.705');
+    expect(priv[0][1]).toContain('CRECI/MA F-4.705');
     expect(priv[0][1]).toContain('formas-de-pagamento');
     expect(priv[0][1]).toContain('SAIR');
     expect(pub[0]).toEqual(['c1', 'Te mandei a simulação no direct! 📩']);

@@ -10,7 +10,7 @@ import { LINHA_PUBLICIDADE } from './escritorio';
 
 export interface CartaoVendas {
   nome: string;
-  /** "CRECI/MA 4.705"; null quando o usuário não tem CRECI (some do rodapé sem quebrar o layout) */
+  /** "CRECI/MA F-4.705"; null quando o usuário não tem CRECI (some do rodapé sem quebrar o layout) */
   creci: string | null;
   telefones: string[];
   /** Dígitos com 55 para o wa.me */
@@ -46,7 +46,7 @@ export const linkInstagram = (usuario: string) => `https://www.instagram.com/${u
 
 /** Contato padrão (fallback sem cadastro): o corretor responsável da Romatec */
 export const CARTAO_PADRAO: CartaoVendas = {
-  nome: 'José Romário', creci: 'CRECI/MA 4.705', telefones: ['(99) 9 9181-1246', '(99) 9 9206-2871'], whatsapp: '5599991811246',
+  nome: 'José Romário', creci: 'CRECI/MA F-4.705', telefones: ['(99) 9 9181-1246', '(99) 9 9206-2871'], whatsapp: '5599991811246',
   email: 'romateccrm@gmail.com', fotoUrl: null, papel: 'Corretor', instagram: INSTAGRAM_PADRAO,
 };
 
@@ -60,10 +60,22 @@ export function formatarTelefone(t: string | null | undefined): string | null {
   return null;
 }
 
-export function formatarCreci(creci: string | null | undefined, uf: string | null | undefined): string | null {
-  const c = String(creci ?? '').trim();
+/**
+ * Número do CRECI de pessoa física com o "F" (corretor): "4705" → "F-4.705". O "F" distingue do CRECI jurídico da
+ * imobiliária ("J-1234"). Aceita o que já vier com F ("F4705", "F-4.705") sem duplicar.
+ */
+export function numeroCreciPF(creci: string | null | undefined): string | null {
+  let c = String(creci ?? '').trim().replace(/^CRECI\s*(\/\s*[A-Z]{2})?\s*/i, '');
   if (!c) return null;
-  const n = /^\d{4,}$/.test(c) ? Number(c).toLocaleString('pt-BR') : c;
+  if (/^J\b|^J-/i.test(c)) return c.toUpperCase(); // jurídico: não vira F
+  c = c.replace(/^F\s*[-/]?\s*/i, '').replace(/[-\s]?F$/i, '');
+  const n = /^\d{3,}$/.test(c) ? Number(c).toLocaleString('pt-BR') : c;
+  return `F-${n}`;
+}
+
+export function formatarCreci(creci: string | null | undefined, uf: string | null | undefined): string | null {
+  const n = numeroCreciPF(creci);
+  if (!n) return null;
   return `CRECI/${(uf || 'MA').toUpperCase()} ${n}`;
 }
 

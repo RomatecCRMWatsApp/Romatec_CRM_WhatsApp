@@ -7,6 +7,7 @@
  * ou esgotamento do estoque. O estoque esgotado encerra a campanha em qualquer modo. Encerrada → ranking congelado.
  */
 import { z } from 'zod';
+import { numeroCreciPF } from './cartaoVendas';
 
 export const STATUS_CONTRATO_VALIDO = ['assinado', 'ativo', 'quitado'] as const;
 export const TIPOS_SINAL = ['entrada', 'avista'] as const;
@@ -94,7 +95,7 @@ export function textoRanking(o: {
   empreendimento: string; linhas: LinhaRanking[]; prazo: Prazo; encerrada: boolean; premio?: string; estoqueRestante?: number | null;
 }): string {
   const linhas = o.linhas.length
-    ? o.linhas.map(l => `${MEDALHA[l.posicao - 1] ?? `${l.posicao}º`} ${l.nome}${l.creci ? ` (CRECI ${l.creci})` : ''} — *${l.vendas}* ${l.vendas === 1 ? 'chácara' : 'chácaras'}`).join('\n')
+    ? o.linhas.map(l => `${MEDALHA[l.posicao - 1] ?? `${l.posicao}º`} ${l.nome}${l.creci ? ` (CRECI ${numeroCreciPF(l.creci)})` : ''} — *${l.vendas}* ${l.vendas === 1 ? 'chácara' : 'chácaras'}`).join('\n')
     : 'Nenhum corretor participando ainda.';
   const prazo = o.encerrada ? '🏁 *Campanha encerrada* — ranking congelado para apuração do vencedor.'
     : o.prazo.modo === 'data' && o.prazo.dataEncerramento ? `⏳ Encerra em *${dataBr(o.prazo.dataEncerramento)}*.`

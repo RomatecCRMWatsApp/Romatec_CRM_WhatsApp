@@ -16,7 +16,7 @@ describe('robô: chácara vai na hora para o corretor', () => {
     const t = B.mensagemChacaraEncaminhada('Fernando');
     expect(t).toMatch(/Bom Jardims/);
     expect(t).toMatch(/corretor/);
-    expect(t).toMatch(/CRECI\/MA 4\.705/);
+    expect(t).toMatch(/CRECI\/MA F-4\.705/);
     expect(t).not.toMatch(/R\$/);
   });
 });

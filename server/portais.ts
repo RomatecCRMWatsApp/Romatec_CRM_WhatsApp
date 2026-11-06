@@ -65,7 +65,7 @@ export function listingXml(a: Anuncio): string {
 export function feedXml(anuncios: Anuncio[], agora = new Date()): string {
   return `<?xml version="1.0" encoding="UTF-8"?>\n<ListingDataFeed xmlns="http://www.vivareal.com/schemas/1.0/VRSync" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" ` +
     `xsi:schemaLocation="http://www.vivareal.com/schemas/1.0/VRSync http://xml.vivareal.com/vrsync.xsd">` +
-    `<Header><Provider>Romatec CRM</Provider><Email>romateccrm@gmail.com</Email><ContactName>José Romário — CRECI/MA 4.705</ContactName>` +
+    `<Header><Provider>Romatec CRM</Provider><Email>romateccrm@gmail.com</Email><ContactName>José Romário — CRECI/MA F-4.705</ContactName>` +
     `<PublishDate>${agora.toISOString().slice(0, 19)}</PublishDate><Telephone>(99) 99181-1246</Telephone></Header>` +
     `<Listings>${anuncios.map(listingXml).join('')}</Listings></ListingDataFeed>`;
 }
@@ -107,7 +107,7 @@ export async function anunciosDoFeed(): Promise<{ anuncios: Anuncio[]; fora: { i
       if (!preco) { fora.push({ id: `${prefixo}-${l.codigo}`, titulo: `${e.nome} · chácara ${l.codigo}`, motivo: 'sem preço de tabela' }); continue; }
       anuncios.push({
         id: `${prefixo}-${l.codigo}`, titulo: `Chácara ${l.codigo} com ${area.toLocaleString('pt-BR', { maximumFractionDigits: 0 })} m² — ${e.nome}`,
-        descricao: `${bj ? DESCRICAO_BOM_JARDIMS : e.nome} Chácara ${l.codigo}${l.quadra ? ` (Quadra ${l.quadra})` : ''}, ${area.toLocaleString('pt-BR', { maximumFractionDigits: 2 })} m². Financiamento direto com a empreendedora. Romatec Consultoria Total, CRECI J-1234 · José Romário, CRECI/MA 4.705.`,
+        descricao: `${bj ? DESCRICAO_BOM_JARDIMS : e.nome} Chácara ${l.codigo}${l.quadra ? ` (Quadra ${l.quadra})` : ''}, ${area.toLocaleString('pt-BR', { maximumFractionDigits: 2 })} m². Financiamento direto com a empreendedora. Romatec Consultoria Total, CRECI J-1234 · José Romário, CRECI/MA F-4.705.`,
         preco, tipo: 'Residential / Farm Ranch', url: bj ? `${urlPublica()}/bom-jardims/chacara/${l.codigo}` : `${urlPublica()}/bom-jardims`,
         imagens: (bj ? IMAGENS_BOM_JARDIMS.map(i => i.src) : []).map(imagem), areaTerreno: area, cidade: e.municipio || 'Açailândia', uf: e.uf || 'MA',
         endereco: e.endereco, lat: l.latCentro != null ? Number(l.latCentro) : null, lon: l.lonCentro != null ? Number(l.lonCentro) : null,

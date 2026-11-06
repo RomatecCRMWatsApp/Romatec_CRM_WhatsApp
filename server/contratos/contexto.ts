@@ -11,6 +11,7 @@ import { areaExtenso, brl, dataBR, dataExtenso, docMascara, extenso, pct, reaisE
 import { tituloCondicao, type PlanoContrato } from './plano';
 import { divisaoComissaoLancamento } from '../../shared/condicoesLancamento';
 import { ESCRITORIO } from '../../shared/escritorio';
+import { numeroCreciPF } from '../../shared/cartaoVendas';
 
 export type Ctx = Record<string, string | boolean | number>;
 
@@ -205,14 +206,14 @@ export function tagsPlano(s: PlanoContrato): Ctx {
 
 function tagsCorretor(c: CredenciaisCorretor, prefixo: 'corr' | 'corr_parceiro'): Ctx {
   if (prefixo === 'corr') {
-    return { corr_creci: c.creci, corr_creci_validade: dataBR(c.creciValidade), corr_certidao_codigo: c.certidaoCodigo,
+    return { corr_creci: numeroCreciPF(c.creci) ?? c.creci, corr_creci_validade: dataBR(c.creciValidade), corr_certidao_codigo: c.certidaoCodigo,
       corr_certidao_data: dataBR(c.certidaoEmissao), corr_certidao_validade: dataBR(c.certidaoValidade) };
   }
   return {
     corr_parceiro: true, corr_parceiro_nome: c.nome.toUpperCase(), corr_parceiro_cpf: docMascara(c.cpf),
-    corr_parceiro_creci: `${c.creciUf} ${c.creci}`.trim(), corr_parceiro_creci_validade: dataBR(c.creciValidade),
+    corr_parceiro_creci: `${c.creciUf} ${numeroCreciPF(c.creci) ?? ''}`.trim(), corr_parceiro_creci_validade: dataBR(c.creciValidade),
     corr_parceiro_certidao_codigo: c.certidaoCodigo, corr_parceiro_certidao_validade: dataBR(c.certidaoValidade),
-    corr_parceiro_resumo: ` · parceiro(a): ${c.nome}, CRECI/${`${c.creciUf} ${c.creci}`.trim()}`,
+    corr_parceiro_resumo: ` · parceiro(a): ${c.nome}, CRECI/${`${c.creciUf} ${numeroCreciPF(c.creci) ?? ''}`.trim()}`,
   };
 }
 
@@ -229,7 +230,7 @@ export function tagsIntermediacao(e: Pick<EntradaContexto, 'corretor' | 'parceir
   const valor = Math.round(base * pctCorretor * 100) / 100;
   return {
     intermed_nome: (c.nome || '').toUpperCase(), intermed_cpf: docMascara(c.cpf),
-    intermed_creci: [c.creciUf, c.creci].filter(Boolean).join(' '), intermed_creci_validade: dataBR(c.creciValidade),
+    intermed_creci: [c.creciUf, numeroCreciPF(c.creci)].filter(Boolean).join(' '), intermed_creci_validade: dataBR(c.creciValidade),
     intermed_comissao_pct: pct(pctCorretor, 0), intermed_comissao_valor: brl(valor), intermed_comissao_extenso: reaisExtenso(valor),
     intermed_base_valor: brl(base),
     // Planos de lançamento: o corretor recebe 50% no ato e o resto em 4 partes, junto com as retenções da corretagem

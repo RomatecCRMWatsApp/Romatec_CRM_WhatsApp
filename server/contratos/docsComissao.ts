@@ -241,7 +241,7 @@ export async function docComissaoRomatec(c: Ctx, plano: PlanoContrato, marca: st
   w.paragrafo([{ t: 'Pelo presente instrumento particular, de um lado, ' }, { t: s(c.vend_nome), b: true },
     { t: `${s(c.vend_cpf) ? `, inscrita no CPF sob o n.º ${s(c.vend_cpf)}` : ''}, titular dos direitos sobre o ${s(c.emp_nome)}, doravante denominada ` }, { t: 'EMPREENDEDORA', b: true },
     { t: '; e, de outro lado, ' }, { t: 'ROMATEC CONSULTORIA TOTAL (J R P Bezerra Ltda)', b: true },
-    { t: `, inscrita no CNPJ sob o n.º 17.261.987/0001-09${s(c.rom_creci_pj) && !/PREENCHER/i.test(s(c.rom_creci_pj)) ? ` e no CRECI/MA sob o n.º ${s(c.rom_creci_pj)}` : ''}, com sede na Rua São Raimundo, n.º 10, Centro, Açailândia/MA, neste ato representada por seu responsável técnico José Romário Pinto Bezerra (CRECI/MA 4.705), doravante denominada ` },
+    { t: `, inscrita no CNPJ sob o n.º 17.261.987/0001-09${s(c.rom_creci_pj) && !/PREENCHER/i.test(s(c.rom_creci_pj)) ? ` e no CRECI/MA sob o n.º ${s(c.rom_creci_pj)}` : ''}, com sede na Rua São Raimundo, n.º 10, Centro, Açailândia/MA, neste ato representada por seu responsável técnico José Romário Pinto Bezerra (CRECI/MA F-4.705), doravante denominada ` },
     { t: 'GESTORA', b: true }, { t: ', ajustam a comissão relativa à venda abaixo identificada, nos termos dos arts. 722 a 729 do Código Civil e da Lei n.º 6.530/1978.' }]);
 
   w.clausula('CLÁUSULA 1ª — DA VENDA');

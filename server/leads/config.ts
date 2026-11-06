@@ -31,7 +31,7 @@ export function corretorWhatsApp(): string {
 
 /** Frase padrão: o lead fala primeiro com o CRM e o José assume pelo número pessoal */
 export function fraseCorretorChama(): string {
-  return `O corretor *José Romário (CRECI/MA 4.705)* vai te chamar pelo número pessoal dele, *${corretorWhatsApp()}*.`;
+  return `O corretor *José Romário (CRECI/MA F-4.705)* vai te chamar pelo número pessoal dele, *${corretorWhatsApp()}*.`;
 }
 
 export function appUrl(): string {

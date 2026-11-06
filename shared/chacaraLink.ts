@@ -111,6 +111,6 @@ export function mensagemLinkChacara(c: { codigo: string; quadra?: string | null;
     '',
     `Fotos, mapa e localização exata da chácara: ${link}`,
     '',
-    'Condições e valores com o corretor José Romário · CRECI/MA 4.705',
+    'Condições e valores com o corretor José Romário · CRECI/MA F-4.705',
   ].join('\n');
 }

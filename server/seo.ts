@@ -52,7 +52,7 @@ export const ROTAS_INTERNAS = [
   '/ranking', '/convites', '/recrutamento', '/reunioes', '/talonarios', '/assinatura', '/saas',
 ];
 
-const CRECI = 'Corretor José Romário · CRECI/MA 4.705';
+const CRECI = 'Corretor José Romário · CRECI/MA F-4.705';
 const SITE = 'https://romateccrm.com';
 const TELEFONE = '+55 99 99181-1246';
 const IMAGEM_OG = '/bom-jardims/og.jpg';
@@ -116,7 +116,7 @@ export const META_BOM_JARDIMS: MetaPagina = {
         address: { '@type': 'PostalAddress', streetAddress: 'Rua São Raimundo, 10, Centro', addressLocality: 'Açailândia', addressRegion: 'MA', addressCountry: 'BR' },
         areaServed: ['Açailândia', 'Imperatriz', 'Maranhão'],
         sameAs: ['https://www.instagram.com/avalieimob'],
-        employee: { '@type': 'Person', name: 'José Romário Pinto Bezerra', jobTitle: 'Corretor de imóveis — CRECI/MA 4.705' },
+        employee: { '@type': 'Person', name: 'José Romário Pinto Bezerra', jobTitle: 'Corretor de imóveis — CRECI/MA F-4.705' },
       },
       {
         '@type': 'FAQPage',

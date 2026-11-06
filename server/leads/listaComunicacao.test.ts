@@ -10,7 +10,7 @@ describe('Lista exclusiva do empreendimento', () => {
     expect(m).toMatch(/^Olá, Maria! 👋/);
     expect(m).toContain('*lista exclusiva* do empreendimento *Residencial Vila Nova*');
     expect(m).toContain('recebe o aviso primeiro');
-    expect(m).toContain('*atendimento prioritário* com o corretor José Romário (CRECI/MA 4.705)');
+    expect(m).toContain('*atendimento prioritário* com o corretor José Romário (CRECI/MA F-4.705)');
     expect(m).toContain('vai te chamar pelo número pessoal dele, *(99) 9 9181-1246*');
     expect(m).toContain('Para sair da lista, responda SAIR.');
     expect(m).not.toMatch(/R\$|valor|pre[çc]o|parcela|entrada|últimas|poucas unidades|corra|garanta/i);
@@ -83,7 +83,7 @@ describe('Resposta padrão para pergunta de valor/preço (captação → lista d
     const r2 = decidirRespostaCaptacao({ texto: 'OK', nome: 'maria souza', empreendimento: EMP, enviadas, agora });
     expect(r2?.tipo).toBe('confirmacao');
     expect(r2!.texto).toMatch(/^✅ Prontinho, Maria! Seu nome está confirmado na \*lista exclusiva\* do empreendimento \*Condomínio de Chácaras Bom Jardims\*/);
-    expect(r2!.texto).toContain('CRECI/MA 4.705');
+    expect(r2!.texto).toContain('CRECI/MA F-4.705');
     expect(r2!.texto).toContain('SAIR');
     expect(falaDaLista(r2!.texto)).toBe(true);     // conta no anti-repetição da lista
     enviadas.push({ texto: r2!.texto, createdAt: min(1) });

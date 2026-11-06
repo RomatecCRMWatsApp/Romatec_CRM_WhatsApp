@@ -255,7 +255,7 @@ describe('Meta - lead do Bom Jardims (sem preço, roteiro §7.1, LGPD)', () => {
     expect(input.consentimento.texto).toContain('Lei n.º 13.709/2018');
     expect(input.consentimento.origem).toContain('Bom Jardims - Mapa de vendas (C3)');
     expect(input.welcomeMessage).toContain('Condomínio de Chácaras Bom Jardims');
-    expect(input.welcomeMessage).toContain('CRECI/MA 4.705');
+    expect(input.welcomeMessage).toContain('CRECI/MA F-4.705');
     // Regra nº 1: nada de valor na mensagem automática
     expect(input.welcomeMessage).not.toMatch(/R\$|valor|pre[çc]o|parcela|entrada/i);
   });

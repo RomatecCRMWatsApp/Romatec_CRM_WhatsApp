@@ -72,7 +72,7 @@ describe('Link e mensagem', () => {
     expect(m).toContain('*Chácara C05 · Quadra C · 3.143,41 m²*');
     expect(m).toContain('Condomínio de Chácaras Bom Jardims · Açailândia/MA');
     expect(m).toContain('https://romateccrm.com/bom-jardims/chacara/C05');
-    expect(m).toContain('CRECI/MA 4.705');
+    expect(m).toContain('CRECI/MA F-4.705');
     expect(m).not.toMatch(/R\$|pre[çc]o|parcela/i);
     expect(tituloChacara({ codigo: 'A01' })).toBe('Chácara A01');
   });

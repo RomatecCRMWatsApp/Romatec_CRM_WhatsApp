@@ -89,7 +89,7 @@ describe('Bom Jardims - formulário e mensagem', () => {
   it('mensagem 7.1 cita o corretor com CRECI e não fala de preço', () => {
     const msg = bomJardimsWelcome('maria souza');
     expect(msg).toContain('Maria');
-    expect(msg).toContain('CRECI/MA 4.705');
+    expect(msg).toContain('CRECI/MA F-4.705');
     expect(msg).not.toMatch(/R\$|valor|preço|parcela|entrada/i);
   });
 

@@ -421,7 +421,7 @@ export default function BomJardims() {
           <div style={{ fontSize: 13, lineHeight: 1.6, color: "var(--c-bfc9b9)" }}>
             <p style={{ margin: 0 }}>Romatec Consultoria Total · CRECI J-1234 · CNPJ 17.261.987/0001-09</p>
             <p style={{ margin: 0 }}>Rua São Raimundo, n.º 10, Centro, Açailândia/MA</p>
-            <p style={{ margin: 0 }}>José Romário Pinto Bezerra — Corretor CRECI/MA 4.705</p>
+            <p style={{ margin: 0 }}>José Romário Pinto Bezerra — Corretor CRECI/MA F-4.705</p>
             <div style={{ marginTop: 12 }}><BotaoInstagram usuario={instagram} claro /></div>
           </div>
         </div>

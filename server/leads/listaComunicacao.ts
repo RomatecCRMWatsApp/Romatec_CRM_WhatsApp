@@ -56,7 +56,7 @@ export function mensagemConfirmacaoLista(nome: string | null | undefined, empree
   return [
     `✅ Prontinho${fn ? `, ${fn}` : ''}! Seu nome está confirmado na *${MARCA}*${emp ? ` do empreendimento *${emp}*` : ''}. 📝`,
     '',
-    'Assim que o lançamento sair, você recebe os *valores e condições* em *primeira mão*, com atendimento prioritário do corretor José Romário (CRECI/MA 4.705). ⭐',
+    'Assim que o lançamento sair, você recebe os *valores e condições* em *primeira mão*, com atendimento prioritário do corretor José Romário (CRECI/MA F-4.705). ⭐',
     '',
     'Para sair da lista, é só responder SAIR.',
   ].join('\n');
@@ -117,7 +117,7 @@ export function boasVindasListaExclusiva(nome: string | null | undefined, empree
     '',
     `✅ ${linhaLista(empreendimento)}`,
     '',
-    'Quem está na lista *recebe o aviso primeiro* quando as vendas forem abertas, com o mapa e as condições, e tem *atendimento prioritário* com o corretor José Romário (CRECI/MA 4.705).',
+    'Quem está na lista *recebe o aviso primeiro* quando as vendas forem abertas, com o mapa e as condições, e tem *atendimento prioritário* com o corretor José Romário (CRECI/MA F-4.705).',
     '',
     `Ele vai te chamar pelo número pessoal dele, *${corretorWhatsApp()}*. Se tiver alguma dúvida, é só escrever aqui.`,
     '',
@@ -135,7 +135,7 @@ export function mensagemListaComunicacao(nome: string | null | undefined, empree
     '',
     'O empreendimento está em fase de regularização e de cadastro de interessados — por isso ainda não estamos vendendo nem reservando chácaras.',
     '',
-    'Assim que as vendas forem abertas, quem está na lista *recebe o aviso primeiro*, com o mapa das chácaras e as condições, e tem *atendimento prioritário* com o corretor José Romário (CRECI/MA 4.705).',
+    'Assim que as vendas forem abertas, quem está na lista *recebe o aviso primeiro*, com o mapa das chácaras e as condições, e tem *atendimento prioritário* com o corretor José Romário (CRECI/MA F-4.705).',
     '',
     'Se tiver alguma dúvida, é só escrever aqui. Para sair da lista, responda SAIR.',
   ].join('\n');

@@ -10,7 +10,8 @@ export const ESCRITORIO = {
   creciJ: 'CRECI J-1234',
   endereco: 'Rua São Raimundo, n.º 10, Centro, Açailândia/MA',
   responsavel: 'José Romário Pinto Bezerra',
-  creciResponsavel: 'CRECI/MA 4.705',
+  /** CRECI de pessoa física do responsável (F = pessoa física; J = jurídica) */
+  creciResponsavel: 'CRECI/MA F-4.705',
 } as const;
 
 /** "Romatec Consultoria Total · CRECI J-1234" (linha obrigatória da publicidade) */

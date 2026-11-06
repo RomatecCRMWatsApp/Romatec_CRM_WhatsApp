@@ -243,7 +243,7 @@ describe('Entrada pelo WhatsApp', () => {
   it('abertura do proprietário chama o corretor', () => {
     const m = montarAbertura({ funil: 'proprietario', nome: 'Cliente' });
     expect(m).toContain('Olá! Aqui é');
-    expect(m).toContain('José Romário (CRECI/MA 4.705)');
+    expect(m).toContain('José Romário (CRECI/MA F-4.705)');
   });
 
   it('decisão: novo, recorrente com imóvel novo, nada a fazer', () => {

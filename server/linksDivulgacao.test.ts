@@ -40,12 +40,12 @@ describe('links de divulgação', () => {
 import { CARTAO_PADRAO, assinaturaWhatsApp, comAssinatura, linhasRodape } from '../shared/cartaoVendas';
 
 describe('dados do corretor em tudo que ele divulga', () => {
-  const alan = { ...CARTAO_PADRAO, nome: 'Alan Martins', creci: 'CRECI/MA 8.662', telefones: ['(99) 9 8888-7777'], whatsapp: '5599988887777', instagram: 'alanmartins', papel: 'Corretor(a)' };
+  const alan = { ...CARTAO_PADRAO, nome: 'Alan Martins', creci: 'CRECI/MA F-8.662', telefones: ['(99) 9 8888-7777'], whatsapp: '5599988887777', instagram: 'alanmartins', papel: 'Corretor(a)' };
 
   it('texto do WhatsApp termina com nome, CRECI, WhatsApp e Instagram do corretor', () => {
     const t = comAssinatura('Veja: https://x', alan);
     expect(t).toContain('*Alan Martins*');
-    expect(t).toContain('CRECI/MA 8.662');
+    expect(t).toContain('CRECI/MA F-8.662');
     expect(t).toContain('(99) 9 8888-7777');
     expect(t).toContain('@alanmartins');
     expect(comAssinatura(t, alan)).toBe(t);
@@ -60,7 +60,7 @@ describe('dados do corretor em tudo que ele divulga', () => {
   });
 
   it('rodapé do banner/vídeo/PDF', () => {
-    expect(linhasRodape(alan)).toEqual({ nome: 'Alan Martins · CRECI/MA 8.662', detalhe: 'WhatsApp (99) 9 8888-7777  ·  @alanmartins' });
+    expect(linhasRodape(alan)).toEqual({ nome: 'Alan Martins · CRECI/MA F-8.662', detalhe: 'WhatsApp (99) 9 8888-7777  ·  @alanmartins' });
   });
 });
 

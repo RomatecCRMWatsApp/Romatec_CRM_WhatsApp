@@ -16,7 +16,7 @@ export interface ComentarioIg { id: string; texto: string; igsid: string; userna
 export interface RegraComentario { nome: string; palavras: string[]; dm: (c: ComentarioIg) => string; publica: string[] }
 
 const BASE = 'https://romateccrm.com/bom-jardims';
-const ASSINATURA = 'José Romário · Corretor CRECI/MA 4.705 · (99) 9 9181-1246';
+const ASSINATURA = 'José Romário · Corretor CRECI/MA F-4.705 · (99) 9 9181-1246';
 const SAIR = 'Se não quiser receber mensagens, responda SAIR.';
 
 export const normalizar = (s: string) => s.normalize('NFD').replace(/[̀-ͯ]/g, '').toUpperCase();

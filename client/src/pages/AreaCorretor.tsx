@@ -8,6 +8,7 @@ import { comRef, useCartaoVendas } from "@/lib/cartaoVendas";
 import { linkAgendamento } from "@/components/LinkAgendamento";
 import { brl } from "@shared/simulador";
 import { Building2, Calculator, Globe2, Link2, Lock, Map as MapIcon, Plus, Smartphone, Wallet } from "lucide-react";
+import { numeroCreciPF } from "@shared/cartaoVendas";
 
 const copiar = async (texto: string, rotulo: string) => {
   try { await navigator.clipboard.writeText(texto); toast.success(`${rotulo} copiado`); }
@@ -55,7 +56,7 @@ export default function AreaCorretor() {
         <div className="flex h-10 w-10 items-center justify-center rounded-full bg-primary/15 text-primary"><Smartphone className="h-5 w-5" /></div>
         <div>
           <p className="text-lg font-bold leading-tight">Olá, {String(user?.name || "").split(" ")[0] || "corretor"}</p>
-          <p className="text-xs text-muted-foreground">{(user as any)?.creci ? `CRECI ${(user as any).creci} · ` : ""}Área do corretor — instale pelo menu do navegador ("Adicionar à tela inicial")</p>
+          <p className="text-xs text-muted-foreground">{(user as any)?.creci ? `CRECI ${numeroCreciPF((user as any).creci)} · ` : ""}Área do corretor — instale pelo menu do navegador ("Adicionar à tela inicial")</p>
         </div>
       </div>
 

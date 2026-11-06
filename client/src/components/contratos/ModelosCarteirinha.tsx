@@ -6,6 +6,7 @@ import { useAuth } from "@/_core/hooks/useAuth";
 import { perfilDe } from "@shared/equipe";
 import { exibirTelefoneBR } from "@shared/telefone";
 import { Camera, FileDown, IdCard, Loader2, Printer, QrCode, X } from "lucide-react";
+import { numeroCreciPF } from "@shared/cartaoVendas";
 
 /**
  * Modelos para apresentar ao cliente (aba Carteirinhas): a carteirinha do condomínio (frente e verso, igual ao PDF da
@@ -195,7 +196,7 @@ export default function ModelosCarteirinha() {
   useEffect(() => {
     const u = user as any;
     if (ccIniciado || !u?.name) return;
-    const creci = u.creci ? `CRECI${u.creciUf ? `/${u.creciUf}` : ""} ${u.creci}` : "";
+    const creci = u.creci ? `CRECI${u.creciUf ? `/${u.creciUf}` : ""} ${numeroCreciPF(u.creci)}` : "";
     setCc(c => ({ ...c, nome: String(u.name).split(/\s+/).slice(0, 3).join(" "), creci, telefone: u.telefone ? exibirTelefoneBR(String(u.telefone)) : "" }));
     setCcIniciado(true);
   }, [user, ccIniciado]);

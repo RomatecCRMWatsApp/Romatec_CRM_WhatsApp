@@ -89,7 +89,7 @@ export function gerarPdfTabela(tab: TabelaPdf): Buffer {
     ops.push(retangulo(0, ALTURA - 56, LARGURA, 56, '0.06 0.35 0.2'));
     ops.push(texto(MARGEM, ALTURA - 30, 'ROMATEC', 'F2', 18, '1 1 1'));
     ops.push(texto(MARGEM + larguraTexto('ROMATEC', 18, true) + 10, ALTURA - 30, 'Consultoria Total', 'F1', 12, '0.85 0.95 0.88'));
-    ops.push(texto(MARGEM, ALTURA - 46, 'CRECI/MA 4.705 · romateccrm.com', 'F1', 8, '0.8 0.92 0.84'));
+    ops.push(texto(MARGEM, ALTURA - 46, 'CRECI/MA F-4.705 · romateccrm.com', 'F1', 8, '0.8 0.92 0.84'));
     const t2 = tab.titulo;
     ops.push(texto(LARGURA - MARGEM - larguraTexto(t2, 13, true), ALTURA - 30, t2, 'F2', 13, '1 1 1'));
     ops.push(texto(LARGURA - MARGEM - larguraTexto(tab.subtitulo, 8), ALTURA - 46, tab.subtitulo, 'F1', 8, '0.85 0.95 0.88'));

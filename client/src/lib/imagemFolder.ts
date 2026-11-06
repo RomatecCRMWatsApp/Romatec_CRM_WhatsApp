@@ -139,7 +139,7 @@ function compor(ctx: CanvasRenderingContext2D, d: DadosFolder, r: Recursos, dese
   }
   fill(VERDE); centro(zap, yc + 39);
   yc += 64 + 30;
-  fill("#DCE8DF"); ctx.font = `400 20px ${SANS}`; centro(`${d.assinatura || "José Romário · CRECI/MA 4.705"} · Romatec Consultoria Total · CRECI J-1234`, yc);
+  fill("#DCE8DF"); ctx.font = `500 22px ${SANS}`; centro(`${d.assinatura || "José Romário · CRECI/MA F-4.705"} · Romatec Consultoria Total · CRECI J-1234`, yc);
   y = topo + alturaQuadro;
 
   // ── Projeto do portal e do stand: cada prancha inteira (a planta alta do stand fica mais estreita)

@@ -19,8 +19,8 @@ const ms = (v: string) => Date.parse(`${String(v).replace(' ', 'T')}Z`);
 
 describe('sequências de follow-up — regras', () => {
   it('troca as variáveis e garante a saída (SAIR)', () => {
-    const t = S.renderizarPasso('{oi} O {empreendimento} está aqui: {link} — {corretor}', { nome: 'maria souza', empreendimento: 'Bom Jardims', link: 'https://x/bj', corretor: 'José (CRECI/MA 4.705)' });
-    expect(t).toBe(`Oi, Maria! O Bom Jardims está aqui: https://x/bj — José (CRECI/MA 4.705)\n\n${S.SAIR}`);
+    const t = S.renderizarPasso('{oi} O {empreendimento} está aqui: {link} — {corretor}', { nome: 'maria souza', empreendimento: 'Bom Jardims', link: 'https://x/bj', corretor: 'José (CRECI/MA F-4.705)' });
+    expect(t).toBe(`Oi, Maria! O Bom Jardims está aqui: https://x/bj — José (CRECI/MA F-4.705)\n\n${S.SAIR}`);
     expect(S.renderizarPasso('{oi} Responda SAIR para parar.', { link: '' })).toBe('Oi! Responda SAIR para parar.');
   });
   it('valida dias crescentes, tamanho e proíbe valores', () => {
@@ -46,7 +46,7 @@ describe('sequências de follow-up — envio', () => {
   let db: any;
   beforeAll(async () => {
     db = await getDb();
-    db.run(sql`INSERT INTO users (id, openId, name, role, creci) VALUES (5, 'u5', 'Ana Corretora', 'user', 'CRECI/MA 9.999')`);
+    db.run(sql`INSERT INTO users (id, openId, name, role, creci) VALUES (5, 'u5', 'Ana Corretora', 'user', 'CRECI/MA F-9.999')`);
     db.run(sql`INSERT INTO leadQualifications (id, phone, nome, funil, etapa, empreendimentoSlug, responsavelId, followUpPasso, proximoFollowUpAt)
       VALUES (1, '5599911112222', 'joão lima', 'comprador', 'visitou', 'bom-jardims', 5, 0, ${txt(SEG_10H - 1000)}),
              (2, '5599933334444', 'ana', 'comprador', 'visita_agendada', 'bom-jardims', 5, 0, ${txt(SEG_10H - 1000)})`);

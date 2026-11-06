@@ -82,7 +82,7 @@ export function mensagemFollowUp(passo: number, l: LeadFollowUp & { empreendimen
   if (l.funil === 'proprietario') {
     const t: Record<number, string> = {
       1: `${oi} Ficou alguma dúvida sobre a avaliação ou a venda do seu imóvel? Se me disser o tipo de imóvel e onde fica, já te explico os próximos passos.`,
-      2: `${oi} Posso agendar uma visita do corretor José Romário (CRECI/MA 4.705) para avaliar seu imóvel, sem compromisso? Me diga o melhor dia.`,
+      2: `${oi} Posso agendar uma visita do corretor José Romário (CRECI/MA F-4.705) para avaliar seu imóvel, sem compromisso? Me diga o melhor dia.`,
       3: `${oi} Ainda pensa em vender? Se quiser, te mando como funciona a divulgação e a avaliação. ${sair}`,
       4: `${oi} Passando só para lembrar que estou à disposição para avaliar seu imóvel quando você quiser. ${sair}`,
       5: `${oi} Esta é minha última mensagem por aqui 🙂 Quando quiser retomar, é só chamar. ${sair}`,
@@ -93,7 +93,7 @@ export function mensagemFollowUp(passo: number, l: LeadFollowUp & { empreendimen
     1: `${oi} Ficou alguma dúvida sobre ${alvo}? Posso te mandar fotos, vídeo e a localização.`,
     2: `${oi} Separei as informações de ${alvo} aqui: ${link}\nQuer agendar uma visita sem compromisso? Me diga o melhor dia.`,
     3: `${oi} Você ainda está procurando? Me conta o que é mais importante para você (tamanho, localização, forma de pagamento) que eu te indico as melhores opções. ${sair}`,
-    4: `${oi} Passando para lembrar que o corretor José Romário (CRECI/MA 4.705) está à disposição para tirar dúvidas e marcar visita. ${sair}`,
+    4: `${oi} Passando para lembrar que o corretor José Romário (CRECI/MA F-4.705) está à disposição para tirar dúvidas e marcar visita. ${sair}`,
     5: `${oi} Esta é minha última mensagem por aqui 🙂 Quando quiser retomar, é só chamar neste número. ${sair}`,
   };
   return t[passo] ?? null;

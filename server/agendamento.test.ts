@@ -74,7 +74,7 @@ describe('link de agendamento', () => {
     // Mapa público: todos os lotes, só "disponível"/"indisponível" (A12 vendido aparece como indisponível, sem detalhe da venda)
     expect(p.mapa.lotes.map(l => [l.codigo, l.situacao])).toEqual([['A01', 'disponivel'], ['A12', 'reservado']]);
     expect(JSON.stringify(p.mapa)).not.toMatch(/vendido|cliente|corretor|valor/i);
-    expect(p.contato).toMatchObject({ nome: 'Maria Corretora', creci: 'CRECI/MA 1.234' });
+    expect(p.contato).toMatchObject({ nome: 'Maria Corretora', creci: 'CRECI/MA F-1.234' });
     // Sem ref, ref adulterada ou link do empreendedor: contato do administrador
     expect((await A.dadosDaPagina('bom-jardims', null)).contato.nome).toBe('José Romário');
     expect((await A.dadosDaPagina('bom-jardims', '2xxxxxxxx')).contato.nome).toBe('José Romário');
@@ -143,7 +143,7 @@ describe('mensagens do agendamento', () => {
     expect(msg).toContain('Olá, Bia Confirma!');
     expect(msg).toContain('• Unidade de interesse: A01');
     expect(msg).toContain('• Pessoas: 3');
-    expect(msg).toContain('corretor Maria Corretora (CRECI/MA 1.234) confirma seu atendimento pelo número (99) 9 8111-2222');
+    expect(msg).toContain('corretor Maria Corretora (CRECI/MA F-1.234) confirma seu atendimento pelo número (99) 9 8111-2222');
     expect(chamadas.at(-1)).toMatchObject({ semBoasVindas: true });
     const [v] = await db.select().from(schema.leadVisitas).where(eq(schema.leadVisitas.id, r.visitaId));
     expect(v.confirmacaoEnviadaAt).toBeTruthy();
@@ -170,7 +170,7 @@ describe('mensagens do agendamento', () => {
     const r: any = await A.registrarAgendamento('bom-jardims', pedido({ nome: 'Caio Sem Zap', telefone: '99944332211' }));
     expect(r.confirmacaoEnviada).toBe(false);
     expect(r.confirmacao).toContain('Olá, Caio Sem Zap!');
-    expect(r.confirmacao).toContain('corretor José Romário (CRECI/MA 4.705)');
+    expect(r.confirmacao).toContain('corretor José Romário (CRECI/MA F-4.705)');
     expect(enviadasSistema.length).toBe(n);
     expect((await M.mensagensDaVisita(r.visitaId)).zapi).toBe(false);
     await expect(M.enviarConfirmacao(r.visitaId, 'x')).rejects.toMatchObject({ name: 'MensagemErro', status: 412 });

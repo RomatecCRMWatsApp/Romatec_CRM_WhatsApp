@@ -10,7 +10,7 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { MAX_PASSOS, VARIAVEIS, problemaSequencia, renderizarPasso, type PassoSequencia } from "@shared/followupSequencias";
 
-const EXEMPLO = { nome: "Maria Souza", empreendimento: "Condomínio de Chácaras Bom Jardims", link: "https://romateccrm.com/bom-jardims", corretor: "José Romário (CRECI/MA 4.705)" };
+const EXEMPLO = { nome: "Maria Souza", empreendimento: "Condomínio de Chácaras Bom Jardims", link: "https://romateccrm.com/bom-jardims", corretor: "José Romário (CRECI/MA F-4.705)" };
 
 function Editor({ s, admin }: { s: { etapa: string; rotulo: string; ativo: boolean; passos: PassoSequencia[]; padrao: boolean }; admin: boolean }) {
   const utils = trpc.useUtils();

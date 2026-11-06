@@ -3,6 +3,17 @@
 Cada versão nova vai no TOPO. Depois rode `npm run release` (valida e atualiza o package.json);
 ao subir, o servidor grava a versão no banco e todos recebem o aviso "Novidades da versão".
 
+## 1.115.1 — 2026-11-06
+tipo: patch
+obrigatoria: nao
+titulo: CRECI de pessoa física com F e CRECI J mais visível
+publico: usuarios
+
+### Melhorias
+- CRECI de pessoa física agora sai com o F, para diferenciar do CRECI jurídico da imobiliária (J): corretores ficam "CRECI/MA F-4.705"; a Romatec segue "CRECI J-1234"
+- Vale para tudo: faixa e cartão final das mídias, texto do WhatsApp, contratos (corretor, parceiro e intermediador), carteirinhas, credenciamento, mensagens do robô, ranking, páginas do Bom Jardims e anúncios
+- A linha "Romatec Consultoria Total · CRECI J-1234" ficou um pouco maior nas fotos, vídeos, PDFs e folders, mais fácil de ler
+
 ## 1.115.0 — 2026-11-06
 tipo: minor
 obrigatoria: nao

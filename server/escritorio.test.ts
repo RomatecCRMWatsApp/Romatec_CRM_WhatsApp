@@ -8,13 +8,31 @@ describe('CRECI J da imobiliária em toda publicidade', () => {
     expect(LINHA_PUBLICIDADE).toBe('Romatec Consultoria Total · CRECI J-1234');
   });
   it('a assinatura do WhatsApp de qualquer corretor leva o CRECI J', () => {
-    const a = assinaturaWhatsApp({ nome: 'Carla Fictícia', papel: 'Corretor(a)', creci: 'CRECI/MA 9.999', telefones: ['(99) 9 0000-0001'], instagram: null } as any);
-    expect(a).toContain('🪪 CRECI/MA 9.999');
+    const a = assinaturaWhatsApp({ nome: 'Carla Fictícia', papel: 'Corretor(a)', creci: 'CRECI/MA F-9.999', telefones: ['(99) 9 0000-0001'], instagram: null } as any);
+    expect(a).toContain('🪪 CRECI/MA F-9.999');
     expect(a.endsWith('🏢 Romatec Consultoria Total · CRECI J-1234')).toBe(true);
   });
   it('contrato preenche o CRECI da pessoa jurídica (CRECI/MA {{rom_creci_pj}} → J-1234)', async () => {
     const { montarContexto } = await import('./contratos/contexto');
     expect(typeof montarContexto).toBe('function');
     expect(ESCRITORIO.creciJ.replace(/^CRECI\s*/i, '')).toBe('J-1234');
+  });
+});
+
+describe('CRECI de pessoa física com F (corretor) e jurídica com J (imobiliária)', async () => {
+  const { numeroCreciPF, formatarCreci } = await import('../shared/cartaoVendas');
+  it('qualquer forma cadastrada vira F-número, sem duplicar', () => {
+    expect(numeroCreciPF('4705')).toBe('F-4.705');
+    expect(numeroCreciPF('4.705')).toBe('F-4.705');
+    expect(numeroCreciPF('F4705')).toBe('F-4.705');
+    expect(numeroCreciPF('F-4.705')).toBe('F-4.705');
+    expect(numeroCreciPF('CRECI/MA 4.705')).toBe('F-4.705');
+    expect(numeroCreciPF('J-1234')).toBe('J-1234');
+    expect(numeroCreciPF('')).toBeNull();
+  });
+  it('formato completo do corretor', () => {
+    expect(formatarCreci('4705', 'MA')).toBe('CRECI/MA F-4.705');
+    expect(formatarCreci('12345', 'pa')).toBe('CRECI/PA F-12.345');
+    expect(formatarCreci(null, 'MA')).toBeNull();
   });
 });

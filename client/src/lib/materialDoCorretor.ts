@@ -112,8 +112,9 @@ export async function pdfDoCorretor(url: string, c: CartaoVendas, link: string, 
     p.drawText(seguro(nome), { x: 12, y: 17, size: 9.5, font: negrito, color: rgb(1, 1, 1) });
     // Linha obrigatória da publicidade (imobiliária + CRECI J), à direita
     const obrig = seguro(LINHA_PUBLICIDADE);
-    const larg = negrito.widthOfTextAtSize(obrig, 8);
-    p.drawText(obrig, { x: Math.max(12, width - larg - 12), y: 17, size: 8, font: negrito, color: rgb(0.79, 0.66, 0.3) });
+    const tam = Math.min(10, Math.max(7, (width - 24) / (obrig.length * 0.55) * 0.5));
+    const larg = negrito.widthOfTextAtSize(obrig, tam);
+    p.drawText(obrig, { x: Math.max(12, width - larg - 12), y: 16.5, size: tam, font: negrito, color: rgb(0.79, 0.66, 0.3) });
     p.drawText(seguro(`${detalhe}${detalhe ? "  ·  " : ""}${link}`), { x: 12, y: 6, size: 7, font: normal, color: rgb(0.95, 0.93, 0.87), maxWidth: width - 24 });
   }
   return new Blob([(await pdf.save()) as BlobPart], { type: "application/pdf" });

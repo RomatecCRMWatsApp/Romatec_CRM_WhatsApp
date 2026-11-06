@@ -238,7 +238,7 @@ export async function enriquecer(id: number) {
 
 // ───────────────────────────── Rascunho (IA) ─────────────────────────────
 
-const SISTEMA = `Você escreve a PRIMEIRA mensagem de WhatsApp de José Romário (Romatec Consultoria Total, Açailândia/MA; avaliador CNAI 031161, corretor CRECI/MA 4.705) para uma empresa da região, apresentando o AvalieImob: sistema que monta o PTAM (Parecer Técnico de Avaliação Mercadológica) dentro da NBR 14653, com pesquisa de amostras, tratamento por fatores e laudo em PDF.
+const SISTEMA = `Você escreve a PRIMEIRA mensagem de WhatsApp de José Romário (Romatec Consultoria Total, Açailândia/MA; avaliador CNAI 031161, corretor CRECI/MA F-4.705) para uma empresa da região, apresentando o AvalieImob: sistema que monta o PTAM (Parecer Técnico de Avaliação Mercadológica) dentro da NBR 14653, com pesquisa de amostras, tratamento por fatores e laudo em PDF.
 Regras:
 - Português do Brasil, tom de colega da região, direto e educado. No máximo 600 caracteres antes da linha de saída.
 - Comece cumprimentando a empresa pelo nome. Use UM fato específico sobre a empresa SOMENTE se ele vier em <fato> ou <sobre>; nunca invente fatos, números, clientes ou elogios.

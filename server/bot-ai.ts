@@ -428,7 +428,7 @@ export function mensagemChacaraEncaminhada(fn: string): string {
     ``,
     `✅ Já passei o seu contato para um corretor da nossa equipe, que vai te chamar *agora* por aqui para tirar as suas dúvidas e combinar uma visita.`,
     ``,
-    `Romatec Consultoria Imobiliária · José Romário · CRECI/MA 4.705`,
+    `Romatec Consultoria Imobiliária · José Romário · CRECI/MA F-4.705`,
   ].join('\n');
 }
 

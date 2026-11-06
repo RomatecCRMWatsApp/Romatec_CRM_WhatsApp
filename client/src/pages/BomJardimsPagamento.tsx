@@ -229,7 +229,7 @@ export default function BomJardimsPagamento() {
         <p style={{ margin: 0, fontSize: 12, lineHeight: 1.5, color: C.suave, fontStyle: "italic" }}>
           Juros de {(c.jurosAaEfetivo * 100).toLocaleString("pt-BR")}% ao ano efetivos sobre o valor financiado (Tabela Price, parcelas fixas, sem correção). No Plano C o resto da entrada é sem juros. {dados.aviso}
         </p>
-        <p style={{ textAlign: "center", fontSize: 12, color: C.suave, margin: 0 }}>Romatec Consultoria Total, CRECI J-1234, CNPJ 17.261.987/0001-09, José Romário, Corretor CRECI/MA 4.705</p>
+        <p style={{ textAlign: "center", fontSize: 12, color: C.suave, margin: 0 }}>Romatec Consultoria Total, CRECI J-1234, CNPJ 17.261.987/0001-09, José Romário, Corretor CRECI/MA F-4.705</p>
       </main>
     </div>
   );

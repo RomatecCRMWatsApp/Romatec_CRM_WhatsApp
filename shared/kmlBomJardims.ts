@@ -52,7 +52,7 @@ function documento(nome: string, descricao: string, olhar: string, corpo: string
 `;
 }
 
-const RODAPE = 'Romatec Consultoria Total · Corretor José Romário — CRECI/MA 4.705. Mapa ilustrativo; medidas do projeto de parcelamento.';
+const RODAPE = 'Romatec Consultoria Total · Corretor José Romário — CRECI/MA F-4.705. Mapa ilustrativo; medidas do projeto de parcelamento.';
 
 const PERIMETRO = (g: GeometriaPublica) =>
   poligono(`${NOME_BOM_JARDIMS} — perímetro`, 'perimetro', g.perimetro, 'Poligonal geral do empreendimento (perímetro certificado).');

@@ -49,7 +49,7 @@ describe('ranking de vendas', () => {
   it('mensagem de WhatsApp com a classificação, prêmio e prazo', () => {
     const t = textoRanking({ empreendimento: 'Condomínio de Chácaras Bom Jardims', linhas: classificar(P, [v(3, 'A01', '2026-11-01')]), prazo: { modo: 'data', dataEncerramento: '2026-12-31' }, encerrada: false, estoqueRestante: 81 });
     expect(t).toContain('Bom Jardims');
-    expect(t).toContain('🥇 Lidiany Lopes de Souza Lima (CRECI 4632) — *1* chácara');
+    expect(t).toContain('🥇 Lidiany Lopes de Souza Lima (CRECI F-4.632) — *1* chácara');
     expect(t).toContain('Honda Biz 125');
     expect(t).toContain('31/12/2026');
     expect(t).toContain('Chácaras disponíveis: 81');

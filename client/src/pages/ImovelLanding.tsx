@@ -218,7 +218,7 @@ export default function ImovelLanding() {
           )}
         </div>
 
-        <p className="text-[11px] text-muted-foreground text-center">Romatec Consultoria Total, CRECI J-1234, José Romário — CRECI/MA 4.705, Açailândia/MA</p>
+        <p className="text-[11px] text-muted-foreground text-center">Romatec Consultoria Total, CRECI J-1234, José Romário — CRECI/MA F-4.705, Açailândia/MA</p>
       </div>
 
       {/* Botão fixo de WhatsApp */}

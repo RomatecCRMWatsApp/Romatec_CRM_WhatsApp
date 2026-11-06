@@ -15,8 +15,8 @@ describe('cartão de vendas por usuário logado', () => {
 
   it('corretor com CRECI, telefone, e-mail e foto; CRECI some quando não há (secretária)', () => {
     const c = cartaoDe({ name: 'Maria Souza', creci: '12345', creciUf: 'ma', telefone: '99981234567', email: 'maria@x.com', fotoUrl: 'https://f/m.jpg' }, 'corretor');
-    expect(c).toMatchObject({ nome: 'Maria Souza', creci: 'CRECI/MA 12.345', telefones: ['(99) 9 8123-4567'], whatsapp: '5599981234567', fotoUrl: 'https://f/m.jpg' });
-    expect(linhaCartao(c)).toBe('Corretor(a) Maria Souza · CRECI/MA 12.345 · (99) 9 8123-4567 · maria@x.com · @avalieimob');
+    expect(c).toMatchObject({ nome: 'Maria Souza', creci: 'CRECI/MA F-12.345', telefones: ['(99) 9 8123-4567'], whatsapp: '5599981234567', fotoUrl: 'https://f/m.jpg' });
+    expect(linhaCartao(c)).toBe('Corretor(a) Maria Souza · CRECI/MA F-12.345 · (99) 9 8123-4567 · maria@x.com · @avalieimob');
     const s = cartaoDe({ name: 'Ana Secretária', telefone: '(99) 99111-2222', cpf: '52998224725' } as any, 'secretario');
     expect(s.creci).toBeNull();
     expect(s.papel).toBe('Atendimento');
@@ -28,7 +28,7 @@ describe('cartão de vendas por usuário logado', () => {
     const a = cartaoDe({ name: 'José Romário Pinto Bezerra', creci: '4705', creciUf: 'MA' }, 'admin');
     expect(a.fotoUrl).toBeNull();
     expect(a.telefones).toEqual(CARTAO_PADRAO.telefones);
-    expect(a.creci).toBe('CRECI/MA 4.705');
+    expect(a.creci).toBe('CRECI/MA F-4.705');
     const c = cartaoDe({ name: 'Sem Telefone' }, 'corretor');
     expect(c.telefones).toEqual([]);
     expect(c.whatsapp).toBeNull();
@@ -62,7 +62,7 @@ describe('intermediação: o cliente vê só os 2% do corretor', () => {
   const plano: any = { modalidade: 'financiado', preco_tabela: 160000, total_pagar: 196141.2, comissao_percentual: 0.05, comissao_corretor_percentual: 0.02 };
   it('parceiro quando houver; senão o responsável; valor 2% do preço; nada da administradora', () => {
     const t = tagsIntermediacao({ corretor: cred('José'), parceiro: cred('Maria'), plano });
-    expect(t).toMatchObject({ intermed_nome: 'MARIA', intermed_comissao_pct: '2%', intermed_comissao_valor: '3.200,00', intermed_creci: 'MA 1.234' });
+    expect(t).toMatchObject({ intermed_nome: 'MARIA', intermed_comissao_pct: '2%', intermed_comissao_valor: '3.200,00', intermed_creci: 'MA F-1.234' });
     expect(Object.values(t).join(' ')).not.toMatch(/5%|8\.000,00/);
     expect(tagsIntermediacao({ corretor: cred('José'), parceiro: null, plano }).intermed_nome).toBe('JOSÉ');
     expect(tagsIntermediacao({ corretor: cred('José'), parceiro: null, plano: { ...plano, modalidade: 'avista', total_pagar: 150000 } }).intermed_comissao_valor).toBe('3.000,00');

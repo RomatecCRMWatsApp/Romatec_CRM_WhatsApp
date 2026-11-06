@@ -10,6 +10,7 @@ import EnviarWhatsAppModal from "@/components/EnviarWhatsAppModal";
 import { useAuth } from "@/_core/hooks/useAuth";
 import { perfilDe } from "@shared/equipe";
 import { MODOS_TERMINO, ROTULO_MODO_TERMINO, type ModoTermino } from "@shared/ranking";
+import { numeroCreciPF } from "@shared/cartaoVendas";
 
 const campo = "h-9 w-full rounded-md border border-border bg-background px-2 text-sm";
 const TODOS = "todos";
@@ -144,7 +145,7 @@ export default function Ranking() {
                   </div>
                   <div className="min-w-0 flex-1">
                     <p className="truncate font-semibold">{l.posicao}º · {l.nome}</p>
-                    <p className="text-xs text-muted-foreground">{l.creci ? `CRECI ${l.creci}` : "CRECI não informado"}{l.ultimaVendaEm ? ` · última venda ${dataHora(l.ultimaVendaEm)}` : ""}</p>
+                    <p className="text-xs text-muted-foreground">{l.creci ? `CRECI ${numeroCreciPF(l.creci)}` : "CRECI não informado"}{l.ultimaVendaEm ? ` · última venda ${dataHora(l.ultimaVendaEm)}` : ""}</p>
                   </div>
                   <div className="text-right"><p className="text-2xl font-bold">{l.vendas}</p><p className="text-[11px] text-muted-foreground">{l.vendas === 1 ? "chácara" : "chácaras"}</p></div>
                 </div>

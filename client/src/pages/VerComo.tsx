@@ -6,6 +6,7 @@ import PageHeader from "@/components/PageHeader";
 import { Button } from "@/components/ui/button";
 import { Eye, Loader2, Search } from "lucide-react";
 import { entrarVerComo } from "@/lib/verComo";
+import { numeroCreciPF } from "@shared/cartaoVendas";
 
 const ABAS = [["corretor", "Corretores"], ["secretario", "Secretárias"], ["empreendedor", "Empreendedoras"]] as const;
 
@@ -54,7 +55,7 @@ export default function VerComo() {
                 : <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-primary/20 font-bold text-primary">{p.nome.charAt(0).toUpperCase()}</div>}
               <div className="min-w-0 flex-1">
                 <p className="truncate text-sm font-semibold">{p.nome}</p>
-                <p className="truncate text-[11px] text-muted-foreground">{[p.rotuloPerfil, p.creci ? `CRECI ${p.creci}` : null, p.empreendimentoSlug].filter(Boolean).join(" · ")}</p>
+                <p className="truncate text-[11px] text-muted-foreground">{[p.rotuloPerfil, p.creci ? `CRECI ${numeroCreciPF(p.creci)}` : null, p.empreendimentoSlug].filter(Boolean).join(" · ")}</p>
               </div>
               <Button size="sm" disabled={iniciar.isPending} onClick={() => iniciar.mutate({ usuarioId: p.id })}>
                 {iniciar.isPending && iniciar.variables?.usuarioId === p.id ? <Loader2 className="mr-1 h-3.5 w-3.5 animate-spin" /> : <Eye className="mr-1 h-3.5 w-3.5" />}Ver como

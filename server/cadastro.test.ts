@@ -59,7 +59,7 @@ describe('qualificação', () => {
   it('solteira, com selo do CRECI e CNAI', () => {
     const q = qualificacao({ ...MARIA, estadoCivil: 'solteiro', creci: '4705', creciUf: 'MA' }, END, null, { linkVerificacaoCreci: 'https://crecima.gov.br/v/1', cnai: '12345' });
     expect(q).toBe('**MARIA DA SILVA**, brasileira, solteira, corretora de imóveis, inscrita no CPF sob o nº 529.982.247-25, portadora do RG nº 12.345-6 SSP/MA, '
-      + 'CRECI/MA 4.705 (✓ CRECI regular — verificar em https://crecima.gov.br/v/1), Avaliador Imobiliário CNAI nº 12345, '
+      + 'CRECI/MA F-4.705 (✓ CRECI regular — verificar em https://crecima.gov.br/v/1), Avaliador Imobiliário CNAI nº 12345, '
       + 'residente e domiciliada na Rua São Raimundo, nº 10, Bairro Centro, Açailândia/MA, CEP 65.930-000.');
   });
 

@@ -37,7 +37,7 @@ export const ROMATEC_CONTACT = {
   cnpj: "17.261.987/0001-09",
   razao: "J R P Bezerra Ltda",
   rt: "José Romário Pinto Bezerra",
-  registros: ["CRECI J-1234", "CRECI/MA 4.705", "CNAI 031161", "CFT/MA 01209185369", "INCRA FQNS"],
+  registros: ["CRECI J-1234", "CRECI/MA F-4.705", "CNAI 031161", "CFT/MA 01209185369", "INCRA FQNS"],
 } as const;
 
 export function AppFooter({ version, online, links = DEFAULT_LINKS, renderLink }: AppFooterProps) {

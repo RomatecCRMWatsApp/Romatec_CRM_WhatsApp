@@ -41,7 +41,7 @@ describe('Equipe — o que cada perfil acessa', () => {
 
 describe('Equipe — login por CRECI e convite', () => {
   it('CRECI só com dígitos; e-mail se tiver @', () => {
-    expect(normalizarCreci('CRECI/MA 4.705')).toBe('4705');
+    expect(normalizarCreci('CRECI/MA F-4.705')).toBe('4705');
     expect(normalizarCreci('4705-F')).toBe('4705');
     expect(normalizarCreci('12')).toBeNull();
     expect(normalizarCreci('')).toBeNull();
