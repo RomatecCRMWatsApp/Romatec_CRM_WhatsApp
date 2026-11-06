@@ -3,6 +3,17 @@
 Cada versão nova vai no TOPO. Depois rode `npm run release` (valida e atualiza o package.json);
 ao subir, o servidor grava a versão no banco e todos recebem o aviso "Novidades da versão".
 
+## 1.110.0 — 2026-11-06
+tipo: minor
+obrigatoria: nao
+titulo: Player de vídeo da Romatec em Materiais
+publico: usuarios
+
+### Novo
+- Player próprio da Romatec CRM para os vídeos de Materiais e do portal do empreendedor: logo no canto, play e pausa, voltar e avançar 10 segundos, barra de tempo, volume e tela cheia, nas cores do sistema
+- No computador também funciona pelo teclado: espaço toca e pausa, setas voltam e avançam
+- Aviso em Materiais e no sininho mostrando que dá para assistir aos vídeos sem baixar: toque em Assistir no vídeo
+
 ## 1.109.0 — 2026-11-06
 tipo: minor
 obrigatoria: nao

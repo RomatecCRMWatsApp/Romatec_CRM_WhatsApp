@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
 import { trpc } from "@/lib/trpc";
 import { Button } from "@/components/ui/button";
-import { ArrowDownUp, Copy, Download, Eye, EyeOff, FileText, Loader2, Lock, Share2, Trash2, Upload, Video } from "lucide-react";
+import { ArrowDownUp, Copy, Play, Download, Eye, EyeOff, FileText, Loader2, Lock, Share2, Trash2, Upload, Video } from "lucide-react";
 import { useCartaoVendas } from "@/lib/cartaoVendas";
 import { legendaDoMaterial, linkDoMaterial, pdfDoCorretor } from "@/lib/materialDoCorretor";
 import { useAuth } from "@/_core/hooks/useAuth";
@@ -258,6 +258,8 @@ export default function MateriaisPainel({ propertyId, empreendimentoSlug }: Dest
     try { const v = localStorage.getItem("materiais_ordem"); return (ORDENS_MATERIAL as readonly string[]).includes(v ?? "") ? (v as OrdemMaterial) : "recentes"; } catch { return "recentes"; }
   });
   const setOrdem = (v: OrdemMaterial) => { setOrdemEstado(v); try { localStorage.setItem("materiais_ordem", v); } catch { /* sem armazenamento */ } };
+  const [avisoPlayerVisto, setAvisoPlayerVisto] = useState(() => { try { return localStorage.getItem("materiais_aviso_player") === "1"; } catch { return false; } });
+  const verAvisoPlayer = () => { setAvisoPlayerVisto(true); try { localStorage.setItem("materiais_aviso_player", "1"); } catch { /* sem armazenamento */ } };
   const [enviando, setEnviando] = useState<string | null>(null);
   // Limites reais do plano de armazenamento (Cloudinary), para o texto e a checagem antes de enviar
   const [limites, setLimites] = useState<{ imagemMB: number; videoMB: number; pdfMB: number } | null>(null);
@@ -368,6 +370,13 @@ export default function MateriaisPainel({ propertyId, empreendimentoSlug }: Dest
       </div>
       {(empreendimentoSlug || destino.startsWith("e:")) && <LinkAgendamento slug={empreendimentoSlug || destino.slice(2)} />}
       <LinkInstagram />
+      {!avisoPlayerVisto && contagem("video") > 0 && aba !== "imagem" && aba !== "pdf" && (
+        <div role="status" className="flex items-start gap-3 rounded-md border border-[var(--rt-gold)]/50 bg-[var(--rt-gold)]/10 px-3 py-2">
+          <span aria-hidden="true" className="mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-black ring-2 ring-[var(--rt-gold)]"><Play className="ml-0.5 h-4 w-4 fill-white text-white" /></span>
+          <p className="flex-1 text-xs text-foreground"><b>Novo: assista aos vídeos aqui dentro.</b> Toque em <b>Assistir</b> no vídeo: ele abre no player da Romatec, com volume, avanço de 10 s e tela cheia, sem baixar. Veja antes de enviar ao cliente.</p>
+          <button type="button" onClick={verAvisoPlayer} className="shrink-0 rounded-md px-2 py-1 text-xs font-medium text-[var(--rt-gold-light)] hover:bg-white/10">Entendi</button>
+        </div>
+      )}
       {enviando && <p className="text-xs text-ok-300">{enviando}</p>}
       <p className="rounded-md border border-ok-500/30 bg-ok-500/5 px-3 py-2 text-xs text-ok-200">
         Tudo o que você baixa ou envia daqui sai <b>só com o seu contato</b>: o rodapé e o cartão final do escritório saem da peça e entram a sua faixa com os dados do <b>Meu carimbo</b> (nome, {cartao.creci ?? "CRECI"}, WhatsApp, Instagram, e-mail e QR do seu link) e, no vídeo, o seu cartão final. Escolha o <b>formato</b> em cada peça: Feed 4:5, Stories/Reels 9:16, Quadrado 1:1, WhatsApp (leve) ou Original. Vídeo leva alguns segundos para montar.

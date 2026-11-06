@@ -38,3 +38,29 @@ export async function avisarMudancaDeCondicoes(): Promise<number> {
   }
   return avisados;
 }
+
+/**
+ * Aviso único (uma vez por empreendimento): "agora tem play nos vídeos de Materiais". Vai para os corretores com o
+ * empreendimento, o empreendedor e o escritório — só nos empreendimentos que têm vídeo liberado na galeria.
+ */
+export const CHAVE_AVISO_PLAYER = 'aviso:player-video-v1';
+export async function avisarPlayerDeVideos(): Promise<number> {
+  const d: any = await getDb();
+  if (!d) return 0;
+  const { materiais } = await import('../drizzle/schema');
+  const linhas: any[] = await d.select({ slug: materiais.empreendimentoSlug, mime: materiais.mime, url: materiais.url })
+    .from(materiais).where(eq(materiais.liberado, true));
+  const slugs = new Set(linhas.filter(m => m.slug && ((m.mime || '').startsWith('video/') || /\/video\/upload\/|\.(mp4|mov|webm)$/i.test(m.url || ''))).map(m => m.slug as string));
+  const { notificarEmpreendimentoPorSlug } = await import('./notificacoes');
+  let n = 0;
+  for (const slug of Array.from(slugs)) {
+    const r = await notificarEmpreendimentoPorSlug(slug, {
+      titulo: 'Novo: assista aos vídeos sem baixar',
+      mensagem: 'Em Materiais, toque no botão ▶ Assistir do vídeo: ele abre aqui dentro, no player da Romatec, com volume, avanço e tela cheia. Veja antes de enviar ao cliente.',
+      url: '/materiais',
+      chave: `${CHAVE_AVISO_PLAYER}:${slug}`,
+    });
+    if (r) n++;
+  }
+  return n;
+}

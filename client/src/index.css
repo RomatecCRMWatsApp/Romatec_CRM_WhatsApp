@@ -425,3 +425,9 @@
     background: var(--c-ok0-35-0-05-155);
   }
 }
+
+/* Barra de tempo e volume do player de vídeo (PlayerVideo): trilho fino, bolinha dourada da marca */
+.rt-range { -webkit-appearance: none; appearance: none; height: 6px; border-radius: 999px; background: color-mix(in srgb, white 25%, transparent); cursor: pointer; }
+.rt-range::-webkit-slider-thumb { -webkit-appearance: none; appearance: none; width: 14px; height: 14px; border-radius: 50%; background: var(--rt-gold); border: 2px solid var(--rt-bg); }
+.rt-range::-moz-range-thumb { width: 14px; height: 14px; border-radius: 50%; background: var(--rt-gold); border: 2px solid var(--rt-bg); }
+.rt-range:focus-visible { outline: 2px solid var(--rt-gold); outline-offset: 3px; }
