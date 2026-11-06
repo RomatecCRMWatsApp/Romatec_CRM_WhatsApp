@@ -113,6 +113,7 @@ export default function ContratoDetalhe() {
   return (
     <div>
       <PageHeader icone={FileSignature} titulo={`Contrato ${c.numero}`} voltar={{ rotulo: "Contratos", onClick: () => navigate("/contratos") }}
+        acoes={(d.comprador as any)?.id ? <Button size="sm" variant="outline" onClick={() => navigate(`/clientes/comprador/${(d.comprador as any).id}`)}>Ficha do cliente</Button> : undefined}
         subtitulo={<span className="inline-flex flex-wrap items-center gap-2"><SeloStatus status={c.status} /> {c.empreendimento} · Chácara {c.loteCodigo} · {d.comprador?.nome ?? "—"}</span>} />
       <div className="mx-auto max-w-[1400px] space-y-4 px-4 pb-10 md:px-6">
         <div className="flex gap-2 border-b border-border">

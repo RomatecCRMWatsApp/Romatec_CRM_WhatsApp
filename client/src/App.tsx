@@ -97,6 +97,7 @@ const Tours360 = lazy(() => import("./pages/Tours360"));
 const PortalParceira = lazy(() => import("./pages/PortalParceira"));
 const AssinarAditivo = lazy(() => import("./pages/AssinarAditivo"));
 const LeadDetalhe = lazy(() => import("./pages/LeadDetalhe"));
+const FichaCliente = lazy(() => import("./pages/FichaCliente"));
 const Setup = lazy(() => import("./pages/Setup"));
 import { trpc } from "@/lib/trpc";
 import { useAuth } from "@/_core/hooks/useAuth";
@@ -173,6 +174,12 @@ function Router() {
       </Route>
       <Route path={"/leads/atender"}>
         {() => <SetupGuard component={AtenderAgora} />}
+      </Route>
+      <Route path={"/clientes/lead/:id"}>
+        {() => <SetupGuard component={FichaCliente} />}
+      </Route>
+      <Route path={"/clientes/comprador/:id"}>
+        {() => <SetupGuard component={FichaCliente} />}
       </Route>
       <Route path={"/leads/lead/:id"}>
         {() => <SetupGuard component={LeadDetalhe} />}

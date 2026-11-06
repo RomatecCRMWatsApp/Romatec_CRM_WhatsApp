@@ -110,7 +110,11 @@ export default function LeadDetalhe() {
           </span>
           <br />+{fone} · entrou há {desde(lead.criadoEm)} · última atividade há {desde(lead.ultimaAtividade)}
         </>}
-        acoes={<Button size="sm" asChild className="bg-[color:var(--c-25d366)] hover:bg-[color:var(--c-1fb956)] text-white"><a href={`https://wa.me/${fone}`} onClick={() => abriuWhatsApp.mutate({ id })} target="_blank" rel="noreferrer" title="Abrir a conversa (conta como atendido)"><MessageCircle className="mr-1.5 h-4 w-4" /> WhatsApp</a></Button>}
+        acoes={<>
+          <Button size="sm" asChild className="bg-[color:var(--c-25d366)] hover:bg-[color:var(--c-1fb956)] text-white"><a href={`https://wa.me/${fone}`} onClick={() => abriuWhatsApp.mutate({ id })} target="_blank" rel="noreferrer" title="Abrir a conversa (conta como atendido)"><MessageCircle className="mr-1.5 h-4 w-4" /> WhatsApp</a></Button>
+          {/* Tudo do cliente numa tela: contratos, parcelas, visitas, documentos e linha do tempo */}
+          <Button size="sm" variant="outline" onClick={() => navigate(`/clientes/lead/${id}`)}>Ficha completa</Button>
+        </>}
       />
 
       <div className="px-4 md:px-6 pb-6 max-w-[1500px] mx-auto grid grid-cols-1 lg:grid-cols-3 gap-4">

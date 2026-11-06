@@ -82,7 +82,7 @@ describe('busca única: no banco, respeitando quem pode ver o quê', () => {
   it('comprador pelo nome ou CPF leva ao contrato, com o CPF mascarado', async () => {
     const r = await buscarTudo('111.444.777-35', ADMIN, pAdmin);
     const c = r.grupos.find((g: any) => g.tipo === 'cliente')!.itens[0];
-    expect(c).toMatchObject({ titulo: 'Pedro Comprador', url: '/contratos/1' });
+    expect(c).toMatchObject({ titulo: 'Pedro Comprador', url: '/clientes/comprador/1' });
     expect(c.detalhe).toContain('CPF ***.444.777-**');
     expect(titulos(await buscarTudo('pedro', ADMIN, pAdmin), 'contrato')).toEqual(['Contrato BJ-0007']);
   });

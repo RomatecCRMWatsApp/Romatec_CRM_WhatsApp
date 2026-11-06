@@ -73,7 +73,7 @@ export async function buscarTudo(entrada: string, ator: { id: number; perfil?: s
     const emp = l.empreendimentoSlug ? emps.find(e => e.slug === l.empreendimentoSlug)?.nome : null;
     out.push({ tipo: "lead", id: `lead:${l.id}`, titulo: l.nome || formatarFone(l.phone) || `Lead ${l.id}`,
       detalhe: [formatarFone(l.phone), l.score ? `lead ${ROTULO_SCORE[l.score] ?? l.score}` : null, emp].filter(Boolean).join(", ") || null,
-      url: `/leads/lead/${l.id}`, pontos });
+      url: `/clientes/lead/${l.id}`, pontos });
   }
 
   // ─── Compradores → contratos deles ───
@@ -99,7 +99,7 @@ export async function buscarTudo(entrada: string, ator: { id: number; perfil?: s
     const c = dele[0];
     out.push({ tipo: "cliente", id: `pessoa:${pe.id}`, titulo: pe.nome,
       detalhe: [mascararDoc(pe.cpfCnpj), `contrato ${c.numero}`, `chácara ${c.loteCodigo}`, dele.length > 1 ? `+${dele.length - 1} contrato(s)` : null].filter(Boolean).join(", "),
-      url: `/contratos/${c.id}`, pontos });
+      url: `/clientes/comprador/${pe.id}`, pontos });
   }
 
   // ─── Contratos (pelo número, pela chácara ou pelo comprador) ───

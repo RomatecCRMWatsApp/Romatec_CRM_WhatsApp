@@ -119,6 +119,7 @@ export function menuDoPerfil(perfil: ReturnType<typeof perfilDe>, modulos?: Reco
 export function tituloDaRota(loc: string): string {
   for (const g of MENU) for (const i of g.itens) if (ativo(loc, i)) return i.rotulo;
   if (loc.startsWith("/leads/lead/")) return "Lead";
+  if (loc.startsWith("/clientes/")) return "Ficha do cliente";
   return "Romatec CRM";
 }
 

@@ -3,6 +3,19 @@
 Cada versão nova vai no TOPO. Depois rode `npm run release` (valida e atualiza o package.json);
 ao subir, o servidor grava a versão no banco e todos recebem o aviso "Novidades da versão".
 
+## 1.117.0 — 2026-11-06
+tipo: minor
+obrigatoria: nao
+titulo: Ficha completa do cliente: tudo de uma pessoa numa tela
+publico: usuarios
+
+### Novo
+- Ficha do cliente com resumo (contratos, recebido, em aberto, vencido com os dias de atraso e a próxima parcela), contato e origem, linha do tempo, contratos com as parcelas, visitas, documentos e as últimas mensagens da conversa
+- Linha do tempo única: quando chegou como lead, encaminhamentos, visitas, contrato, cada pagamento e a última mensagem, do mais recente para o mais antigo; um toque abre o contrato ou o lead
+- Junta o que é da mesma pessoa mesmo sem ligação formal: o lead e o comprador do contrato se encontram pelo telefone
+- Abre pela busca (lead ou comprador), pelo botão "Ficha completa" no lead e "Ficha do cliente" no contrato; atalhos para WhatsApp e ligar
+- Corretor abre a ficha dos clientes dele (com o CPF mascarado e só os contratos dele); o escritório vê tudo
+
 ## 1.116.0 — 2026-11-06
 tipo: minor
 obrigatoria: nao
