@@ -246,6 +246,31 @@ export async function definirAssinatura(p: {
   return { ok: true as const };
 }
 
+/**
+ * Prorrogação autorizada pelo administrador (Controle de acessos): nova data de vencimento, desbloqueando.
+ * Com pagamento: a licença fica como paga; cortesia: fica como cortesia. Sem assinatura ainda, cria uma.
+ */
+export async function prorrogarAssinatura(usuarioId: number, p: { modalidade: 'pago' | 'cortesia'; ate: string; motivo: string }, autorId: number, agora = Date.now()) {
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(p.ate)) throw new SaasErro('Informe a nova data de vencimento');
+  const fim = new Date(`${p.ate}T23:59:59-03:00`);
+  if (fim.getTime() < agora) throw new SaasErro('A nova data precisa ser hoje ou depois');
+  const d = await banco();
+  const [u]: any[] = await d.select().from(users).where(eq(users.id, usuarioId)).limit(1);
+  if (!u) throw new SaasErro('Usuário não encontrado', 404);
+  const motivo = p.motivo.slice(0, 300);
+  const a = await assinaturaDoUsuario(u);
+  if (!a) {
+    return definirAssinatura({
+      usuarioId, planoCodigo: perfilDe(u) === 'empreendedor' ? 'EMPREENDEDOR_AVULSO' : 'CORRETOR_ESSENCIAL',
+      origem: p.modalidade === 'pago' ? 'PAGA' : 'CORTESIA', periodoFim: p.ate, motivo,
+    }, autorId, agora);
+  }
+  const origem = p.modalidade === 'cortesia' ? 'CORTESIA' : (a.origem === 'PACOTE_GESTAO' ? 'PACOTE_GESTAO' : 'PAGA');
+  await atualizar(a, { status: 'ATIVA', origem, periodoFim: fim, trialFim: null, motivo });
+  await auditar(usuarioId, 'DESBLOQUEIO', { prorrogacao: true, modalidade: p.modalidade, ate: p.ate, motivo, por: autorId });
+  return { ok: true as const };
+}
+
 /** Pagamento recebido fora do sistema (Pix, transferência…) enquanto a fase 2 não chega: estende o período e desbloqueia */
 export async function registrarPagamentoManual(id: number, p: { ciclo: 'MENSAL' | 'ANUAL'; valor: number; observacao: string }, autorId: number, agora = Date.now()) {
   if (!(p.valor > 0)) throw new SaasErro('Informe o valor recebido');

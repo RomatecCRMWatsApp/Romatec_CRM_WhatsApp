@@ -229,6 +229,23 @@ export async function notificarSolicitacaoCancelamento(
     { contratoId: p.contratoId });
 }
 
+/** Pedido de prorrogação/cortesia de acesso: só o administrador recebe (autoriza com a senha) */
+export async function notificarSolicitacaoAcesso(
+  p: { solicitacaoId: number; codigo: string; pessoa: string; modalidade: string; ate: string; autorId: number; autorNome?: string | null; motivo: string },
+  repo: RepoNotificacoes = repoBanco(), enviar?: EnviadorPush | null,
+) {
+  const usuarios = await repo.usuarios();
+  const ids = destinatarios("solicitacao_acesso", usuarios, [], perfilDe as any, { empreendimentoId: 0, empreendimentoSlug: "", autorId: p.autorId });
+  const dataBr = p.ate.split("-").reverse().join("/");
+  const { titulo, mensagem } = textoNotificacao("solicitacao_acesso", {
+    motivo: `Autorizar acesso de ${p.pessoa} · código ${p.codigo}`,
+    comprador: `${p.autorNome ?? "A secretária"} pediu ${p.modalidade === "pago" ? "prorrogar com pagamento" : "cortesia"} até ${dataBr} para ${p.pessoa}. Motivo: ${p.motivo}. Autorize com a sua senha em Controle de acessos (código ${p.codigo}).`,
+  });
+  return emitir(repo, enviar === undefined ? await enviadorWebPush() : enviar, usuarios, ids,
+    { tipo: "solicitacao_acesso", titulo, mensagem, empreendimentoId: null, chave: `solicitacao_acesso:${p.solicitacaoId}` },
+    { url: `/controle-acessos?pedido=${p.codigo}` });
+}
+
 /**
  * Novo lead captado (formulário, link de agendamento, WhatsApp/bot da Zayra, Meta…): sininho, aviso na tela e push.
  * Uma vez por lead (chave novo_lead:<id>). Destinatários em shared/notificacoes.ts (destinatarios).

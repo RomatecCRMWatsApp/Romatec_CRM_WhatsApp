@@ -1426,6 +1426,8 @@ async function startServer() {
     await addMateriais();
     const { addMaterialUso } = await import('./migrations/addMaterialUso');
     await addMaterialUso();
+    const { addSolicitacaoAcesso } = await import('./migrations/addSolicitacaoAcesso');
+    await addSolicitacaoAcesso();
   } catch (e) {
     console.error('❌ Erro na migration addMateriais:', e);
   }

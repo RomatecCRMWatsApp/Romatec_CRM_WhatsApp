@@ -3,6 +3,22 @@
 Cada versão nova vai no TOPO. Depois rode `npm run release` (valida e atualiza o package.json);
 ao subir, o servidor grava a versão no banco e todos recebem o aviso "Novidades da versão".
 
+## 1.114.0 — 2026-11-06
+tipo: minor
+obrigatoria: nao
+titulo: Prorrogar, desbloquear e dar cortesia só com a senha do administrador
+publico: equipe
+
+### Novo
+- Controle de acessos › Prorrogar / Desbloquear: nova data de vencimento, com pagamento (valor) ou cortesia, desbloqueando quem estiver bloqueado
+- A secretária faz o pedido e recebe um código; o administrador recebe o aviso no sininho e no celular e autoriza com a senha dele (no aparelho dele ou digitando no aparelho da secretária)
+- Só a senha do administrador libera: senha errada não muda nada, 5 erros cancelam o pedido, e o pedido vale por 48 horas
+- Quadro "Pedidos de prorrogação" com os pedidos aguardando e os decididos na semana; o administrador pode recusar, a secretária pode cancelar o pedido dela
+- Tudo fica no histórico da pessoa: quem pediu, quem autorizou, a data e o motivo
+
+### Mudanças
+- O antigo "Liberar licença" direto saiu: liberar agora sempre passa pela senha do administrador. Bloquear e ativar/desativar o login continuam com a secretária
+
 ## 1.113.0 — 2026-11-06
 tipo: minor
 obrigatoria: nao

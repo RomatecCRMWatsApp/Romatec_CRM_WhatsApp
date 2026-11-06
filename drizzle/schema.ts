@@ -1075,6 +1075,29 @@ export const saasTrials = mysqlTable("saasTrials", {
 });
 
 /** LOGIN, BLOQUEIO_402, CHECKOUT_INICIADO, PAGAMENTO_CONFIRMADO, DESBLOQUEIO, TRIAL_INICIADO, TRIAL_EXPIRADO… */
+/** Pedido de prorrogação/desbloqueio de acesso (secretária → administrador autoriza com a senha) */
+export const solicitacaoAcesso = mysqlTable("solicitacaoAcesso", {
+  id: int("id").autoincrement().primaryKey(),
+  usuarioId: int("usuarioId").notNull(),
+  /** pago | cortesia */
+  modalidade: varchar("modalidade", { length: 10 }).notNull(),
+  /** Nova data de vencimento (YYYY-MM-DD) */
+  ate: varchar("ate", { length: 10 }).notNull(),
+  valor: decimal("valor", { precision: 10, scale: 2 }),
+  motivo: varchar("motivo", { length: 300 }).notNull(),
+  codigo: varchar("codigo", { length: 6 }).notNull(),
+  /** PENDENTE | APROVADA | RECUSADA | CANCELADA | EXPIRADA */
+  status: varchar("status", { length: 12 }).default("PENDENTE").notNull(),
+  tentativas: int("tentativas").default(0).notNull(),
+  solicitanteId: int("solicitanteId").notNull(),
+  decididoPor: int("decididoPor"),
+  decididoEm: timestamp("decididoEm"),
+  criadoEm: timestamp("criadoEm").defaultNow().notNull(),
+}, (t) => ({
+  porStatus: index("idx_solic_status").on(t.status, t.criadoEm),
+  porUsuario: index("idx_solic_usuario").on(t.usuarioId),
+}));
+
 /** Estatística de uso dos materiais: quem baixou/enviou/copiou o texto de qual peça (sem destinatário nem conteúdo) */
 export const materialUso = mysqlTable("materialUso", {
   id: int("id").autoincrement().primaryKey(),

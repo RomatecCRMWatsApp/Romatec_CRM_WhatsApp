@@ -5,8 +5,9 @@
  * e desconectar de todos os aparelhos — sempre com registro de quem fez.
  */
 import { and, desc, eq, gte, inArray } from "drizzle-orm";
+import { randomInt } from "node:crypto";
 import { getDb } from "./db";
-import { auditoriaAcesso, materialUso, saasAssinaturas, saasFaturas, users } from "../drizzle/schema";
+import { auditoriaAcesso, materialUso, saasAssinaturas, saasFaturas, solicitacaoAcesso, users } from "../drizzle/schema";
 import { perfilDe } from "../shared/equipe";
 import { podeEntrar, resumoControle, situacaoDePagamento, situacaoDeUso, somarUsoMidias, type SituacaoPagamento, type SituacaoUso, type UsoMidias } from "../shared/controleAcessos";
 
@@ -122,20 +123,138 @@ export async function definirLoginAtivo(id: number, ativo: boolean, motivo: stri
 }
 
 /**
- * Licença: liberar (até uma data, ou sem fim) ou bloquear. Sem assinatura ainda: liberar cria uma cortesia no plano
- * Corretor Essencial (empreendedor: plano por empreendimento), como faz o SaaS.
+ * Bloquear a licença (a secretária pode). Liberar, prorrogar e dar cortesia NÃO passam por aqui: viram um pedido
+ * que só vale com a senha do administrador (pedirProrrogacao → autorizarPedido).
  */
-export async function definirLicenca(id: number, p: { tipo: "liberar" | "bloquear"; ate?: string | null; motivo: string }, autorId: number) {
-  if (!p.motivo.trim()) throw new AcessoErro("Informe o motivo");
+export async function bloquearLicenca(id: number, motivo: string, autorId: number) {
+  if (!motivo.trim()) throw new AcessoErro("Informe o motivo");
   const u = await pessoaControlada(id);
   const S = await import("./saas/servico");
   const a = await S.assinaturaDoUsuario(u);
-  if (a) return S.acaoAssinatura(a.id, { tipo: p.tipo === "liberar" ? "desbloquear" : "bloquear", motivo: p.motivo, ate: p.ate ?? null }, autorId);
-  if (p.tipo === "bloquear") throw new AcessoErro("Esta pessoa ainda não tem licença para bloquear");
-  return S.definirAssinatura({
-    usuarioId: u.id, planoCodigo: perfilDe(u) === "empreendedor" ? "EMPREENDEDOR_AVULSO" : "CORRETOR_ESSENCIAL",
-    origem: "CORTESIA", periodoFim: p.ate ?? null, motivo: p.motivo,
-  }, autorId);
+  if (!a) throw new AcessoErro("Esta pessoa ainda não tem licença para bloquear");
+  return S.acaoAssinatura(a.id, { tipo: "bloquear", motivo }, autorId);
+}
+
+// ─── Prorrogação / desbloqueio / cortesia: pedido + senha do administrador ───────────────────────────────
+
+export const VALIDADE_PEDIDO_MS = 48 * 3600_000;
+export const LIMITE_TENTATIVAS_SENHA = 5;
+
+type Ator = { id: number; name?: string | null; perfil?: string | null; role?: string | null };
+const ehAdmin = (u: any) => perfilDe(u) === "admin";
+
+/** Confere a senha de login de um administrador (sem a senha inicial do ambiente). Devolve o administrador que bateu. */
+async function adminDaSenha(senha: string, ator: Ator): Promise<{ id: number; nome: string } | null> {
+  if (!senha) return null;
+  const d = await banco();
+  const todos: any[] = await d.select().from(users);
+  // Administrador logado: só a senha dele. Secretária: a senha de um administrador ativo (ele digita no aparelho dela)
+  const candidatos = todos.filter(u => ehAdmin(u) && ativoDe(u) && (!ehAdmin(ator) || u.id === ator.id));
+  const { checkLogin } = await import("./auth-security");
+  for (const u of candidatos) {
+    if (!u.passwordScrypt && !u.passwordHash) continue;
+    if ((await checkLogin(senha, { scryptHash: u.passwordScrypt, legacySha256: u.passwordHash }, "")).ok) return { id: u.id, nome: u.name || "Administrador" };
+  }
+  return null;
+}
+
+/** A secretária (ou o administrador) pede para prorrogar/desbloquear com pagamento ou cortesia. Gera o código e avisa o administrador. */
+export async function pedirProrrogacao(usuarioId: number, p: { modalidade: "pago" | "cortesia"; ate: string; valor?: number | null; motivo: string }, ator: Ator, agora = Date.now()) {
+  if (!p.motivo.trim()) throw new AcessoErro("Informe o motivo");
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(p.ate)) throw new AcessoErro("Informe a nova data de vencimento");
+  if (new Date(`${p.ate}T23:59:59-03:00`).getTime() < agora) throw new AcessoErro("A nova data precisa ser hoje ou depois");
+  const u = await pessoaControlada(usuarioId);
+  const d = await banco();
+  // Um pedido aberto por pessoa: o novo substitui o anterior
+  await d.update(solicitacaoAcesso).set({ status: "CANCELADA", decididoEm: new Date(agora) } as any)
+    .where(and(eq(solicitacaoAcesso.usuarioId, u.id), eq(solicitacaoAcesso.status, "PENDENTE")));
+  const codigo = String(randomInt(100000, 1000000));
+  const r: any = await d.insert(solicitacaoAcesso).values({
+    usuarioId: u.id, modalidade: p.modalidade, ate: p.ate, valor: p.valor != null ? Number(p.valor).toFixed(2) : null,
+    motivo: p.motivo.trim().slice(0, 300), codigo, status: "PENDENTE", tentativas: 0, solicitanteId: ator.id, criadoEm: new Date(agora),
+  } as any);
+  const id = Number(r?.[0]?.insertId ?? r?.insertId ?? r?.lastInsertRowid ?? 0);
+  const S = await import("./saas/servico");
+  await S.auditar(u.id, "PEDIDO_PRORROGACAO", { codigo, modalidade: p.modalidade, ate: p.ate, motivo: p.motivo, por: ator.id });
+  if (!ehAdmin(ator)) {
+    import("./notificacoes").then(N => N.notificarSolicitacaoAcesso({ solicitacaoId: id, codigo, pessoa: u.name || "corretor", modalidade: p.modalidade, ate: p.ate, autorId: ator.id, autorNome: ator.name, motivo: p.motivo }))
+      .catch(e => console.warn("[Acessos] aviso do pedido:", e?.message));
+  }
+  return { id, codigo };
+}
+
+async function pedidoAberto(ref: { id?: number; codigo?: string }, agora: number) {
+  const d = await banco();
+  const cond = ref.id ? eq(solicitacaoAcesso.id, ref.id) : eq(solicitacaoAcesso.codigo, String(ref.codigo ?? ""));
+  const [s]: any[] = await d.select().from(solicitacaoAcesso).where(and(cond, eq(solicitacaoAcesso.status, "PENDENTE"))).orderBy(desc(solicitacaoAcesso.id)).limit(1);
+  if (!s) throw new AcessoErro("Pedido não encontrado ou já decidido", 404);
+  if (agora - new Date(s.criadoEm).getTime() > VALIDADE_PEDIDO_MS) {
+    await d.update(solicitacaoAcesso).set({ status: "EXPIRADA", decididoEm: new Date(agora) } as any).where(eq(solicitacaoAcesso.id, s.id));
+    throw new AcessoErro("Este pedido passou de 48 horas e expirou. Faça um novo pedido.");
+  }
+  return s;
+}
+
+/** Só a senha do administrador libera: aplica a prorrogação (pagamento ou cortesia) e desbloqueia */
+export async function autorizarPedido(ref: { id?: number; codigo?: string }, senha: string, ator: Ator, ip: string | null = null, agora = Date.now()) {
+  const s = await pedidoAberto(ref, agora);
+  const d = await banco();
+  const S = await import("./saas/servico");
+  const admin = await adminDaSenha(String(senha ?? ""), ator);
+  if (!admin) {
+    const tentativas = Number(s.tentativas || 0) + 1;
+    const esgotou = tentativas >= LIMITE_TENTATIVAS_SENHA;
+    await d.update(solicitacaoAcesso).set({ tentativas, ...(esgotou ? { status: "CANCELADA", decididoEm: new Date(agora) } : {}) } as any).where(eq(solicitacaoAcesso.id, s.id));
+    await S.auditar(s.usuarioId, "SENHA_ADMIN_ERRADA", { codigo: s.codigo, tentativa: tentativas, por: ator.id }, ip);
+    throw new AcessoErro(esgotou ? "Senha errada 5 vezes: o pedido foi cancelado. Faça um novo pedido." : `Senha do administrador incorreta. Nada foi alterado (${LIMITE_TENTATIVAS_SENHA - tentativas} tentativas restantes).`, 403);
+  }
+  const valor = s.valor != null ? Number(s.valor) : null;
+  const motivo = `${s.motivo}${s.modalidade === "pago" && valor ? ` (pagamento de R$ ${valor.toFixed(2).replace(".", ",")})` : ""} · autorizado por ${admin.nome}`;
+  await S.prorrogarAssinatura(s.usuarioId, { modalidade: s.modalidade, ate: s.ate, motivo }, admin.id, agora);
+  await d.update(solicitacaoAcesso).set({ status: "APROVADA", decididoPor: admin.id, decididoEm: new Date(agora) } as any).where(eq(solicitacaoAcesso.id, s.id));
+  await S.auditar(s.usuarioId, "PRORROGACAO_AUTORIZADA", { codigo: s.codigo, modalidade: s.modalidade, ate: s.ate, motivo: s.motivo, por: admin.id, pedidoPor: s.solicitanteId }, ip);
+  return { ok: true as const, ate: s.ate, modalidade: s.modalidade as string };
+}
+
+/** Administrador logado prorroga direto: cria o pedido e autoriza com a senha dele, num passo só */
+export async function prorrogarComSenha(usuarioId: number, p: { modalidade: "pago" | "cortesia"; ate: string; valor?: number | null; motivo: string }, senha: string, ator: Ator, ip: string | null = null) {
+  if (!ehAdmin(ator)) throw new AcessoErro("Peça a autorização: só o administrador prorroga direto", 403);
+  const { id } = await pedirProrrogacao(usuarioId, p, ator);
+  return autorizarPedido({ id }, senha, ator, ip);
+}
+
+/** Recusar (administrador) ou desistir do pedido (quem pediu) */
+export async function encerrarPedido(id: number, ator: Ator, agora = Date.now()) {
+  const d = await banco();
+  const [s]: any[] = await d.select().from(solicitacaoAcesso).where(eq(solicitacaoAcesso.id, id)).limit(1);
+  if (!s || s.status !== "PENDENTE") throw new AcessoErro("Pedido não encontrado ou já decidido", 404);
+  if (!ehAdmin(ator) && s.solicitanteId !== ator.id) throw new AcessoErro("Só o administrador ou quem pediu pode encerrar", 403);
+  const status = ehAdmin(ator) && s.solicitanteId !== ator.id ? "RECUSADA" : "CANCELADA";
+  await d.update(solicitacaoAcesso).set({ status, decididoPor: ator.id, decididoEm: new Date(agora) } as any).where(eq(solicitacaoAcesso.id, id));
+  const S = await import("./saas/servico");
+  await S.auditar(s.usuarioId, status === "RECUSADA" ? "PRORROGACAO_RECUSADA" : "PEDIDO_CANCELADO", { codigo: s.codigo, por: ator.id });
+  return { ok: true as const, status };
+}
+
+/** Pedidos abertos e os decididos nos últimos 7 dias */
+export async function listarPedidos(agora = Date.now()) {
+  const d = await banco();
+  const linhas: any[] = await d.select().from(solicitacaoAcesso).orderBy(desc(solicitacaoAcesso.id)).limit(100);
+  const ids = new Set<number>();
+  for (const l of linhas) { ids.add(l.usuarioId); ids.add(l.solicitanteId); if (l.decididoPor) ids.add(l.decididoPor); }
+  const us: any[] = ids.size ? await d.select({ id: users.id, name: users.name }).from(users).where(inArray(users.id, Array.from(ids))) : [];
+  const nome = new Map(us.map(u => [u.id, u.name || "—"]));
+  return linhas
+    .map(l => {
+      const expirou = l.status === "PENDENTE" && agora - new Date(l.criadoEm).getTime() > VALIDADE_PEDIDO_MS;
+      return {
+        id: l.id as number, usuarioId: l.usuarioId as number, pessoa: nome.get(l.usuarioId) ?? "—", modalidade: l.modalidade as "pago" | "cortesia",
+        ate: l.ate as string, valor: l.valor != null ? Number(l.valor) : null, motivo: l.motivo as string, codigo: l.codigo as string,
+        status: (expirou ? "EXPIRADA" : l.status) as string, solicitante: nome.get(l.solicitanteId) ?? "—", solicitanteId: l.solicitanteId as number,
+        decididoPor: l.decididoPor ? nome.get(l.decididoPor) ?? null : null, criadoEm: iso(l.criadoEm), decididoEm: iso(l.decididoEm),
+      };
+    })
+    .filter(l => l.status === "PENDENTE" || (l.decididoEm && agora - new Date(l.decididoEm).getTime() < 7 * 86_400_000));
 }
 
 /** Desconecta de todos os aparelhos (senha emprestada, celular perdido) */
@@ -150,7 +269,8 @@ export async function desconectar(id: number, autorId: number) {
 
 const ROTULO_EVENTO: Record<string, string> = {
   LOGIN: "Entrou no sistema", SAIR_DE_TODOS: "Desconectado de todos os aparelhos", VER_COMO: "Visto pelo escritório (Ver como)",
-  DESBLOQUEIO: "Licença liberada", BLOQUEIO_MANUAL: "Licença bloqueada", LOGIN_ATIVADO: "Login ativado", LOGIN_DESATIVADO: "Login desativado",
+  DESBLOQUEIO: "Licença liberada", PEDIDO_PRORROGACAO: "Pedido de prorrogação", PRORROGACAO_AUTORIZADA: "Prorrogação autorizada (senha do administrador)",
+  PRORROGACAO_RECUSADA: "Prorrogação recusada", PEDIDO_CANCELADO: "Pedido cancelado", SENHA_ADMIN_ERRADA: "Senha do administrador errada", BLOQUEIO_MANUAL: "Licença bloqueada", LOGIN_ATIVADO: "Login ativado", LOGIN_DESATIVADO: "Login desativado",
   PAGAMENTO_CONFIRMADO: "Pagamento confirmado", CHECKOUT_INICIADO: "Abriu o pagamento", ADMIN_CANCELAR: "Licença cancelada",
   ADMIN_OVERRIDE: "Preço negociado", ADMIN_TOLERANCIA: "Tolerância alterada",
 };

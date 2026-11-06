@@ -3,9 +3,11 @@
  * usando o sistema. Ações com motivo registrado: ativar/desativar o login, liberar/bloquear a licença,
  * desconectar de todos os aparelhos e ver o histórico de entradas.
  */
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
+import { useAuth } from "@/_core/hooks/useAuth";
+import { perfilDe } from "@shared/equipe";
 import { toast } from "sonner";
-import { History, Loader2, LogOut, RefreshCw, Search, ShieldCheck, ShieldOff, UserCheck, UserX } from "lucide-react";
+import { CalendarPlus, History, KeyRound, Loader2, LogOut, RefreshCw, Search, ShieldCheck, ShieldOff, UserCheck, UserX } from "lucide-react";
 import { trpc } from "@/lib/trpc";
 import PageHeader from "@/components/PageHeader";
 import { Button } from "@/components/ui/button";
@@ -56,7 +58,7 @@ type Linha = {
 
 type Acao =
   | { tipo: "login"; pessoa: Linha; ativo: boolean }
-  | { tipo: "liberar"; pessoa: Linha }
+  | { tipo: "prorrogar"; pessoa: Linha }
   | { tipo: "bloquear"; pessoa: Linha }
   | { tipo: "desconectar"; pessoa: Linha };
 
@@ -70,6 +72,8 @@ export default function ControleAcessos() {
   const [ordem, setOrdem] = useState<"nome" | "uso" | "midias">("nome");
   const [acao, setAcao] = useState<Acao | null>(null);
   const [historico, setHistorico] = useState<Linha | null>(null);
+  // Link do aviso ao administrador: /controle-acessos?pedido=123456 abre a autorização desse pedido
+  const pedidoDaUrl = useMemo(() => { try { return new URLSearchParams(window.location.search).get("pedido"); } catch { return null; } }, []);
 
   const linhas = (data?.linhas ?? []) as Linha[];
   const visiveis = useMemo(() => {
@@ -97,6 +101,8 @@ export default function ControleAcessos() {
             A cobrança de licença está desligada no SaaS: todos com login ativo entram, pagos ou não. A coluna de pagamento mostra a situação de cada um.
           </p>
         )}
+
+        <PainelPedidos destaque={pedidoDaUrl} onMudou={() => refetch()} />
 
         {r && (
           <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-6">
@@ -162,7 +168,9 @@ export default function ControleAcessos() {
         </div>
       </div>
 
-      {acao && <DialogoAcao acao={acao} onFechar={() => setAcao(null)} onFeito={() => { setAcao(null); refetch(); }} />}
+      {acao && (acao.tipo === "prorrogar"
+        ? <DialogoProrrogar pessoa={acao.pessoa} onFechar={() => setAcao(null)} onFeito={() => { setAcao(null); refetch(); }} />
+        : <DialogoAcao acao={acao} onFechar={() => setAcao(null)} onFeito={() => { setAcao(null); refetch(); }} />)}
       {historico && <DialogoHistorico pessoa={historico} onFechar={() => setHistorico(null)} />}
     </div>
   );
@@ -233,9 +241,8 @@ function CartaoPessoa({ l, onAcao, onHistorico }: { l: Linha; onAcao: (a: Acao) 
         {l.ativo
           ? <Button size="sm" variant="outline" className="h-8 border-danger-500/40 text-danger-300 hover:bg-danger-500/10" onClick={() => onAcao({ tipo: "login", pessoa: l, ativo: false })}><UserX className="mr-1 h-3.5 w-3.5" /> Desativar login</Button>
           : <Button size="sm" variant="outline" className="h-8 border-ok-500/40 text-ok-300 hover:bg-ok-500/10" onClick={() => onAcao({ tipo: "login", pessoa: l, ativo: true })}><UserCheck className="mr-1 h-3.5 w-3.5" /> Ativar login</Button>}
-        {["bloqueado", "vencido", "sem_licenca", "atrasado", "cancelado"].includes(l.pagamento) || l.pagamento === "teste"
-          ? <Button size="sm" variant="outline" className="h-8" onClick={() => onAcao({ tipo: "liberar", pessoa: l })}><ShieldCheck className="mr-1 h-3.5 w-3.5" /> Liberar licença</Button>
-          : null}
+        <Button size="sm" variant="outline" className="h-8 border-[var(--rt-gold)]/50 text-[var(--rt-gold-light)] hover:bg-[var(--rt-gold)]/10" onClick={() => onAcao({ tipo: "prorrogar", pessoa: l })}
+          title="Nova data de vencimento, com pagamento ou cortesia. Só vale com a senha do administrador"><CalendarPlus className="mr-1 h-3.5 w-3.5" /> {["bloqueado", "vencido", "sem_licenca", "cancelado"].includes(l.pagamento) ? "Desbloquear / prorrogar" : "Prorrogar"}</Button>
         {["pago", "cortesia", "teste", "atrasado"].includes(l.pagamento) && l.assinaturaId
           ? <Button size="sm" variant="outline" className="h-8" onClick={() => onAcao({ tipo: "bloquear", pessoa: l })}><ShieldOff className="mr-1 h-3.5 w-3.5" /> Bloquear licença</Button>
           : null}
@@ -246,30 +253,28 @@ function CartaoPessoa({ l, onAcao, onHistorico }: { l: Linha; onAcao: (a: Acao) 
   );
 }
 
-function DialogoAcao({ acao, onFechar, onFeito }: { acao: Acao; onFechar: () => void; onFeito: () => void }) {
+const hojeMais = (dias: number) => { const d = new Date(Date.now() + dias * 86_400_000); return d.toLocaleDateString("sv-SE", { timeZone: "America/Fortaleza" }); };
+
+function DialogoAcao({ acao, onFechar, onFeito }: { acao: Exclude<Acao, { tipo: "prorrogar" }>; onFechar: () => void; onFeito: () => void }) {
   const [motivo, setMotivo] = useState("");
-  const [ate, setAte] = useState("");
   const ok = (msg: string) => () => { toast.success(msg); onFeito(); };
   const erro = (e: { message: string }) => toast.error(e.message);
   const login = trpc.controleAcessos.definirLogin.useMutation({ onSuccess: ok(acao.tipo === "login" && acao.ativo ? "Login ativado" : "Login desativado e aparelhos desconectados"), onError: erro });
-  const licenca = trpc.controleAcessos.definirLicenca.useMutation({ onSuccess: ok(acao.tipo === "liberar" ? "Licença liberada" : "Licença bloqueada"), onError: erro });
+  const bloquear = trpc.controleAcessos.bloquearLicenca.useMutation({ onSuccess: ok("Licença bloqueada"), onError: erro });
   const desconectar = trpc.controleAcessos.desconectar.useMutation({ onSuccess: ok("Desconectado de todos os aparelhos"), onError: erro });
-  const ocupado = login.isPending || licenca.isPending || desconectar.isPending;
+  const ocupado = login.isPending || bloquear.isPending || desconectar.isPending;
   const p = acao.pessoa;
 
-  const titulo = acao.tipo === "login" ? (acao.ativo ? "Ativar login" : "Desativar login")
-    : acao.tipo === "liberar" ? "Liberar licença" : acao.tipo === "bloquear" ? "Bloquear licença" : "Desconectar de todos os aparelhos";
+  const titulo = acao.tipo === "login" ? (acao.ativo ? "Ativar login" : "Desativar login") : acao.tipo === "bloquear" ? "Bloquear licença" : "Desconectar de todos os aparelhos";
   const texto = acao.tipo === "login" ? (acao.ativo ? `${p.nome} volta a entrar no sistema (se a licença estiver liberada).` : `${p.nome} não entra mais e é desconectado de todos os aparelhos. Os leads e o histórico continuam.`)
-    : acao.tipo === "liberar" ? (p.assinaturaId ? `A licença de ${p.nome} volta a valer. Deixe a data em branco para manter o vencimento atual.` : `${p.nome} ainda não tem licença: será criada uma cortesia. Informe até quando vale (em branco: sem data de fim).`)
-    : acao.tipo === "bloquear" ? `${p.nome} perde o acesso até a licença ser liberada de novo.`
+    : acao.tipo === "bloquear" ? `${p.nome} perde o acesso até o administrador autorizar uma prorrogação.`
     : `${p.nome} sai de todos os celulares e computadores e precisa entrar de novo com a senha.`;
   const precisaMotivo = acao.tipo !== "desconectar";
   const podeConfirmar = !ocupado && (!precisaMotivo || motivo.trim().length >= 3);
 
   const confirmar = () => {
     if (acao.tipo === "login") login.mutate({ id: p.id, ativo: acao.ativo, motivo });
-    else if (acao.tipo === "liberar") licenca.mutate({ id: p.id, tipo: "liberar", ate: ate || null, motivo });
-    else if (acao.tipo === "bloquear") licenca.mutate({ id: p.id, tipo: "bloquear", motivo });
+    else if (acao.tipo === "bloquear") bloquear.mutate({ id: p.id, motivo });
     else desconectar.mutate({ id: p.id });
   };
 
@@ -280,24 +285,204 @@ function DialogoAcao({ acao, onFechar, onFeito }: { acao: Acao; onFechar: () => 
           <DialogTitle>{titulo}</DialogTitle>
           <DialogDescription>{texto}</DialogDescription>
         </DialogHeader>
-        {acao.tipo === "liberar" && (
-          <label className="flex flex-col gap-1 text-sm">
-            Liberada até
-            <Input type="date" value={ate} onChange={e => setAte(e.target.value)} />
-          </label>
-        )}
         {precisaMotivo && (
           <label className="flex flex-col gap-1 text-sm">
             Motivo (fica registrado)
-            <Input value={motivo} onChange={e => setMotivo(e.target.value)} maxLength={300} placeholder={acao.tipo === "liberar" ? "Ex.: pagou por Pix, comprovante no WhatsApp" : "Ex.: saiu da equipe"} />
+            <Input value={motivo} onChange={e => setMotivo(e.target.value)} maxLength={300} placeholder="Ex.: saiu da equipe" />
           </label>
         )}
         <DialogFooter className="gap-2">
           <Button variant="outline" onClick={onFechar} disabled={ocupado}>Voltar</Button>
-          <Button onClick={confirmar} disabled={!podeConfirmar} className={acao.tipo === "liberar" || (acao.tipo === "login" && acao.ativo) ? "bg-ok-600 text-white hover:bg-ok-700" : "bg-danger-600 text-white hover:bg-danger-700"}>
+          <Button onClick={confirmar} disabled={!podeConfirmar} className={acao.tipo === "login" && acao.ativo ? "bg-ok-600 text-white hover:bg-ok-700" : "bg-danger-600 text-white hover:bg-danger-700"}>
             {ocupado && <Loader2 className="mr-1.5 h-4 w-4 animate-spin motion-reduce:animate-none" />} Confirmar
           </Button>
         </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+/**
+ * Prorrogar / desbloquear (com pagamento ou cortesia). Secretária: faz o pedido, o administrador recebe o aviso com o
+ * código e autoriza com a senha dele (no aparelho dele ou digitando aqui). Administrador: confirma com a própria senha.
+ */
+function DialogoProrrogar({ pessoa, onFechar, onFeito }: { pessoa: Linha; onFechar: () => void; onFeito: () => void }) {
+  const { user } = useAuth();
+  const souAdmin = perfilDe(user as any) === "admin";
+  const [modalidade, setModalidade] = useState<"pago" | "cortesia">("pago");
+  const [ate, setAte] = useState(() => {
+    const base = pessoa.licencaFim && new Date(pessoa.licencaFim).getTime() > Date.now() ? Math.round((new Date(pessoa.licencaFim).getTime() - Date.now()) / 86_400_000) + 30 : 30;
+    return hojeMais(base);
+  });
+  const [valor, setValor] = useState("");
+  const [motivo, setMotivo] = useState("");
+  const [senha, setSenha] = useState("");
+  const [pedido, setPedido] = useState<{ id: number; codigo: string } | null>(null);
+  const utils = trpc.useUtils();
+  const erro = (e: { message: string }) => toast.error(e.message);
+  const pedir = trpc.controleAcessos.pedirProrrogacao.useMutation({
+    onSuccess: r => { setPedido(r); utils.controleAcessos.pedidos.invalidate(); toast.success(`Pedido enviado ao administrador (código ${r.codigo})`); }, onError: erro,
+  });
+  const direto = trpc.controleAcessos.prorrogarComSenha.useMutation({ onSuccess: () => { toast.success("Prorrogação autorizada"); onFeito(); }, onError: erro });
+  const autorizar = trpc.controleAcessos.autorizarPedido.useMutation({
+    onSuccess: () => { toast.success("Autorizado com a senha do administrador"); utils.controleAcessos.pedidos.invalidate(); onFeito(); },
+    onError: e => { setSenha(""); erro(e); },
+  });
+  const ocupado = pedir.isPending || direto.isPending || autorizar.isPending;
+  const dados = { id: pessoa.id, modalidade, ate, valor: modalidade === "pago" && valor ? Number(valor.replace(",", ".")) : null, motivo };
+  const valido = /^\d{4}-\d{2}-\d{2}$/.test(ate) && motivo.trim().length >= 3;
+
+  return (
+    <Dialog open onOpenChange={v => { if (!v) onFechar(); }}>
+      <DialogContent className="max-w-md">
+        <DialogHeader>
+          <DialogTitle>Prorrogar acesso de {pessoa.nome}</DialogTitle>
+          <DialogDescription>
+            Nova data de vencimento, desbloqueando se estiver bloqueado. <b>Só vale com a senha do administrador.</b>
+          </DialogDescription>
+        </DialogHeader>
+
+        {!pedido ? (
+          <>
+            <fieldset className="grid grid-cols-2 gap-2">
+              <legend className="mb-1 text-sm">Como fica</legend>
+              {([["pago", "Com pagamento"], ["cortesia", "Cortesia (sem pagamento)"]] as const).map(([v, t]) => (
+                <label key={v} className={`flex cursor-pointer items-center gap-2 rounded-md border px-3 py-2 text-sm ${modalidade === v ? "border-[var(--rt-gold)] bg-[var(--rt-gold)]/10" : "border-border"}`}>
+                  <input type="radio" name="modalidade" value={v} checked={modalidade === v} onChange={() => setModalidade(v)} className="accent-[var(--rt-gold)]" /> {t}
+                </label>
+              ))}
+            </fieldset>
+            <div className="grid grid-cols-2 gap-2">
+              <label className="flex flex-col gap-1 text-sm">
+                Vence em
+                <Input type="date" value={ate} min={hojeMais(0)} onChange={e => setAte(e.target.value)} />
+              </label>
+              {modalidade === "pago" && (
+                <label className="flex flex-col gap-1 text-sm">
+                  Valor pago (R$)
+                  <Input inputMode="decimal" value={valor} onChange={e => setValor(e.target.value.replace(/[^\d,.]/g, ""))} placeholder="89,90" />
+                </label>
+              )}
+            </div>
+            <label className="flex flex-col gap-1 text-sm">
+              Motivo (fica registrado)
+              <Input value={motivo} onChange={e => setMotivo(e.target.value)} maxLength={300} placeholder={modalidade === "pago" ? "Ex.: pagou por Pix em 06/11, comprovante no WhatsApp" : "Ex.: cortesia de boas-vindas"} />
+            </label>
+            {souAdmin && (
+              <label className="flex flex-col gap-1 text-sm">
+                Sua senha de administrador
+                <Input type="password" autoComplete="current-password" value={senha} onChange={e => setSenha(e.target.value)} />
+              </label>
+            )}
+            <DialogFooter className="gap-2">
+              <Button variant="outline" onClick={onFechar} disabled={ocupado}>Voltar</Button>
+              {souAdmin
+                ? <Button disabled={!valido || !senha || ocupado} onClick={() => direto.mutate({ ...dados, senha })} className="bg-ok-600 text-white hover:bg-ok-700">
+                    {ocupado ? <Loader2 className="mr-1.5 h-4 w-4 animate-spin motion-reduce:animate-none" /> : <KeyRound className="mr-1.5 h-4 w-4" />} Autorizar
+                  </Button>
+                : <Button disabled={!valido || ocupado} onClick={() => pedir.mutate(dados)} className="bg-[var(--rt-gold)] text-black hover:bg-[var(--rt-gold-light)]">
+                    {ocupado && <Loader2 className="mr-1.5 h-4 w-4 animate-spin motion-reduce:animate-none" />} Pedir autorização
+                  </Button>}
+            </DialogFooter>
+          </>
+        ) : (
+          <>
+            <div className="rounded-lg border border-[var(--rt-gold)]/50 bg-[var(--rt-gold)]/10 p-3 text-center">
+              <p className="text-xs text-muted-foreground">Código do pedido</p>
+              <p className="text-3xl font-semibold tracking-normal tabular-nums text-[var(--rt-gold-light)]">{pedido.codigo}</p>
+              <p className="mt-1 text-xs text-muted-foreground">O administrador recebeu o aviso no sininho e no celular. Ele autoriza pelo aparelho dele, ou digita a senha aqui.</p>
+            </div>
+            <label className="flex flex-col gap-1 text-sm">
+              Senha do administrador
+              <Input type="password" autoComplete="off" value={senha} onChange={e => setSenha(e.target.value)} />
+            </label>
+            <DialogFooter className="gap-2">
+              <Button variant="outline" onClick={onFechar} disabled={ocupado}>Fechar (aguardar)</Button>
+              <Button disabled={!senha || ocupado} onClick={() => autorizar.mutate({ id: pedido.id, senha })} className="bg-ok-600 text-white hover:bg-ok-700">
+                {ocupado ? <Loader2 className="mr-1.5 h-4 w-4 animate-spin motion-reduce:animate-none" /> : <KeyRound className="mr-1.5 h-4 w-4" />} Autorizar agora
+              </Button>
+            </DialogFooter>
+          </>
+        )}
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+/** Pedidos de prorrogação aguardando a senha do administrador (e os decididos na semana) */
+function PainelPedidos({ destaque, onMudou }: { destaque: string | null; onMudou: () => void }) {
+  const { user } = useAuth();
+  const souAdmin = perfilDe(user as any) === "admin";
+  const { data } = trpc.controleAcessos.pedidos.useQuery(undefined, { refetchInterval: 20_000 });
+  const [autorizando, setAutorizando] = useState<{ id: number; codigo: string; pessoa: string } | null>(null);
+  const utils = trpc.useUtils();
+  const encerrar = trpc.controleAcessos.encerrarPedido.useMutation({
+    onSuccess: r => { toast.success(r.status === "RECUSADA" ? "Pedido recusado" : "Pedido cancelado"); utils.controleAcessos.pedidos.invalidate(); }, onError: e => toast.error(e.message),
+  });
+  const abertos = (data ?? []).filter(p => p.status === "PENDENTE");
+  const decididos = (data ?? []).filter(p => p.status !== "PENDENTE").slice(0, 5);
+  useEffect(() => {
+    if (!destaque || !abertos.length || autorizando) return;
+    const p = abertos.find(x => x.codigo === destaque);
+    if (p && souAdmin) setAutorizando({ id: p.id, codigo: p.codigo, pessoa: p.pessoa });
+  }, [destaque, abertos.length]); // eslint-disable-line react-hooks/exhaustive-deps
+  if (!abertos.length && !decididos.length) return null;
+  const ROT: Record<string, string> = { APROVADA: "Autorizado", RECUSADA: "Recusado", CANCELADA: "Cancelado", EXPIRADA: "Expirou" };
+
+  return (
+    <section aria-label="Pedidos de prorrogação" className="rounded-lg border border-[var(--rt-gold)]/40 bg-card p-3">
+      <h2 className="text-sm font-semibold text-foreground">Pedidos de prorrogação {abertos.length ? <span className="ml-1 rounded-full bg-[var(--rt-gold)] px-2 py-0.5 text-xs text-black">{abertos.length} aguardando</span> : null}</h2>
+      <p className="mb-2 text-[11px] text-muted-foreground">Prorrogar, desbloquear e dar cortesia só valem com a senha do administrador. O pedido vale por 48 horas.</p>
+      <ul className="space-y-2">
+        {abertos.map(p => (
+          <li key={p.id} className={`flex flex-wrap items-center gap-2 rounded-md border px-3 py-2 text-sm ${destaque === p.codigo ? "border-[var(--rt-gold)]" : "border-border"}`}>
+            <span className="min-w-0 flex-1">
+              <b className="text-foreground">{p.pessoa}</b>: {p.modalidade === "pago" ? "com pagamento" : "cortesia"} até {dataBr(`${p.ate}T12:00:00`)}{p.valor ? `, R$ ${p.valor.toFixed(2).replace(".", ",")}` : ""}
+              <span className="block text-xs text-muted-foreground">Pedido por {p.solicitante} {haQuanto(p.criadoEm)}, código <b className="tabular-nums text-[var(--rt-gold-light)]">{p.codigo}</b>. Motivo: {p.motivo}</span>
+            </span>
+            <Button size="sm" className="h-8 bg-ok-600 text-white hover:bg-ok-700" onClick={() => setAutorizando({ id: p.id, codigo: p.codigo, pessoa: p.pessoa })}><KeyRound className="mr-1 h-3.5 w-3.5" /> Autorizar com senha</Button>
+            {(souAdmin || p.solicitanteId === (user as any)?.id) && (
+              <Button size="sm" variant="ghost" className="h-8 text-danger-300" disabled={encerrar.isPending} onClick={() => { if (confirm(souAdmin && p.solicitanteId !== (user as any)?.id ? `Recusar o pedido de ${p.pessoa}?` : `Cancelar o pedido de ${p.pessoa}?`)) encerrar.mutate({ id: p.id }); }}>
+                {souAdmin && p.solicitanteId !== (user as any)?.id ? "Recusar" : "Cancelar"}
+              </Button>
+            )}
+          </li>
+        ))}
+        {decididos.map(p => (
+          <li key={p.id} className="flex flex-wrap items-center gap-2 rounded-md border border-border/60 px-3 py-1.5 text-xs text-muted-foreground">
+            <span className="flex-1">{p.pessoa}: {p.modalidade === "pago" ? "com pagamento" : "cortesia"} até {dataBr(`${p.ate}T12:00:00`)}</span>
+            <span className={p.status === "APROVADA" ? "text-ok-300" : "text-danger-300"}>{ROT[p.status] ?? p.status}{p.decididoPor ? ` por ${p.decididoPor}` : ""}</span>
+          </li>
+        ))}
+      </ul>
+      {autorizando && <DialogoSenha pedido={autorizando} onFechar={() => setAutorizando(null)} onFeito={() => { setAutorizando(null); onMudou(); }} />}
+    </section>
+  );
+}
+
+function DialogoSenha({ pedido, onFechar, onFeito }: { pedido: { id: number; codigo: string; pessoa: string }; onFechar: () => void; onFeito: () => void }) {
+  const [senha, setSenha] = useState("");
+  const utils = trpc.useUtils();
+  const autorizar = trpc.controleAcessos.autorizarPedido.useMutation({
+    onSuccess: () => { toast.success(`Acesso de ${pedido.pessoa} prorrogado`); utils.controleAcessos.pedidos.invalidate(); onFeito(); },
+    onError: e => { setSenha(""); toast.error(e.message); },
+  });
+  return (
+    <Dialog open onOpenChange={v => { if (!v) onFechar(); }}>
+      <DialogContent className="max-w-sm">
+        <DialogHeader>
+          <DialogTitle>Autorizar pedido {pedido.codigo}</DialogTitle>
+          <DialogDescription>Prorrogação do acesso de {pedido.pessoa}. Digite a senha do administrador.</DialogDescription>
+        </DialogHeader>
+        <form onSubmit={e => { e.preventDefault(); if (senha) autorizar.mutate({ id: pedido.id, senha }); }} className="space-y-3">
+          <Input type="password" autoComplete="current-password" autoFocus value={senha} onChange={e => setSenha(e.target.value)} aria-label="Senha do administrador" />
+          <DialogFooter className="gap-2">
+            <Button type="button" variant="outline" onClick={onFechar} disabled={autorizar.isPending}>Voltar</Button>
+            <Button type="submit" disabled={!senha || autorizar.isPending} className="bg-ok-600 text-white hover:bg-ok-700">
+              {autorizar.isPending ? <Loader2 className="mr-1.5 h-4 w-4 animate-spin motion-reduce:animate-none" /> : <KeyRound className="mr-1.5 h-4 w-4" />} Autorizar
+            </Button>
+          </DialogFooter>
+        </form>
       </DialogContent>
     </Dialog>
   );

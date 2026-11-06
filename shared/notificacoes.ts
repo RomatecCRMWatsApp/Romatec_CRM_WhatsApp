@@ -11,7 +11,7 @@ import type { Perfil } from './equipe';
 import { VENDIDOS, type SituacaoLote } from './lotes';
 import { temAcesso, type AcessoCorretor } from './permissoes';
 
-export const TIPOS_NOTIFICACAO = ['atualizacao_sistema', 'reserva', 'venda_contrato', 'liberacao', 'solicitacao_cancelamento', 'agendamento', 'novo_lead', 'atendimento', 'confirmacao_reuniao', 'chamado', 'empreendimento'] as const;
+export const TIPOS_NOTIFICACAO = ['atualizacao_sistema', 'reserva', 'venda_contrato', 'liberacao', 'solicitacao_cancelamento', 'agendamento', 'novo_lead', 'atendimento', 'confirmacao_reuniao', 'chamado', 'empreendimento', 'solicitacao_acesso'] as const;
 export type TipoNotificacao = typeof TIPOS_NOTIFICACAO[number];
 
 /** Som de cada tipo (client/public/sons) — trocar o arquivo troca o som, sem mexer no código */
@@ -21,6 +21,7 @@ export const SOM_POR_TIPO: Record<TipoNotificacao, string> = {
   venda_contrato: '/sons/venda.wav',
   liberacao: '/sons/liberacao.wav',
   solicitacao_cancelamento: '/sons/cancelamento.wav',
+  solicitacao_acesso: '/sons/solicitacao-acesso.wav',
   agendamento: '/sons/agendamento.wav',
   novo_lead: '/sons/novo_lead.wav',
   atendimento: '/sons/atendimento.wav',
@@ -35,6 +36,7 @@ export const ROTULO_NOTIFICACAO: Record<TipoNotificacao, string> = {
   venda_contrato: 'Venda / contrato',
   liberacao: 'Lote liberado',
   solicitacao_cancelamento: 'Pedido de cancelamento',
+  solicitacao_acesso: 'Pedido de prorrogação de acesso',
   agendamento: 'Pedido de agendamento',
   novo_lead: 'Novo lead',
   atendimento: 'Cliente aguardando',
@@ -50,6 +52,7 @@ export const COR_NOTIFICACAO: Record<TipoNotificacao, string> = {
   venda_contrato: '#B05FC9',
   liberacao: '#5FB04A',
   solicitacao_cancelamento: '#C0504D',
+  solicitacao_acesso: '#C9A84C',
   agendamento: '#2C7FB8',
   novo_lead: '#1F8A4C',
   atendimento: '#D9822B',
@@ -108,6 +111,7 @@ export function textoNotificacao(
     };
     case 'chamado': return { titulo: `Chamado · contrato ${d.contrato ?? '?'}`, mensagem: (d.motivo ?? 'Novo chamado no portal do comprador').slice(0, 500) };
     case 'empreendimento': return { titulo: `${d.motivo ?? 'Novidade'}${d.empreendimento ? ` · ${d.empreendimento}` : ''}`.slice(0, 150), mensagem: (d.comprador ?? d.motivo ?? 'Novidade no empreendimento').slice(0, 500) };
+    case 'solicitacao_acesso': return { titulo: (d.motivo ?? 'Pedido de prorrogação de acesso').slice(0, 150), mensagem: (d.comprador ?? 'Autorize com a sua senha em Controle de acessos.').slice(0, 500) };
   }
 }
 
@@ -132,6 +136,8 @@ export function destinatarios(
     if (tipo === 'atualizacao_sistema') return true;
     // Pedido de cancelamento: só o administrador decide (e cancela com a senha)
     if (tipo === 'solicitacao_cancelamento') return perfilDe(u) === 'admin' && u.id !== alvo?.autorId;
+    // Pedido de prorrogação/cortesia de acesso: só o administrador autoriza (com a senha)
+    if (tipo === 'solicitacao_acesso') return perfilDe(u) === 'admin' && u.id !== alvo?.autorId;
     // Presença confirmada em reunião: o escritório (quem cria e acompanha as reuniões)
     if (tipo === 'confirmacao_reuniao') return ['admin', 'secretario'].includes(perfilDe(u) ?? '');
     // Pedido de agendamento: vai direto para o responsável (notificarAgendamento), não por escopo
@@ -167,6 +173,7 @@ export function urlDaNotificacao(
     return d.leadId ? `/leads/lead/${d.leadId}` : tipo === 'agendamento' ? '/agenda' : '/leads';
   }
   if (tipo === 'solicitacao_cancelamento') return d.contratoId ? `/contratos/${d.contratoId}` : '/contratos';
+  if (tipo === 'solicitacao_acesso') return '/controle-acessos';
   if (perfil === 'empreendedor') return '/empreendedor?notificacoes=1';
   if (tipo === 'atualizacao_sistema' || !d.empreendimentoSlug) return '/dashboard?notificacoes=1';
   return `/empreendimentos/${d.empreendimentoSlug}${d.lote ? `?lote=${encodeURIComponent(d.lote)}` : ''}`;
