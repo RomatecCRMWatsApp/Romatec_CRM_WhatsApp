@@ -138,8 +138,8 @@ function Reprodutor({ url, capa }: { url: string; capa?: string }) {
         onDurationChange={e => setDuracao(e.currentTarget.duration)} onError={() => setErro(true)}
         className={`w-full bg-black object-contain ${telaCheia ? "h-full" : "max-h-[74vh]"}`} />
 
-      <img src="/brand/wordmark-dourado-280.png" alt="Romatec CRM" width={140} height={39}
-        className="pointer-events-none absolute right-3 top-3 h-auto w-[88px] opacity-80 sm:w-[128px]" />
+      <img src="/brand/selo-crm.png" alt="Romatec CRM" width={64} height={64}
+        className="pointer-events-none absolute right-3 top-3 h-12 w-12 rounded-full opacity-90 shadow-md sm:h-16 sm:w-16" />
 
       {!tocando && !erro && (
         <button type="button" onClick={alternar} aria-label="Tocar"

@@ -3,6 +3,15 @@
 Cada versão nova vai no TOPO. Depois rode `npm run release` (valida e atualiza o package.json);
 ao subir, o servidor grava a versão no banco e todos recebem o aviso "Novidades da versão".
 
+## 1.110.1 — 2026-11-06
+tipo: patch
+obrigatoria: nao
+titulo: Selo Romatec CRM no player de vídeo
+publico: equipe
+
+### Correções
+- O player de vídeo de Materiais passa a mostrar o selo oficial Romatec CRM no canto, no lugar da assinatura dourada
+
 ## 1.110.0 — 2026-11-06
 tipo: minor
 obrigatoria: nao
