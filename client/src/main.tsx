@@ -10,6 +10,10 @@ import "./brand"; // identidade visual: tokens.css (cores, fontes, animações) 
 import "./index.css";
 import { capturarOrigem } from "./lib/origemVisita";
 import { instalarVerComo, sairVerComo, verComoAtual } from "./lib/verComo";
+import { instalarRecargaDeVersao } from "./lib/recarregarVersao";
+
+// Versão nova no ar com a página antiga aberta: recarrega sozinho em vez de mostrar erro
+instalarRecargaDeVersao();
 
 // De onde veio o visitante (UTM, referrer, página de entrada) — vai junto nos formulários
 capturarOrigem();

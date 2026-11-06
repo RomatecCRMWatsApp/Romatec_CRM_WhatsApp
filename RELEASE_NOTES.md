@@ -3,6 +3,16 @@
 Cada versão nova vai no TOPO. Depois rode `npm run release` (valida e atualiza o package.json);
 ao subir, o servidor grava a versão no banco e todos recebem o aviso "Novidades da versão".
 
+## 1.110.2 — 2026-11-06
+tipo: patch
+obrigatoria: nao
+titulo: Sem tela de erro quando sai versão nova
+publico: equipe
+
+### Correções
+- Quem estava com o sistema aberto na hora da atualização via "Failed to fetch dynamically imported module" ao trocar de tela; agora o sistema recarrega sozinho e já abre a versão nova
+- Tela de erro em português, com o botão Recarregar
+
 ## 1.110.1 — 2026-11-06
 tipo: patch
 obrigatoria: nao
