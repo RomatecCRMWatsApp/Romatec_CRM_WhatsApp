@@ -3,6 +3,18 @@
 Cada versão nova vai no TOPO. Depois rode `npm run release` (valida e atualiza o package.json);
 ao subir, o servidor grava a versão no banco e todos recebem o aviso "Novidades da versão".
 
+## 1.113.0 — 2026-11-06
+tipo: minor
+obrigatoria: nao
+titulo: Controle de acessos: uso dos materiais e contador das licenças
+publico: equipe
+
+### Novo
+- Controle de acessos mostra quanto cada corretor usou os materiais do empreendimento nos últimos 30 dias: fotos, vídeos, PDFs e textos baixados, enviados ou copiados
+- Só estatística: o sistema conta o uso, mas não guarda para quem o material foi enviado nem o conteúdo das conversas
+- Quadro "Materiais usados" com o total da equipe e quantos corretores usaram; filtro "Usaram / Não usaram" e ordem por "Mais materiais" ou "Último uso"
+- Contador das licenças: quantos estão pagos, em cortesia, em teste, atrasados, bloqueados, vencidos e sem licença; um toque filtra a lista
+
 ## 1.112.0 — 2026-11-06
 tipo: minor
 obrigatoria: nao

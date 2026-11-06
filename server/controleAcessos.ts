@@ -6,9 +6,9 @@
  */
 import { and, desc, eq, gte, inArray } from "drizzle-orm";
 import { getDb } from "./db";
-import { auditoriaAcesso, saasAssinaturas, saasFaturas, users } from "../drizzle/schema";
+import { auditoriaAcesso, materialUso, saasAssinaturas, saasFaturas, users } from "../drizzle/schema";
 import { perfilDe } from "../shared/equipe";
-import { podeEntrar, resumoControle, situacaoDePagamento, situacaoDeUso, type SituacaoPagamento, type SituacaoUso } from "../shared/controleAcessos";
+import { podeEntrar, resumoControle, situacaoDePagamento, situacaoDeUso, somarUsoMidias, type SituacaoPagamento, type SituacaoUso, type UsoMidias } from "../shared/controleAcessos";
 
 export class AcessoErro extends Error { constructor(msg: string, public status = 400) { super(msg); this.name = "AcessoErro"; } }
 
@@ -29,6 +29,8 @@ export type LinhaControle = {
   pagamento: SituacaoPagamento; plano: string | null; licencaFim: string | null; diasRestantes: number | null;
   assinaturaId: number | null; ultimoPagamento: string | null; faturasAbertas: number;
   podeEntrar: boolean;
+  /** Materiais baixados/enviados/copiados nos últimos 30 dias (só contagem) */
+  midias: UsoMidias;
 };
 
 const ativoDe = (u: any) => !(u.ativo === false || u.ativo === 0);
@@ -44,11 +46,15 @@ export async function listarControleAcessos(agora = Date.now()) {
   const S = await import("./saas/servico");
   const { licenciamentoAtivo } = await S.lerConfig(agora);
   const desde = new Date(agora - DIAS_LOGINS * DIA_MS);
-  const [logins, assinaturas]: any[][] = await Promise.all([
+  const [logins, assinaturas, usos]: any[][] = await Promise.all([
     d.select({ usuarioId: auditoriaAcesso.usuarioId, criadoEm: auditoriaAcesso.criadoEm }).from(auditoriaAcesso)
       .where(and(inArray(auditoriaAcesso.usuarioId, ids), eq(auditoriaAcesso.evento, "LOGIN"), gte(auditoriaAcesso.criadoEm, desde))),
     d.select({ id: saasAssinaturas.id, usuarioId: saasAssinaturas.usuarioId }).from(saasAssinaturas).where(inArray(saasAssinaturas.usuarioId, ids)),
+    d.select({ usuarioId: materialUso.usuarioId, categoria: materialUso.categoria, criadoEm: materialUso.criadoEm }).from(materialUso)
+      .where(and(inArray(materialUso.usuarioId, ids), gte(materialUso.criadoEm, desde))).catch(() => []),
   ]);
+  const usosPor = new Map<number, any[]>();
+  for (const u of usos) { const l = usosPor.get(u.usuarioId) ?? []; l.push(u); usosPor.set(u.usuarioId, l); }
   const idsAssinatura = assinaturas.map(a => a.id as number);
   const faturas: any[] = idsAssinatura.length
     ? await d.select({ assinaturaId: saasFaturas.assinaturaId, status: saasFaturas.status, pagoEm: saasFaturas.pagoEm }).from(saasFaturas).where(inArray(saasFaturas.assinaturaId, idsAssinatura))
@@ -87,6 +93,7 @@ export async function listarControleAcessos(agora = Date.now()) {
       pagamento, plano: lic.plano ?? null, licencaFim: lic.fim ?? null, diasRestantes: lic.diasRestantes ?? null,
       assinaturaId: lic.assinaturaId ?? null, ultimoPagamento: fat?.pago ? new Date(fat.pago).toISOString() : null, faturasAbertas: fat?.abertas ?? 0,
       podeEntrar: podeEntrar(ativo, pagamento),
+      midias: somarUsoMidias(usosPor.get(u.id) ?? []),
     });
   }
   linhas.sort((a, b) => Number(b.ativo) - Number(a.ativo) || a.nome.localeCompare(b.nome, "pt-BR"));

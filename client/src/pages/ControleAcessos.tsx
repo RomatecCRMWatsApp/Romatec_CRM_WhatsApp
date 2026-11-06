@@ -12,8 +12,8 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import {
-  DICA_USO, PAGAMENTO, ROTULO_PAGAMENTO, ROTULO_USO, USO,
-  type SituacaoPagamento, type SituacaoUso,
+  CATEGORIAS_MIDIA, DICA_USO, descreverMidias, PAGAMENTO, ROTULO_MIDIA, ROTULO_PAGAMENTO, ROTULO_USO, USO,
+  type SituacaoPagamento, type SituacaoUso, type UsoMidias,
 } from "@shared/controleAcessos";
 
 const dataBr = (d: unknown) => (d ? new Date(d as any).toLocaleDateString("pt-BR", { timeZone: "America/Fortaleza" }) : "—");
@@ -51,7 +51,7 @@ type Linha = {
   id: number; nome: string; perfil: string; creci: string | null; telefone: string | null; fotoUrl: string | null;
   ativo: boolean; arquivado: boolean; temSenha: boolean; ultimoAcesso: string | null; uso: SituacaoUso; loginsMes: number; ultimoLogin: string | null;
   pagamento: SituacaoPagamento; plano: string | null; licencaFim: string | null; diasRestantes: number | null; assinaturaId: number | null;
-  ultimoPagamento: string | null; faturasAbertas: number; podeEntrar: boolean;
+  ultimoPagamento: string | null; faturasAbertas: number; podeEntrar: boolean; midias: UsoMidias;
 };
 
 type Acao =
@@ -66,6 +66,8 @@ export default function ControleAcessos() {
   const [fUso, setFUso] = useState<"" | SituacaoUso>("");
   const [fPag, setFPag] = useState<"" | SituacaoPagamento | "pendentes">("");
   const [fAtivo, setFAtivo] = useState<"" | "ativos" | "inativos">("ativos");
+  const [fMidia, setFMidia] = useState<"" | "usou" | "nao_usou">("");
+  const [ordem, setOrdem] = useState<"nome" | "uso" | "midias">("nome");
   const [acao, setAcao] = useState<Acao | null>(null);
   const [historico, setHistorico] = useState<Linha | null>(null);
 
@@ -76,8 +78,12 @@ export default function ControleAcessos() {
       (!q || l.nome.toLowerCase().includes(q) || (l.creci ?? "").includes(q) || (l.telefone ?? "").includes(q)) &&
       (!fUso || l.uso === fUso) &&
       (!fPag || (fPag === "pendentes" ? ["atrasado", "bloqueado", "vencido", "sem_licenca"].includes(l.pagamento) : l.pagamento === fPag)) &&
-      (!fAtivo || (fAtivo === "ativos" ? l.ativo : !l.ativo)));
-  }, [linhas, busca, fUso, fPag, fAtivo]);
+      (!fAtivo || (fAtivo === "ativos" ? l.ativo : !l.ativo)) &&
+      (!fMidia || (fMidia === "usou" ? l.midias.total > 0 : l.midias.total === 0)))
+      .sort((a, b) => ordem === "midias" ? b.midias.total - a.midias.total || a.nome.localeCompare(b.nome, "pt-BR")
+        : ordem === "uso" ? (new Date(b.ultimoAcesso ?? 0).getTime() - new Date(a.ultimoAcesso ?? 0).getTime())
+        : 0);
+  }, [linhas, busca, fUso, fPag, fAtivo, fMidia, ordem]);
   const r = data?.resumo;
 
   return (
@@ -103,6 +109,38 @@ export default function ControleAcessos() {
           </div>
         )}
 
+        {r && (
+          <div className="grid gap-2 lg:grid-cols-2">
+            <section aria-label="Contador das licenças" className="rounded-lg border border-border bg-card p-3">
+              <h2 className="mb-2 text-sm font-semibold text-foreground">Contador das licenças</h2>
+              <div className="flex flex-wrap gap-1.5">
+                {PAGAMENTO.filter(p => r.licencas[p] > 0 || ["pago", "cortesia", "teste", "bloqueado"].includes(p)).map(p => (
+                  <button key={p} type="button" onClick={() => { setFPag(p); setFUso(""); setFAtivo(""); }}
+                    className={`inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-xs font-medium ${COR_PAG[p]} hover:brightness-125`}>
+                    {ROTULO_PAGAMENTO[p]} <b className="tabular-nums">{r.licencas[p]}</b>
+                  </button>
+                ))}
+              </div>
+            </section>
+            <section aria-label="Uso dos materiais do empreendimento" className="rounded-lg border border-border bg-card p-3">
+              <h2 className="text-sm font-semibold text-foreground">Materiais usados nos últimos 30 dias</h2>
+              <p className="mb-2 text-[11px] text-muted-foreground">Baixados, enviados ou texto copiado. Só a contagem: não mostra para quem foi enviado.</p>
+              <div className="grid grid-cols-2 gap-2 sm:grid-cols-5">
+                {CATEGORIAS_MIDIA.map(c => (
+                  <div key={c} className="rounded-md bg-secondary/30 px-2 py-1.5">
+                    <p className="text-[11px] text-muted-foreground">{ROTULO_MIDIA[c]}</p>
+                    <p className="text-lg font-semibold tabular-nums text-foreground">{r.midias[c]}</p>
+                  </div>
+                ))}
+                <div className="col-span-2 rounded-md bg-secondary/30 px-2 py-1.5 sm:col-span-1">
+                  <p className="text-[11px] text-muted-foreground">Corretores que usaram</p>
+                  <p className="text-lg font-semibold tabular-nums text-foreground">{r.usaramMidias} <span className="text-xs font-normal text-muted-foreground">de {r.ativos}</span></p>
+                </div>
+              </div>
+            </section>
+          </div>
+        )}
+
         <div className="flex flex-wrap items-end gap-2">
           <label className="relative min-w-[200px] flex-1">
             <span className="sr-only">Buscar</span>
@@ -111,6 +149,8 @@ export default function ControleAcessos() {
           </label>
           <Filtro rotulo="Login" valor={fAtivo} onChange={v => setFAtivo(v as any)} opcoes={[["ativos", "Ativos"], ["inativos", "Desativados"], ["", "Todos"]]} />
           <Filtro rotulo="Uso" valor={fUso} onChange={v => setFUso(v as any)} opcoes={[["", "Todos"], ...USO.map(u => [u, ROTULO_USO[u]] as [string, string])]} />
+          <Filtro rotulo="Materiais" valor={fMidia} onChange={v => setFMidia(v as any)} opcoes={[["", "Todos"], ["usou", "Usaram em 30 dias"], ["nao_usou", "Não usaram"]]} />
+          <Filtro rotulo="Ordenar" valor={ordem} onChange={v => setOrdem(v as any)} opcoes={[["nome", "Nome"], ["uso", "Último uso"], ["midias", "Mais materiais"]]} />
           <Filtro rotulo="Pagamento" valor={fPag} onChange={v => setFPag(v as any)} opcoes={[["", "Todos"], ["pendentes", "Pendentes"], ...PAGAMENTO.map(p => [p, ROTULO_PAGAMENTO[p]] as [string, string])]} />
         </div>
 
@@ -182,6 +222,10 @@ function CartaoPessoa({ l, onAcao, onHistorico }: { l: Linha; onAcao: (a: Acao) 
         <dt className="text-muted-foreground">Último uso</dt><dd className="text-right text-foreground" title={dataHoraBr(l.ultimoAcesso)}>{haQuanto(l.ultimoAcesso)}</dd>
         <dt className="text-muted-foreground">Entradas em 30 dias</dt><dd className="text-right tabular-nums text-foreground">{l.loginsMes}</dd>
         {licenca && <><dt className="text-muted-foreground">Licença</dt><dd className="truncate text-right text-foreground" title={licenca}>{licenca}</dd></>}
+        <dt className="text-muted-foreground">Materiais em 30 dias</dt>
+        <dd className="text-right text-foreground" title={l.midias.ultimo ? `Último em ${dataHoraBr(l.midias.ultimo)}` : "Nenhum material baixado ou enviado"}>
+          {descreverMidias(l.midias)}
+        </dd>
         <dt className="text-muted-foreground">Último pagamento</dt><dd className="text-right text-foreground">{dataBr(l.ultimoPagamento)}{l.faturasAbertas ? `, ${l.faturasAbertas} em aberto` : ""}</dd>
       </dl>
 

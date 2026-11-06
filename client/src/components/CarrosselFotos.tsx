@@ -13,6 +13,7 @@ import { legendaDoMaterial, linkDoMaterial } from "@/lib/materialDoCorretor";
 import { FORMATOS_DOWNLOAD, ROTULO_FORMATO, type FormatoDownload } from "@shared/materiais";
 import { acaoDoGesto, type AcaoGesto } from "@/lib/gestoCarrossel";
 import { arquivoDoCorretor, type Cartao, type Grupo } from "./MateriaisPainel";
+import { useRegistrarUso } from "@/lib/registrarUsoMaterial";
 
 const ehIos = () => typeof navigator !== "undefined" && (/iPhone|iPad|iPod/i.test(navigator.userAgent) || (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1));
 const ehCelular = () => typeof navigator !== "undefined" && /Android|iPhone|iPad|iPod|Mobile/i.test(navigator.userAgent);
@@ -42,7 +43,8 @@ export default function CarrosselFotos({ aberto, onFechar, itens, indiceInicial,
   const [i, setI] = useState(indiceInicial);
   useEffect(() => { if (aberto) setI(indiceInicial); }, [aberto, indiceInicial]);
   const [ocupado, setOcupado] = useState<string | null>(null);
-  const [pronto, setPronto] = useState<{ arquivo: File; texto: string; titulo: string } | null>(null);
+  const registrarUso = useRegistrarUso();
+  const [pronto, setPronto] = useState<{ arquivo: File; texto: string; titulo: string; id: number } | null>(null);
   const [formato, setFormatoEstado] = useState<FormatoDownload>(() => {
     try { const v = localStorage.getItem("materiais_formato"); return (FORMATOS_DOWNLOAD as readonly string[]).includes(v ?? "") ? (v as FormatoDownload) : "original"; } catch { return "original"; }
   });
@@ -68,13 +70,14 @@ export default function CarrosselFotos({ aberto, onFechar, itens, indiceInicial,
       const arquivo = new File([a.blob], a.nome, { type: a.blob.type || m.mime || "image/jpeg" });
       // iPhone: o download vai para "Arquivos"; o compartilhar abre "Salvar imagem", que guarda na galeria (Fotos)
       if (ehIos() && (navigator as any).canShare?.({ files: [arquivo] })) {
-        try { await navigator.share({ files: [arquivo], title: m.titulo }); toast.success("Toque em “Salvar imagem” para guardar na galeria."); return; }
+        try { await navigator.share({ files: [arquivo], title: m.titulo }); registrarUso(m.id, "baixar"); toast.success("Toque em “Salvar imagem” para guardar na galeria."); return; }
         catch (e: any) {
           if (e?.name === "AbortError") return;
           if (e?.name !== "NotAllowedError") throw e;
         }
       }
       baixarArquivo(a.blob, a.nome);
+      registrarUso(m.id, "baixar");
       toast.success("Foto baixada com os seus dados.");
     } catch (e: any) { toast.error(e?.message || "Não foi possível baixar"); }
   };
@@ -88,24 +91,25 @@ export default function CarrosselFotos({ aberto, onFechar, itens, indiceInicial,
       try { await navigator.clipboard.writeText(texto); } catch { /* sem área de transferência */ }
       const arquivo = new File([a.blob], a.nome, { type: a.blob.type || m.mime || "image/jpeg" });
       if ((navigator as any).canShare?.({ files: [arquivo] })) {
-        try { await navigator.share({ files: [arquivo], text: texto, title: m.titulo }); return; }
+        try { await navigator.share({ files: [arquivo], text: texto, title: m.titulo }); registrarUso(m.id, "enviar"); return; }
         catch (e: any) {
           if (e?.name === "AbortError") return;
           // A foto demorou para ficar pronta: o celular pede um toque novo para abrir o compartilhamento
-          if (e?.name === "NotAllowedError") { setPronto({ arquivo, texto, titulo: m.titulo }); return; }
+          if (e?.name === "NotAllowedError") { setPronto({ arquivo, texto, titulo: m.titulo, id: m.id }); return; }
           throw e;
         }
       }
       // Computador: baixa a foto e abre o WhatsApp com o texto e o link; é só anexar a foto baixada
       baixarArquivo(a.blob, a.nome);
       window.open(`https://wa.me/?text=${encodeURIComponent(texto)}`, "_blank", "noopener");
+      registrarUso(m.id, "enviar");
       toast.success("Foto baixada e WhatsApp aberto com o seu texto e link: anexe a foto na conversa.");
     } catch (e: any) { toast.error(e?.message || "Não foi possível enviar"); }
   };
 
   const enviarPronto = async () => {
     if (!pronto) return;
-    try { await navigator.share({ files: [pronto.arquivo], text: pronto.texto, title: pronto.titulo }); setPronto(null); }
+    try { await navigator.share({ files: [pronto.arquivo], text: pronto.texto, title: pronto.titulo }); registrarUso(pronto.id, "enviar"); setPronto(null); }
     catch (e: any) { if (e?.name !== "AbortError") toast.error("Não foi possível compartilhar"); }
   };
 

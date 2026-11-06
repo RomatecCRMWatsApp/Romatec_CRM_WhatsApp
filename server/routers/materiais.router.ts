@@ -7,8 +7,8 @@ import { TRPCError } from "@trpc/server";
 import { desc, eq } from "drizzle-orm";
 import { protectedProcedure, router } from "../_core/trpc";
 import { getDb } from "../db";
-import { materiais, properties, empreendimentos } from "../../drizzle/schema";
-import { TIPOS_MATERIAL, ROTULO_TIPO_MATERIAL, agruparMateriais } from "../../shared/materiais";
+import { materiais, materialUso, properties, empreendimentos } from "../../drizzle/schema";
+import { TIPOS_MATERIAL, ROTULO_TIPO_MATERIAL, agruparMateriais, categoriaDoArquivo } from "../../shared/materiais";
 import { exigirAcesso, type PermissoesUsuario } from "../permissoes";
 import { temAcesso } from "../../shared/permissoes";
 
@@ -135,6 +135,20 @@ export const materiaisRouter = router({
       await db.update(materiais).set(campos as any).where(eq(materiais.id, id));
       // Passou a liberado para divulgação: é material novo para a equipe de vendas
       if (antes?.slug && !(antes.liberado === true || antes.liberado === 1)) avisarMaterialNovo(antes.slug, input.titulo ?? antes.titulo, id, ctx.user.id);
+      return { ok: true };
+    }),
+
+  /**
+   * Estatística de uso (Controle de acessos): o corretor baixou, enviou ou copiou o texto de uma peça.
+   * Só a contagem: não guarda para quem foi nem o conteúdo. Falha aqui nunca atrapalha o corretor.
+   */
+  registrarUso: protectedProcedure
+    .input(z.object({ id: z.number().int().positive(), acao: z.enum(["baixar", "enviar", "copiar"]) }))
+    .mutation(async ({ input, ctx }) => {
+      const db = await dbOrThrow();
+      const m = await materialAutorizado(db, ctx.permissoes, input.id);
+      const categoria = input.acao === "copiar" ? "texto" : categoriaDoArquivo(m.mime, m.url);
+      await db.insert(materialUso).values({ usuarioId: ctx.user.id, materialId: m.id, empreendimentoSlug: m.empreendimentoSlug ?? null, categoria, acao: input.acao, criadoEm: new Date() } as any);
       return { ok: true };
     }),
 

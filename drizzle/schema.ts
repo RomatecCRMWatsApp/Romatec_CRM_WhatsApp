@@ -1075,6 +1075,22 @@ export const saasTrials = mysqlTable("saasTrials", {
 });
 
 /** LOGIN, BLOQUEIO_402, CHECKOUT_INICIADO, PAGAMENTO_CONFIRMADO, DESBLOQUEIO, TRIAL_INICIADO, TRIAL_EXPIRADO… */
+/** Estatística de uso dos materiais: quem baixou/enviou/copiou o texto de qual peça (sem destinatário nem conteúdo) */
+export const materialUso = mysqlTable("materialUso", {
+  id: int("id").autoincrement().primaryKey(),
+  usuarioId: int("usuarioId").notNull(),
+  materialId: int("materialId").notNull(),
+  empreendimentoSlug: varchar("empreendimentoSlug", { length: 80 }),
+  /** imagem | video | pdf | texto */
+  categoria: varchar("categoria", { length: 10 }).notNull(),
+  /** baixar | enviar | copiar */
+  acao: varchar("acao", { length: 10 }).notNull(),
+  criadoEm: timestamp("criadoEm").defaultNow().notNull(),
+}, (t) => ({
+  porUsuario: index("idx_uso_usuario").on(t.usuarioId, t.criadoEm),
+  porMaterial: index("idx_uso_material").on(t.materialId),
+}));
+
 export const auditoriaAcesso = mysqlTable("auditoriaAcesso", {
   id: int("id").autoincrement().primaryKey(),
   usuarioId: int("usuarioId").notNull(),

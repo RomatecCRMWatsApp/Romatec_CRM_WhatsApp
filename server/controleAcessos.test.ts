@@ -3,7 +3,7 @@ import { beforeAll, describe, expect, it } from 'vitest';
 process.env.DATABASE_DRIVER = 'sqlite';
 process.env.SQLITE_PATH = ':memory:';
 
-const { situacaoDeUso, situacaoDePagamento, podeEntrar, resumoControle } = await import('../shared/controleAcessos');
+const { situacaoDeUso, situacaoDePagamento, podeEntrar, resumoControle, somarUsoMidias, descreverMidias } = await import('../shared/controleAcessos');
 const { podeAbrir } = await import('../shared/equipe');
 const S = await import('./saas/servico');
 const A = await import('./controleAcessos');
@@ -44,6 +44,22 @@ describe('controle de acessos: regras', () => {
     ]);
     expect(r).toMatchObject({ total: 3, ativos: 2, inativos: 1, pagos: 1, cortesia: 1, pendentes: 1, usando: 1, parados: 2 });
   });
+  it('mídias: soma por tipo, última vez e o texto do card', () => {
+    const u = somarUsoMidias([
+      { categoria: 'imagem', criadoEm: '2026-11-01T10:00:00Z' }, { categoria: 'imagem', criadoEm: '2026-11-03T10:00:00Z' },
+      { categoria: 'video', criadoEm: '2026-11-02T10:00:00Z' }, { categoria: 'texto', criadoEm: null }, { categoria: 'lixo', criadoEm: null },
+    ]);
+    expect(u).toMatchObject({ imagem: 2, video: 1, pdf: 0, texto: 1, total: 4, ultimo: '2026-11-03T10:00:00.000Z' });
+    expect(descreverMidias(u)).toBe('2 fotos, 1 vídeo, 1 texto');
+    expect(descreverMidias(somarUsoMidias([]))).toBe('nenhum');
+  });
+  it('contador das licenças no resumo', () => {
+    const r = resumoControle([
+      { ativo: true, uso: 'usando', pagamento: 'pago' }, { ativo: true, uso: 'usando', pagamento: 'teste' },
+      { ativo: true, uso: 'parado', pagamento: 'bloqueado' }, { ativo: true, uso: 'parado', pagamento: 'bloqueado' },
+    ]);
+    expect(r.licencas).toMatchObject({ pago: 1, teste: 1, bloqueado: 2, cortesia: 0 });
+  });
   it('a tela abre para administrador e secretária, não para corretor e empreendedor', () => {
     expect(podeAbrir('admin', '/controle-acessos')).toBe(true);
     expect(podeAbrir('secretario', '/controle-acessos')).toBe(true);
@@ -77,6 +93,19 @@ describe('controle de acessos: banco', () => {
     expect(linhas.find(l => l.id === 4)).toMatchObject({ pagamento: 'sem_licenca', uso: 'nunca', podeEntrar: false });
     expect(linhas.find(l => l.id === 5)).toMatchObject({ ativo: false, podeEntrar: false });
     expect(resumo).toMatchObject({ total: 3, ativos: 2, inativos: 1, pagos: 1 });
+  });
+
+  it('uso dos materiais aparece por corretor (só contagem dos últimos 30 dias)', async () => {
+    const { materialUso } = await import('../drizzle/schema');
+    await db.insert(materialUso).values([
+      { usuarioId: 3, materialId: 1, empreendimentoSlug: 'bom-jardims', categoria: 'imagem', acao: 'baixar', criadoEm: new Date(AGORA - DIA) },
+      { usuarioId: 3, materialId: 2, empreendimentoSlug: 'bom-jardims', categoria: 'pdf', acao: 'enviar', criadoEm: new Date(AGORA - 2 * DIA) },
+      { usuarioId: 3, materialId: 1, empreendimentoSlug: 'bom-jardims', categoria: 'imagem', acao: 'enviar', criadoEm: new Date(AGORA - 45 * DIA) },
+    ] as any);
+    const { linhas, resumo } = await A.listarControleAcessos(AGORA);
+    expect(linhas.find(l => l.id === 3)!.midias).toMatchObject({ imagem: 1, pdf: 1, total: 2 });
+    expect(linhas.find(l => l.id === 4)!.midias.total).toBe(0);
+    expect(resumo.usaramMidias).toBe(1);
   });
 
   it('secretária libera cortesia para quem não tem licença, e depois bloqueia', async () => {

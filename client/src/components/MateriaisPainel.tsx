@@ -29,6 +29,7 @@ export const miniatura = (url: string) => url.includes("/image/upload/") ? url.r
 export { capaDoVideo } from "@/lib/capaVideo";
 import PlayerVideo from "@/components/PlayerVideo";
 import CarrosselFotos from "@/components/CarrosselFotos";
+import { useRegistrarUso } from "@/lib/registrarUsoMaterial";
 export const nomeArquivo = (m: any) => {
   const ext = (m.url.split("?")[0].match(/\.[a-z0-9]+$/i)?.[0]) || (ehVideo(m) ? ".mp4" : ehImagem(m) ? ".png" : ".pdf");
   return `${m.titulo.replace(/[^\wÀ-ſ -]+/g, "").trim().replace(/\s+/g, "_") || "material"}${ext}`;
@@ -88,6 +89,7 @@ function CardMaterial({ m, onMudou, grupo, cartao, escritorio, linhasPdf, assina
   const excluir = trpc.materiais.delete.useMutation({ onSuccess: () => { toast.success("Material removido do CRM"); onMudou(); }, onError: e => toast.error(e.message) });
   const [ocupado, setOcupado] = useState<string | null>(null);
   const [pronto, setPronto] = useState<File | null>(null);
+  const registrarUso = useRegistrarUso();
   const [formato, setFormato] = useState<FormatoDownload>(() => {
     try { const v = localStorage.getItem("materiais_formato"); return (FORMATOS_DOWNLOAD as readonly string[]).includes(v ?? "") ? (v as FormatoDownload) : "original"; } catch { return "original"; }
   });
@@ -95,7 +97,7 @@ function CardMaterial({ m, onMudou, grupo, cartao, escritorio, linhasPdf, assina
   const temFormato = (ehImagem(m) && !/\.gif$/i.test(m.url)) || ehVideo(m);
   const enviarPronto = async () => {
     if (!pronto) return;
-    try { await navigator.share({ files: [pronto], text: legenda, title: m.titulo }); setPronto(null); } catch (e: any) { if (e?.name !== "AbortError") toast.error("Não foi possível compartilhar"); }
+    try { await navigator.share({ files: [pronto], text: legenda, title: m.titulo }); setPronto(null); registrarUso(m.id, "enviar"); } catch (e: any) { if (e?.name !== "AbortError") toast.error("Não foi possível compartilhar"); }
   };
   const link = linkDoMaterial(grupo, cartao.ref);
   const legenda = legendaDoMaterial(m.titulo, link, cartao, assinatura);
@@ -118,7 +120,7 @@ function CardMaterial({ m, onMudou, grupo, cartao, escritorio, linhasPdf, assina
   };
 
   const baixar = async () => {
-    try { const a = await preparar(); baixarArquivo(a.blob, a.nome); } catch (e: any) { toast.error(e?.message || "Não foi possível baixar"); }
+    try { const a = await preparar(); baixarArquivo(a.blob, a.nome); registrarUso(m.id, "baixar"); } catch (e: any) { toast.error(e?.message || "Não foi possível baixar"); }
   };
 
   // No celular manda o arquivo (com os dados do corretor) e o texto para o WhatsApp; no computador baixa e copia o texto
@@ -128,7 +130,7 @@ function CardMaterial({ m, onMudou, grupo, cartao, escritorio, linhasPdf, assina
       try { await navigator.clipboard.writeText(legenda); } catch { /* sem área de transferência */ }
       const arquivo = new File([a.blob], a.nome, { type: a.blob.type || m.mime || "" });
       if ((navigator as any).canShare?.({ files: [arquivo] })) {
-        try { await navigator.share({ files: [arquivo], text: legenda, title: m.titulo }); }
+        try { await navigator.share({ files: [arquivo], text: legenda, title: m.titulo }); registrarUso(m.id, "enviar"); }
         catch (e: any) {
           // Demorou para gerar (vídeo): o celular exige um toque novo para abrir o compartilhamento
           if (e?.name === "NotAllowedError") { setPronto(arquivo); toast.success("Material pronto com os seus dados — toque em \"Enviar agora\"."); return; }
@@ -137,6 +139,7 @@ function CardMaterial({ m, onMudou, grupo, cartao, escritorio, linhasPdf, assina
         return;
       }
       baixarArquivo(a.blob, a.nome);
+      registrarUso(m.id, "enviar");
       toast.success("Arquivo baixado com os seus dados e o texto copiado — cole no WhatsApp junto com o arquivo.");
     } catch (e: any) {
       if (e?.name !== "AbortError") toast.error(e?.message || "Não foi possível compartilhar");
@@ -144,7 +147,7 @@ function CardMaterial({ m, onMudou, grupo, cartao, escritorio, linhasPdf, assina
   };
 
   const copiar = async () => {
-    try { await navigator.clipboard.writeText(legenda); toast.success("Texto com o seu link e os seus dados copiado"); } catch { toast.error("Não foi possível copiar"); }
+    try { await navigator.clipboard.writeText(legenda); registrarUso(m.id, "copiar"); toast.success("Texto com o seu link e os seus dados copiado"); } catch { toast.error("Não foi possível copiar"); }
   };
 
   return (

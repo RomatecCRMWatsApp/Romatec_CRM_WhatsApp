@@ -692,6 +692,7 @@ export function initSqliteTables(sqlite: any): void {
   addColumn(`ALTER TABLE saasAssinaturas ADD COLUMN checkoutPendenteJson TEXT`);
   for (const c of ['provedor TEXT', 'externoId TEXT', 'externoStatus TEXT', 'ambiente TEXT', 'pdfUrl TEXT', 'xmlUrl TEXT', 'mensagem TEXT', 'enviadaEm TEXT']) addColumn(`ALTER TABLE saasNfse ADD COLUMN ${c}`);
   run(`CREATE TABLE IF NOT EXISTS saasTrials (cpfCnpj TEXT PRIMARY KEY, usuarioId INTEGER, usadoEm ${agoraS})`);
+  run(`CREATE TABLE IF NOT EXISTS materialUso (id INTEGER PRIMARY KEY AUTOINCREMENT, usuarioId INTEGER NOT NULL, materialId INTEGER NOT NULL, empreendimentoSlug TEXT, categoria TEXT NOT NULL, acao TEXT NOT NULL, criadoEm ${agoraS})`);
   run(`CREATE TABLE IF NOT EXISTS auditoriaAcesso (id INTEGER PRIMARY KEY AUTOINCREMENT, usuarioId INTEGER NOT NULL, evento TEXT NOT NULL, detalheJson TEXT, ip TEXT, criadoEm ${agoraS})`);
   run(`CREATE TABLE IF NOT EXISTS corretoresExternos (
     id INTEGER PRIMARY KEY AUTOINCREMENT, nome TEXT NOT NULL, cpf TEXT NOT NULL UNIQUE, creci TEXT, creciUf TEXT, telefone TEXT, email TEXT, observacao TEXT,
