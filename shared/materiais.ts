@@ -116,6 +116,32 @@ export function agruparMateriais<T extends MaterialLinha>(
     .sort((a, b) => peso(a) - peso(b) || a.nome.localeCompare(b.nome, 'pt-BR'));
 }
 
+// ─── Organizar a lista (botão "Organizar" em Materiais) ───────────
+export const ORDENS_MATERIAL = ['recentes', 'antigos', 'nome', 'tipo'] as const;
+export type OrdemMaterial = typeof ORDENS_MATERIAL[number];
+export const ROTULO_ORDEM_MATERIAL: Record<OrdemMaterial, string> = {
+  recentes: 'Mais recentes primeiro',
+  antigos: 'Mais antigos primeiro',
+  nome: 'Nome (A a Z)',
+  tipo: 'Tipo de peça',
+};
+
+const quando = (m: { createdAt?: unknown }) => { const t = m.createdAt ? new Date(m.createdAt as any).getTime() : 0; return Number.isFinite(t) ? t : 0; };
+
+/** Ordena as peças de um grupo. Padrão: data de envio, as mais novas primeiro (o corretor acha o material novo logo de cara). */
+export function ordenarMateriais<T extends MaterialLinha & { id?: number; createdAt?: unknown }>(itens: T[], ordem: OrdemMaterial = 'recentes'): T[] {
+  const nome = (a: T, b: T) => a.titulo.localeCompare(b.titulo, 'pt-BR', { numeric: true });
+  const desempate = (a: T, b: T) => (b.id ?? 0) - (a.id ?? 0);
+  const ordemTipo = (t: string) => { const i = (TIPOS_MATERIAL as readonly string[]).indexOf(t); return i < 0 ? 99 : i; };
+  const cmp: Record<OrdemMaterial, (a: T, b: T) => number> = {
+    recentes: (a, b) => quando(b) - quando(a) || desempate(a, b),
+    antigos: (a, b) => quando(a) - quando(b) || -desempate(a, b),
+    nome: (a, b) => nome(a, b) || desempate(a, b),
+    tipo: (a, b) => ordemTipo(a.tipo) - ordemTipo(b.tipo) || a.ordem - b.ordem || nome(a, b),
+  };
+  return [...itens].sort(cmp[ordem] ?? cmp.recentes);
+}
+
 // ─── Download no formato da rede (feed, stories/reels, quadrado, WhatsApp) com os dados do corretor ───────────
 /**
  * O arquivo baixado pelo corretor sai SEM o contato do escritório que vem gravado na arte (rodapé com telefone,

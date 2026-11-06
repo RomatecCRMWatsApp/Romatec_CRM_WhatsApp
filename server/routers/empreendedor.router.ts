@@ -10,7 +10,7 @@ import { getDb } from "../db";
 import { leadQualifications, leadCampanhas, materiais, empreendimentos, lotes, leadEventos } from "../../drizzle/schema";
 import { montarRelatorio } from "../leads/relatorio";
 import { perfilDe } from "../../shared/equipe";
-import { agruparMateriais } from "../../shared/materiais";
+import { agruparMateriais, ordenarMateriais } from "../../shared/materiais";
 import { serieLeadsPorDia } from "../leads/painelEmpreendedor";
 
 async function contexto(ctx: any) {
@@ -114,6 +114,7 @@ export const empreendedorRouter = router({
   materiais: protectedProcedure.query(async ({ ctx }) => {
     const { db, slug, emp } = await contexto(ctx);
     const rows: any[] = await db.select().from(materiais).where(and(eq(materiais.empreendimentoSlug, slug), eq(materiais.liberado, true)));
-    return agruparMateriais(rows, { imoveis: new Map(), empreendimentos: new Map([[slug, emp?.nome || slug]]) })[0]?.itens ?? [];
+    // Mais recentes primeiro, como em Materiais
+    return ordenarMateriais(agruparMateriais(rows, { imoveis: new Map(), empreendimentos: new Map([[slug, emp?.nome || slug]]) })[0]?.itens ?? [], "recentes");
   }),
 });

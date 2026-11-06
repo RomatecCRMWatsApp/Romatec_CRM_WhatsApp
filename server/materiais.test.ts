@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { tipoPorNome, tituloPorNome, bloqueadaPorNome, resourceTypeDe, problemaArquivo, agruparMateriais, categoriaDoArquivo, ABA_ARQUIVO } from '../shared/materiais';
+import { tipoPorNome, tituloPorNome, bloqueadaPorNome, resourceTypeDe, problemaArquivo, agruparMateriais, ordenarMateriais, categoriaDoArquivo, ABA_ARQUIVO } from '../shared/materiais';
 
 describe('Materiais — arquivos do pacote', () => {
   it('tipo pelo nome do arquivo', () => {
@@ -64,5 +64,27 @@ describe('Materiais — arquivos do pacote', () => {
     // Na aba, o seletor de arquivo só oferece aquele tipo
     expect(ABA_ARQUIVO.video.aceita).toBe('video/mp4,video/webm,video/quicktime');
     expect(ABA_ARQUIVO.pdf.aceita).toBe('application/pdf');
+  });
+});
+
+describe('Materiais — botão Organizar', () => {
+  const p = (id: number, titulo: string, tipo: string, createdAt: string) => ({ id, propertyId: null, empreendimentoSlug: 'bom-jardims', tipo, ordem: 0, titulo, createdAt });
+  const itens = [
+    p(1, 'Status 02 Portal', 'status', '2026-11-01T10:00:00Z'),
+    p(2, 'Feed 10 Lazer', 'feed', '2026-11-05T09:00:00Z'),
+    p(3, 'Feed 2 Capa', 'feed', '2026-11-03T12:00:00Z'),
+  ];
+  it('padrão: data de envio, mais recentes primeiro', () => {
+    expect(ordenarMateriais(itens).map(i => i.id)).toEqual([2, 3, 1]);
+  });
+  it('mais antigos, nome (com número na ordem certa) e tipo', () => {
+    expect(ordenarMateriais(itens, 'antigos').map(i => i.id)).toEqual([1, 3, 2]);
+    expect(ordenarMateriais(itens, 'nome').map(i => i.titulo)).toEqual(['Feed 2 Capa', 'Feed 10 Lazer', 'Status 02 Portal']);
+    expect(ordenarMateriais(itens, 'tipo').map(i => i.tipo)).toEqual(['feed', 'feed', 'status']);
+  });
+  it('envios no mesmo instante: o último cadastrado vem primeiro; não altera a lista original', () => {
+    const iguais = [p(7, 'A', 'feed', '2026-11-05T09:00:00Z'), p(9, 'B', 'feed', '2026-11-05T09:00:00Z')];
+    expect(ordenarMateriais(iguais).map(i => i.id)).toEqual([9, 7]);
+    expect(iguais.map(i => i.id)).toEqual([7, 9]);
   });
 });

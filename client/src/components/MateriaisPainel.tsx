@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
 import { trpc } from "@/lib/trpc";
 import { Button } from "@/components/ui/button";
-import { Copy, Download, Eye, EyeOff, FileText, Loader2, Lock, Share2, Trash2, Upload, Video } from "lucide-react";
+import { ArrowDownUp, Copy, Download, Eye, EyeOff, FileText, Loader2, Lock, Share2, Trash2, Upload, Video } from "lucide-react";
 import { useCartaoVendas } from "@/lib/cartaoVendas";
 import { legendaDoMaterial, linkDoMaterial, pdfDoCorretor } from "@/lib/materialDoCorretor";
 import { useAuth } from "@/_core/hooks/useAuth";
@@ -11,6 +11,7 @@ import {
   ABA_ARQUIVO, CATEGORIAS_ARQUIVO, FORMATOS_DOWNLOAD, OPCOES_CORTE_FINAL_S, OPCOES_RECORTE_RODAPE, ROTULO_FORMATO, ROTULO_TIPO_MATERIAL, TIPOS_ARQUIVO_ACEITOS, TIPOS_MATERIAL,
   bloqueadaPorNome, categoriaDoArquivo, recorteRodapeEfetivo, tipoPorNome, tituloPorNome,
   type CategoriaArquivo, type FormatoDownload, type TipoMaterial,
+  ORDENS_MATERIAL, ROTULO_ORDEM_MATERIAL, ordenarMateriais, type OrdemMaterial,
 } from "@shared/materiais";
 import { enviarParaCloudinary, mimeDoArquivo } from "@/lib/uploadCloudinary";
 import LinkAgendamento from "@/components/LinkAgendamento";
@@ -244,6 +245,11 @@ export default function MateriaisPainel({ propertyId, empreendimentoSlug }: Dest
     try { const v = localStorage.getItem("materiais_aba"); return (CATEGORIAS_ARQUIVO as readonly string[]).includes(v ?? "") ? (v as CategoriaArquivo) : ""; } catch { return ""; }
   });
   const setAba = (v: "" | CategoriaArquivo) => { setAbaEstado(v); try { localStorage.setItem("materiais_aba", v); } catch { /* sem armazenamento */ } };
+  // Organizar: padrão é a data de envio, mais recentes primeiro; a escolha fica lembrada neste aparelho
+  const [ordem, setOrdemEstado] = useState<OrdemMaterial>(() => {
+    try { const v = localStorage.getItem("materiais_ordem"); return (ORDENS_MATERIAL as readonly string[]).includes(v ?? "") ? (v as OrdemMaterial) : "recentes"; } catch { return "recentes"; }
+  });
+  const setOrdem = (v: OrdemMaterial) => { setOrdemEstado(v); try { localStorage.setItem("materiais_ordem", v); } catch { /* sem armazenamento */ } };
   const [enviando, setEnviando] = useState<string | null>(null);
   // Limites reais do plano de armazenamento (Cloudinary), para o texto e a checagem antes de enviar
   const [limites, setLimites] = useState<{ imagemMB: number; videoMB: number; pdfMB: number } | null>(null);
@@ -307,7 +313,7 @@ export default function MateriaisPainel({ propertyId, empreendimentoSlug }: Dest
   const naAba = (m: any) => !aba || categoriaDoArquivo(m.mime, m.url) === aba;
   const doFiltro = (data?.grupos ?? []).filter(g => !filtro || g.chave === filtro);
   const contagem = (c: "" | CategoriaArquivo) => doFiltro.reduce((n, g) => n + g.itens.filter((m: any) => !c || categoriaDoArquivo(m.mime, m.url) === c).length, 0);
-  const grupos = doFiltro.map(g => ({ ...g, itens: g.itens.filter(naAba) })).filter(g => g.itens.length > 0);
+  const grupos = doFiltro.map(g => ({ ...g, itens: ordenarMateriais(g.itens.filter(naAba), ordem) })).filter(g => g.itens.length > 0);
 
   return (
     <div className="space-y-4">
@@ -326,8 +332,14 @@ export default function MateriaisPainel({ propertyId, empreendimentoSlug }: Dest
         <Button type="button" onClick={() => input.current?.click()} disabled={!!enviando || (!fixo && !destino)} className="bg-ok-600 hover:bg-ok-700 text-white">
           <Upload className="h-4 w-4 mr-1.5" /> {aba ? ABA_ARQUIVO[aba].botao : "Enviar artes, vídeos ou PDF"}
         </Button>
+        <label className="flex flex-col gap-1 text-xs text-muted-foreground ml-auto">
+          <span className="inline-flex items-center gap-1"><ArrowDownUp className="h-3.5 w-3.5" aria-hidden="true" /> Organizar</span>
+          <select value={ordem} onChange={e => setOrdem(e.target.value as OrdemMaterial)} aria-label="Organizar materiais" className="h-9 rounded-md border border-border bg-secondary/30 px-2 text-sm text-foreground">
+            {ORDENS_MATERIAL.map(o => <option key={o} value={o}>{ROTULO_ORDEM_MATERIAL[o]}</option>)}
+          </select>
+        </label>
         {!fixo && (data?.grupos.length ?? 0) > 1 && (
-          <label className="flex flex-col gap-1 text-xs text-muted-foreground ml-auto">
+          <label className="flex flex-col gap-1 text-xs text-muted-foreground">
             Mostrar
             <select value={filtro} onChange={e => setFiltro(e.target.value)} className="h-9 rounded-md border border-border bg-secondary/30 px-2 text-sm text-foreground">
               <option value="">Todos</option>

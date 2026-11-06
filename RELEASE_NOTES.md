@@ -3,6 +3,16 @@
 Cada versão nova vai no TOPO. Depois rode `npm run release` (valida e atualiza o package.json);
 ao subir, o servidor grava a versão no banco e todos recebem o aviso "Novidades da versão".
 
+## 1.108.0 — 2026-11-06
+tipo: minor
+obrigatoria: nao
+titulo: Materiais organizados: os mais recentes aparecem primeiro
+publico: equipe
+
+### Novo
+- Botão "Organizar" em Materiais: mais recentes primeiro (padrão), mais antigos primeiro, nome (A a Z) ou tipo de peça. A escolha fica lembrada no seu aparelho
+- O material que acabou de ser enviado aparece no topo, para o corretor achar logo; o portal do empreendedor também mostra os mais novos primeiro
+
 ## 1.107.2 — 2026-11-06
 tipo: patch
 obrigatoria: nao
