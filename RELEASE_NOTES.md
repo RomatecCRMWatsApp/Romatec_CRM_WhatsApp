@@ -3,6 +3,17 @@
 Cada versão nova vai no TOPO. Depois rode `npm run release` (valida e atualiza o package.json);
 ao subir, o servidor grava a versão no banco e todos recebem o aviso "Novidades da versão".
 
+## 1.109.0 — 2026-11-06
+tipo: minor
+obrigatoria: nao
+titulo: Assista aos vídeos dos Materiais sem baixar
+publico: usuarios
+
+### Novo
+- Vídeos da galeria de Materiais e do portal do empreendedor agora têm botão de play: o vídeo abre numa janela dentro do sistema, com tela cheia, volume e avanço, sem precisar baixar
+- Assista antes de enviar e, quando quiser, use Baixar ou Enviar: o arquivo continua saindo com o seu carimbo e o seu cartão final
+- Leve no celular: o vídeo só carrega quando você aperta o play e vem em qualidade ajustada à sua conexão
+
 ## 1.108.0 — 2026-11-06
 tipo: minor
 obrigatoria: nao

@@ -12,7 +12,7 @@ import { FotoUsuario } from "@/components/AppShell";
 import { SinoNovidades } from "@/components/sistema/Novidades";
 import { APP_VERSION, AppFooter, RomatecAppIcon } from "@/brand";
 import { baixarBlob, ehImagem, ehVideo, miniatura, nomeArquivo } from "@/components/MateriaisPainel";
-import { capaDoVideo } from "@/lib/capaVideo";
+import PlayerVideo from "@/components/PlayerVideo";
 import { ROTULO_TIPO_MATERIAL, type TipoMaterial } from "@shared/materiais";
 import { ROTULO_SITUACAO, type SituacaoLote } from "@shared/lotes";
 import { CabecalhoEmpreendimento, MapaVendas } from "@/components/empreendimento/Vitrine";
@@ -92,12 +92,14 @@ function Arte({ m }: { m: any }) {
   };
   return (
     <div className="rounded-lg border border-border bg-card overflow-hidden flex flex-col">
+      {ehVideo(m) ? (
+        <PlayerVideo url={m.url} titulo={m.titulo} empreendimentoSlug={m.empreendimentoSlug} className="bg-black/40 aspect-[4/5]" />
+      ) : (
       <a href={m.url} target="_blank" rel="noreferrer" className="block bg-black/40 aspect-[4/5] relative">
         {ehImagem(m) ? <img src={miniatura(m.url)} alt={m.titulo} loading="lazy" className="w-full h-full object-contain" />
-          : ehVideo(m) ? <video src={m.url} poster={capaDoVideo(m.url, m.empreendimentoSlug)} preload="metadata" muted className="w-full h-full object-contain" />
           : <div className="w-full h-full flex flex-col items-center justify-center text-muted-foreground gap-2"><FileText className="h-10 w-10" /><span className="text-xs">PDF</span></div>}
-        {ehVideo(m) && <Video className="absolute top-2 left-2 h-4 w-4 text-white drop-shadow" />}
       </a>
+      )}
       <div className="p-2 space-y-1.5 flex-1 flex flex-col">
         <p className="text-sm font-medium text-foreground leading-tight line-clamp-2">{m.titulo}</p>
         <p className="text-[10px] text-muted-foreground">{ROTULO_TIPO_MATERIAL[m.tipo as TipoMaterial] || m.tipo}</p>

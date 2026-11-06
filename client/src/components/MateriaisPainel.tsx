@@ -27,7 +27,7 @@ export const tamanho = (b?: number | null) => (!b ? "" : b > 1024 * 1024 ? `${(b
 /** Miniatura leve do Cloudinary para a grade (o original fica para baixar) */
 export const miniatura = (url: string) => url.includes("/image/upload/") ? url.replace("/image/upload/", "/image/upload/c_limit,w_480,q_auto,f_auto/") : url;
 export { capaDoVideo } from "@/lib/capaVideo";
-import { capaDoVideo } from "@/lib/capaVideo";
+import PlayerVideo from "@/components/PlayerVideo";
 export const nomeArquivo = (m: any) => {
   const ext = (m.url.split("?")[0].match(/\.[a-z0-9]+$/i)?.[0]) || (ehVideo(m) ? ".mp4" : ehImagem(m) ? ".png" : ".pdf");
   return `${m.titulo.replace(/[^\wÀ-ſ -]+/g, "").trim().replace(/\s+/g, "_") || "material"}${ext}`;
@@ -148,23 +148,31 @@ function CardMaterial({ m, onMudou, grupo, cartao, escritorio, linhasPdf, assina
 
   return (
     <div className={`rounded-lg border bg-card overflow-hidden flex flex-col ${m.liberado ? "border-border" : "border-danger-500/40"}`}>
+      {ehVideo(m) ? (
+        <PlayerVideo url={m.url} titulo={m.titulo} empreendimentoSlug={m.empreendimentoSlug} className="bg-black/40 aspect-[4/5]"
+          rodape="Prévia do arquivo original. Ao baixar ou enviar, o vídeo sai com o seu carimbo e o seu cartão final.">
+        {!m.liberado && (
+          <span className="absolute top-2 right-2 rounded bg-danger-600 px-1.5 py-0.5 text-[10px] font-bold text-white flex items-center gap-1">
+            <Lock className="h-3 w-3" /> NÃO DIVULGAR
+          </span>
+        )}
+        </PlayerVideo>
+      ) : (
       <a href={m.url} target="_blank" rel="noreferrer" className="block bg-black/40 aspect-[4/5] relative">
         {ehImagem(m) ? (
           <img src={miniatura(m.url)} alt={m.titulo} loading="lazy" className="w-full h-full object-contain" />
-        ) : ehVideo(m) ? (
-          <video src={m.url} poster={capaDoVideo(m.url, m.empreendimentoSlug)} preload="metadata" muted className="w-full h-full object-contain" />
         ) : (
           <div className="w-full h-full flex flex-col items-center justify-center text-muted-foreground gap-2">
             <FileText className="h-10 w-10" /><span className="text-xs">PDF</span>
           </div>
         )}
-        {ehVideo(m) && <Video className="absolute top-2 left-2 h-4 w-4 text-white drop-shadow" />}
         {!m.liberado && (
           <span className="absolute top-2 right-2 rounded bg-danger-600 px-1.5 py-0.5 text-[10px] font-bold text-white flex items-center gap-1">
             <Lock className="h-3 w-3" /> NÃO DIVULGAR
           </span>
         )}
       </a>
+      )}
       <div className="p-2 space-y-1.5 flex-1 flex flex-col">
         <p className="text-sm font-medium text-foreground leading-tight line-clamp-2" title={m.titulo}>{m.titulo}</p>
         {pronto && <Button size="sm" className="h-7 bg-ok-600 px-2 text-xs text-white hover:bg-ok-700" onClick={enviarPronto}><Share2 className="mr-1 h-3.5 w-3.5" /> Enviar agora</Button>}
