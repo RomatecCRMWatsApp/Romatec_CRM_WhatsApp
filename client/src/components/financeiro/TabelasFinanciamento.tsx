@@ -240,7 +240,7 @@ export default function TabelasFinanciamento() {
           </div>
           <div ref={rolagem} className="max-h-[480px] overflow-auto rounded-xl border border-border [scrollbar-gutter:stable]">
             <table className="w-full min-w-[720px] text-xs tabular-nums">
-              <thead className="sticky top-0 z-10 bg-card"><tr className="border-b border-border text-muted-foreground">
+              <thead className="sticky top-0 z-10 bg-secondary"><tr className="border-b border-border text-muted-foreground">
                 {["Mês", "Vencimento", "Tipo", "Nº", "Parcela", "Juros", "Amortização", "Saldo devedor"].map(h => <th key={h} className="px-2 py-2 text-right font-medium first:text-left">{h}</th>)}
               </tr></thead>
               <tbody>

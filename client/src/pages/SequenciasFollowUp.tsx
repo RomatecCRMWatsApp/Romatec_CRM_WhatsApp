@@ -39,7 +39,7 @@ function Editor({ s, admin }: { s: { etapa: string; rotulo: string; ativo: boole
             <Textarea rows={3} value={p.texto} disabled={!admin} onChange={e => set(i, { texto: e.target.value })} />
             {admin && passos.length > 1 && <Button size="sm" variant="ghost" className="mt-1 h-7 text-red-300" onClick={() => setPassos(passos.filter((_, k) => k !== i))}><Trash2 className="mr-1 h-3.5 w-3.5" /> Remover</Button>}
           </div>
-          <p className="whitespace-pre-wrap rounded-md bg-emerald-500/10 p-2 text-xs"><span className="mb-1 block text-[10px] uppercase text-muted-foreground">Prévia</span>{renderizarPasso(p.texto, EXEMPLO)}</p>
+          <p className="whitespace-pre-wrap rounded-md bg-emerald-500/10 p-2 text-xs"><span className="mb-1 block text-[10px] text-muted-foreground">Prévia</span>{renderizarPasso(p.texto, EXEMPLO)}</p>
         </div>
       ))}
       {admin && (

@@ -91,8 +91,8 @@ function PerformanceCharts({ perfData }: { perfData: any }) {
   const CustomTooltipContent = ({ active, payload, label }: any) => {
     if (!active || !payload?.length) return null;
     return (
-      <div style={{ background: "#1a1f2e", border: "1px solid rgba(16,185,129,0.2)", borderRadius: 8, padding: "6px 12px", boxShadow: "0 10px 25px rgba(0,0,0,0.5)" }}>
-        <p style={{ fontSize: 11, color: "#9ca3af", marginBottom: 4 }}>{label}</p>
+      <div style={{ background: "var(--c-1a1f2e)", border: "1px solid color-mix(in srgb, var(--c-10b981) 20%, transparent)", borderRadius: 8, padding: "6px 12px", boxShadow: "0 10px 25px color-mix(in srgb, var(--c-000000) 50%, transparent)" }}>
+        <p style={{ fontSize: 11, color: "var(--c-9ca3af)", marginBottom: 4 }}>{label}</p>
         {payload.map((entry: any, i: number) => (
           <p key={i} style={{ fontSize: 13, fontWeight: 600, color: entry.color }}>
             {entry.name}: {entry.value}
@@ -266,11 +266,11 @@ function PerformanceCharts({ perfData }: { perfData: any }) {
               <div className="w-full h-2 rounded-full bg-secondary/50 mb-3 overflow-hidden">
                 <div className="h-full flex">
                   <div
-                    className="h-full bg-emerald-500 transition-all"
+                    className="h-full bg-emerald-500 transition"
                     style={{ width: `${camp.total > 0 ? (camp.sent / camp.total) * 100 : 0}%` }}
                   />
                   <div
-                    className="h-full bg-red-500 transition-all"
+                    className="h-full bg-red-500 transition"
                     style={{ width: `${camp.total > 0 ? (camp.failed / camp.total) * 100 : 0}%` }}
                   />
                 </div>
@@ -582,7 +582,7 @@ export default function Dashboard() {
                       <div className="flex-1 min-w-0">
                         <div className="flex items-center gap-2 flex-wrap">
                           <p className="text-sm font-medium text-foreground truncate">{nome}</p>
-                          {l.score && <span className={`text-[10px] uppercase tracking-wide px-1.5 py-0.5 rounded border ${SCORE_STYLE[l.score] || ""}`}>{l.score}</span>}
+                          {l.score && <span className={`text-[10px] px-1.5 py-0.5 rounded border ${SCORE_STYLE[l.score] || ""}`}>{l.score}</span>}
                         </div>
                         <p className="text-xs text-muted-foreground truncate">{ORIGEM_LABEL[l.origem] || "WhatsApp"}{l.campanhaOrigem ? ` · ${l.campanhaOrigem}` : ""} · {timeAgo(l.createdAt)}</p>
                       </div>

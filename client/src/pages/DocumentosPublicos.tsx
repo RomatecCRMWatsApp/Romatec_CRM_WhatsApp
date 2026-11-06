@@ -32,7 +32,7 @@ function useNoIndex(titulo: string) {
 
 function Topo({ titulo, subtitulo, voltar }: { titulo: string; subtitulo: string; voltar?: string }) {
   return (
-    <header style={{ background: `linear-gradient(160deg, ${C.verde} 0%, #08261A 100%)`, color: C.creme }}>
+    <header style={{ background: `linear-gradient(160deg, ${C.verde} 0%, var(--c-08261a) 100%)`, color: C.creme }}>
       <div style={{ maxWidth: 980, margin: "0 auto", padding: "28px 16px 36px" }}>
         <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12, marginBottom: 22 }}>
           <img src={LOGO} alt="Condomínio de Chácaras Bom Jardims" width={520} height={293} style={{ width: "min(170px, 42vw)", height: "auto" }} />
@@ -52,10 +52,10 @@ function Topo({ titulo, subtitulo, voltar }: { titulo: string; subtitulo: string
 
 function Rodape() {
   return (
-    <footer style={{ background: "#08261A", color: C.creme, padding: "28px 16px", fontSize: 13 }}>
+    <footer style={{ background: "var(--c-08261a)", color: C.creme, padding: "28px 16px", fontSize: 13 }}>
       <div style={{ maxWidth: 980, margin: "0 auto", lineHeight: 1.6, opacity: 0.85 }}>
         <p style={{ margin: 0 }}>Condomínio de Chácaras Bom Jardims · Açailândia/MA</p>
-        <p style={{ margin: 0 }}>Romatec Consultoria Total · CRECI/MA 4.705 · Documentos para leitura — a versão válida é a assinada no seu contrato.</p>
+        <p style={{ margin: 0 }}>Romatec Consultoria Total, CRECI/MA 4.705, Documentos para leitura — a versão válida é a assinada no seu contrato.</p>
       </div>
     </footer>
   );
@@ -63,7 +63,7 @@ function Rodape() {
 
 function Destaques({ d }: { d: DocumentoCliente }) {
   return (
-    <section style={{ background: "#fff", border: "1px solid #E2D9BF", borderRadius: 16, padding: "20px 20px 8px" }}>
+    <section style={{ background: "var(--c-ffffff)", border: "1px solid var(--c-e2d9bf)", borderRadius: 16, padding: "20px 20px 8px" }}>
       <h2 style={{ fontFamily: SERIF, color: C.verde, fontSize: 22, margin: "0 0 12px" }}>Principais pontos</h2>
       <ul style={{ margin: 0, padding: 0, listStyle: "none" }}>
         {d.destaques.map(t => (
@@ -96,7 +96,7 @@ function LeitorPdf({ emp, doc }: { emp: string; doc: string }) {
     return () => { vivo = false; };
   }, [emp, doc, qsRef]);
 
-  if (erro) return <p style={{ padding: 24, textAlign: "center", color: "#8A2D2D" }}>{erro}</p>;
+  if (erro) return <p style={{ padding: 24, textAlign: "center", color: "var(--c-8a2d2d)" }}>{erro}</p>;
   if (paginas == null) return (
     <div style={{ padding: 40, textAlign: "center", color: C.suave }}>
       <Loader2 className="mx-auto mb-2 h-6 w-6 animate-spin" /> Preparando o documento para leitura…
@@ -113,7 +113,7 @@ function LeitorPdf({ emp, doc }: { emp: string; doc: string }) {
     <div style={{ overflowX: "auto", WebkitOverflowScrolling: "touch" } as React.CSSProperties}>
     <div {...bloquear} style={{ display: "grid", gap: 14, width: `${zoom * 100}%`, userSelect: "none", WebkitUserSelect: "none", WebkitTouchCallout: "none" } as React.CSSProperties}>
       {Array.from({ length: paginas }, (_, i) => (
-        <div key={i} style={{ position: "relative", background: "#fff", borderRadius: 6, boxShadow: "0 4px 18px rgba(12,51,32,0.14)", overflow: "hidden" }}>
+        <div key={i} style={{ position: "relative", background: "var(--c-ffffff)", borderRadius: 6, boxShadow: "0 4px 18px color-mix(in srgb, var(--c-0c3320) 14%, transparent)", overflow: "hidden" }}>
           <img src={`/api/public/documentos/${emp}/${doc}/${i + 1}.webp${qsRef}`} alt={`Página ${i + 1} de ${paginas}`} loading={i < 2 ? "eager" : "lazy"} draggable={false}
             style={{ display: "block", width: "100%", height: "auto", pointerEvents: "none" }} />
           {/* Camada por cima: toque longo e "salvar imagem" pegam ela, não a página */}
@@ -150,7 +150,7 @@ function Indice({ emp }: { emp: string }) {
         <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(min(100%, 300px), 1fr))", gap: 14 }}>
           {DOCUMENTOS_CLIENTE.map(d => (
             <Link key={d.slug} href={comRef(`/documentos/${emp}/${d.slug}`)}
-              style={{ display: "flex", gap: 14, alignItems: "flex-start", padding: 18, borderRadius: 16, background: "#fff", border: "1px solid #E2D9BF", color: C.texto, textDecoration: "none" }}>
+              style={{ display: "flex", gap: 14, alignItems: "flex-start", padding: 18, borderRadius: 16, background: "var(--c-ffffff)", border: "1px solid var(--c-e2d9bf)", color: C.texto, textDecoration: "none" }}>
               <span style={{ flexShrink: 0, width: 42, height: 42, borderRadius: 12, background: C.verde, color: C.dourado, display: "flex", alignItems: "center", justifyContent: "center" }}>
                 {d.forma === "cartao" ? <IdCard size={22} /> : <FileText size={22} />}
               </span>

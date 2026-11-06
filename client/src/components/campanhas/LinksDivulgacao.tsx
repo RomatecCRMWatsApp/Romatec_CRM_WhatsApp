@@ -52,7 +52,7 @@ function CardLink({ l, cartao, podeEditar, onEditar }: { l: Item; cartao: Return
           <div className="min-w-0">
             <p className="flex items-center gap-2 font-semibold">
               {l.destaque && <Star className="h-4 w-4 shrink-0 fill-amber-300 text-amber-300" />}{l.titulo}
-              {!l.ativo && <span className="rounded border border-border px-1.5 text-[10px] uppercase text-muted-foreground">pausado</span>}
+              {!l.ativo && <span className="rounded border border-border px-1.5 text-[10px] text-muted-foreground">pausado</span>}
             </p>
             <p className="text-xs text-muted-foreground">
               {[l.empreendimento, l.utmCampaign ? `campanha ${l.utmCampaign}` : null, l.fixo ? "link do sistema" : null].filter(Boolean).join(" · ")}
@@ -68,7 +68,7 @@ function CardLink({ l, cartao, podeEditar, onEditar }: { l: Item; cartao: Return
         </div>
         <a href={link} target="_blank" rel="noreferrer" className="block break-all rounded-md border border-border bg-secondary/30 px-2 py-1.5 font-mono text-xs text-emerald-300">{link}</a>
         <div className="rounded-lg border border-border bg-secondary/20 p-3">
-          <p className="mb-1 text-[11px] uppercase tracking-wide text-muted-foreground">Texto para o WhatsApp</p>
+          <p className="mb-1 text-[11px] text-muted-foreground">Texto para o WhatsApp</p>
           <p className="whitespace-pre-wrap text-sm">{texto}</p>
         </div>
         <div className="flex flex-wrap gap-2">
@@ -102,11 +102,11 @@ function CardInstagram({ cartao }: { cartao: ReturnType<typeof useCartaoVendas> 
     copiar(texto, "Texto");
   };
   return (
-    <Card className="border-[#DD2A7B]/50 bg-gradient-to-br from-[#DD2A7B]/10 via-card to-card lg:col-span-2">
+    <Card className="border-[color:var(--c-dd2a7b)]/50 bg-gradient-to-br from-[color:var(--c-dd2a7b)]/10 via-card to-card lg:col-span-2">
       <CardContent className="space-y-3 py-4">
         <div className="flex flex-wrap items-start justify-between gap-2">
           <div className="min-w-0">
-            <p className="flex items-center gap-2 font-semibold"><Instagram className="h-4 w-4 text-[#DD2A7B]" /> Siga meu Instagram — peça para o cliente seguir e compartilhar</p>
+            <p className="flex items-center gap-2 font-semibold"><Instagram className="h-4 w-4 text-[color:var(--c-dd2a7b)]" /> Siga meu Instagram — peça para o cliente seguir e compartilhar</p>
             <p className="text-sm text-muted-foreground">
               Mande no fim do atendimento: agradecimento, um versículo e o pedido para seguir <b className="text-foreground">@{usuario}</b> e compartilhar com familiares e amigos.
             </p>
@@ -122,9 +122,9 @@ function CardInstagram({ cartao }: { cartao: ReturnType<typeof useCartaoVendas> 
             </select>
           </label>
         </div>
-        <a href={link} target="_blank" rel="noreferrer" className="block break-all rounded-md border border-border bg-secondary/30 px-2 py-1.5 font-mono text-xs text-[#F58529]">{link}</a>
+        <a href={link} target="_blank" rel="noreferrer" className="block break-all rounded-md border border-border bg-secondary/30 px-2 py-1.5 font-mono text-xs text-[color:var(--c-f58529)]">{link}</a>
         <div className="rounded-lg border border-border bg-secondary/20 p-3">
-          <p className="mb-1 text-[11px] uppercase tracking-wide text-muted-foreground">Texto para o WhatsApp</p>
+          <p className="mb-1 text-[11px] text-muted-foreground">Texto para o WhatsApp</p>
           <p className="whitespace-pre-wrap text-sm">{texto}</p>
         </div>
         <div className="flex flex-wrap gap-2">

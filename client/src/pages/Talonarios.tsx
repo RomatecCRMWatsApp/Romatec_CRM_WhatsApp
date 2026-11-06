@@ -137,8 +137,8 @@ export default function Talonarios() {
             <div key={t.id} className="rounded-lg border border-border/60 p-2 text-sm">
               <button type="button" className="flex w-full flex-wrap items-center gap-2 text-left" onClick={() => setAberto(aberto === t.id ? null : t.id)}>
                 <b>{t.tipo === "CONTRATO" ? "Contratos" : "Recibos"} {t.numeroInicial}–{t.numeroFinal}</b>
-                <span className="text-xs text-muted-foreground">{t.corretor}{t.externo ? " (externo)" : ""} · entregue em {String(t.entregueEm).split("-").reverse().join("/")}</span>
-                <span className="ml-auto text-xs">{t.utilizadas} usada(s) · {t.emBranco} em branco{t.canceladas ? ` · ${t.canceladas} cancelada(s)` : ""}{t.extraviadas ? ` · ${t.extraviadas} extraviada(s)` : ""}</span>
+                <span className="text-xs text-muted-foreground">{t.corretor}{t.externo ? " (externo)" : ""}, entregue em {String(t.entregueEm).split("-").reverse().join("/")}</span>
+                <span className="ml-auto text-xs">{t.utilizadas} usada(s), {t.emBranco} em branco{t.canceladas ? `, ${t.canceladas} cancelada(s)` : ""}{t.extraviadas ? `, ${t.extraviadas} extraviada(s)` : ""}</span>
               </button>
               {aberto === t.id && <Folhas t={t} onMudou={atualizar} />}
             </div>

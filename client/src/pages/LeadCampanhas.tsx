@@ -253,7 +253,7 @@ export default function LeadCampanhas() {
                         <div className="flex items-center gap-2 flex-wrap">
                           <span className="font-mono text-sm font-bold text-emerald-300">#{c.codigo}</span>
                           <span className="text-sm text-foreground">{c.nome}</span>
-                          <span className="text-[10px] uppercase tracking-wide px-1.5 py-0.5 rounded border border-border text-muted-foreground">{c.funil === "proprietario" ? "Proprietário" : "Comprador"}</span>
+                          <span className="text-[10px] px-1.5 py-0.5 rounded border border-border text-muted-foreground">{c.funil === "proprietario" ? "Proprietário" : "Comprador"}</span>
                         </div>
                         <p className="text-xs text-muted-foreground mt-1">
                           {CANAL_LABEL[c.canal] || c.canal}

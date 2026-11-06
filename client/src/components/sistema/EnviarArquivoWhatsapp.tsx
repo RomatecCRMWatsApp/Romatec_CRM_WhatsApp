@@ -45,7 +45,7 @@ export default function EnviarArquivoWhatsapp() {
         <div className="grid gap-2 sm:grid-cols-2">
           <label className="text-xs text-muted-foreground">Para (escolher da equipe)
             <select className={campo} value="" onChange={e => e.target.value && setTelefone(maskPhone(e.target.value))}>
-              <option value="">— ou digite o número ao lado —</option>
+              <option value="">Escolha, ou digite o número ao lado</option>
               {pessoas.map((p: any) => <option key={p.id} value={p.telefone}>{p.nome} · {maskPhone(p.telefone)}</option>)}
             </select>
           </label>

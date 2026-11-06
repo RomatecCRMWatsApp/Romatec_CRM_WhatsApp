@@ -102,7 +102,7 @@ function MercadoPago() {
   return (
     <section className="space-y-2 rounded-xl border border-border bg-card p-4 text-sm">
       <h2 className="text-sm font-semibold">Mercado Pago — modo {data.modo === "producao" ? <span className="text-emerald-300">PRODUÇÃO (cobrança real)</span> : <span className="text-amber-300">TESTE (sem dinheiro real)</span>}</h2>
-      <p className="text-xs text-muted-foreground">Credencial de teste: {ok(data.teste)} · produção: {ok(data.producao)} · segredo do webhook: {ok(data.webhook)}</p>
+      <p className="text-xs text-muted-foreground">Credencial de teste: {ok(data.teste)}, produção: {ok(data.producao)}, segredo do webhook: {ok(data.webhook)}</p>
       {data.modo === "teste" ? (
         <Button size="sm" variant="outline" disabled={!data.producao || definir.isPending} onClick={() => { if (confirm("Ligar a cobrança REAL no Mercado Pago? Só com a autorização do José.")) definir.mutate({ modo: "producao" }); }}>Ligar produção (cobrança real)</Button>
       ) : (
@@ -249,7 +249,7 @@ function PlanosECupons() {
         <h3 className="flex items-center gap-2 text-sm font-semibold"><Ticket className="h-4 w-4" /> Cupons</h3>
         {!temFundador && (
           <Button size="sm" variant="outline" disabled={criar.isPending} onClick={() => criar.mutate({ codigo: "FUNDADOR", tipo: "PRECO_FIXO", precosFixos: CUPOM_FUNDADOR.precoFixo, limiteUsos: CUPOM_FUNDADOR.limiteUsos, duracaoCiclos: CUPOM_FUNDADOR.duracaoCiclos, descricao: "Preço fundador: 20 primeiros corretores, 12 meses" })}>
-            Criar o cupom FUNDADOR (R$ 69,90 / R$ 129,90 · 20 usos · 12 meses)
+            Criar o cupom FUNDADOR (R$ 69,90 / R$ 129,90, 20 usos, 12 meses)
           </Button>
         )}
         <div className="grid items-end gap-2 md:grid-cols-7">

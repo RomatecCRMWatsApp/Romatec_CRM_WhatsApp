@@ -24,7 +24,7 @@ export default function LinkAgendamento({ slug, nome, compacto }: { slug: string
     <div className={`flex flex-wrap items-center gap-1.5 ${compacto ? "" : "rounded-lg border border-border p-2.5"}`}>
       {!compacto && <p className="flex w-full items-center gap-1.5 text-xs text-muted-foreground"><CalendarCheck className="h-3.5 w-3.5" /> Link de agendamento (formulário que vira lead e pedido na sua agenda)</p>}
       <Button size="sm" variant="outline" className="h-8 text-xs" onClick={copiar}><Copy className="mr-1 h-3.5 w-3.5" /> Copiar link de agendamento</Button>
-      <Button size="sm" variant="outline" className="h-8 text-xs border-[#25d366]/40 text-[#1fa855] hover:text-[#1fa855]" onClick={compartilhar}><Share2 className="mr-1 h-3.5 w-3.5" /> Compartilhar</Button>
+      <Button size="sm" variant="outline" className="h-8 text-xs border-[color:var(--c-25d366)]/40 text-[color:var(--c-1fa855)] hover:text-[color:var(--c-1fa855)]" onClick={compartilhar}><Share2 className="mr-1 h-3.5 w-3.5" /> Compartilhar</Button>
     </div>
   );
 }

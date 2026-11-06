@@ -58,8 +58,8 @@ export function AvisoLeadEncaminhado({ leadId, aoMudar }: { leadId: number; aoMu
   const quando = data.quando ? new Date(data.quando).toLocaleString("pt-BR", { day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit" }) : "";
   return (
     <div className={`space-y-2 rounded-xl border px-4 py-3 ${data.recebidoEm ? "border-emerald-500/40 bg-emerald-500/5" : "border-amber-500/50 bg-amber-500/10"}`}>
-      <p className="text-sm">📨 Lead encaminhado para você {data.por ? `por ${data.por}` : ""} em {quando}{data.recebidoEm ? " · recebimento confirmado" : ""}</p>
-      {data.observacao && <p className="text-xs text-muted-foreground">📝 {data.observacao}</p>}
+      <p className="text-sm">Lead encaminhado para você {data.por ? `por ${data.por}` : ""} em {quando}{data.recebidoEm ? " · recebimento confirmado" : ""}</p>
+      {data.observacao && <p className="text-xs text-muted-foreground">{data.observacao}</p>}
       <AcoesRecebimento id={data.id} recebido={!!data.recebidoEm} aoMudar={aoMudar} />
     </div>
   );

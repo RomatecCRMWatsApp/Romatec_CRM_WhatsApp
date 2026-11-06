@@ -179,21 +179,21 @@ export default function Mapa3D({ lotes, selected, onSelect, dados, destaque, alt
   const sel = selected ? byCodigo.get(selected) : undefined;
   const livres = lotes.filter(l => l.status === "disponivel").length;
   const botao: React.CSSProperties = { display: "inline-flex", alignItems: "center", gap: 6, padding: "8px 12px", borderRadius: 10, border: "1px solid #CFD8BF", background: "#fff", color: "#0C3320", fontWeight: 700, fontSize: 13, cursor: "pointer" };
-  if (erro) return <p style={{ color: "#0C3320" }}>Não foi possível abrir o mapa 3D agora.</p>;
+  if (erro) return <p style={{ color: "var(--c-0c3320)" }}>Não foi possível abrir o mapa 3D agora.</p>;
   return (
     <div>
-      <div style={{ position: "relative", height: altura, minHeight: 360, borderRadius: 16, overflow: "hidden", border: "1px solid #CFD8BF", background: "#C9D9AE" }}>
+      <div style={{ position: "relative", height: altura, minHeight: 360, borderRadius: 16, overflow: "hidden", border: "1px solid var(--c-cfd8bf)", background: "var(--c-c9d9ae)" }}>
         <div ref={caixa} style={{ position: "absolute", inset: 0 }} />
-        {!pronto && <div style={{ position: "absolute", inset: 0, display: "flex", alignItems: "center", justifyContent: "center", color: "#0C3320", gap: 8 }}><Loader2 className="h-5 w-5 animate-spin" /> Carregando o mapa 3D…</div>}
+        {!pronto && <div style={{ position: "absolute", inset: 0, display: "flex", alignItems: "center", justifyContent: "center", color: "var(--c-0c3320)", gap: 8 }}><Loader2 className="h-5 w-5 animate-spin" /> Carregando o mapa 3D…</div>}
         {pronto && !destaque && (
           <div style={{ position: "absolute", left: 10, top: 10, display: "flex", gap: 6, flexWrap: "wrap", maxWidth: "calc(100% - 70px)" }}>
             {!semBuscador && <button type="button" style={botao} onClick={() => setFiltro(f => ({ ...f, aberto: !f.aberto }))}><SlidersHorizontal size={15} /> Buscar chácaras</button>}
 
             <button type="button" style={botao} onClick={() => setGirando(g => !g)}><Rotate3d size={15} /> {girando ? "Parar" : "Girar"}</button>
-            <div role="group" aria-label="Vista do mapa" style={{ display: "inline-flex", borderRadius: 10, border: "1px solid #CFD8BF", overflow: "hidden", background: "#fff" }}>
+            <div role="group" aria-label="Vista do mapa" style={{ display: "inline-flex", borderRadius: 10, border: "1px solid var(--c-cfd8bf)", overflow: "hidden", background: "var(--c-ffffff)" }}>
               {([["plano", "Plano", Rotate3d], ["relevo", "Alto relevo", Mountain], ["cima", "Vista de cima", Compass]] as const).map(([k, r, Icone]) => (
                 <button key={k} type="button" aria-pressed={vista === k} onClick={() => setVista(k)}
-                  style={{ display: "inline-flex", alignItems: "center", gap: 5, padding: "8px 10px", border: "none", fontWeight: 700, fontSize: 12, cursor: "pointer", background: vista === k ? "#0C3320" : "transparent", color: vista === k ? "#fff" : "#0C3320" }}>
+                  style={{ display: "inline-flex", alignItems: "center", gap: 5, padding: "8px 10px", border: "none", fontWeight: 700, fontSize: 12, cursor: "pointer", background: vista === k ? "var(--c-0c3320)" : "transparent", color: vista === k ? "var(--c-ffffff)" : "var(--c-0c3320)" }}>
                   <Icone size={14} /> {r}
                 </button>
               ))}
@@ -201,16 +201,16 @@ export default function Mapa3D({ lotes, selected, onSelect, dados, destaque, alt
           </div>
         )}
         {filtro.aberto && (
-          <div style={{ position: "absolute", left: 10, top: 56, width: 250, padding: 12, borderRadius: 12, background: "rgba(255,255,255,0.96)", color: "#23352A", fontSize: 13, boxShadow: "0 6px 20px #0003" }}>
+          <div style={{ position: "absolute", left: 10, top: 56, width: 250, padding: 12, borderRadius: 12, background: "color-mix(in srgb, var(--c-ffffff) 96%, transparent)", color: "var(--c-23352a)", fontSize: 13, boxShadow: "0 6px 20px var(--c-00000033)" }}>
             <label style={{ display: "flex", gap: 8, alignItems: "center", marginBottom: 10 }}>
               <input type="checkbox" checked={filtro.soLivres} onChange={e => setFiltro(f => ({ ...f, soLivres: e.target.checked }))} /> Só disponíveis ({livres})
             </label>
             <label style={{ display: "block" }}>Área mínima: <b>{filtro.areaMin ? `${filtro.areaMin.toLocaleString("pt-BR")} m²` : "qualquer"}</b>
-              <input type="range" min={0} max={6000} step={250} value={filtro.areaMin} onChange={e => setFiltro(f => ({ ...f, areaMin: Number(e.target.value) }))} style={{ width: "100%", accentColor: "#0C3320" }} />
+              <input type="range" min={0} max={6000} step={250} value={filtro.areaMin} onChange={e => setFiltro(f => ({ ...f, areaMin: Number(e.target.value) }))} style={{ width: "100%", accentColor: "var(--c-0c3320)" }} />
             </label>
           </div>
         )}
-        {pronto && <p style={{ position: "absolute", left: 10, bottom: 8, margin: 0, fontSize: 11, color: "#0C3320", textShadow: "0 0 3px #fff" }}>Dois dedos giram e inclinam · toque numa chácara</p>}
+        {pronto && <p style={{ position: "absolute", left: 10, bottom: 8, margin: 0, fontSize: 11, color: "var(--c-0c3320)", textShadow: "0 0 3px var(--c-ffffff)" }}>Dois dedos giram e inclinam · toque numa chácara</p>}
       </div>
       {!destaque && (
         <div style={{ display: "flex", flexWrap: "wrap", gap: 12, marginTop: 10, fontSize: 13 }}>
@@ -220,7 +220,7 @@ export default function Mapa3D({ lotes, selected, onSelect, dados, destaque, alt
         </div>
       )}
       {sel && !destaque && !corDoLote && (
-        <p style={{ marginTop: 8, fontSize: 14 }}><b>Chácara {sel.codigo}</b>{sel.areaM2 ? ` · ${sel.areaM2.toLocaleString("pt-BR", { maximumFractionDigits: 2 })} m²` : ""} · {STATUS_LABEL[sel.status]} · <a href={`/bom-jardims/chacara/${sel.codigo}`} style={{ color: "#0C3320", fontWeight: 700 }}>ver detalhes</a></p>
+        <p style={{ marginTop: 8, fontSize: 14 }}><b>Chácara {sel.codigo}</b>{sel.areaM2 ? ` · ${sel.areaM2.toLocaleString("pt-BR", { maximumFractionDigits: 2 })} m²` : ""} · {STATUS_LABEL[sel.status]} · <a href={`/bom-jardims/chacara/${sel.codigo}`} style={{ color: "var(--c-0c3320)", fontWeight: 700 }}>ver detalhes</a></p>
       )}
     </div>
   );

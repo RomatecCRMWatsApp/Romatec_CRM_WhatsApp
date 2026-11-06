@@ -172,7 +172,7 @@ export default function Assinatura() {
             <div className="rounded-[18px] border border-[var(--rt-gold)]/50 bg-[var(--rt-surface)] p-4 text-sm">
               <p>{checkout.mensagem}</p>
               <a href={`https://wa.me/${checkout.whatsapp}?text=${encodeURIComponent("Olá! Quero assinar o Romatec CRM.")}`} target="_blank" rel="noopener noreferrer"
-                className="mt-3 inline-flex items-center gap-2 rounded-full bg-[#1F8A4C] px-4 py-2 font-semibold text-white"><MessageCircle className="h-4 w-4" /> Falar com a Romatec</a>
+                className="mt-3 inline-flex items-center gap-2 rounded-full bg-[color:var(--c-1f8a4c)] px-4 py-2 font-semibold text-white"><MessageCircle className="h-4 w-4" /> Falar com a Romatec</a>
             </div>
           )}
           {checkout && checkout.disponivel && checkout.tipo !== "redirecionar" && (

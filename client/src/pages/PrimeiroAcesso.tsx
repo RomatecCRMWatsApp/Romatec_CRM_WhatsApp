@@ -31,7 +31,7 @@ export default function PrimeiroAcesso() {
   const rotulo = "block text-xs font-bold uppercase tracking-[2px] text-[var(--rt-gold)] mb-1";
 
   return (
-    <div className="min-h-screen flex flex-col items-center justify-center gap-6 p-4" style={{ background: "radial-gradient(circle at 50% 30%, #0A1F14 0%, #000 62%)" }}>
+    <div className="min-h-screen flex flex-col items-center justify-center gap-6 p-4" style={{ background: "radial-gradient(circle at 50% 30%, var(--c-0a1f14) 0%, var(--c-000000) 62%)" }}>
       <RomatecLockup variant="stack" height={72} />
       <div className="w-full max-w-md rounded-[18px] border border-[var(--rt-border)] bg-[var(--rt-surface)] p-7">
         <h1 className="text-[22px] font-semibold text-[var(--rt-gold-light)] text-center mb-1" style={{ fontFamily: "var(--rt-font-title)" }}>Primeiro acesso</h1>

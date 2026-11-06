@@ -121,7 +121,7 @@ function Distribuir({ aoEncaminhar }: { aoEncaminhar: () => void }) {
               {lista.map(l => (
                 <tr key={l.id} className={`border-t border-border ${sel.has(l.id) ? "bg-emerald-500/10" : ""}`} onClick={() => alternar(l.id)}>
                   <td className="p-2"><input type="checkbox" aria-label={`Selecionar ${l.nome}`} checked={sel.has(l.id)} onChange={() => alternar(l.id)} onClick={e => e.stopPropagation()} /></td>
-                  <td className="p-2 font-medium"><Link href={`/leads/lead/${l.id}`} onClick={(e: any) => e.stopPropagation()} className="hover:underline">{l.nome}</Link>{l.score === "quente" && <span className="ml-1 text-[10px] text-orange-400">🔥</span>}</td>
+                  <td className="p-2 font-medium"><Link href={`/leads/lead/${l.id}`} onClick={(e: any) => e.stopPropagation()} className="hover:underline">{l.nome}</Link>{l.score === "quente" && <span className="ml-1 text-[10px] text-orange-400"></span>}</td>
                   <td className="p-2 whitespace-nowrap">{l.telefone}</td>
                   <td className="p-2 text-xs">{l.score === "quente" ? "🔥 quente" : l.score === "morno" ? "🌡️ morno" : "❄️ frio"}</td>
                   <td className="p-2 text-xs text-muted-foreground">{l.origem ?? "—"}</td>
@@ -230,10 +230,10 @@ function Relatorio() {
           </div>
           {!!data.porCorretor.length && (
             <div className="rounded-lg border border-border bg-card p-3">
-              <p className="mb-2 text-xs font-semibold uppercase tracking-wider text-muted-foreground">Por corretor</p>
+              <p className="mb-2 text-xs font-semibold text-muted-foreground">Por corretor</p>
               <div className="flex flex-wrap gap-2">
                 {data.porCorretor.map(c => (
-                  <span key={c.corretor} className="rounded-md bg-secondary/40 px-2 py-1 text-xs"><b>{c.corretor}</b>: {c.total} recebidos ({c.manual} manual · {c.automatico} automático) · {c.confirmados} confirmados{c.aguardando ? <span className="text-amber-300"> · {c.aguardando} sem confirmar</span> : null} · {c.vendidos} vendidos · {c.perdidos} perdidos</span>
+                  <span key={c.corretor} className="rounded-md bg-secondary/40 px-2 py-1 text-xs"><b>{c.corretor}</b>: {c.total} recebidos ({c.manual} manual, {c.automatico} automático), {c.confirmados} confirmados{c.aguardando ? <span className="text-amber-300">, {c.aguardando} sem confirmar</span> : null}, {c.vendidos} vendidos, {c.perdidos} perdidos</span>
                 ))}
               </div>
             </div>
@@ -254,7 +254,7 @@ function Relatorio() {
                       <td className="p-2 text-xs font-semibold">{i.para}</td>
                       <td className="p-2 text-xs">{i.por ?? "—"}</td>
                       <td className="p-2 text-xs">{i.continuaCom}</td>
-                      <td className="whitespace-nowrap p-2 text-xs">{i.recebidoEm ? <span className="text-emerald-300">✔ {dataHora(i.recebidoEm)}</span> : i.desfecho ? "—" : (
+                      <td className="whitespace-nowrap p-2 text-xs">{i.recebidoEm ? <span className="text-emerald-300">{dataHora(i.recebidoEm)}</span> : i.desfecho ? "—" : (
                         <span className="flex items-center gap-1 text-amber-300">aguardando
                           <button type="button" className="rounded border border-amber-500/60 px-1.5 py-0.5 text-[10px] text-amber-200 hover:bg-amber-500/20" disabled={reenviar.isPending}
                             onClick={() => reenviar.mutate({ ids: [i.id] })} title="Reenviar o aviso para o corretor">Reenviar</button>

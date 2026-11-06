@@ -155,7 +155,7 @@ export default function Zaira() {
 
         {/* ── Header ── */}
         <div style={{ background: COLORS.bg2, borderBottom: `1px solid ${COLORS.neonDim}`, padding: '12px 16px', display: 'flex', alignItems: 'center', gap: 12, position: 'sticky', top: 0, zIndex: 10 }}>
-          <div style={{ width: 36, height: 36, borderRadius: '50%', background: COLORS.bg3, border: `2px solid ${COLORS.neon}`, display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: `0 0 12px rgba(0,255,136,0.3)` }}>
+          <div style={{ width: 36, height: 36, borderRadius: '50%', background: COLORS.bg3, border: `2px solid ${COLORS.neon}`, display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: `0 0 12px color-mix(in srgb, var(--c-00ff88) 30%, transparent)` }}>
             <Bot size={18} color={COLORS.neon} />
           </div>
           <div style={{ flex: 1 }}>
@@ -201,8 +201,8 @@ export default function Zaira() {
                   <div>
                     <div style={{
                       padding: '9px 13px', borderRadius: 14, fontSize: 13, lineHeight: 1.55,
-                      background: msg.role === 'user' ? COLORS.bg3 : 'rgba(0,255,136,0.06)',
-                      border: `1px solid ${msg.role === 'user' ? 'rgba(0,255,136,0.15)' : 'rgba(0,255,136,0.18)'}`,
+                      background: msg.role === 'user' ? COLORS.bg3 : 'color-mix(in srgb, var(--c-00ff88) 6%, transparent)',
+                      border: `1px solid ${msg.role === 'user' ? 'color-mix(in srgb, var(--c-00ff88) 15%, transparent)' : 'color-mix(in srgb, var(--c-00ff88) 18%, transparent)'}`,
                       color: msg.role === 'assistant' ? COLORS.text : COLORS.text,
                       borderBottomRightRadius: msg.role === 'user' ? 4 : 14,
                       borderBottomLeftRadius:  msg.role === 'assistant' ? 4 : 14,
@@ -212,8 +212,8 @@ export default function Zaira() {
                     {msg.toolsUsed && msg.toolsUsed.length > 0 && (
                       <div style={{ display: 'flex', gap: 4, flexWrap: 'wrap', marginTop: 4 }}>
                         {msg.toolsUsed.map(t => (
-                          <span key={t} style={{ fontSize: 9, padding: '1px 6px', borderRadius: 6, background: 'rgba(0,255,136,0.1)', color: COLORS.neon, border: `1px solid ${COLORS.neonDim}` }}>
-                            🔧 {t}
+                          <span key={t} style={{ fontSize: 9, padding: '1px 6px', borderRadius: 6, background: 'color-mix(in srgb, var(--c-00ff88) 10%, transparent)', color: COLORS.neon, border: `1px solid ${COLORS.neonDim}` }}>
+                            {t}
                           </span>
                         ))}
                       </div>
@@ -226,7 +226,7 @@ export default function Zaira() {
                   <div style={{ width: 28, height: 28, borderRadius: '50%', background: COLORS.bg3, border: `1px solid ${COLORS.neon}`, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                     <Bot size={13} color={COLORS.neon} />
                   </div>
-                  <div style={{ padding: '9px 13px', borderRadius: 14, background: 'rgba(0,255,136,0.06)', border: `1px solid rgba(0,255,136,0.18)`, display: 'flex', gap: 4, alignItems: 'center' }}>
+                  <div style={{ padding: '9px 13px', borderRadius: 14, background: 'color-mix(in srgb, var(--c-00ff88) 6%, transparent)', border: `1px solid color-mix(in srgb, var(--c-00ff88) 18%, transparent)`, display: 'flex', gap: 4, alignItems: 'center' }}>
                     {[0, 1, 2].map(i => (
                       <div key={i} style={{ width: 6, height: 6, borderRadius: '50%', background: COLORS.neon, opacity: 0.6, animation: `pulse 1.2s ${i * 0.4}s infinite` }} />
                     ))}
@@ -288,11 +288,11 @@ export default function Zaira() {
               <div style={{ fontWeight: 600, marginBottom: 10, fontSize: 12, color: COLORS.neon, letterSpacing: 1 }}>CONTROLE DO AGENTE</div>
               <div style={{ display: 'flex', gap: 8 }}>
                 <button onClick={async () => { await startMutation.mutateAsync(); void refetchStatus(); toast.success('Zaira iniciada!'); }} disabled={startMutation.isPending}
-                  style={{ flex: 1, padding: '9px', borderRadius: 8, background: 'rgba(0,255,136,0.12)', border: `1px solid ${COLORS.neon}`, color: COLORS.neon, cursor: 'pointer', fontSize: 12, fontWeight: 600 }}>
+                  style={{ flex: 1, padding: '9px', borderRadius: 8, background: 'color-mix(in srgb, var(--c-00ff88) 12%, transparent)', border: `1px solid ${COLORS.neon}`, color: COLORS.neon, cursor: 'pointer', fontSize: 12, fontWeight: 600 }}>
                   <Play size={12} style={{ display: 'inline', marginRight: 4 }} /> Iniciar
                 </button>
                 <button onClick={async () => { await stopMutation.mutateAsync(); void refetchStatus(); toast.info('Zaira pausada.'); }} disabled={stopMutation.isPending}
-                  style={{ flex: 1, padding: '9px', borderRadius: 8, background: 'rgba(255,68,68,0.1)', border: `1px solid ${COLORS.red}`, color: COLORS.red, cursor: 'pointer', fontSize: 12, fontWeight: 600 }}>
+                  style={{ flex: 1, padding: '9px', borderRadius: 8, background: 'color-mix(in srgb, var(--c-ff4444) 10%, transparent)', border: `1px solid ${COLORS.red}`, color: COLORS.red, cursor: 'pointer', fontSize: 12, fontWeight: 600 }}>
                   <Square size={12} style={{ display: 'inline', marginRight: 4 }} /> Pausar
                 </button>
                 <button onClick={() => { void refetchStatus(); }} style={{ padding: '9px 12px', borderRadius: 8, background: COLORS.bg3, border: `1px solid ${COLORS.neonDim}`, color: COLORS.textDim, cursor: 'pointer' }}>
@@ -308,7 +308,7 @@ export default function Zaira() {
             {/* Database stats */}
             {db && (
               <div style={{ marginBottom: 12 }}>
-                <div style={{ fontSize: 11, color: COLORS.textDim, marginBottom: 8, letterSpacing: 1, textTransform: 'uppercase' }}>🗄️ Database MySQL</div>
+                <div style={{ fontSize: 11, color: COLORS.textDim, marginBottom: 8, letterSpacing: 1, textTransform: 'uppercase' }}>Database MySQL</div>
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
                   <StatusCard icon={Users}         title="Contatos"     value={db.contacts?.total ?? '—'} sub={`${db.contacts?.active ?? 0} ativos`} />
                   <StatusCard icon={TrendingUp}     title="Leads"        value={db.leads?.total ?? '—'}    sub={`${db.leads?.quente ?? 0} quentes 🔥`} color={db.leads?.quente > 0 ? COLORS.orange : COLORS.neon} />
@@ -320,7 +320,7 @@ export default function Zaira() {
 
             {/* Railway status */}
             <div style={{ marginBottom: 12 }}>
-              <div style={{ fontSize: 11, color: COLORS.textDim, marginBottom: 8, letterSpacing: 1, textTransform: 'uppercase' }}>🚂 Railway Produção</div>
+              <div style={{ fontSize: 11, color: COLORS.textDim, marginBottom: 8, letterSpacing: 1, textTransform: 'uppercase' }}>Railway Produção</div>
               <div style={{ background: COLORS.bg2, border: `1px solid ${COLORS.neonDim}`, borderRadius: 12, padding: 14 }}>
                 {ry ? (
                   <>
@@ -341,7 +341,7 @@ export default function Zaira() {
             {/* GitHub status */}
             {gh?.available && (
               <div style={{ marginBottom: 12 }}>
-                <div style={{ fontSize: 11, color: COLORS.textDim, marginBottom: 8, letterSpacing: 1, textTransform: 'uppercase' }}>🐙 GitHub</div>
+                <div style={{ fontSize: 11, color: COLORS.textDim, marginBottom: 8, letterSpacing: 1, textTransform: 'uppercase' }}>GitHub</div>
                 <div style={{ background: COLORS.bg2, border: `1px solid ${COLORS.neonDim}`, borderRadius: 12, padding: 14 }}>
                   <div style={{ fontWeight: 600, color: COLORS.neon, marginBottom: 6, fontSize: 13 }}>{gh.name}</div>
                   <div style={{ fontSize: 11, color: COLORS.textDim, marginBottom: 8 }}>Issues abertas: {gh.openIssues ?? 0}</div>
@@ -358,7 +358,7 @@ export default function Zaira() {
             {/* Clear chat */}
             <button onClick={async () => { await clearMutation.mutateAsync(); setMessages([{ role: 'assistant', content: '🧹 Histórico de conversa limpo!', timestamp: new Date() }]); toast.success('Histórico limpo.'); }}
               style={{ width: '100%', padding: '10px', borderRadius: 8, background: 'transparent', border: `1px solid ${COLORS.neonDim}`, color: COLORS.textDim, cursor: 'pointer', fontSize: 12 }}>
-              🗑️ Limpar histórico de conversa
+              Limpar histórico de conversa
             </button>
           </div>
         )}
@@ -412,7 +412,7 @@ export default function Zaira() {
                 <div key={k.id} style={{ padding: '10px 12px', marginBottom: 8, borderRadius: 10, background: COLORS.bg2, border: `1px solid ${COLORS.neonDim}` }}>
                   <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 4 }}>
                     <span style={{ fontSize: 12, fontWeight: 600, color: COLORS.neon }}>{k.title}</span>
-                    <span style={{ fontSize: 9, padding: '2px 6px', borderRadius: 6, background: 'rgba(0,255,136,0.1)', color: COLORS.neon, border: `1px solid ${COLORS.neonDim}`, textTransform: 'uppercase' }}>{k.category}</span>
+                    <span style={{ fontSize: 9, padding: '2px 6px', borderRadius: 6, background: 'color-mix(in srgb, var(--c-00ff88) 10%, transparent)', color: COLORS.neon, border: `1px solid ${COLORS.neonDim}`, textTransform: 'uppercase' }}>{k.category}</span>
                   </div>
                   <div style={{ fontSize: 12, color: COLORS.textDim, lineHeight: 1.5 }}>{k.content}</div>
                   <div style={{ marginTop: 6, fontSize: 10, color: COLORS.bg3 }}>{k.tags}</div>

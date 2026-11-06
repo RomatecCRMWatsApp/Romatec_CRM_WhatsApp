@@ -56,22 +56,22 @@ export default function ReuniaoPublica() {
   return (
     <div style={fundo}>
       <div style={{ maxWidth: 560, margin: "0 auto" }}>
-        <div style={{ background: C.verde, color: "#fff", borderRadius: "18px 18px 0 0", padding: "22px 22px 18px", borderBottom: `4px solid ${C.dourado}` }}>
+        <div style={{ background: C.verde, color: "var(--c-ffffff)", borderRadius: "18px 18px 0 0", padding: "22px 22px 18px", borderBottom: `4px solid ${C.dourado}` }}>
           <div style={{ fontSize: 13, letterSpacing: 1, textTransform: "uppercase", color: C.destaque }}>Convite para reunião{p.empreendimento ? ` · ${p.empreendimento}` : ""}</div>
           <h1 style={{ fontFamily: SERIF, fontSize: 26, margin: "8px 0 0", lineHeight: 1.2 }}>{p.titulo}</h1>
         </div>
-        <div style={{ background: "#fff", borderRadius: "0 0 18px 18px", padding: 22, boxShadow: "0 6px 24px rgba(12,51,32,.08)" }}>
+        <div style={{ background: "var(--c-ffffff)", borderRadius: "0 0 18px 18px", padding: 22, boxShadow: "0 6px 24px color-mix(in srgb, var(--c-0c3320) 8%, transparent)" }}>
           {p.convidado && <p style={{ marginTop: 0, fontSize: 17 }}>Olá, <b>{p.convidado.nome.split(" ")[0]}</b>!</p>}
           <p style={{ display: "flex", gap: 10, alignItems: "flex-start", margin: "10px 0", fontSize: 16 }}><CalendarDays size={20} color={C.verde} style={{ flexShrink: 0 }} /> <span style={{ textTransform: "capitalize" }}>{p.quandoTexto}</span></p>
           {p.local && <p style={{ display: "flex", gap: 10, alignItems: "flex-start", margin: "10px 0", fontSize: 16 }}><MapPin size={20} color={C.verde} style={{ flexShrink: 0 }} /> {p.local}</p>}
           {p.linkVideo && <p style={{ display: "flex", gap: 10, alignItems: "flex-start", margin: "10px 0", fontSize: 16 }}><Video size={20} color={C.verde} style={{ flexShrink: 0 }} /> <a href={p.linkVideo} target="_blank" rel="noreferrer" style={{ color: C.verde, fontWeight: 700, wordBreak: "break-all" }}>Entrar na videochamada</a></p>}
           {p.descricao && <p style={{ whiteSpace: "pre-wrap", color: C.suave, lineHeight: 1.5 }}>{p.descricao}</p>}
           {p.folder && (imagem
-            ? <a href={p.folder.url} target="_blank" rel="noreferrer"><img src={p.folder.url} alt="Folder da reunião" style={{ width: "100%", borderRadius: 12, margin: "8px 0", border: "1px solid #E6DEC6" }} /></a>
+            ? <a href={p.folder.url} target="_blank" rel="noreferrer"><img src={p.folder.url} alt="Folder da reunião" style={{ width: "100%", borderRadius: 12, margin: "8px 0", border: "1px solid var(--c-e6dec6)" }} /></a>
             : <a href={p.folder.url} target="_blank" rel="noreferrer" style={{ display: "flex", gap: 8, alignItems: "center", color: C.verde, fontWeight: 700, margin: "12px 0" }}><FileText size={20} /> Ver o folder da reunião (PDF)</a>)}
 
-          <div style={{ borderTop: "1px solid #EEE6CF", marginTop: 16, paddingTop: 16 }}>
-            {p.cancelada ? <p style={{ fontWeight: 700, color: "#B23A3A" }}>Esta reunião foi cancelada.</p>
+          <div style={{ borderTop: "1px solid var(--c-eee6cf)", marginTop: 16, paddingTop: 16 }}>
+            {p.cancelada ? <p style={{ fontWeight: 700, color: "var(--c-b23a3a)" }}>Esta reunião foi cancelada.</p>
               : p.encerrada ? <p style={{ fontWeight: 700, color: C.suave }}>O prazo para responder a este convite já terminou.</p>
               : resposta ? (
                 <div style={{ textAlign: "center", padding: "6px 0" }}>
@@ -89,12 +89,12 @@ export default function ReuniaoPublica() {
                       <input tabIndex={-1} autoComplete="off" value={f.website} onChange={e => setF({ ...f, website: e.target.value })} style={{ position: "absolute", left: -9999 }} aria-hidden="true" />
                     </div>
                   )}
-                  {erro && <p role="alert" style={{ color: "#B23A3A", fontWeight: 700 }}>{erro}</p>}
+                  {erro && <p role="alert" style={{ color: "var(--c-b23a3a)", fontWeight: 700 }}>{erro}</p>}
                   <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
-                    <button type="button" disabled={!!enviando || fechado} onClick={() => responder("confirmado")} style={botao("#1F8A4C", true)}>
+                    <button type="button" disabled={!!enviando || fechado} onClick={() => responder("confirmado")} style={botao("var(--c-1f8a4c)", true)}>
                       {enviando === "confirmado" ? "Enviando…" : "Confirmar presença"}
                     </button>
-                    <button type="button" disabled={!!enviando || fechado} onClick={() => responder("recusado")} style={botao("#B23A3A", false)}>
+                    <button type="button" disabled={!!enviando || fechado} onClick={() => responder("recusado")} style={botao("var(--c-b23a3a)", false)}>
                       {enviando === "recusado" ? "Enviando…" : "Não poderei"}
                     </button>
                   </div>

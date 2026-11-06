@@ -65,9 +65,9 @@ export default function LinkPortal() {
           </a>
           <a href={withUtm("/bom-jardims", utm)}
             className="py-4 rounded-2xl flex flex-col items-center justify-center text-base font-semibold no-underline border-2 transition-colors"
-            style={{ background: "#0C3320", borderColor: "#C9A84C", color: "#F3EEDF" }}>
-            <span>🌳 Condomínio de Chácaras Bom Jardims</span>
-            <span className="text-xs font-normal" style={{ color: "#F2C04B" }}>Pré-lançamento · escolha a sua chácara</span>
+            style={{ background: "var(--c-0c3320)", borderColor: "var(--c-c9a84c)", color: "var(--c-f3eedf)" }}>
+            <span>Condomínio de Chácaras Bom Jardims</span>
+            <span className="text-xs font-normal" style={{ color: "var(--c-f2c04b)" }}>Pré-lançamento · escolha a sua chácara</span>
           </a>
           <a href={withUtm("/imoveis", utm)}
             className="py-4 rounded-2xl flex items-center justify-center gap-2 text-base font-semibold no-underline border border-border/50 bg-secondary/30 text-foreground hover:border-emerald/50 transition-colors">
@@ -76,7 +76,7 @@ export default function LinkPortal() {
         </div>
 
         {/* Lotes e chácaras */}
-        <h2 className="text-lg font-bold text-foreground mb-3">🏡 Disponíveis agora</h2>
+        <h2 className="text-lg font-bold text-foreground mb-3">Disponíveis agora</h2>
         {isLoading ? (
           <div className="flex justify-center py-10">
             <div className="w-10 h-10 border-4 border-emerald/30 border-t-emerald rounded-full animate-spin" />

@@ -245,10 +245,10 @@ export default function Campaigns() {
 
   if (isLoading) {
     return (
-      <div className="min-h-screen flex items-center justify-center" style={{ background: "#080f0a" }}>
+      <div className="min-h-screen flex items-center justify-center" style={{ background: "var(--c-080f0a)" }}>
         <div className="text-center">
-          <Loader2 className="h-10 w-10 animate-spin mx-auto mb-4" style={{ color: "#3ec87a" }} />
-          <p style={{ color: "#4a7a55", fontSize: "14px", letterSpacing: "0.05em" }}>
+          <Loader2 className="h-10 w-10 animate-spin mx-auto mb-4" style={{ color: "var(--c-3ec87a)" }} />
+          <p style={{ color: "var(--c-4a7a55)", fontSize: "14px", letterSpacing: "0.05em" }}>
             Carregando campanhas...
           </p>
         </div>
@@ -263,28 +263,28 @@ export default function Campaigns() {
   const CAMPAIGNS_PAUSED = (import.meta.env.VITE_CAMPAIGNS_ENABLED ?? 'false') === 'false';
 
   return (
-    <div className="min-h-screen" style={{ background: "#080f0a", color: "#e8f5e9" }}>
+    <div className="min-h-screen" style={{ background: "var(--c-080f0a)", color: "var(--c-e8f5e9)" }}>
       {CAMPAIGNS_PAUSED && (
         <div
           style={{
-            background: "linear-gradient(90deg, rgba(232,168,62,0.18), rgba(232,168,62,0.08))",
-            borderBottom: "2px solid rgba(232,168,62,0.45)",
+            background: "linear-gradient(90deg, color-mix(in srgb, var(--c-e8a83e) 18%, transparent), color-mix(in srgb, var(--c-e8a83e) 8%, transparent))",
+            borderBottom: "2px solid color-mix(in srgb, var(--c-e8a83e) 45%, transparent)",
             padding: "12px 20px",
             display: "flex",
             alignItems: "center",
             gap: "12px",
-            color: "#f5c870",
+            color: "var(--c-f5c870)",
             fontSize: "13px",
             fontWeight: 500,
             flexWrap: "wrap",
           }}
         >
-          <span style={{ fontSize: "20px" }}>⏸️</span>
+          <span style={{ fontSize: "20px" }}></span>
           <div style={{ flex: 1, minWidth: "260px" }}>
-            <strong style={{ display: "block", color: "#ffd97a", marginBottom: "2px" }}>
+            <strong style={{ display: "block", color: "var(--c-ffd97a)", marginBottom: "2px" }}>
               Envio em massa de campanhas PAUSADO
             </strong>
-            <span style={{ color: "#e8c980", fontSize: "12px" }}>
+            <span style={{ color: "var(--c-e8c980)", fontSize: "12px" }}>
               Estamos aguardando migração para a Meta Cloud API oficial. O CRM continua
               recebendo mensagens, qualificando leads e mantendo todos os contatos. Apenas
               o envio automático em massa está desligado pra evitar bloqueios da sessão.
@@ -294,12 +294,12 @@ export default function Campaigns() {
             style={{
               padding: "5px 12px",
               borderRadius: "999px",
-              background: "rgba(232,168,62,0.15)",
-              border: "1px solid rgba(232,168,62,0.35)",
+              background: "color-mix(in srgb, var(--c-e8a83e) 15%, transparent)",
+              border: "1px solid color-mix(in srgb, var(--c-e8a83e) 35%, transparent)",
               fontSize: "11px",
               letterSpacing: "0.08em",
               textTransform: "uppercase",
-              color: "#f5c870",
+              color: "var(--c-f5c870)",
             }}
           >
             CAMPAIGNS_ENABLED = false
@@ -319,9 +319,9 @@ export default function Campaigns() {
               fontSize: "11px",
               fontWeight: 600,
               letterSpacing: "0.05em",
-              background: "rgba(62,200,122,0.12)",
-              border: "1px solid rgba(62,200,122,0.25)",
-              color: "#3ec87a",
+              background: "color-mix(in srgb, var(--c-3ec87a) 12%, transparent)",
+              border: "1px solid color-mix(in srgb, var(--c-3ec87a) 25%, transparent)",
+              color: "var(--c-3ec87a)",
             }}
           >
             <span
@@ -329,7 +329,7 @@ export default function Campaigns() {
                 width: "7px",
                 height: "7px",
                 borderRadius: "50%",
-                background: "#3ec87a",
+                background: "var(--c-3ec87a)",
                 animation: "rmt-pulse 1.5s infinite",
               }}
             />
@@ -346,9 +346,9 @@ export default function Campaigns() {
               fontSize: "11px",
               fontWeight: 600,
               letterSpacing: "0.05em",
-              background: "rgba(220,60,60,0.12)",
-              border: "1px solid rgba(220,60,60,0.25)",
-              color: "#f07070",
+              background: "color-mix(in srgb, var(--c-dc3c3c) 12%, transparent)",
+              border: "1px solid color-mix(in srgb, var(--c-dc3c3c) 25%, transparent)",
+              color: "var(--c-f07070)",
             }}
           >
             <span
@@ -356,7 +356,7 @@ export default function Campaigns() {
                 width: "7px",
                 height: "7px",
                 borderRadius: "50%",
-                background: "#f07070",
+                background: "var(--c-f07070)",
               }}
             />
             PARADO
@@ -503,7 +503,7 @@ export default function Campaigns() {
         {/* ══════════════════════════════════════════════ */}
         <div
           style={{
-            background: "linear-gradient(135deg, #0a1a10 0%, #0d2518 50%, #0a1a10 100%)",
+            background: "linear-gradient(135deg, var(--c-0a1a10) 0%, var(--c-0d2518) 50%, var(--c-0a1a10) 100%)",
             border: `1px solid ${phase.border}`,
             borderRadius: "16px",
             padding: "20px 24px",
@@ -518,7 +518,7 @@ export default function Campaigns() {
           {/* decorative grid bg */}
           <div style={{
             position: "absolute", inset: 0, opacity: 0.04,
-            backgroundImage: "repeating-linear-gradient(0deg,transparent,transparent 20px,#3ec87a 20px,#3ec87a 21px),repeating-linear-gradient(90deg,transparent,transparent 20px,#3ec87a 20px,#3ec87a 21px)",
+            backgroundImage: "repeating-linear-gradient(0deg,transparent,transparent 20px,var(--c-3ec87a) 20px,var(--c-3ec87a) 21px),repeating-linear-gradient(90deg,transparent,transparent 20px,var(--c-3ec87a) 20px,var(--c-3ec87a) 21px)",
             pointerEvents: "none",
           }} />
 
@@ -526,7 +526,7 @@ export default function Campaigns() {
           <div style={{ zIndex: 1 }}>
             <p style={{
               fontSize: "10px",
-              color: "#3a6a45",
+              color: "var(--c-3a6a45)",
               textTransform: "uppercase",
               letterSpacing: "0.12em",
               margin: "0 0 4px",
@@ -547,7 +547,7 @@ export default function Campaigns() {
             }}>
               {brasiliaTime.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit', second: '2-digit' })}
             </p>
-            <p style={{ fontSize: "10px", color: "#2a4a30", margin: "4px 0 0", letterSpacing: "0.06em" }}>
+            <p style={{ fontSize: "10px", color: "var(--c-2a4a30)", margin: "4px 0 0", letterSpacing: "0.06em" }}>
               Horário de Brasília
             </p>
           </div>
@@ -566,7 +566,7 @@ export default function Campaigns() {
               minWidth: "110px",
             }}>
               <span style={{ fontSize: "22px", lineHeight: 1 }}>
-                {systemPhase === 'active_day' ? '☀️' : systemPhase === 'active_night' ? '🌙' : systemPhase === 'standby' ? '💤' : '🔒'}
+                {systemPhase === 'active_day' ? '' : systemPhase === 'active_night' ? '' : systemPhase === 'standby' ? '' : ''}
               </span>
               <span style={{
                 fontSize: "11px",
@@ -577,7 +577,7 @@ export default function Campaigns() {
               }}>
                 {phase.label}
               </span>
-              <span style={{ fontSize: "9px", color: "#3a5a40", letterSpacing: "0.05em" }}>
+              <span style={{ fontSize: "9px", color: "var(--c-3a5a40)", letterSpacing: "0.05em" }}>
                 {systemPhase === 'active_day'   ? '08h → 18h' :
                  systemPhase === 'active_night' ? '20h → 06h' :
                  systemPhase === 'standby'      ? '18h → 20h' :
@@ -585,8 +585,8 @@ export default function Campaigns() {
               </span>
             </div>
             {isRunning && (
-              <p style={{ fontSize: "9px", color: "#3a6a45", marginTop: "6px", letterSpacing: "0.05em" }}>
-                <span style={{ color: "#3ec87a" }}>●</span> Scheduler ativo
+              <p style={{ fontSize: "9px", color: "var(--c-3a6a45)", marginTop: "6px", letterSpacing: "0.05em" }}>
+                <span style={{ color: "var(--c-3ec87a)" }}>●</span> Scheduler ativo
               </p>
             )}
           </div>
@@ -599,7 +599,7 @@ export default function Campaigns() {
               style={{
                 fontSize: "13px",
                 fontWeight: 600,
-                color: "#7abf8a",
+                color: "var(--c-7abf8a)",
                 display: "flex",
                 alignItems: "center",
                 gap: "6px",
@@ -608,7 +608,7 @@ export default function Campaigns() {
                 letterSpacing: "0.06em",
               }}
             >
-              <BarChart3 size={14} style={{ color: "#3ec87a" }} />
+              <BarChart3 size={14} style={{ color: "var(--c-3ec87a)" }} />
               Painel de controle
             </h2>
             <span
@@ -619,8 +619,8 @@ export default function Campaigns() {
                 fontWeight: 600,
                 letterSpacing: "0.05em",
                 ...(isRunning
-                  ? { background: "rgba(62,200,122,0.1)", border: "1px solid rgba(62,200,122,0.2)", color: "#3ec87a" }
-                  : { background: "rgba(220,60,60,0.1)", border: "1px solid rgba(220,60,60,0.2)", color: "#f07070" }),
+                  ? { background: "color-mix(in srgb, var(--c-3ec87a) 10%, transparent)", border: "1px solid color-mix(in srgb, var(--c-3ec87a) 20%, transparent)", color: "var(--c-3ec87a)" }
+                  : { background: "color-mix(in srgb, var(--c-dc3c3c) 10%, transparent)", border: "1px solid color-mix(in srgb, var(--c-dc3c3c) 20%, transparent)", color: "var(--c-f07070)" }),
               }}
             >
               {isRunning ? "ATIVO" : "PARADO"}
@@ -648,7 +648,7 @@ export default function Campaigns() {
                 className={`rmt-metric${stat.extra === "highlight" ? " rmt-metric-highlight" : ""}`}
               >
                 <stat.icon size={13} style={{ color: stat.color, marginBottom: "4px" }} />
-                <p style={{ fontSize: "9px", color: "#3a5a40", textTransform: "uppercase", letterSpacing: "0.04em", margin: "0 0 3px" }}>
+                <p style={{ fontSize: "9px", color: "var(--c-3a5a40)", textTransform: "uppercase", letterSpacing: "0.04em", margin: "0 0 3px" }}>
                   {stat.label}
                 </p>
                 <p style={{ fontSize: "20px", fontWeight: 600, color: stat.color, margin: 0 }}>{stat.value}</p>
@@ -660,8 +660,8 @@ export default function Campaigns() {
           {isRunning && (
             <div
               style={{
-                background: "#0a0f1a",
-                border: "1px solid #1a2040",
+                background: "var(--c-0a0f1a)",
+                border: "1px solid var(--c-1a2040)",
                 borderRadius: "10px",
                 padding: "14px",
                 marginBottom: "12px",
@@ -669,10 +669,10 @@ export default function Campaigns() {
             >
               <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "10px" }}>
                 <div>
-                  <p style={{ fontSize: "11px", color: "#7a7ae8", display: "flex", alignItems: "center", gap: "5px", margin: "0 0 3px", fontWeight: 600 }}>
+                  <p style={{ fontSize: "11px", color: "var(--c-7a7ae8)", display: "flex", alignItems: "center", gap: "5px", margin: "0 0 3px", fontWeight: 600 }}>
                     <Timer size={13} /> Próxima hora em:
                   </p>
-                  <p style={{ fontSize: "10px", color: "#3a3a6a", margin: 0 }}>
+                  <p style={{ fontSize: "10px", color: "var(--c-3a3a6a)", margin: 0 }}>
                     Hora {hourNumber + 1}/10    {sentThisHour}/{totalCampsActive} campanhas enviaram
                   </p>
                 </div>
@@ -681,15 +681,15 @@ export default function Campaigns() {
                     fontSize: "32px",
                     fontFamily: "monospace",
                     fontWeight: 700,
-                    color: "#8a7ae8",
+                    color: "var(--c-8a7ae8)",
                     letterSpacing: "0.05em",
                   }}
                 >
                   {formatTimer(localTimer)}
                 </span>
               </div>
-              <div className="rmt-prog-bar" style={{ background: "#0f1020" }}>
-                <div className="rmt-prog-fill" style={{ width: `${timeProgressPercent}%`, background: "linear-gradient(90deg, #5a4ae8, #8a7ae8)" }} />
+              <div className="rmt-prog-bar" style={{ background: "var(--c-0f1020)" }}>
+                <div className="rmt-prog-fill" style={{ width: `${timeProgressPercent}%`, background: "linear-gradient(90deg, var(--c-5a4ae8), var(--c-8a7ae8))" }} />
               </div>
               <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: "6px", marginTop: "10px" }}>
                 {[
@@ -700,23 +700,23 @@ export default function Campaigns() {
                   <div
                     key={item.label}
                     style={{
-                      background: "rgba(255,255,255,0.03)",
-                      border: "1px solid rgba(255,255,255,0.06)",
+                      background: "color-mix(in srgb, var(--c-ffffff) 3%, transparent)",
+                      border: "1px solid color-mix(in srgb, var(--c-ffffff) 6%, transparent)",
                       borderRadius: "7px",
                       padding: "6px 8px",
                       textAlign: "center",
                     }}
                   >
-                    <p style={{ fontSize: "9px", color: "#3a3a5a", margin: "0 0 2px" }}>{item.label}</p>
-                    <p style={{ fontSize: "11px", fontWeight: 600, color: "#8a7ae8", margin: 0 }}>{item.value}</p>
+                    <p style={{ fontSize: "9px", color: "var(--c-3a3a5a)", margin: "0 0 2px" }}>{item.label}</p>
+                    <p style={{ fontSize: "11px", fontWeight: 600, color: "var(--c-8a7ae8)", margin: 0 }}>{item.value}</p>
                   </div>
                 ))}
               </div>
               <div style={{ marginTop: "8px", display: "flex", alignItems: "center", justifyContent: "center", gap: "6px", fontSize: "11px" }}>
-                <span style={{ color: "#3a3a5a" }}>Enviadas nesta hora:</span>
-                <span style={{ fontWeight: 600, color: "#8a7ae8" }}>{sentThisHour}/{totalCampsActive}</span>
+                <span style={{ color: "var(--c-3a3a5a)" }}>Enviadas nesta hora:</span>
+                <span style={{ fontWeight: 600, color: "var(--c-8a7ae8)" }}>{sentThisHour}/{totalCampsActive}</span>
                 {totalCampsActive > 0 && sentThisHour >= totalCampsActive && (
-                  <span style={{ fontSize: "10px", background: "rgba(62,200,122,0.12)", color: "#3ec87a", padding: "2px 8px", borderRadius: "10px", border: "1px solid rgba(62,200,122,0.2)" }}>
+                  <span style={{ fontSize: "10px", background: "color-mix(in srgb, var(--c-3ec87a) 12%, transparent)", color: "var(--c-3ec87a)", padding: "2px 8px", borderRadius: "10px", border: "1px solid color-mix(in srgb, var(--c-3ec87a) 20%, transparent)" }}>
                     Hora completa!
                   </span>
                 )}
@@ -729,8 +729,8 @@ export default function Campaigns() {
                       className="rmt-slot-pill"
                       style={
                         slot.sent
-                          ? { background: "rgba(62,200,122,0.1)", color: "#3ec87a", borderColor: "rgba(62,200,122,0.2)", textDecoration: "line-through" }
-                          : { background: "rgba(138,122,232,0.1)", color: "#8a7ae8", borderColor: "rgba(138,122,232,0.2)" }
+                          ? { background: "color-mix(in srgb, var(--c-3ec87a) 10%, transparent)", color: "var(--c-3ec87a)", borderColor: "color-mix(in srgb, var(--c-3ec87a) 20%, transparent)", textDecoration: "line-through" }
+                          : { background: "color-mix(in srgb, var(--c-8a7ae8) 10%, transparent)", color: "var(--c-8a7ae8)", borderColor: "color-mix(in srgb, var(--c-8a7ae8) 20%, transparent)" }
                       }
                     >
                       {slot.campaignName.substring(0, 10)}@{slot.minuteLabel}min
@@ -747,18 +747,18 @@ export default function Campaigns() {
               display: "flex",
               alignItems: "center",
               justifyContent: "space-between",
-              background: "#080f0a",
-              border: "1px solid #162a1c",
+              background: "var(--c-080f0a)",
+              border: "1px solid var(--c-162a1c)",
               borderRadius: "10px",
               padding: "10px 14px",
               marginBottom: "12px",
             }}
           >
             <div>
-              <p style={{ fontSize: "12px", fontWeight: 600, color: "#a8d5b0", margin: "0 0 2px" }}>
+              <p style={{ fontSize: "12px", fontWeight: 600, color: "var(--c-a8d5b0)", margin: "0 0 2px" }}>
                 {nightMode ? "🌙 Modo noite 20h—06h" : "☀️ Modo dia 08h—18h"}
               </p>
-              <p style={{ fontSize: "10px", color: "#3a5a40", margin: 0 }}>
+              <p style={{ fontSize: "10px", color: "var(--c-3a5a40)", margin: 0 }}>
                 {nightMode ? "Enviando das 20h às 06h" : "Enviando das 08h às 18h"}
               </p>
             </div>
@@ -768,7 +768,7 @@ export default function Campaigns() {
                 width: "40px",
                 height: "22px",
                 borderRadius: "11px",
-                background: nightMode ? "#3a3a8a" : "#1e6b30",
+                background: nightMode ? "var(--c-3a3a8a)" : "var(--c-1e6b30)",
                 border: "none",
                 position: "relative",
                 cursor: "pointer",
@@ -780,7 +780,7 @@ export default function Campaigns() {
                 style={{
                   width: "18px",
                   height: "18px",
-                  background: "#fff",
+                  background: "var(--c-ffffff)",
                   borderRadius: "50%",
                   position: "absolute",
                   top: "2px",
@@ -825,7 +825,7 @@ export default function Campaigns() {
                 style={{
                   fontSize: "13px",
                   fontWeight: 600,
-                  color: "#c8a040",
+                  color: "var(--c-c8a040)",
                   display: "flex",
                   alignItems: "center",
                   gap: "6px",
@@ -834,7 +834,7 @@ export default function Campaigns() {
                   letterSpacing: "0.06em",
                 }}
               >
-                <Zap size={13} style={{ color: "#e8a83e" }} />
+                <Zap size={13} style={{ color: "var(--c-e8a83e)" }} />
                 Status por hora — campanhas
               </h2>
               <span style={{
@@ -864,13 +864,13 @@ export default function Campaigns() {
                 marginBottom: "12px",
               }}>
                 <span style={{ fontSize: "24px" }}>
-                  {systemPhase === 'standby' ? '💤' : '🔒'}
+                  {systemPhase === 'standby' ? '' : ''}
                 </span>
                 <div>
                   <p style={{ fontSize: "12px", fontWeight: 700, color: phase.color, margin: "0 0 2px", letterSpacing: "0.04em" }}>
                     {systemPhase === 'standby' ? 'Sistema em Standby — 18h às 20h' : 'Sistema Bloqueado — 06h às 08h'}
                   </p>
-                  <p style={{ fontSize: "10px", color: "#3a5a40", margin: 0 }}>
+                  <p style={{ fontSize: "10px", color: "var(--c-3a5a40)", margin: 0 }}>
                     {systemPhase === 'standby'
                       ? 'Intervalo entre ciclo DIA e NOITE. Próximo ciclo inicia automaticamente às 20h.'
                       : 'Intervalo entre ciclo NOITE e DIA. Próximo ciclo inicia automaticamente às 08h.'}
@@ -908,32 +908,32 @@ export default function Campaigns() {
                         </span>
                         <span style={{
                           marginLeft: "auto", fontSize: "9px", padding: "1px 6px", borderRadius: "8px", fontWeight: 700,
-                          background: !isRunning ? "rgba(80,80,80,0.15)" : isInactive ? phase.bg : hasSent ? "rgba(62,200,122,0.12)" : "rgba(232,168,62,0.12)",
-                          border: `1px solid ${!isRunning ? "rgba(80,80,80,0.3)" : isInactive ? phase.border : hasSent ? "rgba(62,200,122,0.2)" : "rgba(232,168,62,0.2)"}`,
+                          background: !isRunning ? "color-mix(in srgb, var(--c-505050) 15%, transparent)" : isInactive ? phase.bg : hasSent ? "color-mix(in srgb, var(--c-3ec87a) 12%, transparent)" : "color-mix(in srgb, var(--c-e8a83e) 12%, transparent)",
+                          border: `1px solid ${!isRunning ? "color-mix(in srgb, var(--c-505050) 30%, transparent)" : isInactive ? phase.border : hasSent ? "color-mix(in srgb, var(--c-3ec87a) 20%, transparent)" : "color-mix(in srgb, var(--c-e8a83e) 20%, transparent)"}`,
                           color: labelColor,
                         }}>
                           {!isRunning ? "--" : isInactive ? "--" : hasSent ? "1/1" : "0/1"}
                         </span>
                       </div>
-                      <span style={{ fontSize: "12px", fontWeight: 600, color: !isRunning ? "#555" : isInactive ? "#5a7a60" : hasSent ? "#5ad890" : "#e8c060", display: "block", marginBottom: "6px" }}>
+                      <span style={{ fontSize: "12px", fontWeight: 600, color: !isRunning ? "var(--c-555555)" : isInactive ? "var(--c-5a7a60)" : hasSent ? "var(--c-5ad890)" : "var(--c-e8c060)", display: "block", marginBottom: "6px" }}>
                         {campaign.name}
                       </span>
                       {/* Badges Ativo Dia / Ativo Noite */}
                       <div style={{ display: "flex", gap: "4px", marginBottom: "4px" }}>
                         <span style={{
                           fontSize: "9px", padding: "1px 6px", borderRadius: "6px", fontWeight: 700,
-                          background: campaign.activeDay ? "rgba(62,200,122,0.15)" : "rgba(60,60,60,0.4)",
-                          border: `1px solid ${campaign.activeDay ? "rgba(62,200,122,0.35)" : "rgba(80,80,80,0.3)"}`,
-                          color: campaign.activeDay ? "#3ec87a" : "#555",
-                        }}>☀️ DIA</span>
+                          background: campaign.activeDay ? "color-mix(in srgb, var(--c-3ec87a) 15%, transparent)" : "color-mix(in srgb, var(--c-3c3c3c) 40%, transparent)",
+                          border: `1px solid ${campaign.activeDay ? "color-mix(in srgb, var(--c-3ec87a) 35%, transparent)" : "color-mix(in srgb, var(--c-505050) 30%, transparent)"}`,
+                          color: campaign.activeDay ? "var(--c-3ec87a)" : "var(--c-555555)",
+                        }}>DIA</span>
                         <span style={{
                           fontSize: "9px", padding: "1px 6px", borderRadius: "6px", fontWeight: 700,
-                          background: campaign.activeNight ? "rgba(120,100,220,0.15)" : "rgba(60,60,60,0.4)",
-                          border: `1px solid ${campaign.activeNight ? "rgba(120,100,220,0.35)" : "rgba(80,80,80,0.3)"}`,
-                          color: campaign.activeNight ? "#a090f0" : "#555",
-                        }}>🌙 NOITE</span>
+                          background: campaign.activeNight ? "color-mix(in srgb, var(--c-7864dc) 15%, transparent)" : "color-mix(in srgb, var(--c-3c3c3c) 40%, transparent)",
+                          border: `1px solid ${campaign.activeNight ? "color-mix(in srgb, var(--c-7864dc) 35%, transparent)" : "color-mix(in srgb, var(--c-505050) 30%, transparent)"}`,
+                          color: campaign.activeNight ? "var(--c-a090f0)" : "var(--c-555555)",
+                        }}>NOITE</span>
                       </div>
-                      <p style={{ fontSize: "9px", color: "#3a5a40", margin: 0 }}>
+                      <p style={{ fontSize: "9px", color: "var(--c-3a5a40)", margin: 0 }}>
                         1 msg/hora • {campaign.sentCount || 0}/{campaign.totalContacts || 2} total
                       </p>
                     </div>
@@ -949,7 +949,7 @@ export default function Campaigns() {
             style={{
               fontSize: "13px",
               fontWeight: 600,
-              color: "#7abf8a",
+              color: "var(--c-7abf8a)",
               display: "flex",
               alignItems: "center",
               gap: "6px",
@@ -958,14 +958,14 @@ export default function Campaigns() {
               letterSpacing: "0.06em",
             }}
           >
-            <BarChart3 size={14} style={{ color: "#3ec87a" }} />
+            <BarChart3 size={14} style={{ color: "var(--c-3ec87a)" }} />
             Monitoramento em tempo real
           </h2>
 
           {allCampaigns.length === 0 ? (
             <div className="rmt-card" style={{ textAlign: "center", padding: "32px" }}>
-              <Settings2 size={32} style={{ color: "#2a4a30", margin: "0 auto 12px" }} />
-              <p style={{ color: "#3a5a40", fontSize: "14px", margin: 0 }}>Nenhuma campanha configurada</p>
+              <Settings2 size={32} style={{ color: "var(--c-2a4a30)", margin: "0 auto 12px" }} />
+              <p style={{ color: "var(--c-3a5a40)", fontSize: "14px", margin: 0 }}>Nenhuma campanha configurada</p>
             </div>
           ) : (
             <div
@@ -1074,10 +1074,10 @@ function CampaignCard({
             }}
           />
           <div>
-            <h3 style={{ fontSize: "14px", fontWeight: 600, color: "#d8f0dc", margin: "0 0 3px" }}>
+            <h3 style={{ fontSize: "14px", fontWeight: 600, color: "var(--c-d8f0dc)", margin: "0 0 3px" }}>
               {String(campaign.name || "")}
             </h3>
-            <p style={{ fontSize: "10px", color: "#3a5a40", margin: 0 }}>
+            <p style={{ fontSize: "10px", color: "var(--c-3a5a40)", margin: 0 }}>
               Imóvel: {String(campaign.propertyName || "")}
             </p>
           </div>
@@ -1094,7 +1094,7 @@ function CampaignCard({
 
       {/* Regra */}
       <div className="rmt-rule-row">
-        Regra: <span style={{ color: "#5aaa70", fontWeight: 600 }}>1 msg/hora</span>
+        Regra: <span style={{ color: "var(--c-5aaa70)", fontWeight: 600 }}>1 msg/hora</span>
         {" "} 10 horas = 10 contatos/ciclo
         {isActive && isRunning && (
           <span
@@ -1102,7 +1102,7 @@ function CampaignCard({
               float: "right",
               fontFamily: "monospace",
               fontWeight: 700,
-              color: hasSentThisHour ? "#3ec87a" : "#e8a83e",
+              color: hasSentThisHour ? "var(--c-3ec87a)" : "var(--c-e8a83e)",
               fontSize: "11px",
             }}
           >
@@ -1118,9 +1118,9 @@ function CampaignCard({
         <div style={{
           marginTop: "10px",
           padding: "8px",
-          background: "rgba(0, 0, 0, 0.3)",
+          background: "color-mix(in srgb, var(--c-000000) 30%, transparent)",
           borderRadius: "6px",
-          border: "1px solid rgba(94, 168, 112, 0.2)",
+          border: "1px solid color-mix(in srgb, var(--c-5ea870) 20%, transparent)",
         }}>
           <div style={{
             display: "grid",
@@ -1144,9 +1144,9 @@ function CampaignCard({
               style={{
                 padding: "8px 10px",
                 borderRadius: "6px",
-                border: `2px solid ${campaign.activeDay ? "#3ec87a" : "#555"}`,
-                background: campaign.activeDay ? "rgba(62, 200, 122, 0.25)" : "rgba(50, 50, 50, 0.5)",
-                color: campaign.activeDay ? "#3ec87a" : "#888",
+                border: `2px solid ${campaign.activeDay ? "var(--c-3ec87a)" : "var(--c-555555)"}`,
+                background: campaign.activeDay ? "color-mix(in srgb, var(--c-3ec87a) 25%, transparent)" : "color-mix(in srgb, var(--c-323232) 50%, transparent)",
+                color: campaign.activeDay ? "var(--c-3ec87a)" : "var(--c-888888)",
                 fontSize: "12px",
                 fontWeight: 700,
                 cursor: (!campaign.activeDay && cycleStatus.data.dayCount >= 5) ? "not-allowed" : "pointer",
@@ -1165,7 +1165,7 @@ function CampaignCard({
                 ? "Clique para desativar ciclo DIA"
                 : "Clique para ativar ciclo DIA"}
             >
-              <span style={{ fontSize: "14px" }}>☀️</span>
+              <span style={{ fontSize: "14px" }}></span>
               {campaign.activeDay ? "ATIVO" : "INATIVO"}
             </button>
 
@@ -1186,9 +1186,9 @@ function CampaignCard({
               style={{
                 padding: "8px 10px",
                 borderRadius: "6px",
-                border: `2px solid ${campaign.activeNight ? "#3ec87a" : "#555"}`,
-                background: campaign.activeNight ? "rgba(62, 200, 122, 0.25)" : "rgba(50, 50, 50, 0.5)",
-                color: campaign.activeNight ? "#3ec87a" : "#888",
+                border: `2px solid ${campaign.activeNight ? "var(--c-3ec87a)" : "var(--c-555555)"}`,
+                background: campaign.activeNight ? "color-mix(in srgb, var(--c-3ec87a) 25%, transparent)" : "color-mix(in srgb, var(--c-323232) 50%, transparent)",
+                color: campaign.activeNight ? "var(--c-3ec87a)" : "var(--c-888888)",
                 fontSize: "12px",
                 fontWeight: 700,
                 cursor: (!campaign.activeNight && cycleStatus.data.nightCount >= 5) ? "not-allowed" : "pointer",
@@ -1207,7 +1207,7 @@ function CampaignCard({
                 ? "Clique para desativar ciclo NOITE"
                 : "Clique para ativar ciclo NOITE"}
             >
-              <span style={{ fontSize: "14px" }}>🌙</span>
+              <span style={{ fontSize: "14px" }}></span>
               {campaign.activeNight ? "ATIVO" : "INATIVO"}
             </button>
           </div>
@@ -1216,7 +1216,7 @@ function CampaignCard({
           <div style={{
             marginTop: "6px",
             fontSize: "9px",
-            color: "#3a5a40",
+            color: "var(--c-3a5a40)",
             textAlign: "center",
             display: "flex",
             justifyContent: "space-around",
@@ -1229,9 +1229,9 @@ function CampaignCard({
 
       {/* Barra de progresso do ciclo */}
       <div style={{ marginBottom: "8px" }}>
-        <div style={{ display: "flex", justifyContent: "space-between", fontSize: "9px", color: "#3a5a40", marginBottom: "4px" }}>
+        <div style={{ display: "flex", justifyContent: "space-between", fontSize: "9px", color: "var(--c-3a5a40)", marginBottom: "4px" }}>
           <span>Progresso do ciclo (10h)</span>
-          <span style={{ color: progressPercent === 100 ? "#e8a83e" : "#3ec87a", fontWeight: 600 }}>
+          <span style={{ color: progressPercent === 100 ? "var(--c-e8a83e)" : "var(--c-3ec87a)", fontWeight: 600 }}>
             {progressPercent}%
           </span>
         </div>
@@ -1240,7 +1240,7 @@ function CampaignCard({
             className="rmt-prog-fill"
             style={{
               width: `${progressPercent}%`,
-              background: progressPercent === 100 ? "linear-gradient(90deg, #7a5010, #c87820)" : "#1e6b30",
+              background: progressPercent === 100 ? "linear-gradient(90deg, var(--c-7a5010), var(--c-c87820))" : "var(--c-1e6b30)",
             }}
           />
         </div>
@@ -1249,12 +1249,12 @@ function CampaignCard({
       {/* Barra de tempo da hora (apenas ativo+rodando) */}
       {isActive && isRunning && (
         <div style={{ marginBottom: "10px" }}>
-          <div style={{ display: "flex", justifyContent: "space-between", fontSize: "9px", color: "#3a5a40", marginBottom: "4px" }}>
+          <div style={{ display: "flex", justifyContent: "space-between", fontSize: "9px", color: "var(--c-3a5a40)", marginBottom: "4px" }}>
             <span>Tempo da hora</span>
-            <span style={{ color: "#5ba4e8", fontWeight: 600 }}>{timePercent}%</span>
+            <span style={{ color: "var(--c-5ba4e8)", fontWeight: 600 }}>{timePercent}%</span>
           </div>
           <div className="rmt-prog-bar">
-            <div className="rmt-prog-fill" style={{ width: `${timePercent}%`, background: "linear-gradient(90deg, #1a407a, #3a70c8)" }} />
+            <div className="rmt-prog-fill" style={{ width: `${timePercent}%`, background: "linear-gradient(90deg, var(--c-1a407a), var(--c-3a70c8))" }} />
           </div>
         </div>
       )}
@@ -1262,33 +1262,33 @@ function CampaignCard({
       {/* Mini stats 2x2 */}
       <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "6px", marginBottom: "10px" }}>
         <div className="rmt-mini-stat">
-          <p style={{ fontSize: "9px", color: "#3a5a40", margin: "0 0 2px" }}>Enviadas</p>
-          <p style={{ fontSize: "16px", fontWeight: 600, color: "#3ec87a", margin: 0 }}>
-            {sentCount}<span style={{ fontSize: "11px", color: "#2a4a30" }}>/{totalContacts}</span>
+          <p style={{ fontSize: "9px", color: "var(--c-3a5a40)", margin: "0 0 2px" }}>Enviadas</p>
+          <p style={{ fontSize: "16px", fontWeight: 600, color: "var(--c-3ec87a)", margin: 0 }}>
+            {sentCount}<span style={{ fontSize: "11px", color: "var(--c-2a4a30)" }}>/{totalContacts}</span>
           </p>
         </div>
         <div className="rmt-mini-stat">
-          <p style={{ fontSize: "9px", color: "#3a5a40", margin: "0 0 2px" }}>Faltam</p>
-          <p style={{ fontSize: "16px", fontWeight: 600, color: "#e8a83e", margin: 0 }}>{pendingCount}</p>
+          <p style={{ fontSize: "9px", color: "var(--c-3a5a40)", margin: "0 0 2px" }}>Faltam</p>
+          <p style={{ fontSize: "16px", fontWeight: 600, color: "var(--c-e8a83e)", margin: 0 }}>{pendingCount}</p>
         </div>
         <div className="rmt-mini-stat">
-          <p style={{ fontSize: "9px", color: "#3a5a40", margin: "0 0 2px" }}>Hora atual</p>
-          <p style={{ fontSize: "16px", fontWeight: 600, color: "#a07ee8", margin: 0 }}>
-            {hourNumber + 1}<span style={{ fontSize: "11px", color: "#3a2a5a" }}>/10</span>
+          <p style={{ fontSize: "9px", color: "var(--c-3a5a40)", margin: "0 0 2px" }}>Hora atual</p>
+          <p style={{ fontSize: "16px", fontWeight: 600, color: "var(--c-a07ee8)", margin: 0 }}>
+            {hourNumber + 1}<span style={{ fontSize: "11px", color: "var(--c-3a2a5a)" }}>/10</span>
           </p>
         </div>
         <div className="rmt-mini-stat">
-          <p style={{ fontSize: "9px", color: "#3a5a40", margin: "0 0 2px" }}>Esta hora</p>
+          <p style={{ fontSize: "9px", color: "var(--c-3a5a40)", margin: "0 0 2px" }}>Esta hora</p>
           <div style={{ display: "flex", alignItems: "center", gap: "4px", marginTop: "3px" }}>
             {hasSentThisHour ? (
               <>
-                <CheckCircle2 size={13} style={{ color: "#3ec87a" }} />
-                <span style={{ fontSize: "12px", fontWeight: 600, color: "#3ec87a" }}>Enviou</span>
+                <CheckCircle2 size={13} style={{ color: "var(--c-3ec87a)" }} />
+                <span style={{ fontSize: "12px", fontWeight: 600, color: "var(--c-3ec87a)" }}>Enviou</span>
               </>
             ) : (
               <>
-                <Clock size={13} style={{ color: "#e8a83e" }} />
-                <span style={{ fontSize: "12px", fontWeight: 600, color: "#e8a83e" }}>Pendente</span>
+                <Clock size={13} style={{ color: "var(--c-e8a83e)" }} />
+                <span style={{ fontSize: "12px", fontWeight: 600, color: "var(--c-e8a83e)" }}>Pendente</span>
               </>
             )}
           </div>
@@ -1296,18 +1296,18 @@ function CampaignCard({
       </div>
 
       {/* Info texto */}
-      <p style={{ fontSize: "9px", color: "#2a4a30", marginBottom: "8px" }}>
+      <p style={{ fontSize: "9px", color: "var(--c-2a4a30)", marginBottom: "8px" }}>
         Iniciado: {schedulerStartedAt || "--:--:--"}    {campaign.messagesPerHour || 1} msg/hora  {Math.round(cycleDuration / 3600)}h = {totalContacts} contatos
       </p>
 
       {/* Botúo contatos */}
       <button onClick={onToggle} className="rmt-contacts-btn">
         <div style={{ display: "flex", alignItems: "center", gap: "5px" }}>
-          <Users size={12} style={{ color: "#3a6a45" }} />
-          <span style={{ fontWeight: 600, color: "#6a9a7a" }}>
+          <Users size={12} style={{ color: "var(--c-3a6a45)" }} />
+          <span style={{ fontWeight: 600, color: "var(--c-6a9a7a)" }}>
             Contatos ({sentCount}/{totalContacts})
           </span>
-          <span style={{ color: "#2a4a30" }}>
+          <span style={{ color: "var(--c-2a4a30)" }}>
             {sentCount} enviados • {pendingCount} aguardando
           </span>
         </div>
@@ -1318,7 +1318,7 @@ function CampaignCard({
       {expanded && (
         <div style={{ marginTop: "8px", display: "flex", flexDirection: "column", gap: "5px", maxHeight: "320px", overflowY: "auto" }}>
           {contactsList.length === 0 ? (
-            <p style={{ fontSize: "12px", color: "#3a5a40", textAlign: "center", padding: "16px 0" }}>
+            <p style={{ fontSize: "12px", color: "var(--c-3a5a40)", textAlign: "center", padding: "16px 0" }}>
               Nenhum contato designado
             </p>
           ) : (
@@ -1333,17 +1333,17 @@ function CampaignCard({
                   borderRadius: "8px",
                   border: `1px solid ${
                     contact.status === "sent"
-                      ? "rgba(62,200,122,0.15)"
+                      ? "color-mix(in srgb, var(--c-3ec87a) 15%, transparent)"
                       : contact.status === "failed"
-                      ? "rgba(220,60,60,0.15)"
-                      : "rgba(26,53,32,0.8)"
+                      ? "color-mix(in srgb, var(--c-dc3c3c) 15%, transparent)"
+                      : "color-mix(in srgb, var(--c-1a3520) 80%, transparent)"
                   }`,
                   background:
                     contact.status === "sent"
-                      ? "rgba(62,200,122,0.05)"
+                      ? "color-mix(in srgb, var(--c-3ec87a) 5%, transparent)"
                       : contact.status === "failed"
-                      ? "rgba(220,60,60,0.05)"
-                      : "rgba(8,15,10,0.8)",
+                      ? "color-mix(in srgb, var(--c-dc3c3c) 5%, transparent)"
+                      : "color-mix(in srgb, var(--c-080f0a) 80%, transparent)",
                 }}
               >
                 <div
@@ -1352,13 +1352,13 @@ function CampaignCard({
                     height: "18px",
                     borderRadius: "4px",
                     border: `1px solid ${
-                      contact.status === "sent" ? "#3ec87a" : contact.status === "failed" ? "#e85a5a" : "#1a3520"
+                      contact.status === "sent" ? "var(--c-3ec87a)" : contact.status === "failed" ? "var(--c-e85a5a)" : "var(--c-1a3520)"
                     }`,
                     background:
                       contact.status === "sent"
-                        ? "rgba(62,200,122,0.2)"
+                        ? "color-mix(in srgb, var(--c-3ec87a) 20%, transparent)"
                         : contact.status === "failed"
-                        ? "rgba(220,60,60,0.2)"
+                        ? "color-mix(in srgb, var(--c-dc3c3c) 20%, transparent)"
                         : "transparent",
                     display: "flex",
                     alignItems: "center",
@@ -1366,26 +1366,26 @@ function CampaignCard({
                     flexShrink: 0,
                   }}
                 >
-                  {contact.status === "sent" && <CheckCircle2 size={10} style={{ color: "#3ec87a" }} />}
-                  {contact.status === "failed" && <AlertCircle size={10} style={{ color: "#e85a5a" }} />}
+                  {contact.status === "sent" && <CheckCircle2 size={10} style={{ color: "var(--c-3ec87a)" }} />}
+                  {contact.status === "failed" && <AlertCircle size={10} style={{ color: "var(--c-e85a5a)" }} />}
                 </div>
-                <span style={{ fontSize: "11px", fontFamily: "monospace", fontWeight: 600, minWidth: "120px", color: "#8ab5a0" }}>
+                <span style={{ fontSize: "11px", fontFamily: "monospace", fontWeight: 600, minWidth: "120px", color: "var(--c-8ab5a0)" }}>
                   {String(contact.phone || "")}
                 </span>
-                <span style={{ fontSize: "11px", color: "#3a5a40", flex: 1, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                <span style={{ fontSize: "11px", color: "var(--c-3a5a40)", flex: 1, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
                   {String(contact.name || "")}
                 </span>
                 <div style={{ flexShrink: 0 }}>
                   {contact.status === "sent" ? (
-                    <span style={{ fontSize: "10px", color: "#3ec87a", fontFamily: "monospace", background: "rgba(62,200,122,0.08)", padding: "2px 6px", borderRadius: "6px", border: "1px solid rgba(62,200,122,0.15)" }}>
+                    <span style={{ fontSize: "10px", color: "var(--c-3ec87a)", fontFamily: "monospace", background: "color-mix(in srgb, var(--c-3ec87a) 8%, transparent)", padding: "2px 6px", borderRadius: "6px", border: "1px solid color-mix(in srgb, var(--c-3ec87a) 15%, transparent)" }}>
                       {formatTime(contact.sentAt)}
                     </span>
                   ) : contact.status === "failed" ? (
-                    <span style={{ fontSize: "10px", color: "#e85a5a", background: "rgba(220,60,60,0.08)", padding: "2px 6px", borderRadius: "6px", border: "1px solid rgba(220,60,60,0.15)" }}>
+                    <span style={{ fontSize: "10px", color: "var(--c-e85a5a)", background: "color-mix(in srgb, var(--c-dc3c3c) 8%, transparent)", padding: "2px 6px", borderRadius: "6px", border: "1px solid color-mix(in srgb, var(--c-dc3c3c) 15%, transparent)" }}>
                       Falha
                     </span>
                   ) : (
-                    <Clock size={12} style={{ color: "#3a5a40" }} />
+                    <Clock size={12} style={{ color: "var(--c-3a5a40)" }} />
                   )}
                 </div>
               </div>

@@ -155,7 +155,7 @@ export default function ImovelLanding() {
 
       <div className="max-w-3xl mx-auto px-4 pt-5 space-y-5">
         <div>
-          <p className="text-xs uppercase tracking-wide text-emerald-400 font-semibold">{imovel.propertyType || "Imóvel"} · {imovel.finalidade === "aluguel" ? "Aluguel" : "Venda"}</p>
+          <p className="text-xs text-emerald-400 font-semibold">{imovel.propertyType || "Imóvel"} · {imovel.finalidade === "aluguel" ? "Aluguel" : "Venda"}</p>
           <h1 className="text-2xl sm:text-3xl font-bold text-foreground mt-1">{imovel.denomination}</h1>
           <p className="flex items-start gap-1 text-sm text-muted-foreground mt-1">
             <MapPin className="h-4 w-4 shrink-0 mt-0.5 text-emerald-400" />
@@ -175,7 +175,7 @@ export default function ImovelLanding() {
 
         {imovel.videoUrl && (
           /\.(mp4|webm|mov)(\?|$)/i.test(imovel.videoUrl) ? (
-            <video src={imovel.videoUrl} controls playsInline className="w-full rounded-xl bg-black" onPlay={() => uma("play_video")} />
+            <video preload="metadata" src={imovel.videoUrl} controls playsInline className="w-full rounded-xl bg-black" onPlay={() => uma("play_video")} />
           ) : (
             <a href={imovel.videoUrl} target="_blank" rel="noreferrer" onClick={() => uma("play_video")} className="block text-sm text-emerald-400 underline">▶ Ver vídeo do imóvel</a>
           )
@@ -217,13 +217,13 @@ export default function ImovelLanding() {
           )}
         </div>
 
-        <p className="text-[11px] text-muted-foreground text-center">Romatec Consultoria Total · José Romário — CRECI/MA 4.705 · Açailândia/MA</p>
+        <p className="text-[11px] text-muted-foreground text-center">Romatec Consultoria Total, José Romário — CRECI/MA 4.705, Açailândia/MA</p>
       </div>
 
       {/* Botão fixo de WhatsApp */}
       <div className={`fixed inset-x-0 ${consent === null ? "bottom-24 sm:bottom-20" : "bottom-0"} z-40 p-3`}>
         <a href={linkWhats} target="_blank" rel="noreferrer" onClick={() => enviarEvento("clique_whatsapp", { codigo })}
-          className="max-w-3xl mx-auto flex items-center justify-center gap-2 rounded-2xl bg-[#25D366] text-white font-bold py-3.5 shadow-xl">
+          className="max-w-3xl mx-auto flex items-center justify-center gap-2 rounded-2xl bg-[color:var(--c-25d366)] text-white font-bold py-3.5 shadow-xl">
           <MessageCircle className="h-5 w-5" /> Falar no WhatsApp
         </a>
       </div>

@@ -206,7 +206,7 @@ export function CredencialCard({ uid, tipo, doc, linkCertidaoPadrao, validadeSug
       )}
       {progresso != null && <span data-block-idle="true" hidden />}
       {progresso != null && (
-        <div className="h-1.5 overflow-hidden rounded-full bg-secondary"><div className="h-full bg-primary transition-all" style={{ width: `${progresso}%` }} /></div>
+        <div className="h-1.5 overflow-hidden rounded-full bg-secondary"><div className="h-full bg-primary transition" style={{ width: `${progresso}%` }} /></div>
       )}
       <input ref={input} type="file" accept={MIMES_DOCUMENTO.join(",")} hidden onChange={e => { subir(e.target.files?.[0]); e.target.value = ""; }} />
 
@@ -293,7 +293,7 @@ export function DocumentosPessoais({ uid, docs, temConjuge, versao, onMudou, onV
         <input ref={input} type="file" multiple accept={MIMES_DOCUMENTO.join(",")} hidden onChange={e => { subir(Array.from(e.target.files ?? [])); e.target.value = ""; }} />
       </div>
       {progresso != null && <span data-block-idle="true" hidden />}
-      {progresso != null && <div className="h-1.5 overflow-hidden rounded-full bg-secondary"><div className="h-full bg-primary transition-all" style={{ width: `${progresso}%` }} /></div>}
+      {progresso != null && <div className="h-1.5 overflow-hidden rounded-full bg-secondary"><div className="h-full bg-primary transition" style={{ width: `${progresso}%` }} /></div>}
       {!docs.some(d => d.tipo === "cnh" && (d.titular ?? "usuario") === "usuario") && (
         <p className="text-xs text-amber-300">Envie a CNH (frente e verso): é obrigatória e vai anexada na ficha de credenciamento.</p>
       )}

@@ -99,7 +99,7 @@ export default function Agendar() {
 
   return (
     <div style={{ background: C.creme, minHeight: "100vh", fontFamily: SANS, color: C.texto }}>
-      <header style={{ background: C.verde, color: "#fff", padding: "28px 0 32px", borderBottom: `4px solid ${C.dourado}` }}>
+      <header style={{ background: C.verde, color: "var(--c-ffffff)", padding: "28px 0 32px", borderBottom: `4px solid ${C.dourado}` }}>
         <div style={{ ...secao, display: "flex", alignItems: "center", gap: 16, flexWrap: "wrap" }}>
           {logo && <img src={logo} alt={emp.nome} style={{ height: 76, width: "auto" }} />}
           <div style={{ flex: 1, minWidth: 220 }}>
@@ -112,7 +112,7 @@ export default function Agendar() {
 
       {enviado ? (
         <main style={{ ...secao, padding: "40px 16px" }}>
-          <div style={{ background: "#fff", borderRadius: 20, padding: 28, border: `2px solid ${C.dourado}`, textAlign: "center" }}>
+          <div style={{ background: "var(--c-ffffff)", borderRadius: 20, padding: 28, border: `2px solid ${C.dourado}`, textAlign: "center" }}>
             <CheckCircle2 size={56} color="#1F8A4C" />
             <h2 style={{ fontFamily: SERIF, color: C.verde, fontSize: 26, margin: "12px 0 8px" }}>Pedido de agendamento recebido!</h2>
             <p style={{ margin: 0, fontSize: 17, lineHeight: 1.5 }}>
@@ -123,16 +123,16 @@ export default function Agendar() {
                 <p style={{ margin: "0 0 8px", fontWeight: 700, color: C.verde }}>
                   {confirmacao.enviada ? `✅ Enviamos esta confirmação para o seu WhatsApp ${f.telefone}:` : "Sua confirmação:"}
                 </p>
-                <div style={{ whiteSpace: "pre-wrap", background: "#E7F6EC", border: "1px solid #BFE3CB", borderRadius: 14, padding: 16, fontSize: 15, lineHeight: 1.5 }}>{confirmacao.texto}</div>
+                <div style={{ whiteSpace: "pre-wrap", background: "var(--c-e7f6ec)", border: "1px solid var(--c-bfe3cb)", borderRadius: 14, padding: 16, fontSize: 15, lineHeight: 1.5 }}>{confirmacao.texto}</div>
                 {!confirmacao.enviada && <p style={{ margin: "8px 0 0", fontSize: 13, color: C.suave }}>Guarde esta mensagem. Para falar com o corretor agora, toque no botão abaixo.</p>}
               </div>
             )}
-            {zap && <a href={zap} target="_blank" rel="noopener noreferrer" style={{ display: "inline-flex", alignItems: "center", gap: 8, marginTop: 20, padding: "12px 20px", borderRadius: 999, background: "#1F8A4C", color: "#fff", fontWeight: 700, textDecoration: "none" }}><MessageCircle size={20} /> Falar agora no WhatsApp</a>}
+            {zap && <a href={zap} target="_blank" rel="noopener noreferrer" style={{ display: "inline-flex", alignItems: "center", gap: 8, marginTop: 20, padding: "12px 20px", borderRadius: 999, background: "var(--c-1f8a4c)", color: "var(--c-ffffff)", fontWeight: 700, textDecoration: "none" }}><MessageCircle size={20} /> Falar agora no WhatsApp</a>}
           </div>
         </main>
       ) : (
         <main style={{ ...secao, padding: "24px 16px 40px", display: "grid", gap: 20 }}>
-          <section style={{ background: "#fff", borderRadius: 20, padding: 22, border: "1px solid #E2D9BF" }}>
+          <section style={{ background: "var(--c-ffffff)", borderRadius: 20, padding: 22, border: "1px solid var(--c-e2d9bf)" }}>
             <h2 style={{ fontFamily: SERIF, color: C.verde, fontSize: 24, margin: "0 0 10px" }}>Sua chácara com segurança e condições facilitadas</h2>
             <ul style={{ margin: 0, paddingLeft: 22, lineHeight: 1.7, fontSize: 16, listStyle: "disc" }}>
               {c && <li>Chácaras a partir de <b>{m2(c.areaMin)} m²</b>{emp.areaHa ? ` num condomínio de ${emp.areaHa} ha` : ""}</li>}
@@ -146,7 +146,7 @@ export default function Agendar() {
             <p style={{ margin: "12px 0 0", fontSize: 13, color: C.suave }}>Valores sujeitos à disponibilidade e às condições vigentes{c ? `; juros de ${pct(c.jurosAa, 0)} ao ano no saldo (Tabela Price, parcelas fixas)` : ""}.</p>
           </section>
 
-          <section style={{ display: "flex", alignItems: "center", gap: 14, background: C.verde, color: "#fff", borderRadius: 20, padding: 16 }}>
+          <section style={{ display: "flex", alignItems: "center", gap: 14, background: C.verde, color: "var(--c-ffffff)", borderRadius: 20, padding: 16 }}>
             <FotoCorretor cartao={contato} tamanho={64} />
             <div style={{ lineHeight: 1.35 }}>
               <p style={{ margin: 0, fontSize: 12, color: C.dourado, fontWeight: 700, textTransform: "uppercase" }}>Seu atendimento</p>
@@ -155,7 +155,7 @@ export default function Agendar() {
             </div>
           </section>
 
-          <form onSubmit={enviar} style={{ background: "#fff", borderRadius: 20, padding: 22, border: `2px solid ${C.dourado}`, display: "grid", gap: 16 }}>
+          <form onSubmit={enviar} style={{ background: "var(--c-ffffff)", borderRadius: 20, padding: 22, border: `2px solid ${C.dourado}`, display: "grid", gap: 16 }}>
             <h2 style={{ fontFamily: SERIF, color: C.verde, fontSize: 24, margin: 0, display: "flex", alignItems: "center", gap: 8 }}><CalendarCheck size={26} /> Agende seu atendimento</h2>
             <div><label style={rotulo} htmlFor="nome">Nome completo *</label><input id="nome" style={campo} required minLength={3} maxLength={120} autoComplete="name" value={f.nome} onChange={set("nome")} /></div>
             <div><label style={rotulo} htmlFor="tel">Telefone / WhatsApp *</label><input id="tel" style={campo} required inputMode="tel" autoComplete="tel" placeholder="(99) 9 9999-9999" value={f.telefone} onChange={set("telefone")} /></div>
@@ -165,16 +165,16 @@ export default function Agendar() {
               {dados.mapa.lotes.length > 0 && (
                 <>
                   <p style={{ margin: "0 0 8px", fontSize: 14, color: C.suave }}>Toque na chácara que você quer conhecer. Use + e − (ou dois dedos) para aproximar.</p>
-                  <div style={{ borderRadius: 14, overflow: "hidden", background: "#fff" }}>
+                  <div style={{ borderRadius: 14, overflow: "hidden", background: "var(--c-ffffff)" }}>
                     <MapaTematico slug={emp.slug} lotes={dados.mapa.lotes.map(l => ({ id: l.id, codigo: l.codigo, situacao: l.situacao, poligono: l.poligono }))}
                       ruas={dados.mapa.ruas} perimetro={dados.mapa.perimetro} selecionado={selecionado} onSelecionar={escolher} destacar={["disponivel"]} />
                   </div>
                   <p style={{ margin: "6px 0 0", fontSize: 13, color: C.suave }}>Coloridas: disponíveis · cinza: indisponíveis</p>
                 </>
               )}
-              {avisoMapa && <p role="status" style={{ margin: "8px 0 0", color: "#B54708", fontWeight: 700, fontSize: 14 }}>{avisoMapa}</p>}
+              {avisoMapa && <p role="status" style={{ margin: "8px 0 0", color: "var(--c-b54708)", fontWeight: 700, fontSize: 14 }}>{avisoMapa}</p>}
               {loteEscolhido ? (
-                <div style={{ marginTop: 10, display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap", padding: "10px 14px", borderRadius: 12, background: "#EAF5EC", border: "2px solid #1F8A4C" }}>
+                <div style={{ marginTop: 10, display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap", padding: "10px 14px", borderRadius: 12, background: "var(--c-eaf5ec)", border: "2px solid var(--c-1f8a4c)" }}>
                   <span style={{ fontSize: 16 }}>Chácara escolhida: <b>{loteEscolhido.codigo}{loteEscolhido.quadra ? ` · Quadra ${loteEscolhido.quadra}` : ""}</b></span>
                   <button type="button" onClick={() => { setSelecionado(null); setF(x => ({ ...x, unidade: "" })); }} style={{ marginLeft: "auto", background: "none", border: "none", color: C.verde, textDecoration: "underline", cursor: "pointer", fontSize: 14 }}>Limpar</button>
                 </div>
@@ -210,12 +210,12 @@ export default function Agendar() {
               <input type="checkbox" required checked={f.consentimento} onChange={set("consentimento")} style={{ width: 20, height: 20, marginTop: 2 }} />
               Aceito ser contatado(a) por WhatsApp sobre este agendamento e o empreendimento. Meus dados são usados só para este atendimento.
             </label>
-            {erro && <p role="alert" style={{ margin: 0, color: "#B42318", fontWeight: 700 }}>{erro}</p>}
-            <button type="submit" disabled={enviando} style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 8, padding: "15px 20px", borderRadius: 14, border: "none", background: C.verde, color: "#fff", fontSize: 18, fontWeight: 700, cursor: "pointer", opacity: enviando ? 0.7 : 1 }}>
+            {erro && <p role="alert" style={{ margin: 0, color: "var(--c-b42318)", fontWeight: 700 }}>{erro}</p>}
+            <button type="submit" disabled={enviando} style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 8, padding: "15px 20px", borderRadius: 14, border: "none", background: C.verde, color: "var(--c-ffffff)", fontSize: 18, fontWeight: 700, cursor: "pointer", opacity: enviando ? 0.7 : 1 }}>
               {enviando ? <Loader2 size={20} className="animate-spin" /> : <CalendarCheck size={20} />} {enviando ? "Enviando…" : "Quero agendar meu atendimento"}
             </button>
           </form>
-          <p style={{ textAlign: "center", fontSize: 12, color: C.suave, margin: 0 }}>Romatec Consultoria Total · gestão e administração de vendas · CNPJ 17.261.987/0001-09</p>
+          <p style={{ textAlign: "center", fontSize: 12, color: C.suave, margin: 0 }}>Romatec Consultoria Total, gestão e administração de vendas, CNPJ 17.261.987/0001-09</p>
         </main>
       )}
     </div>

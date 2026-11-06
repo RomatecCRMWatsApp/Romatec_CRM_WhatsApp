@@ -125,9 +125,9 @@ export default function LoteMap({ lotes, selected, onSelect, onMapLoaded, dados,
 
   const byCodigo = useMemo(() => new Map(lotes.map(l => [l.codigo, l])), [lotes]);
 
-  if (error) return <p style={{ color: "#0C3320" }}>Não foi possível carregar o mapa agora.</p>;
+  if (error) return <p style={{ color: "var(--c-0c3320)" }}>Não foi possível carregar o mapa agora.</p>;
   if (!data || !proj) {
-    return <div style={{ height: 320, display: "flex", alignItems: "center", justifyContent: "center", color: "#0C3320" }}>Carregando mapa…</div>;
+    return <div style={{ height: 320, display: "flex", alignItems: "center", justifyContent: "center", color: "var(--c-0c3320)" }}>Carregando mapa…</div>;
   }
 
   const { project, H } = proj;
@@ -135,7 +135,7 @@ export default function LoteMap({ lotes, selected, onSelect, onMapLoaded, dados,
 
   return (
     <div>
-      <div style={{ overflow: "hidden", borderRadius: 16, background: "#E7EEDB", border: "1px solid #CFD8BF" }}>
+      <div style={{ overflow: "hidden", borderRadius: 16, background: "var(--c-e7eedb)", border: "1px solid var(--c-cfd8bf)" }}>
         <ZoomSvg W={W} H={H} rotulo="Mapa de vendas do Bom Jardims">
           <path d={pathOf(data.perimetro.map(project))} fill="#D3E2BC" stroke="#0C3320" strokeWidth={2} strokeDasharray="6 4" />
           {/* Área de vivência e recreação na frente, junto ao rio */}
@@ -222,10 +222,10 @@ export default function LoteMap({ lotes, selected, onSelect, onMapLoaded, dados,
       </div>
 
       {/* Escolha pela lista (mais fácil no celular) */}
-      {!destaque && <label style={{ display: "block", marginTop: 12, fontSize: 14, color: "#0C3320" }}>
+      {!destaque && <label style={{ display: "block", marginTop: 12, fontSize: 14, color: "var(--c-0c3320)" }}>
         <span style={{ display: "block", fontWeight: 700, marginBottom: 6 }}>Ou escolha pela lista:</span>
         <select value={selected ?? ""} onChange={e => e.target.value && onSelect(e.target.value)}
-          style={{ width: "100%", padding: "11px 12px", borderRadius: 12, border: "1px solid #CFC6AD", background: "#fff", color: "#0C3320", fontSize: 16 }}>
+          style={{ width: "100%", padding: "11px 12px", borderRadius: 12, border: "1px solid var(--c-cfc6ad)", background: "var(--c-ffffff)", color: "var(--c-0c3320)", fontSize: 16 }}>
           <option value="">Selecione uma chácara disponível</option>
           {lotes.filter(l => l.status === "disponivel").map(l => (
             <option key={l.codigo} value={l.codigo}>{l.codigo} · Quadra {l.quadra} · {formatArea(l.areaM2)}</option>
@@ -234,38 +234,38 @@ export default function LoteMap({ lotes, selected, onSelect, onMapLoaded, dados,
       </label>}
 
       {/* Legenda */}
-      <div style={{ display: "flex", flexWrap: "wrap", gap: "8px 16px", marginTop: 12, fontSize: 13, color: "#0C3320" }}>
+      <div style={{ display: "flex", flexWrap: "wrap", gap: "8px 16px", marginTop: 12, fontSize: 13, color: "var(--c-0c3320)" }}>
         {(["disponivel", "reservado", "em_negociacao", "vendido"] as const).map(s => (
           <span key={s} style={{ display: "inline-flex", alignItems: "center", gap: 6 }}>
-            <span style={{ width: 14, height: 14, borderRadius: 3, background: STATUS_COR[s], border: "1px solid #0C332033" }} />
+            <span style={{ width: 14, height: 14, borderRadius: 3, background: STATUS_COR[s], border: "1px solid var(--c-0c332033)" }} />
             {STATUS_LABEL[s]}
           </span>
         ))}
         <span style={{ display: "inline-flex", alignItems: "center", gap: 6 }}>
-          <span style={{ width: 14, height: 14, borderRadius: 7, background: "#C9A84C", border: "2px solid #0C3320" }} />
+          <span style={{ width: 14, height: 14, borderRadius: 7, background: "var(--c-c9a84c)", border: "2px solid var(--c-0c3320)" }} />
           Portal, stand, poço e pontos de banho
         </span>
         {data.areas?.length ? (
           <span style={{ display: "inline-flex", alignItems: "center", gap: 6 }}>
-            <span style={{ width: 14, height: 14, borderRadius: 3, background: "#BFDB9C", border: "1px solid #2F7D3A" }} />
+            <span style={{ width: 14, height: 14, borderRadius: 3, background: "var(--c-bfdb9c)", border: "1px solid var(--c-2f7d3a)" }} />
             Área de vivência e recreação
           </span>
         ) : null}
         {data.rio ? (
           <span style={{ display: "inline-flex", alignItems: "center", gap: 6 }}>
-            <span style={{ width: 18, height: 6, borderRadius: 3, background: "#2C7FB8" }} />
+            <span style={{ width: 18, height: 6, borderRadius: 3, background: "var(--c-2c7fb8)" }} />
             Rio
           </span>
         ) : null}
         {data.app ? (
           <span style={{ display: "inline-flex", alignItems: "center", gap: 6 }}>
-            <span style={{ width: 14, height: 14, borderRadius: 3, background: "rgba(63,122,58,0.3)", border: "1px solid rgba(47,106,44,0.6)" }} />
+            <span style={{ width: 14, height: 14, borderRadius: 3, background: "color-mix(in srgb, var(--c-3f7a3a) 30%, transparent)", border: "1px solid color-mix(in srgb, var(--c-2f6a2c) 60%, transparent)" }} />
             APP (30 m)
           </span>
         ) : null}
         {data.trilha ? (
           <span style={{ display: "inline-flex", alignItems: "center", gap: 6 }}>
-            <span style={{ width: 18, borderTop: "2px dashed #7A5530" }} />
+            <span style={{ width: 18, borderTop: "2px dashed var(--c-7a5530)" }} />
             Trilha ecológica
           </span>
         ) : null}
@@ -273,13 +273,13 @@ export default function LoteMap({ lotes, selected, onSelect, onMapLoaded, dados,
 
       {/* Chácara selecionada */}
       {sel && !destaque && (
-        <div style={{ marginTop: 16, padding: 16, borderRadius: 16, background: "#FFFFFF", border: "2px solid #C9A84C" }}>
-          <p style={{ margin: 0, fontSize: 13, color: "#5C6B5F" }}>Chácara selecionada</p>
-          <p style={{ margin: "2px 0 0", fontSize: 22, fontWeight: 700, color: "#0C3320", fontFamily: "'Playfair Display', Georgia, serif" }}>
+        <div style={{ marginTop: 16, padding: 16, borderRadius: 16, background: "var(--c-ffffff)", border: "2px solid var(--c-c9a84c)" }}>
+          <p style={{ margin: 0, fontSize: 13, color: "var(--c-5c6b5f)" }}>Chácara selecionada</p>
+          <p style={{ margin: "2px 0 0", fontSize: 22, fontWeight: 700, color: "var(--c-0c3320)", fontFamily: "'Playfair Display', Georgia, serif" }}>
             {sel.codigo} · Quadra {sel.quadra}
           </p>
-          <p style={{ margin: "4px 0 0", color: "#0C3320" }}>
-            {formatArea(sel.areaM2)} · <b style={{ color: sel.status === "disponivel" ? "#3E7B1F" : "#8A5A00" }}>{STATUS_LABEL[sel.status]}</b>
+          <p style={{ margin: "4px 0 0", color: "var(--c-0c3320)" }}>
+            {formatArea(sel.areaM2)} · <b style={{ color: sel.status === "disponivel" ? "var(--c-3e7b1f)" : "var(--c-8a5a00)" }}>{STATUS_LABEL[sel.status]}</b>
           </p>
           {NAO_COMERCIAL_LABEL[sel.codigo] && <p style={{ margin: "4px 0 0" }}>{NAO_COMERCIAL_LABEL[sel.codigo]}</p>}
         </div>

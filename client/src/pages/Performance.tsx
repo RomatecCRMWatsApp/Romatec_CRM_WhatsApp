@@ -29,7 +29,7 @@ const CAMPAIGN_COLORS = [COLORS.emerald, COLORS.gold, COLORS.blue, COLORS.purple
 function CustomTooltip({ active, payload, label }: any) {
   if (!active || !payload?.length) return null;
   return (
-    <div className="bg-[#1a1f2e] border border-emerald/20 rounded-lg px-3 py-2 shadow-xl">
+    <div className="bg-[color:var(--c-1a1f2e)] border border-emerald/20 rounded-lg px-3 py-2 shadow-xl">
       <p className="text-xs text-muted-foreground mb-1">{label}</p>
       {payload.map((entry: any, i: number) => (
         <p key={i} className="text-sm font-semibold" style={{ color: entry.color }}>
@@ -299,11 +299,11 @@ export default function Performance() {
                 <div className="w-full h-2 rounded-full bg-secondary/50 mb-3 overflow-hidden">
                   <div className="h-full flex">
                     <div
-                      className="h-full bg-emerald transition-all"
+                      className="h-full bg-emerald transition"
                       style={{ width: `${camp.total > 0 ? (camp.sent / camp.total) * 100 : 0}%` }}
                     />
                     <div
-                      className="h-full bg-red-500 transition-all"
+                      className="h-full bg-red-500 transition"
                       style={{ width: `${camp.total > 0 ? (camp.failed / camp.total) * 100 : 0}%` }}
                     />
                   </div>

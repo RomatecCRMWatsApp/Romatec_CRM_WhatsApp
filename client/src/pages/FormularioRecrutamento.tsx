@@ -22,7 +22,7 @@ async function buscarCep(cep: string) {
 
 const Secao = ({ titulo, children, nota }: { titulo: string; children: React.ReactNode; nota?: string }) => (
   <section className="space-y-3 rounded-[18px] border border-[var(--rt-border)] bg-[var(--rt-surface)] p-5">
-    <div><h2 className="text-sm font-semibold uppercase tracking-wide text-[var(--rt-gold)]">{titulo}</h2>{nota && <p className="text-xs text-muted-foreground">{nota}</p>}</div>
+    <div><h2 className="text-sm font-semibold text-[var(--rt-gold)]">{titulo}</h2>{nota && <p className="text-xs text-muted-foreground">{nota}</p>}</div>
     {children}
   </section>
 );
@@ -122,7 +122,7 @@ export default function FormularioRecrutamento() {
   const topo = (
     <header className="flex flex-col items-center gap-3 pt-8 pb-4 text-center">
       <RomatecLockup variant="stack" height={70} />
-      <p className="text-xs uppercase tracking-[0.2em] text-[var(--rt-gold)]">Romatec Consultoria Total · Consultoria Imobiliária</p>
+      <p className="text-xs text-[var(--rt-gold)]">Romatec Consultoria Total, consultoria imobiliária</p>
     </header>
   );
   if (isLoading) return <div className="min-h-screen" style={fundo}>{topo}<p className="text-center text-sm text-muted-foreground">Carregando…</p></div>;

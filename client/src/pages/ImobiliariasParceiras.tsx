@@ -58,7 +58,7 @@ export default function ImobiliariasParceiras() {
           <div key={p.id} className={`space-y-2 rounded-xl border border-border bg-card p-4 text-sm ${p.ativo ? "" : "opacity-60"}`}>
             <div className="flex flex-wrap items-start justify-between gap-2">
               <div>
-                <p className="font-semibold">{p.nome} <code className="text-xs text-muted-foreground">PARC-{p.codigo}</code>{!p.ativo && <span className="ml-2 rounded border border-border px-1.5 text-[10px] uppercase">desativada</span>}</p>
+                <p className="font-semibold">{p.nome} <code className="text-xs text-muted-foreground">PARC-{p.codigo}</code>{!p.ativo && <span className="ml-2 rounded border border-border px-1.5 text-[10px]">desativada</span>}</p>
                 <p className="text-xs text-muted-foreground">{[p.creci && `CRECI ${p.creci}`, p.responsavel, p.telefone, p.email].filter(Boolean).join(" · ")}</p>
                 <p className="text-xs text-muted-foreground">Comissão {(p.comissaoPct * 100).toLocaleString("pt-BR")}% · leads com {p.corretorInterno ?? "o rodízio"}</p>
               </div>

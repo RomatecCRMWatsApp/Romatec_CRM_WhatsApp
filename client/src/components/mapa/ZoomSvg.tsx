@@ -76,7 +76,7 @@ const botao: React.CSSProperties = {
 function Bussola({ r, onNorte }: { r: number; onNorte: () => void }) {
   return (
     <button type="button" onClick={onNorte} aria-label={`Mapa girado ${Math.round(r)} graus. Tocar para voltar ao norte`} title="Voltar ao norte"
-      style={{ ...botao, width: 40, height: 40, borderRadius: 999, boxShadow: "0 2px 8px rgba(0,0,0,0.18)" }}>
+      style={{ ...botao, width: 40, height: 40, borderRadius: 999, boxShadow: "0 2px 8px color-mix(in srgb, var(--c-000000) 18%, transparent)" }}>
       <svg width={30} height={30} viewBox="-15 -15 30 30" aria-hidden="true" style={{ transform: `rotate(${r}deg)`, transition: "transform 80ms linear" }}>
         <polygon points="0,-12 4,0 -4,0" fill="#C0392B" />
         <polygon points="0,12 4,0 -4,0" fill="#9AA3AB" />
@@ -213,7 +213,7 @@ export default function ZoomSvg({ W, H, rotulo, children, fundo }: {
       <div style={{ position: "absolute", right: 10, top: 10 }} onPointerDown={e => e.stopPropagation()}>
         <Bussola r={r} onNorte={() => setVista(girarEm(vistaRef.current, -r, W / 2, H / 2, W, H))} />
       </div>
-      <div style={{ position: "absolute", right: 10, bottom: 10, display: "flex", flexDirection: "column", borderRadius: 10, overflow: "hidden", boxShadow: "0 2px 8px rgba(0,0,0,0.18)" }}
+      <div style={{ position: "absolute", right: 10, bottom: 10, display: "flex", flexDirection: "column", borderRadius: 10, overflow: "hidden", boxShadow: "0 2px 8px color-mix(in srgb, var(--c-000000) 18%, transparent)" }}
         onPointerDown={e => e.stopPropagation()}>
         <button type="button" style={botao} aria-label="Ampliar o mapa" title="Ampliar" disabled={vista.s >= ZOOM_MAX} onClick={() => porBotao(1.6)}><ZoomIn size={18} /></button>
         <button type="button" style={{ ...botao, borderTop: 0 }} aria-label="Reduzir o mapa" title="Reduzir" disabled={vista.s <= zoomMinimo(r, W, H) + 1e-3} onClick={() => porBotao(1 / 1.6)}><ZoomOut size={18} /></button>

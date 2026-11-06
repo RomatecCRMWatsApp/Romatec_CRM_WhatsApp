@@ -66,10 +66,10 @@ export default function PropertyPublic() {
             <div className="absolute inset-x-0 top-0 h-20 bg-gradient-to-b from-black/50 to-transparent pointer-events-none" />
             {hasMultipleImages && (
               <>
-                <button onClick={prevImage} className="absolute left-3 top-1/2 -translate-y-1/2 p-2 rounded-full bg-black/50 text-white hover:bg-black/70 transition-all">
+                <button onClick={prevImage} className="absolute left-3 top-1/2 -translate-y-1/2 p-2 rounded-full bg-black/50 text-white hover:bg-black/70 transition">
                   <ChevronLeft className="h-5 w-5" />
                 </button>
-                <button onClick={nextImage} className="absolute right-3 top-1/2 -translate-y-1/2 p-2 rounded-full bg-black/50 text-white hover:bg-black/70 transition-all">
+                <button onClick={nextImage} className="absolute right-3 top-1/2 -translate-y-1/2 p-2 rounded-full bg-black/50 text-white hover:bg-black/70 transition">
                   <ChevronRight className="h-5 w-5" />
                 </button>
                 <div className="absolute bottom-4 right-4 bg-black/60 text-white text-xs px-2 py-1 rounded-full">
@@ -85,12 +85,12 @@ export default function PropertyPublic() {
         )}
 
         {/* Back button */}
-        <button onClick={() => window.history.back()} className="absolute top-4 left-4 p-2 rounded-full bg-black/50 text-white hover:bg-black/70 transition-all">
+        <button onClick={() => window.history.back()} className="absolute top-4 left-4 p-2 rounded-full bg-black/50 text-white hover:bg-black/70 transition">
           <ArrowLeft className="h-5 w-5" />
         </button>
 
         {/* Share */}
-        <button onClick={() => navigator.share?.({ title: property.denomination, url: window.location.href })} className="absolute top-4 right-4 p-2 rounded-full bg-black/50 text-white hover:bg-black/70 transition-all">
+        <button onClick={() => navigator.share?.({ title: property.denomination, url: window.location.href })} className="absolute top-4 right-4 p-2 rounded-full bg-black/50 text-white hover:bg-black/70 transition">
           <Share2 className="h-5 w-5" />
         </button>
       </div>
@@ -187,17 +187,17 @@ export default function PropertyPublic() {
           <div className="glass-card p-5 mb-6">
             <div className="flex gap-3 mb-4">
               {images.length > 0 && (
-                <button onClick={() => setActiveTab("fotos")} className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-medium transition-all ${activeTab === "fotos" ? "bg-emerald text-white" : "bg-secondary/50 text-muted-foreground hover:bg-secondary"}`}>
+                <button onClick={() => setActiveTab("fotos")} className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-medium transition ${activeTab === "fotos" ? "bg-emerald text-white" : "bg-secondary/50 text-muted-foreground hover:bg-secondary"}`}>
                   <ImageIcon className="h-4 w-4" /> Fotos ({images.length})
                 </button>
               )}
               {property.plantaBaixaUrl && (
-                <button onClick={() => setActiveTab("planta")} className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-medium transition-all ${activeTab === "planta" ? "bg-emerald text-white" : "bg-secondary/50 text-muted-foreground hover:bg-secondary"}`}>
+                <button onClick={() => setActiveTab("planta")} className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-medium transition ${activeTab === "planta" ? "bg-emerald text-white" : "bg-secondary/50 text-muted-foreground hover:bg-secondary"}`}>
                   <FileImage className="h-4 w-4" /> Planta Baixa
                 </button>
               )}
               {property.videoUrl && (
-                <button onClick={() => setActiveTab("video")} className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-medium transition-all ${activeTab === "video" ? "bg-emerald text-white" : "bg-secondary/50 text-muted-foreground hover:bg-secondary"}`}>
+                <button onClick={() => setActiveTab("video")} className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-medium transition ${activeTab === "video" ? "bg-emerald text-white" : "bg-secondary/50 text-muted-foreground hover:bg-secondary"}`}>
                   <Video className="h-4 w-4" /> Vídeo
                 </button>
               )}
@@ -207,7 +207,7 @@ export default function PropertyPublic() {
               <div className="flex gap-2 overflow-x-auto px-4 pb-2 scrollbar-hide" style={{ scrollSnapType: 'x mandatory' }}>
                 {images.map((img: string, idx: number) => (
                   <button key={idx} onClick={() => { setImageIndex(idx); window.scrollTo({ top: 0, behavior: 'smooth' }); }}
-                    className={`flex-shrink-0 rounded-xl overflow-hidden border-2 transition-all ${idx === imageIndex ? "border-emerald" : "border-transparent opacity-70 hover:opacity-100"}`}
+                    className={`flex-shrink-0 rounded-xl overflow-hidden border-2 transition ${idx === imageIndex ? "border-emerald" : "border-transparent opacity-70 hover:opacity-100"}`}
                     style={{ scrollSnapAlign: 'start' }}>
                     <img src={img} alt={`Foto ${idx + 1}`} className="w-20 h-20 rounded-lg object-cover" />
                   </button>
@@ -222,9 +222,9 @@ export default function PropertyPublic() {
                 const pdfHref = url.startsWith('data:application/pdf') ? `/api/imoveis/${property.id}/planta` : url;
                 return isPdf ? (
                   <a href={pdfHref} target="_blank" rel="noopener noreferrer"
-                    className="flex items-center gap-4 p-5 rounded-2xl border border-white/10 bg-white/5 hover:bg-white/10 transition-all group">
+                    className="flex items-center gap-4 p-5 rounded-2xl border border-white/10 bg-white/5 hover:bg-white/10 transition group">
                     <div className="w-14 h-16 flex-shrink-0 flex items-center justify-center rounded-xl bg-red-500/15 border border-red-500/20">
-                      <svg width="28" height="28" viewBox="0 0 24 24" fill="none" className="text-red-400"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/><polyline points="14 2 14 8 20 8" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/><line x1="16" y1="13" x2="8" y2="13" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/><line x1="16" y1="17" x2="8" y2="17" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/></svg>
+                      <svg aria-hidden="true" width="28" height="28" viewBox="0 0 24 24" fill="none" className="text-red-400"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/><polyline points="14 2 14 8 20 8" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/><line x1="16" y1="13" x2="8" y2="13" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/><line x1="16" y1="17" x2="8" y2="17" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/></svg>
                     </div>
                     <div className="flex-1">
                       <p className="font-semibold text-white">Planta Baixa</p>
@@ -239,7 +239,7 @@ export default function PropertyPublic() {
             )}
 
             {activeTab === "video" && property.videoUrl && (
-              <video src={property.videoUrl} controls className="w-full rounded-xl" />
+              <video preload="metadata" src={property.videoUrl} controls className="w-full rounded-xl" />
             )}
           </div>
         )}
@@ -258,7 +258,7 @@ export default function PropertyPublic() {
                 </p>
               </div>
               <a href={`https://www.google.com/maps/search/${encodeURIComponent(`${property.address}, ${property.city || ''}, ${property.state || ''}`)}`} target="_blank" rel="noopener noreferrer" className="flex-shrink-0 px-3 py-1.5 bg-emerald/20 text-emerald text-xs font-bold rounded-lg border border-emerald/30 hover:bg-emerald/30 transition-colors no-underline">
-                📍 Ver no Maps ↗
+                Ver no Maps ↗
               </a>
             </div>
           </div>
@@ -270,12 +270,12 @@ export default function PropertyPublic() {
         {/* Especialistas */}
         <div className="glass-card p-6 mb-6">
           <div className="text-center mb-4">
-            <h3 className="text-lg font-bold text-foreground">🏆 Fale com um Especialista</h3>
+            <h3 className="text-lg font-bold text-foreground">Fale com um Especialista</h3>
             <p className="text-sm text-muted-foreground mt-1">Nossa equipe está pronta para te ajudar a realizar o sonho da casa própria!</p>
           </div>
           <div className="grid grid-cols-1 gap-4">
             {especialistas.map((e, idx) => (
-              <button key={idx} onClick={() => setSelectedEsp(idx)} className={`p-4 rounded-xl border-2 transition-all text-left ${selectedEsp === idx ? "border-emerald bg-emerald/10 shadow-lg shadow-emerald/10" : "border-border/30 bg-secondary/20 hover:border-emerald/40"}`}>
+              <button key={idx} onClick={() => setSelectedEsp(idx)} className={`p-4 rounded-xl border-2 transition text-left ${selectedEsp === idx ? "border-emerald bg-emerald/10 shadow-lg shadow-emerald/10" : "border-border/30 bg-secondary/20 hover:border-emerald/40"}`}>
                 <div className="flex items-center gap-4">
                   <div className={`w-14 h-14 rounded-full flex items-center justify-center text-lg font-bold flex-shrink-0 ${selectedEsp === idx ? "bg-emerald text-white shadow-lg" : "bg-secondary text-muted-foreground"}`}>
                     {e.avatar}
@@ -283,7 +283,7 @@ export default function PropertyPublic() {
                   <div className="flex-1">
                     <p className={`font-bold text-base ${selectedEsp === idx ? "text-emerald" : "text-foreground"}`}>{e.nome}</p>
                     <p className="text-xs text-muted-foreground font-medium">{e.cargo}</p>
-                    <p className="text-sm text-muted-foreground mt-0.5">📱 {e.display}</p>
+                    <p className="text-sm text-muted-foreground mt-0.5">{e.display}</p>
                   </div>
                   {selectedEsp === idx && <span className="text-emerald text-xl flex-shrink-0">✓</span>}
                 </div>
@@ -305,7 +305,7 @@ export default function PropertyPublic() {
       <div className="fixed bottom-0 inset-x-0 z-50 p-4 bg-background/80 backdrop-blur-xl border-t border-border/30">
         <div className="max-w-3xl mx-auto">
           <p className="text-xs text-center text-muted-foreground mb-2">
-            💬 Falar com <span className="font-bold text-emerald">{esp.nome}</span> — {esp.display}
+            Falar com <span className="font-bold text-emerald">{esp.nome}</span> — {esp.display}
           </p>
           <div className="flex gap-3">
             <a href={whatsappLink} target="_blank" rel="noopener noreferrer" className="flex-1 btn-premium py-3.5 rounded-xl flex items-center justify-center gap-2 text-base no-underline">

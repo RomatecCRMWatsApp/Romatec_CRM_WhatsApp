@@ -25,7 +25,7 @@ export default function TrocarSenha() {
   };
   const campo = "w-full rounded-[12px] border border-[var(--rt-border)] bg-[var(--rt-bg)] px-3 py-2.5 text-[var(--rt-text)] placeholder:text-[var(--rt-text-3)] focus:outline-none focus:border-[var(--rt-gold-light)]";
   return (
-    <div className="min-h-screen flex flex-col items-center justify-center gap-8 p-4" style={{ background: "radial-gradient(circle at 50% 30%, #0A1F14 0%, #000 62%)" }}>
+    <div className="min-h-screen flex flex-col items-center justify-center gap-8 p-4" style={{ background: "radial-gradient(circle at 50% 30%, var(--c-0a1f14) 0%, var(--c-000000) 62%)" }}>
       <RomatecLockup variant="stack" height={80} />
       <form onSubmit={enviar} className="w-full max-w-md space-y-4 rounded-[18px] border border-[var(--rt-border)] bg-[var(--rt-surface)] p-7">
         <div>

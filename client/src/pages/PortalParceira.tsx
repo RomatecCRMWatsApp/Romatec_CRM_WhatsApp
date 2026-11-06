@@ -34,7 +34,7 @@ export default function PortalParceira() {
   const livres = d?.chacaras.filter((c: any) => c.situacao === "disponivel").length ?? 0;
   const campo = "w-full rounded-lg border bg-white px-3 py-2 text-sm";
   return (
-    <div className="min-h-screen" style={{ background: CREME, color: "#1d2b22", fontFamily: "Manrope, system-ui, sans-serif" }}>
+    <div className="min-h-screen" style={{ background: CREME, color: "var(--c-1d2b22)", fontFamily: "Manrope, system-ui, sans-serif" }}>
       <header className="border-b-4 px-4 py-3 text-white" style={{ background: VERDE, borderColor: DOURADO }}>
         <div className="mx-auto max-w-4xl">
           <p className="font-bold" style={{ fontFamily: "'Playfair Display', Georgia, serif" }}>Condomínio de Chácaras Bom Jardims</p>
@@ -49,20 +49,20 @@ export default function PortalParceira() {
             <section className="grid grid-cols-2 gap-3 sm:grid-cols-4">
               {[["Chácaras livres", String(livres)], ["Seus clientes", String(d.leads.length)], ["Vendas", String(d.vendas.filter((v: any) => v.vendido).length)],
                 ["Sua comissão prevista", brl(d.vendas.filter((v: any) => v.vendido).reduce((s: number, v: any) => s + v.comissao, 0))]].map(([r, v]) => (
-                <div key={r} className="rounded-xl border bg-white p-3" style={{ borderColor: DOURADO }}><p className="text-[11px] uppercase text-neutral-500">{r}</p><p className="font-bold" style={{ color: VERDE }}>{v}</p></div>
+                <div key={r} className="rounded-xl border bg-white p-3" style={{ borderColor: DOURADO }}><p className="text-[11px] text-neutral-500">{r}</p><p className="font-bold" style={{ color: VERDE }}>{v}</p></div>
               ))}
             </section>
             {d.contato && <p className="flex items-center gap-2 rounded-xl border bg-white p-3" style={borda}><MessageCircle className="h-4 w-4" style={{ color: VERDE }} /> Seu contato na Romatec: <b>{d.contato.nome}</b>{d.contato.telefone ? ` · ${d.contato.telefone}` : ""} · comissão de {(d.parceira.comissaoPct * 100).toLocaleString("pt-BR")}% sobre o valor da venda</p>}
             <div className="flex gap-1 overflow-x-auto border-b" style={{ borderColor: DOURADO }}>
               {([["chacaras", "Chácaras"], ["divulgar", "Divulgar"], ["indicar", "Indicar cliente"], ["leads", `Meus clientes (${d.leads.length})`], ["vendas", "Vendas"]] as const).map(([k, r]) => (
-                <button key={k} onClick={() => { setAba(k); setEnvio(null); }} className="-mb-px shrink-0 border-b-2 px-3 py-2 font-semibold" style={{ borderColor: aba === k ? VERDE : "transparent", color: aba === k ? VERDE : "#777" }}>{r}</button>
+                <button key={k} onClick={() => { setAba(k); setEnvio(null); }} className="-mb-px shrink-0 border-b-2 px-3 py-2 font-semibold" style={{ borderColor: aba === k ? VERDE : "transparent", color: aba === k ? VERDE : "var(--c-777777)" }}>{r}</button>
               ))}
             </div>
             {aba === "chacaras" && (
               <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
                 {d.chacaras.map((c: any) => (
                   <div key={c.codigo} className="rounded-lg border bg-white p-2" style={borda}>
-                    <p className="font-bold">{c.codigo}<span className="ml-1 text-xs font-normal" style={{ color: COR_SIT[c.situacao] ?? "#555" }}>· {ROT_SIT[c.situacao] ?? c.situacao}</span></p>
+                    <p className="font-bold">{c.codigo}<span className="ml-1 text-xs font-normal" style={{ color: COR_SIT[c.situacao] ?? "var(--c-555555)" }}>· {ROT_SIT[c.situacao] ?? c.situacao}</span></p>
                     <p className="text-xs text-neutral-600">{c.areaM2 ? `${c.areaM2.toLocaleString("pt-BR", { maximumFractionDigits: 0 })} m²` : ""}{c.situacao === "disponivel" ? ` · ${brl(c.preco)}` : ""}</p>
                   </div>
                 ))}
@@ -103,8 +103,8 @@ export default function PortalParceira() {
               <div className="divide-y rounded-xl border bg-white" style={borda}>
                 {d.vendas.map((v: any, i: number) => (
                   <div key={i} className="flex flex-wrap justify-between gap-2 p-3">
-                    <span>{v.vendido ? <CheckCircle2 className="mr-1 inline h-4 w-4 text-emerald-600" /> : null}<b>Chácara {v.chacara}</b> · {v.situacao} · {br(v.data)}</span>
-                    <span>{brl(v.valor)} · comissão <b>{brl(v.comissao)}</b></span>
+                    <span>{v.vendido ? <CheckCircle2 className="mr-1 inline h-4 w-4 text-emerald-600" /> : null}<b>Chácara {v.chacara}</b>, {v.situacao}, {br(v.data)}</span>
+                    <span>{brl(v.valor)}, comissão <b>{brl(v.comissao)}</b></span>
                   </div>
                 ))}
                 {!d.vendas.length && <p className="p-3 text-neutral-600">Nenhuma venda ainda.</p>}

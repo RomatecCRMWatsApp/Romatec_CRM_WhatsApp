@@ -48,7 +48,7 @@ export default function AtenderAgora() {
                     <span className="text-xs text-muted-foreground">{i + 1}º</span>
                     <button className="font-semibold hover:underline" onClick={() => navigate(`/leads/lead/${l.id}`)}>{l.nome}</button>
                     <span className={`text-xs font-bold ${COR_CLASSE[l.classe] ?? ""}`}>{l.score ?? "–"} · {String(l.classe).toUpperCase()}</span>
-                    <span className="rounded border border-border px-1.5 text-[10px] uppercase text-muted-foreground">{ROTULO_URGENCIA[l.urgencia]}</span>
+                    <span className="rounded border border-border px-1.5 text-[10px] text-muted-foreground">{ROTULO_URGENCIA[l.urgencia]}</span>
                   </p>
                   <p className="text-xs text-muted-foreground">
                     {l.rotuloEtapa}{l.chacara ? ` · chácara ${l.chacara}` : ""}{l.responsavel ? ` · ${l.responsavel}` : ""}
@@ -59,7 +59,7 @@ export default function AtenderAgora() {
                 </div>
                 <div className="flex shrink-0 flex-wrap gap-1.5">
                   {fone && (
-                    <Button size="sm" className="bg-[#25D366] text-white hover:bg-[#1fb956]" asChild>
+                    <Button size="sm" className="bg-[color:var(--c-25d366)] text-white hover:bg-[color:var(--c-1fb956)]" asChild>
                       <a href={`https://wa.me/${fone}`} target="_blank" rel="noreferrer" onClick={() => abriu.mutate({ id: l.id })} title="Abrir a conversa (conta como atendido)">
                         <MessageCircle className="mr-1.5 h-4 w-4" /> WhatsApp
                       </a>

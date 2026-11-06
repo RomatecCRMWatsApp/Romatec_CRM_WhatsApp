@@ -12,7 +12,7 @@ export default function BotaoTour360({ lote, rotulo }: { lote?: string | null; r
   return (
     <>
       <button type="button" onClick={() => setAberto(true)}
-        style={{ display: "inline-flex", alignItems: "center", gap: 8, padding: "12px 18px", borderRadius: 12, border: `2px solid ${C.dourado}`, background: C.verde, color: "#fff", fontWeight: 700, cursor: "pointer" }}>
+        style={{ display: "inline-flex", alignItems: "center", gap: 8, padding: "12px 18px", borderRadius: 12, border: `2px solid ${C.dourado}`, background: C.verde, color: "var(--c-ffffff)", fontWeight: 700, cursor: "pointer" }}>
         <Rotate3d size={20} /> {rotulo ?? (temDaChacara ? `Ver a chácara ${lote} em 360°` : "Tour 360° do condomínio")}
       </button>
       {aberto && <Visualizador360 tours={tours} onFechar={() => setAberto(false)} />}

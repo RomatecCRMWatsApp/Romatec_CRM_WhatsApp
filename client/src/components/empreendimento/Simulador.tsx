@@ -53,7 +53,7 @@ function Evolucao({ slug, codigo, entrada, prazo, onFechar }: { slug: string; co
     <div className="fixed inset-0 z-[1000] flex items-center justify-center bg-black/70 p-4" onClick={e => { if (e.target === e.currentTarget) onFechar(); }}>
       <div role="dialog" aria-modal="true" className="flex max-h-[88vh] w-full max-w-4xl flex-col rounded-2xl border border-border bg-card">
         <div className="flex flex-wrap items-center gap-2 border-b border-border p-4">
-          <p className="flex-1 min-w-[220px] font-semibold">Evolução — chácara {codigo} · entrada {entrada === 1 ? "à vista" : `${entrada}x`} · saldo {prazo}x</p>
+          <p className="flex-1 min-w-[220px] font-semibold">Evolução — chácara {codigo}, entrada {entrada === 1 ? "à vista" : `${entrada}x`}, saldo {prazo}x</p>
           <Button size="sm" variant="outline" disabled={!data} onClick={exportar}><Download className="mr-1.5 h-4 w-4" /> CSV</Button>
           <button onClick={onFechar} aria-label="Fechar" className="text-muted-foreground hover:text-foreground"><X className="h-5 w-5" /></button>
         </div>
@@ -79,7 +79,7 @@ function Evolucao({ slug, codigo, entrada, prazo, onFechar }: { slug: string; co
           {error && <p className="p-4 text-sm text-red-400">{error.message}</p>}
           {data && (
             <table className="w-full text-xs tabular-nums">
-              <thead className="sticky top-0 z-10 bg-card"><tr className="border-b border-border text-muted-foreground">
+              <thead className="sticky top-0 z-10 bg-secondary"><tr className="border-b border-border text-muted-foreground">
                 {["Mês", "Vencimento", "Tipo", "Nº", "Parcela", "Juros", "Amortização", "Saldo devedor"].map(h => <th key={h} className="px-2 py-2 text-right font-medium first:text-left">{h}</th>)}
               </tr></thead>
               <tbody>
@@ -138,7 +138,7 @@ function CronogramaPlano({ codigo, plano, onFechar }: { codigo: string; plano: P
         </div>
         <div className="min-h-0 flex-1 overflow-y-auto overflow-x-auto [scrollbar-gutter:stable]">
           <table className="w-full text-xs tabular-nums">
-            <thead className="sticky top-0 z-10 bg-card"><tr className="border-b border-border text-muted-foreground">
+            <thead className="sticky top-0 z-10 bg-secondary"><tr className="border-b border-border text-muted-foreground">
               {["Mês", "Vencimento", "Tipo", "Nº", "Valor", "Juros", "Amortização", "Saldo devedor"].map(h => <th key={h} className="px-2 py-2 text-right font-medium first:text-left">{h}</th>)}
             </tr></thead>
             <tbody>
@@ -235,7 +235,7 @@ export default function Simulador({ slug, lotes, ruas, perimetro, destinoSugerid
           <label className="space-y-1 text-sm">
             <span className="block text-xs text-muted-foreground">Chácara (nº ou clique no mapa)</span>
             <input list="simulador-lotes" value={digitado} onChange={e => escolher(e.target.value)} placeholder="A01" maxLength={4}
-              className="h-9 w-32 rounded-md border border-border bg-secondary px-2 text-sm uppercase" />
+              className="h-9 w-32 rounded-md border border-border bg-secondary px-2 text-sm" />
             <datalist id="simulador-lotes">{vendaveis.map(c => <option key={c} value={c} />)}</datalist>
           </label>
           {data && (
@@ -260,7 +260,7 @@ export default function Simulador({ slug, lotes, ruas, perimetro, destinoSugerid
           <>
             <div className="flex flex-wrap items-center justify-between gap-2 rounded-xl border border-emerald-500/50 bg-emerald-500/10 p-4">
               <div>
-                <p className="text-xs font-semibold uppercase tracking-wide text-emerald-400">À vista (total)</p>
+                <p className="text-xs font-semibold text-emerald-400">À vista (total)</p>
                 <p className="text-lg font-bold tabular-nums">À vista {brl(sim.avistaTotal.valor)} <span className="text-sm font-semibold text-emerald-400">— economize {brl(sim.avistaTotal.desconto)}</span></p>
                 <p className="text-[11px] text-muted-foreground">Preço cheio {brl(sim.preco)} pago de uma só vez, sem entrada nem parcelas.</p>
               </div>
@@ -336,7 +336,7 @@ export default function Simulador({ slug, lotes, ruas, perimetro, destinoSugerid
             <div className="flex flex-wrap gap-1.5">
               <Button size="sm" variant="outline" onClick={() => setModal("evolucao")}>{condicao === "padrao" ? "Ver evolução" : "Ver cronograma"}</Button>
               <Button size="sm" variant="outline" disabled={vendido || !plano || condicao !== "padrao"} title={condicao !== "padrao" ? "Proposta em PDF: por enquanto só na entrada de 30%. Use o cronograma (CSV) ou o envio no WhatsApp." : undefined} onClick={proposta}><FileText className="mr-1 h-4 w-4" /> Gerar proposta PDF</Button>
-              <Button size="sm" variant="outline" disabled={vendido || !plano} className="border-[#25d366]/40 text-[#1fa855] hover:text-[#1fa855]" onClick={() => setModal("whatsapp")}><Send className="mr-1 h-4 w-4" /> Enviar no WhatsApp</Button>
+              <Button size="sm" variant="outline" disabled={vendido || !plano} className="border-[color:var(--c-25d366)]/40 text-[color:var(--c-1fa855)] hover:text-[color:var(--c-1fa855)]" onClick={() => setModal("whatsapp")}><Send className="mr-1 h-4 w-4" /> Enviar no WhatsApp</Button>
               <Button size="sm" variant="outline" disabled={vendido || !plano} onClick={() => setModal("lead")}><Link2 className="mr-1 h-4 w-4" /> Vincular ao lead</Button>
             </div>
 
@@ -348,9 +348,9 @@ export default function Simulador({ slug, lotes, ruas, perimetro, destinoSugerid
                     <p className="font-semibold">{rotulo}: {brl(k.total)} ({(data.condicoes.comissaoTotalPct * 100).toLocaleString("pt-BR")}% do preço de tabela)</p>
                     <p>Corretor {brl(k.corretor)} · Romatec {brl(k.romatec)}</p>
                     <p className="text-muted-foreground">
-                      {condicao !== "padrao" ? (d => <>Plano {condicao}: 50% no ato ({brl(d.ato.total)} — corretor {brl(d.ato.corretor)} · Romatec {brl(d.ato.romatec)}) + 4× {brl(d.parcelas[0].total)} da 1ª à 4ª parcela do saldo (corretor {brl(d.parcelas[0].corretor)} · Romatec {brl(d.parcelas[0].romatec)} cada)</>)(divisaoComissaoLancamento(k.total, k.corretor))
+                      {condicao !== "padrao" ? (d => <>Plano {condicao}: 50% no ato ({brl(d.ato.total)} — corretor {brl(d.ato.corretor)}, Romatec {brl(d.ato.romatec)}) + 4× {brl(d.parcelas[0].total)} da 1ª à 4ª parcela do saldo (corretor {brl(d.parcelas[0].corretor)}, Romatec {brl(d.parcelas[0].romatec)} cada)</>)(divisaoComissaoLancamento(k.total, k.corretor))
                         : entrada === 1 ? <>Sinal à vista: 100% no ato ({brl(k.no1oPagamento.total)})</>
-                        : <>1º pagamento do sinal: {brl(k.no1oPagamento.total)} (corretor {brl(k.no1oPagamento.corretor)} · Romatec {brl(k.no1oPagamento.romatec)}) · 2º pagamento: {brl(k.no2oPagamento.total)} (corretor {brl(k.no2oPagamento.corretor)} · Romatec {brl(k.no2oPagamento.romatec)})</>}
+                        : <>1º pagamento do sinal: {brl(k.no1oPagamento.total)} (corretor {brl(k.no1oPagamento.corretor)}, Romatec {brl(k.no1oPagamento.romatec)}), 2º pagamento: {brl(k.no2oPagamento.total)} (corretor {brl(k.no2oPagamento.corretor)}, Romatec {brl(k.no2oPagamento.romatec)})</>}
                     </p>
                   </div>
                 ))}

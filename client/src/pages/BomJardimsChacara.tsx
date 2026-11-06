@@ -82,7 +82,7 @@ export function ChacaraView({ codigo, mapa, lotes, falhou = false }: { codigo: s
         <div style={{ textAlign: "center", maxWidth: 420 }}>
           <h1 style={{ fontFamily: SERIF, color: C.verde }}>Chácara não encontrada</h1>
           <p>Confira o código (ex.: C05) ou veja todas as chácaras no mapa do empreendimento.</p>
-          <a href="/bom-jardims#mapa" style={botao(C.verde, "#fff")}>Ver o mapa das chácaras</a>
+          <a href="/bom-jardims#mapa" style={botao(C.verde, "var(--c-ffffff)")}>Ver o mapa das chácaras</a>
         </div>
       </div>
     );
@@ -99,22 +99,22 @@ export function ChacaraView({ codigo, mapa, lotes, falhou = false }: { codigo: s
       <header style={{ position: "relative", minHeight: 360, display: "flex", alignItems: "flex-end", overflow: "hidden", background: C.verde }}>
         <img src="/bom-jardims/portal-dia.webp" alt="Portal de entrada do Bom Jardims (perspectiva ilustrativa)"
           style={{ position: "absolute", inset: 0, width: "100%", height: "100%", objectFit: "cover" }} />
-        <div style={{ position: "absolute", inset: 0, background: "linear-gradient(180deg, rgba(12,51,32,0.2) 0%, rgba(12,51,32,0.6) 45%, rgba(12,51,32,0.95) 100%)" }} />
+        <div style={{ position: "absolute", inset: 0, background: "linear-gradient(180deg, color-mix(in srgb, var(--c-0c3320) 20%, transparent) 0%, color-mix(in srgb, var(--c-0c3320) 60%, transparent) 45%, color-mix(in srgb, var(--c-0c3320) 95%, transparent) 100%)" }} />
         <div style={{ position: "relative", maxWidth: 1080, margin: "0 auto", padding: "28px 16px 32px", width: "100%", boxSizing: "border-box" }}>
-          <a href="/bom-jardims" style={{ display: "inline-flex", alignItems: "center", gap: 6, color: "#F3EEDF", fontSize: 14, textDecoration: "none", marginBottom: 14 }}>
+          <a href="/bom-jardims" style={{ display: "inline-flex", alignItems: "center", gap: 6, color: "var(--c-f3eedf)", fontSize: 14, textDecoration: "none", marginBottom: 14 }}>
             <ArrowLeft size={16} /> {NOME_BOM_JARDIMS}
           </a>
           <p style={{ margin: 0, color: C.dourado, fontWeight: 700, letterSpacing: 2, fontSize: 13 }}>AÇAILÂNDIA/MA · BR-222</p>
-          <h1 style={{ fontFamily: SERIF, color: "#fff", fontSize: "clamp(36px, 8vw, 58px)", lineHeight: 1.05, margin: "8px 0 6px" }}>Chácara {codigo}</h1>
-          <p style={{ color: "#F3EEDF", fontSize: "clamp(17px, 3vw, 21px)", margin: 0 }}>
+          <h1 style={{ fontFamily: SERIF, color: "var(--c-ffffff)", fontSize: "clamp(36px, 8vw, 58px)", lineHeight: 1.05, margin: "8px 0 6px" }}>Chácara {codigo}</h1>
+          <p style={{ color: "var(--c-f3eedf)", fontSize: "clamp(17px, 3vw, 21px)", margin: 0 }}>
             {tituloChacara({ codigo, quadra, areaM2: area }).replace(`Chácara ${codigo} · `, "")}
           </p>
           {info && (
-            <span style={{ display: "inline-block", marginTop: 12, padding: "5px 12px", borderRadius: 999, background: info.status === "disponivel" ? C.dourado : "#E2D9BF", color: C.verde, fontWeight: 700, fontSize: 13 }}>
+            <span style={{ display: "inline-block", marginTop: 12, padding: "5px 12px", borderRadius: 999, background: info.status === "disponivel" ? C.dourado : "var(--c-e2d9bf)", color: C.verde, fontWeight: 700, fontSize: 13 }}>
               {tecnica ? "Área técnica do condomínio" : STATUS_LABEL[info.status]}
             </span>
           )}
-          <p style={{ color: "#D9D3BF", fontSize: 13, margin: "14px 0 0" }}>{rotuloCorretor(corretor)}</p>
+          <p style={{ color: "var(--c-d9d3bf)", fontSize: 13, margin: "14px 0 0" }}>{rotuloCorretor(corretor)}</p>
         </div>
       </header>
 
@@ -123,7 +123,7 @@ export function ChacaraView({ codigo, mapa, lotes, falhou = false }: { codigo: s
         <h2 style={h2}>Localização exata</h2>
         <p style={{ color: C.suave, margin: "0 0 18px" }}>Ponto central da chácara {codigo}, pelo levantamento georreferenciado do empreendimento.</p>
         {local ? (
-          <div style={{ padding: 20, borderRadius: 18, background: "#fff", border: "1px solid #E2D9BF", display: "grid", gap: 14 }}>
+          <div style={{ padding: 20, borderRadius: 18, background: "var(--c-ffffff)", border: "1px solid var(--c-e2d9bf)", display: "grid", gap: 14 }}>
             <div style={{ display: "grid", gap: 6 }}>
               <p style={{ margin: 0, display: "flex", alignItems: "center", gap: 8, fontSize: 18, fontWeight: 700, color: C.verde }}>
                 <MapPin size={20} color={C.dourado} /> {local.latLonTexto}
@@ -132,12 +132,12 @@ export function ChacaraView({ codigo, mapa, lotes, falhou = false }: { codigo: s
               <p style={{ margin: "6px 0 0", fontSize: 14 }}>UTM: {local.utm.texto}</p>
             </div>
             <div style={{ display: "flex", flexWrap: "wrap", gap: 10 }}>
-              <a href={local.googleMaps} target="_blank" rel="noopener noreferrer" style={botao(C.verde, "#fff")}><MapPin size={18} /> Abrir no Google Maps</a>
+              <a href={local.googleMaps} target="_blank" rel="noopener noreferrer" style={botao(C.verde, "var(--c-ffffff)")}><MapPin size={18} /> Abrir no Google Maps</a>
               <a href={rotaAteEntrada()} target="_blank" rel="noopener noreferrer" style={botao(C.dourado, C.verde)}><Navigation size={18} /> Como chegar ao condomínio</a>
-              <button onClick={copiar} style={{ ...botao("#fff", C.verde), border: `1.5px solid ${C.verde}` }}><Copy size={18} /> {copiado ? "Coordenadas copiadas" : "Copiar coordenadas"}</button>
+              <button onClick={copiar} style={{ ...botao("var(--c-ffffff)", C.verde), border: `1.5px solid ${C.verde}` }}><Copy size={18} /> {copiado ? "Coordenadas copiadas" : "Copiar coordenadas"}</button>
             </div>
-            <div style={{ borderTop: "1px solid #EEE7D2", paddingTop: 14, display: "grid", gap: 8 }}>
-              <a href={`/bom-jardims/chacara/${codigo}.kml`} download style={{ ...botao("#fff", C.verde), border: `1.5px solid ${C.verde}`, justifySelf: "start" }}>
+            <div style={{ borderTop: "1px solid var(--c-eee7d2)", paddingTop: 14, display: "grid", gap: 8 }}>
+              <a href={`/bom-jardims/chacara/${codigo}.kml`} download style={{ ...botao("var(--c-ffffff)", C.verde), border: `1.5px solid ${C.verde}`, justifySelf: "start" }}>
                 <Globe2 size={18} /> Baixar KML (Google Earth)
               </a>
               <p style={{ margin: 0, fontSize: 13, color: C.suave }}>
@@ -165,15 +165,15 @@ export function ChacaraView({ codigo, mapa, lotes, falhou = false }: { codigo: s
         <h2 style={h2}>O condomínio</h2>
         <p style={{ color: C.suave, margin: "0 0 18px" }}>Imagens do empreendimento (perspectivas ilustrativas).</p>
         <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(240px, 1fr))", gap: 12 }}>
-          <figure style={{ margin: 0, gridRow: "span 2", borderRadius: 18, overflow: "hidden", background: "#000", position: "relative" }}>
+          <figure style={{ margin: 0, gridRow: "span 2", borderRadius: 18, overflow: "hidden", background: "var(--c-000000)", position: "relative" }}>
             <video src={VIDEO.src} poster={VIDEO.poster} controls playsInline preload="none"
               style={{ width: "100%", height: "100%", objectFit: "cover", display: "block", maxHeight: 640 }} />
-            <figcaption style={{ position: "absolute", top: 10, left: 10, display: "flex", alignItems: "center", gap: 6, padding: "4px 10px", borderRadius: 999, background: "rgba(12,51,32,0.8)", color: "#fff", fontSize: 12 }}>
+            <figcaption style={{ position: "absolute", top: 10, left: 10, display: "flex", alignItems: "center", gap: 6, padding: "4px 10px", borderRadius: 999, background: "color-mix(in srgb, var(--c-0c3320) 80%, transparent)", color: "var(--c-ffffff)", fontSize: 12 }}>
               <Play size={12} /> Vídeo
             </figcaption>
           </figure>
           {GALERIA.map(g => (
-            <figure key={g.src} style={{ margin: 0, borderRadius: 18, overflow: "hidden", background: "#DDD5BD" }}>
+            <figure key={g.src} style={{ margin: 0, borderRadius: 18, overflow: "hidden", background: "var(--c-ddd5bd)" }}>
               <img src={g.src} alt={g.alt} loading="lazy" style={{ width: "100%", height: "100%", aspectRatio: "16 / 10", objectFit: "cover", display: "block" }} />
             </figure>
           ))}
@@ -184,13 +184,13 @@ export function ChacaraView({ codigo, mapa, lotes, falhou = false }: { codigo: s
       {/* Atendimento */}
       <section style={{ background: C.verde }}>
         <div style={{ ...secao, display: "grid", gap: 16 }}>
-          <h2 style={{ ...h2, color: "#fff" }}>Fale sobre a chácara {codigo}</h2>
-          <p style={{ color: "#E8E2CE", margin: 0 }}>Condições e valores são apresentados pelo corretor no atendimento. Agende sua visita.</p>
+          <h2 style={{ ...h2, color: "var(--c-ffffff)" }}>Fale sobre a chácara {codigo}</h2>
+          <p style={{ color: "var(--c-e8e2ce)", margin: 0 }}>Condições e valores são apresentados pelo corretor no atendimento. Agende sua visita.</p>
           <ContatosBotoes codigo={codigo} />
           {!tecnica && (
             <a href={`/bom-jardims?chacara=${codigo}#cadastro`} style={{ ...botao(C.dourado, C.verde), justifySelf: "start" }}>Quero me cadastrar nesta chácara</a>
           )}
-          <p style={{ color: "#B9C4B5", fontSize: 12, margin: 0 }}>
+          <p style={{ color: "var(--c-b9c4b5)", fontSize: 12, margin: 0 }}>
             Imagens e mapa ilustrativos; medidas do projeto de parcelamento. Romatec Consultoria Total · José Romário — CRECI/MA 4.705.
           </p>
         </div>

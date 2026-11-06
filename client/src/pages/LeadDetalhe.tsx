@@ -110,7 +110,7 @@ export default function LeadDetalhe() {
           </span>
           <br />+{fone} · entrou há {desde(lead.criadoEm)} · última atividade há {desde(lead.ultimaAtividade)}
         </>}
-        acoes={<Button size="sm" asChild className="bg-[#25D366] hover:bg-[#1fb956] text-white"><a href={`https://wa.me/${fone}`} onClick={() => abriuWhatsApp.mutate({ id })} target="_blank" rel="noreferrer" title="Abrir a conversa (conta como atendido)"><MessageCircle className="mr-1.5 h-4 w-4" /> WhatsApp</a></Button>}
+        acoes={<Button size="sm" asChild className="bg-[color:var(--c-25d366)] hover:bg-[color:var(--c-1fb956)] text-white"><a href={`https://wa.me/${fone}`} onClick={() => abriuWhatsApp.mutate({ id })} target="_blank" rel="noreferrer" title="Abrir a conversa (conta como atendido)"><MessageCircle className="mr-1.5 h-4 w-4" /> WhatsApp</a></Button>}
       />
 
       <div className="px-4 md:px-6 pb-6 max-w-[1500px] mx-auto grid grid-cols-1 lg:grid-cols-3 gap-4">
@@ -119,8 +119,8 @@ export default function LeadDetalhe() {
           {/* Esperando corretor (alerta de 5 minutos) */}
           {lead.aguardandoDesde && (
             <div className="rounded-xl border border-amber-500/40 bg-amber-500/10 px-4 py-3 flex flex-wrap items-center justify-between gap-2">
-              <p className="text-sm text-amber-200">⏰ Esperando um corretor desde {new Date(lead.aguardandoDesde).toLocaleTimeString("pt-BR", { timeZone: "America/Fortaleza", hour: "2-digit", minute: "2-digit" })}</p>
-              <Button size="sm" variant="outline" onClick={() => marcarAtendido.mutate({ id })}>✅ Já atendi</Button>
+              <p className="text-sm text-amber-200">Esperando um corretor desde {new Date(lead.aguardandoDesde).toLocaleTimeString("pt-BR", { timeZone: "America/Fortaleza", hour: "2-digit", minute: "2-digit" })}</p>
+              <Button size="sm" variant="outline" onClick={() => marcarAtendido.mutate({ id })}>Já atendi</Button>
             </div>
           )}
           <AvisoLeadEncaminhado leadId={id} aoMudar={atualizar} />
@@ -134,7 +134,7 @@ export default function LeadDetalhe() {
                 <option value="">— sem responsável —</option>
                 {(responsaveis ?? []).map(r => <option key={r.id} value={r.id}>{r.nome}</option>)}
               </select>
-              {lead.atendidoEm && <span className="text-xs text-emerald-300">✅ {lead.ultimoAtendimento === "encaminhado" ? "Encaminhado para atendimento" : "Atendido"} {new Date(lead.atendidoEm).toLocaleString("pt-BR", { timeZone: "America/Fortaleza", day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit" })}</span>}
+              {lead.atendidoEm && <span className="text-xs text-emerald-300">{lead.ultimoAtendimento === "encaminhado" ? "Encaminhado para atendimento" : "Atendido"} {new Date(lead.atendidoEm).toLocaleString("pt-BR", { timeZone: "America/Fortaleza", day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit" })}</span>}
               <label className="text-sm text-muted-foreground">Etapa</label>
               <select value={lead.etapa} onChange={e => (e.target.value === "perdido" ? setPerder(true) : mover.mutate({ id, etapa: e.target.value }))}
                 className="h-9 px-2 rounded-md border border-border bg-secondary/30 text-sm text-foreground">
@@ -290,7 +290,7 @@ export default function LeadDetalhe() {
                   : "nenhuma programada"}
                 {lead.followUp.tentativas > 0 && ` (nova tentativa ${lead.followUp.tentativas + 1} de 3)`}
               </p>
-              {lead.followUp.erro && <p className="text-xs text-red-300">⚠️ {lead.followUp.erro}</p>}
+              {lead.followUp.erro && <p className="text-xs text-red-300">{lead.followUp.erro}</p>}
             </CardContent>
           </Card>
 

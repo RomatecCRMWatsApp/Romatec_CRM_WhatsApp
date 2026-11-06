@@ -305,8 +305,8 @@ export default function Empreendedor() {
                       <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.08)" />
                       <XAxis dataKey="rotulo" tick={{ fontSize: 10, fill: "#9ca3af" }} interval={4} />
                       <YAxis allowDecimals={false} tick={{ fontSize: 10, fill: "#9ca3af" }} />
-                      <Tooltip contentStyle={{ background: "#0b1410", border: "1px solid #1f3a2c", fontSize: 12 }} formatter={(v: any) => [v, "leads"]} labelFormatter={(l: any) => `Dia ${l}`} />
-                      <Bar dataKey="leads" fill="#10b981" radius={[3, 3, 0, 0]} />
+                      <Tooltip contentStyle={{ background: "var(--c-0b1410)", border: "1px solid var(--c-1f3a2c)", fontSize: 12 }} formatter={(v: any) => [v, "leads"]} labelFormatter={(l: any) => `Dia ${l}`} />
+                      <Bar dataKey="leads" fill="var(--c-10b981)" radius={[3, 3, 0, 0]} />
                     </BarChart>
                   </ResponsiveContainer>
                 </div>

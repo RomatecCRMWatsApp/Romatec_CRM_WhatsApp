@@ -303,11 +303,11 @@ export default function MapaTematico({ slug, lotes, ruas, perimetro, selecionado
               {ROTULO_SITUACAO[s]} ({lotes.filter(l => l.situacao === s).length})
             </span>
           ))}
-          {ctx?.pontos?.length ? <span className="inline-flex items-center gap-1.5"><span className="inline-block h-3 w-3 rounded-full bg-[#C9A84C] border-2 border-[#0C3320]" />Portal, stand, poço e pontos de apoio</span> : null}
-          {ctx?.areas?.length ? <span className="inline-flex items-center gap-1.5"><span className="inline-block h-3 w-3 rounded-sm border border-[#2F7D3A] bg-[#C7DFA8]" />Área de vivência e recreação</span> : null}
-          {ctx?.rio ? <span className="inline-flex items-center gap-1.5"><span className="inline-block h-1.5 w-4 rounded-full bg-[#2C7FB8]" />Rio</span> : null}
-          {ctx?.app ? <span className="inline-flex items-center gap-1.5"><span className="inline-block h-3 w-3 rounded-sm border border-[#2F6A2C]/60 bg-[#3F7A3A]/30" />APP (30 m)</span> : null}
-          {ctx?.trilha ? <span className="inline-flex items-center gap-1.5"><span className="inline-block w-4 border-t-2 border-dashed border-[#7A5530]" />Trilha ecológica</span> : null}
+          {ctx?.pontos?.length ? <span className="inline-flex items-center gap-1.5"><span className="inline-block h-3 w-3 rounded-full bg-[color:var(--c-c9a84c)] border-2 border-[color:var(--c-0c3320)]" />Portal, stand, poço e pontos de apoio</span> : null}
+          {ctx?.areas?.length ? <span className="inline-flex items-center gap-1.5"><span className="inline-block h-3 w-3 rounded-sm border border-[color:var(--c-2f7d3a)] bg-[color:var(--c-c7dfa8)]" />Área de vivência e recreação</span> : null}
+          {ctx?.rio ? <span className="inline-flex items-center gap-1.5"><span className="inline-block h-1.5 w-4 rounded-full bg-[color:var(--c-2c7fb8)]" />Rio</span> : null}
+          {ctx?.app ? <span className="inline-flex items-center gap-1.5"><span className="inline-block h-3 w-3 rounded-sm border border-[color:var(--c-2f6a2c)]/60 bg-[color:var(--c-3f7a3a)]/30" />APP (30 m)</span> : null}
+          {ctx?.trilha ? <span className="inline-flex items-center gap-1.5"><span className="inline-block w-4 border-t-2 border-dashed border-[color:var(--c-7a5530)]" />Trilha ecológica</span> : null}
         </div>
       )}
     </div>

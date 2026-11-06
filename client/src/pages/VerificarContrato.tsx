@@ -34,7 +34,7 @@ export default function VerificarContrato() {
     } finally { setOcupado(false); }
   };
   return (
-    <div className="min-h-screen" style={{ background: CREME, color: "#1d2b22", fontFamily: "Manrope, system-ui, sans-serif" }}>
+    <div className="min-h-screen" style={{ background: CREME, color: "var(--c-1d2b22)", fontFamily: "Manrope, system-ui, sans-serif" }}>
       <header className="border-b-4 px-4 py-3 text-white" style={{ background: VERDE, borderColor: DOURADO }}>
         <p className="mx-auto max-w-3xl font-bold" style={{ fontFamily: "'Playfair Display', Georgia, serif" }}>Condomínio de Chácaras Bom Jardims · Verificação de contrato</p>
       </header>
@@ -46,7 +46,7 @@ export default function VerificarContrato() {
             <section className="rounded-xl border bg-white p-4" style={{ borderColor: DOURADO }}>
               <h1 className="flex items-center gap-2 text-lg font-bold" style={{ color: VERDE }}><ShieldCheck className="h-5 w-5" /> Contrato {d.numero}</h1>
               <p className="text-sm">{d.empreendimento} · <b>{STATUS[d.status] ?? d.status}</b></p>
-              {d.sha256 && <p className="mt-2 break-all font-mono text-[11px] text-neutral-600">SHA-256 da versão atual: {d.sha256}</p>}
+              {d.sha256 && <p className="mt-2 break-all tabular-nums text-[11px] text-neutral-600">SHA-256 da versão atual: {d.sha256}</p>}
             </section>
             <section className="rounded-xl border bg-white p-4" style={{ borderColor: DOURADO }}>
               <h2 className="mb-2 font-semibold" style={{ color: VERDE }}>Signatários</h2>

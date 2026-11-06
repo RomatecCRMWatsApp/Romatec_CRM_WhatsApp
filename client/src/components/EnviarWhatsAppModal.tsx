@@ -29,15 +29,15 @@ export default function EnviarWhatsAppModal({ titulo, descricao, sugestao, envia
   const enviar = () => { if (destino && !enviando) onEnviar(destino); };
 
   return (
-    <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.7)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 1000, padding: "20px" }}
+    <div style={{ position: "fixed", inset: 0, background: "color-mix(in srgb, var(--c-000000) 70%, transparent)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 1000, padding: "20px" }}
       onClick={e => { if (e.target === e.currentTarget) onFechar(); }}>
       <div role="dialog" aria-modal="true" aria-labelledby="whats-titulo" style={{ background: "var(--card)", border: "1px solid var(--border)", borderRadius: "16px", padding: "24px", width: "100%", maxWidth: "440px" }}>
-        <h3 id="whats-titulo" style={{ fontSize: "15px", fontWeight: 600, color: "#d8f0dc", margin: "0 0 4px" }}>{titulo}</h3>
-        <p style={{ fontSize: "11px", color: "#5a8a65", margin: "0 0 14px" }}>{descricao}</p>
+        <h3 id="whats-titulo" style={{ fontSize: "15px", fontWeight: 600, color: "var(--c-d8f0dc)", margin: "0 0 4px" }}>{titulo}</h3>
+        <p style={{ fontSize: "11px", color: "var(--c-5a8a65)", margin: "0 0 14px" }}>{descricao}</p>
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: "8px" }}>
-          <label htmlFor="whats-destino" style={{ fontSize: "10px", color: "#5a8a65", textTransform: "uppercase", letterSpacing: "0.06em", fontWeight: 700 }}>Número de destino (WhatsApp, com DDD)</label>
+          <label htmlFor="whats-destino" style={{ fontSize: "10px", color: "var(--c-5a8a65)", textTransform: "uppercase", letterSpacing: "0.06em", fontWeight: 700 }}>Número de destino (WhatsApp, com DDD)</label>
           {sugestao && (
-            <button type="button" onClick={() => setTelefone(mascaraTelefoneBR(sugestao))} style={{ background: "none", border: "none", color: "#3ec87a", fontSize: "11px", fontWeight: 600, cursor: "pointer", padding: 0 }}>
+            <button type="button" onClick={() => setTelefone(mascaraTelefoneBR(sugestao))} style={{ background: "none", border: "none", color: "var(--c-3ec87a)", fontSize: "11px", fontWeight: 600, cursor: "pointer", padding: 0 }}>
               Usar o número do José
             </button>
           )}
@@ -48,19 +48,19 @@ export default function EnviarWhatsAppModal({ titulo, descricao, sugestao, envia
           placeholder={sugestao ? `Ex.: ${mascaraTelefoneBR(sugestao.slice(2))}` : "(99) 99999-9999"}
           style={{
             width: "100%", padding: "9px 12px", margin: "4px 0 4px", background: "var(--background)",
-            border: `1px solid ${telefone && !destino ? "rgba(239,68,68,0.5)" : "var(--border)"}`,
-            borderRadius: "8px", color: "#c8f0d0", fontSize: "14px", outline: "none", boxSizing: "border-box", letterSpacing: "0.02em",
+            border: `1px solid ${telefone && !destino ? "color-mix(in srgb, var(--c-ef4444) 50%, transparent)" : "var(--border)"}`,
+            borderRadius: "8px", color: "var(--c-c8f0d0)", fontSize: "14px", outline: "none", boxSizing: "border-box", letterSpacing: "0.02em",
           }} />
-        <p style={{ fontSize: "11px", margin: "0 0 12px", minHeight: "16px", color: destino ? "#3ec87a" : "#e07070" }}>
+        <p style={{ fontSize: "11px", margin: "0 0 12px", minHeight: "16px", color: destino ? "var(--c-3ec87a)" : "var(--c-e07070)" }}>
           {destino ? `✓ Vai para ${exibirTelefoneBR(destino)}` : telefone ? "Número incompleto ou inválido — celular com DDD (o +55 é opcional)" : ""}
         </p>
         {children}
         <div style={{ display: "flex", gap: "8px", justifyContent: "flex-end" }}>
-          <button onClick={onFechar} style={{ padding: "8px 16px", borderRadius: "8px", background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.1)", color: "#6a8a70", cursor: "pointer" }}>
+          <button onClick={onFechar} style={{ padding: "8px 16px", borderRadius: "8px", background: "color-mix(in srgb, var(--c-ffffff) 5%, transparent)", border: "1px solid color-mix(in srgb, var(--c-ffffff) 10%, transparent)", color: "var(--c-6a8a70)", cursor: "pointer" }}>
             Cancelar
           </button>
           <button disabled={!destino || enviando} onClick={enviar} aria-busy={enviando} style={{
-            ...btnWhats("#25d366", "rgba(37,211,102,0.15)", "rgba(37,211,102,0.3)"), padding: "8px 20px",
+            ...btnWhats("var(--c-25d366)", "color-mix(in srgb, var(--c-25d366) 15%, transparent)", "color-mix(in srgb, var(--c-25d366) 30%, transparent)"), padding: "8px 20px",
             opacity: !destino ? 0.5 : 1, cursor: enviando ? "progress" : undefined,
           }}>
             {enviando ? <><InfinityMini width={26} /> Enviando para o WhatsApp…</> : <><Send size={13} /> Enviar</>}

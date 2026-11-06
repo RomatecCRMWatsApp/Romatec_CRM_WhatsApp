@@ -198,7 +198,7 @@ export default function ContratoNovo() {
                       className={`rounded-lg border p-3 text-left text-sm transition ${modoC === m ? "border-amber-400 bg-amber-400/15 ring-1 ring-amber-400" : "border-border hover:border-amber-400/50"}`}>
                       <span className="flex items-center gap-2 font-semibold">
                         <span className={`inline-block h-3.5 w-3.5 rounded-full border-2 ${modoC === m ? "border-amber-400 bg-amber-400" : "border-muted-foreground"}`} />
-                        {ROTULO_MODO_C[m].titulo}{m === "sequencial" && <span className="rounded bg-secondary px-1.5 text-[10px] font-normal uppercase text-muted-foreground">caso a caso</span>}
+                        {ROTULO_MODO_C[m].titulo}{m === "sequencial" && <span className="rounded bg-secondary px-1.5 text-[10px] font-normal text-muted-foreground">caso a caso</span>}
                       </span>
                       <span className="mt-1 block text-xs text-muted-foreground">{ROTULO_MODO_C[m].resumo}</span>
                     </button>

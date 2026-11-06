@@ -247,7 +247,7 @@ export default function Settings() {
 
             {!config?.zApiConnected && (
               <p className="text-xs text-amber-400 text-center">
-                ⚠️ Z-API não está conectado. Salve e teste a conexão primeiro.
+                Z-API não está conectado. Salve e teste a conexão primeiro.
               </p>
             )}
           </CardContent>
@@ -266,7 +266,7 @@ export default function Settings() {
             {/* Telegram */}
             <div className="space-y-3">
               <p className="text-sm font-semibold text-foreground flex items-center gap-2">
-                <span className="text-lg">📲</span> Telegram Bot
+                <span className="text-lg"></span> Telegram Bot
               </p>
               <p className="text-xs text-muted-foreground">
                 Notificações de envio, leads quentes e alertas do sistema via Telegram.
@@ -419,11 +419,11 @@ export default function Settings() {
 
         {/* Informações do sistema */}
         <div className="border border-border rounded-xl p-4 bg-card/50">
-          <h3 className="text-sm font-semibold text-muted-foreground mb-3 uppercase tracking-wide">Informações do Sistema</h3>
+          <h3 className="text-sm font-semibold text-muted-foreground mb-3">Informações do Sistema</h3>
           <div className="space-y-2">
             <div className="flex justify-between text-sm">
               <span className="text-muted-foreground">Versão</span>
-              <span className="text-foreground font-mono font-medium">v{__APP_VERSION__}</span>
+              <span className="text-foreground tabular-nums font-medium">v{__APP_VERSION__}</span>
             </div>
             <div className="flex justify-between text-sm">
               <span className="text-muted-foreground">Plataforma</span>

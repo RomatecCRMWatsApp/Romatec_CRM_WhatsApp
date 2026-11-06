@@ -46,7 +46,7 @@ export function GaleriaProjeto() {
       <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(min(100%, 420px), 1fr))", gap: 12, alignItems: "center" }}>
         {PROJETO.map(p => (
           <a key={p.src} href={p.src} target="_blank" rel="noopener noreferrer" title={p.alt}
-            style={{ display: "block", borderRadius: 14, overflow: "hidden", background: "#fff", border: "1px solid #E2D9BF" }}>
+            style={{ display: "block", borderRadius: 14, overflow: "hidden", background: "var(--c-ffffff)", border: "1px solid var(--c-e2d9bf)" }}>
             <img src={p.src} alt={p.alt} loading="lazy" width={p.w} height={p.h}
               style={{ width: "100%", height: "auto", maxHeight: 460, objectFit: "contain", display: "block" }} />
           </a>
@@ -96,7 +96,7 @@ export function BotaoInstagram({ usuario, claro }: { usuario: string; claro?: bo
   return (
     <a href={linkInstagram(usuario)} target="_blank" rel="noopener noreferrer" aria-label={`Siga no Instagram @${usuario}`}
       style={{ display: "inline-flex", alignItems: "center", gap: 8, padding: "10px 16px", borderRadius: 12, fontWeight: 700, textDecoration: "none",
-        ...(claro ? { border: "1px solid rgba(243,238,223,0.4)", color: "#fff" } : { background: "linear-gradient(45deg,#F58529,#DD2A7B 55%,#8134AF)", color: "#fff" }) }}>
+        ...(claro ? { border: "1px solid color-mix(in srgb, var(--c-f3eedf) 40%, transparent)", color: "var(--c-ffffff)" } : { background: "linear-gradient(45deg,var(--c-f58529),var(--c-dd2a7b) 55%,var(--c-8134af))", color: "var(--c-ffffff)" }) }}>
       <Instagram size={20} /> Siga no Instagram @{usuario}
     </a>
   );
@@ -110,7 +110,7 @@ export function ContatosBotoes({ codigo }: { codigo?: string }) {
     <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))", gap: 12 }}>
       {contatos.map(c => (
         <a key={c.whatsapp} href={waLink(c.whatsapp, codigo)} target="_blank" rel="noopener noreferrer"
-          style={{ display: "flex", alignItems: "center", gap: 12, padding: "14px 16px", borderRadius: 14, background: "#1F8A4C", color: "#fff", textDecoration: "none" }}>
+          style={{ display: "flex", alignItems: "center", gap: 12, padding: "14px 16px", borderRadius: 14, background: "var(--c-1f8a4c)", color: "var(--c-ffffff)", textDecoration: "none" }}>
           <MessageCircle size={26} />
           <span style={{ lineHeight: 1.25 }}>
             <span style={{ display: "block", fontSize: 12, opacity: 0.9 }}>{c.papel}</span>

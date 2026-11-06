@@ -47,7 +47,7 @@ export function Interruptor({ ligado, onMudar, rotulo, disabled, title }: { liga
     <label className={`flex items-center gap-2 text-xs ${disabled ? "opacity-50" : "cursor-pointer"}`} title={title}>
       <button type="button" role="switch" aria-checked={ligado} disabled={disabled} onClick={() => onMudar(!ligado)}
         className={`relative h-5 w-9 shrink-0 rounded-full transition-colors ${ligado ? "bg-emerald-600" : "bg-secondary border border-border"}`}>
-        <span className={`absolute top-0.5 h-4 w-4 rounded-full bg-white shadow transition-all ${ligado ? "left-[18px]" : "left-0.5"}`} />
+        <span className={`absolute top-0.5 h-4 w-4 rounded-full bg-white shadow transition ${ligado ? "left-[18px]" : "left-0.5"}`} />
       </button>
       {rotulo}
     </label>

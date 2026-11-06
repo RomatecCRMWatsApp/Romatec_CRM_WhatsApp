@@ -355,8 +355,8 @@ export default function Properties() {
                   <div>
                     <label className="text-sm font-medium text-muted-foreground mb-1 block">Finalidade</label>
                     <select value={form.finalidade} onChange={e => setForm(p => ({ ...p, finalidade: e.target.value as "venda" | "aluguel" }))} className="w-full h-10 px-3 rounded-md border border-border/50 bg-secondary/30 text-foreground text-sm">
-                      <option value="venda">🏠 Venda</option>
-                      <option value="aluguel">🔑 Aluguel</option>
+                      <option value="venda">Venda</option>
+                      <option value="aluguel">Aluguel</option>
                     </select>
                   </div>
                   <label className="flex items-start gap-2 text-sm text-foreground md:col-span-2 cursor-pointer">
@@ -448,7 +448,7 @@ export default function Properties() {
                   onDrop={e => handleDrop(e, 'photo')}
                   onDragOver={handleDragOver}
                   onClick={() => !isUploading && photoInputRef.current?.click()}
-                  className="p-6 border-2 border-dashed border-emerald/40 rounded-xl text-center cursor-pointer hover:border-emerald hover:bg-emerald/5 transition-all"
+                  className="p-6 border-2 border-dashed border-emerald/40 rounded-xl text-center cursor-pointer hover:border-emerald hover:bg-emerald/5 transition"
                 >
                   {isUploading && uploadProgress.includes('foto') ? (
                     <div className="flex flex-col items-center gap-2">
@@ -471,8 +471,8 @@ export default function Properties() {
                 {form.images.length > 0 ? (
                   <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
                     {form.images.map((img, idx) => (
-                      <div key={idx} className="relative group rounded-xl overflow-hidden border-2 border-border/50 transition-all"
-                        style={{ borderColor: idx === 0 ? '#10b981' : undefined }}>
+                      <div key={idx} className="relative group rounded-xl overflow-hidden border-2 border-border/50 transition"
+                        style={{ borderColor: idx === 0 ? 'var(--c-10b981)' : undefined }}>
                         <img src={img} alt={`Foto ${idx + 1}`} className="w-full h-40 object-cover" />
                         {/* Botão remover */}
                         <button onClick={() => removeImage(idx)} className="absolute top-2 right-2 bg-red-500/90 text-white rounded-full p-1.5 opacity-0 group-hover:opacity-100 transition-opacity">
@@ -481,7 +481,7 @@ export default function Properties() {
                         {/* Badge capa ou botão definir capa */}
                         {idx === 0 ? (
                           <span className="absolute bottom-2 left-2 bg-emerald-500/90 text-white text-xs px-2 py-0.5 rounded-full font-bold flex items-center gap-1">
-                            ⭐ Capa
+                            Capa
                           </span>
                         ) : (
                           <button
@@ -493,7 +493,7 @@ export default function Properties() {
                             }}
                             className="absolute bottom-2 left-2 bg-black/70 text-white text-xs px-2 py-0.5 rounded-full opacity-0 group-hover:opacity-100 transition-opacity hover:bg-emerald-600"
                           >
-                            ⭐ Definir como Capa
+                            Definir como Capa
                           </button>
                         )}
                         <span className="absolute top-2 left-2 bg-black/60 text-white text-xs px-2 py-0.5 rounded-full">Foto {idx + 1}</span>
@@ -516,7 +516,7 @@ export default function Properties() {
                   onDrop={e => handleDrop(e, 'video')}
                   onDragOver={handleDragOver}
                   onClick={() => !isUploading && videoInputRef.current?.click()}
-                  className="p-6 border-2 border-dashed border-red-500/40 rounded-xl text-center cursor-pointer hover:border-red-500 hover:bg-red-500/5 transition-all"
+                  className="p-6 border-2 border-dashed border-red-500/40 rounded-xl text-center cursor-pointer hover:border-red-500 hover:bg-red-500/5 transition"
                 >
                   {isUploading && uploadProgress.includes('v\u00eddeo') ? (
                     <div className="flex flex-col items-center gap-2">
@@ -538,7 +538,7 @@ export default function Properties() {
                     {form.videoUrl.includes("youtube") || form.videoUrl.includes("youtu.be") ? (
                       <iframe src={form.videoUrl.replace("watch?v=", "embed/").replace("youtu.be/", "youtube.com/embed/")} className="w-full h-full" allowFullScreen />
                     ) : (
-                      <video src={form.videoUrl} controls className="w-full h-full" />
+                      <video preload="metadata" src={form.videoUrl} controls className="w-full h-full" />
                     )}
                   </div>
                 ) : null}
@@ -555,7 +555,7 @@ export default function Properties() {
                   onDrop={e => handleDrop(e, 'planta')}
                   onDragOver={handleDragOver}
                   onClick={() => !isUploading && plantaInputRef.current?.click()}
-                  className="p-6 border-2 border-dashed border-emerald/40 rounded-xl text-center cursor-pointer hover:border-emerald hover:bg-emerald/5 transition-all"
+                  className="p-6 border-2 border-dashed border-emerald/40 rounded-xl text-center cursor-pointer hover:border-emerald hover:bg-emerald/5 transition"
                 >
                   {isUploading && uploadProgress.includes('planta') ? (
                     <div className="flex flex-col items-center gap-2">
@@ -577,7 +577,7 @@ export default function Properties() {
                     {(form.plantaBaixaUrl.toLowerCase().includes('.pdf') || form.plantaBaixaUrl.includes('/raw/upload/') || form.plantaBaixaUrl.startsWith('data:application/pdf')) ? (
                       <div className="flex items-center gap-4 p-4 bg-secondary/30 rounded-xl border border-border/40">
                         <div className="w-12 h-14 flex-shrink-0 flex items-center justify-center rounded-lg bg-red-500/15 border border-red-500/20">
-                          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" className="text-red-400"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/><polyline points="14 2 14 8 20 8" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/><line x1="16" y1="13" x2="8" y2="13" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/><line x1="16" y1="17" x2="8" y2="17" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/></svg>
+                          <svg aria-hidden="true" width="24" height="24" viewBox="0 0 24 24" fill="none" className="text-red-400"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/><polyline points="14 2 14 8 20 8" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/><line x1="16" y1="13" x2="8" y2="13" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/><line x1="16" y1="17" x2="8" y2="17" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/></svg>
                         </div>
                         <div className="flex-1 min-w-0">
                           <p className="text-sm font-medium text-foreground truncate">{form.plantaBaixaUrl.startsWith('data:application/pdf') ? 'planta.pdf' : form.plantaBaixaUrl.split('/').pop()}</p>
@@ -617,7 +617,7 @@ export default function Properties() {
           <div className="relative">
             <Search className="absolute left-4 top-3.5 h-5 w-5 text-muted-foreground" />
             <input type="text" placeholder="Buscar por nome ou endereço..." value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)}
-              className="w-full pl-12 pr-4 py-3 rounded-xl bg-secondary/30 border border-border/50 text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-emerald/30 focus:border-emerald/50 transition-all"
+              className="w-full pl-12 pr-4 py-3 rounded-xl bg-secondary/30 border border-border/50 text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-emerald/30 focus:border-emerald/50 transition"
             />
           </div>
         </div>
@@ -738,7 +738,7 @@ export default function Properties() {
 
                   {/* Ações */}
                   <div className="flex gap-2 pt-4 border-t border-border/30">
-                    <button onClick={() => setSelectedProperty(property)} className="flex-1 py-2.5 rounded-xl bg-emerald/10 hover:bg-emerald/20 text-emerald font-semibold text-sm transition-all flex items-center justify-center gap-1.5">
+                    <button onClick={() => setSelectedProperty(property)} className="flex-1 py-2.5 rounded-xl bg-emerald/10 hover:bg-emerald/20 text-emerald font-semibold text-sm transition flex items-center justify-center gap-1.5">
                       <Eye className="h-4 w-4" /> Ver Detalhes
                     </button>
                     {!habilitado(property.id) ? (
@@ -746,19 +746,19 @@ export default function Properties() {
                         <Lock className="h-3.5 w-3.5" /> sem acesso
                       </span>
                     ) : <>
-                    <button onClick={() => handleEdit(property)} className="flex-1 py-2.5 rounded-xl bg-gold/10 hover:bg-gold/20 text-gold font-semibold text-sm transition-all flex items-center justify-center gap-1.5">
+                    <button onClick={() => handleEdit(property)} className="flex-1 py-2.5 rounded-xl bg-gold/10 hover:bg-gold/20 text-gold font-semibold text-sm transition flex items-center justify-center gap-1.5">
                       <Edit className="h-4 w-4" /> Editar
                     </button>
-                    <button onClick={() => handleDelete(property.id, property.denomination)} className="py-2.5 px-3 rounded-xl bg-red-500/10 hover:bg-red-500/20 text-red-400 transition-all">
+                    <button onClick={() => handleDelete(property.id, property.denomination)} className="py-2.5 px-3 rounded-xl bg-red-500/10 hover:bg-red-500/20 text-red-400 transition">
                       <Trash2 className="h-4 w-4" />
                     </button>
                     {property.codigo && (
-                      <button title="QR da placa e página do imóvel" onClick={() => setQrDe({ id: property.id, codigo: property.codigo })} className="py-2.5 px-3 rounded-xl bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-300 text-xs font-bold transition-all">
+                      <button title="QR da placa e página do imóvel" onClick={() => setQrDe({ id: property.id, codigo: property.codigo })} className="py-2.5 px-3 rounded-xl bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-300 text-xs font-bold transition">
                         QR
                       </button>
                     )}
                     {property.publicSlug && (
-                      <button onClick={() => window.open(property.codigo ? `/i/${property.codigo}` : `/imovel/${property.publicSlug}`, "_blank")} className="py-2.5 px-3 rounded-xl bg-secondary/50 hover:bg-secondary text-foreground transition-all">
+                      <button onClick={() => window.open(property.codigo ? `/i/${property.codigo}` : `/imovel/${property.publicSlug}`, "_blank")} className="py-2.5 px-3 rounded-xl bg-secondary/50 hover:bg-secondary text-foreground transition">
                         <ExternalLink className="h-4 w-4" />
                       </button>
                     )}
@@ -795,15 +795,15 @@ export default function Properties() {
                   />
                   {selectedProperty.images.length > 1 && (
                     <>
-                      <button onClick={() => setImageIndex(i => (i - 1 + selectedProperty.images.length) % selectedProperty.images.length)} className="absolute left-3 top-1/2 -translate-y-1/2 p-2 rounded-full bg-black/50 text-white hover:bg-black/70 transition-all">
+                      <button onClick={() => setImageIndex(i => (i - 1 + selectedProperty.images.length) % selectedProperty.images.length)} className="absolute left-3 top-1/2 -translate-y-1/2 p-2 rounded-full bg-black/50 text-white hover:bg-black/70 transition">
                         <ChevronLeft className="h-5 w-5" />
                       </button>
-                      <button onClick={() => setImageIndex(i => (i + 1) % selectedProperty.images.length)} className="absolute right-3 top-1/2 -translate-y-1/2 p-2 rounded-full bg-black/50 text-white hover:bg-black/70 transition-all">
+                      <button onClick={() => setImageIndex(i => (i + 1) % selectedProperty.images.length)} className="absolute right-3 top-1/2 -translate-y-1/2 p-2 rounded-full bg-black/50 text-white hover:bg-black/70 transition">
                         <ChevronRight className="h-5 w-5" />
                       </button>
                       <div className="absolute bottom-3 left-1/2 -translate-x-1/2 flex gap-1.5">
                         {selectedProperty.images.map((_: string, idx: number) => (
-                          <button key={idx} onClick={() => setImageIndex(idx)} className={`w-2 h-2 rounded-full transition-all ${idx === imageIndex ? "bg-white w-6" : "bg-white/50"}`} />
+                          <button key={idx} onClick={() => setImageIndex(idx)} className={`w-2 h-2 rounded-full transition ${idx === imageIndex ? "bg-white w-6" : "bg-white/50"}`} />
                         ))}
                       </div>
                     </>
@@ -900,7 +900,7 @@ export default function Properties() {
                   <h3 className="text-sm font-semibold text-muted-foreground mb-3">Galeria</h3>
                   <div className="flex gap-2 overflow-x-auto pb-2">
                     {selectedProperty.images.map((img: string, idx: number) => (
-                      <button key={idx} onClick={() => setImageIndex(idx)} className={`flex-shrink-0 w-20 h-16 rounded-lg overflow-hidden border-2 transition-all ${idx === imageIndex ? "border-emerald" : "border-transparent opacity-60 hover:opacity-100"}`}>
+                      <button key={idx} onClick={() => setImageIndex(idx)} className={`flex-shrink-0 w-20 h-16 rounded-lg overflow-hidden border-2 transition ${idx === imageIndex ? "border-emerald" : "border-transparent opacity-60 hover:opacity-100"}`}>
                         <img src={img} alt={`Foto ${idx + 1}`} className="w-full h-full object-cover" />
                       </button>
                     ))}
@@ -917,7 +917,7 @@ export default function Properties() {
                       {selectedProperty.videoUrl.includes("youtube") || selectedProperty.videoUrl.includes("youtu.be") ? (
                         <iframe src={selectedProperty.videoUrl.replace("watch?v=", "embed/")} className="w-full h-full" allowFullScreen />
                       ) : (
-                        <video src={selectedProperty.videoUrl} controls className="w-full h-full" />
+                        <video preload="metadata" src={selectedProperty.videoUrl} controls className="w-full h-full" />
                       )}
                     </div>
                   </div>
@@ -928,9 +928,9 @@ export default function Properties() {
                     <div className="rounded-xl overflow-hidden border border-border/30">
                       {(selectedProperty.plantaBaixaUrl.toLowerCase().includes('.pdf') || selectedProperty.plantaBaixaUrl.includes('/raw/upload/') || selectedProperty.plantaBaixaUrl.startsWith('data:application/pdf')) ? (
                         <a href={`/api/imoveis/${selectedProperty.id}/planta`} target="_blank" rel="noopener noreferrer"
-                          className="flex items-center gap-4 p-4 bg-secondary/30 hover:bg-secondary/50 transition-all rounded-xl border border-border/40 group">
+                          className="flex items-center gap-4 p-4 bg-secondary/30 hover:bg-secondary/50 transition rounded-xl border border-border/40 group">
                           <div className="w-12 h-14 flex-shrink-0 flex items-center justify-center rounded-lg bg-red-500/15 border border-red-500/20">
-                            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" className="text-red-400"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/><polyline points="14 2 14 8 20 8" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/><line x1="16" y1="13" x2="8" y2="13" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/><line x1="16" y1="17" x2="8" y2="17" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/></svg>
+                            <svg aria-hidden="true" width="24" height="24" viewBox="0 0 24 24" fill="none" className="text-red-400"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/><polyline points="14 2 14 8 20 8" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/><line x1="16" y1="13" x2="8" y2="13" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/><line x1="16" y1="17" x2="8" y2="17" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/></svg>
                           </div>
                           <div className="flex-1 min-w-0">
                             <p className="text-sm font-medium text-foreground truncate">planta.pdf</p>
@@ -954,7 +954,7 @@ export default function Properties() {
                 <button className="flex-1 btn-gold py-3 rounded-xl flex items-center justify-center gap-2 text-base">
                   <Phone className="h-5 w-5" /> Ligar
                 </button>
-                <button className="py-3 px-4 rounded-xl bg-secondary/50 hover:bg-secondary text-foreground transition-all">
+                <button className="py-3 px-4 rounded-xl bg-secondary/50 hover:bg-secondary text-foreground transition">
                   <Heart className="h-5 w-5" />
                 </button>
               </div>
@@ -965,7 +965,7 @@ export default function Properties() {
 
       {/* Carousel Fullscreen */}
       {lightboxOpen && selectedProperty?.images?.length > 0 && (
-        <div className="fixed inset-0 z-[9999] flex flex-col bg-black" style={{ background: 'rgba(0,0,0,0.97)' }}>
+        <div className="fixed inset-0 z-[9999] flex flex-col bg-black" style={{ background: 'color-mix(in srgb, var(--c-000000) 97%, transparent)' }}>
           {/* Topo: nome + contador + fechar */}
           <div className="flex items-center justify-between px-5 py-4 flex-shrink-0">
             <p className="text-white/60 text-sm font-medium tracking-wide">{selectedProperty.denomination}</p>
@@ -973,10 +973,10 @@ export default function Properties() {
               {lightboxIndex + 1} / {selectedProperty.images.length}
             </span>
             <button
-              className="p-2 rounded-full bg-white/10 hover:bg-white/20 text-white transition-all"
+              className="p-2 rounded-full bg-white/10 hover:bg-white/20 text-white transition"
               onClick={() => setLightboxOpen(false)}
             >
-              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+              <svg aria-hidden="true" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
             </button>
           </div>
 
@@ -990,7 +990,7 @@ export default function Properties() {
               {selectedProperty.images.map((img: string, idx: number) => (
                 <div
                   key={idx}
-                  className="flex-shrink-0 flex items-center justify-center transition-all duration-300"
+                  className="flex-shrink-0 flex items-center justify-center transition duration-300"
                   style={{
                     width: `${100 / selectedProperty.images.length}%`,
                     opacity: idx === lightboxIndex ? 1 : 0.3,
@@ -1001,7 +1001,7 @@ export default function Properties() {
                     src={img}
                     alt={`Foto ${idx + 1}`}
                     className="max-h-[75vh] max-w-[100vw] w-full object-contain rounded-xl shadow-2xl"
-                    style={{ boxShadow: idx === lightboxIndex ? '0 0 60px rgba(62,200,122,0.15)' : 'none' }}
+                    style={{ boxShadow: idx === lightboxIndex ? '0 0 60px color-mix(in srgb, var(--c-3ec87a) 15%, transparent)' : 'none' }}
                   />
                 </div>
               ))}
@@ -1010,7 +1010,7 @@ export default function Properties() {
             {/* Seta esquerda */}
             {lightboxIndex > 0 && (
               <button
-                className="absolute left-0 top-1/2 -translate-y-1/2 p-3 rounded-full bg-white/10 hover:bg-white/20 text-white transition-all backdrop-blur-sm"
+                className="absolute left-0 top-1/2 -translate-y-1/2 p-3 rounded-full bg-white/10 hover:bg-white/20 text-white transition backdrop-blur-sm"
                 onClick={() => setLightboxIndex(i => i - 1)}
               >
                 <ChevronLeft className="h-7 w-7" />
@@ -1020,7 +1020,7 @@ export default function Properties() {
             {/* Seta direita */}
             {lightboxIndex < selectedProperty.images.length - 1 && (
               <button
-                className="absolute right-0 top-1/2 -translate-y-1/2 p-3 rounded-full bg-white/10 hover:bg-white/20 text-white transition-all backdrop-blur-sm"
+                className="absolute right-0 top-1/2 -translate-y-1/2 p-3 rounded-full bg-white/10 hover:bg-white/20 text-white transition backdrop-blur-sm"
                 onClick={() => setLightboxIndex(i => i + 1)}
               >
                 <ChevronRight className="h-7 w-7" />
@@ -1036,11 +1036,11 @@ export default function Properties() {
                 <button
                   key={idx}
                   onClick={() => setLightboxIndex(idx)}
-                  className="rounded-full transition-all duration-200"
+                  className="rounded-full transition duration-200"
                   style={{
                     width: idx === lightboxIndex ? '24px' : '8px',
                     height: '8px',
-                    background: idx === lightboxIndex ? '#3ec87a' : 'rgba(255,255,255,0.3)',
+                    background: idx === lightboxIndex ? 'var(--c-3ec87a)' : 'color-mix(in srgb, var(--c-ffffff) 30%, transparent)',
                   }}
                 />
               ))}
@@ -1051,10 +1051,10 @@ export default function Properties() {
                 <button
                   key={idx}
                   onClick={() => setLightboxIndex(idx)}
-                  className="flex-shrink-0 rounded-lg overflow-hidden transition-all duration-200"
+                  className="flex-shrink-0 rounded-lg overflow-hidden transition duration-200"
                   style={{
                     width: '60px', height: '44px',
-                    border: `2px solid ${idx === lightboxIndex ? '#3ec87a' : 'transparent'}`,
+                    border: `2px solid ${idx === lightboxIndex ? 'var(--c-3ec87a)' : 'transparent'}`,
                     opacity: idx === lightboxIndex ? 1 : 0.45,
                   }}
                 >

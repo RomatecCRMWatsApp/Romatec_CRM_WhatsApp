@@ -48,7 +48,7 @@ export default function ResumoIaLead({ leadId, phone, onEnviou }: { leadId: numb
               <Textarea value={texto} onChange={e => setTexto(e.target.value)} rows={5} />
               <div className="flex flex-wrap gap-2">
                 {fone && (
-                  <Button size="sm" className="bg-[#25D366] text-white hover:bg-[#1fb956]" asChild>
+                  <Button size="sm" className="bg-[color:var(--c-25d366)] text-white hover:bg-[color:var(--c-1fb956)]" asChild>
                     <a href={`https://wa.me/${fone}?text=${encodeURIComponent(texto)}`} target="_blank" rel="noreferrer" onClick={() => abriu.mutate({ id: leadId })}>
                       <MessageCircle className="mr-1.5 h-4 w-4" /> Enviar no WhatsApp
                     </a>
@@ -57,7 +57,7 @@ export default function ResumoIaLead({ leadId, phone, onEnviou }: { leadId: numb
                 <Button size="sm" variant="outline" onClick={copiar}><Copy className="mr-1.5 h-3.5 w-3.5" /> Copiar</Button>
               </div>
             </div>
-            <p className="text-[11px] text-muted-foreground">Gerado {new Date(r.geradoEm).toLocaleString("pt-BR", { timeZone: "America/Fortaleza", day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit" })} · {r.mensagens} mensagens lidas · confira antes de enviar</p>
+            <p className="text-[11px] text-muted-foreground">Gerado {new Date(r.geradoEm).toLocaleString("pt-BR", { timeZone: "America/Fortaleza", day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit" })}, {r.mensagens} mensagens lidas, confira antes de enviar</p>
           </>
         )}
       </CardContent>

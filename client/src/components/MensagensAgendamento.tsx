@@ -47,7 +47,7 @@ export default function MensagensAgendamento({ visitaId, enviada, aberto: inicia
               </div>
               <div className="space-y-1.5">
                 <p className="font-semibold text-muted-foreground">
-                  Confirmação para o cliente {data.enviadaEm ? <span className="font-normal text-emerald-300">· enviada em {dataHora(data.enviadaEm)}</span> : <span className="font-normal text-amber-300">· não enviada</span>}
+                  Confirmação para o cliente {data.enviadaEm ? <span className="font-normal text-emerald-300">(enviada em {dataHora(data.enviadaEm)})</span> : <span className="font-normal text-amber-300">(não enviada)</span>}
                 </p>
                 <textarea value={texto} onChange={e => setTexto(e.target.value)} rows={9} maxLength={3000} aria-label="Confirmação para o cliente"
                   className="w-full rounded-md border border-border bg-background p-2 text-xs" />
@@ -58,7 +58,7 @@ export default function MensagensAgendamento({ visitaId, enviada, aberto: inicia
                     {data.enviadaEm ? "Reenviar confirmação por WhatsApp" : "Enviar confirmação por WhatsApp"}
                   </Button>
                   <Button size="sm" variant="outline" className="h-7 text-xs" onClick={() => copiar(texto, "Confirmação")}><Copy className="mr-1 h-3.5 w-3.5" /> Copiar</Button>
-                  <a href={data.waCliente} target="_blank" rel="noopener noreferrer" className="inline-flex h-7 items-center rounded-md border border-[#25d366]/40 px-2 text-xs text-[#1fa855] hover:bg-[#25d366]/10">
+                  <a href={data.waCliente} target="_blank" rel="noopener noreferrer" className="inline-flex h-7 items-center rounded-md border border-[color:var(--c-25d366)]/40 px-2 text-xs text-[color:var(--c-1fa855)] hover:bg-[color:var(--c-25d366)]/10">
                     <MessageCircle className="mr-1 h-3.5 w-3.5" /> Abrir no WhatsApp
                   </a>
                   {!data.zapi && (

@@ -47,7 +47,7 @@ export function FotoCorretor({ cartao, tamanho = 62 }: { cartao: CartaoVendas; t
   const [erro, setErro] = useState(false);
   if (cartao.fotoUrl && !erro) {
     return <img src={cartao.fotoUrl} alt={cartao.nome} onError={() => setErro(true)} crossOrigin="anonymous"
-      style={{ width: tamanho, height: tamanho, borderRadius: "50%", objectFit: "cover", flexShrink: 0, border: "2px solid #C9A84C" }} />;
+      style={{ width: tamanho, height: tamanho, borderRadius: "50%", objectFit: "cover", flexShrink: 0, border: "2px solid var(--c-c9a84c)" }} />;
   }
   return <img src="/brand/selo-romatec.svg" alt="Selo Romatec Consultoria Total" style={{ width: tamanho, height: tamanho, flexShrink: 0 }} />;
 }

@@ -71,11 +71,11 @@ export default function RelogioPainel() {
   const fuso = -agora.getTimezoneOffset() / 60;
 
   return (
-    <div className="relative overflow-hidden rounded-2xl border border-primary/25 bg-gradient-to-br from-[#0d1f17] via-card to-[#0b1512] p-4 md:p-5">
+    <div className="relative overflow-hidden rounded-2xl border border-primary/25 bg-gradient-to-br from-[color:var(--c-0d1f17)] via-card to-[color:var(--c-0b1512)] p-4 md:p-5">
       <div className="pointer-events-none absolute -right-10 -top-10 h-40 w-40 rounded-full bg-primary/10 blur-3xl" />
       <div className="relative flex flex-wrap items-center gap-x-8 gap-y-3">
         {/* Hora digital */}
-        <div className="font-mono tabular-nums leading-none text-emerald-300 [text-shadow:0_0_18px_rgba(62,200,122,0.45)]" aria-live="off">
+        <div className="font-mono tabular-nums leading-none text-emerald-300 [text-shadow:0_0_18px_color-mix(in_srgb,_var(--c-3ec87a)_45%,_transparent)]" aria-live="off">
           <span className="text-5xl md:text-6xl font-bold">{dois(agora.getHours())}:{dois(agora.getMinutes())}</span>
           <span className="text-3xl md:text-4xl font-bold text-emerald-400/80">:{dois(agora.getSeconds())}</span>
         </div>
@@ -96,7 +96,7 @@ export default function RelogioPainel() {
         {/* Versão */}
         {versao && (
           <div className="ml-auto text-right leading-tight">
-            <p className="font-mono text-sm text-foreground">v{versao.versao}{versao.commit ? <span className="text-muted-foreground"> · {versao.commit}</span> : null}</p>
+            <p className="tabular-nums text-sm text-foreground">v{versao.versao}{versao.commit ? <span className="text-muted-foreground"> · {versao.commit}</span> : null}</p>
             <p className="text-xs text-muted-foreground">deploy {new Date(versao.deployAt).toLocaleString("pt-BR", { timeZone: "America/Fortaleza", day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit" })}</p>
           </div>
         )}

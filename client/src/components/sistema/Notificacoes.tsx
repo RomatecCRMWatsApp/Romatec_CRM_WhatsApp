@@ -108,7 +108,7 @@ export function ListaNotificacoes({ habilitado, onAbrir }: { habilitado: boolean
           className={`flex w-full items-start gap-2.5 rounded-lg border p-3 text-left ${n.lida ? "border-border" : "border-[var(--rt-gold)]/60 bg-[var(--rt-gold)]/5"}`}>
           <span className="mt-1 h-2.5 w-2.5 shrink-0 rounded-full" style={{ background: COR_NOTIFICACAO[n.tipo] }} />
           <span className="min-w-0 flex-1">
-            <span className="flex items-center gap-2 text-[11px] uppercase tracking-wide text-muted-foreground">
+            <span className="flex items-center gap-2 text-[11px] text-muted-foreground">
               {ROTULO_NOTIFICACAO[n.tipo]}
               {!n.lida && <span className="rounded bg-red-500 px-1.5 text-[10px] font-bold normal-case tracking-normal text-white">nova</span>}
               <span className="ml-auto normal-case tracking-normal">{quando(n.criadoEm)}</span>

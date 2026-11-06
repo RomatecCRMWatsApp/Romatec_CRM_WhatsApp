@@ -82,13 +82,13 @@ export default function FichaCredenciamento({ uid }: { uid: number }) {
               <Button type="button" size="sm" variant="outline" className="h-8 text-xs" disabled={!!gerando} onClick={baixar}>
                 {gerando === "baixar" ? <Loader2 className="mr-1 h-3.5 w-3.5 animate-spin" /> : <Download className="mr-1 h-3.5 w-3.5" />} Baixar PDF
               </Button>
-              <Button type="button" size="sm" variant="outline" className="h-8 text-xs border-[#25d366]/40 text-[#1fa855] hover:text-[#1fa855]" disabled={!!gerando} onClick={enviar}>
+              <Button type="button" size="sm" variant="outline" className="h-8 text-xs border-[color:var(--c-25d366)]/40 text-[color:var(--c-1fa855)] hover:text-[color:var(--c-1fa855)]" disabled={!!gerando} onClick={enviar}>
                 {gerando === "enviar" ? <Loader2 className="mr-1 h-3.5 w-3.5 animate-spin" /> : <Share2 className="mr-1 h-3.5 w-3.5" />} Enviar pelo WhatsApp
               </Button>
               <Button type="button" size="sm" variant="ghost" className="h-8 text-xs" onClick={copiar}><Copy className="mr-1 h-3.5 w-3.5" /> Link de verificação</Button>
             </div>
             {pronto && (
-              <Button type="button" size="sm" className="h-9 w-full bg-[#25d366] text-xs text-white hover:bg-[#1fb956]" onClick={() => mandar(pronto, true)}>
+              <Button type="button" size="sm" className="h-9 w-full bg-[color:var(--c-25d366)] text-xs text-white hover:bg-[color:var(--c-1fb956)]" onClick={() => mandar(pronto, true)}>
                 <Share2 className="mr-1 h-4 w-4" /> Enviar agora
               </Button>
             )}

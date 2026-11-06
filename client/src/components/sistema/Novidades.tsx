@@ -23,7 +23,7 @@ export function ItensDaRelease({ itens }: { itens: ItensRelease }) {
     <div className="space-y-3">
       {SECOES_RELEASE.filter(s => itens[s.chave]?.length).map(s => (
         <div key={s.chave}>
-          <p className="mb-1 flex items-center gap-1.5 text-xs font-bold uppercase tracking-wide" style={{ color: s.cor }}>
+          <p className="mb-1 flex items-center gap-1.5 text-xs font-bold" style={{ color: s.cor }}>
             <span className="h-2 w-2 rounded-full" style={{ background: s.cor }} /> {s.rotulo}
           </p>
           <ul className="space-y-1 pl-3.5">
@@ -52,13 +52,13 @@ export function UpdateBanner({ nova, onAtualizar }: { nova: { versao: string; ob
   }, [nova?.versao, nova?.obrigatoria, onAtualizar]);
   if (!nova || (!nova.obrigatoria && escondida === nova.versao)) return null;
   return (
-    <div className="fixed inset-x-0 top-0 z-[60] border-b-2 border-[var(--rt-gold)] bg-[#050b08]/95 px-4 py-2 shadow-lg backdrop-blur" style={{ paddingTop: "max(0.5rem, env(safe-area-inset-top))" }}>
+    <div className="fixed inset-x-0 top-0 z-[60] border-b-2 border-[var(--rt-gold)] bg-[color:var(--c-050b08)]/95 px-4 py-2 shadow-lg backdrop-blur" style={{ paddingTop: "max(0.5rem, env(safe-area-inset-top))" }}>
       <div className="mx-auto flex max-w-5xl flex-wrap items-center gap-x-3 gap-y-1.5 text-sm">
         <Sparkles className="h-4 w-4 shrink-0 text-[var(--rt-gold-light)]" />
         <p className="flex-1 text-[var(--rt-text)]">
           {nova.obrigatoria
-            ? <>Atualização obrigatória <b className="text-[var(--rt-gold-light)]">v{nova.versao}</b> — recarregando em {restam} s</>
-            : <>Nova versão disponível — <b className="text-[var(--rt-gold-light)]">v{nova.versao}</b></>}
+            ? <>Atualização obrigatória <b className="text-[var(--rt-gold-light)]">v{nova.versao}</b>: recarregando em {restam} s</>
+            : <>Nova versão disponível: <b className="text-[var(--rt-gold-light)]">v{nova.versao}</b></>}
         </p>
         <Button size="sm" onClick={onAtualizar} className="bg-[var(--rt-gold)] text-black hover:bg-[var(--rt-gold-light)]"><RefreshCw className="mr-1.5 h-3.5 w-3.5" /> Atualizar agora</Button>
         {!nova.obrigatoria && <Button size="sm" variant="ghost" className="text-muted-foreground" onClick={() => setEscondida(nova.versao)}>Depois</Button>}

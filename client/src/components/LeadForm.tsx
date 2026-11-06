@@ -53,7 +53,7 @@ export default function LeadForm({ propertyId, denomination, utm, title }: {
   if (status === "done") {
     return (
       <div className="glass-card p-6 mb-6 text-center">
-        <p className="text-3xl mb-2">✅</p>
+        <p className="text-3xl mb-2"></p>
         <h3 className="text-lg font-bold text-foreground">Recebemos seu interesse!</h3>
         <p className="text-sm text-muted-foreground mt-1">
           Em instantes você recebe uma mensagem no WhatsApp com valores e condições

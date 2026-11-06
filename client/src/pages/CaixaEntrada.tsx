@@ -49,7 +49,7 @@ function Conversa({ canal, id, info, onVoltar }: { canal: Canal; id: number; inf
         {data?.map(m => (
           <div key={m.id} className={`flex ${m.direcao === "in" ? "justify-start" : "justify-end"}`}>
             <div className={`max-w-[80%] rounded-2xl px-3 py-2 text-sm ${m.direcao === "in" ? "bg-secondary" : "bg-emerald-700/60"}`}>
-              {m.direcao === "out" && ROTULO_AUTOR[m.autor] && <p className="text-[10px] uppercase opacity-70">{ROTULO_AUTOR[m.autor]}</p>}
+              {m.direcao === "out" && ROTULO_AUTOR[m.autor] && <p className="text-[10px] opacity-70">{ROTULO_AUTOR[m.autor]}</p>}
               <p className="whitespace-pre-wrap break-words">{m.texto}</p>
               <p className="mt-0.5 text-right text-[10px] opacity-60">{hora(m.em)}</p>
             </div>

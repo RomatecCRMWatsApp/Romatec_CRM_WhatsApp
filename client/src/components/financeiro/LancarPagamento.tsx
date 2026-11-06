@@ -170,8 +170,8 @@ export default function LancarPagamento() {
           <ul className="mt-2 space-y-1">
             {recentes.data.map(p => (
               <li key={p.id} className="flex flex-wrap gap-x-2">
-                <b>{brl(p.valor)}</b> · {p.forma} · {new Date(p.pagoEm as any).toLocaleString("pt-BR", { timeZone: "America/Fortaleza" })}
-                {p.pagadorNome && <> · {p.pagadorNome}</>} · {p.parcelas.length} parcela(s)
+                <b>{brl(p.valor)}</b>, {p.forma}, {new Date(p.pagoEm as any).toLocaleString("pt-BR", { timeZone: "America/Fortaleza" })}
+                {p.pagadorNome && <>, {p.pagadorNome}</>}, {p.parcelas.length} parcela(s)
                 {p.urlRecibo && <a href={p.urlRecibo} target="_blank" rel="noreferrer" className="text-primary hover:underline">comprovante</a>}
               </li>
             ))}

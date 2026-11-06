@@ -67,7 +67,7 @@ export function AppFooter({ version, online, links = DEFAULT_LINKS, renderLink }
           <h2 className="rt-footer__title">CONTATO</h2>
           <a href={ROMATEC_CONTACT.whatsappHref} target="_blank" rel="noopener noreferrer">WhatsApp {ROMATEC_CONTACT.whatsappLabel}</a>
           <a href={`mailto:${ROMATEC_CONTACT.email}`}>{ROMATEC_CONTACT.email}</a>
-          <span style={{ color: "#D9DFDB", lineHeight: 1.5 }}>{ROMATEC_CONTACT.endereco1}<br />{ROMATEC_CONTACT.endereco2}</span>
+          <span style={{ color: "var(--c-d9dfdb)", lineHeight: 1.5 }}>{ROMATEC_CONTACT.endereco1}<br />{ROMATEC_CONTACT.endereco2}</span>
           <span style={{ fontSize: 13, color: "var(--rt-text-3)" }}>{ROMATEC_CONTACT.horario}</span>
         </div>
         <div className="rt-footer__col">

@@ -23,7 +23,7 @@ export default function EspacoBanco() {
     <Card className="bg-card border-border">
       <CardHeader><CardTitle className="text-foreground flex items-center gap-2"><Database className="h-5 w-5 text-primary" /> Espaço do banco de dados</CardTitle></CardHeader>
       <CardContent className="space-y-3">
-        <p className="text-xs text-muted-foreground">Mostra o que ocupa o volume do MySQL no Railway. Só consulta — não apaga nada.</p>
+        <p className="text-xs text-muted-foreground">Mostra o que ocupa o volume do MySQL no Railway. Só consulta: não apaga nada.</p>
         <Button size="sm" variant="outline" onClick={ver} disabled={carregando}>{carregando ? <Loader2 className="mr-1 h-4 w-4 animate-spin" /> : <Database className="mr-1 h-4 w-4" />} Ver espaço</Button>
         {dados && !dados.ok && <p className="text-sm text-red-400">{dados.erro || "Só o administrador consulta. Saia e entre de novo como administrador."}</p>}
         {dados?.ok && (

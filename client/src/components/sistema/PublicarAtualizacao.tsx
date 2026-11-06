@@ -55,7 +55,7 @@ export default function PublicarAtualizacao() {
       <CardHeader><CardTitle className="text-foreground flex items-center gap-2"><Megaphone className="h-5 w-5 text-[var(--rt-gold)]" /> Publicar atualização</CardTitle></CardHeader>
       <CardContent className="space-y-4">
         <p className="text-xs text-muted-foreground">
-          As versões do deploy vêm do <code>RELEASE_NOTES.md</code>. Aqui você publica um aviso ou corrige um texto sem deploy — todos recebem no "Novidades da versão" e no sino.
+          As versões do deploy vêm do <code>RELEASE_NOTES.md</code>. Aqui você publica um aviso ou corrige um texto sem deploy. O público escolhido recebe no "Novidades da versão" e no sino.
         </p>
         <div className="grid gap-3 sm:grid-cols-4">
           <label className="flex flex-col gap-1 text-xs text-muted-foreground">Versão
@@ -96,7 +96,7 @@ export default function PublicarAtualizacao() {
               <b className="w-14">v{r.versao}</b>
               <span className="min-w-0 flex-1 truncate">{r.titulo}</span>
               <span className="text-xs text-muted-foreground">{new Date(r.publicadoEm).toLocaleDateString("pt-BR")}</span>
-              {r.publico !== "todos" && <span className="rounded border border-border px-1 text-[10px] uppercase text-muted-foreground">{r.publico}</span>}
+              {r.publico !== "todos" && <span className="rounded border border-border px-1 text-[10px] text-muted-foreground">{r.publico}</span>}
               <Button size="sm" variant="ghost" className="h-7 px-2" onClick={() => abrirEdicao(r)}><Pencil className="h-3.5 w-3.5" /></Button>
               <Button size="sm" variant="ghost" className="h-7 px-2 text-xs" onClick={() => ativar.mutate({ id: r.id, ativo: !r.ativo })}>{r.ativo ? "Desativar" : "Reativar"}</Button>
             </div>

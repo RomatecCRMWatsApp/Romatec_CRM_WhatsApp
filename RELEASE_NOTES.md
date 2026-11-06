@@ -3,6 +3,18 @@
 Cada versão nova vai no TOPO. Depois rode `npm run release` (valida e atualiza o package.json);
 ao subir, o servidor grava a versão no banco e todos recebem o aviso "Novidades da versão".
 
+## 1.107.1 — 2026-11-05
+tipo: patch
+obrigatoria: nao
+titulo: Acabamento visual do CRM, mantendo a marca e o layout
+publico: equipe
+
+### Melhorias
+- Todas as cores das telas passam por tokens (client/src/styles/tokens.css), sem mudar o visual: base para unificar a paleta com a marca
+- Animações só de cor, opacidade e posição (nada de largura ou "transition: all"); quem pede menos movimento no celular não vê animação
+- Rótulos pequenos sem maiúsculas espaçadas; ícones de biblioteca no lugar de emoji nas telas; foco visível em todo controle e estado de pressionado nos botões
+- Acessibilidade: ícones decorativos escondidos do leitor de tela, rótulo no quadro de posicionar assinaturas, vídeos carregando só o primeiro quadro
+
 ## 1.107.0 — 2026-11-05
 tipo: minor
 obrigatoria: nao

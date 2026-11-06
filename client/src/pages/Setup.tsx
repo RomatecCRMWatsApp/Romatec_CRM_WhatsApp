@@ -26,7 +26,7 @@ function StepDot({ step, current }: { step: (typeof STEPS)[0]; current: number }
   return (
     <div className="flex flex-col items-center gap-1">
       <div
-        className={`w-10 h-10 rounded-full flex items-center justify-center border-2 transition-all ${
+        className={`w-10 h-10 rounded-full flex items-center justify-center border-2 transition ${
           done
             ? "bg-emerald-600 border-emerald-600 text-white"
             : active
@@ -50,7 +50,7 @@ function StepDot({ step, current }: { step: (typeof STEPS)[0]; current: number }
 function StepLine({ done }: { done: boolean }) {
   return (
     <div
-      className={`flex-1 h-0.5 mt-5 transition-all ${
+      className={`flex-1 h-0.5 mt-5 transition ${
         done ? "bg-emerald-600" : "bg-slate-700"
       }`}
     />

@@ -43,9 +43,9 @@ export default function EmpreendimentoProposta() {
   const hoje = new Date().toLocaleDateString("pt-BR", { timeZone: "America/Fortaleza" });
 
   const Linha = ({ r, v, forte }: { r: string; v: string; forte?: boolean }) => (
-    <tr style={{ borderBottom: "1px solid #e5e7eb" }}>
-      <td style={{ padding: "7px 0", color: "#4b5563" }}>{r}</td>
-      <td style={{ padding: "7px 0", textAlign: "right", fontWeight: forte ? 700 : 500, color: forte ? VERDE : "#111827" }}>{v}</td>
+    <tr style={{ borderBottom: "1px solid var(--c-e5e7eb)" }}>
+      <td style={{ padding: "7px 0", color: "var(--c-4b5563)" }}>{r}</td>
+      <td style={{ padding: "7px 0", textAlign: "right", fontWeight: forte ? 700 : 500, color: forte ? VERDE : "var(--c-111827)" }}>{v}</td>
     </tr>
   );
 
@@ -56,14 +56,14 @@ export default function EmpreendimentoProposta() {
         <Button variant="outline" onClick={() => navigate(`/empreendimentos/${slug}`)}><ArrowLeft className="mr-1.5 h-4 w-4" /> Voltar</Button>
         <Button onClick={() => window.print()}><Printer className="mr-1.5 h-4 w-4" /> Imprimir / salvar PDF</Button>
       </div>
-      <div className="folha mx-auto bg-white shadow-xl" style={{ width: "210mm", minHeight: "270mm", padding: "14mm", color: "#111827", fontFamily: "Inter, Arial, sans-serif", fontSize: "12px" }}>
+      <div className="folha mx-auto bg-white shadow-xl" style={{ width: "210mm", minHeight: "270mm", padding: "14mm", color: "var(--c-111827)", fontFamily: "Inter, Arial, sans-serif", fontSize: "12px" }}>
         <div style={{ display: "flex", alignItems: "center", gap: "14px", borderBottom: `3px solid ${OURO}`, paddingBottom: "10px" }}>
           <img src="/bom-jardims/logo.webp" alt="Bom Jardims" style={{ height: "56px", objectFit: "contain" }} />
           <div style={{ flex: 1 }}>
             <p style={{ fontSize: "18px", fontWeight: 800, color: VERDE, margin: 0 }}>Proposta de financiamento direto</p>
-            <p style={{ margin: 0, color: "#4b5563" }}>Condomínio de Chácaras Bom Jardims · Açailândia/MA</p>
+            <p style={{ margin: 0, color: "var(--c-4b5563)" }}>Condomínio de Chácaras Bom Jardims · Açailândia/MA</p>
           </div>
-          <p style={{ margin: 0, color: "#6b7280" }}>{hoje}</p>
+          <p style={{ margin: 0, color: "var(--c-6b7280)" }}>{hoje}</p>
         </div>
 
         <p style={{ fontSize: "14px", fontWeight: 700, margin: "14px 0 4px" }}>Chácara {data.lote.codigo}{data.lote.quadra ? ` · Quadra ${data.lote.quadra}` : ""} · {m2(data.lote.areaM2)} m²</p>
@@ -78,30 +78,30 @@ export default function EmpreendimentoProposta() {
             <Linha r="Total a pagar (entrada + saldo)" v={brl(plano.totalPago)} forte />
           </tbody>
         </table>
-        <p style={{ margin: "8px 0 0", color: "#374151" }}>{data.textoJuros}. 1ª parcela do saldo no mês seguinte à {entrada === 1 ? "entrada à vista" : "última parcela da entrada"}.</p>
+        <p style={{ margin: "8px 0 0", color: "var(--c-374151)" }}>{data.textoJuros}. 1ª parcela do saldo no mês seguinte à {entrada === 1 ? "entrada à vista" : "última parcela da entrada"}.</p>
 
-        <div style={{ marginTop: "14px", border: `1.5px solid ${OURO}`, borderRadius: "8px", padding: "10px 12px", background: "#FBF7EC", display: "flex", justifyContent: "space-between", alignItems: "center", gap: "12px" }}>
+        <div style={{ marginTop: "14px", border: `1.5px solid ${OURO}`, borderRadius: "8px", padding: "10px 12px", background: "var(--c-fbf7ec)", display: "flex", justifyContent: "space-between", alignItems: "center", gap: "12px" }}>
           <div>
             <p style={{ margin: 0, fontWeight: 700, color: VERDE }}>Ou pagamento integral à vista</p>
-            <p style={{ margin: 0, color: "#4b5563" }}>Preço cheio {brl(sim.preco)} com desconto de {brl(sim.avistaTotal.desconto)}, pago de uma só vez.</p>
+            <p style={{ margin: 0, color: "var(--c-4b5563)" }}>Preço cheio {brl(sim.preco)} com desconto de {brl(sim.avistaTotal.desconto)}, pago de uma só vez.</p>
           </div>
           <div style={{ textAlign: "right" }}>
             <p style={{ margin: 0, fontSize: "17px", fontWeight: 800, color: VERDE }}>{brl(sim.avistaTotal.valor)}</p>
-            <p style={{ margin: 0, color: "#047857", fontWeight: 600 }}>economize {brl(sim.avistaTotal.desconto)}</p>
+            <p style={{ margin: 0, color: "var(--c-047857)", fontWeight: 600 }}>economize {brl(sim.avistaTotal.desconto)}</p>
           </div>
         </div>
 
-        <p style={{ marginTop: "18px", fontSize: "10.5px", color: "#4b5563", lineHeight: 1.45 }}>{data.avisoLegal}</p>
+        <p style={{ marginTop: "18px", fontSize: "10.5px", color: "var(--c-4b5563)", lineHeight: 1.45 }}>{data.avisoLegal}</p>
 
         <div style={{ marginTop: "24px", borderTop: `1px solid ${OURO}`, paddingTop: "10px", display: "flex", alignItems: "center", gap: "14px" }}>
           {/* Foto de quem gerou a proposta (sem foto: selo da Romatec) */}
           <FotoCorretor cartao={cartao} />
           <div>
             <p style={{ margin: 0, fontWeight: 700 }}>{cartao.papel} {cartao.nome}{cartao.creci ? ` · ${cartao.creci}` : ""}</p>
-            {cartao.telefones.length > 0 && <p style={{ margin: 0, color: "#374151" }}>WhatsApp {cartao.telefones.join(" · ")}</p>}
-            {cartao.email && <p style={{ margin: 0, color: "#374151" }}>{cartao.email}</p>}
-            {cartao.instagram && <p style={{ margin: 0, color: "#374151" }}>Instagram @{cartao.instagram}</p>}
-            <p style={{ margin: "4px 0 0", color: "#6b7280" }}>Romatec Consultoria Total · Valores sujeitos a alteração e disponibilidade.</p>
+            {cartao.telefones.length > 0 && <p style={{ margin: 0, color: "var(--c-374151)" }}>WhatsApp {cartao.telefones.join(" · ")}</p>}
+            {cartao.email && <p style={{ margin: 0, color: "var(--c-374151)" }}>{cartao.email}</p>}
+            {cartao.instagram && <p style={{ margin: 0, color: "var(--c-374151)" }}>Instagram @{cartao.instagram}</p>}
+            <p style={{ margin: "4px 0 0", color: "var(--c-6b7280)" }}>Romatec Consultoria Total · Valores sujeitos a alteração e disponibilidade.</p>
           </div>
         </div>
       </div>

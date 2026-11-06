@@ -24,7 +24,7 @@ export function Logo({ slug, nome, className }: { slug: string; nome: string; cl
   if (!v || falhou) {
     return <div className={`flex items-center justify-center rounded-2xl bg-gradient-to-br from-amber-500/80 to-emerald-700/80 text-2xl font-bold text-white [font-family:var(--rt-font-title)] ${className ?? ""}`}>{iniciais(nome)}</div>;
   }
-  return <img src={v.logo} alt={`Logo ${nome}`} onError={() => setFalhou(true)} className={`object-contain drop-shadow-[0_8px_24px_rgba(0,0,0,0.6)] ${className ?? ""}`} />;
+  return <img src={v.logo} alt={`Logo ${nome}`} onError={() => setFalhou(true)} className={`object-contain drop-shadow-[0_8px_24px_color-mix(in_srgb,_var(--c-000000)_60%,_transparent)] ${className ?? ""}`} />;
 }
 
 export const saudacaoDoDia = () => { const h = new Date().getHours(); return h < 12 ? "Bom dia" : h < 18 ? "Boa tarde" : "Boa noite"; };

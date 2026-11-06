@@ -49,7 +49,7 @@ export default function ExtratoCompradores() {
             onClick={() => window.open(`/api/financeiro/dimob.xlsx?ano=${anoDimob}`, "_blank")}><FileSpreadsheet className="mr-1 h-4 w-4" /> Contador / DIMOB</Button>
         </span>
       </div>
-      {t && <p className="text-xs text-muted-foreground">{t.contratos} contrato(s) · {t.emAtraso} em atraso · {t.quitados} quitado(s)</p>}
+      {t && <p className="text-xs text-muted-foreground">{t.contratos} contrato(s), {t.emAtraso} em atraso, {t.quitados} quitado(s)</p>}
       {linhas.length > 0 && (
         <div className="overflow-x-auto rounded-xl border border-border bg-card">
           <table className="w-full text-sm">

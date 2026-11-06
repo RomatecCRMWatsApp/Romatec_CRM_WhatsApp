@@ -69,16 +69,16 @@ function VideoObras() {
     if (!v.muted) { v.play().catch(() => {}); registrarEvento("video_som", { pagina: "obras-bom-jardim" }); }
   };
   return (
-    <div style={{ position: "relative", borderRadius: 18, overflow: "hidden", background: "#000", boxShadow: "0 18px 40px rgba(0,0,0,0.35)", aspectRatio: "16 / 9" }}>
+    <div style={{ position: "relative", borderRadius: 18, overflow: "hidden", background: "var(--c-000000)", boxShadow: "0 18px 40px color-mix(in srgb, var(--c-000000) 35%, transparent)", aspectRatio: "16 / 9" }}>
       <video ref={ref} src={VIDEO.src} poster={VIDEO.poster} autoPlay muted loop playsInline preload="metadata" controls={!mudo}
         aria-label="Vídeo das obras do Condomínio de Chácaras Bom Jardim"
         style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }} />
       <button type="button" onClick={alternarSom} aria-label={mudo ? "Ativar o som do vídeo" : "Desativar o som do vídeo"}
         style={{ position: "absolute", right: 12, bottom: mudo ? 12 : 56, display: "inline-flex", alignItems: "center", gap: 6, padding: "9px 14px", borderRadius: 999, border: "none",
-          background: "rgba(12,51,32,0.88)", color: "#fff", fontWeight: 700, fontSize: 14, cursor: "pointer", fontFamily: SANS }}>
+          background: "color-mix(in srgb, var(--c-0c3320) 88%, transparent)", color: "var(--c-ffffff)", fontWeight: 700, fontSize: 14, cursor: "pointer", fontFamily: SANS }}>
         {mudo ? <><VolumeX size={18} /> Ativar som</> : <><Volume2 size={18} /> Som ligado</>}
       </button>
-      <span style={{ position: "absolute", top: 12, left: 12, padding: "4px 10px", borderRadius: 999, background: "rgba(12,51,32,0.8)", color: "#fff", fontSize: 12, fontWeight: 700 }}>
+      <span style={{ position: "absolute", top: 12, left: 12, padding: "4px 10px", borderRadius: 999, background: "color-mix(in srgb, var(--c-0c3320) 80%, transparent)", color: "var(--c-ffffff)", fontSize: 12, fontWeight: 700 }}>
         IMAGENS REAIS · INÍCIO DAS OBRAS
       </span>
     </div>
@@ -94,7 +94,7 @@ function Opcoes({ nome, valor, opcoes, onChange }: { nome: string; valor: string
         const on = valor === v;
         return (
           <button key={v} type="button" role="radio" aria-checked={on} onClick={() => onChange(v)}
-            style={{ padding: "9px 14px", borderRadius: 999, fontSize: 14, fontFamily: SANS, cursor: "pointer", border: `1.5px solid ${on ? C.verde : "#CFC6AD"}`, background: on ? C.verde : "#fff", color: on ? "#fff" : C.texto }}>
+            style={{ padding: "9px 14px", borderRadius: 999, fontSize: 14, fontFamily: SANS, cursor: "pointer", border: `1.5px solid ${on ? C.verde : "var(--c-cfc6ad)"}`, background: on ? C.verde : "var(--c-ffffff)", color: on ? "var(--c-ffffff)" : C.texto }}>
             {r}
           </button>
         );
@@ -142,20 +142,20 @@ function Ficha({ querValor, aoEnviar }: { querValor: boolean; aoEnviar?: () => v
 
   if (status === "done" && res) {
     return (
-      <div style={{ padding: 26, borderRadius: 20, background: "#fff", textAlign: "center", border: `2px solid ${C.dourado}` }}>
+      <div style={{ padding: 26, borderRadius: 20, background: "var(--c-ffffff)", textAlign: "center", border: `2px solid ${C.dourado}` }}>
         <CheckCircle2 size={44} color={C.verde} />
         <h3 style={{ fontFamily: SERIF, color: C.verde, fontSize: 24, margin: "8px 0" }}>Cadastro completo!</h3>
         <p style={{ margin: "0 0 14px" }}>
           {res.corretor ? <>Seu atendimento é com <b>{res.corretor.nome}</b>{res.corretor.creci ? ` (CRECI ${res.corretor.creci})` : ""}. </> : null}
           Toque abaixo para receber os valores e as condições no WhatsApp.
         </p>
-        <a href={res.whatsappUrl} target="_blank" rel="noopener noreferrer" style={btn("#25D366", "#fff")}><MessageCircle size={20} /> Receber os valores no WhatsApp</a>
+        <a href={res.whatsappUrl} target="_blank" rel="noopener noreferrer" style={btn("var(--c-25d366)", "var(--c-ffffff)")}><MessageCircle size={20} /> Receber os valores no WhatsApp</a>
       </div>
     );
   }
 
   return (
-    <form id="ficha" onSubmit={enviar} noValidate style={{ padding: "22px 18px", borderRadius: 20, background: "#fff", border: `${querValor ? 2 : 1}px solid ${querValor ? C.dourado : "#E2D9BF"}`, display: "grid", gap: 14, scrollMarginTop: 16 }}>
+    <form id="ficha" onSubmit={enviar} noValidate style={{ padding: "22px 18px", borderRadius: 20, background: "var(--c-ffffff)", border: `${querValor ? 2 : 1}px solid ${querValor ? C.dourado : "var(--c-e2d9bf)"}`, display: "grid", gap: 14, scrollMarginTop: 16 }}>
       <h2 style={{ fontFamily: SERIF, color: C.verde, fontSize: 24, margin: 0 }}>{querValor ? "Receba os valores no WhatsApp" : "Garanta prioridade no lançamento"}</h2>
       <p style={{ margin: 0, color: C.suave }}>
         {querValor ? "Preencha a ficha completa: assim que enviar, o WhatsApp do corretor abre para você receber a tabela e as condições."
@@ -187,8 +187,8 @@ function Ficha({ querValor, aoEnviar }: { querValor: boolean; aoEnviar?: () => v
       <label style={{ display: "flex", gap: 10, alignItems: "flex-start", fontSize: 12, color: C.suave, lineHeight: 1.45 }}>
         <input type="checkbox" checked={consent} onChange={e => setConsent(e.target.checked)} style={{ marginTop: 2, width: 18, height: 18 }} /> {CONSENT}
       </label>
-      {status === "error" && <p role="alert" style={{ margin: 0, color: "#A12A2A", fontSize: 14, fontWeight: 700 }}>{erro}</p>}
-      <button type="submit" disabled={status === "sending"} style={{ ...btn(querValor ? "#25D366" : C.verde, "#fff"), flex: "none", width: "100%", opacity: status === "sending" ? 0.7 : 1 }}>
+      {status === "error" && <p role="alert" style={{ margin: 0, color: "var(--c-a12a2a)", fontSize: 14, fontWeight: 700 }}>{erro}</p>}
+      <button type="submit" disabled={status === "sending"} style={{ ...btn(querValor ? "var(--c-25d366)" : C.verde, "var(--c-ffffff)"), flex: "none", width: "100%", opacity: status === "sending" ? 0.7 : 1 }}>
         {status === "sending" ? <><Loader2 size={18} className="animate-spin" /> Enviando…</> : querValor ? <><MessageCircle size={20} /> Enviar e receber os valores no WhatsApp</> : "Quero ser atendido"}
       </button>
     </form>
@@ -225,11 +225,11 @@ export default function ObrasBomJardim() {
 
   return (
     <div style={{ background: C.creme, color: C.texto, fontFamily: SANS, minHeight: "100vh" }}>
-      <header style={{ background: `radial-gradient(120% 80% at 50% 0%, #17502f 0%, ${C.verde} 70%)`, padding: "22px 16px 34px" }}>
+      <header style={{ background: `radial-gradient(120% 80% at 50% 0%, var(--c-17502f) 0%, ${C.verde} 70%)`, padding: "22px 16px 34px" }}>
         <div style={{ maxWidth: 1080, margin: "0 auto", display: "grid", gap: 20 }}>
           <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12, flexWrap: "wrap" }}>
             <img src="/bom-jardims/logo-520.webp" alt="CCBJ — Condomínio de Chácaras Bom Jardim" width={520} height={293} decoding="async" style={{ width: "min(190px, 46vw)", height: "auto" }} />
-            <span style={{ padding: "7px 13px", borderRadius: 999, background: "#C0392B", color: "#fff", fontWeight: 800, fontSize: 13, letterSpacing: 0.6 }}>🚧 OBRAS INICIADAS</span>
+            <span style={{ padding: "7px 13px", borderRadius: 999, background: "var(--c-c0392b)", color: "var(--c-ffffff)", fontWeight: 800, fontSize: 13, letterSpacing: 0.6 }}>OBRAS INICIADAS</span>
           </div>
           <VideoObras />
           <div>
@@ -237,16 +237,16 @@ export default function ObrasBomJardim() {
               LANÇAMENTO OFICIAL · {LANCAMENTO_OBRAS.toUpperCase()}
             </span>
             <h1 style={{ margin: "14px 0 8px" }}>
-              <span style={{ display: "block", fontFamily: SERIF, color: "#fff", fontSize: "clamp(30px, 6.5vw, 54px)", lineHeight: 1.08 }}>As obras começaram. As melhores chácaras saem primeiro.</span>
+              <span style={{ display: "block", fontFamily: SERIF, color: "var(--c-ffffff)", fontSize: "clamp(30px, 6.5vw, 54px)", lineHeight: 1.08 }}>As obras começaram. As melhores chácaras saem primeiro.</span>
               <span style={{ display: "block", color: C.destaque, fontSize: "clamp(16px, 2.8vw, 21px)", fontWeight: 700, marginTop: 10 }}>
-                CCBJ · Condomínio de Chácaras Bom Jardim · Açailândia/MA
+                CCBJ, Condomínio de Chácaras Bom Jardim, Açailândia/MA
               </span>
             </h1>
             <p style={{ color: C.creme, fontSize: "clamp(16px, 2.5vw, 19px)", margin: "0 0 20px", maxWidth: 720, lineHeight: 1.5 }}>
               Só <b>82 chácaras</b>, a partir de <b>3.025 m²</b>. <b>100% documentado</b> — escritura, licença ambiental e georreferenciamento INCRA/SIGEF — e <b>liberado para vendas</b>.
             </p>
             <div style={{ display: "flex", flexWrap: "wrap", gap: 12 }}>
-              <button type="button" onClick={saberValor} style={btn("#25D366", "#fff")}>
+              <button type="button" onClick={saberValor} style={btn("var(--c-25d366)", "var(--c-ffffff)")}>
                 <MessageCircle size={20} /> Quero saber o valor
               </button>
               <button type="button" onClick={agendar} disabled={abrindo === "visita"} style={btn(C.dourado, C.verde)}>
@@ -254,11 +254,11 @@ export default function ObrasBomJardim() {
               </button>
             </div>
             {corretor.doLink && (
-              <div style={{ marginTop: 16, display: "flex", alignItems: "center", gap: 12, padding: "12px 14px", borderRadius: 14, background: "rgba(243,238,223,0.08)", border: "1px solid rgba(201,168,76,0.45)" }}>
+              <div style={{ marginTop: 16, display: "flex", alignItems: "center", gap: 12, padding: "12px 14px", borderRadius: 14, background: "color-mix(in srgb, var(--c-f3eedf) 8%, transparent)", border: "1px solid color-mix(in srgb, var(--c-c9a84c) 45%, transparent)" }}>
                 {corretor.fotoUrl
                   ? <img src={corretor.fotoUrl} alt={corretor.nome} style={{ width: 54, height: 54, borderRadius: "50%", objectFit: "cover", border: `2px solid ${C.dourado}`, flexShrink: 0 }} />
                   : <div style={{ width: 54, height: 54, borderRadius: "50%", background: C.dourado, color: C.verde, display: "flex", alignItems: "center", justifyContent: "center", fontWeight: 800, fontSize: 22, flexShrink: 0 }}>{corretor.nome.charAt(0)}</div>}
-                <div style={{ minWidth: 0, color: "#fff", lineHeight: 1.35 }}>
+                <div style={{ minWidth: 0, color: "var(--c-ffffff)", lineHeight: 1.35 }}>
                   <p style={{ margin: 0, fontSize: 12, color: C.destaque, fontWeight: 700, letterSpacing: 0.4 }}>SEU CORRETOR</p>
                   <p style={{ margin: 0, fontWeight: 700 }}>{corretor.nome}</p>
                   <p style={{ margin: 0, fontSize: 13, color: C.creme }}>{[corretor.creci, corretor.telefones[0]].filter(Boolean).join(" · ")}</p>
@@ -269,7 +269,7 @@ export default function ObrasBomJardim() {
         </div>
       </header>
 
-      <section style={{ background: C.verde, borderTop: "1px solid rgba(201,168,76,0.35)" }}>
+      <section style={{ background: C.verde, borderTop: "1px solid color-mix(in srgb, var(--c-c9a84c) 35%, transparent)" }}>
         <div style={{ maxWidth: 1080, margin: "0 auto", padding: "22px 16px", display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(140px, 1fr))", gap: 14, textAlign: "center" }}>
           {DESTAQUES.map(({ icon: Icon, n, t }) => (
             <div key={t}>
@@ -291,7 +291,7 @@ export default function ObrasBomJardim() {
             ["Documentação em ordem", "Escritura, licença ambiental e área certificada no INCRA/SIGEF."],
             ["Atendimento na hora", "Corretores de plantão: valores, condições e visita guiada pelo WhatsApp."],
           ].map(([t, d]) => (
-            <div key={t} style={{ padding: 16, borderRadius: 16, background: "#fff", border: "1px solid #E2D9BF" }}>
+            <div key={t} style={{ padding: 16, borderRadius: 16, background: "var(--c-ffffff)", border: "1px solid var(--c-e2d9bf)" }}>
               <h3 style={{ margin: "0 0 4px", color: C.verde, fontSize: 18 }}>{t}</h3>
               <p style={{ margin: 0, lineHeight: 1.5 }}>{d}</p>
             </div>
@@ -304,9 +304,9 @@ export default function ObrasBomJardim() {
       </main>
 
       <footer style={{ background: C.verde, color: C.creme, padding: "24px 16px", textAlign: "center", fontSize: 13, lineHeight: 1.6 }}>
-        <p style={{ margin: 0 }}>CCBJ — Condomínio de Chácaras Bom Jardim · Estrada do Piquiá dos Baianos, km 15 da BR-222 · Açailândia/MA</p>
-        {corretor.doLink && <p style={{ margin: "6px 0 0", fontWeight: 700 }}>Atendimento: {rotuloCorretor(corretor)}{corretor.telefones[0] ? ` · ${corretor.telefones[0]}` : ""}</p>}
-        <p style={{ margin: "6px 0 0", opacity: 0.85 }}>Romatec Consultoria Total · Responsável: José Romário — CRECI/MA 4.705{corretor.doLink ? "" : " · (99) 9 9181-1246"}</p>
+        <p style={{ margin: 0 }}>CCBJ — Condomínio de Chácaras Bom Jardim, Estrada do Piquiá dos Baianos, km 15 da BR-222, Açailândia/MA</p>
+        {corretor.doLink && <p style={{ margin: "6px 0 0", fontWeight: 700 }}>Atendimento: {rotuloCorretor(corretor)}{corretor.telefones[0] ? `, ${corretor.telefones[0]}` : ""}</p>}
+        <p style={{ margin: "6px 0 0", opacity: 0.85 }}>Romatec Consultoria Total, Responsável: José Romário — CRECI/MA 4.705{corretor.doLink ? "" : ", (99) 9 9181-1246"}</p>
         <p style={{ margin: "6px 0 0", opacity: 0.7 }}>Imagens reais do início das obras. Valores e condições informados pelo corretor no atendimento.</p>
       </footer>
     </div>

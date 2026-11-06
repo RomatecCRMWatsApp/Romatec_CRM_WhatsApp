@@ -65,7 +65,7 @@ function Vinculo() {
               <p>Mande esta mensagem em até 10 minutos:</p>
               <p className="font-mono text-2xl font-bold tracking-widest">{codigo.mensagem}</p>
               <div className="flex flex-wrap gap-2">
-                <Button asChild className="bg-[#25D366] text-white hover:bg-[#1fb956]"><a href={wa} target="_blank" rel="noreferrer"><MessageCircle className="mr-1 h-4 w-4" /> Abrir no WhatsApp</a></Button>
+                <Button asChild className="bg-[color:var(--c-25d366)] text-white hover:bg-[color:var(--c-1fb956)]"><a href={wa} target="_blank" rel="noreferrer"><MessageCircle className="mr-1 h-4 w-4" /> Abrir no WhatsApp</a></Button>
                 <Button variant="outline" onClick={() => navigator.clipboard.writeText(codigo.mensagem).then(() => toast.success("Copiado"))}><Copy className="mr-1 h-4 w-4" /> Copiar</Button>
               </div>
               <p className="text-[11px] text-muted-foreground">Esta tela atualiza sozinha quando o vínculo for confirmado.</p>
@@ -103,7 +103,7 @@ function ListaRascunhos() {
             <div className="flex items-center justify-between gap-2">
               <span className="font-semibold">nº {r.id} · {r.titulo || (r.tipo ? ROTULO_TIPO[r.tipo] : "Imóvel")}</span>
               <span className="flex items-center gap-1">
-                <span className="rounded bg-secondary/50 px-1.5 py-0.5 text-[10px] font-bold uppercase">{ESTADO[r.estado] ?? r.estado}</span>
+                <span className="rounded bg-secondary/50 px-1.5 py-0.5 text-[10px] font-bold">{ESTADO[r.estado] ?? r.estado}</span>
                 {r.estado !== "saving" && (
                   <button type="button" aria-label={`Excluir rascunho nº ${r.id}`} title="Excluir rascunho" disabled={excluir.isPending}
                     className="rounded p-1.5 text-red-300 hover:bg-red-500/10"
@@ -134,8 +134,8 @@ function PainelAdmin() {
     <section className="space-y-2 rounded-xl border border-border bg-card p-4 text-sm">
       <h2 className="text-base font-semibold">Administração do agente</h2>
       <p className="text-xs text-muted-foreground">{data.agente} · {data.motor}</p>
-      <p className="text-xs">IA: <b>{data.ia.disponivel ? `${data.ia.provedor} (${data.ia.modelo})` : "não configurada"}</b> · Transcrição de áudio: <b>{data.ia.transcricao ? "ligada" : "sem chave"}</b> · Análise de imagem: <b>não usada</b> (fotos organizadas pelo corretor) · Fotos em processamento: <b>{data.fotosEmProcessamento}</b></p>
-      <p className="text-xs">Rascunhos: {data.rascunhosPorEstado.map(x => `${ESTADO[x.estado] ?? x.estado} ${x.n}`).join(" · ") || "nenhum"}</p>
+      <p className="text-xs">IA: <b>{data.ia.disponivel ? `${data.ia.provedor} (${data.ia.modelo})` : "não configurada"}</b>, Transcrição de áudio: <b>{data.ia.transcricao ? "ligada" : "sem chave"}</b>, Análise de imagem: <b>não usada</b> (fotos organizadas pelo corretor), Fotos em processamento: <b>{data.fotosEmProcessamento}</b></p>
+      <p className="text-xs">Rascunhos: {data.rascunhosPorEstado.map(x => `${ESTADO[x.estado] ?? x.estado} ${x.n}`).join(", ") || "nenhum"}</p>
       <div className="overflow-x-auto"><table className="w-full text-xs">
         <thead className="text-left text-muted-foreground"><tr><th className="p-1">Pessoa</th><th className="p-1">Perfil</th><th className="p-1">WhatsApp</th><th className="p-1">Situação</th><th /></tr></thead>
         <tbody>{data.vinculos.map(v => (
@@ -173,7 +173,7 @@ function Rascunho({ id }: { id: number }) {
     <div className="space-y-4">
       <div className="flex flex-wrap items-center gap-2">
         <Link href="/imoveis/whatsapp" className="text-sm text-muted-foreground hover:underline">← Todos os rascunhos</Link>
-        <span className="rounded bg-secondary/50 px-2 py-0.5 text-xs font-bold uppercase">{ESTADO[r.estado] ?? r.estado} · versão {r.versao}</span>
+        <span className="rounded bg-secondary/50 px-2 py-0.5 text-xs font-bold">{ESTADO[r.estado] ?? r.estado} · versão {r.versao}</span>
         {r.propertyId && <Link href={`/properties?imovel=${r.propertyId}`} className="text-sm text-emerald-300 underline">Abrir em Imóveis (cadastrado, interno)</Link>}
         {r.estado !== "saving" && (
           <Button variant="ghost" size="sm" className="ml-auto text-red-300" disabled={excluir.isPending} onClick={() => { if (confirm(avisoExcluir(id, r.propertyId))) excluir.mutate({ id }); }}>
@@ -183,8 +183,8 @@ function Rascunho({ id }: { id: number }) {
       </div>
       {r.erro && <p className="rounded-md bg-red-500/10 p-2 text-xs text-red-200">{r.erro}</p>}
       {!!r.pendencias.length && aberto && <p className="rounded-md bg-amber-500/10 p-2 text-sm text-amber-200">Falta: {r.pendencias.join(", ")}</p>}
-      {r.conflitos.map((c: any) => <p key={c.campo} className="rounded-md bg-amber-500/10 p-2 text-sm text-amber-200">❓ {CAMPOS.find(x => x.campo === c.campo)?.rotulo}: {c.valores.join(" ou ")} — corrija abaixo</p>)}
-      {r.duvidas.map((q: string, i: number) => <p key={i} className="rounded-md bg-amber-500/10 p-2 text-sm text-amber-200">❓ {q}</p>)}
+      {r.conflitos.map((c: any) => <p key={c.campo} className="rounded-md bg-amber-500/10 p-2 text-sm text-amber-200">{CAMPOS.find(x => x.campo === c.campo)?.rotulo}: {c.valores.join(" ou ")} — corrija abaixo</p>)}
+      {r.duvidas.map((q: string, i: number) => <p key={i} className="rounded-md bg-amber-500/10 p-2 text-sm text-amber-200">{q}</p>)}
 
       <section className="grid gap-3 rounded-xl border border-border bg-card p-4 md:grid-cols-2 lg:grid-cols-3">
         {CAMPOS.map(c => {

@@ -14,7 +14,7 @@ export default function InstalarApp() {
     <div>
       <PageHeader icone={MonitorSmartphone} titulo="Instalar o app" subtitulo="O CRM vira um app no celular e no computador: ícone na tela, abre em tela cheia e recebe as notificações" />
       <div className="mx-auto max-w-[900px] space-y-4 px-4 pb-8 md:px-6 text-sm">
-        {app.instalado && <p className="rounded-xl border border-emerald-500/40 bg-emerald-500/10 p-3">✅ Você já está usando o app instalado.</p>}
+        {app.instalado && <p className="rounded-xl border border-emerald-500/40 bg-emerald-500/10 p-3">Você já está usando o app instalado.</p>}
         {app.podeInstalar && <Button onClick={() => app.instalar()}><Download className="mr-1.5 h-4 w-4" /> Instalar agora</Button>}
         <div className="grid gap-3 md:grid-cols-3">
           <div className="space-y-1 rounded-xl border border-border bg-card p-4"><p className="flex items-center gap-2 font-semibold"><Smartphone className="h-4 w-4" /> Android</p>

@@ -32,7 +32,7 @@ export default function BarraVersao() {
 
   return (
     <div className={`w-full bg-black/40 border-b border-white/5 text-[11px] text-zinc-400 px-3 py-0.5 flex flex-wrap gap-x-3 gap-y-0 tabular-nums ${location.startsWith("/empreendedor") ? "" : "lg:pl-[17rem]"}`}>
-      <span>🕒 {dataHora(agora)}</span>
+      <span>{dataHora(agora)}</span>
       {data && (
         <>
           <span title={data.commit ? `commit ${data.commit}` : undefined}>
@@ -41,7 +41,7 @@ export default function BarraVersao() {
           <span>último deploy: {dataHora(new Date(data.deployAt))}</span>
           {versaoNova && (
             <button onClick={() => window.location.reload()} className="rounded bg-emerald-500/20 px-2 font-semibold text-emerald-300 hover:bg-emerald-500/30">
-              🔄 Nova versão no ar — toque para atualizar
+              Nova versão no ar — toque para atualizar
             </button>
           )}
         </>

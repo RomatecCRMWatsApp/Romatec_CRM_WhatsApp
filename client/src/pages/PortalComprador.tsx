@@ -23,9 +23,9 @@ function Chamado({ c, onFeito }: { c: any; onFeito: () => void }) {
       <div className="flex flex-wrap items-start justify-between gap-2">
         <div>
           <p className="font-semibold">{c.assunto}</p>
-          <p className="flex items-center gap-1 text-xs text-muted-foreground"><UserRound className="h-3.5 w-3.5" /> {c.comprador} · contrato {c.contrato} · chácara {c.lote} · {c.rotulo} · {quando(c.criadoEm)}</p>
+          <p className="flex items-center gap-1 text-xs text-muted-foreground"><UserRound className="h-3.5 w-3.5" /> {c.comprador}, contrato {c.contrato}, chácara {c.lote}, {c.rotulo}, {quando(c.criadoEm)}</p>
         </div>
-        <span className="rounded border border-border px-2 py-0.5 text-[11px] uppercase text-muted-foreground">{c.status}</span>
+        <span className="rounded border border-border px-2 py-0.5 text-[11px] text-muted-foreground">{c.status}</span>
       </div>
       <p className="whitespace-pre-wrap">{c.mensagem}</p>
       {c.resposta && <p className="whitespace-pre-wrap rounded-md bg-emerald-500/10 p-2"><b>Resposta</b>{c.respondidoPor ? ` (${c.respondidoPor}, ${quando(c.respondidoEm)})` : ""}: {c.resposta}</p>}

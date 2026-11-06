@@ -43,7 +43,7 @@ export function Mapa3DEmpreendimento({ slug, lotes, perimetro, selecionadoId, on
   if (!dados) return <p className="rounded-xl border border-dashed border-border p-4 text-sm text-muted-foreground">Este empreendimento ainda não tem a geometria das chácaras (importe o DXF) para o mapa 3D.</p>;
   return (
     <Suspense fallback={<p className="p-4 text-sm text-muted-foreground">Carregando o mapa 3D…</p>}>
-      <div className="rounded-xl bg-[#F3EEDF] p-2 text-[#23352A]">
+      <div className="rounded-xl bg-[color:var(--c-f3eedf)] p-2 text-[color:var(--c-23352a)]">
         <Mapa3D lotes={info} dados={dados} selected={sel} corDoLote={corDoLote} legenda={legenda} semBuscador altura={altura}
           onSelect={c => onSelecionar(porCodigo.get(c)?.id ?? null)} />
       </div>

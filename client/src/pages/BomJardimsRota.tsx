@@ -31,7 +31,7 @@ export default function BomJardimsRota() {
 
   return (
     <div style={{ background: C.creme, color: C.texto, fontFamily: SANS, minHeight: "100vh" }}>
-      <header style={{ background: C.verde, color: "#fff", textAlign: "center", padding: "28px 16px 24px" }}>
+      <header style={{ background: C.verde, color: "var(--c-ffffff)", textAlign: "center", padding: "28px 16px 24px" }}>
         <img src="/bom-jardims/logo-520.webp" alt="Logotipo do Condomínio de Chácaras Bom Jardims" width={520} height={293} style={{ width: "min(200px, 50vw)", height: "auto" }} />
         <h1 style={{ fontFamily: SERIF, fontSize: "clamp(34px, 8vw, 52px)", margin: "10px 0 4px", lineHeight: 1.05 }}>Como chegar</h1>
         <p style={{ color: C.destaque, fontWeight: 700, margin: 0 }}>Do centro de Açailândia ao portal do Bom Jardims</p>
@@ -46,14 +46,14 @@ export default function BomJardimsRota() {
       <section style={{ ...sec, paddingTop: 20 }}>
         <h2 style={{ fontFamily: SERIF, color: C.verde, fontSize: 28, margin: "0 0 12px" }}>Veja o caminho em vídeo (com narração)</h2>
         <video src={VIDEO.src} poster={VIDEO.poster} controls playsInline preload="metadata" onPlay={() => abriu("video")}
-          style={{ display: "block", width: "100%", maxWidth: 400, aspectRatio: "9 / 16", margin: "0 auto", borderRadius: 18, background: "#000", objectFit: "cover" }} />
+          style={{ display: "block", width: "100%", maxWidth: 400, aspectRatio: "9 / 16", margin: "0 auto", borderRadius: 18, background: "var(--c-000000)", objectFit: "cover" }} />
       </section>
 
       <section style={{ ...sec, paddingTop: 20 }}>
         <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))", gap: 10 }}>
           <a href={linkGoogleRota()} target="_blank" rel="noopener noreferrer" onClick={() => abriu("google")} style={btn(C.dourado, C.verde)}><Navigation size={20} /> Abrir no Google Maps</a>
-          <a href={linkWazeRota()} target="_blank" rel="noopener noreferrer" onClick={() => abriu("waze")} style={btn("#33CCFF", "#05233A")}><Navigation size={20} /> Abrir no Waze</a>
-          <a href={linkAppleRota()} target="_blank" rel="noopener noreferrer" onClick={() => abriu("apple")} style={btn("#fff", C.verde)}><MapPin size={20} /> Apple Maps (iPhone)</a>
+          <a href={linkWazeRota()} target="_blank" rel="noopener noreferrer" onClick={() => abriu("waze")} style={btn("var(--c-33ccff)", "var(--c-05233a)")}><Navigation size={20} /> Abrir no Waze</a>
+          <a href={linkAppleRota()} target="_blank" rel="noopener noreferrer" onClick={() => abriu("apple")} style={btn("var(--c-ffffff)", C.verde)}><MapPin size={20} /> Apple Maps (iPhone)</a>
         </div>
         <p style={{ fontSize: 13, color: C.suave, margin: "10px 0 0" }}>O Waze traça a rota a partir de onde você estiver. O Google Maps e o Apple Maps já abrem saindo da Prefeitura, no centro.</p>
       </section>
@@ -64,7 +64,7 @@ export default function BomJardimsRota() {
           {PONTOS_ROTA.map((p, i) => {
             const fim = i === PONTOS_ROTA.length - 1;
             return (
-              <li key={p.titulo} style={{ display: "flex", gap: 14, alignItems: "flex-start", padding: "14px 16px", borderRadius: 16, background: fim ? C.verde : "#fff", border: `1px solid ${fim ? C.verde : "#E2D9BF"}` }}>
+              <li key={p.titulo} style={{ display: "flex", gap: 14, alignItems: "flex-start", padding: "14px 16px", borderRadius: 16, background: fim ? C.verde : "var(--c-ffffff)", border: `1px solid ${fim ? C.verde : "var(--c-e2d9bf)"}` }}>
                 <span style={{ flexShrink: 0, width: 38, height: 38, borderRadius: 38, display: "flex", alignItems: "center", justifyContent: "center", fontWeight: 900, background: fim ? C.dourado : C.verde, color: fim ? C.verde : C.destaque, border: `3px solid ${fim ? C.verde : C.dourado}` }}>{i + 1}</span>
                 <span>
                   <b style={{ display: "block", color: fim ? C.destaque : C.verde, fontSize: 18 }}>{p.titulo}</b>
@@ -80,19 +80,19 @@ export default function BomJardimsRota() {
         <h2 style={{ fontFamily: SERIF, color: C.verde, fontSize: 28, margin: "0 0 6px" }}>Arquivo da rota</h2>
         <p style={{ margin: "0 0 12px", color: C.suave }}>Abre em qualquer app de navegação (OsmAnd, Maps.me, Organic Maps, GPS de carro) e no Google Earth.</p>
         <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))", gap: 10 }}>
-          <a href="/bom-jardims/rota.gpx" download onClick={() => abriu("gpx")} style={btn(C.verde, "#fff")}><Download size={20} /> Baixar rota (GPX)</a>
-          <a href="/bom-jardims/rota.kml" download onClick={() => abriu("kml")} style={btn("#fff", C.verde)}><Download size={20} /> Google Earth (KML)</a>
+          <a href="/bom-jardims/rota.gpx" download onClick={() => abriu("gpx")} style={btn(C.verde, "var(--c-ffffff)")}><Download size={20} /> Baixar rota (GPX)</a>
+          <a href="/bom-jardims/rota.kml" download onClick={() => abriu("kml")} style={btn("var(--c-ffffff)", C.verde)}><Download size={20} /> Google Earth (KML)</a>
         </div>
       </section>
 
       <section style={{ ...sec, paddingTop: 24 }}>
         <h2 style={{ fontFamily: SERIF, color: C.verde, fontSize: 28, margin: "0 0 12px" }}>Folder para guardar no celular</h2>
-        <a href={FOLDER} target="_blank" rel="noopener noreferrer" style={{ display: "block", borderRadius: 18, overflow: "hidden", border: "1px solid #E2D9BF", maxWidth: 420, margin: "0 auto" }}>
+        <a href={FOLDER} target="_blank" rel="noopener noreferrer" style={{ display: "block", borderRadius: 18, overflow: "hidden", border: "1px solid var(--c-e2d9bf)", maxWidth: 420, margin: "0 auto" }}>
           <img src={FOLDER} alt="Folder Como chegar ao Bom Jardims, com os pontos de referência e o QR da rota" width={1080} height={1920} loading="lazy" style={{ width: "100%", height: "auto", display: "block" }} />
         </a>
         <div style={{ textAlign: "center", marginTop: 12 }}>
           <a href={FOLDER} download="Como_chegar_Bom_Jardims.png" onClick={() => abriu("folder")} style={{ ...btn(C.dourado, C.verde), display: "inline-flex" }}><Download size={20} /> Baixar o folder</a>
-          <a href="/bom-jardims/divulgacao/como-chegar.pdf" download="Como_chegar_Bom_Jardims.pdf" onClick={() => abriu("pdf")} style={{ ...btn(C.verde, "#fff"), display: "inline-flex", marginLeft: 10, marginTop: 10 }}><Download size={20} /> Apresentação em PDF</a>
+          <a href="/bom-jardims/divulgacao/como-chegar.pdf" download="Como_chegar_Bom_Jardims.pdf" onClick={() => abriu("pdf")} style={{ ...btn(C.verde, "var(--c-ffffff)"), display: "inline-flex", marginLeft: 10, marginTop: 10 }}><Download size={20} /> Apresentação em PDF</a>
         </div>
       </section>
 
@@ -100,7 +100,7 @@ export default function BomJardimsRota() {
         <div style={{ ...sec, padding: "28px 16px 32px" }}>
           <p style={{ color: C.creme, margin: "0 0 12px", fontWeight: 700 }}>Ficou com dúvida no caminho? Chame no WhatsApp:</p>
           <ContatosBotoes />
-          <p style={{ color: "#BFC9B9", fontSize: 13, margin: "16px 0 0" }}>{rotuloCorretor(corretor)} · <a href="/bom-jardims" style={{ color: C.destaque }}>Ver as chácaras</a></p>
+          <p style={{ color: "var(--c-bfc9b9)", fontSize: 13, margin: "16px 0 0" }}>{rotuloCorretor(corretor)} · <a href="/bom-jardims" style={{ color: C.destaque }}>Ver as chácaras</a></p>
         </div>
       </section>
     </div>

@@ -59,7 +59,7 @@ function Opcoes<T extends string>({ name, value, onChange, options }: {
           <button key={o.v} type="button" role="radio" aria-checked={on} onClick={() => onChange(o.v)}
             style={{
               padding: "9px 14px", borderRadius: 999, fontSize: 14, fontFamily: SANS, cursor: "pointer",
-              border: `1.5px solid ${on ? C.verde : "#CFC6AD"}`, background: on ? C.verde : "#fff", color: on ? "#fff" : C.texto,
+              border: `1.5px solid ${on ? C.verde : "var(--c-cfc6ad)"}`, background: on ? C.verde : "var(--c-ffffff)", color: on ? "var(--c-ffffff)" : C.texto,
             }}>
             {o.label}
           </button>
@@ -105,8 +105,8 @@ export function Formulario({ loteCodigo, onClearLote, lotes }: { loteCodigo?: st
 
   if (status === "done") {
     return (
-      <div style={{ padding: 28, borderRadius: 20, background: "#fff", textAlign: "center", border: `2px solid ${C.dourado}` }}>
-        <p style={{ fontSize: 40, margin: 0 }}>✅</p>
+      <div style={{ padding: 28, borderRadius: 20, background: "var(--c-ffffff)", textAlign: "center", border: `2px solid ${C.dourado}` }}>
+        <p style={{ fontSize: 40, margin: 0 }}></p>
         <h3 style={{ fontFamily: SERIF, color: C.verde, fontSize: 24, margin: "8px 0" }}>Cadastro recebido!</h3>
         <p style={{ color: C.texto, margin: 0 }}>Em instantes você recebe uma mensagem no WhatsApp. {corretor.nome}{corretor.creci ? ` (${corretor.creci})` : ""} vai falar com você.</p>
       </div>
@@ -114,9 +114,9 @@ export function Formulario({ loteCodigo, onClearLote, lotes }: { loteCodigo?: st
   }
 
   return (
-    <form onSubmit={submit} style={{ padding: "24px 20px", borderRadius: 20, background: "#fff", border: `1px solid #E2D9BF`, display: "grid", gap: 16 }}>
+    <form onSubmit={submit} style={{ padding: "24px 20px", borderRadius: 20, background: "var(--c-ffffff)", border: `1px solid var(--c-e2d9bf)`, display: "grid", gap: 16 }}>
       {lote && (
-        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 8, padding: "10px 14px", borderRadius: 12, background: "#F7F1DD", border: `1px solid ${C.dourado}` }}>
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 8, padding: "10px 14px", borderRadius: 12, background: "var(--c-f7f1dd)", border: `1px solid ${C.dourado}` }}>
           <span style={{ color: C.verde }}>
             Chácara <b>{lote.codigo}</b> · {formatArea(lote.areaM2)}
             {lote.status !== "disponivel" && <> · <b>{STATUS_LABEL[lote.status]}</b> (escolha uma disponível)</>}
@@ -164,7 +164,7 @@ export function Formulario({ loteCodigo, onClearLote, lotes }: { loteCodigo?: st
         <input type="checkbox" checked={consent} onChange={e => setConsent(e.target.checked)} style={{ marginTop: 3, width: 18, height: 18, accentColor: C.verde, flexShrink: 0 }} />
         <span>{CONSENT_TEXT}</span>
       </label>
-      {status === "error" && <p role="alert" style={{ color: "#B3261E", margin: 0 }}>{error}</p>}
+      {status === "error" && <p role="alert" style={{ color: "var(--c-b3261e)", margin: 0 }}>{error}</p>}
       <button type="submit" disabled={status === "sending"}
         style={{ padding: "16px", borderRadius: 14, border: "none", background: C.dourado, color: C.verde, fontWeight: 700, fontSize: 17, fontFamily: SANS, cursor: "pointer", opacity: status === "sending" ? 0.6 : 1 }}>
         {status === "sending" ? "Enviando…" : "Quero receber o mapa de vendas"}
@@ -230,7 +230,7 @@ export default function BomJardims() {
         <img src={IMAGENS_BOM_JARDIMS[0].src} srcSet={IMAGENS_BOM_JARDIMS[0].srcset} sizes="100vw" alt={IMAGENS_BOM_JARDIMS[0].alt} width={IMAGENS_BOM_JARDIMS[0].w} height={IMAGENS_BOM_JARDIMS[0].h}
           fetchPriority="high" decoding="async"
           style={{ position: "absolute", inset: 0, width: "100%", height: "100%", objectFit: "cover" }} />
-        <div style={{ position: "absolute", inset: 0, background: "linear-gradient(180deg, rgba(12,51,32,0.15) 0%, rgba(12,51,32,0.55) 45%, rgba(12,51,32,0.95) 100%)" }} />
+        <div style={{ position: "absolute", inset: 0, background: "linear-gradient(180deg, color-mix(in srgb, var(--c-0c3320) 15%, transparent) 0%, color-mix(in srgb, var(--c-0c3320) 55%, transparent) 45%, color-mix(in srgb, var(--c-0c3320) 95%, transparent) 100%)" }} />
         <div style={{ position: "relative", maxWidth: 1080, margin: "0 auto", padding: "32px 16px 40px", width: "100%", boxSizing: "border-box" }}>
           <img src="/bom-jardims/logo-520.webp" alt="Logotipo do Condomínio de Chácaras Bom Jardims" width={520} height={293} decoding="async" style={{ width: "min(260px, 60vw)", height: "auto", display: "block", marginBottom: 16 }} />
           <span style={{ display: "inline-block", padding: "6px 12px", borderRadius: 999, background: C.dourado, color: C.verde, fontWeight: 700, fontSize: 13, letterSpacing: 0.5 }}>
@@ -238,26 +238,26 @@ export default function BomJardims() {
           </span>
           {/* H1 com o que as pessoas buscam (condomínio de chácaras / chácaras à venda em Açailândia) + o slogan */}
           <h1 style={{ margin: "14px 0 10px", maxWidth: 760 }}>
-            <span style={{ display: "block", fontFamily: SERIF, color: "#fff", fontSize: "clamp(34px, 7vw, 60px)", lineHeight: 1.05 }}>Seu pedaço de natureza em Açailândia</span>
+            <span style={{ display: "block", fontFamily: SERIF, color: "var(--c-ffffff)", fontSize: "clamp(34px, 7vw, 60px)", lineHeight: 1.05 }}>Seu pedaço de natureza em Açailândia</span>
             <span style={{ display: "block", fontFamily: SANS, color: C.destaque, fontSize: "clamp(16px, 2.8vw, 22px)", fontWeight: 700, lineHeight: 1.3, marginTop: 10 }}>
               Condomínio de Chácaras Bom Jardims · chácaras à venda em Açailândia/MA
             </span>
           </h1>
-          <p style={{ color: "#F3EEDF", fontSize: "clamp(16px, 2.6vw, 20px)", margin: "0 0 24px", maxWidth: 640 }}>
+          <p style={{ color: "var(--c-f3eedf)", fontSize: "clamp(16px, 2.6vw, 20px)", margin: "0 0 24px", maxWidth: 640 }}>
             Condomínio fechado de chácaras a partir de 3.025 m², com portal, água encanada e área de vivência às margens do córrego.
           </p>
           <div style={{ display: "flex", flexWrap: "wrap", gap: 12 }}>
             <a href={AGENDAR_BOM_JARDIMS} style={{ padding: "15px 22px", borderRadius: 14, background: C.dourado, color: C.verde, fontWeight: 700, fontSize: 16, textDecoration: "none", fontFamily: SANS }}>
               Agendar visita
             </a>
-            <button onClick={goForm} style={{ padding: "15px 22px", borderRadius: 14, border: "1.5px solid #fff", background: "transparent", color: "#fff", fontWeight: 700, fontSize: 16, cursor: "pointer", fontFamily: SANS }}>
+            <button onClick={goForm} style={{ padding: "15px 22px", borderRadius: 14, border: "1.5px solid var(--c-ffffff)", background: "transparent", color: "var(--c-ffffff)", fontWeight: 700, fontSize: 16, cursor: "pointer", fontFamily: SANS }}>
               Receber o mapa de vendas
             </button>
-            <a href="#mapa" style={{ padding: "15px 22px", borderRadius: 14, border: "1.5px solid #fff", color: "#fff", fontWeight: 700, fontSize: 16, textDecoration: "none" }}>
+            <a href="#mapa" style={{ padding: "15px 22px", borderRadius: 14, border: "1.5px solid var(--c-ffffff)", color: "var(--c-ffffff)", fontWeight: 700, fontSize: 16, textDecoration: "none" }}>
               Ver as chácaras no mapa
             </a>
           </div>
-          <p style={{ color: "#D9D3BF", fontSize: 13, marginTop: 18 }}>{rotuloCorretor(corretor)}</p>
+          <p style={{ color: "var(--c-d9d3bf)", fontSize: 13, marginTop: 18 }}>{rotuloCorretor(corretor)}</p>
         </div>
       </header>
 
@@ -281,7 +281,7 @@ export default function BomJardims() {
         </p>
         <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(260px, 1fr))", gap: 16 }}>
           {DIFERENCIAIS.map(({ icon: Icon, titulo, texto }) => (
-            <div key={titulo} style={{ padding: 20, borderRadius: 18, background: "#fff", border: "1px solid #E2D9BF" }}>
+            <div key={titulo} style={{ padding: 20, borderRadius: 18, background: "var(--c-ffffff)", border: "1px solid var(--c-e2d9bf)" }}>
               <Icon size={28} color={C.dourado} />
               <h3 style={{ fontFamily: SERIF, color: C.verde, fontSize: 20, margin: "10px 0 6px" }}>{titulo}</h3>
               <p style={{ margin: 0, lineHeight: 1.5 }}>{texto}</p>
@@ -301,11 +301,11 @@ export default function BomJardims() {
           ? <Suspense fallback={<p>Carregando o mapa 3D…</p>}><Mapa3D lotes={lotes} selected={selected} onSelect={c => { setSelected(c); if (c) registrarEvento(EVENTOS.mapa, { empreendimento: "bom-jardims", chacara: c }); }} /></Suspense>
           : <LoteMap lotes={lotes} selected={selected} onSelect={c => { setSelected(c); if (c) registrarEvento(EVENTOS.mapa, { empreendimento: "bom-jardims", chacara: c }); }} onMapLoaded={setFallbackLotes} />} />
         {semSituacao && (
-          <p style={{ fontSize: 13, color: "#8A5A00", marginTop: 8 }}>Não foi possível confirmar a situação das chácaras agora. Fale com o corretor para confirmar a disponibilidade.</p>
+          <p style={{ fontSize: 13, color: "var(--c-8a5a00)", marginTop: 8 }}>Não foi possível confirmar a situação das chácaras agora. Fale com o corretor para confirmar a disponibilidade.</p>
         )}
         {selLote?.status === "disponivel" && (
           <div style={{ display: "flex", flexWrap: "wrap", gap: 12, marginTop: 12 }}>
-            <button onClick={goForm} style={{ padding: "13px 18px", borderRadius: 12, border: "none", background: C.verde, color: "#fff", fontWeight: 700, cursor: "pointer", fontFamily: SANS }}>
+            <button onClick={goForm} style={{ padding: "13px 18px", borderRadius: 12, border: "none", background: C.verde, color: "var(--c-ffffff)", fontWeight: 700, cursor: "pointer", fontFamily: SANS }}>
               Tenho interesse na {selLote.codigo}
             </button>
           </div>
@@ -330,15 +330,15 @@ export default function BomJardims() {
       <section style={{ ...section, paddingTop: 0 }}>
         <h2 style={h2}>Chegar em casa já é um passeio</h2>
         <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(240px, 1fr))", gap: 12, marginTop: 20 }}>
-          <figure style={{ margin: 0, gridRow: "span 2", borderRadius: 18, overflow: "hidden", background: "#000", position: "relative" }}>
+          <figure style={{ margin: 0, gridRow: "span 2", borderRadius: 18, overflow: "hidden", background: "var(--c-000000)", position: "relative" }}>
             <video src={VIDEO.src} poster={VIDEO.poster} controls playsInline preload="none"
               style={{ width: "100%", height: "100%", objectFit: "cover", display: "block", maxHeight: 640 }} />
-            <figcaption style={{ position: "absolute", top: 10, left: 10, display: "flex", alignItems: "center", gap: 6, padding: "4px 10px", borderRadius: 999, background: "rgba(12,51,32,0.8)", color: "#fff", fontSize: 12 }}>
+            <figcaption style={{ position: "absolute", top: 10, left: 10, display: "flex", alignItems: "center", gap: 6, padding: "4px 10px", borderRadius: 999, background: "color-mix(in srgb, var(--c-0c3320) 80%, transparent)", color: "var(--c-ffffff)", fontSize: 12 }}>
               <Play size={12} /> Vídeo
             </figcaption>
           </figure>
           {GALERIA.map(g => (
-            <figure key={g.src} style={{ margin: 0, borderRadius: 18, overflow: "hidden", background: "#DDD5BD" }}>
+            <figure key={g.src} style={{ margin: 0, borderRadius: 18, overflow: "hidden", background: "var(--c-ddd5bd)" }}>
               <img src={g.src} alt={g.alt} loading="lazy" decoding="async" width={1200} height={676} style={{ width: "100%", height: "100%", aspectRatio: "16 / 10", objectFit: "cover", display: "block" }} />
             </figure>
           ))}
@@ -353,7 +353,7 @@ export default function BomJardims() {
         <h2 style={h2}>Sobre o Condomínio de Chácaras Bom Jardims</h2>
         <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(300px, 1fr))", gap: 16, marginTop: 20 }}>
           {SOBRE_BOM_JARDIMS.map(b => (
-            <article key={b.titulo} style={{ padding: 20, borderRadius: 18, background: "#fff", border: "1px solid #E2D9BF" }}>
+            <article key={b.titulo} style={{ padding: 20, borderRadius: 18, background: "var(--c-ffffff)", border: "1px solid var(--c-e2d9bf)" }}>
               <h3 style={{ fontFamily: SERIF, color: C.verde, fontSize: 20, margin: "0 0 8px" }}>{b.titulo}</h3>
               {b.paragrafos.map(p => <p key={p} style={{ margin: "0 0 10px", lineHeight: 1.6 }}>{p}</p>)}
             </article>
@@ -366,13 +366,13 @@ export default function BomJardims() {
         <h2 style={h2}>Perguntas frequentes sobre as Chácaras Bom Jardims</h2>
         <div style={{ display: "grid", gap: 10 }}>
           {FAQ_BOM_JARDIMS.map(f => (
-            <details key={f.pergunta} style={{ padding: "14px 18px", borderRadius: 14, background: "#fff", border: "1px solid #E2D9BF" }}>
+            <details key={f.pergunta} style={{ padding: "14px 18px", borderRadius: 14, background: "var(--c-ffffff)", border: "1px solid var(--c-e2d9bf)" }}>
               <summary style={{ cursor: "pointer", fontWeight: 700, color: C.verde }}>{f.pergunta}</summary>
               <p style={{ margin: "10px 0 0", lineHeight: 1.55 }}>{f.resposta}</p>
             </details>
           ))}
         </div>
-        <a href={AGENDAR_BOM_JARDIMS} style={{ display: "inline-block", marginTop: 20, padding: "15px 22px", borderRadius: 14, background: C.verde, color: "#fff", fontWeight: 700, fontSize: 16, textDecoration: "none" }}>
+        <a href={AGENDAR_BOM_JARDIMS} style={{ display: "inline-block", marginTop: 20, padding: "15px 22px", borderRadius: 14, background: C.verde, color: "var(--c-ffffff)", fontWeight: 700, fontSize: 16, textDecoration: "none" }}>
           Agendar visita ao Bom Jardims
         </a>
       </section>
@@ -380,7 +380,7 @@ export default function BomJardims() {
       {/* 6. Localização */}
       <section style={{ ...section, paddingTop: 0 }}>
         <h2 style={h2}>Localização</h2>
-        <div style={{ padding: 20, borderRadius: 18, background: "#fff", border: "1px solid #E2D9BF", display: "flex", flexWrap: "wrap", gap: 16, alignItems: "center", justifyContent: "space-between" }}>
+        <div style={{ padding: 20, borderRadius: 18, background: "var(--c-ffffff)", border: "1px solid var(--c-e2d9bf)", display: "flex", flexWrap: "wrap", gap: 16, alignItems: "center", justifyContent: "space-between" }}>
           <div style={{ display: "flex", gap: 12, alignItems: "flex-start", maxWidth: 640 }}>
             <MapPin size={26} color={C.dourado} style={{ flexShrink: 0 }} />
             <p style={{ margin: 0, lineHeight: 1.5 }}>
@@ -389,7 +389,7 @@ export default function BomJardims() {
             </p>
           </div>
           <a href={rotaAteEntrada()} target="_blank" rel="noopener noreferrer"
-            style={{ display: "inline-flex", alignItems: "center", gap: 8, padding: "12px 18px", borderRadius: 12, background: C.verde, color: "#fff", fontWeight: 700, textDecoration: "none" }}>
+            style={{ display: "inline-flex", alignItems: "center", gap: 8, padding: "12px 18px", borderRadius: 12, background: C.verde, color: "var(--c-ffffff)", fontWeight: 700, textDecoration: "none" }}>
             <Navigation size={18} /> Como chegar ao portal
           </a>
         </div>
@@ -398,7 +398,7 @@ export default function BomJardims() {
       {/* 7. Formulário */}
       <section ref={formRef} id="cadastro" style={{ background: C.verde }}>
         <div style={{ ...section, maxWidth: 720 }}>
-          <h2 style={{ ...h2, color: "#fff" }}>Receba o mapa pelo WhatsApp</h2>
+          <h2 style={{ ...h2, color: "var(--c-ffffff)" }}>Receba o mapa pelo WhatsApp</h2>
           <p style={{ color: C.creme, margin: "0 0 24px" }}>
             Estamos em pré-lançamento. Deixe seu contato e receba o mapa das chácaras pelo WhatsApp, com as informações do condomínio.
           </p>
@@ -409,16 +409,16 @@ export default function BomJardims() {
       </section>
 
       {/* 8. Rodapé */}
-      <footer style={{ background: "#08261A", color: C.creme }}>
+      <footer style={{ background: "var(--c-08261a)", color: C.creme }}>
         <div style={{ ...section, padding: "32px 16px", display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(240px, 1fr))", gap: 24 }}>
           {contatos.map(c => (
             <div key={c.whatsapp}>
               <p style={{ margin: 0, fontSize: 13, color: C.dourado, fontWeight: 700, textTransform: "uppercase", letterSpacing: 0.5 }}>{c.papel}</p>
               <p style={{ margin: "4px 0 0", fontFamily: SERIF, fontSize: 20 }}>{c.nome}</p>
-              <a href={waLink(c.whatsapp)} target="_blank" rel="noopener noreferrer" style={{ color: "#fff", fontSize: 18, fontWeight: 700, textDecoration: "none" }}>{c.telefone}</a>
+              <a href={waLink(c.whatsapp)} target="_blank" rel="noopener noreferrer" style={{ color: "var(--c-ffffff)", fontSize: 18, fontWeight: 700, textDecoration: "none" }}>{c.telefone}</a>
             </div>
           ))}
-          <div style={{ fontSize: 13, lineHeight: 1.6, color: "#BFC9B9" }}>
+          <div style={{ fontSize: 13, lineHeight: 1.6, color: "var(--c-bfc9b9)" }}>
             <p style={{ margin: 0 }}>Romatec Consultoria Total · CNPJ 17.261.987/0001-09</p>
             <p style={{ margin: 0 }}>Rua São Raimundo, n.º 10, Centro, Açailândia/MA</p>
             <p style={{ margin: 0 }}>José Romário Pinto Bezerra — Corretor CRECI/MA 4.705</p>

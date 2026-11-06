@@ -41,7 +41,7 @@ export default function CarneDigital() {
   const abertas = parcelas.filter(p => p.status !== "paga");
 
   return (
-    <div className="min-h-screen" style={{ background: CREME, color: "#1d2b22", fontFamily: "Manrope, system-ui, sans-serif" }}>
+    <div className="min-h-screen" style={{ background: CREME, color: "var(--c-1d2b22)", fontFamily: "Manrope, system-ui, sans-serif" }}>
       <header className="border-b-4 px-4 py-3 text-white" style={{ background: VERDE, borderColor: DOURADO }}>
         <div className="mx-auto max-w-3xl">
           <p className="font-bold" style={{ fontFamily: "'Playfair Display', Georgia, serif" }}>Condomínio de Chácaras Bom Jardims</p>
@@ -65,7 +65,7 @@ export default function CarneDigital() {
                   {[["Parcelas pagas", `${d.resumo.pagas} de ${d.resumo.total}`], ["Total pago", brl(d.resumo.totalPago)], ["Saldo devedor", brl(d.resumo.saldoDevedor)],
                     ["Próxima", d.resumo.proxima ? `${br(d.resumo.proxima.vencimento)} · ${brl(d.resumo.proxima.valor)}` : "quitado"]].map(([r, v]) => (
                     <div key={r} className="rounded-xl border bg-white p-3" style={{ borderColor: DOURADO }}>
-                      <p className="text-[11px] uppercase text-neutral-500">{r}</p>
+                      <p className="text-[11px] text-neutral-500">{r}</p>
                       <p className="font-bold" style={{ color: VERDE }}>{v}</p>
                     </div>
                   ))}
@@ -96,7 +96,7 @@ export default function CarneDigital() {
                       ["chamados", `Chamados${portal.d.chamados.some(c => c.status === "respondido") ? " •" : ""}`]] : []),
                   ] as [typeof aba, string][]).map(([a, r]) => (
                     <button key={a} onClick={() => setAba(a)} className="-mb-px shrink-0 border-b-2 px-3 py-2 text-sm font-semibold"
-                      style={{ borderColor: aba === a ? VERDE : "transparent", color: aba === a ? VERDE : "#777" }}>{r}</button>
+                      style={{ borderColor: aba === a ? VERDE : "transparent", color: aba === a ? VERDE : "var(--c-777777)" }}>{r}</button>
                   ))}
                 </div>
                 {portal.d && aba === "antecipar" && <AbaAntecipar codigo={codigo} d={portal.d} onPedido={portal.recarregar} />}
@@ -108,7 +108,7 @@ export default function CarneDigital() {
                 {aba === "parcelas" && (
                   <ul className="space-y-2">
                     {abertas.map(p => (
-                      <li key={p.id} className="flex flex-wrap items-center gap-3 rounded-xl border bg-white p-3 text-sm" style={{ borderColor: p.atraso > 0 ? "#f3b4b4" : "#e5dcc5" }}>
+                      <li key={p.id} className="flex flex-wrap items-center gap-3 rounded-xl border bg-white p-3 text-sm" style={{ borderColor: p.atraso > 0 ? "var(--c-f3b4b4)" : "var(--c-e5dcc5)" }}>
                         {p.atraso > 0 ? <AlertTriangle className="h-5 w-5 text-red-600" /> : <Clock className="h-5 w-5 text-neutral-400" />}
                         <div className="min-w-[160px] flex-1">
                           <b>{p.rotulo}</b> · {brl(p.valor)}
@@ -133,7 +133,7 @@ export default function CarneDigital() {
                 {aba === "recibos" && (
                   <ul className="space-y-2">
                     {[...pagas].reverse().map(p => (
-                      <li key={p.id} className="flex flex-wrap items-center gap-3 rounded-xl border bg-white p-3 text-sm" style={{ borderColor: "#e5dcc5" }}>
+                      <li key={p.id} className="flex flex-wrap items-center gap-3 rounded-xl border bg-white p-3 text-sm" style={{ borderColor: "var(--c-e5dcc5)" }}>
                         <CheckCircle2 className="h-5 w-5 text-emerald-600" />
                         <div className="min-w-[160px] flex-1"><b>{p.rotulo}</b><span className="block text-xs text-neutral-500">pago em {br(p.pagoEm)} · {brl(p.valorPago ?? p.valor)}</span></div>
                         {p.recibo ? <a href={p.recibo} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1 rounded-lg border px-3 py-1.5 text-sm" style={{ borderColor: DOURADO }}><Receipt className="h-4 w-4" /> Recibo</a>
@@ -166,11 +166,11 @@ function BarraSituacao({ parcelas }: { parcelas: Parcela[] }) {
       </div>
       <div className="flex h-3 overflow-hidden rounded-full bg-neutral-200">
         <div style={{ width: pct(s.pagas), background: VERDE }} />
-        <div style={{ width: pct(s.emAtraso), background: "#C0392B" }} />
+        <div style={{ width: pct(s.emAtraso), background: "var(--c-c0392b)" }} />
       </div>
       <div className="mt-2 flex flex-wrap gap-x-4 gap-y-1 text-xs text-neutral-700">
         <span><i className="mr-1 inline-block h-2 w-2 rounded-full" style={{ background: VERDE }} />Pagas: <b>{s.pagas}</b></span>
-        <span><i className="mr-1 inline-block h-2 w-2 rounded-full" style={{ background: "#C0392B" }} />Em atraso: <b>{s.emAtraso}</b></span>
+        <span><i className="mr-1 inline-block h-2 w-2 rounded-full" style={{ background: "var(--c-c0392b)" }} />Em atraso: <b>{s.emAtraso}</b></span>
         <span><i className="mr-1 inline-block h-2 w-2 rounded-full bg-neutral-300" />A vencer: <b>{s.aVencer}</b></span>
       </div>
     </section>
@@ -199,20 +199,20 @@ function AbaImpostoRenda({ parcelas, comprador, contrato, beneficiario }: { parc
           <Landmark className="mt-0.5 h-5 w-5" style={{ color: VERDE }} />
           <div>
             <h2 className="font-bold" style={{ color: VERDE }}>Demonstrativo de valores pagos · ano-calendário {ano}</h2>
-            <p className="text-xs text-neutral-600">Contrato {contrato.numero} · Chácara {contrato.lote} · {contrato.empreendimento} · Comprador(a): {comprador} · Vendedora: {beneficiario}</p>
+            <p className="text-xs text-neutral-600">Contrato {contrato.numero}, Chácara {contrato.lote}, {contrato.empreendimento}, Comprador(a): {comprador}, Vendedora: {beneficiario}</p>
           </div>
         </header>
         <div className="grid gap-2 sm:grid-cols-3">
           {[[`Pago em ${ano}`, dm.totalNoAno], [`Total pago até 31/12/${ano - 1}`, dm.acumuladoAnoAnterior], [`Total pago até 31/12/${ano}`, dm.acumuladoAte31Dez]].map(([r, v]) => (
-            <div key={String(r)} className="rounded-lg border p-2" style={{ borderColor: "#e5dcc5" }}>
-              <p className="text-[11px] uppercase text-neutral-500">{r}</p>
+            <div key={String(r)} className="rounded-lg border p-2" style={{ borderColor: "var(--c-e5dcc5)" }}>
+              <p className="text-[11px] text-neutral-500">{r}</p>
               <p className="font-bold tabular-nums" style={{ color: VERDE }}>{brl(Number(v))}</p>
             </div>
           ))}
         </div>
         <div className="overflow-x-auto">
           <table className="w-full min-w-[420px] text-left text-sm">
-            <thead><tr className="border-b text-xs uppercase text-neutral-500"><th className="py-1.5">Parcela</th><th>Vencimento</th><th>Pago em</th><th className="text-right">Valor pago</th></tr></thead>
+            <thead><tr className="border-b text-xs text-neutral-500"><th className="py-1.5">Parcela</th><th>Vencimento</th><th>Pago em</th><th className="text-right">Valor pago</th></tr></thead>
             <tbody>
               {dm.itens.map((i, k) => (
                 <tr key={k} className="border-b border-neutral-100"><td className="py-1.5">{i.rotulo}</td><td>{br(i.vencimento)}</td><td>{br(i.pagoEm)}</td><td className="text-right tabular-nums">{brl(i.valor)}</td></tr>

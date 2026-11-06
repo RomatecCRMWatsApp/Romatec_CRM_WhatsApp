@@ -52,23 +52,23 @@ export default function PropertiesCatalog() {
         <div className="flex gap-2 flex-shrink-0">
           <button
             onClick={() => setTab('venda')}
-            className={`px-4 py-2 rounded-lg text-sm font-semibold border transition-all ${
+            className={`px-4 py-2 rounded-lg text-sm font-semibold border transition ${
               tab === 'venda'
                 ? 'bg-emerald-500 text-white border-emerald-500 shadow-md shadow-emerald-500/20'
                 : 'border-border/50 text-muted-foreground hover:border-emerald-500/40 hover:text-emerald-500'
             }`}
           >
-            🏠 Venda
+            Venda
           </button>
           <button
             onClick={() => setTab('aluguel')}
-            className={`px-4 py-2 rounded-lg text-sm font-semibold border transition-all ${
+            className={`px-4 py-2 rounded-lg text-sm font-semibold border transition ${
               tab === 'aluguel'
                 ? 'bg-emerald-500 text-white border-emerald-500 shadow-md shadow-emerald-500/20'
                 : 'border-border/50 text-muted-foreground hover:border-emerald-500/40 hover:text-emerald-500'
             }`}
           >
-            🔑 Aluguel
+            Aluguel
           </button>
         </div>
       </div>
@@ -92,7 +92,7 @@ export default function PropertiesCatalog() {
               return (
                 <div
                   key={property.id}
-                  className="bg-card border border-border/40 rounded-2xl overflow-hidden flex flex-col hover:border-emerald-500/40 hover:shadow-lg hover:shadow-emerald-500/5 transition-all"
+                  className="bg-card border border-border/40 rounded-2xl overflow-hidden flex flex-col hover:border-emerald-500/40 hover:shadow-lg hover:shadow-emerald-500/5 transition"
                 >
                   {/* Photo */}
                   <div className="relative h-44 bg-secondary/30 overflow-hidden">

@@ -63,36 +63,36 @@ function ScoreDetalhe({ leadId }: { leadId: number }) {
     onError: (e) => toast.error(e.message),
   });
   const titulo = { fontSize: '10px', color: '#3a6a45', textTransform: 'uppercase' as const, letterSpacing: '0.08em', margin: '0 0 8px', fontWeight: 700 };
-  if (isLoading) return <p style={{ fontSize: '11px', color: '#4a7a55' }}>Carregando score...</p>;
+  if (isLoading) return <p style={{ fontSize: '11px', color: 'var(--c-4a7a55)' }}>Carregando score...</p>;
   return (
     <div>
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
         <p style={titulo}>Por que essa nota? {data?.score !== null && data?.score !== undefined ? `— ${data.score}/100` : ''}</p>
         <button className="ld-action-btn" disabled={recalcular.isPending} onClick={() => recalcular.mutate({ id: leadId })}
-          style={{ background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.1)', color: '#5a9a6a', padding: '4px 10px' }}>
+          style={{ background: 'color-mix(in srgb, var(--c-ffffff) 4%, transparent)', border: '1px solid color-mix(in srgb, var(--c-ffffff) 10%, transparent)', color: 'var(--c-5a9a6a)', padding: '4px 10px' }}>
           {recalcular.isPending ? 'Recalculando...' : 'Recalcular'}
         </button>
       </div>
       {!data || data.itens.length === 0 ? (
-        <p style={{ fontSize: '11px', color: '#4a7a55', margin: 0 }}>
+        <p style={{ fontSize: '11px', color: 'var(--c-4a7a55)', margin: 0 }}>
           {data?.calculadoEm ? 'Nenhuma regra pontuou ainda (faltam respostas).' : 'Score ainda não calculado pelas regras. Clique em Recalcular.'}
         </p>
       ) : (
         <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
           {data.itens.map(i => (
-            <div key={i.regra} style={{ display: 'flex', justifyContent: 'space-between', fontSize: '12px', color: '#c8e6c9' }}>
+            <div key={i.regra} style={{ display: 'flex', justifyContent: 'space-between', fontSize: '12px', color: 'var(--c-c8e6c9)' }}>
               <span>{i.rotulo}</span>
-              <span style={{ fontWeight: 700, color: i.pontos >= 0 ? '#3ec87a' : '#ef4444' }}>{i.pontos >= 0 ? '+' : ''}{i.pontos}</span>
+              <span style={{ fontWeight: 700, color: i.pontos >= 0 ? 'var(--c-3ec87a)' : 'var(--c-ef4444)' }}>{i.pontos >= 0 ? '+' : ''}{i.pontos}</span>
             </div>
           ))}
-          <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '12px', borderTop: '1px solid var(--border)', paddingTop: '4px', fontWeight: 700, color: '#e8f5e9' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '12px', borderTop: '1px solid var(--border)', paddingTop: '4px', fontWeight: 700, color: 'var(--c-e8f5e9)' }}>
             <span>Total{data.limitado ? ' (limitado a 0–100)' : ''}</span>
             <span>{data.score}</span>
           </div>
         </div>
       )}
       {data && data.historico.length > 1 && (
-        <p style={{ fontSize: '10px', color: '#3a6a45', margin: '6px 0 0' }}>
+        <p style={{ fontSize: '10px', color: 'var(--c-3a6a45)', margin: '6px 0 0' }}>
           Histórico: {data.historico.slice(0, 6).map((h: any) => h.score).reverse().join(' → ')}
         </p>
       )}
@@ -101,9 +101,9 @@ function ScoreDetalhe({ leadId }: { leadId: number }) {
 }
 
 const SCORE_CFG = {
-  quente: { label: 'Quente',  color: '#ef4444', bg: 'rgba(239,68,68,0.12)',   border: 'rgba(239,68,68,0.3)',   icon: '🔥', glow: '0 0 12px rgba(239,68,68,0.3)' },
-  morno:  { label: 'Morno',   color: '#f59e0b', bg: 'rgba(245,158,11,0.12)',  border: 'rgba(245,158,11,0.3)',  icon: '🌡️', glow: '0 0 12px rgba(245,158,11,0.25)' },
-  frio:   { label: 'Frio',    color: '#3b82f6', bg: 'rgba(59,130,246,0.12)',  border: 'rgba(59,130,246,0.3)',  icon: '❄️', glow: '' },
+  quente: { label: 'Quente',  color: '#ef4444', bg: 'rgba(239,68,68,0.12)',   border: 'rgba(239,68,68,0.3)',   icon: '', glow: '0 0 12px rgba(239,68,68,0.3)' },
+  morno:  { label: 'Morno',   color: '#f59e0b', bg: 'rgba(245,158,11,0.12)',  border: 'rgba(245,158,11,0.3)',  icon: '', glow: '0 0 12px rgba(245,158,11,0.25)' },
+  frio:   { label: 'Frio',    color: '#3b82f6', bg: 'rgba(59,130,246,0.12)',  border: 'rgba(59,130,246,0.3)',  icon: '', glow: '' },
 };
 
 export default function Leads() {
@@ -211,7 +211,7 @@ export default function Leads() {
   ];
 
   return (
-    <div style={{ minHeight: '100vh', background: 'var(--background)', color: '#e8f5e9' }}>
+    <div style={{ minHeight: '100vh', background: 'var(--background)', color: 'var(--c-e8f5e9)' }}>
 
       {/* ── Header ──────────────────────────────────────────────────── */}
       <div style={{
@@ -221,48 +221,48 @@ export default function Leads() {
       }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
           <div>
-            <h1 style={{ fontSize: '17px', fontWeight: 600, color: '#e8f5e9', display: 'flex', alignItems: 'center', gap: '8px', margin: 0 }}>
-              <Users size={16} style={{ color: '#3ec87a' }} />
+            <h1 style={{ fontSize: '17px', fontWeight: 600, color: 'var(--c-e8f5e9)', display: 'flex', alignItems: 'center', gap: '8px', margin: 0 }}>
+              <Users size={16} style={{ color: 'var(--c-3ec87a)' }} />
               Gestão de Leads
             </h1>
-            <p style={{ fontSize: '11px', color: '#3a6a45', margin: '2px 0 0' }}>
+            <p style={{ fontSize: '11px', color: 'var(--c-3a6a45)', margin: '2px 0 0' }}>
               Qualificados pelo bot • Score em tempo real
             </p>
           </div>
         </div>
         <div style={{ display: 'flex', gap: '8px' }}>
           <button onClick={() => navigate('/leads/funil')} style={{
-            padding: '6px 14px', borderRadius: '8px', background: 'rgba(139,92,246,0.12)',
-            border: '1px solid rgba(139,92,246,0.3)', color: '#a78bfa', fontSize: '11px',
+            padding: '6px 14px', borderRadius: '8px', background: 'color-mix(in srgb, var(--c-8b5cf6) 12%, transparent)',
+            border: '1px solid color-mix(in srgb, var(--c-8b5cf6) 30%, transparent)', color: 'var(--c-a78bfa)', fontSize: '11px',
             fontWeight: 600, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '6px',
           }}>
-            🗂️ Funil (kanban)
+            Funil (kanban)
           </button>
           <button onClick={() => navigate('/leads/campanhas')} style={{
-            padding: '6px 14px', borderRadius: '8px', background: 'rgba(245,158,11,0.1)',
-            border: '1px solid rgba(245,158,11,0.25)', color: '#f59e0b', fontSize: '11px',
+            padding: '6px 14px', borderRadius: '8px', background: 'color-mix(in srgb, var(--c-f59e0b) 10%, transparent)',
+            border: '1px solid color-mix(in srgb, var(--c-f59e0b) 25%, transparent)', color: 'var(--c-f59e0b)', fontSize: '11px',
             fontWeight: 600, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '6px',
           }}>
-            📣 Campanhas
+            Campanhas
           </button>
           <button onClick={() => navigate('/leads/relatorio')} style={{
-            padding: '6px 14px', borderRadius: '8px', background: 'rgba(14,165,233,0.1)',
-            border: '1px solid rgba(14,165,233,0.25)', color: '#38bdf8', fontSize: '11px',
+            padding: '6px 14px', borderRadius: '8px', background: 'color-mix(in srgb, var(--c-0ea5e9) 10%, transparent)',
+            border: '1px solid color-mix(in srgb, var(--c-0ea5e9) 25%, transparent)', color: 'var(--c-38bdf8)', fontSize: '11px',
             fontWeight: 600, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '6px',
           }}>
-            📊 Relatório
+            Relatório
           </button>
           <button onClick={() => testTelegram.mutate()} disabled={testTelegram.isPending} style={{
-            padding: '6px 14px', borderRadius: '8px', background: 'rgba(38,169,224,0.1)',
-            border: '1px solid rgba(38,169,224,0.25)', color: '#26a9e0', fontSize: '11px',
+            padding: '6px 14px', borderRadius: '8px', background: 'color-mix(in srgb, var(--c-26a9e0) 10%, transparent)',
+            border: '1px solid color-mix(in srgb, var(--c-26a9e0) 25%, transparent)', color: 'var(--c-26a9e0)', fontSize: '11px',
             fontWeight: 600, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '6px',
             opacity: testTelegram.isPending ? 0.6 : 1,
           }}>
-            ✈️ {testTelegram.isPending ? 'Enviando...' : 'Testar Telegram'}
+            {testTelegram.isPending ? 'Enviando...' : 'Testar Telegram'}
           </button>
           <button onClick={() => refetch()} style={{
-            padding: '6px 14px', borderRadius: '8px', background: 'rgba(62,200,122,0.1)',
-            border: '1px solid rgba(62,200,122,0.2)', color: '#3ec87a', fontSize: '11px',
+            padding: '6px 14px', borderRadius: '8px', background: 'color-mix(in srgb, var(--c-3ec87a) 10%, transparent)',
+            border: '1px solid color-mix(in srgb, var(--c-3ec87a) 20%, transparent)', color: 'var(--c-3ec87a)', fontSize: '11px',
             fontWeight: 600, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '6px',
           }}>
             <RefreshCw size={12} /> Atualizar
@@ -287,23 +287,23 @@ export default function Leads() {
           alvo={excluindo && { titulo: 'Excluir lead', descricao: <>O lead <b>{excluindo.nome}</b> some de vez, com a conversa, os interesses e as visitas. Lead com contrato ou chácara vinculada não pode ser excluído.</> }} />
 
         {equipePendentes.length > 0 && (
-          <div className="ld-card" style={{ borderColor: 'rgba(245,158,11,0.4)' }}>
-            <div style={{ fontSize: '12px', fontWeight: 700, color: '#f59e0b', marginBottom: '8px' }}>
-              ⚠️ {equipePendentes.length} lead(s) vieram de número da equipe — não são clientes
+          <div className="ld-card" style={{ borderColor: 'color-mix(in srgb, var(--c-f59e0b) 40%, transparent)' }}>
+            <div style={{ fontSize: '12px', fontWeight: 700, color: 'var(--c-f59e0b)', marginBottom: '8px' }}>
+              {equipePendentes.length} lead(s) vieram de número da equipe — não são clientes
             </div>
             {equipePendentes.map(l => (
               <div key={l.id} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '8px', fontSize: '11px', padding: '4px 0', flexWrap: 'wrap' }}>
                 <span>#{l.id} {l.nome || 'sem nome'} · {l.phone} · <b>{l.quem}</b></span>
                 <span style={{ display: 'flex', gap: '6px' }}>
                   {l.stage !== 'descartado' && (
-                    <button className="ld-action-btn" style={{ borderColor: 'rgba(239,68,68,0.3)', color: '#ef4444', background: 'transparent' }}
+                    <button className="ld-action-btn" style={{ borderColor: 'color-mix(in srgb, var(--c-ef4444) 30%, transparent)', color: 'var(--c-ef4444)', background: 'transparent' }}
                       disabled={discardLead.isPending}
                       onClick={() => confirm(`Descartar o lead #${l.id} (${l.quem})? Ele sai da lista de leads e não volta a ser atendido pelo bot.`)
                         && discardLead.mutate({ id: l.id, reason: 'Número da equipe — não é lead', blockDays: 3650 })}>
                       Descartar
                     </button>
                   )}
-                  <button className="ld-action-btn" style={{ borderColor: 'rgba(239,68,68,0.5)', color: '#fff', background: 'rgba(239,68,68,0.35)' }}
+                  <button className="ld-action-btn" style={{ borderColor: 'color-mix(in srgb, var(--c-ef4444) 50%, transparent)', color: 'var(--c-ffffff)', background: 'color-mix(in srgb, var(--c-ef4444) 35%, transparent)' }}
                     onClick={() => setExcluindo({ id: l.id, nome: `${l.nome || 'sem nome'} (${l.quem})` })}>
                     <Trash2 size={11} /> Excluir
                   </button>
@@ -320,7 +320,7 @@ export default function Leads() {
               background: 'var(--card)', border: '1px solid var(--border)', borderRadius: '10px',
               padding: '12px 8px', textAlign: 'center',
             }}>
-              <p style={{ fontSize: '9px', color: '#3a5a40', textTransform: 'uppercase', letterSpacing: '0.05em', margin: '0 0 4px' }}>
+              <p style={{ fontSize: '9px', color: 'var(--c-3a5a40)', textTransform: 'uppercase', letterSpacing: '0.05em', margin: '0 0 4px' }}>
                 {sc.label}
               </p>
               <p style={{ fontSize: '24px', fontWeight: 700, color: sc.color, margin: 0 }}>{sc.value}</p>
@@ -332,25 +332,25 @@ export default function Leads() {
         <div style={{ display: 'flex', gap: '8px', alignItems: 'center', flexWrap: 'wrap' }}>
           {/* Search */}
           <div style={{ flex: 1, minWidth: '200px', position: 'relative' }}>
-            <Search size={13} style={{ position: 'absolute', left: '10px', top: '50%', transform: 'translateY(-50%)', color: '#3a6a45' }} />
+            <Search size={13} style={{ position: 'absolute', left: '10px', top: '50%', transform: 'translateY(-50%)', color: 'var(--c-3a6a45)' }} />
             <input
               value={search}
               onChange={e => setSearch(e.target.value)}
               placeholder={visao === 'tabela' ? "Buscar por nome, telefone ou e-mail..." : "Buscar por nome ou telefone..."}
               style={{
                 width: '100%', padding: '8px 10px 8px 30px', background: 'var(--card)',
-                border: '1px solid var(--border)', borderRadius: '8px', color: '#c8f0d0',
+                border: '1px solid var(--border)', borderRadius: '8px', color: 'var(--c-c8f0d0)',
                 fontSize: '12px', outline: 'none', boxSizing: 'border-box',
               }}
             />
           </div>
           {/* Cards | Tabela */}
-          <div style={{ display: 'flex', border: '1px solid rgba(255,255,255,0.08)', borderRadius: '20px', overflow: 'hidden' }}>
+          <div style={{ display: 'flex', border: '1px solid color-mix(in srgb, var(--c-ffffff) 8%, transparent)', borderRadius: '20px', overflow: 'hidden' }}>
             {(['cards', 'tabela'] as const).map(v => (
               <button key={v} onClick={() => setVisao(v)} style={{
                 padding: '7px 14px', fontSize: '11px', fontWeight: 700, cursor: 'pointer', border: 'none',
-                background: visao === v ? 'rgba(62,200,122,0.15)' : 'rgba(255,255,255,0.04)',
-                color: visao === v ? '#3ec87a' : '#4a7a55',
+                background: visao === v ? 'color-mix(in srgb, var(--c-3ec87a) 15%, transparent)' : 'color-mix(in srgb, var(--c-ffffff) 4%, transparent)',
+                color: visao === v ? 'var(--c-3ec87a)' : 'var(--c-4a7a55)',
               }}>
                 {v === 'cards' ? '🗃️ Cards' : '📋 Lista'}
               </button>
@@ -367,9 +367,9 @@ export default function Leads() {
                 style={{
                   padding: '7px 14px', borderRadius: '20px', fontSize: '11px', fontWeight: 700,
                   cursor: 'pointer', letterSpacing: '0.05em', transition: 'all 0.15s',
-                  background: active ? (cfg?.bg || 'rgba(62,200,122,0.15)') : 'rgba(255,255,255,0.04)',
-                  border: `1px solid ${active ? (cfg?.border || 'rgba(62,200,122,0.3)') : 'rgba(255,255,255,0.08)'}`,
-                  color: active ? (cfg?.color || '#3ec87a') : '#4a7a55',
+                  background: active ? (cfg?.bg || 'color-mix(in srgb, var(--c-3ec87a) 15%, transparent)') : 'color-mix(in srgb, var(--c-ffffff) 4%, transparent)',
+                  border: `1px solid ${active ? (cfg?.border || 'color-mix(in srgb, var(--c-3ec87a) 30%, transparent)') : 'color-mix(in srgb, var(--c-ffffff) 8%, transparent)'}`,
+                  color: active ? (cfg?.color || 'var(--c-3ec87a)') : 'var(--c-4a7a55)',
                   boxShadow: active && cfg ? cfg.glow : 'none',
                 }}
               >
@@ -382,16 +382,16 @@ export default function Leads() {
             title="Leads descartados, sem interesse ou que pediram para sair"
             style={{
               padding: '7px 14px', borderRadius: '20px', fontSize: '11px', fontWeight: 700, cursor: 'pointer', letterSpacing: '0.05em',
-              background: verDescartados ? 'rgba(107,114,128,0.25)' : 'rgba(255,255,255,0.04)',
-              border: `1px solid ${verDescartados ? 'rgba(156,163,175,0.6)' : 'rgba(255,255,255,0.08)'}`,
-              color: verDescartados ? '#e5e7eb' : '#4a7a55',
+              background: verDescartados ? 'color-mix(in srgb, var(--c-6b7280) 25%, transparent)' : 'color-mix(in srgb, var(--c-ffffff) 4%, transparent)',
+              border: `1px solid ${verDescartados ? 'color-mix(in srgb, var(--c-9ca3af) 60%, transparent)' : 'color-mix(in srgb, var(--c-ffffff) 8%, transparent)'}`,
+              color: verDescartados ? 'var(--c-e5e7eb)' : 'var(--c-4a7a55)',
             }}
           >
             {verDescartados ? '← Voltar aos ativos' : `🗑️ Descartados (${stats?.descartado ?? 0})`}
           </button>
           {verDescartados && isAdmin && (
             <button type="button" onClick={() => setLimpando(true)} disabled={excluirDescartados.isPending}
-              style={{ padding: '7px 14px', borderRadius: '20px', fontSize: '11px', fontWeight: 700, cursor: 'pointer', background: 'rgba(239,68,68,0.15)', border: '1px solid rgba(239,68,68,0.5)', color: '#fca5a5' }}>
+              style={{ padding: '7px 14px', borderRadius: '20px', fontSize: '11px', fontWeight: 700, cursor: 'pointer', background: 'color-mix(in srgb, var(--c-ef4444) 15%, transparent)', border: '1px solid color-mix(in srgb, var(--c-ef4444) 50%, transparent)', color: 'var(--c-fca5a5)' }}>
               <Trash2 size={11} style={{ display: 'inline', marginRight: 4 }} /> Excluir todos de vez
             </button>
           )}
@@ -401,11 +401,11 @@ export default function Leads() {
         {visao === 'tabela' ? (
           <LeadsTabela situacao={verDescartados ? 'descartados' : 'ativos'} search={debouncedSearch || undefined} />
         ) : isLoading ? (
-          <div style={{ textAlign: 'center', padding: '40px', color: '#3a6a45' }}>Carregando leads...</div>
+          <div style={{ textAlign: 'center', padding: '40px', color: 'var(--c-3a6a45)' }}>Carregando leads...</div>
         ) : leads.length === 0 ? (
           <div className="ld-card" style={{ textAlign: 'center', padding: '40px' }}>
-            <Users size={32} style={{ color: '#1a3520', margin: '0 auto 12px' }} />
-            <p style={{ color: '#3a5a40', fontSize: '14px' }}>Nenhum lead encontrado</p>
+            <Users size={32} style={{ color: 'var(--c-1a3520)', margin: '0 auto 12px' }} />
+            <p style={{ color: 'var(--c-3a5a40)', fontSize: '14px' }}>Nenhum lead encontrado</p>
           </div>
         ) : (
           <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
@@ -423,8 +423,8 @@ export default function Leads() {
                   key={lead.id}
                   style={{
                     background: 'var(--card)',
-                    border: `1px solid ${isDescartado ? '#1a2a1c' : sc.border}`,
-                    borderLeft: `3px solid ${isDescartado ? '#2a3a2c' : sc.color}`,
+                    border: `1px solid ${isDescartado ? 'var(--c-1a2a1c)' : sc.border}`,
+                    borderLeft: `3px solid ${isDescartado ? 'var(--c-2a3a2c)' : sc.color}`,
                     borderRadius: '12px',
                     overflow: 'hidden',
                     opacity: isDescartado ? 0.6 : 1,
@@ -447,7 +447,7 @@ export default function Leads() {
                     {/* Name + phone */}
                     <div style={{ flex: 1, minWidth: 0 }}>
                       <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
-                        <span style={{ fontSize: '14px', fontWeight: 600, color: '#d8f0dc' }}>{nome}</span>
+                        <span style={{ fontSize: '14px', fontWeight: 600, color: 'var(--c-d8f0dc)' }}>{nome}</span>
                         <span style={{
                           fontSize: '9px', padding: '2px 7px', borderRadius: '8px', fontWeight: 700,
                           background: sc.bg, border: `1px solid ${sc.border}`, color: sc.color,
@@ -458,12 +458,12 @@ export default function Leads() {
                         {isBlocked && (
                           <span style={{
                             fontSize: '9px', padding: '2px 7px', borderRadius: '8px',
-                            background: 'rgba(100,100,100,0.15)', border: '1px solid rgba(100,100,100,0.25)',
-                            color: '#888', fontWeight: 700,
+                            background: 'color-mix(in srgb, var(--c-646464) 15%, transparent)', border: '1px solid color-mix(in srgb, var(--c-646464) 25%, transparent)',
+                            color: 'var(--c-888888)', fontWeight: 700,
                           }}>BLOQUEADO</span>
                         )}
                       </div>
-                      <div style={{ fontSize: '11px', color: '#4a7a55', marginTop: '2px', display: 'flex', alignItems: 'center', gap: '10px' }}>
+                      <div style={{ fontSize: '11px', color: 'var(--c-4a7a55)', marginTop: '2px', display: 'flex', alignItems: 'center', gap: '10px' }}>
                         <span style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
                           <Phone size={10} /> {formatPhone(lead.phone)}
                         </span>
@@ -471,30 +471,30 @@ export default function Leads() {
                           <Clock size={10} /> {timeAgo(lead.updatedAt)}
                         </span>
                         {lead.campaignName && (
-                          <span style={{ color: '#2a5a35' }}>📢 {lead.campaignName}</span>
+                          <span style={{ color: 'var(--c-2a5a35)' }}>{lead.campaignName}</span>
                         )}
                       </div>
                     </div>
 
                     {/* Stage + progress */}
                     <div style={{ textAlign: 'right', minWidth: '140px' }}>
-                      <p style={{ fontSize: '10px', color: '#4a7a55', margin: '0 0 4px' }}>{stageLabel(lead.stage || '')}</p>
-                      <div style={{ height: '4px', background: 'rgba(255,255,255,0.06)', borderRadius: '3px', overflow: 'hidden' }}>
+                      <p style={{ fontSize: '10px', color: 'var(--c-4a7a55)', margin: '0 0 4px' }}>{stageLabel(lead.stage || '')}</p>
+                      <div style={{ height: '4px', background: 'color-mix(in srgb, var(--c-ffffff) 6%, transparent)', borderRadius: '3px', overflow: 'hidden' }}>
                         <div style={{
                           height: '100%', borderRadius: '3px', transition: 'width 0.3s',
                           width: `${progress}%`,
-                          background: progress === 100 ? '#3ec87a' : isDescartado ? '#4a4a4a' : 'linear-gradient(90deg, #1e6b30, #3ec87a)',
+                          background: progress === 100 ? 'var(--c-3ec87a)' : isDescartado ? 'var(--c-4a4a4a)' : 'linear-gradient(90deg, var(--c-1e6b30), var(--c-3ec87a))',
                         }} />
                       </div>
-                      <p style={{ fontSize: '9px', color: '#2a4a30', margin: '2px 0 0' }}>{progress}% qualificado</p>
+                      <p style={{ fontSize: '9px', color: 'var(--c-2a4a30)', margin: '2px 0 0' }}>{progress}% qualificado</p>
                     </div>
 
                     {/* Expand button */}
                     <button
                       onClick={() => setExpandedId(isExpanded ? null : lead.id)}
                       style={{
-                        width: '28px', height: '28px', borderRadius: '8px', background: 'rgba(255,255,255,0.05)',
-                        border: '1px solid rgba(255,255,255,0.08)', cursor: 'pointer', color: '#4a7a55',
+                        width: '28px', height: '28px', borderRadius: '8px', background: 'color-mix(in srgb, var(--c-ffffff) 5%, transparent)',
+                        border: '1px solid color-mix(in srgb, var(--c-ffffff) 8%, transparent)', cursor: 'pointer', color: 'var(--c-4a7a55)',
                         display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0,
                       }}
                     >
@@ -510,7 +510,7 @@ export default function Leads() {
                       {/* Answers grid */}
                       {Object.keys(answers).length > 0 && (
                         <div>
-                          <p style={{ fontSize: '10px', color: '#3a6a45', textTransform: 'uppercase', letterSpacing: '0.08em', margin: '0 0 8px', fontWeight: 700 }}>
+                          <p style={{ fontSize: '10px', color: 'var(--c-3a6a45)', textTransform: 'uppercase', letterSpacing: '0.08em', margin: '0 0 8px', fontWeight: 700 }}>
                             Respostas da qualificação
                           </p>
                           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(220px, 1fr))', gap: '6px' }}>
@@ -530,10 +530,10 @@ export default function Leads() {
                                 background: 'var(--background)', border: '1px solid var(--border)',
                                 borderRadius: '7px', padding: '7px 10px',
                               }}>
-                                <p style={{ fontSize: '9px', color: '#2a5a35', margin: '0 0 2px', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                                <p style={{ fontSize: '9px', color: 'var(--c-2a5a35)', margin: '0 0 2px', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
                                   {field.label}
                                 </p>
-                                <p style={{ fontSize: '12px', color: '#a8d5b0', margin: 0, fontWeight: 500 }}>
+                                <p style={{ fontSize: '12px', color: 'var(--c-a8d5b0)', margin: 0, fontWeight: 500 }}>
                                   {answers[field.key]}
                                 </p>
                               </div>
@@ -545,9 +545,9 @@ export default function Leads() {
                       {/* Discard reason */}
                       {lead.discardReason && (
                         <div style={{
-                          padding: '8px 12px', background: 'rgba(100,60,60,0.1)',
-                          border: '1px solid rgba(200,80,80,0.2)', borderRadius: '7px',
-                          fontSize: '11px', color: '#c87070',
+                          padding: '8px 12px', background: 'color-mix(in srgb, var(--c-643c3c) 10%, transparent)',
+                          border: '1px solid color-mix(in srgb, var(--c-c85050) 20%, transparent)', borderRadius: '7px',
+                          fontSize: '11px', color: 'var(--c-c87070)',
                         }}>
                           <strong>Motivo do descarte:</strong> {lead.discardReason}
                           {lead.blockedUntil && <span style={{ marginLeft: '8px', opacity: 0.7 }}>
@@ -562,7 +562,7 @@ export default function Leads() {
                         <button
                           className="ld-action-btn"
                           onClick={() => { setSendMsg({ id: lead.id, phone: lead.phone, name: nome }); setMsgText(''); }}
-                          style={{ background: 'rgba(37,211,102,0.1)', borderColor: 'rgba(37,211,102,0.25)', color: '#25d366' }}
+                          style={{ background: 'color-mix(in srgb, var(--c-25d366) 10%, transparent)', borderColor: 'color-mix(in srgb, var(--c-25d366) 25%, transparent)', color: 'var(--c-25d366)' }}
                         >
                           <MessageSquare size={11} /> WhatsApp
                         </button>
@@ -574,7 +574,7 @@ export default function Leads() {
                           target="_blank"
                           rel="noopener noreferrer"
                           className="ld-action-btn"
-                          style={{ textDecoration: 'none', background: 'rgba(37,211,102,0.06)', borderColor: 'rgba(37,211,102,0.15)', color: '#25d366', fontSize: '11px', fontWeight: 600, padding: '6px 12px', borderRadius: '8px', display: 'inline-flex', alignItems: 'center', gap: '5px' }}
+                          style={{ textDecoration: 'none', background: 'color-mix(in srgb, var(--c-25d366) 6%, transparent)', borderColor: 'color-mix(in srgb, var(--c-25d366) 15%, transparent)', color: 'var(--c-25d366)', fontSize: '11px', fontWeight: 600, padding: '6px 12px', borderRadius: '8px', display: 'inline-flex', alignItems: 'center', gap: '5px' }}
                         >
                           <Phone size={11} /> Abrir chat
                         </a>
@@ -590,9 +590,9 @@ export default function Leads() {
                               disabled={isCurrent || updateScore.isPending}
                               onClick={() => updateScore.mutate({ id: lead.id, score: s })}
                               style={{
-                                background: isCurrent ? cfg.bg : 'rgba(255,255,255,0.04)',
-                                border: `1px solid ${isCurrent ? cfg.border : 'rgba(255,255,255,0.1)'}`,
-                                color: isCurrent ? cfg.color : '#4a7a55',
+                                background: isCurrent ? cfg.bg : 'color-mix(in srgb, var(--c-ffffff) 4%, transparent)',
+                                border: `1px solid ${isCurrent ? cfg.border : 'color-mix(in srgb, var(--c-ffffff) 10%, transparent)'}`,
+                                color: isCurrent ? cfg.color : 'var(--c-4a7a55)',
                                 opacity: isCurrent ? 1 : 0.7,
                                 cursor: isCurrent ? 'default' : 'pointer',
                               }}
@@ -608,14 +608,14 @@ export default function Leads() {
                             className="ld-action-btn"
                             onClick={() => reactivateLead.mutate({ id: lead.id })}
                             disabled={reactivateLead.isPending}
-                            style={{ background: 'rgba(62,200,122,0.08)', borderColor: 'rgba(62,200,122,0.2)', color: '#3ec87a' }}
+                            style={{ background: 'color-mix(in srgb, var(--c-3ec87a) 8%, transparent)', borderColor: 'color-mix(in srgb, var(--c-3ec87a) 20%, transparent)', color: 'var(--c-3ec87a)' }}
                           >
                             <RefreshCw size={11} /> Reativar
                           </button>
                         ) : null}
                         {(isDescartado || isBlocked) && isAdmin && (
                           <button className="ld-action-btn" onClick={() => setExcluindo({ id: lead.id, nome })}
-                            style={{ background: 'rgba(200,60,60,0.08)', borderColor: 'rgba(200,60,60,0.3)', color: '#ef4444' }}>
+                            style={{ background: 'color-mix(in srgb, var(--c-c83c3c) 8%, transparent)', borderColor: 'color-mix(in srgb, var(--c-c83c3c) 30%, transparent)', color: 'var(--c-ef4444)' }}>
                             <Trash2 size={11} /> Excluir
                           </button>
                         )}
@@ -624,7 +624,7 @@ export default function Leads() {
                             className="ld-action-btn"
                             onClick={() => { if (confirm(isAdmin || podeDistribuir ? `Excluir o lead ${nome} de vez? Ele some de todas as telas (não fica em Descartados) e não dá para desfazer.` : `Descartar lead ${nome}?`)) discardLead.mutate({ id: lead.id }); }}
                             disabled={discardLead.isPending}
-                            style={{ background: 'rgba(200,60,60,0.08)', borderColor: 'rgba(200,60,60,0.2)', color: '#e07070' }}
+                            style={{ background: 'color-mix(in srgb, var(--c-c83c3c) 8%, transparent)', borderColor: 'color-mix(in srgb, var(--c-c83c3c) 20%, transparent)', color: 'var(--c-e07070)' }}
                           >
                             <Trash2 size={11} /> Descartar
                           </button>
@@ -644,19 +644,19 @@ export default function Leads() {
             <button
               disabled={offset === 0}
               onClick={() => setOffset(Math.max(0, offset - LIMIT))}
-              style={{ padding: '7px 16px', borderRadius: '8px', background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)', color: '#4a7a55', cursor: offset === 0 ? 'not-allowed' : 'pointer', opacity: offset === 0 ? 0.4 : 1 }}
+              style={{ padding: '7px 16px', borderRadius: '8px', background: 'color-mix(in srgb, var(--c-ffffff) 5%, transparent)', border: '1px solid color-mix(in srgb, var(--c-ffffff) 10%, transparent)', color: 'var(--c-4a7a55)', cursor: offset === 0 ? 'not-allowed' : 'pointer', opacity: offset === 0 ? 0.4 : 1 }}
             >
-              ← Anterior
+              Anterior
             </button>
-            <span style={{ padding: '7px 14px', fontSize: '11px', color: '#3a6a45' }}>
+            <span style={{ padding: '7px 14px', fontSize: '11px', color: 'var(--c-3a6a45)' }}>
               {offset + 1}–{Math.min(offset + LIMIT, total)} de {total}
             </span>
             <button
               disabled={offset + LIMIT >= total}
               onClick={() => setOffset(offset + LIMIT)}
-              style={{ padding: '7px 16px', borderRadius: '8px', background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)', color: '#4a7a55', cursor: offset + LIMIT >= total ? 'not-allowed' : 'pointer', opacity: offset + LIMIT >= total ? 0.4 : 1 }}
+              style={{ padding: '7px 16px', borderRadius: '8px', background: 'color-mix(in srgb, var(--c-ffffff) 5%, transparent)', border: '1px solid color-mix(in srgb, var(--c-ffffff) 10%, transparent)', color: 'var(--c-4a7a55)', cursor: offset + LIMIT >= total ? 'not-allowed' : 'pointer', opacity: offset + LIMIT >= total ? 0.4 : 1 }}
             >
-              Próxima →
+              Próxima
             </button>
           </div>
         )}
@@ -665,18 +665,18 @@ export default function Leads() {
       {/* ── Send WhatsApp Modal ──────────────────────────────────────── */}
       {sendMsg && (
         <div style={{
-          position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.7)', display: 'flex',
+          position: 'fixed', inset: 0, background: 'color-mix(in srgb, var(--c-000000) 70%, transparent)', display: 'flex',
           alignItems: 'center', justifyContent: 'center', zIndex: 1000, padding: '20px',
         }} onClick={e => { if (e.target === e.currentTarget) setSendMsg(null); }}>
           <div style={{
             background: 'var(--card)', border: '1px solid var(--border)', borderRadius: '16px',
             padding: '24px', width: '100%', maxWidth: '480px',
           }}>
-            <h3 style={{ fontSize: '15px', fontWeight: 600, color: '#d8f0dc', margin: '0 0 4px' }}>
+            <h3 style={{ fontSize: '15px', fontWeight: 600, color: 'var(--c-d8f0dc)', margin: '0 0 4px' }}>
               Enviar mensagem WhatsApp
             </h3>
-            <p style={{ fontSize: '11px', color: '#3a6a45', margin: '0 0 16px' }}>
-              Para: <strong style={{ color: '#5aa870' }}>{sendMsg.name}</strong> ({formatPhone(sendMsg.phone)})
+            <p style={{ fontSize: '11px', color: 'var(--c-3a6a45)', margin: '0 0 16px' }}>
+              Para: <strong style={{ color: 'var(--c-5aa870)' }}>{sendMsg.name}</strong> ({formatPhone(sendMsg.phone)})
             </p>
             <textarea
               value={msgText}
@@ -685,14 +685,14 @@ export default function Leads() {
               rows={5}
               style={{
                 width: '100%', padding: '10px 12px', background: 'var(--background)',
-                border: '1px solid var(--border)', borderRadius: '8px', color: '#c8f0d0',
+                border: '1px solid var(--border)', borderRadius: '8px', color: 'var(--c-c8f0d0)',
                 fontSize: '13px', resize: 'vertical', outline: 'none', boxSizing: 'border-box',
               }}
             />
             <div style={{ display: 'flex', gap: '8px', marginTop: '12px', justifyContent: 'flex-end' }}>
               <button
                 onClick={() => setSendMsg(null)}
-                style={{ padding: '8px 16px', borderRadius: '8px', background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)', color: '#6a8a70', cursor: 'pointer' }}
+                style={{ padding: '8px 16px', borderRadius: '8px', background: 'color-mix(in srgb, var(--c-ffffff) 5%, transparent)', border: '1px solid color-mix(in srgb, var(--c-ffffff) 10%, transparent)', color: 'var(--c-6a8a70)', cursor: 'pointer' }}
               >
                 Cancelar
               </button>
@@ -700,8 +700,8 @@ export default function Leads() {
                 disabled={!msgText.trim() || sendWhatsApp.isPending}
                 onClick={() => sendWhatsApp.mutate({ phone: sendMsg.phone, message: msgText.trim(), leadId: sendMsg.id })}
                 style={{
-                  padding: '8px 20px', borderRadius: '8px', background: 'rgba(37,211,102,0.15)',
-                  border: '1px solid rgba(37,211,102,0.3)', color: '#25d366', fontWeight: 700,
+                  padding: '8px 20px', borderRadius: '8px', background: 'color-mix(in srgb, var(--c-25d366) 15%, transparent)',
+                  border: '1px solid color-mix(in srgb, var(--c-25d366) 30%, transparent)', color: 'var(--c-25d366)', fontWeight: 700,
                   cursor: 'pointer', opacity: !msgText.trim() || sendWhatsApp.isPending ? 0.5 : 1,
                   display: 'flex', alignItems: 'center', gap: '6px',
                 }}

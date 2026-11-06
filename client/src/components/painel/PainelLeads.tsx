@@ -87,7 +87,7 @@ export function GraficoLeadsDia({ r }: { r: any }) {
             <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.06)" vertical={false} />
             <XAxis dataKey="rotulo" tick={{ fontSize: 10, fill: "#9ca3af" }} interval={4} axisLine={false} tickLine={false} />
             <YAxis allowDecimals={false} tick={{ fontSize: 10, fill: "#9ca3af" }} axisLine={false} tickLine={false} />
-            <Tooltip contentStyle={{ background: "#22262b", border: "1px solid #3a3f46", borderRadius: 10, fontSize: 12 }} formatter={(v: any) => [v, "leads"]} labelFormatter={(l: any) => `Dia ${l}`} />
+            <Tooltip contentStyle={{ background: "var(--c-22262b)", border: "1px solid var(--c-3a3f46)", borderRadius: 10, fontSize: 12 }} formatter={(v: any) => [v, "leads"]} labelFormatter={(l: any) => `Dia ${l}`} />
             <Area type="monotone" dataKey="leads" stroke={COR.menta} strokeWidth={2.5} fill="url(#gLeads)" />
           </AreaChart>
         </ResponsiveContainer>
@@ -111,7 +111,7 @@ export function DonutPagoOrganico({ r }: { r: any }) {
                 <Pie data={dados} dataKey="valor" nameKey="nome" innerRadius="68%" outerRadius="92%" paddingAngle={3} stroke="none">
                   {dados.map((d: any, i: number) => <Cell key={i} fill={d.cor} />)}
                 </Pie>
-                <Tooltip contentStyle={{ background: "#22262b", border: "1px solid #3a3f46", borderRadius: 10, fontSize: 12 }} />
+                <Tooltip contentStyle={{ background: "var(--c-22262b)", border: "1px solid var(--c-3a3f46)", borderRadius: 10, fontSize: 12 }} />
               </PieChart>
             </ResponsiveContainer>
             <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">

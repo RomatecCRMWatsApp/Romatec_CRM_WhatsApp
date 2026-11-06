@@ -32,7 +32,7 @@ export default function Login() {
 
   const campo = "w-full rounded-[12px] border border-[var(--rt-border)] bg-[var(--rt-bg)] px-3 py-2.5 text-[var(--rt-text)] placeholder:text-[var(--rt-text-3)] focus:outline-none focus:border-[var(--rt-gold-light)]";
   return (
-    <div className="min-h-screen flex flex-col items-center justify-center gap-8 p-4" style={{ background: "radial-gradient(circle at 50% 30%, #0A1F14 0%, #000 62%)" }}>
+    <div className="min-h-screen flex flex-col items-center justify-center gap-8 p-4" style={{ background: "radial-gradient(circle at 50% 30%, var(--c-0a1f14) 0%, var(--c-000000) 62%)" }}>
       {/* Logo oficial (lockup completo); no celular, o empilhado */}
       <div className="hidden sm:block"><RomatecLockup variant="full" height={120} /></div>
       <div className="sm:hidden"><RomatecLockup variant="stack" height={80} /></div>
@@ -43,12 +43,12 @@ export default function Login() {
 
         <form onSubmit={handleLogin} className="space-y-4 text-left">
           <div>
-            <label className="mb-1 block text-xs font-bold uppercase tracking-[2px] text-[var(--rt-gold)]">CRECI, CPF ou e-mail</label>
+            <label className="mb-1 block text-xs font-bold text-[var(--rt-gold)]">CRECI, CPF ou e-mail</label>
             <input type="text" value={username} onChange={e => setUsername(e.target.value)} className={campo}
               placeholder="Ex.: 4705, 000.000.000-00 ou seu@email.com" autoComplete="username" required />
           </div>
           <div>
-            <label className="mb-1 block text-xs font-bold uppercase tracking-[2px] text-[var(--rt-gold)]">Senha</label>
+            <label className="mb-1 block text-xs font-bold text-[var(--rt-gold)]">Senha</label>
             <input type="password" value={password} onChange={e => setPassword(e.target.value)} className={campo}
               placeholder="••••••••" autoComplete="current-password" required />
           </div>
@@ -60,7 +60,7 @@ export default function Login() {
       <div className="text-center text-xs leading-relaxed text-[var(--rt-text-3)]">
         <p>{ROMATEC_CONTACT.endereco1} · {ROMATEC_CONTACT.endereco2}</p>
         <p>WhatsApp {ROMATEC_CONTACT.whatsappLabel} · CNPJ {ROMATEC_CONTACT.cnpj}</p>
-        <p className="mt-1 font-mono text-[11px] text-[var(--rt-gold-light)]">v{APP_VERSION}</p>
+        <p className="mt-1 tabular-nums text-[11px] text-[var(--rt-gold-light)]">v{APP_VERSION}</p>
       </div>
     </div>
   );

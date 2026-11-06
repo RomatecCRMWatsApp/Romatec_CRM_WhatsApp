@@ -16,7 +16,7 @@ function Portais() {
   return (
     <div className="space-y-4">
       <div className="space-y-2 rounded-xl border border-border bg-card p-4 text-sm">
-        <p className="font-semibold">ZAP Imóveis · VivaReal · OLX (Canal Pro do Grupo OLX)</p>
+        <p className="font-semibold">ZAP Imóveis, VivaReal, OLX (Canal Pro do Grupo OLX)</p>
         <ol className="ml-4 list-decimal space-y-1 text-muted-foreground">
           <li>No Canal Pro, em <b>Integração › Integração por XML</b>, cole o link do feed abaixo (padrão VRSync). Os anúncios atualizam sozinhos.</li>
           <li>Em <b>Integração de leads</b>, cole o link do webhook: cada contato do portal vira lead no CRM, com o portal e o anúncio de origem.</li>
@@ -94,7 +94,7 @@ function Api() {
       </div>
       <div className="space-y-2 rounded-xl border border-border bg-card/50 p-4 text-xs text-muted-foreground">
         <p className="font-semibold text-foreground">Como o parceiro usa</p>
-        <p><code>GET /api/v1/empreendimentos</code> · <code>GET /api/v1/empreendimentos/bom-jardims/chacaras</code> · <code>GET /api/v1/imoveis</code> · <code>POST /api/v1/leads</code></p>
+        <p><code>GET /api/v1/empreendimentos</code>, <code>GET /api/v1/empreendimentos/bom-jardims/chacaras</code>, <code>GET /api/v1/imoveis</code>, <code>POST /api/v1/leads</code></p>
         <pre className="overflow-x-auto rounded-md bg-secondary/40 p-2">{exemplo}</pre>
         <p>Preço só sai quando é público no site. Lead exige <code>consentimento: true</code> (LGPD). Limite: 120 chamadas por minuto por chave.</p>
         <Button size="sm" variant="outline" onClick={() => copiar(exemplo, "Exemplo copiado")}><Copy className="mr-1 h-3.5 w-3.5" /> Copiar exemplo</Button>

@@ -105,7 +105,7 @@ export default function BaseConhecimento() {
           {visiveis.map(a => (
             <button key={a.id} type="button" onClick={() => setAbertoId(a.id)}
               className={`rounded-xl border border-border bg-card p-4 text-left transition hover:border-primary focus-visible:outline focus-visible:outline-2 focus-visible:outline-primary ${a.ativo ? "" : "opacity-60"}`}>
-              <span className="text-[11px] font-bold uppercase tracking-wider text-primary">{ROTULO_CATEGORIA_ARTIGO[a.categoria] ?? a.categoria}{a.publico === "escritorio" ? " · escritório" : ""}{a.ativo ? "" : " · rascunho"}</span>
+              <span className="text-[11px] font-bold text-primary">{ROTULO_CATEGORIA_ARTIGO[a.categoria] ?? a.categoria}{a.publico === "escritorio" ? " · escritório" : ""}{a.ativo ? "" : " · rascunho"}</span>
               <p className="mt-1 font-semibold">{a.titulo}</p>
               <p className="mt-1 line-clamp-2 text-sm text-muted-foreground">{a.conteudo.replace(/[#*|_>`-]/g, " ").replace(/\s+/g, " ").trim().slice(0, 180)}</p>
             </button>

@@ -86,18 +86,18 @@ export default function EmpreendimentoDocumentos() {
         <Button variant="outline" onClick={() => navigate(`/empreendimentos/${slug}`)}><ArrowLeft className="mr-1.5 h-4 w-4" /> Voltar</Button>
         <Button onClick={() => window.print()}><Printer className="mr-1.5 h-4 w-4" /> Imprimir / salvar PDF</Button>
         {data.memoriais.length > 0 && (
-          <Button variant="outline" onClick={() => { setAlvo(a => a || data.memoriais[0].codigo); setEnviar(true); }} className="border-[#25d366]/40 text-[#1fa855] hover:text-[#1fa855]">
+          <Button variant="outline" onClick={() => { setAlvo(a => a || data.memoriais[0].codigo); setEnviar(true); }} className="border-[color:var(--c-25d366)]/40 text-[color:var(--c-1fa855)] hover:text-[color:var(--c-1fa855)]">
             <Send className="mr-1.5 h-4 w-4" /> Enviar no WhatsApp
           </Button>
         )}
         {data.semGeometria > 0 && <span className="text-xs text-amber-300">{data.semGeometria} lote(s) sem desenho importado ficaram de fora — importe o DXF na aba Arquivos.</span>}
       </div>
 
-      <div className="mx-auto max-w-[900px] rounded-xl bg-white p-6 text-[#111] shadow print:shadow-none">
+      <div className="mx-auto max-w-[900px] rounded-xl bg-white p-6 text-[color:var(--c-111111)] shadow print:shadow-none">
         {/* Capa: mapa */}
         <h1 className="text-xl font-bold">{emp.nome}</h1>
         <p className="text-sm">{[emp.municipio, emp.uf].filter(Boolean).join("/")} · {titulo} · emitido em {hoje}</p>
-        <p className="text-xs text-[#555]">Matrícula do empreendimento: {emp.registroMatricula || "sem registro informado"}</p>
+        <p className="text-xs text-[color:var(--c-555555)]">Matrícula do empreendimento: {emp.registroMatricula || "sem registro informado"}</p>
         <div ref={mapaRef} className="mt-3">
           <MapaTematico slug={slug} lotes={det.lotes as any} ruas={det.ruas} perimetro={det.perimetro?.poligono}
             realce={codigos.length ? codigos : undefined} destacar={codigos.length || filtro === "todos" ? undefined : ["disponivel"]} compacto />
@@ -107,12 +107,12 @@ export default function EmpreendimentoDocumentos() {
         <h2 className="quebra mt-6 text-lg font-bold">Anexo — {titulo.toLowerCase()} ({data.memoriais.length})</h2>
         <div className="overflow-x-auto">
         <table className="mt-2 w-full border-collapse text-xs">
-          <thead><tr className="border-b border-[#999]">
+          <thead><tr className="border-b border-[color:var(--c-999999)]">
             {["Lote", "Quadra", "Área (m²)", "Área (ha)", "Perímetro (m)", "Situação"].map(h => <th key={h} className="whitespace-nowrap px-1 py-1 text-left">{h}</th>)}
           </tr></thead>
           <tbody>
             {data.memoriais.map(m => (
-              <tr key={m.codigo} className="border-b border-[#ddd]">
+              <tr key={m.codigo} className="border-b border-[color:var(--c-dddddd)]">
                 <td className="px-1 py-0.5 font-semibold">{m.codigo}</td>
                 <td className="px-1 py-0.5">{m.quadra}</td>
                 <td className="px-1 py-0.5 tabular-nums">{n(m.areaM2)}</td>
@@ -129,21 +129,21 @@ export default function EmpreendimentoDocumentos() {
         {/* Memoriais */}
         {data.memoriais.map(m => (
           <section key={m.codigo} className="quebra mt-8">
-            <p className="text-[10px] font-bold uppercase tracking-wide text-[#a33]">{AVISO_RASCUNHO_MEMORIAL}</p>
+            <p className="text-[10px] font-bold text-[color:var(--c-aa3333)]">{AVISO_RASCUNHO_MEMORIAL}</p>
             <h2 className="text-base font-bold">Memorial descritivo — {m.titulo}</h2>
             <ul className="mt-1 text-xs">{m.cabecalho.map(c => <li key={c}>{c}</li>)}</ul>
             <p className="mt-2 text-justify text-xs leading-relaxed">{m.descricao}</p>
             {/* Celular: um cartão por vértice (nada corta) */}
             <ul className="vertices-cartoes mt-2 space-y-2 sm:hidden">
               {m.vertices.map(v => (
-                <li key={v.nome} className="rounded-md border border-[#ddd] p-2 text-[11px]">
+                <li key={v.nome} className="rounded-md border border-[color:var(--c-dddddd)] p-2 text-[11px]">
                   <p className="mb-1 text-xs font-bold">{v.nome}</p>
                   <dl className="grid grid-cols-[auto_1fr] gap-x-3 gap-y-0.5">
-                    <dt className="text-[#555]">N (m)</dt><dd className="tabular-nums">{n(v.n, 3)}</dd>
-                    <dt className="text-[#555]">E (m)</dt><dd className="tabular-nums">{n(v.e, 3)}</dd>
-                    <dt className="text-[#555]">Azimute</dt><dd>{v.azimute}</dd>
-                    <dt className="text-[#555]">Distância</dt><dd className="tabular-nums">{n(v.distancia)} m</dd>
-                    <dt className="text-[#555]">Confrontação</dt><dd className="break-words">{v.confronta}</dd>
+                    <dt className="text-[color:var(--c-555555)]">N (m)</dt><dd className="tabular-nums">{n(v.n, 3)}</dd>
+                    <dt className="text-[color:var(--c-555555)]">E (m)</dt><dd className="tabular-nums">{n(v.e, 3)}</dd>
+                    <dt className="text-[color:var(--c-555555)]">Azimute</dt><dd>{v.azimute}</dd>
+                    <dt className="text-[color:var(--c-555555)]">Distância</dt><dd className="tabular-nums">{n(v.distancia)} m</dd>
+                    <dt className="text-[color:var(--c-555555)]">Confrontação</dt><dd className="break-words">{v.confronta}</dd>
                   </dl>
                 </li>
               ))}
@@ -151,12 +151,12 @@ export default function EmpreendimentoDocumentos() {
             {/* Telas maiores e impressão: tabela (com rolagem horizontal se ainda faltar espaço) */}
             <div className="vertices-tabela mt-2 hidden overflow-x-auto sm:block">
               <table className="w-full border-collapse text-[10px]">
-                <thead><tr className="border-b border-[#999]">
+                <thead><tr className="border-b border-[color:var(--c-999999)]">
                   {["Vértice", "N (m)", "E (m)", "Azimute", "Distância (m)", "Confrontação"].map(h => <th key={h} className="whitespace-nowrap px-1 py-0.5 text-left">{h}</th>)}
                 </tr></thead>
                 <tbody>
                   {m.vertices.map(v => (
-                    <tr key={v.nome} className="border-b border-[#eee]">
+                    <tr key={v.nome} className="border-b border-[color:var(--c-eeeeee)]">
                       <td className="px-1 py-0.5">{v.nome}</td>
                       <td className="whitespace-nowrap px-1 py-0.5 tabular-nums">{n(v.n, 3)}</td>
                       <td className="whitespace-nowrap px-1 py-0.5 tabular-nums">{n(v.e, 3)}</td>
@@ -169,7 +169,7 @@ export default function EmpreendimentoDocumentos() {
               </table>
             </div>
             <p className="mt-6 text-xs">{[emp.municipio, emp.uf].filter(Boolean).join("/")}, {hoje}.</p>
-            <p className="mt-8 border-t border-[#999] pt-1 text-xs">{emp.responsavelTecnico || "Responsável técnico (nome, título e registro profissional)"}</p>
+            <p className="mt-8 border-t border-[color:var(--c-999999)] pt-1 text-xs">{emp.responsavelTecnico || "Responsável técnico (nome, título e registro profissional)"}</p>
           </section>
         ))}
       </div>
@@ -192,7 +192,7 @@ export default function EmpreendimentoDocumentos() {
           <div style={{ display: "flex", gap: "8px", marginBottom: "16px", flexWrap: "wrap" }}>
             {(["imagem", "pdf"] as const).map(f => (
               <button key={f} type="button" onClick={() => setFormato(f)} style={{
-                ...btnWhats(formato === f ? "#3ec87a" : "#5a8a65", formato === f ? "rgba(62,200,122,0.15)" : "rgba(255,255,255,0.04)", formato === f ? "rgba(62,200,122,0.35)" : "rgba(255,255,255,0.12)"),
+                ...btnWhats(formato === f ? "var(--c-3ec87a)" : "var(--c-5a8a65)", formato === f ? "color-mix(in srgb, var(--c-3ec87a) 15%, transparent)" : "color-mix(in srgb, var(--c-ffffff) 4%, transparent)", formato === f ? "color-mix(in srgb, var(--c-3ec87a) 35%, transparent)" : "color-mix(in srgb, var(--c-ffffff) 12%, transparent)"),
               }}>
                 {f === "imagem" ? "🖼️ Enviar como imagem" : "📄 Enviar como PDF"}
               </button>

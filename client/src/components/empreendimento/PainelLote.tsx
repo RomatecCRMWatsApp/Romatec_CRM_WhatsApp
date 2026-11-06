@@ -79,7 +79,7 @@ function LinkChacara({ slug, lote }: { slug: string; lote: LotePainel }) {
         <Button size="sm" variant="outline" className="h-7 text-xs" onClick={copiar}><Link2 className="mr-1 h-3.5 w-3.5" /> Copiar link da chácara</Button>
         {/* Envio pelo WhatsApp do sistema é da equipe (o empreendedor copia o link e manda do próprio celular) */}
         {perfilDe(user as any) !== "empreendedor" && (
-          <Button size="sm" variant="outline" className="h-7 text-xs border-[#25d366]/40 text-[#1fa855] hover:text-[#1fa855]" onClick={() => setEnviar(true)}>
+          <Button size="sm" variant="outline" className="h-7 text-xs border-[color:var(--c-25d366)]/40 text-[color:var(--c-1fa855)] hover:text-[color:var(--c-1fa855)]" onClick={() => setEnviar(true)}>
             <Send className="mr-1 h-3.5 w-3.5" /> Enviar no WhatsApp
           </Button>
         )}
@@ -146,7 +146,7 @@ export default function PainelLote({ slug, lote, onMudou, onFechar }: { slug: st
           <p className="text-xl font-bold">{lote.codigo}{lote.quadra ? ` · Quadra ${lote.quadra}` : ""}</p>
           <p className="text-xs text-muted-foreground">{m2(lote.areaM2)}{lote.perimetroM ? ` · perímetro ${lote.perimetroM.toLocaleString("pt-BR")} m` : ""}</p>
         </div>
-        <span className="rounded-full px-2 py-0.5 text-[11px] font-semibold text-[#0C3320]" style={{ background: COR_SITUACAO[lote.situacao] }}>{ROTULO_SITUACAO[lote.situacao]}</span>
+        <span className="rounded-full px-2 py-0.5 text-[11px] font-semibold text-[color:var(--c-0c3320)]" style={{ background: COR_SITUACAO[lote.situacao] }}>{ROTULO_SITUACAO[lote.situacao]}</span>
         {onFechar && <button onClick={onFechar} className="text-muted-foreground hover:text-foreground text-lg leading-none" aria-label="Fechar">×</button>}
       </div>
 

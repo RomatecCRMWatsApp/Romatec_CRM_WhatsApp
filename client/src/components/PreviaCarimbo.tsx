@@ -48,7 +48,7 @@ export default function PreviaCarimbo({ linhas, link }: { linhas: LinhasPrevia; 
   }, [linhas.nome, linhas.detalhe, linhas.email, link]);
   return (
     <figure className="space-y-1">
-      <figcaption className="text-[11px] font-semibold uppercase tracking-wider text-amber-400">Prévia do carimbo</figcaption>
+      <figcaption className="text-[11px] font-semibold text-amber-400">Prévia do carimbo</figcaption>
       <canvas ref={ref} width={W} height={H} className="block w-full rounded-md border border-amber-500/40 shadow" aria-label={`Prévia do carimbo: ${linhas.nome}. ${linhas.detalhe}. ${linhas.email ?? ""}`} />
       <p className="text-[10px] text-muted-foreground">Assim sai embaixo de cada arte e vídeo. O QR leva para o seu link.</p>
     </figure>

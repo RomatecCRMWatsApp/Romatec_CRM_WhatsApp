@@ -126,7 +126,7 @@ function useQr(texto: string | null) {
 function CrachaCorretor({ nome, funcao, creci, telefone, whatsapp, foto }: { nome: string; funcao: string; creci: string; telefone: string; whatsapp: string | null; foto: string | null }) {
   const qr = useQr(whatsapp ? `https://wa.me/${whatsapp}` : null);
   return (
-    <div data-cracha-corretor className="relative mx-auto flex aspect-[54/86] w-full max-w-[260px] flex-col overflow-hidden rounded-xl shadow-xl shadow-black/40" style={{ background: "#0B0F0D", color: "#FFFFFF", containerType: "inline-size" } as any}>
+    <div data-cracha-corretor className="relative mx-auto flex aspect-[54/86] w-full max-w-[260px] flex-col overflow-hidden rounded-xl shadow-xl shadow-black/40" style={{ background: "var(--c-0b0f0d)", color: "var(--c-ffffff)", containerType: "inline-size" } as any}>
       <div className="relative flex flex-col items-center px-[8%] pb-[5%] pt-[7%]" style={{ background: VERDE }}>
         <img src={brandAssets.rosa} alt="" aria-hidden className="pointer-events-none absolute -right-[18%] -top-[12%] w-[70%] opacity-[0.12]" />
         <img src={brandAssets.wordmark} alt="Romatec Consultoria Total" className="relative w-[78%] object-contain" />
@@ -137,7 +137,7 @@ function CrachaCorretor({ nome, funcao, creci, telefone, whatsapp, foto }: { nom
           <Foto url={foto} nome={nome} className="h-full w-full" />
         </div>
         <p className="line-clamp-2 font-bold leading-tight [font-family:var(--rt-font-title)]" style={{ color: DOURADO, fontSize: "8cqw" }}>{nome || "Nome do Corretor"}</p>
-        <p className="font-semibold uppercase tracking-[0.12em] opacity-90" style={{ fontSize: "4.4cqw" }}>{funcao}</p>
+        <p className="font-semibold tracking-[0.12em] opacity-90" style={{ fontSize: "4.4cqw" }}>{funcao}</p>
         {creci && <p className="rounded-full px-[4cqw] py-[0.8cqw] font-bold" style={{ background: `${DOURADO}26`, color: DOURADO, fontSize: "5.6cqw" }}>{creci}</p>}
       </div>
       <div className="flex items-center gap-[4cqw] border-t px-[7%] py-[4%]" style={{ borderColor: `${DOURADO}55` }}>

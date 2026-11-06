@@ -85,14 +85,14 @@ export default function Oferta() {
 
   return (
     <div style={{ background: C.creme, minHeight: "100vh", fontFamily: SANS, color: C.texto }}>
-      <header style={{ background: C.verde, color: "#fff", padding: "24px 0 28px", borderBottom: `4px solid ${C.dourado}` }}>
+      <header style={{ background: C.verde, color: "var(--c-ffffff)", padding: "24px 0 28px", borderBottom: `4px solid ${C.dourado}` }}>
         <div style={{ ...secao, display: "flex", alignItems: "center", gap: 16, flexWrap: "wrap" }}>
           {logo && <img src={logo} alt={dados.empreendimento.nome} style={{ height: 70, width: "auto" }} />}
           <div style={{ flex: 1, minWidth: 220 }}>
             <p style={{ margin: 0, color: C.dourado, fontWeight: 700, letterSpacing: 1, fontSize: 13, textTransform: "uppercase" }}>{dados.nome ? `${dados.nome}, esta é a sua oferta` : "Condição de lançamento"}</p>
             <h1 style={{ margin: "4px 0 0", fontFamily: SERIF, fontSize: 30, lineHeight: 1.15 }}>{dados.empreendimento.nome}</h1>
           </div>
-          <div style={{ display: "flex", alignItems: "center", gap: 8, background: "rgba(242,192,75,0.15)", border: `1px solid ${C.destaque}`, borderRadius: 999, padding: "8px 14px" }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 8, background: "color-mix(in srgb, var(--c-f2c04b) 15%, transparent)", border: `1px solid ${C.destaque}`, borderRadius: 999, padding: "8px 14px" }}>
             <Flame size={18} color={C.destaque} />
             <span style={{ fontWeight: 700 }}>Restam {disponiveis} chácaras</span>
           </div>
@@ -107,7 +107,7 @@ export default function Oferta() {
           <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))", gap: 14 }}>
             <label style={{ display: "block" }}>
               <span style={{ display: "block", fontSize: 14, fontWeight: 700, color: C.verde, marginBottom: 6 }}>Chácara (livres agora)</span>
-              <select value={codigo} onChange={e => setCodigo(e.target.value)} style={{ width: "100%", padding: "12px 14px", borderRadius: 12, border: "1px solid #D8CFB4", fontSize: 16, background: "#fff" }}>
+              <select value={codigo} onChange={e => setCodigo(e.target.value)} style={{ width: "100%", padding: "12px 14px", borderRadius: 12, border: "1px solid var(--c-d8cfb4)", fontSize: 16, background: "var(--c-ffffff)" }}>
                 {dados.lotes.filter(l => !livres || livres.includes(l.codigo) || l.codigo === codigo).map(l => <option key={l.codigo} value={l.codigo}>{l.codigo} · {m2(l.areaM2)} m²</option>)}
               </select>
             </label>
@@ -116,7 +116,7 @@ export default function Oferta() {
               <input type="range" min={1} max={c.entradaMaxParcelas} value={entrada} onChange={e => setEntrada(Number(e.target.value))} style={{ width: "100%" }} />
             </label>
           </div>
-          {saiu && <p role="status" style={{ margin: "10px 0 0", color: "#B54708", fontWeight: 700 }}>A chácara {codigo} acabou de sair. Escolha outra da lista.</p>}
+          {saiu && <p role="status" style={{ margin: "10px 0 0", color: "var(--c-b54708)", fontWeight: 700 }}>A chácara {codigo} acabou de sair. Escolha outra da lista.</p>}
 
           {sim && (
             <div style={{ marginTop: 16, display: "grid", gap: 10 }}>
@@ -124,7 +124,7 @@ export default function Oferta() {
                 <span>Preço de tabela <b>{brl(sim.preco)}</b></span>
                 <span>À vista <b style={{ color: C.verde }}>{brl(sim.avistaTotal.valor)}</b> ({brl(sim.avistaTotal.desconto)} de desconto)</span>
               </div>
-              <div style={{ background: C.verde, color: "#fff", borderRadius: 16, padding: 16, textAlign: "center" }}>
+              <div style={{ background: C.verde, color: "var(--c-ffffff)", borderRadius: 16, padding: 16, textAlign: "center" }}>
                 <p style={{ margin: 0, fontSize: 14, color: C.dourado, fontWeight: 700, textTransform: "uppercase", letterSpacing: 1 }}>Parcelado direto com a empreendedora</p>
                 <p style={{ margin: "6px 0 0", fontFamily: SERIF, fontSize: 26, fontWeight: 700 }}>{entrada}× {brl(sim.parcelasEntrada[0] ?? sim.entrada30)} de entrada</p>
                 {plano && <p style={{ margin: "4px 0 0", fontSize: 18, color: C.destaque }}>+ {plano.prazo}× fixas de {brl(plano.parcela)}</p>}
@@ -135,7 +135,7 @@ export default function Oferta() {
                 <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(130px, 1fr))", gap: 8 }}>
                   {sim.planos.map(p => (
                     <button key={p.prazo} type="button" onClick={() => setPrazo(p.prazo)}
-                      style={{ padding: "10px 8px", borderRadius: 12, cursor: "pointer", fontSize: 15, border: `2px solid ${p.prazo === plano?.prazo ? C.verde : "#E2D9BF"}`, background: p.prazo === plano?.prazo ? "#EAF5EC" : "#fff", color: C.texto }}>
+                      style={{ padding: "10px 8px", borderRadius: 12, cursor: "pointer", fontSize: 15, border: `2px solid ${p.prazo === plano?.prazo ? C.verde : "var(--c-e2d9bf)"}`, background: p.prazo === plano?.prazo ? "var(--c-eaf5ec)" : "var(--c-ffffff)", color: C.texto }}>
                       <b>{p.prazo}×</b> {brl(p.parcela)}
                     </button>
                   ))}
@@ -146,7 +146,7 @@ export default function Oferta() {
           )}
 
           <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))", gap: 10, marginTop: 16 }}>
-            <a href={zap} target="_blank" rel="noopener noreferrer" style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 8, padding: "15px 18px", borderRadius: 14, background: "#1F8A4C", color: "#fff", fontSize: 18, fontWeight: 700, textDecoration: "none" }}>
+            <a href={zap} target="_blank" rel="noopener noreferrer" style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 8, padding: "15px 18px", borderRadius: 14, background: "var(--c-1f8a4c)", color: "var(--c-ffffff)", fontSize: 18, fontWeight: 700, textDecoration: "none" }}>
               <MessageCircle size={22} /> {lote ? `Quero a chácara ${lote.codigo}` : "Falar no WhatsApp"}
             </a>
             {lote && !saiu && (
@@ -158,7 +158,7 @@ export default function Oferta() {
           </div>
         </section>
 
-        <section style={{ display: "flex", alignItems: "center", gap: 14, background: C.verde, color: "#fff", borderRadius: 20, padding: 16 }}>
+        <section style={{ display: "flex", alignItems: "center", gap: 14, background: C.verde, color: "var(--c-ffffff)", borderRadius: 20, padding: 16 }}>
           <FotoCorretor cartao={dados.contato} tamanho={64} />
           <div style={{ lineHeight: 1.35 }}>
             <p style={{ margin: 0, fontSize: 12, color: C.dourado, fontWeight: 700, textTransform: "uppercase" }}>Seu atendimento</p>
@@ -168,7 +168,7 @@ export default function Oferta() {
         </section>
 
         <p style={{ margin: 0, fontSize: 12, lineHeight: 1.5, color: C.suave, fontStyle: "italic" }}>{dados.aviso}</p>
-        <p style={{ textAlign: "center", fontSize: 12, color: C.suave, margin: 0 }}>Romatec Consultoria Total · gestão e administração de vendas · CNPJ 17.261.987/0001-09</p>
+        <p style={{ textAlign: "center", fontSize: 12, color: C.suave, margin: 0 }}>Romatec Consultoria Total, gestão e administração de vendas, CNPJ 17.261.987/0001-09</p>
       </main>
     </div>
   );

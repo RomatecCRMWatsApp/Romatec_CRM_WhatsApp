@@ -73,8 +73,8 @@ export default function Financeiro() {
               </div>
               {x.comissao && (
                 <p className="mt-1 text-xs text-muted-foreground">
-                  Comissão {brl(x.comissao.total)} — corretor {brl(x.comissao.corretor)} · Romatec {brl(x.comissao.romatec)} ·
-                  1º pagamento {brl(x.comissao.no1oPagamento.total)}{x.comissao.no2oPagamento.total > 0 ? ` · 2º pagamento ${brl(x.comissao.no2oPagamento.total)}` : ""}
+                  Comissão {brl(x.comissao.total)} — corretor {brl(x.comissao.corretor)}, Romatec {brl(x.comissao.romatec)} ·
+                  1º pagamento {brl(x.comissao.no1oPagamento.total)}{x.comissao.no2oPagamento.total > 0 ? `, 2º pagamento ${brl(x.comissao.no2oPagamento.total)}` : ""}
                 </p>
               )}
               {x.minhaComissao && (

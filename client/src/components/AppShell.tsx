@@ -160,7 +160,7 @@ function Navegacao({ onNavegar, recolhido = false }: { onNavegar?: () => void; r
               ? <div className="mx-auto my-1 h-px w-8 rounded" style={{ background: `color-mix(in srgb, ${g.cor} 50%, transparent)` }} title={g.titulo} />
               : (
                 <button type="button" onClick={() => alternar(g.titulo!)} aria-expanded={!fechado}
-                  className="flex w-full items-center gap-1.5 rounded-md px-3 pb-1 pt-0.5 text-[10px] font-semibold uppercase tracking-wider text-sidebar-foreground/45 hover:text-sidebar-foreground/80">
+                  className="flex w-full items-center gap-1.5 rounded-md px-3 pb-1 pt-0.5 text-[10px] font-semibold text-sidebar-foreground/45 hover:text-sidebar-foreground/80">
                   <ChevronRight className={`h-3 w-3 transition-transform ${fechado ? "" : "rotate-90"}`} />
                   <span className="h-1.5 w-1.5 rounded-full" style={{ background: g.cor }} />
                   {g.titulo}
@@ -290,7 +290,7 @@ function BannerLicenca({ licenca }: { licenca?: { exigida: boolean; liberado: bo
   const texto = atraso ? "Pagamento em atraso: regularize para não perder o acesso."
     : `${teste ? "Teste grátis" : "Cortesia"}: ${d === 0 ? "termina hoje" : `faltam ${d} dia(s)`}.`;
   return (
-    <div className={`flex flex-wrap items-center justify-center gap-3 px-4 py-2 text-sm ${atraso || (d ?? 9) <= 1 ? "bg-red-500/15 text-red-200" : "bg-[var(--rt-gold)]/15 text-[var(--rt-gold-light,#E8C766)]"}`}>
+    <div className={`flex flex-wrap items-center justify-center gap-3 px-4 py-2 text-sm ${atraso || (d ?? 9) <= 1 ? "bg-red-500/15 text-red-200" : "bg-[var(--rt-gold)]/15 text-[var(--rt-gold-light)]"}`}>
       <span>{texto}</span>
       <Link href="/assinatura" className="rounded-full bg-[var(--rt-gold)] px-3 py-1 text-xs font-semibold text-black">Assinar</Link>
     </div>
@@ -310,7 +310,7 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
   return (
     <div className={`min-h-screen bg-background transition-[padding] duration-200 print:!pl-0 ${recolhido ? "lg:pl-[72px]" : "lg:pl-64"}`}>
       {/* Menu fixo (desktop) */}
-      <aside className={`hidden lg:flex fixed inset-y-0 left-0 z-30 flex-col bg-sidebar border-r border-sidebar-border transition-[width] duration-200 ${recolhido ? "w-[72px]" : "w-64"}`}>
+      <aside className={`hidden lg:flex fixed inset-y-0 left-0 z-30 flex-col bg-sidebar border-r border-sidebar-border duration-200 ${recolhido ? "w-[72px]" : "w-64"}`}>
         <Marca recolhido={recolhido} />
         <Navegacao recolhido={recolhido} />
         <BotaoInstalarApp recolhido={recolhido} />

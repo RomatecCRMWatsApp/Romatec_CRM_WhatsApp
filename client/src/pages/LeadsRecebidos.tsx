@@ -29,14 +29,14 @@ export default function LeadsRecebidos() {
                   <Link href={`/leads/lead/${l.leadId}`} className="font-semibold hover:underline">{l.lead}</Link>
                   <p className="text-xs text-muted-foreground">{l.telefone}{l.interesse ? ` · ${l.interesse}` : ""}</p>
                 </div>
-                <span className="whitespace-nowrap rounded bg-secondary/50 px-1.5 py-0.5 text-[10px] font-bold uppercase">{l.desfecho ? ROTULO_DESFECHO[l.desfecho] : ROTULO_SITUACAO[l.situacao]}</span>
+                <span className="whitespace-nowrap rounded bg-secondary/50 px-1.5 py-0.5 text-[10px] font-bold">{l.desfecho ? ROTULO_DESFECHO[l.desfecho] : ROTULO_SITUACAO[l.situacao]}</span>
               </div>
               <p className="text-xs text-muted-foreground">Encaminhado em {dataHora(l.quando)} por {l.por ?? "—"}{l.recebidoEm ? ` · recebido em ${dataHora(l.recebidoEm)}` : ""}</p>
-              {l.observacao && <p className="rounded bg-secondary/30 px-2 py-1 text-xs">📝 {l.observacao}</p>}
+              {l.observacao && <p className="rounded bg-secondary/30 px-2 py-1 text-xs">{l.observacao}</p>}
               {l.desfechoMotivo && <p className="text-xs text-muted-foreground">Motivo: {l.desfechoMotivo}</p>}
               {l.situacao !== "finalizado" && (
                 <div className="flex flex-wrap items-start gap-2">
-                  {l.telefone && <Button size="sm" asChild className="bg-[#25D366] text-white hover:bg-[#1fb956]"><a href={`https://wa.me/${l.telefone.replace(/\D/g, "")}`} target="_blank" rel="noreferrer"><MessageCircle className="mr-1 h-4 w-4" /> WhatsApp</a></Button>}
+                  {l.telefone && <Button size="sm" asChild className="bg-[color:var(--c-25d366)] text-white hover:bg-[color:var(--c-1fb956)]"><a href={`https://wa.me/${l.telefone.replace(/\D/g, "")}`} target="_blank" rel="noreferrer"><MessageCircle className="mr-1 h-4 w-4" /> WhatsApp</a></Button>}
                   <div className="flex-1"><AcoesRecebimento id={l.id} recebido={!!l.recebidoEm} /></div>
                 </div>
               )}

@@ -77,7 +77,7 @@ export async function buscarCep(cep: string) {
 /** Selo colorido do perfil */
 export function SeloPerfil({ perfil }: { perfil: Perfil }) {
   return (
-    <span className="rounded px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide" style={{ color: COR_PERFIL[perfil], background: `${COR_PERFIL[perfil]}22`, border: `1px solid ${COR_PERFIL[perfil]}66` }}>
+    <span className="rounded px-1.5 py-0.5 text-[10px] font-semibold" style={{ color: COR_PERFIL[perfil], background: `${COR_PERFIL[perfil]}22`, border: `1px solid ${COR_PERFIL[perfil]}66` }}>
       {ROTULO_PERFIL[perfil]}
     </span>
   );
@@ -112,7 +112,7 @@ function ModalQualificacao({ id, aberto, onFechar }: { id: number; aberto: boole
 const Secao = ({ titulo, children, extra }: { titulo: string; children: React.ReactNode; extra?: React.ReactNode }) => (
   <section className="space-y-2.5">
     <div className="flex items-center gap-2 border-b border-border pb-1">
-      <p className="flex-1 text-xs font-semibold uppercase tracking-wide text-muted-foreground">{titulo}</p>
+      <p className="flex-1 text-xs font-semibold text-muted-foreground">{titulo}</p>
       {extra}
     </div>
     {children}

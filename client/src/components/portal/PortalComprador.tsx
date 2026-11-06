@@ -62,7 +62,7 @@ export function AbaAntecipar({ codigo, d, onPedido }: { codigo: string; d: Dados
       {sim && (
         <div className="grid grid-cols-3 gap-2 text-center">
           <div className="rounded-lg bg-neutral-50 p-2"><p className="text-[11px] text-neutral-500">Valor das parcelas</p><p className="font-semibold">{brl(sim.totalNominal)}</p></div>
-          <div className="rounded-lg p-2" style={{ background: "#eef6ee" }}><p className="text-[11px] text-neutral-500">Você paga</p><p className="font-bold" style={{ color: VERDE }}>{brl(sim.totalAPagar)}</p></div>
+          <div className="rounded-lg p-2" style={{ background: "var(--c-eef6ee)" }}><p className="text-[11px] text-neutral-500">Você paga</p><p className="font-bold" style={{ color: VERDE }}>{brl(sim.totalAPagar)}</p></div>
           <div className="rounded-lg bg-amber-50 p-2"><p className="text-[11px] text-neutral-500">Economia</p><p className="font-semibold text-amber-800">{brl(sim.economia)}</p></div>
         </div>
       )}
@@ -175,7 +175,7 @@ export function AbaChamados({ codigo, d, onNovo }: { codigo: string; d: DadosPor
           <p className="text-xs text-neutral-500">{c.rotulo} · {br(c.criadoEm)}</p>
           <p className="mt-1 whitespace-pre-wrap text-neutral-700">{c.mensagem}</p>
           {c.resposta && (
-            <div className="mt-2 rounded-lg p-2" style={{ background: "#eef6ee" }}>
+            <div className="mt-2 rounded-lg p-2" style={{ background: "var(--c-eef6ee)" }}>
               <p className="flex items-center gap-1 text-xs font-semibold" style={{ color: VERDE }}><CheckCircle2 className="h-3.5 w-3.5" /> Resposta da administração · {br(c.respondidoEm)}</p>
               <p className="whitespace-pre-wrap">{c.resposta}</p>
             </div>

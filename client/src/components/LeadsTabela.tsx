@@ -48,29 +48,29 @@ export default function LeadsTabela({ situacao, search }: { situacao: Situacao; 
       <div style={{ display: "flex", gap: "8px", alignItems: "center", flexWrap: "wrap" }}>
         <select value={origem} onChange={e => setOrigem(e.target.value)} style={{
           padding: "7px 10px", background: "var(--card)", border: "1px solid var(--border)", borderRadius: "8px",
-          color: "#c8f0d0", fontSize: "12px", maxWidth: "100%",
+          color: "var(--c-c8f0d0)", fontSize: "12px", maxWidth: "100%",
         }}>
           <option value="">Todas as origens</option>
           {(data?.origens || []).map(o => <option key={o.origem} value={o.origem}>{o.origem} ({o.total})</option>)}
         </select>
-        <span style={{ fontSize: "11px", color: "#4a7a55" }}>{isLoading ? "Carregando..." : `${linhas.length} ${linhas.length === 1 ? "lead" : "leads"}`}</span>
+        <span style={{ fontSize: "11px", color: "var(--c-4a7a55)" }}>{isLoading ? "Carregando..." : `${linhas.length} ${linhas.length === 1 ? "lead" : "leads"}`}</span>
         <div style={{ flex: 1 }} />
         <button disabled={pdf.isPending || !linhas.length} onClick={() => pdf.mutate(filtro)}
-          style={{ ...btn("#38bdf8", "rgba(14,165,233,0.1)", "rgba(14,165,233,0.25)"), opacity: pdf.isPending || !linhas.length ? 0.5 : 1 }}>
+          style={{ ...btn("var(--c-38bdf8)", "color-mix(in srgb, var(--c-0ea5e9) 10%, transparent)", "color-mix(in srgb, var(--c-0ea5e9) 25%, transparent)"), opacity: pdf.isPending || !linhas.length ? 0.5 : 1 }}>
           <FileDown size={13} /> {pdf.isPending ? "Gerando..." : "Salvar em PDF"}
         </button>
         <button disabled={!linhas.length} onClick={() => setEnviar(true)}
-          style={{ ...btn("#25d366", "rgba(37,211,102,0.1)", "rgba(37,211,102,0.25)"), opacity: !linhas.length ? 0.5 : 1 }}>
+          style={{ ...btn("var(--c-25d366)", "color-mix(in srgb, var(--c-25d366) 10%, transparent)", "color-mix(in srgb, var(--c-25d366) 25%, transparent)"), opacity: !linhas.length ? 0.5 : 1 }}>
           <Send size={13} /> Enviar no WhatsApp
         </button>
       </div>
 
       {isLoading ? (
-        <div style={{ textAlign: "center", padding: "40px", color: "#3a6a45" }}>Carregando leads...</div>
+        <div style={{ textAlign: "center", padding: "40px", color: "var(--c-3a6a45)" }}>Carregando leads...</div>
       ) : !linhas.length ? (
         <div className="ld-card" style={{ textAlign: "center", padding: "40px" }}>
-          <Users size={32} style={{ color: "#1a3520", margin: "0 auto 12px" }} />
-          <p style={{ color: "#3a5a40", fontSize: "14px" }}>Nenhum lead encontrado</p>
+          <Users size={32} style={{ color: "var(--c-1a3520)", margin: "0 auto 12px" }} />
+          <p style={{ color: "var(--c-3a5a40)", fontSize: "14px" }}>Nenhum lead encontrado</p>
         </div>
       ) : (
         <div style={{ background: "var(--card)", border: "1px solid var(--border)", borderRadius: "12px", overflowX: "auto" }}>
@@ -83,12 +83,12 @@ export default function LeadsTabela({ situacao, search }: { situacao: Situacao; 
             <tbody>
               {linhas.map((l, i) => (
                 <tr key={l.id}>
-                  <td style={{ ...td, color: "#4a7a55" }}>{i + 1}</td>
-                  <td style={{ ...td, fontWeight: 600, color: "#d8f0dc" }}>{l.nome}</td>
+                  <td style={{ ...td, color: "var(--c-4a7a55)" }}>{i + 1}</td>
+                  <td style={{ ...td, fontWeight: 600, color: "var(--c-d8f0dc)" }}>{l.nome}</td>
                   <td style={{ ...td, whiteSpace: "nowrap" }}>{l.telefone}</td>
-                  <td style={td}>{l.email || <span style={{ color: "#3a5a40" }}>—</span>}</td>
+                  <td style={td}>{l.email || <span style={{ color: "var(--c-3a5a40)" }}>—</span>}</td>
                   <td style={td}>{l.origem}</td>
-                  <td style={{ ...td, whiteSpace: "nowrap", color: "#4a7a55" }}>{l.entrada ? new Date(l.entrada).toLocaleDateString("pt-BR") : "—"}</td>
+                  <td style={{ ...td, whiteSpace: "nowrap", color: "var(--c-4a7a55)" }}>{l.entrada ? new Date(l.entrada).toLocaleDateString("pt-BR") : "—"}</td>
                 </tr>
               ))}
             </tbody>
@@ -108,7 +108,7 @@ export default function LeadsTabela({ situacao, search }: { situacao: Situacao; 
           <div style={{ display: "flex", gap: "8px", marginBottom: "16px" }}>
             {(["pdf", "texto"] as const).map(f => (
               <button key={f} onClick={() => setFormato(f)} style={{
-                ...btn(formato === f ? "#3ec87a" : "#4a7a55", formato === f ? "rgba(62,200,122,0.15)" : "rgba(255,255,255,0.04)", formato === f ? "rgba(62,200,122,0.35)" : "rgba(255,255,255,0.08)"),
+                ...btn(formato === f ? "var(--c-3ec87a)" : "var(--c-4a7a55)", formato === f ? "color-mix(in srgb, var(--c-3ec87a) 15%, transparent)" : "color-mix(in srgb, var(--c-ffffff) 4%, transparent)", formato === f ? "color-mix(in srgb, var(--c-3ec87a) 35%, transparent)" : "color-mix(in srgb, var(--c-ffffff) 8%, transparent)"),
               }}>
                 {f === "pdf" ? "📄 Documento PDF" : "💬 Texto resumido"}
               </button>

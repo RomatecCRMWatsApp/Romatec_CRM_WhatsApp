@@ -134,7 +134,7 @@ export default function Ranking() {
               <div className="rounded-xl border border-border bg-card p-3"><p className="text-xs text-muted-foreground">Corretores</p><p className="text-2xl font-bold">{r.linhas.length}</p></div>
               <div className="rounded-xl border border-border bg-card p-3"><p className="text-xs text-muted-foreground">Disponíveis</p><p className="text-2xl font-bold">{r.estoqueRestante ?? "—"}</p></div>
             </div>
-            {r.encerrada && <p className="rounded-xl border border-amber-400/40 bg-amber-400/10 p-3 text-sm text-amber-200">🏁 Campanha encerrada — classificação congelada para a apuração do vencedor.</p>}
+            {r.encerrada && <p className="rounded-xl border border-amber-400/40 bg-amber-400/10 p-3 text-sm text-amber-200">Campanha encerrada — classificação congelada para a apuração do vencedor.</p>}
             <div className="space-y-2">
               {r.linhas.length === 0 && <p className="rounded-xl border border-dashed border-border p-4 text-sm text-muted-foreground">Nenhum corretor ativo habilitado neste empreendimento.</p>}
               {r.linhas.map(l => (

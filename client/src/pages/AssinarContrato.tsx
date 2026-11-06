@@ -109,7 +109,7 @@ export default function AssinarContrato() {
   const s = info?.signatario;
   const assinado = feito || s?.status === "assinado";
   return (
-    <div className="min-h-screen" style={{ background: CREME, color: "#1d2b22", fontFamily: "Manrope, system-ui, sans-serif" }}>
+    <div className="min-h-screen" style={{ background: CREME, color: "var(--c-1d2b22)", fontFamily: "Manrope, system-ui, sans-serif" }}>
       <header className="border-b-4 px-4 py-3" style={{ background: VERDE, borderColor: DOURADO }}>
         <div className="mx-auto flex max-w-5xl items-center gap-3 text-white">
           <img src="/bom-jardims/logo.webp" alt="" className="h-10 w-auto" onError={e => ((e.target as HTMLImageElement).style.display = "none")} />

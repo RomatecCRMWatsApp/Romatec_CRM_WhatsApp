@@ -50,7 +50,7 @@ function Preferencias({ minutos }: { minutos: number }) {
   });
   return (
     <div className="rounded-xl border border-border bg-card p-4 space-y-2">
-      <p className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground"><MonitorPause className="h-4 w-4" /> Preferências</p>
+      <p className="flex items-center gap-2 text-xs font-semibold text-muted-foreground"><MonitorPause className="h-4 w-4" /> Preferências</p>
       <label className="flex flex-wrap items-center gap-3 text-sm">
         Tela de descanso
         <select value={minutos} disabled={salvar.isPending} onChange={e => salvar.mutate({ minutos: Number(e.target.value) })}

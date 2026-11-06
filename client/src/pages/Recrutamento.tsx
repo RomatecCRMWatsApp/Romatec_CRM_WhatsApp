@@ -136,7 +136,7 @@ function Conferir({ id, onFechar, onAcesso }: { id: number; onFechar: () => void
         <p className="text-xs font-semibold">Documentos</p>
         {r.exigidos.map(x => {
           const doc = r.docs.find((y: any) => y.tipo === x.tipo);
-          return <p key={x.tipo} className="text-xs">{doc ? <a className="text-primary hover:underline" href={`/api/recrutamento/docs/${doc.id}`} target="_blank" rel="noreferrer">✅ {x.rotulo}</a> : <span className={x.obrigatorio ? "text-red-300" : "text-muted-foreground"}>{x.obrigatorio ? "❌" : "—"} {x.rotulo}</span>}{doc?.validade ? ` (válida até ${doc.validade.split("-").reverse().join("/")})` : ""}</p>;
+          return <p key={x.tipo} className="text-xs">{doc ? <a className="text-primary hover:underline" href={`/api/recrutamento/docs/${doc.id}`} target="_blank" rel="noreferrer">{x.rotulo}</a> : <span className={x.obrigatorio ? "text-red-300" : "text-muted-foreground"}>{x.obrigatorio ? "" : "—"} {x.rotulo}</span>}{doc?.validade ? ` (válida até ${doc.validade.split("-").reverse().join("/")})` : ""}</p>;
         })}
       </div>
       {r.status === "preenchido" && (

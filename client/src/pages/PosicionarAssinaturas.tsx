@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { useLocation, useParams } from "wouter";
 import { toast } from "sonner";
-import { Loader2, Save, Trash2, PenLine } from "lucide-react";
+import { Loader2, Save, Trash2, PenLine, ChevronRight } from "lucide-react";
 import { trpc } from "@/lib/trpc";
 import PageHeader from "@/components/PageHeader";
 import { Button } from "@/components/ui/button";
@@ -110,17 +110,17 @@ export default function PosicionarAssinaturas() {
               <select className="h-8 rounded-md border border-border bg-background px-2" value={pagina} onChange={e => setPagina(Number(e.target.value))} aria-label="Página">
                 {Array.from({ length: total }, (_, i) => <option key={i} value={i + 1}>Página {i + 1}{i + 1 === total ? " (última)" : ""}</option>)}
               </select>
-              <Button size="sm" variant="outline" disabled={pagina >= total} onClick={() => setPagina(p => p + 1)}>›</Button>
+              <Button size="sm" variant="outline" disabled={pagina >= total} onClick={() => setPagina(p => p + 1)} aria-label="Próxima página"><ChevronRight className="h-4 w-4" aria-hidden="true" /></Button>
               <span className="text-xs text-muted-foreground">de {total}</span>
             </div>
           )}
           <div ref={area} className="w-full">
             <div className="relative mx-auto w-fit cursor-crosshair select-none" onClick={colocar} onPointerMove={mover} onPointerUp={soltar}>
-              <canvas ref={canvas} className="block bg-white shadow" />
+              <canvas ref={canvas} className="block bg-white shadow" aria-label="Página do documento para posicionar as assinaturas" />
               {tam.largura > 0 && caixas.map((c, i) => naPagina(c) && (
                 <div key={c.papel} data-caixa="1" onPointerDown={iniciar(i, "mover")}
                   className="absolute cursor-move rounded border-2 bg-white/60 text-[10px] font-semibold"
-                  style={{ left: c.x * tam.largura, top: (1 - c.y - c.h) * tam.altura, width: c.w * tam.largura, height: c.h * tam.altura, borderColor: cor(c.papel), color: "#0C3320" }}>
+                  style={{ left: c.x * tam.largura, top: (1 - c.y - c.h) * tam.altura, width: c.w * tam.largura, height: c.h * tam.altura, borderColor: cor(c.papel), color: "var(--c-0c3320)" }}>
                   <span data-caixa="1" className="pointer-events-none block truncate px-1">{rotulo(c.papel)?.rotulo ?? c.papel}</span>
                   <span data-caixa="1" onPointerDown={iniciar(i, "tamanho")} className="absolute bottom-0 right-0 h-3 w-3 cursor-se-resize" style={{ background: cor(c.papel) }} />
                 </div>
