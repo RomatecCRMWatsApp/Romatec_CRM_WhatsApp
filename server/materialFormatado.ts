@@ -16,6 +16,7 @@ import sharp from 'sharp';
 import QRCode from 'qrcode';
 import { layoutFormato, recorteRodapeEfetivo, type FormatoDownload } from '../shared/materiais';
 import { linhasRodape, type CartaoVendas } from '../shared/cartaoVendas';
+import { LINHA_PUBLICIDADE } from '../shared/escritorio';
 
 export class FormatoErro extends Error { constructor(msg: string, public status = 400) { super(msg); this.name = 'FormatoErro'; } }
 
@@ -92,7 +93,9 @@ export async function faixaCorretor(w: number, h: number, d: DadosCorretor): Pro
   const k = email ? 0.86 : 1;
   const f1 = caber(t1, Math.round(h * 0.13 * k), larg, 0.62), f2 = caber(nome, Math.round(h * 0.22 * k), larg, 0.58), f3 = caber(detalhe, Math.round(h * 0.16 * k), larg, 0.52);
   const f4 = email ? caber(email, Math.round(h * 0.13), larg, 0.52) : 0;
-  const yy = email ? [0.13, 0.36, 0.54, 0.7] : [0.17, 0.45, 0.68, 0];
+  // Linha obrigatória da publicidade (imobiliária + CRECI J), no pé da faixa: as outras sobem um pouco
+  const f5 = caber(LINHA_PUBLICIDADE, Math.round(h * 0.1), larg, 0.55);
+  const yy = email ? [0.1, 0.31, 0.47, 0.61] : [0.13, 0.39, 0.6, 0];
   const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="${w}" height="${h}">
     <rect width="${w}" height="${h}" fill="${VERDE}"/><rect width="${w}" height="${Math.max(3, Math.round(h * 0.03))}" fill="${DOURADO}"/>
     <rect x="${w - pad - qrLado - 4}" y="${pad - 4}" width="${qrLado + 8}" height="${qrLado + 8}" fill="#fff"/>
@@ -100,6 +103,7 @@ export async function faixaCorretor(w: number, h: number, d: DadosCorretor): Pro
     <text x="${pad}" y="${Math.round(pad + h * yy[1])}" font-family="${FONTE}" font-weight="700" font-size="${f2}" fill="#fff">${xml(nome)}</text>
     <text x="${pad}" y="${Math.round(pad + h * yy[2])}" font-family="${FONTE}" font-size="${f3}" fill="${CREME}">${xml(detalhe)}</text>
     ${email ? `<text x="${pad}" y="${Math.round(pad + h * yy[3])}" font-family="${FONTE}" font-size="${f4}" fill="${CREME}">${xml(email)}</text>` : ''}
+    <text x="${pad}" y="${h - Math.round(pad * 0.45)}" font-family="${FONTE}" font-weight="700" font-size="${f5}" fill="${DOURADO}">${xml(LINHA_PUBLICIDADE)}</text>
   </svg>`;
   return sharp(Buffer.from(svg)).composite([{ input: await qr(d.link, qrLado), left: w - pad - qrLado, top: pad }]).png().toBuffer();
 }
@@ -123,6 +127,7 @@ export async function cartaoFinalCorretor(w: number, h: number, d: DadosCorretor
     ${email ? linha(email, y(0.435), caber(email, Math.round(w * 0.038), larg, 0.52), CREME) : ''}
     <rect x="${Math.round((w - qrLado) / 2) - 8}" y="${y(0.47) - 8}" width="${qrLado + 16}" height="${qrLado + 16}" fill="#fff"/>
     ${linha('Aponte a câmera e fale comigo', y(0.47) + qrLado + Math.round(w * 0.07), Math.round(w * 0.04), CREME)}
+    ${linha(LINHA_PUBLICIDADE, y(0.95), caber(LINHA_PUBLICIDADE, Math.round(w * 0.04), larg, 0.55), DOURADO, 700)}
   </svg>`;
   return sharp(Buffer.from(svg)).composite([{ input: await qr(d.link, qrLado), left: Math.round((w - qrLado) / 2), top: y(0.47) }]).png().toBuffer();
 }

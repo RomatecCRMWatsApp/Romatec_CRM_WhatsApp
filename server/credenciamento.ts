@@ -13,6 +13,7 @@ import { PRAZOS_PADRAO, ROTULO_DOCUMENTO, statusValidade } from '../shared/cadas
 import { perfilDe } from '../shared/equipe';
 import { pendenciasCadastro } from './contratoIntermediador';
 import { refDoUsuario, usuarioDaRef } from './cartaoVendas';
+import { ESCRITORIO } from '../shared/escritorio';
 
 type Doc = { id?: number; tipo: string; titular?: string | null; validade?: string | null; numero?: string | null; exibirPerfil?: boolean | number | null };
 const vazio = (v: unknown) => v == null || String(v).trim() === '';
@@ -111,7 +112,7 @@ export async function fichaCredenciamentoPdf(usuarioId: number, slug: string, ho
   campo(k, p, m + 14 + colE + 14, y - 36, 'Localização', [emp.endereco, emp.municipio && `${emp.municipio}/${emp.uf ?? ''}`].filter(Boolean).join(' · ') || '—', { maxW: colE });
   campo(k, p, m + 14, y - 70, 'Área', emp.areaHa ? `${String(emp.areaHa).replace('.', ',')} ha` : '—', { maxW: colE });
   campo(k, p, m + 14 + colE + 14, y - 70, 'Situação do(a) corretor(a)', 'Credenciado(a) neste empreendimento', { maxW: colE });
-  campo(k, p, m + 14, y - 104, 'Gestão e intermediação de vendas', 'Romatec Consultoria Total — CNPJ 17.261.987/0001-09', { maxW: W - 2 * m - 28 });
+  campo(k, p, m + 14, y - 104, 'Gestão e intermediação de vendas', `Romatec Consultoria Total — ${ESCRITORIO.creciJ}, CNPJ ${ESCRITORIO.cnpj}`, { maxW: W - 2 * m - 28 });
   y -= hEmp + 14;
 
   // Corretor (foto + dados)

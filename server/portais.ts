@@ -59,7 +59,7 @@ export function listingXml(a: Anuncio): string {
     `<Location displayAddress="Neighborhood"><Country abbreviation="BR">Brasil</Country><State abbreviation="${esc(a.uf)}">${esc(a.uf)}</State>` +
     `<City>${esc(a.cidade)}</City>${a.bairro ? `<Neighborhood>${esc(a.bairro)}</Neighborhood>` : ''}${a.endereco ? `<Address>${esc(a.endereco)}</Address>` : ''}` +
     `${a.cep ? `<PostalCode>${esc(a.cep.replace(/\D/g, ''))}</PostalCode>` : ''}${a.lat != null && a.lon != null ? `<Latitude>${a.lat}</Latitude><Longitude>${a.lon}</Longitude>` : ''}</Location>` +
-    `<ContactInfo><Name>Romatec Consultoria Total</Name><Email>romateccrm@gmail.com</Email><Website>${esc(urlPublica())}</Website><Telephone>(99) 99181-1246</Telephone></ContactInfo></Listing>`;
+    `<ContactInfo><Name>Romatec Consultoria Total (CRECI J-1234)</Name><Email>romateccrm@gmail.com</Email><Website>${esc(urlPublica())}</Website><Telephone>(99) 99181-1246</Telephone></ContactInfo></Listing>`;
 }
 
 export function feedXml(anuncios: Anuncio[], agora = new Date()): string {
@@ -107,7 +107,7 @@ export async function anunciosDoFeed(): Promise<{ anuncios: Anuncio[]; fora: { i
       if (!preco) { fora.push({ id: `${prefixo}-${l.codigo}`, titulo: `${e.nome} · chácara ${l.codigo}`, motivo: 'sem preço de tabela' }); continue; }
       anuncios.push({
         id: `${prefixo}-${l.codigo}`, titulo: `Chácara ${l.codigo} com ${area.toLocaleString('pt-BR', { maximumFractionDigits: 0 })} m² — ${e.nome}`,
-        descricao: `${bj ? DESCRICAO_BOM_JARDIMS : e.nome} Chácara ${l.codigo}${l.quadra ? ` (Quadra ${l.quadra})` : ''}, ${area.toLocaleString('pt-BR', { maximumFractionDigits: 2 })} m². Financiamento direto com a empreendedora. Romatec Consultoria Total — CRECI/MA 4.705.`,
+        descricao: `${bj ? DESCRICAO_BOM_JARDIMS : e.nome} Chácara ${l.codigo}${l.quadra ? ` (Quadra ${l.quadra})` : ''}, ${area.toLocaleString('pt-BR', { maximumFractionDigits: 2 })} m². Financiamento direto com a empreendedora. Romatec Consultoria Total, CRECI J-1234 · José Romário, CRECI/MA 4.705.`,
         preco, tipo: 'Residential / Farm Ranch', url: bj ? `${urlPublica()}/bom-jardims/chacara/${l.codigo}` : `${urlPublica()}/bom-jardims`,
         imagens: (bj ? IMAGENS_BOM_JARDIMS.map(i => i.src) : []).map(imagem), areaTerreno: area, cidade: e.municipio || 'Açailândia', uf: e.uf || 'MA',
         endereco: e.endereco, lat: l.latCentro != null ? Number(l.latCentro) : null, lon: l.lonCentro != null ? Number(l.lonCentro) : null,

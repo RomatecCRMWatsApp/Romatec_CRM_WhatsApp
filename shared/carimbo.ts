@@ -5,6 +5,7 @@
  * Sem carimbo salvo, vale o cadastro (shared/cartaoVendas.ts).
  */
 import { formatarTelefone, normalizarInstagram, type CartaoVendas } from './cartaoVendas';
+import { LINHA_PUBLICIDADE } from './escritorio';
 
 export interface Carimbo { nome: string; telefone: string | null; instagram: string | null; email: string | null }
 export interface CarimboAplicado { cartao: CartaoVendas; instagram: string | null; email: string | null }
@@ -55,6 +56,7 @@ export function assinaturaDoCarimbo(a: CarimboAplicado): string {
     c.telefones[0] ? `📲 WhatsApp: ${c.telefones[0]}` : null,
     a.instagram ? `📸 @${a.instagram}` : null,
     a.email ? `✉️ ${a.email}` : null,
+    `🏢 ${LINHA_PUBLICIDADE}`,
   ].filter(Boolean).join('\n');
 }
 

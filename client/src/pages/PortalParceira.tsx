@@ -110,7 +110,7 @@ export default function PortalParceira() {
                 {!d.vendas.length && <p className="p-3 text-neutro-600">Nenhuma venda ainda.</p>}
               </div>
             )}
-            <p className="text-xs text-neutro-500">Comissão prevista conforme o acordo de parceria; o pagamento segue o contrato de parceria com a Romatec Consultoria Total (CRECI/MA 4.705). Link pessoal da sua imobiliária — não compartilhe.</p>
+            <p className="text-xs text-neutro-500">Comissão prevista conforme o acordo de parceria; o pagamento segue o contrato de parceria com a Romatec Consultoria Total (CRECI J-1234). Link pessoal da sua imobiliária — não compartilhe.</p>
           </>
         )}
       </main>

@@ -7,12 +7,13 @@ import path from 'node:path';
 import PizZip from 'pizzip';
 import { PDFDocument, StandardFonts, rgb } from 'pdf-lib';
 import { ROTULO_PERFIL_RECRUTAMENTO, documentosDoPerfil, type PerfilRecrutamento } from '../../shared/recrutamento';
+import { ESCRITORIO } from '../../shared/escritorio';
 
 interface Secao { titulo: string; campos: string[]; nota?: string }
 export interface OpcoesFormulario { nome?: string | null; empreendimento?: string | null }
 
 /** Marca da plataforma (não do empreendimento): rosa + wordmark do Romatec CRM */
-export const MARCA = { nome: 'Romatec Consultoria Total', linha: 'CRM · Consultoria Imobiliária', cnpj: 'CNPJ 17.261.987/0001-09', endereco: 'Rua São Raimundo, 10, Centro — Açailândia/MA' };
+export const MARCA = { nome: 'Romatec Consultoria Total', linha: 'CRM · Consultoria Imobiliária', cnpj: `CNPJ ${ESCRITORIO.cnpj} · ${ESCRITORIO.creciJ}`, endereco: 'Rua São Raimundo, 10, Centro — Açailândia/MA' };
 const cacheMarca = new Map<string, Promise<Buffer | null>>();
 /** Logo reduzido (PNG na largura pedida) — o original tem 1.664 px e deixaria o PDF/DOC pesado para o WhatsApp */
 function marca(nome: string, largura: number): Promise<Buffer | null> {

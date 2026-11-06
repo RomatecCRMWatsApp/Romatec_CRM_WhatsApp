@@ -6,6 +6,7 @@ import {
   A4, COR, LAMINA_ALTURA, MM, brl, campo, cartao, dataBR, desenharLamina, faixaModelo, linhaCorte, novoKit, paginaComMarca, qrPng,
   quebrar, retArredondado, texto, textoCentro, textoDir, tituloPagina, type DadosLamina, type Kit,
 } from './comum';
+import { ESCRITORIO } from '../../../shared/escritorio';
 
 const [W, H] = A4;
 const salvar = async (k: Kit) => Buffer.from(await k.doc.save({ useObjectStreams: false }));
@@ -24,7 +25,7 @@ export interface OpcoesDoc { modelo?: boolean; marca?: string; contato?: Contato
 export interface Contato { atendimento: string; vendas: string; corretor: string; email: string; gestora: string }
 export const CONTATO_PADRAO: Contato = {
   atendimento: '(99) 9 9101-1970', vendas: '(99) 9 9181-1246', corretor: 'José Romário', email: 'romateccrm@gmail.com',
-  gestora: 'Romatec Consultoria Total — CNPJ 17.261.987/0001-09',
+  gestora: `Romatec Consultoria Total — ${ESCRITORIO.creciJ}, CNPJ ${ESCRITORIO.cnpj}`,
 };
 
 export const INSTRUCOES_PAGAMENTO = (contato: Contato) => [

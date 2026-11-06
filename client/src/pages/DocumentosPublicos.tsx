@@ -55,7 +55,7 @@ function Rodape() {
     <footer style={{ background: "var(--c-08261a)", color: C.creme, padding: "28px 16px", fontSize: 13 }}>
       <div style={{ maxWidth: 980, margin: "0 auto", lineHeight: 1.6, opacity: 0.85 }}>
         <p style={{ margin: 0 }}>Condomínio de Chácaras Bom Jardims · Açailândia/MA</p>
-        <p style={{ margin: 0 }}>Romatec Consultoria Total, CRECI/MA 4.705, Documentos para leitura — a versão válida é a assinada no seu contrato.</p>
+        <p style={{ margin: 0 }}>Romatec Consultoria Total, CRECI J-1234, Documentos para leitura — a versão válida é a assinada no seu contrato.</p>
       </div>
     </footer>
   );

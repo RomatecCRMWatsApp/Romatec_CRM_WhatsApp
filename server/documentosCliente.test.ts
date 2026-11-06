@@ -52,7 +52,7 @@ describe('documentos para o cliente — rotas públicas (só imagens)', () => {
     const st = await sharp(img).stats();
     expect(st.channels[0].min).toBeLessThan(255); // tem o carimbo por cima da página branca
     const r = await remetenteDoLink(undefined);
-    expect(textoCarimbo(r)).toMatch(/^Enviado por Romatec Consultoria Total · CRECI\/MA 4\.705 · \d{2}\/\d{2}\/\d{4}$/);
+    expect(textoCarimbo(r)).toMatch(/^Enviado por Romatec Consultoria Total · CRECI J-1234 · \d{2}\/\d{2}\/\d{4}$/);
     expect(textoCarimbo({ id: 3, nome: 'Ana', creci: 'CRECI/MA 9.999', ref: 'abc123XYZ' })).toContain('Enviado por Ana · CRECI/MA 9.999 · cód. abc123XYZ · ');
   });
 

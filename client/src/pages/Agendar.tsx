@@ -215,7 +215,7 @@ export default function Agendar() {
               {enviando ? <Loader2 size={20} className="animate-spin" /> : <CalendarCheck size={20} />} {enviando ? "Enviando…" : "Quero agendar meu atendimento"}
             </button>
           </form>
-          <p style={{ textAlign: "center", fontSize: 12, color: C.suave, margin: 0 }}>Romatec Consultoria Total, gestão e administração de vendas, CNPJ 17.261.987/0001-09</p>
+          <p style={{ textAlign: "center", fontSize: 12, color: C.suave, margin: 0 }}>Romatec Consultoria Total, gestão e administração de vendas, CRECI J-1234, CNPJ 17.261.987/0001-09</p>
         </main>
       )}
     </div>

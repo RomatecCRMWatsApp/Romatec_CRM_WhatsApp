@@ -10,6 +10,7 @@
 import { areaExtenso, brl, dataBR, dataExtenso, docMascara, extenso, pct, reaisExtenso } from './formato';
 import { tituloCondicao, type PlanoContrato } from './plano';
 import { divisaoComissaoLancamento } from '../../shared/condicoesLancamento';
+import { ESCRITORIO } from '../../shared/escritorio';
 
 export type Ctx = Record<string, string | boolean | number>;
 
@@ -80,7 +81,7 @@ const ROTULO_REGIME: Record<string, string> = {
   separacao_obrigatoria: 'separação obrigatória de bens', participacao_final: 'participação final nos aquestos',
 };
 
-export const COM_BENEFICIARIO_PADRAO = 'ROMATEC CONSULTORIA TOTAL (J R P Bezerra Ltda), CNPJ 17.261.987/0001-09';
+export const COM_BENEFICIARIO_PADRAO = `ROMATEC CONSULTORIA TOTAL (J R P Bezerra Ltda), CNPJ ${ESCRITORIO.cnpj}, ${ESCRITORIO.creciJ}`;
 
 export const temConjugeNoContrato = (estadoCivil: string | null | undefined) => ['casado', 'uniao_estavel'].includes(String(estadoCivil ?? ''));
 
@@ -250,6 +251,8 @@ export function montarContexto(e: EntradaContexto): Ctx {
   const emp = { ...e.juridico.defaults, ...(e.overrides ?? {}) } as Record<string, unknown>;
   const l = e.lote;
   const ctx: Ctx = {
+    // CRECI da imobiliária gestora (pessoa jurídica): "CRECI/MA {{rom_creci_pj}}" no modelo → CRECI/MA J-1234
+    rom_creci_pj: ESCRITORIO.creciJ.replace(/^CRECI\s*/i, ''),
     ...(emp as Ctx), ...(e.juridico.vendedora as Ctx),
     vend_pf: e.juridico.vendedoraTipo === 'PF', vend_pj: e.juridico.vendedoraTipo === 'PJ',
     ctr_numero: e.contrato.numero, ctr_versao_modelo: e.plano.modalidade === 'financiado' && e.plano.condicao && e.plano.condicao !== 'padrao' ? `${e.juridico.modeloVersao} · ${tituloCondicao(e.plano)}` : e.juridico.modeloVersao, ctr_codigo_verificacao: e.contrato.codigoVerificacao,

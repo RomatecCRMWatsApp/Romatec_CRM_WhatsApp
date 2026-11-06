@@ -3,6 +3,18 @@
 Cada versão nova vai no TOPO. Depois rode `npm run release` (valida e atualiza o package.json);
 ao subir, o servidor grava a versão no banco e todos recebem o aviso "Novidades da versão".
 
+## 1.115.0 — 2026-11-06
+tipo: minor
+obrigatoria: nao
+titulo: CRECI J-1234 da Romatec em toda publicidade, contratos e documentos
+publico: usuarios
+
+### Novo
+- Toda peça baixada ou enviada em Materiais (foto, vídeo e PDF) sai com "Romatec Consultoria Total · CRECI J-1234" na faixa do corretor e no cartão final do vídeo, junto com o CRECI dele
+- O texto que acompanha o material, a assinatura do WhatsApp e o carimbo do corretor levam a mesma linha
+- Contratos (promessa de compra e venda e comissão): a gestora sai qualificada com o CRECI/MA J-1234; o contrato definitivo deixa de ficar travado por falta desse dado
+- Documentos oficiais (carnê, boleto, recibo, declaração de quitação, tabelas, credenciamento, documentos do cliente), rodapés do site do Bom Jardims, oferta, agendamento, pagamento e anúncios dos portais imobiliários com o CRECI J-1234
+
 ## 1.114.0 — 2026-11-06
 tipo: minor
 obrigatoria: nao

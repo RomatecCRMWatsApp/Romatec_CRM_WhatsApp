@@ -52,7 +52,10 @@ describe('dados do corretor em tudo que ele divulga', () => {
   });
 
   it('sem CRECI cadastrado a linha some (não sai "null")', () => {
-    expect(assinaturaWhatsApp({ ...alan, creci: null })).not.toMatch(/null|CRECI/);
+    // Sem o CRECI do corretor, fica só o CRECI J obrigatório da imobiliária
+    const sem = assinaturaWhatsApp({ ...alan, creci: null });
+    expect(sem).not.toMatch(/null|🪪/);
+    expect(sem).toContain('🏢 Romatec Consultoria Total · CRECI J-1234');
     expect(linhasRodape({ ...alan, creci: null }).nome).toBe('Alan Martins');
   });
 

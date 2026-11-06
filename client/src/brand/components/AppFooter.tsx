@@ -37,7 +37,7 @@ export const ROMATEC_CONTACT = {
   cnpj: "17.261.987/0001-09",
   razao: "J R P Bezerra Ltda",
   rt: "José Romário Pinto Bezerra",
-  registros: ["CRECI/MA 4.705", "CNAI 031161", "CFT/MA 01209185369", "INCRA FQNS"],
+  registros: ["CRECI J-1234", "CRECI/MA 4.705", "CNAI 031161", "CFT/MA 01209185369", "INCRA FQNS"],
 } as const;
 
 export function AppFooter({ version, online, links = DEFAULT_LINKS, renderLink }: AppFooterProps) {
@@ -82,7 +82,7 @@ export function AppFooter({ version, online, links = DEFAULT_LINKS, renderLink }
       </div>
       <div className="rt-footer__bottom">
         <div className="rt-footer__bottom-in">
-          <span>© {year} Romatec Consultoria Total · {ROMATEC_CONTACT.razao} · CNPJ {ROMATEC_CONTACT.cnpj}</span>
+          <span>© {year} Romatec Consultoria Total · {ROMATEC_CONTACT.razao} · CRECI J-1234 · CNPJ {ROMATEC_CONTACT.cnpj}</span>
           <span style={{ display: "flex", alignItems: "center", gap: 18, flexWrap: "wrap" }}>
             <span className="rt-chip">
               {online !== undefined && <span className="rt-chip__dot" data-off={!online} />}

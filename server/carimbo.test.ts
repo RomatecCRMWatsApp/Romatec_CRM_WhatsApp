@@ -38,9 +38,9 @@ describe('Meu carimbo', () => {
 
   it('a legenda (texto do WhatsApp) sai com o carimbo; sem Instagram/e-mail no carimbo, não aparecem', () => {
     const a = aplicarCarimbo(cartao, null, { nome: 'Ana C.', telefone: '(99) 9 1111-2222', instagram: 'ana.imoveis', email: 'ana@mail.com' });
-    expect(assinaturaDoCarimbo(a)).toBe('—\n👤 *Ana C.* · Corretor(a)\n🪪 CRECI/MA 9.999\n📲 WhatsApp: (99) 9 1111-2222\n📸 @ana.imoveis\n✉️ ana@mail.com');
+    expect(assinaturaDoCarimbo(a)).toBe('—\n👤 *Ana C.* · Corretor(a)\n🪪 CRECI/MA 9.999\n📲 WhatsApp: (99) 9 1111-2222\n📸 @ana.imoveis\n✉️ ana@mail.com\n🏢 Romatec Consultoria Total · CRECI J-1234');
     const b = aplicarCarimbo(cartao, null, { nome: 'Ana C.', telefone: null, instagram: null, email: null });
-    expect(assinaturaDoCarimbo(b)).toBe('—\n👤 *Ana C.* · Corretor(a)\n🪪 CRECI/MA 9.999');
+    expect(assinaturaDoCarimbo(b)).toBe('—\n👤 *Ana C.* · Corretor(a)\n🪪 CRECI/MA 9.999\n🏢 Romatec Consultoria Total · CRECI J-1234');
   });
 
   it('salva uma vez e devolve o salvo; a faixa das mídias sai com ele', async () => {

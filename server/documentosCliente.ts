@@ -87,7 +87,7 @@ const remetentes = new Map<string, { em: number; r: Remetente }>();
 /** Quem enviou o link (?c=); sem código válido, "Romatec" */
 export async function remetenteDoLink(ref: unknown): Promise<Remetente> {
   const c = refValida(ref);
-  if (!c) return { id: null, nome: 'Romatec Consultoria Total', creci: 'CRECI/MA 4.705', ref: null };
+  if (!c) return { id: null, nome: 'Romatec Consultoria Total', creci: 'CRECI J-1234', ref: null };
   const x = remetentes.get(c);
   if (x && Date.now() - x.em < 10 * 60_000) return x.r;
   const u = await corretorDoLink(c).catch(() => null);

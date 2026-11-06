@@ -21,7 +21,7 @@ const base = { legenda: 'Legenda', nomeArquivo: 'folder-bom-jardims-B13.pdf' };
 describe('Folder da chácara no WhatsApp — legenda e arquivo', () => {
   it('empreendimento + chácara/quadra/área + cidade + corretor, sem preço', () => {
     const l = legendaChacara({ empreendimento: BJ, municipio: 'Açailândia', uf: 'MA', lote: { codigo: 'B13', quadra: 'B', areaM2: 3025.11 } });
-    expect(l).toBe(`🏡 *${BJ}*\nChácara B13 · Quadra B · 3.025,11 m²\n📍 Açailândia/MA\n\nRomatec Consultoria Total · José Romário — CRECI/MA 4.705`);
+    expect(l).toBe(`🏡 *${BJ}*\nChácara B13 · Quadra B · 3.025,11 m²\n📍 Açailândia/MA\n\nRomatec Consultoria Total · CRECI J-1234 · José Romário — CRECI/MA 4.705`);
     expect(l).not.toMatch(/R\$|valor|pre[çc]o/i);
   });
   it('folder geral (sem lote) e dados faltando não quebram', () => {

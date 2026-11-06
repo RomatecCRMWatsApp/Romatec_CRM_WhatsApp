@@ -102,7 +102,7 @@ export default function ReuniaoPublica() {
               )}
           </div>
         </div>
-        <p style={{ textAlign: "center", fontSize: 12, color: C.suave, marginTop: 16 }}>Romatec Consultoria Total · Açailândia/MA</p>
+        <p style={{ textAlign: "center", fontSize: 12, color: C.suave, marginTop: 16 }}>Romatec Consultoria Total · CRECI J-1234 · Açailândia/MA</p>
       </div>
     </div>
   );

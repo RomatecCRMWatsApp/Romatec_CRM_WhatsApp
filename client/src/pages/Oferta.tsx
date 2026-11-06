@@ -168,7 +168,7 @@ export default function Oferta() {
         </section>
 
         <p style={{ margin: 0, fontSize: 12, lineHeight: 1.5, color: C.suave, fontStyle: "italic" }}>{dados.aviso}</p>
-        <p style={{ textAlign: "center", fontSize: 12, color: C.suave, margin: 0 }}>Romatec Consultoria Total, gestão e administração de vendas, CNPJ 17.261.987/0001-09</p>
+        <p style={{ textAlign: "center", fontSize: 12, color: C.suave, margin: 0 }}>Romatec Consultoria Total, gestão e administração de vendas, CRECI J-1234, CNPJ 17.261.987/0001-09</p>
       </main>
     </div>
   );

@@ -306,7 +306,7 @@ export default function ObrasBomJardim() {
       <footer style={{ background: C.verde, color: C.creme, padding: "24px 16px", textAlign: "center", fontSize: 13, lineHeight: 1.6 }}>
         <p style={{ margin: 0 }}>CCBJ — Condomínio de Chácaras Bom Jardim, Estrada do Piquiá dos Baianos, km 15 da BR-222, Açailândia/MA</p>
         {corretor.doLink && <p style={{ margin: "6px 0 0", fontWeight: 700 }}>Atendimento: {rotuloCorretor(corretor)}{corretor.telefones[0] ? `, ${corretor.telefones[0]}` : ""}</p>}
-        <p style={{ margin: "6px 0 0", opacity: 0.85 }}>Romatec Consultoria Total, Responsável: José Romário — CRECI/MA 4.705{corretor.doLink ? "" : ", (99) 9 9181-1246"}</p>
+        <p style={{ margin: "6px 0 0", opacity: 0.85 }}>Romatec Consultoria Total, CRECI J-1234, Responsável: José Romário — CRECI/MA 4.705{corretor.doLink ? "" : ", (99) 9 9181-1246"}</p>
         <p style={{ margin: "6px 0 0", opacity: 0.7 }}>Imagens reais do início das obras. Valores e condições informados pelo corretor no atendimento.</p>
       </footer>
     </div>

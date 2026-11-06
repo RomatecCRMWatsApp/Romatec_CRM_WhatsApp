@@ -7,6 +7,7 @@
 import QRCode from "qrcode";
 import { assinaturaWhatsApp, linhasRodape, type CartaoVendas } from "@shared/cartaoVendas";
 import { comRef } from "@/lib/cartaoVendas";
+import { ESCRITORIO, LINHA_PUBLICIDADE } from "@shared/escritorio";
 
 const VERDE = "#0C3320";
 const DOURADO = "#C9A84C";
@@ -25,7 +26,10 @@ export function linkDoMaterial(grupo: { empreendimentoSlug?: string | null; prop
 
 /** Legenda do envio: título, link do corretor e assinatura */
 export function legendaDoMaterial(titulo: string, link: string, c: CartaoVendas, assinatura?: string): string {
-  return `${titulo}\n\n👉 Saiba mais: ${link}\n\n${assinatura ?? assinaturaWhatsApp(c)}`;
+  const ass = assinatura ?? assinaturaWhatsApp(c);
+  // Publicidade: imobiliária + CRECI J sempre (obrigatório), sem repetir se a assinatura já trouxer
+  const obrigatoria = ass.includes(ESCRITORIO.creciJ) ? "" : `\n🏢 ${LINHA_PUBLICIDADE}`;
+  return `${titulo}\n\n👉 Saiba mais: ${link}\n\n${ass}${obrigatoria}`;
 }
 
 async function blobDe(url: string): Promise<Blob> {
@@ -106,6 +110,10 @@ export async function pdfDoCorretor(url: string, c: CartaoVendas, link: string, 
     p.drawRectangle({ x: 0, y: 0, width, height: h, color: rgb(0.047, 0.2, 0.125) });
     p.drawRectangle({ x: 0, y: h, width, height: 1.5, color: rgb(0.79, 0.66, 0.3) });
     p.drawText(seguro(nome), { x: 12, y: 17, size: 9.5, font: negrito, color: rgb(1, 1, 1) });
+    // Linha obrigatória da publicidade (imobiliária + CRECI J), à direita
+    const obrig = seguro(LINHA_PUBLICIDADE);
+    const larg = negrito.widthOfTextAtSize(obrig, 8);
+    p.drawText(obrig, { x: Math.max(12, width - larg - 12), y: 17, size: 8, font: negrito, color: rgb(0.79, 0.66, 0.3) });
     p.drawText(seguro(`${detalhe}${detalhe ? "  ·  " : ""}${link}`), { x: 12, y: 6, size: 7, font: normal, color: rgb(0.95, 0.93, 0.87), maxWidth: width - 24 });
   }
   return new Blob([(await pdf.save()) as BlobPart], { type: "application/pdf" });

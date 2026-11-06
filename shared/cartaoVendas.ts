@@ -6,6 +6,7 @@
  * O CPF nunca entra em material de divulgação (LGPD). A marca do empreendimento não muda.
  */
 import { telefoneWhatsApp } from './contratos';
+import { LINHA_PUBLICIDADE } from './escritorio';
 
 export interface CartaoVendas {
   nome: string;
@@ -102,6 +103,7 @@ export function assinaturaWhatsApp(c: CartaoVendas): string {
     c.creci ? `🪪 ${c.creci}` : null,
     c.telefones[0] ? `📲 WhatsApp: ${c.telefones[0]}` : null,
     c.instagram ? `📸 @${c.instagram}` : null,
+    `🏢 ${LINHA_PUBLICIDADE}`,
   ].filter(Boolean).join('\n');
 }
 

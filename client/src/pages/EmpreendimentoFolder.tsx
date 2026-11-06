@@ -189,7 +189,7 @@ export default function EmpreendimentoFolder() {
             {qr && <img src={qr} alt="QR Code da página do empreendimento" className="my-3 h-36 w-36 rounded-lg bg-white p-1.5" />}
             <p className="text-xs opacity-80">Aponte a câmera para ver fotos, vídeo e o mapa</p>
             <a href={zap} target="_blank" rel="noreferrer" className="mt-3 inline-block rounded-full px-4 py-2 text-sm font-bold" style={{ background: OURO, color: VERDE }}>WhatsApp {zapFmt}</a>
-            <p className="mt-3 text-[11px] opacity-80">{[`${cartao.papel} ${cartao.nome}`, cartao.creci, cartao.email].filter(Boolean).join(" · ")} · Romatec Consultoria Total</p>
+            <p className="mt-3 text-[11px] opacity-80">{[`${cartao.papel} ${cartao.nome}`, cartao.creci, cartao.email].filter(Boolean).join(" · ")} · Romatec Consultoria Total · CRECI J-1234</p>
             {cartao.instagram && <a href={linkInstagram(cartao.instagram)} target="_blank" rel="noopener noreferrer" className="mt-1 text-[11px] font-semibold" style={{ color: OURO }}>Instagram @{cartao.instagram}</a>}
           </div>
         </div>

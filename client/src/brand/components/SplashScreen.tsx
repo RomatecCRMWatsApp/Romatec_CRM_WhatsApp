@@ -35,7 +35,7 @@ export function SplashScreen({ ready, version, minDuration = 900, message = "Sin
       <RomatecLockup variant="stack" height={96} />
       <span style={{ fontSize: 13, color: "var(--rt-text-3)" }}>{message}</span>
       <div className="rt-splash__foot">
-        v{version}, Açailândia/MA<br />Romatec Consultoria Total, CNPJ 17.261.987/0001-09
+        v{version}, Açailândia/MA<br />Romatec Consultoria Total, CRECI J-1234, CNPJ 17.261.987/0001-09
       </div>
     </div>
   );

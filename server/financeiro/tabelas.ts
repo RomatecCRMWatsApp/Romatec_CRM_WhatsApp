@@ -18,6 +18,7 @@ import { desenharMarca, embutirMarca } from '../contratos/anexos';
 import { pastaTemplates } from '../contratos/render';
 import type { CartaoVendas } from '../../shared/cartaoVendas';
 import { TabelaErro, calcularTabela, type LoteTabela } from '../../shared/tabelaFinanciamento';
+import { ESCRITORIO } from '../../shared/escritorio';
 
 export { TabelaErro, calcularTabela, dataPadrao, type LoteTabela, type PedidoTabela } from '../../shared/tabelaFinanciamento';
 
@@ -86,7 +87,7 @@ async function documento(titulo: string, marcaSlug: string | null, nomeEmp: stri
     const [w, h] = tam;
     p.drawText(nomeEmp.toUpperCase(), { x: 40, y: h - 52, size: 15, font: fb, color: VERDE });
     p.drawLine({ start: { x: 40, y: h - 62 }, end: { x: w - 40, y: h - 62 }, thickness: 1.5, color: OURO });
-    p.drawText('Romatec Consultoria Total · CNPJ 17.261.987/0001-09 · Açailândia/MA', { x: 40, y: 22, size: 7.5, font: f, color: CINZA });
+    p.drawText(`Romatec Consultoria Total · ${ESCRITORIO.creciJ} · CNPJ ${ESCRITORIO.cnpj} · Açailândia/MA`, { x: 40, y: 22, size: 7.5, font: f, color: CINZA });
     return { p, topo: h - 76, base: 40 };
   };
   const numerar = (rotulo: string) => paginas.forEach((p, i) => {

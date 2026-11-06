@@ -15,6 +15,7 @@ import type { PlanoContrato } from './plano';
 import { desenharMarca, embutirMarca } from './anexos';
 import { brl, pct, reaisExtenso } from './formato';
 import { comissao } from '../../shared/simulador';
+import { ESCRITORIO } from '../../shared/escritorio';
 
 const VERDE = rgb(0.047, 0.2, 0.125);
 const DOURADO = rgb(0.788, 0.651, 0.275);
@@ -275,7 +276,7 @@ export async function docComissaoRomatec(c: Ctx, plano: PlanoContrato, marca: st
   w.paragrafo(`Açailândia/MA, ${s(c.ctr_data_extenso)}.`, { antes: 8, depois: 4 });
   w.assinaturas([
     { papel: 'EMPREENDEDORA (promitente vendedora)', nome: s(c.vend_nome), doc: s(c.vend_cpf) ? `CPF ${s(c.vend_cpf)}` : undefined },
-    { papel: 'GESTORA — Romatec Consultoria Total', nome: 'José Romário Pinto Bezerra', doc: 'CNPJ 17.261.987/0001-09' },
+    { papel: 'GESTORA — Romatec Consultoria Total', nome: 'José Romário Pinto Bezerra', doc: `CNPJ ${ESCRITORIO.cnpj} · ${ESCRITORIO.creciJ}` },
   ]);
   return w.salvar();
 }
