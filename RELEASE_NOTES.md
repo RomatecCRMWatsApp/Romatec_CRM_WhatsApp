@@ -3,6 +3,18 @@
 Cada versão nova vai no TOPO. Depois rode `npm run release` (valida e atualiza o package.json);
 ao subir, o servidor grava a versão no banco e todos recebem o aviso "Novidades da versão".
 
+## 1.111.0 — 2026-11-06
+tipo: minor
+obrigatoria: nao
+titulo: Carrossel das fotos em Materiais: para cima baixa, para baixo envia no WhatsApp
+publico: usuarios
+
+### Novo
+- Toque numa foto de Materiais e ela abre em tela cheia, num carrossel com todas as fotos do empreendimento
+- Arraste para cima: baixa a foto na galeria, já com o seu carimbo (no iPhone, toque em "Salvar imagem")
+- Arraste para baixo: envia pelo WhatsApp, com a foto carimbada e o texto com o seu link
+- Arraste para o lado: próxima ou anterior. Também tem os botões Baixar e Enviar no WhatsApp e a escolha do formato (Feed, Stories, Quadrado, WhatsApp leve)
+
 ## 1.110.3 — 2026-11-06
 tipo: patch
 obrigatoria: nao

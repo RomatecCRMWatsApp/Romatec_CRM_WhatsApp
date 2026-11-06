@@ -28,6 +28,7 @@ export const tamanho = (b?: number | null) => (!b ? "" : b > 1024 * 1024 ? `${(b
 export const miniatura = (url: string) => url.includes("/image/upload/") ? url.replace("/image/upload/", "/image/upload/c_limit,w_480,q_auto,f_auto/") : url;
 export { capaDoVideo } from "@/lib/capaVideo";
 import PlayerVideo from "@/components/PlayerVideo";
+import CarrosselFotos from "@/components/CarrosselFotos";
 export const nomeArquivo = (m: any) => {
   const ext = (m.url.split("?")[0].match(/\.[a-z0-9]+$/i)?.[0]) || (ehVideo(m) ? ".mp4" : ehImagem(m) ? ".png" : ".pdf");
   return `${m.titulo.replace(/[^\wÀ-ſ -]+/g, "").trim().replace(/\s+/g, "_") || "material"}${ext}`;
@@ -43,8 +44,8 @@ export async function baixarBlob(m: any): Promise<Blob | null> {
   }
 }
 
-type Cartao = ReturnType<typeof useCartaoVendas>;
-type Grupo = { empreendimentoSlug?: string | null; propertyId?: number | null; nome?: string };
+export type Cartao = ReturnType<typeof useCartaoVendas>;
+export type Grupo = { empreendimentoSlug?: string | null; propertyId?: number | null; nome?: string };
 
 /** Nome do arquivo que o servidor mandou (Content-Disposition) */
 const nomeDoCabecalho = (r: Response, padrao: string) => {
@@ -59,7 +60,7 @@ const nomeDoCabecalho = (r: Response, padrao: string) => {
  * (server/materialFormatado.ts; o vídeo leva alguns segundos e o navegador pergunta até ficar pronto).
  * PDF: rodapé do corretor em todas as páginas, no navegador. GIF segue o original.
  */
-async function arquivoDoCorretor(m: any, c: Cartao, link: string, formato: FormatoDownload, aviso: (t: string) => void, linhasPdf?: { nome: string; detalhe: string }): Promise<{ blob: Blob; nome: string; carimbado: boolean }> {
+export async function arquivoDoCorretor(m: any, c: Cartao, link: string, formato: FormatoDownload, aviso: (t: string) => void, linhasPdf?: { nome: string; detalhe: string }): Promise<{ blob: Blob; nome: string; carimbado: boolean }> {
   const nome = nomeArquivo(m);
   if (!ehImagem(m) && !ehVideo(m)) return { blob: await pdfDoCorretor(m.url, c, link, linhasPdf), nome, carimbado: true };
   if (/\.gif$/i.test(m.url)) {
@@ -82,7 +83,7 @@ async function arquivoDoCorretor(m: any, c: Cartao, link: string, formato: Forma
   }
 }
 
-function CardMaterial({ m, onMudou, grupo, cartao, escritorio, linhasPdf, assinatura }: { m: any; onMudou: () => void; grupo: Grupo; cartao: Cartao; escritorio: boolean; linhasPdf?: { nome: string; detalhe: string }; assinatura?: string }) {
+function CardMaterial({ m, onMudou, grupo, cartao, escritorio, linhasPdf, assinatura, onAbrirFoto }: { m: any; onMudou: () => void; grupo: Grupo; cartao: Cartao; escritorio: boolean; linhasPdf?: { nome: string; detalhe: string }; assinatura?: string; onAbrirFoto?: () => void }) {
   const atualizar = trpc.materiais.update.useMutation({ onSuccess: onMudou, onError: e => toast.error(e.message) });
   const excluir = trpc.materiais.delete.useMutation({ onSuccess: () => { toast.success("Material removido do CRM"); onMudou(); }, onError: e => toast.error(e.message) });
   const [ocupado, setOcupado] = useState<string | null>(null);
@@ -158,6 +159,16 @@ function CardMaterial({ m, onMudou, grupo, cartao, escritorio, linhasPdf, assina
         )}
         </PlayerVideo>
       ) : (
+      ehImagem(m) && onAbrirFoto ? (
+      <button type="button" onClick={onAbrirFoto} aria-label={`Ver ${m.titulo} no carrossel`} className="block w-full bg-black/40 aspect-[4/5] relative focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--rt-gold)]">
+        <img src={miniatura(m.url)} alt={m.titulo} loading="lazy" className="w-full h-full object-contain" />
+        {!m.liberado && (
+          <span className="absolute top-2 right-2 rounded bg-danger-600 px-1.5 py-0.5 text-[10px] font-bold text-white flex items-center gap-1">
+            <Lock className="h-3 w-3" /> NÃO DIVULGAR
+          </span>
+        )}
+      </button>
+      ) : (
       <a href={m.url} target="_blank" rel="noreferrer" className="block bg-black/40 aspect-[4/5] relative">
         {ehImagem(m) ? (
           <img src={miniatura(m.url)} alt={m.titulo} loading="lazy" className="w-full h-full object-contain" />
@@ -172,6 +183,7 @@ function CardMaterial({ m, onMudou, grupo, cartao, escritorio, linhasPdf, assina
           </span>
         )}
       </a>
+      )
       )}
       <div className="p-2 space-y-1.5 flex-1 flex flex-col">
         <p className="text-sm font-medium text-foreground leading-tight line-clamp-2" title={m.titulo}>{m.titulo}</p>
@@ -258,8 +270,12 @@ export default function MateriaisPainel({ propertyId, empreendimentoSlug }: Dest
     try { const v = localStorage.getItem("materiais_ordem"); return (ORDENS_MATERIAL as readonly string[]).includes(v ?? "") ? (v as OrdemMaterial) : "recentes"; } catch { return "recentes"; }
   });
   const setOrdem = (v: OrdemMaterial) => { setOrdemEstado(v); try { localStorage.setItem("materiais_ordem", v); } catch { /* sem armazenamento */ } };
+  // Carrossel das fotos (tela cheia): para cima baixa, para baixo envia no WhatsApp
+  const [carrossel, setCarrossel] = useState<{ grupo: Grupo; itens: any[]; indice: number } | null>(null);
   const [avisoPlayerVisto, setAvisoPlayerVisto] = useState(() => { try { return localStorage.getItem("materiais_aviso_player") === "1"; } catch { return false; } });
   const verAvisoPlayer = () => { setAvisoPlayerVisto(true); try { localStorage.setItem("materiais_aviso_player", "1"); } catch { /* sem armazenamento */ } };
+  const [avisoFotosVisto, setAvisoFotosVisto] = useState(() => { try { return localStorage.getItem("materiais_aviso_carrossel") === "1"; } catch { return false; } });
+  const verAvisoFotos = () => { setAvisoFotosVisto(true); try { localStorage.setItem("materiais_aviso_carrossel", "1"); } catch { /* sem armazenamento */ } };
   const [enviando, setEnviando] = useState<string | null>(null);
   // Limites reais do plano de armazenamento (Cloudinary), para o texto e a checagem antes de enviar
   const [limites, setLimites] = useState<{ imagemMB: number; videoMB: number; pdfMB: number } | null>(null);
@@ -370,6 +386,13 @@ export default function MateriaisPainel({ propertyId, empreendimentoSlug }: Dest
       </div>
       {(empreendimentoSlug || destino.startsWith("e:")) && <LinkAgendamento slug={empreendimentoSlug || destino.slice(2)} />}
       <LinkInstagram />
+      {!avisoFotosVisto && contagem("imagem") > 0 && aba !== "video" && aba !== "pdf" && (
+        <div role="status" className="flex items-start gap-3 rounded-md border border-[var(--rt-gold)]/50 bg-[var(--rt-gold)]/10 px-3 py-2">
+          <span aria-hidden="true" className="mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-black ring-2 ring-[var(--rt-gold)]"><Download className="h-4 w-4 text-white" /></span>
+          <p className="flex-1 text-xs text-foreground"><b>Novo: carrossel das fotos.</b> Toque numa foto para abrir em tela cheia. Arraste para <b>cima</b> para baixar na galeria e para <b>baixo</b> para enviar no WhatsApp, já com o seu carimbo. Para o lado, troca de foto.</p>
+          <button type="button" onClick={verAvisoFotos} className="shrink-0 rounded-md px-2 py-1 text-xs font-medium text-[var(--rt-gold-light)] hover:bg-white/10">Entendi</button>
+        </div>
+      )}
       {!avisoPlayerVisto && contagem("video") > 0 && aba !== "imagem" && aba !== "pdf" && (
         <div role="status" className="flex items-start gap-3 rounded-md border border-[var(--rt-gold)]/50 bg-[var(--rt-gold)]/10 px-3 py-2">
           <span aria-hidden="true" className="mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-black ring-2 ring-[var(--rt-gold)]"><Play className="ml-0.5 h-4 w-4 fill-white text-white" /></span>
@@ -392,10 +415,15 @@ export default function MateriaisPainel({ propertyId, empreendimentoSlug }: Dest
         <section key={g.chave} className="space-y-2">
           {!fixo && <h2 className="text-base font-semibold text-foreground">{g.nome} <span className="text-xs text-muted-foreground font-normal">· {g.itens.length}</span></h2>}
           <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3">
-            {g.itens.map((m: any) => <CardMaterial key={m.id} m={m} onMudou={recarregar} grupo={g} cartao={cartao} escritorio={escritorio} linhasPdf={linhasPdf} assinatura={assinatura} />)}
+            {g.itens.map((m: any) => <CardMaterial key={m.id} m={m} onMudou={recarregar} grupo={g} cartao={cartao} escritorio={escritorio} linhasPdf={linhasPdf} assinatura={assinatura}
+              onAbrirFoto={ehImagem(m) ? () => { const fotos = g.itens.filter((x: any) => ehImagem(x)); setCarrossel({ grupo: g, itens: fotos, indice: Math.max(0, fotos.findIndex((x: any) => x.id === m.id)) }); } : undefined} />)}
           </div>
         </section>
       ))}
+      {carrossel && (
+        <CarrosselFotos aberto onFechar={() => setCarrossel(null)} itens={carrossel.itens} indiceInicial={carrossel.indice}
+          grupo={carrossel.grupo} cartao={cartao} assinatura={assinatura} />
+      )}
     </div>
   );
 }

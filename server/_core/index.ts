@@ -1521,6 +1521,7 @@ async function startServer() {
     await (await import('../avisosEmpreendimento')).avisarMudancaDeCondicoes().catch((err: any) => console.warn('[Avisos] condições:', err?.message));
     // Aviso único da novidade "play nos vídeos de Materiais" (chave por empreendimento: não repete)
     await (await import('../avisosEmpreendimento')).avisarPlayerDeVideos().catch((err: any) => console.warn('[Avisos] player:', err?.message));
+    await (await import('../avisosEmpreendimento')).avisarCarrosselDeFotos().catch((err: any) => console.warn('[Avisos] carrossel:', err?.message));
   } catch (e) {
     console.error('❌ Erro na migration addNotificacoes / aviso de versão:', e);
   }

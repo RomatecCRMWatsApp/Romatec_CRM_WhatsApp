@@ -64,3 +64,26 @@ export async function avisarPlayerDeVideos(): Promise<number> {
   }
   return n;
 }
+
+/** Aviso único (uma vez por empreendimento): carrossel das fotos em Materiais (para cima baixa, para baixo envia) */
+export const CHAVE_AVISO_CARROSSEL = 'aviso:carrossel-fotos-v1';
+export async function avisarCarrosselDeFotos(): Promise<number> {
+  const d: any = await getDb();
+  if (!d) return 0;
+  const { materiais } = await import('../drizzle/schema');
+  const linhas: any[] = await d.select({ slug: materiais.empreendimentoSlug, mime: materiais.mime, url: materiais.url })
+    .from(materiais).where(eq(materiais.liberado, true));
+  const slugs = new Set(linhas.filter(m => m.slug && ((m.mime || '').startsWith('image/') || /\/image\/upload\/|\.(png|jpe?g|webp)$/i.test(m.url || ''))).map(m => m.slug as string));
+  const { notificarEmpreendimentoPorSlug } = await import('./notificacoes');
+  let n = 0;
+  for (const slug of Array.from(slugs)) {
+    const r = await notificarEmpreendimentoPorSlug(slug, {
+      titulo: 'Novo: carrossel das fotos',
+      mensagem: 'Em Materiais, toque numa foto: ela abre em tela cheia. Arraste para cima para baixar na galeria e para baixo para enviar no WhatsApp, já com o seu carimbo.',
+      url: '/materiais',
+      chave: `${CHAVE_AVISO_CARROSSEL}:${slug}`,
+    });
+    if (r) n++;
+  }
+  return n;
+}
