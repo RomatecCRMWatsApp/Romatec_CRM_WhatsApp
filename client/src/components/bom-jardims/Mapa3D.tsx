@@ -3,6 +3,7 @@ import { Compass, Loader2, Mountain, Rotate3d, SlidersHorizontal } from "lucide-
 import type { Map as MapLibre, StyleSpecification } from "maplibre-gl";
 import { STATUS_COR, STATUS_LABEL, type LoteInfo, type MapaData } from "./LoteMap";
 import { BotaoSatelite, SATELITE_CREDITO, SATELITE_TILES, useSatelite } from "@/lib/satelite";
+import { BotaoTelaCheia, estiloTelaCheia, useTelaCheia } from "@/lib/telaCheia";
 
 /**
  * Mapa 3D do Bom Jardims (MapLibre GL): relevo real do terreno (dados abertos de elevação da AWS/Mapzen), as chácaras
@@ -65,6 +66,7 @@ export default function Mapa3D({ lotes, selected, onSelect, dados, destaque, alt
   const [filtro, setFiltro] = useState({ aberto: false, soLivres: false, areaMin: 0 });
   const [vista, setVista] = useState<"plano" | "relevo" | "cima">("plano");
   const [satelite, setSatelite] = useSatelite();
+  const tela = useTelaCheia();
   const relevo = vista === "relevo";
   const byCodigo = useMemo(() => new Map(lotes.map(l => [l.codigo, l])), [lotes]);
 
@@ -184,6 +186,21 @@ export default function Mapa3D({ lotes, selected, onSelect, dados, destaque, alt
     if (m.getLayer("lotes-borda")) m.setPaintProperty("lotes-borda", "line-color", satelite ? "#FFFFFF" : "#0C3320");
   }, [satelite, pronto]);
 
+  // Tela cheia: o mapa refaz o quadro no tamanho novo (a tela cheia do navegador muda o tamanho um pouco depois)
+  useEffect(() => {
+    if (!pronto) return;
+    const ajustar = () => mapa.current?.resize();
+    // Depois de ajustar, reenquadra o empreendimento no quadro novo (maior na tela cheia, menor ao voltar)
+    const reenquadrar = () => {
+      const m = mapa.current, lim = limites.current;
+      ajustar();
+      if (m && lim) m.fitBounds(lim, { padding: 40, pitch: m.getPitch(), bearing: m.getBearing(), duration: 600 });
+    };
+    const id = requestAnimationFrame(ajustar);
+    const t = window.setTimeout(reenquadrar, 350);
+    return () => { cancelAnimationFrame(id); window.clearTimeout(t); };
+  }, [tela.cheia]); // eslint-disable-line react-hooks/exhaustive-deps
+
   // Giro automático (vitrine do stand)
   useEffect(() => {
     if (!girando || !pronto) return;
@@ -201,8 +218,10 @@ export default function Mapa3D({ lotes, selected, onSelect, dados, destaque, alt
   if (erro) return <p style={{ color: "var(--c-0c3320)" }}>Não foi possível abrir o mapa 3D agora.</p>;
   return (
     <div>
-      <div style={{ position: "relative", height: altura, minHeight: 360, borderRadius: 16, overflow: "hidden", border: "1px solid var(--c-cfd8bf)", background: "var(--c-c9d9ae)" }}>
-        <div ref={caixa} style={{ position: "absolute", inset: 0 }} />
+      <div className="mapa3d-quadro" style={{ position: "relative", height: altura, minHeight: 360, borderRadius: 16, overflow: "hidden", border: "1px solid var(--c-cfd8bf)", background: "var(--c-c9d9ae)", ...(tela.cheia ? estiloTelaCheia : {}) }}>
+        <style>{".mapa3d-quadro .maplibregl-ctrl-top-right{top:50px}"}</style>
+        <div style={{ position: "absolute", inset: tela.cheia ? "env(safe-area-inset-top) 0 env(safe-area-inset-bottom) 0" : 0 }}><div ref={caixa} style={{ position: "absolute", inset: 0 }} /></div>
+        {pronto && <div style={{ position: "absolute", right: 10, top: tela.cheia ? "calc(env(safe-area-inset-top) + 10px)" : 10, zIndex: 2 }}><BotaoTelaCheia cheia={tela.cheia} onClick={tela.alternar} /></div>}
         {!pronto && <div style={{ position: "absolute", inset: 0, display: "flex", alignItems: "center", justifyContent: "center", color: "var(--c-0c3320)", gap: 8 }}><Loader2 className="h-5 w-5 animate-spin" /> Carregando o mapa 3D…</div>}
         {pronto && !destaque && (
           <div style={{ position: "absolute", left: 10, top: 10, display: "flex", gap: 6, flexWrap: "wrap", maxWidth: "calc(100% - 70px)" }}>
@@ -231,7 +250,15 @@ export default function Mapa3D({ lotes, selected, onSelect, dados, destaque, alt
             </label>
           </div>
         )}
-        {pronto && <p style={{ position: "absolute", left: 10, bottom: 8, margin: 0, fontSize: 11, color: "var(--c-0c3320)", textShadow: "0 0 3px var(--c-ffffff)" }}>Dois dedos giram e inclinam · toque numa chácara</p>}
+        {pronto && tela.cheia && (
+          <div style={{ position: "absolute", left: 10, bottom: "calc(env(safe-area-inset-bottom) + 28px)", display: "flex", flexWrap: "wrap", gap: 10, maxWidth: "calc(100% - 20px)", padding: "6px 10px", borderRadius: 10, fontSize: 12, color: "var(--c-0c3320)", background: "color-mix(in srgb, var(--c-ffffff) 88%, transparent)" }}>
+            {sel && <b>Chácara {sel.codigo}</b>}
+            {(legenda ?? (["disponivel", "reservado", "em_negociacao", "vendido"] as const).map(s => ({ cor: STATUS_COR[s], rotulo: STATUS_LABEL[s] }))).map(x => (
+              <span key={x.rotulo} style={{ display: "inline-flex", alignItems: "center", gap: 5 }}><span style={{ width: 11, height: 11, borderRadius: 3, background: x.cor }} />{x.rotulo}</span>
+            ))}
+          </div>
+        )}
+        {pronto && <p style={{ position: "absolute", left: 10, bottom: tela.cheia ? "calc(env(safe-area-inset-bottom) + 8px)" : 8, margin: 0, fontSize: 11, color: "var(--c-0c3320)", textShadow: "0 0 3px var(--c-ffffff)" }}>Dois dedos giram e inclinam · toque numa chácara</p>}
       </div>
       {!destaque && (
         <div style={{ display: "flex", flexWrap: "wrap", gap: 12, marginTop: 10, fontSize: 13 }}>

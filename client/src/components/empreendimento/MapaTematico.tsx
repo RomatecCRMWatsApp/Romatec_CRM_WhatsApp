@@ -3,6 +3,7 @@ import { COR_SITUACAO, ROTULO_SITUACAO, SITUACOES_LOTE, type SituacaoLote } from
 import LupaPortal, { alturaDaLupa, cantoDaLupa, densificar } from "@/components/bom-jardims/LupaPortal";
 import ZoomSvg from "@/components/mapa/ZoomSvg";
 import { BotaoSatelite, CreditoSatelite, SateliteSvg, useSatelite } from "@/lib/satelite";
+import { BotaoTelaCheia, estiloTelaCheia, useTelaCheia } from "@/lib/telaCheia";
 
 /**
  * Mapa temático dos lotes (SVG a partir das coordenadas). O desenho dos lotes vem do banco
@@ -61,6 +62,7 @@ export default function MapaTematico({ slug, lotes, ruas, perimetro, selecionado
 }) {
   const [ctx, setCtx] = useState<Contexto | null>(contexto ?? null);
   const [satelite, setSatelite] = useSatelite();
+  const tela = useTelaCheia();
   useEffect(() => {
     if (contexto) return;
     fetch(`/${slug}/mapa.json`).then(r => (r.ok ? r.json() : null)).then(d => d && setCtx(d)).catch(() => {});
@@ -101,8 +103,8 @@ export default function MapaTematico({ slug, lotes, ruas, perimetro, selecionado
 
   return (
     <div>
-      <div className="relative rounded-xl border border-border overflow-hidden shadow-inner">
-        <ZoomSvg W={W} H={H} rotulo="Mapa temático dos lotes" fundo="#E9EFDD">
+      <div className="relative rounded-xl border border-border overflow-hidden shadow-inner" style={tela.cheia ? { ...estiloTelaCheia, background: "#E9EFDD" } : undefined}>
+        <ZoomSvg W={W} H={H} rotulo="Mapa temático dos lotes" fundo="#E9EFDD" cheia={tela.cheia} canto={compacto ? undefined : <BotaoTelaCheia cheia={tela.cheia} onClick={tela.alternar} />}>
           <defs>
             <pattern id="grama" width="14" height="14" patternUnits="userSpaceOnUse">
               <rect width="14" height="14" fill="#D9E6C3" />

@@ -3,6 +3,17 @@
 Cada versão nova vai no TOPO. Depois rode `npm run release` (valida e atualiza o package.json);
 ao subir, o servidor grava a versão no banco e todos recebem o aviso "Novidades da versão".
 
+## 1.129.0 — 2026-11-07
+tipo: minor
+obrigatoria: nao
+titulo: Mapas em tela cheia, no computador e no celular
+publico: todos
+
+### Novo
+- Botão de tela cheia no canto de cima dos mapas (Mapa 2D, Mapa 3D e o mapa de vendas do site): o mapa ocupa a tela toda para navegar à vontade
+- No Mapa 3D, ao entrar e ao sair da tela cheia o empreendimento é reenquadrado; a legenda e a chácara escolhida aparecem por cima do mapa
+- Para sair: o mesmo botão, a tecla Esc ou o voltar do navegador; no iPhone o mapa cobre a tela inteira, acima do cabeçalho e da barra de baixo
+
 ## 1.128.0 — 2026-11-07
 tipo: minor
 obrigatoria: nao

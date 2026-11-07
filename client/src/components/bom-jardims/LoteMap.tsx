@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import LupaPortal, { alturaDaLupa, cantoDaLupa, densificar } from "./LupaPortal";
 import ZoomSvg from "../mapa/ZoomSvg";
 import { BotaoSatelite, CreditoSatelite, SateliteSvg, useSatelite } from "@/lib/satelite";
+import { BotaoTelaCheia, estiloTelaCheia, useTelaCheia } from "@/lib/telaCheia";
 
 /**
  * Mapa de vendas interativo, desenhado a partir das coordenadas georreferenciadas
@@ -115,6 +116,7 @@ export default function LoteMap({ lotes, selected, onSelect, onMapLoaded, dados,
   const [error, setError] = useState(false);
   const proj = useProjection(data);
   const [satelite, setSatelite] = useSatelite();
+  const tela = useTelaCheia();
 
   useEffect(() => {
     if (dados) return;
@@ -137,8 +139,8 @@ export default function LoteMap({ lotes, selected, onSelect, onMapLoaded, dados,
 
   return (
     <div>
-      <div style={{ position: "relative", overflow: "hidden", borderRadius: 16, background: "var(--c-e7eedb)", border: "1px solid var(--c-cfd8bf)" }}>
-        <ZoomSvg W={W} H={H} rotulo="Mapa de vendas do Bom Jardims">
+      <div style={{ position: "relative", overflow: "hidden", borderRadius: 16, background: "var(--c-e7eedb)", border: "1px solid var(--c-cfd8bf)", ...(tela.cheia ? estiloTelaCheia : {}) }}>
+        <ZoomSvg W={W} H={H} rotulo="Mapa de vendas do Bom Jardims" cheia={tela.cheia} canto={<BotaoTelaCheia cheia={tela.cheia} onClick={tela.alternar} />}>
           {satelite && <SateliteSvg limites={limites} projetar={project} />}
           <path d={pathOf(data.perimetro.map(project))} fill={satelite ? "none" : "#D3E2BC"} stroke={satelite ? "#F2C04B" : "#0C3320"} strokeWidth={2} strokeDasharray="6 4" />
           {/* Área de vivência e recreação na frente, junto ao rio */}

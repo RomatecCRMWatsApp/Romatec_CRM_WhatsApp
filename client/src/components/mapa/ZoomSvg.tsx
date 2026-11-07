@@ -86,8 +86,12 @@ function Bussola({ r, onNorte }: { r: number; onNorte: () => void }) {
   );
 }
 
-export default function ZoomSvg({ W, H, rotulo, children, fundo }: {
+export default function ZoomSvg({ W, H, rotulo, children, fundo, cheia, canto }: {
   W: number; H: number; rotulo: string; children: ReactNode;
+  /** Tela cheia: o desenho cabe inteiro na tela (centralizado, sem distorção) */
+  cheia?: boolean;
+  /** Botão extra no canto de cima, ao lado da bússola (ex.: tela cheia) */
+  canto?: ReactNode;
   /** Cor de fundo do quadro (aparece só enquanto o desenho carrega) */
   fundo?: string;
 }) {
@@ -202,14 +206,15 @@ export default function ZoomSvg({ W, H, rotulo, children, fundo }: {
   const ativo = vista.s > ZOOM_MIN + 1e-3 || rodado;
 
   return (
-    <div ref={quadro} style={{ position: "relative", overflow: "hidden", background: fundo, touchAction: ativo ? "none" : "pan-x pan-y", userSelect: "none" }}
+    <div ref={quadro} style={{ position: "relative", overflow: "hidden", background: fundo, ...(cheia ? { height: "100%", display: "flex", alignItems: "center", justifyContent: "center" } : {}), touchAction: ativo ? "none" : "pan-x pan-y", userSelect: "none" }}
       onPointerDown={onPointerDown} onPointerMove={onPointerMove} onPointerUp={soltar} onPointerCancel={soltar}
       // Arrasto/pinça não conta como clique no lote
       onClickCapture={e => { if (arrastou.current) { e.stopPropagation(); e.preventDefault(); arrastou.current = false; } }}>
       <svg ref={svg} viewBox={`0 0 ${W} ${H}`} role="img" aria-label={rotulo}
-        style={{ display: "block", width: "100%", height: "auto", cursor: ativo ? "grab" : undefined }}>
+        style={{ display: "block", width: cheia ? `min(100%, calc(100dvh * ${W / H}))` : "100%", height: "auto", flexShrink: 0, cursor: ativo ? "grab" : undefined }}>
         <g ref={conteudo} transform={`translate(${vista.tx} ${vista.ty}) scale(${vista.s})${rodado ? ` rotate(${r} ${W / 2} ${H / 2})` : ""}`}>{children}</g>
       </svg>
+      {canto && <div style={{ position: "absolute", right: 58, top: 10 }} onPointerDown={e => e.stopPropagation()}>{canto}</div>}
       <div style={{ position: "absolute", right: 10, top: 10 }} onPointerDown={e => e.stopPropagation()}>
         <Bussola r={r} onNorte={() => setVista(girarEm(vistaRef.current, -r, W / 2, H / 2, W, H))} />
       </div>
