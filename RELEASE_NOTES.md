@@ -9,7 +9,7 @@ obrigatoria: nao
 titulo: Correções internas e do robô de vendas antigo
 publico: admin
 
-### Corrigido
+### Correções
 - Robô de vendas: "Não quero", "Não tenho interesse" e "Obrigado, não" eram entendidos como interesse; agora encerram a conversa educadamente
 - Robô de vendas: renda escrita com ponto ("R$ 3.500") deixava de contar na classificação do lead
 - Quem recusa ou pede para parar antes de ter cadastro agora fica bloqueado de verdade (não volta a ser abordado)
