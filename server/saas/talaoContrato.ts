@@ -186,7 +186,7 @@ async function paginasDoTalao(marca: string, numero: number | null): Promise<Buf
 export interface ItemSumario { titulo: string; detalhe: string; inicio: number; fim: number }
 
 /** Capa (página 1) e sumário (página 2) — o sumário recebe as páginas já contadas */
-async function capaESumario(marca: string, numero: number | null, itens: ItemSumario[]): Promise<Buffer> {
+async function capaESumario(marca: string, numero: number | null, itens: ItemSumario[], versao = ''): Promise<Buffer> {
   const doc = await PDFDocument.create();
   const m = await embutirMarca(doc, marca);
   const f = await doc.embedFont(StandardFonts.Helvetica);
@@ -226,6 +226,10 @@ async function capaESumario(marca: string, numero: number | null, itens: ItemSum
   c.y -= 30;
   centro(c, LINHA_PUBLICIDADE, 10, fb, VERDE);
   centro(c, `CNPJ ${ESCRITORIO.cnpj} · Corretor responsável: ${ESCRITORIO.creciResponsavel}`, 8, f, CINZA);
+  // Gerado na hora com o contrato matriz vigente: talão impresso antes de uma mudança fica identificável
+  const geradoEm = new Date(Date.now() - 3 * 3600_000).toISOString().slice(0, 10).split('-').reverse().join('/');
+  c.y -= 6;
+  centro(c, `Gerado em ${geradoEm}${versao ? ` com o modelo ${versao}` : ''} — vale a versão vigente do contrato na data da assinatura`, 7.5, f, CINZA);
 
   // Sumário
   const s2 = nova();
@@ -346,7 +350,7 @@ export async function folhaDoTalao(slug: string, numero: number | null): Promise
     { titulo: '6. Contrato de Intermediação', detalhe: 'Preenchido pelo(a) corretor(a); assinam o(a) comprador(a) e o(a) corretor(a) intermediador(a).', ...faixa(ni) },
     { titulo: '7. Anexação de documentos — checklist', detalhe: 'Cópias dos documentos do(a) comprador(a) e do cônjuge, carteira do CRECI do(a) corretor(a) (ou certidão), comprovante do sinal e conferência.', ...faixa(nc) },
   ];
-  const capa = await capaESumario(marca, numero, itens);
+  const capa = await capaESumario(marca, numero, itens, String(ctx.ctr_versao_modelo ?? ''));
   const junto = await anexar(capa, [frente, principal, estatuto, diretrizes, intermediacao, checklist]);
   return numerar(junto, numero);
 }

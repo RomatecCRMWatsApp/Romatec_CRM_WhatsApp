@@ -3,6 +3,18 @@
 Cada versão nova vai no TOPO. Depois rode `npm run release` (valida e atualiza o package.json);
 ao subir, o servidor grava a versão no banco e todos recebem o aviso "Novidades da versão".
 
+## 1.125.1 — 2026-11-07
+tipo: patch
+obrigatoria: nao
+titulo: Talão: visualizar dentro do sistema e tela mais clara
+publico: equipe
+
+### Melhorias
+- "Visualizar modelo" abre o talão dentro do sistema, em tela cheia: rolar as páginas, zoom (− e +), baixar, imprimir e botão Voltar — sem abrir outra aba nem tela branca (no iPhone aparecem todas as páginas)
+- Em cada bloco, "Visualizar nº 000011" mostra o talão de um corretor antes de baixar
+- Tela de Talonários em dois passos (1. veja o modelo · 2. gere os talões do corretor), arrumada para o celular
+- A capa do talão mostra a data em que foi gerado e a versão do contrato: o talão sempre sai do contrato matriz atual (cláusulas, registro e licença do empreendimento)
+
 ## 1.125.0 — 2026-11-07
 tipo: minor
 obrigatoria: nao

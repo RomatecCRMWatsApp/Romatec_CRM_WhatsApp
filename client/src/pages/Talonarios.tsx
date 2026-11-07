@@ -1,6 +1,7 @@
 import { useRef, useState } from "react";
 import { toast } from "sonner";
-import { BookCopy, FileUp, Loader2, Printer, Send, UserPlus } from "lucide-react";
+import { BookCopy, Eye, FileUp, Loader2, Printer, Send, UserPlus } from "lucide-react";
+import VisualizadorPdf from "@/components/VisualizadorPdf";
 import { trpc } from "@/lib/trpc";
 import PageHeader from "@/components/PageHeader";
 import { Button } from "@/components/ui/button";
@@ -107,6 +108,7 @@ function ImprimirTaloes() {
   const [corretor, setCorretor] = useState("");
   const [qtd, setQtd] = useState("10");
   const [progresso, setProgresso] = useState<{ feitos: number; total: number } | null>(null);
+  const [vendo, setVendo] = useState(false);
   const emitir = trpc.saas.emitirTaloes.useMutation();
   const [tipoC, idC] = corretor.split(":");
   const nomeCorretor = tipoC === "x" ? externos?.find(x => x.id === Number(idC))?.nome ?? "" : comLogin?.find(u => u.id === Number(idC))?.nome ?? "";
@@ -122,19 +124,25 @@ function ImprimirTaloes() {
     } catch (e: any) { toast.error(e?.message || "Não foi possível gerar os talões"); } finally { setProgresso(null); }
   };
   return (
-    <section className="space-y-3 rounded-xl border border-border bg-card p-4">
-      <div className="flex flex-wrap items-start gap-3">
-        <div className="min-w-0 flex-1">
-          <h2 className="text-sm font-semibold">Imprimir talões de contrato para um corretor</h2>
-          <p className="mt-1 text-xs text-muted-foreground">
-            Cada talão: capa, sumário, ficha cadastral, condições, contrato completo, Estatuto, Diretrizes, contrato de intermediação e checklist
-            de anexos. Os números seguem a sequência e ficam registrados no nome do corretor, para a prestação de contas. Sai um PDF por talão.
-          </p>
-        </div>
-        <Button variant="outline" size="sm" onClick={() => window.open("/api/talonarios/contrato.pdf", "_blank", "noopener")}><Printer className="mr-1 h-4 w-4" /> Modelo em branco (sem número)</Button>
+    <section className="space-y-4 rounded-xl border border-border bg-card p-4">
+      <div>
+        <h2 className="text-base font-semibold">Talões de contrato</h2>
+        <p className="mt-1 text-sm text-muted-foreground">Para atender sem sistema: o corretor preenche à mão e devolve ao escritório.</p>
       </div>
-      <div className="grid items-end gap-2 md:grid-cols-4">
-        <label className="text-xs text-muted-foreground md:col-span-2">Corretor
+      <div className="flex flex-col gap-3 rounded-lg border border-border/70 bg-background/40 p-3 sm:flex-row sm:items-center">
+        <div className="min-w-0 flex-1 text-sm">
+          <b>1. Veja o modelo</b>
+          <p className="text-xs text-muted-foreground">Capa, sumário, ficha, condições, contrato completo, Estatuto, Diretrizes, intermediação e checklist de anexos. Sai sempre com o contrato matriz atual (cláusulas, registro e licença).</p>
+        </div>
+        <Button variant="outline" onClick={() => setVendo(true)}><Eye className="mr-1 h-4 w-4" /> Visualizar modelo</Button>
+      </div>
+      {vendo && <VisualizadorPdf url="/api/talonarios/contrato.pdf" titulo="Talão de contrato — modelo" nomeArquivo="talao-contrato-modelo.pdf" onFechar={() => setVendo(false)} />}
+      <div className="text-sm">
+        <b>2. Gere os talões do corretor</b>
+        <p className="text-xs text-muted-foreground">Os números seguem a sequência e ficam no nome do corretor, para a prestação de contas. Sai um PDF por talão.</p>
+      </div>
+      <div className="grid items-end gap-3 sm:grid-cols-4">
+        <label className="text-xs text-muted-foreground sm:col-span-2">Corretor
           <select className={campo} value={corretor} onChange={e => setCorretor(e.target.value)}>
             <option value="">— escolha —</option>
             {(externos ?? []).length > 0 && <optgroup label="Externos (sem login)">{externos!.map(x => <option key={`x${x.id}`} value={`x:${x.id}`}>{x.nome}</option>)}</optgroup>}
@@ -159,6 +167,7 @@ function ImprimirFolhas({ t }: { t: any }) {
   const [de, setDe] = useState(String(t.numeroInicial));
   const [ate, setAte] = useState(String(t.numeroFinal));
   const [progresso, setProgresso] = useState<{ feitos: number; total: number } | null>(null);
+  const [vendo, setVendo] = useState<number | null>(null);
   const a = Number(de), b = Number(ate);
   const erro = !a || !b ? "Informe as folhas" : a > b ? "A primeira folha vem antes da última" : a < t.numeroInicial || b > t.numeroFinal ? `Só folhas do bloco (${t.numeroInicial} a ${t.numeroFinal})` : b - a + 1 > 50 ? "No máximo 50 por vez" : null;
   const baixar = async () => {
@@ -173,7 +182,10 @@ function ImprimirFolhas({ t }: { t: any }) {
       <Button size="sm" disabled={!!erro || !!progresso} onClick={baixar}>
         {progresso ? <><Loader2 className="mr-1 h-4 w-4 animate-spin" /> {Math.min(progresso.feitos + 1, progresso.total)} de {progresso.total}…</> : <><Printer className="mr-1 h-4 w-4" /> Baixar PDFs</>}
       </Button>
+      <Button size="sm" variant="outline" disabled={!!erro} onClick={() => setVendo(a)}><Eye className="mr-1 h-4 w-4" /> Visualizar nº {String(a).padStart(6, "0")}</Button>
       <span className="text-xs text-muted-foreground">{erro ?? `${b - a + 1} arquivo(s), um por talão`}</span>
+      {vendo != null && <VisualizadorPdf url={`/api/talonarios/contrato.pdf?talonario=${t.id}&de=${vendo}&ate=${vendo}`} titulo={`Talão nº ${String(vendo).padStart(6, "0")} · ${t.corretor ?? ""}`}
+        nomeArquivo={`talao-${String(vendo).padStart(6, "0")}.pdf`} onFechar={() => setVendo(null)} />}
     </div>
   );
 }
