@@ -54,6 +54,8 @@ export interface DadosAviso {
   linkPagamento: string | null; // boleto/fatura (Pix) da parcela
   linkPortal: string;            // portal do comprador (carnê, 2ª via)
   pixCopiaECola?: string | null;
+  /** Página de copiar o Pix com um toque (/pix/<token>) */
+  linkPix?: string | null;
 }
 
 const brl = (v: number) => v.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
@@ -64,7 +66,7 @@ export function textoAviso(etapa: EtapaRegua, d: DadosAviso): string {
   const ola = `Olá, ${primeiro(d.nome)}!`;
   const quem = `${d.empreendimento}, chácara ${d.chacara}`;
   const pagar = d.linkPagamento ? `\n\n💳 Pagar (Pix ou boleto): ${d.linkPagamento}` : '';
-  const pix = d.pixCopiaECola ? `\n\nPix copia e cola:\n${d.pixCopiaECola}` : '';
+  const pix = d.linkPix ? `\n\n⚡ Pix (compensa na hora), copie com um toque: ${d.linkPix}` : d.pixCopiaECola ? `\n\nPix copia e cola:\n${d.pixCopiaECola}` : '';
   const portal = `\n📄 Seu carnê e 2ª via: ${d.linkPortal}`;
   const assinatura = `\n\nRomatec Consultoria Total · CRECI J-1234\nDúvidas? É só responder esta mensagem.`;
   const valor = `${brl(d.valor)}`;

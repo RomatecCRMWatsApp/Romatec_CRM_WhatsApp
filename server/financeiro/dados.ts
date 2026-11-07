@@ -5,6 +5,13 @@
  */
 import { rotuloComComplemento, type PlanoContrato } from '../contratos/plano';
 import { brl, type DadosLamina } from './render/comum';
+import { tokenPix } from './links';
+
+/** Página de copiar o Pix da cobrança (impressa como botão no boleto e no carnê) */
+export const urlPixDaCobranca = (cobrancaId: number) => {
+  const base = (process.env.APP_PUBLIC_URL || 'https://romateccrm.com').replace(/\/+$/, '');
+  try { return `${base}/pix/${tokenPix(cobrancaId)}`; } catch { return null; }
+};
 import { CONTATO_PADRAO, instrucoesFicha, type DadosCarne, type DadosParcela } from './render/documentos';
 
 export interface SnapshotAsaas {
@@ -68,6 +75,7 @@ export function dadosLamina(ctx: ContextoDocs, c: CobrancaDoc): DadosLamina {
     contratoNumero: ctx.contrato.numero, loteCodigo: ctx.lote.codigo, parcela, vencimento: c.vencimento, valor: c.valor,
     nossoNumero: c.asaas.nossoNumero, linhaDigitavel: c.asaas.identificationField, codigoBarras: c.asaas.barCode,
     pixPayload: c.asaas.pixPayload, pixQrBase64: c.asaas.pixQrBase64 ?? null,
+    pixUrl: c.asaas.pixPayload ? urlPixDaCobranca(c.id) : null,
     beneficiario: ctx.beneficiario, agenciaCodigo: ctx.agenciaCodigo,
     numeroDocumento: `${ctx.contrato.numero.replace(/^([A-Z]+)-\d{4}-/, '$1')}-${prefixo}${String(c.numero).padStart(3, '0')}`,
     dataDocumento: c.dataDocumento, pagadorNome: ctx.comprador.nome, pagadorDoc: docMascarado(ctx.comprador.cpfCnpj),

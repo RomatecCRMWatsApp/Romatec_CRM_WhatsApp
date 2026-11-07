@@ -1565,6 +1565,8 @@ async function startServer() {
   import('../financeiro/reguaCobranca').then(m => m.iniciarReguaCobranca()).catch(e => console.warn('[Régua de cobrança] não iniciada:', e));
   // Emissão automática no Asaas: próximo carnê 45 dias antes (só roda se estiver ligada em Financeiro)
   import('../financeiro/emissaoAuto').then(m => m.iniciarEmissaoAuto()).catch(e => console.warn('[Emissão automática] não iniciada:', e));
+  // Confirmação de pagamento no WhatsApp: reenvia o que não foi entregue (WhatsApp fora do ar), por até 3 dias
+  import('../financeiro/confirmacaoPagamento').then(m => m.iniciarVigiaConfirmacoes()).catch(e => console.warn('[Confirmação de pagamento] vigia não iniciado:', e));
   // Camada SaaS: expirações, inadimplência e lembretes (só age com o licenciamento ligado)
   import('../saas/servico').then(m => m.iniciarJobsSaas()).catch(e => console.warn('[SaaS] Jobs não iniciados:', e));
   // Mercado Pago: retry dos eventos do webhook e faturas Pix/boleto do próximo ciclo

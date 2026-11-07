@@ -1879,6 +1879,9 @@ export const recibos = mysqlTable("crm_recibos", {
   pdfArquivo: varchar("pdfArquivo", { length: 255 }),
   enviadoEm: datetime("enviadoEm"),
   envioErro: varchar("envioErro", { length: 255 }),
+  /** Confirmação no WhatsApp (server/financeiro/confirmacaoPagamento.ts): tentativas reservadas e o que já foi entregue */
+  envioTentativas: int("envioTentativas").default(0).notNull(),
+  envioJson: text("envioJson"),
   /** Recibo nunca é apagado: o cancelamento (só admin, com senha) marca e fica na auditoria */
   canceladoEm: datetime("canceladoEm"),
   canceladoPor: int("canceladoPor"),

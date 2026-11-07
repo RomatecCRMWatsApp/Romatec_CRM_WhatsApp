@@ -3,6 +3,23 @@
 Cada versão nova vai no TOPO. Depois rode `npm run release` (valida e atualiza o package.json);
 ao subir, o servidor grava a versão no banco e todos recebem o aviso "Novidades da versão".
 
+## 1.128.0 — 2026-11-07
+tipo: minor
+obrigatoria: nao
+titulo: Boletos no padrão da Gestão de PA: confirmação com versículo, Pix copia e cola e compensação de parcelas
+publico: equipe
+
+### Novo
+- Confirmação automática de pagamento no WhatsApp: agradecimento ao comprador com o resumo (parcela, valor, data, forma, recibo em PDF, parcelas em aberto) e um versículo em rodízio
+- Aviso ao administrador a cada pagamento recebido, com o total do dia no empreendimento e se o comprador foi avisado
+- Se o WhatsApp estiver fora, o sistema tenta de novo sozinho (sem repetir o que já foi entregue)
+- Boleto e carnê com o botão "TOQUE AQUI PARA COPIAR O PIX": abre uma página com o código Pix para copiar com um toque, o QR Code e o link do boleto
+- Lembretes de vencimento levam o link do Pix copia e cola
+- Compensação de pagamento: quando o comprador pagou o boleto de outro mês, o pagamento passa para a parcela certa, a outra reabre, o boleto antigo é cancelado no Asaas e um novo é emitido
+
+### Melhorias
+- Contrato › Parcelas: o recibo mostra se o comprador foi avisado no WhatsApp; o reenvio manda a confirmação completa com o recibo
+
 ## 1.127.0 — 2026-11-07
 tipo: minor
 obrigatoria: nao

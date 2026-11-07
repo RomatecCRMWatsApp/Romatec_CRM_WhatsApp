@@ -248,30 +248,15 @@ export async function pdfRecibo(reciboId: number, publico = false): Promise<Buff
 }
 
 /** Envio do recibo (WhatsApp do comprador e do cônjuge). Falha de envio não reemite: fica registrada para reenviar. */
+/**
+ * Confirmação do pagamento no WhatsApp: mensagem de gratidão + recibo em PDF ao comprador e aviso ao administrador
+ * (server/financeiro/confirmacaoPagamento.ts). `perfil` = reenvio pelo escritório (manda de novo).
+ */
 export async function enviarRecibo(reciboId: number, origem = 'webhook'): Promise<{ enviado: boolean; erro?: string }> {
-  const [rec] = await (await db()).select({ contratoId: recibos.contratoId }).from(recibos).where(eq(recibos.id, reciboId)).limit(1);
+  const [rec] = await (await db()).select({ id: recibos.id }).from(recibos).where(eq(recibos.id, reciboId)).limit(1);
   if (!rec) throw new FinanceiroErro('NAO_ENCONTRADO', 'Recibo não encontrado', 404);
-  if (!configAsaas(process.env, await slugDoContrato(rec.contratoId))) return { enviado: false, erro: 'Cobrança desligada (Asaas sem chave): nada é enviado ao cliente' };
-  const { recibo } = await dadosRecibo(reciboId);
-  const pdf = await pdfRecibo(reciboId);
-  const { comprador, conjuge } = await pessoasDoContrato(recibo.contratoId);
-  const telefones = [comprador?.telefone1, conjuge?.telefone1].map(telefoneWhatsApp).filter(Boolean) as string[];
-  const d = await db();
-  try {
-    if (!telefones.length) throw new Error('Comprador sem telefone cadastrado');
-    const { enviarDocumento } = await import('../leads/zapiClient');
-    for (const t of telefones) {
-      await enviarDocumento(t, { base64: pdf.toString('base64'), extensao: 'pdf', mime: 'application/pdf', nomeArquivo: `${recibo.numero}.pdf`,
-        legenda: `Recibo ${recibo.numero} — pagamento confirmado. Obrigado! Condomínio de Chácaras Bom Jardims` });
-    }
-    await d.update(recibos).set({ enviadoEm: new Date(), envioErro: null }).where(eq(recibos.id, reciboId));
-    await auditar('recibo_enviado', { contratoId: recibo.contratoId, cobrancaId: recibo.cobrancaId, origem, detalhe: { numero: recibo.numero, destinos: telefones.length } });
-    return { enviado: true };
-  } catch (e: any) {
-    const erro = String(e?.message ?? e).slice(0, 250);
-    await d.update(recibos).set({ envioErro: erro }).where(eq(recibos.id, reciboId));
-    return { enviado: false, erro };
-  }
+  const { enviarConfirmacao } = await import('./confirmacaoPagamento');
+  return enviarConfirmacao(reciboId, origem === 'perfil' ? 'reenvio' : origem, { forcar: origem === 'perfil' });
 }
 
 // ─── Webhook do Asaas ─────────────────────────────────────────────────────

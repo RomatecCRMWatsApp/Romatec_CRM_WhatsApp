@@ -3,7 +3,7 @@
  * (capa → folha do plano → lâminas 3/página → contracapa), recibo de pagamento e declaração anual de quitação.
  */
 import {
-  A4, COR, LAMINA_ALTURA, MM, brl, campo, cartao, dataBR, desenharLamina, faixaModelo, linhaCorte, novoKit, paginaComMarca, qrPng,
+  A4, COR, LAMINA_ALTURA, MM, botaoPix, brl, campo, cartao, dataBR, desenharLamina, faixaModelo, linkClicavel, linhaCorte, novoKit, paginaComMarca, qrPng,
   quebrar, retArredondado, texto, textoCentro, textoDir, tituloPagina, type DadosLamina, type Kit,
 } from './comum';
 import { ESCRITORIO } from '../../../shared/escritorio';
@@ -29,7 +29,7 @@ export const CONTATO_PADRAO: Contato = {
 };
 
 export const INSTRUCOES_PAGAMENTO = (contato: Contato) => [
-  'Pague pelo QR Code PIX (compensação imediata) ou pela linha digitável/código de barras em qualquer banco, lotérica ou app.',
+  'Pix (recomendado): toque em "COPIAR O PIX" ou leia o QR Code — compensa na hora. Pela linha digitável/código de barras (banco, lotérica ou app), leva até 1 dia útil.',
   'Após o vencimento: correção pelo IPCA/IBGE, multa de 2% e juros de mora de 1% ao mês pro rata die (CPCV, Cláusula 7ª; CDC, art. 52, § 1º).',
   'Antecipação de parcelas com redução proporcional dos juros (CDC, art. 52, § 2º) — solicite o cálculo à administração.',
   'Pague somente por este boleto/PIX, em nome do beneficiário indicado na ficha. Nunca pague em dinheiro, a corretores ou a terceiros.',
@@ -84,10 +84,18 @@ export async function renderBoletoA4(d: DadosParcela, o: OpcoesDoc & { segundaVi
   cartao(k, p, xp, y, wp, hc, 'PAGUE COM PIX');
   if (d.pixPayload || d.pixQrBase64) {
     const qr = d.pixQrBase64 ? await k.doc.embedPng(Buffer.from(d.pixQrBase64, 'base64')) : await qrPng(k, d.pixPayload!);
-    const q = 38 * MM;
-    p.drawImage(qr, { x: xp + (wp - q) / 2, y: y - 25 - q, width: q, height: q });
-    textoCentro(p, 'Abra o app do banco › PIX › ler QR Code', xp + wp / 2, y - hc + 18, 6.3, k.f);
-    textoCentro(p, 'ou use o "copia e cola" abaixo', xp + wp / 2, y - hc + 9, 6.3, k.f);
+    const q = (d.pixUrl ? 31 : 38) * MM;
+    p.drawImage(qr, { x: xp + (wp - q) / 2, y: y - 24 - q, width: q, height: q });
+    if (d.pixUrl) {
+      // No celular a câmera não lê o QR do próprio PDF: o botão abre a página que copia o código com um toque
+      botaoPix(k, p, xp + 10, y - hc + 30, wp - 20, 15, d.pixUrl);
+      linkClicavel(k, p, xp + (wp - q) / 2, y - 24 - q, q, q, d.pixUrl);
+      textoCentro(p, 'ou escaneie o QR Code com o app do banco', xp + wp / 2, y - hc + 19, 6.1, k.f);
+      textoCentro(p, 'Pelo código de barras a compensação leva até 1 dia útil', xp + wp / 2, y - hc + 9.5, 5.8, k.fi, COR.cinza);
+    } else {
+      textoCentro(p, 'Abra o app do banco › PIX › ler QR Code', xp + wp / 2, y - hc + 18, 6.3, k.f);
+      textoCentro(p, 'ou use o "copia e cola" abaixo', xp + wp / 2, y - hc + 9, 6.3, k.f);
+    }
   } else {
     textoCentro(p, 'PIX indisponível nesta cobrança', xp + wp / 2, y - hc / 2, 7, k.f, COR.cinza);
   }

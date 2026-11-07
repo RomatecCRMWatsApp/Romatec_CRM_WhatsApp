@@ -504,6 +504,8 @@ export function initSqliteTables(sqlite: any): void {
   )`);
   // v1.14.0 — trava de cancelamento (server/_core/migrations/addCancelamento.ts)
   for (const t of ['contratos', 'crm_recibos']) for (const c of ['canceladoEm INTEGER', 'canceladoPor INTEGER', 'canceladoMotivo TEXT']) addColumn(`ALTER TABLE ${t} ADD COLUMN ${c}`);
+  addColumn(`ALTER TABLE crm_recibos ADD COLUMN envioTentativas INTEGER NOT NULL DEFAULT 0`);
+  addColumn(`ALTER TABLE crm_recibos ADD COLUMN envioJson TEXT`);
   run(`CREATE TABLE IF NOT EXISTS contratoSolicitacoes (
     id INTEGER PRIMARY KEY AUTOINCREMENT, contratoId INTEGER NOT NULL, tipo TEXT NOT NULL, motivo TEXT NOT NULL, solicitanteId INTEGER NOT NULL,
     status TEXT NOT NULL, resolvidoPor INTEGER, resolvidoEm INTEGER, resposta TEXT, criadoEm ${agora}

@@ -119,6 +119,19 @@ export const financeiroRouter = router({
     const { lancarPagamento } = await import("../financeiro/pagamentoManual");
     return comErroFin(() => lancarPagamento(input as any, ctx.user.id));
   }),
+  /** Pagamento que caiu na parcela errada: passa para a parcela certa (server/financeiro/compensacao.ts) */
+  compensarPagamento: protectedProcedure.input(z.object({ deId: z.number().int(), paraId: z.number().int(), cancelarBoleto: z.boolean().default(true), emitirBoleto: z.boolean().default(true), avisar: z.boolean().default(false) }))
+    .mutation(async ({ ctx, input }) => {
+      await operador(ctx);
+      const { compensarPagamento } = await import("../financeiro/compensacao");
+      return comErroFin(() => compensarPagamento(input, ctx.user.id));
+    }),
+  /** Reenvia a confirmação do pagamento (comprador + administrador) */
+  reenviarConfirmacao: protectedProcedure.input(z.object({ reciboId: z.number().int() })).mutation(async ({ ctx, input }) => {
+    await operador(ctx);
+    const { enviarConfirmacao } = await import("../financeiro/confirmacaoPagamento");
+    return enviarConfirmacao(input.reciboId, "reenvio", { forcar: true });
+  }),
   /** Confere no Asaas as cobranças em aberto e aplica o que mudou (como se o webhook tivesse chegado) */
   sincronizarAsaas: protectedProcedure.mutation(async ({ ctx }) => {
     await operador(ctx);

@@ -5,6 +5,7 @@ import { toast } from "sonner";
 import { AlertTriangle, Ban, CheckCircle2, Copy, Download, FileSignature, FileText, Loader2, Receipt, RefreshCw, Send, ShieldAlert, Upload, XCircle } from "lucide-react";
 import { trpc } from "@/lib/trpc";
 import PageHeader from "@/components/PageHeader";
+import CompensarPagamento from "@/components/contratos/CompensarPagamento";
 import { Button } from "@/components/ui/button";
 import { sel } from "@/components/cadastro/campos";
 import { brl } from "@shared/simulador";
@@ -327,7 +328,7 @@ export default function ContratoDetalhe() {
                               {rot}{x.acoes.vencida && ` · ${x.acoes.atraso} dias`}
                               {x.acoes.negociacao && <span className="ml-2 rounded bg-danger-500/15 px-1.5 py-0.5 text-[10px] font-semibold text-danger-300">Negociação</span>}
                             </td>
-                            <td className="p-2 text-xs">{x.pagoEm ? `${br(x.pagoEm)} · ${brl(x.valorPago ?? x.valor)}` : "—"}{x.reciboNumero && <span className="block text-muted-foreground">{x.reciboNumero}{x.reciboCancelado && <b className="ml-1 text-danger-400">CANCELADO</b>}{x.reciboErro ? ` · envio: ${x.reciboErro}` : x.reciboEnviado ? " · enviado" : ""}</span>}</td>
+                            <td className="p-2 text-xs">{x.pagoEm ? `${br(x.pagoEm)} · ${brl(x.valorPago ?? x.valor)}` : "—"}{x.reciboNumero && <span className="block text-muted-foreground">{x.reciboNumero}{x.reciboCancelado && <b className="ml-1 text-danger-400">CANCELADO</b>}{x.reciboErro ? <span title={x.reciboErro}> · ⚠️ WhatsApp: ver</span> : x.reciboEnviado ? " · ✅ avisado no WhatsApp" : ""}</span>}</td>
                             <td className="p-2">
                               <div className="flex justify-end gap-1">
                                 {x.acoes.boleto && <Button size="sm" variant="outline" onClick={() => abrir(`/api/financeiro/cobrancas/${x.id}/boleto-a4.pdf`)}>Boleto A4</Button>}
@@ -345,11 +346,12 @@ export default function ContratoDetalhe() {
                                   <Button size="sm" variant="ghost" className="text-danger-400" title="Cancelar o recibo (só administrador, com senha)"
                                     onClick={() => setModal({ tipo: "recibo", id: x.reciboId, numero: x.reciboNumero })}><Ban className="h-3 w-3" /></Button>
                                 )}
+                                {x.status === "paga" && d.pode.cobranca && <CompensarPagamento origem={x} cobrancas={f.cobrancas} onFeito={recarregar} />}
                                 {x.acoes.recibo && x.reciboId && d.pode.cobranca && (
-                                  <Button size="sm" variant="ghost" title="Reenviar recibo" disabled={ocupado === `rr${x.id}`}
+                                  <Button size="sm" variant="ghost" title="Reenviar a confirmação e o recibo no WhatsApp" disabled={ocupado === `rr${x.id}`}
                                     onClick={() => acao(`rr${x.id}`, async () => {
                                       const r = await fetch(`/api/financeiro/recibos/${x.reciboId}/reenviar`, { method: "POST", credentials: "include" }).then(r => r.json());
-                                      r.enviado ? toast.success("Recibo reenviado") : toast.error(r.erro ?? "Não enviado");
+                                      r.enviado ? toast.success("Confirmação e recibo reenviados no WhatsApp") : toast.error(r.erro ?? "Não enviado");
                                       recarregar();
                                     })}><RefreshCw className="h-3 w-3" /></Button>
                                 )}

@@ -10,6 +10,7 @@ import { and, desc, eq, gte, inArray, isNotNull, lte } from "drizzle-orm";
 import { getDb } from "../db";
 import { cobrancaAvisos, cobrancas, contratos, empreendimentos } from "../../drizzle/schema";
 import { telefoneWhatsApp } from "../../shared/contratos";
+import { urlPixDaCobranca } from "./dados";
 import {
   CONTRATOS_COM_REGUA, DIA_DA_ETAPA, ETAPAS_REGUA, JANELA_DIAS, ROTULO_ETAPA, STATUS_COBRAVEIS, etapaDeHoje, rotuloParcelaAviso, textoAviso,
   type EtapaRegua,
@@ -78,6 +79,7 @@ export async function avisosDeHoje(agora = Date.now()): Promise<AvisoPlanejado[]
         empreendimento: emps.find(e => Number(e.id) === Number(c.empreendimentoId))?.nome ?? "Bom Jardims", chacara: c.loteCodigo,
         linkPagamento: p.bankSlipUrl ?? null, linkPortal: `${urlPublica()}/c/${c.codigoVerificacao}`,
         pixCopiaECola: etapa === "antes" || etapa === "dia" ? p.pixPayload ?? null : null,
+        linkPix: (etapa === "antes" || etapa === "dia") && p.pixPayload ? urlPixDaCobranca(Number(p.id)) : null,
       }),
     });
   }

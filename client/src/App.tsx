@@ -41,6 +41,7 @@ const RecepcaoEvento = lazy(() => import("./pages/RecepcaoEvento"));
 const PainelVendasAoVivo = lazy(() => import("./pages/PainelVendasAoVivo"));
 const Ranking = lazy(() => import("./pages/Ranking"));
 const ReuniaoPublica = lazy(() => import("./pages/ReuniaoPublica"));
+const PixPublico = lazy(() => import("./pages/PixPublico"));
 const Recrutamento = lazy(() => import("./pages/Recrutamento"));
 const FormularioRecrutamento = lazy(() => import("./pages/FormularioRecrutamento"));
 const TrocarSenha = lazy(() => import("./pages/TrocarSenha"));
@@ -345,6 +346,7 @@ function Router() {
       <Route path={"/parceiro/:token"} component={PortalParceira} />
       <Route path={"/c/v/:codigo"} component={VerificarContrato} />
       <Route path={"/c/:codigo"} component={CarneDigital} />
+      <Route path={"/pix/:token"} component={PixPublico} />
       <Route path={"/agendar/:slug"} component={Agendar} />
       <Route path={"/reuniao/:token"} component={ReuniaoPublica} />
       <Route path={"/o/:slug"} component={Oferta} />

@@ -6,7 +6,7 @@
 import { readFile } from 'node:fs/promises';
 import path from 'node:path';
 import QRCode from 'qrcode';
-import { PDFDocument, StandardFonts, rgb, degrees, type PDFFont, type PDFImage, type PDFPage, type RGB } from 'pdf-lib';
+import { PDFDocument, PDFName, PDFString, StandardFonts, rgb, degrees, type PDFFont, type PDFImage, type PDFPage, type RGB } from 'pdf-lib';
 import { pastaTemplates } from '../../contratos/render';
 
 export const A4: [number, number] = [595.28, 841.89];
@@ -152,6 +152,8 @@ export interface DadosLamina {
   codigoBarras: string;
   /** PIX copia e cola do Asaas */
   pixPayload: string | null;
+  /** Página pública de copiar o Pix (/pix/<token>): vira botão clicável no PDF */
+  pixUrl?: string | null;
   /** QR do PIX gerado pelo Asaas (PNG base64), quando veio */
   pixQrBase64?: string | null;
   beneficiario: string;
@@ -285,9 +287,13 @@ export async function desenharLamina(k: Kit, p: PDFPage, yTopo: number, d: Dados
   d.instrucoes.slice(0, 6).forEach((l, i) => texto(p, l, FX + 4, fy - 16 - i * 8.6, 6.3, k.f, COR.preto, wEsq - 80));
   if (d.pixPayload || d.pixQrBase64) {
     const qr = d.pixQrBase64 ? await k.doc.embedPng(Buffer.from(d.pixQrBase64, 'base64')) : await qrPng(k, d.pixPayload!);
-    const q = 46;
+    const q = d.pixUrl ? 40 : 46;
     textoCentro(p, 'PAGUE COM PIX', FX + wEsq - 38, fy - 15, 5.6, k.fb);
     p.drawImage(qr, { x: FX + wEsq - 38 - q / 2, y: fy - 19 - q, width: q, height: q });
+    if (d.pixUrl) {
+      botaoPix(k, p, FX + wEsq - 74, fy - hi + 1.5, 72, 8.5, d.pixUrl, 'TOQUE AQUI E COPIE O PIX');
+      linkClicavel(k, p, FX + wEsq - 38 - q / 2, fy - 19 - q, q, q, d.pixUrl);
+    }
   }
   ['(-) Desconto/Abatimento', '(+) Mora/Multa', '(+) Outros acréscimos', '(=) Valor cobrado'].forEach((r, i) => caixa(k, p, FX + wEsq, fy - i * 18.5, colDir, 18.5, r));
   fy -= hi;
@@ -299,6 +305,27 @@ export async function desenharLamina(k: Kit, p: PDFPage, yTopo: number, d: Dados
   fy -= hp;
   desenharItf(p, d.codigoBarras, FX + 1, fy - 2 - 10 * MM);
   textoDir(p, 'Autenticação mecânica — Ficha de Compensação', X1, yTopo - LAMINA_ALTURA + 2, 5.4, k.f);
+}
+
+/** Área clicável (link) no PDF: toque no celular abre a URL */
+export function linkClicavel(k: Kit, p: PDFPage, x: number, y: number, w: number, h: number, url: string) {
+  const ctx = k.doc.context;
+  const annot = ctx.register(ctx.obj({
+    Type: 'Annot', Subtype: 'Link', Rect: [x, y, x + w, y + h], Border: [0, 0, 0],
+    A: { Type: 'Action', S: 'URI', URI: PDFString.of(url) },
+  }));
+  const atuais = p.node.lookup(PDFName.of('Annots'));
+  if (atuais && 'push' in (atuais as any)) (atuais as any).push(annot);
+  else p.node.set(PDFName.of('Annots'), ctx.obj([annot]));
+}
+
+/** Botão "toque aqui para copiar o Pix" (retângulo verde com o texto), já com o link */
+export function botaoPix(k: Kit, p: PDFPage, x: number, y: number, w: number, h: number, url: string, rotulo = 'TOQUE AQUI PARA COPIAR O PIX') {
+  p.drawRectangle({ x, y, width: w, height: h, color: COR.verde });
+  const size = Math.min(7.2, h * 0.5);
+  const tw = k.fb.widthOfTextAtSize(rotulo, size);
+  p.drawText(rotulo, { x: x + (w - tw) / 2, y: y + (h - size) / 2 + 1, size, font: k.fb, color: rgb(1, 1, 1) });
+  linkClicavel(k, p, x, y, w, h, url);
 }
 
 /** Linha tracejada de corte horizontal */

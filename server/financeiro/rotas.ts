@@ -435,6 +435,26 @@ export function registrarRotasFinanceiro(app: Express) {
   });
 
   // Termo aditivo de renegociação: página do comprador (/aditivo/:token), código no WhatsApp e assinatura
+  // Pix da cobrança (/pix/<token>): botão "copiar o Pix" do boleto e do carnê — público, sem cache, fora das buscas
+  const contadorPix = new Map<string, { n: number; desde: number }>();
+  app.get('/api/public/pix/:token', async (req, res) => {
+    res.setHeader('Cache-Control', 'no-store');
+    res.setHeader('X-Robots-Tag', 'noindex, nofollow');
+    const ip = String(req.headers['x-forwarded-for'] ?? req.socket.remoteAddress ?? '').split(',').pop()!.trim();
+    const c = contadorPix.get(ip);
+    if (c && Date.now() - c.desde < 10 * 60_000 && c.n >= 60) return res.status(429).json({ ok: false, error: 'Muitas tentativas. Tente em alguns minutos.' });
+    contadorPix.set(ip, c && Date.now() - c.desde < 10 * 60_000 ? { n: c.n + 1, desde: c.desde } : { n: 1, desde: Date.now() });
+    try {
+      const { paginaPix } = await import('./pixPublico');
+      const p = await paginaPix(String(req.params.token));
+      if (!p) return res.status(404).json({ ok: false, error: 'Link inválido' });
+      res.json({ ok: true, ...p });
+    } catch (e: any) {
+      console.error('[Pix público]', e?.message);
+      res.status(500).json({ ok: false, error: 'Não foi possível carregar o Pix agora' });
+    }
+  });
+
   app.get('/api/aditivo/:token', async (req, res) => {
     try {
       if (!(await limitePortal(req, res))) return;
