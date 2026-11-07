@@ -3,6 +3,17 @@
 Cada versão nova vai no TOPO. Depois rode `npm run release` (valida e atualiza o package.json);
 ao subir, o servidor grava a versão no banco e todos recebem o aviso "Novidades da versão".
 
+## 1.130.1 — 2026-11-07
+tipo: patch
+obrigatoria: nao
+titulo: Delimitação das chácaras: tela permitida e regras de madeira e arame mais claras
+publico: equipe
+
+### Correções
+- Tela deixa de ser proibida: permitida para galinheiro, viveiro e cercados de aves e pequenos animais, fixada em piquetes de eucalipto tratado ou em muro
+- Diretrizes de Uso (v1.2) com itens separados: a única madeira permitida é o eucalipto tratado (madeira nativa proibida) e arame farpado proibido (somente arame liso)
+- Mesmo texto na cláusula 6.3.1 do contrato (todos os planos), no Regimento Interno (Estatuto v1.4) e no checklist para o cliente
+
 ## 1.130.0 — 2026-11-07
 tipo: minor
 obrigatoria: nao
