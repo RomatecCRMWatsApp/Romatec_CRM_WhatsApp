@@ -38,7 +38,7 @@ function RetornoCampanha({ r, total }: { r: Roi; total?: boolean }) {
 
 const CANAL_LABEL: Record<string, string> = {
   meta_ctwa: "Anúncio Click-to-WhatsApp", meta_leadads: "Meta Lead Ads", google_ads: "Google Ads",
-  portal_olx: "OLX", portal_zap: "ZAP Imóveis", portal_vivareal: "VivaReal", instagram_organico: "Instagram orgânico",
+  portal_olx: "OLX", evento: "Evento / lançamento", portal_zap: "ZAP Imóveis", portal_vivareal: "VivaReal", instagram_organico: "Instagram orgânico",
   placa_qr: "QR da placa", site: "Site", indicacao: "Indicação", wifi: "Wi-Fi", outro: "Outro",
 };
 

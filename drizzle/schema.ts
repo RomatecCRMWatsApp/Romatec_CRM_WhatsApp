@@ -1308,6 +1308,8 @@ export const reuniaoConvidados = mysqlTable("reuniaoConvidados", {
   status: varchar("status", { length: 12 }).notNull().default("pendente"),
   respondidoEm: timestamp("respondidoEm"),
   conviteEnviadoEm: timestamp("conviteEnviadoEm"),
+  /** Entrada registrada na recepção do evento (QR do convite ou pelo nome) */
+  checkinEm: timestamp("checkinEm"),
   createdAt: timestamp("createdAt").defaultNow().notNull(),
 }, (t) => ({
   uqToken: uniqueIndex("uq_reuniao_conv_token").on(t.token),

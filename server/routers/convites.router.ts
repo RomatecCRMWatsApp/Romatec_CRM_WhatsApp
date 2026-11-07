@@ -2,7 +2,7 @@
 import { z } from "zod";
 import { TRPCError } from "@trpc/server";
 import { protectedProcedure, router } from "../_core/trpc";
-import { convidadoSchema, reuniaoSchema } from "../../shared/convites";
+import { convidadoSchema, naPortaSchema, reuniaoSchema } from "../../shared/convites";
 
 const C = () => import("../convites");
 
@@ -36,5 +36,11 @@ export const convitesRouter = router({
   /** Sem convidadoIds: manda para todos que ainda não responderam */
   enviar: protectedProcedure.input(z.object({ reuniaoId: z.number().int().positive(), convidadoIds: z.array(z.number().int()).max(500).optional() }))
     .mutation(({ ctx, input }) => { escritorio(ctx); return comErro(async () => (await C()).enviarConvites(input.reuniaoId, input.convidadoIds)); }),
+  // Recepção do evento: quem vê a reunião (escritório e corretores do empreendimento) registra as entradas
+  checkinQr: protectedProcedure.input(z.object({ reuniaoId: z.number().int().positive(), lido: z.string().min(1).max(500) }))
+    .mutation(({ ctx, input }) => comErro(async () => (await C()).checkinPorQr(input.reuniaoId, input.lido, escopo(ctx)))),
+  checkin: protectedProcedure.input(id).mutation(({ ctx, input }) => comErro(async () => (await C()).checkinConvidado(input.id, escopo(ctx)))),
+  desfazerCheckin: protectedProcedure.input(id).mutation(({ ctx, input }) => comErro(async () => (await C()).desfazerCheckin(input.id, escopo(ctx)))),
+  naPorta: protectedProcedure.input(naPortaSchema).mutation(({ ctx, input }) => comErro(async () => (await C()).cadastrarNaPorta(input.reuniaoId, input, escopo(ctx)))),
   removerFolder: protectedProcedure.input(id).mutation(({ ctx, input }) => { escritorio(ctx); return comErro(async () => (await C()).salvarFolder(input.id, null)); }),
 });

@@ -273,7 +273,7 @@ const ORIGEM_LABEL: Record<string, string> = {
   site: '🌐 Site',
   indicacao: '🤝 Indicação',
   whatsapp: '📱 WhatsApp',
-  portal_zap: '🏠 ZAP Imóveis', portal_vivareal: '🏠 VivaReal', portal_olx: '🏠 OLX', parceiro: '🤝 Parceiro (API)',
+  portal_zap: '🏠 ZAP Imóveis', portal_vivareal: '🏠 VivaReal', portal_olx: '🏠 OLX', parceiro: '🤝 Parceiro (API)', evento: '🎉 Evento / lançamento',
 };
 
 // Dados vêm de formulário público — escapar antes de usar parse_mode HTML

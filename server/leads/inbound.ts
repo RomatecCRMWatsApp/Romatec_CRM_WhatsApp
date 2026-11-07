@@ -278,7 +278,7 @@ export async function processarEntradaWhatsApp(input: { phone: string; texto: st
 
 const CANAL_LABEL: Record<string, string> = {
   meta_ctwa: 'Anúncio Click-to-WhatsApp', meta_leadads: 'Meta Lead Ads', google_ads: 'Google Ads',
-  portal_olx: 'OLX', portal_zap: 'ZAP Imóveis', portal_vivareal: 'VivaReal', instagram_organico: 'Instagram orgânico',
+  portal_olx: 'OLX', evento: 'Evento / lançamento', portal_zap: 'ZAP Imóveis', portal_vivareal: 'VivaReal', instagram_organico: 'Instagram orgânico',
   placa_qr: 'QR da placa', site: 'Site', busca_organica: 'Google/busca orgânica',
   facebook_organico: 'Facebook orgânico', outras_redes: 'Outras redes (YouTube, TikTok…)', indicacao: 'Indicação', wifi: 'Wi-Fi', whatsapp_direto: 'WhatsApp direto', outro: 'Outro',
 };

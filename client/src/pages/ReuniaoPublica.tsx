@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import QRCode from "qrcode";
 import { useRoute } from "wouter";
 import { CalendarDays, CheckCircle2, FileText, Loader2, MapPin, Video, XCircle } from "lucide-react";
 import { C, SERIF, SANS, useBrandFonts } from "@/components/bom-jardims/marca";
@@ -6,7 +7,7 @@ import { C, SERIF, SANS, useBrandFonts } from "@/components/bom-jardims/marca";
 type Pagina = {
   titulo: string; empreendimento: string | null; quandoTexto: string; local: string | null; linkVideo: string | null; descricao: string | null;
   folder: { mime: string; nome: string; url: string } | null; cancelada: boolean; encerrada: boolean;
-  geral: boolean; convidado: { nome: string; status: "pendente" | "confirmado" | "recusado" } | null;
+  geral: boolean; convidado: { nome: string; status: "pendente" | "confirmado" | "recusado"; entrou?: boolean } | null;
 };
 
 const campo: React.CSSProperties = { width: "100%", boxSizing: "border-box", padding: "12px 14px", borderRadius: 12, border: "1px solid #D8CFB4", background: "#fff", fontSize: 16, fontFamily: SANS, color: C.texto };
@@ -14,6 +15,24 @@ const botao = (cor: string, cheio: boolean): React.CSSProperties => ({
   flex: 1, minWidth: 140, padding: "14px 16px", borderRadius: 12, border: `2px solid ${cor}`, background: cheio ? cor : "#fff", color: cheio ? "#fff" : cor,
   fontSize: 16, fontWeight: 700, fontFamily: SANS, cursor: "pointer",
 });
+
+/** QR de entrada: o próprio link do convite individual, lido na recepção do evento */
+function QrEntrada({ token, entrou }: { token: string; entrou?: boolean }) {
+  const [src, setSrc] = useState<string | null>(null);
+  useEffect(() => {
+    QRCode.toDataURL(`${window.location.origin}/reuniao/${token}`, { width: 480, margin: 1, errorCorrectionLevel: "M" }).then(setSrc).catch(() => setSrc(null));
+  }, [token]);
+  if (!src) return null;
+  return (
+    <div style={{ marginTop: 16, padding: 16, borderRadius: 14, background: C.creme, textAlign: "center" }}>
+      <p style={{ margin: "0 0 10px", fontWeight: 700, fontSize: 16 }}>{entrou ? "Entrada registrada. Bem-vindo(a)!" : "Seu QR de entrada"}</p>
+      {!entrou && <>
+        <img src={src} alt="QR code de entrada no evento" width={240} height={240} style={{ width: 240, height: 240, borderRadius: 8, background: "var(--c-ffffff)" }} />
+        <p style={{ margin: "10px 0 0", color: C.suave, fontSize: 14 }}>Mostre este QR na recepção. Para achar depois, é só abrir este mesmo link.</p>
+      </>}
+    </div>
+  );
+}
 
 /** Convite de reunião (público): mostra a reunião e registra "Confirmar presença" / "Não poderei" */
 export default function ReuniaoPublica() {
@@ -25,7 +44,7 @@ export default function ReuniaoPublica() {
   const [f, setF] = useState({ nome: "", telefone: "", website: "" });
   const [enviando, setEnviando] = useState<string | null>(null);
   const [erro, setErro] = useState<string | null>(null);
-  const [resposta, setResposta] = useState<{ status: string; nome: string } | null>(null);
+  const [resposta, setResposta] = useState<{ status: string; nome: string; token?: string | null } | null>(null);
 
   useEffect(() => {
     fetch(`/api/public/reuniao/${encodeURIComponent(token)}`).then(r => r.json())
@@ -42,7 +61,7 @@ export default function ReuniaoPublica() {
         method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ resposta: r, ...(p?.geral ? f : {}) }),
       }).then(x => x.json());
       if (!j.ok) setErro(j.error || "Não foi possível registrar.");
-      else setResposta({ status: j.status, nome: j.nome ?? p?.convidado?.nome ?? f.nome });
+      else setResposta({ status: j.status, nome: j.nome ?? p?.convidado?.nome ?? f.nome, token: j.token ?? null });
     } catch { setErro("Sem conexão. Tente de novo."); } finally { setEnviando(null); }
   };
 
@@ -78,10 +97,12 @@ export default function ReuniaoPublica() {
                   {resposta.status === "confirmado" ? <CheckCircle2 size={44} color="#1F8A4C" /> : <XCircle size={44} color="#B23A3A" />}
                   <p style={{ fontSize: 18, fontWeight: 700, margin: "8px 0 4px" }}>{resposta.status === "confirmado" ? "Presença confirmada!" : "Resposta registrada."}</p>
                   <p style={{ color: C.suave, margin: 0 }}>{resposta.status === "confirmado" ? "Obrigado. Esperamos você." : "Obrigado por avisar."} Se mudar de ideia, abra este link de novo.</p>
+                  {resposta.status === "confirmado" && (p.geral ? resposta.token : token) && <QrEntrada token={(p.geral ? resposta.token : token) as string} entrou={p.convidado?.entrou} />}
                 </div>
               ) : (
                 <>
-                  {p.convidado && atual !== "pendente" && <p style={{ color: C.suave, marginTop: 0 }}>Sua resposta atual: <b>{atual === "confirmado" ? "vou participar" : "não poderei ir"}</b>. Você pode mudar abaixo.</p>}
+                  {p.convidado && atual === "confirmado" && <QrEntrada token={token} entrou={p.convidado.entrou} />}
+                  {p.convidado && atual !== "pendente" && <p style={{ color: C.suave }}>Sua resposta atual: <b>{atual === "confirmado" ? "vou participar" : "não poderei ir"}</b>. Você pode mudar abaixo.</p>}
                   {p.geral && (
                     <div style={{ display: "grid", gap: 10, marginBottom: 14 }}>
                       <input style={campo} placeholder="Seu nome" autoComplete="name" value={f.nome} onChange={e => setF({ ...f, nome: e.target.value })} aria-label="Seu nome" />

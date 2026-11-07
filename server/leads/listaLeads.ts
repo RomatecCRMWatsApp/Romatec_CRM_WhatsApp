@@ -35,7 +35,7 @@ const ORIGEM_LABEL: Record<string, string> = {
   indicacao: 'Indicação',
   whatsapp: 'WhatsApp',
   whatsapp_empreendimento: 'WhatsApp',
-  portal_zap: 'ZAP Imóveis', portal_vivareal: 'VivaReal', portal_olx: 'OLX', parceiro: 'Parceiro (API)',
+  portal_zap: 'ZAP Imóveis', portal_vivareal: 'VivaReal', portal_olx: 'OLX', parceiro: 'Parceiro (API)', evento: 'Evento / lançamento',
 };
 
 /** "Meta Lead Ads · Condomínio de Chácaras Bom Jardims", "Site (formulário)", "WhatsApp direto"… */

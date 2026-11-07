@@ -3,6 +3,18 @@
 Cada versão nova vai no TOPO. Depois rode `npm run release` (valida e atualiza o package.json);
 ao subir, o servidor grava a versão no banco e todos recebem o aviso "Novidades da versão".
 
+## 1.120.0 — 2026-11-07
+tipo: minor
+obrigatoria: nao
+titulo: Lançamento: mapa de vendas ao vivo na TV e recepção por QR code
+publico: equipe
+
+### Novo
+- Mapa de vendas ao vivo para a TV do evento (/bom-jardims/ao-vivo): as chácaras mudam de cor poucos segundos depois da reserva, aparece o aviso "Chácara B13 acabou de ser reservada!", os contadores de disponíveis, reservadas e vendidas e um QR para o cliente escolher a chácara pelo celular. Rodapé com Romatec Consultoria Total · CRECI J-1234
+- Quem confirma presença no convite recebe o QR de entrada na própria página do convite
+- Convites › Recepção: lê o QR pela câmera do celular, registra a entrada pelo nome e cadastra na hora quem chegou sem convite; mostra quantos já chegaram
+- Quem confirma presença ou chega a um evento de empreendimento vira lead para os corretores (origem "Evento / lançamento"), sem mensagem automática
+
 ## 1.119.0 — 2026-11-07
 tipo: minor
 obrigatoria: nao

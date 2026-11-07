@@ -1,7 +1,7 @@
 import { useMemo, useRef, useState } from "react";
 import { useLocation, useRoute } from "wouter";
 import { toast } from "sonner";
-import { CalendarCheck, Copy, FileText, Loader2, Pencil, Plus, Send, Trash2, Upload, Users, X } from "lucide-react";
+import { CalendarCheck, Copy, FileText, Loader2, Pencil, Plus, ScanLine, Send, Trash2, Upload, Users, X } from "lucide-react";
 import { trpc } from "@/lib/trpc";
 import PageHeader from "@/components/PageHeader";
 import { Button } from "@/components/ui/button";
@@ -146,9 +146,12 @@ function Detalhe({ id }: { id: number }) {
     <div>
       <PageHeader icone={CalendarCheck} titulo={r.titulo} voltar={{ rotulo: "Convites de reunião", onClick: () => navigate("/convites") }}
         subtitulo={<>{dataHora(r.quando)}{r.empreendimento ? ` · ${r.empreendimento}` : ""}{r.cancelada ? " · CANCELADA" : ""}</>}
-        acoes={r.podeEditar && !r.cancelada && <>
-          <Button variant="outline" onClick={() => setEditando(v => !v)}><Pencil className="h-4 w-4" />Editar</Button>
-          <Button variant="outline" onClick={() => { if (confirm("Cancelar esta reunião? O link deixa de aceitar respostas.")) cancelar.mutate({ id }); }}><X className="h-4 w-4" />Cancelar reunião</Button>
+        acoes={!r.cancelada && <>
+          <Button onClick={() => navigate(`/convites/${id}/recepcao`)}><ScanLine className="h-4 w-4" />Recepção{r.chegaram ? ` · ${r.chegaram} chegaram` : ""}</Button>
+          {r.podeEditar && <>
+            <Button variant="outline" onClick={() => setEditando(v => !v)}><Pencil className="h-4 w-4" />Editar</Button>
+            <Button variant="outline" onClick={() => { if (confirm("Cancelar esta reunião? O link deixa de aceitar respostas.")) cancelar.mutate({ id }); }}><X className="h-4 w-4" />Cancelar reunião</Button>
+          </>}
         </>} />
       <div className="px-4 md:px-6 max-w-[1500px] mx-auto grid gap-4 pb-10">
         {editando && <FormReuniao inicial={r} onSalvo={() => setEditando(false)} onCancelar={() => setEditando(false)} />}
@@ -211,7 +214,8 @@ function Detalhe({ id }: { id: number }) {
                 {pessoas.map(c => (
                   <div key={c.id} className="flex flex-wrap items-center gap-2 px-4 py-2 text-sm">
                     <div className="min-w-0 flex-1">
-                      <b>{c.nome}</b> <span className="text-xs text-muted-foreground">{fone(c.telefone)}{c.origem === "link_geral" ? " · pelo link geral" : ""}</span>
+                      <b>{c.nome}</b> <span className="text-xs text-muted-foreground">{fone(c.telefone)}{c.origem === "link_geral" ? " · pelo link geral" : c.origem === "porta" ? " · cadastrado na porta" : ""}</span>
+                      {c.checkinEm && <span className="ml-1 rounded bg-ok-500/15 px-1.5 py-0.5 text-xs text-ok-400">chegou</span>}
                       <div className="text-xs text-muted-foreground">
                         {c.respondidoEm ? `Respondeu em ${dataHora(c.respondidoEm)}` : c.conviteEnviadoEm ? `Convite enviado em ${dataHora(c.conviteEnviadoEm)}` : "Convite ainda não enviado"}
                       </div>

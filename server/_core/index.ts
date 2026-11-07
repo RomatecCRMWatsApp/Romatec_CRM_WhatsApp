@@ -1461,6 +1461,8 @@ async function startServer() {
     await addSaas();
     const { addAutoResposta } = await import('./migrations/addAutoResposta');
     await addAutoResposta();
+    const { addCheckinEvento } = await import('./migrations/addCheckinEvento');
+    await addCheckinEvento();
     const { addDesfechoEncaminhamento } = await import('./migrations/addDesfechoEncaminhamento');
     await addDesfechoEncaminhamento().catch((e: any) => console.warn('[Migration] addDesfechoEncaminhamento:', e?.message));
     const { addMateriaisDivulgacaoBJ } = await import('./migrations/addMateriaisDivulgacaoBJ');

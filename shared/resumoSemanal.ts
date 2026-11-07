@@ -34,7 +34,7 @@ const brl = (v: number) => v.toLocaleString('pt-BR', { style: 'currency', curren
 const dataBr = (d: string) => d.split('-').reverse().slice(0, 2).join('/');
 const plural = (n: number, um: string, varios: string) => `${n} ${n === 1 ? um : varios}`;
 const ROTULO_ORIGEM: Record<string, string> = {
-  whatsapp: 'WhatsApp', instagram_ads: 'anúncio Instagram', instagram_dm: 'Direct', instagram_bio: 'link da bio', site: 'site', indicacao: 'indicação', sem_origem: 'sem origem',
+  whatsapp: 'WhatsApp', instagram_ads: 'anúncio Instagram', instagram_dm: 'Direct', instagram_bio: 'link da bio', site: 'site', indicacao: 'indicação', evento: 'evento', sem_origem: 'sem origem',
 };
 
 /** O texto que vai no WhatsApp (negrito com *, como no app) */

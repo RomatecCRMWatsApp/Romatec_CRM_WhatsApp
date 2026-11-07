@@ -83,3 +83,13 @@ export function lerLista(texto: string): { ok: { nome: string; telefone: string 
   return { ok, erros };
 }
 
+
+/** Token do convidado a partir do que o leitor de QR leu (o link /reuniao/<token> ou só o token); null se não reconhecer */
+export function tokenDoQr(lido: string): string | null {
+  const t = String(lido ?? '').trim().replace(/[?#].*$/, '').replace(/\/+$/, '');
+  const m = t.match(/(?:^|\/reuniao\/)([A-Za-z0-9_-]{16})$/);
+  return m ? m[1] : null;
+}
+
+/** Cadastro de quem chegou sem convite (na porta do evento) */
+export const naPortaSchema = z.object({ reuniaoId: z.number().int().positive(), nome: convidadoSchema.shape.nome, telefone: convidadoSchema.shape.telefone });

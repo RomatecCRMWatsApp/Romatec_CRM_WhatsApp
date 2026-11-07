@@ -37,6 +37,8 @@ const ListaInteresse = lazy(() => import("./pages/ListaInteresse"));
 const AgendaVisitas = lazy(() => import("./pages/AgendaVisitas"));
 const Reunioes = lazy(() => import("./pages/Reunioes"));
 const Convites = lazy(() => import("./pages/Convites"));
+const RecepcaoEvento = lazy(() => import("./pages/RecepcaoEvento"));
+const PainelVendasAoVivo = lazy(() => import("./pages/PainelVendasAoVivo"));
 const Ranking = lazy(() => import("./pages/Ranking"));
 const ReuniaoPublica = lazy(() => import("./pages/ReuniaoPublica"));
 const Recrutamento = lazy(() => import("./pages/Recrutamento"));
@@ -301,6 +303,9 @@ function Router() {
       <Route path={"/convites"}>
         {() => <SetupGuard component={Convites} />}
       </Route>
+      <Route path={"/convites/:id/recepcao"}>
+        {() => <SetupGuard component={RecepcaoEvento} />}
+      </Route>
       <Route path={"/convites/:id"}>
         {() => <SetupGuard component={Convites} />}
       </Route>
@@ -345,6 +350,7 @@ function Router() {
       <Route path={"/o/:slug"} component={Oferta} />
       <Route path={"/bom-jardims/chacara/:codigo"} component={BomJardimsChacara} />
       <Route path={"/bom-jardims/3d"} component={BomJardims3D} />
+      <Route path={"/bom-jardims/ao-vivo"} component={PainelVendasAoVivo} />
       <Route path={"/bom-jardims/rota"} component={BomJardimsRota} />
       <Route path={"/bom-jardims/formas-de-pagamento"} component={BomJardimsPagamento} />
       <Route path={"/obras-bom-jardim"} component={ObrasBomJardim} />
