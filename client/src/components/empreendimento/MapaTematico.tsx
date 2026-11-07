@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import { COR_SITUACAO, ROTULO_SITUACAO, SITUACOES_LOTE, type SituacaoLote } from "@shared/lotes";
 import LupaPortal, { alturaDaLupa, cantoDaLupa, densificar } from "@/components/bom-jardims/LupaPortal";
 import ZoomSvg from "@/components/mapa/ZoomSvg";
+import { BotaoSatelite, CreditoSatelite, SateliteSvg, useSatelite } from "@/lib/satelite";
 
 /**
  * Mapa temático dos lotes (SVG a partir das coordenadas). O desenho dos lotes vem do banco
@@ -59,6 +60,7 @@ export default function MapaTematico({ slug, lotes, ruas, perimetro, selecionado
   semLegenda?: boolean;
 }) {
   const [ctx, setCtx] = useState<Contexto | null>(contexto ?? null);
+  const [satelite, setSatelite] = useSatelite();
   useEffect(() => {
     if (contexto) return;
     fetch(`/${slug}/mapa.json`).then(r => (r.ok ? r.json() : null)).then(d => d && setCtx(d)).catch(() => {});
@@ -87,18 +89,19 @@ export default function MapaTematico({ slug, lotes, ruas, perimetro, selecionado
     const meio: [number, number] = centrosLotes.length
       ? [centrosLotes.reduce((s, p) => s + p[0], 0) / centrosLotes.length, centrosLotes.reduce((s, p) => s + p[1], 0) / centrosLotes.length]
       : [W / 2, H / 2];
-    return { itens, proj, H, larguraRua: Math.max(6, 12 * metro), larguraRio: Math.max(5, 9 * metro), contorno, meio };
+    return { itens, proj, H, larguraRua: Math.max(6, 12 * metro), larguraRio: Math.max(5, 9 * metro), contorno, meio, limites: { minLon, minLat, maxLon, maxLat } };
   }, [lotes, ctx, perimetro]);
 
   if (!desenho) return <p className="text-sm text-muted-foreground">Sem desenho dos lotes ainda. Envie o DXF do projeto na aba Arquivos e importe.</p>;
-  const { itens, proj, H, larguraRua, larguraRio, contorno, meio } = desenho;
+  const { itens, proj, H, larguraRua, larguraRio, contorno, meio, limites } = desenho;
+  const grama = satelite ? "none" : "url(#grama)";
   const fonte = compacto ? 9 : 11;
   // Inclinação média das ruas (rótulos do projeto) para alinhar os blocos
   const anguloRuas = ruas?.length ? inclinacao(ruas.reduce((s, r) => s + (((r.angulo % 180) + 180) % 180 > 90 ? (((r.angulo % 180) + 180) % 180) - 180 : ((r.angulo % 180) + 180) % 180), 0) / ruas.length) : -32;
 
   return (
     <div>
-      <div className="rounded-xl border border-border overflow-hidden shadow-inner">
+      <div className="relative rounded-xl border border-border overflow-hidden shadow-inner">
         <ZoomSvg W={W} H={H} rotulo="Mapa temático dos lotes" fundo="#E9EFDD">
           <defs>
             <pattern id="grama" width="14" height="14" patternUnits="userSpaceOnUse">
@@ -124,13 +127,14 @@ export default function MapaTematico({ slug, lotes, ruas, perimetro, selecionado
             </pattern>
           </defs>
           <rect width={W} height={H} fill="#E9EFDD" />
+          {satelite && <SateliteSvg limites={limites} projetar={proj} />}
           {/* Área total da propriedade (inclui área de vivência) em gramado; perímetro oficial tracejado */}
-          {ctx?.perimetro?.length ? <path d={caminho(ctx.perimetro.map(proj))} fill="url(#grama)" stroke="#5B4A2F" strokeWidth={1.5} strokeDasharray="2 5" strokeLinecap="round" /> : null}
-          {contorno.length && contorno !== ctx?.perimetro ? <path d={caminho(contorno.map(proj))} fill="url(#grama)" stroke="#5B4A2F" strokeWidth={2.5} strokeDasharray="2 5" strokeLinecap="round" /> : null}
+          {ctx?.perimetro?.length ? <path d={caminho(ctx.perimetro.map(proj))} fill={grama} stroke={satelite ? "#F2C04B" : "#5B4A2F"} strokeWidth={1.5} strokeDasharray="2 5" strokeLinecap="round" /> : null}
+          {contorno.length && contorno !== ctx?.perimetro ? <path d={caminho(contorno.map(proj))} fill={grama} stroke={satelite ? "#F2C04B" : "#5B4A2F"} strokeWidth={2.5} strokeDasharray="2 5" strokeLinecap="round" /> : null}
 
           {/* Área de vivência e recreação (na frente, junto ao rio) */}
           {ctx?.areas?.map(a => (
-            <path key={a.nome} d={caminho(a.poly.filter(valido).map(proj))} fill="url(#vivencia)" stroke="#2F7D3A" strokeWidth={1.5} strokeDasharray="6 4" pointerEvents="none" />
+            <path key={a.nome} d={caminho(a.poly.filter(valido).map(proj))} fill="url(#vivencia)" fillOpacity={satelite ? 0.3 : 1} stroke="#2F7D3A" strokeWidth={1.5} strokeDasharray="6 4" pointerEvents="none" />
           ))}
 
           {/* APP (30 m): faixa de preservação ao longo do rio, discreta */}
@@ -156,7 +160,7 @@ export default function MapaTematico({ slug, lotes, ruas, perimetro, selecionado
           {ctx?.ruas?.filter(r => r.line.filter(valido).length > 1).map(r => {
             const d = caminho(r.line.filter(valido).map(proj), false);
             return (
-              <g key={r.nome}>
+              <g key={r.nome} opacity={satelite ? 0.35 : 1}>
                 <path d={d} fill="none" stroke="#E2DDD2" strokeWidth={larguraRua + 4} strokeLinecap="round" strokeLinejoin="round" />
                 <path d={d} fill="none" stroke="url(#bloquete)" strokeWidth={larguraRua} strokeLinecap="round" strokeLinejoin="round" />
               </g>
@@ -165,7 +169,7 @@ export default function MapaTematico({ slug, lotes, ruas, perimetro, selecionado
 
           {/* Ruas entre as quadras: faixa de 6 m em volta de cada lote (meio-fio + asfalto). Onde dois
               lotes ficam frente a frente as faixas se juntam e formam a rua inteira. */}
-          <g pointerEvents="none">
+          <g pointerEvents="none" opacity={satelite ? 0.35 : 1}>
             {itens.map(l => <path key={`mf${l.id}`} d={caminho(l.poly.map(proj))} fill="none" stroke="#E2DDD2" strokeWidth={larguraRua + 4} strokeLinejoin="round" />)}
             {itens.map(l => <path key={`as${l.id}`} d={caminho(l.poly.map(proj))} fill="none" stroke="url(#bloquete)" strokeWidth={larguraRua} strokeLinejoin="round" />)}
           </g>
@@ -180,7 +184,7 @@ export default function MapaTematico({ slug, lotes, ruas, perimetro, selecionado
             return (
               <g key={l.id} onClick={() => onSelecionar?.(l.id)} style={{ cursor: onSelecionar ? "pointer" : "default" }}
                 role={onSelecionar ? "button" : undefined} aria-label={`${l.codigo} — ${ROTULO_SITUACAO[l.situacao]}`} filter={sel ? "url(#sombra)" : undefined}>
-                <path d={d} fill={sel ? COR_SELECIONADO : apagado ? "#EEF1F3" : COR_SITUACAO[l.situacao]} fillOpacity={sel ? 0.55 : apagado ? 1 : 0.95} />
+                <path d={d} fill={sel ? COR_SELECIONADO : apagado ? "#EEF1F3" : COR_SITUACAO[l.situacao]} fillOpacity={sel ? 0.55 : satelite ? (apagado ? 0.25 : 0.5) : apagado ? 1 : 0.95} />
                 <path d={d} fill="none" stroke="#FFFFFF" strokeWidth={2.2} strokeOpacity={0.9} />
                 <path d={d} fill="none" stroke="#6B4F2A" strokeWidth={1.3} strokeDasharray="0.1 4" strokeLinecap="round" />
                 {sel && <path d={d} fill="none" stroke="#0B1F5C" strokeWidth={3.5} />}
@@ -294,6 +298,10 @@ export default function MapaTematico({ slug, lotes, ruas, perimetro, selecionado
             return <LupaPortal portal={[pt[0], pt[1] - 6]} caixa={caixa} imagem={portal.imagem} rotulo="Portal de entrada" raio={18} />;
           })()}
         </ZoomSvg>
+        <div className="absolute left-2.5 bottom-2.5 flex flex-wrap items-center gap-2" style={{ maxWidth: "calc(100% - 70px)" }}>
+          <BotaoSatelite ligado={satelite} onChange={setSatelite} />
+          {satelite && <CreditoSatelite />}
+        </div>
       </div>
       {!semLegenda && (
         <div className="flex flex-wrap gap-x-4 gap-y-1.5 mt-2 text-xs">

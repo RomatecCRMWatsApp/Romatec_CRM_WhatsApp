@@ -2,13 +2,15 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { Compass, Loader2, Mountain, Rotate3d, SlidersHorizontal } from "lucide-react";
 import type { Map as MapLibre, StyleSpecification } from "maplibre-gl";
 import { STATUS_COR, STATUS_LABEL, type LoteInfo, type MapaData } from "./LoteMap";
+import { BotaoSatelite, SATELITE_CREDITO, SATELITE_TILES, useSatelite } from "@/lib/satelite";
 
 /**
  * Mapa 3D do Bom Jardims (MapLibre GL): relevo real do terreno (dados abertos de elevação da AWS/Mapzen), as chácaras
  * em blocos coloridos pela situação ao vivo, ruas, córrego, APP e área de vivência — tudo das coordenadas
  * georreferenciadas de /bom-jardims/mapa.json. Dois dedos giram e inclinam; um toque escolhe a chácara.
  * O "chão" é o ortomosaico do drone quando houver (VITE_MAPA_ORTOFOTO: URL de tiles {z}/{x}/{y}). Vistas: Plano (abre
- * assim, inclinado e sem relevo), Alto relevo (terreno realçado) e Vista de cima (planta, sem inclinação). Fora do Bom Jardims (ou no sistema) as cores vêm de `corDoLote` (situação interna).
+ * assim, inclinado e sem relevo), Alto relevo (terreno realçado) e Vista de cima (planta, sem inclinação); Satélite liga a foto
+ * de satélite por baixo em qualquer vista (inclusive com o relevo). Fora do Bom Jardims (ou no sistema) as cores vêm de `corDoLote` (situação interna).
  */
 
 type Pt = [number, number];
@@ -34,9 +36,11 @@ function estilo(): StyleSpecification {
     sources: {
       relevo: { type: "raster-dem", tiles: ["https://s3.amazonaws.com/elevation-tiles-prod/terrarium/{z}/{x}/{y}.png"], encoding: "terrarium", tileSize: 256, maxzoom: 15, attribution: "Relevo: Mapzen/AWS Terrain Tiles" },
       ...(ORTOFOTO ? { orto: { type: "raster" as const, tiles: [ORTOFOTO], tileSize: 256, maxzoom: 21, attribution: "Imagem: drone Romatec" } } : {}),
+      satelite: { type: "raster", tiles: [SATELITE_TILES], tileSize: 256, maxzoom: 18, attribution: SATELITE_CREDITO },
     },
     layers: [
       { id: "fundo", type: "background", paint: { "background-color": "#C9D9AE" } },
+      { id: "satelite", type: "raster", source: "satelite", layout: { visibility: "none" } },
       ...(ORTOFOTO ? [{ id: "orto", type: "raster" as const, source: "orto" }] : [{ id: "sombra", type: "hillshade" as const, source: "relevo", layout: { visibility: "none" as const }, paint: { "hillshade-shadow-color": "#5F7A45", "hillshade-highlight-color": "#EEF3E1", "hillshade-exaggeration": 0.6 } }]),
     ],
   } as StyleSpecification;
@@ -60,6 +64,7 @@ export default function Mapa3D({ lotes, selected, onSelect, dados, destaque, alt
   const [girando, setGirando] = useState(false);
   const [filtro, setFiltro] = useState({ aberto: false, soLivres: false, areaMin: 0 });
   const [vista, setVista] = useState<"plano" | "relevo" | "cima">("plano");
+  const [satelite, setSatelite] = useSatelite();
   const relevo = vista === "relevo";
   const byCodigo = useMemo(() => new Map(lotes.map(l => [l.codigo, l])), [lotes]);
 
@@ -165,6 +170,20 @@ export default function Mapa3D({ lotes, selected, onSelect, dados, destaque, alt
     m.easeTo({ center: centroEmp, zoom: zoom != null ? zoom - (vista === "cima" ? 0 : 0.2) : undefined, pitch, bearing, duration: 800 });
   }, [vista, relevo, pronto]);
 
+  // Satélite: foto por baixo; o desenho fica translúcido para o terreno aparecer
+  useEffect(() => {
+    const m = mapa.current;
+    if (!pronto || !m) return;
+    m.setLayoutProperty("satelite", "visibility", satelite ? "visible" : "none");
+    if (m.getLayer("perimetro-fill")) m.setPaintProperty("perimetro-fill", "fill-opacity", satelite || ORTOFOTO ? 0 : 0.55);
+    if (m.getLayer("areas")) m.setPaintProperty("areas", "fill-opacity", satelite ? 0.25 : 0.6);
+    if (m.getLayer("app")) m.setPaintProperty("app", "fill-opacity", satelite ? 0.2 : 0.45);
+    if (m.getLayer("ruas")) m.setPaintProperty("ruas", "line-opacity", satelite ? 0.55 : 1);
+    m.setPaintProperty("lotes", "fill-extrusion-opacity", satelite ? 0.55 : 0.9);
+    if (m.getLayer("perimetro-linha")) m.setPaintProperty("perimetro-linha", "line-color", satelite ? "#F2C04B" : "#0C3320");
+    if (m.getLayer("lotes-borda")) m.setPaintProperty("lotes-borda", "line-color", satelite ? "#FFFFFF" : "#0C3320");
+  }, [satelite, pronto]);
+
   // Giro automático (vitrine do stand)
   useEffect(() => {
     if (!girando || !pronto) return;
@@ -198,8 +217,10 @@ export default function Mapa3D({ lotes, selected, onSelect, dados, destaque, alt
                 </button>
               ))}
             </div>
+            <BotaoSatelite ligado={satelite} onChange={setSatelite} estilo={{ boxShadow: "none" }} />
           </div>
         )}
+        {pronto && destaque && <div style={{ position: "absolute", left: 10, top: 10 }}><BotaoSatelite ligado={satelite} onChange={setSatelite} /></div>}
         {filtro.aberto && (
           <div style={{ position: "absolute", left: 10, top: 56, width: 250, padding: 12, borderRadius: 12, background: "color-mix(in srgb, var(--c-ffffff) 96%, transparent)", color: "var(--c-23352a)", fontSize: 13, boxShadow: "0 6px 20px var(--c-00000033)" }}>
             <label style={{ display: "flex", gap: 8, alignItems: "center", marginBottom: 10 }}>

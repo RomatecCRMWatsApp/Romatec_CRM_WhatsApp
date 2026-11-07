@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import LupaPortal, { alturaDaLupa, cantoDaLupa, densificar } from "./LupaPortal";
 import ZoomSvg from "../mapa/ZoomSvg";
+import { BotaoSatelite, CreditoSatelite, SateliteSvg, useSatelite } from "@/lib/satelite";
 
 /**
  * Mapa de vendas interativo, desenhado a partir das coordenadas georreferenciadas
@@ -75,7 +76,7 @@ function useProjection(data: MapaData | null) {
       PAD + (lon - minLon) * k * scale,
       PAD + (maxLat - lat) * scale,
     ];
-    return { project, H };
+    return { project, H, limites: { minLon, minLat, maxLon, maxLat } };
   }, [data]);
 }
 
@@ -113,6 +114,7 @@ export default function LoteMap({ lotes, selected, onSelect, onMapLoaded, dados,
   const [data, setData] = useState<MapaData | null>(dados ?? null);
   const [error, setError] = useState(false);
   const proj = useProjection(data);
+  const [satelite, setSatelite] = useSatelite();
 
   useEffect(() => {
     if (dados) return;
@@ -130,17 +132,18 @@ export default function LoteMap({ lotes, selected, onSelect, onMapLoaded, dados,
     return <div style={{ height: 320, display: "flex", alignItems: "center", justifyContent: "center", color: "var(--c-0c3320)" }}>Carregando mapa…</div>;
   }
 
-  const { project, H } = proj;
+  const { project, H, limites } = proj;
   const sel = selected ? byCodigo.get(selected) : undefined;
 
   return (
     <div>
-      <div style={{ overflow: "hidden", borderRadius: 16, background: "var(--c-e7eedb)", border: "1px solid var(--c-cfd8bf)" }}>
+      <div style={{ position: "relative", overflow: "hidden", borderRadius: 16, background: "var(--c-e7eedb)", border: "1px solid var(--c-cfd8bf)" }}>
         <ZoomSvg W={W} H={H} rotulo="Mapa de vendas do Bom Jardims">
-          <path d={pathOf(data.perimetro.map(project))} fill="#D3E2BC" stroke="#0C3320" strokeWidth={2} strokeDasharray="6 4" />
+          {satelite && <SateliteSvg limites={limites} projetar={project} />}
+          <path d={pathOf(data.perimetro.map(project))} fill={satelite ? "none" : "#D3E2BC"} stroke={satelite ? "#F2C04B" : "#0C3320"} strokeWidth={2} strokeDasharray="6 4" />
           {/* Área de vivência e recreação na frente, junto ao rio */}
           {data.areas?.map(a => (
-            <path key={a.nome} d={pathOf(a.poly.filter(valido).map(project))} fill="#BFDB9C" stroke="#2F7D3A" strokeWidth={1.5} strokeDasharray="6 4" />
+            <path key={a.nome} d={pathOf(a.poly.filter(valido).map(project))} fill="#BFDB9C" fillOpacity={satelite ? 0.25 : 1} stroke="#2F7D3A" strokeWidth={1.5} strokeDasharray="6 4" />
           ))}
           {data.app?.poly?.length ? (
             <path d={pathOf(data.app.poly.filter(valido).map(project))} fill="#3F7A3A" fillOpacity={0.28} stroke="#2F6A2C" strokeOpacity={0.55} strokeWidth={1} pointerEvents="none">
@@ -172,8 +175,8 @@ export default function LoteMap({ lotes, selected, onSelect, onMapLoaded, dados,
                 aria-label={`Chácara ${l.codigo} — ${STATUS_LABEL[status]}`}
                 tabIndex={clickable ? 0 : undefined}
                 onKeyDown={e => { if (clickable && (e.key === "Enter" || e.key === " ")) { e.preventDefault(); onSelect(l.codigo); } }}>
-                <path d={pathOf(pts)} fill={fill} fillOpacity={isSel ? 0.55 : 1} stroke={isSel ? "#0B1F5C" : "#FFFFFF"} strokeWidth={isSel ? 3.5 : 1.5} />
-                <text x={cx} y={cy + 4} textAnchor="middle" fontSize={11} fontWeight={700} fill="#0C3320" pointerEvents="none">
+                <path d={pathOf(pts)} fill={fill} fillOpacity={isSel ? 0.55 : satelite ? 0.5 : 1} stroke={isSel ? "#0B1F5C" : "#FFFFFF"} strokeWidth={isSel ? 3.5 : 1.5} />
+                <text x={cx} y={cy + 4} textAnchor="middle" fontSize={11} fontWeight={700} fill="#0C3320" stroke={satelite ? "#FFFFFF" : undefined} strokeWidth={satelite ? 3 : undefined} paintOrder="stroke" pointerEvents="none">
                   {l.codigo}
                 </text>
               </g>
@@ -219,6 +222,10 @@ export default function LoteMap({ lotes, selected, onSelect, onMapLoaded, dados,
             return <LupaPortal portal={pt} caixa={caixa} imagem={portal.imagem} rotulo="Portal de entrada" raio={15} />;
           })()}
         </ZoomSvg>
+        <div style={{ position: "absolute", left: 10, bottom: 10, display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap", maxWidth: "calc(100% - 70px)" }}>
+          <BotaoSatelite ligado={satelite} onChange={setSatelite} />
+          {satelite && <CreditoSatelite />}
+        </div>
       </div>
 
       {/* Escolha pela lista (mais fácil no celular) */}

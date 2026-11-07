@@ -3,6 +3,17 @@
 Cada versão nova vai no TOPO. Depois rode `npm run release` (valida e atualiza o package.json);
 ao subir, o servidor grava a versão no banco e todos recebem o aviso "Novidades da versão".
 
+## 1.121.0 — 2026-11-07
+tipo: minor
+obrigatoria: nao
+titulo: Vista de satélite em todos os mapas
+publico: todos
+
+### Novo
+- Botão "Satélite" em todos os mapas: mapa 3D (junto com Plano, Alto relevo e Vista de cima), planta do Bom Jardims no site e mapa dos empreendimentos no sistema
+- A foto de satélite fica por baixo das chácaras, que ficam translúcidas nas cores da situação; dá para combinar com o Alto relevo no mapa 3D
+- A escolha fica salva no aparelho: quem ligou o satélite vê assim nos outros mapas
+
 ## 1.120.2 — 2026-11-07
 tipo: patch
 obrigatoria: nao
