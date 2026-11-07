@@ -174,7 +174,7 @@ export default function Empreendimento() {
     <div>
       <PageHeader icone={MapIcon} titulo={emp.nome} subtitulo={[emp.municipio, emp.uf].filter(Boolean).join("/") + ` · ${lotes.length} lotes`} />
       <div className="px-4 md:px-6 pb-8 max-w-[1500px] mx-auto space-y-4">
-        {!emp.registroMatricula && (
+        {admin && !emp.registroMatricula && (
           <div className="flex items-start gap-2 rounded-xl border border-warn-500/40 bg-warn-500/10 p-3 text-sm text-warn-200">
             <AlertTriangle className="h-4 w-4 mt-0.5 shrink-0" />
             <p><b>Empreendimento sem registro no cartório informado.</b> A Licença de Operação é ambiental e não substitui o registro do parcelamento (Lei 6.766/79). Reservas, entradas e vendas registradas aqui são controle interno sob sua responsabilidade.</p>

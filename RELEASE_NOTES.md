@@ -3,6 +3,15 @@
 Cada versão nova vai no TOPO. Depois rode `npm run release` (valida e atualiza o package.json);
 ao subir, o servidor grava a versão no banco e todos recebem o aviso "Novidades da versão".
 
+## 1.133.1 — 2026-11-07
+tipo: patch
+obrigatoria: nao
+titulo: Aviso de registro no cartório só para o administrador
+publico: admin
+
+### Melhorias
+- O aviso "Empreendimento sem registro no cartório informado" (na tela do empreendimento e na lista de empreendimentos) agora aparece só para o administrador; secretária, corretores e empreendedores não veem mais
+
 ## 1.133.0 — 2026-11-07
 tipo: minor
 obrigatoria: nao

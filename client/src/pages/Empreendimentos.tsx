@@ -1,5 +1,7 @@
 import { useLocation } from "wouter";
 import { trpc } from "@/lib/trpc";
+import { useAuth } from "@/_core/hooks/useAuth";
+import { perfilDe } from "@shared/equipe";
 import PageHeader from "@/components/PageHeader";
 import MapaTematico from "@/components/empreendimento/MapaTematico";
 import { CabecalhoEmpreendimento } from "@/components/empreendimento/Vitrine";
@@ -20,6 +22,9 @@ function PreviaMapa({ slug }: { slug: string }) {
 
 function Cartao({ e }: { e: Resumo }) {
   const [, navigate] = useLocation();
+  // Aviso de registro no cartório: só o administrador vê
+  const { user } = useAuth();
+  const admin = perfilDe(user as any) === "admin";
   // Corretor não habilitado: o empreendimento aparece, mas não abre (o servidor também recusa)
   if (!e.acesso) {
     return (
@@ -51,7 +56,7 @@ function Cartao({ e }: { e: Resumo }) {
             <div className="rounded-lg bg-ok-500/10 p-2"><p className="text-2xl font-bold text-ok-300">{e.disponiveis}</p><p className="text-[11px] text-muted-foreground">disponíveis</p></div>
             <div className="rounded-lg bg-alert-500/10 p-2"><p className="text-2xl font-bold text-alert-300">{e.vendidos}</p><p className="text-[11px] text-muted-foreground">vendidos</p></div>
           </div>
-          {e.semRegistro && <p className="mt-3 inline-flex items-center gap-1 text-[11px] text-warn-300"><AlertTriangle className="h-3 w-3" /> sem registro no cartório informado</p>}
+          {admin && e.semRegistro && <p className="mt-3 inline-flex items-center gap-1 text-[11px] text-warn-300"><AlertTriangle className="h-3 w-3" /> sem registro no cartório informado</p>}
           <p className="mt-auto pt-3 text-xs text-primary">Abrir mapa, lotes e documentos →</p>
         </div>
         <PreviaMapa slug={e.slug} />
