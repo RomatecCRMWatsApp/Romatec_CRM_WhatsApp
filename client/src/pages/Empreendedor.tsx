@@ -7,7 +7,7 @@ import { useAuth } from "@/_core/hooks/useAuth";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Bar, BarChart, CartesianGrid, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
-import { ArrowLeft, BarChart3, CalendarCheck, Trophy, Copy, Download, ExternalLink, FileText, IdCard, Images, LogOut, Map as MapIcon, Receipt, Share2, Table2, TrendingUp, Video } from "lucide-react";
+import { ArrowLeft, BadgePercent, BarChart3, CalendarCheck, Trophy, Copy, Download, ExternalLink, FileText, IdCard, Images, LogOut, Map as MapIcon, Receipt, Share2, Table2, TrendingUp, Video } from "lucide-react";
 import { FotoUsuario } from "@/components/AppShell";
 import { SinoNovidades } from "@/components/sistema/Novidades";
 import { APP_VERSION, AppFooter, RomatecAppIcon } from "@/brand";
@@ -17,6 +17,7 @@ import { ROTULO_TIPO_MATERIAL, type TipoMaterial } from "@shared/materiais";
 import { ROTULO_SITUACAO, type SituacaoLote } from "@shared/lotes";
 import { CabecalhoEmpreendimento, MapaVendas } from "@/components/empreendimento/Vitrine";
 import TabelasFinanciamento from "@/components/financeiro/TabelasFinanciamento";
+import { TabelaComissao } from "@/components/corretor/TabelaComissao";
 import { PainelCarteirinhas } from "@/pages/Carteirinhas";
 
 const ROTULO_TIPO: Record<string, string> = { pago: "Anúncios (pago)", organico: "Orgânico", outro: "Portais e outros" };
@@ -36,7 +37,7 @@ const STATUS_BOLETO: Record<string, [string, string]> = {
   emitida: ["Emitido", "bg-warn-500/15 text-warn-300"], paga: ["Pago", "bg-ok-500/15 text-ok-300"],
   vencida: ["Vencido", "bg-danger-500/15 text-danger-300"], estornada: ["Estornado", "bg-secondary text-muted-foreground"],
 };
-const SECOES = [["mapa", "Mapa", MapIcon], ["vendas", "Vendas", TrendingUp], ["financeiro", "Financeiro e boletos", Receipt], ["leads", "Leads", BarChart3], ["carteirinhas", "Carteirinhas", IdCard], ["tabelas", "Tabelas", Table2], ["artes", "Artes", Images]] as const;
+const SECOES = [["mapa", "Mapa", MapIcon], ["vendas", "Vendas", TrendingUp], ["financeiro", "Financeiro e boletos", Receipt], ["leads", "Leads", BarChart3], ["carteirinhas", "Carteirinhas", IdCard], ["tabelas", "Tabelas", Table2], ["comissao", "Comissão", BadgePercent], ["artes", "Artes", Images]] as const;
 
 function Numero({ titulo, valor, sub, cor }: { titulo: string; valor: string | number; sub?: string; cor?: string }) {
   return (
@@ -375,6 +376,10 @@ export default function Empreendedor() {
 
         {/* 6. Tabelas de financiamento (mesmo cálculo do simulador) */}
         <div id="tabelas" className="scroll-mt-24 pt-4"><TabelasFinanciamento /></div>
+
+        {/* 6b. Comissão integral do escritório (5%), com o PDF */}
+        <Titulo id="comissao" icone={BadgePercent} sub="O que o empreendimento paga ao escritório em cada forma de pagamento, já incluída a parte do corretor">Tabela de comissão</Titulo>
+        <div className="rounded-2xl border border-border bg-card p-4"><TabelaComissao slug={slug} tipo="escritorio" /></div>
 
         {/* 6. Artes para divulgar */}
         <Titulo id="artes" icone={Images} sub="Toque em Enviar no celular para mandar direto para o WhatsApp, status ou Instagram. Nas legendas, sempre o CRECI e os contatos do corretor; não publique valores.">Artes ({artes.length})</Titulo>

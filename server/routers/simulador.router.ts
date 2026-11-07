@@ -66,47 +66,6 @@ async function planoDaCondicao(preco: number, condicao: "A" | "B" | "C", prazo: 
 }
 
 export const simuladorRouter = router({
-  /**
-   * Tabela de comissão do corretor no empreendimento (Área do corretor): para cada forma de pagamento, quanto e quando
-   * ele recebe. O corretor vê só a dele (o % do vínculo dele); o administrador vê a do corretor padrão. Secretaria e
-   * demais perfis não veem comissão.
-   */
-  tabelaComissao: protectedProcedure.input(z.object({ slug: z.string().max(80), lote: z.string().trim().max(10).optional() })).query(async ({ input, ctx }) => {
-    const perfil = ctx.permissoes.perfil;
-    if (perfil !== "admin" && perfil !== "corretor") throw new TRPCError({ code: "FORBIDDEN", message: "A tabela de comissão é só do corretor." });
-    const db = await dbOrThrow();
-    const [emp]: any[] = await db.select().from(empreendimentos).where(eq(empreendimentos.slug, input.slug)).limit(1);
-    if (!emp) throw new TRPCError({ code: "NOT_FOUND", message: "Empreendimento não encontrado" });
-    exigirAcesso(ctx.permissoes, "empreendimento", emp.id, emp.nome);
-    const [cond]: any[] = await db.select().from(condicoesPagamento)
-      .where(and(eq(condicoesPagamento.empreendimentoId, emp.id), eq(condicoesPagamento.ativo, true)))
-      .orderBy(desc(condicoesPagamento.vigenteDesde), desc(condicoesPagamento.id)).limit(1);
-    if (!cond) throw new TRPCError({ code: "PRECONDITION_FAILED", message: "Condições de pagamento não cadastradas para este empreendimento" });
-    const c = condicoesDaLinha(cond) as CondicoesPagamento;
-    const pct = perfil === "admin" ? c.comissaoCorretorPct : pctComissaoCorretor(ctx.permissoes, emp.id, c.comissaoCorretorPct);
-    // Chácaras à venda, com o preço de tabela e o valor à vista de cada uma
-    const todos: any[] = await db.select().from(lotes).where(eq(lotes.empreendimentoId, emp.id));
-    const chacaras = todos
-      .filter(l => seloDoLote(l) === "disponivel" && num(l.areaM2))
-      .map(l => {
-        const s = simular(num(l.areaM2)!, 1, c, num(l.precoTabela));
-        return { codigo: String(l.codigo), areaM2: num(l.areaM2)!, preco: s.preco, avista: s.avistaTotal.valor };
-      })
-      .sort((a, b) => a.preco - b.preco || a.codigo.localeCompare(b.codigo));
-    const cod = input.lote?.toUpperCase();
-    const exemplo = chacaras.find(x => x.codigo === cod) ?? chacaras[0] ?? null;
-    const { tabelaComissao, PRAZO_REPASSE_DIAS_UTEIS } = await import("../../shared/tabelaComissao");
-    return {
-      empreendimento: { nome: String(emp.nome), slug: String(emp.slug) },
-      pct,
-      chacaras: chacaras.map(({ codigo, areaM2, preco }) => ({ codigo, areaM2, preco })),
-      faixa: chacaras.length ? { menor: chacaras[0].preco, maior: chacaras[chacaras.length - 1].preco } : null,
-      exemplo: exemplo ? { codigo: exemplo.codigo, areaM2: exemplo.areaM2, preco: exemplo.preco, avista: exemplo.avista } : null,
-      linhas: exemplo ? tabelaComissao(exemplo.preco, exemplo.avista, pct, c.entradaMaxParcelas) : [],
-      repasseDiasUteis: PRAZO_REPASSE_DIAS_UTEIS,
-    };
-  }),
-
   /** Lote + simulação com a entrada escolhida, opções de entrada e (só administrador) a comissão */
   simular: protectedProcedure.input(z.object(base)).query(async ({ input, ctx }) => {
     const db = await dbOrThrow();

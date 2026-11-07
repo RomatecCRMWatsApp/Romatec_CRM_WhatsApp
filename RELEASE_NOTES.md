@@ -3,6 +3,20 @@
 Cada versão nova vai no TOPO. Depois rode `npm run release` (valida e atualiza o package.json);
 ao subir, o servidor grava a versão no banco e todos recebem o aviso "Novidades da versão".
 
+## 1.131.0 — 2026-11-07
+tipo: minor
+obrigatoria: nao
+titulo: Tabelas de comissão por empreendimento: corretor (2%) e escritório (5%), com PDF
+publico: equipe
+
+### Novo
+- Área do corretor › "Sua comissão por empreendimento": cada corretor vê o percentual dele e, para cada forma de pagamento (à vista, entrada de 30% à vista ou parcelada, Planos A, B e C), quanto recebe e em que momento
+- Valores calculados para a chácara escolhida, com a faixa das chácaras à venda
+- Administrador e secretária: "Comissões por empreendimento" com as duas tabelas, Corretor (repasse) e Escritório (integral, 5% paga pelo empreendimento)
+- Painel do empreendedor: nova seção "Tabela de comissão" com a comissão integral do escritório
+- Botão "Baixar PDF" nas tabelas: regras de pagamento, valores de exemplo e a comissão de cada chácara à venda, com a marca do empreendimento
+- A tabela do corretor não depende do Simulador liberado; a do escritório não aparece para corretores
+
 ## 1.130.1 — 2026-11-07
 tipo: patch
 obrigatoria: nao

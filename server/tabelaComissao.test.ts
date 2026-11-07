@@ -30,3 +30,21 @@ describe('tabela de comissão do corretor', () => {
     }
   });
 });
+
+import { podeVerTabelaComissao } from '../shared/tabelaComissao';
+import { podeChamar } from '../shared/equipe';
+
+describe('quem vê cada tabela de comissão', () => {
+  it('corretor (2%): corretor, administrador e secretária; empreendedor não', () => {
+    for (const p of ['admin', 'secretario', 'corretor']) expect(podeVerTabelaComissao(p, 'corretor')).toBe(true);
+    expect(podeVerTabelaComissao('empreendedor', 'corretor')).toBe(false);
+  });
+  it('escritório (5%): administrador, secretária e empreendedor; corretor não', () => {
+    for (const p of ['admin', 'secretario', 'empreendedor']) expect(podeVerTabelaComissao(p, 'escritorio')).toBe(true);
+    expect(podeVerTabelaComissao('corretor', 'escritorio')).toBe(false);
+    expect(podeVerTabelaComissao(null, 'escritorio')).toBe(false);
+  });
+  it('o empreendedor alcança o procedimento da tabela', () => {
+    expect(podeChamar('empreendedor', 'comissoes.tabela')).toBe(true);
+  });
+});

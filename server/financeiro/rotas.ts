@@ -102,6 +102,35 @@ button{padding:10px;background:#0C3320;color:#fff;border:0;border-radius:8px;fon
 }
 
 export function registrarRotasFinanceiro(app: Express) {
+  // Tabela de comissão em PDF (corretor 2% ou escritório 5%) — mesmas regras de quem vê da tela (shared/tabelaComissao.ts)
+  app.get('/api/comissao/tabela.pdf', async (req: Request, res: Response) => {
+    try {
+      const { sdk } = await import('../_core/sdk');
+      const user: any = await sdk.authenticateRequest(req).catch(() => null);
+      if (!user || user.ativo === false || user.ativo === 0) return res.status(401).send('Faça login');
+      const slug = typeof req.query.slug === 'string' && /^[a-z0-9-]{1,80}$/.test(req.query.slug) ? req.query.slug : '';
+      if (!slug) return res.status(400).send('Empreendimento inválido');
+      const tipo = req.query.tipo === 'escritorio' ? 'escritorio' : 'corretor';
+      const lote = typeof req.query.lote === 'string' && /^[A-Za-z0-9]{1,10}$/.test(req.query.lote) ? req.query.lote : undefined;
+      const { carregarPermissoes } = await import('../permissoes');
+      const { dadosTabelaComissao, TabelaComissaoErro } = await import('./tabelaComissao');
+      const dados = await dadosTabelaComissao(slug, tipo, lote, await carregarPermissoes(user)).catch((e: any) => {
+        if (e instanceof TabelaComissaoErro) { res.status(e.status).send(e.message); return null; }
+        throw e;
+      });
+      if (!dados) return;
+      const { pdfTabelaComissao } = await import('./tabelaComissaoPdf');
+      const pdf = await pdfTabelaComissao(dados);
+      res.setHeader('Content-Type', 'application/pdf');
+      res.setHeader('Cache-Control', 'no-store');
+      res.setHeader('Content-Disposition', `inline; filename="TABELA-COMISSAO-${tipo === 'corretor' ? 'CORRETOR' : 'ESCRITORIO'}-${slug.toUpperCase()}.pdf"`);
+      res.send(pdf);
+    } catch (e) {
+      console.error('[Comissão] tabela PDF:', e);
+      res.status(500).send('Falha ao gerar a tabela de comissão');
+    }
+  });
+
   const base = '/api/financeiro';
 
   // Extrato por comprador em planilha (administrador e secretária)

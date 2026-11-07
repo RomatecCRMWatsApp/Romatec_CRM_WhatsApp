@@ -1,6 +1,9 @@
 /**
- * Tabela de comissão do corretor por empreendimento (Área do corretor): para cada forma de pagamento, quanto o corretor
- * recebe e em que momento. Mesmas regras do contrato de comissão (server/contratos/docsComissao.ts):
+ * Tabelas de comissão por empreendimento: para cada forma de pagamento, quanto se recebe e em que momento.
+ * - Corretor (2%): o repasse do escritório ao corretor — corretores, administrador e secretária.
+ * - Escritório (5%): a comissão integral que o empreendimento paga ao escritório (já inclui o repasse ao corretor) —
+ *   administrador, secretária e empreendedor(a).
+ * Mesmo cronograma nas duas. Mesmas regras do contrato de comissão (server/contratos/docsComissao.ts):
  * - À vista total: 100% no ato, sobre o valor à vista (já com o desconto).
  * - Entrada de 30% à vista: 100% no pagamento da entrada, sobre o preço de tabela.
  * - Entrada de 30% parcelada: 50% no 1º pagamento da entrada e 50% no 2º.
@@ -11,6 +14,20 @@ import { COMISSAO_LANCAMENTO, ENTRADA_LANCAMENTO, ROTULO_CONDICAO } from './cond
 import { r2 } from './simulador';
 
 export const PRAZO_REPASSE_DIAS_UTEIS = 5;
+
+export type TipoTabelaComissao = 'corretor' | 'escritorio';
+export const TIPOS_TABELA_COMISSAO: TipoTabelaComissao[] = ['corretor', 'escritorio'];
+
+/** Quem vê cada tabela */
+export function podeVerTabelaComissao(perfil: string | null | undefined, tipo: TipoTabelaComissao): boolean {
+  if (tipo === 'corretor') return perfil === 'admin' || perfil === 'secretario' || perfil === 'corretor';
+  return perfil === 'admin' || perfil === 'secretario' || perfil === 'empreendedor';
+}
+
+export const TITULO_TABELA_COMISSAO: Record<TipoTabelaComissao, string> = {
+  corretor: 'Comissão do corretor (repasse do escritório)',
+  escritorio: 'Comissão integral do escritório (paga pelo empreendimento)',
+};
 
 export interface PagamentoComissao { quando: string; pct: number; valor: number }
 export interface LinhaTabelaComissao {
