@@ -3,6 +3,20 @@
 Cada versão nova vai no TOPO. Depois rode `npm run release` (valida e atualiza o package.json);
 ao subir, o servidor grava a versão no banco e todos recebem o aviso "Novidades da versão".
 
+## 1.120.2 — 2026-11-07
+tipo: patch
+obrigatoria: nao
+titulo: Robô de vendas volta a mandar a proposta de financiamento dos 7 bancos
+publico: admin
+
+### Correções
+- As respostas do robô (nome, renda, financiamento ativo, FGTS e entrada) ficavam gravadas em campos errados: a renda aparecia como "prazo" no CRM e a proposta dos bancos nunca saía. Agora cada resposta vai para o campo da pergunta feita
+- Valores como "R$ 350 mil" e "R$ 80 mil" eram lidos como 350 e 80: a simulação dos bancos e as sugestões de imóveis agora usam o valor certo
+- Imóveis sugeridos na proposta vêm da carteira do CRM (imóveis disponíveis), não de uma lista antiga
+- Quando nenhum banco aprova no valor pedido, a mensagem mostra até quanto a renda comporta, em vez de falar em regularizar CPF
+- Toda proposta sai com Romatec Consultoria Total · CRECI J-1234 e o CRECI/MA F-4.705 do corretor responsável
+- A última resposta do robô podia levar mais de 20 segundos e falhar no cálculo da nota do lead; corrigido
+
 ## 1.120.1 — 2026-11-07
 tipo: patch
 obrigatoria: nao

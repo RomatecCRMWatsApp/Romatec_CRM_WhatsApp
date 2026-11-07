@@ -4,6 +4,8 @@
  * Gera propostas automáticas com CTA para agendamento
  */
 
+import { valorEmReais } from './qualification-flow';
+
 export interface Property {
   id?: number;
   slug: string;
@@ -230,11 +232,11 @@ function calculateFinancingApprox(
  * Recomendador principal:
  * Filtra, ordena e retorna top 3 imóveis recomendados
  */
-export function recommendProperties(profile: LeadProfile, maxResults: number = 3): RecommendedProperty[] {
+export function recommendProperties(profile: LeadProfile, maxResults: number = 3, catalogo: Property[] = AVAILABLE_PROPERTIES): RecommendedProperty[] {
   const recommended: RecommendedProperty[] = [];
 
-  // Calcular score para cada propriedade
-  for (const property of AVAILABLE_PROPERTIES) {
+  // Calcular score para cada propriedade (catálogo: os imóveis disponíveis do CRM; sem ele, a lista de exemplo)
+  for (const property of catalogo) {
     const matchScore = calculateMatchScore(property, profile);
 
     // Descartar se score muito baixo (abaixo de 30%)
@@ -267,9 +269,10 @@ export function recommendProperties(profile: LeadProfile, maxResults: number = 3
 export function generateAutomatedProposal(
   firstName: string,
   profile: LeadProfile,
-  baseUrl: string = 'https://romateccrmwhatsapp-production.up.railway.app'
+  baseUrl: string = 'https://romateccrmwhatsapp-production.up.railway.app',
+  catalogo?: Property[],
 ): string {
-  const recommendations = recommendProperties(profile, 3);
+  const recommendations = recommendProperties(profile, 3, catalogo);
 
   if (recommendations.length === 0) {
     return `*${firstName}*, buscamos em nossa carteira, mas ainda não temos uma propriedade que se encaixa perfeitamente no seu perfil.\n\n📞 Deixa a gente te ligar para explorar opções customizadas?\n\nwa.me/5599991811246`;
@@ -367,13 +370,8 @@ export function extractLeadProfile(
   answers: Record<string, any>,
   score: 'quente' | 'morno' | 'frio'
 ): LeadProfile {
-  // Helper para extrair número
-  const parseNum = (str: string): number => {
-    if (!str) return 0;
-    const match = str.toString().match(/\d+[\d.]*[\d]/);
-    if (!match) return 0;
-    return parseInt(match[0].replace(/[^\d]/g, ''), 10);
-  };
+  // Valor em reais da resposta ("R$ 350 mil" = 350.000)
+  const parseNum = (str: string): number => valorEmReais(str || '');
 
   // Extrair renda
   const rendaMensal = parseNum(answers.rendaMensal || '');

@@ -3,6 +3,7 @@
  * Cálculos SAC e PRICE para 7 bancos brasileiros
  * Com recomendações automáticas baseadas no perfil do lead
  */
+import { valorEmReais } from './qualification-flow';
 
 export interface BankConfig {
   id: string;
@@ -184,11 +185,9 @@ function calculatePRICE(
 /**
  * Extrair valor numérico de string (ex: "R$ 3.500" → 3500)
  */
+/** Valor em reais escrito pelo lead ("R$ 80 mil" = 80.000) */
 function parseValue(value: string): number {
-  if (!value) return 0;
-  const match = value.toString().match(/\d+[\d.]*[\d]/);
-  if (!match) return 0;
-  return parseInt(match[0].replace(/\D/g, ''), 10);
+  return valorEmReais(value);
 }
 
 /**
@@ -314,6 +313,20 @@ export function simulateBank(bank: BankConfig, input: SimulationInput): Simulati
   };
 }
 
+/** Maior valor de imóvel que algum banco aprova com a renda e a entrada informadas (busca binária) */
+export function valorMaximoQueCabe(input: SimulationInput, downPaymentStr: string): number {
+  let baixo = 0, alto = Math.max(input.propertyValue, 50000);
+  const aprova = (valor: number) =>
+    simulateAllBanks({ ...input, propertyValue: valor, downPaymentPercent: parseDownPaymentPercent(downPaymentStr, valor) }).some(r => r.isQualified);
+  if (!aprova(50000)) return 0;
+  baixo = 50000;
+  for (let i = 0; i < 30 && alto - baixo > 1000; i++) {
+    const meio = (baixo + alto) / 2;
+    if (aprova(meio)) baixo = meio; else alto = meio;
+  }
+  return baixo;
+}
+
 /**
  * Gerar proposta multi-banco com recomendação
  */
@@ -344,8 +357,13 @@ export function generateMultiBankProposal(
   const qualifiedBanks = results.filter((r) => r.isQualified);
 
   if (qualifiedBanks.length === 0) {
-    // Nenhum banco aprova
-    return `${firstName}, analisamos seu perfil nos 7 principais bancos do Brasil 🏦\n\n❌ Infelizmente, nenhum aprovaria no momento.\n\n✨ Mas não se preocupe! Podemos:\n✅ Regularizar seu CPF\n✅ Aumentar sua entrada\n✅ Ajustar o prazo\n\n📞 Fale com nosso consultor para estratégia!`;
+    // Nenhum banco aprova nesse valor: mostra até quanto a renda comporta (parcela até 30% da renda)
+    const cabe = valorMaximoQueCabe({ ...input }, downPaymentStr);
+    const brl = (v: number) => v.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL', maximumFractionDigits: 0 });
+    const faixa = cabe > 50000
+      ? `\n\n🏠 Com a sua renda e a sua entrada, o financiamento cabe em imóveis de até *${brl(Math.floor(cabe / 5000) * 5000)}*.`
+      : '';
+    return `${firstName}, analisamos seu perfil nos 7 principais bancos do Brasil 🏦\n\n📌 Para um imóvel de ${brl(propertyValue)}, a parcela passaria do limite de 30% da renda que os bancos aceitam.${faixa}\n\n✨ Também dá para:\n✅ Aumentar a entrada\n✅ Usar o FGTS\n✅ Somar a renda de outra pessoa da família\n\n📞 Fale com nosso consultor para montar a melhor estratégia!`;
   }
 
   // Recomendar melhor (primeira que aprova, com menor parcela)

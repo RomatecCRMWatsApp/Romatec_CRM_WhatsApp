@@ -8,6 +8,7 @@ import { transcribeAudio } from './_core/voiceTranscription';
 import { getDb } from './db';
 import { leadQualifications, contacts, campaigns } from '../drizzle/schema';
 import { eq } from 'drizzle-orm';
+import { ESCRITORIO, LINHA_PUBLICIDADE } from '../shared/escritorio';
 import {
   QUALIFICATION_SEQUENCE,
   detectQualificationIntent,
@@ -16,6 +17,7 @@ import {
   generateProposalMessage,
   isResponseValid,
   QualificationAnswers,
+  valorEmReais,
 } from './qualification-flow';
 import {
   persistLeadState,
@@ -214,11 +216,9 @@ function getProperty(slug?: string) {
 /**
  * Extrair valor numérico de string (ex: "R$ 3.500" → 3500)
  */
+/** Valor em reais da resposta ("R$ 350 mil" = 350.000, "R$ 6.500" = 6.500) */
 function parseNumericValue(value: string): number {
-  if (!value) return 0;
-  const match = value.toString().match(/\d+[\d.]*[\d]/);
-  if (!match) return 0;
-  return parseInt(match[0].replace(/[^\d]/g, ''), 10);
+  return valorEmReais(value);
 }
 
 /**
@@ -491,10 +491,10 @@ async function saveLeadQualification(
       campaignId: campaignId || null,
       nome,
       valorParcela: answers.valorParcela || null,
-      valorEntrada: answers.valorEntrada || null,
+      valorEntrada: answers.entradaDisponivel || answers.valorEntrada || null,
       tipoEmprego: answers.tipoEmprego || null,
       restricaoCPF: answers.restricaoCPF || null,
-      prazo: answers.prazo || null,
+      prazo: answers.prazoPrefido || answers.prazo || null,
       primeiroImovel: answers.primeiroImovel || null,
       score,
       campanhaOrigem: prop?.name || null,
@@ -628,47 +628,47 @@ async function processStage(context: BotContext, state: ConversationState): Prom
         stage: 'qual_etapa_2',
         lastUserReplyAt: Date.now(),
         ...(nomeInformado ? { senderName: nomeInformado } : {}),
-        qualAnswers: { ...state.qualAnswers, prazo: msg },
+        qualAnswers: { ...state.qualAnswers, ...(nomeInformado ? { nome: nomeInformado } : {}) },
       });
       return { text: QUAL_QUESTIONS.etapa_2(nomeInformado ? firstName(nomeInformado) : fn), qualified: true };
     }
 
-    // ---- ETAPA 2: Primeiro imovel? ----
+    // ---- ETAPA 2: Renda mensal ----
     case 'qual_etapa_2': {
       setState(context.phone, {
         stage: 'qual_etapa_3',
         lastUserReplyAt: Date.now(),
-        qualAnswers: { ...state.qualAnswers, primeiroImovel: msg },
+        qualAnswers: { ...state.qualAnswers, rendaMensal: msg },
       });
       return { text: QUAL_QUESTIONS.etapa_3(fn), qualified: true };
     }
 
-    // ---- ETAPA 3: Valor parcela mensal ----
+    // ---- ETAPA 3: Financiamento ativo ----
     case 'qual_etapa_3': {
       setState(context.phone, {
         stage: 'qual_etapa_4',
         lastUserReplyAt: Date.now(),
-        qualAnswers: { ...state.qualAnswers, valorParcela: msg },
+        qualAnswers: { ...state.qualAnswers, financiamentoAtivo: msg },
       });
       return { text: QUAL_QUESTIONS.etapa_4(fn), qualified: true };
     }
 
-    // ---- ETAPA 4: Entrada 20% ----
+    // ---- ETAPA 4: FGTS e tempo de carteira ----
     case 'qual_etapa_4': {
       setState(context.phone, {
         stage: 'qual_etapa_5',
         lastUserReplyAt: Date.now(),
-        qualAnswers: { ...state.qualAnswers, valorEntrada: msg },
+        qualAnswers: { ...state.qualAnswers, fgtsDisponivel: msg },
       });
       return { text: QUAL_QUESTIONS.etapa_5(fn), qualified: true };
     }
 
-    // ---- ETAPA 5: Tipo emprego ----
+    // ---- ETAPA 5: Entrada disponível ----
     case 'qual_etapa_5': {
       setState(context.phone, {
         stage: 'qual_etapa_6',
         lastUserReplyAt: Date.now(),
-        qualAnswers: { ...state.qualAnswers, tipoEmprego: msg },
+        qualAnswers: { ...state.qualAnswers, entradaDisponivel: msg },
       });
       return { text: QUAL_QUESTIONS.etapa_6(fn), qualified: true };
     }
@@ -802,14 +802,19 @@ async function processStage(context: BotContext, state: ConversationState): Prom
 
           // 2️⃣ RECOMENDAÇÕES DE IMÓVEL
           const leadProfile = extractLeadProfile(finalAnswers, score);
-          const propRecommendations = generateAutomatedProposal(fn, leadProfile, SITE_URL);
+          // Carteira real do CRM (imóveis disponíveis), não a lista de exemplo
+          const catalogo = (await getProperties()).map(p => ({
+            slug: p.slug, name: p.name, value: p.value, beds: p.beds || undefined, area: p.area, city: p.city,
+            type: (/ch[aá]cara/i.test(p.type) ? 'Chacara' : /apart/i.test(p.type) ? 'Apartamento' : /comerc/i.test(p.type) ? 'Comercial' : /terreno|lote/i.test(p.type) ? 'Terreno' : 'Casa') as 'Casa',
+          }));
+          const propRecommendations = generateAutomatedProposal(fn, leadProfile, SITE_URL, catalogo);
 
           // Combinar as duas mensagens
           proposalMsg = multiProposal + '\n\n' + propRecommendations;
           propertyRecommendations = propRecommendations;
 
           console.log(`[Bot] 🏦 Proposta multi-banco gerada para ${name} — ${propertyValue.toLocaleString('pt-BR')} / ${monthlyIncome.toLocaleString('pt-BR')}/mês`);
-          console.log(`[Bot] 🏠 Recomendações de imóvel geradas — ${recommendPropertiesForProfile(leadProfile).length} propriedades encontradas`);
+          console.log(`[Bot] 🏠 Recomendações de imóvel geradas — ${recommendPropertiesForProfile(leadProfile, 3, catalogo).length} propriedades encontradas`);
         } else {
           console.log(`[Bot] ⚠️  Dados financeiros insuficientes para simulação — Usando proposta simples`);
         }
@@ -817,6 +822,9 @@ async function processStage(context: BotContext, state: ConversationState): Prom
         console.error(`[Bot] ❌ Erro ao gerar proposta multi-banco/recomendações:`, error);
         // Fallback para proposta simples em caso de erro
       }
+
+      // Toda proposta sai com o CRECI da imobiliária e do corretor responsável
+      proposalMsg += `\n\n${LINHA_PUBLICIDADE}\nCorretor responsável: José Romário · ${ESCRITORIO.creciResponsavel}`;
 
       return {
         text: proposalMsg,

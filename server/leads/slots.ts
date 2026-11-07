@@ -86,8 +86,20 @@ export function validarSlot(funil: Funil, slot: string, valor: unknown): string 
 }
 
 /** Grava slots válidos (descarta os inválidos), preservando os demais */
+/**
+ * Slots como objeto. A coluna JSON pode chegar como texto (SQLite): espalhar o texto com {...} vira um objeto letra a
+ * letra, que cresce a cada resposta até travar o servidor ("Too many properties to enumerate").
+ */
+export function slotsComoObjeto(v: unknown): SlotsLead {
+  if (!v) return {};
+  if (typeof v === 'string') {
+    try { const o = JSON.parse(v); return o && typeof o === 'object' && !Array.isArray(o) ? o as SlotsLead : {}; } catch { return {}; }
+  }
+  return typeof v === 'object' && !Array.isArray(v) ? v as SlotsLead : {};
+}
+
 export function mesclarSlots(funil: Funil, atuais: SlotsLead | null | undefined, novos: Record<string, unknown>, fonte: FonteSlot, now = new Date()): { slots: SlotsLead; aceitos: string[]; recusados: string[] } {
-  const slots: SlotsLead = { ...(atuais || {}) };
+  const slots: SlotsLead = { ...slotsComoObjeto(atuais) };
   const aceitos: string[] = [];
   const recusados: string[] = [];
   for (const [nome, valor] of Object.entries(novos)) {
@@ -100,7 +112,7 @@ export function mesclarSlots(funil: Funil, atuais: SlotsLead | null | undefined,
 }
 
 export function valoresSlots(slots: SlotsLead | null | undefined): Record<string, string> {
-  return Object.fromEntries(Object.entries(slots || {}).map(([k, v]) => [k, v.valor]));
+  return Object.fromEntries(Object.entries(slotsComoObjeto(slots)).map(([k, v]) => [k, v?.valor]));
 }
 
 /** Slots obrigatórios ainda sem valor, na ordem de perguntar */

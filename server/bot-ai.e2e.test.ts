@@ -421,9 +421,11 @@ describe('Bot de Vendas E2E - Fluxo Completo', () => {
       // Response final deve conter proposta
       expect(response?.text).toBeDefined();
 
-      // Última resposta: o resultado da qualificação, com os botões de próximo passo
+      // Última resposta: proposta dos bancos (renda, entrada e valor das etapas 2, 5 e 8) + CRECI, com os botões
       const finalText = response?.text?.toUpperCase() || '';
-      expect(finalText).toContain('PERFIL');
+      expect(finalText).toContain('7 PRINCIPAIS BANCOS');
+      expect(response?.text).toContain('CRECI J-1234');
+      expect(response?.text).toContain('CRECI/MA F-4.705');
       expect(response?.qualified).toBe(true);
       expect(response?.buttons?.some(b => b.id === 'agendar_visita')).toBe(true);
     });

@@ -251,13 +251,13 @@ export async function slotsDoBotEScore(phone: string, answers: Record<string, an
     const [lead] = await db.select({ id: leadQualifications.id, funil: leadQualifications.funil, slots: leadQualifications.slots })
       .from(leadQualifications).where(eq(leadQualifications.phone, phone)).limit(1);
     if (!lead) return;
-    const { mesclarSlots, slotsDeRespostas } = await import('./leads/slots');
+    const { mesclarSlots, slotsDeRespostas, slotsComoObjeto } = await import('./leads/slots');
     const novos = slotsDeRespostas(answers);
-    const atuais = (lead.slots || {}) as Record<string, { valor: string }>;
+    const atuais = slotsComoObjeto(lead.slots) as Record<string, { valor: string }>;
     // Não sobrescreve slot que veio de formulário ou do painel
     const soNovos = Object.fromEntries(Object.entries(novos).filter(([k]) => !atuais[k]));
     if (Object.keys(soNovos).length) {
-      const { slots, aceitos } = mesclarSlots((lead.funil as any) || 'comprador', lead.slots as any, soNovos, 'bot');
+      const { slots, aceitos } = mesclarSlots((lead.funil as any) || 'comprador', atuais as any, soNovos, 'bot');
       if (aceitos.length) await db.update(leadQualifications).set({ slots } as any).where(eq(leadQualifications.id, lead.id));
     }
     const { recalcularScoreLead } = await import('./leads/scoreService');
