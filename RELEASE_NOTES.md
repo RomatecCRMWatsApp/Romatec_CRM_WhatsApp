@@ -3,6 +3,17 @@
 Cada versão nova vai no TOPO. Depois rode `npm run release` (valida e atualiza o package.json);
 ao subir, o servidor grava a versão no banco e todos recebem o aviso "Novidades da versão".
 
+## 1.118.0 — 2026-11-07
+tipo: minor
+obrigatoria: nao
+titulo: Resumo da semana no WhatsApp do administrador
+publico: admin
+
+### Novo
+- Toda segunda, a partir das 8h, chega no WhatsApp do administrador o resumo da semana anterior: leads novos e de onde vieram, leads esperando corretor, visitas, contratos novos e chácaras, reservas, cancelamentos, valor recebido, parcelas em atraso, parcelas vencendo nos próximos 7 dias, corretores usando e parados, quem mais divulgou e licenças vencendo ou bloqueadas
+- Configurações › Resumo da semana: ligar ou desligar, ver a prévia da mensagem e enviar agora
+- Sai uma vez por semana, mesmo que o servidor reinicie
+
 ## 1.117.0 — 2026-11-06
 tipo: minor
 obrigatoria: nao

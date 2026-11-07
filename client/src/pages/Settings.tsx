@@ -13,6 +13,7 @@ import EnviarArquivoWhatsapp from "@/components/sistema/EnviarArquivoWhatsapp";
 import { useLocation } from "wouter";
 import { trpc } from "@/lib/trpc";
 import { toast } from "sonner";
+import ResumoSemanalConfig from "@/components/sistema/ResumoSemanalConfig";
 
 export default function Settings() {
   const [, navigate] = useLocation();
@@ -126,6 +127,8 @@ export default function Settings() {
       <PageHeader icone={SettingsIcon} titulo="Configurações" subtitulo="Empresa, WhatsApp (Z-API), Telegram e senha" />
 
       <div className="px-4 md:px-6 pb-8 space-y-6 max-w-2xl">
+
+        <ResumoSemanalConfig />
 
         {/* Dados da Empresa */}
         <Card className="bg-card border-border">

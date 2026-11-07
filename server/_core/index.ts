@@ -1553,6 +1553,8 @@ async function startServer() {
   import('../leads/scoreService').then(m => m.iniciarJobInatividade()).catch(e => console.warn('[Score] Job não iniciado:', e));
   // IPCA mensal (dia 15) e declaração anual de quitação (2º dia útil de maio)
   import('../financeiro/jobs').then(m => m.iniciarJobsFinanceiro()).catch(e => console.warn('[Financeiro] Jobs não iniciados:', e));
+  // Resumo da semana no WhatsApp do administrador (segunda, a partir das 8h)
+  import('../resumoSemanal').then(m => m.iniciarResumoSemanal()).catch(e => console.warn('[Resumo semanal] não iniciado:', e));
   // Camada SaaS: expirações, inadimplência e lembretes (só age com o licenciamento ligado)
   import('../saas/servico').then(m => m.iniciarJobsSaas()).catch(e => console.warn('[SaaS] Jobs não iniciados:', e));
   // Mercado Pago: retry dos eventos do webhook e faturas Pix/boleto do próximo ciclo
