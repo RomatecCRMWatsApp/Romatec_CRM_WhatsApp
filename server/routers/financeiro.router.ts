@@ -84,6 +84,19 @@ export const financeiroRouter = router({
     return { ok: true };
   }),
   /** Envia já os avisos de hoje (mesmo fora do horário), respeitando quem já recebeu */
+  // ─── Emissão automática no Asaas (server/financeiro/emissaoAuto.ts) — ligar/desligar só o administrador ───
+  emissaoAutoEstado: protectedProcedure.query(async ({ ctx }) => {
+    await operador(ctx);
+    const E = await import("../financeiro/emissaoAuto");
+    return { ligada: await E.emissaoAutoLigada(), diasAntecedencia: E.DIAS_ANTECEDENCIA, previa: await E.previaEmissao() };
+  }),
+  emissaoAutoDefinir: protectedProcedure.input(z.object({ ligada: z.boolean() })).mutation(async ({ ctx, input }) => {
+    const { perfilDe } = await import("../../shared/equipe");
+    if (perfilDe(ctx.user as any) !== "admin") throw new TRPCError({ code: "FORBIDDEN", message: "Só o administrador liga ou desliga a emissão automática." });
+    const E = await import("../financeiro/emissaoAuto");
+    await E.definirEmissaoAuto(input.ligada, ctx.user.id);
+    return { ligada: input.ligada, ...(input.ligada ? await E.rotinaEmissaoAuto(Date.now()) : {}) };
+  }),
   reguaEnviarAgora: protectedProcedure.mutation(async ({ ctx }) => { await operador(ctx); return (await import("../financeiro/reguaCobranca")).processarRegua(Date.now(), undefined, true); }),
 
   /** Lê o recibo público da InfinitePay (valor, data, pagador, CPF parcial, ID da transação) — confere se o destino é a Romatec */

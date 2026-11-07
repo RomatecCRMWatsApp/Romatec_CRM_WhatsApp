@@ -229,6 +229,19 @@ export async function notificarSolicitacaoCancelamento(
     { contratoId: p.contratoId });
 }
 
+/** Emissão automática das cobranças no Asaas: avisa o escritório do que saiu ou do que travou (uma vez por chave) */
+export async function notificarEmissaoCobranca(
+  p: { contratoId: number; contrato: string; motivo: string; chave: string },
+  repo: RepoNotificacoes = repoBanco(), enviar?: EnviadorPush | null,
+) {
+  const usuarios = await repo.usuarios();
+  const ids = destinatarios("cobranca_emissao", usuarios, [], perfilDe as any, { empreendimentoId: 0, empreendimentoSlug: "" });
+  const { titulo, mensagem } = textoNotificacao("cobranca_emissao", { contrato: p.contrato, motivo: p.motivo });
+  return emitir(repo, enviar === undefined ? await enviadorWebPush() : enviar, usuarios, ids,
+    { tipo: "cobranca_emissao", titulo, mensagem, empreendimentoId: null, chave: p.chave },
+    { contratoId: p.contratoId });
+}
+
 /** Pedido de prorrogação/cortesia de acesso: só o administrador recebe (autoriza com a senha) */
 export async function notificarSolicitacaoAcesso(
   p: { solicitacaoId: number; codigo: string; pessoa: string; modalidade: string; ate: string; autorId: number; autorNome?: string | null; motivo: string },

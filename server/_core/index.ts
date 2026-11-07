@@ -1463,6 +1463,8 @@ async function startServer() {
     await addAutoResposta();
     const { addCheckinEvento } = await import('./migrations/addCheckinEvento');
     await addCheckinEvento();
+    const { addEmissaoAuto } = await import('./migrations/addEmissaoAuto');
+    await addEmissaoAuto();
     const { addDesfechoEncaminhamento } = await import('./migrations/addDesfechoEncaminhamento');
     await addDesfechoEncaminhamento().catch((e: any) => console.warn('[Migration] addDesfechoEncaminhamento:', e?.message));
     const { addMateriaisDivulgacaoBJ } = await import('./migrations/addMateriaisDivulgacaoBJ');
@@ -1561,6 +1563,8 @@ async function startServer() {
   import('../resumoSemanal').then(m => m.iniciarResumoSemanal()).catch(e => console.warn('[Resumo semanal] não iniciado:', e));
   // Régua de cobrança das parcelas no WhatsApp do comprador (só roda se estiver ligada em Financeiro)
   import('../financeiro/reguaCobranca').then(m => m.iniciarReguaCobranca()).catch(e => console.warn('[Régua de cobrança] não iniciada:', e));
+  // Emissão automática no Asaas: próximo carnê 45 dias antes (só roda se estiver ligada em Financeiro)
+  import('../financeiro/emissaoAuto').then(m => m.iniciarEmissaoAuto()).catch(e => console.warn('[Emissão automática] não iniciada:', e));
   // Camada SaaS: expirações, inadimplência e lembretes (só age com o licenciamento ligado)
   import('../saas/servico').then(m => m.iniciarJobsSaas()).catch(e => console.warn('[SaaS] Jobs não iniciados:', e));
   // Mercado Pago: retry dos eventos do webhook e faturas Pix/boleto do próximo ciclo

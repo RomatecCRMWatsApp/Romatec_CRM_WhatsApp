@@ -189,6 +189,8 @@ export const contratosRouter = router({
       const h = hoje();
       financeiro = {
         asaasConfigurado: !!configAsaas(process.env, emp?.slug ?? "bom-jardims"),
+        entradaPagaNoAto: c.entradaPagaNoAto === true || c.entradaPagaNoAto === 1,
+        emissaoAuto: await (await import("../financeiro/emissaoAuto")).emissaoAutoLigada(),
         blocos: totalDeBlocos(plano),
         cobrancas: cobs.map(x => {
           const rec = recs.find(r => r.cobrancaId === x.id);
@@ -226,6 +228,17 @@ export const contratosRouter = router({
     if (input.alvo === "definitivo") exigir(podeGerarDefinitivo(perfilDe(ctx.user as any)), "O definitivo é gerado pelo administrador ou pela secretaria.");
     await contratoVisivel(ctx, input.id);
     return tratar(() => gerarVersao(input.id, input.alvo));
+  }),
+
+  /** Entrada recebida no ato da assinatura: a emissão automática não gera boleto dela (só enquanto ainda não foi emitida) */
+  entradaNoAto: protectedProcedure.input(z.object({ id: z.number().int(), paga: z.boolean() })).mutation(async ({ ctx, input }) => {
+    exigir(podeOperarCobranca(perfilDe(ctx.user as any)), "Cobrança é com o administrador ou a secretaria.");
+    await contratoVisivel(ctx, input.id);
+    const d: any = await getDb();
+    const [c]: any[] = await d.select().from(contratos).where(eq(contratos.id, input.id)).limit(1);
+    exigir(!!c && !["cancelado", "distratado"].includes(c.status), "Contrato não encontrado ou encerrado.");
+    await d.update(contratos).set({ entradaPagaNoAto: input.paga } as any).where(eq(contratos.id, input.id));
+    return { paga: input.paga };
   }),
 
   registrarAssinado: protectedProcedure.input(z.object({ id: z.number().int(), pdfBase64: z.string().max(30_000_000).nullable().optional() }))

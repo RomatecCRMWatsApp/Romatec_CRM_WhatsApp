@@ -392,6 +392,8 @@ export async function registrarAssinado(contratoId: number, pdfAssinado: Buffer 
   }
   const { gerarCobrancasDoPlano } = await import('../financeiro/emissao');
   const cobrancas = await gerarCobrancasDoPlano(contratoId, plano);
+  // Emissão automática no Asaas (se ligada em Financeiro): carnê 1 já sai; o que travar vira aviso no sino
+  import('../financeiro/emissaoAuto').then(m => m.aposAtivarContrato(contratoId)).catch(() => {});
   // Carteirinhas do titular, do cônjuge e dos dependentes já completos saem registradas na hora
   const { emitirCarteirasAuto } = await import('./carteirinhas');
   await emitirCarteirasAuto(contratoId);

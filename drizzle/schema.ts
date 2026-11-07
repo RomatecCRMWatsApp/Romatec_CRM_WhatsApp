@@ -1502,6 +1502,8 @@ export const contratos = mysqlTable("contratos", {
   pdfAtual: varchar("pdfAtual", { length: 255 }),
   hashAtual: char("hashAtual", { length: 64 }),
   asaasCustomerId: varchar("asaasCustomerId", { length: 40 }),
+  /** Entrada (1º pagamento) recebida no ato da assinatura: a emissão automática não gera boleto dela */
+  entradaPagaNoAto: boolean("entradaPagaNoAto").default(false).notNull(),
   usoLiberado: boolean("usoLiberado").default(false).notNull(),
   usoLiberadoEm: datetime("usoLiberadoEm"),
   criadoPor: int("criadoPor"),

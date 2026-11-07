@@ -3,10 +3,10 @@
  * 3 dias antes, no dia, 3 dias depois e 10 dias depois do vencimento, com o link de pagamento e o carnê digital.
  *
  * - Só roda ligada (Financeiro › Cobrança automática; começa desligada) e entre 9h e 19h de Brasília.
- * - Só contratos assinados/ativos e parcelas em aberto; cada parcela recebe cada etapa uma vez (cobrancaAvisos).
+ * - Só contratos assinados/ativos e parcelas já emitidas no Asaas (com boleto/Pix); cada parcela recebe cada etapa uma vez.
  * - Sem telefone no cadastro do comprador: registra a falha e não tenta de novo.
  */
-import { and, desc, eq, gte, inArray, lte } from "drizzle-orm";
+import { and, desc, eq, gte, inArray, isNotNull, lte } from "drizzle-orm";
 import { getDb } from "../db";
 import { cobrancaAvisos, cobrancas, contratos, empreendimentos } from "../../drizzle/schema";
 import { telefoneWhatsApp } from "../../shared/contratos";
@@ -47,7 +47,7 @@ export async function avisosDeHoje(agora = Date.now()): Promise<AvisoPlanejado[]
   const min = Math.min(...ETAPAS_REGUA.map(e => DIA_DA_ETAPA[e])), max = Math.max(...ETAPAS_REGUA.map(e => DIA_DA_ETAPA[e])) + JANELA_DIAS;
   const de = somaDias(hoje, -max), ate = somaDias(hoje, -min);
   const parcelas: any[] = await db.select().from(cobrancas)
-    .where(and(inArray(cobrancas.status, [...STATUS_COBRAVEIS]), gte(cobrancas.vencimento, de), lte(cobrancas.vencimento, ate)));
+    .where(and(inArray(cobrancas.status, [...STATUS_COBRAVEIS]), isNotNull(cobrancas.asaasPaymentId), gte(cobrancas.vencimento, de), lte(cobrancas.vencimento, ate)));
   if (!parcelas.length) return [];
   const idsContrato = Array.from(new Set(parcelas.map(p => Number(p.contratoId))));
   const [cts, emps, ja]: any[][] = await Promise.all([

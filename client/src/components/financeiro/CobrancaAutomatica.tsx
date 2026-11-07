@@ -9,6 +9,7 @@ import { trpc } from "@/lib/trpc";
 import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
 import { ETAPAS_REGUA, ROTULO_ETAPA } from "@shared/reguaCobranca";
+import EmissaoAutomatica from "./EmissaoAutomatica";
 
 const brl = (n: number) => n.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
 const dataBr = (d: string) => d.split("-").reverse().join("/");
@@ -33,6 +34,7 @@ export default function CobrancaAutomatica() {
 
   return (
     <div className="space-y-4">
+      <EmissaoAutomatica />
       <section className="rounded-lg border border-border bg-card p-4">
         <div className="flex flex-wrap items-start gap-3">
           <div className="min-w-0 flex-1">

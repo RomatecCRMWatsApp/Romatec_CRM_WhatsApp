@@ -55,15 +55,16 @@ describe('régua de cobrança: banco e envio', () => {
       (3, 'BJ-3', 1, 'D01', 1, '{}', '{}', 'AAAAAAAAAAA3', 'cancelado')`);
     db.run(sql`INSERT INTO pessoas (id, nome, cpfCnpj, telefone1) VALUES (1, 'Maria Teste', '00000000001', '(99) 99999-0001'), (2, 'João Sem Fone', '00000000002', NULL), (3, 'Ana Cancelada', '00000000003', '99999990003')`);
     db.run(sql`INSERT INTO contratoPessoas (contratoId, pessoaId, papel) VALUES (1, 1, 'comprador'), (2, 2, 'comprador'), (3, 3, 'comprador')`);
-    db.run(sql`INSERT INTO cobrancas (id, contratoId, tipo, numero, total, vencimento, valor, status, bankSlipUrl) VALUES
-      (1, 1, 'saldo', 5, 120, '2026-11-10', '1234.51', 'emitida', 'https://pag.exemplo/1'),
-      (2, 1, 'saldo', 4, 120, '2026-11-04', '1234.51', 'vencida', NULL),
-      (3, 1, 'saldo', 3, 120, '2026-11-07', '1234.51', 'paga', NULL),
-      (4, 2, 'saldo', 1, 120, '2026-11-07', '900.00', 'emitida', NULL),
-      (5, 3, 'saldo', 1, 120, '2026-11-07', '900.00', 'emitida', NULL)`);
+    db.run(sql`INSERT INTO cobrancas (id, contratoId, tipo, numero, total, vencimento, valor, status, bankSlipUrl, asaasPaymentId) VALUES
+      (1, 1, 'saldo', 5, 120, '2026-11-10', '1234.51', 'emitida', 'https://pag.exemplo/1', 'pay_t1'),
+      (2, 1, 'saldo', 4, 120, '2026-11-04', '1234.51', 'vencida', NULL, 'pay_t2'),
+      (3, 1, 'saldo', 3, 120, '2026-11-07', '1234.51', 'paga', NULL, 'pay_t3'),
+      (4, 2, 'saldo', 1, 120, '2026-11-07', '900.00', 'emitida', NULL, 'pay_t4'),
+      (5, 3, 'saldo', 1, 120, '2026-11-07', '900.00', 'emitida', NULL, 'pay_t5'),
+      (6, 1, 'saldo', 6, 120, '2026-11-07', '1234.51', 'prevista', NULL, NULL)`);
   });
 
-  it('prévia: só contratos assinados/ativos e parcelas em aberto', async () => {
+  it('prévia: só contratos assinados/ativos e parcelas já emitidas no Asaas (prevista sem boleto fica de fora)', async () => {
     const av = await R.avisosDeHoje(HOJE_10H);
     expect(av.map(a => [a.cobrancaId, a.etapa])).toEqual([[2, 'atraso'], [4, 'dia'], [1, 'antes']]);
     expect(av.find(a => a.cobrancaId === 1)?.telefone).toMatch(/^55\d{10,11}$/);

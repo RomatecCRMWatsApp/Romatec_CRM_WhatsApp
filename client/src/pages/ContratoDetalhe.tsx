@@ -82,6 +82,10 @@ export default function ContratoDetalhe() {
   const cancelarCob = trpc.contratos.cancelarCobranca.useMutation({ onSuccess: () => { toast.success("Cobrança cancelada"); fechar(); }, onError: e => toast.error(e.message) });
   const cancelarRec = trpc.contratos.cancelarRecibo.useMutation({ onSuccess: () => { toast.success("Recibo cancelado"); fechar(); }, onError: e => toast.error(e.message) });
   const emitir = trpc.contratos.emitirCarne.useMutation({ onSuccess: r => { toast.success(`${r.emitidas} cobranças emitidas no Asaas`); recarregar(); }, onError: e => toast.error(e.message) });
+  const entradaNoAto = trpc.contratos.entradaNoAto.useMutation({
+    onSuccess: r => { toast.success(r.paga ? "Entrada marcada como paga no ato: não vira boleto" : "Entrada volta a ser emitida no Asaas"); recarregar(); },
+    onError: e => toast.error(e.message),
+  });
   const link = trpc.contratos.linkComprador.useMutation({
     onSuccess: async r => { try { await navigator.clipboard.writeText(r.url); toast.success("Link copiado (vale 7 dias)"); } catch { toast.message(r.url); } },
     onError: e => toast.error(e.message),
@@ -257,8 +261,32 @@ export default function ContratoDetalhe() {
               {!f.cobrancas.length && (
                 <p className="rounded-xl border border-dashed border-border p-4 text-sm text-muted-foreground">
                   O plano de cobranças é gravado quando o contrato fica ativo (assinado). Status atual: {c.status}.
+                  {f.emissaoAuto ? " Com a emissão automática ligada, o carnê 1 (entrada e primeiras parcelas) sai no Asaas na hora da assinatura." : ""}
                 </p>
               )}
+              {d.pode.cobranca && (() => {
+                // A entrada (1ª parcela do plano) ainda sem boleto: dá para marcar que foi paga no ato
+                const primeira = [...f.cobrancas].sort((a: any, b: any) => String(a.vencimento).localeCompare(String(b.vencimento)))[0];
+                const travada = !!primeira && primeira.status !== "prevista";
+                return (
+                  <section className="rounded-xl border border-border bg-card p-4 text-sm">
+                    <label className={`flex items-start gap-3 ${travada ? "opacity-60" : "cursor-pointer"}`}>
+                      <input type="checkbox" className="mt-0.5 h-4 w-4 accent-[var(--rt-gold)]" checked={f.entradaPagaNoAto} disabled={travada || entradaNoAto.isPending}
+                        onChange={e => entradaNoAto.mutate({ id, paga: e.target.checked })} />
+                      <span>
+                        <b>Entrada paga no ato da assinatura</b> (dinheiro, Pix direto ou maquininha): a entrada não vira boleto no Asaas.
+                        <span className="block text-xs text-muted-foreground">
+                          {travada ? "A entrada já foi emitida ou paga; para mudar, cancele a cobrança dela." : "Depois, registre o pagamento da entrada na lista de parcelas (pagamento manual), para sair o recibo."}
+                        </span>
+                      </span>
+                    </label>
+                    <p className="mt-2 text-xs text-muted-foreground">
+                      Emissão automática no Asaas: <b className={f.emissaoAuto ? "text-ok-400" : ""}>{f.emissaoAuto ? "ligada" : "desligada"}</b>
+                      {f.emissaoAuto ? " (carnê 1 na assinatura e o próximo 45 dias antes)" : " — ligue em Financeiro › Cobrança automática, ou use o botão Emitir no Asaas"}.
+                    </p>
+                  </section>
+                );
+              })()}
               <section className="flex flex-wrap items-end gap-2 rounded-xl border border-border bg-card p-4">
                 <label className="flex flex-col gap-1 text-xs text-muted-foreground">Carnê
                   <select className={`${sel} w-56`} value={bloco} onChange={e => setBloco(e.target.value)}>

@@ -22,8 +22,8 @@ export const ROTULO_ETAPA: Record<EtapaRegua, string> = {
   antes: '3 dias antes', dia: 'No dia', atraso: '3 dias de atraso', final: '10 dias de atraso (último)',
 };
 
-/** Status de parcela que ainda pode ser cobrada */
-export const STATUS_COBRAVEIS = ['prevista', 'emitida', 'vencida'] as const;
+/** Status de parcela que pode ser cobrada: só a já emitida no Asaas (prevista não tem boleto nem Pix para mandar) */
+export const STATUS_COBRAVEIS = ['emitida', 'vencida'] as const;
 /** Contratos que recebem a régua (assinado em diante, sem os encerrados) */
 export const CONTRATOS_COM_REGUA = ['assinado', 'ativo'] as const;
 

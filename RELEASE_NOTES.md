@@ -3,6 +3,23 @@
 Cada versão nova vai no TOPO. Depois rode `npm run release` (valida e atualiza o package.json);
 ao subir, o servidor grava a versão no banco e todos recebem o aviso "Novidades da versão".
 
+## 1.123.0 — 2026-11-07
+tipo: minor
+obrigatoria: nao
+titulo: Emissão automática dos boletos no Asaas ao assinar o contrato
+publico: equipe
+
+### Novo
+- Financeiro › Cobrança automática › Emissão automática no Asaas: quando todos assinam o contrato, o carnê 1 (entrada e primeiras parcelas) sai no Asaas com boleto e Pix, sem ninguém clicar
+- Os carnês seguintes saem sozinhos 45 dias antes da primeira parcela de cada um vencer
+- Travas: só com o Asaas configurado e o cadastro do comprador completo (CPF, endereço e telefone); parcela já vencida nunca é emitida sozinha; o que travar aparece no sino do escritório, e o botão "Emitir no Asaas" continua
+- No contrato, aba Financeiro: "Entrada paga no ato da assinatura" (dinheiro, Pix direto ou maquininha) — a entrada não vira boleto; depois é só registrar o pagamento manual para sair o recibo
+- Prévia do que sairia hoje, contrato por contrato, com o que falta no cadastro
+- Começa desligada: só o administrador liga
+
+### Correções
+- A cobrança automática no WhatsApp agora só lembra de parcela já emitida no Asaas, sempre com o link do boleto/Pix (antes podia lembrar de parcela sem boleto)
+
 ## 1.122.0 — 2026-11-07
 tipo: minor
 obrigatoria: nao

@@ -60,7 +60,7 @@ export async function gerarCobrancasDoPlano(contratoId: number, plano: PlanoCont
 }
 
 /** Emite no Asaas as cobranças previstas do carnê (bloco de 12) — só contrato ativo e Asaas configurado */
-export async function emitirCarneNoAsaas(contratoId: number, bloco: number, o: { usuarioId?: number; fetchFn?: FetchFn } = {}) {
+export async function emitirCarneNoAsaas(contratoId: number, bloco: number, o: { usuarioId?: number; fetchFn?: FetchFn; filtro?: (linha: any) => boolean; origem?: string } = {}) {
   const cfg = exigirConfigAsaas(process.env, await slugDoContrato(contratoId));
   const db = (await getDb()) as any;
   const [c] = await db.select().from(contratos).where(eq(contratos.id, contratoId)).limit(1);
@@ -72,7 +72,7 @@ export async function emitirCarneNoAsaas(contratoId: number, bloco: number, o: {
   const customerId = c.asaasCustomerId || await buscarOuCriarCliente(cfg, payloadCliente({ ...comprador, telefone: comprador.telefone1, contratoId }), o.fetchFn);
   if (!c.asaasCustomerId) await db.update(contratos).set({ asaasCustomerId: customerId }).where(eq(contratos.id, contratoId));
   const linhas = await db.select().from(cobrancas).where(eq(cobrancas.contratoId, contratoId));
-  const doBloco = blocoDoCarne<any>(linhas.map((l: any) => ({ ...l, numero: Number(l.numero) })), bloco).filter((l: any) => l.status === 'prevista');
+  const doBloco = blocoDoCarne<any>(linhas.map((l: any) => ({ ...l, numero: Number(l.numero) })), bloco).filter((l: any) => l.status === 'prevista' && (!o.filtro || o.filtro(l)));
   const hoje = hojeBrasil();
   let emitidas = 0;
   for (const l of doBloco) {
@@ -89,6 +89,6 @@ export async function emitirCarneNoAsaas(contratoId: number, bloco: number, o: {
     }).where(and(eq(cobrancas.id, l.id), eq(cobrancas.status, 'prevista')));
     emitidas++;
   }
-  await auditar('carne_emitido_asaas', { contratoId, usuarioId: o.usuarioId ?? null, origem: 'perfil', detalhe: { bloco, emitidas } });
+  await auditar('carne_emitido_asaas', { contratoId, usuarioId: o.usuarioId ?? null, origem: o.origem ?? 'perfil', detalhe: { bloco, emitidas } });
   return { emitidas };
 }

@@ -396,6 +396,7 @@ export function initSqliteTables(sqlite: any): void {
     pdfAtual TEXT, hashAtual TEXT, asaasCustomerId TEXT, usoLiberado INTEGER NOT NULL DEFAULT 0, usoLiberadoEm INTEGER, criadoPor INTEGER,
     criadoEm ${agora}, atualizadoEm ${agora}
   )`);
+  addColumn(`ALTER TABLE contratos ADD COLUMN entradaPagaNoAto INTEGER NOT NULL DEFAULT 0`);
   run(`CREATE TABLE IF NOT EXISTS contratoVersoes (
     id INTEGER PRIMARY KEY AUTOINCREMENT, contratoId INTEGER NOT NULL, versao INTEGER NOT NULL, etapa TEXT NOT NULL, arquivo TEXT NOT NULL,
     sha256 TEXT NOT NULL, bytes INTEGER NOT NULL, criadoEm ${agora}, UNIQUE(contratoId, versao)
