@@ -42,7 +42,7 @@ export default function RenegociacaoContrato({ contratoId, cobrancas, taxaContra
     onError: e => toast.error(e.message),
   });
   const copiar = async (t: string) => { try { await navigator.clipboard.writeText(t); toast.success("Link copiado"); } catch { window.prompt("Copie:", t); } };
-  const pendente = aditivos?.some(a => a.status === "aguardando");
+  const pendente = aditivos?.some(a => a.status === "aguardando" && a.tipo === "renegociacao");
   const renegPrevistas = cobrancas.filter(x => x.tipo === "renegociacao" && x.status === "prevista").length;
 
   return (
@@ -103,9 +103,9 @@ export default function RenegociacaoContrato({ contratoId, cobrancas, taxaContra
       {aditivos?.map(a => (
         <div key={a.id} className={`flex flex-wrap items-center justify-between gap-2 rounded-lg border p-2 text-sm ${a.status === "aguardando" ? "border-warn-400/50" : "border-border"}`}>
           <div>
-            <p><b>Termo Aditivo n.º {a.numero}</b> · {brl(a.valorRenegociado)} em {a.parcelas}× de {brl(a.valorParcela)} · <span className="text-muted-foreground">{a.rotuloStatus}{a.assinadoEm ? ` em ${new Date(a.assinadoEm).toLocaleString("pt-BR", { timeZone: "America/Fortaleza" })}` : ""}</span></p>
-            <p className="text-xs text-muted-foreground">Parcelas: {a.itens.join(", ")}</p>
-            {a.resultado && <p className="text-xs text-muted-foreground">{a.resultado.canceladas} cancelada(s), {a.resultado.criadas} nova(s), {a.resultado.emitidas} emitida(s) no Asaas{a.resultado.falhasAsaas.length ? ` · ⚠️ ${a.resultado.falhasAsaas.join("; ")}` : ""}</p>}
+            <p><b>Termo Aditivo n.º {a.numero}</b> · {a.tipo === "renegociacao" ? `${brl(a.valorRenegociado)} em ${a.parcelas}× de ${brl(a.valorParcela)}` : a.titulo} · <span className="text-muted-foreground">{a.rotuloStatus}{a.assinadoEm ? ` em ${new Date(a.assinadoEm).toLocaleString("pt-BR", { timeZone: "America/Fortaleza" })}` : ""}</span></p>
+            <p className="text-xs text-muted-foreground">{a.tipo === "renegociacao" ? `Parcelas: ${a.itens.join(", ")}` : a.resumo}</p>
+            {a.tipo === "renegociacao" && a.resultado && <p className="text-xs text-muted-foreground">{a.resultado.canceladas} cancelada(s), {a.resultado.criadas} nova(s), {a.resultado.emitidas} emitida(s) no Asaas{a.resultado.falhasAsaas.length ? ` · ⚠️ ${a.resultado.falhasAsaas.join("; ")}` : ""}</p>}
           </div>
           <div className="flex flex-wrap gap-1">
             <Button size="sm" variant="outline" asChild><a href={`/api/financeiro/aditivos/${a.id}.pdf`} target="_blank" rel="noreferrer"><FileText className="mr-1 h-3.5 w-3.5" /> PDF</a></Button>

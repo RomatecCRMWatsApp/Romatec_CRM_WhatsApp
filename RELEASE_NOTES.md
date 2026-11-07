@@ -3,6 +3,20 @@
 Cada versão nova vai no TOPO. Depois rode `npm run release` (valida e atualiza o package.json);
 ao subir, o servidor grava a versão no banco e todos recebem o aviso "Novidades da versão".
 
+## 1.126.0 — 2026-11-07
+tipo: minor
+obrigatoria: nao
+titulo: Termos aditivos em lote: registro do loteamento e liberação para transferência
+publico: equipe
+
+### Novo
+- Contratos › Aditivos em lote: quando sair o registro do loteamento ou a liberação para transferência, o administrador preenche os dados uma vez e o sistema gera um Termo Aditivo para cada contrato assinado do empreendimento
+- Registro: número do registro, data, cartório, matrícula do empreendimento e as matrículas das chácaras; opcionalmente grava tudo no cadastro do empreendimento, e os contratos novos, o modelo e o talão já saem com o registro
+- Liberação: data e fundamento (ex.: termo de aceite das obras), cessão de direitos com anuência e escritura definitiva após a quitação
+- Cada comprador recebe o link no WhatsApp e assina com o código de confirmação, como na renegociação; o termo assinado fica no contrato, com o manifesto de evidências
+- Andamento por empreendimento: quantos assinaram, quantos aguardam e quem está sem WhatsApp
+- Gerar pede a senha do administrador; a secretária acompanha e reenvia o link
+
 ## 1.125.1 — 2026-11-07
 tipo: patch
 obrigatoria: nao

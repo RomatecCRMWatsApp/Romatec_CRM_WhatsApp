@@ -40,12 +40,14 @@ export default function AssinarAditivo() {
     catch (e: any) { setMsg({ ok: false, t: e.message }); } finally { setOcupado(false); }
   };
   const r = d?.resumo;
+  const reneg = !d || (d.tipo ?? "renegociacao") === "renegociacao";
+  const assunto = reneg ? "renegociação de parcelas" : String(d.titulo ?? "").toLowerCase();
   return (
     <div className="min-h-screen" style={{ background: CREME, color: "var(--c-1d2b22)", fontFamily: "Manrope, system-ui, sans-serif" }}>
       <header className="border-b-4 px-4 py-3 text-white" style={{ background: VERDE, borderColor: DOURADO }}>
         <div className="mx-auto max-w-2xl">
           <p className="font-bold" style={{ fontFamily: "'Playfair Display', Georgia, serif" }}>Condomínio de Chácaras Bom Jardims</p>
-          <p className="text-xs" style={{ color: DOURADO }}>Termo aditivo · renegociação de parcelas</p>
+          <p className="text-xs" style={{ color: DOURADO }}>Termo aditivo · {assunto}</p>
         </div>
       </header>
       <main className="mx-auto max-w-2xl space-y-4 px-4 py-5 text-sm">
@@ -57,7 +59,13 @@ export default function AssinarAditivo() {
               <h1 className="text-lg font-bold" style={{ color: VERDE }}>Olá, {d.comprador}!</h1>
               <p>Termo Aditivo n.º {d.numero} ao contrato {d.contrato} · Chácara {d.lote}</p>
             </section>
-            <section className="space-y-2 rounded-xl border bg-white p-4" style={borda}>
+            {!reneg && (
+              <section className="space-y-2 rounded-xl border bg-white p-4" style={borda}>
+                <p className="font-semibold" style={{ color: VERDE }}>{d.titulo}: o que muda no seu contrato</p>
+                <ul className="list-disc space-y-1 pl-5">{(d.pontos ?? []).map((p: string) => <li key={p}>{p}</li>)}</ul>
+              </section>
+            )}
+            {reneg && <section className="space-y-2 rounded-xl border bg-white p-4" style={borda}>
               <p className="font-semibold" style={{ color: VERDE }}>Parcelas renegociadas</p>
               <ul className="space-y-0.5">{r.itens.map((i: any) => <li key={i.id}>{i.rotulo} · venc. {br(i.vencimento)} · {brl(i.valor)}{i.diasAtraso > 0 ? ` → ${brl(i.atualizado)} atualizado` : ""}</li>)}</ul>
               <div className="grid grid-cols-2 gap-2 pt-2 sm:grid-cols-4">
@@ -67,14 +75,14 @@ export default function AssinarAditivo() {
               </div>
               <p className="pt-2 font-semibold" style={{ color: VERDE }}>Novo parcelamento: {r.parcelas.length}× {r.taxaMensal ? `(juros de ${(r.taxaMensal * 100).toLocaleString("pt-BR")}% ao mês)` : "(sem juros)"}</p>
               <ul className="space-y-0.5">{r.parcelas.map((p: any) => <li key={p.numero}>Parcela {p.numero}/{r.parcelas.length} · vence {br(p.vencimento)} · <b>{brl(p.valor)}</b></li>)}</ul>
-            </section>
+            </section>}
             <a href={`/api/aditivo/${token}/termo.pdf`} target="_blank" rel="noreferrer" onClick={() => setLeu(true)}
               className="flex items-center gap-3 rounded-xl border bg-white p-3 font-semibold" style={{ borderColor: DOURADO, color: VERDE }}>
               <FileText className="h-5 w-5" /> Ler o Termo Aditivo completo (PDF){d.status === "assinado" ? " — com o manifesto de assinatura" : ""}
             </a>
             {d.status === "assinado" && (
               <p className="flex items-start gap-2 rounded-xl bg-ok-50 p-4 text-ok-900"><CheckCircle2 className="mt-0.5 h-5 w-5 shrink-0" />
-                Termo assinado em {new Date(d.assinadoEm).toLocaleString("pt-BR", { timeZone: "America/Fortaleza" })}. As novas parcelas já aparecem no seu portal do comprador (carnê digital), com boleto e PIX.</p>
+                Termo assinado em {new Date(d.assinadoEm).toLocaleString("pt-BR", { timeZone: "America/Fortaleza" })}. {reneg ? "As novas parcelas já aparecem no seu portal do comprador (carnê digital), com boleto e PIX." : "O termo assinado fica junto do seu contrato. Guarde o PDF acima."}</p>
             )}
             {d.status === "cancelado" && <p className="rounded-xl bg-warn-50 p-4 text-warn-900">Este termo foi cancelado pela administração. Fale com o escritório.</p>}
             {d.status === "aguardando" && (
@@ -87,7 +95,7 @@ export default function AssinarAditivo() {
                   className="w-full rounded-lg border px-3 py-2 text-center text-lg tracking-[0.4em]" style={borda} />
                 <label className="flex items-start gap-2">
                   <input type="checkbox" checked={aceite} onChange={e => setAceite(e.target.checked)} className="mt-1" />
-                  <span>Li o Termo Aditivo n.º {d.numero} e concordo com as condições da renegociação.{!leu && <span className="block text-xs text-neutro-500">Abra o PDF acima antes de assinar.</span>}</span>
+                  <span>Li o Termo Aditivo n.º {d.numero} e concordo com as condições {reneg ? "da renegociação" : `do termo (${assunto})`}.{!leu && <span className="block text-xs text-neutro-500">Abra o PDF acima antes de assinar.</span>}</span>
                 </label>
                 {msg && <p className={`rounded-lg p-2 ${msg.ok ? "bg-ok-50 text-ok-800" : "bg-danger-50 text-danger-800"}`}>{msg.t}</p>}
                 <button disabled={ocupado || codigo.length !== 6 || !aceite} onClick={assinar} className="inline-flex w-full items-center justify-center gap-1 rounded-lg px-4 py-3 font-semibold text-white disabled:opacity-50" style={{ background: VERDE }}>

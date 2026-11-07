@@ -17,6 +17,7 @@ import { montarRenegociacao, ROTULO_STATUS_ADITIVO, type ItemRenegociado, type R
 import { calcularEncargos } from './encargos';
 import { rotuloParcela } from './dados';
 import { auditar, cobrancasDoContrato, FinanceiroErro, hojeBrasil, indicesIpcaMap, pessoasDoContrato, slugDoContrato, urlPublica } from './servico';
+import { LINHA_PUBLICIDADE } from '../../shared/escritorio';
 
 const sha = (b: Buffer | string) => createHash('sha256').update(b).digest('hex');
 const brl = (v: number) => v.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
@@ -24,6 +25,7 @@ const br = (iso: string) => iso.slice(0, 10).split('-').reverse().join('/');
 const pctTaxa = (i: number) => `${(i * 100).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 4 })}% ao mês`;
 const fone = (v: unknown) => { const s = String(v ?? '').replace(/\D/g, ''); return s.length < 10 ? null : s.startsWith('55') && s.length >= 12 ? s : `55${s}`; };
 const OTP_MIN = 10;
+export { fone as foneAditivo, sha as shaAditivo };
 const EXTENSO = ['zero', 'uma', 'duas', 'três', 'quatro', 'cinco', 'seis', 'sete', 'oito', 'nove', 'dez', 'onze', 'doze', 'treze', 'quatorze', 'quinze', 'dezesseis', 'dezessete', 'dezoito', 'dezenove', 'vinte'];
 const parcelasPorExtenso = (n: number) => (n <= 20 ? `${n} (${EXTENSO[n]}) ${n === 1 ? 'parcela mensal' : 'parcelas mensais'}` : `${n} parcelas mensais`);
 
@@ -184,7 +186,7 @@ export async function criarAditivo(contratoId: number, p: PedidoRenegociacao, au
   if (!c) throw new FinanceiroErro('NAO_ENCONTRADO', 'Contrato não encontrado', 404);
   if (!['ativo', 'assinado'].includes(c.status)) throw new FinanceiroErro('STATUS', 'A renegociação é para contrato assinado/ativo', 409);
   const todos: any[] = await d.select().from(contratoAditivos).where(eq(contratoAditivos.contratoId, contratoId));
-  if (todos.some(a => a.status === 'aguardando')) throw new FinanceiroErro('PENDENTE', 'Já existe um termo aditivo aguardando a assinatura do comprador. Cancele-o antes de fazer outro.', 409);
+  if (todos.some(a => a.status === 'aguardando' && (a.tipo ?? 'renegociacao') === 'renegociacao')) throw new FinanceiroErro('PENDENTE', 'Já existe um termo aditivo de renegociação aguardando a assinatura do comprador. Cancele-o antes de fazer outro.', 409);
   const r = await simularRenegociacao(contratoId, p, hoje);
   const numero = todos.reduce((m, a) => Math.max(m, Number(a.numero)), 0) + 1;
   const pdf = await termoPdf(contratoId, numero, r, hoje);
@@ -203,12 +205,19 @@ export async function criarAditivo(contratoId: number, p: PedidoRenegociacao, au
 
 export const linkAditivo = (token: string) => `${urlPublica()}/aditivo/${token}`;
 
-async function enviarLink(contratoId: number, token: string, numero: number) {
+/** Assunto do termo na mensagem do WhatsApp, por tipo de aditivo */
+const ASSUNTO_ADITIVO: Record<string, string> = {
+  renegociacao: 'com a renegociação das suas parcelas',
+  registro: 'que inclui no seu contrato os dados do registro do loteamento em cartório',
+  liberacao: 'com a liberação da sua chácara para transferência',
+};
+
+export async function enviarLink(contratoId: number, token: string, numero: number, tipo = 'renegociacao') {
   const { comprador } = await pessoasDoContrato(contratoId);
   const tel = fone(comprador?.telefone1);
   if (!tel) return { enviado: false };
   const nome = String(comprador?.nome ?? '').trim().split(/\s+/)[0] || 'cliente';
-  await enviador(tel, `Olá, ${nome}! O Termo Aditivo n.º ${numero} com a renegociação das suas parcelas está pronto. Leia e assine por aqui (você recebe um código de confirmação no WhatsApp): ${linkAditivo(token)}`);
+  await enviador(tel, `Olá, ${nome}! O Termo Aditivo n.º ${numero} ${ASSUNTO_ADITIVO[tipo] ?? ''} está pronto. Leia e assine por aqui (você recebe um código de confirmação no WhatsApp): ${linkAditivo(token)}\n\n${LINHA_PUBLICIDADE}`.replace(/  +/g, ' '));
   return { enviado: true };
 }
 
@@ -216,7 +225,7 @@ export async function reenviarLink(aditivoId: number) {
   const d = await banco();
   const [a]: any[] = await d.select().from(contratoAditivos).where(eq(contratoAditivos.id, aditivoId)).limit(1);
   if (!a || a.status !== 'aguardando') throw new FinanceiroErro('STATUS', 'Este termo não está aguardando assinatura', 409);
-  return enviarLink(Number(a.contratoId), a.token, Number(a.numero));
+  return enviarLink(Number(a.contratoId), a.token, Number(a.numero), a.tipo ?? 'renegociacao');
 }
 
 export async function cancelarAditivo(aditivoId: number, autorId: number) {
@@ -233,10 +242,13 @@ export async function aditivosDo(contratoId: number) {
   const d = await banco();
   const rs: any[] = await d.select().from(contratoAditivos).where(eq(contratoAditivos.contratoId, contratoId)).orderBy(desc(contratoAditivos.numero));
   return rs.map(a => {
-    const r = JSON.parse(a.dadosJson) as Renegociacao;
+    const tipo = String(a.tipo ?? 'renegociacao');
+    const dados = JSON.parse(a.dadosJson);
+    const r = (tipo === 'renegociacao' ? dados : { valorRenegociado: 0, parcelas: [], itens: [] }) as Renegociacao;
     const res = a.resultadoJson ? JSON.parse(a.resultadoJson) : null;
     return {
-      id: Number(a.id), numero: Number(a.numero), status: a.status as StatusAditivo, rotuloStatus: ROTULO_STATUS_ADITIVO[a.status as StatusAditivo] ?? a.status,
+      id: Number(a.id), numero: Number(a.numero), tipo, titulo: tipo === 'renegociacao' ? 'Renegociação de parcelas' : String(dados.titulo ?? tipo), resumo: tipo === 'renegociacao' ? null : String(dados.resumo ?? ''),
+      status: a.status as StatusAditivo, rotuloStatus: tipo !== 'renegociacao' && a.status === 'assinado' ? 'Assinado' : ROTULO_STATUS_ADITIVO[a.status as StatusAditivo] ?? a.status,
       valorRenegociado: r.valorRenegociado, parcelas: r.parcelas.length, valorParcela: r.parcelas[0]?.valor ?? 0, itens: r.itens.map(i => i.rotulo),
       link: a.status === 'aguardando' ? linkAditivo(a.token) : null, assinadoEm: a.assinadoEm ? new Date(a.assinadoEm).toISOString() : null,
       criadoEm: new Date(a.criadoEm).toISOString(), resultado: res as null | { canceladas: number; criadas: number; emitidas: number; falhasAsaas: string[] },
@@ -268,10 +280,19 @@ export async function paginaAditivo(token: string) {
   const { d, a } = await aditivoDoToken(token);
   const [c]: any[] = await d.select({ numero: contratos.numero, lote: contratos.loteCodigo }).from(contratos).where(eq(contratos.id, a.contratoId)).limit(1);
   const { comprador } = await pessoasDoContrato(Number(a.contratoId));
-  const r = JSON.parse(a.dadosJson) as Renegociacao;
+  const tipo = String(a.tipo ?? 'renegociacao');
+  const dados = JSON.parse(a.dadosJson);
+  const r = dados as Renegociacao;
   const tel = fone(comprador?.telefone1);
+  if (tipo !== 'renegociacao') {
+    return {
+      numero: Number(a.numero), contrato: c?.numero ?? '', lote: c?.lote ?? '', status: a.status as StatusAditivo, tipo, titulo: String(dados.titulo ?? ''),
+      comprador: String(comprador?.nome ?? '').trim().split(/\s+/)[0] || 'Cliente', telefone: tel ? tel.replace(/^(\d{4})\d+(\d{4})$/, '($1) •••••-$2').replace(/^\((\d{2})(\d{2})\)/, '(+$1 $2)') : null,
+      resumo: null, pontos: (dados.pontos ?? []) as string[], assinadoEm: a.assinadoEm ? new Date(a.assinadoEm).toISOString() : null,
+    };
+  }
   return {
-    numero: Number(a.numero), contrato: c?.numero ?? '', lote: c?.lote ?? '', status: a.status as StatusAditivo,
+    numero: Number(a.numero), contrato: c?.numero ?? '', lote: c?.lote ?? '', status: a.status as StatusAditivo, tipo, titulo: 'Renegociação de parcelas', pontos: [] as string[],
     comprador: String(comprador?.nome ?? '').trim().split(/\s+/)[0] || 'Cliente', telefone: tel ? tel.replace(/^(\d{4})\d+(\d{4})$/, '($1) •••••-$2').replace(/^\((\d{2})(\d{2})\)/, '(+$1 $2)') : null,
     resumo: { itens: r.itens, totalOriginal: r.totalOriginal, encargos: r.encargos, desconto: r.desconto, valorRenegociado: r.valorRenegociado, parcelas: r.parcelas, totalAPagar: r.totalAPagar, taxaMensal: r.taxaMensal },
     assinadoEm: a.assinadoEm ? new Date(a.assinadoEm).toISOString() : null,
@@ -334,7 +355,17 @@ export async function assinarAditivo(token: string, codigo: string, o: { aceite:
     await salvarArquivo(chave, assinado, 'application/pdf');
     await d.update(contratoAditivos).set({ pdfAssinadoArquivo: chave } as any).where(eq(contratoAditivos.id, a.id));
   }
-  await auditar('aditivo_assinado', { contratoId: Number(a.contratoId), origem: 'publico', ip: o.ip, detalhe: { numero: a.numero } });
+  await auditar('aditivo_assinado', { contratoId: Number(a.contratoId), origem: 'publico', ip: o.ip, detalhe: { numero: a.numero, tipo: a.tipo } });
+  const tipo = String(a.tipo ?? 'renegociacao');
+  if (tipo !== 'renegociacao') {
+    // Registro / liberação: grava o que o termo traz (matrícula da unidade, liberação) e avisa o escritório
+    const { aplicarAditivoLote } = await import('../contratos/aditivosLote');
+    const resultado = await aplicarAditivoLote(Number(a.id));
+    const { notificarChamado } = await import('../notificacoes');
+    notificarChamado({ contrato: String(c?.numero ?? ''), lote: String(c?.lote ?? ''), empreendimentoId: Number(c?.empreendimentoId ?? 0), empreendimentoSlug: '', tipo: 'contrato',
+      assunto: `Termo Aditivo n.º ${a.numero} (${JSON.parse(a.dadosJson).titulo ?? tipo}) assinado pelo comprador` }).catch(() => {});
+    return { ok: true as const, resultado: { canceladas: 0, criadas: 0, emitidas: 0, falhasAsaas: [] as string[], ...resultado } };
+  }
   const resultado = await aplicarAditivo(Number(a.id));
   // Corretores e empreendedor: aditivo assinado no contrato da chácara (sem dados do comprador)
   try {

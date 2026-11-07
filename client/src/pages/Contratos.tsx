@@ -4,6 +4,7 @@ import { Ban, ChevronDown, Download, FileSignature, Loader2, Pencil, Plus, XCirc
 import { toast } from "sonner";
 import { trpc } from "@/lib/trpc";
 import PageHeader from "@/components/PageHeader";
+import AditivosLote from "@/components/contratos/AditivosLote";
 import PedidoDocumentos from "@/components/contratos/PedidoDocumentos";
 import { Button } from "@/components/ui/button";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
@@ -52,8 +53,8 @@ export default function Contratos() {
   const [, navigate] = useLocation();
   // Aba: lista de contratos ou links de leitura para o cliente (?aba=links abre direto)
   const abaUrl = new URLSearchParams(useSearch()).get("aba");
-  const aba: "contratos" | "links" | "documentos" = abaUrl === "links" ? "links" : abaUrl === "documentos" ? "documentos" : "contratos";
-  const setAba = (a: "contratos" | "links" | "documentos") => navigate(a === "contratos" ? "/contratos" : `/contratos?aba=${a}`, { replace: true });
+  const aba: "contratos" | "links" | "documentos" | "aditivos" = abaUrl === "links" ? "links" : abaUrl === "documentos" ? "documentos" : abaUrl === "aditivos" ? "aditivos" : "contratos";
+  const setAba = (a: "contratos" | "links" | "documentos" | "aditivos") => navigate(a === "contratos" ? "/contratos" : `/contratos?aba=${a}`, { replace: true });
   const [filtro, setFiltro] = useState(0);
   const [busca, setBusca] = useState("");
   const [baixando, setBaixando] = useState<string | null>(null);
@@ -123,7 +124,7 @@ export default function Contratos() {
         </div>} />
       <div className="mx-auto max-w-[1400px] px-4 md:px-6">
         <div className="mb-3 flex gap-1 border-b border-border">
-          {([["contratos", "Contratos"], ["documentos", "Pedir documentos"], ["links", "Links para o cliente"]] as const).map(([k, r]) => (
+          {([["contratos", "Contratos"], ["documentos", "Pedir documentos"], ["links", "Links para o cliente"], ...(["admin", "secretario"].includes(perfil ?? "") ? [["aditivos", "Aditivos em lote"]] as const : [])] as const).map(([k, r]) => (
             <button key={k} onClick={() => setAba(k)}
               className={`-mb-px border-b-2 px-3 py-2 text-sm ${aba === k ? "border-primary font-semibold text-foreground" : "border-transparent text-muted-foreground hover:text-foreground"}`}>{r}</button>
           ))}
@@ -131,6 +132,7 @@ export default function Contratos() {
       </div>
       {aba === "links" && <div className="mx-auto max-w-[1400px] px-4 pb-8 md:px-6"><LinksDocumentos /></div>}
       {aba === "documentos" && <div className="mx-auto max-w-[900px] px-4 pb-8 md:px-6"><PedidoDocumentos /></div>}
+      {aba === "aditivos" && <div className="mx-auto max-w-[1000px] px-4 pb-8 md:px-6"><AditivosLote admin={admin} /></div>}
       <div className={`mx-auto max-w-[1400px] space-y-3 px-4 pb-8 md:px-6 ${aba !== "contratos" ? "hidden" : ""}`}>
         <div className="flex flex-wrap items-center gap-2">
           {FILTROS.map((f, i) => (

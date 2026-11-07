@@ -25,7 +25,40 @@ async function comErro<T>(f: () => Promise<T>): Promise<T> {
   }
 }
 
+const L = () => import("../contratos/aditivosLote");
+const tipoLote = z.enum(["registro", "liberacao"]);
+const dadosRegistro = z.object({
+  numeroRegistro: z.string().trim().min(2).max(80), dataRegistro: z.string().regex(/^\d{4}-\d{2}-\d{2}$/), cartorio: z.string().trim().min(5).max(200),
+  matriculaEmpreendimento: z.string().trim().min(1).max(40), livroFolhas: z.string().trim().max(80).nullable().optional(),
+  matriculas: z.record(z.string().max(10), z.string().max(40)).nullable().optional(), atualizarCadastro: z.boolean().optional(), observacao: z.string().max(2000).nullable().optional(),
+});
+const dadosLiberacao = z.object({ dataLiberacao: z.string().regex(/^\d{4}-\d{2}-\d{2}$/), fundamento: z.string().trim().min(10).max(600), observacao: z.string().max(2000).nullable().optional() });
+
 export const renegociacaoRouter = router({
+  // ─── Termos aditivos em lote: registro do loteamento e liberação para transferência (server/contratos/aditivosLote.ts) ───
+  loteEmpreendimentos: protectedProcedure.query(async ({ ctx }) => {
+    exigir(ctx, ["admin", "secretario"]);
+    const { getDb } = await import("../db");
+    const { empreendimentos } = await import("../../drizzle/schema");
+    const d: any = await getDb();
+    return d ? (await d.select({ id: empreendimentos.id, nome: empreendimentos.nome }).from(empreendimentos)) as { id: number; nome: string }[] : [];
+  }),
+  loteAndamento: protectedProcedure.input(z.object({ empreendimentoId: z.number().int(), tipo: tipoLote })).query(async ({ ctx, input }) => {
+    exigir(ctx, ["admin", "secretario"]);
+    return comErro(async () => (await L()).andamentoLote(input.empreendimentoId, input.tipo));
+  }),
+  loteGerar: protectedProcedure.input(z.object({ empreendimentoId: z.number().int(), senha: z.string().min(1).max(200), registro: dadosRegistro.optional(), liberacao: dadosLiberacao.optional(), tipo: tipoLote }))
+    .mutation(async ({ ctx, input }) => {
+      exigir(ctx, ["admin"]);
+      return comErro(async () => {
+        const { exigirAdminComSenha } = await import("../contratos/cancelamento");
+        await exigirAdminComSenha(ctx.user as any, input.senha, `aditivo_${input.tipo}`, {});
+        const dados = input.tipo === "registro" ? input.registro : input.liberacao;
+        if (!dados) throw new TRPCError({ code: "BAD_REQUEST", message: "Preencha os dados do termo" });
+        return (await L()).gerarLote(input.empreendimentoId, input.tipo, dados as any, ctx.user.id);
+      });
+    }),
+
   simular: protectedProcedure.input(pedido).query(async ({ ctx, input }) => {
     exigir(ctx, ["admin", "secretario"]);
     const { contratoId, ...p } = input;
