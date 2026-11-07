@@ -106,6 +106,15 @@ export function detectQualificationIntent(message: string): 'SIM' | 'NAO' | 'NEU
   const optOut = ['parar', 'pare', 'sair', 'stop', 'descadastrar'];
   if (optOut.includes(msg.replace(/[^a-z]/g, ''))) return 'NAO';
 
+  // Recusa explícita vem antes das palavras positivas: "não quero" e "não tenho interesse" contêm "quero" e "tenho"
+  const semPontuacao = ` ${msg.replace(/[^a-z0-9 ]/g, ' ').replace(/\s+/g, ' ').trim()} `;
+  const RECUSA_EXPLICITA = [
+    'nao quero', 'nao tenho interesse', 'nao tenho mais interesse', 'sem interesse', 'zero interesse', 'nao me interessa',
+    'nao estou interessado', 'nao estou interessada', 'obrigado nao', 'obrigada nao', 'parem de', 'para de me', 'pare de me',
+    'para de mandar', 'pare de mandar', 'me tira da lista', 'me tire da lista', 'nao me mande mais', 'nao me manda mais',
+  ];
+  if (RECUSA_EXPLICITA.some(f => semPontuacao.includes(` ${f} `))) return 'NAO';
+
   // Palavras-chave POSITIVAS
   const positivoRegex = /\b(sim|claro|pode|quero|aceito|vou|com\s*certeza|tenho|possuo|consigo|dou|disponho|beleza|ok|certo|vamos|topa|blz|perfeito|show|top|boa|positivo|afirmativo|confirmo|confirmado)\b/;
   if (positivoRegex.test(msg)) return 'SIM';
@@ -179,6 +188,16 @@ export function detectQualificationIntent(message: string): 'SIM' | 'NAO' | 'NEU
   return 'NEUTRO';
 }
 
+/** Valor em reais escrito pelo lead: "R$ 3.500", "3500,00", "4 mil", "3,5 mil" (0 se não achar número) */
+export function valorEmReais(texto: string): number {
+  const t = String(texto ?? '').toLowerCase();
+  const m = t.match(/\d[\d.]*(?:,\d+)?/);
+  if (!m) return 0;
+  const n = Number(m[0].replace(/\.(?=\d{3}(\D|$))/g, '').replace(',', '.'));
+  if (!Number.isFinite(n)) return 0;
+  return /\bmil\b/.test(t.slice(m.index! + m[0].length)) ? n * 1000 : n;
+}
+
 /**
  * Gerar resposta bot para rejeição educada
  */
@@ -209,10 +228,10 @@ export function calculateLeadScore(answers: QualificationAnswers): 'quente' | 'm
   let score = 0;
   let maxScore = 0;
 
-  // Renda > R$ 2.500/mês = positivo
+  // Renda a partir de R$ 2.500/mês = positivo ("R$ 3.500", "3500", "4 mil", "3,5 mil")
   if (answers.rendaMensal) {
     maxScore += 2;
-    if (/\d{4,}|[5-9]\s*mil|[1-9][0-9]*\s*mil/.test(answers.rendaMensal)) {
+    if (valorEmReais(answers.rendaMensal) >= 2500) {
       score += 2;
     }
   }

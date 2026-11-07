@@ -69,10 +69,10 @@ export async function assignContactsToCampaign(
   const allContacts = await db.select().from(contacts).where(eq(contacts.status, 'active'));
 
   const existingAssignments = await db.select().from(campaignContacts);
-  const alreadyUsed = new Set<number>(existingAssignments.map(cc => cc.contactId));
+  const alreadyUsed = new Set<number>(existingAssignments.map((cc: any) => cc.contactId));
   if (globalUsedIds) globalUsedIds.forEach(id => alreadyUsed.add(id));
 
-  const available = allContacts.filter(c => !alreadyUsed.has(c.id));
+  const available = allContacts.filter((c: any) => !alreadyUsed.has(c.id));
 
   if (available.length < CONTACTS_PER_CAMPAIGN) {
     console.warn(`⚠️ [ContactMgr] Apenas ${available.length} contatos disponíveis para campanha ${campaignId}`);

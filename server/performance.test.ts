@@ -1,4 +1,8 @@
 import { describe, expect, it, vi } from "vitest";
+
+// Banco SQLite em memória, como os outros testes de rota
+process.env.DATABASE_DRIVER = 'sqlite';
+process.env.SQLITE_PATH = ':memory:';
 import { appRouter } from "./routers";
 import type { TrpcContext } from "./_core/context";
 

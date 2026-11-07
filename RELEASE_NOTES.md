@@ -3,6 +3,20 @@
 Cada versão nova vai no TOPO. Depois rode `npm run release` (valida e atualiza o package.json);
 ao subir, o servidor grava a versão no banco e todos recebem o aviso "Novidades da versão".
 
+## 1.120.1 — 2026-11-07
+tipo: patch
+obrigatoria: nao
+titulo: Correções internas e do robô de vendas antigo
+publico: admin
+
+### Corrigido
+- Robô de vendas: "Não quero", "Não tenho interesse" e "Obrigado, não" eram entendidos como interesse; agora encerram a conversa educadamente
+- Robô de vendas: renda escrita com ponto ("R$ 3.500") deixava de contar na classificação do lead
+- Quem recusa ou pede para parar antes de ter cadastro agora fica bloqueado de verdade (não volta a ser abordado)
+- Gerar descrição do imóvel: usa tipo, áreas, quartos, banheiros e vagas, e corrige a palavra "urgência" que saía embaralhada
+- Tela da Zaira: removido o indicador "Autonomia —%", que nunca tinha valor
+- Base técnica: zerados os 63 erros de tipagem e os 22 testes automáticos que falhavam (todas as 1054 verificações passam)
+
 ## 1.120.0 — 2026-11-07
 tipo: minor
 obrigatoria: nao

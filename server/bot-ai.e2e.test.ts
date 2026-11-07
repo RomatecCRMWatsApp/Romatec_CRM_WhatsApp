@@ -6,6 +6,10 @@
  */
 
 import { describe, it, expect, beforeAll, afterAll, vi } from 'vitest';
+
+// Persistência do lead (TESTE 6) usa o banco: SQLite em memória, como os outros testes
+process.env.DATABASE_DRIVER = 'sqlite';
+process.env.SQLITE_PATH = ':memory:';
 import { processBotMessage, registerBotMessage, registerUserReply, BotContext, BotResponse } from './bot-ai';
 import { persistLeadState, loadLeadState, discardLead, isLeadBlocked, getStaleLeads } from './lead-persistence';
 import { simulateAllBanks, generateMultiBankProposal } from './bank-simulation';
@@ -219,7 +223,7 @@ describe('Bot de Vendas E2E - Fluxo Completo', () => {
     });
 
     it('deve gerar proposta com recomendação de banco', () => {
-      const proposal = generateMultiBankProposal('João', 300000, 5000, 'R$ 60 mil', 240, false, true);
+      const proposal = generateMultiBankProposal('João', 300000, 9000, 'R$ 60 mil', 240, false, true); // parcela ~R$ 2,4 mil cabe em 30% da renda
 
       expect(proposal).toBeDefined();
       expect(proposal.length).toBeGreaterThan(100); // Proposta razoavelmente longa
@@ -417,10 +421,11 @@ describe('Bot de Vendas E2E - Fluxo Completo', () => {
       // Response final deve conter proposta
       expect(response?.text).toBeDefined();
 
-      // Deve conter elementos de proposta (banco, imóvel, ou ambos)
+      // Última resposta: o resultado da qualificação, com os botões de próximo passo
       const finalText = response?.text?.toUpperCase() || '';
-      const hasProposal = finalText.includes('PARCELA') || finalText.includes('RECOMENDAÇÃO') || finalText.includes('IMÓVEL');
-      expect(hasProposal).toBe(true);
+      expect(finalText).toContain('PERFIL');
+      expect(response?.qualified).toBe(true);
+      expect(response?.buttons?.some(b => b.id === 'agendar_visita')).toBe(true);
     });
   });
 

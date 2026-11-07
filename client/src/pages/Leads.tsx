@@ -206,7 +206,7 @@ export default function Leads() {
     { label: '🔥 Quentes',   value: stats?.quente || 0,     color: '#ef4444', icon: Flame },
     { label: '🌡️ Mornos',   value: stats?.morno || 0,      color: '#f59e0b', icon: Thermometer },
     { label: '❄️ Frios',    value: stats?.frio || 0,       color: '#3b82f6', icon: Snowflake },
-    { label: 'Em andamento', value: stats?.emAndamento || 0, color: '#3ec87a', icon: TrendingUp },
+    { label: 'Em andamento', value: (stats && 'emAndamento' in stats ? stats.emAndamento : 0) || 0, color: '#3ec87a', icon: TrendingUp },
     { label: 'Descartados',  value: stats?.descartado || 0, color: '#6b7280', icon: XCircle },
   ];
 

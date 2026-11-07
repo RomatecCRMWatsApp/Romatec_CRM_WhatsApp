@@ -220,7 +220,7 @@ export default function Properties() {
   // Corretor só vê os imóveis que o administrador habilitou para ele (admin e secretária veem todos)
   const visiveis = useMemo(() => (properties && minhas ? properties.filter((p: any) => habilitado(p.id)) : []), [properties, minhas]);
   const filteredProperties = useMemo(() => {
-    return visiveis.filter(p =>
+    return visiveis.filter((p: any) =>
       p.denomination?.toLowerCase().includes(searchTerm.toLowerCase()) ||
       p.address?.toLowerCase().includes(searchTerm.toLowerCase())
     );

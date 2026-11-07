@@ -11,7 +11,7 @@ export default function PropertiesCatalog() {
   const [search, setSearch] = useState('');
   const { data: properties = [], isLoading } = trpc.properties.list.useQuery();
 
-  const filtered = properties.filter(p =>
+  const filtered = properties.filter((p: any) =>
     (p as any).finalidade === tab &&
     p.status === 'available' &&
     (search === '' ||

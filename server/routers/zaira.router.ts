@@ -49,7 +49,7 @@ export const zairaRouter = router({
       agentRunning: isAgentRunning(),
       database: stats,
       railway,
-      github: repo.ok ? repo.data : { error: repo.error },
+      github: 'data' in repo && repo.ok ? repo.data : { error: repo.error },
       environment: getEnvironmentInfo(),
     };
   }),

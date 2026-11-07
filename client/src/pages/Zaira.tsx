@@ -300,8 +300,7 @@ export default function Zaira() {
                 </button>
               </div>
               <div style={{ marginTop: 10, fontSize: 11, color: COLORS.textDim }}>
-                Autonomia: <span style={{ color: COLORS.neon, fontWeight: 600 }}>{statusData?.autonomyLevel ?? '—'}%</span> &nbsp;|&nbsp;
-                Status: <span style={{ color: statusData?.agentRunning ? COLORS.neon : COLORS.red, fontWeight: 600 }}>{statusData?.agentRunning ? '● Ativo' : '○ Parado'}</span>
+                                Status: <span style={{ color: statusData?.agentRunning ? COLORS.neon : COLORS.red, fontWeight: 600 }}>{statusData?.agentRunning ? '● Ativo' : '○ Parado'}</span>
               </div>
             </div>
 

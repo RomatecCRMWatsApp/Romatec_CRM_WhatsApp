@@ -276,7 +276,7 @@ export default function Performance() {
 
           {/* Cards detalhados por campanha */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            {byCampaign.map((camp, idx) => (
+            {byCampaign.map((camp: any, idx: any) => (
               <div key={camp.id} className="p-4 rounded-xl bg-secondary/30 border border-border/30">
                 <div className="flex items-center justify-between mb-3">
                   <div className="flex items-center gap-2">

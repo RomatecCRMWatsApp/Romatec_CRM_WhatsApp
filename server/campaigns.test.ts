@@ -1,4 +1,8 @@
 import { describe, expect, it, vi } from "vitest";
+
+// Banco SQLite em memória, como os outros testes de rota
+process.env.DATABASE_DRIVER = 'sqlite';
+process.env.SQLITE_PATH = ':memory:';
 import { appRouter } from "./routers";
 import type { TrpcContext } from "./_core/context";
 
@@ -48,17 +52,19 @@ function createPublicContext(): { ctx: TrpcContext } {
 
 describe("campaigns", () => {
   describe("campaigns.list", () => {
-    it("returns an array (public endpoint)", async () => {
-      const { ctx } = createPublicContext();
-      const caller = appRouter.createCaller(ctx);
-      const result = await caller.campaigns.list();
-      expect(Array.isArray(result)).toBe(true);
+    it("requires login", async () => {
+      const caller = appRouter.createCaller(createPublicContext().ctx);
+      await expect(caller.campaigns.list()).rejects.toThrow(/login/i);
+    });
+    it("returns an array when authenticated", async () => {
+      const caller = appRouter.createCaller(createAuthContext().ctx);
+      expect(Array.isArray(await caller.campaigns.list())).toBe(true);
     });
   });
 
   describe("campaigns.getById", () => {
     it("returns undefined for non-existent campaign", async () => {
-      const { ctx } = createPublicContext();
+      const { ctx } = createAuthContext();
       const caller = appRouter.createCaller(ctx);
       const result = await caller.campaigns.getById({ id: 99999 });
       // Returns undefined or null for non-existent
@@ -69,25 +75,28 @@ describe("campaigns", () => {
 
 describe("scheduler", () => {
   describe("scheduler.getState", () => {
-    it("returns scheduler state (public endpoint)", async () => {
-      const { ctx } = createPublicContext();
+    it("requires login", async () => {
+      await expect(appRouter.createCaller(createPublicContext().ctx).scheduler.getState()).rejects.toThrow(/login/i);
+    });
+    it("returns scheduler state when authenticated", async () => {
+      const { ctx } = createAuthContext();
       const caller = appRouter.createCaller(ctx);
       const result = await caller.scheduler.getState();
       expect(result).toHaveProperty("state");
       expect(result).toHaveProperty("stats");
       expect(result.state).toHaveProperty("isRunning");
-      expect(result.state).toHaveProperty("currentPairIndex");
+      expect(result.state).toHaveProperty("hourNumber");
     });
   });
 
   describe("scheduler.getStats", () => {
     it("returns scheduler statistics", async () => {
-      const { ctx } = createPublicContext();
+      const { ctx } = createAuthContext();
       const caller = appRouter.createCaller(ctx);
       const result = await caller.scheduler.getStats();
-      // Stats may have different property names depending on implementation
       expect(typeof result).toBe("object");
-      expect(result).toHaveProperty("isRunning");
+      expect(result).toHaveProperty("cycleNumber");
+      expect(result).toHaveProperty("totalSent");
     });
   });
 
@@ -182,8 +191,11 @@ describe("companyConfig", () => {
 
 describe("contacts", () => {
   describe("contacts.list", () => {
-    it("returns contacts array (public endpoint)", async () => {
-      const { ctx } = createPublicContext();
+    it("requires login", async () => {
+      await expect(appRouter.createCaller(createPublicContext().ctx).contacts.list({ page: 1, limit: 2 })).rejects.toThrow(/login/i);
+    });
+    it("returns contacts when authenticated", async () => {
+      const { ctx } = createAuthContext();
       const caller = appRouter.createCaller(ctx);
       const result = await caller.contacts.list({ page: 1, limit: 2 });
       // The list endpoint may return array directly or paginated object

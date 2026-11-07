@@ -154,6 +154,10 @@ export async function discardLead(
       console.log(
         `[Persistence] 🚫 Lead ${cleanPhone} descartado: ${reason}. Bloqueado até ${blockedUntil.toLocaleDateString('pt-BR')}`,
       );
+    } else if (cleanPhone) {
+      // Recusa (ou "PARAR") de quem ainda não tinha registro: grava o bloqueio, senão o número volta a ser abordado
+      await db.insert(leadQualifications).values({ phone: cleanPhone, stage: 'descartado', discardReason: reason, blockedUntil, updatedAt: new Date() } as any);
+      console.log(`[Persistence] 🚫 ${cleanPhone} sem registro: bloqueio gravado (${reason})`);
     }
   } catch (error) {
     console.error('[Persistence] ❌ Erro ao descartar lead:', error);
@@ -214,7 +218,7 @@ export async function getStaleLeads(timeoutMinutes: number = 45): Promise<LeadSt
       .from(leadQualifications)
       .where(eq(leadQualifications.stage, 'qual_etapa_1')); // Simplificado: apenas primeira etapa
 
-    const stale = results.filter((lead) => {
+    const stale = results.filter((lead: any) => {
       if (!lead.lastActivityAt) return false;
       return lead.lastActivityAt < cutoffTime;
     });
@@ -223,7 +227,7 @@ export async function getStaleLeads(timeoutMinutes: number = 45): Promise<LeadSt
       `[Persistence] 📊 Found ${stale.length} leads com timeout (>${timeoutMinutes}min sem resposta)`,
     );
 
-    return stale.map((lead) => ({
+    return stale.map((lead: any) => ({
       phone: lead.phone,
       stage: lead.stage || 'nao_iniciado',
       senderName: lead.nome || 'Cliente',

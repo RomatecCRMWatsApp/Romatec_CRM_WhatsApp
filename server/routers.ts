@@ -459,11 +459,22 @@ export const appRouter = router({
         offerPrice: z.string().optional(), 
         areaConstruida: z.coerce.number().optional(),
         bedrooms: z.coerce.number().optional(),
-        bathrooms: z.coerce.number().optional()
+        bathrooms: z.coerce.number().optional(),
+        areaCasa: z.coerce.number().optional(),
+        areaTerreno: z.coerce.number().optional(),
+        garageSpaces: z.coerce.number().optional(),
+        propertyType: z.string().max(40).optional(),
       }))
       .mutation(async ({ input }) => {
         const { invokeLLM } = await import("./_core/llm");
-        const prompt = `Gere uma descricao atrativa para o imovel: ${input.denomination} em ${input.address}, R$ ${Number(input.price).toLocaleString('pt-BR')}. Use gatilhos de escassez e urgÔö£┬¼ncia.`;
+        const detalhes = [
+          input.propertyType, input.city,
+          input.areaTerreno ? `terreno de ${input.areaTerreno} m²` : null,
+          input.areaConstruida || input.areaCasa ? `${input.areaConstruida || input.areaCasa} m² construídos` : null,
+          input.bedrooms ? `${input.bedrooms} quarto(s)` : null, input.bathrooms ? `${input.bathrooms} banheiro(s)` : null,
+          input.garageSpaces ? `${input.garageSpaces} vaga(s)` : null,
+        ].filter(Boolean).join(', ');
+        const prompt = `Gere uma descricao atrativa para o imovel: ${input.denomination} em ${input.address}${detalhes ? ` (${detalhes})` : ''}, R$ ${Number(input.price).toLocaleString('pt-BR')}. Use gatilhos de escassez e urgência.`;
         const response = await invokeLLM({ messages: [{ role: "user", content: prompt }] });
         const descContent = response.choices[0]?.message?.content;
         return { description: typeof descContent === 'string' ? descContent : 'Descricao nao gerada' };
@@ -512,7 +523,7 @@ export const appRouter = router({
       // NEVER delete existing campaigns — preserves IDs and avoids drift
       // Instead: update existing campaigns, create only for new properties
       const existingCampaigns = await db.select().from(campaigns);
-      const existingByPropId = new Map(existingCampaigns.map(c => [c.propertyId, c]));
+      const existingByPropId = new Map<number, any>(existingCampaigns.map((c: any) => [c.propertyId, c]));
       const result = [];
       const usedContactIds = new Set<number>();
       for (const prop of propertiesForCampaign) {
@@ -572,10 +583,10 @@ export const appRouter = router({
       const db = await getDb();
       if (!db) return { campaigns: [], dayCount: 0, nightCount: 0 };
       const allCampaigns = await db.select().from(campaigns);
-      const dayActive = allCampaigns.filter(c => c.activeDay).length;
-      const nightActive = allCampaigns.filter(c => c.activeNight).length;
+      const dayActive = allCampaigns.filter((c: any) => c.activeDay).length;
+      const nightActive = allCampaigns.filter((c: any) => c.activeNight).length;
       return {
-        campaigns: allCampaigns.map(c => ({
+        campaigns: allCampaigns.map((c: any) => ({
           id: c.id,
           name: c.name,
           activeDay: c.activeDay || false,
@@ -598,8 +609,8 @@ export const appRouter = router({
         if (input.active) {
           const allCampaigns = await db.select().from(campaigns);
           const activeCount = input.period === "day"
-            ? allCampaigns.filter(c => c.activeDay).length
-            : allCampaigns.filter(c => c.activeNight).length;
+            ? allCampaigns.filter((c: any) => c.activeDay).length
+            : allCampaigns.filter((c: any) => c.activeNight).length;
           if (activeCount >= 5) {
             throw new Error(`Máximo de 5 campanhas ativadas no ciclo ${input.period === 'day' ? 'DIA' : 'NOITE'} já foi atingido.`);
           }
@@ -613,12 +624,12 @@ export const appRouter = router({
         updateData.cycleActivationUpdatedAt = new Date();
         await db.update(campaigns).set(updateData).where(eq(campaigns.id, input.campaignId));
         const allCampaigns = await db.select().from(campaigns);
-        const dayActive = allCampaigns.filter(c => c.activeDay).length;
-        const nightActive = allCampaigns.filter(c => c.activeNight).length;
+        const dayActive = allCampaigns.filter((c: any) => c.activeDay).length;
+        const nightActive = allCampaigns.filter((c: any) => c.activeNight).length;
         return {
           success: true,
           message: `Campanha ${input.active ? 'ativada' : 'desativada'} no ciclo ${input.period === 'day' ? 'DIA ☀️' : 'NOITE 🌙'}`,
-          campaigns: allCampaigns.map(c => ({
+          campaigns: allCampaigns.map((c: any) => ({
             id: c.id,
             name: c.name,
             activeDay: c.activeDay || false,
@@ -658,7 +669,7 @@ export const appRouter = router({
       const todayMessages = await db.select().from(messages).where(eq(messages.status, "sent"));
       const today = new Date();
       today.setHours(0, 0, 0, 0);
-      return { state, stats, activeCampaigns, todayMessages: todayMessages.filter(m => m.sentAt && m.sentAt >= today) };
+      return { state, stats, activeCampaigns, todayMessages: todayMessages.filter((m: any) => m.sentAt && m.sentAt >= today) };
     }),
     getStats: protectedProcedure.query(async () => campaignScheduler.getStats()),
     reset: protectedProcedure.mutation(async () => {
@@ -826,16 +837,16 @@ export const appRouter = router({
       if (!db) return { totals: { sent: 0, failed: 0, pending: 0, blocked: 0, successRate: 0, avgPerDay: 0, activeCampaigns: 0 }, byCampaign: [], byDay: [], byHour: [] };
       const allMessages = await db.select().from(messages);
       const allCampaigns = await db.select().from(campaigns);
-      const totalSent = allMessages.filter(m => m.status === 'sent' || m.status === 'delivered').length;
-      const totalFailed = allMessages.filter(m => m.status === 'failed').length;
-      const totalBlocked = allMessages.filter(m => m.status === 'blocked').length;
-      const totalPending = allMessages.filter(m => m.status === 'pending').length;
+      const totalSent = allMessages.filter((m: any) => m.status === 'sent' || m.status === 'delivered').length;
+      const totalFailed = allMessages.filter((m: any) => m.status === 'failed').length;
+      const totalBlocked = allMessages.filter((m: any) => m.status === 'blocked').length;
+      const totalPending = allMessages.filter((m: any) => m.status === 'pending').length;
       const successRate = totalSent + totalFailed > 0 ? Math.round((totalSent / (totalSent + totalFailed)) * 100) : 0;
-      const activeCampaigns = allCampaigns.filter(c => c.status === 'running').length;
-      const byCampaign = allCampaigns.map(camp => {
-        const campMsgs = allMessages.filter(m => m.campaignId === camp.id);
-        const sent = campMsgs.filter(m => m.status === 'sent' || m.status === 'delivered').length;
-        const failed = campMsgs.filter(m => m.status === 'failed').length;
+      const activeCampaigns = allCampaigns.filter((c: any) => c.status === 'running').length;
+      const byCampaign = allCampaigns.map((camp: any) => {
+        const campMsgs = allMessages.filter((m: any) => m.campaignId === camp.id);
+        const sent = campMsgs.filter((m: any) => m.status === 'sent' || m.status === 'delivered').length;
+        const failed = campMsgs.filter((m: any) => m.status === 'failed').length;
         return { id: camp.id, name: camp.name, status: camp.status, sent, failed, total: camp.totalContacts || 2, pending: (camp.totalContacts || 2) - sent - failed, successRate: sent + failed > 0 ? Math.round((sent / (sent + failed)) * 100) : 0 };
       });
       const now = new Date();
@@ -846,14 +857,14 @@ export const appRouter = router({
         const dateStr = d.toISOString().split('T')[0];
         const dayStart = new Date(dateStr + 'T00:00:00Z');
         const dayEnd = new Date(dateStr + 'T23:59:59Z');
-        byDay.push({ date: dateStr, sent: allMessages.filter(m => (m.status === 'sent' || m.status === 'delivered') && m.sentAt && m.sentAt >= dayStart && m.sentAt <= dayEnd).length, failed: allMessages.filter(m => m.status === 'failed' && m.sentAt && m.sentAt >= dayStart && m.sentAt <= dayEnd).length });
+        byDay.push({ date: dateStr, sent: allMessages.filter((m: any) => (m.status === 'sent' || m.status === 'delivered') && m.sentAt && m.sentAt >= dayStart && m.sentAt <= dayEnd).length, failed: allMessages.filter((m: any) => m.status === 'failed' && m.sentAt && m.sentAt >= dayStart && m.sentAt <= dayEnd).length });
       }
       const last7 = byDay.slice(-7);
       const daysWithActivity = last7.filter(d => d.sent > 0).length;
       const avgPerDay = daysWithActivity > 0 ? Math.round(last7.reduce((sum, d) => sum + d.sent, 0) / daysWithActivity) : 0;
       const byHour: { hour: number; count: number }[] = [];
       for (let h = 0; h < 24; h++) {
-        byHour.push({ hour: h, count: allMessages.filter(m => (m.status === 'sent' || m.status === 'delivered') && m.sentAt && m.sentAt.getHours() === h).length });
+        byHour.push({ hour: h, count: allMessages.filter((m: any) => (m.status === 'sent' || m.status === 'delivered') && m.sentAt && m.sentAt.getHours() === h).length });
       }
       return { totals: { sent: totalSent, failed: totalFailed, pending: totalPending, blocked: totalBlocked, successRate, avgPerDay, activeCampaigns }, byCampaign, byDay, byHour };
     }),
@@ -931,7 +942,7 @@ export const appRouter = router({
       }))
       .query(async ({ input, ctx }) => {
         const db = await getDb();
-        if (!db) return { leads: [], total: 0, stats: { quente: 0, morno: 0, frio: 0, total: 0, descartado: 0 } };
+        if (!db) return { leads: [], total: 0, stats: { quente: 0, morno: 0, frio: 0, total: 0, descartado: 0, qualificado: 0, emAndamento: 0 } };
 
         // Corretor: só os leads em que é o responsável (lista e contagens)
         let rows = leadsVisiveis(ctx.permissoes, ctx.user.id, await db.select().from(leadQualifications).orderBy(desc(leadQualifications.updatedAt)));
@@ -1172,4 +1183,3 @@ export const appRouter = router({
   }),
 });
 export type AppRouter = typeof appRouter;
-export type { AppRouter };

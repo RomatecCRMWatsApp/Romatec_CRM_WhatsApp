@@ -33,7 +33,7 @@ import {
 import {
   generateAutomatedProposal,
   extractLeadProfile,
-  recommendProperties,
+  recommendProperties as recommendPropertiesForProfile,
 } from './property-recommendation';
 
 // ============ TIPOS ============
@@ -77,6 +77,17 @@ interface QualAnswers {
   valorEntrada?: string;
   tipoEmprego?: string;
   restricaoCPF?: string;
+  /** Etapas 6–10 da qualificação e dados extraídos da conversa */
+  tipoImovelBusca?: string;
+  regiaoBairro?: string;
+  valorImovelPretendido?: string;
+  isMoradiaOuInvestimento?: string;
+  prazoPrefido?: string;
+  nome?: string;
+  rendaMensal?: string;
+  entradaDisponivel?: string;
+  fgtsDisponivel?: string;
+  financiamentoAtivo?: string;
 }
 
 interface ConversationState {
@@ -115,6 +126,14 @@ function setState(phone: string, state: Partial<ConversationState>) {
 // Cache em memória renovado a cada 10 min para não bater no DB a cada mensagem
 type PropertyEntry = { slug: string; name: string; value: number; beds: number; area: string; type: string; city: string };
 let _propertiesCache: PropertyEntry[] = [];
+/** Lista usada enquanto o banco não respondeu (ou sem imóveis cadastrados) */
+const IMOVEIS_PADRAO: PropertyEntry[] = [
+  { slug: 'cond-chacaras-giuliano', name: 'Condomínio de Chácaras Giuliano', value: 160000, beds: 0, area: '~1.000m²', type: 'Chácara', city: 'Açailândia' },
+  { slug: 'mod-vaz-03', name: 'Mod Vaz 03', value: 210000, beds: 3, area: '92m²', type: 'Apartamento', city: 'Açailândia' },
+  { slug: 'mod-vaz-02', name: 'Mod Vaz 02', value: 250000, beds: 3, area: '110m²', type: 'Casa', city: 'Açailândia' },
+  { slug: 'mod-vaz-01', name: 'Mod Vaz 01', value: 300000, beds: 2, area: '68m²', type: 'Apartamento', city: 'Açailândia' },
+  { slug: 'alacide', name: 'Alacide', value: 380000, beds: 2, area: '58m²', type: 'Apartamento', city: 'Açailândia' },
+];
 let _propertiesCacheAt = 0;
 
 async function getProperties(): Promise<PropertyEntry[]> {
@@ -145,24 +164,12 @@ async function getProperties(): Promise<PropertyEntry[]> {
     console.warn('[Bot] Erro ao carregar imóveis do DB, usando cache:', e);
   }
   // Fallback estático se DB indisponível
-  return [
-    { slug: 'cond-chacaras-giuliano', name: 'Condomínio de Chácaras Giuliano', value: 160000, beds: 0, area: '~1.000m²', type: 'Chácara', city: 'Açailândia' },
-    { slug: 'mod-vaz-03', name: 'Mod Vaz 03', value: 210000, beds: 3, area: '92m²', type: 'Apartamento', city: 'Açailândia' },
-    { slug: 'mod-vaz-02', name: 'Mod Vaz 02', value: 250000, beds: 3, area: '110m²', type: 'Casa', city: 'Açailândia' },
-    { slug: 'mod-vaz-01', name: 'Mod Vaz 01', value: 300000, beds: 2, area: '68m²', type: 'Apartamento', city: 'Açailândia' },
-    { slug: 'alacide', name: 'Alacide', value: 380000, beds: 2, area: '58m²', type: 'Apartamento', city: 'Açailândia' },
-  ];
+  return IMOVEIS_PADRAO;
 }
 
 // Sync fallback (usado onde o contexto não é async)
 function getPropertySync(slug?: string): PropertyEntry {
-  const list = _propertiesCache.length > 0 ? _propertiesCache : [
-    { slug: 'cond-chacaras-giuliano', name: 'Condomínio de Chácaras Giuliano', value: 160000, beds: 0, area: '~1.000m²', type: 'Chácara', city: 'Açailândia' },
-    { slug: 'mod-vaz-03', name: 'Mod Vaz 03', value: 210000, beds: 3, area: '92m²', type: 'Apartamento', city: 'Açailândia' },
-    { slug: 'mod-vaz-02', name: 'Mod Vaz 02', value: 250000, beds: 3, area: '110m²', type: 'Casa', city: 'Açailândia' },
-    { slug: 'mod-vaz-01', name: 'Mod Vaz 01', value: 300000, beds: 2, area: '68m²', type: 'Apartamento', city: 'Açailândia' },
-    { slug: 'alacide', name: 'Alacide', value: 380000, beds: 2, area: '58m²', type: 'Apartamento', city: 'Açailândia' },
-  ];
+  const list = _propertiesCache.length > 0 ? _propertiesCache : IMOVEIS_PADRAO;
   if (!slug) return list[0];
   return list.find(p => p.slug === slug) || list[0];
 }
@@ -467,7 +474,7 @@ async function saveLeadQualification(
   nome: string,
   answers: QualAnswers,
   score: LeadScore,
-  prop: typeof PROPERTIES[number],
+  prop: PropertyEntry | undefined,
   campaignId?: number,
 ) {
   try {
@@ -802,7 +809,7 @@ async function processStage(context: BotContext, state: ConversationState): Prom
           propertyRecommendations = propRecommendations;
 
           console.log(`[Bot] 🏦 Proposta multi-banco gerada para ${name} — ${propertyValue.toLocaleString('pt-BR')} / ${monthlyIncome.toLocaleString('pt-BR')}/mês`);
-          console.log(`[Bot] 🏠 Recomendações de imóvel geradas — ${recommendProperties(leadProfile).length} propriedades encontradas`);
+          console.log(`[Bot] 🏠 Recomendações de imóvel geradas — ${recommendPropertiesForProfile(leadProfile).length} propriedades encontradas`);
         } else {
           console.log(`[Bot] ⚠️  Dados financeiros insuficientes para simulação — Usando proposta simples`);
         }
@@ -1179,7 +1186,8 @@ export function formatSimulationWhatsApp(propertyValue: number, entryPct: number
 }
 
 export function recommendProperties(budget: number) {
-  return [..._propertiesCache].filter(p => p.value <= budget * 1.15).sort((a, b) => a.value - b.value);
+  const lista = _propertiesCache.length > 0 ? _propertiesCache : IMOVEIS_PADRAO;
+  return [...lista].filter(p => p.value <= budget * 1.15).sort((a, b) => a.value - b.value);
 }
 
 // Pré-carrega imóveis do banco na inicialização

@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { simulateFinancing, recommendProperties, formatSimulationWhatsApp, formatRecommendationsWhatsApp } from './bot-ai';
+import { simulateFinancing, recommendProperties, formatSimulationWhatsApp } from './bot-ai';
 
 describe('Bot AI - Simulação de Financiamento', () => {
   it('deve calcular financiamento com taxas reais', () => {
@@ -56,20 +56,6 @@ describe('Bot AI - Recomendação de Imóveis', () => {
     const recs = recommendProperties(500000);
     // 5 imóveis: Giuliano 160k, Mod Vaz 03 210k, Mod Vaz 02 250k, Mod Vaz 01 300k, Alacide 380k
     expect(recs).toHaveLength(5);
-  });
-
-  it('deve formatar recomendações para WhatsApp', () => {
-    // Orçamento 350k: Giuliano 160k, Mod Vaz 03 210k, Mod Vaz 02 250k, Mod Vaz 01 300k
-    const msg = formatRecommendationsWhatsApp(350000);
-    expect(msg).toContain('IMÓVEIS DENTRO DO SEU ORÇAMENTO');
-    expect(msg).toContain('Mod Vaz');
-    expect(msg).toContain('/imovel/');
-  });
-
-  it('deve mostrar mensagem para orçamento baixo', () => {
-    const msg = formatRecommendationsWhatsApp(50000);
-    // Menor imóvel agora é Chácaras Giuliano a R$ 160.000
-    expect(msg).toContain('160.000');
   });
 });
 

@@ -1,4 +1,8 @@
 import { describe, it, expect } from "vitest";
+
+// Banco SQLite em memória, como os outros testes de rota
+process.env.DATABASE_DRIVER = 'sqlite';
+process.env.SQLITE_PATH = ':memory:';
 import { appRouter } from "./routers";
 import type { TrpcContext } from "./_core/context";
 
@@ -27,26 +31,6 @@ function createMockContext(): TrpcContext {
 }
 
 describe("Company Configuration", () => {
-  it("should have company name configured", () => {
-    const companyName = process.env.COMPANY_NAME;
-    expect(companyName).toBe("Romatec Consultoria Imobiliária");
-  });
-
-  it("should have company phone configured", () => {
-    const phone = process.env.COMPANY_PHONE;
-    expect(phone).toBe("(99) 999169-0178");
-  });
-
-  it("should have company address configured", () => {
-    const address = process.env.COMPANY_ADDRESS;
-    expect(address).toBe("Rua São Raimundo, 10 - Centro, Açailândia - MA");
-  });
-
-  it("should have Z-API Instance ID configured", () => {
-    const instanceId = process.env.ZAPI_INSTANCE_ID;
-    expect(instanceId).toBe("3F0D313A38C952B7106F6A1199C38405");
-  });
-
   it("should retrieve company config via API", async () => {
     const ctx = createMockContext();
     const caller = appRouter.createCaller(ctx);

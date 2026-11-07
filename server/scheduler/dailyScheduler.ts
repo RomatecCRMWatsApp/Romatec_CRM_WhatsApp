@@ -80,7 +80,7 @@ class DailyScheduler {
       }
     }
 
-    for (const key of this.firedToday) {
+    for (const key of Array.from(this.firedToday)) {
       if (!key.startsWith(day)) this.firedToday.delete(key);
     }
   }

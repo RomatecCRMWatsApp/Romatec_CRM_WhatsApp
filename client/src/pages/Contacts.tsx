@@ -32,7 +32,7 @@ export default function Contacts() {
 
   const filteredContacts = useMemo(() => {
     if (!contacts) return [];
-    return contacts.filter(c =>
+    return contacts.filter((c: any) =>
       c.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
       c.phone?.includes(searchTerm)
     );
@@ -97,7 +97,7 @@ export default function Contacts() {
               </thead>
               <tbody>
                 {paginatedContacts.length > 0 ? (
-                  paginatedContacts.map((contact) => (
+                  paginatedContacts.map((contact: any) => (
                     <tr key={contact.id} className="border-b border-border/50 hover:bg-secondary/30 transition-colors">
                       <td className="p-4">
                         <div className="flex items-center gap-3">

@@ -50,7 +50,7 @@ export const schedulerRouter = router({
       state,
       stats,
       campaigns: activeCampaigns,
-      messages: todayMessages.filter((m) => m.sentAt && m.sentAt >= today),
+      messages: todayMessages.filter((m: any) => m.sentAt && m.sentAt >= today),
     };
   }),
 
@@ -70,7 +70,7 @@ export const schedulerRouter = router({
 
     const activeCampaigns = await db.select().from(campaigns).where(eq(campaigns.status, "running"));
 
-    return activeCampaigns.map((campaign) => ({
+    return activeCampaigns.map((campaign: any) => ({
       id: campaign.id,
       name: campaign.name,
       propertyId: campaign.propertyId,
@@ -93,7 +93,7 @@ export const schedulerRouter = router({
       .from(contacts)
       .where(eq(contacts.status, "blocked"));
 
-    return blockedContacts.filter((c) => c.blockedUntil && c.blockedUntil > now);
+    return blockedContacts.filter((c: any) => c.blockedUntil && c.blockedUntil > now);
   }),
 
   /**
@@ -108,7 +108,7 @@ export const schedulerRouter = router({
 
     const todayMessages = await db.select().from(messages).where(eq(messages.status, "sent"));
 
-    return todayMessages.filter((m) => m.sentAt && m.sentAt >= today);
+    return todayMessages.filter((m: any) => m.sentAt && m.sentAt >= today);
   }),
 
   /**
