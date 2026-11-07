@@ -123,7 +123,7 @@ export function registrarRotasFinanceiro(app: Express) {
       const pdf = await pdfTabelaComissao(dados);
       res.setHeader('Content-Type', 'application/pdf');
       res.setHeader('Cache-Control', 'no-store');
-      res.setHeader('Content-Disposition', `inline; filename="TABELA-COMISSAO-${tipo === 'corretor' ? 'CORRETOR' : 'ESCRITORIO'}-${slug.toUpperCase()}.pdf"`);
+      res.setHeader('Content-Disposition', `inline; filename="TABELA-COMISSAO-${tipo === 'corretor' ? 'VENDA' : 'GESTAO'}-${slug.toUpperCase()}.pdf"`);
       res.send(pdf);
     } catch (e) {
       console.error('[Comissão] tabela PDF:', e);

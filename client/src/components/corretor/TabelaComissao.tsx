@@ -3,6 +3,8 @@ import { FileDown, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { trpc } from "@/lib/trpc";
 import { brl } from "@shared/simulador";
+import { GESTOR_EMPREENDIMENTO } from "@shared/escritorio";
+import { ROTULO_CURTO_COMISSAO, TITULO_TABELA_COMISSAO } from "@shared/tabelaComissao";
 
 const pct = (x: number) => `${(x * 100).toLocaleString("pt-BR", { maximumFractionDigits: 2 })}%`;
 const area = (m2: number) => `${m2.toLocaleString("pt-BR", { maximumFractionDigits: 2 })} m²`;
@@ -15,7 +17,7 @@ const area = (m2: number) => `${m2.toLocaleString("pt-BR", { maximumFractionDigi
 export function TabelaComissao({ slug, tipo = "corretor" }: { slug: string; tipo?: "corretor" | "escritorio" }) {
   const [lote, setLote] = useState<string | undefined>(undefined);
   const { data, isLoading, error } = trpc.comissoes.tabela.useQuery({ slug, lote, tipo }, { placeholderData: prev => prev });
-  const quem = tipo === "corretor" ? "Sua comissão" : "Comissão do escritório";
+  const quem = tipo === "corretor" ? "Comissão de venda" : "Comissão de gestão";
   if (isLoading && !data) return <p className="flex items-center gap-2 text-xs text-muted-foreground"><Loader2 className="h-3.5 w-3.5 animate-spin" /> Carregando a tabela…</p>;
   if (error) return <p className="text-xs text-destructive">{error.message}</p>;
   if (!data) return null;
@@ -23,9 +25,10 @@ export function TabelaComissao({ slug, tipo = "corretor" }: { slug: string; tipo
   const ex = data.exemplo;
   return (
     <div className="space-y-3">
+      <GestorDoEmpreendimento />
       <div className="rounded-xl bg-primary/10 p-3">
         <p className="text-sm">{quem}: <b className="text-primary">{pct(data.pct)} do valor da venda</b></p>
-        {tipo === "escritorio" && <p className="mt-0.5 text-xs text-muted-foreground">Paga pelo empreendimento ao escritório, já incluída a parte do corretor.</p>}
+        <p className="mt-0.5 text-xs text-muted-foreground">{tipo === "escritorio" ? "Paga pelo empreendimento à gestora geral, já incluída a comissão de venda do corretor." : "Do corretor intermediador, repassada pela gestora."}</p>
         {data.faixa && data.faixa.menor !== data.faixa.maior && (
           <p className="mt-0.5 text-xs text-muted-foreground">
             Chácaras à venda de {brl(data.faixa.menor)} a {brl(data.faixa.maior)}: comissão de {brl(data.faixa.menor * data.pct)} a {brl(data.faixa.maior * data.pct)} pelo preço de tabela.
@@ -79,6 +82,44 @@ export function TabelaComissao({ slug, tipo = "corretor" }: { slug: string; tipo
           : `A comissão é retida na plataforma de pagamentos (split para o escritório) quando cada pagamento indicado é compensado; o escritório repassa a parte do corretor em até ${data.repasseDiasUteis} dias úteis.`}{" "}
         Valores de referência; o que vale é o plano escolhido no contrato.
       </p>
+    </div>
+  );
+}
+
+/** Gestora e responsável técnico (em todas as tabelas de comissão) */
+export function GestorDoEmpreendimento() {
+  return (
+    <div className="rounded-xl border border-border p-3 text-xs">
+      <p className="font-semibold text-primary">{GESTOR_EMPREENDIMENTO.titulo}</p>
+      <p className="mt-0.5 font-semibold">{GESTOR_EMPREENDIMENTO.gestora}</p>
+      <p className="text-muted-foreground">{GESTOR_EMPREENDIMENTO.responsavel}</p>
+    </div>
+  );
+}
+
+/**
+ * Comissões de um empreendimento: comissão de gestão (5%, gestora geral) e comissão de venda (2%, corretor). Cada
+ * empreendimento tem as dele (percentuais das condições de pagamento do empreendimento). Administrador e secretária
+ * veem as duas; o corretor, só a de venda (a dele).
+ */
+export function ComissoesEmpreendimento({ slug, perfil }: { slug: string; perfil: string | null | undefined }) {
+  const escritorio = perfil === "admin" || perfil === "secretario";
+  const [tipo, setTipo] = useState<"corretor" | "escritorio">(escritorio ? "escritorio" : "corretor");
+  if (!escritorio && perfil !== "corretor") return null;
+  const atual = escritorio ? tipo : "corretor";
+  return (
+    <div className="space-y-3">
+      {escritorio && (
+        <div role="tablist" aria-label="Tabela de comissão" className="grid grid-cols-2 gap-1 rounded-xl bg-muted p-1">
+          {(["escritorio", "corretor"] as const).map(k => (
+            <button key={k} type="button" role="tab" aria-selected={tipo === k} onClick={() => setTipo(k)} title={TITULO_TABELA_COMISSAO[k]}
+              className={`rounded-lg px-2 py-1.5 text-xs font-semibold ${tipo === k ? "bg-background text-primary shadow-sm" : "text-muted-foreground hover:text-foreground"}`}>
+              {ROTULO_CURTO_COMISSAO[k]} ({k === "escritorio" ? "gestora" : "corretor"})
+            </button>
+          ))}
+        </div>
+      )}
+      <TabelaComissao key={`${slug}-${atual}`} slug={slug} tipo={atual} />
     </div>
   );
 }

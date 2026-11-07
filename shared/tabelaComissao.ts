@@ -24,10 +24,12 @@ export function podeVerTabelaComissao(perfil: string | null | undefined, tipo: T
   return perfil === 'admin' || perfil === 'secretario' || perfil === 'empreendedor';
 }
 
+/** Comissão de venda (corretor intermediador) e comissão de gestão (gestora geral do empreendimento, integral) */
 export const TITULO_TABELA_COMISSAO: Record<TipoTabelaComissao, string> = {
-  corretor: 'Comissão do corretor (repasse do escritório)',
-  escritorio: 'Comissão integral do escritório (paga pelo empreendimento)',
+  corretor: 'Comissão de venda — corretor intermediador',
+  escritorio: 'Comissão de gestão — gestora geral do empreendimento',
 };
+export const ROTULO_CURTO_COMISSAO: Record<TipoTabelaComissao, string> = { corretor: 'Comissão de venda', escritorio: 'Comissão de gestão' };
 
 export interface PagamentoComissao { quando: string; pct: number; valor: number }
 export interface LinhaTabelaComissao {

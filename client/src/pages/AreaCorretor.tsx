@@ -9,7 +9,7 @@ import { comRef, useCartaoVendas } from "@/lib/cartaoVendas";
 import { linkAgendamento } from "@/components/LinkAgendamento";
 import { brl } from "@shared/simulador";
 import { BadgePercent, Building2, Calculator, Globe2, Link2, Lock, Map as MapIcon, Plus, Smartphone, Wallet } from "lucide-react";
-import { TabelaComissao } from "@/components/corretor/TabelaComissao";
+import { ComissoesEmpreendimento } from "@/components/corretor/TabelaComissao";
 import { numeroCreciPF } from "@shared/cartaoVendas";
 
 const copiar = async (texto: string, rotulo: string) => {
@@ -47,7 +47,6 @@ export default function AreaCorretor() {
   const escritorio = admin || minhas?.perfil === "secretario";
   const veComissao = escritorio || minhas?.perfil === "corretor";
   const [empComissao, setEmpComissao] = useState<string | null>(null);
-  const [tipoComissao, setTipoComissao] = useState<"corretor" | "escritorio">("corretor");
   const slugComissao = empComissao ?? comAcesso[0]?.slug ?? null;
 
   const cadastros = [
@@ -76,17 +75,7 @@ export default function AreaCorretor() {
       )}
 
       {m.empreendimentos && veComissao && comAcesso.length > 0 && (
-        <Secao titulo={escritorio ? "Comissões por empreendimento" : "Sua comissão por empreendimento"} icone={BadgePercent}>
-          {escritorio && (
-            <div role="tablist" aria-label="Tabela de comissão" className="grid grid-cols-2 gap-1 rounded-xl bg-muted p-1">
-              {([["corretor", "Corretor (repasse)"], ["escritorio", "Escritório (integral)"]] as const).map(([k, r]) => (
-                <button key={k} type="button" role="tab" aria-selected={tipoComissao === k} onClick={() => setTipoComissao(k)}
-                  className={`rounded-lg px-2 py-1.5 text-xs font-semibold ${tipoComissao === k ? "bg-background text-primary shadow-sm" : "text-muted-foreground hover:text-foreground"}`}>
-                  {r}
-                </button>
-              ))}
-            </div>
-          )}
+        <Secao titulo={escritorio ? "Comissões por empreendimento" : "Sua comissão de venda por empreendimento"} icone={BadgePercent}>
           {comAcesso.length > 1 && (
             <div role="tablist" aria-label="Empreendimento" className="flex flex-wrap gap-1.5">
               {comAcesso.map(e => (
@@ -98,7 +87,7 @@ export default function AreaCorretor() {
             </div>
           )}
           {comAcesso.length === 1 && <p className="text-xs text-muted-foreground">{comAcesso[0].nome}</p>}
-          {slugComissao && <TabelaComissao key={`${slugComissao}-${tipoComissao}`} slug={slugComissao} tipo={escritorio ? tipoComissao : "corretor"} />}
+          {slugComissao && <ComissoesEmpreendimento key={slugComissao} slug={slugComissao} perfil={minhas?.perfil} />}
         </Secao>
       )}
 

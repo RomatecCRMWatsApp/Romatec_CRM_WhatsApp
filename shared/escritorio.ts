@@ -18,3 +18,10 @@ export const ESCRITORIO = {
 export const LINHA_PUBLICIDADE = `${ESCRITORIO.fantasia} · ${ESCRITORIO.creciJ}`;
 /** "Romatec Consultoria Total, CRECI J-1234, CNPJ 17.261.987/0001-09" (rodapés e documentos) */
 export const LINHA_OFICIAL = `${ESCRITORIO.fantasia}, ${ESCRITORIO.creciJ}, CNPJ ${ESCRITORIO.cnpj}`;
+
+/** Identificação da gestora e do responsável técnico (tabelas de comissão, na tela e no PDF) */
+export const GESTOR_EMPREENDIMENTO = {
+  titulo: 'Gestão geral e vendas do empreendimento',
+  gestora: `${ESCRITORIO.fantasia} · ${ESCRITORIO.creciJ} · CNPJ ${ESCRITORIO.cnpj}`,
+  responsavel: `Responsável técnico pelas transações imobiliárias: ${ESCRITORIO.responsavel} · ${ESCRITORIO.creciResponsavel}`,
+} as const;

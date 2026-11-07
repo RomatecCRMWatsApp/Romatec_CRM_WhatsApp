@@ -378,7 +378,7 @@ export default function Empreendedor() {
         <div id="tabelas" className="scroll-mt-24 pt-4"><TabelasFinanciamento /></div>
 
         {/* 6b. Comissão integral do escritório (5%), com o PDF */}
-        <Titulo id="comissao" icone={BadgePercent} sub="O que o empreendimento paga ao escritório em cada forma de pagamento, já incluída a parte do corretor">Tabela de comissão</Titulo>
+        <Titulo id="comissao" icone={BadgePercent} sub="Comissão de gestão: o que o empreendimento paga à gestora geral em cada forma de pagamento, já incluída a comissão de venda do corretor">Comissão de gestão</Titulo>
         <div className="rounded-2xl border border-border bg-card p-4"><TabelaComissao slug={slug} tipo="escritorio" /></div>
 
         {/* 6. Artes para divulgar */}

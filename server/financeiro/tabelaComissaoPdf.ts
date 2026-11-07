@@ -4,7 +4,7 @@
  */
 import { PDFDocument, StandardFonts, rgb, type PDFFont, type PDFPage } from 'pdf-lib';
 import { desenharMarca, embutirMarca } from '../contratos/anexos';
-import { ESCRITORIO } from '../../shared/escritorio';
+import { ESCRITORIO, GESTOR_EMPREENDIMENTO } from '../../shared/escritorio';
 import { brl } from '../../shared/simulador';
 import { TITULO_TABELA_COMISSAO } from '../../shared/tabelaComissao';
 import type { dadosTabelaComissao } from './tabelaComissao';
@@ -93,15 +93,22 @@ export async function pdfTabelaComissao(d: Dados): Promise<Buffer> {
   };
 
   novaPagina();
-  const titulo = `TABELA DE COMISSÃO — ${d.tipo === 'corretor' ? 'CORRETOR' : 'ESCRITÓRIO'} (${pct(d.pct)})`;
+  const titulo = `TABELA DE COMISSÃO DE ${d.tipo === 'corretor' ? 'VENDA' : 'GESTÃO'} (${pct(d.pct)})`;
   p.drawText(titulo, { x: (W - fb.widthOfTextAtSize(titulo, 12.5)) / 2, y: y - 13, size: 12.5, font: fb, color: VERDE });
   y -= 19;
   const sub = `${TITULO_TABELA_COMISSAO[d.tipo]} · ${d.empreendimento.nome}`;
   p.drawText(sub, { x: (W - f.widthOfTextAtSize(sub, 8.6)) / 2, y: y - 9, size: 8.6, font: f, color: CINZA });
-  y -= 22;
+  y -= 18;
+  // Gestora e responsável técnico (em todas as tabelas)
+  const caixa = 34;
+  p.drawRectangle({ x: X0, y: y - caixa, width: X1 - X0, height: caixa, color: LINHA_PAR, borderColor: BORDA, borderWidth: 0.6 });
+  p.drawText(GESTOR_EMPREENDIMENTO.titulo.toUpperCase(), { x: X0 + 8, y: y - 10, size: 7, font: fb, color: VERDE });
+  p.drawText(GESTOR_EMPREENDIMENTO.gestora, { x: X0 + 8, y: y - 20, size: 8, font: fb, color: rgb(0.1, 0.1, 0.1) });
+  p.drawText(GESTOR_EMPREENDIMENTO.responsavel, { x: X0 + 8, y: y - 30, size: 7.8, font: f, color: rgb(0.1, 0.1, 0.1) });
+  y -= caixa + 10;
   texto(d.tipo === 'corretor'
-    ? `O(a) corretor(a) recebe ${pct(d.pct)} do valor da venda, pagos pelo escritório (${ESCRITORIO.fantasia}) no ritmo dos pagamentos do comprador, conforme a forma de pagamento escolhida no contrato.`
-    : `O empreendimento paga ao escritório (${ESCRITORIO.fantasia}) ${pct(d.pct)} do valor da venda, já incluído no preço e já incluída a parte do(a) corretor(a) intermediador(a), no ritmo dos pagamentos do comprador, conforme a forma de pagamento escolhida no contrato.`, { size: 8.6 });
+    ? `Comissão de venda: o(a) corretor(a) intermediador(a) recebe ${pct(d.pct)} do valor da venda, repassados pela gestora (${ESCRITORIO.fantasia}) no ritmo dos pagamentos do comprador, conforme a forma de pagamento escolhida no contrato.`
+    : `Comissão de gestão: o empreendimento paga à gestora geral (${ESCRITORIO.fantasia}) ${pct(d.pct)} do valor da venda, já incluídos no preço e já incluída a comissão de venda do(a) corretor(a) intermediador(a), no ritmo dos pagamentos do comprador, conforme a forma de pagamento escolhida no contrato.`, { size: 8.6 });
   y -= 6;
 
   // 1. Como e quando é paga

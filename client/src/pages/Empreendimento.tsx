@@ -6,6 +6,7 @@ import { useAuth } from "@/_core/hooks/useAuth";
 import { perfilDe } from "@shared/equipe";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { ComissoesEmpreendimento } from "@/components/corretor/TabelaComissao";
 import PageHeader from "@/components/PageHeader";
 import MapaTematico from "@/components/empreendimento/MapaTematico";
 import { AlternadorMapa, Mapa3DEmpreendimento } from "@/components/empreendimento/Mapa3DEmpreendimento";
@@ -132,7 +133,10 @@ export default function Empreendimento() {
   const [, navigate] = useLocation();
   const slug = params?.slug ?? "";
   const { user } = useAuth();
-  const admin = perfilDe(user as any) === "admin";
+  const perfil = perfilDe(user as any);
+  const admin = perfil === "admin";
+  // Comissões do empreendimento: gestão e venda (administrador e secretária), só a de venda (corretor)
+  const veComissoes = perfil === "admin" || perfil === "secretario" || perfil === "corretor";
   const utils = trpc.useUtils();
   const { data, isLoading, error } = trpc.empreendimentosAdmin.detalhe.useQuery({ slug }, { enabled: !!slug });
   const [sel, setSel] = useState<number | null>(null);
@@ -182,6 +186,7 @@ export default function Empreendimento() {
             <TabsTrigger value="mapa">Mapa</TabsTrigger>
             <TabsTrigger value="lotes">Lotes</TabsTrigger>
             <TabsTrigger value="simulador">Simulador</TabsTrigger>
+            {veComissoes && <TabsTrigger value="comissoes">Comissões</TabsTrigger>}
             <TabsTrigger value="geral">Visão geral</TabsTrigger>
             <TabsTrigger value="arquivos">Arquivos ({data.arquivos.length})</TabsTrigger>
             <TabsTrigger value="documentos">Documentos</TabsTrigger>
@@ -233,6 +238,14 @@ export default function Empreendimento() {
           <TabsContent value="simulador" className="mt-3">
             <Simulador slug={slug} lotes={lotes} ruas={data.ruas} perimetro={data.perimetro?.poligono} destinoSugerido={data.destinoSugerido} />
           </TabsContent>
+
+          {veComissoes && (
+            <TabsContent value="comissoes" className="mt-3">
+              <div className="max-w-2xl rounded-2xl border border-border bg-card p-4">
+                <ComissoesEmpreendimento slug={slug} perfil={perfil} />
+              </div>
+            </TabsContent>
+          )}
 
           <TabsContent value="geral" className="mt-3 space-y-3">
             <div className="grid grid-cols-2 md:grid-cols-4 gap-3">

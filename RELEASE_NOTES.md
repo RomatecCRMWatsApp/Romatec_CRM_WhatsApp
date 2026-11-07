@@ -3,6 +3,20 @@
 Cada versão nova vai no TOPO. Depois rode `npm run release` (valida e atualiza o package.json);
 ao subir, o servidor grava a versão no banco e todos recebem o aviso "Novidades da versão".
 
+## 1.132.0 — 2026-11-07
+tipo: minor
+obrigatoria: nao
+titulo: Aba Comissões dentro de cada empreendimento: comissão de gestão e comissão de venda
+publico: equipe
+
+### Novo
+- Empreendimento › Comissões: as tabelas ficam vinculadas a cada empreendimento, com os percentuais das condições dele
+- Comissão de gestão (gestora geral, 5%) e comissão de venda (corretor, 2%): administrador e secretária veem as duas; o corretor vê só a de venda
+- Em todas as tabelas, na tela e no PDF: Romatec Consultoria Total · CRECI J-1234 · CNPJ e o responsável técnico pelas transações imobiliárias, José Romário Pinto Bezerra · CRECI/MA F-4.705
+
+### Melhorias
+- Nomes padronizados: "Comissão de gestão" e "Comissão de venda" na Área do corretor, no painel do empreendedor e nos PDFs
+
 ## 1.131.0 — 2026-11-07
 tipo: minor
 obrigatoria: nao
