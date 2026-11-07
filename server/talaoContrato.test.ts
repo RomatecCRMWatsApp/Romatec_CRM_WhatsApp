@@ -66,3 +66,20 @@ describe('talões para imprimir: sequência e corretor', () => {
     await expect(Tal.emitirTaloes({ tipo: 'CONTRATO', quantidade: 2 }, 1, '2026-11-07')).rejects.toThrow(/corretor/);
   });
 });
+
+describe('talão de recibo', () => {
+  it('uma folha A4 com as 2 vias, número, recebedor oficial e CRECI J', async () => {
+    const { folhaDoRecibo } = await import('./saas/talaoRecibo');
+    const { PDFDocument } = await import('pdf-lib');
+    const pdf = await folhaDoRecibo('bom-jardims', 45);
+    const doc = await PDFDocument.load(pdf);
+    expect(doc.getPageCount()).toBe(1);
+    expect(doc.getTitle()).toBe('Talão de recibo 000045');
+  });
+  it('recibos têm sequência própria, separada dos contratos', async () => {
+    const Tal = await import('./saas/talonarios');
+    const r = await Tal.emitirTaloes({ tipo: 'RECIBO', quantidade: 3, usuarioId: 1 }, 1, '2026-11-07');
+    expect(r).toMatchObject({ numeroInicial: 1, numeroFinal: 3 });
+    expect(await Tal.proximoNumero('RECIBO')).toBe(4);
+  });
+});

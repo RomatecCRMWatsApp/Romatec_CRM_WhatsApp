@@ -128,6 +128,34 @@ export function registrarRotasSaas(app: Express) {
     }
   });
 
+  // Talão de recibo para imprimir (2 vias por folha). Sem talonário: modelo em branco; com ?talonario=&numero=: a folha numerada
+  app.get('/api/talonarios/recibo.pdf', async (req, res) => {
+    try {
+      if (!(await escritorio(req))) return res.status(404).end();
+      const slug = typeof req.query.slug === 'string' && /^[a-z0-9-]{1,80}$/.test(req.query.slug) ? req.query.slug : 'bom-jardims';
+      let numero: number | null = null;
+      if (req.query.talonario) {
+        const { getDb } = await import('../db');
+        const { talonarios } = await import('../../drizzle/schema');
+        const { eq } = await import('drizzle-orm');
+        const d: any = await getDb();
+        const [t]: any[] = await d.select().from(talonarios).where(eq(talonarios.id, Number(req.query.talonario))).limit(1);
+        if (!t) return res.status(404).json({ ok: false, error: 'Talonário não encontrado' });
+        if (t.tipo !== 'RECIBO') return res.status(400).json({ ok: false, error: 'Este bloco é de contratos' });
+        numero = Number(req.query.numero ?? req.query.de ?? t.numeroInicial);
+        if (!Number.isInteger(numero) || numero < t.numeroInicial || numero > t.numeroFinal) return res.status(400).json({ ok: false, error: `Folha fora do bloco (${t.numeroInicial} a ${t.numeroFinal})` });
+      }
+      const { folhaDoRecibo } = await import('./talaoRecibo');
+      const pdf = await folhaDoRecibo(slug, numero);
+      res.type('application/pdf').setHeader('Content-Disposition', `inline; filename="${numero == null ? 'talao-recibo-em-branco.pdf' : `talao-recibo-${String(numero).padStart(6, '0')}.pdf`}"`);
+      res.setHeader('Cache-Control', 'private, no-store');
+      res.send(pdf);
+    } catch (e: any) {
+      console.error('[Talão de recibo] PDF:', e?.message);
+      res.status(e?.status ?? 500).json({ ok: false, error: e?.message || 'Erro ao gerar o recibo' });
+    }
+  });
+
   app.get('/api/talonarios/:id/folhas/:numero/arquivo', async (req, res) => {
     try {
       if (!(await escritorio(req))) return res.status(404).end();

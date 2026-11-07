@@ -3,6 +3,18 @@
 Cada versão nova vai no TOPO. Depois rode `npm run release` (valida e atualiza o package.json);
 ao subir, o servidor grava a versão no banco e todos recebem o aviso "Novidades da versão".
 
+## 1.127.0 — 2026-11-07
+tipo: minor
+obrigatoria: nao
+titulo: Talão de recibo para imprimir, no mesmo padrão do talão de contrato
+publico: equipe
+
+### Novo
+- Talonários: talão de recibo — uma folha por número, com 2 vias e linha de corte (1ª via para quem pagou, 2ª via volta ao escritório na prestação de contas)
+- Campos: quem pagou, CPF, WhatsApp, valor em número e por extenso, a que se refere (sinal, parcela, intermediação, taxa de cessão), contrato/talão, chácara, forma de pagamento, data e assinatura de quem recebeu
+- Recebido em nome da promitente vendedora; rodapé com Romatec Consultoria Total · CRECI J-1234
+- Mesmo fluxo do contrato: escolha o corretor e a quantidade, os números seguem a sequência própria dos recibos, ficam no nome do corretor e sai um PDF por recibo; visualizar dentro do sistema e baixar de novo pelo bloco
+
 ## 1.126.0 — 2026-11-07
 tipo: minor
 obrigatoria: nao

@@ -81,15 +81,20 @@ const pad6 = (n: number) => String(n).padStart(6, "0");
 const nomeArquivo = (s: string) => s.normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/[^A-Za-z0-9]+/g, "-").replace(/^-|-$/g, "").slice(0, 40);
 
 /** Baixa um PDF por talão (arquivos separados), na ordem da sequência */
-async function baixarSeparados(talonarioId: number, de: number, ate: number, corretor: string, progresso: (feitos: number, total: number) => void) {
+type TipoTalao = "CONTRATO" | "RECIBO";
+/** PDF da folha: talão de contrato (CPCV completo) ou de recibo (2 vias) */
+const urlFolha = (tipo: TipoTalao, talonarioId: number, n: number) =>
+  tipo === "RECIBO" ? `/api/talonarios/recibo.pdf?talonario=${talonarioId}&numero=${n}` : `/api/talonarios/contrato.pdf?talonario=${talonarioId}&de=${n}&ate=${n}`;
+
+async function baixarSeparados(talonarioId: number, de: number, ate: number, corretor: string, progresso: (feitos: number, total: number) => void, tipo: TipoTalao = "CONTRATO") {
   const total = ate - de + 1;
   for (let n = de; n <= ate; n++) {
     progresso(n - de, total);
-    const r = await fetch(`/api/talonarios/contrato.pdf?talonario=${talonarioId}&de=${n}&ate=${n}`, { credentials: "include" });
+    const r = await fetch(urlFolha(tipo, talonarioId, n), { credentials: "include" });
     if (!r.ok) { const j = await r.json().catch(() => ({})); throw new Error(j.error || `Falha ao gerar o talão ${pad6(n)}`); }
     const url = URL.createObjectURL(await r.blob());
     const a = document.createElement("a");
-    a.href = url; a.download = `talao-${pad6(n)}${corretor ? `-${nomeArquivo(corretor)}` : ""}.pdf`;
+    a.href = url; a.download = `${tipo === "RECIBO" ? "recibo" : "talao"}-${pad6(n)}${corretor ? `-${nomeArquivo(corretor)}` : ""}.pdf`;
     document.body.appendChild(a); a.click(); a.remove();
     setTimeout(() => URL.revokeObjectURL(url), 30_000);
   }
@@ -104,7 +109,9 @@ function ImprimirTaloes() {
   const utils = trpc.useUtils();
   const { data: externos } = trpc.saas.externos.useQuery();
   const { data: comLogin } = trpc.saas.corretoresComLogin.useQuery();
-  const { data: prox } = trpc.saas.proximoTalao.useQuery({ tipo: "CONTRATO" });
+  const [tipo, setTipo] = useState<TipoTalao>("CONTRATO");
+  const recibo = tipo === "RECIBO";
+  const { data: prox } = trpc.saas.proximoTalao.useQuery({ tipo });
   const [corretor, setCorretor] = useState("");
   const [qtd, setQtd] = useState("10");
   const [progresso, setProgresso] = useState<{ feitos: number; total: number } | null>(null);
@@ -117,26 +124,35 @@ function ImprimirTaloes() {
   const gerar = async () => {
     if (!confirm(`Registrar ${n} talão(ões) para ${nomeCorretor} (nº ${pad6(prox?.numero ?? 1)} a ${pad6((prox?.numero ?? 1) + n - 1)}) e baixar os PDFs?`)) return;
     try {
-      const r = await emitir.mutateAsync({ tipo: "CONTRATO", quantidade: n, externoId: tipoC === "x" ? Number(idC) : null, usuarioId: tipoC === "u" ? Number(idC) : null });
+      const r = await emitir.mutateAsync({ tipo, quantidade: n, externoId: tipoC === "x" ? Number(idC) : null, usuarioId: tipoC === "u" ? Number(idC) : null });
       utils.saas.talonarios.invalidate(); utils.saas.pendencias.invalidate(); utils.saas.proximoTalao.invalidate();
-      await baixarSeparados(r.talonarioId, r.numeroInicial, r.numeroFinal, nomeCorretor, (feitos, total) => setProgresso({ feitos, total }));
+      await baixarSeparados(r.talonarioId, r.numeroInicial, r.numeroFinal, nomeCorretor, (feitos, total) => setProgresso({ feitos, total }), tipo);
       toast.success(`Talões ${pad6(r.numeroInicial)} a ${pad6(r.numeroFinal)} baixados e registrados para ${nomeCorretor}`);
     } catch (e: any) { toast.error(e?.message || "Não foi possível gerar os talões"); } finally { setProgresso(null); }
   };
   return (
     <section className="space-y-4 rounded-xl border border-border bg-card p-4">
       <div>
-        <h2 className="text-base font-semibold">Talões de contrato</h2>
+        <h2 className="text-base font-semibold">Talões para imprimir</h2>
         <p className="mt-1 text-sm text-muted-foreground">Para atender sem sistema: o corretor preenche à mão e devolve ao escritório.</p>
+      </div>
+      <div className="flex gap-1 rounded-lg bg-secondary/40 p-1" role="tablist" aria-label="Tipo de talão">
+        {([["CONTRATO", "Talão de contrato"], ["RECIBO", "Talão de recibo"]] as [TipoTalao, string][]).map(([k, r]) => (
+          <button key={k} type="button" role="tab" aria-selected={tipo === k} onClick={() => setTipo(k)}
+            className={`flex-1 rounded-md px-3 py-2 text-sm font-medium ${tipo === k ? "bg-background text-foreground shadow" : "text-muted-foreground"}`}>{r}</button>
+        ))}
       </div>
       <div className="flex flex-col gap-3 rounded-lg border border-border/70 bg-background/40 p-3 sm:flex-row sm:items-center">
         <div className="min-w-0 flex-1 text-sm">
           <b>1. Veja o modelo</b>
-          <p className="text-xs text-muted-foreground">Capa, sumário, ficha, condições, contrato completo, Estatuto, Diretrizes, intermediação e checklist de anexos. Sai sempre com o contrato matriz atual (cláusulas, registro e licença).</p>
+          <p className="text-xs text-muted-foreground">{recibo
+            ? "Uma folha por recibo, com 2 vias e linha de corte: a 1ª fica com quem pagou e a 2ª volta ao escritório. Valor, quem pagou, a que se refere, forma de pagamento e assinatura."
+            : "Capa, sumário, ficha, condições, contrato completo, Estatuto, Diretrizes, intermediação e checklist de anexos. Sai sempre com o contrato matriz atual (cláusulas, registro e licença)."}</p>
         </div>
         <Button variant="outline" onClick={() => setVendo(true)}><Eye className="mr-1 h-4 w-4" /> Visualizar modelo</Button>
       </div>
-      {vendo && <VisualizadorPdf url="/api/talonarios/contrato.pdf" titulo="Talão de contrato — modelo" nomeArquivo="talao-contrato-modelo.pdf" onFechar={() => setVendo(false)} />}
+      {vendo && <VisualizadorPdf url={recibo ? "/api/talonarios/recibo.pdf" : "/api/talonarios/contrato.pdf"} titulo={recibo ? "Talão de recibo — modelo" : "Talão de contrato — modelo"}
+        nomeArquivo={recibo ? "talao-recibo-modelo.pdf" : "talao-contrato-modelo.pdf"} onFechar={() => setVendo(false)} />}
       <div className="text-sm">
         <b>2. Gere os talões do corretor</b>
         <p className="text-xs text-muted-foreground">Os números seguem a sequência e ficam no nome do corretor, para a prestação de contas. Sai um PDF por talão.</p>
@@ -171,7 +187,7 @@ function ImprimirFolhas({ t }: { t: any }) {
   const a = Number(de), b = Number(ate);
   const erro = !a || !b ? "Informe as folhas" : a > b ? "A primeira folha vem antes da última" : a < t.numeroInicial || b > t.numeroFinal ? `Só folhas do bloco (${t.numeroInicial} a ${t.numeroFinal})` : b - a + 1 > 50 ? "No máximo 50 por vez" : null;
   const baixar = async () => {
-    try { await baixarSeparados(t.id, a, b, t.corretor ?? "", (feitos, total) => setProgresso({ feitos, total })); toast.success("Talões baixados"); }
+    try { await baixarSeparados(t.id, a, b, t.corretor ?? "", (feitos, total) => setProgresso({ feitos, total }), t.tipo); toast.success("Talões baixados"); }
     catch (e: any) { toast.error(e?.message || "Falhou"); } finally { setProgresso(null); }
   };
   return (
@@ -184,8 +200,8 @@ function ImprimirFolhas({ t }: { t: any }) {
       </Button>
       <Button size="sm" variant="outline" disabled={!!erro} onClick={() => setVendo(a)}><Eye className="mr-1 h-4 w-4" /> Visualizar nº {String(a).padStart(6, "0")}</Button>
       <span className="text-xs text-muted-foreground">{erro ?? `${b - a + 1} arquivo(s), um por talão`}</span>
-      {vendo != null && <VisualizadorPdf url={`/api/talonarios/contrato.pdf?talonario=${t.id}&de=${vendo}&ate=${vendo}`} titulo={`Talão nº ${String(vendo).padStart(6, "0")} · ${t.corretor ?? ""}`}
-        nomeArquivo={`talao-${String(vendo).padStart(6, "0")}.pdf`} onFechar={() => setVendo(null)} />}
+      {vendo != null && <VisualizadorPdf url={urlFolha(t.tipo, t.id, vendo)} titulo={`${t.tipo === "RECIBO" ? "Recibo" : "Talão"} nº ${String(vendo).padStart(6, "0")} · ${t.corretor ?? ""}`}
+        nomeArquivo={`${t.tipo === "RECIBO" ? "recibo" : "talao"}-${String(vendo).padStart(6, "0")}.pdf`} onFechar={() => setVendo(null)} />}
     </div>
   );
 }
@@ -212,7 +228,7 @@ function Folhas({ t, onMudou }: { t: any; onMudou: () => void }) {
   };
   return (
     <div className="mt-2 space-y-2">
-      {t.tipo === "CONTRATO" && <ImprimirFolhas t={t} />}
+      <ImprimirFolhas t={t} />
       <div className="flex flex-wrap gap-1">
         {(folhas ?? []).map(f => (
           <button key={f.numero} type="button" title={f.referencia ?? f.status} disabled={f.status !== "EM_BRANCO"} onClick={() => setNumero(f.numero)}

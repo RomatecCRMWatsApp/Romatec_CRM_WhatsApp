@@ -22,11 +22,11 @@ import { docIntermediacao } from '../contratos/docsComissao';
 import { ESCRITORIO, LINHA_PUBLICIDADE } from '../../shared/escritorio';
 
 export const MAX_FOLHAS_POR_PDF = 10;
-const VERDE = rgb(0.047, 0.2, 0.125);
-const DOURADO = rgb(0.788, 0.651, 0.275);
-const CINZA = rgb(0.35, 0.35, 0.35);
-const A4: [number, number] = [595.28, 841.89];
-const X0 = 56, X1 = A4[0] - 56;
+export const VERDE = rgb(0.047, 0.2, 0.125);
+export const DOURADO = rgb(0.788, 0.651, 0.275);
+export const CINZA = rgb(0.35, 0.35, 0.35);
+export const A4: [number, number] = [595.28, 841.89];
+export const X0 = 56, X1 = A4[0] - 56;
 
 const LONGO = '_'.repeat(48), MEDIO = '_'.repeat(26), CURTO = '_'.repeat(14);
 /** Campos que o corretor preenche à mão (prefixos das tags do modelo) */
@@ -74,15 +74,15 @@ export async function contextoTalao(slug: string, numero: number | null): Promis
 
 // ─── Páginas próprias do talão (capa + ficha + quadro de condições) ──────────────
 
-interface Pena { p: PDFPage; y: number; f: PDFFont; fb: PDFFont }
+export interface Pena { p: PDFPage; y: number; f: PDFFont; fb: PDFFont }
 
-function titulo(pn: Pena, t: string, tam = 13) {
+export function titulo(pn: Pena, t: string, tam = 13) {
   pn.p.drawText(t, { x: X0, y: pn.y, size: tam, font: pn.fb, color: VERDE });
   pn.y -= tam + 4;
   pn.p.drawLine({ start: { x: X0, y: pn.y + 2 }, end: { x: X1, y: pn.y + 2 }, thickness: 1, color: DOURADO });
   pn.y -= 12;
 }
-function texto(pn: Pena, t: string, tam = 9.5, cor = CINZA) {
+export function texto(pn: Pena, t: string, tam = 9.5, cor = CINZA) {
   // quebra simples por largura
   const palavras = t.split(/\s+/);
   let linha = '';
@@ -94,7 +94,7 @@ function texto(pn: Pena, t: string, tam = 9.5, cor = CINZA) {
   if (linha) { pn.p.drawText(linha, { x: X0, y: pn.y, size: tam, font: pn.f, color: cor }); pn.y -= tam + 3.5; }
 }
 /** Linha de campos lado a lado: [rótulo, peso da largura] */
-function campos(pn: Pena, itens: [string, number][], alt = 26) {
+export function campos(pn: Pena, itens: [string, number][], alt = 26) {
   const total = itens.reduce((s, [, w]) => s + w, 0);
   let x = X0;
   const larg = X1 - X0 - (itens.length - 1) * 8;
@@ -106,7 +106,7 @@ function campos(pn: Pena, itens: [string, number][], alt = 26) {
   }
   pn.y -= alt;
 }
-function caixas(pn: Pena, opcoes: string[], tam = 9.5) {
+export function caixas(pn: Pena, opcoes: string[], tam = 9.5) {
   let x = X0;
   for (const o of opcoes) {
     pn.p.drawRectangle({ x, y: pn.y - 2, width: 9, height: 9, borderColor: VERDE, borderWidth: 0.8 });
