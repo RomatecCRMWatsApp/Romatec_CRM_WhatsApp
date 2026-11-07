@@ -76,6 +76,33 @@ export async function entregarBloco(p: { tipo: 'CONTRATO' | 'RECIBO'; numeroInic
   return { id, folhas: fim - ini + 1 };
 }
 
+/** Próximo número livre da sequência (contratos e recibos têm sequências próprias) */
+export async function proximoNumero(tipo: 'CONTRATO' | 'RECIBO'): Promise<number> {
+  const d = await banco();
+  const ts: any[] = await d.select({ fim: talonarios.numeroFinal }).from(talonarios).where(eq(talonarios.tipo, tipo));
+  return ts.reduce((m, t) => Math.max(m, Number(t.fim)), 0) + 1;
+}
+
+/**
+ * Talões para imprimir: a secretária escolhe o corretor e a quantidade; o sistema pega os próximos números da
+ * sequência e registra o bloco no nome dele (controle e prestação de contas). Dois pedidos ao mesmo tempo: o segundo
+ * recalcula a faixa (a checagem de sobreposição do entregarBloco barra a repetição).
+ */
+export async function emitirTaloes(p: { tipo: 'CONTRATO' | 'RECIBO'; quantidade: number; externoId?: number | null; usuarioId?: number | null; observacao?: string | null }, autorId: number, hoje: string) {
+  const qtd = Math.round(p.quantidade);
+  if (!(qtd >= 1 && qtd <= 50)) throw new TalonarioErro('De 1 a 50 talões por vez');
+  for (let tentativa = 0; tentativa < 3; tentativa++) {
+    const ini = await proximoNumero(p.tipo);
+    try {
+      const r = await entregarBloco({ tipo: p.tipo, numeroInicial: ini, numeroFinal: ini + qtd - 1, externoId: p.externoId ?? null, usuarioId: p.usuarioId ?? null, entregueEm: hoje, observacao: p.observacao ?? 'Talões baixados para impressão' }, autorId);
+      return { talonarioId: r.id, numeroInicial: ini, numeroFinal: ini + qtd - 1 };
+    } catch (e: any) {
+      if (!(e instanceof TalonarioErro && e.status === 409)) throw e;
+    }
+  }
+  throw new TalonarioErro('Outra pessoa está emitindo talões agora. Tente de novo.', 409);
+}
+
 async function nomesDosCorretores(d: any) {
   const [xs, us]: any[][] = await Promise.all([d.select({ id: corretoresExternos.id, nome: corretoresExternos.nome }).from(corretoresExternos), d.select({ id: users.id, nome: users.name }).from(users)]);
   return { X: new Map(xs.map(x => [x.id, x.nome])), U: new Map(us.map(u => [u.id, u.nome])) };

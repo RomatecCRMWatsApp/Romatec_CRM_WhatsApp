@@ -42,3 +42,27 @@ describe('talão de contrato (CPCV em branco)', () => {
     await expect(T.folhasDoTalao('bom-jardims', Array.from({ length: 11 }, (_, k) => k + 1))).rejects.toThrow(/10 folhas/);
   });
 });
+
+describe('talões para imprimir: sequência e corretor', () => {
+  it('cada pedido pega os próximos números e registra o bloco no nome do corretor', async () => {
+    const Tal = await import('./saas/talonarios');
+    const ext = await Tal.criarExterno({ nome: 'Corretor Externo Exemplo', cpf: '52998224725' }, 1);
+    const externoId = Number((ext as any).id ?? (await Tal.listarExternos())[0].id);
+    expect(await Tal.proximoNumero('CONTRATO')).toBe(1);
+    const a = await Tal.emitirTaloes({ tipo: 'CONTRATO', quantidade: 10, externoId }, 1, '2026-11-07');
+    expect(a).toMatchObject({ numeroInicial: 1, numeroFinal: 10 });
+    const b = await Tal.emitirTaloes({ tipo: 'CONTRATO', quantidade: 5, usuarioId: 1 }, 1, '2026-11-07');
+    expect(b).toMatchObject({ numeroInicial: 11, numeroFinal: 15 });
+    // Recibos têm sequência própria
+    expect(await Tal.proximoNumero('RECIBO')).toBe(1);
+    const blocos = await Tal.listarTalonarios();
+    expect(blocos.find((t: any) => t.id === a.talonarioId)).toMatchObject({ corretor: 'Corretor Externo Exemplo', emBranco: 10 });
+    const pend = await Tal.pendencias();
+    expect(pend.find((p: any) => p.corretor === 'Corretor Externo Exemplo')?.contratos.length).toBeGreaterThan(0);
+  });
+  it('de 1 a 50 por vez e sempre com corretor', async () => {
+    const Tal = await import('./saas/talonarios');
+    await expect(Tal.emitirTaloes({ tipo: 'CONTRATO', quantidade: 51, usuarioId: 1 }, 1, '2026-11-07')).rejects.toThrow(/50/);
+    await expect(Tal.emitirTaloes({ tipo: 'CONTRATO', quantidade: 2 }, 1, '2026-11-07')).rejects.toThrow(/corretor/);
+  });
+});

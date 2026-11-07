@@ -3,6 +3,19 @@
 Cada versão nova vai no TOPO. Depois rode `npm run release` (valida e atualiza o package.json);
 ao subir, o servidor grava a versão no banco e todos recebem o aviso "Novidades da versão".
 
+## 1.125.0 — 2026-11-07
+tipo: minor
+obrigatoria: nao
+titulo: Talões numerados por corretor, com capa, sumário e checklist de anexos
+publico: equipe
+
+### Novo
+- Talonários › Imprimir talões para um corretor: escolha o corretor e a quantidade; o sistema pega os próximos números da sequência (ex.: 000011 a 000020), registra o bloco no nome dele para a prestação de contas e baixa um PDF separado por talão
+- O talão ganhou capa (número, comprador, chácara, corretor e data) e sumário com as páginas de cada parte
+- Último item: anexação de documentos com checklist — documentos do comprador e do cônjuge, carteira do CRECI do corretor com validade vigente (ou certidão de regularidade + RG/CNH), comprovante do sinal e conferência do escritório — e folha com os espaços para grampear as cópias
+- O contrato de intermediação continua no talão, preenchido pelo corretor e assinado pelo corretor e pelo comprador
+- Em cada bloco, "Baixar de novo os talões" (um PDF por talão)
+
 ## 1.124.0 — 2026-11-07
 tipo: minor
 obrigatoria: nao

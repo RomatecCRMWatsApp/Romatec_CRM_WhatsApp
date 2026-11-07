@@ -76,38 +76,104 @@ function EntregarBloco() {
   );
 }
 
-const MAX_IMPRESSAO = 10;
+const pad6 = (n: number) => String(n).padStart(6, "0");
+const nomeArquivo = (s: string) => s.normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/[^A-Za-z0-9]+/g, "-").replace(/^-|-$/g, "").slice(0, 40);
 
-/** Talão de contrato para imprimir: o CPCV completo em branco, com ficha, condições, Estatuto, Diretrizes e intermediação */
-function ModeloTalao() {
+/** Baixa um PDF por talão (arquivos separados), na ordem da sequência */
+async function baixarSeparados(talonarioId: number, de: number, ate: number, corretor: string, progresso: (feitos: number, total: number) => void) {
+  const total = ate - de + 1;
+  for (let n = de; n <= ate; n++) {
+    progresso(n - de, total);
+    const r = await fetch(`/api/talonarios/contrato.pdf?talonario=${talonarioId}&de=${n}&ate=${n}`, { credentials: "include" });
+    if (!r.ok) { const j = await r.json().catch(() => ({})); throw new Error(j.error || `Falha ao gerar o talão ${pad6(n)}`); }
+    const url = URL.createObjectURL(await r.blob());
+    const a = document.createElement("a");
+    a.href = url; a.download = `talao-${pad6(n)}${corretor ? `-${nomeArquivo(corretor)}` : ""}.pdf`;
+    document.body.appendChild(a); a.click(); a.remove();
+    setTimeout(() => URL.revokeObjectURL(url), 30_000);
+  }
+  progresso(total, total);
+}
+
+/**
+ * Talões para imprimir: a secretária escolhe o corretor e a quantidade; o sistema pega os próximos números da sequência
+ * (ex.: 000011 a 000020), registra o bloco no nome do corretor (prestação de contas) e baixa um PDF por talão.
+ */
+function ImprimirTaloes() {
+  const utils = trpc.useUtils();
+  const { data: externos } = trpc.saas.externos.useQuery();
+  const { data: comLogin } = trpc.saas.corretoresComLogin.useQuery();
+  const { data: prox } = trpc.saas.proximoTalao.useQuery({ tipo: "CONTRATO" });
+  const [corretor, setCorretor] = useState("");
+  const [qtd, setQtd] = useState("10");
+  const [progresso, setProgresso] = useState<{ feitos: number; total: number } | null>(null);
+  const emitir = trpc.saas.emitirTaloes.useMutation();
+  const [tipoC, idC] = corretor.split(":");
+  const nomeCorretor = tipoC === "x" ? externos?.find(x => x.id === Number(idC))?.nome ?? "" : comLogin?.find(u => u.id === Number(idC))?.nome ?? "";
+  const n = Number(qtd);
+  const ok = !!corretor && n >= 1 && n <= 50 && !progresso;
+  const gerar = async () => {
+    if (!confirm(`Registrar ${n} talão(ões) para ${nomeCorretor} (nº ${pad6(prox?.numero ?? 1)} a ${pad6((prox?.numero ?? 1) + n - 1)}) e baixar os PDFs?`)) return;
+    try {
+      const r = await emitir.mutateAsync({ tipo: "CONTRATO", quantidade: n, externoId: tipoC === "x" ? Number(idC) : null, usuarioId: tipoC === "u" ? Number(idC) : null });
+      utils.saas.talonarios.invalidate(); utils.saas.pendencias.invalidate(); utils.saas.proximoTalao.invalidate();
+      await baixarSeparados(r.talonarioId, r.numeroInicial, r.numeroFinal, nomeCorretor, (feitos, total) => setProgresso({ feitos, total }));
+      toast.success(`Talões ${pad6(r.numeroInicial)} a ${pad6(r.numeroFinal)} baixados e registrados para ${nomeCorretor}`);
+    } catch (e: any) { toast.error(e?.message || "Não foi possível gerar os talões"); } finally { setProgresso(null); }
+  };
   return (
-    <section className="flex flex-wrap items-center gap-3 rounded-xl border border-border bg-card p-4">
-      <div className="min-w-0 flex-1">
-        <h2 className="text-sm font-semibold">Talão de contrato para imprimir</h2>
-        <p className="mt-1 text-xs text-muted-foreground">
-          Para usar sem sistema (sem energia ou sem internet): ficha cadastral do comprador, quadro de condições, contrato completo com todas
-          as cláusulas e os campos em branco (cliente, chácara, condições, corretor e percentual da intermediação), Anexo III (Estatuto),
-          Anexo IV (Diretrizes) e o contrato de intermediação. Para sair numerado, imprima pelas folhas de um bloco de contratos abaixo.
-        </p>
+    <section className="space-y-3 rounded-xl border border-border bg-card p-4">
+      <div className="flex flex-wrap items-start gap-3">
+        <div className="min-w-0 flex-1">
+          <h2 className="text-sm font-semibold">Imprimir talões de contrato para um corretor</h2>
+          <p className="mt-1 text-xs text-muted-foreground">
+            Cada talão: capa, sumário, ficha cadastral, condições, contrato completo, Estatuto, Diretrizes, contrato de intermediação e checklist
+            de anexos. Os números seguem a sequência e ficam registrados no nome do corretor, para a prestação de contas. Sai um PDF por talão.
+          </p>
+        </div>
+        <Button variant="outline" size="sm" onClick={() => window.open("/api/talonarios/contrato.pdf", "_blank", "noopener")}><Printer className="mr-1 h-4 w-4" /> Modelo em branco (sem número)</Button>
       </div>
-      <Button variant="outline" onClick={() => window.open("/api/talonarios/contrato.pdf", "_blank", "noopener")}><Printer className="mr-1 h-4 w-4" /> Modelo em branco (sem número)</Button>
+      <div className="grid items-end gap-2 md:grid-cols-4">
+        <label className="text-xs text-muted-foreground md:col-span-2">Corretor
+          <select className={campo} value={corretor} onChange={e => setCorretor(e.target.value)}>
+            <option value="">— escolha —</option>
+            {(externos ?? []).length > 0 && <optgroup label="Externos (sem login)">{externos!.map(x => <option key={`x${x.id}`} value={`x:${x.id}`}>{x.nome}</option>)}</optgroup>}
+            {(comLogin ?? []).length > 0 && <optgroup label="Corretores com login">{comLogin!.map(u => <option key={`u${u.id}`} value={`u:${u.id}`}>{u.nome}</option>)}</optgroup>}
+          </select>
+        </label>
+        <label className="text-xs text-muted-foreground">Quantidade de talões<input className={campo} value={qtd} onChange={e => setQtd(e.target.value.replace(/\D/g, "").slice(0, 2))} inputMode="numeric" /></label>
+        <Button disabled={!ok || emitir.isPending} onClick={gerar}>
+          {progresso ? <><Loader2 className="mr-1 h-4 w-4 animate-spin" /> Gerando {Math.min(progresso.feitos + 1, progresso.total)} de {progresso.total}…</> : <><Printer className="mr-1 h-4 w-4" /> Gerar e baixar</>}
+        </Button>
+      </div>
+      <p className="text-xs text-muted-foreground">
+        {prox ? <>Próximos números: <b>{pad6(prox.numero)}</b>{n > 1 ? <> a <b>{pad6(prox.numero + n - 1)}</b></> : null}. </> : null}
+        De 1 a 50 por vez; cada talão leva uns 5 segundos. Se o navegador perguntar, permita baixar vários arquivos.
+      </p>
     </section>
   );
 }
 
-/** Imprimir folhas numeradas de um bloco de contratos (até 10 por arquivo) */
+/** Reimprimir folhas de um bloco de contratos (um PDF por talão) */
 function ImprimirFolhas({ t }: { t: any }) {
   const [de, setDe] = useState(String(t.numeroInicial));
-  const [ate, setAte] = useState(String(Math.min(t.numeroFinal, t.numeroInicial + MAX_IMPRESSAO - 1)));
+  const [ate, setAte] = useState(String(t.numeroFinal));
+  const [progresso, setProgresso] = useState<{ feitos: number; total: number } | null>(null);
   const a = Number(de), b = Number(ate);
-  const erro = !a || !b ? "Informe as folhas" : a > b ? "A primeira folha vem antes da última" : a < t.numeroInicial || b > t.numeroFinal ? `Só folhas do bloco (${t.numeroInicial} a ${t.numeroFinal})` : b - a + 1 > MAX_IMPRESSAO ? `No máximo ${MAX_IMPRESSAO} folhas por arquivo` : null;
+  const erro = !a || !b ? "Informe as folhas" : a > b ? "A primeira folha vem antes da última" : a < t.numeroInicial || b > t.numeroFinal ? `Só folhas do bloco (${t.numeroInicial} a ${t.numeroFinal})` : b - a + 1 > 50 ? "No máximo 50 por vez" : null;
+  const baixar = async () => {
+    try { await baixarSeparados(t.id, a, b, t.corretor ?? "", (feitos, total) => setProgresso({ feitos, total })); toast.success("Talões baixados"); }
+    catch (e: any) { toast.error(e?.message || "Falhou"); } finally { setProgresso(null); }
+  };
   return (
     <div className="flex flex-wrap items-end gap-2 rounded-md border border-border/60 p-2">
-      <span className="text-sm font-semibold">Imprimir talão numerado</span>
-      <label className="text-xs text-muted-foreground">Da folha<input className={`${campo} w-24`} value={de} onChange={e => setDe(e.target.value.replace(/\D/g, ""))} inputMode="numeric" /></label>
-      <label className="text-xs text-muted-foreground">Até a folha<input className={`${campo} w-24`} value={ate} onChange={e => setAte(e.target.value.replace(/\D/g, ""))} inputMode="numeric" /></label>
-      <Button size="sm" disabled={!!erro} onClick={() => window.open(`/api/talonarios/contrato.pdf?talonario=${t.id}&de=${a}&ate=${b}`, "_blank", "noopener")}><Printer className="mr-1 h-4 w-4" /> Gerar PDF para imprimir</Button>
-      <span className="text-xs text-muted-foreground">{erro ?? `${b - a + 1} folha(s); cada uma leva o número no topo de todas as páginas. Pode levar até 1 minuto.`}</span>
+      <span className="text-sm font-semibold">Baixar de novo os talões</span>
+      <label className="text-xs text-muted-foreground">Do nº<input className={`${campo} w-24`} value={de} onChange={e => setDe(e.target.value.replace(/\D/g, ""))} inputMode="numeric" /></label>
+      <label className="text-xs text-muted-foreground">Até o nº<input className={`${campo} w-24`} value={ate} onChange={e => setAte(e.target.value.replace(/\D/g, ""))} inputMode="numeric" /></label>
+      <Button size="sm" disabled={!!erro || !!progresso} onClick={baixar}>
+        {progresso ? <><Loader2 className="mr-1 h-4 w-4 animate-spin" /> {Math.min(progresso.feitos + 1, progresso.total)} de {progresso.total}…</> : <><Printer className="mr-1 h-4 w-4" /> Baixar PDFs</>}
+      </Button>
+      <span className="text-xs text-muted-foreground">{erro ?? `${b - a + 1} arquivo(s), um por talão`}</span>
     </div>
   );
 }
@@ -168,7 +234,7 @@ export default function Talonarios() {
     <div>
       <PageHeader icone={BookCopy} titulo="Talonários" subtitulo="Blocos numerados de contratos e recibos para corretores sem assinatura" />
       <div className="mx-auto max-w-[1300px] space-y-4 px-4 pb-8 md:px-6">
-        <ModeloTalao />
+        <ImprimirTaloes />
         <div className="grid gap-4 lg:grid-cols-2"><Externos /><EntregarBloco /></div>
         <section className="space-y-2 rounded-xl border border-border bg-card p-4">
           <h2 className="text-sm font-semibold">Blocos entregues</h2>

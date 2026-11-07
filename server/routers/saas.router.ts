@@ -200,6 +200,13 @@ export const saasRouter = router({
   }),
   talonarios: protectedProcedure.query(async ({ ctx }) => { escritorio(ctx); return (await T()).listarTalonarios(); }),
   folhas: protectedProcedure.input(z.object({ talonarioId: z.number().int() })).query(async ({ ctx, input }) => { escritorio(ctx); return (await T()).folhasDoTalonario(input.talonarioId); }),
+  proximoTalao: protectedProcedure.input(z.object({ tipo: z.enum(["CONTRATO", "RECIBO"]) })).query(async ({ ctx, input }) => { escritorio(ctx); return { numero: await (await T()).proximoNumero(input.tipo) }; }),
+  emitirTaloes: protectedProcedure.input(z.object({ tipo: z.enum(["CONTRATO", "RECIBO"]).default("CONTRATO"), quantidade: z.number().int().min(1).max(50), externoId: z.number().int().nullable().optional(), usuarioId: z.number().int().nullable().optional(), observacao: z.string().max(255).nullable().optional() }))
+    .mutation(async ({ ctx, input }) => {
+      escritorio(ctx);
+      const hoje = new Date(Date.now() - 3 * 3600_000).toISOString().slice(0, 10);
+      return comErro(async () => (await T()).emitirTaloes(input, ctx.user.id, hoje));
+    }),
   entregarBloco: protectedProcedure.input(z.object({ tipo: z.enum(["CONTRATO", "RECIBO"]), numeroInicial: z.number().int().min(1), numeroFinal: z.number().int().min(1), externoId: z.number().int().nullable().optional(), usuarioId: z.number().int().nullable().optional(), entregueEm: dataZ, observacao: z.string().max(255).nullable().optional() }))
     .mutation(async ({ ctx, input }) => { escritorio(ctx); return comErro(async () => (await T()).entregarBloco(input, ctx.user.id)); }),
   pendencias: protectedProcedure.query(async ({ ctx }) => { escritorio(ctx); return (await T()).pendencias(); }),
