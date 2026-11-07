@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { useLocation } from "wouter";
 import { toast } from "sonner";
 import { trpc } from "@/lib/trpc";
@@ -7,7 +8,8 @@ import { linkEmpreendimento, linkKml } from "@shared/chacaraLink";
 import { comRef, useCartaoVendas } from "@/lib/cartaoVendas";
 import { linkAgendamento } from "@/components/LinkAgendamento";
 import { brl } from "@shared/simulador";
-import { Building2, Calculator, Globe2, Link2, Lock, Map as MapIcon, Plus, Smartphone, Wallet } from "lucide-react";
+import { BadgePercent, Building2, Calculator, Globe2, Link2, Lock, Map as MapIcon, Plus, Smartphone, Wallet } from "lucide-react";
+import { TabelaComissao } from "@/components/corretor/TabelaComissao";
 import { numeroCreciPF } from "@shared/cartaoVendas";
 
 const copiar = async (texto: string, rotulo: string) => {
@@ -41,6 +43,10 @@ export default function AreaCorretor() {
   const habilitado = (id: number) => admin || (minhas?.imoveis ?? []).includes(id);
   const origem = window.location.origin;
   const { ref } = useCartaoVendas();
+  const comAcesso = (emps ?? []).filter(e => e.acesso);
+  const veComissao = admin || minhas?.perfil === "corretor";
+  const [empComissao, setEmpComissao] = useState<string | null>(null);
+  const slugComissao = empComissao ?? comAcesso[0]?.slug ?? null;
 
   const cadastros = [
     { rotulo: "Novo lead", rota: "/leads", modulo: "leads" },
@@ -64,6 +70,23 @@ export default function AreaCorretor() {
         <Secao titulo="Financeiro" icone={Wallet}>
           <p className="text-sm">{admin ? "Vendas registradas" : "Suas comissões"}: <b className="text-primary">{admin ? fin.resumo.quantidade : brl(fin.resumo.minhasComissoes)}</b></p>
           <Button size="sm" variant="outline" onClick={() => navigate("/financeiro")}>Ver vendas e comissão</Button>
+        </Secao>
+      )}
+
+      {m.empreendimentos && veComissao && comAcesso.length > 0 && (
+        <Secao titulo="Sua comissão por empreendimento" icone={BadgePercent}>
+          {comAcesso.length > 1 && (
+            <div role="tablist" aria-label="Empreendimento" className="flex flex-wrap gap-1.5">
+              {comAcesso.map(e => (
+                <button key={e.slug} type="button" role="tab" aria-selected={slugComissao === e.slug} onClick={() => setEmpComissao(e.slug)}
+                  className={`rounded-full border px-3 py-1 text-xs font-semibold ${slugComissao === e.slug ? "border-primary bg-primary/15 text-primary" : "border-border text-muted-foreground hover:text-foreground"}`}>
+                  {e.nome}
+                </button>
+              ))}
+            </div>
+          )}
+          {comAcesso.length === 1 && <p className="text-xs text-muted-foreground">{comAcesso[0].nome}</p>}
+          {slugComissao && <TabelaComissao key={slugComissao} slug={slugComissao} />}
         </Secao>
       )}
 
