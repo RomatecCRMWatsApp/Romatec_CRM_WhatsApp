@@ -1075,6 +1075,22 @@ export const saasTrials = mysqlTable("saasTrials", {
 });
 
 /** LOGIN, BLOQUEIO_402, CHECKOUT_INICIADO, PAGAMENTO_CONFIRMADO, DESBLOQUEIO, TRIAL_INICIADO, TRIAL_EXPIRADO… */
+/** Avisos da régua de cobrança enviados ao comprador (server/financeiro/reguaCobranca.ts): um por parcela e etapa */
+export const cobrancaAvisos = mysqlTable("cobrancaAvisos", {
+  id: int("id").autoincrement().primaryKey(),
+  cobrancaId: int("cobrancaId").notNull(),
+  contratoId: int("contratoId").notNull(),
+  /** antes | dia | atraso | final */
+  etapa: varchar("etapa", { length: 10 }).notNull(),
+  telefone: varchar("telefone", { length: 20 }),
+  ok: boolean("ok").default(false).notNull(),
+  erro: varchar("erro", { length: 255 }),
+  enviadoEm: timestamp("enviadoEm").defaultNow().notNull(),
+}, (t) => ({
+  uq: uniqueIndex("uq_aviso").on(t.cobrancaId, t.etapa),
+  porContrato: index("idx_aviso_contrato").on(t.contratoId, t.enviadoEm),
+}));
+
 /** Pedido de prorrogação/desbloqueio de acesso (secretária → administrador autoriza com a senha) */
 export const solicitacaoAcesso = mysqlTable("solicitacaoAcesso", {
   id: int("id").autoincrement().primaryKey(),

@@ -74,6 +74,18 @@ const lancamentoZ = z.object({
 });
 
 export const financeiroRouter = router({
+  // ─── Cobrança automática no WhatsApp do comprador (server/financeiro/reguaCobranca.ts) ───
+  reguaEstado: protectedProcedure.query(async ({ ctx }) => { await operador(ctx); const R = await import("../financeiro/reguaCobranca"); return { ligada: await R.reguaLigada() }; }),
+  reguaPrevia: protectedProcedure.query(async ({ ctx }) => { await operador(ctx); return (await import("../financeiro/reguaCobranca")).avisosDeHoje(); }),
+  reguaHistorico: protectedProcedure.query(async ({ ctx }) => { await operador(ctx); return (await import("../financeiro/reguaCobranca")).historicoAvisos(); }),
+  reguaDefinir: protectedProcedure.input(z.object({ ligada: z.boolean() })).mutation(async ({ ctx, input }) => {
+    await operador(ctx);
+    await (await import("../financeiro/reguaCobranca")).definirReguaLigada(input.ligada, ctx.user.id);
+    return { ok: true };
+  }),
+  /** Envia já os avisos de hoje (mesmo fora do horário), respeitando quem já recebeu */
+  reguaEnviarAgora: protectedProcedure.mutation(async ({ ctx }) => { await operador(ctx); return (await import("../financeiro/reguaCobranca")).processarRegua(Date.now(), undefined, true); }),
+
   /** Lê o recibo público da InfinitePay (valor, data, pagador, CPF parcial, ID da transação) — confere se o destino é a Romatec */
   lerRecibo: protectedProcedure.input(z.object({ url: z.string().trim().max(400) })).mutation(async ({ ctx, input }) => {
     await operador(ctx);

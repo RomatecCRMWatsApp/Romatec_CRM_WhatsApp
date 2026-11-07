@@ -14,8 +14,9 @@ import { useState } from "react";
 import { useAuth } from "@/_core/hooks/useAuth";
 import { perfilDe } from "@shared/equipe";
 import { podeOperarCobranca } from "@shared/contratos";
+import CobrancaAutomatica from "@/components/financeiro/CobrancaAutomatica";
 
-const ABAS = [["vendas", "Vendas e cobrança"], ["extrato", "Extrato por comprador"], ["fluxo", "Fluxo de caixa"], ["despesas", "Despesas"]] as const;
+const ABAS = [["vendas", "Vendas e cobrança"], ["extrato", "Extrato por comprador"], ["cobranca", "Cobrança automática"], ["fluxo", "Fluxo de caixa"], ["despesas", "Despesas"]] as const;
 
 const data = (d: unknown) => (d ? new Date(d as any).toLocaleDateString("pt-BR", { timeZone: "America/Fortaleza" }) : "—");
 const v = (n: number | null | undefined) => (n == null ? "—" : brl(n));
@@ -43,6 +44,7 @@ export default function Financeiro() {
         </div>
       )}
       {operador && aba === "extrato" && <div className="px-4 md:px-6 pb-8 max-w-[1400px] mx-auto"><ExtratoCompradores /></div>}
+      {operador && aba === "cobranca" && <div className="px-4 md:px-6 pb-8 max-w-[1400px] mx-auto"><CobrancaAutomatica /></div>}
       {operador && aba === "fluxo" && <div className="px-4 md:px-6 pb-8 max-w-[1400px] mx-auto"><FluxoCaixa /></div>}
       {operador && aba === "despesas" && <div className="px-4 md:px-6 pb-8 max-w-[1400px] mx-auto"><Despesas /></div>}
       <div className={`px-4 md:px-6 pb-8 max-w-[1400px] mx-auto space-y-3 ${operador && aba !== "vendas" ? "hidden" : ""}`}>

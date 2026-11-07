@@ -692,6 +692,7 @@ export function initSqliteTables(sqlite: any): void {
   addColumn(`ALTER TABLE saasAssinaturas ADD COLUMN checkoutPendenteJson TEXT`);
   for (const c of ['provedor TEXT', 'externoId TEXT', 'externoStatus TEXT', 'ambiente TEXT', 'pdfUrl TEXT', 'xmlUrl TEXT', 'mensagem TEXT', 'enviadaEm TEXT']) addColumn(`ALTER TABLE saasNfse ADD COLUMN ${c}`);
   run(`CREATE TABLE IF NOT EXISTS saasTrials (cpfCnpj TEXT PRIMARY KEY, usuarioId INTEGER, usadoEm ${agoraS})`);
+  run(`CREATE TABLE IF NOT EXISTS cobrancaAvisos (id INTEGER PRIMARY KEY AUTOINCREMENT, cobrancaId INTEGER NOT NULL, contratoId INTEGER NOT NULL, etapa TEXT NOT NULL, telefone TEXT, ok INTEGER NOT NULL DEFAULT 0, erro TEXT, enviadoEm ${agoraS}, UNIQUE(cobrancaId, etapa))`);
   run(`CREATE TABLE IF NOT EXISTS solicitacaoAcesso (id INTEGER PRIMARY KEY AUTOINCREMENT, usuarioId INTEGER NOT NULL, modalidade TEXT NOT NULL, ate TEXT NOT NULL, valor REAL, motivo TEXT NOT NULL, codigo TEXT NOT NULL, status TEXT NOT NULL DEFAULT 'PENDENTE', tentativas INTEGER NOT NULL DEFAULT 0, solicitanteId INTEGER NOT NULL, decididoPor INTEGER, decididoEm INTEGER, criadoEm ${agoraS})`);
   run(`CREATE TABLE IF NOT EXISTS materialUso (id INTEGER PRIMARY KEY AUTOINCREMENT, usuarioId INTEGER NOT NULL, materialId INTEGER NOT NULL, empreendimentoSlug TEXT, categoria TEXT NOT NULL, acao TEXT NOT NULL, criadoEm ${agoraS})`);
   run(`CREATE TABLE IF NOT EXISTS auditoriaAcesso (id INTEGER PRIMARY KEY AUTOINCREMENT, usuarioId INTEGER NOT NULL, evento TEXT NOT NULL, detalheJson TEXT, ip TEXT, criadoEm ${agoraS})`);

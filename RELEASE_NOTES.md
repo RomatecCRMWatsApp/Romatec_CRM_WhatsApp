@@ -3,6 +3,19 @@
 Cada versão nova vai no TOPO. Depois rode `npm run release` (valida e atualiza o package.json);
 ao subir, o servidor grava a versão no banco e todos recebem o aviso "Novidades da versão".
 
+## 1.119.0 — 2026-11-07
+tipo: minor
+obrigatoria: nao
+titulo: Cobrança automática das parcelas no WhatsApp
+publico: equipe
+
+### Novo
+- Financeiro › Cobrança automática: o comprador recebe no WhatsApp o aviso da parcela 3 dias antes, no dia do vencimento, com 3 dias de atraso e com 10 dias de atraso (último aviso; depois o escritório assume)
+- Cada aviso leva o link de pagamento (Pix ou boleto), o Pix copia e cola (antes e no dia), o carnê digital e a assinatura Romatec Consultoria Total · CRECI J-1234
+- Só contratos assinados ou ativos e parcelas em aberto; cada parcela recebe cada aviso uma única vez; envios só entre 9h e 19h
+- Tela com a prévia dos avisos de hoje (dá para ler cada mensagem antes), botão Enviar agora, alerta de comprador sem telefone e histórico dos envios
+- Começa desligada: revise a prévia e ligue quando quiser
+
 ## 1.118.0 — 2026-11-07
 tipo: minor
 obrigatoria: nao
