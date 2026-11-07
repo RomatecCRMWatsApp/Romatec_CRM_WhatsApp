@@ -6,13 +6,13 @@ import { daEquipe, perfilDe, podeAbrir, ROTULO_PERFIL } from "@shared/equipe";
 import { trpc } from "@/lib/trpc";
 import AvisoRotinas from "./AvisoRotinas";
 import { MobileTabBar, RomatecAppIcon, RomatecLockup, TAB_ICONS, type TabItem } from "@/brand";
-import BuscaGlobal, { type TelaBusca } from "@/components/BuscaGlobal";
+import BuscaGlobal, { JanelaBusca, type TelaBusca } from "@/components/BuscaGlobal";
 import {
   BarChart3, Building2, Flame, Images, KanbanSquare, LayoutDashboard, LineChart, LogOut, Megaphone, Menu, Send,
   Settings, UserCog, Users, X, Eye, ClipboardList, CalendarDays, Map as MapIcon, Smartphone, Wallet, IdCard, FolderOpen, Bell, FileSignature, Mic, CalendarCheck, UserPlus, BookCopy, BadgeDollarSign, Hourglass, Bot, Trophy, Link2, Zap, MessagesSquare, ListOrdered, Plug, Inbox, Building, Rotate3d,
   ChevronRight, ChevronsLeft, ChevronsRight,
   Radar, BookOpen,
- Shuffle, CheckCheck, ShieldCheck,
+ Shuffle, CheckCheck, ShieldCheck, Search,
 } from "lucide-react";
 import { abrirNovidades, SinoNovidades, useNovidadesNaoLidas } from "./sistema/Novidades";
 import { useNotificacoes } from "./sistema/Notificacoes";
@@ -267,12 +267,14 @@ function BotaoRecolher({ recolhido, onAlternar }: { recolhido: boolean; onAltern
  * Barra inferior no celular (< 900 px): Painel · Leads · [R] · Funil · Agenda. O R abre a Área do corretor
  * (atalhos de cadastro) — o CRM ainda não tem tela de lead manual (/leads/novo).
  */
-function BarraInferior({ modulos }: { modulos?: Record<string, boolean> | null }) {
+/** Corretor sem o módulo de leads: a barra (só de leads) não aparece */
+const temBarraInferior = (perfil: string | null, modulos?: Record<string, boolean> | null) => !(perfil !== "admin" && modulos && modulos.leads === false);
+
+function BarraInferior({ modulos, onBuscar }: { modulos?: Record<string, boolean> | null; onBuscar: () => void }) {
   const [loc, navigate] = useLocation();
   const { user } = useAuth();
   const perfil = perfilDe(user as any);
-  // Corretor sem o módulo de leads: a barra (só de leads) não aparece
-  if (perfil !== "admin" && modulos && modulos.leads === false) return null;
+  if (!temBarraInferior(perfil, modulos)) return null;
   const ativa = loc.startsWith("/leads/funil") ? "funil" : loc.startsWith("/leads/agenda") ? "agenda" : loc.startsWith("/leads") ? "leads" : loc.startsWith("/dashboard") ? "painel" : "";
   const tabs = [
     { key: "painel", label: "Painel", href: "/dashboard", icon: TAB_ICONS.painel },
@@ -280,7 +282,7 @@ function BarraInferior({ modulos }: { modulos?: Record<string, boolean> | null }
     { key: "funil", label: "Funil", href: "/leads/funil", icon: TAB_ICONS.funil },
     { key: "agenda", label: "Agenda", href: "/leads/agenda", icon: TAB_ICONS.agenda },
   ] as [TabItem, TabItem, TabItem, TabItem];
-  return <MobileTabBar activeKey={ativa} tabs={tabs} onNavigate={navigate} onFab={() => navigate("/corretor")} fabLabel="Atalhos de cadastro" />;
+  return <MobileTabBar activeKey={ativa} tabs={tabs} onNavigate={navigate} onFab={onBuscar} fabLabel="Buscar no CRM" fabSelo={<Search className="h-3.5 w-3.5" strokeWidth={3} />} />;
 }
 
 /** Layout das telas internas: menu lateral fixo (desktop) / gaveta (celular) + barra do topo */
@@ -304,6 +306,7 @@ function BannerLicenca({ licenca }: { licenca?: { exigida: boolean; liberado: bo
 export default function AppShell({ children }: { children: React.ReactNode }) {
   const [loc] = useLocation();
   const [aberto, setAberto] = useState(false);
+  const [buscaBalao, setBuscaBalao] = useState(false);
   useEffect(() => setAberto(false), [loc]);
   const { user } = useAuth();
   const { data: minhas } = trpc.permissoes.minhas.useQuery(undefined, { enabled: daEquipe(perfilDe(user as any)), staleTime: 60_000 });
@@ -347,8 +350,9 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
         <button onClick={() => setAberto(true)} className="rounded-lg p-2 hover:bg-white/5" aria-label="Abrir menu"><Menu className="h-5 w-5" /></button>
         <RomatecAppIcon size={28} />
         <p className="font-semibold truncate flex-1">{tituloDaRota(loc)}</p>
-        {/* No computador a busca fica no menu lateral; aqui só no celular/tablet (o atalho Ctrl+K vale nos dois) */}
-        <BuscaGlobal telas={telasBusca} />
+        {/* Celular: a busca é o R da barra de baixo. A lupa do topo fica só no tablet (sem a barra) ou para quem não tem a barra.
+            Ela continua montada para o atalho Ctrl+K / "/" valer em qualquer tamanho de tela. */}
+        <div className={temBarraInferior(perfilDe(user as any), minhas?.modulos) ? "hidden min-[900px]:block" : ""}><BuscaGlobal telas={telasBusca} /></div>
         <SinoNovidades className="text-foreground/70" />
         <FotoUsuario tamanho="h-8 w-8" />
       </header>
@@ -357,7 +361,8 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
       <BannerLicenca licenca={(user as any)?.licenca} />
       {/* No celular, espaço para a barra inferior (96 px) */}
       <main className="min-w-0 pb-[calc(6rem+env(safe-area-inset-bottom))] min-[900px]:pb-0">{children}</main>
-      <BarraInferior modulos={minhas?.modulos} />
+      <BarraInferior modulos={minhas?.modulos} onBuscar={() => setBuscaBalao(true)} />
+      {buscaBalao && <JanelaBusca telas={telasBusca} modo="balao" onFechar={() => setBuscaBalao(false)} />}
     </div>
   );
 }

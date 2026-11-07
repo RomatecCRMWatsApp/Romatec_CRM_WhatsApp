@@ -3,6 +3,18 @@
 Cada versão nova vai no TOPO. Depois rode `npm run release` (valida e atualiza o package.json);
 ao subir, o servidor grava a versão no banco e todos recebem o aviso "Novidades da versão".
 
+## 1.122.0 — 2026-11-07
+tipo: minor
+obrigatoria: nao
+titulo: Busca no R da barra de baixo (celular)
+publico: equipe
+
+### Melhorias
+- No celular, a busca agora é o R grande do meio da barra de baixo (com o selo da lupa): toque e abre um balão grande e translúcido, perto do polegar, para digitar nome, telefone, chácara ou contrato
+- O balão sobe junto com o teclado, para a caixa de busca nunca ficar escondida
+- A Área do corretor (novo lead, novo cliente, agendar visita) continua a um toque, logo no balão
+- A lupa pequena do topo saiu do celular; no computador e no tablet a busca segue no menu e no Ctrl+K
+
 ## 1.121.0 — 2026-11-07
 tipo: minor
 obrigatoria: nao

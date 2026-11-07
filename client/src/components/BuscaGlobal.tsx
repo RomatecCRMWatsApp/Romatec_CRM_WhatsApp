@@ -1,5 +1,6 @@
 /**
- * Busca única do CRM: lupa no topo (celular e computador) ou Ctrl+K / ⌘K. Uma caixa para achar lead, comprador,
+ * Busca única do CRM: no celular, o R da barra de baixo abre um balão grande para digitar (JanelaBusca modo "balao");
+ * no computador, o campo do menu lateral ou Ctrl+K / ⌘K. Uma caixa para achar lead, comprador,
  * contrato, chácara, imóvel, gente da equipe, material ou a tela do sistema. Cada perfil só vê o que já pode ver.
  */
 import { useEffect, useMemo, useState, type ComponentType } from "react";
@@ -61,7 +62,23 @@ export default function BuscaGlobal({ telas, variante = "icone", atalho = true }
   );
 }
 
-function JanelaBusca({ telas, onFechar }: { telas: TelaBusca[]; onFechar: () => void }) {
+/** Altura do teclado do celular (visualViewport): o balão sobe junto e não fica escondido atrás dele */
+function useAlturaTeclado(ativo: boolean) {
+  const [altura, setAltura] = useState(0);
+  useEffect(() => {
+    const vv = window.visualViewport;
+    if (!ativo || !vv) return;
+    const medir = () => setAltura(Math.max(0, window.innerHeight - vv.height - vv.offsetTop));
+    medir();
+    vv.addEventListener("resize", medir); vv.addEventListener("scroll", medir);
+    return () => { vv.removeEventListener("resize", medir); vv.removeEventListener("scroll", medir); };
+  }, [ativo]);
+  return altura;
+}
+
+export function JanelaBusca({ telas, onFechar, modo = "topo" }: { telas: TelaBusca[]; onFechar: () => void; modo?: "topo" | "balao" }) {
+  const balao = modo === "balao";
+  const teclado = useAlturaTeclado(balao);
   const [, navegar] = useLocation();
   const [texto, setTexto] = useState("");
   const [termo, setTermo] = useState("");
@@ -81,19 +98,30 @@ function JanelaBusca({ telas, onFechar }: { telas: TelaBusca[]; onFechar: () => 
 
   return (
     <Dialog open onOpenChange={v => { if (!v) onFechar(); }}>
-      <DialogContent showCloseButton={false} className="top-[calc(env(safe-area-inset-top)+4rem)] w-[calc(100%-1.5rem)] max-w-xl translate-y-0 overflow-hidden p-0 sm:top-[15%]">
+      <DialogContent showCloseButton={false}
+        className={balao
+          ? "top-auto w-[calc(100%-1.25rem)] max-w-xl translate-y-0 overflow-hidden rounded-3xl border-[var(--rt-gold)]/50 bg-background/80 p-0 shadow-2xl backdrop-blur-xl"
+          : "top-[calc(env(safe-area-inset-top)+4rem)] w-[calc(100%-1.5rem)] max-w-xl translate-y-0 overflow-hidden p-0 sm:top-[15%]"}
+        style={balao ? { bottom: teclado > 80 ? teclado + 12 : "calc(6.5rem + env(safe-area-inset-bottom))" } : undefined}>
         <DialogTitle className="sr-only">Buscar no CRM</DialogTitle>
         <DialogDescription className="sr-only">Procure lead, comprador, contrato, chácara, imóvel, equipe, material ou uma tela do sistema</DialogDescription>
         <Command shouldFilter={false} loop
           className="[&_[cmdk-group-heading]]:px-2 [&_[cmdk-group-heading]]:pt-2 [&_[cmdk-group-heading]]:text-xs [&_[cmdk-group-heading]]:text-muted-foreground [&_[cmdk-item]]:px-2 [&_[cmdk-item]]:py-2.5">
           <div className="relative">
-            <CommandInput value={texto} onValueChange={setTexto} placeholder="Nome, telefone, CPF, chácara (B13), contrato, CRECI…" className="h-12 text-base outline-none focus-visible:outline-none" />
+            <CommandInput value={texto} onValueChange={setTexto} autoFocus placeholder={balao ? "Buscar: nome, telefone, chácara, contrato…" : "Nome, telefone, CPF, chácara (B13), contrato, CRECI…"}
+              className={balao ? "h-14 text-lg outline-none focus-visible:outline-none" : "h-12 text-base outline-none focus-visible:outline-none"} />
             {isFetching && pronto && <Loader2 className="absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 animate-spin text-muted-foreground motion-reduce:animate-none" aria-label="Buscando" />}
           </div>
-          <CommandList className="max-h-[min(60dvh,460px)]">
+          <CommandList className={balao ? "max-h-[min(45dvh,420px)]" : "max-h-[min(60dvh,460px)]"}>
             {!pronto && (
               <div className="px-3 py-4 text-sm text-muted-foreground">
                 <p>Digite pelo menos {MIN_CARACTERES_BUSCA} letras. A busca procura em leads, compradores, contratos, chácaras, imóveis, equipe e materiais.</p>
+                {balao && (
+                  <button type="button" onClick={() => abrir("/corretor")}
+                    className="mt-3 flex w-full items-center gap-2 rounded-xl border border-border px-3 py-2.5 text-left text-sm text-foreground hover:bg-white/5">
+                    <LayoutGrid className="h-4 w-4 text-[var(--rt-gold)]" /> Área do corretor (novo lead, novo cliente, agendar visita…)
+                  </button>
+                )}
                 {recentes.length > 0 && (
                   <div className="mt-3 flex flex-wrap gap-1.5">
                     <span className="w-full text-xs">Buscas recentes</span>

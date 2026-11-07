@@ -134,6 +134,10 @@ html, body { background: var(--rt-bg); color: var(--rt-text); font-family: var(-
 .rt-tab__fab { width: 62px; height: 62px; margin-top: -26px; border-radius: 50%; display: grid; place-items: center;
   background: var(--rt-green); border: 2px solid var(--rt-gold); cursor: pointer; box-shadow: 0 0 0 4px #000; }
 .rt-tab__fab img { width: 30px; height: auto; }
+.rt-tab__fab { position: relative; }
+.rt-tab__fab:focus-visible { outline: 3px solid var(--rt-gold-light); outline-offset: 3px; }
+.rt-tab__fab-selo { position: absolute; right: -4px; bottom: -2px; width: 24px; height: 24px; border-radius: 50%; display: grid; place-items: center;
+  background: var(--rt-gold); color: #000; border: 2px solid #000; }
 @media (min-width: 900px) { .rt-tabbar { display: none; } }
 
 /* ---------- Splash ---------- */

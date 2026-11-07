@@ -30,10 +30,12 @@ export interface MobileTabBarProps {
   /** ação do botão central (novo lead / disparo) */
   onFab: () => void;
   fabLabel?: string;
+  /** Selo pequeno no canto do R (ex.: lupa da busca) */
+  fabSelo?: ReactNode;
 }
 
 /** Barra inferior do app (some acima de 900 px). Botão central com o R oficial. */
-export function MobileTabBar({ activeKey, tabs = DEFAULT_TABS, onNavigate, onFab, fabLabel = "Novo lead" }: MobileTabBarProps) {
+export function MobileTabBar({ activeKey, tabs = DEFAULT_TABS, onNavigate, onFab, fabLabel = "Novo lead", fabSelo }: MobileTabBarProps) {
   const renderTab = (t: TabItem) => (
     <a
       key={t.key}
@@ -58,6 +60,7 @@ export function MobileTabBar({ activeKey, tabs = DEFAULT_TABS, onNavigate, onFab
       {renderTab(tabs[1])}
       <button type="button" className="rt-tab__fab" aria-label={fabLabel} onClick={onFab}>
         <img src={brandAssets.r} alt="" />
+        {fabSelo && <span className="rt-tab__fab-selo" aria-hidden="true">{fabSelo}</span>}
       </button>
       {renderTab(tabs[2])}
       {renderTab(tabs[3])}
