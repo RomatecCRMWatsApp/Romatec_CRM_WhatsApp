@@ -495,6 +495,10 @@ export function initSqliteTables(sqlite: any): void {
     id INTEGER PRIMARY KEY AUTOINCREMENT, numero TEXT NOT NULL UNIQUE, cobrancaId INTEGER NOT NULL UNIQUE, contratoId INTEGER NOT NULL,
     codigoVerif TEXT NOT NULL, valorPago TEXT NOT NULL, pagoEm TEXT NOT NULL, pdfArquivo TEXT, enviadoEm INTEGER, envioErro TEXT, criadoEm ${agora}
   )`);
+  run(`CREATE TABLE IF NOT EXISTS comissaoRepasses (
+    id INTEGER PRIMARY KEY AUTOINCREMENT, contratoId INTEGER NOT NULL, corretorUserId INTEGER NOT NULL, chave TEXT NOT NULL, valor TEXT NOT NULL,
+    pagoEm TEXT NOT NULL, forma TEXT, observacao TEXT, registradoPor INTEGER, criadoEm ${agora}, UNIQUE(contratoId, chave)
+  )`);
   run(`CREATE TABLE IF NOT EXISTS declaracoesQuitacao (
     id INTEGER PRIMARY KEY AUTOINCREMENT, contratoId INTEGER NOT NULL, anoRef INTEGER NOT NULL, status TEXT NOT NULL DEFAULT 'emitida', motivo TEXT,
     valorTotal TEXT, pdfArquivo TEXT, enviadoEm INTEGER, criadoEm ${agora}, UNIQUE(contratoId, anoRef)

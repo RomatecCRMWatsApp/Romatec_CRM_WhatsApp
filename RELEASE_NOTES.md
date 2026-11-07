@@ -3,6 +3,20 @@
 Cada versão nova vai no TOPO. Depois rode `npm run release` (valida e atualiza o package.json);
 ao subir, o servidor grava a versão no banco e todos recebem o aviso "Novidades da versão".
 
+## 1.133.0 — 2026-11-07
+tipo: minor
+obrigatoria: nao
+titulo: Comissões a pagar no Financeiro e painel de comissões do corretor
+publico: equipe
+
+### Novo
+- Financeiro › Comissões a pagar (administrador e secretária): a partir de cada contrato assinado, todas as partes da comissão de venda de cada corretor, com a data em que devem ser pagas
+- Cada parte é liberada quando o comprador paga a parcela correspondente (entrada, 2º pagamento da entrada, 1ª a 4ª do saldo nos planos) e deve ser repassada em até 5 dias úteis; antes disso aparece a previsão
+- Cartões: a pagar agora, repasses atrasados, previsto e já pago; gráfico de repasses por mês; filtro por corretor; planilha para baixar
+- "Marcar paga" registra a data e a forma do repasse (Pix, transferência, dinheiro ou split); o administrador pode desfazer um registro feito por engano
+- Financeiro › Minhas comissões (corretor): suas vendas, comissão total, já recebido e a receber, gráfico dos recebimentos e das vendas por mês e a lista com as datas
+- Área do corretor: atalho para as comissões
+
 ## 1.132.0 — 2026-11-07
 tipo: minor
 obrigatoria: nao

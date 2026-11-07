@@ -70,7 +70,10 @@ export default function AreaCorretor() {
       {m.financeiro && fin && (
         <Secao titulo="Financeiro" icone={Wallet}>
           <p className="text-sm">{admin ? "Vendas registradas" : "Suas comissões"}: <b className="text-primary">{admin ? fin.resumo.quantidade : brl(fin.resumo.minhasComissoes)}</b></p>
-          <Button size="sm" variant="outline" onClick={() => navigate("/financeiro")}>Ver vendas e comissão</Button>
+          <div className="flex flex-wrap gap-1.5">
+            <Button size="sm" variant="outline" onClick={() => navigate("/financeiro")}>Ver vendas</Button>
+            <Button size="sm" onClick={() => navigate("/financeiro?aba=comissoes")}>{admin || minhas?.perfil === "secretario" ? "Comissões a pagar" : "Minhas comissões"}</Button>
+          </div>
         </Secao>
       )}
 

@@ -46,7 +46,7 @@ export interface LinhaTabelaComissao {
 const pct = (x: number) => `${(x * 100).toLocaleString('pt-BR', { maximumFractionDigits: 2 })}%`;
 
 /** Divide o valor nas fatias (a última leva o arredondamento) */
-function fatias(valor: number, partes: { quando: string; pct: number }[]): PagamentoComissao[] {
+export function fatias(valor: number, partes: { quando: string; pct: number }[]): PagamentoComissao[] {
   let usado = 0;
   return partes.map((p, k) => {
     const v = k === partes.length - 1 ? r2(valor - usado) : r2(valor * p.pct);

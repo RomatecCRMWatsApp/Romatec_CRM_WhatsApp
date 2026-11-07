@@ -2401,3 +2401,25 @@ export const artigosConhecimento = mysqlTable("artigosConhecimento", {
 }, (t) => ({
   uxSlug: uniqueIndex("ux_artigo_slug").on(t.slug),
 }));
+
+/**
+ * Repasses de comissão de venda ao corretor (Financeiro › Comissões a pagar): cada parte da comissão do contrato
+ * (ex.: entrada-1, saldo-3) marcada como paga pelo escritório. As partes previstas são calculadas do plano do contrato
+ * e das cobranças (shared/repasseComissao.ts); aqui fica só o registro do pagamento.
+ */
+export const comissaoRepasses = mysqlTable("comissaoRepasses", {
+  id: int("id").autoincrement().primaryKey(),
+  contratoId: int("contratoId").notNull(),
+  corretorUserId: int("corretorUserId").notNull(),
+  /** avista-1 | entrada-1 | entrada-2 | saldo-1..4 */
+  chave: varchar("chave", { length: 20 }).notNull(),
+  valor: decimal("valor", { precision: 12, scale: 2 }).notNull(),
+  pagoEm: date("pagoEm", { mode: "string" }).notNull(),
+  forma: varchar("forma", { length: 30 }),
+  observacao: varchar("observacao", { length: 300 }),
+  registradoPor: int("registradoPor"),
+  criadoEm: timestamp("criadoEm").defaultNow().notNull(),
+}, (t) => ({
+  uxParte: uniqueIndex("ux_repasse_parte").on(t.contratoId, t.chave),
+  ixCorretor: index("ix_repasse_corretor").on(t.corretorUserId),
+}));
