@@ -3,6 +3,19 @@
 Cada versão nova vai no TOPO. Depois rode `npm run release` (valida e atualiza o package.json);
 ao subir, o servidor grava a versão no banco e todos recebem o aviso "Novidades da versão".
 
+## 1.130.0 — 2026-11-07
+tipo: minor
+obrigatoria: nao
+titulo: Padrão de delimitação das chácaras: muro de alvenaria/bloco ou cerca de eucalipto tratado com arame liso
+publico: equipe
+
+### Melhorias
+- Diretrizes de Uso (Anexo IV, v1.1): muro permitido na frente, laterais e fundos, somente em alvenaria ou bloco de concreto, até 2,00 m
+- Cerca de arame: padrão obrigatório com piquetes de eucalipto tratado e arame liso
+- Qualquer outro tipo de delimitação é proibido (madeira nativa, mourões de concreto, arame farpado, telas, pallets e similares)
+- Contrato (CPCV, todos os planos): nova cláusula 6.3.1 com o padrão de delimitação, e a restrição a averbar (15.1) passa a citar esse padrão
+- Regimento Interno (Estatuto v1.3) atualizado com o mesmo padrão; checklist de restrições e página do contrato para o cliente também
+
 ## 1.129.0 — 2026-11-07
 tipo: minor
 obrigatoria: nao

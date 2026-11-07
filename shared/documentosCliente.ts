@@ -34,6 +34,7 @@ export const DOCUMENTOS_CLIENTE: DocumentoCliente[] = [
       'Esgoto: sistema individual obrigatório (fossa séptica + sumidouro ou filtro anaeróbio — ABNT NBR 7229 e NBR 13969)',
       'Área de vivência (Quadra F) privada, como reserva de preservação, com espaço exclusivo de 100 m² por chácara',
       'Liberação para cercar e construir depois da entrada e da 3ª parcela, com vistoria de medição (a 1ª é gratuita)',
+      'Padrão de delimitação: muro de alvenaria ou bloco de concreto (até 2,00 m) ou cerca de arame liso em piquetes de eucalipto tratado',
       'Foro da Comarca de Açailândia/MA',
     ],
     textoWhatsapp: '📄 *Contrato do Condomínio de Chácaras Bom Jardims*\n\nVeja a minuta completa do contrato de compra e venda (só leitura):\n{link}',
@@ -70,6 +71,7 @@ export const DOCUMENTOS_CLIENTE: DocumentoCliente[] = [
     destaques: [
       'Uso das chácaras: residência, segunda edificação, locação por temporada',
       'Criação de animais e as condições de cada uma',
+      'Delimitação das chácaras: muro de alvenaria ou bloco de concreto, ou cerca de arame liso em piquetes de eucalipto tratado (qualquer outro tipo é proibido)',
       'Integram o Estatuto e só mudam por decisão da Assembleia Geral',
     ],
     textoWhatsapp: '✅ *Diretrizes de Uso — Bom Jardims*\n\nVeja o que pode e o que não pode nas chácaras (só leitura):\n{link}',
