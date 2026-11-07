@@ -3,6 +3,18 @@
 Cada versão nova vai no TOPO. Depois rode `npm run release` (valida e atualiza o package.json);
 ao subir, o servidor grava a versão no banco e todos recebem o aviso "Novidades da versão".
 
+## 1.124.0 — 2026-11-07
+tipo: minor
+obrigatoria: nao
+titulo: Talão de contrato para imprimir (contrato completo em branco)
+publico: equipe
+
+### Novo
+- Talonários: talão de contrato em PDF para usar sem sistema (falta de energia ou de internet) — ficha cadastral do comprador e do cônjuge, quadro de condições de pagamento, o contrato completo com todas as cláusulas (o mesmo modelo do sistema) e os campos em branco para o cliente, a chácara, as condições, o corretor intermediador e o percentual da intermediação
+- Junto: Anexo III (Estatuto da Associação), Anexo IV (Diretrizes de Uso) e o Contrato de Intermediação, com campos para as assinaturas e as testemunhas
+- "Modelo em branco" no topo da tela; em cada bloco de contratos, "Imprimir talão numerado" (até 10 folhas por arquivo), com o número da folha no topo de todas as páginas
+- Dados do empreendimento, da vendedora, do registro e da licença já saem preenchidos; rodapé com Romatec Consultoria Total · CRECI J-1234
+
 ## 1.123.0 — 2026-11-07
 tipo: minor
 obrigatoria: nao

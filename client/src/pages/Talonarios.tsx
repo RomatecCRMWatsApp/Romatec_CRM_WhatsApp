@@ -1,6 +1,6 @@
 import { useRef, useState } from "react";
 import { toast } from "sonner";
-import { BookCopy, FileUp, Loader2, Send, UserPlus } from "lucide-react";
+import { BookCopy, FileUp, Loader2, Printer, Send, UserPlus } from "lucide-react";
 import { trpc } from "@/lib/trpc";
 import PageHeader from "@/components/PageHeader";
 import { Button } from "@/components/ui/button";
@@ -76,6 +76,42 @@ function EntregarBloco() {
   );
 }
 
+const MAX_IMPRESSAO = 10;
+
+/** Talão de contrato para imprimir: o CPCV completo em branco, com ficha, condições, Estatuto, Diretrizes e intermediação */
+function ModeloTalao() {
+  return (
+    <section className="flex flex-wrap items-center gap-3 rounded-xl border border-border bg-card p-4">
+      <div className="min-w-0 flex-1">
+        <h2 className="text-sm font-semibold">Talão de contrato para imprimir</h2>
+        <p className="mt-1 text-xs text-muted-foreground">
+          Para usar sem sistema (sem energia ou sem internet): ficha cadastral do comprador, quadro de condições, contrato completo com todas
+          as cláusulas e os campos em branco (cliente, chácara, condições, corretor e percentual da intermediação), Anexo III (Estatuto),
+          Anexo IV (Diretrizes) e o contrato de intermediação. Para sair numerado, imprima pelas folhas de um bloco de contratos abaixo.
+        </p>
+      </div>
+      <Button variant="outline" onClick={() => window.open("/api/talonarios/contrato.pdf", "_blank", "noopener")}><Printer className="mr-1 h-4 w-4" /> Modelo em branco (sem número)</Button>
+    </section>
+  );
+}
+
+/** Imprimir folhas numeradas de um bloco de contratos (até 10 por arquivo) */
+function ImprimirFolhas({ t }: { t: any }) {
+  const [de, setDe] = useState(String(t.numeroInicial));
+  const [ate, setAte] = useState(String(Math.min(t.numeroFinal, t.numeroInicial + MAX_IMPRESSAO - 1)));
+  const a = Number(de), b = Number(ate);
+  const erro = !a || !b ? "Informe as folhas" : a > b ? "A primeira folha vem antes da última" : a < t.numeroInicial || b > t.numeroFinal ? `Só folhas do bloco (${t.numeroInicial} a ${t.numeroFinal})` : b - a + 1 > MAX_IMPRESSAO ? `No máximo ${MAX_IMPRESSAO} folhas por arquivo` : null;
+  return (
+    <div className="flex flex-wrap items-end gap-2 rounded-md border border-border/60 p-2">
+      <span className="text-sm font-semibold">Imprimir talão numerado</span>
+      <label className="text-xs text-muted-foreground">Da folha<input className={`${campo} w-24`} value={de} onChange={e => setDe(e.target.value.replace(/\D/g, ""))} inputMode="numeric" /></label>
+      <label className="text-xs text-muted-foreground">Até a folha<input className={`${campo} w-24`} value={ate} onChange={e => setAte(e.target.value.replace(/\D/g, ""))} inputMode="numeric" /></label>
+      <Button size="sm" disabled={!!erro} onClick={() => window.open(`/api/talonarios/contrato.pdf?talonario=${t.id}&de=${a}&ate=${b}`, "_blank", "noopener")}><Printer className="mr-1 h-4 w-4" /> Gerar PDF para imprimir</Button>
+      <span className="text-xs text-muted-foreground">{erro ?? `${b - a + 1} folha(s); cada uma leva o número no topo de todas as páginas. Pode levar até 1 minuto.`}</span>
+    </div>
+  );
+}
+
 /** Folhas de um bloco: lançar (nº + cópia digitalizada + contrato/referência), cancelar ou marcar extraviada */
 function Folhas({ t, onMudou }: { t: any; onMudou: () => void }) {
   const { data: folhas, refetch } = trpc.saas.folhas.useQuery({ talonarioId: t.id });
@@ -98,6 +134,7 @@ function Folhas({ t, onMudou }: { t: any; onMudou: () => void }) {
   };
   return (
     <div className="mt-2 space-y-2">
+      {t.tipo === "CONTRATO" && <ImprimirFolhas t={t} />}
       <div className="flex flex-wrap gap-1">
         {(folhas ?? []).map(f => (
           <button key={f.numero} type="button" title={f.referencia ?? f.status} disabled={f.status !== "EM_BRANCO"} onClick={() => setNumero(f.numero)}
@@ -131,6 +168,7 @@ export default function Talonarios() {
     <div>
       <PageHeader icone={BookCopy} titulo="Talonários" subtitulo="Blocos numerados de contratos e recibos para corretores sem assinatura" />
       <div className="mx-auto max-w-[1300px] space-y-4 px-4 pb-8 md:px-6">
+        <ModeloTalao />
         <div className="grid gap-4 lg:grid-cols-2"><Externos /><EntregarBloco /></div>
         <section className="space-y-2 rounded-xl border border-border bg-card p-4">
           <h2 className="text-sm font-semibold">Blocos entregues</h2>

@@ -94,6 +94,40 @@ export function registrarRotasSaas(app: Express) {
     }
   });
 
+  // Talão de contrato para imprimir (CPCV completo em branco + ficha + condições + Estatuto + Diretrizes + Intermediação).
+  // Sem talonário: modelo em branco (sem número). Com ?talonario=&de=&ate=: as folhas numeradas do bloco (até 10 por vez).
+  app.get('/api/talonarios/contrato.pdf', async (req, res) => {
+    try {
+      if (!(await escritorio(req))) return res.status(404).end();
+      const { folhasDoTalao, MAX_FOLHAS_POR_PDF } = await import('./talaoContrato');
+      const slug = typeof req.query.slug === 'string' && /^[a-z0-9-]{1,80}$/.test(req.query.slug) ? req.query.slug : 'bom-jardims';
+      let numeros: (number | null)[] = [null];
+      if (req.query.talonario) {
+        const { getDb } = await import('../db');
+        const { talonarios } = await import('../../drizzle/schema');
+        const { eq } = await import('drizzle-orm');
+        const d: any = await getDb();
+        const [t]: any[] = await d.select().from(talonarios).where(eq(talonarios.id, Number(req.query.talonario))).limit(1);
+        if (!t) return res.status(404).json({ ok: false, error: 'Talonário não encontrado' });
+        if (t.tipo !== 'CONTRATO') return res.status(400).json({ ok: false, error: 'Este bloco é de recibos' });
+        const de = Number(req.query.de ?? t.numeroInicial), ate = Number(req.query.ate ?? de);
+        if (!Number.isInteger(de) || !Number.isInteger(ate) || de > ate || de < t.numeroInicial || ate > t.numeroFinal) {
+          return res.status(400).json({ ok: false, error: `Folhas fora do bloco (${t.numeroInicial} a ${t.numeroFinal})` });
+        }
+        if (ate - de + 1 > MAX_FOLHAS_POR_PDF) return res.status(400).json({ ok: false, error: `No máximo ${MAX_FOLHAS_POR_PDF} folhas por arquivo` });
+        numeros = Array.from({ length: ate - de + 1 }, (_, k) => de + k);
+      }
+      const pdf = await folhasDoTalao(slug, numeros);
+      const nome = numeros[0] == null ? 'talao-contrato-em-branco.pdf' : `talao-contrato-${numeros[0]}${numeros.length > 1 ? `-${numeros[numeros.length - 1]}` : ''}.pdf`;
+      res.type('application/pdf').setHeader('Content-Disposition', `inline; filename="${nome}"`);
+      res.setHeader('Cache-Control', 'private, no-store');
+      res.send(pdf);
+    } catch (e: any) {
+      console.error('[Talão] PDF:', e?.message);
+      res.status(e?.status ?? 500).json({ ok: false, error: e?.message || 'Erro ao gerar o talão' });
+    }
+  });
+
   app.get('/api/talonarios/:id/folhas/:numero/arquivo', async (req, res) => {
     try {
       if (!(await escritorio(req))) return res.status(404).end();
