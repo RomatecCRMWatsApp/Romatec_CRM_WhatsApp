@@ -116,6 +116,7 @@ export default function AreaCorretor() {
                 <div className="mt-2 flex flex-wrap gap-1.5">
                   <Button size="sm" onClick={() => navigate(`/empreendimentos/${e.slug}`)}>Abrir mapa e lotes</Button>
                   {m.simulador && <Button size="sm" variant="outline" onClick={() => navigate(`/empreendimentos/${e.slug}`)}><Calculator className="mr-1 h-3.5 w-3.5" /> Simulador</Button>}
+                  <Button asChild size="sm" variant="outline"><a href={`/api/condicoes/${e.slug}.pdf`} target="_blank" rel="noopener noreferrer"><Calculator className="mr-1 h-3.5 w-3.5" /> Todas as condições (PDF)</a></Button>
                   {e.slug === "bom-jardims" && <>
                     <Button size="sm" variant="outline" onClick={() => copiar(comRef(linkEmpreendimento(origem), ref), "Link do empreendimento")}><Link2 className="mr-1 h-3.5 w-3.5" /> Link de divulgação</Button>
                     <Button size="sm" variant="outline" onClick={() => copiar(linkAgendamento("bom-jardims", ref), "Link de agendamento")}><Link2 className="mr-1 h-3.5 w-3.5" /> Link de agendamento</Button>

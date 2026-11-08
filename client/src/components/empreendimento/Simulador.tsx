@@ -187,6 +187,42 @@ function VincularLead({ salvando, onFechar, onVincular }: { salvando: boolean; o
 }
 
 /** Aba Empreendimento › Simulador: preço do lote, entrada, planos do saldo, proposta e comissão */
+/**
+ * Todas as condições (chácara padrão do empreendimento): PDF com à vista, entrada de 30% (à vista ou parcelada, todos os
+ * prazos) e Planos A, B e C, para o corretor mandar ao cliente antes da proposta exclusiva da chácara escolhida.
+ */
+function TodasAsCondicoes({ slug }: { slug: string }) {
+  const { data } = trpc.condicoes.link.useQuery({ slug }, { staleTime: 10 * 60_000, retry: false });
+  const [fone, setFone] = useState("");
+  const texto = data ? `Olá! Seguem todas as condições de pagamento do ${data.nome} (chácara padrão), para você comparar com calma:\n${data.url}\n\nQuando escolher a chácara, eu te mando a proposta exclusiva dela.` : "";
+  const whatsapp = () => {
+    const d = fone.replace(/\D/g, "");
+    const numero = d ? (d.length <= 11 ? `55${d}` : d) : "";
+    window.open(`https://wa.me/${numero}?text=${encodeURIComponent(texto)}`, "_blank", "noopener");
+  };
+  const compartilhar = async () => {
+    if (!data) return;
+    try {
+      if (navigator.share) { await navigator.share({ title: `Condições — ${data.nome}`, text: texto.split("\n")[0], url: data.url }); return; }
+      await navigator.clipboard.writeText(texto); toast.success("Mensagem com o link copiada");
+    } catch { /* cancelado */ }
+  };
+  return (
+    <div className="space-y-2 rounded-xl border border-primary/40 bg-primary/5 p-4">
+      <div>
+        <p className="flex items-center gap-2 font-semibold"><FileText className="h-4 w-4 text-primary" /> Todas as condições — chácara padrão</p>
+        <p className="text-xs text-muted-foreground">À vista, entrada de 30% (à vista ou parcelada, todos os prazos) e Planos A, B e C, num PDF só. Mande ao cliente primeiro; quando ele escolher a chácara, faça a proposta exclusiva abaixo.</p>
+      </div>
+      <div className="flex flex-wrap items-center gap-2">
+        <Button asChild size="sm" variant="outline"><a href={`/api/condicoes/${slug}.pdf`} target="_blank" rel="noopener noreferrer"><Download className="mr-1 h-4 w-4" /> Baixar PDF</a></Button>
+        <input value={fone} onChange={e => setFone(e.target.value)} inputMode="tel" placeholder="WhatsApp do cliente" className="h-9 min-w-[180px] flex-1 rounded-md border border-border bg-background px-2 text-sm" />
+        <Button size="sm" disabled={!data} onClick={whatsapp} className="bg-emerald-500 text-black hover:bg-emerald-400"><Send className="mr-1 h-4 w-4" /> Enviar no WhatsApp</Button>
+        <Button size="sm" variant="outline" disabled={!data} onClick={compartilhar}><Link2 className="mr-1 h-4 w-4" /> Compartilhar</Button>
+      </div>
+    </div>
+  );
+}
+
 export default function Simulador({ slug, lotes, ruas, perimetro, destinoSugerido }: {
   slug: string; lotes: Lote[]; ruas: any[]; perimetro?: [number, number][] | null; destinoSugerido?: string;
 }) {
@@ -231,6 +267,7 @@ export default function Simulador({ slug, lotes, ruas, perimetro, destinoSugerid
   return (
     <div className="grid items-start gap-4 lg:grid-cols-[1fr_420px]">
       <div className="space-y-3">
+        <TodasAsCondicoes slug={slug} />
         <div className="flex flex-wrap items-end gap-2 rounded-xl border border-border bg-card p-4">
           <label className="space-y-1 text-sm">
             <span className="block text-xs text-muted-foreground">Chácara (nº ou clique no mapa)</span>

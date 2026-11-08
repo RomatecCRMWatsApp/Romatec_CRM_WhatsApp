@@ -17,6 +17,7 @@ import { empreendedorRouter } from "./routers/empreendedor.router";
 import { empreendimentosAdminRouter } from "./routers/empreendimentosAdmin.router";
 import { simuladorRouter } from "./routers/simulador.router";
 import { comissoesRouter } from "./routers/comissoes.router";
+import { condicoesRouter } from "./routers/condicoes.router";
 import { financeiroRouter } from "./routers/financeiro.router";
 import { reunioesRouter } from "./routers/reunioes.router";
 import { recrutamentoRouter } from "./routers/recrutamento.router";
@@ -106,6 +107,7 @@ export const appRouter = router({
   empreendimentosAdmin: empreendimentosAdminRouter,
   simulador: simuladorRouter,
   comissoes: comissoesRouter,
+  condicoes: condicoesRouter,
   financeiro: financeiroRouter,
   reunioes: reunioesRouter,
   recrutamento: recrutamentoRouter,

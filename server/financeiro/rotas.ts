@@ -102,6 +102,46 @@ button{padding:10px;background:#0C3320;color:#fff;border:0;border-radius:8px;fon
 }
 
 export function registrarRotasFinanceiro(app: Express) {
+  // Todas as condições de pagamento (chácara padrão) em PDF: equipe logada baixa; o cliente abre pelo link assinado do corretor
+  const enviarCondicoes = async (res: Response, slug: string, corretorId: number | null) => {
+    const { dadosCondicoes, pdfCondicoesGerais, CondicoesErro } = await import('./condicoesGeraisPdf');
+    try {
+      const pdf = await pdfCondicoesGerais(await dadosCondicoes(slug, corretorId));
+      res.setHeader('Content-Type', 'application/pdf');
+      res.setHeader('Cache-Control', 'no-store');
+      res.setHeader('X-Robots-Tag', 'noindex');
+      res.setHeader('Content-Disposition', `inline; filename="CONDICOES-DE-PAGAMENTO-${slug.toUpperCase()}.pdf"`);
+      res.send(pdf);
+    } catch (e: any) {
+      if (e instanceof CondicoesErro) return res.status(e.status).send(e.message);
+      console.error('[Condições] PDF:', e);
+      res.status(500).send('Falha ao gerar as condições de pagamento');
+    }
+  };
+  app.get('/api/condicoes/:slug.pdf', async (req: Request, res: Response) => {
+    const { sdk } = await import('../_core/sdk');
+    const user: any = await sdk.authenticateRequest(req).catch(() => null);
+    if (!user || user.ativo === false || user.ativo === 0) return res.status(401).send('Faça login');
+    const slug = /^[a-z0-9-]{1,80}$/.test(req.params.slug) ? req.params.slug : '';
+    if (!slug) return res.status(400).send('Empreendimento inválido');
+    const { carregarPermissoes } = await import('../permissoes');
+    const { temAcesso } = await import('../../shared/permissoes');
+    const perm = await carregarPermissoes(user);
+    const d: any = await getDb();
+    const { empreendimentos } = await import('../../drizzle/schema');
+    const [emp]: any[] = d ? await d.select({ id: empreendimentos.id }).from(empreendimentos).where(eq(empreendimentos.slug, slug)).limit(1) : [];
+    if (!emp) return res.status(404).send('Empreendimento não encontrado');
+    if (!temAcesso(perm.perfil, perm.acessos, 'empreendimento', Number(emp.id))) return res.status(403).send('Sem acesso a este empreendimento');
+    await enviarCondicoes(res, slug, Number(user.id));
+  });
+  app.get('/api/public/condicoes/:slug/:token.pdf', async (req: Request, res: Response) => {
+    const slug = /^[a-z0-9-]{1,80}$/.test(req.params.slug) ? req.params.slug : '';
+    const { corretorDoToken } = await import('./condicoesGeraisPdf');
+    const corretorId = slug ? corretorDoToken(slug, req.params.token) : null;
+    if (!corretorId) return res.status(404).send('Link inválido');
+    await enviarCondicoes(res, slug, corretorId);
+  });
+
   // Tabela de comissão em PDF (corretor 2% ou escritório 5%) — mesmas regras de quem vê da tela (shared/tabelaComissao.ts)
   app.get('/api/comissao/tabela.pdf', async (req: Request, res: Response) => {
     try {

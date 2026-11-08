@@ -3,6 +3,19 @@
 Cada versão nova vai no TOPO. Depois rode `npm run release` (valida e atualiza o package.json);
 ao subir, o servidor grava a versão no banco e todos recebem o aviso "Novidades da versão".
 
+## 1.135.0 — 2026-11-08
+tipo: minor
+obrigatoria: nao
+titulo: PDF com todas as condições de pagamento para mandar ao cliente
+publico: equipe
+
+### Novo
+- Simulador › "Todas as condições — chácara padrão": um PDF com todas as formas de comprar a chácara padrão de 3.025 m² — à vista, entrada de 30% (à vista ou de 2× a 6×, com todos os prazos) e Planos A, B e C com todos os prazos
+- Botões: Baixar PDF, Enviar no WhatsApp (com ou sem o número do cliente) e Compartilhar; o cliente abre o PDF pelo link, sem login
+- O PDF sai com a marca do empreendimento, o nome, o CRECI e o WhatsApp do corretor que enviou, e o aviso de valores de referência
+- Depois que o cliente escolhe a chácara, o corretor faz a proposta exclusiva dela no mesmo Simulador
+- Área do corretor: atalho "Todas as condições (PDF)" em cada empreendimento
+
 ## 1.134.0 — 2026-11-08
 tipo: minor
 obrigatoria: nao
