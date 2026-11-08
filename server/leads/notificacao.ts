@@ -126,8 +126,8 @@ export async function notificarLead(
       const resp = await sla.garantirResponsavel(dados.leadId);
       if (resp) dados = { ...dados, responsavelNome: resp.name ?? null };
       destinoWhats = await sla.telefoneDoResponsavel(dados.leadId);
-      dados = { ...dados, linkWhatsApp: sla.linkWhatsAppAtendido(dados.leadId) };
-      if (precisa) dados = { ...dados, linkAtendido: sla.linkAtendido(dados.leadId) };
+      dados = { ...dados, linkWhatsApp: sla.linkWhatsAppAtendido(dados.leadId, resp?.id ?? null) };
+      if (precisa) dados = { ...dados, linkAtendido: sla.linkAtendido(dados.leadId, resp?.id ?? null) };
     } catch (e: any) {
       console.warn('[Notificação] Responsável/SLA indisponível:', e?.message);
     }

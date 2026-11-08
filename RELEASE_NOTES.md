@@ -3,6 +3,18 @@
 Cada versão nova vai no TOPO. Depois rode `npm run release` (valida e atualiza o package.json);
 ao subir, o servidor grava a versão no banco e todos recebem o aviso "Novidades da versão".
 
+## 1.135.1 — 2026-11-08
+tipo: patch
+obrigatoria: nao
+titulo: Troca de corretor anula os links do aviso anterior; leads da secretária na distribuição
+publico: equipe
+
+### Correções
+- Ao trocar o corretor de um lead, os links do aviso que o anterior recebeu ("Confirmar que recebi", "Atender no WhatsApp", "Já atendi") deixam de valer: abrem a tela "Este lead foi passado para outro corretor" e não confirmam nem abrem o cliente
+- O corretor anterior recebe no WhatsApp o aviso de que o lead foi passado para outro
+- Os links dos novos avisos são de cada corretor (o de um não serve para o outro)
+- Distribuição › Não encaminhados: leads que estavam com a secretária (ex.: conversa do Instagram virada em lead) voltam a aparecer para serem encaminhados a um corretor
+
 ## 1.135.0 — 2026-11-08
 tipo: minor
 obrigatoria: nao

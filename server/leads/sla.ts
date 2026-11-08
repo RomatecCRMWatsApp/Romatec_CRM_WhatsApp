@@ -49,12 +49,35 @@ export function escolherResponsavel<T extends { id: number; ultimoLeadAt?: Date 
 // ─── Link "Já atendi" ────────────────────────────────────────────────────────
 // Sem segredo em produção, falha (os links /a/ e /w/ seriam forjáveis com o valor padrão do código-fonte)
 const segredo = () => process.env.JWT_SECRET || process.env.SESSION_SECRET || (() => { if (process.env.NODE_ENV === 'production') throw new Error('Defina JWT_SECRET: sem ele os links assinados poderiam ser forjados'); return 'romatec-sla'; })();
-export function tokenAtendido(leadId: number): string {
-  return crypto.createHmac('sha256', segredo()).update(`atendido:${leadId}`).digest('hex').slice(0, 20);
+/** Token do link "Já atendi"/"Atender no WhatsApp": amarrado ao lead e a quem recebeu o aviso (paraId) */
+export function tokenAtendido(leadId: number, paraId?: number | null): string {
+  return crypto.createHmac('sha256', segredo()).update(paraId ? `atendido:${leadId}:${paraId}` : `atendido:${leadId}`).digest('hex').slice(0, 20);
 }
-export function tokenAtendidoValido(leadId: number, token: string): boolean {
-  const esperado = tokenAtendido(leadId);
+export function tokenAtendidoValido(leadId: number, token: string, paraId?: number | null): boolean {
+  const esperado = tokenAtendido(leadId, paraId);
   return token.length === esperado.length && crypto.timingSafeEqual(Buffer.from(token), Buffer.from(esperado));
+}
+
+/**
+ * O link ainda vale para quem o recebeu? Quando o lead passa para outro corretor, os links do aviso do anterior
+ * (Atender no WhatsApp, Já atendi) deixam de valer. O administrador sempre pode usar os dele.
+ * Link antigo, sem destinatário: só vale se o lead nunca foi repassado.
+ */
+export async function linkAtendidoAindaVale(leadId: number, paraId: number | null): Promise<boolean> {
+  const { getDb } = await import('../db');
+  const d: any = await getDb();
+  if (!d) return true;
+  const { leadQualifications, leadEncaminhamentos, users } = await import('../../drizzle/schema');
+  if (paraId) {
+    const [l]: any[] = await d.select({ responsavelId: leadQualifications.responsavelId }).from(leadQualifications).where(eq(leadQualifications.id, leadId)).limit(1);
+    if (!l) return false;
+    if (Number(l.responsavelId) === paraId) return true;
+    const [u]: any[] = await d.select({ role: users.role, perfil: (users as any).perfil }).from(users).where(eq(users.id, paraId)).limit(1);
+    return !!u && (u.role === 'admin' || u.perfil === 'admin');
+  }
+  const [rep]: any[] = await d.select({ id: leadEncaminhamentos.id }).from(leadEncaminhamentos)
+    .where(and(eq(leadEncaminhamentos.leadId, leadId), eq(leadEncaminhamentos.desfecho, 'repassado'))).limit(1);
+  return !rep;
 }
 /** "✅ Confirmar recebimento" do aviso de encaminhamento: 1 toque, sem login (link assinado por encaminhamento) */
 export function tokenRecebido(encaminhamentoId: number): string {
@@ -65,9 +88,10 @@ export function tokenRecebidoValido(encaminhamentoId: number, token: string): bo
   return token.length === esperado.length && crypto.timingSafeEqual(Buffer.from(token), Buffer.from(esperado));
 }
 export const linkRecebido = (encaminhamentoId: number) => `${appUrl()}/c/${encaminhamentoId}/${tokenRecebido(encaminhamentoId)}`;
-export const linkAtendido = (leadId: number) => `${appUrl()}/a/${leadId}/${tokenAtendido(leadId)}`;
+const destinatario = (paraId?: number | null) => (paraId ? `?u=${paraId}` : '');
+export const linkAtendido = (leadId: number, paraId?: number | null) => `${appUrl()}/a/${leadId}/${tokenAtendido(leadId, paraId)}${destinatario(paraId)}`;
 /** "Atender no WhatsApp" do aviso: passa pelo CRM (marca o atendimento) e abre a conversa com o cliente */
-export const linkWhatsAppAtendido = (leadId: number) => `${appUrl()}/w/${leadId}/${tokenAtendido(leadId)}`;
+export const linkWhatsAppAtendido = (leadId: number, paraId?: number | null) => `${appUrl()}/w/${leadId}/${tokenAtendido(leadId, paraId)}${destinatario(paraId)}`;
 
 /** Robôs de pré-visualização de link (WhatsApp, Telegram, Facebook…) não contam como atendimento */
 export function ehRoboDePrevia(ua: string | null | undefined): boolean {
@@ -222,18 +246,19 @@ export async function processarSla(agora = Date.now()): Promise<number> {
     }
     const nome = l.nome || 'Lead';
     // Atender pelo link do CRM: abrir a conversa já marca o lead como atendido
-    const contato = `📱 +${String(l.phone).replace(/\D/g, '')}\n💬 Atender no WhatsApp (já conta como atendido): ${linkWhatsAppAtendido(l.id)}`;
+    // Links do aviso amarrados a quem recebe: se o lead mudar de corretor, os do anterior deixam de valer
+    const contato = (u: any) => `📱 +${String(l.phone).replace(/\D/g, '')}\n💬 Atender no WhatsApp (já conta como atendido): ${linkWhatsAppAtendido(l.id, u?.id ?? null)}\n✅ Já atendi: ${linkAtendido(l.id, u?.id ?? null)}`;
     if (acao === 'lembrar') {
-      await avisar(resp, `⏰ ${nome} está esperando atendimento há ${minutos} min.\n${contato}\n✅ Já atendi: ${linkAtendido(l.id)}`);
+      await avisar(resp, `⏰ ${nome} está esperando atendimento há ${minutos} min.\n${contato(resp)}`);
     } else if (acao === 'repassar') {
       if (proximo) {
         await db.update(users).set({ ultimoLeadAt: new Date() } as any).where(eq(users.id, proximo.id));
-        await avisar(proximo, `🔁 O lead ${nome} passou para você: está sem atendimento há ${minutos} min.\n${contato}\n✅ Já atendi: ${linkAtendido(l.id)}`);
+        await avisar(proximo, `🔁 O lead ${nome} passou para você: está sem atendimento há ${minutos} min.\n${contato(proximo)}`);
       } else {
-        await avisar(admin, `⚠️ ${nome} está há ${minutos} min sem atendimento.\n${contato}\n✅ Já atendi: ${linkAtendido(l.id)}`);
+        await avisar(admin, `⚠️ ${nome} está há ${minutos} min sem atendimento.\n${contato(admin)}`);
       }
     } else {
-      await avisar(admin, `🚨 ${nome} está há ${minutos} min sem atendimento (responsável: ${resp?.name || '—'}).\n${contato}\n✅ Já atendi: ${linkAtendido(l.id)}`);
+      await avisar(admin, `🚨 ${nome} está há ${minutos} min sem atendimento (responsável: ${resp?.name || '—'}).\n${contato(admin)}`);
     }
     n++;
   }

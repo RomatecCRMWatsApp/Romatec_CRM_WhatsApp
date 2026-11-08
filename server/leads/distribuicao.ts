@@ -104,10 +104,13 @@ export async function liberarDoEscritorio(por: { id: number }) {
   return { liberados: ids.length };
 }
 
-/** Administrador(es): dono "padrão" quando ninguém foi escolhido — lead só com eles conta como não encaminhado */
+/**
+ * Escritório (administrador e secretária): dono "padrão" quando ninguém foi escolhido — lead só com eles conta como
+ * não encaminhado (ex.: conversa do Instagram que a secretária virou lead continua na lista para ir a um corretor)
+ */
 async function idsDoEscritorio(d: any): Promise<Set<number>> {
   const us: any[] = await d.select({ id: users.id, role: users.role, perfil: (users as any).perfil }).from(users);
-  return new Set(us.filter(u => u.role === 'admin' || u.perfil === 'admin').map(u => Number(u.id)));
+  return new Set(us.filter(u => u.role === 'admin' || u.perfil === 'admin' || u.perfil === 'secretario').map(u => Number(u.id)));
 }
 
 /**
@@ -137,6 +140,10 @@ export async function encaminharManual(leadIds: number[], paraId: number, por: {
       await d.update(leadQualifications).set({ responsavelId: paraId, updatedAt: new Date() } as any).where(eq(leadQualifications.id, l.id));
     }
     await registrarEncaminhamento({ leadId: Number(l.id), deId: de, paraId, porId: por.id, origem: 'manual', observacao });
+    // Quem tinha o lead fica sabendo da troca (e que os links do aviso dele não valem mais)
+    if (de && de !== paraId && de !== por.id) {
+      import('./encaminhamento').then(m => m.avisarRetirada({ leadId: Number(l.id), deId: de, paraNome: destino.nome })).catch(e => console.warn('[Distribuição] aviso de troca:', e?.message));
+    }
     if (paraId !== por.id) {
       if (de !== paraId) await registrarAtendimento(Number(l.id), { como: 'encaminhado', usuarioId: por.id, paraId }).catch(() => null);
       avisarEncaminhamento({ leadId: Number(l.id), paraId, porNome: por.nome }).catch(e => console.warn('[Distribuição] aviso:', e?.message));
@@ -221,6 +228,7 @@ export async function confirmarRecebimento(id: number, usuarioId: number, agora 
   const d = await banco();
   const e = await encaminhamentoDo(d, id);
   if (Number(e.paraId) !== usuarioId) throw new DistribuicaoErro('Este lead foi encaminhado para outra pessoa');
+  if (e.desfecho === 'repassado') throw new DistribuicaoErro('Este lead foi passado para outro corretor');
   if (!e.recebidoEm) await d.update(leadEncaminhamentos).set({ recebidoEm: agora } as any).where(eq(leadEncaminhamentos.id, id));
   return { ok: true as const };
 }
