@@ -12,6 +12,7 @@
  */
 import { and, eq, gte, inArray, isNull, lte } from 'drizzle-orm';
 import { appUrl } from './config';
+import { mesmoTelefone } from './mesmoTelefone';
 
 export const STATUS_VISITA = ['solicitada', 'agendada', 'confirmada', 'realizada', 'nao_veio', 'cancelada'] as const;
 export type StatusVisita = typeof STATUS_VISITA[number];
@@ -207,7 +208,7 @@ export async function confirmarPorResposta(phone: string, texto: string, agora =
   const { db, leadVisitas, leadQualifications } = await banco();
   if (!db) return null;
   const fone = phone.replace(/\D/g, '');
-  const [l]: any[] = await db.select({ id: leadQualifications.id }).from(leadQualifications).where(eq(leadQualifications.phone, fone)).limit(1);
+  const [l]: any[] = await db.select({ id: leadQualifications.id }).from(leadQualifications).where(mesmoTelefone(leadQualifications.phone, fone)).limit(1);
   if (!l) return null;
   const [v]: any[] = await db.select().from(leadVisitas)
     .where(and(eq(leadVisitas.leadId, l.id), eq(leadVisitas.status, 'agendada'), gte(leadVisitas.quando, new Date(agora))))

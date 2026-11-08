@@ -13,6 +13,7 @@ import { assistenteNome, appUrl, fraseCorretorChama } from './config';
 import { formatarReais, notificarLead } from './notificacao';
 import { normalizePhoneBR } from '../lead-intake';
 import { boasVindasListaExclusiva } from './listaComunicacao';
+import { mesmoTelefone } from './mesmoTelefone';
 
 export interface ImovelResumo {
   id: number;
@@ -163,7 +164,7 @@ export async function processarEntradaWhatsApp(input: { phone: string; texto: st
   const [campanha] = atrib.campanhaCodigo
     ? await db.select().from(leadCampanhas).where(eq(leadCampanhas.codigo, atrib.campanhaCodigo)).limit(1)
     : [];
-  const [lead] = await db.select().from(leadQualifications).where(eq(leadQualifications.phone, phone)).limit(1);
+  const [lead] = await db.select().from(leadQualifications).where(mesmoTelefone(leadQualifications.phone, phone)).limit(1);
   if (lead?.blockedUntil && new Date(lead.blockedUntil).getTime() > Date.now()) return { acao: 'nenhuma' };
 
   const interessesAtuais = lead
@@ -319,7 +320,7 @@ export async function registrarWhatsappDireto(input: { phone: string; nome?: str
   const phone = input.phone.replace(/\D/g, '');
   const nome = (input.nome || '').trim() || 'Cliente';
   const now = new Date();
-  const [lead]: any[] = await db.select().from(leadQualifications).where(eq(leadQualifications.phone, phone)).limit(1);
+  const [lead]: any[] = await db.select().from(leadQualifications).where(mesmoTelefone(leadQualifications.phone, phone)).limit(1);
   const acao = acaoWhatsappDireto(lead);
   if (acao === 'nada') return false;
 
@@ -349,7 +350,7 @@ export async function registrarWhatsappDireto(input: { phone: string; nome?: str
     } catch { /* conversa é só contexto */ }
   }
 
-  const [contato] = await db.select({ id: contacts.id }).from(contacts).where(eq(contacts.phone, phone)).limit(1).catch(() => [] as any[]);
+  const [contato] = await db.select({ id: contacts.id }).from(contacts).where(mesmoTelefone(contacts.phone, phone)).limit(1).catch(() => [] as any[]);
   const primeira = input.texto.replace(/\s+/g, ' ').trim().slice(0, 120);
   await notificarLead({
     tipo: 'novo_lead', leadId, nome: lead?.nome || nome, telefone: phone, funil: 'comprador',

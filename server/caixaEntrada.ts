@@ -7,6 +7,7 @@
 import { and, desc, eq, gte, inArray } from 'drizzle-orm';
 import { getDb } from './db';
 import { igConversas, igMensagens, leadMensagens, leadQualifications, users } from '../drizzle/schema';
+import { mesmoTelefone } from './leads/mesmoTelefone';
 
 export class CaixaErro extends Error { constructor(msg: string, public status = 400) { super(msg); this.name = 'CaixaErro'; } }
 const H = 3_600_000;
@@ -183,7 +184,7 @@ export async function vincularInstagram(conversaId: number, telefone: string, au
   if (!fone) throw new CaixaErro('WhatsApp inválido (com DDD)');
   const r: any = await ingestLead({ nome: c.nome || c.username || 'Cliente do Instagram', phone: fone, origem: 'instagram_dm', instagramUserId: String(c.igsid), responsavelId: c.responsavelId ?? autor.id, semBoasVindas: true } as any);
   if (!r?.ok) throw new CaixaErro('Não foi possível criar o lead');
-  const [l]: any[] = await d.select({ id: leadQualifications.id }).from(leadQualifications).where(eq(leadQualifications.phone, r.phone)).limit(1);
+  const [l]: any[] = await d.select({ id: leadQualifications.id }).from(leadQualifications).where(mesmoTelefone(leadQualifications.phone, r.phone)).limit(1);
   await d.update(igConversas).set({ leadId: l?.id ?? null, responsavelId: c.responsavelId ?? autor.id } as any).where(eq(igConversas.id, conversaId));
   return { ok: true as const, leadId: l ? Number(l.id) : null };
 }

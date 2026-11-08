@@ -10,6 +10,7 @@
  */
 import { and, desc, eq, gte } from 'drizzle-orm';
 import { corretorWhatsApp } from './config';
+import { mesmoTelefone } from './mesmoTelefone';
 
 export const INTERVALO_LISTA_MS = 24 * 3600_000;
 export const MARCA = 'lista exclusiva';
@@ -173,7 +174,7 @@ export async function respostaCaptacao(phone: string, nome: string | null | unde
   const { leadQualifications, leadMensagens, empreendimentos } = await import('../../drizzle/schema');
   const fone = phone.replace(/\D/g, '');
   const [lead]: any[] = await db.select({ id: leadQualifications.id, nome: leadQualifications.nome, tags: leadQualifications.tags })
-    .from(leadQualifications).where(eq(leadQualifications.phone, fone)).limit(1);
+    .from(leadQualifications).where(mesmoTelefone(leadQualifications.phone, fone)).limit(1);
   if (!lead) return null;
   const [emp]: any[] = await db.select({ precosPublicos: empreendimentos.precosPublicos }).from(empreendimentos).where(eq(empreendimentos.slug, slug)).limit(1);
   const enviadas: any[] = await db.select({ texto: leadMensagens.texto, createdAt: leadMensagens.createdAt }).from(leadMensagens)
@@ -207,7 +208,7 @@ export async function respostaListaComunicacao(phone: string, nome: string | nul
   if (!db) return null;
   const { leadQualifications, leadMensagens } = await import('../../drizzle/schema');
   const fone = phone.replace(/\D/g, '');
-  const [lead]: any[] = await db.select({ id: leadQualifications.id, nome: leadQualifications.nome }).from(leadQualifications).where(eq(leadQualifications.phone, fone)).limit(1);
+  const [lead]: any[] = await db.select({ id: leadQualifications.id, nome: leadQualifications.nome }).from(leadQualifications).where(mesmoTelefone(leadQualifications.phone, fone)).limit(1);
   if (!lead) return null;
   const ultimos: any[] = await db.select({ texto: leadMensagens.texto, createdAt: leadMensagens.createdAt }).from(leadMensagens)
     .where(and(eq(leadMensagens.leadId, lead.id), eq(leadMensagens.direcao, 'out'), gte(leadMensagens.createdAt, new Date(agora - INTERVALO_LISTA_MS))))

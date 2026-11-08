@@ -1469,6 +1469,9 @@ async function startServer() {
     await addCheckinEvento();
     const { addEmissaoAuto } = await import('./migrations/addEmissaoAuto');
     await addEmissaoAuto();
+    // Mesma pessoa em dois leads (celular com e sem o 9): junta no mais antigo
+    const { mesclarLeadsDuplicados } = await import('../leads/mesclarDuplicados');
+    await mesclarLeadsDuplicados().then(r => r.apagados && console.log(`[Leads] ${r.apagados} lead(s) duplicado(s) juntado(s)`)).catch((e: any) => console.warn('[Leads] junção de duplicados:', e?.message));
     const { addDesfechoEncaminhamento } = await import('./migrations/addDesfechoEncaminhamento');
     await addDesfechoEncaminhamento().catch((e: any) => console.warn('[Migration] addDesfechoEncaminhamento:', e?.message));
     const { addMateriaisDivulgacaoBJ } = await import('./migrations/addMateriaisDivulgacaoBJ');

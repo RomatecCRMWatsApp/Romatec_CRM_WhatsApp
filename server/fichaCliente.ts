@@ -18,6 +18,7 @@ import {
   foneComparavel, ordenarLinhaDoTempo, resumoParcelas, ROTULO_DESFECHO, ROTULO_STATUS_CONTRATO, ROTULO_VISITA, type EventoFicha,
 } from "../shared/fichaCliente";
 import type { PermissoesUsuario } from "./permissoes";
+import { mesmoTelefone } from './leads/mesmoTelefone';
 
 export class FichaErro extends Error { constructor(msg: string, public status = 400) { super(msg); this.name = "FichaErro"; } }
 
@@ -75,7 +76,7 @@ export async function fichaDoCliente(ref: { leadId?: number; pessoaId?: number }
   const fonesPessoas = new Set(listaPessoas.flatMap(pe => [pe.telefone1, pe.telefone2]).map(foneComparavel).filter(f => f.length >= 10));
   if (fonesPessoas.size && !listaLeads.length) {
     const candidatos = await db.select({ id: leadQualifications.id, phone: leadQualifications.phone }).from(leadQualifications)
-      .where(or(...Array.from(fonesPessoas).map(f => eq(leadQualifications.phone, `55${f}`)), ...Array.from(fonesPessoas).map(f => eq(leadQualifications.phone, f))));
+      .where(or(...Array.from(fonesPessoas).map(f => mesmoTelefone(leadQualifications.phone, `55${f}`)), ...Array.from(fonesPessoas).map(f => mesmoTelefone(leadQualifications.phone, f))));
     for (const c of candidatos) leadIds.add(Number(c.id));
     listaLeads = await leadsRows();
   }

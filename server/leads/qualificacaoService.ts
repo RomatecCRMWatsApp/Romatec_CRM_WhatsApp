@@ -13,6 +13,7 @@ import {
 } from './iaQualificacao';
 import { tipoImovelDe, type SlotsLead } from './slots';
 import type { Funil } from './atribuicao';
+import { mesmoTelefone } from './mesmoTelefone';
 
 export function qualificacaoIaLigada(): boolean {
   return (process.env.QUALIFICACAO_IA || 'on').toLowerCase() !== 'off' && iaDisponivel();
@@ -69,7 +70,7 @@ export async function registrarMensagemPorTelefone(phone: string, direcao: 'in' 
   const db = await dbx();
   if (!db) return;
   const { leadQualifications } = await import('../../drizzle/schema');
-  const [lead] = await db.select({ id: leadQualifications.id }).from(leadQualifications).where(eq(leadQualifications.phone, phone.replace(/\D/g, ''))).limit(1);
+  const [lead] = await db.select({ id: leadQualifications.id }).from(leadQualifications).where(mesmoTelefone(leadQualifications.phone, phone.replace(/\D/g, ''))).limit(1);
   if (lead) await registrarMensagem(lead.id, direcao, autor, texto);
 }
 
@@ -83,7 +84,7 @@ export async function processarMensagemQualificacao(
   const { leadQualifications, leadMensagens, properties } = await import('../../drizzle/schema');
   const phone = input.phone.replace(/\D/g, '');
   const now = deps.now ?? new Date();
-  const [lead] = await db.select().from(leadQualifications).where(eq(leadQualifications.phone, phone)).limit(1);
+  const [lead] = await db.select().from(leadQualifications).where(mesmoTelefone(leadQualifications.phone, phone)).limit(1);
   if (!lead || !elegivelIa(lead, now.getTime())) return null;
 
   const historicoRows = await db.select({ direcao: leadMensagens.direcao, texto: leadMensagens.texto })

@@ -16,6 +16,7 @@ import {
 import { condicoesDaLinha, simular, precoLote, type CondicoesPagamento } from '../../shared/simulador';
 import { CARTAO_PADRAO, formatarTelefone } from '../../shared/cartaoVendas';
 import { numeroCreciPF } from '../../shared/cartaoVendas';
+import { mesmoTelefone } from '../leads/mesmoTelefone';
 
 /** Mídias de partida (client/public/<slug>/divulgacao); a tela de configuração substitui por arquivo enviado */
 export const MIDIAS_PADRAO: Record<string, Partial<Record<CodigoMidia, { tipo: 'imagem' | 'pdf'; url: string; nomeArquivo: string }>>> = {
@@ -232,7 +233,7 @@ export async function processarMensagem(p: { phone: string; texto: string; nome?
   const agora = p.agora ?? Date.now();
   const phone = p.phone.replace(/\D/g, '');
   const d = await banco();
-  const [lead]: any[] = await d.select().from(leadQualifications).where(eq(leadQualifications.phone, phone)).limit(1);
+  const [lead]: any[] = await d.select().from(leadQualifications).where(mesmoTelefone(leadQualifications.phone, phone)).limit(1);
   if (!lead?.empreendimentoSlug) return { tratado: false };
   const ctx = await contextoDoEmpreendimento(lead.empreendimentoSlug);
   if (!ctx?.cfg.ativo) return { tratado: false };

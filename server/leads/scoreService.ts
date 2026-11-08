@@ -10,6 +10,7 @@ import { desc, eq } from 'drizzle-orm';
 import { calcularBomJardims, calcularComprador, calcularProprietario, regrasDoLead, type Classe, type ResultadoScore } from './score';
 import { valoresSlots, type SlotsLead } from './slots';
 import type { TipoAviso } from './notificacao';
+import { mesmoTelefone } from './mesmoTelefone';
 
 const INATIVO_MS = 48 * 3600_000;
 
@@ -123,7 +124,7 @@ export async function recalcularScorePorTelefone(phone: string, opts: RecalculoO
   if (!db) return null;
   const { leadQualifications } = await import('../../drizzle/schema');
   const [lead] = await db.select({ id: leadQualifications.id }).from(leadQualifications)
-    .where(eq(leadQualifications.phone, phone.replace(/\D/g, ''))).limit(1);
+    .where(mesmoTelefone(leadQualifications.phone, phone.replace(/\D/g, ''))).limit(1);
   return lead ? recalcularScoreLead(lead.id, opts) : null;
 }
 

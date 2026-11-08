@@ -3,6 +3,17 @@
 Cada versão nova vai no TOPO. Depois rode `npm run release` (valida e atualiza o package.json);
 ao subir, o servidor grava a versão no banco e todos recebem o aviso "Novidades da versão".
 
+## 1.133.4 — 2026-11-08
+tipo: patch
+obrigatoria: nao
+titulo: Mesma pessoa não vira dois leads (celular com e sem o 9)
+publico: equipe
+
+### Correções
+- O WhatsApp entrega alguns celulares sem o 9 (ex.: 55 99 9209-8091) e o formulário do Meta com o 9 (55 99 99209-8091): o sistema tratava como pessoas diferentes e criava dois leads
+- Agora todas as buscas de lead e de contato reconhecem o número com ou sem o 9 e com ou sem "+": a mesma pessoa fica num lead só, com as origens e o histórico juntos
+- Leads duplicados que já existiam foram juntados no mais antigo, levando mensagens, eventos, visitas, interesses e encaminhamentos; a junção fica registrada no histórico do lead
+
 ## 1.133.3 — 2026-11-08
 tipo: patch
 obrigatoria: nao

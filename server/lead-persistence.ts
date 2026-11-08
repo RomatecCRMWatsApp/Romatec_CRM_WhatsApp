@@ -6,6 +6,7 @@
 import { getDb } from './db';
 import { leadQualifications } from '../drizzle/schema';
 import { eq } from 'drizzle-orm';
+import { mesmoTelefone } from './leads/mesmoTelefone';
 
 export interface LeadState {
   phone: string;
@@ -39,7 +40,7 @@ export async function persistLeadState(
     const existing = await db
       .select()
       .from(leadQualifications)
-      .where(eq(leadQualifications.phone, cleanPhone))
+      .where(mesmoTelefone(leadQualifications.phone, cleanPhone))
       .limit(1);
 
     const realName = senderName && senderName !== 'Cliente' ? senderName : undefined;
@@ -55,7 +56,7 @@ export async function persistLeadState(
           lastActivityAt: now,
           updatedAt: now,
         })
-        .where(eq(leadQualifications.phone, cleanPhone));
+        .where(mesmoTelefone(leadQualifications.phone, cleanPhone));
       await slotsDoBotEScore(cleanPhone, answers);
 
       console.log(`[Lead Update] phone=${cleanPhone} stage=${stage} name=${realName || existing[0].nome || 'sem nome'}`);
@@ -96,7 +97,7 @@ export async function loadLeadState(phone: string): Promise<LeadState | null> {
     const result = await db
       .select()
       .from(leadQualifications)
-      .where(eq(leadQualifications.phone, cleanPhone))
+      .where(mesmoTelefone(leadQualifications.phone, cleanPhone))
       .limit(1);
 
     if (result && result[0]) {
@@ -137,7 +138,7 @@ export async function discardLead(
     const existing = await db
       .select()
       .from(leadQualifications)
-      .where(eq(leadQualifications.phone, cleanPhone))
+      .where(mesmoTelefone(leadQualifications.phone, cleanPhone))
       .limit(1);
 
     if (existing && existing[0]) {
@@ -149,7 +150,7 @@ export async function discardLead(
           blockedUntil,
           updatedAt: new Date(),
         })
-        .where(eq(leadQualifications.phone, cleanPhone));
+        .where(mesmoTelefone(leadQualifications.phone, cleanPhone));
 
       console.log(
         `[Persistence] 🚫 Lead ${cleanPhone} descartado: ${reason}. Bloqueado até ${blockedUntil.toLocaleDateString('pt-BR')}`,
@@ -177,7 +178,7 @@ export async function isLeadBlocked(phone: string): Promise<boolean> {
     const result = await db
       .select()
       .from(leadQualifications)
-      .where(eq(leadQualifications.phone, cleanPhone))
+      .where(mesmoTelefone(leadQualifications.phone, cleanPhone))
       .limit(1);
 
     if (result && result[0]) {
@@ -249,7 +250,7 @@ export async function slotsDoBotEScore(phone: string, answers: Record<string, an
     const db = await getDb();
     if (!db) return;
     const [lead] = await db.select({ id: leadQualifications.id, funil: leadQualifications.funil, slots: leadQualifications.slots })
-      .from(leadQualifications).where(eq(leadQualifications.phone, phone)).limit(1);
+      .from(leadQualifications).where(mesmoTelefone(leadQualifications.phone, phone)).limit(1);
     if (!lead) return;
     const { mesclarSlots, slotsDeRespostas, slotsComoObjeto } = await import('./leads/slots');
     const novos = slotsDeRespostas(answers);
@@ -279,7 +280,7 @@ export async function getLeadEmpreendimento(phone: string): Promise<string | nul
     const [lead] = await db
       .select({ empreendimentoSlug: leadQualifications.empreendimentoSlug, funil: leadQualifications.funil, stage: leadQualifications.stage, humano: leadQualifications.humano })
       .from(leadQualifications)
-      .where(eq(leadQualifications.phone, cleanPhone))
+      .where(mesmoTelefone(leadQualifications.phone, cleanPhone))
       .limit(1);
     if (lead?.empreendimentoSlug) return lead.empreendimentoSlug;
     // Proprietário (captação) e handoff: o corretor atende, o bot de comprador não responde

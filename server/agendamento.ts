@@ -15,6 +15,7 @@ import {
 } from '../shared/agendamento';
 import { usuarioDaRef } from './cartaoVendas';
 import type { DadosPedido } from '../shared/mensagensAgendamento';
+import { mesmoTelefone } from './leads/mesmoTelefone';
 
 export class AgendamentoErro extends Error { constructor(msg: string, public status = 400) { super(msg); this.name = 'AgendamentoErro'; } }
 
@@ -121,7 +122,7 @@ export async function registrarAgendamento(slug: string, p: PedidoAgendamento, i
     return { ok: true as const, leadId: null, visitaId: null, responsavelId: null };
   }
   const d = await db();
-  const [lead]: any[] = await d.select().from(leadQualifications).where(eq(leadQualifications.phone, r.phone)).limit(1);
+  const [lead]: any[] = await d.select().from(leadQualifications).where(mesmoTelefone(leadQualifications.phone, r.phone)).limit(1);
   if (!lead) return { ok: true as const, leadId: null, visitaId: null, responsavelId: null };
   // Atribuição: lead novo ou sem responsável → dono do link; lead que já tem corretor continua com ele
   let responsavelId: number | null = lead.responsavelId ?? null;

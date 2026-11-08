@@ -37,3 +37,26 @@ export function exibirTelefoneBR(normalizado: string): string {
   const n = String(normalizado || '').replace(/\D/g, '');
   return n.length === 13 ? `+${n.slice(0, 2)} (${n.slice(2, 4)}) ${n.slice(4, 9)}-${n.slice(9)}` : normalizado;
 }
+
+/**
+ * Todas as formas em que o mesmo celular pode estar gravado: com e sem o 9 (o WhatsApp entrega alguns números
+ * antigos sem o 9, o formulário do Meta e o site entregam com), com e sem o "+". Usado para achar o lead
+ * existente antes de criar outro — a mesma pessoa vira um lead só.
+ */
+export function variantesTelefoneBR(raw: string): string[] {
+  const digitos = String(raw || '').replace(/\D/g, '').replace(/^0+/, '');
+  const formas = new Set<string>();
+  if (digitos) formas.add(digitos);
+  const canonico = normalizePhoneBR(raw);
+  if (canonico) {
+    formas.add(canonico);
+    formas.add(canonico.slice(0, 4) + canonico.slice(5)); // sem o 9: 55 + DDD + 8 dígitos
+  }
+  for (const f of Array.from(formas)) formas.add(`+${f}`);
+  return Array.from(formas);
+}
+
+/** Chave para agrupar o mesmo celular (canônico com o 9; se não for celular BR, só os dígitos) */
+export function chaveTelefoneBR(raw: string): string {
+  return normalizePhoneBR(raw) ?? String(raw || '').replace(/\D/g, '');
+}

@@ -16,6 +16,7 @@ import { and, eq, inArray, isNotNull, isNull, lte } from 'drizzle-orm';
 import { appUrl } from './config';
 import { etapaDoLead } from './kanban';
 import { SEQUENCIAS_PADRAO, renderizarPasso, type Sequencia } from '../../shared/followupSequencias';
+import { mesmoTelefone } from './mesmoTelefone';
 
 /** Dias desde a última conversa em que sai cada follow-up (passo 1..5) */
 export const CADENCIA_DIAS = [1, 3, 7, 14, 30] as const;
@@ -142,12 +143,12 @@ export async function agendarFollowUp(phone: string, agora = Date.now()): Promis
   if (!d) return;
   const { leadQualifications } = await import('../../drizzle/schema');
   const fone = phone.replace(/\D/g, '');
-  const [l]: any[] = await d.select({ funil: leadQualifications.funil, etapa: leadQualifications.etapa, stage: leadQualifications.stage }).from(leadQualifications).where(eq(leadQualifications.phone, fone)).limit(1);
+  const [l]: any[] = await d.select({ funil: leadQualifications.funil, etapa: leadQualifications.etapa, stage: leadQualifications.stage }).from(leadQualifications).where(mesmoTelefone(leadQualifications.phone, fone)).limit(1);
   const seq = l ? sequenciaDoLead(l, await sequenciasEmVigor(agora)) : null;
   const prox = quandoSai(1, agora, seq ? seq.passos.map(p => p.dias) : CADENCIA_DIAS);
   await d.update(leadQualifications)
     .set({ followUpPasso: 0, proximoFollowUpAt: prox ? new Date(proximoHorarioComercial(prox)) : null, followUpTentativas: 0 } as any)
-    .where(eq(leadQualifications.phone, fone));
+    .where(mesmoTelefone(leadQualifications.phone, fone));
 }
 
 /** Lead mudou de etapa: a sequência recomeça pela da nova etapa (contando de agora) */
@@ -176,7 +177,7 @@ export async function cancelarFollowUp(phone: string): Promise<void> {
   const { leadQualifications } = await import('../../drizzle/schema');
   await d.update(leadQualifications)
     .set({ proximoFollowUpAt: null } as any)
-    .where(and(eq(leadQualifications.phone, phone.replace(/\D/g, '')), isNotNull(leadQualifications.proximoFollowUpAt)));
+    .where(and(mesmoTelefone(leadQualifications.phone, phone.replace(/\D/g, '')), isNotNull(leadQualifications.proximoFollowUpAt)));
 }
 
 /** Envia os follow-ups vencidos (até `limite` por rodada) */

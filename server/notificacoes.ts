@@ -17,6 +17,7 @@ import {
   type PayloadPush, type TipoNotificacao, type UsuarioDestino,
 } from "../shared/notificacoes";
 import type { SituacaoLote } from "../shared/lotes";
+import { mesmoTelefone } from './leads/mesmoTelefone';
 
 export interface NovaNotificacao {
   usuarioId: number; tipo: TipoNotificacao; titulo: string; mensagem: string; url: string;
@@ -290,7 +291,7 @@ export async function notificarNovoLead(leadId: number, repo: RepoNotificacoes =
 export async function notificarNovoLeadPorTelefone(phone: string) {
   const db = await dbOrThrow();
   const { leadQualifications } = await import("../drizzle/schema");
-  const [l]: any[] = await db.select({ id: leadQualifications.id }).from(leadQualifications).where(eq(leadQualifications.phone, phone)).limit(1);
+  const [l]: any[] = await db.select({ id: leadQualifications.id }).from(leadQualifications).where(mesmoTelefone(leadQualifications.phone, phone)).limit(1);
   return l ? notificarNovoLead(l.id) : null;
 }
 

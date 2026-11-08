@@ -17,6 +17,7 @@ import { isLeadBlocked } from './lead-persistence';
 import { normalizarCodigoCampanha } from './leads/atribuicao';
 import { classificarOrigem, linhaOrigem, idsDeClique, type OrigemVisita } from '../shared/origemTrafego';
 import { normalizePhoneBR } from '../shared/telefone';
+import { mesmoTelefone } from './leads/mesmoTelefone';
 
 export const LEAD_ORIGENS = ['instagram_ads', 'instagram_dm', 'instagram_bio', 'google_ads', 'site', 'indicacao', 'whatsapp', 'whatsapp_empreendimento', 'portal_zap', 'portal_vivareal', 'portal_olx', 'parceiro', 'evento'] as const;
 export type LeadOrigem = typeof LEAD_ORIGENS[number];
@@ -203,7 +204,7 @@ export async function ingestLead(input: LeadIntakeInput): Promise<LeadIntakeResu
   // Contato (tabela usada por campanhas e pelo webhook pra achar o nome)
   let contactId: number | undefined;
   const existingContact = await db.select({ id: contacts.id }).from(contacts)
-    .where(eq(contacts.phone, phone)).limit(1);
+    .where(mesmoTelefone(contacts.phone, phone)).limit(1);
   if (existingContact[0]) {
     contactId = existingContact[0].id;
   } else {
@@ -223,7 +224,7 @@ export async function ingestLead(input: LeadIntakeInput): Promise<LeadIntakeResu
 
   const campanha = campanhaCad?.nome || input.campanha || input.utm?.campaign || imovel;
   const existingLead = await db.select().from(leadQualifications)
-    .where(eq(leadQualifications.phone, phone)).limit(1);
+    .where(mesmoTelefone(leadQualifications.phone, phone)).limit(1);
   const lead = existingLead[0];
   // Respostas do formulário que batem com o enum viram slots (fonte form)
   const { slots } = mesclarSlots((lead?.funil as any) || funil, lead?.slots as any, slotsDeRespostas(input.answers), 'form', now);
@@ -254,7 +255,7 @@ export async function ingestLead(input: LeadIntakeInput): Promise<LeadIntakeResu
       slots,
       ...(shouldMessage ? { stage: input.empreendimentoSlug ? 'novo_lead' : 'abordagem_enviada', lastActivityAt: now } : {}),
       updatedAt: now,
-    }).where(eq(leadQualifications.phone, phone));
+    }).where(mesmoTelefone(leadQualifications.phone, phone));
   } else {
     shouldMessage = true;
     await db.insert(leadQualifications).values({
@@ -309,7 +310,7 @@ export async function ingestLead(input: LeadIntakeInput): Promise<LeadIntakeResu
   }
 
   // Interesse lead × imóvel (para o lead recorrente com outro imóvel)
-  const [leadRow] = await db.select({ id: leadQualifications.id }).from(leadQualifications).where(eq(leadQualifications.phone, phone)).limit(1);
+  const [leadRow] = await db.select({ id: leadQualifications.id }).from(leadQualifications).where(mesmoTelefone(leadQualifications.phone, phone)).limit(1);
   // Boas-vindas do empreendimento fica na conversa: a resposta da lista não se repete nas próximas 24 h
   if (leadRow && messageSent && welcome && input.empreendimentoSlug) {
     const { registrarMensagem } = await import('./leads/qualificacaoService');

@@ -37,6 +37,7 @@ import {
   extractLeadProfile,
   recommendProperties as recommendPropertiesForProfile,
 } from './property-recommendation';
+import { mesmoTelefone } from './leads/mesmoTelefone';
 
 // ============ TIPOS ============
 export interface BotContext {
@@ -448,7 +449,7 @@ async function encaminharChacaraAgora(phone: string, nome: string, respostas: Re
   const db = await getDb();
   if (!db) return;
   const clean = phone.replace(/\D/g, '');
-  const [lead]: any[] = await db.select().from(leadQualifications).where(eq(leadQualifications.phone, clean)).limit(1);
+  const [lead]: any[] = await db.select().from(leadQualifications).where(mesmoTelefone(leadQualifications.phone, clean)).limit(1);
   if (!lead) return;
   await db.update(leadQualifications).set({
     empreendimentoSlug: lead.empreendimentoSlug || 'bom-jardims', humano: true, score: lead.score === 'quente' ? 'quente' : 'morno', updatedAt: new Date(),
@@ -483,7 +484,7 @@ async function saveLeadQualification(
 
     const cleanPhone = phone.replace(/\D/g, '');
     let contactId: number | undefined;
-    const contactResult = await db.select().from(contacts).where(eq(contacts.phone, cleanPhone)).limit(1);
+    const contactResult = await db.select().from(contacts).where(mesmoTelefone(contacts.phone, cleanPhone)).limit(1);
     if (contactResult[0]) contactId = contactResult[0].id;
 
     const qualFields = {
@@ -503,11 +504,11 @@ async function saveLeadQualification(
     };
 
     // UPSERT: atualizar registro existente (criado por persistLeadState) em vez de criar duplicata
-    const existing = await db.select().from(leadQualifications).where(eq(leadQualifications.phone, cleanPhone)).limit(1);
+    const existing = await db.select().from(leadQualifications).where(mesmoTelefone(leadQualifications.phone, cleanPhone)).limit(1);
     if (existing[0]) {
       // Não apaga a campanha de origem (atribuição) com o nome do imóvel recomendado
       const fields: any = existing[0].campanhaOrigem ? { ...qualFields, campanhaOrigem: existing[0].campanhaOrigem } : qualFields;
-      await db.update(leadQualifications).set(fields).where(eq(leadQualifications.phone, cleanPhone));
+      await db.update(leadQualifications).set(fields).where(mesmoTelefone(leadQualifications.phone, cleanPhone));
       console.log(`[Lead Update] phone=${cleanPhone} stage=qualificado score=${score.toUpperCase()} name=${nome} [QUALIFICADO]`);
     } else {
       await db.insert(leadQualifications).values({ phone: cleanPhone, ...qualFields } as any);
