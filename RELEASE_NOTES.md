@@ -3,6 +3,18 @@
 Cada versão nova vai no TOPO. Depois rode `npm run release` (valida e atualiza o package.json);
 ao subir, o servidor grava a versão no banco e todos recebem o aviso "Novidades da versão".
 
+## 1.139.0 — 2026-11-08
+tipo: minor
+obrigatoria: nao
+titulo: Painel financeiro: meta do mês, filtros por categoria e cliente, comissões no fluxo
+publico: equipe
+
+### Novo
+- Meta de recebimentos do mês: o administrador digita o valor (do mês ou padrão para todos) e o painel mostra quanto já foi recebido e o percentual
+- Filtros por categoria (entradas e saídas) e por cliente/fornecedor, valendo para todos os números, o gráfico e as listas
+- Comissões no mesmo fluxo de caixa: comissão de gestão das concessões entra como recebimento; repasses aos corretores entram como pagamento (pagos) ou a pagar (liberados)
+- Histórico da posição em aberto: o sistema passa a guardar a posição uma vez por dia; quando houver o período anterior, a comparação aparece nos cartões de a receber, a pagar e vencidos
+
 ## 1.138.0 — 2026-11-08
 tipo: minor
 obrigatoria: nao

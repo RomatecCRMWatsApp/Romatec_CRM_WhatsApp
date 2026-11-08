@@ -1,8 +1,8 @@
 import { describe, expect, it } from 'vitest';
 import { agrupamento, calcularPainel, periodoAnterior, variacao } from '../shared/painelFinanceiro';
 
-const rec = (id: number, data: string, valor: number) => ({ id, data, valor, contratoId: 1, cliente: 'Cliente Teste', descricao: 'x', tipo: 'saldo', forma: 'PIX', empreendimentoId: 1 });
-const tit = (id: number, vencimento: string, valor: number) => ({ id, contratoId: 1, cliente: 'Cliente Teste', descricao: 'x', vencimento, valor, status: 'emitida', empreendimentoId: 1 });
+const rec = (id: number, data: string, valor: number) => ({ id: `c${id}`, data, valor, contratoId: 1, cliente: 'Cliente Teste', descricao: 'x', tipo: 'saldo', categoria: 'Parcelas do saldo', forma: 'PIX', empreendimentoId: 1 });
+const tit = (id: number, vencimento: string, valor: number) => ({ id: `c${id}`, contratoId: 1, cliente: 'Cliente Teste', descricao: 'x', categoria: 'Parcelas do saldo', vencimento, valor, status: 'emitida', empreendimentoId: 1 });
 
 describe('painel financeiro — regras', () => {
   it('recebimento entra no caixa pela data do pagamento, não pela emissão', () => {
@@ -11,7 +11,7 @@ describe('painel financeiro — regras', () => {
   });
   it('resultado de caixa = recebido − pago, sem erro de arredondamento', () => {
     const p = calcularPainel({ de: '2026-11-01', ate: '2026-11-30', corte: '2026-11-30', recebimentos: [rec(1, '2026-11-02', 0.1), rec(2, '2026-11-03', 0.2)],
-      pagamentos: [{ id: 1, data: '2026-11-05', valor: 0.05, fornecedor: 'F', descricao: 'd', categoria: 'c', empreendimentoId: null }], aReceber: [], aPagar: [] });
+      pagamentos: [{ id: 'd1', data: '2026-11-05', valor: 0.05, fornecedor: 'F', descricao: 'd', categoria: 'c', empreendimentoId: null }], aReceber: [], aPagar: [] });
     expect(p.caixa.recebido).toBe(0.3);
     expect(p.caixa.resultado).toBe(0.25);
   });
@@ -34,9 +34,24 @@ describe('painel financeiro — regras', () => {
     expect(periodoAnterior('2026-11-10', '2026-11-19')).toEqual({ de: '2026-10-31', ate: '2026-11-09' });
   });
   it('gráfico preenche o período e a distribuição concilia com o recebido', () => {
-    const p = calcularPainel({ de: '2026-11-01', ate: '2026-11-07', corte: '2026-11-07', recebimentos: [rec(1, '2026-11-02', 100), { ...rec(2, '2026-11-03', 50), tipo: 'entrada' }], pagamentos: [], aReceber: [], aPagar: [] });
+    const p = calcularPainel({ de: '2026-11-01', ate: '2026-11-07', corte: '2026-11-07', recebimentos: [rec(1, '2026-11-02', 100), { ...rec(2, '2026-11-03', 50), tipo: 'entrada', categoria: 'Entrada' }], pagamentos: [], aReceber: [], aPagar: [] });
     expect(p.serie).toHaveLength(7);
     expect(p.distribuicao.reduce((s, x) => s + x.valor, 0)).toBe(p.caixa.recebido);
     expect(agrupamento('2026-01-01', '2026-12-31')).toBe('mes');
+  });
+});
+
+import { filtrar, metaDoPeriodo } from '../shared/painelFinanceiro';
+describe('painel — filtros e meta', () => {
+  it('filtro por categoria e por cliente (texto, sem acento de caixa)', () => {
+    const l = [{ categoria: 'Entrada', cliente: 'Ana Souza' }, { categoria: 'Parcelas do saldo', cliente: 'Bruno' }];
+    expect(filtrar(l, { categoria: 'Entrada' }, x => x.cliente)).toHaveLength(1);
+    expect(filtrar(l, { pessoa: 'bru' }, x => x.cliente)[0].cliente).toBe('Bruno');
+  });
+  it('meta só vale num mês do calendário; mês específico vence o padrão', () => {
+    expect(metaDoPeriodo('2026-11-01', '2026-11-08', { padrao: 50000 })).toEqual({ mes: '2026-11', valor: 50000 });
+    expect(metaDoPeriodo('2026-11-01', '2026-11-30', { padrao: 50000, meses: { '2026-11': 80000 } })?.valor).toBe(80000);
+    expect(metaDoPeriodo('2026-10-10', '2026-11-08', { padrao: 50000 })).toBeNull();
+    expect(metaDoPeriodo('2026-11-01', '2026-11-30', {})).toBeNull();
   });
 });

@@ -50,6 +50,10 @@ const despesaZ = z.object({
 const num = (v: unknown) => (v === null || v === undefined || v === "" ? null : Number(v));
 
 /** Lançar pagamento: administrador e secretária (quem opera cobrança) */
+const filtroPainel = z.object({
+  de: z.string().regex(/^\d{4}-\d{2}-\d{2}$/), ate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/), empreendimentoId: z.number().int().min(0).nullable().optional(),
+  categoria: z.string().trim().max(60).nullable().optional(), pessoa: z.string().trim().max(80).nullable().optional(),
+});
 async function operador(ctx: any) {
   const { perfilDe } = await import("../../shared/equipe");
   const { podeOperarCobranca } = await import("../../shared/contratos");
@@ -154,20 +158,23 @@ export const financeiroRouter = router({
     return comErroFin(() => fluxoCaixa(input.de, input.ate, input.agrupar, undefined, input.empreendimentoId ?? null));
   }),
 
-  /** Painel financeiro: caixa do período, posição em aberto, gráfico, pendências e movimentações (mesma base do fluxo) */
-  painel: protectedProcedure.input(z.object({
-    de: z.string().regex(/^\d{4}-\d{2}-\d{2}$/), ate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/), empreendimentoId: z.number().int().min(0).nullable().optional(),
-  })).query(async ({ ctx, input }) => {
+  /** Painel financeiro: caixa do período, posição em aberto, gráfico, pendências e movimentações (mesma base do fluxo e das comissões) */
+  painel: protectedProcedure.input(filtroPainel).query(async ({ ctx, input }) => {
     await operador(ctx);
     const { painelFinanceiro } = await import("../financeiro/painel");
-    return comErroFin(() => painelFinanceiro(input));
+    return comErroFin(() => painelFinanceiro(input, ctx.permissoes, ctx.user.id));
   }),
-  painelCsv: protectedProcedure.input(z.object({
-    de: z.string().regex(/^\d{4}-\d{2}-\d{2}$/), ate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/), empreendimentoId: z.number().int().min(0).nullable().optional(),
-  })).mutation(async ({ ctx, input }) => {
+  painelCsv: protectedProcedure.input(filtroPainel).mutation(async ({ ctx, input }) => {
     await operador(ctx);
     const { csvMovimentacoes } = await import("../financeiro/painel");
-    return comErroFin(() => csvMovimentacoes(input));
+    return comErroFin(() => csvMovimentacoes(input, ctx.permissoes, ctx.user.id));
+  }),
+  /** Meta de recebimentos: de um mês ("AAAA-MM") ou o padrão de todos os meses (mes = null); valor null apaga — administrador */
+  salvarMeta: protectedProcedure.input(z.object({ mes: z.string().regex(/^\d{4}-\d{2}$/).nullable(), valor: z.number().nonnegative().max(1e10).nullable() })).mutation(async ({ ctx, input }) => {
+    const { perfilDe } = await import("../../shared/equipe");
+    if (perfilDe(ctx.user as any) !== "admin") throw new TRPCError({ code: "FORBIDDEN", message: "Só o administrador define a meta." });
+    const { salvarMeta } = await import("../financeiro/painel");
+    return salvarMeta(input.mes, input.valor, ctx.user.id);
   }),
 
   // ─── Despesas (saídas do fluxo de caixa): administrador e secretária ───

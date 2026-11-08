@@ -1,8 +1,10 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Link, useLocation, useSearch } from "wouter";
 import { toast } from "sonner";
 import { Bar, CartesianGrid, ComposedChart, Legend, Line, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
-import { AlertTriangle, ArrowDownRight, ArrowUpRight, Download, Info, LayoutDashboard, Loader2, RefreshCw } from "lucide-react";
+import { AlertTriangle, ArrowDownRight, ArrowUpRight, Download, Info, LayoutDashboard, Loader2, RefreshCw, Target, X } from "lucide-react";
+import { useAuth } from "@/_core/hooks/useAuth";
+import { perfilDe } from "@shared/equipe";
 import { trpc } from "@/lib/trpc";
 import PageHeader from "@/components/PageHeader";
 import { Button } from "@/components/ui/button";
@@ -66,12 +68,20 @@ export default function FinanceiroPainel() {
   const [livre, setLivre] = useState({ de: busca.get("de") || `${hojeBR().slice(0, 7)}-01`, ate: busca.get("ate") || hojeBR() });
   const [emp, setEmp] = useState<number | null>(busca.get("emp") ? Number(busca.get("emp")) : null);
   const [aba, setAba] = useState<"mov" | "receber" | "pagar">("mov");
+  const [categoria, setCategoria] = useState<string>(busca.get("cat") || "");
+  const [pessoaDigitada, setPessoaDigitada] = useState<string>(busca.get("cli") || "");
+  const [pessoa, setPessoa] = useState(pessoaDigitada);
+  // Busca por cliente/fornecedor: espera parar de digitar
+  useEffect(() => { const t = setTimeout(() => setPessoa(pessoaDigitada.trim()), 400); return () => clearTimeout(t); }, [pessoaDigitada]);
   const periodo = useMemo(() => intervalo(preset, livre), [preset, livre]);
-  const filtro = { ...periodo, empreendimentoId: emp };
+  const filtro = { ...periodo, empreendimentoId: emp, categoria: categoria || null, pessoa: pessoa || null };
   const atualizarUrl = (p: Preset, l = livre, e = emp) => {
-    const q = new URLSearchParams({ p, ...(p === "livre" ? l : {}), ...(e != null ? { emp: String(e) } : {}) });
+    const q = new URLSearchParams({ p, ...(p === "livre" ? l : {}), ...(e != null ? { emp: String(e) } : {}), ...(categoria ? { cat: categoria } : {}), ...(pessoa ? { cli: pessoa } : {}) });
     window.history.replaceState(null, "", `/financeiro/painel?${q}`);
   };
+  useEffect(() => { atualizarUrl(preset); }, [categoria, pessoa]); // eslint-disable-line react-hooks/exhaustive-deps
+  const { user } = useAuth();
+  const admin = perfilDe(user as any) === "admin";
   const { data: d, isLoading, isFetching, error, refetch, dataUpdatedAt } = trpc.financeiro.painel.useQuery(filtro, { placeholderData: prev => prev, refetchOnWindowFocus: false });
   const csv = trpc.financeiro.painelCsv.useMutation({
     onSuccess: r => {
@@ -83,7 +93,8 @@ export default function FinanceiroPainel() {
     onError: e => toast.error(e.message),
   });
   // Resposta de outro filtro (troca rápida): não mostra números antigos como se fossem do filtro atual
-  const atual = d && d.periodo.de === periodo.de && d.periodo.ate === periodo.ate && (d.filtros.empreendimentoId ?? null) === emp;
+  const atual = d && d.periodo.de === periodo.de && d.periodo.ate === periodo.ate && (d.filtros.empreendimentoId ?? null) === emp
+    && (d.filtros.categoria ?? "") === categoria && (d.filtros.pessoa ?? "") === pessoa;
 
   const grafico = (d?.serie ?? []).map(s => ({ ...s, rotulo: d?.agrupamento === "mes" ? new Date(`${s.periodo}-15T12:00:00Z`).toLocaleDateString("pt-BR", { month: "short", year: "2-digit", timeZone: "UTC" }) : br(s.periodo).slice(0, 5) }));
   const totalDistrib = (d?.distribuicao ?? []).reduce((s, x) => s + x.valor, 0);
@@ -120,6 +131,19 @@ export default function FinanceiroPainel() {
               <option value="0">Só o escritório</option>
               {(d?.empreendimentos ?? []).map(e => <option key={e.id} value={e.id}>{e.nome}</option>)}
             </select>
+          </label>
+          <label className="text-xs text-muted-foreground">Categoria
+            <select value={categoria} onChange={e => setCategoria(e.target.value)} className="mt-1 block h-9 max-w-[220px] rounded-md border border-border bg-background px-2 text-sm text-foreground">
+              <option value="">Todas</option>
+              {!!d?.categorias.entradas.length && <optgroup label="Entradas">{d.categorias.entradas.map(c => <option key={`e-${c}`} value={c}>{c}</option>)}</optgroup>}
+              {!!d?.categorias.saidas.length && <optgroup label="Saídas">{d.categorias.saidas.map(c => <option key={`s-${c}`} value={c}>{c}</option>)}</optgroup>}
+            </select>
+          </label>
+          <label className="text-xs text-muted-foreground">Cliente / fornecedor
+            <span className="mt-1 flex h-9 items-center rounded-md border border-border bg-background px-2">
+              <input value={pessoaDigitada} onChange={e => setPessoaDigitada(e.target.value)} placeholder="Nome" className="w-36 bg-transparent text-sm text-foreground outline-none" />
+              {pessoaDigitada && <button type="button" aria-label="Limpar" onClick={() => setPessoaDigitada("")}><X className="h-3.5 w-3.5" /></button>}
+            </span>
           </label>
           <p className="ml-auto text-[11px] text-muted-foreground">
             Movimentações de {br(periodo.de)} a {br(periodo.ate)}
@@ -160,28 +184,42 @@ export default function FinanceiroPainel() {
                 <p className="sr-only">Resumo do gráfico: recebimentos de {brl(d.caixa.recebido)}, pagamentos de {brl(d.caixa.pago)} e resultado de caixa de {brl(d.caixa.resultado)} no período.</p>
               </section>
               <div className="grid gap-3">
-                <Cartao rotulo="Recebido no período" valor={brl(d.caixa.recebido)} destaque={COR.entrada} sub={`${d.caixa.qtdRecebimentos} parcela(s) recebida(s)`}><Variacao v={d.caixa.comparacao.recebido} maiorEhBom /></Cartao>
-                <Cartao rotulo="Pago no período" valor={brl(d.caixa.pago)} destaque={COR.saida} sub={`${d.caixa.qtdPagamentos} despesa(s) paga(s)`}><Variacao v={d.caixa.comparacao.pago} maiorEhBom={false} /></Cartao>
+                <Cartao rotulo="Recebido no período" valor={brl(d.caixa.recebido)} destaque={COR.entrada} sub={`${d.caixa.qtdRecebimentos} recebimento(s): parcelas e comissões`}><Variacao v={d.caixa.comparacao.recebido} maiorEhBom /></Cartao>
+                <Cartao rotulo="Pago no período" valor={brl(d.caixa.pago)} destaque={COR.saida} sub={`${d.caixa.qtdPagamentos} pagamento(s): despesas e repasses de comissão`}><Variacao v={d.caixa.comparacao.pago} maiorEhBom={false} /></Cartao>
                 <Cartao rotulo="Resultado de caixa" valor={brl(d.caixa.resultado)} destaque={d.caixa.resultado >= 0 ? COR.resultado : COR.saida} sub="Recebido − pago (não é lucro contábil nem saldo bancário)"><Variacao v={d.caixa.comparacao.resultado} maiorEhBom /></Cartao>
               </div>
             </div>
             <p className="text-[11px] text-muted-foreground">Comparação com {br(d.periodo.anterior.de)} a {br(d.periodo.anterior.ate)}.</p>
+            <MetaRecebimentos meta={d.meta} metas={d.metas} mes={periodo.de.slice(8) === "01" && periodo.de.slice(0, 7) === periodo.ate.slice(0, 7) ? periodo.de.slice(0, 7) : null} admin={admin} />
 
             {/* Posição em aberto */}
             <div>
-              <p className="mb-2 text-xs font-semibold text-muted-foreground">Posição atual em {br(d.corte)} (independe do período)</p>
+              {d.historico?.noFim ? (
+                <p className="mb-2 text-xs font-semibold text-muted-foreground">Posição em {br(d.historico.noFim.data)} (guardada no fim do período)</p>
+              ) : (
+                <p className="mb-2 text-xs font-semibold text-muted-foreground">Posição atual em {br(d.corte)} (independe do período)</p>
+              )}
               <div className="grid gap-3 sm:grid-cols-3">
-                <Cartao rotulo="A receber" valor={brl(d.posicao.aReceber)} sub={`${d.posicao.qtdAReceber} parcela(s) em aberto, incluindo as futuras`} />
-                <Cartao rotulo="A pagar" valor={brl(d.posicao.aPagar)} sub={`${d.posicao.qtdAPagar} despesa(s) em aberto`} />
-                <Cartao rotulo="Recebíveis vencidos" valor={brl(d.posicao.vencidos)} destaque={d.posicao.vencidos > 0 ? COR.saida : undefined}
-                  sub={`${d.posicao.qtdVencidos} parcela(s) vencida(s)${d.posicao.qtdVenceHoje ? ` · vence hoje: ${d.posicao.qtdVenceHoje} (${brl(d.posicao.venceHoje)})` : ""}`} />
+                <Cartao rotulo="A receber" valor={brl(d.historico?.noFim?.aReceber ?? d.posicao.aReceber)} sub={d.historico?.noFim ? "posição guardada" : `${d.posicao.qtdAReceber} título(s) em aberto, incluindo os futuros`}>
+                  {d.historico?.comparacao && <Variacao v={d.historico.comparacao.aReceber} maiorEhBom />}
+                </Cartao>
+                <Cartao rotulo="A pagar" valor={brl(d.historico?.noFim?.aPagar ?? d.posicao.aPagar)} sub={d.historico?.noFim ? "posição guardada" : `${d.posicao.qtdAPagar} conta(s) em aberto (despesas e repasses liberados)`}>
+                  {d.historico?.comparacao && <Variacao v={d.historico.comparacao.aPagar} maiorEhBom={false} />}
+                </Cartao>
+                <Cartao rotulo="Recebíveis vencidos" valor={brl(d.historico?.noFim?.vencidos ?? d.posicao.vencidos)} destaque={(d.historico?.noFim?.vencidos ?? d.posicao.vencidos) > 0 ? COR.saida : undefined}
+                  sub={d.historico?.noFim ? `${d.historico.noFim.qtdVencidos} vencido(s) naquele dia` : `${d.posicao.qtdVencidos} vencido(s)${d.posicao.qtdVenceHoje ? ` · vence hoje: ${d.posicao.qtdVenceHoje} (${brl(d.posicao.venceHoje)})` : ""}`}>
+                  {d.historico?.comparacao && <Variacao v={d.historico.comparacao.vencidos} maiorEhBom={false} />}
+                </Cartao>
               </div>
+              <p className="mt-1 text-[11px] text-muted-foreground">
+                {d.historico?.comparacao ? `Comparação da posição com ${br(d.historico.comparacao.data)} (posição guardada).` : d.historico?.motivo ?? ""}
+              </p>
             </div>
 
             {/* Distribuição + pendências */}
             <div className="grid gap-3 lg:grid-cols-2">
               <section className="rounded-2xl border border-white/10 bg-card/80 p-4">
-                <p className="text-sm font-semibold">Distribuição dos recebimentos <span className="font-normal text-muted-foreground">· por tipo de parcela</span></p>
+                <p className="text-sm font-semibold">Distribuição dos recebimentos <span className="font-normal text-muted-foreground">· por categoria</span></p>
                 {!d.distribuicao.length ? <p className="mt-2 text-xs text-muted-foreground">Nenhum recebimento no período.</p> : (
                   <ul className="mt-3 space-y-2">
                     {d.distribuicao.map(x => (
@@ -203,7 +241,7 @@ export default function FinanceiroPainel() {
                       <li key={x.id} className="flex items-center gap-2 py-1.5 text-xs">
                         <span className="min-w-0 flex-1"><b>{x.cliente}</b><span className="block truncate text-muted-foreground">{x.descricao}</span></span>
                         <span className="text-right"><b className="tabular-nums">{brl(x.valor)}</b><span className="block text-rose-300">venceu {br(x.vencimento)} · {x.diasAtraso} d</span></span>
-                        <Link href={`/contratos/${x.contratoId}`} className="rounded border border-border px-2 py-1 text-[11px] hover:bg-secondary">Ver</Link>
+                        {x.contratoId ? <Link href={`/contratos/${x.contratoId}`} className="rounded border border-border px-2 py-1 text-[11px] hover:bg-secondary">Ver</Link> : null}
                       </li>
                     ))}
                   </ul>
@@ -215,7 +253,7 @@ export default function FinanceiroPainel() {
                       <li key={x.id} className="flex items-center gap-2 py-1.5 text-xs">
                         <span className="min-w-0 flex-1"><b>{x.fornecedor}</b><span className="block truncate text-muted-foreground">{x.descricao} · {x.categoria}</span></span>
                         <span className="text-right"><b className="tabular-nums">{brl(x.valor)}</b><span className={`block ${x.vencida ? "text-rose-300" : "text-muted-foreground"}`}>{x.vencida ? "venceu" : "vence"} {br(x.vencimento)}</span></span>
-                        <Link href="/financeiro" className="rounded border border-border px-2 py-1 text-[11px] hover:bg-secondary">Ver</Link>
+                        <Link href={x.contratoId ? `/contratos/${x.contratoId}` : "/financeiro"} className="rounded border border-border px-2 py-1 text-[11px] hover:bg-secondary">Ver</Link>
                       </li>
                     ))}
                   </ul>
@@ -259,7 +297,7 @@ export default function FinanceiroPainel() {
                         return (
                           <tr key={x.id} className="border-t border-border/60">
                             <td className="py-1.5 tabular-nums">{br(x.vencimento)}</td><td>{x.cliente}</td>
-                            <td className="text-xs text-muted-foreground"><Link href={`/contratos/${x.contratoId}`} className="hover:underline">{x.descricao}</Link></td>
+                            <td className="text-xs text-muted-foreground">{x.contratoId ? <Link href={`/contratos/${x.contratoId}`} className="hover:underline">{x.descricao}</Link> : x.descricao}<span className="block text-[10px]">{x.categoria}</span></td>
                             <td className={`text-xs ${sit === "Vencida" ? "text-rose-400" : sit === "Vence hoje" ? "text-amber-300" : ""}`}>{sit}</td>
                             <td className="text-right tabular-nums">{brl(x.valor)}</td>
                           </tr>
@@ -291,7 +329,7 @@ export default function FinanceiroPainel() {
               <div className="rounded-xl border border-border bg-muted/30 p-3 text-[11px] text-muted-foreground">
                 <p className="mb-1 flex items-center gap-1 font-semibold"><Info className="h-3.5 w-3.5" /> Como os números são calculados</p>
                 <ul className="list-disc space-y-0.5 pl-4">
-                  <li>Regime de caixa: recebido = parcelas pagas pela data do pagamento; pago = despesas pagas pela data do pagamento.</li>
+                  <li>Regime de caixa: recebido = parcelas pagas e comissões de gestão recebidas; pago = despesas pagas e repasses de comissão pagos aos corretores — tudo pela data do pagamento.</li>
                   {d.limitacoes.map(l => <li key={l}>{l}</li>)}
                 </ul>
               </div>
@@ -300,5 +338,50 @@ export default function FinanceiroPainel() {
         )}
       </div>
     </div>
+  );
+}
+
+/** Meta de recebimentos do mês: progresso e campo para o administrador digitar (do mês ou padrão de todos os meses) */
+function MetaRecebimentos({ meta, metas, mes, admin }: { meta: { mes: string; valor: number; recebido: number; pct: number; origem: string } | null; metas: { padrao?: number | null; meses?: Record<string, number> }; mes: string | null; admin: boolean }) {
+  const utils = trpc.useUtils();
+  const [editando, setEditando] = useState(false);
+  const [valor, setValor] = useState("");
+  const [todos, setTodos] = useState(false);
+  const salvar = trpc.financeiro.salvarMeta.useMutation({
+    onSuccess: () => { toast.success("Meta salva"); setEditando(false); utils.financeiro.painel.invalidate(); },
+    onError: e => toast.error(e.message),
+  });
+  const nomeMes = (m: string) => new Date(`${m}-15T12:00:00Z`).toLocaleDateString("pt-BR", { month: "long", year: "numeric", timeZone: "UTC" });
+  if (!mes) return <p className="text-[11px] text-muted-foreground">Meta de recebimentos: escolha um mês (Mês atual, Mês anterior ou um mês inteiro no Personalizado) para ver o progresso.</p>;
+  if (!meta && !admin) return null;
+  const abrir = () => { setValor(String(meta?.valor ?? metas.meses?.[mes] ?? metas.padrao ?? "").replace(".", ",")); setTodos(false); setEditando(true); };
+  const enviar = () => { const v = Number(valor.replace(/\./g, "").replace(",", ".")); salvar.mutate({ mes: todos ? null : mes, valor: Number.isFinite(v) && v > 0 ? v : null }); };
+  return (
+    <section className="rounded-2xl border border-white/10 bg-card/80 p-4">
+      <div className="flex flex-wrap items-center gap-2">
+        <p className="flex items-center gap-2 text-sm font-semibold"><Target className="h-4 w-4 text-primary" /> Meta de recebimentos · {nomeMes(mes)}</p>
+        {admin && !editando && <Button size="sm" variant="outline" className="ml-auto h-8 text-xs" onClick={abrir}>{meta ? "Alterar meta" : "Definir meta"}</Button>}
+      </div>
+      {meta ? (
+        <div className="mt-2">
+          <div className="flex justify-between text-xs"><span>Recebido {brl(meta.recebido)} de {brl(meta.valor)}</span><b className="tabular-nums">{meta.pct.toLocaleString("pt-BR")}%</b></div>
+          <div className="mt-1 h-2.5 rounded-full bg-muted" role="progressbar" aria-valuenow={Math.min(100, meta.pct)} aria-valuemin={0} aria-valuemax={100} aria-label="Progresso da meta">
+            <div className="h-2.5 rounded-full" style={{ width: `${Math.min(100, meta.pct)}%`, background: meta.pct >= 100 ? COR.entrada : COR.resultado }} />
+          </div>
+          <p className="mt-1 text-[11px] text-muted-foreground">Mesma base do "Recebido no período" e com os mesmos filtros{meta.origem === "padrao" ? " · meta padrão de todos os meses" : ""}.</p>
+        </div>
+      ) : !editando && <p className="mt-1 text-xs text-muted-foreground">Nenhuma meta definida para este mês.</p>}
+      {editando && (
+        <div className="mt-2 flex flex-wrap items-end gap-2">
+          <label className="text-xs text-muted-foreground">Meta de recebimentos (R$)
+            <input autoFocus inputMode="decimal" value={valor} onChange={e => setValor(e.target.value)} placeholder="Ex.: 80.000,00" className="mt-1 block h-9 w-40 rounded-md border border-border bg-background px-2 text-sm text-foreground" />
+          </label>
+          <label className="flex h-9 items-center gap-1.5 text-xs"><input type="checkbox" checked={todos} onChange={e => setTodos(e.target.checked)} /> Usar para todos os meses (padrão)</label>
+          <Button size="sm" disabled={salvar.isPending} onClick={enviar}>Salvar</Button>
+          <Button size="sm" variant="ghost" onClick={() => setEditando(false)}>Cancelar</Button>
+          <p className="basis-full text-[11px] text-muted-foreground">Deixe vazio e salve para apagar a meta deste mês.</p>
+        </div>
+      )}
+    </section>
   );
 }

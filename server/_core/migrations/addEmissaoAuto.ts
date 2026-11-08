@@ -21,6 +21,14 @@ export async function addEmissaoAuto(): Promise<void> {
       UNIQUE KEY ux_repasse_parte (contratoId, chave), KEY ix_repasse_corretor (corretorUserId)
     )`);
   } catch (e: any) { console.warn('[Migration] comissaoRepasses:', e?.message); }
+  // Posição em aberto do dia (Painel financeiro: comparação histórica)
+  try {
+    await (db as any).execute(sql`CREATE TABLE IF NOT EXISTS financeiroPosicoes (
+      id INT AUTO_INCREMENT PRIMARY KEY, data VARCHAR(10) NOT NULL, escopo VARCHAR(20) NOT NULL, aReceber DECIMAL(14,2) NOT NULL,
+      aPagar DECIMAL(14,2) NOT NULL, vencidos DECIMAL(14,2) NOT NULL, qtdVencidos INT NOT NULL DEFAULT 0,
+      criadoEm TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP, UNIQUE KEY ux_posicao_dia (data, escopo)
+    )`);
+  } catch (e: any) { console.warn('[Migration] financeiroPosicoes:', e?.message); }
   // Confirmação de pagamento no WhatsApp: tentativas reservadas e o que já foi entregue (NULL/0 = a avisar)
   for (const coluna of [sql`ALTER TABLE crm_recibos ADD COLUMN envioTentativas INT NOT NULL DEFAULT 0`, sql`ALTER TABLE crm_recibos ADD COLUMN envioJson TEXT NULL`]) {
     try { await (db as any).execute(coluna); }

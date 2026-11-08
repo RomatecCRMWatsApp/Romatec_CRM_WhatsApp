@@ -6,14 +6,32 @@
  * Valores em centavos inteiros nos cálculos; reais com 2 casas na saída.
  */
 
-export interface Recebimento { id: number; data: string; valor: number; contratoId: number; cliente: string; descricao: string; tipo: string; forma: string; empreendimentoId: number | null }
-export interface Pagamento { id: number; data: string; valor: number; fornecedor: string; descricao: string; categoria: string; empreendimentoId: number | null }
-export interface TituloReceber { id: number; contratoId: number; cliente: string; descricao: string; vencimento: string; valor: number; status: string; empreendimentoId: number | null }
-export interface TituloPagar { id: number; fornecedor: string; descricao: string; categoria: string; vencimento: string; valor: number; empreendimentoId: number | null }
+/** id é texto: parcelas ("c12") e comissões ("k7") convivem sem colidir. categoria = rótulo exibido e filtrável */
+export interface Recebimento { id: string; data: string; valor: number; contratoId: number | null; cliente: string; descricao: string; tipo: string; categoria: string; forma: string; empreendimentoId: number | null }
+export interface Pagamento { id: string; data: string; valor: number; fornecedor: string; descricao: string; categoria: string; empreendimentoId: number | null; contratoId?: number | null }
+export interface TituloReceber { id: string; contratoId: number | null; cliente: string; descricao: string; categoria: string; vencimento: string; valor: number; status: string; empreendimentoId: number | null }
+export interface TituloPagar { id: string; fornecedor: string; descricao: string; categoria: string; vencimento: string; valor: number; empreendimentoId: number | null; contratoId?: number | null }
 
 export const ROTULO_TIPO_PARCELA: Record<string, string> = {
   entrada: 'Entrada', saldo: 'Parcelas do saldo', avista: 'À vista', reforco: 'Reforço anual', complemento: 'Resto da entrada',
 };
+/** Categorias das comissões no mesmo fluxo de caixa */
+export const CAT_COMISSAO_GESTAO = 'Comissão de gestão (concessões)';
+export const CAT_COMISSAO_CORRETOR = 'Comissão de corretor (repasses)';
+
+/** Filtro por categoria e por cliente/fornecedor (texto): o mesmo recorte vale para todos os blocos */
+export function filtrar<T extends { categoria: string }>(l: T[], f: { categoria?: string | null; pessoa?: string | null }, pessoa: (x: T) => string): T[] {
+  const q = (f.pessoa ?? '').trim().toLowerCase();
+  return l.filter(x => (!f.categoria || x.categoria === f.categoria) && (!q || pessoa(x).toLowerCase().includes(q)));
+}
+
+/** Meta do mês (recebimentos): vale só quando o período é um mês do calendário (inteiro ou em andamento) */
+export function metaDoPeriodo(de: string, ate: string, metas: { padrao?: number | null; meses?: Record<string, number> }): { mes: string; valor: number } | null {
+  if (de.slice(8) !== '01' || de.slice(0, 7) !== ate.slice(0, 7)) return null;
+  const mes = de.slice(0, 7);
+  const v = metas.meses?.[mes] ?? metas.padrao ?? null;
+  return v != null && v > 0 ? { mes, valor: v } : null;
+}
 
 const c = (v: number) => Math.round(v * 100);
 const r = (cent: number) => cent / 100;
@@ -95,7 +113,7 @@ export function calcularPainel(o: {
 
   // Distribuição dos recebimentos (por tipo de parcela), conciliando com o recebido
   const porTipo = new Map<string, number>();
-  for (const x of rec) { const k = ROTULO_TIPO_PARCELA[x.tipo] ?? 'Sem categoria'; porTipo.set(k, (porTipo.get(k) ?? 0) + c(x.valor)); }
+  for (const x of rec) { const k = x.categoria || 'Sem categoria'; porTipo.set(k, (porTipo.get(k) ?? 0) + c(x.valor)); }
   const distribuicao = Array.from(porTipo.entries()).map(([grupo, v]) => ({ grupo, valor: r(v) })).sort((a, b) => b.valor - a.valor);
 
   return {
@@ -118,8 +136,8 @@ export function calcularPainel(o: {
         .map(x => ({ ...x, vencida: x.vencimento < o.corte })) },
     },
     movimentacoes: [
-      ...rec.map(x => ({ id: `r${x.id}`, data: x.data, natureza: 'entrada' as const, pessoa: x.cliente, descricao: x.descricao, valor: x.valor, classificacao: `${ROTULO_TIPO_PARCELA[x.tipo] ?? 'Sem categoria'} · ${x.forma}`, contratoId: x.contratoId })),
-      ...pag.map(x => ({ id: `p${x.id}`, data: x.data, natureza: 'saida' as const, pessoa: x.fornecedor, descricao: x.descricao, valor: x.valor, classificacao: x.categoria, contratoId: null as number | null })),
+      ...rec.map(x => ({ id: `r${x.id}`, data: x.data, natureza: 'entrada' as const, pessoa: x.cliente, descricao: x.descricao, valor: x.valor, classificacao: `${x.categoria || 'Sem categoria'} · ${x.forma}`, contratoId: x.contratoId })),
+      ...pag.map(x => ({ id: `p${x.id}`, data: x.data, natureza: 'saida' as const, pessoa: x.fornecedor, descricao: x.descricao, valor: x.valor, classificacao: x.categoria, contratoId: x.contratoId ?? null })),
     ].sort((a, b) => b.data.localeCompare(a.data)),
   };
 }

@@ -2423,3 +2423,18 @@ export const comissaoRepasses = mysqlTable("comissaoRepasses", {
   uxParte: uniqueIndex("ux_repasse_parte").on(t.contratoId, t.chave),
   ixCorretor: index("ix_repasse_corretor").on(t.corretorUserId),
 }));
+
+/**
+ * Posição em aberto do dia (Financeiro › Painel): guardada uma vez por dia para a comparação histórica — o sistema não
+ * reconstrói saldos passados. escopo: "todos", "escritorio" ou "emp:<id>".
+ */
+export const financeiroPosicoes = mysqlTable("financeiroPosicoes", {
+  id: int("id").autoincrement().primaryKey(),
+  data: varchar("data", { length: 10 }).notNull(),
+  escopo: varchar("escopo", { length: 20 }).notNull(),
+  aReceber: decimal("aReceber", { precision: 14, scale: 2 }).notNull(),
+  aPagar: decimal("aPagar", { precision: 14, scale: 2 }).notNull(),
+  vencidos: decimal("vencidos", { precision: 14, scale: 2 }).notNull(),
+  qtdVencidos: int("qtdVencidos").notNull().default(0),
+  criadoEm: timestamp("criadoEm").defaultNow().notNull(),
+}, (t) => ({ uxDia: uniqueIndex("ux_posicao_dia").on(t.data, t.escopo) }));
