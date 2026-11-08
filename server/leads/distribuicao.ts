@@ -37,11 +37,13 @@ export async function registrarEncaminhamento(e: { leadId: number; deId?: number
 }
 
 /** Equipe que pode receber lead (ativos, menos empreendedor) */
-export async function equipe(): Promise<{ id: number; nome: string; recebeLeads: boolean }[]> {
+export async function equipe(): Promise<{ id: number; nome: string; recebeLeads: boolean; semAcesso: boolean }[]> {
   const d = await banco();
-  const rows: any[] = await d.select({ id: users.id, name: users.name, perfil: (users as any).perfil, ativo: users.ativo, recebeLeads: (users as any).recebeLeads }).from(users);
-  return rows.filter(u => u.ativo !== false && u.ativo !== 0 && u.perfil !== 'empreendedor')
-    .map(u => ({ id: Number(u.id), nome: u.name || 'Sem nome', recebeLeads: u.recebeLeads === true || u.recebeLeads === 1 }))
+  const rows: any[] = (await d.select().from(users)).filter((u: any) => u.ativo !== false && u.ativo !== 0 && u.perfil !== 'empreendedor');
+  // Licença bloqueada / sem pagamento: aparece na lista, mas não pode receber lead (server/leads/podeReceber.ts)
+  const { podeReceberLeads } = await import('./podeReceber');
+  const liberados = await Promise.all(rows.map(u => podeReceberLeads(u)));
+  return rows.map((u, k) => ({ id: Number(u.id), nome: u.name || 'Sem nome', recebeLeads: u.recebeLeads === true || u.recebeLeads === 1, semAcesso: !liberados[k] }))
     .sort((a, b) => a.nome.localeCompare(b.nome, 'pt-BR'));
 }
 
@@ -124,6 +126,7 @@ export async function encaminharManual(leadIds: number[], paraId: number, por: {
   if (ids.length > 200) throw new DistribuicaoErro('Até 200 leads por vez');
   const destino = (await equipe()).find(u => u.id === paraId);
   if (!destino) throw new DistribuicaoErro('Corretor não encontrado ou inativo');
+  if (destino.semAcesso) throw new DistribuicaoErro(`${destino.nome} está sem acesso ao sistema (licença bloqueada ou sem pagamento): não pode receber leads`);
   const d = await banco();
   const leads: any[] = await d.select({ id: leadQualifications.id, responsavelId: leadQualifications.responsavelId }).from(leadQualifications).where(inArray(leadQualifications.id, ids));
   if (!leads.length) throw new DistribuicaoErro('Leads não encontrados');

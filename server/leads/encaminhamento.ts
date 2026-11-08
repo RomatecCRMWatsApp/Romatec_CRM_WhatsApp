@@ -25,6 +25,8 @@ export function textoEncaminhamento(o: { leadId: number; cliente: string; telefo
 export async function avisarEncaminhamento(o: { leadId: number; paraId: number; porNome: string }): Promise<void> {
   const d: any = await getDb();
   if (!d) return;
+  // Corretor sem acesso (licença bloqueada/sem pagamento) não recebe aviso nem link
+  if (!(await (await import('./podeReceber')).idPodeReceberLeads(o.paraId))) return;
   const [l]: any[] = await d.select({ nome: leadQualifications.nome, phone: leadQualifications.phone, empreendimentoSlug: leadQualifications.empreendimentoSlug })
     .from(leadQualifications).where(eq(leadQualifications.id, o.leadId)).limit(1);
   const [u]: any[] = await d.select({ telefone: users.telefone, name: users.name }).from(users).where(eq(users.id, o.paraId)).limit(1);

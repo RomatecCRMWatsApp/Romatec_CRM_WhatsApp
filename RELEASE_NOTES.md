@@ -3,6 +3,18 @@
 Cada versão nova vai no TOPO. Depois rode `npm run release` (valida e atualiza o package.json);
 ao subir, o servidor grava a versão no banco e todos recebem o aviso "Novidades da versão".
 
+## 1.136.1 — 2026-11-08
+tipo: patch
+obrigatoria: nao
+titulo: Corretor sem acesso (licença bloqueada ou sem pagamento) não recebe lead
+publico: equipe
+
+### Correções
+- A roleta só escolhe corretores com a licença liberada: quem está bloqueado, sem pagamento ou com a licença vencida fica de fora, mesmo marcado para receber leads
+- Lead que estava com um corretor sem acesso volta para a distribuição (no automático, a roleta escolhe outro corretor)
+- Nenhum aviso, link ou lembrete de lead vai para o WhatsApp de corretor sem acesso
+- Na Distribuição, o corretor sem acesso aparece como "sem acesso — licença bloqueada" e não pode ser escolhido; o servidor também recusa
+
 ## 1.136.0 — 2026-11-08
 tipo: minor
 obrigatoria: nao

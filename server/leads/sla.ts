@@ -109,9 +109,13 @@ async function banco() {
 }
 
 async function candidatos(db: any, users: any) {
-  const todos: any[] = await db.select({ id: users.id, name: users.name, telefone: users.telefone, role: users.role, perfil: users.perfil, ativo: users.ativo, recebeLeads: users.recebeLeads, ultimoLeadAt: users.ultimoLeadAt }).from(users);
+  const todos: any[] = await db.select().from(users);
   const ativos = todos.filter(u => u.ativo !== false && u.ativo !== 0 && u.perfil !== 'empreendedor');
-  const roleta = ativos.filter(u => u.recebeLeads === true || u.recebeLeads === 1);
+  // Roleta: só quem marca "recebe leads" E está com a licença liberada (sem pagamento/bloqueado não recebe)
+  const { podeReceberLeads } = await import('./podeReceber');
+  const marcados = ativos.filter(u => u.recebeLeads === true || u.recebeLeads === 1);
+  const liberados = await Promise.all(marcados.map(u => podeReceberLeads(u)));
+  const roleta = marcados.filter((_, k) => liberados[k]);
   const admin = ativos.find(u => u.role === 'admin') ?? null;
   return { roleta, admin, todos: ativos };
 }
@@ -123,7 +127,14 @@ export async function garantirResponsavel(leadId: number): Promise<{ id: number;
   const [lead]: any[] = await db.select({ responsavelId: leadQualifications.responsavelId }).from(leadQualifications).where(eq(leadQualifications.id, leadId)).limit(1);
   if (!lead) return null;
   const { roleta, admin, todos } = await candidatos(db, users);
-  if (lead.responsavelId) return todos.find(u => u.id === lead.responsavelId) ?? null;
+  if (lead.responsavelId) {
+    const atual = todos.find(u => u.id === lead.responsavelId) ?? null;
+    const { podeReceberLeads } = await import('./podeReceber');
+    if (atual && await podeReceberLeads(atual)) return atual;
+    // Responsável sem acesso (licença bloqueada/sem pagamento ou login desativado): o lead não fica com ele
+    await db.update(leadQualifications).set({ responsavelId: null } as any).where(eq(leadQualifications.id, leadId));
+    console.log(`[Leads] Lead ${leadId}: responsável ${lead.responsavelId} sem acesso — volta para a distribuição`);
+  }
   // Distribuição manual: ninguém é escolhido sozinho — o lead fica em Leads › Distribuição › Não encaminhados
   if ((await (await import('../configSistema')).modoDistribuicao()) === 'manual') return null;
   const escolhido = escolherResponsavel(roleta) ?? admin;
@@ -191,7 +202,9 @@ export async function telefoneDoResponsavel(leadId: number): Promise<string | nu
   if (!db || !leadId) return null;
   const [l]: any[] = await db.select({ r: leadQualifications.responsavelId }).from(leadQualifications).where(eq(leadQualifications.id, leadId)).limit(1);
   if (!l?.r) return null;
-  const [u]: any[] = await db.select({ telefone: users.telefone }).from(users).where(eq(users.id, l.r)).limit(1);
+  const [u]: any[] = await db.select().from(users).where(eq(users.id, l.r)).limit(1);
+  // Corretor sem acesso não recebe aviso nem link do lead
+  if (!(await (await import('./podeReceber')).podeReceberLeads(u))) return null;
   const f = String(u?.telefone || '').replace(/\D/g, '');
   return f.length >= 10 ? (f.startsWith('55') ? f : `55${f}`) : null;
 }
@@ -213,7 +226,10 @@ export async function processarSla(agora = Date.now()): Promise<number> {
   const { enviarTelegram } = await import('./notificacao');
   const fone = (u: any) => { const f = String(u?.telefone || '').replace(/\D/g, ''); return f.length >= 10 ? (f.startsWith('55') ? f : `55${f}`) : null; };
   const { linhasAfetadas, registrarEnvio } = await import('./rotinas');
+  const { podeReceberLeads } = await import('./podeReceber');
   const avisar = async (u: any, texto: string) => {
+    // Corretor sem acesso (licença bloqueada/sem pagamento) não recebe aviso nem link
+    if (u && !(await podeReceberLeads(u))) return;
     const f = fone(u);
     if (f) {
       await enviarTexto(f, texto).then(() => registrarEnvio('sla', true)).catch(e => {

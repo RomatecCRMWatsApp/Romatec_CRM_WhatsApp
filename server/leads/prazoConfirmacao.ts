@@ -79,7 +79,8 @@ export async function expirarEncaminhamentos(agora = Date.now(), horas = PRAZO_C
     n++;
     const cliente = String(lead.nome || '');
     console.log(`[Prazo de confirmação] Lead ${lead.id} voltou ao escritório: ${corretor?.name ?? e.paraId} não confirmou em ${horas} h`);
-    if (corretor) await whats(corretor.telefone, textoLeadPerdido({ corretor: String(corretor.name ?? ''), cliente, horas }));
+    const { idPodeReceberLeads } = await import('./podeReceber');
+    if (corretor && await idPodeReceberLeads(Number(corretor.id))) await whats(corretor.telefone, textoLeadPerdido({ corretor: String(corretor.name ?? ''), cliente, horas }));
     const aviso = textoLeadDevolvido({ corretor: String(corretor?.name ?? ''), cliente, telefone: String(lead.phone ?? ''), horas });
     for (const u of pessoas.filter(x => (x.role === 'admin' || x.perfil === 'admin') && x.ativo !== false && x.ativo !== 0)) await whats(u.telefone, aviso);
     const { notificarLeadDevolvido } = await import('../notificacoes');

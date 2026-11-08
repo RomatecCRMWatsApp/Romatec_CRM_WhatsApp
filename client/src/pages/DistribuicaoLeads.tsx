@@ -92,7 +92,7 @@ function Distribuir({ aoEncaminhar }: { aoEncaminhar: () => void }) {
         <label className="flex flex-col gap-1 text-xs text-muted-foreground">Encaminhar para
           <select id="dist-para" className={`${selectCls} min-w-[200px]`} value={paraId} onChange={e => setParaId(e.target.value ? Number(e.target.value) : "")}>
             <option value="">— escolha o corretor —</option>
-            {equipe?.map(u => <option key={u.id} value={u.id}>{u.nome}{u.recebeLeads ? "" : " (fora da roleta)"}</option>)}
+            {equipe?.map(u => <option key={u.id} value={u.id} disabled={u.semAcesso}>{u.nome}{u.semAcesso ? " (sem acesso — licença bloqueada)" : u.recebeLeads ? "" : " (fora da roleta)"}</option>)}
           </select>
         </label>
         <label className="flex min-w-[200px] flex-1 flex-col gap-1 text-xs text-muted-foreground">Observação (opcional, vai no relatório)
@@ -277,7 +277,7 @@ function Relatorio() {
                                 } else setTrocando(null);
                               }}>
                               <option value="">— novo corretor —</option>
-                              {equipe?.filter(u => u.nome !== i.para).map(u => <option key={u.id} value={u.id}>{u.nome}{u.recebeLeads ? "" : " (fora da roleta)"}</option>)}
+                              {equipe?.filter(u => u.nome !== i.para).map(u => <option key={u.id} value={u.id} disabled={u.semAcesso}>{u.nome}{u.semAcesso ? " (sem acesso)" : u.recebeLeads ? "" : " (fora da roleta)"}</option>)}
                             </select>
                           ) : (
                             <button type="button" className="min-h-8 rounded border border-info-500/60 px-2 py-1 text-[11px] text-info-200 hover:bg-info-500/20" disabled={trocar.isPending}
