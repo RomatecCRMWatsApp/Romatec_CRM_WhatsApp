@@ -42,6 +42,13 @@ const planoZ = z.object({
   condicao: z.enum(["padrao", "A", "B", "C"]).optional(),
   /** Plano C: "unificado" (complemento + parcela no mesmo boleto) ou "sequencial" (primeiro o complemento, depois o saldo) */
   modoC: z.enum(["unificado", "sequencial"]).optional(),
+  /** Concessão por liberalidade da proprietária (sem venda): só o administrador; gera o Termo Aditivo de Concessão */
+  concessao: z.object({
+    motivo: z.string().trim().max(600).default(""),
+    comissaoValor: z.number().nonnegative().max(1e8).optional(),
+    comissaoPrazo: z.string().trim().max(200).default(""),
+    despesasPor: z.enum(["beneficiario", "proprietaria"]).default("beneficiario"),
+  }).nullable().optional(),
 });
 
 /** Erros do serviço → tRPC (campos do formulário em error.data.campos) */
@@ -120,6 +127,7 @@ export const contratosRouter = router({
   })).mutation(async ({ ctx, input }) => {
     const perfil = perfilDe(ctx.user as any);
     exigir(podeCriarContrato(perfil), "Seu perfil não cria contratos.");
+    if (input.plano.concessao) exigir(perfil === "admin", "Só o administrador registra concessão da proprietária.");
     const db = (await getDb()) as any;
     if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Banco indisponível" });
     if (input.leadId) {

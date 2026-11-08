@@ -86,6 +86,19 @@ export interface PlanoContrato {
   /** Plano C: forma do complemento (ausente = unificado nos contratos novos; os anteriores tinham boletos separados) */
   complemento_modo?: ModoPlanoC;
   parcelas: ParcelaPlano[];
+  /** Concessão por liberalidade da proprietária (sem venda): sem cobranças, fora do faturamento, com Termo Aditivo */
+  concessao?: ConcessaoProprietaria;
+}
+
+/** Unidade concedida pela proprietária a terceiro indicado por ela (shared/concessao.ts) */
+export interface ConcessaoProprietaria {
+  motivo: string;
+  /** Comissão de gestão devida pela proprietária à gestora (padrão: % total sobre o preço de tabela) */
+  comissaoValor: number;
+  /** Prazo/forma de pagamento da comissão (texto do termo) */
+  comissaoPrazo: string;
+  /** Quem paga escritura, registro e ITCMD */
+  despesasPor: 'beneficiario' | 'proprietaria';
 }
 
 export function planoDoContrato(sim: Simulacao, escolha: EscolhaPlano, c: CondicoesPagamento, comCorretor: boolean): PlanoContrato {

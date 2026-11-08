@@ -3,6 +3,19 @@
 Cada versão nova vai no TOPO. Depois rode `npm run release` (valida e atualiza o package.json);
 ao subir, o servidor grava a versão no banco e todos recebem o aviso "Novidades da versão".
 
+## 1.137.0 — 2026-11-08
+tipo: minor
+obrigatoria: nao
+titulo: Concessão da proprietária: chácara concedida a terceiro, sem venda, com Termo Aditivo
+publico: admin
+
+### Novo
+- Novo contrato › Forma de pagamento › "Concessão da proprietária (sem venda)" (só o administrador): para a chácara que a proprietária concede a uma pessoa indicada por ela
+- O contrato do beneficiário sai com o Termo Aditivo de Concessão logo depois do CPCV, assinado pela proprietária, pelo beneficiário e pela gestora: quitação do preço por liberalidade, valor à vista do imóvel como valor de referência para a transferência e o imposto, despesas da transferência e a comissão de gestão paga pela proprietária
+- Não é venda: ao ativar, não gera boleto nem carnê, a chácara fica "Concedida pela proprietária" e não entra nas vendas, no financeiro nem nas comissões de corretor
+- A comissão de gestão (padrão: % sobre o valor à vista, ajustável) e o prazo de pagamento ficam no termo
+- Nova situação de chácara "Concedida pela proprietária" no mapa, indisponível no site
+
 ## 1.136.2 — 2026-11-08
 tipo: patch
 obrigatoria: nao

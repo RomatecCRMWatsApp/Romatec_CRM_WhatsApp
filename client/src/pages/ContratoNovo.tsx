@@ -42,6 +42,12 @@ export default function ContratoNovo() {
   const [leadId, setLeadId] = useState<number | null>(q.get("lead") ? Number(q.get("lead")) : null);
   const [corretorUserId, setCorretor] = useState<number | null>(null);
   const [modalidade, setModalidade] = useState<"financiado" | "avista">("financiado");
+  /** Concessão da proprietária a terceiro indicado por ela (sem venda) — só o administrador */
+  const [concessao, setConcessao] = useState(false);
+  const [motivoConcessao, setMotivoConcessao] = useState("");
+  const [comissaoConcessao, setComissaoConcessao] = useState("");
+  const [prazoComissao, setPrazoComissao] = useState("em até 30 (trinta) dias da assinatura deste termo");
+  const [despesasPor, setDespesasPor] = useState<"beneficiario" | "proprietaria">("beneficiario");
   const [entradaParcelas, setEntrada] = useState(1);
   const [prazo, setPrazo] = useState(120);
   /** Forma de pagamento do financiado — define o modelo do CPCV (entrada 30% ou Plano A, B, C) */
@@ -71,7 +77,11 @@ export default function ContratoNovo() {
     if (l.loteCodigo && !lote && op?.lotes.some(x => x.codigo === l.loteCodigo)) setLote(l.loteCodigo);
   }, [leadId, op]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  const plano = { modalidade, entradaParcelas: modalidade === "avista" || condicao !== "padrao" ? 1 : entradaParcelas, prazo: modalidade === "avista" ? undefined : prazo, dataPrimeiroPagamento: data1, condicao: modalidade === "avista" ? "padrao" as const : condicao, ...(modalidade === "financiado" && condicao === "C" ? { modoC } : {}) };
+  const valorComissao = Number(comissaoConcessao.replace(/\./g, "").replace(",", "."));
+  const plano = concessao
+    ? { modalidade: "avista" as const, entradaParcelas: 1, dataPrimeiroPagamento: data1, condicao: "padrao" as const,
+        concessao: { motivo: motivoConcessao, comissaoPrazo: prazoComissao, despesasPor, ...(comissaoConcessao.trim() && Number.isFinite(valorComissao) ? { comissaoValor: valorComissao } : {}) } }
+    : { modalidade, entradaParcelas: modalidade === "avista" || condicao !== "padrao" ? 1 : entradaParcelas, prazo: modalidade === "avista" ? undefined : prazo, dataPrimeiroPagamento: data1, condicao: modalidade === "avista" ? "padrao" as const : condicao, ...(modalidade === "financiado" && condicao === "C" ? { modoC } : {}) };
   const sim = trpc.contratos.simular.useQuery({ slug, lote, plano, corretorUserId: corretorUserId ?? undefined }, { enabled: !!lote && /^\d{4}-\d{2}-\d{2}$/.test(data1) });
   // Documentos escolhidos no passo 2: sobem logo depois de criar (dependente pela posição na lista)
   const [anexos, setAnexos] = useState<AnexoPendente[]>([]);
@@ -163,12 +173,17 @@ export default function ContratoNovo() {
             </div>
             <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
               <Campo rotulo="Forma de pagamento">
-                <select className={sel} value={modalidade} onChange={e => setModalidade(e.target.value as any)}>
+                <select className={sel} value={concessao ? "concessao" : modalidade} onChange={e => {
+                  const v = e.target.value;
+                  setConcessao(v === "concessao");
+                  if (v !== "concessao") setModalidade(v as any);
+                }}>
                   <option value="financiado">Entrada + saldo parcelado</option>
                   <option value="avista">À vista (total, com desconto)</option>
+                  {perfil === "admin" && <option value="concessao">Concessão da proprietária (sem venda)</option>}
                 </select>
               </Campo>
-              {modalidade === "financiado" && (
+              {!concessao && modalidade === "financiado" && (
                 <>
                   <Campo rotulo="Condição (modelo do contrato)">
                     <select className={sel} value={condicao} onChange={e => { const k = e.target.value as CondicaoPagamento; setCondicao(k); setPrazo(k === "B" ? 180 : 120); }}>
@@ -189,7 +204,33 @@ export default function ContratoNovo() {
               )}
               <Campo rotulo="1º pagamento"><input type="date" className={classeCampo()} value={data1} onChange={e => setData1(e.target.value)} /></Campo>
             </div>
-            {modalidade === "financiado" && condicao === "C" && (
+            {concessao && (
+              <div className="space-y-3 rounded-lg border border-info-500/40 bg-info-500/5 p-3">
+                <div>
+                  <p className="text-sm font-semibold">Concessão da proprietária a terceiro indicado por ela</p>
+                  <p className="text-xs text-muted-foreground">Não é venda: o beneficiário não paga preço, não há boleto/carnê e a chácara fica "Concedida pela proprietária", fora das vendas e do financeiro. O contrato sai com o Termo Aditivo de Concessão (assinado pela proprietária, pelo beneficiário e pela gestora), com o valor à vista do imóvel como valor de referência da transferência e a comissão de gestão paga pela proprietária.</p>
+                </div>
+                <Campo rotulo="Registro da proprietária (motivo da concessão)">
+                  <textarea className={`${classeCampo()} min-h-[64px]`} maxLength={600} value={motivoConcessao} onChange={e => setMotivoConcessao(e.target.value)}
+                    placeholder="Ex.: concessão ao ex-funcionário, em acordo com a proprietária" />
+                </Campo>
+                <div className="grid gap-3 sm:grid-cols-3">
+                  <Campo rotulo={`Comissão de gestão (R$)${sim.data ? ` · padrão ${brl(Math.round(sim.data.preco_avista * sim.data.comissao_percentual * 100) / 100)}` : ""}`}>
+                    <input className={classeCampo()} inputMode="decimal" value={comissaoConcessao} onChange={e => setComissaoConcessao(e.target.value)} placeholder="padrão: % sobre o valor à vista" />
+                  </Campo>
+                  <Campo rotulo="Prazo/forma do pagamento da comissão">
+                    <input className={classeCampo()} maxLength={200} value={prazoComissao} onChange={e => setPrazoComissao(e.target.value)} />
+                  </Campo>
+                  <Campo rotulo="Escritura, registro e imposto por conta de">
+                    <select className={sel} value={despesasPor} onChange={e => setDespesasPor(e.target.value as any)}>
+                      <option value="beneficiario">Beneficiário(a)</option>
+                      <option value="proprietaria">Proprietária</option>
+                    </select>
+                  </Campo>
+                </div>
+              </div>
+            )}
+            {!concessao && modalidade === "financiado" && condicao === "C" && (
               <div className="rounded-lg border border-warn-400/40 bg-warn-400/5 p-3">
                 <p className="mb-2 text-sm font-semibold">Plano C — como o cliente paga o resto da entrada?</p>
                 <div className="grid gap-2 sm:grid-cols-2" role="radiogroup" aria-label="Forma do Plano C">
@@ -266,7 +307,7 @@ export default function ContratoNovo() {
               {casado && <p>Cônjuge: <b>{conjuge.nome}</b> — CPF {conjuge.cpf}</p>}
               <p>Documentos anexados: <b>{anexosValidos.length}</b>{anexosValidos.length ? ` — ${anexosValidos.map(a => a.titulo.split(" — ")[0]).join(", ")}` : " (envie depois pela tela do contrato)"}</p>
               <p>Carteirinhas: <b>{1 + (casado ? 1 : 0) + (dependentes?.length ?? 0)}</b>{dependentes?.length ? ` — dependentes: ${dependentes.map(d => `${d.nome.split(" ")[0]} (${rotuloParentesco(d.parentesco)})`).join(", ")}` : " (sem dependentes)"}</p>
-              <p>Plano: <b>{sim.data.modalidade === "avista" ? `à vista ${brl(sim.data.total_pagar)}` : `${sim.data.condicao && sim.data.condicao !== "padrao" ? `${ROTULO_CONDICAO[sim.data.condicao].curto} · ` : ""}entrada ${sim.data.entrada_qtd}× ${brl(sim.data.entrada_parcela)}${sim.data.complemento_qtd ? ` + ${sim.data.complemento_qtd}× ${brl(sim.data.complemento_parcela ?? 0)} (resto da entrada)` : ""} + ${sim.data.saldo_qtd}× ${brl(sim.data.saldo_parcela)}${sim.data.reforco_qtd ? ` + ${sim.data.reforco_qtd} reforços de ${brl(sim.data.reforco_valor ?? 0)}` : ""}`}</b></p>
+              <p>Plano: <b>{concessao ? `concessão da proprietária — sem cobrança (valor de referência ${brl(sim.data.preco_avista)})` : sim.data.modalidade === "avista" ? `à vista ${brl(sim.data.total_pagar)}` : `${sim.data.condicao && sim.data.condicao !== "padrao" ? `${ROTULO_CONDICAO[sim.data.condicao].curto} · ` : ""}entrada ${sim.data.entrada_qtd}× ${brl(sim.data.entrada_parcela)}${sim.data.complemento_qtd ? ` + ${sim.data.complemento_qtd}× ${brl(sim.data.complemento_parcela ?? 0)} (resto da entrada)` : ""} + ${sim.data.saldo_qtd}× ${brl(sim.data.saldo_parcela)}${sim.data.reforco_qtd ? ` + ${sim.data.reforco_qtd} reforços de ${brl(sim.data.reforco_valor ?? 0)}` : ""}`}</b></p>
               <p>Total a pagar: <b>{brl(sim.data.total_pagar)}</b></p>
             </div>
             <Campo rotulo="Condições específicas deste contrato (opcional)">

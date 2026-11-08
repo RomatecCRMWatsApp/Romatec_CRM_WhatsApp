@@ -133,7 +133,9 @@ export interface NovoContrato {
   leadId?: number | null;
   /** Corretor que vendeu (admin/secretário escolhem; corretor = ele mesmo) */
   corretorUserId: number;
-  plano: { modalidade: 'financiado' | 'avista'; entradaParcelas: number; prazo?: number; dataPrimeiroPagamento: string; condicao?: 'padrao' | 'A' | 'B' | 'C'; modoC?: 'unificado' | 'sequencial' };
+  plano: { modalidade: 'financiado' | 'avista'; entradaParcelas: number; prazo?: number; dataPrimeiroPagamento: string; condicao?: 'padrao' | 'A' | 'B' | 'C'; modoC?: 'unificado' | 'sequencial';
+    /** Concessão por liberalidade da proprietária (sem venda) */
+    concessao?: { motivo?: string; comissaoValor?: number; comissaoPrazo?: string; despesasPor?: 'beneficiario' | 'proprietaria' } | null };
   comprador: PessoaForm;
   conjuge?: PessoaForm | null;
   /** Dependentes para as carteirinhas (até 6; opcional) */
@@ -183,7 +185,16 @@ export async function criarContrato(n: NovoContrato, autorId: number): Promise<{
   const j = await juridicoDe(emp.id);
   const cond = await condicoesDe(emp.id);
   const resp = await responsavelTecnicoId(j.defaults);
-  const plano = planoEscolhido(n.plano, Number(lote.areaM2), lote.precoTabela != null ? Number(lote.precoTabela) : null, cond, n.corretorUserId !== resp);
+  const k = n.plano.concessao ?? null;
+  // Concessão: sem plano de pagamento do beneficiário (à vista só para montar o documento; não vira cobrança)
+  const plano = planoEscolhido(k ? { ...n.plano, modalidade: 'avista', entradaParcelas: 1, condicao: undefined } : n.plano, Number(lote.areaM2), lote.precoTabela != null ? Number(lote.precoTabela) : null, cond, k ? false : n.corretorUserId !== resp);
+  if (k) {
+    // Valor de referência = valor à vista do imóvel (base da transferência no cartório e do imposto de transmissão)
+    const valor = Math.round(((k.comissaoValor ?? plano.preco_avista * plano.comissao_percentual) + Number.EPSILON) * 100) / 100;
+    plano.concessao = { motivo: String(k.motivo ?? '').trim(), comissaoValor: valor, comissaoPrazo: String(k.comissaoPrazo ?? '').trim(), despesasPor: k.despesasPor === 'proprietaria' ? 'proprietaria' : 'beneficiario' };
+    // Comissão de gestão: toda da gestora, paga pela proprietária (não há corretor terceiro nem repasse)
+    plano.comissao_total = valor; plano.comissao_romatec = valor; plano.comissao_corretor = 0;
+  }
 
   const numero = await proximoNumero(siglaDoEmpreendimento(emp.slug, j.defaults), new Date().getFullYear());
   const codigo = codigoVerificacaoContrato();
@@ -384,16 +395,20 @@ export async function registrarAssinado(contratoId: number, pdfAssinado: Buffer 
     await d.update(contratos).set({ pdfAtual: chave, hashAtual: s.sha256 }).where(eq(contratos.id, contratoId));
   }
   await d.update(contratos).set({ status: 'ativo', atualizadoEm: agora }).where(eq(contratos.id, contratoId));
-  const situacao = plano.modalidade === 'avista' ? 'vendido_avista' : 'vendido_parcelado';
+  // Concessão da proprietária: a chácara fica "concedida" (fora das vendas e do financeiro) e não há cobranças
+  const situacao = plano.concessao ? 'concedido' : plano.modalidade === 'avista' ? 'vendido_avista' : 'vendido_parcelado';
   if (c.loteId) {
     await d.update(lotes).set({ situacao, status: statusPublicoDe(situacao), dataSituacao: agora } as any).where(eq(lotes.id, c.loteId));
     await d.insert(loteHistorico).values({ loteId: c.loteId, de: 'reservado', para: situacao, corretorId: c.corretorUserId, usuarioId,
       detalhe: `Contrato ${c.numero} ativo`, createdAt: agora } as any);
   }
-  const { gerarCobrancasDoPlano } = await import('../financeiro/emissao');
-  const cobrancas = await gerarCobrancasDoPlano(contratoId, plano);
-  // Emissão automática no Asaas (se ligada em Financeiro): carnê 1 já sai; o que travar vira aviso no sino
-  import('../financeiro/emissaoAuto').then(m => m.aposAtivarContrato(contratoId)).catch(() => {});
+  let cobrancas = 0;
+  if (!plano.concessao) {
+    const { gerarCobrancasDoPlano } = await import('../financeiro/emissao');
+    cobrancas = await gerarCobrancasDoPlano(contratoId, plano);
+    // Emissão automática no Asaas (se ligada em Financeiro): carnê 1 já sai; o que travar vira aviso no sino
+    import('../financeiro/emissaoAuto').then(m => m.aposAtivarContrato(contratoId)).catch(() => {});
+  }
   // Carteirinhas do titular, do cônjuge e dos dependentes já completos saem registradas na hora
   const { emitirCarteirasAuto } = await import('./carteirinhas');
   await emitirCarteirasAuto(contratoId);

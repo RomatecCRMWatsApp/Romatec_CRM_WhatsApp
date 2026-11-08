@@ -8,7 +8,7 @@ import type { PlanoContrato } from './plano';
 import { anexar, docxParaPdf, marcaDagua, mergeDocx, sha256, TEXTO_MINUTA } from './render';
 import { anexoDiretrizes, anexoEstatuto, anexoTabelaPagamento, anexoTarifaAgua } from './anexos';
 import { anexoLicenca, anexoMapa, anexoMemorial, type DadosUnidade } from './anexosLote';
-import { docIntermediacao } from './docsComissao';
+import { docIntermediacao, docTermoConcessao } from './docsComissao';
 
 export class GateBloqueadoError extends Error {
   constructor(public gate: GateResult) {
@@ -49,7 +49,10 @@ export async function gerarContratoPdf(ctx: Ctx, plano: PlanoContrato, o: Opcoes
   // Ordem do contrato (Cláusula 23.4): I memorial, II tabela, III estatuto, IV diretrizes, V mapa, VI licença/registro,
   // VIII tarifa de água (o VII, manifesto de assinaturas, entra ao fim da assinatura); depois, o Contrato de Intermediação
   // (ciência dos 2% do corretor), assinado pelo cliente no mesmo fluxo
-  let pdf = await anexar(principal, [memorial, tabela, estatuto, diretrizes, mapa, licenca, ...(tarifaAgua ? [tarifaAgua] : []), intermediacao]);
+  // Concessão da proprietária: o Termo Aditivo de Concessão vem logo depois do CPCV (mesma assinatura) e não há
+  // Contrato de Intermediação (não há corretor terceiro nem corretagem cobrada do beneficiário)
+  const termo = plano.concessao ? await docTermoConcessao(ctx, plano, o.marca) : null;
+  let pdf = await anexar(principal, [...(termo ? [termo] : []), memorial, tabela, estatuto, diretrizes, mapa, licenca, ...(tarifaAgua ? [tarifaAgua] : []), ...(termo ? [] : [intermediacao])]);
   if (minuta) pdf = await marcaDagua(pdf, TEXTO_MINUTA);
   else if (o.previaSemValor) pdf = await marcaDagua(pdf, o.previaSemValor);
   return { pdf, sha256: sha256(pdf), gate };

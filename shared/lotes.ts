@@ -2,7 +2,7 @@
  * Situações de venda do lote (controle interno do empreendimento) — usadas no
  * servidor e na tela. O site público só vê disponível / reservada / vendida / área técnica.
  */
-export const SITUACOES_LOTE = ['disponivel', 'interesse', 'reservado', 'entrada', 'vendido_parcelado', 'vendido_avista', 'quitado', 'bloqueado'] as const;
+export const SITUACOES_LOTE = ['disponivel', 'interesse', 'reservado', 'entrada', 'vendido_parcelado', 'vendido_avista', 'quitado', 'concedido', 'bloqueado'] as const;
 export type SituacaoLote = typeof SITUACOES_LOTE[number];
 
 export const ROTULO_SITUACAO: Record<SituacaoLote, string> = {
@@ -13,6 +13,7 @@ export const ROTULO_SITUACAO: Record<SituacaoLote, string> = {
   vendido_parcelado: 'Vendido — parcelado',
   vendido_avista: 'Vendido — à vista',
   quitado: 'Quitado',
+  concedido: 'Concedido pela proprietária',
   bloqueado: 'Bloqueado / fora de venda',
 };
 
@@ -25,11 +26,14 @@ export const COR_SITUACAO: Record<SituacaoLote, string> = {
   vendido_parcelado: '#B05FC9',
   vendido_avista: '#C0504D',
   quitado: '#7A2E2B',
+  concedido: '#5B6B8C',
   bloqueado: '#BFC5CC',
 };
 
 /** Precisa de cliente (lead ou nome) */
-export const COM_CLIENTE: SituacaoLote[] = ['interesse', 'reservado', 'entrada', 'vendido_parcelado', 'vendido_avista', 'quitado'];
+export const COM_CLIENTE: SituacaoLote[] = ['interesse', 'reservado', 'entrada', 'vendido_parcelado', 'vendido_avista', 'quitado', 'concedido'];
+/** Concedido pela proprietária a terceiro (sem venda): indisponível, mas fora das vendas e do financeiro */
+export const CONCEDIDOS: SituacaoLote[] = ['concedido'];
 /** Contam como vendidos */
 export const VENDIDOS: SituacaoLote[] = ['vendido_parcelado', 'vendido_avista', 'quitado'];
 
@@ -39,7 +43,7 @@ export type StatusPublico = 'disponivel' | 'reservado' | 'em_negociacao' | 'vend
 export function statusPublicoDe(s: SituacaoLote): StatusPublico {
   if (s === 'bloqueado') return 'nao_comercializavel';
   if (s === 'reservado' || s === 'entrada') return 'reservado';
-  if (VENDIDOS.includes(s)) return 'vendido';
+  if (VENDIDOS.includes(s) || s === 'concedido') return 'vendido';
   return 'disponivel';
 }
 
@@ -85,6 +89,6 @@ export const SITUACOES_CORRETOR: SituacaoLote[] = ['disponivel', 'interesse', 'r
 
 export function corretorPodeAlterarLote(lote: { situacao?: string | null; corretorId?: number | null }, usuarioId: number): boolean {
   const s = lote.situacao || 'disponivel';
-  if (s === 'bloqueado' || s === 'quitado') return false;
+  if (s === 'bloqueado' || s === 'quitado' || s === 'concedido') return false;
   return s === 'disponivel' || !lote.corretorId || Number(lote.corretorId) === usuarioId;
 }

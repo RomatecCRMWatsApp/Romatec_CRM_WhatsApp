@@ -205,7 +205,7 @@ export type SeloLote = 'disponivel' | 'negociacao' | 'vendido' | 'nao_comerciali
 export function seloDoLote(l: { situacao?: string | null; comercializavel?: boolean | number | null }): SeloLote {
   const s = l.situacao || 'disponivel';
   if (l.comercializavel === false || l.comercializavel === 0 || s === 'bloqueado') return 'nao_comercializavel';
-  if (s === 'vendido_parcelado' || s === 'vendido_avista' || s === 'quitado') return 'vendido';
+  if (s === 'vendido_parcelado' || s === 'vendido_avista' || s === 'quitado' || s === 'concedido') return 'vendido';
   if (s === 'interesse' || s === 'reservado' || s === 'entrada') return 'negociacao';
   return 'disponivel';
 }

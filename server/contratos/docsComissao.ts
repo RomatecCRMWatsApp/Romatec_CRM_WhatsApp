@@ -280,3 +280,66 @@ export async function docComissaoRomatec(c: Ctx, plano: PlanoContrato, marca: st
   ]);
   return w.salvar();
 }
+
+// ─── Termo Aditivo de Concessão (unidade concedida pela proprietária a terceiro indicado por ela) ───────────
+
+const vendedora = (c: Ctx) => (c.vend_pj ? s(c.vend_razao_social) : s(c.vend_nome)) || 'PROMITENTE VENDEDORA';
+const docVendedora = (c: Ctx) => (c.vend_pj ? (s(c.vend_cnpj) ? `inscrita no CNPJ sob o n.º ${s(c.vend_cnpj)}` : '') : (s(c.vend_cpf) ? `inscrita no CPF sob o n.º ${s(c.vend_cpf)}` : ''));
+
+/**
+ * Concessão por liberalidade da proprietária: a unidade vai ao(à) beneficiário(a) indicado(a) por ela sem pagamento de
+ * preço. Não é venda (não gera cobrança nem entra no faturamento de vendas), mas a comissão de gestão sobre o valor de
+ * tabela é devida à gestora pela proprietária. Integra o CPCV (vem logo depois dele, no mesmo PDF e na mesma assinatura).
+ */
+export async function docTermoConcessao(c: Ctx, plano: PlanoContrato, marca: string): Promise<Buffer> {
+  const k = plano.concessao!;
+  // Valor de referência: o valor à vista do imóvel (base da transferência no cartório e do imposto de transmissão)
+  const valorRef = plano.preco_avista;
+  const w = await escritor(`Termo Aditivo de Concessão — ${s(c.ctr_numero)}`, marca, `Termo Aditivo de Concessão · integra o CPCV n.º ${s(c.ctr_numero)}`);
+  w.cabecalho('TERMO ADITIVO DE CONCESSÃO DE UNIDADE POR LIBERALIDADE DA PROMITENTE VENDEDORA',
+    `Integra o Instrumento Particular de Compromisso de Compra e Venda n.º ${s(c.ctr_numero)} · ${s(c.emp_nome)} · Chácara ${s(c.lote_codigo)}`);
+
+  w.paragrafo([{ t: 'Pelo presente termo aditivo, de um lado, ' }, { t: vendedora(c), b: true },
+    { t: `${docVendedora(c) ? `, ${docVendedora(c)}` : ''}, proprietária e instituidora do ${s(c.emp_nome)}, doravante denominada ` }, { t: 'PROMITENTE VENDEDORA', b: true },
+    { t: '; de outro, ' }, { t: s(c.comp_nome), b: true }, { t: `, ${qualificacaoComprador(c)}` },
+    ...(c.comp_casado && s(c.conj_nome) ? [{ t: ', e seu cônjuge/companheiro(a) ' }, { t: s(c.conj_nome), b: true }, { t: `, inscrito(a) no CPF sob o n.º ${s(c.conj_cpf)}` }] : []),
+    { t: ', doravante denominado(a) ' }, { t: 'BENEFICIÁRIO(A)', b: true },
+    { t: '; e, como interveniente, ' }, { t: `${ESCRITORIO.razaoSocial} (${ESCRITORIO.fantasia})`, b: true },
+    { t: `, ${ESCRITORIO.creciJ}, inscrita no CNPJ sob o n.º ${ESCRITORIO.cnpj}, gestora de vendas do empreendimento, neste ato pelo responsável técnico ${ESCRITORIO.responsavel}, ${ESCRITORIO.creciResponsavel}, doravante denominada ` },
+    { t: 'GESTORA', b: true }, { t: ', ajustam o seguinte:' }]);
+
+  w.clausula('CLÁUSULA 1ª — DO OBJETO');
+  w.paragrafo(`1.1. Este termo tem por objeto a ${unidade(c)}, Açailândia/MA, descrita no Instrumento Particular de Compromisso de Compra e Venda n.º ${s(c.ctr_numero)} (o "CPCV"), ao qual se integra.`);
+
+  w.clausula('CLÁUSULA 2ª — DA CONCESSÃO POR LIBERALIDADE');
+  w.paragrafo([{ t: '2.1. A PROMITENTE VENDEDORA, por sua livre e exclusiva liberalidade e por indicação própria, ' }, { t: 'concede a unidade ao(à) BENEFICIÁRIO(A), sem contraprestação', b: true },
+    { t: `, que a aceita (Código Civil, arts. 538 e 539). Para todos os efeitos do CPCV, o preço da unidade, cujo valor de referência é o valor à vista do imóvel, de R$ ${brl(valorRef)} (${reaisExtenso(valorRef)}), ` },
+    { t: 'fica integralmente quitado pela PROMITENTE VENDEDORA', b: true }, { t: ', nada sendo devido pelo(a) BENEFICIÁRIO(A) a título de preço, entrada ou parcelas.' }]);
+  w.paragrafo('2.2. Em razão da cláusula 2.1, ficam sem efeito, neste contrato, o Quadro-Resumo e o Anexo II do CPCV na parte em que estabelecem valores, vencimentos e forma de pagamento do preço: não será emitido boleto, carnê ou qualquer cobrança do preço ao(à) BENEFICIÁRIO(A).');
+  if (s(k.motivo)) w.paragrafo(`2.3. Registro da PROMITENTE VENDEDORA sobre a concessão: ${s(k.motivo)}.`);
+
+  w.clausula('CLÁUSULA 3ª — DA NATUREZA DA OPERAÇÃO');
+  w.paragrafo('3.1. A concessão não constitui venda onerosa e não integra o faturamento de vendas do empreendimento, as metas comerciais nem a base de cobrança da plataforma de pagamentos. Permanecem válidas todas as demais cláusulas do CPCV que não tratam do preço, em especial as relativas à posse, à liberação de uso, às construções, ao Estatuto, ao Regimento, às Diretrizes de Uso (Anexo IV), à contribuição associativa e às obrigações do(a) BENEFICIÁRIO(A) como promissário(a) comprador(a).');
+  w.paragrafo([{ t: `3.2. A transferência definitiva observará a forma exigida em lei (Código Civil, art. 541), após o registro do parcelamento e a individualização das matrículas. As despesas e os tributos da transferência (escritura, registro e o imposto de transmissão incidente — ITBI ou ITCMD, conforme a forma do ato) ficam a cargo ` },
+    { t: k.despesasPor === 'proprietaria' ? 'da PROMITENTE VENDEDORA' : 'do(a) BENEFICIÁRIO(A)', b: true },
+    { t: `. Para a transferência e o recolhimento do imposto, as partes adotam como valor da unidade o valor de referência da cláusula 2.1, R$ ${brl(valorRef)}, sem prejuízo de avaliação diversa pelo órgão competente.` }]);
+
+  w.clausula('CLÁUSULA 4ª — DA COMISSÃO DE GESTÃO E CORRETAGEM');
+  w.paragrafo([{ t: '4.1. Ainda que não haja venda onerosa, a GESTORA realizou a gestão, a documentação, o cadastro, a medição e a formalização da unidade concedida, razão pela qual ' },
+    { t: `a PROMITENTE VENDEDORA pagará à GESTORA a comissão de gestão e corretagem de R$ ${brl(k.comissaoValor)} (${reaisExtenso(k.comissaoValor)})`, b: true },
+    { t: `, calculada sobre o valor de referência da cláusula 2.1, ${s(k.comissaoPrazo) || 'em até 30 (trinta) dias da assinatura deste termo'}, por Pix ou transferência à conta da GESTORA (Código Civil, arts. 722 a 729; Lei n.º 6.530/1978).` }]);
+  w.paragrafo('4.2. A comissão desta cláusula é obrigação exclusiva da PROMITENTE VENDEDORA e não é cobrada do(a) BENEFICIÁRIO(A). Não há corretor(a) intermediador(a) terceiro(a) a remunerar nesta operação.');
+
+  w.clausula('CLÁUSULA 5ª — DISPOSIÇÕES GERAIS');
+  w.paragrafo('5.1. Este termo integra o CPCV e prevalece sobre ele no que tratar do preço e da comissão. As partes reconhecem a validade da assinatura eletrônica (MP n.º 2.200-2/2001, art. 10, § 2º; Lei n.º 14.063/2020) e elegem o foro da Comarca de Açailândia/MA, com renúncia a qualquer outro, por mais privilegiado que seja.');
+
+  w.paragrafo(`Açailândia/MA, ${s(c.ctr_data_extenso)}.`, { antes: 8, depois: 4 });
+  const blocos = [
+    { papel: 'PROMITENTE VENDEDORA (concedente)', nome: vendedora(c), doc: docVendedora(c).replace(/^inscrita no /, '').replace(' sob o n.º', '') },
+    { papel: 'BENEFICIÁRIO(A)', nome: s(c.comp_nome), doc: `CPF ${s(c.comp_cpf)}` },
+  ];
+  if (c.comp_casado && s(c.conj_nome)) blocos.push({ papel: 'Cônjuge/companheiro(a) anuente', nome: s(c.conj_nome), doc: `CPF ${s(c.conj_cpf)}` });
+  blocos.push({ papel: 'GESTORA (interveniente)', nome: `${ESCRITORIO.fantasia} — ${ESCRITORIO.responsavel}`, doc: `${ESCRITORIO.creciJ} · ${ESCRITORIO.creciResponsavel}` });
+  w.assinaturas(blocos);
+  return w.salvar();
+}
