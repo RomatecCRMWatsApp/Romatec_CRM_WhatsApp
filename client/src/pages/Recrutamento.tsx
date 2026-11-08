@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
-import { Check, Copy, FileDown, Loader2, MessageCircle, RefreshCw, Send, Trash2, UserPlus, X } from "lucide-react";
+import { Check, Copy, FileDown, Loader2, MessageCircle, RefreshCw, Send, Trash2, UserPlus, X, UserX } from "lucide-react";
 import { trpc } from "@/lib/trpc";
 import { useAuth } from "@/_core/hooks/useAuth";
 import ConfirmarExclusao from "@/components/sistema/ConfirmarExclusao";
@@ -168,6 +168,11 @@ export default function Recrutamento() {
   // Cancelado sai da lista (filtro "Cancelados" para ver); excluir definitivo é só do administrador, com senha
   const { user } = useAuth();
   const admin = (user as any)?.role === "admin";
+  // Desligar da equipe: mesmo efeito do Controle de acessos (sai da roleta e não recebe lead nem aviso)
+  const desativar = trpc.controleAcessos.definirLogin.useMutation({
+    onSuccess: () => toast.success("Login desativado: não entra mais e não recebe leads"),
+    onError: e => toast.error(e.message),
+  });
   const [verCancelados, setVerCancelados] = useState(false);
   const [excluindo, setExcluindo] = useState<{ id: number; nome: string } | null>(null);
   const excluir = trpc.exclusao.convite.useMutation({
@@ -221,6 +226,15 @@ export default function Recrutamento() {
                     {r.status === "convidado" && <Button size="sm" variant="ghost" className="h-7 text-xs" onClick={() => setAberto(r.id)}>Ver o que já preencheu</Button>}
                     <Button size="sm" variant="ghost" className="h-7 text-xs text-danger-300" onClick={() => { if (confirm("Cancelar este convite? O link deixa de funcionar.")) cancelar.mutate({ id: r.id, motivo: "", cancelar: true }); }}>Cancelar</Button>
                   </>
+                )}
+                {r.status === "aprovado" && r.usuarioId && (
+                  <Button size="sm" variant="outline" className="h-7 border-danger-500/40 text-xs text-danger-300 hover:bg-danger-500/10" disabled={desativar.isPending}
+                    onClick={() => {
+                      const motivo = prompt(`Desativar o login de ${r.nome}? Ele(a) sai de todos os aparelhos, não entra mais e não recebe lead nenhum.\n\nMotivo:`, "Desligado da equipe");
+                      if (motivo && motivo.trim().length >= 3) desativar.mutate({ id: r.usuarioId!, ativo: false, motivo: motivo.trim() });
+                    }}>
+                    <UserX className="mr-1 h-3.5 w-3.5" /> Desativar login
+                  </Button>
                 )}
                 {r.status === "aprovado" && r.usuarioId && (
                   <Button size="sm" variant="outline" className="h-7 text-xs" disabled={novaSenha.isPending} onClick={() => { if (confirm("Gerar uma nova senha provisória e enviar pelo WhatsApp? A senha atual deixa de valer.")) novaSenha.mutate({ usuarioId: r.usuarioId! }); }}>

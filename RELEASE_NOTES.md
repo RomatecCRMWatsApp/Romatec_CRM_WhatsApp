@@ -3,6 +3,15 @@
 Cada versão nova vai no TOPO. Depois rode `npm run release` (valida e atualiza o package.json);
 ao subir, o servidor grava a versão no banco e todos recebem o aviso "Novidades da versão".
 
+## 1.136.2 — 2026-11-08
+tipo: patch
+obrigatoria: nao
+titulo: Desativar o login direto no Recrutamento
+publico: equipe
+
+### Melhorias
+- Recrutamento: no cartão de quem já tem acesso, botão "Desativar login" — a pessoa sai de todos os aparelhos, não entra mais e não recebe lead nenhum (mesmo efeito do Controle de acessos)
+
 ## 1.136.1 — 2026-11-08
 tipo: patch
 obrigatoria: nao
