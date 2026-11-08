@@ -47,6 +47,7 @@ const planoZ = z.object({
     motivo: z.string().trim().max(600).default(""),
     comissaoValor: z.number().nonnegative().max(1e8).optional(),
     comissaoPrazo: z.string().trim().max(200).default(""),
+    comissaoVencimento: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).optional(),
     despesasPor: z.enum(["beneficiario", "proprietaria"]).default("beneficiario"),
   }).nullable().optional(),
 });
@@ -145,6 +146,24 @@ export const contratosRouter = router({
       corretorUserId: perfil === "corretor" ? ctx.user.id : input.corretorUserId ?? ctx.user.id,
       plano: input.plano, comprador: input.comprador as any, conjuge: (input.conjuge ?? null) as any, dependentes: input.dependentes ?? [], condicoes: input.condicoes,
     }, ctx.user.id));
+  }),
+
+  /**
+   * Concessão: muda o vencimento (e a forma) da comissão de gestão no próprio contrato — só o administrador.
+   * Vale na hora no Financeiro; o termo sai com a nova data na próxima vez que o contrato for gerado.
+   */
+  concessaoVencimento: protectedProcedure.input(z.object({
+    id: z.number().int(), vencimento: z.string().regex(/^\d{4}-\d{2}-\d{2}$/), forma: z.string().trim().max(200).optional(),
+  })).mutation(async ({ ctx, input }) => {
+    exigir(perfilDe(ctx.user as any) === "admin", "Só o administrador altera a comissão da concessão.");
+    const c = await contratoVisivel(ctx, input.id);
+    if (["cancelado", "distratado"].includes(c.status)) throw new TRPCError({ code: "CONFLICT", message: "Contrato cancelado" });
+    const plano = typeof c.simulacaoJson === "string" ? JSON.parse(c.simulacaoJson) : c.simulacaoJson;
+    if (!plano?.concessao) throw new TRPCError({ code: "BAD_REQUEST", message: "Este contrato não é de concessão" });
+    const novo = { ...plano, concessao: { ...plano.concessao, comissaoVencimento: input.vencimento, ...(input.forma != null ? { comissaoPrazo: input.forma } : {}) } };
+    const db = (await getDb()) as any;
+    await db.update(contratos).set({ simulacaoJson: novo, atualizadoEm: new Date() } as any).where(eq(contratos.id, c.id));
+    return { ok: true, assinado: ["assinado", "ativo", "quitado"].includes(c.status) };
   }),
 
   /** Tela de Carteirinhas: todas as pessoas dos contratos visíveis (corretor: só os dele) */

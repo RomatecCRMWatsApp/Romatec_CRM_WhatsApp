@@ -3,6 +3,17 @@
 Cada versão nova vai no TOPO. Depois rode `npm run release` (valida e atualiza o package.json);
 ao subir, o servidor grava a versão no banco e todos recebem o aviso "Novidades da versão".
 
+## 1.137.2 — 2026-11-08
+tipo: patch
+obrigatoria: nao
+titulo: Concessão: vencimento da comissão editável no próprio contrato
+publico: admin
+
+### Melhorias
+- Novo contrato de concessão: campo "Vencimento da comissão" (padrão: 30 dias) e "Forma / observação do pagamento"; a data vai no Termo Aditivo
+- Tela do contrato: quadro da concessão com o vencimento e a forma editáveis pelo administrador; muda na hora em Financeiro › A receber da proprietária
+- Contrato ainda não assinado: gere de novo para o termo sair com a nova data; já assinado: muda só o controle do Financeiro
+
 ## 1.137.1 — 2026-11-08
 tipo: patch
 obrigatoria: nao

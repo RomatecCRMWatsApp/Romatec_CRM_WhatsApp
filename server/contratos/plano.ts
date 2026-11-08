@@ -95,8 +95,10 @@ export interface ConcessaoProprietaria {
   motivo: string;
   /** Comissão de gestão devida pela proprietária à gestora (padrão: % total sobre o preço de tabela) */
   comissaoValor: number;
-  /** Prazo/forma de pagamento da comissão (texto do termo) */
+  /** Forma/observação do pagamento da comissão (texto do termo) */
   comissaoPrazo: string;
+  /** Vencimento da comissão (AAAA-MM-DD): vai no termo e no Financeiro; editável no contrato */
+  comissaoVencimento?: string;
   /** Quem paga escritura, registro e ITCMD */
   despesasPor: 'beneficiario' | 'proprietaria';
 }

@@ -46,7 +46,8 @@ export default function ContratoNovo() {
   const [concessao, setConcessao] = useState(false);
   const [motivoConcessao, setMotivoConcessao] = useState("");
   const [comissaoConcessao, setComissaoConcessao] = useState("");
-  const [prazoComissao, setPrazoComissao] = useState("em até 30 (trinta) dias da assinatura deste termo");
+  const [prazoComissao, setPrazoComissao] = useState("Pix ou transferência");
+  const [vencComissao, setVencComissao] = useState(() => new Date(Date.now() - 3 * 3600_000 + 30 * 86_400_000).toISOString().slice(0, 10));
   const [despesasPor, setDespesasPor] = useState<"beneficiario" | "proprietaria">("beneficiario");
   const [entradaParcelas, setEntrada] = useState(1);
   const [prazo, setPrazo] = useState(120);
@@ -80,7 +81,7 @@ export default function ContratoNovo() {
   const valorComissao = Number(comissaoConcessao.replace(/\./g, "").replace(",", "."));
   const plano = concessao
     ? { modalidade: "avista" as const, entradaParcelas: 1, dataPrimeiroPagamento: data1, condicao: "padrao" as const,
-        concessao: { motivo: motivoConcessao, comissaoPrazo: prazoComissao, despesasPor, ...(comissaoConcessao.trim() && Number.isFinite(valorComissao) ? { comissaoValor: valorComissao } : {}) } }
+        concessao: { motivo: motivoConcessao, comissaoPrazo: prazoComissao, despesasPor, ...(/^\d{4}-\d{2}-\d{2}$/.test(vencComissao) ? { comissaoVencimento: vencComissao } : {}), ...(comissaoConcessao.trim() && Number.isFinite(valorComissao) ? { comissaoValor: valorComissao } : {}) } }
     : { modalidade, entradaParcelas: modalidade === "avista" || condicao !== "padrao" ? 1 : entradaParcelas, prazo: modalidade === "avista" ? undefined : prazo, dataPrimeiroPagamento: data1, condicao: modalidade === "avista" ? "padrao" as const : condicao, ...(modalidade === "financiado" && condicao === "C" ? { modoC } : {}) };
   const sim = trpc.contratos.simular.useQuery({ slug, lote, plano, corretorUserId: corretorUserId ?? undefined }, { enabled: !!lote && /^\d{4}-\d{2}-\d{2}$/.test(data1) });
   // Documentos escolhidos no passo 2: sobem logo depois de criar (dependente pela posição na lista)
@@ -214,11 +215,14 @@ export default function ContratoNovo() {
                   <textarea className={`${classeCampo()} min-h-[64px]`} maxLength={600} value={motivoConcessao} onChange={e => setMotivoConcessao(e.target.value)}
                     placeholder="Ex.: concessão ao ex-funcionário, em acordo com a proprietária" />
                 </Campo>
-                <div className="grid gap-3 sm:grid-cols-3">
+                <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
                   <Campo rotulo={`Comissão de gestão (R$)${sim.data ? ` · padrão ${brl(Math.round(sim.data.preco_avista * sim.data.comissao_percentual * 100) / 100)}` : ""}`}>
                     <input className={classeCampo()} inputMode="decimal" value={comissaoConcessao} onChange={e => setComissaoConcessao(e.target.value)} placeholder="padrão: % sobre o valor à vista" />
                   </Campo>
-                  <Campo rotulo="Prazo/forma do pagamento da comissão">
+                  <Campo rotulo="Vencimento da comissão">
+                    <input type="date" className={classeCampo()} value={vencComissao} onChange={e => setVencComissao(e.target.value)} />
+                  </Campo>
+                  <Campo rotulo="Forma / observação do pagamento">
                     <input className={classeCampo()} maxLength={200} value={prazoComissao} onChange={e => setPrazoComissao(e.target.value)} />
                   </Campo>
                   <Campo rotulo="Escritura, registro e imposto por conta de">

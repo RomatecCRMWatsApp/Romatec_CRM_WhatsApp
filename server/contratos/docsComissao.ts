@@ -327,7 +327,9 @@ export async function docTermoConcessao(c: Ctx, plano: PlanoContrato, marca: str
   w.clausula('CLÁUSULA 4ª — DA COMISSÃO DE GESTÃO E CORRETAGEM');
   w.paragrafo([{ t: '4.1. Ainda que não haja venda onerosa, a GESTORA realizou a gestão, a documentação, o cadastro, a medição e a formalização da unidade concedida, razão pela qual ' },
     { t: `a PROMITENTE VENDEDORA pagará à GESTORA a comissão de gestão e corretagem de R$ ${brl(k.comissaoValor)} (${reaisExtenso(k.comissaoValor)})`, b: true },
-    { t: `, calculada sobre o valor de referência da cláusula 2.1, ${s(k.comissaoPrazo) || 'em até 30 (trinta) dias da assinatura deste termo'}, por Pix ou transferência à conta da GESTORA (Código Civil, arts. 722 a 729; Lei n.º 6.530/1978).` }]);
+    { t: `, calculada sobre o valor de referência da cláusula 2.1, ` },
+    { t: k.comissaoVencimento ? `até ${k.comissaoVencimento.split('-').reverse().join('/')}` : 'em até 30 (trinta) dias da assinatura deste termo', b: true },
+    { t: `, ${s(k.comissaoPrazo) && !/^em até 30/.test(s(k.comissaoPrazo)) ? `${/^(por|em|via|mediante|no|na)\b/i.test(s(k.comissaoPrazo)) ? '' : 'mediante '}${s(k.comissaoPrazo).replace(/\.$/, '')}, ` : 'por Pix ou transferência, '}à conta da GESTORA (Código Civil, arts. 722 a 729; Lei n.º 6.530/1978).` }]);
   w.paragrafo('4.2. A comissão desta cláusula é obrigação exclusiva da PROMITENTE VENDEDORA e não é cobrada do(a) BENEFICIÁRIO(A). Não há corretor(a) intermediador(a) terceiro(a) a remunerar nesta operação.');
 
   w.clausula('CLÁUSULA 5ª — DISPOSIÇÕES GERAIS');

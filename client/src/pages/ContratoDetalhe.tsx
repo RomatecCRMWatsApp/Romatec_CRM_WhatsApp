@@ -4,6 +4,8 @@ import { useLocation, useParams } from "wouter";
 import { toast } from "sonner";
 import { AlertTriangle, Ban, CheckCircle2, Copy, Download, FileSignature, FileText, Loader2, Receipt, RefreshCw, Send, ShieldAlert, Upload, XCircle } from "lucide-react";
 import { trpc } from "@/lib/trpc";
+import { perfilDe } from "@shared/equipe";
+import { useAuth } from "@/_core/hooks/useAuth";
 import PageHeader from "@/components/PageHeader";
 import CompensarPagamento from "@/components/contratos/CompensarPagamento";
 import { Button } from "@/components/ui/button";
@@ -129,6 +131,7 @@ export default function ContratoDetalhe() {
           ))}
         </div>
 
+        {p?.concessao && <ConcessaoComissao contratoId={id} concessao={p.concessao} valorRef={Number(p.preco_avista ?? 0)} cancelado={["cancelado", "distratado"].includes(c.status)} assinado={["assinado", "ativo", "quitado"].includes(c.status)} />}
         {d.cancelamento && (
           <p className="rounded-lg border border-danger-500/40 bg-danger-500/10 p-3 text-sm text-danger-200">
             Contrato cancelado em {new Date(d.cancelamento.em as any).toLocaleString("pt-BR")} pelo administrador. Motivo: {d.cancelamento.motivo}. O histórico e as versões continuam guardados.
@@ -402,6 +405,43 @@ export default function ContratoDetalhe() {
         titulo={`Cancelar o recibo ${modal?.tipo === "recibo" ? modal.numero : ""}`} rotuloBotao="Cancelar recibo"
         descricao={<p>O recibo não é apagado: a verificação pública passa a mostrar "cancelado" e a ação fica na auditoria.</p>}
         onConfirmar={(motivo, senha) => { if (modal?.tipo === "recibo") cancelarRec.mutate({ reciboId: modal.id, motivo, senha }); }} />
+    </div>
+  );
+}
+
+/** Contrato de concessão da proprietária: comissão de gestão a receber, com vencimento editável (só o administrador) */
+function ConcessaoComissao({ contratoId, concessao, valorRef, cancelado, assinado }: { contratoId: number; concessao: any; valorRef: number; cancelado: boolean; assinado: boolean }) {
+  const { user } = useAuth();
+  const admin = perfilDe(user as any) === "admin";
+  const utils = trpc.useUtils();
+  const [venc, setVenc] = useState<string>(concessao.comissaoVencimento ?? "");
+  const [forma, setForma] = useState<string>(concessao.comissaoPrazo ?? "");
+  const salvar = trpc.contratos.concessaoVencimento.useMutation({
+    onSuccess: r => {
+      toast.success(r.assinado ? "Vencimento atualizado no Financeiro (o termo assinado não muda)" : "Vencimento atualizado. Gere o contrato de novo para o termo sair com a nova data.");
+      utils.contratos.detalhe.invalidate({ id: contratoId }); utils.comissoes.concessoes.invalidate();
+    },
+    onError: e => toast.error(e.message),
+  });
+  return (
+    <div className="space-y-2 rounded-lg border border-info-500/40 bg-info-500/5 p-3 text-sm">
+      <p className="font-semibold">Concessão da proprietária — sem venda, sem boleto</p>
+      <p className="text-xs text-muted-foreground">
+        Valor de referência {brl(valorRef)} · comissão de gestão {brl(Number(concessao.comissaoValor ?? 0))}, paga pela proprietária à gestora
+        {concessao.comissaoVencimento ? ` até ${String(concessao.comissaoVencimento).split("-").reverse().join("/")}` : ""}.
+      </p>
+      {admin && !cancelado && (
+        <div className="flex flex-wrap items-end gap-2">
+          <label className="text-xs text-muted-foreground">Vencimento da comissão
+            <input type="date" value={venc} onChange={e => setVenc(e.target.value)} className="mt-1 block h-9 rounded-md border border-border bg-background px-2 text-sm text-foreground" />
+          </label>
+          <label className="min-w-[200px] flex-1 text-xs text-muted-foreground">Forma / observação
+            <input value={forma} maxLength={200} onChange={e => setForma(e.target.value)} placeholder="Ex.: Pix em 2 vezes" className="mt-1 block h-9 w-full rounded-md border border-border bg-background px-2 text-sm text-foreground" />
+          </label>
+          <Button size="sm" disabled={!/^\d{4}-\d{2}-\d{2}$/.test(venc) || salvar.isPending} onClick={() => salvar.mutate({ id: contratoId, vencimento: venc, forma })}>Salvar prazo</Button>
+        </div>
+      )}
+      {admin && assinado && <p className="text-[11px] text-muted-foreground">Contrato já assinado: a nova data vale no Financeiro; o termo assinado continua com a data original.</p>}
     </div>
   );
 }

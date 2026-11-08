@@ -135,7 +135,7 @@ export interface NovoContrato {
   corretorUserId: number;
   plano: { modalidade: 'financiado' | 'avista'; entradaParcelas: number; prazo?: number; dataPrimeiroPagamento: string; condicao?: 'padrao' | 'A' | 'B' | 'C'; modoC?: 'unificado' | 'sequencial';
     /** Concessão por liberalidade da proprietária (sem venda) */
-    concessao?: { motivo?: string; comissaoValor?: number; comissaoPrazo?: string; despesasPor?: 'beneficiario' | 'proprietaria' } | null };
+    concessao?: { motivo?: string; comissaoValor?: number; comissaoPrazo?: string; comissaoVencimento?: string; despesasPor?: 'beneficiario' | 'proprietaria' } | null };
   comprador: PessoaForm;
   conjuge?: PessoaForm | null;
   /** Dependentes para as carteirinhas (até 6; opcional) */
@@ -195,7 +195,8 @@ export async function criarContrato(n: NovoContrato, autorId: number): Promise<{
   if (k) {
     // Valor de referência = valor à vista do imóvel (base da transferência no cartório e do imposto de transmissão)
     const valor = Math.round(((k.comissaoValor ?? plano.preco_avista * plano.comissao_percentual) + Number.EPSILON) * 100) / 100;
-    plano.concessao = { motivo: String(k.motivo ?? '').trim(), comissaoValor: valor, comissaoPrazo: String(k.comissaoPrazo ?? '').trim(), despesasPor: k.despesasPor === 'proprietaria' ? 'proprietaria' : 'beneficiario' };
+    const venc = /^\d{4}-\d{2}-\d{2}$/.test(String(k.comissaoVencimento ?? '')) ? String(k.comissaoVencimento) : new Date(Date.now() - 3 * 3600_000 + 30 * 86_400_000).toISOString().slice(0, 10);
+    plano.concessao = { motivo: String(k.motivo ?? '').trim(), comissaoValor: valor, comissaoPrazo: String(k.comissaoPrazo ?? '').trim(), comissaoVencimento: venc, despesasPor: k.despesasPor === 'proprietaria' ? 'proprietaria' : 'beneficiario' };
     // Comissão de gestão: toda da gestora, paga pela proprietária (não há corretor terceiro nem repasse)
     plano.comissao_total = valor; plano.comissao_romatec = valor; plano.comissao_corretor = 0;
   }

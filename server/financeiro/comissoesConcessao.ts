@@ -41,13 +41,14 @@ export async function receitasConcessao(p: PermissoesUsuario) {
   const hoje = hojeBR();
   const itens: ReceitaConcessao[] = lista.map(({ c, plano }) => {
     const r = reps.find(x => Number(x.contratoId) === Number(c.id));
-    const venc = somarDias(new Date(c.criadoEm ?? Date.now()), PRAZO_DIAS);
+    // Vencimento definido no contrato (editável); contratos antigos: criação + 30 dias
+    const venc = /^\d{4}-\d{2}-\d{2}$/.test(String(plano.concessao.comissaoVencimento ?? '')) ? String(plano.concessao.comissaoVencimento) : somarDias(new Date(c.criadoEm ?? Date.now()), PRAZO_DIAS);
     return {
       contratoId: Number(c.id), numero: String(c.numero), status: String(c.status),
       empreendimento: String(emps.find(e => Number(e.id) === Number(c.empreendimentoId))?.nome ?? ''), lote: String(c.loteCodigo),
       beneficiario: String(comp.find(x => Number(x.contratoId) === Number(c.id))?.nome ?? '—'),
       valorReferencia: Number(plano.preco_avista ?? 0), valor: Number(plano.concessao.comissaoValor ?? 0),
-      vencimento: venc, prazo: String(plano.concessao.comissaoPrazo || `em até ${PRAZO_DIAS} dias da assinatura`),
+      vencimento: venc, prazo: String(plano.concessao.comissaoPrazo || 'Pix ou transferência'),
       corretor: String(us.find(u => Number(u.id) === Number(c.corretorUserId))?.name ?? '—'),
       situacao: (r ? 'recebida' : venc < hoje ? 'atrasada' : 'a_receber') as ReceitaConcessao['situacao'], recebidoEm: r ? String(r.pagoEm).slice(0, 10) : null, forma: r?.forma ?? null,
     };
