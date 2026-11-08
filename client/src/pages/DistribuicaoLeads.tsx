@@ -183,6 +183,13 @@ function Relatorio() {
     onError: e => toast.error(e.message),
   });
   const pendentes = (data?.itens ?? []).filter(i => i.situacao === "aguardando_confirmacao");
+  // Trocar o corretor direto no relatório quando ele não confirma o recebimento (fecha o anterior como "repassado")
+  const [trocando, setTrocando] = useState<number | null>(null);
+  const utilsRel = trpc.useUtils();
+  const trocar = trpc.distribuicao.encaminhar.useMutation({
+    onSuccess: r => { toast.success(`Lead passado para ${r.para}. O novo corretor foi avisado no sistema e no WhatsApp.`); setTrocando(null); utilsRel.distribuicao.relatorio.invalidate(); utilsRel.distribuicao.leads.invalidate(); },
+    onError: e => toast.error(e.message),
+  });
   const csv = trpc.distribuicao.csv.useMutation({
     onSuccess: r => {
       const a = document.createElement("a");
@@ -255,9 +262,26 @@ function Relatorio() {
                       <td className="p-2 text-xs">{i.por ?? "—"}</td>
                       <td className="p-2 text-xs">{i.continuaCom}</td>
                       <td className="whitespace-nowrap p-2 text-xs">{i.recebidoEm ? <span className="text-ok-300">{dataHora(i.recebidoEm)}</span> : i.desfecho ? "—" : (
-                        <span className="flex items-center gap-1 text-warn-300">aguardando
-                          <button type="button" className="rounded border border-warn-500/60 px-1.5 py-0.5 text-[10px] text-warn-200 hover:bg-warn-500/20" disabled={reenviar.isPending}
+                        <span className="flex flex-wrap items-center gap-1.5 text-warn-300">aguardando
+                          <button type="button" className="min-h-8 rounded border border-warn-500/60 px-2 py-1 text-[11px] text-warn-200 hover:bg-warn-500/20" disabled={reenviar.isPending}
                             onClick={() => reenviar.mutate({ ids: [i.id] })} title="Reenviar o aviso para o corretor">Reenviar</button>
+                          {trocando === i.id ? (
+                            <select autoFocus aria-label="Trocar o corretor" className={`${selectCls} h-8 text-xs`} defaultValue="" disabled={trocar.isPending}
+                              onBlur={() => !trocar.isPending && setTrocando(null)}
+                              onChange={e => {
+                                const novo = Number(e.target.value);
+                                const nome = equipe?.find(u => u.id === novo)?.nome ?? "o corretor";
+                                if (novo && confirm(`Passar o lead ${i.lead} de ${i.para} para ${nome}? ${i.para} deixa de ser o responsável e ${nome} recebe o aviso.`)) {
+                                  trocar.mutate({ leadIds: [i.leadId], paraId: novo, observacao: `Troca: ${i.para} não confirmou o recebimento` });
+                                } else setTrocando(null);
+                              }}>
+                              <option value="">— novo corretor —</option>
+                              {equipe?.filter(u => u.nome !== i.para).map(u => <option key={u.id} value={u.id}>{u.nome}{u.recebeLeads ? "" : " (fora da roleta)"}</option>)}
+                            </select>
+                          ) : (
+                            <button type="button" className="min-h-8 rounded border border-info-500/60 px-2 py-1 text-[11px] text-info-200 hover:bg-info-500/20" disabled={trocar.isPending}
+                              onClick={() => setTrocando(i.id)} title="Passar o lead para outro corretor">Trocar corretor</button>
+                          )}
                         </span>)}</td>
                       <td className="p-2 text-xs">{i.desfecho ? <><b>{ROTULO_DESFECHO[i.desfecho]}</b>{i.desfechoMotivo ? <span className="block text-muted-foreground">{i.desfechoMotivo}</span> : null}</> : ROTULO_SITUACAO[i.situacao]}</td>
                       <td className="p-2 text-xs text-muted-foreground">{i.observacao ?? ""}</td>

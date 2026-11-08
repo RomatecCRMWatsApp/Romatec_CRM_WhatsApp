@@ -3,6 +3,16 @@
 Cada versão nova vai no TOPO. Depois rode `npm run release` (valida e atualiza o package.json);
 ao subir, o servidor grava a versão no banco e todos recebem o aviso "Novidades da versão".
 
+## 1.133.5 — 2026-11-08
+tipo: patch
+obrigatoria: nao
+titulo: Trocar o corretor direto no relatório da distribuição
+publico: equipe
+
+### Melhorias
+- Distribuição de leads › Relatório: nos leads "aguardando" (o corretor ainda não confirmou o recebimento), além de "Reenviar" há o botão "Trocar corretor"
+- Escolha o novo corretor ali mesmo: o lead passa para ele, o anterior fica como "Repassado a outro corretor" e o novo recebe o aviso no sistema e no WhatsApp, sem precisar voltar à aba Distribuir
+
 ## 1.133.4 — 2026-11-08
 tipo: patch
 obrigatoria: nao
