@@ -3,6 +3,18 @@
 Cada versão nova vai no TOPO. Depois rode `npm run release` (valida e atualiza o package.json);
 ao subir, o servidor grava a versão no banco e todos recebem o aviso "Novidades da versão".
 
+## 1.133.3 — 2026-11-08
+tipo: patch
+obrigatoria: nao
+titulo: Notificações no celular: botão Fechar grande, abas sempre visíveis e sem travar
+publico: todos
+
+### Correções
+- Painel de Notificações no celular: o título e as abas não ficam mais escondidos atrás do relógio e da barra do telefone
+- Botão "Fechar" grande no topo, sempre à mão; o cabeçalho e as abas ficam fixos e só a lista rola
+- Novidades: mostra as 20 versões mais recentes e carrega as anteriores no botão "Ver versões anteriores" (a lista inteira travava a rolagem)
+- Versões do mesmo dia na ordem certa, da mais nova para a mais antiga; cartões e toques maiores
+
 ## 1.133.2 — 2026-11-08
 tipo: patch
 obrigatoria: nao

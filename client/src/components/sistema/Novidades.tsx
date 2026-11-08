@@ -1,11 +1,11 @@
 import { useEffect, useState } from "react";
 import { useLocation } from "wouter";
 import { ListaNotificacoes, useNotificacoes } from "./Notificacoes";
-import { Bell, ChevronDown, ChevronRight, RefreshCw, Sparkles } from "lucide-react";
+import { Bell, ChevronDown, ChevronRight, RefreshCw, Sparkles, X } from "lucide-react";
 import { trpc } from "@/lib/trpc";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
+import { Sheet, SheetContent, SheetDescription, SheetTitle } from "@/components/ui/sheet";
 import { RomatecSeal } from "@/brand";
 import { SECOES_RELEASE, type ItensRelease } from "@shared/releases";
 
@@ -151,6 +151,8 @@ export function PainelNovidades({ habilitado }: { habilitado: boolean }) {
   const [aberto, setAberto] = useState(false);
   const [aba, setAba] = useState<Aba>("avisos");
   const [expandida, setExpandida] = useState<number | null>(null);
+  // Lista longa (130+ versões): mostra as 20 mais recentes e carrega mais sob demanda — evita travar no celular
+  const [mostrar, setMostrar] = useState(20);
   const [, navigate] = useLocation();
   const utils = trpc.useUtils();
   const { data } = trpc.novidades.historico.useQuery(undefined, { enabled: habilitado && aberto });
@@ -162,56 +164,77 @@ export function PainelNovidades({ habilitado }: { habilitado: boolean }) {
     window.addEventListener("romatec:novidades", abrir);
     return () => window.removeEventListener("romatec:novidades", abrir);
   }, []);
-  const lista = (data ?? []) as ReleaseTela[];
+  // Mais nova primeiro pelo número da versão (várias versões no mesmo dia não trocam de ordem)
+  const lista = ((data ?? []) as ReleaseTela[]).slice().sort((x, y) => {
+    const a = x.versao.split(".").map(Number), c = y.versao.split(".").map(Number);
+    for (let k = 0; k < 3; k++) if ((a[k] ?? 0) !== (c[k] ?? 0)) return (c[k] ?? 0) - (a[k] ?? 0);
+    return 0;
+  });
   const naoLidas = lista.filter(r => !r.lida).length;
   const BotaoAba = ({ id, rotulo, n }: { id: Aba; rotulo: string; n: number }) => (
-    <button type="button" onClick={() => setAba(id)}
-      className={`flex-1 rounded-md px-3 py-1.5 text-sm ${aba === id ? "bg-primary/15 font-semibold text-foreground" : "text-muted-foreground hover:bg-secondary/50"}`}>
+    <button type="button" role="tab" aria-selected={aba === id} onClick={() => setAba(id)}
+      className={`flex min-h-11 flex-1 items-center justify-center rounded-lg px-3 text-sm ${aba === id ? "bg-primary/15 font-semibold text-foreground" : "text-muted-foreground hover:bg-secondary/50"}`}>
       {rotulo}{n > 0 && <span className="ml-1.5 rounded-full bg-danger-500 px-1.5 text-[10px] font-bold text-white">{n}</span>}
     </button>
   );
 
+  // Cabeçalho fixo (título, fechar e abas) e só a lista rola: no celular nada fica escondido atrás do relógio
+  // nem some ao rolar; o botão de fechar é grande (44 px) e fica sempre à mão
   return (
     <Sheet open={aberto} onOpenChange={setAberto}>
-      <SheetContent side="right" className="w-full max-w-md overflow-y-auto sm:max-w-md">
-        <SheetHeader>
-          <SheetTitle className="flex items-center gap-2"><Bell className="h-4 w-4 text-[var(--rt-gold)]" /> Notificações</SheetTitle>
-        </SheetHeader>
-        <div className="mx-4 flex gap-1 rounded-lg border border-border p-1">
-          <BotaoAba id="avisos" rotulo="Avisos" n={avisosNaoLidos} />
-          <BotaoAba id="versoes" rotulo="Novidades da versão" n={naoLidas} />
-        </div>
-        {aba === "avisos" && (
-          <div className="px-4 pb-6">
-            <ListaNotificacoes habilitado={habilitado && aberto} onAbrir={url => { setAberto(false); if (url && !url.includes("notificacoes=1")) navigate(url); }} />
+      <SheetContent side="right" semFechar
+        className="z-[70] w-full max-w-md gap-0 overflow-hidden p-0 sm:max-w-md"
+        style={{ paddingTop: "env(safe-area-inset-top)", paddingBottom: "env(safe-area-inset-bottom)" }}>
+        <div className="shrink-0 border-b border-border bg-background px-4 pb-3 pt-3">
+          <div className="flex items-center gap-2">
+            <SheetTitle className="flex flex-1 items-center gap-2 text-lg"><Bell className="h-5 w-5 text-[var(--rt-gold)]" /> Notificações</SheetTitle>
+            <SheetDescription className="sr-only">Avisos do sistema e novidades das versões</SheetDescription>
+            <button type="button" onClick={() => setAberto(false)} aria-label="Fechar notificações"
+              className="flex h-11 items-center gap-1.5 rounded-xl border border-border px-3 text-sm font-semibold text-foreground hover:bg-secondary active:scale-95">
+              <X className="h-5 w-5" /> Fechar
+            </button>
           </div>
-        )}
-        {aba === "versoes" && <div className="space-y-2 px-4 pb-6">
-          {naoLidas > 0 && <button type="button" className="text-xs text-primary hover:underline" onClick={() => todas.mutate()}>Marcar todas como lidas ({naoLidas})</button>}
-          {lista.length === 0 && <p className="text-sm text-muted-foreground">Nenhuma novidade ainda.</p>}
-          {lista.map(r => {
-            const on = expandida === r.id;
-            return (
-              <div key={r.id} className={`rounded-lg border p-3 ${r.lida ? "border-border" : "border-[var(--rt-gold)]/60 bg-[var(--rt-gold)]/5"}`}>
-                <button type="button" className="flex w-full items-start gap-2 text-left"
-                  onClick={() => { setExpandida(on ? null : r.id); if (!r.lida) marcar.mutate({ ids: [r.id] }); }}>
-                  {on ? <ChevronDown className="mt-0.5 h-4 w-4 shrink-0" /> : <ChevronRight className="mt-0.5 h-4 w-4 shrink-0" />}
-                  <span className="min-w-0 flex-1">
-                    <span className="flex items-center gap-2 text-sm font-semibold">
-                      v{r.versao}
-                      {!r.lida && <span className="rounded bg-danger-500 px-1.5 text-[10px] font-bold text-white">NOVA</span>}
-                      <span className="ml-auto text-xs font-normal text-muted-foreground">{dataBr(r.publicadoEm)}</span>
+          <div role="tablist" className="mt-3 flex gap-1 rounded-xl border border-border p-1">
+            <BotaoAba id="avisos" rotulo="Avisos" n={avisosNaoLidos} />
+            <BotaoAba id="versoes" rotulo="Novidades" n={naoLidas} />
+          </div>
+        </div>
+        <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-4 pb-8 pt-3" style={{ WebkitOverflowScrolling: "touch" }}>
+          {aba === "avisos" && (
+            <ListaNotificacoes habilitado={habilitado && aberto} onAbrir={url => { setAberto(false); if (url && !url.includes("notificacoes=1")) navigate(url); }} />
+          )}
+          {aba === "versoes" && <div className="space-y-3">
+            {naoLidas > 0 && <button type="button" className="min-h-10 text-sm text-primary hover:underline" onClick={() => todas.mutate()}>Marcar todas como lidas ({naoLidas})</button>}
+            {lista.length === 0 && <p className="text-sm text-muted-foreground">Nenhuma novidade ainda.</p>}
+            {lista.slice(0, mostrar).map(r => {
+              const on = expandida === r.id;
+              return (
+                <div key={r.id} className={`rounded-xl border ${r.lida ? "border-border" : "border-[var(--rt-gold)]/60 bg-[var(--rt-gold)]/5"}`}>
+                  <button type="button" className="flex w-full items-start gap-2 p-3.5 text-left"
+                    onClick={() => { setExpandida(on ? null : r.id); if (!r.lida) marcar.mutate({ ids: [r.id] }); }}>
+                    {on ? <ChevronDown className="mt-0.5 h-5 w-5 shrink-0" /> : <ChevronRight className="mt-0.5 h-5 w-5 shrink-0" />}
+                    <span className="min-w-0 flex-1">
+                      <span className="flex items-center gap-2 text-base font-semibold">
+                        v{r.versao}
+                        {!r.lida && <span className="rounded bg-danger-500 px-1.5 text-[10px] font-bold text-white">NOVA</span>}
+                        <span className="ml-auto text-xs font-normal text-muted-foreground">{dataBr(r.publicadoEm)}</span>
+                      </span>
+                      <span className="mt-0.5 block text-sm text-muted-foreground">{r.titulo}</span>
                     </span>
-                    <span className="block text-sm text-muted-foreground">{r.titulo}</span>
-                  </span>
-                </button>
-                {on && <div className="mt-3 border-t border-border pt-3"><ItensDaRelease itens={r.itens} /></div>}
-              </div>
-            );
-          })}
-        </div>}
+                  </button>
+                  {on && <div className="border-t border-border px-3.5 pb-3.5 pt-3"><ItensDaRelease itens={r.itens} /></div>}
+                </div>
+              );
+            })}
+            {lista.length > mostrar && (
+              <button type="button" onClick={() => setMostrar(n => n + 20)}
+                className="min-h-11 w-full rounded-xl border border-border text-sm text-muted-foreground hover:bg-secondary">
+                Ver versões anteriores ({lista.length - mostrar})
+              </button>
+            )}
+          </div>}
+        </div>
       </SheetContent>
     </Sheet>
   );
 }
-
