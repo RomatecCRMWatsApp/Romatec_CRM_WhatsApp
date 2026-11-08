@@ -3,6 +3,18 @@
 Cada versão nova vai no TOPO. Depois rode `npm run release` (valida e atualiza o package.json);
 ao subir, o servidor grava a versão no banco e todos recebem o aviso "Novidades da versão".
 
+## 1.137.1 — 2026-11-08
+tipo: patch
+obrigatoria: nao
+titulo: Concessões: comissão da gestora a receber no Financeiro e chácara já marcada no mapa
+publico: admin
+
+### Melhorias
+- Financeiro › Comissões a pagar: novo quadro "A receber da proprietária — concessões" com a comissão de gestão de cada contrato de concessão, desde a criação do contrato, em nome do corretor administrador
+- Sem boleto e sem Asaas: o recebimento é marcado à mão (data e forma), e o administrador pode desfazer um registro feito por engano
+- O contrato de concessão fica sempre com o corretor administrador (responsável técnico da gestora)
+- A chácara pode ser marcada antes no mapa como "Concedida pela proprietária": ela aparece em Novo contrato e já seleciona a forma "Concessão da proprietária"
+
 ## 1.137.0 — 2026-11-08
 tipo: minor
 obrigatoria: nao

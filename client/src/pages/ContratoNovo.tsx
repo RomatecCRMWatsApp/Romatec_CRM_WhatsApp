@@ -151,10 +151,10 @@ export default function ContratoNovo() {
                   {opcoesEmp.map(e => <option key={e.slug} value={e.slug}>{e.nome}</option>)}
                 </select>
               </Campo>
-              <Campo rotulo={`Chácara (${op.lotes.length} disponíveis)`}>
-                <select className={sel} value={lote} onChange={e => setLote(e.target.value)}>
+              <Campo rotulo={`Chácara (${op.lotes.filter(l => !l.concedida).length} disponíveis)`}>
+                <select className={sel} value={lote} onChange={e => { setLote(e.target.value); if (op.lotes.find(x => x.codigo === e.target.value)?.concedida) setConcessao(true); }}>
                   <option value="">Escolha…</option>
-                  {op.lotes.map(l => <option key={l.codigo} value={l.codigo}>{l.codigo} · {l.areaM2.toLocaleString("pt-BR")} m²{l.precoTabela ? ` · ${brl(l.precoTabela)}` : ""}</option>)}
+                  {op.lotes.map(l => <option key={l.codigo} value={l.codigo}>{l.codigo} · {l.areaM2.toLocaleString("pt-BR")} m²{l.precoTabela ? ` · ${brl(l.precoTabela)}` : ""}{l.concedida ? " · concedida (só concessão)" : ""}</option>)}
                 </select>
               </Campo>
               <Campo rotulo="Lead (opcional)">

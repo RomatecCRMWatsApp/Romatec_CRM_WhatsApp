@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { brl } from "@shared/simulador";
 import { ROTULO_SITUACAO_REPASSE, type SituacaoRepasse } from "@shared/repasseComissao";
+import ReceitasConcessao from "./ReceitasConcessao";
 
 const COR = { pago: "#2F9E5B", aPagar: "#C9A84C", previsto: "#7C8A99", atraso: "#D9534F" };
 const data = (iso: string | null) => (iso ? iso.slice(0, 10).split("-").reverse().join("/") : "—");
@@ -88,6 +89,7 @@ export default function ComissoesAPagar() {
 
   return (
     <div className="space-y-4">
+      {escritorio && <ReceitasConcessao />}
       {escritorio ? (
         <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
           <Cartao rotulo="A pagar agora" valor={brl(r.aPagar + r.atrasado)} destaque={COR.aPagar} sub="Cliente já pagou a parcela" />

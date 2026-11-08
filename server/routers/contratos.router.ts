@@ -97,7 +97,9 @@ export const contratosRouter = router({
     return {
       empreendimento: { id: emp.id, nome: emp.nome, slug: emp.slug },
       condicoes: { prazos: cond.prazos, entradaMaxParcelas: cond.entradaMaxParcelas, jurosAa: cond.jurosAaEfetivo, entradaPct: cond.entradaPct },
-      lotes: ls.filter(l => (l.situacao ?? "disponivel") === "disponivel").map(l => ({ codigo: l.codigo, quadra: l.quadra, areaM2: Number(l.areaM2), precoTabela: l.precoTabela != null ? Number(l.precoTabela) : null }))
+      // Disponíveis e, para a concessão, as marcadas no mapa como "Concedida pela proprietária" ainda sem contrato
+      lotes: ls.filter(l => (l.situacao ?? "disponivel") === "disponivel" || (l.situacao === "concedido" && !l.contratoReservaId))
+        .map(l => ({ codigo: l.codigo, quadra: l.quadra, areaM2: Number(l.areaM2), precoTabela: l.precoTabela != null ? Number(l.precoTabela) : null, concedida: l.situacao === "concedido" }))
         .sort((a, b) => a.codigo.localeCompare(b.codigo, "pt-BR", { numeric: true })),
       leads: leadsVisiveis(ctx.permissoes, ctx.user.id, leads).map(l => ({ id: l.id, nome: l.nome ?? l.phone, telefone: l.phone, loteCodigo: l.loteCodigo })),
       corretores: corretores.filter(u => u.ativo !== false && u.ativo !== 0 && (u.role === "admin" || ["corretor", "secretario", "equipe"].includes(String(u.perfil))))

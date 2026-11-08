@@ -181,13 +181,17 @@ export async function criarContrato(n: NovoContrato, autorId: number): Promise<{
   const [lote] = await d.select().from(lotes).where(and(eq(lotes.empreendimentoId, emp.id), eq(lotes.codigo, n.loteCodigo))).limit(1);
   if (!lote) throw new ContratoErro('LOTE', `Chácara ${n.loteCodigo} não encontrada`, 404);
   if (!lote.comercializavel || lote.situacao === 'bloqueado') throw new ContratoErro('LOTE', `Chácara ${lote.codigo} não é comercializável`, 409);
-  if ((lote.situacao ?? 'disponivel') !== 'disponivel') throw new ContratoErro('LOTE_INDISPONIVEL', `Chácara ${lote.codigo} está ${lote.situacao}`, 409);
+  // Concessão: a chácara pode já estar marcada no mapa como "Concedida pela proprietária" (sem contrato ainda)
+  const livreParaEste = (lote.situacao ?? 'disponivel') === 'disponivel' || (!!n.plano.concessao && lote.situacao === 'concedido' && !lote.contratoReservaId);
+  if (!livreParaEste) throw new ContratoErro('LOTE_INDISPONIVEL', `Chácara ${lote.codigo} está ${lote.situacao}`, 409);
   const j = await juridicoDe(emp.id);
   const cond = await condicoesDe(emp.id);
   const resp = await responsavelTecnicoId(j.defaults);
   const k = n.plano.concessao ?? null;
+  // Concessão: a receita (comissão de gestão) fica com o corretor administrador, o responsável técnico da gestora
+  const corretorId = k && resp ? resp : n.corretorUserId;
   // Concessão: sem plano de pagamento do beneficiário (à vista só para montar o documento; não vira cobrança)
-  const plano = planoEscolhido(k ? { ...n.plano, modalidade: 'avista', entradaParcelas: 1, condicao: undefined } : n.plano, Number(lote.areaM2), lote.precoTabela != null ? Number(lote.precoTabela) : null, cond, k ? false : n.corretorUserId !== resp);
+  const plano = planoEscolhido(k ? { ...n.plano, modalidade: 'avista', entradaParcelas: 1, condicao: undefined } : n.plano, Number(lote.areaM2), lote.precoTabela != null ? Number(lote.precoTabela) : null, cond, k ? false : corretorId !== resp);
   if (k) {
     // Valor de referência = valor à vista do imóvel (base da transferência no cartório e do imposto de transmissão)
     const valor = Math.round(((k.comissaoValor ?? plano.preco_avista * plano.comissao_percentual) + Number.EPSILON) * 100) / 100;
@@ -200,7 +204,7 @@ export async function criarContrato(n: NovoContrato, autorId: number): Promise<{
   const codigo = codigoVerificacaoContrato();
   const agora = new Date();
   await d.insert(contratos).values({
-    numero, empreendimentoId: emp.id, loteId: lote.id, loteCodigo: lote.codigo, leadId: n.leadId ?? null, corretorUserId: n.corretorUserId,
+    numero, empreendimentoId: emp.id, loteId: lote.id, loteCodigo: lote.codigo, leadId: n.leadId ?? null, corretorUserId: corretorId,
     simulacaoJson: plano as any, dadosJson: { condicionantes: { ctr_condicoes_especificas: n.condicoes?.especificas?.trim() || 'Não há.' } } as any,
     status: 'rascunho', modoAssinatura: n.condicoes?.modoAssinatura ?? 'eletronica', codigoVerificacao: codigo, usoLiberado: sql`FALSE` as any,
     criadoPor: autorId, criadoEm: agora, atualizadoEm: agora,
@@ -210,15 +214,15 @@ export async function criarContrato(n: NovoContrato, autorId: number): Promise<{
   // Reserva exclusiva: só pega o lote se ninguém pegou entre a leitura e agora
   const r = await d.update(lotes).set({
     situacao: 'reservado', status: statusPublicoDe('reservado'), contratoReservaId: c.id, reservadoAte: new Date(Date.now() + 72 * 3600_000),
-    leadId: n.leadId ?? null, corretorId: n.corretorUserId, clienteNome: n.comprador.nome.trim(), valorVenda: String(plano.total_pagar),
+    leadId: n.leadId ?? null, corretorId: corretorId, clienteNome: n.comprador.nome.trim(), valorVenda: String(plano.total_pagar),
     valorEntrada: String(plano.entrada_valor || plano.total_pagar), numParcelas: plano.saldo_qtd || 1, dataSituacao: agora,
-  } as any).where(and(eq(lotes.id, lote.id), or(eq(lotes.situacao, 'disponivel'))));
+  } as any).where(and(eq(lotes.id, lote.id), or(eq(lotes.situacao, 'disponivel'), ...(k ? [eq(lotes.situacao, 'concedido')] : []))));
   if (afetadas(r) !== 1) {
     await d.update(contratos).set({ status: 'cancelado', atualizadoEm: agora }).where(eq(contratos.id, c.id));
     throw new ContratoErro('LOTE_INDISPONIVEL', `Chácara ${lote.codigo} acabou de ser reservada por outra pessoa`, 409);
   }
   await d.insert(loteHistorico).values({ loteId: lote.id, de: lote.situacao ?? 'disponivel', para: 'reservado', leadId: n.leadId ?? null,
-    corretorId: n.corretorUserId, usuarioId: autorId, detalhe: `Contrato ${numero}`, createdAt: agora } as any);
+    corretorId: corretorId, usuarioId: autorId, detalhe: `Contrato ${numero}`, createdAt: agora } as any);
 
   // Contrato emitido para o lead: finaliza o atendimento do encaminhamento (relatório de distribuição)
   if (n.leadId) await import('../leads/distribuicao').then(m => m.finalizarPorEvento(Number(n.leadId), 'vendido', `Contrato ${numero} · chácara ${lote.codigo}`, autorId)).catch(() => 0);

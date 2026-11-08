@@ -34,6 +34,18 @@ export const comissoesRouter = router({
     return comErroRepasse(() => R.registrarRepasse(ctx.permissoes, ctx.user.id, input));
   }),
 
+  /** Comissão de gestão das concessões da proprietária: receita a receber da gestora (sem boleto) */
+  concessoes: protectedProcedure.query(async ({ ctx }) => {
+    const R = await import("../financeiro/comissoesConcessao");
+    return comErroRepasse(() => R.receitasConcessao(ctx.permissoes));
+  }),
+  registrarRecebimentoConcessao: protectedProcedure.input(z.object({
+    contratoId: z.number().int(), pagoEm: z.string().regex(/^\d{4}-\d{2}-\d{2}$/), forma: z.string().max(30).optional(), observacao: z.string().max(300).optional(),
+  })).mutation(async ({ input, ctx }) => {
+    const R = await import("../financeiro/comissoesConcessao");
+    return comErroRepasse(() => R.registrarRecebimentoConcessao(ctx.permissoes, ctx.user.id, input));
+  }),
+
   /** Desfaz o registro (só o administrador) */
   desfazerPagamento: protectedProcedure.input(z.object({ contratoId: z.number().int(), chave: z.string().max(20) })).mutation(async ({ input, ctx }) => {
     const R = await import("../financeiro/comissoesRepasse");
