@@ -91,6 +91,8 @@ export function podeAbrir(perfil: Perfil | null, caminho: string): boolean {
   if (caminho === '/imoveis/whatsapp' || caminho.startsWith('/imoveis/whatsapp/')) return perfil === 'secretario' || perfil === 'corretor';
   // Distribuição manual de leads e relatório dos encaminhamentos: administrador e secretária
   if (caminho === '/leads/distribuicao') return perfil === 'secretario';
+  // Painel financeiro: administrador e secretária (o servidor também confere)
+  if (caminho === '/financeiro/painel') return perfil === 'secretario';
   // Controle de acessos dos corretores (ativo, pago, usando o sistema): administrador e secretária
   if (caminho === '/controle-acessos') return perfil === 'secretario';
   if (caminho === '/saas' || caminho === '/integracoes') return false;

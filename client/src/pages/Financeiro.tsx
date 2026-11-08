@@ -2,7 +2,9 @@ import { trpc } from "@/lib/trpc";
 import PageHeader from "@/components/PageHeader";
 import { ROTULO_SITUACAO, type SituacaoLote } from "@shared/lotes";
 import { brl } from "@shared/simulador";
-import { Wallet } from "lucide-react";
+import { LayoutDashboard, Wallet } from "lucide-react";
+import { useLocation } from "wouter";
+import { Button } from "@/components/ui/button";
 import TabelasFinanciamento from "@/components/financeiro/TabelasFinanciamento";
 import TesteAsaas from "@/components/financeiro/TesteAsaas";
 import LancarPagamento from "@/components/financeiro/LancarPagamento";
@@ -34,6 +36,7 @@ export default function Financeiro() {
   const vendas = d?.vendas ?? [];
   const admin = vendas.some(x => x.comissao);
   const { user } = useAuth();
+  const [, navigate] = useLocation();
   const operador = podeOperarCobranca(perfilDe(user as any));
   const corretor = perfilDe(user as any) === "corretor";
   const abas = operador ? ABAS : corretor ? ABAS_CORRETOR : null;
@@ -41,7 +44,8 @@ export default function Financeiro() {
   const [aba, setAba] = useState<Aba>(() => (new URLSearchParams(window.location.search).get("aba") === "comissoes" ? "comissoes" : "vendas"));
   return (
     <div>
-      <PageHeader icone={Wallet} titulo="Financeiro" subtitulo="Vendas com sinal, parceladas, à vista e quitadas dos empreendimentos que você acessa" />
+      <PageHeader icone={Wallet} titulo="Financeiro" subtitulo="Vendas com sinal, parceladas, à vista e quitadas dos empreendimentos que você acessa"
+        acoes={operador ? <Button size="sm" variant="outline" onClick={() => navigate("/financeiro/painel")}><LayoutDashboard className="mr-1 h-4 w-4" /> Painel financeiro</Button> : undefined} />
       {abas && (
         <div className="px-4 md:px-6 max-w-[1400px] mx-auto mb-3 flex flex-wrap gap-1 border-b border-border">
           {abas.map(([k, r]) => (

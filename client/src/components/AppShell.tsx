@@ -78,7 +78,9 @@ const MENU: Grupo[] = [
       { rotulo: "Prospecção B2B", rota: "/prospeccao", icone: Radar },
       { rotulo: "Tour 360°", rota: "/tour-360", icone: Rotate3d },
       { rotulo: "Talonários", rota: "/talonarios", icone: BookCopy },
-      { rotulo: "Financeiro", rota: "/financeiro", icone: Wallet, modulo: "financeiro", cor: COR.financeiro },
+      { rotulo: "Financeiro", rota: "/financeiro", icone: Wallet, modulo: "financeiro", cor: COR.financeiro, exato: true },
+      // Administrador e secretária (shared/equipe.ts → podeAbrir)
+      { rotulo: "Painel financeiro", rota: "/financeiro/painel", icone: LayoutDashboard, modulo: "financeiro", cor: COR.financeiro },
       { rotulo: "Imóveis", rota: "/properties", icone: Building2, modulo: "imoveis" },
       // Administrador, secretária e corretor (shared/equipe.ts → podeAbrir); empreendedor não vê
       { rotulo: "Cadastro pelo WhatsApp", rota: "/imoveis/whatsapp", icone: Smartphone, modulo: "imoveis" },

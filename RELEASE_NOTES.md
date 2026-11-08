@@ -3,6 +3,22 @@
 Cada versão nova vai no TOPO. Depois rode `npm run release` (valida e atualiza o package.json);
 ao subir, o servidor grava a versão no banco e todos recebem o aviso "Novidades da versão".
 
+## 1.138.0 — 2026-11-08
+tipo: minor
+obrigatoria: nao
+titulo: Painel financeiro: caixa do período, posição em aberto, pendências e movimentações
+publico: equipe
+
+### Novo
+- Financeiro › Painel financeiro (menu e botão no Financeiro; administrador e secretária)
+- Recebido, pago e resultado de caixa do período, com a comparação com o período anterior equivalente
+- Posição atual: a receber, a pagar e recebíveis vencidos (com os que vencem hoje à parte)
+- Gráfico de entradas e saídas por dia, semana ou mês, e a distribuição dos recebimentos por tipo de parcela
+- Pendências: parcelas em atraso (mais antigas primeiro) e despesas que vencem nos próximos 7 dias, com atalho para o contrato
+- Listas de movimentações, a receber e a pagar; filtros de período (mês atual, anterior, 30 dias, ano, personalizado) e de empreendimento
+- Exportar: planilha com todas as movimentações do período
+- Mesma base do Fluxo de caixa (parcelas recebidas e despesas pagas, pela data do pagamento): nenhuma fonte nova de dados
+
 ## 1.137.2 — 2026-11-08
 tipo: patch
 obrigatoria: nao

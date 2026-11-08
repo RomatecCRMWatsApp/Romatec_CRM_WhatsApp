@@ -55,6 +55,7 @@ const EmpreendimentoDocumentos = lazy(() => import("./pages/EmpreendimentoDocume
 const EmpreendimentoFolder = lazy(() => import("./pages/EmpreendimentoFolder"));
 const EmpreendimentoProposta = lazy(() => import("./pages/EmpreendimentoProposta"));
 const Financeiro = lazy(() => import("./pages/Financeiro"));
+const FinanceiroPainel = lazy(() => import("./pages/FinanceiroPainel"));
 const Contratos = lazy(() => import("./pages/Contratos"));
 const Carteirinhas = lazy(() => import("./pages/Carteirinhas"));
 const DocumentosPublicos = lazy(() => import("./pages/DocumentosPublicos"));
@@ -270,6 +271,9 @@ function Router() {
       </Route>
       <Route path={"/reservas"}>
         {() => <SetupGuard component={FilaReservas} />}
+      </Route>
+      <Route path={"/financeiro/painel"}>
+        {() => <SetupGuard component={FinanceiroPainel} />}
       </Route>
       <Route path={"/financeiro"}>
         {() => <SetupGuard component={Financeiro} />}
