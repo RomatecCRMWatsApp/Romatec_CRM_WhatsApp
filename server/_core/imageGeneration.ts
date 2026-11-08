@@ -51,6 +51,7 @@ export async function generateImage(
   ).toString();
 
   const response = await fetch(fullUrl, {
+    signal: AbortSignal.timeout(120_000),
     method: "POST",
     headers: {
       accept: "application/json",

@@ -81,6 +81,7 @@ export async function uploadToCloudinary(
   console.log(`[Cloudinary] Enviando: ${fileName} (${resourceType}, ${(buffer.length / 1024).toFixed(1)}KB)`);
 
   const response = await fetch(uploadUrl, {
+    signal: AbortSignal.timeout(90_000),
     method: 'POST',
     headers: {
       'Content-Type': `multipart/form-data; boundary=${boundary}`,

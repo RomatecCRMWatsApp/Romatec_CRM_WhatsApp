@@ -72,6 +72,7 @@ export async function makeRequest<T = unknown>(
   });
 
   const response = await fetch(url.toString(), {
+    signal: AbortSignal.timeout(15_000),
     method: options.method || "GET",
     headers: {
       "Content-Type": "application/json",

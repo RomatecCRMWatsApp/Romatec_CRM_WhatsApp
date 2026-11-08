@@ -315,6 +315,7 @@ export async function invokeLLM(params: InvokeParams): Promise<InvokeResult> {
   }
 
   const response = await fetch(resolveApiUrl(), {
+    signal: AbortSignal.timeout(120_000),
     method: "POST",
     headers: {
       "content-type": "application/json",

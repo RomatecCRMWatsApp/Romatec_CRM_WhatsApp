@@ -36,6 +36,10 @@ async function startServer() {
   const protecoes = await import('./protecoes');
   app.disable('x-powered-by');
   app.use(protecoes.cabecalhosSeguranca);
+  // Compressão das respostas (Brotli quando o navegador aceita, senão gzip): HTML, JS, CSS, SVG e JSON da API.
+  // Imagens, vídeos e PDFs já vêm comprimidos e passam direto (filtro padrão por tipo de conteúdo).
+  const compression = (await import('compression')).default;
+  app.use(compression({ threshold: 1024 }));
   app.use(protecoes.criarLimiteGlobal());
   // JSON: 50 MB só para o CRM logado (fotos/documentos em base64); 1 MB nas rotas públicas e webhooks.
   // Webhooks da Meta (X-Hub-Signature-256) e da Spedy (Standard Webhooks) assinam o corpo cru: guarda só nessas rotas

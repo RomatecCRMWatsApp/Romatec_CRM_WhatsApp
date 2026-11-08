@@ -1,8 +1,8 @@
-import rDourado from "./assets/r-dourado.png";
-import wordmarkDourado from "./assets/wordmark-dourado.png";
-import rosaDark from "./assets/rosa-dark.png";
+import rDourado from "./assets/r-dourado.webp";
+import wordmarkDourado from "./assets/wordmark-dourado.webp";
+import rosaDark from "./assets/rosa-dark.webp";
 
-/** Recortes oficiais do LOGO_ROMATEC_ATUAL — nunca substituir por texto. */
+/** Recortes oficiais do LOGO_ROMATEC_ATUAL — nunca substituir por texto. Na tela vão em WebP sem perda (mesma arte, no tamanho de exibição); os PNG originais ficam para os PDFs do servidor. */
 export const brandAssets = {
   /** R oficial com a aba, dourado (518x457) */
   r: rDourado,

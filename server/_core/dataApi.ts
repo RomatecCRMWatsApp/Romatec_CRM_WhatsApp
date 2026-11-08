@@ -29,6 +29,7 @@ export async function callDataApi(
   const fullUrl = new URL("webdevtoken.v1.WebDevService/CallApi", baseUrl).toString();
 
   const response = await fetch(fullUrl, {
+    signal: AbortSignal.timeout(30_000),
     method: "POST",
     headers: {
       accept: "application/json",

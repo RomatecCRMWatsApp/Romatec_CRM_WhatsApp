@@ -3,6 +3,17 @@
 Cada versão nova vai no TOPO. Depois rode `npm run release` (valida e atualiza o package.json);
 ao subir, o servidor grava a versão no banco e todos recebem o aviso "Novidades da versão".
 
+## 1.133.2 — 2026-11-08
+tipo: patch
+obrigatoria: nao
+titulo: Sistema mais rápido: respostas comprimidas e imagens da marca mais leves
+publico: todos
+
+### Melhorias
+- Páginas, scripts e dados do sistema agora chegam comprimidos (Brotli ou gzip): até 3 vezes menos dados, mais rápido no celular e em rede fraca
+- Logotipos da Romatec em WebP, no tamanho de exibição: de 667 KB para 215 KB, a mesma arte
+- Chamadas a serviços externos (IA, transcrição, mapas, envio de arquivos) com tempo máximo de espera, para nenhuma tela ficar presa se o serviço não responder
+
 ## 1.133.1 — 2026-11-07
 tipo: patch
 obrigatoria: nao

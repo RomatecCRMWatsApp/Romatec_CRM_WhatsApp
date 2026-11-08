@@ -86,6 +86,7 @@ export async function notifyOwner(
 
   try {
     const response = await fetch(endpoint, {
+      signal: AbortSignal.timeout(10_000),
       method: "POST",
       headers: {
         accept: "application/json",

@@ -35,6 +35,7 @@ async function buildDownloadUrl(
   );
   downloadApiUrl.searchParams.set("path", normalizeKey(relKey));
   const response = await fetch(downloadApiUrl, {
+    signal: AbortSignal.timeout(30_000),
     method: "GET",
     headers: buildAuthHeaders(apiKey),
   });
@@ -77,6 +78,7 @@ export async function storagePut(
   const uploadUrl = buildUploadUrl(baseUrl, key);
   const formData = toFormData(data, contentType, key.split("/").pop() ?? key);
   const response = await fetch(uploadUrl, {
+    signal: AbortSignal.timeout(60_000),
     method: "POST",
     headers: buildAuthHeaders(apiKey),
     body: formData,

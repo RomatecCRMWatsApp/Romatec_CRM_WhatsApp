@@ -25,7 +25,7 @@ export async function transcreverAudio(audio: Buffer, mime: string): Promise<str
   form.append('language', 'pt');
   form.append('response_format', 'json');
   form.append('prompt', 'Reunião de corretor de imóveis com cliente sobre chácaras, lotes, entrada, parcelas, visita e contrato. Português do Brasil.');
-  const r = await fetch(`${base}v1/audio/transcriptions`, { method: 'POST', headers: { authorization: `Bearer ${chave}` }, body: form });
+  const r = await fetch(`${base}v1/audio/transcriptions`, { signal: AbortSignal.timeout(300_000), method: 'POST', headers: { authorization: `Bearer ${chave}` }, body: form });
   if (!r.ok) {
     const t = await r.text().catch(() => '');
     if (r.status === 429 && /insufficient_quota|no credits|credit/i.test(t)) {
