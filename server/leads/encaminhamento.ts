@@ -8,6 +8,7 @@ import { empreendimentos, leadQualifications, users } from '../../drizzle/schema
 import { appUrl } from './config';
 import { linkRecebido, linkWhatsAppAtendido } from './sla';
 import { formatarTelefone } from './notificacao';
+import { PRAZO_CONFIRMACAO_HORAS } from '../../shared/distribuicaoLeads';
 
 export function textoEncaminhamento(o: { leadId: number; cliente: string; telefone: string; porNome: string; empreendimento?: string | null; encaminhamentoId?: number | null; paraId?: number | null }): string {
   return [
@@ -17,6 +18,7 @@ export function textoEncaminhamento(o: { leadId: number; cliente: string; telefo
     `💬 Atender no WhatsApp: ${linkWhatsAppAtendido(o.leadId, o.paraId ?? null)}`,
     `🔗 Ficha no CRM: ${appUrl()}/leads/lead/${o.leadId}`,
     o.encaminhamentoId ? `✅ Confirmar que recebi (1 toque): ${linkRecebido(o.encaminhamentoId)}` : `✅ Confirme que recebeu: ${appUrl()}/leads/recebidos`,
+    `⏳ Confirme em até ${PRAZO_CONFIRMACAO_HORAS} h: sem a confirmação, o lead volta para o escritório e vai para outro corretor.`,
   ].filter(Boolean).join('\n');
 }
 

@@ -32,6 +32,7 @@ export default function LeadsRecebidos() {
                 <span className="whitespace-nowrap rounded bg-secondary/50 px-1.5 py-0.5 text-[10px] font-bold">{l.desfecho ? ROTULO_DESFECHO[l.desfecho] : ROTULO_SITUACAO[l.situacao]}</span>
               </div>
               <p className="text-xs text-muted-foreground">Encaminhado em {dataHora(l.quando)} por {l.por ?? "—"}{l.recebidoEm ? ` · recebido em ${dataHora(l.recebidoEm)}` : ""}</p>
+              {l.expiraEm && <p className="text-xs font-semibold text-warn-200">⏳ Confirme até {dataHora(l.expiraEm)}: sem a confirmação, o lead volta para o escritório e vai para outro corretor.</p>}
               {l.observacao && <p className="rounded bg-secondary/30 px-2 py-1 text-xs">{l.observacao}</p>}
               {l.desfechoMotivo && <p className="text-xs text-muted-foreground">Motivo: {l.desfechoMotivo}</p>}
               {l.situacao !== "finalizado" && (

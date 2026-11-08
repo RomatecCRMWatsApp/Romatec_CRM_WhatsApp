@@ -263,6 +263,7 @@ function Relatorio() {
                       <td className="p-2 text-xs">{i.continuaCom}</td>
                       <td className="whitespace-nowrap p-2 text-xs">{i.recebidoEm ? <span className="text-ok-300">{dataHora(i.recebidoEm)}</span> : i.desfecho ? "—" : (
                         <span className="flex flex-wrap items-center gap-1.5 text-warn-300">aguardando
+                          {i.expiraEm && <span className="block w-full text-[10px] text-muted-foreground">volta ao escritório às {dataHora(i.expiraEm)}</span>}
                           <button type="button" className="min-h-8 rounded border border-warn-500/60 px-2 py-1 text-[11px] text-warn-200 hover:bg-warn-500/20" disabled={reenviar.isPending}
                             onClick={() => reenviar.mutate({ ids: [i.id] })} title="Reenviar o aviso para o corretor">Reenviar</button>
                           {trocando === i.id ? (

@@ -645,8 +645,8 @@ async function startServer() {
     `<!doctype html><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="robots" content="noindex">` +
     `<title>Romatec CRM</title><body style="font-family:system-ui,sans-serif;background:#1b1e22;color:#e8ece9;display:grid;place-items:center;min-height:90vh;margin:0;padding:16px">` +
     `<div style="max-width:360px;text-align:center"><p style="font-size:48px;margin:0">🔁</p>` +
-    `<h1 style="font-size:20px">Este lead foi passado para outro corretor</h1>` +
-    `<p style="color:#9aa5a0">O link deste aviso não vale mais. Se tiver dúvida, fale com o escritório.</p>` +
+    `<h1 style="font-size:20px">Este lead não está mais com você</h1>` +
+    `<p style="color:#9aa5a0">Ele foi passado para outro corretor ou voltou para o escritório porque o recebimento não foi confirmado no prazo. O link deste aviso não vale mais.</p>` +
     `<p><a style="color:#5fd3b4" href="/leads/recebidos">Ver meus leads</a></p></div></body>`,
   );
   const destinatarioDoLink = (req: express.Request) => { const u = Number(req.query.u); return Number.isInteger(u) && u > 0 ? u : null; };
@@ -686,7 +686,7 @@ async function startServer() {
         const [e]: any[] = d ? await d.select().from(leadEncaminhamentos).where(eq(leadEncaminhamentos.id, id)).limit(1) : [];
         leadId = e ? Number(e.leadId) : null;
         // Encaminhamento já fechado (lead passado para outro corretor): o link não confirma mais
-        if (e && e.desfecho === 'repassado') return paginaLinkAnulado(res);
+        if (e && (e.desfecho === 'repassado' || e.desfecho === 'sem_confirmacao')) return paginaLinkAnulado(res);
         if (e && !e.desfecho && !ehRoboDePrevia(req.get('user-agent'))) {
           if (!e.recebidoEm) await d.update(leadEncaminhamentos).set({ recebidoEm: new Date() } as any).where(eq(leadEncaminhamentos.id, id));
           ok = true;

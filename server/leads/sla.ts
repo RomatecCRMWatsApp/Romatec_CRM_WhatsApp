@@ -76,7 +76,7 @@ export async function linkAtendidoAindaVale(leadId: number, paraId: number | nul
     return !!u && (u.role === 'admin' || u.perfil === 'admin');
   }
   const [rep]: any[] = await d.select({ id: leadEncaminhamentos.id }).from(leadEncaminhamentos)
-    .where(and(eq(leadEncaminhamentos.leadId, leadId), eq(leadEncaminhamentos.desfecho, 'repassado'))).limit(1);
+    .where(and(eq(leadEncaminhamentos.leadId, leadId), or(eq(leadEncaminhamentos.desfecho, 'repassado'), eq(leadEncaminhamentos.desfecho, 'sem_confirmacao')))).limit(1);
   return !rep;
 }
 /** "✅ Confirmar recebimento" do aviso de encaminhamento: 1 toque, sem login (link assinado por encaminhamento) */
@@ -273,7 +273,12 @@ export function iniciarJobSla(intervaloMs = 60_000) {
   if (timer) return;
   import('./rotinas').then(({ registrarRotina, rodarRotina }) => {
     registrarRotina('sla', intervaloMs);
-    timer = setInterval(() => { void rodarRotina('sla', () => processarSla()); }, intervaloMs);
+    let voltas = 0;
+    timer = setInterval(() => {
+      void rodarRotina('sla', () => processarSla());
+      // Prazo de 6 h para confirmar o recebimento (a cada ~5 min)
+      if (voltas++ % 5 === 0) void import('./prazoConfirmacao').then(m => m.expirarEncaminhamentos()).catch(e => console.warn('[Prazo de confirmação]', e?.message));
+    }, intervaloMs);
   }).catch(e => console.warn('[SLA] Job não iniciado:', e?.message));
   console.log('[SLA] Prazo de atendimento ativo (5, 15 e 60 min)');
 }

@@ -6,7 +6,7 @@
 import { and, desc, eq, gte, inArray, isNotNull, isNull, lt, or, sql } from 'drizzle-orm';
 import { getDb } from '../db';
 import { leadEncaminhamentos, leadQualifications, users } from '../../drizzle/schema';
-import { DESFECHOS_CORRETOR, MOTIVO_PERDA_DO_DESFECHO, ROTULO_DESFECHO, ROTULO_SITUACAO, situacaoEncaminhamento, type Desfecho, type DesfechoCorretor } from '../../shared/distribuicaoLeads';
+import { PRAZO_CONFIRMACAO_HORAS, DESFECHOS_DE_TROCA, DESFECHOS_CORRETOR, MOTIVO_PERDA_DO_DESFECHO, ROTULO_DESFECHO, ROTULO_SITUACAO, situacaoEncaminhamento, type Desfecho, type DesfechoCorretor } from '../../shared/distribuicaoLeads';
 
 export class DistribuicaoErro extends Error { constructor(msg: string) { super(msg); this.name = 'DistribuicaoErro'; } }
 export type OrigemEncaminhamento = 'manual' | 'automatico';
@@ -74,8 +74,9 @@ export async function leadsParaDistribuir(filtro: FiltroLeads, busca = '', agora
     const ids = rows.map(l => Number(l.id));
     const enviados = new Set<number>();
     for (let i = 0; i < ids.length; i += 500) {
-      const parte: any[] = await d.select({ leadId: leadEncaminhamentos.leadId, paraId: leadEncaminhamentos.paraId }).from(leadEncaminhamentos).where(inArray(leadEncaminhamentos.leadId, ids.slice(i, i + 500)));
-      for (const e of parte) if (!escritorio.has(Number(e.paraId))) enviados.add(Number(e.leadId));
+      const parte: any[] = await d.select({ leadId: leadEncaminhamentos.leadId, paraId: leadEncaminhamentos.paraId, desfecho: leadEncaminhamentos.desfecho }).from(leadEncaminhamentos).where(inArray(leadEncaminhamentos.leadId, ids.slice(i, i + 500)));
+      // Lead que voltou porque o corretor não confirmou em 6 h conta como não encaminhado de novo
+      for (const e of parte) if (!escritorio.has(Number(e.paraId)) && e.desfecho !== 'sem_confirmacao') enviados.add(Number(e.leadId));
     }
     rows = rows.filter(l => !enviados.has(Number(l.id)) && (!l.responsavelId || escritorio.has(Number(l.responsavelId))));
   }
@@ -182,6 +183,8 @@ export async function relatorioEncaminhamentos(f: FiltroRelatorio) {
       de: nome(r.deId), para: nome(r.paraId) ?? '—', paraId: Number(r.paraId), por: r.origem === 'automatico' ? 'Automático (roleta)' : nome(r.porId),
       continuaCom: l ? (Number(l.responsavelId) === Number(r.paraId) ? 'sim' : 'não') : '—', observacao: r.observacao ?? null,
       recebidoEm: iso(r.recebidoEm), situacao: situacaoEncaminhamento(r), desfecho: (r.desfecho ?? null) as Desfecho | null,
+      // Sem confirmação até aqui, o lead volta para o escritório (shared/distribuicaoLeads.ts → PRAZO_CONFIRMACAO_HORAS)
+      expiraEm: !r.recebidoEm && !r.desfecho && r.criadoEm ? new Date(new Date(r.criadoEm).getTime() + PRAZO_CONFIRMACAO_HORAS * 3600_000).toISOString() : null,
       desfechoMotivo: r.desfechoMotivo ?? null, desfechoEm: iso(r.desfechoEm),
     };
   });
@@ -192,7 +195,7 @@ export async function relatorioEncaminhamentos(f: FiltroRelatorio) {
     if (i.situacao === 'aguardando_confirmacao') c.aguardando++;
     if (i.recebidoEm) c.confirmados++;
     if (i.desfecho === 'vendido') c.vendidos++;
-    else if (i.desfecho && i.desfecho !== 'repassado') c.perdidos++;
+    else if (i.desfecho && !DESFECHOS_DE_TROCA.includes(i.desfecho)) c.perdidos++;
     porCorretor.set(i.para, c);
   }
   return {
@@ -228,7 +231,7 @@ export async function confirmarRecebimento(id: number, usuarioId: number, agora 
   const d = await banco();
   const e = await encaminhamentoDo(d, id);
   if (Number(e.paraId) !== usuarioId) throw new DistribuicaoErro('Este lead foi encaminhado para outra pessoa');
-  if (e.desfecho === 'repassado') throw new DistribuicaoErro('Este lead foi passado para outro corretor');
+  if (e.desfecho && DESFECHOS_DE_TROCA.includes(e.desfecho)) throw new DistribuicaoErro(e.desfecho === 'sem_confirmacao' ? 'O prazo para confirmar acabou: o lead voltou para o escritório' : 'Este lead foi passado para outro corretor');
   if (!e.recebidoEm) await d.update(leadEncaminhamentos).set({ recebidoEm: agora } as any).where(eq(leadEncaminhamentos.id, id));
   return { ok: true as const };
 }
@@ -287,6 +290,7 @@ export async function meusEncaminhamentos(usuarioId: number, agora = Date.now())
       interesse: [l?.empreendimentoSlug, l?.loteCodigo].filter(Boolean).join(' · ') || null, etapa: l?.etapa ?? null,
       quando: iso(r.criadoEm), origem: r.origem as OrigemEncaminhamento, por: r.origem === 'automatico' ? 'Automático (roleta)' : nome(r.porId), observacao: r.observacao ?? null,
       situacao: situacaoEncaminhamento(r), recebidoEm: iso(r.recebidoEm), desfecho: (r.desfecho ?? null) as Desfecho | null, desfechoMotivo: r.desfechoMotivo ?? null,
+      expiraEm: !r.recebidoEm && !r.desfecho && r.criadoEm ? new Date(new Date(r.criadoEm).getTime() + PRAZO_CONFIRMACAO_HORAS * 3600_000).toISOString() : null,
     };
   }).sort((a, b) => ordem[a.situacao] - ordem[b.situacao]);
 }

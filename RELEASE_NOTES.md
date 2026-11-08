@@ -3,6 +3,20 @@
 Cada versão nova vai no TOPO. Depois rode `npm run release` (valida e atualiza o package.json);
 ao subir, o servidor grava a versão no banco e todos recebem o aviso "Novidades da versão".
 
+## 1.136.0 — 2026-11-08
+tipo: minor
+obrigatoria: nao
+titulo: Prazo de 6 horas para o corretor confirmar o lead recebido
+publico: equipe
+
+### Novo
+- Todo lead encaminhado (manual ou pela roleta) dá ao corretor 6 horas para tocar em "Confirmar que recebi"
+- Sem a confirmação no prazo, o sistema devolve o lead para o escritório: ele volta para Distribuição › Não encaminhados, pronto para um novo corretor
+- Os links do aviso daquele corretor são cancelados, e ele recebe no WhatsApp a mensagem "Que pena, esse lead escapou por tempo de recebimento!"
+- O administrador recebe no WhatsApp e no sininho o aviso "Lead voltou para o CRM", com o link da distribuição
+- O aviso de encaminhamento, a tela Leads recebidos e o relatório da distribuição mostram até que horas o corretor tem para confirmar
+- No relatório, o desfecho aparece como "Não confirmou em 6 h (voltou ao escritório)" e não conta como lead perdido do corretor
+
 ## 1.135.1 — 2026-11-08
 tipo: patch
 obrigatoria: nao

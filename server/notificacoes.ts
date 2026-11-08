@@ -200,6 +200,18 @@ export async function notificarChamado(
     { empreendimentoSlug: f.empreendimentoSlug });
 }
 
+/** Lead que voltou ao escritório (corretor não confirmou o recebimento no prazo) → administrador e secretária */
+export async function notificarLeadDevolvido(
+  f: { leadId: number; cliente: string; corretor: string; horas: number },
+  repo: RepoNotificacoes = repoBanco(), enviar?: EnviadorPush | null,
+) {
+  const usuarios = await repo.usuarios();
+  const ids = usuarios.filter(u => u.ativo !== false && u.ativo !== 0 && ['admin', 'secretario'].includes(String(perfilDe(u as any)))).map(u => u.id);
+  return emitir(repo, enviar === undefined ? await enviadorWebPush() : enviar, usuarios, ids,
+    { tipo: "atendimento", titulo: `Lead voltou: ${f.cliente || "Sem nome"}`, mensagem: `${f.corretor || "O corretor"} não confirmou o recebimento em ${f.horas} h. Encaminhe para outro corretor.`, empreendimentoId: null, chave: null } as any,
+    { url: `/leads/distribuicao` });
+}
+
 /** Mensagem nova no Instagram Direct (caixa de entrada) → responsável da conversa ou o escritório */
 export async function notificarMensagemInstagram(
   f: { conversaId: number; nome: string; texto: string; responsavelId: number | null },

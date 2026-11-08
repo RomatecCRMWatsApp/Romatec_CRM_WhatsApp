@@ -54,7 +54,7 @@ export const ROTULO_STATUS_CONTRATO: Record<string, string> = {
 };
 export const ROTULO_VISITA: Record<string, string> = { agendada: 'agendada', confirmada: 'confirmada', realizada: 'realizada', nao_veio: 'não veio', cancelada: 'cancelada' };
 export const ROTULO_DESFECHO: Record<string, string> = {
-  vendido: 'vendeu', desistiu: 'cliente desistiu', sem_contato: 'sem contato', nao_qualificado: 'não qualificado', comprou_outro: 'comprou outro', repassado: 'repassado',
+  vendido: 'vendeu', desistiu: 'cliente desistiu', sem_contato: 'sem contato', nao_qualificado: 'não qualificado', comprou_outro: 'comprou outro', repassado: 'repassado', sem_confirmacao: 'não confirmou o recebimento',
 };
 
 /** Telefones comparáveis: só dígitos, sem o 55 do Brasil */
