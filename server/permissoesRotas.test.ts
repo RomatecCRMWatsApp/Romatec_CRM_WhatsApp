@@ -78,7 +78,7 @@ describe('bloqueio no servidor (não confia no front)', () => {
     const semLead = corretor.contratos.criar({ slug: 'bom-jardims', lote: 'A01', plano: pl, comprador: { nome: 'X Y', cpf: '52998224725' } });
     // Sem banco neste teste: passa da regra do lead e só para no banco (o escopo do empreendimento vem depois)
     await expect(semLead).rejects.toThrow(/Banco indisponível/);
-    // Situação da chácara (bloquear, reservar, vender) é só do escritório
+    // Bloqueio (e quitação) da chácara é só do escritório; reserva, sinal e venda o corretor faz nas chácaras livres ou dele
     await expect(corretor.empreendimentosAdmin.atualizarLote({ loteId: 1, situacao: 'bloqueado' })).rejects.toMatchObject({ code: 'FORBIDDEN' });
     // Fila de reservas do escritório: só administrador e secretária
     await expect(corretor.reservas.lista()).rejects.toMatchObject({ code: 'FORBIDDEN' });

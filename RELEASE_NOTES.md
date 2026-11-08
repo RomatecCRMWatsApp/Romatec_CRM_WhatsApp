@@ -3,6 +3,18 @@
 Cada versão nova vai no TOPO. Depois rode `npm run release` (valida e atualiza o package.json);
 ao subir, o servidor grava a versão no banco e todos recebem o aviso "Novidades da versão".
 
+## 1.134.0 — 2026-11-08
+tipo: minor
+obrigatoria: nao
+titulo: Corretor muda a situação das chácaras: reserva, sinal e venda
+publico: equipe
+
+### Novo
+- O corretor agora marca no mapa a situação da chácara: interesse, reserva, entrada/sinal, vendido parcelado e vendido à vista
+- Vale nas chácaras disponíveis ou que já estão com ele; "Disponível" desfaz a reserva dele
+- Bloqueio e quitação continuam só com o escritório; a chácara de outro corretor ou bloqueada aparece só para consulta
+- O corretor fica automaticamente como responsável e só vincula os leads dele; tudo vai para o histórico da chácara
+
 ## 1.133.5 — 2026-11-08
 tipo: patch
 obrigatoria: nao

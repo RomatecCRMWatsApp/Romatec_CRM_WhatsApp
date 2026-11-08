@@ -5,7 +5,7 @@ import { trpc } from "@/lib/trpc";
 import { useAuth } from "@/_core/hooks/useAuth";
 import { perfilDe } from "@shared/equipe";
 import { Button } from "@/components/ui/button";
-import { COM_CLIENTE, COR_SITUACAO, ROTULO_SITUACAO, SITUACOES_LOTE, type SituacaoLote } from "@shared/lotes";
+import { COM_CLIENTE, COR_SITUACAO, ROTULO_SITUACAO, SITUACOES_CORRETOR, SITUACOES_LOTE, corretorPodeAlterarLote, type SituacaoLote } from "@shared/lotes";
 import { SLUG_BOM_JARDIMS, codigoChacaraValido, linkChacara, linkKml } from "@shared/chacaraLink";
 import { comRef, useCartaoVendas } from "@/lib/cartaoVendas";
 import { exibirTelefoneBR } from "@shared/telefone";
@@ -121,14 +121,16 @@ export default function PainelLote({ slug, lote, onMudou, onFechar }: { slug: st
     setNumParcelas(lote.numParcelas?.toString() ?? ""); setObservacao(lote.observacao ?? ""); setBusca("");
   }, [lote.id, lote.situacao, lote.dataSituacao]);
 
-  // Corretor só consulta: situação, cliente e valores são do escritório (o servidor também recusa)
+  // Corretor: reserva, sinal e venda nas chácaras livres ou dele (bloqueio e quitação são do escritório; o servidor confere)
   const { user } = useAuth();
-  const soLeitura = perfilDe(user as any) === "corretor";
+  const corretor = perfilDe(user as any) === "corretor";
+  const soLeitura = corretor && !corretorPodeAlterarLote(lote, Number((user as any)?.id));
+  const opcoesSituacao = corretor ? SITUACOES_CORRETOR : SITUACOES_LOTE;
   // Empreendedor muda situação, cliente e valores; lead e corretor ficam como estão (o servidor preserva)
   const empreendedor = perfilDe(user as any) === "empreendedor";
-  const { data: corretores } = trpc.crm.responsaveis.useQuery(undefined, { enabled: !soLeitura && !empreendedor });
+  const { data: corretores } = trpc.crm.responsaveis.useQuery(undefined, { enabled: !corretor && !empreendedor });
   const { data: achados } = trpc.empreendimentosAdmin.buscarLeads.useQuery({ q: busca }, { enabled: !soLeitura && !empreendedor && busca.trim().length >= 2 });
-  const { data: historico } = trpc.empreendimentosAdmin.historico.useQuery({ loteId: lote.id }, { enabled: !soLeitura });
+  const { data: historico } = trpc.empreendimentosAdmin.historico.useQuery({ loteId: lote.id }, { enabled: !corretor });
   const utils = trpc.useUtils();
   const salvar = trpc.empreendimentosAdmin.atualizarLote.useMutation({
     onSuccess: () => { toast.success(`Lote ${lote.codigo}: ${ROTULO_SITUACAO[situacao]}`); utils.empreendimentosAdmin.historico.invalidate({ loteId: lote.id }); onMudou(); },
@@ -156,13 +158,13 @@ export default function PainelLote({ slug, lote, onMudou, onFechar }: { slug: st
 
       {soLeitura ? (
         <p className="rounded-lg border border-border bg-secondary/40 p-2.5 text-xs text-muted-foreground">
-          {lote.situacao === "disponivel" ? "Para reservar esta chácara, faça o contrato — ela fica reservada por 72 h." : "Situação definida pelo escritório. Dúvidas sobre esta chácara, fale com o escritório."}
+          {lote.situacao === "bloqueado" || lote.situacao === "quitado" ? "Situação definida pelo escritório. Dúvidas sobre esta chácara, fale com o escritório." : "Esta chácara está com outro corretor. Dúvidas, fale com o escritório."}
         </p>
       ) : <>
       <label className="block space-y-1">
         <span className="text-xs text-muted-foreground">Situação</span>
         <select value={situacao} onChange={e => setSituacao(e.target.value as SituacaoLote)} className={campo}>
-          {SITUACOES_LOTE.map(s => <option key={s} value={s}>{ROTULO_SITUACAO[s]}</option>)}
+          {opcoesSituacao.map(s => <option key={s} value={s}>{ROTULO_SITUACAO[s]}</option>)}
         </select>
       </label>
 
@@ -194,7 +196,10 @@ export default function PainelLote({ slug, lote, onMudou, onFechar }: { slug: st
       {empreendedor && lote.corretorNome && situacao !== "disponivel" && situacao !== "bloqueado" && (
         <p className="text-xs text-muted-foreground">Corretor: <b className="text-foreground">{lote.corretorNome}</b></p>
       )}
-      {!empreendedor && situacao !== "disponivel" && situacao !== "bloqueado" && (
+      {corretor && situacao !== "disponivel" && (
+        <p className="text-xs text-muted-foreground">Corretor: <b className="text-foreground">você</b></p>
+      )}
+      {!empreendedor && !corretor && situacao !== "disponivel" && situacao !== "bloqueado" && (
         <label className="block space-y-1">
           <span className="text-xs text-muted-foreground">Corretor</span>
           <select value={corretorId ?? ""} onChange={e => setCorretorId(e.target.value ? Number(e.target.value) : null)} className={campo}>

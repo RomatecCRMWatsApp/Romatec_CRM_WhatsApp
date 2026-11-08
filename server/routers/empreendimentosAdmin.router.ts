@@ -126,13 +126,17 @@ export const empreendimentosAdminRouter = router({
       observacao: z.string().trim().max(500).nullable().optional(),
     }))
     .mutation(async ({ input, ctx }) => {
-      // Situação da chácara (bloquear, reservar, vender…) é do escritório; o corretor reserva fazendo o contrato
-      if ((ctx as any).permissoes?.perfil === "corretor") {
-        const { TRPCError } = await import("@trpc/server");
-        throw new TRPCError({ code: "FORBIDDEN", message: "Só o escritório muda a situação da chácara. Para reservar, faça o contrato." });
-      }
+      // Corretor: reserva, sinal e venda nas chácaras livres ou dele; bloqueio e quitação são do escritório (shared/lotes.ts)
+      const corretor = (ctx as any).permissoes?.perfil === "corretor";
+      const { TRPCError } = await import("@trpc/server");
+      const { SITUACOES_CORRETOR, corretorPodeAlterarLote } = await import("../../shared/lotes");
+      if (corretor && !SITUACOES_CORRETOR.includes(input.situacao)) throw new TRPCError({ code: "FORBIDDEN", message: "Bloqueio e quitação da chácara são do escritório." });
       const db = await dbOrThrow();
       const lote = await loteAutorizado(db, input.loteId, ctx);
+      if (corretor) {
+        if (!corretorPodeAlterarLote(lote, ctx.user.id)) throw new TRPCError({ code: "FORBIDDEN", message: "Esta chácara está com outro corretor ou bloqueada. Fale com o escritório." });
+        input.corretorId = ctx.user.id;
+      }
       const livre = input.situacao === "disponivel" || input.situacao === "bloqueado";
       // Empreendedor não escolhe lead nem corretor (não vê a equipe nem os contatos): mantém os que já estão na chácara
       const empreendedor = (ctx as any).permissoes?.perfil === "empreendedor";

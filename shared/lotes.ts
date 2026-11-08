@@ -75,3 +75,16 @@ export function etapaDoLeadPelaVenda(s: SituacaoLote): string | null {
 
 /** Aviso do memorial descritivo gerado pelo sistema (tela, impressão, imagem e WhatsApp) */
 export const AVISO_RASCUNHO_MEMORIAL = 'Rascunho para conferência — não vale como documento oficial sem assinatura do responsável técnico';
+
+/**
+ * Corretor muda a situação da chácara (decisão de 08/11/2026): interesse, reserva, sinal/entrada e venda — menos
+ * bloqueio e quitação, que são do escritório. Só em chácara livre ou que já é dele (não mexe na reserva de outro
+ * corretor nem em chácara bloqueada); "Disponível" serve para ele desfazer a própria reserva.
+ */
+export const SITUACOES_CORRETOR: SituacaoLote[] = ['disponivel', 'interesse', 'reservado', 'entrada', 'vendido_parcelado', 'vendido_avista'];
+
+export function corretorPodeAlterarLote(lote: { situacao?: string | null; corretorId?: number | null }, usuarioId: number): boolean {
+  const s = lote.situacao || 'disponivel';
+  if (s === 'bloqueado' || s === 'quitado') return false;
+  return s === 'disponivel' || !lote.corretorId || Number(lote.corretorId) === usuarioId;
+}
