@@ -53,13 +53,21 @@ export function registrarRotaEspaco(app: Express) {
       const quem = (await tentar(sql`SELECT USER AS usuario, SUBSTRING_INDEX(HOST, ':', 1) AS origem, IFNULL(DB, '') AS banco, COUNT(*) AS conexoes, SUM(COMMAND <> 'Sleep') AS ativas
         FROM information_schema.PROCESSLIST GROUP BY usuario, origem, banco ORDER BY conexoes DESC LIMIT 20`))
         .map((r: any) => ({ usuario: String(r.usuario), origem: String(r.origem), banco: String(r.banco), conexoes: Number(r.conexoes) || 0, ativas: Number(r.ativas) || 0 }));
+      // Consultas que mais tomam tempo (performance_schema: texto normalizado, sem os valores) e o critério de "lenta"
+      const lentaS = Number(((await tentar(sql`SHOW VARIABLES LIKE 'long_query_time'`))[0] ?? {}).Value ?? NaN);
+      const pesadas = (await tentar(sql`SELECT SCHEMA_NAME AS banco, LEFT(DIGEST_TEXT, 220) AS consulta, COUNT_STAR AS vezes,
+          ROUND(AVG_TIMER_WAIT / 1e12, 2) AS mediaS, ROUND(MAX_TIMER_WAIT / 1e12, 2) AS maxS, ROUND(SUM_TIMER_WAIT / 1e12, 1) AS totalS, SUM_ROWS_EXAMINED AS linhasLidas
+        FROM performance_schema.events_statements_summary_by_digest
+        WHERE DIGEST_TEXT IS NOT NULL AND DIGEST_TEXT NOT LIKE '%performance_schema%' AND DIGEST_TEXT NOT LIKE '%information_schema%'
+        ORDER BY MAX_TIMER_WAIT DESC LIMIT 12`))
+        .map((r: any) => ({ banco: String(r.banco ?? ''), consulta: String(r.consulta ?? ''), vezes: Number(r.vezes) || 0, mediaS: Number(r.mediaS) || 0, maxS: Number(r.maxS) || 0, totalS: Number(r.totalS) || 0, linhasLidas: Number(r.linhasLidas) || 0 }));
       const { situacaoPool } = await import('../db');
       const conexoes = {
         maximo: Number(maxConn.max_connections) || null, waitTimeoutS: Number(maxConn.wait_timeout) || null,
         agora: Number(status.Threads_connected) || 0, executando: Number(status.Threads_running) || 0,
         pico: Number(status.Max_used_connections) || 0, picoEm: status.Max_used_connections_time ?? null,
         recusadasPorLimite: Number(status.Connection_errors_max_connections) || 0, falhasDeConexao: Number(status.Aborted_connects) || 0,
-        consultasLentas: Number(status.Slow_queries) || 0, ligadoHaHoras: Math.round((Number(status.Uptime) || 0) / 360) / 10,
+        consultasLentas: Number(status.Slow_queries) || 0, lentaAcimaDeS: Number.isFinite(lentaS) ? lentaS : null, pesadas, ligadoHaHoras: Math.round((Number(status.Uptime) || 0) / 360) / 10,
         quem, poolDoCrm: situacaoPool({ zerarEsperas: false }),
       };
       res.json({

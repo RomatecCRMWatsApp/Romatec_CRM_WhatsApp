@@ -3,6 +3,15 @@
 Cada versão nova vai no TOPO. Depois rode `npm run release` (valida e atualiza o package.json);
 ao subir, o servidor grava a versão no banco e todos recebem o aviso "Novidades da versão".
 
+## 1.140.3 — 2026-11-09
+tipo: patch
+obrigatoria: nao
+titulo: Banco de dados: consultas mais demoradas
+publico: admin
+
+### Melhorias
+- Configurações › Banco de dados: lista as consultas que mais demoraram desde que o banco ligou (quantas vezes rodaram, tempo médio e máximo), para achar a origem das consultas lentas
+
 ## 1.140.2 — 2026-11-09
 tipo: patch
 obrigatoria: nao

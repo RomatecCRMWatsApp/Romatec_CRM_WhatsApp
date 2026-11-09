@@ -5,7 +5,8 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 
 type Conexoes = {
   maximo: number | null; waitTimeoutS: number | null; agora: number; executando: number; pico: number; picoEm: string | null;
-  recusadasPorLimite: number; falhasDeConexao: number; consultasLentas: number; ligadoHaHoras: number;
+  recusadasPorLimite: number; falhasDeConexao: number; consultasLentas: number; ligadoHaHoras: number; lentaAcimaDeS: number | null;
+  pesadas: { banco: string; consulta: string; vezes: number; mediaS: number; maxS: number; totalS: number; linhasLidas: number }[];
   quem: { usuario: string; origem: string; banco: string; conexoes: number; ativas: number }[];
   poolDoCrm: { driver: string; limite?: number; emUso?: number; livres?: number; fila?: number };
 };
@@ -74,9 +75,28 @@ function PainelConexoes({ c }: { c: Conexoes }) {
         <div><p className="text-xs text-muted-foreground">CRM (pool deste servidor)</p><p className="font-semibold tabular-nums">{c.poolDoCrm.emUso ?? 0} em uso de {c.poolDoCrm.limite ?? "—"}{c.poolDoCrm.fila ? ` · ${c.poolDoCrm.fila} na fila` : ""}</p></div>
       </div>
       <p className="text-xs text-muted-foreground">
-        Banco ligado há {c.ligadoHaHoras} h · recusadas por falta de vaga: <b className={c.recusadasPorLimite ? "text-danger-400" : ""}>{c.recusadasPorLimite}</b> · falhas de conexão: {c.falhasDeConexao} · consultas lentas: {c.consultasLentas}
+        Banco ligado há {c.ligadoHaHoras} h · recusadas por falta de vaga: <b className={c.recusadasPorLimite ? "text-danger-400" : ""}>{c.recusadasPorLimite}</b> · falhas de conexão: {c.falhasDeConexao} · consultas lentas{c.lentaAcimaDeS != null ? ` (acima de ${c.lentaAcimaDeS}s)` : ""}: {c.consultasLentas}
         {c.waitTimeoutS ? ` · conexão parada fecha em ${Math.round(c.waitTimeoutS / 60)} min` : ""}
       </p>
+      {!!c.pesadas?.length && (
+        <details className="rounded-md bg-secondary/30 p-2 text-xs">
+          <summary className="cursor-pointer font-semibold">Consultas mais demoradas (desde que o banco ligou)</summary>
+          <div className="mt-2 overflow-x-auto">
+            <table className="w-full">
+              <thead><tr className="text-left text-muted-foreground"><th className="py-1">Consulta</th><th className="py-1 text-right">Vezes</th><th className="py-1 text-right">Média</th><th className="py-1 text-right">Máx.</th><th className="py-1 text-right">Linhas lidas</th></tr></thead>
+              <tbody>{c.pesadas.map((q, i) => (
+                <tr key={i} className="border-t border-border/50 align-top">
+                  <td className="max-w-[28rem] break-all py-1 font-mono text-[11px]">{q.consulta}</td>
+                  <td className="py-1 text-right tabular-nums">{q.vezes.toLocaleString("pt-BR")}</td>
+                  <td className="py-1 text-right tabular-nums">{q.mediaS.toLocaleString("pt-BR")}s</td>
+                  <td className={`py-1 text-right tabular-nums ${q.maxS >= 5 ? "text-danger-400" : q.maxS >= 1 ? "text-warn-400" : ""}`}>{q.maxS.toLocaleString("pt-BR")}s</td>
+                  <td className="py-1 text-right tabular-nums">{q.linhasLidas.toLocaleString("pt-BR")}</td>
+                </tr>
+              ))}</tbody>
+            </table>
+          </div>
+        </details>
+      )}
       {!!c.quem.length && (
         <div className="overflow-x-auto">
           <table className="w-full text-xs">
