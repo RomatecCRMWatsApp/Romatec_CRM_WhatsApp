@@ -70,8 +70,9 @@ export function registrarRotaEspaco(app: Express) {
         consultasLentas: Number(status.Slow_queries) || 0, lentaAcimaDeS: Number.isFinite(lentaS) ? lentaS : null, pesadas, ligadoHaHoras: Math.round((Number(status.Uptime) || 0) / 360) / 10,
         quem, poolDoCrm: situacaoPool({ zerarEsperas: false }), lentasDoCrm: consultasLentasCrm(),
       };
+      const armazem = await (await import('../arquivos/migrarArmazem')).situacaoArmazem().catch(() => null);
       res.json({
-        ok: true, conexoes, totalTabelasMB: mb(total), binlogs, bancos, arquivos, variaveis, compartilhadas,
+        ok: true, conexoes, armazem, totalTabelasMB: mb(total), binlogs, bancos, arquivos, variaveis, compartilhadas,
         tabelas: tabelas.slice(0, 25).map(t => ({ tabela: t.tabela, linhas: Number(t.linhas) || 0, mb: mb(Number(t.dados || 0) + Number(t.indices || 0)), livreMB: mb(t.livre) })),
       });
     } catch (e: any) {

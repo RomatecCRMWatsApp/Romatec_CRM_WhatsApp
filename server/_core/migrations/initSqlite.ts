@@ -741,6 +741,9 @@ export function initSqliteTables(sqlite: any): void {
     tamanhoBytes INTEGER NOT NULL, conteudoBase64 TEXT NOT NULL, validade TEXT, createdAt INTEGER NOT NULL DEFAULT (strftime('%s','now')),
     UNIQUE (recrutamentoId, tipo)
   )`);
+  // Arquivos fora do banco (server/arquivos/armazem.ts)
+  for (const t of ['usuarioDocumentos', 'usuarioDocumentoPaginas', 'recrutamentoDocs']) addColumn(`ALTER TABLE ${t} ADD COLUMN arquivoRef TEXT`);
+  addColumn(`ALTER TABLE properties ADD COLUMN plantaRef TEXT`);
   // Reuniões com clientes (server/_core/migrations/addReunioes.ts)
   run(`CREATE TABLE IF NOT EXISTS reunioes (
     id INTEGER PRIMARY KEY AUTOINCREMENT, leadId INTEGER, titulo TEXT NOT NULL, tipo TEXT NOT NULL DEFAULT 'presencial',

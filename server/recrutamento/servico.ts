@@ -6,6 +6,7 @@
 import crypto from 'node:crypto';
 import { and, desc, eq, ne } from 'drizzle-orm';
 import { getDb } from '../db';
+import { apagarArquivos, ehRef, lerConteudo, paraGravar } from '../arquivos/armazem';
 import { empJuridico, empreendimentos, recrutamentoDocs, recrutamentos, users, usuarioFoto } from '../../drizzle/schema';
 import { MAX_FOTO_BYTES, detectarMime, problemaArquivo } from '../../shared/cadastro';
 import { MODULOS } from '../../shared/permissoes';
@@ -143,7 +144,7 @@ export async function arquivoDoDoc(docId: number) {
   const d = await banco();
   const [x]: any[] = await d.select().from(recrutamentoDocs).where(eq(recrutamentoDocs.id, docId)).limit(1);
   if (!x) throw new RecrutamentoErro('Documento não encontrado', 404);
-  return { buf: Buffer.from(String(x.conteudoBase64), 'base64'), mime: x.mime as string, nome: x.nome as string };
+  return { buf: await lerConteudo(x.conteudoBase64, x.arquivoRef), mime: x.mime as string, nome: x.nome as string };
 }
 
 /** Pacote base do perfil (módulos marcados por padrão); corretor: o empreendimento da convocação (sem ele, todos) */
@@ -204,10 +205,10 @@ export async function aprovarRecrutamento(id: number, autor: { id: number; role?
   const avisos: string[] = [];
   const { enviarDocumento } = await import('../credenciais');
   for (const x of docs) {
-    const buf = Buffer.from(String(x.conteudoBase64), 'base64');
     try {
+      const buf = await lerConteudo(x.conteudoBase64, x.arquivoRef);
       if (x.tipo === 'foto') {
-        await d.insert(usuarioFoto).values({ usuarioId, mime: x.mime, conteudoBase64: x.conteudoBase64 } as any);
+        await d.insert(usuarioFoto).values({ usuarioId, mime: x.mime, conteudoBase64: buf.toString('base64') } as any);
         await d.update(users).set({ fotoUrl: `/api/usuarios/${usuarioId}/foto?v=${agora}` } as any).where(eq(users.id, usuarioId));
       } else {
         await enviarDocumento(usuarioId, x.tipo, buf, x.nome, { validade: x.validade ?? null }, autor.id);
@@ -347,6 +348,12 @@ async function avisarAdministradores(texto: string) {
   }
 }
 
+/** Referências no armazém do anexo de um tipo (para apagar quando for substituído ou removido) */
+async function refsDoTipo(d: any, recrutamentoId: number, tipo: string): Promise<string[]> {
+  const rows: any[] = await d.select({ ref: recrutamentoDocs.arquivoRef }).from(recrutamentoDocs).where(and(eq(recrutamentoDocs.recrutamentoId, recrutamentoId), eq(recrutamentoDocs.tipo, tipo)));
+  return rows.map(x => x.ref).filter(ehRef);
+}
+
 /** Anexo do formulário (um por tipo; reenviar substitui) */
 export async function salvarDocPublico(token: string, tipo: string, buf: Buffer, nomeArquivo: string, validade?: string | null) {
   const r = await porToken(token);
@@ -360,17 +367,22 @@ export async function salvarDocPublico(token: string, tipo: string, buf: Buffer,
     if (p) throw new RecrutamentoErro(p.erro, p.status);
   }
   const d = await banco();
+  const conteudo = await paraGravar(buf, 'recrutamento');
+  const velhas = await refsDoTipo(d, r.id, tipo);
   await d.delete(recrutamentoDocs).where(and(eq(recrutamentoDocs.recrutamentoId, r.id), eq(recrutamentoDocs.tipo, tipo)));
   await d.insert(recrutamentoDocs).values({
-    recrutamentoId: r.id, tipo, nome: (nomeArquivo || tipo).slice(0, 200), mime: mime!, tamanhoBytes: buf.length, conteudoBase64: buf.toString('base64'),
+    recrutamentoId: r.id, tipo, nome: (nomeArquivo || tipo).slice(0, 200), mime: mime!, tamanhoBytes: buf.length, conteudoBase64: conteudo.base64, arquivoRef: conteudo.ref,
     validade: validade && /^\d{4}-\d{2}-\d{2}$/.test(validade) ? validade : null, createdAt: new Date(),
   } as any);
+  if (velhas.length) apagarArquivos(velhas).catch(e => console.warn('[Recrutamento] apagar no armazém:', e?.message));
   return { ok: true as const, tipo };
 }
 
 export async function removerDocPublico(token: string, tipo: string) {
   const r = await porToken(token);
   const d = await banco();
+  const velhas = await refsDoTipo(d, r.id, tipo);
   await d.delete(recrutamentoDocs).where(and(eq(recrutamentoDocs.recrutamentoId, r.id), eq(recrutamentoDocs.tipo, tipo)));
+  if (velhas.length) apagarArquivos(velhas).catch(e => console.warn('[Recrutamento] apagar no armazém:', e?.message));
   return { ok: true as const };
 }

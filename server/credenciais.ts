@@ -12,6 +12,7 @@ import path from "node:path";
 import crypto from "node:crypto";
 import { and, asc, eq, inArray } from "drizzle-orm";
 import { getDb, transacao } from "./db";
+import { apagarArquivos, ehRef, lerConteudo, paraGravar } from "./arquivos/armazem";
 import { configCredenciais, users, usuarioDocumentoPaginas, usuarioDocumentos } from "../drizzle/schema";
 import {
   CREDENCIAIS, LINK_CERTIDAO_PADRAO, PRAZOS_PADRAO, ROTULO_DOCUMENTO, detectarMime, linkCrecUf, maisDias, problemaArquivo, statusValidade, tipoUnico,
@@ -110,11 +111,31 @@ export function problemaMeta(tipo: string, m: MetaDocumento): string | null {
   return null;
 }
 
-async function gravarPaginas(tx: any, documentoId: number, paginas: Buffer[]) {
+type Gravavel = { base64: string; ref: string | null };
+
+/** Envia as páginas ao armazém ANTES da transação (nenhuma conexão do banco fica presa esperando o upload) */
+async function prepararPaginas(paginas: Buffer[]): Promise<Gravavel[]> {
+  const out: Gravavel[] = [];
+  for (const p of paginas) out.push(await paraGravar(p, "paginas"));
+  return out;
+}
+
+/** Troca as páginas do documento; devolve as referências antigas, para apagar no armazém depois do commit */
+async function gravarPaginas(tx: any, documentoId: number, paginas: Gravavel[]): Promise<string[]> {
+  const antigas: any[] = await tx.select({ ref: usuarioDocumentoPaginas.arquivoRef }).from(usuarioDocumentoPaginas).where(eq(usuarioDocumentoPaginas.documentoId, documentoId));
   await tx.delete(usuarioDocumentoPaginas).where(eq(usuarioDocumentoPaginas.documentoId, documentoId));
   for (let i = 0; i < paginas.length; i++) {
-    await tx.insert(usuarioDocumentoPaginas).values({ documentoId, n: i + 1, pngBase64: paginas[i].toString("base64") } as any);
+    await tx.insert(usuarioDocumentoPaginas).values({ documentoId, n: i + 1, pngBase64: paginas[i].base64, arquivoRef: paginas[i].ref } as any);
   }
+  return antigas.map(x => x.ref).filter(ehRef);
+}
+
+const refsDe = (...grupos: (Gravavel | Gravavel[] | null | undefined)[]) =>
+  grupos.flatMap(g => (Array.isArray(g) ? g : g ? [g] : [])).map(x => x.ref).filter(ehRef);
+
+/** Apaga no armazém sem atrasar a resposta; o que falhar o faxineiro diário recolhe (server/arquivos/migrarArmazem.ts) */
+function apagarDepois(refs: string[]) {
+  if (refs.length) apagarArquivos(refs).catch(e => console.warn("[Armazém] apagar depois:", e?.message));
 }
 
 /**
@@ -131,20 +152,34 @@ export async function enviarDocumento(usuarioId: number, tipo: string, buf: Buff
   const db = await dbOrThrow();
   const cfg = await configuracao();
   const validade = meta.validade || (tipo === "certidao_creci" ? maisDias(cfg.certidaoValidadeDias) : null);
+  const conteudo = await paraGravar(buf, "documentos");
+  const paginas = await prepararPaginas(arq.paginas);
   let id = 0;
+  const velhas: string[] = [];
+  try {
   await transacao(db, async (tx: any) => {
     if (tipoUnico(tipo)) {
-      await tx.delete(usuarioDocumentos).where(and(eq(usuarioDocumentos.usuarioId, usuarioId), eq(usuarioDocumentos.tipo, tipo), eq(usuarioDocumentos.titular, "usuario")));
+      const anteriores: any[] = await tx.select({ id: usuarioDocumentos.id, ref: usuarioDocumentos.arquivoRef }).from(usuarioDocumentos)
+        .where(and(eq(usuarioDocumentos.usuarioId, usuarioId), eq(usuarioDocumentos.tipo, tipo), eq(usuarioDocumentos.titular, "usuario")));
+      if (anteriores.length) {
+        const ids = anteriores.map(x => Number(x.id));
+        const pags: any[] = await tx.select({ ref: usuarioDocumentoPaginas.arquivoRef }).from(usuarioDocumentoPaginas).where(inArray(usuarioDocumentoPaginas.documentoId, ids));
+        velhas.push(...anteriores.map(x => x.ref), ...pags.map(x => x.ref));
+        await tx.delete(usuarioDocumentoPaginas).where(inArray(usuarioDocumentoPaginas.documentoId, ids)); // antes ficavam páginas órfãs
+        await tx.delete(usuarioDocumentos).where(inArray(usuarioDocumentos.id, ids));
+      }
     }
     const r: any = await tx.insert(usuarioDocumentos).values({
-      usuarioId, tipo, titular, nome: nome.slice(0, 200), mime: arq.mime, tamanhoBytes: buf.length, conteudoBase64: buf.toString("base64"),
+      usuarioId, tipo, titular, nome: nome.slice(0, 200), mime: arq.mime, tamanhoBytes: buf.length, conteudoBase64: conteudo.base64, arquivoRef: conteudo.ref,
       validade, numero: meta.numero ?? null, linkVerificacao: meta.linkVerificacao ?? null, linkEmissao: meta.linkEmissao ?? null,
       anexarDocumentos: meta.anexarDocumentos ?? tipo !== "certificado_cnai", exibirPerfil: meta.exibirPerfil ?? tipo === "certificado_cnai",
       thumbBase64: arq.thumb.toString("base64"), paginasQtd: arq.paginas.length, enviadoPor: autorId,
     } as any);
     id = Number(r?.[0]?.insertId ?? r?.insertId ?? r?.lastInsertRowid ?? 0);
-    await gravarPaginas(tx, id, arq.paginas);
+    velhas.push(...await gravarPaginas(tx, id, paginas));
   });
+  } catch (e) { apagarDepois(refsDe(conteudo, paginas)); throw e; }
+  apagarDepois(velhas.filter(ehRef));
   if (tipo === "certidao_creci") await db.update(users).set({ certidaoCreciValidade: validade } as any).where(eq(users.id, usuarioId));
   return id;
 }
@@ -157,13 +192,21 @@ export async function trocarArquivo(documentoId: number, buf: Buffer, nome: stri
   const p = problemaArquivo(doc.tipo, buf);
   if (p) throw new ErroArquivo(p.status, p.erro);
   const arq = await converter(buf);
-  await transacao(db, async (tx: any) => {
-    await tx.update(usuarioDocumentos).set({
-      nome: nome.slice(0, 200), mime: arq.mime, tamanhoBytes: buf.length, conteudoBase64: buf.toString("base64"),
-      thumbBase64: arq.thumb.toString("base64"), paginasQtd: arq.paginas.length, alertaEnviadoEm: null,
-    } as any).where(eq(usuarioDocumentos.id, documentoId));
-    await gravarPaginas(tx, documentoId, arq.paginas);
-  });
+  const conteudo = await paraGravar(buf, "documentos");
+  const paginas = await prepararPaginas(arq.paginas);
+  const velhas: string[] = [];
+  try {
+    await transacao(db, async (tx: any) => {
+      const [ant]: any[] = await tx.select({ ref: usuarioDocumentos.arquivoRef }).from(usuarioDocumentos).where(eq(usuarioDocumentos.id, documentoId)).limit(1);
+      velhas.push(ant?.ref);
+      await tx.update(usuarioDocumentos).set({
+        nome: nome.slice(0, 200), mime: arq.mime, tamanhoBytes: buf.length, conteudoBase64: conteudo.base64, arquivoRef: conteudo.ref,
+        thumbBase64: arq.thumb.toString("base64"), paginasQtd: arq.paginas.length, alertaEnviadoEm: null,
+      } as any).where(eq(usuarioDocumentos.id, documentoId));
+      velhas.push(...await gravarPaginas(tx, documentoId, paginas));
+    });
+  } catch (e) { apagarDepois(refsDe(conteudo, paginas)); throw e; }
+  apagarDepois(velhas.filter(ehRef));
 }
 
 /** Colunas do documento sem o arquivo nem a miniatura: o original guardado no banco tem vários MB */
@@ -173,7 +216,13 @@ const META_DOCUMENTO = {
   titular: usuarioDocumentos.titular, numero: usuarioDocumentos.numero, linkVerificacao: usuarioDocumentos.linkVerificacao, linkEmissao: usuarioDocumentos.linkEmissao,
   anexarDocumentos: usuarioDocumentos.anexarDocumentos, exibirPerfil: usuarioDocumentos.exibirPerfil, alertaEnviadoEm: usuarioDocumentos.alertaEnviadoEm,
   paginasQtd: usuarioDocumentos.paginasQtd, atualizadoEm: usuarioDocumentos.atualizadoEm, emissao: usuarioDocumentos.emissao,
+  arquivoRef: usuarioDocumentos.arquivoRef,
 };
+
+/** Arquivo original do documento (armazém ou banco) */
+export async function arquivoDoDocumento(doc: { conteudoBase64?: string | null; arquivoRef?: string | null }): Promise<Buffer> {
+  return lerConteudo(doc.conteudoBase64, doc.arquivoRef);
+}
 
 /**
  * Documento (para conferir permissão: o admin ou o dono). Por padrão só os metadados;
@@ -193,14 +242,15 @@ export async function documentoDe(documentoId: number, o: { conteudo?: boolean; 
 export async function paginaDoDocumento(documentoId: number, n: number): Promise<Buffer | null> {
   const db = await dbOrThrow();
   const [pg]: any[] = await db.select().from(usuarioDocumentoPaginas).where(and(eq(usuarioDocumentoPaginas.documentoId, documentoId), eq(usuarioDocumentoPaginas.n, n))).limit(1);
-  if (pg) return Buffer.from(pg.pngBase64, "base64");
+  if (pg) return lerConteudo(pg.pngBase64, pg.arquivoRef);
   const [meta]: any[] = await db.select({ paginasQtd: usuarioDocumentos.paginasQtd }).from(usuarioDocumentos).where(eq(usuarioDocumentos.id, documentoId)).limit(1);
   if (!meta || meta.paginasQtd) return null;
-  const [doc]: any[] = await db.select({ conteudoBase64: usuarioDocumentos.conteudoBase64 }).from(usuarioDocumentos).where(eq(usuarioDocumentos.id, documentoId)).limit(1);
+  const [doc]: any[] = await db.select({ conteudoBase64: usuarioDocumentos.conteudoBase64, arquivoRef: usuarioDocumentos.arquivoRef }).from(usuarioDocumentos).where(eq(usuarioDocumentos.id, documentoId)).limit(1);
   if (!doc) return null;
-  const arq = await converter(Buffer.from(doc.conteudoBase64, "base64"));
+  const arq = await converter(await lerConteudo(doc.conteudoBase64, doc.arquivoRef));
+  const paginas = await prepararPaginas(arq.paginas);
   await transacao(db, async (tx: any) => {
-    await gravarPaginas(tx, documentoId, arq.paginas);
+    await gravarPaginas(tx, documentoId, paginas);
     await tx.update(usuarioDocumentos).set({ thumbBase64: arq.thumb.toString("base64"), paginasQtd: arq.paginas.length } as any).where(eq(usuarioDocumentos.id, documentoId));
   });
   return arq.paginas[n - 1] ?? null;
@@ -242,14 +292,19 @@ export async function atualizarDocumento(documentoId: number, m: MetaDocumento) 
   return { ok: true };
 }
 
-/** Remove o registro, as páginas e a miniatura (tudo no banco) */
+/** Remove o registro, as páginas e a miniatura (e os arquivos no armazém) */
 export async function removerDocumento(documentoId: number) {
   const db = await dbOrThrow();
   const [doc]: any[] = await db.select({ usuarioId: usuarioDocumentos.usuarioId, tipo: usuarioDocumentos.tipo }).from(usuarioDocumentos).where(eq(usuarioDocumentos.id, documentoId)).limit(1);
+  const velhas: string[] = [];
   await transacao(db, async (tx: any) => {
+    const [d]: any[] = await tx.select({ ref: usuarioDocumentos.arquivoRef }).from(usuarioDocumentos).where(eq(usuarioDocumentos.id, documentoId)).limit(1);
+    const pags: any[] = await tx.select({ ref: usuarioDocumentoPaginas.arquivoRef }).from(usuarioDocumentoPaginas).where(eq(usuarioDocumentoPaginas.documentoId, documentoId));
+    velhas.push(d?.ref, ...pags.map(x => x.ref));
     await tx.delete(usuarioDocumentoPaginas).where(eq(usuarioDocumentoPaginas.documentoId, documentoId));
     await tx.delete(usuarioDocumentos).where(eq(usuarioDocumentos.id, documentoId));
   });
+  apagarDepois(velhas.filter(ehRef));
   if (doc?.tipo === "certidao_creci") await db.update(users).set({ certidaoCreciValidade: null } as any).where(eq(users.id, doc.usuarioId));
   return { ok: true };
 }
@@ -285,7 +340,7 @@ export async function anexarCredenciais(usuarioId: number, pdfBytes: Uint8Array)
     const paginas: any[] = await db.select().from(usuarioDocumentoPaginas).where(eq(usuarioDocumentoPaginas.documentoId, d.id)).orderBy(asc(usuarioDocumentoPaginas.n));
     for (const p of paginas) {
       try {
-        const img = await doc.embedPng(Buffer.from(p.pngBase64, "base64"));
+        const img = await doc.embedPng(await lerConteudo(p.pngBase64, p.arquivoRef));
         const page = doc.addPage([595.28, 841.89]);
         const m = 40, maxW = 595.28 - 2 * m, maxH = 841.89 - 2 * m;
         const s = Math.min(maxW / img.width, maxH / img.height);

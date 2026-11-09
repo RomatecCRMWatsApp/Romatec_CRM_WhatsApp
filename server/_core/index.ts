@@ -1075,7 +1075,8 @@ async function startServer() {
       res.setHeader('Content-Type', doc.mime || 'application/octet-stream');
       res.setHeader('Content-Disposition', `${inline ? 'inline' : 'attachment'}; filename*=UTF-8''${encodeURIComponent(doc.nome)}`);
       res.setHeader('Cache-Control', 'private, no-store');
-      res.send(Buffer.from(doc.conteudoBase64, 'base64'));
+      const { arquivoDoDocumento } = await import('../credenciais');
+      res.send(await arquivoDoDocumento(doc));
     } catch (error: any) {
       console.error('[Usuários] Download de documento falhou:', error?.message);
       res.status(500).send('Falha ao abrir o documento');
@@ -1273,9 +1274,19 @@ async function startServer() {
         return res.status(503).json({ error: "Banco de dados indisponível" });
       }
 
-      const prop = await db.select().from(properties).where(eq(properties.id, Number(id))).limit(1);
+      const prop = await db.select({ plantaBaixaUrl: properties.plantaBaixaUrl, plantaRef: properties.plantaRef }).from(properties).where(eq(properties.id, Number(id))).limit(1);
       if (!prop[0] || !prop[0].plantaBaixaUrl) {
         return res.status(404).json({ error: "Planta baixa não encontrada" });
+      }
+
+      // Planta no armazém (server/arquivos/planta.ts)
+      if (prop[0].plantaRef) {
+        const { lerConteudo } = await import('../arquivos/armazem');
+        const buffer = await lerConteudo(null, prop[0].plantaRef);
+        res.setHeader('Content-Type', 'application/pdf');
+        res.setHeader('Content-Disposition', 'inline; filename="planta.pdf"');
+        res.setHeader('Cache-Control', 'public, max-age=86400');
+        return res.send(buffer);
       }
 
       const plantaUrl = prop[0].plantaBaixaUrl as string;
@@ -1593,6 +1604,7 @@ async function startServer() {
   // Emissão automática no Asaas: próximo carnê 45 dias antes (só roda se estiver ligada em Financeiro)
   import('../financeiro/emissaoAuto').then(m => m.iniciarEmissaoAuto()).catch(e => console.warn('[Emissão automática] não iniciada:', e));
   // Confirmação de pagamento no WhatsApp: reenvia o que não foi entregue (WhatsApp fora do ar), por até 3 dias
+  import('../arquivos/migrarArmazem').then(m => m.iniciarArmazem()).catch(e => console.warn('[Armazém] não iniciado:', e));
   import('../financeiro/painel').then(m => m.iniciarFotoDaPosicao()).catch(e => console.warn('[Painel financeiro] foto da posição não iniciada:', e));
   import('../financeiro/confirmacaoPagamento').then(m => m.iniciarVigiaConfirmacoes()).catch(e => console.warn('[Confirmação de pagamento] vigia não iniciado:', e));
   // Camada SaaS: expirações, inadimplência e lembretes (só age com o licenciamento ligado)

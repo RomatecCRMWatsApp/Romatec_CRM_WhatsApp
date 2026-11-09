@@ -432,7 +432,18 @@ export const appRouter = router({
         const { id, ...data } = input;
         const updateData: any = {};
         Object.entries(data).forEach(([k, v]) => { if (v !== undefined) updateData[k] = v; });
-        await db.update(properties).set(updateData).where(eq(properties.id, id));
+        // Planta em PDF (data:) vai para o armazém; o campo vira o link do CRM
+        let apagarPlanta: string[] = [];
+        if (typeof updateData.plantaBaixaUrl === "string") {
+          const { plantaParaGravar } = await import("./arquivos/planta");
+          const [atual]: any[] = await db.select({ plantaRef: properties.plantaRef }).from(properties).where(eq(properties.id, id)).limit(1);
+          const p = await plantaParaGravar(id, updateData.plantaBaixaUrl, atual?.plantaRef);
+          delete updateData.plantaBaixaUrl;
+          Object.assign(updateData, p.set);
+          apagarPlanta = p.apagar;
+        }
+        if (Object.keys(updateData).length) await db.update(properties).set(updateData).where(eq(properties.id, id));
+        if (apagarPlanta.length) (await import("./arquivos/planta")).apagarPlantasDepois(apagarPlanta);
         return { success: true };
       }),
     delete: protectedProcedure

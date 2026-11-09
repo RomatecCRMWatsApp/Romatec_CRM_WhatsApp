@@ -11,8 +11,14 @@ type Conexoes = {
   poolDoCrm: { driver: string; limite?: number; emUso?: number; livres?: number; fila?: number };
   lentasDoCrm?: { limiteMs: number; itens: { consulta: string; ms: number; vezes: number; ultimaEm: string }[] };
 };
+type Armazem = {
+  teste: { pronto: boolean; erro: string | null; testadoEm: string } | null;
+  tabelas: { nome: string; pendentes: number; migrados: number; falhas: number }[];
+  ultimoErro: string | null; ultimaRodada: string | null; otimizadas: string[];
+  faxina: { em: string; noArmazem: number; apagados: number } | null;
+};
 type Resp = {
-  ok: boolean; conexoes?: Conexoes; erro?: string; totalTabelasMB?: number; binlogs?: { arquivos: number; mb: number } | string; tabelas?: { tabela: string; linhas: number; mb: number; livreMB: number }[];
+  ok: boolean; conexoes?: Conexoes; armazem?: Armazem | null; erro?: string; totalTabelasMB?: number; binlogs?: { arquivos: number; mb: number } | string; tabelas?: { tabela: string; linhas: number; mb: number; livreMB: number }[];
   bancos?: { banco: string; mb: number }[]; arquivos?: { arquivo: string; tipo: string; mb: number }[]; variaveis?: Record<string, string>;
   compartilhadas?: Record<string, string[]>;
 };
@@ -37,6 +43,7 @@ export default function EspacoBanco() {
         {dados?.ok && (
           <>
             {dados.conexoes && <PainelConexoes c={dados.conexoes} />}
+            {dados.armazem && <PainelArmazem a={dados.armazem} />}
             <p className="text-sm">Tabelas: <b>{dados.totalTabelasMB} MB</b> · Logs internos do MySQL (binlog): <b>{typeof dados.binlogs === "string" ? dados.binlogs : `${dados.binlogs?.mb} MB em ${dados.binlogs?.arquivos} arquivo(s)`}</b></p>
             <div className="overflow-x-auto">
             <table className="w-full text-sm">
@@ -130,6 +137,38 @@ function PainelConexoes({ c }: { c: Conexoes }) {
           </table>
         </div>
       )}
+    </div>
+  );
+}
+
+/** Arquivos fora do banco: teste do armazém, o que falta migrar e a faxina de órfãos */
+function PainelArmazem({ a }: { a: Armazem }) {
+  const dt = (iso: string) => new Date(iso).toLocaleString("pt-BR", { timeZone: "America/Fortaleza", day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit" });
+  const faltam = a.tabelas.reduce((s, t) => s + Math.max(0, t.pendentes), 0);
+  return (
+    <div className="space-y-2 rounded-md border border-border/60 p-3 text-sm">
+      <p className="font-semibold">Arquivos fora do banco</p>
+      <p className={`text-xs ${!a.teste ? "text-muted-foreground" : a.teste.pronto ? "text-ok-400" : "text-danger-400"}`}>
+        {!a.teste ? "Armazém ainda não testado (o teste roda alguns minutos depois do deploy)."
+          : a.teste.pronto ? `Armazém privado funcionando (testado em ${dt(a.teste.testadoEm)}). Novos documentos já vão para fora do banco.`
+          : `Armazém indisponível: ${a.teste.erro}. Os arquivos continuam no banco, como antes.`}
+      </p>
+      <table className="w-full text-xs">
+        <thead><tr className="text-left text-muted-foreground"><th className="py-1">Arquivos</th><th className="py-1 text-right">Ainda no banco</th><th className="py-1 text-right">Movidos neste deploy</th></tr></thead>
+        <tbody>{a.tabelas.map(t => (
+          <tr key={t.nome} className="border-t border-border/50">
+            <td className="py-1">{t.nome}{t.falhas ? <span className="text-warn-400"> · {t.falhas} falha(s), tenta de novo</span> : null}</td>
+            <td className="py-1 text-right tabular-nums">{t.pendentes < 0 ? "—" : t.pendentes}</td>
+            <td className="py-1 text-right tabular-nums">{t.migrados}</td>
+          </tr>
+        ))}</tbody>
+      </table>
+      <p className="text-xs text-muted-foreground">
+        {faltam ? `Faltam ${faltam} arquivo(s); a migração move até 30 a cada 10 minutos, conferindo cada um antes de tirar do banco.` : "Nada pendente."}
+        {a.otimizadas.length ? ` Espaço devolvido ao volume: ${a.otimizadas.join(", ")}.` : ""}
+        {a.faxina ? ` Faxina ${dt(a.faxina.em)}: ${a.faxina.noArmazem} arquivo(s) no armazém, ${a.faxina.apagados} sem registro apagado(s).` : ""}
+      </p>
+      {a.ultimoErro && <p className="text-xs text-warn-400">Último erro: {a.ultimoErro}</p>}
     </div>
   );
 }

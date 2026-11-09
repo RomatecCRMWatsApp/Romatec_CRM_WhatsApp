@@ -575,7 +575,7 @@ export default function Properties() {
                 <Input value={form.plantaBaixaUrl} onChange={e => setForm(p => ({ ...p, plantaBaixaUrl: e.target.value }))} placeholder="Ou cole a URL da planta baixa" className="bg-secondary/30 border-border/50" />
                 {form.plantaBaixaUrl ? (
                   <div className="rounded-xl overflow-hidden border border-border/50">
-                    {(form.plantaBaixaUrl.toLowerCase().includes('.pdf') || form.plantaBaixaUrl.includes('/raw/upload/') || form.plantaBaixaUrl.startsWith('data:application/pdf')) ? (
+                    {(form.plantaBaixaUrl.toLowerCase().includes('.pdf') || form.plantaBaixaUrl.includes('/raw/upload/') || form.plantaBaixaUrl.startsWith('data:application/pdf') || /\/api\/imoveis\/\d+\/planta$/.test(form.plantaBaixaUrl)) ? (
                       <div className="flex items-center gap-4 p-4 bg-secondary/30 rounded-xl border border-border/40">
                         <div className="w-12 h-14 flex-shrink-0 flex items-center justify-center rounded-lg bg-danger-500/15 border border-danger-500/20">
                           <svg aria-hidden="true" width="24" height="24" viewBox="0 0 24 24" fill="none" className="text-danger-400"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/><polyline points="14 2 14 8 20 8" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/><line x1="16" y1="13" x2="8" y2="13" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/><line x1="16" y1="17" x2="8" y2="17" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/></svg>
@@ -927,7 +927,7 @@ export default function Properties() {
                   <div>
                     <h3 className="text-sm font-semibold text-muted-foreground mb-2 flex items-center gap-1"><FileImage className="h-4 w-4 text-emerald" /> Planta Baixa</h3>
                     <div className="rounded-xl overflow-hidden border border-border/30">
-                      {(selectedProperty.plantaBaixaUrl.toLowerCase().includes('.pdf') || selectedProperty.plantaBaixaUrl.includes('/raw/upload/') || selectedProperty.plantaBaixaUrl.startsWith('data:application/pdf')) ? (
+                      {(selectedProperty.plantaBaixaUrl.toLowerCase().includes('.pdf') || selectedProperty.plantaBaixaUrl.includes('/raw/upload/') || selectedProperty.plantaBaixaUrl.startsWith('data:application/pdf') || /\/api\/imoveis\/\d+\/planta$/.test(selectedProperty.plantaBaixaUrl)) ? (
                         <a href={`/api/imoveis/${selectedProperty.id}/planta`} target="_blank" rel="noopener noreferrer"
                           className="flex items-center gap-4 p-4 bg-secondary/30 hover:bg-secondary/50 transition rounded-xl border border-border/40 group">
                           <div className="w-12 h-14 flex-shrink-0 flex items-center justify-center rounded-lg bg-danger-500/15 border border-danger-500/20">

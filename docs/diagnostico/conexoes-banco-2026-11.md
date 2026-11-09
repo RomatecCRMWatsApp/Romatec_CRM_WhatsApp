@@ -63,3 +63,16 @@ O login do CRM **não tem OTP**. Nenhuma autenticação nova foi criada.
   - **Concorrência:** uma tentativa por vez. Respostas antigas, de código substituído pelo reenvio ou depois de fechar a tela são ignoradas.
   - **Animação:** os dígitos giram em órbita e se fundem no bloco "Código confirmado" só depois da resposta positiva do servidor, em cerca de 0,8 s. Com movimento reduzido, aparece só o bloco, sem rotação. A assinatura já está gravada antes da animação.
   - **Sigilo:** o código não vai para armazenamento local, URL, log ou console.
+
+## 3. Arquivos fora do banco (v1.142.0)
+
+Medição em produção (09/11/2026): tabelas 254 MB, sendo ~210 MB de arquivos em base64 (páginas e originais de documentos, documentos do recrutamento, plantas).
+
+- **Destino:** Cloudinary, como `raw` do tipo **private**. Sem URL pública: só o servidor do CRM baixa, pela API assinada, depois de conferir a permissão. O nome do arquivo no Cloudinary é aleatório, sem nome de pessoa nem tipo de documento.
+- **Liberação:** o armazém só é usado depois de um teste de ida e volta (envia, baixa, compara o sha256 e apaga). Se o teste falhar, tudo continua no banco, como antes, e o motivo aparece em Configurações › Banco de dados.
+- **Gravação nova:** o arquivo vai ao armazém **antes** da transação, para não prender conexão durante o upload. É conferido (baixado e comparado) e só então a linha é gravada, com `arquivoRef` e o base64 vazio.
+- **Migração do que já existe:** um arquivo por vez, até 30 a cada 10 minutos. Cada arquivo é enviado, conferido e só sai do banco se o conteúdo não mudou nesse meio-tempo. Se falhar, fica no banco e tenta de novo. Quando a tabela termina, roda `OPTIMIZE TABLE` uma vez para devolver o espaço ao volume.
+- **Exclusão (LGPD):** ao remover ou substituir um documento, o arquivo é apagado também no armazém. Uma faxina diária apaga o que ficou sem registro no banco (só arquivos com mais de 2 h).
+- **Planta dos imóveis:** o PDF em `data:` vai para o armazém e `plantaBaixaUrl` passa a ser `/api/imoveis/:id/planta`, servido pelo CRM. Salvar o imóvel sem trocar a planta mantém o mesmo arquivo.
+- **Ficam no banco, por decisão:** fotos dos usuários (17 MB), arquivos de contrato (têm conferência de autenticidade por sha256) e arquivos de empreendimento.
+- **Reversão:** variável `ARQUIVOS_NO_BANCO=1` faz as novas gravações voltarem ao banco. Os arquivos já movidos continuam legíveis pela referência.

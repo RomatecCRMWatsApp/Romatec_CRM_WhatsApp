@@ -37,4 +37,17 @@ export async function addEmissaoAuto(): Promise<void> {
       if (code !== 'ER_DUP_FIELDNAME' && !/Duplicate column/.test(String(e?.message ?? e?.cause?.message ?? ''))) console.warn('[Migration] crm_recibos (confirmação):', e?.message);
     }
   }
+  // Arquivos fora do banco (server/arquivos/armazem.ts): referência do arquivo no armazém; o base64 fica vazio depois de migrado
+  for (const coluna of [
+    sql`ALTER TABLE usuarioDocumentos ADD COLUMN arquivoRef VARCHAR(300) NULL`,
+    sql`ALTER TABLE usuarioDocumentoPaginas ADD COLUMN arquivoRef VARCHAR(300) NULL`,
+    sql`ALTER TABLE recrutamentoDocs ADD COLUMN arquivoRef VARCHAR(300) NULL`,
+    sql`ALTER TABLE properties ADD COLUMN plantaRef VARCHAR(300) NULL`,
+  ]) {
+    try { await (db as any).execute(coluna); }
+    catch (e: any) {
+      const code = e?.code ?? e?.cause?.code;
+      if (code !== 'ER_DUP_FIELDNAME' && !/Duplicate column/.test(String(e?.message ?? e?.cause?.message ?? ''))) console.warn('[Migration] arquivoRef:', e?.message);
+    }
+  }
 }

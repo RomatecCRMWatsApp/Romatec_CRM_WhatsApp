@@ -6,6 +6,7 @@
  * Só sai com o cadastro completo: todos os dados (exceto CNAI, opcional), foto, cartão e certidão em dia e a CNH.
  * CPF mascarado na página 1 (LGPD) — o documento oficial vai anexado por decisão do próprio corretor.
  */
+import { lerConteudo } from './arquivos/armazem';
 import { and, asc, eq } from 'drizzle-orm';
 import { getDb } from './db';
 import { acessosCorretor, empreendimentos, users, usuarioConjuge, usuarioDocumentoPaginas, usuarioDocumentos, usuarioFoto } from '../drizzle/schema';
@@ -159,7 +160,7 @@ export async function fichaCredenciamentoPdf(usuarioId: number, slug: string, ho
       const rot = ROTULO_DOCUMENTO[d.tipo as keyof typeof ROTULO_DOCUMENTO] ?? d.tipo;
       texto(pag, `${rot} — ${u.name}`, 40, A4[1] - 30, 9, k.fb);
       try {
-        const img = await k.doc.embedPng(Buffer.from(pg.pngBase64, 'base64'));
+        const img = await k.doc.embedPng(await lerConteudo(pg.pngBase64, pg.arquivoRef));
         const mg = 40, maxW = A4[0] - 2 * mg, maxH = A4[1] - 2 * mg - 10;
         const s = Math.min(maxW / img.width, maxH / img.height);
         pag.drawImage(img, { x: (A4[0] - img.width * s) / 2, y: A4[1] - mg - 10 - img.height * s, width: img.width * s, height: img.height * s });

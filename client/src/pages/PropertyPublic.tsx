@@ -219,7 +219,7 @@ export default function PropertyPublic() {
             {activeTab === "planta" && property.plantaBaixaUrl && (
               (() => {
                 const url = property.plantaBaixaUrl as string;
-                const isPdf = url.toLowerCase().includes('.pdf') || url.includes('/raw/upload/') || url.startsWith('data:application/pdf');
+                const isPdf = url.toLowerCase().includes('.pdf') || url.includes('/raw/upload/') || url.startsWith('data:application/pdf') || /\/api\/imoveis\/\d+\/planta$/.test(url);
                 const pdfHref = url.startsWith('data:application/pdf') ? `/api/imoveis/${property.id}/planta` : url;
                 return isPdf ? (
                   <a href={pdfHref} target="_blank" rel="noopener noreferrer"

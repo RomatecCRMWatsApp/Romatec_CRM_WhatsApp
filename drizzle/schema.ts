@@ -110,6 +110,8 @@ export const properties = mysqlTable("properties", {
   images: json("images").$type<string[]>(),
   videoUrl: text("videoUrl"),
   plantaBaixaUrl: text("plantaBaixaUrl"),
+  /** Planta (PDF) no armazém; plantaBaixaUrl passa a ser /api/imoveis/:id/planta */
+  plantaRef: varchar("plantaRef", { length: 300 }),
   areaConstruida: decimal("areaConstruida", { precision: 10, scale: 2 }),
   areaCasa: decimal("areaCasa", { precision: 10, scale: 2 }),
   areaTerreno: decimal("areaTerreno", { precision: 10, scale: 2 }),
@@ -560,6 +562,8 @@ export const usuarioDocumentos = mysqlTable("usuarioDocumentos", {
   atualizadoEm: timestamp("atualizadoEm").defaultNow().onUpdateNow(),
   /** Certidão CRECI: data de emissão (AAAA-MM-DD) — vai para a qualificação do corretor no contrato */
   emissao: varchar("emissao", { length: 10 }),
+  /** Arquivo no armazém (server/arquivos/armazem.ts); com referência, conteudoBase64 fica vazio */
+  arquivoRef: varchar("arquivoRef", { length: 300 }),
 }, (t) => ({
   idxUsuario: index("idx_usudoc_usuario").on(t.usuarioId, t.tipo),
 }));
@@ -570,6 +574,8 @@ export const usuarioDocumentoPaginas = mysqlTable("usuarioDocumentoPaginas", {
   documentoId: int("documentoId").notNull(),
   n: int("n").notNull(),
   pngBase64: longtext("pngBase64").notNull(),
+  /** Página no armazém (server/arquivos/armazem.ts); com referência, pngBase64 fica vazio */
+  arquivoRef: varchar("arquivoRef", { length: 300 }),
 }, (t) => ({
   uqPagina: uniqueIndex("ux_pagina").on(t.documentoId, t.n),
 }));
@@ -1227,6 +1233,8 @@ export const recrutamentoDocs = mysqlTable("recrutamentoDocs", {
   conteudoBase64: longtext("conteudoBase64").notNull(),
   validade: date("validade", { mode: "string" }),
   createdAt: timestamp("createdAt").defaultNow().notNull(),
+  /** Arquivo no armazém (server/arquivos/armazem.ts); com referência, conteudoBase64 fica vazio */
+  arquivoRef: varchar("arquivoRef", { length: 300 }),
 }, (t) => ({
   uqTipo: uniqueIndex("uq_recrutamento_doc").on(t.recrutamentoId, t.tipo),
 }));

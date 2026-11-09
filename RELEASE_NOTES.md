@@ -3,6 +3,21 @@
 Cada versão nova vai no TOPO. Depois rode `npm run release` (valida e atualiza o package.json);
 ao subir, o servidor grava a versão no banco e todos recebem o aviso "Novidades da versão".
 
+## 1.142.0 — 2026-11-09
+tipo: minor
+obrigatoria: nao
+titulo: Documentos e plantas fora do banco de dados (armazenamento privado)
+publico: admin
+
+### Melhorias
+- Documentos dos usuários (originais e páginas), documentos do recrutamento e plantas dos imóveis passam a ficar num armazenamento privado, fora do banco: o banco fica leve e as telas não carregam mais megabytes a cada consulta
+- Os arquivos que já existem são movidos aos poucos, um de cada vez, e cada um é conferido antes de sair do banco; se algo falhar, o arquivo continua no banco
+- Ao remover ou trocar um documento, o arquivo também é apagado do armazenamento; uma faxina diária remove o que ficou sem registro
+- Configurações › Banco de dados: quadro "Arquivos fora do banco" com o andamento da migração
+
+### Correções
+- Ao substituir o cartão/certidão CRECI ou o CNAI, as páginas do documento anterior ficavam guardadas sem uso; agora saem junto
+
 ## 1.141.0 — 2026-11-09
 tipo: minor
 obrigatoria: nao
