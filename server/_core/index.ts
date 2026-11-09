@@ -1048,15 +1048,16 @@ async function startServer() {
     try {
       const ok = await documentoDaRota(req, res);
       if (!ok) return;
-      if (!ok.doc.thumbBase64) {
-        const { paginaDoDocumento, documentoDe } = await import('../credenciais');
+      const { paginaDoDocumento, documentoDe } = await import('../credenciais');
+      let comMiniatura = await documentoDe(ok.doc.id, { miniatura: true });
+      if (!comMiniatura?.thumbBase64) {
         await paginaDoDocumento(ok.doc.id, 1).catch(() => null); // documento antigo: converte e gera a miniatura
-        ok.doc = (await documentoDe(ok.doc.id)) ?? ok.doc;
+        comMiniatura = await documentoDe(ok.doc.id, { miniatura: true });
       }
-      if (!ok.doc.thumbBase64) return res.status(404).send('Sem miniatura');
+      if (!comMiniatura?.thumbBase64) return res.status(404).send('Sem miniatura');
       res.setHeader('Content-Type', 'image/webp');
       res.setHeader('Cache-Control', 'private, no-store');
-      res.send(Buffer.from(ok.doc.thumbBase64, 'base64'));
+      res.send(Buffer.from(comMiniatura.thumbBase64, 'base64'));
     } catch (e: any) { responderErro(res, e, 'Miniatura'); }
   });
   // Arquivo original ("Baixar original")
@@ -1065,8 +1066,10 @@ async function startServer() {
       const user = await usuarioLogado(req);
       if (!user) return res.status(401).send('Faça login para abrir o documento');
       const { documentoDe } = await import('../credenciais');
-      const doc = await documentoDe(Number(req.params.docId) || 0);
+      const meta = await documentoDe(Number(req.params.docId) || 0);
       const { podeGerirCadastroDe } = await import('../../shared/cadastro');
+      if (!meta || !podeGerirCadastroDe(user, meta.usuarioId)) return res.status(404).send('Documento não encontrado');
+      const doc = await documentoDe(meta.id, { conteudo: true }); // o arquivo só depois de conferir a permissão
       if (!doc || !podeGerirCadastroDe(user, doc.usuarioId)) return res.status(404).send('Documento não encontrado');
       const inline = /^(application\/pdf|image\/)/.test(doc.mime || '') && req.query.baixar !== '1';
       res.setHeader('Content-Type', doc.mime || 'application/octet-stream');

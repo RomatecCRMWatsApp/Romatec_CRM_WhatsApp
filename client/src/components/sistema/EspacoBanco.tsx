@@ -9,6 +9,7 @@ type Conexoes = {
   pesadas: { banco: string; consulta: string; vezes: number; mediaS: number; maxS: number; totalS: number; linhasLidas: number }[];
   quem: { usuario: string; origem: string; banco: string; conexoes: number; ativas: number }[];
   poolDoCrm: { driver: string; limite?: number; emUso?: number; livres?: number; fila?: number };
+  lentasDoCrm?: { limiteMs: number; itens: { consulta: string; ms: number; vezes: number; ultimaEm: string }[] };
 };
 type Resp = {
   ok: boolean; conexoes?: Conexoes; erro?: string; totalTabelasMB?: number; binlogs?: { arquivos: number; mb: number } | string; tabelas?: { tabela: string; linhas: number; mb: number; livreMB: number }[];
@@ -78,6 +79,28 @@ function PainelConexoes({ c }: { c: Conexoes }) {
         Banco ligado há {c.ligadoHaHoras} h · recusadas por falta de vaga: <b className={c.recusadasPorLimite ? "text-danger-400" : ""}>{c.recusadasPorLimite}</b> · falhas de conexão: {c.falhasDeConexao} · consultas lentas{c.lentaAcimaDeS != null ? ` (acima de ${c.lentaAcimaDeS}s)` : ""}: {c.consultasLentas}
         {c.waitTimeoutS ? ` · conexão parada fecha em ${Math.round(c.waitTimeoutS / 60)} min` : ""}
       </p>
+      {c.lentasDoCrm && (
+        <details className="rounded-md bg-secondary/30 p-2 text-xs" open={c.lentasDoCrm.itens.length > 0}>
+          <summary className="cursor-pointer font-semibold">
+            Consultas lentas do CRM desde o último deploy (acima de {c.lentasDoCrm.limiteMs / 1000}s): {c.lentasDoCrm.itens.length || "nenhuma"}
+          </summary>
+          {!!c.lentasDoCrm.itens.length && (
+            <div className="mt-2 overflow-x-auto">
+              <table className="w-full">
+                <thead><tr className="text-left text-muted-foreground"><th className="py-1">Consulta</th><th className="py-1 text-right">Vezes</th><th className="py-1 text-right">Maior tempo</th><th className="py-1 text-right">Última</th></tr></thead>
+                <tbody>{c.lentasDoCrm.itens.map((q, i) => (
+                  <tr key={i} className="border-t border-border/50 align-top">
+                    <td className="max-w-[28rem] break-all py-1 font-mono text-[11px]">{q.consulta}</td>
+                    <td className="py-1 text-right tabular-nums">{q.vezes}</td>
+                    <td className={`py-1 text-right tabular-nums ${q.ms >= 5000 ? "text-danger-400" : "text-warn-400"}`}>{(q.ms / 1000).toLocaleString("pt-BR", { maximumFractionDigits: 1 })}s</td>
+                    <td className="py-1 text-right tabular-nums">{new Date(q.ultimaEm).toLocaleString("pt-BR", { timeZone: "America/Fortaleza", day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit" })}</td>
+                  </tr>
+                ))}</tbody>
+              </table>
+            </div>
+          )}
+        </details>
+      )}
       {!!c.pesadas?.length && (
         <details className="rounded-md bg-secondary/30 p-2 text-xs">
           <summary className="cursor-pointer font-semibold">Consultas mais demoradas (desde que o banco ligou)</summary>

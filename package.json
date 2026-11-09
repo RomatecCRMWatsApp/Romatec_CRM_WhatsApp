@@ -1,6 +1,6 @@
 {
   "name": "romatec-crm-whatsapp",
-  "version": "1.140.3",
+  "version": "1.141.0",
   "type": "module",
   "license": "MIT",
   "scripts": {

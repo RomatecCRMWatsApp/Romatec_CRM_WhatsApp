@@ -61,14 +61,14 @@ export function registrarRotaEspaco(app: Express) {
         WHERE DIGEST_TEXT IS NOT NULL AND DIGEST_TEXT NOT LIKE '%performance_schema%' AND DIGEST_TEXT NOT LIKE '%information_schema%'
         ORDER BY MAX_TIMER_WAIT DESC LIMIT 12`))
         .map((r: any) => ({ banco: String(r.banco ?? ''), consulta: String(r.consulta ?? ''), vezes: Number(r.vezes) || 0, mediaS: Number(r.mediaS) || 0, maxS: Number(r.maxS) || 0, totalS: Number(r.totalS) || 0, linhasLidas: Number(r.linhasLidas) || 0 }));
-      const { situacaoPool } = await import('../db');
+      const { situacaoPool, consultasLentasCrm } = await import('../db');
       const conexoes = {
         maximo: Number(maxConn.max_connections) || null, waitTimeoutS: Number(maxConn.wait_timeout) || null,
         agora: Number(status.Threads_connected) || 0, executando: Number(status.Threads_running) || 0,
         pico: Number(status.Max_used_connections) || 0, picoEm: status.Max_used_connections_time ?? null,
         recusadasPorLimite: Number(status.Connection_errors_max_connections) || 0, falhasDeConexao: Number(status.Aborted_connects) || 0,
         consultasLentas: Number(status.Slow_queries) || 0, lentaAcimaDeS: Number.isFinite(lentaS) ? lentaS : null, pesadas, ligadoHaHoras: Math.round((Number(status.Uptime) || 0) / 360) / 10,
-        quem, poolDoCrm: situacaoPool({ zerarEsperas: false }),
+        quem, poolDoCrm: situacaoPool({ zerarEsperas: false }), lentasDoCrm: consultasLentasCrm(),
       };
       res.json({
         ok: true, conexoes, totalTabelasMB: mb(total), binlogs, bancos, arquivos, variaveis, compartilhadas,

@@ -67,7 +67,9 @@ export async function credenciaisDoUsuario(userId: number): Promise<CredenciaisC
   const d = await db();
   const [u] = await d.select().from(users).where(eq(users.id, userId)).limit(1);
   if (!u) throw new ContratoErro('CORRETOR', 'Corretor não encontrado', 404);
-  const docs: any[] = await d.select().from(usuarioDocumentos).where(eq(usuarioDocumentos.usuarioId, userId));
+  // Só os metadados: o arquivo de cada documento (vários MB) não é usado aqui
+  const docs: any[] = await d.select({ tipo: usuarioDocumentos.tipo, titular: usuarioDocumentos.titular, validade: usuarioDocumentos.validade, numero: usuarioDocumentos.numero, emissao: usuarioDocumentos.emissao })
+    .from(usuarioDocumentos).where(eq(usuarioDocumentos.usuarioId, userId));
   const doTipo = (t: string) => docs.filter(x => x.tipo === t && (x.titular ?? 'usuario') === 'usuario').sort((a, b) => String(b.validade ?? '').localeCompare(String(a.validade ?? '')))[0];
   const cartao = doTipo('cartao_creci'), certidao = doTipo('certidao_creci');
   return {

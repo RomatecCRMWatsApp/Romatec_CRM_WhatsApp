@@ -152,7 +152,7 @@ export async function enviarDocumento(usuarioId: number, tipo: string, buf: Buff
 /** Troca o arquivo e mantém os metadados (certidão sem validade: hoje + 30) */
 export async function trocarArquivo(documentoId: number, buf: Buffer, nome: string): Promise<void> {
   const db = await dbOrThrow();
-  const [doc]: any[] = await db.select().from(usuarioDocumentos).where(eq(usuarioDocumentos.id, documentoId)).limit(1);
+  const [doc]: any[] = await db.select({ tipo: usuarioDocumentos.tipo }).from(usuarioDocumentos).where(eq(usuarioDocumentos.id, documentoId)).limit(1);
   if (!doc) throw new ErroArquivo(404, "Documento não encontrado");
   const p = problemaArquivo(doc.tipo, buf);
   if (p) throw new ErroArquivo(p.status, p.erro);
@@ -166,10 +166,26 @@ export async function trocarArquivo(documentoId: number, buf: Buffer, nome: stri
   });
 }
 
-/** Documento com permissão: o admin ou o dono */
-export async function documentoDe(documentoId: number) {
+/** Colunas do documento sem o arquivo nem a miniatura: o original guardado no banco tem vários MB */
+const META_DOCUMENTO = {
+  id: usuarioDocumentos.id, usuarioId: usuarioDocumentos.usuarioId, tipo: usuarioDocumentos.tipo, nome: usuarioDocumentos.nome, mime: usuarioDocumentos.mime,
+  tamanhoBytes: usuarioDocumentos.tamanhoBytes, validade: usuarioDocumentos.validade, enviadoPor: usuarioDocumentos.enviadoPor, createdAt: usuarioDocumentos.createdAt,
+  titular: usuarioDocumentos.titular, numero: usuarioDocumentos.numero, linkVerificacao: usuarioDocumentos.linkVerificacao, linkEmissao: usuarioDocumentos.linkEmissao,
+  anexarDocumentos: usuarioDocumentos.anexarDocumentos, exibirPerfil: usuarioDocumentos.exibirPerfil, alertaEnviadoEm: usuarioDocumentos.alertaEnviadoEm,
+  paginasQtd: usuarioDocumentos.paginasQtd, atualizadoEm: usuarioDocumentos.atualizadoEm, emissao: usuarioDocumentos.emissao,
+};
+
+/**
+ * Documento (para conferir permissão: o admin ou o dono). Por padrão só os metadados;
+ * o arquivo original e a miniatura vêm só quando pedidos (antes cada miniatura e cada página exibida lia o original inteiro).
+ */
+export async function documentoDe(documentoId: number, o: { conteudo?: boolean; miniatura?: boolean } = {}) {
   const db = await dbOrThrow();
-  const [doc]: any[] = await db.select().from(usuarioDocumentos).where(eq(usuarioDocumentos.id, documentoId)).limit(1);
+  const [doc]: any[] = await db.select({
+    ...META_DOCUMENTO,
+    ...(o.conteudo ? { conteudoBase64: usuarioDocumentos.conteudoBase64 } : {}),
+    ...(o.miniatura ? { thumbBase64: usuarioDocumentos.thumbBase64 } : {}),
+  }).from(usuarioDocumentos).where(eq(usuarioDocumentos.id, documentoId)).limit(1);
   return doc ?? null;
 }
 
@@ -178,8 +194,10 @@ export async function paginaDoDocumento(documentoId: number, n: number): Promise
   const db = await dbOrThrow();
   const [pg]: any[] = await db.select().from(usuarioDocumentoPaginas).where(and(eq(usuarioDocumentoPaginas.documentoId, documentoId), eq(usuarioDocumentoPaginas.n, n))).limit(1);
   if (pg) return Buffer.from(pg.pngBase64, "base64");
-  const [doc]: any[] = await db.select().from(usuarioDocumentos).where(eq(usuarioDocumentos.id, documentoId)).limit(1);
-  if (!doc || doc.paginasQtd) return null;
+  const [meta]: any[] = await db.select({ paginasQtd: usuarioDocumentos.paginasQtd }).from(usuarioDocumentos).where(eq(usuarioDocumentos.id, documentoId)).limit(1);
+  if (!meta || meta.paginasQtd) return null;
+  const [doc]: any[] = await db.select({ conteudoBase64: usuarioDocumentos.conteudoBase64 }).from(usuarioDocumentos).where(eq(usuarioDocumentos.id, documentoId)).limit(1);
+  if (!doc) return null;
   const arq = await converter(Buffer.from(doc.conteudoBase64, "base64"));
   await transacao(db, async (tx: any) => {
     await gravarPaginas(tx, documentoId, arq.paginas);
@@ -211,7 +229,7 @@ export async function listarDocumentos(usuarioId: number) {
 
 export async function atualizarDocumento(documentoId: number, m: MetaDocumento) {
   const db = await dbOrThrow();
-  const [doc]: any[] = await db.select().from(usuarioDocumentos).where(eq(usuarioDocumentos.id, documentoId)).limit(1);
+  const [doc]: any[] = await db.select({ tipo: usuarioDocumentos.tipo }).from(usuarioDocumentos).where(eq(usuarioDocumentos.id, documentoId)).limit(1);
   if (!doc) throw new ErroArquivo(404, "Documento não encontrado");
   const erro = problemaMeta(doc.tipo, m);
   if (erro) throw new ErroArquivo(400, erro);

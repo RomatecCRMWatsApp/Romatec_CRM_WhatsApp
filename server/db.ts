@@ -46,6 +46,53 @@ export function situacaoPool(o: { zerarEsperas?: boolean } = {}): { driver: 'mys
   return { driver: 'mysql', limite: p.config?.connectionLimit, emUso: total - livres, livres, fila: p._connectionQueue?.length ?? 0, esperas };
 }
 
+/** Consultas do CRM acima deste tempo entram no registro de lentas (DB_CONSULTA_LENTA_MS) */
+const LIMITE_LENTA_MS = inteiro(process.env.DB_CONSULTA_LENTA_MS, 1000, 100, 60_000);
+const MAX_LENTAS = 30;
+export interface ConsultaLenta { consulta: string; ms: number; vezes: number; ultimaEm: string }
+const _lentas = new Map<string, ConsultaLenta>();
+
+/** Texto da consulta para o registro: o SQL com "?" (os valores vão à parte, nunca entram aqui), espaços colapsados */
+export function textoDaConsulta(arg: unknown): string {
+  const bruto = typeof arg === 'string' ? arg : String((arg as any)?.sql ?? '');
+  return bruto.replace(/\s+/g, ' ').trim().slice(0, 300);
+}
+
+export function registrarLenta(consulta: string, ms: number, agora = new Date()): void {
+  if (ms < LIMITE_LENTA_MS || !consulta) return;
+  const atual = _lentas.get(consulta);
+  if (atual) { atual.vezes++; atual.ms = Math.max(atual.ms, Math.round(ms)); atual.ultimaEm = agora.toISOString(); }
+  else {
+    if (_lentas.size >= MAX_LENTAS) { // descarta a mais rápida para caber a nova
+      const menor = Array.from(_lentas.entries()).sort((a, b) => a[1].ms - b[1].ms)[0];
+      if (menor[1].ms >= ms) return;
+      _lentas.delete(menor[0]);
+    }
+    _lentas.set(consulta, { consulta, ms: Math.round(ms), vezes: 1, ultimaEm: agora.toISOString() });
+  }
+  console.warn(`[Database] consulta lenta (${Math.round(ms)} ms): ${consulta.slice(0, 160)}`);
+}
+
+/** Consultas lentas do CRM desde que este servidor subiu (mais lentas primeiro) */
+export function consultasLentasCrm(): { limiteMs: number; itens: ConsultaLenta[] } {
+  return { limiteMs: LIMITE_LENTA_MS, itens: Array.from(_lentas.values()).sort((a, b) => b.ms - a.ms) };
+}
+
+/** Mede o tempo de cada consulta do pool (query/execute) sem mudar o resultado nem os erros */
+export function cronometrar(pool: any): void {
+  for (const m of ['query', 'execute'] as const) {
+    const original = pool[m]?.bind(pool);
+    if (!original) continue;
+    pool[m] = (...args: unknown[]) => {
+      const t0 = performance.now();
+      const p = original(...args);
+      if (!p || typeof p.then !== 'function') return p;
+      const fim = () => registrarLenta(textoDaConsulta(args[0]), performance.now() - t0);
+      return p.then((r: unknown) => { fim(); return r; }, (e: unknown) => { fim(); throw e; });
+    };
+  }
+}
+
 /** Encerramento controlado (SIGTERM do deploy): espera as consultas em curso e fecha o pool */
 export async function fecharDb(): Promise<void> {
   const p = _pool; _pool = null; _db = null; _abrindo = null;
@@ -123,6 +170,7 @@ async function abrirDb(): Promise<any> {
       });
       _pool = pool;
       pool.on('enqueue', () => { _esperas++; });
+      cronometrar(pool);
       _db = drizzle(pool);
       _dbDriver = 'mysql';
       console.log("[Database] MySQL pool conectado");

@@ -3,6 +3,17 @@
 Cada versão nova vai no TOPO. Depois rode `npm run release` (valida e atualiza o package.json);
 ao subir, o servidor grava a versão no banco e todos recebem o aviso "Novidades da versão".
 
+## 1.141.0 — 2026-11-09
+tipo: minor
+obrigatoria: nao
+titulo: Documentos e contratos mais leves no banco; registro das consultas lentas do CRM
+publico: admin
+
+### Melhorias
+- Miniaturas e páginas dos documentos dos usuários não leem mais o arquivo original inteiro do banco a cada exibição (antes, cada miniatura puxava vários MB)
+- Geração de contrato e modelo: os dados do CRECI do corretor são lidos sem carregar os arquivos dos documentos
+- Configurações › Banco de dados: lista das consultas do CRM que passaram de 1 segundo desde o último deploy (só o texto da consulta, sem dados de clientes), para achar a origem das consultas lentas
+
 ## 1.140.3 — 2026-11-09
 tipo: patch
 obrigatoria: nao
