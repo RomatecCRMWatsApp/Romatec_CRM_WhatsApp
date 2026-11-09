@@ -3,6 +3,15 @@
 Cada versão nova vai no TOPO. Depois rode `npm run release` (valida e atualiza o package.json);
 ao subir, o servidor grava a versão no banco e todos recebem o aviso "Novidades da versão".
 
+## 1.140.2 — 2026-11-09
+tipo: patch
+obrigatoria: nao
+titulo: Banco de dados: logs internos desligados aparecem como "desligado"
+publico: admin
+
+### Correções
+- Configurações › Banco de dados: quando os logs internos do MySQL (binlog) estão desligados, o quadro mostra "desligado (não ocupa espaço)" em vez de erro de consulta
+
 ## 1.140.1 — 2026-11-09
 tipo: patch
 obrigatoria: nao

@@ -27,7 +27,10 @@ export function registrarRotaEspaco(app: Express) {
       try {
         const b = linhas(await db.execute(sql`SHOW BINARY LOGS`));
         binlogs = { arquivos: b.length, mb: mb(b.reduce((s: number, x: any) => s + Number(x.File_size ?? x.file_size ?? 0), 0)) };
-      } catch (e: any) { binlogs = `não consultável: ${String(e?.message ?? '').slice(0, 120)}`; }
+      } catch (e: any) {
+        const ligado: any[] = linhas(await db.execute(sql`SHOW VARIABLES LIKE 'log_bin'`).catch(() => []));
+        binlogs = String(ligado[0]?.Value ?? ligado[0]?.value ?? '').toUpperCase() === 'OFF' ? 'desligado (não ocupa espaço)' : `não consultável: ${String(e?.message ?? '').slice(0, 120)}`;
+      }
       const total = tabelas.reduce((s, t) => s + Number(t.dados || 0) + Number(t.indices || 0), 0);
       // O resto do volume: outros bancos no mesmo MySQL e os arquivos internos do InnoDB (redo, undo, temporários)
       const tentar = async (q: any) => { try { return linhas(await db.execute(q)); } catch { return []; } };
