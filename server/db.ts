@@ -5,6 +5,52 @@ import { ENV } from './_core/env';
 // ─── Driver detection ─────────────────────────────────────────────────────
 let _db: any = null;
 let _dbDriver: 'mysql' | 'sqlite' = 'mysql';
+/** Conexão em andamento: chamadas simultâneas na partida esperam a mesma (antes cada uma podia abrir um pool próprio) */
+let _abrindo: Promise<any> | null = null;
+let _pool: any = null;
+/** Requisições que tiveram de esperar conexão desde a última leitura (evento 'enqueue' do mysql2) */
+let _esperas = 0;
+
+const inteiro = (v: string | undefined, padrao: number, min: number, max: number) => {
+  const n = Number.parseInt(String(v ?? ''), 10);
+  return Number.isFinite(n) ? Math.min(max, Math.max(min, n)) : padrao;
+};
+
+/**
+ * Pool MySQL (processo Node persistente no Railway: um pool por processo, reaproveitado).
+ * - connectionLimit 10 (DB_POOL_LIMITE): valor que já estava em produção; réplicas × limite deve caber no max_connections do MySQL.
+ * - queueLimit 500 (DB_POOL_FILA): antes ilimitado; acima disso a requisição falha na hora em vez de acumular memória e espera.
+ * - keep-alive: evita sockets mortos pelo proxy após períodos ociosos (ECONNRESET na primeira consulta depois da pausa).
+ * - idleTimeout 60 s / maxIdle: devolve conexões ociosas sem fechar o pool a cada consulta.
+ */
+export function opcoesPool(env: Record<string, string | undefined> = process.env) {
+  const limite = inteiro(env.DB_POOL_LIMITE, 10, 1, 50);
+  return {
+    waitForConnections: true,
+    connectionLimit: limite,
+    maxIdle: Math.min(limite, inteiro(env.DB_POOL_OCIOSAS, 5, 0, 50)),
+    idleTimeout: 60_000,
+    queueLimit: inteiro(env.DB_POOL_FILA, 500, 0, 10_000),
+    connectTimeout: 10_000,
+    enableKeepAlive: true,
+    keepAliveInitialDelay: 10_000,
+  };
+}
+
+/** Situação do pool para diagnóstico (sem dados de conexão) */
+export function situacaoPool(): { driver: 'mysql' | 'sqlite'; limite?: number; emUso?: number; livres?: number; fila?: number; esperas?: number } {
+  if (_dbDriver === 'sqlite' || !_pool) return { driver: _dbDriver };
+  const p = _pool.pool ?? _pool; // mysql2/promise embrulha o pool de callbacks
+  const total = p._allConnections?.length ?? 0, livres = p._freeConnections?.length ?? 0;
+  const esperas = _esperas; _esperas = 0;
+  return { driver: 'mysql', limite: p.config?.connectionLimit, emUso: total - livres, livres, fila: p._connectionQueue?.length ?? 0, esperas };
+}
+
+/** Encerramento controlado (SIGTERM do deploy): espera as consultas em curso e fecha o pool */
+export async function fecharDb(): Promise<void> {
+  const p = _pool; _pool = null; _db = null; _abrindo = null;
+  if (p) await p.end().catch(() => undefined);
+}
 
 export function getDbDriver(): 'mysql' | 'sqlite' { return _dbDriver; }
 
@@ -16,6 +62,12 @@ export function transacao<T>(db: any, f: (tx: any) => Promise<T>): Promise<T> {
 }
 
 export async function getDb(): Promise<any> {
+  if (_db) return _db;
+  if (!_abrindo) _abrindo = abrirDb().finally(() => { _abrindo = null; });
+  return _abrindo;
+}
+
+async function abrirDb(): Promise<any> {
   if (_db) return _db;
 
   // ── SQLite (modo local / Electron) ────────────────────────────────────
@@ -67,10 +119,10 @@ export async function getDb(): Promise<any> {
         password: decodeURIComponent(url.password),
         database: url.pathname.replace('/', ''),
         ssl: { rejectUnauthorized: false },
-        waitForConnections: true,
-        connectionLimit: 10,
-        queueLimit: 0,
+        ...opcoesPool(),
       });
+      _pool = pool;
+      pool.on('enqueue', () => { _esperas++; });
       _db = drizzle(pool);
       _dbDriver = 'mysql';
       console.log("[Database] MySQL pool conectado");

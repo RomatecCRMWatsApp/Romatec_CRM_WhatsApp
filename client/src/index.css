@@ -436,3 +436,22 @@
    bateria, e uma faixa preta cobre essa área quando a tela rola (senão o texto passa por trás do relógio). */
 body { padding-top: env(safe-area-inset-top); }
 body::before { content: ""; position: fixed; inset: 0 0 auto 0; height: env(safe-area-inset-top); background: var(--rt-bg); z-index: 70; pointer-events: none; }
+
+/* Código de confirmação (assinatura): os dígitos giram em órbita elíptica (camada achatada em Y; cada dígito desfaz o achatamento) e se fundem no bloco "Código confirmado".
+   Só roda depois da resposta positiva do servidor; camada aria-hidden por cima do campo, sem mexer no layout. */
+@keyframes otp-orbita {
+  0% { transform: rotate(0deg) translateX(var(--otp-x)) rotate(0deg); opacity: 1; }
+  35% { transform: rotate(170deg) translateX(calc(var(--otp-x) * 0.55)) rotate(-170deg); opacity: 1; }
+  75% { transform: rotate(450deg) translateX(calc(var(--otp-x) * 0.15)) rotate(-450deg); opacity: 1; }
+  100% { transform: rotate(450deg) translateX(0) rotate(-450deg) scale(0.4); opacity: 0; }
+}
+@keyframes otp-bloco {
+  0%, 55% { opacity: 0; transform: scale(0.7); }
+  100% { opacity: 1; transform: scale(1); }
+}
+.otp-orbita { animation: otp-orbita 620ms cubic-bezier(0.5, 0, 0.3, 1) both; transform-origin: center; }
+.otp-bloco { animation: otp-bloco 760ms cubic-bezier(0.2, 0.8, 0.2, 1) both; }
+@media (prefers-reduced-motion: reduce) {
+  .otp-orbita { display: none; }
+  .otp-bloco { animation: fadeIn 150ms ease-out both; }
+}

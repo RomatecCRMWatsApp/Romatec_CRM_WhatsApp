@@ -3,6 +3,21 @@
 Cada versão nova vai no TOPO. Depois rode `npm run release` (valida e atualiza o package.json);
 ao subir, o servidor grava a versão no banco e todos recebem o aviso "Novidades da versão".
 
+## 1.140.0 — 2026-11-08
+tipo: minor
+obrigatoria: nao
+titulo: Assinatura com código: nova confirmação e proteção contra assinatura duplicada; banco mais estável
+publico: equipe
+
+### Melhorias
+- Assinatura avançada do contrato: campo do código em 6 casas (aceita colar e o preenchimento automático do celular) e confirmação animada que só aparece depois que o sistema aceita o código
+- Mensagens claras para código incorreto (com as tentativas restantes), expirado, tentativas esgotadas e falta de conexão; reenvio do código com contagem de 60 segundos
+- Conexão com o banco: uma única conexão compartilhada desde a partida, fila com limite, conexões ociosas mantidas vivas e encerramento organizado no deploy
+- Lista de rascunhos de imóveis mais leve: as fotos são contadas numa única consulta
+
+### Correções
+- Dois cliques (ou duas abas) confirmando o mesmo código ao mesmo tempo podiam registrar a assinatura e carimbar o contrato duas vezes; agora o código vale uma única vez
+
 ## 1.139.0 — 2026-11-08
 tipo: minor
 obrigatoria: nao

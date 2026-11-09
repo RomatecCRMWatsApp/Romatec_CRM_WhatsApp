@@ -232,6 +232,9 @@ export async function exigirVez(s: any): Promise<void> {
 const hashOtp = (token: string, codigo: string) => createHash('sha256').update(`${token}:${codigo}`).digest('hex');
 const mascararTel = (t: string) => t.replace(/^55(\d{2})\d+(\d{4})$/, '($1) •••••-$2');
 
+/** Linhas afetadas por update/delete no MySQL (mysql2) ou no SQLite (better-sqlite3); sem informação, considera 1 */
+const linhasAfetadas = (r: any) => Number(r?.[0]?.affectedRows ?? r?.affectedRows ?? r?.changes ?? 1);
+
 export async function solicitarOtp(token: string, o: { ip?: string; ua?: string } = {}) {
   const { s, c } = await signatarioPorToken(token);
   if (s.status === 'assinado') throw new AssinaturaErro('ASSINADO', 'Você já assinou este contrato', 409);
@@ -274,13 +277,16 @@ export async function confirmarAvancada(token: string, codigo: string, o: { ip: 
   // Reserva a tentativa no banco antes de comparar (atômico): palpites em paralelo não passam do limite
   const reserva: any = await d.update(assinaturaOtp).set({ tentativas: sql`${assinaturaOtp.tentativas} + 1` })
     .where(and(eq(assinaturaOtp.signatarioId, s.id), lt(assinaturaOtp.tentativas, OTP_TENTATIVAS)));
-  if (!Number(reserva?.[0]?.affectedRows ?? reserva?.affectedRows ?? reserva?.changes ?? 1)) throw new AssinaturaErro('OTP_BLOQUEADO', 'Tentativas esgotadas — peça um novo código', 429);
+  if (!linhasAfetadas(reserva)) throw new AssinaturaErro('OTP_BLOQUEADO', 'Tentativas esgotadas — peça um novo código', 429);
   const esperado = Buffer.from(otp.codigoHash, 'hex'), recebido = Buffer.from(hashOtp(token, String(codigo).replace(/\D/g, '')), 'hex');
   if (esperado.length !== recebido.length || !timingSafeEqual(esperado, recebido)) {
     await evento(s.contratoId, s.id, 'otp_errado', { ip: o.ip, ua: o.ua });
     throw new AssinaturaErro('OTP_INVALIDO', `Código incorreto (${OTP_TENTATIVAS - otp.tentativas - 1} tentativa(s) restante(s))`, 400);
   }
-  await d.delete(assinaturaOtp).where(eq(assinaturaOtp.signatarioId, s.id));
+  // Uso único atômico: só a requisição que consegue apagar ESTE código (mesmo hash) segue; duas confirmações simultâneas
+  // com o código certo não geram dois carimbos nem duas conclusões
+  const consumo: any = await d.delete(assinaturaOtp).where(and(eq(assinaturaOtp.signatarioId, s.id), eq(assinaturaOtp.codigoHash, otp.codigoHash)));
+  if (!linhasAfetadas(consumo)) throw new AssinaturaErro('OTP_USADO', 'Este código já foi usado. Atualize a página para ver a situação da assinatura.', 409);
   const quando = new Date();
   const atual = await pdfAtual(s.contratoId);
   const hashAssinado = sha256(atual);

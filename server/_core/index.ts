@@ -1615,6 +1615,28 @@ async function startServer() {
     console.log(`Port ${preferredPort} is busy, using port ${port} instead`);
   }
 
+  // Encerramento controlado: o deploy do Railway manda SIGTERM; para de aceitar requisições, espera as em curso e fecha o pool
+  let encerrando = false;
+  const encerrar = (sinal: string) => {
+    if (encerrando) return; encerrando = true;
+    console.log(`[Servidor] ${sinal} recebido: encerrando`);
+    const limite = setTimeout(() => process.exit(0), 10_000); limite.unref();
+    server.close(async () => {
+      const { fecharDb } = await import('../db');
+      await fecharDb();
+      process.exit(0);
+    });
+  };
+  process.once('SIGTERM', () => encerrar('SIGTERM'));
+  process.once('SIGINT', () => encerrar('SIGINT'));
+
+  // Vigia do pool: registra no log quando requisições precisaram esperar conexão (sinal de saturação ou consulta lenta)
+  setInterval(async () => {
+    const { situacaoPool } = await import('../db');
+    const p = situacaoPool();
+    if (p.esperas || p.fila) console.warn(`[Database] pool cheio: ${p.esperas ?? 0} requisição(ões) esperaram conexão nos últimos 30 s; agora ${p.emUso}/${p.limite} em uso, ${p.fila} na fila`);
+  }, 30_000).unref();
+
   server.listen(port, async () => {
     console.log(`Server running on http://localhost:${port}/`);
 

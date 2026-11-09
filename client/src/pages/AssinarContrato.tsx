@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import { useParams } from "wouter";
 import { CheckCircle2, Download, FileSignature, Loader2, Lock, ShieldCheck, Upload } from "lucide-react";
 import { abrirPdf, desenharPagina } from "@/lib/pdf";
+import { CodigoOtp } from "@/components/assinatura/CodigoOtp";
 
 const VERDE = "#0C3320", DOURADO = "#C9A646", CREME = "#F7F3E8";
 
@@ -12,10 +13,16 @@ interface Info {
   outros: { papel: string; nome: string; status: string }[];
 }
 
+/** Erro da API com o código do servidor ({ erro, mensagem }) e a marca de falha de rede, para a tela não adivinhar pelo texto */
+class ErroApi extends Error {
+  constructor(mensagem: string, readonly codigo?: string, readonly status?: number, readonly rede = false) { super(mensagem); }
+}
+
 async function chamar(url: string, init?: RequestInit) {
-  const r = await fetch(url, init);
+  let r: Response;
+  try { r = await fetch(url, init); } catch { throw new ErroApi("Não foi possível falar com o servidor. Verifique sua conexão.", undefined, 0, true); }
   const j = await r.json().catch(() => ({}));
-  if (!r.ok) throw new Error(j.mensagem || "Não foi possível concluir");
+  if (!r.ok) throw new ErroApi(j.mensagem || "Não foi possível concluir", j.erro, r.status);
   return j;
 }
 
@@ -72,7 +79,6 @@ export default function AssinarContrato() {
   const [erro, setErro] = useState<string | null>(null);
   const [leu, setLeu] = useState(false);
   const [aceite, setAceite] = useState(false);
-  const [codigo, setCodigo] = useState("");
   const [enviado, setEnviado] = useState<string | null>(null);
   const [ocupado, setOcupado] = useState(false);
   const [msg, setMsg] = useState<string | null>(null);
@@ -90,10 +96,11 @@ export default function AssinarContrato() {
     if (!navigator.geolocation) return ok(null);
     navigator.geolocation.getCurrentPosition(p => ok({ lat: p.coords.latitude, lon: p.coords.longitude }), () => ok(null), { timeout: 4000 });
   });
-  const assinarAvancada = () => executar(async () => {
+  // A assinatura vale quando o servidor responde; o efeito de confirmação só roda depois disso (CodigoOtp)
+  const confirmarCodigo = async (codigo: string) => {
     await chamar(`${base}/avancada`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ codigo, leuAteOFim: leu, aceite, geo: await geo() }) });
-    setFeito(true); carregar();
-  });
+  };
+  const reenviarCodigo = async () => { const r = await chamar(`${base}/codigo`, { method: "POST" }); setEnviado(r.destino); };
   const assinarCertificado = () => executar(async () => {
     if (!pfx) throw new Error("Escolha o arquivo do certificado (.pfx ou .p12)");
     const pfxBase64 = await lerBase64(pfx);
@@ -165,20 +172,17 @@ export default function AssinarContrato() {
                         <input type="checkbox" className="mt-1" checked={aceite} onChange={e => setAceite(e.target.checked)} disabled={!leu} />
                         <span>Li o contrato inteiro e concordo com todas as cláusulas. Sei que esta assinatura eletrônica tem validade jurídica (MP 2.200-2/2001, art. 10, § 2º).</span>
                       </label>
-                      <button disabled={!leu || ocupado} onClick={pedirCodigo} className="rounded-lg px-4 py-2 text-sm font-semibold text-white disabled:opacity-40" style={{ background: VERDE }}>
-                        {enviado ? "Reenviar código" : `Receber código no WhatsApp${s.telefoneFinal ? ` (final ${s.telefoneFinal})` : ""}`}
-                      </button>
+                      {!enviado && (
+                        <button disabled={!leu || ocupado} onClick={pedirCodigo} className="inline-flex min-h-11 items-center gap-2 rounded-lg px-4 py-2 text-sm font-semibold text-white disabled:opacity-40" style={{ background: VERDE }}>
+                          {ocupado && <Loader2 aria-hidden="true" className="h-4 w-4 animate-spin" />}
+                          {`Receber código no WhatsApp${s.telefoneFinal ? ` (final ${s.telefoneFinal})` : ""}`}
+                        </button>
+                      )}
                       {enviado && (
-                        <div className="flex flex-wrap items-end gap-2">
-                          <label className="text-sm">Código enviado para {enviado}
-                            <input value={codigo} onChange={e => setCodigo(e.target.value.replace(/\D/g, "").slice(0, 6))} inputMode="numeric" autoComplete="one-time-code"
-                              className="mt-1 block w-40 rounded-lg border px-3 py-2 text-center text-lg tracking-[0.4em]" placeholder="000000" aria-label="Código de 6 dígitos" />
-                          </label>
-                          <button disabled={codigo.length !== 6 || !aceite || !leu || ocupado} onClick={assinarAvancada}
-                            className="inline-flex items-center gap-2 rounded-lg px-4 py-2 text-sm font-semibold disabled:opacity-40" style={{ background: DOURADO, color: VERDE }}>
-                            {ocupado ? <Loader2 className="h-4 w-4 animate-spin" /> : <FileSignature className="h-4 w-4" />} Assinar contrato
-                          </button>
-                        </div>
+                        <CodigoOtp destino={enviado} confirmar={confirmarCodigo} reenviar={reenviarCodigo}
+                          aoConcluir={() => { setFeito(true); carregar(); }} aoRecarregar={carregar}
+                          bloqueado={!leu ? "Leia o contrato até o fim para liberar a assinatura." : !aceite ? "Marque que leu e concorda com o contrato para assinar." : null}
+                          cores={{ verde: VERDE, dourado: DOURADO }} />
                       )}
                     </div>
                   )}

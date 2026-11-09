@@ -729,13 +729,19 @@ export async function listarRascunhos(usuarioId: number, perfil: string) {
   const rows: any[] = await (cond ? d.select().from(imovelRascunhos).where(cond) : d.select().from(imovelRascunhos)).orderBy(desc(imovelRascunhos.atualizadoEm)).limit(200);
   const us: any[] = await d.select({ id: users.id, name: users.name }).from(users);
   const nome = (id: unknown) => us.find(x => Number(x.id) === Number(id))?.name ?? '—';
-  return Promise.all(rows.map(async r => {
+  // Uma consulta para as fotos de todos os rascunhos (antes: uma por rascunho, até 200 em paralelo disputando o pool)
+  const ids = rows.map(r => Number(r.id));
+  const midias: any[] = ids.length ? await d.select({ rascunhoId: imovelRascunhoMidias.rascunhoId, removida: imovelRascunhoMidias.removida, status: imovelRascunhoMidias.status })
+    .from(imovelRascunhoMidias).where(inArray(imovelRascunhoMidias.rascunhoId, ids)) : [];
+  const qtdFotos = new Map<number, number>();
+  for (const f of midias) if (!f.removida && f.status === 'ok') qtdFotos.set(Number(f.rascunhoId), (qtdFotos.get(Number(f.rascunhoId)) ?? 0) + 1);
+  return rows.map(r => {
     const dados = dadosDe(r);
-    const qtd = (await fotos(d, r.id)).length;
+    const qtd = qtdFotos.get(Number(r.id)) ?? 0;
     return { id: Number(r.id), estado: String(r.estado), versao: Number(r.versao), titulo: r.titulo ?? null, tipo: dados.tipo, cidade: dados.cidade, preco: dados.preco, fotos: qtd,
       pendencias: pendencias(dados, qtd), autor: nome(r.autorId), responsavel: nome(r.responsavelId), propertyId: r.propertyId ? Number(r.propertyId) : null,
       erro: r.erro ?? null, atualizadoEm: new Date(r.atualizadoEm).toISOString() };
-  }));
+  });
 }
 
 async function rascunhoPermitido(d: any, id: number, usuarioId: number, perfil: string) {

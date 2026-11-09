@@ -89,7 +89,12 @@ describe('assinatura eletrônica — fluxo completo', () => {
     expect(JSON.parse(depois.evidenciasJson)).toMatchObject({ ip: '10.0.0.1', otpCanal: 'whatsapp', carimbado: true });
     const j = await sig('conjuge');
     await A.solicitarOtp(j.token);
-    await A.confirmarAvancada(j.token, ultimoCodigo(), { ip: '10.0.0.2', leuAteOFim: true, aceite: true });
+    // Duas confirmações simultâneas com o código certo (duplo clique / duas abas): só uma assina e carimba
+    const codigoJ = ultimoCodigo();
+    const duas = await Promise.allSettled([1, 2].map(() => A.confirmarAvancada(j.token, codigoJ, { ip: '10.0.0.2', leuAteOFim: true, aceite: true })));
+    expect(duas.filter(x => x.status === 'fulfilled')).toHaveLength(1);
+    expect((duas.find(x => x.status === 'rejected') as PromiseRejectedResult).reason.codigo).toMatch(/^(OTP_USADO|ASSINADO|OTP)$/);
+    expect((await versoes()).filter((v: any) => v.etapa === `carimbo_avancada:${j.id}`)).toHaveLength(1);
     await expect(A.confirmarAvancada(j.token, '123456', { ip: '10.0.0.2', leuAteOFim: true, aceite: true })).rejects.toMatchObject({ codigo: 'ASSINADO' });
   });
 
