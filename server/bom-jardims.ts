@@ -159,7 +159,7 @@ export const bomJardimsLeadSchema = z.object({
   finalidade: z.enum(FINALIDADES).optional(),
   prazo: z.enum(PRAZOS).optional(),
   pagamento: z.enum(PAGAMENTOS).optional(),
-  loteCodigo: z.string().trim().regex(/^[A-D]\d{2}$/, 'Chácara inválida').optional(),
+  loteCodigo: z.string().trim().regex(/^[A-D]\d{2}A?$/, 'Chácara inválida').optional(),
   consent: z.literal(true, { message: 'É preciso aceitar o contato' }),
   utm: z.object({ source: utmField, medium: utmField, campaign: utmField, content: utmField }).optional(),
   origemVisita: origemVisitaSchema,
@@ -247,7 +247,7 @@ export function registrarKmlBomJardims(app: Express, base: () => string) {
     res.json({ ok: true, km, minutos, tracado: linha.length > 1 });
   });
   app.get(`/${BOM_JARDIMS_SLUG}/chacara/:arquivo`, async (req, res, next) => {
-    const m = /^([A-Da-d]\d{2})\.kml$/.exec(req.params.arquivo);
+    const m = /^([A-Da-d]\d{2}[Aa]?)\.kml$/.exec(req.params.arquivo);
     if (!m) return next();                                   // /bom-jardims/chacara/C05 → página (SPA)
     const g = await geometriaBomJardims();
     if (!g) return res.status(503).type('text/plain').send('Mapa indisponível');

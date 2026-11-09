@@ -6,6 +6,7 @@ import PageHeader from "@/components/PageHeader";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Visualizador360 } from "@/components/Tour360";
+import { CODIGO_LOTE } from "@shared/lotes";
 
 const SLUG = "bom-jardims";
 
@@ -43,7 +44,7 @@ export default function Tours360() {
             <Input value={titulo} onChange={e => setTitulo(e.target.value)} placeholder="Título (ex.: Vista da frente da chácara)" />
             <Input value={lote} onChange={e => setLote(e.target.value.toUpperCase().slice(0, 3))} placeholder="Chácara (ex.: A05)" />
             <input type="file" accept="image/jpeg,image/png" onChange={e => setArq(e.target.files?.[0] ?? null)} className="text-xs" />
-            <Button disabled={!arq || lendo || adicionar.isPending || (!!lote && !/^[A-Z]\d{2}$/.test(lote))} onClick={enviar}>
+            <Button disabled={!arq || lendo || adicionar.isPending || (!!lote && !CODIGO_LOTE.test(lote))} onClick={enviar}>
               {lendo || adicionar.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Upload className="mr-1 h-4 w-4" />} Publicar
             </Button>
           </div>

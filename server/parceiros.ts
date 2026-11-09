@@ -12,6 +12,7 @@ import { getDb } from './db';
 import { contratos, empreendimentos, imobiliariasParceiras, leadQualifications, lotes, users } from '../drizzle/schema';
 import { statusPublicoDe } from '../shared/lotes';
 import { STATUS_EM_ANDAMENTO, STATUS_VENDIDO, valorDoPlano } from '../shared/roiCampanhas';
+import { CODIGO_LOTE_I } from '../shared/lotes';
 
 export class ParceiroErro extends Error { constructor(msg: string, public status = 400) { super(msg); this.name = 'ParceiroErro'; } }
 const urlPublica = () => (process.env.APP_PUBLIC_URL || 'https://romateccrm.com').replace(/\/+$/, '');
@@ -144,7 +145,7 @@ export async function portalParceira(token: string) {
 }
 
 export const indicacaoSchema = z.object({
-  nome: z.string().trim().min(3).max(160), telefone: z.string().trim().min(10).max(25), chacara: z.string().trim().regex(/^[A-Z]\d{2}$/i).optional().or(z.literal('')),
+  nome: z.string().trim().min(3).max(160), telefone: z.string().trim().min(10).max(25), chacara: z.string().trim().regex(CODIGO_LOTE_I).optional().or(z.literal('')),
   mensagem: z.string().trim().max(1000).optional(), consentimento: z.literal(true, { message: 'Confirme que o cliente autorizou o contato' }),
 });
 

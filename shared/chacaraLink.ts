@@ -11,12 +11,13 @@ export const NOME_BOM_JARDIMS = 'Condomínio de Chácaras Bom Jardims';
 export const FUSO_BOM_JARDIMS = 23;
 
 /**
- * Portal de entrada (principal) do condomínio: UTM X 235.872,420 / Y 9.454.873,270 (SIRGAS 2000, fuso 23S,
- * EPSG:31983) → WGS 84. Na divisa junto ao marco FQNS-M-4200, ao lado da via de acesso, perto da área de recreação.
- * O acesso desce até a estrada, ao sul; as rotas do Google Maps apontam para a ponta do acesso na estrada.
+ * Portal de entrada do condomínio (projeto V2, nov/2026): atravessa a via de entrada (Rua Walter e Maria) na esquina com a
+ * Rua Cedro, do ponto inicial no limite da fazenda (UTM 235.955,872 / 9.454.732,409, SIRGAS 2000 23S) até o canto da área
+ * administrativa / stand de vendas — 12 m. PORTAL_ENTRADA é o meio do portal; a rota do Google Maps termina na via,
+ * 10 m antes, em frente ao stand (gerado de scripts/bom-jardims-projeto-v2.ts).
  */
-export const PORTAL_ENTRADA = { lat: -4.92754264, lon: -47.38171366 };
-export const ACESSO_ESTRADA = { lat: -4.929037, lon: -47.3815739 };
+export const PORTAL_ENTRADA = { lat: -4.9287718, lon: -47.3809935 };
+export const ACESSO_ESTRADA = { lat: -4.9288176, lon: -47.3810712 };
 
 /** Rota no Google Maps até a entrada do condomínio (de onde a pessoa estiver, ou de uma origem dada) */
 export function rotaAteEntrada(origem?: string): string {
@@ -26,7 +27,7 @@ export function rotaAteEntrada(origem?: string): string {
 
 /** Código de chácara no formato oficial (A01…D18) */
 export function codigoChacaraValido(codigo: string | null | undefined): boolean {
-  return /^[A-D]\d{2}$/.test(String(codigo || ''));
+  return /^[A-D]\d{2}A?$/.test(String(codigo || ''));
 }
 
 export function caminhoChacara(codigo: string): string {

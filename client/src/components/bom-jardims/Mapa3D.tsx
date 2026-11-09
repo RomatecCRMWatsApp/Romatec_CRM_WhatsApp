@@ -110,7 +110,9 @@ export default function Mapa3D({ lotes, selected, onSelect, dados, destaque, alt
         m.addLayer({ id: "perimetro-fill", type: "fill", source: "perimetro", paint: { "fill-color": "#DCE8C4", "fill-opacity": ORTOFOTO ? 0 : 0.55 } });
         m.addLayer({ id: "perimetro-linha", type: "line", source: "perimetro", paint: { "line-color": "#0C3320", "line-width": 2, "line-dasharray": [3, 2] } });
         if (data.app) { m.addSource("app", { type: "geojson", data: fc([poly(data.app.poly as Pt[])]) }); m.addLayer({ id: "app", type: "fill", source: "app", paint: { "fill-color": "#2F6B2A", "fill-opacity": 0.45 } }); }
-        const areas = [...(data.areas ?? []), ...(((data as any).areasComuns ?? []) as any[])];
+        const adm = (data.areas ?? []).filter(a => /administrativ/i.test(a.nome));
+        if (adm.length) { m.addSource("adm", { type: "geojson", data: fc(adm.map(a => poly(a.poly as Pt[]))) }); m.addLayer({ id: "adm", type: "fill", source: "adm", paint: { "fill-color": "#E3CF9F", "fill-opacity": 0.85 } }); }
+        const areas = [...(data.areas ?? []).filter(a => !/administrativ/i.test(a.nome)), ...(((data as any).areasComuns ?? []) as any[])];
         if (areas.length) { m.addSource("areas", { type: "geojson", data: fc(areas.map(a => poly(a.poly as Pt[]))) }); m.addLayer({ id: "areas", type: "fill", source: "areas", paint: { "fill-color": "#7FB069", "fill-opacity": 0.6 } }); }
         m.addSource("ruas", { type: "geojson", data: fc(data.ruas.map(r => linha(r.line as Pt[]))) });
         m.addLayer({ id: "ruas", type: "line", source: "ruas", layout: { "line-cap": "round", "line-join": "round" }, paint: { "line-color": "#E9E2CF", "line-width": ["interpolate", ["linear"], ["zoom"], 14, 2, 18, 12] } });

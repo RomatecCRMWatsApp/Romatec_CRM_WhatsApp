@@ -9,6 +9,7 @@ import path from 'path';
 import { avisoLegal, variaveisDaOferta } from '../../shared/autoresposta';
 import { precoLote, simular } from '../../shared/simulador';
 import { contextoDoEmpreendimento } from './motor';
+import { CODIGO_LOTE } from '../../shared/lotes';
 
 const COR = { verde: '#0C3320', dourado: '#C9A84C', destaque: '#F2C04B', creme: '#F3EEDF', texto: '#23352A', suave: '#5C6B5F' };
 const SANS = "'Liberation Sans', Arial, Helvetica, sans-serif";
@@ -80,7 +81,7 @@ export function svgDoFolder(p: { empreendimento: string; codigo: string; vars: R
 /** PNG do folder da chácara (só chácara livre de empreendimento com condições cadastradas) */
 export async function folderDaChacara(slug: string, codigoBruto: string): Promise<Buffer> {
   const codigo = codigoBruto.toUpperCase();
-  if (!/^[A-Z]\d{2}$/.test(codigo)) throw new FolderErro('Chácara inválida', 400);
+  if (!CODIGO_LOTE.test(codigo)) throw new FolderErro('Chácara inválida', 400);
   const ctx = await contextoDoEmpreendimento(slug);
   if (!ctx) throw new FolderErro('Empreendimento não encontrado');
   if (!ctx.cond) throw new FolderErro('Sem condições de pagamento');

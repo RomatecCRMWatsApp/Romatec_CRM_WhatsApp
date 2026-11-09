@@ -12,6 +12,7 @@ import { tituloCondicao, type PlanoContrato } from './plano';
 import { divisaoComissaoLancamento } from '../../shared/condicoesLancamento';
 import { ESCRITORIO } from '../../shared/escritorio';
 import { numeroCreciPF } from '../../shared/cartaoVendas';
+import { numeroDoLote } from '../../shared/lotes';
 
 export type Ctx = Record<string, string | boolean | number>;
 
@@ -260,7 +261,7 @@ export function montarContexto(e: EntradaContexto): Ctx {
     ctr_data_extenso: dataExtenso(e.contrato.dataGeracao),
     ctr_parcelas_minimas_obra: '3', ctr_condicoes_especificas: 'Não há.',
     ...tagsRecebedor(e.recebedor),
-    lote_codigo: l.codigo, lote_quadra: l.quadra ?? '', lote_numero: l.numero != null ? String(l.numero).padStart(2, '0') : '',
+    lote_codigo: l.codigo, lote_quadra: l.quadra ?? '', lote_numero: l.numero != null ? numeroDoLote(l) : '',
     lote_area_m2: brl(l.areaM2), lote_area_extenso: areaExtenso(l.areaM2), lote_perimetro_m: brl(l.perimetroM),
     lote_descricao: l.descricao, lote_via_frente: l.viaFrente, lote_matricula: l.matricula,
     ...tagsPlano(e.plano),

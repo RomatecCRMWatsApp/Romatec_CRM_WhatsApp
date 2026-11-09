@@ -10,6 +10,7 @@ import { brl, vencimento, type SeloLote } from "@shared/simulador";
 import { CONDICOES, ROTULO_CONDICAO, ROTULO_LINHA, cronograma, divisaoComissaoLancamento, planosDaCondicao, prazosDaCondicao, textoCondicao, type CondicaoPagamento, type PlanoCondicao } from "@shared/condicoesLancamento";
 import type { LotePainel } from "@/components/empreendimento/PainelLote";
 import { Calculator, Download, FileText, Link2, Send, X } from "lucide-react";
+import { CODIGO_LOTE } from "@shared/lotes";
 
 const m2 = (v: number) => v.toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 const cel = (v: unknown) => { const s = v == null ? "" : String(v); return /[;"\n]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s; };
@@ -235,7 +236,7 @@ export default function Simulador({ slug, lotes, ruas, perimetro, destinoSugerid
   const [condicao, setCondicao] = useState<CondicaoPagamento>("padrao");
   const [modal, setModal] = useState<"evolucao" | "whatsapp" | "lead" | null>(null);
 
-  const escolher = (c: string) => { const v = c.trim().toUpperCase(); setDigitado(v); if (/^[A-Z]\d{2}$/.test(v)) setCodigo(v); };
+  const escolher = (c: string) => { const v = c.trim().toUpperCase(); setDigitado(v); if (CODIGO_LOTE.test(v)) setCodigo(v); };
   // Planos A, B e C: entrada única no ato — a comissão do quadro sai 100% no ato (como no contrato)
   const { data, error, isFetching } = trpc.simulador.simular.useQuery(
     { slug, lote: codigo, entrada: condicao === "padrao" ? entrada : 1 },

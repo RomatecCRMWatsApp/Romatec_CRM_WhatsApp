@@ -136,7 +136,8 @@ export default function MapaTematico({ slug, lotes, ruas, perimetro, selecionado
 
           {/* Área de vivência e recreação (na frente, junto ao rio) */}
           {ctx?.areas?.map(a => (
-            <path key={a.nome} d={caminho(a.poly.filter(valido).map(proj))} fill="url(#vivencia)" fillOpacity={satelite ? 0.3 : 1} stroke="#2F7D3A" strokeWidth={1.5} strokeDasharray="6 4" pointerEvents="none" />
+            <path key={a.nome} d={caminho(a.poly.filter(valido).map(proj))} fill={/administrativ/i.test(a.nome) ? "#EADCB8" : "url(#vivencia)"} fillOpacity={satelite ? 0.3 : 1}
+              stroke={/administrativ/i.test(a.nome) ? "#8A6A2E" : "#2F7D3A"} strokeWidth={1.5} strokeDasharray="6 4" pointerEvents="none" />
           ))}
 
           {/* APP (30 m): faixa de preservação ao longo do rio, discreta */}
@@ -233,7 +234,7 @@ export default function MapaTematico({ slug, lotes, ruas, perimetro, selecionado
             const fs = compacto ? 10 : 12;
             return (
               <g key={`r${a.nome}`} pointerEvents="none">
-                <text x={x} y={y} textAnchor="middle" fontSize={fs} fontWeight={800} fill="#1F5A2A" stroke="#FFFFFF" strokeWidth={3} paintOrder="stroke">
+                <text x={x} y={y} textAnchor="middle" fontSize={/administrativ/i.test(a.nome) ? fs - 2 : fs} fontWeight={800} fill={/administrativ/i.test(a.nome) ? "#5C4518" : "#1F5A2A"} stroke="#FFFFFF" strokeWidth={3} paintOrder="stroke">
                   <tspan x={x} dy={0}>{a.nome.split(" e ")[0].toUpperCase()}</tspan>
                   {a.nome.includes(" e ") && <tspan x={x} dy={fs + 2}>{`E ${a.nome.split(" e ").slice(1).join(" e ").toUpperCase()}`}</tspan>}
                   {a.detalhe && <tspan x={x} dy={fs + 1} fontSize={fs - 2} fontWeight={600}>{a.detalhe}</tspan>}
@@ -314,7 +315,8 @@ export default function MapaTematico({ slug, lotes, ruas, perimetro, selecionado
             </span>
           ))}
           {ctx?.pontos?.length ? <span className="inline-flex items-center gap-1.5"><span className="inline-block h-3 w-3 rounded-full bg-[color:var(--c-c9a84c)] border-2 border-[color:var(--c-0c3320)]" />Portal, stand, poço e pontos de apoio</span> : null}
-          {ctx?.areas?.length ? <span className="inline-flex items-center gap-1.5"><span className="inline-block h-3 w-3 rounded-sm border border-[color:var(--c-2f7d3a)] bg-[color:var(--c-c7dfa8)]" />Área de vivência e recreação</span> : null}
+          {ctx?.areas?.some(a => !/administrativ/i.test(a.nome)) ? <span className="inline-flex items-center gap-1.5"><span className="inline-block h-3 w-3 rounded-sm border border-[color:var(--c-2f7d3a)] bg-[color:var(--c-c7dfa8)]" />Área de vivência e recreação</span> : null}
+          {ctx?.areas?.some(a => /administrativ/i.test(a.nome)) ? <span className="inline-flex items-center gap-1.5"><span className="inline-block h-3 w-3 rounded-sm border border-[#8A6A2E] bg-[#EADCB8]" />Administração e stand de vendas</span> : null}
           {ctx?.rio ? <span className="inline-flex items-center gap-1.5"><span className="inline-block h-1.5 w-4 rounded-full bg-[color:var(--c-2c7fb8)]" />Rio</span> : null}
           {ctx?.app ? <span className="inline-flex items-center gap-1.5"><span className="inline-block h-3 w-3 rounded-sm border border-[color:var(--c-2f6a2c)]/60 bg-[color:var(--c-3f7a3a)]/30" />APP (30 m)</span> : null}
           {ctx?.trilha ? <span className="inline-flex items-center gap-1.5"><span className="inline-block w-4 border-t-2 border-dashed border-[color:var(--c-7a5530)]" />Trilha ecológica</span> : null}

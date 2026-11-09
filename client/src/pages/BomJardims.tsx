@@ -18,7 +18,7 @@ import { refDaSessao } from "@/lib/cartaoVendas";
 /**
  * Landing do Condomínio de Chácaras Bom Jardims — /bom-jardims
  * Regras do pacote (README §0): NÃO mostrar preço, CRECI e os dois contatos
- * com o mesmo destaque, 82 chácaras, sem promessas de escritura/valorização.
+ * com o mesmo destaque, 84 chácaras, sem promessas de escritura/valorização.
  */
 
 const CONSENT_TEXT =
@@ -26,7 +26,7 @@ const CONSENT_TEXT =
 
 
 const DIFERENCIAIS = [
-  { icon: ShieldCheck, titulo: "Portal com guarita", texto: "Portal em tijolo aparente e troncos, portão de correr estilo fazenda e controle de acesso." },
+  { icon: ShieldCheck, titulo: "Portal com guarita", texto: "Portal em troncos e tábuas na entrada (Rua Walter e Maria, esquina com a Rua Cedro), ao lado do stand de vendas, com guarita, portão automatizado e controle de acesso." },
   { icon: Trees, titulo: "Área de vivência e reserva preservada", texto: "Reserva de mata nativa ao longo do córrego, com trilha ecológica e pontos de banho. Cada chácara tem um espaço exclusivo de 100 m² com tenda e churrasqueira. Flora e fauna intactas." },
   { icon: Droplets, titulo: "Água encanada", texto: "Poço artesiano do condomínio com bombeamento automático para reservatório elevado de 10.000 litros, e ponto de água na frente de cada chácara, com medição individual." },
   { icon: Route, titulo: "Ruas internas de 12 m", texto: "8 ruas internas com sarjeta e passeio — 9 m de rolamento e 1,50 m de calçada de cada lado." },
@@ -321,7 +321,7 @@ export default function BomJardims() {
           )}
         </div>
         <p style={{ fontSize: 12, color: C.suave, marginTop: 12 }}>
-          Mapa ilustrativo a partir do levantamento georreferenciado (SIRGAS 2000). A03 é área técnica (poço e reservatório) e B14 abriga o stand de vendas e a administração.
+          Mapa ilustrativo a partir do levantamento georreferenciado (SIRGAS 2000). A02 é área técnica (poço e reservatório); a administração e o stand de vendas ficam na entrada, junto ao portal (Rua Walter e Maria × Rua Cedro), fora do condomínio.
           O KML traz a poligonal do empreendimento e todas as chácaras demarcadas — abre no Google Earth e em apps de mapas e GIS.
         </p>
       </section>

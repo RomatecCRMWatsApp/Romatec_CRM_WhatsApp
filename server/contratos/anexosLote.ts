@@ -11,6 +11,7 @@ import { pontoDentro, utmParaGeo } from '../../shared/utm';
 import type { CamadasMapa } from './mapaEmpreendimento';
 import type { Ctx } from './contexto';
 import { desenharMarca, embutirMarca } from './anexos';
+import { numeroDoLote } from '../../shared/lotes';
 
 type XY = [number, number];
 const VERDE = rgb(0.047, 0.2, 0.125);
@@ -237,8 +238,10 @@ export async function anexoMapa(u: DadosUnidade, ctx: Ctx, marca: string): Promi
       // Propriedade em gramado; perímetro tracejado
       if (cam?.perimetro.length) poligono(p, P(cam.perimetro), { cor: M.grama, borda: M.divisa, esp: px(1.5), tracejado: [0.1, px(5)], redondo: true });
       if (u.perimetroUtm?.length) poligono(p, P(u.perimetroUtm), { cor: cam?.perimetro.length ? undefined : M.grama, borda: M.divisa, esp: px(2.5), tracejado: [0.1, px(5)], redondo: true });
-      for (const a of cam?.areas ?? []) poligono(p, P(a.poly), { cor: M.vivencia, borda: M.vivenciaBorda, esp: px(1.5), tracejado: [px(6), px(4)] });
-      for (const a of cam?.areas ?? []) {
+      // Área administrativa e stand (projeto V2): tom próprio, sem copas de árvore
+      const ehAdm = (a: { nome: string }) => /administrativ/i.test(a.nome);
+      for (const a of cam?.areas ?? []) poligono(p, P(a.poly), ehAdm(a) ? { cor: hex('#EADCB8'), borda: hex('#8A6A2E'), esp: px(1.5), tracejado: [px(6), px(4)] } : { cor: M.vivencia, borda: M.vivenciaBorda, esp: px(1.5), tracejado: [px(6), px(4)] });
+      for (const a of (cam?.areas ?? []).filter(x => !ehAdm(x))) {
         // Copas (o padrão "vivencia" do mapa do sistema)
         const pts = P(a.poly), xs = pts.map(q => q[0]), ys = pts.map(q => q[1]);
         const passo = px(18);
@@ -287,7 +290,8 @@ export async function anexoMapa(u: DadosUnidade, ctx: Ctx, marca: string): Promi
         const [x, yy] = g.map(a.rotulo), fs = px(12) * T;
         const partes = a.nome.split(' e ');
         const linhas = [partes[0].toUpperCase(), ...(partes.length > 1 ? [`E ${partes.slice(1).join(' e ').toUpperCase()}`] : [])];
-        linhas.forEach((l, i) => texto(p, l, x, yy - i * (fs + px(2)), { font: fb, size: fs, cor: M.vivenciaTexto, halo: M.branco, esp: px(3) }));
+        const corTxt = /administrativ/i.test(a.nome) ? hex('#5C4518') : M.vivenciaTexto;
+        linhas.forEach((l, i) => texto(p, l, x, yy - i * (fs + px(2)), { font: fb, size: fs, cor: corTxt, halo: M.branco, esp: px(3) }));
         if (a.detalhe) texto(p, a.detalhe, x, yy - linhas.length * (fs + px(2)) + px(1), { font: f, size: fs - px(2) * T, cor: M.vivenciaTexto, halo: M.branco, esp: px(3) });
       }
       if (cam?.rio?.rotulo) { const [x, yy] = g.map(cam.rio.rotulo); texto(p, cam.rio.nome.split(' (')[0].toUpperCase(), x, yy, { font: fi, size: px(12) * T, cor: M.rioTexto, halo: M.branco, esp: px(3), ang: 78 }); }
@@ -479,7 +483,7 @@ export async function anexoMapa(u: DadosUnidade, ctx: Ctx, marca: string): Promi
 
     const [lon, lat] = utmParaGeo(...centroide(u.verticesUtm.length ? u.verticesUtm : vs), u.fuso);
     const resumo: [string, string][] = [
-      ['Unidade', `Chácara ${u.codigo}${u.quadra ? `, Quadra ${u.quadra}` : ''}${u.numero != null ? `, Lote ${String(u.numero).padStart(2, '0')}` : ''}`],
+      ['Unidade', `Chácara ${u.codigo}${u.quadra ? `, Quadra ${u.quadra}` : ''}${u.numero != null ? `, Lote ${numeroDoLote(u)}` : ''}`],
       ['Área', `${fmt(u.areaM2)} m² (${fmt(u.areaM2 / 10000, 4)} ha)`],
       ['Perímetro', `${fmt(u.perimetroM)} m · ${vt.length} vértices`],
       ['Centro aproximado', `${gms(lat, 'N', 'S')}  ${gms(lon, 'E', 'W', 3)}  (${lat.toFixed(8)}°, ${lon.toFixed(8)}°)`],

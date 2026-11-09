@@ -2,6 +2,18 @@
  * Situações de venda do lote (controle interno do empreendimento) — usadas no
  * servidor e na tela. O site público só vê disponível / reservada / vendida / área técnica.
  */
+
+/** Código de lote: quadra + número com 2 dígitos + sufixo opcional de desmembramento (A02, B14, A02A) */
+export const CODIGO_LOTE = /^[A-Z]\d{2}[A-Z]?$/;
+/** O mesmo padrão, sem diferenciar maiúsculas (entrada digitada) */
+export const CODIGO_LOTE_I = /^[A-Z]\d{2}[A-Z]?$/i;
+
+/** Número do lote por extenso nos documentos: "02"; desmembrado (A02A) → "02-A" */
+export function numeroDoLote(l: { codigo: string; numero?: number | null }): string {
+  const suf = /\d([A-Z])$/.exec(l.codigo)?.[1];
+  const base = l.numero != null ? String(l.numero).padStart(2, '0') : (/\d+/.exec(l.codigo)?.[0] ?? '');
+  return suf ? `${base}-${suf}` : base;
+}
 export const SITUACOES_LOTE = ['disponivel', 'interesse', 'reservado', 'entrada', 'vendido_parcelado', 'vendido_avista', 'quitado', 'concedido', 'bloqueado'] as const;
 export type SituacaoLote = typeof SITUACOES_LOTE[number];
 

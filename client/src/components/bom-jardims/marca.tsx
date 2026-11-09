@@ -21,20 +21,23 @@ export const CONTATOS = [
 export const GALERIA = [
   { src: "/bom-jardims/portal-noite.webp", alt: "Portal de entrada à noite (perspectiva ilustrativa)" },
   { src: "/bom-jardims/portal-frontal.webp", alt: "Portal de entrada — vista frontal (perspectiva ilustrativa)" },
-  { src: "/bom-jardims/stand-perspectiva.webp", alt: "Stand de vendas e administração na chácara B14 (perspectiva ilustrativa)" },
+  { src: "/bom-jardims/stand-perspectiva.webp", alt: "Stand de vendas e administração na entrada do condomínio (perspectiva ilustrativa)" },
   { src: "/bom-jardims/stand-aerea.webp", alt: "Stand de vendas e administração — vista aérea (perspectiva ilustrativa)" },
 ];
 export const VIDEO = { src: "/bom-jardims/video.mp4", poster: "/bom-jardims/video-poster.webp" };
 
 /**
- * Projeto arquitetônico (recortes das pranchas PA-01 Portal/Guarita e PA-02 Administração/Stand B14):
+ * Projeto arquitetônico (pranchas PA-01 rev. V2 Portal/Guarita — sem ala esquerda, ao lado do stand — e PA-02 Administração/Stand,
+ * na área de entrada, junto ao portal):
  * fachada e planta baixa, já com o título da prancha na imagem. Mostrados inteiros (sem corte).
  */
 export const PROJETO = [
-  { src: "/bom-jardims/projeto-portal-fachada.webp", alt: "Fachada frontal — portal de entrada (projeto PA-01)", w: 1600, h: 530 },
-  { src: "/bom-jardims/projeto-portal-planta.webp", alt: "Planta baixa — implantação do portal e guarita (projeto PA-01)", w: 1600, h: 542 },
+  { src: "/bom-jardims/projeto-portal-fachada.webp", alt: "Fachada frontal — portal de entrada na Rua Walter e Maria (esquina com a Rua Cedro), ao lado do stand de vendas (projeto PA-01 rev. V2)", w: 1600, h: 911, pdf: "/bom-jardims/projeto-portal-v2.pdf" },
+  { src: "/bom-jardims/projeto-portal-planta.webp", alt: "Planta baixa — portal, guarita e portão de pedestres, do limite da fazenda ao canto do stand (projeto PA-01 rev. V2)", w: 1600, h: 1289, pdf: "/bom-jardims/projeto-portal-v2.pdf" },
+  { src: "/bom-jardims/projeto-portal-implantacao.webp", alt: "Implantação — portal, área administrativa e stand de vendas na entrada (projeto V2)", w: 1600, h: 1068, pdf: "/bom-jardims/projeto-portal-v2.pdf" },
   { src: "/bom-jardims/projeto-stand-fachada.webp", alt: "Fachada frontal — administração e stand de vendas (projeto PA-02)", w: 1600, h: 549 },
-  { src: "/bom-jardims/projeto-stand-planta.webp", alt: "Planta baixa — administração e stand de vendas na chácara B14 (projeto PA-02)", w: 1600, h: 1590 },
+  { src: "/bom-jardims/projeto-stand-planta.webp", alt: "Planta baixa — administração e stand de vendas na área de entrada (projeto PA-02)", w: 1600, h: 1590 },
+  { src: "/bom-jardims/projeto-stand-implantacao.webp", alt: "Planta de implantação — área administrativa e stand de vendas na entrada, junto ao portal (4.125 m², projeto V2)", w: 1600, h: 1132, pdf: "/bom-jardims/projeto-stand-implantacao.pdf" },
 ];
 
 /** Bloco "Projeto — portal e stand de vendas": imagens inteiras, cada uma abre em tamanho grande */
@@ -45,7 +48,7 @@ export function GaleriaProjeto() {
       <p style={{ color: C.suave, margin: "0 0 14px", fontSize: 14 }}>Fachadas e plantas baixas do projeto arquitetônico. Toque para ampliar.</p>
       <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(min(100%, 420px), 1fr))", gap: 12, alignItems: "center" }}>
         {PROJETO.map(p => (
-          <a key={p.src} href={p.src} target="_blank" rel="noopener noreferrer" title={p.alt}
+          <a key={p.src} href={(p as { pdf?: string }).pdf ?? p.src} target="_blank" rel="noopener noreferrer" title={p.alt}
             style={{ display: "block", borderRadius: 14, overflow: "hidden", background: "var(--c-ffffff)", border: "1px solid var(--c-e2d9bf)" }}>
             <img src={p.src} alt={p.alt} loading="lazy" width={p.w} height={p.h}
               style={{ width: "100%", height: "auto", maxHeight: 460, objectFit: "contain", display: "block" }} />

@@ -10,6 +10,7 @@ import { z } from 'zod';
 import { getDb } from './db';
 import { apiChaves, empreendimentos, lotes, properties } from '../drizzle/schema';
 import { statusPublicoDe } from '../shared/lotes';
+import { CODIGO_LOTE_I } from '../shared/lotes';
 
 export const ESCOPOS = ['lotes:ler', 'imoveis:ler', 'leads:criar'] as const;
 export type Escopo = typeof ESCOPOS[number];
@@ -72,7 +73,7 @@ export const leadApiSchema = z.object({
   email: z.string().trim().email().max(160).optional(),
   mensagem: z.string().trim().max(1000).optional(),
   empreendimento: z.string().trim().max(80).optional(),
-  chacara: z.string().trim().regex(/^[A-Z]\d{2}$/i).optional(),
+  chacara: z.string().trim().regex(CODIGO_LOTE_I).optional(),
   imovel: z.string().trim().max(20).optional(),
   consentimento: z.literal(true, { message: 'consentimento: true é obrigatório (LGPD — o cliente autorizou o contato)' }),
 });

@@ -16,6 +16,7 @@ import {
 import { usuarioDaRef } from './cartaoVendas';
 import type { DadosPedido } from '../shared/mensagensAgendamento';
 import { mesmoTelefone } from './leads/mesmoTelefone';
+import { CODIGO_LOTE_I } from '../shared/lotes';
 
 export class AgendamentoErro extends Error { constructor(msg: string, public status = 400) { super(msg); this.name = 'AgendamentoErro'; } }
 
@@ -109,7 +110,7 @@ export async function registrarAgendamento(slug: string, p: PedidoAgendamento, i
   const utm = p.utm?.source ? p.utm : undefined;
   const r = await ingestLead({
     nome: p.nome, phone: p.telefone, origem: utm ? origemFromUtm(utm) : 'site', campanha: utm?.campaign || 'Link de agendamento', utm, empreendimentoSlug: emp.slug,
-    loteCodigo: /^[A-Z]\d{2}$/i.test(p.unidade || '') ? p.unidade!.toUpperCase() : undefined,
+    loteCodigo: CODIGO_LOTE_I.test(p.unidade || '') ? p.unidade!.toUpperCase() : undefined,
     answers: respostasDoPedido(p), funil: 'comprador', responsavelId: dono?.id ?? null,
     // A 1ª mensagem é a confirmação do agendamento (abaixo), já com o corretor responsável
     semBoasVindas: true,

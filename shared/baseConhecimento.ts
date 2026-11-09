@@ -45,11 +45,11 @@ export const ARTIGOS_INICIAIS: ArtigoBase[] = [
   {
     slug: 'ficha-do-bom-jardims', titulo: 'Ficha do Condomínio de Chácaras Bom Jardims', categoria: 'empreendimento', publico: 'todos', ordem: 1,
     conteudo: `## O empreendimento
-- **82 chácaras** em cerca de 41 ha, em Açailândia/MA.
+- **84 chácaras** em cerca de 41 ha, em Açailândia/MA.
 - Tamanhos: **3.025 m²** (quadras A e B, 55 × 55 m), **3.140 m²** (quadras C e D) e **3.600 m²** junto à mata.
 - Preço **a partir de R$ 160 mil** (chácara de 3.025 m²).
 - Endereço: Estrada do Piquiá dos Baianos, altura do km 15 da BR-222. **17 km do centro**, menos de 28 min de carro.
-- **Stand de vendas e administração:** chácara B14.
+- **Stand de vendas e administração:** na entrada do condomínio, junto ao portal (Rua Walter e Maria, esquina com a Rua Cedro) (área própria de 4.125 m², fora do condomínio).
 - **Lançamento oficial:** 14 de novembro de 2026.
 
 ## Infraestrutura (projeto; confira o estágio da obra antes de afirmar que está pronto)

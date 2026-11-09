@@ -165,7 +165,7 @@ export default function BomJardims3D() {
             <div style={{ flex: "1 1 280px", maxWidth: 480 }}>
               <h3 style={{ fontFamily: SERIF, color: C.verde, fontSize: 26, margin: "0 0 8px" }}>O Bom Jardims em 3D em 1 minuto</h3>
               <p style={{ margin: "0 0 16px", lineHeight: 1.55 }}>
-                O terreno real em alto relevo, as 82 chácaras nos três tamanhos — 3.025 m², 3.140 m² e 3.600 m² junto à mata — e as imagens do início das obras.
+                O terreno real em alto relevo, as 84 chácaras nos três tamanhos — 3.025 m², 3.140 m² e 3.600 m² junto à mata — e as imagens do início das obras.
               </p>
               <div style={{ display: "flex", flexWrap: "wrap", gap: 10 }}>
                 <button onClick={() => window.scrollTo({ top: 0, behavior: "smooth" })} style={{ padding: "13px 18px", borderRadius: 14, border: "none", background: C.verde, color: "var(--c-ffffff)", fontWeight: 700, cursor: "pointer", fontFamily: SANS, fontSize: 15 }}>

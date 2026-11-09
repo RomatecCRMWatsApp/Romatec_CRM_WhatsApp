@@ -51,8 +51,8 @@ describe('Localização exata da chácara', () => {
     expect(loc.utm.texto).toMatch(/^E [\d.]+,\d\d · N [\d.]+,\d\d \(SIRGAS 2000, fuso 23S\)$/);
     expect(loc.utm.n).toBeGreaterThan(9_400_000);   // hemisfério sul, falso norte
   });
-  it('todas as 84 chácaras têm localização dentro do próprio lote', () => {
-    expect(mapa.lotes).toHaveLength(84);
+  it('todos os 85 lotes têm localização dentro do próprio lote', () => {
+    expect(mapa.lotes).toHaveLength(85);
     for (const l of mapa.lotes) {
       const loc = localizacaoDoLote(l.poly);
       expect(dentro([loc.lon, loc.lat], l.poly), l.codigo).toBe(true);

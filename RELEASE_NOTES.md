@@ -3,6 +3,29 @@
 Cada versão nova vai no TOPO. Depois rode `npm run release` (valida e atualiza o package.json);
 ao subir, o servidor grava a versão no banco e todos recebem o aviso "Novidades da versão".
 
+## 1.143.0 — 2026-11-09
+tipo: minor
+obrigatoria: nao
+titulo: Bom Jardims — projeto V2: portal e stand na entrada, A02 desmembrado, A03 e B14 à venda
+publico: equipe
+
+### Novo
+- Projeto V2 do Bom Jardims aplicado uma vez no banco: geometria oficial de todos os lotes (área, perímetro, vértices e polígono do DXF atualizado), ruas do desenho e contagem de chácaras
+- A02 desmembrado: A02 (1.100,04 m²) vira a área técnica do poço e reservatório; o novo A02A (1.925,07 m²) entra à venda
+- A03 e B14 liberados para venda — agora são 84 chácaras à venda (85 lotes)
+- Portal de entrada (PA-01 rev. V2): atravessa a Rua Walter e Maria na esquina com a Rua Cedro, do ponto inicial no limite da fazenda (E 235.955,872 · N 9.454.732,409) até o canto da área do stand — sem ala lateral, guarita na área administrativa, portão de giro automatizado. Fachada, planta, implantação e PDF A3 na página do empreendimento
+- Área administrativa e stand de vendas na entrada (4.125 m², fora do condomínio), com planta de implantação em PDF
+
+### Melhorias
+- Mapas 2D, 3D, temático e KML: portal no novo ponto, área administrativa destacada, A02 como área técnica; rotas do Google Maps terminam na via de entrada, em frente ao stand
+- Memorial descritivo e anexos dos contratos: lote desmembrado aparece como "Lote 02-A da Quadra A" e as confrontações listam todos os vizinhos de cada lado
+- Modelos de contrato (CPCV) e estatuto da associação atualizados (A02 área técnica; sede na área administrativa da entrada)
+- Mapa de vendas para divulgação atualizado (84 chácaras, A02A, ADM/stand e portal)
+- Importador de DXF aceita lotes desmembrados ("2A")
+
+### Correções
+- Se o A02 já tiver cliente, reserva ou contrato, o desmembramento não é aplicado automaticamente (fica para decisão manual)
+
 ## 1.142.0 — 2026-11-09
 tipo: minor
 obrigatoria: nao

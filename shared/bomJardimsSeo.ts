@@ -9,7 +9,7 @@
 export const TITULO_BOM_JARDIMS = 'Condomínio de Chácaras em Açailândia/MA — Chácaras Bom Jardims à venda';
 
 export const DESCRICAO_BOM_JARDIMS =
-  'Chácaras à venda em Açailândia/MA: Condomínio de Chácaras Bom Jardims, na BR-222. 82 chácaras a partir de 3.025 m², portal, água encanada e área de vivência. Agende sua visita.';
+  'Chácaras à venda em Açailândia/MA: Condomínio de Chácaras Bom Jardims, na BR-222. 84 chácaras a partir de 3.025 m², portal, água encanada e área de vivência. Agende sua visita.';
 
 /** Rota pública do formulário de agendamento */
 export const AGENDAR_BOM_JARDIMS = '/agendar/bom-jardims';
@@ -31,7 +31,7 @@ export const SOBRE_BOM_JARDIMS: { titulo: string; paragrafos: string[] }[] = [
   {
     titulo: 'Condomínio de chácaras em Açailândia/MA',
     paragrafos: [
-      'O Condomínio de Chácaras Bom Jardims é um condomínio fechado de chácaras em Açailândia, no Maranhão. São 82 chácaras à venda, com terrenos a partir de 3.025 m², numa área total de 41 hectares — espaço para morar com tranquilidade, ter um lugar de lazer no fim de semana ou investir em terra perto da cidade.',
+      'O Condomínio de Chácaras Bom Jardims é um condomínio fechado de chácaras em Açailândia, no Maranhão. São 84 chácaras à venda, com terrenos a partir de 3.025 m², numa área total de 41 hectares — espaço para morar com tranquilidade, ter um lugar de lazer no fim de semana ou investir em terra perto da cidade.',
       'O nome é Bom Jardims, com S no final; muita gente procura como "Bom Jardins" ou "chácaras Bom Jardim". É o mesmo empreendimento da BR-222, em Açailândia.',
     ],
   },
@@ -71,7 +71,7 @@ export const FAQ_BOM_JARDIMS: { pergunta: string; resposta: string }[] = [
   },
   {
     pergunta: 'Qual o tamanho das chácaras do Bom Jardims?',
-    resposta: 'São 82 chácaras a partir de 3.025 m², em quadras com ruas internas de 12 metros e área de vivência e recreação às margens do córrego.',
+    resposta: 'São 84 chácaras a partir de 3.025 m², em quadras com ruas internas de 12 metros e área de vivência e recreação às margens do córrego.',
   },
   {
     pergunta: 'Qual o preço das chácaras do Bom Jardims?',
@@ -115,7 +115,7 @@ export function htmlEstaticoBomJardims(): string {
     '<main style="font-family:sans-serif;max-width:860px;margin:0 auto;padding:24px 16px;color:#E8F0EB;line-height:1.55">',
     `<img src="${hero.src}" srcset="${SRCSET_TOPO}" sizes="(max-width: 860px) 100vw, 860px" alt="${esc(hero.alt)}" width="${hero.w}" height="${hero.h}" fetchpriority="high" style="width:100%;height:auto;border-radius:16px" />`,
     '<h1>Chácaras Bom Jardims — Condomínio de Chácaras em Açailândia/MA</h1>',
-    '<p>Chácaras à venda em Açailândia, Maranhão: o Condomínio de Chácaras Bom Jardims tem 82 chácaras a partir de 3.025 m², portal de acesso, ruas internas de 12 m e área de vivência às margens do córrego, na BR-222 (Estrada do Piquiá dos Baianos, km 15).</p>',
+    '<p>Chácaras à venda em Açailândia, Maranhão: o Condomínio de Chácaras Bom Jardims tem 84 chácaras a partir de 3.025 m², portal de acesso, ruas internas de 12 m e área de vivência às margens do córrego, na BR-222 (Estrada do Piquiá dos Baianos, km 15).</p>',
     `<p><a href="${AGENDAR_BOM_JARDIMS}" style="${botao}">Agendar visita</a><a href="#mapa" style="color:#E8F0EB">Ver as chácaras no mapa</a></p>`,
     '<h2>Sobre o Condomínio de Chácaras Bom Jardims</h2>',
     ...SOBRE_BOM_JARDIMS.map(s => `<h3>${esc(s.titulo)}</h3>${s.paragrafos.map(p => `<p>${esc(p)}</p>`).join('')}`),

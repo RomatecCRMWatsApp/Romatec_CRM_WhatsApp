@@ -244,7 +244,7 @@ export default function ObrasBomJardim() {
               </span>
             </h1>
             <p style={{ color: C.creme, fontSize: "clamp(16px, 2.5vw, 19px)", margin: "0 0 20px", maxWidth: 720, lineHeight: 1.5 }}>
-              Só <b>82 chácaras</b>, a partir de <b>3.025 m²</b>. <b>100% documentado</b> — escritura, licença ambiental e georreferenciamento INCRA/SIGEF — e <b>liberado para vendas</b>.
+              Só <b>84 chácaras</b>, a partir de <b>3.025 m²</b>. <b>100% documentado</b> — escritura, licença ambiental e georreferenciamento INCRA/SIGEF — e <b>liberado para vendas</b>.
             </p>
             <div style={{ display: "flex", flexWrap: "wrap", gap: 12 }}>
               <button type="button" onClick={saberValor} style={btn("var(--c-25d366)", "var(--c-ffffff)")}>
@@ -288,7 +288,7 @@ export default function ObrasBomJardim() {
           <h2 style={{ fontFamily: SERIF, color: C.verde, fontSize: 26, margin: 0 }}>Por que agora?</h2>
           {[
             ["Obras em andamento", "Máquinas no terreno: abertura das ruas internas de 12 m, todas empiçarradas."],
-            ["Estoque limitado", "São só 82 chácaras. Quem chega antes do lançamento escolhe primeiro."],
+            ["Estoque limitado", "São só 84 chácaras. Quem chega antes do lançamento escolhe primeiro."],
             ["Documentação em ordem", "Escritura, licença ambiental e área certificada no INCRA/SIGEF."],
             ["Atendimento na hora", "Corretores de plantão: valores, condições e visita guiada pelo WhatsApp."],
           ].map(([t, d]) => (

@@ -26,11 +26,11 @@ const codigosOficiais = mapa.lotes.map((l: any) => l.codigo).sort();
 
 describe('KML do empreendimento (nível campanha): poligonal geral + TODAS as chácaras demarcadas', () => {
   const kml = kmlEmpreendimento(mapa, { link: 'https://romateccrm.com/bom-jardims' });
-  const lotesDe = (k: string) => placemarks(k).filter(p => /^[A-D]\d\d$/.test(p.nome));
-  it('bem formado: o perímetro + 85 lotes/áreas (84 lotes + Quadra E) e mais nada', () => {
+  const lotesDe = (k: string) => placemarks(k).filter(p => /^[A-D]\d\dA?$/.test(p.nome));
+  it('bem formado: o perímetro + 86 lotes/áreas (85 lotes + Quadra E) e mais nada', () => {
     bemFormado(kml);
     const pm = placemarks(kml);
-    expect(pm).toHaveLength(1 + 85);
+    expect(pm).toHaveLength(1 + 86);
     expect(pm.every(p => p.corpo.includes('<Polygon>'))).toBe(true);                 // só polígonos (sem pontos)
     expect(pm[0].nome).toBe(PERIMETRO);
     expect(pm[0].corpo).toContain(`<coordinates>${coordsDe(mapa.perimetro)}</coordinates>`);
@@ -45,11 +45,11 @@ describe('KML do empreendimento (nível campanha): poligonal geral + TODAS as ch
     expect(kml).toContain('<name>Quadra E · área de uso comum</name>');
     expect(e.corpo).not.toContain('/chacara/');                                       // sem página de chácara
   });
-  it('cada lote com o código oficial como nome (A01…D18, 82 chácaras + A03 e B14) e a geometria oficial', () => {
+  it('cada lote com o código oficial como nome (A01…D18 e A02A; A02 é área técnica) e a geometria oficial', () => {
     const lotes = lotesDe(kml);
     expect(lotes.map(p => p.nome).sort()).toEqual(codigosOficiais);
-    expect(codigosOficiais).toHaveLength(84);
-    for (const [q, n] of [['A', 22], ['B', 26], ['C', 18], ['D', 18]]) {
+    expect(codigosOficiais).toHaveLength(85);
+    for (const [q, n] of [['A', 23], ['B', 26], ['C', 18], ['D', 18]]) {
       expect(kml).toContain(`<name>Quadra ${q} (${n})</name>`);
       expect(codigosOficiais.filter((c: string) => c[0] === q)).toHaveLength(n);
     }
@@ -58,11 +58,12 @@ describe('KML do empreendimento (nível campanha): poligonal geral + TODAS as ch
       expect(lotes.find(p => p.nome === c)!.corpo).toContain(`<coordinates>${coordsDe(l.poly)}</coordinates>`);
     }
     expect(lotes.find(p => p.nome === 'C05')!.corpo).toContain('https://romateccrm.com/bom-jardims/chacara/C05');
-    expect(lotes.find(p => p.nome === 'A03')!.corpo).toContain('área técnica');
+    expect(lotes.find(p => p.nome === 'A02')!.corpo).toContain('área técnica');
+    expect(lotes.find(p => p.nome === 'A03')!.corpo).not.toContain('área técnica');
   });
   it('nenhuma chácara destacada: todos os lotes com o mesmo estilo', () => {
     expect(kml).not.toContain('#chacara');
-    expect(lotesDe(kml)).toHaveLength(84);
+    expect(lotesDe(kml)).toHaveLength(85);
     expect(lotesDe(kml).every(p => p.corpo.includes('<styleUrl>#lote</styleUrl>'))).toBe(true);
   });
 });
@@ -130,7 +131,7 @@ describe('Links e rotas públicas do KML', () => {
     expect(r.headers['content-type']).toBe('application/vnd.google-earth.kml+xml; charset=utf-8');
     expect(r.headers['content-disposition']).toBe('attachment; filename="bom-jardims.kml"');
     expect(r.body).toContain('<name>Quadra C (18)</name>');
-    expect((r.body.match(/<Polygon>/g) || []).length).toBe(86);   // perímetro + 84 lotes + Quadra E
+    expect((r.body.match(/<Polygon>/g) || []).length).toBe(87);   // perímetro + 85 lotes + Quadra E
   });
   it('/bom-jardims/chacara/C05.kml: KML da chácara; código errado → 404; sem .kml → segue para a página', async () => {
     const r = await chamar('/bom-jardims/chacara/:arquivo', { arquivo: 'c05.kml' });

@@ -57,7 +57,7 @@ const RODAPE = 'Romatec Consultoria Total · Corretor José Romário — CRECI/M
 const PERIMETRO = (g: GeometriaPublica) =>
   poligono(`${NOME_BOM_JARDIMS} — perímetro`, 'perimetro', g.perimetro, 'Poligonal geral do empreendimento (perímetro certificado).');
 
-/** Descrição do lote no KML: "Chácara C05 · Quadra C · 3.143,41 m²" (área técnica: A03 poço, B14 stand) + link */
+/** Descrição do lote no KML: "Chácara C05 · Quadra C · 3.143,41 m²" (área técnica: A02, poço e reservatório) + link */
 function descricaoLote(l: GeometriaPublica['lotes'][number], link?: string): string {
   return [
     tituloChacara({ codigo: l.codigo, quadra: l.quadra, areaM2: l.areaM2 }),

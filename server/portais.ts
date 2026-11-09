@@ -137,7 +137,7 @@ export async function receberLeadPortal(b: LeadPortal) {
     if (p) propertyId = Number(p.id);
     else if (/^IMV-\d+$/.test(anuncio)) propertyId = Number(anuncio.slice(4));
     else {
-      const m = anuncio.match(/^[A-Z]{1,3}-([A-Z]\d{2})$/);
+      const m = anuncio.match(/^[A-Z]{1,3}-([A-Z]\d{2}[A-Z]?)$/);
       if (m) { empreendimentoSlug = 'bom-jardims'; loteCodigo = m[1]; }
     }
   }

@@ -8,6 +8,7 @@ import { avaliarGate } from './contratos/gate';
 import { aplicarMarca } from './contratos/render';
 import { brl } from './contratos/formato';
 import { SEED_EMP_JURIDICO } from './_core/migrations/seedContratos';
+import { PORTAL_ENTRADA } from '../shared/chacaraLink';
 
 const C = {
   precoBase: 160000, areaBaseM2: 3025.11, toleranciaAreaM2: 1, entradaPct: 0.3, entradaMaxParcelas: 6, descontoAvistaPct: 0.0625,
@@ -117,8 +118,8 @@ describe('anexos da unidade (I memorial, V mapa, VI licença)', () => {
     expect(camadas?.areas.some(a => /vivência/i.test(a.nome))).toBe(true);
     const portal = camadas!.pontos.find(p => /portal/i.test(p.nome))!;
     const [lon, lat] = utmParaGeo(portal.pt[0], portal.pt[1], 23);
-    expect(lat).toBeCloseTo(-4.92754264, 6);
-    expect(lon).toBeCloseTo(-47.38171366, 6);
+    expect(lat).toBeCloseTo(PORTAL_ENTRADA.lat, 6);   // projeto V2: boca da Rua Cedro
+    expect(lon).toBeCloseTo(PORTAL_ENTRADA.lon, 6);
     expect(await carregarCamadas('../etc', 23)).toBeNull();
 
     const v = [[-47.3770209, -4.9232288], [-47.3772805, -4.9228053], [-47.3768604, -4.9225413], [-47.3766009, -4.9229649]].map(([o, a]) => geoParaUtm(o, a, 23));

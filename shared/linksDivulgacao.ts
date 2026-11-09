@@ -39,7 +39,7 @@ export const LINKS_FIXOS: LinkDivulgacao[] = [
     chave: 'fixo:pagamento-status', titulo: 'Entrada de R$ 10 mil — texto para o Status do WhatsApp', fixo: true, destaque: false, empreendimento: 'Bom Jardims',
     descricao: 'Poste no Status o Reel "Entrada R$ 10 mil" (romateccrm.com/bom-jardims/ig/reel-entrada-10mil.mp4) e cole este texto na legenda; o link abre a simulação dos planos.',
     url: ROTA_PAGAMENTO, utmSource: 'whatsapp-status', utmCampaign: CAMPANHA_PAGAMENTO,
-    textoWhatsapp: `🌳 *Chácara de 3.025 m² em Açailândia com entrada de R$ 10 mil!*\n\nEscolha o plano que cabe no seu bolso:\n💰 *13º* — R$ 1.234,51/mês + reforço no 13º\n📅 *Prazo longo* — até 180× fixas, sem reforço\n🧩 *Entrada parcelada* — resto da entrada em 36× sem juros\n\nSem banco · só 82 chácaras · lançamento 14/11\n\n👉 Simule a sua:\n${MARCA_LINK}`,
+    textoWhatsapp: `🌳 *Chácara de 3.025 m² em Açailândia com entrada de R$ 10 mil!*\n\nEscolha o plano que cabe no seu bolso:\n💰 *13º* — R$ 1.234,51/mês + reforço no 13º\n📅 *Prazo longo* — até 180× fixas, sem reforço\n🧩 *Entrada parcelada* — resto da entrada em 36× sem juros\n\nSem banco · só 84 chácaras · lançamento 14/11\n\n👉 Simule a sua:\n${MARCA_LINK}`,
   },
   {
     chave: 'fixo:comparativo', titulo: 'Lote urbano × chácara — vídeo comparativo (WhatsApp)', fixo: true, destaque: true, empreendimento: 'Bom Jardims',
@@ -69,7 +69,7 @@ export const LINKS_FIXOS: LinkDivulgacao[] = [
     chave: 'fixo:obras', titulo: 'Obras iniciadas — campanha do Instagram', fixo: true, destaque: true, empreendimento: 'Bom Jardims',
     descricao: `Página com o vídeo das obras, cadastro rápido e botões "Quero saber o valor" e "Agendar visita". Lançamento oficial em ${LANCAMENTO_OBRAS}.`,
     url: ROTA_OBRAS, utmSource: 'instagram', utmCampaign: CAMPANHA_OBRAS,
-    textoWhatsapp: `🚧 *As obras do Condomínio de Chácaras Bom Jardim começaram!*\n\nLançamento oficial em *${LANCAMENTO_OBRAS}*. São só *82 chácaras*, a partir de *3.025 m²*, 100% documentado e liberado para vendas.\n\n🎥 Veja o vídeo das obras e garanta prioridade:\n${MARCA_LINK}`,
+    textoWhatsapp: `🚧 *As obras do Condomínio de Chácaras Bom Jardim começaram!*\n\nLançamento oficial em *${LANCAMENTO_OBRAS}*. São só *84 chácaras*, a partir de *3.025 m²*, 100% documentado e liberado para vendas.\n\n🎥 Veja o vídeo das obras e garanta prioridade:\n${MARCA_LINK}`,
   },
   {
     chave: 'fixo:landing', titulo: 'Página do Bom Jardims (mapa de vendas)', fixo: true, destaque: false, empreendimento: 'Bom Jardims',

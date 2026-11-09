@@ -1438,6 +1438,9 @@ async function startServer() {
   try {
     const { addEmpreendimentos } = await import('./migrations/addEmpreendimentos');
     await addEmpreendimentos();
+    // Projeto V2 do Bom Jardims (portal/administração na entrada, A02 desmembrado): aplicado uma vez
+    const { aplicarProjetoV2BomJardims } = await import('./migrations/bomJardimsProjetoV2');
+    await aplicarProjetoV2BomJardims().catch((e: any) => console.error('[Bom Jardims V2] não aplicado:', e?.message));
   } catch (e) {
     console.error('❌ Erro na migration addEmpreendimentos:', e);
   }

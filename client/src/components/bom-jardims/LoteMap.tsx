@@ -42,7 +42,6 @@ export const STATUS_COR: Record<LoteInfo["status"], string> = {
   vendido: "#C0504D",
   nao_comercializavel: "#BFD9EE",
 };
-const COR_B14 = "#F3E3C3";
 
 export const STATUS_LABEL: Record<LoteInfo["status"], string> = {
   disponivel: "Disponível",
@@ -52,9 +51,14 @@ export const STATUS_LABEL: Record<LoteInfo["status"], string> = {
   nao_comercializavel: "Área técnica",
 };
 
+/** Área administrativa e stand de vendas (projeto V2): cor e rótulo próprios, não é área de lazer */
+export const ehAreaAdm = (a: { nome: string }) => /administrativ/i.test(a.nome);
+/** Nome da área em até duas linhas, em maiúsculas: "Área de vivência e recreação" → ["ÁREA DE VIVÊNCIA", "E RECREAÇÃO"] */
+export const linhasDoNome = (nome: string) => { const [a, ...r] = nome.split(" e "); return [a.toUpperCase(), ...(r.length ? [`E ${r.join(" e ").toUpperCase()}`] : [])]; };
+
+/** Lotes fora de venda (projeto V2: o stand e a administração ficam na área de entrada, fora do condomínio) */
 const NAO_COMERCIAL_LABEL: Record<string, string> = {
-  A03: "Poço artesiano e reservatório",
-  B14: "Stand de vendas e administração",
+  A02: "Poço artesiano e reservatório",
 };
 
 const W = 1000;
@@ -145,7 +149,10 @@ export default function LoteMap({ lotes, selected, onSelect, onMapLoaded, dados,
           <path d={pathOf(data.perimetro.map(project))} fill={satelite ? "none" : "#D3E2BC"} stroke={satelite ? "#F2C04B" : "#0C3320"} strokeWidth={2} strokeDasharray="6 4" />
           {/* Área de vivência e recreação na frente, junto ao rio */}
           {data.areas?.map(a => (
-            <path key={a.nome} d={pathOf(a.poly.filter(valido).map(project))} fill="#BFDB9C" fillOpacity={satelite ? 0.25 : 1} stroke="#2F7D3A" strokeWidth={1.5} strokeDasharray="6 4" />
+            <path key={a.nome} d={pathOf(a.poly.filter(valido).map(project))} fill={ehAreaAdm(a) ? "#EADCB8" : "#BFDB9C"} fillOpacity={satelite ? 0.25 : 1}
+              stroke={ehAreaAdm(a) ? "#8A6A2E" : "#2F7D3A"} strokeWidth={1.5} strokeDasharray="6 4">
+              <title>{[a.nome, a.detalhe].filter(Boolean).join(" — ")}</title>
+            </path>
           ))}
           {data.app?.poly?.length ? (
             <path d={pathOf(data.app.poly.filter(valido).map(project))} fill="#3F7A3A" fillOpacity={0.28} stroke="#2F6A2C" strokeOpacity={0.55} strokeWidth={1} pointerEvents="none">
@@ -166,7 +173,7 @@ export default function LoteMap({ lotes, selected, onSelect, onMapLoaded, dados,
             const status = info?.status ?? (NAO_COMERCIAL_LABEL[l.codigo] ? "nao_comercializavel" : "disponivel");
             const pts = l.poly.map(project);
             const [cx, cy] = centroid(pts);
-            const fill = selected === l.codigo ? "#1E3A8A" : l.codigo === "B14" ? COR_B14 : STATUS_COR[status];
+            const fill = selected === l.codigo ? "#1E3A8A" : STATUS_COR[status];
             const clickable = status !== "nao_comercializavel";
             const isSel = selected === l.codigo;
             return (
@@ -197,9 +204,8 @@ export default function LoteMap({ lotes, selected, onSelect, onMapLoaded, dados,
           {data.areas?.filter(a => valido(a.rotulo)).map(a => {
             const [x, y] = project(a.rotulo!);
             return (
-              <text key={`r${a.nome}`} x={x} y={y} textAnchor="middle" fontSize={15} fontWeight={800} fill="#1F5A2A" stroke="#FFFFFF" strokeWidth={3} paintOrder="stroke" pointerEvents="none">
-                <tspan x={x} dy={0}>ÁREA DE VIVÊNCIA</tspan>
-                <tspan x={x} dy={17}>E RECREAÇÃO</tspan>
+              <text key={`r${a.nome}`} x={x} y={y} textAnchor="middle" fontSize={ehAreaAdm(a) ? 12 : 15} fontWeight={800} fill={ehAreaAdm(a) ? "#5C4518" : "#1F5A2A"} stroke="#FFFFFF" strokeWidth={3} paintOrder="stroke" pointerEvents="none">
+                {linhasDoNome(a.nome).map((t, i) => <tspan key={t} x={x} dy={i ? (ehAreaAdm(a) ? 14 : 17) : 0}>{t}</tspan>)}
               </text>
             );
           })}
@@ -254,10 +260,16 @@ export default function LoteMap({ lotes, selected, onSelect, onMapLoaded, dados,
           <span style={{ width: 14, height: 14, borderRadius: 7, background: "var(--c-c9a84c)", border: "2px solid var(--c-0c3320)" }} />
           Portal, stand, poço e pontos de banho
         </span>
-        {data.areas?.length ? (
+        {data.areas?.filter(a => !ehAreaAdm(a)).length ? (
           <span style={{ display: "inline-flex", alignItems: "center", gap: 6 }}>
             <span style={{ width: 14, height: 14, borderRadius: 3, background: "var(--c-bfdb9c)", border: "1px solid var(--c-2f7d3a)" }} />
             Área de vivência e recreação
+          </span>
+        ) : null}
+        {data.areas?.some(ehAreaAdm) ? (
+          <span style={{ display: "inline-flex", alignItems: "center", gap: 6 }}>
+            <span style={{ width: 14, height: 14, borderRadius: 3, background: "#EADCB8", border: "1px solid #8A6A2E" }} />
+            Administração e stand de vendas
           </span>
         ) : null}
         {data.rio ? (

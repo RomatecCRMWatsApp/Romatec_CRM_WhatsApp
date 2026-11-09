@@ -31,34 +31,41 @@ const areaM2 = (p: Pt[]) => {
 };
 
 describe('Mapa do Bom Jardims — dados da planta oficial', () => {
-  it('portal de entrada principal: UTM 235.872,420 / 9.454.873,270 (23S) → WGS 84, fora de lote', () => {
+  it('portal de entrada (projeto V2): atravessa a Rua Walter e Maria na esquina com a Rua Cedro, do limite da fazenda (UTM 235.955,872 / 9.454.732,409) ao canto da área administrativa', () => {
     const principais = mapa.pontos.filter((p: any) => /portal/i.test(p.nome));
     expect(principais).toHaveLength(1);
     expect(principais[0].nome).toBe('Portal de entrada');
     const portal = ponto(/portal/i);
-    expect(portal).toEqual([-47.38171366, -4.92754264]);
+    // Marcador no meio do portal: entre o ponto inicial (limite da fazenda) e o canto V2 da área administrativa
     const [e, n] = geoParaUtm(portal[0], portal[1], 23, true);
-    expect(Math.abs(e - 235872.42)).toBeLessThan(0.05);
-    expect(Math.abs(n - 9454873.27)).toBeLessThan(0.05);
+    expect(Math.abs(e - (235955.872 + 235949.756) / 2)).toBeLessThan(0.05);
+    expect(Math.abs(n - (9454732.409 + 9454742.734) / 2)).toBeLessThan(0.05);
     expect(mapa.lotes.some((l: any) => dentro(portal, l.poly))).toBe(false);
-    expect(dentro(portal, mapa.perimetro)).toBe(true);
-    // Ao lado da via de acesso, junto à área de recreação, entre o stand B14 e a quadra D
-    expect(metros(portal, [-47.3817011, -4.927564])).toBeLessThan(5);
-    expect(dentro(portal, mapa.areas.find((a: any) => /recrea/i.test(a.nome)).poly)).toBe(true);
-    const distLote = (c: string) => Math.min(...(mapa.lotes.find((l: any) => l.codigo === c).poly as Pt[]).map(q => metros(portal, q)));
-    expect(distLote('B14')).toBeLessThan(40);
-    expect(distLote('D11')).toBeLessThan(40);
-    // Não é mais o canto noroeste do KMZ antigo
-    expect(metros(portal, [-47.382658381, -4.925448446])).toBeGreaterThan(200);   // ≈ 266 m
+    const adm = mapa.areas.find((a: any) => /administrativa/i.test(a.nome));
+    expect(dentro(portal, adm.poly)).toBe(false);
+    const distAte = (poly: Pt[]) => Math.min(...poly.map(q => metros(portal, q)));
+    expect(distAte(adm.poly)).toBeLessThan(7);                                      // ao lado da área administrativa
+    expect(distAte(mapa.lotes.find((l: any) => l.codigo === 'D10').poly)).toBeLessThan(15);
+    // Mudou de lugar: o portal antigo ficava ao lado do B14
+    expect(metros(portal, [-47.38171366, -4.92754264])).toBeGreaterThan(100);
   });
-  it('acesso do DXF: da estrada (ao sul) até o portal; rotas do Google Maps apontam para a ponta na estrada', () => {
+  it('área administrativa e stand de vendas (projeto V2): 4.125 m² na entrada, fora dos lotes; poço e reservatório no A02', () => {
+    const adm = mapa.areas.find((a: any) => /administrativa/i.test(a.nome));
+    expect(Math.abs(areaM2(adm.poly) - 4125) / 4125).toBeLessThan(0.01);
+    expect(mapa.lotes.some((l: any) => dentro(centroide(l.poly), adm.poly))).toBe(false);
+    expect(dentro(ponto(/administração/i), adm.poly)).toBe(true);
+    const a02 = mapa.lotes.find((l: any) => l.codigo === 'A02');
+    expect(a02.comercializavel).toBe(false);
+    expect(dentro(ponto(/poço/i), a02.poly)).toBe(true);
+    expect(mapa.lotes.filter((l: any) => !l.comercializavel).map((l: any) => l.codigo)).toEqual(['A02']);
+  });
+  it('acesso: pela Rua Walter e Maria, em frente ao stand, até o portal; rotas do Google Maps apontam para a ponta antes do portal', () => {
     const acesso = mapa.ruas.find((r: any) => /porta de entrada/i.test(r.nome)).line as Pt[];
-    expect(acesso).toEqual([[-47.3815739, -4.929037], [-47.3819959, -4.9281757], [-47.38171366, -4.92754264]]);
+    expect(acesso).toHaveLength(2);
     expect(acesso[acesso.length - 1]).toEqual(ponto(/portal/i));                // termina no portal
-    expect(acesso[0][1]).toBeLessThan(acesso[acesso.length - 1][1]);              // vem do sul
-    expect(acesso.every(p => dentro(p, mapa.perimetro))).toBe(true);
+    expect(metros(acesso[0], acesso[1])).toBeCloseTo(10, 0);                     // 10 m antes do portal, na via
     expect(mapa.lotes.some((l: any) => acesso.some(p => dentro(p, l.poly)))).toBe(false);
-    expect(rotaAteEntrada()).toBe('https://www.google.com/maps/dir/?api=1&destination=-4.929037,-47.3815739&travelmode=driving');
+    expect(rotaAteEntrada()).toBe(`https://www.google.com/maps/dir/?api=1&destination=${ACESSO_ESTRADA.lat},${ACESSO_ESTRADA.lon}&travelmode=driving`);
     expect(rotaAteEntrada('Centro, Açailândia - MA')).toContain('origin=Centro%2C%20A%C3%A7ail%C3%A2ndia%20-%20MA');
     expect([PORTAL_ENTRADA.lon, PORTAL_ENTRADA.lat]).toEqual(ponto(/portal/i));
     expect([ACESSO_ESTRADA.lon, ACESSO_ESTRADA.lat]).toEqual(acesso[0]);
@@ -107,8 +114,11 @@ describe('Mapa do Bom Jardims — dados da planta oficial', () => {
   });
   it('perímetro certificado e lotes com a geometria do KMZ (áreas oficiais)', () => {
     expect(Math.abs(areaM2(mapa.perimetro) - 411401.13) / 411401.13).toBeLessThan(0.005);
-    expect(mapa.lotes).toHaveLength(84);
+    expect(mapa.lotes).toHaveLength(85);
     const a = (c: string) => areaM2(mapa.lotes.find((l: any) => l.codigo === c).poly);
+    // Projeto V2: A02 desmembrado em A02 (poço e reservatório) e A02A
+    expect(Math.abs(a('A02') - 1100.04)).toBeLessThan(15);
+    expect(Math.abs(a('A02A') - 1925.07)).toBeLessThan(15);
     for (const c of ['A01', 'A14', 'B13']) expect(Math.abs(a(c) - 3025.11)).toBeLessThan(15);
     for (const c of ['C01', 'C05', 'D10']) expect(a(c)).toBeGreaterThan(3100);
   });

@@ -61,6 +61,13 @@ export function numeroBr(texto: string): number | null {
 
 const limpo = (t: string) => t.replace(/\\[A-Za-z][^;]*;|[{}]/g, '').trim();
 
+/** Número de lote do desenho: "07" ou desmembrado "2A" (sufixo de uma letra) */
+export const NUMERO_LOTE = /^\d{1,3}[A-Z]?$/;
+/** Valor para ordenar/agrupar a sequência: "2A" fica logo depois do "02" */
+export const valorNumero = (n: string) => parseInt(n, 10) + (/[A-Z]$/.test(n) ? 0.5 : 0);
+/** Código do lote: quadra + número com 2 dígitos + sufixo ("A" + "2A" → "A02A") */
+export const codigoLote = (quadra: string, n: string) => `${quadra}${String(parseInt(n, 10)).padStart(2, '0')}${(n.match(/[A-Z]$/) ?? [''])[0]}`;
+
 export interface LoteDxf {
   codigo: string; quadra: string; numero: number;
   areaM2: number;               // área do texto do projeto (ou calculada, se faltar)
@@ -124,7 +131,7 @@ export function importarLotesDxf(conteudo: string, opts: OpcoesDxf = {}): Result
   const textos = (camada: string) => ents.filter(e => e.camada === camada && /TEXT/.test(e.tipo) && e.xs.length);
   const contornos = ents.filter(e => e.camada === cam.contorno && e.tipo === 'LWPOLYLINE' && e.xs.length >= 3)
     .map(e => e.xs.map((x, i) => [x, e.ys[i]] as XY));
-  const numeros = textos(cam.numero).map(t => ({ n: limpo(t.texto), x: t.xs[0], y: t.ys[0] })).filter(t => /^\d{1,3}$/.test(t.n));
+  const numeros = textos(cam.numero).map(t => ({ n: limpo(t.texto).toUpperCase(), x: t.xs[0], y: t.ys[0] })).filter(t => NUMERO_LOTE.test(t.n));
   const areas = textos(cam.area).map(t => ({ a: numeroBr(t.texto), x: t.xs[0], y: t.ys[0] }));
   const quadras = textos(cam.quadra).map(t => ({ q: limpo(t.texto).toUpperCase(), x: t.xs[0], y: t.ys[0] })).filter(t => /^[A-Z]{1,2}$/.test(t.q));
   const avisos: string[] = [];
@@ -146,7 +153,7 @@ export function importarLotesDxf(conteudo: string, opts: OpcoesDxf = {}): Result
   const sequencias: (typeof comContorno)[] = [];
   for (const x of comContorno) {
     const atual = sequencias[sequencias.length - 1];
-    if (!atual || Number(x.t.n) <= Number(atual[atual.length - 1].t.n)) sequencias.push([x]);
+    if (!atual || valorNumero(x.t.n) <= valorNumero(atual[atual.length - 1].t.n)) sequencias.push([x]);
     else atual.push(x);
   }
   const maisProximo = (c: XY) => quadras.map(t => ({ q: t.q, d: Math.hypot(t.x - c[0], t.y - c[1]) })).sort((a, b) => a.d - b.d)[0]?.q ?? null;
@@ -168,11 +175,11 @@ export function importarLotesDxf(conteudo: string, opts: OpcoesDxf = {}): Result
   for (const x of comContorno) {
     const { t: num, pts } = x;
     const c = centroide(pts);
-    const quadra = opts.quadraDoLote?.(utmParaGeo(c[0], c[1], fuso, sul), Number(num.n)) ?? quadraDaSequencia.get(x) ?? null;
+    const quadra = opts.quadraDoLote?.(utmParaGeo(c[0], c[1], fuso, sul), parseInt(num.n, 10)) ?? quadraDaSequencia.get(x) ?? null;
     if (!quadra) continue;
     const q = { q: quadra };
-    const numero = Number(num.n);
-    const codigo = `${q.q}${String(numero).padStart(2, '0')}`;
+    const numero = parseInt(num.n, 10);
+    const codigo = codigoLote(q.q, num.n);
     if (usados.has(codigo)) { avisos.push(`Lote ${codigo} apareceu duas vezes — confira a quadra no desenho`); continue; }
     usados.add(codigo);
     const areaTxt = areas.find(a => a.a != null && pontoDentro(a.x, a.y, pts))?.a ?? null;
@@ -193,7 +200,7 @@ export function importarLotesDxf(conteudo: string, opts: OpcoesDxf = {}): Result
   }
   const semContorno = numeros.filter(t => !contornos.some(p => pontoDentro(t.x, t.y, p)));
   if (semContorno.length && lotes.length) avisos.push(`${semContorno.length} número(s) de lote fora de qualquer contorno (cópias/detalhes do desenho foram ignorados)`);
-  lotes.sort((a, b) => a.quadra.localeCompare(b.quadra) || a.numero - b.numero);
+  lotes.sort((a, b) => a.quadra.localeCompare(b.quadra) || a.numero - b.numero || a.codigo.localeCompare(b.codigo));
 
   // Ruas: textos "RUA …", "TRAVESSA …" em qualquer camada (fora dos lotes)
   const ruas: RuaDxf[] = ents

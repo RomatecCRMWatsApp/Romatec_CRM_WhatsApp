@@ -80,7 +80,7 @@ export const META_BOM_JARDIMS: MetaPagina = {
         '@id': LUGAR_ID,
         name: 'Condomínio de Chácaras Bom Jardims',
         alternateName: NOMES_ALTERNATIVOS,
-        description: 'Condomínio fechado de chácaras em Açailândia/MA, na BR-222: 82 chácaras a partir de 3.025 m², portal com guarita, ruas internas de 12 m, água encanada e área de vivência às margens do córrego.',
+        description: 'Condomínio fechado de chácaras em Açailândia/MA, na BR-222: 84 chácaras a partir de 3.025 m², portal com guarita, ruas internas de 12 m, água encanada e área de vivência às margens do córrego.',
         address: { '@type': 'PostalAddress', streetAddress: 'Estrada do Piquiá dos Baianos, altura do km 15 da BR-222', addressLocality: 'Açailândia', addressRegion: 'MA', addressCountry: 'BR' },
         geo: { '@type': 'GeoCoordinates', latitude: -4.92754264, longitude: -47.38171366 },
         hasMap: 'https://www.google.com/maps?q=-4.92754264,-47.38171366',
@@ -272,7 +272,7 @@ export function metaDaRota(path: string): MetaPagina | 'imovel' {
   const p = path.replace(/\/+$/, '') || '/';
   if (ROTAS_INTERNAS.some(r => p === r || p.startsWith(`${r}/`))) return { ...META_PADRAO, title: 'Romatec CRM', path: p, indexavel: false };
   if (p === '/bom-jardims') return META_BOM_JARDIMS;
-  const chacara = /^\/bom-jardims\/chacara\/([A-Da-d]\d{2})$/.exec(p);
+  const chacara = /^\/bom-jardims\/chacara\/([A-Da-d]\d{2}[Aa]?)$/.exec(p);
   if (chacara) return metaDaChacara(chacara[1].toUpperCase());
   if (p === AGENDAR_BOM_JARDIMS) return META_AGENDAR_BOM_JARDIMS;
   if (p === ROTA_OBRAS) return META_OBRAS;

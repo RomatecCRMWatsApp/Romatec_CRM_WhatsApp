@@ -3,6 +3,7 @@ import { gpxRota, kmlRota, linkGoogleRota, linkWazeRota, PONTOS_ROTA, ROTA_COMO_
 import { LINKS_FIXOS, montarLink } from '../shared/linksDivulgacao';
 import { PORTAL_ENTRADA } from '../shared/chacaraLink';
 import { metaDaRota } from './seo';
+import { ACESSO_ESTRADA } from '../shared/chacaraLink';
 
 describe('Como chegar ao Bom Jardims (/bom-jardims/rota)', () => {
   afterEach(() => { vi.unstubAllGlobals(); vi.resetModules(); });
@@ -14,7 +15,7 @@ describe('Como chegar ao Bom Jardims (/bom-jardims/rota)', () => {
   });
 
   it('GPX com trilha pelas estradas terminando no portal; sem traçado, só rota e pontos', () => {
-    const g = gpxRota([[-47.5, -4.9469], [-47.45, -4.94], [-47.40, -4.93], [-47.3815739, -4.929037]], 'https://x/bom-jardims/rota');
+    const g = gpxRota([[-47.5, -4.9469], [-47.45, -4.94], [-47.40, -4.93], [ACESSO_ESTRADA.lon, ACESSO_ESTRADA.lat]], 'https://x/bom-jardims/rota');
     expect(g).toContain('<trk>');
     expect(g).toContain(`<trkpt lat="${PORTAL_ENTRADA.lat.toFixed(6)}" lon="${PORTAL_ENTRADA.lon.toFixed(6)}"/>`);
     expect((g.match(/<trkpt/g) || []).length).toBe(5);

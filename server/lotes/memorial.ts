@@ -4,6 +4,7 @@
  * vizinhos que dividem a mesma linha; o resto fica como "área comum / via — conferir".
  */
 import { anelAberto, azimute, distancia, grausMinSeg, type XY } from '../../shared/utm';
+import { numeroDoLote } from '../../shared/lotes';
 
 export interface LoteMemorial { codigo: string; quadra: string | null; numero: number | null; areaM2: number; perimetroM: number; verticesUtm: XY[] }
 
@@ -29,12 +30,15 @@ export function confrontantes(lote: LoteMemorial, todos: LoteMemorial[], tol = 0
   const v = ordenarVertices(lote.verticesUtm);
   return v.map((a, i) => {
     const b = v[(i + 1) % v.length];
-    const meio: XY = [(a[0] + b[0]) / 2, (a[1] + b[1]) / 2];
+    // Vários pontos ao longo do lado: um lado pode confrontar mais de um lote (ex.: A03 com A02 e A02A), na ordem do caminhamento
     const viz: string[] = [];
-    for (const o of todos) {
-      if (o.codigo === lote.codigo || !o.verticesUtm?.length) continue;
-      const ov = anelAberto(o.verticesUtm);
-      if (ov.some((q, j) => distSeg(meio, q, ov[(j + 1) % ov.length]) <= tol)) viz.push(o.codigo);
+    for (const f of [0.05, 0.15, 0.25, 0.35, 0.45, 0.5, 0.55, 0.65, 0.75, 0.85, 0.95]) {
+      const p: XY = [a[0] + (b[0] - a[0]) * f, a[1] + (b[1] - a[1]) * f];
+      for (const o of todos) {
+        if (o.codigo === lote.codigo || viz.includes(o.codigo) || !o.verticesUtm?.length) continue;
+        const ov = anelAberto(o.verticesUtm);
+        if (ov.some((q, j) => distSeg(p, q, ov[(j + 1) % ov.length]) <= tol)) viz.push(o.codigo);
+      }
     }
     return viz;
   });
@@ -71,7 +75,7 @@ export function ruaDoLado(a: XY, b: XY, ruas: RuaMemorial[]): string | null {
 
 const nomeLote = (codigo: string, todos: LoteMemorial[]) => {
   const l = todos.find(x => x.codigo === codigo);
-  return l?.quadra && l.numero != null ? `Lote ${String(l.numero).padStart(2, '0')} da Quadra ${l.quadra}` : `Lote ${codigo}`;
+  return l?.quadra && l.numero != null ? `Lote ${numeroDoLote(l)} da Quadra ${l.quadra}` : `Lote ${codigo}`;
 };
 
 export interface Memorial { titulo: string; cabecalho: string[]; descricao: string; vertices: { nome: string; e: number; n: number; azimute: string; distancia: number; confronta: string }[] }
@@ -86,7 +90,7 @@ export function ladoNoPerimetro(a: XY, b: XY, perimetroUtm: XY[] | null | undefi
 
 /** "Lote 18 da Quadra C" (sem quadra/número: "Lote C18") */
 export function nomeLoteMemorial(lote: { codigo: string; quadra?: string | null; numero?: number | null }): string {
-  return lote.quadra && lote.numero != null ? `Lote ${String(lote.numero).padStart(2, '0')} da Quadra ${lote.quadra}` : `Lote ${lote.codigo}`;
+  return lote.quadra && lote.numero != null ? `Lote ${numeroDoLote(lote)} da Quadra ${lote.quadra}` : `Lote ${lote.codigo}`;
 }
 
 export function memorialDoLote(lote: LoteMemorial, todos: LoteMemorial[], emp: { nome: string; municipio?: string | null; uf?: string | null; fuso: number; matricula?: string | null; ruas?: RuaMemorial[]; perimetroUtm?: XY[] | null }): Memorial {
