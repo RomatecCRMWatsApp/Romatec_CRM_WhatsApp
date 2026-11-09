@@ -3,6 +3,15 @@
 Cada versão nova vai no TOPO. Depois rode `npm run release` (valida e atualiza o package.json);
 ao subir, o servidor grava a versão no banco e todos recebem o aviso "Novidades da versão".
 
+## 1.140.1 — 2026-11-09
+tipo: patch
+obrigatoria: nao
+titulo: Configurações: conexões do banco de dados no próprio CRM
+publico: admin
+
+### Melhorias
+- Configurações › Banco de dados: além do espaço, mostra o limite de conexões do MySQL, quantas estão abertas agora, o pico desde que o banco ligou, conexões recusadas por falta de vaga e quem está conectado (CRM, ZAYRA e outros), sem precisar do console da Railway
+
 ## 1.140.0 — 2026-11-08
 tipo: minor
 obrigatoria: nao

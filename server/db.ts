@@ -38,11 +38,11 @@ export function opcoesPool(env: Record<string, string | undefined> = process.env
 }
 
 /** Situação do pool para diagnóstico (sem dados de conexão) */
-export function situacaoPool(): { driver: 'mysql' | 'sqlite'; limite?: number; emUso?: number; livres?: number; fila?: number; esperas?: number } {
+export function situacaoPool(o: { zerarEsperas?: boolean } = {}): { driver: 'mysql' | 'sqlite'; limite?: number; emUso?: number; livres?: number; fila?: number; esperas?: number } {
   if (_dbDriver === 'sqlite' || !_pool) return { driver: _dbDriver };
   const p = _pool.pool ?? _pool; // mysql2/promise embrulha o pool de callbacks
   const total = p._allConnections?.length ?? 0, livres = p._freeConnections?.length ?? 0;
-  const esperas = _esperas; _esperas = 0;
+  const esperas = _esperas; if (o.zerarEsperas !== false) _esperas = 0;
   return { driver: 'mysql', limite: p.config?.connectionLimit, emUso: total - livres, livres, fila: p._connectionQueue?.length ?? 0, esperas };
 }
 

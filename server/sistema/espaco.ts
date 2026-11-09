@@ -42,8 +42,25 @@ export function registrarRotaEspaco(app: Express) {
       for (const t of ['recibos', 'crm_recibos', 'users', 'contacts', 'properties', 'campaigns', 'messages']) {
         compartilhadas[t] = (await tentar(sql`SELECT COLUMN_NAME AS c FROM information_schema.COLUMNS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = ${t} ORDER BY ORDINAL_POSITION`)).map((r: any) => String(r.c));
       }
+      // Conexões: teto do MySQL, uso agora e pico desde que o banco ligou; quem está conectado (CRM, ZAYRA, outros)
+      const status = Object.fromEntries((await tentar(sql`SHOW GLOBAL STATUS WHERE Variable_name IN ('Threads_connected', 'Threads_running', 'Max_used_connections', 'Max_used_connections_time', 'Aborted_connects', 'Connection_errors_max_connections', 'Slow_queries', 'Uptime')`))
+        .map((v: any) => [v.Variable_name ?? v.variable_name, v.Value ?? v.value]));
+      const maxConn: Record<string, string> = (await tentar(sql`SHOW VARIABLES WHERE Variable_name IN ('max_connections', 'wait_timeout')`))
+        .reduce((o: Record<string, string>, v: any) => ({ ...o, [v.Variable_name ?? v.variable_name]: v.Value ?? v.value }), {} as Record<string, string>);
+      const quem = (await tentar(sql`SELECT USER AS usuario, SUBSTRING_INDEX(HOST, ':', 1) AS origem, IFNULL(DB, '') AS banco, COUNT(*) AS conexoes, SUM(COMMAND <> 'Sleep') AS ativas
+        FROM information_schema.PROCESSLIST GROUP BY usuario, origem, banco ORDER BY conexoes DESC LIMIT 20`))
+        .map((r: any) => ({ usuario: String(r.usuario), origem: String(r.origem), banco: String(r.banco), conexoes: Number(r.conexoes) || 0, ativas: Number(r.ativas) || 0 }));
+      const { situacaoPool } = await import('../db');
+      const conexoes = {
+        maximo: Number(maxConn.max_connections) || null, waitTimeoutS: Number(maxConn.wait_timeout) || null,
+        agora: Number(status.Threads_connected) || 0, executando: Number(status.Threads_running) || 0,
+        pico: Number(status.Max_used_connections) || 0, picoEm: status.Max_used_connections_time ?? null,
+        recusadasPorLimite: Number(status.Connection_errors_max_connections) || 0, falhasDeConexao: Number(status.Aborted_connects) || 0,
+        consultasLentas: Number(status.Slow_queries) || 0, ligadoHaHoras: Math.round((Number(status.Uptime) || 0) / 360) / 10,
+        quem, poolDoCrm: situacaoPool({ zerarEsperas: false }),
+      };
       res.json({
-        ok: true, totalTabelasMB: mb(total), binlogs, bancos, arquivos, variaveis, compartilhadas,
+        ok: true, conexoes, totalTabelasMB: mb(total), binlogs, bancos, arquivos, variaveis, compartilhadas,
         tabelas: tabelas.slice(0, 25).map(t => ({ tabela: t.tabela, linhas: Number(t.linhas) || 0, mb: mb(Number(t.dados || 0) + Number(t.indices || 0)), livreMB: mb(t.livre) })),
       });
     } catch (e: any) {
