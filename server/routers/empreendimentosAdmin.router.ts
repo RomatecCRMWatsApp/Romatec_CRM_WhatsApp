@@ -8,6 +8,7 @@ import { and, desc, eq, inArray, like, or } from "drizzle-orm";
 import { adminProcedure, protectedProcedure, router } from "../_core/trpc";
 import { getDb } from "../db";
 import { empreendimentos, lotes, loteHistorico, empreendimentoArquivos, leadQualifications, users } from "../../drizzle/schema";
+import { CATEGORIAS_ARQUIVO_EMPREENDIMENTO } from "../../shared/contratos";
 import { SITUACOES_LOTE, problemaVenda, statusPublicoDe, etapaDoLeadPelaVenda, situacaoValida, type SituacaoLote } from "../../shared/lotes";
 import { etapaDoLead } from "../leads/kanban";
 import { exigirAcesso, exigirLead, type PermissoesUsuario } from "../permissoes";
@@ -235,6 +236,14 @@ export const empreendimentosAdminRouter = router({
       } as any).where(eq(empreendimentos.id, emp.id));
       return { success: true };
     }),
+
+  /** Muda o tipo de um arquivo (ex.: marcar como "Documento de origem", que entra no contrato como Anexo IX) */
+  categoriaArquivo: adminProcedure.input(z.object({ id: z.number().int(), categoria: z.string().max(30) })).mutation(async ({ input }) => {
+    if (!Object.hasOwn(CATEGORIAS_ARQUIVO_EMPREENDIMENTO, input.categoria)) throw new Error("Tipo de arquivo inválido");
+    const db = await dbOrThrow();
+    await db.update(empreendimentoArquivos).set({ categoria: input.categoria } as any).where(eq(empreendimentoArquivos.id, input.id));
+    return { success: true };
+  }),
 
   excluirArquivo: adminProcedure.input(z.object({ id: z.number().int() })).mutation(async ({ input }) => {
     const db = await dbOrThrow();

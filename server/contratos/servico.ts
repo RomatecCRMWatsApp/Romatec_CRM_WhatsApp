@@ -6,17 +6,17 @@ import { randomBytes } from 'node:crypto';
 import { and, asc, eq, inArray, or, sql } from 'drizzle-orm';
 import { getDb } from '../db';
 import {
-  carteiras, chacaraDependentes, condicoesPagamento, contratoPessoas, contratos, contratoSeq, contratoVersoes, empJuridico, empreendimentos, loteHistorico, lotes, pessoas,
+  carteiras, chacaraDependentes, condicoesPagamento, contratoPessoas, contratos, contratoSeq, contratoVersoes, empJuridico, empreendimentoArquivos, empreendimentos, loteHistorico, lotes, pessoas,
   usuarioDocumentos, users,
 } from '../../drizzle/schema';
 import { condicoesDaLinha, simular, type CondicoesPagamento } from '../../shared/simulador';
 import { statusPublicoDe } from '../../shared/lotes';
-import { exigeConjuge, pendenciasComprador, pendenciasDependentes, type Dependente, type PessoaForm } from '../../shared/contratos';
+import { CATEGORIA_ORIGEM, exigeConjuge, pendenciasComprador, pendenciasDependentes, type Dependente, type PessoaForm } from '../../shared/contratos';
 import { memorialDoLote, type RuaMemorial } from '../lotes/memorial';
 import { montarContexto, type CredenciaisCorretor, type EntradaContexto, type PessoaContrato } from './contexto';
 import { modeloDaCondicao, planoDoContrato, type EscolhaPlano, type PlanoContrato } from './plano';
 import { gerarContratoPdf } from './gerar';
-import type { DadosUnidade } from './anexosLote';
+import type { DadosUnidade, DocumentoOrigem } from './anexosLote';
 import { carregarCamadas } from './mapaEmpreendimento';
 import { lerArquivo, salvarArquivo } from './arquivos';
 import { avaliarGate } from './gate';
@@ -350,13 +350,24 @@ export async function gateDoContrato(contratoId: number) {
 
 // ─── Versões ─────────────────────────────────────────────────────────────────
 
+/** Arquivos da categoria "origem" do empreendimento (Empreendimento › Arquivos) — Anexo IX do contrato */
+export async function documentosOrigemDoEmpreendimento(empreendimentoId: number | null | undefined): Promise<DocumentoOrigem[]> {
+  if (!empreendimentoId) return [];
+  const d = await db();
+  const rows: any[] = await d.select({ nome: empreendimentoArquivos.nome, mime: empreendimentoArquivos.mime, conteudoBase64: empreendimentoArquivos.conteudoBase64 })
+    .from(empreendimentoArquivos)
+    .where(and(eq(empreendimentoArquivos.empreendimentoId, empreendimentoId), eq(empreendimentoArquivos.categoria, CATEGORIA_ORIGEM)));
+  return rows.map(r => ({ nome: String(r.nome), mime: r.mime ?? null, conteudo: Buffer.from(String(r.conteudoBase64 ?? ''), 'base64') }));
+}
+
 export async function gerarVersao(contratoId: number, alvo: 'minuta' | 'definitivo', o: { licenca?: Buffer | null } = {}) {
   const d = await db();
   const c = await contratoPorId(contratoId);
   if (['ativo', 'quitado', 'distratado', 'cancelado', 'assinado'].includes(c.status)) throw new ContratoErro('STATUS', `Contrato ${c.status}: não gera nova versão`, 409);
   const { entrada, unidade, plano, marca, modelo } = await entradaDoContrato(contratoId);
   const ctx = montarContexto(entrada);
-  const { pdf, sha256, gate } = await gerarContratoPdf(ctx, plano, { alvo, modelo, marca, unidade, licenca: o.licenca });
+  const documentosOrigem = await documentosOrigemDoEmpreendimento(c.empreendimentoId);
+  const { pdf, sha256, gate } = await gerarContratoPdf(ctx, plano, { alvo, modelo, marca, unidade, licenca: o.licenca, documentosOrigem });
   const versoes: any[] = await d.select({ versao: contratoVersoes.versao }).from(contratoVersoes).where(eq(contratoVersoes.contratoId, contratoId));
   const versao = versoes.reduce((m, v) => Math.max(m, Number(v.versao)), 0) + 1;
   const chave = `contratos/${contratoId}/v${String(versao).padStart(3, '0')}-${alvo}.pdf`;

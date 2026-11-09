@@ -3,6 +3,21 @@
 Cada versão nova vai no TOPO. Depois rode `npm run release` (valida e atualiza o package.json);
 ao subir, o servidor grava a versão no banco e todos recebem o aviso "Novidades da versão".
 
+## 1.144.0 — 2026-11-09
+tipo: minor
+obrigatoria: nao
+titulo: Contrato com os documentos de origem do imóvel (Anexo IX)
+publico: equipe
+
+### Novo
+- Contrato (CPCV): novo Anexo IX — Documentos de origem do imóvel. Capa com os dados do imóvel (matrícula de origem, CCIR, CIB, certificação SIGEF) e índice com as folhas; em seguida, a certidão de inteiro teor da matrícula, o CCIR, o recibo do ITR e os mapas e memoriais da certificação SIGEF/INCRA
+- Empreendimento › Arquivos: novo tipo "Documento de origem (vai no contrato)". Tudo o que for enviado com esse tipo entra em todo contrato gerado, na ordem certa (matrícula, CCIR, ITR, SIGEF parcela I e II)
+- O administrador pode mudar o tipo de um arquivo já enviado direto na lista
+
+### Melhorias
+- Cláusulas 2.4 e 23.4 dos modelos do CPCV citam o Anexo IX
+- Configuração jurídica do Bom Jardims: 85 lotes, 84 comercializáveis (projeto V2)
+
 ## 1.143.0 — 2026-11-09
 tipo: minor
 obrigatoria: nao

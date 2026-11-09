@@ -101,3 +101,22 @@ export async function aplicarProjetoV2BomJardims(): Promise<ResultadoV2> {
   console.log(`[Bom Jardims V2] projeto aplicado: ${atualizados} lotes atualizados, ${criados} novo(s), liberados para venda: ${liberados.join(', ') || '—'}`);
   return { aplicado: true, atualizados, criados, liberados };
 }
+
+/**
+ * Configuração jurídica (campos emp_* do contrato): quantidade de lotes do projeto V2. Só troca os valores antigos
+ * (84 lotes / 82 comercializáveis) — se o administrador já tiver posto outro número, fica o dele.
+ */
+export async function ajustarJuridicoV2BomJardims(): Promise<boolean> {
+  const db: any = await getDb();
+  if (!db) return false;
+  const { empJuridico } = await import('../../../drizzle/schema');
+  const [emp]: any[] = await db.select({ id: empreendimentos.id }).from(empreendimentos).where(eq(empreendimentos.slug, SLUG)).limit(1);
+  if (!emp) return false;
+  const [j]: any[] = await db.select().from(empJuridico).where(eq(empJuridico.empreendimentoId, emp.id)).limit(1);
+  if (!j) return false;
+  const d = typeof j.defaultsJson === 'string' ? JSON.parse(j.defaultsJson) : { ...(j.defaultsJson ?? {}) };
+  if (String(d.emp_qtd_lotes) !== '84' || String(d.emp_qtd_comercializaveis) !== '82') return false;
+  await db.update(empJuridico).set({ defaultsJson: { ...d, emp_qtd_lotes: '85', emp_qtd_comercializaveis: '84' } } as any).where(eq(empJuridico.empreendimentoId, emp.id));
+  console.log('[Bom Jardims V2] configuração jurídica: 85 lotes, 84 comercializáveis');
+  return true;
+}

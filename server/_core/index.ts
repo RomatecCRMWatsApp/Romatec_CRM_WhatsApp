@@ -1180,8 +1180,8 @@ async function startServer() {
       if (!buffer?.length) return res.status(400).json({ success: false, error: 'Arquivo vazio' });
       if (buffer.length > 20 * 1024 * 1024) return res.status(400).json({ success: false, error: 'Arquivo acima de 20 MB' });
       const nome = decodeURIComponent(String(req.headers['x-file-name'] || 'arquivo')).replace(/[\\/:*?"<>|]+/g, '_').slice(0, 200);
-      const categorias = ['licenca', 'projeto', 'escritura', 'memorial', 'mapa', 'contrato', 'outro'];
-      const categoria = categorias.includes(String(req.headers['x-categoria'])) ? String(req.headers['x-categoria']) : 'outro';
+      const { CATEGORIAS_ARQUIVO_EMPREENDIMENTO } = await import('../../shared/contratos');
+      const categoria = Object.hasOwn(CATEGORIAS_ARQUIVO_EMPREENDIMENTO, String(req.headers['x-categoria'])) ? String(req.headers['x-categoria']) : 'outro';
       const { getDb } = await import('../db');
       const { empreendimentos, empreendimentoArquivos } = await import('../../drizzle/schema');
       const { eq } = await import('drizzle-orm');
@@ -1439,8 +1439,9 @@ async function startServer() {
     const { addEmpreendimentos } = await import('./migrations/addEmpreendimentos');
     await addEmpreendimentos();
     // Projeto V2 do Bom Jardims (portal/administração na entrada, A02 desmembrado): aplicado uma vez
-    const { aplicarProjetoV2BomJardims } = await import('./migrations/bomJardimsProjetoV2');
+    const { aplicarProjetoV2BomJardims, ajustarJuridicoV2BomJardims } = await import('./migrations/bomJardimsProjetoV2');
     await aplicarProjetoV2BomJardims().catch((e: any) => console.error('[Bom Jardims V2] não aplicado:', e?.message));
+    await ajustarJuridicoV2BomJardims().catch((e: any) => console.error('[Bom Jardims V2] configuração jurídica:', e?.message));
   } catch (e) {
     console.error('❌ Erro na migration addEmpreendimentos:', e);
   }

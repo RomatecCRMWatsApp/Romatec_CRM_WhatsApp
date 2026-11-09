@@ -105,6 +105,30 @@ describe('anexos da unidade (I memorial, V mapa, VI licença)', () => {
     expect(await anexoLicenca(ctx, 'bomjardims', lo)).toBe(lo);
   });
 
+  it('Anexo IX: capa com índice e os documentos de origem na ordem de leitura; sem documentos, "a anexar"; arquivo ruim não derruba', async () => {
+    const { PDFDocument } = await import('pdf-lib');
+    const { anexoDocumentosOrigem, ordemDocumentoOrigem, rotuloDocumentoOrigem } = await import('./contratos/anexosLote');
+    const ctx = montarContexto(entrada());
+    const pdf = async (paginas: number) => { const d = await PDFDocument.create(); for (let i = 0; i < paginas; i++) d.addPage([300, 300]); return Buffer.from(await d.save()); };
+    expect((await PDFDocument.load(await anexoDocumentosOrigem(ctx, 'bomjardims', []))).getPageCount()).toBe(1);
+    const docs = [
+      { nome: 'Geo-Memorial_Descritivo_Certificac_a_o_Sifeg_FAZENDA_LUA_NOVA_-_Fazenda_Lua_Nova_II_Espo_lio_IVAN_FIGUEREDO.pdf', mime: 'application/pdf', conteudo: await pdf(2) },
+      { nome: 'CCIR77672303262_FAZ._LUA_NOVA_ATUALIZADO.pdf', mime: 'application/pdf', conteudo: await pdf(1) },
+      { nome: 'Certida_o_de_inteiro_teor_MAT._33036.pdf', mime: 'application/pdf', conteudo: await pdf(5) },
+      { nome: 'quebrado.pdf', mime: 'application/pdf', conteudo: Buffer.from('não é pdf') },
+    ];
+    const out = await PDFDocument.load(await anexoDocumentosOrigem(ctx, 'bomjardims', docs));
+    expect(out.getPageCount()).toBe(1 + 5 + 1 + 2);
+    expect([...docs].sort((a, b) => ordemDocumentoOrigem(a.nome) - ordemDocumentoOrigem(b.nome)).map(d => rotuloDocumentoOrigem(d.nome))).toEqual([
+      'Certidão de inteiro teor da matrícula n.º 33.036',
+      'Certificado de Cadastro de Imóvel Rural — CCIR (INCRA)',
+      'Memorial descritivo da certificação SIGEF/INCRA — Parcela II',
+      'quebrado',
+    ]);
+    expect(rotuloDocumentoOrigem('Geo-Mapa_Certificac_a_o_Sifeg_FAZENDA_LUA_NOVA_-_Fazenda_Lua_Nova__I__VALMA_MARILDA.pdf')).toBe('Planta (mapa) da certificação SIGEF/INCRA — Parcela I');
+    expect(rotuloDocumentoOrigem('45723435-ITR-2025-ORIGI-Recibo4273080879438659013.pdf')).toBe('Recibo de entrega da declaração do ITR — exercício 2025 (Receita Federal)');
+  });
+
   it('Anexo V usa as camadas do mapa do sistema (portal na coordenada do mapa.json) e traz o detalhe em página própria', async () => {
     const { PDFDocument } = await import('pdf-lib');
     const { anexoMapa } = await import('./contratos/anexosLote');

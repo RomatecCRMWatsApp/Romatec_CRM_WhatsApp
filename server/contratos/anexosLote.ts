@@ -3,7 +3,9 @@
  * I — memorial descritivo (memorialDoLote: vértices, azimutes, distâncias, confrontações e área);
  * V — mapa individual da unidade: planta do empreendimento igual ao mapa do sistema (MapaTematico + mapa.json) com a
  *     chácara destacada, e o detalhe com vértices (UTM e geográficas), azimutes, distâncias, área e perímetro;
- * VI — licença de operação e certidão do registro: entra o PDF que o administrador subir; sem ele, página "a anexar".
+ * VI — licença de operação e certidão do registro: entra o PDF que o administrador subir; sem ele, página "a anexar";
+ * IX — documentos de origem do imóvel (matrícula, CCIR, ITR, certificação SIGEF): capa com índice + os arquivos da
+ *      categoria "Documento de origem" do empreendimento.
  */
 import { LineCapStyle, LineJoinStyle, PDFDocument, StandardFonts, clip, degrees, endPath, popGraphicsState, pushGraphicsState, rectangle, rgb, setLineJoin, type PDFFont, type PDFPage } from 'pdf-lib';
 import type { Memorial, RuaMemorial } from '../lotes/memorial';
@@ -514,5 +516,119 @@ export async function anexoLicenca(ctx: Ctx, marca: string, arquivo?: Buffer | n
     'O documento é anexado pelo Administrador em Configurações › Empreendimento › Jurídico antes do contrato definitivo.',
   ];
   linhas.flatMap(l => quebrar(f, l, 7.8, X1 - X0 - 32)).forEach((l, i) => p.drawText(l, { x: X0 + 16, y: y - 62 - i * 12, size: 7.8, font: f }));
+  return Buffer.from(await doc.save({ useObjectStreams: false }));
+}
+
+// ─── Anexo IX — documentos de origem do imóvel ───────────────────────────────
+
+/** Documento de origem enviado em Empreendimento › Arquivos (categoria "Documento de origem") */
+export interface DocumentoOrigem { nome: string; mime: string | null; conteudo: Buffer }
+
+const normalizar = (nome: string) => nome.normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase().replace(/[_\-.]+/g, ' ').replace(/\s+/g, ' ').trim();
+/** Parcela da certificação SIGEF pelo nome do arquivo ("… Lua Nova II …" / "… Lua Nova I …") */
+function parcelaDe(n: string): 'I' | 'II' | '' {
+  if (/\b(parcela|lua nova) ii\b/.test(n)) return 'II';
+  if (/\b(parcela|lua nova) i\b/.test(n)) return 'I';
+  return '';
+}
+
+/** Ordem de leitura: matrícula → CCIR → ITR → certificação SIGEF (parcela I, depois II; mapa antes do memorial) → demais */
+export function ordemDocumentoOrigem(nome: string): number {
+  const n = normalizar(nome);
+  if (/matricula|inteiro teor|certida ?o/.test(n)) return 10;
+  if (/\bccir/.test(n)) return 20;
+  if (/\bitr\b/.test(n)) return 30;
+  const parcela = { I: 0, II: 1, '': 2 }[parcelaDe(n)];
+  if (/sigef|sifeg|certifica|memorial|mapa/.test(n)) return 40 + parcela * 4 + (/memorial/.test(n) ? 1 : 0);
+  return 90;
+}
+
+/** Nome legível do documento na capa do anexo (a partir do nome do arquivo) */
+export function rotuloDocumentoOrigem(nome: string): string {
+  const n = normalizar(nome);
+  const parcela = parcelaDe(n) ? ` — Parcela ${parcelaDe(n)}` : '';
+  if (/matricula|inteiro teor/.test(n)) { const m = n.match(/\bmat(?:ricula)? (\d+)/); return `Certidão de inteiro teor da matrícula${m ? ` n.º ${Number(m[1]).toLocaleString('pt-BR')}` : ''}`; }
+  if (/\bccir/.test(n)) return 'Certificado de Cadastro de Imóvel Rural — CCIR (INCRA)';
+  if (/\bitr\b/.test(n)) { const a = n.match(/\bitr (\d{4})\b/); return `Recibo de entrega da declaração do ITR${a ? ` — exercício ${a[1]}` : ''} (Receita Federal)`; }
+  if (/memorial/.test(n)) return `Memorial descritivo da certificação SIGEF/INCRA${parcela}`;
+  if (/mapa/.test(n)) return `Planta (mapa) da certificação SIGEF/INCRA${parcela}`;
+  return nome.replace(/\.[a-z0-9]+$/i, '').replace(/[_-]+/g, ' ').trim();
+}
+
+/**
+ * Anexo IX — capa com o índice e, em seguida, os documentos de origem (PDFs e imagens) na ordem de leitura.
+ * Sem documentos enviados, a capa traz "A ANEXAR". Arquivos que não abrem entram como página de aviso (não derrubam o contrato).
+ */
+export async function anexoDocumentosOrigem(ctx: Ctx, marca: string, docs: DocumentoOrigem[]): Promise<Buffer> {
+  const { doc, f, fb, pagina } = await base(`Anexo IX — Documentos de origem do imóvel — ${ctx.ctr_numero}`, marca);
+  const { p, y: y0 } = pagina('ANEXO IX — DOCUMENTOS DE ORIGEM DO IMÓVEL', subtitulo(ctx));
+  const ordenados = [...docs].sort((a, b) => ordemDocumentoOrigem(a.nome) - ordemDocumentoOrigem(b.nome) || a.nome.localeCompare(b.nome));
+
+  // Páginas de cada documento (carregadas antes, para o índice trazer a numeração)
+  const blocos: { rotulo: string; paginas: number; montar: () => Promise<void> }[] = [];
+  for (const d of ordenados) {
+    const rotulo = rotuloDocumentoOrigem(d.nome);
+    const mime = String(d.mime ?? '');
+    try {
+      if (/pdf/i.test(mime) || /\.pdf$/i.test(d.nome)) {
+        const src = await PDFDocument.load(d.conteudo, { ignoreEncryption: true });
+        blocos.push({ rotulo, paginas: src.getPageCount(), montar: async () => { (await doc.copyPages(src, src.getPageIndices())).forEach(pg => doc.addPage(pg)); } });
+      } else if (/image\/(png|jpe?g)/i.test(mime) || /\.(png|jpe?g)$/i.test(d.nome)) {
+        const png = /png/i.test(mime) || /\.png$/i.test(d.nome);
+        const img = png ? await doc.embedPng(d.conteudo) : await doc.embedJpg(d.conteudo);
+        blocos.push({ rotulo, paginas: 1, montar: async () => {
+          const pg = doc.addPage(A4);
+          const k = Math.min((A4[0] - 40) / img.width, (A4[1] - 40) / img.height);
+          pg.drawImage(img, { x: (A4[0] - img.width * k) / 2, y: (A4[1] - img.height * k) / 2, width: img.width * k, height: img.height * k });
+        } });
+      }
+    } catch (e: any) {
+      console.warn(`[Contrato] documento de origem "${d.nome}" não abriu:`, e?.message);
+      blocos.push({ rotulo: `${rotulo} (arquivo ilegível — reenviar)`, paginas: 0, montar: async () => {} });
+    }
+  }
+
+  let y = y0;
+  const linha = (t: string, tam = 8.2, fonte = f, cor = rgb(0, 0, 0)) => { for (const l of quebrar(fonte, t, tam, X1 - X0)) { p.drawText(l, { x: X0, y, size: tam, font: fonte, color: cor }); y -= tam + 3.6; } };
+  const v = (k: string) => String(ctx[k] ?? '').trim();
+  linha('Documentos que comprovam a origem, a titularidade e o georreferenciamento do imóvel do qual faz parte o empreendimento (Lei n.º 6.766/1979, art. 18; Lei n.º 6.015/1973, art. 176, §§ 3.º a 5.º). Integram este contrato para conhecimento do(a) COMPRADOR(A).', 8.2);
+  y -= 6;
+  const dados = [
+    v('emp_imovel_denominacao') && `Imóvel: ${v('emp_imovel_denominacao')}`,
+    v('emp_matricula_origem') && `Matrícula de origem: n.º ${v('emp_matricula_origem')}${v('emp_matricula_livro_fls') ? `, ${v('emp_matricula_livro_fls')}` : ''}${v('emp_cartorio_ri') ? ` — ${v('emp_cartorio_ri')}` : ''}`,
+    v('emp_ccir') && `INCRA/SNCR (CCIR): ${v('emp_ccir')}${v('emp_cib') ? ` · Receita Federal (CIB/NIRF): ${v('emp_cib')}` : ''}`,
+    v('emp_sigef') && `Certificação SIGEF/INCRA da área do empreendimento: ${v('emp_sigef')}${v('emp_area_ha') ? ` — ${v('emp_area_ha')} ha` : ''}${v('emp_perimetro_m') ? `, perímetro ${v('emp_perimetro_m')} m` : ''}`,
+  ].filter(Boolean) as string[];
+  for (const d of dados) linha(d, 8.2);
+  y -= 10;
+
+  if (!blocos.length) {
+    p.drawRectangle({ x: X0, y: y - 70, width: X1 - X0, height: 62, borderColor: DOURADO, borderWidth: 1, color: CREME });
+    p.drawText('A ANEXAR', { x: X0 + 16, y: y - 30, size: 16, font: fb, color: VERDE });
+    p.drawText('Os documentos são enviados pelo Administrador em Empreendimento › Arquivos (categoria "Documento de origem").', { x: X0 + 16, y: y - 50, size: 7.6, font: f });
+  } else {
+    p.drawText('ÍNDICE', { x: X0, y, size: 9, font: fb, color: VERDE });
+    y -= 8;
+    p.drawRectangle({ x: X0, y: y - 13, width: X1 - X0, height: 14, color: VERDE });
+    p.drawText('N.º', { x: X0 + 6, y: y - 9.5, size: 7.6, font: fb, color: rgb(1, 1, 1) });
+    p.drawText('Documento', { x: X0 + 34, y: y - 9.5, size: 7.6, font: fb, color: rgb(1, 1, 1) });
+    p.drawText('Folhas do anexo', { x: X1 - 80, y: y - 9.5, size: 7.6, font: fb, color: rgb(1, 1, 1) });
+    y -= 26;
+    let folha = 2;
+    blocos.forEach((b, i) => {
+      const fol = b.paginas ? (b.paginas > 1 ? `${folha} a ${folha + b.paginas - 1}` : String(folha)) : '—';
+      const ls = quebrar(f, b.rotulo, 8, X1 - X0 - 130);
+      p.drawText(String(i + 1), { x: X0 + 8, y, size: 8, font: fb });
+      ls.forEach((l, k) => p.drawText(l, { x: X0 + 34, y: y - k * 11, size: 8, font: f }));
+      p.drawText(fol, { x: X1 - 80, y, size: 8, font: f });
+      y -= ls.length * 11 + 3;
+      p.drawLine({ start: { x: X0, y: y + 6 }, end: { x: X1, y: y + 6 }, thickness: 0.4, color: rgb(0.85, 0.85, 0.85) });
+      y -= 5;
+      folha += b.paginas;
+    });
+    y -= 8;
+    linha('Cópias fiéis dos documentos apresentados pela VENDEDORA; prevalecem as informações da matrícula e das certidões atualizadas do Registro de Imóveis.', 7.4, f, CINZA);
+  }
+  for (const b of blocos) await b.montar();
   return Buffer.from(await doc.save({ useObjectStreams: false }));
 }

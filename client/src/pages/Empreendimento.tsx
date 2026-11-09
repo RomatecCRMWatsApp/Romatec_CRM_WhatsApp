@@ -4,6 +4,7 @@ import { toast } from "sonner";
 import { trpc } from "@/lib/trpc";
 import { useAuth } from "@/_core/hooks/useAuth";
 import { perfilDe } from "@shared/equipe";
+import { CATEGORIAS_ARQUIVO_EMPREENDIMENTO, CATEGORIA_ORIGEM } from "@shared/contratos";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { ComissoesEmpreendimento } from "@/components/corretor/TabelaComissao";
@@ -15,7 +16,7 @@ import Simulador from "@/components/empreendimento/Simulador";
 import { COR_SITUACAO, ROTULO_SITUACAO, SITUACOES_LOTE, VENDIDOS, type SituacaoLote } from "@shared/lotes";
 import { AlertTriangle, Download, FileText, Map as MapIcon, Printer, Trash2, Upload } from "lucide-react";
 
-const CATEGORIAS: Record<string, string> = { licenca: "Licença", projeto: "Projeto / DXF", escritura: "Escritura", memorial: "Memorial", mapa: "Mapa", contrato: "Contrato", outro: "Outro" };
+const CATEGORIAS: Record<string, string> = CATEGORIAS_ARQUIVO_EMPREENDIMENTO;
 const brl = (v: number | null | undefined) => (v == null ? "—" : v.toLocaleString("pt-BR", { style: "currency", currency: "BRL" }));
 const m2 = (v: number | null) => (v == null ? "—" : v.toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 }));
 const tamanho = (b: number | null) => (b == null ? "" : b > 1048576 ? `${(b / 1048576).toFixed(1)} MB` : `${Math.round(b / 1024)} KB`);
@@ -46,6 +47,8 @@ function Arquivos({ slug, arquivos, admin, onMudou }: { slug: string; arquivos: 
   const [enviando, setEnviando] = useState(false);
   const [dxf, setDxf] = useState<number | null>(null);
   const excluir = trpc.empreendimentosAdmin.excluirArquivo.useMutation({ onSuccess: () => { toast.success("Arquivo excluído"); onMudou(); }, onError: e => toast.error(e.message) });
+  const mudarCategoria = trpc.empreendimentosAdmin.categoriaArquivo.useMutation({ onSuccess: () => { toast.success("Tipo do arquivo atualizado"); onMudou(); }, onError: e => toast.error(e.message) });
+  const origem = arquivos.filter(a => a.categoria === CATEGORIA_ORIGEM).length;
   const previa = trpc.empreendimentosAdmin.previaDxf.useQuery({ slug, arquivoId: dxf ?? 0 }, { enabled: !!dxf });
   const aplicar = trpc.empreendimentosAdmin.aplicarDxf.useMutation({
     onSuccess: r => { toast.success(`DXF aplicado: ${r.atualizados} lotes atualizados, ${r.criados} novos`); setDxf(null); onMudou(); },
@@ -84,6 +87,7 @@ function Arquivos({ slug, arquivos, admin, onMudou }: { slug: string; arquivos: 
         <input ref={ref} type="file" multiple className="hidden" onChange={e => enviar(e.target.files)} />
         <Button onClick={() => ref.current?.click()} disabled={enviando}><Upload className="mr-1.5 h-4 w-4" /> {enviando ? "Enviando…" : "Enviar arquivos"}</Button>
         <p className="text-[11px] text-muted-foreground basis-full">Até 20 MB por arquivo. Ficam guardados no CRM e só abrem com login (o empreendedor não vê esta aba).</p>
+        <p className="text-[11px] text-muted-foreground basis-full">"Documento de origem" (matrícula, CCIR, ITR, mapas e memoriais da certificação SIGEF): entra em todo contrato gerado como Anexo IX, em PDF. {origem ? `${origem} documento(s) de origem cadastrado(s).` : "Nenhum documento de origem ainda — o Anexo IX sai como \"a anexar\"."}</p>
       </div>
 
       {dxf && (
@@ -115,7 +119,12 @@ function Arquivos({ slug, arquivos, admin, onMudou }: { slug: string; arquivos: 
           <div key={a.id} className="flex flex-wrap items-center gap-2 p-3 text-sm">
             <FileText className="h-4 w-4 text-muted-foreground" />
             <a href={`/api/empreendimentos/arquivos/${a.id}`} target="_blank" rel="noreferrer" className="flex-1 min-w-[180px] truncate hover:underline">{a.nome}</a>
-            <span className="rounded bg-secondary px-1.5 py-0.5 text-[10px]">{CATEGORIAS[a.categoria] ?? a.categoria}</span>
+            {admin
+              ? <select value={a.categoria} onChange={e => mudarCategoria.mutate({ id: a.id, categoria: e.target.value })} aria-label={`Tipo de ${a.nome}`}
+                  className="h-7 rounded border border-border bg-secondary px-1 text-[11px]">
+                  {Object.entries(CATEGORIAS).map(([k, v]) => <option key={k} value={k}>{v}</option>)}
+                </select>
+              : <span className="rounded bg-secondary px-1.5 py-0.5 text-[10px]">{CATEGORIAS[a.categoria] ?? a.categoria}</span>}
             <span className="text-xs text-muted-foreground">{tamanho(a.tamanhoBytes)}</span>
             <a href={`/api/empreendimentos/arquivos/${a.id}?baixar=1`} className="text-muted-foreground hover:text-foreground" aria-label="Baixar"><Download className="h-4 w-4" /></a>
             {admin && /\.dxf$/i.test(a.nome) && <Button size="sm" variant="outline" className="h-7 text-xs" onClick={() => setDxf(a.id)}>Importar lotes</Button>}

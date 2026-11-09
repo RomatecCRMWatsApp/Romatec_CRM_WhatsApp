@@ -183,3 +183,11 @@ export const TIPOS_ANEXO = {
 export type TipoAnexo = keyof typeof TIPOS_ANEXO;
 export const MIMES_ANEXO = ['application/pdf', 'image/jpeg', 'image/png', 'image/webp'];
 export const LIMITE_ANEXO_MB = 10;
+
+/** Arquivos do empreendimento (Empreendimento › Arquivos): categorias aceitas no envio */
+export const CATEGORIAS_ARQUIVO_EMPREENDIMENTO = {
+  licenca: 'Licença', projeto: 'Projeto / DXF', escritura: 'Escritura', memorial: 'Memorial', mapa: 'Mapa',
+  origem: 'Documento de origem (vai no contrato)', contrato: 'Contrato', outro: 'Outro',
+} as const;
+/** Documentos de origem do imóvel (matrícula, CCIR, ITR, certificação SIGEF): entram no contrato como Anexo IX */
+export const CATEGORIA_ORIGEM = 'origem';
