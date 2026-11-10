@@ -3,6 +3,15 @@
 Cada versão nova vai no TOPO. Depois rode `npm run release` (valida e atualiza o package.json);
 ao subir, o servidor grava a versão no banco e todos recebem o aviso "Novidades da versão".
 
+## 1.148.1 — 2026-11-10
+tipo: patch
+obrigatoria: nao
+titulo: Contrato de gestão: cláusula dos tributos
+publico: admin
+
+### Melhorias
+- Cláusula 6ª passa a "Da prestação de contas e dos tributos": todos os tributos sobre os recebimentos, as movimentações financeiras e os ativos do empreendimento ficam com a proprietária, conforme as alíquotas vigentes, inclusive quando os valores transitarem pelo CNPJ da Romatec; a Romatec responde só pelos tributos da própria remuneração e pode reter e provisionar os tributos dos recebimentos, com prestação de contas
+
 ## 1.148.0 — 2026-11-10
 tipo: minor
 obrigatoria: nao

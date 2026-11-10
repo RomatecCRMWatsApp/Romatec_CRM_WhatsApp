@@ -42,6 +42,10 @@ describe('Contrato de Gestão', () => {
     expect(t).toMatch(/no total de R\$ 90\.100,00 \(noventa mil e cem reais\)/);
     expect(t).toMatch(/TOTAL A RECEBER\s+90\.100,00/);
     expect(t).toMatch(/aberto a termos aditivos/);
+    expect(t).toMatch(/CLÁUSULA 6ª — DA PRESTAÇÃO DE CONTAS E DOS TRIBUTOS/);
+    expect(t).toMatch(/6\.3\. Todos os tributos incidentes sobre os recebimentos, as movimentações financeiras e os ativos do EMPREENDIMENTO são de responsabilidade exclusiva da EMPREENDEDORA, conforme a legislação e as alíquotas vigentes/);
+    expect(t).toMatch(/vinculados ao CNPJ da GESTORA/);
+    expect(t).toMatch(/6\.5\. Fica a GESTORA autorizada a reter e provisionar/);
     expect(t).toMatch(/pontos de locação da faixa marginal do córrego\/rio/);
     expect(t).toMatch(/CLÁUSULA 7ª — DA PROMESSA DE TRANSFERÊNCIA DO IMÓVEL/);
     expect(t).toMatch(/MARIA SINTETICA DE TESTE/);
