@@ -3,6 +3,16 @@
 Cada versão nova vai no TOPO. Depois rode `npm run release` (valida e atualiza o package.json);
 ao subir, o servidor grava a versão no banco e todos recebem o aviso "Novidades da versão".
 
+## 1.149.3 — 2026-11-10
+tipo: patch
+obrigatoria: nao
+titulo: Novidades "Só administrador" ficam privativas do administrador
+publico: admin
+
+### Correções
+- As novidades marcadas "Só administrador" (contrato de gestão, taxas, valores, recibos e aditivos) deixam de aparecer para a secretária, no painel e no aviso por WhatsApp; corretores e empreendedores já não as viam
+- A tela, os downloads (PDF e Word) e as funções do contrato de gestão continuam restritos ao administrador
+
 ## 1.149.2 — 2026-11-10
 tipo: patch
 obrigatoria: nao

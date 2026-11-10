@@ -6,6 +6,10 @@ describe('quem recebe cada aviso', () => {
   it('atualização do sistema: escritório sempre; corretor/empreendedor só quando a versão é para eles', () => {
     for (const p of ['admin', 'secretario']) expect(releaseParaPerfil('equipe', p)).toBe(true);
     expect(releaseParaPerfil('equipe', 'corretor')).toBe(false);
+    // "Só administrador" (contrato de gestão, taxas, valores): nem a secretária vê
+    expect(releaseParaPerfil('admin', 'admin')).toBe(true);
+    for (const p of ['secretario', 'corretor', 'empreendedor', null]) expect(releaseParaPerfil('admin', p as any)).toBe(false);
+    expect(releaseParaPerfil('corretor', 'secretario')).toBe(true);
     expect(releaseParaPerfil('equipe', 'empreendedor')).toBe(false);
     expect(releaseParaPerfil('corretor', 'corretor')).toBe(true);
     expect(releaseParaPerfil('corretor', 'empreendedor')).toBe(false);

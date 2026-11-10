@@ -82,9 +82,12 @@ export function problemaRelease(r: { versao: string; titulo: string; itens: Iten
   return null;
 }
 
-/** Quem vê a release (publico = todos ou o perfil da pessoa) */
+/**
+ * Quem vê a release (publico = todos ou o perfil da pessoa). O administrador vê todas; "admin" é privativa dele
+ * (contrato de gestão, taxas, valores): a secretária vê as demais da equipe, mas não essas.
+ */
 export const releaseParaPerfil = (publico: string, perfil: string | null) =>
-  perfil === 'admin' || perfil === 'secretario' || publico === 'todos' || publico === perfil
+  perfil === 'admin' || (publico !== 'admin' && (perfil === 'secretario' || publico === 'todos' || publico === perfil))
   // usuarios = corretor e empreendedor (ferramenta usada pelos dois)
   || (publico === 'usuarios' && (perfil === 'corretor' || perfil === 'empreendedor'));
 export const ROTULO_PUBLICO_RELEASE: Record<PublicoRelease, string> = {

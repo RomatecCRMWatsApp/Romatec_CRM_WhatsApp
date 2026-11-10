@@ -66,6 +66,9 @@ describe('controle de acessos: regras', () => {
     expect(podeAbrir('secretario', '/controle-acessos')).toBe(true);
     expect(podeAbrir('corretor', '/controle-acessos')).toBe(false);
     expect(podeAbrir('empreendedor', '/controle-acessos')).toBe(false);
+    // Contrato de gestão (taxas, valores, recibos): privativo do administrador
+    expect(podeAbrir('admin', '/contrato-gestao')).toBe(true);
+    for (const p of ['secretario', 'corretor', 'empreendedor'] as const) expect(podeAbrir(p, '/contrato-gestao')).toBe(false);
   });
 });
 
