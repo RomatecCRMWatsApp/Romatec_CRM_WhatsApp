@@ -112,10 +112,10 @@ function Parametros({ p, qtdCadastrados, onSalvo }: { p: ParametrosGestao; qtdCa
   );
 }
 
-interface Aporte { id: number; numero: number; data: string; valor: number; descricao: string; categoria: CategoriaAporte; favorecido: string; formaPagamento: string; comprovante: string; ressarcidoEm: string | null }
+interface Aporte { id: number; numero: number; data: string; valor: number; descricao: string; categoria: CategoriaAporte; favorecido: string; formaPagamento: string; comprovante: string; ressarcidoEm: string | null; valorContratado: number | null; referencia: string; aditivos: number[] }
 
 function Adiantamentos({ aportes, base, onMudou }: { aportes: Aporte[]; base: string; onMudou: () => void }) {
-  const vazio = { data: hoje(), valor: "", descricao: "", categoria: "agrimensura" as CategoriaAporte, formaPagamento: "pix" as (typeof FORMAS_PAGAMENTO_APORTE)[number], favorecido: "", comprovante: "" };
+  const vazio = { data: hoje(), valor: "", descricao: "", categoria: "agrimensura" as CategoriaAporte, formaPagamento: "pix" as (typeof FORMAS_PAGAMENTO_APORTE)[number], favorecido: "", comprovante: "", contratado: "", referencia: "" };
   const [f, setF] = useState(vazio);
   const erro = (e: { message: string }) => toast.error(e.message);
   const criar = trpc.gestao.criarAporte.useMutation({ onSuccess: r => { toast.success(`Recibo n.º ${r.numero} criado`); setF(vazio); onMudou(); }, onError: erro });
@@ -141,9 +141,11 @@ function Adiantamentos({ aportes, base, onMudou }: { aportes: Aporte[]; base: st
         </label>
         <label className="flex flex-col gap-1 text-xs text-muted-foreground md:col-span-3">Favorecido (quem recebeu)<Input value={f.favorecido} onChange={set("favorecido")} maxLength={200} /></label>
         <label className="flex flex-col gap-1 text-xs text-muted-foreground md:col-span-3">Comprovante (n.º do PIX, nota, recibo)<Input value={f.comprovante} onChange={set("comprovante")} maxLength={200} /></label>
+        <label className="flex flex-col gap-1 text-xs text-muted-foreground md:col-span-2">Valor total contratado do serviço (opcional: o recibo mostra o saldo)<Input inputMode="decimal" value={f.contratado} onChange={set("contratado")} placeholder="0,00" /></label>
+        <label className="flex flex-col gap-1 text-xs text-muted-foreground md:col-span-4">Documento de origem (orçamento, medição, proposta)<Input value={f.referencia} onChange={set("referencia")} maxLength={300} /></label>
       </div>
       <Button disabled={criar.isPending || num(f.valor) <= 0 || f.descricao.trim().length < 3}
-        onClick={() => criar.mutate({ slug: SLUG, aporte: { ...f, valor: num(f.valor) } })}>
+        onClick={() => { const { contratado, ...resto } = f; criar.mutate({ slug: SLUG, aporte: { ...resto, valor: num(f.valor), valorContratado: contratado ? num(contratado) : null } }); }}>
         {criar.isPending ? <Loader2 className="mr-1 h-4 w-4 animate-spin" /> : <Plus className="mr-1 h-4 w-4" />} Lançar e gerar recibo
       </Button>
       {aportes.length > 0 && (
@@ -154,7 +156,8 @@ function Adiantamentos({ aportes, base, onMudou }: { aportes: Aporte[]; base: st
               {aportes.map(a => (
                 <tr key={a.id} className="border-b border-border/60">
                   <td className="py-2">{a.numero}</td><td>{dataBR(a.data)}</td>
-                  <td><p>{a.descricao}</p><p className="text-xs text-muted-foreground">{[CATEGORIAS_APORTE[a.categoria], ROTULO_FORMA_APORTE[a.formaPagamento as keyof typeof ROTULO_FORMA_APORTE], a.favorecido].filter(Boolean).join(" · ")}</p></td>
+                  <td><p>{a.descricao}</p><p className="text-xs text-muted-foreground">{[CATEGORIAS_APORTE[a.categoria], ROTULO_FORMA_APORTE[a.formaPagamento as keyof typeof ROTULO_FORMA_APORTE], a.favorecido,
+                    a.valorContratado ? `contratado ${brl(a.valorContratado)} · saldo ${brl(Math.max(0, a.valorContratado - a.valor))}` : "", a.aditivos.length ? `Aditivo n.º ${a.aditivos.join(", ")}` : "Anexo I"].filter(Boolean).join(" · ")}</p></td>
                   <td className="pr-4 text-right font-medium">{brl(a.valor)}</td>
                   <td className="pl-2"><label className="inline-flex items-center gap-1.5 text-xs"><input type="checkbox" checked={!!a.ressarcidoEm} onChange={e => ressarcido.mutate({ slug: SLUG, id: a.id, data: e.target.checked ? hoje() : null })} />
                     {a.ressarcidoEm ? dataBR(a.ressarcidoEm) : "não"}</label></td>

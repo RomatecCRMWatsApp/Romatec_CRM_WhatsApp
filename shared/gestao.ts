@@ -70,6 +70,10 @@ export const aporteSchema = z.object({
   favorecido: z.string().trim().max(200).optional().default(''),
   formaPagamento: z.enum(FORMAS_PAGAMENTO_APORTE),
   comprovante: z.string().trim().max(200).optional().default(''),
+  /** Valor total contratado do serviço (opcional): o recibo mostra o saldo a pagar */
+  valorContratado: z.number().positive().max(100_000_000).nullable().optional().default(null),
+  /** Documento de origem (orçamento, medição, proposta) */
+  referencia: z.string().trim().max(300).optional().default(''),
 });
 export type DadosAporte = z.infer<typeof aporteSchema>;
 

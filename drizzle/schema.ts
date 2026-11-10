@@ -2253,6 +2253,10 @@ export const gestaoAportes = mysqlTable("gestaoAportes", {
   favorecido: varchar("favorecido", { length: 200 }),
   formaPagamento: varchar("formaPagamento", { length: 20 }).notNull(),
   comprovante: varchar("comprovante", { length: 200 }),
+  /** Valor total contratado do serviço (o recibo mostra o saldo a pagar) */
+  valorContratado: decimal("valorContratado", { precision: 14, scale: 2 }),
+  /** Documento de origem (orçamento, medição, proposta) */
+  referencia: varchar("referencia", { length: 300 }),
   ressarcidoEm: varchar("ressarcidoEm", { length: 10 }),
   criadoPor: int("criadoPor"),
   criadoEm: timestamp("criadoEm").defaultNow().notNull(),

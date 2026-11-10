@@ -3,6 +3,17 @@
 Cada versão nova vai no TOPO. Depois rode `npm run release` (valida e atualiza o package.json);
 ao subir, o servidor grava a versão no banco e todos recebem o aviso "Novidades da versão".
 
+## 1.148.2 — 2026-11-10
+tipo: patch
+obrigatoria: nao
+titulo: Recibos de adiantamento interligados ao contrato e aos aditivos
+publico: admin
+
+### Melhorias
+- Lançamento de adiantamento ganha "Valor total contratado" e "Documento de origem" (medição, proposta, orçamento): o recibo mostra o quadro contratado / adiantado / saldo a pagar e avisa que o saldo, quando pago, sai em novo recibo vinculado
+- Cada recibo leva número próprio (001/2026, 002/2026…) e a linha de vínculo: Contrato de Gestão n.º, Cláusula 5ª e Anexo I, e o Termo Aditivo que o reconheceu
+- Anexo I do contrato ganha as colunas Vínculo e Situação; a lista da aba mostra em qual aditivo cada recibo entrou
+
 ## 1.148.1 — 2026-11-10
 tipo: patch
 obrigatoria: nao

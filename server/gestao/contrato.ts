@@ -187,9 +187,9 @@ export function blocosContrato(g: DadosContratoGestao): Bloco[] {
   b.push({ k: 'cab', t1: 'ANEXO I — RECIBOS DE ADIANTAMENTO', t2: `Contrato de Gestão n.º ${g.numero} · Cláusula 5ª` });
   if (!g.aportes.length) b.push(P('Nenhum adiantamento registrado até esta data. Os recibos serão emitidos pelo CRM a cada desembolso da GESTORA e integram este contrato.'));
   else {
-    b.push({ k: 'tab', cab: ['Recibo', 'Data', 'Descrição', 'Valor (R$)', 'Situação'], pesos: [0.8, 1, 4.4, 1.4, 1.2], direita: [3],
-      linhas: [...g.aportes.map(a => [`${a.numero}`, dataBR(a.data), a.descricao, brl(a.valor), a.ressarcidoEm ? `ressarcido ${dataBR(a.ressarcidoEm)}` : 'a ressarcir']),
-        ['TOTAL', '', '', brl(totalAportes(g.aportes)), '']] });
+    b.push({ k: 'tab', cab: ['Recibo', 'Data', 'Descrição', 'Valor (R$)', 'Vínculo', 'Situação'], pesos: [1.1, 1, 3.5, 1.3, 1.3, 1.2], direita: [3],
+      linhas: [...g.aportes.map(a => [numeroRecibo(a), dataBR(a.data), a.descricao, brl(a.valor), vinculoCurto(a), a.ressarcidoEm ? `ressarcido ${dataBR(a.ressarcidoEm)}` : 'a ressarcir']),
+        ['TOTAL', '', '', brl(totalAportes(g.aportes)), '', '']] });
     for (const a of g.aportes) { b.push({ k: 'quebra' }); b.push(...blocosRecibo(g, a, true)); }
   }
 
@@ -210,17 +210,28 @@ export function blocosContrato(g: DadosContratoGestao): Bloco[] {
   return b;
 }
 
-/** Recibo de Adiantamento (avulso ou dentro do Anexo I) */
+/** "001/2026" */
+export const numeroRecibo = (a: Pick<AporteGestao, 'numero' | 'data'>) => `${String(a.numero).padStart(3, '0')}/${a.data.slice(0, 4)}`;
+/** "Anexo I" ou "Aditivo n.º 2" */
+const vinculoCurto = (a: AporteGestao) => (a.aditivos?.length ? `Aditivo n.º ${a.aditivos.join(', ')}` : 'Anexo I');
+
+/** Recibo de Adiantamento (avulso ou dentro do Anexo I), com o vínculo ao contrato e aos termos aditivos */
 export function blocosRecibo(g: DadosContratoGestao, a: AporteGestao, noAnexo = false): Bloco[] {
   const E = qualificacaoEmpreendedora(g);
   const local = `${g.empreendimento.municipio}/${g.empreendimento.uf}`;
+  const saldo = a.valorContratado ? Math.round((a.valorContratado - a.valor) * 100) / 100 : null;
+  const vinculo = `Contrato de Gestão n.º ${g.numero} (Cláusula 5ª e Anexo I)${a.aditivos?.length ? `; reconhecido no${a.aditivos.length > 1 ? 's' : ''} Termo${a.aditivos.length > 1 ? 's' : ''} Aditivo${a.aditivos.length > 1 ? 's' : ''} n.º ${a.aditivos.join(', ')}` : ''}`;
   return [
-    { k: 'cab', t1: `RECIBO DE ADIANTAMENTO N.º ${String(a.numero).padStart(3, '0')}/${a.data.slice(0, 4)}`, t2: `${noAnexo ? 'Anexo I do ' : ''}Contrato de Gestão n.º ${g.numero} · ${g.empreendimento.nome}` },
+    { k: 'cab', t1: `RECIBO DE ADIANTAMENTO N.º ${numeroRecibo(a)}`, t2: `${noAnexo ? 'Anexo I do ' : ''}Contrato de Gestão n.º ${g.numero} · ${g.empreendimento.nome}` },
     PB({ t: 'Valor: ' }, { t: reais(a.valor), b: true }),
+    PB({ t: 'Vínculo: ' }, { t: vinculo, b: true }),
+    ...(a.valorContratado ? [{ k: 'tab', cab: ['Serviço contratado', 'Adiantado neste recibo', 'Saldo a pagar'], direita: [0, 1, 2],
+      linhas: [[`R$ ${brl(a.valorContratado)}`, `R$ ${brl(a.valor)}`, `R$ ${brl(Math.max(0, saldo ?? 0))}`]] } as Bloco] : []),
     PB({ t: 'A EMPREENDEDORA, ' }, { t: E.nome, b: true }, { t: `${E.doc ? `, ${E.doc}` : ''}, declara e reconhece que a GESTORA, ` }, { t: GESTORA.nome, b: true },
       { t: `, CNPJ ${ESCRITORIO.cnpj}, pagou com recursos próprios, em ${dataBR(a.data)}, a importância de ${reais(a.valor)}, referente a ` }, { t: a.descricao, b: true },
       { t: `, em favor do ${g.empreendimento.nome}.` }),
-    P(`Categoria: ${CATEGORIAS_APORTE[a.categoria as keyof typeof CATEGORIAS_APORTE] ?? a.categoria}. Forma de pagamento: ${ROTULO_FORMA_APORTE[a.formaPagamento as keyof typeof ROTULO_FORMA_APORTE] ?? a.formaPagamento}.${a.favorecido ? ` Favorecido: ${a.favorecido}.` : ''}${a.comprovante ? ` Comprovante: ${a.comprovante}.` : ''}`),
+    P(`Categoria: ${CATEGORIAS_APORTE[a.categoria as keyof typeof CATEGORIAS_APORTE] ?? a.categoria}. Forma de pagamento: ${ROTULO_FORMA_APORTE[a.formaPagamento as keyof typeof ROTULO_FORMA_APORTE] ?? a.formaPagamento}.${a.favorecido ? ` Favorecido: ${a.favorecido}.` : ''}${a.comprovante ? ` Comprovante: ${a.comprovante}.` : ''}${a.referencia ? ` Documento de origem: ${a.referencia}.` : ''}`),
+    ...(saldo && saldo > 0 ? [P(`O saldo de R$ ${brl(saldo)} (${reaisExtenso(saldo)}) do serviço contratado, quando pago pela GESTORA, será documentado em novo Recibo de Adiantamento, vinculado a este.`)] : []),
     P('O valor constitui crédito da GESTORA, corrigido pelo IPCA/IBGE desde o desembolso, a ser ressarcido com os recebimentos do EMPREENDIMENTO nos termos da Cláusula 5ª do Contrato de Gestão, do qual este recibo é parte integrante.'),
     P(`${local}, ${dataExtenso(a.data)}.`),
     { k: 'ass', blocos: [
@@ -297,8 +308,8 @@ export function blocosAditivoGestao(g: DadosContratoGestao, ad: AditivoGestao): 
   const valor = ad.valor ?? (recibos.length ? somaRecibos : null);
   const extras: Bloco[] = recibos.length ? [
     P(`A EMPREENDEDORA reconhece os adiantamentos abaixo, feitos pela GESTORA com recursos próprios e documentados pelos respectivos Recibos de Adiantamento, que passam a integrar o Anexo I do Contrato de Gestão:`),
-    { k: 'tab', cab: ['Recibo', 'Data', 'Descrição', 'Valor (R$)'], pesos: [0.8, 1, 5, 1.5], direita: [3],
-      linhas: [...recibos.map(a => [String(a.numero), dataBR(a.data), a.descricao, brl(a.valor)]), ['TOTAL', '', '', brl(somaRecibos)]] },
+    { k: 'tab', cab: ['Recibo', 'Data', 'Descrição', 'Valor (R$)'], pesos: [1.1, 1, 4.7, 1.5], direita: [3],
+      linhas: [...recibos.map(a => [numeroRecibo(a), dataBR(a.data), a.descricao, brl(a.valor)]), ['TOTAL', '', '', brl(somaRecibos)]] },
   ] : [];
   const p = g.parametros;
   return blocosAditivo({

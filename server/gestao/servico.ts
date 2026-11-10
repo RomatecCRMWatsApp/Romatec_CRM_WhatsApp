@@ -23,7 +23,7 @@ const json = (v: unknown): Record<string, any> => {
 /** Valor útil (vazio e "[PREENCHER…]" contam como ausentes) */
 const util = (v: unknown) => { const t = String(v ?? '').trim(); return t && !/^\[?PREENCHER/i.test(t) ? t : ''; };
 
-export interface AporteGestao extends DadosAporte { id: number; numero: number; ressarcidoEm: string | null }
+export interface AporteGestao extends DadosAporte { id: number; numero: number; ressarcidoEm: string | null; /** Termos aditivos que reconhecem este recibo */ aditivos: number[] }
 export interface AditivoGestao { id: number; numero: number; data: string; tipo: TipoAditivoGestao; objeto: string; texto: string; valor: number | null; aportes: number[] }
 
 export interface DadosContratoGestao {
@@ -60,7 +60,7 @@ export async function dadosContrato(slug: string): Promise<DadosContratoGestao> 
   const ap: any[] = await d.select().from(gestaoAportes).where(eq(gestaoAportes.empreendimentoId, e.id)).orderBy(asc(gestaoAportes.numero));
   const ad: any[] = await d.select().from(gestaoAditivos).where(eq(gestaoAditivos.empreendimentoId, e.id)).orderBy(asc(gestaoAditivos.numero));
   const ano = parametros.dataContrato ? Number(parametros.dataContrato.slice(0, 4)) : new Date().getFullYear();
-  return {
+  const r: DadosContratoGestao = {
     empreendimento: { id: Number(e.id), slug: e.slug, nome: e.nome, municipio: e.municipio ?? 'Açailândia', uf: e.uf ?? 'MA' },
     numero: g?.numero ?? numeroContratoGestao(Number(e.id), ano),
     parametros,
@@ -72,6 +72,7 @@ export async function dadosContrato(slug: string): Promise<DadosContratoGestao> 
     aportes: ap.map(a => ({
       id: Number(a.id), numero: Number(a.numero), data: a.data, valor: Number(a.valor), descricao: a.descricao, categoria: a.categoria,
       favorecido: a.favorecido ?? '', formaPagamento: a.formaPagamento, comprovante: a.comprovante ?? '', ressarcidoEm: a.ressarcidoEm ?? null,
+      valorContratado: a.valorContratado != null ? Number(a.valorContratado) : null, referencia: a.referencia ?? '', aditivos: [] as number[],
     })),
     aditivos: ad.map(a => ({
       id: Number(a.id), numero: Number(a.numero), data: a.data, tipo: a.tipo, objeto: a.objeto ?? '', texto: a.texto ?? '',
@@ -79,6 +80,9 @@ export async function dadosContrato(slug: string): Promise<DadosContratoGestao> 
     })),
     atualizadoEm: g?.atualizadoEm ? new Date(g.atualizadoEm).toISOString() : null,
   };
+  // Vínculos: cada recibo sabe em quais termos aditivos foi reconhecido
+  for (const ap of r.aportes) ap.aditivos = r.aditivos.filter(x => x.tipo === 'adiantamentos' && x.aportes.includes(ap.id)).map(x => x.numero);
+  return r;
 }
 
 export async function salvarParametros(slug: string, p: ParametrosGestao, autorId: number) {
@@ -100,7 +104,8 @@ export async function criarAporte(slug: string, a: DadosAporte, autorId: number)
   const numero = ex.reduce((m, x) => Math.max(m, Number(x.numero)), 0) + 1;
   await d.insert(gestaoAportes).values({
     empreendimentoId: e.id, numero, data: a.data, valor: a.valor.toFixed(2), descricao: a.descricao, categoria: a.categoria,
-    favorecido: a.favorecido || null, formaPagamento: a.formaPagamento, comprovante: a.comprovante || null, criadoPor: autorId, criadoEm: new Date(),
+    favorecido: a.favorecido || null, formaPagamento: a.formaPagamento, comprovante: a.comprovante || null,
+    valorContratado: a.valorContratado != null ? a.valorContratado.toFixed(2) : null, referencia: a.referencia || null, criadoPor: autorId, criadoEm: new Date(),
   } as any);
   return { ok: true as const, numero };
 }

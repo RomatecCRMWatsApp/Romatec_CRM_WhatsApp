@@ -157,6 +157,24 @@ describe('Motor de aditivos', () => {
     expect((await G.criarAditivoGestao('bom-jardims', { tipo: 'receber', data: '2026-11-14', objeto: '', texto: '', valor: 500, aportes: [] }, 1)).numero).toBe(3);
   });
 
+  it('recibo com serviço contratado mostra o saldo; recibo, Anexo I e aditivo ficam vinculados pelos números', async () => {
+    await G.criarAporte('bom-jardims', { data: '2026-11-10', valor: 7000, descricao: 'Adiantamento dos planos ambientais', categoria: 'licencas', favorecido: 'Engenheiro', formaPagamento: 'pix', comprovante: 'E1', valorContratado: 15000, referencia: 'Proposta' }, 1);
+    let g = await G.dadosContrato('bom-jardims');
+    let r = texto(C.blocosRecibo(g, g.aportes[0]));
+    expect(r).toMatch(/RECIBO DE ADIANTAMENTO N\.º 001\/2026/);
+    expect(r).toMatch(/Vínculo: Contrato de Gestão n\.º GE-\d{4}-0007 \(Cláusula 5ª e Anexo I\)/);
+    expect(r).toMatch(/R\$ 15\.000,00 R\$ 7\.000,00 R\$ 8\.000,00/);
+    expect(r).toMatch(/O saldo de R\$ 8\.000,00 \(oito mil reais\)/);
+    expect(r).toMatch(/Documento de origem: Proposta\./);
+    await G.criarAditivoGestao('bom-jardims', { tipo: 'adiantamentos', data: '2026-11-11', objeto: '', texto: '', valor: null, aportes: [g.aportes[0].id] }, 1);
+    g = await G.dadosContrato('bom-jardims');
+    expect(g.aportes[0].aditivos).toEqual([1]);
+    r = texto(C.blocosRecibo(g, g.aportes[0]));
+    expect(r).toMatch(/reconhecido no Termo Aditivo n\.º 1/);
+    expect(texto(C.blocosContrato(g))).toMatch(/001\/2026 10\/11\/2026 Adiantamento dos planos ambientais 7\.000,00 Aditivo n\.º 1/);
+    expect(texto(C.blocosAditivoGestao(g, g.aditivos[0]))).toMatch(/001\/2026/);
+  });
+
   it('aditivo livre ao CPCV: valida objeto, texto e contrato', async () => {
     const L = await import('./aditivos/cpcv');
     await expect(L.criarAditivoLivre(1, { objeto: 'abc', texto: 'x y' }, 1)).rejects.toThrow(/objeto/);
