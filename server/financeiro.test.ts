@@ -62,7 +62,7 @@ beforeAll(async () => {
   // Seeds em SQL puro: no SQLite o drizzle (schema MySQL) não envia booleanos dos defaults
   db.run(sql`INSERT INTO empreendimentos (id, slug, nome) VALUES (1, 'bom-jardims', 'Bom Jardims')`);
   db.run(sql`INSERT INTO lotes (empreendimentoId, codigo, quadra, numero, areaM2) VALUES (1, 'A01', 'A', 1, '3025.11')`);
-  db.run(sql`INSERT INTO empJuridico (empreendimentoId, defaultsJson, vendedoraJson) VALUES (1, '{}', ${JSON.stringify({ vend_nome: 'VALMA', vend_cpf: '364.274.623-34' })})`);
+  db.run(sql`INSERT INTO empJuridico (empreendimentoId, defaultsJson, vendedoraJson) VALUES (1, '{}', ${JSON.stringify({ vend_nome: 'MARIA', vend_cpf: '529.982.247-25' })})`);
   db.run(sql`INSERT INTO contratos (id, numero, empreendimentoId, loteCodigo, corretorUserId, simulacaoJson, dadosJson, status, codigoVerificacao)
     VALUES (1, 'BJ-2026-0001', 1, 'A01', 1, ${JSON.stringify(plano)}, '{}', 'ativo', 'ABCDEFGHJKLM')`);
   db.run(sql`INSERT INTO pessoas (id, nome, cpfCnpj, telefone1) VALUES (1, 'Fulano de Tal', '52998224725', '99991234567')`);
@@ -200,7 +200,7 @@ describe('5. renders', () => {
   const ctx = {
     contrato: { id: 1, numero: 'BJ-2026-0001', modeloVersao: 'CPCV-BJ v2.0', codigoVerificacao: 'ABCDEFGHJKLM' },
     lote: { codigo: 'A01', quadra: 'A', areaM2: 3025.11 }, comprador: { nome: 'FULANO', cpfCnpj: '52998224725', endereco: 'Rua A' },
-    beneficiario: 'VALMA', agenciaCodigo: '0001 / 0000000-0', urlPublica: 'https://romateccrm.com', plano,
+    beneficiario: 'MARIA', agenciaCodigo: '0001 / 0000000-0', urlPublica: 'https://romateccrm.com', plano,
   };
   const cobs = plano.parcelas.map((p, i) => ({ id: i + 1, ...p, asaas: snapAsaas(i), dataDocumento: '2026-10-24' }));
 

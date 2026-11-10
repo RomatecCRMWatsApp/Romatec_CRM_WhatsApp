@@ -110,7 +110,7 @@ export default function BomJardimsPagamento() {
         {/* 1. Chácara */}
         <section style={card}>
           <h2 style={h2}>1. Escolha a chácara</h2>
-          <select value={codigo} onChange={e => setCodigo(e.target.value)} style={{ width: "100%", padding: "12px 14px", borderRadius: 12, border: "1px solid var(--c-d8cfb4)", fontSize: 16, background: "var(--c-ffffff)" }}>
+          <select aria-label="Escolha a chácara" value={codigo} onChange={e => setCodigo(e.target.value)} style={{ width: "100%", padding: "12px 14px", borderRadius: 12, border: "1px solid var(--c-d8cfb4)", fontSize: 16, background: "var(--c-ffffff)" }}>
             {dados.lotes.map(l => <option key={l.codigo} value={l.codigo}>Chácara {l.codigo} · {m2(l.areaM2)} m² · {brl(l.preco)}</option>)}
           </select>
           <p style={{ margin: "8px 0 0", fontSize: 13, color: C.suave }}>O preço é o mesmo em todas as formas de pagamento. Muda só como você paga.</p>

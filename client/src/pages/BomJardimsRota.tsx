@@ -100,7 +100,7 @@ export default function BomJardimsRota() {
         <div style={{ ...sec, padding: "28px 16px 32px" }}>
           <p style={{ color: C.creme, margin: "0 0 12px", fontWeight: 700 }}>Ficou com dúvida no caminho? Chame no WhatsApp:</p>
           <ContatosBotoes />
-          <p style={{ color: "var(--c-bfc9b9)", fontSize: 13, margin: "16px 0 0" }}>{rotuloCorretor(corretor)} · <a href="/bom-jardims" style={{ color: C.destaque }}>Ver as chácaras</a></p>
+          <p style={{ color: "var(--c-bfc9b9)", fontSize: 13, margin: "16px 0 0" }}>{rotuloCorretor(corretor)} · <a href="/bom-jardims" style={{ color: C.destaque, textDecoration: "underline" }}>Ver as chácaras</a></p>
         </div>
       </section>
     </div>

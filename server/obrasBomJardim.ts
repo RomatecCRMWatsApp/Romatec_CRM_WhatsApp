@@ -4,6 +4,7 @@
  * empreendimento e com a origem da campanha (utm_source / utm_campaign; padrão Instagram + IG-OBRAS-NOV26).
  */
 import { and, eq, inArray } from 'drizzle-orm';
+import { CONSENTIMENTO_OBRAS_BOM_JARDIMS } from '../shared/consentimentos';
 import type { Express } from 'express';
 import { z } from 'zod';
 import { getDb } from './db';
@@ -11,7 +12,7 @@ import { acessosCorretor, campanhaCliques, empreendimentos, users } from '../dri
 import { escolherResponsavel } from './leads/sla';
 import { refDoUsuario, usuarioDaRef } from './cartaoVendas';
 import { ingestLead, origemFromUtm, origemVisitaSchema } from './lead-intake';
-import { BOM_JARDIMS_CONSENT_TEXT, BOM_JARDIMS_SLUG, bomJardimsWelcome, scoreBomJardims } from './bom-jardims';
+import { BOM_JARDIMS_SLUG, bomJardimsWelcome, scoreBomJardims } from './bom-jardims';
 import { CAMPANHA_OBRAS, FINALIDADES_OBRAS, PAGAMENTOS_OBRAS, PRAZOS_OBRAS, fichaObrasSchema, msgValorComFicha, rotuloObras, utmObras } from '../shared/obrasBomJardim';
 
 /** WhatsApp do José (CRECI/MA F-4.705): quando ninguém da equipe tem telefone cadastrado */
@@ -115,7 +116,7 @@ export function registrarRotasObras(app: Express, allow: (key: string) => boolea
           finalidade: rotuloObras(FINALIDADES_OBRAS, p.finalidade), pagamento: rotuloObras(PAGAMENTOS_OBRAS, p.pagamento), prazo: rotuloObras(PRAZOS_OBRAS, p.prazo),
           pediu: 'Valores / tabela',
         },
-        consentimento: { at: new Date().toISOString(), texto: BOM_JARDIMS_CONSENT_TEXT, origem: `campanha /obras-bom-jardim (utm_source=${utm.source})`, ip },
+        consentimento: { at: new Date().toISOString(), texto: CONSENTIMENTO_OBRAS_BOM_JARDIMS, origem: `campanha /obras-bom-jardim (utm_source=${utm.source})`, ip },
         welcomeMessage: bomJardimsWelcome(p.nome),
       });
       if (!r.ok && r.reason === 'invalid_phone') return res.status(400).json({ ok: false, error: 'Informe um WhatsApp válido com DDD' });

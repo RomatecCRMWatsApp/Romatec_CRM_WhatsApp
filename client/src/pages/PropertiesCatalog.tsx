@@ -54,7 +54,7 @@ export default function PropertiesCatalog() {
             onClick={() => setTab('venda')}
             className={`px-4 py-2 rounded-lg text-sm font-semibold border transition ${
               tab === 'venda'
-                ? 'bg-ok-500 text-white border-ok-500 shadow-md shadow-ok-500/20'
+                ? 'bg-ok-700 text-white border-ok-700 shadow-md shadow-ok-500/20'
                 : 'border-border/50 text-muted-foreground hover:border-ok-500/40 hover:text-ok-500'
             }`}
           >
@@ -64,7 +64,7 @@ export default function PropertiesCatalog() {
             onClick={() => setTab('aluguel')}
             className={`px-4 py-2 rounded-lg text-sm font-semibold border transition ${
               tab === 'aluguel'
-                ? 'bg-ok-500 text-white border-ok-500 shadow-md shadow-ok-500/20'
+                ? 'bg-ok-700 text-white border-ok-700 shadow-md shadow-ok-500/20'
                 : 'border-border/50 text-muted-foreground hover:border-ok-500/40 hover:text-ok-500'
             }`}
           >
@@ -108,7 +108,7 @@ export default function PropertiesCatalog() {
                       </div>
                     )}
                     {/* Finalidade badge */}
-                    <span className="absolute top-2 left-2 px-2 py-0.5 rounded-full text-xs font-bold bg-ok-500/90 text-white">
+                    <span className="absolute top-2 left-2 px-2 py-0.5 rounded-full text-xs font-bold bg-ok-700 text-white">
                       {tab === 'venda' ? 'Venda' : 'Aluguel'}
                     </span>
                   </div>
@@ -155,7 +155,7 @@ export default function PropertiesCatalog() {
                       {property.publicSlug ? (
                         <a
                           href={`/imovel/${property.publicSlug}`}
-                          className="block w-full py-2.5 rounded-xl text-sm font-semibold text-center bg-ok-500 hover:bg-ok-600 text-white transition-colors no-underline"
+                          className="block w-full py-2.5 rounded-xl text-sm font-semibold text-center bg-ok-700 hover:bg-ok-800 text-white transition-colors no-underline"
                         >
                           Ver Detalhes
                         </a>
