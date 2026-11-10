@@ -3,6 +3,16 @@
 Cada versão nova vai no TOPO. Depois rode `npm run release` (valida e atualiza o package.json);
 ao subir, o servidor grava a versão no banco e todos recebem o aviso "Novidades da versão".
 
+## 1.149.1 — 2026-11-10
+tipo: patch
+obrigatoria: nao
+titulo: Contrato de gestão: Romatec como construtora e exclusividade dos serviços do condomínio
+publico: admin
+
+### Melhorias
+- Cláusula 4ª-A: as obras e os serviços de engenharia são executados pela própria Romatec (J R P Bezerra Ltda), que também atua como construtora; saem os campos de construtora separada
+- Nova Cláusula 4ª-B: exclusividade da Romatec para todas as edificações e construções civis do empreendimento e para os serviços ao condomínio (portaria, limpeza e conservação, administração), com indicação no estatuto e nos contratos de venda por 60 meses a partir da instalação, ratificação em assembleia, valores fixados antes de cada serviço e preferência na renovação
+
 ## 1.149.0 — 2026-11-10
 tipo: minor
 obrigatoria: nao

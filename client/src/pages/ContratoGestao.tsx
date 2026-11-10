@@ -63,7 +63,6 @@ function Parametros({ p, qtdCadastrados, onSalvo }: { p: ParametrosGestao; qtdCa
     comissao: pctTxt(x.comissaoPct), corretor: pctTxt(x.corretorParceiroPct), valorLote: String(x.valorPorLote).replace(".", ","), qtdLotes: x.qtdLotes ? String(x.qtdLotes) : "", extras: String(x.unidadesExtras ?? 1), pontos: String(x.pontosBanhoQtd ?? 85), valorPonto: String(x.valorPontoBanho ?? 200).replace(".", ","),
     retencao: pctTxt(x.retencaoAportesPct), prazo: String(x.prazoMinimoMeses), multa: pctTxt(x.multaRescisaoPct), dataContrato: x.dataContrato,
     t1n: x.testemunha1Nome, t1c: x.testemunha1Cpf, t2n: x.testemunha2Nome, t2c: x.testemunha2Cpf, obs: x.observacoes,
-    construtora: x.construtoraNome ?? "", construtoraCnpj: x.construtoraCnpj ?? "",
   });
   const [f, setF] = useState(vazio(p));
   useEffect(() => setF(vazio(p)), [p]);
@@ -82,7 +81,6 @@ function Parametros({ p, qtdCadastrados, onSalvo }: { p: ParametrosGestao; qtdCa
     unidadesExtras: Number(f.extras) || 0, pontosBanhoQtd: Number(f.pontos) || 0, valorPontoBanho: num(f.valorPonto),
     retencaoAportesPct: num(f.retencao) / 100, prazoMinimoMeses: Number(f.prazo) || 60, multaRescisaoPct: num(f.multa) / 100, dataContrato: f.dataContrato,
     testemunha1Nome: f.t1n, testemunha1Cpf: f.t1c, testemunha2Nome: f.t2n, testemunha2Cpf: f.t2c, observacoes: f.obs,
-    construtoraNome: f.construtora, construtoraCnpj: f.construtoraCnpj,
   } });
   return (
     <section className="space-y-3 rounded-xl border border-border bg-card p-4 text-sm" aria-labelledby="condicoes">
@@ -101,7 +99,6 @@ function Parametros({ p, qtdCadastrados, onSalvo }: { p: ParametrosGestao; qtdCa
         {campo("Data do contrato", "dataContrato", { tipo: "date" })}
         {campo("Testemunha 1 — nome", "t1n")}{campo("Testemunha 1 — CPF", "t1c")}
         {campo("Testemunha 2 — nome", "t2n")}{campo("Testemunha 2 — CPF", "t2c")}
-        {campo("Construtora (engenharia e obras, por aditivo)", "construtora", { ph: "razão social" })}{campo("Construtora — CNPJ", "construtoraCnpj")}
       </div>
       <p className="rounded-lg bg-secondary p-2">
         Topografia a receber: locação de <b>{top.unidades} unidades × {brl(num(f.valorLote))} = {brl(top.locacao)}</b>

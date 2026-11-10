@@ -176,14 +176,20 @@ describe('Motor de aditivos', () => {
   });
 
   it('engenharia, legalização e obras civis ficam fora da gestão e da agrimensura, fixadas por aditivo antes de cada frente; arquitetura e locação entram na agrimensura', async () => {
-    await G.salvarParametros('bom-jardims', { ...PARAMETROS_PADRAO, construtoraNome: 'CONSTRUTORA FICTICIA LTDA', construtoraCnpj: '11.222.333/0001-81' }, 1);
-    const t = texto(C.blocosContrato(await G.dadosContrato('bom-jardims')));
+        const t = texto(C.blocosContrato(await G.dadosContrato('bom-jardims')));
     expect(t).toMatch(/CLÁUSULA 4ª-A — DOS SERVIÇOS DE ENGENHARIA E DAS OBRAS CIVIS/);
     expect(t).toMatch(/Não estão compreendidos na remuneração da Cláusula 3ª nem nos valores da Cláusula 4ª, e serão contratados e cobrados à parte/);
     expect(t).toMatch(/projetos de engenharia e de legalização.*terraplenagem, drenagem pluvial/);
     expect(t).toMatch(/acompanhamento técnico e a fiscalização de engenharia da terraplenagem, do aterro e do empiçarramento do arruamento, da drenagem, das obras elétricas e das obras do poço/);
     expect(t).toMatch(/stand de vendas, o portal de entrada/);
-    expect(t).toMatch(/construtora da GESTORA, CONSTRUTORA FICTICIA LTDA, CNPJ 11\.222\.333\/0001-81/);
+    expect(t).toMatch(/executados pela própria GESTORA, J R P BEZERRA LTDA .*CNPJ 17\.261\.987\/0001-09, que também atua como construtora/);
+    expect(t).toMatch(/CLÁUSULA 4ª-B — DA EXCLUSIVIDADE DAS OBRAS E DOS SERVIÇOS DO CONDOMÍNIO/);
+    expect(t).toMatch(/com exclusividade, a execução de todas as edificações e construções civis do EMPREENDIMENTO/);
+    expect(t).toMatch(/gestão de portaria e controle de acesso/);
+    expect(t).toMatch(/gestão de limpeza, conservação e manutenção das áreas comuns/);
+    expect(t).toMatch(/administração do condomínio ou da associação/);
+    expect(t).toMatch(/pelo prazo mínimo de 60 \(sessenta\) meses a contar da instalação/);
+    expect(t).toMatch(/construtora ou administradora para o EMPREENDIMENTO/);
     expect(t).toMatch(/fixados em termo aditivo próprio, firmado antes do seu início/);
     expect(t).toMatch(/preço global, por preço unitário apurado em boletim de medição, ou por administração/);
     expect(t).toMatch(/4\.8\. Estão incluídos nos valores da Cláusula 4\.4, sem acréscimo, os serviços de arquitetura e de locação/);

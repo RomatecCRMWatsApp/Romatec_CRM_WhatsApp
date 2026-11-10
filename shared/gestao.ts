@@ -40,8 +40,6 @@ export const PARAMETROS_PADRAO = {
   multaRescisaoPct: 0.05,
   dataContrato: '',
   testemunha1Nome: '', testemunha1Cpf: '', testemunha2Nome: '', testemunha2Cpf: '',
-  /** Construtora da GESTORA que executa os serviços de engenharia e as obras civis (Cláusula 4ª-A), por aditivo */
-  construtoraNome: '', construtoraCnpj: '',
   observacoes: '',
 };
 export type ParametrosGestao = typeof PARAMETROS_PADRAO;
@@ -61,7 +59,6 @@ export const parametrosSchema = z.object({
   dataContrato: z.union([dataIso, z.literal('')]),
   testemunha1Nome: z.string().trim().max(120), testemunha1Cpf: z.string().trim().max(20),
   testemunha2Nome: z.string().trim().max(120), testemunha2Cpf: z.string().trim().max(20),
-  construtoraNome: z.string().trim().max(160).optional().default(''), construtoraCnpj: z.string().trim().max(20).optional().default(''),
   observacoes: z.string().trim().max(2000),
 });
 
@@ -116,7 +113,7 @@ export const numeroContratoGestao = (empreendimentoId: number, ano: number) => `
 export const TIPOS_ADITIVO_GESTAO = {
   adiantamentos: { rotulo: 'Reconhecimento de adiantamentos', objeto: 'o reconhecimento de adiantamentos feitos pela GESTORA com recursos próprios em favor do EMPREENDIMENTO, nos termos da Cláusula 5ª do Contrato de Gestão', valor: 'total dos adiantamentos ora reconhecidos, que a EMPREENDEDORA confessa dever à GESTORA e que serão ressarcidos na forma da Cláusula 5ª do Contrato de Gestão' },
   receber: { rotulo: 'Valores a receber', objeto: 'o reconhecimento de valores a receber pela GESTORA da EMPREENDEDORA', valor: 'devidos pela EMPREENDEDORA à GESTORA, corrigidos pelo IPCA/IBGE e ressarcidos na forma da Cláusula 5ª do Contrato de Gestão' },
-  engenharia: { rotulo: 'Frente de engenharia ou obra (Cláusula 4ª-A)', objeto: 'a fixação do escopo, do valor, do prazo e das condições de frente de serviço de engenharia ou de obra civil do EMPREENDIMENTO, nos termos da Cláusula 4ª-A do Contrato de Gestão, antes do seu início', valor: 'pela frente de serviço ora contratada, medido e pago na forma da Cláusula 4ª-A do Contrato de Gestão e deste termo' },
+  engenharia: { rotulo: 'Frente de engenharia, obra ou serviço do condomínio (Cláusulas 4ª-A e 4ª-B)', objeto: 'a fixação do escopo, do valor, do prazo e das condições de frente de serviço de engenharia, de obra civil ou de serviço ao condomínio do EMPREENDIMENTO, nos termos das Cláusulas 4ª-A e 4ª-B do Contrato de Gestão, antes do seu início', valor: 'pela frente de serviço ora contratada, medido e pago na forma das Cláusulas 4ª-A e 4ª-B do Contrato de Gestão e deste termo' },
   servicos: { rotulo: 'Novos serviços e atribuições', objeto: 'a inclusão de novos serviços, atribuições e responsabilidades da GESTORA', valor: 'pelos serviços ora incluídos, pagos com os recursos das vendas do EMPREENDIMENTO, por retenção na forma da Cláusula 5.3, ou diretamente pela EMPREENDEDORA em até 10 (dez) dias da medição' },
   valores: { rotulo: 'Ajuste de valores, prazos e condições', objeto: 'o ajuste de quantidades, valores, prazos e condições do Contrato de Gestão', valor: 'valor ajustado por este termo' },
   transferencia: { rotulo: 'Transferência do imóvel', objeto: 'a formalização das condições da transferência do imóvel prevista na Cláusula 7ª do Contrato de Gestão', valor: 'valor ajustado para a transferência, na forma deste termo' },
