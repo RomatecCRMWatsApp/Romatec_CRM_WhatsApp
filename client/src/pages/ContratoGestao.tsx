@@ -1,13 +1,13 @@
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
-import { FileDown, FileText, Handshake, Loader2, Plus, Receipt, Save, Trash2 } from "lucide-react";
+import { FilePlus2, FileDown, FileText, Handshake, Loader2, Plus, Receipt, Save, Trash2 } from "lucide-react";
 import { trpc } from "@/lib/trpc";
 import PageHeader from "@/components/PageHeader";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
-  CATEGORIAS_APORTE, FORMAS_PAGAMENTO_APORTE, PARAMETROS_PADRAO, ROTULO_FORMA_APORTE, totaisTopografia,
-  type CategoriaAporte, type ParametrosGestao,
+  CATEGORIAS_APORTE, FORMAS_PAGAMENTO_APORTE, PARAMETROS_PADRAO, ROTULO_FORMA_APORTE, TIPOS_ADITIVO_GESTAO, totaisTopografia,
+  type CategoriaAporte, type ParametrosGestao, type TipoAditivoGestao,
 } from "@shared/gestao";
 
 const SLUG = "bom-jardims";
@@ -48,6 +48,7 @@ export default function ContratoGestao() {
         </section>
         <Parametros p={data.parametros} qtdCadastrados={data.lotesCadastrados} onSalvo={recarregar} />
         <Adiantamentos aportes={data.aportes as any[]} base={base} onMudou={recarregar} />
+        <Aditivos aditivos={data.aditivos as any[]} aportes={data.aportes as any[]} base={base} onMudou={recarregar} />
         <p className="text-xs text-muted-foreground">
           O contrato e os recibos saem com a qualificação completa da proprietária e do imóvel cadastrada no jurídico. Revise o texto com o seu advogado antes de colher as assinaturas.
           Para validade como título executivo, assinem as partes e 2 (duas) testemunhas.
@@ -166,6 +167,83 @@ function Adiantamentos({ aportes, base, onMudou }: { aportes: Aporte[]; base: st
             </tbody>
           </table>
         </div>
+      )}
+    </section>
+  );
+}
+
+interface AditivoG { id: number; numero: number; data: string; tipo: TipoAditivoGestao; objeto: string; texto: string; valor: number | null; aportes: number[] }
+
+/** Termos aditivos ao Contrato de Gestão (motor de aditivos): numerados, em PDF e Word */
+function Aditivos({ aditivos, aportes, base, onMudou }: { aditivos: AditivoG[]; aportes: Aporte[]; base: string; onMudou: () => void }) {
+  const vazio = { tipo: "adiantamentos" as TipoAditivoGestao, data: hoje(), objeto: "", texto: "", valor: "", aportes: [] as number[] };
+  const [f, setF] = useState(vazio);
+  const [aberto, setAberto] = useState(false);
+  const erro = (e: { message: string }) => toast.error(e.message);
+  const criar = trpc.gestao.criarAditivo.useMutation({ onSuccess: r => { toast.success(`Termo aditivo n.º ${r.numero} criado`); setF(vazio); setAberto(false); onMudou(); }, onError: erro });
+  const excluir = trpc.gestao.excluirAditivo.useMutation({ onSuccess: () => { toast.success("Termo aditivo excluído"); onMudou(); }, onError: erro });
+  const jaReconhecidos = new Set(aditivos.filter(a => a.tipo === "adiantamentos").flatMap(a => a.aportes));
+  const marcar = (id: number) => setF(x => ({ ...x, aportes: x.aportes.includes(id) ? x.aportes.filter(i => i !== id) : [...x.aportes, id] }));
+  const soma = aportes.filter(a => f.aportes.includes(a.id)).reduce((s, a) => s + a.valor, 0);
+  const tipo = TIPOS_ADITIVO_GESTAO[f.tipo];
+  return (
+    <section className="space-y-3 rounded-xl border border-border bg-card p-4 text-sm" aria-labelledby="aditivos">
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <h2 id="aditivos" className="font-semibold">Termos aditivos</h2>
+        <Button size="sm" variant={aberto ? "outline" : "default"} onClick={() => setAberto(v => !v)}><FilePlus2 className="mr-1 h-4 w-4" /> {aberto ? "Fechar" : "Novo termo aditivo"}</Button>
+      </div>
+      {aberto && (
+        <div className="space-y-2 rounded-lg border border-border p-3">
+          <div className="grid gap-2 md:grid-cols-3">
+            <label className="flex flex-col gap-1 text-xs text-muted-foreground">Tipo
+              <select className={selectCls} value={f.tipo} onChange={e => setF({ ...f, tipo: e.target.value as TipoAditivoGestao })}>
+                {(Object.keys(TIPOS_ADITIVO_GESTAO) as TipoAditivoGestao[]).map(t => <option key={t} value={t}>{TIPOS_ADITIVO_GESTAO[t].rotulo}</option>)}
+              </select>
+            </label>
+            <label className="flex flex-col gap-1 text-xs text-muted-foreground">Data<Input type="date" value={f.data} onChange={e => setF({ ...f, data: e.target.value })} /></label>
+            <label className="flex flex-col gap-1 text-xs text-muted-foreground">Valor (R$, opcional){f.tipo === "adiantamentos" && " — vazio: soma dos recibos"}
+              <Input inputMode="decimal" value={f.valor} onChange={e => setF({ ...f, valor: e.target.value })} placeholder={f.tipo === "adiantamentos" ? brl(soma) : "0,00"} />
+            </label>
+          </div>
+          <label className="flex flex-col gap-1 text-xs text-muted-foreground">Objeto (vazio: texto padrão do tipo)
+            <Input value={f.objeto} onChange={e => setF({ ...f, objeto: e.target.value })} placeholder={tipo.objeto} maxLength={500} />
+          </label>
+          {f.tipo === "adiantamentos" && (
+            <fieldset className="space-y-1">
+              <legend className="text-xs text-muted-foreground">Recibos que o termo reconhece</legend>
+              {!aportes.length && <p className="text-xs text-muted-foreground">Lance os adiantamentos acima para escolher.</p>}
+              {aportes.map(a => (
+                <label key={a.id} className="flex items-center gap-2 text-xs">
+                  <input type="checkbox" checked={f.aportes.includes(a.id)} onChange={() => marcar(a.id)} />
+                  Recibo {a.numero} · {dataBR(a.data)} · {a.descricao} · {brl(a.valor)}{jaReconhecidos.has(a.id) && <span className="text-muted-foreground">(já em outro termo)</span>}
+                </label>
+              ))}
+            </fieldset>
+          )}
+          <label className="flex flex-col gap-1 text-xs text-muted-foreground">Alterações e inclusões (uma por linha; cada linha vira um item numerado)
+            <textarea value={f.texto} onChange={e => setF({ ...f, texto: e.target.value })} rows={5} maxLength={8000} className="rounded-md border border-border bg-background p-2 text-sm text-foreground"
+              placeholder="ex.: Fica incluído no objeto do Contrato de Gestão o serviço de …" />
+          </label>
+          <Button disabled={criar.isPending} onClick={() => criar.mutate({ slug: SLUG, aditivo: { tipo: f.tipo, data: f.data, objeto: f.objeto, texto: f.texto, valor: f.valor ? num(f.valor) : null, aportes: f.tipo === "adiantamentos" ? f.aportes : [] } })}>
+            {criar.isPending ? <Loader2 className="mr-1 h-4 w-4 animate-spin" /> : <Save className="mr-1 h-4 w-4" />} Gerar termo aditivo
+          </Button>
+        </div>
+      )}
+      {!aditivos.length && !aberto && <p className="text-xs text-muted-foreground">Nenhum termo aditivo ainda. Os termos ficam numerados (PRIMEIRO, SEGUNDO…) e integram o contrato (Cláusula 13.2).</p>}
+      {aditivos.length > 0 && (
+        <ul className="divide-y divide-border rounded-lg border border-border">
+          {[...aditivos].reverse().map(a => (
+            <li key={a.id} className="flex flex-wrap items-center justify-between gap-2 p-2">
+              <div><p className="font-medium">Termo aditivo n.º {a.numero} · {TIPOS_ADITIVO_GESTAO[a.tipo]?.rotulo ?? a.tipo}</p>
+                <p className="text-xs text-muted-foreground">{dataBR(a.data)}{a.valor ? ` · ${brl(a.valor)}` : ""}{a.aportes.length ? ` · ${a.aportes.length} recibo(s)` : ""}</p></div>
+              <div className="flex gap-1.5">
+                <Button size="sm" variant="outline" asChild><a href={`${base}/aditivo/${a.id}.pdf`} target="_blank" rel="noreferrer"><FileDown className="mr-1 h-3.5 w-3.5" /> PDF</a></Button>
+                <Button size="sm" variant="outline" asChild><a href={`${base}/aditivo/${a.id}.docx`}><FileText className="mr-1 h-3.5 w-3.5" /> Word</a></Button>
+                <Button size="sm" variant="ghost" aria-label={`Excluir termo aditivo ${a.numero}`} onClick={() => { if (confirm(`Excluir o termo aditivo n.º ${a.numero}? (só se ainda não foi assinado)`)) excluir.mutate({ slug: SLUG, id: a.id }); }}><Trash2 className="h-3.5 w-3.5" /></Button>
+              </div>
+            </li>
+          ))}
+        </ul>
       )}
     </section>
   );

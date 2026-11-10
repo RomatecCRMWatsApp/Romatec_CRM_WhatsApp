@@ -59,6 +59,20 @@ export const renegociacaoRouter = router({
       });
     }),
 
+  // ─── Termo aditivo livre ao CPCV (motor de aditivos: server/aditivos/cpcv.ts) ───
+  criarLivre: protectedProcedure.input(z.object({
+    contratoId: z.number().int(), senha: z.string().min(1).max(200), objeto: z.string().trim().min(5).max(500), texto: z.string().trim().max(8000),
+    valor: z.number().min(0).max(100_000_000).nullable().optional(), valorDescricao: z.string().trim().max(300).nullable().optional(), enviarWhatsapp: z.boolean().optional(),
+  })).mutation(async ({ ctx, input }) => {
+    exigir(ctx, ["admin"]);
+    return comErro(async () => {
+      const { exigirAdminComSenha } = await import("../contratos/cancelamento");
+      await exigirAdminComSenha(ctx.user as any, input.senha, "aditivo_livre", { contratoId: input.contratoId });
+      const { criarAditivoLivre } = await import("../aditivos/cpcv");
+      return criarAditivoLivre(input.contratoId, { objeto: input.objeto, texto: input.texto, valor: input.valor ?? null, valorDescricao: input.valorDescricao ?? null }, ctx.user.id, { enviarWhatsapp: input.enviarWhatsapp });
+    });
+  }),
+
   simular: protectedProcedure.input(pedido).query(async ({ ctx, input }) => {
     exigir(ctx, ["admin", "secretario"]);
     const { contratoId, ...p } = input;

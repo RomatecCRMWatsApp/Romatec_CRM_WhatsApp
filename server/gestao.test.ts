@@ -17,7 +17,7 @@ const texto = (bs: any[]) => bs.map(b => (b.k === 'par' ? b.tr.map((t: any) => t
 
 beforeEach(async () => {
   const db: any = await getDb();
-  for (const t of ['gestaoAportes', 'gestaoContratos', 'empJuridico', 'lotes', 'empreendimentos']) db.run(sql.raw(`DELETE FROM ${t}`));
+  for (const t of ['gestaoAditivos', 'gestaoAportes', 'gestaoContratos', 'empJuridico', 'lotes', 'empreendimentos']) db.run(sql.raw(`DELETE FROM ${t}`));
   db.run(sql`INSERT INTO empreendimentos (id, slug, nome, municipio, uf) VALUES (7, 'bom-jardims', 'Condomínio de Chácaras Bom Jardims', 'Açailândia', 'MA')`);
   for (let i = 1; i <= 85; i++) db.run(sql`INSERT INTO lotes (empreendimentoId, codigo, quadra, numero, areaM2) VALUES (7, ${`A${String(i).padStart(2, '0')}`}, 'A', ${i}, '3025.11')`);
   db.run(sql`INSERT INTO empJuridico (empreendimentoId, defaultsJson, vendedoraJson) VALUES (7, ${JSON.stringify({
@@ -102,5 +102,62 @@ describe('Contrato de Gestão', () => {
   it('empreendimento inexistente e adiantamento de outro empreendimento: erro 404', async () => {
     await expect(G.dadosContrato('nao-existe')).rejects.toMatchObject({ status: 404 });
     await expect(G.excluirAporte('bom-jardims', 999)).rejects.toMatchObject({ status: 404 });
+  });
+});
+
+describe('Motor de aditivos', () => {
+  it('número por extenso, itens do texto numerados, valor e ratificação', async () => {
+    const M = await import('./aditivos/motor');
+    expect(M.ordinalAditivo(2)).toBe('SEGUNDO TERMO ADITIVO');
+    expect(M.ordinalAditivo(21)).toBe('TERMO ADITIVO N.º 21');
+    expect(M.paragrafosDe('1. Primeira alteração\n\n2) Segunda alteração\n \nTerceira')).toEqual(['Primeira alteração', 'Segunda alteração', 'Terceira']);
+    const bl = M.blocosAditivo({
+      numero: 2, instrumento: 'Contrato X n.º 1', contexto: 'Empreendimento', local: 'Açailândia/MA', data: '2026-11-10',
+      partes: [{ papel: 'EMPREENDEDORA', nome: 'A', qualif: 'CPF 1' }, { papel: 'PROMISSÁRIO(A) COMPRADOR(A)', nome: 'B', qualif: 'CPF 2' }],
+      objeto: 'a inclusão de um serviço.', texto: 'Inclui o serviço Y.\nO prazo é de 30 dias.', valor: { valor: 1500, descricao: 'pelo serviço' },
+      testemunhas: [{ nome: '', cpf: '' }],
+    });
+    const t = texto(bl);
+    expect(t).toMatch(/^SEGUNDO TERMO ADITIVO AO CONTRATO X N\.º 1/);
+    expect(t).toMatch(/doravante denominado\(a\) PROMISSÁRIO\(A\) COMPRADOR\(A\)/);
+    expect(t).toMatch(/1\.1\. O presente Termo Aditivo tem por objeto a inclusão de um serviço\./);
+    expect(t).toMatch(/2\.1\. Inclui o serviço Y\.\n2\.2\. O prazo é de 30 dias\./);
+    expect(t).toMatch(/CLÁUSULA 3ª — DO VALOR\n3\.1\. R\$ 1\.500,00 \(mil e quinhentos reais\), pelo serviço\./);
+    expect(t).toMatch(/CLÁUSULA 4ª — DA RATIFICAÇÃO E DA AUSÊNCIA DE NOVAÇÃO/);
+    expect(bl.at(-1)).toMatchObject({ k: 'ass' });
+    expect((bl.at(-1) as any).blocos).toHaveLength(3);
+  });
+
+  it('aditivo ao Contrato de Gestão: reconhecimento de adiantamentos com a tabela dos recibos, numeração sequencial, PDF e Word', async () => {
+    await G.criarAporte('bom-jardims', { data: '2026-11-10', valor: 1000, descricao: 'Marcos', categoria: 'materiais', favorecido: '', formaPagamento: 'pix', comprovante: '' }, 1);
+    await G.criarAporte('bom-jardims', { data: '2026-11-11', valor: 250.5, descricao: 'Combustível', categoria: 'agrimensura', favorecido: '', formaPagamento: 'pix', comprovante: '' }, 1);
+    let g = await G.dadosContrato('bom-jardims');
+    await expect(G.criarAditivoGestao('bom-jardims', { tipo: 'adiantamentos', data: '2026-11-12', objeto: '', texto: '', valor: null, aportes: [] }, 1)).rejects.toThrow(/Escolha os adiantamentos/);
+    await expect(G.criarAditivoGestao('bom-jardims', { tipo: 'outro', data: '2026-11-12', objeto: '', texto: '', valor: null, aportes: [] }, 1)).rejects.toThrow(/Descreva/);
+    expect((await G.criarAditivoGestao('bom-jardims', { tipo: 'adiantamentos', data: '2026-11-12', objeto: '', texto: '', valor: null, aportes: g.aportes.map(a => a.id) }, 1)).numero).toBe(1);
+    expect((await G.criarAditivoGestao('bom-jardims', { tipo: 'servicos', data: '2026-11-13', objeto: '', texto: 'Fica incluída a locação de 10 pontos adicionais.', valor: 2000, aportes: [] }, 1)).numero).toBe(2);
+    g = await G.dadosContrato('bom-jardims');
+    const [a1, a2] = g.aditivos;
+    const t1 = texto(C.blocosAditivoGestao(g, a1));
+    expect(t1).toMatch(/^PRIMEIRO TERMO ADITIVO AO CONTRATO DE PRESTAÇÃO DE SERVIÇOS DE GESTÃO N\.º GE-\d{4}-0007/);
+    expect(t1).toMatch(/MARIA SINTETICA DE TESTE/);
+    expect(t1).toMatch(/TOTAL\s+1\.250,50/);
+    expect(t1).toMatch(/R\$ 1\.250,50 \(mil duzentos e cinquenta reais e cinquenta centavos\), total dos adiantamentos ora reconhecidos/);
+    const t2 = texto(C.blocosAditivoGestao(g, a2));
+    expect(t2).toMatch(/^SEGUNDO TERMO ADITIVO/);
+    expect(t2).toMatch(/2\.1\. Fica incluída a locação de 10 pontos adicionais\./);
+    expect(t2).toMatch(/R\$ 2\.000,00 \(dois mil reais\), pelos serviços ora incluídos/);
+    expect((await PDFDocument.load(await C.blocosParaPdf(C.blocosAditivoGestao(g, a1), 'Aditivo', 'rodapé'))).getPageCount()).toBeGreaterThanOrEqual(1);
+    expect(strFromU8(unzipSync(new Uint8Array(C.blocosParaDocx(C.blocosAditivoGestao(g, a2))))['word/document.xml'])).toContain('SEGUNDO TERMO ADITIVO');
+    await G.excluirAditivoGestao('bom-jardims', a1.id);
+    expect((await G.criarAditivoGestao('bom-jardims', { tipo: 'receber', data: '2026-11-14', objeto: '', texto: '', valor: 500, aportes: [] }, 1)).numero).toBe(3);
+  });
+
+  it('aditivo livre ao CPCV: valida objeto, texto e contrato', async () => {
+    const L = await import('./aditivos/cpcv');
+    await expect(L.criarAditivoLivre(1, { objeto: 'abc', texto: 'x y' }, 1)).rejects.toThrow(/objeto/);
+    await expect(L.criarAditivoLivre(1, { objeto: 'a alteração do vencimento', texto: '' }, 1)).rejects.toThrow(/alterações/);
+    await expect(L.criarAditivoLivre(99999, { objeto: 'a alteração do vencimento', texto: 'Novo vencimento no dia 15.' }, 1)).rejects.toMatchObject({ status: 404 });
+    expect(L.pontosLivre({ objeto: 'a alteração do vencimento.', texto: 'Novo vencimento no dia 15.' })).toEqual(['a alteração do vencimento', 'Novo vencimento no dia 15.', 'As demais cláusulas do contrato continuam valendo']);
   });
 });

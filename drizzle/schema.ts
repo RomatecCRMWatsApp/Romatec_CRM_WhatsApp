@@ -2224,6 +2224,23 @@ export const gestaoContratos = mysqlTable("gestaoContratos", {
   atualizadoEm: timestamp("atualizadoEm").defaultNow().notNull(),
 });
 
+/** Termos aditivos ao Contrato de Gestão (server/aditivos/motor.ts) */
+export const gestaoAditivos = mysqlTable("gestaoAditivos", {
+  id: int("id").autoincrement().primaryKey(),
+  empreendimentoId: int("empreendimentoId").notNull(),
+  numero: int("numero").notNull(),
+  data: varchar("data", { length: 10 }).notNull(),
+  /** shared/gestao TIPOS_ADITIVO_GESTAO */
+  tipo: varchar("tipo", { length: 20 }).notNull(),
+  objeto: varchar("objeto", { length: 500 }),
+  texto: text("texto"),
+  valor: decimal("valor", { precision: 14, scale: 2 }),
+  /** Recibos (gestaoAportes.id) reconhecidos no termo */
+  aportesJson: text("aportesJson"),
+  criadoPor: int("criadoPor"),
+  criadoEm: timestamp("criadoEm").defaultNow().notNull(),
+}, (t) => ({ ixEmp: index("ix_gaditivo_emp").on(t.empreendimentoId) }));
+
 /** Adiantamentos pagos pela GESTORA com recursos próprios (cada um gera um Recibo de Adiantamento no Anexo I) */
 export const gestaoAportes = mysqlTable("gestaoAportes", {
   id: int("id").autoincrement().primaryKey(),

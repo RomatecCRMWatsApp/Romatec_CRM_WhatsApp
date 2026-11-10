@@ -686,6 +686,9 @@ export function initSqliteTables(sqlite: any): void {
     ordem INTEGER NOT NULL DEFAULT 0, criadoPor INTEGER, criadoEm ${agoraS})`);
   run(`CREATE TABLE IF NOT EXISTS gestaoContratos (
     empreendimentoId INTEGER PRIMARY KEY, numero TEXT NOT NULL, parametrosJson TEXT NOT NULL, atualizadoPor INTEGER, atualizadoEm ${agoraS})`);
+  run(`CREATE TABLE IF NOT EXISTS gestaoAditivos (
+    id INTEGER PRIMARY KEY AUTOINCREMENT, empreendimentoId INTEGER NOT NULL, numero INTEGER NOT NULL, data TEXT NOT NULL, tipo TEXT NOT NULL, objeto TEXT, texto TEXT,
+    valor TEXT, aportesJson TEXT, criadoPor INTEGER, criadoEm ${agoraS})`);
   run(`CREATE TABLE IF NOT EXISTS gestaoAportes (
     id INTEGER PRIMARY KEY AUTOINCREMENT, empreendimentoId INTEGER NOT NULL, numero INTEGER NOT NULL, data TEXT NOT NULL, valor TEXT NOT NULL, descricao TEXT NOT NULL,
     categoria TEXT NOT NULL, favorecido TEXT, formaPagamento TEXT NOT NULL, comprovante TEXT, ressarcidoEm TEXT, criadoPor INTEGER, criadoEm ${agoraS})`);

@@ -3,6 +3,17 @@
 Cada versão nova vai no TOPO. Depois rode `npm run release` (valida e atualiza o package.json);
 ao subir, o servidor grava a versão no banco e todos recebem o aviso "Novidades da versão".
 
+## 1.148.0 — 2026-11-10
+tipo: minor
+obrigatoria: nao
+titulo: Motor de termos aditivos: contrato de gestão e contratos de venda, em PDF e Word
+publico: admin
+
+### Novo
+- Motor único de termos aditivos: número por extenso (PRIMEIRO, SEGUNDO…), partes qualificadas, objeto, alterações numeradas, valor por extenso, ratificação sem novação, assinatura eletrônica e foro
+- Contrato de gestão › Termos aditivos: reconhecimento de adiantamentos (com a tabela dos recibos escolhidos e o total), valores a receber, novos serviços e atribuições, ajuste de valores e prazos, transferência do imóvel e outros; cada termo em PDF e Word
+- Contratos de venda › Termo aditivo (texto livre): o administrador escreve o objeto e as alterações, confirma com a senha e o comprador recebe o link no WhatsApp para assinar com o código, com manifesto de evidências; Word também disponível. Nada muda nas parcelas automaticamente
+
 ## 1.147.2 — 2026-11-10
 tipo: patch
 obrigatoria: nao

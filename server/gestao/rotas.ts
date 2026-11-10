@@ -43,6 +43,34 @@ export function registrarRotasGestao(app: Express) {
     }
   });
 
+  app.get('/api/gestao/:slug/aditivo/:id.:formato', async (req, res) => {
+    try {
+      const user = await admin(req, res);
+      if (!user) return;
+      const { slug, formato } = req.params;
+      const id = Number(req.params.id);
+      if (!slugOk(slug) || !['pdf', 'docx'].includes(formato) || !Number.isInteger(id) || id <= 0) return res.status(404).send('Não encontrado');
+      const { dadosContrato } = await import('./servico');
+      const C = await import('./contrato');
+      const g = await dadosContrato(slug);
+      const ad = g.aditivos.find(x => x.id === id);
+      if (!ad) return res.status(404).send('Termo aditivo não encontrado');
+      const blocos = C.blocosAditivoGestao(g, ad);
+      const nome = `Termo-Aditivo-${String(ad.numero).padStart(2, '0')}-${g.numero}.${formato}`;
+      const arq = formato === 'pdf'
+        ? await C.blocosParaPdf(blocos, `Termo Aditivo ${ad.numero} — ${g.numero}`, `Termo Aditivo n.º ${ad.numero} ao Contrato de Gestão n.º ${g.numero}`)
+        : C.blocosParaDocx(blocos);
+      res.setHeader('Content-Type', formato === 'pdf' ? 'application/pdf' : 'application/vnd.openxmlformats-officedocument.wordprocessingml.document');
+      res.setHeader('Content-Disposition', `${formato === 'pdf' ? 'inline' : 'attachment'}; filename="${nome}"`);
+      res.setHeader('Cache-Control', 'private, no-store');
+      res.send(arq);
+    } catch (e: any) {
+      if (e?.name === 'GestaoErro') return res.status(e.status).send(e.message);
+      console.error('[Gestão] aditivo:', e);
+      res.status(500).send('Falha ao gerar o termo aditivo');
+    }
+  });
+
   app.get('/api/gestao/:slug/recibo/:id.pdf', async (req, res) => {
     try {
       const user = await admin(req, res);

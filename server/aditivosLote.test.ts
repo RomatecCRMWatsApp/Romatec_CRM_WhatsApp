@@ -80,3 +80,34 @@ describe('termos aditivos em lote', () => {
     expect(lista[0].numero).toBe(2);
   });
 });
+
+describe('termo aditivo livre (motor de aditivos)', () => {
+  it('gera o termo numerado, envia o link, o comprador assina com o código e nada muda nas parcelas; Word disponível', async () => {
+    const A = await import('./aditivos/cpcv');
+    await expect(A.criarAditivoLivre(3, { objeto: 'a alteração do dia de vencimento', texto: 'O vencimento passa para o dia 15.' }, 1)).rejects.toThrow(/assinado, ativo ou quitado/);
+    const antes: any[] = await db.select().from(S.contratoAditivos).where(eq(S.contratoAditivos.contratoId, 1));
+    const r = await A.criarAditivoLivre(1, { objeto: 'a alteração do dia de vencimento das parcelas', texto: 'O vencimento das parcelas passa para o dia 15 de cada mês.\nAs parcelas já vencidas não mudam.' }, 1);
+    expect(r.numero).toBe(Math.max(...antes.map(a => Number(a.numero))) + 1);
+    expect(r.enviado).toBe(true);
+    expect(msgs.at(-1)![1]).toMatch(/uma alteração do seu contrato/);
+    const [a]: any[] = await db.select().from(S.contratoAditivos).where(eq(S.contratoAditivos.numero, r.numero));
+    expect(a).toMatchObject({ tipo: 'livre', status: 'aguardando', contratoId: 1 });
+    const pag: any = await R.paginaAditivo(a.token);
+    expect(pag.pontos).toEqual(['a alteração do dia de vencimento das parcelas', 'O vencimento das parcelas passa para o dia 15 de cada mês.', 'As parcelas já vencidas não mudam.', 'As demais cláusulas do contrato continuam valendo']);
+    const pdf = await R.pdfDoAditivo(Number(a.id));
+    const { PDFDocument } = await import('pdf-lib');
+    expect((await PDFDocument.load(pdf!.buf)).getPageCount()).toBeGreaterThanOrEqual(1);
+    const cobAntes = (await db.select().from(S.cobrancas)).length;
+    await R.enviarCodigo(a.token);
+    const codigo = msgs.at(-1)![1].match(/(\d{6})/)![1];
+    expect((await R.assinarAditivo(a.token, codigo, { aceite: true, ip: '127.0.0.1', ua: 'teste' })).ok).toBe(true);
+    expect((await db.select().from(S.cobrancas)).length).toBe(cobAntes);
+    expect((await R.aditivosDo(1)).find(x => x.numero === r.numero)).toMatchObject({ tipo: 'livre', status: 'assinado', titulo: 'a alteração do dia de vencimento das parcelas' });
+    const { docx, nome } = await A.docxAditivoLivre(Number(a.id));
+    const { unzipSync, strFromU8 } = await import('fflate');
+    const xml = strFromU8(unzipSync(new Uint8Array(docx))['word/document.xml']);
+    expect(xml).toContain('TERMO ADITIVO AO INSTRUMENTO PARTICULAR DE COMPROMISSO DE COMPRA E VENDA N.º BJ-T-0001');
+    expect(xml).toContain('Maria Teste');
+    expect(nome).toMatch(/^Termo-Aditivo-\d+-CPCV-BJ-T-0001\.docx$/);
+  });
+});

@@ -210,6 +210,7 @@ const ASSUNTO_ADITIVO: Record<string, string> = {
   renegociacao: 'com a renegociação das suas parcelas',
   registro: 'que inclui no seu contrato os dados do registro do loteamento em cartório',
   liberacao: 'com a liberação da sua chácara para transferência',
+  livre: 'com uma alteração do seu contrato',
 };
 
 export async function enviarLink(contratoId: number, token: string, numero: number, tipo = 'renegociacao') {

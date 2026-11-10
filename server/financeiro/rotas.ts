@@ -563,6 +563,25 @@ export function registrarRotasFinanceiro(app: Express) {
     } catch (e) { erro(res, e); }
   });
   // PDF do termo para o escritório (administrador e secretária)
+  // Word do termo aditivo livre (motor de aditivos); o PDF guardado continua sendo o oficial
+  app.get('/api/financeiro/aditivos/:id.docx', async (req, res) => {
+    try {
+      const { sdk } = await import('../_core/sdk');
+      const user: any = await sdk.authenticateRequest(req).catch(() => null);
+      const { perfilDe } = await import('../../shared/equipe');
+      if (!user || !['admin', 'secretario'].includes(String(perfilDe(user)))) return res.status(403).json({ erro: 'nao_autorizado' });
+      const { docxAditivoLivre } = await import('../aditivos/cpcv');
+      const r = await docxAditivoLivre(Number(req.params.id) || 0);
+      res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document');
+      res.setHeader('Content-Disposition', `attachment; filename="${r.nome}"`);
+      res.setHeader('Cache-Control', 'private, no-store');
+      res.send(r.docx);
+    } catch (e: any) {
+      if (e?.status === 404) return res.status(404).json({ erro: 'nao_encontrado' });
+      erro(res, e);
+    }
+  });
+
   app.get('/api/financeiro/aditivos/:id.pdf', async (req, res) => {
     try {
       const { sdk } = await import('../_core/sdk');

@@ -1,6 +1,6 @@
 import { useMemo, useState } from "react";
 import { toast } from "sonner";
-import { Copy, FileText, Handshake, Loader2, Send, X } from "lucide-react";
+import { Copy, FilePlus2, FileText, Handshake, Loader2, Send, X } from "lucide-react";
 import { trpc } from "@/lib/trpc";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -43,14 +43,22 @@ export default function RenegociacaoContrato({ contratoId, cobrancas, taxaContra
   });
   const copiar = async (t: string) => { try { await navigator.clipboard.writeText(t); toast.success("Link copiado"); } catch { window.prompt("Copie:", t); } };
   const pendente = aditivos?.some(a => a.status === "aguardando" && a.tipo === "renegociacao");
+  const [livre, setLivre] = useState(false);
+  const vazioLivre = { objeto: "", texto: "", valor: "", valorDescricao: "", senha: "", enviar: true };
+  const [fl, setFl] = useState(vazioLivre);
+  const criarLivre = trpc.renegociacao.criarLivre.useMutation({
+    onSuccess: r => { toast.success(`Termo Aditivo n.º ${r.numero} gerado${r.enviado ? " e enviado ao comprador no WhatsApp" : " — copie o link e envie ao comprador"}`); setFl(vazioLivre); setLivre(false); recarregar(); },
+    onError: e => toast.error(e.message),
+  });
   const renegPrevistas = cobrancas.filter(x => x.tipo === "renegociacao" && x.status === "prevista").length;
 
   return (
     <section className="space-y-3 rounded-xl border border-border bg-card p-4">
       <div className="flex flex-wrap items-center justify-between gap-2">
-        <p className="flex items-center gap-2 font-semibold"><Handshake className="h-4 w-4" /> Renegociação de parcelas (termo aditivo)</p>
+        <p className="flex items-center gap-2 font-semibold"><Handshake className="h-4 w-4" /> Termos aditivos e renegociação de parcelas</p>
         <div className="flex gap-2">
           {admin && renegPrevistas > 0 && <Button size="sm" variant="outline" disabled={emitir.isPending} onClick={() => emitir.mutate({ contratoId })}><Send className="mr-1.5 h-3.5 w-3.5" /> Emitir {renegPrevistas} no Asaas</Button>}
+          {admin && <Button size="sm" variant="outline" onClick={() => setLivre(v => !v)}><FilePlus2 className="mr-1.5 h-3.5 w-3.5" /> {livre ? "Fechar" : "Termo aditivo"}</Button>}
           {!aberto && <Button size="sm" disabled={!abertas.length || pendente} onClick={() => setAberto(true)} title={pendente ? "Há um termo aguardando assinatura" : ""}>Renegociar</Button>}
         </div>
       </div>
@@ -100,6 +108,28 @@ export default function RenegociacaoContrato({ contratoId, cobrancas, taxaContra
         </div>
       )}
 
+      {livre && admin && (
+        <div className="space-y-2 rounded-lg border border-border p-3 text-sm">
+          <p className="text-xs text-muted-foreground">Termo aditivo com texto livre: o comprador recebe o link no WhatsApp e assina com o código. Nada muda nas parcelas automaticamente.</p>
+          <label className="flex flex-col gap-1 text-xs text-muted-foreground">Objeto (completa "O presente Termo Aditivo tem por objeto…")
+            <Input value={fl.objeto} onChange={e => setFl({ ...fl, objeto: e.target.value })} placeholder="ex.: a alteração da data de vencimento das parcelas" maxLength={500} />
+          </label>
+          <label className="flex flex-col gap-1 text-xs text-muted-foreground">Alterações e inclusões (uma por linha; cada linha vira um item numerado)
+            <textarea value={fl.texto} onChange={e => setFl({ ...fl, texto: e.target.value })} rows={5} maxLength={8000} className="rounded-md border border-border bg-background p-2 text-sm text-foreground" />
+          </label>
+          <div className="grid gap-2 md:grid-cols-3">
+            <label className="flex flex-col gap-1 text-xs text-muted-foreground">Valor (opcional)<Input inputMode="decimal" value={fl.valor} onChange={e => setFl({ ...fl, valor: e.target.value })} placeholder="0,00" /></label>
+            <label className="flex flex-col gap-1 text-xs text-muted-foreground md:col-span-2">O valor é… (opcional)<Input value={fl.valorDescricao} onChange={e => setFl({ ...fl, valorDescricao: e.target.value })} placeholder="ex.: da taxa de cessão de direitos, paga na assinatura" maxLength={300} /></label>
+            <label className="flex flex-col gap-1 text-xs text-muted-foreground">Sua senha (confirmação)<Input type="password" autoComplete="current-password" value={fl.senha} onChange={e => setFl({ ...fl, senha: e.target.value })} /></label>
+            <label className="inline-flex items-center gap-2 text-xs md:col-span-2"><input type="checkbox" checked={fl.enviar} onChange={e => setFl({ ...fl, enviar: e.target.checked })} /> Enviar o link ao comprador no WhatsApp</label>
+          </div>
+          <Button size="sm" disabled={criarLivre.isPending || fl.objeto.trim().length < 5 || !fl.senha}
+            onClick={() => criarLivre.mutate({ contratoId, senha: fl.senha, objeto: fl.objeto, texto: fl.texto, valor: fl.valor ? reais(fl.valor) : null, valorDescricao: fl.valorDescricao || null, enviarWhatsapp: fl.enviar })}>
+            {criarLivre.isPending ? <Loader2 className="mr-1 h-3.5 w-3.5 animate-spin" /> : null} Gerar termo aditivo
+          </Button>
+        </div>
+      )}
+
       {aditivos?.map(a => (
         <div key={a.id} className={`flex flex-wrap items-center justify-between gap-2 rounded-lg border p-2 text-sm ${a.status === "aguardando" ? "border-warn-400/50" : "border-border"}`}>
           <div>
@@ -109,6 +139,7 @@ export default function RenegociacaoContrato({ contratoId, cobrancas, taxaContra
           </div>
           <div className="flex flex-wrap gap-1">
             <Button size="sm" variant="outline" asChild><a href={`/api/financeiro/aditivos/${a.id}.pdf`} target="_blank" rel="noreferrer"><FileText className="mr-1 h-3.5 w-3.5" /> PDF</a></Button>
+            {a.tipo === "livre" && <Button size="sm" variant="outline" asChild><a href={`/api/financeiro/aditivos/${a.id}.docx`}><FileText className="mr-1 h-3.5 w-3.5" /> Word</a></Button>}
             {a.link && <Button size="sm" variant="outline" onClick={() => copiar(a.link!)}><Copy className="mr-1 h-3.5 w-3.5" /> Link</Button>}
             {a.status === "aguardando" && <Button size="sm" variant="outline" disabled={reenviar.isPending} onClick={() => reenviar.mutate({ id: a.id })}><Send className="mr-1 h-3.5 w-3.5" /> Reenviar</Button>}
             {admin && a.status === "aguardando" && <Button size="sm" variant="ghost" className="text-danger-300" onClick={() => { if (confirm(`Cancelar o Termo Aditivo n.º ${a.numero}? O link deixa de valer.`)) cancelar.mutate({ id: a.id }); }}><X className="h-4 w-4" /></Button>}

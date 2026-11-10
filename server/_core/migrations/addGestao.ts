@@ -6,6 +6,10 @@ const TABELAS: [string, string][] = [
   ['gestaoContratos', `CREATE TABLE IF NOT EXISTS gestaoContratos (
     empreendimentoId INT PRIMARY KEY, numero VARCHAR(20) NOT NULL, parametrosJson TEXT NOT NULL, atualizadoPor INT NULL,
     atualizadoEm TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP)`],
+  ['gestaoAditivos', `CREATE TABLE IF NOT EXISTS gestaoAditivos (
+    id INT AUTO_INCREMENT PRIMARY KEY, empreendimentoId INT NOT NULL, numero INT NOT NULL, data VARCHAR(10) NOT NULL, tipo VARCHAR(20) NOT NULL,
+    objeto VARCHAR(500) NULL, texto TEXT NULL, valor DECIMAL(14,2) NULL, aportesJson TEXT NULL, criadoPor INT NULL,
+    criadoEm TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP, KEY ix_gaditivo_emp (empreendimentoId))`],
   ['gestaoAportes', `CREATE TABLE IF NOT EXISTS gestaoAportes (
     id INT AUTO_INCREMENT PRIMARY KEY, empreendimentoId INT NOT NULL, numero INT NOT NULL, data VARCHAR(10) NOT NULL, valor DECIMAL(14,2) NOT NULL,
     descricao VARCHAR(500) NOT NULL, categoria VARCHAR(20) NOT NULL, favorecido VARCHAR(200) NULL, formaPagamento VARCHAR(20) NOT NULL,

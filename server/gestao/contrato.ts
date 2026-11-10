@@ -11,8 +11,9 @@ import { zipSync, strToU8 } from 'fflate';
 import { escritor } from '../contratos/docsComissao';
 import { brl, dataBR, dataExtenso, extenso, pct, reaisExtenso } from '../contratos/formato';
 import { ESCRITORIO } from '../../shared/escritorio';
-import { CATEGORIAS_APORTE, ROTULO_FORMA_APORTE, totaisTopografia } from '../../shared/gestao';
-import type { AporteGestao, DadosContratoGestao } from './servico';
+import { CATEGORIAS_APORTE, ROTULO_FORMA_APORTE, TIPOS_ADITIVO_GESTAO, totaisTopografia } from '../../shared/gestao';
+import type { AditivoGestao, AporteGestao, DadosContratoGestao } from './servico';
+import { blocosAditivo } from '../aditivos/motor';
 
 type Trecho = { t: string; b?: boolean };
 export type Bloco =
@@ -280,4 +281,35 @@ export function blocosParaDocx(blocos: Bloco[]): Buffer {
     'word/document.xml': strToU8(documento),
   };
   return Buffer.from(zipSync(arquivos));
+}
+
+/** Termo aditivo ao Contrato de Gestão (motor de aditivos) */
+export function blocosAditivoGestao(g: DadosContratoGestao, ad: AditivoGestao): Bloco[] {
+  const E = qualificacaoEmpreendedora(g);
+  const tipo = TIPOS_ADITIVO_GESTAO[ad.tipo] ?? TIPOS_ADITIVO_GESTAO.outro;
+  const recibos = g.aportes.filter(a => ad.aportes.includes(a.id));
+  const somaRecibos = Math.round(recibos.reduce((s, a) => s + a.valor, 0) * 100) / 100;
+  const valor = ad.valor ?? (recibos.length ? somaRecibos : null);
+  const extras: Bloco[] = recibos.length ? [
+    P(`A EMPREENDEDORA reconhece os adiantamentos abaixo, feitos pela GESTORA com recursos próprios e documentados pelos respectivos Recibos de Adiantamento, que passam a integrar o Anexo I do Contrato de Gestão:`),
+    { k: 'tab', cab: ['Recibo', 'Data', 'Descrição', 'Valor (R$)'], pesos: [0.8, 1, 5, 1.5], direita: [3],
+      linhas: [...recibos.map(a => [String(a.numero), dataBR(a.data), a.descricao, brl(a.valor)]), ['TOTAL', '', '', brl(somaRecibos)]] },
+  ] : [];
+  const p = g.parametros;
+  return blocosAditivo({
+    numero: ad.numero,
+    instrumento: `Contrato de Prestação de Serviços de Gestão n.º ${g.numero}`,
+    contexto: `${tipo.rotulo} · ${g.empreendimento.nome} · ${g.empreendimento.municipio}/${g.empreendimento.uf}`,
+    partes: [
+      { papel: 'EMPREENDEDORA', nome: E.nome, qualif: E.qualif, doc: E.doc || undefined },
+      { papel: 'GESTORA', nome: GESTORA.nome, qualif: GESTORA.qualif, doc: `CNPJ ${ESCRITORIO.cnpj} · ${ESCRITORIO.creciJ}`, rotuloAssinatura: `GESTORA — ${ESCRITORIO.fantasia}` },
+    ],
+    objeto: ad.objeto || tipo.objeto,
+    texto: ad.texto,
+    extras,
+    valor: valor ? { valor, descricao: tipo.valor } : null,
+    local: `${g.empreendimento.municipio}/${g.empreendimento.uf}`,
+    data: ad.data,
+    testemunhas: [{ nome: p.testemunha1Nome, cpf: p.testemunha1Cpf }, { nome: p.testemunha2Nome, cpf: p.testemunha2Cpf }],
+  });
 }

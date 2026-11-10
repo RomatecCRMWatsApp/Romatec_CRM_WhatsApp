@@ -86,3 +86,24 @@ export function totaisTopografia(p: Pick<ParametrosGestao, 'valorPorLote' | 'uni
 
 /** Número do contrato de gestão do empreendimento: GE-2026-0001 */
 export const numeroContratoGestao = (empreendimentoId: number, ano: number) => `GE-${ano}-${String(empreendimentoId).padStart(4, '0')}`;
+
+/** Termos aditivos ao Contrato de Gestão (Cláusula 13.2): tipo → objeto padrão e frase do valor */
+export const TIPOS_ADITIVO_GESTAO = {
+  adiantamentos: { rotulo: 'Reconhecimento de adiantamentos', objeto: 'o reconhecimento de adiantamentos feitos pela GESTORA com recursos próprios em favor do EMPREENDIMENTO, nos termos da Cláusula 5ª do Contrato de Gestão', valor: 'total dos adiantamentos ora reconhecidos, que a EMPREENDEDORA confessa dever à GESTORA e que serão ressarcidos na forma da Cláusula 5ª do Contrato de Gestão' },
+  receber: { rotulo: 'Valores a receber', objeto: 'o reconhecimento de valores a receber pela GESTORA da EMPREENDEDORA', valor: 'devidos pela EMPREENDEDORA à GESTORA, corrigidos pelo IPCA/IBGE e ressarcidos na forma da Cláusula 5ª do Contrato de Gestão' },
+  servicos: { rotulo: 'Novos serviços e atribuições', objeto: 'a inclusão de novos serviços, atribuições e responsabilidades da GESTORA', valor: 'pelos serviços ora incluídos, pagos com os recursos das vendas do EMPREENDIMENTO, por retenção na forma da Cláusula 5.3, ou diretamente pela EMPREENDEDORA em até 10 (dez) dias da medição' },
+  valores: { rotulo: 'Ajuste de valores, prazos e condições', objeto: 'o ajuste de quantidades, valores, prazos e condições do Contrato de Gestão', valor: 'valor ajustado por este termo' },
+  transferencia: { rotulo: 'Transferência do imóvel', objeto: 'a formalização das condições da transferência do imóvel prevista na Cláusula 7ª do Contrato de Gestão', valor: 'valor ajustado para a transferência, na forma deste termo' },
+  outro: { rotulo: 'Outro', objeto: 'ajustes ao Contrato de Gestão', valor: 'valor ajustado por este termo' },
+} as const;
+export type TipoAditivoGestao = keyof typeof TIPOS_ADITIVO_GESTAO;
+
+export const aditivoGestaoSchema = z.object({
+  tipo: z.enum(Object.keys(TIPOS_ADITIVO_GESTAO) as [TipoAditivoGestao, ...TipoAditivoGestao[]]),
+  data: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, 'Data no formato AAAA-MM-DD'),
+  objeto: z.string().trim().max(500).optional().default(''),
+  texto: z.string().trim().max(8000).optional().default(''),
+  valor: z.number().min(0).max(100_000_000).nullable().optional().default(null),
+  aportes: z.array(z.number().int().positive()).max(500).optional().default([]),
+});
+export type DadosAditivoGestao = z.infer<typeof aditivoGestaoSchema>;

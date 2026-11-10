@@ -4,8 +4,8 @@
  */
 import { and, asc, eq } from 'drizzle-orm';
 import { getDb } from '../db';
-import { empJuridico, empreendimentos, gestaoAportes, gestaoContratos, lotes } from '../../drizzle/schema';
-import { PARAMETROS_PADRAO, numeroContratoGestao, parametrosSchema, type DadosAporte, type ParametrosGestao } from '../../shared/gestao';
+import { empJuridico, empreendimentos, gestaoAditivos, gestaoAportes, gestaoContratos, lotes } from '../../drizzle/schema';
+import { PARAMETROS_PADRAO, aditivoGestaoSchema, numeroContratoGestao, parametrosSchema, type DadosAditivoGestao, type DadosAporte, type ParametrosGestao, type TipoAditivoGestao } from '../../shared/gestao';
 
 export class GestaoErro extends Error { constructor(msg: string, public status = 400) { super(msg); this.name = 'GestaoErro'; } }
 
@@ -24,6 +24,7 @@ const json = (v: unknown): Record<string, any> => {
 const util = (v: unknown) => { const t = String(v ?? '').trim(); return t && !/^\[?PREENCHER/i.test(t) ? t : ''; };
 
 export interface AporteGestao extends DadosAporte { id: number; numero: number; ressarcidoEm: string | null }
+export interface AditivoGestao { id: number; numero: number; data: string; tipo: TipoAditivoGestao; objeto: string; texto: string; valor: number | null; aportes: number[] }
 
 export interface DadosContratoGestao {
   empreendimento: { id: number; slug: string; nome: string; municipio: string; uf: string };
@@ -36,6 +37,7 @@ export interface DadosContratoGestao {
   vend: Record<string, string>;
   vendedoraPj: boolean;
   aportes: AporteGestao[];
+  aditivos: AditivoGestao[];
   atualizadoEm: string | null;
 }
 
@@ -56,6 +58,7 @@ export async function dadosContrato(slug: string): Promise<DadosContratoGestao> 
   const limpar = (o: Record<string, any>) => Object.fromEntries(Object.entries(o).map(([k, v]) => [k, util(v)]).filter(([, v]) => v));
   const ls: any[] = await d.select({ id: lotes.id }).from(lotes).where(eq(lotes.empreendimentoId, e.id));
   const ap: any[] = await d.select().from(gestaoAportes).where(eq(gestaoAportes.empreendimentoId, e.id)).orderBy(asc(gestaoAportes.numero));
+  const ad: any[] = await d.select().from(gestaoAditivos).where(eq(gestaoAditivos.empreendimentoId, e.id)).orderBy(asc(gestaoAditivos.numero));
   const ano = parametros.dataContrato ? Number(parametros.dataContrato.slice(0, 4)) : new Date().getFullYear();
   return {
     empreendimento: { id: Number(e.id), slug: e.slug, nome: e.nome, municipio: e.municipio ?? 'Açailândia', uf: e.uf ?? 'MA' },
@@ -69,6 +72,10 @@ export async function dadosContrato(slug: string): Promise<DadosContratoGestao> 
     aportes: ap.map(a => ({
       id: Number(a.id), numero: Number(a.numero), data: a.data, valor: Number(a.valor), descricao: a.descricao, categoria: a.categoria,
       favorecido: a.favorecido ?? '', formaPagamento: a.formaPagamento, comprovante: a.comprovante ?? '', ressarcidoEm: a.ressarcidoEm ?? null,
+    })),
+    aditivos: ad.map(a => ({
+      id: Number(a.id), numero: Number(a.numero), data: a.data, tipo: a.tipo, objeto: a.objeto ?? '', texto: a.texto ?? '',
+      valor: a.valor != null ? Number(a.valor) : null, aportes: (() => { try { return JSON.parse(a.aportesJson || '[]').map(Number); } catch { return []; } })(),
     })),
     atualizadoEm: g?.atualizadoEm ? new Date(g.atualizadoEm).toISOString() : null,
   };
@@ -142,4 +149,33 @@ export async function ajustarAgrimensura850(): Promise<number> {
   await gravarConfig(CHAVE, JSON.stringify({ em: new Date().toISOString(), ajustados: n }), null);
   if (n) console.log(`[Gestão] agrimensura: ${n} contrato(s) de R$ 800 para R$ 850 por lote`);
   return n;
+}
+
+/** Novo termo aditivo ao Contrato de Gestão (número seguinte; numeração não é reaproveitada) */
+export async function criarAditivoGestao(slug: string, entrada: DadosAditivoGestao, autorId: number) {
+  const d = await banco();
+  const e = await empreendimentoDe(slug);
+  const a = aditivoGestaoSchema.parse(entrada);
+  if (a.tipo === 'adiantamentos') {
+    if (!a.aportes.length) throw new GestaoErro('Escolha os adiantamentos (recibos) que o termo reconhece.');
+    const ex: any[] = await d.select({ id: gestaoAportes.id }).from(gestaoAportes).where(eq(gestaoAportes.empreendimentoId, e.id));
+    const validos = new Set(ex.map(x => Number(x.id)));
+    if (a.aportes.some(id => !validos.has(id))) throw new GestaoErro('Adiantamento não encontrado neste empreendimento.', 404);
+  } else if (!a.texto && !a.valor && !a.objeto) throw new GestaoErro('Descreva o que o termo altera ou inclui.');
+  const todos: any[] = await d.select({ numero: gestaoAditivos.numero }).from(gestaoAditivos).where(eq(gestaoAditivos.empreendimentoId, e.id));
+  const numero = todos.reduce((m, x) => Math.max(m, Number(x.numero)), 0) + 1;
+  await d.insert(gestaoAditivos).values({
+    empreendimentoId: e.id, numero, data: a.data, tipo: a.tipo, objeto: a.objeto || null, texto: a.texto || null,
+    valor: a.valor != null ? a.valor.toFixed(2) : null, aportesJson: JSON.stringify(a.aportes), criadoPor: autorId, criadoEm: new Date(),
+  } as any);
+  return { ok: true as const, numero };
+}
+
+export async function excluirAditivoGestao(slug: string, id: number) {
+  const d = await banco();
+  const e = await empreendimentoDe(slug);
+  const [a]: any[] = await d.select({ id: gestaoAditivos.id }).from(gestaoAditivos).where(and(eq(gestaoAditivos.id, id), eq(gestaoAditivos.empreendimentoId, e.id))).limit(1);
+  if (!a) throw new GestaoErro('Termo aditivo não encontrado', 404);
+  await d.delete(gestaoAditivos).where(eq(gestaoAditivos.id, id));
+  return { ok: true as const };
 }
