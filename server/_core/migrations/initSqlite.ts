@@ -768,6 +768,7 @@ export function initSqliteTables(sqlite: any): void {
   addColumn(`ALTER TABLE prospectos ADD COLUMN objetivo TEXT NOT NULL DEFAULT 'avalieimob'`);
   addColumn(`ALTER TABLE gestaoAportes ADD COLUMN valorContratado TEXT`);
   addColumn(`ALTER TABLE gestaoAportes ADD COLUMN referencia TEXT`);
+  addColumn(`ALTER TABLE gestaoAportes ADD COLUMN anexosJson TEXT`);
   run(`CREATE TABLE IF NOT EXISTS modelosMensagem (
     chave TEXT PRIMARY KEY, texto TEXT NOT NULL, atualizadoPor INTEGER, updatedAt INTEGER NOT NULL DEFAULT (strftime('%s','now'))
   )`);

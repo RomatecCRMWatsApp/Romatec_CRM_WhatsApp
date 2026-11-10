@@ -5,7 +5,7 @@
 import { and, asc, eq } from 'drizzle-orm';
 import { getDb } from '../db';
 import { empJuridico, empreendimentos, gestaoAditivos, gestaoAportes, gestaoContratos, lotes } from '../../drizzle/schema';
-import { PARAMETROS_PADRAO, aditivoGestaoSchema, numeroContratoGestao, parametrosSchema, type DadosAditivoGestao, type DadosAporte, type ParametrosGestao, type TipoAditivoGestao } from '../../shared/gestao';
+import { MAX_BYTES_ANEXO_APORTE, PARAMETROS_PADRAO, aditivoGestaoSchema, anexoAporteSchema, ordenarAnexos, type DadosAnexoAporte, type TipoAnexoAporte, numeroContratoGestao, parametrosSchema, type DadosAditivoGestao, type DadosAporte, type ParametrosGestao, type TipoAditivoGestao } from '../../shared/gestao';
 
 export class GestaoErro extends Error { constructor(msg: string, public status = 400) { super(msg); this.name = 'GestaoErro'; } }
 
@@ -23,7 +23,15 @@ const json = (v: unknown): Record<string, any> => {
 /** Valor útil (vazio e "[PREENCHER…]" contam como ausentes) */
 const util = (v: unknown) => { const t = String(v ?? '').trim(); return t && !/^\[?PREENCHER/i.test(t) ? t : ''; };
 
-export interface AporteGestao extends DadosAporte { id: number; numero: number; ressarcidoEm: string | null; /** Termos aditivos que reconhecem este recibo */ aditivos: number[] }
+export interface AnexoAporte { chave: string; nome: string; mime: string; tipo: TipoAnexoAporte; descricao: string; bytes: number }
+export interface AporteGestao extends DadosAporte {
+  id: number; numero: number; ressarcidoEm: string | null;
+  /** Termos aditivos que reconhecem este recibo */
+  aditivos: number[];
+  /** Comprovantes e documentos de origem anexos (o conteúdo fica em contratoArquivos) */
+  anexos: AnexoAporte[];
+}
+const anexosDe = (v: unknown): AnexoAporte[] => { try { const a = JSON.parse(String(v || '[]')); return Array.isArray(a) ? a : []; } catch { return []; } };
 export interface AditivoGestao { id: number; numero: number; data: string; tipo: TipoAditivoGestao; objeto: string; texto: string; valor: number | null; aportes: number[] }
 
 export interface DadosContratoGestao {
@@ -72,7 +80,7 @@ export async function dadosContrato(slug: string): Promise<DadosContratoGestao> 
     aportes: ap.map(a => ({
       id: Number(a.id), numero: Number(a.numero), data: a.data, valor: Number(a.valor), descricao: a.descricao, categoria: a.categoria,
       favorecido: a.favorecido ?? '', formaPagamento: a.formaPagamento, comprovante: a.comprovante ?? '', ressarcidoEm: a.ressarcidoEm ?? null,
-      valorContratado: a.valorContratado != null ? Number(a.valorContratado) : null, referencia: a.referencia ?? '', aditivos: [] as number[],
+      valorContratado: a.valorContratado != null ? Number(a.valorContratado) : null, referencia: a.referencia ?? '', aditivos: [] as number[], anexos: anexosDe(a.anexosJson),
     })),
     aditivos: ad.map(a => ({
       id: Number(a.id), numero: Number(a.numero), data: a.data, tipo: a.tipo, objeto: a.objeto ?? '', texto: a.texto ?? '',
@@ -116,6 +124,51 @@ async function aporteDoEmpreendimento(slug: string, id: number) {
   const [a]: any[] = await d.select().from(gestaoAportes).where(and(eq(gestaoAportes.id, id), eq(gestaoAportes.empreendimentoId, e.id))).limit(1);
   if (!a) throw new GestaoErro('Adiantamento não encontrado', 404);
   return { d, a };
+}
+
+const ASSINATURA_ARQUIVO: Record<string, (b: Buffer) => boolean> = {
+  'application/pdf': b => b.subarray(0, 5).toString('latin1') === '%PDF-',
+  'image/png': b => b.subarray(0, 8).equals(Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a])),
+  'image/jpeg': b => b[0] === 0xff && b[1] === 0xd8 && b[2] === 0xff,
+};
+
+/** Anexa ao recibo o comprovante do pagamento ou o documento de origem (PDF, PNG ou JPG, até 10 MB) */
+export async function anexarAporte(slug: string, id: number, entrada: DadosAnexoAporte) {
+  const { d, a } = await aporteDoEmpreendimento(slug, id);
+  const x = anexoAporteSchema.parse(entrada);
+  const buf = Buffer.from(x.conteudoBase64, 'base64');
+  if (!buf.length || buf.length > MAX_BYTES_ANEXO_APORTE) throw new GestaoErro('Arquivo vazio ou maior que 10 MB.');
+  if (!ASSINATURA_ARQUIVO[x.mime](buf)) throw new GestaoErro('O conteúdo do arquivo não corresponde a PDF, PNG ou JPG.');
+  const atuais = anexosDe(a.anexosJson);
+  if (atuais.length >= 10) throw new GestaoErro('Limite de 10 anexos por recibo.');
+  const ext = x.mime === 'application/pdf' ? 'pdf' : x.mime === 'image/png' ? 'png' : 'jpg';
+  const chave = `gestao/${a.empreendimentoId}/recibo-${a.numero}-${x.tipo}-${Date.now()}.${ext}`;
+  const { salvarArquivo } = await import('../contratos/arquivos');
+  await salvarArquivo(chave, buf, x.mime);
+  const novo: AnexoAporte = { chave, nome: x.nome, mime: x.mime, tipo: x.tipo, descricao: x.descricao, bytes: buf.length };
+  await d.update(gestaoAportes).set({ anexosJson: JSON.stringify([...atuais, novo]) } as any).where(eq(gestaoAportes.id, id));
+  return { ok: true as const, anexo: novo };
+}
+
+/** Retira um anexo do recibo (o arquivo continua guardado: versões nunca são apagadas) */
+export async function removerAnexoAporte(slug: string, id: number, chave: string) {
+  const { d, a } = await aporteDoEmpreendimento(slug, id);
+  const atuais = anexosDe(a.anexosJson);
+  if (!atuais.some(x => x.chave === chave)) throw new GestaoErro('Anexo não encontrado', 404);
+  await d.update(gestaoAportes).set({ anexosJson: JSON.stringify(atuais.filter(x => x.chave !== chave)) } as any).where(eq(gestaoAportes.id, id));
+  return { ok: true as const };
+}
+
+/** Conteúdo dos anexos de um recibo, na ordem: comprovantes, depois documentos de origem */
+export async function arquivosDoAporte(a: Pick<AporteGestao, 'anexos'>): Promise<(AnexoAporte & { buf: Buffer })[]> {
+  const { lerArquivo } = await import('../contratos/arquivos');
+  const r: (AnexoAporte & { buf: Buffer })[] = [];
+  for (const x of ordenarAnexos(a.anexos)) {
+    const f = await lerArquivo(x.chave).catch(() => null);
+    if (f) r.push({ ...x, buf: f.buf });
+    else console.warn(`[Gestão] anexo ${x.chave} não encontrado`);
+  }
+  return r;
 }
 
 /** Marca (ou desmarca) o ressarcimento de um adiantamento */

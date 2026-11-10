@@ -3,6 +3,18 @@
 Cada versão nova vai no TOPO. Depois rode `npm run release` (valida e atualiza o package.json);
 ao subir, o servidor grava a versão no banco e todos recebem o aviso "Novidades da versão".
 
+## 1.149.0 — 2026-11-10
+tipo: minor
+obrigatoria: nao
+titulo: Recibos com comprovantes anexos e cláusula de engenharia e obras no contrato de gestão
+publico: admin
+
+### Novo
+- Cada recibo de adiantamento aceita anexos (PDF, PNG ou JPG, até 10 MB): o comprovante do pagamento e o documento de origem (medição, boletim de horas da máquina, orçamento). Eles saem no PDF do recibo, logo depois dele, e no fim do contrato de gestão, cada página com a tarja "Recibo n.º … · Anexo …"
+- Nova Cláusula 4ª-A no contrato de gestão: projetos de engenharia e de legalização, acompanhamento de terraplenagem, aterro do arruamento, drenagem, obras elétricas e do poço, e as obras civis (stand de vendas, portal de entrada) ficam fora da gestão e da agrimensura. São executados pela construtora da Romatec, com escopo e valor fixados em termo aditivo antes do início de cada frente
+- Arquitetura (projeto urbanístico, stand, portal) e locação das obras ficam expressamente incluídas no valor da agrimensura
+- Novo tipo de aditivo "Frente de engenharia ou obra (Cláusula 4ª-A)" e campos da construtora (razão social e CNPJ) nas condições do contrato
+
 ## 1.148.2 — 2026-11-10
 tipo: patch
 obrigatoria: nao

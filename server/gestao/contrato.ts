@@ -11,7 +11,7 @@ import { zipSync, strToU8 } from 'fflate';
 import { escritor } from '../contratos/docsComissao';
 import { brl, dataBR, dataExtenso, extenso, pct, reaisExtenso } from '../contratos/formato';
 import { ESCRITORIO } from '../../shared/escritorio';
-import { CATEGORIAS_APORTE, ROTULO_FORMA_APORTE, TIPOS_ADITIVO_GESTAO, totaisTopografia } from '../../shared/gestao';
+import { CATEGORIAS_APORTE, ROTULO_FORMA_APORTE, TIPOS_ADITIVO_GESTAO, TIPOS_ANEXO_APORTE, ordenarAnexos, totaisTopografia } from '../../shared/gestao';
 import type { AditivoGestao, AporteGestao, DadosContratoGestao } from './servico';
 import { blocosAditivo } from '../aditivos/motor';
 
@@ -93,14 +93,15 @@ export function blocosContrato(g: DadosContratoGestao): Bloco[] {
   b.push(C('CLÁUSULA 2ª — DO OBJETO'));
   b.push(P('2.1. A EMPREENDEDORA contrata a GESTORA, com exclusividade, para a gestão integral do EMPREENDIMENTO, compreendendo:'));
   [
-    '(a) planejamento, desenvolvimento e acompanhamento do parcelamento: projetos, aprovações municipais, licenciamento ambiental e suas condicionantes, registro do loteamento e abertura das matrículas individuais;',
+    '(a) planejamento, desenvolvimento e acompanhamento administrativo do parcelamento: coordenação dos projetos, protocolos e aprovações municipais, licenciamento ambiental e suas condicionantes, registro do loteamento e abertura das matrículas individuais, sem incluir a elaboração dos projetos de engenharia e de legalização, que seguem a Cláusula 4ª-A;',
     '(b) gestão comercial e de vendas: definição de tabela e condições com a EMPREENDEDORA, marketing, atendimento, CRM, credenciamento e coordenação de corretores e imobiliárias parceiras, visitas e propostas;',
     '(c) gestão contratual: elaboração dos compromissos de compra e venda, aditivos, termos de concessão, distratos e cessões, com assinatura eletrônica e controle dos documentos;',
     '(d) gestão financeira das vendas: emissão de carnês e boletos, conciliação, cobrança amigável dos compradores e prestação de contas à EMPREENDEDORA;',
-    '(e) acompanhamento e fiscalização das obras de infraestrutura (vias, drenagem, água, energia, portal e áreas comuns);',
+    '(e) coordenação gerencial das obras de infraestrutura e das áreas comuns: cronograma geral, cotações, contratação de terceiros em nome do EMPREENDIMENTO, controle de pagamentos e prestação de contas, sem incluir o acompanhamento técnico de engenharia nem a execução de obras, que seguem a Cláusula 4ª-A;',
     '(f) serviços técnicos de agrimensura e topografia, na forma da Cláusula 4ª;',
     '(g) relacionamento com cartórios, órgãos públicos, concessionárias e a associação dos proprietários.',
   ].forEach(t => b.push(P(t, 18)));
+  b.push(P('2.2. A remuneração da Cláusula 3ª corresponde às atividades das alíneas (a) a (e) e (g) da Cláusula 2.1. Os serviços de agrimensura e topografia são remunerados na forma da Cláusula 4ª, e os serviços de engenharia e as obras civis, na forma da Cláusula 4ª-A, em valores próprios.'));
 
   b.push(C('CLÁUSULA 3ª — DA REMUNERAÇÃO DA GESTÃO'));
   b.push(PB({ t: '3.1. Pela gestão integral, a EMPREENDEDORA pagará à GESTORA ' }, { t: `${pctExt(p.comissaoPct)} sobre o valor de cada alienação de unidade do EMPREENDIMENTO`, b: true },
@@ -123,11 +124,28 @@ export function blocosContrato(g: DadosContratoGestao): Bloco[] {
   b.push(P(`4.${p.pontosBanhoQtd ? 5 : 4}. O pagamento é devido por unidade ou ponto locado e entregue com o respectivo memorial ou registro de coordenadas, apurado em boletim de medição, e será feito com os recursos das vendas do EMPREENDIMENTO, por retenção na forma da Cláusula 5.3, ou diretamente pela EMPREENDEDORA em até 10 (dez) dias da medição.`));
   b.push(P((p.pontosBanhoQtd ? '4.6.' : '4.5.') + ' Os serviços seguem a NBR 13133 (execução de levantamento topográfico), a Norma Técnica para Georreferenciamento de Imóveis Rurais do INCRA, a Lei n.º 6.015/1973 e a Lei n.º 6.766/1979, sob a responsabilidade técnica de José Romário Pinto Bezerra, Técnico em Agrimensura, CFT/MA 01209185369, credenciado no INCRA (FQNS).'));
   b.push(P((p.pontosBanhoQtd ? '4.7.' : '4.6.') + ' A relocação de marcos ou piquetes removidos ou danificados por terceiros, compradores ou obras após a entrega será cobrada à parte, pelo mesmo valor unitário do respectivo serviço.'));
+  b.push(PB({ t: (p.pontosBanhoQtd ? '4.8.' : '4.7.') + ' ' }, { t: 'Estão incluídos nos valores da Cláusula ' + (p.pontosBanhoQtd ? '4.4' : '4.3') + ', sem acréscimo, os serviços de arquitetura e de locação', b: true },
+    { t: ': (a) o projeto urbanístico do parcelamento (quadras, unidades, vias e áreas comuns) e o projeto arquitetônico do stand de vendas, do portal de entrada e das áreas comuns; e (b) a locação topográfica das obras do EMPREENDIMENTO (eixos e greides das vias, redes, poço, stand, portal e edificações das áreas comuns). Os projetos complementares e de legalização dessas obras seguem a Cláusula 4ª-A.' }));
+
+  const construtora = p.construtoraNome ? `${p.construtoraNome}${p.construtoraCnpj ? `, CNPJ ${p.construtoraCnpj}` : ''}` : '';
+  b.push(C('CLÁUSULA 4ª-A — DOS SERVIÇOS DE ENGENHARIA E DAS OBRAS CIVIS'));
+  b.push(PB({ t: '4ª-A.1. ' }, { t: 'Não estão compreendidos na remuneração da Cláusula 3ª nem nos valores da Cláusula 4ª, e serão contratados e cobrados à parte', b: true }, { t: ':' }));
+  [
+    '(a) os projetos de engenharia e de legalização do EMPREENDIMENTO e das obras: terraplenagem, drenagem pluvial, empiçarramento ou pavimentação das vias, rede de distribuição de energia elétrica e iluminação, poço tubular e sistema de abastecimento de água, projetos estruturais e complementares das edificações, com as respectivas ART ou RRT, taxas e aprovações nos órgãos e concessionárias;',
+    '(b) o acompanhamento técnico e a fiscalização de engenharia da terraplenagem, do aterro e do empiçarramento do arruamento, da drenagem, das obras elétricas e das obras do poço e do abastecimento de água;',
+    '(c) a gestão e a execução das obras civis do EMPREENDIMENTO, tais como o stand de vendas, o portal de entrada e as edificações das áreas comuns.',
+  ].forEach(t => b.push(P(t, 18)));
+  b.push(P(`4ª-A.2. Os serviços da Cláusula 4ª-A.1 serão executados preferencialmente pela construtora da GESTORA${construtora ? `, ${construtora}` : ', por ela indicada'}, ou por terceiros contratados com anuência da EMPREENDEDORA, sempre sob a responsabilidade técnica de profissional legalmente habilitado, com ART (Lei n.º 6.496/1977) ou RRT de cada serviço.`));
+  b.push(PB({ t: '4ª-A.3. ' }, { t: 'Cada frente de serviço terá escopo, valor, prazo e condições de pagamento negociados entre as partes e fixados em termo aditivo próprio, firmado antes do seu início', b: true },
+    { t: '. Nenhuma frente será iniciada, nem será devida, sem o respectivo aditivo, salvo serviço urgente para evitar dano ao EMPREENDIMENTO, autorizado por escrito pela EMPREENDEDORA (inclusive por mensagem eletrônica) e formalizado em aditivo em até 10 (dez) dias.' }));
+  b.push(P('4ª-A.4. O termo aditivo de cada frente indicará, no mínimo: (a) o escopo, com projeto, memorial ou orçamento discriminado; (b) a modalidade de preço: empreitada por preço global, por preço unitário apurado em boletim de medição, ou por administração, pelo custo comprovado de materiais, equipamentos e mão de obra acrescido de taxa de administração; (c) o valor total ou estimado, o prazo e o cronograma físico-financeiro; (d) a forma de medição e de pagamento, com os recursos das vendas do EMPREENDIMENTO, por retenção na forma da Cláusula 5.3, ou diretamente pela EMPREENDEDORA; (e) o responsável técnico e a ART ou RRT; e (f) as garantias da obra, observado o art. 618 do Código Civil.'));
+  b.push(P('4ª-A.5. A locação de máquinas e equipamentos, os materiais e os serviços de terceiros pagos pela GESTORA com recursos próprios em qualquer frente constituem adiantamentos e seguem a Cláusula 5ª, com Recibo de Adiantamento acompanhado do comprovante de pagamento e do documento de origem (medição, boletim de horas, nota fiscal ou orçamento).'));
+  b.push(P('4ª-A.6. Os serviços observarão as normas técnicas aplicáveis, em especial a NBR 6118 (projeto de estruturas de concreto), a NBR 5410 (instalações elétricas de baixa tensão) e as normas da concessionária de energia, a NBR 12212 e a NBR 12244 (poço tubular para captação de água subterrânea), além das exigências do licenciamento ambiental do EMPREENDIMENTO.'));
 
   b.push(C('CLÁUSULA 5ª — DOS ADIANTAMENTOS COM RECURSOS PRÓPRIOS DA GESTORA'));
   b.push(P('5.1. A GESTORA poderá antecipar, com recursos próprios, despesas do EMPREENDIMENTO, tais como obras de infraestrutura, materiais e marcos, serviços de terceiros, taxas, emolumentos, licenças, tributos do imóvel e marketing, registrando cada desembolso no CRM com o respectivo comprovante.'));
   b.push(P('5.2. Cada adiantamento é documentado por Recibo de Adiantamento (Anexo I), assinado pelas partes, e constitui crédito da GESTORA contra a EMPREENDEDORA, líquido, certo e exigível, que a EMPREENDEDORA reconhece e confessa dever, para os fins do art. 784, III, do Código de Processo Civil.'));
-  b.push(PB({ t: '5.3. Os adiantamentos e os serviços da Cláusula 4ª serão ressarcidos com prioridade pelos recebimentos do EMPREENDIMENTO: fica a GESTORA autorizada a reter, de cada valor recebido das vendas (entradas e parcelas) que transite pela plataforma de pagamentos, ' },
+  b.push(PB({ t: '5.3. Os adiantamentos, os serviços da Cláusula 4ª e as frentes da Cláusula 4ª-A, quando o respectivo aditivo assim previr, serão ressarcidos com prioridade pelos recebimentos do EMPREENDIMENTO: fica a GESTORA autorizada a reter, de cada valor recebido das vendas (entradas e parcelas) que transite pela plataforma de pagamentos, ' },
     { t: `até ${pctExt(p.retencaoAportesPct)} da parte destinada à EMPREENDEDORA`, b: true }, { t: ', até a quitação integral, com demonstrativo mensal.' }));
   b.push(P('5.4. Os valores adiantados serão corrigidos monetariamente pelo IPCA/IBGE desde cada desembolso até o ressarcimento, sem juros remuneratórios. Em caso de extinção deste contrato, o saldo será exigível de imediato.'));
   if (g.aportes.length) b.push(P(`5.5. Até a data deste instrumento, os adiantamentos somam ${reais(totalAportes(g.aportes))}, conforme os ${g.aportes.length} (${extenso(g.aportes.length)}) recibos do Anexo I. Novos adiantamentos serão documentados por recibos numerados em sequência, que integram este contrato.`));
@@ -137,7 +155,7 @@ export function blocosContrato(g: DadosContratoGestao): Bloco[] {
   b.push(P('6.2. A EMPREENDEDORA poderá solicitar, a qualquer tempo, o extrato e os comprovantes de qualquer lançamento, que serão disponibilizados em até 5 (cinco) dias úteis.'));
   b.push(PB({ t: '6.3. ' }, { t: 'Todos os tributos incidentes sobre os recebimentos, as movimentações financeiras e os ativos do EMPREENDIMENTO são de responsabilidade exclusiva da EMPREENDEDORA', b: true },
     { t: ', conforme a legislação e as alíquotas vigentes na data de cada fato gerador, inclusive quando os valores das vendas, entradas, parcelas, ressarcimentos e demais receitas do EMPREENDIMENTO transitarem por contas, plataformas de pagamento ou cadastros vinculados ao CNPJ da GESTORA, tais como IRPJ, CSLL, PIS, COFINS, ISS, IOF, tributos sobre ganho de capital, sobre a receita ou sobre movimentação financeira e os que vierem a ser instituídos.' }));
-  b.push(P('6.4. A GESTORA responde somente pelos tributos incidentes sobre a sua própria remuneração prevista nas Cláusulas 3ª e 4ª. Os valores do EMPREENDIMENTO que transitarem pelo CNPJ da GESTORA são recebidos por conta e ordem da EMPREENDEDORA e não constituem receita da GESTORA.'));
+  b.push(P('6.4. A GESTORA responde somente pelos tributos incidentes sobre a sua própria remuneração prevista nas Cláusulas 3ª, 4ª e 4ª-A. Os valores do EMPREENDIMENTO que transitarem pelo CNPJ da GESTORA são recebidos por conta e ordem da EMPREENDEDORA e não constituem receita da GESTORA.'));
   b.push(P('6.5. Fica a GESTORA autorizada a reter e provisionar, dos recebimentos do EMPREENDIMENTO, o valor dos tributos de que trata a Cláusula 6.3, demonstrando a apuração, as guias e os comprovantes na prestação de contas mensal. Não havendo saldo suficiente para a retenção, a EMPREENDEDORA reembolsará à GESTORA o tributo recolhido em até 5 (cinco) dias úteis da apresentação do comprovante, sob pena de correção monetária pelo IPCA/IBGE e juros de mora de 1% (um por cento) ao mês.'));
   b.push(P('6.6. A EMPREENDEDORA responde também pelas multas, juros e demais encargos decorrentes de autuação, lançamento ou atraso relativos aos tributos da Cláusula 6.3, e ressarcirá integralmente a GESTORA de qualquer valor que esta venha a pagar a esse título, inclusive custos de defesa administrativa ou judicial, cabendo-lhe fornecer, no prazo solicitado, os documentos e as informações necessários às declarações fiscais.'));
 
@@ -162,15 +180,15 @@ export function blocosContrato(g: DadosContratoGestao): Bloco[] {
   b.push(C('CLÁUSULA 11ª — DA EXCLUSIVIDADE, DO PRAZO E DA RESCISÃO'));
   b.push(P(`11.1. Este contrato vigora, com exclusividade, a partir da assinatura, pelo prazo mínimo de ${p.prazoMinimoMeses} (${extenso(p.prazoMinimoMeses)}) meses e, em qualquer caso, até a alienação da última unidade, o registro do loteamento e a quitação de todos os créditos da GESTORA.`));
   b.push(P('11.2. O descumprimento de qualquer cláusula, não sanado em 15 (quinze) dias da notificação, autoriza a parte prejudicada a rescindir o contrato, sem prejuízo de perdas e danos.'));
-  b.push(PB({ t: '11.3. Extinto o contrato por qualquer motivo, permanecem devidas à GESTORA: (a) a remuneração sobre as alienações já contratadas, inclusive sobre parcelas futuras; (b) os serviços de agrimensura executados; e (c) o saldo dos adiantamentos, corrigido. Na rescisão imotivada ou por culpa da EMPREENDEDORA, esta pagará ainda multa compensatória de ' },
+  b.push(PB({ t: '11.3. Extinto o contrato por qualquer motivo, permanecem devidas à GESTORA: (a) a remuneração sobre as alienações já contratadas, inclusive sobre parcelas futuras; (b) os serviços de agrimensura executados e as frentes de engenharia e obras medidas; e (c) o saldo dos adiantamentos, corrigido. Na rescisão imotivada ou por culpa da EMPREENDEDORA, esta pagará ainda multa compensatória de ' },
     { t: `${pctExt(p.multaRescisaoPct)} sobre o valor de tabela das unidades não alienadas`, b: true }, { t: ' na data da rescisão.' }));
 
   b.push(C('CLÁUSULA 12ª — DO SIGILO E DA PROTEÇÃO DE DADOS'));
   b.push(P('12.1. As partes guardarão sigilo sobre as informações deste contrato e do EMPREENDIMENTO e tratarão os dados pessoais de compradores, corretores e demais titulares somente para a execução deste contrato e o cumprimento de obrigações legais, observada a Lei n.º 13.709/2018 (LGPD).'));
 
   b.push(C('CLÁUSULA 13ª — DAS DISPOSIÇÕES GERAIS E DO FORO'));
-  b.push(P('13.1. Integram este contrato os Anexos I (Recibos de Adiantamento) e II (Quadro dos serviços de agrimensura), os Contratos de Comissão de cada venda e os termos aditivos que as partes firmarem. Alterações somente valem por escrito. A tolerância de uma parte não importa novação ou renúncia.'));
-  b.push(P('13.2. Este contrato permanece aberto a termos aditivos, numerados em sequência e assinados pelas partes, que dele passarão a fazer parte integrante para: (a) reconhecer novos adiantamentos com recursos próprios da GESTORA e valores a receber da EMPREENDEDORA, além dos recibos do Anexo I; (b) incluir novos serviços, atribuições e responsabilidades da GESTORA; (c) ajustar quantidades, valores, prazos e condições; e (d) formalizar a transferência prevista na Cláusula 7ª. Os aditivos observarão as demais cláusulas deste contrato no que não dispuserem de forma diversa.'));
+  b.push(P('13.1. Integram este contrato os Anexos I (Recibos de Adiantamento, com os comprovantes de pagamento e os documentos de origem de cada recibo) e II (Quadro dos serviços de agrimensura), os Contratos de Comissão de cada venda e os termos aditivos que as partes firmarem. Alterações somente valem por escrito. A tolerância de uma parte não importa novação ou renúncia.'));
+  b.push(P('13.2. Este contrato permanece aberto a termos aditivos, numerados em sequência e assinados pelas partes, que dele passarão a fazer parte integrante para: (a) reconhecer novos adiantamentos com recursos próprios da GESTORA e valores a receber da EMPREENDEDORA, além dos recibos do Anexo I; (b) fixar, antes do início de cada frente, o escopo, os valores, os prazos e as condições dos serviços de engenharia e das obras civis da Cláusula 4ª-A; (c) incluir novos serviços, atribuições e responsabilidades da GESTORA; (d) ajustar quantidades, valores, prazos e condições; e (e) formalizar a transferência prevista na Cláusula 7ª. Os aditivos observarão as demais cláusulas deste contrato no que não dispuserem de forma diversa.'));
   b.push(P('13.3. As partes reconhecem a validade da assinatura eletrônica deste instrumento e de seus anexos (MP n.º 2.200-2/2001 e Lei n.º 14.063/2020). Assinado pelas partes e por 2 (duas) testemunhas, este contrato constitui título executivo extrajudicial (CPC, art. 784, III).'));
   b.push(P(`13.4. As partes elegem o foro da Comarca de ${local}, com renúncia a qualquer outro, por mais privilegiado que seja.`));
   if (p.observacoes) b.push(P(`13.5. ${p.observacoes}`));
@@ -190,6 +208,7 @@ export function blocosContrato(g: DadosContratoGestao): Bloco[] {
     b.push({ k: 'tab', cab: ['Recibo', 'Data', 'Descrição', 'Valor (R$)', 'Vínculo', 'Situação'], pesos: [1.1, 1, 3.5, 1.3, 1.3, 1.2], direita: [3],
       linhas: [...g.aportes.map(a => [numeroRecibo(a), dataBR(a.data), a.descricao, brl(a.valor), vinculoCurto(a), a.ressarcidoEm ? `ressarcido ${dataBR(a.ressarcidoEm)}` : 'a ressarcir']),
         ['TOTAL', '', '', brl(totalAportes(g.aportes)), '', '']] });
+    if (g.aportes.some(a => a.anexos?.length)) b.push(P('Os comprovantes de pagamento e os documentos de origem de cada recibo seguem ao final deste instrumento, com a identificação do recibo em cada página.'));
     for (const a of g.aportes) { b.push({ k: 'quebra' }); b.push(...blocosRecibo(g, a, true)); }
   }
 
@@ -231,6 +250,7 @@ export function blocosRecibo(g: DadosContratoGestao, a: AporteGestao, noAnexo = 
       { t: `, CNPJ ${ESCRITORIO.cnpj}, pagou com recursos próprios, em ${dataBR(a.data)}, a importância de ${reais(a.valor)}, referente a ` }, { t: a.descricao, b: true },
       { t: `, em favor do ${g.empreendimento.nome}.` }),
     P(`Categoria: ${CATEGORIAS_APORTE[a.categoria as keyof typeof CATEGORIAS_APORTE] ?? a.categoria}. Forma de pagamento: ${ROTULO_FORMA_APORTE[a.formaPagamento as keyof typeof ROTULO_FORMA_APORTE] ?? a.formaPagamento}.${a.favorecido ? ` Favorecido: ${a.favorecido}.` : ''}${a.comprovante ? ` Comprovante: ${a.comprovante}.` : ''}${a.referencia ? ` Documento de origem: ${a.referencia}.` : ''}`),
+    ...(a.anexos?.length ? [P(`Anexos deste recibo, dele inseparáveis: ${ordenarAnexos(a.anexos).map((x, i) => `(${i + 1}) ${TIPOS_ANEXO_APORTE[x.tipo] ?? 'Anexo'}${x.descricao ? ` — ${x.descricao}` : ''}`).join('; ')}.`)] : []),
     ...(saldo && saldo > 0 ? [P(`O saldo de R$ ${brl(saldo)} (${reaisExtenso(saldo)}) do serviço contratado, quando pago pela GESTORA, será documentado em novo Recibo de Adiantamento, vinculado a este.`)] : []),
     P('O valor constitui crédito da GESTORA, corrigido pelo IPCA/IBGE desde o desembolso, a ser ressarcido com os recebimentos do EMPREENDIMENTO nos termos da Cláusula 5ª do Contrato de Gestão, do qual este recibo é parte integrante.'),
     P(`${local}, ${dataExtenso(a.data)}.`),

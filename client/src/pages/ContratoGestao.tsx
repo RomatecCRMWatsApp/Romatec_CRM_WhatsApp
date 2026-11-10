@@ -1,13 +1,13 @@
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
-import { FilePlus2, FileDown, FileText, Handshake, Loader2, Plus, Receipt, Save, Trash2 } from "lucide-react";
+import { FilePlus2, FileDown, FileText, Handshake, Loader2, Paperclip, Plus, Receipt, Save, Trash2, X } from "lucide-react";
 import { trpc } from "@/lib/trpc";
 import PageHeader from "@/components/PageHeader";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
-  CATEGORIAS_APORTE, FORMAS_PAGAMENTO_APORTE, PARAMETROS_PADRAO, ROTULO_FORMA_APORTE, TIPOS_ADITIVO_GESTAO, totaisTopografia,
-  type CategoriaAporte, type ParametrosGestao, type TipoAditivoGestao,
+  CATEGORIAS_APORTE, FORMAS_PAGAMENTO_APORTE, MAX_BYTES_ANEXO_APORTE, PARAMETROS_PADRAO, TIPOS_ANEXO_APORTE, ROTULO_FORMA_APORTE, TIPOS_ADITIVO_GESTAO, totaisTopografia,
+  type CategoriaAporte, type ParametrosGestao, type TipoAditivoGestao, type TipoAnexoAporte,
 } from "@shared/gestao";
 
 const SLUG = "bom-jardims";
@@ -63,6 +63,7 @@ function Parametros({ p, qtdCadastrados, onSalvo }: { p: ParametrosGestao; qtdCa
     comissao: pctTxt(x.comissaoPct), corretor: pctTxt(x.corretorParceiroPct), valorLote: String(x.valorPorLote).replace(".", ","), qtdLotes: x.qtdLotes ? String(x.qtdLotes) : "", extras: String(x.unidadesExtras ?? 1), pontos: String(x.pontosBanhoQtd ?? 85), valorPonto: String(x.valorPontoBanho ?? 200).replace(".", ","),
     retencao: pctTxt(x.retencaoAportesPct), prazo: String(x.prazoMinimoMeses), multa: pctTxt(x.multaRescisaoPct), dataContrato: x.dataContrato,
     t1n: x.testemunha1Nome, t1c: x.testemunha1Cpf, t2n: x.testemunha2Nome, t2c: x.testemunha2Cpf, obs: x.observacoes,
+    construtora: x.construtoraNome ?? "", construtoraCnpj: x.construtoraCnpj ?? "",
   });
   const [f, setF] = useState(vazio(p));
   useEffect(() => setF(vazio(p)), [p]);
@@ -81,6 +82,7 @@ function Parametros({ p, qtdCadastrados, onSalvo }: { p: ParametrosGestao; qtdCa
     unidadesExtras: Number(f.extras) || 0, pontosBanhoQtd: Number(f.pontos) || 0, valorPontoBanho: num(f.valorPonto),
     retencaoAportesPct: num(f.retencao) / 100, prazoMinimoMeses: Number(f.prazo) || 60, multaRescisaoPct: num(f.multa) / 100, dataContrato: f.dataContrato,
     testemunha1Nome: f.t1n, testemunha1Cpf: f.t1c, testemunha2Nome: f.t2n, testemunha2Cpf: f.t2c, observacoes: f.obs,
+    construtoraNome: f.construtora, construtoraCnpj: f.construtoraCnpj,
   } });
   return (
     <section className="space-y-3 rounded-xl border border-border bg-card p-4 text-sm" aria-labelledby="condicoes">
@@ -99,6 +101,7 @@ function Parametros({ p, qtdCadastrados, onSalvo }: { p: ParametrosGestao; qtdCa
         {campo("Data do contrato", "dataContrato", { tipo: "date" })}
         {campo("Testemunha 1 — nome", "t1n")}{campo("Testemunha 1 — CPF", "t1c")}
         {campo("Testemunha 2 — nome", "t2n")}{campo("Testemunha 2 — CPF", "t2c")}
+        {campo("Construtora (engenharia e obras, por aditivo)", "construtora", { ph: "razão social" })}{campo("Construtora — CNPJ", "construtoraCnpj")}
       </div>
       <p className="rounded-lg bg-secondary p-2">
         Topografia a receber: locação de <b>{top.unidades} unidades × {brl(num(f.valorLote))} = {brl(top.locacao)}</b>
@@ -112,7 +115,8 @@ function Parametros({ p, qtdCadastrados, onSalvo }: { p: ParametrosGestao; qtdCa
   );
 }
 
-interface Aporte { id: number; numero: number; data: string; valor: number; descricao: string; categoria: CategoriaAporte; favorecido: string; formaPagamento: string; comprovante: string; ressarcidoEm: string | null; valorContratado: number | null; referencia: string; aditivos: number[] }
+interface Aporte { id: number; numero: number; data: string; valor: number; descricao: string; categoria: CategoriaAporte; favorecido: string; formaPagamento: string; comprovante: string; ressarcidoEm: string | null; valorContratado: number | null; referencia: string; aditivos: number[]; anexos: AnexoAporte[] }
+interface AnexoAporte { chave: string; nome: string; mime: string; tipo: TipoAnexoAporte; descricao: string; bytes: number }
 
 function Adiantamentos({ aportes, base, onMudou }: { aportes: Aporte[]; base: string; onMudou: () => void }) {
   const vazio = { data: hoje(), valor: "", descricao: "", categoria: "agrimensura" as CategoriaAporte, formaPagamento: "pix" as (typeof FORMAS_PAGAMENTO_APORTE)[number], favorecido: "", comprovante: "", contratado: "", referencia: "" };
@@ -157,7 +161,8 @@ function Adiantamentos({ aportes, base, onMudou }: { aportes: Aporte[]; base: st
                 <tr key={a.id} className="border-b border-border/60">
                   <td className="py-2">{a.numero}</td><td>{dataBR(a.data)}</td>
                   <td><p>{a.descricao}</p><p className="text-xs text-muted-foreground">{[CATEGORIAS_APORTE[a.categoria], ROTULO_FORMA_APORTE[a.formaPagamento as keyof typeof ROTULO_FORMA_APORTE], a.favorecido,
-                    a.valorContratado ? `contratado ${brl(a.valorContratado)} · saldo ${brl(Math.max(0, a.valorContratado - a.valor))}` : "", a.aditivos.length ? `Aditivo n.º ${a.aditivos.join(", ")}` : "Anexo I"].filter(Boolean).join(" · ")}</p></td>
+                    a.valorContratado ? `contratado ${brl(a.valorContratado)} · saldo ${brl(Math.max(0, a.valorContratado - a.valor))}` : "", a.aditivos.length ? `Aditivo n.º ${a.aditivos.join(", ")}` : "Anexo I"].filter(Boolean).join(" · ")}</p>
+                    <AnexosRecibo aporte={a} onMudou={onMudou} /></td>
                   <td className="pr-4 text-right font-medium">{brl(a.valor)}</td>
                   <td className="pl-2"><label className="inline-flex items-center gap-1.5 text-xs"><input type="checkbox" checked={!!a.ressarcidoEm} onChange={e => ressarcido.mutate({ slug: SLUG, id: a.id, data: e.target.checked ? hoje() : null })} />
                     {a.ressarcidoEm ? dataBR(a.ressarcidoEm) : "não"}</label></td>
@@ -172,6 +177,62 @@ function Adiantamentos({ aportes, base, onMudou }: { aportes: Aporte[]; base: st
         </div>
       )}
     </section>
+  );
+}
+
+const lerBase64 = (arq: File) => new Promise<string>((ok, falha) => {
+  const r = new FileReader();
+  r.onload = () => ok(String(r.result).split(",")[1] ?? "");
+  r.onerror = () => falha(new Error("Não foi possível ler o arquivo"));
+  r.readAsDataURL(arq);
+});
+
+/** Comprovante do pagamento e documento de origem (medição, boletim de horas) anexos ao recibo: saem junto no PDF */
+function AnexosRecibo({ aporte, onMudou }: { aporte: Aporte; onMudou: () => void }) {
+  const [tipo, setTipo] = useState<TipoAnexoAporte>("comprovante");
+  const [descricao, setDescricao] = useState("");
+  const [aberto, setAberto] = useState(false);
+  const erro = (e: { message: string }) => toast.error(e.message);
+  const anexar = trpc.gestao.anexarAporte.useMutation({ onSuccess: () => { toast.success("Anexo incluído no recibo"); setDescricao(""); setAberto(false); onMudou(); }, onError: erro });
+  const remover = trpc.gestao.removerAnexoAporte.useMutation({ onSuccess: onMudou, onError: erro });
+  const enviar = async (arq: File | undefined) => {
+    if (!arq) return;
+    const mime = arq.type === "image/jpg" ? "image/jpeg" : arq.type;
+    if (!["application/pdf", "image/png", "image/jpeg"].includes(mime)) return toast.error("Envie PDF, PNG ou JPG.");
+    if (arq.size > MAX_BYTES_ANEXO_APORTE) return toast.error("Arquivo maior que 10 MB.");
+    try {
+      anexar.mutate({ slug: SLUG, id: aporte.id, anexo: { tipo, nome: arq.name.slice(0, 160), mime: mime as "application/pdf" | "image/png" | "image/jpeg", conteudoBase64: await lerBase64(arq), descricao } });
+    } catch (e) { erro(e as Error); }
+  };
+  return (
+    <div className="mt-1 space-y-1">
+      {aporte.anexos.map((x, i) => (
+        <p key={x.chave} className="flex items-center gap-1 text-xs text-muted-foreground">
+          <Paperclip className="h-3 w-3 shrink-0" aria-hidden />
+          <span>Anexo {i + 1}: {TIPOS_ANEXO_APORTE[x.tipo]}{x.descricao ? ` — ${x.descricao}` : ""} ({x.nome})</span>
+          <button type="button" className="rounded p-0.5 hover:text-danger-400 focus-visible:outline focus-visible:outline-2" aria-label={`Retirar o anexo ${x.nome}`}
+            onClick={() => { if (confirm(`Retirar "${x.nome}" do recibo?`)) remover.mutate({ slug: SLUG, id: aporte.id, chave: x.chave }); }}><X className="h-3 w-3" /></button>
+        </p>
+      ))}
+      {!aberto ? (
+        <button type="button" className="inline-flex items-center gap-1 text-xs text-primary underline-offset-2 hover:underline focus-visible:outline focus-visible:outline-2" onClick={() => setAberto(true)}>
+          <Paperclip className="h-3 w-3" aria-hidden /> Anexar comprovante ou medição
+        </button>
+      ) : (
+        <div className="flex flex-wrap items-center gap-2 rounded-md border border-border p-2">
+          <select aria-label="Tipo do anexo" className="h-8 rounded-md border border-border bg-background px-2 text-xs" value={tipo} onChange={e => setTipo(e.target.value as TipoAnexoAporte)}>
+            {(Object.keys(TIPOS_ANEXO_APORTE) as TipoAnexoAporte[]).map(t => <option key={t} value={t}>{TIPOS_ANEXO_APORTE[t]}</option>)}
+          </select>
+          <Input aria-label="Descrição do anexo" className="h-8 w-56 text-xs" value={descricao} onChange={e => setDescricao(e.target.value)} maxLength={200}
+            placeholder={tipo === "comprovante" ? "ex.: PIX C6 Bank de 10/11, 13:03" : "ex.: boletim de horas da máquina"} />
+          <label className="inline-flex cursor-pointer items-center gap-1 rounded-md border border-border px-2 py-1 text-xs hover:bg-muted focus-within:outline focus-within:outline-2">
+            {anexar.isPending ? <Loader2 className="h-3 w-3 animate-spin" /> : <FilePlus2 className="h-3 w-3" />} Escolher arquivo (PDF, PNG, JPG)
+            <input type="file" className="sr-only" accept="application/pdf,image/png,image/jpeg" disabled={anexar.isPending} onChange={e => { void enviar(e.target.files?.[0]); e.target.value = ""; }} />
+          </label>
+          <button type="button" className="text-xs text-muted-foreground hover:underline" onClick={() => setAberto(false)}>cancelar</button>
+        </div>
+      )}
+    </div>
   );
 }
 

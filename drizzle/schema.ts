@@ -2257,6 +2257,8 @@ export const gestaoAportes = mysqlTable("gestaoAportes", {
   valorContratado: decimal("valorContratado", { precision: 14, scale: 2 }),
   /** Documento de origem (orçamento, medição, proposta) */
   referencia: varchar("referencia", { length: 300 }),
+  /** Arquivos anexos ao recibo (comprovante de pagamento, medição): [{ chave, nome, mime, tipo, bytes }] em contratoArquivos */
+  anexosJson: text("anexosJson"),
   ressarcidoEm: varchar("ressarcidoEm", { length: 10 }),
   criadoPor: int("criadoPor"),
   criadoEm: timestamp("criadoEm").defaultNow().notNull(),

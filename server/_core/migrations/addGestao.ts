@@ -24,7 +24,7 @@ export async function addGestao(): Promise<void> {
     try { await (db as any).execute(sql.raw(stmt)); }
     catch (e: any) { console.warn(`[Migration] addGestao (${nome}):`, e?.message); }
   }
-  for (const [c, tipo] of [['valorContratado', 'DECIMAL(14,2) NULL'], ['referencia', 'VARCHAR(300) NULL']]) {
+  for (const [c, tipo] of [['valorContratado', 'DECIMAL(14,2) NULL'], ['referencia', 'VARCHAR(300) NULL'], ['anexosJson', 'TEXT NULL']]) {
     try { await (db as any).execute(sql.raw(`ALTER TABLE gestaoAportes ADD COLUMN ${c} ${tipo}`)); }
     catch (e: any) { if (!/Duplicate column/i.test(e?.message ?? '') && (e?.code ?? e?.cause?.code) !== 'ER_DUP_FIELDNAME') console.warn(`[Migration] addGestao (gestaoAportes.${c}):`, e?.message); }
   }

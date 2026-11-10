@@ -3,7 +3,7 @@ import { z } from "zod";
 import { TRPCError } from "@trpc/server";
 import { protectedProcedure, router } from "../_core/trpc";
 import { perfilDe } from "../../shared/equipe";
-import { aditivoGestaoSchema, aporteSchema, parametrosSchema } from "../../shared/gestao";
+import { aditivoGestaoSchema, anexoAporteSchema, aporteSchema, parametrosSchema } from "../../shared/gestao";
 
 const G = () => import("../gestao/servico");
 function exigirAdmin(ctx: any) {
@@ -45,6 +45,10 @@ export const gestaoRouter = router({
   }),
   excluirAditivo: protectedProcedure.input(z.object({ slug: slugZ, id: z.number().int().positive() }))
     .mutation(async ({ ctx, input }) => { exigirAdmin(ctx); return rodar(async () => (await G()).excluirAditivoGestao(input.slug, input.id)); }),
+  anexarAporte: protectedProcedure.input(z.object({ slug: slugZ, id: z.number().int().positive(), anexo: anexoAporteSchema }))
+    .mutation(async ({ ctx, input }) => { exigirAdmin(ctx); return rodar(async () => (await G()).anexarAporte(input.slug, input.id, input.anexo)); }),
+  removerAnexoAporte: protectedProcedure.input(z.object({ slug: slugZ, id: z.number().int().positive(), chave: z.string().min(1).max(300) }))
+    .mutation(async ({ ctx, input }) => { exigirAdmin(ctx); return rodar(async () => (await G()).removerAnexoAporte(input.slug, input.id, input.chave)); }),
   excluirAporte: protectedProcedure.input(z.object({ slug: slugZ, id: z.number().int().positive() }))
     .mutation(async ({ ctx, input }) => { exigirAdmin(ctx); return rodar(async () => (await G()).excluirAporte(input.slug, input.id)); }),
 });

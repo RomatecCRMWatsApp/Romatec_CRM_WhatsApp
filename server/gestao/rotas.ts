@@ -27,9 +27,7 @@ export function registrarRotasGestao(app: Express) {
       const g = await dadosContrato(slug);
       const blocos = C.blocosContrato(g);
       const nome = `Contrato-de-Gestao-${g.numero}.${formato}`;
-      const arq = formato === 'pdf'
-        ? await C.blocosParaPdf(blocos, `Contrato de Gestão ${g.numero} — ${g.empreendimento.nome}`, `Contrato de Gestão n.º ${g.numero} · documento interno`)
-        : C.blocosParaDocx(blocos);
+      const arq = formato === 'pdf' ? await (await import('./documentos')).pdfContrato(g) : C.blocosParaDocx(blocos);
       const { auditar } = await import('../financeiro/servico');
       await auditar('contrato_gestao_' + formato, { usuarioId: user.id, origem: 'perfil', ip: req.ip }).catch(() => {});
       res.setHeader('Content-Type', formato === 'pdf' ? 'application/pdf' : 'application/vnd.openxmlformats-officedocument.wordprocessingml.document');
@@ -79,11 +77,10 @@ export function registrarRotasGestao(app: Express) {
       const id = Number(req.params.id);
       if (!slugOk(slug) || !Number.isInteger(id) || id <= 0) return res.status(404).send('Não encontrado');
       const { dadosContrato } = await import('./servico');
-      const C = await import('./contrato');
       const g = await dadosContrato(slug);
       const a = g.aportes.find(x => x.id === id);
       if (!a) return res.status(404).send('Adiantamento não encontrado');
-      const pdf = await C.blocosParaPdf(C.blocosRecibo(g, a), `Recibo de Adiantamento ${a.numero} — ${g.numero}`, `Recibo de Adiantamento n.º ${a.numero} · Contrato de Gestão n.º ${g.numero}`);
+      const pdf = await (await import('./documentos')).pdfRecibo(g, a);
       res.setHeader('Content-Type', 'application/pdf');
       res.setHeader('Content-Disposition', `inline; filename="Recibo-Adiantamento-${String(a.numero).padStart(3, '0')}-${g.numero}.pdf"`);
       res.setHeader('Cache-Control', 'private, no-store');

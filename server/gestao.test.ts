@@ -175,6 +175,47 @@ describe('Motor de aditivos', () => {
     expect(texto(C.blocosAditivoGestao(g, g.aditivos[0]))).toMatch(/001\/2026/);
   });
 
+  it('engenharia, legalização e obras civis ficam fora da gestão e da agrimensura, fixadas por aditivo antes de cada frente; arquitetura e locação entram na agrimensura', async () => {
+    await G.salvarParametros('bom-jardims', { ...PARAMETROS_PADRAO, construtoraNome: 'CONSTRUTORA FICTICIA LTDA', construtoraCnpj: '11.222.333/0001-81' }, 1);
+    const t = texto(C.blocosContrato(await G.dadosContrato('bom-jardims')));
+    expect(t).toMatch(/CLÁUSULA 4ª-A — DOS SERVIÇOS DE ENGENHARIA E DAS OBRAS CIVIS/);
+    expect(t).toMatch(/Não estão compreendidos na remuneração da Cláusula 3ª nem nos valores da Cláusula 4ª, e serão contratados e cobrados à parte/);
+    expect(t).toMatch(/projetos de engenharia e de legalização.*terraplenagem, drenagem pluvial/);
+    expect(t).toMatch(/acompanhamento técnico e a fiscalização de engenharia da terraplenagem, do aterro e do empiçarramento do arruamento, da drenagem, das obras elétricas e das obras do poço/);
+    expect(t).toMatch(/stand de vendas, o portal de entrada/);
+    expect(t).toMatch(/construtora da GESTORA, CONSTRUTORA FICTICIA LTDA, CNPJ 11\.222\.333\/0001-81/);
+    expect(t).toMatch(/fixados em termo aditivo próprio, firmado antes do seu início/);
+    expect(t).toMatch(/preço global, por preço unitário apurado em boletim de medição, ou por administração/);
+    expect(t).toMatch(/4\.8\. Estão incluídos nos valores da Cláusula 4\.4, sem acréscimo, os serviços de arquitetura e de locação/);
+    expect(t).toMatch(/\(b\) fixar, antes do início de cada frente, o escopo, os valores/);
+    expect(t).toMatch(/sem incluir o acompanhamento técnico de engenharia nem a execução de obras/);
+  });
+
+  it('comprovante e medição anexos ao recibo: tipo validado, saem no PDF do recibo e no fim do contrato, com a tarja do recibo', async () => {
+    await G.criarAporte('bom-jardims', { data: '2026-11-10', valor: 13000, descricao: 'locação de trator de esteira', categoria: 'obras', formaPagamento: 'pix', favorecido: '', comprovante: '', valorContratado: 25245, referencia: 'medição' }, 1);
+    const [a] = (await G.dadosContrato('bom-jardims')).aportes;
+    const png = Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==', 'base64');
+    const med = await PDFDocument.create(); med.addPage([400, 300]); med.addPage([400, 300]);
+    const medBuf = Buffer.from(await med.save());
+    await expect(G.anexarAporte('bom-jardims', a.id, { tipo: 'comprovante', nome: 'falso.png', mime: 'image/png', conteudoBase64: Buffer.from('nao e imagem').toString('base64'), descricao: '' })).rejects.toMatchObject({ status: 400 });
+    await G.anexarAporte('bom-jardims', a.id, { tipo: 'origem', nome: 'medicao.pdf', mime: 'application/pdf', conteudoBase64: medBuf.toString('base64'), descricao: 'boletim de horas da máquina' });
+    await G.anexarAporte('bom-jardims', a.id, { tipo: 'comprovante', nome: 'pix.png', mime: 'image/png', conteudoBase64: png.toString('base64'), descricao: 'PIX de 10/11' });
+    const g = await G.dadosContrato('bom-jardims');
+    expect(g.aportes[0].anexos.map(x => x.nome)).toEqual(['medicao.pdf', 'pix.png']);
+    expect(texto(C.blocosRecibo(g, g.aportes[0]))).toMatch(/Anexos deste recibo, dele inseparáveis: \(1\) Comprovante de pagamento — PIX de 10\/11; \(2\) Documento de origem — boletim de horas da máquina/);
+    const D = await import('./gestao/documentos');
+    const so = await PDFDocument.load(await C.blocosParaPdf(C.blocosRecibo(g, g.aportes[0]), 't', 'r'));
+    const rec = await PDFDocument.load(await D.pdfRecibo(g, g.aportes[0]));
+    expect(rec.getPageCount()).toBe(so.getPageCount() + 3);
+    const ctr = await PDFDocument.load(await D.pdfContrato(g));
+    const ctrSo = await PDFDocument.load(await C.blocosParaPdf(C.blocosContrato(g), 't', 'r'));
+    expect(ctr.getPageCount()).toBe(ctrSo.getPageCount() + 3);
+    expect(texto(C.blocosContrato(g))).toMatch(/comprovantes de pagamento e os documentos de origem de cada recibo seguem ao final/);
+    await G.removerAnexoAporte('bom-jardims', a.id, g.aportes[0].anexos[0].chave);
+    expect((await G.dadosContrato('bom-jardims')).aportes[0].anexos.map(x => x.nome)).toEqual(['pix.png']);
+    await expect(G.removerAnexoAporte('bom-jardims', a.id, 'inexistente')).rejects.toMatchObject({ status: 404 });
+  });
+
   it('aditivo livre ao CPCV: valida objeto, texto e contrato', async () => {
     const L = await import('./aditivos/cpcv');
     await expect(L.criarAditivoLivre(1, { objeto: 'abc', texto: 'x y' }, 1)).rejects.toThrow(/objeto/);
