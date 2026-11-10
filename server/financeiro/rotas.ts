@@ -142,31 +142,57 @@ export function registrarRotasFinanceiro(app: Express) {
     await enviarCondicoes(res, slug, corretorId);
   });
 
-  // Tabela de comissão em PDF (corretor 2% ou escritório 5%) — mesmas regras de quem vê da tela (shared/tabelaComissao.ts)
+  // Tabela de comissão em PDF (corretor 2% ou escritório 5%) — mesmas regras de quem vê da tela (shared/tabelaComissao.ts).
+  // ?baixar=1 baixa o arquivo; sem ele, abre no navegador.
+  const enviarTabelaComissao = async (req: Request, res: Response, user: any, slug: string, tipo: 'corretor' | 'escritorio', lote: string | undefined) => {
+    const { carregarPermissoes } = await import('../permissoes');
+    const { dadosTabelaComissao, TabelaComissaoErro } = await import('./tabelaComissao');
+    const dados = await dadosTabelaComissao(slug, tipo, lote, await carregarPermissoes(user)).catch((e: any) => {
+      if (e instanceof TabelaComissaoErro) { res.status(e.status).send(e.message); return null; }
+      throw e;
+    });
+    if (!dados) return;
+    const { pdfTabelaComissao } = await import('./tabelaComissaoPdf');
+    const pdf = await pdfTabelaComissao(dados);
+    const { nomeArquivoTabelaComissao } = await import('./tabelaComissaoLink');
+    res.setHeader('Content-Type', 'application/pdf');
+    res.setHeader('Cache-Control', 'private, no-store');
+    res.setHeader('X-Robots-Tag', 'noindex');
+    res.setHeader('Content-Disposition', `${req.query.baixar === '1' ? 'attachment' : 'inline'}; filename="${nomeArquivoTabelaComissao(slug, tipo, dados.exemplo?.codigo)}"`);
+    res.send(pdf);
+  };
+  const pedidoTabela = (q: Request['query']) => ({
+    slug: typeof q.slug === 'string' && /^[a-z0-9-]{1,80}$/.test(q.slug) ? q.slug : '',
+    tipo: (q.tipo === 'escritorio' ? 'escritorio' : 'corretor') as 'corretor' | 'escritorio',
+    lote: typeof q.lote === 'string' && /^[A-Za-z0-9]{1,10}$/.test(q.lote) ? q.lote : undefined,
+  });
   app.get('/api/comissao/tabela.pdf', async (req: Request, res: Response) => {
     try {
       const { sdk } = await import('../_core/sdk');
       const user: any = await sdk.authenticateRequest(req).catch(() => null);
       if (!user || user.ativo === false || user.ativo === 0) return res.status(401).send('Faça login');
-      const slug = typeof req.query.slug === 'string' && /^[a-z0-9-]{1,80}$/.test(req.query.slug) ? req.query.slug : '';
-      if (!slug) return res.status(400).send('Empreendimento inválido');
-      const tipo = req.query.tipo === 'escritorio' ? 'escritorio' : 'corretor';
-      const lote = typeof req.query.lote === 'string' && /^[A-Za-z0-9]{1,10}$/.test(req.query.lote) ? req.query.lote : undefined;
-      const { carregarPermissoes } = await import('../permissoes');
-      const { dadosTabelaComissao, TabelaComissaoErro } = await import('./tabelaComissao');
-      const dados = await dadosTabelaComissao(slug, tipo, lote, await carregarPermissoes(user)).catch((e: any) => {
-        if (e instanceof TabelaComissaoErro) { res.status(e.status).send(e.message); return null; }
-        throw e;
-      });
-      if (!dados) return;
-      const { pdfTabelaComissao } = await import('./tabelaComissaoPdf');
-      const pdf = await pdfTabelaComissao(dados);
-      res.setHeader('Content-Type', 'application/pdf');
-      res.setHeader('Cache-Control', 'no-store');
-      res.setHeader('Content-Disposition', `inline; filename="TABELA-COMISSAO-${tipo === 'corretor' ? 'VENDA' : 'GESTAO'}-${slug.toUpperCase()}.pdf"`);
-      res.send(pdf);
+      const p = pedidoTabela(req.query);
+      if (!p.slug) return res.status(400).send('Empreendimento inválido');
+      await enviarTabelaComissao(req, res, user, p.slug, p.tipo, p.lote);
     } catch (e) {
       console.error('[Comissão] tabela PDF:', e);
+      res.status(500).send('Falha ao gerar a tabela de comissão');
+    }
+  });
+  // Link assinado (30 dias) para quem recebe por WhatsApp abrir sem login: gera com as permissões de quem compartilhou,
+  // e para de abrir se essa pessoa for desativada ou perder o acesso
+  app.get('/api/public/comissao/tabela.pdf', async (req: Request, res: Response) => {
+    try {
+      const { lerLinkTabelaComissao } = await import('./tabelaComissaoLink');
+      const l = lerLinkTabelaComissao(req.query);
+      if (!l) return res.status(410).send('Link expirado ou inválido. Peça um novo link a quem enviou.');
+      const d: any = await getDb();
+      const { users } = await import('../../drizzle/schema');
+      const [user]: any[] = d ? await d.select().from(users).where(eq(users.id, l.usuarioId)).limit(1) : [];
+      if (!user || user.ativo === false || user.ativo === 0) return res.status(410).send('Link expirado ou inválido. Peça um novo link a quem enviou.');
+      await enviarTabelaComissao(req, res, user, l.slug, l.tipo, l.lote);
+    } catch (e) {
+      console.error('[Comissão] tabela PDF (link):', e);
       res.status(500).send('Falha ao gerar a tabela de comissão');
     }
   });

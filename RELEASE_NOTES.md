@@ -3,6 +3,20 @@
 Cada versão nova vai no TOPO. Depois rode `npm run release` (valida e atualiza o package.json);
 ao subir, o servidor grava a versão no banco e todos recebem o aviso "Novidades da versão".
 
+## 1.150.0 — 2026-11-10
+tipo: minor
+obrigatoria: nao
+titulo: Tabela de comissão: baixar, enviar pelo WhatsApp e copiar o link
+publico: equipe
+
+### Novo
+- O PDF da tabela de comissão (aba Comissões do empreendimento) ganha os botões Abrir, Baixar, WhatsApp, Copiar link e Compartilhar. "Compartilhar", no celular, manda o próprio arquivo pelo WhatsApp, e-mail etc.
+- WhatsApp e Copiar link usam um link seguro, válido por 30 dias, que abre o PDF sem login: dá para mandar ao empreendedor ou a quem não tem acesso ao sistema. O PDF sai como na tela de quem enviou e o link para de abrir se essa pessoa for desativada
+- Administrador: opção de enviar o PDF pelo WhatsApp do sistema, informando o número
+
+### Correções
+- "Baixar" agora baixa o arquivo; antes só abria o PDF no navegador
+
 ## 1.149.4 — 2026-11-10
 tipo: patch
 obrigatoria: nao

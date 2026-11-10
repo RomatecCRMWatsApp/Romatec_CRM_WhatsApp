@@ -52,6 +52,22 @@ export const comissoesRouter = router({
     return comErroRepasse(() => R.desfazerRepasse(ctx.permissoes, input));
   }),
 
+  /** Link público (30 dias) da tabela em PDF para enviar por WhatsApp: só sai se a pessoa pode ver essa tabela */
+  linkTabela: protectedProcedure.input(z.object({
+    slug: z.string().regex(/^[a-z0-9-]{1,80}$/), lote: z.string().trim().regex(/^[A-Za-z0-9]{1,10}$/).optional(), tipo: z.enum(["corretor", "escritorio"]).default("corretor"),
+  })).mutation(async ({ input, ctx }) => {
+    const { dadosTabelaComissao, TabelaComissaoErro } = await import("../financeiro/tabelaComissao");
+    const L = await import("../financeiro/tabelaComissaoLink");
+    try {
+      const d = await dadosTabelaComissao(input.slug, input.tipo, input.lote, ctx.permissoes);
+      const lote = input.lote ?? d.exemplo?.codigo ?? undefined;
+      return { caminho: L.linkTabelaComissao({ slug: input.slug, tipo: input.tipo, lote, usuarioId: ctx.user.id }), validadeDias: L.VALIDADE_LINK_TABELA_DIAS, nomeArquivo: L.nomeArquivoTabelaComissao(input.slug, input.tipo, lote) };
+    } catch (e: any) {
+      if (e instanceof TabelaComissaoErro) throw new TRPCError({ code: e.status === 403 ? "FORBIDDEN" : e.status === 404 ? "NOT_FOUND" : e.status === 412 ? "PRECONDITION_FAILED" : "INTERNAL_SERVER_ERROR", message: e.message });
+      throw e;
+    }
+  }),
+
   tabela: protectedProcedure.input(z.object({
     slug: z.string().max(80), lote: z.string().trim().max(10).optional(), tipo: z.enum(["corretor", "escritorio"]).default("corretor"),
   })).query(async ({ input, ctx }) => {

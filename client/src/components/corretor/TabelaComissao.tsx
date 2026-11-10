@@ -1,6 +1,6 @@
 import { useState } from "react";
-import { FileDown, Loader2 } from "lucide-react";
-import { Button } from "@/components/ui/button";
+import { Loader2 } from "lucide-react";
+import { AcoesPdf } from "@/components/sistema/AcoesPdf";
 import { trpc } from "@/lib/trpc";
 import { brl } from "@shared/simulador";
 import { GESTOR_EMPREENDIMENTO } from "@shared/escritorio";
@@ -17,6 +17,7 @@ const area = (m2: number) => `${m2.toLocaleString("pt-BR", { maximumFractionDigi
 export function TabelaComissao({ slug, tipo = "corretor" }: { slug: string; tipo?: "corretor" | "escritorio" }) {
   const [lote, setLote] = useState<string | undefined>(undefined);
   const { data, isLoading, error } = trpc.comissoes.tabela.useQuery({ slug, lote, tipo }, { placeholderData: prev => prev });
+  const link = trpc.comissoes.linkTabela.useMutation();
   const quem = tipo === "corretor" ? "Comissão de venda" : "Comissão de gestão";
   if (isLoading && !data) return <p className="flex items-center gap-2 text-xs text-muted-foreground"><Loader2 className="h-3.5 w-3.5 animate-spin" /> Carregando a tabela…</p>;
   if (error) return <p className="text-xs text-destructive">{error.message}</p>;
@@ -43,13 +44,14 @@ export function TabelaComissao({ slug, tipo = "corretor" }: { slug: string; tipo
           {data.chacaras.map(c => <option key={c.codigo} value={c.codigo}>{c.codigo} · {area(c.areaM2)} · {brl(c.preco)}</option>)}
         </select>
       </label>
-      <div className="flex flex-wrap items-center justify-between gap-2">
+      <div className="space-y-2">
         <p className="text-xs text-muted-foreground">Preço de tabela {brl(ex.preco)} · à vista {brl(ex.avista)}</p>
-        <Button asChild size="sm" variant="outline">
-          <a href={`/api/comissao/tabela.pdf?slug=${encodeURIComponent(slug)}&tipo=${tipo}&lote=${encodeURIComponent(ex.codigo)}`} target="_blank" rel="noopener noreferrer">
-            <FileDown className="mr-1 h-3.5 w-3.5" /> Baixar PDF
-          </a>
-        </Button>
+        <AcoesPdf
+          url={`/api/comissao/tabela.pdf?slug=${encodeURIComponent(slug)}&tipo=${tipo}&lote=${encodeURIComponent(ex.codigo)}`}
+          nomeArquivo={`TABELA-COMISSAO-${tipo === "corretor" ? "VENDA" : "GESTAO"}-${slug.toUpperCase()}-${ex.codigo.toUpperCase()}.pdf`}
+          linkPublico={() => link.mutateAsync({ slug, tipo, lote: ex.codigo })}
+          mensagem={`${TITULO_TABELA_COMISSAO[tipo] ?? "Tabela de comissão"} — ${data.empreendimento?.nome ?? ""}, chácara ${ex.codigo}`}
+        />
       </div>
 
       <ol className="space-y-2">
