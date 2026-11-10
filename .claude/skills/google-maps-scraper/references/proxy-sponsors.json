@@ -1,0 +1,31 @@
+[
+  {
+    "id": "rapidproxy",
+    "name": "RapidProxy",
+    "description": "Residential proxy provider supporting the Google Maps Scraper project.",
+    "referral_url": "https://www.rapidproxy.io/?ref=gosom",
+    "active": true
+  },
+  {
+    "id": "webshare",
+    "name": "Webshare",
+    "description": "Proxy provider with HTTP and SOCKS5 support.",
+    "referral_url": "https://www.webshare.io/?referral_code=0q3l81eet8mp",
+    "active": true
+  },
+  {
+    "id": "nodemaven",
+    "name": "NodeMaven",
+    "description": "The most efficient proxy provider for Web Scraping and Automation with the Highest Quality IP on the market.",
+    "referral_url": "https://go.nodemaven.com/GoogleMapsScrapperoctober",
+    "offer": "Use MAPS2X for 2X traffic for Black Friday, MAPS35 for 35% off to Mobile and Residential Proxies, or MAPS40 for 40% off to ISP (Static) Proxies.",
+    "active": true
+  },
+  {
+    "id": "evomi",
+    "name": "Evomi",
+    "description": "Swiss residential proxy provider supporting the project.",
+    "referral_url": "https://evomi.com?utm_source=github&utm_medium=banner&utm_campaign=gosom-maps",
+    "active": true
+  }
+]
