@@ -95,7 +95,7 @@ export function podeAbrir(perfil: Perfil | null, caminho: string): boolean {
   if (caminho === '/financeiro/painel') return perfil === 'secretario';
   // Controle de acessos dos corretores (ativo, pago, usando o sistema): administrador e secretária
   if (caminho === '/controle-acessos') return perfil === 'secretario';
-  if (caminho === '/saas' || caminho === '/integracoes') return false;
+  if (caminho === '/saas' || caminho === '/integracoes' || caminho === '/contrato-gestao') return false;
   // Fila de reservas do escritório: administrador e secretária
   if (caminho === '/reservas' || caminho === '/portal-comprador' || caminho === '/imobiliarias-parceiras' || caminho === '/prospeccao' || caminho === '/tour-360') return perfil === 'secretario';
   // Respostas automáticas no WhatsApp (robô por empreendimento): administrador e secretária

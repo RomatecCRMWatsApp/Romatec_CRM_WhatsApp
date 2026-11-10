@@ -2215,6 +2215,32 @@ export const tours360 = mysqlTable("tours360", {
 }));
 
 /** Registro do contrato no Cartório de Registro de Imóveis (server/cartorio.ts): protocolo, prazo, exigências, matrícula */
+/** Contrato de Gestão do empreendimento (EMPREENDEDORA × GESTORA): parâmetros editáveis — shared/gestao.ts */
+export const gestaoContratos = mysqlTable("gestaoContratos", {
+  empreendimentoId: int("empreendimentoId").primaryKey(),
+  numero: varchar("numero", { length: 20 }).notNull(),
+  parametrosJson: text("parametrosJson").notNull(),
+  atualizadoPor: int("atualizadoPor"),
+  atualizadoEm: timestamp("atualizadoEm").defaultNow().notNull(),
+});
+
+/** Adiantamentos pagos pela GESTORA com recursos próprios (cada um gera um Recibo de Adiantamento no Anexo I) */
+export const gestaoAportes = mysqlTable("gestaoAportes", {
+  id: int("id").autoincrement().primaryKey(),
+  empreendimentoId: int("empreendimentoId").notNull(),
+  numero: int("numero").notNull(),
+  data: varchar("data", { length: 10 }).notNull(),
+  valor: decimal("valor", { precision: 14, scale: 2 }).notNull(),
+  descricao: varchar("descricao", { length: 500 }).notNull(),
+  categoria: varchar("categoria", { length: 20 }).notNull(),
+  favorecido: varchar("favorecido", { length: 200 }),
+  formaPagamento: varchar("formaPagamento", { length: 20 }).notNull(),
+  comprovante: varchar("comprovante", { length: 200 }),
+  ressarcidoEm: varchar("ressarcidoEm", { length: 10 }),
+  criadoPor: int("criadoPor"),
+  criadoEm: timestamp("criadoEm").defaultNow().notNull(),
+}, (t) => ({ ixEmp: index("ix_aporte_emp").on(t.empreendimentoId) }));
+
 export const registrosCartorio = mysqlTable("registrosCartorio", {
   contratoId: int("contratoId").primaryKey(),
   /** preparando | protocolado | exigencia | registrado | devolvido */

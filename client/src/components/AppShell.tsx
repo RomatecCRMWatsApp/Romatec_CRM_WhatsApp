@@ -9,7 +9,7 @@ import { MobileTabBar, RomatecAppIcon, RomatecLockup, TAB_ICONS, type TabItem } 
 import BuscaGlobal, { JanelaBusca, type TelaBusca } from "@/components/BuscaGlobal";
 import {
   BarChart3, Building2, Flame, Images, KanbanSquare, LayoutDashboard, LineChart, LogOut, Megaphone, Menu, Send,
-  Settings, UserCog, Users, X, Eye, ClipboardList, CalendarDays, Map as MapIcon, Smartphone, Wallet, IdCard, FolderOpen, Bell, FileSignature, Mic, CalendarCheck, UserPlus, BookCopy, BadgeDollarSign, Hourglass, Bot, Trophy, Link2, Zap, MessagesSquare, ListOrdered, Plug, Inbox, Building, Rotate3d,
+  Settings, UserCog, Users, X, Eye, ClipboardList, CalendarDays, Map as MapIcon, Smartphone, Wallet, IdCard, FolderOpen, Bell, FileSignature, Handshake, Mic, CalendarCheck, UserPlus, BookCopy, BadgeDollarSign, Hourglass, Bot, Trophy, Link2, Zap, MessagesSquare, ListOrdered, Plug, Inbox, Building, Rotate3d,
   ChevronRight, ChevronsLeft, ChevronsRight,
   Radar, BookOpen,
  Shuffle, CheckCheck, ShieldCheck, Search,
@@ -67,6 +67,8 @@ const MENU: Grupo[] = [
     itens: [
       { rotulo: "Empreendimentos", rota: "/empreendimentos", icone: MapIcon, modulo: "empreendimentos" },
       { rotulo: "Contratos", rota: "/contratos", icone: FileSignature, modulo: "contratos" },
+      // Só o administrador (shared/equipe.ts → podeAbrir): contrato interno proprietária × Romatec
+      { rotulo: "Contrato de gestão", rota: "/contrato-gestao", icone: Handshake },
       { rotulo: "Ranking de vendas", rota: "/ranking", icone: Trophy },
       // Administrador e secretária (shared/equipe.ts → podeAbrir)
       { rotulo: "Fila de reservas", rota: "/reservas", icone: Hourglass },

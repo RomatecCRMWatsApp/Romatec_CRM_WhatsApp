@@ -153,6 +153,37 @@ export async function escritor(titulo: string, marca: string, rodapeDoc: string)
     y -= 26;
   };
 
+  /** Nova página (anexos) */
+  const quebra = () => nova();
+
+  /** Tabela simples: cabeçalho verde, linhas alternadas, larguras proporcionais; repete o cabeçalho na quebra de página */
+  const tabela = (cab: string[], linhasT: string[][], o: { pesos?: number[]; direita?: number[]; size?: number } = {}) => {
+    const size = o.size ?? 8.6, lh = size * 1.75;
+    const pesos = o.pesos ?? cab.map(() => 1);
+    const soma = pesos.reduce((a, b) => a + b, 0);
+    const larg = pesos.map(w => (w / soma) * LARG);
+    const celula = (t: string, i: number, x: number, fonte: typeof f, cor = rgb(0.08, 0.08, 0.08)) => {
+      let tx = t;
+      while (tx.length > 1 && fonte.widthOfTextAtSize(tx, size) > larg[i] - 8) tx = tx.slice(0, -2) + '…';
+      const w = fonte.widthOfTextAtSize(tx, size);
+      p.drawText(tx, { x: o.direita?.includes(i) ? x + larg[i] - 4 - w : x + 4, y: y - size - 2, size, font: fonte, color: cor });
+    };
+    const cabecalhoT = () => {
+      garantir(lh * 2);
+      p.drawRectangle({ x: X0, y: y - lh, width: LARG, height: lh, color: VERDE });
+      let x = X0; cab.forEach((t, i) => { celula(t, i, x, fb, rgb(1, 1, 1)); x += larg[i]; });
+      y -= lh;
+    };
+    cabecalhoT();
+    linhasT.forEach((l, k) => {
+      if (y - lh < base) { nova(); cabecalhoT(); }
+      if (k % 2 === 1) p.drawRectangle({ x: X0, y: y - lh, width: LARG, height: lh, color: rgb(0.95, 0.94, 0.9) });
+      let x = X0; l.forEach((t, i) => { celula(t, i, x, /^TOTAL/.test(l[0]) ? fb : f); x += larg[i]; });
+      y -= lh;
+    });
+    y -= 8;
+  };
+
   const salvar = async () => {
     paginas.forEach((pg, i) => {
       const t = `${rodapeDoc} · Página ${i + 1} de ${paginas.length}`;
@@ -160,7 +191,7 @@ export async function escritor(titulo: string, marca: string, rodapeDoc: string)
     });
     return Buffer.from(await doc.save({ useObjectStreams: false }));
   };
-  return { paragrafo, clausula, cabecalho, assinaturas, faixa, salvar, espaco: (h: number) => { y -= h; } };
+  return { paragrafo, clausula, cabecalho, assinaturas, faixa, salvar, quebra, tabela, espaco: (h: number) => { y -= h; } };
 }
 
 const qualificacaoComprador = (c: Ctx) => [

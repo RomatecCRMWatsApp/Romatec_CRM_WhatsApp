@@ -3,6 +3,21 @@
 Cada versão nova vai no TOPO. Depois rode `npm run release` (valida e atualiza o package.json);
 ao subir, o servidor grava a versão no banco e todos recebem o aviso "Novidades da versão".
 
+## 1.147.0 — 2026-11-10
+tipo: minor
+obrigatoria: nao
+titulo: Contrato de gestão do empreendimento (proprietária × Romatec) com recibos de adiantamento
+publico: admin
+
+### Novo
+- Vendas › Contrato de gestão (só o administrador): contrato de prestação de serviços de gestão integral entre a proprietária e a J R P Bezerra Ltda (Romatec), gerado com a qualificação completa cadastrada no jurídico
+- Remuneração da gestão de 5% sobre todas as alienações, em qualquer modalidade (venda pela Romatec, por corretor ou imobiliária parceira, venda direta da proprietária, concessão, permuta, dação e venda em bloco); a corretagem do parceiro sai desses 5%
+- Serviços de agrimensura e topografia: R$ 800,00 por lote (85 lotes = R$ 68.000,00), com locação individual dos lotes, marcos, pontos de locação do rio e da área de vivência, memoriais e TRT; ruas já locadas
+- Adiantamentos com recursos próprios da Romatec: cada lançamento gera um Recibo de Adiantamento numerado (Anexo I), ressarcido com os recebimentos do empreendimento, com controle de ressarcido / a ressarcir
+- Promessa de transferência do imóvel à Romatec (ou incorporadora indicada), com direito de preferência até a escritura definitiva
+- Download em PDF (com a marca do empreendimento) e em Word (.docx editável); recibo avulso em PDF
+- Condições editáveis na tela: percentuais, valor por lote, quantidade de lotes, retenção, prazo, multa, data e testemunhas
+
 ## 1.146.0 — 2026-11-10
 tipo: minor
 obrigatoria: nao

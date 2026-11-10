@@ -593,6 +593,9 @@ async function startServer() {
   // Kit do Parceiro (PDF personalizado: parceira, prospecto, corretor)
   const { registrarRotaKit } = await import('../kitParceiro');
   registrarRotaKit(app);
+  // Contrato de Gestão (EMPREENDEDORA × GESTORA): PDF, Word e recibos — só o administrador
+  const { registrarRotasGestao } = await import('../gestao/rotas');
+  registrarRotasGestao(app);
   // Tour 360° das chácaras
   const { registrarRotasTour360 } = await import('../tour360');
   registrarRotasTour360(app);
@@ -1595,6 +1598,8 @@ async function startServer() {
     await addAssinatura();
     const { addObjetivoProspecto } = await import('./migrations/addObjetivoProspecto');
     await addObjetivoProspecto();
+    const { addGestao } = await import('./migrations/addGestao');
+    await addGestao();
     const { addCancelamento } = await import('./migrations/addCancelamento');
     await addCancelamento();
   } catch (e) {
