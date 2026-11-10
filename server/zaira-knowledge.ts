@@ -16,7 +16,7 @@ const SEED: Array<Omit<KnowledgeEntry, "id" | "createdAt">> = [
   {
     title: "Romatec — Identidade",
     content:
-      "Romatec Consultoria Imobiliaria. CEO: Jose Romario Pinto Bezerra. Sede: Acailandia/MA. CNPJ: 12.091.853/0001-69. Atua com avaliacao imobiliaria, locacao, venda, contratos e CRM via WhatsApp.",
+      "Romatec Consultoria Total (J R P Bezerra Ltda). CEO: Jose Romario Pinto Bezerra. Sede: Acailandia/MA. CNPJ: 17.261.987/0001-09. CRECI J-1234. Atua com avaliacao imobiliaria, locacao, venda, contratos e CRM via WhatsApp.",
     tags: ["empresa", "ceo", "identidade"],
   },
   {

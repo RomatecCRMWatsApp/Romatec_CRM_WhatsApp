@@ -3,6 +3,22 @@
 Cada versão nova vai no TOPO. Depois rode `npm run release` (valida e atualiza o package.json);
 ao subir, o servidor grava a versão no banco e todos recebem o aviso "Novidades da versão".
 
+## 1.145.0 — 2026-11-10
+tipo: minor
+obrigatoria: nao
+titulo: Privacidade e acessibilidade nas páginas públicas
+publico: equipe
+
+### Melhorias
+- Páginas públicas acessíveis (WCAG 2.2 AA verificado com axe nas 12 páginas): zoom liberado no celular, botões verdes com contraste adequado, campos com rótulo e links que não dependem só da cor
+- Formulário dos anúncios (/i/…): o consentimento de contato passa a ser registrado com texto, data e origem, como nos demais formulários
+- Página das obras: o texto de consentimento registrado é exatamente o que a pessoa leu
+- Aviso de cookies dos anúncios com texto correto sobre o que é gravado
+- A IA de atendimento usa o CNPJ e o nome corretos da Romatec (17.261.987/0001-09, CRECI J-1234)
+
+### Correções
+- Dados pessoais reais removidos dos arquivos de exemplo e de teste do sistema (substituídos por dados fictícios)
+
 ## 1.144.0 — 2026-11-09
 tipo: minor
 obrigatoria: nao
