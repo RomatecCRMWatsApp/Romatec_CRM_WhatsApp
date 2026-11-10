@@ -11,25 +11,25 @@ const ping = vi.fn(async (url: string, init: any) => {
 
 describe('credenciais do Cloudinary (uma fonte para todo upload)', () => {
   it('lê CLOUDINARY_URL e as variáveis separadas, sem espaços nem aspas', () => {
-    const c = candidatos({ CLOUDINARY_URL: 'cloudinary://111:sss@romatec', CLOUDINARY_CLOUD_NAME: ' "romatec" ', CLOUDINARY_API_KEY: '846459254227374 ', CLOUDINARY_API_SECRET: 'x' });
+    const c = candidatos({ CLOUDINARY_URL: 'cloudinary://111:sss@romatec', CLOUDINARY_CLOUD_NAME: ' "romatec" ', CLOUDINARY_API_KEY: '123456789012345 ', CLOUDINARY_API_SECRET: 'x' });
     expect(c).toEqual([
       { cloud: 'romatec', key: '111', secret: 'sss', origem: 'CLOUDINARY_URL' },
-      { cloud: 'romatec', key: '846459254227374', secret: 'x', origem: 'CLOUDINARY_*' },
+      { cloud: 'romatec', key: '123456789012345', secret: 'x', origem: 'CLOUDINARY_*' },
     ]);
   });
 
   it('usa o conjunto que o Cloudinary aceita (api_key inválida é ignorada)', async () => {
     limparCacheCredenciais();
-    const env = { CLOUDINARY_CLOUD_NAME: 'romatec', CLOUDINARY_API_KEY: '846459254227374', CLOUDINARY_API_SECRET: 'x', CLOUDINARY_URL: 'cloudinary://111:sss@romatec' };
+    const env = { CLOUDINARY_CLOUD_NAME: 'romatec', CLOUDINARY_API_KEY: '123456789012345', CLOUDINARY_API_SECRET: 'x', CLOUDINARY_URL: 'cloudinary://111:sss@romatec' };
     expect(await credenciais(ping, env)).toMatchObject({ key: '111', origem: 'CLOUDINARY_URL' });
   });
 
   it('nenhum válido: erro dizendo qual variável e qual api_key; diagnóstico sem segredo', async () => {
     limparCacheCredenciais();
-    const env = { CLOUDINARY_CLOUD_NAME: 'romatec', CLOUDINARY_API_KEY: '846459254227374', CLOUDINARY_API_SECRET: 'segredo' };
-    await expect(credenciais(ping, env)).rejects.toThrow(/CLOUDINARY_\* \(cloud "romatec", api_key …7374\): Invalid api_key 846459254227374/);
+    const env = { CLOUDINARY_CLOUD_NAME: 'romatec', CLOUDINARY_API_KEY: '123456789012345', CLOUDINARY_API_SECRET: 'segredo' };
+    await expect(credenciais(ping, env)).rejects.toThrow(/CLOUDINARY_\* \(cloud "romatec", api_key …2345\): Invalid api_key 123456789012345/);
     const d = await diagnostico(ping, env);
-    expect(d.conjuntos).toEqual([{ origem: 'CLOUDINARY_*', cloud: 'romatec', apiKeyFinal: '7374', valido: false, status: 401, erro: 'Invalid api_key 846459254227374' }]);
+    expect(d.conjuntos).toEqual([{ origem: 'CLOUDINARY_*', cloud: 'romatec', apiKeyFinal: '2345', valido: false, status: 401, erro: 'Invalid api_key 123456789012345' }]);
     expect(JSON.stringify(d)).not.toContain('segredo');
   });
 });

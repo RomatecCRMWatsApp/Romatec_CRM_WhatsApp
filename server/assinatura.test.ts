@@ -28,7 +28,7 @@ beforeAll(async () => {
   db.run(sql`INSERT INTO users (id, openId, name, role, creci, telefone, email) VALUES (1, 'u1', 'José Romário Pinto Bezerra', 'admin', '4705', '99991811246', 'jose@exemplo.com')`);
   db.run(sql`INSERT INTO empreendimentos (id, slug, nome, municipio, uf) VALUES (1, 'bom-jardims', 'Condomínio de Chácaras Bom Jardims', 'Açailândia', 'MA')`);
   db.run(sql`INSERT INTO lotes (empreendimentoId, codigo, quadra, numero, areaM2, perimetroM, situacao, verticesUtm) VALUES (1, 'A01', 'A', 1, '3025.11', '220.01', 'disponivel', ${q(236000, 9455000)})`);
-  db.run(sql`INSERT INTO empJuridico (empreendimentoId, defaultsJson, vendedoraJson) VALUES (1, '{}', ${JSON.stringify({ vend_nome: 'VALMA MARILDA BONJARDIM FIGUEREDO', vend_cpf: '364.274.623-34', vend_telefone: '(99) 9 9101-1970' })})`);
+  db.run(sql`INSERT INTO empJuridico (empreendimentoId, defaultsJson, vendedoraJson) VALUES (1, '{}', ${JSON.stringify({ vend_nome: 'MARIA SINTETICA DE TESTE', vend_cpf: '529.982.247-25', vend_telefone: '(99) 9 9000-0001' })})`);
   db.run(sql`INSERT INTO condicoesPagamento (empreendimentoId, precoBase, areaBaseM2, toleranciaAreaM2, entradaPct, entradaMaxParcelas, descontoAvistaPct, jurosAaEfetivo, metodo, prazos, comissaoTotalPct, comissaoCorretorPct, comissao1aParcelaPct, vigenteDesde, ativo)
     VALUES (1, '160000', '3025.11', '1', '0.30', 6, '0.0625', '0.06', 'PRICE', '[12,24,36,60,120]', '0.05', '0.02', '0.5', '2026-10-23', 1)`);
   const r = await C.criarContrato({
@@ -61,7 +61,7 @@ describe('assinatura eletrônica — fluxo completo', () => {
     const r = await A.enviarParaAssinatura(contratoId, { vendedora: 'icp_a1', intermediadora: 'govbr' }, 1);
     expect(r.signatarios).toBe(4);
     expect(r.convites.every(c => c.enviado)).toBe(true);
-    expect(mensagens.filter(m => /está pronto para a sua assinatura/.test(m.msg)).map(m => m.tel)).toEqual(['5599991234567', '5599997654321', '5599991011970', '5599991811246']);
+    expect(mensagens.filter(m => /está pronto para a sua assinatura/.test(m.msg)).map(m => m.tel)).toEqual(['5599991234567', '5599997654321', '5599990000001', '5599991811246']);
     expect((await C.contratoPorId(contratoId)).status).toBe('em_assinatura');
     const pdf = await A.pdfAtual(contratoId);
     expect((await PDFDocument.load(pdf)).getPageCount()).toBe(4); // + quadro de assinaturas
@@ -71,7 +71,7 @@ describe('assinatura eletrônica — fluxo completo', () => {
 
   it('ICP/gov.br esperam as avançadas; link inválido não abre', async () => {
     const v = await sig('vendedora');
-    await expect(A.assinarComCertificado(v.token, pfxDeTeste({ nome: 'VALMA', cpf: '36427462334', senha: 'x' }), 'x', { ip: '1.1.1.1' })).rejects.toMatchObject({ codigo: 'AGUARDE' });
+    await expect(A.assinarComCertificado(v.token, pfxDeTeste({ nome: 'MARIA', cpf: '52998224725', senha: 'x' }), 'x', { ip: '1.1.1.1' })).rejects.toMatchObject({ codigo: 'AGUARDE' });
     await expect(A.signatarioPorToken('a'.repeat(43))).rejects.toMatchObject({ status: 404 });
   });
 
@@ -100,15 +100,15 @@ describe('assinatura eletrônica — fluxo completo', () => {
 
   it('ICP A1: CPF do certificado tem de conferir; assina incremental e zera o .pfx', async () => {
     const v = await sig('vendedora');
-    await expect(A.assinarComCertificado(v.token, pfxDeTeste({ nome: 'OUTRA PESSOA', cpf: '52998224725', senha: 's' }), 's', { ip: '1.1.1.1' })).rejects.toMatchObject({ codigo: 'CPF' });
-    await expect(A.assinarComCertificado(v.token, pfxDeTeste({ nome: 'VALMA', cpf: '36427462334', senha: 's' }), 'errada', { ip: '1.1.1.1' })).rejects.toMatchObject({ codigo: 'CERTIFICADO' });
+    await expect(A.assinarComCertificado(v.token, pfxDeTeste({ nome: 'OUTRA PESSOA', cpf: '11144477735', senha: 's' }), 's', { ip: '1.1.1.1' })).rejects.toMatchObject({ codigo: 'CPF' });
+    await expect(A.assinarComCertificado(v.token, pfxDeTeste({ nome: 'MARIA', cpf: '52998224725', senha: 's' }), 'errada', { ip: '1.1.1.1' })).rejects.toMatchObject({ codigo: 'CERTIFICADO' });
     const antes = await A.pdfAtual(contratoId);
-    const pfx = pfxDeTeste({ nome: 'VALMA MARILDA BONJARDIM FIGUEREDO', cpf: '36427462334', senha: 's' });
+    const pfx = pfxDeTeste({ nome: 'MARIA SINTETICA DE TESTE', cpf: '52998224725', senha: 's' });
     await A.assinarComCertificado(v.token, pfx, 's', { ip: '1.1.1.1' });
     expect(pfx.every(b => b === 0)).toBe(true);
     const depois = await A.pdfAtual(contratoId);
     expect(depois.subarray(0, antes.length).equals(antes)).toBe(true);
-    expect(extrairUltimaAssinatura(depois)?.cpf).toBe('36427462334');
+    expect(extrairUltimaAssinatura(depois)?.cpf).toBe('52998224725');
   });
 
   it('gov.br: só aceita a versão atual assinada pelo próprio titular; conclui com manifesto e contrato ativo', async () => {

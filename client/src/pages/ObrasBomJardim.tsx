@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from "react";
+import { CONSENTIMENTO_OBRAS_BOM_JARDIMS } from "@shared/consentimentos";
 import { CalendarCheck, CheckCircle2, FileCheck2, Loader2, MessageCircle, Ruler, Trees, Volume2, VolumeX } from "lucide-react";
 import { readUtm } from "@/components/LeadForm";
 import { origemDaVisita } from "@/lib/origemVisita";
@@ -17,8 +18,7 @@ import { numeroCreciPF } from "@shared/cartaoVendas";
 
 const VIDEO = { src: "/obras-bom-jardim/video-obras.mp4", poster: "/obras-bom-jardim/video-obras-poster.webp" };
 const WHATS_PADRAO = "5599991811246";
-const CONSENT =
-  "Autorizo a Romatec Consultoria Total e o Condomínio de Chácaras Bom Jardim a usar meus dados para contato por WhatsApp, telefone e e-mail sobre este empreendimento (Lei n.º 13.709/2018). Posso cancelar a qualquer momento.";
+const CONSENT = CONSENTIMENTO_OBRAS_BOM_JARDIMS;
 
 function maskPhone(v: string) {
   const d = v.replace(/\D/g, "").slice(0, 11);

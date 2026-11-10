@@ -535,6 +535,7 @@ async function startServer() {
       }
 
       const { publicLeadSchema, ingestLead, origemFromUtm } = await import('../lead-intake');
+      const { CONSENTIMENTO_IMOVEL } = await import('../../shared/consentimentos');
       const parsed = publicLeadSchema.safeParse(req.body ?? {});
       if (!parsed.success) {
         const first = parsed.error.issues[0];
@@ -554,6 +555,8 @@ async function startServer() {
         utm: data.utm,
         origemVisita: data.origemVisita,
         visitanteId: data.vid,
+        // O schema exige consent:true; registra o que a pessoa leu (mesmo texto do formulário), quando e de onde
+        consentimento: { at: new Date().toISOString(), texto: CONSENTIMENTO_IMOVEL, origem: `landing /i (imóvel ${data.propertyId ?? '—'})`, ip },
       });
 
       if (!result.ok) {

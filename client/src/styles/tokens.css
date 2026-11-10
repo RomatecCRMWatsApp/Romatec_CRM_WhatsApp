@@ -81,12 +81,12 @@
   --c-1d2b22: #1d2b22;
   --c-1e190f: #1e190f;
   --c-1e6b30: #1e6b30;
-  --c-1f8a4c: #1f8a4c;
+  --c-1f8a4c: #187a42; /* era #1f8a4c: escurecido para contraste AA com texto branco (WCAG 1.4.3) */
   --c-1fa855: #1fa855;
   --c-1fb956: #1fb956;
   --c-22c55e: #22c55e;
   --c-23352a: #23352a;
-  --c-25d366: #25d366;
+  --c-25d366: #137a43; /* era #25d366 (verde WhatsApp): texto branco sobre ele tinha 1,98:1; agora 5,4:1 */
   --c-26a9e0: #26a9e0;
   --c-2a3a2c: #2a3a2c;
   --c-2a4a30: #2a4a30;

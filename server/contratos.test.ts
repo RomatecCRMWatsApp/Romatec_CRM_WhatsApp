@@ -112,7 +112,7 @@ describe('anexos da unidade (I memorial, V mapa, VI licença)', () => {
     const pdf = async (paginas: number) => { const d = await PDFDocument.create(); for (let i = 0; i < paginas; i++) d.addPage([300, 300]); return Buffer.from(await d.save()); };
     expect((await PDFDocument.load(await anexoDocumentosOrigem(ctx, 'bomjardims', []))).getPageCount()).toBe(1);
     const docs = [
-      { nome: 'Geo-Memorial_Descritivo_Certificac_a_o_Sifeg_FAZENDA_LUA_NOVA_-_Fazenda_Lua_Nova_II_Espo_lio_IVAN_FIGUEREDO.pdf', mime: 'application/pdf', conteudo: await pdf(2) },
+      { nome: 'Geo-Memorial_Descritivo_Certificac_a_o_Sifeg_FAZENDA_LUA_NOVA_-_Fazenda_Lua_Nova_II.pdf', mime: 'application/pdf', conteudo: await pdf(2) },
       { nome: 'CCIR77672303262_FAZ._LUA_NOVA_ATUALIZADO.pdf', mime: 'application/pdf', conteudo: await pdf(1) },
       { nome: 'Certida_o_de_inteiro_teor_MAT._33036.pdf', mime: 'application/pdf', conteudo: await pdf(5) },
       { nome: 'quebrado.pdf', mime: 'application/pdf', conteudo: Buffer.from('não é pdf') },
@@ -125,7 +125,7 @@ describe('anexos da unidade (I memorial, V mapa, VI licença)', () => {
       'Memorial descritivo da certificação SIGEF/INCRA — Parcela II',
       'quebrado',
     ]);
-    expect(rotuloDocumentoOrigem('Geo-Mapa_Certificac_a_o_Sifeg_FAZENDA_LUA_NOVA_-_Fazenda_Lua_Nova__I__VALMA_MARILDA.pdf')).toBe('Planta (mapa) da certificação SIGEF/INCRA — Parcela I');
+    expect(rotuloDocumentoOrigem('Geo-Mapa_Certificac_a_o_Sifeg_FAZENDA_LUA_NOVA_-_Fazenda_Lua_Nova__I_.pdf')).toBe('Planta (mapa) da certificação SIGEF/INCRA — Parcela I');
     expect(rotuloDocumentoOrigem('45723435-ITR-2025-ORIGI-Recibo4273080879438659013.pdf')).toBe('Recibo de entrega da declaração do ITR — exercício 2025 (Receita Federal)');
   });
 

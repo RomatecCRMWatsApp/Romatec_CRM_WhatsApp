@@ -5,7 +5,7 @@ import { router, protectedProcedure, publicProcedure } from './_core/trpc';
 const ADMIN = { id: 1, name: 'José', role: 'admin', perfil: null, ativo: true } as any;
 const SECRETARIA = { id: 2, name: 'Sec', role: 'user', perfil: 'secretario', ativo: true } as any;
 const CORRETOR = { id: 3, name: 'Ana', role: 'user', perfil: 'corretor', ativo: true } as any;
-const EMPREENDEDORA = { id: 4, name: 'Valma', role: 'user', perfil: 'empreendedor', ativo: true } as any;
+const EMPREENDEDORA = { id: 4, name: 'Maria', role: 'user', perfil: 'empreendedor', ativo: true } as any;
 const DESATIVADO = { id: 5, name: 'Ex', role: 'user', perfil: 'corretor', ativo: false } as any;
 const OUTRO_ADMIN = { id: 6, name: 'Adm2', role: 'admin', perfil: null, ativo: true } as any;
 const POR_ID: Record<number, any> = { 1: ADMIN, 2: SECRETARIA, 3: CORRETOR, 4: EMPREENDEDORA, 5: DESATIVADO, 6: OUTRO_ADMIN };

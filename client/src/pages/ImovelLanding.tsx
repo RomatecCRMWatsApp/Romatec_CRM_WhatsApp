@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react";
+import { CONSENTIMENTO_IMOVEL } from "@shared/consentimentos";
 import { useRoute } from "wouter";
 import { trpc } from "@/lib/trpc";
 import { Button } from "@/components/ui/button";
@@ -21,7 +22,7 @@ function BannerCookies({ onEscolha }: { onEscolha: (v: "sim" | "nao") => void })
     <div className="fixed inset-x-0 bottom-0 z-50 p-3 pb-[calc(0.75rem+env(safe-area-inset-bottom))]">
       <div className="max-w-3xl mx-auto rounded-2xl border border-border bg-card p-4 shadow-md flex flex-col sm:flex-row sm:items-center gap-3">
         <p className="text-sm text-foreground flex-1">
-          Usamos cookies próprios para melhorar o atendimento. Nada é compartilhado com terceiros.
+          Usamos um cookie próprio para medir as visitas a este anúncio e melhorar o atendimento. Ele só é gravado se você aceitar.
         </p>
         <div className="flex gap-2 shrink-0">
           <Button size="sm" variant="ghost" onClick={() => onEscolha("nao")}>Recusar</Button>
@@ -210,7 +211,7 @@ export default function ImovelLanding() {
               <input type="text" tabIndex={-1} autoComplete="off" value={form.website} onChange={e => setForm(f => ({ ...f, website: e.target.value }))} className="hidden" aria-hidden="true" />
               <label className="flex items-start gap-2 text-xs text-muted-foreground cursor-pointer">
                 <input type="checkbox" className="mt-0.5" checked={form.consent} onChange={e => setForm(f => ({ ...f, consent: e.target.checked }))} />
-                Autorizo a Romatec Consultoria Total a entrar em contato comigo por WhatsApp sobre este imóvel (Lei 13.709/2018). Posso cancelar a qualquer momento.
+                {CONSENTIMENTO_IMOVEL}
               </label>
               {erro && <p className="text-sm text-danger-400">{erro}</p>}
               <Button type="submit" disabled={enviando} className="w-full bg-ok-600 hover:bg-ok-700 text-white">{enviando ? "Enviando..." : "Enviar"}</Button>

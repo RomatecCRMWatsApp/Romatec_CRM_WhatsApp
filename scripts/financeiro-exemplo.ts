@@ -83,7 +83,7 @@ await arq('RECIBO-A01-Saldo-1.pdf', await renderRecibo({
 const doAno = cobrancas.filter(c => c.vencimento.startsWith('2027'));
 await arq('DECLARACAO-QUITACAO-2027-A01.pdf', await renderDeclaracaoAnual({
   ano: 2027, contratoNumero: ctx.contrato.numero, compradorNome: ctx.comprador.nome, compradorDoc: 'CPF 000.000.000-00',
-  unidade: 'Chácara A01 (Quadra A, 3.025,11 m²)', vendedora: 'VALMA MARILDA BONJARDIM FIGUEREDO',
+  unidade: 'Chácara A01 (Quadra A, 3.025,11 m²)', vendedora: 'MARIA SINTETICA DE TESTE',
   pagamentos: doAno.map(c => ({ parcela: `${c.tipo === 'entrada' ? 'Entrada' : 'Saldo'} ${c.numero}/${c.total}`, vencimento: c.vencimento, pagoEm: c.vencimento, valor: c.valor })),
   codigoVerif: 'D2A7-41C9-0E55', urlVerificacao: 'https://romateccrm.com/c/EX7K2M9P4Q1R', emitidaEm: '2028-05-03',
 }, { modelo: true }));
