@@ -26,7 +26,7 @@ beforeEach(async () => {
 });
 
 describe('Contrato de Gestão', () => {
-  it('padrões: 5% sobre todas as vendas, R$ 850 por lote × lotes cadastrados, promessa de transferência; [PREENCHER] fica de fora', async () => {
+  it('padrões: 5% sobre todas as vendas, R$ 850 por unidade (lotes + área adm./stand), pontos de banho a R$ 200, promessa de transferência; [PREENCHER] fica de fora', async () => {
     const g = await G.dadosContrato('bom-jardims');
     expect(g.numero).toMatch(/^GE-\d{4}-0007$/);
     expect(g.qtdLotes).toBe(85);
@@ -35,7 +35,13 @@ describe('Contrato de Gestão', () => {
     expect(t).toMatch(/5% \(cinco por cento\) sobre o valor de cada alienação/);
     expect(t).toMatch(/venda direta pela EMPREENDEDORA/);
     expect(t).toMatch(/concessão, permuta, dação em pagamento/);
-    expect(t).toMatch(/R\$ 850,00 \(oitocentos e cinquenta reais\) por lote, totalizando R\$ 72\.250,00 \(setenta e dois mil duzentos e cinquenta reais\) para os 85 \(oitenta e cinco\) lotes/);
+    expect(t).toMatch(/locação e piqueteamento, com marcos de concreto nos vértices, de 86 \(oitenta e seis\) unidades — os 85 \(oitenta e cinco\) lotes do parcelamento e a área administrativa e do stand de vendas/);
+    expect(t).toMatch(/piqueteamento e locação de 85 \(oitenta e cinco\) pontos de banho na lâmina d'água, ao longo do curso do rio/);
+    expect(t).toMatch(/R\$ 850,00 \(oitocentos e cinquenta reais\) por unidade locada, totalizando R\$ 73\.100,00 \(setenta e três mil e cem reais\) para as 86 \(oitenta e seis\) unidades/);
+    expect(t).toMatch(/R\$ 200,00 \(duzentos reais\) por ponto de banho locado, totalizando R\$ 17\.000,00 \(dezessete mil reais\) para os 85 \(oitenta e cinco\) pontos/);
+    expect(t).toMatch(/no total de R\$ 90\.100,00 \(noventa mil e cem reais\)/);
+    expect(t).toMatch(/TOTAL A RECEBER\s+90\.100,00/);
+    expect(t).toMatch(/aberto a termos aditivos/);
     expect(t).toMatch(/pontos de locação da faixa marginal do córrego\/rio/);
     expect(t).toMatch(/CLÁUSULA 7ª — DA PROMESSA DE TRANSFERÊNCIA DO IMÓVEL/);
     expect(t).toMatch(/MARIA SINTETICA DE TESTE/);
@@ -52,7 +58,7 @@ describe('Contrato de Gestão', () => {
     let g = await G.dadosContrato('bom-jardims');
     expect(g.numero).toBe('GE-2026-0007');
     const t = texto(C.blocosContrato(g));
-    expect(t).toMatch(/R\$ 900,00 .* por lote, totalizando R\$ 75\.600,00 .* para os 84 \(oitenta e quatro\) lotes/);
+    expect(t).toMatch(/R\$ 900,00 .* por unidade locada, totalizando R\$ 76\.500,00 .* para as 85 \(oitenta e cinco\) unidades/);
     expect(t).toMatch(/os adiantamentos somam R\$ 16\.300,50 \(dezesseis mil e trezentos reais e cinquenta centavos\)/);
     expect(t).toMatch(/RECIBO DE ADIANTAMENTO N\.º 002\/2026/);
     expect(t).toMatch(/TOTAL\s+16\.300,50/);

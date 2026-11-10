@@ -3,6 +3,18 @@
 Cada versão nova vai no TOPO. Depois rode `npm run release` (valida e atualiza o package.json);
 ao subir, o servidor grava a versão no banco e todos recebem o aviso "Novidades da versão".
 
+## 1.147.2 — 2026-11-10
+tipo: patch
+obrigatoria: nao
+titulo: Contrato de gestão: 86 unidades locadas, pontos de banho no rio e termos aditivos
+publico: admin
+
+### Melhorias
+- Agrimensura: locação e piqueteamento com marcos de concreto de 86 unidades (85 lotes + área administrativa e stand de vendas), a R$ 850,00 por unidade = R$ 73.100,00
+- Novo serviço a receber: piqueteamento e locação de 85 pontos de banho na lâmina d'água do rio, a R$ 200,00 por ponto = R$ 17.000,00 (total da topografia a receber: R$ 90.100,00)
+- Cláusula de termos aditivos: novos adiantamentos e valores a receber, novos serviços e atribuições, ajustes de valores e prazos e a transferência do imóvel
+- Campos novos na tela: áreas extras locadas, quantidade e valor dos pontos de banho
+
 ## 1.147.1 — 2026-11-10
 tipo: patch
 obrigatoria: nao

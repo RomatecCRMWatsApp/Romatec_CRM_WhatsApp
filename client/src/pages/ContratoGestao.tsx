@@ -6,7 +6,7 @@ import PageHeader from "@/components/PageHeader";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
-  CATEGORIAS_APORTE, FORMAS_PAGAMENTO_APORTE, PARAMETROS_PADRAO, ROTULO_FORMA_APORTE, totalAgrimensura,
+  CATEGORIAS_APORTE, FORMAS_PAGAMENTO_APORTE, PARAMETROS_PADRAO, ROTULO_FORMA_APORTE, totaisTopografia,
   type CategoriaAporte, type ParametrosGestao,
 } from "@shared/gestao";
 
@@ -59,7 +59,7 @@ export default function ContratoGestao() {
 
 function Parametros({ p, qtdCadastrados, onSalvo }: { p: ParametrosGestao; qtdCadastrados: number; onSalvo: () => void }) {
   const vazio = (x: ParametrosGestao) => ({
-    comissao: pctTxt(x.comissaoPct), corretor: pctTxt(x.corretorParceiroPct), valorLote: String(x.valorPorLote).replace(".", ","), qtdLotes: x.qtdLotes ? String(x.qtdLotes) : "",
+    comissao: pctTxt(x.comissaoPct), corretor: pctTxt(x.corretorParceiroPct), valorLote: String(x.valorPorLote).replace(".", ","), qtdLotes: x.qtdLotes ? String(x.qtdLotes) : "", extras: String(x.unidadesExtras ?? 1), pontos: String(x.pontosBanhoQtd ?? 85), valorPonto: String(x.valorPontoBanho ?? 200).replace(".", ","),
     retencao: pctTxt(x.retencaoAportesPct), prazo: String(x.prazoMinimoMeses), multa: pctTxt(x.multaRescisaoPct), dataContrato: x.dataContrato,
     t1n: x.testemunha1Nome, t1c: x.testemunha1Cpf, t2n: x.testemunha2Nome, t2c: x.testemunha2Cpf, obs: x.observacoes,
   });
@@ -68,7 +68,7 @@ function Parametros({ p, qtdCadastrados, onSalvo }: { p: ParametrosGestao; qtdCa
   const salvar = trpc.gestao.salvar.useMutation({ onSuccess: () => { toast.success("Contrato atualizado"); onSalvo(); }, onError: e => toast.error(e.message) });
   const set = (k: keyof typeof f) => (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => setF({ ...f, [k]: e.target.value });
   const qtd = Number(f.qtdLotes) || qtdCadastrados;
-  const total = totalAgrimensura({ valorPorLote: num(f.valorLote) }, qtd);
+  const top = totaisTopografia({ valorPorLote: num(f.valorLote), unidadesExtras: Number(f.extras) || 0, pontosBanhoQtd: Number(f.pontos) || 0, valorPontoBanho: num(f.valorPonto) }, qtd);
   const campo = (rotulo: string, k: keyof typeof f, o: { sufixo?: string; tipo?: string; ph?: string; modo?: "decimal" | "numeric" } = {}) => (
     <label className="flex flex-col gap-1 text-xs text-muted-foreground">{rotulo}
       <div className="flex items-center gap-1"><Input type={o.tipo ?? "text"} inputMode={o.modo} value={f[k]} onChange={set(k)} placeholder={o.ph} />{o.sufixo && <span>{o.sufixo}</span>}</div>
@@ -77,6 +77,7 @@ function Parametros({ p, qtdCadastrados, onSalvo }: { p: ParametrosGestao; qtdCa
   const enviar = () => salvar.mutate({ slug: SLUG, parametros: {
     ...PARAMETROS_PADRAO,
     comissaoPct: num(f.comissao) / 100, corretorParceiroPct: num(f.corretor) / 100, valorPorLote: num(f.valorLote), qtdLotes: f.qtdLotes ? Number(f.qtdLotes) : null,
+    unidadesExtras: Number(f.extras) || 0, pontosBanhoQtd: Number(f.pontos) || 0, valorPontoBanho: num(f.valorPonto),
     retencaoAportesPct: num(f.retencao) / 100, prazoMinimoMeses: Number(f.prazo) || 60, multaRescisaoPct: num(f.multa) / 100, dataContrato: f.dataContrato,
     testemunha1Nome: f.t1n, testemunha1Cpf: f.t1c, testemunha2Nome: f.t2n, testemunha2Cpf: f.t2c, observacoes: f.obs,
   } });
@@ -88,6 +89,9 @@ function Parametros({ p, qtdCadastrados, onSalvo }: { p: ParametrosGestao; qtdCa
         {campo("Corretagem do parceiro (sai dos 5%)", "corretor", { sufixo: "%", modo: "decimal" })}
         {campo("Agrimensura: valor por lote", "valorLote", { sufixo: "R$", modo: "decimal" })}
         {campo("Quantidade de lotes", "qtdLotes", { ph: `${qtdCadastrados} (cadastrados)`, modo: "numeric" })}
+        {campo("Áreas extras locadas (adm./stand)", "extras", { modo: "numeric" })}
+        {campo("Pontos de banho no rio", "pontos", { modo: "numeric" })}
+        {campo("Valor por ponto de banho", "valorPonto", { sufixo: "R$", modo: "decimal" })}
         {campo("Retenção para ressarcir adiantamentos", "retencao", { sufixo: "%", modo: "decimal" })}
         {campo("Prazo mínimo", "prazo", { sufixo: "meses", modo: "numeric" })}
         {campo("Multa na rescisão imotivada", "multa", { sufixo: "%", modo: "decimal" })}
@@ -95,7 +99,10 @@ function Parametros({ p, qtdCadastrados, onSalvo }: { p: ParametrosGestao; qtdCa
         {campo("Testemunha 1 — nome", "t1n")}{campo("Testemunha 1 — CPF", "t1c")}
         {campo("Testemunha 2 — nome", "t2n")}{campo("Testemunha 2 — CPF", "t2c")}
       </div>
-      <p className="rounded-lg bg-secondary p-2">Agrimensura: <b>{qtd} lotes × {brl(num(f.valorLote))} = {brl(total)}</b>, com os pontos de locação do rio e da área de vivência incluídos.</p>
+      <p className="rounded-lg bg-secondary p-2">
+        Topografia a receber: locação de <b>{top.unidades} unidades × {brl(num(f.valorLote))} = {brl(top.locacao)}</b>
+        {top.banho > 0 && <> + pontos de banho <b>{Number(f.pontos)} × {brl(num(f.valorPonto))} = {brl(top.banho)}</b></>} = <b>{brl(top.total)}</b>
+      </p>
       <label className="flex flex-col gap-1 text-xs text-muted-foreground">Cláusula adicional (opcional)
         <textarea value={f.obs} onChange={set("obs")} rows={2} maxLength={2000} className="rounded-md border border-border bg-background p-2 text-sm text-foreground" />
       </label>

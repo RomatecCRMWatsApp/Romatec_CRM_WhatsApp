@@ -29,6 +29,11 @@ export const PARAMETROS_PADRAO = {
   valorPorLote: 850,
   /** null: usa a quantidade de lotes cadastrada no empreendimento */
   qtdLotes: null as number | null,
+  /** Unidades locadas além dos lotes (área administrativa e stand de vendas, na entrada) */
+  unidadesExtras: 1,
+  /** Piqueteamento e locação dos pontos de banho na lâmina d'água do rio */
+  pontosBanhoQtd: 85,
+  valorPontoBanho: 200,
   /** Parte de cada recebimento do empreendimento que a GESTORA pode reter até quitar os adiantamentos */
   retencaoAportesPct: 0.5,
   prazoMinimoMeses: 60,
@@ -45,6 +50,9 @@ export const parametrosSchema = z.object({
   corretorParceiroPct: z.number().min(0).max(0.1),
   valorPorLote: z.number().min(0).max(100_000),
   qtdLotes: z.number().int().min(1).max(5000).nullable(),
+  unidadesExtras: z.number().int().min(0).max(100),
+  pontosBanhoQtd: z.number().int().min(0).max(5000),
+  valorPontoBanho: z.number().min(0).max(100_000),
   retencaoAportesPct: z.number().min(0).max(1),
   prazoMinimoMeses: z.number().int().min(1).max(600),
   multaRescisaoPct: z.number().min(0).max(0.2),
@@ -65,8 +73,16 @@ export const aporteSchema = z.object({
 });
 export type DadosAporte = z.infer<typeof aporteSchema>;
 
-/** Valor total dos serviços de agrimensura */
+/** Valor total da locação dos lotes (só a parte por lote) */
 export const totalAgrimensura = (p: Pick<ParametrosGestao, 'valorPorLote'>, qtdLotes: number) => Math.round(p.valorPorLote * qtdLotes * 100) / 100;
+
+/** Serviços de topografia a receber: locação das unidades (lotes + área administrativa/stand) e pontos de banho no rio */
+export function totaisTopografia(p: Pick<ParametrosGestao, 'valorPorLote' | 'unidadesExtras' | 'pontosBanhoQtd' | 'valorPontoBanho'>, qtdLotes: number) {
+  const r2 = (v: number) => Math.round(v * 100) / 100;
+  const unidades = qtdLotes + (p.unidadesExtras ?? 0);
+  const locacao = r2(p.valorPorLote * unidades), banho = r2((p.pontosBanhoQtd ?? 0) * (p.valorPontoBanho ?? 0));
+  return { unidades, locacao, banho, total: r2(locacao + banho) };
+}
 
 /** Número do contrato de gestão do empreendimento: GE-2026-0001 */
 export const numeroContratoGestao = (empreendimentoId: number, ano: number) => `GE-${ano}-${String(empreendimentoId).padStart(4, '0')}`;

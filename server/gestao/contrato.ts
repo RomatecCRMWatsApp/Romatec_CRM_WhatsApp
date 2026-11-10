@@ -11,7 +11,7 @@ import { zipSync, strToU8 } from 'fflate';
 import { escritor } from '../contratos/docsComissao';
 import { brl, dataBR, dataExtenso, extenso, pct, reaisExtenso } from '../contratos/formato';
 import { ESCRITORIO } from '../../shared/escritorio';
-import { CATEGORIAS_APORTE, ROTULO_FORMA_APORTE, totalAgrimensura } from '../../shared/gestao';
+import { CATEGORIAS_APORTE, ROTULO_FORMA_APORTE, totaisTopografia } from '../../shared/gestao';
 import type { AporteGestao, DadosContratoGestao } from './servico';
 
 type Trecho = { t: string; b?: boolean };
@@ -74,7 +74,8 @@ export function blocosContrato(g: DadosContratoGestao): Bloco[] {
   const p = g.parametros, E = qualificacaoEmpreendedora(g);
   const data = p.dataContrato || hojeIso();
   const local = `${g.empreendimento.municipio}/${g.empreendimento.uf}`;
-  const agr = totalAgrimensura(p, g.qtdLotes);
+  const top = totaisTopografia(p, g.qtdLotes);
+  const extras = p.unidadesExtras ? ` e ${p.unidadesExtras === 1 ? 'a área administrativa e do stand de vendas, na entrada do EMPREENDIMENTO' : `${p.unidadesExtras} (${extenso(p.unidadesExtras)}) áreas complementares, incluída a área administrativa e do stand de vendas`}` : '';
   const b: Bloco[] = [];
 
   b.push({ k: 'cab', t1: 'CONTRATO DE PRESTAÇÃO DE SERVIÇOS DE GESTÃO INTEGRAL DE EMPREENDIMENTO IMOBILIÁRIO, DE AGRIMENSURA E OUTRAS AVENÇAS',
@@ -111,12 +112,16 @@ export function blocosContrato(g: DadosContratoGestao): Bloco[] {
 
   b.push(C('CLÁUSULA 4ª — DOS SERVIÇOS DE AGRIMENSURA E TOPOGRAFIA'));
   b.push(P('4.1. Serviços já executados pela GESTORA: levantamento georreferenciado e certificação da área no SIGEF/INCRA, levantamento planialtimétrico, projeto de parcelamento com mapa e quadro de áreas, e locação dos eixos das vias do EMPREENDIMENTO.'));
-  b.push(P('4.2. Serviços a executar: (a) locação individual de cada lote, com implantação de marcos nos vértices; (b) pontos de locação da faixa marginal do córrego/rio (Área de Preservação Permanente) e da área de vivência; (c) memoriais descritivos e plantas individuais dos lotes; e (d) emissão do Termo de Responsabilidade Técnica (TRT) no Conselho Federal dos Técnicos Industriais.'));
-  b.push(PB({ t: '4.3. Pelos serviços de agrimensura e topografia, a EMPREENDEDORA pagará à GESTORA ' }, { t: `${reais(p.valorPorLote)} por lote, totalizando ${reais(agr)} para os ${g.qtdLotes} (${extenso(g.qtdLotes)}) lotes`, b: true },
-    { t: ', incluídos os pontos de locação do rio e da área de vivência, sem acréscimo. O quadro de quantidades consta do Anexo II.' }));
-  b.push(P('4.4. O pagamento é devido por lote locado e entregue com o respectivo memorial, apurado em boletim de medição, e será feito com os recursos das vendas do EMPREENDIMENTO, por retenção na forma da Cláusula 5.3, ou diretamente pela EMPREENDEDORA em até 10 (dez) dias da medição.'));
-  b.push(P('4.5. Os serviços seguem a NBR 13133 (execução de levantamento topográfico), a Norma Técnica para Georreferenciamento de Imóveis Rurais do INCRA, a Lei n.º 6.015/1973 e a Lei n.º 6.766/1979, sob a responsabilidade técnica de José Romário Pinto Bezerra, Técnico em Agrimensura, CFT/MA 01209185369, credenciado no INCRA (FQNS).'));
-  b.push(P('4.6. A relocação de marcos removidos ou danificados por terceiros, compradores ou obras após a entrega será cobrada à parte, pelo mesmo valor unitário por lote.'));
+  b.push(P(`4.2. Serviços a executar, a receber pela GESTORA: (a) locação e piqueteamento, com marcos de concreto nos vértices, de ${top.unidades} (${extenso(top.unidades)}) unidades — os ${g.qtdLotes} (${extenso(g.qtdLotes)}) lotes do parcelamento${extras}; (b) pontos de locação da faixa marginal do córrego/rio (Área de Preservação Permanente) e da área de vivência; (c) memoriais descritivos e plantas individuais das unidades; e (d) emissão do Termo de Responsabilidade Técnica (TRT) no Conselho Federal dos Técnicos Industriais.`));
+  if (p.pontosBanhoQtd) b.push(P(`4.3. Serviço a executar, a receber pela GESTORA: piqueteamento e locação de ${p.pontosBanhoQtd} (${extenso(p.pontosBanhoQtd)}) pontos de banho na lâmina d'água, ao longo do curso do rio, com materialização de cada ponto por piquete e registro de coordenadas.`));
+  b.push(PB({ t: `4.${p.pontosBanhoQtd ? 4 : 3}. Pelos serviços de agrimensura e topografia a executar, a EMPREENDEDORA pagará à GESTORA: ` },
+    { t: `(a) ${reais(p.valorPorLote)} por unidade locada, totalizando ${reais(top.locacao)} para as ${top.unidades} (${extenso(top.unidades)}) unidades`, b: true },
+    ...(p.pontosBanhoQtd ? [{ t: '; ' }, { t: `(b) ${reais(p.valorPontoBanho)} por ponto de banho locado, totalizando ${reais(top.banho)} para os ${p.pontosBanhoQtd} (${extenso(p.pontosBanhoQtd)}) pontos`, b: true }] : []),
+    { t: '; ' }, { t: `no total de ${reais(top.total)}`, b: true },
+    { t: '. Os pontos de locação da faixa do rio e da área de vivência estão incluídos, sem acréscimo. O quadro de quantidades consta do Anexo II.' }));
+  b.push(P(`4.${p.pontosBanhoQtd ? 5 : 4}. O pagamento é devido por unidade ou ponto locado e entregue com o respectivo memorial ou registro de coordenadas, apurado em boletim de medição, e será feito com os recursos das vendas do EMPREENDIMENTO, por retenção na forma da Cláusula 5.3, ou diretamente pela EMPREENDEDORA em até 10 (dez) dias da medição.`));
+  b.push(P((p.pontosBanhoQtd ? '4.6.' : '4.5.') + ' Os serviços seguem a NBR 13133 (execução de levantamento topográfico), a Norma Técnica para Georreferenciamento de Imóveis Rurais do INCRA, a Lei n.º 6.015/1973 e a Lei n.º 6.766/1979, sob a responsabilidade técnica de José Romário Pinto Bezerra, Técnico em Agrimensura, CFT/MA 01209185369, credenciado no INCRA (FQNS).'));
+  b.push(P((p.pontosBanhoQtd ? '4.7.' : '4.6.') + ' A relocação de marcos ou piquetes removidos ou danificados por terceiros, compradores ou obras após a entrega será cobrada à parte, pelo mesmo valor unitário do respectivo serviço.'));
 
   b.push(C('CLÁUSULA 5ª — DOS ADIANTAMENTOS COM RECURSOS PRÓPRIOS DA GESTORA'));
   b.push(P('5.1. A GESTORA poderá antecipar, com recursos próprios, despesas do EMPREENDIMENTO, tais como obras de infraestrutura, materiais e marcos, serviços de terceiros, taxas, emolumentos, licenças, tributos do imóvel e marketing, registrando cada desembolso no CRM com o respectivo comprovante.'));
@@ -158,10 +163,11 @@ export function blocosContrato(g: DadosContratoGestao): Bloco[] {
   b.push(P('12.1. As partes guardarão sigilo sobre as informações deste contrato e do EMPREENDIMENTO e tratarão os dados pessoais de compradores, corretores e demais titulares somente para a execução deste contrato e o cumprimento de obrigações legais, observada a Lei n.º 13.709/2018 (LGPD).'));
 
   b.push(C('CLÁUSULA 13ª — DAS DISPOSIÇÕES GERAIS E DO FORO'));
-  b.push(P('13.1. Integram este contrato os Anexos I (Recibos de Adiantamento) e II (Quadro dos serviços de agrimensura), os Contratos de Comissão de cada venda e os aditivos que as partes firmarem. Alterações somente valem por escrito. A tolerância de uma parte não importa novação ou renúncia.'));
-  b.push(P('13.2. As partes reconhecem a validade da assinatura eletrônica deste instrumento e de seus anexos (MP n.º 2.200-2/2001 e Lei n.º 14.063/2020). Assinado pelas partes e por 2 (duas) testemunhas, este contrato constitui título executivo extrajudicial (CPC, art. 784, III).'));
-  b.push(P(`13.3. As partes elegem o foro da Comarca de ${local}, com renúncia a qualquer outro, por mais privilegiado que seja.`));
-  if (p.observacoes) b.push(P(`13.4. ${p.observacoes}`));
+  b.push(P('13.1. Integram este contrato os Anexos I (Recibos de Adiantamento) e II (Quadro dos serviços de agrimensura), os Contratos de Comissão de cada venda e os termos aditivos que as partes firmarem. Alterações somente valem por escrito. A tolerância de uma parte não importa novação ou renúncia.'));
+  b.push(P('13.2. Este contrato permanece aberto a termos aditivos, numerados em sequência e assinados pelas partes, que dele passarão a fazer parte integrante para: (a) reconhecer novos adiantamentos com recursos próprios da GESTORA e valores a receber da EMPREENDEDORA, além dos recibos do Anexo I; (b) incluir novos serviços, atribuições e responsabilidades da GESTORA; (c) ajustar quantidades, valores, prazos e condições; e (d) formalizar a transferência prevista na Cláusula 7ª. Os aditivos observarão as demais cláusulas deste contrato no que não dispuserem de forma diversa.'));
+  b.push(P('13.3. As partes reconhecem a validade da assinatura eletrônica deste instrumento e de seus anexos (MP n.º 2.200-2/2001 e Lei n.º 14.063/2020). Assinado pelas partes e por 2 (duas) testemunhas, este contrato constitui título executivo extrajudicial (CPC, art. 784, III).'));
+  b.push(P(`13.4. As partes elegem o foro da Comarca de ${local}, com renúncia a qualquer outro, por mais privilegiado que seja.`));
+  if (p.observacoes) b.push(P(`13.5. ${p.observacoes}`));
   b.push(P(`E, por estarem justas e contratadas, as partes assinam o presente instrumento. ${local}, ${dataExtenso(data)}.`));
   b.push({ k: 'ass', blocos: [
     { papel: 'EMPREENDEDORA', nome: E.nome, doc: E.doc || undefined },
@@ -188,12 +194,13 @@ export function blocosContrato(g: DadosContratoGestao): Bloco[] {
     linhas: [
       ['Georreferenciamento e certificação SIGEF/INCRA, levantamento e projeto', 'executado', '—', '—', 'incluído'],
       ['Locação dos eixos das vias', 'executado', '—', '—', 'incluído'],
-      ['Locação individual dos lotes, com marcos nos vértices', 'a executar', String(g.qtdLotes), brl(p.valorPorLote), brl(agr)],
+      [`Locação e piqueteamento com marcos de concreto: ${g.qtdLotes} lotes${p.unidadesExtras ? ` + ${p.unidadesExtras === 1 ? 'área administrativa e stand' : `${p.unidadesExtras} áreas complementares`}` : ''}`, 'a executar', String(top.unidades), brl(p.valorPorLote), brl(top.locacao)],
+      ...(p.pontosBanhoQtd ? [['Piqueteamento e locação dos pontos de banho na lâmina d\'água do rio', 'a executar', String(p.pontosBanhoQtd), brl(p.valorPontoBanho), brl(top.banho)]] : []),
       ['Pontos de locação da faixa do rio (APP) e área de vivência', 'a executar', '—', '—', 'incluído'],
-      ['Memoriais descritivos e plantas individuais; TRT', 'a executar', String(g.qtdLotes), '—', 'incluído'],
-      ['TOTAL DOS SERVIÇOS', '', '', '', brl(agr)],
+      ['Memoriais descritivos e plantas individuais; TRT', 'a executar', String(top.unidades), '—', 'incluído'],
+      ['TOTAL A RECEBER', '', '', '', brl(top.total)],
     ] });
-  b.push(P(`Valor total: ${reais(agr)}. Pagamento por lote locado e entregue, conforme boletim de medição (Cláusula 4.4).`));
+  b.push(P(`Valor total dos serviços a executar: ${reais(top.total)}. Pagamento por unidade ou ponto locado e entregue, conforme boletim de medição (Cláusula 4.${p.pontosBanhoQtd ? 5 : 4}).`));
   return b;
 }
 
