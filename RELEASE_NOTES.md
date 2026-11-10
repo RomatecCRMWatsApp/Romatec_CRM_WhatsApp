@@ -3,6 +3,15 @@
 Cada versão nova vai no TOPO. Depois rode `npm run release` (valida e atualiza o package.json);
 ao subir, o servidor grava a versão no banco e todos recebem o aviso "Novidades da versão".
 
+## 1.149.4 — 2026-11-10
+tipo: patch
+obrigatoria: nao
+titulo: Avisos antigos das versões privativas saem do sino da equipe
+publico: admin
+
+### Correções
+- Os avisos "Sistema atualizado" das versões só do administrador (contrato de gestão, taxas, valores) que já tinham chegado à secretária saem do sino dela; corretores e empreendedores não os tinham recebido. A limpeza roda a cada subida do servidor
+
 ## 1.149.3 — 2026-11-10
 tipo: patch
 obrigatoria: nao

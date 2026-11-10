@@ -1602,6 +1602,8 @@ async function startServer() {
     await addGestao();
     const { ajustarAgrimensura850 } = await import('../gestao/servico');
     await ajustarAgrimensura850().catch((e: any) => console.warn('[Gestão] ajuste da agrimensura:', e?.message));
+    const { limparAvisosPrivativos } = await import('../notificacoes');
+    await limparAvisosPrivativos().catch((e: any) => console.warn('[Notificações] limpeza de avisos privativos:', e?.message));
     const { addCancelamento } = await import('./migrations/addCancelamento');
     await addCancelamento();
   } catch (e) {

@@ -415,6 +415,30 @@ export async function notificarAtualizacaoSistema(versao: string, repo: RepoNoti
 }
 
 /**
+ * Avisos "Sistema atualizado" de versões privativas (público que o perfil não vê, ex.: "admin" — contrato de gestão,
+ * taxas, valores) já entregues a quem não deveria: saem do sino. Roda na subida; idempotente.
+ */
+export async function limparAvisosPrivativos(): Promise<number> {
+  const db: any = await getDb();
+  if (!db) return 0;
+  const { systemRelease } = await import("../drizzle/schema");
+  const { releaseParaPerfil } = await import("../shared/releases");
+  const rel: any[] = await db.select({ versao: systemRelease.versao, publico: systemRelease.publico }).from(systemRelease);
+  const restritas = rel.filter(r => r.publico !== "todos");
+  if (!restritas.length) return 0;
+  const us: any[] = await db.select({ id: users.id, role: users.role, perfil: (users as any).perfil }).from(users);
+  let n = 0;
+  for (const r of restritas) {
+    const fora = us.filter(u => !releaseParaPerfil(r.publico, perfilDe(u as any) as any)).map(u => Number(u.id));
+    if (!fora.length) continue;
+    const res: any = await db.delete(notificacoes).where(and(eq(notificacoes.tipo, "atualizacao_sistema"), eq(notificacoes.chave, `v${r.versao}`), inArray(notificacoes.usuarioId, fora)));
+    n += Number(res?.[0]?.affectedRows ?? res?.changes ?? res?.rowsAffected ?? 0);
+  }
+  if (n) console.log(`[Notificações] ${n} aviso(s) de versão privativa retirado(s) de quem não deveria ver`);
+  return n;
+}
+
+/**
  * Notificação de teste (Configurações, só admin): vai só para quem pediu — sininho, som do tipo e push
  * nos aparelhos dele —, sem mexer em lote nenhum. chave "teste" separa dos eventos reais.
  */
