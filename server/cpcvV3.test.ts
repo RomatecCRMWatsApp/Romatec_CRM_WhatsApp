@@ -64,7 +64,7 @@ describe('Estatuto v1.2 (Quadra F privada como reserva)', () => {
   it('traz o regime privado, os espaços exclusivos, as proibições e a reimpressão da carteirinha', async () => {
     const { mergeDocx } = await import('./contratos/render');
     const { ESTATUTO, contextoEstatuto } = await import('./contratos/anexos');
-    expect(ESTATUTO.arquivo).toBe('MODELO-ESTATUTO-ASSOCIACAO-BOM-JARDIMS-v2.docx');
+    expect(ESTATUTO.arquivo).toBe('MODELO-ESTATUTO-ASSOCIACAO-BOM-JARDIMS-v3.docx');
     const docx = await mergeDocx(ESTATUTO.arquivo, contextoEstatuto({ ...SEED_EMP_JURIDICO.defaults } as any), { minuta: false, marca: 'bomjardims' });
     const t = new PizZip(docx).file('word/document.xml')!.asText().replace(/<[^>]+>/g, '');
     for (const trecho of [
@@ -77,6 +77,9 @@ describe('Estatuto v1.2 (Quadra F privada como reserva)', () => {
       'O hidrômetro e o cavalete são adquiridos e instalados pelo associado',
       'fixadas inicialmente em R$ 100,00 por chácara',
       'rateadas igualmente por unidade', 'até 3 (três) veículos',
+      'Até a alienação de 2/3 (dois terços) dos lotes', 'Administradora indicada.', 'ROMATEC CONSULTORIA TOTAL (J R P Bezerra Ltda), CNPJ 17.261.987/0001-09',
+      'pelo prazo mínimo de 60 (sessenta) meses, contados da Assembleia de instalação, que a ratificará',
+      'a substituição da administradora somente ocorrerá por justa causa', 'observado o art. 22, §§ 1º a 4º',
     ]) expect(t, trecho).toContain(trecho);
     expect(t).not.toContain('área pública integrante dos 25% doados ao Município');
   }, 60_000);
@@ -85,5 +88,19 @@ describe('Estatuto v1.2 (Quadra F privada como reserva)', () => {
     const { QUADRA_F_REGIME_ANTIGO } = await import('./_core/migrations/seedContratos');
     expect(QUADRA_F_REGIME_ANTIGO).toMatch(/^área pública integrante dos 25% doados ao Município/);
     expect(SEED_EMP_JURIDICO.defaults.emp_quadra_f_regime).toMatch(/^área privada do empreendimento/);
+  });
+});
+
+describe('Administradora do condomínio (contrato de gestão, Cláusula 4ª-B)', () => {
+  it('os quatro modelos de CPCV trazem a Cláusula 14.6 com a Romatec indicada no Estatuto', async () => {
+    const { mergeDocx } = await import('./contratos/render');
+    for (const modelo of ['MODELO-CPCV-BOM-JARDIMS-v3.docx', 'MODELO-CPCV-BOM-JARDIMS-v3-PLANO-A.docx', 'MODELO-CPCV-BOM-JARDIMS-v3-PLANO-B.docx', 'MODELO-CPCV-BOM-JARDIMS-v3-PLANO-C.docx']) {
+      const docx = await mergeDocx(modelo, { ...SEED_EMP_JURIDICO.defaults, ctr_parcelas_minimas_obra: '3' } as any, { minuta: false, marca: 'bomjardims' });
+      const t = new PizZip(docx).file('word/document.xml')!.asText().replace(/<[^>]+>/g, '');
+      expect(t, modelo).toContain('14.6. Administradora e serviços do condomínio.');
+      expect(t, modelo).toContain('ROMATEC CONSULTORIA TOTAL (J R P Bezerra Ltda), CNPJ 17.261.987/0001-09, indicada no Estatuto (Anexo III, art. 22, §§ 1º a 4º)');
+      expect(t, modelo).toContain('as edificações e construções civis das áreas comuns são executadas com exclusividade pela mesma empresa');
+      expect(t.indexOf('14.5. Para o controle de acesso'), modelo).toBeLessThan(t.indexOf('14.6. Administradora'));
+    }
   });
 });

@@ -3,6 +3,20 @@
 Cada versão nova vai no TOPO. Depois rode `npm run release` (valida e atualiza o package.json);
 ao subir, o servidor grava a versão no banco e todos recebem o aviso "Novidades da versão".
 
+## 1.149.2 — 2026-11-10
+tipo: patch
+obrigatoria: nao
+titulo: Estatuto e contratos de venda indicam a Romatec como administradora do condomínio
+publico: admin
+
+### Melhorias
+- Estatuto da associação v1.5, Art. 22, §§ 1º a 4º: a Romatec fica indicada como administradora e prestadora de portaria, limpeza e conservação e administração da associação, e executa as construções das áreas comuns. Vale por no mínimo 60 meses a partir da Assembleia de instalação, que a ratifica; a substituição só ocorre por justa causa; a remuneração entra no orçamento, com reajuste pelo IPCA; a Romatec tem preferência na renovação
+- Contratos de venda (entrada de 30% e Planos A, B e C): nova Cláusula 14.6, em que o comprador declara ciência e concordância com a administradora indicada no Estatuto e com a exclusividade das obras das áreas comuns
+- Valem para os contratos gerados a partir de agora; os já gerados mantêm o PDF da época
+
+### Correções
+- Estatuto, Art. 22: o percentual de transição da administração, que saía em branco, passa a 2/3 (dois terços) dos lotes quando não configurado
+
 ## 1.149.1 — 2026-11-10
 tipo: patch
 obrigatoria: nao

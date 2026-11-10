@@ -113,13 +113,15 @@ export async function anexoTabelaPagamento(plano: PlanoContrato, ctx: Ctx, marca
  * Estatuto (Anexo III): para mudar o texto, edite o DOCX em templates/ e suba a versão aqui — os contratos
  * gerados depois saem com o texto novo; os já gerados guardam o PDF da época (contratoVersoes).
  */
-export const ESTATUTO = { arquivo: 'MODELO-ESTATUTO-ASSOCIACAO-BOM-JARDIMS-v2.docx', versao: 'v1.4 (nov/2026)' };
+export const ESTATUTO = { arquivo: 'MODELO-ESTATUTO-ASSOCIACAO-BOM-JARDIMS-v3.docx', versao: 'v1.5 (nov/2026)' };
 
 /** Tags do Estatuto (Anexo III) a partir do contexto do contrato */
 export function contextoEstatuto(ctx: Ctx): Ctx {
   return {
     ...ctx,
     est_versao: String(ctx.est_versao ?? ESTATUTO.versao),
+    // Art. 22: a administração passa à associação na alienação deste percentual dos lotes (ou na Assembleia de instalação)
+    est_percentual_transicao: String(ctx.est_percentual_transicao || '2/3 (dois terços)'),
     est_data_extenso: String(ctx.ctr_data_extenso ?? ''),
     inst_nome: String(ctx.vend_pj ? ctx.vend_razao_social ?? '' : ctx.vend_nome ?? ''),
     inst_documento: ctx.vend_pj ? `CNPJ ${ctx.vend_cnpj ?? ''}` : `CPF ${ctx.vend_cpf ?? ''}`,
