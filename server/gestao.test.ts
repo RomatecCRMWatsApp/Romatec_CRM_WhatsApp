@@ -26,7 +26,7 @@ beforeEach(async () => {
 });
 
 describe('Contrato de Gestão', () => {
-  it('padrões: 5% sobre todas as vendas, R$ 800 por lote × lotes cadastrados, promessa de transferência; [PREENCHER] fica de fora', async () => {
+  it('padrões: 5% sobre todas as vendas, R$ 850 por lote × lotes cadastrados, promessa de transferência; [PREENCHER] fica de fora', async () => {
     const g = await G.dadosContrato('bom-jardims');
     expect(g.numero).toMatch(/^GE-\d{4}-0007$/);
     expect(g.qtdLotes).toBe(85);
@@ -35,7 +35,7 @@ describe('Contrato de Gestão', () => {
     expect(t).toMatch(/5% \(cinco por cento\) sobre o valor de cada alienação/);
     expect(t).toMatch(/venda direta pela EMPREENDEDORA/);
     expect(t).toMatch(/concessão, permuta, dação em pagamento/);
-    expect(t).toMatch(/R\$ 800,00 \(oitocentos reais\) por lote, totalizando R\$ 68\.000,00 \(sessenta e oito mil reais\) para os 85 \(oitenta e cinco\) lotes/);
+    expect(t).toMatch(/R\$ 850,00 \(oitocentos e cinquenta reais\) por lote, totalizando R\$ 72\.250,00 \(setenta e dois mil duzentos e cinquenta reais\) para os 85 \(oitenta e cinco\) lotes/);
     expect(t).toMatch(/pontos de locação da faixa marginal do córrego\/rio/);
     expect(t).toMatch(/CLÁUSULA 7ª — DA PROMESSA DE TRANSFERÊNCIA DO IMÓVEL/);
     expect(t).toMatch(/MARIA SINTETICA DE TESTE/);
@@ -79,6 +79,18 @@ describe('Contrato de Gestão', () => {
     expect(doc).not.toMatch(/<[^>]*&[^a-z#]/); // XML escapado
     const recibo = await C.blocosParaPdf(C.blocosRecibo(g, g.aportes[0]), 'Recibo', 'rodapé');
     expect((await PDFDocument.load(recibo)).getPageCount()).toBe(1);
+  });
+
+  it('contrato salvo com R$ 800 passa a R$ 850 uma vez; valor escolhido depois é respeitado', async () => {
+    const { limparCacheConfig } = await import('./configSistema');
+    const db: any = await getDb();
+    db.run(sql`DELETE FROM configSistema`); limparCacheConfig();
+    await G.salvarParametros('bom-jardims', { ...PARAMETROS_PADRAO, valorPorLote: 800 }, 1);
+    expect(await G.ajustarAgrimensura850()).toBe(1);
+    expect((await G.dadosContrato('bom-jardims')).parametros.valorPorLote).toBe(850);
+    await G.salvarParametros('bom-jardims', { ...PARAMETROS_PADRAO, valorPorLote: 800 }, 1);
+    expect(await G.ajustarAgrimensura850()).toBe(0);
+    expect((await G.dadosContrato('bom-jardims')).parametros.valorPorLote).toBe(800);
   });
 
   it('empreendimento inexistente e adiantamento de outro empreendimento: erro 404', async () => {

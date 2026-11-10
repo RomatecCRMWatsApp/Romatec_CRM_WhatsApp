@@ -1600,6 +1600,8 @@ async function startServer() {
     await addObjetivoProspecto();
     const { addGestao } = await import('./migrations/addGestao');
     await addGestao();
+    const { ajustarAgrimensura850 } = await import('../gestao/servico');
+    await ajustarAgrimensura850().catch((e: any) => console.warn('[Gestão] ajuste da agrimensura:', e?.message));
     const { addCancelamento } = await import('./migrations/addCancelamento');
     await addCancelamento();
   } catch (e) {

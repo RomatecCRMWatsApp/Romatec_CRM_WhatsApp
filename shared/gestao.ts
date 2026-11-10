@@ -26,7 +26,7 @@ export const ROTULO_FORMA_APORTE: Record<(typeof FORMAS_PAGAMENTO_APORTE)[number
 export const PARAMETROS_PADRAO = {
   comissaoPct: 0.05,
   corretorParceiroPct: 0.02,
-  valorPorLote: 800,
+  valorPorLote: 850,
   /** null: usa a quantidade de lotes cadastrada no empreendimento */
   qtdLotes: null as number | null,
   /** Parte de cada recebimento do empreendimento que a GESTORA pode reter até quitar os adiantamentos */

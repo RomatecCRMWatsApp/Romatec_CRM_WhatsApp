@@ -120,3 +120,26 @@ export async function excluirAporte(slug: string, id: number) {
   await d.delete(gestaoAportes).where(eq(gestaoAportes.id, id));
   return { ok: true as const };
 }
+
+/**
+ * Agrimensura passou de R$ 800 para R$ 850 por lote (nov/2026): condições já salvas com 800 passam a 850, uma vez só
+ * (marcador em configSistema) — se depois o administrador puser outro valor, fica o dele.
+ */
+export async function ajustarAgrimensura850(): Promise<number> {
+  const d: any = await getDb();
+  if (!d) return 0;
+  const { lerConfig, gravarConfig } = await import('../configSistema');
+  const CHAVE = 'gestao_agrimensura_850';
+  if (await lerConfig(CHAVE).catch(() => null)) return 0;
+  const rows: any[] = await d.select().from(gestaoContratos);
+  let n = 0;
+  for (const r of rows) {
+    const p = json(r.parametrosJson);
+    if (Number(p.valorPorLote) !== 800) continue;
+    await d.update(gestaoContratos).set({ parametrosJson: JSON.stringify({ ...p, valorPorLote: 850 }) } as any).where(eq(gestaoContratos.empreendimentoId, r.empreendimentoId));
+    n++;
+  }
+  await gravarConfig(CHAVE, JSON.stringify({ em: new Date().toISOString(), ajustados: n }), null);
+  if (n) console.log(`[Gestão] agrimensura: ${n} contrato(s) de R$ 800 para R$ 850 por lote`);
+  return n;
+}

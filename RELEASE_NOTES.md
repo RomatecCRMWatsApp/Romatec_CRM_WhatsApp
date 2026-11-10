@@ -3,6 +3,15 @@
 Cada versão nova vai no TOPO. Depois rode `npm run release` (valida e atualiza o package.json);
 ao subir, o servidor grava a versão no banco e todos recebem o aviso "Novidades da versão".
 
+## 1.147.1 — 2026-11-10
+tipo: patch
+obrigatoria: nao
+titulo: Contrato de gestão: agrimensura a R$ 850,00 por lote
+publico: admin
+
+### Melhorias
+- Serviços de agrimensura e topografia do contrato de gestão passam a R$ 850,00 por lote (85 lotes = R$ 72.250,00). Condições já salvas com R$ 800,00 são atualizadas automaticamente
+
 ## 1.147.0 — 2026-11-10
 tipo: minor
 obrigatoria: nao
