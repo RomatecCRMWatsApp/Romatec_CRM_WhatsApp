@@ -3,6 +3,22 @@
 Cada versão nova vai no TOPO. Depois rode `npm run release` (valida e atualiza o package.json);
 ao subir, o servidor grava a versão no banco e todos recebem o aviso "Novidades da versão".
 
+## 1.146.0 — 2026-11-10
+tipo: minor
+obrigatoria: nao
+titulo: Rede de Parceiros: busca no Google Maps e Kit do Parceiro em PDF
+publico: equipe
+
+### Novo
+- Prospecção B2B › "Buscar no Google Maps": escolha a cidade e os tipos (imobiliárias, corretores, construtoras…), veja telefone, site, nota e avaliações e importe só os selecionados. O CRM avisa quem já é parceira ou já está na prospecção. Usa a API oficial do Google (Places)
+- A prospecção agora tem dois objetivos: "Parceria Bom Jardims" e "AvalieImob (laudos)". A IA e a mensagem-modelo escrevem o convite certo para cada um
+- Kit do Parceiro em PDF, gerado na hora: capa com o nome da imobiliária, o empreendimento com o mapa de vendas e a documentação, como funciona a parceria, a comissão dela e o QR code do portal exclusivo. Opcional: tabela de preços das chácaras disponíveis
+- "Virar parceira": o prospecto que aceitou vira imobiliária parceira com portal próprio (comissão padrão de 2%, ajustável)
+- Kit do corretor: apresentação do Bom Jardims com o cartão e o link/QR do corretor (os leads que chegarem por ali ficam com ele). O corretor baixa o dele no Painel do corretor; o escritório baixa o de qualquer corretor em Imobiliárias parceiras
+
+### Como ativar a busca
+- O administrador cadastra a chave da Places API (New) do Google em Prospecção B2B › Buscar no Google Maps (ou na variável GOOGLE_PLACES_API_KEY do servidor)
+
 ## 1.145.0 — 2026-11-10
 tipo: minor
 obrigatoria: nao

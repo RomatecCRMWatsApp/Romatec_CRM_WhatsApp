@@ -116,6 +116,11 @@ export default function PainelCorretor() {
               <Globe2 className="h-3.5 w-3.5" /> Google Earth (KML)
             </a>
           )}
+          {emp.slug === "bom-jardims" && user?.id && (
+            <a href={`/api/kit-parceiro/corretor/${user.id}.pdf`} target="_blank" rel="noreferrer" className="flex shrink-0 items-center gap-1.5 rounded-full border border-border px-3 py-1.5 text-xs font-medium transition hover:border-[var(--rt-gold)]/60 hover:bg-secondary">
+              <FileText className="h-3.5 w-3.5" /> Meu kit em PDF
+            </a>
+          )}
         </div>
       )}
 

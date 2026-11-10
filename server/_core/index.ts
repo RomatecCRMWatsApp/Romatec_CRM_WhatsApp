@@ -590,6 +590,9 @@ async function startServer() {
   // Portal das imobiliárias parceiras (/parceiro/:token)
   const { registrarRotasParceiros } = await import('../parceiros');
   registrarRotasParceiros(app, allowPublicLead);
+  // Kit do Parceiro (PDF personalizado: parceira, prospecto, corretor)
+  const { registrarRotaKit } = await import('../kitParceiro');
+  registrarRotaKit(app);
   // Tour 360° das chácaras
   const { registrarRotasTour360 } = await import('../tour360');
   registrarRotasTour360(app);
@@ -1590,6 +1593,8 @@ async function startServer() {
     await addPagamentosManuais();
     const { addAssinatura } = await import('./migrations/addAssinatura');
     await addAssinatura();
+    const { addObjetivoProspecto } = await import('./migrations/addObjetivoProspecto');
+    await addObjetivoProspecto();
     const { addCancelamento } = await import('./migrations/addCancelamento');
     await addCancelamento();
   } catch (e) {

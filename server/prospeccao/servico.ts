@@ -13,8 +13,10 @@ import { getDb } from '../db';
 import { prospectos } from '../../drizzle/schema';
 import {
   CATEGORIAS_PROSPECTO, LIMITE_ENVIOS_DIA_PADRAO, RODAPE_OPTOUT, STATUS_PROSPECTO, categoriaDe, ehOptout, extrairContatos, mensagemModelo,
-  normalizarTelefone, pareceCelular, validarMensagem, type CategoriaProspecto, type StatusProspecto,
+  mensagemModeloParceria, normalizarTelefone, objetivoDe, pareceCelular, validarMensagem, type CategoriaProspecto, type ObjetivoProspecto, type StatusProspecto,
 } from '../../shared/prospeccao';
+import { imobiliariasParceiras } from '../../drizzle/schema';
+import type { LugarMaps } from './googlePlaces';
 
 export class ProspeccaoErro extends Error { constructor(msg: string, public status = 400) { super(msg); this.name = 'ProspeccaoErro'; } }
 
@@ -33,12 +35,12 @@ export const limiteDiario = () => Math.max(1, Math.min(200, Number(process.env.P
 export const transporte = {
   async enviarWhatsApp(fone: string, texto: string): Promise<void> { const { enviarTexto } = await import('../leads/zapiClient'); await enviarTexto(fone, texto); },
   async baixar(url: string): Promise<string | null> { return baixarSeguro(url); },
-  async ia(pedido: string): Promise<string | null> { return escreverComIa(pedido); },
+  async ia(pedido: string, objetivo: ObjetivoProspecto = 'avalieimob'): Promise<string | null> { return escreverComIa(pedido, objetivo); },
 };
 
 export interface LinhaImportacao {
   nome: string; categoria?: string; cidade?: string; uf?: string; endereco?: string; telefone?: string; email?: string;
-  site?: string; instagram?: string; fonte?: string; fonteId?: string;
+  site?: string; instagram?: string; fonte?: string; fonteId?: string; objetivo?: string;
 }
 
 function urlOuNulo(v: unknown): string | null {
@@ -68,7 +70,7 @@ export async function importar(linhas: LinhaImportacao[], autorId: number) {
     if (k.some(x => chaves.has(x))) { repetidos++; continue; }
     k.forEach(x => chaves.add(x));
     await d.insert(prospectos).values({
-      nome, categoria: categoriaDe(l.categoria), cidade: corta(l.cidade, 80), uf: corta(l.uf, 2)?.toUpperCase() ?? null, endereco: corta(l.endereco, 255),
+      nome, categoria: categoriaDe(l.categoria), objetivo: objetivoDe(l.objetivo), cidade: corta(l.cidade, 80), uf: corta(l.uf, 2)?.toUpperCase() ?? null, endereco: corta(l.endereco, 255),
       telefone, email: corta(l.email, 160)?.toLowerCase() ?? null, site: urlOuNulo(l.site), instagram: urlOuNulo(l.instagram), fonte, fonteId,
       status: 'novo', criadoPor: autorId, criadoEm: new Date(),
     } as any);
@@ -77,9 +79,10 @@ export async function importar(linhas: LinhaImportacao[], autorId: number) {
   return { inseridos, repetidos, invalidos };
 }
 
-export async function listar(filtro: { status?: StatusProspecto; categoria?: CategoriaProspecto; cidade?: string } = {}) {
+export async function listar(filtro: { status?: StatusProspecto; categoria?: CategoriaProspecto; cidade?: string; objetivo?: ObjetivoProspecto } = {}) {
   const d = await banco();
   const conds = [
+    filtro.objetivo ? eq(prospectos.objetivo, filtro.objetivo) : null,
     filtro.status ? eq(prospectos.status, filtro.status) : null,
     filtro.categoria ? eq(prospectos.categoria, filtro.categoria) : null,
     filtro.cidade ? eq(prospectos.cidade, filtro.cidade) : null,
@@ -87,7 +90,7 @@ export async function listar(filtro: { status?: StatusProspecto; categoria?: Cat
   const q = d.select().from(prospectos);
   const rows: any[] = await (conds.length ? q.where(and(...conds)) : q).orderBy(desc(prospectos.id)).limit(2000);
   return rows.map(r => ({
-    id: Number(r.id), nome: r.nome, categoria: r.categoria as CategoriaProspecto, cidade: r.cidade, uf: r.uf, endereco: r.endereco, telefone: r.telefone,
+    id: Number(r.id), nome: r.nome, categoria: r.categoria as CategoriaProspecto, objetivo: objetivoDe(r.objetivo), cidade: r.cidade, uf: r.uf, endereco: r.endereco, telefone: r.telefone,
     celular: pareceCelular(r.telefone), email: r.email, site: r.site, instagram: r.instagram, sobre: r.sobre, fato: r.fato, fonte: r.fonte,
     status: r.status as StatusProspecto, mensagem: r.mensagem, ultimaResposta: r.ultimaResposta, observacoes: r.observacoes,
     enriquecidoEm: iso(r.enriquecidoEm), enviadoEm: iso(r.enviadoEm), respondeuEm: iso(r.respondeuEm),
@@ -247,9 +250,21 @@ Regras:
 - A última linha deve ser exatamente: "${RODAPE_OPTOUT}"
 Responda só com JSON: {"mensagem": "..."}.`;
 
+const SISTEMA_PARCERIA = `Você escreve a PRIMEIRA mensagem de WhatsApp de José Romário (Romatec Consultoria Total, Açailândia/MA; corretor CRECI/MA F-4.705) para uma imobiliária, corretor ou construtora da região, convidando para a rede de parceiros do Condomínio de Chácaras Bom Jardims (Açailândia/MA): o parceiro indica clientes, acompanha cada indicação num portal próprio e recebe a comissão definida no cadastro da parceria.
+Regras:
+- Português do Brasil, tom de colega de mercado da região, direto e educado. No máximo 600 caracteres antes da linha de saída.
+- Comece cumprimentando a empresa pelo nome. Use UM fato específico sobre a empresa SOMENTE se ele vier em <fato> ou <sobre>; nunca invente fatos, números, clientes ou elogios.
+- Não cite preços, percentuais de comissão, prazos, valorização, "escritura" ou "documentação 100%"; não prometa resultado.
+- Termine com UMA pergunta simples (ex.: se pode mandar a apresentação da parceria). Sem links, sem emojis em excesso.
+- A última linha deve ser exatamente: "${RODAPE_OPTOUT}"
+Responda só com JSON: {"mensagem": "..."}.`;
+
+const sistemaDe = (o: ObjetivoProspecto) => (o === 'parceria_bj' ? SISTEMA_PARCERIA : SISTEMA);
+
 const SCHEMA = { type: 'object', properties: { mensagem: { type: 'string' } }, required: ['mensagem'], additionalProperties: false };
 
-async function escreverComIa(pedido: string): Promise<string | null> {
+async function escreverComIa(pedido: string, objetivo: ObjetivoProspecto = 'avalieimob'): Promise<string | null> {
+  const SISTEMA = sistemaDe(objetivo);
   if (process.env.ANTHROPIC_API_KEY) {
     try {
       const { default: Anthropic } = await import('@anthropic-ai/sdk');
@@ -291,9 +306,13 @@ export async function gerarMensagem(id: number, remetente: string) {
     p.fato ? `<fato>${xml(p.fato)}</fato>` : null, p.sobre ? `<sobre>${xml(p.sobre)}</sobre>` : null,
     `Quem envia: ${xml(remetente)}. Escreva a mensagem.`,
   ].filter(Boolean).join('\n');
-  let texto = (await transporte.ia(pedido))?.trim() || '';
+  const objetivo = objetivoDe(p.objetivo);
+  let texto = (await transporte.ia(pedido, objetivo))?.trim() || '';
   let origem: 'ia' | 'modelo' = 'ia';
-  if (!texto || texto.length < 40) { texto = mensagemModelo({ nome: p.nome, categoria: p.categoria, cidade: p.cidade, fato: p.fato }, `${remetente}, da Romatec`); origem = 'modelo'; }
+  if (!texto || texto.length < 40) {
+    const modelo = objetivo === 'parceria_bj' ? mensagemModeloParceria : mensagemModelo;
+    texto = modelo({ nome: p.nome, categoria: p.categoria, cidade: p.cidade, fato: p.fato }, `${remetente}, da Romatec`); origem = 'modelo';
+  }
   if (!/\bSAIR\b/.test(texto)) texto = `${texto}\n\n${RODAPE_OPTOUT}`;
   texto = texto.slice(0, 1500);
   await d.update(prospectos).set({ mensagem: texto, status: ['novo', 'rascunho', 'aprovado'].includes(p.status) ? 'rascunho' : p.status } as any).where(eq(prospectos.id, id));
@@ -359,4 +378,57 @@ export async function registrarRespostaWhatsApp(fone: string, texto: string, ago
   } as any).where(eq(prospectos.id, p.id));
   if (sair) await transporte.enviarWhatsApp(p.telefone, 'Pronto, removemos o seu contato da nossa lista. Desculpe o incômodo e bom trabalho!').catch(() => {});
   return true;
+}
+
+
+// ───────────────────────────── Google Maps → prospectos ─────────────────────────────
+
+export type LugarComSituacao = LugarMaps & { jaCadastrado: null | 'prospecto' | 'parceira' };
+
+/** Marca o que já está no CRM (prospecto com o mesmo lugar/telefone/nome na cidade, ou parceira com o mesmo telefone/nome) */
+export async function marcarCadastrados(lugares: LugarMaps[], cidade: string): Promise<LugarComSituacao[]> {
+  const d = await banco();
+  const ps: any[] = await d.select({ nome: prospectos.nome, cidade: prospectos.cidade, telefone: prospectos.telefone, fonte: prospectos.fonte, fonteId: prospectos.fonteId }).from(prospectos);
+  const pars: any[] = await d.select({ nome: imobiliariasParceiras.nome, telefone: imobiliariasParceiras.telefone }).from(imobiliariasParceiras);
+  const kp = new Set<string>(), kpar = new Set<string>();
+  for (const p of ps) {
+    if (p.fonteId) kp.add(`f:${p.fonte}:${p.fonteId}`);
+    if (p.telefone) kp.add(`t:${p.telefone}`);
+    kp.add(`n:${norm(p.nome)}|${norm(p.cidade)}`);
+  }
+  for (const p of pars) {
+    const t = normalizarTelefone(p.telefone);
+    if (t) kpar.add(`t:${t}`);
+    kpar.add(`n:${norm(p.nome)}`);
+  }
+  return lugares.map(l => {
+    const parceira = (l.telefone && kpar.has(`t:${l.telefone}`)) || kpar.has(`n:${norm(l.nome)}`);
+    const prospecto = kp.has(`f:google:${l.placeId}`) || (l.telefone && kp.has(`t:${l.telefone}`)) || kp.has(`n:${norm(l.nome)}|${norm(cidade)}`);
+    return { ...l, jaCadastrado: parceira ? 'parceira' : prospecto ? 'prospecto' : null };
+  });
+}
+
+/** Importa os lugares escolhidos na busca (fonte "google", id do lugar no Google); repetidos ficam de fora */
+export async function importarDoMaps(lugares: LugarMaps[], o: { cidade: string; uf: string; objetivo: ObjetivoProspecto }, autorId: number) {
+  return importar(lugares.map(l => ({
+    nome: l.nome, categoria: l.categoria, cidade: o.cidade, uf: o.uf, endereco: l.endereco ?? undefined, telefone: l.telefone ?? undefined,
+    site: l.site ?? undefined, fonte: 'google', fonteId: l.placeId, objetivo: o.objetivo,
+  })), autorId);
+}
+
+/** Prospecto que aceitou a parceria → cadastro de imobiliária parceira (portal próprio, comissão padrão 2%) */
+export async function virarParceira(id: number, autorId: number, comissaoPct = 0.02) {
+  const d = await banco();
+  const p = await umProspecto(id);
+  if (p.status === 'optout') throw new ProspeccaoErro('Esta empresa pediu para não receber mensagens.');
+  const pars: any[] = await d.select({ id: imobiliariasParceiras.id, nome: imobiliariasParceiras.nome, telefone: imobiliariasParceiras.telefone }).from(imobiliariasParceiras);
+  const ja = pars.find(x => (p.telefone && normalizarTelefone(x.telefone) === p.telefone) || norm(x.nome) === norm(p.nome));
+  if (ja) throw new ProspeccaoErro(`Já existe a parceira "${ja.nome}" com este nome ou telefone.`, 409);
+  const { criarParceira } = await import('../parceiros');
+  const fone = p.telefone ? String(p.telefone).replace(/^55/, '') : null;
+  const r = await criarParceira({ nome: String(p.nome).slice(0, 160), telefone: fone, email: p.email ?? null, comissaoPct }, autorId);
+  const [nova]: any[] = await d.select({ id: imobiliariasParceiras.id }).from(imobiliariasParceiras).where(eq(imobiliariasParceiras.codigo, r.codigo)).limit(1);
+  const obs = [p.observacoes, `Virou parceira em ${new Date().toLocaleDateString('pt-BR')} (código ${r.codigo}).`].filter(Boolean).join('\n').slice(0, 2000);
+  await d.update(prospectos).set({ status: 'interessado', observacoes: obs } as any).where(eq(prospectos.id, id));
+  return { ok: true as const, parceiraId: Number(nova?.id ?? 0), codigo: r.codigo };
 }

@@ -19,6 +19,32 @@ export const ROTULO_STATUS: Record<StatusProspecto, string> = {
   interessado: 'Interessado', sem_interesse: 'Sem interesse', optout: 'Não quer contato',
 };
 
+/**
+ * Objetivo da prospecção: o mesmo funil serve a duas frentes, com mensagem e material próprios.
+ * - avalieimob: vender o software de PTAM (origem do módulo);
+ * - parceria_bj: rede de imobiliárias e corretores parceiros na venda do Bom Jardims (kit em PDF + portal do parceiro).
+ */
+export const OBJETIVOS_PROSPECTO = ['avalieimob', 'parceria_bj'] as const;
+export type ObjetivoProspecto = (typeof OBJETIVOS_PROSPECTO)[number];
+export const ROTULO_OBJETIVO: Record<ObjetivoProspecto, string> = { avalieimob: 'AvalieImob (laudos)', parceria_bj: 'Parceria Bom Jardims' };
+export const objetivoDe = (v: unknown): ObjetivoProspecto => (OBJETIVOS_PROSPECTO as readonly string[]).includes(String(v)) ? (v as ObjetivoProspecto) : 'avalieimob';
+
+/** Busca no Google Maps (Places API): tipos de empresa → termos de busca */
+export const TIPOS_BUSCA_MAPS = {
+  imobiliaria: { rotulo: 'Imobiliárias', termos: ['imobiliária'], categoria: 'imobiliaria' },
+  corretor: { rotulo: 'Corretores de imóveis', termos: ['corretor de imóveis', 'corretora de imóveis'], categoria: 'imobiliaria' },
+  construtora: { rotulo: 'Construtoras e loteadoras', termos: ['construtora', 'loteadora'], categoria: 'construtora' },
+  correspondente: { rotulo: 'Correspondentes bancários', termos: ['correspondente bancário'], categoria: 'correspondente' },
+  engenharia: { rotulo: 'Engenharia e topografia', termos: ['engenharia', 'topografia'], categoria: 'engenharia' },
+  cartorio: { rotulo: 'Cartórios', termos: ['cartório'], categoria: 'cartorio' },
+  advocacia: { rotulo: 'Advocacia', termos: ['advogado'], categoria: 'advocacia' },
+} as const satisfies Record<string, { rotulo: string; termos: readonly string[]; categoria: CategoriaProspecto }>;
+export type TipoBuscaMaps = keyof typeof TIPOS_BUSCA_MAPS;
+export const TIPOS_BUSCA_POR_OBJETIVO: Record<ObjetivoProspecto, TipoBuscaMaps[]> = {
+  parceria_bj: ['imobiliaria', 'corretor', 'construtora'],
+  avalieimob: ['imobiliaria', 'correspondente', 'engenharia', 'cartorio', 'advocacia'],
+};
+
 /** Limite diário de primeiras mensagens (protege o número de WhatsApp de bloqueio por spam) */
 export const LIMITE_ENVIOS_DIA_PADRAO = 20;
 export const RODAPE_OPTOUT = 'Se não quiser receber mensagens, é só responder SAIR.';
@@ -132,4 +158,16 @@ export function validarMensagem(texto: string): string | null {
   if (t.length > 1500) return 'A mensagem passou de 1.500 caracteres. Encurte para caber numa conversa.';
   if (!/\bSAIR\b/.test(t)) return 'Inclua a saída: "Se não quiser receber mensagens, é só responder SAIR."';
   return null;
+}
+
+/** Mensagem-modelo da parceria Bom Jardims (quando a IA não está disponível) */
+export function mensagemModeloParceria(p: ProspectoParaMensagem, remetente = 'José Romário, da Romatec'): string {
+  const fato = p.fato ? ` Vi que ${p.fato.replace(/\.$/, '')}.` : '';
+  const quem = p.categoria === 'construtora' ? 'vocês' : 'vocês, que atendem quem procura imóvel na região,';
+  return [
+    `Olá, pessoal da ${p.nome}! Aqui é o ${remetente}, de Açailândia.${fato}`,
+    `Estamos montando uma rede de parceiros para o Condomínio de Chácaras Bom Jardims, aqui em Açailândia, e queria convidar ${quem} para indicar clientes, com comissão definida no cadastro da parceria e um portal próprio para acompanhar cada indicação.`,
+    'Posso te mandar a apresentação com as condições da parceria?',
+    RODAPE_OPTOUT,
+  ].join('\n\n');
 }

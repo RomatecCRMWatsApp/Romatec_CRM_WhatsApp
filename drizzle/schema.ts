@@ -2238,6 +2238,8 @@ export const prospectos = mysqlTable("prospectos", {
   nome: varchar("nome", { length: 200 }).notNull(),
   /** imobiliaria | correspondente | engenharia | construtora | cartorio | banco | advocacia | outro (shared/prospeccao.ts) */
   categoria: varchar("categoria", { length: 20 }).default("outro").notNull(),
+  /** avalieimob | parceria_bj (shared/prospeccao OBJETIVOS_PROSPECTO) */
+  objetivo: varchar("objetivo", { length: 20 }).default("avalieimob").notNull(),
   cidade: varchar("cidade", { length: 80 }),
   uf: varchar("uf", { length: 2 }),
   endereco: varchar("endereco", { length: 255 }),

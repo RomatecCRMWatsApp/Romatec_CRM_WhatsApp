@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { toast } from "sonner";
-import { Building, Copy, ExternalLink, Loader2, Plus, RefreshCw } from "lucide-react";
+import { Building, Copy, ExternalLink, FileDown, Loader2, Plus, RefreshCw } from "lucide-react";
 import { trpc } from "@/lib/trpc";
 import { useAuth } from "@/_core/hooks/useAuth";
 import { perfilDe } from "@shared/equipe";
@@ -21,6 +21,8 @@ export default function ImobiliariasParceiras() {
   const { data: resp } = trpc.crm.responsaveis.useQuery();
   const [f, setF] = useState(vazio);
   const [aberto, setAberto] = useState(false);
+  const [comPrecos, setComPrecos] = useState(false);
+  const kit = (tipo: "parceira" | "corretor", id: number) => `/api/kit-parceiro/${tipo}/${id}.pdf${comPrecos ? "?precos=1" : ""}`;
   const recarregar = () => utils.parceiras.lista.invalidate();
   const criar = trpc.parceiras.criar.useMutation({ onSuccess: r => { toast.success(`Parceira cadastrada (código ${r.codigo})`); setF(vazio); setAberto(false); recarregar(); }, onError: e => toast.error(e.message) });
   const atualizar = trpc.parceiras.atualizar.useMutation({ onSuccess: () => { toast.success("Atualizado"); recarregar(); }, onError: e => toast.error(e.message) });
@@ -52,6 +54,10 @@ export default function ImobiliariasParceiras() {
             <Button disabled={f.nome.trim().length < 2 || criar.isPending} onClick={() => criar.mutate(dados())}>{criar.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : "Cadastrar"}</Button>
           </div>
         )}
+        <label className="inline-flex items-center gap-2 rounded-lg border border-border bg-card px-3 py-2 text-sm">
+          <input type="checkbox" checked={comPrecos} onChange={e => setComPrecos(e.target.checked)} />
+          Incluir a tabela de preços das chácaras disponíveis nos kits em PDF
+        </label>
         {isLoading && <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />}
         {data && !data.length && <p className="rounded-xl border border-dashed border-border p-4 text-sm text-muted-foreground">Nenhuma imobiliária parceira cadastrada.</p>}
         {data?.map(p => (
@@ -69,6 +75,7 @@ export default function ImobiliariasParceiras() {
               </div>
             </div>
             <div className="flex flex-wrap gap-2">
+              <Button size="sm" asChild><a href={kit("parceira", p.id)} target="_blank" rel="noreferrer"><FileDown className="mr-1 h-3.5 w-3.5" /> Kit PDF</a></Button>
               <Button size="sm" variant="outline" onClick={() => copiar(p.portal)}><Copy className="mr-1 h-3.5 w-3.5" /> Link do portal</Button>
               <Button size="sm" variant="ghost" asChild><a href={p.portal} target="_blank" rel="noreferrer"><ExternalLink className="mr-1 h-3.5 w-3.5" /> Ver como a parceira</a></Button>
               {admin && <Button size="sm" variant="ghost" onClick={() => { if (confirm("Gerar um novo link? O atual para de funcionar.")) novoLink.mutate({ id: p.id }); }}><RefreshCw className="mr-1 h-3.5 w-3.5" /> Novo link</Button>}
@@ -76,6 +83,15 @@ export default function ImobiliariasParceiras() {
             </div>
           </div>
         ))}
+        <section className="space-y-2 rounded-xl border border-border bg-card p-4 text-sm" aria-labelledby="kits-corretores">
+          <h2 id="kits-corretores" className="font-semibold">Kit dos corretores ativos</h2>
+          <p className="text-xs text-muted-foreground">Apresentação do Bom Jardims com o cartão do corretor e o link/QR dele: os leads que chegarem por ali ficam com ele.</p>
+          <div className="flex flex-wrap gap-2">
+            {(resp as any[] | undefined)?.map(u => (
+              <Button key={u.id} size="sm" variant="outline" asChild><a href={kit("corretor", u.id)} target="_blank" rel="noreferrer"><FileDown className="mr-1 h-3.5 w-3.5" /> {u.nome}</a></Button>
+            ))}
+          </div>
+        </section>
       </div>
     </div>
   );
