@@ -312,6 +312,15 @@ export const contratosRouter = router({
     return tratar(() => editarContratoAdmin(id, ctx.user as any, senha, e as any, (ctx as any).req?.ip ?? null));
   }),
 
+  /** Venda antes do registro do parcelamento (venda na planta): SÓ o administrador, com a senha (contratos/edicao.ts) */
+  vendaAntesRegistro: protectedProcedure.input(z.object({ id: z.number().int(), ligado: z.boolean(), protocolo: z.string().trim().max(60).optional(), prazoDias: z.number().int().min(30).max(720).optional(), senha: z.string().min(1).max(200) }))
+    .mutation(async ({ ctx, input }) => {
+      exigir(perfilDe(ctx.user as any) === "admin", "Só o administrador libera a venda antes do registro.");
+      const { vendaAntesDoRegistro } = await import("../contratos/edicao");
+      const { id, senha, ...o } = input;
+      return tratar(() => vendaAntesDoRegistro(id, ctx.user as any, senha, o, (ctx as any).req?.ip ?? null));
+    }),
+
   /** Excluir contrato sem dinheiro envolvido: SÓ o administrador, com a senha de login (com pagamento: Cancelar) */
   excluir: protectedProcedure.input(z.object({ id: z.number().int(), motivo: z.string().trim().min(3).max(300), senha: z.string().min(1).max(200) }))
     .mutation(async ({ ctx, input }) => {

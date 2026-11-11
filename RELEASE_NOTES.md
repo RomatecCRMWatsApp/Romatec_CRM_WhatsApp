@@ -3,6 +3,17 @@
 Cada versão nova vai no TOPO. Depois rode `npm run release` (valida e atualiza o package.json);
 ao subir, o servidor grava a versão no banco e todos recebem o aviso "Novidades da versão".
 
+## 1.156.0 — 2026-11-11
+tipo: minor
+obrigatoria: nao
+titulo: Venda na planta antes do registro do parcelamento (liberação do administrador)
+publico: admin
+
+### Novo
+- Contrato › "Para o contrato definitivo": quando a trava "Parcelamento não registrado" aparece, o administrador pode liberar a venda antes do registro, com o protocolo no Registro de Imóveis, o prazo para o registro e a senha. Vale para o empreendimento e fica na trilha de auditoria
+- Com a liberação, o CPCV (4 modelos) sai com a Cláusula 2.2 dizendo a situação real: imóvel matriculado, parcelamento ainda não registrado, registro e aprovações por termos aditivos e, sem registro no prazo, devolução integral e corrigida ao comprador. Registro, aprovação, LI e associação ainda inexistentes saem como "a informar por termo aditivo"
+- Depois de registrado, o aditivo "Registro do loteamento" (Aditivos em lote) grava o número e a data, e os contratos novos voltam a sair com a declaração do registro
+
 ## 1.155.0 — 2026-11-11
 tipo: minor
 obrigatoria: nao

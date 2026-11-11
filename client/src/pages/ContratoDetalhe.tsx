@@ -3,7 +3,7 @@ import { ROTULO_CONDICAO, type CondicaoPagamento } from "@shared/condicoesLancam
 import { useLocation, useParams } from "wouter";
 import { toast } from "sonner";
 import { AlertTriangle, Ban, CheckCircle2, Copy, Download, FileSignature, FileText, Loader2, Pencil, Receipt, RefreshCw, Send, ShieldAlert, Trash2, Upload, XCircle } from "lucide-react";
-import { EditarContrato, ExcluirContrato } from "@/components/contratos/EditarContrato";
+import { EditarContrato, ExcluirContrato, LiberarVendaAntesRegistro } from "@/components/contratos/EditarContrato";
 import { trpc } from "@/lib/trpc";
 import { perfilDe } from "@shared/equipe";
 import { useAuth } from "@/_core/hooks/useAuth";
@@ -68,6 +68,7 @@ export default function ContratoDetalhe() {
   // ?editar=1 (botão Editar da lista): já abre a edição
   const [editando, setEditando] = useState(() => new URLSearchParams(window.location.search).get("editar") === "1");
   const [excluindo, setExcluindo] = useState(false);
+  const [liberandoPlanta, setLiberandoPlanta] = useState(false);
   const utils = trpc.useUtils();
   const { data: d, isLoading, error } = trpc.contratos.detalhe.useQuery({ id }, { enabled: id > 0 });
   const recarregar = () => utils.contratos.detalhe.invalidate({ id });
@@ -252,6 +253,9 @@ export default function ContratoDetalhe() {
                   ? <p className="flex items-center gap-2 text-sm text-ok-400"><CheckCircle2 className="h-4 w-4" /> Tudo pronto para o definitivo</p>
                   : <div className="space-y-2 text-xs">
                     {gate.definitivo.bloqueios.map((b: string) => <p key={b} className="flex gap-2 text-danger-300"><AlertTriangle className="h-4 w-4 shrink-0" />{b}</p>)}
+                    {d.pode.cancelar && gate.definitivo.bloqueios.some((b: string) => b.startsWith("Parcelamento não registrado")) && (
+                      <Button size="sm" variant="outline" onClick={() => setLiberandoPlanta(true)}>Liberar venda antes do registro (venda na planta)</Button>
+                    )}
                     {!!gate.definitivo.faltantes.length && <>
                       <p className="text-muted-foreground">Campos a preencher ({gate.definitivo.faltantes.length}):</p>
                       <ul className="list-disc pl-5 text-muted-foreground">{gate.definitivo.faltantes.map((x: string) => <li key={x}>{ROTULO_CAMPO[x] ?? x}</li>)}</ul>
@@ -393,6 +397,7 @@ export default function ContratoDetalhe() {
       </div>
 
       {d.pode.cancelar && <EditarContrato aberto={editando} onFechar={() => setEditando(false)} onSalvo={recarregar} contrato={c as any} comprador={d.comprador} conjuge={d.conjuge} plano={d.plano} />}
+      {d.pode.cancelar && <LiberarVendaAntesRegistro aberto={liberandoPlanta} onFechar={() => setLiberandoPlanta(false)} onFeito={recarregar} contratoId={id} />}
       {d.pode.cancelar && <ExcluirContrato aberto={excluindo} onFechar={() => setExcluindo(false)} onExcluido={() => { setExcluindo(false); navigate("/contratos"); }} contrato={c as any} />}
       <ConfirmarCancelamento aberto={modal?.tipo === "contrato"} onFechar={() => setModal(null)} comSenha pendente={cancelar.isPending}
         titulo={`Cancelar o contrato ${c.numero}`} rotuloBotao="Cancelar contrato" motivoInicial={pendentes[0]?.motivo ?? ""}

@@ -233,3 +233,41 @@ export function ExcluirContrato({ aberto, onFechar, onExcluido, contrato }: { ab
     </Dialog>
   );
 }
+
+/** Liberar a venda antes do registro do parcelamento (venda na planta): só o administrador, com a senha */
+export function LiberarVendaAntesRegistro({ aberto, onFechar, onFeito, contratoId }: { aberto: boolean; onFechar: () => void; onFeito: () => void; contratoId: number }) {
+  const [protocolo, setProtocolo] = useState("");
+  const [prazo, setPrazo] = useState(180);
+  const [senha, setSenha] = useState("");
+  const [ciente, setCiente] = useState(false);
+  useEffect(() => { if (aberto) { setSenha(""); setCiente(false); } }, [aberto]);
+  const liberar = trpc.contratos.vendaAntesRegistro.useMutation({
+    onSuccess: () => { toast.success("Venda antes do registro liberada: gere o definitivo de novo"); onFeito(); onFechar(); },
+    onError: e => toast.error(e.message),
+  });
+  return (
+    <Dialog open={aberto} onOpenChange={v => !v && !liberar.isPending && onFechar()}>
+      <DialogContent className="bg-card border-border sm:max-w-lg">
+        <DialogHeader>
+          <DialogTitle className="text-foreground">Liberar a venda antes do registro do parcelamento</DialogTitle>
+          <DialogDescription>
+            Vale para todos os contratos deste empreendimento. A Cláusula 2.2 passa a dizer que o imóvel está matriculado e o parcelamento em processo de registro, com o protocolo; o registro e as demais aprovações entram por termo aditivo; e, se o registro não sair no prazo, o comprador pode desfazer com devolução integral e corrigida, sem retenção.
+          </DialogDescription>
+        </DialogHeader>
+        <div className="space-y-3">
+          <Campo rotulo="Protocolo do pedido de registro no Registro de Imóveis (se já houver)"><input className={classeCampo()} value={protocolo} maxLength={60} onChange={e => setProtocolo(e.target.value)} placeholder="Ex.: 12.345" /></Campo>
+          <Campo rotulo="Prazo para obter o registro (dias, contados da assinatura)"><input type="number" min={30} max={720} className={classeCampo()} value={prazo} onChange={e => setPrazo(Math.max(30, Math.min(720, Number(e.target.value) || 180)))} /></Campo>
+          <label className="flex items-start gap-2 text-xs text-muted-foreground"><input type="checkbox" className="mt-0.5" checked={ciente} onChange={e => setCiente(e.target.checked)} />
+            Estou ciente de que a promessa de venda antes do registro é vedada pela Lei n.º 6.766/1979 (arts. 37 e 50) e assumo a decisão pela gestão do empreendimento.</label>
+          <Campo rotulo="Sua senha de login"><input type="password" autoComplete="current-password" className={classeCampo()} value={senha} onChange={e => setSenha(e.target.value)} /></Campo>
+        </div>
+        <DialogFooter>
+          <Button variant="outline" onClick={onFechar} disabled={liberar.isPending}>Fechar</Button>
+          <Button disabled={liberar.isPending || !ciente || !senha} onClick={() => liberar.mutate({ id: contratoId, ligado: true, protocolo, prazoDias: prazo, senha })}>
+            {liberar.isPending && <Loader2 className="mr-1 h-4 w-4 animate-spin" />} Liberar
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  );
+}

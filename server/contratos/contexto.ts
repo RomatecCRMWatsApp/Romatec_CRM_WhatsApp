@@ -259,13 +259,42 @@ export function tagsRecebedor(r: EntradaContexto['recebedor']): Ctx {
   return { pag_recebedor_nome: r.nome.toUpperCase(), pag_recebedor_doc: doc || 'documento a informar', pag_recebedor_configurado: 'sim' };
 }
 
+/**
+ * Registro do parcelamento no contrato (Cláusula 2.2 e itens 5/6 do Quadro-Resumo). Registrado: a declaração do registro.
+ * Venda antes do registro (liberada pelo administrador, emp_venda_antes_registro): o texto diz a situação real — imóvel
+ * matriculado, parcelamento em processo de registro (protocolo), registro por termo aditivo, prazo e devolução
+ * integral ao comprador se não registrar no prazo. Campos ainda inexistentes saem como "a informar por termo aditivo".
+ */
+export function tagsRegistro(emp: Record<string, unknown>): Ctx {
+  const s = (k: string) => String(emp[k] ?? '').trim();
+  const registrado = emp.emp_parcelamento_registrado === true;
+  if (registrado || emp.emp_venda_antes_registro !== true) {
+    return { ctr_clausula_registro: 'A VENDEDORA declara, sob as penas da lei, que o parcelamento está aprovado pelo Município e registrado no Registro de Imóveis nos termos dos itens 5 e 6 do Quadro-Resumo, condição indispensável à celebração deste compromisso (Lei n.º 6.766/1979, arts. 18 e 37), e que mantém à disposição do(a) COMPRADOR(A) a certidão do registro, o projeto aprovado, o cronograma de obras e o instrumento de garantia de sua execução (art. 18, V).', ctr_venda_antes_registro: '' };
+  }
+  const aditivo = 'a informar por termo aditivo';
+  const prazo = Number(emp.emp_registro_prazo_dias) || 180;
+  const protocolo = s('emp_registro_protocolo');
+  const matricula = s('emp_matricula_empreendimento') || s('emp_matricula_origem');
+  const fallback = (k: string, v = aditivo) => (s(k) ? {} : { [k]: v });
+  return {
+    ...fallback('emp_registro_parcelamento', `em processo de registro${protocolo ? ` (protocolo n.º ${protocolo})` : ''}`),
+    ...fallback('emp_registro_data', aditivo),
+    ...fallback('emp_matricula_empreendimento', matricula ? `${matricula} (matrícula do imóvel; a do empreendimento será aberta com o registro)` : aditivo),
+    ...fallback('emp_aprovacao_numero', 'em tramitação'), ...fallback('emp_aprovacao_data', aditivo),
+    ...fallback('emp_li_numero', 'em tramitação'), ...fallback('emp_li_data', aditivo), ...fallback('emp_obras_termo_final', aditivo),
+    ...fallback('emp_associacao_registro', 'a constituir'), ...fallback('emp_associacao_cnpj', 'a constituir'),
+    ctr_venda_antes_registro: 'sim',
+    ctr_clausula_registro: `Venda na planta antes do registro do parcelamento. A VENDEDORA declara que o imóvel de que faz parte a unidade está matriculado no Registro de Imóveis${matricula ? ` sob o n.º ${matricula}` : ''} e que o parcelamento ${protocolo ? `teve o registro requerido no Registro de Imóveis (protocolo n.º ${protocolo}) e ` : ''}encontra-se em processo de aprovação e registro, AINDA NÃO REGISTRADO na data deste compromisso, o que o(a) COMPRADOR(A) declara conhecer e aceitar. O registro do parcelamento, a aprovação municipal, a licença de instalação, a matrícula individual da unidade e a liberação para transferência serão comunicados ao(à) COMPRADOR(A) e incorporados a este contrato por termos aditivos sucessivos, com os respectivos números e datas, independentemente de nova manifestação de vontade. A VENDEDORA obriga-se a obter o registro do parcelamento em até ${prazo} (${extenso(prazo)}) dias contados desta data; não obtido no prazo, o(a) COMPRADOR(A) poderá resolver este compromisso, mediante simples notificação, com a restituição integral e imediata de todos os valores pagos, corrigidos pelo IPCA/IBGE desde cada pagamento, sem qualquer retenção, multa ou dedução, inclusive da corretagem, que a VENDEDORA e a INTERMEDIADORA restituirão solidariamente.`,
+  };
+}
+
 export function montarContexto(e: EntradaContexto): Ctx {
   const emp = { ...e.juridico.defaults, ...(e.overrides ?? {}) } as Record<string, unknown>;
   const l = e.lote;
   const ctx: Ctx = {
     // CRECI da imobiliária gestora (pessoa jurídica): "CRECI/MA {{rom_creci_pj}}" no modelo → CRECI/MA J-1234
     rom_creci_pj: ESCRITORIO.creciJ.replace(/^CRECI\s*/i, ''),
-    ...(emp as Ctx), ...(e.juridico.vendedora as Ctx),
+    ...(emp as Ctx), ...tagsRegistro(emp), ...(e.juridico.vendedora as Ctx),
     vend_pf: e.juridico.vendedoraTipo === 'PF', vend_pj: e.juridico.vendedoraTipo === 'PJ',
     ctr_numero: e.contrato.numero, ctr_versao_modelo: e.plano.modalidade === 'financiado' && e.plano.condicao && e.plano.condicao !== 'padrao' ? `${e.juridico.modeloVersao} · ${tituloCondicao(e.plano)}` : e.juridico.modeloVersao, ctr_codigo_verificacao: e.contrato.codigoVerificacao,
     ctr_data_extenso: dataExtenso(e.contrato.dataGeracao),

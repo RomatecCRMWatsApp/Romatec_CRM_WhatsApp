@@ -181,3 +181,23 @@ export async function excluirContratoAdmin(contratoId: number, ator: Ator, senha
   });
   return { ok: true as const, numero: c.numero, loteLiberado: liberado };
 }
+
+/**
+ * Venda antes do registro do parcelamento (venda na planta): SÓ o administrador, com a senha. Liga ou desliga no
+ * empreendimento; o contrato passa a dizer a situação real (contexto.ts → tagsRegistro), com o protocolo, o prazo para
+ * o registro e a devolução integral ao comprador se não registrar no prazo. Fica na trilha de auditoria.
+ */
+export async function vendaAntesDoRegistro(contratoId: number, ator: Ator, senha: string, o: { ligado: boolean; protocolo?: string; prazoDias?: number }, ip?: string | null) {
+  await exigirAdminComSenha(ator, senha, 'venda_antes_registro', { contratoId, ip });
+  const d = await db();
+  const c = await contratoPorId(contratoId);
+  const { empJuridico } = await import('../../drizzle/schema');
+  const [j]: any[] = await d.select().from(empJuridico).where(eq(empJuridico.empreendimentoId, c.empreendimentoId)).limit(1);
+  if (!j) throw new ContratoErro('JURIDICO', 'Configuração jurídica do empreendimento não encontrada', 404);
+  const atual = json(j.defaultsJson);
+  const prazo = Math.max(30, Math.min(720, Math.round(Number(o.prazoDias) || 180)));
+  const novos = { ...atual, emp_venda_antes_registro: o.ligado, emp_registro_protocolo: String(o.protocolo ?? atual.emp_registro_protocolo ?? '').trim().slice(0, 60), emp_registro_prazo_dias: prazo };
+  await d.update(empJuridico).set({ defaultsJson: novos, atualizadoEm: new Date() } as any).where(eq(empJuridico.empreendimentoId, c.empreendimentoId));
+  await auditar('empreendimento.venda_antes_registro', { contratoId, usuarioId: ator.id, origem: 'perfil', ip, detalhe: { ligado: o.ligado, protocolo: novos.emp_registro_protocolo, prazoDias: prazo, empreendimentoId: c.empreendimentoId } });
+  return { ok: true as const, ligado: o.ligado, prazoDias: prazo };
+}

@@ -32,15 +32,17 @@ export function avaliarGate(ctx: Ctx, alvo: 'minuta' | 'definitivo', hoje = new 
   if (ctx.assinatura_manuscrita) lista.push('test1_nome', 'test1_cpf', 'test2_nome', 'test2_cpf');
   const faltantes = lista.filter(k => vazio(ctx[k]));
   const bloqueios: string[] = [];
+  // Venda antes do registro liberada pelo administrador (contexto.ts → tagsRegistro): o contrato diz a situação real
+  const antesDoRegistro = ctx.emp_parcelamento_registrado !== true && ctx.emp_venda_antes_registro === true;
   if (alvo === 'definitivo') {
-    if (ctx.emp_parcelamento_registrado !== true) bloqueios.push('Parcelamento não registrado (Lei 6.766/1979, art. 37)');
+    if (ctx.emp_parcelamento_registrado !== true && !antesDoRegistro) bloqueios.push('Parcelamento não registrado (Lei 6.766/1979, art. 37)');
     if (vencida(ctx.emp_licenca_validade, hoje)) bloqueios.push('Licença ambiental vencida ou não informada');
     if (vencida(ctx.corr_creci_validade, hoje)) bloqueios.push('Carteira CRECI do corretor vencida ou não informada');
     if (vencida(ctx.corr_certidao_validade, hoje)) bloqueios.push('Certidão de regularidade do corretor vencida');
     if (ctx.corr_parceiro && (vencida(ctx.corr_parceiro_creci_validade, hoje) || vencida(ctx.corr_parceiro_certidao_validade, hoje))) {
       bloqueios.push('Credenciais do corretor parceiro vencidas');
     }
-    if (String(ctx.emp_matricula_empreendimento ?? '').includes(String(ctx.emp_matricula_origem || '33.036'))) {
+    if (!antesDoRegistro && String(ctx.emp_matricula_empreendimento ?? '').includes(String(ctx.emp_matricula_origem || '33.036'))) {
       bloqueios.push('Matrícula de origem não pode ser usada no definitivo — informe a matrícula do empreendimento');
     }
   }
