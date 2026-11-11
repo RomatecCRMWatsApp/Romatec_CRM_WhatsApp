@@ -3,6 +3,18 @@
 Cada versão nova vai no TOPO. Depois rode `npm run release` (valida e atualiza o package.json);
 ao subir, o servidor grava a versão no banco e todos recebem o aviso "Novidades da versão".
 
+## 1.153.0 — 2026-11-11
+tipo: minor
+obrigatoria: nao
+titulo: Plano C com o complemento da entrada congelado (definido pela gestão)
+publico: admin
+
+### Novo
+- Plano C ganha a forma "Complemento congelado", só para o administrador. O cliente paga os R$ 10 mil no ato (boleto único), as parcelas do financiamento começam no mês seguinte, e o resto da entrada fica congelado, sem juros nem correção, até o mês definido pela gestão (de 2 a 60 meses depois do ato). A partir daí ele vem em carnê à parte, sem somar à parcela
+- Aparece no Novo contrato (Plano C) e em Editar contrato › Mudar o plano de pagamento, para contrato ainda não assinado e sem boleto emitido
+- Carnês: com o complemento congelado, os carnês da entrada e do saldo saem primeiro e os do complemento saem separados, de 12 em 12
+- Contrato (Plano C): Quadro-Resumo e Cláusulas 3.2 e 3.3 trazem o congelamento, o mês e a data do 1º vencimento do complemento
+
 ## 1.152.0 — 2026-11-11
 tipo: minor
 obrigatoria: nao

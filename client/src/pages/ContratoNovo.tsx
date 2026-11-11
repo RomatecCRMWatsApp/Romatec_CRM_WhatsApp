@@ -55,6 +55,8 @@ export default function ContratoNovo() {
   const [condicao, setCondicao] = useState<CondicaoPagamento>(() => { const c = q.get("condicao"); return c === "A" || c === "B" || c === "C" ? c : "padrao"; });
   /** Plano C: boleto único (resto da entrada + parcela) ou primeiro a entrada e depois o financiamento */
   const [modoC, setModoC] = useState<ModoPlanoC>(() => (q.get("modoC") === "sequencial" ? "sequencial" : "unificado"));
+  /** Plano C congelado (só o administrador): mês do 1º vencimento do complemento, contado do ato */
+  const [inicioComp, setInicioComp] = useState(15);
   const [data1, setData1] = useState(dataSugerida());
   const [comprador, setComprador] = useState<PessoaForm>(PESSOA_VAZIA);
   const [conjuge, setConjuge] = useState<PessoaForm>({ ...PESSOA_VAZIA });
@@ -82,7 +84,7 @@ export default function ContratoNovo() {
   const plano = concessao
     ? { modalidade: "avista" as const, entradaParcelas: 1, dataPrimeiroPagamento: data1, condicao: "padrao" as const,
         concessao: { motivo: motivoConcessao, comissaoPrazo: prazoComissao, despesasPor, ...(/^\d{4}-\d{2}-\d{2}$/.test(vencComissao) ? { comissaoVencimento: vencComissao } : {}), ...(comissaoConcessao.trim() && Number.isFinite(valorComissao) ? { comissaoValor: valorComissao } : {}) } }
-    : { modalidade, entradaParcelas: modalidade === "avista" || condicao !== "padrao" ? 1 : entradaParcelas, prazo: modalidade === "avista" ? undefined : prazo, dataPrimeiroPagamento: data1, condicao: modalidade === "avista" ? "padrao" as const : condicao, ...(modalidade === "financiado" && condicao === "C" ? { modoC } : {}) };
+    : { modalidade, entradaParcelas: modalidade === "avista" || condicao !== "padrao" ? 1 : entradaParcelas, prazo: modalidade === "avista" ? undefined : prazo, dataPrimeiroPagamento: data1, condicao: modalidade === "avista" ? "padrao" as const : condicao, ...(modalidade === "financiado" && condicao === "C" ? { modoC, ...(modoC === "congelado" ? { inicioComplemento: inicioComp } : {}) } : {}) };
   const sim = trpc.contratos.simular.useQuery({ slug, lote, plano, corretorUserId: corretorUserId ?? undefined }, { enabled: !!lote && /^\d{4}-\d{2}-\d{2}$/.test(data1) });
   // Documentos escolhidos no passo 2: sobem logo depois de criar (dependente pela posição na lista)
   const [anexos, setAnexos] = useState<AnexoPendente[]>([]);
@@ -238,17 +240,25 @@ export default function ContratoNovo() {
               <div className="rounded-lg border border-warn-400/40 bg-warn-400/5 p-3">
                 <p className="mb-2 text-sm font-semibold">Plano C — como o cliente paga o resto da entrada?</p>
                 <div className="grid gap-2 sm:grid-cols-2" role="radiogroup" aria-label="Forma do Plano C">
-                  {MODOS_C.map(m => (
+                  {[...MODOS_C, ...(perfil === "admin" ? ["congelado" as const] : [])].map(m => (
                     <button key={m} type="button" role="radio" aria-checked={modoC === m} onClick={() => setModoC(m)}
                       className={`rounded-lg border p-3 text-left text-sm transition ${modoC === m ? "border-warn-400 bg-warn-400/15 ring-1 ring-warn-400" : "border-border hover:border-warn-400/50"}`}>
                       <span className="flex items-center gap-2 font-semibold">
                         <span className={`inline-block h-3.5 w-3.5 rounded-full border-2 ${modoC === m ? "border-warn-400 bg-warn-400" : "border-muted-foreground"}`} />
-                        {ROTULO_MODO_C[m].titulo}{m === "sequencial" && <span className="rounded bg-secondary px-1.5 text-[10px] font-normal text-muted-foreground">caso a caso</span>}
+                        {ROTULO_MODO_C[m].titulo}{m !== "unificado" && <span className="rounded bg-secondary px-1.5 text-[10px] font-normal text-muted-foreground">{m === "congelado" ? "só a gestão" : "caso a caso"}</span>}
                       </span>
                       <span className="mt-1 block text-xs text-muted-foreground">{ROTULO_MODO_C[m].resumo}</span>
                     </button>
                   ))}
                 </div>
+                {modoC === "congelado" && (
+                  <label className="mt-3 flex flex-wrap items-center gap-2 text-sm">
+                    Complemento começa no
+                    <input type="number" min={2} max={60} value={inicioComp} onChange={e => setInicioComp(Math.max(2, Math.min(60, Number(e.target.value) || 2)))}
+                      className="h-9 w-20 rounded-md border border-border bg-background px-2 text-sm" aria-label="Mês do 1º vencimento do complemento" />
+                    º mês depois do ato (congelado até lá, sem juros, em carnê à parte)
+                  </label>
+                )}
                 <p className="mt-2 text-xs text-muted-foreground">A escolha vai para o contrato (Quadro-Resumo e Cláusulas 3.2 e 3.3), para o Anexo II e para os boletos.</p>
               </div>
             )}

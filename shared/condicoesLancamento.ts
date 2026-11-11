@@ -26,14 +26,23 @@ export const PRAZO_LONGO_B = 180;
 /** Plano C: complemento da entrada em até 36 meses */
 export const MESES_COMPLEMENTO_C = 36;
 
-/** Plano C: boleto único (complemento + parcela juntos) ou primeiro o complemento e depois o saldo */
-export type ModoPlanoC = 'unificado' | 'sequencial';
+/**
+ * Plano C: boleto único (complemento + parcela juntos), primeiro o complemento e depois o saldo, ou — só a gestão,
+ * caso a caso — complemento CONGELADO: o saldo começa no mês 1 e o complemento só começa no mês definido pela gestão,
+ * em carnê à parte.
+ */
+export type ModoPlanoC = 'unificado' | 'sequencial' | 'congelado';
+/** Formas oferecidas a todos (simulador, folder); 'congelado' é só do administrador, no contrato */
 export const MODOS_C: ModoPlanoC[] = ['unificado', 'sequencial'];
 export const ROTULO_MODO_C: Record<ModoPlanoC, { titulo: string; resumo: string }> = {
   unificado: { titulo: 'Boleto único', resumo: 'Paga os R$ 10 mil e já começa um boleto por mês com o resto da entrada + a parcela.' },
   sequencial: { titulo: 'Primeiro a entrada', resumo: 'Paga primeiro as parcelas do resto da entrada e, depois da última, começa o financiamento.' },
+  congelado: { titulo: 'Complemento congelado', resumo: 'Paga os R$ 10 mil, começa o financiamento e o resto da entrada fica congelado até o mês definido pela gestão, em carnê à parte.' },
 };
-export const modoCValido = (v: unknown): v is ModoPlanoC => v === 'unificado' || v === 'sequencial';
+export const modoCValido = (v: unknown): v is ModoPlanoC => v === 'unificado' || v === 'sequencial' || v === 'congelado';
+/** Complemento congelado: mês do 1º vencimento do complemento, contado do ato (2 a 60) */
+export const INICIO_COMPLEMENTO_MIN = 2;
+export const INICIO_COMPLEMENTO_MAX = 60;
 
 export const ROTULO_CONDICAO: Record<CondicaoPagamento, { curto: string; titulo: string; resumo: string }> = {
   padrao: { curto: 'Entrada 30%', titulo: 'Entrada de 30%', resumo: 'Entrada de 30% (à vista com desconto ou em até 6× sem juros) e o saldo em parcelas fixas.' },
@@ -64,8 +73,10 @@ export interface PlanoCondicao {
   entradaTotal: number;
   /** Plano C: complemento da entrada parcelado sem juros */
   complemento: { total: number; qtd: number; parcela: number } | null;
-  /** Plano C: forma do complemento (unificado = junto com a parcela; sequencial = antes do saldo) */
+  /** Plano C: forma do complemento (unificado = junto com a parcela; sequencial = antes do saldo; congelado = mês definido) */
   modoC?: ModoPlanoC;
+  /** Complemento congelado: mês do 1º vencimento do complemento, contado do ato */
+  inicioComplemento?: number;
   /** Valor financiado pela Price (o que gera juros) */
   saldoFinanciado: number;
   /** Parcela mensal fixa do saldo */
@@ -83,7 +94,7 @@ export interface PlanoCondicao {
  * Plano de uma condição para um preço e prazo. entradaParcelas só vale para o padrão
  * (1 = à vista com desconto; 2..entradaMaxParcelas = sem desconto).
  */
-export function planoCondicao(preco: number, cond: CondicaoPagamento, prazo: number, c: CondicoesPagamento, entradaParcelas = 1, modoC: ModoPlanoC = 'unificado'): PlanoCondicao {
+export function planoCondicao(preco: number, cond: CondicaoPagamento, prazo: number, c: CondicoesPagamento, entradaParcelas = 1, modoC: ModoPlanoC = 'unificado', inicioComplemento?: number): PlanoCondicao {
   if (!prazosDaCondicao(cond, c).includes(prazo)) throw new Error(`Prazo de ${prazo} meses não está disponível no ${ROTULO_CONDICAO[cond].curto}`);
   const i = taxaMensal(c.jurosAaEfetivo);
   const saldoPadrao = r2(preco - r2(preco * c.entradaPct));
@@ -132,10 +143,16 @@ export function planoCondicao(preco: number, cond: CondicaoPagamento, prazo: num
   const parcComp = totalComp > 0 ? dividirEntrada(totalComp, qtd)[0] : 0;
   const total = r2(entrada10 + totalComp + parcelaPadrao * prazo);
   const seq = modoC === 'sequencial' && totalComp > 0;
+  const congelado = modoC === 'congelado' && totalComp > 0;
+  if (congelado) {
+    const m = Number(inicioComplemento);
+    if (!Number.isInteger(m) || m < INICIO_COMPLEMENTO_MIN || m > INICIO_COMPLEMENTO_MAX) throw new Error(`Complemento congelado: informe o mês do 1º vencimento entre ${INICIO_COMPLEMENTO_MIN} e ${INICIO_COMPLEMENTO_MAX}`);
+  }
   return {
     condicao: cond, prazo, preco, entradaAto: entrada10, parcelasEntrada: [entrada10], entradaTotal: r2(entrada10 + totalComp),
-    complemento: totalComp > 0 ? { total: totalComp, qtd, parcela: parcComp } : null, modoC: seq ? 'sequencial' : 'unificado',
-    saldoFinanciado: saldoPadrao, parcela: parcelaPadrao, reforco: null, mensalInicial: seq ? parcComp : r2(parcelaPadrao + parcComp),
+    complemento: totalComp > 0 ? { total: totalComp, qtd, parcela: parcComp } : null, modoC: seq ? 'sequencial' : congelado ? 'congelado' : 'unificado',
+    ...(congelado ? { inicioComplemento: Number(inicioComplemento) } : {}),
+    saldoFinanciado: saldoPadrao, parcela: parcelaPadrao, reforco: null, mensalInicial: seq ? parcComp : congelado ? parcelaPadrao : r2(parcelaPadrao + parcComp),
     totalPago: total, juros: r2(total - preco), taxaMensal: i,
   };
 }
@@ -179,10 +196,13 @@ export function cronograma(p: PlanoCondicao): LinhaCronograma[] {
     const v = ult ? r2(p.complemento!.total - p.complemento!.parcela * (p.complemento!.qtd - 1)) : p.complemento!.parcela;
     linhas.push({ mes, tipo: 'complemento', numero: k, total: p.complemento!.qtd, parcela: v, juros: 0, amortizacao: v, saldoDevedor: saldo });
   };
+  const congelado = p.modoC === 'congelado' && !!p.complemento;
   if (seq) for (let k = 1; k <= p.complemento!.qtd; k++) linhaComp(k, k);
+  // Congelado: o complemento começa no mês definido pela gestão, independente do saldo (carnê à parte)
+  if (congelado) for (let k = 1; k <= p.complemento!.qtd; k++) linhaComp(k, (p.inicioComplemento ?? 1) + k - 1);
   for (let k = 1; k <= p.prazo; k++) {
     const mes = inicio + k - 1;
-    if (!seq && p.complemento && k <= p.complemento.qtd) linhaComp(k, mes);
+    if (!seq && !congelado && p.complemento && k <= p.complemento.qtd) linhaComp(k, mes);
     const ultima = k === p.prazo;
     const juros = r2(saldo * i);
     const reforcoAqui = p.reforco && k % p.reforco.intervaloMeses === 0 && k / p.reforco.intervaloMeses <= p.reforco.qtd;
@@ -232,7 +252,7 @@ export function textoCondicao(p: PlanoCondicao): string {
   if (p.condicao === 'padrao') {
     partes.push(p.parcelasEntrada.length === 1 ? `entrada à vista ${brl(p.entradaAto)}` : `entrada em ${p.parcelasEntrada.length}× de ${brl(p.parcelasEntrada[0])}`);
   } else partes.push(`${brl(p.entradaAto)} de entrada`);
-  if (p.complemento) partes.push(`${p.complemento.qtd}× de ${brl(p.complemento.parcela)} (resto da entrada, sem juros${p.modoC === 'sequencial' ? '' : ', no mesmo boleto da parcela'})`);
+  if (p.complemento) partes.push(`${p.complemento.qtd}× de ${brl(p.complemento.parcela)} (resto da entrada, sem juros${p.modoC === 'sequencial' ? '' : p.modoC === 'congelado' ? `, a partir do ${p.inicioComplemento}º mês, em carnê à parte` : ', no mesmo boleto da parcela'})`);
   partes.push(p.modoC === 'sequencial' && p.complemento ? `depois ${p.prazo}× fixas de ${brl(p.parcela)}` : `${p.prazo}× fixas de ${brl(p.parcela)}`);
   if (p.reforco) partes.push(`${p.reforco.qtd} reforço${p.reforco.qtd > 1 ? 's' : ''} anua${p.reforco.qtd > 1 ? 'is' : 'l'} de ${brl(p.reforco.valor)}`);
   return partes.join(' + ');

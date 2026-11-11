@@ -119,10 +119,23 @@ export function blocoDoCarne<T extends { tipo: string; numero: number }>(cobranc
   const todas = emOrdem(cobrancas.filter(c => c.tipo !== 'antecipacao' && c.tipo !== 'renegociacao'));
   if (bloco === 'completo') return todas;
   if (!Number.isInteger(bloco) || bloco < 1) throw new Error('Bloco inválido');
-  return todas.slice((bloco - 1) * PARCELAS_POR_CARNE, bloco * PARCELAS_POR_CARNE);
+  return blocosDoCarne(todas)[bloco - 1] ?? [];
 }
 
-export const totalDeBlocos = (plano: Pick<PlanoContrato, 'parcelas'>) => Math.max(1, Math.ceil(plano.parcelas.length / PARCELAS_POR_CARNE));
+/**
+ * Carnês de 12 em 12 parcelas. Plano C com complemento congelado (complemento em boletos próprios, começando depois do
+ * saldo): primeiro os carnês da entrada + saldo e, à parte, os carnês do complemento da entrada.
+ */
+export function blocosDoCarne<T extends { tipo: string; numero: number; vencimento?: string }>(ordenadas: T[]): T[][] {
+  const comp = ordenadas.filter(c => c.tipo === 'complemento'), saldo = ordenadas.filter(c => c.tipo === 'saldo');
+  const congelado = comp.length > 0 && saldo.length > 0 && String(comp[0].vencimento ?? '') > String(saldo[0].vencimento ?? '');
+  const series = congelado ? [ordenadas.filter(c => c.tipo !== 'complemento'), comp] : [ordenadas];
+  const out: T[][] = [];
+  for (const s of series) for (let i = 0; i < s.length; i += PARCELAS_POR_CARNE) out.push(s.slice(i, i + PARCELAS_POR_CARNE));
+  return out.length ? out : [[]];
+}
+
+export const totalDeBlocos = (plano: Pick<PlanoContrato, 'parcelas'>) => Math.max(1, blocosDoCarne(emOrdem(plano.parcelas)).length);
 
 export function dadosCarne(ctx: ContextoDocs, bloco: CobrancaDoc[], n: number | 'completo'): DadosCarne {
   const s = ctx.plano;

@@ -8,6 +8,7 @@ import PessoaCampos, { PESSOA_VAZIA } from "@/components/cadastro/PessoaCampos";
 import { Campo, classeCampo, sel } from "@/components/cadastro/campos";
 import { maskCEP, maskCPF, maskPhone } from "@shared/masks";
 import { exigeConjuge, pendenciasComprador, type PessoaForm } from "@shared/contratos";
+import { ROTULO_CONDICAO, ROTULO_MODO_C, type ModoPlanoC } from "@shared/condicoesLancamento";
 
 /** Linha do cadastro (pessoas) → formulário */
 function paraForm(x: any | null | undefined): PessoaForm {
@@ -30,10 +31,25 @@ interface Props {
   contrato: { id: number; numero: string; status: string; empreendimentoSlug: string; corretorUserId: number; condicoesEspecificas?: string };
   comprador: any;
   conjuge: any;
+  /** Plano atual (snapshot do contrato) — base para a edição do plano */
+  plano?: any;
+}
+
+type Cond = "padrao" | "A" | "B" | "C";
+function planoInicial(p: any) {
+  return {
+    modalidade: (p?.modalidade === "avista" ? "avista" : "financiado") as "avista" | "financiado",
+    condicao: (["A", "B", "C"].includes(p?.condicao) ? p.condicao : "padrao") as Cond,
+    prazo: Number(p?.saldo_qtd) || 120,
+    entradaParcelas: p?.condicao && p.condicao !== "padrao" ? 1 : Number(p?.entrada_qtd) || 1,
+    data1: String(p?.entrada_venc1 || p?.avista_vencimento || "").slice(0, 10),
+    modoC: (["unificado", "sequencial", "congelado"].includes(p?.complemento_modo) ? p.complemento_modo : "unificado") as ModoPlanoC,
+    inicioComp: Number(p?.complemento_inicio_mes) || 15,
+  };
 }
 
 /** Editar o contrato (só o administrador, com a senha de login): comprador, cônjuge, corretor e condições específicas */
-export function EditarContrato({ aberto, onFechar, onSalvo, contrato, comprador, conjuge }: Props) {
+export function EditarContrato({ aberto, onFechar, onSalvo, contrato, comprador, conjuge, plano }: Props) {
   const pode = trpc.contratos.edicao.useQuery({ id: contrato.id }, { enabled: aberto });
   const opcoes = trpc.contratos.opcoes.useQuery({ slug: contrato.empreendimentoSlug }, { enabled: aberto && !!contrato.empreendimentoSlug });
   const [c, setC] = useState<PessoaForm>(PESSOA_VAZIA);
@@ -41,12 +57,15 @@ export function EditarContrato({ aberto, onFechar, onSalvo, contrato, comprador,
   const [corretor, setCorretor] = useState(contrato.corretorUserId);
   const [especificas, setEspecificas] = useState("");
   const [senha, setSenha] = useState("");
+  const [mudarPlano, setMudarPlano] = useState(false);
+  const [pl, setPl] = useState(planoInicial(plano));
   const [erros, setErros] = useState<Record<string, string>>({});
   useEffect(() => {
     if (!aberto) return;
     setC(paraForm(comprador)); setJ(paraForm(conjuge)); setCorretor(contrato.corretorUserId);
     setEspecificas(contrato.condicoesEspecificas === "Não há." ? "" : contrato.condicoesEspecificas ?? ""); setSenha(""); setErros({});
-  }, [aberto, comprador, conjuge, contrato.corretorUserId, contrato.condicoesEspecificas]);
+    setPl(planoInicial(plano)); setMudarPlano(false);
+  }, [aberto, comprador, conjuge, contrato.corretorUserId, contrato.condicoesEspecificas, plano]);
   const editar = trpc.contratos.editar.useMutation({
     onSuccess: r => {
       toast.success(r.voltouRascunho ? "Contrato atualizado. Ele voltou a rascunho: gere a minuta/definitivo de novo." : r.soCadastral ? "Cadastro corrigido. O PDF assinado continua o oficial (alteração na trilha)." : "Contrato atualizado");
@@ -55,6 +74,16 @@ export function EditarContrato({ aberto, onFechar, onSalvo, contrato, comprador,
     onError: e => toast.error(e.message),
   });
   const temConjuge = exigeConjuge(c.estadoCivil);
+  const planoParaEnviar = () => {
+    const lanc = pl.modalidade === "financiado" && pl.condicao !== "padrao";
+    return {
+      modalidade: pl.modalidade, dataPrimeiroPagamento: pl.data1,
+      entradaParcelas: pl.modalidade === "avista" || lanc ? 1 : pl.entradaParcelas,
+      ...(pl.modalidade === "financiado" ? { prazo: pl.prazo, condicao: pl.condicao } : { condicao: "padrao" as const }),
+      ...(pl.modalidade === "financiado" && pl.condicao === "C" ? { modoC: pl.modoC, ...(pl.modoC === "congelado" ? { inicioComplemento: pl.inicioComp } : {}) } : {}),
+    };
+  };
+  const prazos: number[] = (opcoes.data as any)?.prazos ?? (opcoes.data as any)?.condicoes?.prazos ?? [12, 24, 36, 48, 60, 72, 84, 96, 108, 120, 180];
   const salvar = () => {
     const e = pendenciasComprador(c, temConjuge ? j : null);
     setErros(e);
@@ -64,6 +93,7 @@ export function EditarContrato({ aberto, onFechar, onSalvo, contrato, comprador,
       id: contrato.id, senha, comprador: c, conjuge: temConjuge ? j : null,
       ...(corretor && corretor !== contrato.corretorUserId ? { corretorUserId: corretor } : {}),
       condicoesEspecificas: especificas,
+      ...(mudarPlano ? { plano: planoParaEnviar() } : {}),
     });
   };
   const corretores: any[] = (opcoes.data as any)?.corretores ?? [];
@@ -94,6 +124,55 @@ export function EditarContrato({ aberto, onFechar, onSalvo, contrato, comprador,
               <Campo rotulo="Condições específicas (sai no contrato)" className="sm:col-span-2">
                 <textarea className={`${classeCampo()} min-h-[64px]`} maxLength={2000} value={especificas} onChange={e => setEspecificas(e.target.value)} placeholder="Não há." />
               </Campo>
+            </section>
+            <section className="space-y-2 rounded-lg border border-border p-3">
+              <label className="flex items-center gap-2 text-sm font-semibold">
+                <input type="checkbox" checked={mudarPlano} disabled={!pode.data?.plano} onChange={e => setMudarPlano(e.target.checked)} /> Mudar o plano de pagamento
+              </label>
+              {!pode.data?.plano && <p className="text-xs text-muted-foreground">O plano só muda antes da assinatura e sem boleto emitido (contrato assinado: termo aditivo).</p>}
+              {mudarPlano && pode.data?.plano && (
+                <div className="grid gap-3 sm:grid-cols-3">
+                  <Campo rotulo="Modalidade">
+                    <select className={sel} value={pl.modalidade === "avista" ? "avista" : pl.condicao} onChange={e => {
+                      const v = e.target.value;
+                      setPl(x => v === "avista" ? { ...x, modalidade: "avista" } : { ...x, modalidade: "financiado", condicao: v as Cond });
+                    }}>
+                      <option value="avista">À vista</option>
+                      {(["padrao", "A", "B", "C"] as Cond[]).map(k => <option key={k} value={k}>{k === "padrao" ? "Financiado — entrada de 30%" : `Financiado — ${ROTULO_CONDICAO[k].curto}`}</option>)}
+                    </select>
+                  </Campo>
+                  {pl.modalidade === "financiado" && (
+                    <Campo rotulo="Prazo do saldo (meses)">
+                      <select className={sel} value={pl.prazo} onChange={e => setPl(x => ({ ...x, prazo: Number(e.target.value) }))}>
+                        {Array.from(new Set([...prazos, pl.prazo])).sort((a, b) => a - b).map(n => <option key={n} value={n}>{n}×</option>)}
+                      </select>
+                    </Campo>
+                  )}
+                  {pl.modalidade === "financiado" && pl.condicao === "padrao" && (
+                    <Campo rotulo="Entrada em (vezes)">
+                      <input type="number" min={1} max={6} className={classeCampo()} value={pl.entradaParcelas} onChange={e => setPl(x => ({ ...x, entradaParcelas: Math.max(1, Math.min(6, Number(e.target.value) || 1)) }))} />
+                    </Campo>
+                  )}
+                  <Campo rotulo={pl.modalidade === "avista" ? "Vencimento do pagamento" : "Vencimento da entrada (ato)"}>
+                    <input type="date" className={classeCampo()} value={pl.data1} onChange={e => setPl(x => ({ ...x, data1: e.target.value }))} />
+                  </Campo>
+                  {pl.modalidade === "financiado" && pl.condicao === "C" && (
+                    <Campo rotulo="Resto da entrada (Plano C)" className="sm:col-span-2">
+                      <select className={sel} value={pl.modoC} onChange={e => setPl(x => ({ ...x, modoC: e.target.value as ModoPlanoC }))}>
+                        {(["unificado", "sequencial", "congelado"] as ModoPlanoC[]).map(m => <option key={m} value={m}>{ROTULO_MODO_C[m].titulo}</option>)}
+                      </select>
+                    </Campo>
+                  )}
+                  {pl.modalidade === "financiado" && pl.condicao === "C" && pl.modoC === "congelado" && (
+                    <Campo rotulo="Complemento começa no mês (contado do ato)">
+                      <input type="number" min={2} max={60} className={classeCampo()} value={pl.inicioComp} onChange={e => setPl(x => ({ ...x, inicioComp: Math.max(2, Math.min(60, Number(e.target.value) || 2)) }))} />
+                    </Campo>
+                  )}
+                  {pl.modalidade === "financiado" && pl.condicao === "C" && (
+                    <p className="text-xs text-muted-foreground sm:col-span-3">{ROTULO_MODO_C[pl.modoC].resumo}</p>
+                  )}
+                </div>
+              )}
             </section>
             <Campo rotulo="Sua senha de login (confirma a alteração)">
               <input type="password" autoComplete="current-password" className={classeCampo()} value={senha} onChange={e => setSenha(e.target.value)} />

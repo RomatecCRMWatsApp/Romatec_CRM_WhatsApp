@@ -392,7 +392,7 @@ export default function ContratoDetalhe() {
         )}
       </div>
 
-      {d.pode.cancelar && <EditarContrato aberto={editando} onFechar={() => setEditando(false)} onSalvo={recarregar} contrato={c as any} comprador={d.comprador} conjuge={d.conjuge} />}
+      {d.pode.cancelar && <EditarContrato aberto={editando} onFechar={() => setEditando(false)} onSalvo={recarregar} contrato={c as any} comprador={d.comprador} conjuge={d.conjuge} plano={d.plano} />}
       {d.pode.cancelar && <ExcluirContrato aberto={excluindo} onFechar={() => setExcluindo(false)} onExcluido={() => { setExcluindo(false); navigate("/contratos"); }} contrato={c as any} />}
       <ConfirmarCancelamento aberto={modal?.tipo === "contrato"} onFechar={() => setModal(null)} comSenha pendente={cancelar.isPending}
         titulo={`Cancelar o contrato ${c.numero}`} rotuloBotao="Cancelar contrato" motivoInicial={pendentes[0]?.motivo ?? ""}

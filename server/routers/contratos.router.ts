@@ -41,7 +41,9 @@ const planoZ = z.object({
   /** Forma de pagamento do financiado: entrada 30% (padrão) ou planos de lançamento A, B, C — define o modelo do CPCV */
   condicao: z.enum(["padrao", "A", "B", "C"]).optional(),
   /** Plano C: "unificado" (complemento + parcela no mesmo boleto) ou "sequencial" (primeiro o complemento, depois o saldo) */
-  modoC: z.enum(["unificado", "sequencial"]).optional(),
+  modoC: z.enum(["unificado", "sequencial", "congelado"]).optional(),
+  /** Plano C congelado (só o administrador): mês do 1º vencimento do complemento, contado do ato */
+  inicioComplemento: z.number().int().min(2).max(60).optional(),
   /** Concessão por liberalidade da proprietária (sem venda): só o administrador; gera o Termo Aditivo de Concessão */
   concessao: z.object({
     motivo: z.string().trim().max(600).default(""),
@@ -131,6 +133,7 @@ export const contratosRouter = router({
     const perfil = perfilDe(ctx.user as any);
     exigir(podeCriarContrato(perfil), "Seu perfil não cria contratos.");
     if (input.plano.concessao) exigir(perfil === "admin", "Só o administrador registra concessão da proprietária.");
+    if (input.plano.modoC === "congelado") exigir(perfil === "admin", "Só o administrador define o congelamento do complemento da entrada.");
     const db = (await getDb()) as any;
     if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Banco indisponível" });
     if (input.leadId) {

@@ -21,8 +21,11 @@ export interface EscolhaPlano {
   dataPrimeiroPagamento: string;
   /** Forma de pagamento do financiado: entrada 30% (padrão) ou condições de lançamento A, B, C */
   condicao?: CondicaoPagamento;
-  /** Plano C: 'unificado' (complemento + parcela no mesmo boleto, padrão) ou 'sequencial' (complemento antes do saldo) */
+  /** Plano C: 'unificado' (complemento + parcela no mesmo boleto, padrão), 'sequencial' (complemento antes do saldo)
+   *  ou 'congelado' (só a gestão: complemento a partir do mês inicioComplemento, em carnê à parte) */
   modoC?: ModoPlanoC;
+  /** Plano C congelado: mês do 1º vencimento do complemento, contado do ato */
+  inicioComplemento?: number;
 }
 
 export interface ParcelaPlano {
@@ -85,6 +88,8 @@ export interface PlanoContrato {
   complemento_venc1?: string;
   /** Plano C: forma do complemento (ausente = unificado nos contratos novos; os anteriores tinham boletos separados) */
   complemento_modo?: ModoPlanoC;
+  /** Plano C congelado: mês do 1º vencimento do complemento, contado do ato */
+  complemento_inicio_mes?: number;
   parcelas: ParcelaPlano[];
   /** Concessão por liberalidade da proprietária (sem venda): sem cobranças, fora do faturamento, com Termo Aditivo */
   concessao?: ConcessaoProprietaria;
@@ -157,12 +162,12 @@ function planoDeLancamento(sim: Simulacao, escolha: EscolhaPlano, c: CondicoesPa
   const cond = escolha.condicao as Exclude<CondicaoPagamento, 'padrao'>;
   const d1 = escolha.dataPrimeiroPagamento;
   let pc;
-  try { pc = planoCondicao(sim.preco, cond, Number(escolha.prazo), c, 1, cond === 'C' ? escolha.modoC ?? 'unificado' : 'unificado'); }
+  try { pc = planoCondicao(sim.preco, cond, Number(escolha.prazo), c, 1, cond === 'C' ? escolha.modoC ?? 'unificado' : 'unificado', escolha.inicioComplemento); }
   catch (e: any) { throw new Error(e?.message || 'Condição de pagamento inválida'); }
   let parcelas: ParcelaPlano[] = cronograma(pc).map(l => ({
     tipo: l.tipo, numero: l.numero, total: l.total, vencimento: vencimento(d1, l.mes), valor: l.parcela, juros: l.juros, amortizacao: l.amortizacao, saldoDevedor: l.saldoDevedor,
   }));
-  const unificado = cond === 'C' && pc.complemento && pc.modoC !== 'sequencial';
+  const unificado = cond === 'C' && pc.complemento && pc.modoC === 'unificado';
   if (unificado) parcelas = unificarComplemento(parcelas);
   const com = comissao(sim.preco, comCorretor, true, c);
   const primeiroReforco = parcelas.find(p => p.tipo === 'reforco');
@@ -178,6 +183,7 @@ function planoDeLancamento(sim: Simulacao, escolha: EscolhaPlano, c: CondicoesPa
     ...(pc.complemento ? {
       complemento_ato: pc.entradaAto, complemento_valor: pc.complemento.total, complemento_qtd: pc.complemento.qtd,
       complemento_parcela: pc.complemento.parcela, complemento_modo: pc.modoC ?? 'unificado',
+      ...(pc.modoC === 'congelado' ? { complemento_inicio_mes: pc.inicioComplemento } : {}),
       complemento_venc1: primeiroComp?.vencimento ?? parcelas.find(p => p.complemento)?.vencimento ?? '',
     } : {}),
     parcelas,
