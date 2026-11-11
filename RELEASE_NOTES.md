@@ -3,6 +3,17 @@
 Cada versão nova vai no TOPO. Depois rode `npm run release` (valida e atualiza o package.json);
 ao subir, o servidor grava a versão no banco e todos recebem o aviso "Novidades da versão".
 
+## 1.159.0 — 2026-11-11
+tipo: minor
+obrigatoria: nao
+titulo: Cartão do corretor com foto em todos os PDFs comerciais
+publico: usuarios
+
+### Melhorias
+- O cartão "Seu corretor" (foto redonda do cadastro, nome, CRECI, WhatsApp, Instagram e e-mail do Meu carimbo) agora sai também em: Todas as condições de pagamento, Tabela de financiamento, Tabela geral de financiamento e Kit do parceiro/corretor
+- No Kit, o cartão mostra quem atende: o próprio corretor no kit dele, ou o corretor da casa definido para a parceira
+- Sem foto no cadastro, o cartão mostra as iniciais. Contratos, recibos e termos continuam sem o cartão, por serem documentos jurídicos
+
 ## 1.158.8 — 2026-11-11
 tipo: patch
 obrigatoria: nao

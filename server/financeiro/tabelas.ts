@@ -13,6 +13,7 @@ import {
   AVISO_LEGAL_SIMULACAO, brl, condicoesDaLinha, precoLote, simular, type CondicoesPagamento, type LinhaEvolucao,
 } from '../../shared/simulador';
 import { temAcesso, type AcessoCorretor } from '../../shared/permissoes';
+import { ALTURA_CARTAO, desenharCartaoCorretor, type CorretorPdf } from '../pdf/cartaoCorretor';
 import type { Perfil } from '../../shared/equipe';
 import { desenharMarca, embutirMarca } from '../contratos/anexos';
 import { pastaTemplates } from '../contratos/render';
@@ -139,7 +140,7 @@ const assinatura = (c: CartaoVendas | null) => (c ? [`${c.papel} ${c.nome}`, c.c
 /** PDF: condições + evolutivo de um lote/área/valor */
 const ROTULO_TIPO: Record<string, string> = { entrada: 'Entrada', saldo: 'Saldo', reforco: 'Reforço', complemento: 'Compl. entr.' };
 
-export async function pdfTabelaFinanciamento(base: Awaited<ReturnType<typeof baseDoEmpreendimento>>, t: ReturnType<typeof calcularTabela>, cartao: CartaoVendas | null): Promise<Buffer> {
+export async function pdfTabelaFinanciamento(base: Awaited<ReturnType<typeof baseDoEmpreendimento>>, t: ReturnType<typeof calcularTabela>, cartao: CartaoVendas | null, corretor: CorretorPdf | null = null): Promise<Buffer> {
   const { emp, c } = base, s = t.simulacao;
   const nome = t.origem.tipo === 'lote' ? `Chácara ${t.origem.codigo}${t.origem.quadra ? ` · Quadra ${t.origem.quadra}` : ''}` : t.origem.tipo === 'area' ? `Área de ${m2(t.origem.areaM2)} m²` : `Valor de ${brl(t.origem.preco)}`;
   const D = await documento(`Tabela de financiamento — ${emp.nome} — ${nome}`, base.marca, emp.nome);
@@ -201,12 +202,17 @@ export async function pdfTabelaFinanciamento(base: Awaited<ReturnType<typeof bas
   const avisos = [...quebrar(D.f, AVISO_LEGAL_SIMULACAO, 7.2, L), ...(cartao ? [`Gerado por ${assinatura(cartao)} · Romatec Consultoria Total`] : [])];
   if (y - avisos.length * 9.5 < b) ({ p, topo: y, base: b } = D.pagina());
   for (const a of avisos) { texto(a, { size: 7.2, cor: CINZA }); y -= 9.5; }
+  if (corretor) {
+    y -= 6;
+    if (y - ALTURA_CARTAO < b) ({ p, topo: y, base: b } = D.pagina());
+    y -= await desenharCartaoCorretor(D.doc, p, X0, y, L, corretor, { normal: D.f, negrito: D.fb });
+  }
   D.numerar(`Tabela de financiamento · ${nome}`);
   return Buffer.from(await D.doc.save({ useObjectStreams: false }));
 }
 
 /** PDF: tabela geral com todos os lotes comercializáveis (paisagem) */
-export async function pdfTabelaGeral(base: Awaited<ReturnType<typeof baseDoEmpreendimento>>, cartao: CartaoVendas | null): Promise<Buffer> {
+export async function pdfTabelaGeral(base: Awaited<ReturnType<typeof baseDoEmpreendimento>>, cartao: CartaoVendas | null, corretor: CorretorPdf | null = null): Promise<Buffer> {
   const { emp, c, lotes: ls } = base;
   const D = await documento(`Tabela geral de financiamento — ${emp.nome}`, base.marca, emp.nome, true);
   const X0 = 36, L = D.largura - 72;
@@ -232,6 +238,11 @@ export async function pdfTabelaGeral(base: Awaited<ReturnType<typeof baseDoEmpre
     ...(cartao ? [`Gerado por ${assinatura(cartao)} · Romatec Consultoria Total`] : []),
   ];
   for (const n of notas) { if (y < b + 10) ({ p, topo: y, base: b } = D.pagina()); p.drawText(n, { x: X0, y, size: 7, font: D.f, color: CINZA }); y -= 9.5; }
+  if (corretor) {
+    y -= 6;
+    if (y - ALTURA_CARTAO < b) ({ p, topo: y, base: b } = D.pagina());
+    await desenharCartaoCorretor(D.doc, p, X0, y, Math.min(L, 470), corretor, { normal: D.f, negrito: D.fb });
+  }
   D.numerar(`Tabela geral · ${emp.nome}`);
   return Buffer.from(await D.doc.save({ useObjectStreams: false }));
 }

@@ -6,6 +6,7 @@
 import { AVISO_LEGAL_SIMULACAO, brl, simular, textoEntrada, textoJuros, type CondicoesPagamento } from '../../shared/simulador';
 import { ROTULO_CONDICAO, planoCondicao, type CondicaoPagamento } from '../../shared/condicoesLancamento';
 import { ESCRITORIO } from '../../shared/escritorio';
+import type { CorretorPdf } from '../pdf/cartaoCorretor';
 
 const m2 = (v: number) => v.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 
@@ -14,20 +15,11 @@ export interface DadosProposta {
   empreendimento: string;
   c: CondicoesPagamento;
   entrada: number; prazo: number; condicao: CondicaoPagamento;
-  /** Carimbo do corretor (Materiais › Meu carimbo; sem ele, o cadastro) */
-  corretor: { nome: string; creci: string | null; telefone: string | null; instagram?: string | null; email: string | null; foto?: Buffer | null };
+  /** Carimbo do corretor (Materiais › Meu carimbo; sem ele, o cadastro); foto já redonda */
+  corretor: CorretorPdf;
 }
 
-/** Foto do cadastro recortada em círculo, com aro dourado (PNG com fundo transparente) */
-export async function fotoRedonda(bruto: Buffer, lado = 360): Promise<Buffer> {
-  const sharp = (await import('sharp')).default;
-  const r = lado / 2, aro = Math.round(lado * 0.035);
-  const mascara = Buffer.from(`<svg width="${lado}" height="${lado}"><circle cx="${r}" cy="${r}" r="${r}" fill="#fff"/></svg>`);
-  const anel = Buffer.from(`<svg width="${lado}" height="${lado}"><circle cx="${r}" cy="${r}" r="${r - aro / 2}" fill="none" stroke="#c9a646" stroke-width="${aro}"/></svg>`);
-  const recorte = await sharp(bruto).rotate().resize(lado, lado, { fit: 'cover', position: 'attention' }).ensureAlpha()
-    .composite([{ input: mascara, blend: 'dest-in' }]).png().toBuffer();
-  return sharp(recorte).composite([{ input: anel }]).png().toBuffer();
-}
+export { fotoRedonda } from '../pdf/cartaoCorretor';
 
 export class PropostaErro extends Error { constructor(m: string, public status = 422) { super(m); } }
 
@@ -65,12 +57,7 @@ export async function pdfProposta(d: DadosProposta): Promise<Buffer> {
   w.paragrafo([{ t: 'Ou pagamento integral à vista: ', b: true }, { t: `${brl(sim.avistaTotal.valor)} — preço cheio ${brl(sim.preco)} com desconto de ${brl(sim.avistaTotal.desconto)}, pago de uma só vez.` }], { antes: 8 });
   w.paragrafo(AVISO_LEGAL_SIMULACAO, { size: 8.4, antes: 10 });
   w.espaco(14);
-  await w.cartaoPessoa({
-    foto: d.corretor.foto ? await fotoRedonda(d.corretor.foto).catch(() => null) : null,
-    titulo: 'Seu corretor', nome: d.corretor.nome,
-    sub: [d.corretor.creci, 'Corretor(a) de imóveis'].filter(Boolean).join(' · '),
-    linhas: [d.corretor.telefone && `WhatsApp: ${d.corretor.telefone}`, d.corretor.instagram && `Instagram: @${d.corretor.instagram}`, d.corretor.email && `E-mail: ${d.corretor.email}`].filter(Boolean) as string[],
-  });
+  await w.cartaoCorretor(d.corretor);
   w.paragrafo(`${ESCRITORIO.fantasia} · ${ESCRITORIO.creciJ} · Valores sujeitos a alteração e disponibilidade.`, { size: 8.4 });
   return w.salvar();
 }

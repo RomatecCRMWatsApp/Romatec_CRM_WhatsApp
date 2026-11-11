@@ -198,13 +198,12 @@ export function registrarRotasFinanceiro(app: Express) {
       if (!cx) return;
       if (cx.selo === 'vendido') return res.status(409).send(`Chácara ${cx.lote.codigo} vendida — sem proposta`);
       const { pdfProposta, PropostaErro } = await import('../simulador/propostaPdf');
-      const { dadosDoCarimbo } = await import('../carimbo');
-      const cb = await dadosDoCarimbo(user.id);
-      const foto = await (await import('../credenciamento')).fotoPng(d, user.id);
+      const { corretorParaPdf } = await import('../pdf/cartaoCorretor');
+      const corretor = await corretorParaPdf(user.id) ?? { nome: String(user.name ?? ''), creci: null, telefone: null, email: user.email ?? null };
       const pdf = await pdfProposta({
         lote: { codigo: String(cx.lote.codigo), quadra: cx.lote.quadra ?? null, areaM2: cx.areaM2, precoTabela: cx.lote.precoTabela != null ? Number(cx.lote.precoTabela) : null },
         empreendimento: String(cx.emp.nome), c: cx.c, entrada, prazo, condicao,
-        corretor: { nome: String(cb.cartao.nome || user.name || ''), creci: cb.cartao.creci || null, telefone: cb.cartao.telefones[0] ?? null, instagram: cb.instagram, email: cb.email ?? cb.cartao.email ?? null, foto },
+        corretor,
       }).catch((e: any) => { if (e instanceof PropostaErro) { res.status(e.status).send(e.message); return null; } throw e; });
       if (!pdf) return;
       res.setHeader('Content-Type', 'application/pdf');
@@ -382,7 +381,9 @@ export function registrarRotasFinanceiro(app: Express) {
       const slug = q.slug && /^[a-z0-9-]{1,80}$/.test(q.slug) ? q.slug : 'bom-jardims';
       const b = await T.baseDoEmpreendimento(slug, perm);
       const cartao = await cartaoDoUsuario(user.id).catch(() => null);
-      if (geral) return pdf(res, await T.pdfTabelaGeral(b, cartao), `Tabela-geral-${slug}.pdf`);
+      const { corretorParaPdf } = await import('../pdf/cartaoCorretor');
+      const corretor = await corretorParaPdf(user.id);
+      if (geral) return pdf(res, await T.pdfTabelaGeral(b, cartao, corretor), `Tabela-geral-${slug}.pdf`);
       const n = (v?: string) => (v && Number.isFinite(Number(v)) && Number(v) > 0 ? Number(v) : null);
       const t = T.calcularTabela(b, {
         lote: q.lote && /^[A-Za-z0-9]{1,10}$/.test(q.lote) ? q.lote : null, areaM2: n(q.area), preco: n(q.preco),
@@ -390,7 +391,7 @@ export function registrarRotasFinanceiro(app: Express) {
         condicao: q.condicao === 'A' || q.condicao === 'B' || q.condicao === 'C' ? q.condicao : 'padrao',
       });
       const nome = t.origem.tipo === 'lote' ? t.origem.codigo : t.origem.tipo === 'area' ? `area-${Math.round(t.origem.areaM2)}` : `valor-${Math.round(t.origem.preco)}`;
-      pdf(res, await T.pdfTabelaFinanciamento(b, t, cartao), `Tabela-financiamento-${slug}-${nome}.pdf`);
+      pdf(res, await T.pdfTabelaFinanciamento(b, t, cartao, corretor), `Tabela-financiamento-${slug}-${nome}.pdf`);
     } catch (e: any) {
       if (e?.name === 'TabelaErro') return res.status(e.status).send(e.message);
       console.error('[Financeiro] tabela:', e);

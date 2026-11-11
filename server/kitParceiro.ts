@@ -86,6 +86,8 @@ export interface Destinatario {
   comissaoPct: number | null;
   /** Quem atende: o corretor do kit, ou o corretor da casa definido para a parceira, ou o padrão (José Romário) */
   contato: CartaoVendas;
+  /** Usuário do contato (foto e carimbo no cartão); sem ele, o cartão sai com as iniciais */
+  contatoId?: number | null;
 }
 
 export interface DadosEmpreendimento {
@@ -124,7 +126,7 @@ export async function destinatarioDe(tipo: TipoKit, id: number): Promise<Destina
   if (tipo === 'parceira') {
     const [p]: any[] = await d.select().from(imobiliariasParceiras).where(eq(imobiliariasParceiras.id, id)).limit(1);
     if (!p) throw new KitErro('Parceira não encontrada', 404);
-    return { tipo, nome: p.nome, link: `${urlPublica()}/parceiro/${p.token}`, comissaoPct: Number(p.comissaoPct ?? COMISSAO_PADRAO), contato: await contatoDe(d, p.corretorInternoId) };
+    return { tipo, nome: p.nome, link: `${urlPublica()}/parceiro/${p.token}`, comissaoPct: Number(p.comissaoPct ?? COMISSAO_PADRAO), contato: await contatoDe(d, p.corretorInternoId), contatoId: p.corretorInternoId ?? null };
   }
   if (tipo === 'prospecto') {
     const [p]: any[] = await d.select().from(prospectos).where(eq(prospectos.id, id)).limit(1);
@@ -137,7 +139,7 @@ export async function destinatarioDe(tipo: TipoKit, id: number): Promise<Destina
   const { perfilDe } = await import('../shared/equipe');
   const { refDoUsuario } = await import('./cartaoVendas');
   const cartao = cartaoDe(u, perfilDe(u));
-  return { tipo, nome: cartao.nome, link: `${urlPublica()}/${SLUG}?c=${refDoUsuario(Number(u.id))}`, comissaoPct: null, contato: cartao };
+  return { tipo, nome: cartao.nome, link: `${urlPublica()}/${SLUG}?c=${refDoUsuario(Number(u.id))}`, comissaoPct: null, contato: cartao, contatoId: Number(u.id) };
 }
 
 export async function dadosEmpreendimento(comPrecos: boolean): Promise<DadosEmpreendimento> {
@@ -307,11 +309,11 @@ export async function gerarKit(dest: Destinatario, emp: DadosEmpreendimento): Pr
     txt(p, dest.tipo === 'parceira' ? 'SEU PORTAL DE PARCEIRO' : dest.tipo === 'corretor' ? 'CONHEÇA AS CHÁCARAS' : 'CONHEÇA O EMPREENDIMENTO', xi, yy, 9, fb, DOURADO); yy -= 16;
     for (const l of quebrar(f, dest.link, 8.5, li)) { txt(p, l, xi, yy, 8.5, f, VERDE); yy -= 11; }
     yy -= 8;
-    const c = dest.contato;
-    txt(p, c.nome, xi, yy, 12, fb, VERDE); yy -= 14;
-    if (c.creci) { txt(p, `${c.papel} · ${c.creci}`, xi, yy, 9, f, CINZA); yy -= 12; }
-    if (c.telefones[0]) { txt(p, `WhatsApp ${c.telefones[0]}`, xi, yy, 10, fb); yy -= 12; }
-    if (c.email) { txt(p, c.email, xi, yy, 9, f, CINZA); }
+    txt(p, 'Aponte a câmera para o QR code ou toque no link.', xi, yy, 9, f, CINZA);
+    // Cartão "Seu corretor": foto redonda, carimbo e contatos de quem atende
+    const { corretorParaPdf, corretorDoCartao, desenharCartaoCorretor } = await import('./pdf/cartaoCorretor');
+    const cartaoC = (dest.contatoId ? await corretorParaPdf(dest.contatoId) : null) ?? corretorDoCartao(dest.contato);
+    await desenharCartaoCorretor(doc, p, X0, y - qrw - 24 - 14, X1 - X0, cartaoC, { normal: f, negrito: fb });
     rodape(p, pagina);
   }
 

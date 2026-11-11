@@ -41,7 +41,7 @@ describe('pdfProposta', () => {
     expect(meta.hasAlpha).toBe(true);
     const { data } = await sharp(r).raw().toBuffer({ resolveWithObject: true });
     expect(data[3]).toBe(0); // canto transparente
-    const pdf = await pdfProposta({ ...base, condicao: 'padrao', corretor: { ...base.corretor, foto } } as any);
+    const pdf = await pdfProposta({ ...base, condicao: 'padrao', corretor: { ...base.corretor, foto: r } } as any);
     const t = await texto(pdf);
     expect(t).toContain('Seucorretor');
     expect(t).toContain('Instagram:@corretor.teste');

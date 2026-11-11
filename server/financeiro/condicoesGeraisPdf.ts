@@ -14,7 +14,7 @@ import { ESCRITORIO, LINHA_PUBLICIDADE } from '../../shared/escritorio';
 import { brl, condicoesDaLinha, precoLote, simular, type CondicoesPagamento } from '../../shared/simulador';
 import { ENTRADA_LANCAMENTO, ROTULO_CONDICAO, planosDaCondicao, type CondicaoPagamento } from '../../shared/condicoesLancamento';
 import { numeroCreciPF } from '../../shared/cartaoVendas';
-import { exibirTelefoneBR, normalizePhoneBR } from '../../shared/telefone';
+import { ALTURA_CARTAO, corretorParaPdf, desenharCartaoCorretor, type CorretorPdf } from '../pdf/cartaoCorretor';
 
 const VERDE = rgb(0.047, 0.2, 0.125);
 const CINZA = rgb(0.35, 0.35, 0.35);
@@ -60,7 +60,8 @@ export interface DadosCondicoes {
   empreendimento: { nome: string; slug: string; municipio: string | null; uf: string | null };
   c: CondicoesPagamento;
   marca: string;
-  corretor: { nome: string; creci: string | null; telefone: string | null } | null;
+  /** Cartão do corretor que enviou (carimbo + foto) */
+  corretor: CorretorPdf | null;
 }
 
 export async function dadosCondicoes(slug: string, corretorId: number | null): Promise<DadosCondicoes> {
@@ -76,8 +77,8 @@ export async function dadosCondicoes(slug: string, corretorId: number | null): P
   try { const { juridicoDe } = await import('../contratos/servico'); marca = String((await juridicoDe(Number(emp.id)) as any)?.marcaSlug ?? marca); } catch { /* marca padrão */ }
   let corretor: DadosCondicoes['corretor'] = null;
   if (corretorId) {
-    const [u]: any[] = await d.select({ name: users.name, creci: users.creci, telefone: users.telefone }).from(users).where(eq(users.id, corretorId)).limit(1);
-    if (u) corretor = { nome: String(u.name ?? '').trim(), creci: u.creci ? String(u.creci) : null, telefone: u.telefone ? String(u.telefone) : null };
+    const [u]: any[] = await d.select({ id: users.id, ativo: users.ativo }).from(users).where(eq(users.id, corretorId)).limit(1);
+    if (u) corretor = await corretorParaPdf(Number(u.id));
   }
   return { empreendimento: { nome: String(emp.nome), slug, municipio: emp.municipio ?? null, uf: emp.uf ?? null }, c: condicoesDaLinha(cond), marca, corretor };
 }
@@ -177,13 +178,8 @@ export async function pdfCondicoesGerais(dd: DadosCondicoes): Promise<Buffer> {
   // Corretor e observações
   y -= 4;
   if (dd.corretor?.nome) {
-    if (y - 50 < base) nova();
-    p.drawRectangle({ x: X0, y: y - 40, width: X1 - X0, height: 40, borderColor: BORDA, borderWidth: 0.6 });
-    p.drawText('SEU CORRETOR', { x: X0 + 8, y: y - 11, size: 7, font: fb, color: VERDE });
-    const creci = dd.corretor.creci ? ` · CRECI ${numeroCreciPF(dd.corretor.creci)}` : '';
-    p.drawText(`${dd.corretor.nome}${creci}`, { x: X0 + 8, y: y - 23, size: 9.4, font: fb, color: PRETO });
-    if (dd.corretor.telefone) p.drawText(`WhatsApp ${(() => { const n = normalizePhoneBR(dd.corretor.telefone); return n ? exibirTelefoneBR(n) : dd.corretor.telefone; })()}`, { x: X0 + 8, y: y - 34, size: 8.4, font: f, color: PRETO });
-    y -= 48;
+    if (y - ALTURA_CARTAO - 10 < base) nova();
+    y -= (await desenharCartaoCorretor(doc, p, X0, y, X1 - X0, dd.corretor, { normal: f, negrito: fb })) + 10;
   }
   texto(`Valores de referência em ${hoje()}, sujeitos a alteração e à disponibilidade das chácaras. Não é proposta: a proposta exclusiva, com a chácara escolhida, as datas e o contrato, é enviada pelo corretor. ${LINHA_PUBLICIDADE} · CNPJ ${ESCRITORIO.cnpj}.`, { size: 7.4, cor: CINZA });
 
