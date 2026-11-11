@@ -102,6 +102,23 @@ export async function posicoesDe(contratoId: number, modeloVersao: string): Prom
   return linhas.map((l: any) => ({ papel: l.papel, pagina: Number(l.pagina), x: Number(l.x), y: Number(l.y), w: Number(l.w), h: Number(l.h) }));
 }
 
+/** Só as caixas salvas neste contrato (sem o gabarito) */
+export async function posicoesSalvas(contratoId: number): Promise<Caixa[]> {
+  const d = await db();
+  const ls: any[] = await d.select().from(assinaturaPosicoes).where(eq(assinaturaPosicoes.contratoId, contratoId));
+  return ls.map((l: any) => ({ papel: l.papel, pagina: Number(l.pagina), x: Number(l.x), y: Number(l.y), w: Number(l.w), h: Number(l.h) }));
+}
+
+/** Caixas localizadas pelos nomes impressos embaixo das linhas de assinatura (a gestora também pela razão social) */
+export async function posicoesAutomaticas(pdf: Buffer, sigs: { papel: string; nome: string }[]): Promise<Caixa[]> {
+  const { localizarAssinaturas } = await import('./autoPosicao');
+  const { ESCRITORIO } = await import('../../shared/escritorio');
+  return localizarAssinaturas(pdf, sigs.map(s => ({ ...s, apelidos: s.papel === 'intermediadora' ? [ESCRITORIO.fantasia, ESCRITORIO.razaoSocial] : [] }))).catch((e: any) => {
+    console.warn('[Assinatura] posições automáticas:', e?.message);
+    return [];
+  });
+}
+
 /** Grava as caixas do contrato (ou o gabarito do modelo, com contratoId nulo) — substitui as anteriores */
 export async function salvarPosicoes(caixas: Caixa[], alvo: { contratoId: number } | { modeloVersao: string }) {
   const d = await db();
@@ -154,11 +171,21 @@ export async function enviarParaAssinatura(contratoId: number, metodos: Record<s
   const j = await juridicoDe(c.empreendimentoId);
   let pdf = await pdfAtual(contratoId);
   if (temAssinaturaDigital(pdf)) throw new AssinaturaErro('PDF', 'O PDF atual já tem assinatura digital', 409);
-  let caixas = await posicoesDe(contratoId, j.modeloVersao);
-  if (!sigs.every(s => caixas.some(cx => cx.papel === s.papel))) {
-    const r = await paginaDeAssinaturas(pdf, sigs, { numero: c.numero, marca: j.marcaSlug, codigo: c.codigoVerificacao });
+  // Posições: as que o administrador salvou neste contrato; senão, as localizadas pelos nomes no PDF (cada linha de
+  // assinatura com o nome da pessoa ganha uma caixa); senão, o gabarito do modelo
+  let caixas = await posicoesSalvas(contratoId);
+  if (!caixas.length) caixas = await posicoesAutomaticas(pdf, sigs);
+  if (!caixas.length) caixas = await posicoesDe(contratoId, j.modeloVersao);
+  // Quem ficou sem caixa ganha o quadro de assinaturas no fim; as posições dos demais (várias por pessoa) são mantidas
+  const semCaixa = sigs.filter(s => !caixas.some(cx => cx.papel === s.papel));
+  if (semCaixa.length) {
+    const { PDFDocument } = await import('pdf-lib');
+    const paginas = (await PDFDocument.load(pdf)).getPageCount();
+    // "-1" (última página) passa a ser o número dela: a página de assinaturas entra depois
+    const fixas = caixas.map(cx => (cx.pagina === -1 ? { ...cx, pagina: paginas } : cx));
+    const r = await paginaDeAssinaturas(pdf, semCaixa, { numero: c.numero, marca: j.marcaSlug, codigo: c.codigoVerificacao });
     pdf = r.pdf;
-    caixas = r.caixas;
+    caixas = [...fixas, ...r.caixas];
     await salvarPosicoes(caixas, { contratoId });
   }
   pdf = await marcarCaixasDigitais(pdf, caixas.map(cx => ({ ...cx, metodo: sigs.find(s => s.papel === cx.papel)?.metodo ?? 'avancada' })));
@@ -293,9 +320,12 @@ export async function confirmarAvancada(token: string, codigo: string, o: { ip: 
   let carimbado = false;
   if (!temAssinaturaDigital(atual)) {
     const j = await juridicoDe(c.empreendimentoId);
-    const cx = (await posicoesDe(s.contratoId, j.modeloVersao)).find(x => x.papel === s.papel);
-    if (cx) {
-      await novaVersao(s.contratoId, `carimbo_avancada:${s.id}`, await carimbarAvancada(atual, cx, { nome: s.nome, cpf: s.cpf, quando, ip: o.ip, codigo: c.codigoVerificacao }));
+    // Todas as caixas da pessoa (assinatura do CPCV, do contrato de intermediação, de anexos…)
+    const cxs = (await posicoesDe(s.contratoId, j.modeloVersao)).filter(x => x.papel === s.papel);
+    if (cxs.length) {
+      let pdf = atual;
+      for (const cx of cxs) pdf = await carimbarAvancada(pdf, cx, { nome: s.nome, cpf: s.cpf, quando, ip: o.ip, codigo: c.codigoVerificacao });
+      await novaVersao(s.contratoId, `carimbo_avancada:${s.id}`, pdf);
       carimbado = true;
     }
   }

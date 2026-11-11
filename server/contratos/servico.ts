@@ -360,6 +360,20 @@ export async function documentosOrigemDoEmpreendimento(empreendimentoId: number 
   return rows.map(r => ({ nome: String(r.nome), mime: r.mime ?? null, conteudo: Buffer.from(String(r.conteudoBase64 ?? ''), 'base64') }));
 }
 
+/** Documentos do comprador e do cônjuge enviados na ficha do contrato (os dos dependentes ficam nas carteirinhas) */
+export async function documentosPartesDoContrato(contratoId: number) {
+  const { listarAnexos, lerAnexo } = await import('./documentosContrato');
+  const { comprador, conjuge } = await pessoasDe(contratoId);
+  const quem = { comprador: comprador?.nome ? `${comprador.nome} (comprador(a))` : 'Comprador(a)', conjuge: conjuge?.nome ? `${conjuge.nome} (cônjuge)` : 'Cônjuge' } as Record<string, string>;
+  const lista = (await listarAnexos(contratoId)).filter(a => a.alvo === 'comprador' || a.alvo === 'conjuge');
+  const out: { rotulo: string; nome: string; mime: string | null; conteudo: Buffer }[] = [];
+  for (const a of lista) {
+    const f = await lerAnexo(contratoId, a.id).catch(() => null);
+    if (f) out.push({ rotulo: `${a.rotulo} — ${quem[a.alvo] ?? a.alvo}`, nome: f.nome, mime: f.mime, conteudo: f.buf });
+  }
+  return out;
+}
+
 export async function gerarVersao(contratoId: number, alvo: 'minuta' | 'definitivo', o: { licenca?: Buffer | null } = {}) {
   const d = await db();
   const c = await contratoPorId(contratoId);
@@ -367,7 +381,8 @@ export async function gerarVersao(contratoId: number, alvo: 'minuta' | 'definiti
   const { entrada, unidade, plano, marca, modelo } = await entradaDoContrato(contratoId);
   const ctx = montarContexto(entrada);
   const documentosOrigem = await documentosOrigemDoEmpreendimento(c.empreendimentoId);
-  const { pdf, sha256, gate } = await gerarContratoPdf(ctx, plano, { alvo, modelo, marca, unidade, licenca: o.licenca, documentosOrigem });
+  const documentosPartes = await documentosPartesDoContrato(contratoId);
+  const { pdf, sha256, gate } = await gerarContratoPdf(ctx, plano, { alvo, modelo, marca, unidade, licenca: o.licenca, documentosOrigem, documentosPartes });
   const versoes: any[] = await d.select({ versao: contratoVersoes.versao }).from(contratoVersoes).where(eq(contratoVersoes.contratoId, contratoId));
   const versao = versoes.reduce((m, v) => Math.max(m, Number(v.versao)), 0) + 1;
   const chave = `contratos/${contratoId}/v${String(versao).padStart(3, '0')}-${alvo}.pdf`;

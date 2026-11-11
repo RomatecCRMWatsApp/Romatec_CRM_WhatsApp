@@ -7,7 +7,7 @@ import { avaliarGate, type GateResult } from './gate';
 import type { PlanoContrato } from './plano';
 import { anexar, docxParaPdf, marcaDagua, mergeDocx, sha256, TEXTO_MINUTA } from './render';
 import { anexoDiretrizes, anexoEstatuto, anexoTabelaPagamento, anexoTarifaAgua } from './anexos';
-import { anexoDocumentosOrigem, anexoLicenca, anexoMapa, anexoMemorial, type DadosUnidade, type DocumentoOrigem } from './anexosLote';
+import { anexoDocumentosPartes, type DocumentoParte, anexoDocumentosOrigem, anexoLicenca, anexoMapa, anexoMemorial, type DadosUnidade, type DocumentoOrigem } from './anexosLote';
 import { docIntermediacao, docTermoConcessao } from './docsComissao';
 
 export class GateBloqueadoError extends Error {
@@ -28,6 +28,8 @@ export interface OpcoesGeracao {
   licenca?: Buffer | null;
   /** Documentos de origem do imóvel (matrícula, CCIR, ITR, SIGEF) — Anexo IX; sem eles, capa "a anexar" */
   documentosOrigem?: DocumentoOrigem[];
+  /** Cópias dos documentos do comprador e do cônjuge enviados na ficha do contrato — Anexo X (sem eles, não entra) */
+  documentosPartes?: DocumentoParte[];
 }
 
 export async function gerarContratoPdf(ctx: Ctx, plano: PlanoContrato, o: OpcoesGeracao): Promise<{ pdf: Buffer; sha256: string; gate: GateResult }> {
@@ -49,13 +51,14 @@ export async function gerarContratoPdf(ctx: Ctx, plano: PlanoContrato, o: Opcoes
     anexoDocumentosOrigem(ctx, o.marca, o.documentosOrigem ?? []),
     docIntermediacao(ctx, o.marca),
   ]);
+  const partes = await anexoDocumentosPartes(ctx, o.marca, o.documentosPartes ?? []);
   // Ordem do contrato (Cláusula 23.4): I memorial, II tabela, III estatuto, IV diretrizes, V mapa, VI licença/registro,
   // VIII tarifa de água, IX documentos de origem do imóvel (o VII, manifesto de assinaturas, entra ao fim da assinatura); depois, o Contrato de Intermediação
   // (ciência dos 2% do corretor), assinado pelo cliente no mesmo fluxo
   // Concessão da proprietária: o Termo Aditivo de Concessão vem logo depois do CPCV (mesma assinatura) e não há
   // Contrato de Intermediação (não há corretor terceiro nem corretagem cobrada do beneficiário)
   const termo = plano.concessao ? await docTermoConcessao(ctx, plano, o.marca) : null;
-  let pdf = await anexar(principal, [...(termo ? [termo] : []), memorial, tabela, estatuto, diretrizes, mapa, licenca, ...(tarifaAgua ? [tarifaAgua] : []), origem, ...(termo ? [] : [intermediacao])]);
+  let pdf = await anexar(principal, [...(termo ? [termo] : []), memorial, tabela, estatuto, diretrizes, mapa, licenca, ...(tarifaAgua ? [tarifaAgua] : []), origem, ...(partes ? [partes] : []), ...(termo ? [] : [intermediacao])]);
   if (minuta) pdf = await marcaDagua(pdf, TEXTO_MINUTA);
   else if (o.previaSemValor) pdf = await marcaDagua(pdf, o.previaSemValor);
   return { pdf, sha256: sha256(pdf), gate };

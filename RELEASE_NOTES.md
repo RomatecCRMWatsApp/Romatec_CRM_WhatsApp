@@ -3,6 +3,20 @@
 Cada versão nova vai no TOPO. Depois rode `npm run release` (valida e atualiza o package.json);
 ao subir, o servidor grava a versão no banco e todos recebem o aviso "Novidades da versão".
 
+## 1.155.0 — 2026-11-11
+tipo: minor
+obrigatoria: nao
+titulo: Assinaturas posicionadas sozinhas pelos nomes e documentos das partes no contrato
+publico: equipe
+
+### Novo
+- Assinaturas: o sistema coloca sozinho uma caixa em cada linha de assinatura com o nome da pessoa, em todas as páginas (CPCV, contrato de intermediação, anexos). A gestora também é achada pela razão social. Quem assina pelo link recebe o carimbo em todas as suas caixas
+- Posicionar assinaturas: abre já com as caixas automáticas e tem o botão "Localizar pelos nomes". Cada pessoa pode ter várias caixas, e o × tira uma
+- Contrato (minuta e definitivo): novo Anexo X com as cópias dos documentos do comprador e do cônjuge enviados na ficha (RG/CNH, CPF, comprovantes, certidão), com capa e índice. Fotos em WEBP também entram
+
+### Correções
+- Posições salvas: antes só valia uma caixa por pessoa, e se alguém ficasse sem caixa o sistema descartava todas. Agora quem ficar sem caixa ganha o quadro de assinaturas no fim e as demais posições ficam como estão
+
 ## 1.154.0 — 2026-11-11
 tipo: minor
 obrigatoria: nao

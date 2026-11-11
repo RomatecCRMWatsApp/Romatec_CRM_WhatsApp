@@ -632,3 +632,69 @@ export async function anexoDocumentosOrigem(ctx: Ctx, marca: string, docs: Docum
   for (const b of blocos) await b.montar();
   return Buffer.from(await doc.save({ useObjectStreams: false }));
 }
+
+export interface DocumentoParte { rotulo: string; nome: string; mime: string | null; conteudo: Buffer }
+
+/** Imagem para o PDF: PNG/JPG direto; WEBP (e outras) convertidas para PNG */
+async function imagemParaPdf(doc: PDFDocument, d: DocumentoParte) {
+  const mime = String(d.mime ?? '');
+  if (/png/i.test(mime)) return doc.embedPng(d.conteudo);
+  if (/jpe?g/i.test(mime)) return doc.embedJpg(d.conteudo);
+  const sharp = (await import('sharp')).default;
+  return doc.embedPng(await sharp(d.conteudo).rotate().png().toBuffer());
+}
+
+/**
+ * Anexo X — cópias dos documentos pessoais das partes (comprador e cônjuge) enviados na ficha do contrato: capa com o
+ * índice e cada documento numa página, com o nome no topo. Arquivo que não abre vira aviso no índice.
+ */
+export async function anexoDocumentosPartes(ctx: Ctx, marca: string, docs: DocumentoParte[]): Promise<Buffer | null> {
+  if (!docs.length) return null;
+  const { doc, f, fb, pagina } = await base(`Anexo X — Documentos das partes — ${ctx.ctr_numero}`, marca);
+  const { p, y: y0 } = pagina('ANEXO X — DOCUMENTOS PESSOAIS DAS PARTES', subtitulo(ctx));
+  const blocos: { rotulo: string; paginas: number; montar: () => Promise<void> }[] = [];
+  for (const d of docs) {
+    try {
+      if (/pdf/i.test(String(d.mime ?? '')) || /\.pdf$/i.test(d.nome)) {
+        const src = await PDFDocument.load(d.conteudo, { ignoreEncryption: true });
+        blocos.push({ rotulo: d.rotulo, paginas: src.getPageCount(), montar: async () => { (await doc.copyPages(src, src.getPageIndices())).forEach(pg => doc.addPage(pg)); } });
+      } else {
+        const img = await imagemParaPdf(doc, d);
+        blocos.push({ rotulo: d.rotulo, paginas: 1, montar: async () => {
+          const pg = doc.addPage(A4);
+          pg.drawText(d.rotulo.slice(0, 110), { x: 40, y: A4[1] - 34, size: 9, font: fb, color: VERDE });
+          const area = [A4[0] - 80, A4[1] - 100] as const;
+          const k = Math.min(area[0] / img.width, area[1] / img.height, 2);
+          pg.drawImage(img, { x: (A4[0] - img.width * k) / 2, y: 40 + (area[1] - img.height * k) / 2, width: img.width * k, height: img.height * k });
+        } });
+      }
+    } catch (e: any) {
+      console.warn(`[Contrato] documento da parte "${d.nome}" não abriu:`, e?.message);
+      blocos.push({ rotulo: `${d.rotulo} (arquivo ilegível — reenviar)`, paginas: 0, montar: async () => {} });
+    }
+  }
+  let y = y0;
+  for (const l of quebrar(f, 'Cópias dos documentos de identificação e comprobatórios apresentados pelas partes, que integram este contrato para conferência da qualificação (Lei n.º 13.709/2018, art. 7º, V — execução do contrato).', 8.2, X1 - X0)) { p.drawText(l, { x: X0, y, size: 8.2, font: f }); y -= 11.8; }
+  y -= 10;
+  p.drawText('ÍNDICE', { x: X0, y, size: 9, font: fb, color: VERDE });
+  y -= 8;
+  p.drawRectangle({ x: X0, y: y - 13, width: X1 - X0, height: 14, color: VERDE });
+  p.drawText('N.º', { x: X0 + 6, y: y - 9.5, size: 7.6, font: fb, color: rgb(1, 1, 1) });
+  p.drawText('Documento', { x: X0 + 34, y: y - 9.5, size: 7.6, font: fb, color: rgb(1, 1, 1) });
+  p.drawText('Folhas do anexo', { x: X1 - 80, y: y - 9.5, size: 7.6, font: fb, color: rgb(1, 1, 1) });
+  y -= 26;
+  let folha = 2;
+  blocos.forEach((b, i) => {
+    const fol = b.paginas ? (b.paginas > 1 ? `${folha} a ${folha + b.paginas - 1}` : String(folha)) : '—';
+    const ls = quebrar(f, b.rotulo, 8, X1 - X0 - 130);
+    p.drawText(String(i + 1), { x: X0 + 8, y, size: 8, font: fb });
+    ls.forEach((l, k) => p.drawText(l, { x: X0 + 34, y: y - k * 11, size: 8, font: f }));
+    p.drawText(fol, { x: X1 - 80, y, size: 8, font: f });
+    y -= ls.length * 11 + 3;
+    p.drawLine({ start: { x: X0, y: y + 6 }, end: { x: X1, y: y + 6 }, thickness: 0.4, color: rgb(0.85, 0.85, 0.85) });
+    y -= 5;
+    folha += b.paginas;
+  });
+  for (const b of blocos) await b.montar();
+  return Buffer.from(await doc.save({ useObjectStreams: false }));
+}

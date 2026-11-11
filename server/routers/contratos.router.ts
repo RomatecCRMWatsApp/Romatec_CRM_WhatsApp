@@ -415,10 +415,27 @@ export const contratosRouter = router({
     const j = await tratar(() => juridicoDe(c.empreendimentoId));
     const { ROTULO_PAPEL } = await import("../assinatura/pdf");
     const previstos = await A.signatariosPrevistos(c.id).catch(() => []);
+    // Sem posições salvas: as localizadas pelos nomes no PDF atual (as mesmas que valem no envio)
+    let caixas = await A.posicoesSalvas(c.id);
+    let automaticas = false;
+    if (!caixas.length && c.pdfAtual) {
+      const pdf = await A.pdfAtual(c.id).catch(() => null);
+      if (pdf) { caixas = await A.posicoesAutomaticas(pdf, previstos); automaticas = caixas.length > 0; }
+    }
+    if (!caixas.length) caixas = await A.posicoesDe(c.id, j.modeloVersao);
     return {
-      caixas: await A.posicoesDe(c.id, j.modeloVersao), modeloVersao: j.modeloVersao, status: c.status, temPdf: !!c.pdfAtual,
+      caixas, automaticas, modeloVersao: j.modeloVersao, status: c.status, temPdf: !!c.pdfAtual,
       papeis: previstos.map(s => ({ papel: s.papel, rotulo: ROTULO_PAPEL[s.papel] ?? s.papel, nome: s.nome })),
     };
+  }),
+
+  /** Localiza as caixas pelos nomes impressos nas linhas de assinatura do PDF atual (não grava: a tela mostra e salva) */
+  posicoesAuto: protectedProcedure.input(z.object({ id: z.number().int() })).mutation(async ({ ctx, input }) => {
+    const c = await contratoVisivel(ctx, input.id);
+    const A = await import("../assinatura/servico");
+    const pdf = await tratar(() => A.pdfAtual(c.id));
+    const previstos = await A.signatariosPrevistos(c.id).catch(() => []);
+    return { caixas: await A.posicoesAutomaticas(pdf, previstos) };
   }),
 
   salvarPosicoes: protectedProcedure.input(z.object({

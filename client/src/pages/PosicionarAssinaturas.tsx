@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { useLocation, useParams } from "wouter";
 import { toast } from "sonner";
-import { Loader2, Save, Trash2, PenLine, ChevronRight } from "lucide-react";
+import { Wand2, Loader2, Save, Trash2, PenLine, ChevronRight } from "lucide-react";
 import { trpc } from "@/lib/trpc";
 import PageHeader from "@/components/PageHeader";
 import { Button } from "@/components/ui/button";
@@ -18,6 +18,10 @@ export default function PosicionarAssinaturas() {
   const id = Number(idStr);
   const [, navigate] = useLocation();
   const { data, isLoading, error } = trpc.contratos.posicoes.useQuery({ id }, { enabled: id > 0 });
+  const auto = trpc.contratos.posicoesAuto.useMutation({
+    onSuccess: r => { setCaixas(r.caixas); toast.success(r.caixas.length ? `${r.caixas.length} caixa(s) colocada(s) pelos nomes — confira e salve` : "Nenhuma linha de assinatura com os nomes foi encontrada"); },
+    onError: e => toast.error(e.message),
+  });
   const salvar = trpc.contratos.salvarPosicoes.useMutation({ onSuccess: () => toast.success("Posições salvas"), onError: e => toast.error(e.message) });
   const [doc, setDoc] = useState<DocumentoPdf | null>(null);
   const [pagina, setPagina] = useState(1);
@@ -48,7 +52,8 @@ export default function PosicionarAssinaturas() {
     const y = Math.min(Math.max(1 - (e.clientY - r.top) / r.height - PADRAO.h / 2, 0), 1 - PADRAO.h);
     // Na última página grava -1 (continua certo se o PDF ganhar páginas no fim)
     const nova: Caixa = { papel, pagina: pagina === total ? -1 : pagina, x, y, ...PADRAO };
-    setCaixas(cs => [...cs.filter(c => c.papel !== papel), nova]);
+    // Várias caixas por pessoa (uma em cada página que ela assina): clicar acrescenta; o "×" da caixa tira
+    setCaixas(cs => [...cs, nova]);
   };
   const iniciar = (i: number, modo: "mover" | "tamanho") => (e: React.PointerEvent) => {
     e.stopPropagation();
@@ -81,20 +86,25 @@ export default function PosicionarAssinaturas() {
         <aside className="space-y-3">
           <div className="space-y-1.5 rounded-xl border border-border bg-card p-3">
             {data.papeis.map(p => {
-              const posta = caixas.find(c => c.papel === p.papel);
+              const postas = caixas.filter(c => c.papel === p.papel);
               return (
                 <button key={p.papel} onClick={() => setPapel(p.papel)}
                   className={`flex w-full items-center gap-2 rounded-lg border px-2 py-1.5 text-left text-xs ${papel === p.papel ? "border-primary bg-primary/10" : "border-border"}`}>
                   <span className="h-3 w-3 shrink-0 rounded-sm" style={{ background: cor(p.papel) }} />
                   <span className="min-w-0 flex-1"><b className="block truncate">{p.rotulo}</b><span className="block truncate text-muted-foreground">{p.nome}</span></span>
-                  {posta ? <span className="text-[10px] text-ok-400">pág. {posta.pagina === -1 ? "última" : posta.pagina}</span> : <span className="text-[10px] text-muted-foreground">—</span>}
+                  {postas.length ? <span className="text-[10px] text-ok-400">pág. {postas.map(x => (x.pagina === -1 ? "última" : x.pagina)).join(", ")}</span> : <span className="text-[10px] text-muted-foreground">—</span>}
                 </button>
               );
             })}
           </div>
-          {!!faltam.length && <p className="text-xs text-warn-300">Sem posição: {faltam.map(f => f.rotulo).join(", ")} — sem todas, vale o quadro de assinaturas automático.</p>}
+          {!!faltam.length && <p className="text-xs text-warn-300">Sem posição: {faltam.map(f => f.rotulo).join(", ")} — ganha(m) o quadro de assinaturas no fim do contrato; as posições dos demais ficam como estão.</p>}
+          {data.automaticas && <p className="rounded-md bg-primary/10 p-2 text-[11px] text-primary">Caixas colocadas automaticamente em cada linha de assinatura com o nome da pessoa. Se estiver tudo certo, nem precisa salvar: no envio vale o mesmo.</p>}
+          <p className="text-[11px] text-muted-foreground">Cada pessoa pode ter várias caixas: escolha a pessoa e clique em cada página que ela assina (CPCV, contrato de intermediação, anexos). Para tirar uma caixa, use o × dela.</p>
           <label className="flex items-center gap-2 text-xs"><input type="checkbox" checked={gabarito} onChange={e => setGabarito(e.target.checked)} /> Salvar também como gabarito do modelo ({data.modeloVersao})</label>
           <div className="flex flex-wrap gap-2">
+            <Button variant="outline" disabled={bloqueado || auto.isPending || !data.temPdf} onClick={() => auto.mutate({ id })} title="Põe uma caixa em cada linha de assinatura com o nome da pessoa, em todas as páginas">
+              {auto.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Wand2 className="h-4 w-4" />} Localizar pelos nomes
+            </Button>
             <Button disabled={bloqueado || salvar.isPending} onClick={() => salvar.mutate({ id, caixas, gabarito })}>
               {salvar.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />} Salvar posições
             </Button>
@@ -118,11 +128,14 @@ export default function PosicionarAssinaturas() {
             <div className="relative mx-auto w-fit cursor-crosshair select-none" onClick={colocar} onPointerMove={mover} onPointerUp={soltar}>
               <canvas ref={canvas} className="block bg-white shadow" aria-label="Página do documento para posicionar as assinaturas" />
               {tam.largura > 0 && caixas.map((c, i) => naPagina(c) && (
-                <div key={c.papel} data-caixa="1" onPointerDown={iniciar(i, "mover")}
+                <div key={`${c.papel}-${c.pagina}-${i}`} data-caixa="1" onPointerDown={iniciar(i, "mover")}
                   className="absolute cursor-move rounded border-2 bg-white/60 text-[10px] font-semibold"
                   style={{ left: c.x * tam.largura, top: (1 - c.y - c.h) * tam.altura, width: c.w * tam.largura, height: c.h * tam.altura, borderColor: cor(c.papel), color: "var(--c-0c3320)" }}>
                   <span data-caixa="1" className="pointer-events-none block truncate px-1">{rotulo(c.papel)?.rotulo ?? c.papel}</span>
                   <span data-caixa="1" onPointerDown={iniciar(i, "tamanho")} className="absolute bottom-0 right-0 h-3 w-3 cursor-se-resize" style={{ background: cor(c.papel) }} />
+                  <button type="button" data-caixa="1" aria-label={`Tirar esta caixa de ${rotulo(c.papel)?.rotulo ?? c.papel}`} onPointerDown={e => e.stopPropagation()}
+                    onClick={e => { e.stopPropagation(); setCaixas(cs => cs.filter((_, k) => k !== i)); }}
+                    className="absolute -right-2 -top-2 flex h-5 w-5 items-center justify-center rounded-full bg-danger-500 text-[11px] font-bold text-white focus-visible:outline focus-visible:outline-2">×</button>
                 </div>
               ))}
             </div>
