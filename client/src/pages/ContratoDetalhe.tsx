@@ -159,6 +159,15 @@ export default function ContratoDetalhe() {
             <div className="space-y-4">
               <section className="rounded-xl border border-border bg-card p-4">
                 <h2 className="mb-2 text-sm font-semibold">Documento</h2>
+                {/* Por que o "Gerar definitivo" está travado: as pendências, aqui mesmo (no celular a lista ao lado fica no fim) */}
+                {d.pode.definitivo && !encerrado && gate?.definitivo && !definitivoOk && (
+                  <div className="mb-2 space-y-1 rounded-md border border-danger-500/30 bg-danger-500/5 p-2 text-xs">
+                    <p className="font-semibold text-danger-300">"Gerar definitivo" travado até resolver:</p>
+                    {(gate.definitivo.bloqueios ?? []).map((b: string) => <p key={b} className="text-danger-300">• {b}</p>)}
+                    {(gate.definitivo.faltantes ?? []).map((x: string) => <p key={x} className="text-muted-foreground">• Falta: {ROTULO_CAMPO[x] ?? x}</p>)}
+                  </div>
+                )}
+                {gate?.erro && <p className="mb-2 text-xs text-danger-400">Não foi possível conferir as pendências: {gate.erro}</p>}
                 {(d as any).registro && !(d as any).registro.registrado && (
                   <p className={`mb-2 rounded-md p-2 text-xs ${(d as any).registro.vendaAntesLiberada ? "bg-primary/10 text-primary" : "bg-warn-400/10 text-warn-300"}`}>
                     {(d as any).registro.vendaAntesLiberada

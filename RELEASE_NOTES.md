@@ -3,6 +3,16 @@
 Cada versão nova vai no TOPO. Depois rode `npm run release` (valida e atualiza o package.json);
 ao subir, o servidor grava a versão no banco e todos recebem o aviso "Novidades da versão".
 
+## 1.158.3 — 2026-11-11
+tipo: patch
+obrigatoria: nao
+titulo: Pendências do contrato definitivo logo abaixo do botão
+publico: equipe
+
+### Melhorias
+- Ficha do contrato: quando o "Gerar definitivo" está travado, a lista do que falta (travas e campos) aparece no próprio quadro "Documento", logo abaixo dos botões. Antes ficava só no quadro do lado, no fim da página no celular
+- Venda antes do registro: lei municipal e TRT do responsável técnico ainda não informados saem como "a informar por termo aditivo" / "a emitir" e não travam o definitivo
+
 ## 1.158.2 — 2026-11-11
 tipo: patch
 obrigatoria: nao
