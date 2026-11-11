@@ -4,32 +4,66 @@ import sharp from 'sharp';
 import { localizarAssinaturas } from './assinatura/autoPosicao';
 import { anexoDocumentosPartes } from './contratos/anexosLote';
 
+const TRACO = '_'.repeat(58);
+
 async function pdfComNomes() {
   const d = await PDFDocument.create();
   const f = await d.embedFont(StandardFonts.HelveticaBold), r = await d.embedFont(StandardFonts.Helvetica);
   const p1 = d.addPage([595, 842]);
   // Qualificação (nome no meio do parágrafo): não conta
   p1.drawText('PROMISSARIA COMPRADORA: MARIA FICTICIA DE TESTE, brasileira, solteira', { x: 60, y: 700, size: 10, font: r });
+  // Quadro-Resumo: a gestora numa célula de tabela, sem traço em cima — não conta (era o erro do BJ-2026-0002, p. 1)
+  p1.drawText('ROMATEC CONSULTORIA TOTAL - CNPJ 17.261.987/0001-09 - CRECI/MA', { x: 200, y: 640, size: 9, font: r });
+  p1.drawText(TRACO.slice(0, 40), { x: 60, y: 312, size: 9, font: r });
   p1.drawText('MARIA FICTICIA DE TESTE', { x: 60, y: 300, size: 9, font: f });
+  p1.drawText(TRACO.slice(0, 40), { x: 320, y: 312, size: 9, font: r });
   p1.drawText('ANA PROPRIETARIA FICTICIA', { x: 320, y: 300, size: 9, font: f });
   const p2 = d.addPage([595, 842]);
+  // Texto logo acima do traço: a caixa encolhe para não cobrir
+  p2.drawText('Assinatura digital (ICP-Brasil / gov.br) ou a punho', { x: 60, y: 300, size: 9, font: r });
+  p2.drawText(TRACO, { x: 60, y: 262, size: 9, font: r });
   p2.drawText('MARIA FICTICIA DE TESTE', { x: 60, y: 250, size: 9, font: f });
+  p2.drawText(TRACO, { x: 60, y: 162, size: 9, font: r });
   p2.drawText('ROMATEC CONSULTORIA TOTAL — GESTORA DE VENDAS E INTERMEDIADORA'.replace('—', '-'), { x: 60, y: 150, size: 9, font: f });
+  // Documento anexado (conta de luz com o nome da compradora numa linha só, sem traço): não conta (p. 44 do BJ-2026-0002)
+  const p3 = d.addPage([595, 842]);
+  p3.drawText('MARIA FICTICIA DE TESTE', { x: 60, y: 760, size: 9, font: f });
+  p3.drawText('MARIA FICTICIA DE TESTE', { x: 60, y: 120, size: 9, font: f });
+  // Bloco que caiu no topo da página, colado no cabeçalho: sem espaço para a caixa, não entra (vai para o quadro de assinaturas)
+  const p4 = d.addPage([595, 842]);
+  p4.drawText(TRACO, { x: 60, y: 760, size: 9, font: r });
+  p4.drawText('ANA PROPRIETARIA FICTICIA', { x: 60, y: 748, size: 9, font: f });
   return Buffer.from(await d.save());
 }
 
 describe('assinaturas posicionadas pelos nomes', () => {
-  it('uma caixa em cada linha de assinatura com o nome (todas as páginas); nome no parágrafo não conta', async () => {
-    const cx = await localizarAssinaturas(await pdfComNomes(), [
-      { papel: 'comprador', nome: 'Maria Ficticia de Teste' }, { papel: 'vendedora', nome: 'ANA PROPRIETARIA FICTICIA' },
-      { papel: 'intermediadora', nome: 'José Romário Pinto Bezerra', apelidos: ['Romatec Consultoria Total'] },
-    ]);
-    const resumo = cx.map(c => `${c.papel}:${c.pagina}`).sort();
-    expect(resumo).toEqual(['comprador:1', 'comprador:2', 'intermediadora:2', 'vendedora:1']);
+  const sigs = [
+    { papel: 'comprador', nome: 'Maria Ficticia de Teste' }, { papel: 'vendedora', nome: 'ANA PROPRIETARIA FICTICIA' },
+    { papel: 'intermediadora', nome: 'José Romário Pinto Bezerra', apelidos: ['Romatec Consultoria Total'] },
+  ];
+  it('só a linha com o nome logo abaixo de um traço de assinatura: tabela, parágrafo, documento anexado e topo da página não contam', async () => {
+    const cx = await localizarAssinaturas(await pdfComNomes(), sigs);
+    expect(cx.map(c => `${c.papel}:${c.pagina}`).sort()).toEqual(['comprador:1', 'comprador:2', 'intermediadora:2', 'vendedora:1']);
     const c1 = cx.find(c => c.papel === 'comprador' && c.pagina === 1)!;
-    expect(c1.y).toBeGreaterThan(300 / 842); // logo acima do nome
-    expect(c1.y).toBeLessThan(330 / 842);
+    expect(c1.y * 842).toBeGreaterThan(312); // em cima do traço
+    expect(c1.y * 842).toBeLessThan(318);
     expect(c1.x).toBeCloseTo(60 / 595, 2);
+  });
+  it('a caixa nunca cobre o texto de cima nem outra caixa', async () => {
+    const cx = await localizarAssinaturas(await pdfComNomes(), sigs);
+    const c2 = cx.find(c => c.papel === 'comprador' && c.pagina === 2)!;
+    expect((c2.y + c2.h) * 842).toBeLessThan(300 - 1); // abaixo da linha "Assinatura digital…"
+    for (const a of cx) for (const b of cx) if (a !== b && a.pagina === b.pagina) {
+      const sobre = Math.min(a.x + a.w, b.x + b.w) > Math.max(a.x, b.x) && Math.min(a.y + a.h, b.y + b.h) > Math.max(a.y, b.y);
+      expect(sobre).toBe(false);
+    }
+  });
+  it('caixas repetidas (salvas à mão + automáticas) viram uma só', async () => {
+    const { caixasSemSobreposicao } = await import('./assinatura/autoPosicao');
+    const a = { papel: 'vendedora', pagina: 15, x: 0.31, y: 0.2, w: 0.4, h: 0.045 };
+    const b = { papel: 'vendedora', pagina: 15, x: 0.32, y: 0.215, w: 0.28, h: 0.05 };
+    const c = { papel: 'vendedora', pagina: 18, x: 0.31, y: 0.2, w: 0.4, h: 0.045 };
+    expect(caixasSemSobreposicao([a, b, c])).toEqual([a, c]);
   });
 });
 

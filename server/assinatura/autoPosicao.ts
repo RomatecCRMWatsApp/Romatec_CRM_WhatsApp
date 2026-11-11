@@ -1,22 +1,32 @@
 /**
- * Posições de assinatura automáticas: procura no PDF cada linha que traz SÓ o nome do signatário (o nome impresso
- * embaixo da linha de assinatura, no CPCV, no contrato de intermediação, nos anexos…) e põe a caixa logo acima dela.
- * O nome no meio de um parágrafo (qualificação) não conta: a linha tem de ser exatamente o nome.
+ * Posições de assinatura automáticas, ancoradas na LINHA DE ASSINATURA (o traço), não só no nome:
+ *  - vale a linha que traz SÓ o nome do signatário (ou a razão social/fantasia da gestora) e que está logo abaixo de um
+ *    traço de assinatura ("_____" — nos documentos do sistema desenhados com traço vetorial há um traço invisível de
+ *    texto no mesmo lugar, para servir de âncora);
+ *  - o nome numa tabela (Quadro-Resumo), num parágrafo ou num documento anexado (conta de luz, RG…) não tem traço em
+ *    cima: não conta;
+ *  - a caixa fica em cima do traço, na largura dele, e a altura se ajusta ao espaço livre até o texto de cima — nunca
+ *    cobre texto, cabeçalho nem outra caixa;
+ *  - uma caixa por traço (o mesmo traço não recebe duas pessoas nem dois carimbos).
  */
 import type { Caixa } from './pdf';
 
 /** apelidos: outros nomes da mesma parte que valem pelo começo da linha (ex.: razão social da gestora) */
 export interface SignatarioNome { papel: string; nome: string; apelidos?: string[] }
 
-const normalizar = (s: string) => String(s ?? '').normalize('NFD').replace(/[̀-ͯ]/g, '').toUpperCase().replace(/[^A-Z0-9 ]+/g, ' ').replace(/\s+/g, ' ').trim();
+export const normalizar = (s: string) => String(s ?? '').normalize('NFD').replace(/[̀-ͯ]/g, '').toUpperCase().replace(/[^A-Z0-9 ]+/g, ' ').replace(/\s+/g, ' ').trim();
 
-/** Altura e folga da caixa (pontos do PDF) */
-const ALTURA = 34, FOLGA = 2, LARGURA_MIN = 150;
+/** Altura máxima/mínima da caixa, folgas e largura mínima (pontos do PDF) */
+export const ALTURA_MAX = 40, ALTURA_MIN = 22, FOLGA = 2, LARGURA_MIN = 150;
+/** Distância máxima entre o traço e a linha do nome logo abaixo */
+const TRACO_ATE_NOME = 22;
+/** Faixa do topo/rodapé da página onde não entra caixa (cabeçalho e rodapé com a marca) */
+const MARGEM_TOPO = 0.13, MARGEM_RODAPE = 0.07;
 
-interface Trecho { x: number; y: number; w: number; fs: number; txt: string }
+export interface Trecho { x: number; y: number; w: number; fs: number; txt: string }
 
 /** Agrupa os pedaços de texto da mesma linha (mesma altura) que estão encostados, separando colunas */
-function linhas(itens: Trecho[]): Trecho[] {
+export function linhas(itens: Trecho[]): Trecho[] {
   const porY = new Map<number, Trecho[]>();
   for (const t of itens) {
     const k = Math.round(t.y);
@@ -31,10 +41,41 @@ function linhas(itens: Trecho[]): Trecho[] {
       const ant = linha.length ? linha[linha.length - 1] : undefined;
       const gap = ant ? t.x - (ant.x + ant.w) : Infinity;
       if (ant && gap <= Math.max(8, t.fs * 1.2)) {
-        linha[linha.length - 1] = { x: ant.x, y: ant.y, w: t.x + t.w - ant.x, txt: `${ant.txt}${gap > t.fs * 0.15 ? ' ' : ''}${t.txt}`, fs: Math.max(ant.fs, t.fs) };
+        linha[linha.length - 1] = { x: ant.x, y: ant.y, w: Math.max(ant.w, t.x + t.w - ant.x), txt: `${ant.txt}${gap > t.fs * 0.15 ? ' ' : ''}${t.txt}`, fs: Math.max(ant.fs, t.fs) };
       } else linha.push({ ...t });
     }
     out.push(...linha);
+  }
+  return out;
+}
+
+const ehTraco = (t: Trecho) => /^_{12,}$/.test(t.txt.replace(/\s+/g, ''));
+const sobrepoeX = (a: { x: number; w: number }, b: { x: number; w: number }) => Math.min(a.x + a.w, b.x + b.w) - Math.max(a.x, b.x) > 4;
+
+/**
+ * Caixas de uma página (coordenadas em pontos, origem embaixo à esquerda) a partir das linhas de texto.
+ * Exportada para os testes: recebe as linhas já agrupadas.
+ */
+export function caixasDaPagina(ls: Trecho[], W: number, H: number, alvos: { papel: string; nome: string; apelidos: string[] }[]): { papel: string; x: number; y: number; w: number; h: number }[] {
+  const tracos = ls.filter(ehTraco);
+  const out: { papel: string; x: number; y: number; w: number; h: number }[] = [];
+  const usados = new Set<Trecho>();
+  for (const l of ls) {
+    if (ehTraco(l)) continue;
+    const txt = normalizar(l.txt);
+    const s = alvos.find(a => txt === a.nome) ?? alvos.find(a => a.apelidos.some(ap => txt === ap || txt.startsWith(`${ap} `)));
+    if (!s) continue;
+    // O traço logo acima do nome, na mesma coluna
+    const traco = tracos.filter(t => !usados.has(t) && t.y > l.y && t.y - l.y <= TRACO_ATE_NOME && sobrepoeX(t, l)).sort((a, b) => a.y - b.y)[0];
+    if (!traco) continue;
+    usados.add(traco);
+    const base = traco.y + FOLGA;
+    // Espaço livre: até o texto mais baixo que esteja acima do traço, na mesma faixa horizontal (ou o cabeçalho)
+    const x = traco.x, w = Math.min(Math.max(traco.w, LARGURA_MIN), W - traco.x - 4);
+    const teto = Math.min(H * (1 - MARGEM_TOPO), ...ls.filter(o => o !== traco && o.y > traco.y + 1 && sobrepoeX(o, { x, w })).map(o => o.y - o.fs * 0.3));
+    const h = Math.min(ALTURA_MAX, teto - base - FOLGA);
+    if (h < ALTURA_MIN || base < H * MARGEM_RODAPE) continue;
+    out.push({ papel: s.papel, x, y: base, w, h });
   }
   return out;
 }
@@ -53,17 +94,25 @@ export async function localizarAssinaturas(pdf: Buffer, sigs: SignatarioNome[]):
       const t = await p.getTextContent();
       const itens: Trecho[] = t.items.filter((i: any) => typeof i.str === 'string' && i.str.trim())
         .map((i: any) => ({ x: i.transform[4] - x0, y: i.transform[5] - y0, w: i.width, fs: Math.abs(i.transform[0]) || 10, txt: i.str }));
-      for (const l of linhas(itens)) {
-        const txt = normalizar(l.txt);
-        const s = alvos.find(a => txt === a.nome) ?? alvos.find(a => a.apelidos.some(ap => txt === ap || txt.startsWith(`${ap} `)));
-        if (!s) continue;
-        const w = Math.min(Math.max(l.w, LARGURA_MIN), W - l.x - 4);
-        const base = l.y + l.fs + FOLGA;
-        if (base + ALTURA > H) continue;
-        caixas.push({ papel: s.papel, pagina: n, x: l.x / W, y: base / H, w: w / W, h: ALTURA / H });
-      }
+      for (const c of caixasDaPagina(linhas(itens), W, H, alvos)) caixas.push({ papel: c.papel, pagina: n, x: c.x / W, y: c.y / H, w: c.w / W, h: c.h / H });
       p.cleanup?.();
     }
   } finally { await doc.destroy?.(); }
   return caixas;
+}
+
+/**
+ * Limpa uma lista de caixas: tira as repetidas (mesma página, sobrepostas — o mesmo lugar marcado duas vezes, ou pela
+ * mesma pessoa, ou por duas) e as fora da página. Vale para as salvas à mão e para as automáticas.
+ */
+export function caixasSemSobreposicao(cxs: Caixa[]): Caixa[] {
+  const area = (c: Caixa) => c.w * c.h;
+  const inter = (a: Caixa, b: Caixa) => Math.max(0, Math.min(a.x + a.w, b.x + b.w) - Math.max(a.x, b.x)) * Math.max(0, Math.min(a.y + a.h, b.y + b.h) - Math.max(a.y, b.y));
+  const out: Caixa[] = [];
+  for (const c of cxs) {
+    if (!(c.w > 0 && c.h > 0 && c.x >= 0 && c.y >= 0 && c.x + c.w <= 1.001 && c.y + c.h <= 1.001)) continue;
+    if (out.some(o => o.pagina === c.pagina && inter(o, c) > 0.15 * Math.min(area(o), area(c)))) continue;
+    out.push(c);
+  }
+  return out;
 }

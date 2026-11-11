@@ -3,6 +3,20 @@
 Cada versão nova vai no TOPO. Depois rode `npm run release` (valida e atualiza o package.json);
 ao subir, o servidor grava a versão no banco e todos recebem o aviso "Novidades da versão".
 
+## 1.160.1 — 2026-11-11
+tipo: patch
+obrigatoria: nao
+titulo: Assinaturas sempre no lugar certo, sem sobreposição
+publico: equipe
+
+### Correções
+- Assinatura eletrônica: o carimbo de cada pessoa agora vai só onde há uma linha de assinatura (o traço) com o nome dela embaixo. Antes, o nome da gestora numa célula do Quadro-Resumo e o nome da compradora num documento anexado (conta de luz) recebiam carimbo por engano
+- A caixa do carimbo fica em cima do traço, na largura dele, e a altura se ajusta ao espaço livre: não cobre texto, cabeçalho nem outra assinatura. Caixas repetidas no mesmo lugar viram uma só
+- CPCV (Planos padrão, A, B e C) e Estatuto: cada bloco de assinatura tem espaço reservado acima do traço e nunca se separa do nome na quebra de página
+- Contrato de intermediação, termo de anuência, aditivos e requerimentos: o mesmo espaço reservado acima de cada assinatura
+- Ao gerar um definitivo novo, as posições de assinatura antigas são apagadas (eram do PDF anterior, como no caso da troca de compradora); no envio, o sistema localiza de novo e grava as posições, e cada assinatura carimba exatamente nelas
+- Carimbo: o nome e os dados cabem sempre dentro da caixa (a letra diminui se precisar), sem quebrar linha por cima do texto
+
 ## 1.160.0 — 2026-11-11
 tipo: minor
 obrigatoria: nao

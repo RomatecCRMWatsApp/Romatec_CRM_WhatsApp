@@ -87,8 +87,16 @@ export async function carimbarAvancada(pdf: Buffer, cx: Caixa, s: { nome: string
     [`CPF ${cpfMascarado(s.cpf)} · ${s.quando.toLocaleString('pt-BR', { timeZone: 'America/Fortaleza' })}`, f, 6.5],
     [`IP ${s.ip} · verificação ${s.codigo}`, f, 6.5],
   ];
-  let yy = y + h - 11;
-  for (const [t, font, size] of linhas) { p.drawText(t, { x: x + 5, y: yy, size, font, color: VERDE, maxWidth: w - 10 }); yy -= size + 4; }
+  // Tudo dentro da caixa: cada linha numa linha só (a fonte diminui para caber na largura) e o bloco na altura
+  const escalaH = Math.min(1, (h - 6) / linhas.reduce((a, [, , sz]) => a + sz + 3, 0));
+  let yy = y + h - 4;
+  for (const [t, font, size] of linhas) {
+    let sz = size * escalaH;
+    while (sz > 4 && font.widthOfTextAtSize(t, sz) > w - 10) sz -= 0.2;
+    yy -= sz + 1;
+    p.drawText(t, { x: x + 5, y: yy, size: sz, font, color: VERDE });
+    yy -= 2.6 * escalaH;
+  }
   return Buffer.from(await d.save({ useObjectStreams: false }));
 }
 

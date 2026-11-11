@@ -130,14 +130,21 @@ export async function escritor(titulo: string, marca: string, rodapeDoc: string)
     y -= 8;
   };
 
+  /**
+   * Blocos de assinatura: espaço livre de 46 pt acima de cada traço (cabe a caixa do carimbo sem cobrir texto), traço,
+   * nome, papel e documento sempre juntos na mesma página. Sob o traço vetorial vai um traço de texto invisível
+   * ("____"): é a âncora com que o sistema localiza a linha de assinatura (server/assinatura/autoPosicao.ts).
+   */
   const assinaturas = (blocos: { papel: string; nome: string; doc?: string }[]) => {
-    y -= 10;
+    y -= 8;
     const col = (LARG - 30) / 2;
+    const tracoTxt = '_'.repeat(Math.max(12, Math.floor(col / f.widthOfTextAtSize('_', 8))));
     for (let i = 0; i < blocos.length; i += 2) {
-      garantir(70);
-      const yy = y - 42;
+      garantir(46 + 40);
+      const yy = y - 46;
       blocos.slice(i, i + 2).forEach((b, k) => {
         const x = X0 + k * (col + 30);
+        p.drawText(tracoTxt, { x, y: yy + 1, size: 8, font: f, opacity: 0 });
         p.drawLine({ start: { x, y: yy }, end: { x: x + col, y: yy }, thickness: 0.6, color: rgb(0.2, 0.2, 0.2) });
         p.drawText(b.nome.slice(0, 60), { x, y: yy - 11, size: 8.6, font: fb });
         p.drawText(b.papel, { x, y: yy - 21, size: 8, font: f, color: CINZA });

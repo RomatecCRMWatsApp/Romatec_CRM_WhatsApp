@@ -5,7 +5,7 @@
 import { randomBytes } from 'node:crypto';
 import { and, asc, eq, inArray, or, sql } from 'drizzle-orm';
 import { getDb } from '../db';
-import {
+import { assinaturaPosicoes,
   carteiras, chacaraDependentes, condicoesPagamento, contratoPessoas, contratos, contratoSeq, contratoVersoes, empJuridico, empreendimentoArquivos, empreendimentos, loteHistorico, lotes, pessoas,
   usuarioDocumentos, users,
 } from '../../drizzle/schema';
@@ -445,6 +445,9 @@ export async function gerarVersao(contratoId: number, alvo: 'minuta' | 'definiti
   const chave = `contratos/${contratoId}/v${String(versao).padStart(3, '0')}-${alvo}.pdf`;
   await salvarArquivo(chave, pdf);
   await d.insert(contratoVersoes).values({ contratoId, versao, etapa: alvo === 'minuta' ? 'gerado:minuta' : 'gerado', arquivo: chave, sha256, bytes: pdf.length, criadoEm: new Date() });
+  // PDF novo: as caixas de assinatura salvas eram do PDF anterior (páginas e linhas mudam) — saem; no envio o sistema
+  // localiza de novo cada linha de assinatura no PDF novo
+  await d.delete(assinaturaPosicoes).where(eq(assinaturaPosicoes.contratoId, contratoId));
   const dados = json<Record<string, unknown>>(c.dadosJson) ?? {};
   await d.update(contratos).set({
     status: alvo === 'minuta' ? 'minuta' : 'apto_assinatura', pdfAtual: chave, hashAtual: sha256, dadosJson: { ...dados, ctx } as any, atualizadoEm: new Date(),

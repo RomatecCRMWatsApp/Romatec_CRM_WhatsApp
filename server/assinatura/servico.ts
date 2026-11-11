@@ -115,7 +115,7 @@ export async function posicoesSalvas(contratoId: number): Promise<Caixa[]> {
 export async function posicoesAutomaticas(pdf: Buffer, sigs: { papel: string; nome: string }[]): Promise<Caixa[]> {
   const { localizarAssinaturas } = await import('./autoPosicao');
   const { ESCRITORIO } = await import('../../shared/escritorio');
-  return localizarAssinaturas(pdf, sigs.map(s => ({ ...s, apelidos: s.papel === 'intermediadora' ? [ESCRITORIO.fantasia, ESCRITORIO.razaoSocial] : [] }))).catch((e: any) => {
+  return localizarAssinaturas(pdf, sigs.map(s => ({ ...s, apelidos: s.papel === 'intermediadora' ? [ESCRITORIO.fantasia, ESCRITORIO.razaoSocial, ESCRITORIO.responsavel] : [] }))).catch((e: any) => {
     console.warn('[Assinatura] posições automáticas:', e?.message);
     return [];
   });
@@ -175,9 +175,13 @@ export async function enviarParaAssinatura(contratoId: number, metodos: Record<s
   if (temAssinaturaDigital(pdf)) throw new AssinaturaErro('PDF', 'O PDF atual já tem assinatura digital', 409);
   // Posições: as que o administrador salvou neste contrato; senão, as localizadas pelos nomes no PDF (cada linha de
   // assinatura com o nome da pessoa ganha uma caixa); senão, o gabarito do modelo
+  // Toda caixa fica em cima de um traço de assinatura, sem sobreposição; quem não tem caixa salva ganha as automáticas
+  const { caixasSemSobreposicao } = await import('./autoPosicao');
+  const automaticas = await posicoesAutomaticas(pdf, sigs);
   let caixas = await posicoesSalvas(contratoId);
-  if (!caixas.length) caixas = await posicoesAutomaticas(pdf, sigs);
+  caixas = [...caixas, ...automaticas.filter(a => !caixas.some(cx => cx.papel === a.papel))];
   if (!caixas.length) caixas = await posicoesDe(contratoId, j.modeloVersao);
+  caixas = caixasSemSobreposicao(caixas);
   // Quem ficou sem caixa ganha o quadro de assinaturas no fim; as posições dos demais (várias por pessoa) são mantidas
   const semCaixa = sigs.filter(s => !caixas.some(cx => cx.papel === s.papel));
   if (semCaixa.length) {
@@ -188,8 +192,9 @@ export async function enviarParaAssinatura(contratoId: number, metodos: Record<s
     const r = await paginaDeAssinaturas(pdf, semCaixa, { numero: c.numero, marca: j.marcaSlug, codigo: c.codigoVerificacao });
     pdf = r.pdf;
     caixas = [...fixas, ...r.caixas];
-    await salvarPosicoes(caixas, { contratoId });
   }
+  // As caixas do envio ficam gravadas: cada assinatura carimba exatamente onde foi localizado no PDF congelado
+  await salvarPosicoes(caixas, { contratoId });
   pdf = await marcarCaixasDigitais(pdf, caixas.map(cx => ({ ...cx, metodo: sigs.find(s => s.papel === cx.papel)?.metodo ?? 'avancada' })));
   await novaVersao(contratoId, 'para_assinatura', pdf);
 
@@ -333,7 +338,8 @@ export async function confirmarAvancada(token: string, codigo: string, o: { ip: 
   if (!temAssinaturaDigital(atual)) {
     const j = await juridicoDe(c.empreendimentoId);
     // Todas as caixas da pessoa (assinatura do CPCV, do contrato de intermediação, de anexos…)
-    const cxs = (await posicoesDe(s.contratoId, j.modeloVersao)).filter(x => x.papel === s.papel);
+    const { caixasSemSobreposicao } = await import('./autoPosicao');
+    const cxs = caixasSemSobreposicao(await posicoesDe(s.contratoId, j.modeloVersao)).filter(x => x.papel === s.papel);
     if (cxs.length) {
       let pdf = atual;
       for (const cx of cxs) pdf = await carimbarAvancada(pdf, cx, { nome: s.nome, cpf: s.cpf, quando, ip: o.ip, codigo: c.codigoVerificacao });
