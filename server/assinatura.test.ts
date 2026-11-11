@@ -3,6 +3,7 @@ import { PDFDocument, StandardFonts } from 'pdf-lib';
 
 // Banco local em memória (SQLite) com as mesmas tabelas da produção
 process.env.DATABASE_DRIVER = 'sqlite';
+process.env.JWT_SECRET = process.env.JWT_SECRET || 'segredo-de-teste';
 process.env.SQLITE_PATH = ':memory:';
 
 const A = await import('./assinatura/servico');
@@ -67,6 +68,22 @@ describe('assinatura eletrônica — fluxo completo', () => {
     expect((await PDFDocument.load(pdf)).getPageCount()).toBe(4); // + quadro de assinaturas
     expect((await A.posicoesDe(contratoId, 'x')).map(c => c.papel).sort()).toEqual(['comprador', 'conjuge', 'intermediadora', 'vendedora']);
     expect((await sig('comprador')).token).toMatch(/^[A-Za-z0-9_-]{43}$/);
+  });
+
+  it('boleto da entrada vai junto com o convite da compradora (só dela); sem Asaas, o envio segue sem boleto', async () => {
+    const cobs: any[] = db.all(sql`SELECT id, tipo, numero, status FROM cobrancas WHERE contratoId = ${contratoId} ORDER BY id`);
+    expect(cobs.length).toBeGreaterThan(1); // o plano já ficou gravado no envio (previstas)
+    const ent = cobs.find(c => c.tipo === 'entrada' && Number(c.numero) === 1) ?? cobs.find(c => c.tipo === 'avista');
+    db.run(sql`UPDATE cobrancas SET status = 'emitida', asaasPaymentId = 'pay_teste_1' WHERE id = ${ent.id}`);
+    mensagens.length = 0;
+    const comp = await sig('comprador'), vend = await sig('vendedora');
+    await A.enviarConvites(contratoId, comp.id);
+    await A.enviarConvites(contratoId, vend.id);
+    const doComprador = mensagens.find(m => m.tel === '5599991234567')!.msg;
+    expect(doComprador).toMatch(/Boleto da entrada: R\$/);
+    expect(doComprador).toMatch(new RegExp(`/api/financeiro/cobrancas/${ent.id}/boleto-a4\\.pdf\\?exp=\\d+&sig=`));
+    expect(doComprador).toMatch(/Pagar por Pix: .*\/pix\//);
+    expect(mensagens.find(m => m.tel !== '5599991234567')!.msg).not.toMatch(/Boleto da entrada/);
   });
 
   it('ICP/gov.br esperam as avançadas; link inválido não abre', async () => {

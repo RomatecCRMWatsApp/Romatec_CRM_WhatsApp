@@ -3,6 +3,17 @@
 Cada versão nova vai no TOPO. Depois rode `npm run release` (valida e atualiza o package.json);
 ao subir, o servidor grava a versão no banco e todos recebem o aviso "Novidades da versão".
 
+## 1.157.0 — 2026-11-11
+tipo: minor
+obrigatoria: nao
+titulo: Boleto da entrada vai junto com o link de assinatura
+publico: equipe
+
+### Novo
+- Ao "Enviar para assinatura", o sistema grava o plano de cobranças e emite no Asaas só o boleto da entrada (ou do pagamento à vista). O WhatsApp da compradora leva, junto com o link para ler e assinar, o valor e o vencimento da entrada, o boleto em PDF (link de 15 dias) e o link do Pix
+- Os reenvios do convite para a compradora também levam o boleto enquanto ele não for pago. Os demais signatários recebem só o link de assinatura
+- O carnê do saldo continua saindo na ativação (depois de todas as assinaturas), sem duplicar a entrada. Sem Asaas configurado, o envio segue sem o boleto e a tela avisa o motivo
+
 ## 1.156.1 — 2026-11-11
 tipo: patch
 obrigatoria: nao

@@ -60,12 +60,14 @@ export async function gerarCobrancasDoPlano(contratoId: number, plano: PlanoCont
 }
 
 /** Emite no Asaas as cobranças previstas do carnê (bloco de 12) — só contrato ativo e Asaas configurado */
-export async function emitirCarneNoAsaas(contratoId: number, bloco: number, o: { usuarioId?: number; fetchFn?: FetchFn; filtro?: (linha: any) => boolean; origem?: string } = {}) {
+export async function emitirCarneNoAsaas(contratoId: number, bloco: number, o: { usuarioId?: number; fetchFn?: FetchFn; filtro?: (linha: any) => boolean; origem?: string; antesDaAtivacao?: boolean } = {}) {
   const cfg = exigirConfigAsaas(process.env, await slugDoContrato(contratoId));
   const db = (await getDb()) as any;
   const [c] = await db.select().from(contratos).where(eq(contratos.id, contratoId)).limit(1);
   if (!c) throw new FinanceiroErro('NAO_ENCONTRADO', 'Contrato não encontrado', 404);
-  if (c.status !== 'ativo') throw new FinanceiroErro('CONTRATO_NAO_ATIVO', 'Cobranças só são emitidas com o contrato ativo (assinado por todos)', 409);
+  // Exceção: o boleto da entrada sai junto com o link de assinatura (emitirEntradaComAssinatura), antes da ativação
+  const podeAntes = o.antesDaAtivacao && ['apto_assinatura', 'em_assinatura'].includes(String(c.status));
+  if (c.status !== 'ativo' && !podeAntes) throw new FinanceiroErro('CONTRATO_NAO_ATIVO', 'Cobranças só são emitidas com o contrato ativo (assinado por todos)', 409);
   const ctx = await contextoDocs(contratoId);
   const { comprador } = await pessoasDoContrato(contratoId);
   if (!comprador) throw new FinanceiroErro('SEM_COMPRADOR', 'Contrato sem comprador cadastrado', 409);
@@ -91,4 +93,43 @@ export async function emitirCarneNoAsaas(contratoId: number, bloco: number, o: {
   }
   await auditar('carne_emitido_asaas', { contratoId, usuarioId: o.usuarioId ?? null, origem: o.origem ?? 'perfil', detalhe: { bloco, emitidas } });
   return { emitidas };
+}
+
+/** 1º pagamento do plano: a entrada (parcela 1) ou o pagamento à vista */
+const ehPrimeiroPagamento = (l: { tipo: string; numero: number | string }) => l.tipo === 'avista' || (l.tipo === 'entrada' && Number(l.numero) === 1);
+
+export interface BoletoEntrada { cobrancaId: number; valor: number; vencimento: string; boletoUrl: string; pixUrl: string | null }
+
+/** Boleto da entrada já emitido (para o convite de assinatura e os reenvios); null se não houver ou já pago */
+export async function boletoDaEntrada(contratoId: number, dias = 15): Promise<BoletoEntrada | null> {
+  const db = (await getDb()) as any;
+  const ls: any[] = await db.select().from(cobrancas).where(eq(cobrancas.contratoId, contratoId));
+  const l = ls.find(x => ehPrimeiroPagamento(x) && x.status === 'emitida');
+  if (!l) return null;
+  const { assinarLink } = await import('./links');
+  const { urlPixDaCobranca } = await import('./dados');
+  const base = (process.env.APP_PUBLIC_URL || 'https://romateccrm.com').replace(/\/+$/, '');
+  return {
+    cobrancaId: Number(l.id), valor: Number(l.valor), vencimento: String(l.vencimento).slice(0, 10),
+    boletoUrl: `${base}${assinarLink(`/api/financeiro/cobrancas/${l.id}/boleto-a4.pdf`, Date.now(), dias)}`, pixUrl: urlPixDaCobranca(Number(l.id)),
+  };
+}
+
+/**
+ * No envio para assinatura: grava as cobranças do plano (previstas) e emite no Asaas SÓ o boleto da entrada (ou do
+ * à vista), para seguir junto com o link de assinatura. O carnê do saldo sai na ativação, como sempre (sem duplicar).
+ * Sem Asaas configurado ou em caso de erro, devolve o motivo e o envio da assinatura segue.
+ */
+export async function emitirEntradaComAssinatura(contratoId: number, plano: PlanoContrato, o: { usuarioId?: number; fetchFn?: FetchFn } = {}): Promise<{ boleto: BoletoEntrada | null; motivo?: string }> {
+  if ((plano as any).concessao) return { boleto: null, motivo: 'concessão: sem cobrança' };
+  try {
+    await gerarCobrancasDoPlano(contratoId, plano);
+    const ja = await boletoDaEntrada(contratoId);
+    if (ja) return { boleto: ja };
+    await emitirCarneNoAsaas(contratoId, 1, { usuarioId: o.usuarioId, fetchFn: o.fetchFn, filtro: ehPrimeiroPagamento, origem: 'assinatura', antesDaAtivacao: true });
+    return { boleto: await boletoDaEntrada(contratoId) };
+  } catch (e: any) {
+    console.warn('[Emissão] boleto da entrada no envio para assinatura:', e?.message);
+    return { boleto: null, motivo: String(e?.message ?? e).slice(0, 200) };
+  }
 }

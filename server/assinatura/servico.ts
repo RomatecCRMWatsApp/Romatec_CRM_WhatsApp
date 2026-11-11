@@ -201,14 +201,21 @@ export async function enviarParaAssinatura(contratoId: number, metodos: Record<s
     });
   }
   await d.update(contratos).set({ status: 'em_assinatura', assinaturaIniciadaEm: new Date() }).where(eq(contratos.id, contratoId));
-  await evento(contratoId, null, 'enviado_para_assinatura', { detalhe: { usuarioId, signatarios: sigs.length } });
+  // Boleto da entrada: emitido agora e enviado junto com o link de assinatura da compradora
+  const { emitirEntradaComAssinatura } = await import('../financeiro/emissao');
+  const plano = (() => { try { return typeof c.simulacaoJson === 'string' ? JSON.parse(c.simulacaoJson) : c.simulacaoJson; } catch { return null; } })();
+  const entrada = plano ? await emitirEntradaComAssinatura(contratoId, plano, { usuarioId }) : { boleto: null, motivo: 'plano não encontrado' };
+  await evento(contratoId, null, 'enviado_para_assinatura', { detalhe: { usuarioId, signatarios: sigs.length, boletoEntrada: entrada.boleto?.cobrancaId ?? null, semBoleto: entrada.motivo ?? null } });
   const convites = await enviarConvites(contratoId);
-  return { signatarios: sigs.length, convites };
+  return { signatarios: sigs.length, convites, boletoEntrada: !!entrada.boleto, boletoMotivo: entrada.boleto ? null : entrada.motivo ?? null };
 }
 
-const MENSAGEM_CONVITE = (s: { nome: string }, numero: string, link: string) =>
+const brlTxt = (v: number) => v.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
+const MENSAGEM_CONVITE = (s: { nome: string }, numero: string, link: string, boleto?: { valor: number; vencimento: string; boletoUrl: string; pixUrl: string | null } | null) =>
   `Olá, ${s.nome.split(' ')[0]}! O contrato ${numero} do Condomínio de Chácaras Bom Jardims está pronto para a sua assinatura.\n\n` +
-  `Leia e assine pelo link (válido por ${VALIDADE_LINK_DIAS} dias): ${link}\n\nDúvidas: (99) 9 9101-1970.`;
+  `Leia e assine pelo link (válido por ${VALIDADE_LINK_DIAS} dias): ${link}` +
+  (boleto ? `\n\nBoleto da entrada: ${brlTxt(boleto.valor)}, vencimento em ${boleto.vencimento.split('-').reverse().join('/')}.\nBoleto (PDF): ${boleto.boletoUrl}${boleto.pixUrl ? `\nPagar por Pix: ${boleto.pixUrl}` : ''}` : '') +
+  `\n\nDúvidas: (99) 9 9101-1970.`;
 
 /** Convites (WhatsApp) de quem ainda não assinou; sem telefone, o operador copia o link */
 export async function enviarConvites(contratoId: number, soSignatarioId?: number) {
@@ -216,10 +223,13 @@ export async function enviarConvites(contratoId: number, soSignatarioId?: number
   const c = await contratoPorId(contratoId);
   const sigs: any[] = await d.select().from(assinaturaSignatarios).where(eq(assinaturaSignatarios.contratoId, contratoId));
   const res: { papel: string; enviado: boolean; erro?: string }[] = [];
+  // Compradora: o convite leva também o boleto da entrada (se emitido e ainda não pago)
+  const { boletoDaEntrada } = await import('../financeiro/emissao');
+  const boleto = await boletoDaEntrada(contratoId).catch(() => null);
   for (const s of sigs.filter(x => x.status !== 'assinado' && (!soSignatarioId || x.id === soSignatarioId))) {
     try {
       if (!s.whatsapp) throw new Error('sem WhatsApp cadastrado');
-      await enviador(s.whatsapp, MENSAGEM_CONVITE(s, c.numero, linkDoSignatario(s.token)));
+      await enviador(s.whatsapp, MENSAGEM_CONVITE(s, c.numero, linkDoSignatario(s.token), s.papel === 'comprador' ? boleto : null));
       await d.update(assinaturaSignatarios).set({ status: 'convidado' }).where(eq(assinaturaSignatarios.id, s.id));
       await evento(contratoId, s.id, 'convite_enviado', { detalhe: { canal: 'whatsapp' } });
       res.push({ papel: s.papel, enviado: true });

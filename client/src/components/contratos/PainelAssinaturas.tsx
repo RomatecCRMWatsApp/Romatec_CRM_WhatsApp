@@ -22,7 +22,12 @@ export default function PainelAssinaturas({ id, status, podeEnviar }: { id: numb
   useEffect(() => { if (data?.previstos) setMetodos(Object.fromEntries(data.previstos.map((p: any) => [p.papel, p.metodo]))); }, [data]);
   const recarregar = () => { utils.contratos.assinaturas.invalidate({ id }); utils.contratos.detalhe.invalidate({ id }); };
   const enviar = trpc.contratos.enviarParaAssinatura.useMutation({
-    onSuccess: r => { const falhas = r.convites.filter((c: any) => !c.enviado); falhas.length ? toast.warning(`${falhas.length} convite(s) não enviados — copie o link`) : toast.success("Convites enviados por WhatsApp"); recarregar(); },
+    onSuccess: r => {
+      const falhas = r.convites.filter((c: any) => !c.enviado);
+      falhas.length ? toast.warning(`${falhas.length} convite(s) não enviados — copie o link`) : toast.success(r.boletoEntrada ? "Convites enviados por WhatsApp — a compradora recebeu também o boleto da entrada" : "Convites enviados por WhatsApp");
+      if (!r.boletoEntrada && r.boletoMotivo && !/concessão/.test(r.boletoMotivo)) toast.warning(`Boleto da entrada não foi junto: ${r.boletoMotivo}`);
+      recarregar();
+    },
     onError: e => toast.error(e.message),
   });
   const reenviar = trpc.contratos.reenviarConvite.useMutation({ onSuccess: r => { r.enviado ? toast.success("Convite reenviado") : toast.error(r.erro ?? "Não enviado"); recarregar(); }, onError: e => toast.error(e.message) });
