@@ -3,6 +3,16 @@
 Cada versão nova vai no TOPO. Depois rode `npm run release` (valida e atualiza o package.json);
 ao subir, o servidor grava a versão no banco e todos recebem o aviso "Novidades da versão".
 
+## 1.159.2 — 2026-11-11
+tipo: patch
+obrigatoria: nao
+titulo: Via assinada do contrato num botão só, para o cliente e para o arquivo
+publico: equipe
+
+### Melhorias
+- Contratos: novo botão "Via assinada" nos contratos assinados, ativos e quitados, na lista e no topo do contrato. Ele gera um PDF único com o contrato e todas as assinaturas, mais o manifesto das assinaturas (Anexo VII) no final, com as opções Abrir, Baixar, WhatsApp, Copiar link e Compartilhar. É a via para mandar ao cliente e imprimir para o arquivo
+- Aba Assinaturas: o mesmo botão "Via assinada completa" ao lado do Manifesto
+
 ## 1.159.1 — 2026-11-11
 tipo: patch
 obrigatoria: nao

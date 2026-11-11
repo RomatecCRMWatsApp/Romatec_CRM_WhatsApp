@@ -333,6 +333,36 @@ export function registrarRotasContratos(app: Express) {
     } catch (e: any) { res.status(e instanceof ContratoErro ? e.status : 500).send(e?.message ?? 'Falha'); }
   });
 
+  // Via assinada para o cliente e para o arquivo: o contrato com todas as assinaturas + o manifesto (Anexo VII)
+  app.get('/api/contratos/:id/via-assinada.pdf', async (req, res) => {
+    try {
+      const { sdk } = await import('../_core/sdk');
+      const user: any = await sdk.authenticateRequest(req).catch(() => null);
+      if (!user || user.ativo === false || user.ativo === 0) return res.status(401).send('Faça login');
+      const { perfilDe } = await import('../../shared/equipe');
+      const perfil = perfilDe(user);
+      const c = await contratoPorId(Number(req.params.id) || 0);
+      if (!(perfil === 'admin' || perfil === 'secretario' || (perfil === 'corretor' && c.corretorUserId === user.id)) || !c.pdfAtual) return res.status(404).send('Contrato sem PDF');
+      if (!['assinado', 'ativo', 'quitado'].includes(String(c.status))) return res.status(409).send('A via assinada sai depois que todos assinarem');
+      const { lerArquivo } = await import('./arquivos');
+      const contrato = await lerArquivo(c.pdfAtual);
+      if (!contrato) return res.status(404).send('Contrato sem PDF');
+      const manifesto = c.manifestoArquivo ? await lerArquivo(c.manifestoArquivo) : null;
+      let buf = contrato.buf;
+      if (manifesto) {
+        const { PDFDocument } = await import('pdf-lib');
+        const via = await PDFDocument.load(contrato.buf, { ignoreEncryption: true });
+        const m = await PDFDocument.load(manifesto.buf, { ignoreEncryption: true });
+        (await via.copyPages(m, m.getPageIndices())).forEach(pg => via.addPage(pg));
+        buf = Buffer.from(await via.save({ useObjectStreams: false }));
+      }
+      res.setHeader('Content-Type', 'application/pdf');
+      res.setHeader('Cache-Control', 'private, no-store');
+      res.setHeader('Content-Disposition', `inline; filename="CONTRATO-${c.numero}-VIA-ASSINADA.pdf"`);
+      res.send(buf);
+    } catch (e: any) { res.status(e instanceof ContratoErro ? e.status : 500).send(e?.message ?? 'Falha'); }
+  });
+
   app.get('/api/contratos/:id/versoes/:versao.pdf', async (req, res) => {
     try {
       const { sdk } = await import('../_core/sdk');

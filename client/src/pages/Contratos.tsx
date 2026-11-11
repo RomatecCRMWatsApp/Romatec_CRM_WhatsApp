@@ -15,6 +15,7 @@ import { useAuth } from "@/_core/hooks/useAuth";
 import { perfilDe } from "@shared/equipe";
 import { COR_STATUS_CONTRATO, ROTULO_STATUS_CONTRATO, podeCancelarContrato, type StatusContrato } from "@shared/contratos";
 import { brl } from "@shared/simulador";
+import { AcoesPdf } from "@/components/sistema/AcoesPdf";
 
 const FILTROS: { rotulo: string; status?: StatusContrato[] }[] = [
   { rotulo: "Todos" },
@@ -163,6 +164,10 @@ export default function Contratos() {
                 <span className="text-sm text-muted-foreground">{c.empreendimento} · Chácara {c.loteCodigo}</span>
                 {/* Ações (o clique nelas não abre o contrato) */}
                 <div className="ml-auto flex flex-wrap gap-1.5" onClick={e => e.stopPropagation()} onKeyDown={e => e.stopPropagation()}>
+                  {["assinado", "ativo", "quitado"].includes(c.status) && (
+                    <AcoesPdf compacto rotulo="Via assinada" url={`/api/contratos/${c.id}/via-assinada.pdf`} nomeArquivo={`CONTRATO-${c.numero}-VIA-ASSINADA.pdf`}
+                      mensagem={`Contrato ${c.numero} (Chácara ${c.loteCodigo}) — via assinada, com o manifesto das assinaturas`} />
+                  )}
                   {admin ? (
                     <Button size="sm" variant="outline" className="h-7 px-2 text-xs" onClick={() => navigate(`/contratos/${c.id}?editar=1`)} title="Editar comprador, cônjuge, corretor e condições (com a sua senha)">
                       <Pencil className="h-3.5 w-3.5" /> Editar

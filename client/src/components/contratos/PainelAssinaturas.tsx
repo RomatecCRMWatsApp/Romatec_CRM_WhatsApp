@@ -80,6 +80,7 @@ export default function PainelAssinaturas({ id, status, podeEnviar }: { id: numb
       <section className="rounded-xl border border-border bg-card p-4">
         <div className="mb-2 flex flex-wrap items-center justify-between gap-2">
           <h2 className="text-sm font-semibold">Assinaturas · {assinados} de {data.signatarios.length}</h2>
+          {data.manifesto && <AcoesPdf compacto rotulo="Via assinada completa" url={`/api/contratos/${id}/via-assinada.pdf`} nomeArquivo={`CONTRATO-${id}-VIA-ASSINADA.pdf`} mensagem="Contrato com todas as assinaturas e o manifesto (Anexo VII)" />}
           {data.manifesto && <AcoesPdf compacto rotulo="Manifesto (Anexo VII)" url={`/api/contratos/${id}/manifesto.pdf`} nomeArquivo={`MANIFESTO-ASSINATURAS-${id}.pdf`} mensagem="Manifesto de evidências das assinaturas (Anexo VII)" />}
         </div>
         <div className="divide-y divide-border/50">
