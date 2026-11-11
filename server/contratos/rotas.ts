@@ -344,18 +344,9 @@ export function registrarRotasContratos(app: Express) {
       const c = await contratoPorId(Number(req.params.id) || 0);
       if (!(perfil === 'admin' || perfil === 'secretario' || (perfil === 'corretor' && c.corretorUserId === user.id)) || !c.pdfAtual) return res.status(404).send('Contrato sem PDF');
       if (!['assinado', 'ativo', 'quitado'].includes(String(c.status))) return res.status(409).send('A via assinada sai depois que todos assinarem');
-      const { lerArquivo } = await import('./arquivos');
-      const contrato = await lerArquivo(c.pdfAtual);
-      if (!contrato) return res.status(404).send('Contrato sem PDF');
-      const manifesto = c.manifestoArquivo ? await lerArquivo(c.manifestoArquivo) : null;
-      let buf = contrato.buf;
-      if (manifesto) {
-        const { PDFDocument } = await import('pdf-lib');
-        const via = await PDFDocument.load(contrato.buf, { ignoreEncryption: true });
-        const m = await PDFDocument.load(manifesto.buf, { ignoreEncryption: true });
-        (await via.copyPages(m, m.getPageIndices())).forEach(pg => via.addPage(pg));
-        buf = Buffer.from(await via.save({ useObjectStreams: false }));
-      }
+      const via = await (await import('./liberacaoVia')).montarViaAssinada(c.id);
+      if (!via) return res.status(404).send('Contrato sem PDF');
+      const buf = via.buf;
       res.setHeader('Content-Type', 'application/pdf');
       res.setHeader('Cache-Control', 'private, no-store');
       res.setHeader('Content-Disposition', `inline; filename="CONTRATO-${c.numero}-VIA-ASSINADA.pdf"`);

@@ -414,9 +414,9 @@ export async function concluirSeTodos(contratoId: number): Promise<{ concluido: 
   await evento(contratoId, null, 'manifesto_gerado', { detalhe: { sha256: sha256(final) } });
   // Todas as assinaturas + manifesto: contrato ativo (lote vendido e plano de cobranças gravado)
   await registrarAssinado(contratoId, null, 0);
-  // Entrada já paga antes da última assinatura: a via assinada vai para o(a) comprador(a) agora
-  const { enviarViaAssinadaSeLiberada } = await import('../contratos/liberacaoVia');
-  await enviarViaAssinadaSeLiberada(contratoId).catch((e: any) => console.warn('[Assinatura] via assinada:', e?.message));
+  // Assinatura concluída: a via oficial (PDF + link) vai pelo WhatsApp a cada envolvido; ao(à) comprador(a), com a entrada paga
+  const { enviarViasAssinadas } = await import('../contratos/liberacaoVia');
+  await enviarViasAssinadas(contratoId).catch((e: any) => console.warn('[Assinatura] vias assinadas:', e?.message));
   return { concluido: true };
 }
 

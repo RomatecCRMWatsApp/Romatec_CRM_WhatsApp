@@ -1,6 +1,6 @@
 import { useMemo, useState } from "react";
 import { useLocation, useSearch } from "wouter";
-import { Ban, ChevronDown, Download, FileSignature, FileText, Loader2, Pencil, Plus, Trash2, XCircle } from "lucide-react";
+import { Ban, ChevronDown, History, PenLine, Download, FileSignature, FileText, Loader2, Pencil, Plus, Trash2, XCircle } from "lucide-react";
 import { ExcluirContrato } from "@/components/contratos/EditarContrato";
 import { toast } from "sonner";
 import { trpc } from "@/lib/trpc";
@@ -16,6 +16,7 @@ import { perfilDe } from "@shared/equipe";
 import { COR_STATUS_CONTRATO, ROTULO_STATUS_CONTRATO, podeCancelarContrato, type StatusContrato } from "@shared/contratos";
 import { brl } from "@shared/simulador";
 import { AcoesPdf } from "@/components/sistema/AcoesPdf";
+import { LinhaDoTempo } from "@/components/contratos/LinhaDoTempo";
 
 const FILTROS: { rotulo: string; status?: StatusContrato[] }[] = [
   { rotulo: "Todos" },
@@ -59,6 +60,7 @@ export default function Contratos() {
   const setAba = (a: "contratos" | "links" | "documentos" | "aditivos") => navigate(a === "contratos" ? "/contratos" : `/contratos?aba=${a}`, { replace: true });
   const [filtro, setFiltro] = useState(0);
   const [busca, setBusca] = useState("");
+  const [linhaAberta, setLinhaAberta] = useState<number | null>(null);
   const [baixando, setBaixando] = useState<string | null>(null);
   // Modelos gerados na hora (nada é gravado): baixa o PDF direto, sem abrir
   const baixarModelo = async (m: typeof MODELOS[number]) => {
@@ -202,6 +204,27 @@ export default function Contratos() {
                 <p>Corretor: <b className="text-foreground">{c.corretor}</b></p>
                 <p>{c.modalidade === "avista" ? "À vista" : "Financiado"}{c.total != null ? ` · total ${brl(c.total)}` : ""}</p>
               </div>
+              {/* Plano, observações (congelamento, concessão, condições específicas), assinaturas e a linha do tempo */}
+              <div className="mt-1.5 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs" onClick={e => e.stopPropagation()} onKeyDown={e => e.stopPropagation()}>
+                <span className="text-muted-foreground">Plano: <b className="text-foreground">{c.plano}</b></span>
+                {c.assinaturas && (
+                  <span className={`inline-flex items-center gap-1 rounded-full border px-2 py-0.5 ${c.assinaturas.assinados === c.assinaturas.total ? "border-ok-500/40 bg-ok-600/15 text-ok-300" : "border-border text-muted-foreground"}`}>
+                    <PenLine className="h-3 w-3" /> Assinaturas {c.assinaturas.assinados} de {c.assinaturas.total}
+                  </span>
+                )}
+                <button type="button" className="ml-auto inline-flex items-center gap-1 rounded-md px-1.5 py-0.5 text-primary hover:underline focus-visible:outline focus-visible:outline-2 focus-visible:outline-primary"
+                  aria-expanded={linhaAberta === c.id} onClick={() => setLinhaAberta(v => (v === c.id ? null : c.id))}>
+                  <History className="h-3.5 w-3.5" /> {linhaAberta === c.id ? "Fechar linha do tempo" : "Linha do tempo"}
+                </button>
+              </div>
+              {c.observacoes.length > 0 && (
+                <div className="mt-1 space-y-0.5 text-xs text-warn-200">{c.observacoes.map(o => <p key={o}>• {o}</p>)}</div>
+              )}
+              {linhaAberta === c.id && (
+                <div className="mt-3 cursor-default rounded-lg border border-border bg-background/40 p-3" onClick={e => e.stopPropagation()} onKeyDown={e => e.stopPropagation()}>
+                  <LinhaDoTempo contratoId={c.id} />
+                </div>
+              )}
             </div>
           ))}
         </div>

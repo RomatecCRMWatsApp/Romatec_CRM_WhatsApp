@@ -11,6 +11,7 @@ import PageHeader from "@/components/PageHeader";
 import CompensarPagamento from "@/components/contratos/CompensarPagamento";
 import { Button } from "@/components/ui/button";
 import { AcoesPdf } from "@/components/sistema/AcoesPdf";
+import { LinhaDoTempo } from "@/components/contratos/LinhaDoTempo";
 import { sel } from "@/components/cadastro/campos";
 import { brl } from "@shared/simulador";
 import { maskPhone } from "@shared/masks";
@@ -163,6 +164,10 @@ export default function ContratoDetalhe() {
         {aba === "contrato" && (
           <div className="grid gap-4 lg:grid-cols-[1fr_380px]">
             <div className="space-y-4">
+              <section className="rounded-xl border border-border bg-card p-4">
+                <h2 className="mb-2 text-sm font-semibold">Plano, observações e linha do tempo</h2>
+                <LinhaDoTempo contratoId={id} comResumo />
+              </section>
               <section className="rounded-xl border border-border bg-card p-4">
                 <h2 className="mb-2 text-sm font-semibold">Documento</h2>
                 {/* Por que o "Gerar definitivo" está travado: as pendências, aqui mesmo (no celular a lista ao lado fica no fim) */}

@@ -75,3 +75,48 @@ describe('credenciais do corretor anexas ao contrato de intermediação', () => 
     expect(S.numeroNaCertidao('texto sem código')).toBeNull();
   });
 });
+
+describe('via oficial a todos os envolvidos', () => {
+  it('proprietária recebe na hora; compradora só com a entrada paga; uma vez por pessoa', async () => {
+    const q = (e: number, n: number) => JSON.stringify([[e, n], [e + 55, n], [e + 55, n - 55], [e, n - 55]]);
+    db.run(sql`INSERT INTO lotes (empreendimentoId, codigo, quadra, numero, areaM2, perimetroM, situacao, verticesUtm) VALUES (1, 'D17', 'D', 17, '3025.11', '220.01', 'disponivel', ${q(236100, 9455000)})`);
+    const r2 = await S.criarContrato({ empreendimentoSlug: 'bom-jardims', loteCodigo: 'D17', corretorUserId: 1,
+      plano: { modalidade: 'financiado', entradaParcelas: 1, prazo: 120, dataPrimeiroPagamento: '2026-12-10' },
+      comprador: { nome: 'Outra Compradora Ficticia', cpf: '111.444.777-35', estadoCivil: 'solteiro', telefone1: '(99) 9 9222-3333', logradouro: 'Rua B', cidade: 'Açailândia', uf: 'MA' } }, 1);
+    const id2 = r2.id;
+    db.run(sql`INSERT INTO cobrancas (contratoId, tipo, numero, total, vencimento, valor, status) VALUES (${id2}, 'entrada', 1, 1, '2026-12-10', '48000', 'emitida')`);
+    db.run(sql`INSERT INTO assinaturaSignatarios (contratoId, papel, nome, cpf, whatsapp, metodo, ordem, status, token, expiraEm, revisaoManual) VALUES (${id2}, 'comprador', 'Outra Compradora Ficticia', '11144477735', '5599992223333', 'avancada', 1, 'assinado', 'tok2', '2030-01-01 00:00:00', 0)`);
+    db.run(sql`INSERT INTO assinaturaSignatarios (contratoId, papel, nome, cpf, whatsapp, metodo, ordem, status, token, expiraEm, revisaoManual) VALUES (${id2}, 'vendedora', 'Proprietaria Ficticia', '52998224725', '5599993334444', 'avancada', 2, 'assinado', 'tok3', '2030-01-01 00:00:00', 0)`);
+    db.run(sql`UPDATE contratos SET manifestoArquivo = 'contratos/x/manifesto.pdf' WHERE id = ${id2}`);
+    const r = await L.enviarViasAssinadas(id2);
+    expect(r.enviados.map(x => x.papel)).toEqual(['vendedora']);
+    expect(r.aguardando.map(x => x.papel)).toEqual(['comprador']);
+    expect(mensagens.at(-1)!.msg).toMatch(/Todas as assinaturas do contrato/);
+    expect((await L.enviarViasAssinadas(id2)).enviados).toEqual([]);
+    db.run(sql`UPDATE cobrancas SET status = 'paga' WHERE contratoId = ${id2}`);
+    expect((await L.enviarViasAssinadas(id2)).enviados.map(x => x.papel)).toEqual(['comprador']);
+  });
+});
+
+describe('linha do tempo e resumo do contrato', () => {
+  it('etapas com a data; feitas e pendentes; via enviada aparece', async () => {
+    const T = await import('./contratos/linhaTempo');
+    const etapas = await T.linhaDoTempo(id);
+    expect(etapas[0]).toMatchObject({ chave: 'preenchido', feito: true });
+    expect(etapas.find(e => e.chave === 'definitivo')!.feito).toBe(false);
+    expect(etapas.find(e => e.chave === 'entrada')).toMatchObject({ feito: true });
+    expect(etapas.some(e => e.chave.startsWith('via:') && e.feito && /WhatsApp/.test(e.titulo))).toBe(true);
+    const lista = await S.listarContratos();
+    const c = lista.find(x => x.id === id)!;
+    expect(c.plano).toMatch(/120× de R\$/);
+    expect(c.assinaturas).toEqual({ assinados: 1, total: 1 });
+  });
+  it('resumo: congelamento e condições específicas viram observação', async () => {
+    const { resumoDoContrato } = await import('./contratos/linhaTempo');
+    const r = resumoDoContrato({ simulacaoJson: { modalidade: 'financiado', condicao: 'C', complemento_ato: 10000, saldo_qtd: 120, saldo_parcela: 1234.51, total_pagar: 1, complemento_qtd: 12, complemento_parcela: 1055.56, complemento_modo: 'congelado', complemento_inicio_mes: 15 },
+      dadosJson: { condicionantes: { ctr_condicoes_especificas: 'Liberação de uso após a 3ª parcela.' } } });
+    expect(r.plano).toMatch(/^Plano C .*entrada R\$\s?10\.000,00 no ato \+ 120× de R\$\s?1\.234,51/);
+    expect(r.observacoes[0]).toMatch(/congelado: 12× .* a partir do 15º mês, em carnê à parte/);
+    expect(r.observacoes[1]).toMatch(/Condições específicas: Liberação de uso/);
+  });
+});

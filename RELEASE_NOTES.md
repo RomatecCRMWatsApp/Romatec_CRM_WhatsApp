@@ -3,6 +3,19 @@
 Cada versão nova vai no TOPO. Depois rode `npm run release` (valida e atualiza o package.json);
 ao subir, o servidor grava a versão no banco e todos recebem o aviso "Novidades da versão".
 
+## 1.160.0 — 2026-11-11
+tipo: minor
+obrigatoria: nao
+titulo: Via oficial automática pelo WhatsApp e linha do tempo do contrato
+publico: equipe
+
+### Novidades
+- Assinatura concluída: assim que o último envolvido assina, o sistema manda a via oficial assinada (PDF com o contrato, as assinaturas e o manifesto, mais o link de conferência) pelo WhatsApp a cada envolvido: proprietária, gestora, testemunhas e o corretor do contrato. O(a) comprador(a) e o cônjuge recebem quando a entrada for paga, como já era a regra. Cada pessoa recebe uma vez só
+- Linha do tempo do contrato (auditoria): contrato preenchido, minuta, definitivo, envio para assinatura, a assinatura de cada um, manifesto, entrada paga, via enviada pelo WhatsApp a cada pessoa e contrato ativo, com data e hora. Etapa concluída fica verde. Fica na lista de contratos (botão "Linha do tempo") e no topo do contrato
+
+### Melhorias
+- Lista de contratos: cada contrato mostra o plano numa linha (ex.: Plano C, entrada no ato + parcelas), as assinaturas (verde quando todos assinaram) e as observações: complemento congelado, concessão e condições específicas
+
 ## 1.159.2 — 2026-11-11
 tipo: patch
 obrigatoria: nao

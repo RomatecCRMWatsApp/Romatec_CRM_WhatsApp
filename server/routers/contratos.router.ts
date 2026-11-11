@@ -200,6 +200,13 @@ export const contratosRouter = router({
     return { ok: true, emitidas: await emitirCarteirasAuto(c.id) };
   }),
 
+  /** Linha do tempo (auditoria) do contrato: cada etapa com a data; as feitas ficam verdes na tela */
+  linhaDoTempo: protectedProcedure.input(z.object({ id: z.number().int() })).query(async ({ ctx, input }) => {
+    const c = await contratoVisivel(ctx, input.id);
+    const { linhaDoTempo, resumoDoContrato } = await import("../contratos/linhaTempo");
+    return { etapas: await linhaDoTempo(c.id), ...resumoDoContrato(c as any) };
+  }),
+
   detalhe: protectedProcedure.input(z.object({ id: z.number().int() })).query(async ({ ctx, input }) => {
     const c = await contratoVisivel(ctx, input.id);
     const perfil = perfilDe(ctx.user as any);

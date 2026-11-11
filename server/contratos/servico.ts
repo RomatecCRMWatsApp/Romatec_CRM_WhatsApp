@@ -517,12 +517,15 @@ export async function listarContratos(filtro: { corretorUserId?: number; status?
     .from(contratoPessoas).innerJoin(pessoas, eq(pessoas.id, contratoPessoas.pessoaId)).where(inArray(contratoPessoas.contratoId, ids)) : [];
   const emps: any[] = await d.select({ id: empreendimentos.id, nome: empreendimentos.nome, slug: empreendimentos.slug }).from(empreendimentos);
   const us: any[] = await d.select({ id: users.id, name: users.name }).from(users);
+  const { assinaturasPorContrato, resumoDoContrato } = await import('./linhaTempo');
+  const assin = await assinaturasPorContrato(ids);
   return lista.sort((a, b) => b.id - a.id).map(c => {
     const plano = json<PlanoContrato>(c.simulacaoJson);
     return {
       id: c.id, numero: c.numero, status: c.status, loteCodigo: c.loteCodigo, empreendimento: emps.find(e => e.id === c.empreendimentoId)?.nome ?? '',
       comprador: ps.find(p => p.contratoId === c.id && p.papel === 'comprador')?.nome ?? '—', corretor: us.find(u => u.id === c.corretorUserId)?.name ?? '—',
       corretorUserId: c.corretorUserId, total: plano?.total_pagar ?? null, modalidade: plano?.modalidade ?? null, criadoEm: c.criadoEm,
+      assinaturas: assin.get(c.id) ?? null, ...resumoDoContrato(c), viaEnviada: !!c.manifestoArquivo,
     };
   });
 }
