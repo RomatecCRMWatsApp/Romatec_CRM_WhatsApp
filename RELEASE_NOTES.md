@@ -3,6 +3,17 @@
 Cada versão nova vai no TOPO. Depois rode `npm run release` (valida e atualiza o package.json);
 ao subir, o servidor grava a versão no banco e todos recebem o aviso "Novidades da versão".
 
+## 1.152.0 — 2026-11-11
+tipo: minor
+obrigatoria: nao
+titulo: Editar e excluir contratos (só o administrador)
+publico: admin
+
+### Novo
+- Contrato: botões "Editar contrato" e "Excluir contrato", só para o administrador e sempre confirmados com a senha de login. Na lista, o administrador vê "Editar" e "Excluir"; os demais veem só "Abrir"
+- Editar: comprador, cônjuge, corretor e condições específicas; o plano de pagamento muda só antes da assinatura e sem boleto emitido. Contrato já gerado ou em assinatura volta a rascunho para gerar o PDF novo, e as assinaturas pendentes são descartadas. Contrato assinado: só correção do cadastro, e o PDF assinado continua o oficial (para mudar condições, use termo aditivo)
+- Excluir: só contrato sem boleto emitido, pagamento, recibo ou repasse. A chácara volta a disponível e a trilha de auditoria fica guardada. Com pagamento, o caminho é Cancelar
+
 ## 1.151.0 — 2026-11-11
 tipo: minor
 obrigatoria: nao

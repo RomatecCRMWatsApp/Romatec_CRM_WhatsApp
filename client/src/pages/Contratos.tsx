@@ -1,6 +1,7 @@
 import { useMemo, useState } from "react";
 import { useLocation, useSearch } from "wouter";
-import { Ban, ChevronDown, Download, FileSignature, Loader2, Pencil, Plus, XCircle } from "lucide-react";
+import { Ban, ChevronDown, Download, FileSignature, FileText, Loader2, Pencil, Plus, Trash2, XCircle } from "lucide-react";
+import { ExcluirContrato } from "@/components/contratos/EditarContrato";
 import { toast } from "sonner";
 import { trpc } from "@/lib/trpc";
 import PageHeader from "@/components/PageHeader";
@@ -77,6 +78,7 @@ export default function Contratos() {
   const utils = trpc.useUtils();
   // Cancelar (administrador, com a senha dele) ou pedir o cancelamento (corretor/secretária) direto da lista
   const [alvo, setAlvo] = useState<{ id: number; numero: string } | null>(null);
+  const [excluir, setExcluir] = useState<{ id: number; numero: string; loteCodigo: string } | null>(null);
   const cancelar = trpc.contratos.cancelar.useMutation({
     onSuccess: r => {
       toast.success(r.jaCancelado ? "Contrato já estava cancelado" : `Contrato cancelado${r.loteLiberado ? " · chácara liberada" : ""}${r.cobrancasCanceladas ? ` · ${r.cobrancasCanceladas} cobrança(s) futura(s) cancelada(s)` : ""}`);
@@ -161,13 +163,25 @@ export default function Contratos() {
                 <span className="text-sm text-muted-foreground">{c.empreendimento} · Chácara {c.loteCodigo}</span>
                 {/* Ações (o clique nelas não abre o contrato) */}
                 <div className="ml-auto flex flex-wrap gap-1.5" onClick={e => e.stopPropagation()} onKeyDown={e => e.stopPropagation()}>
-                  <Button size="sm" variant="outline" className="h-7 px-2 text-xs" onClick={() => abrir(c.id)} title="Abrir o contrato: minuta/definitivo, assinaturas e financeiro">
-                    <Pencil className="h-3.5 w-3.5" /> Editar
-                  </Button>
+                  {admin ? (
+                    <Button size="sm" variant="outline" className="h-7 px-2 text-xs" onClick={() => navigate(`/contratos/${c.id}?editar=1`)} title="Editar comprador, cônjuge, corretor e condições (com a sua senha)">
+                      <Pencil className="h-3.5 w-3.5" /> Editar
+                    </Button>
+                  ) : (
+                    <Button size="sm" variant="outline" className="h-7 px-2 text-xs" onClick={() => abrir(c.id)} title="Abrir o contrato: minuta/definitivo, assinaturas e financeiro">
+                      <FileText className="h-3.5 w-3.5" /> Abrir
+                    </Button>
+                  )}
                   {!ENCERRADOS.includes(c.status) && admin && (
                     <Button size="sm" variant="outline" className="h-7 px-2 text-xs text-danger-400" onClick={() => setAlvo({ id: c.id, numero: c.numero })}
                       title="Cancela com a sua senha: libera a chácara e cancela as cobranças futuras. O histórico fica guardado.">
                       <XCircle className="h-3.5 w-3.5" /> Cancelar
+                    </Button>
+                  )}
+                  {admin && (
+                    <Button size="sm" variant="outline" className="h-7 px-2 text-xs text-danger-400" onClick={() => setExcluir({ id: c.id, numero: c.numero, loteCodigo: c.loteCodigo })}
+                      title="Exclui de vez (só contrato sem boleto emitido nem pagamento), com a sua senha">
+                      <Trash2 className="h-3.5 w-3.5" /> Excluir
                     </Button>
                   )}
                   {!ENCERRADOS.includes(c.status) && podePedir && (
@@ -187,6 +201,7 @@ export default function Contratos() {
           ))}
         </div>
       </div>
+      {admin && excluir && <ExcluirContrato aberto onFechar={() => setExcluir(null)} onExcluido={() => { setExcluir(null); utils.contratos.listar.invalidate(); }} contrato={excluir} />}
       <ConfirmarCancelamento aberto={!!alvo} onFechar={() => setAlvo(null)} comSenha={admin} pendente={cancelar.isPending || solicitar.isPending}
         titulo={admin ? `Cancelar o contrato ${alvo?.numero ?? ""}` : `Pedir o cancelamento do contrato ${alvo?.numero ?? ""}`}
         descricao={admin

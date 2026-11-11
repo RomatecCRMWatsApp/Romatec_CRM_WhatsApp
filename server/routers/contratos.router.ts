@@ -236,7 +236,8 @@ export const contratosRouter = router({
     return {
       contrato: {
         id: c.id, numero: c.numero, status: c.status, loteCodigo: c.loteCodigo, modoAssinatura: c.modoAssinatura, codigoVerificacao: c.codigoVerificacao,
-        empreendimento: emp?.nome ?? "", empreendimentoSlug: emp?.slug ?? "", criadoEm: c.criadoEm, corretorUserId: c.corretorUserId,
+        empreendimento: emp?.nome ?? "", empreendimentoSlug: emp?.slug ?? "", criadoEm: c.criadoEm, corretorUserId: c.corretorUserId, leadId: c.leadId ?? null,
+        condicoesEspecificas: (() => { try { const x = typeof c.dadosJson === "string" ? JSON.parse(c.dadosJson) : c.dadosJson; return String(x?.condicionantes?.ctr_condicoes_especificas ?? ""); } catch { return ""; } })(),
       },
       plano: { ...plano, parcelas: undefined },
       comprador, conjuge,
@@ -286,6 +287,34 @@ export const contratosRouter = router({
       exigir(podeCancelarContrato(perfilDe(ctx.user as any)), "Só o administrador cancela contratos.");
       await contratoVisivel(ctx, input.id);
       return tratar(() => cancelarContratoAdmin(input.id, ctx.user as any, input.senha, input.motivo, (ctx as any).req?.ip ?? null));
+    }),
+
+  /** O que o administrador pode editar/excluir neste contrato (só ele vê os botões) */
+  edicao: protectedProcedure.input(z.object({ id: z.number().int() })).query(async ({ ctx, input }) => {
+    if (perfilDe(ctx.user as any) !== "admin") return { editar: false, plano: false, voltaRascunho: false, soCadastral: false, excluir: false, motivoNaoExcluir: null };
+    const { edicaoPermitida } = await import("../contratos/edicao");
+    return tratar(() => edicaoPermitida(input.id));
+  }),
+
+  /** Editar contrato: SÓ o administrador, com a senha de login (contratos/edicao.ts) */
+  editar: protectedProcedure.input(z.object({
+    id: z.number().int(), senha: z.string().min(1).max(200),
+    comprador: pessoaZ.optional(), conjuge: pessoaZ.nullable().optional(), corretorUserId: z.number().int().positive().optional(),
+    leadId: z.number().int().nullable().optional(), condicoesEspecificas: z.string().max(2000).optional(), plano: planoZ.optional(),
+  })).mutation(async ({ ctx, input }) => {
+    exigir(perfilDe(ctx.user as any) === "admin", "Só o administrador edita contratos.");
+    if (input.plano?.concessao) throw new TRPCError({ code: "BAD_REQUEST", message: "A concessão não muda pela edição." });
+    const { editarContratoAdmin } = await import("../contratos/edicao");
+    const { id, senha, ...e } = input;
+    return tratar(() => editarContratoAdmin(id, ctx.user as any, senha, e as any, (ctx as any).req?.ip ?? null));
+  }),
+
+  /** Excluir contrato sem dinheiro envolvido: SÓ o administrador, com a senha de login (com pagamento: Cancelar) */
+  excluir: protectedProcedure.input(z.object({ id: z.number().int(), motivo: z.string().trim().min(3).max(300), senha: z.string().min(1).max(200) }))
+    .mutation(async ({ ctx, input }) => {
+      exigir(perfilDe(ctx.user as any) === "admin", "Só o administrador exclui contratos.");
+      const { excluirContratoAdmin } = await import("../contratos/edicao");
+      return tratar(() => excluirContratoAdmin(input.id, ctx.user as any, input.senha, input.motivo, (ctx as any).req?.ip ?? null));
     }),
 
   /** Corretor (só os dele) e secretária: pedem o cancelamento; vai para o sininho/push do administrador */

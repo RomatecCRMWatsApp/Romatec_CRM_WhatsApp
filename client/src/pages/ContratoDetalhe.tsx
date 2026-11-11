@@ -2,7 +2,8 @@ import { useState } from "react";
 import { ROTULO_CONDICAO, type CondicaoPagamento } from "@shared/condicoesLancamento";
 import { useLocation, useParams } from "wouter";
 import { toast } from "sonner";
-import { AlertTriangle, Ban, CheckCircle2, Copy, Download, FileSignature, FileText, Loader2, Receipt, RefreshCw, Send, ShieldAlert, Upload, XCircle } from "lucide-react";
+import { AlertTriangle, Ban, CheckCircle2, Copy, Download, FileSignature, FileText, Loader2, Pencil, Receipt, RefreshCw, Send, ShieldAlert, Trash2, Upload, XCircle } from "lucide-react";
+import { EditarContrato, ExcluirContrato } from "@/components/contratos/EditarContrato";
 import { trpc } from "@/lib/trpc";
 import { perfilDe } from "@shared/equipe";
 import { useAuth } from "@/_core/hooks/useAuth";
@@ -64,6 +65,9 @@ export default function ContratoDetalhe() {
   const [ocupado, setOcupado] = useState<string | null>(null);
   type Modal = { tipo: "contrato" } | { tipo: "solicitar" } | { tipo: "recusar"; solicitacaoId: number } | { tipo: "cobranca"; id: number; rotulo: string } | { tipo: "recibo"; id: number; numero: string };
   const [modal, setModal] = useState<Modal | null>(null);
+  // ?editar=1 (botão Editar da lista): já abre a edição
+  const [editando, setEditando] = useState(() => new URLSearchParams(window.location.search).get("editar") === "1");
+  const [excluindo, setExcluindo] = useState(false);
   const utils = trpc.useUtils();
   const { data: d, isLoading, error } = trpc.contratos.detalhe.useQuery({ id }, { enabled: id > 0 });
   const recarregar = () => utils.contratos.detalhe.invalidate({ id });
@@ -170,8 +174,15 @@ export default function ContratoDetalhe() {
                   {d.pode.cancelar && (
                     <AcoesPdf compacto rotulo="Comissão Romatec (interno)" url={`/api/contratos/${id}/comissao-romatec.pdf`} nomeArquivo={`COMISSAO-ROMATEC-${c.numero}.pdf`} mensagem={`Comissão Romatec — contrato ${c.numero}`} />
                   )}
+                  {/* Só o administrador (o servidor confere o perfil e a senha) */}
+                  {d.pode.cancelar && !["cancelado", "distratado"].includes(c.status) && (
+                    <Button variant="outline" onClick={() => setEditando(true)}><Pencil className="h-4 w-4" /> Editar contrato</Button>
+                  )}
                   {d.pode.cancelar && !["cancelado", "distratado"].includes(c.status) && (
                     <Button variant="outline" className="text-danger-400" onClick={() => setModal({ tipo: "contrato" })}><XCircle className="h-4 w-4" /> Cancelar contrato</Button>
+                  )}
+                  {d.pode.cancelar && (
+                    <Button variant="outline" className="text-danger-400" onClick={() => setExcluindo(true)}><Trash2 className="h-4 w-4" /> Excluir contrato</Button>
                   )}
                   {d.pode.solicitarCancelamento && (
                     <Button variant="outline" className="text-danger-400" disabled={pedidoAberto} onClick={() => setModal({ tipo: "solicitar" })}
@@ -381,6 +392,8 @@ export default function ContratoDetalhe() {
         )}
       </div>
 
+      {d.pode.cancelar && <EditarContrato aberto={editando} onFechar={() => setEditando(false)} onSalvo={recarregar} contrato={c as any} comprador={d.comprador} conjuge={d.conjuge} />}
+      {d.pode.cancelar && <ExcluirContrato aberto={excluindo} onFechar={() => setExcluindo(false)} onExcluido={() => { setExcluindo(false); navigate("/contratos"); }} contrato={c as any} />}
       <ConfirmarCancelamento aberto={modal?.tipo === "contrato"} onFechar={() => setModal(null)} comSenha pendente={cancelar.isPending}
         titulo={`Cancelar o contrato ${c.numero}`} rotuloBotao="Cancelar contrato" motivoInicial={pendentes[0]?.motivo ?? ""}
         descricao={<>
