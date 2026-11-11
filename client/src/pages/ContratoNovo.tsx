@@ -17,6 +17,7 @@ import DependentesCampos from "@/components/contratos/Dependentes";
 import { AnexosNovoContrato, enviarAnexo, vagasDoContrato, type AnexoPendente } from "@/components/contratos/Anexos";
 import { brl } from "@shared/simulador";
 import { CONDICOES, MODOS_C, ROTULO_CONDICAO, ROTULO_MODO_C, prazosDaCondicao, type CondicaoPagamento, type ModoPlanoC } from "@shared/condicoesLancamento";
+import { CondicoesEspecificas } from "@/components/contratos/CondicoesEspecificas";
 
 const PASSOS = ["Unidade e plano", "Comprador", "Revisão"];
 
@@ -324,9 +325,11 @@ export default function ContratoNovo() {
               <p>Plano: <b>{concessao ? `concessão da proprietária — sem cobrança (valor de referência ${brl(sim.data.preco_avista)})` : sim.data.modalidade === "avista" ? `à vista ${brl(sim.data.total_pagar)}` : `${sim.data.condicao && sim.data.condicao !== "padrao" ? `${ROTULO_CONDICAO[sim.data.condicao].curto} · ` : ""}entrada ${sim.data.entrada_qtd}× ${brl(sim.data.entrada_parcela)}${sim.data.complemento_qtd ? ` + ${sim.data.complemento_qtd}× ${brl(sim.data.complemento_parcela ?? 0)} (resto da entrada)` : ""} + ${sim.data.saldo_qtd}× ${brl(sim.data.saldo_parcela)}${sim.data.reforco_qtd ? ` + ${sim.data.reforco_qtd} reforços de ${brl(sim.data.reforco_valor ?? 0)}` : ""}`}</b></p>
               <p>Total a pagar: <b>{brl(sim.data.total_pagar)}</b></p>
             </div>
-            <Campo rotulo="Condições específicas deste contrato (opcional)">
-              <textarea className={`${classeCampo()} h-24 py-2`} maxLength={2000} value={especificas} onChange={e => setEspecificas(e.target.value)} placeholder="Ex.: entrega das chaves condicionada…" />
-            </Campo>
+            <div>
+              <CondicoesEspecificas valor={especificas} onMudar={setEspecificas} admin={perfil === "admin"} inicioComplemento={inicioComp}
+                planoC={!concessao && modalidade === "financiado" && condicao === "C"}
+                onCongelamento={ligado => { if (ligado) setModoC("congelado"); else if (modoC === "congelado") setModoC("unificado"); }} />
+            </div>
             <Campo rotulo="Assinatura">
               <select className={sel} value={modoAssinatura} onChange={e => setModo(e.target.value as any)}>
                 <option value="eletronica">Eletrônica</option>

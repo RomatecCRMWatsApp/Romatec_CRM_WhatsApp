@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import PessoaCampos, { PESSOA_VAZIA } from "@/components/cadastro/PessoaCampos";
 import { Campo, classeCampo, sel } from "@/components/cadastro/campos";
+import { CondicoesEspecificas } from "@/components/contratos/CondicoesEspecificas";
 import { maskCEP, maskCPF, maskPhone } from "@shared/masks";
 import { exigeConjuge, pendenciasComprador, type PessoaForm } from "@shared/contratos";
 import { ROTULO_CONDICAO, ROTULO_MODO_C, type ModoPlanoC } from "@shared/condicoesLancamento";
@@ -121,9 +122,16 @@ export function EditarContrato({ aberto, onFechar, onSalvo, contrato, comprador,
                   {corretores.map(x => <option key={x.id} value={x.id}>{x.nome}</option>)}
                 </select>
               </Campo>
-              <Campo rotulo="Condições específicas (sai no contrato)" className="sm:col-span-2">
-                <textarea className={`${classeCampo()} min-h-[64px]`} maxLength={2000} value={especificas} onChange={e => setEspecificas(e.target.value)} placeholder="Não há." />
-              </Campo>
+              <div className="sm:col-span-2">
+                <CondicoesEspecificas valor={especificas} onMudar={setEspecificas} admin
+                  planoC={mudarPlano ? pl.modalidade === "financiado" && pl.condicao === "C" : plano?.condicao === "C"}
+                  inicioComplemento={mudarPlano ? pl.inicioComp : Number(plano?.complemento_inicio_mes) || 15}
+                  onCongelamento={ligado => {
+                    if (!pode.data?.plano) return;
+                    if (ligado) { setMudarPlano(true); setPl(x => ({ ...x, modalidade: "financiado", condicao: "C", modoC: "congelado" })); }
+                    else if (pl.modoC === "congelado") setPl(x => ({ ...x, modoC: "unificado" }));
+                  }} />
+              </div>
             </section>
             <section className="space-y-2 rounded-lg border border-border p-3">
               <label className="flex items-center gap-2 text-sm font-semibold">

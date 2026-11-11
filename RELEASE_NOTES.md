@@ -3,6 +3,17 @@
 Cada versão nova vai no TOPO. Depois rode `npm run release` (valida e atualiza o package.json);
 ao subir, o servidor grava a versão no banco e todos recebem o aviso "Novidades da versão".
 
+## 1.154.0 — 2026-11-11
+tipo: minor
+obrigatoria: nao
+titulo: Condições específicas pré-redigidas no contrato
+publico: equipe
+
+### Novo
+- Condições específicas do contrato (Novo contrato e Editar contrato): é só marcar as condições-padrão e, se precisar, escrever outra no campo livre
+- "Liberação de uso após a 3ª parcela do financiamento": o uso da chácara (cercar, edificar, criar, plantar) fica liberado depois do valor do ato e da quitação da 3ª parcela do saldo, com Termo de Liberação de Uso
+- "Congelamento do complemento da entrada (Plano C)", só para o administrador: o texto já sai com o mês de início, e marcar a condição liga o complemento congelado no plano de pagamento
+
 ## 1.153.1 — 2026-11-11
 tipo: patch
 obrigatoria: nao
