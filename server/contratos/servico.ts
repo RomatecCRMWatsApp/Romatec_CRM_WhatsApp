@@ -63,6 +63,35 @@ export const codigoVerificacaoContrato = () => {
 
 const creciFormatado = (c: string | null | undefined) => { const d = soDigitos(c); return d.length > 3 ? `${d.slice(0, -3)}.${d.slice(-3)}` : d; };
 
+/** Lê o número/código da certidão de regularidade no PDF enviado e grava no cadastro (uma vez) */
+export async function numeroDaCertidao(userId: number): Promise<string | null> {
+  const d = await db();
+  const docs: any[] = await d.select().from(usuarioDocumentos).where(eq(usuarioDocumentos.usuarioId, userId));
+  const x = docs.filter(z => z.tipo === 'certidao_creci' && (z.titular ?? 'usuario') === 'usuario').sort((a, b) => String(b.validade ?? '').localeCompare(String(a.validade ?? '')))[0];
+  if (!x?.conteudoBase64 || !/pdf/i.test(String(x.mime ?? '')) && !/\.pdf$/i.test(String(x.nome ?? ''))) return null;
+  const pdfjs: any = await import('pdfjs-dist/legacy/build/pdf.mjs');
+  const doc = await pdfjs.getDocument({ data: new Uint8Array(Buffer.from(x.conteudoBase64, 'base64')), disableFontFace: true, isEvalSupported: false, verbosity: 0 }).promise;
+  let texto = '';
+  try { for (let n = 1; n <= Math.min(doc.numPages, 2); n++) texto += ' ' + (await (await doc.getPage(n)).getTextContent()).items.map((i: any) => i.str).join(' '); }
+  finally { await doc.destroy?.(); }
+  const numero = numeroNaCertidao(texto);
+  if (numero) await d.update(usuarioDocumentos).set({ numero: numero.slice(0, 30) } as any).where(eq(usuarioDocumentos.id, x.id));
+  return numero;
+}
+
+/** Nº ou código da certidão no texto ("Certidão n.º 1234/2026", "Código de controle: AB12-…", "Autenticação: …") */
+export function numeroNaCertidao(texto: string): string | null {
+  const t = String(texto ?? '').replace(/\s+/g, ' ');
+  const padroes = [
+    /certid[aã]o\s*(?:de\s+regularidade\s*)?n[º°o.]*\s*[:\-]?\s*([0-9][0-9.\-\/]{2,})/i,
+    /c[oó]digo\s*(?:de\s*)?(?:controle|autentica[cç][aã]o|autenticidade|verifica[cç][aã]o|valida[cç][aã]o)\s*[:\-]?\s*([A-Z0-9][A-Z0-9.\-\/]{3,})/i,
+    /autentica[cç][aã]o\s*[:\-]?\s*([A-Z0-9][A-Z0-9.\-\/]{5,})/i,
+    /protocolo\s*n?[º°o.]*\s*[:\-]?\s*([0-9][0-9.\-\/]{3,})/i,
+  ];
+  for (const p of padroes) { const m = p.exec(t); if (m) return m[1].replace(/[.\-\/]+$/, ''); }
+  return null;
+}
+
 export async function credenciaisDoUsuario(userId: number): Promise<CredenciaisCorretor> {
   const d = await db();
   const [u] = await d.select().from(users).where(eq(users.id, userId)).limit(1);
@@ -72,10 +101,16 @@ export async function credenciaisDoUsuario(userId: number): Promise<CredenciaisC
     .from(usuarioDocumentos).where(eq(usuarioDocumentos.usuarioId, userId));
   const doTipo = (t: string) => docs.filter(x => x.tipo === t && (x.titular ?? 'usuario') === 'usuario').sort((a, b) => String(b.validade ?? '').localeCompare(String(a.validade ?? '')))[0];
   const cartao = doTipo('cartao_creci'), certidao = doTipo('certidao_creci');
+  const certidaoValidade = certidao?.validade ?? u.certidaoCreciValidade ?? '';
+  // Nº da certidão: o do cadastro; sem ele, lido do próprio PDF (e gravado); sem achar, "constante da certidão anexa"
+  let certidaoCodigo = String(certidao?.numero ?? '').trim();
+  if (certidao && !certidaoCodigo) certidaoCodigo = (await numeroDaCertidao(userId).catch(() => null)) || 'constante da certidão anexa';
+  // Emissão: a do cadastro; sem ela, a validade menos 30 dias (a certidão do CRECI vale 30 dias)
+  const emissao = String(certidao?.emissao ?? '').trim() || (/^\d{4}-\d{2}-\d{2}$/.test(String(certidaoValidade))
+    ? new Date(Date.parse(`${certidaoValidade}T12:00:00Z`) - 30 * 86_400_000).toISOString().slice(0, 10) : '');
   return {
     nome: String(u.name ?? ''), cpf: u.cpf ?? '', creci: creciFormatado(u.creci), creciUf: u.creciUf ?? 'MA',
-    creciValidade: cartao?.validade ?? '', certidaoCodigo: certidao?.numero ?? '', certidaoEmissao: certidao?.emissao ?? '',
-    certidaoValidade: certidao?.validade ?? u.certidaoCreciValidade ?? '',
+    creciValidade: cartao?.validade ?? '', certidaoCodigo, certidaoEmissao: emissao, certidaoValidade,
   };
 }
 

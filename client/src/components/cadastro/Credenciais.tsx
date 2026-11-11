@@ -230,6 +230,11 @@ export function CredencialCard({ uid, tipo, doc, linkCertidaoPadrao, validadeSug
               </span>
             </label>
           )}
+          {tipo === "certidao_creci" && (
+            <label className="flex flex-col gap-1 text-xs text-muted-foreground">Nº / código da certidão (vai no contrato)
+              <input maxLength={30} placeholder="lido do PDF, se vazio" {...campo("numero", v => ({ numero: v.trim() || null }))} className={classeCampo()} />
+            </label>
+          )}
           {tipo === "certificado_cnai" && (
             <label className="flex flex-col gap-1 text-xs text-muted-foreground">Nº CNAI
               <input inputMode="numeric" maxLength={10} {...campo("numero", v => ({ numero: v.replace(/\D/g, "") || null }))} className={classeCampo(local.numero && !/^\d{4,10}$/.test(local.numero) ? "x" : undefined)} />

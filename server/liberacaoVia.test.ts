@@ -63,5 +63,15 @@ describe('credenciais do corretor anexas ao contrato de intermediação', () => 
     const c = await S.credenciaisDoUsuario(1);
     expect(c.creciValidade).toBe('2027-12-31');
     expect(c.certidaoValidade).toBe('2026-12-31');
+    // Certidão sem nº no cadastro (imagem): "constante da certidão anexa"; emissão = validade − 30 dias
+    expect(c.certidaoCodigo).toBe('constante da certidão anexa');
+    expect(c.certidaoEmissao).toBe('2026-12-01');
+  });
+
+  it('lê o nº/código no texto da certidão', () => {
+    expect(S.numeroNaCertidao('CERTIDÃO DE REGULARIDADE Nº 12.345/2026 Certificamos que')).toBe('12.345/2026');
+    expect(S.numeroNaCertidao('... Código de Controle: A1B2-C3D4-E5F6 ...')).toBe('A1B2-C3D4-E5F6');
+    expect(S.numeroNaCertidao('Código de autenticidade 9F8E7D6C5B')).toBe('9F8E7D6C5B');
+    expect(S.numeroNaCertidao('texto sem código')).toBeNull();
   });
 });

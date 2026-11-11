@@ -3,6 +3,19 @@
 Cada versão nova vai no TOPO. Depois rode `npm run release` (valida e atualiza o package.json);
 ao subir, o servidor grava a versão no banco e todos recebem o aviso "Novidades da versão".
 
+## 1.158.6 — 2026-11-11
+tipo: patch
+obrigatoria: nao
+titulo: Contrato reconhece a certidão do CRECI já enviada no cadastro
+publico: equipe
+
+### Correções
+- Contrato: com a certidão de regularidade válida no cadastro, mas sem o número preenchido (a tela nem tinha esse campo), o "Gerar definitivo" travava em "Falta: Nº da certidão de regularidade". Agora o sistema lê o número/código no PDF da certidão e grava no cadastro. Se não achar, usa "constante da certidão anexa", porque a certidão vai anexa ao contrato de intermediação
+- A data de emissão da certidão, quando não informada, sai como a validade menos 30 dias
+
+### Melhorias
+- Meu cadastro › Certidão de Regularidade (CRECI): novo campo "Nº / código da certidão", para conferir ou corrigir o número que sai no contrato
+
 ## 1.158.5 — 2026-11-11
 tipo: patch
 obrigatoria: nao
