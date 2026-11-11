@@ -82,7 +82,7 @@ export async function situacaoCredenciamento(usuarioId: number, slug: string) {
 }
 
 /** Foto do cadastro (tabela usuarioFoto) em PNG quadrado para o PDF */
-async function fotoPng(db: any, usuarioId: number): Promise<Buffer | null> {
+export async function fotoPng(db: any, usuarioId: number): Promise<Buffer | null> {
   try {
     const [f] = await db.select().from(usuarioFoto).where(eq(usuarioFoto.usuarioId, usuarioId)).limit(1);
     if (!f) return null;

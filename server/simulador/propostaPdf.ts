@@ -15,7 +15,18 @@ export interface DadosProposta {
   c: CondicoesPagamento;
   entrada: number; prazo: number; condicao: CondicaoPagamento;
   /** Carimbo do corretor (Materiais › Meu carimbo; sem ele, o cadastro) */
-  corretor: { nome: string; creci: string | null; telefone: string | null; instagram?: string | null; email: string | null };
+  corretor: { nome: string; creci: string | null; telefone: string | null; instagram?: string | null; email: string | null; foto?: Buffer | null };
+}
+
+/** Foto do cadastro recortada em círculo, com aro dourado (PNG com fundo transparente) */
+export async function fotoRedonda(bruto: Buffer, lado = 360): Promise<Buffer> {
+  const sharp = (await import('sharp')).default;
+  const r = lado / 2, aro = Math.round(lado * 0.035);
+  const mascara = Buffer.from(`<svg width="${lado}" height="${lado}"><circle cx="${r}" cy="${r}" r="${r}" fill="#fff"/></svg>`);
+  const anel = Buffer.from(`<svg width="${lado}" height="${lado}"><circle cx="${r}" cy="${r}" r="${r - aro / 2}" fill="none" stroke="#c9a646" stroke-width="${aro}"/></svg>`);
+  const recorte = await sharp(bruto).rotate().resize(lado, lado, { fit: 'cover', position: 'attention' }).ensureAlpha()
+    .composite([{ input: mascara, blend: 'dest-in' }]).png().toBuffer();
+  return sharp(recorte).composite([{ input: anel }]).png().toBuffer();
 }
 
 export class PropostaErro extends Error { constructor(m: string, public status = 422) { super(m); } }
@@ -45,7 +56,6 @@ export async function pdfProposta(d: DadosProposta): Promise<Buffer> {
   }
   const hoje = new Date().toLocaleDateString('pt-BR', { timeZone: 'America/Fortaleza' });
   const quem = `${d.corretor.nome}${d.corretor.creci ? ` · ${d.corretor.creci}` : ''}`;
-  const contato = [d.corretor.telefone && `WhatsApp ${d.corretor.telefone}`, d.corretor.instagram && `@${d.corretor.instagram}`, d.corretor.email].filter(Boolean).join(' · ');
   // Carimbo do corretor no rodapé de todas as páginas, como nos materiais de divulgação
   const w = await escritor(`Proposta — Chácara ${d.lote.codigo}`, 'bomjardims', `${quem}${d.corretor.telefone ? ` · WhatsApp ${d.corretor.telefone}` : ''} · Proposta Chácara ${d.lote.codigo} · ${hoje}`);
   w.cabecalho('PROPOSTA DE FINANCIAMENTO DIRETO', `${d.empreendimento} · Açailândia/MA · ${hoje}`);
@@ -54,9 +64,13 @@ export async function pdfProposta(d: DadosProposta): Promise<Buffer> {
   w.paragrafo(`${textoJuros(d.c)}. ${nota}`, { antes: 6 });
   w.paragrafo([{ t: 'Ou pagamento integral à vista: ', b: true }, { t: `${brl(sim.avistaTotal.valor)} — preço cheio ${brl(sim.preco)} com desconto de ${brl(sim.avistaTotal.desconto)}, pago de uma só vez.` }], { antes: 8 });
   w.paragrafo(AVISO_LEGAL_SIMULACAO, { size: 8.4, antes: 10 });
-  w.espaco(12);
-  w.faixa(`ATENDIMENTO: ${quem}`.toUpperCase());
-  if (contato) w.paragrafo(contato, { depois: 1 });
+  w.espaco(14);
+  await w.cartaoPessoa({
+    foto: d.corretor.foto ? await fotoRedonda(d.corretor.foto).catch(() => null) : null,
+    titulo: 'Seu corretor', nome: d.corretor.nome,
+    sub: [d.corretor.creci, 'Corretor(a) de imóveis'].filter(Boolean).join(' · '),
+    linhas: [d.corretor.telefone && `WhatsApp: ${d.corretor.telefone}`, d.corretor.instagram && `Instagram: @${d.corretor.instagram}`, d.corretor.email && `E-mail: ${d.corretor.email}`].filter(Boolean) as string[],
+  });
   w.paragrafo(`${ESCRITORIO.fantasia} · ${ESCRITORIO.creciJ} · Valores sujeitos a alteração e disponibilidade.`, { size: 8.4 });
   return w.salvar();
 }

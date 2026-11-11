@@ -153,6 +153,40 @@ export async function escritor(titulo: string, marca: string, rodapeDoc: string)
     y -= 26;
   };
 
+  /**
+   * Cartão de pessoa (ex.: o corretor da proposta): foto redonda (PNG já recortado em círculo) ou as iniciais,
+   * título pequeno, nome em destaque, subtítulo e até 3 linhas de contato.
+   */
+  const cartaoPessoa = async (o: { foto: Buffer | null; titulo: string; nome: string; sub?: string | null; linhas: string[] }) => {
+    const H = 104, D = 74;
+    garantir(H + 10);
+    const topo = y;
+    p.drawRectangle({ x: X0, y: topo - H, width: LARG, height: H, color: rgb(0.975, 0.965, 0.93), borderColor: DOURADO, borderWidth: 0.8 });
+    p.drawRectangle({ x: X0, y: topo - H, width: 5, height: H, color: VERDE });
+    const fx = X0 + 22, fy = topo - (H + D) / 2;
+    if (o.foto) {
+      const img = await doc.embedPng(o.foto);
+      p.drawImage(img, { x: fx, y: fy, width: D, height: D });
+    } else {
+      p.drawCircle({ x: fx + D / 2, y: fy + D / 2, size: D / 2, color: VERDE, borderColor: DOURADO, borderWidth: 2.5 });
+      const ini = o.nome.split(/\s+/).filter(w => w.length > 2 || /^[A-ZÀ-Ú]/.test(w)).map(w => w[0]).filter(Boolean);
+      const sigla = ((ini[0] ?? '') + (ini.length > 1 ? ini[ini.length - 1] : '')).toUpperCase();
+      const ts = 24;
+      p.drawText(sigla, { x: fx + (D - fh.widthOfTextAtSize(sigla, ts)) / 2, y: fy + D / 2 - ts * 0.35, size: ts, font: fh, color: rgb(1, 1, 1) });
+    }
+    const tx = fx + D + 18, largT = X1 - 14 - tx;
+    const caber = (t: string, fonte: typeof f, tam: number, min: number) => { let z = tam; while (z > min && fonte.widthOfTextAtSize(t, z) > largT) z -= 0.25; return z; };
+    p.drawText(o.titulo, { x: tx, y: topo - 22, size: 8.5, font: fh, color: DOURADO });
+    const tn = caber(o.nome, fh, 14, 9);
+    p.drawText(o.nome, { x: tx, y: topo - 40, size: tn, font: fh, color: VERDE });
+    let ly = topo - 54;
+    if (o.sub) { p.drawText(o.sub, { x: tx, y: ly, size: caber(o.sub, f, 9.5, 7), font: f, color: CINZA }); ly -= 7; }
+    p.drawLine({ start: { x: tx, y: ly }, end: { x: X1 - 14, y: ly }, thickness: 0.5, color: DOURADO });
+    ly -= 12;
+    for (const l of o.linhas.slice(0, 3)) { p.drawText(l, { x: tx, y: ly, size: caber(l, f, 10, 7.5), font: f, color: rgb(0.1, 0.1, 0.1) }); ly -= 12.5; }
+    y = topo - H - 10;
+  };
+
   /** Nova página (anexos) */
   const quebra = () => nova();
 
@@ -191,7 +225,7 @@ export async function escritor(titulo: string, marca: string, rodapeDoc: string)
     });
     return Buffer.from(await doc.save({ useObjectStreams: false }));
   };
-  return { paragrafo, clausula, cabecalho, assinaturas, faixa, salvar, quebra, tabela, espaco: (h: number) => { y -= h; } };
+  return { paragrafo, clausula, cabecalho, assinaturas, faixa, cartaoPessoa, salvar, quebra, tabela, espaco: (h: number) => { y -= h; } };
 }
 
 const qualificacaoComprador = (c: Ctx) => [

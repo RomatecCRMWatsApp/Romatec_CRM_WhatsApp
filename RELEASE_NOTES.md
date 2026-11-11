@@ -3,6 +3,15 @@
 Cada versão nova vai no TOPO. Depois rode `npm run release` (valida e atualiza o package.json);
 ao subir, o servidor grava a versão no banco e todos recebem o aviso "Novidades da versão".
 
+## 1.158.8 — 2026-11-11
+tipo: patch
+obrigatoria: nao
+titulo: Proposta em PDF com o cartão do corretor e a foto redonda
+publico: usuarios
+
+### Melhorias
+- Proposta do simulador: a faixa vermelha do atendimento virou um cartão "Seu corretor", com a foto do cadastro em círculo e aro dourado, o nome em destaque, o CRECI e, cada um na sua linha, WhatsApp, Instagram e e-mail (do Meu carimbo). Sem foto no cadastro, aparecem as iniciais
+
 ## 1.158.7 — 2026-11-11
 tipo: patch
 obrigatoria: nao

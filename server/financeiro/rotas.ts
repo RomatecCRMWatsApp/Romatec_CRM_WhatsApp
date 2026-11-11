@@ -200,10 +200,11 @@ export function registrarRotasFinanceiro(app: Express) {
       const { pdfProposta, PropostaErro } = await import('../simulador/propostaPdf');
       const { dadosDoCarimbo } = await import('../carimbo');
       const cb = await dadosDoCarimbo(user.id);
+      const foto = await (await import('../credenciamento')).fotoPng(d, user.id);
       const pdf = await pdfProposta({
         lote: { codigo: String(cx.lote.codigo), quadra: cx.lote.quadra ?? null, areaM2: cx.areaM2, precoTabela: cx.lote.precoTabela != null ? Number(cx.lote.precoTabela) : null },
         empreendimento: String(cx.emp.nome), c: cx.c, entrada, prazo, condicao,
-        corretor: { nome: String(cb.cartao.nome || user.name || ''), creci: cb.cartao.creci || null, telefone: cb.cartao.telefones[0] ?? null, instagram: cb.instagram, email: cb.email ?? cb.cartao.email ?? null },
+        corretor: { nome: String(cb.cartao.nome || user.name || ''), creci: cb.cartao.creci || null, telefone: cb.cartao.telefones[0] ?? null, instagram: cb.instagram, email: cb.email ?? cb.cartao.email ?? null, foto },
       }).catch((e: any) => { if (e instanceof PropostaErro) { res.status(e.status).send(e.message); return null; } throw e; });
       if (!pdf) return;
       res.setHeader('Content-Type', 'application/pdf');
