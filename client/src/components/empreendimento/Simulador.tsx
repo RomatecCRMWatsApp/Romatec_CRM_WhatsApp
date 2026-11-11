@@ -264,6 +264,7 @@ export default function Simulador({ slug, lotes, ruas, perimetro, destinoSugerid
   const planoCond = condicao === "padrao" ? null : planosCond.find(p => p.prazo === prazo) ?? null;
   const plano = condicao === "padrao" ? sim?.planos.find(p => p.prazo === prazo) : planoCond ?? undefined;
   const vendido = data?.lote.selo === "vendido";
+  const urlProposta = `/api/simulador/proposta.pdf?slug=${encodeURIComponent(slug)}&lote=${encodeURIComponent(codigo)}&entrada=${condicao === "padrao" ? entrada : 1}&prazo=${prazo}&condicao=${condicao}`;
   const proposta = () => window.open(`/empreendimentos/${slug}/proposta?lote=${codigo}&entrada=${condicao === "padrao" ? entrada : 1}&prazo=${prazo}&condicao=${condicao}`, "_blank");
 
   return (
@@ -374,7 +375,11 @@ export default function Simulador({ slug, lotes, ruas, perimetro, destinoSugerid
             {vendido && <p className="rounded-xl border border-danger-500/50 bg-danger-500/10 p-3 text-sm text-danger-300">Chácara vendida: simulação só para consulta, sem proposta, envio ou vínculo.</p>}
             <div className="flex flex-wrap gap-1.5">
               <Button size="sm" variant="outline" onClick={() => setModal("evolucao")}>{condicao === "padrao" ? "Ver evolução" : "Ver cronograma"}</Button>
-              <Button size="sm" variant="outline" disabled={vendido || !plano} onClick={proposta}><FileText className="mr-1 h-4 w-4" /> Gerar proposta PDF</Button>
+              {!vendido && plano && (
+                <AcoesPdf compacto rotulo="Proposta PDF" url={urlProposta}
+                  nomeArquivo={`PROPOSTA-${codigo}-${condicao === "padrao" ? "ENTRADA-30" : `PLANO-${condicao}`}-${prazo}X.pdf`}
+                  mensagem={`Proposta da Chácara ${codigo} — Condomínio de Chácaras Bom Jardims${condicao !== "padrao" ? ` (${ROTULO_CONDICAO[condicao].curto})` : ""}`} />
+              )}
               <Button size="sm" variant="outline" disabled={vendido || !plano} className="border-[color:var(--c-25d366)]/40 text-[color:var(--c-1fa855)] hover:text-[color:var(--c-1fa855)]" onClick={() => setModal("whatsapp")}><Send className="mr-1 h-4 w-4" /> Enviar no WhatsApp</Button>
               <Button size="sm" variant="outline" disabled={vendido || !plano} onClick={() => setModal("lead")}><Link2 className="mr-1 h-4 w-4" /> Vincular ao lead</Button>
             </div>

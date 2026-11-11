@@ -5,6 +5,7 @@ import { ArrowLeft, Printer } from "lucide-react";
 import { brl, textoEntrada } from "@shared/simulador";
 import { ROTULO_CONDICAO, planoCondicao, condicaoValida, type CondicaoPagamento, type PlanoCondicao } from "@shared/condicoesLancamento";
 import { FotoCorretor, useCartaoVendas } from "@/lib/cartaoVendas";
+import { AcoesPdf } from "@/components/sistema/AcoesPdf";
 
 /**
  * Proposta da simulação (A4, "Imprimir → Salvar como PDF"): lote, entrada e plano escolhidos,
@@ -59,7 +60,9 @@ export default function EmpreendimentoProposta() {
       <style>{IMPRESSAO}</style>
       <div className="nao-imprimir mx-auto mb-4 flex max-w-[210mm] flex-wrap gap-2 px-4">
         <Button variant="outline" onClick={() => navigate(`/empreendimentos/${slug}`)}><ArrowLeft className="mr-1.5 h-4 w-4" /> Voltar</Button>
-        <Button onClick={() => window.print()}><Printer className="mr-1.5 h-4 w-4" /> Imprimir / salvar PDF</Button>
+        <Button onClick={() => window.print()}><Printer className="mr-1.5 h-4 w-4" /> Imprimir</Button>
+        <AcoesPdf compacto rotulo="PDF: baixar, enviar, link" url={`/api/simulador/proposta.pdf?slug=${encodeURIComponent(slug)}&lote=${encodeURIComponent(lote)}&entrada=${entrada}&prazo=${prazo}&condicao=${condicao}`}
+          nomeArquivo={`PROPOSTA-${lote}-${condicao === "padrao" ? "ENTRADA-30" : `PLANO-${condicao}`}-${prazo}X.pdf`} mensagem={`Proposta da Chácara ${lote} — Condomínio de Chácaras Bom Jardims`} />
       </div>
       <div className="folha mx-auto bg-white shadow-xl" style={{ width: "210mm", minHeight: "270mm", padding: "14mm", color: "var(--c-111827)", fontFamily: "Inter, Arial, sans-serif", fontSize: "12px" }}>
         <div style={{ display: "flex", alignItems: "center", gap: "14px", borderBottom: `3px solid ${OURO}`, paddingBottom: "10px" }}>

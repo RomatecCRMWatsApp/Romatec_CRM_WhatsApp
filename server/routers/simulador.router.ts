@@ -27,7 +27,7 @@ async function dbOrThrow() {
 const num = (v: unknown) => (v === null || v === undefined || v === "" ? null : Number(v));
 
 /** Empreendimento, condições vigentes e lote — com os erros do simulador (404 / 422) */
-async function contexto(db: any, slug: string, codigo: string, permissoes: PermissoesUsuario) {
+export async function contexto(db: any, slug: string, codigo: string, permissoes: PermissoesUsuario) {
   const [emp]: any[] = await db.select().from(empreendimentos).where(eq(empreendimentos.slug, slug)).limit(1);
   if (!emp) throw new TRPCError({ code: "NOT_FOUND", message: "Empreendimento não encontrado" });
   exigirAcesso(permissoes, "empreendimento", emp.id, emp.nome);

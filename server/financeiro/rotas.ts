@@ -179,6 +179,43 @@ export function registrarRotasFinanceiro(app: Express) {
       res.status(500).send('Falha ao gerar a tabela de comissão');
     }
   });
+  // Proposta do simulador em PDF (mesmas regras do simulador; com link assinado, abre sem login como quem gerou)
+  app.get('/api/simulador/proposta.pdf', async (req: Request, res: Response) => {
+    try {
+      const { sdk } = await import('../_core/sdk');
+      const user: any = await sdk.authenticateRequest(req).catch(() => null);
+      if (!user || user.ativo === false || user.ativo === 0) return res.status(401).send('Faça login');
+      const slug = typeof req.query.slug === 'string' && /^[a-z0-9-]{1,80}$/.test(req.query.slug) ? req.query.slug : 'bom-jardims';
+      const lote = typeof req.query.lote === 'string' && /^[A-Za-z0-9]{2,10}$/.test(req.query.lote) ? req.query.lote : '';
+      if (!lote) return res.status(400).send('Informe a chácara');
+      const entrada = Math.max(1, Math.min(60, Number(req.query.entrada) || 1));
+      const prazo = Math.max(1, Math.min(600, Number(req.query.prazo) || 120));
+      const condicao = (['A', 'B', 'C'].includes(String(req.query.condicao)) ? req.query.condicao : 'padrao') as any;
+      const { carregarPermissoes } = await import('../permissoes');
+      const { contexto } = await import('../routers/simulador.router');
+      const d: any = await getDb();
+      const cx = await contexto(d, slug, lote, await carregarPermissoes(user)).catch((e: any) => { res.status(e?.code === 'NOT_FOUND' ? 404 : e?.code === 'FORBIDDEN' ? 403 : 422).send(e?.message || 'Chácara inválida'); return null; });
+      if (!cx) return;
+      if (cx.selo === 'vendido') return res.status(409).send(`Chácara ${cx.lote.codigo} vendida — sem proposta`);
+      const { pdfProposta, PropostaErro } = await import('../simulador/propostaPdf');
+      const { dadosDoCarimbo } = await import('../carimbo');
+      const cb = await dadosDoCarimbo(user.id);
+      const pdf = await pdfProposta({
+        lote: { codigo: String(cx.lote.codigo), quadra: cx.lote.quadra ?? null, areaM2: cx.areaM2, precoTabela: cx.lote.precoTabela != null ? Number(cx.lote.precoTabela) : null },
+        empreendimento: String(cx.emp.nome), c: cx.c, entrada, prazo, condicao,
+        corretor: { nome: String(cb.cartao.nome || user.name || ''), creci: cb.cartao.creci || null, telefone: cb.cartao.telefones[0] ?? null, instagram: cb.instagram, email: cb.email ?? cb.cartao.email ?? null },
+      }).catch((e: any) => { if (e instanceof PropostaErro) { res.status(e.status).send(e.message); return null; } throw e; });
+      if (!pdf) return;
+      res.setHeader('Content-Type', 'application/pdf');
+      res.setHeader('Cache-Control', 'private, no-store');
+      res.setHeader('Content-Disposition', `inline; filename="PROPOSTA-${String(cx.lote.codigo)}-${condicao === 'padrao' ? 'ENTRADA-30' : `PLANO-${condicao}`}-${prazo}X.pdf"`);
+      res.send(pdf);
+    } catch (e) {
+      console.error('[Simulador] proposta PDF:', e);
+      res.status(500).send('Falha ao gerar a proposta');
+    }
+  });
+
   // Link assinado (30 dias) para quem recebe por WhatsApp abrir sem login: gera com as permissões de quem compartilhou,
   // e para de abrir se essa pessoa for desativada ou perder o acesso
   app.get('/api/public/comissao/tabela.pdf', async (req: Request, res: Response) => {

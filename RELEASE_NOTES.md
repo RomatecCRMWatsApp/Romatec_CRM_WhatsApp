@@ -3,6 +3,17 @@
 Cada versão nova vai no TOPO. Depois rode `npm run release` (valida e atualiza o package.json);
 ao subir, o servidor grava a versão no banco e todos recebem o aviso "Novidades da versão".
 
+## 1.158.7 — 2026-11-11
+tipo: patch
+obrigatoria: nao
+titulo: Proposta do simulador: baixar, WhatsApp, link e compartilhar, com o seu carimbo
+publico: usuarios
+
+### Melhorias
+- Simulador: o botão "Proposta PDF" agora abre as mesmas opções dos outros PDFs do sistema: Abrir, Baixar, WhatsApp (com link válido por 30 dias), Copiar link e Compartilhar o arquivo pelo celular. Vale para a entrada de 30% e para os Planos A, B e C
+- A proposta em PDF sai carimbada com os dados de Materiais › Meu carimbo (nome, CRECI, WhatsApp, Instagram e e-mail), em destaque no fim e no rodapé de todas as páginas. Sem carimbo salvo, usa o seu cadastro
+- Página de impressão da proposta: as mesmas opções do PDF ao lado do botão Imprimir
+
 ## 1.158.6 — 2026-11-11
 tipo: patch
 obrigatoria: nao
