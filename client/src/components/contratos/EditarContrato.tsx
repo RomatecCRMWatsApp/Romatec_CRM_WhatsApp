@@ -237,6 +237,7 @@ export function ExcluirContrato({ aberto, onFechar, onExcluido, contrato }: { ab
 /** Liberar a venda antes do registro do parcelamento (venda na planta): só o administrador, com a senha */
 export function LiberarVendaAntesRegistro({ aberto, onFechar, onFeito, contratoId }: { aberto: boolean; onFechar: () => void; onFeito: () => void; contratoId: number }) {
   const [protocolo, setProtocolo] = useState("");
+  const [temProtocolo, setTemProtocolo] = useState(false);
   const [prazo, setPrazo] = useState(180);
   const [senha, setSenha] = useState("");
   const [ciente, setCiente] = useState(false);
@@ -255,7 +256,9 @@ export function LiberarVendaAntesRegistro({ aberto, onFechar, onFeito, contratoI
           </DialogDescription>
         </DialogHeader>
         <div className="space-y-3">
-          <Campo rotulo="Protocolo do pedido de registro no Registro de Imóveis (se já houver)"><input className={classeCampo()} value={protocolo} maxLength={60} onChange={e => setProtocolo(e.target.value)} placeholder="Ex.: 12.345" /></Campo>
+          {/* Sem protocolo ainda: libera agora; o protocolo e o registro entram depois, por termo aditivo, quando saírem as certidões */}
+          <label className="flex items-center gap-2 text-sm"><input type="checkbox" checked={temProtocolo} onChange={e => setTemProtocolo(e.target.checked)} /> Já tenho o protocolo do pedido de registro</label>
+          {temProtocolo && <Campo rotulo="Protocolo no Registro de Imóveis"><input className={classeCampo()} value={protocolo} maxLength={60} onChange={e => setProtocolo(e.target.value)} placeholder="Ex.: 12.345" /></Campo>}
           <Campo rotulo="Prazo para obter o registro (dias, contados da assinatura)"><input type="number" min={30} max={720} className={classeCampo()} value={prazo} onChange={e => setPrazo(Math.max(30, Math.min(720, Number(e.target.value) || 180)))} /></Campo>
           <label className="flex items-start gap-2 text-xs text-muted-foreground"><input type="checkbox" className="mt-0.5" checked={ciente} onChange={e => setCiente(e.target.checked)} />
             Estou ciente de que a promessa de venda antes do registro é vedada pela Lei n.º 6.766/1979 (arts. 37 e 50) e assumo a decisão pela gestão do empreendimento.</label>
@@ -263,7 +266,7 @@ export function LiberarVendaAntesRegistro({ aberto, onFechar, onFeito, contratoI
         </div>
         <DialogFooter>
           <Button variant="outline" onClick={onFechar} disabled={liberar.isPending}>Fechar</Button>
-          <Button disabled={liberar.isPending || !ciente || !senha} onClick={() => liberar.mutate({ id: contratoId, ligado: true, protocolo, prazoDias: prazo, senha })}>
+          <Button disabled={liberar.isPending || !ciente || !senha} onClick={() => liberar.mutate({ id: contratoId, ligado: true, protocolo: temProtocolo ? protocolo : "", prazoDias: prazo, senha })}>
             {liberar.isPending && <Loader2 className="mr-1 h-4 w-4 animate-spin" />} Liberar
           </Button>
         </DialogFooter>

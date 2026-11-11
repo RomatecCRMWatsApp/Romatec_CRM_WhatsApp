@@ -3,6 +3,15 @@
 Cada versão nova vai no TOPO. Depois rode `npm run release` (valida e atualiza o package.json);
 ao subir, o servidor grava a versão no banco e todos recebem o aviso "Novidades da versão".
 
+## 1.158.2 — 2026-11-11
+tipo: patch
+obrigatoria: nao
+titulo: Liberar venda antes do registro sem protocolo
+publico: admin
+
+### Melhorias
+- "Liberar venda antes do registro": o protocolo fica de fora por padrão (opção "Já tenho o protocolo"). Libera só com o prazo, a ciência e a senha; o protocolo e o registro entram depois, por termo aditivo, quando saírem as certidões
+
 ## 1.158.1 — 2026-11-11
 tipo: patch
 obrigatoria: nao
