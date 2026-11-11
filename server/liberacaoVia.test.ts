@@ -49,3 +49,19 @@ describe('via assinada liberada só com a entrada paga', () => {
     expect(await L.enviarViaAssinadaSeLiberada(id)).toMatchObject({ enviado: false, motivo: 'já enviada' });
   });
 });
+
+describe('credenciais do corretor anexas ao contrato de intermediação', () => {
+  it('puxa a carteira CRECI e a certidão do cadastro do corretor, com a validade no rótulo', async () => {
+    const png = 'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==';
+    db.run(sql`INSERT INTO usuarioDocumentos (usuarioId, tipo, nome, mime, conteudoBase64, validade, titular) VALUES (1, 'cartao_creci', 'creci.png', 'image/png', ${png}, '2027-12-31', 'usuario')`);
+    db.run(sql`INSERT INTO usuarioDocumentos (usuarioId, tipo, nome, mime, conteudoBase64, validade, titular) VALUES (1, 'certidao_creci', 'certidao.png', 'image/png', ${png}, '2026-12-31', 'usuario')`);
+    const r = await S.credenciaisAnexoDoContrato(id);
+    expect(r.map(x => x.rotulo)).toEqual([
+      'Carteira de identidade profissional (CRECI) — Admin Teste (válida até 31/12/2027)',
+      'Certidão de regularidade do CRECI — Admin Teste (válida até 31/12/2026)',
+    ]);
+    const c = await S.credenciaisDoUsuario(1);
+    expect(c.creciValidade).toBe('2027-12-31');
+    expect(c.certidaoValidade).toBe('2026-12-31');
+  });
+});

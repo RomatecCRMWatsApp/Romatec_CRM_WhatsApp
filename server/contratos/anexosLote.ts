@@ -648,10 +648,11 @@ async function imagemParaPdf(doc: PDFDocument, d: DocumentoParte) {
  * Anexo X — cópias dos documentos pessoais das partes (comprador e cônjuge) enviados na ficha do contrato: capa com o
  * índice e cada documento numa página, com o nome no topo. Arquivo que não abre vira aviso no índice.
  */
-export async function anexoDocumentosPartes(ctx: Ctx, marca: string, docs: DocumentoParte[]): Promise<Buffer | null> {
+export async function anexoDocumentosPartes(ctx: Ctx, marca: string, docs: DocumentoParte[],
+  o: { titulo?: string; rodape?: string; intro?: string } = {}): Promise<Buffer | null> {
   if (!docs.length) return null;
-  const { doc, f, fb, pagina } = await base(`Anexo X — Documentos das partes — ${ctx.ctr_numero}`, marca);
-  const { p, y: y0 } = pagina('ANEXO X — DOCUMENTOS PESSOAIS DAS PARTES', subtitulo(ctx));
+  const { doc, f, fb, pagina } = await base(o.rodape ?? `Anexo X — Documentos das partes — ${ctx.ctr_numero}`, marca);
+  const { p, y: y0 } = pagina(o.titulo ?? 'ANEXO X — DOCUMENTOS PESSOAIS DAS PARTES', subtitulo(ctx));
   const blocos: { rotulo: string; paginas: number; montar: () => Promise<void> }[] = [];
   for (const d of docs) {
     try {
@@ -674,7 +675,7 @@ export async function anexoDocumentosPartes(ctx: Ctx, marca: string, docs: Docum
     }
   }
   let y = y0;
-  for (const l of quebrar(f, 'Cópias dos documentos de identificação e comprobatórios apresentados pelas partes, que integram este contrato para conferência da qualificação (Lei n.º 13.709/2018, art. 7º, V — execução do contrato).', 8.2, X1 - X0)) { p.drawText(l, { x: X0, y, size: 8.2, font: f }); y -= 11.8; }
+  for (const l of quebrar(f, o.intro ?? 'Cópias dos documentos de identificação e comprobatórios apresentados pelas partes, que integram este contrato para conferência da qualificação (Lei n.º 13.709/2018, art. 7º, V — execução do contrato).', 8.2, X1 - X0)) { p.drawText(l, { x: X0, y, size: 8.2, font: f }); y -= 11.8; }
   y -= 10;
   p.drawText('ÍNDICE', { x: X0, y, size: 9, font: fb, color: VERDE });
   y -= 8;

@@ -360,6 +360,27 @@ export async function documentosOrigemDoEmpreendimento(empreendimentoId: number 
   return rows.map(r => ({ nome: String(r.nome), mime: r.mime ?? null, conteudo: Buffer.from(String(r.conteudoBase64 ?? ''), 'base64') }));
 }
 
+/** Carteira CRECI e certidão de regularidade dos corretores do contrato (responsável técnico e, se houver, o parceiro) */
+export async function credenciaisAnexoDoContrato(contratoId: number) {
+  const d = await db();
+  const c = await contratoPorId(contratoId);
+  const j = await juridicoDe(c.empreendimentoId);
+  const resp = await responsavelTecnicoId(j.defaults);
+  const ids = Array.from(new Set([resp, c.corretorUserId].filter((x): x is number => !!x)));
+  const out: { rotulo: string; nome: string; mime: string | null; conteudo: Buffer }[] = [];
+  const ROT: Record<string, string> = { cartao_creci: 'Carteira de identidade profissional (CRECI)', certidao_creci: 'Certidão de regularidade do CRECI' };
+  for (const uid of ids) {
+    const [u]: any[] = await d.select({ name: users.name }).from(users).where(eq(users.id, uid)).limit(1);
+    const docs: any[] = await d.select().from(usuarioDocumentos).where(eq(usuarioDocumentos.usuarioId, uid));
+    for (const tipo of ['cartao_creci', 'certidao_creci']) {
+      const x = docs.filter(z => z.tipo === tipo && (z.titular ?? 'usuario') === 'usuario').sort((a, b) => String(b.validade ?? '').localeCompare(String(a.validade ?? '')))[0];
+      if (!x?.conteudoBase64) continue;
+      out.push({ rotulo: `${ROT[tipo]} — ${u?.name ?? 'corretor'}${x.validade ? ` (válida até ${String(x.validade).split('-').reverse().join('/')})` : ''}`, nome: x.nome, mime: x.mime ?? null, conteudo: Buffer.from(x.conteudoBase64, 'base64') });
+    }
+  }
+  return out;
+}
+
 /** Documentos do comprador e do cônjuge enviados na ficha do contrato (os dos dependentes ficam nas carteirinhas) */
 export async function documentosPartesDoContrato(contratoId: number) {
   const { listarAnexos, lerAnexo } = await import('./documentosContrato');
@@ -382,7 +403,8 @@ export async function gerarVersao(contratoId: number, alvo: 'minuta' | 'definiti
   const ctx = montarContexto(entrada);
   const documentosOrigem = await documentosOrigemDoEmpreendimento(c.empreendimentoId);
   const documentosPartes = await documentosPartesDoContrato(contratoId);
-  const { pdf, sha256, gate } = await gerarContratoPdf(ctx, plano, { alvo, modelo, marca, unidade, licenca: o.licenca, documentosOrigem, documentosPartes });
+  const credenciaisCorretor = await credenciaisAnexoDoContrato(contratoId).catch(() => []);
+  const { pdf, sha256, gate } = await gerarContratoPdf(ctx, plano, { alvo, modelo, marca, unidade, licenca: o.licenca, documentosOrigem, documentosPartes, credenciaisCorretor });
   const versoes: any[] = await d.select({ versao: contratoVersoes.versao }).from(contratoVersoes).where(eq(contratoVersoes.contratoId, contratoId));
   const versao = versoes.reduce((m, v) => Math.max(m, Number(v.versao)), 0) + 1;
   const chave = `contratos/${contratoId}/v${String(versao).padStart(3, '0')}-${alvo}.pdf`;

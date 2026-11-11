@@ -30,6 +30,8 @@ export interface OpcoesGeracao {
   documentosOrigem?: DocumentoOrigem[];
   /** Cópias dos documentos do comprador e do cônjuge enviados na ficha do contrato — Anexo X (sem eles, não entra) */
   documentosPartes?: DocumentoParte[];
+  /** Carteira CRECI e certidão dos corretores — anexas ao Contrato de Intermediação */
+  credenciaisCorretor?: DocumentoParte[];
 }
 
 export async function gerarContratoPdf(ctx: Ctx, plano: PlanoContrato, o: OpcoesGeracao): Promise<{ pdf: Buffer; sha256: string; gate: GateResult }> {
@@ -52,6 +54,10 @@ export async function gerarContratoPdf(ctx: Ctx, plano: PlanoContrato, o: Opcoes
     docIntermediacao(ctx, o.marca),
   ]);
   const partes = await anexoDocumentosPartes(ctx, o.marca, o.documentosPartes ?? []);
+  const credenciais = await anexoDocumentosPartes(ctx, o.marca, o.credenciaisCorretor ?? [], {
+    titulo: 'CREDENCIAIS DO CORRETOR INTERMEDIADOR', rodape: `Credenciais do corretor — ${ctx.ctr_numero}`,
+    intro: 'Carteira de identidade profissional e certidão de regularidade no Conselho Regional de Corretores de Imóveis do(s) corretor(es) que intermediou(aram) a venda, extraídas do cadastro da gestora (Lei n.º 6.530/1978). Integram o Contrato de Intermediação.',
+  });
   // Ordem do contrato (Cláusula 23.4): I memorial, II tabela, III estatuto, IV diretrizes, V mapa, VI licença/registro,
   // VIII tarifa de água, IX documentos de origem do imóvel (o VII, manifesto de assinaturas, entra ao fim da assinatura); depois, o Contrato de Intermediação
   // (ciência dos 2% do corretor), assinado pelo cliente no mesmo fluxo
@@ -60,7 +66,7 @@ export async function gerarContratoPdf(ctx: Ctx, plano: PlanoContrato, o: Opcoes
   const termo = plano.concessao ? await docTermoConcessao(ctx, plano, o.marca) : null;
   // Plano C com o complemento congelado: termo de anuência da proprietária, logo depois do CPCV (mesma rodada de assinaturas)
   const congelamento = !plano.concessao && plano.complemento_modo === 'congelado' ? await docTermoCongelamento(ctx, plano, o.marca) : null;
-  let pdf = await anexar(principal, [...(termo ? [termo] : []), ...(congelamento ? [congelamento] : []), memorial, tabela, estatuto, diretrizes, mapa, licenca, ...(tarifaAgua ? [tarifaAgua] : []), origem, ...(partes ? [partes] : []), ...(termo ? [] : [intermediacao])]);
+  let pdf = await anexar(principal, [...(termo ? [termo] : []), ...(congelamento ? [congelamento] : []), memorial, tabela, estatuto, diretrizes, mapa, licenca, ...(tarifaAgua ? [tarifaAgua] : []), origem, ...(partes ? [partes] : []), ...(termo ? [] : [intermediacao, ...(credenciais ? [credenciais] : [])])]);
   if (minuta) pdf = await marcaDagua(pdf, TEXTO_MINUTA);
   else if (o.previaSemValor) pdf = await marcaDagua(pdf, o.previaSemValor);
   return { pdf, sha256: sha256(pdf), gate };

@@ -37,10 +37,14 @@ export function avaliarGate(ctx: Ctx, alvo: 'minuta' | 'definitivo', hoje = new 
   if (alvo === 'definitivo') {
     if (ctx.emp_parcelamento_registrado !== true && !antesDoRegistro) bloqueios.push('Parcelamento não registrado (Lei 6.766/1979, art. 37)');
     if (vencida(ctx.emp_licenca_validade, hoje)) bloqueios.push('Licença ambiental vencida ou não informada');
-    if (vencida(ctx.corr_creci_validade, hoje)) bloqueios.push('Carteira CRECI do corretor vencida ou não informada');
-    if (vencida(ctx.corr_certidao_validade, hoje)) bloqueios.push('Certidão de regularidade do corretor vencida');
+    // Credenciais vêm do cadastro de cada corretor (Equipe › corretor › Credenciais: carteira CRECI e certidão, com a validade)
+    const quem = String(ctx.corr_nome_cadastro ?? '').trim() || 'responsável técnico';
+    const onde = (n: string) => `atualize em Equipe › ${n} › Credenciais (envie o documento e preencha a validade)`;
+    if (vencida(ctx.corr_creci_validade, hoje)) bloqueios.push(`Carteira CRECI de ${quem} vencida ou sem validade no cadastro — ${onde(quem)}`);
+    if (vencida(ctx.corr_certidao_validade, hoje)) bloqueios.push(`Certidão de regularidade do CRECI de ${quem} vencida ou sem validade no cadastro — ${onde(quem)}`);
     if (ctx.corr_parceiro && (vencida(ctx.corr_parceiro_creci_validade, hoje) || vencida(ctx.corr_parceiro_certidao_validade, hoje))) {
-      bloqueios.push('Credenciais do corretor parceiro vencidas');
+      const p = String(ctx.corr_parceiro_nome ?? 'corretor parceiro');
+      bloqueios.push(`Credenciais de ${p} (carteira CRECI ou certidão) vencidas ou sem validade no cadastro — ${onde(p)}`);
     }
     if (!antesDoRegistro && String(ctx.emp_matricula_empreendimento ?? '').includes(String(ctx.emp_matricula_origem || '33.036'))) {
       bloqueios.push('Matrícula de origem não pode ser usada no definitivo — informe a matrícula do empreendimento');

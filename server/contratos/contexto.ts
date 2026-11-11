@@ -217,7 +217,7 @@ export function tagsPlano(s: PlanoContrato): Ctx {
 
 function tagsCorretor(c: CredenciaisCorretor, prefixo: 'corr' | 'corr_parceiro'): Ctx {
   if (prefixo === 'corr') {
-    return { corr_creci: numeroCreciPF(c.creci) ?? c.creci, corr_creci_validade: dataBR(c.creciValidade), corr_certidao_codigo: c.certidaoCodigo,
+    return { corr_nome_cadastro: c.nome, corr_creci: numeroCreciPF(c.creci) ?? c.creci, corr_creci_validade: dataBR(c.creciValidade), corr_certidao_codigo: c.certidaoCodigo,
       corr_certidao_data: dataBR(c.certidaoEmissao), corr_certidao_validade: dataBR(c.certidaoValidade) };
   }
   return {

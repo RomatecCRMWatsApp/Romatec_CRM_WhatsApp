@@ -3,6 +3,16 @@
 Cada versão nova vai no TOPO. Depois rode `npm run release` (valida e atualiza o package.json);
 ao subir, o servidor grava a versão no banco e todos recebem o aviso "Novidades da versão".
 
+## 1.158.4 — 2026-11-11
+tipo: patch
+obrigatoria: nao
+titulo: Credenciais do corretor anexas ao contrato de intermediação
+publico: equipe
+
+### Melhorias
+- Contrato (minuta e definitivo): logo depois do Contrato de Intermediação entra o anexo "Credenciais do corretor intermediador", com a carteira CRECI e a certidão de regularidade puxadas do cadastro de cada corretor (responsável técnico e, se houver, o corretor parceiro), com a validade de cada uma
+- Trava do definitivo: o aviso diz de qual corretor é a carteira ou a certidão vencida ou sem validade e onde atualizar (Equipe › corretor › Credenciais)
+
 ## 1.158.3 — 2026-11-11
 tipo: patch
 obrigatoria: nao
