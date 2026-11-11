@@ -301,6 +301,10 @@ export async function processarEventoAsaas(ev: EventoAsaas, opcoes: { enviarDepo
     await marcar();
     await auditar('pagamento_confirmado', { contratoId: r.contratoId, cobrancaId: r.id, origem: 'webhook', detalhe: { evento, recibo: rec.numero } });
     if (rec.novo) (opcoes.enviarDepois ?? (id => setImmediate(() => enviarRecibo(id).catch(e => console.warn('[Financeiro] envio do recibo:', e?.message)))))(rec.id);
+    // Entrada (ou à vista) paga: libera e manda a via assinada do contrato, se todos já assinaram
+    if (r.tipo === 'avista' || (r.tipo === 'entrada' && Number(r.numero) === 1)) {
+      setImmediate(() => import('../contratos/liberacaoVia').then(m => m.enviarViaAssinadaSeLiberada(Number(r.contratoId))).catch(e => console.warn('[Financeiro] via assinada:', e?.message)));
+    }
     return { acao: rec.novo ? 'pago:recibo_emitido' : 'pago:recibo_ja_existia', reciboId: rec.id };
   }
   const novo = evento === 'PAYMENT_OVERDUE' ? 'vencida' : evento === 'PAYMENT_DELETED' ? 'cancelada'

@@ -40,6 +40,8 @@ export const linkDoSignatario = (token: string) => `${urlPublica()}/assinar/${to
 /** Envio de WhatsApp (trocável nos testes) */
 type Enviador = (telefone: string, mensagem: string) => Promise<void>;
 let enviador: Enviador = async (telefone, mensagem) => { const { enviarTexto } = await import('../leads/zapiClient'); await enviarTexto(telefone, mensagem); };
+/** Mensagem de WhatsApp pelo mesmo enviador dos convites (trocável nos testes) */
+export const enviarMensagem = (telefone: string, mensagem: string) => enviador(telefone, mensagem);
 export const definirEnviador = (e: Enviador | null) => {
   enviador = e ?? (async (t, m) => { const { enviarTexto } = await import('../leads/zapiClient'); await enviarTexto(t, m); });
 };
@@ -412,6 +414,9 @@ export async function concluirSeTodos(contratoId: number): Promise<{ concluido: 
   await evento(contratoId, null, 'manifesto_gerado', { detalhe: { sha256: sha256(final) } });
   // Todas as assinaturas + manifesto: contrato ativo (lote vendido e plano de cobranças gravado)
   await registrarAssinado(contratoId, null, 0);
+  // Entrada já paga antes da última assinatura: a via assinada vai para o(a) comprador(a) agora
+  const { enviarViaAssinadaSeLiberada } = await import('../contratos/liberacaoVia');
+  await enviarViaAssinadaSeLiberada(contratoId).catch((e: any) => console.warn('[Assinatura] via assinada:', e?.message));
   return { concluido: true };
 }
 

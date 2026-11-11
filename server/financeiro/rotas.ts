@@ -512,7 +512,7 @@ export function registrarRotasFinanceiro(app: Express) {
       if (!(await limitePortal(req, res))) return;
       const { contratoPdfDoCodigo } = await import('./portalComprador');
       const r = await contratoPdfDoCodigo(codigoDe(req));
-      if (!r) return res.status(404).json({ erro: 'arquivo', mensagem: 'O PDF do contrato ainda não está disponível' });
+      if (!r) return res.status(404).json({ erro: 'arquivo', mensagem: 'O contrato assinado é liberado depois da compensação do pagamento da entrada' });
       await auditar('portal_contrato_pdf', { origem: 'publico', ip: ipPortal(req), detalhe: { numero: r.numero } });
       res.setHeader('Cache-Control', 'private, no-store');
       pdf(res, r.buf, `Contrato-${r.numero}.pdf`);

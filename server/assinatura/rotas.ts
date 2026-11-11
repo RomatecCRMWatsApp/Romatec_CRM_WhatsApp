@@ -44,6 +44,7 @@ export function registrarRotasAssinatura(app: Express) {
         signatario: { nome: s.nome, papel: s.papel, papelRotulo: ROTULO_PAPEL[s.papel] ?? s.papel, metodo: s.metodo, metodoRotulo: ROTULO_METODO[s.metodo] ?? s.metodo,
           status: s.status, assinadoEm: s.assinadoEm, telefoneFinal: s.whatsapp ? String(s.whatsapp).slice(-4) : null },
         vez, aguardando, pdfComAssinaturaDigital: temAssinaturaDigital(pdf), bytes: pdf.length,
+        viaBloqueada: await (await import('../contratos/liberacaoVia')).bloquearViaParaSignatario(c.id, s),
         outros: todos.sort((a, b) => a.ordem - b.ordem).map(t => ({ papel: ROTULO_PAPEL[t.papel] ?? t.papel, nome: t.nome.split(' ')[0], status: t.status })),
       });
     } catch (e) { erro(res, e); }
@@ -51,7 +52,10 @@ export function registrarRotasAssinatura(app: Express) {
 
   app.get(`${base}/contrato.pdf`, async (req, res) => {
     try {
-      const { c } = await signatarioPorToken(req.params.token);
+      const { s, c } = await signatarioPorToken(req.params.token);
+      // Comprador(a)/cônjuge que já assinou: a via assinada só depois da entrada paga
+      const bloqueio = await (await import('../contratos/liberacaoVia')).bloquearViaParaSignatario(c.id, s);
+      if (bloqueio) return res.status(423).json({ erro: 'via_bloqueada', mensagem: bloqueio });
       const pdf = await pdfAtual(c.id);
       res.setHeader('Content-Type', 'application/pdf');
       res.setHeader('Content-Disposition', `${req.query.baixar ? 'attachment' : 'inline'}; filename="Contrato-${c.numero}.pdf"`);

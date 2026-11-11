@@ -3,6 +3,17 @@
 Cada versão nova vai no TOPO. Depois rode `npm run release` (valida e atualiza o package.json);
 ao subir, o servidor grava a versão no banco e todos recebem o aviso "Novidades da versão".
 
+## 1.158.0 — 2026-11-11
+tipo: minor
+obrigatoria: nao
+titulo: Via assinada do contrato liberada só depois do pagamento da entrada
+publico: equipe
+
+### Novo
+- O comprador (e o cônjuge) lê o contrato normalmente para assinar. Depois de assinar, a via assinada só abre quando a entrada (ou o pagamento à vista) for compensada, tanto pelo link de assinatura quanto pelo Portal do comprador. Até lá aparece o aviso "liberada após a compensação da entrada"
+- Paga a entrada e com todos assinados, o sistema manda ao comprador pelo WhatsApp o link da via assinada, com o manifesto e o carnê, uma vez só. Vale para pagamento pelo Asaas, para a baixa manual da "entrada paga no ato" e para a entrada paga antes da última assinatura
+- Vendedora, gestora e escritório veem o contrato normalmente. Concessão não tem essa trava
+
 ## 1.157.1 — 2026-11-11
 tipo: patch
 obrigatoria: nao

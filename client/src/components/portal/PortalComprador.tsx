@@ -92,12 +92,18 @@ export function AbaDocumentos({ d }: { d: DadosPortal }) {
           </p>
         </div>
       )}
-      {d.documentos.map(x => (
+      {d.documentos.map(x => x.url ? (
         <a key={x.url} href={x.url} target="_blank" rel="noreferrer" className="flex items-center gap-3 rounded-xl border bg-white p-3 text-sm" style={borda}>
           <FileText className="h-5 w-5 shrink-0" style={{ color: VERDE }} />
           <span className="flex-1"><b>{x.titulo}</b><span className="block text-xs text-neutro-500">{x.descricao}</span></span>
           <ExternalLink className="h-4 w-4 text-neutro-400" />
         </a>
+      ) : (
+        // Via assinada ainda bloqueada (liberada depois da entrada paga)
+        <div key={x.titulo} className="flex items-center gap-3 rounded-xl border bg-white p-3 text-sm opacity-80" style={borda}>
+          <FileText className="h-5 w-5 shrink-0 text-neutro-400" />
+          <span className="flex-1"><b>{x.titulo}</b><span className="block text-xs text-neutro-500">{x.descricao}</span></span>
+        </div>
       ))}
       {d.carteirinhas.length > 0 && (
         <div className="rounded-xl border bg-white p-3 text-sm" style={borda}>

@@ -271,6 +271,8 @@ export const contratosRouter = router({
     const [c]: any[] = await d.select().from(contratos).where(eq(contratos.id, input.id)).limit(1);
     exigir(!!c && !["cancelado", "distratado"].includes(c.status), "Contrato não encontrado ou encerrado.");
     await d.update(contratos).set({ entradaPagaNoAto: input.paga } as any).where(eq(contratos.id, input.id));
+    // Entrada paga no ato (baixa manual): libera e manda a via assinada, se todos já assinaram
+    if (input.paga) await (await import("../contratos/liberacaoVia")).enviarViaAssinadaSeLiberada(input.id).catch(() => null);
     return { paga: input.paga };
   }),
 

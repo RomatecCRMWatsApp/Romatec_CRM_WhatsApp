@@ -10,6 +10,8 @@ interface Info {
   contrato: { numero: string; empreendimento: string; lote: string; status: string; codigoVerificacao: string };
   signatario: { nome: string; papel: string; papelRotulo: string; metodo: string; metodoRotulo: string; status: string; assinadoEm: string | null; telefoneFinal: string | null };
   vez: boolean; aguardando: string | null; bytes: number;
+  /** Via assinada ainda não liberada (comprador/cônjuge, antes da entrada paga): o motivo */
+  viaBloqueada?: string | null;
   outros: { papel: string; nome: string; status: string }[];
 }
 
@@ -147,9 +149,9 @@ export default function AssinarContrato() {
               <section className="rounded-xl border bg-white p-6 text-center" style={{ borderColor: DOURADO }}>
                 <CheckCircle2 className="mx-auto h-12 w-12 text-ok-600" />
                 <h2 className="mt-2 text-lg font-bold" style={{ color: VERDE }}>Assinatura registrada</h2>
-                <p className="text-sm">Obrigado! Quando todos assinarem, você recebe o contrato pelo WhatsApp.</p>
+                <p className="text-sm">{info.viaBloqueada ? "Obrigado! A via assinada do contrato é liberada e enviada pelo WhatsApp assim que o pagamento da entrada for compensado." : "Obrigado! Quando todos assinarem, você recebe o contrato pelo WhatsApp."}</p>
                 <p className="mt-3 text-xs text-neutro-600">Confira a autenticidade em <a className="underline" href={`/c/v/${info.contrato.codigoVerificacao}`}>romateccrm.com/c/v/{info.contrato.codigoVerificacao}</a></p>
-                <a className="mt-3 inline-flex items-center gap-1 text-sm underline" href={`${base}/contrato.pdf?baixar=1`}><Download className="h-4 w-4" /> Baixar o contrato</a>
+                {!info.viaBloqueada && <a className="mt-3 inline-flex items-center gap-1 text-sm underline" href={`${base}/contrato.pdf?baixar=1`}><Download className="h-4 w-4" /> Baixar o contrato</a>}
               </section>
             ) : (
               <>

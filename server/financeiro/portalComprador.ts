@@ -43,7 +43,12 @@ export async function portalDoComprador(codigo: string, hoje = hojeBrasil()) {
   const { c, emp } = await contratoDoCodigo(codigo);
   const d = await banco();
   const docs: { titulo: string; descricao: string; url: string }[] = [];
-  if (c.pdfAtual) docs.push({ titulo: `Contrato ${c.numero}`, descricao: 'Versão assinada (PDF)', url: `/api/c/${codigo}/contrato.pdf` });
+  if (c.pdfAtual) {
+    const via = await (await import('../contratos/liberacaoVia')).situacaoDaVia(Number(c.id));
+    docs.push(via.liberada
+      ? { titulo: `Contrato ${c.numero}`, descricao: 'Versão assinada (PDF)', url: `/api/c/${codigo}/contrato.pdf` }
+      : { titulo: `Contrato ${c.numero}`, descricao: via.motivo ?? 'Liberado após o pagamento da entrada', url: '' });
+  }
   if (emp && empDocsValido(emp.slug)) {
     for (const slug of ['estatuto', 'diretrizes', 'tarifa-agua']) {
       const doc = DOCUMENTOS_CLIENTE.find(x => x.slug === slug);
@@ -203,6 +208,7 @@ export async function fotoObra(codigo: string, id: number): Promise<Buffer | nul
 export async function contratoPdfDoCodigo(codigo: string): Promise<{ buf: Buffer; numero: string } | null> {
   const { c } = await contratoDoCodigo(codigo);
   if (!c.pdfAtual) return null;
+  if (!(await (await import('../contratos/liberacaoVia')).situacaoDaVia(Number(c.id))).liberada) return null;
   const { lerArquivo } = await import('../contratos/arquivos');
   const a = await lerArquivo(c.pdfAtual);
   return a ? { buf: a.buf, numero: String(c.numero) } : null;
