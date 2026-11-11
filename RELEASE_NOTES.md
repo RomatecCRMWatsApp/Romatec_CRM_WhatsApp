@@ -3,6 +3,16 @@
 Cada versão nova vai no TOPO. Depois rode `npm run release` (valida e atualiza o package.json);
 ao subir, o servidor grava a versão no banco e todos recebem o aviso "Novidades da versão".
 
+## 1.157.1 — 2026-11-11
+tipo: patch
+obrigatoria: nao
+titulo: Mapa do Bom Jardims sincronizado com o projeto V2 (ruas e chácaras)
+publico: equipe
+
+### Correções
+- Mapa do Bom Jardims: nomes e posições das ruas e geometria de todas as chácaras regravados a partir do projeto V2 atual (portal na entrada, ruas renomeadas). A aplicação do V2 podia ter parado na proteção do A02 e deixado o desenho antigo, e por isso a D16 saía de frente para a Rua Walter e Maria em vez da Rua Jatobá. Não mexe em situação, cliente nem contrato
+- Contratos: o memorial (Anexo I) e a "frente para a rua" do Quadro-Resumo saem com as ruas do V2 na próxima minuta ou definitivo
+
 ## 1.157.0 — 2026-11-11
 tipo: minor
 obrigatoria: nao

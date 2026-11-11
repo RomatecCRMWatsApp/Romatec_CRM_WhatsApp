@@ -120,3 +120,38 @@ export async function ajustarJuridicoV2BomJardims(): Promise<boolean> {
   console.log('[Bom Jardims V2] configuração jurídica: 85 lotes, 84 comercializáveis');
   return true;
 }
+
+export const CHAVE_SYNC_V2 = 'bom_jardims_projeto_v2_sync_ruas';
+
+/**
+ * Sincroniza o mapa com o projeto V2 atual (uma vez): nomes e posições das ruas e a geometria de todos os lotes —
+ * mesmo que a aplicação completa do V2 tenha parado na proteção do A02. Não mexe em situação, cliente nem contrato;
+ * o A02/A02A só recebe a geometria nova se o desmembramento já tiver sido aplicado (A02A existe).
+ * É o que o memorial e a "frente para a rua" do contrato usam.
+ */
+export async function sincronizarMapaV2BomJardims(): Promise<{ aplicado: boolean; lotes: number; motivo?: string }> {
+  const db: any = await getDb();
+  if (!db) return { aplicado: false, lotes: 0, motivo: 'sem banco' };
+  const { lerConfig, gravarConfig } = await import('../../configSistema');
+  if (await lerConfig(CHAVE_SYNC_V2).catch(() => null)) return { aplicado: false, lotes: 0, motivo: 'já aplicado' };
+  const [emp]: any[] = await db.select().from(empreendimentos).where(eq(empreendimentos.slug, SLUG)).limit(1);
+  if (!emp) return { aplicado: false, lotes: 0, motivo: 'empreendimento não cadastrado' };
+  const rows: any[] = await db.select().from(lotes).where(eq(lotes.empreendimentoId, emp.id));
+  const porCodigo = new Map(rows.map(r => [String(r.codigo), r]));
+  const desmembrado = porCodigo.has('A02A');
+  let n = 0;
+  for (const l of (dados as any).lotes) {
+    if (!desmembrado && (l.codigo === 'A02' || l.codigo === 'A02A')) continue;
+    const atual = porCodigo.get(l.codigo);
+    if (!atual) continue;
+    await db.update(lotes).set({
+      areaM2: String(l.areaM2), perimetroM: String(l.perimetroM), verticesUtm: l.verticesUtm, poligono: l.poligono,
+      lonCentro: String(l.centro[0]), latCentro: String(l.centro[1]),
+    } as any).where(eq(lotes.id, atual.id));
+    n++;
+  }
+  await db.update(empreendimentos).set({ ruas: (dados as any).ruas } as any).where(eq(empreendimentos.id, emp.id));
+  await gravarConfig(CHAVE_SYNC_V2, JSON.stringify({ em: new Date().toISOString(), lotes: n, ruas: (dados as any).ruas.length, desmembrado }), null);
+  console.log(`[Bom Jardims V2] mapa sincronizado: ${n} lotes e ${(dados as any).ruas.length} rótulos de ruas`);
+  return { aplicado: true, lotes: n };
+}

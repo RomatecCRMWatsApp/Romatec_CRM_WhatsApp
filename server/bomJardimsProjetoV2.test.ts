@@ -105,3 +105,23 @@ describe('Importação de DXF: lote desmembrado ("2A")', () => {
     expect(r.lotes.find(l => l.codigo === 'A02A')).toMatchObject({ quadra: 'A', numero: 2, areaM2: 2500 });
   });
 });
+
+describe('Sincronização do mapa V2 (ruas e geometria) mesmo com o V2 travado no A02', () => {
+  it('com o A02 ocupado (V2 não aplica), a sincronização grava as ruas e a geometria; a D16 fica de frente para a Rua Jatobá', async () => {
+    const { sincronizarMapaV2BomJardims } = await import('./_core/migrations/bomJardimsProjetoV2');
+    const { memorialDoLote } = await import('./lotes/memorial');
+    db.run(sql`UPDATE lotes SET clienteNome = 'Cliente Ficticio' WHERE codigo = 'A02'`);
+    expect((await aplicarProjetoV2BomJardims()).aplicado).toBe(false);
+    const r = await sincronizarMapaV2BomJardims();
+    expect(r.aplicado).toBe(true);
+    expect(Number((await lote('A02')).areaM2)).toBe(seed.lotes.find((l: any) => l.codigo === 'A02').areaM2); // A02 intocado
+    const emp = (await db.select().from(schema.empreendimentos))[0];
+    const ruas = typeof emp.ruas === 'string' ? JSON.parse(emp.ruas) : emp.ruas;
+    const todos = (await db.select().from(schema.lotes)).map((l: any) => ({ codigo: l.codigo, quadra: l.quadra, numero: l.numero, areaM2: Number(l.areaM2), perimetroM: Number(l.perimetroM), verticesUtm: typeof l.verticesUtm === 'string' ? JSON.parse(l.verticesUtm) : (l.verticesUtm ?? []) }));
+    const d16 = todos.find((l: any) => l.codigo === 'D16');
+    const m = memorialDoLote(d16, todos.filter((l: any) => l.verticesUtm.length >= 3), { nome: 'BJ', fuso: 23, ruas });
+    expect(m.vertices.map(v => v.confronta)).toContain('a Rua Jatobá');
+    expect(m.vertices.map(v => v.confronta)).not.toContain('a Rua Walter e Maria');
+    expect((await sincronizarMapaV2BomJardims()).aplicado).toBe(false); // uma vez só
+  });
+});
