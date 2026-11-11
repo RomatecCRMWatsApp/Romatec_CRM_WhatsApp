@@ -126,7 +126,9 @@ export async function destinatarioDe(tipo: TipoKit, id: number): Promise<Destina
   if (tipo === 'parceira') {
     const [p]: any[] = await d.select().from(imobiliariasParceiras).where(eq(imobiliariasParceiras.id, id)).limit(1);
     if (!p) throw new KitErro('Parceira não encontrada', 404);
-    return { tipo, nome: p.nome, link: `${urlPublica()}/parceiro/${p.token}`, comissaoPct: Number(p.comissaoPct ?? COMISSAO_PADRAO), contato: await contatoDe(d, p.corretorInternoId), contatoId: p.corretorInternoId ?? null };
+    const contato = await contatoDe(d, p.corretorInternoId);
+    // Corretor da casa inativo/ausente: contato padrão (contatoId nulo → foto do contato padrão)
+    return { tipo, nome: p.nome, link: `${urlPublica()}/parceiro/${p.token}`, comissaoPct: Number(p.comissaoPct ?? COMISSAO_PADRAO), contato, contatoId: contato === CARTAO_PADRAO ? null : p.corretorInternoId ?? null };
   }
   if (tipo === 'prospecto') {
     const [p]: any[] = await d.select().from(prospectos).where(eq(prospectos.id, id)).limit(1);
@@ -311,8 +313,9 @@ export async function gerarKit(dest: Destinatario, emp: DadosEmpreendimento): Pr
     yy -= 8;
     txt(p, 'Aponte a câmera para o QR code ou toque no link.', xi, yy, 9, f, CINZA);
     // Cartão "Seu corretor": foto redonda, carimbo e contatos de quem atende
-    const { corretorParaPdf, corretorDoCartao, desenharCartaoCorretor } = await import('./pdf/cartaoCorretor');
-    const cartaoC = (dest.contatoId ? await corretorParaPdf(dest.contatoId) : null) ?? corretorDoCartao(dest.contato);
+    const { corretorParaPdf, corretorPadraoPdf, desenharCartaoCorretor } = await import('./pdf/cartaoCorretor');
+    // Sem corretor definido, o contato padrão, com a foto dele
+    const cartaoC = (dest.contatoId ? await corretorParaPdf(dest.contatoId) : null) ?? await corretorPadraoPdf();
     await desenharCartaoCorretor(doc, p, X0, y - qrw - 24 - 14, X1 - X0, cartaoC, { normal: f, negrito: fb });
     rodape(p, pagina);
   }

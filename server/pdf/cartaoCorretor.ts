@@ -55,6 +55,36 @@ export async function corretorParaPdf(usuarioId: number | null | undefined): Pro
   }
 }
 
+/**
+ * Usuário do contato padrão (CARTAO_PADRAO, o corretor responsável da Romatec): pelo WhatsApp ou pelo CRECI do
+ * cartão padrão, preferindo o administrador ativo. Guardado depois da primeira busca.
+ */
+let padraoId: number | null | undefined;
+export async function usuarioDoCartaoPadrao(): Promise<number | null> {
+  if (padraoId !== undefined) return padraoId;
+  try {
+    const { getDb } = await import('../db');
+    const { users } = await import('../../drizzle/schema');
+    const { CARTAO_PADRAO } = await import('../../shared/cartaoVendas');
+    const d: any = await getDb();
+    if (!d) return null;
+    const lista: any[] = await d.select({ id: users.id, role: users.role, ativo: users.ativo, telefone: users.telefone, creci: users.creci }).from(users);
+    const tel = String(CARTAO_PADRAO.whatsapp ?? '').replace(/\D/g, '').slice(-9);
+    const creci = String(CARTAO_PADRAO.creci ?? '').replace(/\D/g, '');
+    const ativos = lista.filter(u => u.ativo !== false && u.ativo !== 0);
+    const bate = (u: any) => (tel && String(u.telefone ?? '').replace(/\D/g, '').endsWith(tel)) || (creci && String(u.creci ?? '').replace(/\D/g, '') === creci);
+    const achado = ativos.filter(bate).sort((a, b) => Number(b.role === 'admin') - Number(a.role === 'admin') || a.id - b.id)[0];
+    padraoId = achado ? Number(achado.id) : null;
+  } catch { return null; }
+  return padraoId;
+}
+
+/** Cartão do contato padrão com a foto dele (sem o usuário, o cartão padrão com as iniciais) */
+export async function corretorPadraoPdf(): Promise<CorretorPdf> {
+  const { CARTAO_PADRAO } = await import('../../shared/cartaoVendas');
+  return (await corretorParaPdf(await usuarioDoCartaoPadrao())) ?? corretorDoCartao(CARTAO_PADRAO);
+}
+
 const iniciais = (nome: string) => {
   const ps = nome.split(/\s+/).filter(w => w.length > 2);
   const lista = ps.length ? ps : nome.split(/\s+/).filter(Boolean);

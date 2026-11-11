@@ -3,6 +3,15 @@
 Cada versão nova vai no TOPO. Depois rode `npm run release` (valida e atualiza o package.json);
 ao subir, o servidor grava a versão no banco e todos recebem o aviso "Novidades da versão".
 
+## 1.159.1 — 2026-11-11
+tipo: patch
+obrigatoria: nao
+titulo: Cartão padrão do Kit com a foto do corretor responsável
+publico: usuarios
+
+### Melhorias
+- Kit para prospecto ou para parceira sem corretor da casa: o cartão "Seu corretor" agora traz a foto e o carimbo do corretor responsável da Romatec (o contato padrão), em vez das iniciais
+
 ## 1.159.0 — 2026-11-11
 tipo: minor
 obrigatoria: nao

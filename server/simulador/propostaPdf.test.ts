@@ -49,3 +49,12 @@ describe('pdfProposta', () => {
     if (process.env.SALVAR_PROPOSTA) writeFileSync(process.env.SALVAR_PROPOSTA, pdf);
   });
 });
+
+describe('contato padrão do cartão', () => {
+  it('sem banco, cai no cartão padrão com as iniciais', async () => {
+    const { corretorPadraoPdf } = await import('../pdf/cartaoCorretor');
+    const c = await corretorPadraoPdf();
+    expect(c.nome.length).toBeGreaterThan(2);
+    expect(c.creci).toMatch(/CRECI/);
+  });
+});
