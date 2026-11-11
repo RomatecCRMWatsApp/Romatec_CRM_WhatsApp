@@ -286,8 +286,16 @@ export const financeiroRouter = router({
     const pessoas: any[] = await db.select({ id: users.id, name: users.name }).from(users);
     const L = new Map(leads.map(l => [l.id, l.nome])), U = new Map(pessoas.map(x => [x.id, x.name])), E = new Map(emps.map(e => [e.id, e]));
 
+    // Concessão da proprietária = venda à vista pelo valor à vista (também com o contrato de concessão ainda em andamento)
+    const { concessoesPorLote, valorAvistaDoLote } = await import("../lotes/concessao");
+    const concessoes = await concessoesPorLote(db, rows.map(r => Number(r.id)));
     const vendas = rows.map(r => {
       const c = cond.get(r.empreendimentoId) ?? null;
+      const concessao = r.situacao === "concedido" || concessoes.has(Number(r.id));
+      if (concessao) {
+        const avista = concessoes.get(Number(r.id)) ?? valorAvistaDoLote(r, c) ?? num(r.valorVenda);
+        r = { ...r, situacao: "concedido", valorVenda: avista, valorEntrada: avista, numParcelas: 1 };
+      }
       return linhaFinanceira(p.perfil, ctx.user.id, {
         loteId: r.id, codigo: r.codigo, quadra: r.quadra, areaM2: num(r.areaM2),
         empreendimento: E.get(r.empreendimentoId)?.nome, empreendimentoSlug: E.get(r.empreendimentoId)?.slug,

@@ -5,6 +5,7 @@ import { trpc } from "@/lib/trpc";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { brl } from "@shared/simulador";
+import { AcoesPdf } from "@/components/sistema/AcoesPdf";
 
 const br = (iso?: string | null) => (iso ? String(iso).slice(0, 10).split("-").reverse().join("/") : "—");
 const hoje = () => new Date(Date.now() - 3 * 3600_000).toISOString().slice(0, 10);
@@ -138,7 +139,7 @@ export default function RenegociacaoContrato({ contratoId, cobrancas, taxaContra
             {a.tipo === "renegociacao" && a.resultado && <p className="text-xs text-muted-foreground">{a.resultado.canceladas} cancelada(s), {a.resultado.criadas} nova(s), {a.resultado.emitidas} emitida(s) no Asaas{a.resultado.falhasAsaas.length ? ` · ⚠️ ${a.resultado.falhasAsaas.join("; ")}` : ""}</p>}
           </div>
           <div className="flex flex-wrap gap-1">
-            <Button size="sm" variant="outline" asChild><a href={`/api/financeiro/aditivos/${a.id}.pdf`} target="_blank" rel="noreferrer"><FileText className="mr-1 h-3.5 w-3.5" /> PDF</a></Button>
+            <AcoesPdf compacto url={`/api/financeiro/aditivos/${a.id}.pdf`} nomeArquivo={`TERMO-ADITIVO-${a.numero ?? a.id}.pdf`} mensagem={`Termo aditivo n.º ${a.numero ?? a.id}`} />
             {a.tipo === "livre" && <Button size="sm" variant="outline" asChild><a href={`/api/financeiro/aditivos/${a.id}.docx`}><FileText className="mr-1 h-3.5 w-3.5" /> Word</a></Button>}
             {a.link && <Button size="sm" variant="outline" onClick={() => copiar(a.link!)}><Copy className="mr-1 h-3.5 w-3.5" /> Link</Button>}
             {a.status === "aguardando" && <Button size="sm" variant="outline" disabled={reenviar.isPending} onClick={() => reenviar.mutate({ id: a.id })}><Send className="mr-1 h-3.5 w-3.5" /> Reenviar</Button>}

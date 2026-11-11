@@ -9,6 +9,7 @@ import { Button } from "@/components/ui/button";
 import { maskPhone } from "@shared/masks";
 import { ROTULO_ESTADO_CIVIL, ROTULO_REGIME } from "@shared/cadastro";
 import { ROTULO_PERFIL_RECRUTAMENTO, STATUS_RECRUTAMENTO } from "@shared/recrutamento";
+import { AcoesPdf } from "@/components/sistema/AcoesPdf";
 
 const campo = "h-9 w-full rounded-md border border-border bg-background px-2 text-sm";
 const COR: Record<string, string> = {
@@ -72,7 +73,7 @@ function NovoConvite({ emps, onCriado }: { emps: { slug: string; nome: string }[
           {criar.isPending ? <Loader2 className="mr-1 h-4 w-4 animate-spin" /> : <Send className="mr-1 h-4 w-4" />} Criar e enviar pelo WhatsApp
         </Button>
         <Button variant="outline" disabled={!ok || criar.isPending} onClick={() => criar.mutate({ perfil, nome, telefone: tel, empreendimentoSlug: emp || null, enviar: false })}>Só gerar o link</Button>
-        <a className="inline-flex h-9 items-center gap-1 rounded-md border border-border px-3 text-sm hover:bg-secondary/40" href={`/api/recrutamento/modelo.pdf?perfil=${perfil}${emp ? `&emp=${emp}` : ""}`}><FileDown className="h-4 w-4" /> Formulário PDF</a>
+        <AcoesPdf compacto rotulo="Formulário PDF" url={`/api/recrutamento/modelo.pdf?perfil=${perfil}${emp ? `&emp=${emp}` : ""}`} nomeArquivo={`FORMULARIO-CREDENCIAMENTO-${perfil.toUpperCase()}.pdf`} mensagem="Formulário de credenciamento — Romatec" />
         <a className="inline-flex h-9 items-center gap-1 rounded-md border border-border px-3 text-sm hover:bg-secondary/40" href={`/api/recrutamento/modelo.docx?perfil=${perfil}${emp ? `&emp=${emp}` : ""}`}><FileDown className="h-4 w-4" /> Formulário DOC</a>
       </div>
       <p className="text-[11px] text-muted-foreground">O candidato recebe o texto com o link do formulário e os arquivos em PDF e DOC. Ele preenche, anexa o CRECI, a certidão, o documento com foto e a selfie. Você confere aqui e aprova: o sistema cria o login e manda a senha provisória pelo WhatsApp.</p>

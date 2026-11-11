@@ -25,7 +25,7 @@ export const ROTULO_SITUACAO: Record<SituacaoLote, string> = {
   vendido_parcelado: 'Vendido — parcelado',
   vendido_avista: 'Vendido — à vista',
   quitado: 'Quitado',
-  concedido: 'Concedido pela proprietária',
+  concedido: 'Concedido pela proprietária (à vista)',
   bloqueado: 'Bloqueado / fora de venda',
 };
 

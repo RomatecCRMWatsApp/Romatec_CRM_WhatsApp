@@ -5,6 +5,7 @@ import { trpc } from "@/lib/trpc";
 import PageHeader from "@/components/PageHeader";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { AcoesPdf } from "@/components/sistema/AcoesPdf";
 import {
   CATEGORIAS_APORTE, FORMAS_PAGAMENTO_APORTE, MAX_BYTES_ANEXO_APORTE, PARAMETROS_PADRAO, TIPOS_ANEXO_APORTE, ROTULO_FORMA_APORTE, TIPOS_ADITIVO_GESTAO, totaisTopografia,
   type CategoriaAporte, type ParametrosGestao, type TipoAditivoGestao, type TipoAnexoAporte,
@@ -32,7 +33,7 @@ export default function ContratoGestao() {
     <div>
       <PageHeader icone={Handshake} titulo="Contrato de gestão" subtitulo={`${data.empreendimento.nome} · contrato n.º ${data.numero} · documento interno entre a proprietária e a Romatec`}
         acoes={<div className="flex flex-wrap gap-2">
-          <Button asChild><a href={`${base}/contrato.pdf`} target="_blank" rel="noreferrer"><FileDown className="mr-1 h-4 w-4" /> Baixar PDF</a></Button>
+          <AcoesPdf compacto rotulo="Contrato (PDF)" url={`${base}/contrato.pdf`} nomeArquivo={`CONTRATO-DE-GESTAO-${data.numero}.pdf`} mensagem={`Contrato de Gestão n.º ${data.numero} — ${data.empreendimento.nome}`} />
           <Button variant="outline" asChild><a href={`${base}/contrato.docx`}><FileText className="mr-1 h-4 w-4" /> Baixar Word</a></Button>
         </div>} />
       <div className="mx-auto max-w-[1100px] space-y-4 px-4 pb-10 md:px-6">
@@ -164,7 +165,7 @@ function Adiantamentos({ aportes, base, onMudou }: { aportes: Aporte[]; base: st
                   <td className="pl-2"><label className="inline-flex items-center gap-1.5 text-xs"><input type="checkbox" checked={!!a.ressarcidoEm} onChange={e => ressarcido.mutate({ slug: SLUG, id: a.id, data: e.target.checked ? hoje() : null })} />
                     {a.ressarcidoEm ? dataBR(a.ressarcidoEm) : "não"}</label></td>
                   <td className="text-right">
-                    <Button size="sm" variant="outline" asChild><a href={`${base}/recibo/${a.id}.pdf`} target="_blank" rel="noreferrer"><Receipt className="mr-1 h-3.5 w-3.5" /> Recibo</a></Button>
+                    <AcoesPdf compacto rotulo="Recibo" url={`${base}/recibo/${a.id}.pdf`} nomeArquivo={`RECIBO-ADIANTAMENTO-${String(a.numero).padStart(3, "0")}.pdf`} mensagem={`Recibo de Adiantamento n.º ${String(a.numero).padStart(3, "0")}/${a.data.slice(0, 4)}`} />
                     {!a.ressarcidoEm && <Button size="sm" variant="ghost" aria-label={`Excluir lançamento ${a.numero}`} onClick={() => { if (confirm(`Excluir o lançamento n.º ${a.numero}?`)) excluir.mutate({ slug: SLUG, id: a.id }); }}><Trash2 className="h-3.5 w-3.5" /></Button>}
                   </td>
                 </tr>
@@ -298,7 +299,7 @@ function Aditivos({ aditivos, aportes, base, onMudou }: { aditivos: AditivoG[]; 
               <div><p className="font-medium">Termo aditivo n.º {a.numero} · {TIPOS_ADITIVO_GESTAO[a.tipo]?.rotulo ?? a.tipo}</p>
                 <p className="text-xs text-muted-foreground">{dataBR(a.data)}{a.valor ? ` · ${brl(a.valor)}` : ""}{a.aportes.length ? ` · ${a.aportes.length} recibo(s)` : ""}</p></div>
               <div className="flex gap-1.5">
-                <Button size="sm" variant="outline" asChild><a href={`${base}/aditivo/${a.id}.pdf`} target="_blank" rel="noreferrer"><FileDown className="mr-1 h-3.5 w-3.5" /> PDF</a></Button>
+                <AcoesPdf compacto url={`${base}/aditivo/${a.id}.pdf`} nomeArquivo={`TERMO-ADITIVO-GESTAO-${String(a.numero).padStart(2, "0")}.pdf`} mensagem={`Termo Aditivo n.º ${a.numero} ao Contrato de Gestão`} />
                 <Button size="sm" variant="outline" asChild><a href={`${base}/aditivo/${a.id}.docx`}><FileText className="mr-1 h-3.5 w-3.5" /> Word</a></Button>
                 <Button size="sm" variant="ghost" aria-label={`Excluir termo aditivo ${a.numero}`} onClick={() => { if (confirm(`Excluir o termo aditivo n.º ${a.numero}? (só se ainda não foi assinado)`)) excluir.mutate({ slug: SLUG, id: a.id }); }}><Trash2 className="h-3.5 w-3.5" /></Button>
               </div>

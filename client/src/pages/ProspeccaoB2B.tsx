@@ -11,6 +11,7 @@ import {
 import PageHeader from "@/components/PageHeader";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { AcoesPdf } from "@/components/sistema/AcoesPdf";
 
 const POR_PAGINA = 40;
 const COR_STATUS: Record<StatusProspecto, string> = {
@@ -200,7 +201,7 @@ function Cartao({ p, admin, onMudou }: { p: Prospecto; admin: boolean; onMudou: 
             <Button size="sm" variant="outline" disabled={ocupado} onClick={() => gerar.mutate({ id: p.id })}>{gerar.isPending ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Sparkles className="mr-1 h-3.5 w-3.5" />} {p.mensagem ? "Refazer mensagem" : "Escrever mensagem"}</Button>
           )}
           {parceria && p.status !== "optout" && (
-            <Button size="sm" variant="outline" asChild><a href={`/api/kit-parceiro/prospecto/${p.id}.pdf`} target="_blank" rel="noreferrer"><FileDown className="mr-1 h-3.5 w-3.5" /> Kit PDF</a></Button>
+            <AcoesPdf compacto rotulo="Kit PDF" url={`/api/kit-parceiro/prospecto/${p.id}.pdf`} nomeArquivo={`KIT-PARCEIRO-${p.id}.pdf`} mensagem="Kit do parceiro — Condomínio de Chácaras Bom Jardims" />
           )}
           {parceria && admin && p.status !== "optout" && (
             <Button size="sm" variant="outline" disabled={virar.isPending}

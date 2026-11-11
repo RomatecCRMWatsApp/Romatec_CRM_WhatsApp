@@ -74,7 +74,12 @@ class SDKServer {
     const sessionCookie = cookies.get(COOKIE_NAME);
     const session = await this.verifySession(sessionCookie);
 
-    if (!session) throw ForbiddenError("Invalid session cookie");
+    if (!session) {
+      // PDF aberto por link compartilhado (WhatsApp): vale como quem compartilhou, só para aquele PDF (_core/linkPdf.ts)
+      const doLink = await this.usuarioDoLinkPdf(req);
+      if (doLink) return doLink;
+      throw ForbiddenError("Invalid session cookie");
+    }
 
     const user = await db.getUserByOpenId(session.openId);
     if (!user) throw ForbiddenError("User not found");
@@ -85,6 +90,23 @@ class SDKServer {
     // "Ver como" do administrador (server/_core/verComo.ts): responde como o usuário escolhido, só leitura
     const { aplicarVerComo } = await import('./verComo');
     return aplicarVerComo(req, user);
+  }
+
+  /** Usuário de um link de PDF assinado (GET de /api/….pdf), ativo e com a mesma versão de sessão da assinatura */
+  private async usuarioDoLinkPdf(req: Request): Promise<User | null> {
+    const { lerLinkPdf, pareceLinkPdf } = await import('./linkPdf');
+    if (!pareceLinkPdf(req)) return null;
+    const m = /[?&]_u=(\d{1,10})(?:&|$)/.exec(String(req.originalUrl ?? req.url ?? ''));
+    if (!m) return null;
+    const { getDb } = await import('../db');
+    const { users } = await import('../../drizzle/schema');
+    const { eq } = await import('drizzle-orm');
+    const d: any = await getDb();
+    if (!d) return null;
+    const [u]: any[] = await d.select().from(users).where(eq(users.id, Number(m[1]))).limit(1);
+    if (!u || u.ativo === false || u.ativo === 0) return null;
+    const id = lerLinkPdf(req, uid => (uid === Number(u.id) ? Number(u.sessaoVersao) || 0 : null));
+    return id === Number(u.id) ? (u as User) : null;
   }
 }
 

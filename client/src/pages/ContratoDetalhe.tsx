@@ -9,6 +9,7 @@ import { useAuth } from "@/_core/hooks/useAuth";
 import PageHeader from "@/components/PageHeader";
 import CompensarPagamento from "@/components/contratos/CompensarPagamento";
 import { Button } from "@/components/ui/button";
+import { AcoesPdf } from "@/components/sistema/AcoesPdf";
 import { sel } from "@/components/cadastro/campos";
 import { brl } from "@shared/simulador";
 import { maskPhone } from "@shared/masks";
@@ -167,9 +168,7 @@ export default function ContratoDetalhe() {
                     <Button variant="outline" disabled={assinado.isPending} onClick={enviarAssinado}><Upload className="h-4 w-4" /> Registrar contrato assinado</Button>
                   )}
                   {d.pode.cancelar && (
-                    <Button variant="outline" onClick={() => abrir(`/api/contratos/${id}/comissao-romatec.pdf`)} title="Documento interno (só o administrador vê)">
-                      <Receipt className="h-4 w-4" /> Comissão Romatec (interno)
-                    </Button>
+                    <AcoesPdf compacto rotulo="Comissão Romatec (interno)" url={`/api/contratos/${id}/comissao-romatec.pdf`} nomeArquivo={`COMISSAO-ROMATEC-${c.numero}.pdf`} mensagem={`Comissão Romatec — contrato ${c.numero}`} />
                   )}
                   {d.pode.cancelar && !["cancelado", "distratado"].includes(c.status) && (
                     <Button variant="outline" className="text-danger-400" onClick={() => setModal({ tipo: "contrato" })}><XCircle className="h-4 w-4" /> Cancelar contrato</Button>
@@ -200,7 +199,7 @@ export default function ContratoDetalhe() {
                       <span className="text-muted-foreground">{v.etapa === "gerado:minuta" ? "Minuta" : v.etapa === "manuscrito" ? "Assinado (PDF enviado)" : v.etapa === "gerado" ? "Definitivo" : v.etapa}</span>
                       <span className="text-xs text-muted-foreground">{new Date(v.criadoEm as any).toLocaleString("pt-BR")} · {(v.bytes / 1024 / 1024).toFixed(1)} MB</span>
                       <span className="hidden font-mono text-[10px] text-muted-foreground md:inline" title="SHA-256">{v.sha256.slice(0, 16)}…</span>
-                      <Button size="sm" variant="outline" className="ml-auto" onClick={() => abrir(`/api/contratos/${id}/versoes/${v.versao}.pdf`)}><Download className="h-4 w-4" /> Abrir</Button>
+                      <div className="ml-auto"><AcoesPdf compacto url={`/api/contratos/${id}/versoes/${v.versao}.pdf`} nomeArquivo={`CONTRATO-${c.numero}-v${v.versao}.pdf`} mensagem={`Contrato ${c.numero} (chácara ${c.loteCodigo}) — versão ${v.versao}`} /></div>
                     </div>
                   ))}
                 </div>
@@ -298,7 +297,7 @@ export default function ContratoDetalhe() {
                     <option value="completo">Carnê completo (todas as parcelas)</option>
                   </select>
                 </label>
-                <Button variant="outline" disabled={!f.cobrancas.length} onClick={() => abrir(`/api/financeiro/contratos/${id}/carne-v2.pdf?bloco=${bloco}`)}><Receipt className="h-4 w-4" /> Abrir carnê</Button>
+                {f.cobrancas.length > 0 && <AcoesPdf compacto rotulo="Carnê" url={`/api/financeiro/contratos/${id}/carne-v2.pdf?bloco=${bloco}`} nomeArquivo={`CARNE-${c.numero}-${bloco}.pdf`} mensagem={`Carnê de pagamento — contrato ${c.numero}, chácara ${c.loteCodigo}`} />}
                 {d.pode.cobranca && c.status === "ativo" && bloco !== "completo" && (
                   <Button disabled={!f.asaasConfigurado || emitir.isPending} onClick={() => { if (confirm(`Emitir no Asaas as cobranças do carnê ${bloco}? O cliente passa a poder pagar por elas.`)) emitir.mutate({ id, bloco: Number(bloco) }); }}
                     title={f.asaasConfigurado ? "" : "Asaas não configurado"}>
@@ -334,13 +333,13 @@ export default function ContratoDetalhe() {
                             <td className="p-2 text-xs">{x.pagoEm ? `${br(x.pagoEm)} · ${brl(x.valorPago ?? x.valor)}` : "—"}{x.reciboNumero && <span className="block text-muted-foreground">{x.reciboNumero}{x.reciboCancelado && <b className="ml-1 text-danger-400">CANCELADO</b>}{x.reciboErro ? <span title={x.reciboErro}> · ⚠️ WhatsApp: ver</span> : x.reciboEnviado ? " · ✅ avisado no WhatsApp" : ""}</span>}</td>
                             <td className="p-2">
                               <div className="flex justify-end gap-1">
-                                {x.acoes.boleto && <Button size="sm" variant="outline" onClick={() => abrir(`/api/financeiro/cobrancas/${x.id}/boleto-a4.pdf`)}>Boleto A4</Button>}
+                                {x.acoes.boleto && <AcoesPdf compacto rotulo="Boleto" url={`/api/financeiro/cobrancas/${x.id}/boleto-a4.pdf`} nomeArquivo={`BOLETO-${c.numero}-${x.numero}-${x.total}.pdf`} mensagem={`Boleto ${x.numero}/${x.total} — contrato ${c.numero}, chácara ${c.loteCodigo}`} />}
                                 {x.acoes.segundaVia && d.pode.cobranca && (
                                   <Button size="sm" variant="outline" disabled={ocupado === `2v${x.id}`} onClick={() => acao(`2v${x.id}`, async () => { await postPdf(`/api/financeiro/cobrancas/${x.id}/segunda-via`); recarregar(); })}>
                                     {ocupado === `2v${x.id}` ? <Loader2 className="h-3 w-3 animate-spin" /> : null} 2ª via
                                   </Button>
                                 )}
-                                {x.acoes.recibo && x.reciboId && <Button size="sm" variant="outline" onClick={() => abrir(`/api/financeiro/recibos/${x.reciboId}.pdf`)}>Recibo</Button>}
+                                {x.acoes.recibo && x.reciboId && <AcoesPdf compacto rotulo="Recibo" url={`/api/financeiro/recibos/${x.reciboId}.pdf`} nomeArquivo={`RECIBO-${x.reciboNumero ?? x.reciboId}.pdf`} mensagem={`Recibo de pagamento — parcela ${x.numero}/${x.total}, contrato ${c.numero}`} />}
                                 {d.pode.cancelar && ["prevista", "emitida", "vencida"].includes(x.status) && (
                                   <Button size="sm" variant="ghost" className="text-danger-400" title="Cancelar esta cobrança (só administrador, com senha)"
                                     onClick={() => setModal({ tipo: "cobranca", id: x.id, rotulo: `${ROTULO_TIPO[x.tipo] ?? x.tipo} ${x.numero}/${x.total}` })}><XCircle className="h-3 w-3" /></Button>
@@ -373,7 +372,7 @@ export default function ContratoDetalhe() {
                 {!f.declaracoes.length && <p className="text-sm text-muted-foreground">Emitidas automaticamente no 2º dia útil de maio, referentes ao ano anterior.</p>}
                 <div className="flex flex-wrap gap-2">
                   {f.declaracoes.sort((a: any, b: any) => b.ano - a.ano).map((x: any) => x.status === "emitida"
-                    ? <Button key={x.ano} size="sm" variant="outline" onClick={() => abrir(`/api/financeiro/contratos/${id}/declaracao/${x.ano}.pdf`)}>{x.ano} · {x.valorTotal != null ? brl(x.valorTotal) : ""}</Button>
+                    ? <AcoesPdf key={x.ano} compacto rotulo={`${x.ano}${x.valorTotal != null ? ` · ${brl(x.valorTotal)}` : ""}`} url={`/api/financeiro/contratos/${id}/declaracao/${x.ano}.pdf`} nomeArquivo={`DECLARACAO-QUITACAO-${x.ano}-${c.numero}.pdf`} mensagem={`Declaração anual de quitação ${x.ano} — contrato ${c.numero}`} />
                     : <span key={x.ano} className="rounded-lg border border-danger-500/40 px-2 py-1 text-xs text-danger-300">{x.ano}: {x.motivo ?? "retida — débito em aberto"}</span>)}
                 </div>
               </section>

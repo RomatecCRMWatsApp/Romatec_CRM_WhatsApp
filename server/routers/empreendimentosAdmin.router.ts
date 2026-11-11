@@ -109,7 +109,8 @@ export const empreendimentosAdminRouter = router({
       /** Sugestão no envio pelo WhatsApp (número do José); o usuário digita o destino */
       destinoSugerido: (await import("../leads/config")).telefonesNotificacao()[0] || "",
       lotes: lotesOut, resumo, arquivos,
-      valorVendido: lotesOut.filter(l => ["vendido_parcelado", "vendido_avista", "quitado"].includes(l.situacao)).reduce((s, l) => s + (l.valorVenda ?? 0), 0),
+      // Concessão da proprietária conta como venda à vista (valor à vista gravado na chácara: server/lotes/concessao.ts)
+      valorVendido: lotesOut.filter(l => ["vendido_parcelado", "vendido_avista", "quitado", "concedido"].includes(l.situacao)).reduce((s, l) => s + (l.valorVenda ?? 0), 0),
     };
   }),
 
@@ -150,6 +151,12 @@ export const empreendimentosAdminRouter = router({
         valorEntrada: livre ? null : input.valorEntrada ?? null,
         numParcelas: livre ? null : input.numParcelas ?? null,
       };
+      // Concessão da proprietária: sempre venda à vista, pelo valor à vista da chácara (server/lotes/concessao.ts)
+      if (input.situacao === "concedido") {
+        const { condicoesAtivas, valorAvistaDoLote } = await import("../lotes/concessao");
+        const avista = valorAvistaDoLote(lote, await condicoesAtivas(db, Number(lote.empreendimentoId)));
+        if (avista) Object.assign(dados, { valorVenda: avista, valorEntrada: avista, numParcelas: 1 });
+      }
       const problema = problemaVenda(dados);
       if (problema) throw new Error(problema);
       // Corretor só vincula lead dele (confere antes de gravar o lote)

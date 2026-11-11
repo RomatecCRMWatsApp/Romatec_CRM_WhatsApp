@@ -173,7 +173,8 @@ export function comissaoNaSimulacao(
 // ─── Financeiro ──────────────────────────────────────────────────────────────
 
 /** Situações do lote que entram no financeiro (venda com sinal ou concluída) */
-export const SITUACOES_VENDA = ['entrada', 'vendido_parcelado', 'vendido_avista', 'quitado'] as const;
+/** Situações que entram nas vendas; a concessão da proprietária conta como venda à vista (server/lotes/concessao.ts) */
+export const SITUACOES_VENDA = ['entrada', 'vendido_parcelado', 'vendido_avista', 'quitado', 'concedido'] as const;
 /** "Venda parcelada" para a regra da comissão: vendido parcelado ou com sinal */
 export const vendaParcelada = (situacao: string | null | undefined) => situacao === 'vendido_parcelado' || situacao === 'entrada';
 

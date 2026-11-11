@@ -7,6 +7,7 @@ import { CabecalhoEmpreendimento, Logo, MapaVendas } from "@/components/empreend
 import { linkEmpreendimento, linkKml } from "@shared/chacaraLink";
 import { comRef, useCartaoVendas } from "@/lib/cartaoVendas";
 import { linkAgendamento } from "@/components/LinkAgendamento";
+import { AcoesPdf } from "@/components/sistema/AcoesPdf";
 import {
   CalendarDays, Calculator, FileSignature, FileText, Flame, FolderOpen, Globe2, Link2, Lock, Share2, UserPlus,
 } from "lucide-react";
@@ -117,9 +118,7 @@ export default function PainelCorretor() {
             </a>
           )}
           {emp.slug === "bom-jardims" && user?.id && (
-            <a href={`/api/kit-parceiro/corretor/${user.id}.pdf`} target="_blank" rel="noreferrer" className="flex shrink-0 items-center gap-1.5 rounded-full border border-border px-3 py-1.5 text-xs font-medium transition hover:border-[var(--rt-gold)]/60 hover:bg-secondary">
-              <FileText className="h-3.5 w-3.5" /> Meu kit em PDF
-            </a>
+            <AcoesPdf compacto rotulo="Meu kit em PDF" url={`/api/kit-parceiro/corretor/${user.id}.pdf`} nomeArquivo="KIT-PARCEIRO-BOM-JARDIMS.pdf" mensagem="Kit do parceiro — Condomínio de Chácaras Bom Jardims" />
           )}
         </div>
       )}

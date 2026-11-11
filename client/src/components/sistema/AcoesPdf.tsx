@@ -5,16 +5,21 @@ import { Button } from "@/components/ui/button";
 import { useAuth } from "@/_core/hooks/useAuth";
 import { perfilDe } from "@shared/equipe";
 import { maskPhone } from "@shared/masks";
+import { trpc } from "@/lib/trpc";
 
 interface Props {
   /** PDF para quem está logado (abre no navegador; com ?baixar=1, baixa) */
   url: string;
   /** Nome do arquivo ao baixar ou compartilhar */
   nomeArquivo: string;
-  /** Gera o link público assinado (sem login) para mandar a quem não tem acesso ao sistema; devolve o caminho */
-  linkPublico: () => Promise<{ caminho: string; validadeDias: number }>;
+  /** Gera o link público assinado (sem login); padrão: link de 30 dias do próprio PDF (system.linkPdf) */
+  linkPublico?: () => Promise<{ caminho: string; validadeDias: number }>;
   /** Texto que acompanha o link no WhatsApp */
   mensagem: string;
+  /** Em listas: começa como um botão só ("PDF") que abre as opções */
+  compacto?: boolean;
+  /** Rótulo do botão no modo compacto */
+  rotulo?: string;
 }
 
 const comBaixar = (u: string) => `${u}${u.includes("?") ? "&" : "?"}baixar=1`;
@@ -23,16 +28,18 @@ const comBaixar = (u: string) => `${u}${u.includes("?") ? "&" : "?"}baixar=1`;
  * Ações de um PDF: abrir, baixar, enviar pelo WhatsApp (o seu, com o link), copiar o link, compartilhar o arquivo
  * (celular: escolhe WhatsApp, e-mail…) e, para o administrador, mandar o arquivo pelo WhatsApp do sistema.
  */
-export function AcoesPdf({ url, nomeArquivo, linkPublico, mensagem }: Props) {
+export function AcoesPdf({ url, nomeArquivo, linkPublico, mensagem, compacto, rotulo }: Props) {
+  const gerarLink = trpc.system.linkPdf.useMutation();
   const { user } = useAuth();
   const admin = perfilDe(user as any) === "admin";
   const [ocupado, setOcupado] = useState<string | null>(null);
   const [sistema, setSistema] = useState(false);
+  const [aberto, setAberto] = useState(false);
   const [telefone, setTelefone] = useState("");
   const podeCompartilharArquivo = typeof navigator !== "undefined" && "canShare" in navigator;
 
   const link = async () => {
-    const r = await linkPublico();
+    const r = linkPublico ? await linkPublico() : await gerarLink.mutateAsync({ caminho: url });
     return { url: new URL(r.caminho, window.location.origin).toString(), dias: r.validadeDias };
   };
   // O PDF gerado fica guardado: se o celular recusar o compartilhamento depois da espera, o segundo toque é imediato
@@ -89,6 +96,10 @@ export function AcoesPdf({ url, nomeArquivo, linkPublico, mensagem }: Props) {
   });
 
   const icone = (qual: string, I: typeof Download) => (ocupado === qual ? <Loader2 className="mr-1 h-3.5 w-3.5 animate-spin" /> : <I className="mr-1 h-3.5 w-3.5" />);
+  // Em listas: um botão "PDF" que abre as opções logo abaixo
+  if (compacto && !aberto) {
+    return <Button size="sm" variant="outline" onClick={() => setAberto(true)} aria-expanded={false}><Share2 className="mr-1 h-3.5 w-3.5" /> {rotulo ?? "PDF"}</Button>;
+  }
   return (
     <div className="space-y-2">
       <div className="flex flex-wrap gap-1.5" role="group" aria-label="Ações do PDF">

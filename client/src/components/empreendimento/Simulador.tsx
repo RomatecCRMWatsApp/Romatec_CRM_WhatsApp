@@ -11,6 +11,7 @@ import { CONDICOES, ROTULO_CONDICAO, ROTULO_LINHA, cronograma, divisaoComissaoLa
 import type { LotePainel } from "@/components/empreendimento/PainelLote";
 import { Calculator, Download, FileText, Link2, Send, X } from "lucide-react";
 import { CODIGO_LOTE } from "@shared/lotes";
+import { AcoesPdf } from "@/components/sistema/AcoesPdf";
 
 const m2 = (v: number) => v.toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 const cel = (v: unknown) => { const s = v == null ? "" : String(v); return /[;"\n]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s; };
@@ -215,7 +216,7 @@ function TodasAsCondicoes({ slug }: { slug: string }) {
         <p className="text-xs text-muted-foreground">À vista, entrada de 30% (à vista ou parcelada, todos os prazos) e Planos A, B e C, num PDF só. Mande ao cliente primeiro; quando ele escolher a chácara, faça a proposta exclusiva abaixo.</p>
       </div>
       <div className="flex flex-wrap items-center gap-2">
-        <Button asChild size="sm" variant="outline"><a href={`/api/condicoes/${slug}.pdf`} target="_blank" rel="noopener noreferrer"><Download className="mr-1 h-4 w-4" /> Baixar PDF</a></Button>
+        <AcoesPdf compacto rotulo="PDF: baixar, enviar, link" url={`/api/condicoes/${slug}.pdf`} nomeArquivo={`CONDICOES-DE-PAGAMENTO-${slug.toUpperCase()}.pdf`} mensagem="Condições de pagamento — Condomínio de Chácaras Bom Jardims" />
         <input value={fone} onChange={e => setFone(e.target.value)} inputMode="tel" placeholder="WhatsApp do cliente" className="h-9 min-w-[180px] flex-1 rounded-md border border-border bg-background px-2 text-sm" />
         <Button size="sm" disabled={!data} onClick={whatsapp} className="bg-emerald-500 text-black hover:bg-emerald-400"><Send className="mr-1 h-4 w-4" /> Enviar no WhatsApp</Button>
         <Button size="sm" variant="outline" disabled={!data} onClick={compartilhar}><Link2 className="mr-1 h-4 w-4" /> Compartilhar</Button>

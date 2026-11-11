@@ -36,6 +36,8 @@ async function startServer() {
   const protecoes = await import('./protecoes');
   app.disable('x-powered-by');
   app.use(protecoes.cabecalhosSeguranca);
+  // PDFs: ?baixar=1 baixa o arquivo em vez de abrir (_core/linkPdf.ts)
+  { const { forcarDownloadPdf } = await import('./linkPdf'); app.use(forcarDownloadPdf as any); }
   // Compressão das respostas (Brotli quando o navegador aceita, senão gzip): HTML, JS, CSS, SVG e JSON da API.
   // Imagens, vídeos e PDFs já vêm comprimidos e passam direto (filtro padrão por tipo de conteúdo).
   const compression = (await import('compression')).default;
@@ -1602,6 +1604,8 @@ async function startServer() {
     await addGestao();
     const { ajustarAgrimensura850 } = await import('../gestao/servico');
     await ajustarAgrimensura850().catch((e: any) => console.warn('[Gestão] ajuste da agrimensura:', e?.message));
+    const { ajustarConcessoesAvista } = await import('../lotes/concessao');
+    await ajustarConcessoesAvista().catch((e: any) => console.warn('[Concessão] ajuste à vista:', e?.message));
     const { limparAvisosPrivativos } = await import('../notificacoes');
     await limparAvisosPrivativos().catch((e: any) => console.warn('[Notificações] limpeza de avisos privativos:', e?.message));
     const { addCancelamento } = await import('./migrations/addCancelamento');

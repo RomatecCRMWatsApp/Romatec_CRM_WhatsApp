@@ -5,6 +5,7 @@ import { AlertTriangle, CheckCircle2, Clock, Copy, Download, Loader2, PenLine, S
 import { trpc } from "@/lib/trpc";
 import { Button } from "@/components/ui/button";
 import { sel } from "@/components/cadastro/campos";
+import { AcoesPdf } from "@/components/sistema/AcoesPdf";
 
 const METODOS = [["avancada", "Eletrônica avançada (link + código no WhatsApp)"], ["govbr", "gov.br (assinador.iti.br)"], ["icp_a1", "Certificado ICP-Brasil A1"]] as const;
 const EVENTO: Record<string, string> = {
@@ -74,7 +75,7 @@ export default function PainelAssinaturas({ id, status, podeEnviar }: { id: numb
       <section className="rounded-xl border border-border bg-card p-4">
         <div className="mb-2 flex flex-wrap items-center justify-between gap-2">
           <h2 className="text-sm font-semibold">Assinaturas · {assinados} de {data.signatarios.length}</h2>
-          {data.manifesto && <Button size="sm" variant="outline" onClick={() => window.open(`/api/contratos/${id}/manifesto.pdf`, "_blank")}><Download className="h-4 w-4" /> Manifesto (Anexo VII)</Button>}
+          {data.manifesto && <AcoesPdf compacto rotulo="Manifesto (Anexo VII)" url={`/api/contratos/${id}/manifesto.pdf`} nomeArquivo={`MANIFESTO-ASSINATURAS-${id}.pdf`} mensagem="Manifesto de evidências das assinaturas (Anexo VII)" />}
         </div>
         <div className="divide-y divide-border/50">
           {data.signatarios.map((s: any) => (

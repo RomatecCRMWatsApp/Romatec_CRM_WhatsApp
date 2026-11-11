@@ -8,6 +8,7 @@ import { createPortal } from "react-dom";
 import { ArrowLeft, Download, Loader2, Minus, Plus, Printer } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { abrirPdf, desenharPagina, type DocumentoPdf } from "@/lib/pdf";
+import { AcoesPdf } from "@/components/sistema/AcoesPdf";
 
 const ZOOMS = [0.6, 0.8, 1, 1.25, 1.5, 2, 2.5];
 
@@ -95,6 +96,8 @@ export default function VisualizadorPdf({ url, titulo, nomeArquivo, onFechar }: 
           <Button variant="ghost" size="icon" aria-label="Imprimir" className="hidden sm:inline-flex" disabled={!blob} onClick={imprimir}><Printer className="h-4 w-4" /></Button>
         </div>
       </div>
+      {/* Enviar pelo WhatsApp, copiar o link, compartilhar (PDFs do sistema) */}
+      {url.startsWith("/api/") && <div className="shrink-0 border-b border-border bg-background px-2 py-1.5"><AcoesPdf compacto rotulo="Enviar / link" url={url} nomeArquivo={nomeArquivo} mensagem={titulo} /></div>}
       <div ref={area} className="min-h-0 flex-1 overflow-auto overscroll-contain px-3 pt-4 pb-[calc(1rem+env(safe-area-inset-bottom))]" style={{ WebkitOverflowScrolling: "touch" }}>
         {erro ? <div className="mx-auto mt-16 max-w-sm rounded-lg bg-background p-4 text-center text-sm text-danger-400">{erro}</div>
           : !doc ? (

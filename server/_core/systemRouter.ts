@@ -28,6 +28,12 @@ export function infoVersao() {
 }
 
 export const systemRouter = router({
+  /** Link de 30 dias de um PDF do sistema para enviar por WhatsApp (abre sem login, como quem gerou veria): _core/linkPdf.ts */
+  linkPdf: protectedProcedure.input(z.object({ caminho: z.string().min(6).max(600) })).mutation(async ({ input, ctx }) => {
+    const { assinarLinkPdf, caminhoPdfValido, VALIDADE_LINK_PDF_DIAS } = await import("./linkPdf");
+    if (!caminhoPdfValido(input.caminho)) throw new Error("Endereço de PDF inválido");
+    return { caminho: assinarLinkPdf(input.caminho, ctx.user.id, Number((ctx.user as any).sessaoVersao) || 0), validadeDias: VALIDADE_LINK_PDF_DIAS };
+  }),
   health: publicProcedure
     .input(
       z.object({

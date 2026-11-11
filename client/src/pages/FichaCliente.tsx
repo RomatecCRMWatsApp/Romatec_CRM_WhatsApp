@@ -12,6 +12,7 @@ import { trpc } from "@/lib/trpc";
 import PageHeader from "@/components/PageHeader";
 import { Button } from "@/components/ui/button";
 import { ROTULO_SITUACAO, type TipoEvento } from "@shared/fichaCliente";
+import { AcoesPdf } from "@/components/sistema/AcoesPdf";
 
 const brl = (v: number | null | undefined) => (Number(v) || 0).toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
 const dataBr = (d: unknown) => (d ? new Date(d as any).toLocaleDateString("pt-BR", { timeZone: "America/Fortaleza" }) : "—");
@@ -180,7 +181,7 @@ function CartaoContrato({ c, onAbrir }: { c: any; onAbrir: () => void }) {
       </p>
       <div className="mt-2 flex flex-wrap gap-1.5">
         <Button size="sm" variant="outline" className="h-8" onClick={onAbrir}>Abrir contrato</Button>
-        {c.pdf && <Button asChild size="sm" variant="ghost" className="h-8"><a href={c.pdf} target="_blank" rel="noreferrer"><FileText className="mr-1 h-3.5 w-3.5" /> PDF</a></Button>}
+        {c.pdf && <AcoesPdf compacto rotulo="Contrato (PDF)" url={c.pdf} nomeArquivo={`CONTRATO-${c.numero ?? ""}.pdf`} mensagem={`Contrato ${c.numero ?? ""}`} />}
         {c.parcelas.length > 0 && (
           <Button size="sm" variant="ghost" className="h-8" aria-expanded={aberto} onClick={() => setAberto(v => !v)}>
             <ChevronDown className={`mr-1 h-3.5 w-3.5 transition-transform ${aberto ? "rotate-180" : ""}`} /> {aberto ? "Esconder parcelas" : "Ver parcelas"}

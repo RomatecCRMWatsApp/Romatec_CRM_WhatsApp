@@ -3,6 +3,20 @@
 Cada versão nova vai no TOPO. Depois rode `npm run release` (valida e atualiza o package.json);
 ao subir, o servidor grava a versão no banco e todos recebem o aviso "Novidades da versão".
 
+## 1.151.0 — 2026-11-11
+tipo: minor
+obrigatoria: nao
+titulo: Todos os PDFs com baixar, WhatsApp, copiar link e compartilhar
+publico: todos
+
+### Novo
+- Os PDFs do sistema ganham o botão de opções com Abrir, Baixar, WhatsApp, Copiar link e Compartilhar (no celular, manda o próprio arquivo). Vale para condições de pagamento, versões do contrato, carnê, boletos, recibos, declarações de quitação, termos aditivos, manifesto das assinaturas, kit do parceiro, formulário de credenciamento, talões e documentos internos do escritório
+- O link enviado abre o PDF sem login por 30 dias, exatamente como quem enviou o vê. Só abre aquele documento e para de abrir se a pessoa for desativada ou tiver o perfil trocado
+- "Baixar" agora baixa o arquivo em todos os PDFs (antes alguns só abriam)
+
+### Correções
+- Chácara concedida pela proprietária passa a contar sempre como venda à vista, pelo valor à vista, nas vendas e no valor vendido, inclusive enquanto o contrato de concessão está em andamento. As concessões já lançadas foram corrigidas. As demais vendas seguem o próprio contrato
+
 ## 1.150.0 — 2026-11-10
 tipo: minor
 obrigatoria: nao
