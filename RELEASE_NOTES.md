@@ -3,6 +3,15 @@
 Cada versão nova vai no TOPO. Depois rode `npm run release` (valida e atualiza o package.json);
 ao subir, o servidor grava a versão no banco e todos recebem o aviso "Novidades da versão".
 
+## 1.153.1 — 2026-11-11
+tipo: patch
+obrigatoria: nao
+titulo: Órgão emissor do RG: sem "SSP" automático, com SEJUSP nas sugestões
+publico: equipe
+
+### Correções
+- Cadastro do comprador e do cônjuge (contrato, edição e clientes): o campo "Órgão" não vem mais preenchido com "SSP". Ele sugere os órgãos ao digitar (SEJUSP, SSP, SESP, SSPDS, PC, DETRAN e outros) e grava em maiúsculas. Confira sempre no documento: na CNH do Maranhão, por exemplo, vem "SEJUSP MA"
+
 ## 1.153.0 — 2026-11-11
 tipo: minor
 obrigatoria: nao

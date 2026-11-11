@@ -1,13 +1,13 @@
 import { Campo, InputMascara, classeCampo, sel } from "@/components/cadastro/campos";
 import { buscarCep } from "@/components/equipe/CadastroUsuario";
 import { maskCEP, maskCPF, maskPhone, onlyDigits } from "@shared/masks";
-import { UFS } from "@shared/cadastro";
+import { ORGAOS_EMISSORES, UFS } from "@shared/cadastro";
 import { ESTADOS_CIVIS, REGIMES_BENS, exigePacto, type PessoaForm } from "@shared/contratos";
 
 /** Cadastro completo de pessoa (comprador, cônjuge, cliente): o mesmo formulário no contrato e em Clientes */
 export const PESSOA_VAZIA: PessoaForm = {
   nome: "", cpf: "", sexo: "", nacionalidade: "brasileira", estadoCivil: "", regimeBens: "", pactoAntenupcial: "", profissao: "", nascimento: "",
-  rg: "", rgOrgao: "SSP", rgUf: "MA", email: "", telefone1: "", cep: "", logradouro: "", numero: "", complemento: "", bairro: "", cidade: "", uf: "MA",
+  rg: "", rgOrgao: "", rgUf: "MA", email: "", telefone1: "", cep: "", logradouro: "", numero: "", complemento: "", bairro: "", cidade: "", uf: "MA",
 };
 
 export default function PessoaCampos({ p, set, erros, prefixo, conjuge }: {
@@ -50,7 +50,9 @@ export default function PessoaCampos({ p, set, erros, prefixo, conjuge }: {
       <Campo rotulo="RG"><input className={classeCampo()} value={p.rg ?? ""} onChange={x => set("rg", x.target.value)} /></Campo>
       <Campo rotulo="Órgão / UF">
         <div className="grid grid-cols-[minmax(0,1fr)_5.5rem] gap-2">
-          <input className={classeCampo()} value={p.rgOrgao ?? ""} onChange={x => set("rgOrgao", x.target.value)} />
+          {/* Texto livre com sugestões (confira no documento: ex. SEJUSP na CNH do Maranhão) */}
+          <input className={classeCampo()} value={p.rgOrgao ?? ""} onChange={x => set("rgOrgao", x.target.value.toUpperCase())} list={`orgaos-${prefixo}`} maxLength={20} placeholder="SEJUSP, SSP…" aria-label="Órgão emissor do RG" />
+          <datalist id={`orgaos-${prefixo}`}>{ORGAOS_EMISSORES.filter(o => o !== "Outro").map(o => <option key={o} value={o} />)}</datalist>
           <select className={sel} value={p.rgUf ?? ""} onChange={x => set("rgUf", x.target.value)}>{UFS.map(u => <option key={u}>{u}</option>)}</select>
         </div>
       </Campo>

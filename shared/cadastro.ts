@@ -33,7 +33,8 @@ export const PROFISSOES = [
 /** Primeira letra maiúscula, sem espaços sobrando */
 export const normalizarProfissao = (p: string) => { const t = p.trim().replace(/\s+/g, ' '); return t ? t.charAt(0).toUpperCase() + t.slice(1) : t; };
 
-export const ORGAOS_EMISSORES = ['SSP', 'SESP', 'SDS', 'PC', 'IFP', 'DETRAN', 'DPF', 'PM', 'CBM', 'MB', 'EB', 'FAB', 'OAB', 'CREA', 'CRECI', 'Outro'];
+/** Órgãos emissores do RG (SEJUSP: Maranhão e outros estados, inclusive na CNH) */
+export const ORGAOS_EMISSORES = ['SSP', 'SEJUSP', 'SESP', 'SSPDS', 'SJS', 'SPTC', 'SSPDC', 'SDS', 'PC', 'IFP', 'DETRAN', 'DPF', 'PM', 'CBM', 'MB', 'EB', 'FAB', 'OAB', 'CREA', 'CRECI', 'Outro'];
 
 /** Documentos e credenciais (um só cadastro, com titular usuário ou cônjuge) */
 export const CREDENCIAIS = ['cartao_creci', 'certidao_creci', 'certificado_cnai'] as const;

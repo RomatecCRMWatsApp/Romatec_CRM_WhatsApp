@@ -18,7 +18,7 @@ function paraForm(x: any | null | undefined): PessoaForm {
     ...PESSOA_VAZIA,
     nome: v("nome"), cpf: x.cpfCnpj ? maskCPF(String(x.cpfCnpj)) : "", sexo: v("sexo"), nacionalidade: v("nacionalidade") || "brasileira",
     estadoCivil: v("estadoCivil"), regimeBens: v("regimeBens"), pactoAntenupcial: v("pactoAntenupcial"), profissao: v("profissao"),
-    nascimento: v("nascimento").slice(0, 10), rg: v("rg"), rgOrgao: v("rgOrgao") || "SSP", rgUf: v("rgUf") || "MA", email: v("email"),
+    nascimento: v("nascimento").slice(0, 10), rg: v("rg"), rgOrgao: v("rgOrgao"), rgUf: v("rgUf") || "MA", email: v("email"),
     telefone1: x.telefone1 ? maskPhone(String(x.telefone1).replace(/^55(?=\d{10,11}$)/, "")) : "", cep: x.cep ? maskCEP(String(x.cep)) : "",
     logradouro: v("logradouro"), numero: v("numero"), complemento: v("complemento"), bairro: v("bairro"), cidade: v("cidade"), uf: v("uf") || "MA",
   };
