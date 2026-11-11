@@ -148,7 +148,7 @@ export function tagsModoC(s: Pick<PlanoContrato, 'complemento_qtd' | 'complement
   if (!s.complemento_qtd) return { plano_c_forma: '', plano_c_item10: '', plano_c_cobranca: '', plano_c_inicio_saldo: '' };
   if (s.complemento_modo === 'congelado') {
     const m = Number(s.complemento_inicio_mes) || 0;
-    const quando = `a partir do ${m}º (${extenso(m)}º) mês contado do pagamento do valor do ato${s.complemento_venc1 ? `, a primeira com vencimento em ${dataBR(s.complemento_venc1)}` : ''}`;
+    const quando = `a partir do ${m}º mês contado do pagamento do valor do ato${s.complemento_venc1 ? `, a primeira com vencimento em ${dataBR(s.complemento_venc1)}` : ''}`;
     return {
       plano_c_forma: `parcelas do saldo a partir do mês seguinte ao do ato e, em carnê à parte, as parcelas do complemento da entrada ${quando}, ficando o complemento congelado, sem juros nem correção, até essa data`,
       plano_c_item10: 'pagas a partir do mês seguinte ao do pagamento do valor do ato, independentemente do complemento da entrada do item 9',

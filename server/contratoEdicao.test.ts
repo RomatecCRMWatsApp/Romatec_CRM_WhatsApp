@@ -12,7 +12,7 @@ const { getDb } = await import('./db');
 const { sql } = await import('drizzle-orm');
 
 const comprador = { nome: 'Cliente de Teste', cpf: '529.982.247-25', estadoCivil: 'solteiro', telefone1: '(99) 9 9123-4567', logradouro: 'Rua A', numero: '10', cidade: 'Açailândia', uf: 'MA', sexo: 'M' };
-const real = { nome: 'Silvia Kelly Coelho Pereira', cpf: '111.444.777-35', estadoCivil: 'solteiro', telefone1: '(99) 9 9888-7766', logradouro: 'Rua B', numero: '20', cidade: 'Açailândia', uf: 'MA', sexo: 'F' };
+const real = { nome: 'Maria Ficticia de Teste', cpf: '111.444.777-35', estadoCivil: 'solteiro', telefone1: '(99) 9 9888-7766', logradouro: 'Rua B', numero: '20', cidade: 'Açailândia', uf: 'MA', sexo: 'F' };
 const plano = { modalidade: 'financiado' as const, entradaParcelas: 6, prazo: 120, dataPrimeiroPagamento: '2026-12-10' };
 const admin = { id: 1, name: 'José Romário', role: 'admin' };
 const SENHA = 'senha-do-admin-123';
@@ -39,12 +39,12 @@ describe('editar e excluir contrato (administrador)', () => {
     const x = await E.editarContratoAdmin(r.id, admin, SENHA, { comprador: real, corretorUserId: 2, condicoesEspecificas: 'Entrega das chaves em março.', plano: { ...plano, modalidade: 'avista' } });
     expect(x.campos).toEqual(expect.arrayContaining(['comprador', 'corretor', 'condições específicas', 'plano de pagamento']));
     const { comprador: comp } = await S.pessoasDe(r.id);
-    expect(comp.nome).toBe('Silvia Kelly Coelho Pereira');
+    expect(comp.nome).toBe('Maria Ficticia de Teste');
     const c = await S.contratoPorId(r.id);
     expect(c.corretorUserId).toBe(2);
     const p = typeof c.simulacaoJson === 'string' ? JSON.parse(c.simulacaoJson) : c.simulacaoJson;
     expect(p.modalidade).toBe('avista');
-    expect(await lote('D16')).toMatchObject({ clienteNome: 'Silvia Kelly Coelho Pereira', corretorId: 2, numParcelas: 1 });
+    expect(await lote('D16')).toMatchObject({ clienteNome: 'Maria Ficticia de Teste', corretorId: 2, numParcelas: 1 });
   });
 
   it('exclui contrato sem dinheiro (chácara volta a disponível); com boleto emitido recusa e indica Cancelar', async () => {

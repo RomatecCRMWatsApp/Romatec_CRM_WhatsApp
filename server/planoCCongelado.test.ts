@@ -36,7 +36,7 @@ describe('Plano C com o complemento da entrada congelado (gestão)', () => {
     expect(blocos.slice(0, primeiroComp).every(b => b.every(x => x.tipo !== 'complemento'))).toBe(true);
     expect(blocos.slice(primeiroComp).every(b => b.every(x => x.tipo === 'complemento'))).toBe(true);
     const t = tagsModoC(plano);
-    expect(t.plano_c_cobranca).toMatch(/a partir do 15º \(quinze\)?.*mês .*em carnê próprio/);
+    expect(t.plano_c_cobranca).toMatch(/a partir do 15º mês .*em carnê próprio/);
     expect(t.plano_c_forma).toMatch(/congelado, sem juros nem correção/);
   });
 });

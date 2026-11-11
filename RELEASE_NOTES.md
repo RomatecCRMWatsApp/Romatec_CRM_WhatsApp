@@ -3,6 +3,15 @@
 Cada versão nova vai no TOPO. Depois rode `npm run release` (valida e atualiza o package.json);
 ao subir, o servidor grava a versão no banco e todos recebem o aviso "Novidades da versão".
 
+## 1.156.1 — 2026-11-11
+tipo: patch
+obrigatoria: nao
+titulo: Termo de anuência da proprietária ao congelamento do Plano C
+publico: admin
+
+### Melhorias
+- Contrato do Plano C com o complemento congelado: entra, logo depois do CPCV, o "Termo de Anuência da Promitente Vendedora ao Congelamento do Complemento da Entrada". Ele traz o valor, as parcelas, o mês de início e o 1º vencimento, sem juros nem correção no período e sem novação. É assinado pela proprietária, pelo comprador (e cônjuge) e pela gestora, na mesma rodada de assinaturas, com as caixas colocadas pelos nomes
+
 ## 1.156.0 — 2026-11-11
 tipo: minor
 obrigatoria: nao

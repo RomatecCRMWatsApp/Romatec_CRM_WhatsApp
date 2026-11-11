@@ -13,7 +13,7 @@ import { PDFDocument, StandardFonts, popGraphicsState, pushGraphicsState, rgb, s
 import type { Ctx } from './contexto';
 import type { PlanoContrato } from './plano';
 import { desenharMarca, embutirMarca } from './anexos';
-import { brl, pct, reaisExtenso } from './formato';
+import { brl, extenso, pct, reaisExtenso } from './formato';
 import { comissao } from '../../shared/simulador';
 import { ESCRITORIO } from '../../shared/escritorio';
 
@@ -370,6 +370,52 @@ export async function docTermoConcessao(c: Ctx, plano: PlanoContrato, marca: str
   const blocos = [
     { papel: 'PROMITENTE VENDEDORA (concedente)', nome: vendedora(c), doc: docVendedora(c).replace(/^inscrita no /, '').replace(' sob o n.º', '') },
     { papel: 'BENEFICIÁRIO(A)', nome: s(c.comp_nome), doc: `CPF ${s(c.comp_cpf)}` },
+  ];
+  if (c.comp_casado && s(c.conj_nome)) blocos.push({ papel: 'Cônjuge/companheiro(a) anuente', nome: s(c.conj_nome), doc: `CPF ${s(c.conj_cpf)}` });
+  blocos.push({ papel: 'GESTORA (interveniente)', nome: `${ESCRITORIO.fantasia} — ${ESCRITORIO.responsavel}`, doc: `${ESCRITORIO.creciJ} · ${ESCRITORIO.creciResponsavel}` });
+  w.assinaturas(blocos);
+  return w.salvar();
+}
+
+/**
+ * Plano C com o complemento da entrada congelado: termo em que a PROMITENTE VENDEDORA anui ao congelamento concedido
+ * pela gestão (mês de início e carnê à parte), assinado por ela junto com as demais assinaturas do contrato.
+ */
+export async function docTermoCongelamento(c: Ctx, plano: PlanoContrato, marca: string): Promise<Buffer> {
+  const mes = Number(plano.complemento_inicio_mes) || 0;
+  const total = Number(plano.complemento_valor) || 0, qtd = Number(plano.complemento_qtd) || 0, parc = Number(plano.complemento_parcela) || 0;
+  const venc1 = s(plano.complemento_venc1) ? s(plano.complemento_venc1).split('-').reverse().join('/') : '';
+  const w = await escritor(`Termo de Anuência ao Congelamento — ${s(c.ctr_numero)}`, marca, `Termo de Anuência ao Congelamento · integra o CPCV n.º ${s(c.ctr_numero)}`);
+  w.cabecalho('TERMO DE ANUÊNCIA DA PROMITENTE VENDEDORA AO CONGELAMENTO DO COMPLEMENTO DA ENTRADA',
+    `Integra o Instrumento Particular de Compromisso de Compra e Venda n.º ${s(c.ctr_numero)} · ${s(c.emp_nome)} · Chácara ${s(c.lote_codigo)} · Plano C`);
+  w.paragrafo([{ t: 'Pelo presente termo, ' }, { t: vendedora(c), b: true },
+    { t: `${docVendedora(c) ? `, ${docVendedora(c)}` : ''}, proprietária e instituidora do ${s(c.emp_nome)}, doravante denominada ` }, { t: 'PROMITENTE VENDEDORA', b: true },
+    { t: '; ' }, { t: s(c.comp_nome), b: true }, { t: `, ${qualificacaoComprador(c)}` },
+    ...(c.comp_casado && s(c.conj_nome) ? [{ t: ', e seu cônjuge/companheiro(a) ' }, { t: s(c.conj_nome), b: true }, { t: `, inscrito(a) no CPF sob o n.º ${s(c.conj_cpf)}` }] : []),
+    { t: ', doravante denominado(a) ' }, { t: 'PROMISSÁRIO(A) COMPRADOR(A)', b: true },
+    { t: '; e, como interveniente, ' }, { t: `${ESCRITORIO.razaoSocial} (${ESCRITORIO.fantasia})`, b: true },
+    { t: `, ${ESCRITORIO.creciJ}, inscrita no CNPJ sob o n.º ${ESCRITORIO.cnpj}, gestora de vendas do empreendimento, neste ato pelo responsável técnico ${ESCRITORIO.responsavel}, doravante denominada ` },
+    { t: 'GESTORA', b: true }, { t: ', ajustam o seguinte:' }]);
+
+  w.clausula('CLÁUSULA 1ª — DO OBJETO');
+  w.paragrafo(`1.1. Este termo tem por objeto o complemento da entrada do Plano C da ${unidade(c)}, Açailândia/MA, objeto do Instrumento Particular de Compromisso de Compra e Venda n.º ${s(c.ctr_numero)} (o "CPCV"), ao qual se integra.`);
+
+  w.clausula('CLÁUSULA 2ª — DO CONGELAMENTO E DA ANUÊNCIA');
+  w.paragrafo([{ t: '2.1. A PROMITENTE VENDEDORA ' }, { t: 'declara-se ciente e anui expressamente ao congelamento do complemento da entrada', b: true },
+    { t: ` concedido pela GESTORA ao(à) PROMISSÁRIO(A) COMPRADOR(A): o complemento, no valor total de R$ ${brl(total)} (${reaisExtenso(total)}), em ${qtd} (${extenso(qtd)}) parcelas mensais de R$ ${brl(parc)}, ` },
+    { t: `terá o pagamento iniciado no ${mes}º mês contado do pagamento do valor do ato da entrada${venc1 ? `, com o primeiro vencimento em ${venc1}` : ''}`, b: true },
+    { t: ', em carnê próprio, separado do carnê das parcelas do saldo.' }]);
+  w.paragrafo('2.2. Durante o congelamento não incidem juros nem correção monetária sobre o complemento. As parcelas do saldo financiado vencem normalmente a partir do mês seguinte ao do ato, na forma do CPCV e do Anexo II.');
+  w.paragrafo('2.3. O congelamento é condição deste contrato, aceita pela PROMITENTE VENDEDORA, e não constitui novação, renúncia nem perdão de dívida: o complemento continua devido e, vencida e não paga qualquer de suas parcelas, aplicam-se os encargos e as consequências do inadimplemento previstos no CPCV.');
+  w.paragrafo('2.4. O congelamento não altera o preço, a corretagem, a comissão de gestão nem os prazos de liberação de uso e de transferência previstos no CPCV.');
+
+  w.clausula('CLÁUSULA 3ª — DISPOSIÇÕES GERAIS');
+  w.paragrafo('3.1. Este termo integra o CPCV e prevalece sobre ele no que tratar do vencimento do complemento da entrada. As partes reconhecem a validade da assinatura eletrônica (MP n.º 2.200-2/2001, art. 10, § 2º; Lei n.º 14.063/2020) e elegem o foro da Comarca de Açailândia/MA, com renúncia a qualquer outro, por mais privilegiado que seja.');
+
+  w.paragrafo(`Açailândia/MA, ${s(c.ctr_data_extenso)}.`, { antes: 8, depois: 4 });
+  const blocos = [
+    { papel: 'PROMITENTE VENDEDORA (anuente)', nome: vendedora(c), doc: docVendedora(c).replace(/^inscrita no /, '').replace(' sob o n.º', '') },
+    { papel: 'PROMISSÁRIO(A) COMPRADOR(A)', nome: s(c.comp_nome), doc: `CPF ${s(c.comp_cpf)}` },
   ];
   if (c.comp_casado && s(c.conj_nome)) blocos.push({ papel: 'Cônjuge/companheiro(a) anuente', nome: s(c.conj_nome), doc: `CPF ${s(c.conj_cpf)}` });
   blocos.push({ papel: 'GESTORA (interveniente)', nome: `${ESCRITORIO.fantasia} — ${ESCRITORIO.responsavel}`, doc: `${ESCRITORIO.creciJ} · ${ESCRITORIO.creciResponsavel}` });

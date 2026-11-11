@@ -9,11 +9,11 @@ async function pdfComNomes() {
   const f = await d.embedFont(StandardFonts.HelveticaBold), r = await d.embedFont(StandardFonts.Helvetica);
   const p1 = d.addPage([595, 842]);
   // Qualificação (nome no meio do parágrafo): não conta
-  p1.drawText('PROMISSARIA COMPRADORA: SYLVIA KELLY COELHO PEREIRA, brasileira, solteira', { x: 60, y: 700, size: 10, font: r });
-  p1.drawText('SYLVIA KELLY COELHO PEREIRA', { x: 60, y: 300, size: 9, font: f });
-  p1.drawText('VALMA MARILDA BONJARDIM FIGUEREDO', { x: 320, y: 300, size: 9, font: f });
+  p1.drawText('PROMISSARIA COMPRADORA: MARIA FICTICIA DE TESTE, brasileira, solteira', { x: 60, y: 700, size: 10, font: r });
+  p1.drawText('MARIA FICTICIA DE TESTE', { x: 60, y: 300, size: 9, font: f });
+  p1.drawText('ANA PROPRIETARIA FICTICIA', { x: 320, y: 300, size: 9, font: f });
   const p2 = d.addPage([595, 842]);
-  p2.drawText('SYLVIA KELLY COELHO PEREIRA', { x: 60, y: 250, size: 9, font: f });
+  p2.drawText('MARIA FICTICIA DE TESTE', { x: 60, y: 250, size: 9, font: f });
   p2.drawText('ROMATEC CONSULTORIA TOTAL — GESTORA DE VENDAS E INTERMEDIADORA'.replace('—', '-'), { x: 60, y: 150, size: 9, font: f });
   return Buffer.from(await d.save());
 }
@@ -21,7 +21,7 @@ async function pdfComNomes() {
 describe('assinaturas posicionadas pelos nomes', () => {
   it('uma caixa em cada linha de assinatura com o nome (todas as páginas); nome no parágrafo não conta', async () => {
     const cx = await localizarAssinaturas(await pdfComNomes(), [
-      { papel: 'comprador', nome: 'Sylvia Kelly Coelho Pereira' }, { papel: 'vendedora', nome: 'VALMA MARILDA BONJARDIM FIGUEREDO' },
+      { papel: 'comprador', nome: 'Maria Ficticia de Teste' }, { papel: 'vendedora', nome: 'ANA PROPRIETARIA FICTICIA' },
       { papel: 'intermediadora', nome: 'José Romário Pinto Bezerra', apelidos: ['Romatec Consultoria Total'] },
     ]);
     const resumo = cx.map(c => `${c.papel}:${c.pagina}`).sort();
@@ -41,9 +41,9 @@ describe('Anexo X — documentos das partes', () => {
     const pdfDoc = await PDFDocument.create(); pdfDoc.addPage(); pdfDoc.addPage();
     const pdf = Buffer.from(await pdfDoc.save());
     const out = await anexoDocumentosPartes({ ctr_numero: 'BJ-2026-0002' } as any, 'bomjardims', [
-      { rotulo: 'Documento com foto (RG/CNH) — Sylvia (comprador(a))', nome: 'cnh.jpg', mime: 'image/jpeg', conteudo: jpg },
-      { rotulo: 'Comprovante de endereço — Sylvia (comprador(a))', nome: 'conta.webp', mime: 'image/webp', conteudo: webp },
-      { rotulo: 'CPF — Sylvia', nome: 'cpf.pdf', mime: 'application/pdf', conteudo: pdf },
+      { rotulo: 'Documento com foto (RG/CNH) — Maria (comprador(a))', nome: 'cnh.jpg', mime: 'image/jpeg', conteudo: jpg },
+      { rotulo: 'Comprovante de endereço — Maria (comprador(a))', nome: 'conta.webp', mime: 'image/webp', conteudo: webp },
+      { rotulo: 'CPF — Maria', nome: 'cpf.pdf', mime: 'application/pdf', conteudo: pdf },
     ]);
     expect((await PDFDocument.load(out!)).getPageCount()).toBe(1 + 1 + 1 + 2);
   });
