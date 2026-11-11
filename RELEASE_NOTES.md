@@ -9,7 +9,7 @@ obrigatoria: nao
 titulo: Correção de posicionamento das assinaturas
 publico: equipe
 
-### Novidades
+### Novo
 - Contrato assinado › aba Assinaturas › "Corrigir posicionamento" (só o administrador, com a senha): refaz a via a partir da versão enviada para assinatura (sem carimbos) e recoloca o carimbo de cada pessoa no lugar certo, com os mesmos dados da assinatura dela (data, hora, IP e código). Ninguém assina de novo. Sai uma versão nova, o manifesto é refeito com o novo SHA-256 e uma nota da correção, e a correção entra na linha do tempo do contrato. A "Via assinada" passa a sair corrigida
 - Contratos antigos sem espaço acima da linha de assinatura (bloco colado no cabeçalho): o carimbo vai logo abaixo do bloco da pessoa, sem cobrir texto
 
