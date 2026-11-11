@@ -3,6 +3,21 @@
 Cada versão nova vai no TOPO. Depois rode `npm run release` (valida e atualiza o package.json);
 ao subir, o servidor grava a versão no banco e todos recebem o aviso "Novidades da versão".
 
+## 1.161.1 — 2026-11-11
+tipo: patch
+obrigatoria: nao
+titulo: Correção de posicionamento também no termo, na intermediação e no Anexo VIII
+publico: equipe
+
+### Correções
+- Assinaturas: o sistema agora reconhece também a linha de assinatura desenhada (traço em linha ou retângulo fino), como no termo de anuência e no contrato de intermediação gerados antes da versão 1.160.1 e no Anexo VIII (tabela de água). Antes, nesses documentos o carimbo não saía
+- Linha de assinatura com o papel escrito embaixo, no lugar do nome ("VENDEDORA", "COMPRADOR(A)", "GESTORA"): passa a receber o carimbo da pessoa daquele papel
+- O espaço do cabeçalho é medido na própria página (faixa da marca), e não mais por uma margem fixa: anexos sem cabeçalho assinam no alto da página
+- A borda de um carimbo ou de uma caixa não conta mais como linha de assinatura
+
+### Avisos
+- BJ-2026-0002: rode de novo "Corrigir posicionamento" (aba Assinaturas) para incluir os carimbos do termo de anuência, do Anexo VIII e do contrato de intermediação. A correção parte sempre da versão enviada para assinatura, sem carimbos
+
 ## 1.161.0 — 2026-11-11
 tipo: minor
 obrigatoria: nao

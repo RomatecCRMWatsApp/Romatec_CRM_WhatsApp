@@ -31,6 +31,9 @@ async function pdfComNomes() {
   p3.drawText('MARIA FICTICIA DE TESTE', { x: 60, y: 120, size: 9, font: f });
   // Bloco que caiu no topo da página, colado no cabeçalho (p. 16 do BJ-2026-0002): sem espaço em cima, a caixa vai logo abaixo do bloco
   const p4 = d.addPage([595, 842]);
+  // Cabeçalho da marca (faixa de imagem no topo)
+  const cab = await d.embedPng(await sharp({ create: { width: 600, height: 80, channels: 3, background: '#2a5' } }).png().toBuffer());
+  p4.drawImage(cab, { x: 40, y: 772, width: 515, height: 66 });
   p4.drawText(TRACO, { x: 60, y: 760, size: 9, font: r });
   p4.drawText('ANA PROPRIETARIA FICTICIA', { x: 60, y: 748, size: 9, font: f });
   return Buffer.from(await d.save());
@@ -67,6 +70,29 @@ describe('assinaturas posicionadas pelos nomes', () => {
     const b = { papel: 'vendedora', pagina: 15, x: 0.32, y: 0.215, w: 0.28, h: 0.05 };
     const c = { papel: 'vendedora', pagina: 18, x: 0.31, y: 0.2, w: 0.4, h: 0.045 };
     expect(caixasSemSobreposicao([a, b, c])).toEqual([a, c]);
+  });
+});
+
+describe('traços desenhados (PDFs antigos e anexos fixos)', () => {
+  it('linha vetorial e retângulo fino valem como traço; papel escrito ("VENDEDORA") vale; contorno de carimbo não', async () => {
+    const { rgb } = await import('pdf-lib');
+    const d = await PDFDocument.create();
+    const f = await d.embedFont(StandardFonts.HelveticaBold);
+    const p = d.addPage([595, 842]);
+    // Termo/intermediação antigos: traço vetorial + nome
+    p.drawLine({ start: { x: 62, y: 400 }, end: { x: 283, y: 400 }, thickness: 0.6 });
+    p.drawText('MARIA FICTICIA DE TESTE', { x: 62, y: 389, size: 8.6, font: f });
+    // Anexo VIII: retângulo fino + papel escrito
+    p.drawRectangle({ x: 320, y: 400, width: 200, height: 0.75, color: rgb(0, 0, 0) });
+    p.drawText('VENDEDORA', { x: 390, y: 389, size: 9, font: f });
+    // Carimbo antigo (caixa com borda) com o nome dentro: não é linha de assinatura
+    p.drawRectangle({ x: 62, y: 200, width: 220, height: 40, borderColor: rgb(0.8, 0.6, 0.2), borderWidth: 0.8 });
+    p.drawText('ANA PROPRIETARIA FICTICIA', { x: 67, y: 225, size: 8, font: f });
+    const cx = await localizarAssinaturas(Buffer.from(await d.save()), [
+      { papel: 'comprador', nome: 'Maria Ficticia de Teste' }, { papel: 'vendedora', nome: 'ANA PROPRIETARIA FICTICIA' },
+    ]);
+    expect(cx.map(c => c.papel).sort()).toEqual(['comprador', 'vendedora']);
+    for (const c of cx) expect(Math.abs(c.y * 842 - 402)).toBeLessThan(2); // em cima do traço
   });
 });
 
