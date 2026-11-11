@@ -159,6 +159,13 @@ export default function ContratoDetalhe() {
             <div className="space-y-4">
               <section className="rounded-xl border border-border bg-card p-4">
                 <h2 className="mb-2 text-sm font-semibold">Documento</h2>
+                {(d as any).registro && !(d as any).registro.registrado && (
+                  <p className={`mb-2 rounded-md p-2 text-xs ${(d as any).registro.vendaAntesLiberada ? "bg-primary/10 text-primary" : "bg-warn-400/10 text-warn-300"}`}>
+                    {(d as any).registro.vendaAntesLiberada
+                      ? `Venda na planta liberada (parcelamento ainda não registrado${(d as any).registro.protocolo ? `, protocolo ${(d as any).registro.protocolo}` : ""}${(d as any).registro.prazoDias ? `, prazo ${(d as any).registro.prazoDias} dias` : ""}): o definitivo sai com a Cláusula 2.2 de venda antes do registro.`
+                      : "Parcelamento ainda não registrado: o definitivo fica travado até o administrador liberar a venda antes do registro (botão abaixo)."}
+                  </p>
+                )}
                 <div className="flex flex-wrap gap-2">
                   <Button variant="outline" disabled={encerrado || gerar.isPending} onClick={() => gerar.mutate({ id, alvo: "minuta" })}>
                     {gerar.isPending && gerar.variables?.alvo === "minuta" ? <Loader2 className="h-4 w-4 animate-spin" /> : <FileText className="h-4 w-4" />} Gerar minuta
@@ -168,6 +175,10 @@ export default function ContratoDetalhe() {
                       title={definitivoOk ? "" : "Bloqueado — veja a lista ao lado"}>
                       {gerar.isPending && gerar.variables?.alvo === "definitivo" ? <Loader2 className="h-4 w-4 animate-spin" /> : <FileSignature className="h-4 w-4" />} Gerar definitivo
                     </Button>
+                  )}
+                  {/* Parcelamento ainda não registrado: o administrador libera a venda na planta para gerar o definitivo */}
+                  {d.pode.cancelar && !encerrado && (d as any).registro && !(d as any).registro.registrado && !(d as any).registro.vendaAntesLiberada && (
+                    <Button variant="outline" className="border-warn-400 text-warn-300" onClick={() => setLiberandoPlanta(true)}>Liberar venda antes do registro</Button>
                   )}
                   {d.pode.definitivo && ["apto_assinatura", "em_assinatura", "assinado"].includes(c.status) && (
                     <Button variant="outline" disabled={assinado.isPending} onClick={enviarAssinado}><Upload className="h-4 w-4" /> Registrar contrato assinado</Button>

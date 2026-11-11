@@ -251,6 +251,14 @@ export const contratosRouter = router({
         solicitarCancelamento: (perfil === "corretor" || perfil === "secretario") && !["cancelado", "distratado"].includes(c.status),
       },
       cancelamento: c.canceladoEm ? { em: c.canceladoEm, motivo: c.canceladoMotivo, por: c.canceladoPor } : null,
+      // Registro do parcelamento: a tela oferece ao administrador liberar a venda antes do registro (venda na planta)
+      registro: await (async () => {
+        try {
+          const jj: any = await juridicoDe(c.empreendimentoId);
+          const df = (jj?.defaults ?? {}) as Record<string, unknown>;
+          return { registrado: df.emp_parcelamento_registrado === true, vendaAntesLiberada: df.emp_venda_antes_registro === true, protocolo: String(df.emp_registro_protocolo ?? ''), prazoDias: Number(df.emp_registro_prazo_dias) || null };
+        } catch { return null; }
+      })(),
       solicitacoes: await solicitacoesDo(c.id),
       dependentes: await dependentesDo(c.id),
       financeiro,

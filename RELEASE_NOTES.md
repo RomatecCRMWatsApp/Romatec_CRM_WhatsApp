@@ -3,6 +3,15 @@
 Cada versão nova vai no TOPO. Depois rode `npm run release` (valida e atualiza o package.json);
 ao subir, o servidor grava a versão no banco e todos recebem o aviso "Novidades da versão".
 
+## 1.158.1 — 2026-11-11
+tipo: patch
+obrigatoria: nao
+titulo: Botão "Liberar venda antes do registro" ao lado do "Gerar definitivo"
+publico: admin
+
+### Melhorias
+- Ficha do contrato, quadro "Documento": com o parcelamento ainda não registrado, aparece um aviso e, para o administrador, o botão "Liberar venda antes do registro" ao lado do "Gerar definitivo". Antes ele ficava só no quadro "Para o contrato definitivo", no fim da página no celular. Depois de liberada, o aviso mostra que a venda na planta está liberada, com o protocolo e o prazo
+
 ## 1.158.0 — 2026-11-11
 tipo: minor
 obrigatoria: nao
