@@ -264,7 +264,7 @@ export default function Simulador({ slug, lotes, ruas, perimetro, destinoSugerid
   const planoCond = condicao === "padrao" ? null : planosCond.find(p => p.prazo === prazo) ?? null;
   const plano = condicao === "padrao" ? sim?.planos.find(p => p.prazo === prazo) : planoCond ?? undefined;
   const vendido = data?.lote.selo === "vendido";
-  const proposta = () => window.open(`/empreendimentos/${slug}/proposta?lote=${codigo}&entrada=${entrada}&prazo=${prazo}`, "_blank");
+  const proposta = () => window.open(`/empreendimentos/${slug}/proposta?lote=${codigo}&entrada=${condicao === "padrao" ? entrada : 1}&prazo=${prazo}&condicao=${condicao}`, "_blank");
 
   return (
     <div className="grid items-start gap-4 lg:grid-cols-[1fr_420px]">
@@ -374,7 +374,7 @@ export default function Simulador({ slug, lotes, ruas, perimetro, destinoSugerid
             {vendido && <p className="rounded-xl border border-danger-500/50 bg-danger-500/10 p-3 text-sm text-danger-300">Chácara vendida: simulação só para consulta, sem proposta, envio ou vínculo.</p>}
             <div className="flex flex-wrap gap-1.5">
               <Button size="sm" variant="outline" onClick={() => setModal("evolucao")}>{condicao === "padrao" ? "Ver evolução" : "Ver cronograma"}</Button>
-              <Button size="sm" variant="outline" disabled={vendido || !plano || condicao !== "padrao"} title={condicao !== "padrao" ? "Proposta em PDF: por enquanto só na entrada de 30%. Use o cronograma (CSV) ou o envio no WhatsApp." : undefined} onClick={proposta}><FileText className="mr-1 h-4 w-4" /> Gerar proposta PDF</Button>
+              <Button size="sm" variant="outline" disabled={vendido || !plano} onClick={proposta}><FileText className="mr-1 h-4 w-4" /> Gerar proposta PDF</Button>
               <Button size="sm" variant="outline" disabled={vendido || !plano} className="border-[color:var(--c-25d366)]/40 text-[color:var(--c-1fa855)] hover:text-[color:var(--c-1fa855)]" onClick={() => setModal("whatsapp")}><Send className="mr-1 h-4 w-4" /> Enviar no WhatsApp</Button>
               <Button size="sm" variant="outline" disabled={vendido || !plano} onClick={() => setModal("lead")}><Link2 className="mr-1 h-4 w-4" /> Vincular ao lead</Button>
             </div>

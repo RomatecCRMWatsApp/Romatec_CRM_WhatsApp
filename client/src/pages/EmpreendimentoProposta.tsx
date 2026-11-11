@@ -3,6 +3,7 @@ import { trpc } from "@/lib/trpc";
 import { Button } from "@/components/ui/button";
 import { ArrowLeft, Printer } from "lucide-react";
 import { brl, textoEntrada } from "@shared/simulador";
+import { ROTULO_CONDICAO, planoCondicao, condicaoValida, type CondicaoPagamento, type PlanoCondicao } from "@shared/condicoesLancamento";
 import { FotoCorretor, useCartaoVendas } from "@/lib/cartaoVendas";
 
 /**
@@ -31,15 +32,19 @@ export default function EmpreendimentoProposta() {
   const lote = (q.get("lote") || "").toUpperCase();
   const entrada = Number(q.get("entrada")) || 1;
   const prazo = Number(q.get("prazo")) || 120;
+  // Plano da proposta: entrada de 30% (padrão) ou Planos A, B e C (entrada de R$ 10 mil no ato)
+  const condicao: CondicaoPagamento = condicaoValida(q.get("condicao")) ? (q.get("condicao") as CondicaoPagamento) : "padrao";
   const { data, error, isLoading } = trpc.simulador.simular.useQuery({ slug, lote, entrada }, { enabled: !!slug && !!lote, retry: false });
 
   if (!lote) return <p className="p-6 text-sm text-danger-400">Informe a chácara.</p>;
   if (error) return <p className="p-6 text-sm text-danger-400">{error.message}</p>;
   if (isLoading || !data) return <p className="p-6 text-sm text-muted-foreground">Carregando…</p>;
   const sim = data.simulacao;
-  const plano = sim.planos.find(p => p.prazo === prazo);
+  const plano = condicao === "padrao" ? sim.planos.find(p => p.prazo === prazo) : undefined;
+  let pc: PlanoCondicao | null = null;
+  if (condicao !== "padrao") { try { pc = planoCondicao(sim.preco, condicao, prazo, data.condicoes); } catch { pc = null; } }
   if (data.lote.selo === "vendido") return <p className="p-6 text-sm text-danger-400">Chácara {data.lote.codigo} vendida — sem proposta.</p>;
-  if (!plano) return <p className="p-6 text-sm text-danger-400">Prazo de {prazo} meses não está nas condições.</p>;
+  if (condicao === "padrao" ? !plano : !pc) return <p className="p-6 text-sm text-danger-400">Prazo de {prazo} meses não está nas condições{condicao !== "padrao" ? ` do ${ROTULO_CONDICAO[condicao].curto}` : ""}.</p>;
   const hoje = new Date().toLocaleDateString("pt-BR", { timeZone: "America/Fortaleza" });
 
   const Linha = ({ r, v, forte }: { r: string; v: string; forte?: boolean }) => (
@@ -71,16 +76,28 @@ export default function EmpreendimentoProposta() {
         <table style={{ width: "100%", borderCollapse: "collapse" }}>
           <tbody>
             <Linha r="Preço da chácara" v={brl(sim.preco)} forte />
-            <Linha r={`Entrada (${Math.round(data.condicoes.entradaPct * 100)}%)`} v={textoEntrada(sim)} />
-            <Linha r={`Saldo financiado (${Math.round((1 - data.condicoes.entradaPct) * 100)}%)`} v={brl(sim.saldo)} />
-            <Linha r="Parcelas do saldo (fixas)" v={`${plano.prazo}× de ${brl(plano.parcela)}`} forte />
-            <Linha r="Total das parcelas do saldo" v={brl(plano.totalSaldo)} />
-            <Linha r="Juros no período" v={brl(plano.juros)} />
-            <Linha r="Total a pagar (entrada + saldo)" v={brl(plano.totalPago)} forte />
+            {pc ? <>
+              <Linha r="Forma de pagamento" v={ROTULO_CONDICAO[condicao].titulo} forte />
+              <Linha r="Entrada no ato" v={brl(pc.entradaAto)} />
+              {pc.complemento && <Linha r="Resto da entrada (sem juros)" v={`${pc.complemento.qtd}× de ${brl(pc.complemento.parcela)} — ${pc.modoC === "sequencial" ? "antes do financiamento" : "no mesmo boleto da parcela"}`} />}
+              <Linha r="Saldo financiado" v={brl(pc.saldoFinanciado)} />
+              <Linha r="Parcelas do saldo (fixas)" v={`${pc.prazo}× de ${brl(pc.parcela)}`} forte />
+              {pc.reforco && <Linha r="Reforços anuais" v={`${pc.reforco.qtd}× de ${brl(pc.reforco.valor)} (a cada ${pc.reforco.intervaloMeses} meses)`} />}
+              {pc.complemento && pc.modoC !== "sequencial" && <Linha r="Desembolso mensal nos primeiros meses" v={brl(pc.mensalInicial)} />}
+              <Linha r="Juros no período" v={brl(pc.juros)} />
+              <Linha r="Total a pagar" v={brl(pc.totalPago)} forte />
+            </> : plano && <>
+              <Linha r={`Entrada (${Math.round(data.condicoes.entradaPct * 100)}%)`} v={textoEntrada(sim)} />
+              <Linha r={`Saldo financiado (${Math.round((1 - data.condicoes.entradaPct) * 100)}%)`} v={brl(sim.saldo)} />
+              <Linha r="Parcelas do saldo (fixas)" v={`${plano.prazo}× de ${brl(plano.parcela)}`} forte />
+              <Linha r="Total das parcelas do saldo" v={brl(plano.totalSaldo)} />
+              <Linha r="Juros no período" v={brl(plano.juros)} />
+              <Linha r="Total a pagar (entrada + saldo)" v={brl(plano.totalPago)} forte />
+            </>}
           </tbody>
         </table>
         </div>
-        <p style={{ margin: "8px 0 0", color: "var(--c-374151)" }}>{data.textoJuros}. 1ª parcela do saldo no mês seguinte à {entrada === 1 ? "entrada à vista" : "última parcela da entrada"}.</p>
+        <p style={{ margin: "8px 0 0", color: "var(--c-374151)" }}>{data.textoJuros}. {pc ? `1ª parcela do saldo no mês seguinte ao pagamento da entrada${pc.complemento && pc.modoC === "sequencial" ? ` — depois das ${pc.complemento.qtd} parcelas do resto da entrada` : ""}.` : `1ª parcela do saldo no mês seguinte à ${entrada === 1 ? "entrada à vista" : "última parcela da entrada"}.`}</p>
 
         <div style={{ marginTop: "14px", border: `1.5px solid ${OURO}`, borderRadius: "8px", padding: "10px 12px", background: "var(--c-fbf7ec)", display: "flex", justifyContent: "space-between", alignItems: "center", gap: "12px" }}>
           <div>

@@ -3,6 +3,15 @@
 Cada versão nova vai no TOPO. Depois rode `npm run release` (valida e atualiza o package.json);
 ao subir, o servidor grava a versão no banco e todos recebem o aviso "Novidades da versão".
 
+## 1.158.5 — 2026-11-11
+tipo: patch
+obrigatoria: nao
+titulo: Proposta em PDF também nos Planos A, B e C
+publico: usuarios
+
+### Correções
+- Simulador: o botão "Gerar proposta PDF" ficava cinza nos Planos A, B e C e só funcionava na entrada de 30%. Agora a proposta sai em qualquer plano, com a entrada de R$ 10 mil no ato, o resto da entrada sem juros (Plano C), os reforços anuais (Plano A), o saldo, as parcelas, os juros e o total
+
 ## 1.158.4 — 2026-11-11
 tipo: patch
 obrigatoria: nao
