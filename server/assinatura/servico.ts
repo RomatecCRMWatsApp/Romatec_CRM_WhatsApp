@@ -395,6 +395,23 @@ export async function receberGovbr(token: string, enviado: Buffer, o: { ip: stri
 
 // ─── Conclusão, manifesto e verificação ──────────────────────────────────────
 
+/** Manifesto (Anexo VII) da versão final: gera, grava e devolve a chave do arquivo */
+export async function gravarManifesto(contratoId: number, final: Buffer, sigs: any[], empreendimento: string, o: { nota?: string | null; sufixo?: string } = {}): Promise<string> {
+  const c = await contratoPorId(contratoId);
+  const j = await juridicoDe(c.empreendimentoId);
+  const manifesto = await renderManifesto({
+    numero: c.numero, codigo: c.codigoVerificacao, sha256: sha256(final), url: `${urlPublica()}/c/v/${c.codigoVerificacao}`, marca: j.marcaSlug,
+    empreendimento, emitidoEm: new Date(), nota: o.nota ?? null,
+    linhas: [...sigs].sort((a, b) => a.ordem - b.ordem).map(x => {
+      const e = json<Record<string, any>>(x.evidenciasJson) ?? {};
+      return { papel: x.papel, nome: x.nome, cpf: x.cpf, metodo: x.metodo, quando: x.assinadoEm ? new Date(x.assinadoEm) : null, ip: e.ip, emissor: e.emissor, status: x.status };
+    }),
+  });
+  const chave = `contratos/${contratoId}/manifesto-${c.numero}${o.sufixo ?? ''}.pdf`;
+  await salvarArquivo(chave, manifesto);
+  return chave;
+}
+
 export async function concluirSeTodos(contratoId: number): Promise<{ concluido: boolean }> {
   const d = await db();
   const sigs: any[] = await d.select().from(assinaturaSignatarios).where(eq(assinaturaSignatarios.contratoId, contratoId));
@@ -402,18 +419,8 @@ export async function concluirSeTodos(contratoId: number): Promise<{ concluido: 
   const c = await contratoPorId(contratoId);
   if (c.manifestoArquivo) return { concluido: true };
   const [emp] = await d.select({ nome: empreendimentos.nome }).from(empreendimentos).where(eq(empreendimentos.id, c.empreendimentoId)).limit(1);
-  const j = await juridicoDe(c.empreendimentoId);
   const final = await pdfAtual(contratoId);
-  const manifesto = await renderManifesto({
-    numero: c.numero, codigo: c.codigoVerificacao, sha256: sha256(final), url: `${urlPublica()}/c/v/${c.codigoVerificacao}`, marca: j.marcaSlug,
-    empreendimento: emp?.nome ?? '', emitidoEm: new Date(),
-    linhas: sigs.sort((a, b) => a.ordem - b.ordem).map(x => {
-      const e = json<Record<string, any>>(x.evidenciasJson) ?? {};
-      return { papel: x.papel, nome: x.nome, cpf: x.cpf, metodo: x.metodo, quando: x.assinadoEm ? new Date(x.assinadoEm) : null, ip: e.ip, emissor: e.emissor, status: x.status };
-    }),
-  });
-  const chave = `contratos/${contratoId}/manifesto-${c.numero}.pdf`;
-  await salvarArquivo(chave, manifesto);
+  const chave = await gravarManifesto(contratoId, final, sigs, emp?.nome ?? '');
   await d.update(contratos).set({ manifestoArquivo: chave, status: 'assinado' }).where(eq(contratos.id, contratoId));
   const { emitirCarteirasAuto } = await import('../contratos/carteirinhas');
   await emitirCarteirasAuto(contratoId);

@@ -1,11 +1,13 @@
 import { useEffect, useState } from "react";
 import { useLocation } from "wouter";
 import { toast } from "sonner";
-import { AlertTriangle, CheckCircle2, Clock, Copy, Download, Loader2, PenLine, Send } from "lucide-react";
+import { AlertTriangle, CheckCircle2, Clock, Copy, Download, Loader2, PenLine, Send, Wrench } from "lucide-react";
 import { trpc } from "@/lib/trpc";
 import { Button } from "@/components/ui/button";
 import { sel } from "@/components/cadastro/campos";
 import { AcoesPdf } from "@/components/sistema/AcoesPdf";
+import { useAuth } from "@/_core/hooks/useAuth";
+import { perfilDe } from "@shared/equipe";
 
 const METODOS = [["avancada", "Eletrônica avançada (link + código no WhatsApp)"], ["govbr", "gov.br (assinador.iti.br)"], ["icp_a1", "Certificado ICP-Brasil A1"]] as const;
 const EVENTO: Record<string, string> = {
@@ -20,7 +22,18 @@ export default function PainelAssinaturas({ id, status, podeEnviar }: { id: numb
   const { data, isLoading, error } = trpc.contratos.assinaturas.useQuery({ id });
   const [metodos, setMetodos] = useState<Record<string, string>>({});
   useEffect(() => { if (data?.previstos) setMetodos(Object.fromEntries(data.previstos.map((p: any) => [p.papel, p.metodo]))); }, [data]);
-  const recarregar = () => { utils.contratos.assinaturas.invalidate({ id }); utils.contratos.detalhe.invalidate({ id }); };
+  const recarregar = () => { utils.contratos.assinaturas.invalidate({ id }); utils.contratos.detalhe.invalidate({ id }); utils.contratos.linhaDoTempo.invalidate({ id }); };
+  const { user } = useAuth();
+  const admin = perfilDe(user as any) === "admin";
+  const [corrigindo, setCorrigindo] = useState(false);
+  const [senha, setSenha] = useState("");
+  const corrigir = trpc.contratos.corrigirPosicionamento.useMutation({
+    onSuccess: r => {
+      toast.success(`Posições corrigidas: ${r.caixas} assinatura(s) no lugar certo (versão ${r.versao}) e manifesto refeito`);
+      setCorrigindo(false); setSenha(""); recarregar();
+    },
+    onError: e => toast.error(e.message),
+  });
   const enviar = trpc.contratos.enviarParaAssinatura.useMutation({
     onSuccess: r => {
       const falhas = r.convites.filter((c: any) => !c.enviado);
@@ -81,8 +94,27 @@ export default function PainelAssinaturas({ id, status, podeEnviar }: { id: numb
         <div className="mb-2 flex flex-wrap items-center justify-between gap-2">
           <h2 className="text-sm font-semibold">Assinaturas · {assinados} de {data.signatarios.length}</h2>
           {data.manifesto && <AcoesPdf compacto rotulo="Via assinada completa" url={`/api/contratos/${id}/via-assinada.pdf`} nomeArquivo={`CONTRATO-${id}-VIA-ASSINADA.pdf`} mensagem="Contrato com todas as assinaturas e o manifesto (Anexo VII)" />}
+          {data.manifesto && admin && (
+            <Button size="sm" variant="outline" onClick={() => setCorrigindo(v => !v)} aria-expanded={corrigindo}
+              title="Refaz os carimbos no lugar certo a partir da versão enviada para assinatura, com os mesmos dados de cada assinatura">
+              <Wrench className="h-4 w-4" /> Corrigir posicionamento
+            </Button>
+          )}
           {data.manifesto && <AcoesPdf compacto rotulo="Manifesto (Anexo VII)" url={`/api/contratos/${id}/manifesto.pdf`} nomeArquivo={`MANIFESTO-ASSINATURAS-${id}.pdf`} mensagem="Manifesto de evidências das assinaturas (Anexo VII)" />}
         </div>
+        {admin && corrigindo && (
+          <div className="mb-3 space-y-2 rounded-lg border border-warn-500/40 bg-warn-500/10 p-3 text-xs text-warn-100">
+            <p><b>Correção de posicionamento.</b> O sistema volta à versão enviada para assinatura (sem carimbos), localiza de novo cada linha de assinatura e recoloca o carimbo de cada pessoa com os mesmos dados da assinatura dela (data, hora, IP e código). Ninguém assina de novo. Sai uma versão nova, o manifesto é refeito com o novo SHA-256 e a correção fica na linha do tempo.</p>
+            <div className="flex flex-wrap items-center gap-2">
+              <input type="password" autoComplete="current-password" value={senha} onChange={e => setSenha(e.target.value)} placeholder="Sua senha de administrador" aria-label="Senha do administrador"
+                className="h-8 w-56 rounded-md border border-border bg-background px-2 text-sm text-foreground" />
+              <Button size="sm" disabled={!senha || corrigir.isPending} onClick={() => corrigir.mutate({ id, senha })}>
+                {corrigir.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Wrench className="h-4 w-4" />} Corrigir agora
+              </Button>
+              <Button size="sm" variant="ghost" onClick={() => { setCorrigindo(false); setSenha(""); }}>Desistir</Button>
+            </div>
+          </div>
+        )}
         <div className="divide-y divide-border/50">
           {data.signatarios.map((s: any) => (
             <div key={s.id} className="flex flex-wrap items-center gap-3 py-2 text-sm">

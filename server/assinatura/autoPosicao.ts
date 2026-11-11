@@ -74,8 +74,14 @@ export function caixasDaPagina(ls: Trecho[], W: number, H: number, alvos: { pape
     const x = traco.x, w = Math.min(Math.max(traco.w, LARGURA_MIN), W - traco.x - 4);
     const teto = Math.min(H * (1 - MARGEM_TOPO), ...ls.filter(o => o !== traco && o.y > traco.y + 1 && sobrepoeX(o, { x, w })).map(o => o.y - o.fs * 0.3));
     const h = Math.min(ALTURA_MAX, teto - base - FOLGA);
-    if (h < ALTURA_MIN || base < H * MARGEM_RODAPE) continue;
-    out.push({ papel: s.papel, x, y: base, w, h });
+    if (h >= ALTURA_MIN && base >= H * MARGEM_RODAPE) { out.push({ papel: s.papel, x, y: base, w, h }); continue; }
+    // Sem espaço em cima do traço (PDF antigo, bloco colado no cabeçalho): a caixa vai logo abaixo do bloco da
+    // assinatura (nome, papel, documento), se ali houver espaço livre — nunca por cima de texto
+    const bloco = [l, ...ls.filter(o => o !== l && o.y < l.y && l.y - o.y <= 40 && sobrepoeX(o, { x, w }) && !ehTraco(o))];
+    const fundo = Math.min(...bloco.map(o => o.y - o.fs * 0.3)) - FOLGA;
+    const piso = Math.max(H * MARGEM_RODAPE, ...ls.filter(o => !bloco.includes(o) && o.y < fundo && sobrepoeX(o, { x, w })).map(o => o.y + o.fs));
+    const h2 = Math.min(ALTURA_MAX, fundo - piso - FOLGA);
+    if (h2 >= ALTURA_MIN) out.push({ papel: s.papel, x, y: fundo - h2, w, h: h2 });
   }
   return out;
 }

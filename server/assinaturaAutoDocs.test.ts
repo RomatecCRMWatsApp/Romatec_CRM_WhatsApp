@@ -29,7 +29,7 @@ async function pdfComNomes() {
   const p3 = d.addPage([595, 842]);
   p3.drawText('MARIA FICTICIA DE TESTE', { x: 60, y: 760, size: 9, font: f });
   p3.drawText('MARIA FICTICIA DE TESTE', { x: 60, y: 120, size: 9, font: f });
-  // Bloco que caiu no topo da página, colado no cabeçalho: sem espaço para a caixa, não entra (vai para o quadro de assinaturas)
+  // Bloco que caiu no topo da página, colado no cabeçalho (p. 16 do BJ-2026-0002): sem espaço em cima, a caixa vai logo abaixo do bloco
   const p4 = d.addPage([595, 842]);
   p4.drawText(TRACO, { x: 60, y: 760, size: 9, font: r });
   p4.drawText('ANA PROPRIETARIA FICTICIA', { x: 60, y: 748, size: 9, font: f });
@@ -41,9 +41,12 @@ describe('assinaturas posicionadas pelos nomes', () => {
     { papel: 'comprador', nome: 'Maria Ficticia de Teste' }, { papel: 'vendedora', nome: 'ANA PROPRIETARIA FICTICIA' },
     { papel: 'intermediadora', nome: 'José Romário Pinto Bezerra', apelidos: ['Romatec Consultoria Total'] },
   ];
-  it('só a linha com o nome logo abaixo de um traço de assinatura: tabela, parágrafo, documento anexado e topo da página não contam', async () => {
+  it('só a linha com o nome logo abaixo de um traço de assinatura: tabela, parágrafo e documento anexado não contam; bloco no topo da página assina embaixo', async () => {
     const cx = await localizarAssinaturas(await pdfComNomes(), sigs);
-    expect(cx.map(c => `${c.papel}:${c.pagina}`).sort()).toEqual(['comprador:1', 'comprador:2', 'intermediadora:2', 'vendedora:1']);
+    expect(cx.map(c => `${c.papel}:${c.pagina}`).sort()).toEqual(['comprador:1', 'comprador:2', 'intermediadora:2', 'vendedora:1', 'vendedora:4']);
+    const topo = cx.find(c => c.pagina === 4)!;
+    expect((topo.y + topo.h) * 842).toBeLessThan(748 - 2); // abaixo do nome, sem cobrir
+    expect(topo.y * 842).toBeGreaterThan(842 * 0.07);
     const c1 = cx.find(c => c.papel === 'comprador' && c.pagina === 1)!;
     expect(c1.y * 842).toBeGreaterThan(312); // em cima do traço
     expect(c1.y * 842).toBeLessThan(318);

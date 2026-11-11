@@ -339,6 +339,18 @@ export const contratosRouter = router({
     }),
 
   /** Excluir contrato sem dinheiro envolvido: SÓ o administrador, com a senha de login (com pagamento: Cancelar) */
+  /** Correção de posicionamento das assinaturas (contrato assinado; só o administrador, com a senha dele) */
+  corrigirPosicionamento: protectedProcedure.input(z.object({ id: z.number().int(), senha: z.string().min(1).max(200) }))
+    .mutation(async ({ ctx, input }) => tratar(async () => {
+      const { exigirAdminComSenha } = await import("../contratos/cancelamento");
+      await exigirAdminComSenha(ctx.user as any, input.senha, "corrigir_posicionamento", { contratoId: input.id, ip: (ctx as any).req?.ip ?? null });
+      const { corrigirPosicionamento, CorrecaoErro } = await import("../assinatura/correcao");
+      try { return await corrigirPosicionamento(input.id, ctx.user.id); } catch (e: any) {
+        if (e instanceof CorrecaoErro) throw new TRPCError({ code: e.status === 404 ? "NOT_FOUND" : "CONFLICT", message: e.message });
+        throw e;
+      }
+    })),
+
   excluir: protectedProcedure.input(z.object({ id: z.number().int(), motivo: z.string().trim().min(3).max(300), senha: z.string().min(1).max(200) }))
     .mutation(async ({ ctx, input }) => {
       exigir(perfilDe(ctx.user as any) === "admin", "Só o administrador exclui contratos.");

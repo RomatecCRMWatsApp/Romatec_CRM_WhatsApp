@@ -101,6 +101,10 @@ export async function linhaDoTempo(contratoId: number): Promise<EtapaLinha[]> {
   }
   const semVia = sigs.filter(s => s.whatsapp && !vias.some(v => v.signatarioId === s.id));
   if (c.manifestoArquivo) for (const s of semVia) add(`via:${s.id}`, `Via oficial para ${s.nome} (${papel(s.papel)})`, null, false, ['comprador', 'conjuge'].includes(String(s.papel)) ? 'vai pelo WhatsApp quando a entrada for paga' : 'aguardando envio');
+  for (const e of eventos.filter(x => x.evento === 'posicionamento_corrigido')) {
+    const det = json(e.detalhe);
+    add(`correcao:${det.versaoNova ?? e.criadoEm}`, 'Posicionamento das assinaturas corrigido', e.criadoEm, true, `versão ${det.versaoNova ?? '—'} · ${det.caixas ?? '?'} carimbo(s) sobre a versão enviada (v${det.versaoBase ?? '?'}), mesmos dados de cada assinatura · manifesto refeito`);
+  }
   add('ativo', ['quitado'].includes(c.status) ? 'Contrato quitado' : 'Contrato ativo', null, ['ativo', 'quitado'].includes(String(c.status)), ['ativo', 'quitado'].includes(String(c.status)) ? 'chácara vendida e cobranças gravadas' : null);
   return out;
 }

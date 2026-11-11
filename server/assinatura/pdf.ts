@@ -103,7 +103,7 @@ export async function carimbarAvancada(pdf: Buffer, cx: Caixa, s: { nome: string
 export interface LinhaManifesto { papel: string; nome: string; cpf: string; metodo: string; quando: Date | null; ip?: string | null; emissor?: string | null; status: string }
 
 /** Manifesto de assinaturas (Anexo VII): arquivo separado, com o hash da versão final e QR da verificação pública */
-export async function renderManifesto(o: { numero: string; codigo: string; sha256: string; url: string; marca: string; empreendimento: string; linhas: LinhaManifesto[]; emitidoEm: Date }): Promise<Buffer> {
+export async function renderManifesto(o: { numero: string; codigo: string; sha256: string; url: string; marca: string; empreendimento: string; linhas: LinhaManifesto[]; emitidoEm: Date; nota?: string | null }): Promise<Buffer> {
   const d = await PDFDocument.create();
   d.setTitle(`Manifesto de assinaturas — ${o.numero}`);
   const m = await embutirMarca(d, o.marca);
@@ -152,6 +152,7 @@ export async function renderManifesto(o: { numero: string; codigo: string; sha25
     'Avançada: link individual + código enviado ao WhatsApp do signatário, leitura integral e aceite (MP 2.200-2/2001, art. 10, § 2º).',
     'ICP-Brasil e gov.br: assinaturas digitais incrementais no próprio arquivo, conferíveis no painel do leitor de PDF.',
     `Emitido em ${o.emitidoEm.toLocaleString('pt-BR', { timeZone: 'America/Fortaleza' })}.`,
+    ...(o.nota ? [o.nota] : []),
   ]) { p.drawText(t, { x: X0, y, size: 7, font: f, color: CINZA, maxWidth: X1 - X0 }); y -= 11; }
   return Buffer.from(await d.save({ useObjectStreams: false }));
 }
