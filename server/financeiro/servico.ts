@@ -67,8 +67,12 @@ export async function cobrancaPorId(id: number) {
 
 export async function cobrancasDoContrato(contratoId: number): Promise<ReturnType<typeof linhaParaCobranca>[]> {
   const rs = await (await db()).select().from(cobrancas).where(eq(cobrancas.contratoId, contratoId));
-  const ordem = { entrada: 0, avista: 0, saldo: 1, renegociacao: 2, antecipacao: 3 } as Record<string, number>;
-  return rs.map(linhaParaCobranca).sort((a: any, b: any) => ordem[a.tipo] - ordem[b.tipo] || a.numero - b.numero);
+  // Em ordem de vencimento (entrada, saldo, complemento, reforço e renegociação intercalados pela data); no mesmo dia,
+  // entrada antes do saldo, depois complemento, reforço, renegociação e antecipação
+  const ordem: Record<string, number> = { entrada: 0, avista: 0, saldo: 1, complemento: 2, reforco: 3, renegociacao: 4, antecipacao: 5 };
+  const peso = (t: string) => ordem[t] ?? 9;
+  return rs.map(linhaParaCobranca).sort((a: any, b: any) =>
+    String(a.vencimento).slice(0, 10).localeCompare(String(b.vencimento).slice(0, 10)) || peso(a.tipo) - peso(b.tipo) || a.numero - b.numero);
 }
 
 /** Comprador/cônjuge do contrato (tabela pessoas) */

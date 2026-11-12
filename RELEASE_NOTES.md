@@ -3,6 +3,15 @@
 Cada versão nova vai no TOPO. Depois rode `npm run release` (valida e atualiza o package.json);
 ao subir, o servidor grava a versão no banco e todos recebem o aviso "Novidades da versão".
 
+## 1.162.1 — 2026-11-12
+tipo: patch
+obrigatoria: nao
+titulo: Parcelas em ordem de vencimento
+publico: equipe
+
+### Correções
+- Contrato › Financeiro, ficha do cliente e portal do comprador: as parcelas aparecem em ordem de vencimento. Antes, no Plano C, o complemento da entrada (que vence anos depois) aparecia misturado no meio das parcelas do saldo
+
 ## 1.162.0 — 2026-11-12
 tipo: minor
 obrigatoria: nao
