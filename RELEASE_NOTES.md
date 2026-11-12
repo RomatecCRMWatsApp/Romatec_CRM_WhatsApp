@@ -3,6 +3,16 @@
 Cada versão nova vai no TOPO. Depois rode `npm run release` (valida e atualiza o package.json);
 ao subir, o servidor grava a versão no banco e todos recebem o aviso "Novidades da versão".
 
+## 1.165.4 — 2026-11-12
+tipo: patch
+obrigatoria: nao
+titulo: Passo a passo da inadimplência no portal jurídico
+publico: equipe
+
+### Melhorias
+- Portal jurídico › Inadimplência: linha do tempo didática do procedimento, em 8 etapas — parcela vencida, notificação de constituição em mora (30 dias), requerimento ao cartório (Registro de Imóveis ou Títulos e Documentos), prazo da intimação, certidão e ata de resolução, cancelamento no registro, acerto de contas (art. 32-A) e a chácara de volta à venda. Cada etapa mostra o prazo, quem faz, a peça a gerar e a base legal
+- Fica aberta quando não há contrato em atraso e recolhível quando há casos na lista
+
 ## 1.165.3 — 2026-11-12
 tipo: patch
 obrigatoria: nao
