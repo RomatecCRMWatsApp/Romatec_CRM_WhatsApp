@@ -79,22 +79,26 @@ export async function carimbarAvancada(pdf: Buffer, cx: Caixa, s: { nome: string
   const p = pagina(d, cx.pagina);
   if (!p) throw new Error('Página da caixa de assinatura inexistente');
   const { width, height } = p.getSize();
-  const [x, y, w, h] = [cx.x * width, cx.y * height, cx.w * width, cx.h * height];
+  const [x0, y, w0, h] = [cx.x * width, cx.y * height, cx.w * width, cx.h * height];
   const f = await d.embedFont(StandardFonts.Helvetica), fb = await d.embedFont(StandardFonts.HelveticaBold);
-  p.drawRectangle({ x, y, width: w, height: h, borderColor: DOURADO, borderWidth: 0.8, color: CREME });
   const linhas: [string, PDFFont, number][] = [
     ['ASSINADO ELETRONICAMENTE', fb, 7], [s.nome, fb, 8],
     [`CPF ${cpfMascarado(s.cpf)} · ${s.quando.toLocaleString('pt-BR', { timeZone: 'America/Fortaleza' })}`, f, 6.5],
     [`IP ${s.ip} · verificação ${s.codigo}`, f, 6.5],
   ];
-  // Tudo dentro da caixa: cada linha numa linha só (a fonte diminui para caber na largura) e o bloco na altura
+  // Tudo dentro da caixa: cada linha numa linha só (a fonte diminui para caber) e o bloco na altura
   const escalaH = Math.min(1, (h - 6) / linhas.reduce((a, [, , sz]) => a + sz + 3, 0));
+  // Traço longo: o carimbo fica do tamanho do texto, centralizado sobre o traço (e o texto centralizado na caixa)
+  const largTexto = Math.max(...linhas.map(([t, font, size]) => font.widthOfTextAtSize(t, size * escalaH)));
+  const w = Math.min(w0, Math.max(200, largTexto + 24));
+  const x = x0 + (w0 - w) / 2;
+  p.drawRectangle({ x, y, width: w, height: h, borderColor: DOURADO, borderWidth: 0.8, color: CREME });
   let yy = y + h - 4;
   for (const [t, font, size] of linhas) {
     let sz = size * escalaH;
     while (sz > 4 && font.widthOfTextAtSize(t, sz) > w - 10) sz -= 0.2;
     yy -= sz + 1;
-    p.drawText(t, { x: x + 5, y: yy, size: sz, font, color: VERDE });
+    p.drawText(t, { x: x + (w - font.widthOfTextAtSize(t, sz)) / 2, y: yy, size: sz, font, color: VERDE });
     yy -= 2.6 * escalaH;
   }
   return Buffer.from(await d.save({ useObjectStreams: false }));

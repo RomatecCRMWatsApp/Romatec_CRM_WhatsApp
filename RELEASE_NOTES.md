@@ -3,6 +3,18 @@
 Cada versão nova vai no TOPO. Depois rode `npm run release` (valida e atualiza o package.json);
 ao subir, o servidor grava a versão no banco e todos recebem o aviso "Novidades da versão".
 
+## 1.161.2 — 2026-11-12
+tipo: patch
+obrigatoria: nao
+titulo: Carimbo de assinatura centralizado
+publico: equipe
+
+### Melhorias
+- Carimbo da assinatura eletrônica centralizado: nas linhas de assinatura longas (CPCV, Estatuto) o carimbo fica do tamanho do texto, no meio do traço; em todas as caixas o texto sai centralizado. Vale para todos os contratos
+
+### Avisos
+- BJ-2026-0002: rode "Corrigir posicionamento" mais uma vez para a via sair com os carimbos centralizados
+
 ## 1.161.1 — 2026-11-11
 tipo: patch
 obrigatoria: nao
