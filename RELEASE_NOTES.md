@@ -3,6 +3,16 @@
 Cada versão nova vai no TOPO. Depois rode `npm run release` (valida e atualiza o package.json);
 ao subir, o servidor grava a versão no banco e todos recebem o aviso "Novidades da versão".
 
+## 1.163.1 — 2026-11-12
+tipo: patch
+obrigatoria: nao
+titulo: Advogados em cortesia, com a opção de passar a cobrar
+publico: equipe
+
+### Melhorias
+- Corpo jurídico: o advogado aprovado (ou criado em Equipe) entra em cortesia, sem data de fim, no plano do corretor. Os advogados aparecem em Controle de acessos: dali você tira a cortesia, passa a cobrar a mesma mensalidade dos corretores ou bloqueia, quando quiser
+- Com a cortesia encerrada, o advogado vê a área do assinante para pagar e voltar ao portal
+
 ## 1.163.0 — 2026-11-12
 tipo: minor
 obrigatoria: nao

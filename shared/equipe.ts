@@ -67,7 +67,7 @@ const TRPC_EMPREENDEDOR = ['auth.', 'empreendedor.', 'system.versao', 'cadastro.
  * Corpo jurídico (advogados do empreendimento): só o portal jurídico — documentos (estatuto, modelos, contratos e
  * aditivos), financeiro do empreendimento (leitura) e as pontuações jurídicas. O escopo é o empreendimento do login.
  */
-const TRPC_JURIDICO = ['auth.', 'juridico.', 'system.versao', 'system.linkPdf', 'cadastro.', 'novidades.naoLidas', 'novidades.historico', 'novidades.marcarLida', 'novidades.marcarTodas', 'novidades.definirDescanso', 'notificacoes.'];
+const TRPC_JURIDICO = ['auth.', 'juridico.', 'system.versao', 'system.linkPdf', 'cadastro.', 'saas.minhaAssinatura', 'saas.minhaCheckout', 'saas.cupomValidar', 'novidades.naoLidas', 'novidades.historico', 'novidades.marcarLida', 'novidades.marcarTodas', 'novidades.definirDescanso', 'notificacoes.'];
 /** Secretário e corretor não mexem em configurações, na equipe nem na ZAYRA */
 const TRPC_SO_ADMIN = ['companyConfig.update', 'equipe.', 'zaira.'];
 
@@ -90,7 +90,7 @@ export function podeAbrir(perfil: Perfil | null, caminho: string): boolean {
   if (perfil === 'admin') return true;
   if (caminho === '/meu-cadastro' || caminho === '/instalar') return true;
   // Área do assinante (camada SaaS): corretor e empreendedor
-  if (caminho === '/assinatura') return perfil === 'corretor' || perfil === 'empreendedor';
+  if (caminho === '/assinatura') return perfil === 'corretor' || perfil === 'empreendedor' || perfil === 'juridico';
   if (perfil === 'juridico') return caminho === '/juridico' || caminho.startsWith('/juridico/');
   if (perfil === 'empreendedor') return caminho === '/empreendedor' || caminho.startsWith('/empreendedor/') || caminho === '/convites' || caminho.startsWith('/convites/') || caminho === '/ranking';
   // Recrutamento e talonários: administrador e secretária; Admin › SaaS: só o administrador

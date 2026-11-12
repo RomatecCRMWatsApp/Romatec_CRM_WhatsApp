@@ -24,7 +24,7 @@ beforeAll(async () => {
 });
 
 describe('perfil jurídico: regras', () => {
-  it('só o portal jurídico; nada do resto do CRM; sem licença paga', () => {
+  it('só o portal jurídico; nada do resto do CRM; licença como o corretor', () => {
     expect(perfilDe(advogado)).toBe('juridico');
     expect(telaInicial('juridico')).toBe('/juridico');
     expect(podeAbrir('juridico', '/juridico')).toBe(true);
@@ -34,7 +34,7 @@ describe('perfil jurídico: regras', () => {
     expect(podeChamar('juridico', 'juridico.painel')).toBe(true);
     expect(podeChamar('juridico', 'contratos.listar')).toBe(false);
     expect(podeChamar('juridico', 'financeiro.vendas')).toBe(false);
-    expect(precisaLicenca('juridico' as any)).toBe(false);
+    expect(precisaLicenca('juridico' as any)).toBe(true); // cortesia, com a opção de passar a cobrar
     expect(documentosDoPerfil('juridico').filter(d => d.obrigatorio).map(d => d.tipo)).toEqual(['foto', 'carteira_oab']);
   });
   it('escopo: só o empreendimento do login, e bloqueado não vê', () => {
@@ -69,5 +69,23 @@ describe('portal jurídico (tRPC)', () => {
   it('corretor não abre o portal jurídico', async () => {
     const cor = appRouter.createCaller(ctx({ id: 3, openId: 'c', name: 'Corretor', role: 'user', perfil: 'corretor', ativo: 1 }));
     await expect(cor.juridico.painel()).rejects.toThrow();
+  });
+});
+
+describe('cortesia do corpo jurídico', () => {
+  it('advogado criado entra em cortesia sem data de fim, no plano do corretor; licença liberada', async () => {
+    const { criarUsuarioComCadastro } = await import('./cadastroUsuario');
+    const { assinaturaDoUsuario } = await import('./saas/servico');
+    const { licencaLiberada } = await import('../shared/saas');
+    const r = await criarUsuarioComCadastro({
+      nome: 'Advogado Ficticio Dois', email: 'adv2@exemplo.com', telefone: '99991112222', perfil: 'juridico', empreendimentoSlug: 'bom-jardims', oab: '54321', oabUf: 'MA',
+      cpf: '52998224725', rg: '1234567', rgOrgao: 'SSP', nacionalidade: 'brasileira', dataNascimento: '1985-05-10', sexo: 'M', profissao: 'Advogado', estadoCivil: 'solteiro',
+      enderecoCep: '65930000', enderecoLogradouro: 'Rua A', enderecoNumero: '10', enderecoBairro: 'Centro', enderecoCidade: 'Açailândia', enderecoUf: 'MA',
+    }, { modulos: [], empreendimentosIds: [], imoveisIds: [] }, { id: 1, role: 'admin' }).catch((e: any) => { throw new Error(`${e.message} ${JSON.stringify(e.campos ?? e.cause?.campos ?? {})}`); });
+    expect(r.perfil).toBe('juridico');
+    const a: any = await assinaturaDoUsuario({ id: r.id, perfil: 'juridico', role: 'user' });
+    expect(a).toMatchObject({ origem: 'CORTESIA', status: 'ATIVA' });
+    expect(a.periodoFim).toBeNull();
+    expect(licencaLiberada(a)).toBe(true);
   });
 });

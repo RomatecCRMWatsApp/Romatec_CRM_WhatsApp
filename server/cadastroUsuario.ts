@@ -265,6 +265,14 @@ export async function criarUsuarioComCadastro(
     ] : [];
     if (acessos.length) await db.insert(acessosCorretor).values(acessos as any);
   }
+  // Corpo jurídico: entra em cortesia (sem data de fim) no plano do corretor; o administrador passa a cobrar ou
+  // bloqueia quando quiser (Controle de acessos / SaaS)
+  if (perfil === "juridico") {
+    try {
+      const { definirAssinatura } = await import("./saas/servico");
+      await definirAssinatura({ usuarioId: id, planoCodigo: "CORRETOR_ESSENCIAL", origem: "CORTESIA", periodoFim: null, motivo: "Cortesia — corpo jurídico do empreendimento (piloto)" }, autor.id);
+    } catch (e: any) { console.warn("[Cadastro] cortesia do jurídico:", e?.message); }
+  }
   return { id, perfil };
 }
 

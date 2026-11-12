@@ -214,7 +214,7 @@ function CartaoPessoa({ l, onAcao, onHistorico }: { l: Linha; onAcao: (a: Acao) 
         <div className="min-w-0 flex-1">
           <p className="truncate font-medium text-foreground">{l.nome}</p>
           <p className="truncate text-xs text-muted-foreground">
-            {l.perfil === "empreendedor" ? "Empreendedor" : "Corretor"}{l.creci ? `, CRECI ${numeroCreciPF(l.creci)}` : ""}{l.telefone ? `, ${l.telefone}` : ""}
+            {l.perfil === "empreendedor" ? "Empreendedor" : l.perfil === "juridico" ? "Advogado(a) — jurídico" : "Corretor"}{l.creci ? `, CRECI ${numeroCreciPF(l.creci)}` : ""}{l.telefone ? `, ${l.telefone}` : ""}
           </p>
         </div>
         <Selo texto={l.podeEntrar ? "Entra hoje" : "Sem acesso"} cor={l.podeEntrar ? "bg-ok-500/15 text-ok-300 border-ok-500/40" : "bg-danger-500/15 text-danger-300 border-danger-500/40"}

@@ -13,7 +13,7 @@ import { podeEntrar, resumoControle, situacaoDePagamento, situacaoDeUso, somarUs
 
 export class AcessoErro extends Error { constructor(msg: string, public status = 400) { super(msg); this.name = "AcessoErro"; } }
 
-const PERFIS_CONTROLADOS = ["corretor", "empreendedor"] as const;
+const PERFIS_CONTROLADOS = ["corretor", "empreendedor", "juridico"] as const;
 const DIAS_LOGINS = 30;
 const DIA_MS = 86_400_000;
 
@@ -105,7 +105,7 @@ async function pessoaControlada(id: number) {
   const d = await banco();
   const [u]: any[] = await d.select().from(users).where(eq(users.id, id)).limit(1);
   if (!u) throw new AcessoErro("Pessoa não encontrada", 404);
-  if (!(PERFIS_CONTROLADOS as readonly string[]).includes(perfilDe(u) ?? "")) throw new AcessoErro("Este controle é só para corretores e empreendedores", 403);
+  if (!(PERFIS_CONTROLADOS as readonly string[]).includes(perfilDe(u) ?? "")) throw new AcessoErro("Este controle é só para corretores, empreendedores e advogados", 403);
   return u;
 }
 

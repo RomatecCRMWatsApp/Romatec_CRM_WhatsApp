@@ -157,8 +157,8 @@ export function calcularMrr(itens: { status: string; origem: string; ciclo?: str
   return r2(itens.filter(a => a.status === 'ATIVA' && a.origem === 'PAGA').reduce((s, a) => s + valorMensal(a, a.plano), 0));
 }
 
-/** Perfis sujeitos à licença (admin e secretária são isentos) */
-export const precisaLicenca = (perfil: string | null | undefined) => perfil === 'corretor' || perfil === 'empreendedor';
+/** Perfis sujeitos à licença (admin e secretária são isentos). O jurídico entra em cortesia e pode passar a pagar o plano do corretor */
+export const precisaLicenca = (perfil: string | null | undefined) => perfil === 'corretor' || perfil === 'empreendedor' || perfil === 'juridico';
 
 /** Procedimentos tRPC liberados mesmo bloqueado (paywall, sessão e o próprio cadastro) */
 export const LIVRES_SEM_LICENCA = ['auth.', 'system.', 'saas.minha', 'saas.cupom', 'saas.planosPublicos', 'notificacoes.', 'cadastro.dados', 'cadastro.cartaoVendas'];
