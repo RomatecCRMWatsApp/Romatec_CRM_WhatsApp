@@ -3,6 +3,15 @@
 Cada versão nova vai no TOPO. Depois rode `npm run release` (valida e atualiza o package.json);
 ao subir, o servidor grava a versão no banco e todos recebem o aviso "Novidades da versão".
 
+## 1.165.5 — 2026-11-12
+tipo: patch
+obrigatoria: nao
+titulo: Inadimplência — ato jurídico de consolidação do bem
+publico: equipe
+
+### Melhorias
+- Portal jurídico: a seção de inadimplência passa a se chamar "Inadimplência — ato jurídico de consolidação do bem", e o passo a passo mostra o caminho até a chácara voltar ao empreendimento
+
 ## 1.165.4 — 2026-11-12
 tipo: patch
 obrigatoria: nao

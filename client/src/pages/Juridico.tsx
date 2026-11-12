@@ -193,7 +193,7 @@ export default function Juridico() {
         </section>
 
         {aba === "inadimplencia" && (<section aria-labelledby="aba-inadimplencia" className="space-y-3">
-        <Titulo id="inadimplencia" icone={AlertTriangle} sub="Constituição em mora, cartório e resolução do contrato (Lei n.º 6.766/1979, arts. 32 e 32-A).">Inadimplência</Titulo>
+        <Titulo id="inadimplencia" icone={AlertTriangle} sub="Constituição em mora, cartório, resolução do contrato e retorno da chácara ao empreendimento (Lei n.º 6.766/1979, arts. 32 e 32-A).">Inadimplência — ato jurídico de consolidação do bem</Titulo>
         <PainelInadimplencia slug={ehJuridico ? undefined : slug} />
         </section>)}
 

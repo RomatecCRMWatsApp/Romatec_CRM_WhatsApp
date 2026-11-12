@@ -95,7 +95,7 @@ function FluxoInadimplencia({ aberto }: { aberto: boolean }) {
   return (
     <details open={aberto} className="group rounded-xl border border-border bg-card/60 p-3">
       <summary className="cursor-pointer select-none text-sm font-semibold text-[#E8B931] focus-visible:outline focus-visible:outline-2 focus-visible:outline-[#E8B931]">
-        Passo a passo do procedimento — da parcela vencida à chácara de volta à venda
+        Passo a passo da consolidação do bem — da parcela vencida à chácara de volta ao empreendimento
       </summary>
       <ol className="relative mt-4 space-y-4 border-l border-[#E8B931]/40 pl-6">
         {ETAPAS.map(e => (
