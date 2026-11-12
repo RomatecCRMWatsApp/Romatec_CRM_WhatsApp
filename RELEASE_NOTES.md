@@ -3,6 +3,19 @@
 Cada versão nova vai no TOPO. Depois rode `npm run release` (valida e atualiza o package.json);
 ao subir, o servidor grava a versão no banco e todos recebem o aviso "Novidades da versão".
 
+## 1.165.2 — 2026-11-12
+tipo: patch
+obrigatoria: nao
+titulo: Portal jurídico em abas
+publico: equipe
+
+### Melhorias
+- Portal jurídico: os botões do topo (Inadimplência, Assinaturas, Documentos, Pontuações, Contratos, Financeiro, Certificado) viraram abas independentes — cada uma abre só a sua seção, e a aba aberta fica destacada em dourado. O endereço guarda a aba (dá para voltar direto nela)
+- "Pontuar" num documento ou contrato abre a aba de Pontuações já com o documento escolhido
+
+### Correções
+- Campo "Cláusula / artigo / página" da pontuação não é mais preenchido sozinho pelo navegador
+
 ## 1.165.1 — 2026-11-12
 tipo: patch
 obrigatoria: nao

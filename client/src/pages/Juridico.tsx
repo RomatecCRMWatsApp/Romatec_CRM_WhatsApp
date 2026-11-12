@@ -28,7 +28,7 @@ const STATUS_CONTRATO: Record<string, string> = {
 
 function Titulo({ id, icone: Icone, children, sub }: { id: string; icone: React.ComponentType<{ className?: string }>; children: React.ReactNode; sub?: string }) {
   return (
-    <div id={id} className="scroll-mt-28 pt-4">
+    <div id={`aba-${id}`} className="pt-2">
       <h2 className="flex items-center gap-2 text-base font-semibold text-[var(--rt-gold-light)] [font-family:var(--rt-font-title)] sm:text-lg"><Icone className="h-5 w-5 shrink-0" />{children}</h2>
       {sub && <p className="text-xs text-muted-foreground">{sub}</p>}
     </div>
@@ -57,7 +57,7 @@ function NovaPontuacao({ slug, documentos, inicial, onFeito }: { slug: string; d
           <select className={campo} value={tipo} onChange={e => setTipo(e.target.value as any)}><option value="alteracao">Alteração necessária</option><option value="indagacao">Indagação jurídica</option><option value="observacao">Observação</option></select>
         </label>
         <label className="text-xs text-muted-foreground">Cláusula / artigo / página
-          <input className={campo} value={trecho} onChange={e => setTrecho(e.target.value)} placeholder="Ex.: Cláusula 9ª, item 9.2" />
+          <input className={campo} value={trecho} onChange={e => setTrecho(e.target.value)} placeholder="Ex.: Cláusula 9ª, item 9.2" autoComplete="off" name="jur-trecho" />
         </label>
       </div>
       <label className="block text-xs text-muted-foreground">Pontuação
@@ -123,7 +123,10 @@ export default function Juridico() {
   const [filtro, setFiltro] = useState<string>("abertas");
   const [docPontuar, setDocPontuar] = useState<string | undefined>(undefined);
   const recarregar = () => { utils.juridico.pontuacoes.invalidate(); utils.juridico.painel.invalidate(); };
-  const ir = (id: string) => document.getElementById(id)?.scrollIntoView({ behavior: "smooth", block: "start" });
+  // Abas independentes: cada botão do topo abre só a sua seção (lembrada no #endereço)
+  const inicial = typeof window !== "undefined" ? window.location.hash.replace("#", "") : "";
+  const [aba, setAba] = useState<string>(SECOES.some(([id]) => id === inicial) ? inicial : "inadimplencia");
+  const ir = (id: string) => { setAba(id); try { window.history.replaceState(null, "", `#${id}`); } catch { /* sem histórico */ } window.scrollTo({ top: 0, behavior: "smooth" }); };
   const slug = p?.empreendimento.slug ?? "bom-jardims";
   const lista = pts.filter(x => filtro === "todas" || (filtro === "abertas" ? x.status !== "resolvido" : x.status === "resolvido"));
   const porDoc = new Map<string, number>();
@@ -151,9 +154,12 @@ export default function Juridico() {
           <FotoUsuario />
           <Button size="sm" variant="ghost" className="px-2 text-white hover:bg-white/15 sm:px-3" title="Sair" onClick={() => logout()}><LogOut className="h-4 w-4" /></Button>
         </div>
-        <div className="mx-auto flex max-w-[1500px] gap-1.5 overflow-x-auto px-3 pb-2 sm:px-4 md:px-6 [scrollbar-width:none]">
+        <div role="tablist" aria-label="Seções do portal jurídico" className="mx-auto flex max-w-[1500px] gap-1.5 overflow-x-auto px-3 pb-2 sm:px-4 md:px-6 [scrollbar-width:none]">
           {SECOES.map(([id, rotulo, Icone]) => (
-            <button key={id} onClick={() => ir(id)} className="flex shrink-0 items-center gap-1.5 rounded-full border border-border px-3 py-1 text-xs font-medium text-white/80 transition hover:border-[var(--rt-gold)]/60 hover:text-white focus-visible:outline focus-visible:outline-2 focus-visible:outline-[var(--rt-gold)]">
+            <button key={id} role="tab" aria-selected={aba === id} onClick={() => ir(id)}
+              className={`flex shrink-0 items-center gap-1.5 rounded-full border px-3 py-1 text-xs font-medium transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-[#F6D56B] ${aba === id
+                ? "border-[#E8B931] bg-[#E8B931] text-[#1b1402] shadow-[0_0_12px_rgba(232,185,49,.35)]"
+                : "border-border text-white/80 hover:border-[#E8B931]/60 hover:text-white"}`}>
               <Icone className="h-3.5 w-3.5" />{rotulo}
             </button>
           ))}
@@ -186,12 +192,17 @@ export default function Juridico() {
           )}
         </section>
 
+        {aba === "inadimplencia" && (<section aria-labelledby="aba-inadimplencia" className="space-y-3">
         <Titulo id="inadimplencia" icone={AlertTriangle} sub="Constituição em mora, cartório e resolução do contrato (Lei n.º 6.766/1979, arts. 32 e 32-A).">Inadimplência</Titulo>
         <PainelInadimplencia slug={ehJuridico ? undefined : slug} />
+        </section>)}
 
+        {aba === "assinaturas" && (<section aria-labelledby="aba-assinaturas" className="space-y-3">
         <Titulo id="assinaturas" icone={PenTool} sub="Notificações, requerimentos, atas, ofícios e alterações — assinados com certificado digital ICP-Brasil.">Documentos e assinaturas</Titulo>
         <DocumentosJuridicos slug={ehJuridico ? undefined : slug} podeEnviar admin={!ehJuridico} />
+        </section>)}
 
+        {aba === "documentos" && (<section aria-labelledby="aba-documentos" className="space-y-3">
         <Titulo id="documentos" icone={FileText} sub="Versões em vigor, geradas na hora com um cliente fictício. Alguns PDFs levam alguns segundos.">Documentos do empreendimento</Titulo>
         <div className="grid gap-2 md:grid-cols-2">
           {(p?.documentos ?? []).map(d => (
@@ -205,7 +216,9 @@ export default function Juridico() {
             </div>
           ))}
         </div>
+        </section>)}
 
+        {aba === "pontuacoes" && (<section aria-labelledby="aba-pontuacoes" className="space-y-3">
         <Titulo id="pontuacoes" icone={MessageSquarePlus} sub="Alterações necessárias, indagações jurídicas e observações sobre cada documento.">Pontuações jurídicas</Titulo>
         {p && <NovaPontuacao key={docPontuar ?? "x"} slug={slug} documentos={p.documentos} inicial={docPontuar} onFeito={recarregar} />}
         <div className="flex gap-1.5">
@@ -217,7 +230,9 @@ export default function Juridico() {
           {!lista.length && <p className="rounded-xl border border-dashed border-border p-4 text-sm text-muted-foreground">Nenhuma pontuação {filtro === "abertas" ? "em aberto" : filtro === "resolvidas" ? "resolvida" : "ainda"}.</p>}
           {lista.map(x => <CartaoPontuacao key={x.id} p={x} admin={!!p?.admin} onFeito={recarregar} />)}
         </div>
+        </section>)}
 
+        {aba === "contratos" && (<section aria-labelledby="aba-contratos" className="space-y-3">
         <Titulo id="contratos" icone={Gavel} sub="Contratos do empreendimento, com o PDF atual, a via assinada (com o manifesto) e os termos aditivos.">Contratos e aditivos</Titulo>
         <div className="space-y-2">
           {!cs.length && <p className="rounded-xl border border-dashed border-border p-4 text-sm text-muted-foreground">Nenhum contrato ainda.</p>}
@@ -246,7 +261,9 @@ export default function Juridico() {
             </div>
           ))}
         </div>
+        </section>)}
 
+        {aba === "financeiro" && (<section aria-labelledby="aba-financeiro" className="space-y-3">
         <Titulo id="financeiro" icone={Receipt} sub="Contratado, recebido, em aberto e vencido por contrato — base para o acompanhamento e o percentual do escritório.">Financeiro do empreendimento</Titulo>
         {fin?.totais ? (
           <>
@@ -275,9 +292,13 @@ export default function Juridico() {
             </div>
           </>
         ) : <p className="text-sm text-muted-foreground">Sem contratos com financeiro ainda.</p>}
+        </section>)}
 
+        {aba === "certificado" && (<section aria-labelledby="aba-certificado" className="space-y-3">
         <Titulo id="certificado" icone={FileKey2} sub="O seu certificado para assinar os documentos do portal.">Meu certificado digital</Titulo>
         <CertificadoDigital />
+        </section>)}
+
       </div>
     </div>
   );
