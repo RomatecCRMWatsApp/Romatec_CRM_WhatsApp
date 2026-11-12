@@ -44,6 +44,9 @@ export const users = mysqlTable("users", {
   recebeLeads: boolean("recebeLeads").default(false).notNull(),
   // ─── Cadastro completo (shared/cadastro.ts) — o contrato puxa do corretor (intermediador) ───
   creciUf: varchar("creciUf", { length: 2 }),
+  /** Advogado (perfil jurídico): n.º e seccional da OAB */
+  oab: varchar("oab", { length: 20 }),
+  oabUf: varchar("oabUf", { length: 2 }),
   /** Instagram do usuário, sem @ (opcional; nas peças, sem ele vai o institucional @avalieimob) */
   instagram: varchar("instagram", { length: 40 }),
   cpf: varchar("cpf", { length: 11 }),
@@ -2497,3 +2500,24 @@ export const financeiroPosicoes = mysqlTable("financeiroPosicoes", {
   qtdVencidos: int("qtdVencidos").notNull().default(0),
   criadoEm: timestamp("criadoEm").defaultNow().notNull(),
 }, (t) => ({ uxDia: uniqueIndex("ux_posicao_dia").on(t.data, t.escopo) }));
+
+/** Pontuações/indagações jurídicas dos advogados do empreendimento sobre cada documento (portal jurídico) */
+export const juridicoApontamentos = mysqlTable("juridicoApontamentos", {
+  id: int("id").autoincrement().primaryKey(),
+  empreendimentoId: int("empreendimentoId").notNull(),
+  /** estatuto | cpcv | cpcv-A | intermediacao | diretrizes | contrato:<id> | geral … */
+  documento: varchar("documento", { length: 60 }).notNull(),
+  documentoRotulo: varchar("documentoRotulo", { length: 200 }).notNull(),
+  /** Cláusula/artigo/página a que se refere */
+  trecho: varchar("trecho", { length: 300 }),
+  /** alteracao | indagacao | observacao */
+  tipo: varchar("tipo", { length: 12 }).default("alteracao").notNull(),
+  texto: text("texto").notNull(),
+  autorId: int("autorId").notNull(),
+  /** aberto | respondido | resolvido */
+  status: varchar("status", { length: 12 }).default("aberto").notNull(),
+  resposta: text("resposta"),
+  respondidoPor: int("respondidoPor"),
+  respondidoEm: datetime("respondidoEm"),
+  criadoEm: timestamp("criadoEm").defaultNow().notNull(),
+});

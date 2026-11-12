@@ -8,9 +8,9 @@
  */
 import { ROTULO_DOCUMENTO } from './cadastro';
 
-export const PERFIS_RECRUTAMENTO = ['corretor', 'secretario', 'empreendedor'] as const;
+export const PERFIS_RECRUTAMENTO = ['corretor', 'secretario', 'empreendedor', 'juridico'] as const;
 export type PerfilRecrutamento = typeof PERFIS_RECRUTAMENTO[number];
-export const ROTULO_PERFIL_RECRUTAMENTO: Record<PerfilRecrutamento, string> = { corretor: 'Corretor(a)', secretario: 'Secretária(o)', empreendedor: 'Empreendedor(a)' };
+export const ROTULO_PERFIL_RECRUTAMENTO: Record<PerfilRecrutamento, string> = { corretor: 'Corretor(a)', secretario: 'Secretária(o)', empreendedor: 'Empreendedor(a)', juridico: 'Advogado(a) — corpo jurídico' };
 
 /** Quem usa a aba Recrutamento: o administrador e a secretária */
 export const podeRecrutar = (perfil: string | null | undefined) => perfil === 'admin' || perfil === 'secretario';
@@ -36,6 +36,14 @@ export function documentosDoPerfil(perfil: PerfilRecrutamento): DocRecrutamento[
       { tipo: 'cartao_creci', rotulo: ROTULO_DOCUMENTO.cartao_creci, obrigatorio: true, dica: 'Carteirinha do CRECI' },
       { tipo: 'certidao_creci', rotulo: ROTULO_DOCUMENTO.certidao_creci, obrigatorio: true, dica: 'Certidão válida — emita no site do CRECI da sua região' },
       { tipo: 'certificado_cnai', rotulo: ROTULO_DOCUMENTO.certificado_cnai, obrigatorio: false },
+      residencia,
+    ];
+  }
+  if (perfil === 'juridico') {
+    return [
+      foto,
+      { tipo: 'carteira_oab', rotulo: ROTULO_DOCUMENTO.carteira_oab, obrigatorio: true, dica: 'Frente e verso, foto ou PDF (vale como documento com foto)' },
+      { tipo: 'certidao_oab', rotulo: ROTULO_DOCUMENTO.certidao_oab, obrigatorio: false, dica: 'Certidão de regularidade emitida pela seccional' },
       residencia,
     ];
   }

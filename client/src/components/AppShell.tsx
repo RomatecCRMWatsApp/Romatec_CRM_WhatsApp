@@ -7,7 +7,7 @@ import { trpc } from "@/lib/trpc";
 import AvisoRotinas from "./AvisoRotinas";
 import { MobileTabBar, RomatecAppIcon, RomatecLockup, TAB_ICONS, type TabItem } from "@/brand";
 import BuscaGlobal, { JanelaBusca, type TelaBusca } from "@/components/BuscaGlobal";
-import {
+import { Scale,
   BarChart3, Building2, Flame, Images, KanbanSquare, LayoutDashboard, LineChart, LogOut, Megaphone, Menu, Send,
   Settings, UserCog, Users, X, Eye, ClipboardList, CalendarDays, Map as MapIcon, Smartphone, Wallet, IdCard, FolderOpen, Bell, FileSignature, Handshake, Mic, CalendarCheck, UserPlus, BookCopy, BadgeDollarSign, Hourglass, Bot, Trophy, Link2, Zap, MessagesSquare, ListOrdered, Plug, Inbox, Building, Rotate3d,
   ChevronRight, ChevronsLeft, ChevronsRight,
@@ -107,6 +107,7 @@ const MENU: Grupo[] = [
       { rotulo: "Visão portal do corretor", rota: "/ver-como?perfil=corretor", icone: Smartphone },
       { rotulo: "Visão da secretária", rota: "/ver-como?perfil=secretario", icone: UserCog },
       { rotulo: "Visão do empreendedor", rota: "/ver-como?perfil=empreendedor", icone: Eye },
+      { rotulo: "Portal jurídico", rota: "/juridico", icone: Scale },
       { rotulo: "Configurações", rota: "/settings", icone: Settings },
     ],
   },

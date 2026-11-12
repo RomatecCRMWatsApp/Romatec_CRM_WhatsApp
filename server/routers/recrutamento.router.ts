@@ -45,7 +45,7 @@ export const recrutamentoRouter = router({
   detalhe: protectedProcedure.input(z.object({ id: z.number().int() }))
     .query(async ({ ctx, input }) => { exigirRecrutador(ctx); return comErro(async () => (await S()).detalheRecrutamento(input.id)); }),
   criarConvite: protectedProcedure.input(z.object({
-    perfil: z.enum(["corretor", "secretario"]), nome: z.string().trim().min(3).max(150), telefone: z.string().trim().min(10).max(25),
+    perfil: z.enum(["corretor", "secretario", "juridico"]), nome: z.string().trim().min(3).max(150), telefone: z.string().trim().min(10).max(25),
     empreendimentoSlug: z.string().max(80).nullable().optional(), enviar: z.boolean().default(true),
   })).mutation(async ({ ctx, input }) => {
     exigirRecrutador(ctx);

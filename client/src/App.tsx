@@ -80,6 +80,7 @@ function Inicio() {
 const Equipe = lazy(() => import("./pages/Equipe"));
 const MeuCadastro = lazy(() => import("./pages/MeuCadastro"));
 const Empreendedor = lazy(() => import("./pages/Empreendedor"));
+const Juridico = lazy(() => import("./pages/Juridico"));
 const PrimeiroAcesso = lazy(() => import("./pages/PrimeiroAcesso"));
 import { perfilDe, podeAbrir, telaInicial } from "@shared/equipe";
 const AppShell = lazy(() => import("./components/AppShell"));
@@ -116,7 +117,7 @@ function SetupGuard({ component: Component }: { component: React.ComponentType }
   const perfil = perfilDe(user as any);
   // Empreendedor não lê a configuração da empresa (nem precisa do /setup)
   const { data: config, isLoading } = trpc.companyConfig.get.useQuery(undefined, {
-    enabled: isAuthenticated && perfil !== "empreendedor",
+    enabled: isAuthenticated && perfil !== "empreendedor" && perfil !== "juridico",
   });
   const permitido = !isAuthenticated || podeAbrir(perfil, location);
 
@@ -144,7 +145,7 @@ function SetupGuard({ component: Component }: { component: React.ComponentType }
 
   if (!permitido) return null;
   // Telas internas dentro do menu lateral; o empreendedor tem o painel próprio, sem menu do CRM
-  return perfil === "empreendedor" || location.startsWith("/empreendedor") || location === "/assinatura" ? <Suspense fallback={null}><Component /></Suspense> : <AppShell><Suspense fallback={null}><Component /></Suspense></AppShell>;
+  return perfil === "empreendedor" || perfil === "juridico" || location.startsWith("/empreendedor") || location.startsWith("/juridico") || location === "/assinatura" ? <Suspense fallback={null}><Component /></Suspense> : <AppShell><Suspense fallback={null}><Component /></Suspense></AppShell>;
 }
 
 function Router() {
@@ -194,6 +195,9 @@ function Router() {
       </Route>
       <Route path={"/empreendedor"}>
         {() => <SetupGuard component={Empreendedor} />}
+      </Route>
+      <Route path={"/juridico"}>
+        {() => <SetupGuard component={Juridico} />}
       </Route>
       <Route path={"/ver-como"}>
         {() => <SetupGuard component={VerComo} />}

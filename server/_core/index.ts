@@ -1566,6 +1566,13 @@ async function startServer() {
   }
 
   try {
+    const { addJuridico } = await import('./migrations/addJuridico');
+    await addJuridico();
+  } catch (e) {
+    console.error('❌ Erro na migration addJuridico:', e);
+  }
+
+  try {
     const { addReleases } = await import('./migrations/addReleases');
     await addReleases();
     // Notas de versão: grava no banco a versão do RELEASE_NOTES.md (todos recebem o "Novidades da versão")

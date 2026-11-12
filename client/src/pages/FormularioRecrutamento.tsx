@@ -37,7 +37,7 @@ function Anexo({ token, doc, enviado, onMudou }: { token: string; doc: DocRecrut
     if (!f) return;
     setEstado("Enviando…");
     try {
-      const q = doc.tipo === "certidao_creci" && validade ? `?validade=${validade}` : "";
+      const q = (doc.tipo === "certidao_creci" || doc.tipo === "certidao_oab") && validade ? `?validade=${validade}` : "";
       const r = await fetch(`/api/public/recrutamento/${encodeURIComponent(token)}/docs/${doc.tipo}${q}`, { method: "POST", headers: { "Content-Type": "application/octet-stream", "x-nome-arquivo": encodeURIComponent(f.name) }, body: f });
       const j = await r.json().catch(() => ({}));
       if (!r.ok || !j.ok) throw new Error(j.error || "Não foi possível enviar");
@@ -53,7 +53,7 @@ function Anexo({ token, doc, enviado, onMudou }: { token: string; doc: DocRecrut
       </div>
       {doc.dica && <p className="mt-0.5 text-xs text-muted-foreground">{doc.dica}</p>}
       <div className="mt-2 flex flex-wrap items-center gap-2">
-        {doc.tipo === "certidao_creci" && (
+        {(doc.tipo === "certidao_creci" || doc.tipo === "certidao_oab") && (
           <label className="text-xs text-muted-foreground">Válida até <input type="date" value={validade} onChange={e => setValidade(e.target.value)} className="ml-1 h-8 rounded-md border border-border bg-background px-2 text-sm" /></label>
         )}
         <input ref={input} type="file" hidden accept={doc.tipo === "foto" ? "image/jpeg,image/png,image/webp" : "image/jpeg,image/png,image/webp,application/pdf"}
@@ -84,7 +84,7 @@ export default function FormularioRecrutamento() {
   useEffect(() => {
     if (!data || carregado.current) return;
     carregado.current = true;
-    setF({ nacionalidade: "brasileira", rgOrgao: "SSP", creciUf: "MA", enderecoUf: "MA", ...data.dados, conjuge: { nacionalidade: "brasileira", mesmoEndereco: true, ...(data.dados?.conjuge ?? {}) } });
+    setF({ nacionalidade: "brasileira", rgOrgao: "SSP", creciUf: "MA", oabUf: "MA", enderecoUf: "MA", ...data.dados, conjuge: { nacionalidade: "brasileira", mesmoEndereco: true, ...(data.dados?.conjuge ?? {}) } });
     if (data.status === "preenchido") setEnviado(true);
   }, [data]);
   const salvar = trpc.recrutamento.salvarFormulario.useMutation();
@@ -189,6 +189,15 @@ export default function FormularioRecrutamento() {
             <div className="grid gap-3 sm:grid-cols-3">
               <Campo rotulo="Nº do CRECI" erro={e("creci")}><input {...inp("creci", { inputMode: "numeric" })} /></Campo>
               <Campo rotulo="UF do CRECI" erro={e("creciUf")}><select className={sel} value={s(f.creciUf)} onChange={x => set("creciUf", x.target.value)}>{UFS.map(u => <option key={u}>{u}</option>)}</select></Campo>
+            </div>
+          </Secao>
+        )}
+
+        {data.perfil === "juridico" && (
+          <Secao titulo="OAB">
+            <div className="grid gap-3 sm:grid-cols-3">
+              <Campo rotulo="Nº da OAB" erro={e("oab")}><input {...inp("oab", { autoCapitalize: "characters" })} /></Campo>
+              <Campo rotulo="Seccional (UF)" erro={e("oabUf")}><select className={sel} value={s(f.oabUf)} onChange={x => set("oabUf", x.target.value)}>{UFS.map(u => <option key={u}>{u}</option>)}</select></Campo>
             </div>
           </Secao>
         )}

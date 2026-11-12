@@ -785,4 +785,12 @@ export function initSqliteTables(sqlite: any): void {
     tipo TEXT NOT NULL DEFAULT 'outro', url TEXT NOT NULL, mime TEXT, tamanhoBytes INTEGER, liberado INTEGER NOT NULL DEFAULT 1,
     observacao TEXT, ordem INTEGER NOT NULL DEFAULT 0, recorteRodapePct INTEGER, corteFinalMs INTEGER, createdAt INTEGER NOT NULL DEFAULT (strftime('%s','now'))
   )`);
+  // Corpo jurídico (server/_core/migrations/addJuridico.ts)
+  addColumn(`ALTER TABLE users ADD COLUMN oab TEXT`);
+  addColumn(`ALTER TABLE users ADD COLUMN oabUf TEXT`);
+  run(`CREATE TABLE IF NOT EXISTS juridicoApontamentos (
+    id INTEGER PRIMARY KEY AUTOINCREMENT, empreendimentoId INTEGER NOT NULL, documento TEXT NOT NULL, documentoRotulo TEXT NOT NULL, trecho TEXT,
+    tipo TEXT NOT NULL DEFAULT 'alteracao', texto TEXT NOT NULL, autorId INTEGER NOT NULL, status TEXT NOT NULL DEFAULT 'aberto', resposta TEXT,
+    respondidoPor INTEGER, respondidoEm TEXT, criadoEm TEXT NOT NULL DEFAULT (datetime('now'))
+  )`);
 }

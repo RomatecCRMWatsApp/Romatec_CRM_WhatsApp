@@ -37,7 +37,7 @@ export const normalizarProfissao = (p: string) => { const t = p.trim().replace(/
 export const ORGAOS_EMISSORES = ['SSP', 'SEJUSP', 'SESP', 'SSPDS', 'SJS', 'SPTC', 'SSPDC', 'SDS', 'PC', 'IFP', 'DETRAN', 'DPF', 'PM', 'CBM', 'MB', 'EB', 'FAB', 'OAB', 'CREA', 'CRECI', 'Outro'];
 
 /** Documentos e credenciais (um só cadastro, com titular usuário ou cônjuge) */
-export const CREDENCIAIS = ['cartao_creci', 'certidao_creci', 'certificado_cnai'] as const;
+export const CREDENCIAIS = ['cartao_creci', 'certidao_creci', 'certificado_cnai', 'carteira_oab', 'certidao_oab'] as const;
 export const TIPOS_DOCUMENTO = [
   ...CREDENCIAIS, 'rg', 'cin', 'cnh', 'cpf', 'comprovante_residencia', 'certidao_casamento', 'certidao_nascimento', 'rnm_passaporte', 'outros',
 ] as const;
@@ -47,6 +47,8 @@ export const ROTULO_DOCUMENTO: Record<TipoDocumento, string> = {
   cartao_creci: 'Cartão de Regularidade (CRECI)',
   certidao_creci: 'Certidão de Regularidade (CRECI)',
   certificado_cnai: 'Certificado CNAI',
+  carteira_oab: 'Carteira da OAB',
+  certidao_oab: 'Certidão de regularidade (OAB)',
   rg: 'RG (frente/verso)',
   cin: 'CIN – Carteira de Identidade Nacional',
   cnh: 'CNH',

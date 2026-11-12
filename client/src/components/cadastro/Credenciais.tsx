@@ -120,6 +120,8 @@ const TEXTO_CRED: Record<TipoCredencial, { titulo: string; ajuda: string }> = {
   cartao_creci: { titulo: "Cartão de Regularidade (CRECI)", ajuda: "Obrigatório para receber leads. Vai anexado aos contratos com o selo de verificação." },
   certidao_creci: { titulo: "Certidão de Regularidade (CRECI)", ajuda: "Vale 30 dias. Você recebe um alerta no WhatsApp 5 dias antes de vencer." },
   certificado_cnai: { titulo: "Certificado CNAI", ajuda: "Avaliador Imobiliário. O número pode aparecer na sua qualificação." },
+  carteira_oab: { titulo: "Carteira da OAB", ajuda: "Frente e verso. Identifica o(a) advogado(a) do corpo jurídico do empreendimento." },
+  certidao_oab: { titulo: "Certidão de regularidade (OAB)", ajuda: "Emitida pela seccional. Informe a validade para receber o alerta antes de vencer." },
 };
 
 /** Card de uma credencial: arrastar e soltar, progresso, miniatura, trocar/visualizar/remover e os campos do tipo */

@@ -19,7 +19,7 @@ export interface PermissoesUsuario {
 export async function carregarPermissoes(user: { id: number; role?: string | null; perfil?: string | null }): Promise<PermissoesUsuario> {
   const perfil = perfilDe(user);
   // Empreendedor: acesso só ao empreendimento dele (mapa, situação das chácaras, vendas) — o resto é barrado por podeChamar
-  if (perfil === 'empreendedor') {
+  if (perfil === 'empreendedor' || perfil === 'juridico') {
     const slug = (user as any).empreendimentoSlug as string | null | undefined;
     const db = slug ? ((await getDb()) as any) : null;
     const [emp]: any[] = db && slug ? await db.select({ id: empreendimentos.id }).from(empreendimentos).where(eq(empreendimentos.slug, String(slug))).limit(1).catch(() => []) : [];

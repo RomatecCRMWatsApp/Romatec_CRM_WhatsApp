@@ -3,6 +3,19 @@
 Cada versão nova vai no TOPO. Depois rode `npm run release` (valida e atualiza o package.json);
 ao subir, o servidor grava a versão no banco e todos recebem o aviso "Novidades da versão".
 
+## 1.163.0 — 2026-11-12
+tipo: minor
+obrigatoria: nao
+titulo: Portal do corpo jurídico (advogados do empreendimento)
+publico: equipe
+
+### Novo
+- Novo perfil "Jurídico (advogado)", ligado a um empreendimento, como o do empreendedor. O advogado só abre o Portal jurídico do empreendimento dele; o resto do CRM fica fechado. Acesso liberado, sem cobrança de licença
+- Convite por link: Recrutamento › Convidar › "Advogado(a) — corpo jurídico", com o empreendimento. O advogado preenche o formulário com o n.º e a seccional da OAB e anexa a carteira da OAB (e a certidão, opcional); você aprova e ele recebe o login e a senha provisória pelo WhatsApp
+- Portal jurídico: documentos do empreendimento (Estatuto, Diretrizes, CPCV de cada plano, intermediação, tabela, carnê e recibo) em PDF com as opções de baixar e compartilhar; contratos com a via assinada e os termos aditivos; financeiro do empreendimento (contratado, recebido, em aberto e vencido)
+- Pontuações jurídicas: o advogado registra alterações necessárias, indagações e observações por documento (com cláusula/artigo); o escritório recebe o aviso e responde no próprio portal; a pontuação fica aberta, respondida ou resolvida
+- Administrador: menu "Portal jurídico" para ver o portal de cada empreendimento e responder as pontuações. Bloqueio do advogado em Equipe (desativar o login)
+
 ## 1.162.1 — 2026-11-12
 tipo: patch
 obrigatoria: nao

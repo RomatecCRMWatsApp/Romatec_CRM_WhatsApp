@@ -11,7 +11,7 @@
  * O antigo perfil "equipe" (até a v1.5.0) é lido como corretor.
  */
 
-export const PERFIS = ['admin', 'secretario', 'corretor', 'empreendedor'] as const;
+export const PERFIS = ['admin', 'secretario', 'corretor', 'empreendedor', 'juridico'] as const;
 export type Perfil = typeof PERFIS[number];
 
 export const ROTULO_PERFIL: Record<Perfil, string> = {
@@ -19,11 +19,12 @@ export const ROTULO_PERFIL: Record<Perfil, string> = {
   secretario: 'Secretário(a)',
   corretor: 'Corretor(a)',
   empreendedor: 'Empreendedor',
+  juridico: 'Jurídico (advogado)',
 };
 
 /** Cor do selo do perfil (dourado, azul, verde, roxo) */
 export const COR_PERFIL: Record<Perfil, string> = {
-  admin: '#C9A84C', secretario: '#5AA9E6', corretor: '#2BD47A', empreendedor: '#B07CE0',
+  admin: '#C9A84C', secretario: '#5AA9E6', corretor: '#2BD47A', empreendedor: '#B07CE0', juridico: '#E0904A',
 };
 
 /** Perfis da equipe interna (usam o portal de permissões) */
@@ -34,7 +35,7 @@ export function perfilDe(user: { role?: string | null; perfil?: string | null } 
   if (!user) return null;
   if (user.role === 'admin') return 'admin';
   const p = String(user.perfil);
-  if (p === 'secretario' || p === 'corretor' || p === 'empreendedor') return p;
+  if (p === 'secretario' || p === 'corretor' || p === 'empreendedor' || p === 'juridico') return p;
   return 'corretor'; // "equipe" (antigo) ou vazio
 }
 
@@ -62,6 +63,11 @@ const TRPC_EMPREENDEDOR = ['auth.', 'empreendedor.', 'system.versao', 'cadastro.
   'convites.listar', 'convites.detalhe',
   // Ranking de vendas e campanha do empreendimento dele (só leitura)
   'ranking.empreendimentos', 'ranking.classificacao'];
+/**
+ * Corpo jurídico (advogados do empreendimento): só o portal jurídico — documentos (estatuto, modelos, contratos e
+ * aditivos), financeiro do empreendimento (leitura) e as pontuações jurídicas. O escopo é o empreendimento do login.
+ */
+const TRPC_JURIDICO = ['auth.', 'juridico.', 'system.versao', 'system.linkPdf', 'cadastro.', 'novidades.naoLidas', 'novidades.historico', 'novidades.marcarLida', 'novidades.marcarTodas', 'novidades.definirDescanso', 'notificacoes.'];
 /** Secretário e corretor não mexem em configurações, na equipe nem na ZAYRA */
 const TRPC_SO_ADMIN = ['companyConfig.update', 'equipe.', 'zaira.'];
 
@@ -69,12 +75,13 @@ export function podeChamar(perfil: Perfil | null, caminho: string): boolean {
   if (!perfil) return false;
   if (perfil === 'admin') return true;
   if (perfil === 'empreendedor') return TRPC_EMPREENDEDOR.some(p => (p.endsWith('.') ? caminho.startsWith(p) : caminho === p));
+  if (perfil === 'juridico') return TRPC_JURIDICO.some(p => (p.endsWith('.') ? caminho.startsWith(p) : caminho === p));
   return !TRPC_SO_ADMIN.some(p => (p.endsWith('.') ? caminho.startsWith(p) : caminho === p));
 }
 
 // ─── Navegador: telas ────────────────────────────────────────────────────────
 export function telaInicial(perfil: Perfil | null): string {
-  return perfil === 'empreendedor' ? '/empreendedor' : '/dashboard';
+  return perfil === 'empreendedor' ? '/empreendedor' : perfil === 'juridico' ? '/juridico' : '/dashboard';
 }
 
 /** Tela que o perfil pode abrir; se não puder, o app manda para telaInicial */
@@ -84,6 +91,7 @@ export function podeAbrir(perfil: Perfil | null, caminho: string): boolean {
   if (caminho === '/meu-cadastro' || caminho === '/instalar') return true;
   // Área do assinante (camada SaaS): corretor e empreendedor
   if (caminho === '/assinatura') return perfil === 'corretor' || perfil === 'empreendedor';
+  if (perfil === 'juridico') return caminho === '/juridico' || caminho.startsWith('/juridico/');
   if (perfil === 'empreendedor') return caminho === '/empreendedor' || caminho.startsWith('/empreendedor/') || caminho === '/convites' || caminho.startsWith('/convites/') || caminho === '/ranking';
   // Recrutamento e talonários: administrador e secretária; Admin › SaaS: só o administrador
   if (caminho === '/recrutamento' || caminho.startsWith('/recrutamento/') || caminho === '/talonarios') return perfil === 'secretario';
@@ -104,6 +112,7 @@ export function podeAbrir(perfil: Perfil | null, caminho: string): boolean {
   if (caminho === '/ver-como' || caminho.startsWith('/ver-como?') || caminho === '/visao-corretor') return false;
   // Disparos WhatsApp: administrador e secretária
   if (caminho === '/campaigns' || caminho.startsWith('/campaigns/')) return perfil === 'secretario';
+  if (caminho === '/juridico' || caminho.startsWith('/juridico/')) return false;
   return !['/equipe', '/settings', '/setup'].some(p => caminho === p || caminho.startsWith(`${p}/`)) && !caminho.startsWith('/empreendedor');
 }
 

@@ -38,7 +38,7 @@ function ResultadoAcesso({ r, onFechar }: { r: Acesso; onFechar: () => void }) {
 }
 
 function NovoConvite({ emps, onCriado }: { emps: { slug: string; nome: string }[]; onCriado: () => void }) {
-  const [perfil, setPerfil] = useState<"corretor" | "secretario">("corretor");
+  const [perfil, setPerfil] = useState<"corretor" | "secretario" | "juridico">("corretor");
   const [nome, setNome] = useState("");
   const [tel, setTel] = useState("");
   const [emp, setEmp] = useState("");
@@ -52,17 +52,17 @@ function NovoConvite({ emps, onCriado }: { emps: { slug: string; nome: string }[
     },
     onError: e => toast.error(e.message),
   });
-  const ok = nome.trim().length >= 3 && tel.replace(/\D/g, "").length >= 10;
+  const ok = nome.trim().length >= 3 && tel.replace(/\D/g, "").length >= 10 && (perfil !== "juridico" || !!emp);
   return (
     <section className="space-y-3 rounded-xl border border-border bg-card p-4">
-      <h2 className="flex items-center gap-2 text-sm font-semibold"><UserPlus className="h-4 w-4 text-primary" /> Convidar corretor(a) ou secretária</h2>
+      <h2 className="flex items-center gap-2 text-sm font-semibold"><UserPlus className="h-4 w-4 text-primary" /> Convidar corretor(a), secretária ou advogado(a)</h2>
       <div className="grid gap-2 md:grid-cols-4">
         <label className="text-xs text-muted-foreground">Perfil
-          <select className={campo} value={perfil} onChange={e => setPerfil(e.target.value as any)}><option value="corretor">Corretor(a)</option><option value="secretario">Secretária(o)</option></select>
+          <select className={campo} value={perfil} onChange={e => setPerfil(e.target.value as any)}><option value="corretor">Corretor(a)</option><option value="secretario">Secretária(o)</option><option value="juridico">Advogado(a) — corpo jurídico</option></select>
         </label>
         <label className="text-xs text-muted-foreground md:col-span-2">Nome<input className={campo} value={nome} onChange={e => setNome(e.target.value)} placeholder="Nome do candidato" /></label>
         <label className="text-xs text-muted-foreground">WhatsApp<input className={campo} value={tel} onChange={e => setTel(maskPhone(e.target.value))} inputMode="tel" placeholder="(99) 9 9999-9999" /></label>
-        <label className="text-xs text-muted-foreground md:col-span-2">Empreendimento da convocação
+        <label className="text-xs text-muted-foreground md:col-span-2">{perfil === "juridico" ? "Empreendimento do corpo jurídico (obrigatório)" : "Empreendimento da convocação"}
           <select className={campo} value={emp} onChange={e => setEmp(e.target.value)}>
             <option value="">— nenhum em especial —</option>{emps.map(x => <option key={x.slug} value={x.slug}>{x.nome}</option>)}
           </select>

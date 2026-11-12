@@ -41,6 +41,7 @@ export function secoesDoFormulario(perfil: PerfilRecrutamento): Secao[] {
       campos: ['Nome completo', 'CPF', 'RG e órgão emissor', 'Sexo', 'Nacionalidade', 'Profissão', 'Estado civil', 'E-mail', 'Telefone / WhatsApp', 'Instagram (opcional)'],
     },
     ...(perfil === 'corretor' ? [{ titulo: 'CRECI', campos: ['Nº do CRECI', 'UF do CRECI'] }] : []),
+    ...(perfil === 'juridico' ? [{ titulo: 'OAB', campos: ['Nº da OAB', 'Seccional (UF)'] }] : []),
     { titulo: 'Endereço', campos: ['CEP', 'Rua / avenida', 'Número', 'Complemento', 'Bairro', 'Cidade', 'UF'] },
     {
       titulo: 'Cônjuge ou companheiro(a)',

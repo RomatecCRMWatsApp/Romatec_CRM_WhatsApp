@@ -652,10 +652,18 @@ export function registrarRotasFinanceiro(app: Express) {
       const { sdk } = await import('../_core/sdk');
       const user: any = await sdk.authenticateRequest(req).catch(() => null);
       const { perfilDe } = await import('../../shared/equipe');
-      if (!user || !['admin', 'secretario'].includes(String(perfilDe(user)))) return res.status(403).json({ erro: 'nao_autorizado' });
+      const juridico = !!user && perfilDe(user) === 'juridico' && user.ativo !== false && user.ativo !== 0;
+      if (!user || (!['admin', 'secretario'].includes(String(perfilDe(user))) && !juridico)) return res.status(403).json({ erro: 'nao_autorizado' });
       const { pdfDoAditivo } = await import('./renegociacao');
       const r = await pdfDoAditivo(Number(req.params.id) || 0);
       if (!r) return res.status(404).json({ erro: 'arquivo' });
+      // Advogado: só aditivos de contratos do empreendimento dele
+      if (juridico) {
+        const { contratoPorId } = await import('../contratos/servico');
+        const c = await contratoPorId(r.contratoId).catch(() => null);
+        const { juridicoDoEmpreendimento } = await import('../juridico/acesso');
+        if (!c || !(await juridicoDoEmpreendimento(user, c.empreendimentoId))) return res.status(403).json({ erro: 'nao_autorizado' });
+      }
       await auditar('aditivo_pdf', { contratoId: r.contratoId, usuarioId: user.id, origem: 'perfil', ip: req.ip });
       pdf(res, r.buf, r.nome);
     } catch (e) { erro(res, e); }

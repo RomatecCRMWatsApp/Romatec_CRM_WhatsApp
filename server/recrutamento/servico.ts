@@ -45,6 +45,7 @@ const foneWhats = (t: string) => { const d = soDig(t); return d.length === 10 ||
 
 export async function criarConvite(dados: { perfil: PerfilRecrutamento; nome: string; telefone: string; empreendimentoSlug?: string | null }, autorId: number, agora = Date.now()) {
   if (dados.perfil === 'empreendedor') throw new RecrutamentoErro('Empreendedor não usa formulário: use "Criar acesso do empreendedor".');
+  if (dados.perfil === 'juridico' && !dados.empreendimentoSlug) throw new RecrutamentoErro('Escolha o empreendimento do corpo jurídico');
   const tel = soDig(dados.telefone);
   if (tel.length < 10 || tel.length > 11) throw new RecrutamentoErro('Informe o WhatsApp com DDD');
   const d = await banco();
@@ -148,7 +149,9 @@ export async function arquivoDoDoc(docId: number) {
 }
 
 /** Pacote base do perfil (módulos marcados por padrão); corretor: o empreendimento da convocação (sem ele, todos) */
-async function acessoPadrao(perfil: 'corretor' | 'secretario', slug?: string | null) {
+async function acessoPadrao(perfil: 'corretor' | 'secretario' | 'juridico', slug?: string | null) {
+  // Jurídico: o acesso é o empreendimento do login (users.empreendimentoSlug), sem módulos do CRM
+  if (perfil === 'juridico') return { modulos: [] as string[], empreendimentosIds: [] as number[], imoveisIds: [] as number[] };
   const d = await banco();
   const emps: any[] = slug ? await d.select({ id: empreendimentos.id }).from(empreendimentos).where(eq(empreendimentos.slug, slug))
     : await d.select({ id: empreendimentos.id }).from(empreendimentos);
@@ -189,8 +192,8 @@ async function enviarAcesso(usuarioId: number, telefone: string, senha: string) 
 export async function aprovarRecrutamento(id: number, autor: { id: number; role?: string | null }, agora = Date.now()) {
   const r = await recrutamentoPorId(id);
   if (r.status !== 'preenchido') throw new RecrutamentoErro('Só dá para aprovar depois que o candidato enviar o formulário', 409);
-  const perfil = r.perfil as 'corretor' | 'secretario';
-  const dados = { ...(json<Record<string, any>>(r.dadosJson) ?? {}), perfil, recebeLeads: false };
+  const perfil = r.perfil as 'corretor' | 'secretario' | 'juridico';
+  const dados = { ...(json<Record<string, any>>(r.dadosJson) ?? {}), perfil, recebeLeads: false, ...(perfil === 'juridico' ? { empreendimentoSlug: r.empreendimentoSlug } : {}) };
   const d = await banco();
   const docs: any[] = await d.select().from(recrutamentoDocs).where(eq(recrutamentoDocs.recrutamentoId, id));
   const faltam = documentosDoPerfil(perfil).filter(x => x.obrigatorio && !docs.some(y => y.tipo === x.tipo));
@@ -311,8 +314,10 @@ export async function formularioPublico(token: string) {
 export async function salvarFormulario(token: string, dados: Record<string, any>, enviar: boolean, agora = Date.now()) {
   const r = await porToken(token, agora);
   const d = await banco();
-  const limpo = { ...dados, perfil: r.perfil, recebeLeads: false };
-  delete (limpo as any).empreendimentoSlug;
+  const limpo: Record<string, any> = { ...dados, perfil: r.perfil, recebeLeads: false };
+  delete limpo.empreendimentoSlug;
+  // Corpo jurídico: o empreendimento é o da convocação (o advogado não escolhe)
+  if (r.perfil === 'juridico') limpo.empreendimentoSlug = r.empreendimentoSlug;
   await d.update(recrutamentos).set({ dadosJson: JSON.stringify(limpo), updatedAt: new Date(agora) } as any).where(eq(recrutamentos.id, r.id));
   if (!enviar) return { ok: true as const, status: r.status };
   const { cadastroSchema, errosPorCampo } = await import('../cadastroUsuario');
@@ -329,6 +334,7 @@ export async function salvarFormulario(token: string, dados: Record<string, any>
   await dup(users.cpf, v.data.cpf, 'cpf', 'Este CPF já tem cadastro no sistema. Fale com a Romatec.');
   await dup(users.email, v.data.email, 'email', 'Este e-mail já tem cadastro no sistema. Use outro ou fale com a Romatec.');
   await dup(users.creci, v.data.creci, 'creci', 'Este CRECI já tem cadastro no sistema. Fale com a Romatec.');
+  if (r.perfil === 'juridico') await dup((users as any).oab, v.data.oab, 'oab', 'Esta OAB já tem cadastro no sistema. Fale com a Romatec.');
   const docs: any[] = await d.select({ tipo: recrutamentoDocs.tipo }).from(recrutamentoDocs).where(eq(recrutamentoDocs.recrutamentoId, r.id));
   const faltam = documentosDoPerfil(r.perfil).filter(x => x.obrigatorio && !docs.some(y => y.tipo === x.tipo));
   if (faltam.length) throw new RecrutamentoErro(`Anexe: ${faltam.map(x => x.rotulo).join(', ')}`, 422);

@@ -3,6 +3,9 @@ import express, { type Express } from 'express';
 import { contratoPorId, pdfDaVersao, ContratoErro } from './servico';
 import { numeroCreciPF } from '../../shared/cartaoVendas';
 
+/** Advogado do corpo jurídico do empreendimento do contrato (só leitura dos PDFs) */
+const juridicoVe = async (user: any, c: { empreendimentoId: number }) => (await import('../juridico/acesso')).juridicoDoEmpreendimento(user, c.empreendimentoId);
+
 export function registrarRotasContratos(app: Express) {
   // Contrato modelo: minuta com o cliente fictício (nada é gravado) — admin, secretária e corretor
   app.get('/api/contratos/modelo.pdf', async (req, res) => {
@@ -12,7 +15,8 @@ export function registrarRotasContratos(app: Express) {
       if (!user || user.ativo === false || user.ativo === 0) return res.status(401).send('Faça login');
       const { perfilDe } = await import('../../shared/equipe');
       const { podeCriarContrato } = await import('../../shared/contratos');
-      if (!podeCriarContrato(perfilDe(user))) return res.status(403).send('Sem permissão');
+      const slugPedido = typeof req.query.slug === 'string' ? req.query.slug : 'bom-jardims';
+      if (!podeCriarContrato(perfilDe(user)) && !(await import('../juridico/acesso')).juridicoDoSlug(user, slugPedido)) return res.status(403).send('Sem permissão');
       const slug = typeof req.query.slug === 'string' && /^[a-z0-9-]{1,80}$/.test(req.query.slug) ? req.query.slug : 'bom-jardims';
       const lote = typeof req.query.lote === 'string' && /^[A-Z0-9]{1,6}$/.test(req.query.lote) ? req.query.lote : 'A01';
       // ?plano=A|B|C: modelo da condição de lançamento; sem ele, o da entrada de 30%
@@ -38,7 +42,8 @@ export function registrarRotasContratos(app: Express) {
       if (!user || user.ativo === false || user.ativo === 0) return res.status(401).send('Faça login');
       const { perfilDe } = await import('../../shared/equipe');
       const { podeCriarContrato } = await import('../../shared/contratos');
-      if (!podeCriarContrato(perfilDe(user))) return res.status(403).send('Sem permissão');
+      const slugPedido = typeof req.query.slug === 'string' ? req.query.slug : 'bom-jardims';
+      if (!podeCriarContrato(perfilDe(user)) && !(await import('../juridico/acesso')).juridicoDoSlug(user, slugPedido)) return res.status(403).send('Sem permissão');
       const { modeloDocumento, TIPOS_MODELO } = await import('./modelosDocs');
       const tipo = req.params.tipo as any;
       if (!TIPOS_MODELO.includes(tipo)) return res.status(404).send('Modelo não encontrado');
@@ -304,7 +309,7 @@ export function registrarRotasContratos(app: Express) {
       const { perfilDe } = await import('../../shared/equipe');
       const perfil = perfilDe(user);
       const c = await contratoPorId(Number(req.params.id) || 0);
-      if (!(perfil === 'admin' || perfil === 'secretario' || (perfil === 'corretor' && c.corretorUserId === user.id)) || !c.pdfAtual) return res.status(404).send('Contrato sem PDF');
+      if (!(perfil === 'admin' || perfil === 'secretario' || (perfil === 'corretor' && c.corretorUserId === user.id) || await juridicoVe(user, c)) || !c.pdfAtual) return res.status(404).send('Contrato sem PDF');
       const { lerArquivo } = await import('./arquivos');
       const a = await lerArquivo(c.pdfAtual);
       if (!a) return res.status(404).send('Contrato sem PDF');
@@ -323,7 +328,7 @@ export function registrarRotasContratos(app: Express) {
       const { perfilDe } = await import('../../shared/equipe');
       const perfil = perfilDe(user);
       const c = await contratoPorId(Number(req.params.id) || 0);
-      if (!(perfil === 'admin' || perfil === 'secretario' || (perfil === 'corretor' && c.corretorUserId === user.id)) || !c.manifestoArquivo) return res.status(404).send('Manifesto não encontrado');
+      if (!(perfil === 'admin' || perfil === 'secretario' || (perfil === 'corretor' && c.corretorUserId === user.id) || await juridicoVe(user, c)) || !c.manifestoArquivo) return res.status(404).send('Manifesto não encontrado');
       const { lerArquivo } = await import('./arquivos');
       const a = await lerArquivo(c.manifestoArquivo);
       if (!a) return res.status(404).send('Manifesto não encontrado');
@@ -342,7 +347,7 @@ export function registrarRotasContratos(app: Express) {
       const { perfilDe } = await import('../../shared/equipe');
       const perfil = perfilDe(user);
       const c = await contratoPorId(Number(req.params.id) || 0);
-      if (!(perfil === 'admin' || perfil === 'secretario' || (perfil === 'corretor' && c.corretorUserId === user.id)) || !c.pdfAtual) return res.status(404).send('Contrato sem PDF');
+      if (!(perfil === 'admin' || perfil === 'secretario' || (perfil === 'corretor' && c.corretorUserId === user.id) || await juridicoVe(user, c)) || !c.pdfAtual) return res.status(404).send('Contrato sem PDF');
       if (!['assinado', 'ativo', 'quitado'].includes(String(c.status))) return res.status(409).send('A via assinada sai depois que todos assinarem');
       const via = await (await import('./liberacaoVia')).montarViaAssinada(c.id);
       if (!via) return res.status(404).send('Contrato sem PDF');
@@ -362,7 +367,7 @@ export function registrarRotasContratos(app: Express) {
       const { perfilDe } = await import('../../shared/equipe');
       const perfil = perfilDe(user);
       const c = await contratoPorId(Number(req.params.id) || 0);
-      const pode = perfil === 'admin' || perfil === 'secretario' || (perfil === 'corretor' && c.corretorUserId === user.id);
+      const pode = perfil === 'admin' || perfil === 'secretario' || (perfil === 'corretor' && c.corretorUserId === user.id) || await juridicoVe(user, c);
       if (!pode) return res.status(404).send('Contrato não encontrado');
       const { pdf, nome } = await pdfDaVersao(c.id, Number(req.params.versao) || 0);
       res.setHeader('Content-Type', 'application/pdf');

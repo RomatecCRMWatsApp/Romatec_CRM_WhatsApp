@@ -74,7 +74,7 @@ export function registrarRotasRecrutamento(app: Express) {
     try {
       if (!(await recrutador(req))) return res.status(404).json({ ok: false });
       const ext = String(req.params.ext);
-      const perfil = req.query.perfil === 'secretario' ? 'secretario' : 'corretor';
+      const perfil = req.query.perfil === 'secretario' ? 'secretario' : req.query.perfil === 'juridico' ? 'juridico' : 'corretor';
       if (!['pdf', 'docx'].includes(ext)) return res.status(404).end();
       let empreendimento: string | null = null;
       if (typeof req.query.emp === 'string' && req.query.emp) {

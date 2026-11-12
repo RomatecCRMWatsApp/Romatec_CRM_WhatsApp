@@ -52,7 +52,7 @@ const CONJUGE_VAZIO = {
   mesmoEndereco: true, cep: "", logradouro: "", numero: "", complemento: "", bairro: "", cidade: "", uf: "",
 };
 const FORM_VAZIO = {
-  ...PESSOA_VAZIA, email: "", telefone: "", perfil: "corretor" as Perfil, recebeLeads: false, creci: "", creciUf: "MA", instagram: "", estadoCivil: "",
+  ...PESSOA_VAZIA, email: "", telefone: "", perfil: "corretor" as Perfil, recebeLeads: false, creci: "", creciUf: "MA", oab: "", oabUf: "MA", instagram: "", estadoCivil: "",
   enderecoCep: "", enderecoLogradouro: "", enderecoNumero: "", enderecoComplemento: "", enderecoBairro: "", enderecoCidade: "", enderecoUf: "", empreendimentoSlug: "",
 };
 type Form = typeof FORM_VAZIO;
@@ -155,7 +155,7 @@ export default function CadastroUsuario({ id, admin, listas, onSalvo, onCancelar
     if (!d) return;
     setF({
       ...FORM_VAZIO, ...Object.fromEntries(Object.keys(FORM_VAZIO).map(k => [k, (d as any)[k] ?? (FORM_VAZIO as any)[k]])),
-      sexo: s(d.sexo), estadoCivil: s(d.estadoCivil), empreendimentoSlug: s(d.empreendimentoSlug), creciUf: d.creciUf || "MA", perfil: d.perfil as Perfil, recebeLeads: d.recebeLeads,
+      sexo: s(d.sexo), estadoCivil: s(d.estadoCivil), empreendimentoSlug: s(d.empreendimentoSlug), creciUf: d.creciUf || "MA", oabUf: (d as any).oabUf || "MA", perfil: d.perfil as Perfil, recebeLeads: d.recebeLeads,
     } as Form);
     if (d.conjuge) {
       const cj: any = d.conjuge;
@@ -209,7 +209,8 @@ export default function CadastroUsuario({ id, admin, listas, onSalvo, onCancelar
       creci: ouNull(f.creci), creciUf: f.creci ? f.creciUf : null, instagram: ouNull(f.instagram), estadoCivil: f.estadoCivil || undefined,
       enderecoCep: f.enderecoCep, enderecoLogradouro: f.enderecoLogradouro, enderecoNumero: f.enderecoNumero, enderecoComplemento: ouNull(f.enderecoComplemento),
       enderecoBairro: f.enderecoBairro, enderecoCidade: f.enderecoCidade, enderecoUf: f.enderecoUf,
-      empreendimentoSlug: f.perfil === "empreendedor" ? ouNull(f.empreendimentoSlug) : null,
+      empreendimentoSlug: f.perfil === "empreendedor" || f.perfil === "juridico" ? ouNull(f.empreendimentoSlug) : null,
+      oab: f.perfil === "juridico" ? ouNull(f.oab) : null, oabUf: f.perfil === "juridico" ? ouNull(f.oabUf) : null,
       conjuge: comConjuge ? {
         ...pessoa(c), profissao: ouNull(c.profissao), dataNascimento: c.dataNascimento || null, telefone: c.telefone, email: c.email,
         regimeBens: f.estadoCivil === "casado" ? c.regimeBens : null, dataCasamento: c.dataCasamento || null,
@@ -322,9 +323,14 @@ export default function CadastroUsuario({ id, admin, listas, onSalvo, onCancelar
               </select>
             </Campo>
           )}
-          <Campo rotulo={`CRECI ${f.perfil === "corretor" ? "(obrigatório)" : "(opcional)"}`} erro={erros.creci}><input {...inp("creci")} inputMode="numeric" placeholder="4705" /></Campo>
-          <Campo rotulo="UF do CRECI" erro={erros.creciUf}><select {...inp("creciUf")} className={sel}>{UFS.map(u => <option key={u}>{u}</option>)}</select></Campo>
-          {f.perfil === "empreendedor" && admin && (
+          {f.perfil === "juridico" ? (<>
+            <Campo rotulo="N.º da OAB (obrigatório)" erro={(erros as any).oab}><input {...inp("oab")} placeholder="12345" autoCapitalize="characters" /></Campo>
+            <Campo rotulo="Seccional (UF da OAB)" erro={(erros as any).oabUf}><select {...inp("oabUf")} className={sel}>{UFS.map(u => <option key={u}>{u}</option>)}</select></Campo>
+          </>) : (<>
+            <Campo rotulo={`CRECI ${f.perfil === "corretor" ? "(obrigatório)" : "(opcional)"}`} erro={erros.creci}><input {...inp("creci")} inputMode="numeric" placeholder="4705" /></Campo>
+            <Campo rotulo="UF do CRECI" erro={erros.creciUf}><select {...inp("creciUf")} className={sel}>{UFS.map(u => <option key={u}>{u}</option>)}</select></Campo>
+          </>)}
+          {(f.perfil === "empreendedor" || f.perfil === "juridico") && admin && (
             <Campo rotulo="Empreendimento" erro={erros.empreendimentoSlug}>
               <select {...inp("empreendimentoSlug")} className={sel}>
                 <option value="">— escolha —</option>
@@ -410,7 +416,7 @@ export default function CadastroUsuario({ id, admin, listas, onSalvo, onCancelar
       {!novo && uid && f.perfil !== "empreendedor" && (
         <Secao titulo="Credenciais profissionais">
           <div className="grid gap-3 lg:grid-cols-3">
-            {CREDENCIAIS.map(t => (
+            {CREDENCIAIS.filter(t => (f.perfil === "juridico") === t.endsWith("_oab")).map(t => (
               <CredencialCard key={t} uid={uid} tipo={t} doc={cred(t)} versao={versao} onMudou={recarregarDocs} onVer={setVer}
                 linkCertidaoPadrao={docs.data?.linkCertidaoPadrao ?? "https://www.crecima.gov.br"} validadeSugerida={docs.data?.validadeSugeridaCertidao ?? ""} />
             ))}

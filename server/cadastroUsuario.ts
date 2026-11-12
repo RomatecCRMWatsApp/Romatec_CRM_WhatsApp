@@ -71,6 +71,9 @@ export const cadastroSchema = z.object({
   recebeLeads: z.boolean().optional(),
   creci: z.string().optional().nullable().transform(v => normalizarCreci(v) ?? null),
   creciUf: ufOpc,
+  /** Advogado (perfil jurídico): n.º e seccional da OAB */
+  oab: z.string().optional().nullable().transform(v => { const t = String(v ?? "").toUpperCase().replace(/[^0-9A-Z]/g, ""); return t ? t.slice(0, 20) : null; }),
+  oabUf: ufOpc,
   /** Opcional: "@fulano" ou o link do perfil; guardado só o usuário */
   instagram: z.string().optional().nullable().refine(v => !String(v ?? "").trim() || !!normalizarInstagram(v), "Instagram inválido (ex.: @avalieimob)")
     .transform(v => normalizarInstagram(v)),
@@ -91,6 +94,8 @@ export const cadastroSchema = z.object({
   regrasPessoa(u, [], add);
   if (u.perfil === "corretor" && !u.creci) add({ path: ["creci"], message: "CRECI obrigatório para corretor" });
   if (u.perfil === "empreendedor" && !u.empreendimentoSlug) add({ path: ["empreendimentoSlug"], message: "Escolha o empreendimento do empreendedor" });
+  if (u.perfil === "juridico" && !u.empreendimentoSlug) add({ path: ["empreendimentoSlug"], message: "Escolha o empreendimento do corpo jurídico" });
+  if (u.perfil === "juridico" && !u.oab) add({ path: ["oab"], message: "Informe o n.º da OAB" });
   if (temConjuge(u.estadoCivil)) {
     if (!u.conjuge) add({ path: ["conjuge"], message: "Informe os dados do cônjuge/companheiro(a)" });
     else {
@@ -177,7 +182,7 @@ export async function salvarCadastro(alvoId: number, entrada: unknown, autor: { 
     nacionalidade: d.nacionalidade, paisOrigem: d.nacionalidade === "estrangeira" ? d.paisOrigem : null,
     docEstrangeiroTipo: d.nacionalidade === "estrangeira" ? d.docEstrangeiroTipo ?? "RNM" : null,
     docEstrangeiroNumero: d.nacionalidade === "estrangeira" ? d.docEstrangeiroNumero : null,
-    profissao: d.profissao, creci: d.creci, creciUf: d.creciUf, instagram: d.instagram, estadoCivil: d.estadoCivil,
+    profissao: d.profissao, creci: d.creci, creciUf: d.creciUf, oab: d.oab ?? null, oabUf: d.oabUf ?? null, instagram: d.instagram, estadoCivil: d.estadoCivil,
     enderecoCep: d.enderecoCep, enderecoLogradouro: d.enderecoLogradouro, enderecoNumero: d.enderecoNumero,
     enderecoComplemento: d.enderecoComplemento, enderecoBairro: d.enderecoBairro, enderecoCidade: d.enderecoCidade, enderecoUf: d.enderecoUf,
     updatedAt: new Date(),
@@ -185,8 +190,8 @@ export async function salvarCadastro(alvoId: number, entrada: unknown, autor: { 
     ...(mudouPerfil ? {
       role: perfil === "admin" ? "admin" : "user", perfil: perfil === "admin" ? null : perfil,
       sessaoVersao: (Number(atual.sessaoVersao) || 0) + 1,
-      empreendimentoSlug: perfil === "empreendedor" ? d.empreendimentoSlug : null,
-    } : perfil === "empreendedor" && admin ? { empreendimentoSlug: d.empreendimentoSlug } : {}),
+      empreendimentoSlug: perfil === "empreendedor" || perfil === "juridico" ? d.empreendimentoSlug : null,
+    } : (perfil === "empreendedor" || perfil === "juridico") && admin ? { empreendimentoSlug: d.empreendimentoSlug } : {}),
   };
 
   await transacao(db, async (tx: any) => {
@@ -273,7 +278,7 @@ export async function carregarCadastro(usuarioId: number) {
     id: u.id, perfil: perfilDe(u), nome: u.name ?? "", email: u.email ?? "", telefone: u.telefone ?? "", sexo: u.sexo ?? null,
     cpf: u.cpf ?? "", rg: u.rg ?? "", rgOrgao: u.rgOrgao ?? "", nacionalidade: u.nacionalidade === "estrangeira" ? "estrangeira" : "brasileira",
     paisOrigem: u.paisOrigem ?? "", docEstrangeiroTipo: u.docEstrangeiroTipo ?? "RNM", docEstrangeiroNumero: u.docEstrangeiroNumero ?? "",
-    profissao: u.profissao ?? "", creci: u.creci ?? "", creciUf: u.creciUf ?? "", instagram: u.instagram ?? "", estadoCivil: u.estadoCivil ?? null,
+    profissao: u.profissao ?? "", creci: u.creci ?? "", creciUf: u.creciUf ?? "", oab: u.oab ?? "", oabUf: u.oabUf ?? "", instagram: u.instagram ?? "", estadoCivil: u.estadoCivil ?? null,
     enderecoCep: u.enderecoCep ?? "", enderecoLogradouro: u.enderecoLogradouro ?? "", enderecoNumero: u.enderecoNumero ?? "",
     enderecoComplemento: u.enderecoComplemento ?? "", enderecoBairro: u.enderecoBairro ?? "", enderecoCidade: u.enderecoCidade ?? "", enderecoUf: u.enderecoUf ?? "",
     empreendimentoSlug: u.empreendimentoSlug ?? null, recebeLeads: !!u.recebeLeads, fotoUrl: u.fotoUrl ?? null,

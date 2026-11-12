@@ -1,0 +1,266 @@
+import { useState } from "react";
+import { useLocation } from "wouter";
+import { toast } from "sonner";
+import { ArrowLeft, CheckCircle2, FileText, Gavel, Loader2, LogOut, MessageSquarePlus, Receipt, Scale } from "lucide-react";
+import { perfilDe } from "@shared/equipe";
+import { trpc } from "@/lib/trpc";
+import { useAuth } from "@/_core/hooks/useAuth";
+import { Button } from "@/components/ui/button";
+import { FotoUsuario } from "@/components/AppShell";
+import { SinoNovidades } from "@/components/sistema/Novidades";
+import { RomatecAppIcon } from "@/brand";
+import { AcoesPdf } from "@/components/sistema/AcoesPdf";
+
+const brl = (n: number | null | undefined) => (n == null ? "—" : n.toLocaleString("pt-BR", { style: "currency", currency: "BRL" }));
+const dataBr = (d: string | null | undefined) => (d ? new Date(d.length <= 10 ? `${d}T12:00:00` : d).toLocaleDateString("pt-BR") : "—");
+const SECOES = [["documentos", "Documentos", FileText], ["pontuacoes", "Pontuações jurídicas", MessageSquarePlus], ["contratos", "Contratos e aditivos", Gavel], ["financeiro", "Financeiro", Receipt]] as const;
+const TIPO: Record<string, string> = { alteracao: "Alteração", indagacao: "Indagação", observacao: "Observação" };
+const STATUS: Record<string, [string, string]> = {
+  aberto: ["Aberta", "bg-warn-500/15 text-warn-300"], respondido: ["Respondida", "bg-info-500/15 text-info-300"], resolvido: ["Resolvida", "bg-ok-500/15 text-ok-300"],
+};
+const STATUS_CONTRATO: Record<string, string> = {
+  rascunho: "Rascunho", minuta: "Minuta", apto_assinatura: "Apto para assinatura", em_assinatura: "Em assinatura", assinado: "Assinado",
+  ativo: "Ativo", quitado: "Quitado", cancelado: "Cancelado", distratado: "Distratado",
+};
+
+function Titulo({ id, icone: Icone, children, sub }: { id: string; icone: React.ComponentType<{ className?: string }>; children: React.ReactNode; sub?: string }) {
+  return (
+    <div id={id} className="scroll-mt-28 pt-4">
+      <h2 className="flex items-center gap-2 text-lg font-semibold text-[var(--rt-gold-light)] [font-family:var(--rt-font-title)]"><Icone className="h-5 w-5" />{children}</h2>
+      {sub && <p className="text-xs text-muted-foreground">{sub}</p>}
+    </div>
+  );
+}
+
+/** Formulário de nova pontuação sobre um documento */
+function NovaPontuacao({ slug, documentos, inicial, onFeito }: { slug: string; documentos: { chave: string; rotulo: string }[]; inicial?: string; onFeito: () => void }) {
+  const [doc, setDoc] = useState(inicial ?? documentos[0]?.chave ?? "geral");
+  const [tipo, setTipo] = useState<"alteracao" | "indagacao" | "observacao">("alteracao");
+  const [trecho, setTrecho] = useState("");
+  const [texto, setTexto] = useState("");
+  const m = trpc.juridico.pontuar.useMutation({
+    onSuccess: () => { toast.success("Pontuação registrada — o escritório foi avisado"); setTexto(""); setTrecho(""); onFeito(); },
+    onError: e => toast.error(e.message),
+  });
+  const opcoes = [...documentos, { chave: "geral", rotulo: "Assunto geral do empreendimento" }];
+  const campo = "mt-1 h-9 w-full rounded-md border border-border bg-background px-2 text-sm text-foreground";
+  return (
+    <div className="space-y-2 rounded-xl border border-border bg-card p-4 text-sm">
+      <div className="grid gap-2 md:grid-cols-4">
+        <label className="text-xs text-muted-foreground md:col-span-2">Documento
+          <select className={campo} value={doc} onChange={e => setDoc(e.target.value)}>{opcoes.map(o => <option key={o.chave} value={o.chave}>{o.rotulo}</option>)}</select>
+        </label>
+        <label className="text-xs text-muted-foreground">Tipo
+          <select className={campo} value={tipo} onChange={e => setTipo(e.target.value as any)}><option value="alteracao">Alteração necessária</option><option value="indagacao">Indagação jurídica</option><option value="observacao">Observação</option></select>
+        </label>
+        <label className="text-xs text-muted-foreground">Cláusula / artigo / página
+          <input className={campo} value={trecho} onChange={e => setTrecho(e.target.value)} placeholder="Ex.: Cláusula 9ª, item 9.2" />
+        </label>
+      </div>
+      <label className="block text-xs text-muted-foreground">Pontuação
+        <textarea className="mt-1 min-h-[110px] w-full rounded-md border border-border bg-background p-2 text-sm text-foreground" value={texto} onChange={e => setTexto(e.target.value)}
+          placeholder="Descreva a alteração proposta (com a redação sugerida) ou a indagação jurídica, com o fundamento legal." />
+      </label>
+      <Button disabled={texto.trim().length < 5 || m.isPending} onClick={() => m.mutate({ slug, documento: doc, documentoRotulo: opcoes.find(o => o.chave === doc)?.rotulo ?? doc, trecho: trecho || null, tipo, texto })}>
+        {m.isPending ? <Loader2 className="mr-1 h-4 w-4 animate-spin" /> : <MessageSquarePlus className="mr-1 h-4 w-4" />} Registrar pontuação
+      </Button>
+    </div>
+  );
+}
+
+/** Uma pontuação: texto, autor, resposta do escritório e as ações */
+function CartaoPontuacao({ p, admin, onFeito }: { p: any; admin: boolean; onFeito: () => void }) {
+  const [resposta, setResposta] = useState("");
+  const r = trpc.juridico.responder.useMutation({ onSuccess: () => { toast.success("Atualizado"); setResposta(""); onFeito(); }, onError: e => toast.error(e.message) });
+  const [rot, cor] = STATUS[p.status] ?? [p.status, ""];
+  return (
+    <div className="space-y-2 rounded-xl border border-border bg-card p-3 text-sm">
+      <div className="flex flex-wrap items-center gap-2">
+        <span className={`rounded-full px-2 py-0.5 text-[11px] ${cor}`}>{rot}</span>
+        <b>{TIPO[p.tipo] ?? p.tipo}</b>
+        <span className="text-xs text-muted-foreground">{p.documentoRotulo}{p.trecho ? ` · ${p.trecho}` : ""}</span>
+        <span className="ml-auto text-xs text-muted-foreground">{p.autor} · {dataBr(p.criadoEm)}</span>
+      </div>
+      <p className="whitespace-pre-wrap">{p.texto}</p>
+      {p.resposta && (
+        <div className="rounded-lg border border-[var(--rt-gold)]/30 bg-background/40 p-2 text-xs">
+          <p className="mb-1 text-muted-foreground">Resposta do escritório — {p.respondidoPor} · {dataBr(p.respondidoEm)}</p>
+          <p className="whitespace-pre-wrap text-sm">{p.resposta}</p>
+        </div>
+      )}
+      <div className="flex flex-wrap items-end gap-2">
+        {admin && p.status !== "resolvido" && (
+          <>
+            <textarea className="min-h-[60px] flex-1 rounded-md border border-border bg-background p-2 text-sm" value={resposta} onChange={e => setResposta(e.target.value)} placeholder="Resposta do escritório (ex.: alteração aceita na versão v1.6 do estatuto)" />
+            <Button size="sm" disabled={resposta.trim().length < 2 || r.isPending} onClick={() => r.mutate({ id: p.id, resposta, status: "respondido" })}>Responder</Button>
+          </>
+        )}
+        {p.status !== "resolvido" && <Button size="sm" variant="outline" disabled={r.isPending} onClick={() => r.mutate({ id: p.id, status: "resolvido" })}><CheckCircle2 className="mr-1 h-4 w-4" /> Marcar como resolvida</Button>}
+        {p.status === "resolvido" && <Button size="sm" variant="ghost" disabled={r.isPending} onClick={() => r.mutate({ id: p.id, status: "aberto" })}>Reabrir</Button>}
+      </div>
+    </div>
+  );
+}
+
+/**
+ * Portal do corpo jurídico do empreendimento: documentos (estatuto, modelos de contrato) para leitura e pontuação,
+ * contratos com vias assinadas e aditivos, financeiro e as pontuações jurídicas com a resposta do escritório.
+ */
+export default function Juridico() {
+  const { user, logout } = useAuth();
+  const [, navigate] = useLocation();
+  const ehJuridico = perfilDe(user as any) === "juridico";
+  const [slugAdmin, setSlugAdmin] = useState<string | undefined>(undefined);
+  const entrada = ehJuridico ? undefined : slugAdmin ? { slug: slugAdmin } : undefined;
+  const utils = trpc.useUtils();
+  const { data: p, error } = trpc.juridico.painel.useQuery(entrada);
+  const { data: cs = [] } = trpc.juridico.contratos.useQuery(entrada);
+  const { data: fin } = trpc.juridico.financeiro.useQuery(entrada);
+  const { data: pts = [] } = trpc.juridico.pontuacoes.useQuery(entrada);
+  const [filtro, setFiltro] = useState<string>("abertas");
+  const [docPontuar, setDocPontuar] = useState<string | undefined>(undefined);
+  const recarregar = () => { utils.juridico.pontuacoes.invalidate(); utils.juridico.painel.invalidate(); };
+  const ir = (id: string) => document.getElementById(id)?.scrollIntoView({ behavior: "smooth", block: "start" });
+  const slug = p?.empreendimento.slug ?? "bom-jardims";
+  const lista = pts.filter(x => filtro === "todas" || (filtro === "abertas" ? x.status !== "resolvido" : x.status === "resolvido"));
+  const porDoc = new Map<string, number>();
+  for (const x of pts) if (x.status !== "resolvido") porDoc.set(x.documento, (porDoc.get(x.documento) ?? 0) + 1);
+
+  return (
+    <div className="min-h-screen bg-background">
+      <div className="sticky top-[env(safe-area-inset-top)] z-30 border-b border-[var(--rt-border)] bg-black">
+        <div className="mx-auto flex max-w-[1500px] items-center gap-1 px-2 py-2 sm:gap-3 sm:px-4 md:px-6">
+          {!ehJuridico && (
+            <Button size="sm" variant="outline" className="shrink-0 border-white/30 text-white hover:bg-white/15" onClick={() => navigate("/dashboard")}>
+              <ArrowLeft className="mr-1 h-4 w-4" /><span className="hidden sm:inline">Voltar ao&nbsp;</span>CRM
+            </Button>
+          )}
+          <span className="hidden min-[400px]:inline-flex"><RomatecAppIcon size={34} /></span>
+          <p className="min-w-0 flex-1 truncate text-sm text-white/80">
+            Portal jurídico · <b className="text-white">{p?.empreendimento.nome ?? "…"}</b>{ehJuridico ? ` · ${String((user as any)?.name || "").split(" ")[0]}` : " (visão do escritório)"}
+          </p>
+          {p?.admin && p.empreendimentos.length > 1 && (
+            <select className="h-8 rounded-md border border-white/30 bg-black px-2 text-xs text-white" value={slug} onChange={e => setSlugAdmin(e.target.value)} aria-label="Empreendimento">
+              {p.empreendimentos.map(e => <option key={e.slug} value={e.slug}>{e.nome}</option>)}
+            </select>
+          )}
+          <SinoNovidades className="text-white/80 hover:text-white" />
+          <FotoUsuario />
+          <Button size="sm" variant="ghost" className="px-2 text-white hover:bg-white/15 sm:px-3" title="Sair" onClick={() => logout()}><LogOut className="h-4 w-4" /></Button>
+        </div>
+        <div className="mx-auto flex max-w-[1500px] gap-1.5 overflow-x-auto px-3 pb-2 sm:px-4 md:px-6 [scrollbar-width:none]">
+          {SECOES.map(([id, rotulo, Icone]) => (
+            <button key={id} onClick={() => ir(id)} className="flex shrink-0 items-center gap-1.5 rounded-full border border-border px-3 py-1 text-xs font-medium text-white/80 transition hover:border-[var(--rt-gold)]/60 hover:text-white focus-visible:outline focus-visible:outline-2 focus-visible:outline-[var(--rt-gold)]">
+              <Icone className="h-3.5 w-3.5" />{rotulo}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      <div className="mx-auto max-w-[1500px] space-y-4 px-3 pb-10 pt-3 sm:px-4 md:px-6 md:pt-4">
+        {error && <p className="text-sm text-danger-400">{error.message}</p>}
+        <section className="flex flex-wrap items-center gap-4 rounded-2xl border border-[var(--rt-gold)]/30 bg-card p-4">
+          <Scale className="h-10 w-10 text-[var(--rt-gold-light)]" />
+          <div className="min-w-0 flex-1">
+            <h1 className="text-xl font-semibold [font-family:var(--rt-font-title)]">Corpo jurídico — {p?.empreendimento.nome ?? "…"}</h1>
+            <p className="text-xs text-muted-foreground">
+              Leia os documentos, registre as alterações necessárias e as indagações jurídicas; o escritório responde aqui mesmo.
+              {p?.advogados.length ? ` Advogados: ${p.advogados.map(a => `${a.nome}${a.oab ? ` (${a.oab})` : ""}${a.ativo ? "" : " — bloqueado"}`).join("; ")}.` : ""}
+            </p>
+          </div>
+          {p && (
+            <div className="flex gap-3 text-center text-xs">
+              <div><p className="text-2xl font-bold text-warn-300">{p.pontuacoes.abertas}</p><p className="text-muted-foreground">abertas</p></div>
+              <div><p className="text-2xl font-bold text-info-300">{p.pontuacoes.respondidas}</p><p className="text-muted-foreground">respondidas</p></div>
+              <div><p className="text-2xl font-bold text-ok-300">{p.pontuacoes.resolvidas}</p><p className="text-muted-foreground">resolvidas</p></div>
+            </div>
+          )}
+        </section>
+
+        <Titulo id="documentos" icone={FileText} sub="Versões em vigor, geradas na hora com um cliente fictício. Alguns PDFs levam alguns segundos.">Documentos do empreendimento</Titulo>
+        <div className="grid gap-2 md:grid-cols-2">
+          {(p?.documentos ?? []).map(d => (
+            <div key={d.chave} className="flex flex-wrap items-center gap-2 rounded-xl border border-border bg-card p-3 text-sm">
+              <div className="min-w-0 flex-1">
+                <p className="font-medium">{d.rotulo}</p>
+                <p className="text-xs text-muted-foreground">{d.grupo}{porDoc.get(d.chave) ? ` · ${porDoc.get(d.chave)} pontuação(ões) em aberto` : ""}</p>
+              </div>
+              <AcoesPdf compacto rotulo="PDF" url={d.url} nomeArquivo={`${d.chave.toUpperCase()}-${slug.toUpperCase()}.pdf`} mensagem={`${d.rotulo} — ${p?.empreendimento.nome ?? ""}`} />
+              <Button size="sm" variant="outline" onClick={() => { setDocPontuar(d.chave); ir("pontuacoes"); }}><MessageSquarePlus className="mr-1 h-4 w-4" /> Pontuar</Button>
+            </div>
+          ))}
+        </div>
+
+        <Titulo id="pontuacoes" icone={MessageSquarePlus} sub="Alterações necessárias, indagações jurídicas e observações sobre cada documento.">Pontuações jurídicas</Titulo>
+        {p && <NovaPontuacao key={docPontuar ?? "x"} slug={slug} documentos={p.documentos} inicial={docPontuar} onFeito={recarregar} />}
+        <div className="flex gap-1.5">
+          {[["abertas", "Em aberto"], ["resolvidas", "Resolvidas"], ["todas", "Todas"]].map(([k, r]) => (
+            <button key={k} onClick={() => setFiltro(k)} className={`rounded-full border px-3 py-1 text-xs ${filtro === k ? "border-[var(--rt-gold)] text-[var(--rt-gold-light)]" : "border-border text-muted-foreground"}`}>{r}</button>
+          ))}
+        </div>
+        <div className="space-y-2">
+          {!lista.length && <p className="rounded-xl border border-dashed border-border p-4 text-sm text-muted-foreground">Nenhuma pontuação {filtro === "abertas" ? "em aberto" : filtro === "resolvidas" ? "resolvida" : "ainda"}.</p>}
+          {lista.map(x => <CartaoPontuacao key={x.id} p={x} admin={!!p?.admin} onFeito={recarregar} />)}
+        </div>
+
+        <Titulo id="contratos" icone={Gavel} sub="Contratos do empreendimento, com o PDF atual, a via assinada (com o manifesto) e os termos aditivos.">Contratos e aditivos</Titulo>
+        <div className="space-y-2">
+          {!cs.length && <p className="rounded-xl border border-dashed border-border p-4 text-sm text-muted-foreground">Nenhum contrato ainda.</p>}
+          {cs.map(c => (
+            <div key={c.id} className="space-y-1.5 rounded-xl border border-border bg-card p-3 text-sm">
+              <div className="flex flex-wrap items-center gap-2">
+                <b>{c.numero}</b>
+                <span className="rounded-full border border-border px-2 py-0.5 text-[11px]">{STATUS_CONTRATO[c.status] ?? c.status}</span>
+                <span className="text-muted-foreground">Chácara {c.lote} · {c.comprador}</span>
+                <div className="ml-auto flex flex-wrap gap-1.5">
+                  {c.viaAssinada && <AcoesPdf compacto rotulo="Via assinada" url={c.viaAssinada} nomeArquivo={`CONTRATO-${c.numero}-VIA-ASSINADA.pdf`} mensagem={`Contrato ${c.numero} — via assinada`} />}
+                  {!c.viaAssinada && c.pdfAtual && <AcoesPdf compacto rotulo="PDF atual" url={c.pdfAtual} nomeArquivo={`CONTRATO-${c.numero}.pdf`} mensagem={`Contrato ${c.numero}`} />}
+                  <Button size="sm" variant="outline" onClick={() => { setDocPontuar(undefined); ir("pontuacoes"); }}>Pontuar</Button>
+                </div>
+              </div>
+              <p className="text-xs text-muted-foreground">Plano: <b className="text-foreground">{c.plano}</b></p>
+              {c.observacoes.map((o: string) => <p key={o} className="text-xs text-warn-200">• {o}</p>)}
+              {!!c.aditivos.length && (
+                <div className="flex flex-wrap items-center gap-1.5 pt-1 text-xs">
+                  <span className="text-muted-foreground">Aditivos:</span>
+                  {c.aditivos.map((a: any) => (
+                    <AcoesPdf key={a.id} compacto rotulo={`n.º ${a.numero} — ${a.titulo}${a.status === "assinado" ? "" : ` (${a.status})`}`} url={a.url} nomeArquivo={`ADITIVO-${a.numero}-${c.numero}.pdf`} mensagem={`Termo Aditivo n.º ${a.numero} — contrato ${c.numero}`} />
+                  ))}
+                </div>
+              )}
+            </div>
+          ))}
+        </div>
+
+        <Titulo id="financeiro" icone={Receipt} sub="Contratado, recebido, em aberto e vencido por contrato — base para o acompanhamento e o percentual do escritório.">Financeiro do empreendimento</Titulo>
+        {fin?.totais ? (
+          <>
+            <div className="grid grid-cols-2 gap-3 lg:grid-cols-5">
+              {[["Contratos", String(fin.totais.contratos), ""], ["Contratado", brl(fin.totais.contratado), "text-[var(--rt-gold-light)]"], ["Recebido", brl(fin.totais.recebido), "text-ok-300"],
+                ["Em aberto", brl(fin.totais.emAberto), ""], ["Vencido", brl(fin.totais.vencido), "text-danger-300"]].map(([t, v, c]) => (
+                <div key={t} className="rounded-xl border border-border bg-card p-4"><p className="text-xs text-muted-foreground">{t}</p><p className={`mt-1 text-xl font-bold ${c}`}>{v}</p></div>
+              ))}
+            </div>
+            <div className="overflow-x-auto rounded-xl border border-border bg-card">
+              <table className="w-full min-w-[720px] text-sm">
+                <thead><tr className="border-b border-border text-left text-xs text-muted-foreground">
+                  {["Contrato", "Chácara", "Comprador", "Contratado", "Recebido", "Vencido", "Pago", "Próximo vencimento"].map(h => <th key={h} className="px-3 py-2 font-medium">{h}</th>)}
+                </tr></thead>
+                <tbody>
+                  {fin.contratos.map((c: any) => (
+                    <tr key={c.contratoId} className="border-b border-border/50">
+                      <td className="px-3 py-2">{c.numero}</td><td className="px-3 py-2">{c.lote}</td><td className="px-3 py-2">{c.comprador}</td>
+                      <td className="px-3 py-2 tabular-nums">{brl(c.contratado)}</td><td className="px-3 py-2 tabular-nums text-ok-300">{brl(c.recebido)}</td>
+                      <td className="px-3 py-2 tabular-nums">{brl(c.vencido)}</td><td className="px-3 py-2">{c.pctPago != null ? `${Math.round(c.pctPago)}%` : "—"}</td>
+                      <td className="px-3 py-2">{dataBr(c.proximoVencimento)}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </>
+        ) : <p className="text-sm text-muted-foreground">Sem contratos com financeiro ainda.</p>}
+      </div>
+    </div>
+  );
+}
