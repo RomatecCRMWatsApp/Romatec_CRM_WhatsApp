@@ -119,6 +119,7 @@ function Conferir({ id, onFechar, onAcesso }: { id: number; onFechar: () => void
     onError: e => toast.error(e.message),
   });
   const recusar = trpc.recrutamento.recusar.useMutation({ onSuccess: () => { toast.success("Recrutamento recusado"); utils.recrutamento.listar.invalidate(); onFechar(); }, onError: e => toast.error(e.message) });
+  const [cortesiaAte, setCortesiaAte] = useState(() => new Date(Date.now() + 90 * 86_400_000).toISOString().slice(0, 10));
   if (isLoading || !r) return <p className="text-sm text-muted-foreground">Carregando…</p>;
   const d = r.dados as Record<string, any>;
   const c = d.conjuge as Record<string, any> | null;
@@ -129,7 +130,7 @@ function Conferir({ id, onFechar, onAcesso }: { id: number; onFechar: () => void
       <div className="grid gap-x-6 gap-y-0.5 md:grid-cols-2">
         {linha("CPF", d.cpf)}{linha("RG", [d.rg, d.rgOrgao].filter(Boolean).join(" "))}{linha("Profissão", d.profissao)}
         {linha("Estado civil", ROTULO_ESTADO_CIVIL[d.estadoCivil as keyof typeof ROTULO_ESTADO_CIVIL])}{linha("E-mail", d.email)}{linha("WhatsApp", d.telefone)}
-        {linha("CRECI", d.creci ? `${d.creci}/${d.creciUf ?? ""}` : "")}{linha("Instagram", d.instagram)}
+        {linha("CRECI", d.creci ? `${d.creci}/${d.creciUf ?? ""}` : "")}{linha("OAB", d.oab ? `${d.oab}/${d.oabUf ?? ""}` : "")}{linha("Instagram", d.instagram)}
         {linha("Endereço", [d.enderecoLogradouro, d.enderecoNumero, d.enderecoComplemento, d.enderecoBairro, d.enderecoCidade && `${d.enderecoCidade}/${d.enderecoUf}`, d.enderecoCep].filter(Boolean).join(", "))}
       </div>
       {c && <div className="rounded-md bg-secondary/30 p-2"><p className="text-xs font-semibold">Cônjuge</p>{linha("Nome", c.nome)}{linha("CPF", c.cpf)}{linha("Regime", ROTULO_REGIME[c.regimeBens as keyof typeof ROTULO_REGIME])}</div>}
@@ -141,8 +142,14 @@ function Conferir({ id, onFechar, onAcesso }: { id: number; onFechar: () => void
         })}
       </div>
       {r.status === "preenchido" && (
-        <div className="flex flex-wrap gap-2">
-          <Button disabled={aprovar.isPending} onClick={() => { if (confirm(`Aprovar ${r.nome} e criar o acesso com senha provisória?`)) aprovar.mutate({ id }); }} className="bg-ok-600 hover:bg-ok-700 text-white">
+        <div className="flex flex-wrap items-end gap-2">
+          {r.perfil === "juridico" && (
+            <label className="text-xs text-muted-foreground">Cortesia até (depois, a mensalidade do corretor)
+              <input type="date" className="ml-0 mt-1 block h-9 rounded-md border border-border bg-background px-2 text-sm text-foreground" value={cortesiaAte}
+                min={new Date().toISOString().slice(0, 10)} onChange={e => setCortesiaAte(e.target.value)} />
+            </label>
+          )}
+          <Button disabled={aprovar.isPending || (r.perfil === "juridico" && !cortesiaAte)} onClick={() => { if (confirm(`Aprovar ${r.nome} e criar o acesso com senha provisória?${r.perfil === "juridico" ? ` Cortesia até ${cortesiaAte.split("-").reverse().join("/")}.` : ""}`)) aprovar.mutate({ id, cortesiaAte: r.perfil === "juridico" ? cortesiaAte : null }); }} className="bg-ok-600 hover:bg-ok-700 text-white">
             {aprovar.isPending ? <Loader2 className="mr-1 h-4 w-4 animate-spin" /> : <Check className="mr-1 h-4 w-4" />} Aprovar e criar acesso
           </Button>
           <Button variant="outline" className="text-danger-300" disabled={recusar.isPending} onClick={() => { const m = prompt("Motivo da recusa (opcional):"); if (m !== null) recusar.mutate({ id, motivo: m }); }}>Recusar</Button>

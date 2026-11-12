@@ -3,6 +3,16 @@
 Cada versão nova vai no TOPO. Depois rode `npm run release` (valida e atualiza o package.json);
 ao subir, o servidor grava a versão no banco e todos recebem o aviso "Novidades da versão".
 
+## 1.163.2 — 2026-11-12
+tipo: patch
+obrigatoria: nao
+titulo: Cortesia do advogado com prazo definido pelo administrador
+publico: equipe
+
+### Melhorias
+- Corpo jurídico: o advogado entra como o corretor, com cortesia até a data que você escolher na aprovação (Recrutamento › Conferir e aprovar › "Cortesia até"; padrão: 90 dias). Vencida a cortesia, passa à mensalidade do corretor; prorrogue, cobre ou bloqueie em Controle de acessos
+- Conferência do formulário mostra o n.º e a seccional da OAB
+
 ## 1.163.1 — 2026-11-12
 tipo: patch
 obrigatoria: nao

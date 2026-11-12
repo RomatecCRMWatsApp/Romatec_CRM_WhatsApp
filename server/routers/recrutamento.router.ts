@@ -58,8 +58,8 @@ export const recrutamentoRouter = router({
   }),
   enviarConvite: protectedProcedure.input(z.object({ id: z.number().int() }))
     .mutation(async ({ ctx, input }) => { exigirRecrutador(ctx); return comErro(async () => (await S()).enviarConvite(input.id)); }),
-  aprovar: protectedProcedure.input(z.object({ id: z.number().int() }))
-    .mutation(async ({ ctx, input }) => { exigirRecrutador(ctx); return comErro(async () => (await S()).aprovarRecrutamento(input.id, ctx.user as any)); }),
+  aprovar: protectedProcedure.input(z.object({ id: z.number().int(), cortesiaAte: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).nullable().optional() }))
+    .mutation(async ({ ctx, input }) => { exigirRecrutador(ctx); return comErro(async () => (await S()).aprovarRecrutamento(input.id, ctx.user as any, Date.now(), { cortesiaAte: input.cortesiaAte ?? null })); }),
   recusar: protectedProcedure.input(z.object({ id: z.number().int(), motivo: z.string().trim().max(300).default(""), cancelar: z.boolean().default(false) }))
     .mutation(async ({ ctx, input }) => { exigirRecrutador(ctx); return comErro(async () => (await S()).recusarRecrutamento(input.id, input.motivo, ctx.user.id, input.cancelar)); }),
   reenviarAcesso: protectedProcedure.input(z.object({ usuarioId: z.number().int() }))

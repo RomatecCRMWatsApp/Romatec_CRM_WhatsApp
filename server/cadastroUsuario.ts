@@ -227,11 +227,16 @@ export async function salvarCadastro(alvoId: number, entrada: unknown, autor: { 
  * Novo acesso com o cadastro completo (Equipe → Novo e aprovação do Recrutamento): mesma validação do "Salvar
  * cadastro". Secretário/Corretor: só os módulos, empreendimentos e imóveis marcados (não herda o pacote base).
  */
+/** Cortesia padrão do corpo jurídico: 90 dias a partir de hoje */
+export const DIAS_CORTESIA_JURIDICO = 90;
+export const cortesiaPadrao = (agora = Date.now()) => new Date(agora + DIAS_CORTESIA_JURIDICO * 86_400_000).toISOString().slice(0, 10);
+
 export async function criarUsuarioComCadastro(
   dados: Record<string, unknown>,
   acesso: { modulos: string[]; empreendimentosIds: number[]; imoveisIds: number[] },
   autor: { id: number; role?: string | null },
   extra: Record<string, unknown> = {},
+  opcoes: { cortesiaAte?: string | null } = {},
 ): Promise<{ id: number; perfil: Perfil }> {
   const r = cadastroSchema.safeParse(dados);
   if (!r.success) {
@@ -265,12 +270,13 @@ export async function criarUsuarioComCadastro(
     ] : [];
     if (acessos.length) await db.insert(acessosCorretor).values(acessos as any);
   }
-  // Corpo jurídico: entra em cortesia (sem data de fim) no plano do corretor; o administrador passa a cobrar ou
-  // bloqueia quando quiser (Controle de acessos / SaaS)
+  // Corpo jurídico: integração igual à do corretor, com cortesia até a data que o administrador definir (padrão:
+  // 90 dias); depois, a mesma mensalidade do corretor — prorrogar, cobrar ou bloquear em Controle de acessos / SaaS
   if (perfil === "juridico") {
     try {
       const { definirAssinatura } = await import("./saas/servico");
-      await definirAssinatura({ usuarioId: id, planoCodigo: "CORRETOR_ESSENCIAL", origem: "CORTESIA", periodoFim: null, motivo: "Cortesia — corpo jurídico do empreendimento (piloto)" }, autor.id);
+      const ate = opcoes.cortesiaAte && /^\d{4}-\d{2}-\d{2}$/.test(opcoes.cortesiaAte) ? opcoes.cortesiaAte : cortesiaPadrao();
+      await definirAssinatura({ usuarioId: id, planoCodigo: "CORRETOR_ESSENCIAL", origem: "CORTESIA", periodoFim: ate, motivo: `Cortesia — corpo jurídico do empreendimento, até ${ate.split("-").reverse().join("/")}` }, autor.id);
     } catch (e: any) { console.warn("[Cadastro] cortesia do jurídico:", e?.message); }
   }
   return { id, perfil };

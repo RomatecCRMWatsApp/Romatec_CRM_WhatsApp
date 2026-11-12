@@ -73,7 +73,7 @@ describe('portal jurídico (tRPC)', () => {
 });
 
 describe('cortesia do corpo jurídico', () => {
-  it('advogado criado entra em cortesia sem data de fim, no plano do corretor; licença liberada', async () => {
+  it('advogado criado entra em cortesia com prazo (padrão 90 dias, ou a data escolhida), no plano do corretor; vencida, bloqueia', async () => {
     const { criarUsuarioComCadastro } = await import('./cadastroUsuario');
     const { assinaturaDoUsuario } = await import('./saas/servico');
     const { licencaLiberada } = await import('../shared/saas');
@@ -85,7 +85,11 @@ describe('cortesia do corpo jurídico', () => {
     expect(r.perfil).toBe('juridico');
     const a: any = await assinaturaDoUsuario({ id: r.id, perfil: 'juridico', role: 'user' });
     expect(a).toMatchObject({ origem: 'CORTESIA', status: 'ATIVA' });
-    expect(a.periodoFim).toBeNull();
+    const dias = (new Date(a.periodoFim).getTime() - Date.now()) / 86_400_000;
+    expect(dias).toBeGreaterThan(89);
+    expect(dias).toBeLessThan(92);
     expect(licencaLiberada(a)).toBe(true);
+    // Depois do prazo, sem pagamento: bloqueado até o administrador prorrogar ou o advogado pagar
+    expect(licencaLiberada(a, Date.now() + 95 * 86_400_000)).toBe(false);
   });
 });

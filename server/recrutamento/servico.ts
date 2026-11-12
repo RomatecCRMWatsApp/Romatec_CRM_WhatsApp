@@ -189,7 +189,7 @@ async function enviarAcesso(usuarioId: number, telefone: string, senha: string) 
 }
 
 /** Aprova: cria o acesso com o cadastro e os documentos do formulário e manda a senha provisória */
-export async function aprovarRecrutamento(id: number, autor: { id: number; role?: string | null }, agora = Date.now()) {
+export async function aprovarRecrutamento(id: number, autor: { id: number; role?: string | null }, agora = Date.now(), opcoes: { cortesiaAte?: string | null } = {}) {
   const r = await recrutamentoPorId(id);
   if (r.status !== 'preenchido') throw new RecrutamentoErro('Só dá para aprovar depois que o candidato enviar o formulário', 409);
   const perfil = r.perfil as 'corretor' | 'secretario' | 'juridico';
@@ -201,7 +201,7 @@ export async function aprovarRecrutamento(id: number, autor: { id: number; role?
   const { criarUsuarioComCadastro } = await import('../cadastroUsuario');
   let usuarioId: number;
   try {
-    ({ id: usuarioId } = await criarUsuarioComCadastro(dados, await acessoPadrao(perfil, r.empreendimentoSlug), autor));
+    ({ id: usuarioId } = await criarUsuarioComCadastro(dados, await acessoPadrao(perfil, r.empreendimentoSlug), autor, {}, { cortesiaAte: opcoes.cortesiaAte ?? null }));
   } catch (e: any) {
     throw new RecrutamentoErro(e?.message || 'Cadastro inválido', 422, e?.cause?.campos ?? e?.campos);
   }
