@@ -1,9 +1,11 @@
 import { useState } from "react";
 import { useLocation } from "wouter";
 import { toast } from "sonner";
-import { AlertTriangle, ArrowLeft, CheckCircle2, FileKey2, FileText, Gavel, Loader2, LogOut, MessageSquarePlus, PenTool, Receipt } from "lucide-react";
+import { AlertTriangle, ArrowLeft, BookOpen, CheckCircle2, FileKey2, FileText, Gavel, Loader2, LogOut, MessageSquarePlus, PenTool, Receipt } from "lucide-react";
 import { CertificadoDigital, DocumentosJuridicos } from "@/components/juridico/CertificadoDigital";
 import { PainelInadimplencia } from "@/components/juridico/Inadimplencia";
+import { BibliotecaLegislacao } from "@/components/juridico/Legislacao";
+import type { TemaLegislacao } from "@shared/legislacao";
 import { perfilDe } from "@shared/equipe";
 import { trpc } from "@/lib/trpc";
 import { useAuth } from "@/_core/hooks/useAuth";
@@ -16,7 +18,9 @@ import { OURO_JURIDICO, SeloJuridico } from "@/components/juridico/SeloJuridico"
 
 const brl = (n: number | null | undefined) => (n == null ? "—" : n.toLocaleString("pt-BR", { style: "currency", currency: "BRL" }));
 const dataBr = (d: string | null | undefined) => (d ? new Date(d.length <= 10 ? `${d}T12:00:00` : d).toLocaleDateString("pt-BR") : "—");
-const SECOES = [["inadimplencia", "Inadimplência", AlertTriangle], ["assinaturas", "Assinaturas", PenTool], ["documentos", "Documentos", FileText], ["pontuacoes", "Pontuações jurídicas", MessageSquarePlus], ["contratos", "Contratos e aditivos", Gavel], ["financeiro", "Financeiro", Receipt], ["certificado", "Certificado", FileKey2]] as const;
+const SECOES = [["inadimplencia", "Inadimplência", AlertTriangle], ["assinaturas", "Assinaturas", PenTool], ["documentos", "Documentos", FileText], ["legislacao", "Legislação", BookOpen], ["pontuacoes", "Pontuações jurídicas", MessageSquarePlus], ["contratos", "Contratos e aditivos", Gavel], ["financeiro", "Financeiro", Receipt], ["certificado", "Certificado", FileKey2]] as const;
+/** Grupo de documento → tema da biblioteca de legislação */
+const TEMA_DO_GRUPO: Record<string, TemaLegislacao> = { "Associação": "associacao", "Compra e venda": "contratos", "Pagamento": "inadimplencia" };
 const TIPO: Record<string, string> = { alteracao: "Alteração", indagacao: "Indagação", observacao: "Observação" };
 const STATUS: Record<string, [string, string]> = {
   aberto: ["Aberta", "bg-warn-500/15 text-warn-300"], respondido: ["Respondida", "bg-info-500/15 text-info-300"], resolvido: ["Resolvida", "bg-ok-500/15 text-ok-300"],
@@ -122,12 +126,17 @@ export default function Juridico() {
   const { data: pts = [] } = trpc.juridico.pontuacoes.useQuery(entrada);
   const [filtro, setFiltro] = useState<string>("abertas");
   const [docPontuar, setDocPontuar] = useState<string | undefined>(undefined);
+  const [grupoDoc, setGrupoDoc] = useState<string>("todos");
+  const [temaLeg, setTemaLeg] = useState<TemaLegislacao>("inadimplencia");
   const recarregar = () => { utils.juridico.pontuacoes.invalidate(); utils.juridico.painel.invalidate(); };
   // Abas independentes: cada botão do topo abre só a sua seção (lembrada no #endereço)
   const inicial = typeof window !== "undefined" ? window.location.hash.replace("#", "") : "";
   const [aba, setAba] = useState<string>(SECOES.some(([id]) => id === inicial) ? inicial : "inadimplencia");
   const ir = (id: string) => { setAba(id); try { window.history.replaceState(null, "", `#${id}`); } catch { /* sem histórico */ } window.scrollTo({ top: 0, behavior: "smooth" }); };
   const slug = p?.empreendimento.slug ?? "bom-jardims";
+  const verLegislacao = (t: TemaLegislacao) => { setTemaLeg(t); ir("legislacao"); };
+  const gruposDoc = Array.from(new Set((p?.documentos ?? []).map(d => d.grupo)));
+  const docsVisiveis = (p?.documentos ?? []).filter(d => grupoDoc === "todos" || d.grupo === grupoDoc);
   const lista = pts.filter(x => filtro === "todas" || (filtro === "abertas" ? x.status !== "resolvido" : x.status === "resolvido"));
   const porDoc = new Map<string, number>();
   for (const x of pts) if (x.status !== "resolvido") porDoc.set(x.documento, (porDoc.get(x.documento) ?? 0) + 1);
@@ -195,6 +204,7 @@ export default function Juridico() {
         {aba === "inadimplencia" && (<section aria-labelledby="aba-inadimplencia" className="space-y-3">
         <Titulo id="inadimplencia" icone={AlertTriangle} sub="Constituição em mora, cartório, resolução do contrato e retorno da chácara ao empreendimento (Lei n.º 6.766/1979, arts. 32 e 32-A).">Inadimplência — ato jurídico de consolidação do bem</Titulo>
         <PainelInadimplencia slug={ehJuridico ? undefined : slug} />
+        <Button size="sm" variant="outline" onClick={() => verLegislacao("inadimplencia")}><BookOpen className="mr-1 h-4 w-4" /> Legislação da inadimplência e consolidação do bem</Button>
         </section>)}
 
         {aba === "assinaturas" && (<section aria-labelledby="aba-assinaturas" className="space-y-3">
@@ -204,8 +214,19 @@ export default function Juridico() {
 
         {aba === "documentos" && (<section aria-labelledby="aba-documentos" className="space-y-3">
         <Titulo id="documentos" icone={FileText} sub="Versões em vigor, geradas na hora com um cliente fictício. Alguns PDFs levam alguns segundos.">Documentos do empreendimento</Titulo>
+        <div role="tablist" aria-label="Grupos de documentos" className="flex flex-wrap items-center gap-1.5">
+          {["todos", ...gruposDoc].map(g => (
+            <button key={g} type="button" role="tab" aria-selected={grupoDoc === g} onClick={() => setGrupoDoc(g)}
+              className={`rounded-full border px-3 py-1 text-xs focus-visible:outline focus-visible:outline-2 focus-visible:outline-[#E8B931] ${grupoDoc === g ? "border-[#E8B931] bg-[#E8B931] font-semibold text-black" : "border-border text-muted-foreground hover:text-foreground"}`}>
+              {g === "todos" ? "Todos" : g}
+            </button>
+          ))}
+          {TEMA_DO_GRUPO[grupoDoc] && (
+            <Button size="sm" variant="outline" className="ml-auto" onClick={() => verLegislacao(TEMA_DO_GRUPO[grupoDoc])}><BookOpen className="mr-1 h-4 w-4" /> Legislação de {grupoDoc.toLowerCase()}</Button>
+          )}
+        </div>
         <div className="grid gap-2 md:grid-cols-2">
-          {(p?.documentos ?? []).map(d => (
+          {docsVisiveis.map(d => (
             <div key={d.chave} className="flex flex-wrap items-center gap-2 rounded-xl border border-border bg-card p-3 text-sm">
               <div className="min-w-0 basis-full sm:basis-auto sm:flex-1">
                 <p className="font-medium">{d.rotulo}</p>
@@ -216,6 +237,11 @@ export default function Juridico() {
             </div>
           ))}
         </div>
+        </section>)}
+
+        {aba === "legislacao" && (<section aria-labelledby="aba-legislacao" className="space-y-3">
+        <Titulo id="legislacao" icone={BookOpen} sub="Leis, jurisprudência e doutrina que regem o empreendimento, por tema — com o fundamento pronto para copiar na peça.">Legislação e fundamentos</Titulo>
+        <BibliotecaLegislacao key={temaLeg} temaInicial={temaLeg} />
         </section>)}
 
         {aba === "pontuacoes" && (<section aria-labelledby="aba-pontuacoes" className="space-y-3">

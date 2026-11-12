@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button";
 const brl = (n: number) => n.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
 const br = (iso: string) => iso.slice(0, 10).split("-").reverse().join("/");
 const campo = "mt-1 h-9 rounded-md border border-border bg-background px-2 text-sm text-foreground";
-const ROTULO: Record<string, string> = { notificacao: "Notificação", requerimento: "Requerimento", ata: "Ata", avulso: "Avulso" };
+const ROTULO: Record<string, string> = { notificacao: "Notificação", memorial: "Memorial do débito", requerimento: "Requerimento", ata: "Ata", cancelamento: "Cancelamento", restituicao: "Restituição", avulso: "Avulso" };
 
 /** Um contrato em atraso: parcelas, valores atualizados e a geração das peças (notificação → requerimento → ata) */
 function CasoInadimplencia({ c, onGerado }: { c: any; onGerado: () => void }) {
@@ -15,8 +15,11 @@ function CasoInadimplencia({ c, onGerado }: { c: any; onGerado: () => void }) {
   const [via, setVia] = useState<"rtd" | "ri">("rtd");
   const [dataIntimacao, setDataIntimacao] = useState("");
   const [protocolo, setProtocolo] = useState("");
+  const [abrirRest, setAbrirRest] = useState(false);
+  const [dataResolucao, setDataResolucao] = useState("");
+  const [outros, setOutros] = useState("");
   const gerar = trpc.juridico.gerarDocumento.useMutation({
-    onSuccess: () => { toast.success("Documento gerado — confira e assine com o certificado em Documentos e assinaturas"); setAbrirAta(false); onGerado(); },
+    onSuccess: () => { toast.success("Documento gerado — confira e assine com o certificado em Documentos e assinaturas"); setAbrirAta(false); setAbrirRest(false); onGerado(); },
     onError: e => toast.error(e.message),
   });
   return (
@@ -34,6 +37,7 @@ function CasoInadimplencia({ c, onGerado }: { c: any; onGerado: () => void }) {
       )}
       <div className="flex flex-wrap items-end gap-2">
         <Button size="sm" variant="outline" disabled={gerar.isPending} onClick={() => gerar.mutate({ contratoId: c.contratoId, tipo: "notificacao" })}><FileText className="mr-1 h-4 w-4" /> 1. Notificação (mora, 30 dias)</Button>
+        <Button size="sm" variant="outline" disabled={gerar.isPending} onClick={() => gerar.mutate({ contratoId: c.contratoId, tipo: "memorial" })}><FileText className="mr-1 h-4 w-4" /> Memorial do débito</Button>
         <label className="text-xs text-muted-foreground">Cartório
           <select className={`${campo} block`} value={via} onChange={e => setVia(e.target.value as any)}>
             <option value="rtd">Títulos e Documentos (compromisso não registrado)</option>
@@ -41,7 +45,8 @@ function CasoInadimplencia({ c, onGerado }: { c: any; onGerado: () => void }) {
           </select>
         </label>
         <Button size="sm" variant="outline" disabled={gerar.isPending} onClick={() => gerar.mutate({ contratoId: c.contratoId, tipo: "requerimento", via })}><FileText className="mr-1 h-4 w-4" /> 2. Requerimento ao Oficial</Button>
-        <Button size="sm" variant="outline" disabled={gerar.isPending} onClick={() => setAbrirAta(v => !v)}><FileText className="mr-1 h-4 w-4" /> 3. Ata de resolução</Button>
+        <Button size="sm" variant="outline" disabled={gerar.isPending} onClick={() => setAbrirAta(v => !v)}><FileText className="mr-1 h-4 w-4" /> 3. Ata e cancelamento</Button>
+        <Button size="sm" variant="outline" disabled={gerar.isPending} onClick={() => setAbrirRest(v => !v)}><FileText className="mr-1 h-4 w-4" /> 4. Restituição (art. 32-A)</Button>
         {gerar.isPending && <Loader2 className="h-4 w-4 animate-spin" />}
       </div>
       {abrirAta && (
@@ -49,11 +54,25 @@ function CasoInadimplencia({ c, onGerado }: { c: any; onGerado: () => void }) {
           <label className="text-xs text-muted-foreground">Data da intimação/notificação pelo cartório
             <input type="date" className={`${campo} block`} value={dataIntimacao} onChange={e => setDataIntimacao(e.target.value)} />
           </label>
-          <label className="text-xs text-muted-foreground">Protocolo / certidão do cartório
+          <label className="text-xs text-muted-foreground">Protocolo / n.º da certidão do cartório
             <input className={`${campo} block w-48`} value={protocolo} onChange={e => setProtocolo(e.target.value)} placeholder="Ex.: RTD 1234" />
           </label>
           <Button size="sm" disabled={!dataIntimacao || gerar.isPending} onClick={() => gerar.mutate({ contratoId: c.contratoId, tipo: "ata", dataIntimacao, protocolo: protocolo || null })}>Gerar a ata</Button>
-          <p className="basis-full text-[11px] text-muted-foreground">A ata só é lavrada depois de 30 dias da intimação sem o pagamento (Lei n.º 6.766/1979, art. 32; CPCV, Cláusula 8ª). Depois, cancele o contrato no CRM para a chácara voltar à venda.</p>
+          <Button size="sm" variant="outline" disabled={!dataIntimacao || !protocolo || via !== "ri" || gerar.isPending} title={via !== "ri" ? "Só para compromisso registrado no Registro de Imóveis" : undefined}
+            onClick={() => gerar.mutate({ contratoId: c.contratoId, tipo: "cancelamento", via, dataIntimacao, protocolo })}>Requerer o cancelamento do registro</Button>
+          <p className="basis-full text-[11px] text-muted-foreground">A ata só é lavrada depois de 30 dias da intimação sem o pagamento (Lei n.º 6.766/1979, art. 32; CPCV, Cláusula 8ª). O cancelamento do registro (Registro de Imóveis) pede a certidão de decurso do prazo sem pagamento (Lei n.º 6.015/1973, art. 251-A).</p>
+        </div>
+      )}
+      {abrirRest && (
+        <div className="flex flex-wrap items-end gap-2 rounded-lg border border-border bg-background/40 p-2">
+          <label className="text-xs text-muted-foreground">Data da resolução (ata)
+            <input type="date" className={`${campo} block`} value={dataResolucao} onChange={e => setDataResolucao(e.target.value)} />
+          </label>
+          <label className="text-xs text-muted-foreground">IPTU e contribuições associativas em aberto (R$)
+            <input inputMode="decimal" autoComplete="off" className={`${campo} block w-40`} value={outros} onChange={e => setOutros(e.target.value)} placeholder="0,00" />
+          </label>
+          <Button size="sm" disabled={gerar.isPending} onClick={() => gerar.mutate({ contratoId: c.contratoId, tipo: "restituicao", dataResolucao: dataResolucao || null, outrosDebitos: Number(outros.replace(/\./g, "").replace(",", ".")) || 0 })}>Gerar o memorial da restituição</Button>
+          <p className="basis-full text-[11px] text-muted-foreground">Calcula os valores pagos e as deduções pelos tetos do art. 32-A (fruição até 0,75% ao mês de posse, cláusula penal até 10%, encargos pagos, débitos do lote e corretagem) e o saldo em até 12 parcelas. Depois da resolução e do início da restituição, cancele o contrato no CRM para a chácara voltar à venda (art. 32-A, § 2º).</p>
         </div>
       )}
     </div>
@@ -67,27 +86,27 @@ const ETAPAS: Etapa[] = [
   { n: 1, titulo: "Parcela vencida e não paga", prazo: "Dia seguinte ao vencimento", quem: "Sistema",
     texto: "O contrato aparece aqui em destaque já na primeira parcela em atraso, com o valor original, o atualizado e os dias de atraso. Vale um contato amigável do escritório antes da via formal.",
     base: "CPCV, Cláusula 8ª" },
-  { n: 2, titulo: "Notificação de constituição em mora", prazo: "Abre 30 dias para pagar", quem: "Advogado", peca: "Peça 1 — Notificação",
-    texto: "Gere a notificação no botão 1 do caso, confira e assine com o certificado digital em Assinaturas. Ela cobra as parcelas vencidas, as que vencerem até o pagamento, multa, juros e correção, e dá 30 dias para purgar a mora.",
+  { n: 2, titulo: "Notificação de constituição em mora", prazo: "Abre 30 dias para pagar", quem: "Advogado", peca: "Peças 1 — Notificação e memorial do débito",
+    texto: "Gere a notificação no botão 1 e o memorial de cálculo do débito (correção, multa e juros parcela a parcela), confira e assine com o certificado digital em Assinaturas. Ela cobra as parcelas vencidas, as que vencerem até o pagamento, multa, juros e correção, e dá 30 dias para purgar a mora.",
     base: "Lei 6.766/1979, art. 32, caput; CPCV, Cláusula 7ª" },
   { n: 3, titulo: "Requerimento ao cartório", prazo: "Logo após a notificação", quem: "Advogado → Oficial", peca: "Peça 2 — Requerimento",
-    texto: "Escolha o cartório e gere o requerimento (botão 2). Contrato registrado: Registro de Imóveis, que intima o comprador pessoalmente. Contrato não registrado: Títulos e Documentos. Comprador em lugar incerto: intimação por edital. Protocole a notificação assinada junto.",
-    base: "Lei 6.766/1979, art. 32, § 1º; art. 49" },
+    texto: "Escolha o cartório e gere o requerimento (botão 2). Contrato registrado: Registro de Imóveis, que intima o comprador pessoalmente. Contrato não registrado: Títulos e Documentos. Comprador em lugar incerto: intimação por edital. Protocole junto a notificação e o memorial assinados.",
+    base: "Lei 6.766/1979, art. 32, § 1º, e art. 49; Lei 6.015/1973 (Registros Públicos), arts. 160 e 251-A; STJ, Súmula 76" },
   { n: 4, titulo: "Prazo de 30 dias da intimação", prazo: "Conta da data em que o cartório intimou", quem: "Comprador",
     texto: "Se pagar no cartório ou ao empreendimento, a mora é purgada e o contrato segue normalmente: dê baixa nas parcelas no Financeiro do CRM e o caso some desta lista.",
     base: "Lei 6.766/1979, art. 32, § 2º" },
   { n: 5, titulo: "Certidão de não pagamento e ata de resolução", prazo: "Depois dos 30 dias, sem pagamento", quem: "Cartório → Advogado", peca: "Peça 3 — Ata",
     texto: "Pegue no cartório a certidão de que não houve pagamento. Gere a ata de resolução (botão 3) com a data da intimação e o número do protocolo ou da certidão, e assine com o certificado.",
     base: "Lei 6.766/1979, art. 32, caput e § 3º; CPCV, Cláusula 8ª" },
-  { n: 6, titulo: "Cancelamento no registro", prazo: "Com a certidão e a ata", quem: "Advogado → Oficial",
-    texto: "Contrato registrado: requeira ao Registro de Imóveis o cancelamento do registro do compromisso. Se o comprador ocupar a chácara e não a devolver, a retomada da posse é por ação judicial de reintegração.",
-    base: "Lei 6.766/1979, art. 32, § 3º" },
-  { n: 7, titulo: "Acerto de contas com o comprador", prazo: "Até 12 parcelas, depois da carência", quem: "Empreendimento",
-    texto: "Devolve-se o que foi pago, descontadas as deduções do contrato e da lei: fruição do imóvel (até 0,75% ao mês), multa (até 10% do valor atualizado do contrato), comissão, impostos e taxas do lote. Com obras concluídas, as parcelas começam até 12 meses depois da resolução.",
+  { n: 6, titulo: "Cancelamento no registro", prazo: "Com a certidão e a ata", quem: "Advogado → Oficial", peca: "Peça 4 — Requerimento de cancelamento",
+    texto: "Contrato registrado: gere o requerimento de cancelamento (no painel da ata) e protocole no Registro de Imóveis com a certidão. A certidão do cancelamento é prova para a liminar de reintegração de posse, se o comprador não devolver a chácara.",
+    base: "Lei 6.766/1979, art. 32, § 3º; Lei 6.015/1973, art. 251-A, § 6º; CPC, arts. 560 a 566" },
+  { n: 7, titulo: "Acerto de contas com o comprador", prazo: "Até 12 parcelas, depois da carência", quem: "Empreendimento", peca: "Peça 5 — Memorial da restituição",
+    texto: "Gere o memorial da restituição (botão 4): valores pagos menos as deduções da lei — fruição (até 0,75% do valor do contrato por mês de posse), cláusula penal (até 10%), encargos pagos em atraso, IPTU e contribuições do lote e corretagem. Com obras concluídas, as parcelas começam até 12 meses depois da resolução.",
     base: "Lei 6.766/1979, art. 32-A" },
   { n: 8, titulo: "Chácara de volta à venda", prazo: "Encerramento", quem: "Escritório", final: true,
-    texto: "Cancele o contrato no CRM (Contratos): a chácara volta a ficar disponível no mapa e na tabela de vendas do empreendimento, e a linha do tempo do contrato guarda todo o histórico.",
-    base: "CRM — Contratos" },
+    texto: "A nova venda só é registrada depois de comprovado o início da restituição (art. 32-A, § 2º). Cancele o contrato no CRM (Contratos): a chácara volta a ficar disponível no mapa e na tabela de vendas do empreendimento, e a linha do tempo do contrato guarda todo o histórico.",
+    base: "Lei 6.766/1979, art. 32-A, § 2º; CRM — Contratos" },
 ];
 
 /** Linha do tempo didática do procedimento (aberta quando não há casos; recolhível quando há) */
@@ -112,7 +131,7 @@ function FluxoInadimplencia({ aberto }: { aberto: boolean }) {
         ))}
       </ol>
       <p className="mt-4 text-justify text-[11px] text-muted-foreground">
-        As três peças (notificação, requerimento e ata) são geradas aqui com os dados do contrato e os valores atualizados, e assinadas com o certificado digital ICP-Brasil do advogado. Cada etapa fica registrada na linha do tempo do contrato.
+        As peças (notificação, memorial do débito, requerimento, ata, requerimento de cancelamento e memorial da restituição) são geradas aqui com os dados do contrato e os valores atualizados, e assinadas com o certificado digital ICP-Brasil do advogado. Cada etapa fica registrada na linha do tempo do contrato.
       </p>
     </details>
   );

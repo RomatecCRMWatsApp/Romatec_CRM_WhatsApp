@@ -3,6 +3,21 @@
 Cada versão nova vai no TOPO. Depois rode `npm run release` (valida e atualiza o package.json);
 ao subir, o servidor grava a versão no banco e todos recebem o aviso "Novidades da versão".
 
+## 1.166.0 — 2026-11-12
+tipo: minor
+obrigatoria: nao
+titulo: Peças da consolidação do bem e aba Legislação no portal jurídico
+publico: equipe
+
+### Novo
+- Portal jurídico › Inadimplência: novas peças geradas com os dados do contrato e assináveis com certificado digital — memorial de cálculo do débito (correção, multa e juros parcela a parcela), requerimento de cancelamento do registro do compromisso no Registro de Imóveis (Lei de Registros Públicos, art. 251-A) e memorial de cálculo da restituição pelos tetos do art. 32-A da Lei n.º 6.766/1979 (fruição, cláusula penal, encargos, débitos do lote e corretagem, com o saldo em até 12 parcelas)
+- Portal jurídico › Legislação: biblioteca por tema (inadimplência e consolidação do bem, associação e estatuto, condomínio, regimento e diretrizes de uso, compra e venda e corretagem, registro de imóveis, posse e reintegração, assinatura digital e LGPD), com o resumo de cada dispositivo, quando usar, link para o texto oficial, botão para copiar o fundamento na peça, súmulas e temas do STJ/STF e doutrina de referência. Busca por assunto em todos os temas
+- Portal jurídico › Documentos: sub-abas por grupo (Associação, Compra e venda, Pagamento), cada uma com atalho para a legislação do grupo
+
+### Melhorias
+- Requerimento de intimação passa a citar o art. 251-A da Lei de Registros Públicos e a intimação por edital (Lei n.º 6.766/1979, art. 49); a ata lembra que a nova venda depende do início da restituição (art. 32-A, § 2º)
+- Passo a passo da consolidação do bem atualizado com as cinco peças e a base legal de cada etapa
+
 ## 1.165.5 — 2026-11-12
 tipo: patch
 obrigatoria: nao

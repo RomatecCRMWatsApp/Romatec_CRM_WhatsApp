@@ -20,11 +20,13 @@ export class JuridicoErro extends Error { constructor(m: string, public status =
 
 /** A partir da 1ª parcela vencida e não paga o caso já vai para o jurídico (CPCV, Cláusula 8ª) */
 export const GATILHO_PARCELAS = 1;
-export const TIPOS_DOC = ['notificacao', 'requerimento', 'ata', 'avulso'] as const;
+export const TIPOS_DOC = ['notificacao', 'memorial', 'requerimento', 'ata', 'cancelamento', 'restituicao', 'avulso'] as const;
 export type TipoDoc = typeof TIPOS_DOC[number];
 export const ROTULO_DOC: Record<TipoDoc, string> = {
   notificacao: 'Notificação extrajudicial de constituição em mora', requerimento: 'Requerimento de intimação ao Oficial',
   ata: 'Ata de constatação do inadimplemento e resolução do contrato', avulso: 'Documento avulso',
+  memorial: 'Memorial de cálculo do débito', cancelamento: 'Requerimento de cancelamento do registro do compromisso',
+  restituicao: 'Memorial de cálculo da restituição (art. 32-A)',
 };
 const ABERTAS = ['prevista', 'emitida', 'vencida'];
 const sha = (b: Buffer) => createHash('sha256').update(b).digest('hex');
@@ -42,7 +44,7 @@ async function banco(): Promise<any> {
   return d;
 }
 
-export interface ParcelaAtraso { id: number; rotulo: string; vencimento: string; valor: number; atualizado: number; dias: number }
+export interface ParcelaAtraso { id: number; rotulo: string; vencimento: string; valor: number; atualizado: number; dias: number; correcao: number; multa: number; juros: number }
 
 /** Parcelas vencidas e não pagas de um contrato, atualizadas até hoje pelos encargos da Cláusula 7ª */
 export async function parcelasEmAtraso(contratoId: number, hoje: string): Promise<ParcelaAtraso[]> {
@@ -58,7 +60,7 @@ export async function parcelasEmAtraso(contratoId: number, hoje: string): Promis
       const venc = String(c.vencimentoOriginal ?? c.vencimento).slice(0, 10);
       const valor = Number(c.valorOriginal ?? c.valor);
       const e = calcularEncargos(valor, venc, hoje, ipca);
-      return { id: Number(c.id), rotulo: rotuloParcela({ tipo: c.tipo, numero: Number(c.numero), total: Number(c.total) } as any), vencimento: venc, valor, atualizado: e.total, dias: e.dias };
+      return { id: Number(c.id), rotulo: rotuloParcela({ tipo: c.tipo, numero: Number(c.numero), total: Number(c.total) } as any), vencimento: venc, valor, atualizado: e.total, dias: e.dias, correcao: e.correcao, multa: e.multa, juros: e.juros };
     })
     .sort((a, b) => a.vencimento.localeCompare(b.vencimento));
 }
@@ -108,13 +110,30 @@ async function partes(contratoId: number) {
   };
 }
 
-export interface OpcoesDoc { via?: 'ri' | 'rtd'; dataIntimacao?: string | null; protocolo?: string | null; observacao?: string | null }
+export interface OpcoesDoc { via?: 'ri' | 'rtd'; dataIntimacao?: string | null; protocolo?: string | null; observacao?: string | null; dataResolucao?: string | null; outrosDebitos?: number | null }
+
+/** Teto legal das deduções na restituição (Lei n.º 6.766/1979, art. 32-A, I e II) */
+export const FRUICAO_MES_PCT = 0.0075;
+export const CLAUSULA_PENAL_MAX_PCT = 0.10;
+const ISO = /^\d{4}-\d{2}-\d{2}$/;
+const mesesEntre = (de: string, ate: string) => Math.max(0, Math.round((Date.parse(`${ate}T12:00:00Z`) - Date.parse(`${de}T12:00:00Z`)) / (30.4375 * 86_400_000) * 100) / 100);
+const r2 = (n: number) => Math.round(n * 100) / 100;
+
+/** Valores pagos pelo comprador e base do contrato para o memorial da restituição */
+async function pagamentosDo(contratoId: number) {
+  const d = await banco();
+  const cobs: any[] = await d.select().from(cobrancas).where(eq(cobrancas.contratoId, contratoId));
+  const pagas = cobs.filter(c => String(c.status) === 'paga');
+  const totalPago = r2(pagas.reduce((a, c) => a + Number(c.valorPago ?? c.valor ?? 0), 0));
+  const encargosPagos = r2(pagas.reduce((a, c) => a + Math.max(0, Number(c.valorPago ?? 0) - Number(c.valorOriginal ?? c.valor ?? 0)), 0));
+  return { qtd: pagas.length, totalPago, encargosPagos };
+}
 
 /** Gera o PDF do documento (sem assinatura digital; as assinaturas ICP entram depois, uma por pessoa) */
 export async function pdfDocumento(contratoId: number, tipo: Exclude<TipoDoc, 'avulso'>, hoje: string, o: OpcoesDoc = {}): Promise<{ pdf: Buffer; titulo: string; dados: any }> {
   const P = await partes(contratoId);
   const ps = await parcelasEmAtraso(contratoId, hoje);
-  if (!ps.length && tipo !== 'ata') throw new JuridicoErro('Este contrato não tem parcela vencida em aberto', 409);
+  if (!ps.length && (tipo === 'notificacao' || tipo === 'requerimento' || tipo === 'memorial')) throw new JuridicoErro('Este contrato não tem parcela vencida em aberto', 409);
   const { escritor } = await import('../contratos/docsComissao');
   const numero = s(P.c.numero), lote = s(P.c.loteCodigo), empNome = s(P.emp?.nome);
   const local = `${s(P.emp?.municipio) || 'Açailândia'}/${s(P.emp?.uf) || 'MA'}`;
@@ -126,6 +145,9 @@ export async function pdfDocumento(contratoId: number, tipo: Exclude<TipoDoc, 'a
     notificacao: `Notificação extrajudicial — constituição em mora — ${numero}`,
     requerimento: `Requerimento de ${via === 'ri' ? 'intimação' : 'notificação'} ao Oficial — ${numero}`,
     ata: `Ata de constatação do inadimplemento e resolução — ${numero}`,
+    memorial: `Memorial de cálculo do débito — ${numero}`,
+    cancelamento: `Requerimento de cancelamento do registro — ${numero}`,
+    restituicao: `Memorial de cálculo da restituição — ${numero}`,
   };
   const w = await escritor(titulos[tipo], P.marca, `${ROTULO_DOC[tipo]} · CPCV n.º ${numero} · Chácara ${lote}`);
   const tabelaAtraso = () => {
@@ -164,18 +186,97 @@ export async function pdfDocumento(contratoId: number, tipo: Exclude<TipoDoc, 'a
   }
 
   if (tipo === 'requerimento') {
-    w.cabecalho(`ILUSTRÍSSIMO(A) SENHOR(A) ${oficial.toUpperCase()}`, `Requerimento de ${via === 'ri' ? 'intimação — Lei n.º 6.766/1979, art. 32, § 1º' : 'notificação extrajudicial — Lei n.º 6.015/1973, art. 160'}`);
+    w.cabecalho(`ILUSTRÍSSIMO(A) SENHOR(A) ${oficial.toUpperCase()}`, `Requerimento de ${via === 'ri' ? 'intimação — Lei n.º 6.766/1979, art. 32, § 1º; Lei n.º 6.015/1973, art. 251-A' : 'notificação extrajudicial — Lei n.º 6.015/1973, art. 160'}`);
     w.paragrafo([{ t: `${P.vendedora.nome}`, b: true }, { t: `, ${P.vendedora.doc}, promitente vendedora do ${empNome}${advTxt}, vem, respeitosamente, à presença de Vossa Senhoria, ` },
-      { t: via === 'ri' ? 'com fundamento no art. 32, § 1º, da Lei n.º 6.766/1979, REQUERER A INTIMAÇÃO' : 'com fundamento no art. 160 da Lei n.º 6.015/1973, REQUERER A NOTIFICAÇÃO EXTRAJUDICIAL', b: true },
+      { t: via === 'ri' ? 'com fundamento no art. 32, § 1º, da Lei n.º 6.766/1979 e no art. 251-A da Lei n.º 6.015/1973 (Lei de Registros Públicos), REQUERER A INTIMAÇÃO' : 'com fundamento no art. 160 da Lei n.º 6.015/1973, REQUERER A NOTIFICAÇÃO EXTRAJUDICIAL', b: true },
       { t: ` de ${qualifComprador}, promissário(a) comprador(a) da Chácara ${lote} pelo Instrumento Particular de Compromisso de Compra e Venda n.º ${numero}, nos termos da notificação anexa, que integra este requerimento.` }]);
-    w.paragrafo(`O(A) intimando(a) está em mora quanto a ${ps.length} prestação(ões), que somam ${brl(totalOrig)} de valor original e ${brl(totalAtual)} atualizados até ${br(hoje)} (Cláusula 7ª do CPCV), discriminadas na notificação.`);
+    w.paragrafo(`O(A) intimando(a) está em mora quanto a ${ps.length} prestação(ões), que somam ${brl(totalOrig)} de valor original e ${brl(totalAtual)} atualizados até ${br(hoje)} (Cláusula 7ª do CPCV), discriminadas na notificação e no memorial de cálculo anexos.`);
     w.paragrafo(via === 'ri'
-      ? 'Requer seja o(a) intimando(a) intimado(a) a satisfazer, no prazo de 30 (trinta) dias, as prestações vencidas e as que se vencerem até a data do pagamento, com os juros convencionados e as custas de intimação, e, decorrido o prazo sem o pagamento, seja expedida a certidão respectiva e averbado o cancelamento do registro do compromisso (Lei n.º 6.766/1979, art. 32, §§ 1º e 3º).'
+      ? 'Requer seja o(a) intimando(a) intimado(a) a satisfazer, no prazo de 30 (trinta) dias, as prestações vencidas e as que se vencerem até a data do pagamento, com os juros convencionados e as custas de intimação, e, decorrido o prazo sem o pagamento, seja expedida a certidão respectiva e averbado o cancelamento do registro do compromisso (Lei n.º 6.766/1979, art. 32, §§ 1º e 3º; Lei n.º 6.015/1973, art. 251-A). Não sendo o(a) intimando(a) encontrado(a), requer a intimação pelos demais meios admitidos, inclusive por edital, se em lugar incerto e não sabido (Lei n.º 6.766/1979, art. 49).'
       : 'Requer seja o(a) notificando(a) notificado(a) do inteiro teor da notificação anexa, com a entrega pessoal no endereço indicado, e a expedição da certidão da notificação, com a data do recebimento, para fins de contagem do prazo de 30 (trinta) dias para a purgação da mora previsto no CPCV (Cláusula 8ª) e no art. 32 da Lei n.º 6.766/1979.');
     w.paragrafo('Requer, ainda, que eventuais comunicações sejam dirigidas aos advogados signatários. Nestes termos, pede deferimento.');
     if (o.observacao) w.paragrafo(`Observação: ${o.observacao}`, { antes: 4 });
     fecho(); blocosAss();
     return { pdf: await w.salvar(), titulo: titulos[tipo], dados: { via, oficial, parcelas: ps.length } };
+  }
+
+  if (tipo === 'memorial') {
+    w.cabecalho('MEMORIAL DE CÁLCULO DO DÉBITO', `CPCV n.º ${numero} · Chácara ${lote} · posição em ${br(hoje)}`);
+    w.paragrafo([{ t: 'CREDORA: ', b: true }, { t: `${P.vendedora.nome}, ${P.vendedora.doc}.` }]);
+    w.paragrafo([{ t: 'DEVEDOR(A): ', b: true }, { t: `${qualifComprador}.` }]);
+    w.clausula('1. CRITÉRIOS (CPCV, Cláusula 7ª)');
+    w.paragrafo('Correção monetária pelo IPCA/IBGE desde o vencimento; multa moratória de 2% (dois por cento) sobre o valor corrigido; juros de mora de 1% (um por cento) ao mês, pro rata die. Base legal: Código Civil, arts. 389, 395 e 406; Lei n.º 6.766/1979, art. 32, § 1º (prestações vencidas e as que se vencerem até o pagamento, juros convencionados e custas).');
+    w.clausula('2. DEMONSTRATIVO');
+    w.tabela(['Parcela', 'Vencimento', 'Original', 'Dias', 'Correção', 'Multa 2%', 'Juros', 'Total'],
+      [...ps.map(p => [p.rotulo, br(p.vencimento), brl(p.valor), String(p.dias), brl(p.correcao), brl(p.multa), brl(p.juros), brl(p.atualizado)]),
+        ['TOTAL', '', brl(totalOrig), '', brl(r2(ps.reduce((a, p) => a + p.correcao, 0))), brl(r2(ps.reduce((a, p) => a + p.multa, 0))), brl(r2(ps.reduce((a, p) => a + p.juros, 0))), brl(totalAtual)]],
+      { pesos: [1.4, 0.9, 1, 0.5, 0.9, 0.9, 1, 1.1], direita: [2, 3, 4, 5, 6, 7] });
+    w.paragrafo(`3. Débito total atualizado até ${br(hoje)}: ${brl(totalAtual)}, acrescido das prestações que se vencerem até o efetivo pagamento e das custas e emolumentos da intimação, a serem informados pelo Oficial.`, { antes: 6 });
+    if (o.observacao) w.paragrafo(`Observação: ${o.observacao}`, { antes: 4 });
+    fecho(); blocosAss();
+    return { pdf: await w.salvar(), titulo: titulos[tipo], dados: { parcelas: ps.length, totalOriginal: r2(totalOrig), totalAtualizado: r2(totalAtual) } };
+  }
+
+  if (tipo === 'cancelamento') {
+    if (via !== 'ri') throw new JuridicoErro('Sem registro do compromisso no Registro de Imóveis não há o que cancelar: a resolução fica provada pela notificação, pela certidão do Títulos e Documentos e pela ata', 409);
+    const intimadoC = o.dataIntimacao && ISO.test(o.dataIntimacao) ? o.dataIntimacao : null;
+    if (!intimadoC) throw new JuridicoErro('Informe a data em que o(a) comprador(a) foi intimado(a) pelo Oficial', 400);
+    if (!o.protocolo) throw new JuridicoErro('Informe o número da certidão de decurso do prazo sem purgação da mora', 400);
+    const fim = new Date(Date.parse(`${intimadoC}T12:00:00Z`) + 30 * 86_400_000).toISOString().slice(0, 10);
+    if (fim >= hoje) throw new JuridicoErro(`O prazo de 30 dias para purgar a mora só termina em ${br(fim)}`, 409);
+    w.cabecalho(`ILUSTRÍSSIMO(A) SENHOR(A) ${oficial.toUpperCase()}`, 'Requerimento de averbação do cancelamento do registro do compromisso — Lei n.º 6.766/1979, art. 32, § 3º; Lei n.º 6.015/1973, art. 251-A');
+    w.paragrafo([{ t: `${P.vendedora.nome}`, b: true }, { t: `, ${P.vendedora.doc}, promitente vendedora do ${empNome}${advTxt}, vem, respeitosamente, ` },
+      { t: 'REQUERER A AVERBAÇÃO DO CANCELAMENTO DO REGISTRO', b: true },
+      { t: ` do Instrumento Particular de Compromisso de Compra e Venda n.º ${numero}, relativo à Chácara ${lote}, firmado com ${qualifComprador}, pelos fatos e fundamentos a seguir.` }]);
+    w.clausula('1. DOS FATOS');
+    w.paragrafo(`1.1. A requerimento da promitente vendedora, o(a) promissário(a) comprador(a) foi intimado(a) por este Ofício em ${br(intimadoC)} para satisfazer, em 30 (trinta) dias, as prestações vencidas e as que se vencessem até o pagamento, com os encargos contratuais e as custas da intimação.`);
+    w.paragrafo(`1.2. O prazo encerrou-se em ${br(fim)} sem a purgação da mora, conforme a certidão n.º ${o.protocolo} expedida por este Ofício.`);
+    w.clausula('2. DO DIREITO');
+    w.paragrafo('2.1. Vencida e não paga a prestação, o contrato considera-se rescindido 30 (trinta) dias depois de constituído em mora o devedor; com a certidão de não haver sido feito o pagamento em cartório, o vendedor requererá ao Oficial o cancelamento da averbação (Lei n.º 6.766/1979, art. 32, caput e § 3º). Em igual sentido, o procedimento de cancelamento do registro do compromisso por falta de pagamento do art. 251-A da Lei n.º 6.015/1973, incluído pela Lei n.º 14.382/2022.');
+    w.paragrafo('2.2. A restituição dos valores pagos observará o art. 32-A da Lei n.º 6.766/1979 e a Cláusula 9ª do CPCV, conforme o memorial de cálculo da restituição anexo.');
+    w.clausula('3. DO PEDIDO');
+    w.paragrafo('Requer a averbação do cancelamento do registro do compromisso na matrícula do imóvel, a expedição da certidão respectiva e que as comunicações sejam dirigidas aos advogados signatários. Anexos: certidão de decurso do prazo, notificação, memorial de cálculo do débito, ata de resolução e memorial de cálculo da restituição. Nestes termos, pede deferimento.');
+    if (o.observacao) w.paragrafo(`Observação: ${o.observacao}`, { antes: 4 });
+    fecho(); blocosAss();
+    return { pdf: await w.salvar(), titulo: titulos[tipo], dados: { intimado: intimadoC, fimPrazo: fim, certidao: o.protocolo, oficial } };
+  }
+
+  if (tipo === 'restituicao') {
+    const plano: any = json(P.c.simulacaoJson) ?? {};
+    const valorContrato = Number(plano.preco_tabela ?? plano.total_pagar ?? 0);
+    const comissao = Number(plano.comissao_total ?? 0);
+    const posse = String(P.c.usoLiberadoEm ? new Date(P.c.usoLiberadoEm).toISOString() : '').slice(0, 10);
+    const resolucao = o.dataResolucao && ISO.test(o.dataResolucao) ? o.dataResolucao : hoje;
+    const pg = await pagamentosDo(contratoId);
+    const meses = posse ? mesesEntre(posse, resolucao) : 0;
+    const fruicao = r2(valorContrato * FRUICAO_MES_PCT * meses);
+    const multa = r2(valorContrato * CLAUSULA_PENAL_MAX_PCT);
+    const outros = r2(Math.max(0, Number(o.outrosDebitos ?? 0)));
+    const deducoes = r2(fruicao + multa + pg.encargosPagos + outros + comissao);
+    const saldo = r2(Math.max(0, pg.totalPago - deducoes));
+    const parcela = r2(saldo / 12);
+    w.cabecalho('MEMORIAL DE CÁLCULO DA RESTITUIÇÃO', `CPCV n.º ${numero} · Chácara ${lote} · Lei n.º 6.766/1979, art. 32-A`);
+    w.paragrafo([{ t: 'EX-PROMISSÁRIO(A) COMPRADOR(A): ', b: true }, { t: `${qualifComprador}.` }]);
+    w.paragrafo(`Valor atualizado do contrato (base): ${brl(valorContrato)}. Resolução em ${br(resolucao)}. ${posse ? `Posse (uso liberado) desde ${br(posse)}: ${meses.toLocaleString('pt-BR')} mês(es).` : 'Sem registro de transmissão da posse: fruição não aplicada.'}`);
+    w.clausula('1. VALORES PAGOS');
+    w.paragrafo(`${pg.qtd} parcela(s) paga(s), no total de ${brl(pg.totalPago)}.`);
+    w.clausula('2. DEDUÇÕES (art. 32-A, incisos I a V — tetos legais)');
+    w.tabela(['Dedução', 'Fundamento', 'Valor'], [
+      ['Fruição do imóvel (até 0,75% do valor atualizado do contrato por mês de posse)', 'art. 32-A, I', brl(fruicao)],
+      ['Cláusula penal e despesas administrativas (até 10% do valor atualizado do contrato)', 'art. 32-A, II', brl(multa)],
+      ['Encargos moratórios das prestações pagas em atraso', 'art. 32-A, III', brl(pg.encargosPagos)],
+      ['Débitos de tributos e contribuições associativas do lote', 'art. 32-A, IV', brl(outros)],
+      ['Comissão de corretagem integrada ao preço', 'art. 32-A, V', brl(comissao)],
+      ['TOTAL DAS DEDUÇÕES', '', brl(deducoes)],
+    ], { pesos: [3.4, 1, 1], direita: [2] });
+    w.clausula('3. SALDO A RESTITUIR E FORMA DE PAGAMENTO');
+    w.paragrafo(saldo > 0
+      ? `Saldo a restituir: ${brl(saldo)}, em até 12 (doze) parcelas mensais de ${brl(parcela)}, com início no prazo de carência do art. 32-A, § 1º: em loteamento com obras concluídas, em até 12 (doze) meses da formalização da resolução; com obras em andamento, em até 180 (cento e oitenta) dias após o prazo previsto no contrato para a conclusão das obras.`
+      : 'As deduções legais e contratuais absorvem os valores pagos: não há saldo a restituir.');
+    w.paragrafo('Os percentuais acima são os tetos do art. 32-A; prevalece o percentual pactuado na Cláusula 9ª do CPCV quando menor. A nova venda do lote só será registrada depois de comprovado o início da restituição, salvo se o adquirente não for localizado ou não se manifestar (art. 32-A, § 2º).', { antes: 4 });
+    if (o.observacao) w.paragrafo(`Observação: ${o.observacao}`, { antes: 4 });
+    fecho(); blocosAss();
+    return { pdf: await w.salvar(), titulo: titulos[tipo], dados: { valorContrato, pago: pg.totalPago, fruicao, multa, encargos: pg.encargosPagos, outros, comissao, deducoes, saldo, meses, resolucao } };
   }
 
   // Ata: decorrido o prazo sem purgação
@@ -192,7 +293,7 @@ export async function pdfDocumento(contratoId: number, tipo: Exclude<TipoDoc, 'a
   w.paragrafo([{ t: `2.1. O prazo para a purgação da mora encerrou-se em ${br(fimPrazo)} sem o pagamento. Em consequência, ` }, { t: 'o CPCV n.º ' + numero + ' está rescindido de pleno direito', b: true },
     { t: ' (Lei n.º 6.766/1979, art. 32; CPCV, Cláusula 8ª), e o imóvel retorna à disponibilidade da PROMITENTE VENDEDORA, livre para nova comercialização, observado o cancelamento do registro do compromisso, quando houver (art. 32, § 3º).' }]);
   w.clausula('3. DA RESTITUIÇÃO E DA POSSE');
-  w.paragrafo('3.1. Os valores pagos serão restituídos na forma do art. 32-A da Lei n.º 6.766/1979 e da Cláusula 9ª do CPCV, em demonstrativo apartado, deduzidos a fruição do imóvel (até 0,75% ao mês sobre o valor atualizado do contrato, desde a imissão na posse), a cláusula penal e as despesas administrativas, os débitos de tributos e contribuições associativas e a comissão de corretagem, pagos nos prazos do art. 32-A, § 1º.');
+  w.paragrafo('3.1. Os valores pagos serão restituídos na forma do art. 32-A da Lei n.º 6.766/1979 e da Cláusula 9ª do CPCV, em demonstrativo apartado, deduzidos a fruição do imóvel (até 0,75% ao mês sobre o valor atualizado do contrato, desde a imissão na posse), a cláusula penal e as despesas administrativas, os débitos de tributos e contribuições associativas e a comissão de corretagem, pagos nos prazos do art. 32-A, § 1º. A nova venda do lote só será registrada após comprovado o início da restituição (art. 32-A, § 2º).');
   w.paragrafo('3.2. O(A) ex-promissário(a) comprador(a) deverá restituir a posse livre de pessoas e coisas em até 30 (trinta) dias, sob pena de pagar a fruição em dobro até a desocupação, sem prejuízo da reintegração de posse (Cláusula 9.4), observado o regime das benfeitorias da Cláusula 9.3.');
   w.paragrafo('3.3. Dê-se ciência ao(à) ex-promissário(a) comprador(a) pelos contatos do Quadro-Resumo.');
   if (o.observacao) w.paragrafo(`Observação: ${o.observacao}`, { antes: 4 });

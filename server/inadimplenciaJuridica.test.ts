@@ -78,6 +78,28 @@ describe('inadimplência', () => {
     expect(ata.id).toBeGreaterThan(rq.id);
   });
 
+  it('memorial de cálculo do débito, restituição pelos tetos do art. 32-A e cancelamento só com registro no RI', async () => {
+    const m = await J.pdfDocumento(contratoId, 'memorial', HOJE);
+    expect(m.dados.parcelas).toBe(3);
+    expect(m.dados.totalAtualizado).toBeGreaterThan(m.dados.totalOriginal);
+    db.run(sql`UPDATE cobrancas SET status = 'paga', valorPago = '1300', valorOriginal = '1287.81' WHERE contratoId = ${contratoId} AND numero = 4`);
+    db.run(sql`UPDATE contratos SET usoLiberadoEm = ${dia(-100) + ' 12:00:00'} WHERE id = ${contratoId}`);
+    const r = await J.pdfDocumento(contratoId, 'restituicao', HOJE, { outrosDebitos: 50 });
+    expect(r.dados.pago).toBe(1300);
+    expect(r.dados.encargos).toBeCloseTo(12.19, 2);
+    expect(r.dados.multa).toBeCloseTo(r.dados.valorContrato * 0.1, 2);
+    expect(r.dados.saldo).toBe(Math.max(0, Math.round((1300 - r.dados.deducoes) * 100) / 100));
+    db.run(sql`UPDATE cobrancas SET status = 'prevista', valorPago = NULL WHERE contratoId = ${contratoId} AND numero = 4`);
+    await expect(J.pdfDocumento(contratoId, 'cancelamento', HOJE, { via: 'rtd', dataIntimacao: dia(-40), protocolo: 'C1' })).rejects.toThrow(/não há o que cancelar/);
+    await expect(J.pdfDocumento(contratoId, 'cancelamento', HOJE, { via: 'ri', dataIntimacao: dia(-40) })).rejects.toThrow(/certidão/);
+    const c = await J.pdfDocumento(contratoId, 'cancelamento', HOJE, { via: 'ri', dataIntimacao: dia(-40), protocolo: 'C-77' });
+    expect(c.dados.certidao).toBe('C-77');
+    if (process.env.SALVAR_DOCS) {
+      const { writeFileSync } = await import('node:fs');
+      writeFileSync(`${process.env.SALVAR_DOCS}/memorial.pdf`, m.pdf); writeFileSync(`${process.env.SALVAR_DOCS}/restituicao.pdf`, r.pdf); writeFileSync(`${process.env.SALVAR_DOCS}/cancelamento.pdf`, c.pdf);
+    }
+  });
+
   it('advogado assina com o certificado guardado e o administrador com o .pfx enviado agora: duas assinaturas no mesmo PDF', async () => {
     const [doc] = (await J.documentosDo(1)).filter(d => d.tipo === 'notificacao');
     await expect(J.assinarDocumento(doc.id, { id: 2 }, 'errada')).rejects.toThrow(/Senha incorreta/);

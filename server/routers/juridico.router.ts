@@ -171,14 +171,15 @@ export const juridicoRouter = router({
 
   /** Gera a notificação, o requerimento ao Oficial ou a ata (guardados para assinar com certificado) */
   gerarDocumento: protectedProcedure.input(z.object({
-    contratoId: z.number().int(), tipo: z.enum(["notificacao", "requerimento", "ata"]), via: z.enum(["ri", "rtd"]).optional(),
+    contratoId: z.number().int(), tipo: z.enum(["notificacao", "memorial", "requerimento", "ata", "cancelamento", "restituicao"]), via: z.enum(["ri", "rtd"]).optional(),
+    dataResolucao: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).nullable().optional(), outrosDebitos: z.number().min(0).max(10_000_000).nullable().optional(),
     dataIntimacao: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).nullable().optional(), protocolo: z.string().trim().max(80).nullable().optional(), observacao: z.string().trim().max(1500).nullable().optional(),
   })).mutation(async ({ ctx, input }) => {
     const { db, emp } = await contexto(ctx);
     const [c]: any[] = await db.select({ empreendimentoId: contratos.empreendimentoId }).from(contratos).where(eq(contratos.id, input.contratoId)).limit(1);
     if (!c || (perfilDe(ctx.user) === "juridico" && Number(c.empreendimentoId) !== Number(emp.id))) throw new TRPCError({ code: "NOT_FOUND", message: "Contrato não encontrado" });
     const { gerarDocumento } = await import("../juridico/inadimplencia");
-    return comErro(() => gerarDocumento(input.contratoId, input.tipo, ctx.user.id, hoje(), { via: input.via, dataIntimacao: input.dataIntimacao ?? null, protocolo: input.protocolo ?? null, observacao: input.observacao ?? null }));
+    return comErro(() => gerarDocumento(input.contratoId, input.tipo, ctx.user.id, hoje(), { via: input.via, dataIntimacao: input.dataIntimacao ?? null, protocolo: input.protocolo ?? null, observacao: input.observacao ?? null, dataResolucao: input.dataResolucao ?? null, outrosDebitos: input.outrosDebitos ?? null }));
   }),
 
   /** Documentos jurídicos do empreendimento (gerados e avulsos) com as assinaturas */
