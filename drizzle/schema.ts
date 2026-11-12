@@ -2521,3 +2521,34 @@ export const juridicoApontamentos = mysqlTable("juridicoApontamentos", {
   respondidoEm: datetime("respondidoEm"),
   criadoEm: timestamp("criadoEm").defaultNow().notNull(),
 });
+
+/** Certificado digital A1 (ICP-Brasil) do usuário: o .pfx fica CIFRADO (AES-256-GCM); a senha NUNCA é guardada */
+export const certificadosUsuario = mysqlTable("certificadosUsuario", {
+  usuarioId: int("usuarioId").primaryKey(),
+  pfxCifrado: longtext("pfxCifrado").notNull(),
+  iv: varchar("iv", { length: 32 }).notNull(),
+  tag: varchar("tag", { length: 40 }).notNull(),
+  titular: varchar("titular", { length: 200 }).notNull(),
+  cpf: varchar("cpf", { length: 11 }),
+  emissor: varchar("emissor", { length: 200 }).notNull(),
+  validade: datetime("validade").notNull(),
+  criadoEm: timestamp("criadoEm").defaultNow().notNull(),
+});
+
+/** Documentos do corpo jurídico (notificação, requerimento, ata de inadimplência, ofícios avulsos) e as assinaturas ICP */
+export const juridicoDocumentos = mysqlTable("juridicoDocumentos", {
+  id: int("id").autoincrement().primaryKey(),
+  empreendimentoId: int("empreendimentoId").notNull(),
+  contratoId: int("contratoId"),
+  /** notificacao | requerimento | ata | avulso */
+  tipo: varchar("tipo", { length: 20 }).notNull(),
+  titulo: varchar("titulo", { length: 250 }).notNull(),
+  pdfArquivo: varchar("pdfArquivo", { length: 255 }).notNull(),
+  sha256: char("sha256", { length: 64 }).notNull(),
+  /** [{ usuarioId, nome, cpf, emissor, em }] */
+  assinaturasJson: text("assinaturasJson"),
+  dadosJson: text("dadosJson"),
+  criadoPor: int("criadoPor").notNull(),
+  criadoEm: timestamp("criadoEm").defaultNow().notNull(),
+  atualizadoEm: datetime("atualizadoEm"),
+});

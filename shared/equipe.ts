@@ -62,12 +62,14 @@ const TRPC_EMPREENDEDOR = ['auth.', 'empreendedor.', 'system.versao', 'cadastro.
   // Reuniões do empreendimento dele e quem confirmou presença (só leitura)
   'convites.listar', 'convites.detalhe',
   // Ranking de vendas e campanha do empreendimento dele (só leitura)
-  'ranking.empreendimentos', 'ranking.classificacao'];
+  'ranking.empreendimentos', 'ranking.classificacao',
+  // Documentos jurídicos do empreendimento dele e a assinatura com certificado digital ICP-Brasil
+  'juridico.documentos', 'juridico.assinarDocumento', 'certificado.'];
 /**
  * Corpo jurídico (advogados do empreendimento): só o portal jurídico — documentos (estatuto, modelos, contratos e
  * aditivos), financeiro do empreendimento (leitura) e as pontuações jurídicas. O escopo é o empreendimento do login.
  */
-const TRPC_JURIDICO = ['auth.', 'juridico.', 'system.versao', 'system.linkPdf', 'cadastro.', 'saas.minhaAssinatura', 'saas.minhaCheckout', 'saas.cupomValidar', 'novidades.naoLidas', 'novidades.historico', 'novidades.marcarLida', 'novidades.marcarTodas', 'novidades.definirDescanso', 'notificacoes.'];
+const TRPC_JURIDICO = ['auth.', 'juridico.', 'certificado.', 'system.versao', 'system.linkPdf', 'cadastro.', 'saas.minhaAssinatura', 'saas.minhaCheckout', 'saas.cupomValidar', 'novidades.naoLidas', 'novidades.historico', 'novidades.marcarLida', 'novidades.marcarTodas', 'novidades.definirDescanso', 'notificacoes.'];
 /** Secretário e corretor não mexem em configurações, na equipe nem na ZAYRA */
 const TRPC_SO_ADMIN = ['companyConfig.update', 'equipe.', 'zaira.'];
 

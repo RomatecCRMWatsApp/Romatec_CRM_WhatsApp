@@ -3,6 +3,24 @@
 Cada versão nova vai no TOPO. Depois rode `npm run release` (valida e atualiza o package.json);
 ao subir, o servidor grava a versão no banco e todos recebem o aviso "Novidades da versão".
 
+## 1.165.0 — 2026-11-12
+tipo: minor
+obrigatoria: nao
+titulo: Inadimplência no portal jurídico e assinatura com certificado digital
+publico: equipe
+
+### Novo
+- Portal jurídico › Inadimplência: contratos com parcela vencida e não paga, com os valores atualizados pela Cláusula 7ª do CPCV (IPCA, multa de 2% e juros de 1% ao mês). A partir de 3 parcelas o caso fica em destaque
+- Peças geradas para cada caso (Lei n.º 6.766/1979, arts. 32 e 32-A; CPCV, Cláusulas 8ª e 9ª): 1) notificação extrajudicial de constituição em mora, com 30 dias para purgar; 2) requerimento ao Oficial — Registro de Imóveis (intimação do art. 32, § 1º) ou Títulos e Documentos (enquanto o compromisso não estiver registrado); 3) ata de constatação do inadimplemento e resolução do contrato, só depois de 30 dias da intimação sem pagamento
+- Assinatura com certificado digital ICP-Brasil A1: advogados, administrador, secretária e empreendedora assinam as peças, ofícios, alterações e solicitações. Várias pessoas assinam o mesmo PDF sem invalidar as assinaturas anteriores. O comprador continua assinando pelo WhatsApp
+- Meu certificado digital (Meu cadastro, portal jurídico e portal do empreendedor): guarde o .pfx uma vez; ele fica cifrado no servidor e a senha nunca é guardada — o sistema pede a senha a cada assinatura. Só certificado ICP-Brasil, dentro da validade e com o CPF do seu cadastro. Também dá para assinar enviando o .pfx na hora, sem guardar
+- Portal jurídico › Documentos e assinaturas: envio de PDF avulso (ofício, alteração, solicitação) para assinar; lista com quem já assinou
+- Portal do empreendedor › Documentos jurídicos: a empreendedora vê e assina com o certificado os documentos do empreendimento
+- Linha do tempo do contrato: documento jurídico gerado e assinado com certificado digital
+
+### Avisos
+- A ata não cancela o contrato sozinha: depois dela, cancele o contrato no CRM para a chácara voltar à venda
+
 ## 1.164.1 — 2026-11-12
 tipo: patch
 obrigatoria: nao

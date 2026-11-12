@@ -1365,6 +1365,8 @@ async function startServer() {
   });
   const { registrarRotasContratos } = await import('../contratos/rotas');
   registrarRotasContratos(app);
+  const { registrarRotasJuridico } = await import('../juridico/rotas');
+  registrarRotasJuridico(app);
   // Cartão de vendas público dos links de divulgação (?c=<ref>): contato de quem compartilhou
   app.get('/api/cartao/:ref', async (req, res) => {
     try {

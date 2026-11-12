@@ -1,7 +1,9 @@
 import { useState } from "react";
 import { useLocation } from "wouter";
 import { toast } from "sonner";
-import { ArrowLeft, CheckCircle2, FileText, Gavel, Loader2, LogOut, MessageSquarePlus, Receipt } from "lucide-react";
+import { AlertTriangle, ArrowLeft, CheckCircle2, FileKey2, FileText, Gavel, Loader2, LogOut, MessageSquarePlus, PenTool, Receipt } from "lucide-react";
+import { CertificadoDigital, DocumentosJuridicos } from "@/components/juridico/CertificadoDigital";
+import { PainelInadimplencia } from "@/components/juridico/Inadimplencia";
 import { perfilDe } from "@shared/equipe";
 import { trpc } from "@/lib/trpc";
 import { useAuth } from "@/_core/hooks/useAuth";
@@ -14,7 +16,7 @@ import { OURO_JURIDICO, SeloJuridico } from "@/components/juridico/SeloJuridico"
 
 const brl = (n: number | null | undefined) => (n == null ? "—" : n.toLocaleString("pt-BR", { style: "currency", currency: "BRL" }));
 const dataBr = (d: string | null | undefined) => (d ? new Date(d.length <= 10 ? `${d}T12:00:00` : d).toLocaleDateString("pt-BR") : "—");
-const SECOES = [["documentos", "Documentos", FileText], ["pontuacoes", "Pontuações jurídicas", MessageSquarePlus], ["contratos", "Contratos e aditivos", Gavel], ["financeiro", "Financeiro", Receipt]] as const;
+const SECOES = [["inadimplencia", "Inadimplência", AlertTriangle], ["assinaturas", "Assinaturas", PenTool], ["documentos", "Documentos", FileText], ["pontuacoes", "Pontuações jurídicas", MessageSquarePlus], ["contratos", "Contratos e aditivos", Gavel], ["financeiro", "Financeiro", Receipt], ["certificado", "Certificado", FileKey2]] as const;
 const TIPO: Record<string, string> = { alteracao: "Alteração", indagacao: "Indagação", observacao: "Observação" };
 const STATUS: Record<string, [string, string]> = {
   aberto: ["Aberta", "bg-warn-500/15 text-warn-300"], respondido: ["Respondida", "bg-info-500/15 text-info-300"], resolvido: ["Resolvida", "bg-ok-500/15 text-ok-300"],
@@ -184,6 +186,12 @@ export default function Juridico() {
           )}
         </section>
 
+        <Titulo id="inadimplencia" icone={AlertTriangle} sub="Constituição em mora, cartório e resolução do contrato (Lei n.º 6.766/1979, arts. 32 e 32-A).">Inadimplência</Titulo>
+        <PainelInadimplencia slug={ehJuridico ? undefined : slug} />
+
+        <Titulo id="assinaturas" icone={PenTool} sub="Notificações, requerimentos, atas, ofícios e alterações — assinados com certificado digital ICP-Brasil.">Documentos e assinaturas</Titulo>
+        <DocumentosJuridicos slug={ehJuridico ? undefined : slug} podeEnviar admin={!ehJuridico} />
+
         <Titulo id="documentos" icone={FileText} sub="Versões em vigor, geradas na hora com um cliente fictício. Alguns PDFs levam alguns segundos.">Documentos do empreendimento</Titulo>
         <div className="grid gap-2 md:grid-cols-2">
           {(p?.documentos ?? []).map(d => (
@@ -267,6 +275,9 @@ export default function Juridico() {
             </div>
           </>
         ) : <p className="text-sm text-muted-foreground">Sem contratos com financeiro ainda.</p>}
+
+        <Titulo id="certificado" icone={FileKey2} sub="O seu certificado para assinar os documentos do portal.">Meu certificado digital</Titulo>
+        <CertificadoDigital />
       </div>
     </div>
   );

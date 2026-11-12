@@ -14,12 +14,13 @@ import { perfilDe } from "../../shared/equipe";
 
 const slugZ = z.object({ slug: z.string().regex(/^[a-z0-9-]{1,80}$/).optional() }).optional();
 
-async function contexto(ctx: any, slugPedido?: string | null) {
+async function contexto(ctx: any, slugPedido?: string | null, o: { empreendedor?: boolean } = {}) {
   const perfil = perfilDe(ctx.user);
-  if (perfil !== "juridico" && perfil !== "admin") throw new TRPCError({ code: "FORBIDDEN", message: "O portal jurídico é dos advogados do empreendimento e do administrador." });
+  const ok = perfil === "juridico" || perfil === "admin" || (o.empreendedor && perfil === "empreendedor");
+  if (!ok) throw new TRPCError({ code: "FORBIDDEN", message: "O portal jurídico é dos advogados do empreendimento e do administrador." });
   const db: any = await getDb();
   if (!db) throw new Error("Banco indisponível");
-  const slug: string | null = perfil === "juridico" ? ctx.user.empreendimentoSlug ?? null : (slugPedido || ctx.user.empreendimentoSlug || "bom-jardims");
+  const slug: string | null = perfil === "juridico" || perfil === "empreendedor" ? ctx.user.empreendimentoSlug ?? null : (slugPedido || ctx.user.empreendimentoSlug || "bom-jardims");
   if (!slug) throw new TRPCError({ code: "FORBIDDEN", message: "Seu acesso não tem empreendimento definido. Fale com o administrador." });
   const [emp]: any[] = await db.select().from(empreendimentos).where(eq(empreendimentos.slug, slug)).limit(1);
   if (!emp) throw new TRPCError({ code: "NOT_FOUND", message: "Empreendimento não encontrado" });
@@ -45,6 +46,19 @@ function documentos(slug: string, lote: string) {
 }
 
 const TIPOS = ["alteracao", "indagacao", "observacao"] as const;
+
+/** Erros do serviço de inadimplência/certificado viram erros tRPC com a mensagem para a tela */
+async function comErro<T>(f: () => Promise<T>): Promise<T> {
+  try { return await f(); } catch (e: any) {
+    if (e?.name === "JuridicoErro" || e?.name === "CertificadoErro") {
+      const st = Number(e.status);
+      throw new TRPCError({ code: st === 404 ? "NOT_FOUND" : st === 403 ? "FORBIDDEN" : st === 409 ? "CONFLICT" : st === 412 ? "PRECONDITION_FAILED" : st >= 500 ? "INTERNAL_SERVER_ERROR" : "BAD_REQUEST", message: e.message });
+    }
+    throw e;
+  }
+}
+const hoje = () => new Date(Date.now() - 3 * 3600_000).toISOString().slice(0, 10);
+const pfxZ = z.string().max(280_000).optional().nullable();
 const STATUS = ["aberto", "respondido", "resolvido"] as const;
 
 export const juridicoRouter = router({
@@ -144,5 +158,46 @@ export const juridicoRouter = router({
         ...(perfil === "admin" && input.resposta ? { resposta: input.resposta, respondidoPor: ctx.user.id, respondidoEm: new Date() } : {}),
       } as any).where(eq(juridicoApontamentos.id, input.id));
       return { ok: true as const };
+    }),
+
+  // ─── Inadimplência (Lei n.º 6.766/1979, arts. 32 e 32-A) ───────────────────────────────
+  /** Contratos com parcela vencida em aberto; alerta a partir de 3 parcelas */
+  inadimplencia: protectedProcedure.input(z.object({ slug: z.string().regex(/^[a-z0-9-]{1,80}$/).optional(), gatilho: z.number().int().min(1).max(24).optional() }).optional())
+    .query(async ({ ctx, input }) => {
+      const { emp } = await contexto(ctx, input?.slug);
+      const { inadimplentes, GATILHO_PARCELAS } = await import("../juridico/inadimplencia");
+      return { gatilho: input?.gatilho ?? GATILHO_PARCELAS, contratos: await inadimplentes(Number(emp.id), hoje(), input?.gatilho ?? GATILHO_PARCELAS) };
+    }),
+
+  /** Gera a notificação, o requerimento ao Oficial ou a ata (guardados para assinar com certificado) */
+  gerarDocumento: protectedProcedure.input(z.object({
+    contratoId: z.number().int(), tipo: z.enum(["notificacao", "requerimento", "ata"]), via: z.enum(["ri", "rtd"]).optional(),
+    dataIntimacao: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).nullable().optional(), protocolo: z.string().trim().max(80).nullable().optional(), observacao: z.string().trim().max(1500).nullable().optional(),
+  })).mutation(async ({ ctx, input }) => {
+    const { db, emp } = await contexto(ctx);
+    const [c]: any[] = await db.select({ empreendimentoId: contratos.empreendimentoId }).from(contratos).where(eq(contratos.id, input.contratoId)).limit(1);
+    if (!c || (perfilDe(ctx.user) === "juridico" && Number(c.empreendimentoId) !== Number(emp.id))) throw new TRPCError({ code: "NOT_FOUND", message: "Contrato não encontrado" });
+    const { gerarDocumento } = await import("../juridico/inadimplencia");
+    return comErro(() => gerarDocumento(input.contratoId, input.tipo, ctx.user.id, hoje(), { via: input.via, dataIntimacao: input.dataIntimacao ?? null, protocolo: input.protocolo ?? null, observacao: input.observacao ?? null }));
+  }),
+
+  /** Documentos jurídicos do empreendimento (gerados e avulsos) com as assinaturas */
+  documentos: protectedProcedure.input(slugZ).query(async ({ ctx, input }) => {
+    const { emp } = await contexto(ctx, input?.slug, { empreendedor: true });
+    const { documentosDo } = await import("../juridico/inadimplencia");
+    return documentosDo(Number(emp.id));
+  }),
+
+  /** Assina com o certificado digital ICP-Brasil (o guardado, só com a senha; ou um .pfx enviado agora, que não é guardado) */
+  assinarDocumento: protectedProcedure.input(z.object({ id: z.number().int(), senha: z.string().min(1).max(200), pfxBase64: pfxZ }))
+    .mutation(async ({ ctx, input }) => {
+      const { emp } = await contexto(ctx, undefined, { empreendedor: true });
+      const { documentoPorId, assinarDocumento } = await import("../juridico/inadimplencia");
+      return comErro(async () => {
+        const r = await documentoPorId(input.id);
+        if (perfilDe(ctx.user) !== "admin" && Number(r.empreendimentoId) !== Number(emp.id)) throw Object.assign(new Error("Documento não encontrado"), { name: "JuridicoErro", status: 404 });
+        const pfx = input.pfxBase64 ? Buffer.from(input.pfxBase64, "base64") : null;
+        try { return await assinarDocumento(input.id, ctx.user as any, input.senha, pfx); } finally { pfx?.fill(0); }
+      });
     }),
 });

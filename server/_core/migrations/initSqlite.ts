@@ -793,4 +793,13 @@ export function initSqliteTables(sqlite: any): void {
     tipo TEXT NOT NULL DEFAULT 'alteracao', texto TEXT NOT NULL, autorId INTEGER NOT NULL, status TEXT NOT NULL DEFAULT 'aberto', resposta TEXT,
     respondidoPor INTEGER, respondidoEm TEXT, criadoEm TEXT NOT NULL DEFAULT (datetime('now'))
   )`);
+  run(`CREATE TABLE IF NOT EXISTS certificadosUsuario (
+    usuarioId INTEGER PRIMARY KEY, pfxCifrado TEXT NOT NULL, iv TEXT NOT NULL, tag TEXT NOT NULL, titular TEXT NOT NULL, cpf TEXT, emissor TEXT NOT NULL,
+    validade TEXT NOT NULL, criadoEm TEXT NOT NULL DEFAULT (datetime('now'))
+  )`);
+  run(`CREATE TABLE IF NOT EXISTS juridicoDocumentos (
+    id INTEGER PRIMARY KEY AUTOINCREMENT, empreendimentoId INTEGER NOT NULL, contratoId INTEGER, tipo TEXT NOT NULL, titulo TEXT NOT NULL,
+    pdfArquivo TEXT NOT NULL, sha256 TEXT NOT NULL, assinaturasJson TEXT, dadosJson TEXT, criadoPor INTEGER NOT NULL,
+    criadoEm TEXT NOT NULL DEFAULT (datetime('now')), atualizadoEm TEXT
+  )`);
 }

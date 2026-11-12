@@ -109,6 +109,12 @@ export async function linhaDoTempo(contratoId: number): Promise<EtapaLinha[]> {
     const det = json(e.detalhe);
     add(`vencimentos:${e.criadoEm}`, `Vencimento das parcelas no dia ${det.dia ?? '?'}`, e.criadoEm, true, `${det.parcelas ?? '?'} parcela(s) remarcada(s) · 1ª em ${String(det.primeira ?? '').split('-').reverse().join('/')}`);
   }
+  const ROT_JUR: Record<string, string> = { notificacao: 'Notificação de constituição em mora', requerimento: 'Requerimento ao Oficial do cartório', ata: 'Ata de resolução por inadimplemento', avulso: 'Documento jurídico' };
+  for (const e of eventos.filter(x => x.evento === 'juridico_documento' || x.evento === 'juridico_assinado')) {
+    const det = json(e.detalhe);
+    add(`jur:${e.evento}:${det.documentoId}:${e.criadoEm}`, e.evento === 'juridico_documento' ? `${ROT_JUR[det.tipo] ?? 'Documento jurídico'} gerado` : `${ROT_JUR[det.tipo] ?? 'Documento jurídico'} assinado com certificado digital`,
+      e.criadoEm, true, e.evento === 'juridico_assinado' ? `por ${det.nome ?? '—'} (ICP-Brasil)` : 'corpo jurídico');
+  }
   add('ativo', ['quitado'].includes(c.status) ? 'Contrato quitado' : 'Contrato ativo', null, ['ativo', 'quitado'].includes(String(c.status)), ['ativo', 'quitado'].includes(String(c.status)) ? 'chácara vendida e cobranças gravadas' : null);
   return out;
 }

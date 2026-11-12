@@ -9,6 +9,7 @@ import PageHeader from "@/components/PageHeader";
 import CadastroUsuario from "@/components/equipe/CadastroUsuario";
 import { AtivarPush } from "@/components/sistema/Notificacoes";
 import { perfilDe } from "@shared/equipe";
+import { CertificadoDigital } from "@/components/juridico/CertificadoDigital";
 
 /** "Meu cadastro": o próprio usuário (todos os perfis) mantém dados, foto, credenciais e documentos */
 export default function MeuCadastro() {
@@ -34,6 +35,7 @@ export default function MeuCadastro() {
         <div className="rounded-xl border border-border bg-card p-4">
           <CadastroUsuario admin={perfil === "admin"} onSalvo={() => utils.auth.me.invalidate()} />
         </div>
+        {(perfil === "admin" || perfil === "secretario" || perfil === "juridico" || perfil === "empreendedor") && <CertificadoDigital />}
         <SegurancaConta />
         <Preferencias minutos={Number((user as any)?.descansoMinutos ?? DESCANSO_PADRAO)} />
       </div>

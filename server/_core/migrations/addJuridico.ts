@@ -30,6 +30,39 @@ const COMANDOS: { nome: string; stmt: ReturnType<typeof sql> }[] = [
       INDEX ix_jur_doc (empreendimentoId, documento)
     )`,
   },
+  {
+    nome: 'certificadosUsuario',
+    stmt: sql`CREATE TABLE IF NOT EXISTS certificadosUsuario (
+      usuarioId INT PRIMARY KEY,
+      pfxCifrado MEDIUMTEXT NOT NULL,
+      iv VARCHAR(32) NOT NULL,
+      tag VARCHAR(40) NOT NULL,
+      titular VARCHAR(200) NOT NULL,
+      cpf VARCHAR(11) NULL,
+      emissor VARCHAR(200) NOT NULL,
+      validade DATETIME NOT NULL,
+      criadoEm TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
+    )`,
+  },
+  {
+    nome: 'juridicoDocumentos',
+    stmt: sql`CREATE TABLE IF NOT EXISTS juridicoDocumentos (
+      id INT AUTO_INCREMENT PRIMARY KEY,
+      empreendimentoId INT NOT NULL,
+      contratoId INT NULL,
+      tipo VARCHAR(20) NOT NULL,
+      titulo VARCHAR(250) NOT NULL,
+      pdfArquivo VARCHAR(255) NOT NULL,
+      sha256 CHAR(64) NOT NULL,
+      assinaturasJson TEXT NULL,
+      dadosJson TEXT NULL,
+      criadoPor INT NOT NULL,
+      criadoEm TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+      atualizadoEm DATETIME NULL,
+      INDEX ix_jdoc_emp (empreendimentoId, criadoEm),
+      INDEX ix_jdoc_ctr (contratoId)
+    )`,
+  },
 ];
 
 export async function addJuridico(): Promise<void> {
