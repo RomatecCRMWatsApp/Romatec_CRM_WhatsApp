@@ -100,4 +100,15 @@ describe('inadimplência', () => {
     const r = await J.salvarAvulso(1, 'Ofício ao cartório', Buffer.from(await p.save()), 2);
     expect(r.id).toBeGreaterThan(0);
   });
+
+  it('avulso com xref compactada (Word, navegador, celular) é assinado: regrava com xref clássica antes da 1ª assinatura', async () => {
+    const { PDFDocument } = await import('pdf-lib');
+    const p = await PDFDocument.create(); p.addPage();
+    const bytes = Buffer.from(await p.save({ useObjectStreams: true }));
+    expect(bytes.toString('latin1')).toContain('/XRef');
+    const r = await J.salvarAvulso(1, 'Notificação avulsa', bytes, 2);
+    expect(await J.assinarDocumento(r.id, { id: 2 }, 's')).toMatchObject({ assinaturas: 1 });
+    const { buf } = await J.pdfDoDocumento(r.id);
+    expect(extrairUltimaAssinatura(buf)).toMatchObject({ nome: 'ADVOGADA FICTICIA', cobreAteOFim: true });
+  });
 });

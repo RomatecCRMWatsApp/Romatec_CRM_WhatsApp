@@ -3,6 +3,16 @@
 Cada versão nova vai no TOPO. Depois rode `npm run release` (valida e atualiza o package.json);
 ao subir, o servidor grava a versão no banco e todos recebem o aviso "Novidades da versão".
 
+## 1.165.3 — 2026-11-12
+tipo: patch
+obrigatoria: nao
+titulo: Assinatura com certificado em qualquer PDF
+publico: equipe
+
+### Correções
+- Assinatura com certificado digital: PDFs enviados de fora (Word, navegador, celular) com tabela de referências compactada agora são assinados — antes a assinatura falhava. O conteúdo do documento não muda
+- Quando a assinatura não puder ser feita, aparece o motivo em português; se o servidor estiver atualizando, o aviso pede para tentar de novo em um minuto
+
 ## 1.165.2 — 2026-11-12
 tipo: patch
 obrigatoria: nao

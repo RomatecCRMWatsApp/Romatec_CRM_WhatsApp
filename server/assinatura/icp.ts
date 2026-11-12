@@ -71,15 +71,34 @@ export function lerCertificado(pfx: Buffer, senha: string, agora = new Date()): 
 /** PDF já tem assinatura digital? (depois disso, nada de regravar o arquivo inteiro) */
 export const temAssinaturaDigital = (pdf: Buffer) => pdf.includes(Buffer.from('/ByteRange'));
 
+/**
+ * PDF ainda sem assinatura com tabela xref compactada (xref stream / object streams — Word, navegador, celular, pdf-lib):
+ * o placeholder-plain só entende a tabela xref clássica. Antes da PRIMEIRA assinatura, regrava com xref clássica
+ * (conteúdo idêntico) — só quando a original falha. Com assinatura já feita, não regrava — isso invalidaria as anteriores.
+ */
+export async function pdfParaAssinar(pdf: Buffer): Promise<Buffer> {
+  if (temAssinaturaDigital(pdf)) return pdf;
+  const { PDFDocument } = await import('pdf-lib');
+  const doc = await PDFDocument.load(pdf, { ignoreEncryption: false, updateMetadata: false });
+  return Buffer.from(await doc.save({ useObjectStreams: false }));
+}
+
 /** Assina incrementalmente com o A1 do próprio signatário; zera o .pfx da memória em qualquer caso */
 export async function assinarICP(pdf: Buffer, pfx: Buffer, senha: string, o: { motivo: string; nome: string; local?: string; contato?: string }): Promise<Buffer> {
   try {
-    const comPlaceholder = plainAddPlaceholder({
-      pdfBuffer: pdf, reason: o.motivo, contactInfo: o.contato ?? 'romateccrm@gmail.com', name: o.nome, location: o.local ?? 'Açailândia/MA',
+    const placeholder = (buf: Buffer) => plainAddPlaceholder({
+      pdfBuffer: buf, reason: o.motivo, contactInfo: o.contato ?? 'romateccrm@gmail.com', name: o.nome, location: o.local ?? 'Açailândia/MA',
       signatureLength: 16384,
     });
+    let base = pdf;
+    let comPlaceholder: Buffer;
+    try { comPlaceholder = placeholder(base); } catch (e: any) {
+      if (temAssinaturaDigital(pdf)) throw new Error('Este PDF já foi assinado em outro sistema num formato que não aceita nova assinatura aqui');
+      try { base = await pdfParaAssinar(pdf); comPlaceholder = placeholder(base); }
+      catch (e2: any) { throw new Error(`PDF em formato não suportado para assinatura (${String(e2?.message ?? e?.message ?? e2).slice(0, 80)})`); }
+    }
     const assinado = await new SignPdf().sign(comPlaceholder, new P12Signer(pfx, { passphrase: senha }));
-    if (!assinado.subarray(0, pdf.length).equals(pdf)) throw new Error('Assinatura não incremental — abortado para preservar as assinaturas anteriores');
+    if (!assinado.subarray(0, base.length).equals(base)) throw new Error('Assinatura não incremental — abortado para preservar as assinaturas anteriores');
     return assinado;
   } finally {
     pfx.fill(0);

@@ -104,7 +104,9 @@ export async function assinarComMeuCertificado(usuarioId: number, pdf: Buffer, s
   }
   try {
     const info = await conferir(usuarioId, pfx, senha);
-    const assinado = await assinarICP(pdf, Buffer.from(pfx), senha, { motivo: o.motivo, nome: info.nome });
+    let assinado: Buffer;
+    try { assinado = await assinarICP(pdf, Buffer.from(pfx), senha, { motivo: o.motivo, nome: info.nome }); }
+    catch (e: any) { throw new CertificadoErro(`Não foi possível assinar: ${String(e?.message ?? e).slice(0, 200)}`, 422); }
     return { pdf: assinado, info };
   } finally { pfx.fill(0); }
 }

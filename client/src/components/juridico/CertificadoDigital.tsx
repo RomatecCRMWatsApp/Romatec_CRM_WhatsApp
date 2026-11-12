@@ -6,6 +6,10 @@ import { Button } from "@/components/ui/button";
 import { AcoesPdf } from "@/components/sistema/AcoesPdf";
 
 const dataBr = (iso: string) => new Date(iso).toLocaleDateString("pt-BR");
+/** Erro sem resposta do servidor (reinício no deploy, queda de rede) vira um aviso legível */
+const erroLegivel = (m: string) => /transform response|Failed to fetch|NetworkError|Load failed/i.test(m)
+  ? "O servidor não respondeu (pode estar atualizando). Aguarde um minuto e tente de novo."
+  : m;
 const campo = "h-9 w-full rounded-md border border-border bg-background px-2 text-sm text-foreground";
 
 /** Lê o arquivo do certificado em base64 (sem guardar nada no navegador) */
@@ -28,9 +32,9 @@ export function CertificadoDigital() {
   const input = useRef<HTMLInputElement>(null);
   const guardar = trpc.certificado.guardar.useMutation({
     onSuccess: r => { toast.success(`Certificado guardado: ${r?.titular}`); setArquivo(null); setSenha(""); if (input.current) input.current.value = ""; utils.certificado.meu.invalidate(); },
-    onError: e => toast.error(e.message),
+    onError: e => toast.error(erroLegivel(e.message)),
   });
-  const remover = trpc.certificado.remover.useMutation({ onSuccess: () => { toast.success("Certificado removido"); utils.certificado.meu.invalidate(); }, onError: e => toast.error(e.message) });
+  const remover = trpc.certificado.remover.useMutation({ onSuccess: () => { toast.success("Certificado removido"); utils.certificado.meu.invalidate(); }, onError: e => toast.error(erroLegivel(e.message)) });
 
   return (
     <section className="space-y-3 rounded-xl border border-border bg-card p-4 text-sm">
@@ -74,7 +78,7 @@ export function AssinarComCertificado({ documentoId, onAssinado, rotulo = "Assin
   const [arquivo, setArquivo] = useState<File | null>(null);
   const assinar = trpc.juridico.assinarDocumento.useMutation({
     onSuccess: r => { toast.success(`Assinado digitalmente por ${r.nome} (${r.assinaturas} assinatura${r.assinaturas > 1 ? "s" : ""})`); setAberto(false); setSenha(""); setArquivo(null); onAssinado(); },
-    onError: e => toast.error(e.message),
+    onError: e => toast.error(erroLegivel(e.message)),
   });
   if (!aberto) return <Button size="sm" onClick={() => setAberto(true)}><PenTool className="mr-1 h-4 w-4" /> {rotulo}</Button>;
   return (
