@@ -22,7 +22,7 @@ function CasoInadimplencia({ c, onGerado }: { c: any; onGerado: () => void }) {
   return (
     <div className={`space-y-2 rounded-xl border p-3 text-sm ${c.alerta ? "border-danger-500/50 bg-danger-500/5" : "border-border bg-card"}`}>
       <div className="flex flex-wrap items-center gap-2">
-        {c.alerta && <span className="inline-flex items-center gap-1 rounded-full bg-danger-500/20 px-2 py-0.5 text-[11px] text-danger-200"><AlertTriangle className="h-3 w-3" /> {c.qtd} parcelas em atraso</span>}
+        {c.alerta && <span className="inline-flex items-center gap-1 rounded-full bg-danger-500/20 px-2 py-0.5 text-[11px] text-danger-200"><AlertTriangle className="h-3 w-3" /> {c.qtd} parcela{c.qtd > 1 ? "s" : ""} em atraso</span>}
         <b>{c.numero}</b><span className="text-muted-foreground">Chácara {c.lote} · {c.comprador}</span>
         <span className="ml-auto text-xs tabular-nums">Original {brl(c.valor)} · <b className="text-danger-200">atualizado {brl(c.atualizado)}</b> · maior atraso {c.maiorAtraso} dias</span>
       </div>
@@ -70,7 +70,7 @@ export function PainelInadimplencia({ slug }: { slug?: string }) {
   return (
     <div className="space-y-2">
       <p className="text-justify text-xs text-muted-foreground">
-        Contratos com parcela vencida e não paga. A partir de {data?.gatilho ?? 3} parcelas o caso fica em destaque para o jurídico. Caminho: notificação de constituição em mora com 30 dias para purgar → requerimento de intimação/notificação pelo cartório → ata de resolução, se não houver pagamento. Valores atualizados pela Cláusula 7ª do CPCV (IPCA, multa de 2% e juros de 1% ao mês).
+        Contratos com parcela vencida e não paga — a partir da primeira, o caso já pode ir para o jurídico (CPCV, Cláusula 8ª). Caminho: notificação de constituição em mora com 30 dias para purgar → requerimento de intimação/notificação pelo cartório → ata de resolução, se não houver pagamento. Valores atualizados pela Cláusula 7ª do CPCV (IPCA, multa de 2% e juros de 1% ao mês).
       </p>
       {!lista.length && <p className="rounded-xl border border-dashed border-border p-4 text-sm text-muted-foreground">Nenhum contrato em atraso. 🎉</p>}
       {lista.map(c => <CasoInadimplencia key={c.contratoId} c={c} onGerado={recarregar} />)}

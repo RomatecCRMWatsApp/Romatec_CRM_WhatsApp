@@ -161,7 +161,7 @@ export const juridicoRouter = router({
     }),
 
   // ─── Inadimplência (Lei n.º 6.766/1979, arts. 32 e 32-A) ───────────────────────────────
-  /** Contratos com parcela vencida em aberto; alerta a partir de 3 parcelas */
+  /** Contratos com parcela vencida em aberto; alerta a partir da 1ª parcela */
   inadimplencia: protectedProcedure.input(z.object({ slug: z.string().regex(/^[a-z0-9-]{1,80}$/).optional(), gatilho: z.number().int().min(1).max(24).optional() }).optional())
     .query(async ({ ctx, input }) => {
       const { emp } = await contexto(ctx, input?.slug);

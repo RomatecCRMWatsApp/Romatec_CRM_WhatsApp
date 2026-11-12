@@ -52,7 +52,7 @@ describe('certificado digital guardado', () => {
 });
 
 describe('inadimplência', () => {
-  it('3 parcelas vencidas: alerta, valores atualizados pela Cláusula 7ª', async () => {
+  it('parcela vencida: alerta já a partir da primeira, valores atualizados pela Cláusula 7ª', async () => {
     const lista = await J.inadimplentes(1, HOJE);
     expect(lista).toHaveLength(1);
     expect(lista[0]).toMatchObject({ contratoId, qtd: 3, alerta: true, comprador: 'Compradora Ficticia' });

@@ -1,6 +1,6 @@
 /**
  * Inadimplência no portal jurídico (Lei n.º 6.766/1979, arts. 32 e 32-A; CPCV, Cláusulas 7ª, 8ª e 9ª):
- * 1. Alerta: contratos com parcelas vencidas e não pagas; a partir de GATILHO_PARCELAS (3) o caso vai para o jurídico.
+ * 1. Alerta: contratos com parcelas vencidas e não pagas; a partir de GATILHO_PARCELAS (1) o caso vai para o jurídico.
  * 2. Notificação extrajudicial de constituição em mora (prazo de 30 dias para purgar), com os valores atualizados pelos
  *    encargos da Cláusula 7ª (mesmo cálculo da 2ª via).
  * 3. Requerimento ao Oficial: do Registro de Imóveis (intimação do art. 32, § 1º, com o compromisso registrado) ou de
@@ -18,7 +18,8 @@ import { cobrancas, contratos, empreendimentos, juridicoDocumentos, users } from
 
 export class JuridicoErro extends Error { constructor(m: string, public status = 400) { super(m); this.name = 'JuridicoErro'; } }
 
-export const GATILHO_PARCELAS = 3;
+/** A partir da 1ª parcela vencida e não paga o caso já vai para o jurídico (CPCV, Cláusula 8ª) */
+export const GATILHO_PARCELAS = 1;
 export const TIPOS_DOC = ['notificacao', 'requerimento', 'ata', 'avulso'] as const;
 export type TipoDoc = typeof TIPOS_DOC[number];
 export const ROTULO_DOC: Record<TipoDoc, string> = {
