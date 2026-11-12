@@ -3,6 +3,15 @@
 Cada versão nova vai no TOPO. Depois rode `npm run release` (valida e atualiza o package.json);
 ao subir, o servidor grava a versão no banco e todos recebem o aviso "Novidades da versão".
 
+## 1.164.1 — 2026-11-12
+tipo: patch
+obrigatoria: nao
+titulo: Abertura do portal jurídico mais apresentável no celular
+publico: equipe
+
+### Melhorias
+- Portal jurídico: o topo agora traz o selo da balança com o slogan "Ética, segurança jurídica e transparência", o título menor, o nome do empreendimento numa linha só, o texto justificado e os contadores (abertas, respondidas, resolvidas) numa faixa embaixo. No celular, os botões de cada documento vão abaixo do nome
+
 ## 1.164.0 — 2026-11-12
 tipo: minor
 obrigatoria: nao

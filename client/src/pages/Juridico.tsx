@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { useLocation } from "wouter";
 import { toast } from "sonner";
-import { ArrowLeft, CheckCircle2, FileText, Gavel, Loader2, LogOut, MessageSquarePlus, Receipt, Scale } from "lucide-react";
+import { ArrowLeft, CheckCircle2, FileText, Gavel, Loader2, LogOut, MessageSquarePlus, Receipt } from "lucide-react";
 import { perfilDe } from "@shared/equipe";
 import { trpc } from "@/lib/trpc";
 import { useAuth } from "@/_core/hooks/useAuth";
@@ -10,6 +10,7 @@ import { FotoUsuario } from "@/components/AppShell";
 import { SinoNovidades } from "@/components/sistema/Novidades";
 import { RomatecAppIcon } from "@/brand";
 import { AcoesPdf } from "@/components/sistema/AcoesPdf";
+import { OURO_JURIDICO, SeloJuridico } from "@/components/juridico/SeloJuridico";
 
 const brl = (n: number | null | undefined) => (n == null ? "—" : n.toLocaleString("pt-BR", { style: "currency", currency: "BRL" }));
 const dataBr = (d: string | null | undefined) => (d ? new Date(d.length <= 10 ? `${d}T12:00:00` : d).toLocaleDateString("pt-BR") : "—");
@@ -26,7 +27,7 @@ const STATUS_CONTRATO: Record<string, string> = {
 function Titulo({ id, icone: Icone, children, sub }: { id: string; icone: React.ComponentType<{ className?: string }>; children: React.ReactNode; sub?: string }) {
   return (
     <div id={id} className="scroll-mt-28 pt-4">
-      <h2 className="flex items-center gap-2 text-lg font-semibold text-[var(--rt-gold-light)] [font-family:var(--rt-font-title)]"><Icone className="h-5 w-5" />{children}</h2>
+      <h2 className="flex items-center gap-2 text-base font-semibold text-[var(--rt-gold-light)] [font-family:var(--rt-font-title)] sm:text-lg"><Icone className="h-5 w-5 shrink-0" />{children}</h2>
       {sub && <p className="text-xs text-muted-foreground">{sub}</p>}
     </div>
   );
@@ -159,20 +160,26 @@ export default function Juridico() {
 
       <div className="mx-auto max-w-[1500px] space-y-4 px-3 pb-10 pt-3 sm:px-4 md:px-6 md:pt-4">
         {error && <p className="text-sm text-danger-400">{error.message}</p>}
-        <section className="flex flex-wrap items-center gap-4 rounded-2xl border border-[var(--rt-gold)]/30 bg-card p-4">
-          <Scale className="h-10 w-10 text-[var(--rt-gold-light)]" />
-          <div className="min-w-0 flex-1">
-            <h1 className="text-xl font-semibold [font-family:var(--rt-font-title)]">Corpo jurídico — {p?.empreendimento.nome ?? "…"}</h1>
-            <p className="text-xs text-muted-foreground">
-              Leia os documentos, registre as alterações necessárias e as indagações jurídicas; o escritório responde aqui mesmo.
-              {p?.advogados.length ? ` Advogados: ${p.advogados.map(a => `${a.nome}${a.oab ? ` (${a.oab})` : ""}${a.ativo ? "" : " — bloqueado"}`).join("; ")}.` : ""}
-            </p>
+        <section className="rounded-2xl border p-4 sm:p-5" style={{ borderColor: `${OURO_JURIDICO.base}55`, background: "radial-gradient(ellipse at 0% 0%, #14361f 0%, var(--rt-surface) 60%)" }}>
+          <div className="flex items-center gap-3 sm:gap-4">
+            <SeloJuridico tamanho={72} className="h-16 w-16 shrink-0 sm:h-20 sm:w-20" />
+            <div className="min-w-0 flex-1">
+              <p className="text-xs italic sm:text-sm" style={{ color: OURO_JURIDICO.claro, fontFamily: "Georgia, serif" }}>Ética, segurança jurídica e transparência</p>
+              <h1 className="mt-0.5 text-base font-semibold leading-tight sm:text-xl" style={{ color: OURO_JURIDICO.claro, fontFamily: "var(--rt-font-title)" }}>Corpo jurídico</h1>
+              <p className="truncate text-sm text-[var(--rt-text)]">{p?.empreendimento.nome ?? "…"}</p>
+            </div>
           </div>
+          <p className="mt-3 text-justify text-xs leading-relaxed text-muted-foreground sm:text-sm">
+            Leia os documentos do empreendimento, registre as alterações necessárias e as indagações jurídicas; o escritório responde aqui mesmo.
+          </p>
+          {!!p?.advogados.length && (
+            <p className="mt-1 text-xs text-muted-foreground">Advogados: {p.advogados.map(a => `${a.nome}${a.oab ? ` (${a.oab})` : ""}${a.ativo ? "" : " — bloqueado"}`).join("; ")}</p>
+          )}
           {p && (
-            <div className="flex gap-3 text-center text-xs">
-              <div><p className="text-2xl font-bold text-warn-300">{p.pontuacoes.abertas}</p><p className="text-muted-foreground">abertas</p></div>
-              <div><p className="text-2xl font-bold text-info-300">{p.pontuacoes.respondidas}</p><p className="text-muted-foreground">respondidas</p></div>
-              <div><p className="text-2xl font-bold text-ok-300">{p.pontuacoes.resolvidas}</p><p className="text-muted-foreground">resolvidas</p></div>
+            <div className="mt-3 grid grid-cols-3 divide-x divide-[var(--rt-border)] rounded-xl border border-[var(--rt-border)] bg-black/30 text-center">
+              {[["abertas", p.pontuacoes.abertas, "text-warn-300"], ["respondidas", p.pontuacoes.respondidas, "text-info-300"], ["resolvidas", p.pontuacoes.resolvidas, "text-ok-300"]].map(([r, v, c]) => (
+                <div key={r as string} className="px-2 py-2"><p className={`text-xl font-bold tabular-nums ${c}`}>{v as number}</p><p className="text-[11px] text-muted-foreground">{r as string}</p></div>
+              ))}
             </div>
           )}
         </section>
@@ -181,7 +188,7 @@ export default function Juridico() {
         <div className="grid gap-2 md:grid-cols-2">
           {(p?.documentos ?? []).map(d => (
             <div key={d.chave} className="flex flex-wrap items-center gap-2 rounded-xl border border-border bg-card p-3 text-sm">
-              <div className="min-w-0 flex-1">
+              <div className="min-w-0 basis-full sm:basis-auto sm:flex-1">
                 <p className="font-medium">{d.rotulo}</p>
                 <p className="text-xs text-muted-foreground">{d.grupo}{porDoc.get(d.chave) ? ` · ${porDoc.get(d.chave)} pontuação(ões) em aberto` : ""}</p>
               </div>
