@@ -279,6 +279,19 @@ export const contratosRouter = router({
   }),
 
   /** Entrada recebida no ato da assinatura: a emissão automática não gera boleto dela (só enquanto ainda não foi emitida) */
+  /** Dia de vencimento escolhido pelo comprador: prévia (aplicar=false) ou remarca as parcelas ainda não emitidas */
+  vencimentos: protectedProcedure.input(z.object({ id: z.number().int(), dia: z.number().int().min(1).max(31), primeiroMes: z.string().regex(/^\d{4}-\d{2}$/).nullable().optional(), aplicar: z.boolean() }))
+    .mutation(async ({ ctx, input }) => {
+      exigir(podeOperarCobranca(perfilDe(ctx.user as any)), "Cobrança é com o administrador ou a secretaria.");
+      await contratoVisivel(ctx, input.id);
+      const { alterarVencimentos, VencimentoErro } = await import("../financeiro/vencimentos");
+      const { hojeBrasil } = await import("../financeiro/servico");
+      try { return await alterarVencimentos(input.id, { dia: input.dia, primeiroMes: input.primeiroMes ?? null, aplicar: input.aplicar }, ctx.user.id, hojeBrasil()); } catch (e: any) {
+        if (e instanceof VencimentoErro) throw new TRPCError({ code: e.status === 404 ? "NOT_FOUND" : e.status === 400 ? "BAD_REQUEST" : "CONFLICT", message: e.message });
+        throw e;
+      }
+    }),
+
   entradaNoAto: protectedProcedure.input(z.object({ id: z.number().int(), paga: z.boolean() })).mutation(async ({ ctx, input }) => {
     exigir(podeOperarCobranca(perfilDe(ctx.user as any)), "Cobrança é com o administrador ou a secretaria.");
     await contratoVisivel(ctx, input.id);

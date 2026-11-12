@@ -12,6 +12,7 @@ import CompensarPagamento from "@/components/contratos/CompensarPagamento";
 import { Button } from "@/components/ui/button";
 import { AcoesPdf } from "@/components/sistema/AcoesPdf";
 import { LinhaDoTempo } from "@/components/contratos/LinhaDoTempo";
+import { VencimentosCarne } from "@/components/contratos/VencimentosCarne";
 import { sel } from "@/components/cadastro/campos";
 import { brl } from "@shared/simulador";
 import { maskPhone } from "@shared/masks";
@@ -336,6 +337,9 @@ export default function ContratoDetalhe() {
                   </section>
                 );
               })()}
+              {d.pode.cobranca && !!f.cobrancas.length && ["ativo", "assinado"].includes(c.status) && (
+                <VencimentosCarne contratoId={id} diaAtual={(c as any).diaVencimento ?? null} onAplicado={recarregar} />
+              )}
               <section className="flex flex-wrap items-end gap-2 rounded-xl border border-border bg-card p-4">
                 <label className="flex flex-col gap-1 text-xs text-muted-foreground">Carnê
                   <select className={`${sel} w-56`} value={bloco} onChange={e => setBloco(e.target.value)}>

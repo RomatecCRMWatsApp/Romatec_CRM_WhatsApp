@@ -3,6 +3,19 @@
 Cada versão nova vai no TOPO. Depois rode `npm run release` (valida e atualiza o package.json);
 ao subir, o servidor grava a versão no banco e todos recebem o aviso "Novidades da versão".
 
+## 1.162.0 — 2026-11-12
+tipo: minor
+obrigatoria: nao
+titulo: Dia de vencimento do carnê escolhido pelo comprador
+publico: equipe
+
+### Novo
+- Contrato › Financeiro › "Dia de vencimento do carnê": o escritório escolhe o dia (ex.: 25) e o mês da 1ª parcela do saldo (padrão: o mês seguinte ao pagamento da entrada). O sistema mostra a prévia e, ao aplicar, remarca todas as parcelas ainda não emitidas (saldo, complemento da entrada e reforços) para esse dia, mantendo a sequência e os valores. Dia 29, 30 ou 31 em mês curto cai no último dia do mês
+- A alteração entra na linha do tempo do contrato e na auditoria do financeiro
+
+### Avisos
+- Parcela já emitida no Asaas não é remarcada: cancele a cobrança dela e emita de novo. A emissão do carnê continua pelo botão "Emitir no Asaas"; deixe a "Cobrança automática" desligada para o escritório emitir cada carnê
+
 ## 1.161.2 — 2026-11-12
 tipo: patch
 obrigatoria: nao

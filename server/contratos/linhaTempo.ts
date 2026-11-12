@@ -105,6 +105,10 @@ export async function linhaDoTempo(contratoId: number): Promise<EtapaLinha[]> {
     const det = json(e.detalhe);
     add(`correcao:${det.versaoNova ?? e.criadoEm}`, 'Posicionamento das assinaturas corrigido', e.criadoEm, true, `versão ${det.versaoNova ?? '—'} · ${det.caixas ?? '?'} carimbo(s) sobre a versão enviada (v${det.versaoBase ?? '?'}), mesmos dados de cada assinatura · manifesto refeito`);
   }
+  for (const e of eventos.filter(x => x.evento === 'vencimentos_alterados')) {
+    const det = json(e.detalhe);
+    add(`vencimentos:${e.criadoEm}`, `Vencimento das parcelas no dia ${det.dia ?? '?'}`, e.criadoEm, true, `${det.parcelas ?? '?'} parcela(s) remarcada(s) · 1ª em ${String(det.primeira ?? '').split('-').reverse().join('/')}`);
+  }
   add('ativo', ['quitado'].includes(c.status) ? 'Contrato quitado' : 'Contrato ativo', null, ['ativo', 'quitado'].includes(String(c.status)), ['ativo', 'quitado'].includes(String(c.status)) ? 'chácara vendida e cobranças gravadas' : null);
   return out;
 }
