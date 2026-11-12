@@ -3,6 +3,7 @@ import { useState, useEffect } from "react";
 import { useLocation } from "wouter";
 import { perfilDe, telaInicial } from "@shared/equipe";
 import { APP_VERSION, LoadingButton, ROMATEC_CONTACT, RomatecLockup } from "@/brand";
+import { marcarAreaLogin } from "@/const";
 
 export default function Login() {
   const { isAuthenticated, login, user } = useAuth();
@@ -12,6 +13,7 @@ export default function Login() {
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
 
+  useEffect(() => { marcarAreaLogin("crm"); }, []);
   useEffect(() => {
     if (isAuthenticated) {
       // Senha provisória (recrutamento): primeiro cria a senha; empreendedor vai direto para o painel dele

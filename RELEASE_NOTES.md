@@ -3,6 +3,16 @@
 Cada versão nova vai no TOPO. Depois rode `npm run release` (valida e atualiza o package.json);
 ao subir, o servidor grava a versão no banco e todos recebem o aviso "Novidades da versão".
 
+## 1.164.0 — 2026-11-12
+tipo: minor
+obrigatoria: nao
+titulo: Login próprio do corpo jurídico
+publico: equipe
+
+### Novo
+- Login do portal jurídico em /juridico/entrar, com a identidade jurídica: selo com a balança da justiça e os louros, logotipo Romatec | JURÍDICO e o dourado mais vivo. O advogado entra com CPF ou e-mail e vai direto ao portal
+- A mensagem de acesso do advogado (aprovação no Recrutamento) leva o link do login jurídico; ao sair ou quando a sessão expira, o advogado volta para esse login
+
 ## 1.163.2 — 2026-11-12
 tipo: patch
 obrigatoria: nao

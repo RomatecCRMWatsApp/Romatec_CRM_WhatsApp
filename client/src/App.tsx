@@ -81,6 +81,7 @@ const Equipe = lazy(() => import("./pages/Equipe"));
 const MeuCadastro = lazy(() => import("./pages/MeuCadastro"));
 const Empreendedor = lazy(() => import("./pages/Empreendedor"));
 const Juridico = lazy(() => import("./pages/Juridico"));
+const LoginJuridico = lazy(() => import("./pages/LoginJuridico"));
 const PrimeiroAcesso = lazy(() => import("./pages/PrimeiroAcesso"));
 import { perfilDe, podeAbrir, telaInicial } from "@shared/equipe";
 const AppShell = lazy(() => import("./components/AppShell"));
@@ -152,6 +153,7 @@ function Router() {
   return (
     <Switch>
       <Route path={"/login"} component={Login} />
+      <Route path={"/juridico/entrar"}>{() => <Suspense fallback={null}><LoginJuridico /></Suspense>}</Route>
       <Route path={"/"} component={Home} />
       <Route path={"/setup"} component={Setup} />
       <Route path={"/dashboard"}>

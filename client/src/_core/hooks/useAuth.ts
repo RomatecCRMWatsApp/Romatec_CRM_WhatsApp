@@ -2,6 +2,7 @@ import { trpc } from "@/lib/trpc";
 import { TRPCClientError } from "@trpc/client";
 import { useCallback, useEffect, useMemo } from "react";
 import { sairVerComo, verComoAtual } from "@/lib/verComo";
+import { getLoginUrl } from "@/const";
 
 type UseAuthOptions = {
   redirectOnUnauthenticated?: boolean;
@@ -39,7 +40,7 @@ export function useAuth(options?: UseAuthOptions) {
       await Promise.race([logoutMutation.mutateAsync(), new Promise(r => setTimeout(r, 3000))]);
     } catch { /* sessão já encerrada ou rede: segue para o login */ }
     utils.auth.me.setData(undefined, null);
-    window.location.replace("/login");
+    window.location.replace(getLoginUrl());
   }, [logoutMutation, utils]);
 
   /** null = entrou; string = mensagem de erro do servidor (senha errada, muitas tentativas...) */

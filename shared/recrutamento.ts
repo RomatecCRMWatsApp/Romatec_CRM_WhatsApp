@@ -74,11 +74,11 @@ export function mensagemConvite(nome: string, perfil: PerfilRecrutamento, link: 
 }
 
 /** Acesso criado: login + senha provisória (troca obrigatória no 1º acesso) */
-export function mensagemAcesso(nome: string, login: string, senha: string, url: string, diasValidade = DIAS_SENHA_PROVISORIA): string {
+export function mensagemAcesso(nome: string, login: string, senha: string, url: string, diasValidade = DIAS_SENHA_PROVISORIA, caminhoLogin = '/login'): string {
   return [
     `Olá, ${primeiro(nome)}! ✅ Seu acesso ao CRM da Romatec está pronto.`,
     '',
-    `🔗 ${url.replace(/\/+$/, '')}/login`,
+    `🔗 ${url.replace(/\/+$/, '')}${caminhoLogin}`,
     `👤 Login: ${login}`,
     `🔑 Senha provisória: ${senha}`,
     '',

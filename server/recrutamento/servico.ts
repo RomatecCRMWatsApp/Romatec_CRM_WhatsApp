@@ -178,9 +178,10 @@ const loginDe = (u: { creci?: string | null; cpf?: string | null; email?: string
 /** Manda login + senha provisória; sem Z-API, devolve para o administrador repassar */
 async function enviarAcesso(usuarioId: number, telefone: string, senha: string) {
   const d = await banco();
-  const [u]: any[] = await d.select({ name: users.name, creci: users.creci, cpf: users.cpf, email: users.email }).from(users).where(eq(users.id, usuarioId)).limit(1);
+  const [u]: any[] = await d.select({ name: users.name, creci: users.creci, cpf: users.cpf, email: users.email, perfil: users.perfil }).from(users).where(eq(users.id, usuarioId)).limit(1);
   const login = loginDe(u ?? {});
-  const texto = mensagemAcesso(u?.name ?? '', login, senha, urlBase());
+  // Advogado: o link abre o login do portal jurídico
+  const texto = mensagemAcesso(u?.name ?? '', login, senha, urlBase(), undefined, u?.perfil === 'juridico' ? '/juridico/entrar' : '/login');
   let enviado = false;
   if (envio.disponivel()) {
     try { await envio.texto(foneWhats(telefone), texto); enviado = true; } catch (e: any) { console.warn('[Recrutamento] envio do acesso:', e?.message); }

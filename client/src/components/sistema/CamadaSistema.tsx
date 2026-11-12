@@ -11,7 +11,7 @@ import { abrirNovidades, PainelNovidades, UpdateBanner, WhatsNewModal } from "./
 import { useAlertasNotificacoes } from "./Notificacoes";
 
 /** Telas públicas (landing, catálogo, links, login): sem banner, novidades nem tela de descanso */
-const PUBLICAS = ["/login", "/primeiro-acesso", "/imoveis", "/i/", "/imovel/", "/links", "/bom-jardims", "/404"];
+const PUBLICAS = ["/login", "/juridico/entrar", "/primeiro-acesso", "/imoveis", "/i/", "/imovel/", "/links", "/bom-jardims", "/404"];
 const ehPublica = (loc: string) => loc === "/" || PUBLICAS.some(p => loc === p || loc.startsWith(p.endsWith("/") ? p : `${p}/`));
 
 /**
