@@ -3,6 +3,15 @@
 Cada versão nova vai no TOPO. Depois rode `npm run release` (valida e atualiza o package.json);
 ao subir, o servidor grava a versão no banco e todos recebem o aviso "Novidades da versão".
 
+## 1.167.3 — 2026-11-14
+tipo: patch
+obrigatoria: nao
+titulo: Correção da inicialização do servidor
+publico: equipe
+
+### Correções
+- O servidor voltou a iniciar: a versão 1.167.2 carregava um módulo interno da biblioteca de assinatura de um jeito que o servidor de produção não aceita
+
 ## 1.167.2 — 2026-11-13
 tipo: patch
 obrigatoria: nao

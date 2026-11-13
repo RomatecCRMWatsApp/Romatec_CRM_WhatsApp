@@ -6,8 +6,7 @@
  * Anotações depois de uma assinatura são alteração permitida: as assinaturas anteriores seguem válidas.
  * O selo entra ANTES do placeholder da assinatura, então fica coberto pela assinatura de quem o recebe.
  */
-import * as readPdfMod from '@signpdf/placeholder-plain/dist/readPdf';
-import * as findObjectMod from '@signpdf/placeholder-plain/dist/findObject';
+import { createRequire } from 'node:module';
 import { removeTrailingNewLine } from '@signpdf/utils';
 
 export interface DadosSelo {
@@ -18,10 +17,14 @@ export interface DadosSelo {
   reservados?: string[];
 }
 
-// Módulos CommonJS com "exports.default": a função fica em .default (ou .default.default, conforme o empacotador)
-const padrao = (m: any) => (typeof m === 'function' ? m : typeof m?.default === 'function' ? m.default : m?.default?.default);
-const readPdf: (pdf: Buffer) => any = padrao(readPdfMod);
-const findObject: (pdf: Buffer, xref: any, ref: string) => Buffer = padrao(findObjectMod);
+// Funções internas do placeholder-plain (CommonJS, sem "exports" no package.json): carregadas com require e o
+// caminho completo (.js), só na hora de assinar — um import ESM sem extensão derruba o servidor na inicialização
+const carregar = (arquivo: string) => {
+  const m = createRequire(import.meta.url)(`@signpdf/placeholder-plain/dist/${arquivo}.js`);
+  return typeof m === 'function' ? m : m.default;
+};
+const readPdf = (pdf: Buffer): any => carregar('readPdf')(pdf);
+const findObject = (pdf: Buffer, xref: any, ref: string): Buffer => carregar('findObject')(pdf, xref, ref);
 
 const MARCA_PAGINA = '/RomatecAssinaturas true';
 const MARCA_SELO = '/RomatecSelo true';
