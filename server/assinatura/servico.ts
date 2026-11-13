@@ -218,10 +218,11 @@ export async function enviarParaAssinatura(contratoId: number, metodos: Record<s
 }
 
 const brlTxt = (v: number) => v.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
-const MENSAGEM_CONVITE = (s: { nome: string }, numero: string, link: string, boleto?: { valor: number; vencimento: string; boletoUrl: string; pixUrl: string | null } | null) =>
+const MENSAGEM_CONVITE = (s: { nome: string }, numero: string, link: string, boleto?: { valor: number; vencimento: string; boletoUrl: string; pixUrl: string | null; cartao?: { valor: number; url: string } | null } | null) =>
   `Olá, ${s.nome.split(' ')[0]}! O contrato ${numero} do Condomínio de Chácaras Bom Jardims está pronto para a sua assinatura.\n\n` +
   `Leia e assine pelo link (válido por ${VALIDADE_LINK_DIAS} dias): ${link}` +
-  (boleto ? `\n\nBoleto da entrada: ${brlTxt(boleto.valor)}, vencimento em ${boleto.vencimento.split('-').reverse().join('/')}.\nBoleto (PDF): ${boleto.boletoUrl}${boleto.pixUrl ? `\nPagar por Pix: ${boleto.pixUrl}` : ''}` : '') +
+  (boleto ? `\n\n${boleto.cartao ? 'Entrada — parte no boleto/PIX' : 'Boleto da entrada'}: ${brlTxt(boleto.valor)}, vencimento em ${boleto.vencimento.split('-').reverse().join('/')}.\nBoleto (PDF): ${boleto.boletoUrl}${boleto.pixUrl ? `\nPagar por Pix: ${boleto.pixUrl}` : ''}` : '') +
+  (boleto?.cartao ? `\n\nEntrada — parte no cartão de crédito: ${brlTxt(boleto.cartao.valor)}.\nPagar no cartão: ${boleto.cartao.url}` : '') +
   `\n\nDúvidas: (99) 9 9101-1970.`;
 
 /** Convites (WhatsApp) de quem ainda não assinou; sem telefone, o operador copia o link */

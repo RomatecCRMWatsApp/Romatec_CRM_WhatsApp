@@ -171,6 +171,8 @@ export interface NovoContrato {
   /** Corretor que vendeu (admin/secretário escolhem; corretor = ele mesmo) */
   corretorUserId: number;
   plano: { modalidade: 'financiado' | 'avista'; entradaParcelas: number; prazo?: number; dataPrimeiroPagamento: string; condicao?: 'padrao' | 'A' | 'B' | 'C'; modoC?: 'unificado' | 'sequencial' | 'congelado'; inicioComplemento?: number;
+    /** Planos A/B/C: entrada única ou dividida (boleto/PIX + cartão) e 1º vencimento das parcelas */
+    entradaForma?: 'unica' | 'boleto_cartao'; inicioParcelas?: string | null;
     /** Concessão por liberalidade da proprietária (sem venda) */
     concessao?: { motivo?: string; comissaoValor?: number; comissaoPrazo?: string; comissaoVencimento?: string; despesasPor?: 'beneficiario' | 'proprietaria' } | null };
   comprador: PessoaForm;
@@ -188,6 +190,34 @@ export const pessoaParaLinha = (p: PessoaForm) => ({
   complemento: p.complemento || null, bairro: p.bairro || null, cidade: p.cidade || null, uf: p.uf ? p.uf.toUpperCase() : null,
 });
 
+/**
+ * Cadastro já existente pelo CPF (para preencher o Novo contrato sem redigitar): a pessoa e, se ela já foi compradora
+ * casada/em união estável, o cônjuge do contrato mais recente. Corretor: só quem já está num contrato dele.
+ */
+export async function pessoaPorCpf(cpf: string, o: { corretorUserId?: number | null } = {}): Promise<{ pessoa: PessoaForm; conjuge: PessoaForm | null } | null> {
+  const dig = soDigitos(cpf);
+  if (dig.length !== 11) return null;
+  const d = await db();
+  const [p]: any[] = await d.select().from(pessoas).where(eq(pessoas.cpfCnpj, dig)).limit(1);
+  if (!p) return null;
+  const vinculos: any[] = await d.select({ contratoId: contratoPessoas.contratoId, papel: contratoPessoas.papel, corretor: contratos.corretorUserId, criadoEm: contratos.criadoEm })
+    .from(contratoPessoas).innerJoin(contratos, eq(contratos.id, contratoPessoas.contratoId)).where(eq(contratoPessoas.pessoaId, p.id));
+  if (o.corretorUserId != null && !vinculos.some(v => Number(v.corretor) === Number(o.corretorUserId))) return null;
+  const paraForm = (x: any): PessoaForm => ({
+    nome: x.nome ?? '', cpf: x.cpfCnpj ?? '', sexo: x.sexo, nacionalidade: x.nacionalidade, estadoCivil: x.estadoCivil, regimeBens: x.regimeBens,
+    pactoAntenupcial: x.pactoAntenupcial, profissao: x.profissao, nascimento: x.nascimento ? String(x.nascimento).slice(0, 10) : null,
+    rg: x.rg, rgOrgao: x.rgOrgao, rgUf: x.rgUf, email: x.email, telefone1: x.telefone1, cep: x.cep, logradouro: x.logradouro, numero: x.numero,
+    complemento: x.complemento, bairro: x.bairro, cidade: x.cidade, uf: x.uf,
+  });
+  let conjuge: PessoaForm | null = null;
+  const comoComprador = vinculos.filter(v => v.papel === 'comprador').sort((a, b) => String(b.criadoEm ?? '').localeCompare(String(a.criadoEm ?? '')))[0];
+  if (comoComprador) {
+    const { conjuge: cj } = await pessoasDe(Number(comoComprador.contratoId));
+    if (cj) conjuge = paraForm(cj);
+  }
+  return { pessoa: paraForm(p), conjuge };
+}
+
 /** Cadastro único por CPF: atualiza quem já existe, cria quem não existe */
 export async function salvarPessoa(p: PessoaForm, leadId: number | null): Promise<number> {
   const d = await db();
@@ -204,7 +234,8 @@ export async function salvarPessoa(p: PessoaForm, leadId: number | null): Promis
 export function planoEscolhido(n: NovoContrato['plano'], areaM2: number, precoTabela: number | null, c: CondicoesPagamento, comCorretor: boolean): PlanoContrato {
   const lancamento = n.modalidade === 'financiado' && !!n.condicao && n.condicao !== 'padrao';
   const sim = simular(areaM2, n.modalidade === 'avista' || lancamento ? 1 : n.entradaParcelas, c, precoTabela);
-  const escolha: EscolhaPlano = { modalidade: n.modalidade, prazo: n.prazo, dataPrimeiroPagamento: n.dataPrimeiroPagamento, condicao: n.modalidade === 'financiado' ? n.condicao ?? 'padrao' : 'padrao', modoC: n.modoC, inicioComplemento: n.inicioComplemento };
+  const escolha: EscolhaPlano = { modalidade: n.modalidade, prazo: n.prazo, dataPrimeiroPagamento: n.dataPrimeiroPagamento, condicao: n.modalidade === 'financiado' ? n.condicao ?? 'padrao' : 'padrao', modoC: n.modoC, inicioComplemento: n.inicioComplemento,
+    ...(lancamento ? { entradaForma: n.entradaForma ?? 'unica', inicioParcelas: n.inicioParcelas || undefined } : {}) };
   return planoDoContrato(sim, escolha, c, comCorretor);
 }
 

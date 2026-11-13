@@ -147,12 +147,15 @@ export function diasDeAtraso(vencimento: string, hoje: string): number {
 }
 
 /** O que a tela mostra em cada parcela (Boleto A4, 2ª via, Recibo, selo Negociação) */
-export function acoesDaParcela(c: { status: string; vencimento: string; vencimentoOriginal?: string | null; asaas: boolean; recibo: boolean }, hoje: string) {
+export function acoesDaParcela(c: { status: string; vencimento: string; vencimentoOriginal?: string | null; asaas: boolean; recibo: boolean; cartao?: boolean }, hoje: string) {
   const vencida = c.status === 'vencida' || (c.status === 'emitida' && c.vencimento < hoje);
   const atraso = vencida ? diasDeAtraso(c.vencimentoOriginal ?? c.vencimento, hoje) : 0;
+  // Parte da entrada no cartão de crédito: sem boleto nem 2ª via — paga pelo link do cartão (enquanto não paga)
+  const cartao = !!c.cartao && c.asaas && ['emitida', 'vencida'].includes(c.status);
   return {
-    boleto: c.asaas && ['emitida', 'vencida'].includes(c.status) && !vencida,
-    segundaVia: c.asaas && vencida && atraso <= DIAS_SEGUNDA_VIA,
+    cartao,
+    boleto: !c.cartao && c.asaas && ['emitida', 'vencida'].includes(c.status) && !vencida,
+    segundaVia: !c.cartao && c.asaas && vencida && atraso <= DIAS_SEGUNDA_VIA,
     negociacao: vencida && atraso > DIAS_SEGUNDA_VIA,
     recibo: c.status === 'paga' && c.recibo,
     atraso,

@@ -12,7 +12,7 @@ import { buscarCep } from "@/components/equipe/CadastroUsuario";
 import { maskCEP, maskCPF, maskPhone, onlyDigits } from "@shared/masks";
 import { UFS } from "@shared/cadastro";
 import { perfilDe } from "@shared/equipe";
-import { ESTADOS_CIVIS, REGIMES_BENS, exigeConjuge, exigePacto, pendenciasComprador, pendenciasDependentes, rotuloParentesco, type Dependente, type PessoaForm } from "@shared/contratos";
+import { ESTADOS_CIVIS, REGIMES_BENS, cpfValido, exigeConjuge, exigePacto, pendenciasComprador, pendenciasDependentes, rotuloParentesco, type Dependente, type PessoaForm } from "@shared/contratos";
 import DependentesCampos from "@/components/contratos/Dependentes";
 import { AnexosNovoContrato, enviarAnexo, vagasDoContrato, type AnexoPendente } from "@/components/contratos/Anexos";
 import { brl } from "@shared/simulador";
@@ -59,6 +59,8 @@ export default function ContratoNovo() {
   /** Plano C congelado (só o administrador): mês do 1º vencimento do complemento, contado do ato */
   const [inicioComp, setInicioComp] = useState(15);
   const [data1, setData1] = useState(dataSugerida());
+  const [entradaForma, setEntradaForma] = useState<"unica" | "boleto_cartao">("unica");
+  const [inicioParcelas, setInicioParcelas] = useState("");
   const [comprador, setComprador] = useState<PessoaForm>(PESSOA_VAZIA);
   const [conjuge, setConjuge] = useState<PessoaForm>({ ...PESSOA_VAZIA });
   const [especificas, setEspecificas] = useState("");
@@ -85,7 +87,8 @@ export default function ContratoNovo() {
   const plano = concessao
     ? { modalidade: "avista" as const, entradaParcelas: 1, dataPrimeiroPagamento: data1, condicao: "padrao" as const,
         concessao: { motivo: motivoConcessao, comissaoPrazo: prazoComissao, despesasPor, ...(/^\d{4}-\d{2}-\d{2}$/.test(vencComissao) ? { comissaoVencimento: vencComissao } : {}), ...(comissaoConcessao.trim() && Number.isFinite(valorComissao) ? { comissaoValor: valorComissao } : {}) } }
-    : { modalidade, entradaParcelas: modalidade === "avista" || condicao !== "padrao" ? 1 : entradaParcelas, prazo: modalidade === "avista" ? undefined : prazo, dataPrimeiroPagamento: data1, condicao: modalidade === "avista" ? "padrao" as const : condicao, ...(modalidade === "financiado" && condicao === "C" ? { modoC, ...(modoC === "congelado" ? { inicioComplemento: inicioComp } : {}) } : {}) };
+    : { modalidade, entradaParcelas: modalidade === "avista" || condicao !== "padrao" ? 1 : entradaParcelas, prazo: modalidade === "avista" ? undefined : prazo, dataPrimeiroPagamento: data1, condicao: modalidade === "avista" ? "padrao" as const : condicao, ...(modalidade === "financiado" && condicao === "C" ? { modoC, ...(modoC === "congelado" ? { inicioComplemento: inicioComp } : {}) } : {}),
+        ...(modalidade === "financiado" && condicao !== "padrao" ? { entradaForma, ...(/^\d{4}-\d{2}-\d{2}$/.test(inicioParcelas) ? { inicioParcelas } : {}) } : {}) };
   const sim = trpc.contratos.simular.useQuery({ slug, lote, plano, corretorUserId: corretorUserId ?? undefined }, { enabled: !!lote && /^\d{4}-\d{2}-\d{2}$/.test(data1) });
   // Documentos escolhidos no passo 2: sobem logo depois de criar (dependente pela posição na lista)
   const [anexos, setAnexos] = useState<AnexoPendente[]>([]);
@@ -95,6 +98,7 @@ export default function ContratoNovo() {
   const criar = trpc.contratos.criar.useMutation({
     onSuccess: async r => {
       toast.success(`Contrato ${r.numero} criado — chácara reservada`);
+      try { localStorage.removeItem(`romatec:contrato-novo:rascunho:v1:${(user as any)?.id ?? "anon"}`); } catch { /* ok */ }
       if (anexosValidos.length) {
         setSubindo(true);
         let falhas = 0;
@@ -118,6 +122,79 @@ export default function ContratoNovo() {
   const setJ = (k: keyof PessoaForm, v: string) => setConjuge(p => ({ ...p, [k]: v }));
   const passo0ok = !!lote && !!sim.data;
 
+  // ─── Rascunho salvo neste aparelho: o que foi digitado volta ao reabrir (7 dias; some ao criar o contrato) ───
+  const chaveRascunho = `romatec:contrato-novo:rascunho:v1:${(user as any)?.id ?? "anon"}`;
+  const [rascunhoEm, setRascunhoEm] = useState<string | null>(null);
+  const [restaurado, setRestaurado] = useState(false);
+  useEffect(() => {
+    if (restaurado || !(user as any)?.id) return;
+    setRestaurado(true);
+    try {
+      const r = JSON.parse(localStorage.getItem(chaveRascunho) || "null");
+      if (!r || Date.now() - Number(r.salvoEm) > 7 * 86_400_000) return;
+      const f = r.f ?? {};
+      if (f.slug && !q.get("slug")) setSlug(f.slug);
+      if (f.lote && !q.get("lote")) setLote(f.lote);
+      if (f.leadId != null && !q.get("lead")) setLeadId(f.leadId);
+      if (f.corretorUserId != null) setCorretor(f.corretorUserId);
+      if (f.modalidade) setModalidade(f.modalidade);
+      if (f.entradaParcelas) setEntrada(f.entradaParcelas);
+      if (f.prazo) setPrazo(f.prazo);
+      if (f.condicao && !q.get("condicao")) setCondicao(f.condicao);
+      if (f.modoC && !q.get("modoC")) setModoC(f.modoC);
+      if (f.inicioComp) setInicioComp(f.inicioComp);
+      if (f.data1) setData1(f.data1);
+      if (f.entradaForma) setEntradaForma(f.entradaForma);
+      if (typeof f.inicioParcelas === "string") setInicioParcelas(f.inicioParcelas);
+      if (f.comprador) setComprador({ ...PESSOA_VAZIA, ...f.comprador });
+      if (f.conjuge) setConjuge({ ...PESSOA_VAZIA, ...f.conjuge });
+      if (typeof f.especificas === "string") setEspecificas(f.especificas);
+      if (f.modoAssinatura) setModo(f.modoAssinatura);
+      if (Array.isArray(f.dependentes)) setDependentes(f.dependentes);
+      setRascunhoEm(new Date(Number(r.salvoEm)).toLocaleString("pt-BR", { dateStyle: "short", timeStyle: "short" }));
+      toast.success("Rascunho restaurado: os dados digitados antes voltaram");
+    } catch { /* rascunho ilegível: começa do zero */ }
+  }, [user]); // eslint-disable-line react-hooks/exhaustive-deps
+  const formRascunho = { slug, lote, leadId, corretorUserId, modalidade, entradaParcelas, prazo, condicao, modoC, inicioComp, data1, entradaForma, inicioParcelas, comprador, conjuge, especificas, modoAssinatura, dependentes };
+  const temDados = !!(lote || comprador.nome || comprador.cpf || conjuge.nome);
+  useEffect(() => {
+    if (!restaurado || !temDados) return;
+    const t = setTimeout(() => {
+      try { localStorage.setItem(chaveRascunho, JSON.stringify({ salvoEm: Date.now(), f: formRascunho })); setRascunhoEm(new Date().toLocaleString("pt-BR", { dateStyle: "short", timeStyle: "short" })); } catch { /* sem armazenamento */ }
+    }, 800);
+    return () => clearTimeout(t);
+  }, [JSON.stringify(formRascunho), restaurado]); // eslint-disable-line react-hooks/exhaustive-deps
+  const descartarRascunho = () => {
+    try { localStorage.removeItem(chaveRascunho); } catch { /* ok */ }
+    setComprador(PESSOA_VAZIA); setConjuge({ ...PESSOA_VAZIA }); setDependentes(null); setEspecificas(""); setRascunhoEm(null);
+    toast.success("Rascunho descartado");
+  };
+
+  // ─── Cadastro já existente pelo CPF: oferece preencher (comprador e cônjuge) ───
+  const cpfDig = (v: string | null | undefined) => String(v ?? "").replace(/\D/g, "");
+  const buscaComprador = trpc.contratos.pessoaPorCpf.useQuery({ cpf: cpfDig(comprador.cpf) }, { enabled: cpfValido(comprador.cpf), staleTime: 60_000, retry: false });
+  const buscaConjuge = trpc.contratos.pessoaPorCpf.useQuery({ cpf: cpfDig(conjuge.cpf) }, { enabled: casado && cpfValido(conjuge.cpf), staleTime: 60_000, retry: false });
+  const [usados, setUsados] = useState<string[]>([]);
+  const mascaraForm = (x: PessoaForm): PessoaForm => ({
+    ...PESSOA_VAZIA, ...Object.fromEntries(Object.entries(x).map(([k, v]) => [k, v ?? ""])),
+    cpf: cpfDig(x.cpf).replace(/^(\d{3})(\d{3})(\d{3})(\d{2})$/, "$1.$2.$3-$4"),
+    telefone1: x.telefone1 ? maskPhone(cpfDig(x.telefone1)) : "", cep: cpfDig(x.cep).replace(/^(\d{5})(\d{3})$/, "$1-$2"),
+  } as PessoaForm);
+  const preencherComprador = () => {
+    const r = buscaComprador.data; if (!r) return;
+    setComprador(mascaraForm(r.pessoa));
+    if (r.conjuge && !conjuge.nome) setConjuge(mascaraForm(r.conjuge));
+    setUsados(u => [...u, cpfDig(comprador.cpf)]);
+    toast.success("Dados do cadastro preenchidos — confira antes de seguir");
+  };
+  const preencherConjuge = () => {
+    const r = buscaConjuge.data; if (!r) return;
+    setConjuge(mascaraForm(r.pessoa)); setUsados(u => [...u, `c${cpfDig(conjuge.cpf)}`]);
+    toast.success("Dados do cônjuge preenchidos — confira antes de seguir");
+  };
+  const ofertaComprador = buscaComprador.data && !usados.includes(cpfDig(comprador.cpf)) ? buscaComprador.data : null;
+  const ofertaConjuge = buscaConjuge.data && !usados.includes(`c${cpfDig(conjuge.cpf)}`) ? buscaConjuge.data : null;
+
   const avancar = () => {
     if (passo === 1) {
       const e = { ...pendenciasComprador(comprador, casado ? conjuge : null), ...pendenciasDependentes(dependentes ?? []) };
@@ -138,6 +215,12 @@ export default function ContratoNovo() {
       <PageHeader icone={FileSignature} titulo="Novo contrato" subtitulo="Compromisso de compra e venda — a chácara fica reservada por 72 h ao criar"
         voltar={{ rotulo: "Contratos", onClick: () => navigate("/contratos") }} />
       <div className="mx-auto max-w-[1100px] space-y-4 px-4 pb-10 md:px-6">
+        {rascunhoEm && (
+          <p className="flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
+            <span className="text-ok-400">✓ Rascunho salvo neste aparelho ({rascunhoEm})</span> — se fechar a tela, os dados digitados voltam ao reabrir. Os anexos precisam ser escolhidos de novo.
+            <button type="button" className="underline hover:text-foreground" onClick={() => { if (confirm("Descartar o rascunho e limpar os dados do comprador?")) descartarRascunho(); }}>Descartar rascunho</button>
+          </p>
+        )}
         <ol className="flex flex-wrap gap-2 text-xs">
           {PASSOS.map((p, i) => (
             <li key={p} className={`rounded-full border px-3 py-1 ${i === passo ? "border-primary bg-primary/15 text-primary" : i < passo ? "border-ok-600/50 text-ok-400" : "border-border text-muted-foreground"}`}>
@@ -237,6 +320,28 @@ export default function ContratoNovo() {
                 </div>
               </div>
             )}
+            {!concessao && modalidade === "financiado" && condicao !== "padrao" && (
+              <div className="rounded-lg border border-primary/30 bg-primary/5 p-3">
+                <p className="mb-2 text-sm font-semibold">Entrada no ato e 1º vencimento das parcelas</p>
+                <div className="grid gap-2 sm:grid-cols-2" role="radiogroup" aria-label="Forma da entrada">
+                  {([["unica", "Parcela única", "Boleto ou PIX do valor todo da entrada no ato."], ["boleto_cartao", "Metade no boleto/PIX + metade no cartão", "Duas cobranças no ato: uma por boleto/PIX e outra por link de pagamento no cartão de crédito."]] as const).map(([k, t, r]) => (
+                    <button key={k} type="button" role="radio" aria-checked={entradaForma === k} onClick={() => setEntradaForma(k)}
+                      className={`rounded-lg border p-3 text-left text-sm transition ${entradaForma === k ? "border-primary bg-primary/15 ring-1 ring-primary" : "border-border hover:border-primary/50"}`}>
+                      <span className="flex items-center gap-2 font-semibold">
+                        <span className={`inline-block h-3.5 w-3.5 rounded-full border-2 ${entradaForma === k ? "border-primary bg-primary" : "border-muted-foreground"}`} />{t}
+                      </span>
+                      <span className="mt-1 block text-xs text-muted-foreground">{r}</span>
+                    </button>
+                  ))}
+                </div>
+                <label className="mt-3 flex flex-wrap items-center gap-2 text-sm">
+                  1º vencimento das parcelas
+                  <input type="date" className="h-9 rounded-md border border-border bg-background px-2 text-sm" value={inicioParcelas} min={data1} onChange={e => setInicioParcelas(e.target.value)} aria-label="1º vencimento das parcelas" />
+                  {inicioParcelas && <button type="button" className="text-xs text-muted-foreground underline" onClick={() => setInicioParcelas("")}>usar o padrão (1 mês depois do ato)</button>}
+                </label>
+                <p className="mt-2 text-xs text-muted-foreground">Vazio = um mês depois do pagamento da entrada. As demais parcelas seguem mês a mês, no mesmo valor. A escolha vai para o Quadro-Resumo, a Cláusula 3 e as cobranças.</p>
+              </div>
+            )}
             {!concessao && modalidade === "financiado" && condicao === "C" && (
               <div className="rounded-lg border border-warn-400/40 bg-warn-400/5 p-3">
                 <p className="mb-2 text-sm font-semibold">Plano C — como o cliente paga o resto da entrada?</p>
@@ -296,12 +401,24 @@ export default function ContratoNovo() {
           <section className="space-y-4">
             <div className="rounded-xl border border-border bg-card p-4">
               <h2 className="mb-3 text-sm font-semibold">Promissário(a) comprador(a)</h2>
+              {ofertaComprador && (
+                <div className="mb-3 flex flex-wrap items-center gap-2 rounded-lg border border-primary/40 bg-primary/10 p-2 text-sm">
+                  <span>Cadastro encontrado para este CPF: <b>{ofertaComprador.pessoa.nome}</b>{ofertaComprador.conjuge ? ` (com cônjuge ${ofertaComprador.conjuge.nome})` : ""}.</span>
+                  <Button size="sm" onClick={preencherComprador}>Preencher automaticamente</Button>
+                </div>
+              )}
               <PessoaCampos p={comprador} set={setC} erros={erros} prefixo="comprador" />
             </div>
             {casado && (
               <div className="rounded-xl border border-border bg-card p-4">
                 <h2 className="mb-1 text-sm font-semibold">Cônjuge / companheiro(a) anuente</h2>
                 <p className="mb-3 text-xs text-muted-foreground">Obrigatório para casado(a) ou em união estável — assina o contrato junto (Código Civil, arts. 1.647 e 1.725).</p>
+                {ofertaConjuge && (
+                  <div className="mb-3 flex flex-wrap items-center gap-2 rounded-lg border border-primary/40 bg-primary/10 p-2 text-sm">
+                    <span>Cadastro encontrado para este CPF: <b>{ofertaConjuge.pessoa.nome}</b>.</span>
+                    <Button size="sm" onClick={preencherConjuge}>Preencher automaticamente</Button>
+                  </div>
+                )}
                 <PessoaCampos p={conjuge} set={setJ} erros={erros} prefixo="conjuge" conjuge />
               </div>
             )}

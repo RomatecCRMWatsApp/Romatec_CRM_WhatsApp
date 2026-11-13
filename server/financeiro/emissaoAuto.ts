@@ -7,6 +7,7 @@
  *   boleto; parcela prevista que já venceu NUNCA é emitida sozinha (alguém confere se foi paga por fora).
  * - Tudo que trava vira aviso no sino do escritório (uma vez por dia por motivo) e o botão "Emitir no Asaas" continua.
  */
+import { linhasDoAto } from "../../shared/entradaAto";
 import { and, eq } from "drizzle-orm";
 import { getDb } from "../db";
 import { cobrancas, contratos } from "../../drizzle/schema";
@@ -57,9 +58,11 @@ export interface PlanoEmissao {
 export function planejarEmissao(linhas: { id: number; tipo: string; numero: number; vencimento: string; status: string }[], hoje: string, entradaPagaNoAto: boolean): PlanoEmissao {
   const ordem = blocoDoCarne(linhas.map(l => ({ ...l, numero: Number(l.numero), vencimento: dia(l.vencimento) })), "completo");
   const entradaNoAto = entradaPagaNoAto && ordem[0] && ordem[0].status === "prevista" ? ordem[0].id : null;
+  // Entrada recebida no ato: nenhuma parte dela (boleto/PIX e cartão, se dividida) vira cobrança
+  const doAto = new Set(entradaPagaNoAto ? linhasDoAto(ordem).filter(l => l.status === "prevista").map(l => l.id) : []);
   const limite = somaDias(hoje, DIAS_ANTECEDENCIA);
-  const elegivel = (l: { id: number; status: string; vencimento: string }) => l.status === "prevista" && l.id !== entradaNoAto && l.vencimento >= hoje;
-  const vencidasSemBoleto = ordem.filter(l => l.status === "prevista" && l.id !== entradaNoAto && l.vencimento < hoje).length;
+  const elegivel = (l: { id: number; status: string; vencimento: string }) => l.status === "prevista" && l.id !== entradaNoAto && !doAto.has(l.id) && l.vencimento >= hoje;
+  const vencidasSemBoleto = ordem.filter(l => l.status === "prevista" && l.id !== entradaNoAto && !doAto.has(l.id) && l.vencimento < hoje).length;
   const blocos: PlanoEmissao["blocos"] = [];
   const totalBlocos = Math.ceil(ordem.length / 12);
   for (let b = 1; b <= totalBlocos; b++) {

@@ -41,11 +41,12 @@ export async function carneDigital(codigo: string, o: { ip?: string; hoje?: stri
   const link = (caminho: string) => assinarLink(caminho);
   const parcelas = cobs.filter(x => x.status !== 'cancelada').map(x => {
     const rec = recs.find(r => r.cobrancaId === x.id);
-    const a = acoesDaParcela({ status: x.status, vencimento: x.vencimento, vencimentoOriginal: x.vencimentoOriginal, asaas: !!x.asaasPaymentId && !!x.asaas, recibo: !!rec }, hoje);
+    const a = acoesDaParcela({ status: x.status, vencimento: x.vencimento, vencimentoOriginal: x.vencimentoOriginal, asaas: !!x.asaasPaymentId && !!x.asaas, recibo: !!rec, cartao: String((x as any).formaPagamento ?? '') === 'CARTAO' }, hoje);
     return {
       id: x.id, rotulo: rotuloParcela(x), vencimento: x.vencimento, valor: x.valor, status: x.status, pagoEm: x.pagoEm || null, valorPago: x.valorPago,
       atraso: a.atraso, negociacao: a.negociacao,
       boleto: a.boleto ? link(`/api/financeiro/cobrancas/${x.id}/boleto-a4.pdf`) : null,
+      cartao: a.cartao ? ((x as any).bankSlipUrl ?? null) : null,
       segundaVia: a.segundaVia ? link(`/api/financeiro/cobrancas/${x.id}/segunda-via`) : null,
       recibo: a.recibo && rec ? link(`/api/financeiro/recibos/${rec.id}.pdf`) : null,
     };

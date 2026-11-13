@@ -3,6 +3,7 @@
  * preenchido → minuta → definitivo → enviado para assinatura → cada assinatura → manifesto → entrada paga →
  * via oficial enviada pelo WhatsApp → contrato ativo. Cada etapa traz a data; a feita fica verde na tela.
  */
+import { atoPagoEm, linhasDoAto } from '../../shared/entradaAto';
 import { asc, eq, inArray } from 'drizzle-orm';
 import { getDb } from '../db';
 import { assinaturaEventos, assinaturaSignatarios, cobrancas, contratos, contratoVersoes } from '../../drizzle/schema';
@@ -62,7 +63,7 @@ export async function linhaDoTempo(contratoId: number): Promise<EtapaLinha[]> {
     d.select({ etapa: contratoVersoes.etapa, versao: contratoVersoes.versao, criadoEm: contratoVersoes.criadoEm }).from(contratoVersoes).where(eq(contratoVersoes.contratoId, contratoId)).orderBy(asc(contratoVersoes.versao)),
     d.select().from(assinaturaSignatarios).where(eq(assinaturaSignatarios.contratoId, contratoId)),
     d.select({ signatarioId: assinaturaEventos.signatarioId, evento: assinaturaEventos.evento, detalhe: assinaturaEventos.detalhe, criadoEm: assinaturaEventos.criadoEm }).from(assinaturaEventos).where(eq(assinaturaEventos.contratoId, contratoId)).orderBy(asc(assinaturaEventos.criadoEm)),
-    d.select({ tipo: cobrancas.tipo, numero: cobrancas.numero, status: cobrancas.status, pagoEm: cobrancas.pagoEm, valor: cobrancas.valor }).from(cobrancas).where(eq(cobrancas.contratoId, contratoId)),
+    d.select({ tipo: cobrancas.tipo, numero: cobrancas.numero, status: cobrancas.status, pagoEm: cobrancas.pagoEm, valor: cobrancas.valor, vencimento: cobrancas.vencimento, vencimentoOriginal: cobrancas.vencimentoOriginal, formaPagamento: cobrancas.formaPagamento }).from(cobrancas).where(eq(cobrancas.contratoId, contratoId)),
   ]);
   const primeiraVersao = (k: string) => versoes.find(v => ETAPA_VERSAO(String(v.etapa)) === k);
   const ev = (nome: string, sid?: number | null) => eventos.find(e => e.evento === nome && (sid === undefined || e.signatarioId === sid));
@@ -88,9 +89,14 @@ export async function linhaDoTempo(contratoId: number): Promise<EtapaLinha[]> {
   if (sigs.length) add('manifesto', 'Todas as assinaturas · manifesto gerado', manifesto?.criadoEm, !!c.manifestoArquivo, c.manifestoArquivo ? 'Anexo VII com as evidências' : null);
   const p = json(c.simulacaoJson);
   if (!p.concessao) {
-    const primeira = cobs.find(x => x.tipo === 'avista' || (x.tipo === 'entrada' && Number(x.numero) === 1));
-    const paga = c.entradaPagaNoAto === true || c.entradaPagaNoAto === 1 || primeira?.status === 'paga';
-    add('entrada', p.modalidade === 'avista' ? 'Pagamento à vista compensado' : 'Entrada paga', primeira?.pagoEm, paga, primeira ? brl(primeira.valor) : 'boleto ainda não emitido');
+    const ato = linhasDoAto(cobs);
+    const pagoEm = atoPagoEm(cobs);
+    const paga = c.entradaPagaNoAto === true || c.entradaPagaNoAto === 1 || !!pagoEm;
+    const totalAto = ato.reduce((t: number, x: any) => t + Number(x.valor ?? 0), 0);
+    const det = !ato.length ? 'boleto ainda não emitido' : ato.length > 1
+      ? `${brl(totalAto)} (${ato.map((x: any) => `${String(x.formaPagamento ?? '') === 'CARTAO' ? 'cartão' : 'boleto/PIX'} ${brl(x.valor)}${x.status === 'paga' ? ' ✓' : ''}`).join(' + ')})`
+      : brl(ato[0].valor);
+    add('entrada', p.modalidade === 'avista' ? 'Pagamento à vista compensado' : 'Entrada paga', pagoEm ?? ato[0]?.pagoEm, paga, det);
   }
   const vias = eventos.filter(e => e.evento === 'via_assinada_enviada');
   for (const v of vias) {

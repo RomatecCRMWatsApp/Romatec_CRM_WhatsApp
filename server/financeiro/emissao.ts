@@ -13,6 +13,7 @@ import { blocoDoCarne, parcelaDoPlano, rotuloParcela } from './dados';
 import { rotuloComComplemento } from '../contratos/plano';
 import { divisaoComissaoLancamento } from '../../shared/condicoesLancamento';
 import { r2 } from '../../shared/simulador';
+import { linhasDoAto } from '../../shared/entradaAto';
 
 /**
  * Split da comissão (Romatec): 50% no 1º e 50% no 2º pagamento da entrada; entrada à vista ou à vista total = 100% no 1º.
@@ -25,7 +26,12 @@ export function splitDaComissao(plano: PlanoContrato): Map<string, number> {
   if (!total) return m;
   if (plano.modalidade === 'financiado' && plano.condicao && plano.condicao !== 'padrao') {
     const d = divisaoComissaoLancamento(total, plano.comissao_corretor ?? 0);
-    m.set('entrada:1', d.ato.total);
+    if (plano.entrada_forma === 'boleto_cartao') {
+      // Entrada dividida: a retenção do ato fica na parte do boleto/PIX; o que passar dela, na do cartão
+      const noBoleto = r2(Math.min(d.ato.total, plano.entrada_boleto ?? plano.entrada_parcela));
+      m.set('entrada:1', noBoleto);
+      if (r2(d.ato.total - noBoleto) > 0) m.set('entrada:2', r2(d.ato.total - noBoleto));
+    } else m.set('entrada:1', d.ato.total);
     const tipo = plano.complemento_modo === 'sequencial' && plano.complemento_qtd ? 'complemento' : 'saldo';
     d.parcelas.forEach((f, k) => m.set(`${tipo}:${k + 1}`, f.total));
     return m;
@@ -50,6 +56,8 @@ export async function gerarCobrancasDoPlano(contratoId: number, plano: PlanoCont
         contratoId, tipo: p.tipo, numero: p.numero, total: p.total, vencimento: p.vencimento, valor: String(p.valor),
         jurosParcela: String(p.juros), amortizacao: String(p.amortizacao), saldoDevedor: String(p.saldoDevedor),
         splitValor: String(split.get(`${p.tipo}:${p.numero}`) ?? 0), status: 'prevista',
+        // Entrada dividida: a parte do cartão já nasce marcada (vira link de pagamento no cartão no Asaas)
+        ...(p.forma === 'cartao' ? { formaPagamento: 'CARTAO' } : {}),
       });
       novas++;
     } catch (e: any) {
@@ -79,11 +87,20 @@ export async function emitirCarneNoAsaas(contratoId: number, bloco: number, o: {
   let emitidas = 0;
   for (const l of doBloco) {
     const venc = String(l.vencimento).slice(0, 10) >= hoje ? String(l.vencimento).slice(0, 10) : hoje;
+    const cartao = String(l.formaPagamento ?? '') === 'CARTAO';
     const pay = await criarCobranca(cfg, payloadCobranca({
+      billingType: cartao ? 'CREDIT_CARD' : 'UNDEFINED',
       customerId, cobrancaId: l.id, valor: Number(l.valor), vencimento: venc,
       descricao: `${ctx.contrato.numero} · Chácara ${ctx.lote.codigo} · ${rotuloComComplemento(rotuloParcela(l), parcelaDoPlano(ctx.plano, l))} — Condomínio de Chácaras Bom Jardims`,
       splitValor: Number(l.splitValor ?? 0), walletComissao: cfg.walletComissao,
     }), o.fetchFn);
+    if (cartao) {
+      // Cartão: sem linha digitável — guarda o link de pagamento do Asaas (fatura) no lugar do boleto
+      await db.update(cobrancas).set({ asaasPaymentId: pay.id, status: 'emitida', bankSlipUrl: pay.invoiceUrl ?? null, asaasSnapshot: { invoiceUrl: pay.invoiceUrl ?? null, billingType: 'CREDIT_CARD' } as any })
+        .where(and(eq(cobrancas.id, l.id), eq(cobrancas.status, 'prevista')));
+      emitidas++;
+      continue;
+    }
     const snap = await dadosDePagamento(cfg, pay.id, o.fetchFn);
     await db.update(cobrancas).set({
       asaasPaymentId: pay.id, status: 'emitida', bankSlipUrl: pay.bankSlipUrl ?? null, linhaDigitavel: snap.identificationField,
@@ -95,16 +112,19 @@ export async function emitirCarneNoAsaas(contratoId: number, bloco: number, o: {
   return { emitidas };
 }
 
-/** 1º pagamento do plano: a entrada (parcela 1) ou o pagamento à vista */
-const ehPrimeiroPagamento = (l: { tipo: string; numero: number | string }) => l.tipo === 'avista' || (l.tipo === 'entrada' && Number(l.numero) === 1);
-
-export interface BoletoEntrada { cobrancaId: number; valor: number; vencimento: string; boletoUrl: string; pixUrl: string | null }
+export interface BoletoEntrada {
+  cobrancaId: number; valor: number; vencimento: string; boletoUrl: string; pixUrl: string | null;
+  /** Entrada dividida: a parte no cartão de crédito (link de pagamento do Asaas) */
+  cartao?: { cobrancaId: number; valor: number; url: string } | null;
+}
 
 /** Boleto da entrada já emitido (para o convite de assinatura e os reenvios); null se não houver ou já pago */
 export async function boletoDaEntrada(contratoId: number, dias = 15): Promise<BoletoEntrada | null> {
   const db = (await getDb()) as any;
   const ls: any[] = await db.select().from(cobrancas).where(eq(cobrancas.contratoId, contratoId));
-  const l = ls.find(x => ehPrimeiroPagamento(x) && x.status === 'emitida');
+  const ato = linhasDoAto(ls);
+  const l = ato.find(x => String(x.formaPagamento ?? '') !== 'CARTAO' && x.status === 'emitida');
+  const c = ato.find(x => String(x.formaPagamento ?? '') === 'CARTAO' && x.status === 'emitida' && x.bankSlipUrl);
   if (!l) return null;
   const { assinarLink } = await import('./links');
   const { urlPixDaCobranca } = await import('./dados');
@@ -112,6 +132,7 @@ export async function boletoDaEntrada(contratoId: number, dias = 15): Promise<Bo
   return {
     cobrancaId: Number(l.id), valor: Number(l.valor), vencimento: String(l.vencimento).slice(0, 10),
     boletoUrl: `${base}${assinarLink(`/api/financeiro/cobrancas/${l.id}/boleto-a4.pdf`, Date.now(), dias)}`, pixUrl: urlPixDaCobranca(Number(l.id)),
+    cartao: c ? { cobrancaId: Number(c.id), valor: Number(c.valor), url: String(c.bankSlipUrl) } : null,
   };
 }
 
@@ -125,8 +146,10 @@ export async function emitirEntradaComAssinatura(contratoId: number, plano: Plan
   try {
     await gerarCobrancasDoPlano(contratoId, plano);
     const ja = await boletoDaEntrada(contratoId);
-    if (ja) return { boleto: ja };
-    await emitirCarneNoAsaas(contratoId, 1, { usuarioId: o.usuarioId, fetchFn: o.fetchFn, filtro: ehPrimeiroPagamento, origem: 'assinatura', antesDaAtivacao: true });
+    if (ja && (ja.cartao || plano.entrada_forma !== 'boleto_cartao')) return { boleto: ja };
+    const db = (await getDb()) as any;
+    const doAto = new Set(linhasDoAto(await db.select().from(cobrancas).where(eq(cobrancas.contratoId, contratoId)) as any[]).map((x: any) => Number(x.id)));
+    await emitirCarneNoAsaas(contratoId, 1, { usuarioId: o.usuarioId, fetchFn: o.fetchFn, filtro: l => doAto.has(Number(l.id)), origem: 'assinatura', antesDaAtivacao: true });
     return { boleto: await boletoDaEntrada(contratoId) };
   } catch (e: any) {
     console.warn('[Emissão] boleto da entrada no envio para assinatura:', e?.message);

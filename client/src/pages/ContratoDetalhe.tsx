@@ -373,7 +373,7 @@ export default function ContratoDetalhe() {
                         const [rot, cor] = STATUS_COB[x.status] ?? [x.status, ""];
                         return (
                           <tr key={x.id} className="border-t border-border/50">
-                            <td className="p-2">{ROTULO_TIPO[x.tipo] ?? x.tipo} {x.numero}/{x.total}</td>
+                            <td className="p-2">{ROTULO_TIPO[x.tipo] ?? x.tipo} {x.numero}/{x.total}{x.forma === "cartao" && <span className="ml-1 rounded bg-azul-500/15 px-1.5 py-0.5 text-[10px] text-azul-300">cartão</span>}</td>
                             <td className="p-2">{br(x.vencimento)}{x.valorOriginal != null && <span className="ml-1 text-[10px] text-warn-400">2ª via</span>}</td>
                             <td className="p-2 text-right">{brl(x.valor)}</td>
                             <td className={`p-2 ${cor}`}>
@@ -383,6 +383,11 @@ export default function ContratoDetalhe() {
                             <td className="p-2 text-xs">{x.pagoEm ? `${br(x.pagoEm)} · ${brl(x.valorPago ?? x.valor)}` : "—"}{x.reciboNumero && <span className="block text-muted-foreground">{x.reciboNumero}{x.reciboCancelado && <b className="ml-1 text-danger-400">CANCELADO</b>}{x.reciboErro ? <span title={x.reciboErro}> · ⚠️ WhatsApp: ver</span> : x.reciboEnviado ? " · ✅ avisado no WhatsApp" : ""}</span>}</td>
                             <td className="p-2">
                               <div className="flex justify-end gap-1">
+                                {x.acoes.cartao && x.linkCartao && (
+                                  <Button size="sm" variant="outline" asChild title="Link de pagamento no cartão de crédito (Asaas) — envie ao comprador">
+                                    <a href={x.linkCartao} target="_blank" rel="noopener noreferrer">Pagar no cartão</a>
+                                  </Button>
+                                )}
                                 {x.acoes.boleto && <AcoesPdf compacto rotulo="Boleto" url={`/api/financeiro/cobrancas/${x.id}/boleto-a4.pdf`} nomeArquivo={`BOLETO-${c.numero}-${x.numero}-${x.total}.pdf`} mensagem={`Boleto ${x.numero}/${x.total} — contrato ${c.numero}, chácara ${c.loteCodigo}`} />}
                                 {x.acoes.segundaVia && d.pode.cobranca && (
                                   <Button size="sm" variant="outline" disabled={ocupado === `2v${x.id}`} onClick={() => acao(`2v${x.id}`, async () => { await postPdf(`/api/financeiro/cobrancas/${x.id}/segunda-via`); recarregar(); })}>

@@ -2,6 +2,7 @@
  * Serviços do Bloco Financeiro: contexto dos documentos, recibo automático (idempotente), webhook do Asaas,
  * 2ª via atualizada e auditoria. Asaas DORMENTE sem chave: nada é emitido, cobrado nem enviado ao cliente.
  */
+import { atoPagoEm, ehDoAto } from '../../shared/entradaAto';
 import { createHash, randomBytes } from 'node:crypto';
 import { telefoneWhatsApp } from '../../shared/contratos';
 import { and, eq, like, sql } from 'drizzle-orm';
@@ -298,7 +299,7 @@ export async function processarEventoAsaas(ev: EventoAsaas, opcoes: { enviarDepo
   if (PAGO.has(evento)) {
     const pagoEm = (pay.clientPaymentDate || pay.paymentDate || pay.confirmedDate || hojeBrasil()).slice(0, 10);
     if (r.status !== 'paga') {
-      await d.update(cobrancas).set({ status: 'paga', pagoEm, valorPago: String(pay.value ?? r.valor), formaPagamento: pay.billingType === 'PIX' ? 'PIX' : 'BOLETO' })
+      await d.update(cobrancas).set({ status: 'paga', pagoEm, valorPago: String(pay.value ?? r.valor), formaPagamento: pay.billingType === 'PIX' ? 'PIX' : pay.billingType === 'CREDIT_CARD' || pay.billingType === 'DEBIT_CARD' ? 'CARTAO' : 'BOLETO' })
         .where(eq(cobrancas.id, r.id));
     }
     const rec = await emitirRecibo(r.id, pagoEm);
@@ -306,7 +307,9 @@ export async function processarEventoAsaas(ev: EventoAsaas, opcoes: { enviarDepo
     await auditar('pagamento_confirmado', { contratoId: r.contratoId, cobrancaId: r.id, origem: 'webhook', detalhe: { evento, recibo: rec.numero } });
     if (rec.novo) (opcoes.enviarDepois ?? (id => setImmediate(() => enviarRecibo(id).catch(e => console.warn('[Financeiro] envio do recibo:', e?.message)))))(rec.id);
     // Entrada (ou à vista) paga: libera e manda a via assinada do contrato, se todos já assinaram
-    if (r.tipo === 'avista' || (r.tipo === 'entrada' && Number(r.numero) === 1)) {
+    // (entrada dividida: só quando as duas partes do ato — boleto/PIX e cartão — estiverem pagas)
+    const doContrato: any[] = await d.select().from(cobrancas).where(eq(cobrancas.contratoId, r.contratoId));
+    if (ehDoAto(r, doContrato) && atoPagoEm(doContrato.map(x => (Number(x.id) === Number(r.id) ? { ...x, status: 'paga', pagoEm } : x)))) {
       setImmediate(() => import('../contratos/liberacaoVia').then(m => m.enviarViaAssinadaSeLiberada(Number(r.contratoId))).catch(e => console.warn('[Financeiro] via assinada:', e?.message)));
     }
     return { acao: rec.novo ? 'pago:recibo_emitido' : 'pago:recibo_ja_existia', reciboId: rec.id };

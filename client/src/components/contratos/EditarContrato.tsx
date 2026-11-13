@@ -46,6 +46,8 @@ function planoInicial(p: any) {
     data1: String(p?.entrada_venc1 || p?.avista_vencimento || "").slice(0, 10),
     modoC: (["unificado", "sequencial", "congelado"].includes(p?.complemento_modo) ? p.complemento_modo : "unificado") as ModoPlanoC,
     inicioComp: Number(p?.complemento_inicio_mes) || 15,
+    entradaForma: (p?.entrada_forma === "boleto_cartao" ? "boleto_cartao" : "unica") as "unica" | "boleto_cartao",
+    inicioParcelas: String(p?.parcelas_inicio || "").slice(0, 10),
   };
 }
 
@@ -82,6 +84,7 @@ export function EditarContrato({ aberto, onFechar, onSalvo, contrato, comprador,
       entradaParcelas: pl.modalidade === "avista" || lanc ? 1 : pl.entradaParcelas,
       ...(pl.modalidade === "financiado" ? { prazo: pl.prazo, condicao: pl.condicao } : { condicao: "padrao" as const }),
       ...(pl.modalidade === "financiado" && pl.condicao === "C" ? { modoC: pl.modoC, ...(pl.modoC === "congelado" ? { inicioComplemento: pl.inicioComp } : {}) } : {}),
+      ...(lanc ? { entradaForma: pl.entradaForma, ...(/^\d{4}-\d{2}-\d{2}$/.test(pl.inicioParcelas) ? { inicioParcelas: pl.inicioParcelas } : {}) } : {}),
     };
   };
   const prazos: number[] = (opcoes.data as any)?.prazos ?? (opcoes.data as any)?.condicoes?.prazos ?? [12, 24, 36, 48, 60, 72, 84, 96, 108, 120, 180];
@@ -164,6 +167,17 @@ export function EditarContrato({ aberto, onFechar, onSalvo, contrato, comprador,
                   <Campo rotulo={pl.modalidade === "avista" ? "Vencimento do pagamento" : "Vencimento da entrada (ato)"}>
                     <input type="date" className={classeCampo()} value={pl.data1} onChange={e => setPl(x => ({ ...x, data1: e.target.value }))} />
                   </Campo>
+                  {pl.modalidade === "financiado" && pl.condicao !== "padrao" && (<>
+                    <Campo rotulo="Forma da entrada (ato)">
+                      <select className={sel} value={pl.entradaForma} onChange={e => setPl(x => ({ ...x, entradaForma: e.target.value as "unica" | "boleto_cartao" }))}>
+                        <option value="unica">Parcela única (boleto/PIX)</option>
+                        <option value="boleto_cartao">Metade boleto/PIX + metade cartão</option>
+                      </select>
+                    </Campo>
+                    <Campo rotulo="1º vencimento das parcelas (vazio = 1 mês depois do ato)">
+                      <input type="date" className={classeCampo()} value={pl.inicioParcelas} min={pl.data1} onChange={e => setPl(x => ({ ...x, inicioParcelas: e.target.value }))} />
+                    </Campo>
+                  </>)}
                   {pl.modalidade === "financiado" && pl.condicao === "C" && (
                     <Campo rotulo="Resto da entrada (Plano C)" className="sm:col-span-2">
                       <select className={sel} value={pl.modoC} onChange={e => setPl(x => ({ ...x, modoC: e.target.value as ModoPlanoC }))}>

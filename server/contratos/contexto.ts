@@ -180,10 +180,15 @@ export function tagsModoC(s: Pick<PlanoContrato, 'complemento_qtd' | 'complement
 export function tagsPlano(s: PlanoContrato): Ctx {
   const financiado = s.modalidade === 'financiado';
   const lancamento = financiado && !!s.condicao && s.condicao !== 'padrao';
+  // Entrada dividida no ato: parte por boleto bancário/PIX e parte por cartão de crédito
+  const partesAto = s.entrada_forma === 'boleto_cartao'
+    ? `R$ ${brl(s.entrada_boleto ?? 0)} por boleto bancário ou PIX e R$ ${brl(s.entrada_cartao ?? 0)} por cartão de crédito` : '';
   const entradaForma = !financiado ? '' : lancamento
     ? (s.complemento_qtd
-      ? `R$ ${brl(s.complemento_ato ?? s.entrada_parcela)} no ato, com vencimento em ${dataBR(s.entrada_venc1)}, e o complemento de R$ ${brl(s.complemento_valor ?? 0)} em ${s.complemento_qtd} (${extenso(s.complemento_qtd)}) parcelas mensais de R$ ${brl(s.complemento_parcela ?? 0)}, sem juros, a primeira com vencimento em ${dataBR(s.complemento_venc1 ?? '')}`
-      : `em parcela única de R$ ${brl(s.entrada_parcela)}, sem desconto, com vencimento em ${dataBR(s.entrada_venc1)}`)
+      ? `R$ ${brl(s.complemento_ato ?? s.entrada_parcela)} no ato${partesAto ? ` (${partesAto})` : ''}, com vencimento em ${dataBR(s.entrada_venc1)}, e o complemento de R$ ${brl(s.complemento_valor ?? 0)} em ${s.complemento_qtd} (${extenso(s.complemento_qtd)}) parcelas mensais de R$ ${brl(s.complemento_parcela ?? 0)}, sem juros, a primeira com vencimento em ${dataBR(s.complemento_venc1 ?? '')}`
+      : partesAto
+        ? `no ato, sem desconto, com vencimento em ${dataBR(s.entrada_venc1)}, em duas partes: ${partesAto}`
+        : `em parcela única de R$ ${brl(s.entrada_parcela)}, sem desconto, com vencimento em ${dataBR(s.entrada_venc1)}`)
     : s.entrada_qtd === 1
     ? `à vista, com desconto de R$ ${brl(s.entrada_desconto)}, vencimento em ${dataBR(s.entrada_venc1)}`
     : `em ${s.entrada_qtd} (${extenso(s.entrada_qtd)}) parcelas mensais de R$ ${brl(s.entrada_parcela)}, sem desconto, a primeira com vencimento em ${dataBR(s.entrada_venc1)}`;

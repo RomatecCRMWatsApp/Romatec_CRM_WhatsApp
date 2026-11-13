@@ -3,6 +3,19 @@
 Cada versão nova vai no TOPO. Depois rode `npm run release` (valida e atualiza o package.json);
 ao subir, o servidor grava a versão no banco e todos recebem o aviso "Novidades da versão".
 
+## 1.168.0 — 2026-11-14
+tipo: minor
+obrigatoria: nao
+titulo: Entrada metade no boleto e metade no cartão, 1º vencimento das parcelas e rascunho do contrato
+publico: equipe
+
+### Novo
+- Novo contrato (Planos A, B e C): a entrada de R$ 10 mil pode ser dividida no ato — R$ 5 mil por boleto/PIX e R$ 5 mil no cartão de crédito (link de pagamento do Asaas). O Quadro-Resumo e a Cláusula 3 já saem com as duas partes; o convite de assinatura leva o boleto e o link do cartão; a via assinada, a linha do tempo e a comissão do ato só contam a entrada como paga com as duas partes pagas
+- Novo contrato (Planos A, B e C): campo "1º vencimento das parcelas" — as parcelas começam na data escolhida (ex.: 15/03/2027) e seguem mês a mês, no mesmo valor. Também dá para mudar na edição do contrato
+- Novo contrato: rascunho salvo automaticamente neste aparelho — se fechar a tela, os dados digitados voltam ao reabrir (botão para descartar)
+- Novo contrato: ao digitar o CPF de quem já tem cadastro, o sistema oferece "Preencher automaticamente" (com o cônjuge do último contrato). O corretor só encontra clientes dos contratos dele
+- Contrato e carnê digital: a parte da entrada no cartão aparece marcada como "cartão", com o botão "Pagar no cartão" no lugar do boleto
+
 ## 1.167.8 — 2026-11-14
 tipo: patch
 obrigatoria: nao

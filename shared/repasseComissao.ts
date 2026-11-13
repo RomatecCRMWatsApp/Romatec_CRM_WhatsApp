@@ -8,6 +8,7 @@
  * O repasse vence em até 5 dias úteis depois que o comprador paga a parcela que gera a parte; antes disso, a data é a
  * previsão (vencimento da parcela + 5 dias úteis).
  */
+import { atoPagoEm, linhasDoAto } from './entradaAto';
 import { COMISSAO_LANCAMENTO } from './condicoesLancamento';
 import { PRAZO_REPASSE_DIAS_UTEIS, fatias } from './tabelaComissao';
 
@@ -95,6 +96,8 @@ export function partesDaComissao(o: {
     const doPlano = o.plano.parcelas?.find(p => p.tipo === g.tipo && Number(p.numero) === g.numero) ?? null;
     const vencimentoCliente = (cob?.vencimento ?? doPlano?.vencimento ?? null)?.slice(0, 10) ?? null;
     let clientePagouEm = cob?.status === 'paga' ? (cob.pagoEm ?? cob.vencimento)?.slice(0, 10) ?? null : null;
+    // Entrada dividida no ato (boleto/PIX + cartão): a parte da comissão do ato só vence com as duas pagas
+    if (g.tipo === 'entrada' && g.numero === 1 && linhasDoAto(o.cobrancas).length > 1) clientePagouEm = atoPagoEm(o.cobrancas);
     // Entrada recebida no ato da assinatura (sem boleto)
     if (!clientePagouEm && o.entradaPagaNoAto && g.tipo === 'entrada' && g.numero === 1) clientePagouEm = o.dataAssinatura?.slice(0, 10) ?? vencimentoCliente;
     const dataRepasse = clientePagouEm ? somarDiasUteis(clientePagouEm, PRAZO_REPASSE_DIAS_UTEIS)

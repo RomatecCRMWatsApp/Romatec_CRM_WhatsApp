@@ -44,6 +44,10 @@ const planoZ = z.object({
   modoC: z.enum(["unificado", "sequencial", "congelado"]).optional(),
   /** Plano C congelado (só o administrador): mês do 1º vencimento do complemento, contado do ato */
   inicioComplemento: z.number().int().min(2).max(60).optional(),
+  /** Planos A/B/C: entrada do ato única ou dividida (metade boleto/PIX, metade cartão de crédito) */
+  entradaForma: z.enum(["unica", "boleto_cartao"]).optional(),
+  /** Planos A/B/C: 1º vencimento das parcelas (AAAA-MM-DD); vazio = um mês depois do ato */
+  inicioParcelas: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).nullable().optional(),
   /** Concessão por liberalidade da proprietária (sem venda): só o administrador; gera o Termo Aditivo de Concessão */
   concessao: z.object({
     motivo: z.string().trim().max(600).default(""),
@@ -124,6 +128,14 @@ export const contratosRouter = router({
       const { parcelas, ...resumo } = plano;
       return { ...resumo, primeiras: parcelas.slice(0, 3), ultima: parcelas.at(-1) };
     })),
+
+  /** Novo contrato: cadastro já existente pelo CPF (preenche os dados sem redigitar). Corretor: só clientes dos contratos dele */
+  pessoaPorCpf: protectedProcedure.input(z.object({ cpf: z.string().max(20) })).query(async ({ ctx, input }) => {
+    const perfil = perfilDe(ctx.user as any);
+    exigir(podeCriarContrato(perfil), "Seu perfil não cria contratos.");
+    const { pessoaPorCpf } = await import("../contratos/servico");
+    return pessoaPorCpf(input.cpf, { corretorUserId: perfil === "admin" || perfil === "secretario" ? null : ctx.user.id });
+  }),
 
   criar: protectedProcedure.input(z.object({
     slug: z.string().max(80), lote: z.string().max(10), leadId: z.number().int().nullable().optional(), corretorUserId: z.number().int().optional(),
@@ -237,7 +249,9 @@ export const contratosRouter = router({
             id: x.id, tipo: x.tipo, numero: x.numero, total: x.total, vencimento: x.vencimento, valor: x.valor, status: x.status, pagoEm: x.pagoEm || null,
             valorPago: x.valorPago, valorOriginal: x.valorOriginal, juros: x.juros, amortizacao: x.amortizacao, saldoApos: x.saldoDevedor,
             reciboId: rec?.id ?? null, reciboNumero: rec?.numero ?? null, reciboCancelado: !!rec?.canceladoEm, reciboEnviado: !!rec?.enviadoEm, reciboErro: rec?.envioErro ?? null,
-            acoes: acoesDaParcela({ status: x.status, vencimento: x.vencimento, vencimentoOriginal: x.vencimentoOriginal, asaas: !!x.asaasPaymentId, recibo: !!rec }, h),
+            acoes: acoesDaParcela({ status: x.status, vencimento: x.vencimento, vencimentoOriginal: x.vencimentoOriginal, asaas: !!x.asaasPaymentId, recibo: !!rec, cartao: String((x as any).formaPagamento ?? '') === 'CARTAO' }, h),
+            forma: String((x as any).formaPagamento ?? '') === 'CARTAO' ? 'cartao' as const : null,
+            linkCartao: String((x as any).formaPagamento ?? '') === 'CARTAO' && x.status !== 'paga' ? ((x as any).bankSlipUrl ?? null) : null,
           };
         }),
         declaracoes: decls.map(d => ({ ano: Number(d.anoRef), status: d.status, motivo: d.motivo, valorTotal: d.valorTotal != null ? Number(d.valorTotal) : null })),

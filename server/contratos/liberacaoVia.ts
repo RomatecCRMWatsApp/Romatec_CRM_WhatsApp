@@ -7,8 +7,8 @@
 import { and, eq } from 'drizzle-orm';
 import { getDb } from '../db';
 import { assinaturaEventos, assinaturaSignatarios, cobrancas, contratos, users } from '../../drizzle/schema';
+import { atoPagoEm, linhasDoAto } from '../../shared/entradaAto';
 
-const ehPrimeiro = (l: { tipo: string; numero: number | string }) => l.tipo === 'avista' || (l.tipo === 'entrada' && Number(l.numero) === 1);
 const json = (v: unknown): any => { if (typeof v !== 'string') return v ?? {}; try { return JSON.parse(v); } catch { return {}; } };
 
 export interface SituacaoVia { liberada: boolean; motivo: string | null }
@@ -20,10 +20,11 @@ export async function situacaoDaVia(contratoId: number): Promise<SituacaoVia> {
   if (!c) return { liberada: false, motivo: 'Contrato não encontrado' };
   if (json(c.simulacaoJson)?.concessao) return { liberada: true, motivo: null };
   if (c.entradaPagaNoAto === true || c.entradaPagaNoAto === 1) return { liberada: true, motivo: null };
-  const cobs: any[] = await d.select({ tipo: cobrancas.tipo, numero: cobrancas.numero, status: cobrancas.status }).from(cobrancas).where(eq(cobrancas.contratoId, contratoId));
-  const primeira = cobs.find(ehPrimeiro);
-  if (!primeira) return { liberada: false, motivo: 'A via assinada do contrato é liberada depois do pagamento da entrada.' };
-  return primeira.status === 'paga' ? { liberada: true, motivo: null } : { liberada: false, motivo: 'A via assinada do contrato é liberada depois da compensação do pagamento da entrada.' };
+  const cobs: any[] = await d.select({ tipo: cobrancas.tipo, numero: cobrancas.numero, status: cobrancas.status, vencimento: cobrancas.vencimento, vencimentoOriginal: cobrancas.vencimentoOriginal, pagoEm: cobrancas.pagoEm })
+    .from(cobrancas).where(eq(cobrancas.contratoId, contratoId));
+  if (!linhasDoAto(cobs).length) return { liberada: false, motivo: 'A via assinada do contrato é liberada depois do pagamento da entrada.' };
+  // Entrada dividida (boleto/PIX + cartão): libera quando as duas partes estiverem pagas
+  return atoPagoEm(cobs) ? { liberada: true, motivo: null } : { liberada: false, motivo: 'A via assinada do contrato é liberada depois da compensação do pagamento da entrada.' };
 }
 
 /** Comprador(a)/cônjuge que já assinou e a via ainda não foi liberada? (os demais signatários veem sempre) */

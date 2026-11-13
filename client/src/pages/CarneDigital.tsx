@@ -10,7 +10,7 @@ const br = (iso?: string | null) => (iso ? String(iso).slice(0, 10).split("-").r
 
 interface Parcela {
   id: number; rotulo: string; vencimento: string; valor: number; status: string; pagoEm: string | null; valorPago: number | null;
-  atraso: number; negociacao: boolean; boleto: string | null; segundaVia: string | null; recibo: string | null;
+  atraso: number; negociacao: boolean; boleto: string | null; segundaVia: string | null; recibo: string | null; cartao?: string | null;
 }
 
 /** Abre a 2ª via (POST no link assinado) num PDF novo */
@@ -116,6 +116,7 @@ export default function CarneDigital() {
                             vence {br(p.vencimento)}{p.atraso > 0 ? ` · ${p.atraso} dias em atraso` : ""}
                           </span>
                         </div>
+                        {p.cartao && <a href={p.cartao} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1 rounded-lg px-3 py-1.5 text-sm font-semibold text-white" style={{ background: VERDE }}><FileText className="h-4 w-4" /> Pagar no cartão</a>}
                         {p.boleto && <a href={p.boleto} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1 rounded-lg px-3 py-1.5 text-sm font-semibold text-white" style={{ background: VERDE }}><FileText className="h-4 w-4" /> Boleto / PIX</a>}
                         {p.segundaVia && (
                           <button disabled={ocupado === p.id} onClick={() => pedir2via(p)} className="inline-flex items-center gap-1 rounded-lg px-3 py-1.5 text-sm font-semibold disabled:opacity-50" style={{ background: DOURADO, color: VERDE }}>
@@ -123,7 +124,7 @@ export default function CarneDigital() {
                           </button>
                         )}
                         {p.negociacao && <span className="rounded-lg bg-danger-100 px-2 py-1 text-xs font-semibold text-danger-800">Negociação: {d.contato}</span>}
-                        {!p.boleto && !p.segundaVia && !p.negociacao && <span className="text-xs text-neutro-500">boleto ainda não emitido</span>}
+                        {!p.boleto && !p.cartao && !p.segundaVia && !p.negociacao && <span className="text-xs text-neutro-500">boleto ainda não emitido</span>}
                       </li>
                     ))}
                     {!abertas.length && <li className="flex items-center gap-2 rounded-xl border bg-white p-4 text-sm text-ok-800"><CheckCircle2 className="h-5 w-5" /> Nenhuma parcela em aberto.</li>}
