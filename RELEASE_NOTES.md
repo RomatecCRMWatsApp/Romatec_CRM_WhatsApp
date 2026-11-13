@@ -3,6 +3,15 @@
 Cada versão nova vai no TOPO. Depois rode `npm run release` (valida e atualiza o package.json);
 ao subir, o servidor grava a versão no banco e todos recebem o aviso "Novidades da versão".
 
+## 1.168.3 — 2026-11-14
+tipo: patch
+obrigatoria: nao
+titulo: Dispensa da assinatura do cônjuge
+publico: equipe
+
+### Novo
+- Contrato › Assinaturas: no(a) cônjuge do comprador, a opção "Dispensar a assinatura do(a) cônjuge", com o motivo. O contrato vai para assinatura sem ele(a), fica completo com as assinaturas dos demais e a dispensa (quem, quando e por quê) fica na linha do tempo e no manifesto de assinaturas. A anuência do cônjuge do comprador é cautela: a outorga conjugal (Código Civil, art. 1.647) só é exigida para vender ou gravar imóvel
+
 ## 1.168.2 — 2026-11-14
 tipo: patch
 obrigatoria: nao

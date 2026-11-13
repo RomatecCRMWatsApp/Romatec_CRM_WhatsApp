@@ -12,7 +12,7 @@ import { perfilDe } from "@shared/equipe";
 const METODOS = [["avancada", "Eletrônica avançada (link + código no WhatsApp)"], ["govbr", "gov.br (assinador.iti.br)"], ["icp_a1", "Certificado ICP-Brasil A1"]] as const;
 const EVENTO: Record<string, string> = {
   enviado_para_assinatura: "Enviado para assinatura", convite_enviado: "Convite enviado", link_aberto: "Link aberto", otp_enviado: "Código enviado",
-  otp_errado: "Código incorreto", assinado: "Assinou", erro: "Erro", lembrete_d1: "Lembrete (1 dia)", lembrete_d3: "Lembrete (3 dias)", manifesto_gerado: "Manifesto gerado",
+  otp_errado: "Código incorreto", assinado: "Assinou", erro: "Erro", lembrete_d1: "Lembrete (1 dia)", lembrete_d3: "Lembrete (3 dias)", manifesto_gerado: "Manifesto gerado", conjuge_dispensado: "Assinatura do(a) cônjuge dispensada",
 };
 
 /** Aba Assinaturas da ficha: métodos por signatário, envio, acompanhamento, links e manifesto */
@@ -21,6 +21,8 @@ export default function PainelAssinaturas({ id, status, podeEnviar }: { id: numb
   const utils = trpc.useUtils();
   const { data, isLoading, error } = trpc.contratos.assinaturas.useQuery({ id });
   const [metodos, setMetodos] = useState<Record<string, string>>({});
+  // Dispensa da assinatura do(a) cônjuge do comprador (administrador/secretaria), com motivo
+  const [motivoDispensa, setMotivoDispensa] = useState("Dispensada a pedido do(a) comprador(a), por ausência do(a) cônjuge no ato");
   useEffect(() => { if (data?.previstos) setMetodos(Object.fromEntries(data.previstos.map((p: any) => [p.papel, p.metodo]))); }, [data]);
   const recarregar = () => { utils.contratos.assinaturas.invalidate({ id }); utils.contratos.detalhe.invalidate({ id }); utils.contratos.linhaDoTempo.invalidate({ id }); };
   const { user } = useAuth();
@@ -51,6 +53,8 @@ export default function PainelAssinaturas({ id, status, podeEnviar }: { id: numb
 
   if (!data.enviado) {
     const apto = status === "apto_assinatura";
+    // Cônjuge dispensado(a): o que falta no cadastro dele(a) não trava o envio
+    const pendencias: string[] = metodos.conjuge === "dispensado" ? data.pendencias.filter((x: string) => !x.startsWith("conjuge:")) : data.pendencias;
     return (
       <div className="space-y-4">
         <section className="rounded-xl border border-border bg-card p-4">
@@ -62,21 +66,37 @@ export default function PainelAssinaturas({ id, status, podeEnviar }: { id: numb
                 <div className="min-w-[220px] flex-1"><b>{p.nome || "—"}</b><span className="block text-xs text-muted-foreground">{p.papelRotulo}{p.whatsapp ? "" : " · sem WhatsApp"}</span></div>
                 <select className={`${sel} sm:max-w-sm`} value={metodos[p.papel] ?? "avancada"} disabled={!podeEnviar || !apto} onChange={e => setMetodos(m => ({ ...m, [p.papel]: e.target.value }))} aria-label={`Método de ${p.papelRotulo}`}>
                   {METODOS.map(([v, r]) => <option key={v} value={v}>{r}</option>)}
+                  {p.papel === "conjuge" && <option value="dispensado">Dispensar a assinatura do(a) cônjuge</option>}
                 </select>
+                {p.papel === "conjuge" && metodos.conjuge === "dispensado" && (
+                  <div className="basis-full space-y-1 rounded-lg border border-warn-500/40 bg-warn-500/10 p-2 text-xs">
+                    <label className="block text-warn-200">Motivo da dispensa (vai para a linha do tempo e para o manifesto de assinaturas)
+                      <input className="mt-1 h-9 w-full rounded-md border border-border bg-background px-2 text-sm text-foreground" maxLength={300} value={motivoDispensa} onChange={e => setMotivoDispensa(e.target.value)} />
+                    </label>
+                    <p className="text-muted-foreground">A anuência do(a) cônjuge do comprador é cautela: a outorga conjugal (Código Civil, art. 1.647) só é exigida para vender ou gravar imóvel, não para comprar. Com a dispensa, o contrato fica completo com as assinaturas dos demais.</p>
+                  </div>
+                )}
               </div>
             ))}
           </div>
-          {!!data.pendencias.length && (
+          {!!pendencias.length && (
             <div className="mt-3 rounded-lg border border-warn-500/40 bg-warn-500/10 p-2 text-xs text-warn-200">
               <p className="flex items-center gap-1 font-semibold"><AlertTriangle className="h-4 w-4" /> Complete antes de enviar:</p>
-              <ul className="list-disc pl-5">{data.pendencias.map((x: string) => <li key={x}>{x}</li>)}</ul>
+              <ul className="list-disc pl-5">{pendencias.map((x: string) => <li key={x}>{x}</li>)}</ul>
             </div>
           )}
           <div className="mt-3 flex flex-wrap gap-2">
             <Button variant="outline" onClick={() => navigate(`/contratos/${id}/assinaturas`)}><PenLine className="h-4 w-4" /> Posicionar assinaturas no PDF</Button>
             {podeEnviar && (
-              <Button disabled={!apto || enviar.isPending || !!data.pendencias.length}
-                onClick={() => { if (confirm("Enviar o contrato para assinatura? O PDF fica congelado e cada signatário recebe o link pelo WhatsApp.")) enviar.mutate({ id, metodos: metodos as any }); }}>
+              <Button disabled={!apto || enviar.isPending || !!pendencias.length}
+                onClick={() => {
+                  const dispensa = metodos.conjuge === "dispensado";
+                  if (dispensa && motivoDispensa.trim().length < 5) { toast.error("Informe o motivo da dispensa do(a) cônjuge"); return; }
+                  const msg = dispensa ? "Enviar o contrato para assinatura SEM a assinatura do(a) cônjuge (dispensada)? O PDF fica congelado e cada signatário recebe o link pelo WhatsApp." : "Enviar o contrato para assinatura? O PDF fica congelado e cada signatário recebe o link pelo WhatsApp.";
+                  if (!confirm(msg)) return;
+                  const { conjuge, ...outros } = metodos;
+                  enviar.mutate({ id, metodos: (dispensa ? outros : metodos) as any, ...(dispensa ? { dispensaConjuge: { motivo: motivoDispensa.trim() } } : {}) });
+                }}>
                 {enviar.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />} Enviar para assinatura
               </Button>
             )}

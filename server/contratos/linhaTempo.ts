@@ -85,6 +85,11 @@ export async function linhaDoTempo(contratoId: number): Promise<EtapaLinha[]> {
       : [papel(s.papel), convite ? `convite em ${new Date(convite.criadoEm).toLocaleDateString('pt-BR')}` : null, abriu ? 'abriu o link' : 'ainda não abriu'].filter(Boolean).join(' · ');
     add(`assinatura:${s.id}`, `Assinatura de ${s.nome}`, s.assinadoEm, s.status === 'assinado', det);
   }
+  const dispensa = ev('conjuge_dispensado');
+  if (dispensa) {
+    const dd = json(dispensa.detalhe);
+    add('conjuge_dispensado', `Assinatura do(a) cônjuge ${dd?.nome ?? ''} dispensada`.trim(), dispensa.criadoEm, true, dd?.motivo ? `Motivo: ${dd.motivo}` : null);
+  }
   const manifesto = ev('manifesto_gerado');
   if (sigs.length) add('manifesto', 'Todas as assinaturas · manifesto gerado', manifesto?.criadoEm, !!c.manifestoArquivo, c.manifestoArquivo ? 'Anexo VII com as evidências' : null);
   const p = json(c.simulacaoJson);

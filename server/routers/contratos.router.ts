@@ -454,12 +454,16 @@ export const contratosRouter = router({
     };
   }),
 
-  enviarParaAssinatura: protectedProcedure.input(z.object({ id: z.number().int(), metodos: z.record(z.string(), z.enum(["avancada", "govbr", "icp_a1"])).default({}) }))
+  enviarParaAssinatura: protectedProcedure.input(z.object({
+    id: z.number().int(), metodos: z.record(z.string(), z.enum(["avancada", "govbr", "icp_a1"])).default({}),
+    /** Dispensa da assinatura do(a) cônjuge do comprador (motivo obrigatório; fica no manifesto) */
+    dispensaConjuge: z.object({ motivo: z.string().trim().min(5).max(300) }).nullable().optional(),
+  }))
     .mutation(async ({ ctx, input }) => {
       exigir(podeGerarDefinitivo(perfilDe(ctx.user as any)), "O envio para assinatura é com o administrador ou a secretaria.");
       await contratoVisivel(ctx, input.id);
       const A = await import("../assinatura/servico");
-      return tratar(() => A.enviarParaAssinatura(input.id, input.metodos as any, ctx.user.id));
+      return tratar(() => A.enviarParaAssinatura(input.id, input.metodos as any, ctx.user.id, { dispensaConjuge: input.dispensaConjuge ?? null }));
     }),
 
   reenviarConvite: protectedProcedure.input(z.object({ id: z.number().int(), signatarioId: z.number().int() })).mutation(async ({ ctx, input }) => {

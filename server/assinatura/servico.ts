@@ -161,12 +161,23 @@ export async function novaVersao(contratoId: number, etapa: string, buf: Buffer)
  * Congela o definitivo para assinatura: posiciona as caixas (do contrato, do gabarito ou numa página de assinaturas
  * acrescentada ao fim), marca as caixas ICP/gov.br, cria os signatários com link individual (15 dias) e envia os convites.
  */
-export async function enviarParaAssinatura(contratoId: number, metodos: Record<string, Metodo>, usuarioId: number) {
+/**
+ * Dispensa da assinatura do(a) cônjuge do comprador: a outorga conjugal (CC, art. 1.647) é exigida para alienar ou
+ * gravar imóvel, não para adquirir — a anuência do cônjuge do promissário comprador é cautela e pode ser dispensada.
+ * Fica registrada (quem, quando, motivo) na linha do tempo e no manifesto.
+ */
+export interface DispensaConjuge { motivo: string }
+
+export async function enviarParaAssinatura(contratoId: number, metodos: Record<string, Metodo>, usuarioId: number, o: { dispensaConjuge?: DispensaConjuge | null } = {}) {
   const d = await db();
   const c = await contratoPorId(contratoId);
   if (c.status !== 'apto_assinatura') throw new AssinaturaErro('STATUS', 'Gere o contrato definitivo antes de enviar para assinatura', 409);
   if (c.modoAssinatura === 'manuscrita') throw new AssinaturaErro('MODO', 'Contrato com assinatura a punho: imprima, colha as assinaturas e use "Registrar contrato assinado"', 409);
-  const sigs = (await signatariosPrevistos(contratoId)).map(s => ({ ...s, metodo: (METODOS as readonly string[]).includes(metodos[s.papel]) ? metodos[s.papel] : s.metodo }));
+  const previstos = (await signatariosPrevistos(contratoId)).map(s => ({ ...s, metodo: (METODOS as readonly string[]).includes(metodos[s.papel]) ? metodos[s.papel] : s.metodo }));
+  const dispensado = o.dispensaConjuge ? previstos.find(s => s.papel === 'conjuge') ?? null : null;
+  if (o.dispensaConjuge && !dispensado) throw new AssinaturaErro('DISPENSA', 'Este contrato não tem cônjuge para dispensar', 409);
+  if (dispensado && String(o.dispensaConjuge!.motivo ?? '').trim().length < 5) throw new AssinaturaErro('DISPENSA', 'Informe o motivo da dispensa da assinatura do(a) cônjuge', 400);
+  const sigs = dispensado ? previstos.filter(s => s.papel !== 'conjuge') : previstos;
   const pend = pendenciasSignatarios(sigs);
   if (pend.length) throw new AssinaturaErro('PENDENCIAS', `Complete antes de enviar: ${pend.join('; ')}`, 409);
 
@@ -181,7 +192,7 @@ export async function enviarParaAssinatura(contratoId: number, metodos: Record<s
   let caixas = await posicoesSalvas(contratoId);
   caixas = [...caixas, ...automaticas.filter(a => !caixas.some(cx => cx.papel === a.papel))];
   if (!caixas.length) caixas = await posicoesDe(contratoId, j.modeloVersao);
-  caixas = caixasSemSobreposicao(caixas);
+  caixas = caixasSemSobreposicao(caixas).filter(cx => sigs.some(sg => sg.papel === cx.papel));
   // Quem ficou sem caixa ganha o quadro de assinaturas no fim; as posições dos demais (várias por pessoa) são mantidas
   const semCaixa = sigs.filter(s => !caixas.some(cx => cx.papel === s.papel));
   if (semCaixa.length) {
@@ -199,6 +210,9 @@ export async function enviarParaAssinatura(contratoId: number, metodos: Record<s
   await novaVersao(contratoId, 'para_assinatura', pdf);
 
   await d.delete(assinaturaSignatarios).where(and(eq(assinaturaSignatarios.contratoId, contratoId), eq(assinaturaSignatarios.status, 'pendente')));
+  if (dispensado) {
+    await evento(contratoId, null, 'conjuge_dispensado', { detalhe: { usuarioId, nome: dispensado.nome, cpf: dispensado.cpf, motivo: String(o.dispensaConjuge!.motivo).trim().slice(0, 300) } });
+  }
   const expira = new Date(Date.now() + VALIDADE_LINK_DIAS * 86_400_000);
   for (let i = 0; i < sigs.length; i++) {
     const s = sigs[i];
@@ -421,7 +435,11 @@ export async function concluirSeTodos(contratoId: number): Promise<{ concluido: 
   if (c.manifestoArquivo) return { concluido: true };
   const [emp] = await d.select({ nome: empreendimentos.nome }).from(empreendimentos).where(eq(empreendimentos.id, c.empreendimentoId)).limit(1);
   const final = await pdfAtual(contratoId);
-  const chave = await gravarManifesto(contratoId, final, sigs, emp?.nome ?? '');
+  // Cônjuge dispensado(a) no envio: a dispensa entra no manifesto
+  const [disp]: any[] = await d.select().from(assinaturaEventos).where(and(eq(assinaturaEventos.contratoId, contratoId), eq(assinaturaEventos.evento, 'conjuge_dispensado'))).limit(1);
+  const dd = disp ? (json<Record<string, any>>(disp.detalhe) ?? {}) : null;
+  const nota = dd ? `Assinatura do(a) cônjuge anuente ${String(dd.nome ?? '').toUpperCase()} dispensada pela gestora em ${new Date(disp.criadoEm).toLocaleDateString('pt-BR')} — motivo: ${dd.motivo}. A aquisição pelo promissário comprador não depende de outorga conjugal (Código Civil, art. 1.647).` : null;
+  const chave = await gravarManifesto(contratoId, final, sigs, emp?.nome ?? '', { nota });
   await d.update(contratos).set({ manifestoArquivo: chave, status: 'assinado' }).where(eq(contratos.id, contratoId));
   const { emitirCarteirasAuto } = await import('../contratos/carteirinhas');
   await emitirCarteirasAuto(contratoId);
