@@ -3,6 +3,20 @@
 Cada versão nova vai no TOPO. Depois rode `npm run release` (valida e atualiza o package.json);
 ao subir, o servidor grava a versão no banco e todos recebem o aviso "Novidades da versão".
 
+## 1.167.0 — 2026-11-13
+tipo: minor
+obrigatoria: nao
+titulo: Imóveis: compartilhar em um toque, filtros e cards novos
+publico: equipe
+
+### Novo
+- Imóveis: botão Compartilhar em cada imóvel e no detalhe, com WhatsApp (ficha pronta com preço, quartos, banheiros, vagas, áreas e link), envio com fotos pelo celular, outros apps (Instagram Direct, Messenger, SMS), copiar link, copiar anúncio, baixar todas as fotos para Instagram e Status, Facebook, Telegram, e-mail, QR da placa e página pública
+- O link compartilhado registra o canal e o corretor (UTM): o lead que chega pela página do imóvel mostra de onde veio
+
+### Melhorias
+- Imóveis: filtros por situação (com contagem), finalidade e tipo; ordenação por mais recentes, menor e maior preço; busca também por código e tipo
+- Card mais limpo: Compartilhar e Ver detalhes em destaque, edição, QR, página e exclusão em ícones; a foto abre o detalhe; "Oferta" só aparece quando o preço de oferta é menor (de/por)
+
 ## 1.166.0 — 2026-11-12
 tipo: minor
 obrigatoria: nao

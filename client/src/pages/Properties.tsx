@@ -13,6 +13,7 @@ import { podeUsarAgenteImovel } from "@shared/cadastroImovelAgente";
 import { toast } from "sonner";
 import MateriaisPainel from "@/components/MateriaisPainel";
 import { capaDoVideo } from "@/lib/capaVideo";
+import { CompartilharImovel } from "@/components/imoveis/CompartilharImovel";
 
 interface PropertyForm {
   denomination: string;
@@ -86,6 +87,11 @@ export default function Properties() {
   const [searchTerm, setSearchTerm] = useState("");
   const [showForm, setShowForm] = useState(false);
   const [qrDe, setQrDe] = useState<{ id: number; codigo: string } | null>(null);
+  const [compartilhar, setCompartilhar] = useState<any>(null);
+  const [filtroStatus, setFiltroStatus] = useState<"todos" | "available" | "sold" | "inactive">("todos");
+  const [filtroFinalidade, setFiltroFinalidade] = useState<"todas" | "venda" | "aluguel">("todas");
+  const [filtroTipo, setFiltroTipo] = useState<string>("todos");
+  const [ordem, setOrdem] = useState<"recentes" | "menor" | "maior">("recentes");
   const [editingId, setEditingId] = useState<number | null>(null);
   const [selectedProperty, setSelectedProperty] = useState<any>(null);
   // Link direto (ex.: confirmação do cadastro pelo WhatsApp): /properties?imovel=ID abre o detalhe desse imóvel
@@ -219,12 +225,27 @@ export default function Properties() {
 
   // Corretor só vê os imóveis que o administrador habilitou para ele (admin e secretária veem todos)
   const visiveis = useMemo(() => (properties && minhas ? properties.filter((p: any) => habilitado(p.id)) : []), [properties, minhas]);
+  const tiposDisponiveis = useMemo<string[]>(() => Array.from(new Set<string>(visiveis.map((p: any) => String(p.propertyType || "").trim()).filter(Boolean))).sort(), [visiveis]);
+  const contagem = useMemo(() => ({
+    todos: visiveis.length,
+    available: visiveis.filter((p: any) => p.status === "available").length,
+    sold: visiveis.filter((p: any) => p.status === "sold").length,
+    inactive: visiveis.filter((p: any) => p.status === "inactive").length,
+  }), [visiveis]);
   const filteredProperties = useMemo(() => {
-    return visiveis.filter((p: any) =>
-      p.denomination?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      p.address?.toLowerCase().includes(searchTerm.toLowerCase())
-    );
-  }, [visiveis, searchTerm]);
+    const termo = searchTerm.trim().toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+    const norm = (v: unknown) => String(v ?? "").toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+    const precoEfetivo = (p: any) => Number(p.offerPrice) > 0 && Number(p.offerPrice) < Number(p.price) ? Number(p.offerPrice) : Number(p.price) || 0;
+    const lista = visiveis.filter((p: any) =>
+      (filtroStatus === "todos" || p.status === filtroStatus) &&
+      (filtroFinalidade === "todas" || (filtroFinalidade === "aluguel" ? p.finalidade === "aluguel" : p.finalidade !== "aluguel")) &&
+      (filtroTipo === "todos" || String(p.propertyType || "").trim() === filtroTipo) &&
+      (!termo || [p.denomination, p.address, p.city, p.codigo, p.propertyType].some(v => norm(v).includes(termo))));
+    return [...lista].sort((a: any, b: any) =>
+      ordem === "menor" ? precoEfetivo(a) - precoEfetivo(b)
+        : ordem === "maior" ? precoEfetivo(b) - precoEfetivo(a)
+          : new Date(b.createdAt ?? 0).getTime() - new Date(a.createdAt ?? 0).getTime() || b.id - a.id);
+  }, [visiveis, searchTerm, filtroStatus, filtroFinalidade, filtroTipo, ordem]);
 
   const handleEdit = (property: any) => {
     setEditingId(property.id);
@@ -613,14 +634,40 @@ export default function Properties() {
           </div>
         )}
 
-        {/* Barra de Busca */}
-        <div className="mb-6">
+        {/* Busca, filtros e ordenação */}
+        <div className="mb-6 space-y-3">
           <div className="relative">
             <Search className="absolute left-4 top-3.5 h-5 w-5 text-muted-foreground" />
-            <input type="text" placeholder="Buscar por nome ou endereço..." value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)}
+            <input type="search" placeholder="Buscar por nome, código, endereço ou tipo..." value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} autoComplete="off"
               className="w-full pl-12 pr-4 py-3 rounded-xl bg-secondary/30 border border-border/50 text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-emerald/30 focus:border-emerald/50 transition"
             />
           </div>
+          <div className="-mx-1 flex gap-2 overflow-x-auto px-1 pb-1 [scrollbar-width:none]" role="tablist" aria-label="Situação">
+            {([["todos", "Todos"], ["available", "Disponíveis"], ["sold", "Vendidos"], ["inactive", "Inativos"]] as const).map(([k, r]) => (
+              <button key={k} type="button" role="tab" aria-selected={filtroStatus === k} onClick={() => setFiltroStatus(k)}
+                className={`shrink-0 rounded-full border px-3.5 py-1.5 text-sm font-medium transition focus-visible:outline focus-visible:outline-2 focus-visible:outline-emerald ${filtroStatus === k ? "border-emerald bg-emerald/15 text-emerald" : "border-border/50 text-muted-foreground hover:text-foreground"}`}>
+                {r} <span className="ml-1 tabular-nums opacity-70">{contagem[k]}</span>
+              </button>
+            ))}
+          </div>
+          <div className="grid grid-cols-3 gap-2">
+            <select aria-label="Finalidade" value={filtroFinalidade} onChange={e => setFiltroFinalidade(e.target.value as any)} className="h-10 rounded-xl border border-border/50 bg-secondary/30 px-2 text-sm text-foreground">
+              <option value="todas">Finalidade</option><option value="venda">Venda</option><option value="aluguel">Aluguel</option>
+            </select>
+            <select aria-label="Tipo" value={filtroTipo} onChange={e => setFiltroTipo(e.target.value)} className="h-10 rounded-xl border border-border/50 bg-secondary/30 px-2 text-sm text-foreground">
+              <option value="todos">Tipo</option>
+              {tiposDisponiveis.map(t => <option key={t} value={t}>{t}</option>)}
+            </select>
+            <select aria-label="Ordenar" value={ordem} onChange={e => setOrdem(e.target.value as any)} className="h-10 rounded-xl border border-border/50 bg-secondary/30 px-2 text-sm text-foreground">
+              <option value="recentes">Recentes</option><option value="menor">Menor R$</option><option value="maior">Maior R$</option>
+            </select>
+          </div>
+          {(searchTerm || filtroStatus !== "todos" || filtroFinalidade !== "todas" || filtroTipo !== "todos") && (
+            <p className="text-xs text-muted-foreground">
+              {filteredProperties.length} de {visiveis.length} imóveis ·{" "}
+              <button type="button" className="text-emerald underline-offset-2 hover:underline" onClick={() => { setSearchTerm(""); setFiltroStatus("todos"); setFiltroFinalidade("todas"); setFiltroTipo("todos"); }}>limpar filtros</button>
+            </p>
+          )}
         </div>
 
         {/* Grid de Imóveis - Cards Premium */}
@@ -632,7 +679,7 @@ export default function Properties() {
                 <div className="property-image relative">
                   {property.images && property.images.length > 0 ? (
                     <>
-                      <img src={property.images[0]} alt={property.denomination} className="w-full h-48 sm:h-56 object-cover max-w-full" />
+                      <img src={property.images[0]} alt={property.denomination} loading="lazy" onClick={() => setSelectedProperty(property)} className="w-full h-48 sm:h-56 object-cover max-w-full cursor-pointer" />
                       {property.images.length > 1 && (
                         <div className="absolute bottom-3 right-3 bg-black/75 text-white text-xs px-2.5 py-1 rounded-full flex items-center gap-1">
                           <Image className="h-3 w-3" /> {property.images.length}
@@ -665,13 +712,11 @@ export default function Properties() {
                   <div className="absolute inset-x-0 bottom-0 h-24 bg-gradient-to-t from-black/80 to-transparent" />
                   {/* Preço sobre a imagem */}
                   <div className="absolute bottom-3 left-3">
-                    <p className="text-2xl font-bold text-white text-glow-green">
-                      R$ {formatCurrency(property.price)}
-                    </p>
-                    {property.offerPrice && (
-                      <p className="text-sm font-semibold text-gold">
-                        Oferta: R$ {formatCurrency(property.offerPrice)}
-                      </p>
+                    {Number(property.offerPrice) > 0 && Number(property.offerPrice) < Number(property.price) ? (<>
+                      <p className="text-sm text-white/70 line-through">R$ {formatCurrency(property.price)}</p>
+                      <p className="text-2xl font-bold text-gold">R$ {formatCurrency(property.offerPrice)}</p>
+                    </>) : (
+                      <p className="text-2xl font-bold text-white text-glow-green">R$ {formatCurrency(property.price)}</p>
                     )}
                   </div>
                 </div>
@@ -711,7 +756,7 @@ export default function Properties() {
                     )}
                     {property.garageSpaces > 0 && (
                       <span className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-secondary/50 text-sm text-foreground">
-                        <Car className="h-3.5 w-3.5 text-emerald" /> {property.garageSpaces} Vagas
+                        <Car className="h-3.5 w-3.5 text-emerald" /> {property.garageSpaces} {property.garageSpaces > 1 ? "Vagas" : "Vaga"}
                       </span>
                     )}
                     {property.areaConstruida && (
@@ -737,33 +782,38 @@ export default function Properties() {
                     {property.plantaBaixaUrl && <span className="badge-gold text-xs py-1 px-2"><FileImage className="h-3 w-3" /> Planta</span>}
                   </div>
 
-                  {/* Ações */}
-                  <div className="flex gap-2 pt-4 border-t border-border/30">
-                    <button onClick={() => setSelectedProperty(property)} className="flex-1 py-2.5 rounded-xl bg-emerald/10 hover:bg-emerald/20 text-emerald font-semibold text-sm transition flex items-center justify-center gap-1.5">
-                      <Eye className="h-4 w-4" /> Ver Detalhes
-                    </button>
-                    {!habilitado(property.id) ? (
-                      <span className="flex-1 inline-flex items-center justify-center gap-1 text-xs text-muted-foreground" title="Peça ao administrador para habilitar este imóvel">
-                        <Lock className="h-3.5 w-3.5" /> sem acesso
-                      </span>
-                    ) : <>
-                    <button onClick={() => handleEdit(property)} className="flex-1 py-2.5 rounded-xl bg-gold/10 hover:bg-gold/20 text-gold font-semibold text-sm transition flex items-center justify-center gap-1.5">
-                      <Edit className="h-4 w-4" /> Editar
-                    </button>
-                    <button onClick={() => handleDelete(property.id, property.denomination)} className="py-2.5 px-3 rounded-xl bg-danger-500/10 hover:bg-danger-500/20 text-danger-400 transition">
-                      <Trash2 className="h-4 w-4" />
-                    </button>
-                    {property.codigo && (
-                      <button title="QR da placa e página do imóvel" onClick={() => setQrDe({ id: property.id, codigo: property.codigo })} className="py-2.5 px-3 rounded-xl bg-ok-500/10 hover:bg-ok-500/20 text-ok-300 text-xs font-bold transition">
-                        QR
+                  {/* Ações: compartilhar em destaque; o resto em ícones */}
+                  <div className="space-y-2 border-t border-border/30 pt-4">
+                    <div className="grid grid-cols-2 gap-2">
+                      <button type="button" onClick={() => setCompartilhar(property)} className="flex items-center justify-center gap-1.5 rounded-xl bg-gold py-2.5 text-sm font-bold text-black transition hover:brightness-110 focus-visible:outline focus-visible:outline-2 focus-visible:outline-gold">
+                        <Share2 className="h-4 w-4" /> Compartilhar
                       </button>
-                    )}
-                    {property.publicSlug && (
-                      <button onClick={() => window.open(property.codigo ? `/i/${property.codigo}` : `/imovel/${property.publicSlug}`, "_blank")} className="py-2.5 px-3 rounded-xl bg-secondary/50 hover:bg-secondary text-foreground transition">
-                        <ExternalLink className="h-4 w-4" />
+                      <button type="button" onClick={() => setSelectedProperty(property)} className="flex items-center justify-center gap-1.5 rounded-xl bg-emerald/10 py-2.5 text-sm font-semibold text-emerald transition hover:bg-emerald/20 focus-visible:outline focus-visible:outline-2 focus-visible:outline-emerald">
+                        <Eye className="h-4 w-4" /> Ver detalhes
                       </button>
-                    )}
-                    </>}
+                    </div>
+                    <div className="flex gap-2">
+                      {!habilitado(property.id) ? (
+                        <span className="flex-1 inline-flex items-center justify-center gap-1 text-xs text-muted-foreground" title="Peça ao administrador para habilitar este imóvel">
+                          <Lock className="h-3.5 w-3.5" /> sem acesso para editar
+                        </span>
+                      ) : <>
+                        <button type="button" onClick={() => handleEdit(property)} className="flex flex-1 items-center justify-center gap-1.5 rounded-xl bg-secondary/40 py-2 text-xs font-semibold text-foreground transition hover:bg-secondary">
+                          <Edit className="h-3.5 w-3.5" /> Editar
+                        </button>
+                        {property.codigo && (
+                          <button type="button" title="QR da placa" aria-label="QR da placa" onClick={() => setQrDe({ id: property.id, codigo: property.codigo })} className="rounded-xl bg-secondary/40 px-3 py-2 text-xs font-bold text-ok-300 transition hover:bg-secondary">QR</button>
+                        )}
+                        {(property.codigo || property.publicSlug) && (
+                          <button type="button" title="Abrir página pública" aria-label="Abrir página pública" onClick={() => window.open(property.codigo ? `/i/${property.codigo}` : `/imovel/${property.publicSlug}`, "_blank")} className="rounded-xl bg-secondary/40 px-3 py-2 text-foreground transition hover:bg-secondary">
+                            <ExternalLink className="h-3.5 w-3.5" />
+                          </button>
+                        )}
+                        <button type="button" title="Excluir" aria-label="Excluir imóvel" onClick={() => handleDelete(property.id, property.denomination)} className="rounded-xl bg-danger-500/10 px-3 py-2 text-danger-400 transition hover:bg-danger-500/20">
+                          <Trash2 className="h-3.5 w-3.5" />
+                        </button>
+                      </>}
+                    </div>
                   </div>
                 </div>
               </div>
@@ -830,10 +880,15 @@ export default function Properties() {
                   </div>
                 </div>
                 <div className="text-right">
-                  <p className="text-2xl font-bold text-emerald text-glow-green">R$ {formatCurrency(selectedProperty.price)}</p>
-                  {selectedProperty.offerPrice && (
-                    <p className="text-lg font-semibold text-gold">Oferta: R$ {formatCurrency(selectedProperty.offerPrice)}</p>
+                  {Number(selectedProperty.offerPrice) > 0 && Number(selectedProperty.offerPrice) < Number(selectedProperty.price) ? (<>
+                    <p className="text-sm text-muted-foreground line-through">R$ {formatCurrency(selectedProperty.price)}</p>
+                    <p className="text-2xl font-bold text-gold">R$ {formatCurrency(selectedProperty.offerPrice)}</p>
+                  </>) : (
+                    <p className="text-2xl font-bold text-emerald text-glow-green">R$ {formatCurrency(selectedProperty.price)}</p>
                   )}
+                  <button type="button" onClick={() => setCompartilhar(selectedProperty)} className="mt-2 inline-flex items-center gap-1.5 rounded-xl bg-gold px-4 py-2 text-sm font-bold text-black transition hover:brightness-110">
+                    <Share2 className="h-4 w-4" /> Compartilhar
+                  </button>
                 </div>
               </div>
 
@@ -1066,6 +1121,8 @@ export default function Properties() {
           </div>
         </div>
       )}
+      <CompartilharImovel imovel={compartilhar} aberto={!!compartilhar} onFechar={() => setCompartilhar(null)}
+        onQr={compartilhar?.codigo ? () => { setQrDe({ id: compartilhar.id, codigo: compartilhar.codigo }); setCompartilhar(null); } : undefined} />
       {qrDe && <QrPlaca propertyId={qrDe.id} codigo={qrDe.codigo} onClose={() => setQrDe(null)} />}
     </div>
   );
