@@ -108,9 +108,11 @@ export const contratosRouter = router({
       lotes: ls.filter(l => (l.situacao ?? "disponivel") === "disponivel" || (l.situacao === "concedido" && !l.contratoReservaId))
         .map(l => ({ codigo: l.codigo, quadra: l.quadra, areaM2: Number(l.areaM2), precoTabela: l.precoTabela != null ? Number(l.precoTabela) : null, concedida: l.situacao === "concedido" }))
         .sort((a, b) => a.codigo.localeCompare(b.codigo, "pt-BR", { numeric: true })),
-      leads: leadsVisiveis(ctx.permissoes, ctx.user.id, leads).map(l => ({ id: l.id, nome: l.nome ?? l.phone, telefone: l.phone, loteCodigo: l.loteCodigo })),
+      leads: leadsVisiveis(ctx.permissoes, ctx.user.id, leads).map(l => ({ id: l.id, nome: l.nome ?? l.phone, telefone: l.phone, loteCodigo: l.loteCodigo, responsavelId: l.responsavelId ?? null })),
+      // Admin e secretária preenchem o contrato pelo corretor: a lista traz os corretores primeiro, por nome
       corretores: corretores.filter(u => u.ativo !== false && u.ativo !== 0 && (u.role === "admin" || ["corretor", "secretario", "equipe"].includes(String(u.perfil))))
-        .map(u => ({ id: u.id, nome: u.nome ?? `#${u.id}` })),
+        .map(u => ({ id: u.id, nome: u.nome ?? `#${u.id}`, corretor: String(u.perfil) === "corretor" }))
+        .sort((a, b) => Number(b.corretor) - Number(a.corretor) || a.nome.localeCompare(b.nome, "pt-BR")),
       euId: ctx.user.id,
     };
   }),

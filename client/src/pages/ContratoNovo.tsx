@@ -221,6 +221,12 @@ export default function ContratoNovo() {
             <button type="button" className="underline hover:text-foreground" onClick={() => { if (confirm("Descartar o rascunho e limpar os dados do comprador?")) descartarRascunho(); }}>Descartar rascunho</button>
           </p>
         )}
+        {passo > 0 && perfil !== "corretor" && op && (
+          <p className="flex flex-wrap items-center gap-2 rounded-lg border border-border bg-card px-3 py-2 text-sm">
+            Corretor da venda: <b>{op.corretores.find(c => c.id === corretorUserId)?.nome ?? "—"}</b>
+            <button type="button" className="text-xs text-primary underline" onClick={() => setPasso(0)}>Trocar</button>
+          </p>
+        )}
         <ol className="flex flex-wrap gap-2 text-xs">
           {PASSOS.map((p, i) => (
             <li key={p} className={`rounded-full border px-3 py-1 ${i === passo ? "border-primary bg-primary/15 text-primary" : i < passo ? "border-ok-600/50 text-ok-400" : "border-border text-muted-foreground"}`}>
@@ -245,15 +251,26 @@ export default function ContratoNovo() {
                 </select>
               </Campo>
               <Campo rotulo="Lead (opcional)">
-                <select className={sel} value={leadId ?? ""} onChange={e => setLeadId(e.target.value ? Number(e.target.value) : null)}>
+                <select className={sel} value={leadId ?? ""} onChange={e => {
+                  const id = e.target.value ? Number(e.target.value) : null;
+                  setLeadId(id);
+                  // Lead com corretor responsável: já seleciona ele como corretor da venda (dá para trocar)
+                  const resp = op.leads.find(l => l.id === id)?.responsavelId;
+                  if (perfil !== "corretor" && resp && op.corretores.some(c => c.id === resp)) setCorretor(resp);
+                }}>
                   <option value="">{perfil === "corretor" ? "Cliente próprio (sem lead)" : "Sem lead"}</option>
                   {op.leads.map(l => <option key={l.id} value={l.id}>{l.nome}{l.loteCodigo ? ` · ${l.loteCodigo}` : ""}</option>)}
                 </select>
               </Campo>
               {perfil !== "corretor" && (
-                <Campo rotulo="Corretor da venda">
+                <Campo rotulo="Corretor da venda (preencha pelo corretor)">
                   <select className={sel} value={corretorUserId ?? ""} onChange={e => setCorretor(Number(e.target.value))}>
-                    {op.corretores.map(c => <option key={c.id} value={c.id}>{c.nome}</option>)}
+                    <optgroup label="Corretores">
+                      {op.corretores.filter(c => c.corretor).map(c => <option key={c.id} value={c.id}>{c.nome}</option>)}
+                    </optgroup>
+                    <optgroup label="Equipe / venda direta">
+                      {op.corretores.filter(c => !c.corretor).map(c => <option key={c.id} value={c.id}>{c.nome}{c.id === op.euId ? " (eu)" : ""}</option>)}
+                    </optgroup>
                   </select>
                 </Campo>
               )}

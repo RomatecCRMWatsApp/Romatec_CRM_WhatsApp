@@ -3,6 +3,15 @@
 Cada versão nova vai no TOPO. Depois rode `npm run release` (valida e atualiza o package.json);
 ao subir, o servidor grava a versão no banco e todos recebem o aviso "Novidades da versão".
 
+## 1.168.1 — 2026-11-14
+tipo: patch
+obrigatoria: nao
+titulo: Corretor da venda mais visível no novo contrato
+publico: equipe
+
+### Melhorias
+- Novo contrato: "Corretor da venda" com os corretores primeiro, em ordem alfabética; ao escolher um lead, o corretor responsável por ele já vem marcado; nos passos Comprador e Revisão aparece o corretor escolhido, com "Trocar"
+
 ## 1.168.0 — 2026-11-14
 tipo: minor
 obrigatoria: nao
