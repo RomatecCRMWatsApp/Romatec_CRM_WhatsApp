@@ -3,6 +3,15 @@
 Cada versão nova vai no TOPO. Depois rode `npm run release` (valida e atualiza o package.json);
 ao subir, o servidor grava a versão no banco e todos recebem o aviso "Novidades da versão".
 
+## 1.167.7 — 2026-11-14
+tipo: patch
+obrigatoria: nao
+titulo: Como validar a assinatura digital
+publico: equipe
+
+### Melhorias
+- Documentos e assinaturas: link "validar no ITI" em cada documento assinado e o passo a passo para validar (validador oficial do ITI e confiança na raiz ICP-Brasil no Adobe)
+
 ## 1.167.6 — 2026-11-14
 tipo: patch
 obrigatoria: nao
