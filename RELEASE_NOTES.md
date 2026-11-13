@@ -3,6 +3,15 @@
 Cada versão nova vai no TOPO. Depois rode `npm run release` (valida e atualiza o package.json);
 ao subir, o servidor grava a versão no banco e todos recebem o aviso "Novidades da versão".
 
+## 1.167.5 — 2026-11-14
+tipo: patch
+obrigatoria: nao
+titulo: Selo da assinatura travado
+publico: equipe
+
+### Melhorias
+- O selo visível da assinatura digital fica travado no PDF: no Adobe e em outros leitores ninguém consegue mover, editar nem apagar
+
 ## 1.167.4 — 2026-11-14
 tipo: patch
 obrigatoria: nao

@@ -185,14 +185,14 @@ function selo(e: Escrita, paginaIdx: number, rect: [number, number, number, numb
   escrever(e, apIdx, stream(`/Type /XObject /Subtype /Form /BBox [0 0 ${w.toFixed(2)} ${h.toFixed(2)}] /Resources << /Font ${FONTES} >>`, compacto ? aparenciaNoTraco(w, h, d) : aparencia(w, h, d)));
   const annotIdx = novo(e);
   const descricao = `Assinado digitalmente por ${d.nome}${d.quando ? ` em ${dataHoraBrasilia(d.quando)}` : ''}`;
-  escrever(e, annotIdx, `<< /Type /Annot /Subtype /Stamp /Rect [${rect.map(n => n.toFixed(2)).join(' ')}] /F 4 /P ${paginaIdx} 0 R /AP << /N ${apIdx} 0 R >> /Contents ${literal(descricao)} /Name /Approved ${MARCA_SELO} >>`);
+  escrever(e, annotIdx, `<< /Type /Annot /Subtype /Stamp /Rect [${rect.map(n => n.toFixed(2)).join(' ')}] /F 644 /P ${paginaIdx} 0 R /AP << /N ${apIdx} 0 R >> /Contents ${literal(descricao)} /Name /Approved /T (Assinatura ICP-Brasil) ${MARCA_SELO} >>`);
   anotar(e, paginaIdx, annotIdx, dictPagina);
 }
 
 /** Retângulos dos selos já postos, por índice da página */
 function selosExistentes(pdf: Buffer): { pagina: number; r: number[] }[] {
   const out: { pagina: number; r: number[] }[] = [];
-  const re = /\/Rect \[([-\d. ]+)\] \/F 4 \/P (\d+) 0 R[^\n]*\/RomatecSelo true/g;
+  const re = /\/Rect \[([-\d. ]+)\] \/F (?:4|644) \/P (\d+) 0 R[^\n]*\/RomatecSelo true/g;
   const t = pdf.toString('latin1');
   for (let m = re.exec(t); m; m = re.exec(t)) out.push({ pagina: Number(m[2]), r: m[1].trim().split(/\s+/).map(Number) });
   return out;
