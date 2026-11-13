@@ -20,6 +20,7 @@ import TabelasFinanciamento from "@/components/financeiro/TabelasFinanciamento";
 import { TabelaComissao } from "@/components/corretor/TabelaComissao";
 import { PainelCarteirinhas } from "@/pages/Carteirinhas";
 import { CertificadoDigital, DocumentosJuridicos } from "@/components/juridico/CertificadoDigital";
+import { TextoValidacao } from "@/components/juridico/AvisoValidacao";
 
 const ROTULO_TIPO: Record<string, string> = { pago: "Anúncios (pago)", organico: "Orgânico", outro: "Portais e outros" };
 const pct = (a: number, b: number) => (b ? `${Math.round((a / b) * 100)}%` : "—");
@@ -384,6 +385,10 @@ export default function Empreendedor() {
 
         {/* 6c. Documentos jurídicos do empreendimento (notificações, atas, ofícios) para assinar com certificado digital */}
         <Titulo id="juridico" icone={PenTool} sub="Notificações, requerimentos, atas e ofícios do corpo jurídico — assine com o seu certificado digital ICP-Brasil">Documentos jurídicos</Titulo>
+        <details className="rounded-xl border border-border bg-card/60 p-3">
+          <summary className="cursor-pointer text-sm font-semibold">Como validar as assinaturas</summary>
+          <div className="mt-2"><TextoValidacao /></div>
+        </details>
         <DocumentosJuridicos />
         <CertificadoDigital />
 

@@ -3,6 +3,15 @@
 Cada versão nova vai no TOPO. Depois rode `npm run release` (valida e atualiza o package.json);
 ao subir, o servidor grava a versão no banco e todos recebem o aviso "Novidades da versão".
 
+## 1.167.8 — 2026-11-14
+tipo: patch
+obrigatoria: nao
+titulo: Aviso de validação das assinaturas para os advogados
+publico: equipe
+
+### Novo
+- Portal jurídico: ao entrar, o advogado recebe o aviso "Assinaturas digitais: como validar" (onde ficam os documentos, validador do ITI, Adobe e validade jurídica); some depois de "Entendi" e pode ser reaberto na aba Assinaturas pelo botão "Como validar as assinaturas". O painel da empreendedora também traz o passo a passo
+
 ## 1.167.7 — 2026-11-14
 tipo: patch
 obrigatoria: nao

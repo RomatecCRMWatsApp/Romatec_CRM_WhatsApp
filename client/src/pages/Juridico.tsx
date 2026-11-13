@@ -5,6 +5,7 @@ import { AlertTriangle, ArrowLeft, BookOpen, CheckCircle2, FileKey2, FileText, G
 import { CertificadoDigital, DocumentosJuridicos } from "@/components/juridico/CertificadoDigital";
 import { PainelInadimplencia } from "@/components/juridico/Inadimplencia";
 import { BibliotecaLegislacao } from "@/components/juridico/Legislacao";
+import { AvisoValidacao } from "@/components/juridico/AvisoValidacao";
 import type { TemaLegislacao } from "@shared/legislacao";
 import { perfilDe } from "@shared/equipe";
 import { trpc } from "@/lib/trpc";
@@ -127,6 +128,7 @@ export default function Juridico() {
   const [filtro, setFiltro] = useState<string>("abertas");
   const [docPontuar, setDocPontuar] = useState<string | undefined>(undefined);
   const [grupoDoc, setGrupoDoc] = useState<string>("todos");
+  const [verAviso, setVerAviso] = useState(false);
   const [temaLeg, setTemaLeg] = useState<TemaLegislacao>("inadimplencia");
   const recarregar = () => { utils.juridico.pontuacoes.invalidate(); utils.juridico.painel.invalidate(); };
   // Abas independentes: cada botão do topo abre só a sua seção (lembrada no #endereço)
@@ -143,6 +145,8 @@ export default function Juridico() {
 
   return (
     <div className="min-h-screen bg-background">
+      <AvisoValidacao usuarioId={ehJuridico ? Number((user as any)?.id) || null : null} />
+      {verAviso && <AvisoValidacao forcar onFechar={() => setVerAviso(false)} />}
       <div className="sticky top-[env(safe-area-inset-top)] z-30 border-b border-[var(--rt-border)] bg-black">
         <div className="mx-auto flex max-w-[1500px] items-center gap-1 px-2 py-2 sm:gap-3 sm:px-4 md:px-6">
           {!ehJuridico && (
@@ -209,6 +213,7 @@ export default function Juridico() {
 
         {aba === "assinaturas" && (<section aria-labelledby="aba-assinaturas" className="space-y-3">
         <Titulo id="assinaturas" icone={PenTool} sub="Notificações, requerimentos, atas, ofícios e alterações — assinados com certificado digital ICP-Brasil.">Documentos e assinaturas</Titulo>
+        <Button size="sm" variant="outline" onClick={() => setVerAviso(true)}><CheckCircle2 className="mr-1 h-4 w-4" /> Como validar as assinaturas</Button>
         <DocumentosJuridicos slug={ehJuridico ? undefined : slug} podeEnviar admin={!ehJuridico && !!p?.admin} />
         </section>)}
 

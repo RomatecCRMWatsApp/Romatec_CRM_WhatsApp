@@ -143,15 +143,6 @@ export function DocumentosJuridicos({ slug, podeEnviar, admin }: { slug?: string
           <p className="basis-full text-[11px] text-muted-foreground">Escolha o PDF (o título vem do nome do arquivo e pode ser editado) e toque em Enviar para assinar; em seguida digite a senha do certificado.</p>
         </div>
       )}
-      <details className="rounded-xl border border-border bg-card/60 p-3 text-xs">
-        <summary className="cursor-pointer font-semibold text-foreground">Como validar uma assinatura</summary>
-        <ol className="mt-2 list-decimal space-y-1 pl-4 text-muted-foreground">
-          <li>Baixe o PDF assinado (botão PDF › Baixar). Valide sempre o arquivo original baixado daqui — imprimir ou “salvar como” cria outra cópia, sem a assinatura.</li>
-          <li>Abra <a className="text-ok-300 underline" href="https://validar.iti.gov.br/" target="_blank" rel="noopener noreferrer">validar.iti.gov.br</a> (validador oficial do ITI), aceite os termos e envie o arquivo. O relatório mostra cada signatário, o certificado ICP-Brasil e se o documento está íntegro; dá para baixar o relatório em PDF.</li>
-          <li>No Adobe Acrobat/Reader, o aviso “exige validação” só significa que o computador ainda não confia na raiz ICP-Brasil. Para ficar verde: baixe as cadeias “AC Raiz” no site do ITI (Repositório) e importe em Preferências › Assinaturas › Identidades e certificados confiáveis › Importar, marcando “usar como raiz confiável”.</li>
-          <li>Cada assinatura também aparece como selo verde em cima do traço de quem assinou; o selo é só a parte visível — a validade jurídica está na assinatura embutida no arquivo (MP n.º 2.200-2/2001, art. 10, § 1º).</li>
-        </ol>
-      </details>
       {isLoading && <p className="text-xs text-muted-foreground">Carregando…</p>}
       {!isLoading && !docs.length && <p className="rounded-xl border border-dashed border-border p-4 text-sm text-muted-foreground">Nenhum documento jurídico ainda.</p>}
       {docs.map(d => {
