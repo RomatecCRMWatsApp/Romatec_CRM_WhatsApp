@@ -361,8 +361,27 @@ export async function pdfDoDocumento(id: number) {
   return { buf: a.buf, nome: `${String(r.titulo).normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/[^A-Za-z0-9]+/g, '-').replace(/^-|-$/g, '').slice(0, 90) || 'documento'}.pdf`, empreendimentoId: Number(r.empreendimentoId) };
 }
 
+/** Como a pessoa aparece embaixo do traço: o nome do cadastro; a empreendedora, também como a vendedora do empreendimento */
+async function nomesNoTraco(usuario: { id: number; name?: string | null; perfil?: string | null }, empreendimentoId: number): Promise<{ apelidos: string[]; reservados: string[] }> {
+  const apelidos = [s(usuario.name)].filter(Boolean);
+  const reservados: string[] = [];
+  try {
+    const { perfilDe } = await import('../../shared/equipe');
+    const { juridicoDe } = await import('../contratos/servico');
+    const j: any = await juridicoDe(empreendimentoId);
+    const v = (j?.vendedora ?? {}) as Record<string, unknown>;
+    const vendedora = s(j?.vendedoraTipo === 'PJ' ? v.vend_razao_social : v.vend_nome);
+    if (perfilDe(usuario as any) === 'empreendedor') apelidos.push(vendedora); else reservados.push(vendedora);
+    const d = await banco();
+    const [emp]: any[] = await d.select({ slug: empreendimentos.slug }).from(empreendimentos).where(eq(empreendimentos.id, empreendimentoId)).limit(1);
+    const advs: any[] = emp ? await d.select({ id: users.id, nome: users.name, perfil: users.perfil }).from(users).where(eq(users.empreendimentoSlug, String(emp.slug))) : [];
+    for (const a of advs) if (a.perfil === 'juridico' && Number(a.id) !== Number(usuario.id)) reservados.push(s(a.nome));
+  } catch { /* sem os dados: fica o nome do cadastro */ }
+  return { apelidos: apelidos.filter(Boolean), reservados: reservados.filter(Boolean) };
+}
+
 /** Assina o documento com o certificado digital do usuário (incremental: as assinaturas anteriores continuam válidas) */
-export async function assinarDocumento(id: number, usuario: { id: number; name?: string | null }, senha: string, pfxAgora: Buffer | null = null) {
+export async function assinarDocumento(id: number, usuario: { id: number; name?: string | null; perfil?: string | null }, senha: string, pfxAgora: Buffer | null = null) {
   const r = await documentoPorId(id);
   const assinaturas: any[] = json(r.assinaturasJson) ?? [];
   if (assinaturas.some(a => Number(a.usuarioId) === Number(usuario.id))) throw new JuridicoErro('Você já assinou este documento', 409);
@@ -370,7 +389,7 @@ export async function assinarDocumento(id: number, usuario: { id: number; name?:
   const a = await lerArquivo(r.pdfArquivo);
   if (!a) throw new JuridicoErro('Arquivo não encontrado', 404);
   const { assinarComMeuCertificado } = await import('../certificado/servico');
-  const { pdf, info } = await assinarComMeuCertificado(usuario.id, a.buf, senha, { motivo: String(r.titulo).slice(0, 120), pfxAgora });
+  const { pdf, info } = await assinarComMeuCertificado(usuario.id, a.buf, senha, { motivo: String(r.titulo).slice(0, 120), pfxAgora, ...(await nomesNoTraco(usuario, Number(r.empreendimentoId))) });
   const chave = `juridico/${r.empreendimentoId}/${r.tipo}-${r.contratoId ?? 'avulso'}-${Date.now()}-ass${assinaturas.length + 1}.pdf`;
   await salvarArquivo(chave, pdf, 'application/pdf');
   const nova = { usuarioId: usuario.id, nome: info.nome, cpf: info.cpf, emissor: info.emissor, em: new Date().toISOString() };

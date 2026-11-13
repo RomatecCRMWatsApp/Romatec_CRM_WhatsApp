@@ -8,6 +8,7 @@ import forge from 'node-forge';
 import { SignPdf } from '@signpdf/signpdf';
 import { P12Signer } from '@signpdf/signer-p12';
 import { plainAddPlaceholder } from '@signpdf/placeholder-plain';
+import type { DadosSelo } from './seloVisivel';
 
 export class CertificadoInvalidoError extends Error {}
 
@@ -83,9 +84,35 @@ export async function pdfParaAssinar(pdf: Buffer): Promise<Buffer> {
   return Buffer.from(await doc.save({ useObjectStreams: false }));
 }
 
+/**
+ * O placeholder-plain grava no último "startxref" a posição da quebra de linha que antecede o "xref" (1 byte antes).
+ * Leitores rigorosos (Adobe) "consertam" o arquivo e acusam a assinatura como inválida: aponta para o "xref" exato.
+ */
+export function corrigirStartxref(pdf: Buffer): Buffer {
+  const i = pdf.lastIndexOf('startxref');
+  if (i < 0) return pdf;
+  const m = /^startxref\s*(\d+)/.exec(pdf.subarray(i, i + 40).toString('latin1'));
+  if (!m) return pdf;
+  const pos = Number(m[1]);
+  if (pdf.subarray(pos, pos + 4).toString('latin1') === 'xref') return pdf;
+  const certo = pdf.indexOf('xref', pos);
+  if (certo < 0 || certo - pos > 4 || pdf.subarray(pos, certo).toString('latin1').trim() !== '') return pdf;
+  return Buffer.concat([pdf.subarray(0, i), Buffer.from(`startxref\n${certo}\n%%EOF`, 'latin1')]);
+}
+
+/** Acrescenta o selo visível (incremental); sem quebrar a assinatura se o PDF não permitir */
+async function comSelo(pdf: Buffer, selo: DadosSelo): Promise<Buffer> {
+  const { acrescentarSeloVisivel } = await import('./seloVisivel');
+  try { return await acrescentarSeloVisivel(pdf, selo); } catch {
+    if (temAssinaturaDigital(pdf)) return pdf;
+    try { return await acrescentarSeloVisivel(await pdfParaAssinar(pdf), selo); } catch { return pdf; }
+  }
+}
+
 /** Assina incrementalmente com o A1 do próprio signatário; zera o .pfx da memória em qualquer caso */
-export async function assinarICP(pdf: Buffer, pfx: Buffer, senha: string, o: { motivo: string; nome: string; local?: string; contato?: string }): Promise<Buffer> {
+export async function assinarICP(pdf: Buffer, pfx: Buffer, senha: string, o: { motivo: string; nome: string; local?: string; contato?: string; selo?: DadosSelo }): Promise<Buffer> {
   try {
+    if (o.selo) pdf = await comSelo(pdf, o.selo);
     const placeholder = (buf: Buffer) => plainAddPlaceholder({
       pdfBuffer: buf, reason: o.motivo, contactInfo: o.contato ?? 'romateccrm@gmail.com', name: o.nome, location: o.local ?? 'Açailândia/MA',
       signatureLength: 16384,
@@ -97,6 +124,7 @@ export async function assinarICP(pdf: Buffer, pfx: Buffer, senha: string, o: { m
       try { base = await pdfParaAssinar(pdf); comPlaceholder = placeholder(base); }
       catch (e2: any) { throw new Error(`PDF em formato não suportado para assinatura (${String(e2?.message ?? e?.message ?? e2).slice(0, 80)})`); }
     }
+    comPlaceholder = corrigirStartxref(comPlaceholder);
     const assinado = await new SignPdf().sign(comPlaceholder, new P12Signer(pfx, { passphrase: senha }));
     if (!assinado.subarray(0, base.length).equals(base)) throw new Error('Assinatura não incremental — abortado para preservar as assinaturas anteriores');
     return assinado;

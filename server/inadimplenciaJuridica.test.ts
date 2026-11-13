@@ -130,6 +130,22 @@ describe('inadimplência', () => {
     const { buf } = await J.pdfDoDocumento(doc.id);
     expect(buf.toString('latin1').split('/ByteRange').length - 1).toBe(2);
     expect(extrairUltimaAssinatura(buf)).toMatchObject({ nome: 'ADMIN TESTE', cobreAteOFim: true });
+    // Selo visível de cada assinatura e o último startxref apontando exatamente para o "xref" (Adobe)
+    const txt = buf.toString('latin1');
+    expect(txt.match(/\/RomatecSelo true/g)?.length).toBe(2);
+    expect(txt).toContain('ADVOGADA FICTICIA');
+    const sx = Number(/startxref\s*(\d+)\s*%%EOF\s*$/.exec(txt)![1]);
+    expect(txt.slice(sx, sx + 4)).toBe('xref');
+    // As duas assinaturas cobrem bytes cujo resumo confere (selo da 2ª não invalida a 1ª)
+    const { createHash } = await import('node:crypto');
+    const forge = (await import('node-forge')).default;
+    for (const m of txt.matchAll(/\/ByteRange\s*\[\s*(\d+)\s+(\d+)\s+(\d+)\s+(\d+)\s*\]/g)) {
+      const [a0, b0, c0, d0] = m.slice(1).map(Number);
+      const hex = txt.slice(a0 + b0, c0).replace(/[<>\s]/g, '').replace(/(00)+$/, '');
+      const msg: any = forge.pkcs7.messageFromAsn1(forge.asn1.fromDer(forge.util.hexToBytes(hex), { strict: false } as any));
+      const md = (msg.rawCapture.authenticatedAttributes as any[]).map(x => forge.asn1.derToOid(x.value[0].value) === forge.pki.oids.messageDigest ? forge.util.bytesToHex(x.value[1].value[0].value) : null).find(Boolean);
+      expect(createHash('sha256').update(Buffer.concat([buf.subarray(a0, a0 + b0), buf.subarray(c0, c0 + d0)])).digest('hex')).toBe(md);
+    }
     expect((await J.documentosDo(1)).find(d => d.id === doc.id)!.assinaturas.map(a => a.nome)).toEqual(['ADVOGADA FICTICIA', 'ADMIN TESTE']);
   });
 

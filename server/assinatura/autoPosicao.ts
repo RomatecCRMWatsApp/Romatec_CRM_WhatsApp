@@ -12,7 +12,7 @@
 import type { Caixa } from './pdf';
 
 /** apelidos: outros nomes da mesma parte que valem pelo começo da linha (ex.: razão social da gestora) */
-export interface SignatarioNome { papel: string; nome: string; apelidos?: string[] }
+export interface SignatarioNome { papel: string; nome: string; apelidos?: string[]; /** vale qualquer traço de assinatura com uma linha de texto embaixo */ qualquer?: boolean }
 
 /** Papel escrito embaixo do traço no lugar do nome (ex.: Anexo VIII "VENDEDORA" / "COMPRADOR(A)") — vale só a linha exata */
 export const ROTULOS_PAPEL: Record<string, string[]> = {
@@ -66,7 +66,7 @@ const sobrepoeX = (a: { x: number; w: number }, b: { x: number; w: number }) => 
  */
 export interface Faixa { x: number; y: number; w: number; h: number }
 
-export function caixasDaPagina(ls: Trecho[], W: number, H: number, alvos: { papel: string; nome: string; apelidos: string[] }[], faixas: Faixa[] | null = null): { papel: string; x: number; y: number; w: number; h: number }[] {
+export function caixasDaPagina(ls: Trecho[], W: number, H: number, alvos: { papel: string; nome: string; apelidos: string[]; qualquer?: boolean }[], faixas: Faixa[] | null = null): { papel: string; x: number; y: number; w: number; h: number }[] {
   const tracos = ls.filter(ehTraco);
   const out: { papel: string; x: number; y: number; w: number; h: number }[] = [];
   const usados = new Set<Trecho>();
@@ -74,7 +74,8 @@ export function caixasDaPagina(ls: Trecho[], W: number, H: number, alvos: { pape
     if (ehTraco(l)) continue;
     const txt = normalizar(l.txt);
     const s = alvos.find(a => txt === a.nome) ?? alvos.find(a => a.apelidos.some(ap => txt === ap || txt.startsWith(`${ap} `)))
-      ?? alvos.find(a => (ROTULOS_PAPEL[a.papel] ?? []).includes(txt));
+      ?? alvos.find(a => (ROTULOS_PAPEL[a.papel] ?? []).includes(txt))
+      ?? alvos.find(a => a.qualquer && txt.length >= 3);
     if (!s) continue;
     // O traço logo acima do nome, na mesma coluna
     const traco = tracos.filter(t => !usados.has(t) && t.y > l.y && t.y - l.y <= TRACO_ATE_NOME && sobrepoeX(t, l)).sort((a, b) => a.y - b.y)[0];
@@ -166,7 +167,7 @@ async function tracosVetoriais(p: any, OPS: any, x0: number, y0: number, faixas:
 }
 
 export async function localizarAssinaturas(pdf: Buffer, sigs: SignatarioNome[]): Promise<Caixa[]> {
-  const alvos = sigs.map(s => ({ papel: s.papel, nome: normalizar(s.nome), apelidos: (s.apelidos ?? []).map(normalizar).filter(a => a.split(' ').length >= 2) })).filter(s => s.nome.split(' ').length >= 2 || s.apelidos.length);
+  const alvos = sigs.map(s => ({ papel: s.papel, nome: normalizar(s.nome), apelidos: (s.apelidos ?? []).map(normalizar).filter(a => a.split(' ').length >= 2), qualquer: s.qualquer })).filter(s => s.qualquer || s.nome.split(' ').length >= 2 || s.apelidos.length);
   if (!alvos.length) return [];
   const pdfjs: any = await import('pdfjs-dist/legacy/build/pdf.mjs');
   const doc = await pdfjs.getDocument({ data: new Uint8Array(pdf), disableFontFace: true, isEvalSupported: false, useSystemFonts: false, verbosity: 0 }).promise;

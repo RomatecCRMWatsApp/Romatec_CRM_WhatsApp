@@ -128,7 +128,7 @@ export async function removerCertificado(usuarioId: number) {
  * Assina o PDF com o certificado do usuário: o guardado (só a senha) ou um .pfx enviado agora (não é guardado).
  * Devolve o PDF assinado e os dados do certificado usado.
  */
-export async function assinarComMeuCertificado(usuarioId: number, pdf: Buffer, senha: string, o: { motivo: string; pfxAgora?: Buffer | null }): Promise<{ pdf: Buffer; info: InfoCertificado }> {
+export async function assinarComMeuCertificado(usuarioId: number, pdf: Buffer, senha: string, o: { motivo: string; pfxAgora?: Buffer | null; apelidos?: string[]; reservados?: string[] }): Promise<{ pdf: Buffer; info: InfoCertificado }> {
   let pfx: Buffer;
   if (o.pfxAgora?.length) pfx = o.pfxAgora;
   else {
@@ -145,7 +145,7 @@ export async function assinarComMeuCertificado(usuarioId: number, pdf: Buffer, s
   try {
     const info = await conferir(usuarioId, pfx, senha);
     let assinado: Buffer;
-    try { assinado = await assinarICP(pdf, Buffer.from(pfx), senha, { motivo: o.motivo, nome: info.nome }); }
+    try { assinado = await assinarICP(pdf, Buffer.from(pfx), senha, { motivo: o.motivo, nome: info.nome, selo: { nome: info.nome, cpf: info.cpf, emissor: info.emissor, motivo: o.motivo, quando: new Date(), apelidos: o.apelidos, reservados: o.reservados } }); }
     catch (e: any) { throw new CertificadoErro(`Não foi possível assinar: ${String(e?.message ?? e).slice(0, 200)}`, 422); }
     return { pdf: assinado, info };
   } finally { pfx.fill(0); }

@@ -3,6 +3,17 @@
 Cada versão nova vai no TOPO. Depois rode `npm run release` (valida e atualiza o package.json);
 ao subir, o servidor grava a versão no banco e todos recebem o aviso "Novidades da versão".
 
+## 1.167.2 — 2026-11-13
+tipo: patch
+obrigatoria: nao
+titulo: Assinatura com certificado visível no documento
+publico: equipe
+
+### Correções
+- Assinatura com certificado digital: o PDF assinado passa a mostrar o selo da assinatura em cima do traço de quem assinou (nome, CPF mascarado, data e hora) — antes a assinatura existia no arquivo, mas não aparecia na página. A empreendedora assina no traço da vendedora; quem não tem o nome no documento usa um traço livre ou a página "Assinaturas digitais" criada no fim
+- O selo é acrescentado sem regravar o arquivo: as assinaturas anteriores do mesmo PDF continuam válidas
+- Corrigida a posição final da tabela de referências do PDF assinado, que fazia o Adobe Reader acusar "Pelo menos uma assinatura é inválida"
+
 ## 1.167.1 — 2026-11-13
 tipo: patch
 obrigatoria: nao
