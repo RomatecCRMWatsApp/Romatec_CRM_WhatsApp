@@ -155,6 +155,8 @@ describe('inadimplência', () => {
     const p = await PDFDocument.create(); p.addPage();
     const r = await J.salvarAvulso(1, 'Ofício ao cartório', Buffer.from(await p.save()), 2);
     expect(r.id).toBeGreaterThan(0);
+    await J.excluirDocumento(r.id, 1);
+    expect((await J.documentosDo(1)).some(d => d.id === r.id)).toBe(false);
   });
 
   it('avulso com xref compactada (Word, navegador, celular) é assinado: regrava com xref clássica antes da 1ª assinatura', async () => {

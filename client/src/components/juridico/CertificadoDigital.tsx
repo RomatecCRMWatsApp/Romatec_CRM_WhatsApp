@@ -111,6 +111,8 @@ export function DocumentosJuridicos({ slug, podeEnviar, admin }: { slug?: string
   const [arquivoPdf, setArquivoPdf] = useState<File | null>(null);
   const [recemEnviado, setRecemEnviado] = useState<number | null>(null);
   const [enviando, setEnviando] = useState(false);
+  const [semAutofill, setSemAutofill] = useState(true);
+  const excluir = trpc.juridico.excluirDocumento.useMutation({ onSuccess: () => { toast.success("Documento excluído"); recarregar(); }, onError: e => toast.error(erroLegivel(e.message)) });
   const arq = useRef<HTMLInputElement>(null);
   const recarregar = () => { utils.juridico.documentos.invalidate(); utils.juridico.inadimplencia.invalidate(); };
   const enviar = async () => {
@@ -132,7 +134,8 @@ export function DocumentosJuridicos({ slug, podeEnviar, admin }: { slug?: string
       {podeEnviar && (
         <div className="flex flex-wrap items-end gap-2 rounded-xl border border-dashed border-border p-3 text-sm">
           <label className="min-w-[220px] flex-1 text-xs text-muted-foreground">Ofício, alteração ou solicitação (PDF) — título
-            <input className={`${campo} mt-1`} value={titulo} onChange={e => setTitulo(e.target.value)} placeholder="Ex.: Ofício ao Cartório do 1.º Ofício — certidão" autoComplete="off" name="titulo-documento-juridico" />
+            <input className={`${campo} mt-1`} value={titulo} onChange={e => setTitulo(e.target.value)} placeholder="Ex.: Ofício ao Cartório do 1.º Ofício — certidão"
+              autoComplete="off" name="titulo-documento-juridico" data-lpignore="true" data-1p-ignore readOnly={semAutofill} onFocus={() => setSemAutofill(false)} />
           </label>
           <input ref={arq} type="file" accept="application/pdf" className="text-xs file:mr-2 file:rounded-md file:border file:border-border file:bg-background file:px-2 file:py-1 file:text-foreground"
             onChange={e => { const f = e.target.files?.[0] ?? null; setArquivoPdf(f); if (f && !titulo.trim()) setTitulo(f.name.replace(/\.pdf$/i, "").replace(/[_-]+/g, " ").trim()); }} />
@@ -150,6 +153,12 @@ export function DocumentosJuridicos({ slug, podeEnviar, admin }: { slug?: string
               <span className="rounded-full border border-border px-2 py-0.5 text-[11px]">{d.rotuloTipo}</span>
               <b className="min-w-0 flex-1">{d.titulo}</b>
               <AcoesPdf compacto rotulo="PDF" url={d.url} nomeArquivo={`${d.titulo}.pdf`} mensagem={d.titulo} />
+              {admin && (
+                <Button size="sm" variant="outline" className="text-danger-300" title="Excluir documento" disabled={excluir.isPending}
+                  onClick={() => { if (confirm(`Excluir "${d.titulo}"${d.assinaturas.length ? " — já tem assinatura" : ""}? Ele some do portal para todos.`)) excluir.mutate({ id: d.id }); }}>
+                  <Trash2 className="h-4 w-4" />
+                </Button>
+              )}
             </div>
             <p className="text-xs text-muted-foreground">{d.contrato ? `${d.contrato} · ` : ""}gerado em {dataBr(d.criadoEm)}</p>
             <p className="text-xs">{d.assinaturas.length

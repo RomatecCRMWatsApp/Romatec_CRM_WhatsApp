@@ -189,6 +189,13 @@ export const juridicoRouter = router({
     return documentosDo(Number(emp.id));
   }),
 
+  /** Exclui um documento jurídico — só o administrador (documento de teste ou gerado por engano) */
+  excluirDocumento: protectedProcedure.input(z.object({ id: z.number().int() })).mutation(async ({ ctx, input }) => {
+    if (perfilDe(ctx.user) !== "admin") throw new TRPCError({ code: "FORBIDDEN", message: "Só o administrador exclui documentos jurídicos" });
+    const { excluirDocumento } = await import("../juridico/inadimplencia");
+    return comErro(() => excluirDocumento(input.id, ctx.user.id));
+  }),
+
   /** Assina com o certificado digital ICP-Brasil (o guardado, só com a senha; ou um .pfx enviado agora, que não é guardado) */
   assinarDocumento: protectedProcedure.input(z.object({ id: z.number().int(), senha: z.string().min(1).max(200), pfxBase64: pfxZ }))
     .mutation(async ({ ctx, input }) => {

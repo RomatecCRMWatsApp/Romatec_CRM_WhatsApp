@@ -3,6 +3,18 @@
 Cada versão nova vai no TOPO. Depois rode `npm run release` (valida e atualiza o package.json);
 ao subir, o servidor grava a versão no banco e todos recebem o aviso "Novidades da versão".
 
+## 1.167.6 — 2026-11-14
+tipo: patch
+obrigatoria: nao
+titulo: Excluir documento jurídico
+publico: equipe
+
+### Novo
+- Documentos e assinaturas: o administrador pode excluir um documento (teste ou peça gerada por engano), com confirmação; ele some do portal para todos e a exclusão fica na linha do tempo do contrato
+
+### Correções
+- O campo de título do documento não é mais preenchido pelo navegador com o usuário do login
+
 ## 1.167.5 — 2026-11-14
 tipo: patch
 obrigatoria: nao

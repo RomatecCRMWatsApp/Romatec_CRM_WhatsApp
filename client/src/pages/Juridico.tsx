@@ -209,7 +209,7 @@ export default function Juridico() {
 
         {aba === "assinaturas" && (<section aria-labelledby="aba-assinaturas" className="space-y-3">
         <Titulo id="assinaturas" icone={PenTool} sub="Notificações, requerimentos, atas, ofícios e alterações — assinados com certificado digital ICP-Brasil.">Documentos e assinaturas</Titulo>
-        <DocumentosJuridicos slug={ehJuridico ? undefined : slug} podeEnviar admin={!ehJuridico} />
+        <DocumentosJuridicos slug={ehJuridico ? undefined : slug} podeEnviar admin={!ehJuridico && !!p?.admin} />
         </section>)}
 
         {aba === "documentos" && (<section aria-labelledby="aba-documentos" className="space-y-3">

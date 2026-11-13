@@ -361,6 +361,18 @@ export async function pdfDoDocumento(id: number) {
   return { buf: a.buf, nome: `${String(r.titulo).normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/[^A-Za-z0-9]+/g, '-').replace(/^-|-$/g, '').slice(0, 90) || 'documento'}.pdf`, empreendimentoId: Number(r.empreendimentoId) };
 }
 
+/** Exclui um documento jurídico (só o administrador: testes ou peça gerada por engano); registra na linha do tempo */
+export async function excluirDocumento(id: number, autorId: number) {
+  const r = await documentoPorId(id);
+  const d = await banco();
+  await d.delete(juridicoDocumentos).where(eq(juridicoDocumentos.id, id));
+  if (r.contratoId) {
+    const { evento } = await import('../assinatura/servico');
+    await evento(Number(r.contratoId), null, 'juridico_documento', { detalhe: { documentoId: id, tipo: r.tipo, excluido: true, usuarioId: autorId } }).catch(() => {});
+  }
+  return { ok: true as const };
+}
+
 /** Como a pessoa aparece embaixo do traço: o nome do cadastro; a empreendedora, também como a vendedora do empreendimento */
 async function nomesNoTraco(usuario: { id: number; name?: string | null; perfil?: string | null }, empreendimentoId: number): Promise<{ apelidos: string[]; reservados: string[] }> {
   const apelidos = [s(usuario.name)].filter(Boolean);
