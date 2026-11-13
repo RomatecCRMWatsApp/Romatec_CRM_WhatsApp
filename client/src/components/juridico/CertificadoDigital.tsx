@@ -77,8 +77,8 @@ export function CertificadoDigital() {
  * Assinar um documento jurídico com o certificado: só a senha (certificado guardado) ou um .pfx enviado agora
  * (não é guardado).
  */
-export function AssinarComCertificado({ documentoId, onAssinado, rotulo = "Assinar com certificado" }: { documentoId: number; onAssinado: () => void; rotulo?: string }) {
-  const [aberto, setAberto] = useState(false);
+export function AssinarComCertificado({ documentoId, onAssinado, rotulo = "Assinar com certificado", abertoInicial = false }: { documentoId: number; onAssinado: () => void; rotulo?: string; abertoInicial?: boolean }) {
+  const [aberto, setAberto] = useState(abertoInicial);
   const [senha, setSenha] = useState("");
   const [arquivo, setArquivo] = useState<File | null>(null);
   const assinar = trpc.juridico.assinarDocumento.useMutation({
@@ -108,18 +108,23 @@ export function DocumentosJuridicos({ slug, podeEnviar, admin }: { slug?: string
   const { data: docs = [], isLoading } = trpc.juridico.documentos.useQuery(slug ? { slug } : undefined);
   const { data: eu } = trpc.auth.me.useQuery();
   const [titulo, setTitulo] = useState("");
+  const [arquivoPdf, setArquivoPdf] = useState<File | null>(null);
+  const [recemEnviado, setRecemEnviado] = useState<number | null>(null);
   const [enviando, setEnviando] = useState(false);
   const arq = useRef<HTMLInputElement>(null);
   const recarregar = () => { utils.juridico.documentos.invalidate(); utils.juridico.inadimplencia.invalidate(); };
   const enviar = async () => {
-    const f = arq.current?.files?.[0];
-    if (!f || titulo.trim().length < 3) return;
+    const f = arquivoPdf ?? arq.current?.files?.[0];
+    if (!f) return toast.error("Escolha o arquivo PDF");
+    const t = (titulo.trim() || f.name.replace(/\.pdf$/i, "")).trim();
+    if (t.length < 3) return toast.error("Dê um título ao documento (mínimo 3 letras)");
     setEnviando(true);
     try {
-      const r = await fetch("/api/juridico/documentos/avulso", { method: "POST", credentials: "include", headers: { "Content-Type": "application/octet-stream", "x-titulo": encodeURIComponent(titulo), ...(admin && slug ? { "x-slug": encodeURIComponent(slug) } : {}) }, body: f });
+      const r = await fetch("/api/juridico/documentos/avulso", { method: "POST", credentials: "include", headers: { "Content-Type": "application/octet-stream", "x-titulo": encodeURIComponent(t), ...(admin && slug ? { "x-slug": encodeURIComponent(slug) } : {}) }, body: f });
       const j = await r.json().catch(() => ({}));
       if (!r.ok || !j.ok) throw new Error(j.error || "Não foi possível enviar");
-      toast.success("Documento enviado — agora é só assinar"); setTitulo(""); if (arq.current) arq.current.value = ""; recarregar();
+      toast.success("Documento enviado — digite a senha do certificado e assine"); setTitulo(""); setArquivoPdf(null); if (arq.current) arq.current.value = "";
+      setRecemEnviado(Number(j.id) || null); recarregar();
     } catch (e: any) { toast.error(e.message); } finally { setEnviando(false); }
   };
   return (
@@ -129,8 +134,10 @@ export function DocumentosJuridicos({ slug, podeEnviar, admin }: { slug?: string
           <label className="min-w-[220px] flex-1 text-xs text-muted-foreground">Ofício, alteração ou solicitação (PDF) — título
             <input className={`${campo} mt-1`} value={titulo} onChange={e => setTitulo(e.target.value)} placeholder="Ex.: Ofício ao Cartório do 1.º Ofício — certidão" autoComplete="off" name="titulo-documento-juridico" />
           </label>
-          <input ref={arq} type="file" accept="application/pdf" className="text-xs file:mr-2 file:rounded-md file:border file:border-border file:bg-background file:px-2 file:py-1 file:text-foreground" />
-          <Button size="sm" variant="outline" disabled={enviando || titulo.trim().length < 3} onClick={enviar}>{enviando ? <Loader2 className="mr-1 h-4 w-4 animate-spin" /> : <Upload className="mr-1 h-4 w-4" />} Enviar para assinar</Button>
+          <input ref={arq} type="file" accept="application/pdf" className="text-xs file:mr-2 file:rounded-md file:border file:border-border file:bg-background file:px-2 file:py-1 file:text-foreground"
+            onChange={e => { const f = e.target.files?.[0] ?? null; setArquivoPdf(f); if (f && !titulo.trim()) setTitulo(f.name.replace(/\.pdf$/i, "").replace(/[_-]+/g, " ").trim()); }} />
+          <Button size="sm" disabled={enviando || !arquivoPdf} onClick={enviar}>{enviando ? <Loader2 className="mr-1 h-4 w-4 animate-spin" /> : <Upload className="mr-1 h-4 w-4" />} Enviar para assinar</Button>
+          <p className="basis-full text-[11px] text-muted-foreground">Escolha o PDF (o título vem do nome do arquivo e pode ser editado) e toque em Enviar para assinar; em seguida digite a senha do certificado.</p>
         </div>
       )}
       {isLoading && <p className="text-xs text-muted-foreground">Carregando…</p>}
@@ -148,7 +155,7 @@ export function DocumentosJuridicos({ slug, podeEnviar, admin }: { slug?: string
             <p className="text-xs">{d.assinaturas.length
               ? <span className="text-ok-300">Assinado digitalmente (ICP-Brasil) por: {d.assinaturas.map(a => `${a.nome} em ${dataBr(a.em)}`).join("; ")}</span>
               : <span className="text-warn-300">Ainda sem assinatura</span>}</p>
-            {!jaAssinei && <AssinarComCertificado documentoId={d.id} onAssinado={recarregar} />}
+            {!jaAssinei && <AssinarComCertificado key={`${d.id}-${recemEnviado === d.id}`} documentoId={d.id} onAssinado={() => { setRecemEnviado(null); recarregar(); }} abertoInicial={recemEnviado === d.id} />}
           </div>
         );
       })}

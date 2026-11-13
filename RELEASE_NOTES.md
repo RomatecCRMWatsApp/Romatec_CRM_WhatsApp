@@ -3,6 +3,16 @@
 Cada versão nova vai no TOPO. Depois rode `npm run release` (valida e atualiza o package.json);
 ao subir, o servidor grava a versão no banco e todos recebem o aviso "Novidades da versão".
 
+## 1.167.4 — 2026-11-14
+tipo: patch
+obrigatoria: nao
+titulo: Envio de documento para assinar mais simples
+publico: equipe
+
+### Correções
+- Documentos e assinaturas: ao escolher o PDF, o título vem do nome do arquivo (dá para editar) e o botão "Enviar para assinar" já fica ativo — antes ele ficava apagado até digitar um título, sem avisar
+- Depois do envio, o campo da senha do certificado abre direto no documento novo
+
 ## 1.167.3 — 2026-11-14
 tipo: patch
 obrigatoria: nao
