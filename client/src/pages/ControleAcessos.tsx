@@ -74,6 +74,16 @@ export default function ControleAcessos() {
   const [ordem, setOrdem] = useState<"nome" | "uso" | "midias">("nome");
   const [acao, setAcao] = useState<Acao | null>(null);
   const [historico, setHistorico] = useState<Linha | null>(null);
+  // Esqueceu a senha: senha provisória nova pelo WhatsApp (troca obrigatória no 1º acesso)
+  const [senhaNova, setSenhaNova] = useState<{ nome: string; enviado: boolean; login: string; senha: string; texto: string } | null>(null);
+  const resetar = trpc.recrutamento.reenviarAcesso.useMutation({ onError: e => toast.error(e.message) });
+  const resetarSenha = async (l: Linha) => {
+    if (!l.telefone) { toast.error("Sem WhatsApp no cadastro: preencha o telefone em Equipe › Cadastro"); return; }
+    if (!confirm(`Resetar a senha de ${l.nome}? A senha atual deixa de valer, ele(a) sai dos aparelhos conectados e recebe uma senha provisória no WhatsApp ${l.telefone}.`)) return;
+    const r = await resetar.mutateAsync({ usuarioId: l.id });
+    setSenhaNova({ nome: l.nome, ...r });
+    if (r.enviado) toast.success("Senha provisória enviada pelo WhatsApp");
+  };
   // Link do aviso ao administrador: /controle-acessos?pedido=123456 abre a autorização desse pedido
   const pedidoDaUrl = useMemo(() => { try { return new URLSearchParams(window.location.search).get("pedido"); } catch { return null; } }, []);
 
@@ -165,8 +175,23 @@ export default function ControleAcessos() {
         {isLoading && <p className="flex items-center gap-2 text-sm text-muted-foreground"><Loader2 className="h-4 w-4 animate-spin motion-reduce:animate-none" /> Carregando…</p>}
         {!isLoading && visiveis.length === 0 && <p className="rounded-md border border-dashed border-border p-6 text-center text-sm text-muted-foreground">Ninguém neste filtro.</p>}
 
+        {senhaNova && (
+          <div className="space-y-2 rounded-xl border border-ok-500/40 bg-ok-500/10 p-4 text-sm">
+            <p className="font-semibold text-ok-300">{senhaNova.enviado
+              ? `✅ Senha de ${senhaNova.nome} redefinida e enviada pelo WhatsApp.`
+              : `✅ Senha de ${senhaNova.nome} redefinida — o WhatsApp do sistema não enviou: repasse a mensagem abaixo.`}</p>
+            <p>Login: <b>{senhaNova.login}</b> · Senha provisória: <b className="font-mono">{senhaNova.senha}</b></p>
+            <p className="text-xs text-muted-foreground">No 1º acesso o sistema pede para criar a senha nova. A provisória vale 7 dias; a antiga já não vale e os aparelhos conectados saíram.</p>
+            {!senhaNova.enviado && <pre className="whitespace-pre-wrap rounded bg-background/60 p-2 text-xs">{senhaNova.texto}</pre>}
+            <div className="flex gap-2">
+              <Button size="sm" variant="outline" onClick={async () => { try { await navigator.clipboard.writeText(senhaNova.texto); toast.success("Mensagem copiada"); } catch { toast.error("Não foi possível copiar"); } }}>Copiar mensagem</Button>
+              <Button size="sm" variant="ghost" onClick={() => setSenhaNova(null)}>Fechar</Button>
+            </div>
+          </div>
+        )}
+
         <div className="grid gap-2 md:grid-cols-2 xl:grid-cols-3">
-          {visiveis.map(l => <CartaoPessoa key={l.id} l={l} onAcao={setAcao} onHistorico={() => setHistorico(l)} />)}
+          {visiveis.map(l => <CartaoPessoa key={l.id} l={l} onAcao={setAcao} onHistorico={() => setHistorico(l)} onResetarSenha={() => resetarSenha(l)} resetando={resetar.isPending} />)}
         </div>
       </div>
 
@@ -203,7 +228,7 @@ function Selo({ texto, cor, dica }: { texto: string; cor: string; dica?: string 
   return <span title={dica} className={`inline-flex items-center rounded-full border px-2 py-0.5 text-[11px] font-medium ${cor}`}>{texto}</span>;
 }
 
-function CartaoPessoa({ l, onAcao, onHistorico }: { l: Linha; onAcao: (a: Acao) => void; onHistorico: () => void }) {
+function CartaoPessoa({ l, onAcao, onHistorico, onResetarSenha, resetando }: { l: Linha; onAcao: (a: Acao) => void; onHistorico: () => void; onResetarSenha: () => void; resetando?: boolean }) {
   const licenca = l.licencaFim ? `${l.plano ?? "Licença"} até ${dataBr(l.licencaFim)}${l.diasRestantes != null && l.diasRestantes >= 0 ? ` (${l.diasRestantes} d)` : ""}` : l.plano ?? null;
   return (
     <div className={`flex flex-col gap-2 rounded-lg border bg-card p-3 ${l.ativo ? "border-border" : "border-danger-500/30 opacity-80"}`}>
@@ -248,6 +273,11 @@ function CartaoPessoa({ l, onAcao, onHistorico }: { l: Linha; onAcao: (a: Acao) 
         {["pago", "cortesia", "teste", "atrasado"].includes(l.pagamento) && l.assinaturaId
           ? <Button size="sm" variant="outline" className="h-8" onClick={() => onAcao({ tipo: "bloquear", pessoa: l })}><ShieldOff className="mr-1 h-3.5 w-3.5" /> Bloquear licença</Button>
           : null}
+        {l.ativo && (
+          <Button size="sm" variant="outline" className="h-8" disabled={resetando} title={l.telefone ? "Esqueceu a senha: senha provisória nova pelo WhatsApp" : "Sem WhatsApp no cadastro"} onClick={onResetarSenha}>
+            <KeyRound className="mr-1 h-3.5 w-3.5" /> Resetar senha
+          </Button>
+        )}
         <Button size="sm" variant="ghost" className="h-8 px-2" title="Desconectar de todos os aparelhos" aria-label="Desconectar de todos os aparelhos" onClick={() => onAcao({ tipo: "desconectar", pessoa: l })}><LogOut className="h-3.5 w-3.5" /></Button>
         <Button size="sm" variant="ghost" className="h-8 px-2" title="Histórico de entradas e liberações" aria-label="Histórico de entradas e liberações" onClick={onHistorico}><History className="h-3.5 w-3.5" /></Button>
       </div>

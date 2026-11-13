@@ -3,6 +3,15 @@
 Cada versão nova vai no TOPO. Depois rode `npm run release` (valida e atualiza o package.json);
 ao subir, o servidor grava a versão no banco e todos recebem o aviso "Novidades da versão".
 
+## 1.168.5 — 2026-11-14
+tipo: patch
+obrigatoria: nao
+titulo: Resetar senha também no Controle de acessos
+publico: equipe
+
+### Melhorias
+- Controle de acessos: botão "Resetar senha" em cada cartão (corretores, advogados e empreendedores) — senha provisória nova pelo WhatsApp, a antiga deixa de valer e os aparelhos conectados saem; a tela mostra a mensagem para copiar se o WhatsApp do sistema não enviar
+
 ## 1.168.4 — 2026-11-14
 tipo: patch
 obrigatoria: nao
