@@ -50,6 +50,11 @@ export function CertificadoDigital() {
             <p className={`text-xs ${cert.vencido ? "text-danger-300" : "text-muted-foreground"}`}>{cert.emissor} · {cert.vencido ? "vencido em" : "válido até"} {dataBr(cert.validade)}</p>
           </div>
           <Button size="sm" variant="outline" className="text-danger-300" disabled={remover.isPending} onClick={() => { if (confirm("Remover o certificado guardado?")) remover.mutate(); }}><Trash2 className="mr-1 h-4 w-4" /> Remover</Button>
+          {(cert as any).legivel === false && (
+            <p className="basis-full rounded-md border border-danger-500/40 bg-danger-500/10 p-2 text-xs text-danger-200">
+              O servidor não consegue mais abrir este certificado (a chave de cifra mudou depois que ele foi guardado). Envie o arquivo .pfx de novo logo abaixo e guarde — a senha continua não sendo guardada.
+            </p>
+          )}
         </div>
       ) : <p className="text-xs text-warn-300">Nenhum certificado guardado.</p>}
       <div className="grid gap-2 sm:grid-cols-[1fr_200px_auto] sm:items-end">
@@ -58,7 +63,7 @@ export function CertificadoDigital() {
             onChange={e => setArquivo(e.target.files?.[0] ?? null)} />
         </label>
         <label className="text-xs text-muted-foreground">Senha do certificado
-          <input type="password" className={`${campo} mt-1`} value={senha} onChange={e => setSenha(e.target.value)} autoComplete="off" />
+          <input type="password" className={`${campo} mt-1`} value={senha} onChange={e => setSenha(e.target.value)} autoComplete="new-password" name="senha-certificado-icp" />
         </label>
         <Button disabled={!arquivo || !senha || guardar.isPending} onClick={async () => { if (arquivo) guardar.mutate({ pfxBase64: await base64(arquivo), senha }); }}>
           {guardar.isPending ? <Loader2 className="mr-1 h-4 w-4 animate-spin" /> : <Upload className="mr-1 h-4 w-4" />} Guardar
@@ -84,10 +89,10 @@ export function AssinarComCertificado({ documentoId, onAssinado, rotulo = "Assin
   return (
     <div className="flex w-full flex-wrap items-end gap-2 rounded-lg border border-[var(--rt-gold)]/40 bg-background/40 p-2">
       <label className="text-xs text-muted-foreground">Senha do certificado
-        <input type="password" className={`${campo} mt-1 w-48`} value={senha} onChange={e => setSenha(e.target.value)} autoComplete="off" autoFocus />
+        <input type="password" className={`${campo} mt-1 w-48`} value={senha} onChange={e => setSenha(e.target.value)} autoComplete="new-password" name="senha-certificado-icp" autoFocus />
       </label>
       <label className="text-xs text-muted-foreground">Outro certificado (opcional, não é guardado)
-        <input type="file" accept=".pfx,.p12,application/x-pkcs12" className="mt-1 block text-xs" onChange={e => setArquivo(e.target.files?.[0] ?? null)} />
+        <input type="file" accept=".pfx,.p12,application/x-pkcs12" className="mt-1 block text-xs file:mr-2 file:rounded-md file:border file:border-border file:bg-background file:px-2 file:py-1 file:text-foreground" onChange={e => setArquivo(e.target.files?.[0] ?? null)} />
       </label>
       <Button size="sm" disabled={!senha || assinar.isPending} onClick={async () => assinar.mutate({ id: documentoId, senha, pfxBase64: arquivo ? await base64(arquivo) : null })}>
         {assinar.isPending ? <Loader2 className="mr-1 h-4 w-4 animate-spin" /> : <PenTool className="mr-1 h-4 w-4" />} Assinar
@@ -122,9 +127,9 @@ export function DocumentosJuridicos({ slug, podeEnviar, admin }: { slug?: string
       {podeEnviar && (
         <div className="flex flex-wrap items-end gap-2 rounded-xl border border-dashed border-border p-3 text-sm">
           <label className="min-w-[220px] flex-1 text-xs text-muted-foreground">Ofício, alteração ou solicitação (PDF) — título
-            <input className={`${campo} mt-1`} value={titulo} onChange={e => setTitulo(e.target.value)} placeholder="Ex.: Ofício ao Cartório do 1.º Ofício — certidão" />
+            <input className={`${campo} mt-1`} value={titulo} onChange={e => setTitulo(e.target.value)} placeholder="Ex.: Ofício ao Cartório do 1.º Ofício — certidão" autoComplete="off" name="titulo-documento-juridico" />
           </label>
-          <input ref={arq} type="file" accept="application/pdf" className="text-xs" />
+          <input ref={arq} type="file" accept="application/pdf" className="text-xs file:mr-2 file:rounded-md file:border file:border-border file:bg-background file:px-2 file:py-1 file:text-foreground" />
           <Button size="sm" variant="outline" disabled={enviando || titulo.trim().length < 3} onClick={enviar}>{enviando ? <Loader2 className="mr-1 h-4 w-4 animate-spin" /> : <Upload className="mr-1 h-4 w-4" />} Enviar para assinar</Button>
         </div>
       )}

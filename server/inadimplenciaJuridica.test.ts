@@ -49,6 +49,24 @@ describe('certificado digital guardado', () => {
     expect(Object.values(linha).join(' ')).not.toContain('"s"');
     expect(C.decifrar(linha).length).toBeGreaterThan(500);
   });
+
+  it('certificado guardado antes da CERTIFICADOS_CHAVE abre pela chave reserva, é recifrado e a troca de chave tem mensagem clara', async () => {
+    const pfx = pfxDeTeste({ nome: 'ADVOGADA FICTICIA', cpf: '52998224725', senha: 's' });
+    const antes = process.env.CERTIFICADOS_CHAVE, jwtAntes = process.env.JWT_SECRET;
+    delete process.env.CERTIFICADOS_CHAVE;
+    const velho = C.cifrar(Buffer.from(pfx)); // guardado com a chave derivada do JWT_SECRET
+    process.env.CERTIFICADOS_CHAVE = 'ab'.repeat(32); // depois a variável foi criada no servidor
+    try {
+      expect(C.abrirGuardado(velho)).toMatchObject({ chaveAntiga: true });
+      expect(C.abrirGuardado(C.cifrar(Buffer.from(pfx))).chaveAntiga).toBe(false);
+      const outro = { ...velho, tag: `${velho.tag.split('.')[0]}.ffffff` };
+      process.env.JWT_SECRET = 'outro-segredo-com-mais-de-16-caracteres';
+      expect(() => C.abrirGuardado(outro)).toThrow(/outra chave de cifra/);
+    } finally {
+      process.env.JWT_SECRET = jwtAntes;
+      if (antes === undefined) delete process.env.CERTIFICADOS_CHAVE; else process.env.CERTIFICADOS_CHAVE = antes;
+    }
+  });
 });
 
 describe('inadimplência', () => {

@@ -3,6 +3,17 @@
 Cada versão nova vai no TOPO. Depois rode `npm run release` (valida e atualiza o package.json);
 ao subir, o servidor grava a versão no banco e todos recebem o aviso "Novidades da versão".
 
+## 1.167.1 — 2026-11-13
+tipo: patch
+obrigatoria: nao
+titulo: Certificado guardado volta a abrir na assinatura
+publico: equipe
+
+### Correções
+- Assinatura com certificado guardado: o certificado salvo antes da configuração da chave de cifra do servidor volta a abrir e é recifrado sozinho com a chave atual — não precisa reenviar o arquivo
+- Se o certificado não puder mais ser aberto, a tela do certificado avisa e a mensagem explica o motivo e a alternativa (assinar escolhendo o .pfx em "Outro certificado")
+- O navegador não preenche mais a senha do certificado com a senha do login, nem o título do documento avulso com o seu usuário
+
 ## 1.167.0 — 2026-11-13
 tipo: minor
 obrigatoria: nao

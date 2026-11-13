@@ -15,25 +15,57 @@ export class CertificadoErro extends Error { constructor(m: string, public statu
 
 const MAX_PFX = 200_000;
 
+const derivar = (base: string) => createHash('sha256').update(`romatec:certificados:v1:${base}`).digest();
+const deVar = (v: string) => /^[0-9a-f]{64}$/i.test(v) ? Buffer.from(v, 'hex') : v.length >= 16 ? derivar(v) : null;
+/** Impressão digital curta da chave (não revela a chave): vai junto da etiqueta para diagnosticar troca de chave */
+const digital = (k: Buffer) => createHash('sha256').update(k).digest('hex').slice(0, 6);
+
+/** Chave atual: CERTIFICADOS_CHAVE (64 hex ou frase longa) ou, na falta, derivada do JWT_SECRET */
 function chave(): Buffer {
-  const env = String(process.env.CERTIFICADOS_CHAVE ?? '').trim();
-  if (/^[0-9a-f]{64}$/i.test(env)) return Buffer.from(env, 'hex');
-  const base = env || String(process.env.JWT_SECRET ?? '');
-  if (base.length < 16) throw new CertificadoErro('Guarda de certificados indisponível no servidor (falta a chave de cifra)', 503);
-  return createHash('sha256').update(`romatec:certificados:v1:${base}`).digest();
+  const env = String(process.env.CERTIFICADOS_CHAVE ?? '').trim().replace(/^["']|["']$/g, '');
+  const jwt = String(process.env.JWT_SECRET ?? '').trim();
+  const k = env ? deVar(env) : jwt.length >= 16 ? derivar(jwt) : null;
+  if (!k) throw new CertificadoErro('Guarda de certificados indisponível no servidor (falta a chave de cifra CERTIFICADOS_CHAVE)', 503);
+  return k;
+}
+
+/** Chaves aceitas para ABRIR: a atual, a anterior (CERTIFICADOS_CHAVE_ANTERIOR) e a reserva do JWT_SECRET */
+function chavesParaAbrir(): Buffer[] {
+  const lista: Buffer[] = [chave()];
+  const ant = String(process.env.CERTIFICADOS_CHAVE_ANTERIOR ?? '').trim().replace(/^["']|["']$/g, '');
+  const jwt = String(process.env.JWT_SECRET ?? '').trim();
+  for (const k of [ant ? deVar(ant) : null, jwt.length >= 16 ? derivar(jwt) : null]) if (k && !lista.some(x => x.equals(k))) lista.push(k);
+  return lista;
 }
 
 export function cifrar(pfx: Buffer) {
+  const k = chave();
   const iv = randomBytes(12);
-  const c = createCipheriv('aes-256-gcm', chave(), iv);
+  const c = createCipheriv('aes-256-gcm', k, iv);
   const dados = Buffer.concat([c.update(pfx), c.final()]);
-  return { pfxCifrado: dados.toString('base64'), iv: iv.toString('hex'), tag: c.getAuthTag().toString('hex') };
+  return { pfxCifrado: dados.toString('base64'), iv: iv.toString('hex'), tag: `${c.getAuthTag().toString('hex')}.${digital(k)}` };
+}
+
+/** Abre o .pfx guardado; diz se foi preciso uma chave antiga (então convém recifrar com a atual) */
+export function abrirGuardado(r: { pfxCifrado: string; iv: string; tag: string }): { pfx: Buffer; chaveAntiga: boolean } {
+  const [tagHex, dig] = String(r.tag).split('.');
+  const chaves = chavesParaAbrir();
+  for (let i = 0; i < chaves.length; i++) {
+    const k = chaves[i];
+    try {
+      const d = createDecipheriv('aes-256-gcm', k, Buffer.from(r.iv, 'hex'));
+      d.setAuthTag(Buffer.from(tagHex, 'hex'));
+      return { pfx: Buffer.concat([d.update(Buffer.from(r.pfxCifrado, 'base64')), d.final()]), chaveAntiga: i > 0 };
+    } catch { /* tenta a próxima chave */ }
+  }
+  const atual = digital(chaves[0]);
+  throw new CertificadoErro(dig && dig !== atual
+    ? 'O certificado foi guardado com outra chave de cifra do servidor (a CERTIFICADOS_CHAVE mudou). Guarde o certificado de novo em Certificado digital, ou assine agora escolhendo o arquivo .pfx em "Outro certificado".'
+    : 'Não foi possível abrir o certificado guardado: guarde-o de novo em Certificado digital, ou assine agora escolhendo o arquivo .pfx em "Outro certificado".', 409);
 }
 
 export function decifrar(r: { pfxCifrado: string; iv: string; tag: string }): Buffer {
-  const d = createDecipheriv('aes-256-gcm', chave(), Buffer.from(r.iv, 'hex'));
-  d.setAuthTag(Buffer.from(r.tag, 'hex'));
-  return Buffer.concat([d.update(Buffer.from(r.pfxCifrado, 'base64')), d.final()]);
+  return abrirGuardado(r).pfx;
 }
 
 const soDig = (v: unknown) => String(v ?? '').replace(/\D/g, '');
@@ -68,7 +100,10 @@ const resumo = (r: any) => r ? {
 export async function meuCertificado(usuarioId: number) {
   const d = await banco();
   const [r]: any[] = await d.select().from(certificadosUsuario).where(eq(certificadosUsuario.usuarioId, usuarioId)).limit(1);
-  return resumo(r);
+  if (!r) return null;
+  let legivel = true;
+  try { abrirGuardado(r).pfx.fill(0); } catch { legivel = false; }
+  return { ...resumo(r)!, legivel };
 }
 
 /** Guarda (ou troca) o certificado: confere com a senha e guarda só o .pfx cifrado */
@@ -79,7 +114,7 @@ export async function guardarCertificado(usuarioId: number, pfx: Buffer, senha: 
     const d = await banco();
     await d.delete(certificadosUsuario).where(eq(certificadosUsuario.usuarioId, usuarioId));
     await d.insert(certificadosUsuario).values({ usuarioId, ...c, titular: info.nome.slice(0, 200), cpf: info.cpf, emissor: info.emissor.slice(0, 200), validade: info.validade, criadoEm: new Date() } as any);
-    return resumo({ titular: info.nome, cpf: info.cpf, emissor: info.emissor, validade: info.validade, criadoEm: new Date() });
+    return { ...resumo({ titular: info.nome, cpf: info.cpf, emissor: info.emissor, validade: info.validade, criadoEm: new Date() })!, legivel: true };
   } finally { pfx.fill(0); }
 }
 
@@ -100,7 +135,12 @@ export async function assinarComMeuCertificado(usuarioId: number, pdf: Buffer, s
     const d = await banco();
     const [r]: any[] = await d.select().from(certificadosUsuario).where(eq(certificadosUsuario.usuarioId, usuarioId)).limit(1);
     if (!r) throw new CertificadoErro('Você ainda não guardou o seu certificado digital: guarde em Meu cadastro › Certificado digital, ou envie o .pfx agora', 412);
-    try { pfx = decifrar(r); } catch { throw new CertificadoErro('Não foi possível abrir o certificado guardado: guarde-o de novo', 500); }
+    const aberto = abrirGuardado(r);
+    pfx = aberto.pfx;
+    if (aberto.chaveAntiga) {
+      // Guardado com a chave anterior: recifra com a atual, sem pedir o arquivo de novo
+      try { await d.update(certificadosUsuario).set(cifrar(Buffer.from(pfx)) as any).where(eq(certificadosUsuario.usuarioId, usuarioId)); } catch { /* segue: assina mesmo assim */ }
+    }
   }
   try {
     const info = await conferir(usuarioId, pfx, senha);
