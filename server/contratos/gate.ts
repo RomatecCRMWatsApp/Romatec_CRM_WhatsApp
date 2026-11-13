@@ -42,9 +42,12 @@ export function avaliarGate(ctx: Ctx, alvo: 'minuta' | 'definitivo', hoje = new 
     const onde = (n: string) => `atualize em Equipe › ${n} › Credenciais (envie o documento e preencha a validade)`;
     if (vencida(ctx.corr_creci_validade, hoje)) bloqueios.push(`Carteira CRECI de ${quem} vencida ou sem validade no cadastro — ${onde(quem)}`);
     if (vencida(ctx.corr_certidao_validade, hoje)) bloqueios.push(`Certidão de regularidade do CRECI de ${quem} vencida ou sem validade no cadastro — ${onde(quem)}`);
-    if (ctx.corr_parceiro && (vencida(ctx.corr_parceiro_creci_validade, hoje) || vencida(ctx.corr_parceiro_certidao_validade, hoje))) {
+    if (ctx.corr_parceiro) {
+      // Uma linha por documento, com a validade que está no cadastro — para saber exatamente o que corrigir
       const p = String(ctx.corr_parceiro_nome ?? 'corretor parceiro');
-      bloqueios.push(`Credenciais de ${p} (carteira CRECI ou certidão) vencidas ou sem validade no cadastro — ${onde(p)}`);
+      const situ = (v: unknown) => (/^\d{2}\/\d{2}\/\d{4}$/.test(String(v ?? '').trim()) ? `vencida em ${String(v).trim()}` : 'sem validade preenchida');
+      if (vencida(ctx.corr_parceiro_creci_validade, hoje)) bloqueios.push(`Carteira CRECI de ${p} ${situ(ctx.corr_parceiro_creci_validade)} — ${onde(p)}`);
+      if (vencida(ctx.corr_parceiro_certidao_validade, hoje)) bloqueios.push(`Certidão de regularidade do CRECI de ${p} ${situ(ctx.corr_parceiro_certidao_validade)} — ${onde(p)}`);
     }
     if (!antesDoRegistro && String(ctx.emp_matricula_empreendimento ?? '').includes(String(ctx.emp_matricula_origem || '33.036'))) {
       bloqueios.push('Matrícula de origem não pode ser usada no definitivo — informe a matrícula do empreendimento');

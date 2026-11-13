@@ -3,6 +3,16 @@
 Cada versão nova vai no TOPO. Depois rode `npm run release` (valida e atualiza o package.json);
 ao subir, o servidor grava a versão no banco e todos recebem o aviso "Novidades da versão".
 
+## 1.168.2 — 2026-11-14
+tipo: patch
+obrigatoria: nao
+titulo: Verificar de novo as pendências do contrato definitivo
+publico: equipe
+
+### Melhorias
+- Contrato › "Gerar definitivo" travado: botão "Verificar de novo" — depois de corrigir o cadastro (ex.: credenciais do corretor em Equipe), confere outra vez sem recarregar a página
+- A pendência das credenciais do corretor parceiro agora diz qual documento falta: carteira CRECI ou certidão de regularidade, com a validade encontrada ("vencida em …" ou "sem validade preenchida")
+
 ## 1.168.1 — 2026-11-14
 tipo: patch
 obrigatoria: nao

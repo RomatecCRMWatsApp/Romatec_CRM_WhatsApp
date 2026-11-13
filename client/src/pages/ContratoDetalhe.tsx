@@ -72,7 +72,17 @@ export default function ContratoDetalhe() {
   const [excluindo, setExcluindo] = useState(false);
   const [liberandoPlanta, setLiberandoPlanta] = useState(false);
   const utils = trpc.useUtils();
-  const { data: d, isLoading, error } = trpc.contratos.detalhe.useQuery({ id }, { enabled: id > 0 });
+  const { data: d, isLoading, error, refetch: refetchDetalhe } = trpc.contratos.detalhe.useQuery({ id }, { enabled: id > 0 });
+  const [verificando, setVerificando] = useState(false);
+  const verificarDeNovo = async () => {
+    setVerificando(true);
+    try {
+      const r = await refetchDetalhe();
+      const g: any = (r.data as any)?.gate;
+      if (g?.definitivo && !(g.definitivo.bloqueios?.length || g.definitivo.faltantes?.length)) toast.success("Tudo certo: o definitivo está liberado");
+      else toast.info("Conferido de novo — ainda há pendência (veja a lista)");
+    } catch { toast.error("Não foi possível conferir agora"); } finally { setVerificando(false); }
+  };
   const recarregar = () => utils.contratos.detalhe.invalidate({ id });
   const gerar = trpc.contratos.gerar.useMutation({
     onSuccess: (r, v) => { toast.success(`${v.alvo === "minuta" ? "Minuta" : "Definitivo"} gerado (versão ${r.versao})`); recarregar(); abrir(`/api/contratos/${id}/versoes/${r.versao}.pdf`); },
@@ -174,7 +184,12 @@ export default function ContratoDetalhe() {
                 {/* Por que o "Gerar definitivo" está travado: as pendências, aqui mesmo (no celular a lista ao lado fica no fim) */}
                 {d.pode.definitivo && !encerrado && gate?.definitivo && !definitivoOk && (
                   <div className="mb-2 space-y-1 rounded-md border border-danger-500/30 bg-danger-500/5 p-2 text-xs">
-                    <p className="font-semibold text-danger-300">"Gerar definitivo" travado até resolver:</p>
+                    <div className="flex flex-wrap items-center justify-between gap-2">
+                      <p className="font-semibold text-danger-300">"Gerar definitivo" travado até resolver:</p>
+                      <Button size="sm" variant="outline" disabled={verificando} onClick={verificarDeNovo} title="Corrigiu o cadastro em outra tela? Confere de novo sem recarregar a página">
+                        {verificando ? <Loader2 className="mr-1 h-3 w-3 animate-spin" /> : <RefreshCw className="mr-1 h-3 w-3" />} Verificar de novo
+                      </Button>
+                    </div>
                     {(gate.definitivo.bloqueios ?? []).map((b: string) => <p key={b} className="text-danger-300">• {b}</p>)}
                     {(gate.definitivo.faltantes ?? []).map((x: string) => <p key={x} className="text-muted-foreground">• Falta: {ROTULO_CAMPO[x] ?? x}</p>)}
                   </div>
