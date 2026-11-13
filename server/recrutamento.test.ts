@@ -77,6 +77,21 @@ describe('recrutamento de corretor', () => {
     await expect(S.formularioPublico(token)).rejects.toMatchObject({ status: 410 });
   });
 
+  it('reset de senha (esqueceu): senha provisória nova pelo WhatsApp, a antiga deixa de valer', async () => {
+    const [u0] = db.all(sql`SELECT * FROM users WHERE creci = '9876'`);
+    const antiga = u0.password_hash ?? u0.passwordScrypt;
+    const r = await S.reenviarAcesso(u0.id, { autorId: 1 });
+    expect(r).toMatchObject({ enviado: true, login: 'CRECI 9876' });
+    expect(r.senha).toMatch(/^Rmt-[a-z2-9]{6}$/);
+    expect(r.texto).toContain('foi redefinida');
+    expect(enviados.at(-1)!.conteudo).toContain(`Senha provisória: ${r.senha}`);
+    const [u] = db.all(sql`SELECT * FROM users WHERE id = ${u0.id}`);
+    expect(u.password_hash ?? u.passwordScrypt).not.toBe(antiga);
+    expect(u.trocarSenha).toBe(1);
+    expect((await checkLogin(r.senha, { scryptHash: u.password_hash ?? u.passwordScrypt, legacySha256: null })).ok).toBe(true);
+    await expect(S.reenviarAcesso(1)).rejects.toThrow(/administrador/);
+  });
+
   it('CPF já cadastrado é barrado no envio do formulário', async () => {
     const { link } = await S.criarConvite({ perfil: 'secretario', nome: 'Outra Pessoa', telefone: '99955554444' }, 1);
     const token = link.split('/').pop()!;

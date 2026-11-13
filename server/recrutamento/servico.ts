@@ -176,12 +176,12 @@ const loginDe = (u: { creci?: string | null; cpf?: string | null; email?: string
   u.creci ? `CRECI ${u.creci}` : u.cpf ? `CPF ${String(u.cpf).replace(/(\d{3})(\d{3})(\d{3})(\d{2})/, '$1.$2.$3-$4')}` : String(u.email ?? '');
 
 /** Manda login + senha provisória; sem Z-API, devolve para o administrador repassar */
-async function enviarAcesso(usuarioId: number, telefone: string, senha: string) {
+async function enviarAcesso(usuarioId: number, telefone: string, senha: string, redefinida = false) {
   const d = await banco();
   const [u]: any[] = await d.select({ name: users.name, creci: users.creci, cpf: users.cpf, email: users.email, perfil: users.perfil }).from(users).where(eq(users.id, usuarioId)).limit(1);
   const login = loginDe(u ?? {});
   // Advogado: o link abre o login do portal jurídico
-  const texto = mensagemAcesso(u?.name ?? '', login, senha, urlBase(), undefined, u?.perfil === 'juridico' ? '/juridico/entrar' : '/login');
+  const texto = mensagemAcesso(u?.name ?? '', login, senha, urlBase(), undefined, u?.perfil === 'juridico' ? '/juridico/entrar' : '/login', redefinida);
   let enviado = false;
   if (envio.disponivel()) {
     try { await envio.texto(foneWhats(telefone), texto); enviado = true; } catch (e: any) { console.warn('[Recrutamento] envio do acesso:', e?.message); }
@@ -234,14 +234,16 @@ export async function recusarRecrutamento(id: number, motivo: string, autorId: n
   return { ok: true as const };
 }
 
-/** Nova senha provisória (esqueceu ou venceu) */
-export async function reenviarAcesso(usuarioId: number) {
+/** Nova senha provisória (esqueceu ou venceu): a antiga deixa de valer, os aparelhos logados saem e vai pelo WhatsApp */
+export async function reenviarAcesso(usuarioId: number, o: { autorId?: number | null } = {}) {
   const d = await banco();
   const [u]: any[] = await d.select({ id: users.id, telefone: users.telefone, role: users.role }).from(users).where(eq(users.id, usuarioId)).limit(1);
   if (!u) throw new RecrutamentoErro('Usuário não encontrado', 404);
   if (u.role === 'admin') throw new RecrutamentoErro('O acesso do administrador não usa senha provisória');
-  if (!u.telefone) throw new RecrutamentoErro('Usuário sem WhatsApp no cadastro');
-  return enviarAcesso(u.id, u.telefone, await definirSenhaProvisoria(u.id));
+  if (!u.telefone) throw new RecrutamentoErro('Usuário sem WhatsApp no cadastro: preencha o telefone em Equipe › Cadastro');
+  const r = await enviarAcesso(u.id, u.telefone, await definirSenhaProvisoria(u.id), true);
+  console.log(`[Acesso] senha provisória redefinida para o usuário ${u.id} por ${o.autorId ?? '?'} (WhatsApp ${r.enviado ? 'enviado' : 'não enviado'})`);
+  return r;
 }
 
 // ─── Empreendedor: acesso com os dados do proprietário ────────────────────

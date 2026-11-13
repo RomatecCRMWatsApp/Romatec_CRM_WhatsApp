@@ -73,6 +73,9 @@ export default function Equipe() {
   // Desativado sai da lista: sem vínculo é apagado; com histórico (contrato, lead, financeiro) é arquivado
   const [verArquivados, setVerArquivados] = useState(false);
   const [removendo, setRemovendo] = useState<{ id: number; nome: string } | null>(null);
+  // Reset de senha: gera senha provisória (troca obrigatória no 1º login) e manda pelo WhatsApp
+  const [senhaNova, setSenhaNova] = useState<{ nome: string; enviado: boolean; login: string; senha: string; texto: string } | null>(null);
+  const resetarSenha = trpc.recrutamento.reenviarAcesso.useMutation({ onError: e => toast.error(e.message) });
   const remover = trpc.exclusao.usuario.useMutation({
     onSuccess: r => {
       if (r.modo === "excluido") toast.success("Usuário excluído");
@@ -94,6 +97,20 @@ export default function Equipe() {
       <div className="px-4 md:px-6 pb-6 max-w-[1500px] mx-auto space-y-4">
         {error && <p className="text-sm text-danger-400">{error.message}</p>}
         {convite && <ConviteGerado {...convite} onFechar={() => setConvite(null)} />}
+        {senhaNova && (
+          <div className="space-y-2 rounded-xl border border-ok-500/40 bg-ok-500/10 p-4 text-sm">
+            <p className="font-semibold text-ok-300">{senhaNova.enviado
+              ? `✅ Senha de ${senhaNova.nome} redefinida e enviada pelo WhatsApp.`
+              : `✅ Senha de ${senhaNova.nome} redefinida — o WhatsApp do sistema não enviou: repasse a mensagem abaixo.`}</p>
+            <p>Login: <b>{senhaNova.login}</b> · Senha provisória: <b className="font-mono">{senhaNova.senha}</b></p>
+            <p className="text-xs text-muted-foreground">No 1º acesso o sistema pede para criar a senha dela. A provisória vale 7 dias; a senha antiga já não vale e os aparelhos conectados saíram.</p>
+            {!senhaNova.enviado && <pre className="whitespace-pre-wrap rounded bg-background/60 p-2 text-xs">{senhaNova.texto}</pre>}
+            <div className="flex gap-2">
+              <Button size="sm" variant="outline" onClick={async () => { try { await navigator.clipboard.writeText(senhaNova.texto); toast.success("Mensagem copiada"); } catch { toast.error("Não foi possível copiar"); } }}><Copy className="mr-1 h-4 w-4" /> Copiar mensagem</Button>
+              <Button size="sm" variant="ghost" onClick={() => setSenhaNova(null)}>Fechar</Button>
+            </div>
+          </div>
+        )}
 
         <PacoteBase />
 
@@ -159,6 +176,19 @@ export default function Equipe() {
                         }}>
                           <KeyRound className="mr-1.5 h-3.5 w-3.5" /> {p.temSenha ? "Redefinir senha" : "Gerar link"}
                         </Button>
+                        {p.ativo && (
+                          <Button size="sm" variant="outline" disabled={resetarSenha.isPending || !p.telefone}
+                            title={p.telefone ? "Esqueceu a senha: gera uma senha provisória e manda pelo WhatsApp" : "Preencha o WhatsApp no Cadastro para enviar a senha"}
+                            onClick={async () => {
+                              if (!confirm(`Resetar a senha de ${p.nome}? A senha atual deixa de valer, ele(a) sai dos aparelhos conectados e recebe uma senha provisória no WhatsApp ${p.telefone}.`)) return;
+                              const r = await resetarSenha.mutateAsync({ usuarioId: p.id });
+                              setSenhaNova({ nome: p.nome, ...r });
+                              if (r.enviado) toast.success("Senha provisória enviada pelo WhatsApp");
+                              recarregar();
+                            }}>
+                            <KeyRound className="mr-1.5 h-3.5 w-3.5" /> Resetar e enviar senha
+                          </Button>
+                        )}
                         {p.ativo && p.temSenha && (
                           <Button size="sm" variant="outline" disabled={desconectar.isPending} title="Senha emprestada, celular perdido: sai de todos os celulares e computadores"
                             onClick={() => { if (confirm(`Desconectar ${p.nome} de todos os aparelhos? Se a senha foi passada para outra pessoa, use também "Redefinir senha".`)) desconectar.mutate({ id: p.id }); }}>

@@ -63,7 +63,7 @@ export const recrutamentoRouter = router({
   recusar: protectedProcedure.input(z.object({ id: z.number().int(), motivo: z.string().trim().max(300).default(""), cancelar: z.boolean().default(false) }))
     .mutation(async ({ ctx, input }) => { exigirRecrutador(ctx); return comErro(async () => (await S()).recusarRecrutamento(input.id, input.motivo, ctx.user.id, input.cancelar)); }),
   reenviarAcesso: protectedProcedure.input(z.object({ usuarioId: z.number().int() }))
-    .mutation(async ({ ctx, input }) => { exigirRecrutador(ctx); return comErro(async () => (await S()).reenviarAcesso(input.usuarioId)); }),
+    .mutation(async ({ ctx, input }) => { exigirRecrutador(ctx); return comErro(async () => (await S()).reenviarAcesso(input.usuarioId, { autorId: ctx.user.id })); }),
   proprietario: protectedProcedure.input(z.object({ slug: z.string().max(80) }))
     .query(async ({ ctx, input }) => { exigirRecrutador(ctx); return comErro(async () => (await S()).dadosDoProprietario(input.slug)); }),
   criarEmpreendedor: protectedProcedure.input(z.object({ slug: z.string().max(80), email: z.string().trim().max(160), telefone: z.string().max(25).nullable().optional() }))

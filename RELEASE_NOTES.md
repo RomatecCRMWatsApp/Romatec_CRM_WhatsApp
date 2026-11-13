@@ -3,6 +3,15 @@
 Cada versão nova vai no TOPO. Depois rode `npm run release` (valida e atualiza o package.json);
 ao subir, o servidor grava a versão no banco e todos recebem o aviso "Novidades da versão".
 
+## 1.168.4 — 2026-11-14
+tipo: patch
+obrigatoria: nao
+titulo: Resetar senha e enviar senha provisória
+publico: equipe
+
+### Novo
+- Equipe: botão "Resetar e enviar senha" em cada pessoa da equipe (corretores, secretária, advogados). Gera uma senha provisória, manda pelo WhatsApp do cadastro com o link e o login, derruba os aparelhos conectados e invalida a senha antiga; no 1º acesso o sistema pede para criar a senha nova. Sem o WhatsApp do sistema, a tela mostra a mensagem para copiar e repassar
+
 ## 1.168.3 — 2026-11-14
 tipo: patch
 obrigatoria: nao
