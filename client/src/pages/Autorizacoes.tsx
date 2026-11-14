@@ -28,6 +28,10 @@ export default function Autorizacoes() {
   const [abrir, setAbrir] = useState(false);
   const [slug, setSlug] = useState("");
   const [cliente, setCliente] = useState("");
+  // Interessado: pessoa física ou empresa (razão social, CNPJ e todos os sócios com nome e CPF)
+  const [tipoInt, setTipoInt] = useState<"PF" | "PJ">("PF");
+  const [docInt, setDocInt] = useState("");
+  const [socios, setSocios] = useState<{ nome: string; cpf: string }[]>([{ nome: "", cpf: "" }]);
   const [obs, setObs] = useState("");
   const [prop, setProp] = useState({ nome: "", empresa: "", documento: "", telefone: "" });
   const [linhas, setLinhas] = useState<Linha[]>([nova()]);
@@ -39,13 +43,15 @@ export default function Autorizacoes() {
   const op = trpc.contratos.opcoes.useQuery({ slug }, { enabled: !!slug });
   const propPadrao = trpc.autorizacoes.proprietaria.useQuery({ slug }, { enabled: !!slug });
   useEffect(() => { if (propPadrao.data && !editId) setProp({ nome: propPadrao.data.nome, empresa: propPadrao.data.empresa, documento: propPadrao.data.documento, telefone: propPadrao.data.telefone }); }, [propPadrao.data]); // eslint-disable-line react-hooks/exhaustive-deps
-  const fechar = () => { setAbrir(false); setEditId(null); setLinhas([nova()]); setCliente(""); setObs(""); };
+  const fechar = () => { setAbrir(false); setEditId(null); setLinhas([nova()]); setCliente(""); setObs(""); setTipoInt("PF"); setDocInt(""); setSocios([{ nome: "", cpf: "" }]); };
   const editarDe = async (id: number) => {
     carregandoEdicao[1](true);
     try {
       const p = await utils.autorizacoes.pedido.fetch({ id });
       setEditId({ id, numero: p.numero });
-      setSlug(p.empreendimentoSlug); setCliente(p.clienteNome); setObs(p.observacao ?? "");
+      setSlug(p.empreendimentoSlug); setCliente(p.interessado?.nome ?? p.clienteNome); setObs(p.observacao ?? "");
+      setTipoInt(p.interessado?.tipo === "PJ" ? "PJ" : "PF"); setDocInt(p.interessado?.documento ?? "");
+      setSocios(p.interessado?.socios?.length ? p.interessado.socios : [{ nome: "", cpf: "" }]);
       setProp({ nome: p.proprietario?.nome ?? "", empresa: p.proprietario?.empresa ?? "", documento: p.proprietario?.documento ?? "", telefone: p.proprietario?.telefone ?? "" });
       const t = (v: number | null | undefined) => (v == null ? "" : String(v).replace(".", ","));
       setLinhas(p.itens.map(i => ({ loteCodigo: i.loteCodigo, preco: t(i.personalizado.preco), entrada: t(i.personalizado.entrada), entradaParcelas: i.personalizado.entradaParcelas, prazo: String(i.personalizado.prazo), parcela: t(i.personalizado.parcela), data1: i.dataPrimeiroPagamento, inicio: i.personalizado.inicioParcelas ?? "" })));
@@ -59,7 +65,9 @@ export default function Autorizacoes() {
     personalizado: { entrada: num(l.entrada), entradaParcelas: l.entradaParcelas, prazo: Number(l.prazo), parcela: num(l.parcela),
       ...(l.preco.trim() && num(l.preco) > 0 ? { preco: num(l.preco) } : {}), ...(/^\d{4}-\d{2}-\d{2}$/.test(l.inicio) ? { inicioParcelas: l.inicio } : {}) },
   }));
-  const pedido = { empreendimentoSlug: slug, clienteNome: cliente, itens, observacao: obs || undefined, proprietario: prop };
+  const interessado = { tipo: tipoInt, nome: cliente.trim(), ...(docInt.trim() ? { documento: docInt.trim() } : {}), ...(tipoInt === "PJ" ? { socios: socios.filter(x => x.nome.trim() || x.cpf.trim()) } : {}) };
+  const interessadoOk = cliente.trim().length >= 3 && (tipoInt === "PF" || (docInt.replace(/\D/g, "").length === 14 && interessado.socios!.length > 0 && interessado.socios!.every(x => x.nome.trim().length >= 3 && x.cpf.replace(/\D/g, "").length === 11)));
+  const pedido = { empreendimentoSlug: slug, clienteNome: cliente, itens, observacao: obs || undefined, proprietario: prop, interessado };
   const prontos = !!slug && itens.length > 0 && itens.length === linhas.length;
   const sim = trpc.autorizacoes.simular.useQuery(pedido, { enabled: prontos, retry: false });
   const criar = trpc.autorizacoes.criar.useMutation({
@@ -90,10 +98,35 @@ export default function Autorizacoes() {
                   {opcoesEmp.map((e: any) => <option key={e.slug} value={e.slug}>{e.nome}</option>)}
                 </select>
               </label>
-              <label className="text-xs text-muted-foreground md:col-span-2">Interessado (cliente)
-                <input className={campo} value={cliente} maxLength={160} onChange={e => setCliente(e.target.value)} placeholder="Nome de quem quer comprar" />
-              </label>
+              <div className="md:col-span-2">
+                <div className="flex gap-3 text-xs text-muted-foreground">Interessado:
+                  {(["PF", "PJ"] as const).map(t => (
+                    <label key={t} className="inline-flex items-center gap-1"><input type="radio" checked={tipoInt === t} onChange={() => setTipoInt(t)} /> {t === "PF" ? "Pessoa física" : "Empresa"}</label>
+                  ))}
+                </div>
+                <div className="grid gap-2 sm:grid-cols-3">
+                  <label className="text-xs text-muted-foreground sm:col-span-2">{tipoInt === "PJ" ? "Razão social" : "Nome completo"}
+                    <input className={campo} value={cliente} maxLength={160} onChange={e => setCliente(e.target.value)} placeholder={tipoInt === "PJ" ? "Ex.: Empresa Exemplo Ltda" : "Nome de quem quer comprar"} />
+                  </label>
+                  <label className="text-xs text-muted-foreground">{tipoInt === "PJ" ? "CNPJ" : "CPF (opcional)"}
+                    <input className={campo} inputMode="numeric" value={docInt} maxLength={20} onChange={e => setDocInt(e.target.value)} />
+                  </label>
+                </div>
+              </div>
             </div>
+            {tipoInt === "PJ" && (
+              <div className="space-y-2 rounded-lg border border-border/60 p-2">
+                <p className="text-xs font-semibold">Sócios da empresa interessada (todos, com nome e CPF)</p>
+                {socios.map((x, i) => (
+                  <div key={i} className="grid gap-2 sm:grid-cols-[1fr_180px_auto]">
+                    <input className={campo} value={x.nome} maxLength={160} placeholder={`Sócio ${i + 1} — nome completo`} aria-label={`Nome do sócio ${i + 1}`} onChange={e => setSocios(ss => ss.map((y, j) => (j === i ? { ...y, nome: e.target.value } : y)))} />
+                    <input className={campo} inputMode="numeric" value={x.cpf} maxLength={14} placeholder="CPF" aria-label={`CPF do sócio ${i + 1}`} onChange={e => setSocios(ss => ss.map((y, j) => (j === i ? { ...y, cpf: e.target.value } : y)))} />
+                    {socios.length > 1 ? <Button size="sm" variant="ghost" className="mt-1" onClick={() => setSocios(ss => ss.filter((_, j) => j !== i))} title="Tirar sócio"><Trash2 className="h-4 w-4" /></Button> : <span />}
+                  </div>
+                ))}
+                {socios.length < 10 && <Button size="sm" variant="outline" onClick={() => setSocios(ss => [...ss, { nome: "", cpf: "" }])}><Plus className="h-4 w-4" /> Adicionar sócio</Button>}
+              </div>
+            )}
             <div className="grid gap-3 md:grid-cols-4">
               <label className="text-xs text-muted-foreground">Proprietária — quem assina
                 <input className={campo} value={prop.nome} maxLength={160} onChange={e => setProp(p => ({ ...p, nome: e.target.value }))} />
@@ -153,7 +186,7 @@ export default function Autorizacoes() {
               <input className={campo} value={obs} maxLength={600} onChange={e => setObs(e.target.value)} />
             </label>
             <div className="flex gap-2">
-              <Button disabled={!prontos || cliente.trim().length < 3 || !sim.data || criar.isPending || editar.isPending} onClick={() => (editId ? editar.mutate({ ...pedido, id: editId.id }) : criar.mutate(pedido))}>
+              <Button disabled={!prontos || !interessadoOk || !sim.data || criar.isPending || editar.isPending} onClick={() => (editId ? editar.mutate({ ...pedido, id: editId.id }) : criar.mutate(pedido))}>
                 {criar.isPending || editar.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />} {editId ? "Salvar correção e reenviar à proprietária" : "Gerar e enviar à proprietária"}
               </Button>
               <Button variant="ghost" onClick={fechar}>Fechar</Button>

@@ -3,6 +3,19 @@
 Cada versão nova vai no TOPO. Depois rode `npm run release` (valida e atualiza o package.json);
 ao subir, o servidor grava a versão no banco e todos recebem o aviso "Novidades da versão".
 
+## 1.180.0 — 2026-11-14
+tipo: minor
+obrigatoria: nao
+titulo: Autorizações: interessado empresa com todos os sócios
+publico: equipe
+
+### Novo
+- Autorizações: o interessado pode ser pessoa física (nome e CPF) ou empresa.
+  - Para empresa: razão social, CNPJ e todos os sócios, com nome e CPF (até 10, com o botão "Adicionar sócio").
+  - O sistema confere o CNPJ, o CPF de cada sócio e se ao menos um sócio foi informado.
+  - A qualificação completa (empresa, CNPJ e sócios) aparece na autorização da proprietária e na via do cliente.
+- A edição da autorização também traz o interessado e os sócios.
+
 ## 1.179.0 — 2026-11-14
 tipo: minor
 obrigatoria: nao

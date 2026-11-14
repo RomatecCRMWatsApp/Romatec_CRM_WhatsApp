@@ -31,8 +31,43 @@ async function banco(): Promise<any> {
 }
 
 export interface ItemPedido { loteCodigo: string; personalizado: PlanoPersonalizado; dataPrimeiroPagamento: string }
+/** Interessado: pessoa física ou empresa (com todos os sócios, nome e CPF) */
+export interface Interessado { tipo: 'PF' | 'PJ'; nome: string; documento?: string; socios?: { nome: string; cpf: string }[] }
+const so = (v: unknown) => String(v ?? '').replace(/\D/g, '');
+const fmtCpf = (v: string) => so(v).replace(/^(\d{3})(\d{3})(\d{3})(\d{2})$/, '$1.$2.$3-$4');
+const fmtCnpj = (v: string) => so(v).replace(/^(\d{2})(\d{3})(\d{3})(\d{4})(\d{2})$/, '$1.$2.$3/$4-$5');
+
+/** Confere e normaliza o interessado (empresa: CNPJ e ao menos um sócio com nome e CPF) */
+export function interessadoValido(i: Interessado | null | undefined, nomeLivre: string): Interessado {
+  if (!i) return { tipo: 'PF', nome: nomeLivre.trim() };
+  const nome = String(i.nome ?? '').trim();
+  if (nome.length < 3) throw new ContratoErro('CLIENTE', i.tipo === 'PJ' ? 'Informe a razão social da empresa interessada' : 'Informe o nome do interessado', 400);
+  if (i.tipo === 'PJ') {
+    if (so(i.documento).length !== 14) throw new ContratoErro('CLIENTE', 'CNPJ da empresa interessada com 14 dígitos', 400);
+    const socios = (i.socios ?? []).map(x => ({ nome: String(x.nome ?? '').trim(), cpf: so(x.cpf) })).filter(x => x.nome || x.cpf);
+    if (!socios.length) throw new ContratoErro('CLIENTE', 'Informe os sócios da empresa (nome e CPF)', 400);
+    const ruim = socios.find(x => x.nome.length < 3 || x.cpf.length !== 11);
+    if (ruim) throw new ContratoErro('CLIENTE', `Sócio ${ruim.nome || '(sem nome)'}: informe nome e CPF com 11 dígitos`, 400);
+    return { tipo: 'PJ', nome, documento: fmtCnpj(i.documento!), socios: socios.map(x => ({ nome: x.nome, cpf: fmtCpf(x.cpf) })) };
+  }
+  const doc = so(i.documento);
+  if (doc && doc.length !== 11) throw new ContratoErro('CLIENTE', 'CPF do interessado com 11 dígitos', 400);
+  return { tipo: 'PF', nome, ...(doc ? { documento: fmtCpf(doc) } : {}) };
+}
+
+/** "JMRC LTDA, inscrita no CNPJ sob o n.º …, sócios: Ana (CPF …) e Rui (CPF …)" */
+export function qualificacaoInteressado(i: Interessado): string {
+  if (i.tipo === 'PJ') {
+    const ss = (i.socios ?? []).map(x => `${x.nome} (CPF ${x.cpf})`);
+    const lista = ss.length > 1 ? `${ss.slice(0, -1).join(', ')} e ${ss.at(-1)}` : ss[0] ?? '';
+    return `${i.nome}, inscrita no CNPJ sob o n.º ${i.documento}${lista ? `, ${ss.length > 1 ? 'sócios' : 'sócio(a)'}: ${lista}` : ''}`;
+  }
+  return `${i.nome}${i.documento ? `, CPF ${i.documento}` : ''}`;
+}
+
 export interface PedidoAutorizacao {
   empreendimentoSlug: string; clienteNome: string; itens: ItemPedido[]; observacao?: string;
+  interessado?: Interessado | null;
   /** Proprietário(a) que autoriza: vazio = o do cadastro jurídico do empreendimento */
   proprietario?: { nome?: string; documento?: string; empresa?: string; telefone?: string } | null;
 }
@@ -99,7 +134,7 @@ export async function simularPedido(p: PedidoAutorizacao) {
   return { itens: xs.map(x => ({ loteCodigo: x.loteCodigo, areaM2: x.areaM2, comparativo: x.comparativo, entrada: x.plano.entrada_valor, entradaQtd: x.plano.entrada_qtd, parcela: x.plano.saldo_parcela, prazo: x.plano.saldo_qtd, venc1: x.plano.saldo_venc1, taxaAa: x.plano.taxa_aa })), totais: totais(xs) };
 }
 
-async function pedidoPdf(numero: number, emp: any, prop: Awaited<ReturnType<typeof proprietariaPadrao>>, cliente: string, xs: ItemCalculado[], observacao: string): Promise<Buffer> {
+async function pedidoPdf(numero: number, emp: any, prop: Awaited<ReturnType<typeof proprietariaPadrao>>, cliente: string, xs: ItemCalculado[], observacao: string, interessado?: Interessado): Promise<Buffer> {
   const { escritor } = await import('../contratos/docsComissao');
   const marca = String(emp.slug ?? 'bom-jardims').replace(/-/g, '');
   const w0 = await escritor(`Autorização n.º ${numero}`, marca, `Autorização n.º ${numero} · ${xs.map(x => x.loteCodigo).join(', ')}`);
@@ -108,7 +143,7 @@ async function pedidoPdf(numero: number, emp: any, prop: Awaited<ReturnType<type
   const plural = xs.length > 1;
   w.cabecalho('AUTORIZAÇÃO DE VENDA EM CONDIÇÕES FORA DO PADRÃO', `Autorização n.º ${numero} · ${emp.nome} · ${plural ? 'Chácaras' : 'Chácara'} ${xs.map(x => x.loteCodigo).join(', ')}`);
   w.paragrafo([{ t: 'O escritório gestor de vendas submete à ' }, { t: prop.empresa || prop.nome, b: true }, { t: `${prop.empresa ? `, neste ato representada por ${prop.nome}` : ''}, proprietária e promitente vendedora, a proposta de ` },
-    { t: cliente, b: true }, { t: ` para ${plural ? `as chácaras ${xs.map(x => x.loteCodigo).join(', ')}` : `a Chácara ${xs[0].loteCodigo}`}, em condições fora da tabela de vendas. Cada chácara terá contrato individual com o plano abaixo.` }]);
+    { t: interessado ? qualificacaoInteressado(interessado) : cliente, b: true }, { t: ` para ${plural ? `as chácaras ${xs.map(x => x.loteCodigo).join(', ')}` : `a Chácara ${xs[0].loteCodigo}`}, em condições fora da tabela de vendas. Cada chácara terá contrato individual com o plano abaixo.` }]);
   w.clausula('1. PROPOSTA POR CHÁCARA');
   w.tabela(['Chácara', 'Preço', 'Entrada', 'Saldo', 'Taxa', 'Total'], xs.map(x => [
     `${x.loteCodigo} (${x.areaM2.toLocaleString('pt-BR')} m²)`,
@@ -142,20 +177,21 @@ async function enviador() { return (await import('../financeiro/renegociacao')).
 export async function criarAutorizacao(p: PedidoAutorizacao, autorId: number) {
   const d = await banco();
   const emp = await empreendimentoPorSlug(p.empreendimentoSlug);
-  const cliente = String(p.clienteNome ?? '').trim();
+  const interessado = interessadoValido(p.interessado, String(p.clienteNome ?? ''));
+  const cliente = interessado.nome;
   if (cliente.length < 3) throw new ContratoErro('CLIENTE', 'Informe o nome do interessado', 400);
   const xs = await calcularItens(Number(emp.id), p.itens);
   const prop = await proprietariaPadrao(Number(emp.id), p.proprietario);
   const todas: any[] = await d.select({ numero: autorizacoesVenda.numero }).from(autorizacoesVenda);
   const numero = todas.reduce((m, a) => Math.max(m, Number(a.numero)), 0) + 1;
-  const pdf = await pedidoPdf(numero, emp, prop, cliente, xs, String(p.observacao ?? ''));
+  const pdf = await pedidoPdf(numero, emp, prop, cliente, xs, String(p.observacao ?? ''), interessado);
   const { salvarArquivo } = await import('../contratos/arquivos');
   const chave = `autorizacoes/autorizacao-${numero}-${Date.now()}.pdf`;
   await salvarArquivo(chave, pdf, 'application/pdf');
   const tot = totais(xs);
   const token = randomBytes(16).toString('hex');
   const pontos = [
-    `Interessado: ${cliente}.`,
+    `Interessado: ${qualificacaoInteressado(interessado)}.`,
     ...xs.map(x => `Chácara ${x.loteCodigo}: entrada ${x.plano.entrada_qtd > 1 ? `${x.plano.entrada_qtd}× R$ ${brl(x.plano.entrada_parcela)}` : `R$ ${brl(x.plano.entrada_valor)}`} + ${x.plano.saldo_qtd}× R$ ${brl(x.plano.saldo_parcela)} (tabela: R$ ${brl(x.comparativo.parcelaTabela)}); diferença em valor presente ${sinal(x.comparativo.diferencaVp)}.`),
     ...(xs.length > 1 ? [`Total: R$ ${brl(tot.totalProposta)} (tabela R$ ${brl(tot.totalTabela)}); em valor presente ${sinal(tot.diferencaVp)}.`] : []),
     'Ao assinar, você autoriza a venda nessas condições.',
@@ -163,7 +199,7 @@ export async function criarAutorizacao(p: PedidoAutorizacao, autorId: number) {
   await d.insert(autorizacoesVenda).values({
     numero, empreendimentoId: Number(emp.id), loteCodigos: xs.map(x => x.loteCodigo).join(', ').slice(0, 255), clienteNome: cliente.slice(0, 160),
     escolhaJson: JSON.stringify({ itens: xs.map(x => ({ loteCodigo: x.loteCodigo, escolha: x.escolha })) }),
-    dadosJson: JSON.stringify({ proprietaria: prop, itens: xs.map(x => ({ loteCodigo: x.loteCodigo, areaM2: x.areaM2, comparativo: x.comparativo, assinaturaPlano: x.assinaturaPlano, entrada: x.plano.entrada_valor, entradaQtd: x.plano.entrada_qtd, parcela: x.plano.saldo_parcela, prazo: x.plano.saldo_qtd, contratoId: null })), totais: tot, pontos }),
+    dadosJson: JSON.stringify({ proprietaria: prop, interessado, itens: xs.map(x => ({ loteCodigo: x.loteCodigo, areaM2: x.areaM2, comparativo: x.comparativo, assinaturaPlano: x.assinaturaPlano, entrada: x.plano.entrada_valor, entradaQtd: x.plano.entrada_qtd, parcela: x.plano.saldo_parcela, prazo: x.plano.saldo_qtd, contratoId: null })), totais: tot, pontos }),
     observacao: String(p.observacao ?? '').slice(0, 600) || null, status: 'aguardando', pdfArquivo: chave, pdfSha256: sha(pdf), token, criadoPor: autorId, criadoEm: new Date(),
   } as any);
   const envio = await enviarLink(numero, token, prop, emp.nome).catch(() => ({ enviado: false }));
@@ -362,7 +398,7 @@ export async function viaDoCliente(id: number): Promise<{ buf: Buffer; nome: str
   const w = { ...w0, paragrafo: (t: Parameters<typeof w0.paragrafo>[0], o: Parameters<typeof w0.paragrafo>[1] = {}) => w0.paragrafo(t, { size: 9.8, ...o }) };
   w.cabecalho('CONDIÇÕES DE PAGAMENTO APROVADAS', `${emp?.nome ?? ''} · ${plural ? 'Chácaras' : 'Chácara'} ${xs.map(x => x.loteCodigo).join(', ')} · Autorização n.º ${a.numero}`);
   w.paragrafo([{ t: 'A ' }, { t: prop.empresa || prop.nome || 'proprietária', b: true }, { t: `${prop.empresa ? `, representada por ${prop.nome}` : ''}, proprietária e promitente vendedora, ` },
-    { t: `aprovou as condições de pagamento abaixo para ${a.clienteNome}`, b: true }, { t: `, referentes ${plural ? 'às chácaras' : 'à chácara'} ${xs.map(x => x.loteCodigo).join(', ')} do ${emp?.nome ?? 'empreendimento'}.` }]);
+    { t: `aprovou as condições de pagamento abaixo para ${dd.interessado ? qualificacaoInteressado(dd.interessado) : a.clienteNome}`, b: true }, { t: `, referentes ${plural ? 'às chácaras' : 'à chácara'} ${xs.map(x => x.loteCodigo).join(', ')} do ${emp?.nome ?? 'empreendimento'}.` }]);
   w.clausula(plural ? 'CONDIÇÕES POR CHÁCARA' : 'CONDIÇÕES');
   w.tabela(['Chácara', 'Preço', 'Entrada', 'Parcelas', 'Total'], xs.map(x => [
     `${x.loteCodigo} (${x.areaM2.toLocaleString('pt-BR')} m²)`,
@@ -406,19 +442,20 @@ export async function editarAutorizacao(id: number, p: PedidoAutorizacao, autorI
   if ((json(a.dadosJson).itens ?? []).some((i: any) => i.contratoId)) throw new ContratoErro('STATUS', 'Esta autorização já tem contrato gerado: para mudar, faça uma nova autorização', 409);
   const emp = await empreendimentoPorSlug(p.empreendimentoSlug);
   if (Number(emp.id) !== Number(a.empreendimentoId)) throw new ContratoErro('EMPREENDIMENTO', 'O empreendimento da autorização não muda: faça uma nova', 400);
-  const cliente = String(p.clienteNome ?? '').trim();
+  const interessado = interessadoValido(p.interessado, String(p.clienteNome ?? ''));
+  const cliente = interessado.nome;
   if (cliente.length < 3) throw new ContratoErro('CLIENTE', 'Informe o nome do interessado', 400);
   const xs = await calcularItens(Number(emp.id), p.itens);
   const prop = await proprietariaPadrao(Number(emp.id), p.proprietario);
   const numero = Number(a.numero);
-  const pdf = await pedidoPdf(numero, emp, prop, cliente, xs, String(p.observacao ?? ''));
+  const pdf = await pedidoPdf(numero, emp, prop, cliente, xs, String(p.observacao ?? ''), interessado);
   const { salvarArquivo } = await import('../contratos/arquivos');
   const chave = `autorizacoes/autorizacao-${numero}-${Date.now()}.pdf`;
   await salvarArquivo(chave, pdf, 'application/pdf');
   const tot = totais(xs);
   const token = randomBytes(16).toString('hex');
   const pontos = [
-    `Interessado: ${cliente}.`,
+    `Interessado: ${qualificacaoInteressado(interessado)}.`,
     ...xs.map(x => `Chácara ${x.loteCodigo}: entrada ${x.plano.entrada_qtd > 1 ? `${x.plano.entrada_qtd}× R$ ${brl(x.plano.entrada_parcela)}` : `R$ ${brl(x.plano.entrada_valor)}`} + ${x.plano.saldo_qtd}× R$ ${brl(x.plano.saldo_parcela)} (tabela: R$ ${brl(x.comparativo.parcelaTabela)}); diferença em valor presente ${sinal(x.comparativo.diferencaVp)}.`),
     ...(xs.length > 1 ? [`Total: R$ ${brl(tot.totalProposta)} (tabela R$ ${brl(tot.totalTabela)}); em valor presente ${sinal(tot.diferencaVp)}.`] : []),
     'Ao assinar, você autoriza a venda nessas condições.',
@@ -427,7 +464,7 @@ export async function editarAutorizacao(id: number, p: PedidoAutorizacao, autorI
   await d.update(autorizacoesVenda).set({
     loteCodigos: xs.map(x => x.loteCodigo).join(', ').slice(0, 255), clienteNome: cliente.slice(0, 160),
     escolhaJson: JSON.stringify({ itens: xs.map(x => ({ loteCodigo: x.loteCodigo, escolha: x.escolha })) }),
-    dadosJson: JSON.stringify({ proprietaria: prop, itens: xs.map(x => ({ loteCodigo: x.loteCodigo, areaM2: x.areaM2, comparativo: x.comparativo, assinaturaPlano: x.assinaturaPlano, entrada: x.plano.entrada_valor, entradaQtd: x.plano.entrada_qtd, parcela: x.plano.saldo_parcela, prazo: x.plano.saldo_qtd, contratoId: null })), totais: tot, pontos, historico }),
+    dadosJson: JSON.stringify({ proprietaria: prop, interessado, itens: xs.map(x => ({ loteCodigo: x.loteCodigo, areaM2: x.areaM2, comparativo: x.comparativo, assinaturaPlano: x.assinaturaPlano, entrada: x.plano.entrada_valor, entradaQtd: x.plano.entrada_qtd, parcela: x.plano.saldo_parcela, prazo: x.plano.saldo_qtd, contratoId: null })), totais: tot, pontos, historico }),
     observacao: String(p.observacao ?? '').slice(0, 600) || null, status: 'aguardando', pdfArquivo: chave, pdfSha256: sha(pdf), pdfAssinadoArquivo: null,
     token, otpHash: null, otpExpira: null, otpTentativas: 0, otpEnvios: 0, assinadoEm: null, assinaturaIp: null, assinaturaUa: null,
   } as any).where(eq(autorizacoesVenda.id, id));
@@ -444,7 +481,7 @@ export async function pedidoDaAutorizacao(id: number): Promise<PedidoAutorizacao
   const dd = json(a.dadosJson);
   return {
     id: Number(a.id), numero: Number(a.numero), status: String(a.status), empreendimentoSlug: String(e?.slug ?? ''), clienteNome: String(a.clienteNome), observacao: a.observacao ?? '',
-    proprietario: dd.proprietaria ?? null,
+    proprietario: dd.proprietaria ?? null, interessado: dd.interessado ?? { tipo: 'PF', nome: String(a.clienteNome) },
     itens: (json(a.escolhaJson).itens ?? []).map((i: any) => ({ loteCodigo: i.loteCodigo, dataPrimeiroPagamento: i.escolha.dataPrimeiroPagamento, personalizado: i.escolha.personalizado })),
   };
 }

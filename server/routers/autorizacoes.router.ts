@@ -22,6 +22,10 @@ const itemZ = z.object({
 });
 const pedidoZ = z.object({
   empreendimentoSlug: z.string().max(80), clienteNome: z.string().trim().max(160), itens: z.array(itemZ).min(1).max(20), observacao: z.string().trim().max(600).optional(),
+  interessado: z.object({
+    tipo: z.enum(["PF", "PJ"]), nome: z.string().trim().max(160), documento: z.string().trim().max(25).optional(),
+    socios: z.array(z.object({ nome: z.string().trim().max(160), cpf: z.string().trim().max(20) })).max(10).optional(),
+  }).nullable().optional(),
   proprietario: z.object({ nome: z.string().trim().max(160).optional(), documento: z.string().trim().max(25).optional(), empresa: z.string().trim().max(160).optional(), telefone: z.string().trim().max(25).optional() }).nullable().optional(),
 });
 

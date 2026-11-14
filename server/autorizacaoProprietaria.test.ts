@@ -144,3 +144,15 @@ describe('autorização antes do contrato: 2 chácaras → proprietária (empres
     await expect(A.editarAutorizacao(1, await A.pedidoDaAutorizacao(1), 1)).rejects.toThrow(/já tem contrato/);
   });
 });
+
+describe('interessado empresa: todos os sócios com nome e CPF', () => {
+  it('valida CNPJ e sócios e monta a qualificação', async () => {
+    const A = await import('./autorizacoes/servico');
+    const i = A.interessadoValido({ tipo: 'PJ', nome: 'Empresa Ficticia Compradora Ltda', documento: '11222333000181', socios: [{ nome: 'Ana Socia Ficticia', cpf: '52998224725' }, { nome: 'Bruno Socio Ficticio', cpf: '390.533.447-05' }] }, '');
+    expect(A.qualificacaoInteressado(i)).toBe('Empresa Ficticia Compradora Ltda, inscrita no CNPJ sob o n.º 11.222.333/0001-81, sócios: Ana Socia Ficticia (CPF 529.982.247-25) e Bruno Socio Ficticio (CPF 390.533.447-05)');
+    expect(() => A.interessadoValido({ tipo: 'PJ', nome: 'Empresa X Ltda', documento: '11222333000181', socios: [] }, '')).toThrow(/sócios/);
+    expect(() => A.interessadoValido({ tipo: 'PJ', nome: 'Empresa X Ltda', documento: '11222333000181', socios: [{ nome: 'Ana Socia', cpf: '123' }] }, '')).toThrow(/CPF com 11 dígitos/);
+    expect(() => A.interessadoValido({ tipo: 'PJ', nome: 'Empresa X Ltda', documento: '123', socios: [{ nome: 'Ana Socia', cpf: '52998224725' }] }, '')).toThrow(/CNPJ/);
+    expect(A.qualificacaoInteressado(A.interessadoValido({ tipo: 'PF', nome: 'Pedro Ficticio', documento: '52998224725' }, ''))).toBe('Pedro Ficticio, CPF 529.982.247-25');
+  });
+});
