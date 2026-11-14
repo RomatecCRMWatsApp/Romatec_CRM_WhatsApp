@@ -147,7 +147,8 @@ export default function Autorizacoes() {
               <span className={`rounded px-1.5 py-0.5 text-xs ${a.status === "autorizada" ? "bg-ok-500/15 text-ok-300" : a.status === "cancelada" ? "bg-secondary text-muted-foreground" : "bg-warn-500/15 text-warn-300"}`}>{ROTULO[a.status] ?? a.status}{a.assinadoEm ? ` em ${new Date(a.assinadoEm).toLocaleString("pt-BR")}` : ""}</span>
               <span className="text-xs text-muted-foreground">{a.empreendimento} · {a.chacaras} · interessado: {a.cliente} · proprietária: {a.proprietaria}</span>
               <span className="ml-auto flex flex-wrap gap-1">
-                <AcoesPdf compacto url={`/api/autorizacoes/${a.id}.pdf`} nomeArquivo={`AUTORIZACAO-${a.numero}.pdf`} mensagem={`Autorização n.º ${a.numero}`} />
+                <AcoesPdf compacto rotulo="Autorização (interna)" url={`/api/autorizacoes/${a.id}.pdf`} nomeArquivo={`AUTORIZACAO-${a.numero}.pdf`} mensagem={`Autorização n.º ${a.numero}`} />
+                {a.status === "autorizada" && <AcoesPdf compacto rotulo="Via do cliente" url={`/api/autorizacoes/${a.id}/via-cliente.pdf`} nomeArquivo={`CONDICOES-APROVADAS-${a.numero}.pdf`} mensagem={`Condições de pagamento aprovadas pela proprietária — ${a.chacaras}`} />}
                 {a.status === "aguardando" && a.link && <>
                   <Button size="sm" variant="outline" onClick={() => navigator.clipboard.writeText(a.link!).then(() => toast.success("Link copiado"))}><Copy className="h-4 w-4" /> Link</Button>
                   <Button size="sm" variant="outline" disabled={reenviar.isPending} onClick={() => reenviar.mutate({ id: a.id })}><Send className="h-4 w-4" /> Reenviar</Button>

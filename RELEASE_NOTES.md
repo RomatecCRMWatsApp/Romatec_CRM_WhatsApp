@@ -3,6 +3,23 @@
 Cada versão nova vai no TOPO. Depois rode `npm run release` (valida e atualiza o package.json);
 ao subir, o servidor grava a versão no banco e todos recebem o aviso "Novidades da versão".
 
+## 1.178.0 — 2026-11-14
+tipo: minor
+obrigatoria: nao
+titulo: Via do cliente da autorização aprovada
+publico: equipe
+
+### Novo
+- Autorizações: depois que a proprietária assina, aparece o botão "Via do cliente".
+  - É o PDF com as condições aprovadas de cada chácara: preço, entrada, parcelas e total.
+  - Não traz a comparação com a tabela.
+  - Traz o selo da assinatura eletrônica da proprietária sobre a linha de assinatura: nome, documento, data e hora, IP e código de verificação.
+  - Pronto para enviar ao interessado pelo WhatsApp ou e-mail.
+- A autorização completa, com a comparação, fica como documento interno.
+
+### Melhorias
+- Selo de assinatura eletrônica: quando quem assina é uma empresa, mostra o CNPJ formatado (antes saía como CPF).
+
 ## 1.177.0 — 2026-11-14
 tipo: minor
 obrigatoria: nao

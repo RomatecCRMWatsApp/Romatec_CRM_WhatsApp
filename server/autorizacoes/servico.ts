@@ -336,3 +336,57 @@ export async function assinarPublico(a: any, codigo: string, o: { aceite: boolea
     assunto: `Proprietária assinou a Autorização n.º ${a.numero} (${a.loteCodigos}) — os contratos podem ser gerados` })).catch(() => {});
   return { ok: true as const, resultado: { canceladas: 0, criadas: 0, emitidas: 0, falhasAsaas: [] as string[] } };
 }
+
+// ─── Via do cliente (só depois da autorização): condições aprovadas, sem a comparação com a tabela ───────
+
+/**
+ * Via para entregar ao interessado: as condições de cada chácara aprovadas pela proprietária, com o selo da assinatura
+ * eletrônica dela (nome, documento, data/hora, IP e código de verificação) sobre a linha de assinatura. Não traz a
+ * comparação com a tabela nem valores internos. Só existe com a autorização assinada.
+ */
+export async function viaDoCliente(id: number): Promise<{ buf: Buffer; nome: string } | null> {
+  const d = await banco();
+  const [a]: any[] = await d.select().from(autorizacoesVenda).where(eq(autorizacoesVenda.id, id)).limit(1);
+  if (!a) return null;
+  if (a.status !== 'autorizada') throw new ContratoErro('STATUS', 'A via do cliente só sai depois que a proprietária assina a autorização', 409);
+  const [emp]: any[] = await d.select().from(empreendimentos).where(eq(empreendimentos.id, a.empreendimentoId)).limit(1);
+  const dd = json(a.dadosJson);
+  const prop = dd.proprietaria ?? {};
+  const escolhas: any[] = json(a.escolhaJson).itens ?? [];
+  // Recalcula o plano de cada chácara a partir da escolha autorizada (as mesmas parcelas do contrato)
+  const xs = await calcularItens(Number(a.empreendimentoId), escolhas.map(e => ({ loteCodigo: e.loteCodigo, dataPrimeiroPagamento: e.escolha.dataPrimeiroPagamento, personalizado: e.escolha.personalizado })));
+  const { escritor } = await import('../contratos/docsComissao');
+  const marca = String(emp?.slug ?? 'bom-jardims').replace(/-/g, '');
+  const plural = xs.length > 1;
+  const w0 = await escritor(`Condições aprovadas — Autorização n.º ${a.numero}`, marca, `Condições aprovadas pela proprietária · Autorização n.º ${a.numero}`);
+  const w = { ...w0, paragrafo: (t: Parameters<typeof w0.paragrafo>[0], o: Parameters<typeof w0.paragrafo>[1] = {}) => w0.paragrafo(t, { size: 9.8, ...o }) };
+  w.cabecalho('CONDIÇÕES DE PAGAMENTO APROVADAS', `${emp?.nome ?? ''} · ${plural ? 'Chácaras' : 'Chácara'} ${xs.map(x => x.loteCodigo).join(', ')} · Autorização n.º ${a.numero}`);
+  w.paragrafo([{ t: 'A ' }, { t: prop.empresa || prop.nome || 'proprietária', b: true }, { t: `${prop.empresa ? `, representada por ${prop.nome}` : ''}, proprietária e promitente vendedora, ` },
+    { t: `aprovou as condições de pagamento abaixo para ${a.clienteNome}`, b: true }, { t: `, referentes ${plural ? 'às chácaras' : 'à chácara'} ${xs.map(x => x.loteCodigo).join(', ')} do ${emp?.nome ?? 'empreendimento'}.` }]);
+  w.clausula(plural ? 'CONDIÇÕES POR CHÁCARA' : 'CONDIÇÕES');
+  w.tabela(['Chácara', 'Preço', 'Entrada', 'Parcelas', 'Total'], xs.map(x => [
+    `${x.loteCodigo} (${x.areaM2.toLocaleString('pt-BR')} m²)`,
+    `R$ ${brl(Number(x.plano.preco_tabela))}`,
+    x.plano.entrada_qtd > 1 ? `${x.plano.entrada_qtd}× R$ ${brl(x.plano.entrada_parcela)}, de ${br(x.plano.entrada_venc1)}` : `R$ ${brl(x.plano.entrada_valor)} em ${br(x.plano.entrada_venc1)}`,
+    `${x.plano.saldo_qtd}× R$ ${brl(x.plano.saldo_parcela)}, de ${br(x.plano.saldo_venc1)}`,
+    `R$ ${brl(Number(x.plano.total_pagar))}`,
+  ]), { pesos: [1.3, 1.1, 1.8, 1.9, 1.1], direita: [1, 4], size: 8.4 });
+  if (plural) {
+    const totalGeral = xs.reduce((s, x) => s + Number(x.plano.total_pagar), 0);
+    const mensal = xs.reduce((s, x) => s + Number(x.plano.saldo_parcela), 0);
+    w.paragrafo(`Total das ${xs.length} chácaras: R$ ${brl(totalGeral)} · parcelas do saldo somadas: R$ ${brl(mensal)} por mês.`, { antes: 4 });
+  }
+  w.paragrafo([{ t: 'Observações: ', b: true }, { t: `parcelas mensais fixas, por boleto bancário ou PIX, nos vencimentos indicados. Cada chácara será formalizada por contrato individual (Instrumento Particular de Compromisso de Compra e Venda), que trará estas condições e as demais cláusulas do empreendimento. Valores nominais, sem correção monetária.` }], { antes: 4 });
+  w.paragrafo(`Aprovação registrada eletronicamente pela proprietária em ${new Date(a.assinadoEm).toLocaleString('pt-BR', { timeZone: 'America/Fortaleza' })}, com código de confirmação enviado ao seu WhatsApp (MP n.º 2.200-2/2001, art. 10; Lei n.º 14.063/2020).`);
+  const doc = prop.documento ? (String(prop.documento).replace(/\D/g, '').length > 11 ? `CNPJ ${prop.documento}` : `CPF ${prop.documento}`) : undefined;
+  w.assinaturas([{ papel: prop.empresa ? `PROPRIETÁRIA — ${prop.empresa}` : 'PROPRIETÁRIA (promitente vendedora)', nome: String(prop.nome ?? ''), doc }], { local: `Açailândia/MA, ${br(new Date(a.assinadoEm).toISOString())}.` });
+  let pdf: Buffer = await w.salvar();
+  // Selo da assinatura eletrônica dela sobre a linha de assinatura (o mesmo dos contratos)
+  try {
+    const { localizarAssinaturas } = await import('../assinatura/autoPosicao');
+    const { carimbarAvancada } = await import('../assinatura/pdf');
+    const [cx] = await localizarAssinaturas(pdf, [{ papel: 'vendedora', nome: String(prop.nome ?? '') }]);
+    if (cx) pdf = await carimbarAvancada(pdf, cx, { nome: String(prop.nome ?? ''), cpf: String(prop.documento ?? '').replace(/\D/g, ''), quando: new Date(a.assinadoEm), ip: String(a.assinaturaIp ?? ''), codigo: `AUT-${a.numero}-${String(a.pdfSha256).slice(0, 8).toUpperCase()}` });
+  } catch (e: any) { console.warn('[Autorizações] selo na via do cliente:', e?.message ?? e); }
+  return { buf: pdf, nome: `CONDICOES-APROVADAS-AUTORIZACAO-${a.numero}.pdf` };
+}

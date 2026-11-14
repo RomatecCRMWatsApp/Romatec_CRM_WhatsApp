@@ -23,6 +23,8 @@ export const ROTULO_METODO: Record<string, string> = {
 };
 
 export const cpfMascarado = (cpf: string) => String(cpf).replace(/^(\d{3})\d{6}(\d{2})$/, '$1.***.***-$2');
+/** Documento no selo: CPF mascarado ou, para empresa, o CNPJ formatado */
+const docDoSelo = (doc: string) => { const d = String(doc).replace(/\D/g, ''); return d.length === 14 ? `CNPJ ${d.replace(/^(\d{2})(\d{3})(\d{3})(\d{4})(\d{2})$/, '$1.$2.$3/$4-$5')}` : `CPF ${cpfMascarado(d)}`; };
 
 const pagina = (d: PDFDocument, n: number) => { const ps = d.getPages(); return ps[n === -1 ? ps.length - 1 : n - 1]; };
 
@@ -83,7 +85,7 @@ export async function carimbarAvancada(pdf: Buffer, cx: Caixa, s: { nome: string
   const f = await d.embedFont(StandardFonts.Helvetica), fb = await d.embedFont(StandardFonts.HelveticaBold);
   const linhas: [string, PDFFont, number][] = [
     ['ASSINADO ELETRONICAMENTE', fb, 7], [s.nome, fb, 8],
-    [`CPF ${cpfMascarado(s.cpf)} · ${s.quando.toLocaleString('pt-BR', { timeZone: 'America/Fortaleza' })}`, f, 6.5],
+    [`${docDoSelo(s.cpf)} · ${s.quando.toLocaleString('pt-BR', { timeZone: 'America/Fortaleza' })}`, f, 6.5],
     [`IP ${s.ip} · verificação ${s.codigo}`, f, 6.5],
   ];
   // Tudo dentro da caixa: cada linha numa linha só (a fonte diminui para caber) e o bloco na altura

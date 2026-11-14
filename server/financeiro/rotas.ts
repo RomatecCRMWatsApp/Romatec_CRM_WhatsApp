@@ -636,6 +636,22 @@ export function registrarRotasFinanceiro(app: Express) {
       res.json(aut ? await A.assinarPublico(aut, String(req.body?.codigo ?? '').trim(), ev) : await assinarAditivo(String(req.params.token), String(req.body?.codigo ?? '').trim(), ev));
     } catch (e) { erro(res, e); }
   });
+  // Via do cliente da autorização (só autorizada): condições aprovadas com o selo da assinatura da proprietária
+  app.get('/api/autorizacoes/:id/via-cliente.pdf', async (req, res) => {
+    try {
+      const { sdk } = await import('../_core/sdk');
+      const user: any = await sdk.authenticateRequest(req).catch(() => null);
+      const { perfilDe } = await import('../../shared/equipe');
+      if (!user || !['admin', 'secretario'].includes(String(perfilDe(user)))) return res.status(403).json({ erro: 'nao_autorizado' });
+      const { viaDoCliente } = await import('../autorizacoes/servico');
+      const r = await viaDoCliente(Number(req.params.id) || 0);
+      if (!r) return res.status(404).json({ erro: 'arquivo' });
+      res.setHeader('Cache-Control', 'private, no-store');
+      res.setHeader('Content-Type', 'application/pdf');
+      res.setHeader('Content-Disposition', `inline; filename="${r.nome}"`);
+      res.send(r.buf);
+    } catch (e) { erro(res, e); }
+  });
   // PDF da autorização de venda (administrador e secretária)
   app.get('/api/autorizacoes/:id.pdf', async (req, res) => {
     try {

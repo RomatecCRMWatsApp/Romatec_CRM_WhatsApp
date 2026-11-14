@@ -90,6 +90,25 @@ describe('autorização antes do contrato: 2 chácaras → proprietária (empres
     expect(disp[0]).toMatchObject({ numero: 1, prazo: 180, parcela: 1000, entradaQtd: 4 });
   });
 
+  it('via do cliente: só depois de assinada; sem a comparação com a tabela; com o selo da assinatura da proprietária', async () => {
+    const A = await AV();
+    const via = await A.viaDoCliente(1);
+    const pdfjs: any = await import('pdfjs-dist/legacy/build/pdf.mjs');
+    const doc = await pdfjs.getDocument({ data: new Uint8Array(via!.buf), verbosity: 0 }).promise;
+    let t = '';
+    for (let n = 1; n <= doc.numPages; n++) t += (await (await doc.getPage(n)).getTextContent()).items.map((i: any) => i.str).join(' ') + ' ';
+    expect(t).toMatch(/CONDIÇÕES DE PAGAMENTO APROVADAS/);
+    expect(t.replace(/\s+/g, ' ')).toMatch(/aprovou\s*as condições de pagamento abaixo para Cliente Ficticio das Quatro/);
+    expect(t).toMatch(/CNPJ 11\.222\.333\/0001-81 · 14\/11/);
+    expect(t).toMatch(/180× R\$ 1\.000,00/);
+    expect(t).toMatch(/ASSINADO ELETRONICAMENTE/);
+    expect(t).not.toMatch(/tabela|valor presente|Diferença/i);
+    // autorização ainda não assinada: não tem via do cliente
+    await A.criarAutorizacao({ empreendimentoSlug: 'bom-jardims', clienteNome: 'Outro Ficticio', itens: [{ loteCodigo: 'D01', dataPrimeiroPagamento: '2026-11-20', personalizado: plano }] }, 1);
+    const id2 = db.all(sql`SELECT id FROM autorizacoesVenda WHERE numero = 2`)[0].id;
+    await expect(A.viaDoCliente(id2)).rejects.toThrow(/depois que a proprietária assina/);
+  });
+
   it('contrato da D01 com o plano da autorização: vale e anexa; outra chácara/plano diferente não vale; a D01 sai da lista', async () => {
     const A = await AV();
     const { escolha, numero } = await A.escolhaDaAutorizacao(1, 1, 'D01');
