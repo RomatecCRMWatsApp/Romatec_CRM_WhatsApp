@@ -188,7 +188,9 @@ export function tagsPlano(s: PlanoContrato): Ctx {
       ? `R$ ${brl(s.complemento_ato ?? s.entrada_parcela)} no ato${partesAto ? ` (${partesAto})` : ''}, com vencimento em ${dataBR(s.entrada_venc1)}, e o complemento de R$ ${brl(s.complemento_valor ?? 0)} em ${s.complemento_qtd} (${extenso(s.complemento_qtd)}) parcelas mensais de R$ ${brl(s.complemento_parcela ?? 0)}, sem juros, a primeira com vencimento em ${dataBR(s.complemento_venc1 ?? '')}`
       : partesAto
         ? `no ato, sem desconto, com vencimento em ${dataBR(s.entrada_venc1)}, em duas partes: ${partesAto}`
-        : `em parcela única de R$ ${brl(s.entrada_parcela)}, sem desconto, com vencimento em ${dataBR(s.entrada_venc1)}`)
+        : s.sinal_parcelado && s.entrada_qtd > 1
+          ? `a título de sinal, em ${s.entrada_qtd} (${extenso(s.entrada_qtd)}) parcelas mensais de R$ ${brl(s.entrada_parcela)}, sem juros e sem desconto, a primeira com vencimento em ${dataBR(s.entrada_venc1)}; as parcelas do saldo começam somente depois da última parcela do sinal`
+          : `em parcela única de R$ ${brl(s.entrada_parcela)}, sem desconto, com vencimento em ${dataBR(s.entrada_venc1)}`)
     : s.entrada_qtd === 1
     ? `à vista, com desconto de R$ ${brl(s.entrada_desconto)}, vencimento em ${dataBR(s.entrada_venc1)}`
     : `em ${s.entrada_qtd} (${extenso(s.entrada_qtd)}) parcelas mensais de R$ ${brl(s.entrada_parcela)}, sem desconto, a primeira com vencimento em ${dataBR(s.entrada_venc1)}`;
@@ -320,5 +322,16 @@ export function montarContexto(e: EntradaContexto): Ctx {
     ctr_taxa_cessao: emp.emp_salario_minimo ? brl(Number(String(emp.emp_salario_minimo).replace(/\./g, '').replace(',', '.'))) : '',
     ...(e.condicionantes ?? {}),
   };
+  const nota = notaParcelaPersonalizada(e.plano);
+  if (nota) {
+    const atual = String(ctx.ctr_condicoes_especificas ?? '').trim();
+    ctx.ctr_condicoes_especificas = !atual || /^não há\.?$/i.test(atual) ? nota : `${atual}\n${nota}`;
+  }
   return ctx;
+}
+
+/** Nota das condições específicas quando o administrador fixou a parcela do saldo abaixo da de tabela */
+export function notaParcelaPersonalizada(s: PlanoContrato): string {
+  if (!s.parcela_personalizada || !s.parcela_tabela) return '';
+  return `Parcela do saldo fixada em R$ ${brl(s.saldo_parcela)} (${s.saldo_qtd} parcelas mensais), por liberalidade da VENDEDORA, em substituição à parcela de tabela de R$ ${brl(s.parcela_tabela)}; a diferença é desconto concedido sobre os juros do financiamento, sem novação.`;
 }

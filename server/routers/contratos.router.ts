@@ -48,6 +48,10 @@ const planoZ = z.object({
   entradaForma: z.enum(["unica", "boleto_cartao"]).optional(),
   /** Planos A/B/C: 1º vencimento das parcelas (AAAA-MM-DD); vazio = um mês depois do ato */
   inicioParcelas: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).nullable().optional(),
+  /** Planos A/B: sinal (entrada de R$ 10 mil) em N parcelas mensais; o saldo começa depois da última */
+  sinalParcelas: z.number().int().min(1).max(6).nullable().optional(),
+  /** Só o administrador: valor fixo da parcela do saldo (desconto sobre a de tabela) */
+  parcelaPersonalizada: z.number().positive().max(1e7).nullable().optional(),
   /** Concessão por liberalidade da proprietária (sem venda): só o administrador; gera o Termo Aditivo de Concessão */
   concessao: z.object({
     motivo: z.string().trim().max(600).default(""),
@@ -59,6 +63,20 @@ const planoZ = z.object({
 });
 
 /** Erros do serviço → tRPC (campos do formulário em error.data.campos) */
+/** Condições fora do padrão: o administrador escolhe livremente; os demais precisam da senha dele. Parcela personalizada é só dele. */
+async function exigirAutorizacaoDoPlano(p: z.infer<typeof planoZ>, user: { id: number; name?: string | null }, senha?: string | null): Promise<void> {
+  const perfil = perfilDe(user as any);
+  if (p.parcelaPersonalizada != null) exigir(perfil === "admin", "Só o administrador define o valor da parcela.");
+  const { foraDoPadrao } = await import("../../shared/autorizacaoPlano");
+  const fora = foraDoPadrao(p);
+  if (perfil === "admin" || !fora.length) return;
+  if (!senha) throw new TRPCError({ code: "FORBIDDEN", message: `Precisa da senha do administrador para: ${fora.join(", ")}.` });
+  const { autorizarComSenhaDoAdmin } = await import("../controleAcessos");
+  const ok = await autorizarComSenhaDoAdmin(senha, user as any, `condições fora do padrão: ${fora.join(", ")}`)
+    .catch((e: any) => { throw new TRPCError({ code: "TOO_MANY_REQUESTS", message: e?.message || "Tente de novo mais tarde." }); });
+  if (!ok) throw new TRPCError({ code: "FORBIDDEN", message: "Senha do administrador não confere." });
+}
+
 async function tratar<T>(f: () => Promise<T>): Promise<T> {
   try { return await f(); } catch (e: any) {
     if (e instanceof ContratoErro || e?.codigo) {
@@ -143,9 +161,12 @@ export const contratosRouter = router({
     slug: z.string().max(80), lote: z.string().max(10), leadId: z.number().int().nullable().optional(), corretorUserId: z.number().int().optional(),
     plano: planoZ, comprador: pessoaZ, conjuge: pessoaZ.nullable().optional(), dependentes: z.array(dependenteZ).max(6).optional(),
     condicoes: z.object({ especificas: z.string().max(2000).optional(), modoAssinatura: z.enum(["eletronica", "manuscrita"]).optional() }).optional(),
+    /** Senha do administrador para condições fora do padrão (quem não é administrador) */
+    autorizacao: z.object({ senha: z.string().max(200) }).nullable().optional(),
   })).mutation(async ({ ctx, input }) => {
     const perfil = perfilDe(ctx.user as any);
     exigir(podeCriarContrato(perfil), "Seu perfil não cria contratos.");
+    await exigirAutorizacaoDoPlano(input.plano, ctx.user as any, input.autorizacao?.senha);
     if (input.plano.concessao) exigir(perfil === "admin", "Só o administrador registra concessão da proprietária.");
     if (input.plano.modoC === "congelado") exigir(perfil === "admin", "Só o administrador define o congelamento do complemento da entrada.");
     const db = (await getDb()) as any;

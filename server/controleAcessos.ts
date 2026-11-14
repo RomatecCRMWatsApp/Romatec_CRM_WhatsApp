@@ -158,6 +158,21 @@ async function adminDaSenha(senha: string, ator: Ator): Promise<{ id: number; no
   return null;
 }
 
+/** Autorização avulsa por senha do administrador (ex.: contrato com condições fora do padrão). Limita as tentativas por pessoa. */
+const tentativasAutorizacao = new Map<number, { n: number; desde: number }>();
+const JANELA_TENTATIVAS_MS = 15 * 60_000;
+export async function autorizarComSenhaDoAdmin(senha: string, ator: Ator, motivo: string, agora = Date.now()): Promise<{ id: number; nome: string } | null> {
+  const t = tentativasAutorizacao.get(ator.id);
+  const atual = t && agora - t.desde < JANELA_TENTATIVAS_MS ? t : { n: 0, desde: agora };
+  if (atual.n >= LIMITE_TENTATIVAS_SENHA) throw new AcessoErro("Muitas tentativas de senha. Aguarde 15 minutos ou peça ao administrador.");
+  const admin = await adminDaSenha(senha, ator);
+  if (!admin) { tentativasAutorizacao.set(ator.id, { n: atual.n + 1, desde: atual.desde }); return null; }
+  tentativasAutorizacao.delete(ator.id);
+  const S = await import("./saas/servico");
+  await S.auditar(ator.id, "AUTORIZACAO_ADMIN", { motivo: motivo.slice(0, 300), autorizadoPor: admin.id }).catch(() => undefined);
+  return admin;
+}
+
 /** A secretária (ou o administrador) pede para prorrogar/desbloquear com pagamento ou cortesia. Gera o código e avisa o administrador. */
 export async function pedirProrrogacao(usuarioId: number, p: { modalidade: "pago" | "cortesia"; ate: string; valor?: number | null; motivo: string }, ator: Ator, agora = Date.now()) {
   if (!p.motivo.trim()) throw new AcessoErro("Informe o motivo");

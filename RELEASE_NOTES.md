@@ -3,6 +3,20 @@
 Cada versão nova vai no TOPO. Depois rode `npm run release` (valida e atualiza o package.json);
 ao subir, o servidor grava a versão no banco e todos recebem o aviso "Novidades da versão".
 
+## 1.169.0 — 2026-11-14
+tipo: minor
+obrigatoria: nao
+titulo: Sinal parcelado e parcela personalizada nos Planos A e B
+publico: equipe
+
+### Novo
+- Planos A e B: o sinal (entrada de R$ 10 mil) pode ser dividido em até 6 parcelas mensais sem juros (ex.: 4× R$ 2.500). O financiamento só começa no mês seguinte à última parcela do sinal, ou na data escolhida.
+- Administrador: campo "Valor da parcela do saldo". Já vem com a parcela do cálculo e aceita um valor menor, como desconto. O contrato, o carnê e as cobranças usam o valor definido, e a parcela de tabela fica registrada nas condições específicas.
+- Condições fora do padrão pedem a senha do administrador para corretor e secretaria: sinal parcelado, entrada dividida boleto/PIX + cartão e 1º vencimento escolhido.
+
+### Melhorias
+- A retenção da comissão do ato se distribui pelas parcelas do sinal, e a parte do corretor do ato vence com o sinal quitado.
+
 ## 1.168.5 — 2026-11-14
 tipo: patch
 obrigatoria: nao

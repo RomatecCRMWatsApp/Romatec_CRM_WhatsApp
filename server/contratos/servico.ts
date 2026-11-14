@@ -173,6 +173,7 @@ export interface NovoContrato {
   plano: { modalidade: 'financiado' | 'avista'; entradaParcelas: number; prazo?: number; dataPrimeiroPagamento: string; condicao?: 'padrao' | 'A' | 'B' | 'C'; modoC?: 'unificado' | 'sequencial' | 'congelado'; inicioComplemento?: number;
     /** Planos A/B/C: entrada única ou dividida (boleto/PIX + cartão) e 1º vencimento das parcelas */
     entradaForma?: 'unica' | 'boleto_cartao'; inicioParcelas?: string | null;
+    sinalParcelas?: number | null; parcelaPersonalizada?: number | null;
     /** Concessão por liberalidade da proprietária (sem venda) */
     concessao?: { motivo?: string; comissaoValor?: number; comissaoPrazo?: string; comissaoVencimento?: string; despesasPor?: 'beneficiario' | 'proprietaria' } | null };
   comprador: PessoaForm;
@@ -235,7 +236,7 @@ export function planoEscolhido(n: NovoContrato['plano'], areaM2: number, precoTa
   const lancamento = n.modalidade === 'financiado' && !!n.condicao && n.condicao !== 'padrao';
   const sim = simular(areaM2, n.modalidade === 'avista' || lancamento ? 1 : n.entradaParcelas, c, precoTabela);
   const escolha: EscolhaPlano = { modalidade: n.modalidade, prazo: n.prazo, dataPrimeiroPagamento: n.dataPrimeiroPagamento, condicao: n.modalidade === 'financiado' ? n.condicao ?? 'padrao' : 'padrao', modoC: n.modoC, inicioComplemento: n.inicioComplemento,
-    ...(lancamento ? { entradaForma: n.entradaForma ?? 'unica', inicioParcelas: n.inicioParcelas || undefined } : {}) };
+    ...(lancamento ? { entradaForma: n.entradaForma ?? 'unica', inicioParcelas: n.inicioParcelas || undefined, sinalParcelas: n.sinalParcelas || undefined, parcelaPersonalizada: n.parcelaPersonalizada ?? undefined } : {}) };
   return planoDoContrato(sim, escolha, c, comCorretor);
 }
 

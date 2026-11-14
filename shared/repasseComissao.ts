@@ -29,6 +29,8 @@ export interface PlanoParaRepasse {
   modalidade: 'avista' | 'financiado' | string;
   condicao?: string | null;
   entrada_qtd?: number | null;
+  /** Sinal da entrada parcelado (Planos A/B): a parte do ato vence com a última parcela do sinal */
+  sinal_parcelado?: boolean | null;
   comissao_corretor?: number | null;
   parcelas?: { tipo: string; numero: number; vencimento: string }[];
 }
@@ -69,8 +71,11 @@ export function gatilhosDoPlano(plano: PlanoParaRepasse): { chave: string; tipo:
   const cond = plano.condicao && plano.condicao !== 'padrao' ? plano.condicao : null;
   if (cond) {
     const n = COMISSAO_LANCAMENTO.parcelasSaldo, ato = COMISSAO_LANCAMENTO.pctAto;
+    const nSinal = plano.sinal_parcelado ? Math.max(1, Number(plano.entrada_qtd ?? 1)) : 1;
     return [
-      { chave: 'entrada-1', tipo: 'entrada', numero: 1, quando: 'Entrada (R$ 10 mil)', pct: ato },
+      nSinal > 1
+        ? { chave: 'entrada-1', tipo: 'entrada', numero: nSinal, quando: `Sinal quitado (${nSinal} parcelas)`, pct: ato }
+        : { chave: 'entrada-1', tipo: 'entrada', numero: 1, quando: 'Entrada (R$ 10 mil)', pct: ato },
       ...Array.from({ length: n }, (_, k) => ({ chave: `saldo-${k + 1}`, tipo: 'saldo', numero: k + 1, quando: `${k + 1}ª parcela do saldo`, pct: (1 - ato) / n })),
     ];
   }

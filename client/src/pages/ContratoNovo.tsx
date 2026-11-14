@@ -18,6 +18,7 @@ import { AnexosNovoContrato, enviarAnexo, vagasDoContrato, type AnexoPendente } 
 import { brl } from "@shared/simulador";
 import { CONDICOES, MODOS_C, ROTULO_CONDICAO, ROTULO_MODO_C, prazosDaCondicao, type CondicaoPagamento, type ModoPlanoC } from "@shared/condicoesLancamento";
 import { CondicoesEspecificas } from "@/components/contratos/CondicoesEspecificas";
+import { foraDoPadrao } from "@shared/autorizacaoPlano";
 
 const PASSOS = ["Unidade e plano", "Comprador", "Revisão"];
 
@@ -61,6 +62,10 @@ export default function ContratoNovo() {
   const [data1, setData1] = useState(dataSugerida());
   const [entradaForma, setEntradaForma] = useState<"unica" | "boleto_cartao">("unica");
   const [inicioParcelas, setInicioParcelas] = useState("");
+  // Planos A/B: sinal (entrada de R$ 10 mil) em N parcelas mensais; só o administrador fixa o valor da parcela do saldo
+  const [sinalParcelas, setSinalParcelas] = useState(1);
+  const [parcelaPers, setParcelaPers] = useState("");
+  const [senhaAdmin, setSenhaAdmin] = useState("");
   const [comprador, setComprador] = useState<PessoaForm>(PESSOA_VAZIA);
   const [conjuge, setConjuge] = useState<PessoaForm>({ ...PESSOA_VAZIA });
   const [especificas, setEspecificas] = useState("");
@@ -84,11 +89,17 @@ export default function ContratoNovo() {
   }, [leadId, op]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const valorComissao = Number(comissaoConcessao.replace(/\./g, "").replace(",", "."));
+  const valorParcelaPers = parcelaPers.trim() ? Number(parcelaPers.replace(/\./g, "").replace(",", ".")) : 0;
   const plano = concessao
     ? { modalidade: "avista" as const, entradaParcelas: 1, dataPrimeiroPagamento: data1, condicao: "padrao" as const,
         concessao: { motivo: motivoConcessao, comissaoPrazo: prazoComissao, despesasPor, ...(/^\d{4}-\d{2}-\d{2}$/.test(vencComissao) ? { comissaoVencimento: vencComissao } : {}), ...(comissaoConcessao.trim() && Number.isFinite(valorComissao) ? { comissaoValor: valorComissao } : {}) } }
     : { modalidade, entradaParcelas: modalidade === "avista" || condicao !== "padrao" ? 1 : entradaParcelas, prazo: modalidade === "avista" ? undefined : prazo, dataPrimeiroPagamento: data1, condicao: modalidade === "avista" ? "padrao" as const : condicao, ...(modalidade === "financiado" && condicao === "C" ? { modoC, ...(modoC === "congelado" ? { inicioComplemento: inicioComp } : {}) } : {}),
-        ...(modalidade === "financiado" && condicao !== "padrao" ? { entradaForma, ...(/^\d{4}-\d{2}-\d{2}$/.test(inicioParcelas) ? { inicioParcelas } : {}) } : {}) };
+        ...(modalidade === "financiado" && condicao !== "padrao" ? {
+          entradaForma: sinalParcelas > 1 ? "unica" as const : entradaForma, ...(/^\d{4}-\d{2}-\d{2}$/.test(inicioParcelas) ? { inicioParcelas } : {}),
+          ...(condicao !== "C" && sinalParcelas > 1 ? { sinalParcelas } : {}),
+          ...(perfil === "admin" && condicao !== "C" && valorParcelaPers > 0 ? { parcelaPersonalizada: valorParcelaPers } : {}),
+        } : {}) };
+  const precisaSenha = perfil !== "admin" && !concessao ? foraDoPadrao(plano as any) : [];
   const sim = trpc.contratos.simular.useQuery({ slug, lote, plano, corretorUserId: corretorUserId ?? undefined }, { enabled: !!lote && /^\d{4}-\d{2}-\d{2}$/.test(data1) });
   // Documentos escolhidos no passo 2: sobem logo depois de criar (dependente pela posição na lista)
   const [anexos, setAnexos] = useState<AnexoPendente[]>([]);
@@ -146,6 +157,8 @@ export default function ContratoNovo() {
       if (f.data1) setData1(f.data1);
       if (f.entradaForma) setEntradaForma(f.entradaForma);
       if (typeof f.inicioParcelas === "string") setInicioParcelas(f.inicioParcelas);
+      if (Number(f.sinalParcelas) >= 1) setSinalParcelas(Number(f.sinalParcelas));
+      if (typeof f.parcelaPers === "string") setParcelaPers(f.parcelaPers);
       if (f.comprador) setComprador({ ...PESSOA_VAZIA, ...f.comprador });
       if (f.conjuge) setConjuge({ ...PESSOA_VAZIA, ...f.conjuge });
       if (typeof f.especificas === "string") setEspecificas(f.especificas);
@@ -155,7 +168,7 @@ export default function ContratoNovo() {
       toast.success("Rascunho restaurado: os dados digitados antes voltaram");
     } catch { /* rascunho ilegível: começa do zero */ }
   }, [user]); // eslint-disable-line react-hooks/exhaustive-deps
-  const formRascunho = { slug, lote, leadId, corretorUserId, modalidade, entradaParcelas, prazo, condicao, modoC, inicioComp, data1, entradaForma, inicioParcelas, comprador, conjuge, especificas, modoAssinatura, dependentes };
+  const formRascunho = { slug, lote, leadId, corretorUserId, modalidade, entradaParcelas, prazo, condicao, modoC, inicioComp, data1, entradaForma, inicioParcelas, sinalParcelas, parcelaPers, comprador, conjuge, especificas, modoAssinatura, dependentes };
   const temDados = !!(lote || comprador.nome || comprador.cpf || conjuge.nome);
   useEffect(() => {
     if (!restaurado || !temDados) return;
@@ -206,6 +219,7 @@ export default function ContratoNovo() {
   const enviar = () => criar.mutate({
     slug, lote, leadId, corretorUserId: corretorUserId ?? undefined, plano,
     comprador, conjuge: casado ? conjuge : null, dependentes: dependentes ?? [], condicoes: { especificas, modoAssinatura },
+    ...(precisaSenha.length ? { autorizacao: { senha: senhaAdmin } } : {}),
   });
 
   const opcoesEmp = useMemo(() => (emps ?? []).filter(e => e.acesso), [emps]);
@@ -342,7 +356,7 @@ export default function ContratoNovo() {
                 <p className="mb-2 text-sm font-semibold">Entrada no ato e 1º vencimento das parcelas</p>
                 <div className="grid gap-2 sm:grid-cols-2" role="radiogroup" aria-label="Forma da entrada">
                   {([["unica", "Parcela única", "Boleto ou PIX do valor todo da entrada no ato."], ["boleto_cartao", "Metade no boleto/PIX + metade no cartão", "Duas cobranças no ato: uma por boleto/PIX e outra por link de pagamento no cartão de crédito."]] as const).map(([k, t, r]) => (
-                    <button key={k} type="button" role="radio" aria-checked={entradaForma === k} onClick={() => setEntradaForma(k)}
+                    <button key={k} type="button" role="radio" aria-checked={entradaForma === k} onClick={() => { setEntradaForma(k); if (k === "boleto_cartao") setSinalParcelas(1); }}
                       className={`rounded-lg border p-3 text-left text-sm transition ${entradaForma === k ? "border-primary bg-primary/15 ring-1 ring-primary" : "border-border hover:border-primary/50"}`}>
                       <span className="flex items-center gap-2 font-semibold">
                         <span className={`inline-block h-3.5 w-3.5 rounded-full border-2 ${entradaForma === k ? "border-primary bg-primary" : "border-muted-foreground"}`} />{t}
@@ -356,7 +370,35 @@ export default function ContratoNovo() {
                   <input type="date" className="h-9 rounded-md border border-border bg-background px-2 text-sm" value={inicioParcelas} min={data1} onChange={e => setInicioParcelas(e.target.value)} aria-label="1º vencimento das parcelas" />
                   {inicioParcelas && <button type="button" className="text-xs text-muted-foreground underline" onClick={() => setInicioParcelas("")}>usar o padrão (1 mês depois do ato)</button>}
                 </label>
-                <p className="mt-2 text-xs text-muted-foreground">Vazio = um mês depois do pagamento da entrada. As demais parcelas seguem mês a mês, no mesmo valor. A escolha vai para o Quadro-Resumo, a Cláusula 3 e as cobranças.</p>
+                <p className="mt-2 text-xs text-muted-foreground">Vazio = um mês depois do pagamento da entrada (ou da última parcela do sinal). As demais parcelas seguem mês a mês, no mesmo valor. A escolha vai para o Quadro-Resumo, a Cláusula 3 e as cobranças.</p>
+                {condicao !== "C" && (
+                  <label className="mt-3 flex flex-wrap items-center gap-2 text-sm">
+                    Sinal (entrada) em
+                    <select className="h-9 rounded-md border border-border bg-background px-2 text-sm" value={sinalParcelas} aria-label="Parcelas do sinal"
+                      onChange={e => { const n = Number(e.target.value); setSinalParcelas(n); if (n > 1) setEntradaForma("unica"); }}>
+                      {[1, 2, 3, 4, 5, 6].map(n => <option key={n} value={n}>{n === 1 ? "parcela única no ato" : `${n} parcelas mensais`}</option>)}
+                    </select>
+                    {sinalParcelas > 1 && <span className="text-xs text-muted-foreground">sem juros; o financiamento começa depois da última</span>}
+                  </label>
+                )}
+                {perfil === "admin" && condicao !== "C" && (
+                  <label className="mt-3 flex flex-wrap items-center gap-2 text-sm">
+                    Valor da parcela do saldo
+                    <input className="h-9 w-36 rounded-md border border-border bg-background px-2 text-sm" inputMode="decimal" aria-label="Valor da parcela do saldo"
+                      placeholder={sim.data ? brl(Number((sim.data as any).parcela_tabela ?? sim.data.saldo_parcela)) : "padrão"} value={parcelaPers}
+                      onChange={e => setParcelaPers(e.target.value.replace(/[^\d.,]/g, ""))} />
+                    {parcelaPers
+                      ? <button type="button" className="text-xs text-muted-foreground underline" onClick={() => setParcelaPers("")}>voltar ao cálculo</button>
+                      : <span className="text-xs text-muted-foreground">vazio = parcela do cálculo; menor = desconto (só o administrador)</span>}
+                  </label>
+                )}
+                {precisaSenha.length > 0 && (
+                  <div className="mt-3 rounded-md border border-warn-400/40 bg-warn-400/10 p-2 text-sm">
+                    <p className="text-xs">Fora do padrão ({precisaSenha.join("; ")}): precisa da senha do administrador para criar o contrato.</p>
+                    <input type="password" autoComplete="off" className="mt-1 h-9 w-full max-w-xs rounded-md border border-border bg-background px-2 text-sm"
+                      placeholder="Senha do administrador" aria-label="Senha do administrador" value={senhaAdmin} onChange={e => setSenhaAdmin(e.target.value)} />
+                  </div>
+                )}
               </div>
             )}
             {!concessao && modalidade === "financiado" && condicao === "C" && (
@@ -402,7 +444,7 @@ export default function ContratoNovo() {
                         {sim.data.complemento_qtd ? (sim.data.complemento_modo === "sequencial"
                           ? <p>Financiamento começa em <b>{br(sim.data.saldo_venc1)}</b>, depois da última parcela da entrada</p>
                           : <p>Boleto único nos {sim.data.complemento_qtd} primeiros meses: <b>{brl((sim.data.complemento_parcela ?? 0) + sim.data.saldo_parcela)}</b></p>) : null}
-                        <p>Saldo: <b>{sim.data.saldo_qtd}× {brl(sim.data.saldo_parcela)}</b> a partir de {br(sim.data.saldo_venc1)}</p>
+                        <p>Saldo: <b>{sim.data.saldo_qtd}× {brl(sim.data.saldo_parcela)}</b> a partir de {br(sim.data.saldo_venc1)}{(sim.data as any).parcela_personalizada ? <span className="text-xs text-muted-foreground"> (tabela {brl((sim.data as any).parcela_tabela)})</span> : null}</p>
                         {sim.data.reforco_qtd ? <p>Reforço anual: <b>{sim.data.reforco_qtd}× {brl(sim.data.reforco_valor ?? 0)}</b>, o 1º em {br(sim.data.reforco_venc1 ?? "")}</p> : null}
                         <p>Total a pagar: <b>{brl(sim.data.total_pagar)}</b> · juros {brl(sim.data.total_juros)}</p>
                       </>}

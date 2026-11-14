@@ -6,7 +6,7 @@
  * acerta só a divisão juros/amortização para zerar o saldo. Assim o total a pagar do contrato é exatamente
  * o que o cliente viu no simulador e na proposta (entrada + parcela × prazo).
  */
-import { comissao, vencimento, type CondicoesPagamento, type Simulacao } from '../../shared/simulador';
+import { comissao, r2, vencimento, type CondicoesPagamento, type Simulacao } from '../../shared/simulador';
 import { cronograma, planoCondicao, ROTULO_CONDICAO, type CondicaoPagamento, type ModoPlanoC } from '../../shared/condicoesLancamento';
 import { gerarPlano } from '../financeiro/plano';
 
@@ -30,7 +30,13 @@ export interface EscolhaPlano {
   entradaForma?: FormaEntrada;
   /** Planos A/B/C: 1º vencimento das parcelas (AAAA-MM-DD) — ausente = um mês depois do ato. As demais seguem mês a mês */
   inicioParcelas?: string;
+  /** Planos A/B: sinal (entrada de R$ 10 mil) em N parcelas mensais sem juros (1 = à vista no ato); o saldo começa depois */
+  sinalParcelas?: number;
+  /** Só o administrador: valor fixo da parcela do saldo (desconto sobre a de tabela); a taxa efetiva é recalculada */
+  parcelaPersonalizada?: number;
 }
+
+export const MAX_SINAL_PARCELAS = 6;
 
 export type FormaEntrada = 'unica' | 'boleto_cartao';
 
@@ -104,6 +110,11 @@ export interface PlanoContrato {
   entrada_cartao?: number;
   /** 1º vencimento das parcelas escolhido no contrato (AAAA-MM-DD) */
   parcelas_inicio?: string;
+  /** Sinal da entrada em parcelas mensais (Planos A/B) */
+  sinal_parcelado?: boolean;
+  /** Parcela do saldo fixada pelo administrador: a de tabela fica registrada */
+  parcela_personalizada?: boolean;
+  parcela_tabela?: number;
   parcelas: ParcelaPlano[];
   /** Concessão por liberalidade da proprietária (sem venda): sem cobranças, fora do faturamento, com Termo Aditivo */
   concessao?: ConcessaoProprietaria;
@@ -184,10 +195,27 @@ function planoDeLancamento(sim: Simulacao, escolha: EscolhaPlano, c: CondicoesPa
     if (!/^\d{4}-\d{2}-\d{2}$/.test(ini)) throw new Error('1º vencimento das parcelas inválido (AAAA-MM-DD)');
     if (ini <= d1) throw new Error('O 1º vencimento das parcelas tem que ser depois do pagamento da entrada');
   }
-  const venc = (mes: number) => (mes >= 1 && ini ? vencimento(ini, mes - 1) : vencimento(d1, mes));
+  // Sinal parcelado (Planos A/B): N parcelas mensais da entrada; sem data escolhida, o saldo começa no mês seguinte à última
+  const nSinal = Math.max(1, Math.floor(Number(escolha.sinalParcelas) || 1));
+  if (nSinal > 1) {
+    if (cond === 'C') throw new Error('No Plano C a entrada já é parcelada pelo complemento: o sinal parcelado vale para os Planos A e B');
+    if (escolha.entradaForma === 'boleto_cartao') throw new Error('Escolha uma forma só: sinal parcelado ou entrada dividida boleto/cartão');
+    if (nSinal > MAX_SINAL_PARCELAS) throw new Error(`Sinal em até ${MAX_SINAL_PARCELAS} parcelas`);
+    if (ini && ini <= vencimento(d1, nSinal - 1)) throw new Error('O 1º vencimento das parcelas tem que ser depois da última parcela do sinal');
+  }
+  const venc = (mes: number) => (mes >= 1 && ini ? vencimento(ini, mes - 1) : vencimento(d1, mes >= 1 ? mes + nSinal - 1 : mes));
   let parcelas: ParcelaPlano[] = cronograma(pc).map(l => ({
     tipo: l.tipo, numero: l.numero, total: l.total, vencimento: venc(l.mes), valor: l.parcela, juros: l.juros, amortizacao: l.amortizacao, saldoDevedor: l.saldoDevedor,
   }));
+  if (nSinal > 1) {
+    const e = parcelas.find(p => p.tipo === 'entrada')!;
+    const base = Math.floor((e.valor / nSinal) * 100) / 100;
+    const sinal: ParcelaPlano[] = Array.from({ length: nSinal }, (_, k) => {
+      const v = k === nSinal - 1 ? r2(e.valor - base * (nSinal - 1)) : base;
+      return { ...e, numero: k + 1, total: nSinal, vencimento: vencimento(d1, k), valor: v, amortizacao: v };
+    });
+    parcelas = [...sinal, ...parcelas.filter(p => p.tipo !== 'entrada')];
+  }
   // Entrada dividida: o ato vira duas cobranças no mesmo dia — nº 1 boleto/PIX e nº 2 cartão de crédito
   const dividida = escolha.entradaForma === 'boleto_cartao';
   let entradaBoleto = pc.entradaAto, entradaCartao = 0;
@@ -203,17 +231,22 @@ function planoDeLancamento(sim: Simulacao, escolha: EscolhaPlano, c: CondicoesPa
   }
   const unificado = cond === 'C' && pc.complemento && pc.modoC === 'unificado';
   if (unificado) parcelas = unificarComplemento(parcelas);
+  // Parcela personalizada (administrador): recalcula juros/amortização à taxa efetiva que a parcela fixada implica
+  const pers = escolha.parcelaPersonalizada != null ? personalizarParcelas(parcelas, pc.saldoFinanciado, Number(escolha.parcelaPersonalizada), !!pc.reforco || !!pc.complemento) : null;
+  if (pers) parcelas = pers.parcelas;
   const com = comissao(sim.preco, comCorretor, true, c);
   const primeiroReforco = parcelas.find(p => p.tipo === 'reforco');
   const primeiroComp = parcelas.find(p => p.tipo === 'complemento');
   return {
     ...base, modalidade: 'financiado', avista_vencimento: '', condicao: cond,
-    entrada_valor: pc.entradaTotal, entrada_percentual: pc.entradaTotal / sim.preco, entrada_qtd: dividida ? 2 : 1,
-    entrada_parcela: dividida ? entradaBoleto : pc.entradaAto, entrada_desconto: 0, entrada_venc1: d1,
+    entrada_valor: pc.entradaTotal, entrada_percentual: pc.entradaTotal / sim.preco, entrada_qtd: dividida ? 2 : nSinal,
+    entrada_parcela: dividida ? entradaBoleto : nSinal > 1 ? parcelas.find(p => p.tipo === 'entrada')!.valor : pc.entradaAto, entrada_desconto: 0, entrada_venc1: d1,
+    ...(nSinal > 1 ? { sinal_parcelado: true } : {}),
     ...(dividida ? { entrada_forma: 'boleto_cartao' as const, entrada_boleto: entradaBoleto, entrada_cartao: entradaCartao } : {}),
     ...(ini ? { parcelas_inicio: ini } : {}),
-    saldo_valor: pc.saldoFinanciado, saldo_qtd: pc.prazo, saldo_parcela: pc.parcela, saldo_venc1: parcelas.find(p => p.tipo === 'saldo')?.vencimento ?? vencimento(d1, 1),
-    total_pagar: pc.totalPago, total_juros: pc.juros,
+    saldo_valor: pc.saldoFinanciado, saldo_qtd: pc.prazo, saldo_parcela: pers ? pers.parcela : pc.parcela, saldo_venc1: parcelas.find(p => p.tipo === 'saldo')?.vencimento ?? vencimento(d1, 1),
+    total_pagar: pers ? r2(pc.entradaTotal + pers.parcela * pc.prazo) : pc.totalPago, total_juros: pers ? r2(pc.entradaTotal + pers.parcela * pc.prazo - sim.preco) : pc.juros,
+    ...(pers ? { parcela_personalizada: true, parcela_tabela: pc.parcela, taxa_am: pers.taxaMensal, taxa_aa: r2((Math.pow(1 + pers.taxaMensal, 12) - 1) * 1e6) / 1e6 } : {}),
     comissao_total: com.total, comissao_corretor: com.corretor, comissao_romatec: com.romatec,
     ...(pc.reforco ? { reforco_qtd: pc.reforco.qtd, reforco_valor: pc.reforco.valor, reforco_venc1: primeiroReforco?.vencimento ?? '' } : {}),
     ...(pc.complemento ? {
@@ -256,4 +289,41 @@ export const tituloCondicao = (p: Pick<PlanoContrato, 'condicao'>) => ROTULO_CON
 export function modeloDaCondicao(modeloBase: string, condicao: CondicaoPagamento | undefined | null): string {
   if (!condicao || condicao === 'padrao') return modeloBase;
   return modeloBase.replace(/\.docx$/i, `-PLANO-${condicao}.docx`);
+}
+
+
+/**
+ * Parcela do saldo fixada pelo administrador (desconto sobre a de tabela): todas as parcelas do saldo passam a ter o valor
+ * escolhido; a taxa efetiva mensal é a que faz as parcelas pagarem exatamente o saldo financiado (Price). Se a parcela
+ * não cobre nem o saldo sem juros, a taxa fica 0 e a diferença é desconto no preço. Só para saldo sem reforço/complemento.
+ */
+export function personalizarParcelas(parcelas: ParcelaPlano[], saldo: number, valor: number, temExtras: boolean): { parcelas: ParcelaPlano[]; parcela: number; taxaMensal: number } {
+  if (temExtras) throw new Error('Parcela personalizada: disponível para o Plano B e para a entrada de 30% (sem reforço nem complemento)');
+  const v = r2(valor);
+  if (!(v > 0)) throw new Error('Informe o valor da parcela personalizada');
+  const saldoRows = parcelas.filter(p => p.tipo === 'saldo');
+  const n = saldoRows.length;
+  if (!n) throw new Error('Plano sem parcelas de saldo');
+  const tabela = saldoRows[0].valor;
+  if (v > tabela + 0.005) throw new Error(`A parcela personalizada é um desconto: até R$ ${tabela.toFixed(2).replace('.', ',')} (a de tabela)`);
+  // Taxa que zera o saldo com n parcelas de v (bisseção)
+  const vp = (i: number) => (i === 0 ? v * n : v * (1 - Math.pow(1 + i, -n)) / i);
+  let i = 0;
+  if (vp(0) > saldo) {
+    let lo = 0, hi = 0.1;
+    for (let k = 0; k < 200; k++) { const m = (lo + hi) / 2; if (vp(m) > saldo) lo = m; else hi = m; }
+    i = (lo + hi) / 2;
+  }
+  let s = i === 0 ? Math.min(saldo, v * n) : saldo;
+  let k = 0;
+  const out = parcelas.map(p => {
+    if (p.tipo !== 'saldo') return p;
+    k++;
+    const juros = r2(s * i);
+    let amort = r2(v - juros);
+    if (k === n) amort = r2(s);
+    s = r2(s - amort);
+    return { ...p, valor: k === n ? r2(amort + juros) : v, juros, amortizacao: amort, saldoDevedor: Math.max(0, s) };
+  });
+  return { parcelas: out, parcela: v, taxaMensal: i };
 }

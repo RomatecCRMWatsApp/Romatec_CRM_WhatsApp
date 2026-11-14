@@ -48,6 +48,8 @@ function planoInicial(p: any) {
     inicioComp: Number(p?.complemento_inicio_mes) || 15,
     entradaForma: (p?.entrada_forma === "boleto_cartao" ? "boleto_cartao" : "unica") as "unica" | "boleto_cartao",
     inicioParcelas: String(p?.parcelas_inicio || "").slice(0, 10),
+    sinalParcelas: p?.sinal_parcelado ? Number(p?.entrada_qtd || 1) : 1,
+    parcelaPers: p?.parcela_personalizada ? String(p?.saldo_parcela ?? "").replace(".", ",") : "",
   };
 }
 
@@ -84,7 +86,9 @@ export function EditarContrato({ aberto, onFechar, onSalvo, contrato, comprador,
       entradaParcelas: pl.modalidade === "avista" || lanc ? 1 : pl.entradaParcelas,
       ...(pl.modalidade === "financiado" ? { prazo: pl.prazo, condicao: pl.condicao } : { condicao: "padrao" as const }),
       ...(pl.modalidade === "financiado" && pl.condicao === "C" ? { modoC: pl.modoC, ...(pl.modoC === "congelado" ? { inicioComplemento: pl.inicioComp } : {}) } : {}),
-      ...(lanc ? { entradaForma: pl.entradaForma, ...(/^\d{4}-\d{2}-\d{2}$/.test(pl.inicioParcelas) ? { inicioParcelas: pl.inicioParcelas } : {}) } : {}),
+      ...(lanc ? { entradaForma: pl.sinalParcelas > 1 ? "unica" as const : pl.entradaForma, ...(/^\d{4}-\d{2}-\d{2}$/.test(pl.inicioParcelas) ? { inicioParcelas: pl.inicioParcelas } : {}),
+        ...(pl.condicao !== "C" && pl.sinalParcelas > 1 ? { sinalParcelas: pl.sinalParcelas } : {}),
+        ...(pl.condicao !== "C" && Number(pl.parcelaPers.replace(/\./g, "").replace(",", ".")) > 0 ? { parcelaPersonalizada: Number(pl.parcelaPers.replace(/\./g, "").replace(",", ".")) } : {}) } : {}),
     };
   };
   const prazos: number[] = (opcoes.data as any)?.prazos ?? (opcoes.data as any)?.condicoes?.prazos ?? [12, 24, 36, 48, 60, 72, 84, 96, 108, 120, 180];
@@ -177,6 +181,16 @@ export function EditarContrato({ aberto, onFechar, onSalvo, contrato, comprador,
                     <Campo rotulo="1º vencimento das parcelas (vazio = 1 mês depois do ato)">
                       <input type="date" className={classeCampo()} value={pl.inicioParcelas} min={pl.data1} onChange={e => setPl(x => ({ ...x, inicioParcelas: e.target.value }))} />
                     </Campo>
+                    {pl.condicao !== "C" && (<>
+                      <Campo rotulo="Sinal (entrada)">
+                        <select className={sel} value={pl.sinalParcelas} onChange={e => setPl(x => ({ ...x, sinalParcelas: Number(e.target.value) }))}>
+                          {[1, 2, 3, 4, 5, 6].map(n => <option key={n} value={n}>{n === 1 ? "Parcela única no ato" : `${n} parcelas mensais, sem juros`}</option>)}
+                        </select>
+                      </Campo>
+                      <Campo rotulo="Valor da parcela do saldo (vazio = cálculo)">
+                        <input className={classeCampo()} inputMode="decimal" value={pl.parcelaPers} placeholder="parcela do cálculo" onChange={e => setPl(x => ({ ...x, parcelaPers: e.target.value.replace(/[^\d.,]/g, "") }))} />
+                      </Campo>
+                    </>)}
                   </>)}
                   {pl.modalidade === "financiado" && pl.condicao === "C" && (
                     <Campo rotulo="Resto da entrada (Plano C)" className="sm:col-span-2">

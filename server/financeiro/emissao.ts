@@ -31,6 +31,15 @@ export function splitDaComissao(plano: PlanoContrato): Map<string, number> {
       const noBoleto = r2(Math.min(d.ato.total, plano.entrada_boleto ?? plano.entrada_parcela));
       m.set('entrada:1', noBoleto);
       if (r2(d.ato.total - noBoleto) > 0) m.set('entrada:2', r2(d.ato.total - noBoleto));
+    } else if (plano.sinal_parcelado && plano.entrada_qtd > 1) {
+      // Sinal parcelado: a retenção do ato vai nas parcelas do sinal, em ordem, sem passar do valor de cada uma
+      let resta = d.ato.total;
+      for (const p of plano.parcelas.filter(x => x.tipo === 'entrada')) {
+        if (!(resta > 0)) break;
+        const v = r2(Math.min(resta, p.valor));
+        m.set(`entrada:${p.numero}`, v);
+        resta = r2(resta - v);
+      }
     } else m.set('entrada:1', d.ato.total);
     const tipo = plano.complemento_modo === 'sequencial' && plano.complemento_qtd ? 'complemento' : 'saldo';
     d.parcelas.forEach((f, k) => m.set(`${tipo}:${k + 1}`, f.total));
