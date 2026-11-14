@@ -3,6 +3,15 @@
 Cada versão nova vai no TOPO. Depois rode `npm run release` (valida e atualiza o package.json);
 ao subir, o servidor grava a versão no banco e todos recebem o aviso "Novidades da versão".
 
+## 1.183.0 — 2026-11-14
+tipo: minor
+obrigatoria: nao
+titulo: Plano padrão em até 180 parcelas
+publico: equipe
+
+### Novo
+- Forma de pagamento padrão (30% de entrada + saldo pela Tabela Price): nova opção de 180 parcelas no contrato, no simulador, nas tabelas de financiamento e na edição do contrato.
+
 ## 1.182.0 — 2026-11-14
 tipo: minor
 obrigatoria: nao

@@ -136,7 +136,7 @@ export default function TabelasFinanciamento() {
         </label>
         <label className="space-y-1"><span className="block text-xs text-muted-foreground">Saldo</span>
           <select className={campo} value={prazo} onChange={e => setPrazo(Number(e.target.value))}>
-            {(t?.prazos ?? c?.prazos ?? [12, 24, 36, 60, 120]).map(n => <option key={n} value={n}>{n}×</option>)}
+            {(t?.prazos ?? c?.prazos ?? [12, 24, 36, 60, 120, 180]).map(n => <option key={n} value={n}>{n}×</option>)}
           </select>
         </label>
         <label className="space-y-1"><span className="block text-xs text-muted-foreground">1º pagamento</span>

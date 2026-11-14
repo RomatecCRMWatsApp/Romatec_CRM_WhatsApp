@@ -75,6 +75,11 @@ const COMANDOS: { nome: string; stmt: ReturnType<typeof sql> }[] = [
       SET l.precoTabela = IF(l.areaM2 <= 3025.11 + 1.00, 160000.00, ROUND(l.areaM2 * 160000.00 / 3025.11, 2))
       WHERE e.slug = 'bom-jardims' AND l.comercializavel = 1 AND l.precoTabela IS NULL AND l.areaM2 IS NOT NULL`,
   },
+  {
+    // Plano padrão (30% de entrada + saldo pela Price): opção de 180 parcelas (nov/2026)
+    nome: 'condicoesPagamento.prazos + 180',
+    stmt: sql`UPDATE condicoesPagamento SET prazos = JSON_ARRAY_APPEND(prazos, '$', 180) WHERE NOT JSON_CONTAINS(prazos, '180')`,
+  },
 ];
 
 export async function addSimulador(): Promise<void> {
