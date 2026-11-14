@@ -189,7 +189,10 @@ export async function enviarParaAssinatura(contratoId: number, metodos: Record<s
   // Toda caixa fica em cima de um traço de assinatura, sem sobreposição; quem não tem caixa salva ganha as automáticas
   const { caixasSemSobreposicao } = await import('./autoPosicao');
   const automaticas = await posicoesAutomaticas(pdf, sigs);
-  let caixas = await posicoesSalvas(contratoId);
+  // Posições salvas de um envio anterior (PDF com outro número de páginas) que caem fora deste PDF são descartadas
+  const { PDFDocument: Doc } = await import('pdf-lib');
+  const totalPaginas = (await Doc.load(pdf)).getPageCount();
+  let caixas = (await posicoesSalvas(contratoId)).filter(cx => cx.pagina === -1 || (cx.pagina >= 1 && cx.pagina <= totalPaginas));
   caixas = [...caixas, ...automaticas.filter(a => !caixas.some(cx => cx.papel === a.papel))];
   if (!caixas.length) caixas = await posicoesDe(contratoId, j.modeloVersao);
   caixas = caixasSemSobreposicao(caixas).filter(cx => sigs.some(sg => sg.papel === cx.papel));
@@ -412,7 +415,16 @@ async function registrarAvancada(s: any, c: any, o: { ip: string; ua?: string; g
     const j = await juridicoDe(c.empreendimentoId);
     // Todas as caixas da pessoa (assinatura do CPCV, do contrato de intermediação, de anexos…)
     const { caixasSemSobreposicao } = await import('./autoPosicao');
-    const cxs = caixasSemSobreposicao(await posicoesDe(s.contratoId, j.modeloVersao)).filter(x => x.papel === s.papel);
+    // Só caixas que existem no PDF atual (posição gravada de um envio anterior, com outro número de páginas, não serve);
+    // sem nenhuma válida, procura de novo o traço da pessoa no PDF — caixa inválida nunca impede a assinatura
+    const { PDFDocument } = await import('pdf-lib');
+    const nPaginas = (await PDFDocument.load(atual)).getPageCount();
+    const existe = (x: Caixa) => x.pagina === -1 || (x.pagina >= 1 && x.pagina <= nPaginas);
+    let cxs = caixasSemSobreposicao(await posicoesDe(s.contratoId, j.modeloVersao)).filter(x => x.papel === s.papel);
+    const invalidas = cxs.filter(x => !existe(x)).length;
+    cxs = cxs.filter(existe);
+    if (!cxs.length) cxs = (await posicoesAutomaticas(atual, [{ papel: s.papel, nome: s.nome }])).filter(x => x.papel === s.papel && existe(x));
+    if (invalidas) await evento(s.contratoId, s.id, 'posicao_ajustada', { detalhe: { invalidas, usadas: cxs.length } }).catch(() => undefined);
     if (cxs.length) {
       let pdf = atual;
       for (const cx of cxs) pdf = await carimbarAvancada(pdf, cx, { nome: s.nome, cpf: s.cpf, quando, ip: o.ip, codigo: c.codigoVerificacao });

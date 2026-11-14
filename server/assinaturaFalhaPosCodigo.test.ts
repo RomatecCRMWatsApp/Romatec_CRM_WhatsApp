@@ -37,3 +37,29 @@ describe('assinatura avançada: falha depois do código aceito', () => {
     expect(db.all(sql`SELECT status FROM assinaturaSignatarios WHERE id = 1`)[0].status).not.toBe('assinado');
   });
 });
+
+describe('assinatura avançada: posição gravada numa página que não existe mais (erro "Página da caixa de assinatura inexistente")', () => {
+  it('assina mesmo assim: descarta a caixa inválida, procura o traço de novo e registra o ajuste na trilha', async () => {
+    const { PDFDocument, StandardFonts } = await import('pdf-lib');
+    const doc = await PDFDocument.create();
+    const pg = doc.addPage([595, 842]);
+    const f = await doc.embedFont(StandardFonts.Helvetica);
+    pg.drawText('Contrato de teste — uma página só', { x: 50, y: 780, size: 12, font: f });
+    pg.drawText('_'.repeat(40), { x: 150, y: 300, size: 8, font: f });
+    pg.drawText('Ana Ficticia Compradora', { x: 160, y: 288, size: 9, font: f });
+    const pdf = Buffer.from(await doc.save());
+    const { salvarArquivo } = await import('./contratos/arquivos');
+    await salvarArquivo('contratos/2/v001-para_assinatura.pdf', pdf);
+    const T2 = 'U'.repeat(43);
+    db.run(sql`INSERT INTO contratos (id, numero, empreendimentoId, loteId, loteCodigo, corretorUserId, status, simulacaoJson, dadosJson, codigoVerificacao, pdfAtual) VALUES (2, 'BJ-2026-0098', 1, 0, 'A02', 1, 'em_assinatura', '{}', '{}', 'COD2', 'contratos/2/v001-para_assinatura.pdf')`);
+    db.run(sql`INSERT INTO assinaturaSignatarios (id, contratoId, papel, nome, cpf, whatsapp, metodo, ordem, status, token) VALUES (2, 2, 'comprador', 'Ana Ficticia Compradora', '39053344705', '5599988886666', 'avancada', 1, 'convidado', ${T2}), (3, 2, 'vendedora', 'Vera Ficticia', '11144477735', '5599988885555', 'avancada', 2, 'convidado', ${'V'.repeat(43)})`);
+    // Caixa gravada de um envio anterior, com o PDF de 42 páginas: página 41 não existe neste PDF
+    db.run(sql`INSERT INTO assinaturaPosicoes (contratoId, papel, pagina, x, y, w, h) VALUES (2, 'comprador', 41, 0.2, 0.3, 0.4, 0.05)`);
+    await A.solicitarOtp(T2);
+    const codigo = msgs.at(-1)!.match(/(\d{6})/)![1];
+    await A.confirmarAvancada(T2, codigo, { ip: '1.2.3.4', ua: 'teste', leuAteOFim: true, aceite: true });
+    expect(db.all(sql`SELECT status FROM assinaturaSignatarios WHERE id = 2`)[0].status).toBe('assinado');
+    expect(db.all(sql`SELECT * FROM assinaturaEventos WHERE contratoId = 2 AND evento = 'posicao_ajustada'`)).toHaveLength(1);
+    expect(db.all(sql`SELECT * FROM assinaturaEventos WHERE contratoId = 2 AND evento = 'erro'`)).toHaveLength(0);
+  });
+});

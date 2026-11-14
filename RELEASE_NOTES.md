@@ -3,6 +3,18 @@
 Cada versão nova vai no TOPO. Depois rode `npm run release` (valida e atualiza o package.json);
 ao subir, o servidor grava a versão no banco e todos recebem o aviso "Novidades da versão".
 
+## 1.175.3 — 2026-11-14
+tipo: patch
+obrigatoria: sim
+titulo: Assinatura: posição da assinatura que não existe mais no PDF
+publico: equipe
+
+### Correções
+- Assinatura avançada falhava com "Página da caixa de assinatura inexistente".
+  - Causa: o contrato tinha posições de assinatura gravadas de um envio anterior, com outro número de páginas.
+  - Agora essas posições são descartadas no envio. Na hora de assinar, o sistema procura de novo o traço da pessoa no PDF.
+  - Uma posição inválida não impede mais a assinatura. O ajuste fica registrado na trilha de auditoria.
+
 ## 1.175.2 — 2026-11-14
 tipo: patch
 obrigatoria: sim

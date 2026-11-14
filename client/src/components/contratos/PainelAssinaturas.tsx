@@ -12,7 +12,7 @@ import { perfilDe } from "@shared/equipe";
 
 const METODOS = [["avancada", "Eletrônica avançada (link + código no WhatsApp)"], ["govbr", "gov.br (assinador.iti.br)"], ["icp_a1", "Certificado ICP-Brasil A1"]] as const;
 const EVENTO: Record<string, string> = {
-  enviado_para_assinatura: "Enviado para assinatura", convite_enviado: "Convite enviado", telefone_corrigido: "Número de WhatsApp corrigido", link_aberto: "Link aberto", otp_enviado: "Código enviado",
+  enviado_para_assinatura: "Enviado para assinatura", convite_enviado: "Convite enviado", telefone_corrigido: "Número de WhatsApp corrigido", posicao_ajustada: "Posição da assinatura localizada de novo", link_aberto: "Link aberto", otp_enviado: "Código enviado",
   otp_errado: "Código incorreto", assinado: "Assinou", erro: "Erro", lembrete_d1: "Lembrete (1 dia)", lembrete_d3: "Lembrete (3 dias)", manifesto_gerado: "Manifesto gerado", conjuge_dispensado: "Assinatura do(a) cônjuge dispensada",
 };
 
