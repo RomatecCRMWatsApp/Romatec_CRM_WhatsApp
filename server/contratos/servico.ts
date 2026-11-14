@@ -10,7 +10,7 @@ import { assinaturaPosicoes,
   usuarioDocumentos, users,
 } from '../../drizzle/schema';
 import { condicoesDaLinha, simular, type CondicoesPagamento } from '../../shared/simulador';
-import { statusPublicoDe } from '../../shared/lotes';
+import { HORAS_RESERVA_LOTE, statusPublicoDe } from '../../shared/lotes';
 import { CATEGORIA_ORIGEM, exigeConjuge, pendenciasComprador, pendenciasDependentes, type Dependente, type PessoaForm } from '../../shared/contratos';
 import { memorialDoLote, type RuaMemorial } from '../lotes/memorial';
 import { montarContexto, type CredenciaisCorretor, type EntradaContexto, type PessoaContrato } from './contexto';
@@ -283,7 +283,7 @@ export async function criarContrato(n: NovoContrato, autorId: number): Promise<{
 
   // Reserva exclusiva: só pega o lote se ninguém pegou entre a leitura e agora
   const r = await d.update(lotes).set({
-    situacao: 'reservado', status: statusPublicoDe('reservado'), contratoReservaId: c.id, reservadoAte: new Date(Date.now() + 72 * 3600_000),
+    situacao: 'reservado', status: statusPublicoDe('reservado'), contratoReservaId: c.id, reservadoAte: new Date(Date.now() + HORAS_RESERVA_LOTE * 3600_000),
     leadId: n.leadId ?? null, corretorId: corretorId, clienteNome: n.comprador.nome.trim(), valorVenda: String(plano.total_pagar),
     valorEntrada: String(plano.entrada_valor || plano.total_pagar), numParcelas: plano.saldo_qtd || 1, dataSituacao: agora,
   } as any).where(and(eq(lotes.id, lote.id), or(eq(lotes.situacao, 'disponivel'), ...(k ? [eq(lotes.situacao, 'concedido')] : []))));
@@ -519,11 +519,18 @@ export async function registrarAssinado(contratoId: number, pdfAssinado: Buffer 
     await d.insert(contratoVersoes).values({ contratoId, versao, etapa: 'manuscrito', arquivo: chave, sha256: s.sha256, bytes: s.bytes, criadoEm: agora });
     await d.update(contratos).set({ pdfAtual: chave, hashAtual: s.sha256 }).where(eq(contratos.id, contratoId));
   }
+  if (c.loteId) {
+    // Reserva vencida (o motor liberou a chácara): só ativa se ela ainda estiver livre ou com este contrato
+    const [lt]: any[] = await d.select({ situacao: lotes.situacao, contratoReservaId: lotes.contratoReservaId }).from(lotes).where(eq(lotes.id, c.loteId)).limit(1);
+    if (lt && Number(lt.contratoReservaId) !== Number(c.id) && lt.situacao !== 'disponivel') {
+      throw new ContratoErro('LOTE_INDISPONIVEL', `A reserva da chácara ${c.loteCodigo} venceu e ela já está com outro cliente. Fale com o escritório antes de ativar.`, 409);
+    }
+  }
   await d.update(contratos).set({ status: 'ativo', atualizadoEm: agora }).where(eq(contratos.id, contratoId));
   // Concessão da proprietária: a chácara fica "concedida" (fora das vendas e do financeiro) e não há cobranças
   const situacao = plano.concessao ? 'concedido' : plano.modalidade === 'avista' ? 'vendido_avista' : 'vendido_parcelado';
   if (c.loteId) {
-    await d.update(lotes).set({ situacao, status: statusPublicoDe(situacao), dataSituacao: agora } as any).where(eq(lotes.id, c.loteId));
+    await d.update(lotes).set({ situacao, status: statusPublicoDe(situacao), dataSituacao: agora, contratoReservaId: c.id, reservadoAte: null } as any).where(eq(lotes.id, c.loteId));
     await d.insert(loteHistorico).values({ loteId: c.loteId, de: 'reservado', para: situacao, corretorId: c.corretorUserId, usuarioId,
       detalhe: `Contrato ${c.numero} ativo`, createdAt: agora } as any);
   }

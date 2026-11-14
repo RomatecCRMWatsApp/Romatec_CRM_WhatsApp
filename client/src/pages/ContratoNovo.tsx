@@ -226,7 +226,7 @@ export default function ContratoNovo() {
 
   return (
     <div>
-      <PageHeader icone={FileSignature} titulo="Novo contrato" subtitulo="Compromisso de compra e venda — a chácara fica reservada por 72 h ao criar"
+      <PageHeader icone={FileSignature} titulo="Novo contrato" subtitulo="Compromisso de compra e venda — a chácara fica reservada por 24 h ao criar"
         voltar={{ rotulo: "Contratos", onClick: () => navigate("/contratos") }} />
       <div className="mx-auto max-w-[1100px] space-y-4 px-4 pb-10 md:px-6">
         {rascunhoEm && (
@@ -353,7 +353,17 @@ export default function ContratoNovo() {
             )}
             {!concessao && modalidade === "financiado" && condicao !== "padrao" && (
               <div className="rounded-lg border border-primary/30 bg-primary/5 p-3">
-                <p className="mb-2 text-sm font-semibold">Entrada no ato e 1º vencimento das parcelas</p>
+                <p className="mb-2 text-sm font-semibold">Sinal, entrada no ato e 1º vencimento das parcelas</p>
+                {condicao !== "C" && (
+                  <label className="mb-3 flex flex-wrap items-center gap-2 rounded-md border border-primary/40 bg-background/60 p-2 text-sm font-medium">
+                    Sinal (entrada de R$ 10 mil) em
+                    <select className="h-9 rounded-md border border-border bg-background px-2 text-sm" value={sinalParcelas} aria-label="Parcelas do sinal"
+                      onChange={e => { const n = Number(e.target.value); setSinalParcelas(n); if (n > 1) setEntradaForma("unica"); }}>
+                      {[1, 2, 3, 4, 5, 6].map(n => <option key={n} value={n}>{n === 1 ? "parcela única no ato" : `${n} parcelas mensais`}</option>)}
+                    </select>
+                    {sinalParcelas > 1 && <span className="text-xs text-muted-foreground">sem juros; o financiamento começa depois da última</span>}
+                  </label>
+                )}
                 <div className="grid gap-2 sm:grid-cols-2" role="radiogroup" aria-label="Forma da entrada">
                   {([["unica", "Parcela única", "Boleto ou PIX do valor todo da entrada no ato."], ["boleto_cartao", "Metade no boleto/PIX + metade no cartão", "Duas cobranças no ato: uma por boleto/PIX e outra por link de pagamento no cartão de crédito."]] as const).map(([k, t, r]) => (
                     <button key={k} type="button" role="radio" aria-checked={entradaForma === k} onClick={() => { setEntradaForma(k); if (k === "boleto_cartao") setSinalParcelas(1); }}
@@ -371,16 +381,6 @@ export default function ContratoNovo() {
                   {inicioParcelas && <button type="button" className="text-xs text-muted-foreground underline" onClick={() => setInicioParcelas("")}>usar o padrão (1 mês depois do ato)</button>}
                 </label>
                 <p className="mt-2 text-xs text-muted-foreground">Vazio = um mês depois do pagamento da entrada (ou da última parcela do sinal). As demais parcelas seguem mês a mês, no mesmo valor. A escolha vai para o Quadro-Resumo, a Cláusula 3 e as cobranças.</p>
-                {condicao !== "C" && (
-                  <label className="mt-3 flex flex-wrap items-center gap-2 text-sm">
-                    Sinal (entrada) em
-                    <select className="h-9 rounded-md border border-border bg-background px-2 text-sm" value={sinalParcelas} aria-label="Parcelas do sinal"
-                      onChange={e => { const n = Number(e.target.value); setSinalParcelas(n); if (n > 1) setEntradaForma("unica"); }}>
-                      {[1, 2, 3, 4, 5, 6].map(n => <option key={n} value={n}>{n === 1 ? "parcela única no ato" : `${n} parcelas mensais`}</option>)}
-                    </select>
-                    {sinalParcelas > 1 && <span className="text-xs text-muted-foreground">sem juros; o financiamento começa depois da última</span>}
-                  </label>
-                )}
                 {perfil === "admin" && condicao !== "C" && (
                   <label className="mt-3 flex flex-wrap items-center gap-2 text-sm">
                     Valor da parcela do saldo

@@ -156,7 +156,7 @@ export const TEXTOS_PADRAO: Record<Intencao, { texto: string; midias: CodigoMidi
   escassez: {
     midias: ['STORY_ESCASSEZ'],
     texto: '{{nome}}, passando para te avisar: restam *somente {{disponiveis}} chácaras* e as melhores posições — perto do portal e da área de vivência — são as primeiras a sair. 🏃‍♂️\n\n' +
-      'Com a reserva, a chácara que você escolher fica *garantida por 72 horas* enquanto organizamos a documentação.\n\n' +
+      'Com a reserva, a chácara que você escolher fica *garantida por 24 horas* enquanto organizamos a documentação.\n\n' +
       'A condição de *{{entrada_parcelas}}× {{entrada_parcela}} + {{prazo_maior}}× {{parcela_maior}}* é {{validade_condicao}}. Quer que eu separe uma para você?',
   },
   followup: {
@@ -186,12 +186,12 @@ export const TEXTOS_PADRAO: Record<Intencao, { texto: string; midias: CodigoMidi
   fechar: {
     midias: [],
     texto: 'Vamos garantir a sua, {{nome}}? Para a reserva preciso de:\n📄 RG/CNH e CPF (e do cônjuge, se casado)\n🏠 Comprovante de endereço\n📱 Telefone e e-mail\n\n' +
-      'Assim que você me enviar, separo a chácara *{{lote}}* por 72 horas e já te mando o contrato para assinatura digital. ✍️',
+      'Assim que você me enviar, separo a chácara *{{lote}}* por 24 horas e já te mando o contrato para assinatura digital. ✍️',
   },
   chacara_especifica: {
     midias: [],
     texto: 'A chácara *{{lote}}* tem *{{area}} m²*:\n\n🏷️ Preço de tabela: *{{preco}}*\n💵 À vista: *{{avista}}*\n1️⃣ Entrada: *{{entrada_parcelas}}× {{entrada_parcela}}* sem juros (ou {{entrada_avista}} à vista)\n' +
-      '2️⃣ Saldo de {{saldo}}:\n{{tabela_prazos}}\n\nQuer que eu separe a {{lote}} para você? A reserva vale 72 horas.',
+      '2️⃣ Saldo de {{saldo}}:\n{{tabela_prazos}}\n\nQuer que eu separe a {{lote}} para você? A reserva vale 24 horas.',
   },
   optout: {
     midias: [],

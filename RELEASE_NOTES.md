@@ -3,6 +3,21 @@
 Cada versão nova vai no TOPO. Depois rode `npm run release` (valida e atualiza o package.json);
 ao subir, o servidor grava a versão no banco e todos recebem o aviso "Novidades da versão".
 
+## 1.170.0 — 2026-11-14
+tipo: minor
+obrigatoria: sim
+titulo: Reserva de chácara vale 24 h e é liberada sozinha
+publico: equipe
+
+### Novo
+- Motor das reservas: toda chácara reservada volta a ficar livre 24 h depois da reserva, seja pelo contrato novo, pelo controle de lotes ou pelo escritório. Ele confere a cada 5 minutos, registra no histórico da chácara e avisa o 1º da fila de espera.
+- Contrato já assinado não perde a chácara. Contrato ainda sem assinatura perde a reserva, e só ativa se a chácara estiver livre.
+
+### Melhorias
+- Reserva manual no controle de lotes agora também tem prazo de 24 h (antes ficava reservada sem prazo).
+- Prorrogar na fila do escritório soma 24 h. Mensagens do robô atualizadas para 24 horas.
+- Novo contrato: a escolha do sinal parcelado (Planos A e B) aparece em destaque no topo do quadro do plano.
+
 ## 1.169.0 — 2026-11-14
 tipo: minor
 obrigatoria: nao

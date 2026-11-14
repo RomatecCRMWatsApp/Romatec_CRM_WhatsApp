@@ -65,12 +65,12 @@ describe('fila de reservas do escritório', () => {
     expect(db.all(sql`SELECT detalhe FROM loteHistorico WHERE loteId = ${lote('A02').id}`)[0].detalhe).toMatch(/passada para Ana Ativa/);
   });
 
-  it('assumir, prorrogar 72 h e liberar (com contrato ligado, recusa)', async () => {
+  it('assumir, prorrogar 24 h e liberar (com contrato ligado, recusa)', async () => {
     await F.acaoReserva(lote('A03').id, { tipo: 'assumir' }, 1);
     expect(lote('A03').corretorId).toBeNull();
-    await expect(F.acaoReserva(lote('A03').id, { tipo: 'prorrogar' }, 1)).rejects.toThrow(/72 h/); // entrada não tem prazo
+    await expect(F.acaoReserva(lote('A03').id, { tipo: 'prorrogar' }, 1)).rejects.toThrow(/24 h/); // entrada não tem prazo
     await F.acaoReserva(lote('A01').id, { tipo: 'prorrogar' }, 1);
-    expect(new Date(lote('A01').reservadoAte).getTime() - Date.now()).toBeGreaterThan(71 * H);
+    expect(new Date(lote('A01').reservadoAte).getTime() - Date.now()).toBeGreaterThan(23 * H);
     expect(F.motivoFila(lote('A01'), true)).toBeNull();
     await expect(F.acaoReserva(lote('A05').id, { tipo: 'liberar', motivo: 'desistiu' }, 1)).rejects.toThrow(/contrato BJ-2026-0007/);
     await expect(F.acaoReserva(lote('A04').id, { tipo: 'liberar', motivo: '' }, 1)).rejects.toThrow(/motivo/);

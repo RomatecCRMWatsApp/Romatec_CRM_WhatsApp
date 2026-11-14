@@ -43,6 +43,9 @@ export const COR_SITUACAO: Record<SituacaoLote, string> = {
 };
 
 /** Precisa de cliente (lead ou nome) */
+/** Reserva vale 24 h a contar de quando foi feita; vencida, o motor libera a chácara sozinho (server/lotes/expirarReservas.ts) */
+export const HORAS_RESERVA_LOTE = 24;
+
 export const COM_CLIENTE: SituacaoLote[] = ['interesse', 'reservado', 'entrada', 'vendido_parcelado', 'vendido_avista', 'quitado', 'concedido'];
 /** Concedido pela proprietária a terceiro (sem venda): indisponível, mas fora das vendas e do financeiro */
 export const CONCEDIDOS: SituacaoLote[] = ['concedido'];

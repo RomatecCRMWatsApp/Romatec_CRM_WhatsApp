@@ -1681,6 +1681,9 @@ async function startServer() {
   process.once('SIGTERM', () => encerrar('SIGTERM'));
   process.once('SIGINT', () => encerrar('SIGINT'));
 
+  // Motor das reservas: chácara reservada volta a ficar livre 24 h depois da reserva, venha de onde vier
+  import('../lotes/expirarReservas').then(m => m.iniciarMotorReservas()).catch((e: any) => console.error('[Reservas] motor não iniciou:', e?.message));
+
   // Vigia do pool: registra no log quando requisições precisaram esperar conexão (sinal de saturação ou consulta lenta)
   setInterval(async () => {
     const { situacaoPool } = await import('../db');

@@ -165,8 +165,12 @@ export const empreendimentosAdminRouter = router({
         if (l) exigirLead(ctx.permissoes, ctx.user.id, l);
       }
       const agora = new Date();
+      // Reserva vale 24 h a contar de quando foi feita (o motor libera depois); mudar de reservado para reservado não renova
+      const { HORAS_RESERVA_LOTE } = await import("../../shared/lotes");
+      const reservadoAte = input.situacao !== "reservado" ? null
+        : lote.situacao === "reservado" && lote.reservadoAte ? lote.reservadoAte : new Date(agora.getTime() + HORAS_RESERVA_LOTE * 3600_000);
       await db.update(lotes).set({
-        ...dados, observacao: input.observacao ?? lote.observacao ?? null, dataSituacao: agora,
+        ...dados, reservadoAte, observacao: input.observacao ?? lote.observacao ?? null, dataSituacao: agora,
         status: statusPublicoDe(input.situacao), comercializavel: input.situacao !== "bloqueado",
       } as any).where(eq(lotes.id, lote.id));
       const partes = [

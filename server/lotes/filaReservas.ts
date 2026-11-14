@@ -1,26 +1,26 @@
 /**
  * Fila de reservas do escritório (administrador e secretária): chácaras em interesse, reservadas ou com entrada que
- * precisam de alguém do escritório — reserva de 72 h vencida (o site já mostra a chácara livre, mas o CRM segue
- * "reservado"), corretor sem acesso (pausado pela assinatura, cancelado ou desativado) ou sem corretor.
- * Ações: passar para outro corretor habilitado, assumir pelo escritório, prorrogar 72 h e liberar (sem contrato ligado —
+ * precisam de alguém do escritório — reserva de 24 h vencida (o motor libera sozinho; aparece aqui só até a próxima
+ * conferência), corretor sem acesso (pausado pela assinatura, cancelado ou desativado) ou sem corretor.
+ * Ações: passar para outro corretor habilitado, assumir pelo escritório, prorrogar 24 h e liberar (sem contrato ligado —
  * contrato se cancela pelo fluxo próprio, com senha). Tudo vai para o histórico da chácara.
  */
 import { and, eq, inArray } from 'drizzle-orm';
 import { getDb } from '../db';
 import { acessosCorretor, contratos, empreendimentos, leadQualifications, loteHistorico, lotes, saasAssinaturas, users } from '../../drizzle/schema';
-import { ROTULO_SITUACAO, statusPublicoDe, type SituacaoLote } from '../../shared/lotes';
+import { HORAS_RESERVA_LOTE, ROTULO_SITUACAO, statusPublicoDe, type SituacaoLote } from '../../shared/lotes';
 import { perfilDe } from '../../shared/equipe';
 
 export class FilaErro extends Error { constructor(msg: string, public status = 400) { super(msg); this.name = 'FilaErro'; } }
 
 /** Situações que seguram a chácara para um cliente */
 export const ATIVAS: SituacaoLote[] = ['interesse', 'reservado', 'entrada'];
-export const HORAS_RESERVA = 72;
+export const HORAS_RESERVA = HORAS_RESERVA_LOTE;
 const H = 3_600_000;
 
 export type MotivoFila = 'vencida' | 'corretor_sem_acesso' | 'sem_corretor';
 export const ROTULO_MOTIVO: Record<MotivoFila, string> = {
-  vencida: 'Reserva de 72 h vencida', corretor_sem_acesso: 'Corretor sem acesso', sem_corretor: 'Sem corretor',
+  vencida: 'Reserva de 24 h vencida', corretor_sem_acesso: 'Corretor sem acesso', sem_corretor: 'Sem corretor',
 };
 
 /** Por que a reserva precisa do escritório (null = segue com o corretor) */
@@ -120,7 +120,7 @@ export async function acaoReserva(loteId: number, acao: AcaoFila, autorId: numbe
     return { ok: true as const, mensagem: `Chácara ${l.codigo} com o escritório` };
   }
   if (acao.tipo === 'prorrogar') {
-    if (l.situacao !== 'reservado') throw new FilaErro('Só reserva (sem entrada) tem o prazo de 72 h');
+    if (l.situacao !== 'reservado') throw new FilaErro(`Só reserva (sem entrada) tem o prazo de ${HORAS_RESERVA} h`);
     const base = Math.max(agora, l.reservadoAte ? new Date(l.reservadoAte).getTime() : 0);
     const ate = new Date(base + HORAS_RESERVA * H);
     await d.update(lotes).set({ reservadoAte: ate, status: statusPublicoDe('reservado'), updatedAt: new Date(agora) } as any).where(eq(lotes.id, l.id));

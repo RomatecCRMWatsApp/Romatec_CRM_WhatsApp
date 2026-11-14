@@ -63,7 +63,7 @@ function Linha({ item, onFeito }: { item: Item; onFeito: () => void }) {
         <div className="flex flex-wrap justify-end gap-1">
           <Reatribuir item={item} onFeito={onFeito} />
           {item.corretorId && <Button size="sm" variant="ghost" className="h-7 text-xs" disabled={acao.isPending} onClick={() => { if (confirm(`Assumir a reserva da ${item.codigo} pelo escritório?`)) acao.mutate({ loteId: item.loteId, acao: { tipo: "assumir" } }); }}><Building className="mr-1 h-3.5 w-3.5" /> Assumir</Button>}
-          {item.situacao === "reservado" && <Button size="sm" variant="ghost" className="h-7 text-xs" disabled={acao.isPending} onClick={() => acao.mutate({ loteId: item.loteId, acao: { tipo: "prorrogar" } })}><Hourglass className="mr-1 h-3.5 w-3.5" /> +72 h</Button>}
+          {item.situacao === "reservado" && <Button size="sm" variant="ghost" className="h-7 text-xs" disabled={acao.isPending} onClick={() => acao.mutate({ loteId: item.loteId, acao: { tipo: "prorrogar" } })}><Hourglass className="mr-1 h-3.5 w-3.5" /> +24 h</Button>}
           <Button size="sm" variant="ghost" className="h-7 text-xs text-danger-300" disabled={acao.isPending} onClick={() => {
             if (item.contrato && !["cancelado", "distratado"].includes(item.contrato.status)) { toast.error(`Presa ao contrato ${item.contrato.numero}: cancele o contrato pela tela dele para liberar.`); return; }
             const motivo = window.prompt(`Liberar a chácara ${item.codigo}? Ela volta a ficar disponível. Motivo:`);
@@ -78,7 +78,7 @@ function Linha({ item, onFeito }: { item: Item; onFeito: () => void }) {
 
 /**
  * Fila de reservas do escritório (administrador e secretária): reservas vencidas, de corretor sem acesso ou sem
- * corretor — passar para outro corretor, assumir, prorrogar 72 h ou liberar. Aba "Todas" com o prazo de cada reserva.
+ * corretor — passar para outro corretor, assumir, prorrogar 24 h ou liberar. Aba "Todas" com o prazo de cada reserva.
  */
 /** Filas de espera por chácara: quem aguarda a reserva cair (server/lotes/filaEspera.ts) */
 function FilasEspera() {
@@ -151,8 +151,8 @@ export default function FilaReservas() {
         <div className="flex items-start gap-2 rounded-xl border border-border bg-card/50 p-3 text-xs text-muted-foreground">
           <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0 text-warn-300" />
           <p>
-            A reserva feita pelo contrato vale <b>72 horas</b>. Vencida, o site já mostra a chácara livre, mas ela segue reservada aqui até o escritório decidir:
-            <b> +72 h</b> prorroga, <b>Passar para corretor</b> leva a reserva e o lead do cliente para outro corretor habilitado, <b>Assumir</b> deixa com o escritório
+            Toda reserva vale <b>24 horas</b> a contar de quando foi feita (contrato ou controle de lotes). Vencida, o sistema libera a chácara sozinho — contrato já assinado não perde a chácara. Antes de vencer:
+            <b> +24 h</b> prorroga, <b>Passar para corretor</b> leva a reserva e o lead do cliente para outro corretor habilitado, <b>Assumir</b> deixa com o escritório
             e <b>Liberar</b> devolve a chácara para venda (com contrato ligado, cancele o contrato pela tela dele). Tudo fica no histórico da chácara.
           </p>
         </div>
