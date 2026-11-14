@@ -358,7 +358,9 @@ export const contratosRouter = router({
     const perfil = perfilDe(ctx.user as any);
     const db = (await getDb()) as any;
     const [emp] = await db.select({ nome: empreendimentos.nome, slug: empreendimentos.slug }).from(empreendimentos).where(eq(empreendimentos.id, c.empreendimentoId)).limit(1);
-    const { comprador, conjuge } = await pessoasDe(c.id);
+    const { comprador: comp0, conjuge, socios } = await pessoasDe(c.id);
+    // Empresa compradora: os sócios vêm junto (tela do contrato e edição)
+    const comprador = comp0 ? { ...comp0, socios: comp0.tipo === "PJ" ? socios : [] } : comp0;
     const versoes: any[] = await db.select().from(contratoVersoes).where(eq(contratoVersoes.contratoId, c.id));
     const plano = typeof c.simulacaoJson === "string" ? JSON.parse(c.simulacaoJson) : c.simulacaoJson;
     const gate = await gateDoContrato(c.id).catch((e: any) => ({ erro: String(e?.message ?? e) }) as any);

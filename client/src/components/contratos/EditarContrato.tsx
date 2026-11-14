@@ -5,6 +5,7 @@ import { trpc } from "@/lib/trpc";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import PessoaCampos, { PESSOA_VAZIA } from "@/components/cadastro/PessoaCampos";
+import EmpresaCampos, { maskCNPJ } from "@/components/cadastro/EmpresaCampos";
 import { Campo, classeCampo, sel } from "@/components/cadastro/campos";
 import { CondicoesEspecificas } from "@/components/contratos/CondicoesEspecificas";
 import { maskCEP, maskCPF, maskPhone } from "@shared/masks";
@@ -15,9 +16,15 @@ import { ROTULO_CONDICAO, ROTULO_MODO_C, type ModoPlanoC } from "@shared/condico
 function paraForm(x: any | null | undefined): PessoaForm {
   if (!x) return { ...PESSOA_VAZIA };
   const v = (k: string) => (x[k] == null ? "" : String(x[k]));
+  const pj = x.tipo === "PJ";
   return {
     ...PESSOA_VAZIA,
-    nome: v("nome"), cpf: x.cpfCnpj ? maskCPF(String(x.cpfCnpj)) : "", sexo: v("sexo"), nacionalidade: v("nacionalidade") || "brasileira",
+    tipo: pj ? "PJ" : "PF",
+    socios: pj ? (x.socios ?? []).map((s: any) => ({
+      nome: String(s.nome ?? ""), cpf: s.cpfCnpj ? maskCPF(String(s.cpfCnpj)) : "", email: String(s.email ?? ""),
+      telefone1: s.telefone1 ? maskPhone(String(s.telefone1).replace(/^55(?=\d{10,11}$)/, "")) : "",
+    })) : [],
+    nome: v("nome"), cpf: x.cpfCnpj ? (pj ? maskCNPJ : maskCPF)(String(x.cpfCnpj)) : "", sexo: v("sexo"), nacionalidade: v("nacionalidade") || "brasileira",
     estadoCivil: v("estadoCivil"), regimeBens: v("regimeBens"), pactoAntenupcial: v("pactoAntenupcial"), profissao: v("profissao"),
     nascimento: v("nascimento").slice(0, 10), rg: v("rg"), rgOrgao: v("rgOrgao"), rgUf: v("rgUf") || "MA", email: v("email"),
     telefone1: x.telefone1 ? maskPhone(String(x.telefone1).replace(/^55(?=\d{10,11}$)/, "")) : "", cep: x.cep ? maskCEP(String(x.cep)) : "",
@@ -78,7 +85,8 @@ export function EditarContrato({ aberto, onFechar, onSalvo, contrato, comprador,
     },
     onError: e => toast.error(e.message),
   });
-  const temConjuge = exigeConjuge(c.estadoCivil);
+  const empresa = c.tipo === "PJ";
+  const temConjuge = !empresa && exigeConjuge(c.estadoCivil);
   const planoParaEnviar = () => {
     const lanc = pl.modalidade === "financiado" && pl.condicao !== "padrao";
     return {
@@ -120,7 +128,21 @@ export function EditarContrato({ aberto, onFechar, onSalvo, contrato, comprador,
           <p className="text-sm text-danger-400">Contrato cancelado ou distratado não pode ser editado.</p>
         ) : (
           <div className="space-y-5">
-            <section className="space-y-2"><h3 className="text-sm font-semibold">Comprador(a)</h3><PessoaCampos p={c} set={(k, v) => setC(x => ({ ...x, [k]: v }))} erros={erros} prefixo="comprador" /></section>
+            <section className="space-y-2">
+              <div className="flex flex-wrap items-center justify-between gap-2">
+                <h3 className="text-sm font-semibold">Comprador(a)</h3>
+                <div className="flex gap-1" role="group" aria-label="Tipo de comprador">
+                  <Button type="button" size="sm" variant={empresa ? "outline" : "default"} aria-pressed={!empresa}
+                    onClick={() => setC(x => ({ ...x, tipo: "PF", socios: [] }))}>Pessoa física</Button>
+                  <Button type="button" size="sm" variant={empresa ? "default" : "outline"} aria-pressed={empresa}
+                    onClick={() => setC(x => ({ ...x, tipo: "PJ", estadoCivil: "", socios: x.socios?.length ? x.socios : [{ nome: "", cpf: "", telefone1: "", email: "" }] }))}>Empresa (CNPJ)</Button>
+                </div>
+              </div>
+              {empresa
+                ? <EmpresaCampos p={c} set={(k, v) => setC(x => ({ ...x, [k]: v }))} setSocios={socios => setC(x => ({ ...x, socios }))} erros={erros} />
+                : <PessoaCampos p={c} set={(k, v) => setC(x => ({ ...x, [k]: v }))} erros={erros} prefixo="comprador" />}
+              {empresa && <p className="text-xs text-muted-foreground">Trocar os sócios muda quem assina: se o contrato já estiver em assinatura, gere e envie de novo.</p>}
+            </section>
             {temConjuge && <section className="space-y-2"><h3 className="text-sm font-semibold">Cônjuge / companheiro(a)</h3><PessoaCampos p={j} set={(k, v) => setJ(x => ({ ...x, [k]: v }))} erros={erros} prefixo="conjuge" conjuge /></section>}
             <section className="grid gap-3 sm:grid-cols-2">
               <Campo rotulo="Corretor da venda">

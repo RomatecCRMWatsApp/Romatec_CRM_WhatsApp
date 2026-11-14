@@ -3,6 +3,16 @@
 Cada versão nova vai no TOPO. Depois rode `npm run release` (valida e atualiza o package.json);
 ao subir, o servidor grava a versão no banco e todos recebem o aviso "Novidades da versão".
 
+## 1.182.0 — 2026-11-14
+tipo: minor
+obrigatoria: nao
+titulo: Editar contrato: comprador empresa (CNPJ) com sócios
+publico: equipe
+
+### Novo
+- Editar contrato: escolha "Pessoa física" ou "Empresa (CNPJ)" no comprador, com razão social, CNPJ, sede e os sócios (nome, CPF e WhatsApp).
+- A tela do contrato mostra o CNPJ e os sócios que assinam pela empresa.
+
 ## 1.181.0 — 2026-11-14
 tipo: minor
 obrigatoria: nao

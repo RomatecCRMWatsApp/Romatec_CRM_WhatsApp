@@ -273,7 +273,12 @@ export default function ContratoDetalhe() {
                   <div key={t} className="rounded-xl border border-border bg-card p-4">
                     <h2 className="mb-2 text-sm font-semibold">{t}</h2>
                     <Linha rotulo="Nome" valor={x.nome} />
-                    <Linha rotulo="CPF" valor={String(x.cpfCnpj).replace(/(\d{3})(\d{3})(\d{3})(\d{2})/, "$1.$2.$3-$4")} />
+                    {x.tipo === "PJ"
+                      ? <Linha rotulo="CNPJ" valor={String(x.cpfCnpj).replace(/^(\d{2})(\d{3})(\d{3})(\d{4})(\d{2})$/, "$1.$2.$3/$4-$5")} />
+                      : <Linha rotulo="CPF" valor={String(x.cpfCnpj).replace(/(\d{3})(\d{3})(\d{3})(\d{2})/, "$1.$2.$3-$4")} />}
+                    {x.tipo === "PJ" && (x.socios ?? []).map((s: any, i: number) => (
+                      <Linha key={s.cpfCnpj ?? i} rotulo={`Sócio ${i + 1}`} valor={`${s.nome} — CPF ${String(s.cpfCnpj).replace(/(\d{3})(\d{3})(\d{3})(\d{2})/, "$1.$2.$3-$4")}`} />
+                    ))}
                     {x.telefone1 && <Linha rotulo="Telefone" valor={maskPhone(String(x.telefone1))} />}
                     {x.email && <Linha rotulo="E-mail" valor={x.email} />}
                     {x.cidade && <Linha rotulo="Cidade" valor={`${x.cidade}/${x.uf ?? ""}`} />}
