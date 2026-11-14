@@ -90,6 +90,9 @@ export async function editarContratoAdmin(contratoId: number, ator: Ator, senha:
   if (e.comprador) {
     const id = await salvarPessoa(e.comprador, leadId);
     await trocarPessoa(d, contratoId, 'comprador', id);
+    // Empresa compradora: os sócios que assinam por ela (PF: remove eventuais sócios antigos)
+    const { salvarSocios } = await import('./servico');
+    await salvarSocios(contratoId, e.comprador.tipo === 'PJ' ? e.comprador.socios ?? [] : []);
     mudou.push('comprador');
   }
   if (e.conjuge !== undefined) {

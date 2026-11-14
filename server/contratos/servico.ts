@@ -159,7 +159,9 @@ export async function pessoasDe(contratoId: number) {
   const rs: any[] = await d.select({ papel: contratoPessoas.papel, p: pessoas }).from(contratoPessoas)
     .innerJoin(pessoas, eq(pessoas.id, contratoPessoas.pessoaId)).where(eq(contratoPessoas.contratoId, contratoId));
   const de = (papel: string) => rs.find(r => r.papel === papel)?.p ?? null;
-  return { comprador: de('comprador'), conjuge: de('conjuge') };
+  // Empresa compradora: os sócios (todos assinam pela empresa)
+  const socios = rs.filter(r => r.papel === 'socio').map(r => r.p);
+  return { comprador: de('comprador'), conjuge: de('conjuge'), socios };
 }
 
 // ─── Criação ─────────────────────────────────────────────────────────────────
@@ -185,7 +187,7 @@ export interface NovoContrato {
 }
 
 export const pessoaParaLinha = (p: PessoaForm) => ({
-  tipo: 'PF', nome: p.nome.trim(), cpfCnpj: soDigitos(p.cpf), sexo: p.sexo || null, nacionalidade: p.nacionalidade || 'brasileira',
+  tipo: p.tipo === 'PJ' ? 'PJ' : 'PF', nome: p.nome.trim(), cpfCnpj: soDigitos(p.cpf), sexo: p.sexo || null, nacionalidade: p.nacionalidade || 'brasileira',
   estadoCivil: p.estadoCivil || null, regimeBens: p.regimeBens || null, pactoAntenupcial: p.pactoAntenupcial || null, profissao: p.profissao || null,
   nascimento: p.nascimento || null, rg: p.rg || null, rgOrgao: p.rgOrgao || null, rgUf: p.rgUf || null, email: p.email || null,
   telefone1: soDigitos(p.telefone1) || null, cep: soDigitos(p.cep) || null, logradouro: p.logradouro || null, numero: p.numero || null,
@@ -221,6 +223,16 @@ export async function pessoaPorCpf(cpf: string, o: { corretorUserId?: number | n
 }
 
 /** Cadastro único por CPF: atualiza quem já existe, cria quem não existe */
+/** Sócios da empresa compradora: cada um vira pessoa (PF) ligada ao contrato como "socio" */
+export async function salvarSocios(contratoId: number, socios: { nome: string; cpf: string; telefone1: string; email?: string | null }[]): Promise<void> {
+  const d = await db();
+  await d.delete(contratoPessoas).where(and(eq(contratoPessoas.contratoId, contratoId), eq(contratoPessoas.papel, 'socio')));
+  for (const s of socios) {
+    const id = await salvarPessoa({ tipo: 'PF', nome: s.nome, cpf: s.cpf, telefone1: s.telefone1, email: s.email ?? null }, null);
+    await d.insert(contratoPessoas).values({ contratoId, pessoaId: id, papel: 'socio' } as any);
+  }
+}
+
 export async function salvarPessoa(p: PessoaForm, leadId: number | null): Promise<number> {
   const d = await db();
   const linha = pessoaParaLinha(p);
@@ -306,7 +318,8 @@ export async function criarContrato(n: NovoContrato, autorId: number): Promise<{
   if (n.leadId) await import('../leads/distribuicao').then(m => m.finalizarPorEvento(Number(n.leadId), 'vendido', `Contrato ${numero} · chácara ${lote.codigo}`, autorId)).catch(() => 0);
   const compradorId = await salvarPessoa(n.comprador, n.leadId ?? null);
   await d.insert(contratoPessoas).values({ contratoId: c.id, pessoaId: compradorId, papel: 'comprador' });
-  if (exigeConjuge(n.comprador.estadoCivil) && n.conjuge) {
+  if (n.comprador.tipo === 'PJ') await salvarSocios(c.id, n.comprador.socios ?? []);
+  if (n.comprador.tipo !== 'PJ' && exigeConjuge(n.comprador.estadoCivil) && n.conjuge) {
     const conjugeId = await salvarPessoa({ ...n.conjuge, estadoCivil: n.comprador.estadoCivil, regimeBens: n.comprador.regimeBens }, null);
     await d.insert(contratoPessoas).values({ contratoId: c.id, pessoaId: conjugeId, papel: 'conjuge' });
   }
@@ -378,8 +391,9 @@ export async function entradaDoContrato(contratoId: number): Promise<{ entrada: 
   const todos: any[] = await d.select().from(lotes).where(eq(lotes.empreendimentoId, c.empreendimentoId));
   const lote = todos.find(l => l.codigo === c.loteCodigo);
   if (!lote) throw new ContratoErro('LOTE', 'Lote do contrato não encontrado', 404);
-  const { comprador, conjuge } = await pessoasDe(contratoId);
-  if (!comprador) throw new ContratoErro('SEM_COMPRADOR', 'Contrato sem comprador', 409);
+  const { comprador: comp0, conjuge, socios } = await pessoasDe(contratoId);
+  if (!comp0) throw new ContratoErro('SEM_COMPRADOR', 'Contrato sem comprador', 409);
+  const comprador = { ...comp0, socios };
   const plano = json<PlanoContrato>(c.simulacaoJson)!;
   const resp = await responsavelTecnicoId(j.defaults);
   const corretor = resp ? await credenciaisDoUsuario(resp) : { nome: '', cpf: '', creci: '', creciUf: 'MA', creciValidade: '', certidaoCodigo: '', certidaoEmissao: '', certidaoValidade: '' };

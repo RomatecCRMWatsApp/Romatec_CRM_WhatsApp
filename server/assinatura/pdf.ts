@@ -18,6 +18,7 @@ export const ROTULO_PAPEL: Record<string, string> = {
   vendedora: 'Promitente vendedora', titular: 'Titular anuente', intermediadora: 'Gestora de vendas e intermediadora (Romatec)',
   corretor_parceiro: 'Corretor(a) parceiro(a)', testemunha1: 'Testemunha', testemunha2: 'Testemunha',
 };
+for (let i = 1; i <= 10; i++) ROTULO_PAPEL[`socio${i}`] = 'Sócio(a) — assina pela empresa compradora';
 export const ROTULO_METODO: Record<string, string> = {
   avancada: 'Assinatura eletrônica avançada (link + código)', govbr: 'Assinatura gov.br', icp_a1: 'Certificado digital ICP-Brasil (A1)', manuscrita: 'A punho',
 };

@@ -30,6 +30,9 @@ export const pessoaZ = z.object({
   telefone1: z.string().max(20).nullable().optional(), cep: z.string().max(10).nullable().optional(), logradouro: z.string().max(160).nullable().optional(),
   numero: z.string().max(10).nullable().optional(), complemento: z.string().max(80).nullable().optional(), bairro: z.string().max(80).nullable().optional(),
   cidade: z.string().max(80).nullable().optional(), uf: z.string().max(2).nullable().optional(),
+  /** Empresa compradora (PJ): razão social em nome, CNPJ em cpf e os sócios que assinam por ela */
+  tipo: z.enum(["PF", "PJ"]).optional(),
+  socios: z.array(z.object({ nome: z.string().trim().max(160), cpf: z.string().max(20), telefone1: z.string().max(20), email: z.string().max(160).nullable().optional() })).max(10).optional(),
 });
 const dependenteZ = z.object({
   id: z.number().int().nullable().optional(), nome: z.string().trim().max(160), parentesco: z.string().max(10), cpf: z.string().max(20),

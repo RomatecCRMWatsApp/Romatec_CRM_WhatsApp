@@ -8,6 +8,7 @@ import PageHeader from "@/components/PageHeader";
 import { Button } from "@/components/ui/button";
 import { Campo, InputMascara, classeCampo, sel } from "@/components/cadastro/campos";
 import PessoaCampos, { PESSOA_VAZIA } from "@/components/cadastro/PessoaCampos";
+import EmpresaCampos from "@/components/cadastro/EmpresaCampos";
 import { buscarCep } from "@/components/equipe/CadastroUsuario";
 import { maskCEP, maskCPF, maskPhone, onlyDigits } from "@shared/masks";
 import { UFS } from "@shared/cadastro";
@@ -137,7 +138,8 @@ export default function ContratoNovo() {
   });
 
   const loteSel = op?.lotes.find(l => l.codigo === lote);
-  const casado = exigeConjuge(comprador.estadoCivil);
+  const empresa = comprador.tipo === "PJ";
+  const casado = !empresa && exigeConjuge(comprador.estadoCivil);
   const setC = (k: keyof PessoaForm, v: string) => setComprador(p => ({ ...p, [k]: v }));
   const setJ = (k: keyof PessoaForm, v: string) => setConjuge(p => ({ ...p, [k]: v }));
   const passo0ok = !!lote && !!sim.data;
@@ -194,7 +196,7 @@ export default function ContratoNovo() {
 
   // ─── Cadastro já existente pelo CPF: oferece preencher (comprador e cônjuge) ───
   const cpfDig = (v: string | null | undefined) => String(v ?? "").replace(/\D/g, "");
-  const buscaComprador = trpc.contratos.pessoaPorCpf.useQuery({ cpf: cpfDig(comprador.cpf) }, { enabled: cpfValido(comprador.cpf), staleTime: 60_000, retry: false });
+  const buscaComprador = trpc.contratos.pessoaPorCpf.useQuery({ cpf: cpfDig(comprador.cpf) }, { enabled: !empresa && cpfValido(comprador.cpf), staleTime: 60_000, retry: false });
   const buscaConjuge = trpc.contratos.pessoaPorCpf.useQuery({ cpf: cpfDig(conjuge.cpf) }, { enabled: casado && cpfValido(conjuge.cpf), staleTime: 60_000, retry: false });
   const [usados, setUsados] = useState<string[]>([]);
   const mascaraForm = (x: PessoaForm): PessoaForm => ({
@@ -481,14 +483,24 @@ export default function ContratoNovo() {
         {passo === 1 && (
           <section className="space-y-4">
             <div className="rounded-xl border border-border bg-card p-4">
-              <h2 className="mb-3 text-sm font-semibold">Promissário(a) comprador(a)</h2>
+              <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
+                <h2 className="text-sm font-semibold">Promissário(a) comprador(a)</h2>
+                <div className="flex gap-1" role="group" aria-label="Tipo de comprador">
+                  <Button type="button" size="sm" variant={empresa ? "outline" : "default"} aria-pressed={!empresa}
+                    onClick={() => setComprador(p => ({ ...p, tipo: "PF", socios: [] }))}>Pessoa física</Button>
+                  <Button type="button" size="sm" variant={empresa ? "default" : "outline"} aria-pressed={empresa}
+                    onClick={() => setComprador(p => ({ ...p, tipo: "PJ", estadoCivil: "", socios: p.socios?.length ? p.socios : [{ nome: "", cpf: "", telefone1: "", email: "" }] }))}>Empresa (CNPJ)</Button>
+                </div>
+              </div>
               {ofertaComprador && (
                 <div className="mb-3 flex flex-wrap items-center gap-2 rounded-lg border border-primary/40 bg-primary/10 p-2 text-sm">
                   <span>Cadastro encontrado para este CPF: <b>{ofertaComprador.pessoa.nome}</b>{ofertaComprador.conjuge ? ` (com cônjuge ${ofertaComprador.conjuge.nome})` : ""}.</span>
                   <Button size="sm" onClick={preencherComprador}>Preencher automaticamente</Button>
                 </div>
               )}
-              <PessoaCampos p={comprador} set={setC} erros={erros} prefixo="comprador" />
+              {empresa
+                ? <EmpresaCampos p={comprador} set={setC} setSocios={socios => setComprador(p => ({ ...p, socios }))} erros={erros} />
+                : <PessoaCampos p={comprador} set={setC} erros={erros} prefixo="comprador" />}
             </div>
             {casado && (
               <div className="rounded-xl border border-border bg-card p-4">
@@ -516,7 +528,8 @@ export default function ContratoNovo() {
           <section className="space-y-4 rounded-xl border border-border bg-card p-4 text-sm">
             <div className="grid gap-x-6 gap-y-1 sm:grid-cols-2">
               <p>Chácara: <b>{lote}</b> · {op?.empreendimento.nome}</p>
-              <p>Comprador: <b>{comprador.nome}</b> — CPF {comprador.cpf}</p>
+              <p>Comprador: <b>{comprador.nome}</b> — {empresa ? "CNPJ" : "CPF"} {comprador.cpf}</p>
+              {empresa && <p>Assinam pela empresa: <b>{(comprador.socios ?? []).map(x => x.nome).join(", ")}</b></p>}
               {casado && <p>Cônjuge: <b>{conjuge.nome}</b> — CPF {conjuge.cpf}</p>}
               <p>Documentos anexados: <b>{anexosValidos.length}</b>{anexosValidos.length ? ` — ${anexosValidos.map(a => a.titulo.split(" — ")[0]).join(", ")}` : " (envie depois pela tela do contrato)"}</p>
               <p>Carteirinhas: <b>{1 + (casado ? 1 : 0) + (dependentes?.length ?? 0)}</b>{dependentes?.length ? ` — dependentes: ${dependentes.map(d => `${d.nome.split(" ")[0]} (${rotuloParentesco(d.parentesco)})`).join(", ")}` : " (sem dependentes)"}</p>

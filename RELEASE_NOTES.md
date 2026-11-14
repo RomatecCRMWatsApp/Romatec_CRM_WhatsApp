@@ -3,6 +3,21 @@
 Cada versão nova vai no TOPO. Depois rode `npm run release` (valida e atualiza o package.json);
 ao subir, o servidor grava a versão no banco e todos recebem o aviso "Novidades da versão".
 
+## 1.181.0 — 2026-11-14
+tipo: minor
+obrigatoria: nao
+titulo: Contrato com comprador empresa (CNPJ) e sócios
+publico: equipe
+
+### Novo
+- Contrato novo: escolha "Pessoa física" ou "Empresa (CNPJ)" no comprador. Na empresa entram razão social, CNPJ, sede, telefone, e-mail e todos os sócios (nome, CPF e WhatsApp).
+- O contrato qualifica a empresa compradora (CNPJ, sede e sócios que a representam) e traz uma linha de assinatura para cada sócio.
+- Na assinatura eletrônica, cada sócio recebe o próprio link e código no WhatsApp e assina pela empresa; o boleto da entrada vai com o convite do primeiro sócio.
+
+### Melhorias
+- Correção de número de WhatsApp vale também para os sócios; a via assinada segue a mesma regra do comprador.
+- Contratos de concessão e documentos de comissão usam a qualificação da empresa e as assinaturas dos sócios.
+
 ## 1.180.0 — 2026-11-14
 tipo: minor
 obrigatoria: nao

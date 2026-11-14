@@ -25,7 +25,7 @@ export type Metodo = typeof METODOS[number];
 export const VALIDADE_LINK_DIAS = 15;
 export const OTP_MINUTOS = 10;
 export const OTP_TENTATIVAS = 5;
-const ORDEM_PAPEL = ['comprador', 'conjuge', 'comprador2', 'vendedora', 'titular', 'intermediadora', 'corretor_parceiro'];
+const ORDEM_PAPEL = ['comprador', ...Array.from({ length: 10 }, (_, i) => `socio${i + 1}`), 'conjuge', 'comprador2', 'vendedora', 'titular', 'intermediadora', 'corretor_parceiro'];
 
 const db = async () => {
   const d = (await getDb()) as any;
@@ -55,12 +55,14 @@ export async function signatariosPrevistos(contratoId: number): Promise<Signatar
   const d = await db();
   const c = await contratoPorId(contratoId);
   const j = await juridicoDe(c.empreendimentoId);
-  const { comprador, conjuge } = await pessoasDe(contratoId);
+  const { comprador, conjuge, socios } = await pessoasDe(contratoId);
   const v = j.vendedora as Record<string, string>;
   const lista: SignatarioPrevisto[] = [];
   const add = (papel: string, nome: unknown, cpf: unknown, email: unknown, tel: unknown) =>
     lista.push({ papel, nome: String(nome ?? '').trim(), cpf: soDigitos(cpf), email: (email as string) || null, whatsapp: telefoneWhatsApp(tel as string), metodo: 'avancada' });
-  if (comprador) add('comprador', comprador.nome, comprador.cpfCnpj, comprador.email, comprador.telefone1);
+  // Empresa compradora: assinam os sócios (cada um com seu CPF e WhatsApp), em nome da empresa
+  if (comprador && comprador.tipo === 'PJ' && socios.length) socios.forEach((x: any, i: number) => add(`socio${i + 1}`, x.nome, x.cpfCnpj, x.email, x.telefone1));
+  else if (comprador) add('comprador', comprador.nome, comprador.cpfCnpj, comprador.email, comprador.telefone1);
   if (conjuge) add('conjuge', conjuge.nome, conjuge.cpfCnpj, conjuge.email, conjuge.telefone1);
   if (j.vendedoraTipo === 'PJ') {
     add('vendedora', v.vend_rep_nome, v.vend_rep_cpf, v.vend_email, v.vend_telefone);
@@ -254,7 +256,7 @@ export async function enviarConvites(contratoId: number, soSignatarioId?: number
   for (const s of sigs.filter(x => x.status !== 'assinado' && (!soSignatarioId || x.id === soSignatarioId))) {
     try {
       if (!s.whatsapp) throw new Error('sem WhatsApp cadastrado');
-      await enviador(s.whatsapp, MENSAGEM_CONVITE(s, c.numero, linkDoSignatario(s.token), s.papel === 'comprador' ? boleto : null));
+      await enviador(s.whatsapp, MENSAGEM_CONVITE(s, c.numero, linkDoSignatario(s.token), (s.papel === 'comprador' || s.papel === 'socio1') ? boleto : null));
       await d.update(assinaturaSignatarios).set({ status: 'convidado' }).where(eq(assinaturaSignatarios.id, s.id));
       await evento(contratoId, s.id, 'convite_enviado', { detalhe: { canal: 'whatsapp' } });
       res.push({ papel: s.papel, enviado: true });
@@ -286,8 +288,11 @@ export async function corrigirTelefoneSignatario(contratoId: number, signatarioI
   await d.delete(assinaturaOtp).where(eq(assinaturaOtp.signatarioId, s.id));
   // Cadastro da pessoa do contrato (comprador/cônjuge): o número certo vale no cadastro e na lista de clientes
   let cadastro = false;
-  if (s.papel === 'comprador' || s.papel === 'conjuge') {
-    const vs: any[] = await d.select({ pessoaId: contratoPessoas.pessoaId }).from(contratoPessoas).where(and(eq(contratoPessoas.contratoId, contratoId), eq(contratoPessoas.papel, s.papel)));
+  const ehSocio = /^socio\d+$/.test(s.papel);
+  if (s.papel === 'comprador' || s.papel === 'conjuge' || ehSocio) {
+    let vs: any[] = await d.select({ pessoaId: contratoPessoas.pessoaId, cpf: pessoas.cpfCnpj }).from(contratoPessoas).innerJoin(pessoas, eq(pessoas.id, contratoPessoas.pessoaId))
+      .where(and(eq(contratoPessoas.contratoId, contratoId), eq(contratoPessoas.papel, ehSocio ? 'socio' : s.papel)));
+    if (ehSocio) vs = vs.filter(v => soDigitos(v.cpf) === soDigitos(s.cpf));
     for (const v of vs) {
       const fmt = novo.replace(/^55/, '');
       const legivel = fmt.length === 11 ? `(${fmt.slice(0, 2)}) ${fmt.slice(2, 3)} ${fmt.slice(3, 7)}-${fmt.slice(7)}` : `(${fmt.slice(0, 2)}) ${fmt.slice(2, 6)}-${fmt.slice(6)}`;

@@ -14,7 +14,8 @@ import { ESCRITORIO } from '../../shared/escritorio';
 import { numeroCreciPF } from '../../shared/cartaoVendas';
 import { numeroDoLote } from '../../shared/lotes';
 
-export type Ctx = Record<string, string | boolean | number>;
+/** Valores do modelo; listas (ex.: comp_socios) viram blocos repetidos no Word ({{#comp_socios}}…{{/comp_socios}}) */
+export type Ctx = Record<string, string | boolean | number | Record<string, string>[]>;
 
 export interface CredenciaisCorretor {
   nome: string;
@@ -31,6 +32,9 @@ export interface CredenciaisCorretor {
 
 /** Linha da tabela pessoas (ou do formulário) */
 export interface PessoaContrato {
+  /** PF | PJ (empresa compradora, com os sócios) */
+  tipo?: string | null;
+  socios?: { nome: string; cpfCnpj: string; telefone1?: string | null }[];
   nome: string;
   cpfCnpj: string;
   nacionalidade?: string | null;
@@ -114,6 +118,15 @@ function qualificacaoCurta(p: PessoaContrato): string {
     .filter(Boolean).join(', ');
 }
 
+/** "pessoa jurídica de direito privado, inscrita no CNPJ…, com sede na…, neste ato representada por seus sócios…" */
+export function qualificacaoEmpresa(p: PessoaContrato): string {
+  const ss = (p.socios ?? []).map(s => `${s.nome.toUpperCase()}, inscrito(a) no CPF sob o n.º ${docMascara(s.cpfCnpj)}`);
+  const lista = ss.length > 1 ? `${ss.slice(0, -1).join('; ')} e ${ss.at(-1)}` : ss[0] ?? '';
+  return [`pessoa jurídica de direito privado, inscrita no CNPJ sob o n.º ${docMascara(p.cpfCnpj)}`,
+    enderecoCompleto(p) ? `com sede na ${enderecoCompleto(p)}` : '', p.email ? `e-mail ${p.email}` : '', p.telefone1 ? `telefone/WhatsApp ${telefoneMascara(p.telefone1)}` : '',
+    lista ? `neste ato representada por ${ss.length > 1 ? 'seus sócios' : 'seu(sua) sócio(a)'} ${lista}, que assinam em conjunto` : ''].filter(Boolean).join(', ');
+}
+
 /** Tags das pessoas do contrato (comp_*, conj_*, comp2_*) */
 export function tagsPessoas(comprador: PessoaContrato, conjuge?: PessoaContrato | null, comprador2?: (PessoaContrato & { fracao: number }) | null): Ctx {
   const ctx: Ctx = {
@@ -121,8 +134,12 @@ export function tagsPessoas(comprador: PessoaContrato, conjuge?: PessoaContrato 
     comp_estado_civil: estadoCivil(comprador), comp_profissao: comprador.profissao ?? '', comp_nascimento: dataBR(comprador.nascimento ?? ''),
     comp_rg: comprador.rg ?? '', comp_rg_orgao: rgOrgao(comprador), comp_endereco: enderecoCompleto(comprador),
     comp_email: comprador.email ?? '', comp_telefone: telefoneMascara(comprador.telefone1),
-    comp_casado: temConjugeNoContrato(comprador.estadoCivil),
+    comp_casado: comprador.tipo !== 'PJ' && temConjugeNoContrato(comprador.estadoCivil),
     comp2_existe: Boolean(comprador2), comp2_resumo: '',
+    // Empresa compradora: qualificação de PJ e os sócios (cada um assina pela empresa)
+    comp_pf: comprador.tipo !== 'PJ', comp_pj: comprador.tipo === 'PJ', comp_doc_rotulo: comprador.tipo === 'PJ' ? 'CNPJ' : 'CPF',
+    comp_socios: (comprador.socios ?? []).map(s => ({ nome: s.nome.toUpperCase(), cpf: docMascara(s.cpfCnpj) })),
+    comp_qualificacao_pj: comprador.tipo === 'PJ' ? qualificacaoEmpresa(comprador) : '',
   };
   if (ctx.comp_casado && conjuge) {
     const regime = String(comprador.regimeBens ?? conjuge.regimeBens ?? '');

@@ -222,7 +222,13 @@ export async function escritor(titulo: string, marca: string, rodapeDoc: string)
   return { paragrafo, clausula, cabecalho, assinaturas, faixa, cartaoCorretor, salvar, quebra, tabela, espaco: (h: number) => { y -= h; } };
 }
 
-const qualificacaoComprador = (c: Ctx) => [
+/** Empresa compradora: a qualificação de PJ (CNPJ, sede e sócios) */
+const qualificacaoComprador = (c: Ctx) => (c.comp_pj ? s(c.comp_qualificacao_pj) : qualificacaoPf(c));
+/** Quem assina pelo comprador: a pessoa (CPF) ou, na empresa, cada sócio */
+const assinaturasComprador = (c: Ctx, papel: string) => (c.comp_pj && Array.isArray(c.comp_socios) && c.comp_socios.length
+  ? (c.comp_socios as Record<string, string>[]).map(x => ({ papel: `SÓCIO(A) — pela ${s(c.comp_nome)}`, nome: x.nome, doc: `CPF ${x.cpf}` }))
+  : [{ papel, nome: s(c.comp_nome), doc: `CPF ${s(c.comp_cpf)}` }]);
+const qualificacaoPf = (c: Ctx) => [
   s(c.comp_nacionalidade), s(c.comp_estado_civil), s(c.comp_profissao),
   s(c.comp_rg) ? `portador(a) do RG n.º ${s(c.comp_rg)} ${s(c.comp_rg_orgao)}`.trim() : '',
   `inscrito(a) no CPF sob o n.º ${s(c.comp_cpf)}`, s(c.comp_endereco) ? `residente e domiciliado(a) na ${s(c.comp_endereco)}` : '',
@@ -276,7 +282,7 @@ export async function docIntermediacao(c: Ctx, marca: string): Promise<Buffer> {
   w.paragrafo('6.2. As partes reconhecem a validade da assinatura eletrônica deste instrumento (MP n.º 2.200-2/2001, art. 10, § 2º; Lei n.º 14.063/2020) e elegem o foro da Comarca de Açailândia/MA para dirimir quaisquer controvérsias, com renúncia a qualquer outro, por mais privilegiado que seja.');
 
   w.paragrafo(`Açailândia/MA, ${s(c.ctr_data_extenso)}.`, { antes: 8, depois: 4 });
-  const blocos = [{ papel: 'CONTRATANTE (promissário(a) comprador(a))', nome: s(c.comp_nome), doc: `CPF ${s(c.comp_cpf)}` }];
+  const blocos = assinaturasComprador(c, 'CONTRATANTE (promissário(a) comprador(a))');
   if (c.comp_casado && s(c.conj_nome)) blocos.push({ papel: 'Cônjuge/companheiro(a) anuente', nome: s(c.conj_nome), doc: `CPF ${s(c.conj_cpf)}` });
   blocos.push({ papel: 'CORRETOR(A) INTERMEDIADOR(A)', nome: s(c.intermed_nome), doc: `CRECI/${s(c.intermed_creci)}` });
   w.assinaturas(blocos);
@@ -405,7 +411,7 @@ export async function docTermoConcessao(c: Ctx, plano: PlanoContrato, marca: str
 
   const blocos = [
     { papel: 'PROMITENTE VENDEDORA (concedente)', nome: vendedora(c), doc: docVendedora(c).replace(/^inscrita no /, '').replace(' sob o n.º', '') },
-    { papel: 'BENEFICIÁRIO(A)', nome: s(c.comp_nome), doc: `CPF ${s(c.comp_cpf)}` },
+    ...assinaturasComprador(c, 'BENEFICIÁRIO(A)'),
   ];
   if (c.comp_casado && s(c.conj_nome)) blocos.push({ papel: 'Cônjuge/companheiro(a) anuente', nome: s(c.conj_nome), doc: `CPF ${s(c.conj_cpf)}` });
   blocos.push({ papel: 'GESTORA (interveniente)', nome: `${ESCRITORIO.fantasia} — ${ESCRITORIO.responsavel}`, doc: `${ESCRITORIO.creciJ} · ${ESCRITORIO.creciResponsavel}` });
@@ -441,7 +447,7 @@ export async function docDeclaracaoConcessao(c: Ctx, plano: PlanoContrato, marca
     w.paragrafo('3. Que a concessão não corresponde a salário, remuneração, gratificação, indenização ou pagamento de dívida de qualquer natureza, nada tendo a reclamar da PROPRIETÁRIA em razão dela, em juízo ou fora dele, e que a aceito de forma livre, consciente e sem qualquer coação.');
   }
   w.paragrafo(`${acordo ? 5 : 4}. Que a posse e o uso seguem a condição "Posse e uso na concessão" e a Cláusula 6ª do CPCV; que a propriedade só se transfere pela escritura pública e seu registro, após o registro do parcelamento, com despesas e tributos a cargo ${k.despesasPor === 'proprietaria' ? 'da PROPRIETÁRIA' : 'do(a) BENEFICIÁRIO(A)'}; e que as informações acima são verdadeiras, firmadas com assinatura eletrônica (MP n.º 2.200-2/2001, art. 10; Lei n.º 14.063/2020).`);
-  const blocos = [{ papel: 'BENEFICIÁRIO(A) — declarante', nome: s(c.comp_nome), doc: `CPF ${s(c.comp_cpf)}` }];
+  const blocos = assinaturasComprador(c, 'BENEFICIÁRIO(A) — declarante');
   if (c.comp_casado && s(c.conj_nome)) blocos.push({ papel: 'Cônjuge/companheiro(a) anuente', nome: s(c.conj_nome), doc: `CPF ${s(c.conj_cpf)}` });
   blocos.push({ papel: 'PROPRIETÁRIA (ciente)', nome: vendedora(c), doc: docVendedora(c).replace(/^inscrita no /, '').replace(' sob o n.º', '') });
   w.assinaturas(blocos, { local: `Açailândia/MA, ${s(c.ctr_data_extenso)}.` });
@@ -486,7 +492,7 @@ export async function docTermoCongelamento(c: Ctx, plano: PlanoContrato, marca: 
   w.paragrafo(`Açailândia/MA, ${s(c.ctr_data_extenso)}.`, { antes: 8, depois: 4 });
   const blocos = [
     { papel: 'PROMITENTE VENDEDORA (anuente)', nome: vendedora(c), doc: docVendedora(c).replace(/^inscrita no /, '').replace(' sob o n.º', '') },
-    { papel: 'PROMISSÁRIO(A) COMPRADOR(A)', nome: s(c.comp_nome), doc: `CPF ${s(c.comp_cpf)}` },
+    ...assinaturasComprador(c, 'PROMISSÁRIO(A) COMPRADOR(A)'),
   ];
   if (c.comp_casado && s(c.conj_nome)) blocos.push({ papel: 'Cônjuge/companheiro(a) anuente', nome: s(c.conj_nome), doc: `CPF ${s(c.conj_cpf)}` });
   blocos.push({ papel: 'GESTORA (interveniente)', nome: `${ESCRITORIO.fantasia} — ${ESCRITORIO.responsavel}`, doc: `${ESCRITORIO.creciJ} · ${ESCRITORIO.creciResponsavel}` });

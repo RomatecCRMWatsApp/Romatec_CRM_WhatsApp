@@ -106,7 +106,13 @@ export function pendenciasCarteirinhaDependente(d: Partial<Dependente> & { temFo
 export const exigePacto = (estadoCivil: string | null | undefined, regime: string | null | undefined) =>
   estadoCivil === 'casado' && !!regime && regime !== 'comunhao_parcial';
 
+/** Sócio da empresa compradora: assina o contrato pela empresa (assinatura eletrônica com código no WhatsApp dele) */
+export interface SocioForm { nome: string; cpf: string; telefone1: string; email?: string | null }
+
 export interface PessoaForm {
+  /** PF (padrão) ou PJ — empresa compradora: nome = razão social, cpf = CNPJ, endereço = sede, sócios assinam */
+  tipo?: 'PF' | 'PJ';
+  socios?: SocioForm[];
   nome: string; cpf: string; sexo?: string | null; nacionalidade?: string | null; estadoCivil?: string | null; regimeBens?: string | null;
   pactoAntenupcial?: string | null; profissao?: string | null; nascimento?: string | null; rg?: string | null; rgOrgao?: string | null; rgUf?: string | null;
   email?: string | null; telefone1?: string | null; cep?: string | null; logradouro?: string | null; numero?: string | null; complemento?: string | null;
@@ -120,8 +126,36 @@ export function cpfValido(cpf: string | null | undefined): boolean {
   return dv(9) === +d[9] && dv(10) === +d[10];
 }
 
+export function cnpjValido(cnpj: string | null | undefined): boolean {
+  const d = String(cnpj ?? '').replace(/\D/g, '');
+  if (d.length !== 14 || /^(\d)\1{13}$/.test(d)) return false;
+  const dv = (n: number) => { const pesos = n === 12 ? [5, 4, 3, 2, 9, 8, 7, 6, 5, 4, 3, 2] : [6, 5, 4, 3, 2, 9, 8, 7, 6, 5, 4, 3, 2]; const s = pesos.reduce((a, p, i) => a + +d[i] * p, 0); const r = s % 11; return r < 2 ? 0 : 11 - r; };
+  return dv(12) === +d[12] && dv(13) === +d[13];
+}
+
+/** Campos que faltam na empresa compradora e nos sócios (todos, com nome, CPF e WhatsApp — cada um assina) */
+export function pendenciasEmpresa(c: PessoaForm): Record<string, string> {
+  const e: Record<string, string> = {};
+  const vazio = (v: unknown) => v == null || String(v).trim() === '';
+  if (vazio(c.nome) || String(c.nome).trim().length < 3) e['comprador.nome'] = 'Razão social';
+  if (!cnpjValido(c.cpf)) e['comprador.cpf'] = 'CNPJ inválido';
+  if (vazio(c.telefone1) || String(c.telefone1).replace(/\D/g, '').length < 10) e['comprador.telefone1'] = 'Telefone da empresa';
+  if (vazio(c.logradouro) || vazio(c.cidade) || vazio(c.uf)) e['comprador.endereco'] = 'Endereço da sede';
+  const socios = c.socios ?? [];
+  if (!socios.length) e['comprador.socios'] = 'Informe os sócios (nome, CPF e WhatsApp)';
+  socios.forEach((s, i) => {
+    if (vazio(s.nome) || String(s.nome).trim().split(/\s+/).length < 2) e[`socio.${i}.nome`] = `Nome completo do sócio ${i + 1}`;
+    if (!cpfValido(s.cpf)) e[`socio.${i}.cpf`] = `CPF do sócio ${i + 1} inválido`;
+    if (vazio(s.telefone1) || String(s.telefone1).replace(/\D/g, '').length < 10) e[`socio.${i}.telefone1`] = `WhatsApp do sócio ${i + 1} (ele assina pela empresa)`;
+  });
+  const cpfs = socios.map(s => String(s.cpf).replace(/\D/g, ''));
+  if (new Set(cpfs).size !== cpfs.length) e['comprador.socios'] = 'O mesmo CPF aparece em dois sócios';
+  return e;
+}
+
 /** Campos que faltam no comprador (e no cônjuge, quando casado/união estável) para criar o contrato */
 export function pendenciasComprador(c: PessoaForm, conj?: PessoaForm | null): Record<string, string> {
+  if (c.tipo === 'PJ') return pendenciasEmpresa(c);
   const e: Record<string, string> = {};
   const vazio = (v: unknown) => v == null || String(v).trim() === '';
   if (vazio(c.nome) || String(c.nome).trim().split(/\s+/).length < 2) e['comprador.nome'] = 'Nome completo';

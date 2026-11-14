@@ -29,7 +29,7 @@ export async function situacaoDaVia(contratoId: number): Promise<SituacaoVia> {
 
 /** Comprador(a)/cônjuge que já assinou e a via ainda não foi liberada? (os demais signatários veem sempre) */
 export async function bloquearViaParaSignatario(contratoId: number, s: { papel: string; status: string }): Promise<string | null> {
-  if (!['comprador', 'conjuge'].includes(s.papel) || s.status !== 'assinado') return null;
+  if (!ehDoComprador(s.papel) || s.status !== 'assinado') return null;
   const v = await situacaoDaVia(contratoId);
   return v.liberada ? null : v.motivo;
 }
@@ -56,6 +56,8 @@ export async function montarViaAssinada(contratoId: number): Promise<{ buf: Buff
 }
 
 const COMPRADOR = ['comprador', 'conjuge'];
+/** Comprador(a), cônjuge ou sócio(a) que assina pela empresa compradora */
+export const ehDoComprador = (papel: string) => COMPRADOR.includes(papel) || /^socio\d+$/.test(papel);
 const primeiroNome = (n: unknown) => String(n ?? '').trim().split(/\s+/)[0] || '';
 
 /** Manda o PDF da via pelo WhatsApp do sistema (Z-API); falha no arquivo não impede o aviso com o link */
@@ -96,7 +98,7 @@ export async function enviarViasAssinadas(contratoId: number): Promise<Resultado
     const fone = String(s.whatsapp ?? '').replace(/\D/g, '');
     if (fone) fones.add(fone.slice(-9));
     if (ja.has(String(s.id)) || !fone) continue;
-    const ehComprador = COMPRADOR.includes(String(s.papel));
+    const ehComprador = ehDoComprador(String(s.papel));
     if (ehComprador && !situacao.liberada) { out.aguardando.push({ papel: s.papel, nome: s.nome, motivo: 'entrada não paga' }); continue; }
     const msg = ehComprador
       ? `Olá, ${primeiroNome(s.nome)}! Pagamento da entrada confirmado. ✅\n\nA via assinada do contrato ${c.numero} (Chácara ${c.loteCodigo}) já está liberada para você, com o manifesto das assinaturas e o seu carnê: ${A.urlPublica()}/c/${c.codigoVerificacao}\n\nDúvidas: (99) 9 9101-1970.`
@@ -133,8 +135,8 @@ export async function enviarViaAssinadaSeLiberada(contratoId: number): Promise<{
   const [c]: any[] = await d.select().from(contratos).where(eq(contratos.id, contratoId)).limit(1);
   if (!c || !c.manifestoArquivo) return { enviado: false, motivo: 'assinaturas incompletas' };
   const r = await enviarViasAssinadas(contratoId);
-  if (r.enviados.some(x => x.papel === 'comprador')) return { enviado: true };
-  if (r.aguardando.some(x => x.papel === 'comprador')) return { enviado: false, motivo: 'entrada não paga' };
+  if (r.enviados.some(x => x.papel === 'comprador' || x.papel === 'socio1')) return { enviado: true };
+  if (r.aguardando.some(x => x.papel === 'comprador' || x.papel === 'socio1')) return { enviado: false, motivo: 'entrada não paga' };
   const [s]: any[] = await d.select().from(assinaturaSignatarios).where(and(eq(assinaturaSignatarios.contratoId, contratoId), eq(assinaturaSignatarios.papel, 'comprador'))).limit(1);
   if (!s?.whatsapp) return { enviado: false, motivo: 'comprador sem WhatsApp' };
   return { enviado: false, motivo: 'já enviada' };
