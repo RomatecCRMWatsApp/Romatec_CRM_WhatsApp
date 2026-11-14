@@ -41,6 +41,10 @@ export default function PainelAssinaturas({ id, status, podeEnviar }: { id: numb
     onError: e => toast.error(e.message),
   });
   const [senha, setSenha] = useState("");
+  const concluir = trpc.contratos.concluirAssinatura.useMutation({
+    onSuccess: r => { r.concluido ? toast.success("Assinatura concluída: manifesto gerado e contrato ativo") : toast.error("Ainda falta assinatura de alguém"); recarregar(); },
+    onError: e => toast.error(e.message),
+  });
   const corrigir = trpc.contratos.corrigirPosicionamento.useMutation({
     onSuccess: r => {
       toast.success(`Posições corrigidas: ${r.caixas} assinatura(s) no lugar certo (versão ${r.versao}) e manifesto refeito`);
@@ -125,6 +129,12 @@ export default function PainelAssinaturas({ id, status, podeEnviar }: { id: numb
       <section className="rounded-xl border border-border bg-card p-4">
         <div className="mb-2 flex flex-wrap items-center justify-between gap-2">
           <h2 className="text-sm font-semibold">Assinaturas · {assinados} de {data.signatarios.length}</h2>
+          {!data.manifesto && podeEnviar && data.signatarios.length > 0 && assinados === data.signatarios.length && (
+            <Button size="sm" disabled={concluir.isPending} onClick={() => concluir.mutate({ id })}
+              title="Todos assinaram, mas o fechamento do contrato (manifesto e ativação) não terminou: refaz o fechamento">
+              {concluir.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : <CheckCircle2 className="h-4 w-4" />} Concluir assinatura
+            </Button>
+          )}
           {data.manifesto && <AcoesPdf compacto rotulo="Via assinada completa" url={`/api/contratos/${id}/via-assinada.pdf`} nomeArquivo={`CONTRATO-${id}-VIA-ASSINADA.pdf`} mensagem="Contrato com todas as assinaturas e o manifesto (Anexo VII)" />}
           {data.manifesto && admin && (
             <Button size="sm" variant="outline" onClick={() => setCorrigindo(v => !v)} aria-expanded={corrigindo}
@@ -188,7 +198,8 @@ export default function PainelAssinaturas({ id, status, podeEnviar }: { id: numb
             const quem = data.signatarios.find((s: any) => s.id === e.signatarioId);
             return (
               <li key={i} className="flex justify-between gap-2">
-                <span>{EVENTO[e.evento] ?? e.evento}{quem ? ` · ${quem.nome.split(" ")[0]}` : ""}</span>
+                <span>{EVENTO[e.evento] ?? e.evento}{quem ? ` · ${quem.nome.split(" ")[0]}` : ""}
+                  {e.evento === "erro" && e.detalhe?.msg ? <span className="block text-danger-400">{String(e.detalhe.etapa ?? "")}: {String(e.detalhe.msg)}</span> : null}</span>
                 <span className="shrink-0 text-muted-foreground">{new Date(e.criadoEm).toLocaleString("pt-BR", { day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit" })}</span>
               </li>
             );

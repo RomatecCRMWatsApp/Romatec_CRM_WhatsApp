@@ -353,7 +353,15 @@ async function concluirSignatario(s: any, metodo: string, evid: Record<string, u
   await d.update(assinaturaSignatarios).set({ status: 'assinado', metodo, assinadoEm: new Date(), evidenciasJson: evid as any,
     ...(evid.revisaoManual ? { revisaoManual: 1 } : {}) }).where(eq(assinaturaSignatarios.id, s.id));
   await evento(s.contratoId, s.id, 'assinado', { ip: evid.ip as string, ua: evid.ua as string, detalhe: { metodo } });
-  return concluirSeTodos(s.contratoId);
+  // A assinatura da pessoa já está gravada: falha ao fechar o contrato (manifesto, carteirinhas, ativação) não a desfaz —
+  // fica na trilha e o escritório conclui pelo botão "Concluir assinatura" do painel
+  try {
+    return await concluirSeTodos(s.contratoId);
+  } catch (e: any) {
+    console.error('[Assinatura] conclusão do contrato:', e?.message ?? e);
+    await evento(s.contratoId, null, 'erro', { detalhe: { etapa: 'concluir', msg: String(e?.message ?? e).slice(0, 300) } }).catch(() => undefined);
+    return { concluido: false };
+  }
 }
 
 /** Avançada: leitura integral + código + aceite → carimbo na caixa (enquanto não houver assinatura digital no arquivo) */
@@ -381,6 +389,21 @@ export async function confirmarAvancada(token: string, codigo: string, o: { ip: 
   // com o código certo não geram dois carimbos nem duas conclusões
   const consumo: any = await d.delete(assinaturaOtp).where(and(eq(assinaturaOtp.signatarioId, s.id), eq(assinaturaOtp.codigoHash, otp.codigoHash)));
   if (!linhasAfetadas(consumo)) throw new AssinaturaErro('OTP_USADO', 'Este código já foi usado. Atualize a página para ver a situação da assinatura.', 409);
+  try {
+    return await registrarAvancada(s, c, o);
+  } catch (e: any) {
+    // Falhou depois do código aceito (carimbo/versão do PDF): o código volta a valer e o erro fica na trilha —
+    // antes, o código era gasto e a pessoa ficava presa pedindo código novo sem nada registrado
+    await d.insert(assinaturaOtp).values({ signatarioId: s.id, codigoHash: otp.codigoHash, expiraEm: otp.expiraEm, tentativas: Number(otp.tentativas) || 0 }).catch(() => undefined);
+    await evento(s.contratoId, s.id, 'erro', { ip: o.ip, ua: o.ua, detalhe: { etapa: 'assinar', msg: String(e?.message ?? e).slice(0, 300) } }).catch(() => undefined);
+    console.error('[Assinatura] falha ao registrar a assinatura avançada:', e?.message ?? e);
+    if (e instanceof AssinaturaErro) throw e;
+    throw new AssinaturaErro('FALHA_ASSINAR', 'Não foi possível registrar a sua assinatura agora. Tente de novo em instantes: o mesmo código continua valendo.', 500);
+  }
+}
+
+/** Carimbo da assinatura avançada no PDF e conclusão do signatário (depois do código conferido) */
+async function registrarAvancada(s: any, c: any, o: { ip: string; ua?: string; geo?: { lat: number; lon: number } | null }) {
   const quando = new Date();
   const atual = await pdfAtual(s.contratoId);
   const hashAssinado = sha256(atual);
@@ -482,8 +505,8 @@ export async function concluirSeTodos(contratoId: number): Promise<{ concluido: 
   // Todas as assinaturas + manifesto: contrato ativo (lote vendido e plano de cobranças gravado)
   await registrarAssinado(contratoId, null, 0);
   // Assinatura concluída: a via oficial (PDF + link) vai pelo WhatsApp a cada envolvido; ao(à) comprador(a), com a entrada paga
-  const { enviarViasAssinadas } = await import('../contratos/liberacaoVia');
-  await enviarViasAssinadas(contratoId).catch((e: any) => console.warn('[Assinatura] vias assinadas:', e?.message));
+  // Envio das vias (PDFs grandes pelo WhatsApp) em segundo plano: não segura a resposta de quem acabou de assinar
+  setImmediate(() => { import('../contratos/liberacaoVia').then(m => m.enviarViasAssinadas(contratoId)).catch((e: any) => console.warn('[Assinatura] vias assinadas:', e?.message)); });
   return { concluido: true };
 }
 

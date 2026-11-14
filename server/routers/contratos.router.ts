@@ -563,6 +563,18 @@ export const contratosRouter = router({
     catch (e: any) { if (e instanceof A.AssinaturaErro) throw new TRPCError({ code: e.status === 404 ? "NOT_FOUND" : e.status === 409 ? "CONFLICT" : "BAD_REQUEST", message: e.message }); throw e; }
   }),
 
+  /** Todos assinaram mas o fechamento (manifesto, carteirinhas, ativação) não terminou: refaz — administrador ou secretaria */
+  concluirAssinatura: protectedProcedure.input(z.object({ id: z.number().int() })).mutation(async ({ ctx, input }) => {
+    exigir(podeGerarDefinitivo(perfilDe(ctx.user as any)), "A conclusão da assinatura é com o administrador ou a secretaria.");
+    await contratoVisivel(ctx, input.id);
+    const A = await import("../assinatura/servico");
+    try { return await A.concluirSeTodos(input.id); }
+    catch (e: any) {
+      await A.evento(input.id, null, 'erro', { detalhe: { etapa: 'concluir', msg: String(e?.message ?? e).slice(0, 300) } }).catch(() => undefined);
+      throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: `Não foi possível concluir: ${String(e?.message ?? e).slice(0, 200)}` });
+    }
+  }),
+
   reenviarConvite: protectedProcedure.input(z.object({ id: z.number().int(), signatarioId: z.number().int() })).mutation(async ({ ctx, input }) => {
     exigir(podeGerarDefinitivo(perfilDe(ctx.user as any)), "O envio para assinatura é com o administrador ou a secretaria.");
     await contratoVisivel(ctx, input.id);

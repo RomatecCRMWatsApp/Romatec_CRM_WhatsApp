@@ -170,7 +170,8 @@ export function CodigoOtp({ destino, confirmar, reenviar, aoConcluir, aoRecarreg
       <p id="codigo-otp-status" role="status" aria-live="polite" className={`flex min-h-5 items-start gap-1.5 text-sm ${comErro ? "text-danger-800" : "text-neutro-700"}`}>
         {comErro && <AlertCircle aria-hidden="true" className="mt-0.5 h-4 w-4 shrink-0" />}
         {verificando && <Loader2 aria-hidden="true" className="mt-0.5 h-4 w-4 shrink-0 animate-spin" />}
-        <span>{aviso ?? mensagem ?? (bloqueado || "")}</span>
+        {/* Erro do servidor aparece sempre (o aviso de digitação não pode escondê-lo) */}
+        <span>{comErro ? (mensagem ?? aviso) : (aviso ?? mensagem ?? (bloqueado || ""))}</span>
       </p>
 
       {/* Some na confirmação sem deslocar o layout */}

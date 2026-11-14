@@ -3,6 +3,20 @@
 Cada versão nova vai no TOPO. Depois rode `npm run release` (valida e atualiza o package.json);
 ao subir, o servidor grava a versão no banco e todos recebem o aviso "Novidades da versão".
 
+## 1.175.2 — 2026-11-14
+tipo: patch
+obrigatoria: sim
+titulo: Assinatura: o código não se perde mais quando algo falha
+publico: equipe
+
+### Correções
+- Assinatura avançada: se algo falhava depois de o código ser aceito (carimbo no PDF, fechamento do contrato), o código era gasto, a pessoa via erro e ficava pedindo código novo, sem nada registrado.
+  - Agora o código continua valendo e a pessoa vê uma mensagem clara.
+  - O erro aparece na trilha de auditoria, com a etapa e o motivo.
+- A assinatura de quem confirmou não se perde se o fechamento do contrato (manifesto, carteirinhas, ativação) falhar. Nesse caso aparece o botão "Concluir assinatura" no painel.
+- O envio das vias assinadas pelo WhatsApp roda em segundo plano, e a confirmação do último signatário responde na hora.
+- A tela do código mostra sempre o erro real do servidor. Antes, o aviso de digitação podia escondê-lo.
+
 ## 1.175.1 — 2026-11-14
 tipo: patch
 obrigatoria: sim
