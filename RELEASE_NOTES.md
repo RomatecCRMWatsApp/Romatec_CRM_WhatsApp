@@ -3,6 +3,25 @@
 Cada versão nova vai no TOPO. Depois rode `npm run release` (valida e atualiza o package.json);
 ao subir, o servidor grava a versão no banco e todos recebem o aviso "Novidades da versão".
 
+## 1.173.0 — 2026-11-14
+tipo: minor
+obrigatoria: nao
+titulo: Declaração de recebimento na concessão e assinaturas empilhadas
+publico: equipe
+
+### Novo
+- Concessão: o beneficiário assina, junto com o contrato, a Declaração de Recebimento e Quitação.
+  - Ele confirma que recebeu a chácara pelo valor de referência.
+  - A Declaração também traz as assinaturas do cônjuge e da proprietária.
+- Natureza da concessão:
+  - **Liberalidade:** é uma doação. O beneficiário declara que não é salário, indenização nem pagamento de dívida.
+  - **Acordo:** a chácara quita uma obrigação, por exemplo um acordo com ex-funcionário. O Termo sai como dação em pagamento, e a Declaração dá quitação do que foi descrito.
+- A natureza da concessão pode ser ajustada na tela do contrato enquanto ele não for assinado.
+
+### Melhorias
+- Assinaturas dos documentos gerados pelo sistema: uma embaixo da outra, centralizadas, com espaço para o selo da assinatura digital.
+- O local e a data ficam na mesma página das assinaturas.
+
 ## 1.172.0 — 2026-11-14
 tipo: minor
 obrigatoria: nao

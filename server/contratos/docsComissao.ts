@@ -136,22 +136,34 @@ export async function escritor(titulo: string, marca: string, rodapeDoc: string)
    * nome, papel e documento sempre juntos na mesma página. Sob o traço vetorial vai um traço de texto invisível
    * ("____"): é a âncora com que o sistema localiza a linha de assinatura (server/assinatura/autoPosicao.ts).
    */
-  const assinaturas = (blocos: { papel: string; nome: string; doc?: string }[]) => {
-    y -= 8;
-    const col = (LARG - 30) / 2;
+  /**
+   * Assinaturas uma embaixo da outra, centralizadas (padrão de todos os documentos do sistema): em cima de cada traço
+   * fica o espaço do selo da assinatura digital ICP; embaixo, nome, papel e documento. O traço invisível de texto
+   * ("____") faz o selo achar a linha certa (server/assinatura/autoPosicao.ts).
+   */
+  const ESPACO_SELO = 42, TEXTO_ASSINATURA = 33;
+  const assinaturas = (blocos: { papel: string; nome: string; doc?: string }[], o: { local?: string } = {}) => {
+    // Local e data + todas as assinaturas juntos: se não couberem no resto da página, vão juntos para a próxima
+    const total = (o.local ? 22 : 0) + blocos.length * (ESPACO_SELO + TEXTO_ASSINATURA) + 4;
+    if (y - total < base && total < 600) nova();
+    if (o.local) paragrafo(o.local, { antes: 4, depois: 0 });
+    y -= 4;
+    const col = Math.min(LARG, 300);
+    const x = X0 + (LARG - col) / 2;
     const tracoTxt = '_'.repeat(Math.max(12, Math.floor(col / f.widthOfTextAtSize('_', 8))));
-    for (let i = 0; i < blocos.length; i += 2) {
-      garantir(46 + 40);
-      const yy = y - 46;
-      blocos.slice(i, i + 2).forEach((b, k) => {
-        const x = X0 + k * (col + 30);
-        p.drawText(tracoTxt, { x, y: yy + 1, size: 8, font: f, opacity: 0 });
-        p.drawLine({ start: { x, y: yy }, end: { x: x + col, y: yy }, thickness: 0.6, color: rgb(0.2, 0.2, 0.2) });
-        p.drawText(b.nome.slice(0, 60), { x, y: yy - 11, size: 8.6, font: fb });
-        p.drawText(b.papel, { x, y: yy - 21, size: 8, font: f, color: CINZA });
-        if (b.doc) p.drawText(b.doc, { x, y: yy - 31, size: 8, font: f, color: CINZA });
-      });
-      y = yy - 44;
+    const centro = (t: string, fonte: typeof f, tam: number, yt: number, cor?: ReturnType<typeof rgb>) => {
+      const tm = Math.min(tam, (col - 4) / Math.max(1, fonte.widthOfTextAtSize(t, 1)));
+      p.drawText(t, { x: x + (col - fonte.widthOfTextAtSize(t, tm)) / 2, y: yt, size: tm, font: fonte, ...(cor ? { color: cor } : {}) });
+    };
+    for (const b of blocos) {
+      garantir(ESPACO_SELO + TEXTO_ASSINATURA);
+      const yy = y - ESPACO_SELO;
+      p.drawText(tracoTxt, { x, y: yy + 1, size: 8, font: f, opacity: 0 });
+      p.drawLine({ start: { x, y: yy }, end: { x: x + col, y: yy }, thickness: 0.6, color: rgb(0.2, 0.2, 0.2) });
+      centro(b.nome.slice(0, 80), fb, 8.6, yy - 11);
+      centro(b.papel, f, 8, yy - 21, CINZA);
+      if (b.doc) centro(b.doc, f, 8, yy - 31, CINZA);
+      y = yy - TEXTO_ASSINATURA;
     }
   };
 
@@ -358,17 +370,25 @@ export async function docTermoConcessao(c: Ctx, plano: PlanoContrato, marca: str
   w.clausula('CLÁUSULA 1ª — DO OBJETO');
   w.paragrafo(`1.1. Este termo tem por objeto a ${unidade(c)}, Açailândia/MA, descrita no Instrumento Particular de Compromisso de Compra e Venda n.º ${s(c.ctr_numero)} (o "CPCV"), ao qual se integra.`);
 
-  w.clausula('CLÁUSULA 2ª — DA CONCESSÃO POR LIBERALIDADE');
-  w.paragrafo([{ t: '2.1. A PROMITENTE VENDEDORA, por sua livre e exclusiva liberalidade e por indicação própria, ' }, { t: 'concede a unidade ao(à) BENEFICIÁRIO(A), sem contraprestação', b: true },
-    { t: `, que a aceita (Código Civil, arts. 538 e 539). Para todos os efeitos do CPCV, o preço da unidade, cujo valor de referência é o valor à vista do imóvel, de R$ ${brl(valorRef)} (${reaisExtenso(valorRef)}), ` },
-    { t: 'fica integralmente quitado pela PROMITENTE VENDEDORA', b: true }, { t: ', nada sendo devido pelo(a) BENEFICIÁRIO(A) a título de preço, entrada ou parcelas.' }]);
+  const acordo = k.natureza === 'acordo' && s(k.acordo);
+  if (acordo) {
+    w.clausula('CLÁUSULA 2ª — DA CONCESSÃO EM PAGAMENTO (ACORDO)');
+    w.paragrafo([{ t: '2.1. A PROMITENTE VENDEDORA ' }, { t: 'concede a unidade ao(à) BENEFICIÁRIO(A) em pagamento das obrigações descritas a seguir', b: true },
+      { t: `, que ele(a) aceita em substituição à prestação devida (dação em pagamento — Código Civil, arts. 356 a 359): ${acordo.replace(/\.$/, '')}. Para todos os efeitos do CPCV, o preço da unidade, cujo valor de referência é o valor à vista do imóvel, de R$ ${brl(valorRef)} (${reaisExtenso(valorRef)}), ` },
+      { t: 'fica integralmente quitado', b: true }, { t: ', nada sendo devido pelo(a) BENEFICIÁRIO(A) a título de preço, entrada ou parcelas, e as obrigações acima ficam quitadas até esse valor, na forma da Declaração de Recebimento e Quitação que integra este termo.' }]);
+  } else {
+    w.clausula('CLÁUSULA 2ª — DA CONCESSÃO POR LIBERALIDADE');
+    w.paragrafo([{ t: '2.1. A PROMITENTE VENDEDORA, por sua livre e exclusiva liberalidade e por indicação própria, ' }, { t: 'concede a unidade ao(à) BENEFICIÁRIO(A), sem contraprestação', b: true },
+      { t: `, que a aceita (Código Civil, arts. 538 e 539). Para todos os efeitos do CPCV, o preço da unidade, cujo valor de referência é o valor à vista do imóvel, de R$ ${brl(valorRef)} (${reaisExtenso(valorRef)}), ` },
+      { t: 'fica integralmente quitado pela PROMITENTE VENDEDORA', b: true }, { t: ', nada sendo devido pelo(a) BENEFICIÁRIO(A) a título de preço, entrada ou parcelas.' }]);
+  }
   w.paragrafo('2.2. Em razão da cláusula 2.1, ficam sem efeito, neste contrato, o Quadro-Resumo e o Anexo II do CPCV na parte em que estabelecem valores, vencimentos e forma de pagamento do preço: não será emitido boleto, carnê ou qualquer cobrança do preço ao(à) BENEFICIÁRIO(A).');
   if (s(k.motivo)) w.paragrafo(`2.3. Registro da PROMITENTE VENDEDORA sobre a concessão: ${s(k.motivo)}.`);
 
   w.clausula('CLÁUSULA 3ª — DA NATUREZA DA OPERAÇÃO');
   w.paragrafo('3.1. A concessão não constitui venda onerosa e não integra o faturamento de vendas do empreendimento, as metas comerciais nem a base de cobrança da plataforma de pagamentos. Permanecem válidas todas as demais cláusulas do CPCV que não tratam do preço, em especial as relativas à posse, à liberação de uso, às construções, ao Estatuto, ao Regimento, às Diretrizes de Uso (Anexo IV), à contribuição associativa e às obrigações do(a) BENEFICIÁRIO(A) como promissário(a) comprador(a).');
   w.paragrafo(`3.1.1. Posse e uso. Quitado o preço pela PROMITENTE VENDEDORA na forma da cláusula 2.1, aplicam-se ao(à) BENEFICIÁRIO(A) as regras do pagamento integral à vista da Cláusula 6ª do CPCV: imissão na posse após a assinatura do CPCV e deste termo por todas as partes, mediante Termo de Entrega com vistoria dos marcos, e liberação de uso pelo Termo de Liberação de Uso, após a vistoria de medição, ambos em até ${DIAS_ENTREGA_CONCESSAO} (quinze) dias da última assinatura, dispensado o mínimo de parcelas pagas para construir e mantidas as demais exigências do item 6.2 do CPCV. A partir da imissão na posse, correm por conta do(a) BENEFICIÁRIO(A) os tributos, as taxas, o consumo e a contribuição associativa da unidade.`);
-  w.paragrafo([{ t: `3.2. A transferência definitiva observará a forma exigida em lei (Código Civil, art. 541), após o registro do parcelamento e a individualização das matrículas. As despesas e os tributos da transferência (escritura, registro e o imposto de transmissão incidente — ITBI ou ITCMD, conforme a forma do ato) ficam a cargo ` },
+  w.paragrafo([{ t: `3.2. A transferência definitiva observará a forma exigida em lei (Código Civil, art. 541), após o registro do parcelamento e a individualização das matrículas. As despesas e os tributos da transferência (escritura, registro e o imposto de transmissão incidente — ITBI na dação em pagamento ou ITCMD na doação, conforme a natureza do ato) ficam a cargo ` },
     { t: k.despesasPor === 'proprietaria' ? 'da PROMITENTE VENDEDORA' : 'do(a) BENEFICIÁRIO(A)', b: true },
     { t: `. Para a transferência e o recolhimento do imposto, as partes adotam como valor da unidade o valor de referência da cláusula 2.1, R$ ${brl(valorRef)}, sem prejuízo de avaliação diversa pelo órgão competente.` }]);
 
@@ -383,14 +403,48 @@ export async function docTermoConcessao(c: Ctx, plano: PlanoContrato, marca: str
   w.clausula('CLÁUSULA 5ª — DISPOSIÇÕES GERAIS');
   w.paragrafo('5.1. Este termo integra o CPCV e prevalece sobre ele no que tratar do preço e da comissão. As partes reconhecem a validade da assinatura eletrônica (MP n.º 2.200-2/2001, art. 10, § 2º; Lei n.º 14.063/2020) e elegem o foro da Comarca de Açailândia/MA, com renúncia a qualquer outro, por mais privilegiado que seja.');
 
-  w.paragrafo(`Açailândia/MA, ${s(c.ctr_data_extenso)}.`, { antes: 8, depois: 4 });
   const blocos = [
     { papel: 'PROMITENTE VENDEDORA (concedente)', nome: vendedora(c), doc: docVendedora(c).replace(/^inscrita no /, '').replace(' sob o n.º', '') },
     { papel: 'BENEFICIÁRIO(A)', nome: s(c.comp_nome), doc: `CPF ${s(c.comp_cpf)}` },
   ];
   if (c.comp_casado && s(c.conj_nome)) blocos.push({ papel: 'Cônjuge/companheiro(a) anuente', nome: s(c.conj_nome), doc: `CPF ${s(c.conj_cpf)}` });
   blocos.push({ papel: 'GESTORA (interveniente)', nome: `${ESCRITORIO.fantasia} — ${ESCRITORIO.responsavel}`, doc: `${ESCRITORIO.creciJ} · ${ESCRITORIO.creciResponsavel}` });
-  w.assinaturas(blocos);
+  w.assinaturas(blocos, { local: `Açailândia/MA, ${s(c.ctr_data_extenso)}.` });
+  return w.salvar();
+}
+
+/**
+ * Declaração de Recebimento e Quitação da concessão: o(a) beneficiário(a) declara, de próprio punho (assinatura), que
+ * recebeu a unidade e o valor de referência, a finalidade (liberalidade ou acordo) e, no acordo, a quitação das
+ * obrigações. Respaldo da proprietária; vem logo depois do Termo Aditivo de Concessão, na mesma rodada de assinaturas.
+ */
+export async function docDeclaracaoConcessao(c: Ctx, plano: PlanoContrato, marca: string): Promise<Buffer> {
+  const k = plano.concessao!;
+  const valorRef = plano.preco_avista;
+  const acordo = k.natureza === 'acordo' && s(k.acordo);
+  const w0 = await escritor(`Declaração de Recebimento — ${s(c.ctr_numero)}`, marca, `Declaração de Recebimento e Quitação · CPCV n.º ${s(c.ctr_numero)}`);
+  // Corpo um pouco menor: a declaração e as assinaturas (uma embaixo da outra) cabem numa página
+  const w = { ...w0, paragrafo: (t: Parameters<typeof w0.paragrafo>[0], o: Parameters<typeof w0.paragrafo>[1] = {}) => w0.paragrafo(t, { size: 9.9, ...o }) };
+  w.cabecalho('DECLARAÇÃO DE RECEBIMENTO E QUITAÇÃO', `Concessão da ${unidade(c)} · integra o CPCV n.º ${s(c.ctr_numero)} e o Termo Aditivo de Concessão`);
+  w.paragrafo([{ t: 'Eu, ' }, { t: s(c.comp_nome), b: true }, { t: `, ${qualificacaoComprador(c)}` },
+    ...(c.comp_casado && s(c.conj_nome) ? [{ t: ', com a anuência do(a) cônjuge/companheiro(a) ' }, { t: s(c.conj_nome), b: true }, { t: `, inscrito(a) no CPF sob o n.º ${s(c.conj_cpf)}` }] : []),
+    { t: ', na qualidade de BENEFICIÁRIO(A) da concessão, ' }, { t: 'DECLARO, para todos os fins de direito:', b: true }]);
+  w.paragrafo([{ t: `1. Que recebo de ${vendedora(c)}${docVendedora(c) ? `, ${docVendedora(c)}` : ''} (a PROPRIETÁRIA), a ${unidade(c)}, Açailândia/MA, nos termos do CPCV n.º ${s(c.ctr_numero)} e do Termo Aditivo de Concessão, ` },
+    { t: `com o valor de R$ ${brl(valorRef)} (${reaisExtenso(valorRef)})`, b: true }, { t: ', correspondente ao valor à vista do imóvel, que reconheço como justo e aceito.' }]);
+  if (acordo) {
+    w.paragrafo([{ t: '2. Que a unidade me é entregue ' }, { t: 'em pagamento', b: true }, { t: ` (dação em pagamento — Código Civil, arts. 356 a 359) das seguintes obrigações da PROPRIETÁRIA para comigo: ${acordo.replace(/\.$/, '')}.` }]);
+    w.paragrafo([{ t: '3. Que, com o recebimento da unidade, ' }, { t: `dou à PROPRIETÁRIA quitação das obrigações descritas no item 2, até o valor de R$ ${brl(valorRef)}`, b: true },
+      { t: ', nada mais tendo a reclamar a esse título, em juízo ou fora dele, e que celebro este acordo de forma livre, consciente e sem qualquer coação.' }]);
+    w.paragrafo('4. Que, tratando-se de verbas de relação de trabalho, a quitação vale para as parcelas e os valores aqui discriminados (CLT, art. 477, § 2º), podendo as partes submeter este acordo à homologação da Justiça do Trabalho (CLT, arts. 855-B a 855-E).');
+  } else {
+    w.paragrafo([{ t: '2. Que a concessão é ' }, { t: 'ato de liberalidade da PROPRIETÁRIA', b: true }, { t: ' (Código Civil, arts. 538 e 539), sem contraprestação de minha parte, e que nada paguei nem devo pagar a título de preço, entrada ou parcelas.' }]);
+    w.paragrafo('3. Que a concessão não corresponde a salário, remuneração, gratificação, indenização ou pagamento de dívida de qualquer natureza, nada tendo a reclamar da PROPRIETÁRIA em razão dela, em juízo ou fora dele, e que a aceito de forma livre, consciente e sem qualquer coação.');
+  }
+  w.paragrafo(`${acordo ? 5 : 4}. Que a posse e o uso seguem a condição "Posse e uso na concessão" e a Cláusula 6ª do CPCV; que a propriedade só se transfere pela escritura pública e seu registro, após o registro do parcelamento, com despesas e tributos a cargo ${k.despesasPor === 'proprietaria' ? 'da PROPRIETÁRIA' : 'do(a) BENEFICIÁRIO(A)'}; e que as informações acima são verdadeiras, firmadas com assinatura eletrônica (MP n.º 2.200-2/2001, art. 10; Lei n.º 14.063/2020).`);
+  const blocos = [{ papel: 'BENEFICIÁRIO(A) — declarante', nome: s(c.comp_nome), doc: `CPF ${s(c.comp_cpf)}` }];
+  if (c.comp_casado && s(c.conj_nome)) blocos.push({ papel: 'Cônjuge/companheiro(a) anuente', nome: s(c.conj_nome), doc: `CPF ${s(c.conj_cpf)}` });
+  blocos.push({ papel: 'PROPRIETÁRIA (ciente)', nome: vendedora(c), doc: docVendedora(c).replace(/^inscrita no /, '').replace(' sob o n.º', '') });
+  w.assinaturas(blocos, { local: `Açailândia/MA, ${s(c.ctr_data_extenso)}.` });
   return w.salvar();
 }
 

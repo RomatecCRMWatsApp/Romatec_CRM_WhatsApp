@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { NaturezaConcessao } from "@/components/contratos/NaturezaConcessao";
 import { ROTULO_CONDICAO, type CondicaoPagamento } from "@shared/condicoesLancamento";
 import { useLocation, useParams } from "wouter";
 import { toast } from "sonner";
@@ -488,6 +489,12 @@ function ConcessaoComissao({ contratoId, concessao, valorRef, cancelado, assinad
   const utils = trpc.useUtils();
   const [venc, setVenc] = useState<string>(concessao.comissaoVencimento ?? "");
   const [forma, setForma] = useState<string>(concessao.comissaoPrazo ?? "");
+  const [natureza, setNatureza] = useState<"liberalidade" | "acordo">(concessao.natureza === "acordo" ? "acordo" : "liberalidade");
+  const [acordo, setAcordo] = useState<string>(concessao.acordo ?? "");
+  const salvarNatureza = trpc.contratos.concessaoDados.useMutation({
+    onSuccess: () => { toast.success("Natureza da concessão salva. Gere o contrato de novo para o termo e a declaração saírem atualizados."); utils.contratos.detalhe.invalidate({ id: contratoId }); },
+    onError: e => toast.error(e.message),
+  });
   const salvar = trpc.contratos.concessaoVencimento.useMutation({
     onSuccess: r => {
       toast.success(r.assinado ? "Vencimento atualizado no Financeiro (o termo assinado não muda)" : "Vencimento atualizado. Gere o contrato de novo para o termo sair com a nova data.");
@@ -514,6 +521,14 @@ function ConcessaoComissao({ contratoId, concessao, valorRef, cancelado, assinad
         </div>
       )}
       {admin && assinado && <p className="text-[11px] text-muted-foreground">Contrato já assinado: a nova data vale no Financeiro; o termo assinado continua com a data original.</p>}
+      <div className="space-y-2 border-t border-info-500/30 pt-2">
+        <p className="text-xs font-semibold">Natureza da concessão e declaração do beneficiário</p>
+        <NaturezaConcessao natureza={natureza} acordo={acordo} onNatureza={setNatureza} onAcordo={setAcordo} desabilitado={!admin || cancelado || assinado} />
+        {admin && !cancelado && !assinado && (
+          <Button size="sm" variant="outline" disabled={salvarNatureza.isPending || (natureza === "acordo" && acordo.trim().length < 10)}
+            onClick={() => salvarNatureza.mutate({ id: contratoId, natureza, acordo: natureza === "acordo" ? acordo : "" })}>Salvar natureza</Button>
+        )}
+      </div>
     </div>
   );
 }

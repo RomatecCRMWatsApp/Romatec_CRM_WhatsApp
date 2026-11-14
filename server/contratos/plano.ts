@@ -131,6 +131,10 @@ export interface ConcessaoProprietaria {
   comissaoVencimento?: string;
   /** Quem paga escritura, registro e ITCMD */
   despesasPor: 'beneficiario' | 'proprietaria';
+  /** liberalidade (doação, CC 538) ou acordo: a unidade é dada em pagamento de obrigação da proprietária (CC 356) */
+  natureza?: 'liberalidade' | 'acordo';
+  /** Acordo: obrigações que a unidade quita (ex.: verbas do acordo de rescisão do contrato de trabalho de …) */
+  acordo?: string;
 }
 
 export function planoDoContrato(sim: Simulacao, escolha: EscolhaPlano, c: CondicoesPagamento, comCorretor: boolean): PlanoContrato {

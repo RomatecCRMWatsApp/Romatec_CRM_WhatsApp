@@ -59,6 +59,9 @@ const planoZ = z.object({
     comissaoPrazo: z.string().trim().max(200).default(""),
     comissaoVencimento: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).optional(),
     despesasPor: z.enum(["beneficiario", "proprietaria"]).default("beneficiario"),
+    /** liberalidade (doação) ou acordo (a unidade quita obrigação da proprietária: dação em pagamento) */
+    natureza: z.enum(["liberalidade", "acordo"]).default("liberalidade"),
+    acordo: z.string().trim().max(800).default(""),
   }).nullable().optional(),
 });
 
@@ -202,6 +205,24 @@ export const contratosRouter = router({
     const db = (await getDb()) as any;
     await db.update(contratos).set({ simulacaoJson: novo, atualizadoEm: new Date() } as any).where(eq(contratos.id, c.id));
     return { ok: true, assinado: ["assinado", "ativo", "quitado"].includes(c.status) };
+  }),
+
+  /** Concessão: natureza (liberalidade ou acordo) e motivo — só o administrador, antes da assinatura */
+  concessaoDados: protectedProcedure.input(z.object({
+    id: z.number().int(), natureza: z.enum(["liberalidade", "acordo"]), acordo: z.string().trim().max(800).default(""), motivo: z.string().trim().max(600).optional(),
+  })).mutation(async ({ ctx, input }) => {
+    exigir(perfilDe(ctx.user as any) === "admin", "Só o administrador altera a concessão.");
+    const c = await contratoVisivel(ctx, input.id);
+    if (["cancelado", "distratado", "assinado", "ativo", "quitado", "em_assinatura"].includes(c.status)) throw new TRPCError({ code: "CONFLICT", message: "Contrato já em assinatura ou assinado: a natureza da concessão não muda mais (use um termo aditivo)." });
+    const plano = typeof c.simulacaoJson === "string" ? JSON.parse(c.simulacaoJson) : c.simulacaoJson;
+    if (!plano?.concessao) throw new TRPCError({ code: "BAD_REQUEST", message: "Este contrato não é de concessão" });
+    const { naturezaConcessao } = await import("../contratos/servico");
+    const nat = await tratar(async () => naturezaConcessao(input));
+    const { acordo: _velho, ...resto } = plano.concessao;
+    const novo = { ...plano, concessao: { ...resto, ...nat, ...(input.motivo != null ? { motivo: input.motivo } : {}) } };
+    const db = (await getDb()) as any;
+    await db.update(contratos).set({ simulacaoJson: novo, atualizadoEm: new Date() } as any).where(eq(contratos.id, c.id));
+    return { ok: true };
   }),
 
   /** Tela de Carteirinhas: todas as pessoas dos contratos visíveis (corretor: só os dele) */

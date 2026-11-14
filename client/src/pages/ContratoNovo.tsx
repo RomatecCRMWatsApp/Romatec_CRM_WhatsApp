@@ -19,6 +19,7 @@ import { brl } from "@shared/simulador";
 import { CONDICOES, MODOS_C, ROTULO_CONDICAO, ROTULO_MODO_C, prazosDaCondicao, type CondicaoPagamento, type ModoPlanoC } from "@shared/condicoesLancamento";
 import { CondicoesEspecificas } from "@/components/contratos/CondicoesEspecificas";
 import { foraDoPadrao } from "@shared/autorizacaoPlano";
+import { NaturezaConcessao } from "@/components/contratos/NaturezaConcessao";
 
 const PASSOS = ["Unidade e plano", "Comprador", "Revisão"];
 
@@ -51,6 +52,8 @@ export default function ContratoNovo() {
   const [prazoComissao, setPrazoComissao] = useState("Pix ou transferência");
   const [vencComissao, setVencComissao] = useState(() => new Date(Date.now() - 3 * 3600_000 + 30 * 86_400_000).toISOString().slice(0, 10));
   const [despesasPor, setDespesasPor] = useState<"beneficiario" | "proprietaria">("beneficiario");
+  const [naturezaConc, setNaturezaConc] = useState<"liberalidade" | "acordo">("liberalidade");
+  const [acordoConc, setAcordoConc] = useState("");
   const [entradaParcelas, setEntrada] = useState(1);
   const [prazo, setPrazo] = useState(120);
   /** Forma de pagamento do financiado — define o modelo do CPCV (entrada 30% ou Plano A, B, C) */
@@ -92,7 +95,7 @@ export default function ContratoNovo() {
   const valorParcelaPers = parcelaPers.trim() ? Number(parcelaPers.replace(/\./g, "").replace(",", ".")) : 0;
   const plano = concessao
     ? { modalidade: "avista" as const, entradaParcelas: 1, dataPrimeiroPagamento: data1, condicao: "padrao" as const,
-        concessao: { motivo: motivoConcessao, comissaoPrazo: prazoComissao, despesasPor, ...(/^\d{4}-\d{2}-\d{2}$/.test(vencComissao) ? { comissaoVencimento: vencComissao } : {}), ...(comissaoConcessao.trim() && Number.isFinite(valorComissao) ? { comissaoValor: valorComissao } : {}) } }
+        concessao: { motivo: motivoConcessao, comissaoPrazo: prazoComissao, despesasPor, natureza: naturezaConc, acordo: naturezaConc === "acordo" ? acordoConc : "", ...(/^\d{4}-\d{2}-\d{2}$/.test(vencComissao) ? { comissaoVencimento: vencComissao } : {}), ...(comissaoConcessao.trim() && Number.isFinite(valorComissao) ? { comissaoValor: valorComissao } : {}) } }
     : { modalidade, entradaParcelas: modalidade === "avista" || condicao !== "padrao" ? 1 : entradaParcelas, prazo: modalidade === "avista" ? undefined : prazo, dataPrimeiroPagamento: data1, condicao: modalidade === "avista" ? "padrao" as const : condicao, ...(modalidade === "financiado" && condicao === "C" ? { modoC, ...(modoC === "congelado" ? { inicioComplemento: inicioComp } : {}) } : {}),
         ...(modalidade === "financiado" && condicao !== "padrao" ? {
           entradaForma: sinalParcelas > 1 ? "unica" as const : entradaForma, ...(/^\d{4}-\d{2}-\d{2}$/.test(inicioParcelas) ? { inicioParcelas } : {}),
@@ -328,6 +331,7 @@ export default function ContratoNovo() {
                   <p className="text-sm font-semibold">Concessão da proprietária a terceiro indicado por ela</p>
                   <p className="text-xs text-muted-foreground">Não é venda: o beneficiário não paga preço, não há boleto/carnê e a chácara fica "Concedida pela proprietária", fora das vendas e do financeiro. O contrato sai com o Termo Aditivo de Concessão (assinado pela proprietária, pelo beneficiário e pela gestora), com o valor à vista do imóvel como valor de referência da transferência e a comissão de gestão paga pela proprietária.</p>
                 </div>
+                <NaturezaConcessao natureza={naturezaConc} acordo={acordoConc} onNatureza={setNaturezaConc} onAcordo={setAcordoConc} />
                 <Campo rotulo="Registro da proprietária (motivo da concessão)">
                   <textarea className={`${classeCampo()} min-h-[64px]`} maxLength={600} value={motivoConcessao} onChange={e => setMotivoConcessao(e.target.value)}
                     placeholder="Ex.: concessão ao ex-funcionário, em acordo com a proprietária" />
