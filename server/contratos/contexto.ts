@@ -191,6 +191,10 @@ export function tagsPlano(s: PlanoContrato): Ctx {
         : s.sinal_parcelado && s.entrada_qtd > 1
           ? `a título de sinal, em ${s.entrada_qtd} (${extenso(s.entrada_qtd)}) parcelas mensais de R$ ${brl(s.entrada_parcela)}, sem juros e sem desconto, a primeira com vencimento em ${dataBR(s.entrada_venc1)}; as parcelas do saldo começam somente depois da última parcela do sinal`
           : `em parcela única de R$ ${brl(s.entrada_parcela)}, sem desconto, com vencimento em ${dataBR(s.entrada_venc1)}`)
+    : s.plano_autorizado
+    ? (s.entrada_qtd === 1
+      ? `em parcela única de R$ ${brl(s.entrada_parcela)}, sem desconto, com vencimento em ${dataBR(s.entrada_venc1)}`
+      : `em ${s.entrada_qtd} (${extenso(s.entrada_qtd)}) parcelas mensais de R$ ${brl(s.entrada_parcela)}, sem juros e sem desconto, a primeira com vencimento em ${dataBR(s.entrada_venc1)}`)
     : s.entrada_qtd === 1
     ? `à vista, com desconto de R$ ${brl(s.entrada_desconto)}, vencimento em ${dataBR(s.entrada_venc1)}`
     : `em ${s.entrada_qtd} (${extenso(s.entrada_qtd)}) parcelas mensais de R$ ${brl(s.entrada_parcela)}, sem desconto, a primeira com vencimento em ${dataBR(s.entrada_venc1)}`;

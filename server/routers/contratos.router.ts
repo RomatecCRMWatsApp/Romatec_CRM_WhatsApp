@@ -52,6 +52,11 @@ const planoZ = z.object({
   sinalParcelas: z.number().int().min(1).max(6).nullable().optional(),
   /** Só o administrador: valor fixo da parcela do saldo (desconto sobre a de tabela) */
   parcelaPersonalizada: z.number().positive().max(1e7).nullable().optional(),
+  /** Só o administrador: plano negociado fora das condições — precisa da autorização assinada da proprietária */
+  personalizado: z.object({
+    preco: z.number().positive().max(1e8).nullable().optional(), entrada: z.number().positive().max(1e8), entradaParcelas: z.number().int().min(1).max(12),
+    prazo: z.number().int().min(1).max(360), parcela: z.number().positive().max(1e7), inicioParcelas: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).nullable().optional(),
+  }).nullable().optional(),
   /** Concessão por liberalidade da proprietária (sem venda): só o administrador; gera o Termo Aditivo de Concessão */
   concessao: z.object({
     motivo: z.string().trim().max(600).default(""),
@@ -70,6 +75,7 @@ const planoZ = z.object({
 async function exigirAutorizacaoDoPlano(p: z.infer<typeof planoZ>, user: { id: number; name?: string | null }, senha?: string | null): Promise<void> {
   const perfil = perfilDe(user as any);
   if (p.parcelaPersonalizada != null) exigir(perfil === "admin", "Só o administrador define o valor da parcela.");
+  if (p.personalizado) exigir(perfil === "admin", "Só o administrador monta o plano negociado (com autorização da proprietária).");
   const { foraDoPadrao } = await import("../../shared/autorizacaoPlano");
   const fora = foraDoPadrao(p);
   if (perfil === "admin" || !fora.length) return;
@@ -149,7 +155,13 @@ export const contratosRouter = router({
       const resp = await responsavelTecnicoId(j.defaults);
       const plano = planoEscolhido(input.plano, Number(l.areaM2), l.precoTabela != null ? Number(l.precoTabela) : null, await condicoesDe(emp.id), (input.corretorUserId ?? ctx.user.id) !== resp);
       const { parcelas, ...resumo } = plano;
-      return { ...resumo, primeiras: parcelas.slice(0, 3), ultima: parcelas.at(-1) };
+      // Plano negociado / parcela fixada: comparação com a tabela (ganho ou perda) para a tela e para a proprietária
+      const { compararComTabela } = await import("../../shared/autorizacaoProprietaria");
+      const cond = await condicoesDe(emp.id);
+      const comparativo = plano.modalidade === "financiado" && (plano.plano_autorizado || plano.parcela_personalizada)
+        ? compararComTabela({ precoTabela: Number(plano.preco_tabela_original ?? plano.preco_tabela), precoProposta: Number(plano.preco_tabela), entrada: Number(plano.entrada_valor), prazo: Number(plano.saldo_qtd), taxaTabelaAa: Number(cond.jurosAaEfetivo), linhas: parcelas.map(p => ({ vencimento: p.vencimento, valor: Number(p.valor) })), taxaPropostaAm: Number(plano.taxa_am) })
+        : null;
+      return { ...resumo, primeiras: parcelas.slice(0, 3), ultima: parcelas.at(-1), comparativo };
     })),
 
   /** Novo contrato: cadastro já existente pelo CPF (preenche os dados sem redigitar). Corretor: só clientes dos contratos dele */
@@ -269,6 +281,28 @@ export const contratosRouter = router({
     const falhas: string[] = [];
     const emitidas = await M.emitirComissao(input.id, falhas);
     return { emitidas, falhas };
+  }),
+
+  /** Autorização da proprietária para plano fora do padrão: situação, comparação com a tabela e pedidos (só o administrador) */
+  autorizacaoProprietaria: protectedProcedure.input(z.object({ id: z.number().int() })).query(async ({ ctx, input }) => {
+    exigir(perfilDe(ctx.user as any) === "admin", "Só o administrador vê as autorizações da proprietária.");
+    await contratoVisivel(ctx, input.id);
+    const M = await import("../contratos/autorizacaoProprietaria");
+    return M.painelAutorizacao(input.id);
+  }),
+  solicitarAutorizacaoProprietaria: protectedProcedure.input(z.object({ id: z.number().int(), observacao: z.string().trim().max(600).optional() })).mutation(async ({ ctx, input }) => {
+    exigir(perfilDe(ctx.user as any) === "admin", "Só o administrador pede a autorização da proprietária.");
+    await contratoVisivel(ctx, input.id);
+    const M = await import("../contratos/autorizacaoProprietaria");
+    return tratar(() => M.solicitarAutorizacao(input.id, { observacao: input.observacao }, ctx.user.id));
+  }),
+  pedidoAutorizacaoAcao: protectedProcedure.input(z.object({ id: z.number().int(), pedidoId: z.number().int(), acao: z.enum(["reenviar", "cancelar"]) })).mutation(async ({ ctx, input }) => {
+    exigir(perfilDe(ctx.user as any) === "admin", "Só o administrador mexe nas autorizações da proprietária.");
+    await contratoVisivel(ctx, input.id);
+    const R = await import("../financeiro/renegociacao");
+    const { FinanceiroErro } = await import("../financeiro/servico");
+    try { return input.acao === "reenviar" ? await R.reenviarLink(input.pedidoId) : { ...(await R.cancelarAditivo(input.pedidoId, ctx.user.id)), enviado: false }; }
+    catch (e: any) { if (e instanceof FinanceiroErro) throw new TRPCError({ code: "CONFLICT", message: e.message }); throw e; }
   }),
 
   /** Tela de Carteirinhas: todas as pessoas dos contratos visíveis (corretor: só os dele) */

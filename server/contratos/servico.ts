@@ -174,6 +174,7 @@ export interface NovoContrato {
     /** Planos A/B/C: entrada única ou dividida (boleto/PIX + cartão) e 1º vencimento das parcelas */
     entradaForma?: 'unica' | 'boleto_cartao'; inicioParcelas?: string | null;
     sinalParcelas?: number | null; parcelaPersonalizada?: number | null;
+    personalizado?: { preco?: number | null; entrada: number; entradaParcelas: number; prazo: number; parcela: number; inicioParcelas?: string | null } | null;
     /** Concessão por liberalidade da proprietária (sem venda) */
     concessao?: { motivo?: string; comissaoValor?: number; comissaoPrazo?: string; comissaoVencimento?: string; despesasPor?: 'beneficiario' | 'proprietaria'; natureza?: 'liberalidade' | 'acordo'; acordo?: string } | null };
   comprador: PessoaForm;
@@ -235,6 +236,10 @@ export async function salvarPessoa(p: PessoaForm, leadId: number | null): Promis
 }
 
 export function planoEscolhido(n: NovoContrato['plano'], areaM2: number, precoTabela: number | null, c: CondicoesPagamento, comCorretor: boolean): PlanoContrato {
+  // Plano negociado (autorizado pela proprietária): entrada/prazo/parcela livres, sobre o preço de tabela do lote
+  if (n.modalidade === 'financiado' && n.personalizado) {
+    return planoDoContrato(simular(areaM2, 1, c, precoTabela), { modalidade: 'financiado', dataPrimeiroPagamento: n.dataPrimeiroPagamento, personalizado: n.personalizado }, c, comCorretor);
+  }
   const lancamento = n.modalidade === 'financiado' && !!n.condicao && n.condicao !== 'padrao';
   const sim = simular(areaM2, n.modalidade === 'avista' || lancamento ? 1 : n.entradaParcelas, c, precoTabela);
   const escolha: EscolhaPlano = { modalidade: n.modalidade, prazo: n.prazo, dataPrimeiroPagamento: n.dataPrimeiroPagamento, condicao: n.modalidade === 'financiado' ? n.condicao ?? 'padrao' : 'padrao', modoC: n.modoC, inicioComplemento: n.inicioComplemento,
@@ -413,8 +418,9 @@ export async function entradaDoContrato(contratoId: number): Promise<{ entrada: 
 
 /** Gate atual do contrato (para a tela: o que falta e o que bloqueia) */
 export async function gateDoContrato(contratoId: number) {
-  const { entrada } = await entradaDoContrato(contratoId);
-  const ctx = montarContexto(entrada);
+  const { entrada, plano } = await entradaDoContrato(contratoId);
+  const { situacaoAutorizacao } = await import('./autorizacaoProprietaria');
+  const ctx = { ...montarContexto(entrada), aut_proprietaria: (await situacaoAutorizacao(contratoId, plano)).situacao };
   return { minuta: avaliarGate(ctx, 'minuta'), definitivo: avaliarGate(ctx, 'definitivo') };
 }
 
@@ -470,11 +476,14 @@ export async function gerarVersao(contratoId: number, alvo: 'minuta' | 'definiti
   const c = await contratoPorId(contratoId);
   if (['ativo', 'quitado', 'distratado', 'cancelado', 'assinado'].includes(c.status)) throw new ContratoErro('STATUS', `Contrato ${c.status}: não gera nova versão`, 409);
   const { entrada, unidade, plano, marca, modelo } = await entradaDoContrato(contratoId);
-  const ctx = montarContexto(entrada);
+  // Plano fora do padrão: o definitivo exige a autorização assinada da proprietária, que vai como anexo
+  const { situacaoAutorizacao, pdfAutorizacaoValida } = await import('./autorizacaoProprietaria');
+  const ctx = { ...montarContexto(entrada), aut_proprietaria: (await situacaoAutorizacao(contratoId, plano)).situacao };
+  const autorizacaoPdf = await pdfAutorizacaoValida(contratoId, plano);
   const documentosOrigem = await documentosOrigemDoEmpreendimento(c.empreendimentoId);
   const documentosPartes = await documentosPartesDoContrato(contratoId);
   const credenciaisCorretor = await credenciaisAnexoDoContrato(contratoId).catch(() => []);
-  const { pdf, sha256, gate } = await gerarContratoPdf(ctx, plano, { alvo, modelo, marca, unidade, licenca: o.licenca, documentosOrigem, documentosPartes, credenciaisCorretor });
+  const { pdf, sha256, gate } = await gerarContratoPdf(ctx, plano, { alvo, modelo, marca, unidade, licenca: o.licenca, documentosOrigem, documentosPartes, credenciaisCorretor, autorizacaoPdf });
   const versoes: any[] = await d.select({ versao: contratoVersoes.versao }).from(contratoVersoes).where(eq(contratoVersoes.contratoId, contratoId));
   const versao = versoes.reduce((m, v) => Math.max(m, Number(v.versao)), 0) + 1;
   const chave = `contratos/${contratoId}/v${String(versao).padStart(3, '0')}-${alvo}.pdf`;

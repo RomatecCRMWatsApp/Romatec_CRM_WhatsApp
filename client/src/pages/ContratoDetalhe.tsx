@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { NaturezaConcessao } from "@/components/contratos/NaturezaConcessao";
 import { ComissaoBeneficiario } from "@/components/contratos/ComissaoBeneficiario";
+import { AutorizacaoProprietaria } from "@/components/contratos/AutorizacaoProprietaria";
 import { ROTULO_CONDICAO, type CondicaoPagamento } from "@shared/condicoesLancamento";
 import { useLocation, useParams } from "wouter";
 import { toast } from "sonner";
@@ -157,6 +158,7 @@ export default function ContratoDetalhe() {
           ))}
         </div>
 
+        {d.pode.cancelar && p?.modalidade === "financiado" && !p?.concessao && <AutorizacaoProprietaria contratoId={id} status={c.status} />}
         {p?.concessao && <ConcessaoComissao contratoId={id} concessao={p.concessao} valorRef={Number(p.preco_avista ?? 0)} cancelado={["cancelado", "distratado"].includes(c.status)} assinado={["assinado", "ativo", "quitado"].includes(c.status)} />}
         {d.cancelamento && (
           <p className="rounded-lg border border-danger-500/40 bg-danger-500/10 p-3 text-sm text-danger-200">

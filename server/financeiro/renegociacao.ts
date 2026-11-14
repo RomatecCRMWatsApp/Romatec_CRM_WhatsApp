@@ -205,21 +205,34 @@ export async function criarAditivo(contratoId: number, p: PedidoRenegociacao, au
 
 export const linkAditivo = (token: string) => `${urlPublica()}/aditivo/${token}`;
 
+/** Termos assinados pela proprietária (não pelo comprador) */
+export const TIPOS_DA_PROPRIETARIA = ['autorizacao_prop'];
+/** Quem assina o termo: o comprador ou, na autorização de plano, a proprietária (nome, CPF/CNPJ e WhatsApp) */
+async function assinante(contratoId: number, tipo: string): Promise<{ nome?: string | null; cpfCnpj?: string | null; telefone1?: string | null } | null> {
+  if (TIPOS_DA_PROPRIETARIA.includes(tipo)) {
+    const { proprietariaDoContrato } = await import('../contratos/autorizacaoProprietaria');
+    return proprietariaDoContrato(contratoId);
+  }
+  return (await pessoasDoContrato(contratoId)).comprador;
+}
+
 /** Assunto do termo na mensagem do WhatsApp, por tipo de aditivo */
 const ASSUNTO_ADITIVO: Record<string, string> = {
   renegociacao: 'com a renegociação das suas parcelas',
   registro: 'que inclui no seu contrato os dados do registro do loteamento em cartório',
   liberacao: 'com a liberação da sua chácara para transferência',
   livre: 'com uma alteração do seu contrato',
+  autorizacao_prop: 'com o pedido de autorização de uma venda em condições fora do padrão',
   comissao_benef: 'com a proposta de parcelamento da comissão de gestão da concessão',
 };
 
 export async function enviarLink(contratoId: number, token: string, numero: number, tipo = 'renegociacao') {
-  const { comprador } = await pessoasDoContrato(contratoId);
+  const comprador = await assinante(contratoId, tipo);
   const tel = fone(comprador?.telefone1);
   if (!tel) return { enviado: false };
   const nome = String(comprador?.nome ?? '').trim().split(/\s+/)[0] || 'cliente';
-  await enviador(tel, `Olá, ${nome}! O Termo Aditivo n.º ${numero} ${ASSUNTO_ADITIVO[tipo] ?? ''} está pronto. Leia e assine por aqui (você recebe um código de confirmação no WhatsApp): ${linkAditivo(token)}\n\n${LINHA_PUBLICIDADE}`.replace(/  +/g, ' '));
+  const doc = TIPOS_DA_PROPRIETARIA.includes(tipo) ? `O documento n.º ${numero} do contrato` : `O Termo Aditivo n.º ${numero}`;
+  await enviador(tel, `Olá, ${nome}! ${doc} ${ASSUNTO_ADITIVO[tipo] ?? ''} está pronto. Leia e assine por aqui (você recebe um código de confirmação no WhatsApp): ${linkAditivo(token)}\n\n${LINHA_PUBLICIDADE}`.replace(/  +/g, ' '));
   return { enviado: true };
 }
 
@@ -281,8 +294,8 @@ async function aditivoDoToken(token: string) {
 export async function paginaAditivo(token: string) {
   const { d, a } = await aditivoDoToken(token);
   const [c]: any[] = await d.select({ numero: contratos.numero, lote: contratos.loteCodigo }).from(contratos).where(eq(contratos.id, a.contratoId)).limit(1);
-  const { comprador } = await pessoasDoContrato(Number(a.contratoId));
   const tipo = String(a.tipo ?? 'renegociacao');
+  const comprador = await assinante(Number(a.contratoId), tipo);
   const dados = JSON.parse(a.dadosJson);
   const r = dados as Renegociacao;
   const tel = fone(comprador?.telefone1);
@@ -316,7 +329,7 @@ export async function enviarCodigo(token: string) {
   const { d, a } = await aditivoDoToken(token);
   if (a.status !== 'aguardando') throw new FinanceiroErro('STATUS', a.status === 'assinado' ? 'Este termo já foi assinado' : 'Este termo foi cancelado', 409);
   if (Number(a.otpEnvios) >= 5) throw new FinanceiroErro('LIMITE', 'Limite de códigos atingido. Fale com a administração.', 429);
-  const { comprador } = await pessoasDoContrato(Number(a.contratoId));
+  const comprador = await assinante(Number(a.contratoId), String(a.tipo ?? 'renegociacao'));
   const tel = fone(comprador?.telefone1);
   if (!tel) throw new FinanceiroErro('TELEFONE', 'Sem WhatsApp cadastrado no contrato. Fale com a administração.', 409);
   const codigo = String(randomInt(0, 1_000_000)).padStart(6, '0');
@@ -346,7 +359,7 @@ export async function assinarAditivo(token: string, codigo: string, o: { aceite:
   if (!afetadas) throw new FinanceiroErro('STATUS', 'Este termo já foi assinado', 409);
   const { lerArquivo, salvarArquivo } = await import('../contratos/arquivos');
   const original = await lerArquivo(a.pdfArquivo);
-  const { comprador } = await pessoasDoContrato(Number(a.contratoId));
+  const comprador = await assinante(Number(a.contratoId), String(a.tipo ?? 'renegociacao'));
   const [c]: any[] = await d.select({ numero: contratos.numero, lote: contratos.loteCodigo, empreendimentoId: contratos.empreendimentoId }).from(contratos).where(eq(contratos.id, a.contratoId)).limit(1);
   if (original) {
     const assinado = await anexarManifesto(original.buf, {
@@ -359,6 +372,13 @@ export async function assinarAditivo(token: string, codigo: string, o: { aceite:
   }
   await auditar('aditivo_assinado', { contratoId: Number(a.contratoId), origem: 'publico', ip: o.ip, detalhe: { numero: a.numero, tipo: a.tipo } });
   const tipo = String(a.tipo ?? 'renegociacao');
+  if (tipo === 'autorizacao_prop') {
+    // Autorização da proprietária assinada: o contrato com o plano negociado pode seguir (definitivo e assinaturas)
+    const { notificarChamado } = await import('../notificacoes');
+    notificarChamado({ contrato: String(c?.numero ?? ''), lote: String(c?.lote ?? ''), empreendimentoId: Number(c?.empreendimentoId ?? 0), empreendimentoSlug: '', tipo: 'contrato',
+      assunto: `Proprietária autorizou o plano fora do padrão (autorização n.º ${a.numero}) — o contrato pode seguir` }).catch(() => {});
+    return { ok: true as const, resultado: { canceladas: 0, criadas: 0, emitidas: 0, falhasAsaas: [] as string[] } };
+  }
   if (tipo === 'comissao_benef') {
     // Comissão da concessão paga pelo beneficiário: lança as parcelas e emite os boletos (100% para a Romatec)
     const { aplicarComissaoBeneficiario } = await import('./comissaoBeneficiario');

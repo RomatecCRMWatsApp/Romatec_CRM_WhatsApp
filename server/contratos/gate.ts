@@ -36,6 +36,7 @@ export function avaliarGate(ctx: Ctx, alvo: 'minuta' | 'definitivo', hoje = new 
   const antesDoRegistro = ctx.emp_parcelamento_registrado !== true && ctx.emp_venda_antes_registro === true;
   if (alvo === 'definitivo') {
     if (ctx.emp_parcelamento_registrado !== true && !antesDoRegistro) bloqueios.push('Parcelamento não registrado (Lei 6.766/1979, art. 37)');
+    if (ctx.aut_proprietaria === 'pendente') bloqueios.push('Plano fora do padrão: falta a autorização assinada da proprietária (pedido de autorização no contrato)');
     if (vencida(ctx.emp_licenca_validade, hoje)) bloqueios.push('Licença ambiental vencida ou não informada');
     // Credenciais vêm do cadastro de cada corretor (Equipe › corretor › Credenciais: carteira CRECI e certidão, com a validade)
     const quem = String(ctx.corr_nome_cadastro ?? '').trim() || 'responsável técnico';

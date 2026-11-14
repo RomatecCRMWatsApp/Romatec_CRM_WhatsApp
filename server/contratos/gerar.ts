@@ -32,6 +32,8 @@ export interface OpcoesGeracao {
   documentosPartes?: DocumentoParte[];
   /** Carteira CRECI e certidão dos corretores — anexas ao Contrato de Intermediação */
   credenciaisCorretor?: DocumentoParte[];
+  /** Autorização assinada da proprietária (plano fora do padrão): anexa logo depois do CPCV */
+  autorizacaoPdf?: Buffer | null;
 }
 
 export async function gerarContratoPdf(ctx: Ctx, plano: PlanoContrato, o: OpcoesGeracao): Promise<{ pdf: Buffer; sha256: string; gate: GateResult }> {
@@ -68,7 +70,7 @@ export async function gerarContratoPdf(ctx: Ctx, plano: PlanoContrato, o: Opcoes
   const declaracao = plano.concessao ? await docDeclaracaoConcessao(ctx, plano, o.marca) : null;
   // Plano C com o complemento congelado: termo de anuência da proprietária, logo depois do CPCV (mesma rodada de assinaturas)
   const congelamento = !plano.concessao && plano.complemento_modo === 'congelado' ? await docTermoCongelamento(ctx, plano, o.marca) : null;
-  let pdf = await anexar(principal, [...(termo ? [termo] : []), ...(declaracao ? [declaracao] : []), ...(congelamento ? [congelamento] : []), memorial, tabela, estatuto, diretrizes, mapa, licenca, ...(tarifaAgua ? [tarifaAgua] : []), origem, ...(partes ? [partes] : []), ...(termo ? [] : [intermediacao, ...(credenciais ? [credenciais] : [])])]);
+  let pdf = await anexar(principal, [...(o.autorizacaoPdf ? [o.autorizacaoPdf] : []), ...(termo ? [termo] : []), ...(declaracao ? [declaracao] : []), ...(congelamento ? [congelamento] : []), memorial, tabela, estatuto, diretrizes, mapa, licenca, ...(tarifaAgua ? [tarifaAgua] : []), origem, ...(partes ? [partes] : []), ...(termo ? [] : [intermediacao, ...(credenciais ? [credenciais] : [])])]);
   if (minuta) pdf = await marcaDagua(pdf, TEXTO_MINUTA);
   else if (o.previaSemValor) pdf = await marcaDagua(pdf, o.previaSemValor);
   return { pdf, sha256: sha256(pdf), gate };

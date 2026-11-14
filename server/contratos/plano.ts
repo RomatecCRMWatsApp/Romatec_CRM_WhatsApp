@@ -34,6 +34,21 @@ export interface EscolhaPlano {
   sinalParcelas?: number;
   /** Só o administrador: valor fixo da parcela do saldo (desconto sobre a de tabela); a taxa efetiva é recalculada */
   parcelaPersonalizada?: number;
+  /** Só o administrador, com autorização assinada da proprietária: preço/entrada/prazo/parcela fora das condições */
+  personalizado?: PlanoPersonalizado;
+}
+
+/** Plano negociado fora das condições (autorizado pela proprietária): entrada em 1..12 vezes e saldo em parcelas fixas */
+export interface PlanoPersonalizado {
+  /** Preço negociado (ausente = preço de tabela) */
+  preco?: number | null;
+  entrada: number;
+  entradaParcelas: number;
+  prazo: number;
+  /** Parcela fixa do saldo; a taxa efetiva é a que zera o saldo com essas parcelas */
+  parcela: number;
+  /** 1º vencimento do saldo (AAAA-MM-DD); ausente = mês seguinte à última parcela da entrada */
+  inicioParcelas?: string | null;
 }
 
 export const MAX_SINAL_PARCELAS = 6;
@@ -115,6 +130,10 @@ export interface PlanoContrato {
   /** Parcela do saldo fixada pelo administrador: a de tabela fica registrada */
   parcela_personalizada?: boolean;
   parcela_tabela?: number;
+  /** Plano negociado fora das condições: só segue com a autorização assinada da proprietária */
+  plano_autorizado?: boolean;
+  /** Preço de tabela do lote quando o preço foi negociado (preco_tabela passa a ser o preço da venda) */
+  preco_tabela_original?: number;
   parcelas: ParcelaPlano[];
   /** Concessão por liberalidade da proprietária (sem venda): sem cobranças, fora do faturamento, com Termo Aditivo */
   concessao?: ConcessaoProprietaria;
@@ -159,6 +178,7 @@ export function planoDoContrato(sim: Simulacao, escolha: EscolhaPlano, c: Condic
     };
   }
 
+  if (escolha.personalizado) return planoPersonalizado(sim, escolha, c, comCorretor, base);
   if (escolha.condicao && escolha.condicao !== 'padrao') return planoDeLancamento(sim, escolha, c, comCorretor, base);
 
   const plano = sim.planos.find(p => p.prazo === escolha.prazo);
@@ -330,4 +350,62 @@ export function personalizarParcelas(parcelas: ParcelaPlano[], saldo: number, va
     return { ...p, valor: k === n ? r2(amort + juros) : v, juros, amortizacao: amort, saldoDevedor: Math.max(0, s) };
   });
   return { parcelas: out, parcela: v, taxaMensal: i };
+}
+
+/**
+ * Plano negociado (autorizado pela proprietária): preço (tabela ou negociado), entrada em N parcelas mensais sem juros
+ * a partir do ato e saldo em parcelas fixas; juros e amortização pela taxa efetiva que as parcelas implicam (Price).
+ * As parcelas têm de cobrir o saldo — desconto no preço vai no preço negociado.
+ */
+export function planoPersonalizado(sim: Simulacao, escolha: EscolhaPlano, c: CondicoesPagamento, comCorretor: boolean,
+  base: Pick<PlanoContrato, 'area_m2' | 'preco_tabela' | 'preco_avista' | 'desconto_avista_total' | 'taxa_aa' | 'taxa_am' | 'comissao_percentual' | 'comissao_corretor_percentual'>): PlanoContrato {
+  const k = escolha.personalizado!;
+  const d1 = escolha.dataPrimeiroPagamento;
+  const preco = r2(Number(k.preco ?? sim.preco));
+  const entrada = r2(Number(k.entrada));
+  const nEnt = Math.floor(Number(k.entradaParcelas) || 1);
+  const prazo = Math.floor(Number(k.prazo));
+  const parcela = r2(Number(k.parcela));
+  if (!(preco > 0)) throw new Error('Informe o preço da venda');
+  if (!(entrada > 0) || entrada >= preco) throw new Error('A entrada tem de ser maior que zero e menor que o preço');
+  if (nEnt < 1 || nEnt > 12) throw new Error('Entrada em 1 a 12 parcelas');
+  if (prazo < 1 || prazo > 360) throw new Error('Prazo do saldo de 1 a 360 meses');
+  const saldo = r2(preco - entrada);
+  if (!(parcela > 0) || parcela * prazo < saldo - 0.005) throw new Error(`As ${prazo} parcelas de R$ ${parcela.toFixed(2).replace('.', ',')} não cobrem o saldo de R$ ${saldo.toFixed(2).replace('.', ',')}: aumente a parcela ou negocie o preço`);
+  const ini = k.inicioParcelas || vencimento(d1, nEnt);
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(ini)) throw new Error('1º vencimento das parcelas inválido (AAAA-MM-DD)');
+  if (ini <= vencimento(d1, nEnt - 1)) throw new Error('O 1º vencimento das parcelas tem que ser depois da última parcela da entrada');
+  // Taxa mensal que zera o saldo com as parcelas fixas (bisseção)
+  const vp = (i: number) => (i === 0 ? parcela * prazo : (parcela * (1 - Math.pow(1 + i, -prazo))) / i);
+  let i = 0;
+  if (vp(0) > saldo + 0.005) { let lo = 0, hi = 0.2; for (let t = 0; t < 200; t++) { const m = (lo + hi) / 2; if (vp(m) > saldo) lo = m; else hi = m; } i = (lo + hi) / 2; }
+  const baseEnt = Math.floor((entrada / nEnt) * 100) / 100;
+  const ent: ParcelaPlano[] = Array.from({ length: nEnt }, (_, x) => {
+    const v = x === nEnt - 1 ? r2(entrada - baseEnt * (nEnt - 1)) : baseEnt;
+    return { tipo: 'entrada', numero: x + 1, total: nEnt, vencimento: vencimento(d1, x), valor: v, juros: 0, amortizacao: v, saldoDevedor: saldo };
+  });
+  let s = saldo;
+  const sal: ParcelaPlano[] = Array.from({ length: prazo }, (_, x) => {
+    const juros = r2(s * i);
+    const ultima = x === prazo - 1;
+    const amort = ultima ? r2(s) : r2(parcela - juros);
+    s = r2(s - amort);
+    return { tipo: 'saldo', numero: x + 1, total: prazo, vencimento: vencimento(ini, x), valor: ultima ? r2(amort + juros) : parcela, juros, amortizacao: amort, saldoDevedor: Math.max(0, s) };
+  });
+  const total = r2(entrada + sal.reduce((a, x) => a + x.valor, 0));
+  const com = comissao(preco, comCorretor, nEnt === 1, c);
+  const it = sim.taxaMensal;
+  const parcelaTabela = r2(it === 0 ? saldo / prazo : (saldo * it) / (1 - Math.pow(1 + it, -prazo)));
+  return {
+    ...base, ...(preco !== r2(sim.preco) ? { preco_tabela: preco, preco_tabela_original: r2(sim.preco) } : {}),
+    modalidade: 'financiado', condicao: 'padrao', avista_vencimento: '',
+    entrada_valor: entrada, entrada_percentual: entrada / preco, entrada_qtd: nEnt, entrada_parcela: ent[0].valor, entrada_desconto: 0, entrada_venc1: d1,
+    saldo_valor: saldo, saldo_qtd: prazo, saldo_parcela: parcela, saldo_venc1: ini,
+    taxa_am: i, taxa_aa: Math.round((Math.pow(1 + i, 12) - 1) * 1e6) / 1e6,
+    total_pagar: total, total_juros: r2(total - preco),
+    comissao_total: com.total, comissao_corretor: com.corretor, comissao_romatec: com.romatec,
+    plano_autorizado: true, parcela_tabela: parcelaTabela,
+    ...(ini !== vencimento(d1, nEnt) ? { parcelas_inicio: ini } : {}),
+    parcelas: [...ent, ...sal],
+  };
 }

@@ -3,6 +3,24 @@
 Cada versão nova vai no TOPO. Depois rode `npm run release` (valida e atualiza o package.json);
 ao subir, o servidor grava a versão no banco e todos recebem o aviso "Novidades da versão".
 
+## 1.176.0 — 2026-11-14
+tipo: minor
+obrigatoria: nao
+titulo: Plano negociado com autorização da proprietária
+publico: equipe
+
+### Novo
+- Novo contrato (administrador): opção "Plano negociado fora da tabela".
+  - Você define o preço negociado (opcional), a entrada (à vista ou em até 12 vezes), o número de parcelas, o valor da parcela e o 1º vencimento.
+  - O sistema calcula a taxa e mostra na hora a comparação com a tabela: ganho ou perda no total e em valor presente.
+- Autorização da proprietária, na tela do contrato:
+  - Você clica em "Pedir autorização à proprietária" e ela recebe no WhatsApp o pedido em PDF, com a proposta e a comparação.
+  - Ela autoriza assinando com código, e o PDF sai com o manifesto de evidências.
+  - O pedido pode ser reenviado, cancelado ou baixado.
+- Trava: contrato com plano negociado ou parcela fixada só gera o definitivo com a autorização assinada.
+  - A autorização vale para aquele plano. Se o plano mudar, é preciso uma nova.
+  - O PDF autorizado entra como anexo do contrato, logo depois do CPCV.
+
 ## 1.175.3 — 2026-11-14
 tipo: patch
 obrigatoria: sim
