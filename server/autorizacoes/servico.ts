@@ -386,7 +386,65 @@ export async function viaDoCliente(id: number): Promise<{ buf: Buffer; nome: str
     const { localizarAssinaturas } = await import('../assinatura/autoPosicao');
     const { carimbarAvancada } = await import('../assinatura/pdf');
     const [cx] = await localizarAssinaturas(pdf, [{ papel: 'vendedora', nome: String(prop.nome ?? '') }]);
-    if (cx) pdf = await carimbarAvancada(pdf, cx, { nome: String(prop.nome ?? ''), cpf: String(prop.documento ?? '').replace(/\D/g, ''), quando: new Date(a.assinadoEm), ip: String(a.assinaturaIp ?? ''), codigo: `AUT-${a.numero}-${String(a.pdfSha256).slice(0, 8).toUpperCase()}` });
+    if (cx) pdf = await carimbarAvancada(pdf, cx, { nome: prop.empresa ? `${prop.empresa} — por ${prop.nome}` : String(prop.nome ?? ''), cpf: String(prop.documento ?? '').replace(/\D/g, ''), quando: new Date(a.assinadoEm), ip: String(a.assinaturaIp ?? ''), codigo: `AUT-${a.numero}-${String(a.pdfSha256).slice(0, 8).toUpperCase()}` });
   } catch (e: any) { console.warn('[Autorizações] selo na via do cliente:', e?.message ?? e); }
   return { buf: pdf, nome: `CONDICOES-APROVADAS-AUTORIZACAO-${a.numero}.pdf` };
+}
+
+// ─── Edição (antes de qualquer contrato): mesmo número, PDF novo, nova assinatura da proprietária ───────────
+
+/**
+ * Corrige a autorização (chácaras, planos, interessado, proprietária): só sem contrato gerado. Refaz o PDF com o mesmo
+ * número, troca o link (o anterior deixa de valer), zera o código e, se já estava autorizada, volta a aguardar a
+ * proprietária — a assinatura anterior não vale para o texto novo. O link novo vai ao WhatsApp dela.
+ */
+export async function editarAutorizacao(id: number, p: PedidoAutorizacao, autorId: number) {
+  const d = await banco();
+  const [a]: any[] = await d.select().from(autorizacoesVenda).where(eq(autorizacoesVenda.id, id)).limit(1);
+  if (!a) throw new ContratoErro('NAO_ENCONTRADO', 'Autorização não encontrada', 404);
+  if (a.status === 'cancelada') throw new ContratoErro('STATUS', 'Autorização cancelada: faça uma nova', 409);
+  if ((json(a.dadosJson).itens ?? []).some((i: any) => i.contratoId)) throw new ContratoErro('STATUS', 'Esta autorização já tem contrato gerado: para mudar, faça uma nova autorização', 409);
+  const emp = await empreendimentoPorSlug(p.empreendimentoSlug);
+  if (Number(emp.id) !== Number(a.empreendimentoId)) throw new ContratoErro('EMPREENDIMENTO', 'O empreendimento da autorização não muda: faça uma nova', 400);
+  const cliente = String(p.clienteNome ?? '').trim();
+  if (cliente.length < 3) throw new ContratoErro('CLIENTE', 'Informe o nome do interessado', 400);
+  const xs = await calcularItens(Number(emp.id), p.itens);
+  const prop = await proprietariaPadrao(Number(emp.id), p.proprietario);
+  const numero = Number(a.numero);
+  const pdf = await pedidoPdf(numero, emp, prop, cliente, xs, String(p.observacao ?? ''));
+  const { salvarArquivo } = await import('../contratos/arquivos');
+  const chave = `autorizacoes/autorizacao-${numero}-${Date.now()}.pdf`;
+  await salvarArquivo(chave, pdf, 'application/pdf');
+  const tot = totais(xs);
+  const token = randomBytes(16).toString('hex');
+  const pontos = [
+    `Interessado: ${cliente}.`,
+    ...xs.map(x => `Chácara ${x.loteCodigo}: entrada ${x.plano.entrada_qtd > 1 ? `${x.plano.entrada_qtd}× R$ ${brl(x.plano.entrada_parcela)}` : `R$ ${brl(x.plano.entrada_valor)}`} + ${x.plano.saldo_qtd}× R$ ${brl(x.plano.saldo_parcela)} (tabela: R$ ${brl(x.comparativo.parcelaTabela)}); diferença em valor presente ${sinal(x.comparativo.diferencaVp)}.`),
+    ...(xs.length > 1 ? [`Total: R$ ${brl(tot.totalProposta)} (tabela R$ ${brl(tot.totalTabela)}); em valor presente ${sinal(tot.diferencaVp)}.`] : []),
+    'Ao assinar, você autoriza a venda nessas condições.',
+  ];
+  const historico = [...(json(a.dadosJson).historico ?? []), { em: new Date().toISOString(), por: autorId, statusAnterior: a.status, chacarasAnteriores: a.loteCodigos }];
+  await d.update(autorizacoesVenda).set({
+    loteCodigos: xs.map(x => x.loteCodigo).join(', ').slice(0, 255), clienteNome: cliente.slice(0, 160),
+    escolhaJson: JSON.stringify({ itens: xs.map(x => ({ loteCodigo: x.loteCodigo, escolha: x.escolha })) }),
+    dadosJson: JSON.stringify({ proprietaria: prop, itens: xs.map(x => ({ loteCodigo: x.loteCodigo, areaM2: x.areaM2, comparativo: x.comparativo, assinaturaPlano: x.assinaturaPlano, entrada: x.plano.entrada_valor, entradaQtd: x.plano.entrada_qtd, parcela: x.plano.saldo_parcela, prazo: x.plano.saldo_qtd, contratoId: null })), totais: tot, pontos, historico }),
+    observacao: String(p.observacao ?? '').slice(0, 600) || null, status: 'aguardando', pdfArquivo: chave, pdfSha256: sha(pdf), pdfAssinadoArquivo: null,
+    token, otpHash: null, otpExpira: null, otpTentativas: 0, otpEnvios: 0, assinadoEm: null, assinaturaIp: null, assinaturaUa: null,
+  } as any).where(eq(autorizacoesVenda.id, id));
+  const envio = await enviarLink(numero, token, prop, emp.nome).catch(() => ({ enviado: false }));
+  return { ok: true as const, numero, link: await linkDe(token), enviado: envio.enviado, totais: tot };
+}
+
+/** Dados da autorização no formato do formulário (para editar) */
+export async function pedidoDaAutorizacao(id: number): Promise<PedidoAutorizacao & { id: number; numero: number; status: string }> {
+  const d = await banco();
+  const [a]: any[] = await d.select().from(autorizacoesVenda).where(eq(autorizacoesVenda.id, id)).limit(1);
+  if (!a) throw new ContratoErro('NAO_ENCONTRADO', 'Autorização não encontrada', 404);
+  const [e]: any[] = await d.select({ slug: empreendimentos.slug }).from(empreendimentos).where(eq(empreendimentos.id, a.empreendimentoId)).limit(1);
+  const dd = json(a.dadosJson);
+  return {
+    id: Number(a.id), numero: Number(a.numero), status: String(a.status), empreendimentoSlug: String(e?.slug ?? ''), clienteNome: String(a.clienteNome), observacao: a.observacao ?? '',
+    proprietario: dd.proprietaria ?? null,
+    itens: (json(a.escolhaJson).itens ?? []).map((i: any) => ({ loteCodigo: i.loteCodigo, dataPrimeiroPagamento: i.escolha.dataPrimeiroPagamento, personalizado: i.escolha.personalizado })),
+  };
 }

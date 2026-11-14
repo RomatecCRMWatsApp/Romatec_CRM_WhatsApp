@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
-import { Ban, Copy, CopyPlus, Loader2, Plus, Send, ShieldCheck, Trash2 } from "lucide-react";
+import { Ban, Copy, CopyPlus, Loader2, Pencil, Plus, Send, ShieldCheck, Trash2 } from "lucide-react";
 import { Link } from "wouter";
 import { trpc } from "@/lib/trpc";
 import PageHeader from "@/components/PageHeader";
@@ -31,11 +31,28 @@ export default function Autorizacoes() {
   const [obs, setObs] = useState("");
   const [prop, setProp] = useState({ nome: "", empresa: "", documento: "", telefone: "" });
   const [linhas, setLinhas] = useState<Linha[]>([nova()]);
+  // Edição: id da autorização sendo corrigida (null = nova)
+  const [editId, setEditId] = useState<{ id: number; numero: number } | null>(null);
+  const carregandoEdicao = useState(false);
   const opcoesEmp = useMemo(() => (emps ?? []).filter((e: any) => e.acesso), [emps]);
   useEffect(() => { if (!slug && opcoesEmp.length === 1) setSlug(opcoesEmp[0].slug); }, [opcoesEmp, slug]);
   const op = trpc.contratos.opcoes.useQuery({ slug }, { enabled: !!slug });
   const propPadrao = trpc.autorizacoes.proprietaria.useQuery({ slug }, { enabled: !!slug });
-  useEffect(() => { if (propPadrao.data) setProp({ nome: propPadrao.data.nome, empresa: propPadrao.data.empresa, documento: propPadrao.data.documento, telefone: propPadrao.data.telefone }); }, [propPadrao.data]);
+  useEffect(() => { if (propPadrao.data && !editId) setProp({ nome: propPadrao.data.nome, empresa: propPadrao.data.empresa, documento: propPadrao.data.documento, telefone: propPadrao.data.telefone }); }, [propPadrao.data]); // eslint-disable-line react-hooks/exhaustive-deps
+  const fechar = () => { setAbrir(false); setEditId(null); setLinhas([nova()]); setCliente(""); setObs(""); };
+  const editarDe = async (id: number) => {
+    carregandoEdicao[1](true);
+    try {
+      const p = await utils.autorizacoes.pedido.fetch({ id });
+      setEditId({ id, numero: p.numero });
+      setSlug(p.empreendimentoSlug); setCliente(p.clienteNome); setObs(p.observacao ?? "");
+      setProp({ nome: p.proprietario?.nome ?? "", empresa: p.proprietario?.empresa ?? "", documento: p.proprietario?.documento ?? "", telefone: p.proprietario?.telefone ?? "" });
+      const t = (v: number | null | undefined) => (v == null ? "" : String(v).replace(".", ","));
+      setLinhas(p.itens.map(i => ({ loteCodigo: i.loteCodigo, preco: t(i.personalizado.preco), entrada: t(i.personalizado.entrada), entradaParcelas: i.personalizado.entradaParcelas, prazo: String(i.personalizado.prazo), parcela: t(i.personalizado.parcela), data1: i.dataPrimeiroPagamento, inicio: i.personalizado.inicioParcelas ?? "" })));
+      setAbrir(true);
+      window.scrollTo({ top: 0, behavior: "smooth" });
+    } catch (e: any) { toast.error(e.message); } finally { carregandoEdicao[1](false); }
+  };
 
   const itens = linhas.filter(l => l.loteCodigo && num(l.entrada) > 0 && Number(l.prazo) > 0 && num(l.parcela) > 0 && /^\d{4}-\d{2}-\d{2}$/.test(l.data1)).map(l => ({
     loteCodigo: l.loteCodigo, dataPrimeiroPagamento: l.data1,
@@ -46,7 +63,11 @@ export default function Autorizacoes() {
   const prontos = !!slug && itens.length > 0 && itens.length === linhas.length;
   const sim = trpc.autorizacoes.simular.useQuery(pedido, { enabled: prontos, retry: false });
   const criar = trpc.autorizacoes.criar.useMutation({
-    onSuccess: r => { toast.success(r.enviado ? `Autorização n.º ${r.numero} enviada no WhatsApp da proprietária` : `Autorização n.º ${r.numero} gerada — copie o link (sem WhatsApp da proprietária)`); setAbrir(false); setLinhas([nova()]); setCliente(""); setObs(""); utils.autorizacoes.listar.invalidate(); },
+    onSuccess: r => { toast.success(r.enviado ? `Autorização n.º ${r.numero} enviada no WhatsApp da proprietária` : `Autorização n.º ${r.numero} gerada — copie o link (sem WhatsApp da proprietária)`); fechar(); utils.autorizacoes.listar.invalidate(); },
+    onError: e => toast.error(e.message),
+  });
+  const editar = trpc.autorizacoes.editar.useMutation({
+    onSuccess: r => { toast.success(r.enviado ? `Autorização n.º ${r.numero} corrigida — link novo enviado à proprietária` : `Autorização n.º ${r.numero} corrigida — copie o link novo`); fechar(); utils.autorizacoes.listar.invalidate(); },
     onError: e => toast.error(e.message),
   });
   const cancelar = trpc.autorizacoes.cancelar.useMutation({ onSuccess: () => { toast.success("Autorização cancelada"); utils.autorizacoes.listar.invalidate(); }, onError: e => toast.error(e.message) });
@@ -57,13 +78,14 @@ export default function Autorizacoes() {
   return (
     <div>
       <PageHeader icone={ShieldCheck} titulo="Autorizações da proprietária" subtitulo="Venda fora da tabela: a proprietária autoriza antes; cada chácara autorizada vira um contrato no Novo contrato"
-        acoes={<Button onClick={() => setAbrir(v => !v)}><Plus className="h-4 w-4" /> Nova autorização</Button>} />
+        acoes={<Button onClick={() => { if (abrir) fechar(); else { setEditId(null); setAbrir(true); } }}><Plus className="h-4 w-4" /> Nova autorização</Button>} />
       <div className="mx-auto max-w-[1300px] space-y-4 px-4 pb-10 md:px-6">
         {abrir && (
           <section className="space-y-3 rounded-xl border border-border bg-card p-4">
+            {editId && <p className="rounded-md border border-warn-500/40 bg-warn-500/10 p-2 text-sm">Corrigindo a <b>Autorização n.º {editId.numero}</b>: ao salvar, o PDF é refeito com o mesmo número, o link anterior deixa de valer e a proprietária assina de novo.</p>}
             <div className="grid gap-3 md:grid-cols-3">
               <label className="text-xs text-muted-foreground">Empreendimento
-                <select className={campo} value={slug} onChange={e => { setSlug(e.target.value); setLinhas([nova()]); }}>
+                <select className={campo} value={slug} disabled={!!editId} onChange={e => { setSlug(e.target.value); setLinhas([nova()]); }}>
                   <option value="">Escolha…</option>
                   {opcoesEmp.map((e: any) => <option key={e.slug} value={e.slug}>{e.nome}</option>)}
                 </select>
@@ -97,6 +119,7 @@ export default function Autorizacoes() {
                       <label className="text-xs text-muted-foreground">Chácara
                         <select className={campo} value={l.loteCodigo} onChange={e => setL(i, "loteCodigo", e.target.value)} disabled={!slug}>
                           <option value="">…</option>
+                          {l.loteCodigo && !(op.data?.lotes ?? []).some((x: any) => x.codigo === l.loteCodigo) && <option value={l.loteCodigo}>{l.loteCodigo}</option>}
                           {(op.data?.lotes ?? []).filter((x: any) => x.codigo === l.loteCodigo || !usados.has(x.codigo)).map((x: any) => <option key={x.codigo} value={x.codigo}>{x.codigo}</option>)}
                         </select>
                       </label>
@@ -130,10 +153,10 @@ export default function Autorizacoes() {
               <input className={campo} value={obs} maxLength={600} onChange={e => setObs(e.target.value)} />
             </label>
             <div className="flex gap-2">
-              <Button disabled={!prontos || cliente.trim().length < 3 || !sim.data || criar.isPending} onClick={() => criar.mutate(pedido)}>
-                {criar.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />} Gerar e enviar à proprietária
+              <Button disabled={!prontos || cliente.trim().length < 3 || !sim.data || criar.isPending || editar.isPending} onClick={() => (editId ? editar.mutate({ ...pedido, id: editId.id }) : criar.mutate(pedido))}>
+                {criar.isPending || editar.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />} {editId ? "Salvar correção e reenviar à proprietária" : "Gerar e enviar à proprietária"}
               </Button>
-              <Button variant="ghost" onClick={() => setAbrir(false)}>Fechar</Button>
+              <Button variant="ghost" onClick={fechar}>Fechar</Button>
             </div>
           </section>
         )}
@@ -149,6 +172,9 @@ export default function Autorizacoes() {
               <span className="ml-auto flex flex-wrap gap-1">
                 <AcoesPdf compacto rotulo="Autorização (interna)" url={`/api/autorizacoes/${a.id}.pdf`} nomeArquivo={`AUTORIZACAO-${a.numero}.pdf`} mensagem={`Autorização n.º ${a.numero}`} />
                 {a.status === "autorizada" && <AcoesPdf compacto rotulo="Via do cliente" url={`/api/autorizacoes/${a.id}/via-cliente.pdf`} nomeArquivo={`CONDICOES-APROVADAS-${a.numero}.pdf`} mensagem={`Condições de pagamento aprovadas pela proprietária — ${a.chacaras}`} />}
+                {a.status !== "cancelada" && !a.itens.some((i: any) => i.contratoId) && (
+                  <Button size="sm" variant="outline" disabled={carregandoEdicao[0]} onClick={() => editarDe(a.id)}><Pencil className="h-4 w-4" /> Editar</Button>
+                )}
                 {a.status === "aguardando" && a.link && <>
                   <Button size="sm" variant="outline" onClick={() => navigator.clipboard.writeText(a.link!).then(() => toast.success("Link copiado"))}><Copy className="h-4 w-4" /> Link</Button>
                   <Button size="sm" variant="outline" disabled={reenviar.isPending} onClick={() => reenviar.mutate({ id: a.id })}><Send className="h-4 w-4" /> Reenviar</Button>

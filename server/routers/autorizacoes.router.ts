@@ -41,6 +41,14 @@ export const autorizacoesRouter = router({
   }),
   simular: protectedProcedure.input(pedidoZ).query(async ({ ctx, input }) => { soAdmin(ctx); return comErro(async () => (await S()).simularPedido(input as any)); }),
   criar: protectedProcedure.input(pedidoZ).mutation(async ({ ctx, input }) => { soAdmin(ctx); return comErro(async () => (await S()).criarAutorizacao(input as any, ctx.user.id)); }),
+  /** Para editar: os dados no formato do formulário */
+  pedido: protectedProcedure.input(z.object({ id: z.number().int() })).query(async ({ ctx, input }) => { soAdmin(ctx); return comErro(async () => (await S()).pedidoDaAutorizacao(input.id)); }),
+  /** Corrige a autorização (sem contrato gerado): mesmo número, PDF e link novos, assinatura de novo */
+  editar: protectedProcedure.input(pedidoZ.extend({ id: z.number().int() })).mutation(async ({ ctx, input }) => {
+    soAdmin(ctx);
+    const { id, ...p } = input;
+    return comErro(async () => (await S()).editarAutorizacao(id, p as any, ctx.user.id));
+  }),
   cancelar: protectedProcedure.input(z.object({ id: z.number().int() })).mutation(async ({ ctx, input }) => { soAdmin(ctx); return comErro(async () => (await S()).cancelarAutorizacao(input.id, ctx.user.id)); }),
   reenviar: protectedProcedure.input(z.object({ id: z.number().int() })).mutation(async ({ ctx, input }) => { soAdmin(ctx); return comErro(async () => (await S()).reenviarAutorizacao(input.id)); }),
   /** Novo contrato: autorizações assinadas com esta chácara ainda sem contrato */

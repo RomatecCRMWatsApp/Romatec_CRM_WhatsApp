@@ -127,4 +127,20 @@ describe('autorização antes do contrato: 2 chácaras → proprietária (empres
     const g = avaliarGate({ aut_proprietaria: 'pendente' } as any, 'definitivo');
     expect(g.bloqueios.some(b => /autorização assinada da proprietária/.test(b))).toBe(true);
   });
+
+  it('editar: troca a chácara (D01 → D18) com o mesmo número, link novo e nova assinatura; com contrato gerado não edita', async () => {
+    const A = await AV();
+    const id2 = db.all(sql`SELECT id FROM autorizacoesVenda WHERE numero = 2`)[0].id;
+    const tokenAntes = db.all(sql`SELECT token FROM autorizacoesVenda WHERE id = ${id2}`)[0].token;
+    const p0 = await A.pedidoDaAutorizacao(id2);
+    expect(p0.itens.map(i => i.loteCodigo)).toEqual(['D01']);
+    const r = await A.editarAutorizacao(id2, { ...p0, itens: [{ ...p0.itens[0], loteCodigo: 'D18' }] }, 1);
+    expect(r).toMatchObject({ numero: 2, enviado: true });
+    const linha = db.all(sql`SELECT * FROM autorizacoesVenda WHERE id = ${id2}`)[0];
+    expect(linha).toMatchObject({ loteCodigos: 'D18', status: 'aguardando', numero: 2 });
+    expect(linha.token).not.toBe(tokenAntes);
+    expect(await A.porToken(tokenAntes)).toBeNull();
+    expect(msgs.at(-1)![1]).toMatch(/Autorização n.º 2/);
+    await expect(A.editarAutorizacao(1, await A.pedidoDaAutorizacao(1), 1)).rejects.toThrow(/já tem contrato/);
+  });
 });

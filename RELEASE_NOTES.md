@@ -3,6 +3,22 @@
 Cada versão nova vai no TOPO. Depois rode `npm run release` (valida e atualiza o package.json);
 ao subir, o servidor grava a versão no banco e todos recebem o aviso "Novidades da versão".
 
+## 1.179.0 — 2026-11-14
+tipo: minor
+obrigatoria: nao
+titulo: Editar autorização da proprietária
+publico: equipe
+
+### Novo
+- Autorizações: novo botão "Editar" enquanto nenhuma chácara da autorização tem contrato.
+  - O formulário abre preenchido, para trocar chácara, plano, interessado ou dados da proprietária.
+  - Ao salvar, o PDF é refeito com o mesmo número e um link novo vai à proprietária.
+  - O link anterior deixa de valer.
+  - Se já estava autorizada, a autorização volta a aguardar a assinatura dela, porque o texto mudou.
+
+### Melhorias
+- Via do cliente: quando a proprietária é empresa, o selo da assinatura mostra a empresa e quem assinou por ela ("Empresa — por Fulano"), com o CNPJ.
+
 ## 1.178.0 — 2026-11-14
 tipo: minor
 obrigatoria: nao
