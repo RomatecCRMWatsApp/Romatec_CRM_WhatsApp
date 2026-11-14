@@ -35,6 +35,7 @@ async function acesso(req: Request, caminho: string, permitirLink = true): Promi
 function erro(res: Response, e: any) {
   if (e instanceof FinanceiroErro || e instanceof AsaasErro) return res.status(e.status).json({ erro: e.codigo, mensagem: e.message });
   if (e instanceof SemDadosAsaasError) return res.status(409).json({ erro: 'sem_asaas', mensagem: e.message });
+  if (e?.name === 'ContratoErro' && typeof e.status === 'number') return res.status(e.status).json({ erro: e.codigo, mensagem: e.message });
   console.error('[Financeiro]', e);
   return res.status(500).json({ erro: 'falha', mensagem: 'Falha ao gerar o documento' });
 }
@@ -594,6 +595,10 @@ export function registrarRotasFinanceiro(app: Express) {
       if (!(await limitePortal(req, res))) return;
       const { paginaAditivo } = await import('./renegociacao');
       res.setHeader('Cache-Control', 'no-store');
+      // Autorização de venda da proprietária: mesma página de assinatura dos termos aditivos
+      const A = await import('../autorizacoes/servico');
+      const aut = await A.porToken(String(req.params.token));
+      if (aut) return res.json(await A.paginaPublica(aut));
       res.json(await paginaAditivo(String(req.params.token)));
     } catch (e) { erro(res, e); }
   });
@@ -601,7 +606,9 @@ export function registrarRotasFinanceiro(app: Express) {
     try {
       if (!(await limitePortal(req, res))) return;
       const { pdfDoToken } = await import('./renegociacao');
-      const r = await pdfDoToken(String(req.params.token));
+      const A = await import('../autorizacoes/servico');
+      const aut = await A.porToken(String(req.params.token));
+      const r = aut ? await A.pdfPublico(aut) : await pdfDoToken(String(req.params.token));
       if (!r) return res.status(404).json({ erro: 'arquivo', mensagem: 'Termo indisponível' });
       res.setHeader('Cache-Control', 'private, no-store');
       res.setHeader('Content-Type', 'application/pdf');
@@ -613,18 +620,36 @@ export function registrarRotasFinanceiro(app: Express) {
     try {
       if (!(await limitePortal(req, res))) return;
       const { enviarCodigo } = await import('./renegociacao');
-      res.json(await enviarCodigo(String(req.params.token)));
+      const A = await import('../autorizacoes/servico');
+      const aut = await A.porToken(String(req.params.token));
+      res.json(aut ? await A.enviarCodigoPublico(aut) : await enviarCodigo(String(req.params.token)));
     } catch (e) { erro(res, e); }
   });
   app.post('/api/aditivo/:token/assinar', async (req, res) => {
     try {
       if (!(await limitePortal(req, res))) return;
       const { assinarAditivo } = await import('./renegociacao');
-      res.json(await assinarAditivo(String(req.params.token), String(req.body?.codigo ?? '').trim(), {
-        // IP de evidência: o que o proxy do Railway acrescentou (último da lista), não o informado pelo navegador
-        aceite: req.body?.aceite === true, ip: String(req.headers['x-forwarded-for'] ?? '').split(',').map(x => x.trim()).filter(Boolean).pop() || req.socket.remoteAddress || '',
-        ua: String(req.headers['user-agent'] ?? ''),
-      }));
+      // IP de evidência: o que o proxy do Railway acrescentou (último da lista), não o informado pelo navegador
+      const ev = { aceite: req.body?.aceite === true, ip: String(req.headers['x-forwarded-for'] ?? '').split(',').map(x => x.trim()).filter(Boolean).pop() || req.socket.remoteAddress || '', ua: String(req.headers['user-agent'] ?? '') };
+      const A = await import('../autorizacoes/servico');
+      const aut = await A.porToken(String(req.params.token));
+      res.json(aut ? await A.assinarPublico(aut, String(req.body?.codigo ?? '').trim(), ev) : await assinarAditivo(String(req.params.token), String(req.body?.codigo ?? '').trim(), ev));
+    } catch (e) { erro(res, e); }
+  });
+  // PDF da autorização de venda (administrador e secretária)
+  app.get('/api/autorizacoes/:id.pdf', async (req, res) => {
+    try {
+      const { sdk } = await import('../_core/sdk');
+      const user: any = await sdk.authenticateRequest(req).catch(() => null);
+      const { perfilDe } = await import('../../shared/equipe');
+      if (!user || !['admin', 'secretario'].includes(String(perfilDe(user)))) return res.status(403).json({ erro: 'nao_autorizado' });
+      const { pdfDaAutorizacao } = await import('../autorizacoes/servico');
+      const r = await pdfDaAutorizacao(Number(req.params.id) || 0);
+      if (!r) return res.status(404).json({ erro: 'arquivo' });
+      res.setHeader('Cache-Control', 'private, no-store');
+      res.setHeader('Content-Type', 'application/pdf');
+      res.setHeader('Content-Disposition', `inline; filename="${r.nome}"`);
+      res.send(r.buf);
     } catch (e) { erro(res, e); }
   });
   // PDF do termo para o escritório (administrador e secretária)

@@ -178,9 +178,22 @@ export const contratosRouter = router({
     condicoes: z.object({ especificas: z.string().max(2000).optional(), modoAssinatura: z.enum(["eletronica", "manuscrita"]).optional() }).optional(),
     /** Senha do administrador para condições fora do padrão (quem não é administrador) */
     autorizacao: z.object({ senha: z.string().max(200) }).nullable().optional(),
+    /** Autorização de venda assinada pela proprietária: o plano da chácara vem dela (só o administrador) */
+    autorizacaoVendaId: z.number().int().nullable().optional(),
   })).mutation(async ({ ctx, input }) => {
     const perfil = perfilDe(ctx.user as any);
     exigir(podeCriarContrato(perfil), "Seu perfil não cria contratos.");
+    let daAutorizacao: { id: number; numero: number } | null = null;
+    if (input.autorizacaoVendaId) {
+      exigir(perfil === "admin", "Só o administrador gera contrato com autorização da proprietária.");
+      const db0 = (await getDb()) as any;
+      const [e0] = await db0.select({ id: empreendimentos.id }).from(empreendimentos).where(eq(empreendimentos.slug, input.slug)).limit(1);
+      if (!e0) throw new TRPCError({ code: "NOT_FOUND", message: "Empreendimento não encontrado" });
+      const AV = await import("../autorizacoes/servico");
+      const r = await tratar(() => AV.escolhaDaAutorizacao(input.autorizacaoVendaId!, Number(e0.id), input.lote));
+      input.plano = { ...r.escolha, entradaParcelas: 1, condicao: "padrao" } as any;
+      daAutorizacao = { id: input.autorizacaoVendaId, numero: r.numero };
+    }
     await exigirAutorizacaoDoPlano(input.plano, ctx.user as any, input.autorizacao?.senha);
     if (input.plano.concessao) exigir(perfil === "admin", "Só o administrador registra concessão da proprietária.");
     if (input.plano.modoC === "congelado") exigir(perfil === "admin", "Só o administrador define o congelamento do complemento da entrada.");
@@ -194,11 +207,20 @@ export const contratosRouter = router({
     // Sem lead = cliente próprio do corretor: o contrato (e a comissão) fica com quem cria (corretorUserId)
     const [emp] = await db.select({ id: empreendimentos.id }).from(empreendimentos).where(eq(empreendimentos.slug, input.slug)).limit(1);
     if (!emp || !temAcesso(ctx.permissoes.perfil, ctx.permissoes.acessos, "empreendimento", emp.id)) throw new TRPCError({ code: "FORBIDDEN", message: "Empreendimento não habilitado para você." });
-    return tratar(() => criarContrato({
+    const novo = await tratar(() => criarContrato({
       empreendimentoSlug: input.slug, loteCodigo: input.lote, leadId: input.leadId ?? null,
       corretorUserId: perfil === "corretor" ? ctx.user.id : input.corretorUserId ?? ctx.user.id,
       plano: input.plano, comprador: input.comprador as any, conjuge: (input.conjuge ?? null) as any, dependentes: input.dependentes ?? [], condicoes: input.condicoes,
     }, ctx.user.id));
+    if (daAutorizacao) {
+      // O contrato guarda a autorização de origem; a chácara da autorização fica com este contrato
+      const [c1] = await db.select({ simulacaoJson: contratos.simulacaoJson }).from(contratos).where(eq(contratos.id, novo.id)).limit(1);
+      const p1 = typeof c1?.simulacaoJson === "string" ? JSON.parse(c1.simulacaoJson) : c1?.simulacaoJson;
+      await db.update(contratos).set({ simulacaoJson: { ...p1, autorizacao_venda: daAutorizacao } } as any).where(eq(contratos.id, novo.id));
+      const AV = await import("../autorizacoes/servico");
+      await AV.vincularContrato(daAutorizacao.id, input.lote, novo.id);
+    }
+    return novo;
   }),
 
   /**
@@ -290,21 +312,6 @@ export const contratosRouter = router({
     const M = await import("../contratos/autorizacaoProprietaria");
     return M.painelAutorizacao(input.id);
   }),
-  solicitarAutorizacaoProprietaria: protectedProcedure.input(z.object({ id: z.number().int(), observacao: z.string().trim().max(600).optional() })).mutation(async ({ ctx, input }) => {
-    exigir(perfilDe(ctx.user as any) === "admin", "Só o administrador pede a autorização da proprietária.");
-    await contratoVisivel(ctx, input.id);
-    const M = await import("../contratos/autorizacaoProprietaria");
-    return tratar(() => M.solicitarAutorizacao(input.id, { observacao: input.observacao }, ctx.user.id));
-  }),
-  pedidoAutorizacaoAcao: protectedProcedure.input(z.object({ id: z.number().int(), pedidoId: z.number().int(), acao: z.enum(["reenviar", "cancelar"]) })).mutation(async ({ ctx, input }) => {
-    exigir(perfilDe(ctx.user as any) === "admin", "Só o administrador mexe nas autorizações da proprietária.");
-    await contratoVisivel(ctx, input.id);
-    const R = await import("../financeiro/renegociacao");
-    const { FinanceiroErro } = await import("../financeiro/servico");
-    try { return input.acao === "reenviar" ? await R.reenviarLink(input.pedidoId) : { ...(await R.cancelarAditivo(input.pedidoId, ctx.user.id)), enviado: false }; }
-    catch (e: any) { if (e instanceof FinanceiroErro) throw new TRPCError({ code: "CONFLICT", message: e.message }); throw e; }
-  }),
-
   /** Tela de Carteirinhas: todas as pessoas dos contratos visíveis (corretor: só os dele) */
   carteirinhasLista: protectedProcedure.query(async ({ ctx }) => {
     const perfil = perfilDe(ctx.user as any);

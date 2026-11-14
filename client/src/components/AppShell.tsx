@@ -69,6 +69,8 @@ const MENU: Grupo[] = [
       { rotulo: "Contratos", rota: "/contratos", icone: FileSignature, modulo: "contratos" },
       // Só o administrador (shared/equipe.ts → podeAbrir): contrato interno proprietária × Romatec
       { rotulo: "Contrato de gestão", rota: "/contrato-gestao", icone: Handshake },
+      // Só o administrador: autorizações da proprietária para venda fora da tabela (antes do contrato)
+      { rotulo: "Autorizações da proprietária", rota: "/autorizacoes", icone: ShieldCheck },
       { rotulo: "Ranking de vendas", rota: "/ranking", icone: Trophy },
       // Administrador e secretária (shared/equipe.ts → podeAbrir)
       { rotulo: "Fila de reservas", rota: "/reservas", icone: Hourglass },

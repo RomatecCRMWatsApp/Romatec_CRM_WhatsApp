@@ -49,9 +49,11 @@ describe('plano negociado', () => {
   });
 });
 
-describe('autorização da proprietária: pedido → assinatura pelo link → anexo; plano mudou → precisa de novo', () => {
+describe('autorização antes do contrato: 2 chácaras → proprietária (empresa) assina pelo link → contrato de cada chácara', () => {
   let db: any;
   const msgs: [string, string][] = [];
+  const AV = () => import('./autorizacoes/servico');
+  const plano = { entrada: 10000, entradaParcelas: 4, prazo: 180, parcela: 1000, inicioParcelas: '2027-03-15' };
   beforeAll(async () => {
     db = await getDb();
     R.definirEnviador(async (t, m) => { msgs.push([t, m]); });
@@ -59,39 +61,51 @@ describe('autorização da proprietária: pedido → assinatura pelo link → an
     db.run(sql`INSERT INTO condicoesPagamento (empreendimentoId, precoBase, areaBaseM2, toleranciaAreaM2, entradaPct, entradaMaxParcelas, descontoAvistaPct, jurosAaEfetivo, metodo, prazos, comissaoTotalPct, comissaoCorretorPct, comissao1aParcelaPct, vigenteDesde, ativo)
       VALUES (1, '160000', '3025.11', '1', '0.3', 6, '0.0625', '0.06', 'PRICE', '[12,24,36,60,120]', '0.05', '0.02', '0.5', '2026-01-01', 1)`);
     db.run(sql`INSERT INTO empJuridico (empreendimentoId, defaultsJson, vendedoraJson) VALUES (1, '{}', ${JSON.stringify({ vend_nome: 'VERA PROPRIETARIA FICTICIA', vend_cpf: '111.444.777-35', vend_telefone: '(99) 9 9000-0001' })})`);
-    const p = negociado({ entrada: 50000, entradaParcelas: 1, prazo: 180, parcela: 1000 });
-    db.run(sql`INSERT INTO contratos (id, numero, empreendimentoId, loteId, loteCodigo, corretorUserId, status, simulacaoJson, dadosJson, codigoVerificacao) VALUES (1, 'BJ-2026-0077', 1, 0, 'D12', 1, 'rascunho', ${JSON.stringify(p)}, '{}', 'C77')`);
-    db.run(sql`INSERT INTO pessoas (id, nome, cpfCnpj, telefone1) VALUES (1, 'Cliente Ficticio da D12', '52998224725', '99988887777')`);
-    db.run(sql`INSERT INTO contratoPessoas (contratoId, pessoaId, papel) VALUES (1, 1, 'comprador')`);
+    db.run(sql`INSERT INTO lotes (empreendimentoId, codigo, quadra, numero, areaM2, situacao) VALUES (1, 'D01', 'D', 1, '3157.17', 'disponivel'), (1, 'D18', 'D', 18, '3154.38', 'disponivel')`);
   });
 
-  it('sem autorização o definitivo fica bloqueado', async () => {
+  it('gera a autorização com as 2 chácaras, a empresa e o representante; o link vai ao WhatsApp informado', async () => {
+    const r = await (await AV()).criarAutorizacao({
+      empreendimentoSlug: 'bom-jardims', clienteNome: 'Cliente Ficticio das Quatro',
+      proprietario: { nome: 'Rui Representante Ficticio', empresa: 'Empresa Ficticia Ltda', documento: '11.222.333/0001-81', telefone: '(99) 9 8000-0002' },
+      itens: ['D01', 'D18'].map(loteCodigo => ({ loteCodigo, dataPrimeiroPagamento: '2026-11-20', personalizado: plano })),
+    }, 1);
+    expect(r).toMatchObject({ numero: 1, enviado: true });
+    expect(msgs.at(-1)![0]).toBe('5599980000002');
+    expect(msgs.at(-1)![1]).toMatch(/Olá, Rui! O pedido de Autorização n.º 1/);
+    expect(r.totais.parcelaMensal).toBe(2000);
+    // ainda não assinada: não aparece no Novo contrato
+    expect(await (await AV()).disponiveisPara('bom-jardims', 'D01')).toEqual([]);
+  });
+
+  it('a proprietária assina pela página pública com o código; a chácara fica disponível para o contrato', async () => {
+    const A = await AV();
+    const a = await A.porToken(db.all(sql`SELECT token FROM autorizacoesVenda WHERE numero = 1`)[0].token);
+    expect((await A.paginaPublica(a)).comprador).toBe('Rui');
+    await A.enviarCodigoPublico(a);
+    const codigo = msgs.at(-1)![1].match(/(\d{6})/)![1];
+    await A.assinarPublico(await A.porToken(a.token), codigo, { aceite: true, ip: '1.2.3.4', ua: 'teste' });
+    const disp = await A.disponiveisPara('bom-jardims', 'D01');
+    expect(disp).toHaveLength(1);
+    expect(disp[0]).toMatchObject({ numero: 1, prazo: 180, parcela: 1000, entradaQtd: 4 });
+  });
+
+  it('contrato da D01 com o plano da autorização: vale e anexa; outra chácara/plano diferente não vale; a D01 sai da lista', async () => {
+    const A = await AV();
+    const { escolha, numero } = await A.escolhaDaAutorizacao(1, 1, 'D01');
+    const p = planoDoContrato(simular(3157.17, 1, C), escolha as any, C, true);
+    db.run(sql`INSERT INTO contratos (id, numero, empreendimentoId, loteId, loteCodigo, corretorUserId, status, simulacaoJson, dadosJson, codigoVerificacao) VALUES (1, 'BJ-2026-0077', 1, 0, 'D01', 1, 'rascunho', ${JSON.stringify({ ...p, autorizacao_venda: { id: 1, numero } })}, '{}', 'C77')`);
+    expect((await M.situacaoAutorizacao(1)).situacao).toBe('pendente'); // ainda não vinculado
+    await A.vincularContrato(1, 'D01', 1);
+    expect((await M.situacaoAutorizacao(1)).situacao).toBe('valida');
+    expect((await M.pdfAutorizacaoValida(1))?.subarray(0, 5).toString()).toBe('%PDF-');
+    expect(await A.disponiveisPara('bom-jardims', 'D01')).toEqual([]);
+    expect(await A.disponiveisPara('bom-jardims', 'D18')).toHaveLength(1);
+    await expect(A.escolhaDaAutorizacao(1, 1, 'D01')).rejects.toThrow(/já tem contrato/);
+    const outro = planoDoContrato(simular(3157.17, 1, C), { ...(escolha as any), personalizado: { ...plano, parcela: 1100 } }, C, true);
+    db.run(sql`UPDATE contratos SET simulacaoJson = ${JSON.stringify({ ...outro, autorizacao_venda: { id: 1, numero } })} WHERE id = 1`);
     expect((await M.situacaoAutorizacao(1)).situacao).toBe('pendente');
     const g = avaliarGate({ aut_proprietaria: 'pendente' } as any, 'definitivo');
     expect(g.bloqueios.some(b => /autorização assinada da proprietária/.test(b))).toBe(true);
-  });
-
-  it('o pedido vai ao WhatsApp da proprietária; ela assina com o código e o PDF assinado fica para o anexo', async () => {
-    const r = await M.solicitarAutorizacao(1, { observacao: 'Cliente com entrada de 30%' }, 1);
-    expect(r).toMatchObject({ numero: 1, enviado: true });
-    expect(msgs.at(-1)![0]).toBe('5599990000001');
-    expect(msgs.at(-1)![1]).toMatch(/Olá, VERA! O documento n.º 1 do contrato com o pedido de autorização/);
-    await expect(M.solicitarAutorizacao(1, {}, 1)).rejects.toThrow(/aguardando a proprietária/);
-    const token = db.all(sql`SELECT token FROM contratoAditivos WHERE contratoId = 1 AND numero = 1`)[0].token;
-    const pagina = await R.paginaAditivo(token);
-    expect(pagina.comprador).toBe('VERA');
-    await R.enviarCodigo(token);
-    expect(msgs.at(-1)![0]).toBe('5599990000001');
-    const codigo = msgs.at(-1)![1].match(/(\d{6})/)![1];
-    await R.assinarAditivo(token, codigo, { aceite: true, ip: '1.2.3.4', ua: 'teste' });
-    expect((await M.situacaoAutorizacao(1)).situacao).toBe('valida');
-    const pdf = await M.pdfAutorizacaoValida(1);
-    expect(pdf?.subarray(0, 5).toString()).toBe('%PDF-');
-  });
-
-  it('se o plano do contrato mudar, a autorização não vale mais', async () => {
-    const outro = negociado({ entrada: 50000, entradaParcelas: 1, prazo: 180, parcela: 1100 });
-    db.run(sql`UPDATE contratos SET simulacaoJson = ${JSON.stringify(outro)} WHERE id = 1`);
-    expect((await M.situacaoAutorizacao(1)).situacao).toBe('pendente');
   });
 });

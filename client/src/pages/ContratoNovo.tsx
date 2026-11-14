@@ -69,10 +69,8 @@ export default function ContratoNovo() {
   const [sinalParcelas, setSinalParcelas] = useState(1);
   const [parcelaPers, setParcelaPers] = useState("");
   const [senhaAdmin, setSenhaAdmin] = useState("");
-  // Plano negociado (só o administrador): precisa da autorização assinada da proprietária para sair o definitivo
-  const [negociado, setNegociado] = useState(false);
-  const [neg, setNeg] = useState({ preco: "", entrada: "", entradaParcelas: 1, prazo: "180", parcela: "", inicio: "" });
-  const numBR = (v: string) => Number(String(v).replace(/\./g, "").replace(",", "."));
+  // Plano negociado: vem de uma Autorização da proprietária já assinada (tela Autorizações) — só o administrador
+  const [autorizacaoId, setAutorizacaoId] = useState<number | null>(Number(q.get("autorizacao")) || null);
   const [comprador, setComprador] = useState<PessoaForm>(PESSOA_VAZIA);
   const [conjuge, setConjuge] = useState<PessoaForm>({ ...PESSOA_VAZIA });
   const [especificas, setEspecificas] = useState("");
@@ -97,11 +95,10 @@ export default function ContratoNovo() {
 
   const valorComissao = Number(comissaoConcessao.replace(/\./g, "").replace(",", "."));
   const valorParcelaPers = parcelaPers.trim() ? Number(parcelaPers.replace(/\./g, "").replace(",", ".")) : 0;
-  const planoNegociado = negociado && perfil === "admin" && !concessao && modalidade === "financiado" && numBR(neg.entrada) > 0 && Number(neg.prazo) > 0 && numBR(neg.parcela) > 0
-    ? { modalidade: "financiado" as const, entradaParcelas: 1, dataPrimeiroPagamento: data1, condicao: "padrao" as const,
-        personalizado: { entrada: numBR(neg.entrada), entradaParcelas: neg.entradaParcelas, prazo: Number(neg.prazo), parcela: numBR(neg.parcela),
-          ...(neg.preco.trim() && numBR(neg.preco) > 0 ? { preco: numBR(neg.preco) } : {}), ...(/^\d{4}-\d{2}-\d{2}$/.test(neg.inicio) ? { inicioParcelas: neg.inicio } : {}) } }
-    : null;
+  const autDisp = trpc.autorizacoes.disponiveis.useQuery({ slug, lote }, { enabled: perfil === "admin" && !!slug && !!lote });
+  const autSel = (autDisp.data ?? []).find(a => a.id === autorizacaoId) ?? null;
+  const negociado = !!autSel && !concessao;
+  const planoNegociado = negociado ? { ...autSel!.escolha, entradaParcelas: 1, condicao: "padrao" as const } : null;
   const plano = planoNegociado ?? concessao
     ? { modalidade: "avista" as const, entradaParcelas: 1, dataPrimeiroPagamento: data1, condicao: "padrao" as const,
         concessao: { motivo: motivoConcessao, comissaoPrazo: prazoComissao, despesasPor, natureza: naturezaConc, acordo: naturezaConc === "acordo" ? acordoConc : "", ...(/^\d{4}-\d{2}-\d{2}$/.test(vencComissao) ? { comissaoVencimento: vencComissao } : {}), ...(comissaoConcessao.trim() && Number.isFinite(valorComissao) ? { comissaoValor: valorComissao } : {}) } }
@@ -232,6 +229,7 @@ export default function ContratoNovo() {
     slug, lote, leadId, corretorUserId: corretorUserId ?? undefined, plano,
     comprador, conjuge: casado ? conjuge : null, dependentes: dependentes ?? [], condicoes: { especificas, modoAssinatura },
     ...(precisaSenha.length ? { autorizacao: { senha: senhaAdmin } } : {}),
+    ...(negociado && autorizacaoId ? { autorizacaoVendaId: autorizacaoId } : {}),
   });
 
   const opcoesEmp = useMemo(() => (emps ?? []).filter(e => e.acesso), [emps]);
@@ -364,44 +362,15 @@ export default function ContratoNovo() {
                 </div>
               </div>
             )}
-            {perfil === "admin" && !concessao && modalidade === "financiado" && (
-              <div className="rounded-lg border border-warn-500/40 bg-warn-500/5 p-3">
-                <label className="flex items-center gap-2 text-sm font-semibold">
-                  <input type="checkbox" checked={negociado} onChange={e => setNegociado(e.target.checked)} />
-                  Plano negociado fora da tabela (com autorização da proprietária)
+            {perfil === "admin" && !concessao && !!lote && (autDisp.data?.length ?? 0) > 0 && (
+              <div className="rounded-lg border border-ok-500/40 bg-ok-500/5 p-3">
+                <label className="block text-sm font-semibold">Plano autorizado pela proprietária (chácara {lote})
+                  <select className={`${sel} mt-1`} value={autorizacaoId ?? ""} onChange={e => setAutorizacaoId(Number(e.target.value) || null)}>
+                    <option value="">Não usar — plano da tabela</option>
+                    {(autDisp.data ?? []).map(a => <option key={a.id} value={a.id}>Autorização n.º {a.numero} · {a.cliente} · {a.entradaQtd > 1 ? `${a.entradaQtd}× ` : ""}entrada {brl(a.entrada)} + {a.prazo}× {brl(a.parcela)}</option>)}
+                  </select>
                 </label>
-                {negociado && (
-                  <div className="mt-2 space-y-2">
-                    <div className="grid gap-2 sm:grid-cols-3 lg:grid-cols-6">
-                      {([["preco", "Preço negociado (vazio = tabela)"], ["entrada", "Entrada (R$)"], ["prazo", "Parcelas do saldo"], ["parcela", "Valor da parcela (R$)"]] as const).map(([kk, rot]) => (
-                        <label key={kk} className="text-xs text-muted-foreground">{rot}
-                          <input inputMode="decimal" value={(neg as any)[kk]} onChange={e => setNeg(x => ({ ...x, [kk]: e.target.value.replace(/[^\d.,]/g, "") }))}
-                            className="mt-1 block h-9 w-full rounded-md border border-border bg-background px-2 text-sm text-foreground" />
-                        </label>
-                      ))}
-                      <label className="text-xs text-muted-foreground">Entrada em
-                        <select value={neg.entradaParcelas} onChange={e => setNeg(x => ({ ...x, entradaParcelas: Number(e.target.value) }))} className="mt-1 block h-9 w-full rounded-md border border-border bg-background px-2 text-sm text-foreground">
-                          {Array.from({ length: 12 }, (_, i) => i + 1).map(n => <option key={n} value={n}>{n === 1 ? "parcela única" : `${n}× mensais`}</option>)}
-                        </select>
-                      </label>
-                      <label className="text-xs text-muted-foreground">1º vencimento do saldo
-                        <input type="date" value={neg.inicio} min={data1} onChange={e => setNeg(x => ({ ...x, inicio: e.target.value }))} className="mt-1 block h-9 w-full rounded-md border border-border bg-background px-2 text-sm text-foreground" />
-                      </label>
-                    </div>
-                    {sim.data && (sim.data as any).comparativo && (() => {
-                      const k = (sim.data as any).comparativo;
-                      const sg = (v: number) => `${v >= 0 ? "+" : "−"} ${brl(Math.abs(v))}`;
-                      return (
-                        <p className="text-xs">
-                          Tabela: {k.prazo}× de <b>{brl(k.parcelaTabela)}</b> · total {brl(k.totalTabela)} · Proposta: total <b>{brl(k.totalProposta)}</b> ·
-                          diferença <b>{sg(k.diferencaNominal)}</b> · em valor presente <b className={k.diferencaVp < 0 ? "text-danger-400" : "text-ok-400"}>{sg(k.diferencaVp)} ({k.diferencaVpPct.toLocaleString("pt-BR")}%)</b>
-                          {k.taxaPropostaAa != null && <> · taxa {(k.taxaPropostaAa * 100).toLocaleString("pt-BR", { maximumFractionDigits: 2 })}% a.a.</>}
-                        </p>
-                      );
-                    })()}
-                    <p className="text-xs text-muted-foreground">O contrato fica em rascunho até a proprietária autorizar: depois de criar, use "Pedir autorização à proprietária" na tela do contrato. Sem a autorização assinada, o definitivo não sai; com ela, o PDF assinado vai anexo ao contrato.</p>
-                  </div>
-                )}
+                {negociado && <p className="mt-2 text-xs text-muted-foreground">O contrato sai exatamente com o plano autorizado (modelo padrão) e leva o PDF da autorização assinada como anexo. Para mudar o plano, peça outra autorização.</p>}
               </div>
             )}
             {!negociado && !concessao && modalidade === "financiado" && condicao !== "padrao" && (

@@ -1085,6 +1085,43 @@ export const saasTrials = mysqlTable("saasTrials", {
 
 /** LOGIN, BLOQUEIO_402, CHECKOUT_INICIADO, PAGAMENTO_CONFIRMADO, DESBLOQUEIO, TRIAL_INICIADO, TRIAL_EXPIRADO… */
 /** Avisos da régua de cobrança enviados ao comprador (server/financeiro/reguaCobranca.ts): um por parcela e etapa */
+/** Autorizações de venda fora do padrão assinadas pela proprietária, antes do contrato (server/autorizacoes/servico.ts) */
+export const autorizacoesVenda = mysqlTable("autorizacoesVenda", {
+  id: int("id").autoincrement().primaryKey(),
+  /** Numeração própria: Autorização n.º 1, 2, 3… */
+  numero: int("numero").notNull(),
+  empreendimentoId: int("empreendimentoId").notNull(),
+  /** Chácaras da autorização ("D01, D02, D03, D18") — cada uma com o seu plano em escolhaJson */
+  loteCodigos: varchar("loteCodigos", { length: 255 }).notNull(),
+  clienteNome: varchar("clienteNome", { length: 160 }).notNull(),
+  /** { itens: [{ loteCodigo, escolha }] } — o contrato de cada chácara sai exatamente com a escolha dela */
+  escolhaJson: text("escolhaJson").notNull(),
+  /** Resumo do plano e comparação com a tabela no momento do pedido */
+  dadosJson: text("dadosJson").notNull(),
+  observacao: varchar("observacao", { length: 600 }),
+  /** aguardando | autorizada | cancelada */
+  status: varchar("status", { length: 12 }).default("aguardando").notNull(),
+  /** Contratos vinculados ficam em dadosJson.itens[].contratoId (um contrato por chácara) */
+  pdfArquivo: varchar("pdfArquivo", { length: 255 }).notNull(),
+  pdfSha256: char("pdfSha256", { length: 64 }).notNull(),
+  pdfAssinadoArquivo: varchar("pdfAssinadoArquivo", { length: 255 }),
+  token: char("token", { length: 32 }).notNull(),
+  otpHash: char("otpHash", { length: 64 }),
+  otpExpira: datetime("otpExpira"),
+  otpTentativas: int("otpTentativas").default(0).notNull(),
+  otpEnvios: int("otpEnvios").default(0).notNull(),
+  assinadoEm: datetime("assinadoEm"),
+  assinaturaIp: varchar("assinaturaIp", { length: 64 }),
+  assinaturaUa: varchar("assinaturaUa", { length: 300 }),
+  criadoPor: int("criadoPor"),
+  canceladoPor: int("canceladoPor"),
+  criadoEm: timestamp("criadoEm").defaultNow().notNull(),
+}, (t) => ({
+  uxNumero: uniqueIndex("ux_autvenda_numero").on(t.numero),
+  uxToken: uniqueIndex("ux_autvenda_token").on(t.token),
+  ixEmp: index("ix_autvenda_emp").on(t.empreendimentoId),
+}));
+
 export const cobrancaAvisos = mysqlTable("cobrancaAvisos", {
   id: int("id").autoincrement().primaryKey(),
   cobrancaId: int("cobrancaId").notNull(),

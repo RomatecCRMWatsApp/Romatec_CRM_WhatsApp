@@ -43,12 +43,14 @@ export default function AssinarAditivo() {
   const r = d?.resumo;
   const reneg = !d || (d.tipo ?? "renegociacao") === "renegociacao";
   const assunto = reneg ? "renegociação de parcelas" : String(d.titulo ?? "").toLowerCase();
+  // Autorização de venda da proprietária (antes do contrato): não é termo aditivo
+  const aut = d?.tipo === "autorizacao_venda";
   return (
     <div className="min-h-screen" style={{ background: CREME, color: "var(--c-1d2b22)", fontFamily: "Manrope, system-ui, sans-serif" }}>
       <header className="border-b-4 px-4 py-3 text-white" style={{ background: VERDE, borderColor: DOURADO }}>
         <div className="mx-auto max-w-2xl">
           <p className="font-bold" style={{ fontFamily: "'Playfair Display', Georgia, serif" }}>Condomínio de Chácaras Bom Jardims</p>
-          <p className="text-xs" style={{ color: DOURADO }}>Termo aditivo · {assunto}</p>
+          <p className="text-xs" style={{ color: DOURADO }}>{aut ? "Autorização da proprietária" : "Termo aditivo"} · {assunto}</p>
         </div>
       </header>
       <main className="mx-auto max-w-2xl space-y-4 px-4 py-5 text-sm">
@@ -58,7 +60,7 @@ export default function AssinarAditivo() {
           <>
             <section className="rounded-xl border bg-white p-4" style={{ borderColor: DOURADO }}>
               <h1 className="text-lg font-bold" style={{ color: VERDE }}>Olá, {d.comprador}!</h1>
-              <p>Termo Aditivo n.º {d.numero} ao contrato {d.contrato} · Chácara {d.lote}</p>
+              <p>{aut ? `${d.contrato} · ${String(d.lote).includes(",") ? "Chácaras" : "Chácara"} ${d.lote}` : `Termo Aditivo n.º ${d.numero} ao contrato ${d.contrato} · Chácara ${d.lote}`}</p>
             </section>
             {!reneg && (
               <section className="space-y-2 rounded-xl border bg-white p-4" style={borda}>
@@ -79,11 +81,11 @@ export default function AssinarAditivo() {
             </section>}
             <a href={`/api/aditivo/${token}/termo.pdf`} target="_blank" rel="noreferrer" onClick={() => setLeu(true)}
               className="flex items-center gap-3 rounded-xl border bg-white p-3 font-semibold" style={{ borderColor: DOURADO, color: VERDE }}>
-              <FileText className="h-5 w-5" /> Ler o Termo Aditivo completo (PDF){d.status === "assinado" ? " — com o manifesto de assinatura" : ""}
+              <FileText className="h-5 w-5" /> {aut ? "Ler a autorização completa (PDF)" : "Ler o Termo Aditivo completo (PDF)"}{d.status === "assinado" ? " — com o manifesto de assinatura" : ""}
             </a>
             {d.status === "assinado" && (
               <p className="flex items-start gap-2 rounded-xl bg-ok-50 p-4 text-ok-900"><CheckCircle2 className="mt-0.5 h-5 w-5 shrink-0" />
-                Termo assinado em {new Date(d.assinadoEm).toLocaleString("pt-BR", { timeZone: "America/Fortaleza" })}. {reneg ? "As novas parcelas já aparecem no seu portal do comprador (carnê digital), com boleto e PIX." : d.tipo === "comissao_benef" ? "As cobranças da comissão foram enviadas no seu WhatsApp (boleto/PIX ou link do cartão). Guarde o PDF acima." : "O termo assinado fica junto do seu contrato. Guarde o PDF acima."}</p>
+                {aut ? "Autorização assinada" : "Termo assinado"} em {new Date(d.assinadoEm).toLocaleString("pt-BR", { timeZone: "America/Fortaleza" })}. {reneg ? "As novas parcelas já aparecem no seu portal do comprador (carnê digital), com boleto e PIX." : d.tipo === "comissao_benef" ? "As cobranças da comissão foram enviadas no seu WhatsApp (boleto/PIX ou link do cartão). Guarde o PDF acima." : aut ? "Autorização registrada: o escritório já pode gerar os contratos. Guarde o PDF acima." : "O termo assinado fica junto do seu contrato. Guarde o PDF acima."}</p>
             )}
             {d.status === "cancelado" && <p className="rounded-xl bg-warn-50 p-4 text-warn-900">Este termo foi cancelado pela administração. Fale com o escritório.</p>}
             {d.status === "aguardando" && (
@@ -96,11 +98,11 @@ export default function AssinarAditivo() {
                   className="w-full rounded-lg border px-3 py-2 text-center text-lg tracking-[0.4em]" style={borda} />
                 <label className="flex items-start gap-2">
                   <input type="checkbox" checked={aceite} onChange={e => setAceite(e.target.checked)} className="mt-1" />
-                  <span>Li o Termo Aditivo n.º {d.numero} e concordo com as condições {reneg ? "da renegociação" : `do termo (${assunto})`}.{!leu && <span className="block text-xs text-neutro-500">Abra o PDF acima antes de assinar.</span>}</span>
+                  <span>{aut ? `Li a ${d.contrato} e autorizo a venda nas condições propostas.` : <>Li o Termo Aditivo n.º {d.numero} e concordo com as condições {reneg ? "da renegociação" : `do termo (${assunto})`}.</>}{!leu && <span className="block text-xs text-neutro-500">Abra o PDF acima antes de assinar.</span>}</span>
                 </label>
                 {msg && <p className={`rounded-lg p-2 ${msg.ok ? "bg-ok-50 text-ok-800" : "bg-danger-50 text-danger-800"}`}>{msg.t}</p>}
                 <button disabled={ocupado || codigo.length !== 6 || !aceite} onClick={assinar} className="inline-flex w-full items-center justify-center gap-1 rounded-lg px-4 py-3 font-semibold text-white disabled:opacity-50" style={{ background: VERDE }}>
-                  {ocupado ? <Loader2 className="h-4 w-4 animate-spin" /> : <CheckCircle2 className="h-4 w-4" />} Assinar o termo
+                  {ocupado ? <Loader2 className="h-4 w-4 animate-spin" /> : <CheckCircle2 className="h-4 w-4" />} {aut ? "Assinar a autorização" : "Assinar o termo"}
                 </button>
                 <p className="text-[11px] text-neutro-500">Assinatura eletrônica com código no WhatsApp, IP, aparelho, data e hora registrados no próprio documento (MP 2.200-2/2001, art. 10, § 2º; Lei 14.063/2020).</p>
               </section>

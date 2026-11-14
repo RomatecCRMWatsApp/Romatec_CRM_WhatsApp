@@ -1484,6 +1484,8 @@ async function startServer() {
     await addSolicitacaoAcesso();
     const { addCobrancaAvisos } = await import('./migrations/addCobrancaAvisos');
     await addCobrancaAvisos();
+    const { addAutorizacoesVenda } = await import('./migrations/addAutorizacoesVenda');
+    await addAutorizacoesVenda();
   } catch (e) {
     console.error('❌ Erro na migration addMateriais:', e);
   }

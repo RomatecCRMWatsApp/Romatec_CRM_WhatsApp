@@ -158,7 +158,7 @@ export default function ContratoDetalhe() {
           ))}
         </div>
 
-        {d.pode.cancelar && p?.modalidade === "financiado" && !p?.concessao && <AutorizacaoProprietaria contratoId={id} status={c.status} />}
+        {d.pode.cancelar && p?.modalidade === "financiado" && !p?.concessao && <AutorizacaoProprietaria contratoId={id} />}
         {p?.concessao && <ConcessaoComissao contratoId={id} concessao={p.concessao} valorRef={Number(p.preco_avista ?? 0)} cancelado={["cancelado", "distratado"].includes(c.status)} assinado={["assinado", "ativo", "quitado"].includes(c.status)} />}
         {d.cancelamento && (
           <p className="rounded-lg border border-danger-500/40 bg-danger-500/10 p-3 text-sm text-danger-200">

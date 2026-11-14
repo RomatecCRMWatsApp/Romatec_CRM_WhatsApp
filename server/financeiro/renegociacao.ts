@@ -38,6 +38,8 @@ async function banco(): Promise<any> {
 export type Enviador = (telefone: string, texto: string) => Promise<unknown>;
 let enviador: Enviador = async (tel, txt) => { const { enviarTexto } = await import('../leads/zapiClient'); return enviarTexto(tel, txt); };
 /** Testes trocam o envio do WhatsApp */
+/** Envio pelo WhatsApp (as autorizações de venda usam o mesmo, e os testes trocam aqui) */
+export const enviarMensagemAditivo = (tel: string, txt: string) => enviador(tel, txt);
 export const definirEnviador = (e: Enviador | null) => { enviador = e ?? (async (tel, txt) => { const { enviarTexto } = await import('../leads/zapiClient'); return enviarTexto(tel, txt); }); };
 
 export interface PedidoRenegociacao { ids: number[]; desconto: number; parcelas: number; taxaMensal: number; primeiroVencimento: string }
@@ -136,7 +138,7 @@ async function termoPdf(contratoId: number, numero: number, r: Renegociacao, hoj
 }
 
 /** Página final com as evidências da assinatura eletrônica do comprador */
-async function anexarManifesto(pdf: Buffer, ev: { aditivo: string; nome: string; cpf: string; telefone: string; em: Date; ip: string; ua: string; hashOriginal: string }): Promise<Buffer> {
+export async function anexarManifesto(pdf: Buffer, ev: { aditivo: string; nome: string; cpf: string; telefone: string; em: Date; ip: string; ua: string; hashOriginal: string }): Promise<Buffer> {
   const doc = await PDFDocument.load(pdf);
   const f = await doc.embedFont(StandardFonts.Helvetica);
   const fb = await doc.embedFont(StandardFonts.HelveticaBold);

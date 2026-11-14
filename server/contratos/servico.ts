@@ -23,7 +23,7 @@ import { avaliarGate } from './gate';
 import { hojeIso } from './formato';
 
 export class ContratoErro extends Error {
-  constructor(public codigo: string, mensagem: string, public status = 400, public campos?: Record<string, string>) { super(mensagem); }
+  constructor(public codigo: string, mensagem: string, public status = 400, public campos?: Record<string, string>) { super(mensagem); this.name = 'ContratoErro'; }
 }
 
 type XY = [number, number];

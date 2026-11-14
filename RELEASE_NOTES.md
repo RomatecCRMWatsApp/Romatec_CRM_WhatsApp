@@ -3,6 +3,29 @@
 Cada versão nova vai no TOPO. Depois rode `npm run release` (valida e atualiza o package.json);
 ao subir, o servidor grava a versão no banco e todos recebem o aviso "Novidades da versão".
 
+## 1.177.0 — 2026-11-14
+tipo: minor
+obrigatoria: nao
+titulo: Autorizações da proprietária antes do contrato
+publico: equipe
+
+### Novo
+- Nova tela "Autorizações da proprietária" (menu Vendas, só o administrador), para pedir a autorização antes de existir contrato:
+  - Uma ou várias chácaras na mesma proposta, cada uma com o seu plano: preço negociado (opcional), entrada à vista ou em até 12 vezes, número e valor das parcelas, 1º pagamento e 1º vencimento do saldo.
+  - Botão para copiar o plano da 1ª chácara para as outras.
+  - Interessado e proprietária: vem a do cadastro jurídico, com empresa, CPF/CNPJ e WhatsApp editáveis.
+  - Comparação automática com a tabela, por chácara e no total.
+  - Numeração própria: Autorização n.º 1, 2, 3…
+- A proprietária autoriza pelo link no WhatsApp, com código de confirmação. O PDF sai com o manifesto de evidências.
+- Autorizada, cada chácara tem o botão "gerar contrato". No Novo contrato, o administrador escolhe a autorização da chácara:
+  - O plano vem dela, sem redigitar, e o contrato sai no modelo padrão.
+  - O PDF assinado vai como anexo do contrato.
+  - Cada chácara gera um contrato individual.
+
+### Melhorias
+- O plano negociado sai do Novo contrato e do pedido de dentro do contrato: agora ele sempre vem de uma autorização assinada.
+- A tela do contrato mostra a autorização vinculada e a comparação com a tabela. O definitivo continua travado se o plano não for o autorizado.
+
 ## 1.176.0 — 2026-11-14
 tipo: minor
 obrigatoria: nao

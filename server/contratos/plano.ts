@@ -134,6 +134,8 @@ export interface PlanoContrato {
   plano_autorizado?: boolean;
   /** Preço de tabela do lote quando o preço foi negociado (preco_tabela passa a ser o preço da venda) */
   preco_tabela_original?: number;
+  /** Autorização de venda da proprietária que originou o plano negociado (server/autorizacoes/servico.ts) */
+  autorizacao_venda?: { id: number; numero: number };
   parcelas: ParcelaPlano[];
   /** Concessão por liberalidade da proprietária (sem venda): sem cobranças, fora do faturamento, com Termo Aditivo */
   concessao?: ConcessaoProprietaria;
