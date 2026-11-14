@@ -3,6 +3,19 @@
 Cada versão nova vai no TOPO. Depois rode `npm run release` (valida e atualiza o package.json);
 ao subir, o servidor grava a versão no banco e todos recebem o aviso "Novidades da versão".
 
+## 1.175.1 — 2026-11-14
+tipo: patch
+obrigatoria: sim
+titulo: Correção do código de assinatura
+publico: equipe
+
+### Correções
+- Código de assinatura: com o campo já preenchido, digitar ou colar o código de novo (ou o celular preencher sozinho) mantinha o código antigo e mostrava "O código tem 6 dígitos; confira o que foi colado".
+  - Agora vale sempre o código novo.
+  - Colar a mensagem inteira do WhatsApp também funciona: o sistema pega o código dentro dela.
+- Depois de um código errado ou vencido, o campo limpa sozinho para digitar o código certo. O aviso explica que cada novo pedido troca o código.
+- A mensagem do código no WhatsApp traz o código sozinho numa linha e avisa que ele substitui os anteriores. Vale para o contrato e para os termos aditivos.
+
 ## 1.175.0 — 2026-11-14
 tipo: minor
 obrigatoria: nao

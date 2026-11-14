@@ -321,7 +321,7 @@ export async function enviarCodigo(token: string) {
   if (!tel) throw new FinanceiroErro('TELEFONE', 'Sem WhatsApp cadastrado no contrato. Fale com a administração.', 409);
   const codigo = String(randomInt(0, 1_000_000)).padStart(6, '0');
   await d.update(contratoAditivos).set({ otpHash: hashOtp(token, codigo), otpExpira: new Date(Date.now() + OTP_MIN * 60_000), otpTentativas: 0, otpEnvios: Number(a.otpEnvios) + 1 } as any).where(eq(contratoAditivos.id, a.id));
-  await enviador(tel, `Código para assinar o Termo Aditivo n.º ${a.numero}: ${codigo}\nVale por ${OTP_MIN} minutos. Não compartilhe este código.`);
+  await enviador(tel, `Seu código para assinar o Termo Aditivo n.º ${a.numero} é:\n\n${codigo}\n\nVale por ${OTP_MIN} minutos. Este código substitui os anteriores. Não compartilhe.`);
   return { ok: true as const };
 }
 

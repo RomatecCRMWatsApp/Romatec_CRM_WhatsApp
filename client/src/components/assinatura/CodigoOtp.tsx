@@ -53,7 +53,9 @@ export function CodigoOtp({ destino, confirmar, reenviar, aoConcluir, aoRecarreg
   const comErro = ["invalido", "expirado", "bloqueado", "sem_conexao", "erro"].includes(estado);
 
   const mudar = (bruto: string) => {
-    const n = normalizarCodigo(bruto);
+    // Depois de um erro o campo recomeça: o que a pessoa digitar agora é o código novo (não gruda no anterior)
+    const anterior = comErro ? valor : valor.length >= TAMANHO_OTP ? valor : "";
+    const n = normalizarCodigo(bruto, TAMANHO_OTP, anterior);
     setValor(n.valor); setAviso(n.aviso);
     if (estado !== "editando") { setEstado("editando"); setMensagem(null); }
   };
@@ -87,7 +89,8 @@ export function CodigoOtp({ destino, confirmar, reenviar, aoConcluir, aoRecarreg
       const r = estadoDaFalha(comoFalha(err));
       if (r.estado === "recarregar") { setMensagem(r.mensagem); aoRecarregar(); return; }
       setEstado(r.estado); setMensagem(r.mensagem);
-      if (r.estado === "invalido") requestAnimationFrame(() => { campo.current?.focus(); campo.current?.select(); });
+      // Erro: limpa o campo para a pessoa digitar o código certo (no celular, "selecionar tudo" não funciona no campo invisível)
+      if (["invalido", "expirado", "bloqueado"].includes(r.estado)) { setValor(""); setAviso(null); requestAnimationFrame(() => campo.current?.focus()); }
     } finally {
       controle.current.terminar(t);
     }

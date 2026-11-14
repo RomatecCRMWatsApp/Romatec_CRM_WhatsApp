@@ -13,7 +13,7 @@ export type EstadoOtp = 'editando' | 'verificando' | 'confirmado' | 'invalido' |
 export const MENSAGEM_OTP = {
   instrucao: 'Digite o código para confirmar seu acesso.',
   verificando: 'Verificando código…',
-  invalido: 'Não foi possível validar esse código. Confira e tente novamente.',
+  invalido: 'Código não confere. Use o código da mensagem mais recente no WhatsApp (cada novo pedido troca o código).',
   expirado: 'Este código expirou. Peça um novo código.',
   bloqueado: 'Tentativas esgotadas. Peça um novo código.',
   semConexao: 'Não foi possível confirmar agora. Verifique sua conexão e tente de novo.',
@@ -22,14 +22,30 @@ export const MENSAGEM_OTP = {
 
 /**
  * Normaliza o que foi digitado ou colado: aceita espaços, hífens e pontos ("123 456", "123-456"), preserva zeros à esquerda
- * (texto, nunca número). Nada é cortado em silêncio: sobra de dígitos ou letras gera aviso.
+ * (texto, nunca número).
+ * - Colou a mensagem inteira do WhatsApp ("Código para assinar o contrato BJ-2026-0004: 500063 …"): usa o único grupo de
+ *   6 dígitos da mensagem.
+ * - Campo já cheio e a pessoa digita ou o celular preenche de novo (o texto novo vem grudado no anterior): vale o que foi
+ *   digitado/colado agora — nunca o código antigo (era o erro "O código tem 6 dígitos; confira o que foi colado").
+ * Só quando não dá para saber qual é o código é que aparece aviso.
  */
-export function normalizarCodigo(bruto: string, tamanho = TAMANHO_OTP): { valor: string; aviso: string | null } {
-  const semSeparadores = String(bruto ?? '').replace(/[\s.\-]/g, '');
+export function normalizarCodigo(bruto: string, tamanho = TAMANHO_OTP, anterior = ''): { valor: string; aviso: string | null } {
+  const texto = String(bruto ?? '');
+  const semSeparadores = texto.replace(/[\s.\-]/g, '');
   const digitos = semSeparadores.replace(/\D/g, '');
-  if (digitos.length !== semSeparadores.length) return { valor: digitos.slice(0, tamanho), aviso: 'O código tem só números.' };
+  if (digitos.length <= tamanho && digitos.length === semSeparadores.length) return { valor: digitos, aviso: null };
+  // Texto novo grudado no código que já estava no campo: fica só o novo
+  const ant = String(anterior ?? '').replace(/\D/g, '');
+  if (ant && texto.startsWith(ant) && texto.length > ant.length) {
+    const novo = normalizarCodigo(texto.slice(ant.length), tamanho);
+    if (novo.valor) return novo;
+  }
+  // Mensagem colada: um único grupo de exatamente 6 dígitos (ou "123 456")
+  const grupos = Array.from(texto.matchAll(new RegExp(`(?<!\\d)(\\d{3}[ .\\-]?\\d{3})(?!\\d)`, 'g'))).map(m => m[1].replace(/\D/g, '')).filter(g => g.length === tamanho);
+  if (grupos.length === 1) return { valor: grupos[0], aviso: null };
+  if (digitos.length !== semSeparadores.length && !digitos.length) return { valor: '', aviso: 'O código tem só números.' };
   if (digitos.length > tamanho) return { valor: digitos.slice(0, tamanho), aviso: `O código tem ${tamanho} dígitos; confira o que foi colado.` };
-  return { valor: digitos, aviso: null };
+  return { valor: digitos, aviso: digitos.length === semSeparadores.length ? null : 'O código tem só números.' };
 }
 
 /** Erro devolvido pela API de assinatura ({ erro, mensagem }) ou falha de rede */

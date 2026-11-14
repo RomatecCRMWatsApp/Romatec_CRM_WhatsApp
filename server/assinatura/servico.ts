@@ -343,7 +343,7 @@ export async function solicitarOtp(token: string, o: { ip?: string; ua?: string 
   const dados = { codigoHash: hashOtp(token, codigo), expiraEm: new Date(Date.now() + OTP_MINUTOS * 60_000), tentativas: 0 };
   if (atual) await d.update(assinaturaOtp).set(dados).where(eq(assinaturaOtp.signatarioId, s.id));
   else await d.insert(assinaturaOtp).values({ signatarioId: s.id, ...dados });
-  await enviador(s.whatsapp, `Código para assinar o contrato ${c.numero}: ${codigo}\nVálido por ${OTP_MINUTOS} minutos. Não compartilhe este código.`);
+  await enviador(s.whatsapp, `Seu código para assinar o contrato ${c.numero} é:\n\n${codigo}\n\nVálido por ${OTP_MINUTOS} minutos. Este código substitui os anteriores. Não compartilhe.`);
   await evento(s.contratoId, s.id, 'otp_enviado', { ip: o.ip, ua: o.ua, detalhe: { canal: 'whatsapp' } });
   return { destino: mascararTel(s.whatsapp), validadeMin: OTP_MINUTOS };
 }

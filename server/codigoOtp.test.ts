@@ -14,6 +14,18 @@ describe('código de confirmação: entrada', () => {
   });
 });
 
+describe('código de confirmação: campo já cheio e mensagem colada (erro "confira o que foi colado")', () => {
+  it('digitar ou o celular preencher de novo com o campo cheio: vale o código novo, nunca o antigo', () => {
+    expect(normalizarCodigo('500063812345', 6, '500063')).toEqual({ valor: '812345', aviso: null });
+    expect(normalizarCodigo('5000638', 6, '500063')).toEqual({ valor: '8', aviso: null });
+    expect(normalizarCodigo('500063 812 345', 6, '500063')).toEqual({ valor: '812345', aviso: null });
+  });
+  it('colar a mensagem inteira do WhatsApp: pega o único grupo de 6 dígitos', () => {
+    expect(normalizarCodigo('Seu código para assinar o contrato BJ-2026-0004 é:\n\n500063\n\nVálido por 10 minutos.')).toEqual({ valor: '500063', aviso: null });
+    expect(normalizarCodigo('Código para assinar o contrato BJ-2026-0004: 012 345')).toEqual({ valor: '012345', aviso: null });
+  });
+});
+
 describe('código de confirmação: respostas do servidor', () => {
   it('traduz inválido, expirado, bloqueado, rede e já usado sem simular sucesso', () => {
     expect(estadoDaFalha({ codigo: 'OTP_INVALIDO', mensagem: 'Código incorreto (3 tentativa(s) restante(s))' })).toEqual({ estado: 'invalido', mensagem: 'Código incorreto (3 tentativa(s) restante(s))' });

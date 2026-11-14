@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { normalizarCodigo } from "@shared/codigoOtp";
 import { useParams } from "wouter";
 import { CheckCircle2, FileText, Loader2, Lock, MessageCircle } from "lucide-react";
 
@@ -91,7 +92,7 @@ export default function AssinarAditivo() {
                 <button disabled={ocupado} onClick={pedirCodigo} className="inline-flex items-center gap-1 rounded-lg px-4 py-2 font-semibold disabled:opacity-50" style={{ background: DOURADO, color: VERDE }}>
                   <MessageCircle className="h-4 w-4" /> {enviado ? "Reenviar código" : "Receber código no WhatsApp"}
                 </button>
-                <input value={codigo} onChange={e => setCodigo(e.target.value.replace(/\D/g, "").slice(0, 6))} inputMode="numeric" placeholder="Código de 6 dígitos" aria-label="Código"
+                <input value={codigo} onChange={e => setCodigo(normalizarCodigo(e.target.value, 6, codigo.length >= 6 ? codigo : "").valor)} autoComplete="one-time-code" inputMode="numeric" placeholder="Código de 6 dígitos" aria-label="Código"
                   className="w-full rounded-lg border px-3 py-2 text-center text-lg tracking-[0.4em]" style={borda} />
                 <label className="flex items-start gap-2">
                   <input type="checkbox" checked={aceite} onChange={e => setAceite(e.target.checked)} className="mt-1" />

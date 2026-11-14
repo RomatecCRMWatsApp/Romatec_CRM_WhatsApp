@@ -17,7 +17,7 @@ const { sql, eq } = await import('drizzle-orm');
 
 const mensagens: { tel: string; msg: string }[] = [];
 A.definirEnviador(async (tel, msg) => { mensagens.push({ tel, msg }); });
-const ultimoCodigo = () => mensagens.filter(m => /Código para assinar/.test(m.msg)).at(-1)!.msg.match(/(\d{6})/)![1];
+const ultimoCodigo = () => mensagens.filter(m => /código para assinar/i.test(m.msg)).at(-1)!.msg.match(/(\d{6})/)![1];
 
 let db: any, contratoId = 0;
 const sig = async (papel: string) => (await db.select().from(schema.assinaturaSignatarios)).find((s: any) => s.papel === papel);
