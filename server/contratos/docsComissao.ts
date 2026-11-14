@@ -7,6 +7,7 @@
  *
  * Textos em padrão jurídico brasileiro para revisão do José/jurídico antes do uso.
  */
+import { DIAS_ENTREGA_CONCESSAO } from '../../shared/condicoesEspecificas';
 import { divisaoComissaoLancamento } from '../../shared/condicoesLancamento';
 import { tituloCondicao } from './plano';
 import { PDFDocument, StandardFonts, popGraphicsState, pushGraphicsState, rgb, setWordSpacing, type PDFPage } from 'pdf-lib';
@@ -366,6 +367,7 @@ export async function docTermoConcessao(c: Ctx, plano: PlanoContrato, marca: str
 
   w.clausula('CLÁUSULA 3ª — DA NATUREZA DA OPERAÇÃO');
   w.paragrafo('3.1. A concessão não constitui venda onerosa e não integra o faturamento de vendas do empreendimento, as metas comerciais nem a base de cobrança da plataforma de pagamentos. Permanecem válidas todas as demais cláusulas do CPCV que não tratam do preço, em especial as relativas à posse, à liberação de uso, às construções, ao Estatuto, ao Regimento, às Diretrizes de Uso (Anexo IV), à contribuição associativa e às obrigações do(a) BENEFICIÁRIO(A) como promissário(a) comprador(a).');
+  w.paragrafo(`3.1.1. Posse e uso. Quitado o preço pela PROMITENTE VENDEDORA na forma da cláusula 2.1, aplicam-se ao(à) BENEFICIÁRIO(A) as regras do pagamento integral à vista da Cláusula 6ª do CPCV: imissão na posse após a assinatura do CPCV e deste termo por todas as partes, mediante Termo de Entrega com vistoria dos marcos, e liberação de uso pelo Termo de Liberação de Uso, após a vistoria de medição, ambos em até ${DIAS_ENTREGA_CONCESSAO} (quinze) dias da última assinatura, dispensado o mínimo de parcelas pagas para construir e mantidas as demais exigências do item 6.2 do CPCV. A partir da imissão na posse, correm por conta do(a) BENEFICIÁRIO(A) os tributos, as taxas, o consumo e a contribuição associativa da unidade.`);
   w.paragrafo([{ t: `3.2. A transferência definitiva observará a forma exigida em lei (Código Civil, art. 541), após o registro do parcelamento e a individualização das matrículas. As despesas e os tributos da transferência (escritura, registro e o imposto de transmissão incidente — ITBI ou ITCMD, conforme a forma do ato) ficam a cargo ` },
     { t: k.despesasPor === 'proprietaria' ? 'da PROMITENTE VENDEDORA' : 'do(a) BENEFICIÁRIO(A)', b: true },
     { t: `. Para a transferência e o recolhimento do imposto, as partes adotam como valor da unidade o valor de referência da cláusula 2.1, R$ ${brl(valorRef)}, sem prejuízo de avaliação diversa pelo órgão competente.` }]);

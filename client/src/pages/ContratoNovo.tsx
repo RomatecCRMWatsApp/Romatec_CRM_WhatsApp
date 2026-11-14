@@ -502,7 +502,7 @@ export default function ContratoNovo() {
               <p>Total a pagar: <b>{brl(sim.data.total_pagar)}</b></p>
             </div>
             <div>
-              <CondicoesEspecificas valor={especificas} onMudar={setEspecificas} admin={perfil === "admin"} inicioComplemento={inicioComp}
+              <CondicoesEspecificas valor={especificas} onMudar={setEspecificas} admin={perfil === "admin"} concessao={concessao} inicioComplemento={inicioComp}
                 planoC={!concessao && modalidade === "financiado" && condicao === "C"}
                 onCongelamento={ligado => { if (ligado) setModoC("congelado"); else if (modoC === "congelado") setModoC("unificado"); }} />
             </div>

@@ -8,13 +8,15 @@ interface Props {
   onMudar: (v: string) => void;
   planoC: boolean;
   admin: boolean;
+  /** Concessão da proprietária: entra a posse da concessão (marcada por padrão) e sai a liberação após a 3ª parcela */
+  concessao?: boolean;
   inicioComplemento?: number | null;
   /** Marcar o congelamento também liga o complemento congelado no plano */
   onCongelamento?: (ligado: boolean) => void;
 }
 
 /** Condições específicas: as padrão (clicar para incluir) e o campo livre para outras */
-export function CondicoesEspecificas({ valor, onMudar, planoC, admin, inicioComplemento, onCongelamento }: Props) {
+export function CondicoesEspecificas({ valor, onMudar, planoC, admin, concessao = false, inicioComplemento, onCongelamento }: Props) {
   // Estado local (o campo livre guarda espaços e quebras de linha enquanto digita); começa do valor recebido
   const inicial = useRef(separarCondicoes(valor));
   const [marcadas, setMarcadas] = useState<IdCondicaoEspecifica[]>(inicial.current.marcadas);
@@ -30,7 +32,16 @@ export function CondicoesEspecificas({ valor, onMudar, planoC, admin, inicioComp
   }, [valor]);
   // Mês do congelamento mudou: o texto da condição acompanha
   useEffect(() => { if (marcadas.includes("congelamento")) emitir(montarCondicoes(marcadas, livre, o)); }, [inicioComplemento]); // eslint-disable-line react-hooks/exhaustive-deps
-  const disponiveis = CONDICOES_ESPECIFICAS.filter(c => (!c.soPlanoC || planoC) && (!c.soAdmin || admin));
+  // Concessão ligada: marca a posse da concessão e tira a liberação após a 3ª parcela; desligada, tira a posse da concessão
+  useEffect(() => {
+    const nova = concessao
+      ? [...marcadas.filter(id => id !== "liberacao_uso"), ...(marcadas.includes("posse_concessao") ? [] : ["posse_concessao" as const])]
+      : marcadas.filter(id => id !== "posse_concessao");
+    if (nova.length === marcadas.length && nova.every(id => marcadas.includes(id))) return;
+    setMarcadas(nova);
+    emitir(montarCondicoes(nova, livre, o));
+  }, [concessao]); // eslint-disable-line react-hooks/exhaustive-deps
+  const disponiveis = CONDICOES_ESPECIFICAS.filter(c => (!c.soPlanoC || planoC) && (!c.soAdmin || admin) && (!c.soConcessao || concessao) && (!c.semConcessao || !concessao));
   const alternar = (id: IdCondicaoEspecifica) => {
     const nova = marcadas.includes(id) ? marcadas.filter(x => x !== id) : [...marcadas, id];
     setMarcadas(nova);

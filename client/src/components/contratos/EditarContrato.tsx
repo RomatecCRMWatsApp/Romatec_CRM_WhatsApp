@@ -130,7 +130,7 @@ export function EditarContrato({ aberto, onFechar, onSalvo, contrato, comprador,
                 </select>
               </Campo>
               <div className="sm:col-span-2">
-                <CondicoesEspecificas valor={especificas} onMudar={setEspecificas} admin
+                <CondicoesEspecificas valor={especificas} onMudar={setEspecificas} admin concessao={!!plano?.concessao}
                   planoC={mudarPlano ? pl.modalidade === "financiado" && pl.condicao === "C" : plano?.condicao === "C"}
                   inicioComplemento={mudarPlano ? pl.inicioComp : Number(plano?.complemento_inicio_mes) || 15}
                   onCongelamento={ligado => {

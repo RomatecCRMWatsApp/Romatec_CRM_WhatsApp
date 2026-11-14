@@ -3,6 +3,23 @@
 Cada versão nova vai no TOPO. Depois rode `npm run release` (valida e atualiza o package.json);
 ao subir, o servidor grava a versão no banco e todos recebem o aviso "Novidades da versão".
 
+## 1.172.0 — 2026-11-14
+tipo: minor
+obrigatoria: nao
+titulo: Posse e uso na concessão
+publico: equipe
+
+### Novo
+- Contrato de concessão: nova condição específica "Posse e uso na concessão", marcada automaticamente quando o contrato é concessão.
+  - O preço fica quitado pela proprietária, então vale a regra do pagamento à vista do CPCV.
+  - Imissão na posse por Termo de Entrega e liberação de uso por Termo de Liberação de Uso, em até 15 dias da última assinatura.
+  - Sem o mínimo de parcelas para construir; continuam exigidos projeto aprovado, alvará e esgotamento sanitário.
+  - A propriedade só passa com a escritura e o registro, depois do registro do parcelamento.
+- O Termo Aditivo de Concessão traz a mesma regra (item 3.1.1).
+
+### Melhorias
+- Na concessão, a condição "Liberação de uso após a 3ª parcela" deixa de aparecer, porque não há parcelas.
+
 ## 1.171.0 — 2026-11-14
 tipo: minor
 obrigatoria: nao
