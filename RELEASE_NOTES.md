@@ -3,6 +3,21 @@
 Cada versão nova vai no TOPO. Depois rode `npm run release` (valida e atualiza o package.json);
 ao subir, o servidor grava a versão no banco e todos recebem o aviso "Novidades da versão".
 
+## 1.174.0 — 2026-11-14
+tipo: minor
+obrigatoria: nao
+titulo: Corrigir o número na assinatura e clientes dos contratos na lista de Clientes
+publico: equipe
+
+### Novo
+- Assinaturas: botão "Corrigir número" para quem ainda não assinou.
+  - O número certo vai para o signatário e para o cadastro do cliente.
+  - O código enviado ao número errado deixa de valer, o link é renovado e o convite é reenviado.
+  - Tudo fica registrado na trilha de auditoria.
+- Clientes: compradores e cônjuges de todos os contratos entram na lista de Clientes, ligados pelo telefone.
+  - Se o contato já existia, por exemplo um apelido do WhatsApp, ele passa a ter o nome do cadastro.
+  - Os contratos novos e as correções de cadastro entram sozinhos.
+
 ## 1.173.0 — 2026-11-14
 tipo: minor
 obrigatoria: nao

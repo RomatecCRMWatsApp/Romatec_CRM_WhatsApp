@@ -8,7 +8,7 @@
 import { createHash, randomBytes, randomInt, timingSafeEqual } from 'node:crypto';
 import { and, eq, isNull, lt, sql } from 'drizzle-orm';
 import { getDb } from '../db';
-import { assinaturaEventos, assinaturaOtp, assinaturaPosicoes, assinaturaSignatarios, contratos, contratoVersoes, empreendimentos, users } from '../../drizzle/schema';
+import { assinaturaEventos, assinaturaOtp, assinaturaPosicoes, assinaturaSignatarios, contratoPessoas, contratos, contratoVersoes, empreendimentos, pessoas, users } from '../../drizzle/schema';
 import { telefoneWhatsApp } from '../../shared/contratos';
 import { lerArquivo, salvarArquivo } from '../contratos/arquivos';
 import { contratoPorId, juridicoDe, pessoasDe, registrarAssinado, responsavelTecnicoId } from '../contratos/servico';
@@ -261,6 +261,41 @@ export async function enviarConvites(contratoId: number, soSignatarioId?: number
     }
   }
   return res;
+}
+
+/** Telefone mascarado para a trilha de auditoria: (99) 9 ••••-1235 */
+const telMascarado = (t: string | null | undefined) => { const d = String(t ?? '').replace(/\D/g, '').replace(/^55/, ''); return d.length >= 10 ? `(${d.slice(0, 2)}) ${d.slice(2, 3)} ••••-${d.slice(-4)}` : '—'; };
+
+/**
+ * Número de WhatsApp errado num signatário que ainda não assinou: grava o número certo nele e no cadastro da pessoa
+ * (comprador/cônjuge), anula o código já enviado ao número errado, renova o link e reenvia o convite. Fica na trilha.
+ * O PDF em assinatura não muda (quem já assinou continua valendo); o número certo vale no cadastro e nos próximos documentos.
+ */
+export async function corrigirTelefoneSignatario(contratoId: number, signatarioId: number, telefone: string, autorId: number) {
+  const d = await db();
+  const novo = telefoneWhatsApp(telefone);
+  if (!novo) throw new AssinaturaErro('TELEFONE', 'Telefone inválido: informe DDD + número (ex.: 99 9 9123-4567)', 400);
+  const [s]: any[] = await d.select().from(assinaturaSignatarios).where(and(eq(assinaturaSignatarios.id, signatarioId), eq(assinaturaSignatarios.contratoId, contratoId))).limit(1);
+  if (!s) throw new AssinaturaErro('SIGNATARIO', 'Signatário não encontrado', 404);
+  if (s.status === 'assinado') throw new AssinaturaErro('ASSINADO', 'Esta pessoa já assinou: o número não muda mais neste envio', 409);
+  const antigo = s.whatsapp;
+  await d.update(assinaturaSignatarios).set({ whatsapp: novo, expiraEm: new Date(Date.now() + VALIDADE_LINK_DIAS * 86_400_000) }).where(eq(assinaturaSignatarios.id, s.id));
+  await d.delete(assinaturaOtp).where(eq(assinaturaOtp.signatarioId, s.id));
+  // Cadastro da pessoa do contrato (comprador/cônjuge): o número certo vale no cadastro e na lista de clientes
+  let cadastro = false;
+  if (s.papel === 'comprador' || s.papel === 'conjuge') {
+    const vs: any[] = await d.select({ pessoaId: contratoPessoas.pessoaId }).from(contratoPessoas).where(and(eq(contratoPessoas.contratoId, contratoId), eq(contratoPessoas.papel, s.papel)));
+    for (const v of vs) {
+      const fmt = novo.replace(/^55/, '');
+      const legivel = fmt.length === 11 ? `(${fmt.slice(0, 2)}) ${fmt.slice(2, 3)} ${fmt.slice(3, 7)}-${fmt.slice(7)}` : `(${fmt.slice(0, 2)}) ${fmt.slice(2, 6)}-${fmt.slice(6)}`;
+      await d.update(pessoas).set({ telefone1: legivel } as any).where(eq(pessoas.id, v.pessoaId));
+      cadastro = true;
+    }
+    if (cadastro) import('../clientes/sincronizar').then(m => m.sincronizarClientesDoContrato(contratoId)).catch(() => undefined);
+  }
+  await evento(contratoId, s.id, 'telefone_corrigido', { detalhe: { de: telMascarado(antigo), para: telMascarado(novo), por: autorId, cadastro } });
+  const [r] = await enviarConvites(contratoId, s.id);
+  return { ...(r ?? { enviado: false, erro: 'Não enviado' }), cadastro };
 }
 
 // ─── Página do signatário ────────────────────────────────────────────────────

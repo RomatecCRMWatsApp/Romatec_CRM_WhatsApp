@@ -225,11 +225,13 @@ export async function salvarPessoa(p: PessoaForm, leadId: number | null): Promis
   const linha = pessoaParaLinha(p);
   const [ja] = await d.select({ id: pessoas.id }).from(pessoas).where(eq(pessoas.cpfCnpj, linha.cpfCnpj)).limit(1);
   const agora = new Date();
-  if (ja) { await d.update(pessoas).set({ ...linha, atualizadoEm: agora }).where(eq(pessoas.id, ja.id)); return ja.id; }
+  // Toda pessoa de contrato vai para a lista de Clientes (casada pelo telefone)
+  const paraClientes = (id: number) => { import('../clientes/sincronizar').then(m => m.sincronizarPessoa(id)).catch(() => undefined); return id; };
+  if (ja) { await d.update(pessoas).set({ ...linha, atualizadoEm: agora }).where(eq(pessoas.id, ja.id)); return paraClientes(ja.id); }
   // Booleanos em SQL: o SQLite local não aceita true/false do drizzle (no MySQL tanto faz)
   await d.insert(pessoas).values({ ...linha, leadId, telefone1Whatsapp: sql`TRUE` as any, telefone2Whatsapp: sql`FALSE` as any, lgpdMarketing: sql`FALSE` as any, criadoEm: agora, atualizadoEm: agora });
   const [novo] = await d.select({ id: pessoas.id }).from(pessoas).where(eq(pessoas.cpfCnpj, linha.cpfCnpj)).limit(1);
-  return novo.id;
+  return paraClientes(novo.id);
 }
 
 export function planoEscolhido(n: NovoContrato['plano'], areaM2: number, precoTabela: number | null, c: CondicoesPagamento, comCorretor: boolean): PlanoContrato {

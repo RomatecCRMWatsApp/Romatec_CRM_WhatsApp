@@ -1681,6 +1681,9 @@ async function startServer() {
   process.once('SIGTERM', () => encerrar('SIGTERM'));
   process.once('SIGINT', () => encerrar('SIGINT'));
 
+  // Clientes: compradores e cônjuges dos contratos entram na lista de Clientes (idempotente)
+  setTimeout(() => { import('../clientes/sincronizar').then(m => m.sincronizarTodosClientes()).catch((e: any) => console.warn('[Clientes] sincronização inicial:', e?.message)); }, 20_000).unref();
+
   // Motor das reservas: chácara reservada volta a ficar livre 24 h depois da reserva, venha de onde vier
   import('../lotes/expirarReservas').then(m => m.iniciarMotorReservas()).catch((e: any) => console.error('[Reservas] motor não iniciou:', e?.message));
 

@@ -1,7 +1,8 @@
 import { useEffect, useState } from "react";
 import { useLocation } from "wouter";
 import { toast } from "sonner";
-import { AlertTriangle, CheckCircle2, Clock, Copy, Download, Loader2, PenLine, Send, Wrench } from "lucide-react";
+import { AlertTriangle, CheckCircle2, Clock, Copy, Download, Loader2, PenLine, Phone, Send, Wrench } from "lucide-react";
+import { maskPhone } from "@shared/masks";
 import { trpc } from "@/lib/trpc";
 import { Button } from "@/components/ui/button";
 import { sel } from "@/components/cadastro/campos";
@@ -11,7 +12,7 @@ import { perfilDe } from "@shared/equipe";
 
 const METODOS = [["avancada", "Eletrônica avançada (link + código no WhatsApp)"], ["govbr", "gov.br (assinador.iti.br)"], ["icp_a1", "Certificado ICP-Brasil A1"]] as const;
 const EVENTO: Record<string, string> = {
-  enviado_para_assinatura: "Enviado para assinatura", convite_enviado: "Convite enviado", link_aberto: "Link aberto", otp_enviado: "Código enviado",
+  enviado_para_assinatura: "Enviado para assinatura", convite_enviado: "Convite enviado", telefone_corrigido: "Número de WhatsApp corrigido", link_aberto: "Link aberto", otp_enviado: "Código enviado",
   otp_errado: "Código incorreto", assinado: "Assinou", erro: "Erro", lembrete_d1: "Lembrete (1 dia)", lembrete_d3: "Lembrete (3 dias)", manifesto_gerado: "Manifesto gerado", conjuge_dispensado: "Assinatura do(a) cônjuge dispensada",
 };
 
@@ -28,6 +29,17 @@ export default function PainelAssinaturas({ id, status, podeEnviar }: { id: numb
   const { user } = useAuth();
   const admin = perfilDe(user as any) === "admin";
   const [corrigindo, setCorrigindo] = useState(false);
+  // Número de WhatsApp errado: corrige no signatário e no cadastro do cliente e reenvia o convite
+  const [telDe, setTelDe] = useState<number | null>(null);
+  const [telNovo, setTelNovo] = useState("");
+  const corrigirTel = trpc.contratos.corrigirTelefoneSignatario.useMutation({
+    onSuccess: r => {
+      if (r.enviado) toast.success(`Número corrigido${r.cadastro ? " (também no cadastro do cliente)" : ""} e convite reenviado`);
+      else toast.error(`Número corrigido, mas o convite não saiu: ${r.erro ?? "tente Reenviar"}`);
+      setTelDe(null); setTelNovo(""); recarregar();
+    },
+    onError: e => toast.error(e.message),
+  });
   const [senha, setSenha] = useState("");
   const corrigir = trpc.contratos.corrigirPosicionamento.useMutation({
     onSuccess: r => {
@@ -150,6 +162,19 @@ export default function PainelAssinaturas({ id, status, podeEnviar }: { id: numb
                 <div className="flex gap-1">
                   <Button size="sm" variant="outline" onClick={() => copiar(s.link)}><Copy className="h-4 w-4" /> Link</Button>
                   <Button size="sm" variant="outline" disabled={!s.whatsapp || reenviar.isPending} onClick={() => reenviar.mutate({ id, signatarioId: s.id })}><Send className="h-4 w-4" /> Reenviar</Button>
+                  <Button size="sm" variant="outline" onClick={() => { setTelDe(telDe === s.id ? null : s.id); setTelNovo(""); }}><Phone className="h-4 w-4" /> Corrigir número</Button>
+                </div>
+              )}
+              {telDe === s.id && s.status !== "assinado" && (
+                <div className="flex w-full flex-wrap items-center gap-2 rounded-lg border border-warn-500/40 bg-warn-500/10 p-2 text-xs">
+                  <span>WhatsApp certo de <b>{s.nome.split(" ")[0]}</b>{s.whatsapp ? <> (atual: {maskPhone(String(s.whatsapp).replace(/^55/, ""))})</> : null}:</span>
+                  <input inputMode="tel" autoFocus value={telNovo} onChange={e => setTelNovo(maskPhone(e.target.value))} placeholder="(99) 9 9123-4567" aria-label="Número de WhatsApp correto"
+                    className="h-8 w-44 rounded-md border border-border bg-background px-2 text-sm text-foreground" />
+                  <Button size="sm" disabled={telNovo.replace(/\D/g, "").length < 10 || corrigirTel.isPending} onClick={() => corrigirTel.mutate({ id, signatarioId: s.id, telefone: telNovo })}>
+                    {corrigirTel.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />} Salvar e reenviar
+                  </Button>
+                  <Button size="sm" variant="ghost" onClick={() => setTelDe(null)}>Cancelar</Button>
+                  <span className="basis-full text-muted-foreground">O número certo vai para o cadastro do cliente e para a lista de Clientes. O código enviado ao número errado deixa de valer e o link é renovado.</span>
                 </div>
               )}
             </div>

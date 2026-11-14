@@ -508,6 +508,15 @@ export const contratosRouter = router({
       return tratar(() => A.enviarParaAssinatura(input.id, input.metodos as any, ctx.user.id, { dispensaConjuge: input.dispensaConjuge ?? null }));
     }),
 
+  /** Número de WhatsApp errado de quem ainda não assinou: corrige no signatário e no cadastro e reenvia o convite */
+  corrigirTelefoneSignatario: protectedProcedure.input(z.object({ id: z.number().int(), signatarioId: z.number().int(), telefone: z.string().trim().min(8).max(25) })).mutation(async ({ ctx, input }) => {
+    exigir(podeGerarDefinitivo(perfilDe(ctx.user as any)), "A correção do número é com o administrador ou a secretaria.");
+    await contratoVisivel(ctx, input.id);
+    const A = await import("../assinatura/servico");
+    try { return await A.corrigirTelefoneSignatario(input.id, input.signatarioId, input.telefone, ctx.user.id); }
+    catch (e: any) { if (e instanceof A.AssinaturaErro) throw new TRPCError({ code: e.status === 404 ? "NOT_FOUND" : e.status === 409 ? "CONFLICT" : "BAD_REQUEST", message: e.message }); throw e; }
+  }),
+
   reenviarConvite: protectedProcedure.input(z.object({ id: z.number().int(), signatarioId: z.number().int() })).mutation(async ({ ctx, input }) => {
     exigir(podeGerarDefinitivo(perfilDe(ctx.user as any)), "O envio para assinatura é com o administrador ou a secretaria.");
     await contratoVisivel(ctx, input.id);
