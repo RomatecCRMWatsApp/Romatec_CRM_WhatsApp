@@ -3,7 +3,7 @@
  * dos leads do empreendimento dele — sem nome, telefone ou conversa (LGPD) e sem
  * gasto/custo — e as artes LIBERADAS para baixar e postar.
  */
-import { and, eq, gte } from "drizzle-orm";
+import { and, eq, gte, ne } from "drizzle-orm";
 import { TRPCError } from "@trpc/server";
 import { protectedProcedure, router } from "../_core/trpc";
 import { getDb } from "../db";
@@ -39,7 +39,7 @@ export async function financeiroDoEmpreendimento(db: any, emp: any) {
     const ext = await extratoCompradores();
     const linhas = ext.linhas.filter(l => ids.has(Number(l.contratoId)));
     const soma = (k: "contratado" | "recebido" | "emAberto" | "vencido" | "aVencer") => Math.round(linhas.reduce((s, l) => s + l[k], 0) * 100) / 100;
-    const cobs: any[] = ids.size ? await db.select().from(cobrancas).where(inArray(cobrancas.contratoId, Array.from(ids))) : [];
+    const cobs: any[] = ids.size ? await db.select().from(cobrancas).where(and(inArray(cobrancas.contratoId, Array.from(ids)), ne(cobrancas.tipo, "comissao"))) : [];
     const C = new Map(meus.map(c => [Number(c.id), c]));
     const L = new Map(linhas.map(l => [Number(l.contratoId), l.comprador]));
     const boletos = cobs

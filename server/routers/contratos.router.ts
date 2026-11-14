@@ -225,6 +225,52 @@ export const contratosRouter = router({
     return { ok: true };
   }),
 
+  /** Concessão: comissão paga pelo beneficiário (proposta assinada pelo link → boletos no Asaas) — só o administrador */
+  comissaoBeneficiario: protectedProcedure.input(z.object({ id: z.number().int() })).query(async ({ ctx, input }) => {
+    exigir(perfilDe(ctx.user as any) === "admin", "Só o administrador vê a comissão da concessão.");
+    await contratoVisivel(ctx, input.id);
+    const M = await import("../financeiro/comissaoBeneficiario");
+    const R = await import("../financeiro/renegociacao");
+    const aditivos = (await R.aditivosDo(input.id)).filter(a => a.tipo === M.TIPO_ADITIVO_COMISSAO);
+    return { propostas: aditivos, cobrancas: await M.cobrancasComissao(input.id) };
+  }),
+  proporComissaoBeneficiario: protectedProcedure.input(z.object({
+    id: z.number().int(), parcelas: z.number().int().min(1).max(4), primeiroVencimento: z.string().regex(/^\d{4}-\d{2}-\d{2}$/), valor: z.number().positive().max(1e7).optional(),
+    forma: z.enum(["boleto", "cartao"]).default("boleto"),
+  })).mutation(async ({ ctx, input }) => {
+    exigir(perfilDe(ctx.user as any) === "admin", "Só o administrador gera a proposta da comissão.");
+    await contratoVisivel(ctx, input.id);
+    const M = await import("../financeiro/comissaoBeneficiario");
+    const { FinanceiroErro } = await import("../financeiro/servico");
+    try { return await M.proporComissaoBeneficiario(input.id, input, ctx.user.id); }
+    catch (e: any) { if (e instanceof FinanceiroErro) throw new TRPCError({ code: e.status === 404 ? "NOT_FOUND" : e.status === 409 ? "CONFLICT" : "BAD_REQUEST", message: e.message }); throw e; }
+  }),
+  /** Revoga a proposta aguardando assinatura ou os boletos em aberto (para gerar outra: subdividir, juntar, cartão) */
+  revogarComissaoBeneficiario: protectedProcedure.input(z.object({ id: z.number().int(), propostaId: z.number().int().optional() })).mutation(async ({ ctx, input }) => {
+    exigir(perfilDe(ctx.user as any) === "admin", "Só o administrador revoga a comissão.");
+    await contratoVisivel(ctx, input.id);
+    const { FinanceiroErro } = await import("../financeiro/servico");
+    try {
+      if (input.propostaId) { const R = await import("../financeiro/renegociacao"); await R.cancelarAditivo(input.propostaId, ctx.user.id); return { canceladas: 0, falhas: [] as string[], proposta: true }; }
+      const M = await import("../financeiro/comissaoBeneficiario");
+      return { ...(await M.revogarComissao(input.id, ctx.user.id)), proposta: false };
+    } catch (e: any) { if (e instanceof FinanceiroErro) throw new TRPCError({ code: e.status === 404 ? "NOT_FOUND" : "CONFLICT", message: e.message }); throw e; }
+  }),
+  reenviarComissaoBeneficiario: protectedProcedure.input(z.object({ id: z.number().int(), propostaId: z.number().int() })).mutation(async ({ ctx, input }) => {
+    exigir(perfilDe(ctx.user as any) === "admin", "Só o administrador reenvia a proposta.");
+    await contratoVisivel(ctx, input.id);
+    const R = await import("../financeiro/renegociacao");
+    return R.reenviarLink(input.propostaId);
+  }),
+  emitirComissaoBeneficiario: protectedProcedure.input(z.object({ id: z.number().int() })).mutation(async ({ ctx, input }) => {
+    exigir(perfilDe(ctx.user as any) === "admin", "Só o administrador emite os boletos da comissão.");
+    await contratoVisivel(ctx, input.id);
+    const M = await import("../financeiro/comissaoBeneficiario");
+    const falhas: string[] = [];
+    const emitidas = await M.emitirComissao(input.id, falhas);
+    return { emitidas, falhas };
+  }),
+
   /** Tela de Carteirinhas: todas as pessoas dos contratos visíveis (corretor: só os dele) */
   carteirinhasLista: protectedProcedure.query(async ({ ctx }) => {
     const perfil = perfilDe(ctx.user as any);

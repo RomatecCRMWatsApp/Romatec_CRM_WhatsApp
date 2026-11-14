@@ -25,7 +25,7 @@ export interface SnapshotAsaas {
 export interface CobrancaDoc {
   id: number;
   /** reforco = reforço anual (Plano A); complemento = resto da entrada sem juros (Plano C) */
-  tipo: 'entrada' | 'saldo' | 'avista' | 'renegociacao' | 'reforco' | 'complemento';
+  tipo: 'entrada' | 'saldo' | 'avista' | 'renegociacao' | 'reforco' | 'complemento' | 'comissao';
   numero: number;
   total: number;
   vencimento: string;
@@ -49,7 +49,7 @@ export interface ContextoDocs {
   plano: PlanoContrato;
 }
 
-const ROTULO = { entrada: 'Entrada', saldo: 'Saldo', avista: 'À vista', renegociacao: 'Renegociação', reforco: 'Reforço anual', complemento: 'Complemento da entrada' } as const;
+const ROTULO = { entrada: 'Entrada', saldo: 'Saldo', avista: 'À vista', renegociacao: 'Renegociação', reforco: 'Reforço anual', complemento: 'Complemento da entrada', comissao: 'Comissão de gestão' } as const;
 export const rotuloParcela = (c: Pick<CobrancaDoc, 'tipo' | 'numero' | 'total'>) => `${ROTULO[c.tipo]} ${c.numero}/${c.total}`;
 /** Parcela do plano (snapshot do contrato) correspondente à cobrança — no Plano C unificado traz a parte do complemento */
 export const parcelaDoPlano = (plano: Pick<PlanoContrato, 'parcelas'>, c: { tipo: string; numero: number }) =>

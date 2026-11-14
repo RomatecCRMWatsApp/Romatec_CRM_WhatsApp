@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { NaturezaConcessao } from "@/components/contratos/NaturezaConcessao";
+import { ComissaoBeneficiario } from "@/components/contratos/ComissaoBeneficiario";
 import { ROTULO_CONDICAO, type CondicaoPagamento } from "@shared/condicoesLancamento";
 import { useLocation, useParams } from "wouter";
 import { toast } from "sonner";
@@ -26,7 +27,7 @@ import RenegociacaoContrato from "@/components/contratos/Renegociacao";
 import RegistroCartorio from "@/components/contratos/RegistroCartorio";
 
 const br = (iso?: string | null) => (iso ? String(iso).slice(0, 10).split("-").reverse().join("/") : "—");
-const ROTULO_TIPO: Record<string, string> = { entrada: "Entrada", saldo: "Saldo", avista: "À vista", antecipacao: "Antecipação", renegociacao: "Renegociação", reforco: "Reforço anual", complemento: "Compl. entrada" };
+const ROTULO_TIPO: Record<string, string> = { entrada: "Entrada", saldo: "Saldo", avista: "À vista", antecipacao: "Antecipação", renegociacao: "Renegociação", reforco: "Reforço anual", complemento: "Compl. entrada", comissao: "Comissão" };
 const STATUS_COB: Record<string, [string, string]> = {
   prevista: ["Prevista", "text-muted-foreground"], emitida: ["Emitida", "text-info-400"], vencida: ["Vencida", "text-danger-400"],
   paga: ["Paga", "text-ok-400"], cancelada: ["Cancelada", "text-muted-foreground line-through"], estornada: ["Estornada", "text-warn-400"],
@@ -506,7 +507,7 @@ function ConcessaoComissao({ contratoId, concessao, valorRef, cancelado, assinad
     <div className="space-y-2 rounded-lg border border-info-500/40 bg-info-500/5 p-3 text-sm">
       <p className="font-semibold">Concessão da proprietária — sem venda, sem boleto</p>
       <p className="text-xs text-muted-foreground">
-        Valor de referência {brl(valorRef)} · comissão de gestão {brl(Number(concessao.comissaoValor ?? 0))}, paga pela proprietária à gestora
+        Valor de referência {brl(valorRef)} · comissão de gestão {brl(Number(concessao.comissaoValor ?? 0))}, paga {concessao.comissaoPagador === "beneficiario" ? "pelo beneficiário (proposta assinada)" : "pela proprietária à gestora"}
         {concessao.comissaoVencimento ? ` até ${String(concessao.comissaoVencimento).split("-").reverse().join("/")}` : ""}.
       </p>
       {admin && !cancelado && (
@@ -521,6 +522,7 @@ function ConcessaoComissao({ contratoId, concessao, valorRef, cancelado, assinad
         </div>
       )}
       {admin && assinado && <p className="text-[11px] text-muted-foreground">Contrato já assinado: a nova data vale no Financeiro; o termo assinado continua com a data original.</p>}
+      {admin && <ComissaoBeneficiario contratoId={contratoId} comissaoValor={Number(concessao.comissaoValor ?? 0)} cancelado={cancelado} />}
       <div className="space-y-2 border-t border-info-500/30 pt-2">
         <p className="text-xs font-semibold">Natureza da concessão e declaração do beneficiário</p>
         <NaturezaConcessao natureza={natureza} acordo={acordo} onNatureza={setNatureza} onAcordo={setAcordo} desabilitado={!admin || cancelado || assinado} />

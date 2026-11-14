@@ -82,7 +82,7 @@ export default function AssinarAditivo() {
             </a>
             {d.status === "assinado" && (
               <p className="flex items-start gap-2 rounded-xl bg-ok-50 p-4 text-ok-900"><CheckCircle2 className="mt-0.5 h-5 w-5 shrink-0" />
-                Termo assinado em {new Date(d.assinadoEm).toLocaleString("pt-BR", { timeZone: "America/Fortaleza" })}. {reneg ? "As novas parcelas já aparecem no seu portal do comprador (carnê digital), com boleto e PIX." : "O termo assinado fica junto do seu contrato. Guarde o PDF acima."}</p>
+                Termo assinado em {new Date(d.assinadoEm).toLocaleString("pt-BR", { timeZone: "America/Fortaleza" })}. {reneg ? "As novas parcelas já aparecem no seu portal do comprador (carnê digital), com boleto e PIX." : d.tipo === "comissao_benef" ? "As cobranças da comissão foram enviadas no seu WhatsApp (boleto/PIX ou link do cartão). Guarde o PDF acima." : "O termo assinado fica junto do seu contrato. Guarde o PDF acima."}</p>
             )}
             {d.status === "cancelado" && <p className="rounded-xl bg-warn-50 p-4 text-warn-900">Este termo foi cancelado pela administração. Fale com o escritório.</p>}
             {d.status === "aguardando" && (

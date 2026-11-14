@@ -138,11 +138,15 @@ export function payloadCliente(p: ClienteContrato) {
 export function payloadCobranca(i: {
   customerId: string; cobrancaId: number; valor: number; vencimento: string; descricao: string;
   splitValor?: number; walletComissao?: string | null;
+  /** Split em % do valor líquido (ex.: 100 = tudo para a carteira da Romatec — comissão paga pelo beneficiário) */
+  splitPercentual?: number;
   /** 'CREDIT_CARD' = link de pagamento no cartão (entrada dividida); padrão: boleto ou PIX na mesma cobrança */
   billingType?: 'UNDEFINED' | 'CREDIT_CARD';
 }) {
   if (!(i.valor > 0)) throw new AsaasErro('SEM_VALOR', 'Parcela sem valor para cobrar', 409);
-  const split = i.splitValor && i.splitValor > 0 && i.walletComissao ? [{ walletId: i.walletComissao, fixedValue: Math.round(i.splitValor * 100) / 100 }] : undefined;
+  const split = !i.walletComissao ? undefined
+    : i.splitPercentual && i.splitPercentual > 0 ? [{ walletId: i.walletComissao, percentualValue: Math.min(100, i.splitPercentual) }]
+    : i.splitValor && i.splitValor > 0 ? [{ walletId: i.walletComissao, fixedValue: Math.round(i.splitValor * 100) / 100 }] : undefined;
   return {
     customer: i.customerId,
     // UNDEFINED: o pagador escolhe boleto ou PIX na mesma cobrança; CREDIT_CARD: paga pelo link (invoiceUrl) no cartão

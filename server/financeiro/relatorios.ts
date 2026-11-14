@@ -4,7 +4,7 @@
  * - fluxo de caixa: recebimentos por dia/mês com saldo acumulado e por forma, e a previsão por mês de vencimento;
  * - a cobrar: quem está vencido ou vence em breve, com a mensagem pronta — o envio é sempre escolha do administrador.
  */
-import { inArray } from 'drizzle-orm';
+import { and, inArray, ne } from 'drizzle-orm';
 import { getDb } from '../db';
 import { cobrancas, contratos, financeiroAuditoria } from '../../drizzle/schema';
 import { telefoneWhatsApp } from '../../shared/contratos';
@@ -22,7 +22,7 @@ async function base() {
   if (!d) throw new FinanceiroErro('DB', 'Banco indisponível', 503);
   const cs: any[] = (await d.select().from(contratos)).filter((c: any) => !ENCERRADOS.includes(c.status));
   const ids = cs.map(c => c.id);
-  const cobs: any[] = ids.length ? await d.select().from(cobrancas).where(inArray(cobrancas.contratoId, ids)) : [];
+  const cobs: any[] = ids.length ? await d.select().from(cobrancas).where(and(inArray(cobrancas.contratoId, ids), ne(cobrancas.tipo, 'comissao'))) : [];
   return { d, cs, cobs: cobs.filter(c => c.tipo !== 'antecipacao' && c.status !== 'cancelada') };
 }
 

@@ -35,9 +35,9 @@ export async function dadosDaSemana(inicio: string, fim: string, agora = Date.no
     db.select({ id: contratos.id }).from(contratos).where(and(gte(contratos.canceladoEm, de as any), lte(contratos.canceladoEm, ate as any))).catch(caiu("cancelados")),
     db.select({ id: lotes.id }).from(lotes).where(eq(lotes.status, "reservado")).catch(caiu("reservas")),
     db.select({ valorPago: cobrancas.valorPago, valor: cobrancas.valor }).from(cobrancas)
-      .where(and(eq(cobrancas.status, "paga"), gte(cobrancas.pagoEm, inicio), lte(cobrancas.pagoEm, fim))).catch(caiu("recebido")),
+      .where(and(eq(cobrancas.status, "paga"), gte(cobrancas.pagoEm, inicio), lte(cobrancas.pagoEm, fim), ne(cobrancas.tipo, "comissao"))).catch(caiu("recebido")),
     db.select({ contratoId: cobrancas.contratoId, valor: cobrancas.valor, vencimento: cobrancas.vencimento, status: cobrancas.status }).from(cobrancas)
-      .where(inArray(cobrancas.status, ["prevista", "emitida", "vencida"])).catch(caiu("em aberto")),
+      .where(and(inArray(cobrancas.status, ["prevista", "emitida", "vencida"]), ne(cobrancas.tipo, "comissao"))).catch(caiu("em aberto")),
     db.select({ id: solicitacaoAcesso.id }).from(solicitacaoAcesso).where(eq(solicitacaoAcesso.status, "PENDENTE")).catch(caiu("pedidos")),
   ]);
 

@@ -6,7 +6,7 @@
  */
 import { and, eq, inArray } from 'drizzle-orm';
 import { getDb } from '../db';
-import { comissaoRepasses, contratoPessoas, contratos, empreendimentos, pessoas, users } from '../../drizzle/schema';
+import { cobrancas, comissaoRepasses, contratoPessoas, contratos, empreendimentos, pessoas, users } from '../../drizzle/schema';
 import type { PermissoesUsuario } from '../permissoes';
 import { RepasseErro } from './comissoesRepasse';
 
@@ -31,18 +31,26 @@ export async function receitasConcessao(p: PermissoesUsuario) {
   const lista = todos.map(c => ({ c, plano: json(c.simulacaoJson) })).filter(x => x.plano?.concessao);
   if (!lista.length) return { itens: [] as ReceitaConcessao[], resumo: { aReceber: 0, atrasado: 0, recebido: 0 } };
   const ids = lista.map(x => Number(x.c.id));
-  const [reps, emps, us, comp]: any[][] = await Promise.all([
+  const [reps, emps, us, comp, cobs]: any[][] = await Promise.all([
     d.select().from(comissaoRepasses).where(and(inArray(comissaoRepasses.contratoId, ids), eq(comissaoRepasses.chave, CHAVE))),
     d.select({ id: empreendimentos.id, nome: empreendimentos.nome }).from(empreendimentos),
     d.select({ id: users.id, name: users.name }).from(users),
     d.select({ contratoId: contratoPessoas.contratoId, nome: pessoas.nome }).from(contratoPessoas).innerJoin(pessoas, eq(pessoas.id, contratoPessoas.pessoaId))
       .where(and(inArray(contratoPessoas.contratoId, ids), eq(contratoPessoas.papel, 'comprador'))),
+    d.select().from(cobrancas).where(and(inArray(cobrancas.contratoId, ids), eq(cobrancas.tipo, 'comissao'))),
   ]);
   const hoje = hojeBR();
   const itens: ReceitaConcessao[] = lista.map(({ c, plano }) => {
     const r = reps.find(x => Number(x.contratoId) === Number(c.id));
     // Vencimento definido no contrato (editável); contratos antigos: criação + 30 dias
-    const venc = /^\d{4}-\d{2}-\d{2}$/.test(String(plano.concessao.comissaoVencimento ?? '')) ? String(plano.concessao.comissaoVencimento) : somarDias(new Date(c.criadoEm ?? Date.now()), PRAZO_DIAS);
+    let venc = /^\d{4}-\d{2}-\d{2}$/.test(String(plano.concessao.comissaoVencimento ?? '')) ? String(plano.concessao.comissaoVencimento) : somarDias(new Date(c.criadoEm ?? Date.now()), PRAZO_DIAS);
+    // Paga pelo beneficiário em boletos: a situação segue as cobranças da comissão (vence na 1ª em aberto)
+    const minhas = cobs.filter(x => Number(x.contratoId) === Number(c.id) && !['cancelada', 'estornada'].includes(String(x.status)));
+    const doBenef = plano.concessao.comissaoPagador === 'beneficiario' && minhas.length > 0;
+    const abertas = minhas.filter(x => x.status !== 'paga').sort((a, b) => String(a.vencimento).localeCompare(String(b.vencimento)));
+    if (doBenef && abertas.length) venc = String(abertas[0].vencimento).slice(0, 10);
+    const pagaBenef = doBenef && !abertas.length;
+    const ultimoPag = pagaBenef ? minhas.map(x => String(x.pagoEm ?? x.vencimento).slice(0, 10)).sort().at(-1) ?? null : null;
     return {
       contratoId: Number(c.id), numero: String(c.numero), status: String(c.status),
       empreendimento: String(emps.find(e => Number(e.id) === Number(c.empreendimentoId))?.nome ?? ''), lote: String(c.loteCodigo),
@@ -50,7 +58,8 @@ export async function receitasConcessao(p: PermissoesUsuario) {
       valorReferencia: Number(plano.preco_avista ?? 0), valor: Number(plano.concessao.comissaoValor ?? 0),
       vencimento: venc, prazo: String(plano.concessao.comissaoPrazo || 'Pix ou transferência'),
       corretor: String(us.find(u => Number(u.id) === Number(c.corretorUserId))?.name ?? '—'),
-      situacao: (r ? 'recebida' : venc < hoje ? 'atrasada' : 'a_receber') as ReceitaConcessao['situacao'], recebidoEm: r ? String(r.pagoEm).slice(0, 10) : null, forma: r?.forma ?? null,
+      situacao: (r || pagaBenef ? 'recebida' : venc < hoje ? 'atrasada' : 'a_receber') as ReceitaConcessao['situacao'],
+      recebidoEm: r ? String(r.pagoEm).slice(0, 10) : ultimoPag, forma: r?.forma ?? (doBenef ? `Boletos do beneficiário (${minhas.filter(x => x.status === 'paga').length}/${minhas.length} pagos)` : null),
     };
   }).sort((a, b) => a.situacao.localeCompare(b.situacao) || b.contratoId - a.contratoId);
   const soma = (f: (i: ReceitaConcessao) => boolean) => Math.round(itens.filter(f).reduce((s, i) => s + i.valor, 0) * 100) / 100;

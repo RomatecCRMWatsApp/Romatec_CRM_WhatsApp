@@ -6,7 +6,7 @@
  * - Só contratos assinados/ativos e parcelas já emitidas no Asaas (com boleto/Pix); cada parcela recebe cada etapa uma vez.
  * - Sem telefone no cadastro do comprador: registra a falha e não tenta de novo.
  */
-import { and, desc, eq, gte, inArray, isNotNull, lte } from "drizzle-orm";
+import { and, desc, eq, gte, inArray, isNotNull, lte, ne } from "drizzle-orm";
 import { getDb } from "../db";
 import { cobrancaAvisos, cobrancas, contratos, empreendimentos } from "../../drizzle/schema";
 import { telefoneWhatsApp } from "../../shared/contratos";
@@ -48,7 +48,7 @@ export async function avisosDeHoje(agora = Date.now()): Promise<AvisoPlanejado[]
   const min = Math.min(...ETAPAS_REGUA.map(e => DIA_DA_ETAPA[e])), max = Math.max(...ETAPAS_REGUA.map(e => DIA_DA_ETAPA[e])) + JANELA_DIAS;
   const de = somaDias(hoje, -max), ate = somaDias(hoje, -min);
   const parcelas: any[] = await db.select().from(cobrancas)
-    .where(and(inArray(cobrancas.status, [...STATUS_COBRAVEIS]), isNotNull(cobrancas.asaasPaymentId), gte(cobrancas.vencimento, de), lte(cobrancas.vencimento, ate)));
+    .where(and(inArray(cobrancas.status, [...STATUS_COBRAVEIS]), isNotNull(cobrancas.asaasPaymentId), gte(cobrancas.vencimento, de), lte(cobrancas.vencimento, ate), ne(cobrancas.tipo, "comissao")));
   if (!parcelas.length) return [];
   const idsContrato = Array.from(new Set(parcelas.map(p => Number(p.contratoId))));
   const [cts, emps, ja]: any[][] = await Promise.all([

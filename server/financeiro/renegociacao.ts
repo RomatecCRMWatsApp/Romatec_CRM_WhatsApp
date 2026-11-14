@@ -211,6 +211,7 @@ const ASSUNTO_ADITIVO: Record<string, string> = {
   registro: 'que inclui no seu contrato os dados do registro do loteamento em cartório',
   liberacao: 'com a liberação da sua chácara para transferência',
   livre: 'com uma alteração do seu contrato',
+  comissao_benef: 'com a proposta de parcelamento da comissão de gestão da concessão',
 };
 
 export async function enviarLink(contratoId: number, token: string, numero: number, tipo = 'renegociacao') {
@@ -358,6 +359,15 @@ export async function assinarAditivo(token: string, codigo: string, o: { aceite:
   }
   await auditar('aditivo_assinado', { contratoId: Number(a.contratoId), origem: 'publico', ip: o.ip, detalhe: { numero: a.numero, tipo: a.tipo } });
   const tipo = String(a.tipo ?? 'renegociacao');
+  if (tipo === 'comissao_benef') {
+    // Comissão da concessão paga pelo beneficiário: lança as parcelas e emite os boletos (100% para a Romatec)
+    const { aplicarComissaoBeneficiario } = await import('./comissaoBeneficiario');
+    const r = await aplicarComissaoBeneficiario(Number(a.id));
+    const { notificarChamado } = await import('../notificacoes');
+    notificarChamado({ contrato: String(c?.numero ?? ''), lote: String(c?.lote ?? ''), empreendimentoId: Number(c?.empreendimentoId ?? 0), empreendimentoSlug: '', tipo: 'financeiro',
+      assunto: `Proposta de comissão assinada pelo beneficiário — ${r.criadas} parcela(s), ${r.emitidas} boleto(s) emitido(s)${r.falhasAsaas.length ? `, ${r.falhasAsaas.length} pendência(s)` : ''}` }).catch(() => {});
+    return { ok: true as const, resultado: { canceladas: 0, criadas: r.criadas, emitidas: r.emitidas, falhasAsaas: r.falhasAsaas } };
+  }
   if (tipo !== 'renegociacao') {
     // Registro / liberação: grava o que o termo traz (matrícula da unidade, liberação) e avisa o escritório
     const { aplicarAditivoLote } = await import('../contratos/aditivosLote');

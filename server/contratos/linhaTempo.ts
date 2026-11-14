@@ -4,7 +4,7 @@
  * via oficial enviada pelo WhatsApp → contrato ativo. Cada etapa traz a data; a feita fica verde na tela.
  */
 import { atoPagoEm, linhasDoAto } from '../../shared/entradaAto';
-import { asc, eq, inArray } from 'drizzle-orm';
+import { and, asc, eq, inArray, ne } from 'drizzle-orm';
 import { getDb } from '../db';
 import { assinaturaEventos, assinaturaSignatarios, cobrancas, contratos, contratoVersoes } from '../../drizzle/schema';
 import { ROTULO_CONDICAO, ROTULO_MODO_C } from '../../shared/condicoesLancamento';
@@ -63,7 +63,7 @@ export async function linhaDoTempo(contratoId: number): Promise<EtapaLinha[]> {
     d.select({ etapa: contratoVersoes.etapa, versao: contratoVersoes.versao, criadoEm: contratoVersoes.criadoEm }).from(contratoVersoes).where(eq(contratoVersoes.contratoId, contratoId)).orderBy(asc(contratoVersoes.versao)),
     d.select().from(assinaturaSignatarios).where(eq(assinaturaSignatarios.contratoId, contratoId)),
     d.select({ signatarioId: assinaturaEventos.signatarioId, evento: assinaturaEventos.evento, detalhe: assinaturaEventos.detalhe, criadoEm: assinaturaEventos.criadoEm }).from(assinaturaEventos).where(eq(assinaturaEventos.contratoId, contratoId)).orderBy(asc(assinaturaEventos.criadoEm)),
-    d.select({ tipo: cobrancas.tipo, numero: cobrancas.numero, status: cobrancas.status, pagoEm: cobrancas.pagoEm, valor: cobrancas.valor, vencimento: cobrancas.vencimento, vencimentoOriginal: cobrancas.vencimentoOriginal, formaPagamento: cobrancas.formaPagamento }).from(cobrancas).where(eq(cobrancas.contratoId, contratoId)),
+    d.select({ tipo: cobrancas.tipo, numero: cobrancas.numero, status: cobrancas.status, pagoEm: cobrancas.pagoEm, valor: cobrancas.valor, vencimento: cobrancas.vencimento, vencimentoOriginal: cobrancas.vencimentoOriginal, formaPagamento: cobrancas.formaPagamento }).from(cobrancas).where(and(eq(cobrancas.contratoId, contratoId), ne(cobrancas.tipo, 'comissao'))),
   ]);
   const primeiraVersao = (k: string) => versoes.find(v => ETAPA_VERSAO(String(v.etapa)) === k);
   const ev = (nome: string, sid?: number | null) => eventos.find(e => e.evento === nome && (sid === undefined || e.signatarioId === sid));

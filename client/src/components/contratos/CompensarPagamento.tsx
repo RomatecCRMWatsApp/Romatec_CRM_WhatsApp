@@ -11,7 +11,7 @@ import { Dialog, DialogContent, DialogDescription, DialogTitle } from "@/compone
 import { brl } from "@shared/simulador";
 
 const br = (iso?: string | null) => (iso ? String(iso).slice(0, 10).split("-").reverse().join("/") : "—");
-const ROTULO: Record<string, string> = { entrada: "Entrada", saldo: "Saldo", avista: "À vista", renegociacao: "Renegociação", reforco: "Reforço", complemento: "Complemento" };
+const ROTULO: Record<string, string> = { entrada: "Entrada", saldo: "Saldo", avista: "À vista", renegociacao: "Renegociação", reforco: "Reforço", complemento: "Complemento", comissao: "Comissão" };
 const nome = (x: any) => `${ROTULO[x.tipo] ?? x.tipo} ${x.numero}/${x.total}`;
 
 export default function CompensarPagamento({ origem, cobrancas, onFeito }: { origem: any; cobrancas: any[]; onFeito: () => void }) {

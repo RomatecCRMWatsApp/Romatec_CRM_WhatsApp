@@ -12,7 +12,7 @@
  * advogados, pelo administrador e pelo empreendedor (assinaturas incrementais no mesmo PDF).
  */
 import { createHash } from 'node:crypto';
-import { and, desc, eq, inArray } from 'drizzle-orm';
+import { and, desc, eq, inArray, ne } from 'drizzle-orm';
 import { getDb } from '../db';
 import { cobrancas, contratos, empreendimentos, juridicoDocumentos, users } from '../../drizzle/schema';
 
@@ -49,7 +49,7 @@ export interface ParcelaAtraso { id: number; rotulo: string; vencimento: string;
 /** Parcelas vencidas e não pagas de um contrato, atualizadas até hoje pelos encargos da Cláusula 7ª */
 export async function parcelasEmAtraso(contratoId: number, hoje: string): Promise<ParcelaAtraso[]> {
   const d = await banco();
-  const cobs: any[] = await d.select().from(cobrancas).where(eq(cobrancas.contratoId, contratoId));
+  const cobs: any[] = await d.select().from(cobrancas).where(and(eq(cobrancas.contratoId, contratoId), ne(cobrancas.tipo, 'comissao')));
   const { calcularEncargos } = await import('../financeiro/encargos');
   const { indicesIpcaMap } = await import('../financeiro/servico');
   const { rotuloParcela } = await import('../financeiro/dados');
@@ -122,7 +122,7 @@ const r2 = (n: number) => Math.round(n * 100) / 100;
 /** Valores pagos pelo comprador e base do contrato para o memorial da restituição */
 async function pagamentosDo(contratoId: number) {
   const d = await banco();
-  const cobs: any[] = await d.select().from(cobrancas).where(eq(cobrancas.contratoId, contratoId));
+  const cobs: any[] = await d.select().from(cobrancas).where(and(eq(cobrancas.contratoId, contratoId), ne(cobrancas.tipo, 'comissao')));
   const pagas = cobs.filter(c => String(c.status) === 'paga');
   const totalPago = r2(pagas.reduce((a, c) => a + Number(c.valorPago ?? c.valor ?? 0), 0));
   const encargosPagos = r2(pagas.reduce((a, c) => a + Math.max(0, Number(c.valorPago ?? 0) - Number(c.valorOriginal ?? c.valor ?? 0)), 0));

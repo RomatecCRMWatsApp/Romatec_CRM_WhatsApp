@@ -87,5 +87,6 @@ export function rotuloParcelaAviso(p: { tipo: string; numero: number; total: num
   if (p.tipo === 'entrada') return p.total > 1 ? `entrada (${p.numero}/${p.total})` : 'entrada';
   if (p.tipo === 'avista') return 'parcela à vista';
   if (p.tipo === 'renegociacao') return `parcela renegociada ${p.numero}/${p.total}`;
+  if (p.tipo === 'comissao') return `comissão de gestão ${p.numero}/${p.total}`;
   return `parcela ${p.numero}/${p.total}`;
 }

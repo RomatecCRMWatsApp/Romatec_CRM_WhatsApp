@@ -3,6 +3,25 @@
 Cada versão nova vai no TOPO. Depois rode `npm run release` (valida e atualiza o package.json);
 ao subir, o servidor grava a versão no banco e todos recebem o aviso "Novidades da versão".
 
+## 1.175.0 — 2026-11-14
+tipo: minor
+obrigatoria: nao
+titulo: Comissão da concessão paga pelo beneficiário, parcelada
+publico: equipe
+
+### Novo
+- Concessão: a comissão de gestão (5%) pode ser paga pelo beneficiário em 1, 2, 3 ou 4 vezes, por boleto/PIX ou cartão.
+  - O administrador gera, no quadro da concessão do próprio contrato, a proposta de parcelamento: um termo de ciência em que o beneficiário assume o pagamento.
+  - A proposta vai para o WhatsApp do beneficiário, que assina com o código.
+  - Depois da assinatura, as cobranças saem no Asaas com 100% para a Romatec e os links seguem no WhatsApp dele.
+- Revogar: cancela a proposta pendente ou os boletos em aberto, também no Asaas. Depois é só gerar uma nova proposta com o saldo, para subdividir, juntar em um boleto só ou passar para o cartão.
+
+### Melhorias
+- A comissão paga pelo beneficiário é só do escritório:
+  - Não aparece para a empreendedora, nas parcelas do contrato, nos relatórios e no painel do empreendimento, nem na inadimplência, na régua ou no resumo semanal.
+  - O pagamento não gera recibo do empreendimento.
+- Em Comissões › Concessões, a situação acompanha os boletos pagos pelo beneficiário.
+
 ## 1.174.0 — 2026-11-14
 tipo: minor
 obrigatoria: nao

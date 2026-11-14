@@ -9,7 +9,7 @@
  * Não há pagamento parcial de parcela neste modelo; parcelas estornadas não entram (sem data do estorno).
  * Posição histórica: guardada uma vez por dia em financeiroPosicoes (guardarPosicaoDoDia) para a comparação.
  */
-import { and, eq, inArray } from 'drizzle-orm';
+import { and, eq, inArray, ne } from 'drizzle-orm';
 import { getDb } from '../db';
 import { cobrancas, contratoPessoas, contratos, empreendimentos, financeiroDespesas, financeiroPosicoes, pessoas } from '../../drizzle/schema';
 import { ROTULO_CATEGORIA } from '../../shared/despesas';
@@ -60,7 +60,7 @@ async function fontes(emp: number | null, perm: PermissoesUsuario, usuarioId: nu
   const contratosDoFiltro = cs.filter(c => emp == null || (emp !== 0 && Number(c.empreendimentoId) === emp));
   const ids = contratosDoFiltro.map(c => Number(c.id));
   const [cobs, comps]: any[][] = ids.length ? await Promise.all([
-    d.select().from(cobrancas).where(inArray(cobrancas.contratoId, ids)),
+    d.select().from(cobrancas).where(and(inArray(cobrancas.contratoId, ids), ne(cobrancas.tipo, 'comissao'))),
     d.select({ contratoId: contratoPessoas.contratoId, nome: pessoas.nome }).from(contratoPessoas).innerJoin(pessoas, eq(pessoas.id, contratoPessoas.pessoaId))
       .where(and(inArray(contratoPessoas.contratoId, ids), eq(contratoPessoas.papel, 'comprador'))),
   ]) : [[], []];

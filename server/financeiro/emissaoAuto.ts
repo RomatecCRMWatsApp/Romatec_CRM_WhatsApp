@@ -8,7 +8,7 @@
  * - Tudo que trava vira aviso no sino do escritório (uma vez por dia por motivo) e o botão "Emitir no Asaas" continua.
  */
 import { linhasDoAto } from "../../shared/entradaAto";
-import { and, eq } from "drizzle-orm";
+import { and, eq, ne } from "drizzle-orm";
 import { getDb } from "../db";
 import { cobrancas, contratos } from "../../drizzle/schema";
 import { blocoDoCarne } from "./dados";
@@ -95,7 +95,7 @@ export async function emitirAutomatico(contratoId: number, o: { agora?: number; 
   const hoje = o.agora ? new Date(o.agora - 3 * 3600_000).toISOString().slice(0, 10) : hojeBrasil();
   const [c]: any[] = await db.select().from(contratos).where(eq(contratos.id, contratoId)).limit(1);
   if (!c || c.status !== "ativo") return { contratoId, emitidas: 0, motivo: "contrato não ativo" };
-  const linhas: any[] = await db.select().from(cobrancas).where(eq(cobrancas.contratoId, contratoId));
+  const linhas: any[] = await db.select().from(cobrancas).where(and(eq(cobrancas.contratoId, contratoId), ne(cobrancas.tipo, "comissao")));
   const plano = planejarEmissao(linhas, hoje, c.entradaPagaNoAto === true || c.entradaPagaNoAto === 1);
 
   if (plano.vencidasSemBoleto) {
@@ -160,7 +160,7 @@ export async function previaEmissao(agora = Date.now()) {
   const ativos: any[] = await db.select().from(contratos).where(eq(contratos.status, "ativo"));
   const out = [];
   for (const c of ativos) {
-    const linhas: any[] = await db.select().from(cobrancas).where(and(eq(cobrancas.contratoId, Number(c.id))));
+    const linhas: any[] = await db.select().from(cobrancas).where(and(eq(cobrancas.contratoId, Number(c.id)), ne(cobrancas.tipo, "comissao")));
     const p = planejarEmissao(linhas, hoje, c.entradaPagaNoAto === true || c.entradaPagaNoAto === 1);
     if (!p.blocos.length && !p.vencidasSemBoleto) continue;
     const { comprador } = await pessoasDoContrato(Number(c.id)).catch(() => ({ comprador: null as any }));

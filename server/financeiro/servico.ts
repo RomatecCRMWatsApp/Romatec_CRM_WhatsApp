@@ -5,7 +5,7 @@
 import { atoPagoEm, ehDoAto } from '../../shared/entradaAto';
 import { createHash, randomBytes } from 'node:crypto';
 import { telefoneWhatsApp } from '../../shared/contratos';
-import { and, eq, like, sql } from 'drizzle-orm';
+import { and, eq, like, ne, sql } from 'drizzle-orm';
 import { getDb } from '../db';
 import {
   asaasWebhookLog, cobrancas, contratoPessoas, contratos, empJuridico, empreendimentos, financeiroAuditoria, indicesIpca, lotes, pessoas, recibos,
@@ -67,7 +67,8 @@ export async function cobrancaPorId(id: number) {
 }
 
 export async function cobrancasDoContrato(contratoId: number): Promise<ReturnType<typeof linhaParaCobranca>[]> {
-  const rs = await (await db()).select().from(cobrancas).where(eq(cobrancas.contratoId, contratoId));
+  // A comissão da concessão paga pelo beneficiário é negociação do escritório: fora das parcelas do contrato (só no quadro da concessão)
+  const rs = await (await db()).select().from(cobrancas).where(and(eq(cobrancas.contratoId, contratoId), ne(cobrancas.tipo, 'comissao')));
   // Em ordem de vencimento (entrada, saldo, complemento, reforço e renegociação intercalados pela data); no mesmo dia,
   // entrada antes do saldo, depois complemento, reforço, renegociação e antecipação
   const ordem: Record<string, number> = { entrada: 0, avista: 0, saldo: 1, complemento: 2, reforco: 3, renegociacao: 4, antecipacao: 5 };
@@ -301,6 +302,12 @@ export async function processarEventoAsaas(ev: EventoAsaas, opcoes: { enviarDepo
     if (r.status !== 'paga') {
       await d.update(cobrancas).set({ status: 'paga', pagoEm, valorPago: String(pay.value ?? r.valor), formaPagamento: pay.billingType === 'PIX' ? 'PIX' : pay.billingType === 'CREDIT_CARD' || pay.billingType === 'DEBIT_CARD' ? 'CARTAO' : 'BOLETO' })
         .where(eq(cobrancas.id, r.id));
+    }
+    // Comissão da concessão paga pelo beneficiário: é da Romatec — sem recibo do empreendimento (não aparece para a empreendedora)
+    if (r.tipo === 'comissao') {
+      await marcar();
+      await auditar('comissao_beneficiario_paga', { contratoId: r.contratoId, cobrancaId: r.id, origem: 'webhook', detalhe: { evento, parcela: `${r.numero}/${r.total}` } });
+      return { acao: 'pago:comissao' };
     }
     const rec = await emitirRecibo(r.id, pagoEm);
     await marcar();
