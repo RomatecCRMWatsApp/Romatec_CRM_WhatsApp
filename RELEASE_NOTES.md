@@ -3,6 +3,17 @@
 Cada versão nova vai no TOPO. Depois rode `npm run release` (valida e atualiza o package.json);
 ao subir, o servidor grava a versão no banco e todos recebem o aviso "Novidades da versão".
 
+## 1.171.0 — 2026-11-14
+tipo: minor
+obrigatoria: nao
+titulo: Cotas e área das chácaras no mapa 2D
+publico: equipe
+
+### Novo
+- Mapa 2D do empreendimento: cada chácara mostra o código e a área (m²), alinhados ao comprimento do lote. Ao ampliar o mapa, aparece a medida de cada lado por dentro da borda, sempre do mesmo tamanho na tela.
+- Medidas no plano UTM, as mesmas da planta e do memorial descritivo.
+- Botão "Cotas" no canto do mapa liga e desliga as medidas. A escolha fica guardada no aparelho.
+
 ## 1.170.0 — 2026-11-14
 tipo: minor
 obrigatoria: sim

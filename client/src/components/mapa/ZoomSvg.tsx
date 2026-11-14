@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useLayoutEffect, useRef, useState, type ReactNode } from "react";
+import { createContext, useCallback, useContext, useEffect, useLayoutEffect, useRef, useState, type ReactNode } from "react";
 import { Maximize2, RotateCcw, RotateCw, ZoomIn, ZoomOut } from "lucide-react";
 
 /**
@@ -11,6 +11,9 @@ import { Maximize2, RotateCcw, RotateCw, ZoomIn, ZoomOut } from "lucide-react";
 export type Vista = { s: number; tx: number; ty: number; /** graus, sentido horário */ r?: number };
 
 export const ZOOM_MIN = 1;
+/** Zoom atual do mapa para o conteúdo (ex.: cotas que só aparecem ampliado e mantêm o tamanho na tela) */
+const ZoomAtual = createContext(1);
+export const useZoomAtual = () => useContext(ZoomAtual);
 export const ZOOM_MAX = 8;
 export const VISTA_INICIAL: Vista = { s: 1, tx: 0, ty: 0 };
 /** Passo dos botões de girar */
@@ -212,7 +215,7 @@ export default function ZoomSvg({ W, H, rotulo, children, fundo, cheia, canto }:
       onClickCapture={e => { if (arrastou.current) { e.stopPropagation(); e.preventDefault(); arrastou.current = false; } }}>
       <svg ref={svg} viewBox={`0 0 ${W} ${H}`} role="img" aria-label={rotulo}
         style={{ display: "block", width: cheia ? `min(100%, calc(100dvh * ${W / H}))` : "100%", height: "auto", flexShrink: 0, cursor: ativo ? "grab" : undefined }}>
-        <g ref={conteudo} transform={`translate(${vista.tx} ${vista.ty}) scale(${vista.s})${rodado ? ` rotate(${r} ${W / 2} ${H / 2})` : ""}`}>{children}</g>
+        <g ref={conteudo} transform={`translate(${vista.tx} ${vista.ty}) scale(${vista.s})${rodado ? ` rotate(${r} ${W / 2} ${H / 2})` : ""}`}><ZoomAtual.Provider value={vista.s}>{children}</ZoomAtual.Provider></g>
       </svg>
       {canto && <div style={{ position: "absolute", right: 58, top: 10 }} onPointerDown={e => e.stopPropagation()}>{canto}</div>}
       <div style={{ position: "absolute", right: 10, top: 10 }} onPointerDown={e => e.stopPropagation()}>

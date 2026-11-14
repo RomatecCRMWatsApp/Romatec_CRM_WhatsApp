@@ -1,9 +1,11 @@
 import { useEffect, useMemo, useState } from "react";
 import { COR_SITUACAO, ROTULO_SITUACAO, SITUACOES_LOTE, type SituacaoLote } from "@shared/lotes";
 import LupaPortal, { alturaDaLupa, cantoDaLupa, densificar } from "@/components/bom-jardims/LupaPortal";
-import ZoomSvg from "@/components/mapa/ZoomSvg";
+import ZoomSvg, { useZoomAtual } from "@/components/mapa/ZoomSvg";
 import { BotaoSatelite, CreditoSatelite, SateliteSvg, useSatelite } from "@/lib/satelite";
 import { BotaoTelaCheia, estiloTelaCheia, useTelaCheia } from "@/lib/telaCheia";
+import { Ruler } from "lucide-react";
+import { areaBR, areaDoLote, ladosDoLote, metrosBR, verticesDoLote } from "@shared/cotasLote";
 
 /**
  * Mapa temático dos lotes (SVG a partir das coordenadas). O desenho dos lotes vem do banco
@@ -12,7 +14,8 @@ import { BotaoTelaCheia, estiloTelaCheia, useTelaCheia } from "@/lib/telaCheia";
  * lotes com cerca.
  */
 type Pt = [number, number]; // [lon, lat]
-export type LoteMapa = { id: number; codigo: string; situacao: SituacaoLote; poligono: Pt[] | null };
+export type LoteMapa = { id: number; codigo: string; situacao: SituacaoLote; poligono: Pt[] | null; areaM2?: number | string | null };
+const CHAVE_COTAS = "romatec.mapa.cotas";
 export type RuaRotulo = { nome: string; lon: number; lat: number; angulo: number };
 export type Contexto = {
   lotes: { codigo: string; poly: Pt[] }[];
@@ -63,6 +66,10 @@ export default function MapaTematico({ slug, lotes, ruas, perimetro, selecionado
   const [ctx, setCtx] = useState<Contexto | null>(contexto ?? null);
   const [satelite, setSatelite] = useSatelite();
   const tela = useTelaCheia();
+  // Cotas (lados em metros e área): ligadas por padrão no mapa grande; a escolha fica no aparelho
+  const [cotas, setCotas] = useState<boolean>(() => { try { return localStorage.getItem(CHAVE_COTAS) !== "0"; } catch { return true; } });
+  const alternarCotas = () => setCotas(v => { try { localStorage.setItem(CHAVE_COTAS, v ? "0" : "1"); } catch { /* sem armazenamento */ } return !v; });
+  const comCotas = cotas && !compacto;
   useEffect(() => {
     if (contexto) return;
     fetch(`/${slug}/mapa.json`).then(r => (r.ok ? r.json() : null)).then(d => d && setCtx(d)).catch(() => {});
@@ -191,8 +198,10 @@ export default function MapaTematico({ slug, lotes, ruas, perimetro, selecionado
                 <path d={d} fill="none" stroke="#FFFFFF" strokeWidth={2.2} strokeOpacity={0.9} />
                 <path d={d} fill="none" stroke="#6B4F2A" strokeWidth={1.3} strokeDasharray="0.1 4" strokeLinecap="round" />
                 {sel && <path d={d} fill="none" stroke="#0B1F5C" strokeWidth={3.5} />}
-                <text x={cx} y={cy + fonte / 3} textAnchor="middle" fontSize={fonte} fontWeight={800} fill={apagado ? "#9AA3AB" : "#0C3320"}
-                  stroke="#FFFFFF" strokeWidth={2.5} paintOrder="stroke" pointerEvents="none">{l.codigo}</text>
+                {comCotas
+                  ? <CotasDoLote codigo={l.codigo} poly={l.poly} pts={pts} centroTela={[cx, cy]} areaM2={Number(l.areaM2) || null} fonte={fonte} apagado={!!apagado} />
+                  : <text x={cx} y={cy + fonte / 3} textAnchor="middle" fontSize={fonte} fontWeight={800} fill={apagado ? "#9AA3AB" : "#0C3320"}
+                    stroke="#FFFFFF" strokeWidth={2.5} paintOrder="stroke" pointerEvents="none">{l.codigo}</text>}
                 <title>{`${l.codigo} — ${ROTULO_SITUACAO[l.situacao]}`}</title>
               </g>
             );
@@ -303,6 +312,16 @@ export default function MapaTematico({ slug, lotes, ruas, perimetro, selecionado
         </ZoomSvg>
         <div className="absolute left-2.5 bottom-2.5 flex flex-wrap items-center gap-2" style={{ maxWidth: "calc(100% - 70px)" }}>
           <BotaoSatelite ligado={satelite} onChange={setSatelite} />
+          {!compacto && (
+            <button type="button" aria-pressed={cotas} onClick={alternarCotas} title={cotas ? "Esconder as medidas dos lotes" : "Mostrar a área e, ampliando o mapa, as medidas dos lados"}
+              style={{
+                display: "inline-flex", alignItems: "center", gap: 5, padding: "8px 10px", borderRadius: 10, border: "1px solid var(--c-cfd8bf)",
+                fontWeight: 700, fontSize: 12, cursor: "pointer", background: cotas ? "var(--c-0c3320)" : "var(--c-ffffff)", color: cotas ? "var(--c-ffffff)" : "var(--c-0c3320)",
+                boxShadow: "0 2px 8px color-mix(in srgb, var(--c-000000) 18%, transparent)",
+              }}>
+              <Ruler size={14} /> Cotas
+            </button>
+          )}
           {satelite && <CreditoSatelite />}
         </div>
       </div>
@@ -323,5 +342,67 @@ export default function MapaTematico({ slug, lotes, ruas, perimetro, selecionado
         </div>
       )}
     </div>
+  );
+}
+
+/** A partir deste zoom aparecem as medidas dos lados (antes, só código e área) */
+const ZOOM_COTAS = 1.9;
+/** Tamanho das medidas na tela (unidades do desenho no zoom 1): fica igual ao ampliar */
+const FONTE_COTA_TELA = 10.5;
+/** Teto do código do lote na tela ao ampliar (não cresce sem fim com o zoom) */
+const FONTE_CODIGO_TELA = 17;
+
+/**
+ * Código e área do lote alinhados ao comprimento do lote (cabem nas chácaras estreitas) e, ampliado o mapa,
+ * a medida de cada lado por dentro da borda, sempre do mesmo tamanho na tela.
+ */
+function CotasDoLote({ codigo, poly, pts, centroTela, areaM2, fonte, apagado }: {
+  codigo: string; poly: Pt[]; pts: [number, number][]; centroTela: [number, number]; areaM2: number | null; fonte: number; apagado: boolean;
+}) {
+  const zoom = useZoomAtual();
+  const vertTela = verticesDoLote(pts as Pt[]) as [number, number][];
+  const lados = ladosDoLote(poly);
+  const area = areaM2 ?? areaDoLote(poly);
+  const ladosTela = lados.map(({ i, j, metros }) => {
+    const a = vertTela[i], b = vertTela[j];
+    return a && b ? { a, b, metros, comp: Math.hypot(b[0] - a[0], b[1] - a[1]) } : null;
+  }).filter(Boolean) as { a: [number, number]; b: [number, number]; metros: number; comp: number }[];
+  if (!ladosTela.length) return null;
+  const maior = ladosTela.reduce((m, l) => (l.comp > m.comp ? l : m));
+  const menor = Math.min(...ladosTela.filter(l => l.comp > 0).map(l => l.comp));
+  const reto = (dx: number, dy: number) => { let g = (Math.atan2(dy, dx) * 180) / Math.PI; if (g > 90) g -= 180; else if (g <= -90) g += 180; return g; };
+  const angLote = reto(maior.b[0] - maior.a[0], maior.b[1] - maior.a[1]);
+  // Código e área ao longo do lote, limitados pela largura (lado menor) e pelo comprimento
+  const fsCod = Math.min(fonte, menor * 0.36, maior.comp * 0.22, FONTE_CODIGO_TELA / zoom);
+  const txtArea = area > 0 ? areaBR(area) : "";
+  const fsArea = Math.min(fsCod * 0.72, (maior.comp * 0.8) / Math.max(1, txtArea.length * 0.56));
+  const [cx, cy] = centroTela;
+  const corTexto = apagado ? "#9AA3AB" : "#0C3320";
+  const fsLado = FONTE_COTA_TELA / zoom;
+  return (
+    <g pointerEvents="none">
+      <g transform={`rotate(${angLote.toFixed(1)} ${cx.toFixed(1)} ${cy.toFixed(1)})`}>
+        <text x={cx} y={cy - (txtArea ? fsArea * 0.35 : -fsCod / 3)} transform="" textAnchor="middle" fontSize={fsCod} fontWeight={800} fill={corTexto}
+          stroke="#FFFFFF" strokeWidth={Math.max(1, fsCod * 0.22)} paintOrder="stroke">{codigo}</text>
+        {txtArea && (
+          <text x={cx} y={cy + fsArea * 1.25} transform="" textAnchor="middle" fontSize={fsArea} fontWeight={700} fill={corTexto}
+            stroke="#FFFFFF" strokeWidth={Math.max(0.8, fsArea * 0.25)} paintOrder="stroke">{txtArea}</text>
+        )}
+      </g>
+      {zoom >= ZOOM_COTAS && ladosTela.map(({ a, b, metros, comp }, k) => {
+        // Lado curto demais (curva, chanfro): sem cota para não embolar
+        if (comp < fsLado * 4.5 || metros < 1) return null;
+        const dx = b[0] - a[0], dy = b[1] - a[1];
+        const mx = (a[0] + b[0]) / 2, my = (a[1] + b[1]) / 2;
+        const nx = -dy / comp, ny = dx / comp;
+        const dentro = (cx - mx) * nx + (cy - my) * ny > 0 ? 1 : -1;
+        const off = fsLado * 0.95;
+        const x = mx + nx * off * dentro, y = my + ny * off * dentro;
+        return (
+          <text key={k} x={x} y={y} transform={`rotate(${reto(dx, dy).toFixed(1)} ${x.toFixed(1)} ${y.toFixed(1)})`} textAnchor="middle" dominantBaseline="middle"
+            fontSize={fsLado} fontWeight={700} fill={apagado ? "#9AA3AB" : "#3B2A12"} stroke="#FFFFFF" strokeWidth={fsLado * 0.22} paintOrder="stroke">{metrosBR(metros)} m</text>
+        );
+      })}
+    </g>
   );
 }
