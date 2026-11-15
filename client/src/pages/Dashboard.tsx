@@ -8,6 +8,7 @@ import { Users, Send, Settings, LogOut, WifiOff, TrendingUp, Building2, BarChart
 import { useLocation } from "wouter";
 import { trpc } from "@/lib/trpc";
 import RelogioPainel from "@/components/RelogioPainel";
+import { AtalhosPainel } from "@/components/painel/AtalhosPainel";
 import { CabecalhoEmpreendimento } from "@/components/empreendimento/Vitrine";
 import { Map as MapIcon } from "lucide-react";
 
@@ -536,12 +537,15 @@ export default function Dashboard() {
       <div className="flex flex-wrap items-end justify-between gap-2">
         <div>
           <h1 className="text-[32px] leading-tight font-semibold text-[var(--rt-gold-light)]" style={{ fontFamily: "var(--rt-font-title)" }}>Painel</h1>
-          <p className="text-sm text-muted-foreground">{primeiroNome ? `Olá, ${primeiroNome} · ` : ""}{hoje}</p>
+          <p className="text-sm text-muted-foreground">O essencial para o seu atendimento.</p>
+          <p className="text-xs text-muted-foreground">{primeiroNome ? `Olá, ${primeiroNome} · ` : ""}{hoje}</p>
         </div>
         <p className="text-xs text-muted-foreground">{config?.companyName || "Romatec"}</p>
       </div>
 
       <CabecalhoPainel nomeUsuario={primeiroNome} />
+
+      <AtalhosPainel />
 
       <RelogioPainel />
 
