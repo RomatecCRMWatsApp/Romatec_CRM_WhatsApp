@@ -1,0 +1,117 @@
+/* Tema claro (preferência "Aparência: Claro" ou "Sistema" com sistema claro) — client/src/lib/aparencia.ts.
+ * O escuro continua sendo o padrão e os tokens dele ficam intactos; aqui só se sobrescrevem os mesmos tokens.
+ * A marca nunca é recolorida: o logo fica na cápsula verde #0C3320 (classe .rt-capsula-marca).
+ */
+:root[data-rt-theme="light"] {
+  color-scheme: light;
+
+  /* Marca (brand/tokens.css) */
+  --rt-bg: #F4F6F2;
+  --rt-bg-2: #EEF3EE;
+  --rt-bg-glow: #E4EEE6;
+  --rt-bg-glow-2: #EEF3EE;
+  --rt-surface: #FFFFFF;
+  --rt-surface-2: #F7F9F5;
+  --rt-green-track: #E4EEE6;
+  --rt-gold-light: #8A6A20; /* dourado legível sobre branco (texto); o dourado claro fica só decorativo */
+  --rt-glow: #155B38;
+  --rt-emerald: #15803D;
+  --rt-border: #C9D4C9;
+  --rt-divider: #DCE4DC;
+  --rt-text: #18392B;
+  --rt-text-2: #496352;
+  --rt-text-3: #5D7566;
+  --rt-shell: #FFFFFF;
+  --rt-titulo: #0C3320;
+
+  /* shadcn (styles/tokens.css) */
+  --background: #F4F6F2;
+  --foreground: #18392B;
+  --card: #FFFFFF;
+  --card-foreground: #18392B;
+  --popover: #FFFFFF;
+  --popover-foreground: #18392B;
+  --primary: #0C3320;
+  --primary-foreground: #FFFFFF;
+  --secondary: #EEF3EE;
+  --secondary-foreground: #18392B;
+  --muted: #EEF3EE;
+  --muted-foreground: #496352;
+  --accent: #E4EEE6;
+  --accent-foreground: #18392B;
+  --border: #C9D4C9;
+  --input: #C9D4C9;
+  --ring: #155B38;
+  --sidebar: #FFFFFF;
+  --sidebar-foreground: #18392B;
+  --sidebar-primary: #0C3320;
+  --sidebar-primary-foreground: #FFFFFF;
+  --sidebar-accent: #E4EEE6;
+  --sidebar-accent-foreground: #18392B;
+  --sidebar-border: #C9D4C9;
+  --sidebar-ring: #155B38;
+
+  /* Textos de estado pensados para fundo escuro (ok/danger/warn/info 200–400) ficam escuros e legíveis no claro */
+  --color-ok-200: oklch(43.2% 0.095 166.913);
+  --color-ok-300: oklch(50.8% 0.118 165.612);
+  --color-ok-400: oklch(50.8% 0.118 165.612);
+  --color-danger-200: oklch(44.4% 0.177 26.899);
+  --color-danger-300: oklch(50.5% 0.213 27.518);
+  --color-danger-400: oklch(50.5% 0.213 27.518);
+  --color-warn-200: oklch(47.3% 0.137 46.201);
+  --color-warn-300: oklch(47.3% 0.137 46.201);
+  --color-info-200: oklch(39.1% 0.09 240.876);
+  --color-info-300: oklch(45% 0.12 240);
+  --color-grafite-300: oklch(45% 0.013 285.805);
+  --color-grafite-400: oklch(45% 0.013 285.805);
+}
+
+/* Cores fixas pensadas para fundo escuro, sem trocar tela por tela */
+:root[data-rt-theme="light"] .text-white:not([class*="bg-"]) { color: var(--rt-text); }
+:root[data-rt-theme="light"] [class*="bg-white/5"],
+:root[data-rt-theme="light"] [class*="bg-white/10"] { background-color: color-mix(in srgb, var(--rt-text) 5%, transparent); }
+:root[data-rt-theme="light"] [class*="border-white/"] { border-color: var(--rt-border); }
+/* Botão de ação dourado do escuro vira o verde da marca com texto branco */
+:root[data-rt-theme="light"] .btn-premium,
+:root[data-rt-theme="light"] [class*="bg-[var(--rt-gold)]"]:not([class*="bg-[var(--rt-gold)]/"]) {
+  background: var(--rt-green);
+  color: #FFFFFF;
+}
+
+/* Logo oficial: no claro ganha a cápsula verde (nunca recolorir o desenho) */
+.rt-capsula-marca { display: inline-block; border-radius: 20px; }
+:root[data-rt-theme="light"] .rt-capsula-marca {
+  background: var(--rt-green);
+  padding: 10px 12px;
+  /* dentro da cápsula, o dourado volta ao original da marca */
+  --rt-gold-light: #E2C877;
+  --rt-text: #E8F0EB;
+}
+
+/* Menu lateral no claro: seleção sálvia, texto verde-floresta, marcador verde */
+:root[data-rt-theme="light"] .rt-nav-item[aria-current="page"],
+:root[data-rt-theme="light"] .rt-pref-sel {
+  background: #E4EEE6;
+  border-color: var(--rt-border);
+  color: var(--rt-text);
+}
+:root[data-rt-theme="light"] #menu-lateral,
+:root[data-rt-theme="light"] #menu-gaveta {
+  background: rgba(255, 255, 255, 0.97);
+  border-color: var(--rt-border);
+  box-shadow: 0 8px 24px rgba(24, 57, 43, 0.09);
+}
+@media (max-width: 899px) {
+  :root[data-rt-theme="light"] #menu-gaveta { backdrop-filter: none; }
+}
+
+/* Textos claros de telas antigas (estilos inline com cores nomeadas) e o card de imóvel */
+:root[data-rt-theme="light"] {
+  --c-e8f5e9: #18392B;
+  --c-e2d9bf: #18392B;
+  --c-f3eedf: #18392B;
+}
+:root[data-rt-theme="light"] .property-card {
+  background: var(--rt-surface);
+  border-color: var(--rt-border);
+}

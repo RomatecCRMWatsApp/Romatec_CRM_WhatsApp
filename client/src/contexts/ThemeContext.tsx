@@ -1,4 +1,5 @@
 import React, { createContext, useContext, useEffect, useState } from "react";
+import { aplicarTema } from "@/lib/aparencia";
 
 type Theme = "light" | "dark";
 
@@ -29,18 +30,11 @@ export function ThemeProvider({
     return defaultTheme;
   });
 
+  // A preferência de aparência (Claro/Escuro/Sistema) vale só dentro do app (AppShell marca data-rt-shell).
+  // Telas públicas e de login ficam no escuro da marca.
   useEffect(() => {
-    const root = document.documentElement;
-    if (theme === "dark") {
-      root.classList.add("dark");
-    } else {
-      root.classList.remove("dark");
-    }
-
-    if (switchable) {
-      localStorage.setItem("theme", theme);
-    }
-  }, [theme, switchable]);
+    if (!document.documentElement.dataset.rtShell) aplicarTema("dark");
+  }, []);
 
   const toggleTheme = switchable
     ? () => {

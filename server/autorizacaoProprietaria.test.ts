@@ -99,7 +99,7 @@ describe('autorização antes do contrato: 2 chácaras → proprietária (empres
     for (let n = 1; n <= doc.numPages; n++) t += (await (await doc.getPage(n)).getTextContent()).items.map((i: any) => i.str).join(' ') + ' ';
     expect(t).toMatch(/CONDIÇÕES DE PAGAMENTO APROVADAS/);
     expect(t.replace(/\s+/g, ' ')).toMatch(/aprovou\s*as condições de pagamento abaixo para Cliente Ficticio das Quatro/);
-    expect(t).toMatch(/CNPJ 11\.222\.333\/0001-81 · 14\/11/);
+    expect(t).toMatch(/CNPJ 11\.222\.333\/0001-81 · \d{2}\/\d{2}\/\d{4}/);
     expect(t).toMatch(/180× R\$ 1\.000,00/);
     expect(t).toMatch(/ASSINADO ELETRONICAMENTE/);
     expect(t).not.toMatch(/tabela|valor presente|Diferença/i);

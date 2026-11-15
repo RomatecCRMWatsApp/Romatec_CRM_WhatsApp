@@ -14,7 +14,20 @@
 
     <!-- PWA (identidade visual v1.0: ícone R dourado em squircle verde, fundo preto) -->
     <link rel="manifest" href="/manifest.json" />
-    <meta name="theme-color" content="#000000" />
+    <meta name="theme-color" content="#061A11" />
+    <!-- Aparência antes da 1ª pintura (sem piscar): mesmas chaves de client/src/lib/aparencia.ts -->
+    <script>
+      (function () {
+        var a = "escuro";
+        try { a = localStorage.getItem("rt.aparencia") || "escuro"; } catch (e) {}
+        var claro = a === "claro" || (a === "sistema" && window.matchMedia && window.matchMedia("(prefers-color-scheme: light)").matches);
+        var r = document.documentElement;
+        r.setAttribute("data-rt-theme", claro ? "light" : "dark");
+        if (!claro) r.classList.add("dark");
+        r.style.colorScheme = claro ? "light" : "dark";
+        if (claro) { var m = document.querySelector('meta[name="theme-color"]'); if (m) m.setAttribute("content", "#F4F6F2"); }
+      })();
+    </script>
     <meta name="color-scheme" content="dark" />
     <meta name="description" content="Romatec CRM — Gestão de Leads Imobiliários · Romatec Consultoria Total, Açailândia/MA" />
 

@@ -8,6 +8,7 @@
 @import "tw-animate-css";
 @import "./styles/tokens.css";
 @import "./styles/palette.css";
+@import "./styles/tema-claro.css";
 
 @custom-variant dark (&:is(.dark *));
 
@@ -51,18 +52,18 @@
   /* Marca (client/src/brand/tokens.css) — classes rt-* do Tailwind: bg-rt-surface, text-rt-gold… */
   --color-gold: #C9A84C;
   --color-gold-dark: #A8862F;
-  --color-emerald: #2BD47A;
+  --color-emerald: var(--rt-emerald);
   --color-emerald-dark: #0E6B3C;
-  --color-rt-bg: #061A11;
-  --color-rt-surface: #0B2218;
+  --color-rt-bg: var(--rt-bg);
+  --color-rt-surface: var(--rt-surface);
   --color-rt-green: #0C3320;
   --color-rt-gold: #C9A84C;
-  --color-rt-gold-light: #E2C877;
+  --color-rt-gold-light: var(--rt-gold-light);
   --color-rt-gold-dark: #A8862F;
-  --color-rt-glow: #2BD47A;
-  --color-rt-border: #3A3220;
-  --color-rt-text: #E8F0EB;
-  --color-rt-text-2: #B9C7BE;
+  --color-rt-glow: var(--rt-glow);
+  --color-rt-border: var(--rt-border);
+  --color-rt-text: var(--rt-text);
+  --color-rt-text-2: var(--rt-text-2);
   --font-title: "Cinzel", "Times New Roman", serif;
   --font-body: "Manrope", system-ui, sans-serif;
   --font-brand: Arial, Helvetica, sans-serif;
@@ -83,7 +84,7 @@
     /* Fundo das artes de divulgação: verde profundo com brilho no canto superior */
     background-image:
       radial-gradient(120% 70% at 0% 0%, var(--rt-bg-glow) 0%, transparent 60%),
-      radial-gradient(90% 60% at 100% 100%, var(--rt-green) 0%, transparent 65%);
+      radial-gradient(90% 60% at 100% 100%, var(--rt-bg-glow-2) 0%, transparent 65%);
     background-attachment: fixed;
   }
   ::selection {
