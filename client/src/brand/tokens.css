@@ -131,9 +131,10 @@ html, body { background: var(--rt-bg); color: var(--rt-text); font-family: var(-
 .rt-tab[aria-current="page"] { color: var(--rt-gold-light); font-weight: 700; }
 .rt-tab__mark { width: 22px; height: 3px; border-radius: 3px; background: transparent; }
 .rt-tab[aria-current="page"] .rt-tab__mark { background: var(--rt-glow); }
-.rt-tab__fab { width: 62px; height: 62px; margin-top: -26px; border-radius: 50%; display: grid; place-items: center;
-  background: var(--rt-green); border: 2px solid var(--rt-gold); cursor: pointer; box-shadow: 0 0 0 4px #000; }
-.rt-tab__fab img { width: 30px; height: auto; }
+/* Upgrade visual: botão central compacto, dentro da barra (não cobre mais o conteúdo); alvo de toque de 48 px */
+.rt-tab__fab { width: 48px; height: 48px; margin-top: 0; align-self: center; justify-self: center; border-radius: 14px; display: grid; place-items: center;
+  background: var(--rt-green); border: 1.5px solid var(--rt-gold); cursor: pointer; box-shadow: none; }
+.rt-tab__fab img { width: 22px; height: auto; }
 .rt-tab__fab { position: relative; }
 .rt-tab__fab:focus-visible { outline: 3px solid var(--rt-gold-light); outline-offset: 3px; }
 .rt-tab__fab-selo { position: absolute; right: -4px; bottom: -2px; width: 24px; height: 24px; border-radius: 50%; display: grid; place-items: center;

@@ -98,6 +98,7 @@ const CadastroImovelWhatsApp = lazy(() => import("./pages/CadastroImovelWhatsApp
 const ImobiliariasParceiras = lazy(() => import("./pages/ImobiliariasParceiras"));
 const ContratoGestao = lazy(() => import("./pages/ContratoGestao"));
 const Autorizacoes = lazy(() => import("./pages/Autorizacoes"));
+const RelatoriosFotograficos = lazy(() => import("./pages/RelatoriosFotograficos"));
 const ProspeccaoB2B = lazy(() => import("./pages/ProspeccaoB2B"));
 const BaseConhecimento = lazy(() => import("./pages/BaseConhecimento"));
 const InstalarApp = lazy(() => import("./pages/InstalarApp"));
@@ -252,6 +253,12 @@ function Router() {
       </Route>
       <Route path={"/instalar"}>
         {() => <SetupGuard component={InstalarApp} />}
+      </Route>
+      <Route path={"/relatorios-fotograficos/:id"}>
+        {() => <SetupGuard component={RelatoriosFotograficos} />}
+      </Route>
+      <Route path={"/relatorios-fotograficos"}>
+        {() => <SetupGuard component={RelatoriosFotograficos} />}
       </Route>
       <Route path={"/autorizacoes"}>
         {() => <SetupGuard component={Autorizacoes} />}
@@ -412,7 +419,7 @@ function CarregamentoDoApp() {
 function App() {
   return (
     <ErrorBoundary>
-      <ThemeProvider defaultTheme="dark">
+      <ThemeProvider defaultTheme="dark" switchable>
         <TooltipProvider>
           <Toaster />
           <CarregamentoDoApp />

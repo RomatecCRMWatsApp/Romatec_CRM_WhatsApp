@@ -10,13 +10,14 @@ import BuscaGlobal, { JanelaBusca, type TelaBusca } from "@/components/BuscaGlob
 import { Scale,
   BarChart3, Building2, Flame, Images, KanbanSquare, LayoutDashboard, LineChart, LogOut, Megaphone, Menu, Send,
   Settings, UserCog, Users, X, Eye, ClipboardList, CalendarDays, Map as MapIcon, Smartphone, Wallet, IdCard, FolderOpen, Bell, FileSignature, Handshake, Mic, CalendarCheck, UserPlus, BookCopy, BadgeDollarSign, Hourglass, Bot, Trophy, Link2, Zap, MessagesSquare, ListOrdered, Plug, Inbox, Building, Rotate3d,
-  ChevronRight, ChevronsLeft, ChevronsRight,
+  ChevronRight, ChevronsLeft, ChevronsRight, Moon, Sun,
   Radar, BookOpen,
- Shuffle, CheckCheck, ShieldCheck, Search,
+ Shuffle, CheckCheck, ShieldCheck, Search, Camera,
 } from "lucide-react";
 import { abrirNovidades, SinoNovidades, useNovidadesNaoLidas } from "./sistema/Novidades";
 import { useNotificacoes } from "./sistema/Notificacoes";
 import { APP_VERSION } from "@/brand";
+import { useTheme } from "@/contexts/ThemeContext";
 
 /**
  * modulo = chave em shared/permissoes.ts (some do menu quando o módulo está desligado para o corretor).
@@ -25,91 +26,97 @@ import { APP_VERSION } from "@/brand";
 type Item = { rotulo: string; rota: string; icone: React.ComponentType<{ className?: string; style?: React.CSSProperties }>; exato?: boolean; modulo?: string; cor?: string };
 type Grupo = { titulo?: string; cor: string; itens: Item[] };
 
-const COR = { geral: "#F472B6", leads: "#F97316", vendas: "#22C55E", financeiro: "#D4A62A", admin: "#3B82F6" };
+const COR = { geral: "#F472B6", leads: "#F97316", vendas: "#22C55E", financeiro: "#D4A62A", conteudo: "#2DD4BF", admin: "#3B82F6" };
 
+/**
+ * Menu em grupos por finalidade (upgrade visual). Só a organização mudou: rotas, ícones, módulos e regras de acesso
+ * (podeAbrir + módulos ligados) são os mesmos de antes. Nenhum item foi removido.
+ */
 const MENU: Grupo[] = [
   {
     cor: COR.geral,
     itens: [
       { rotulo: "Painel", rota: "/dashboard", icone: LayoutDashboard },
-      { rotulo: "Área do corretor", rota: "/corretor", icone: Smartphone },
-      { rotulo: "Meu cadastro", rota: "/meu-cadastro", icone: IdCard },
-      { rotulo: "Notificações", rota: "#novidades", icone: Bell },
-      { rotulo: "Base de conhecimento", rota: "/ajuda", icone: BookOpen },
-      // Administrador e secretária (shared/equipe.ts → podeAbrir)
-      { rotulo: "Recrutamento", rota: "/recrutamento", icone: UserPlus },
     ],
   },
   {
-    titulo: "Leads",
+    titulo: "Relacionamento",
     cor: COR.leads,
     itens: [
       { rotulo: "Atender agora", rota: "/leads/atender", icone: Zap, modulo: "leads" },
       { rotulo: "Caixa de entrada", rota: "/caixa-entrada", icone: Inbox, modulo: "leads" },
       { rotulo: "Leads recebidos", rota: "/leads/recebidos", icone: CheckCheck, modulo: "leads" },
       { rotulo: "Leads", rota: "/leads", icone: Flame, exato: true, modulo: "leads" },
-      // Administrador e secretária (shared/equipe.ts → podeAbrir)
       { rotulo: "Distribuição de leads", rota: "/leads/distribuicao", icone: Shuffle, modulo: "leads" },
       { rotulo: "Funil", rota: "/leads/funil", icone: KanbanSquare, modulo: "leads" },
-      { rotulo: "Agenda de visitas", rota: "/leads/agenda", icone: CalendarDays, modulo: "leads" },
-      { rotulo: "Reuniões", rota: "/reunioes", icone: Mic, modulo: "leads" },
-      { rotulo: "Convites de reunião", rota: "/convites", icone: CalendarCheck },
       { rotulo: "Campanhas de captação", rota: "/leads/campanhas", icone: Megaphone, modulo: "leads" },
       { rotulo: "Links de divulgação", rota: "/leads/campanhas?aba=links", icone: Link2, modulo: "leads" },
       { rotulo: "Sequências de follow-up", rota: "/leads/sequencias", icone: ListOrdered, modulo: "leads" },
       { rotulo: "Relatório", rota: "/leads/relatorio", icone: BarChart3, modulo: "leads" },
       { rotulo: "Lista de interesse", rota: "/leads/lista-interesse", icone: ClipboardList, modulo: "leads" },
-    ],
-  },
-  {
-    titulo: "Vendas",
-    cor: COR.vendas,
-    itens: [
-      { rotulo: "Empreendimentos", rota: "/empreendimentos", icone: MapIcon, modulo: "empreendimentos" },
-      { rotulo: "Contratos", rota: "/contratos", icone: FileSignature, modulo: "contratos" },
-      // Só o administrador (shared/equipe.ts → podeAbrir): contrato interno proprietária × Romatec
-      { rotulo: "Contrato de gestão", rota: "/contrato-gestao", icone: Handshake },
-      // Só o administrador: autorizações da proprietária para venda fora da tabela (antes do contrato)
-      { rotulo: "Autorizações da proprietária", rota: "/autorizacoes", icone: ShieldCheck },
-      { rotulo: "Ranking de vendas", rota: "/ranking", icone: Trophy },
-      // Administrador e secretária (shared/equipe.ts → podeAbrir)
-      { rotulo: "Fila de reservas", rota: "/reservas", icone: Hourglass },
-      { rotulo: "Carteirinhas", rota: "/carteirinhas", icone: IdCard, modulo: "contratos" },
-      { rotulo: "Links de contratos e documentos", rota: "/contratos?aba=links", icone: FolderOpen, modulo: "contratos" },
-      // Administrador e secretária (shared/equipe.ts → podeAbrir)
-      { rotulo: "Portal do comprador", rota: "/portal-comprador", icone: MessagesSquare },
-      { rotulo: "Imobiliárias parceiras", rota: "/imobiliarias-parceiras", icone: Building },
-      { rotulo: "Prospecção B2B", rota: "/prospeccao", icone: Radar },
-      { rotulo: "Tour 360°", rota: "/tour-360", icone: Rotate3d },
-      { rotulo: "Talonários", rota: "/talonarios", icone: BookCopy },
-      { rotulo: "Financeiro", rota: "/financeiro", icone: Wallet, modulo: "financeiro", cor: COR.financeiro, exato: true },
-      // Administrador e secretária (shared/equipe.ts → podeAbrir)
-      { rotulo: "Painel financeiro", rota: "/financeiro/painel", icone: LayoutDashboard, modulo: "financeiro", cor: COR.financeiro },
-      { rotulo: "Imóveis", rota: "/properties", icone: Building2, modulo: "imoveis" },
-      // Administrador, secretária e corretor (shared/equipe.ts → podeAbrir); empreendedor não vê
-      { rotulo: "Cadastro pelo WhatsApp", rota: "/imoveis/whatsapp", icone: Smartphone, modulo: "imoveis" },
-      { rotulo: "Materiais", rota: "/materiais", icone: Images, modulo: "materiais" },
+      { rotulo: "Agenda de visitas", rota: "/leads/agenda", icone: CalendarDays, modulo: "leads" },
+      { rotulo: "Reuniões", rota: "/reunioes", icone: Mic, modulo: "leads" },
+      { rotulo: "Convites de reunião", rota: "/convites", icone: CalendarCheck },
       { rotulo: "Clientes", rota: "/contacts", icone: Users, modulo: "contatos" },
       { rotulo: "Disparos WhatsApp", rota: "/campaigns", icone: Send, modulo: "campanhas" },
       { rotulo: "Desempenho", rota: "/performance", icone: LineChart, modulo: "desempenho" },
     ],
   },
   {
-    titulo: "Administração",
+    titulo: "Vendas e empreendimentos",
+    cor: COR.vendas,
+    itens: [
+      { rotulo: "Empreendimentos", rota: "/empreendimentos", icone: MapIcon, modulo: "empreendimentos" },
+      { rotulo: "Imóveis", rota: "/properties", icone: Building2, modulo: "imoveis" },
+      { rotulo: "Cadastro pelo WhatsApp", rota: "/imoveis/whatsapp", icone: Smartphone, modulo: "imoveis" },
+      { rotulo: "Contratos", rota: "/contratos", icone: FileSignature, modulo: "contratos" },
+      { rotulo: "Contrato de gestão", rota: "/contrato-gestao", icone: Handshake },
+      { rotulo: "Autorizações da proprietária", rota: "/autorizacoes", icone: ShieldCheck },
+      { rotulo: "Ranking de vendas", rota: "/ranking", icone: Trophy },
+      { rotulo: "Fila de reservas", rota: "/reservas", icone: Hourglass },
+      { rotulo: "Carteirinhas", rota: "/carteirinhas", icone: IdCard, modulo: "contratos" },
+      { rotulo: "Links de contratos e documentos", rota: "/contratos?aba=links", icone: FolderOpen, modulo: "contratos" },
+      { rotulo: "Portal do comprador", rota: "/portal-comprador", icone: MessagesSquare },
+      { rotulo: "Imobiliárias parceiras", rota: "/imobiliarias-parceiras", icone: Building },
+      { rotulo: "Prospecção B2B", rota: "/prospeccao", icone: Radar },
+      { rotulo: "Tour 360°", rota: "/tour-360", icone: Rotate3d },
+      { rotulo: "Talonários", rota: "/talonarios", icone: BookCopy },
+    ],
+  },
+  {
+    titulo: "Financeiro e jurídico",
+    cor: COR.financeiro,
+    itens: [
+      { rotulo: "Financeiro", rota: "/financeiro", icone: Wallet, modulo: "financeiro", cor: COR.financeiro, exato: true },
+      { rotulo: "Painel financeiro", rota: "/financeiro/painel", icone: LayoutDashboard, modulo: "financeiro", cor: COR.financeiro },
+      { rotulo: "Portal jurídico", rota: "/juridico", icone: Scale },
+    ],
+  },
+  {
+    titulo: "Conteúdo e atividades",
+    cor: COR.conteudo,
+    itens: [
+      { rotulo: "Materiais", rota: "/materiais", icone: Images, modulo: "materiais" },
+      { rotulo: "Relatórios fotográficos", rota: "/relatorios-fotograficos", icone: Camera },
+    ],
+  },
+  {
+    titulo: "Equipe e administração",
     cor: COR.admin,
     itens: [
+      { rotulo: "Área do corretor", rota: "/corretor", icone: Smartphone },
+      { rotulo: "Meu cadastro", rota: "/meu-cadastro", icone: IdCard },
+      { rotulo: "Notificações", rota: "#novidades", icone: Bell },
+      { rotulo: "Base de conhecimento", rota: "/ajuda", icone: BookOpen },
+      { rotulo: "Recrutamento", rota: "/recrutamento", icone: UserPlus },
       { rotulo: "Equipe", rota: "/equipe", icone: UserCog },
-      // Administrador e secretária: quem está ativo, pago e usando o sistema
       { rotulo: "Controle de acessos", rota: "/controle-acessos", icone: ShieldCheck },
-      // Administrador e secretária (shared/equipe.ts → podeAbrir)
       { rotulo: "Respostas automáticas", rota: "/respostas-automaticas", icone: Bot },
       { rotulo: "SaaS e assinaturas", rota: "/saas", icone: BadgeDollarSign },
       { rotulo: "Integrações", rota: "/integracoes", icone: Plug },
-      // "Ver como" (só o administrador): o sistema exatamente como cada pessoa vê, só leitura
       { rotulo: "Visão portal do corretor", rota: "/ver-como?perfil=corretor", icone: Smartphone },
       { rotulo: "Visão da secretária", rota: "/ver-como?perfil=secretario", icone: UserCog },
       { rotulo: "Visão do empreendedor", rota: "/ver-como?perfil=empreendedor", icone: Eye },
-      { rotulo: "Portal jurídico", rota: "/juridico", icone: Scale },
       { rotulo: "Configurações", rota: "/settings", icone: Settings },
     ],
   },
@@ -188,7 +195,7 @@ function Navegacao({ onNavegar, recolhido = false }: { onNavegar?: () => void; r
                   aria-label={it.rotulo}
                   onClick={() => { if (it.rota === "#novidades") abrirNovidades(); else navigate(it.rota); onNavegar?.(); }}
                   className={`relative w-full flex items-center rounded-lg text-sm transition-colors ${recolhido ? "justify-center p-1.5" : "gap-3 px-2 py-1.5"} ${on
-                    ? "bg-primary/15 text-primary font-semibold shadow-[inset_3px_0_0_var(--primary)]"
+                    ? "bg-[var(--rt-ouro-fosco)] text-[var(--rt-shell)] font-semibold"
                     : "text-sidebar-foreground/75 hover:bg-white/5 hover:text-sidebar-foreground"}`}
                 >
                   <IconeMenu icone={it.icone} cor={it.cor ?? g.cor} on={on} />
@@ -245,8 +252,22 @@ function Rodape({ recolhido = false }: { recolhido?: boolean }) {
         <SinoNovidades />
         <button onClick={() => logout()} title="Sair" className="rounded-lg p-2 text-sidebar-foreground/60 hover:bg-white/10 hover:text-danger-300"><LogOut className="h-4 w-4" /></button>
       </div>
+      <BotaoTema />
       <p className="mt-2 text-center text-[10px] tracking-wide text-sidebar-foreground/40">CRM Romatec v{APP_VERSION}</p>
     </div>
+  );
+}
+
+/** Alterna o tema escuro (padrão) e o tema creme (beta); a escolha fica no navegador */
+function BotaoTema() {
+  const { theme, toggleTheme } = useTheme();
+  if (!toggleTheme) return null;
+  const escuro = theme === "dark";
+  return (
+    <button type="button" onClick={toggleTheme} aria-pressed={!escuro}
+      className="mt-2 flex w-full min-h-[44px] items-center justify-center gap-2 rounded-lg text-xs text-sidebar-foreground/70 hover:bg-white/5 hover:text-sidebar-foreground">
+      {escuro ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />}{escuro ? "Tema creme (beta)" : "Tema escuro"}
+    </button>
   );
 }
 
@@ -343,6 +364,8 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
           <div className="absolute inset-0 bg-black/60" onClick={() => setAberto(false)} />
           <aside className="relative z-10 flex h-[100dvh] max-h-[100dvh] w-72 max-w-[85vw] flex-col overflow-hidden bg-sidebar border-r border-sidebar-border pt-[env(safe-area-inset-top)] pb-[env(safe-area-inset-bottom)]">
             <div className="flex shrink-0 items-center justify-between pr-3"><Marca /><button onClick={() => setAberto(false)} className="p-2 text-sidebar-foreground/70" aria-label="Fechar menu"><X className="h-5 w-5" /></button></div>
+            {/* Gaveta pesquisável: a mesma busca do menu fixo (telas e registros) */}
+            <div className="shrink-0 px-3 pb-2"><BuscaGlobal telas={telasBusca} variante="campo" atalho={false} /></div>
             <Navegacao onNavegar={() => setAberto(false)} />
             <div className="shrink-0">
               <BotaoInstalarApp />
@@ -353,14 +376,14 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
       )}
 
       {/* Barra do topo (celular): abre a gaveta */}
-      <header className="lg:hidden sticky top-[env(safe-area-inset-top)] z-20 flex items-center gap-3 border-b border-border bg-background px-3 py-2">
-        <button onClick={() => setAberto(true)} className="rounded-lg p-2 hover:bg-white/5" aria-label="Abrir menu"><Menu className="h-5 w-5" /></button>
+      <header className="lg:hidden sticky top-[env(safe-area-inset-top)] z-20 flex items-center gap-3 border-b border-[var(--rt-gold-dark)]/40 bg-[var(--rt-shell)] px-3 py-2 text-[#F7F5ED]">
+        <button onClick={() => setAberto(true)} className="rounded-lg p-2 hover:bg-white/5" aria-label="Abrir menu"><Menu className="h-6 w-6" /></button>
         <RomatecAppIcon size={28} />
         <p className="font-semibold truncate flex-1">{tituloDaRota(loc)}</p>
         {/* Celular: a busca é o R da barra de baixo. A lupa do topo fica só no tablet (sem a barra) ou para quem não tem a barra.
             Ela continua montada para o atalho Ctrl+K / "/" valer em qualquer tamanho de tela. */}
         <div className={temBarraInferior(perfilDe(user as any), minhas?.modulos) ? "hidden min-[900px]:block" : ""}><BuscaGlobal telas={telasBusca} /></div>
-        <SinoNovidades className="text-foreground/70" />
+        <SinoNovidades className="text-[#F7F5ED]/80" />
         <FotoUsuario tamanho="h-8 w-8" />
       </header>
 

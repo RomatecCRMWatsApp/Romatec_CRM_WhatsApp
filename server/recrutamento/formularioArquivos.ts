@@ -16,7 +16,7 @@ export interface OpcoesFormulario { nome?: string | null; empreendimento?: strin
 export const MARCA = { nome: 'Romatec Consultoria Total', linha: 'CRM · Consultoria Imobiliária', cnpj: `CNPJ ${ESCRITORIO.cnpj} · ${ESCRITORIO.creciJ}`, endereco: 'Rua São Raimundo, 10, Centro — Açailândia/MA' };
 const cacheMarca = new Map<string, Promise<Buffer | null>>();
 /** Logo reduzido (PNG na largura pedida) — o original tem 1.664 px e deixaria o PDF/DOC pesado para o WhatsApp */
-function marca(nome: string, largura: number): Promise<Buffer | null> {
+export function marca(nome: string, largura: number): Promise<Buffer | null> {
   const chave = `${nome}@${largura}`;
   if (!cacheMarca.has(chave)) {
     cacheMarca.set(chave, (async () => {

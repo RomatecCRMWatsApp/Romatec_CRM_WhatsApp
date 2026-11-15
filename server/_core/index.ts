@@ -1335,6 +1335,8 @@ async function startServer() {
   // Bloco Financeiro: boletos, carnê, 2ª via, recibos, declaração, verificação pública (/r/:numero) e webhook do Asaas
   const { registrarRotasFinanceiro } = await import('../financeiro/rotas');
   registrarRotasFinanceiro(app);
+  const { registrarRotasRelatorios } = await import('../relatorios/rotas');
+  registrarRotasRelatorios(app);
   const { registrarRotasReunioes } = await import('../reunioes/rotas');
   registrarRotasReunioes(app);
   const { registrarRotaEspaco } = await import('../sistema/espaco');
@@ -1486,6 +1488,8 @@ async function startServer() {
     await addCobrancaAvisos();
     const { addAutorizacoesVenda } = await import('./migrations/addAutorizacoesVenda');
     await addAutorizacoesVenda();
+    const { addRelatoriosFotograficos } = await import('./migrations/addRelatoriosFotograficos');
+    await addRelatoriosFotograficos();
   } catch (e) {
     console.error('❌ Erro na migration addMateriais:', e);
   }

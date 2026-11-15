@@ -2589,3 +2589,83 @@ export const juridicoDocumentos = mysqlTable("juridicoDocumentos", {
   criadoEm: timestamp("criadoEm").defaultNow().notNull(),
   atualizadoEm: datetime("atualizadoEm"),
 });
+
+// ─── Relatórios fotográficos (registro privado de atividades com fotos) ─────────────────────────────
+/** Relatório de atividade com fotos. Registro interno — não é laudo, prova pericial nem documento jurídico. */
+export const relatoriosFotograficos = mysqlTable("relatoriosFotograficos", {
+  id: int("id").autoincrement().primaryKey(),
+  /** Identificador público do registro (32 hex) — usado para localizar o registro recém-criado */
+  uid: char("uid", { length: 32 }).notNull(),
+  /** RF-AAAA-NNNN */
+  numero: varchar("numero", { length: 20 }).notNull(),
+  titulo: varchar("titulo", { length: 180 }).notNull(),
+  descricao: text("descricao"),
+  /** visita | vistoria | obra | reuniao | outros */
+  tipoAtividade: varchar("tipoAtividade", { length: 12 }).notNull(),
+  /** Data declarada pelo usuário (AAAA-MM-DD) */
+  dataAtividade: varchar("dataAtividade", { length: 10 }).notNull(),
+  /** user_provided | edited_by_user */
+  dataAtividadeOrigem: varchar("dataAtividadeOrigem", { length: 24 }).default("user_provided").notNull(),
+  empreendimentoId: int("empreendimentoId"),
+  loteCodigo: varchar("loteCodigo", { length: 20 }),
+  imovelId: int("imovelId"),
+  clienteId: int("clienteId"),
+  responsavelUserId: int("responsavelUserId").notNull(),
+  /** draft | final */
+  status: varchar("status", { length: 8 }).default("draft").notNull(),
+  /** Correção de um final: novo rascunho derivado (o final continua intacto) */
+  derivadoDeId: int("derivadoDeId"),
+  finalizadoEm: datetime("finalizadoEm"),
+  finalizadoPor: int("finalizadoPor"),
+  criadoPor: int("criadoPor").notNull(),
+  criadoEm: timestamp("criadoEm").defaultNow().notNull(),
+  atualizadoEm: datetime("atualizadoEm"),
+  excluidoEm: datetime("excluidoEm"),
+}, (t) => ({
+  uxUid: uniqueIndex("ux_relfoto_uid").on(t.uid),
+  ixResp: index("ix_relfoto_resp").on(t.responsavelUserId),
+  ixEmp: index("ix_relfoto_emp").on(t.empreendimentoId),
+}));
+
+/** Foto de um relatório: original preservado + prévia e miniatura (arquivos privados em contratoArquivos) */
+export const relatorioFotos = mysqlTable("relatorioFotos", {
+  id: int("id").autoincrement().primaryKey(),
+  relatorioId: int("relatorioId").notNull(),
+  uid: char("uid", { length: 32 }).notNull(),
+  ordem: int("ordem").default(0).notNull(),
+  legenda: varchar("legenda", { length: 1000 }),
+  /** 1 = entra na versão para o cliente */
+  incluirCliente: int("incluirCliente").default(1).notNull(),
+  mime: varchar("mime", { length: 30 }).notNull(),
+  bytes: int("bytes").notNull(),
+  largura: int("largura"),
+  altura: int("altura"),
+  nomeOriginal: varchar("nomeOriginal", { length: 255 }),
+  arquivoOriginal: varchar("arquivoOriginal", { length: 255 }).notNull(),
+  arquivoPrevia: varchar("arquivoPrevia", { length: 255 }).notNull(),
+  arquivoMiniatura: varchar("arquivoMiniatura", { length: 255 }).notNull(),
+  /** camera | gallery | desktop_upload | other */
+  origemCaptura: varchar("origemCaptura", { length: 16 }),
+  /** EXIF DateTimeOriginal, quando houver (não substitui a data da atividade) */
+  capturadaEm: datetime("capturadaEm"),
+  /** Localização só com consentimento explícito do usuário */
+  geoConsentimento: int("geoConsentimento").default(0).notNull(),
+  latitude: decimal("latitude", { precision: 10, scale: 7 }),
+  longitude: decimal("longitude", { precision: 10, scale: 7 }),
+  enviadaPor: int("enviadaPor").notNull(),
+  enviadaEm: timestamp("enviadaEm").defaultNow().notNull(),
+  excluidaEm: datetime("excluidaEm"),
+}, (t) => ({
+  uxUid: uniqueIndex("ux_relfotofoto_uid").on(t.uid),
+  ixRel: index("ix_relfotofoto_rel").on(t.relatorioId),
+}));
+
+/** Trilha do relatório: criação, edição, upload, remoção, finalização, prévia, exportação, download */
+export const relatorioEventos = mysqlTable("relatorioEventos", {
+  id: int("id").autoincrement().primaryKey(),
+  relatorioId: int("relatorioId").notNull(),
+  usuarioId: int("usuarioId"),
+  evento: varchar("evento", { length: 30 }).notNull(),
+  detalheJson: text("detalheJson"),
+  criadoEm: timestamp("criadoEm").defaultNow().notNull(),
+}, (t) => ({ ixRel: index("ix_releventos_rel").on(t.relatorioId) }));

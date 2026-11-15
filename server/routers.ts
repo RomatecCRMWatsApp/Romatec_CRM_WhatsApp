@@ -36,6 +36,7 @@ import { linksDivulgacaoRouter } from "./routers/linksDivulgacao.router";
 import { portalCompradorRouter } from "./routers/portalComprador.router";
 import { renegociacaoRouter } from "./routers/renegociacao.router";
 import { autorizacoesRouter } from "./routers/autorizacoes.router";
+import { relatoriosFotograficosRouter } from "./routers/relatoriosFotograficos.router";
 import { integracoesRouter } from "./routers/integracoes.router";
 import { caixaEntradaRouter } from "./routers/caixaEntrada.router";
 import { parceirasRouter } from "./routers/parceiras.router";
@@ -130,6 +131,7 @@ export const appRouter = router({
   portalComprador: portalCompradorRouter,
   renegociacao: renegociacaoRouter,
   autorizacoes: autorizacoesRouter,
+  relatoriosFotograficos: relatoriosFotograficosRouter,
   integracoes: integracoesRouter,
   caixaEntrada: caixaEntradaRouter,
   parceiras: parceirasRouter,
