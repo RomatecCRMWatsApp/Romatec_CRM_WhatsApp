@@ -31,7 +31,7 @@ export default function BarraVersao() {
   if (!isAuthenticated || !interna) return null;
 
   return (
-    <div className={`w-full bg-black/40 border-b border-white/5 text-[11px] text-grafite-400 px-3 py-0.5 flex flex-wrap gap-x-3 gap-y-0 tabular-nums ${location.startsWith("/empreendedor") ? "" : "min-[900px]:pl-[var(--rt-menu-offset,312px)]"}`}>
+    <div className={`w-full bg-black/40 border-b border-white/5 text-[11px] text-grafite-400 px-3 py-0.5 flex flex-wrap gap-x-3 gap-y-0 tabular-nums min-[900px]:pl-[var(--rt-menu-offset,312px)]`}>
       <span>{dataHora(agora)}</span>
       {data && (
         <>

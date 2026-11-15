@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from "react";
+import { createContext, useCallback, useContext, useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { Link, useLocation } from "wouter";
 import { useAuth } from "@/_core/hooks/useAuth";
@@ -153,6 +153,9 @@ const ICONE_GRUPO: Record<string, Item["icone"]> = {
   "Financeiro e jurídico": Wallet,
   "Conteúdo e atividades": Images,
   "Equipe e administração": UserCog,
+  "Meu empreendimento": Building2,
+  "Documentos e artes": FileSignature,
+  "Equipe e agenda": Trophy,
 };
 const idGrupo = (titulo: string) => `menu-grupo-${titulo.normalize("NFD").replace(/[^\w]+/g, "-").toLowerCase()}`;
 const semAcento = (s: string) => s.normalize("NFD").replace(/[̀-ͯ]/g, "").toLowerCase();
@@ -165,11 +168,27 @@ function useAlertasMenu() {
   return { pendencias: pendencias ?? [], novidades };
 }
 
+/**
+ * Outro portal (ex.: empreendedor) usa o mesmo menu com os seus próprios destinos:
+ * grupos, qual item está ativo e o que fazer ao escolher (rolar até a seção, abrir rota…).
+ */
+export type ItemMenuLateral = Item;
+export type GrupoMenuLateral = Grupo;
+type ContextoMenu = { grupos: Grupo[]; estaAtivo: (it: Item) => boolean; irPara: (it: Item) => void };
+const MenuCtx = createContext<ContextoMenu | null>(null);
+
 function useGruposDoMenu() {
+  const ctx = useContext(MenuCtx);
   const { user } = useAuth();
   const perfil = perfilDe(user as any);
-  const { data: minhas } = trpc.permissoes.minhas.useQuery(undefined, { enabled: daEquipe(perfil), staleTime: 60_000 });
-  return menuDoPerfil(perfil, minhas?.modulos);
+  const { data: minhas } = trpc.permissoes.minhas.useQuery(undefined, { enabled: !ctx && daEquipe(perfil), staleTime: 60_000 });
+  return ctx ? ctx.grupos : menuDoPerfil(perfil, minhas?.modulos);
+}
+
+function useEstaAtivo() {
+  const ctx = useContext(MenuCtx);
+  const [loc] = useLocation();
+  return ctx ? ctx.estaAtivo : (it: Item) => ativo(loc, it);
 }
 
 const linkBase = "relative flex min-h-11 w-full items-center gap-3 rounded-xl px-3 text-left text-[15px] transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--rt-gold)]";
@@ -177,8 +196,8 @@ const linkAtivo = "border border-[var(--rt-gold)]/45 bg-[var(--rt-gold)]/12 font
 const linkInativo = "border border-transparent text-[var(--rt-text)]/85 hover:bg-[var(--rt-glow)]/[0.07] hover:text-[var(--rt-text)]";
 
 /** Um destino do menu (link real; "#novidades" abre a central de notificações) */
-function ItemMenu({ it, loc, onIr, alertas }: { it: Item; loc: string; onIr: (it: Item) => void; alertas: ReturnType<typeof useAlertasMenu> }) {
-  const on = ativo(loc, it);
+function ItemMenu({ it, onIr, alertas }: { it: Item; loc?: string; onIr: (it: Item) => void; alertas: ReturnType<typeof useAlertasMenu> }) {
+  const on = useEstaAtivo()(it);
   const Icone = it.icone;
   return (
     <button type="button" onClick={() => onIr(it)} aria-current={on ? "page" : undefined} className={`rt-nav-item ${linkBase} ${on ? linkAtivo : linkInativo}`}>
@@ -193,8 +212,10 @@ function ItemMenu({ it, loc, onIr, alertas }: { it: Item; loc: string; onIr: (it
 
 function useIrPara(onNavegar?: () => void) {
   const [, navigate] = useLocation();
+  const ctx = useContext(MenuCtx);
   return (it: Item) => {
-    if (it.rota === "#novidades") abrirNovidades();
+    if (ctx) { ctx.irPara(it); tocarNavegacao(); }
+    else if (it.rota === "#novidades") abrirNovidades();
     else { navigate(it.rota); tocarNavegacao(); }
     onNavegar?.();
   };
@@ -205,6 +226,7 @@ function Navegacao({ onNavegar }: { onNavegar?: () => void }) {
   const [loc] = useLocation();
   const { user } = useAuth();
   const grupos = useGruposDoMenu();
+  const estaAtivo = useEstaAtivo();
   const alertas = useAlertasMenu();
   const irPara = useIrPara(onNavegar);
   const chave = `menu.gruposAbertos.${(user as any)?.id ?? "anon"}`;
@@ -231,7 +253,7 @@ function Navegacao({ onNavegar }: { onNavegar?: () => void }) {
             : <p className="px-3 py-4 text-sm text-[var(--rt-text-2)]">Nenhum recurso com “{busca}”.</p>
         ) : grupos.map((g, gi) => {
           if (!g.titulo) return <div key={gi} className="space-y-1">{g.itens.map(it => <ItemMenu key={it.rota} it={it} loc={loc} onIr={irPara} alertas={alertas} />)}</div>;
-          const temAtual = g.itens.some(it => ativo(loc, it));
+          const temAtual = g.itens.some(it => estaAtivo(it));
           const aberto = temAtual || abertos.includes(g.titulo);
           const IconeG = ICONE_GRUPO[g.titulo] ?? Users;
           const id = idGrupo(g.titulo);
@@ -271,6 +293,7 @@ function Dica({ texto, top }: { texto: string; top: number }) {
 function NavegacaoRecolhida() {
   const [loc] = useLocation();
   const grupos = useGruposDoMenu();
+  const estaAtivo = useEstaAtivo();
   const alertas = useAlertasMenu();
   const [dica, setDica] = useState<{ texto: string; top: number } | null>(null);
   const [flyout, setFlyout] = useState<{ gi: number; top: number } | null>(null);
@@ -295,7 +318,7 @@ function NavegacaoRecolhida() {
       {grupos.map((gr, gi) => {
         const unico = !gr.titulo && gr.itens.length === 1 ? gr.itens[0] : null;
         const rotulo = unico ? unico.rotulo : gr.titulo ?? "Menu";
-        const on = gr.itens.some(it => ativo(loc, it));
+        const on = gr.itens.some(it => estaAtivo(it));
         const Icone = unico ? unico.icone : ICONE_GRUPO[rotulo] ?? Users;
         const aberto = flyout?.gi === gi;
         return (
@@ -594,5 +617,56 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
       <BarraInferior modulos={minhas?.modulos} onBuscar={() => setBuscaBalao(true)} />
       {buscaBalao && <JanelaBusca telas={telasBusca} modo="balao" onFechar={() => setBuscaBalao(false)} />}
     </div>
+  );
+}
+
+/**
+ * Mesmo menu lateral do CRM (flutuante, recolhível, gaveta no celular, Aparência e Som) para outro portal,
+ * com os destinos dele. Usado pelo Portal do empreendedor.
+ */
+export function PortalLateral({ grupos, estaAtivo, irPara, titulo, children }: {
+  grupos: GrupoMenuLateral[];
+  estaAtivo: (it: ItemMenuLateral) => boolean;
+  irPara: (it: ItemMenuLateral) => void;
+  titulo: string;
+  children: React.ReactNode;
+}) {
+  const [loc] = useLocation();
+  const [aberto, setAberto] = useState(false);
+  const botaoMenu = useRef<HTMLButtonElement | null>(null);
+  useTemaDoApp();
+  useEffect(() => setAberto(false), [loc]);
+  const [recolhido, setRecolhido] = useState<boolean>(() => lerPref("menu.recolhido", false));
+  const alternarMenu = () => setRecolhido(r => { gravarPref("menu.recolhido", !r); return !r; });
+  useEffect(() => {
+    document.documentElement.style.setProperty("--rt-menu-offset", recolhido ? "112px" : "312px");
+  }, [recolhido]);
+  const fecharGaveta = useCallback(() => { setAberto(false); requestAnimationFrame(() => botaoMenu.current?.focus()); }, []);
+  const ctx: ContextoMenu = { grupos, estaAtivo, irPara: it => { irPara(it); setAberto(false); } };
+
+  return (
+    <MenuCtx.Provider value={ctx}>
+      <div className={`min-h-screen bg-background transition-[padding] duration-200 motion-reduce:transition-none print:!pl-0 ${recolhido ? "min-[900px]:pl-[112px]" : "min-[900px]:pl-[312px]"}`}>
+        <aside id="menu-lateral" aria-label="Menu lateral"
+          className={`fixed bottom-4 left-4 top-4 z-30 hidden flex-col overflow-hidden rounded-[28px] border border-[var(--rt-gold)]/45 bg-[color-mix(in_srgb,var(--rt-surface)_94%,transparent)] shadow-[0_20px_60px_-20px_rgba(0,0,0,.8)] backdrop-blur-md transition-[width] duration-200 motion-reduce:transition-none min-[900px]:flex print:hidden ${recolhido ? "w-20" : "w-[280px]"}`}>
+          <TopoMenu recolhido={recolhido} onAlternar={alternarMenu} />
+          {recolhido ? <NavegacaoRecolhida /> : <Navegacao />}
+          <BotaoInstalarApp recolhido={recolhido} />
+          <Rodape recolhido={recolhido} />
+        </aside>
+
+        {aberto && <Gaveta onFechar={fecharGaveta} />}
+
+        <header className="sticky top-[env(safe-area-inset-top)] z-20 flex items-center gap-3 border-b border-[var(--rt-green)] bg-[var(--rt-shell)] px-3 py-2 text-[var(--rt-text)] min-[900px]:hidden">
+          <button ref={botaoMenu} onClick={() => setAberto(true)} className="flex h-11 w-11 items-center justify-center rounded-lg hover:bg-white/5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--rt-gold)]" aria-label="Abrir menu" aria-expanded={aberto} aria-controls="menu-gaveta"><Menu className="h-6 w-6" /></button>
+          <RomatecAppIcon size={28} />
+          <p className="min-w-0 flex-1 truncate font-semibold">{titulo}</p>
+          <SinoNovidades className="text-[var(--rt-gold-light)]" />
+          <FotoUsuario tamanho="h-8 w-8" />
+        </header>
+
+        <main className="min-w-0">{children}</main>
+      </div>
+    </MenuCtx.Provider>
   );
 }

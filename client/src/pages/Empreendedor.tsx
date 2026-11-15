@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useLocation } from "wouter";
 import { toast } from "sonner";
 import { perfilDe } from "@shared/equipe";
@@ -7,10 +7,9 @@ import { useAuth } from "@/_core/hooks/useAuth";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Bar, BarChart, CartesianGrid, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
-import { PenTool, ArrowLeft, BadgePercent, BarChart3, CalendarCheck, Trophy, Copy, Download, ExternalLink, FileText, IdCard, Images, LogOut, Map as MapIcon, Receipt, Share2, Table2, TrendingUp, Video } from "lucide-react";
-import { FotoUsuario } from "@/components/AppShell";
-import { SinoNovidades } from "@/components/sistema/Novidades";
-import { APP_VERSION, AppFooter, RomatecAppIcon } from "@/brand";
+import { PenTool, ArrowLeft, BadgePercent, BarChart3, CalendarCheck, Trophy, Copy, Download, ExternalLink, FileText, IdCard, Images, Map as MapIcon, Receipt, Share2, Table2, TrendingUp, Video } from "lucide-react";
+import { PortalLateral, type GrupoMenuLateral, type ItemMenuLateral } from "@/components/AppShell";
+import { APP_VERSION, AppFooter } from "@/brand";
 import { baixarBlob, ehImagem, ehVideo, miniatura, nomeArquivo } from "@/components/MateriaisPainel";
 import PlayerVideo from "@/components/PlayerVideo";
 import { ROTULO_TIPO_MATERIAL, type TipoMaterial } from "@shared/materiais";
@@ -121,7 +120,7 @@ function Arte({ m }: { m: any }) {
  * com a situação das chácaras editável por ela) e, abaixo, vendas, financeiro e boletos, leads e gráficos, tabelas e artes.
  */
 export default function Empreendedor() {
-  const { user, logout } = useAuth();
+  const { user } = useAuth();
   const [, navigate] = useLocation();
   const ehEmpreendedor = perfilDe(user as any) === "empreendedor";
   const slug = String((user as any)?.empreendimentoSlug || "bom-jardims");
@@ -137,37 +136,40 @@ export default function Empreendedor() {
   const nome = emp?.nome || p?.empreendimento.nome || "Meu empreendimento";
   const ir = (id: string) => document.getElementById(id)?.scrollIntoView({ behavior: "smooth", block: "start" });
 
-  return (
-    <div className="min-h-screen bg-background">
-      {/* Barra do topo */}
-      <div className="sticky top-[env(safe-area-inset-top)] z-30 border-b border-[var(--rt-border)] bg-black">
-        <div className="mx-auto flex max-w-[1500px] items-center gap-1 px-2 py-2 sm:gap-3 sm:px-4 md:px-6">
-          {/* Administrador/secretária olhando a Visão do empreendedor: volta para o CRM */}
-          {!ehEmpreendedor && (
-            <Button size="sm" variant="outline" className="shrink-0 border-white/30 text-white hover:bg-white/15" onClick={() => navigate("/dashboard")}>
-              <ArrowLeft className="mr-1 h-4 w-4" /><span className="hidden sm:inline">Voltar ao&nbsp;</span>CRM
-            </Button>
-          )}
-          <span className="hidden min-[400px]:inline-flex"><RomatecAppIcon size={34} /></span>
-          <p className="min-w-0 flex-1 truncate text-sm text-white/80">
-            {ehEmpreendedor ? "Portal do empreendedor" : "Visão do empreendedor (prévia)"} · <b className="text-white">{String((user as any)?.name || "").split(" ")[0]}</b>
-          </p>
-          <Button size="sm" variant="ghost" className="px-2 text-white hover:bg-white/15 sm:px-3" title="Ranking de vendas dos corretores" onClick={() => navigate("/ranking")}><Trophy className="h-4 w-4 sm:mr-1" /><span className="hidden sm:inline">Ranking</span></Button>
-          <Button size="sm" variant="ghost" className="px-2 text-white hover:bg-white/15 sm:px-3" title="Reuniões e quem confirmou presença" onClick={() => navigate("/convites")}><CalendarCheck className="h-4 w-4 sm:mr-1" /><span className="hidden sm:inline">Reuniões</span></Button>
-          <SinoNovidades className="text-white/80 hover:text-white" />
-          <FotoUsuario />
-          <Button size="sm" variant="ghost" className="px-2 text-white hover:bg-white/15 sm:px-3" title="Sair" onClick={() => logout()}><LogOut className="h-4 w-4" /></Button>
-        </div>
-        {/* Navegação das seções da página */}
-        <div className="mx-auto flex max-w-[1500px] gap-1.5 overflow-x-auto px-3 pb-2 sm:px-4 md:px-6 [scrollbar-width:none]">
-          {SECOES.map(([id, rotulo, Icone]) => (
-            <button key={id} onClick={() => ir(id)} className="flex shrink-0 items-center gap-1.5 rounded-full border border-border px-3 py-1 text-xs font-medium text-white/80 transition hover:border-[var(--rt-gold)]/60 hover:text-white">
-              <Icone className="h-3.5 w-3.5" />{rotulo}
-            </button>
-          ))}
-        </div>
-      </div>
+  // Menu lateral (mesmo do CRM): seções desta página + atalhos; a seção visível fica marcada
+  const [secao, setSecao] = useState<string>("mapa");
+  useEffect(() => {
+    const els = SECOES.map(([id]) => document.getElementById(id)).filter(Boolean) as HTMLElement[];
+    if (!els.length || typeof IntersectionObserver === "undefined") return;
+    const io = new IntersectionObserver(ent => {
+      const vis = ent.filter(e => e.isIntersecting).sort((x, y) => x.boundingClientRect.top - y.boundingClientRect.top)[0];
+      if (vis) setSecao(vis.target.id);
+    }, { rootMargin: "-15% 0px -70% 0px" });
+    els.forEach(el => io.observe(el));
+    return () => io.disconnect();
+  }, [vendas, fin, artes.length]);
+  const grupos = useMemo<GrupoMenuLateral[]>(() => {
+    const item = ([id, rotulo, icone]: readonly [string, string, ItemMenuLateral["icone"]]): ItemMenuLateral => ({ rotulo, rota: `#${id}`, icone });
+    const por = (ids: string[]) => SECOES.filter(([id]) => ids.includes(id)).map(item);
+    return [
+      { cor: "", itens: por(["mapa"]) },
+      { titulo: "Meu empreendimento", cor: "", itens: por(["vendas", "financeiro", "leads", "carteirinhas", "tabelas", "comissao"]) },
+      { titulo: "Documentos e artes", cor: "", itens: por(["juridico", "artes"]) },
+      { titulo: "Equipe e agenda", cor: "", itens: [
+        { rotulo: "Ranking de vendas", rota: "/ranking", icone: Trophy },
+        { rotulo: "Reuniões", rota: "/convites", icone: CalendarCheck },
+        ...(ehEmpreendedor ? [] : [{ rotulo: "Voltar ao CRM", rota: "/dashboard", icone: ArrowLeft }]),
+      ] },
+    ];
+  }, [ehEmpreendedor]);
+  const irPara = (it: ItemMenuLateral) => {
+    if (it.rota.startsWith("#")) { const id = it.rota.slice(1); setSecao(id); ir(id); }
+    else navigate(it.rota);
+  };
 
+  return (
+    <PortalLateral grupos={grupos} estaAtivo={it => it.rota === `#${secao}`} irPara={irPara}
+      titulo={ehEmpreendedor ? "Portal do empreendedor" : "Visão do empreendedor (prévia)"}>
       <div className="mx-auto max-w-[1500px] space-y-4 px-3 pb-10 pt-3 sm:px-4 md:px-6 md:pt-4">
         {error && <p className="text-sm text-danger-400">{error.message}</p>}
 
@@ -400,6 +402,6 @@ export default function Empreendedor() {
       </div>
       {/* Rodapé oficial (sem a coluna "Sistema": o empreendedor não abre as telas do CRM) */}
       <div className="mt-10"><AppFooter version={APP_VERSION} links={[]} /></div>
-    </div>
+    </PortalLateral>
   );
 }
