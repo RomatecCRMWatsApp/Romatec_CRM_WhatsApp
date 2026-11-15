@@ -3,6 +3,21 @@
 Cada versão nova vai no TOPO. Depois rode `npm run release` (valida e atualiza o package.json);
 ao subir, o servidor grava a versão no banco e todos recebem o aviso "Novidades da versão".
 
+## 1.184.0 — 2026-11-15
+tipo: minor
+obrigatoria: nao
+titulo: Relatórios fotográficos e menu reorganizado
+publico: equipe
+
+### Novo
+- Relatórios fotográficos (menu Conteúdo e atividades): registre visitas, vistorias, obras e reuniões com fotos pela câmera ou galeria, legendas e ordem; gere o PDF interno ou a versão do cliente. As fotos são privadas.
+- Relatório finalizado fica somente leitura; para corrigir, crie um rascunho de correção a partir dele.
+- Tema creme (beta) no rodapé do menu; o tema escuro continua o padrão.
+
+### Melhorias
+- Menu organizado em grupos: Relacionamento, Vendas e empreendimentos, Financeiro e jurídico, Conteúdo e atividades, Equipe e administração (os mesmos itens de antes).
+- Busca dentro do menu no celular, item ativo destacado em dourado e botão central da barra inferior menor, sem cobrir o conteúdo.
+
 ## 1.183.0 — 2026-11-14
 tipo: minor
 obrigatoria: nao
