@@ -312,7 +312,7 @@ export default function Properties() {
               </div>
               <div className="flex flex-wrap items-center gap-2">
                 {podeUsarAgenteImovel(minhas?.perfil) && (
-                  <Button variant="outline" onClick={() => navigate("/imoveis/whatsapp")} className="border-emerald/30 text-emerald hover:bg-emerald/10 text-sm">
+                  <Button variant="outline" onClick={() => navigate("/imoveis/whatsapp")} className="border-[var(--rt-gold)]/40 text-[var(--rt-gold-light)] hover:bg-[var(--rt-gold)]/10 text-sm">
                     <Smartphone className="mr-2 h-4 w-4" /> Pelo WhatsApp
                   </Button>
                 )}
@@ -322,7 +322,7 @@ export default function Properties() {
                     navigator.clipboard.writeText('https://romateccrm.com/imoveis');
                     toast.success('Link do catálogo copiado!');
                   }}
-                  className="border-emerald/30 text-emerald hover:bg-emerald/10 text-sm"
+                  className="border-[var(--rt-gold)]/40 text-[var(--rt-gold-light)] hover:bg-[var(--rt-gold)]/10 text-sm"
                 >
                   <Share2 className="mr-2 h-4 w-4" />
                   Compartilhar Catálogo
@@ -488,7 +488,7 @@ export default function Properties() {
                 {/* URL manual */}
                 <div className="flex gap-2">
                   <Input value={newImageUrl} onChange={e => setNewImageUrl(e.target.value)} placeholder="Ou cole a URL da imagem aqui..." className="flex-1 bg-secondary/30 border-border/50" />
-                  <Button onClick={addImage} variant="outline" className="border-emerald/30 text-emerald hover:bg-emerald/10"><Plus className="mr-1 h-4 w-4" /> URL</Button>
+                  <Button onClick={addImage} variant="outline" className="border-[var(--rt-gold)]/40 text-[var(--rt-gold-light)] hover:bg-[var(--rt-gold)]/10"><Plus className="mr-1 h-4 w-4" /> URL</Button>
                 </div>
                 {form.images.length > 0 ? (
                   <div className="grid grid-cols-2 md:grid-cols-3 gap-3">

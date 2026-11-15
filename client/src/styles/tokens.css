@@ -2,19 +2,19 @@
 /* Identidade visual v1.0 (shadcn): sempre dark, dourado como cor principal */
 :root {
   --radius: 0.75rem;
-  --background: #000000;
+  --background: #061A11;
   --foreground: #E8F0EB;
   /* Cards e superfícies */
-  --card: #0A1410;
+  --card: #0B2218;
   --card-foreground: #E8F0EB;
-  --popover: #0F1D16;
+  --popover: #0F2B1E;
   --popover-foreground: #E8F0EB;
   /* Principal: dourado da marca (botões, links, item ativo) */
   --primary: #C9A84C;
   --primary-foreground: #0A0A0A;
-  --secondary: #0F1D16;
+  --secondary: #0F2B1E;
   --secondary-foreground: #E8F0EB;
-  --muted: #0F1D16;
+  --muted: #0F2B1E;
   --muted-foreground: #9FB3A8;
   --accent: #E2C877;
   --accent-foreground: #0A0A0A;
@@ -241,8 +241,8 @@
   --c-6f5d35: #6f5d35;
 }
 
-/* ─── Casco do app (marca oficial v1.4.0: fundo #000000, green #0C3320, gold #C9A84C/#E2C877) ─── */
+/* ─── Casco do app: verde profundo das artes de divulgação, green #0C3320, gold #C9A84C/#E2C877 ─── */
 :root {
-  --rt-shell: #000000;
+  --rt-shell: #04140D;
   --rt-titulo: var(--rt-gold-light);
 }

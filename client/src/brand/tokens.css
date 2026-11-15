@@ -6,10 +6,11 @@
    Tokens + utilitários + animações. Importar UMA vez no entry (main.tsx).
    ========================================================================= */
 :root {
-  --rt-bg: #000000;
-  --rt-bg-2: #030806;
-  --rt-surface: #0A1410;
-  --rt-surface-2: #0F1D16;
+  --rt-bg: #061A11;
+  --rt-bg-glow: #0F3A26;
+  --rt-bg-2: #04120B;
+  --rt-surface: #0B2218;
+  --rt-surface-2: #0F2B1E;
   --rt-green: #0C3320;
   --rt-green-track: #123826;
   --rt-gold: #C9A84C;

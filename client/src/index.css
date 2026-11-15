@@ -53,8 +53,8 @@
   --color-gold-dark: #A8862F;
   --color-emerald: #2BD47A;
   --color-emerald-dark: #0E6B3C;
-  --color-rt-bg: #000000;
-  --color-rt-surface: #0A1410;
+  --color-rt-bg: #061A11;
+  --color-rt-surface: #0B2218;
   --color-rt-green: #0C3320;
   --color-rt-gold: #C9A84C;
   --color-rt-gold-light: #E2C877;
@@ -80,6 +80,11 @@
   body {
     @apply bg-background text-foreground;
     font-family: var(--rt-font-body);
+    /* Fundo das artes de divulgação: verde profundo com brilho no canto superior */
+    background-image:
+      radial-gradient(120% 70% at 0% 0%, var(--rt-bg-glow) 0%, transparent 60%),
+      radial-gradient(90% 60% at 100% 100%, var(--rt-green) 0%, transparent 65%);
+    background-attachment: fixed;
   }
   ::selection {
     background: color-mix(in srgb, var(--primary) 35%, transparent);
@@ -191,18 +196,18 @@
 
   /* Premium Button - Green */
   .btn-premium {
-    background: linear-gradient(135deg, var(--c-16a34a) 0%, var(--c-22c55e) 50%, var(--c-16a34a) 100%);
-    color: var(--rt-text);
+    background: linear-gradient(135deg, var(--rt-gold-dark) 0%, var(--rt-gold) 50%, var(--rt-gold-light) 100%);
+    color: var(--rt-bg);
     font-weight: 600;
     padding: 0.75rem 1.5rem;
     border-radius: 0.75rem;
     border: none;
     transition: transform 0.3s ease, border-color 0.3s ease, box-shadow 0.3s ease, background-color 0.3s ease, opacity 0.3s ease;
-    box-shadow: 0 4px 15px color-mix(in srgb, var(--c-22c55e) 30%, transparent);
+    box-shadow: 0 4px 15px color-mix(in srgb, var(--rt-gold) 25%, transparent);
   }
 
   .btn-premium:hover {
-    box-shadow: 0 6px 25px color-mix(in srgb, var(--c-22c55e) 50%, transparent);
+    box-shadow: 0 6px 25px color-mix(in srgb, var(--rt-gold) 40%, transparent);
   }
 
   /* Premium Button - Gold */
