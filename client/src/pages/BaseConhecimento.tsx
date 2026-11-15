@@ -7,6 +7,7 @@ import { useAuth } from "@/_core/hooks/useAuth";
 import { perfilDe } from "@shared/equipe";
 import { buscarArtigos, CATEGORIAS_ARTIGO, PUBLICOS_ARTIGO, ROTULO_CATEGORIA_ARTIGO, type CategoriaArtigo, type PublicoArtigo } from "@shared/baseConhecimento";
 import PageHeader from "@/components/PageHeader";
+import { ContatosSuporte } from "@/components/suporte/ContatosSuporte";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 
@@ -87,9 +88,16 @@ export default function BaseConhecimento() {
 
   return (
     <div>
-      <PageHeader icone={BookOpen} titulo="Base de conhecimento" subtitulo="Tudo o que a equipe precisa saber sobre o Bom Jardims, as vendas, o financeiro e o sistema"
-        acoes={admin ? <Button onClick={() => setEditando({ id: null, dados: vazio })}><Plus className="mr-1 h-4 w-4" /> Novo artigo</Button> : undefined} />
+      <PageHeader icone={BookOpen} titulo="Central de suporte" subtitulo="Fale com o escritório, assista às demonstrações e consulte a base de conhecimento" />
       <div className="mx-auto max-w-[1100px] space-y-3 px-4 pb-8 md:px-6">
+        <ContatosSuporte />
+        <div className="flex flex-wrap items-end justify-between gap-2 pt-4">
+          <div>
+            <h2 className="text-lg font-semibold text-[var(--rt-gold-light)]">Base de conhecimento</h2>
+            <p className="text-sm text-muted-foreground">Tudo o que a equipe precisa saber sobre o Bom Jardims, as vendas, o financeiro e o sistema</p>
+          </div>
+          {admin && <Button onClick={() => setEditando({ id: null, dados: vazio })}><Plus className="mr-1 h-4 w-4" /> Novo artigo</Button>}
+        </div>
         <div className="flex flex-wrap gap-2">
           <div className="relative min-w-[220px] flex-1">
             <Search className="pointer-events-none absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />

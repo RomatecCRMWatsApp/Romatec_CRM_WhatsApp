@@ -106,7 +106,7 @@ const MENU: Grupo[] = [
       { rotulo: "Área do corretor", rota: "/corretor", icone: Smartphone },
       { rotulo: "Meu cadastro", rota: "/meu-cadastro", icone: IdCard },
       { rotulo: "Notificações", rota: "#novidades", icone: Bell },
-      { rotulo: "Base de conhecimento", rota: "/ajuda", icone: BookOpen },
+      { rotulo: "Central de suporte", rota: "/ajuda", icone: BookOpen },
       { rotulo: "Recrutamento", rota: "/recrutamento", icone: UserPlus },
       { rotulo: "Equipe", rota: "/equipe", icone: UserCog },
       { rotulo: "Controle de acessos", rota: "/controle-acessos", icone: ShieldCheck },

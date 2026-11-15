@@ -10,6 +10,7 @@ import { zairaRouter } from "./routers/zaira.router";
 import { leadCampanhasRouter } from "./routers/leadCampanhas.router";
 import { crmRouter } from "./routers/crm.router";
 import { materiaisRouter } from "./routers/materiais.router";
+import { suporteRouter } from "./routers/suporte.router";
 import { distribuicaoRouter } from "./routers/distribuicao.router";
 import { agenteImovelRouter } from "./routers/agenteImovel.router";
 import { equipeRouter } from "./routers/equipe.router";
@@ -105,6 +106,7 @@ export const appRouter = router({
   leadCampanhas: leadCampanhasRouter,
   crm: crmRouter,
   materiais: materiaisRouter,
+  suporte: suporteRouter,
   distribuicao: distribuicaoRouter,
   agenteImovel: agenteImovelRouter,
   equipe: equipeRouter,

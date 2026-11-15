@@ -30,13 +30,13 @@ function useRotasPermitidas(): Set<string> {
 function useFotosMateriais(ativo: boolean): string[] {
   const { data } = trpc.materiais.list.useQuery(undefined, { enabled: ativo, staleTime: 5 * 60_000 });
   return useMemo(() => {
-    const urls: string[] = [];
-    for (const g of data?.grupos ?? []) for (const m of g.itens as any[]) {
-      const imagem = (m.mime && String(m.mime).startsWith("image/")) || (!m.mime && EXT_IMAGEM.test(m.url));
-      if (imagem && m.tipo !== "video" && m.tipo !== "mapa") urls.push(m.url);
-      if (urls.length >= MAX_FOTOS) return urls;
-    }
-    return urls;
+    // As últimas enviadas primeiro (a lista vem agrupada por empreendimento e tipo)
+    const itens = (data?.grupos ?? []).flatMap(g => g.itens as any[]);
+    return itens
+      .filter(m => ((m.mime && String(m.mime).startsWith("image/")) || (!m.mime && EXT_IMAGEM.test(m.url))) && m.tipo !== "video" && m.tipo !== "mapa")
+      .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime() || b.id - a.id)
+      .slice(0, MAX_FOTOS)
+      .map(m => m.url as string);
   }, [data]);
 }
 
