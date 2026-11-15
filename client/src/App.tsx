@@ -419,7 +419,7 @@ function CarregamentoDoApp() {
 function App() {
   return (
     <ErrorBoundary>
-      <ThemeProvider defaultTheme="dark" switchable>
+      <ThemeProvider defaultTheme="dark">
         <TooltipProvider>
           <Toaster />
           <CarregamentoDoApp />

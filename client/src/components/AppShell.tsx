@@ -10,14 +10,13 @@ import BuscaGlobal, { JanelaBusca, type TelaBusca } from "@/components/BuscaGlob
 import { Scale,
   BarChart3, Building2, Flame, Images, KanbanSquare, LayoutDashboard, LineChart, LogOut, Megaphone, Menu, Send,
   Settings, UserCog, Users, X, Eye, ClipboardList, CalendarDays, Map as MapIcon, Smartphone, Wallet, IdCard, FolderOpen, Bell, FileSignature, Handshake, Mic, CalendarCheck, UserPlus, BookCopy, BadgeDollarSign, Hourglass, Bot, Trophy, Link2, Zap, MessagesSquare, ListOrdered, Plug, Inbox, Building, Rotate3d,
-  ChevronRight, ChevronsLeft, ChevronsRight, Moon, Sun,
+  ChevronRight, ChevronsLeft, ChevronsRight,
   Radar, BookOpen,
  Shuffle, CheckCheck, ShieldCheck, Search, Camera,
 } from "lucide-react";
 import { abrirNovidades, SinoNovidades, useNovidadesNaoLidas } from "./sistema/Novidades";
 import { useNotificacoes } from "./sistema/Notificacoes";
 import { APP_VERSION } from "@/brand";
-import { useTheme } from "@/contexts/ThemeContext";
 
 /**
  * modulo = chave em shared/permissoes.ts (some do menu quando o módulo está desligado para o corretor).
@@ -195,7 +194,7 @@ function Navegacao({ onNavegar, recolhido = false }: { onNavegar?: () => void; r
                   aria-label={it.rotulo}
                   onClick={() => { if (it.rota === "#novidades") abrirNovidades(); else navigate(it.rota); onNavegar?.(); }}
                   className={`relative w-full flex items-center rounded-lg text-sm transition-colors ${recolhido ? "justify-center p-1.5" : "gap-3 px-2 py-1.5"} ${on
-                    ? "bg-[var(--rt-ouro-fosco)] text-[var(--rt-shell)] font-semibold"
+                    ? "bg-primary/15 text-primary font-semibold shadow-[inset_3px_0_0_var(--primary)]"
                     : "text-sidebar-foreground/75 hover:bg-white/5 hover:text-sidebar-foreground"}`}
                 >
                   <IconeMenu icone={it.icone} cor={it.cor ?? g.cor} on={on} />
@@ -252,22 +251,8 @@ function Rodape({ recolhido = false }: { recolhido?: boolean }) {
         <SinoNovidades />
         <button onClick={() => logout()} title="Sair" className="rounded-lg p-2 text-sidebar-foreground/60 hover:bg-white/10 hover:text-danger-300"><LogOut className="h-4 w-4" /></button>
       </div>
-      <BotaoTema />
       <p className="mt-2 text-center text-[10px] tracking-wide text-sidebar-foreground/40">CRM Romatec v{APP_VERSION}</p>
     </div>
-  );
-}
-
-/** Alterna o tema escuro (padrão) e o tema creme (beta); a escolha fica no navegador */
-function BotaoTema() {
-  const { theme, toggleTheme } = useTheme();
-  if (!toggleTheme) return null;
-  const escuro = theme === "dark";
-  return (
-    <button type="button" onClick={toggleTheme} aria-pressed={!escuro}
-      className="mt-2 flex w-full min-h-[44px] items-center justify-center gap-2 rounded-lg text-xs text-sidebar-foreground/70 hover:bg-white/5 hover:text-sidebar-foreground">
-      {escuro ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />}{escuro ? "Tema creme (beta)" : "Tema escuro"}
-    </button>
   );
 }
 
@@ -376,14 +361,14 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
       )}
 
       {/* Barra do topo (celular): abre a gaveta */}
-      <header className="lg:hidden sticky top-[env(safe-area-inset-top)] z-20 flex items-center gap-3 border-b border-[var(--rt-gold-dark)]/40 bg-[var(--rt-shell)] px-3 py-2 text-[#F7F5ED]">
+      <header className="lg:hidden sticky top-[env(safe-area-inset-top)] z-20 flex items-center gap-3 border-b border-[var(--rt-green)] bg-[var(--rt-shell)] px-3 py-2 text-[var(--rt-text)]">
         <button onClick={() => setAberto(true)} className="rounded-lg p-2 hover:bg-white/5" aria-label="Abrir menu"><Menu className="h-6 w-6" /></button>
         <RomatecAppIcon size={28} />
         <p className="font-semibold truncate flex-1">{tituloDaRota(loc)}</p>
         {/* Celular: a busca é o R da barra de baixo. A lupa do topo fica só no tablet (sem a barra) ou para quem não tem a barra.
             Ela continua montada para o atalho Ctrl+K / "/" valer em qualquer tamanho de tela. */}
         <div className={temBarraInferior(perfilDe(user as any), minhas?.modulos) ? "hidden min-[900px]:block" : ""}><BuscaGlobal telas={telasBusca} /></div>
-        <SinoNovidades className="text-[#F7F5ED]/80" />
+        <SinoNovidades className="text-[var(--rt-gold-light)]" />
         <FotoUsuario tamanho="h-8 w-8" />
       </header>
 

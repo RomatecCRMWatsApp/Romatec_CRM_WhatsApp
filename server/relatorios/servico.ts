@@ -406,7 +406,7 @@ export async function montarPdf(r: Rel, fotos: Foto[], previas: Map<number, Buff
   const fonte = await pdf.embedFont(StandardFonts.Helvetica);
   const negrito = await pdf.embedFont(StandardFonts.HelveticaBold);
   const titulo = await pdf.embedFont(StandardFonts.TimesRomanBold);
-  const verde = rgb(0.043, 0.188, 0.129), dourado = rgb(0.816, 0.678, 0.306), tinta = rgb(0.09, 0.23, 0.17), cinza = rgb(0.36, 0.43, 0.38), creme = rgb(0.96, 0.95, 0.91);
+  const verde = rgb(0.047, 0.2, 0.125), dourado = rgb(0.788, 0.659, 0.298), tinta = rgb(0.09, 0.23, 0.17), cinza = rgb(0.36, 0.43, 0.38), creme = rgb(0.96, 0.95, 0.91);
   const W = 595, H = 842, M = 40;
   const rosa = await marca('rosa-dark.png', 160).catch(() => null), wordmark = await marca('wordmark-dourado.png', 480).catch(() => null);
   const imgRosa = rosa ? await pdf.embedPng(rosa) : null, imgWord = wordmark ? await pdf.embedPng(wordmark) : null;
@@ -429,7 +429,7 @@ export async function montarPdf(r: Rel, fotos: Foto[], previas: Map<number, Buff
     pg.drawRectangle({ x: 0, y: H - h - 2, width: W, height: 2, color: dourado });
     let x = M;
     if (imgRosa) { const s = compacto ? 30 : 52; pg.drawImage(imgRosa, { x, y: H - h + (h - s) / 2, width: s, height: s * imgRosa.height / imgRosa.width }); x += s + 10; }
-    if (imgWord) { const w = compacto ? 96 : 140, wh = w * imgWord.height / imgWord.width; pg.drawImage(imgWord, { x, y: compacto ? H - h + (h - wh) / 2 : H - h + 26, width: w, height: wh }); }
+    if (imgWord) { const w = compacto ? 112 : 140, wh = w * imgWord.height / imgWord.width; pg.drawImage(imgWord, { x, y: compacto ? H - h + (h - wh) / 2 : H - h + 26, width: w, height: wh }); }
     else pg.drawText('ROMATEC CONSULTORIA TOTAL', { x, y: H - h / 2, size: 12, font: negrito, color: dourado });
     if (!compacto) pg.drawText(limpa(MARCA.linha), { x, y: H - h + 14, size: 8.5, font: negrito, color: dourado });
     const etiqueta = limpa(`${r.numero}${cliente ? ' · versão para o cliente' : ''}`);

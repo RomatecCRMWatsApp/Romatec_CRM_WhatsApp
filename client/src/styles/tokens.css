@@ -30,9 +30,9 @@
   --chart-4: #E2C877;
   --chart-5: #0E6B3C;
   /* Menu lateral */
-  --sidebar: #08271C; /* upgrade visual: verde-escuro da marca no menu (tema escuro e creme) */
+  --sidebar: #0C3320; /* marca oficial: green native #0C3320 no menu */
   --sidebar-foreground: #E8F0EB;
-  --sidebar-primary: #D0AD4E;
+  --sidebar-primary: #C9A84C;
   --sidebar-primary-foreground: #0A0A0A;
   --sidebar-accent: #E2C877;
   --sidebar-accent-foreground: #0A0A0A;
@@ -241,42 +241,8 @@
   --c-6f5d35: #6f5d35;
 }
 
-/* ─── Upgrade visual (casco do app) ─────────────────────────────────────────────────────────────────
-   Verde do topo/menu, dourado fosco das ações e título das telas. Valem nos dois temas. */
+/* ─── Casco do app (marca oficial v1.4.0: fundo #000000, green #0C3320, gold #C9A84C/#E2C877) ─── */
 :root {
-  --rt-shell: #0B3021;
-  --rt-ouro-fosco: #D0AD4E;
-  --rt-ouro-tinta: #715419;
+  --rt-shell: #000000;
   --rt-titulo: var(--rt-gold-light);
-}
-
-/* ─── Tema creme (beta, opcional) ──────────────────────────────────────────────────────────────────
-   Ativado pelo botão "Tema creme" no rodapé do menu (classe .dark removida do <html>). O padrão continua o escuro.
-   Só os tokens semânticos mudam: telas com cores fixas antigas (--c-*) ainda não foram adaptadas. */
-html:not(.dark) {
-  --background: #F5F2E8;
-  --foreground: #173B2B;
-  --card: #FFFFFF;
-  --card-foreground: #173B2B;
-  --popover: #FFFFFF;
-  --popover-foreground: #173B2B;
-  --primary: #D0AD4E;
-  --primary-foreground: #0B3021;
-  --secondary: #EEF2EC;
-  --secondary-foreground: #173B2B;
-  --muted: #EEF2EC;
-  --muted-foreground: #5B6D60;
-  --accent: #D0AD4E;
-  --accent-foreground: #0B3021;
-  --destructive: #AD292B;
-  --destructive-foreground: #FFFFFF;
-  --border: #D4DDD2;
-  --input: #D4DDD2;
-  --ring: #947124;
-  --rt-bg: #F5F2E8;
-  --rt-text: #173B2B;
-  --rt-text-2: #3D5446;
-  --rt-text-3: #5B6D60;
-  --rt-titulo: #0B3021;
-  color-scheme: light;
 }
