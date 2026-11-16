@@ -1,3 +1,4 @@
+import { createHash } from 'node:crypto';
 /**
  * Monta os dados dos documentos financeiros a partir do contrato e das cobranças.
  * Os campos de pagamento (linha digitável, código de barras, nosso número, PIX) são copiados do snapshot do Asaas
@@ -81,7 +82,16 @@ export function dadosLamina(ctx: ContextoDocs, c: CobrancaDoc): DadosLamina {
     beneficiario: ctx.beneficiario, agenciaCodigo: ctx.agenciaCodigo,
     numeroDocumento: `${ctx.contrato.numero.replace(/^([A-Z]+)-\d{4}-/, '$1')}-${prefixo}${String(c.numero).padStart(3, '0')}`,
     dataDocumento: c.dataDocumento, pagadorNome: ctx.comprador.nome, pagadorDoc: docMascarado(ctx.comprador.cpfCnpj),
-    pagadorEndereco: ctx.comprador.endereco, instrucoes: instrucoesFicha(`${parcela} (${ROTULO[c.tipo].toLowerCase()})`, CONTATO_PADRAO, false, c.tipo === 'saldo'),
+    pagadorEndereco: ctx.comprador.endereco,
+    instrucoes: c.tipo === 'comissao'
+      ? [
+          `Comissão de gestão ${c.numero}/${c.total} — contrato ${ctx.contrato.numero} · Chácara ${ctx.lote.codigo}.`,
+          'Após o vencimento: multa de 2% e juros de 1% a.m.',
+          'Não receber após 59 dias do vencimento.',
+          'Pague somente por este boleto/PIX. Não pague a terceiros.',
+          `Dúvidas: WhatsApp ${CONTATO_PADRAO.atendimento}.`,
+        ]
+      : instrucoesFicha(`${parcela} (${ROTULO[c.tipo].toLowerCase()})`, CONTATO_PADRAO, false, c.tipo === 'saldo'),
   };
 }
 
@@ -95,7 +105,17 @@ export function dadosParcela(ctx: ContextoDocs, c: CobrancaDoc, todas: CobrancaD
     parcelasRestantes: c.tipo === 'comissao' ? (c.total - c.numero > 0 ? `${c.total - c.numero} da comissão` : 'nenhuma (última)') : restantes,
     tipo: c.tipo,
     empreendimento: ctx.empreendimento ? `${ctx.empreendimento.nome}${ctx.empreendimento.local ? ` · ${ctx.empreendimento.local}` : ''}` : undefined,
+    pago: dadosDoPagamento(c),
   };
+}
+
+/** Pagamento confirmado da cobrança (status paga) com um código de autenticação estável, para o carimbo do boleto pago */
+export function dadosDoPagamento(c: CobrancaDoc): DadosParcela['pago'] {
+  const x = c as CobrancaDoc & { status?: string; pagoEm?: string; valorPago?: number | null; formaPagamento?: string | null; asaasPaymentId?: string | null };
+  if (x.status !== 'paga' || !x.pagoEm) return undefined;
+  const valor = x.valorPago ?? c.valor;
+  const h = createHash('sha256').update(`romatec-crm|cobranca|${c.id}|${x.asaasPaymentId ?? ''}|${x.pagoEm}|${valor.toFixed(2)}`).digest('hex').slice(0, 16).toUpperCase();
+  return { em: x.pagoEm.slice(0, 10), valor, forma: x.formaPagamento ?? null, autenticacao: h.match(/.{4}/g)!.join('-') };
 }
 
 /** "N do saldo", "N da entrada + M do saldo", "N reforços" … — o que falta depois desta parcela */

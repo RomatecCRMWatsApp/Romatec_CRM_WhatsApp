@@ -223,14 +223,15 @@ function caixa(k: Kit, p: PDFPage, x: number, yTopo: number, w: number, h: numbe
 }
 
 /** Lâmina completa a partir do topo yTopo (altura LAMINA_ALTURA). Os dados de pagamento são os do Asaas, sem alteração. */
-export async function desenharLamina(k: Kit, p: PDFPage, yTopo: number, d: DadosLamina) {
+export async function desenharLamina(k: Kit, p: PDFPage, yTopo: number, d: DadosLamina, marca?: { titulo: string; logo: PDFImage }) {
   const X0 = 28, X1 = A4[0] - 28;
   // Faixa verde com logo, empreendimento, contrato/parcela e vencimento · valor
   p.drawRectangle({ x: X0, y: yTopo - 25, width: X1 - X0, height: 25, color: COR.verde });
   p.drawRectangle({ x: X0, y: yTopo - 27, width: X1 - X0, height: 2, color: COR.dourado });
-  const lw = 24, lh = (lw * k.logo.height) / k.logo.width;
-  p.drawImage(k.logo, { x: X0 + 3, y: yTopo - 12.5 - lh / 2, width: lw, height: lh });
-  texto(p, 'CONDOMÍNIO DE CHÁCARAS BOM JARDIMS', X0 + 30, yTopo - 11, 8.3, k.fb, COR.branco);
+  const logoFaixa = marca?.logo ?? k.logo;
+  const lh = 21, lw = Math.min(30, (lh * logoFaixa.width) / logoFaixa.height);
+  p.drawImage(logoFaixa, { x: X0 + 3, y: yTopo - 12.5 - (lw * logoFaixa.height / logoFaixa.width) / 2, width: lw, height: lw * logoFaixa.height / logoFaixa.width });
+  texto(p, marca?.titulo ?? 'CONDOMÍNIO DE CHÁCARAS BOM JARDIMS', X0 + 30, yTopo - 11, 8.3, k.fb, COR.branco, 260);
   texto(p, `Contrato ${d.contratoNumero} · Chácara ${d.loteCodigo} · ${d.parcela}`, X0 + 30, yTopo - 20.5, 6.4, k.f, COR.dourado);
   textoDir(p, `Vencimento ${dataBR(d.vencimento)}  ·  ${brl(d.valor)}`, X1 - 6, yTopo - 16, 8.8, k.fb, COR.branco);
 

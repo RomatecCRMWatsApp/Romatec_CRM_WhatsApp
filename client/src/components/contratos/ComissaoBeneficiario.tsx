@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { toast } from "sonner";
-import { Ban, Copy, ExternalLink, Loader2, RefreshCw, Send } from "lucide-react";
+import { Ban, Copy, Download, ExternalLink, Loader2, RefreshCw, Send } from "lucide-react";
 import { trpc } from "@/lib/trpc";
 import { Button } from "@/components/ui/button";
 import { brl } from "@shared/simulador";
@@ -62,7 +62,10 @@ export function ComissaoBeneficiario({ contratoId, comissaoValor, cancelado }: {
                   <td className="px-2 py-1">{br(c.vencimento)}</td>
                   <td className="px-2 py-1 text-right tabular-nums">{brl(c.valor)}</td>
                   <td className="px-2 py-1">{ROTULO_STATUS[c.status] ?? c.status}{c.pagoEm ? ` em ${br(c.pagoEm)}` : ""}</td>
-                  <td className="px-2 py-1 text-right">{c.boleto && !["paga", "cancelada"].includes(c.status) && <a className="inline-flex items-center gap-1 text-ok-300 underline" href={c.boleto} target="_blank" rel="noopener noreferrer"><ExternalLink className="h-3 w-3" /> pagar</a>}</td>
+                  <td className="px-2 py-1 text-right">
+                    {c.boleto && !["paga", "cancelada"].includes(c.status) && <a className="inline-flex items-center gap-1 text-ok-300 underline" href={c.boleto} target="_blank" rel="noopener noreferrer"><ExternalLink className="h-3 w-3" /> pagar</a>}
+                    {c.boleto && c.status === "paga" && <a className="inline-flex items-center gap-1 text-ok-300 underline" href={c.boleto} target="_blank" rel="noopener noreferrer" title="Boleto com o carimbo de pago, a data e a autenticação, para enviar ao cliente"><Download className="h-3 w-3" /> boleto pago</a>}
+                  </td>
                 </tr>
               ))}
             </tbody>

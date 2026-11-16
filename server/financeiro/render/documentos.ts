@@ -7,6 +7,7 @@ import {
   quebrar, retArredondado, texto, textoCentro, textoDir, tituloPagina, type DadosLamina, type Kit,
 } from './comum';
 import { ESCRITORIO } from '../../../shared/escritorio';
+import { renderBoletoComissaoA4 } from './comissao';
 
 const [W, H] = A4;
 const salvar = async (k: Kit) => Buffer.from(await k.doc.save({ useObjectStreams: false }));
@@ -21,6 +22,8 @@ export interface DadosParcela extends DadosLamina {
   tipo?: string;
   /** "Condomínio de Chácaras Bom Jardims · Açailândia/MA" — de qual empreendimento sai a cobrança */
   empreendimento?: string;
+  /** Cobrança já paga: o boleto sai com o carimbo "BOLETO PAGO", a data, o valor e a autenticação */
+  pago?: { em: string; valor: number; forma: string | null; autenticacao: string };
 }
 
 export interface SegundaVia { valorOriginal: number; encargos: number; dias: number; valorAtualizado: number; novoVencimento: string }
@@ -54,6 +57,8 @@ export function instrucoesFicha(parcela: string, contato: Contato, segundaVia = 
 /** Boleto avulso A4 (1 página): resumo da parcela + PIX + instruções + lâmina a 12 mm do rodapé */
 export async function renderBoletoA4(d: DadosParcela, o: OpcoesDoc & { segundaVia?: SegundaVia } = {}): Promise<Buffer> {
   const contato = o.contato ?? CONTATO_PADRAO;
+  // Comissão de gestão: é a Romatec quem recebe, então o boleto sai no padrão Romatec (verde-escuro), não no do empreendimento
+  if (d.tipo === 'comissao' && !o.segundaVia) return renderBoletoComissaoA4(d, { modelo: o.modelo, contato });
   const k = await novoKit({ marca: o.marca, modelo: o.modelo, titulo: `Boleto ${d.contratoNumero} ${d.parcela}` });
   const { p, topo, base } = paginaComMarca(k);
   const sv = o.segundaVia;

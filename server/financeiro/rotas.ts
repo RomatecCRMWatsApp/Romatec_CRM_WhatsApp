@@ -410,7 +410,7 @@ export function registrarRotasFinanceiro(app: Express) {
       const ctx = await contextoDocs(c.contratoId);
       const buf = await renderBoletoA4(dadosParcela(ctx, c, []));
       await auditar('boleto_a4', { contratoId: c.contratoId, cobrancaId: c.id, usuarioId: a.usuarioId, origem: a.origem, ip: req.ip });
-      pdf(res, buf, `Boleto-${ctx.contrato.numero}-${c.tipo}-${c.numero}.pdf`);
+      pdf(res, buf, `Boleto${c.status === 'paga' ? '-pago' : ''}-${ctx.contrato.numero}-${c.tipo}-${c.numero}.pdf`);
     } catch (e) { erro(res, e); }
   });
 
