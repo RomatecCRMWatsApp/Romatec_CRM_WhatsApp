@@ -4,6 +4,7 @@ import { FileKey2, Loader2, PenTool, ShieldCheck, Trash2, Upload } from "lucide-
 import { trpc } from "@/lib/trpc";
 import { Button } from "@/components/ui/button";
 import { AcoesPdf } from "@/components/sistema/AcoesPdf";
+import { SenhaNativa } from "@/components/ui/campo-senha";
 
 const dataBr = (iso: string) => new Date(iso).toLocaleDateString("pt-BR");
 /** Erro sem resposta do servidor (reinício no deploy, queda de rede) vira um aviso legível */
@@ -63,7 +64,7 @@ export function CertificadoDigital() {
             onChange={e => setArquivo(e.target.files?.[0] ?? null)} />
         </label>
         <label className="text-xs text-muted-foreground">Senha do certificado
-          <input type="password" className={`${campo} mt-1`} value={senha} onChange={e => setSenha(e.target.value)} autoComplete="new-password" name="senha-certificado-icp" />
+          <SenhaNativa className={`${campo} mt-1`} value={senha} onChange={e => setSenha(e.target.value)} autoComplete="new-password" name="senha-certificado-icp" />
         </label>
         <Button disabled={!arquivo || !senha || guardar.isPending} onClick={async () => { if (arquivo) guardar.mutate({ pfxBase64: await base64(arquivo), senha }); }}>
           {guardar.isPending ? <Loader2 className="mr-1 h-4 w-4 animate-spin" /> : <Upload className="mr-1 h-4 w-4" />} Guardar
@@ -89,7 +90,7 @@ export function AssinarComCertificado({ documentoId, onAssinado, rotulo = "Assin
   return (
     <div className="flex w-full flex-wrap items-end gap-2 rounded-lg border border-[var(--rt-gold)]/40 bg-background/40 p-2">
       <label className="text-xs text-muted-foreground">Senha do certificado
-        <input type="password" className={`${campo} mt-1 w-48`} value={senha} onChange={e => setSenha(e.target.value)} autoComplete="new-password" name="senha-certificado-icp" autoFocus />
+        <SenhaNativa className={`${campo} mt-1 w-48`} value={senha} onChange={e => setSenha(e.target.value)} autoComplete="new-password" name="senha-certificado-icp" autoFocus />
       </label>
       <label className="text-xs text-muted-foreground">Outro certificado (opcional, não é guardado)
         <input type="file" accept=".pfx,.p12,application/x-pkcs12" className="mt-1 block text-xs file:mr-2 file:rounded-md file:border file:border-border file:bg-background file:px-2 file:py-1 file:text-foreground" onChange={e => setArquivo(e.target.files?.[0] ?? null)} />

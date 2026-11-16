@@ -3,6 +3,7 @@ import { useLocation } from "wouter";
 import { trpc } from "@/lib/trpc";
 import { useAuth } from "@/_core/hooks/useAuth";
 import { LoadingButton, RomatecLockup } from "@/brand";
+import { SenhaNativa } from "@/components/ui/campo-senha";
 
 /** 1º acesso com senha provisória (recrutamento): a pessoa cria a própria senha antes de usar o sistema */
 export default function TrocarSenha() {
@@ -35,13 +36,13 @@ export default function TrocarSenha() {
           </p>
         </div>
         <label className="block space-y-1 text-sm text-[var(--rt-text-2)]">Senha provisória (a que chegou no WhatsApp)
-          <input type="password" className={campo} value={atual} onChange={e => setAtual(e.target.value)} autoComplete="current-password" required />
+          <SenhaNativa className={campo} value={atual} onChange={e => setAtual(e.target.value)} autoComplete="current-password" required />
         </label>
         <label className="block space-y-1 text-sm text-[var(--rt-text-2)]">Nova senha
-          <input type="password" className={campo} value={nova} onChange={e => setNova(e.target.value)} autoComplete="new-password" required minLength={8} />
+          <SenhaNativa className={campo} value={nova} onChange={e => setNova(e.target.value)} autoComplete="new-password" required minLength={8} />
         </label>
         <label className="block space-y-1 text-sm text-[var(--rt-text-2)]">Repita a nova senha
-          <input type="password" className={campo} value={confirma} onChange={e => setConfirma(e.target.value)} autoComplete="new-password" required minLength={8} />
+          <SenhaNativa className={campo} value={confirma} onChange={e => setConfirma(e.target.value)} autoComplete="new-password" required minLength={8} />
         </label>
         {erro && <p className="text-sm text-danger-400">{erro}</p>}
         <LoadingButton type="submit" loading={trocar.isPending} className="w-full">Salvar e entrar</LoadingButton>

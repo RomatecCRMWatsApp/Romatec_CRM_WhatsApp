@@ -6,6 +6,7 @@ import { perfilDe, telaInicial } from "@shared/equipe";
 import { APP_VERSION, ROMATEC_CONTACT, brandAssets } from "@/brand";
 import { OURO_JURIDICO, SeloJuridico } from "@/components/juridico/SeloJuridico";
 import { marcarAreaLogin } from "@/const";
+import { SenhaNativa } from "@/components/ui/campo-senha";
 
 /**
  * Login do corpo jurídico (/juridico/entrar): o mesmo acesso do CRM com a identidade jurídica — selo com a balança
@@ -57,7 +58,7 @@ export default function LoginJuridico() {
             </div>
             <div>
               <label htmlFor="jur-senha" className={rotulo} style={{ color: OURO_JURIDICO.base }}>Senha</label>
-              <input id="jur-senha" type="password" value={senha} onChange={e => setSenha(e.target.value)} className={campo}
+              <SenhaNativa id="jur-senha" value={senha} onChange={e => setSenha(e.target.value)} className={campo}
                 placeholder="••••••••" autoComplete="current-password" required />
             </div>
             {erro && <p className="text-sm text-[var(--rt-danger)]" role="alert">{erro}</p>}

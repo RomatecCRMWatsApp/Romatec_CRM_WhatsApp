@@ -4,6 +4,7 @@ import { useLocation } from "wouter";
 import { perfilDe, telaInicial } from "@shared/equipe";
 import { APP_VERSION, LoadingButton, ROMATEC_CONTACT, RomatecLockup } from "@/brand";
 import { marcarAreaLogin } from "@/const";
+import { SenhaNativa } from "@/components/ui/campo-senha";
 
 export default function Login() {
   const { isAuthenticated, login, user } = useAuth();
@@ -51,7 +52,7 @@ export default function Login() {
           </div>
           <div>
             <label className="mb-1 block text-xs font-bold text-[var(--rt-gold)]">Senha</label>
-            <input type="password" value={password} onChange={e => setPassword(e.target.value)} className={campo}
+            <SenhaNativa value={password} onChange={e => setPassword(e.target.value)} className={campo}
               placeholder="••••••••" autoComplete="current-password" required />
           </div>
           {error && <p className="text-sm text-[var(--rt-danger)]">{error}</p>}

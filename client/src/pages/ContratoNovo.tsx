@@ -21,6 +21,7 @@ import { CONDICOES, MODOS_C, ROTULO_CONDICAO, ROTULO_MODO_C, prazosDaCondicao, t
 import { CondicoesEspecificas } from "@/components/contratos/CondicoesEspecificas";
 import { foraDoPadrao } from "@shared/autorizacaoPlano";
 import { NaturezaConcessao } from "@/components/contratos/NaturezaConcessao";
+import { SenhaNativa } from "@/components/ui/campo-senha";
 
 const PASSOS = ["Unidade e plano", "Comprador", "Revisão"];
 
@@ -419,7 +420,7 @@ export default function ContratoNovo() {
                 {precisaSenha.length > 0 && (
                   <div className="mt-3 rounded-md border border-warn-400/40 bg-warn-400/10 p-2 text-sm">
                     <p className="text-xs">Fora do padrão ({precisaSenha.join("; ")}): precisa da senha do administrador para criar o contrato.</p>
-                    <input type="password" autoComplete="off" className="mt-1 h-9 w-full max-w-xs rounded-md border border-border bg-background px-2 text-sm"
+                    <SenhaNativa autoComplete="off" className="mt-1 h-9 w-full max-w-xs rounded-md border border-border bg-background px-2 text-sm"
                       placeholder="Senha do administrador" aria-label="Senha do administrador" value={senhaAdmin} onChange={e => setSenhaAdmin(e.target.value)} />
                   </div>
                 )}

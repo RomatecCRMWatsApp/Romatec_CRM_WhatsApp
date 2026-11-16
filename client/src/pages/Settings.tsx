@@ -351,7 +351,7 @@ export default function Settings() {
                 <Label className="text-muted-foreground text-xs">Senha Atual</Label>
                 <div className="relative">
                   <Input
-                    type={showPass.current ? "text" : "password"}
+                    type={showPass.current ? "text" : "password"} data-sem-olho
                     value={passForm.currentPassword}
                     onChange={e => setPassForm(f => ({ ...f, currentPassword: e.target.value }))}
                     placeholder="Digite a senha atual"
@@ -368,7 +368,7 @@ export default function Settings() {
                 <Label className="text-muted-foreground text-xs">Nova Senha</Label>
                 <div className="relative">
                   <Input
-                    type={showPass.new ? "text" : "password"}
+                    type={showPass.new ? "text" : "password"} data-sem-olho
                     value={passForm.newPassword}
                     onChange={e => setPassForm(f => ({ ...f, newPassword: e.target.value }))}
                     placeholder="Mínimo 6 caracteres"
@@ -385,7 +385,7 @@ export default function Settings() {
                 <Label className="text-muted-foreground text-xs">Confirmar Nova Senha</Label>
                 <div className="relative">
                   <Input
-                    type={showPass.confirm ? "text" : "password"}
+                    type={showPass.confirm ? "text" : "password"} data-sem-olho
                     value={passForm.confirmPassword}
                     onChange={e => setPassForm(f => ({ ...f, confirmPassword: e.target.value }))}
                     placeholder="Repita a nova senha"

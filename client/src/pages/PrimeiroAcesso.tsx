@@ -2,6 +2,7 @@ import { useState } from "react";
 import { useLocation } from "wouter";
 import { trpc } from "@/lib/trpc";
 import { LoadingButton, RomatecLockup } from "@/brand";
+import { SenhaNativa } from "@/components/ui/campo-senha";
 
 /** Primeiro acesso pelo link do convite: confirma o e-mail e cria a senha */
 export default function PrimeiroAcesso() {
@@ -58,11 +59,11 @@ export default function PrimeiroAcesso() {
               </div>
               <div>
                 <label className={rotulo}>Crie sua senha</label>
-                <input type="password" required minLength={8} autoComplete="new-password" value={senha} onChange={e => setSenha(e.target.value)} className={campo} placeholder="Pelo menos 8 caracteres, não só números" />
+                <SenhaNativa required minLength={8} autoComplete="new-password" value={senha} onChange={e => setSenha(e.target.value)} className={campo} placeholder="Pelo menos 8 caracteres, não só números" />
               </div>
               <div>
                 <label className={rotulo}>Repita a senha</label>
-                <input type="password" required autoComplete="new-password" value={senha2} onChange={e => setSenha2(e.target.value)} className={campo} />
+                <SenhaNativa required autoComplete="new-password" value={senha2} onChange={e => setSenha2(e.target.value)} className={campo} />
               </div>
               {erro && <p className="text-sm text-[var(--rt-danger)]">{erro}</p>}
               <LoadingButton type="submit" loading={aceitar.isPending} loadingText="Salvando…" className="w-full">Criar senha</LoadingButton>

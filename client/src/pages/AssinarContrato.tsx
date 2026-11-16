@@ -3,6 +3,7 @@ import { useParams } from "wouter";
 import { CheckCircle2, Download, FileSignature, Loader2, Lock, ShieldCheck, Upload } from "lucide-react";
 import { abrirPdf, desenharPagina } from "@/lib/pdf";
 import { CodigoOtp } from "@/components/assinatura/CodigoOtp";
+import { SenhaNativa } from "@/components/ui/campo-senha";
 
 const VERDE = "#0C3320", DOURADO = "#C9A646", CREME = "#F7F3E8";
 
@@ -198,7 +199,7 @@ export default function AssinarContrato() {
                           <input type="file" accept=".pfx,.p12,application/x-pkcs12" onChange={e => setPfx(e.target.files?.[0] ?? null)} className="mt-1 block w-full text-sm" />
                         </label>
                         <label className="text-sm">Senha do certificado
-                          <input type="password" value={senha} onChange={e => setSenha(e.target.value)} autoComplete="off" className="mt-1 block w-full rounded-lg border px-3 py-2" />
+                          <SenhaNativa value={senha} onChange={e => setSenha(e.target.value)} autoComplete="off" className="mt-1 block w-full rounded-lg border px-3 py-2" />
                         </label>
                       </div>
                       <button disabled={!leu || !info.vez || !pfx || !senha || ocupado} onClick={assinarCertificado}

@@ -11,6 +11,7 @@ import { CondicoesEspecificas } from "@/components/contratos/CondicoesEspecifica
 import { maskCEP, maskCPF, maskPhone } from "@shared/masks";
 import { exigeConjuge, pendenciasComprador, type PessoaForm } from "@shared/contratos";
 import { ROTULO_CONDICAO, ROTULO_MODO_C, type ModoPlanoC } from "@shared/condicoesLancamento";
+import { SenhaNativa } from "@/components/ui/campo-senha";
 
 /** Linha do cadastro (pessoas) → formulário */
 function paraForm(x: any | null | undefined): PessoaForm {
@@ -233,7 +234,7 @@ export function EditarContrato({ aberto, onFechar, onSalvo, contrato, comprador,
               )}
             </section>
             <Campo rotulo="Sua senha de login (confirma a alteração)">
-              <input type="password" autoComplete="current-password" className={classeCampo()} value={senha} onChange={e => setSenha(e.target.value)} />
+              <SenhaNativa autoComplete="current-password" className={classeCampo()} value={senha} onChange={e => setSenha(e.target.value)} />
             </Campo>
           </div>
         )}
@@ -268,7 +269,7 @@ export function ExcluirContrato({ aberto, onFechar, onExcluido, contrato }: { ab
         ) : (
           <div className="space-y-3">
             <Campo rotulo="Motivo"><input className={classeCampo()} value={motivo} maxLength={300} onChange={e => setMotivo(e.target.value)} placeholder="Ex.: contrato de teste" /></Campo>
-            <Campo rotulo="Sua senha de login"><input type="password" autoComplete="current-password" className={classeCampo()} value={senha} onChange={e => setSenha(e.target.value)} /></Campo>
+            <Campo rotulo="Sua senha de login"><SenhaNativa autoComplete="current-password" className={classeCampo()} value={senha} onChange={e => setSenha(e.target.value)} /></Campo>
           </div>
         )}
         <DialogFooter>
@@ -312,7 +313,7 @@ export function LiberarVendaAntesRegistro({ aberto, onFechar, onFeito, contratoI
           <Campo rotulo="Prazo para obter o registro (dias, contados da assinatura)"><input type="number" min={30} max={720} className={classeCampo()} value={prazo} onChange={e => setPrazo(Math.max(30, Math.min(720, Number(e.target.value) || 180)))} /></Campo>
           <label className="flex items-start gap-2 text-xs text-muted-foreground"><input type="checkbox" className="mt-0.5" checked={ciente} onChange={e => setCiente(e.target.checked)} />
             Estou ciente de que a promessa de venda antes do registro é vedada pela Lei n.º 6.766/1979 (arts. 37 e 50) e assumo a decisão pela gestão do empreendimento.</label>
-          <Campo rotulo="Sua senha de login"><input type="password" autoComplete="current-password" className={classeCampo()} value={senha} onChange={e => setSenha(e.target.value)} /></Campo>
+          <Campo rotulo="Sua senha de login"><SenhaNativa autoComplete="current-password" className={classeCampo()} value={senha} onChange={e => setSenha(e.target.value)} /></Campo>
         </div>
         <DialogFooter>
           <Button variant="outline" onClick={onFechar} disabled={liberar.isPending}>Fechar</Button>

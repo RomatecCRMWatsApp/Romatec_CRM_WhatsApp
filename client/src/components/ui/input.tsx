@@ -2,8 +2,9 @@ import { useDialogComposition } from "@/components/ui/dialog";
 import { useComposition } from "@/hooks/useComposition";
 import { cn } from "@/lib/utils";
 import * as React from "react";
+import { ComOlho } from "@/components/ui/campo-senha";
 
-function Input({
+function InputBase({
   className,
   type,
   onKeyDown,
@@ -65,6 +66,15 @@ function Input({
       {...props}
     />
   );
+}
+
+/** type="password" ganha o olhinho para ver a senha digitada (data-sem-olho desliga, para telas que já têm o próprio) */
+function Input({ className, type, ...props }: React.ComponentProps<"input"> & { "data-sem-olho"?: boolean }) {
+  const { "data-sem-olho": semOlho, ...resto } = props;
+  if (type === "password" && !semOlho) {
+    return <ComOlho className={className}>{(tipo, classe) => <InputBase {...resto} type={tipo} className={classe} />}</ComOlho>;
+  }
+  return <InputBase {...resto} type={type} className={className} />;
 }
 
 export { Input };

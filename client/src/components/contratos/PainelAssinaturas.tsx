@@ -9,6 +9,7 @@ import { sel } from "@/components/cadastro/campos";
 import { AcoesPdf } from "@/components/sistema/AcoesPdf";
 import { useAuth } from "@/_core/hooks/useAuth";
 import { perfilDe } from "@shared/equipe";
+import { SenhaNativa } from "@/components/ui/campo-senha";
 
 const METODOS = [["avancada", "Eletrônica avançada (link + código no WhatsApp)"], ["govbr", "gov.br (assinador.iti.br)"], ["icp_a1", "Certificado ICP-Brasil A1"]] as const;
 const EVENTO: Record<string, string> = {
@@ -148,7 +149,7 @@ export default function PainelAssinaturas({ id, status, podeEnviar }: { id: numb
           <div className="mb-3 space-y-2 rounded-lg border border-warn-500/40 bg-warn-500/10 p-3 text-xs text-warn-100">
             <p><b>Correção de posicionamento.</b> O sistema volta à versão enviada para assinatura (sem carimbos), localiza de novo cada linha de assinatura e recoloca o carimbo de cada pessoa com os mesmos dados da assinatura dela (data, hora, IP e código). Ninguém assina de novo. Sai uma versão nova, o manifesto é refeito com o novo SHA-256 e a correção fica na linha do tempo.</p>
             <div className="flex flex-wrap items-center gap-2">
-              <input type="password" autoComplete="current-password" value={senha} onChange={e => setSenha(e.target.value)} placeholder="Sua senha de administrador" aria-label="Senha do administrador"
+              <SenhaNativa autoComplete="current-password" value={senha} onChange={e => setSenha(e.target.value)} placeholder="Sua senha de administrador" aria-label="Senha do administrador"
                 className="h-8 w-56 rounded-md border border-border bg-background px-2 text-sm text-foreground" />
               <Button size="sm" disabled={!senha || corrigir.isPending} onClick={() => corrigir.mutate({ id, senha })}>
                 {corrigir.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Wrench className="h-4 w-4" />} Corrigir agora
