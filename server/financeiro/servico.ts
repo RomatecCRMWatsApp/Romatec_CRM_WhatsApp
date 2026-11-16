@@ -93,7 +93,7 @@ export async function contextoDocs(contratoId: number): Promise<ContextoDocs> {
   const [j] = await d.select().from(empJuridico).where(eq(empJuridico.empreendimentoId, c.empreendimentoId)).limit(1);
   const [l] = await d.select().from(lotes).where(and(eq(lotes.empreendimentoId, c.empreendimentoId), eq(lotes.codigo, c.loteCodigo))).limit(1);
   const { comprador } = await pessoasDoContrato(contratoId);
-  const [emp] = await d.select({ slug: empreendimentos.slug }).from(empreendimentos).where(eq(empreendimentos.id, c.empreendimentoId)).limit(1);
+  const [emp] = await d.select({ slug: empreendimentos.slug, nome: empreendimentos.nome, municipio: empreendimentos.municipio, uf: empreendimentos.uf }).from(empreendimentos).where(eq(empreendimentos.id, c.empreendimentoId)).limit(1);
   const benef = await beneficiarioDoEmpreendimento(c.empreendimentoId, emp?.slug ?? 'bom-jardims');
   const plano = json<PlanoContrato>(c.simulacaoJson)!;
   return {
@@ -106,6 +106,7 @@ export async function contextoDocs(contratoId: number): Promise<ContextoDocs> {
     agenciaCodigo: benef.agenciaConta || '—',
     urlPublica: urlPublica(),
     plano,
+    empreendimento: emp?.nome ? { nome: String(emp.nome), local: [emp.municipio, emp.uf].filter(Boolean).join('/') } : undefined,
   };
 }
 

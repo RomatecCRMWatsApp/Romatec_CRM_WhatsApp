@@ -17,6 +17,10 @@ export interface DadosParcela extends DadosLamina {
   saldoApos: number | null;
   /** "118 do saldo" */
   parcelasRestantes: string;
+  /** Tipo da cobrança ('comissao' = comissão de gestão, recebida pela gestora) */
+  tipo?: string;
+  /** "Condomínio de Chácaras Bom Jardims · Açailândia/MA" — de qual empreendimento sai a cobrança */
+  empreendimento?: string;
 }
 
 export interface SegundaVia { valorOriginal: number; encargos: number; dias: number; valorAtualizado: number; novoVencimento: string }
@@ -53,12 +57,15 @@ export async function renderBoletoA4(d: DadosParcela, o: OpcoesDoc & { segundaVi
   const k = await novoKit({ marca: o.marca, modelo: o.modelo, titulo: `Boleto ${d.contratoNumero} ${d.parcela}` });
   const { p, topo, base } = paginaComMarca(k);
   const sv = o.segundaVia;
-  let y = tituloPagina(k, p, topo, sv ? 'BOLETO DE PAGAMENTO — 2ª VIA ATUALIZADA' : 'BOLETO DE PAGAMENTO',
-    'Condomínio de Chácaras Bom Jardims · Açailândia/MA · pagamento por boleto ou PIX');
+  const comissao = d.tipo === 'comissao';
+  const emp = d.empreendimento ?? 'Condomínio de Chácaras Bom Jardims · Açailândia/MA';
+  const titulo = comissao ? 'BOLETO — COMISSÃO DE GESTÃO' : 'BOLETO DE PAGAMENTO';
+  let y = tituloPagina(k, p, topo, sv ? `${titulo} — 2ª VIA ATUALIZADA` : titulo,
+    comissao ? `Comissão de gestão do ${emp} · recebida pela Romatec CRM · boleto ou PIX` : `${emp} · pagamento por boleto ou PIX`);
 
   // Resumo da parcela
   const hc = 164, wr = 326, xr = 42;
-  const a = cartao(k, p, xr, y, wr, hc, 'RESUMO DA PARCELA');
+  const a = cartao(k, p, xr, y, wr, hc, comissao ? 'RESUMO DA COMISSÃO' : 'RESUMO DA PARCELA');
   const c1 = a.x, c2 = a.x + 136;
   let ly = a.yTopo - 13;
   campo(k, p, c1, ly, 'Contrato', d.contratoNumero); campo(k, p, c2, ly, 'Chácara', d.loteResumo, { maxW: 180 });
@@ -72,11 +79,12 @@ export async function renderBoletoA4(d: DadosParcela, o: OpcoesDoc & { segundaVi
     campo(k, p, c1, ly, 'Valor atualizado', brl(sv.valorAtualizado), { size: 12.5 });
     campo(k, p, c2, ly, 'Novo vencimento', dataBR(sv.novoVencimento));
   } else {
-    campo(k, p, c1, ly, 'Valor da parcela', brl(d.valor), { size: 12.5 });
-    campo(k, p, c2, ly, 'Saldo devedor após o pagamento', d.saldoApos != null ? brl(d.saldoApos) : '—');
+    campo(k, p, c1, ly, comissao ? 'Valor da comissão' : 'Valor da parcela', brl(d.valor), { size: 12.5 });
+    if (comissao) campo(k, p, c2, ly, 'Empreendimento', emp, { maxW: 180 });
+    else campo(k, p, c2, ly, 'Saldo devedor após o pagamento', d.saldoApos != null ? brl(d.saldoApos) : '—');
     ly -= 34;
     campo(k, p, c1, ly, 'Parcelas restantes', d.parcelasRestantes);
-    campo(k, p, c2, ly, 'Comprador(a)', d.pagadorNome, { maxW: 180 });
+    campo(k, p, c2, ly, comissao ? 'Beneficiário(a) da concessão' : 'Comprador(a)', d.pagadorNome, { maxW: 180 });
   }
 
   // PIX

@@ -29,6 +29,9 @@ export function ComissaoBeneficiario({ contratoId, comissaoValor, cancelado }: {
   const revogar = trpc.contratos.revogarComissaoBeneficiario.useMutation({
     onSuccess: r => { toast.success(r.proposta ? "Proposta revogada" : `${r.canceladas} boleto(s) revogado(s)${r.falhas.length ? ` — ${r.falhas.length} falha(s) no Asaas` : ""}`); recarregar(); }, onError: erro,
   });
+  const reenviarBoletos = trpc.contratos.reenviarBoletosComissaoBeneficiario.useMutation({
+    onSuccess: r => (r.enviados ? toast.success(`${r.enviados} boleto(s) reenviado(s) no WhatsApp`) : toast.error(r.falhas[0] ?? "Nada para reenviar")), onError: erro,
+  });
   const reenviar = trpc.contratos.reenviarComissaoBeneficiario.useMutation({ onSuccess: r => (r.enviado ? toast.success("Link reenviado") : toast.error("Sem WhatsApp no cadastro")), onError: erro });
   const emitir = trpc.contratos.emitirComissaoBeneficiario.useMutation({
     onSuccess: r => { r.emitidas ? toast.success(`${r.emitidas} cobrança(s) emitida(s) e enviada(s)`) : toast.error(r.falhas[0] ?? "Nada emitido"); recarregar(); }, onError: erro,
@@ -70,6 +73,7 @@ export function ComissaoBeneficiario({ contratoId, comissaoValor, cancelado }: {
       {!cancelado && abertas.length > 0 && (
         <div className="flex flex-wrap gap-2">
           {abertas.some(c => c.status === "prevista") && <Button size="sm" variant="outline" disabled={emitir.isPending} onClick={() => emitir.mutate({ id: contratoId })}><RefreshCw className="h-4 w-4" /> Emitir os pendentes</Button>}
+          {abertas.some(c => c.status === "emitida") && <Button size="sm" variant="outline" disabled={reenviarBoletos.isPending} onClick={() => reenviarBoletos.mutate({ id: contratoId })}><Send className="h-4 w-4" /> Reenviar boletos no WhatsApp</Button>}
           <Button size="sm" variant="outline" disabled={revogar.isPending} onClick={() => { if (confirm("Revogar os boletos em aberto da comissão? Eles são cancelados no Asaas e você gera uma nova proposta com o saldo (subdividir, juntar ou cartão).")) revogar.mutate({ id: contratoId }); }}>
             <Ban className="h-4 w-4" /> Revogar boletos em aberto
           </Button>

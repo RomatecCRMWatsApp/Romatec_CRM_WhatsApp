@@ -47,6 +47,8 @@ export interface ContextoDocs {
   agenciaCodigo: string;
   urlPublica: string;
   plano: PlanoContrato;
+  /** Empreendimento do contrato (boletos personalizados: de qual empreendimento sai a cobrança/comissão) */
+  empreendimento?: { nome: string; local: string };
 }
 
 const ROTULO = { entrada: 'Entrada', saldo: 'Saldo', avista: 'À vista', renegociacao: 'Renegociação', reforco: 'Reforço anual', complemento: 'Complemento da entrada', comissao: 'Comissão de gestão' } as const;
@@ -89,8 +91,10 @@ export function dadosParcela(ctx: ContextoDocs, c: CobrancaDoc, todas: CobrancaD
   return {
     ...dadosLamina(ctx, c),
     loteResumo: `${ctx.lote.codigo} · Quadra ${ctx.lote.quadra ?? '—'} · ${area(ctx.lote.areaM2)} m²`,
-    saldoApos: c.tipo === 'saldo' ? c.saldoDevedor : ctx.plano.saldo_valor || null,
-    parcelasRestantes: restantes,
+    saldoApos: c.tipo === 'comissao' ? null : c.tipo === 'saldo' ? c.saldoDevedor : ctx.plano.saldo_valor || null,
+    parcelasRestantes: c.tipo === 'comissao' ? (c.total - c.numero > 0 ? `${c.total - c.numero} da comissão` : 'nenhuma (última)') : restantes,
+    tipo: c.tipo,
+    empreendimento: ctx.empreendimento ? `${ctx.empreendimento.nome}${ctx.empreendimento.local ? ` · ${ctx.empreendimento.local}` : ''}` : undefined,
   };
 }
 

@@ -41,9 +41,12 @@ async function contratoConcessao(contratoId: number) {
 export async function cobrancasComissao(contratoId: number) {
   const d = await banco();
   const ls: any[] = await d.select().from(cobrancas).where(and(eq(cobrancas.contratoId, contratoId), eq(cobrancas.tipo, 'comissao')));
+  // Boleto/PIX: o PDF no modelo do CRM (o mesmo das parcelas); cartão: o link de pagamento do Asaas
+  const boletos = await Promise.all(ls.map(l => (l.linhaDigitavel ? caminhoBoletoCrm(Number(l.id)) : null)));
+  const boletoCrm = (l: any) => boletos[ls.indexOf(l)];
   return ls.sort((a, b) => Number(a.numero) - Number(b.numero)).map(l => ({
     id: Number(l.id), numero: Number(l.numero), total: Number(l.total), vencimento: String(l.vencimento).slice(0, 10), valor: Number(l.valor),
-    status: String(l.status), boleto: l.bankSlipUrl ?? null, pagoEm: l.pagoEm ? String(l.pagoEm).slice(0, 10) : null,
+    status: String(l.status), boleto: boletoCrm(l) ?? l.bankSlipUrl ?? null, pagoEm: l.pagoEm ? String(l.pagoEm).slice(0, 10) : null,
   }));
 }
 
@@ -196,21 +199,81 @@ export async function emitirComissao(contratoId: number, falhas: string[] = []):
           asaasPaymentId: pay.id, status: 'emitida', bankSlipUrl: pay.bankSlipUrl ?? null, linhaDigitavel: snap.identificationField,
           codigoBarras: snap.barCode, nossoNumero: snap.nossoNumero, pixPayload: snap.pixPayload, asaasSnapshot: snap as any,
         } as any).where(and(eq(cobrancas.id, l.id), eq(cobrancas.status, 'prevista')));
-        if (pay.bankSlipUrl) links.push(`Parcela ${l.numero}/${l.total} — R$ ${brl(Number(l.valor))}, venc. ${br(venc)}: ${pay.bankSlipUrl}`);
+        const linhaCrm = snap.identificationField ? await linhaBoletoComissao({ id: Number(l.id), numero: Number(l.numero), total: Number(l.total), valor: Number(l.valor), vencimento: venc, pix: !!snap.pixPayload }) : null;
+        if (linhaCrm) links.push(linhaCrm);
+        else if (pay.bankSlipUrl) links.push(`Parcela ${l.numero}/${l.total} — R$ ${brl(Number(l.valor))}, venc. ${br(venc)}: ${pay.bankSlipUrl}`);
         emitidas++;
       } catch (e: any) { falhas.push(`emitir parcela ${l.numero}: ${String(e?.message ?? e).slice(0, 160)}`); }
     }
   } catch (e: any) { falhas.push(`cliente no Asaas: ${String(e?.message ?? e).slice(0, 160)}`); }
-  if (links.length) {
-    const tel = String(comprador.telefone1 ?? '').replace(/\D/g, '');
-    const fone = tel.length >= 10 ? (tel.startsWith('55') && tel.length >= 12 ? tel : `55${tel}`) : null;
-    if (fone) {
-      const { enviarMensagem } = await import('../assinatura/servico');
-      const nome = String(comprador.nome ?? '').trim().split(/\s+/)[0] || 'cliente';
-      await enviarMensagem(fone, `Olá, ${nome}! Seguem os boletos da comissão de gestão da concessão da chácara ${c.loteCodigo} (contrato ${c.numero}). Cada um pode ser pago por boleto ou PIX:\n\n${links.join('\n')}\n\nDúvidas: (99) 9 9101-1970.`).catch((e: any) => falhas.push(`WhatsApp: ${String(e?.message ?? e).slice(0, 120)}`));
-    }
-  }
+  if (links.length) await enviarBoletosComissao(c, comprador, links, falhas);
   return emitidas;
+}
+
+const DIAS_LINK_BOLETO = 60;
+
+/** Caminho assinado do boleto A4 do CRM; null se o servidor não tiver a chave de assinatura */
+async function caminhoBoletoCrm(id: number): Promise<string | null> {
+  const { assinarLink } = await import('./links');
+  try { return assinarLink(`/api/financeiro/cobrancas/${id}/boleto-a4.pdf`, Date.now(), DIAS_LINK_BOLETO); } catch { return null; }
+}
+
+/** Uma parcela da comissão na mensagem: boleto A4 no modelo do CRM (link assinado) e a página de copiar o PIX */
+async function linhaBoletoComissao(l: { id: number; numero: number; total: number; valor: number; vencimento: string; pix: boolean }): Promise<string | null> {
+  const caminho = await caminhoBoletoCrm(l.id);
+  if (!caminho) return null; // sem chave para assinar o link: a mensagem cai no boleto do Asaas
+  const { urlPixDaCobranca } = await import('./dados');
+  const base = (process.env.APP_PUBLIC_URL || 'https://romateccrm.com').replace(/\/+$/, '');
+  const boleto = `${base}${caminho}`;
+  let pix: string | null = null;
+  try { pix = l.pix ? urlPixDaCobranca(l.id) : null; } catch { pix = null; }
+  return `Parcela ${l.numero}/${l.total} — R$ ${brl(l.valor)}, venc. ${br(l.vencimento)}\nBoleto (PDF): ${boleto}${pix ? `\nPagar por Pix: ${pix}` : ''}`;
+}
+
+async function enviarBoletosComissao(c: any, comprador: any, linhas: string[], falhas: string[]): Promise<boolean> {
+  const tel = String(comprador.telefone1 ?? '').replace(/\D/g, '');
+  const fone = tel.length >= 10 ? (tel.startsWith('55') && tel.length >= 12 ? tel : `55${tel}`) : null;
+  if (!fone) { falhas.push('Beneficiário(a) sem WhatsApp cadastrado'); return false; }
+  const { enviarMensagem } = await import('../assinatura/servico');
+  const nome = String(comprador.nome ?? '').trim().split(/\s+/)[0] || 'cliente';
+  const emp = await nomeDoEmpreendimento(Number(c.empreendimentoId));
+  try {
+    await enviarMensagem(fone, `Olá, ${nome}! Seguem os boletos da comissão de gestão da concessão da chácara ${c.loteCodigo} do ${emp} (contrato ${c.numero}). Cada um pode ser pago pelo boleto ou pelo PIX:\n\n${linhas.join('\n\n')}\n\nDúvidas: (99) 9 9101-1970.`);
+    return true;
+  } catch (e: any) { falhas.push(`WhatsApp: ${String(e?.message ?? e).slice(0, 120)}`); return false; }
+}
+
+async function nomeDoEmpreendimento(id: number): Promise<string> {
+  const d = await banco();
+  const { empreendimentos } = await import('../../drizzle/schema');
+  const [e]: any[] = await d.select({ nome: empreendimentos.nome }).from(empreendimentos).where(eq(empreendimentos.id, id)).limit(1);
+  return String(e?.nome ?? 'Condomínio de Chácaras Bom Jardims');
+}
+
+/**
+ * Reenvia ao WhatsApp do(a) beneficiário(a) os boletos da comissão já emitidos e ainda não pagos, no modelo do CRM
+ * (boleto A4 + página do PIX). As cobranças no Asaas não mudam: mesmo nosso número, mesma linha digitável e mesmo PIX.
+ */
+export async function reenviarBoletosComissao(contratoId: number): Promise<{ enviados: number; falhas: string[] }> {
+  const d = await banco();
+  const falhas: string[] = [];
+  const [c]: any[] = await d.select().from(contratos).where(eq(contratos.id, contratoId)).limit(1);
+  if (!c) return { enviados: 0, falhas: ['Contrato não encontrado'] };
+  const { comprador } = await pessoasDoContrato(contratoId);
+  if (!comprador) return { enviados: 0, falhas: ['Contrato sem beneficiário cadastrado'] };
+  const ls: any[] = await d.select().from(cobrancas).where(and(eq(cobrancas.contratoId, contratoId), eq(cobrancas.tipo, 'comissao'), eq(cobrancas.status, 'emitida')));
+  const linhas: string[] = [];
+  for (const l of ls.sort((a, b) => Number(a.numero) - Number(b.numero))) {
+    if (String(l.formaPagamento ?? '') === 'CARTAO') { if (l.bankSlipUrl) linhas.push(`Parcela ${l.numero}/${l.total} — R$ ${brl(Number(l.valor))} no cartão: ${l.bankSlipUrl}`); continue; }
+    if (!l.linhaDigitavel) continue;
+    const venc = String(l.vencimento).slice(0, 10);
+    const linha = await linhaBoletoComissao({ id: Number(l.id), numero: Number(l.numero), total: Number(l.total), valor: Number(l.valor), vencimento: venc, pix: !!l.pixPayload });
+    if (linha) linhas.push(linha);
+    else if (l.bankSlipUrl) linhas.push(`Parcela ${l.numero}/${l.total} — R$ ${brl(Number(l.valor))}, venc. ${br(venc)}: ${l.bankSlipUrl}`);
+  }
+  if (!linhas.length) return { enviados: 0, falhas: ['Nenhum boleto da comissão em aberto'] };
+  const ok = await enviarBoletosComissao(c, comprador, linhas, falhas);
+  return { enviados: ok ? linhas.length : 0, falhas };
 }
 
 /** Revoga os boletos da comissão ainda não pagos (cancela também no Asaas): abre caminho para nova proposta — subdividir, juntar ou trocar a forma */

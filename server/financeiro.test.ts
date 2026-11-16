@@ -211,6 +211,17 @@ describe('5. renders', () => {
     expect((await PDFDocument.load(a4)).getPageCount()).toBe(1);
   });
 
+  it('boleto da comissão de gestão: modelo do CRM com o empreendimento e sem saldo devedor', async () => {
+    const ctxC = { ...ctx, empreendimento: { nome: 'Condomínio de Chácaras Bom Jardims', local: 'Açailândia/MA' } };
+    const c = { id: 900, tipo: 'comissao' as const, numero: 1, total: 1, vencimento: '2026-11-16', valor: 7843.23, juros: 0, amortizacao: 0, saldoDevedor: 0, asaas: snapAsaas(1), dataDocumento: '2026-11-16' };
+    const d = dadosParcela(ctxC, c as any, []);
+    expect(d).toMatchObject({ tipo: 'comissao', saldoApos: null, parcelasRestantes: 'nenhuma (última)', empreendimento: 'Condomínio de Chácaras Bom Jardims · Açailândia/MA' });
+    expect(d.parcela).toMatch(/^Comissão de gestão 1\/1/);
+    const pdf = await renderBoletoA4(d, { modelo: true });
+    expect((await PDFDocument.load(pdf)).getPageCount()).toBe(1);
+    if (process.env.SALVAR_BOLETO_COMISSAO) (await import('node:fs')).writeFileSync(process.env.SALVAR_BOLETO_COMISSAO, pdf);
+  });
+
   it('carnê anual: 12 parcelas por carnê, contadas do início; "completo" traz todas', () => {
     const b1 = blocoDoCarne(cobs, 1), b2 = blocoDoCarne(cobs, 2);
     expect(b1).toHaveLength(12);

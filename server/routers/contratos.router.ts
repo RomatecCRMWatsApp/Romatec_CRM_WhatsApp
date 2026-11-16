@@ -293,6 +293,13 @@ export const contratosRouter = router({
       return { ...(await M.revogarComissao(input.id, ctx.user.id)), proposta: false };
     } catch (e: any) { if (e instanceof FinanceiroErro) throw new TRPCError({ code: e.status === 404 ? "NOT_FOUND" : "CONFLICT", message: e.message }); throw e; }
   }),
+  /** Reenvia os boletos da comissão em aberto no modelo do CRM (boleto A4 + página do PIX); as cobranças no Asaas não mudam */
+  reenviarBoletosComissaoBeneficiario: protectedProcedure.input(z.object({ id: z.number().int() })).mutation(async ({ ctx, input }) => {
+    exigir(perfilDe(ctx.user as any) === "admin", "Só o administrador reenvia os boletos da comissão.");
+    await contratoVisivel(ctx, input.id);
+    const M = await import("../financeiro/comissaoBeneficiario");
+    return M.reenviarBoletosComissao(input.id);
+  }),
   reenviarComissaoBeneficiario: protectedProcedure.input(z.object({ id: z.number().int(), propostaId: z.number().int() })).mutation(async ({ ctx, input }) => {
     exigir(perfilDe(ctx.user as any) === "admin", "Só o administrador reenvia a proposta.");
     await contratoVisivel(ctx, input.id);
