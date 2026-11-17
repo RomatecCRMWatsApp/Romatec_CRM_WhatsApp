@@ -17,6 +17,7 @@ import { atualizarCobranca, beneficiarioDaConta, configAsaas, dadosDePagamento, 
 import { calcularEncargos, diasEntre, DIAS_MAX_SEGUNDA_VIA, somarDiasUteis } from './encargos';
 import { docMascarado, restantesDe, rotuloParcela, type CobrancaDoc, type ContextoDocs, type SnapshotAsaas, dadosParcela } from './dados';
 import { renderBoletoA4, renderRecibo } from './render/documentos';
+import { urlPublica } from '../_core/urlPublica';
 
 export class FinanceiroErro extends Error {
   constructor(public codigo: string, mensagem: string, public status = 400) { super(mensagem); }
@@ -31,7 +32,7 @@ const num = (v: unknown) => (v == null ? null : Number(v));
 const json = <T>(v: unknown): T | null => (v == null ? null : typeof v === 'string' ? JSON.parse(v) : (v as T));
 const iso = (v: unknown) => (v == null ? '' : v instanceof Date ? v.toISOString().slice(0, 10) : String(v).slice(0, 10));
 export const hojeBrasil = (agora = new Date()) => new Date(agora.getTime() - 3 * 3600_000).toISOString().slice(0, 10);
-export const urlPublica = () => (process.env.APP_PUBLIC_URL || 'https://romateccrm.com').replace(/\/+$/, '');
+export { urlPublica };
 
 /** XXXX-XXXX-XXXX (sem 0/O/1/I) */
 export function codigoVerificacao(): string {

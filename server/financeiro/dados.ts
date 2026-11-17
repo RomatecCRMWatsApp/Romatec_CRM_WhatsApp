@@ -10,11 +10,12 @@ import { tokenPix } from './links';
 
 /** Página de copiar o Pix da cobrança (impressa como botão no boleto e no carnê) */
 export const urlPixDaCobranca = (cobrancaId: number) => {
-  const base = (process.env.APP_PUBLIC_URL || 'https://romateccrm.com').replace(/\/+$/, '');
+  const base = urlPublica();
   try { return `${base}/pix/${tokenPix(cobrancaId)}`; } catch { return null; }
 };
 import { CONTATO_PADRAO, instrucoesFicha, type DadosCarne, type DadosParcela } from './render/documentos';
 import { DIAS_MAX_SEGUNDA_VIA, JUROS_MES_TEXTO, MULTA_TEXTO } from './encargos';
+import { urlPublica } from '../_core/urlPublica';
 
 export interface SnapshotAsaas {
   identificationField: string;

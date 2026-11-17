@@ -12,6 +12,7 @@ import { cobrancas, contratoAditivos, contratos } from '../../drizzle/schema';
 import { parcelasComissao, type ParcelaComissao } from '../../shared/comissaoBeneficiario';
 import { auditar, FinanceiroErro, hojeBrasil, pessoasDoContrato, slugDoContrato } from './servico';
 import { JUROS_MES_TEXTO, MULTA_TEXTO } from './encargos';
+import { urlPublica } from '../_core/urlPublica';
 
 export const TIPO_ADITIVO_COMISSAO = 'comissao_benef';
 const json = (v: unknown) => { if (typeof v !== 'string') return (v ?? {}) as any; try { return JSON.parse(v); } catch { return {}; } };
@@ -227,7 +228,7 @@ async function linhaBoletoComissao(l: { id: number; numero: number; total: numbe
   const caminho = await caminhoBoletoCrm(l.id);
   if (!caminho) return null; // sem chave para assinar o link: a mensagem cai no boleto do Asaas
   const { urlPixDaCobranca } = await import('./dados');
-  const base = (process.env.APP_PUBLIC_URL || 'https://romateccrm.com').replace(/\/+$/, '');
+  const base = urlPublica();
   const boleto = `${base}${caminho}`;
   let pix: string | null = null;
   try { pix = l.pix ? urlPixDaCobranca(l.id) : null; } catch { pix = null; }

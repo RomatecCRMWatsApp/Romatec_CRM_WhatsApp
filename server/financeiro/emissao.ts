@@ -14,6 +14,7 @@ import { rotuloComComplemento } from '../contratos/plano';
 import { divisaoComissaoLancamento } from '../../shared/condicoesLancamento';
 import { r2 } from '../../shared/simulador';
 import { linhasDoAto } from '../../shared/entradaAto';
+import { urlPublica } from '../_core/urlPublica';
 
 /**
  * Split da comissão (Romatec): 50% no 1º e 50% no 2º pagamento da entrada; entrada à vista ou à vista total = 100% no 1º.
@@ -137,7 +138,7 @@ export async function boletoDaEntrada(contratoId: number, dias = 15): Promise<Bo
   if (!l) return null;
   const { assinarLink } = await import('./links');
   const { urlPixDaCobranca } = await import('./dados');
-  const base = (process.env.APP_PUBLIC_URL || 'https://romateccrm.com').replace(/\/+$/, '');
+  const base = urlPublica();
   return {
     cobrancaId: Number(l.id), valor: Number(l.valor), vencimento: String(l.vencimento).slice(0, 10),
     boletoUrl: `${base}${assinarLink(`/api/financeiro/cobrancas/${l.id}/boleto-a4.pdf`, Date.now(), dias)}`, pixUrl: urlPixDaCobranca(Number(l.id)),
