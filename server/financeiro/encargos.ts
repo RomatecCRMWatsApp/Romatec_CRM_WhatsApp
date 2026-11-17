@@ -10,6 +10,13 @@ export const JUROS_MES_PCT = 0.01;
 /** Acima disso a 2ª via é bloqueada: vai para negociação (spec) */
 export const DIAS_MAX_SEGUNDA_VIA = 59;
 
+/** Fração → "2%" para os textos impressos (mesma regra do cálculo e do Asaas) */
+export const pctTexto = (fracao: number) => `${Number((fracao * 100).toFixed(4)).toLocaleString('pt-BR')}%`;
+export const MULTA_TEXTO = pctTexto(MULTA_PCT);
+export const JUROS_MES_TEXTO = pctTexto(JUROS_MES_PCT);
+/** Fração → percentual do Asaas: fine.value e interest.value são em %, não em fração (0,02 → 2) */
+export const pctAsaas = (fracao: number) => Math.round(fracao * 10000) / 100;
+
 /** "AAAA-MM" → variação mensal do IPCA em % (0,44 = 0,44%) */
 export type IndicesIpca = Map<string, number> | Record<string, number>;
 

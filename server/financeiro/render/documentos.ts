@@ -8,6 +8,7 @@ import {
 } from './comum';
 import { ESCRITORIO } from '../../../shared/escritorio';
 import { renderBoletoComissaoA4 } from './comissao';
+import { DIAS_MAX_SEGUNDA_VIA, JUROS_MES_TEXTO, MULTA_TEXTO } from '../encargos';
 
 const [W, H] = A4;
 const salvar = async (k: Kit) => Buffer.from(await k.doc.save({ useObjectStreams: false }));
@@ -37,7 +38,7 @@ export const CONTATO_PADRAO: Contato = {
 
 export const INSTRUCOES_PAGAMENTO = (contato: Contato) => [
   'Pix (recomendado): toque em "COPIAR O PIX" ou leia o QR Code — compensa na hora. Pela linha digitável/código de barras (banco, lotérica ou app), leva até 1 dia útil.',
-  'Após o vencimento: correção pelo IPCA/IBGE, multa de 2% e juros de mora de 1% ao mês pro rata die (CPCV, Cláusula 7ª; CDC, art. 52, § 1º).',
+  `Após o vencimento: correção pelo IPCA/IBGE, multa de ${MULTA_TEXTO} e juros de mora de ${JUROS_MES_TEXTO} ao mês pro rata die (CPCV, Cláusula 7ª; CDC, art. 52, § 1º).`,
   'Antecipação de parcelas com redução proporcional dos juros (CDC, art. 52, § 2º) — solicite o cálculo à administração.',
   'Pague somente por este boleto/PIX, em nome do beneficiário indicado na ficha. Nunca pague em dinheiro, a corretores ou a terceiros.',
   `Recibo automático por WhatsApp e e-mail após a compensação. 2ª via e carnê digital: ${contato.atendimento}.`,
@@ -46,9 +47,9 @@ export const INSTRUCOES_PAGAMENTO = (contato: Contato) => [
 /** Instruções da ficha de compensação */
 export function instrucoesFicha(parcela: string, contato: Contato, segundaVia = false, comJuros = true): string[] {
   return [
-    segundaVia ? 'Valor já atualizado com correção, multa e juros até o novo vencimento.' : 'Após o vencimento: multa de 2% e juros de 1% a.m. pro rata die.',
+    segundaVia ? 'Valor já atualizado com correção, multa e juros até o novo vencimento.' : `Após o vencimento: multa de ${MULTA_TEXTO} e juros de ${JUROS_MES_TEXTO} a.m. pro rata die.`,
     comJuros ? `Parcela ${parcela} · juros de 6% a.a. já incluídos.` : `Parcela ${parcela} · sem juros.`,
-    'Não receber após 59 dias do vencimento.',
+    `Não receber após ${DIAS_MAX_SEGUNDA_VIA} dias do vencimento.`,
     'Não pague a corretores ou a terceiros.',
     `2ª via: carnê digital ou WhatsApp ${contato.atendimento}.`,
   ];

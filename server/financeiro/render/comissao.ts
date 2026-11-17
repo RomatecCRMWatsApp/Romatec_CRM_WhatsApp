@@ -14,6 +14,7 @@ import {
   quebrar, retArredondado, texto, textoCentro, textoDir, type Kit,
 } from './comum';
 import type { Contato, DadosParcela } from './documentos';
+import { JUROS_MES_TEXTO, MULTA_TEXTO } from '../encargos';
 
 const [W, H] = A4;
 
@@ -72,6 +73,15 @@ function botaoPixRomatec(k: Kit, p: PDFPage, x: number, y: number, w: number, h:
   const size = Math.min(7.6, h * 0.5);
   textoCentro(p, rotulo, x + w / 2, y + (h - size) / 2 + 1, size, k.fb, R.superficie);
   linkClicavel(k, p, x, y, w, h, url);
+}
+
+/** Orientações de pagamento impressas no boleto da comissão */
+export function linhasComoPagarComissao(contratoNumero: string, atendimento: string): string[] {
+  return [
+    'Pix (recomendado): toque em "Copiar o Pix" ou leia o QR Code. Compensa na hora; pelo código de barras, até 1 dia útil.',
+    `Esta é a comissão de gestão do contrato ${contratoNumero}. Não é parcela do contrato e não altera o valor da chácara.`,
+    `Após o vencimento: multa de ${MULTA_TEXTO} e juros de ${JUROS_MES_TEXTO} ao mês. Pague somente por este boleto/Pix; o comprovante sai pelo WhatsApp ${atendimento}.`,
+  ];
 }
 
 export async function renderBoletoComissaoA4(d: DadosParcela, o: { modelo?: boolean; contato: Contato }): Promise<Buffer> {
@@ -170,12 +180,7 @@ export async function renderBoletoComissaoA4(d: DadosParcela, o: { modelo?: bool
   y -= 34;
 
   // Como pagar
-  const linhas = [
-    'Pix (recomendado): toque em "Copiar o Pix" ou leia o QR Code. Compensa na hora; pelo código de barras, até 1 dia útil.',
-    `Esta é a comissão de gestão do contrato ${d.contratoNumero}. Não é parcela do contrato e não altera o valor da chácara.`,
-    `Após o vencimento: multa de 2% e juros de 1% ao mês. Pague somente por este boleto/Pix; o comprovante sai pelo WhatsApp ${o.contato.atendimento}.`,
-  ];
-  for (const l of linhas) {
+  for (const l of linhasComoPagarComissao(d.contratoNumero, o.contato.atendimento)) {
     quebrar(k.f, l, 7.3, W - 96).forEach((t, i) => { texto(p, `${i ? '  ' : '• '}${t}`, 42, y, 7.3, k.f, R.creme); y -= 10.5; });
   }
 

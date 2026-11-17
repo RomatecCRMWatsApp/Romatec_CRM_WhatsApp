@@ -11,9 +11,13 @@ import { getDb } from '../db';
 import { cobrancas, contratoAditivos, contratos } from '../../drizzle/schema';
 import { parcelasComissao, type ParcelaComissao } from '../../shared/comissaoBeneficiario';
 import { auditar, FinanceiroErro, hojeBrasil, pessoasDoContrato, slugDoContrato } from './servico';
+import { JUROS_MES_TEXTO, MULTA_TEXTO } from './encargos';
 
 export const TIPO_ADITIVO_COMISSAO = 'comissao_benef';
 const json = (v: unknown) => { if (typeof v !== 'string') return (v ?? {}) as any; try { return JSON.parse(v); } catch { return {}; } };
+/** Atraso da comissão: cláusula 3.2 da proposta (PDF) e o ponto do resumo que o beneficiário assina */
+export const CLAUSULA_ATRASO_COMISSAO = `3.2. Após o vencimento: multa de ${MULTA_TEXTO} e juros de mora de ${JUROS_MES_TEXTO} ao mês; o valor em aberto poderá ser cobrado pelos meios legais.`;
+export const PONTO_ATRASO_COMISSAO = `Atraso: multa de ${MULTA_TEXTO} e juros de ${JUROS_MES_TEXTO} ao mês.`;
 const brl = (v: number) => v.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 const br = (iso: string) => iso.split('-').reverse().join('/');
 const EXT = ['', 'uma', 'duas', 'três', 'quatro'];
@@ -75,7 +79,7 @@ async function propostaPdf(c: any, plano: any, numero: number, valor: number, ps
   w.clausula('3. DA FORMA DE PAGAMENTO');
   w.paragrafo(`3.1. O valor será pago em ${ps.length === 1 ? 'parcela única' : `${ps.length} (${EXT[ps.length]}) parcelas mensais`}, ${forma === 'cartao' ? 'por cartão de crédito, pelo link de pagamento' : 'por boleto bancário ou PIX'} emitido pela GESTORA e enviado ao WhatsApp do(a) BENEFICIÁRIO(A):`);
   w.tabela(['Parcela', 'Vencimento', 'Valor'], ps.map(p => [`${p.numero}/${ps.length}`, br(p.vencimento), `R$ ${brl(p.valor)}`]), { pesos: [1, 1.4, 1.4], direita: [2] });
-  w.paragrafo('3.2. Após o vencimento: multa de 2% e juros de mora de 1% ao mês; o valor em aberto poderá ser cobrado pelos meios legais.', { antes: 4 });
+  w.paragrafo(CLAUSULA_ATRASO_COMISSAO, { antes: 4 });
   w.clausula('4. DISPOSIÇÕES GERAIS');
   w.paragrafo('4.1. O(A) BENEFICIÁRIO(A) declara estar ciente do valor, das parcelas e dos vencimentos e com eles concordar. Assinatura eletrônica com código enviado ao seu WhatsApp e manifesto de evidências (MP n.º 2.200-2/2001, art. 10; Lei n.º 14.063/2020). Foro: Comarca de Açailândia/MA.');
   const blocos = [{ papel: 'BENEFICIÁRIO(A)', nome, doc: cpf ? `CPF ${cpf.replace(/^(\d{3})(\d{3})(\d{3})(\d{2})$/, '$1.$2.$3-$4')}` : undefined }];
@@ -110,7 +114,7 @@ export async function proporComissaoBeneficiario(contratoId: number, p: PedidoCo
     `Você assume o pagamento dessa comissão perante a Romatec (a proprietária fica desobrigada dela).`,
     ...(pago > 0 ? [`Já pago da comissão: R$ ${brl(pago)}. Esta proposta trata do saldo.`] : []),
     ...ps.map(x => `Parcela ${x.numero}/${ps.length}: R$ ${brl(x.valor)}, vencimento em ${br(x.vencimento)} (${forma === 'cartao' ? 'cartão de crédito' : 'boleto ou PIX'}).`),
-    'Atraso: multa de 2% e juros de 1% ao mês.',
+    PONTO_ATRASO_COMISSAO,
   ];
   await d.insert(contratoAditivos).values({
     contratoId, numero, tipo: TIPO_ADITIVO_COMISSAO, status: 'aguardando',

@@ -14,6 +14,7 @@ export const urlPixDaCobranca = (cobrancaId: number) => {
   try { return `${base}/pix/${tokenPix(cobrancaId)}`; } catch { return null; }
 };
 import { CONTATO_PADRAO, instrucoesFicha, type DadosCarne, type DadosParcela } from './render/documentos';
+import { DIAS_MAX_SEGUNDA_VIA, JUROS_MES_TEXTO, MULTA_TEXTO } from './encargos';
 
 export interface SnapshotAsaas {
   identificationField: string;
@@ -86,8 +87,8 @@ export function dadosLamina(ctx: ContextoDocs, c: CobrancaDoc): DadosLamina {
     instrucoes: c.tipo === 'comissao'
       ? [
           `Comissão de gestão ${c.numero}/${c.total} — contrato ${ctx.contrato.numero} · Chácara ${ctx.lote.codigo}.`,
-          'Após o vencimento: multa de 2% e juros de 1% a.m.',
-          'Não receber após 59 dias do vencimento.',
+          `Após o vencimento: multa de ${MULTA_TEXTO} e juros de ${JUROS_MES_TEXTO} a.m.`,
+          `Não receber após ${DIAS_MAX_SEGUNDA_VIA} dias do vencimento.`,
           'Pague somente por este boleto/PIX. Não pague a terceiros.',
           `Dúvidas: WhatsApp ${CONTATO_PADRAO.atendimento}.`,
         ]

@@ -11,6 +11,7 @@
  * Fidelidade do boleto: linha digitável, código de barras, nosso número e PIX vêm SEMPRE daqui
  * (/identificationField e /pixQrCode) — o CRM nunca calcula esses dados.
  */
+import { JUROS_MES_PCT, MULTA_PCT, pctAsaas } from './encargos';
 export class AsaasErro extends Error {
   constructor(public codigo: string, mensagem: string, public status = 502, public detalhe?: unknown) { super(mensagem); }
 }
@@ -156,8 +157,8 @@ export function payloadCobranca(i: {
     description: i.descricao.slice(0, 500),
     externalReference: `crm-cobranca-${i.cobrancaId}`,
     // Quem pagar o boleto original atrasado paga multa/juros nativos do Asaas (CPCV, Cláusula 7ª); IPCA só na 2ª via
-    fine: { value: 2 },
-    interest: { value: 1 },
+    fine: { value: pctAsaas(MULTA_PCT) },
+    interest: { value: pctAsaas(JUROS_MES_PCT) },
     ...(split ? { split } : {}),
   };
 }
