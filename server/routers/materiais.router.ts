@@ -11,6 +11,7 @@ import { materiais, materialUso, properties, empreendimentos } from "../../drizz
 import { TIPOS_MATERIAL, ROTULO_TIPO_MATERIAL, agruparMateriais, categoriaDoArquivo } from "../../shared/materiais";
 import { exigirAcesso, type PermissoesUsuario } from "../permissoes";
 import { temAcesso } from "../../shared/permissoes";
+import { perfilDe } from "../../shared/equipe";
 
 async function dbOrThrow() {
   const db = await getDb();
@@ -41,7 +42,41 @@ async function materialAutorizado(db: any, p: PermissoesUsuario, id: number) {
   return m;
 }
 
+function exigirAdmin(user: unknown) {
+  if (perfilDe(user as any) !== "admin") throw new TRPCError({ code: "FORBIDDEN", message: "Só o administrador gera o link de materiais para parceiros." });
+}
+
 export const materiaisRouter = router({
+  /** Link público (sem login) com os materiais liberados, para parceiros de marketing — só o administrador */
+  parceirosOpcoes: protectedProcedure.query(async ({ ctx }) => {
+    exigirAdmin(ctx.user);
+    const { materiaisParaParceiros, VALIDADES_DIAS } = await import("../materiaisParceiros");
+    const db = await dbOrThrow();
+    const emps: any[] = await (db as any).select({ slug: empreendimentos.slug, nome: empreendimentos.nome }).from(empreendimentos);
+    const todos = (await materiaisParaParceiros(null)).flatMap(g => g.itens);
+    const linhas: any[] = await (db as any).select({ id: materiais.id, slug: materiais.empreendimentoSlug }).from(materiais).where(eq(materiais.liberado, true));
+    const porSlug = new Map<string, number>();
+    for (const l of linhas) if (l.slug) porSlug.set(l.slug, (porSlug.get(l.slug) ?? 0) + 1);
+    return {
+      total: todos.length,
+      validades: [...VALIDADES_DIAS],
+      empreendimentos: emps.filter(e => porSlug.get(e.slug)).map(e => ({ slug: String(e.slug), nome: String(e.nome), total: porSlug.get(e.slug)! })),
+    };
+  }),
+  gerarLinkParceiros: protectedProcedure
+    .input(z.object({ slug: z.string().regex(/^[a-z0-9-]{1,80}$/).nullable(), dias: z.number().int() }))
+    .mutation(async ({ input, ctx }) => {
+      exigirAdmin(ctx.user);
+      const { gerarLinkParceiros } = await import("../materiaisParceiros");
+      return gerarLinkParceiros(input.slug, input.dias);
+    }),
+  revogarLinksParceiros: protectedProcedure.mutation(async ({ ctx }) => {
+    exigirAdmin(ctx.user);
+    const { revogarLinksParceiros } = await import("../materiaisParceiros");
+    await revogarLinksParceiros(Number((ctx.user as any).id));
+    return { ok: true };
+  }),
+
   tipos: protectedProcedure.query(() => ({ TIPOS_MATERIAL, ROTULO_TIPO_MATERIAL })),
 
   /** Meu carimbo: o que sai na faixa das mídias de quem está logado (shared/carimbo.ts) */

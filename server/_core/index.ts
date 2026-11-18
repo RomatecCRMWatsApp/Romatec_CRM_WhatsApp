@@ -592,6 +592,9 @@ async function startServer() {
   // Portal das imobiliárias parceiras (/parceiro/:token)
   const { registrarRotasParceiros } = await import('../parceiros');
   registrarRotasParceiros(app, allowPublicLead);
+  // Link de materiais para parceiros de marketing (/m/parceiros, assinado e revogável pelo administrador)
+  const { registrarRotasMateriaisParceiros } = await import('../materiaisParceiros');
+  registrarRotasMateriaisParceiros(app);
   // Kit do Parceiro (PDF personalizado: parceira, prospecto, corretor)
   const { registrarRotaKit } = await import('../kitParceiro');
   registrarRotaKit(app);
