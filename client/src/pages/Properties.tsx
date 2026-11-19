@@ -921,7 +921,7 @@ export default function Properties() {
               {/* Nome e Preço: no celular um embaixo do outro */}
               <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between mb-4">
                 <div className="min-w-0">
-                  <h2 className="text-2xl md:text-3xl font-bold text-foreground">{selectedProperty.denomination}</h2>
+                  <h2 className="text-2xl md:text-3xl font-bold text-foreground [overflow-wrap:anywhere]">{selectedProperty.denomination}</h2>
                   <div className="flex items-center gap-1.5 text-muted-foreground mt-1">
                     <MapPin className="h-4 w-4 text-emerald" />
                     <span className="min-w-0 break-words">{selectedProperty.address}{selectedProperty.city ? `, ${selectedProperty.city}` : ""}{selectedProperty.state ? ` - ${selectedProperty.state}` : ""}</span>
@@ -944,7 +944,7 @@ export default function Properties() {
               {selectedProperty.description && (
                 <div className="mb-6 p-4 rounded-xl bg-secondary/30 border border-border/30">
                   <h3 className="text-sm font-semibold text-gold mb-2">Descrição</h3>
-                  <p className="text-sm text-foreground/80 whitespace-pre-line leading-relaxed">{selectedProperty.description}</p>
+                  <p className="text-sm text-foreground/80 whitespace-pre-line leading-relaxed [overflow-wrap:anywhere]">{selectedProperty.description}</p>
                 </div>
               )}
 

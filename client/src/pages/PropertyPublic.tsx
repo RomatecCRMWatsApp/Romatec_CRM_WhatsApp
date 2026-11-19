@@ -180,7 +180,7 @@ export default function PropertyPublic() {
         {property.description && (
           <div className="glass-card p-5 mb-6">
             <h2 className="text-lg font-bold text-foreground mb-2">Sobre o Imóvel</h2>
-            <p className="text-muted-foreground text-sm leading-relaxed">{property.description}</p>
+            <p className="text-muted-foreground text-sm leading-relaxed [overflow-wrap:anywhere]">{property.description}</p>
           </div>
         )}
 

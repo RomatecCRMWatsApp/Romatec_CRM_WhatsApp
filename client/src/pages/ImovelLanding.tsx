@@ -163,7 +163,7 @@ export default function ImovelLanding() {
       <div className="max-w-3xl mx-auto px-4 pt-5 space-y-5">
         <div>
           <p className="text-xs text-ok-400 font-semibold">{imovel.propertyType || "Imóvel"} · {imovel.finalidade === "aluguel" ? "Aluguel" : "Venda"}</p>
-          <h1 className="text-2xl sm:text-3xl font-bold text-foreground mt-1">{imovel.denomination}</h1>
+          <h1 className="text-2xl sm:text-3xl font-bold text-foreground mt-1 [overflow-wrap:anywhere]">{imovel.denomination}</h1>
           <p className="flex items-start gap-1 text-sm text-muted-foreground mt-1">
             <MapPin className="h-4 w-4 shrink-0 mt-0.5 text-ok-400" />
             {[imovel.address, imovel.city, imovel.state].filter(Boolean).join(", ")}
@@ -178,7 +178,7 @@ export default function ImovelLanding() {
           {!!imovel.garageSpaces && <div className="glass-card p-3 text-center"><Car className="h-4 w-4 mx-auto text-ok-400" /><p className="text-sm font-semibold mt-1">{imovel.garageSpaces} vaga(s)</p></div>}
         </div>
 
-        {imovel.description && <p className="text-sm text-foreground/90 whitespace-pre-line leading-relaxed">{imovel.description}</p>}
+        {imovel.description && <p className="text-sm text-foreground/90 whitespace-pre-line leading-relaxed [overflow-wrap:anywhere]">{imovel.description}</p>}
 
         {videosDoImovel.length > 0 && <h2 className="text-lg font-semibold text-foreground">{videosDoImovel.length === 1 ? "Vídeo do imóvel" : `Vídeos do imóvel (${videosDoImovel.length})`}</h2>}
         {videosDoImovel.map(v => (
