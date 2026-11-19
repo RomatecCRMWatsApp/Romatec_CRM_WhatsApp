@@ -9,6 +9,8 @@ import { campanhaDaVisita, enviarEvento, gravarConsentimento, lerConsentimento, 
 import { origemDaVisita } from "@/lib/origemVisita";
 import { capaDoVideo } from "@/lib/capaVideo";
 import { refDaSessao, useCartaoDoLink } from "@/lib/cartaoVendas";
+import { BotaoInstagram } from "@/components/bom-jardims/marca";
+import { INSTAGRAM_PADRAO } from "@shared/cartaoVendas";
 
 const TEMPO_PASSO_S = 15;
 const TEMPO_MAX_S = 300;
@@ -224,6 +226,9 @@ export default function ImovelLanding() {
             </form>
           )}
         </div>
+
+        {/* Siga no Instagram: o de quem compartilhou o link (?c=); sem ele, o institucional */}
+        <div className="flex justify-center"><BotaoInstagram usuario={cartaoLink?.instagram || INSTAGRAM_PADRAO} /></div>
 
         <p className="text-[11px] text-muted-foreground text-center">Romatec Consultoria Total, CRECI J-1234, José Romário — CRECI/MA F-4.705, Açailândia/MA</p>
       </div>

@@ -40,6 +40,7 @@ describe('texto de divulgação do imóvel', async () => {
     expect(t).toContain('🏡 *ALACIDE* (IMV-0001)');
     expect(t).toContain('🎥 2 vídeos do imóvel no link');
     expect(t).toContain('👉 Fotos, vídeos e detalhes: https://romateccrm.com/i/IMV-0001?utm_source=whatsapp&c=abc123def');
+    expect(t).toContain('📸 Siga no Instagram: https://www.instagram.com/avalieimob');
     expect(t).toContain('compartilhe este link com seus familiares e amigos');
     expect(t).toContain('CRECI/MA F-4.705');
     expect(t).toContain('Romatec Consultoria Total');

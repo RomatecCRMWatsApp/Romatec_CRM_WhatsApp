@@ -65,11 +65,12 @@ export function textoAnuncio(p: ImovelCompartilhavel, link: string | null, corre
  * os vídeos, o pedido para compartilhar e a assinatura completa do cartão de vendas (nome, CRECI, WhatsApp,
  * Instagram e a Romatec).
  */
-import { comAssinatura, type CartaoVendas } from "./cartaoVendas";
+import { comAssinatura, linkInstagram, type CartaoVendas } from "./cartaoVendas";
 export function textoDivulgacaoImovel(p: ImovelCompartilhavel, link: string | null, cartao: CartaoVendas, nVideos = 0): string {
   const base = textoAnuncio(p, null, null).split("\n");
   if (nVideos > 0) base.push(`🎥 ${nVideos === 1 ? "Vídeo do imóvel" : `${nVideos} vídeos do imóvel`} no link`);
   if (link) base.push("", `👉 Fotos, vídeos e detalhes: ${link}`);
+  if (cartao.instagram) base.push("", `📸 Siga no Instagram: ${linkInstagram(cartao.instagram)}`);
   base.push("", "🤝 E um favor: compartilhe este link com seus familiares e amigos, para que eles também fiquem por dentro das melhores oportunidades. Obrigado!");
   return comAssinatura(base.join("\n"), cartao);
 }
