@@ -57,6 +57,8 @@ export default function ContratoNovo() {
   const [naturezaConc, setNaturezaConc] = useState<"liberalidade" | "acordo">("liberalidade");
   const [acordoConc, setAcordoConc] = useState("");
   const [entradaParcelas, setEntrada] = useState(1);
+  // Entrada de 30%: valor digitado acima do mínimo (vazio = os 30% da tabela)
+  const [entradaTxt, setEntradaTxt] = useState("");
   const [prazo, setPrazo] = useState(120);
   /** Forma de pagamento do financiado — define o modelo do CPCV (entrada 30% ou Plano A, B, C) */
   const [condicao, setCondicao] = useState<CondicaoPagamento>(() => { const c = q.get("condicao"); return c === "A" || c === "B" || c === "C" ? c : "padrao"; });
@@ -96,6 +98,7 @@ export default function ContratoNovo() {
   }, [leadId, op]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const valorComissao = Number(comissaoConcessao.replace(/\./g, "").replace(",", "."));
+  const valorEntradaDig = entradaTxt.trim() ? Number(entradaTxt.replace(/[^\d,]/g, "").replace(",", ".")) : 0;
   const valorParcelaPers = parcelaPers.trim() ? Number(parcelaPers.replace(/\./g, "").replace(",", ".")) : 0;
   const autDisp = trpc.autorizacoes.disponiveis.useQuery({ slug, lote }, { enabled: perfil === "admin" && !!slug && !!lote });
   const autSel = (autDisp.data ?? []).find(a => a.id === autorizacaoId) ?? null;
@@ -109,7 +112,8 @@ export default function ContratoNovo() {
           entradaForma: sinalParcelas > 1 ? "unica" as const : entradaForma, ...(/^\d{4}-\d{2}-\d{2}$/.test(inicioParcelas) ? { inicioParcelas } : {}),
           ...(condicao !== "C" && sinalParcelas > 1 ? { sinalParcelas } : {}),
           ...(perfil === "admin" && condicao !== "C" && valorParcelaPers > 0 ? { parcelaPersonalizada: valorParcelaPers } : {}),
-        } : {}) };
+        } : {}),
+        ...(modalidade === "financiado" && condicao === "padrao" && valorEntradaDig > 0 ? { entradaValor: valorEntradaDig } : {}) };
   const precisaSenha = perfil !== "admin" && !concessao ? foraDoPadrao(plano as any) : [];
   const sim = trpc.contratos.simular.useQuery({ slug, lote, plano, corretorUserId: corretorUserId ?? undefined }, { enabled: !!lote && /^\d{4}-\d{2}-\d{2}$/.test(data1) });
   // Documentos escolhidos no passo 2: sobem logo depois de criar (dependente pela posição na lista)
@@ -162,6 +166,7 @@ export default function ContratoNovo() {
       if (f.corretorUserId != null) setCorretor(f.corretorUserId);
       if (f.modalidade) setModalidade(f.modalidade);
       if (f.entradaParcelas) setEntrada(f.entradaParcelas);
+      if (typeof f.entradaTxt === "string") setEntradaTxt(f.entradaTxt);
       if (f.prazo) setPrazo(f.prazo);
       if (f.condicao && !q.get("condicao")) setCondicao(f.condicao);
       if (f.modoC && !q.get("modoC")) setModoC(f.modoC);
@@ -180,7 +185,7 @@ export default function ContratoNovo() {
       toast.success("Rascunho restaurado: os dados digitados antes voltaram");
     } catch { /* rascunho ilegível: começa do zero */ }
   }, [user]); // eslint-disable-line react-hooks/exhaustive-deps
-  const formRascunho = { slug, lote, leadId, corretorUserId, modalidade, entradaParcelas, prazo, condicao, modoC, inicioComp, data1, entradaForma, inicioParcelas, sinalParcelas, parcelaPers, comprador, conjuge, especificas, modoAssinatura, dependentes };
+  const formRascunho = { slug, lote, leadId, corretorUserId, modalidade, entradaParcelas, entradaTxt, prazo, condicao, modoC, inicioComp, data1, entradaForma, inicioParcelas, sinalParcelas, parcelaPers, comprador, conjuge, especificas, modoAssinatura, dependentes };
   const temDados = !!(lote || comprador.nome || comprador.cpf || conjuge.nome);
   useEffect(() => {
     if (!restaurado || !temDados) return;
@@ -323,9 +328,23 @@ export default function ContratoNovo() {
                   </Campo>
                   {condicao === "padrao" && <Campo rotulo={`Entrada (${Math.round(op.condicoes.entradaPct * 100)}%)`}>
                     <select className={sel} value={entradaParcelas} onChange={e => setEntrada(Number(e.target.value))}>
-                      {Array.from({ length: op.condicoes.entradaMaxParcelas }, (_, i) => i + 1).map(n => <option key={n} value={n}>{n === 1 ? "À vista (com desconto)" : `${n}× sem juros`}</option>)}
+                      {Array.from({ length: op.condicoes.entradaMaxParcelas }, (_, i) => i + 1).map(n => <option key={n} value={n}>{n === 1 ? (valorEntradaDig > 0 ? "À vista" : "À vista (com desconto)") : `${n}× sem juros`}</option>)}
                     </select>
                   </Campo>}
+                  {condicao === "padrao" && (() => {
+                    const preco = sim.data?.preco_tabela ?? null;
+                    const minimo = preco != null ? Math.round(preco * op.condicoes.entradaPct * 100) / 100 : null;
+                    return (
+                      <Campo rotulo="Valor da entrada (R$)">
+                        <input inputMode="decimal" className={classeCampo()} value={entradaTxt} onChange={e => setEntradaTxt(e.target.value)}
+                          placeholder={minimo != null ? `${brl(minimo).replace("R$", "").trim()} (30%)` : "30% do preço"} aria-describedby="entrada-ajuda" />
+                        <span id="entrada-ajuda" className="mt-1 block text-[11px] text-muted-foreground">
+                          {valorEntradaDig > 0 ? "Entrada digitada: sem o desconto à vista; o saldo e as parcelas são recalculados." : `Vazio = ${minimo != null ? brl(minimo) : "30%"}. Digite um valor maior para mudar as parcelas.`}
+                          {valorEntradaDig > 0 && <button type="button" onClick={() => setEntradaTxt("")} className="ml-1 underline">voltar aos 30%</button>}
+                        </span>
+                      </Campo>
+                    );
+                  })()}
                   <Campo rotulo="Saldo">
                     <select className={sel} value={prazo} onChange={e => setPrazo(Number(e.target.value))}>
                       {prazosDaCondicao(condicao, op.condicoes).map(p => <option key={p} value={p}>{p} meses</option>)}

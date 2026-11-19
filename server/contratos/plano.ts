@@ -194,7 +194,7 @@ export function planoDoContrato(sim: Simulacao, escolha: EscolhaPlano, c: Condic
   const com = comissao(sim.preco, comCorretor, nEnt === 1, c);
   return {
     ...base, modalidade: 'financiado', avista_vencimento: '',
-    entrada_valor: sim.entradaEfetiva, entrada_percentual: c.entradaPct, entrada_qtd: nEnt,
+    entrada_valor: sim.entradaEfetiva, entrada_percentual: sim.entradaPersonalizada ? r2(sim.entradaEfetiva / sim.preco * 10000) / 10000 : c.entradaPct, entrada_qtd: nEnt,
     entrada_parcela: sim.parcelasEntrada[0], entrada_desconto: nEnt === 1 ? sim.descontoAvista : 0, entrada_venc1: d1,
     saldo_valor: sim.saldo, saldo_qtd: plano.prazo, saldo_parcela: plano.parcela, saldo_venc1: vencimento(d1, nEnt),
     total_pagar: plano.totalPago, total_juros: plano.juros,

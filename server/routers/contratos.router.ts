@@ -40,6 +40,8 @@ const dependenteZ = z.object({
 });
 const planoZ = z.object({
   modalidade: z.enum(["financiado", "avista"]), entradaParcelas: z.number().int().min(1).max(12), prazo: z.number().int().min(1).max(360).optional(),
+  /** Entrada de 30%: valor digitado acima do mínimo (abate o preço pelo valor cheio, sem o desconto à vista) */
+  entradaValor: z.number().positive().max(1e8).nullable().optional(),
   dataPrimeiroPagamento: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
   /** Forma de pagamento do financiado: entrada 30% (padrão) ou planos de lançamento A, B, C — define o modelo do CPCV */
   condicao: z.enum(["padrao", "A", "B", "C"]).optional(),

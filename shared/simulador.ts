@@ -53,6 +53,8 @@ export interface Simulacao {
   planos: PlanoSaldo[];
   /** Lote pago todo de uma vez: preço − descontoAvistaTotal */
   avistaTotal: AvistaTotal;
+  /** Entrada digitada no contrato (acima dos 30%): abate o preço pelo valor cheio, sem o desconto à vista */
+  entradaPersonalizada?: boolean;
 }
 
 export interface AvistaTotal {
@@ -123,12 +125,13 @@ export function avistaTotal(preco: number, c: Pick<CondicoesPagamento, 'desconto
  * 2..entradaMaxParcelas, parcelada sem juros e sem desconto. O saldo é sempre preço − 30%.
  * precoTabela (do lote) prevalece sobre o preço calculado pela área, quando informado.
  */
-export function simular(areaM2: number, entradaParcelas: number, c: CondicoesPagamento, precoTabela?: number | null): Simulacao {
+export function simular(areaM2: number, entradaParcelas: number, c: CondicoesPagamento, precoTabela?: number | null, entradaValor?: number | null): Simulacao {
   if (!Number.isInteger(entradaParcelas) || entradaParcelas < 1 || entradaParcelas > c.entradaMaxParcelas) {
     throw new Error(`Entrada em ${entradaParcelas}x fora do limite (à vista ou até ${c.entradaMaxParcelas}x)`);
   }
   const preco = precoTabela != null && precoTabela > 0 ? r2(precoTabela) : precoLote(areaM2, c);
   const entrada30 = r2(preco * c.entradaPct);
+  if (entradaValor != null) return simularEntradaMaior(areaM2, entradaParcelas, c, preco, entrada30, r2(entradaValor));
   const entradaAvista = r2(entrada30 * (1 - c.descontoAvistaPct));
   const saldo = r2(preco - entrada30);
   const avista = entradaParcelas === 1;
@@ -143,6 +146,30 @@ export function simular(areaM2: number, entradaParcelas: number, c: CondicoesPag
     areaM2, preco, entrada30, entradaAvista, descontoAvista: r2(entrada30 - entradaAvista), saldo,
     entradaParcelas, parcelasEntrada: avista ? [entradaAvista] : dividirEntrada(entrada30, entradaParcelas),
     entradaEfetiva, taxaMensal: i, planos, avistaTotal: avistaTotal(preco, c),
+  };
+}
+
+/** Entrada mínima (30% do preço) para a entrada digitada no contrato */
+export const entradaMinima = (preco: number, c: Pick<CondicoesPagamento, 'entradaPct'>) => r2(preco * c.entradaPct);
+
+/**
+ * Entrada digitada no contrato, maior que os 30%: o cliente paga esse valor (à vista ou em até entradaMaxParcelas,
+ * sem desconto) e o saldo é preço − entrada, pela mesma Price e prazos da tabela.
+ */
+function simularEntradaMaior(areaM2: number, entradaParcelas: number, c: CondicoesPagamento, preco: number, entrada30: number, entrada: number): Simulacao {
+  if (!Number.isFinite(entrada) || entrada < entrada30) throw new Error(`A entrada tem que ser de pelo menos ${brl(entrada30)} (${pct(c.entradaPct, 0)}% do preço)`);
+  if (entrada >= preco) throw new Error('A entrada tem que ser menor que o preço: para pagar tudo, escolha à vista');
+  const saldo = r2(preco - entrada);
+  const i = taxaMensal(c.jurosAaEfetivo);
+  const planos = c.prazos.map(prazo => {
+    const parcela = parcelaPrice(saldo, prazo, i);
+    const totalSaldo = r2(parcela * prazo);
+    return { prazo, parcela, totalSaldo, juros: r2(totalSaldo - saldo), totalPago: r2(entrada + totalSaldo) };
+  });
+  return {
+    areaM2, preco, entrada30, entradaAvista: entrada, descontoAvista: 0, saldo,
+    entradaParcelas, parcelasEntrada: dividirEntrada(entrada, entradaParcelas),
+    entradaEfetiva: entrada, taxaMensal: i, planos, avistaTotal: avistaTotal(preco, c), entradaPersonalizada: true,
   };
 }
 

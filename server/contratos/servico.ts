@@ -172,7 +172,7 @@ export interface NovoContrato {
   leadId?: number | null;
   /** Corretor que vendeu (admin/secretário escolhem; corretor = ele mesmo) */
   corretorUserId: number;
-  plano: { modalidade: 'financiado' | 'avista'; entradaParcelas: number; prazo?: number; dataPrimeiroPagamento: string; condicao?: 'padrao' | 'A' | 'B' | 'C'; modoC?: 'unificado' | 'sequencial' | 'congelado'; inicioComplemento?: number;
+  plano: { modalidade: 'financiado' | 'avista'; entradaParcelas: number; prazo?: number; entradaValor?: number | null; dataPrimeiroPagamento: string; condicao?: 'padrao' | 'A' | 'B' | 'C'; modoC?: 'unificado' | 'sequencial' | 'congelado'; inicioComplemento?: number;
     /** Planos A/B/C: entrada única ou dividida (boleto/PIX + cartão) e 1º vencimento das parcelas */
     entradaForma?: 'unica' | 'boleto_cartao'; inicioParcelas?: string | null;
     sinalParcelas?: number | null; parcelaPersonalizada?: number | null;
@@ -253,7 +253,9 @@ export function planoEscolhido(n: NovoContrato['plano'], areaM2: number, precoTa
     return planoDoContrato(simular(areaM2, 1, c, precoTabela), { modalidade: 'financiado', dataPrimeiroPagamento: n.dataPrimeiroPagamento, personalizado: n.personalizado }, c, comCorretor);
   }
   const lancamento = n.modalidade === 'financiado' && !!n.condicao && n.condicao !== 'padrao';
-  const sim = simular(areaM2, n.modalidade === 'avista' || lancamento ? 1 : n.entradaParcelas, c, precoTabela);
+  // Entrada digitada (acima dos 30%): só na entrada de 30% do financiado
+  const entradaValor = n.modalidade === 'financiado' && !lancamento && n.entradaValor != null ? n.entradaValor : null;
+  const sim = simular(areaM2, n.modalidade === 'avista' || lancamento ? 1 : n.entradaParcelas, c, precoTabela, entradaValor);
   const escolha: EscolhaPlano = { modalidade: n.modalidade, prazo: n.prazo, dataPrimeiroPagamento: n.dataPrimeiroPagamento, condicao: n.modalidade === 'financiado' ? n.condicao ?? 'padrao' : 'padrao', modoC: n.modoC, inicioComplemento: n.inicioComplemento,
     ...(lancamento ? { entradaForma: n.entradaForma ?? 'unica', inicioParcelas: n.inicioParcelas || undefined, sinalParcelas: n.sinalParcelas || undefined, parcelaPersonalizada: n.parcelaPersonalizada ?? undefined } : {}) };
   return planoDoContrato(sim, escolha, c, comCorretor);

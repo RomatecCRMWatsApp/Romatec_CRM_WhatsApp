@@ -212,6 +212,8 @@ export function tagsPlano(s: PlanoContrato): Ctx {
     ? (s.entrada_qtd === 1
       ? `em parcela única de R$ ${brl(s.entrada_parcela)}, sem desconto, com vencimento em ${dataBR(s.entrada_venc1)}`
       : `em ${s.entrada_qtd} (${extenso(s.entrada_qtd)}) parcelas mensais de R$ ${brl(s.entrada_parcela)}, sem juros e sem desconto, a primeira com vencimento em ${dataBR(s.entrada_venc1)}`)
+    : s.entrada_qtd === 1 && !(s.entrada_desconto > 0)
+    ? `em parcela única de R$ ${brl(s.entrada_parcela)}, sem desconto, com vencimento em ${dataBR(s.entrada_venc1)}`
     : s.entrada_qtd === 1
     ? `à vista, com desconto de R$ ${brl(s.entrada_desconto)}, vencimento em ${dataBR(s.entrada_venc1)}`
     : `em ${s.entrada_qtd} (${extenso(s.entrada_qtd)}) parcelas mensais de R$ ${brl(s.entrada_parcela)}, sem desconto, a primeira com vencimento em ${dataBR(s.entrada_venc1)}`;
@@ -220,7 +222,7 @@ export function tagsPlano(s: PlanoContrato): Ctx {
     plano_preco_tabela: brl(s.preco_tabela), plano_preco_tabela_extenso: reaisExtenso(s.preco_tabela),
     plano_preco_avista: brl(s.preco_avista),
     plano_avista_forma: financiado ? '' : `parcela única com vencimento em ${dataBR(s.avista_vencimento)}`,
-    plano_entrada_valor: financiado ? brl(s.entrada_valor) : '', plano_entrada_percentual: financiado ? pct(s.entrada_percentual, lancamento && Math.round(s.entrada_percentual * 100) !== s.entrada_percentual * 100 ? 2 : 0) : '',
+    plano_entrada_valor: financiado ? brl(s.entrada_valor) : '', plano_entrada_percentual: financiado ? pct(s.entrada_percentual, Math.abs(s.entrada_percentual * 100 - Math.round(s.entrada_percentual * 100)) > 1e-6 ? 2 : 0) : '',
     plano_entrada_forma: entradaForma,
     // Condições de lançamento (modelos …-PLANO-A/B/C): título, reforços anuais (A) e complemento da entrada (C)
     plano_condicao_titulo: financiado ? tituloCondicao(s) : '',
