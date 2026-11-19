@@ -7,7 +7,7 @@ import { and, desc, eq, inArray } from 'drizzle-orm';
 import { getDb } from '../db';
 import { carteiras, contratos, empreendimentos, obraAtualizacoes, portalChamados, users } from '../../drizzle/schema';
 import { DOCUMENTOS_CLIENTE, empDocsValido } from '../../shared/documentosCliente';
-import { ROTULO_CHAMADO, TIPOS_CHAMADO, antecipaveis, simularAntecipacao, type TipoChamado } from '../../shared/portalComprador';
+import { ROTULO_CHAMADO, TIPOS_CHAMADO, antecipaveis, simularAntecipacao, tabelaAntecipacao, type TipoChamado } from '../../shared/portalComprador';
 import { rotuloParcela } from './dados';
 import { cobrancasDoContrato, contextoDocs, FinanceiroErro, hojeBrasil, pessoasDoContrato, urlPublica } from './servico';
 
@@ -77,7 +77,8 @@ export async function portalDoComprador(codigo: string, hoje = hojeBrasil()) {
 export async function simularDoCodigo(codigo: string, quantidade: number, hoje = hojeBrasil()) {
   const { c } = await contratoDoCodigo(codigo);
   const ctx = await contextoDocs(c.id);
-  return simularAntecipacao(await abertasDo(c.id), Number(ctx.plano?.taxa_am ?? 0), quantidade, hoje);
+  const abertas = await abertasDo(c.id), taxa = Number(ctx.plano?.taxa_am ?? 0);
+  return { ...simularAntecipacao(abertas, taxa, quantidade, hoje), tabela: tabelaAntecipacao(abertas, taxa, hoje) };
 }
 
 const brl = (v: number) => v.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });

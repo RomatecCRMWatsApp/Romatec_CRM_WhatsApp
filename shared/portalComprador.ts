@@ -12,7 +12,9 @@ export const ROTULO_CHAMADO: Record<TipoChamado, string> = {
 
 export interface ParcelaAntecipavel { id: number; rotulo: string; vencimento: string; valor: number }
 export interface LinhaAntecipacao extends ParcelaAntecipavel { meses: number; valorPresente: number; desconto: number }
-export interface Antecipacao { parcelas: LinhaAntecipacao[]; totalNominal: number; totalAPagar: number; economia: number; taxaMensal: number }
+export interface Antecipacao { parcelas: LinhaAntecipacao[]; totalNominal: number; totalAPagar: number; economia: number; taxaMensal: number; percentual: number }
+/** Uma linha da tabela "quanto você economiza": antecipar as `quantidade` últimas parcelas hoje */
+export interface LinhaTabelaAntecipacao { quantidade: number; quitaTudo: boolean; totalNominal: number; totalAPagar: number; economia: number; percentual: number }
 
 const r2 = (v: number) => Math.round(v * 100) / 100;
 const diasEntre = (de: string, ate: string) => Math.round((Date.parse(`${ate}T12:00:00Z`) - Date.parse(`${de}T12:00:00Z`)) / 86_400_000);
@@ -32,8 +34,26 @@ export function simularAntecipacao(abertas: ParcelaAntecipavel[], taxaMensal: nu
   });
   const totalNominal = r2(parcelas.reduce((s, p) => s + p.valor, 0));
   const totalAPagar = r2(parcelas.reduce((s, p) => s + p.valorPresente, 0));
-  return { parcelas, totalNominal, totalAPagar, economia: r2(totalNominal - totalAPagar), taxaMensal: i };
+  const economia = r2(totalNominal - totalAPagar);
+  return { parcelas, totalNominal, totalAPagar, economia, taxaMensal: i, percentual: totalNominal > 0 ? Math.round((economia / totalNominal) * 10000) / 100 : 0 };
 }
 
 /** Quantas parcelas dá para antecipar (as que vencem daqui a mais de 30 dias) */
 export const antecipaveis = (abertas: ParcelaAntecipavel[], hoje: string) => abertas.filter(p => diasEntre(hoje, p.vencimento) > 30).length;
+
+/** Quantidades mostradas na tabela do portal (as que couberem) + "quitar tudo" */
+export const QUANTIDADES_TABELA = [1, 6, 12, 24, 36, 60] as const;
+
+/**
+ * Tabela "quanto você economiza" do portal: antecipar hoje as últimas 1, 6, 12, 24, 36 e 60 parcelas (as que houver)
+ * e todas as antecipáveis (quitação). Mesma conta da simulação (valor presente pela taxa do contrato).
+ */
+export function tabelaAntecipacao(abertas: ParcelaAntecipavel[], taxaMensal: number, hoje: string): LinhaTabelaAntecipacao[] {
+  const max = antecipaveis(abertas, hoje);
+  if (!max) return [];
+  const qtds = [...QUANTIDADES_TABELA.filter(q => q < max), max];
+  return qtds.map(q => {
+    const s = simularAntecipacao(abertas, taxaMensal, q, hoje);
+    return { quantidade: q, quitaTudo: q === max, totalNominal: s.totalNominal, totalAPagar: s.totalAPagar, economia: s.economia, percentual: s.percentual };
+  });
+}

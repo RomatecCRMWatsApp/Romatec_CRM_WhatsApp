@@ -9,6 +9,7 @@ import { ROTULO_CHAMADO, TIPOS_CHAMADO, type TipoChamado } from "@shared/portalC
 
 export const VERDE = "#0C3320", DOURADO = "#C9A646";
 const brl = (v: number | null | undefined) => (v == null ? "—" : v.toLocaleString("pt-BR", { style: "currency", currency: "BRL" }));
+const pct = (v: number) => `${v.toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}%`;
 const br = (iso?: string | null) => (iso ? String(iso).slice(0, 10).split("-").reverse().join("/") : "—");
 const borda = { borderColor: "#e5dcc5" };
 
@@ -66,6 +67,44 @@ export function AbaAntecipar({ codigo, d, onPedido }: { codigo: string; d: Dados
           <div className="rounded-lg bg-warn-50 p-2"><p className="text-[11px] text-neutro-500">Economia</p><p className="font-semibold text-warn-800">{brl(sim.economia)}</p></div>
         </div>
       )}
+      {sim?.parcelas?.length > 0 && (
+        <p className="text-center text-xs text-neutro-600">Desconto de <b style={{ color: VERDE }}>{pct(sim.percentual ?? 0)}</b> sobre o valor das parcelas antecipadas.</p>
+      )}
+      {sim?.tabela?.length > 0 && (() => {
+        const ultima = sim.tabela[0];
+        return (
+          <div className="space-y-2">
+            {ultima?.quantidade === 1 && (
+              <div className="rounded-lg p-3 text-center" style={{ background: VERDE, color: "var(--c-ffffff)" }}>
+                <p className="text-xs opacity-90">Pagando hoje só a última parcela, você paga</p>
+                <p className="text-2xl font-bold" style={{ color: DOURADO }}>{brl(ultima.totalAPagar)}</p>
+                <p className="text-xs opacity-90">em vez de {brl(ultima.totalNominal)}: <b>{pct(ultima.percentual)}</b> de desconto</p>
+              </div>
+            )}
+            <div className="overflow-x-auto">
+              <table className="w-full text-xs">
+                <caption className="pb-1 text-left font-semibold" style={{ color: VERDE }}>Quanto você economiza antecipando hoje</caption>
+                <thead><tr className="text-left text-neutro-500"><th className="py-1 font-medium">Últimas parcelas</th><th className="py-1 text-right font-medium">Valor</th><th className="py-1 text-right font-medium">Você paga</th><th className="py-1 text-right font-medium">Desconto</th></tr></thead>
+                <tbody>
+                  {sim.tabela.map((l: any) => (
+                    <tr key={l.quantidade} className={`border-t ${l.quantidade === qtd ? "font-semibold" : ""}`} style={{ borderColor: "var(--c-e5e7eb)" }}>
+                      <td className="py-1.5">
+                        <button type="button" onClick={() => setQtd(l.quantidade)} className="text-left underline-offset-2 hover:underline focus-visible:outline focus-visible:outline-2" style={{ color: VERDE }}>
+                          {l.quitaTudo ? `${l.quantidade} (quitar tudo)` : l.quantidade === 1 ? "1 (a última)" : l.quantidade}
+                        </button>
+                      </td>
+                      <td className="py-1.5 text-right">{brl(l.totalNominal)}</td>
+                      <td className="py-1.5 text-right">{brl(l.totalAPagar)}</td>
+                      <td className="py-1.5 text-right">{pct(l.percentual)}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+            <p className="text-[11px] text-neutro-500">Toque numa linha para simular essa quantidade. Quanto mais longe o vencimento, maior o desconto: os juros dos meses que faltam saem do valor.</p>
+          </div>
+        );
+      })()}
       {sim?.parcelas?.length > 0 && (
         <details className="text-xs text-neutro-600"><summary className="cursor-pointer">Ver as parcelas</summary>
           <ul className="mt-1 space-y-0.5">{sim.parcelas.map((p: any) => <li key={p.id}>{p.rotulo} · vence {br(p.vencimento)} · {brl(p.valor)} → {brl(p.valorPresente)}</li>)}</ul>

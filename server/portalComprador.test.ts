@@ -3,7 +3,7 @@ import { beforeAll, describe, expect, it } from 'vitest';
 process.env.DATABASE_DRIVER = 'sqlite';
 process.env.SQLITE_PATH = ':memory:';
 
-const { simularAntecipacao, antecipaveis } = await import('../shared/portalComprador');
+const { simularAntecipacao, antecipaveis, tabelaAntecipacao } = await import('../shared/portalComprador');
 const P = await import('./financeiro/portalComprador');
 const { getDb } = await import('./db');
 const { sql } = await import('drizzle-orm');
@@ -25,6 +25,27 @@ describe('antecipação de parcelas (valor presente pela taxa do contrato)', () 
   });
   it('sem juros não há desconto', () => {
     expect(simularAntecipacao(parcelas, 0, 2, '2026-10-29')).toMatchObject({ totalNominal: 2000, totalAPagar: 2000, economia: 0 });
+  });
+});
+
+describe('tabela "quanto você economiza" (Condição de 30% / C12: 120 parcelas pela Price a 6% a.a.)', () => {
+  // Parcela 1 vence hoje; a k vence (k−1)×30 dias depois — a parcela 120 fica 119 meses à frente
+  const hoje = '2026-12-10';
+  const dia = (n: number) => new Date(Date.parse(`${hoje}T12:00:00Z`) + n * 86_400_000).toISOString().slice(0, 10);
+  const parcelas = Array.from({ length: 120 }, (_, k) => ({ id: k + 1, rotulo: `Saldo ${k + 1}/120`, vencimento: dia(k * 30), valor: 1281.13 }));
+  const i = Math.pow(1.06, 1 / 12) - 1;
+  it('só a última parcela: 43,89% de desconto (mesma conta do PDF)', () => {
+    const t = tabelaAntecipacao(parcelas, i, hoje);
+    expect(t[0]).toMatchObject({ quantidade: 1, quitaTudo: false, totalNominal: 1281.13, totalAPagar: 718.86, percentual: 43.89 });
+  });
+  it('1, 6, 12, 24, 36, 60 e quitar tudo (118: a do mês seguinte, a 30 dias, não entra), desconto menor quanto mais parcelas', () => {
+    const t = tabelaAntecipacao(parcelas, i, hoje);
+    expect(t.map(l => l.quantidade)).toEqual([1, 6, 12, 24, 36, 60, 118]);
+    expect(t[t.length - 1].quitaTudo).toBe(true);
+    for (let k = 1; k < t.length; k++) expect(t[k].percentual).toBeLessThan(t[k - 1].percentual);
+  });
+  it('sem parcelas antecipáveis a tabela fica vazia', () => {
+    expect(tabelaAntecipacao(parcelas.slice(0, 1), i, hoje)).toEqual([]);
   });
 });
 
