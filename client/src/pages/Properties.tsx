@@ -13,6 +13,7 @@ import { podeUsarAgenteImovel } from "@shared/cadastroImovelAgente";
 import { toast } from "sonner";
 import MateriaisPainel from "@/components/MateriaisPainel";
 import { capaDoVideo } from "@/lib/capaVideo";
+import { enviarParaCloudinary } from "@/lib/uploadCloudinary";
 import { CompartilharImovel } from "@/components/imoveis/CompartilharImovel";
 
 /** Vídeo do cadastro + vídeos liberados do imóvel em Materiais (vem do servidor em `videos`) */
@@ -133,9 +134,9 @@ export default function Properties() {
         },
         body: buffer,
       });
-      const data = await response.json();
+      const data = await response.json().catch(() => ({}));
       if (data.success && data.url) return data.url;
-      toast.error('Erro no upload: ' + (data.error || 'desconhecido'));
+      toast.error('Erro no upload: ' + (data.error || data.mensagem || `servidor respondeu ${response.status}`));
       return null;
     } catch (e) {
       toast.error('Erro no upload: ' + String(e));
@@ -163,14 +164,18 @@ export default function Properties() {
   const handleVideoUpload = async (files: FileList | null) => {
     if (!files || files.length === 0) return;
     setIsUploading(true);
-    setUploadProgress("Enviando v\u00eddeo...");
-    const url = await uploadFile(files[0]);
-    if (url) {
+    setUploadProgress("Enviando vídeo...");
+    // Direto para o Cloudinary, em partes (o mesmo envio de Materiais): o vídeo não passa pelo servidor do CRM
+    try {
+      const { url } = await enviarParaCloudinary(files[0], pct => setUploadProgress(`Enviando vídeo... ${pct}%`));
       setForm(prev => ({ ...prev, videoUrl: url }));
-      toast.success("V\u00eddeo enviado!");
+      toast.success("Vídeo enviado! Clique em Atualizar Imóvel para salvar.");
+    } catch (e: any) {
+      toast.error(`Erro no upload do vídeo: ${e?.message || e}`);
+    } finally {
+      setIsUploading(false);
+      setUploadProgress("");
     }
-    setIsUploading(false);
-    setUploadProgress("");
   };
 
   const handlePlantaUpload = async (files: FileList | null) => {
@@ -484,7 +489,7 @@ export default function Properties() {
                     <div className="flex flex-col items-center gap-2">
                       <CloudUpload className="h-10 w-10 text-emerald/60" />
                       <p className="text-foreground font-medium">Arraste fotos aqui ou clique para buscar</p>
-                      <p className="text-muted-foreground text-xs">Aceita JPG, PNG, WebP (m\u00faltiplos arquivos)</p>
+                      <p className="text-muted-foreground text-xs">Aceita JPG, PNG, WebP (múltiplos arquivos)</p>
                     </div>
                   )}
                 </div>
@@ -533,9 +538,9 @@ export default function Properties() {
               <TabsContent value="video" className="space-y-4">
                 <div className="flex items-center gap-2 mb-2">
                   <Video className="h-5 w-5 text-danger-500" />
-                  <h3 className="font-semibold text-foreground">V\u00eddeo do Im\u00f3vel</h3>
+                  <h3 className="font-semibold text-foreground">Vídeo do Imóvel</h3>
                 </div>
-                {/* Upload drag&drop de v\u00eddeo */}
+                {/* Upload drag&drop de vídeo */}
                 <input ref={videoInputRef} type="file" accept="video/*" className="hidden" onChange={e => handleVideoUpload(e.target.files)} />
                 <div
                   onDrop={e => handleDrop(e, 'video')}
@@ -543,7 +548,7 @@ export default function Properties() {
                   onClick={() => !isUploading && videoInputRef.current?.click()}
                   className="p-6 border-2 border-dashed border-danger-500/40 rounded-xl text-center cursor-pointer hover:border-danger-500 hover:bg-danger-500/5 transition"
                 >
-                  {isUploading && uploadProgress.includes('v\u00eddeo') ? (
+                  {isUploading && uploadProgress.includes('vídeo') ? (
                     <div className="flex flex-col items-center gap-2">
                       <Loader2 className="h-8 w-8 text-danger-500 animate-spin" />
                       <p className="text-danger-500 font-medium">{uploadProgress}</p>
@@ -551,13 +556,13 @@ export default function Properties() {
                   ) : (
                     <div className="flex flex-col items-center gap-2">
                       <CloudUpload className="h-10 w-10 text-danger-500/60" />
-                      <p className="text-foreground font-medium">Arraste o v\u00eddeo aqui ou clique para buscar</p>
-                      <p className="text-muted-foreground text-xs">Aceita MP4, WebM, MOV (m\u00e1x 50MB)</p>
+                      <p className="text-foreground font-medium">Arraste o vídeo aqui ou clique para buscar</p>
+                      <p className="text-muted-foreground text-xs">Aceita MP4, WebM, MOV (máx 50MB)</p>
                     </div>
                   )}
                 </div>
                 {/* URL manual */}
-                <Input value={form.videoUrl} onChange={e => setForm(p => ({ ...p, videoUrl: e.target.value }))} placeholder="Ou cole a URL do v\u00eddeo (YouTube, etc.)" className="bg-secondary/30 border-border/50" />
+                <Input value={form.videoUrl} onChange={e => setForm(p => ({ ...p, videoUrl: e.target.value }))} placeholder="Ou cole a URL do vídeo (YouTube, etc.)" className="bg-secondary/30 border-border/50" />
                 {form.videoUrl ? (
                   <div className="rounded-xl overflow-hidden border border-border/50 bg-black aspect-video">
                     {form.videoUrl.includes("youtube") || form.videoUrl.includes("youtu.be") ? (
