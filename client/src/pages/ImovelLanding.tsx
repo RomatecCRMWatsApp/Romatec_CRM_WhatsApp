@@ -8,6 +8,7 @@ import { BedDouble, Bath, Car, ChevronLeft, ChevronRight, ImageIcon, MapPin, Mes
 import { campanhaDaVisita, enviarEvento, gravarConsentimento, lerConsentimento, utmsDaVisita, visitanteId, type Consentimento } from "@/lib/rastreio";
 import { origemDaVisita } from "@/lib/origemVisita";
 import { capaDoVideo } from "@/lib/capaVideo";
+import { refDaSessao, useCartaoDoLink } from "@/lib/cartaoVendas";
 
 const TEMPO_PASSO_S = 15;
 const TEMPO_MAX_S = 300;
@@ -76,7 +77,10 @@ export default function ImovelLanding() {
   const preco = imovel ? reais(imovel.offerPrice) || reais(imovel.price) : null;
   const camp = campanhaDaVisita();
   const msgWhats = `Olá! Tenho interesse no imóvel ${codigo}${camp ? ` (#${camp})` : ""}. Pode me passar mais informações?`;
-  const linkWhats = imovel ? `https://wa.me/${imovel.whatsappNumero}?text=${encodeURIComponent(msgWhats)}` : "#";
+  // Link de corretor (?c=): o WhatsApp é o de quem compartilhou; sem link, o número de leads da Romatec
+  const cartaoLink = useCartaoDoLink();
+  const numeroWhats = cartaoLink?.whatsapp || imovel?.whatsappNumero;
+  const linkWhats = imovel ? `https://wa.me/${numeroWhats}?text=${encodeURIComponent(msgWhats)}` : "#";
   const mapa = imovel ? `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent([imovel.address, imovel.city, imovel.state].filter(Boolean).join(", "))}` : "#";
   const area = imovel ? Number(imovel.areaTerreno) || Number(imovel.areaConstruida) || 0 : 0;
 
@@ -97,7 +101,7 @@ export default function ImovelLanding() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           nome: form.nome, phone: form.phone, propertyId: imovel?.id, consent: true, website: form.website,
-          vid: visitanteId() ?? undefined,
+          vid: visitanteId() ?? undefined, ref: refDaSessao(),
           utm: { source: utm.utm_source, medium: utm.utm_medium, campaign: utm.utm_campaign, content: utm.utm_content },
           origemVisita: origemDaVisita(),
         }),
@@ -175,13 +179,13 @@ export default function ImovelLanding() {
 
         {imovel.description && <p className="text-sm text-foreground/90 whitespace-pre-line leading-relaxed">{imovel.description}</p>}
 
-        {imovel.videoUrl && (
-          /\.(mp4|webm|mov)(\?|$)/i.test(imovel.videoUrl) ? (
-            <video preload="metadata" src={imovel.videoUrl} poster={capaDoVideo(imovel.videoUrl)} controls playsInline className="w-full rounded-xl bg-black" onPlay={() => uma("play_video")} />
+        {(((imovel as any).videos as string[] | undefined) ?? (imovel.videoUrl ? [imovel.videoUrl] : [])).map(v => (
+          /\.(mp4|webm|mov|m4v)(\?|$)/i.test(v) || /\/video\/upload\//.test(v) ? (
+            <video key={v} preload="metadata" src={v} poster={capaDoVideo(v)} controls playsInline className="w-full max-h-[80vh] rounded-xl bg-black object-contain" onPlay={() => uma("play_video")} />
           ) : (
-            <a href={imovel.videoUrl} target="_blank" rel="noreferrer" onClick={() => uma("play_video")} className="block text-sm text-ok-400 underline">▶ Ver vídeo do imóvel</a>
+            <a key={v} href={v} target="_blank" rel="noreferrer" onClick={() => uma("play_video")} className="block text-sm text-ok-400 underline">▶ Ver vídeo do imóvel</a>
           )
-        )}
+        ))}
 
         <div className="flex flex-wrap gap-2">
           {imovel.plantaBaixaUrl && (

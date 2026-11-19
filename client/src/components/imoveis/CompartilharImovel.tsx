@@ -4,7 +4,8 @@ import { Copy, Download, ExternalLink, Images, Link2, Loader2, Mail, MessageCirc
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { useAuth } from "@/_core/hooks/useAuth";
 
-import { linkImovel, textoAnuncio, type ImovelCompartilhavel } from "@shared/anuncioImovel";
+import { linkImovel, textoAnuncio, textoDivulgacaoImovel, type ImovelCompartilhavel } from "@shared/anuncioImovel";
+import { comRef, useCartaoVendas } from "@/lib/cartaoVendas";
 
 export type { ImovelCompartilhavel };
 type Canal = "whatsapp" | "instagram" | "facebook" | "telegram" | "email" | "link" | "nativo";
@@ -49,12 +50,15 @@ function Opcao({ icone: Icone, rotulo, sub, onClick, destaque, ocupado, desabili
 /** Folha de compartilhamento de um imóvel: WhatsApp com a ficha, fotos, redes, link rastreado, QR e página pública */
 export function CompartilharImovel({ imovel, aberto, onFechar, onQr }: { imovel: ImovelCompartilhavel | null; aberto: boolean; onFechar: () => void; onQr?: () => void }) {
   const { user } = useAuth();
+  const cartao = useCartaoVendas();
   const [ocupado, setOcupado] = useState<string | null>(null);
   if (!imovel) return null;
   const corretorId = (user as any)?.id ?? null;
-  const assinatura = [(user as any)?.name, (user as any)?.phone || (user as any)?.telefone].filter(Boolean).join(" · ") || null;
-  const link = (c: Canal) => linkPublico(imovel, c, corretorId);
-  const texto = (c: Canal) => textoAnuncio(imovel, link(c), assinatura);
+  const assinatura = [cartao.nome, cartao.telefones[0]].filter(Boolean).join(" · ") || null;
+  // ?c= de quem compartilha: na página do imóvel o WhatsApp e o lead do formulário vão para essa pessoa
+  const link = (c: Canal) => { const l = linkPublico(imovel, c, corretorId); return l ? comRef(l, cartao.ref) : l; };
+  const nVideos = Array.isArray((imovel as any).videos) ? (imovel as any).videos.length : (imovel as any).videoUrl ? 1 : 0;
+  const texto = (c: Canal) => textoDivulgacaoImovel(imovel, link(c), cartao, nVideos);
   const semLink = !link("link");
   const nFotos = imovel.images?.length ?? 0;
   const abrir = (url: string) => window.open(url, "_blank", "noopener,noreferrer");

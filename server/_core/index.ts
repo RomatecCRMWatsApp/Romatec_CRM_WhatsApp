@@ -549,7 +549,11 @@ async function startServer() {
         return res.json({ ok: true });
       }
 
+      // Link de corretor (?c=): o lead é dele; sem link, o rodízio decide (mesma regra do Bom Jardims)
+      const { corretorDoLink } = await import('../obrasBomJardim');
+      const dono = data.ref ? await corretorDoLink(data.ref).catch(() => null) : null;
       const result = await ingestLead({
+        responsavelId: dono?.id ?? null,
         nome: data.nome,
         phone: data.phone,
         origem: origemFromUtm(data.utm),

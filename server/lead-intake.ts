@@ -106,6 +106,8 @@ export const publicLeadSchema = z.object({
   origemVisita: origemVisitaSchema,
   // Cookie rmt_vid (só existe se o visitante aceitou cookies na landing)
   vid: z.string().uuid().optional(),
+  // ?c= do corretor que compartilhou o link do imóvel: o lead é dele (sem ele, o rodízio decide)
+  ref: z.string().regex(/^[A-Za-z0-9_-]{9,16}$/).optional(),
   // Honeypot: campo invisível no formulário. Robô preenche, humano não.
   website: z.string().max(500).optional(),
 });

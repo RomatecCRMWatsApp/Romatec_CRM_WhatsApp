@@ -15,6 +15,9 @@ import MateriaisPainel from "@/components/MateriaisPainel";
 import { capaDoVideo } from "@/lib/capaVideo";
 import { CompartilharImovel } from "@/components/imoveis/CompartilharImovel";
 
+/** Vídeo do cadastro + vídeos liberados do imóvel em Materiais (vem do servidor em `videos`) */
+const videosDe = (p: any): string[] => (Array.isArray(p?.videos) && p.videos.length ? p.videos : p?.videoUrl ? [p.videoUrl] : []);
+
 interface PropertyForm {
   denomination: string;
   address: string;
@@ -778,7 +781,12 @@ export default function Properties() {
                   {/* Mídia badges */}
                   <div className="flex gap-2 mb-4">
                     {property.images?.length > 0 && <span className="badge-success text-xs py-1 px-2"><Image className="h-3 w-3" /> {property.images.length} fotos</span>}
-                    {property.videoUrl && <span className="text-xs py-1 px-2 rounded-full bg-danger-500/15 text-danger-400 border border-danger-500/20 inline-flex items-center gap-1"><Video className="h-3 w-3" /> Vídeo</span>}
+                    {videosDe(property).length > 0 && (
+                      <button type="button" onClick={() => setSelectedProperty(property)} title="Ver os vídeos"
+                        className="text-xs py-1 px-2 rounded-full bg-danger-500/15 text-danger-400 border border-danger-500/20 inline-flex items-center gap-1 hover:bg-danger-500/25 focus-visible:outline focus-visible:outline-2 focus-visible:outline-danger-400">
+                        <Video className="h-3 w-3" /> {videosDe(property).length === 1 ? "Vídeo" : `${videosDe(property).length} vídeos`}
+                      </button>
+                    )}
                     {property.plantaBaixaUrl && <span className="badge-gold text-xs py-1 px-2"><FileImage className="h-3 w-3" /> Planta</span>}
                   </div>
 
@@ -966,15 +974,19 @@ export default function Properties() {
 
               {/* Vídeo e Planta */}
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
-                {selectedProperty.videoUrl && (
-                  <div>
-                    <h3 className="text-sm font-semibold text-muted-foreground mb-2 flex items-center gap-1"><Video className="h-4 w-4 text-danger-400" /> Vídeo</h3>
-                    <div className="aspect-video rounded-xl overflow-hidden border border-border/30">
-                      {selectedProperty.videoUrl.includes("youtube") || selectedProperty.videoUrl.includes("youtu.be") ? (
-                        <iframe src={selectedProperty.videoUrl.replace("watch?v=", "embed/")} className="w-full h-full" allowFullScreen />
-                      ) : (
-                        <video preload="metadata" src={selectedProperty.videoUrl} poster={capaDoVideo(selectedProperty.videoUrl)} controls className="w-full h-full" />
-                      )}
+                {videosDe(selectedProperty).length > 0 && (
+                  <div className={videosDe(selectedProperty).length > 1 ? "md:col-span-2" : ""}>
+                    <h3 className="text-sm font-semibold text-muted-foreground mb-2 flex items-center gap-1"><Video className="h-4 w-4 text-danger-400" /> {videosDe(selectedProperty).length === 1 ? "Vídeo" : `Vídeos (${videosDe(selectedProperty).length})`}</h3>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                      {videosDe(selectedProperty).map(v => (
+                        <div key={v} className="rounded-xl overflow-hidden border border-border/30 bg-black">
+                          {v.includes("youtube") || v.includes("youtu.be") ? (
+                            <iframe src={v.replace("watch?v=", "embed/").replace("youtu.be/", "youtube.com/embed/")} className="w-full aspect-video" allowFullScreen />
+                          ) : (
+                            <video preload="metadata" src={v} poster={capaDoVideo(v)} controls playsInline className="w-full max-h-[480px] object-contain" />
+                          )}
+                        </div>
+                      ))}
                     </div>
                   </div>
                 )}

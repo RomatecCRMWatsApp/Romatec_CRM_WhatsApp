@@ -368,7 +368,11 @@ export const appRouter = router({
 
   properties: router({
     // Público: imóvel com exibirPreco = false sai sem preço ("Valor sob consulta"); logado vê tudo
-    list: publicProcedure.query(async ({ ctx }) => (await getAllProperties()).map((p: any) => semPrecoSeOculto(p, !!ctx.user))),
+    list: publicProcedure.query(async ({ ctx }) => {
+      const { comVideos } = await import("./imoveis/videos");
+      const lista = (await getAllProperties()).map((p: any) => semPrecoSeOculto(p, !!ctx.user)) as (typeof properties.$inferSelect)[];
+      return comVideos(lista);
+    }),
     getById: publicProcedure.input(z.object({ id: z.number() })).query(async ({ input, ctx }) => {
       const p = await getPropertyById(input.id);
       return p ? semPrecoSeOculto(p, !!ctx.user) : p;
@@ -386,7 +390,9 @@ export const appRouter = router({
       const [p] = await db.select().from(properties).where(eq(properties.codigo, input.codigo.toUpperCase())).limit(1);
       if (!p || p.status === "inactive") return null;
       const { numeroWhatsAppLeads } = await import("./leads/config");
-      return { ...semPrecoSeOculto(p, false), whatsappNumero: numeroWhatsAppLeads() };
+      const { comVideos } = await import("./imoveis/videos");
+      const [comV] = await comVideos([semPrecoSeOculto(p, false) as typeof p]);
+      return { ...comV, whatsappNumero: numeroWhatsAppLeads() };
     }),
     create: protectedProcedure
       .input(z.object({

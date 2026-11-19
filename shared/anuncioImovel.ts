@@ -59,3 +59,17 @@ export function textoAnuncio(p: ImovelCompartilhavel, link: string | null, corre
   return linhas.join("\n");
 }
 
+
+/**
+ * Texto de divulgação do imóvel no padrão dos links do Bom Jardims: a ficha, o link (com o ?c= de quem divulga),
+ * os vídeos, o pedido para compartilhar e a assinatura completa do cartão de vendas (nome, CRECI, WhatsApp,
+ * Instagram e a Romatec).
+ */
+import { comAssinatura, type CartaoVendas } from "./cartaoVendas";
+export function textoDivulgacaoImovel(p: ImovelCompartilhavel, link: string | null, cartao: CartaoVendas, nVideos = 0): string {
+  const base = textoAnuncio(p, null, null).split("\n");
+  if (nVideos > 0) base.push(`🎥 ${nVideos === 1 ? "Vídeo do imóvel" : `${nVideos} vídeos do imóvel`} no link`);
+  if (link) base.push("", `👉 Fotos, vídeos e detalhes: ${link}`);
+  base.push("", "🤝 E um favor: compartilhe este link com seus familiares e amigos, para que eles também fiquem por dentro das melhores oportunidades. Obrigado!");
+  return comAssinatura(base.join("\n"), cartao);
+}
