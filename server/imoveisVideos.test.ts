@@ -46,3 +46,20 @@ describe('texto de divulgação do imóvel', async () => {
     expect(t).toContain('Romatec Consultoria Total');
   });
 });
+
+describe('Siga meu Instagram com o imóvel', async () => {
+  const { textoSeguirInstagramImovel } = await import('../shared/anuncioImovel');
+  const { CARTAO_PADRAO } = await import('../shared/cartaoVendas');
+  it('agradecimento, versículo, imóvel com link, seguir, compartilhar e assinatura', () => {
+    const t = textoSeguirInstagramImovel({ id: 1, denomination: 'ALACIDE', codigo: 'IMV-0001' } as any,
+      'https://romateccrm.com/i/IMV-0001?c=abc123def', 'avalieimob', CARTAO_PADRAO, 1);
+    expect(t).toContain('🙏 *Muito obrigado pela confiança e pelo seu tempo!*');
+    expect(t).toContain('(Salmos 37:5)');
+    expect(t).toContain('🏡 *ALACIDE* (IMV-0001)');
+    expect(t).toContain('👉 Fotos, vídeos e detalhes: https://romateccrm.com/i/IMV-0001?c=abc123def');
+    expect(t).toContain('Siga o meu Instagram *@avalieimob*');
+    expect(t).toContain('https://www.instagram.com/avalieimob');
+    expect(t).toContain('compartilhe este link com seus familiares e amigos');
+    expect(t).toContain('CRECI/MA F-4.705');
+  });
+});

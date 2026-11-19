@@ -5,7 +5,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Home, Search, Edit, MapPin, DollarSign, Plus, ArrowLeft, Image, Video, FileImage, Ruler, BedDouble, Bath, Car, Sparkles, ExternalLink, Loader2, Lock, X, Eye, Heart, Phone, MessageCircle, ChevronLeft, ChevronRight, Trash2, Upload, CloudUpload, Share2, Smartphone } from "lucide-react";
+import { Home, Search, Edit, MapPin, DollarSign, Plus, ArrowLeft, Image, Video, FileImage, Ruler, BedDouble, Bath, Car, Sparkles, ExternalLink, Loader2, Lock, X, Eye, Heart, Phone, MessageCircle, ChevronLeft, ChevronRight, Trash2, Upload, CloudUpload, Share2, Smartphone, Instagram } from "lucide-react";
 import { useLocation } from "wouter";
 import { trpc } from "@/lib/trpc";
 import { temAcesso } from "@shared/permissoes";
@@ -93,6 +93,7 @@ export default function Properties() {
   const [showForm, setShowForm] = useState(false);
   const [qrDe, setQrDe] = useState<{ id: number; codigo: string } | null>(null);
   const [compartilhar, setCompartilhar] = useState<any>(null);
+  const [focoInstagram, setFocoInstagram] = useState(false);
   const [filtroStatus, setFiltroStatus] = useState<"todos" | "available" | "sold" | "inactive">("todos");
   const [filtroFinalidade, setFiltroFinalidade] = useState<"todas" | "venda" | "aluguel">("todas");
   const [filtroTipo, setFiltroTipo] = useState<string>("todos");
@@ -840,6 +841,10 @@ export default function Properties() {
                         <Eye className="h-4 w-4" /> Ver detalhes
                       </button>
                     </div>
+                    <button type="button" onClick={() => { setFocoInstagram(true); setCompartilhar(property); }}
+                      className="flex w-full items-center justify-center gap-1.5 rounded-xl bg-gradient-to-r from-[color:var(--c-f58529)] via-[color:var(--c-dd2a7b)] to-[color:var(--c-8134af)] py-2.5 text-sm font-bold text-white transition hover:brightness-110 focus-visible:outline focus-visible:outline-2 focus-visible:outline-[color:var(--c-dd2a7b)]">
+                      <Instagram className="h-4 w-4" /> Siga meu Instagram
+                    </button>
                     <div className="flex gap-2">
                       {!habilitado(property.id) ? (
                         <span className="flex-1 inline-flex items-center justify-center gap-1 text-xs text-muted-foreground" title="Peça ao administrador para habilitar este imóvel">
@@ -1173,8 +1178,8 @@ export default function Properties() {
           </div>
         </div>
       )}
-      <CompartilharImovel imovel={compartilhar} aberto={!!compartilhar} onFechar={() => setCompartilhar(null)}
-        onQr={compartilhar?.codigo ? () => { setQrDe({ id: compartilhar.id, codigo: compartilhar.codigo }); setCompartilhar(null); } : undefined} />
+      <CompartilharImovel imovel={compartilhar} aberto={!!compartilhar} focoInstagram={focoInstagram} onFechar={() => { setCompartilhar(null); setFocoInstagram(false); }}
+        onQr={compartilhar?.codigo ? () => { setQrDe({ id: compartilhar.id, codigo: compartilhar.codigo }); setCompartilhar(null); setFocoInstagram(false); } : undefined} />
       {qrDe && <QrPlaca propertyId={qrDe.id} codigo={qrDe.codigo} onClose={() => setQrDe(null)} />}
     </div>
   );

@@ -74,3 +74,30 @@ export function textoDivulgacaoImovel(p: ImovelCompartilhavel, link: string | nu
   base.push("", "🤝 E um favor: compartilhe este link com seus familiares e amigos, para que eles também fiquem por dentro das melhores oportunidades. Obrigado!");
   return comAssinatura(base.join("\n"), cartao);
 }
+
+/**
+ * "Siga meu Instagram" com o imóvel: o mesmo agradecimento + versículo + pedido para seguir e compartilhar da peça de
+ * Links de divulgação, com o imóvel (nome, código e link com o ?c= de quem divulga) no meio, e a assinatura completa.
+ */
+import { VERSICULOS_AGRADECIMENTO } from "./linksDivulgacao";
+export function textoSeguirInstagramImovel(p: ImovelCompartilhavel, link: string | null, usuario: string, cartao: CartaoVendas, versiculo = 0): string {
+  const v = VERSICULOS_AGRADECIMENTO[versiculo] ?? VERSICULOS_AGRADECIMENTO[0];
+  const linhas = [
+    "🙏 *Muito obrigado pela confiança e pelo seu tempo!*",
+    "",
+    `📖 _"${v.texto}"_ (${v.ref})`,
+    "",
+    "Que Deus abençoe você e toda a sua família! 🏡",
+    "",
+    `🏡 *${p.denomination}*${p.codigo ? ` (${p.codigo})` : ""}`,
+  ];
+  if (link) linhas.push(`👉 Fotos, vídeos e detalhes: ${link}`);
+  linhas.push(
+    "",
+    `📸 Siga o meu Instagram *@${usuario}* e acompanhe as novidades de imóveis, os lançamentos e as oportunidades com que trabalho:`,
+    linkInstagram(usuario),
+    "",
+    "🤝 E um favor: compartilhe este link com seus familiares e amigos, para que eles também fiquem por dentro das melhores oportunidades. Obrigado!",
+  );
+  return comAssinatura(linhas.join("\n"), cartao);
+}

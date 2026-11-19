@@ -1,10 +1,12 @@
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
-import { Copy, Download, ExternalLink, Images, Link2, Loader2, Mail, MessageCircle, QrCode, Send, Share2 } from "lucide-react";
+import { Copy, Download, ExternalLink, Images, Instagram, Link2, Loader2, Mail, MessageCircle, QrCode, Send, Share2 } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { useAuth } from "@/_core/hooks/useAuth";
 
-import { linkImovel, textoAnuncio, textoDivulgacaoImovel, type ImovelCompartilhavel } from "@shared/anuncioImovel";
+import { linkImovel, textoAnuncio, textoDivulgacaoImovel, textoSeguirInstagramImovel, type ImovelCompartilhavel } from "@shared/anuncioImovel";
+import { VERSICULOS_AGRADECIMENTO } from "@shared/linksDivulgacao";
+import { linkInstagram } from "@shared/cartaoVendas";
 import { comRef, useCartaoVendas } from "@/lib/cartaoVendas";
 
 export type { ImovelCompartilhavel };
@@ -48,10 +50,18 @@ function Opcao({ icone: Icone, rotulo, sub, onClick, destaque, ocupado, desabili
 }
 
 /** Folha de compartilhamento de um imóvel: WhatsApp com a ficha, fotos, redes, link rastreado, QR e página pública */
-export function CompartilharImovel({ imovel, aberto, onFechar, onQr }: { imovel: ImovelCompartilhavel | null; aberto: boolean; onFechar: () => void; onQr?: () => void }) {
+export function CompartilharImovel({ imovel, aberto, onFechar, onQr, focoInstagram }: { imovel: ImovelCompartilhavel | null; aberto: boolean; onFechar: () => void; onQr?: () => void; focoInstagram?: boolean }) {
   const { user } = useAuth();
   const cartao = useCartaoVendas();
   const [ocupado, setOcupado] = useState<string | null>(null);
+  const [versiculo, setVersiculo] = useState(0);
+  const secaoIg = useRef<HTMLElement | null>(null);
+  // Aberto pelo botão "Siga meu Instagram" do cartão: vai direto para a peça
+  useEffect(() => {
+    if (!aberto || !focoInstagram) return;
+    const t = setTimeout(() => secaoIg.current?.scrollIntoView({ block: "start" }), 120);
+    return () => clearTimeout(t);
+  }, [aberto, focoInstagram]);
   if (!imovel) return null;
   const corretorId = (user as any)?.id ?? null;
   const assinatura = [cartao.nome, cartao.telefones[0]].filter(Boolean).join(" · ") || null;
@@ -60,6 +70,8 @@ export function CompartilharImovel({ imovel, aberto, onFechar, onQr }: { imovel:
   const nVideos = Array.isArray((imovel as any).videos) ? (imovel as any).videos.length : (imovel as any).videoUrl ? 1 : 0;
   const texto = (c: Canal) => textoDivulgacaoImovel(imovel, link(c), cartao, nVideos);
   const semLink = !link("link");
+  const usuarioIg = cartao.instagramProprio ?? cartao.instagram;
+  const textoSeguir = textoSeguirInstagramImovel(imovel, link("whatsapp"), usuarioIg, cartao, versiculo);
   const nFotos = imovel.images?.length ?? 0;
   const abrir = (url: string) => window.open(url, "_blank", "noopener,noreferrer");
   const copiar = async (t: string, msg: string) => {
@@ -149,6 +161,28 @@ export function CompartilharImovel({ imovel, aberto, onFechar, onQr }: { imovel:
           {onQr && imovel.codigo && <Opcao icone={QrCode} rotulo="QR da placa" sub="PNG/SVG para placa e panfleto" onClick={onQr} />}
           {!semLink && <Opcao icone={ExternalLink} rotulo="Ver página pública" sub="Como o cliente vê" onClick={() => { const l = link("link"); if (l) abrir(l); }} />}
         </div>
+        <section ref={secaoIg} className="space-y-2 rounded-xl border border-[color:var(--c-dd2a7b)]/50 bg-gradient-to-br from-[color:var(--c-dd2a7b)]/10 via-card to-card p-3" aria-label="Siga meu Instagram">
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            <p className="flex items-center gap-1.5 text-sm font-semibold text-foreground"><Instagram className="h-4 w-4 text-[color:var(--c-dd2a7b)]" /> Siga meu Instagram, com este imóvel</p>
+            <label className="flex items-center gap-1.5 text-xs text-muted-foreground">Versículo
+              <select value={versiculo} onChange={e => setVersiculo(Number(e.target.value))} className="h-8 rounded-md border border-border bg-background px-2 text-xs text-foreground">
+                {VERSICULOS_AGRADECIMENTO.map((v, i) => <option key={v.ref} value={i}>{v.ref}</option>)}
+              </select>
+            </label>
+          </div>
+          {!cartao.instagramProprio && <p className="text-[11px] text-warn-300">Sem Instagram no seu cadastro: vai o institucional @{cartao.instagram}. <a href="/meu-cadastro" className="underline">Cadastre o seu</a>.</p>}
+          <pre className="max-h-48 overflow-y-auto whitespace-pre-wrap rounded-lg border border-border bg-secondary/20 p-2 font-sans text-xs text-foreground/80 [overflow-wrap:anywhere]">{textoSeguir}</pre>
+          <div className="flex flex-wrap gap-2">
+            <button type="button" onClick={() => abrir(`https://wa.me/?text=${encodeURIComponent(textoSeguir)}`)}
+              className="inline-flex min-h-10 items-center gap-1.5 rounded-lg bg-ok-600 px-3 text-sm font-semibold text-white hover:bg-ok-700"><MessageCircle className="h-4 w-4" /> Enviar no WhatsApp</button>
+            <button type="button" onClick={() => copiar(textoSeguir, "Texto copiado")}
+              className="inline-flex min-h-10 items-center gap-1.5 rounded-lg border border-border px-3 text-sm hover:bg-secondary/50"><Copy className="h-4 w-4" /> Copiar texto</button>
+            <button type="button" onClick={async () => { if ((navigator as any).share) { try { await navigator.share({ text: textoSeguir }); } catch { /* cancelado */ } } else copiar(textoSeguir, "Texto copiado"); }}
+              className="inline-flex min-h-10 items-center gap-1.5 rounded-lg border border-border px-3 text-sm hover:bg-secondary/50"><Share2 className="h-4 w-4" /> Compartilhar</button>
+            <a href={linkInstagram(usuarioIg)} target="_blank" rel="noreferrer"
+              className="inline-flex min-h-10 items-center gap-1.5 rounded-lg px-3 text-sm hover:bg-secondary/50"><ExternalLink className="h-4 w-4" /> Abrir perfil</a>
+          </div>
+        </section>
         <details className="rounded-xl border border-border/50 bg-secondary/20 p-3 text-xs">
           <summary className="cursor-pointer font-semibold text-foreground">Prévia do anúncio</summary>
           <pre className="mt-2 whitespace-pre-wrap font-sans text-foreground/80">{texto("whatsapp")}</pre>
