@@ -73,6 +73,7 @@ export default function ImovelLanding() {
     if (imovel) document.title = `${imovel.denomination} — Romatec Imóveis`;
   }, [imovel]);
 
+  const videosDoImovel: string[] = ((imovel as any)?.videos as string[] | undefined) ?? (imovel?.videoUrl ? [imovel.videoUrl] : []);
   const imagens: string[] = useMemo(() => (Array.isArray(imovel?.images) ? imovel!.images.filter(Boolean) : []), [imovel]);
   const preco = imovel ? reais(imovel.offerPrice) || reais(imovel.price) : null;
   const camp = campanhaDaVisita();
@@ -179,7 +180,8 @@ export default function ImovelLanding() {
 
         {imovel.description && <p className="text-sm text-foreground/90 whitespace-pre-line leading-relaxed">{imovel.description}</p>}
 
-        {(((imovel as any).videos as string[] | undefined) ?? (imovel.videoUrl ? [imovel.videoUrl] : [])).map(v => (
+        {videosDoImovel.length > 0 && <h2 className="text-lg font-semibold text-foreground">{videosDoImovel.length === 1 ? "Vídeo do imóvel" : `Vídeos do imóvel (${videosDoImovel.length})`}</h2>}
+        {videosDoImovel.map(v => (
           /\.(mp4|webm|mov|m4v)(\?|$)/i.test(v) || /\/video\/upload\//.test(v) ? (
             <video key={v} preload="metadata" src={v} poster={capaDoVideo(v)} controls playsInline className="w-full max-h-[80vh] rounded-xl bg-black object-contain" onPlay={() => uma("play_video")} />
           ) : (

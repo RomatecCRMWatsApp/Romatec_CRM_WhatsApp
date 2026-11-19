@@ -381,7 +381,9 @@ export const appRouter = router({
       const db = await getDb();
       if (!db) return null;
       const result = await db.select().from(properties).where(eq(properties.publicSlug, input.slug)).limit(1);
-      return result[0] ? semPrecoSeOculto(result[0], !!ctx.user) : null;
+      if (!result[0]) return null;
+      const { comVideos } = await import("./imoveis/videos");
+      return (await comVideos([semPrecoSeOculto(result[0], !!ctx.user)]))[0];
     }),
     // Landing /i/:codigo (pública)
     byCodigo: publicProcedure.input(z.object({ codigo: z.string().regex(/^IMV-\d{4}$/i) })).query(async ({ input }) => {

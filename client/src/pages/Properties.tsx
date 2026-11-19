@@ -14,6 +14,7 @@ import { toast } from "sonner";
 import MateriaisPainel from "@/components/MateriaisPainel";
 import { capaDoVideo } from "@/lib/capaVideo";
 import { enviarParaCloudinary } from "@/lib/uploadCloudinary";
+import { ListaVideosExtras, useVideosExtras } from "@/components/imoveis/VideosExtras";
 import { CompartilharImovel } from "@/components/imoveis/CompartilharImovel";
 
 /** Vídeo do cadastro + vídeos liberados do imóvel em Materiais (vem do servidor em `videos`) */
@@ -149,8 +150,12 @@ export default function Properties() {
     setIsUploading(true);
     const newUrls: string[] = [];
     for (let i = 0; i < files.length; i++) {
-      setUploadProgress(`Enviando foto ${i + 1} de ${files.length}...`);
-      const url = await uploadFile(files[i]);
+      const rotulo = `Enviando foto ${i + 1} de ${files.length}...`;
+      setUploadProgress(rotulo);
+      // Direto para o Cloudinary (o mesmo envio de Materiais, funciona no celular); se falhar, pelo servidor (comprime fotos grandes)
+      let url: string | null = null;
+      try { url = (await enviarParaCloudinary(files[i], pct => setUploadProgress(`${rotulo} ${pct}%`))).url; }
+      catch { url = await uploadFile(files[i]); }
       if (url) newUrls.push(url);
     }
     if (newUrls.length > 0) {
@@ -161,20 +166,43 @@ export default function Properties() {
     setUploadProgress("");
   };
 
+  const videosExtras = useVideosExtras(editingId);
+  /**
+   * Vários vídeos: o 1º vai para o campo do imóvel; os seguintes entram como vídeos do imóvel em Materiais (já salvos).
+   * Envio direto para o Cloudinary, em partes (o mesmo de Materiais): o vídeo não passa pelo servidor do CRM.
+   */
   const handleVideoUpload = async (files: FileList | null) => {
     if (!files || files.length === 0) return;
+    const lista = Array.from(files);
     setIsUploading(true);
-    setUploadProgress("Enviando vídeo...");
-    // Direto para o Cloudinary, em partes (o mesmo envio de Materiais): o vídeo não passa pelo servidor do CRM
+    let principal = form.videoUrl;
+    let enviados = 0;
     try {
-      const { url } = await enviarParaCloudinary(files[0], pct => setUploadProgress(`Enviando vídeo... ${pct}%`));
-      setForm(prev => ({ ...prev, videoUrl: url }));
-      toast.success("Vídeo enviado! Clique em Atualizar Imóvel para salvar.");
-    } catch (e: any) {
-      toast.error(`Erro no upload do vídeo: ${e?.message || e}`);
+      for (let i = 0; i < lista.length; i++) {
+        const f = lista[i];
+        const rotulo = lista.length > 1 ? `Enviando vídeo ${i + 1} de ${lista.length}...` : "Enviando vídeo...";
+        setUploadProgress(rotulo);
+        try {
+          const r = await enviarParaCloudinary(f, pct => setUploadProgress(`${rotulo} ${pct}%`));
+          if (!principal) {
+            principal = r.url;
+            setForm(prev => ({ ...prev, videoUrl: r.url }));
+          } else if (editingId) {
+            await videosExtras.adicionar({ titulo: f.name.replace(/\.[^.]+$/, "").replace(/[_-]+/g, " "), url: r.url, mime: r.mime, tamanhoBytes: r.tamanhoBytes });
+          } else {
+            toast.info("Cadastre o imóvel primeiro para adicionar mais de um vídeo.");
+            continue;
+          }
+          enviados++;
+        } catch (e: any) {
+          toast.error(`Erro no upload de ${f.name}: ${e?.message || e}`);
+        }
+      }
+      if (enviados) toast.success(`${enviados} vídeo(s) enviado(s)!${principal && editingId ? " Clique em Atualizar Imóvel para salvar o principal." : ""}`);
     } finally {
       setIsUploading(false);
       setUploadProgress("");
+      if (videoInputRef.current) videoInputRef.current.value = "";
     }
   };
 
@@ -541,7 +569,7 @@ export default function Properties() {
                   <h3 className="font-semibold text-foreground">Vídeo do Imóvel</h3>
                 </div>
                 {/* Upload drag&drop de vídeo */}
-                <input ref={videoInputRef} type="file" accept="video/*" className="hidden" onChange={e => handleVideoUpload(e.target.files)} />
+                <input ref={videoInputRef} type="file" accept="video/*" multiple className="hidden" onChange={e => handleVideoUpload(e.target.files)} />
                 <div
                   onDrop={e => handleDrop(e, 'video')}
                   onDragOver={handleDragOver}
@@ -556,22 +584,29 @@ export default function Properties() {
                   ) : (
                     <div className="flex flex-col items-center gap-2">
                       <CloudUpload className="h-10 w-10 text-danger-500/60" />
-                      <p className="text-foreground font-medium">Arraste o vídeo aqui ou clique para buscar</p>
-                      <p className="text-muted-foreground text-xs">Aceita MP4, WebM, MOV (máx 50MB)</p>
+                      <p className="text-foreground font-medium">Arraste os vídeos aqui ou clique para buscar</p>
+                      <p className="text-muted-foreground text-xs">MP4, WebM ou MOV · pode escolher vários de uma vez{form.videoUrl ? " · os novos se somam ao principal" : ""}</p>
                     </div>
                   )}
                 </div>
                 {/* URL manual */}
                 <Input value={form.videoUrl} onChange={e => setForm(p => ({ ...p, videoUrl: e.target.value }))} placeholder="Ou cole a URL do vídeo (YouTube, etc.)" className="bg-secondary/30 border-border/50" />
                 {form.videoUrl ? (
-                  <div className="rounded-xl overflow-hidden border border-border/50 bg-black aspect-video">
-                    {form.videoUrl.includes("youtube") || form.videoUrl.includes("youtu.be") ? (
-                      <iframe src={form.videoUrl.replace("watch?v=", "embed/").replace("youtu.be/", "youtube.com/embed/")} className="w-full h-full" allowFullScreen />
-                    ) : (
-                      <video preload="metadata" src={form.videoUrl} poster={capaDoVideo(form.videoUrl)} controls className="w-full h-full" />
-                    )}
+                  <div className="space-y-2">
+                    <div className="flex items-center justify-between gap-2">
+                      <p className="text-sm font-semibold text-foreground">Vídeo principal</p>
+                      <button type="button" onClick={() => setForm(p => ({ ...p, videoUrl: "" }))} className="text-xs text-danger-400 hover:underline">Remover</button>
+                    </div>
+                    <div className="rounded-xl overflow-hidden border border-border/50 bg-black">
+                      {form.videoUrl.includes("youtube") || form.videoUrl.includes("youtu.be") ? (
+                        <iframe src={form.videoUrl.replace("watch?v=", "embed/").replace("youtu.be/", "youtube.com/embed/")} className="w-full aspect-video" allowFullScreen />
+                      ) : (
+                        <video preload="metadata" src={form.videoUrl} poster={capaDoVideo(form.videoUrl)} controls playsInline className="w-full max-h-[420px] object-contain" />
+                      )}
+                    </div>
                   </div>
                 ) : null}
+                {editingId && <ListaVideosExtras videos={videosExtras.videos} onRemover={videosExtras.remover} />}
               </TabsContent>
 
               <TabsContent value="planta" className="space-y-4">
@@ -846,7 +881,7 @@ export default function Properties() {
       {/* Modal de Detalhes Premium */}
       {selectedProperty && (
         <Dialog open={!!selectedProperty} onOpenChange={() => { setSelectedProperty(null); setImageIndex(0); }}>
-          <DialogContent className="sm:max-w-4xl w-[calc(100vw-16px)] max-h-[90vh] overflow-y-auto bg-card border-border/50 p-0">
+          <DialogContent className="block w-[calc(100vw-16px)] max-w-[calc(100vw-16px)] sm:max-w-5xl max-h-[92vh] overflow-y-auto overflow-x-hidden bg-card border-border/50 p-0">
             {/* Header com imagem */}
             <div className="relative">
               {selectedProperty.images?.length > 0 ? (
@@ -882,17 +917,17 @@ export default function Properties() {
             </div>
 
             {/* Conteúdo */}
-            <div className="px-4 sm:px-6 pb-6 -mt-8 relative z-10">
-              {/* Nome e Preço */}
-              <div className="flex items-start justify-between mb-4">
-                <div>
+            <div className="px-4 sm:px-6 pb-6 -mt-8 relative z-10 min-w-0">
+              {/* Nome e Preço: no celular um embaixo do outro */}
+              <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between mb-4">
+                <div className="min-w-0">
                   <h2 className="text-2xl md:text-3xl font-bold text-foreground">{selectedProperty.denomination}</h2>
                   <div className="flex items-center gap-1.5 text-muted-foreground mt-1">
                     <MapPin className="h-4 w-4 text-emerald" />
-                    <span>{selectedProperty.address}{selectedProperty.city ? `, ${selectedProperty.city}` : ""}{selectedProperty.state ? ` - ${selectedProperty.state}` : ""}</span>
+                    <span className="min-w-0 break-words">{selectedProperty.address}{selectedProperty.city ? `, ${selectedProperty.city}` : ""}{selectedProperty.state ? ` - ${selectedProperty.state}` : ""}</span>
                   </div>
                 </div>
-                <div className="text-right">
+                <div className="sm:text-right shrink-0">
                   {Number(selectedProperty.offerPrice) > 0 && Number(selectedProperty.offerPrice) < Number(selectedProperty.price) ? (<>
                     <p className="text-sm text-muted-foreground line-through">R$ {formatCurrency(selectedProperty.price)}</p>
                     <p className="text-2xl font-bold text-gold">R$ {formatCurrency(selectedProperty.offerPrice)}</p>
@@ -914,7 +949,7 @@ export default function Properties() {
               )}
 
               {/* Características Grid */}
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-6">
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-6 [&>*]:min-w-0">
                 {selectedProperty.bedrooms > 0 && (
                   <div className="metric-card text-center">
                     <BedDouble className="h-5 w-5 text-emerald mx-auto mb-1" />
@@ -967,7 +1002,7 @@ export default function Properties() {
               {selectedProperty.images?.length > 1 && (
                 <div className="mb-6">
                   <h3 className="text-sm font-semibold text-muted-foreground mb-3">Galeria</h3>
-                  <div className="flex gap-2 overflow-x-auto pb-2">
+                  <div className="flex max-w-full gap-2 overflow-x-auto pb-2">
                     {selectedProperty.images.map((img: string, idx: number) => (
                       <button key={idx} onClick={() => setImageIndex(idx)} className={`flex-shrink-0 w-20 h-16 rounded-lg overflow-hidden border-2 transition ${idx === imageIndex ? "border-emerald" : "border-transparent opacity-60 hover:opacity-100"}`}>
                         <img src={img} alt={`Foto ${idx + 1}`} className="w-full h-full object-cover" />
@@ -978,17 +1013,17 @@ export default function Properties() {
               )}
 
               {/* Vídeo e Planta */}
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
+              <div className="grid grid-cols-1 gap-4 mb-6 md:grid-cols-[minmax(0,1fr)_minmax(0,1fr)]">
                 {videosDe(selectedProperty).length > 0 && (
-                  <div className={videosDe(selectedProperty).length > 1 ? "md:col-span-2" : ""}>
+                  <div className={`min-w-0 ${videosDe(selectedProperty).length > 1 || !selectedProperty.plantaBaixaUrl ? "md:col-span-2" : ""}`}>
                     <h3 className="text-sm font-semibold text-muted-foreground mb-2 flex items-center gap-1"><Video className="h-4 w-4 text-danger-400" /> {videosDe(selectedProperty).length === 1 ? "Vídeo" : `Vídeos (${videosDe(selectedProperty).length})`}</h3>
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    <div className="grid grid-cols-1 gap-3 sm:grid-cols-[minmax(0,1fr)_minmax(0,1fr)]">
                       {videosDe(selectedProperty).map(v => (
-                        <div key={v} className="rounded-xl overflow-hidden border border-border/30 bg-black">
+                        <div key={v} className="min-w-0 rounded-xl overflow-hidden border border-border/30 bg-black">
                           {v.includes("youtube") || v.includes("youtu.be") ? (
                             <iframe src={v.replace("watch?v=", "embed/").replace("youtu.be/", "youtube.com/embed/")} className="w-full aspect-video" allowFullScreen />
                           ) : (
-                            <video preload="metadata" src={v} poster={capaDoVideo(v)} controls playsInline className="w-full max-h-[480px] object-contain" />
+                            <video preload="metadata" src={v} poster={capaDoVideo(v)} controls playsInline className="mx-auto block w-full max-h-[70vh] object-contain" />
                           )}
                         </div>
                       ))}
@@ -996,7 +1031,7 @@ export default function Properties() {
                   </div>
                 )}
                 {selectedProperty.plantaBaixaUrl && (
-                  <div>
+                  <div className="min-w-0">
                     <h3 className="text-sm font-semibold text-muted-foreground mb-2 flex items-center gap-1"><FileImage className="h-4 w-4 text-emerald" /> Planta Baixa</h3>
                     <div className="rounded-xl overflow-hidden border border-border/30">
                       {(selectedProperty.plantaBaixaUrl.toLowerCase().includes('.pdf') || selectedProperty.plantaBaixaUrl.includes('/raw/upload/') || selectedProperty.plantaBaixaUrl.startsWith('data:application/pdf') || /\/api\/imoveis\/\d+\/planta$/.test(selectedProperty.plantaBaixaUrl)) ? (
@@ -1021,7 +1056,7 @@ export default function Properties() {
 
               {/* Botões de Ação */}
               <div className="flex gap-3">
-                <button className="flex-1 btn-premium py-3 rounded-xl flex items-center justify-center gap-2 text-base">
+                <button type="button" onClick={() => setCompartilhar(selectedProperty)} className="flex-1 btn-premium py-3 rounded-xl flex items-center justify-center gap-2 text-base">
                   <MessageCircle className="h-5 w-5" /> WhatsApp
                 </button>
                 <button className="flex-1 btn-gold py-3 rounded-xl flex items-center justify-center gap-2 text-base">

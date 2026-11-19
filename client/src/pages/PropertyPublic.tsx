@@ -44,6 +44,7 @@ export default function PropertyPublic() {
   }
 
   const images = property.images || [];
+  const videos: string[] = (property as any).videos ?? (property.videoUrl ? [property.videoUrl] : []);
   const imageCount = images.length;
   const hasMultipleImages = imageCount > 1;
   const esp = especialistas[selectedEsp];
@@ -184,9 +185,9 @@ export default function PropertyPublic() {
         )}
 
         {/* Fotos/Video/Planta */}
-        {(images.length > 0 || property.videoUrl || property.plantaBaixaUrl) && (
+        {(images.length > 0 || videos.length > 0 || property.plantaBaixaUrl) && (
           <div className="glass-card p-5 mb-6">
-            <div className="flex gap-3 mb-4">
+            <div className="flex flex-wrap gap-3 mb-4">
               {images.length > 0 && (
                 <button onClick={() => setActiveTab("fotos")} className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-medium transition ${activeTab === "fotos" ? "bg-emerald text-white" : "bg-secondary/50 text-muted-foreground hover:bg-secondary"}`}>
                   <ImageIcon className="h-4 w-4" /> Fotos ({images.length})
@@ -197,9 +198,9 @@ export default function PropertyPublic() {
                   <FileImage className="h-4 w-4" /> Planta Baixa
                 </button>
               )}
-              {property.videoUrl && (
+              {videos.length > 0 && (
                 <button onClick={() => setActiveTab("video")} className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-medium transition ${activeTab === "video" ? "bg-emerald text-white" : "bg-secondary/50 text-muted-foreground hover:bg-secondary"}`}>
-                  <Video className="h-4 w-4" /> Vídeo
+                  <Video className="h-4 w-4" /> {videos.length === 1 ? "Vídeo" : `Vídeos (${videos.length})`}
                 </button>
               )}
             </div>
@@ -239,8 +240,12 @@ export default function PropertyPublic() {
               })()
             )}
 
-            {activeTab === "video" && property.videoUrl && (
-              <video preload="metadata" src={property.videoUrl} poster={capaDoVideo(property.videoUrl)} controls className="w-full rounded-xl" />
+            {activeTab === "video" && videos.length > 0 && (
+              <div className="grid grid-cols-1 gap-3 sm:grid-cols-[minmax(0,1fr)_minmax(0,1fr)]">
+                {videos.map(v => (
+                  <video key={v} preload="metadata" src={v} poster={capaDoVideo(v)} controls playsInline className="w-full max-h-[75vh] rounded-xl bg-black object-contain" />
+                ))}
+              </div>
             )}
           </div>
         )}
