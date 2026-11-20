@@ -307,6 +307,14 @@ const COMANDOS: { nome: string; stmt: ReturnType<typeof sql> }[] = [
       SET j.defaultsJson = JSON_SET(j.defaultsJson, ${'$.' + campo}, ${String(SEED_EMP_JURIDICO.defaults[campo])})
       WHERE e.slug = ${SEED_EMP_JURIDICO.slug} AND COALESCE(JSON_UNQUOTE(JSON_EXTRACT(j.defaultsJson, ${'$.' + campo})), '') = ''`,
   })),
+  // Espaço de recreação: deixa de ser área (100,00 m²) e passa a ser frente de 10,00 metros lineares à margem do rio
+  // (o texto do CPCV v3 e do Estatuto v3 diz "metros lineares"); só troca o valor antigo, sem mexer em edição manual
+  {
+    nome: 'empJuridico: recreação em metros lineares (Bom Jardims)',
+    stmt: sql`UPDATE empJuridico j JOIN empreendimentos e ON e.id = j.empreendimentoId
+      SET j.defaultsJson = JSON_SET(j.defaultsJson, '$.emp_area_recreacao_m2', ${String(SEED_EMP_JURIDICO.defaults.emp_area_recreacao_m2)})
+      WHERE e.slug = ${SEED_EMP_JURIDICO.slug} AND JSON_UNQUOTE(JSON_EXTRACT(j.defaultsJson, '$.emp_area_recreacao_m2')) = '100,00'`,
+  },
   // Quadra F é área privada (reserva de preservação), não área pública doada: troca o texto antigo, sem mexer em edição manual
   {
     nome: 'empJuridico: regime da Quadra F (Bom Jardims)',

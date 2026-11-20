@@ -35,7 +35,7 @@
   "emp_onus_declarados": "[PREENCHER — configurado no CRM em Configurações › Empreendimento › Jurídico]",
   "emp_contribuicao_mensal": "100,00",
   "emp_taxa_carteirinha": "25,00",
-  "emp_area_recreacao_m2": "100,00",
+  "emp_area_recreacao_m2": "10,00",
   "emp_fracao_minima_m2": "2.000",
   "emp_qtd_lotes": "85",
   "emp_qtd_comercializaveis": "84",

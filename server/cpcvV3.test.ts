@@ -16,7 +16,7 @@ describe('CPCV Bom Jardims v3', () => {
     const t = await texto();
     for (const trecho of [
       'Fixada inicialmente em R$ 100,00/mês por chácara',
-      'espaço de uso exclusivo de 100,00 m²',
+      'espaço de uso exclusivo de 10,00 metros lineares à margem do rio',
       'taxa de reimpressão de R$ 25,00 por carteirinha',
       'EQUATORIAL MARANHÃO DISTRIBUIDORA DE ENERGIA S.A.',
       'monofásico, bifásico ou trifásico',
@@ -50,7 +50,7 @@ describe('CPCV Bom Jardims v3', () => {
 
   it('padrões do empreendimento e anexo VIII com a tabela da água', async () => {
     expect(SEED_EMP_JURIDICO.defaults.emp_taxa_carteirinha).toBe('25,00');
-    expect(SEED_EMP_JURIDICO.defaults.emp_area_recreacao_m2).toBe('100,00');
+    expect(SEED_EMP_JURIDICO.defaults.emp_area_recreacao_m2).toBe('10,00');
     const { anexoTarifaAgua } = await import('./contratos/anexos');
     const pdf = await anexoTarifaAgua('bomjardims');
     expect(pdf).not.toBeNull();
@@ -69,7 +69,7 @@ describe('Estatuto v1.2 (Quadra F privada como reserva)', () => {
     const t = new PizZip(docx).file('word/document.xml')!.asText().replace(/<[^>]+>/g, '');
     for (const trecho of [
       'área privada do empreendimento, de uso comum dos associados, não integrante das áreas públicas doadas ao Município',
-      'espaço de uso exclusivo de 100,00 m² na Quadra F',
+      'espaço de uso exclusivo de 10,00 metros lineares à margem do rio na Quadra F',
       'São vedadas edificações permanentes (casa, chalé ou similar)',
       'Reserva de preservação.',
       'O uso do córrego limita-se ao banho e à recreação de baixo impacto',
