@@ -257,6 +257,7 @@ export function planoEscolhido(n: NovoContrato['plano'], areaM2: number, precoTa
   const entradaValor = n.modalidade === 'financiado' && !lancamento && n.entradaValor != null ? n.entradaValor : null;
   const sim = simular(areaM2, n.modalidade === 'avista' || lancamento ? 1 : n.entradaParcelas, c, precoTabela, entradaValor);
   const escolha: EscolhaPlano = { modalidade: n.modalidade, prazo: n.prazo, dataPrimeiroPagamento: n.dataPrimeiroPagamento, condicao: n.modalidade === 'financiado' ? n.condicao ?? 'padrao' : 'padrao', modoC: n.modoC, inicioComplemento: n.inicioComplemento,
+    ...(!lancamento && n.modalidade === 'financiado' && n.inicioParcelas ? { inicioParcelas: n.inicioParcelas } : {}),
     ...(lancamento ? { entradaForma: n.entradaForma ?? 'unica', inicioParcelas: n.inicioParcelas || undefined, sinalParcelas: n.sinalParcelas || undefined, parcelaPersonalizada: n.parcelaPersonalizada ?? undefined } : {}) };
   return planoDoContrato(sim, escolha, c, comCorretor);
 }

@@ -58,6 +58,9 @@ function planoInicial(p: any) {
     inicioParcelas: String(p?.parcelas_inicio || "").slice(0, 10),
     sinalParcelas: p?.sinal_parcelado ? Number(p?.entrada_qtd || 1) : 1,
     parcelaPers: p?.parcela_personalizada ? String(p?.saldo_parcela ?? "").replace(".", ",") : "",
+    // Entrada de 30% com valor digitado acima do mínimo (sem desconto): volta preenchida para não se perder ao editar
+    entradaTxt: (!p?.condicao || p.condicao === "padrao") && p?.modalidade === "financiado" && Number(p?.entrada_percentual) > 0.3001 && !(Number(p?.entrada_desconto) > 0)
+      ? Number(p.entrada_valor).toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : "",
   };
 }
 
@@ -95,6 +98,10 @@ export function EditarContrato({ aberto, onFechar, onSalvo, contrato, comprador,
       entradaParcelas: pl.modalidade === "avista" || lanc ? 1 : pl.entradaParcelas,
       ...(pl.modalidade === "financiado" ? { prazo: pl.prazo, condicao: pl.condicao } : { condicao: "padrao" as const }),
       ...(pl.modalidade === "financiado" && pl.condicao === "C" ? { modoC: pl.modoC, ...(pl.modoC === "congelado" ? { inicioComplemento: pl.inicioComp } : {}) } : {}),
+      ...(pl.modalidade === "financiado" && pl.condicao === "padrao" ? {
+        ...(/^\d{4}-\d{2}-\d{2}$/.test(pl.inicioParcelas) ? { inicioParcelas: pl.inicioParcelas } : {}),
+        ...(Number(pl.entradaTxt.replace(/[^\d,]/g, "").replace(",", ".")) > 0 ? { entradaValor: Number(pl.entradaTxt.replace(/[^\d,]/g, "").replace(",", ".")) } : {}),
+      } : {}),
       ...(lanc ? { entradaForma: pl.sinalParcelas > 1 ? "unica" as const : pl.entradaForma, ...(/^\d{4}-\d{2}-\d{2}$/.test(pl.inicioParcelas) ? { inicioParcelas: pl.inicioParcelas } : {}),
         ...(pl.condicao !== "C" && pl.sinalParcelas > 1 ? { sinalParcelas: pl.sinalParcelas } : {}),
         ...(pl.condicao !== "C" && Number(pl.parcelaPers.replace(/\./g, "").replace(",", ".")) > 0 ? { parcelaPersonalizada: Number(pl.parcelaPers.replace(/\./g, "").replace(",", ".")) } : {}) } : {}),
@@ -191,9 +198,19 @@ export function EditarContrato({ aberto, onFechar, onSalvo, contrato, comprador,
                       <input type="number" min={1} max={6} className={classeCampo()} value={pl.entradaParcelas} onChange={e => setPl(x => ({ ...x, entradaParcelas: Math.max(1, Math.min(6, Number(e.target.value) || 1)) }))} />
                     </Campo>
                   )}
+                  {pl.modalidade === "financiado" && pl.condicao === "padrao" && (
+                    <Campo rotulo="Valor da entrada (R$) — vazio = 30% com desconto à vista">
+                      <input inputMode="decimal" className={classeCampo()} value={pl.entradaTxt} placeholder="30% da tabela" onChange={e => setPl(x => ({ ...x, entradaTxt: e.target.value }))} />
+                    </Campo>
+                  )}
                   <Campo rotulo={pl.modalidade === "avista" ? "Vencimento do pagamento" : "Vencimento da entrada (ato)"}>
                     <input type="date" className={classeCampo()} value={pl.data1} onChange={e => setPl(x => ({ ...x, data1: e.target.value }))} />
                   </Campo>
+                  {pl.modalidade === "financiado" && pl.condicao === "padrao" && (
+                    <Campo rotulo="1ª parcela do saldo (vazio = 1 mês depois da entrada)">
+                      <input type="date" className={classeCampo()} value={pl.inicioParcelas} min={pl.data1} onChange={e => setPl(x => ({ ...x, inicioParcelas: e.target.value }))} />
+                    </Campo>
+                  )}
                   {pl.modalidade === "financiado" && pl.condicao !== "padrao" && (<>
                     <Campo rotulo="Forma da entrada (ato)">
                       <select className={sel} value={pl.entradaForma} onChange={e => setPl(x => ({ ...x, entradaForma: e.target.value as "unica" | "boleto_cartao" }))}>

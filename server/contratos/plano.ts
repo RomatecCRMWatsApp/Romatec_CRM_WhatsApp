@@ -186,8 +186,15 @@ export function planoDoContrato(sim: Simulacao, escolha: EscolhaPlano, c: Condic
   const plano = sim.planos.find(p => p.prazo === escolha.prazo);
   if (!plano) throw new Error(`Prazo de ${escolha.prazo} meses não está nas condições do empreendimento`);
   const nEnt = sim.parcelasEntrada.length;
+  // 1º vencimento do saldo escolhido no contrato (vazio = um mês depois da última parcela da entrada)
+  const ini = escolha.inicioParcelas || '';
+  if (ini) {
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(ini)) throw new Error('1º vencimento das parcelas inválido (AAAA-MM-DD)');
+    if (ini <= vencimento(d1, nEnt - 1)) throw new Error('O 1º vencimento das parcelas tem que ser depois do pagamento da entrada');
+  }
+  const primeiraSaldo = ini || vencimento(d1, nEnt);
   const { linhas } = gerarPlano({
-    saldo: sim.saldo, meses: plano.prazo, taxaAA: c.jurosAaEfetivo, primeiraSaldo: vencimento(d1, nEnt),
+    saldo: sim.saldo, meses: plano.prazo, taxaAA: c.jurosAaEfetivo, primeiraSaldo,
     entrada: { parcelas: sim.parcelasEntrada, primeira: d1 },
   });
   const parcelas: ParcelaPlano[] = linhas.map(({ saldoApos, ...l }) => ({ ...l, saldoDevedor: saldoApos }));
@@ -196,7 +203,8 @@ export function planoDoContrato(sim: Simulacao, escolha: EscolhaPlano, c: Condic
     ...base, modalidade: 'financiado', avista_vencimento: '',
     entrada_valor: sim.entradaEfetiva, entrada_percentual: sim.entradaPersonalizada ? r2(sim.entradaEfetiva / sim.preco * 10000) / 10000 : c.entradaPct, entrada_qtd: nEnt,
     entrada_parcela: sim.parcelasEntrada[0], entrada_desconto: nEnt === 1 ? sim.descontoAvista : 0, entrada_venc1: d1,
-    saldo_valor: sim.saldo, saldo_qtd: plano.prazo, saldo_parcela: plano.parcela, saldo_venc1: vencimento(d1, nEnt),
+    saldo_valor: sim.saldo, saldo_qtd: plano.prazo, saldo_parcela: plano.parcela, saldo_venc1: primeiraSaldo,
+    ...(ini ? { parcelas_inicio: ini } : {}),
     total_pagar: plano.totalPago, total_juros: plano.juros,
     comissao_total: com.total, comissao_corretor: com.corretor, comissao_romatec: com.romatec,
     parcelas,

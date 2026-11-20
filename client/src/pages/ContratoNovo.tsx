@@ -113,7 +113,8 @@ export default function ContratoNovo() {
           ...(condicao !== "C" && sinalParcelas > 1 ? { sinalParcelas } : {}),
           ...(perfil === "admin" && condicao !== "C" && valorParcelaPers > 0 ? { parcelaPersonalizada: valorParcelaPers } : {}),
         } : {}),
-        ...(modalidade === "financiado" && condicao === "padrao" && valorEntradaDig > 0 ? { entradaValor: valorEntradaDig } : {}) };
+        ...(modalidade === "financiado" && condicao === "padrao" && valorEntradaDig > 0 ? { entradaValor: valorEntradaDig } : {}),
+        ...(modalidade === "financiado" && condicao === "padrao" && /^\d{4}-\d{2}-\d{2}$/.test(inicioParcelas) ? { inicioParcelas } : {}) };
   const precisaSenha = perfil !== "admin" && !concessao ? foraDoPadrao(plano as any) : [];
   const sim = trpc.contratos.simular.useQuery({ slug, lote, plano, corretorUserId: corretorUserId ?? undefined }, { enabled: !!lote && /^\d{4}-\d{2}-\d{2}$/.test(data1) });
   // Documentos escolhidos no passo 2: sobem logo depois de criar (dependente pela posição na lista)
@@ -352,7 +353,15 @@ export default function ContratoNovo() {
                   </Campo>
                 </>
               )}
-              <Campo rotulo="1º pagamento"><input type="date" className={classeCampo()} value={data1} onChange={e => setData1(e.target.value)} /></Campo>
+              <Campo rotulo={!concessao && modalidade === "financiado" ? "Vencimento da entrada" : "1º pagamento"}><input type="date" className={classeCampo()} value={data1} onChange={e => setData1(e.target.value)} /></Campo>
+              {!concessao && modalidade === "financiado" && condicao === "padrao" && (
+                <Campo rotulo="1ª parcela do saldo">
+                  <input type="date" className={classeCampo()} value={inicioParcelas} min={data1} onChange={e => setInicioParcelas(e.target.value)} aria-describedby="inicio-ajuda" />
+                  <span id="inicio-ajuda" className="mt-1 block text-[11px] text-muted-foreground">
+                    {inicioParcelas ? <>As demais seguem mês a mês. <button type="button" className="underline" onClick={() => setInicioParcelas("")}>usar 1 mês depois da entrada</button></> : "Vazio = 1 mês depois da entrada."}
+                  </span>
+                </Campo>
+              )}
             </div>
             {concessao && (
               <div className="space-y-3 rounded-lg border border-info-500/40 bg-info-500/5 p-3">

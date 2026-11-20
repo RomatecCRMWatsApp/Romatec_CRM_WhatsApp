@@ -42,3 +42,24 @@ describe('entrada digitada acima dos 30%', () => {
     expect(() => simular(AREA, 1, c, null, 166229.46)).toThrow(/menor que o preço/);
   });
 });
+
+describe('1ª parcela do saldo escolhida na entrada de 30%', () => {
+  it('entrada em 24/11/2026 e saldo a partir de 15/01/2027 (C12)', () => {
+    const p = planoEscolhido({ ...base, dataPrimeiroPagamento: '2026-11-24', entradaValor: 50000, inicioParcelas: '2027-01-15' }, AREA, null, c, true);
+    expect(p.entrada_venc1).toBe('2026-11-24');
+    expect(p.saldo_venc1).toBe('2027-01-15');
+    expect(p.parcelas_inicio).toBe('2027-01-15');
+    const saldo = p.parcelas.filter(x => x.tipo === 'saldo');
+    expect(saldo[0].vencimento).toBe('2027-01-15');
+    expect(saldo[1].vencimento).toBe('2027-02-15');
+    expect(saldo.at(-1)!.vencimento).toBe('2036-12-15');
+    expect(saldo[0].valor).toBe(1281.13);
+    expect(tagsPlano(p).plano_saldo_venc1).toBe('15/01/2027');
+  });
+  it('vazio continua 1 mês depois da entrada', () => {
+    expect(planoEscolhido({ ...base, dataPrimeiroPagamento: '2026-11-24' }, AREA, null, c, true).saldo_venc1).toBe('2026-12-24');
+  });
+  it('não aceita a 1ª parcela antes ou no mesmo dia da entrada', () => {
+    expect(() => planoEscolhido({ ...base, dataPrimeiroPagamento: '2026-11-24', inicioParcelas: '2026-11-24' }, AREA, null, c, true)).toThrow(/depois do pagamento da entrada/);
+  });
+});
