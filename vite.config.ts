@@ -170,6 +170,8 @@ export default defineConfig({
       "@": path.resolve(import.meta.dirname, "client", "src"),
       "@shared": path.resolve(import.meta.dirname, "shared"),
       "@assets": path.resolve(import.meta.dirname, "attached_assets"),
+      // Runtime ONNX (WebAssembly) servido pelo próprio site — Tour 3D a partir de fotos
+      "@ort-dist": path.resolve(import.meta.dirname, "node_modules", "@huggingface", "transformers", "dist"),
     },
   },
   envDir: path.resolve(import.meta.dirname),

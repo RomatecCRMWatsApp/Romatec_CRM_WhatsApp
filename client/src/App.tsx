@@ -33,6 +33,7 @@ const Leads = lazy(() => import("./pages/Leads"));
 const LeadCampanhas = lazy(() => import("./pages/LeadCampanhas"));
 const LeadsRelatorio = lazy(() => import("./pages/LeadsRelatorio"));
 const Materiais = lazy(() => import("./pages/Materiais"));
+const Tour3DFotos = lazy(() => import("./pages/Tour3DFotos"));
 const ListaInteresse = lazy(() => import("./pages/ListaInteresse"));
 const AgendaVisitas = lazy(() => import("./pages/AgendaVisitas"));
 const Reunioes = lazy(() => import("./pages/Reunioes"));
@@ -337,6 +338,9 @@ function Router() {
       </Route>
       <Route path={"/leads/lista-interesse"}>
         {() => <SetupGuard component={ListaInteresse} />}
+      </Route>
+      <Route path={"/materiais/tour-3d"}>
+        {() => <SetupGuard component={Tour3DFotos} />}
       </Route>
       <Route path={"/materiais"}>
         {() => <SetupGuard component={Materiais} />}

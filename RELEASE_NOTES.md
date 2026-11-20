@@ -3,6 +3,17 @@
 Cada versão nova vai no TOPO. Depois rode `npm run release` (valida e atualiza o package.json);
 ao subir, o servidor grava a versão no banco e todos recebem o aviso "Novidades da versão".
 
+## 1.185.0 — 2026-11-20
+tipo: minor
+obrigatoria: nao
+titulo: Tour 3D a partir de fotos
+publico: corretor
+
+### Novo
+- Tour 3D a partir de fotos (menu Conteúdo e atividades): tire ou escolha fotos do imóvel (ou use as de um imóvel cadastrado) e o sistema cria um vídeo com movimento em 3D, com título, preço e seu contato.
+- Formatos: Reel/Status (9:16), Apresentação (16:9) e Feed (1:1). Escolha o movimento de cada foto ou deixe no automático.
+- Baixe o MP4 ou envie direto pelo WhatsApp e Instagram. As fotos ficam só no seu aparelho.
+
 ## 1.184.0 — 2026-11-15
 tipo: minor
 obrigatoria: nao
