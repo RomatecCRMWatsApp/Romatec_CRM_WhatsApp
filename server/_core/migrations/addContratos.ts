@@ -307,7 +307,7 @@ const COMANDOS: { nome: string; stmt: ReturnType<typeof sql> }[] = [
       SET j.defaultsJson = JSON_SET(j.defaultsJson, ${'$.' + campo}, ${String(SEED_EMP_JURIDICO.defaults[campo])})
       WHERE e.slug = ${SEED_EMP_JURIDICO.slug} AND COALESCE(JSON_UNQUOTE(JSON_EXTRACT(j.defaultsJson, ${'$.' + campo})), '') = ''`,
   })),
-  // Espaço de recreação: deixa de ser área (100,00 m²) e passa a ser frente de 10,00 metros lineares à margem do rio
+  // Espaço de recreação: deixa de ser área (100,00 m²) e passa a ser frente de 10,00 metros lineares à margem do córrego
   // (o texto do CPCV v3 e do Estatuto v3 diz "metros lineares"); só troca o valor antigo, sem mexer em edição manual
   {
     nome: 'empJuridico: recreação em metros lineares (Bom Jardims)',

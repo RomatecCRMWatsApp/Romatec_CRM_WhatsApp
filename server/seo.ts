@@ -87,7 +87,7 @@ export const META_BOM_JARDIMS: MetaPagina = {
         containedInPlace: { '@type': 'City', name: 'Açailândia', address: { '@type': 'PostalAddress', addressRegion: 'MA', addressCountry: 'BR' } },
         amenityFeature: [
           'Portal com guarita e controle de acesso', 'Ruas internas de 12 m', 'Água encanada de poço artesiano com medição individual',
-          'Área de vivência com reserva de mata nativa e acesso ao córrego', 'Espaço exclusivo de 10 metros lineares à margem do rio por chácara, com tenda e churrasqueira', 'Trilha ecológica',
+          'Área de vivência com reserva de mata nativa e acesso ao córrego', 'Espaço exclusivo de 10 metros lineares à margem do córrego por chácara, com tenda e churrasqueira', 'Trilha ecológica',
         ].map(name => ({ '@type': 'LocationFeatureSpecification', name, value: true })),
         telephone: TELEFONE,
         image: [`${SITE}${IMAGEM_OG}`, ...IMAGENS_BOM_JARDIMS.map(i => `${SITE}${i.src}`)],
