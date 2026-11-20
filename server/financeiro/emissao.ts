@@ -71,7 +71,8 @@ export async function gerarCobrancasDoPlano(contratoId: number, plano: PlanoCont
       });
       novas++;
     } catch (e: any) {
-      if (!/unique|duplicate/i.test(String(e?.message ?? e?.cause?.message ?? ''))) throw e;
+      // No MySQL o Drizzle põe "Failed query: …" em message e o "Duplicate entry" (ER_DUP_ENTRY) só em cause
+      if (!/unique|duplicate/i.test(`${e?.message ?? ''} ${e?.cause?.message ?? ''} ${e?.cause?.code ?? ''}`)) throw e;
     }
   }
   return novas;
