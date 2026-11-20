@@ -54,6 +54,7 @@ import { notificacoesRouter } from "./routers/notificacoes.router";
 import { prospeccaoRouter } from "./routers/prospeccao.router";
 import { gestaoRouter } from "./routers/gestao.router";
 import { baseConhecimentoRouter } from "./routers/baseConhecimento.router";
+import { privacidadeRouter } from "./routers/privacidade.router";
 import { exigirAcesso, exigirLead, leadsVisiveis } from "./permissoes";
 import { acessosCorretor } from "../drizzle/schema";
 import { z } from "zod";
@@ -88,6 +89,22 @@ async function exigirContato(id: number, ctx: { user: { id: number }; permissoes
   if (!c || !final11(c.phone) || !meus.some((l: { phone: string }) => final11(l.phone) === final11(c.phone))) throw new TRPCError({ code: "FORBIDDEN", message: "Este cliente é de um lead de outro responsável." });
 }
 
+/**
+ * Lista de contatos com o MESMO escopo de exigirContato: escritório vê todos; corretor só os contatos dos leads em que
+ * é o responsável (antes a lista devolvia a base inteira de nomes/telefones/e-mails a qualquer corretor).
+ */
+export async function contatosVisiveis(ctx: { user: { id: number }; permissoes: { perfil: string | null } }) {
+  const perfil = ctx.permissoes.perfil;
+  const todos = await getAllContacts();
+  if (perfil === "admin" || perfil === "secretario") return todos;
+  if (perfil !== "corretor") return [];
+  const db = await getDb();
+  if (!db) return [];
+  const final11 = (v: unknown) => String(v ?? "").replace(/\D/g, "").slice(-11);
+  const meus = new Set((await db.select({ phone: leadQualifications.phone }).from(leadQualifications).where(eq(leadQualifications.responsavelId, ctx.user.id))).map((l: { phone: string }) => final11(l.phone)).filter(Boolean));
+  return todos.filter((c: { phone: string | null }) => !!final11(c.phone) && meus.has(final11(c.phone)));
+}
+
 /** exibirPreco = false: visitante não recebe preço nem preço de oferta */
 function semPrecoSeOculto<T extends Record<string, any>>(p: T, logado: boolean): T {
   if (logado || p.exibirPreco !== false) return p;
@@ -102,6 +119,7 @@ const filtroListaLeads = z.object({
 });
 
 export const appRouter = router({
+  privacidade: privacidadeRouter,
   zaira: zairaRouter,
   leadCampanhas: leadCampanhasRouter,
   crm: crmRouter,
@@ -273,7 +291,7 @@ export const appRouter = router({
       }),
   }),
   contacts: router({
-    list: protectedProcedure.query(async () => getAllContacts()),
+    list: protectedProcedure.query(async ({ ctx }) => contatosVisiveis(ctx)),
     /** Ficha completa do cliente (mesma de comprador nos contratos), ligada pelo telefone */
     cadastro: protectedProcedure.input(z.object({ id: z.number().int() })).query(async ({ input, ctx }) => {
       await exigirContato(input.id, ctx);
@@ -905,7 +923,8 @@ export const appRouter = router({
     }),
   }),
   bot: router({
-    processMessage: protectedProcedure.input(z.object({ phone: z.string(), message: z.string().optional(), audioUrl: z.string().optional(), senderName: z.string().optional() })).mutation(async ({ input }) => {
+    // Só o administrador: simular o robô dispara mensagens e altera leads (nenhuma tela da equipe usa)
+    processMessage: adminProcedure.input(z.object({ phone: z.string(), message: z.string().optional(), audioUrl: z.string().optional(), senderName: z.string().optional() })).mutation(async ({ input }) => {
       const { processBotMessage } = await import('./bot-ai');
       try {
         const response = await processBotMessage({ phone: input.phone, message: input.message, audioUrl: input.audioUrl, senderName: input.senderName });
@@ -925,7 +944,8 @@ export const appRouter = router({
     }),
   }),
   zapi: router({
-    sendMessage: protectedProcedure.input(z.object({ phone: z.string().min(2), message: z.string().min(1) })).mutation(async ({ input }) => {
+    // Só o administrador (tela Configurações): mensagem livre pelo WhatsApp da empresa para qualquer número
+    sendMessage: adminProcedure.input(z.object({ phone: z.string().min(2), message: z.string().min(1) })).mutation(async ({ input }) => {
       const config = await getCompanyConfig();
       if (!config?.zApiInstanceId || !config?.zApiToken) return { success: false, error: 'Z-API nao configurado' };
       const { sendMessageViaZAPI } = await import('./zapi-integration');
