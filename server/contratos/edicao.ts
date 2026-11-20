@@ -2,7 +2,9 @@
  * Edição e exclusão de contrato — SÓ o administrador, confirmando com a senha de login (step-up, como o cancelamento).
  *
  * Editar: comprador, cônjuge, corretor, lead e condições específicas em qualquer etapa (menos cancelado/distratado);
- * o plano de pagamento só antes da assinatura e sem nenhuma cobrança emitida. Se o contrato já estava gerado ou em
+ * o plano de pagamento enquanto o contrato não foi assinado por todos e nada foi pago. Boleto já emitido e não pago
+ * (ex.: o da entrada, que sai com o link de assinatura) é cancelado no Asaas e o novo sai no reenvio para assinatura,
+ * com o aviso da alteração na mensagem. Se o contrato já estava gerado ou em
  * assinatura, volta a rascunho (a rodada de assinaturas pendente é descartada) para gerar o PDF novo com os dados certos.
  * Já assinado/ativo: só correção cadastral; o PDF assinado continua o oficial (a mudança vai para a trilha).
  *
@@ -51,14 +53,47 @@ export async function edicaoPermitida(contratoId: number) {
   const comDinheiro = await temDinheiro(d, contratoId, cobs);
   const encerrado = ENCERRADOS.includes(c.status);
   const concessao = !!json(c.simulacaoJson)?.concessao;
+  const pago = await temPagamento(d, contratoId, cobs);
+  const boletosEmitidos = cobs.filter(x => x.asaas && !['paga', 'recebida', 'cancelada'].includes(String(x.status))).length;
   return {
     editar: !encerrado,
-    plano: !encerrado && !concessao && ANTES_DA_ASSINATURA.includes(c.status) && !cobs.some(x => x.asaas || x.status !== 'prevista'),
+    plano: !encerrado && !concessao && ANTES_DA_ASSINATURA.includes(c.status) && !pago,
+    /** Boletos emitidos e não pagos que serão cancelados no Asaas se o plano mudar */
+    boletosACancelar: boletosEmitidos,
     voltaRascunho: ['minuta', 'apto_assinatura', 'em_assinatura'].includes(c.status),
     soCadastral: ['assinado', 'ativo', 'quitado'].includes(c.status),
     excluir: !comDinheiro,
     motivoNaoExcluir: comDinheiro ? 'Este contrato tem boleto emitido ou pagamento registrado: use Cancelar, que guarda o histórico financeiro.' : null,
   };
+}
+
+/** Algum pagamento já entrou (cobrança paga/recebida, recibo, repasse, quitação ou rateio): aí o plano não muda mais */
+async function temPagamento(d: any, contratoId: number, cobs: any[]): Promise<boolean> {
+  if (cobs.some(x => ['paga', 'recebida'].includes(String(x.status)))) return true;
+  const [r]: any[] = await d.select({ id: recibos.id }).from(recibos).where(eq(recibos.contratoId, contratoId)).limit(1);
+  const [k]: any[] = await d.select({ id: comissaoRepasses.id }).from(comissaoRepasses).where(eq(comissaoRepasses.contratoId, contratoId)).limit(1);
+  const [q]: any[] = await d.select({ id: declaracoesQuitacao.id }).from(declaracoesQuitacao).where(eq(declaracoesQuitacao.contratoId, contratoId)).limit(1);
+  const [p]: any[] = await d.select({ id: pagamentoRateio.id }).from(pagamentoRateio).where(eq(pagamentoRateio.contratoId, contratoId)).limit(1);
+  return !!(r || k || q || p);
+}
+
+/** Rótulo curto do plano para o aviso da reassinatura ("Plano C · 120×", "Entrada de 30% · 120×") */
+function rotuloPlano(p: any): string {
+  if (!p) return '—';
+  if (p.modalidade === 'avista') return 'à vista';
+  const cond = p.condicao && p.condicao !== 'padrao' ? `Plano ${p.condicao}` : 'Entrada + saldo';
+  return `${cond} (${p.saldo_qtd}× de R$ ${Number(p.saldo_parcela).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })})`;
+}
+const dataBR = (iso?: string | null) => (iso ? String(iso).slice(0, 10).split('-').reverse().join('/') : '—');
+
+/** Texto do aviso que vai junto com o novo link de assinatura quando o plano mudou */
+export function avisoAlteracaoPlano(antes: any, depois: any): string {
+  const partes: string[] = [];
+  if (rotuloPlano(antes) !== rotuloPlano(depois)) partes.push(`plano de pagamento: de ${rotuloPlano(antes)} para ${rotuloPlano(depois)}`);
+  if (Number(antes?.entrada_valor) !== Number(depois?.entrada_valor)) partes.push(`entrada: R$ ${Number(depois?.entrada_valor).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`);
+  if ((antes?.entrada_venc1 || '') !== (depois?.entrada_venc1 || '')) partes.push(`vencimento da entrada: ${dataBR(depois?.entrada_venc1)}`);
+  if ((antes?.saldo_venc1 || '') !== (depois?.saldo_venc1 || '')) partes.push(`1ª parcela: ${dataBR(depois?.saldo_venc1)}`);
+  return partes.length ? partes.join('; ') : 'condições de pagamento';
 }
 
 async function temDinheiro(d: any, contratoId: number, cobs: any[]): Promise<boolean> {
@@ -81,7 +116,7 @@ export async function editarContratoAdmin(contratoId: number, ator: Ator, senha:
   const c = await contratoPorId(contratoId);
   const pode = await edicaoPermitida(contratoId);
   if (!pode.editar) throw new ContratoErro('STATUS', 'Contrato cancelado ou distratado não pode ser editado', 409);
-  if (e.plano && !pode.plano) throw new ContratoErro('PLANO', 'O plano de pagamento só muda antes da assinatura e sem cobranças emitidas. Para contrato assinado, use um termo aditivo.', 409);
+  if (e.plano && !pode.plano) throw new ContratoErro('PLANO', 'O plano de pagamento só muda enquanto o contrato não foi assinado por todos e nada foi pago. Para contrato assinado, use um termo aditivo.', 409);
   const agora = new Date();
   const mudou: string[] = [];
   let leadId = c.leadId ?? null;
@@ -118,8 +153,31 @@ export async function editarContratoAdmin(contratoId: number, ator: Ator, senha:
     const corretor = e.corretorUserId ?? c.corretorUserId;
     plano = planoEscolhido(e.plano, Number(lote.areaM2), lote.precoTabela != null ? Number(lote.precoTabela) : null, await condicoesDe(c.empreendimentoId), corretor !== resp);
     set.simulacaoJson = plano;
-    // Cobranças ainda só previstas (nada no Asaas): saem; o plano novo gera as dele na ativação
-    await d.delete(cobrancas).where(and(eq(cobrancas.contratoId, contratoId), eq(cobrancas.status, 'prevista')));
+    // Boletos emitidos e não pagos (ex.: o da entrada, que saiu com o link de assinatura): cancela no Asaas antes de
+    // trocar o plano. Se o Asaas recusar (ex.: já foi pago), nada muda e o administrador vê o motivo.
+    const todas: any[] = await d.select().from(cobrancas).where(eq(cobrancas.contratoId, contratoId));
+    const { cancelarCobrancaInterna } = await import('./cancelamento');
+    const { slugDoContrato } = await import('../financeiro/servico');
+    const slug = await slugDoContrato(contratoId);
+    const canceladas: { id: number; tipo: string; numero: number; valor: string; vencimento: string; asaas: string | null }[] = [];
+    for (const cob of todas.filter(x => x.asaasPaymentId && !['paga', 'recebida', 'cancelada'].includes(String(x.status)))) {
+      const r = await cancelarCobrancaInterna(cob, slug);
+      if (r.asaas === 'erro' || r.asaas === 'sem_chave') {
+        throw new ContratoErro('ASAAS', `Não consegui cancelar no Asaas o boleto ${cob.tipo} ${cob.numero} (${r.erro ?? 'sem chave do Asaas'}). O plano não foi alterado; confira no Asaas e tente de novo.`, 502);
+      }
+      canceladas.push({ id: Number(cob.id), tipo: String(cob.tipo), numero: Number(cob.numero), valor: String(cob.valor), vencimento: String(cob.vencimento).slice(0, 10), asaas: cob.asaasPaymentId ?? null });
+    }
+    // As linhas do plano antigo saem (previstas e as canceladas acima: nenhuma foi paga); o plano novo grava as dele
+    // no reenvio para assinatura (boleto novo da entrada) e na ativação (carnê). O histórico fica na auditoria.
+    const ids = todas.filter(x => !['paga', 'recebida'].includes(String(x.status))).map(x => Number(x.id));
+    if (ids.length) {
+      await d.delete(cobrancaAvisos).where(inArray(cobrancaAvisos.cobrancaId, ids)).catch(() => {});
+      await d.delete(cobrancas).where(inArray(cobrancas.id, ids));
+    }
+    if (canceladas.length) await auditar('contrato.boletos_cancelados_troca_plano', { contratoId, usuarioId: ator.id, origem: 'perfil', ip, detalhe: { canceladas } });
+    // Aviso que vai junto com o novo link de assinatura (usado no próximo envio)
+    const dados = json(set.dadosJson ?? c.dadosJson);
+    set.dadosJson = { ...dados, avisoReassinatura: { texto: avisoAlteracaoPlano(json(c.simulacaoJson), plano), em: agora.toISOString(), boletosCancelados: canceladas.length } };
     mudou.push('plano de pagamento');
   }
   // Já gerado ou em assinatura: volta a rascunho para sair o PDF novo; a rodada de assinaturas pendente é descartada

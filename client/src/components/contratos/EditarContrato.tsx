@@ -84,7 +84,7 @@ export function EditarContrato({ aberto, onFechar, onSalvo, contrato, comprador,
   }, [aberto, comprador, conjuge, contrato.corretorUserId, contrato.condicoesEspecificas, plano]);
   const editar = trpc.contratos.editar.useMutation({
     onSuccess: r => {
-      toast.success(r.voltouRascunho ? "Contrato atualizado. Ele voltou a rascunho: gere a minuta/definitivo de novo." : r.soCadastral ? "Cadastro corrigido. O PDF assinado continua o oficial (alteração na trilha)." : "Contrato atualizado");
+      toast.success(r.voltouRascunho ? `Contrato atualizado${r.campos?.includes("plano de pagamento") && ((pode.data as any)?.boletosACancelar ?? 0) > 0 ? " e boleto antigo cancelado no Asaas" : ""}. Ele voltou a rascunho: gere o definitivo e envie para assinatura de novo (a mensagem já avisa da alteração).` : r.soCadastral ? "Cadastro corrigido. O PDF assinado continua o oficial (alteração na trilha)." : "Contrato atualizado");
       onSalvo(); onFechar();
     },
     onError: e => toast.error(e.message),
@@ -174,7 +174,12 @@ export function EditarContrato({ aberto, onFechar, onSalvo, contrato, comprador,
               <label className="flex items-center gap-2 text-sm font-semibold">
                 <input type="checkbox" checked={mudarPlano} disabled={!pode.data?.plano} onChange={e => setMudarPlano(e.target.checked)} /> Mudar o plano de pagamento
               </label>
-              {!pode.data?.plano && <p className="text-xs text-muted-foreground">O plano só muda antes da assinatura e sem boleto emitido (contrato assinado: termo aditivo).</p>}
+              {!pode.data?.plano && <p className="text-xs text-muted-foreground">O plano só muda enquanto o contrato não foi assinado por todos e nada foi pago (contrato assinado: termo aditivo).</p>}
+              {mudarPlano && pode.data?.plano && ((pode.data as any)?.boletosACancelar ?? 0) > 0 && (
+                <p className="rounded-md border border-warn-500/40 bg-warn-500/10 p-2 text-xs text-warn-300">
+                  {(pode.data as any).boletosACancelar === 1 ? "O boleto já emitido (entrada) será cancelado no Asaas" : `Os ${(pode.data as any).boletosACancelar} boletos já emitidos serão cancelados no Asaas`} ao salvar. Depois gere o definitivo e envie para assinatura de novo: o boleto novo vai junto com o link, e a mensagem avisa o cliente da alteração.
+                </p>
+              )}
               {mudarPlano && pode.data?.plano && (
                 <div className="grid gap-3 sm:grid-cols-3">
                   <Campo rotulo="Modalidade">
