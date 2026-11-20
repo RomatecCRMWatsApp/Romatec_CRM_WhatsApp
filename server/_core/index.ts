@@ -28,6 +28,8 @@ async function findAvailablePort(startPort: number = 3000): Promise<number> {
 }
 
 async function startServer() {
+  // LGPD: telefone, CPF, e-mail, chaves e tokens saem redigidos dos logs (server/privacidade/redacao.ts; LOG_REDACAO=off desliga)
+  (await import('../privacidade/redacao')).instalarRedacaoDeLogs();
   const app = express();
   const server = createServer(app);
   // CSRF: escrita com a sessão vinda de outro site é recusada (server/_core/origem.ts)
@@ -837,6 +839,11 @@ async function startServer() {
       if (!buffer || buffer.length === 0) {
         return res.status(400).json({ success: false, error: 'Arquivo vazio' });
       }
+      // Tipo conferido pelos bytes: recusa SVG/HTML ou outro arquivo disfarçado de imagem/vídeo/PDF (shared/uploadSeguro.ts)
+      const { conferirTipo } = await import('../../shared/uploadSeguro');
+      if (!conferirTipo(fileType, buffer)) {
+        return res.status(415).json({ success: false, error: 'O conteúdo do arquivo não corresponde ao tipo informado. Use JPG, PNG, WEBP, GIF, MP4, MOV, WEBM ou PDF.' });
+      }
       if (buffer.length > 100 * 1024 * 1024) {
         return res.status(400).json({ success: false, error: 'Arquivo excede 100MB' });
       }
@@ -1101,6 +1108,30 @@ async function startServer() {
     }
   });
 
+  // Exportação dos dados de um titular (LGPD): link assinado de 15 min + sessão de administrador (server/privacidade/titular.ts)
+  app.get('/api/privacidade/exportacao/:token', async (req, res) => {
+    try {
+      res.setHeader('Cache-Control', 'private, no-store');
+      res.setHeader('X-Robots-Tag', 'noindex');
+      const user = await usuarioLogado(req);
+      const { perfilDe } = await import('../../shared/equipe');
+      if (!user || perfilDe(user) !== 'admin') return res.status(401).send('Faça login como administrador para baixar este arquivo');
+      const T = await import('../privacidade/titular');
+      const t = T.lerTokenExportacao(String(req.params.token));
+      if (!t) return res.status(410).send('Link vencido ou inválido. Gere um novo no CRM.');
+      const pacote = await T.dadosDoTitular(t.criterios);
+      const { registrarEvento } = await import('../privacidade/pedidos');
+      await registrarEvento(t.pedidoId, 'exportacao_baixada', user.id, { formato: t.formato }).catch(() => {});
+      const nome = `dados-titular-pedido-${t.pedidoId}.${t.formato}`;
+      res.setHeader('Content-Disposition', `attachment; filename="${nome}"`);
+      if (t.formato === 'csv') return res.type('text/csv; charset=utf-8').send(T.paraCsv(pacote));
+      res.type('application/json').send(JSON.stringify(pacote, null, 2));
+    } catch (e: any) {
+      console.error('[Privacidade] Exportação falhou:', e?.message);
+      res.status(500).send('Falha ao gerar o arquivo');
+    }
+  });
+
   // Foto de perfil (todos os perfis): WEBP 512×512 recortado no navegador, guardado no banco
   app.post('/api/usuarios/:id/foto', express.raw({ type: '*/*', limit: '6mb' }), async (req, res) => {
     try {
@@ -1228,11 +1259,14 @@ async function startServer() {
       const [arq] = await db.select().from(empreendimentoArquivos).where(eq(empreendimentoArquivos.id, Number(req.params.id) || 0)).limit(1);
       if (!arq) return res.status(404).send('Arquivo não encontrado');
       if (!(await habilitadoNoEmpreendimento(user, arq.empreendimentoId))) return res.status(403).send('Você não está habilitado para este empreendimento');
-      const inline = /^(application\/pdf|image\/)/.test(arq.mime || '') && req.query.baixar !== '1';
-      res.setHeader('Content-Type', arq.mime || 'application/octet-stream');
+      const conteudo = Buffer.from(arq.conteudoBase64, 'base64');
+      // Abre no navegador só PDF/imagem conferidos pelos bytes (SVG/HTML com tipo "image/…" vira download: evita script no domínio do CRM)
+      const { podeAbrirInline, mimePelosBytes } = await import('../../shared/uploadSeguro');
+      const inline = podeAbrirInline(conteudo) && req.query.baixar !== '1';
+      res.setHeader('Content-Type', inline ? mimePelosBytes(conteudo)! : 'application/octet-stream');
       res.setHeader('Content-Disposition', `${inline ? 'inline' : 'attachment'}; filename*=UTF-8''${encodeURIComponent(arq.nome)}`);
       res.setHeader('Cache-Control', 'private, no-store');
-      res.send(Buffer.from(arq.conteudoBase64, 'base64'));
+      res.send(conteudo);
     } catch (error: any) {
       console.error('[Empreendimentos] Download falhou:', error?.message);
       res.status(500).send('Falha ao abrir o arquivo');
@@ -1499,6 +1533,13 @@ async function startServer() {
     await addRelatoriosFotograficos();
   } catch (e) {
     console.error('❌ Erro na migration addMateriais:', e);
+  }
+
+  try {
+    const { addPrivacidade } = await import('./migrations/addPrivacidade');
+    await addPrivacidade();
+  } catch (e) {
+    console.error('❌ Erro na migration addPrivacidade:', e);
   }
 
   try {

@@ -112,6 +112,7 @@ const MENU: Grupo[] = [
       { rotulo: "Recrutamento", rota: "/recrutamento", icone: UserPlus },
       { rotulo: "Equipe", rota: "/equipe", icone: UserCog },
       { rotulo: "Controle de acessos", rota: "/controle-acessos", icone: ShieldCheck },
+      { rotulo: "Pedidos de privacidade (LGPD)", rota: "/privacidade/pedidos", icone: ShieldCheck },
       { rotulo: "Respostas automáticas", rota: "/respostas-automaticas", icone: Bot },
       { rotulo: "SaaS e assinaturas", rota: "/saas", icone: BadgeDollarSign },
       { rotulo: "Integrações", rota: "/integracoes", icone: Plug },

@@ -53,7 +53,7 @@ export function tipoLogin(entrada: string): 'email' | 'cpf' | 'creci' {
 
 // ─── Servidor: procedimentos tRPC ────────────────────────────────────────────
 /** O empreendedor só chama estes (o resto do CRM é negado por padrão); o próprio cadastro todos editam */
-const TRPC_EMPREENDEDOR = ['auth.', 'empreendedor.', 'system.versao', 'cadastro.', 'novidades.naoLidas', 'novidades.historico', 'novidades.marcarLida', 'novidades.marcarTodas', 'novidades.novosLeads', 'novidades.definirDescanso', 'notificacoes.', 'saas.minhaAssinatura', 'saas.minhaCheckout', 'saas.cupomValidar',
+const TRPC_EMPREENDEDOR = ['auth.', 'privacidade.minhaSituacao', 'privacidade.aceitar', 'privacidade.marketing', 'empreendedor.', 'system.versao', 'cadastro.', 'novidades.naoLidas', 'novidades.historico', 'novidades.marcarLida', 'novidades.marcarTodas', 'novidades.novosLeads', 'novidades.definirDescanso', 'notificacoes.', 'saas.minhaAssinatura', 'saas.minhaCheckout', 'saas.cupomValidar',
   // Portal do empreendedor: mapa e situação das chácaras do empreendimento dele, vendas e tabelas (escopo conferido no servidor)
   'empreendimentosAdmin.detalhe', 'empreendimentosAdmin.atualizarLote', 'empreendimentosAdmin.historico', 'empreendimentosAdmin.memoriais',
   'financeiro.vendas', 'financeiro.tabelasEmpreendimentos', 'financeiro.tabela', 'comissoes.tabela',
@@ -69,7 +69,7 @@ const TRPC_EMPREENDEDOR = ['auth.', 'empreendedor.', 'system.versao', 'cadastro.
  * Corpo jurídico (advogados do empreendimento): só o portal jurídico — documentos (estatuto, modelos, contratos e
  * aditivos), financeiro do empreendimento (leitura) e as pontuações jurídicas. O escopo é o empreendimento do login.
  */
-const TRPC_JURIDICO = ['auth.', 'juridico.', 'certificado.', 'system.versao', 'system.linkPdf', 'cadastro.', 'saas.minhaAssinatura', 'saas.minhaCheckout', 'saas.cupomValidar', 'novidades.naoLidas', 'novidades.historico', 'novidades.marcarLida', 'novidades.marcarTodas', 'novidades.definirDescanso', 'notificacoes.'];
+const TRPC_JURIDICO = ['auth.', 'privacidade.minhaSituacao', 'privacidade.aceitar', 'privacidade.marketing', 'juridico.', 'certificado.', 'system.versao', 'system.linkPdf', 'cadastro.', 'saas.minhaAssinatura', 'saas.minhaCheckout', 'saas.cupomValidar', 'novidades.naoLidas', 'novidades.historico', 'novidades.marcarLida', 'novidades.marcarTodas', 'novidades.definirDescanso', 'notificacoes.'];
 /** Secretário e corretor não mexem em configurações, na equipe nem na ZAYRA */
 const TRPC_SO_ADMIN = ['companyConfig.update', 'equipe.', 'zaira.'];
 
@@ -90,7 +90,9 @@ export function telaInicial(perfil: Perfil | null): string {
 export function podeAbrir(perfil: Perfil | null, caminho: string): boolean {
   if (!perfil) return false;
   if (perfil === 'admin') return true;
-  if (caminho === '/meu-cadastro' || caminho === '/instalar') return true;
+  if (caminho === '/meu-cadastro' || caminho === '/instalar' || caminho === '/minha-privacidade') return true;
+  // Pedidos de privacidade (LGPD) de titulares: só o administrador
+  if (caminho === '/privacidade/pedidos') return false;
   // Área do assinante (camada SaaS): corretor e empreendedor
   if (caminho === '/assinatura') return perfil === 'corretor' || perfil === 'empreendedor' || perfil === 'juridico';
   if (perfil === 'juridico') return caminho === '/juridico' || caminho.startsWith('/juridico/');

@@ -161,5 +161,7 @@ export function calcularMrr(itens: { status: string; origem: string; ciclo?: str
 export const precisaLicenca = (perfil: string | null | undefined) => perfil === 'corretor' || perfil === 'empreendedor' || perfil === 'juridico';
 
 /** Procedimentos tRPC liberados mesmo bloqueado (paywall, sessão e o próprio cadastro) */
-export const LIVRES_SEM_LICENCA = ['auth.', 'system.', 'saas.minha', 'saas.cupom', 'saas.planosPublicos', 'notificacoes.', 'cadastro.dados', 'cadastro.cartaoVendas'];
+export const LIVRES_SEM_LICENCA = [
+  // Central de Privacidade (LGPD): direitos do titular não dependem de licença paga
+  'privacidade.minhaSituacao', 'privacidade.aceitar', 'privacidade.marketing', 'auth.', 'system.', 'saas.minha', 'saas.cupom', 'saas.planosPublicos', 'notificacoes.', 'cadastro.dados', 'cadastro.cartaoVendas'];
 export const caminhoLivre = (path: string) => LIVRES_SEM_LICENCA.some(p => (p.endsWith('.') ? path.startsWith(p) : path === p || path.startsWith(`${p}`)));

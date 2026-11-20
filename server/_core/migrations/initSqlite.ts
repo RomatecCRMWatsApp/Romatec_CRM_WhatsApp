@@ -806,4 +806,9 @@ export function initSqliteTables(sqlite: any): void {
     pdfArquivo TEXT NOT NULL, sha256 TEXT NOT NULL, assinaturasJson TEXT, dadosJson TEXT, criadoPor INTEGER NOT NULL,
     criadoEm TEXT NOT NULL DEFAULT (datetime('now')), atualizadoEm TEXT
   )`);
+
+  // Privacidade (LGPD): canal do titular e aceites versionados (server/_core/migrations/addPrivacidade.ts)
+  run(`CREATE TABLE IF NOT EXISTS privacidadePedidos (id INTEGER PRIMARY KEY AUTOINCREMENT, protocolo TEXT NOT NULL UNIQUE, tipo TEXT NOT NULL, nome TEXT NOT NULL, contato TEXT NOT NULL, contatoTipo TEXT NOT NULL, descricao TEXT, status TEXT NOT NULL DEFAULT 'aguardando_verificacao', responsavelId INTEGER, prazoEm INTEGER, codigoHash TEXT, codigoExpira INTEGER, tentativas INTEGER NOT NULL DEFAULT 0, verificadoEm INTEGER, ipHash TEXT, resposta TEXT, criadoEm INTEGER NOT NULL, atualizadoEm INTEGER, concluidoEm INTEGER)`);
+  run(`CREATE TABLE IF NOT EXISTS privacidadePedidoEventos (id INTEGER PRIMARY KEY AUTOINCREMENT, pedidoId INTEGER NOT NULL, evento TEXT NOT NULL, usuarioId INTEGER, detalheJson TEXT, criadoEm INTEGER NOT NULL)`);
+  run(`CREATE TABLE IF NOT EXISTS privacidadeAceites (id INTEGER PRIMARY KEY AUTOINCREMENT, usuarioId INTEGER NOT NULL, documento TEXT NOT NULL, versao TEXT NOT NULL, hash TEXT NOT NULL, acao TEXT NOT NULL, criadoEm INTEGER NOT NULL)`);
 }

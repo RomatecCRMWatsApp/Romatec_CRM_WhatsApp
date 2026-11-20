@@ -2669,3 +2669,57 @@ export const relatorioEventos = mysqlTable("relatorioEventos", {
   detalheJson: text("detalheJson"),
   criadoEm: timestamp("criadoEm").defaultNow().notNull(),
 }, (t) => ({ ixRel: index("ix_releventos_rel").on(t.relatorioId) }));
+
+// ─── Privacidade (LGPD): canal do titular, trilha e aceites versionados ──────
+// Datas em milissegundos (bigint) para valer igual no MySQL e no SQLite dos testes. Tabelas novas, só aditivas.
+
+/** Pedido de titular (acesso, correção, eliminação…) — vale também para quem não tem conta no CRM */
+export const privacidadePedidos = mysqlTable("privacidadePedidos", {
+  id: int("id").autoincrement().primaryKey(),
+  /** LGPD-AAAA-XXXXXXXX (aleatório, não sequencial) */
+  protocolo: varchar("protocolo", { length: 24 }).notNull(),
+  /** confirmacao | acesso | correcao | anonimizacao | eliminacao | portabilidade | compartilhamento | revogacao | oposicao | outro */
+  tipo: varchar("tipo", { length: 20 }).notNull(),
+  nome: varchar("nome", { length: 160 }).notNull(),
+  /** telefone (só dígitos) ou e-mail informado pelo titular — canal da verificação */
+  contato: varchar("contato", { length: 160 }).notNull(),
+  contatoTipo: varchar("contatoTipo", { length: 10 }).notNull(),
+  descricao: text("descricao"),
+  /** aguardando_verificacao | aberto | em_analise | concluido | indeferido */
+  status: varchar("status", { length: 24 }).default("aguardando_verificacao").notNull(),
+  responsavelId: int("responsavelId"),
+  prazoEm: bigint("prazoEm", { mode: "number" }),
+  codigoHash: varchar("codigoHash", { length: 64 }),
+  codigoExpira: bigint("codigoExpira", { mode: "number" }),
+  tentativas: int("tentativas").default(0).notNull(),
+  verificadoEm: bigint("verificadoEm", { mode: "number" }),
+  /** Resumo SHA-256 do IP (antifraude), nunca o IP em claro */
+  ipHash: varchar("ipHash", { length: 64 }),
+  resposta: text("resposta"),
+  criadoEm: bigint("criadoEm", { mode: "number" }).notNull(),
+  atualizadoEm: bigint("atualizadoEm", { mode: "number" }),
+  concluidoEm: bigint("concluidoEm", { mode: "number" }),
+}, (t) => ({ uxProtocolo: uniqueIndex("ux_privped_protocolo").on(t.protocolo), ixStatus: index("ix_privped_status").on(t.status) }));
+
+/** Trilha mínima do pedido (quem fez o quê e quando), sem cópia de documentos */
+export const privacidadePedidoEventos = mysqlTable("privacidadePedidoEventos", {
+  id: int("id").autoincrement().primaryKey(),
+  pedidoId: int("pedidoId").notNull(),
+  evento: varchar("evento", { length: 40 }).notNull(),
+  usuarioId: int("usuarioId"),
+  detalheJson: text("detalheJson"),
+  criadoEm: bigint("criadoEm", { mode: "number" }).notNull(),
+}, (t) => ({ ixPedido: index("ix_privev_pedido").on(t.pedidoId) }));
+
+/** Aceite dos termos/aviso (versão + hash do texto) e consentimento opcional de marketing; append-only (histórico) */
+export const privacidadeAceites = mysqlTable("privacidadeAceites", {
+  id: int("id").autoincrement().primaryKey(),
+  usuarioId: int("usuarioId").notNull(),
+  /** termos | privacidade | marketing */
+  documento: varchar("documento", { length: 16 }).notNull(),
+  versao: varchar("versao", { length: 20 }).notNull(),
+  hash: varchar("hash", { length: 64 }).notNull(),
+  /** aceite | revogacao */
+  acao: varchar("acao", { length: 10 }).notNull(),
+  criadoEm: bigint("criadoEm", { mode: "number" }).notNull(),
+}, (t) => ({ ixUsuario: index("ix_privaceite_usuario").on(t.usuarioId) }));
