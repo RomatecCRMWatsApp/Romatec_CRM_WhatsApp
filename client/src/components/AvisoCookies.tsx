@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { useLocation } from "wouter";
 import { rotaDeMarketing } from "@shared/rastreamento";
-import { carregarTags, configRastreamento, escolhaCookies, escutarCliquesWhatsapp, registrarEscolha } from "@/lib/rastreamento";
+import { carregarTags, configRastreamento, escolhaCookies, escutarCliquesWhatsapp, registrarEscolha, EVENTO_REABRIR_COOKIES } from "@/lib/rastreamento";
 
 /**
  * Aviso de cookies (LGPD) das páginas públicas de marketing. Só aparece quando há Google Analytics/Ads
@@ -17,9 +17,22 @@ export default function AvisoCookies() {
     escutarCliquesWhatsapp();
     carregarTags();
     setAberto(escolhaCookies() === null);
+    // "Preferências de cookies": a pessoa pode mudar a escolha a qualquer momento (revogação)
+    const reabrir = () => setAberto(true);
+    window.addEventListener(EVENTO_REABRIR_COOKIES, reabrir);
+    return () => window.removeEventListener(EVENTO_REABRIR_COOKIES, reabrir);
   }, [publico]);
 
-  if (!publico || !aberto) return null;
+  if (!publico) return null;
+  if (!aberto) {
+    return (
+      <button type="button" onClick={() => setAberto(true)} aria-label="Preferências de cookies"
+        style={{ position: "fixed", left: 8, bottom: 8, zIndex: 9998, padding: "4px 8px", borderRadius: 8, fontSize: 11, cursor: "pointer", fontFamily: "inherit",
+          background: "color-mix(in srgb, var(--c-08261a) 70%, transparent)", color: "var(--c-f3eedf)", border: "1px solid var(--c-8fa394)", opacity: 0.8 }}>
+        Cookies
+      </button>
+    );
+  }
   const escolher = (e: "aceito" | "recusado") => { registrarEscolha(e); setAberto(false); };
   const botao: React.CSSProperties = { padding: "9px 16px", borderRadius: 10, fontWeight: 700, fontSize: 14, cursor: "pointer", fontFamily: "inherit" };
   return (

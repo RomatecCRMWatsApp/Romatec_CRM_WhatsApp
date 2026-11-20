@@ -58,6 +58,37 @@ describe('rastreamento de conversão (GA4 / Google Ads)', () => {
     delete g.window; delete g.localStorage; delete g.document;
   });
 
+  it('revogação: depois de "Recusar" nenhum evento sai, o gtag recebe consentimento negado e os cookies do Google somem', async () => {
+    const chamadas: unknown[][] = [];
+    const store: Record<string, string> = {};
+    const cookies: string[] = [];
+    const g: any = globalThis;
+    g.window = { __RASTREAMENTO: configRastreamento(ENV), location: { pathname: '/bom-jardims' }, dataLayer: undefined, dispatchEvent: vi.fn() };
+    g.localStorage = { getItem: (k: string) => store[k] ?? null, setItem: (k: string, v: string) => { store[k] = v; } };
+    g.location = { hostname: 'romateccrm.com' };
+    g.document = {
+      head: { appendChild: vi.fn() }, createElement: () => ({}), addEventListener: vi.fn(),
+      get cookie() { return '_ga=GA1.1.123; _ga_ABC=GS1; rmt_vid=x; _gcl_au=1'; }, set cookie(v: string) { cookies.push(v); },
+    };
+    vi.resetModules();
+    const R = await import('../client/src/lib/rastreamento');
+    R.registrarEscolha('aceito');
+    g.window.gtag = (...a: unknown[]) => chamadas.push(a);
+    R.registrarEvento(EVENTOS.mapa, { chacara: 'A01' });
+    expect(chamadas).toHaveLength(1);
+    R.registrarEscolha('recusado');
+    expect(chamadas.at(-1)).toEqual(['consent', 'update', expect.objectContaining({ analytics_storage: 'denied', ad_storage: 'denied' })]);
+    const antes = chamadas.length;
+    R.registrarEvento(EVENTOS.mapa, { chacara: 'A02' });
+    R.registrarEvento(EVENTOS.agendamento, {}, 'agendamento');
+    expect(chamadas).toHaveLength(antes); // nada novo depois da revogação
+    expect(g.window['ga-disable-G-ABC123XYZ']).toBe(true);
+    expect(cookies.some(c => c.startsWith('_ga=; Max-Age=0'))).toBe(true);
+    expect(cookies.some(c => c.startsWith('_gcl_au=; Max-Age=0'))).toBe(true);
+    expect(cookies.some(c => c.startsWith('rmt_vid='))).toBe(false); // cookie do próprio site fora do Google não é tocado aqui
+    delete g.window; delete g.localStorage; delete g.document; delete g.location;
+  });
+
   it('endereço que não existe fica fora do Google (sem "soft 404"); a home continua indexável', () => {
     expect((metaDaRota('/qualquer-coisa') as any).indexavel).toBe(false);
     expect((metaDaRota('/') as any).indexavel).toBe(true);

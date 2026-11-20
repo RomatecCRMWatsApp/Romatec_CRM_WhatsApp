@@ -24,7 +24,32 @@ export function escolhaCookies(): EscolhaCookies | null {
 export function registrarEscolha(e: EscolhaCookies) {
   try { localStorage.setItem(CHAVE, e); } catch { /* navegador sem armazenamento: vale só nesta visita */ }
   escolhaNaVisita = e;
-  if (e === "aceito") carregarTags();
+  const cfg = configRastreamento();
+  // Opt-out oficial do gtag por ID: liga na recusa, desliga se a pessoa voltar a aceitar
+  for (const id of [cfg?.ga4, cfg?.ads]) if (id) (window as unknown as Record<string, unknown>)[`ga-disable-${id}`] = e === "recusado";
+  if (e === "aceito") { carregarTags(); return; }
+  // Revogação: nenhum evento novo (registrarEvento confere a escolha atual), consentimento negado no gtag já carregado
+  // e os cookies do Google que o site consegue apagar (_ga, _ga_*, _gcl_*) removidos. Limites: cópias já enviadas ao
+  // Google seguem as regras dele (docs/privacidade/fornecedores-e-ia.md).
+  if (carregado && window.gtag) window.gtag("consent", "update", { analytics_storage: "denied", ad_storage: "denied", ad_user_data: "denied", ad_personalization: "denied" });
+  apagarCookiesGoogle();
+}
+
+/** Apaga os cookies first-party do Google Analytics/Ads no domínio atual e nos domínios-pai */
+export function apagarCookiesGoogle() {
+  if (typeof document === "undefined" || typeof document.cookie !== "string") return;
+  const nomes = document.cookie.split(";").map(c => c.split("=")[0].trim()).filter(n => /^(_ga|_ga_.+|_gid|_gat.*|_gcl_.+)$/.test(n));
+  const host = typeof location !== "undefined" ? location.hostname : "";
+  const partes = host.split(".");
+  const dominios = [""];
+  for (let i = 0; i < partes.length - 1; i++) dominios.push(`; domain=.${partes.slice(i).join(".")}`);
+  for (const n of nomes) for (const d of dominios) document.cookie = `${n}=; Max-Age=0; path=/${d}`;
+}
+
+/** Reabre o aviso para a pessoa mudar a escolha (link "Preferências de cookies") */
+export const EVENTO_REABRIR_COOKIES = "romatec:preferencias-cookies";
+export function reabrirPreferenciasCookies() {
+  if (typeof window !== "undefined") window.dispatchEvent(new Event(EVENTO_REABRIR_COOKIES));
 }
 
 let escolhaNaVisita: EscolhaCookies | null = null;
@@ -51,7 +76,9 @@ export function carregarTags() {
 /** Evento GA4 e, se for conversão e o rótulo existir, a conversão do Google Ads */
 export function registrarEvento(nome: string, params: Record<string, unknown> = {}, conversao?: "agendamento" | "whatsapp") {
   const cfg = configRastreamento();
-  if (!carregado || !cfg || !window.gtag || !rotaDeMarketing(window.location.pathname)) return;
+  // A escolha ATUAL vale: depois de "Recusar" (revogação) nenhum evento sai, mesmo com o gtag já carregado na página
+  const aceitoAgora = (escolhaNaVisita ?? escolhaCookies()) === "aceito";
+  if (!carregado || !aceitoAgora || !cfg || !window.gtag || !rotaDeMarketing(window.location.pathname)) return;
   window.gtag("event", nome, params);
   const sendTo = conversao === "agendamento" ? cfg.conversaoAgendamento : conversao === "whatsapp" ? cfg.conversaoWhatsapp : null;
   if (sendTo) window.gtag("event", "conversion", { send_to: sendTo });

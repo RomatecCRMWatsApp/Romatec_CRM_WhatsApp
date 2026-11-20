@@ -242,6 +242,13 @@ export default function ImovelLanding() {
       </div>
 
       {consent === null && <BannerCookies onEscolha={escolherCookies} />}
+      {/* Mudar a escolha de cookies a qualquer momento (revogação: "Recusar" apaga o identificador e para os eventos) */}
+      {consent !== null && (
+        <button type="button" onClick={() => setConsent(null)} aria-label="Preferências de cookies"
+          className="fixed left-2 top-2 z-50 rounded-md border border-white/30 bg-black/40 px-2 py-0.5 text-[11px] text-white/80">
+          Cookies
+        </button>
+      )}
     </div>
   );
 }
