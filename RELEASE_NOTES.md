@@ -3,6 +3,18 @@
 Cada versão nova vai no TOPO. Depois rode `npm run release` (valida e atualiza o package.json);
 ao subir, o servidor grava a versão no banco e todos recebem o aviso "Novidades da versão".
 
+## 1.187.1 — 2026-11-20
+tipo: patch
+obrigatoria: nao
+titulo: Tour 3D: música no vídeo em qualquer celular e botão ouvir
+publico: corretor
+
+### Correções
+- Tour 3D: a música passa a ser colocada no vídeo pelo servidor, no formato do WhatsApp — funciona também nos celulares que não gravam áudio no navegador (o vídeo saía mudo).
+
+### Melhorias
+- Botão de play em cada trilha (e na sua música) para ouvir antes de escolher.
+
 ## 1.187.0 — 2026-11-20
 tipo: minor
 obrigatoria: nao
