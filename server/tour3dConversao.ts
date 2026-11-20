@@ -20,9 +20,11 @@ export class ConversaoErro extends Error {
 }
 
 /** Argumentos do ffmpeg: MP4 só regrava o áudio; WebM vira MP4 H.264 + AAC. */
-export function argumentosConversao(entrada: string, saida: string, ehWebm: boolean): string[] {
+export function argumentosConversao(entrada: string, saida: string, ehWebm: boolean, audio?: string): string[] {
   const video = ehWebm ? ['-c:v', 'libx264', '-preset', 'veryfast', '-crf', '21', '-pix_fmt', 'yuv420p'] : ['-c:v', 'copy'];
-  return ['-hide_banner', '-loglevel', 'error', '-y', '-i', entrada, '-map', '0:v:0', '-map', '0:a:0?', ...video, '-c:a', 'aac', '-b:a', '160k', '-ar', '48000', '-ac', '2', '-movflags', '+faststart', saida];
+  // com a trilha separada (WAV), a música vem dela; senão, regrava o áudio que vier no vídeo
+  const fontes = audio ? ['-i', entrada, '-i', audio, '-map', '0:v:0', '-map', '1:a:0', '-shortest'] : ['-i', entrada, '-map', '0:v:0', '-map', '0:a:0?'];
+  return ['-hide_banner', '-loglevel', 'error', '-y', ...fontes, ...video, '-c:a', 'aac', '-b:a', '192k', '-ar', '48000', '-ac', '2', '-movflags', '+faststart', saida];
 }
 
 function rodarFfmpeg(args: string[]): Promise<void> {
@@ -39,18 +41,25 @@ function rodarFfmpeg(args: string[]): Promise<void> {
 // um ajuste por vez: o servidor é compartilhado com o resto do CRM
 let fila: Promise<unknown> = Promise.resolve();
 
-export async function converterParaWhatsApp(dados: Buffer, tipo: string): Promise<Buffer> {
+/** `bytesVideo`: quando o corpo traz vídeo + trilha WAV juntos, onde termina o vídeo. */
+export async function converterParaWhatsApp(dados: Buffer, tipo: string, bytesVideo?: number): Promise<Buffer> {
   if (!dados?.length) throw new ConversaoErro('Vídeo vazio', 400);
   if (dados.length > LIMITE_BYTES_TOUR3D) throw new ConversaoErro('Vídeo grande demais (limite 200 MB)', 413);
   const ehWebm = /webm/i.test(tipo);
+  const comTrilha = Number.isFinite(bytesVideo) && (bytesVideo as number) > 0 && (bytesVideo as number) < dados.length;
+  const video = comTrilha ? dados.subarray(0, bytesVideo) : dados;
+  const wav = comTrilha ? dados.subarray(bytesVideo as number) : null;
+  if (wav && wav.subarray(0, 4).toString('latin1') !== 'RIFF') throw new ConversaoErro('Trilha inválida', 400);
   if (!ehWebm && !/mp4/i.test(tipo)) throw new ConversaoErro('Envie o vídeo MP4 ou WebM gerado pelo Tour 3D', 400);
   const tarefa = fila.then(async () => {
     const pasta = await fs.mkdtemp(path.join(os.tmpdir(), 'tour3d-'));
     const entrada = path.join(pasta, `${randomUUID()}.${ehWebm ? 'webm' : 'mp4'}`);
     const saida = path.join(pasta, 'saida.mp4');
+    const trilha = wav ? path.join(pasta, 'trilha.wav') : undefined;
     try {
-      await fs.writeFile(entrada, dados);
-      await rodarFfmpeg(argumentosConversao(entrada, saida, ehWebm));
+      await fs.writeFile(entrada, video);
+      if (trilha && wav) await fs.writeFile(trilha, wav);
+      await rodarFfmpeg(argumentosConversao(entrada, saida, ehWebm, trilha));
       return await fs.readFile(saida);
     } finally {
       await fs.rm(pasta, { recursive: true, force: true }).catch(() => undefined);

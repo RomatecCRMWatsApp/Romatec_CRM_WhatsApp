@@ -26,6 +26,26 @@ describe("tour 3D — ajuste do vídeo para o WhatsApp", () => {
     await expect(converterParaWhatsApp(Buffer.from("x"), "image/png")).rejects.toMatchObject({ status: 400 });
   });
 
+  it.skipIf(!temFfmpeg)("vídeo sem som + trilha WAV no mesmo corpo: sai com a música em AAC", async () => {
+    const pasta = mkdtempSync(path.join(os.tmpdir(), "t3d-teste-"));
+    try {
+      const v = path.join(pasta, "mudo.mp4"), a = path.join(pasta, "trilha.wav");
+      expect(spawnSync("ffmpeg", ["-hide_banner", "-loglevel", "error", "-y", "-f", "lavfi", "-i", "color=c=blue:s=320x568:d=2:r=30", "-c:v", "libx264", "-pix_fmt", "yuv420p", v]).status).toBe(0);
+      expect(spawnSync("ffmpeg", ["-hide_banner", "-loglevel", "error", "-y", "-f", "lavfi", "-i", "sine=frequency=330:duration=2:sample_rate=48000", "-ac", "2", a]).status).toBe(0);
+      const video = readFileSync(v);
+      const corpo = Buffer.concat([video, readFileSync(a)]);
+      const saida = await converterParaWhatsApp(corpo, "video/mp4", video.length);
+      const destino = path.join(pasta, "saida.mp4");
+      writeFileSync(destino, saida);
+      const p = spawnSync("ffprobe", ["-v", "error", "-show_entries", "stream=codec_type,codec_name", "-of", "csv=p=0", destino], { encoding: "utf8" });
+      expect(p.stdout).toContain("h264,video");
+      expect(p.stdout).toContain("aac,audio");
+      await expect(converterParaWhatsApp(Buffer.concat([video, Buffer.from("lixo")]), "video/mp4", video.length)).rejects.toMatchObject({ status: 400 });
+    } finally {
+      rmSync(pasta, { recursive: true, force: true });
+    }
+  });
+
   it.skipIf(!temFfmpeg)("vídeo com áudio Opus sai com áudio AAC e a mesma imagem", async () => {
     const pasta = mkdtempSync(path.join(os.tmpdir(), "t3d-teste-"));
     try {

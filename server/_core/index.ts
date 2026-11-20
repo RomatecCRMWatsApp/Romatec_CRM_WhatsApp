@@ -978,7 +978,7 @@ async function startServer() {
       const user = await sdk.authenticateRequest(req).catch(() => null);
       if (!user || (user as any).ativo === false) return res.status(401).json({ success: false, error: 'Faça login para gerar o vídeo' });
       const { converterParaWhatsApp } = await import('../tour3dConversao');
-      const saida = await converterParaWhatsApp(req.body as Buffer, String(req.headers['x-file-type'] || req.headers['content-type'] || ''));
+      const saida = await converterParaWhatsApp(req.body as Buffer, String(req.headers['x-file-type'] || req.headers['content-type'] || ''), Number(req.headers['x-video-bytes']) || undefined);
       res.setHeader('Content-Type', 'video/mp4');
       res.setHeader('Cache-Control', 'no-store');
       res.end(saida);

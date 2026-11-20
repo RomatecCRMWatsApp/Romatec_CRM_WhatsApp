@@ -133,6 +133,8 @@ export default function Tour3DFotos() {
   const [arquivoMusica, setArquivoMusica] = useState<File | null>(null);
   const [volume, setVolume] = useState(0.8);
   const [somPrevia, setSomPrevia] = useState(false);
+  const [amostra, setAmostra] = useState<EstiloTrilha | "arquivo" | null>(null);
+  const [carregandoAmostra, setCarregandoAmostra] = useState<EstiloTrilha | "arquivo" | null>(null);
   const [logo, setLogo] = useState<{ url: string; imagem: ImageBitmap } | null>(null);
   const [posLogo, setPosLogo] = useState<PosicaoLogo>(() => {
     try { return (localStorage.getItem(CHAVE_POS_LOGO) as PosicaoLogo) || "sup-dir"; } catch { return "sup-dir"; }
@@ -152,6 +154,8 @@ export default function Tour3DFotos() {
   const fonteAudio = useRef<AudioBufferSourceNode | null>(null);
   const ganhoAudio = useRef<GainNode | null>(null);
   const reiniciarPrevia = useRef(false);
+  const amostraFonte = useRef<AudioBufferSourceNode | null>(null);
+  const amostrasCache = useRef<Partial<Record<EstiloTrilha, AudioBuffer>>>({});
   tocandoRef.current = tocando;
 
   // na primeira vez, o carimbo vem do cartão de vendas (nome, CRECI, telefone, Instagram); depois, do que foi salvo
@@ -239,6 +243,58 @@ export default function Tour3DFotos() {
     try { localStorage.removeItem(CHAVE_LOGO); } catch { /* */ }
   };
 
+  const pararAmostra = () => {
+    try { amostraFonte.current?.stop(); } catch { /* já parado */ }
+    amostraFonte.current = null;
+    setAmostra(null);
+  };
+
+  /** Toca uns segundos da trilha para o corretor ouvir antes de escolher (toque de novo para parar). */
+  async function ouvirAmostra(qual: EstiloTrilha | "arquivo") {
+    if (amostra === qual) { pararAmostra(); return; }
+    pararAmostra();
+    // o contexto de áudio nasce no toque (exigência dos celulares); a trilha é composta em seguida
+    if (!audioCtx.current) audioCtx.current = new AudioContext();
+    const ctx = audioCtx.current;
+    void ctx.resume();
+    setCarregandoAmostra(qual);
+    try {
+      const t = await import("@/lib/tour3d/trilha");
+      let buf: AudioBuffer | null = null;
+      if (qual === "arquivo") {
+        if (!arquivoMusica) { musica.current?.click(); return; }
+        buf = await t.trilhaDeArquivo(arquivoMusica, 15);
+      } else {
+        buf = amostrasCache.current[qual] ?? await t.gerarTrilha(qual, 12);
+        amostrasCache.current[qual] = buf;
+      }
+      const src = ctx.createBufferSource();
+      src.buffer = buf;
+      const g = ctx.createGain();
+      g.gain.value = volume;
+      src.connect(g).connect(ctx.destination);
+      src.onended = () => { if (amostraFonte.current === src) { amostraFonte.current = null; setAmostra(null); } };
+      src.start();
+      amostraFonte.current = src;
+      setAmostra(qual);
+    } catch {
+      toast.error("Não consegui tocar essa música neste aparelho.");
+    } finally {
+      setCarregandoAmostra(null);
+    }
+  }
+
+  const BotaoOuvir = ({ qual, rotulo: r }: { qual: EstiloTrilha | "arquivo"; rotulo: string }) => (
+    <button
+      type="button"
+      onClick={e => { e.preventDefault(); e.stopPropagation(); void ouvirAmostra(qual); }}
+      aria-label={amostra === qual ? `Parar ${r}` : `Ouvir ${r}`}
+      className="absolute right-2 top-2 flex h-9 w-9 items-center justify-center rounded-full bg-[var(--rt-gold)] text-[#0b1f14] transition-transform hover:scale-105 focus-visible:outline-2 focus-visible:outline-ring"
+    >
+      {carregandoAmostra === qual ? <Loader2 className="h-4 w-4 animate-spin" /> : amostra === qual ? <Pause className="h-4 w-4" /> : <Play className="h-4 w-4 translate-x-[1px]" />}
+    </button>
+  );
+
   const pararSom = () => {
     try { fonteAudio.current?.stop(); } catch { /* já parado */ }
     fonteAudio.current = null;
@@ -269,7 +325,11 @@ export default function Tour3DFotos() {
   };
 
   useEffect(() => { if (ganhoAudio.current) ganhoAudio.current.gain.value = volume; }, [volume]);
-  useEffect(() => () => { try { fonteAudio.current?.stop(); } catch { /* */ } void audioCtx.current?.close(); }, []);
+  useEffect(() => () => {
+    try { fonteAudio.current?.stop(); } catch { /* */ }
+    try { amostraFonte.current?.stop(); } catch { /* */ }
+    void audioCtx.current?.close();
+  }, []);
 
   async function montarTrilha(duracao: number): Promise<AudioBuffer | null> {
     if (trilhaEscolha === "nenhuma") return null;
@@ -354,6 +414,7 @@ export default function Tour3DFotos() {
   const trocarComodo = (id: string, comodo: string) => setFotos(f => f.map(x => (x.id === id ? { ...x, comodo } : x)));
 
   async function preparar() {
+    pararAmostra();
     if (fotos.length < 1) { toast.error("Adicione pelo menos uma foto."); return; }
     if (!carimbo.creciF.trim() && !carimbo.creciJ.trim()) toast.warning("Anúncio de imóvel deve trazer o CRECI. Preencha o CRECI-F ou o CRECI-J no carimbo.");
     cancelar.current = false;
@@ -436,11 +497,13 @@ export default function Tour3DFotos() {
       const trilha = trilhaRef.current ? comVolume(trilhaRef.current, volume) : null;
       const { precisaAjuste, ajustarParaWhatsApp } = await import("@/lib/tour3d/video");
       let v = await gerarVideo(cena, r, pct => setProgresso({ texto: "Gerando o vídeo…", pct }), () => cancelar.current, trilha);
-      if (precisaAjuste(v)) {
-        setProgresso({ texto: "Ajustando o som para tocar no WhatsApp…", pct: 100 });
-        try { v = await ajustarParaWhatsApp(v); } catch (e) {
+      // com música, a versão final é sempre montada no servidor (música em AAC a partir do WAV): muitos
+      // celulares não gravam áudio no navegador e o vídeo chegava mudo no WhatsApp
+      if (trilha || precisaAjuste(v)) {
+        setProgresso({ texto: "Colocando a música e ajustando para o WhatsApp…", pct: 100 });
+        try { v = await ajustarParaWhatsApp(v, trilha); } catch (e) {
           console.error(e);
-          toast.warning("Não consegui ajustar o som para o WhatsApp agora. O vídeo foi gerado, mas a música pode não tocar lá.");
+          toast.warning(`Não consegui finalizar o som do vídeo (${(e as Error)?.message || "erro"}). O vídeo foi gerado, mas a música pode não tocar no WhatsApp.`);
         }
       }
       const nome = nomeArquivo(titulo, formato, v.extensao);
@@ -657,16 +720,18 @@ export default function Tour3DFotos() {
               <legend className={`${rotulo} flex items-center gap-1`}><Music className="h-3.5 w-3.5" aria-hidden />Música de fundo</legend>
               <div className="mt-2 grid gap-2 sm:grid-cols-3">
                 {(Object.keys(TRILHAS) as EstiloTrilha[]).map(t => (
-                  <label key={t} className={`cursor-pointer rounded-lg border p-3 text-sm transition-colors ${trilhaEscolha === t ? "border-[var(--rt-gold)] bg-[var(--rt-gold)]/10" : "border-border hover:bg-muted/50"}`}>
+                  <label key={t} className={`relative cursor-pointer rounded-lg border p-3 pr-12 text-sm transition-colors ${trilhaEscolha === t ? "border-[var(--rt-gold)] bg-[var(--rt-gold)]/10" : "border-border hover:bg-muted/50"}`}>
                     <input type="radio" name="trilha" value={t} checked={trilhaEscolha === t} onChange={() => setTrilhaEscolha(t)} className="sr-only" />
                     <span className="block font-semibold text-foreground">{TRILHAS[t].rotulo}</span>
                     <span className="block text-xs text-muted-foreground">{TRILHAS[t].descricao}</span>
+                    <BotaoOuvir qual={t} rotulo={`a trilha ${TRILHAS[t].rotulo}`} />
                   </label>
                 ))}
-                <label className={`cursor-pointer rounded-lg border p-3 text-sm transition-colors ${trilhaEscolha === "arquivo" ? "border-[var(--rt-gold)] bg-[var(--rt-gold)]/10" : "border-border hover:bg-muted/50"}`}>
+                <label className={`relative cursor-pointer rounded-lg border p-3 ${arquivoMusica ? "pr-12" : ""} text-sm transition-colors ${trilhaEscolha === "arquivo" ? "border-[var(--rt-gold)] bg-[var(--rt-gold)]/10" : "border-border hover:bg-muted/50"}`}>
                   <input type="radio" name="trilha" value="arquivo" checked={trilhaEscolha === "arquivo"} onChange={() => { setTrilhaEscolha("arquivo"); if (!arquivoMusica) musica.current?.click(); }} className="sr-only" />
                   <span className="block font-semibold text-foreground">Minha música</span>
                   <span className="block truncate text-xs text-muted-foreground">{arquivoMusica ? arquivoMusica.name : "Escolha um arquivo do aparelho"}</span>
+                  {arquivoMusica && <BotaoOuvir qual="arquivo" rotulo="a sua música" />}
                 </label>
                 <label className={`cursor-pointer rounded-lg border p-3 text-sm transition-colors ${trilhaEscolha === "nenhuma" ? "border-[var(--rt-gold)] bg-[var(--rt-gold)]/10" : "border-border hover:bg-muted/50"}`}>
                   <input type="radio" name="trilha" value="nenhuma" checked={trilhaEscolha === "nenhuma"} onChange={() => setTrilhaEscolha("nenhuma")} className="sr-only" />
@@ -782,7 +847,7 @@ export default function Tour3DFotos() {
                 </>
               )}
             </div>
-            <p className="mt-4 flex gap-2 text-xs text-muted-foreground"><Home className="mt-0.5 h-3.5 w-3.5 shrink-0" aria-hidden />As fotos ficam só no seu aparelho (quando o celular não grava o som no formato do WhatsApp, o vídeo passa pelo servidor só para ajustar o áudio e é apagado em seguida). O 3D é um efeito de profundidade sobre cada foto, não uma planta do imóvel. A música entra no próprio vídeo.</p>
+            <p className="mt-4 flex gap-2 text-xs text-muted-foreground"><Home className="mt-0.5 h-3.5 w-3.5 shrink-0" aria-hidden />As fotos ficam só no seu aparelho (com música, o vídeo passa pelo servidor só para juntar o som no formato do WhatsApp e é apagado em seguida). O 3D é um efeito de profundidade sobre cada foto, não uma planta do imóvel. A música entra no próprio vídeo.</p>
           </section>
         </aside>
         <NovoImovelTour3D

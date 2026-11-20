@@ -24,20 +24,49 @@ export function precisaAjuste(v: Pick<VideoGerado, "audio" | "extensao">): boole
   return v.extensao === "webm" || v.audio === "opus" || v.audio === "webm";
 }
 
-/** Regrava o áudio em AAC (e converte WebM em MP4) no servidor; o arquivo não fica guardado. */
-export async function ajustarParaWhatsApp(v: VideoGerado): Promise<VideoGerado> {
+/** Trilha em WAV (PCM 16 bits) — vai separada para o servidor juntar ao vídeo em AAC. */
+export function trilhaEmWav(buf: AudioBuffer): Blob {
+  const canais = buf.numberOfChannels, taxa = buf.sampleRate, n = buf.length;
+  const dados = new DataView(new ArrayBuffer(44 + n * canais * 2));
+  const txt = (o: number, t: string) => { for (let i = 0; i < t.length; i++) dados.setUint8(o + i, t.charCodeAt(i)); };
+  txt(0, "RIFF"); dados.setUint32(4, 36 + n * canais * 2, true); txt(8, "WAVE");
+  txt(12, "fmt "); dados.setUint32(16, 16, true); dados.setUint16(20, 1, true); dados.setUint16(22, canais, true);
+  dados.setUint32(24, taxa, true); dados.setUint32(28, taxa * canais * 2, true); dados.setUint16(32, canais * 2, true); dados.setUint16(34, 16, true);
+  txt(36, "data"); dados.setUint32(40, n * canais * 2, true);
+  const ch = Array.from({ length: canais }, (_, c) => buf.getChannelData(c));
+  let o = 44;
+  for (let i = 0; i < n; i++) for (let c = 0; c < canais; c++) {
+    const v = Math.max(-1, Math.min(1, ch[c][i]));
+    dados.setInt16(o, v < 0 ? v * 0x8000 : v * 0x7fff, true);
+    o += 2;
+  }
+  return new Blob([dados.buffer], { type: "audio/wav" });
+}
+
+/**
+ * Versão final para WhatsApp/Instagram, feita no servidor: imagem copiada sem perda (WebM vira MP4) e,
+ * com trilha, a música entra a partir do WAV, em AAC — não depende do celular saber gravar áudio.
+ * O vídeo e a música são apagados do servidor em seguida.
+ */
+export async function ajustarParaWhatsApp(v: VideoGerado, trilha: AudioBuffer | null = null): Promise<VideoGerado> {
+  const wav = trilha ? trilhaEmWav(trilha) : null;
+  const corpo = wav ? new Blob([v.blob, wav]) : v.blob;
   const r = await fetch("/api/tour3d/converter", {
     method: "POST",
     credentials: "include",
-    headers: { "Content-Type": "application/octet-stream", "x-file-type": v.mime },
-    body: v.blob,
+    headers: {
+      "Content-Type": "application/octet-stream",
+      "x-file-type": v.mime,
+      ...(wav ? { "x-video-bytes": String(v.blob.size) } : {}),
+    },
+    body: corpo,
   });
   if (!r.ok) {
     const j = await r.json().catch(() => null) as { error?: string } | null;
     throw new Error(j?.error || `Falha ao ajustar o vídeo (${r.status})`);
   }
   const blob = await r.blob();
-  return { blob: new Blob([blob], { type: "video/mp4" }), extensao: "mp4", mime: "video/mp4", semAudio: v.semAudio, audio: v.audio ? "aac" : null };
+  return { blob: new Blob([blob], { type: "video/mp4" }), extensao: "mp4", mime: "video/mp4", semAudio: false, audio: wav || v.audio ? "aac" : null };
 }
 
 const CODECS_AUDIO: { codec: string; mux: "aac" | "opus" }[] = [
