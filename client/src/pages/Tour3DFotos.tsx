@@ -7,6 +7,8 @@ import PageHeader from "@/components/PageHeader";
 import { Button } from "@/components/ui/button";
 import { trpc } from "@/lib/trpc";
 import { useCartaoVendas } from "@/lib/cartaoVendas";
+import { enviarParaCloudinary } from "@/lib/uploadCloudinary";
+import NovoImovelTour3D from "@/components/tour3d/NovoImovelTour3D";
 import {
   FORMATOS, MOVIMENTOS, TRANSICOES, montarRoteiro, movimentoAutomatico, nomeArquivo, transicaoVariada,
   type Formato, type Movimento, type Roteiro, type Transicao,
@@ -101,6 +103,11 @@ async function bitmapDeBlob(b: Blob): Promise<ImageBitmap> {
 export default function Tour3DFotos() {
   const cartao = useCartaoVendas();
   const { data: imoveis } = trpc.properties.list.useQuery();
+  const utils = trpc.useUtils();
+  const criarMaterial = trpc.materiais.create.useMutation();
+  const [novoImovelAberto, setNovoImovelAberto] = useState(false);
+  const [salvandoNoImovel, setSalvandoNoImovel] = useState("");
+  const [salvoNoImovel, setSalvoNoImovel] = useState<number | null>(null);
   const [fotos, setFotos] = useState<FotoLocal[]>([]);
   const [formato, setFormato] = useState<Formato>("reel");
   const [segundos, setSegundos] = useState(4);
@@ -450,6 +457,29 @@ export default function Tour3DFotos() {
     }
   }
 
+  /** Guarda o vídeo gerado nos vídeos do imóvel (aparece no cartão, nos detalhes, na página pública e em Materiais). */
+  async function salvarNoImovel() {
+    if (!video) return;
+    const id = Number(imovelId);
+    if (!id) { toast.info("Escolha o imóvel (ou cadastre um novo) no quadro 1 para salvar o vídeo nele."); return; }
+    try {
+      setSalvandoNoImovel("Enviando o vídeo…");
+      const arq = new File([video.blob], video.nome, { type: video.mime });
+      const up = await enviarParaCloudinary(arq, pct => setSalvandoNoImovel(`Enviando o vídeo… ${pct}%`));
+      await criarMaterial.mutateAsync({
+        propertyId: id, titulo: `Tour 3D — ${titulo.trim() || "imóvel"}`.slice(0, 160), tipo: "video",
+        url: up.url, mime: up.mime, tamanhoBytes: up.tamanhoBytes, liberado: true,
+      });
+      await Promise.all([utils.materiais.list.invalidate(), utils.properties.list.invalidate()]);
+      setSalvoNoImovel(id);
+      toast.success("Vídeo salvo no imóvel. Ele aparece nos vídeos do imóvel e em Materiais.");
+    } catch (e) {
+      toast.error((e as Error)?.message || "Não consegui salvar o vídeo no imóvel.");
+    } finally {
+      setSalvandoNoImovel("");
+    }
+  }
+
   const baixar = () => {
     if (!video) return;
     const a = document.createElement("a");
@@ -499,13 +529,18 @@ export default function Tour3DFotos() {
               <input ref={camera} type="file" accept="image/*" capture="environment" className="sr-only" onChange={e => { void adicionarArquivos(e.target.files); e.target.value = ""; }} />
               <input ref={galeria} type="file" accept="image/*" multiple className="sr-only" onChange={e => { void adicionarArquivos(e.target.files); e.target.value = ""; }} />
             </div>
-            {!!imoveis?.length && (
+            {(
               <label className="mt-4 block max-w-md">
-                <span className={rotulo}>Ou usar as fotos de um imóvel cadastrado</span>
+                <span className={rotulo}>Imóvel do vídeo (usa as fotos dele, ou cadastre um novo)</span>
                 <span className="relative block">
-                  <select className={campo} value={imovelId} disabled={ocupado || etapa !== "editar" || carregandoImovel} onChange={e => e.target.value && void usarImovel(e.target.value)}>
+                  <select className={campo} value={imovelId} disabled={ocupado || carregandoImovel} onChange={e => {
+                    const v = e.target.value;
+                    if (v === "__novo") { setNovoImovelAberto(true); return; }
+                    if (v && etapa === "editar") void usarImovel(v); else setImovelId(v);
+                  }}>
                     <option value="">Selecione o imóvel…</option>
-                    {imoveis.map(p => <option key={p.id} value={p.id}>{p.denomination}{p.city ? ` — ${p.city}` : ""}</option>)}
+                    <option value="__novo">+ Cadastrar imóvel novo</option>
+                    {(imoveis ?? []).map(p => <option key={p.id} value={p.id}>{p.denomination}{p.city ? ` — ${p.city}` : ""}</option>)}
                   </select>
                   {carregandoImovel && <Loader2 className="absolute right-9 top-1/2 h-4 w-4 -translate-y-1/2 animate-spin text-muted-foreground" aria-label="Carregando fotos" />}
                 </span>
@@ -524,7 +559,7 @@ export default function Tour3DFotos() {
                       <input
                         list="tour3d-comodos"
                         aria-label={`Cômodo da foto ${i + 1}`}
-                        placeholder="Cômodo (ex.: Cozinha)"
+                        placeholder="Cômodo"
                         maxLength={30}
                         className="h-9 w-full rounded-md border border-border bg-background px-2 text-sm"
                         value={f.comodo}
@@ -735,7 +770,14 @@ export default function Tour3DFotos() {
               {etapa === "gerado" && video && (
                 <>
                   <Button type="button" size="lg" onClick={() => void compartilhar()}><Share2 className="mr-2 h-4 w-4" aria-hidden />Enviar (WhatsApp, Instagram…)</Button>
-                  <Button type="button" variant="outline" onClick={baixar}><Download className="mr-2 h-4 w-4" aria-hidden />Baixar {video.extensao.toUpperCase()} ({(video.blob.size / 1_048_576).toFixed(1)} MB)</Button>
+                  <Button type="button" variant="outline" onClick={baixar}><Download className="mr-2 h-4 w-4" aria-hidden />Salvar no celular ({(video.blob.size / 1_048_576).toFixed(1)} MB)</Button>
+                  {salvoNoImovel && salvoNoImovel === Number(imovelId) ? (
+                    <p className="rounded-md bg-[var(--rt-gold)]/10 px-3 py-2 text-center text-sm text-foreground">Vídeo salvo no imóvel ✓</p>
+                  ) : (
+                    <Button type="button" variant="outline" onClick={() => (imovelId ? void salvarNoImovel() : setNovoImovelAberto(true))} disabled={!!salvandoNoImovel}>
+                      {salvandoNoImovel ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" aria-hidden />{salvandoNoImovel}</> : <><Home className="mr-2 h-4 w-4" aria-hidden />{imovelId ? "Salvar no imóvel" : "Salvar em um imóvel novo"}</>}
+                    </Button>
+                  )}
                   <Button type="button" variant="ghost" onClick={voltarParaEdicao}><RotateCcw className="mr-2 h-4 w-4" />Fazer outro</Button>
                 </>
               )}
@@ -743,6 +785,24 @@ export default function Tour3DFotos() {
             <p className="mt-4 flex gap-2 text-xs text-muted-foreground"><Home className="mt-0.5 h-3.5 w-3.5 shrink-0" aria-hidden />As fotos ficam só no seu aparelho (quando o celular não grava o som no formato do WhatsApp, o vídeo passa pelo servidor só para ajustar o áudio e é apagado em seguida). O 3D é um efeito de profundidade sobre cada foto, não uma planta do imóvel. A música entra no próprio vídeo.</p>
           </section>
         </aside>
+        <NovoImovelTour3D
+          aberto={novoImovelAberto}
+          sugestao={{
+            nome: titulo,
+            endereco: enderecoImovel,
+            cidade: subtitulo.split(/\s*[-/]\s*/)[0] ?? "",
+            uf: (subtitulo.match(/\b([A-Za-z]{2})\s*$/)?.[1] ?? "").toUpperCase(),
+            preco,
+          }}
+          fotos={fotos.map((f, i) => ({ url: f.url, nome: `foto-${i + 1}.jpg` }))}
+          onFechar={() => setNovoImovelAberto(false)}
+          onCriado={(id, nome) => {
+            setNovoImovelAberto(false);
+            setImovelId(String(id));
+            if (!titulo.trim()) setTitulo(nome);
+            if (etapa === "gerado" && video) toast.info("Agora toque em \"Salvar no imóvel\" para guardar o vídeo nele.");
+          }}
+        />
       </div>
     </div>
   );

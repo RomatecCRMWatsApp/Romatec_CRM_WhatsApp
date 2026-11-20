@@ -3,6 +3,17 @@
 Cada versão nova vai no TOPO. Depois rode `npm run release` (valida e atualiza o package.json);
 ao subir, o servidor grava a versão no banco e todos recebem o aviso "Novidades da versão".
 
+## 1.187.0 — 2026-11-20
+tipo: minor
+obrigatoria: nao
+titulo: Tour 3D: cadastrar imóvel novo e salvar o vídeo no imóvel
+publico: corretor
+
+### Novo
+- Tour 3D: "+ Cadastrar imóvel novo" no seletor de imóvel — nome, endereço, cidade, preço e finalidade já vêm do tour, e as fotos vão junto para o cadastro.
+- Depois de gerar, "Salvar no imóvel": o vídeo fica nos vídeos do imóvel (cartão, detalhes, página pública) e em Materiais.
+- "Salvar no celular" baixa o MP4 para a galeria do aparelho.
+
 ## 1.186.1 — 2026-11-20
 tipo: patch
 obrigatoria: nao
