@@ -44,15 +44,46 @@ export async function montarViaAssinada(contratoId: number): Promise<{ buf: Buff
   const contrato = await lerArquivo(c.pdfAtual);
   if (!contrato) return null;
   const manifesto = c.manifestoArquivo ? await lerArquivo(c.manifestoArquivo) : null;
-  let buf = contrato.buf;
+  const { PDFDocument } = await import('pdf-lib');
+  const via = await PDFDocument.load(contrato.buf, { ignoreEncryption: true });
   if (manifesto) {
-    const { PDFDocument } = await import('pdf-lib');
-    const via = await PDFDocument.load(contrato.buf, { ignoreEncryption: true });
     const m = await PDFDocument.load(manifesto.buf, { ignoreEncryption: true });
     (await via.copyPages(m, m.getPageIndices())).forEach(pg => via.addPage(pg));
-    buf = Buffer.from(await via.save({ useObjectStreams: false }));
   }
-  return { buf, nome: `CONTRATO-${c.numero}-VIA-ASSINADA.pdf` };
+  // O contrato repete as mesmas imagens (cabeçalho, mapas) em várias páginas: sem as cópias cabe no limite do WhatsApp (15 MB)
+  await deduplicarStreams(via);
+  return { buf: Buffer.from(await via.save({ useObjectStreams: false })), nome: `CONTRATO-${c.numero}-VIA-ASSINADA.pdf` };
+}
+
+/** Streams com dicionário e conteúdo idênticos viram um só objeto (sem perda: os mesmos bytes) */
+export async function deduplicarStreams(doc: import('pdf-lib').PDFDocument): Promise<number> {
+  // Imagem com máscara (SMask) duplicada só fica idêntica depois que a máscara é unificada: repete até estabilizar
+  let total = 0;
+  for (let n; (n = await passadaDedup(doc)); ) total += n;
+  return total;
+}
+
+async function passadaDedup(doc: import('pdf-lib').PDFDocument): Promise<number> {
+  const { PDFRawStream, PDFDict, PDFArray, PDFRef } = await import('pdf-lib');
+  const { createHash } = await import('node:crypto');
+  const canon = new Map<string, import('pdf-lib').PDFRef>();
+  const troca = new Map<string, import('pdf-lib').PDFRef>();
+  for (const [ref, o] of doc.context.enumerateIndirectObjects()) {
+    if (!(o instanceof PDFRawStream)) continue;
+    const h = createHash('sha256').update(o.dict.toString()).update(o.contents).digest('hex');
+    const ja = canon.get(h);
+    if (ja) troca.set(ref.toString(), ja); else canon.set(h, ref);
+  }
+  if (!troca.size) return 0;
+  const novo = (v: unknown) => (v instanceof PDFRef ? troca.get(v.toString()) : undefined);
+  const visitar = (v: unknown): void => {
+    if (v instanceof PDFDict) for (const [k, x] of v.entries()) { const n = novo(x); if (n) v.set(k, n); else visitar(x); }
+    else if (v instanceof PDFArray) for (let i = 0; i < v.size(); i++) { const x = v.get(i); const n = novo(x); if (n) v.set(i, n); else visitar(x); }
+    else if (v instanceof PDFRawStream) visitar(v.dict);
+  };
+  for (const [, o] of doc.context.enumerateIndirectObjects()) visitar(o);
+  for (const [r] of doc.context.enumerateIndirectObjects()) if (troca.has(r.toString())) doc.context.delete(r);
+  return troca.size;
 }
 
 const COMPRADOR = ['comprador', 'conjuge'];

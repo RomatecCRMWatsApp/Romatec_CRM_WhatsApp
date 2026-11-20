@@ -120,3 +120,18 @@ describe('linha do tempo e resumo do contrato', () => {
     expect(r.observacoes[1]).toMatch(/Condições específicas: Liberação de uso/);
   });
 });
+
+describe('via assinada: imagens repetidas', () => {
+  it('a mesma imagem embutida várias vezes vira um objeto só, sem perder páginas', async () => {
+    const { PDFDocument } = await import('pdf-lib');
+    const sharp = (await import('sharp')).default;
+    const png = await sharp({ create: { width: 300, height: 200, channels: 4, background: { r: 10, g: 80, b: 40, alpha: 0.5 } } }).png().toBuffer();
+    const doc = await PDFDocument.create();
+    for (let i = 0; i < 3; i++) doc.addPage().drawImage(await doc.embedPng(png), { x: 10, y: 10 }); // 3 imagens + 3 máscaras iguais
+    const antes = (await doc.save()).length;
+    expect(await L.deduplicarStreams(doc)).toBe(4);
+    const depois = await doc.save();
+    expect(depois.length).toBeLessThan(antes);
+    expect((await PDFDocument.load(depois)).getPageCount()).toBe(3);
+  });
+});
