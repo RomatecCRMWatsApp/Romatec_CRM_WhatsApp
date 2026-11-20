@@ -15,6 +15,29 @@ export interface VideoGerado {
   mime: string;
   /** havia trilha, mas este navegador não conseguiu codificar o áudio */
   semAudio: boolean;
+  /** codec do áudio gravado (null = sem áudio) — Opus/WebM precisam do ajuste para o WhatsApp */
+  audio: "aac" | "opus" | "webm" | null;
+}
+
+/** O WhatsApp descarta áudio Opus em MP4 e não aceita WebM: esses passam pelo ajuste no servidor. */
+export function precisaAjuste(v: Pick<VideoGerado, "audio" | "extensao">): boolean {
+  return v.extensao === "webm" || v.audio === "opus" || v.audio === "webm";
+}
+
+/** Regrava o áudio em AAC (e converte WebM em MP4) no servidor; o arquivo não fica guardado. */
+export async function ajustarParaWhatsApp(v: VideoGerado): Promise<VideoGerado> {
+  const r = await fetch("/api/tour3d/converter", {
+    method: "POST",
+    credentials: "include",
+    headers: { "Content-Type": "application/octet-stream", "x-file-type": v.mime },
+    body: v.blob,
+  });
+  if (!r.ok) {
+    const j = await r.json().catch(() => null) as { error?: string } | null;
+    throw new Error(j?.error || `Falha ao ajustar o vídeo (${r.status})`);
+  }
+  const blob = await r.blob();
+  return { blob: new Blob([blob], { type: "video/mp4" }), extensao: "mp4", mime: "video/mp4", semAudio: v.semAudio, audio: v.audio ? "aac" : null };
 }
 
 const CODECS_AUDIO: { codec: string; mux: "aac" | "opus" }[] = [
@@ -130,7 +153,7 @@ async function gerarWebCodecs(
   if (audio && trilha) await codificarAudio(muxer, trilha, audio.codec);
   muxer.finalize();
   aoProgresso(100);
-  return { blob: new Blob([muxer.target.buffer], { type: "video/mp4" }), extensao: "mp4", mime: "video/mp4", semAudio: !!trilha && !audio };
+  return { blob: new Blob([muxer.target.buffer], { type: "video/mp4" }), extensao: "mp4", mime: "video/mp4", semAudio: !!trilha && !audio, audio: audio ? audio.mux : null };
 }
 
 function mimeGravador(): { mime: string; extensao: "mp4" | "webm" } {
@@ -183,5 +206,5 @@ async function gerarMediaRecorder(
   stream.getTracks().forEach(t => t.stop());
   void actx?.close();
   aoProgresso(100);
-  return { blob: new Blob(partes, { type: mime }), extensao, mime: mime.split(";")[0], semAudio: false };
+  return { blob: new Blob(partes, { type: mime }), extensao, mime: mime.split(";")[0], semAudio: false, audio: trilha ? (extensao === "webm" ? "webm" : "opus") : null };
 }

@@ -3,6 +3,15 @@
 Cada versão nova vai no TOPO. Depois rode `npm run release` (valida e atualiza o package.json);
 ao subir, o servidor grava a versão no banco e todos recebem o aviso "Novidades da versão".
 
+## 1.186.1 — 2026-11-20
+tipo: patch
+obrigatoria: nao
+titulo: Tour 3D: música tocando no WhatsApp
+publico: corretor
+
+### Correções
+- Tour 3D: em alguns celulares o vídeo chegava mudo no WhatsApp. Agora o som é ajustado para o formato que o WhatsApp e o Instagram tocam (AAC) antes de baixar ou enviar.
+
 ## 1.186.0 — 2026-11-20
 tipo: minor
 obrigatoria: nao

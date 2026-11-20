@@ -427,7 +427,15 @@ export default function Tour3DFotos() {
       const { gerarVideo } = await import("@/lib/tour3d/video");
       const { comVolume } = await import("@/lib/tour3d/trilha");
       const trilha = trilhaRef.current ? comVolume(trilhaRef.current, volume) : null;
-      const v = await gerarVideo(cena, r, pct => setProgresso({ texto: "Gerando o vídeo…", pct }), () => cancelar.current, trilha);
+      const { precisaAjuste, ajustarParaWhatsApp } = await import("@/lib/tour3d/video");
+      let v = await gerarVideo(cena, r, pct => setProgresso({ texto: "Gerando o vídeo…", pct }), () => cancelar.current, trilha);
+      if (precisaAjuste(v)) {
+        setProgresso({ texto: "Ajustando o som para tocar no WhatsApp…", pct: 100 });
+        try { v = await ajustarParaWhatsApp(v); } catch (e) {
+          console.error(e);
+          toast.warning("Não consegui ajustar o som para o WhatsApp agora. O vídeo foi gerado, mas a música pode não tocar lá.");
+        }
+      }
       const nome = nomeArquivo(titulo, formato, v.extensao);
       setVideo({ ...v, url: URL.createObjectURL(v.blob), nome });
       setEtapa("gerado");
@@ -732,7 +740,7 @@ export default function Tour3DFotos() {
                 </>
               )}
             </div>
-            <p className="mt-4 flex gap-2 text-xs text-muted-foreground"><Home className="mt-0.5 h-3.5 w-3.5 shrink-0" aria-hidden />As fotos ficam só no seu aparelho. O 3D é um efeito de profundidade sobre cada foto, não uma planta do imóvel. A música entra no próprio vídeo.</p>
+            <p className="mt-4 flex gap-2 text-xs text-muted-foreground"><Home className="mt-0.5 h-3.5 w-3.5 shrink-0" aria-hidden />As fotos ficam só no seu aparelho (quando o celular não grava o som no formato do WhatsApp, o vídeo passa pelo servidor só para ajustar o áudio e é apagado em seguida). O 3D é um efeito de profundidade sobre cada foto, não uma planta do imóvel. A música entra no próprio vídeo.</p>
           </section>
         </aside>
       </div>

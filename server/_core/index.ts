@@ -971,6 +971,23 @@ async function startServer() {
     res.json({ success: true, imagemMB: mb(l.imagem), videoMB: mb(l.video), pdfMB: mb(l.raw), plano: l.plano, fonte: l.fonte });
   });
 
+  // Tour 3D: regrava o áudio em AAC (o WhatsApp descarta Opus) ou converte WebM em MP4. Nada é guardado.
+  app.post('/api/tour3d/converter', express.raw({ type: '*/*', limit: '210mb' }), async (req, res) => {
+    try {
+      const { sdk } = await import('./sdk');
+      const user = await sdk.authenticateRequest(req).catch(() => null);
+      if (!user || (user as any).ativo === false) return res.status(401).json({ success: false, error: 'Faça login para gerar o vídeo' });
+      const { converterParaWhatsApp } = await import('../tour3dConversao');
+      const saida = await converterParaWhatsApp(req.body as Buffer, String(req.headers['x-file-type'] || req.headers['content-type'] || ''));
+      res.setHeader('Content-Type', 'video/mp4');
+      res.setHeader('Cache-Control', 'no-store');
+      res.end(saida);
+    } catch (error: any) {
+      const status = typeof error?.status === 'number' ? error.status : 500;
+      res.status(status).json({ success: false, error: error?.message || 'Falha ao ajustar o vídeo' });
+    }
+  });
+
   app.post('/api/materiais/upload', express.raw({ type: '*/*', limit: '110mb' }), async (req, res) => {
     try {
       const { sdk } = await import('./sdk');
