@@ -17,6 +17,8 @@ describe('CPCV Bom Jardims v3', () => {
     for (const trecho of [
       'Fixada inicialmente em R$ 100,00/mês por chácara',
       'espaço de uso exclusivo de 10,00 metros lineares à margem do córrego',
+      'um bangalô de até 16,00 m² (dezesseis metros quadrados) de área construída por unidade',
+      'passarela de madeira, suspensa ou apoiada em estacas, passando entre as árvores, sem supressão de vegetação nativa, para o acesso de pessoas do espaço de uso exclusivo até a margem do córrego',
       'taxa de reimpressão de R$ 25,00 por carteirinha',
       'EQUATORIAL MARANHÃO DISTRIBUIDORA DE ENERGIA S.A.',
       'monofásico, bifásico ou trifásico',
@@ -70,6 +72,8 @@ describe('Estatuto v1.2 (Quadra F privada como reserva)', () => {
     for (const trecho of [
       'área privada do empreendimento, de uso comum dos associados, não integrante das áreas públicas doadas ao Município',
       'espaço de uso exclusivo de 10,00 metros lineares à margem do córrego na Quadra F',
+      'um bangalô de até 16,00 m² de área construída por chácara',
+      'é permitida passarela de madeira, suspensa ou apoiada em estacas, entre as árvores',
       'São vedadas edificações permanentes (casa, chalé ou similar)',
       'Reserva de preservação.',
       'O uso do córrego limita-se ao banho e à recreação de baixo impacto',
