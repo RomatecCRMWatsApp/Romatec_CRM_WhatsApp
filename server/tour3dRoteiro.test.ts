@@ -34,7 +34,7 @@ describe("tour 3D — roteiro", () => {
     expect(q.cenas.map(c => c.indice)).toEqual([0, 1]);
     expect(q.cenas[1].opacidade).toBeGreaterThan(0);
     expect(q.cenas[1].opacidade).toBeLessThan(1);
-    expect(quadroEm(r, 1).cenas).toEqual([{ indice: 0, progresso: 0.25, opacidade: 1 }]);
+    expect(quadroEm(r, 1).cenas).toEqual([{ indice: 0, progresso: 0.25, opacidade: 1, transicao: "dissolver" }]);
   });
 
   it("o cartão final aparece no fim e fica totalmente visível", () => {

@@ -5,6 +5,27 @@
 
 export type Movimento = "aproximar" | "afastar" | "deslizar-esquerda" | "deslizar-direita" | "subir" | "orbitar";
 export type Formato = "reel" | "paisagem" | "quadrado";
+export type Transicao =
+  | "dissolver" | "flash" | "escurecer" | "deslizar-cima" | "deslizar-baixo" | "deslizar-esquerda" | "deslizar-direita" | "girar" | "zoom";
+
+export const TRANSICOES: Record<Transicao, string> = {
+  dissolver: "Dissolver",
+  flash: "Flash (clarão)",
+  escurecer: "Escurecer",
+  "deslizar-cima": "Deslizar para cima",
+  "deslizar-baixo": "Deslizar para baixo",
+  "deslizar-esquerda": "Deslizar para a esquerda",
+  "deslizar-direita": "Deslizar para a direita",
+  girar: "Girar",
+  zoom: "Zoom",
+};
+
+/** Sequência do modo "variado": cada troca de foto usa um efeito diferente. */
+const CICLO_TRANSICAO: Transicao[] = ["dissolver", "deslizar-esquerda", "zoom", "flash", "deslizar-cima", "girar", "escurecer", "deslizar-direita", "deslizar-baixo"];
+
+export function transicaoVariada(indice: number): Transicao {
+  return CICLO_TRANSICAO[indice % CICLO_TRANSICAO.length];
+}
 
 export const FORMATOS: Record<Formato, { rotulo: string; largura: number; altura: number; uso: string }> = {
   reel: { rotulo: "Reel / Status (9:16)", largura: 1080, altura: 1920, uso: "Instagram, TikTok, status do WhatsApp" },
@@ -31,6 +52,8 @@ export const FPS = 30;
 export interface CenaRoteiro {
   movimento: Movimento;
   duracao: number;
+  /** como esta foto entra (a primeira foto não tem transição) */
+  transicao?: Transicao;
 }
 
 export interface Roteiro {
@@ -69,7 +92,9 @@ export interface CenaNoQuadro {
   indice: number;
   /** 0..1 dentro da cena */
   progresso: number;
+  /** 0..1 — quanto a cena já entrou (1 = transição concluída) */
   opacidade: number;
+  transicao: Transicao;
 }
 
 export interface Quadro {
@@ -90,7 +115,7 @@ export function quadroEm(r: Roteiro, t: number): Quadro {
     const progresso = Math.min(1, Math.max(0, (t - ini) / c.duracao));
     let opacidade = 1;
     if (i > 0 && t < ini + TRANSICAO_S) opacidade = suave((t - ini) / TRANSICAO_S);
-    cenas.push({ indice: i, progresso, opacidade });
+    cenas.push({ indice: i, progresso, opacidade, transicao: c.transicao ?? "dissolver" });
   });
   const cartao = r.cartaoFinal && t >= r.inicioCartao ? suave(Math.min(1, (t - r.inicioCartao) / TRANSICAO_S)) : 0;
   return { cenas, cartao };

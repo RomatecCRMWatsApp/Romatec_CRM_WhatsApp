@@ -3,6 +3,19 @@
 Cada versão nova vai no TOPO. Depois rode `npm run release` (valida e atualiza o package.json);
 ao subir, o servidor grava a versão no banco e todos recebem o aviso "Novidades da versão".
 
+## 1.186.0 — 2026-11-20
+tipo: minor
+obrigatoria: nao
+titulo: Tour 3D: música, cômodos, logo, transições e carimbo do corretor
+publico: corretor
+
+### Novo
+- Música de fundo no vídeo: trilhas Suave, Animada e Elegante criadas pelo próprio sistema (livres para o Instagram), ou uma música do seu aparelho, com volume ajustável e botão Ouvir na prévia.
+- Nome do cômodo em cada foto (Sala, Cozinha, Suíte…), que aparece na cena correspondente.
+- Logo do escritório no vídeo, no canto que você escolher; fica salvo no aparelho para os próximos vídeos.
+- Transições entre as fotos: dissolver, flash, escurecer, deslizar (cima, baixo, esquerda, direita), girar e zoom — uma para o vídeo todo, variado, ou uma por foto.
+- Carimbo profissional em todas as cenas: corretor com CRECI-F e imobiliária com CRECI-J. No final: preço, endereço do imóvel e, se quiser, CNPJ, endereço do escritório, Instagram, link do WhatsApp e site.
+
 ## 1.185.0 — 2026-11-20
 tipo: minor
 obrigatoria: nao
