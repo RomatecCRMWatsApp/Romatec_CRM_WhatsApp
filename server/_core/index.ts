@@ -1514,6 +1514,8 @@ async function startServer() {
     await addAutorizacoesVenda();
     const { addRelatoriosFotograficos } = await import('./migrations/addRelatoriosFotograficos');
     await addRelatoriosFotograficos();
+    const { addSalaVideo } = await import('./migrations/addSalaVideo');
+    await addSalaVideo();
   } catch (e) {
     console.error('❌ Erro na migration addMateriais:', e);
   }

@@ -42,6 +42,7 @@ import { integracoesRouter } from "./routers/integracoes.router";
 import { caixaEntradaRouter } from "./routers/caixaEntrada.router";
 import { parceirasRouter } from "./routers/parceiras.router";
 import { tour360Router } from "./routers/tour360.router";
+import { salaVideoRouter } from "./routers/salaVideo.router";
 import { cartorioRouter } from "./routers/cartorio.router";
 import { autoRespostaRouter } from "./routers/autoResposta.router";
 import { verComoRouter } from "./routers/verComo.router";
@@ -141,6 +142,7 @@ export const appRouter = router({
   gestao: gestaoRouter,
   baseConhecimento: baseConhecimentoRouter,
   tour360: tour360Router,
+  salaVideo: salaVideoRouter,
   cartorio: cartorioRouter,
   autoResposta: autoRespostaRouter,
   verComo: verComoRouter,

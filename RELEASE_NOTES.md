@@ -3,6 +3,20 @@
 Cada versão nova vai no TOPO. Depois rode `npm run release` (valida e atualiza o package.json);
 ao subir, o servidor grava a versão no banco e todos recebem o aviso "Novidades da versão".
 
+## 1.188.0 — 2026-11-20
+tipo: minor
+obrigatoria: nao
+titulo: Sala de vídeo para reuniões com corretores e clientes
+publico: corretor
+
+### Novo
+- Sala de vídeo (menu Relacionamento): crie a sala, convide pelo WhatsApp ou copie o link e faça a reunião pelo navegador — vídeo, áudio, chat, compartilhar tela e levantar a mão. O convidado entra pelo link só digitando o nome, no celular ou no computador.
+- Convites de reunião: botão "Usar a sala de vídeo do CRM" cria a sala e já põe o link no convite.
+- Quem criou a sala pode encerrá-la; o link deixa de funcionar.
+
+### Avisos
+- A chamada abre no Jitsi gratuito, numa aba do navegador (no primeiro acesso, quem cria a sala entra com a conta Google). Para a chamada abrir dentro do CRM, o administrador configura o Jitsi como serviço (JaaS).
+
 ## 1.187.1 — 2026-11-20
 tipo: patch
 obrigatoria: nao

@@ -38,6 +38,8 @@ const ListaInteresse = lazy(() => import("./pages/ListaInteresse"));
 const AgendaVisitas = lazy(() => import("./pages/AgendaVisitas"));
 const Reunioes = lazy(() => import("./pages/Reunioes"));
 const Convites = lazy(() => import("./pages/Convites"));
+const SalaVideo = lazy(() => import("./pages/SalaVideo"));
+const SalaVideoPublica = lazy(() => import("./pages/SalaVideoPublica"));
 const RecepcaoEvento = lazy(() => import("./pages/RecepcaoEvento"));
 const PainelVendasAoVivo = lazy(() => import("./pages/PainelVendasAoVivo"));
 const Ranking = lazy(() => import("./pages/Ranking"));
@@ -327,6 +329,12 @@ function Router() {
       <Route path={"/ranking"}>
         {() => <SetupGuard component={Ranking} />}
       </Route>
+      <Route path={"/sala-video/:codigo"}>
+        {() => <SetupGuard component={SalaVideo} />}
+      </Route>
+      <Route path={"/sala-video"}>
+        {() => <SetupGuard component={SalaVideo} />}
+      </Route>
       <Route path={"/convites"}>
         {() => <SetupGuard component={Convites} />}
       </Route>
@@ -378,6 +386,7 @@ function Router() {
       <Route path={"/pix/:token"} component={PixPublico} />
       <Route path={"/agendar/:slug"} component={Agendar} />
       <Route path={"/reuniao/:token"} component={ReuniaoPublica} />
+      <Route path={"/sala/:codigo"} component={SalaVideoPublica} />
       <Route path={"/o/:slug"} component={Oferta} />
       <Route path={"/bom-jardims/chacara/:codigo"} component={BomJardimsChacara} />
       <Route path={"/bom-jardims/3d"} component={BomJardims3D} />

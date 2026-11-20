@@ -38,6 +38,11 @@ function FormReuniao({ inicial, onSalvo, onCancelar }: { inicial?: any; onSalvo:
     if (inicial) editar.mutate({ id: inicial.id, ...dados }); else criar.mutate(dados);
   };
   const ocupado = criar.isPending || editar.isPending;
+  // Sala de vídeo do próprio CRM: gera a sala com o título da reunião e põe o link no convite
+  const criarSala = trpc.salaVideo.criar.useMutation({
+    onSuccess: sala => { setF(x => ({ ...x, linkVideo: sala.link })); toast.success("Sala de vídeo criada: o link já está no convite"); },
+    onError: e => toast.error(e.message),
+  });
   return (
     <form onSubmit={salvar} className="rounded-xl border border-border bg-card p-4 grid gap-3 md:grid-cols-2">
       <label className="text-xs md:col-span-2">Título<input required className={campo} value={f.titulo} onChange={e => setF({ ...f, titulo: e.target.value })} placeholder="Ex.: Apresentação do Bom Jardims" /></label>
@@ -52,7 +57,13 @@ function FormReuniao({ inicial, onSalvo, onCancelar }: { inicial?: any; onSalvo:
         <label className="text-xs">Hora<input required type="time" className={campo} value={f.hora} onChange={e => setF({ ...f, hora: e.target.value })} /></label>
       </div>
       <label className="text-xs">Local<input className={campo} value={f.local} onChange={e => setF({ ...f, local: e.target.value })} placeholder="Endereço ou ponto de encontro" /></label>
-      <label className="text-xs">Link da videochamada<input className={campo} value={f.linkVideo} onChange={e => setF({ ...f, linkVideo: e.target.value })} placeholder="https://meet.google.com/…" /></label>
+      <div className="text-xs">
+        <label>Link da videochamada<input className={campo} value={f.linkVideo} onChange={e => setF({ ...f, linkVideo: e.target.value })} placeholder="https://meet.google.com/…" /></label>
+        <button type="button" className="mt-1 text-xs font-semibold text-[var(--rt-gold-light)] underline-offset-2 hover:underline disabled:opacity-50" disabled={criarSala.isPending}
+          onClick={() => criarSala.mutate({ titulo: f.titulo.trim() || "Reunião" })}>
+          {criarSala.isPending ? "Criando a sala…" : "Usar a sala de vídeo do CRM"}
+        </button>
+      </div>
       <label className="text-xs md:col-span-2">Descrição<textarea rows={3} className="w-full rounded-md border border-border bg-background p-2 text-sm" value={f.descricao} onChange={e => setF({ ...f, descricao: e.target.value })} /></label>
       <div className="md:col-span-2 flex justify-end gap-2">
         <Button type="button" variant="outline" onClick={onCancelar}>Cancelar</Button>

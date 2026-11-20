@@ -2669,3 +2669,17 @@ export const relatorioEventos = mysqlTable("relatorioEventos", {
   detalheJson: text("detalheJson"),
   criadoEm: timestamp("criadoEm").defaultNow().notNull(),
 }, (t) => ({ ixRel: index("ix_releventos_rel").on(t.relatorioId) }));
+
+/** Salas de vídeo (Jitsi): chamada no navegador, com link público /sala/<codigo> para convidados */
+export const salasVideo = mysqlTable("salasVideo", {
+  id: int("id").autoincrement().primaryKey(),
+  codigo: varchar("codigo", { length: 16 }).notNull(),
+  titulo: varchar("titulo", { length: 120 }).notNull(),
+  criadoPor: int("criadoPor").notNull(),
+  leadId: int("leadId"),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  encerradaEm: datetime("encerradaEm"),
+}, (t) => ({
+  uqCodigo: uniqueIndex("ux_sala_codigo").on(t.codigo),
+  ixAutor: index("ix_sala_autor").on(t.criadoPor),
+}));

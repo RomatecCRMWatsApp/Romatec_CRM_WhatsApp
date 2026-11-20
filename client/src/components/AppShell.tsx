@@ -10,7 +10,7 @@ import { MobileTabBar, RomatecAppIcon, RomatecLockup, TAB_ICONS, type TabItem } 
 import BuscaGlobal, { JanelaBusca, type TelaBusca } from "@/components/BuscaGlobal";
 import { Scale,
   BarChart3, Building2, Flame, Images, KanbanSquare, LayoutDashboard, LineChart, LogOut, Megaphone, Menu, Send,
-  Settings, UserCog, Users, X, Eye, ClipboardList, CalendarDays, Map as MapIcon, Smartphone, Wallet, IdCard, FolderOpen, Bell, FileSignature, Handshake, Mic, CalendarCheck, UserPlus, BookCopy, BadgeDollarSign, Hourglass, Bot, Trophy, Link2, Zap, MessagesSquare, ListOrdered, Plug, Inbox, Building, Rotate3d, Box,
+  Settings, UserCog, Users, X, Eye, ClipboardList, CalendarDays, Map as MapIcon, Smartphone, Wallet, IdCard, FolderOpen, Bell, FileSignature, Handshake, Mic, CalendarCheck, UserPlus, BookCopy, BadgeDollarSign, Hourglass, Bot, Trophy, Link2, Zap, MessagesSquare, ListOrdered, Plug, Inbox, Building, Rotate3d, Box, Video,
   ChevronDown, ChevronLeft, ChevronRight,
   Radar, BookOpen,
  Shuffle, CheckCheck, ShieldCheck, Search, Camera, Sun, Moon, Monitor, Volume2, VolumeX, SlidersHorizontal,
@@ -58,6 +58,7 @@ const MENU: Grupo[] = [
       { rotulo: "Agenda de visitas", rota: "/leads/agenda", icone: CalendarDays, modulo: "leads" },
       { rotulo: "Reuniões", rota: "/reunioes", icone: Mic, modulo: "leads" },
       { rotulo: "Convites de reunião", rota: "/convites", icone: CalendarCheck },
+      { rotulo: "Sala de vídeo", rota: "/sala-video", icone: Video },
       { rotulo: "Clientes", rota: "/contacts", icone: Users, modulo: "contatos" },
       { rotulo: "Disparos WhatsApp", rota: "/campaigns", icone: Send, modulo: "campanhas" },
       { rotulo: "Desempenho", rota: "/performance", icone: LineChart, modulo: "desempenho" },
