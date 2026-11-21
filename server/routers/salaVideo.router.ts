@@ -27,6 +27,8 @@ export const salaVideoRouter = router({
     .mutation(async ({ ctx, input }) => comErro(async () => (await S()).entrarComoUsuario(input.codigo, quem(ctx)))),
   encerrar: protectedProcedure.input(z.object({ codigo: codigoZ }))
     .mutation(async ({ ctx, input }) => comErro(async () => (await S()).encerrarSala(input.codigo, quem(ctx)))),
+  excluir: protectedProcedure.input(z.object({ codigo: codigoZ }))
+    .mutation(async ({ ctx, input }) => comErro(async () => (await S()).excluirSala(input.codigo, quem(ctx)))),
   /** Link público do convidado: /sala/<codigo> */
   publica: publicProcedure.input(z.object({ codigo: codigoZ }))
     .query(async ({ input }) => comErro(async () => (await S()).salaPublica(input.codigo))),

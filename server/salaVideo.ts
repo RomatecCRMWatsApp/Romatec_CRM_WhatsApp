@@ -173,3 +173,13 @@ export async function encerrarSala(codigo: string, q: Quem) {
   await db.update(salasVideo).set({ encerradaEm: new Date() }).where(eq(salasVideo.id, r.id));
   return { ok: true };
 }
+
+/** Apaga a sala da lista (só a encerrada; quem criou ou o escritório). */
+export async function excluirSala(codigo: string, q: Quem) {
+  const r = await salaPorCodigo(codigo);
+  if (Number(r.criadoPor) !== q.id && !ehEscritorio(q)) throw new SalaErro('Só quem criou a sala pode excluir', 403);
+  if (!r.encerradaEm) throw new SalaErro('Encerre a sala antes de excluir');
+  const db = await banco();
+  await db.delete(salasVideo).where(eq(salasVideo.id, r.id));
+  return { ok: true };
+}

@@ -3,6 +3,15 @@
 Cada versão nova vai no TOPO. Depois rode `npm run release` (valida e atualiza o package.json);
 ao subir, o servidor grava a versão no banco e todos recebem o aviso "Novidades da versão".
 
+## 1.188.2 — 2026-11-21
+tipo: patch
+obrigatoria: nao
+titulo: Sala de vídeo: excluir salas encerradas
+publico: corretor
+
+### Melhorias
+- Na lista de salas encerradas, o botão da lixeira apaga a sala da lista (pede confirmação). Só quem criou a sala ou o escritório pode excluir.
+
 ## 1.188.1 — 2026-11-21
 tipo: patch
 obrigatoria: nao

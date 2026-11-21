@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { useLocation, useRoute } from "wouter";
 import { toast } from "sonner";
-import { ArrowLeft, Copy, Loader2, MessageCircle, Plus, Video, XCircle } from "lucide-react";
+import { ArrowLeft, Copy, Loader2, MessageCircle, Plus, Trash2, Video, XCircle } from "lucide-react";
 import PageHeader from "@/components/PageHeader";
 import { Button } from "@/components/ui/button";
 import { trpc } from "@/lib/trpc";
@@ -76,6 +76,10 @@ function Lista() {
     onSuccess: s => { utils.salaVideo.listar.invalidate(); navigate(`/sala-video/${s.codigo}`); },
     onError: e => toast.error(e.message),
   });
+  const excluir = trpc.salaVideo.excluir.useMutation({
+    onSuccess: () => { toast.success("Sala excluída"); utils.salaVideo.listar.invalidate(); },
+    onError: e => toast.error(e.message),
+  });
   const ativas = (salas ?? []).filter(s => !s.encerrada);
   const antigas = (salas ?? []).filter(s => s.encerrada);
 
@@ -118,7 +122,16 @@ function Lista() {
         <section>
           <h2 className="mb-2 text-sm font-semibold text-muted-foreground">Encerradas</h2>
           <ul className="grid gap-1 text-sm text-muted-foreground">
-            {antigas.slice(0, 20).map(s => <li key={s.id}>{s.titulo} · {s.criadaEm ? new Date(s.criadaEm).toLocaleDateString("pt-BR") : ""}</li>)}
+            {antigas.slice(0, 50).map(s => (
+              <li key={s.id} className="flex items-center gap-2">
+                <span className="min-w-0 truncate">{s.titulo} · {s.criadaEm ? new Date(s.criadaEm).toLocaleDateString("pt-BR") : ""}</span>
+                <Button size="sm" variant="ghost" className="h-8 px-2 text-destructive" disabled={excluir.isPending}
+                  aria-label={`Excluir a sala ${s.titulo}`}
+                  onClick={() => { if (confirm(`Excluir a sala "${s.titulo}" da lista?`)) excluir.mutate({ codigo: s.codigo }); }}>
+                  <Trash2 className="h-4 w-4" aria-hidden />
+                </Button>
+              </li>
+            ))}
           </ul>
         </section>
       )}
