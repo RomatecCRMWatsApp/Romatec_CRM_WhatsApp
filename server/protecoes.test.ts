@@ -52,3 +52,14 @@ describe('proteções gerais', () => {
     expect(frameAncestors({ FRAME_ANCESTORS_EXTRA: 'https://parceiro.com.br' } as any)).toContain('https://parceiro.com.br');
   });
 });
+
+describe('Permissions-Policy da sala de vídeo', () => {
+  it('libera câmera, microfone e tela para o iframe do 8x8 e mantém o resto restrito', async () => {
+    const { PERMISSIONS_POLICY } = await import('./_core/protecoes');
+    expect(PERMISSIONS_POLICY).toContain('camera=(self "https://8x8.vc")');
+    expect(PERMISSIONS_POLICY).toContain('microphone=(self "https://8x8.vc")');
+    expect(PERMISSIONS_POLICY).toContain('display-capture=(self "https://8x8.vc")');
+    expect(PERMISSIONS_POLICY).toContain('geolocation=(self)');
+    expect(PERMISSIONS_POLICY).toContain('payment=()');
+  });
+});

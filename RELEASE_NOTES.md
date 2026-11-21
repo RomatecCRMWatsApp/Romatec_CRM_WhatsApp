@@ -3,6 +3,15 @@
 Cada versão nova vai no TOPO. Depois rode `npm run release` (valida e atualiza o package.json);
 ao subir, o servidor grava a versão no banco e todos recebem o aviso "Novidades da versão".
 
+## 1.188.3 — 2026-11-21
+tipo: patch
+obrigatoria: nao
+titulo: Sala de vídeo: câmera e microfone liberados na chamada
+publico: corretor
+
+### Correções
+- A câmera e o microfone ficavam bloqueados dentro da chamada (no iPhone, no Android e no computador). Agora o navegador pede a permissão e a imagem aparece; compartilhar a tela também passa a funcionar.
+
 ## 1.188.2 — 2026-11-21
 tipo: patch
 obrigatoria: nao

@@ -42,12 +42,27 @@ export function frameAncestors(env: NodeJS.ProcessEnv = process.env): string {
   return ["'self'", 'https://romateccrm.com', 'https://*.romateccrm.com', 'https://romatecavalieimob.com.br', 'https://*.romatecavalieimob.com.br', 'https://*.manus.space', ...extra].join(' ');
 }
 
+/**
+ * Câmera (documentos), microfone (agente de voz) e localização (evidência da assinatura) só no próprio site —
+ * e na videochamada da Sala de vídeo, que roda num iframe do 8x8 (Jitsi como serviço): sem liberar o 8x8 aqui,
+ * o navegador bloqueia câmera, microfone e compartilhamento de tela dentro da chamada.
+ */
+export const JITSI_ORIGEM = '"https://8x8.vc"';
+export const PERMISSIONS_POLICY = [
+  `camera=(self ${JITSI_ORIGEM})`,
+  `microphone=(self ${JITSI_ORIGEM})`,
+  `display-capture=(self ${JITSI_ORIGEM})`,
+  `fullscreen=(self ${JITSI_ORIGEM})`,
+  `autoplay=(self ${JITSI_ORIGEM})`,
+  'geolocation=(self)',
+  'payment=()',
+].join(', ');
+
 export function cabecalhosSeguranca(req: Request, res: Response, next: NextFunction) {
   res.setHeader('X-Content-Type-Options', 'nosniff');
   res.setHeader('Referrer-Policy', 'strict-origin-when-cross-origin');
   res.setHeader('Content-Security-Policy', `frame-ancestors ${frameAncestors()}`);
-  // Câmera (documentos), microfone (agente de voz) e localização (evidência da assinatura) só no próprio site
-  res.setHeader('Permissions-Policy', 'camera=(self), microphone=(self), geolocation=(self), payment=()');
+  res.setHeader('Permissions-Policy', PERMISSIONS_POLICY);
   const https = req.protocol === 'https' || String(req.headers['x-forwarded-proto'] ?? '').split(',')[0].trim() === 'https';
   if (https) res.setHeader('Strict-Transport-Security', 'max-age=15552000; includeSubDomains');
   next();
