@@ -157,12 +157,13 @@ export async function salaPublica(codigo: string) {
   return { titulo: String(r.titulo), anfitriao: u?.name ? String(u.name) : null, encerrada: !!r.encerradaEm, modo: modoSala() };
 }
 
-export async function entrarComoConvidado(codigo: string, nome: string): Promise<Entrada> {
+export async function entrarComoConvidado(codigo: string, nome: string): Promise<Entrada & { titulo: string }> {
   const n = nomeParticipanteValido(nome);
   if (!n) throw new SalaErro('Digite o seu nome para entrar');
   const r = await salaPorCodigo(codigo);
   if (r.encerradaEm) throw new SalaErro('Esta reunião já foi encerrada', 410);
-  return entrada(codigo, { id: `c${crypto.randomBytes(6).toString('hex')}`, nome: n, moderador: false });
+  const e = await entrada(codigo, { id: `c${crypto.randomBytes(6).toString('hex')}`, nome: n, moderador: false });
+  return { ...e, titulo: String(r.titulo) };
 }
 
 export async function encerrarSala(codigo: string, q: Quem) {

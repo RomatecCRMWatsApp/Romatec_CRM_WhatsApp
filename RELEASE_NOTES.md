@@ -3,6 +3,16 @@
 Cada versão nova vai no TOPO. Depois rode `npm run release` (valida e atualiza o package.json);
 ao subir, o servidor grava a versão no banco e todos recebem o aviso "Novidades da versão".
 
+## 1.188.1 — 2026-11-21
+tipo: patch
+obrigatoria: nao
+titulo: Sala de vídeo: convite sempre com o link do CRM
+publico: corretor
+
+### Melhorias
+- Dentro da chamada, o convite do 8x8 saiu: para chamar alguém use "Copiar link" ou "Convidar pelo WhatsApp", que mandam o link da sala no CRM (romateccrm.com/sala/…), onde o convidado só digita o nome.
+- O topo da chamada mostra o nome da reunião em vez do código da sala.
+
 ## 1.188.0 — 2026-11-20
 tipo: minor
 obrigatoria: nao

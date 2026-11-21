@@ -11,6 +11,8 @@ export interface EntradaSala {
   script?: string;
   url?: string;
   nome: string;
+  /** nome da reunião, mostrado no topo da chamada no lugar do código da sala */
+  titulo?: string;
 }
 
 const scripts = new Map<string, Promise<void>>();
@@ -59,6 +61,9 @@ export default function ChamadaJitsi({ entrada, onSair, altura = "calc(100dvh - 
         userInfo: { displayName: entrada.nome },
         configOverwrite: {
           prejoinConfig: { enabled: true },
+          // o convite sai pelos botões do CRM (link /sala/<codigo>), não pelo link do 8x8
+          disableInviteFunctions: true,
+          ...(entrada.titulo ? { subject: entrada.titulo } : {}),
           // no celular, não oferece "baixar o app": a chamada fica no navegador
           disableDeepLinking: true,
           defaultLanguage: "ptBR",
