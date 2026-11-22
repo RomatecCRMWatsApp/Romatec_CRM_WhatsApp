@@ -118,7 +118,16 @@ export default function Retorno() {
               <span><b>1. Ligação para tirar todas as dúvidas.</b> Por telefone eu explico localização, situação registral, prazo das obras, o que está incluso e o que não está, valor, entrada e parcelas do financiamento, e envio o material completo: mapa interativo, vídeos, simulação e a minuta do contrato.</span></p>
             <p style={{ margin: 0, display: "flex", gap: 10 }}><Car size={22} color={C.verde} aria-hidden="true" style={{ flexShrink: 0, marginTop: 2 }} />
               <span><b>2. Visita para escolher e fechar.</b> O condomínio fica a 17 km do centro de Açailândia. Buscamos você de carro e levamos até lá quando já tiver decidido pela compra, para escolher a posição da chácara e assinar o contrato.</span></p>
-            <p style={{ margin: "12px 0 0", fontSize: 14, color: C.suave }}>Se ainda tem alguma dúvida, escolha a ligação: é rápido e sem compromisso.</p>
+            <div style={{ marginTop: 16, padding: 16, borderRadius: 14, background: "var(--c-fff7e0)", border: `2px solid ${C.dourado}` }}>
+              <p style={{ margin: "0 0 8px", fontWeight: 700, color: C.verde }}>Importante sobre a visita ao condomínio</p>
+              <ul style={{ margin: 0, paddingLeft: 20, lineHeight: 1.55, fontSize: 15, listStyle: "disc" }}>
+                <li>A visita é um deslocamento de 17 km com o nosso veículo, feito com hora marcada.</li>
+                <li>Ela é agendada <b>somente depois</b> que todas as dúvidas foram esclarecidas por telefone e você já decidiu pela compra.</li>
+                <li>O objetivo da visita é <b>escolher a posição da chácara e assinar o contrato</b>.</li>
+                <li>Leve RG ou CNH e CPF (e os do cônjuge, se for casado) e um comprovante de endereço.</li>
+              </ul>
+            </div>
+            <p style={{ margin: "12px 0 0", fontSize: 14, color: C.suave }}>Ainda tem alguma dúvida? Escolha a ligação: é rápido e sem compromisso. Assim que tudo estiver claro, marcamos a visita.</p>
             {insta && <div style={{ marginTop: 14 }}>{insta}</div>}
           </section>
 

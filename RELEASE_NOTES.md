@@ -3,6 +3,15 @@
 Cada versão nova vai no TOPO. Depois rode `npm run release` (valida e atualiza o package.json);
 ao subir, o servidor grava a versão no banco e todos recebem o aviso "Novidades da versão".
 
+## 1.189.3 — 2026-11-22
+tipo: patch
+obrigatoria: nao
+titulo: Link de retorno: regras da visita em destaque
+publico: corretor
+
+### Melhorias
+- A página do link de retorno ganhou um quadro "Importante sobre a visita": deslocamento de 17 km com hora marcada, só depois de tirar todas as dúvidas por telefone, para escolher a chácara e assinar o contrato, e quais documentos levar.
+
 ## 1.189.2 — 2026-11-22
 tipo: patch
 obrigatoria: nao
