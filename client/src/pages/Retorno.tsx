@@ -114,6 +114,12 @@ export default function Retorno() {
           <section style={{ background: "var(--c-ffffff)", borderRadius: 20, padding: 22, border: "1px solid var(--c-e2d9bf)", fontSize: 16, lineHeight: 1.55 }}>
             <h2 style={{ fontFamily: SERIF, color: C.verde, fontSize: 22, margin: "0 0 10px" }}>Como funciona o atendimento</h2>
             <p style={{ margin: "0 0 10px" }}>Obrigado pelo interesse! Para cuidar bem do seu tempo, o atendimento acontece em duas etapas:</p>
+            {emp.slug === "bom-jardims" && (
+              <div style={{ margin: "0 0 14px", padding: 12, borderRadius: 14, background: "var(--c-eaf5ec)", border: "1px solid var(--c-bfe3cb)" }}>
+                <p style={{ margin: "0 0 6px", fontSize: 14, fontWeight: 700, color: C.verde }}>🔊 Ouça como funciona (1 min e meio)</p>
+                <audio controls preload="none" src="/bom-jardims/audio-como-funciona-visita.mp3" style={{ width: "100%" }}>Seu navegador não toca áudio.</audio>
+              </div>
+            )}
             <p style={{ margin: "0 0 10px", display: "flex", gap: 10 }}><PhoneCall size={22} color={C.verde} aria-hidden="true" style={{ flexShrink: 0, marginTop: 2 }} />
               <span><b>1. Ligação para tirar todas as dúvidas.</b> Por telefone eu explico localização, situação registral, prazo das obras, o que está incluso e o que não está, valor, entrada e parcelas do financiamento, e envio o material completo: mapa interativo, vídeos, simulação e a minuta do contrato.</span></p>
             <p style={{ margin: 0, display: "flex", gap: 10 }}><Car size={22} color={C.verde} aria-hidden="true" style={{ flexShrink: 0, marginTop: 2 }} />

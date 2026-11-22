@@ -3,6 +3,15 @@
 Cada versão nova vai no TOPO. Depois rode `npm run release` (valida e atualiza o package.json);
 ao subir, o servidor grava a versão no banco e todos recebem o aviso "Novidades da versão".
 
+## 1.189.6 — 2026-11-22
+tipo: patch
+obrigatoria: nao
+titulo: Áudio explicativo no link de retorno
+publico: corretor
+
+### Melhorias
+- A página do link de retorno do Bom Jardims tem um áudio de 1 minuto e meio explicando as duas etapas do atendimento e as regras da visita.
+
 ## 1.189.5 — 2026-11-22
 tipo: patch
 obrigatoria: nao
