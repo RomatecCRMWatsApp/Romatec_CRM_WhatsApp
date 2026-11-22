@@ -43,6 +43,13 @@ export default function BomJardimsRota() {
         )}
       </header>
 
+      <section style={{ ...sec, paddingTop: 20, paddingBottom: 0 }}>
+        <div style={{ padding: "12px 14px", borderRadius: 16, background: "var(--c-ffffff)", border: "1px solid var(--c-e2d9bf)" }}>
+          <p style={{ margin: "0 0 6px", fontSize: 14, fontWeight: 700, color: C.verde }}>🔊 Ouça o caminho passo a passo (1 min e 20 s)</p>
+          <audio controls preload="none" src="/bom-jardims/audio-como-chegar.mp3" onPlay={() => abriu("audio")} style={{ width: "100%" }}>Seu navegador não toca áudio.</audio>
+        </div>
+      </section>
+
       <section style={{ ...sec, paddingTop: 20 }}>
         <h2 style={{ fontFamily: SERIF, color: C.verde, fontSize: 28, margin: "0 0 12px" }}>Veja o caminho em vídeo (com narração)</h2>
         <video src={VIDEO.src} poster={VIDEO.poster} controls playsInline preload="metadata" onPlay={() => abriu("video")}
