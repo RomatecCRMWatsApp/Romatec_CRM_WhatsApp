@@ -123,6 +123,10 @@ export default function BomJardims3D() {
             Gire, aproxime e toque numa chácara: ela sobe no mapa com a área e a situação.
             {disponiveis !== undefined && <> Hoje são <b style={{ color: C.destaque }}>{disponiveis} chácaras disponíveis</b>.</>}
           </p>
+          <div style={{ marginTop: 12, maxWidth: 520, padding: "10px 12px", borderRadius: 14, background: "rgba(255,255,255,0.08)", border: "1px solid rgba(201,168,76,0.5)" }}>
+            <p style={{ margin: "0 0 6px", color: C.destaque, fontSize: 14, fontWeight: 700 }}>🔊 Ouça como usar o mapa (1 minuto)</p>
+            <audio controls preload="none" src="/bom-jardims/audio-mapa-3d.mp3" style={{ width: "100%" }}>Seu navegador não toca áudio.</audio>
+          </div>
         </div>
         <div style={{ maxWidth: 1080, margin: "0 auto", padding: "0 16px 24px" }}>
           <div style={{ borderRadius: 18, overflow: "hidden", background: C.creme, padding: tres ? 0 : 8 }}>

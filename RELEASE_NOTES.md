@@ -3,6 +3,15 @@
 Cada versão nova vai no TOPO. Depois rode `npm run release` (valida e atualiza o package.json);
 ao subir, o servidor grava a versão no banco e todos recebem o aviso "Novidades da versão".
 
+## 1.189.8 — 2026-11-22
+tipo: patch
+obrigatoria: nao
+titulo: Áudio explicativo no mapa 3D do Bom Jardims
+publico: corretor
+
+### Melhorias
+- A página do mapa 3D tem um áudio de 1 minuto ensinando a girar, aproximar e tocar na chácara para ver a área e a situação.
+
 ## 1.189.7 — 2026-11-22
 tipo: patch
 obrigatoria: nao
