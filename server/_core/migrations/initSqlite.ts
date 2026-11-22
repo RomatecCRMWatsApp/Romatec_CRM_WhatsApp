@@ -567,6 +567,12 @@ export function initSqliteTables(sqlite: any): void {
     lembreteClienteAt INTEGER, avisoCorretorAt INTEGER, resultadoPedidoAt INTEGER, confirmadaAt INTEGER,
     createdAt INTEGER NOT NULL DEFAULT (strftime('%s','now')), updatedAt INTEGER NOT NULL DEFAULT (strftime('%s','now'))
   )`);
+  run(`CREATE TABLE IF NOT EXISTS leadRetornos (
+    id INTEGER PRIMARY KEY AUTOINCREMENT, leadId INTEGER NOT NULL, tipo TEXT NOT NULL, quando INTEGER NOT NULL,
+    enderecoBusca TEXT, pessoas INTEGER, observacao TEXT, local TEXT, status TEXT NOT NULL DEFAULT 'pendente',
+    responsavelId INTEGER, avisoAt INTEGER,
+    createdAt INTEGER NOT NULL DEFAULT (strftime('%s','now')), updatedAt INTEGER NOT NULL DEFAULT (strftime('%s','now'))
+  )`);
   // Mensagens do link de agendamento (server/_core/migrations/addMensagensAgendamento.ts)
   addColumn(`ALTER TABLE leadVisitas ADD COLUMN pedidoJson TEXT`);
   addColumn(`ALTER TABLE leadVisitas ADD COLUMN confirmacaoEnviadaAt INTEGER`);

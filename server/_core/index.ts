@@ -470,6 +470,53 @@ async function startServer() {
       res.status(500).json({ ok: false, error: 'Não foi possível enviar agora. Fale pelo WhatsApp.' });
     }
   });
+  // ─── Link de retorno (/retorno/:slug?c=<ref>): ligação ou visita com busca ───
+  const allowRetorno = createRateLimiter(5, 10 * 60 * 1000);
+  app.get('/api/public/retorno/:slug', async (req, res) => {
+    try {
+      const { dadosRetorno } = await import('../retorno');
+      const ref = typeof req.query.c === 'string' ? req.query.c.slice(0, 20) : null;
+      res.setHeader('Cache-Control', 'no-store');
+      res.json({ ok: true, ...(await dadosRetorno(String(req.params.slug).slice(0, 80), ref)) });
+    } catch (e: any) {
+      if (e?.name === 'AgendamentoErro') return res.status(e.status).json({ ok: false, error: e.message });
+      console.error('[Retorno] página:', e);
+      res.status(500).json({ ok: false, error: 'Falha ao carregar' });
+    }
+  });
+  app.get('/api/public/retorno/:slug/horarios', async (req, res) => {
+    try {
+      const dia = String(req.query.dia ?? '');
+      const tipo = req.query.tipo === 'visita_busca' ? 'visita_busca' : 'ligacao';
+      if (!/^\d{4}-\d{2}-\d{2}$/.test(dia)) return res.status(400).json({ ok: false, error: 'Dia inválido' });
+      const ref = typeof req.query.c === 'string' ? req.query.c.slice(0, 20) : null;
+      const { horariosLivres } = await import('../retorno');
+      res.setHeader('Cache-Control', 'no-store');
+      res.json({ ok: true, horarios: await horariosLivres(String(req.params.slug).slice(0, 80), ref, dia, tipo) });
+    } catch (e: any) {
+      if (e?.name === 'AgendamentoErro') return res.status(e.status).json({ ok: false, error: e.message });
+      console.error('[Retorno] horários:', e);
+      res.status(500).json({ ok: false, error: 'Falha ao carregar os horários' });
+    }
+  });
+  app.post('/api/public/retorno/:slug', async (req, res) => {
+    try {
+      const fwd = String(req.headers['x-forwarded-for'] ?? '').split(',').map(s => s.trim()).filter(Boolean);
+      const ip = fwd[fwd.length - 1] || req.socket.remoteAddress || 'unknown';
+      if (!allowRetorno(ip)) return res.status(429).json({ ok: false, error: 'Muitas tentativas. Tente novamente em alguns minutos.' });
+      const { retornoSchema } = await import('../../shared/retorno');
+      const parsed = retornoSchema.safeParse(req.body ?? {});
+      if (!parsed.success) return res.status(400).json({ ok: false, error: parsed.error.issues[0]?.message || 'Dados inválidos' });
+      if (parsed.data.website) return res.json({ ok: true }); // honeypot
+      const { registrarRetorno } = await import('../retorno');
+      const r = await registrarRetorno(String(req.params.slug).slice(0, 80), parsed.data, ip);
+      res.json({ ok: true, confirmacao: r.confirmacao ?? null });
+    } catch (e: any) {
+      if (e?.name === 'AgendamentoErro') return res.status(e.status).json({ ok: false, error: e.message });
+      console.error('[Retorno] envio:', e);
+      res.status(500).json({ ok: false, error: 'Não foi possível enviar agora. Fale pelo WhatsApp.' });
+    }
+  });
   // ─── Convite de reunião: confirmação de presença (/reuniao/:token — server/convites.ts) ───
   const allowReuniao = createRateLimiter(20, 10 * 60 * 1000);
   const erroConvite = (res: express.Response, e: any, onde: string) => {
@@ -1541,6 +1588,8 @@ async function startServer() {
     await addVisitas();
     const { addMensagensAgendamento } = await import('./migrations/addMensagensAgendamento');
     await addMensagensAgendamento();
+    const { addRetornos } = await import('./migrations/addRetornos');
+    await addRetornos();
     const { addReunioes } = await import('./migrations/addReunioes');
     await addReunioes();
     const { addRecrutamento } = await import('./migrations/addRecrutamento');
@@ -1688,6 +1737,7 @@ async function startServer() {
   import('../leads/sla').then(m => m.iniciarJobSla()).catch(e => console.warn('[SLA] Job não iniciado:', e));
   // Agenda de visitas: lembrete ao cliente, aviso ao corretor e pedido de resultado
   import('../leads/visitas').then(m => m.iniciarJobVisitas()).catch(e => console.warn('[Visitas] Job não iniciado:', e));
+  import('../retorno').then(m => m.iniciarJobRetornos()).catch(e => console.warn('[Retornos] Job não iniciado:', e));
   // Credenciais CRECI: alerta de vencimento pelo WhatsApp (08:00, a cada 2 dias até regularizar)
   import('../credenciais').then(m => m.iniciarJobCredenciais()).catch(e => console.warn('[Credenciais] Job não iniciado:', e));
   // Vigia: avisa no Telegram se o follow-up ou o alerta de atendimento pararem

@@ -294,6 +294,7 @@ export function metaDaRota(path: string): MetaPagina | 'imovel' {
   }
   // Agendamento de outros empreendimentos: funciona, mas fica fora do Google
   if (p.startsWith('/agendar/')) return { ...META_PADRAO, title: 'Agende sua visita — Romatec Imóveis', path: p, indexavel: false };
+  if (p.startsWith('/retorno/')) return { ...META_PADRAO, title: 'Marque seu retorno — Romatec Imóveis', path: p, indexavel: false };
   // Formulário do recrutamento (link pessoal do candidato): fora do Google
   if (p.startsWith('/formulario/')) return { ...META_PADRAO, title: 'Cadastro — Romatec CRM', path: '/formulario', indexavel: false };
   if (p === '/imoveis') return { ...META_PADRAO, title: 'Imóveis à venda em Açailândia/MA — Romatec', path: '/imoveis' };

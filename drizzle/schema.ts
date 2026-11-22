@@ -917,6 +917,29 @@ export const leadVisitas = mysqlTable("leadVisitas", {
   idxLead: index("idx_visita_lead").on(t.leadId),
 }));
 
+/** Pedidos do link de retorno (/retorno/:slug): ligação ou visita com busca no endereço do cliente */
+export const leadRetornos = mysqlTable("leadRetornos", {
+  id: int("id").autoincrement().primaryKey(),
+  leadId: int("leadId").notNull(),
+  /** ligacao | visita_busca */
+  tipo: varchar("tipo", { length: 20 }).notNull(),
+  quando: timestamp("quando").notNull(),
+  enderecoBusca: varchar("enderecoBusca", { length: 300 }),
+  pessoas: int("pessoas"),
+  observacao: varchar("observacao", { length: 300 }),
+  local: varchar("local", { length: 200 }),
+  /** pendente | feito | cancelado */
+  status: varchar("status", { length: 15 }).notNull().default("pendente"),
+  responsavelId: int("responsavelId"),
+  /** Quando o aviso da hora marcada saiu (uma vez só) */
+  avisoAt: timestamp("avisoAt"),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().notNull(),
+}, (t) => ({
+  idxQuando: index("idx_retorno_quando").on(t.quando),
+  idxLead: index("idx_retorno_lead").on(t.leadId),
+}));
+
 // ─── Camada SaaS (shared/saas.ts) — fase 1: planos, cupons, assinaturas, trial, talonários ───
 
 /** Configurações da camada SaaS (licenciamento_ativo, cortesia_ate…) */
