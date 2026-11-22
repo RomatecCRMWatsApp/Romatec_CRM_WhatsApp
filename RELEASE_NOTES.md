@@ -3,6 +3,15 @@
 Cada versão nova vai no TOPO. Depois rode `npm run release` (valida e atualiza o package.json);
 ao subir, o servidor grava a versão no banco e todos recebem o aviso "Novidades da versão".
 
+## 1.190.3 — 2026-11-22
+tipo: patch
+obrigatoria: nao
+titulo: Prévia do agendar visita com o portal rústico
+publico: corretor
+
+### Melhorias
+- A prévia do link de agendar visita passa a mostrar o projeto atual do portal rústico, com a guarita à esquerda.
+
 ## 1.190.2 — 2026-11-22
 tipo: patch
 obrigatoria: nao

@@ -139,7 +139,7 @@ export const META_AGENDAR_BOM_JARDIMS: MetaPagina = {
   title: 'Agende sua visita — Chácaras Bom Jardims, Açailândia/MA',
   description: 'Agende uma visita ao Condomínio de Chácaras Bom Jardims, em Açailândia/MA: escolha o dia, o horário e a chácara no mapa. O corretor confirma pelo WhatsApp.',
   path: AGENDAR_BOM_JARDIMS,
-  image: '/bom-jardims/og-agendar-visita.jpg',
+  image: '/bom-jardims/og-agendar-visita-v2.jpg',
   imageAlt: 'Agende sua visita ao Condomínio de Chácaras Bom Jardims — portal de entrada (projeto ilustrativo)',
   imageSize: { w: 1200, h: 630 },
   indexavel: true,
