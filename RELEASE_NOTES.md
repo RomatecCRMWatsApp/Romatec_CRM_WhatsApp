@@ -3,6 +3,17 @@
 Cada versão nova vai no TOPO. Depois rode `npm run release` (valida e atualiza o package.json);
 ao subir, o servidor grava a versão no banco e todos recebem o aviso "Novidades da versão".
 
+## 1.189.2 — 2026-11-22
+tipo: patch
+obrigatoria: nao
+titulo: Prévias novas dos links do Bom Jardims no WhatsApp
+publico: corretor
+
+### Melhorias
+- Ao colar o link no WhatsApp, a miniatura do mapa 3D agora mostra o logo e o slogan "Mais espaço, mais qualidade de vida".
+- O link de como chegar mostra o ícone de localização com a distância de 17 km do centro de Açailândia.
+- O link das formas de pagamento mostra a proposta com o ícone de R$ e "Financiamento direto, sem banco".
+
 ## 1.189.1 — 2026-11-22
 tipo: patch
 obrigatoria: nao

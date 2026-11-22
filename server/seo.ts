@@ -178,8 +178,8 @@ export const META_MAPA3D: MetaPagina = {
   title: TITULO_MAPA3D,
   description: DESCRICAO_MAPA3D,
   path: ROTA_MAPA3D,
-  image: '/bom-jardims/og-3d.jpg',
-  imageAlt: 'Chácaras demarcadas do Condomínio de Chácaras Bom Jardims vistas de cima (drone)',
+  image: '/bom-jardims/og-3d-slogan.jpg',
+  imageAlt: 'Bom Jardims — Mais espaço, mais qualidade de vida. Escolha sua chácara no mapa 3D',
   imageSize: { w: 1200, h: 630 },
   indexavel: true,
   jsonLd: {
@@ -198,9 +198,9 @@ export const META_ROTA: MetaPagina = {
   title: TITULO_ROTA,
   description: DESCRICAO_ROTA,
   path: ROTA_COMO_CHEGAR,
-  image: '/bom-jardims/divulgacao/como-chegar.png',
-  imageAlt: 'Folder Como chegar ao Condomínio de Chácaras Bom Jardims com os pontos de referência',
-  imageSize: { w: 1080, h: 1920 },
+  image: '/bom-jardims/og-rota.jpg',
+  imageAlt: 'Como chegar ao Condomínio de Chácaras Bom Jardims, a 17 km do centro de Açailândia',
+  imageSize: { w: 1200, h: 630 },
   indexavel: true,
 };
 
@@ -209,8 +209,9 @@ export const META_PAGAMENTO: MetaPagina = {
   title: TITULO_PAGAMENTO,
   description: DESCRICAO_PAGAMENTO,
   path: ROTA_PAGAMENTO,
-  image: '/bom-jardims/og.jpg',
-  imageAlt: 'Condomínio de Chácaras Bom Jardims — formas de pagamento',
+  image: '/bom-jardims/og-pagamento.jpg',
+  imageAlt: 'Condomínio de Chácaras Bom Jardims — formas de pagamento, financiamento direto sem banco',
+  imageSize: { w: 1200, h: 630 },
   indexavel: false,
 };
 
