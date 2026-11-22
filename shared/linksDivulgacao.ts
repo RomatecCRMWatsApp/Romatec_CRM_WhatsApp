@@ -106,7 +106,7 @@ export const LINKS_FIXOS: LinkDivulgacao[] = [
     chave: 'fixo:rio', titulo: 'O rio e a água — resposta para quem pergunta do rio', fixo: true, destaque: true, empreendimento: 'Bom Jardims',
     descricao: 'Página que explica: o rio não passa dentro das chácaras, fica na área de preservação (área comum de todos), cada chácara tem 10 metros lineares à margem e a água vem do poço artesiano.',
     url: ROTA_RIO, utmSource: 'whatsapp', utmCampaign: CAMPANHA_RIO,
-    textoWhatsapp: `Boa pergunta! 🌊 O rio *não passa dentro das chácaras*: ele fica na área de preservação, que é uma *área comum para todos os condôminos*, e cada chácara tem a concessão de uso de *10 metros lineares* à margem. A água da chácara vem do *poço artesiano* do condomínio.\n\nVeja todos os detalhes aqui:\n${MARCA_LINK}`,
+    textoWhatsapp: `Boa pergunta! 🌊 O rio *não passa dentro das chácaras*: ele fica na área de preservação, que é uma *área comum para todos os condôminos*, e cada chácara tem um espaço exclusivo de *10 metros lineares* à margem, onde pode fazer deck ou bangalô de madeira. A água da chácara vem do *poço artesiano* do condomínio.\n\nVeja todos os detalhes aqui:\n${MARCA_LINK}`,
   },
   {
     chave: 'fixo:agendar', titulo: 'Agendar visita ao Bom Jardims', fixo: true, destaque: false, empreendimento: 'Bom Jardims',

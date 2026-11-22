@@ -1,13 +1,13 @@
 /**
  * O rio e a água no Bom Jardims (/bom-jardims/rio-e-agua): página para responder a pergunta mais comum —
  * o rio não passa dentro das chácaras; fica na área de preservação, que é área comum de todos; cada chácara tem
- * a concessão de uso de 10 metros lineares à margem; e a água da chácara vem do poço artesiano do condomínio.
+ * um espaço de 10 metros lineares à margem (deck ou bangalô de madeira de até 16 m², cláusula 2.5); e a água da chácara vem do poço artesiano do condomínio.
  * Mesmas regras da ficha (shared/baseConhecimento.ts) e do contrato (shared/documentosCliente.ts).
  */
 export const ROTA_RIO = '/bom-jardims/rio-e-agua';
 export const CAMPANHA_RIO = 'BJ-RIO';
 export const TITULO_RIO = 'O rio e a água — Condomínio de Chácaras Bom Jardims, Açailândia/MA';
-export const DESCRICAO_RIO = 'O rio não passa dentro das chácaras: fica na área de preservação, que é área comum de todos os condôminos. Cada chácara tem 10 metros lineares à margem, e a água vem do poço artesiano do condomínio.';
+export const DESCRICAO_RIO = 'O rio não passa dentro das chácaras: fica na área de preservação, que é área comum de todos os condôminos. Cada chácara tem um espaço de 10 metros lineares à margem, e a água vem do poço artesiano do condomínio.';
 
 export interface BlocoRio { titulo: string; itens: string[] }
 
@@ -17,7 +17,7 @@ export const BLOCOS_RIO: BlocoRio[] = [
     itens: [
       'Nenhuma chácara tem rio dentro do terreno.',
       'O rio corre na área de preservação permanente (APP), uma reserva de mata nativa protegida por lei, junto às chácaras.',
-      'A flora e a fauna dessa área são preservadas: não se pode desmatar, cercar nem construir nela.',
+      'A flora e a fauna dessa área são preservadas: na faixa de preservação não se pode desmatar, cercar nem construir.',
     ],
   },
   {
@@ -31,10 +31,11 @@ export const BLOCOS_RIO: BlocoRio[] = [
   {
     titulo: '10 metros lineares à margem para cada chácara',
     itens: [
-      'Cada chácara terá a concessão de uso de um trecho de 10 metros lineares à margem do rio.',
-      'É uma concessão de uso, não é propriedade: o trecho continua sendo área de preservação.',
-      'Só valem estruturas removíveis, como tenda e churrasqueira portátil.',
-      'Não é área individual de 100 m², não inclui deck ou bangalô individual e não autoriza construir.',
+      'Cada chácara terá um espaço de uso exclusivo de 10 metros lineares à margem do rio, fora da faixa de preservação, em área já aberta.',
+      'O condomínio entrega uma tenda e uma churrasqueira em cada espaço.',
+      'É permitido construir deck de madeira e bangalô de até 16 m², além de cabana ou quiosque: estruturas leves de madeira, sem alvenaria, por conta do próprio chacreiro e com aprovação prévia da administração.',
+      'A passarela de madeira até a margem do rio também é permitida, com aprovação da administração e autorização do órgão ambiental.',
+      'Não é permitido casa, chalé ou construção de alvenaria, nem cortar a mata. O espaço é de uso exclusivo da chácara, mas não vira propriedade.',
     ],
   },
   {

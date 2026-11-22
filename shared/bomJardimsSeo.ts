@@ -52,7 +52,7 @@ export const SOBRE_BOM_JARDIMS: { titulo: string; paragrafos: string[] }[] = [
     titulo: 'Infraestrutura do condomínio',
     paragrafos: [
       'Portal de acesso com guarita e controle de acesso, 8 ruas internas de 12 m, em piçarra, com sarjeta e meio-fio, água encanada de poço artesiano do condomínio com bombeamento automático para reservatório elevado de 10.000 litros e ponto de água na frente de cada chácara, com medição individual por hidrômetro.',
-      'A área de vivência é uma reserva de mata nativa preservada ao longo do córrego, exclusiva dos moradores: trilha ecológica e pontos de banho, apoio com quiosques, vestiário e churrasqueiras fora da faixa de preservação. Cada chácara terá a concessão de uso de um trecho de 10 metros lineares à margem do córrego, só para estruturas removíveis (como tenda e churrasqueira), conforme as regras ambientais. A flora e a fauna são preservadas.',
+      'A área de vivência é uma reserva de mata nativa preservada ao longo do córrego, exclusiva dos moradores: trilha ecológica e pontos de banho, apoio com quiosques, vestiário e churrasqueiras fora da faixa de preservação. Cada chácara terá um espaço de uso exclusivo de 10 metros lineares à margem do córrego, fora da faixa de preservação, com tenda e churrasqueira; nele o comprador pode fazer, por conta própria e com aprovação da administração, estruturas leves de madeira, como deck ou bangalô de até 16 m². A flora e a fauna são preservadas.',
     ],
   },
   {

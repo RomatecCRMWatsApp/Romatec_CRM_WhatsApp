@@ -59,7 +59,7 @@ export const DOCUMENTOS_CLIENTE: DocumentoCliente[] = [
       'Contribuição associativa mensal de R$ 100,00',
       'Água faturada pela média das tarifas residenciais da CAEMA e do SAAE, com hidrômetro individual',
       'Quadra F: área privada e reserva de preservação da flora e da fauna — sem desmatar, caçar ou poluir o córrego',
-      'Espaço exclusivo de 10 metros lineares à margem do córrego por chácara, só com estruturas removíveis (tenda e churrasqueira)',
+      'Espaço exclusivo de 10 metros lineares à margem do córrego por chácara, com tenda e churrasqueira; deck, cabana, quiosque ou bangalô de madeira de até 16 m² por conta do comprador, com aprovação da administração',
       'Carteirinhas: 1ª via gratuita; reimpressão R$ 25,00',
     ],
     textoWhatsapp: '📘 *Estatuto da Associação — Bom Jardims*\n\nRegras de convivência, contribuição e uso das áreas comuns (só leitura):\n{link}',

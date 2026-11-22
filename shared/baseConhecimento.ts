@@ -57,7 +57,7 @@ export const ARTIGOS_INICIAIS: ArtigoBase[] = [
 - 8 ruas internas de 12 m, em piçarra, com sarjeta e meio-fio (sem calçada entregue).
 - Poço artesiano com reservatório elevado de 10.000 L e hidrômetro individual.
 - Energia elétrica e **sinal 5G** em todo o condomínio.
-- Área de vivência: mata nativa junto ao córrego, trilha e pontos de banho. Cada chácara terá a concessão de uso de 10 metros lineares à margem do córrego, só para estruturas removíveis (tenda, churrasqueira). Não é área individual de 100 m², não inclui deck ou bangalô individual (o deck junto ao rio é da área comum) e não é autorização ambiental para construir.
+- Área de vivência: mata nativa junto ao córrego, trilha e pontos de banho. Cada chácara terá um espaço de uso exclusivo de 10 metros lineares à margem do córrego, fora da faixa de APP, em área já aberta; o condomínio entrega tenda e churrasqueira em cada espaço. O comprador pode fazer, por conta própria e com aprovação prévia da administração, estruturas leves de madeira, sem fundação de alvenaria: deck, cabana, quiosque ou um bangalô de até 16 m². Passarela de madeira até a margem depende também de autorização ambiental. São proibidas edificações permanentes (casa, chalé), a supressão de vegetação e qualquer intervenção na APP; as benfeitorias não geram propriedade nem indenização (contrato, cláusula 2.5). O deck grande junto ao rio é da área comum.
 
 ## Documentação
 Georreferenciamento, certificação e licenças **em andamento**. Não diga que estão emitidos: informe a situação atualizada de cada documento.

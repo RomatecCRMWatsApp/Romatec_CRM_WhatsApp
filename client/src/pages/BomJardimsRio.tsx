@@ -29,8 +29,13 @@ export default function BomJardimsRio() {
         <section style={{ background: "var(--c-ffffff)", borderRadius: 18, padding: 18, border: `2px solid ${C.dourado}` }}>
           <p style={{ margin: 0, fontSize: 17, lineHeight: 1.55 }}>
             <b>Resumindo:</b> o rio <b>não passa dentro das chácaras</b>. Ele fica na área de preservação, que é uma <b>área comum para todos os condôminos</b>.
-            Cada chácara tem a concessão de uso de <b>10 metros lineares à margem</b>, e a água da chácara vem do <b>poço artesiano do condomínio</b>.
+            Cada chácara tem um espaço exclusivo de <b>10 metros lineares à margem</b>, onde pode fazer deck ou bangalô de madeira, e a água da chácara vem do <b>poço artesiano do condomínio</b>.
           </p>
+        </section>
+
+        <section style={{ background: "var(--c-ffffff)", borderRadius: 18, padding: "12px 14px", border: "1px solid var(--c-e2d9bf)" }}>
+          <p style={{ margin: "0 0 6px", fontSize: 14, fontWeight: 700, color: C.verde }}>🔊 Ouça a explicação completa (1 min e 50 s)</p>
+          <audio controls preload="none" src="/bom-jardims/audio-rio-e-agua.mp3" style={{ width: "100%" }}>Seu navegador não toca áudio.</audio>
         </section>
 
         {BLOCOS_RIO.map((b, i) => {

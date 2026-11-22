@@ -1,7 +1,7 @@
 /**
  * Ficha do Bom Jardims na base de conhecimento (que a IA e os corretores usam para responder clientes):
  * alinha o artigo já gravado no banco ao texto de shared/baseConhecimento.ts — lançamento em 05/12/2026,
- * ruas em piçarra sem calçada entregue, concessão de 10 m lineares só para estruturas removíveis e
+ * ruas em piçarra sem calçada entregue, espaço de 10 m lineares à margem (cláusula 2.5 do contrato) e
  * documentação em andamento. Troca só os trechos antigos: se o administrador já editou o artigo, o texto dele fica.
  */
 import { eq } from 'drizzle-orm';
@@ -12,7 +12,9 @@ import { ARTIGOS_INICIAIS } from '../../../shared/baseConhecimento';
 export const TROCAS_FICHA: Array<[string, string]> = [
   ['- **Lançamento oficial:** 14 de novembro de 2026.', '- **Lançamento oficial:** 5 de dezembro de 2026.'],
   ['- 8 ruas internas de 12 m (9 m de rolamento + 1,50 m de calçada de cada lado).', '- 8 ruas internas de 12 m, em piçarra, com sarjeta e meio-fio (sem calçada entregue).'],
-  ['trilha, pontos de banho e deck (em construção).', 'trilha e pontos de banho. Cada chácara terá a concessão de uso de 10 metros lineares à margem do córrego, só para estruturas removíveis (tenda, churrasqueira). Não é área individual de 100 m², não inclui deck ou bangalô individual (o deck junto ao rio é da área comum) e não é autorização ambiental para construir.'],
+  ['trilha, pontos de banho e deck (em construção).', 'trilha e pontos de banho. Cada chácara terá um espaço de uso exclusivo de 10 metros lineares à margem do córrego, fora da faixa de APP, em área já aberta; o condomínio entrega tenda e churrasqueira em cada espaço. O comprador pode fazer, por conta própria e com aprovação prévia da administração, estruturas leves de madeira, sem fundação de alvenaria: deck, cabana, quiosque ou um bangalô de até 16 m². Passarela de madeira até a margem depende também de autorização ambiental. São proibidas edificações permanentes (casa, chalé), a supressão de vegetação e qualquer intervenção na APP; as benfeitorias não geram propriedade nem indenização (contrato, cláusula 2.5). O deck grande junto ao rio é da área comum.'],
+  // 22/11/2026: regra da margem alinhada à cláusula 2.5 do contrato (bangalô de até 16 m², deck e estruturas leves de madeira)
+  ['Cada chácara terá a concessão de uso de 10 metros lineares à margem do córrego, só para estruturas removíveis (tenda, churrasqueira). Não é área individual de 100 m², não inclui deck ou bangalô individual (o deck junto ao rio é da área comum) e não é autorização ambiental para construir.', 'Cada chácara terá um espaço de uso exclusivo de 10 metros lineares à margem do córrego, fora da faixa de APP, em área já aberta; o condomínio entrega tenda e churrasqueira em cada espaço. O comprador pode fazer, por conta própria e com aprovação prévia da administração, estruturas leves de madeira, sem fundação de alvenaria: deck, cabana, quiosque ou um bangalô de até 16 m². Passarela de madeira até a margem depende também de autorização ambiental. São proibidas edificações permanentes (casa, chalé), a supressão de vegetação e qualquer intervenção na APP; as benfeitorias não geram propriedade nem indenização (contrato, cláusula 2.5). O deck grande junto ao rio é da área comum.'],
   ['Área georreferenciada e certificada no SIGEF/INCRA, Licença de Operação da SEMMA e memorial descritivo de cada chácara.', 'Georreferenciamento, certificação e licenças **em andamento**. Não diga que estão emitidos: informe a situação atualizada de cada documento.'],
 ];
 

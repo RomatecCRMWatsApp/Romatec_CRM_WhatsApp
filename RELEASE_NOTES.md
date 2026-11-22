@@ -3,6 +3,16 @@
 Cada versão nova vai no TOPO. Depois rode `npm run release` (valida e atualiza o package.json);
 ao subir, o servidor grava a versão no banco e todos recebem o aviso "Novidades da versão".
 
+## 1.190.1 — 2026-11-22
+tipo: patch
+obrigatoria: nao
+titulo: Rio do Bom Jardims: deck e bangalô no espaço à margem
+publico: corretor
+
+### Melhorias
+- O espaço de 10 metros lineares à margem segue a cláusula 2.5 do contrato. O condomínio entrega tenda e churrasqueira, e o comprador pode fazer, por conta própria e com aprovação da administração, deck, cabana, quiosque ou bangalô de madeira de até 16 m², sem alvenaria. Atualizado na página do rio, no site, na ficha usada nas respostas e no resumo do contrato.
+- A página "O rio e a água" ganhou o áudio com a explicação completa.
+
 ## 1.190.0 — 2026-11-22
 tipo: minor
 obrigatoria: nao
