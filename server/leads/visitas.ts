@@ -105,7 +105,7 @@ async function banco() {
 }
 
 /** Avisa o corretor da visita (WhatsApp do responsável; sem telefone, NOTIFY_PHONES) e o Telegram */
-async function avisarCorretor(responsavelId: number | null | undefined, texto: string) {
+export async function avisarCorretor(responsavelId: number | null | undefined, texto: string) {
   const { db, users } = await banco();
   const { enviarTexto } = await import('./zapiClient');
   const { enviarTelegram } = await import('./notificacao');

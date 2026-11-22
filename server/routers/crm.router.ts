@@ -323,6 +323,35 @@ export const crmRouter = router({
     })).sort((a, b) => new Date(a.quando).getTime() - new Date(b.quando).getTime());
   }),
 
+  /** Pedidos do link de retorno (ligação ou visita com busca) */
+  retornos: protectedProcedure.input(z.object({ diasAtras: z.number().int().min(0).max(60).default(3) }).optional()).query(async ({ input, ctx }) => {
+    const db = await dbOrThrow();
+    const { leadRetornos } = await import("../../drizzle/schema");
+    const agora = Date.now();
+    let rows: any[] = await db.select().from(leadRetornos).where(gte(leadRetornos.quando, new Date(agora - (input?.diasAtras ?? 3) * 86400_000)));
+    const leadIds = Array.from(new Set(rows.map(r => r.leadId)));
+    const leads: any[] = leadIds.length ? await db.select({ id: leadQualifications.id, nome: leadQualifications.nome, phone: leadQualifications.phone, responsavelId: leadQualifications.responsavelId }).from(leadQualifications).where(inArray(leadQualifications.id, leadIds)) : [];
+    const visiveis = new Set(leadsVisiveis(ctx.permissoes, ctx.user.id, leads).map(l => l.id));
+    rows = rows.filter(r => visiveis.has(r.leadId));
+    const pessoas: any[] = await db.select({ id: users.id, name: users.name }).from(users);
+    const L = new Map(leads.map(l => [l.id, l])), U = new Map(pessoas.map(u => [u.id, u.name]));
+    return rows.map(r => ({
+      id: r.id as number, leadId: r.leadId as number, nome: L.get(r.leadId)?.nome || "Lead", telefone: L.get(r.leadId)?.phone || "",
+      tipo: r.tipo as string, quando: r.quando, enderecoBusca: r.enderecoBusca ?? null, pessoas: r.pessoas ?? null, observacao: r.observacao ?? null,
+      local: r.local ?? null, status: r.status as string, avisado: !!r.avisoAt, responsavel: r.responsavelId ? U.get(r.responsavelId) ?? null : null,
+    })).sort((a, b) => new Date(a.quando).getTime() - new Date(b.quando).getTime());
+  }),
+  marcarRetorno: protectedProcedure.input(z.object({ id: z.number().int(), status: z.enum(["pendente", "feito", "cancelado"]) })).mutation(async ({ input, ctx }) => {
+    const db = await dbOrThrow();
+    const { leadRetornos } = await import("../../drizzle/schema");
+    const [r]: any[] = await db.select().from(leadRetornos).where(eq(leadRetornos.id, input.id)).limit(1);
+    if (!r) throw new TRPCError({ code: "NOT_FOUND", message: "Retorno não encontrado" });
+    const [lead]: any[] = await db.select({ id: leadQualifications.id, responsavelId: leadQualifications.responsavelId }).from(leadQualifications).where(eq(leadQualifications.id, r.leadId)).limit(1);
+    if (!lead || !leadsVisiveis(ctx.permissoes, ctx.user.id, [lead]).length) throw new TRPCError({ code: "FORBIDDEN", message: "Sem acesso a este lead" });
+    await db.update(leadRetornos).set({ status: input.status, updatedAt: new Date() } as any).where(eq(leadRetornos.id, input.id));
+    return { ok: true };
+  }),
+
   agendarVisita: protectedProcedure
     .input(z.object({
       leadId: z.number().int(), quando: z.string().datetime(), local: z.string().trim().max(200).optional(),

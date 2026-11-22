@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { AcoesVisita, COR_STATUS_VISITA, ROTULO_STATUS_VISITA } from "@/components/VisitasLead";
 import LinkAgendamento from "@/components/LinkAgendamento";
 import MensagensAgendamento from "@/components/MensagensAgendamento";
+import { LinkRetorno, ListaRetornos } from "@/components/RetornosLink";
 import { comRef, useCartaoVendas } from "@/lib/cartaoVendas";
 
 const diaChave = (d: string | Date) => new Date(d).toLocaleDateString("en-CA", { timeZone: "America/Fortaleza" });
@@ -66,6 +67,7 @@ function LinksDivulgacao() {
           <div key={e.slug} className="space-y-1.5">
             <p className="text-xs font-semibold text-foreground">{e.nome}</p>
             <LinkAgendamento slug={e.slug} nome={e.nome} />
+            <LinkRetorno slug={e.slug} nome={e.nome} />
             {pagina && (
               <div className="flex flex-wrap items-center gap-1.5 rounded-lg border border-border p-2.5">
                 <p className="flex w-full items-center gap-1.5 text-xs text-muted-foreground"><Globe className="h-3.5 w-3.5" /> Página do empreendimento (fotos, mapa, perguntas e botão de agendar)</p>
@@ -104,6 +106,8 @@ export default function AgendaVisitas() {
         {isLoading && <p className="text-sm text-muted-foreground">Carregando…</p>}
 
         <LinksDivulgacao />
+
+        <ListaRetornos />
 
         <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
           {[

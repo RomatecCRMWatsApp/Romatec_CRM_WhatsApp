@@ -3,6 +3,19 @@
 Cada versão nova vai no TOPO. Depois rode `npm run release` (valida e atualiza o package.json);
 ao subir, o servidor grava a versão no banco e todos recebem o aviso "Novidades da versão".
 
+## 1.189.0 — 2026-11-22
+tipo: minor
+obrigatoria: nao
+titulo: Link de retorno: o cliente marca a ligação ou a visita para fechar
+publico: corretor
+
+### Novo
+- Novo link de retorno, para mandar quando você estiver ocupado: o cliente escolhe entre ligação para tirar dúvidas ou visita para escolher a chácara e fechar (buscamos de carro), o dia e o horário. Na visita, ele informa o endereço de busca e confirma que já decidiu pela compra.
+- A página explica as duas etapas: todas as dúvidas (documentação, obras, valores, parcelas, materiais e contrato) são tiradas por telefone; o deslocamento de 17 km é só para escolher a posição e assinar.
+- Só aparecem os horários em que alguém da equipe está livre. Se você já tem compromisso naquele horário, o retorno vai para o próximo corretor da roleta, pela mesma distribuição dos leads, e você recebe o aviso.
+- O sistema avisa no WhatsApp perto da hora marcada: 10 minutos antes da ligação e 1 hora antes da saída para a busca. O cliente recebe a confirmação na hora.
+- Agenda de visitas: novos botões "Copiar link de retorno" e "Copiar mensagem pronta", e a lista "Retornos marcados pelo link" com Ligar, WhatsApp, Feito e Cancelar.
+
 ## 1.188.4 — 2026-11-22
 tipo: patch
 obrigatoria: nao
