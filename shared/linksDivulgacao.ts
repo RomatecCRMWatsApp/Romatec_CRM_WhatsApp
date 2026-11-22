@@ -8,6 +8,7 @@ import { CAMPANHA_OBRAS, LANCAMENTO_OBRAS, ROTA_OBRAS } from './obrasBomJardim';
 import { CAMPANHA_MAPA3D, ROTA_MAPA3D } from './mapa3dBomJardims';
 import { CAMPANHA_ROTA, ROTA_COMO_CHEGAR } from './rotaBomJardims';
 import { CAMPANHA_PAGAMENTO, ROTA_PAGAMENTO } from './pagamentoBomJardims';
+import { CAMPANHA_RIO, ROTA_RIO } from './rioBomJardims';
 
 /** Marcador do link no texto: trocado pelo link de quem compartilha */
 export const MARCA_LINK = '{link}';
@@ -100,6 +101,12 @@ export const LINKS_FIXOS: LinkDivulgacao[] = [
     descricao: 'Legenda para o Reels do vídeo narrado da rota. No Instagram o link não fica clicável: quem comentar ROTA recebe o link pelo Direct ou WhatsApp.',
     url: ROTA_COMO_CHEGAR, utmSource: 'instagram', utmCampaign: CAMPANHA_ROTA,
     textoWhatsapp: `📍 Como chegar ao Condomínio de Chácaras Bom Jardims\n\nDo centro de Açailândia até o portal em 17 km, cerca de 24 minutos de carro. No vídeo você vê o caminho inteiro com os pontos de referência:\n\n1️⃣ Prefeitura Municipal\n2️⃣ BR-222, sentido Piquiá\n3️⃣ Posto da PRF\n4️⃣ Entrada da estação ferroviária\n5️⃣ Duas ferrovias (atenção à passagem dos trens 🚆)\n6️⃣ Balneário Walter Figueiredo\n7️⃣ Portal do Bom Jardims 🌳\n\nQuer a rota no seu celular, com Google Maps, Waze e o vídeo narrado? Comente ROTA ou chame no WhatsApp que eu te mando o link.\n\n🌿 Chácaras a partir de 3.025 m² · Lançamento oficial em 05/12\n\n🔗 ${MARCA_LINK}\n\n#BomJardims #Açailândia #Chácaras #ComoChegar #Maranhão #ChácarasÀVenda #Imperatriz #CondomínioDeChácaras`,
+  },
+  {
+    chave: 'fixo:rio', titulo: 'O rio e a água — resposta para quem pergunta do rio', fixo: true, destaque: true, empreendimento: 'Bom Jardims',
+    descricao: 'Página que explica: o rio não passa dentro das chácaras, fica na área de preservação (área comum de todos), cada chácara tem 10 metros lineares à margem e a água vem do poço artesiano.',
+    url: ROTA_RIO, utmSource: 'whatsapp', utmCampaign: CAMPANHA_RIO,
+    textoWhatsapp: `Boa pergunta! 🌊 O rio *não passa dentro das chácaras*: ele fica na área de preservação, que é uma *área comum para todos os condôminos*, e cada chácara tem a concessão de uso de *10 metros lineares* à margem. A água da chácara vem do *poço artesiano* do condomínio.\n\nVeja todos os detalhes aqui:\n${MARCA_LINK}`,
   },
   {
     chave: 'fixo:agendar', titulo: 'Agendar visita ao Bom Jardims', fixo: true, destaque: false, empreendimento: 'Bom Jardims',

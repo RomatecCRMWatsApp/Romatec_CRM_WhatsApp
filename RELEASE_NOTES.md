@@ -3,6 +3,16 @@
 Cada versão nova vai no TOPO. Depois rode `npm run release` (valida e atualiza o package.json);
 ao subir, o servidor grava a versão no banco e todos recebem o aviso "Novidades da versão".
 
+## 1.190.0 — 2026-11-22
+tipo: minor
+obrigatoria: nao
+titulo: Nova página: o rio e a água no Bom Jardims
+publico: corretor
+
+### Novo
+- Página "O rio e a água", para mandar a quem pergunta do rio: explica que o rio não passa dentro das chácaras, que fica na área de preservação (área comum de todos os condôminos), que cada chácara tem a concessão de uso de 10 metros lineares à margem, só para estruturas removíveis, e como chega a água na chácara (poço artesiano, reservatório de 10.000 litros e hidrômetro individual).
+- O link está em Links de divulgação, com a mensagem pronta e a imagem de prévia do rio no WhatsApp.
+
 ## 1.189.10 — 2026-11-22
 tipo: patch
 obrigatoria: nao

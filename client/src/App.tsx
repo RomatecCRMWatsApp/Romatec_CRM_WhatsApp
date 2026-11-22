@@ -27,6 +27,7 @@ const BomJardims = lazy(() => import("./pages/BomJardims"));
 const BomJardimsChacara = lazy(() => import("./pages/BomJardimsChacara"));
 const BomJardims3D = lazy(() => import("./pages/BomJardims3D"));
 const BomJardimsRota = lazy(() => import("./pages/BomJardimsRota"));
+const BomJardimsRio = lazy(() => import("./pages/BomJardimsRio"));
 const BomJardimsPagamento = lazy(() => import("./pages/BomJardimsPagamento"));
 const Performance = lazy(() => import("./pages/Performance"));
 const Leads = lazy(() => import("./pages/Leads"));
@@ -394,6 +395,7 @@ function Router() {
       <Route path={"/bom-jardims/3d"} component={BomJardims3D} />
       <Route path={"/bom-jardims/ao-vivo"} component={PainelVendasAoVivo} />
       <Route path={"/bom-jardims/rota"} component={BomJardimsRota} />
+      <Route path={"/bom-jardims/rio-e-agua"} component={BomJardimsRio} />
       <Route path={"/bom-jardims/formas-de-pagamento"} component={BomJardimsPagamento} />
       <Route path={"/obras-bom-jardim"} component={ObrasBomJardim} />
       <Route path={"/documentos/:emp/:doc"} component={DocumentosPublicos} />

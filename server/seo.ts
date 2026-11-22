@@ -12,6 +12,7 @@ import { configRastreamento, rotaDeMarketing } from '../shared/rastreamento';
 import { DESCRICAO_OBRAS, ROTA_OBRAS, TITULO_OBRAS } from '../shared/obrasBomJardim';
 import { DESCRICAO_MAPA3D, ROTA_MAPA3D, TITULO_MAPA3D } from '../shared/mapa3dBomJardims';
 import { DESCRICAO_ROTA, ROTA_COMO_CHEGAR, TITULO_ROTA } from '../shared/rotaBomJardims';
+import { DESCRICAO_RIO, ROTA_RIO, TITULO_RIO } from '../shared/rioBomJardims';
 import { DESCRICAO_PAGAMENTO, ROTA_PAGAMENTO, TITULO_PAGAMENTO } from '../shared/pagamentoBomJardims';
 
 export interface MetaPagina {
@@ -204,6 +205,17 @@ export const META_ROTA: MetaPagina = {
   indexavel: true,
 };
 
+/** O rio e a água: prévia com a foto do rio */
+export const META_RIO: MetaPagina = {
+  title: TITULO_RIO,
+  description: DESCRICAO_RIO,
+  path: ROTA_RIO,
+  image: '/bom-jardims/og-rio-agua.jpg',
+  imageAlt: 'O rio e a água no Condomínio de Chácaras Bom Jardims',
+  imageSize: { w: 1200, h: 630 },
+  indexavel: true,
+};
+
 /** Formas de pagamento (folder interativo): prévia com a arte da oferta */
 export const META_PAGAMENTO: MetaPagina = {
   title: TITULO_PAGAMENTO,
@@ -279,6 +291,7 @@ export function metaDaRota(path: string): MetaPagina | 'imovel' {
   if (p === ROTA_OBRAS) return META_OBRAS;
   if (p === ROTA_MAPA3D) return META_MAPA3D;
   if (p === ROTA_COMO_CHEGAR) return META_ROTA;
+  if (p === ROTA_RIO) return META_RIO;
   if (p === ROTA_PAGAMENTO) return META_PAGAMENTO;
   // Página de oferta (link pessoal do robô no WhatsApp): prévia com o folder, fora do Google, sem preço na meta
   const oferta = /^\/o\/([a-z0-9-]+)$/.exec(p);
