@@ -178,7 +178,7 @@ export const META_MAPA3D: MetaPagina = {
   title: TITULO_MAPA3D,
   description: DESCRICAO_MAPA3D,
   path: ROTA_MAPA3D,
-  image: '/bom-jardims/og-3d-slogan.jpg',
+  image: '/bom-jardims/og-mapa3d-v2.jpg',
   imageAlt: 'Bom Jardims — Mais espaço, mais qualidade de vida. Escolha sua chácara no mapa 3D',
   imageSize: { w: 1200, h: 630 },
   indexavel: true,
@@ -198,7 +198,7 @@ export const META_ROTA: MetaPagina = {
   title: TITULO_ROTA,
   description: DESCRICAO_ROTA,
   path: ROTA_COMO_CHEGAR,
-  image: '/bom-jardims/og-rota.jpg',
+  image: '/bom-jardims/og-rota-v2.jpg',
   imageAlt: 'Como chegar ao Condomínio de Chácaras Bom Jardims, a 17 km do centro de Açailândia',
   imageSize: { w: 1200, h: 630 },
   indexavel: true,
@@ -209,7 +209,7 @@ export const META_PAGAMENTO: MetaPagina = {
   title: TITULO_PAGAMENTO,
   description: DESCRICAO_PAGAMENTO,
   path: ROTA_PAGAMENTO,
-  image: '/bom-jardims/og-pagamento.jpg',
+  image: '/bom-jardims/og-pagamento-v2.jpg',
   imageAlt: 'Condomínio de Chácaras Bom Jardims — formas de pagamento, financiamento direto sem banco',
   imageSize: { w: 1200, h: 630 },
   indexavel: false,
@@ -299,7 +299,7 @@ export function metaDaRota(path: string): MetaPagina | 'imovel' {
     ...META_PADRAO, path: p, indexavel: false,
     title: 'Agende seu retorno — Bom Jardims: ligação ou visita para fechar',
     description: 'Escolha o dia e o horário: ligação para tirar todas as dúvidas, ou visita ao condomínio para escolher a chácara e fechar.',
-    image: '/bom-jardims/og-retorno.jpg', imageAlt: 'Agende seu retorno — escolha o dia e o horário', imageSize: { w: 1200, h: 630 },
+    image: '/bom-jardims/og-retorno-v2.jpg', imageAlt: 'Agende seu retorno — escolha o dia e o horário', imageSize: { w: 1200, h: 630 },
   };
   // Formulário do recrutamento (link pessoal do candidato): fora do Google
   if (p.startsWith('/formulario/')) return { ...META_PADRAO, title: 'Cadastro — Romatec CRM', path: '/formulario', indexavel: false };

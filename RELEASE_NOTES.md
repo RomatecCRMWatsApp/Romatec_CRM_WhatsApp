@@ -3,6 +3,15 @@
 Cada versão nova vai no TOPO. Depois rode `npm run release` (valida e atualiza o package.json);
 ao subir, o servidor grava a versão no banco e todos recebem o aviso "Novidades da versão".
 
+## 1.189.5 — 2026-11-22
+tipo: patch
+obrigatoria: nao
+titulo: Novas imagens de prévia dos links do Bom Jardims
+publico: corretor
+
+### Melhorias
+- Mapa 3D, formas de pagamento, como chegar e agende seu retorno ganharam imagens novas na prévia do link no WhatsApp.
+
 ## 1.189.4 — 2026-11-22
 tipo: patch
 obrigatoria: nao

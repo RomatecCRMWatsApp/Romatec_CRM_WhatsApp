@@ -43,6 +43,6 @@ describe('Como chegar ao Bom Jardims (/bom-jardims/rota)', () => {
     const l = LINKS_FIXOS.find(x => x.chave === 'fixo:rota')!;
     expect(montarLink('https://romateccrm.com', l, 'ab12')).toBe('https://romateccrm.com/bom-jardims/rota?utm_source=whatsapp&utm_campaign=BJ-ROTA&c=ab12');
     const m = metaDaRota(ROTA_COMO_CHEGAR);
-    expect(m !== 'imovel' && m.image).toBe('/bom-jardims/og-rota.jpg');
+    expect(m !== 'imovel' && m.image).toBe('/bom-jardims/og-rota-v2.jpg');
   });
 });
