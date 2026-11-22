@@ -18,7 +18,7 @@ describe('campanha das obras (/obras-bom-jardim)', () => {
     if (m === 'imovel') return;
     expect(m.image).toBe('/obras-bom-jardim/og.jpg');
     expect(m.indexavel).toBe(true);
-    expect(m.description).toContain('14 de novembro');
+    expect(m.description).toContain('5 de dezembro');
     expect(`${m.title} ${m.description}`).not.toMatch(/R\$/);
   });
 

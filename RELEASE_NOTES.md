@@ -3,6 +3,17 @@
 Cada versão nova vai no TOPO. Depois rode `npm run release` (valida e atualiza o package.json);
 ao subir, o servidor grava a versão no banco e todos recebem o aviso "Novidades da versão".
 
+## 1.188.4 — 2026-11-22
+tipo: patch
+obrigatoria: nao
+titulo: Bom Jardims: textos do site alinhados à campanha
+publico: corretor
+
+### Correções
+- As páginas do Bom Jardims passam a informar a situação atual: documentação, certificação e licenças em andamento; ruas em piçarra com sarjeta e meio-fio; lançamento oficial em 5 de dezembro; 84 chácaras.
+- A margem do córrego aparece como concessão de uso de 10 metros lineares por chácara, só para estruturas removíveis. O deck junto ao rio é da área comum.
+- A ficha do Bom Jardims usada nas respostas automáticas foi atualizada com as mesmas informações.
+
 ## 1.188.3 — 2026-11-21
 tipo: patch
 obrigatoria: nao

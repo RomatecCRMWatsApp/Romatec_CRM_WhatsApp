@@ -27,10 +27,10 @@ const CONSENT_TEXT =
 
 const DIFERENCIAIS = [
   { icon: ShieldCheck, titulo: "Portal com guarita", texto: "Portal em troncos e tábuas na entrada (Rua Walter e Maria, esquina com a Rua Cedro), ao lado do stand de vendas, com guarita, portão automatizado e controle de acesso." },
-  { icon: Trees, titulo: "Área de vivência e reserva preservada", texto: "Reserva de mata nativa ao longo do córrego, com trilha ecológica e pontos de banho. Cada chácara tem um espaço exclusivo de 10 metros lineares à margem do córrego, com tenda e churrasqueira. Flora e fauna intactas." },
+  { icon: Trees, titulo: "Área de vivência e reserva preservada", texto: "Reserva de mata nativa ao longo do córrego, com trilha ecológica e pontos de banho. Cada chácara terá a concessão de uso de um trecho de 10 metros lineares à margem do córrego, só para estruturas removíveis (como tenda e churrasqueira), conforme as regras ambientais. Flora e fauna preservadas." },
   { icon: Droplets, titulo: "Água encanada", texto: "Poço artesiano do condomínio com bombeamento automático para reservatório elevado de 10.000 litros, e ponto de água na frente de cada chácara, com medição individual." },
-  { icon: Route, titulo: "Ruas internas de 12 m", texto: "8 ruas internas com sarjeta e passeio — 9 m de rolamento e 1,50 m de calçada de cada lado." },
-  { icon: FileCheck2, titulo: "Documentação técnica", texto: "Área georreferenciada e certificada no SIGEF/INCRA, Licença de Operação da SEMMA e memorial descritivo de cada chácara." },
+  { icon: Route, titulo: "Ruas internas de 12 m", texto: "8 ruas internas de 12 m, em piçarra, com sarjeta e meio-fio." },
+  { icon: FileCheck2, titulo: "Documentação técnica", texto: "Georreferenciamento, certificação e licenças em andamento. O corretor informa a situação atualizada de cada documento." },
   { icon: Handshake, titulo: "Pagamento direto", texto: "Financiamento direto com o empreendimento, sem banco. Condições apresentadas pelo corretor no atendimento." },
 ];
 
