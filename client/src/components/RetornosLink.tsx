@@ -9,7 +9,7 @@ export function linkRetorno(slug: string, ref: string | null | undefined, origem
   return comRef(`${origem}/retorno/${slug}`, ref);
 }
 
-export function textoRetorno(link: string, nome?: string) {
+export function textoRetorno(link: string, nome?: string, instagram?: string | null) {
   return [
     `Olá! Obrigado pelo contato${nome ? ` e pelo interesse no ${nome}` : ""}. Agora estou em atendimento e não consigo responder na hora, mas quero te atender bem.`,
     "",
@@ -19,17 +19,18 @@ export function textoRetorno(link: string, nome?: string) {
     "",
     "Escolha aqui o que prefere e o melhor dia e horário:",
     link,
+    ...(instagram ? ["", `📸 Siga também o nosso Instagram e acompanhe as obras: https://www.instagram.com/${instagram}`] : []),
   ].join("\n");
 }
 
 export function LinkRetorno({ slug, nome }: { slug: string; nome?: string }) {
-  const { ref } = useCartaoVendas();
+  const { ref, instagram } = useCartaoVendas();
   const link = linkRetorno(slug, ref);
   const copiar = async (t: string, oque: string) => {
     try { await navigator.clipboard.writeText(t); toast.success(`${oque} copiado`); } catch { window.prompt("Copie:", t); }
   };
   const compartilhar = async () => {
-    const texto = textoRetorno(link, nome);
+    const texto = textoRetorno(link, nome, instagram);
     if (navigator.share) { try { await navigator.share({ title: "Marque seu retorno", text: texto }); return; } catch { /* cancelado */ } }
     window.open(`https://wa.me/?text=${encodeURIComponent(texto)}`, "_blank", "noopener");
   };
@@ -37,7 +38,7 @@ export function LinkRetorno({ slug, nome }: { slug: string; nome?: string }) {
     <div className="flex flex-wrap items-center gap-1.5 rounded-lg border border-border p-2.5">
       <p className="flex w-full items-center gap-1.5 text-xs text-muted-foreground"><PhoneCall className="h-3.5 w-3.5" /> Link de retorno (quando você está ocupado: o cliente marca o horário da ligação ou da visita com busca)</p>
       <Button size="sm" variant="outline" className="h-8 text-xs" onClick={() => copiar(link, "Link de retorno")}><Copy className="mr-1 h-3.5 w-3.5" /> Copiar link de retorno</Button>
-      <Button size="sm" variant="outline" className="h-8 text-xs" onClick={() => copiar(textoRetorno(link, nome), "Mensagem")}><Copy className="mr-1 h-3.5 w-3.5" /> Copiar mensagem pronta</Button>
+      <Button size="sm" variant="outline" className="h-8 text-xs" onClick={() => copiar(textoRetorno(link, nome, instagram), "Mensagem")}><Copy className="mr-1 h-3.5 w-3.5" /> Copiar mensagem pronta</Button>
       <Button size="sm" variant="outline" className="h-8 text-xs" onClick={compartilhar}><Share2 className="mr-1 h-3.5 w-3.5" /> Compartilhar</Button>
     </div>
   );

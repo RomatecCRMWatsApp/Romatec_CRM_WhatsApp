@@ -1,10 +1,10 @@
 import { useEffect, useMemo, useState } from "react";
 import { useRoute } from "wouter";
-import { Car, CheckCircle2, Loader2, MessageCircle, PhoneCall } from "lucide-react";
+import { Car, CheckCircle2, Instagram, Loader2, MessageCircle, PhoneCall } from "lucide-react";
 import { C, SERIF, SANS, useBrandFonts, waLink } from "@/components/bom-jardims/marca";
 import { FotoCorretor } from "@/lib/cartaoVendas";
 import { HORA_MAX, HORA_MIN, TIPOS_RETORNO, ULTIMA_BUSCA, type TipoRetorno } from "@shared/retorno";
-import type { CartaoVendas } from "@shared/cartaoVendas";
+import { linkInstagram, type CartaoVendas } from "@shared/cartaoVendas";
 
 type Dados = { empreendimento: { slug: string; nome: string; municipio: string | null; uf: string | null }; contato: CartaoVendas };
 
@@ -69,6 +69,11 @@ export default function Retorno() {
   const { empreendimento: emp, contato } = dados;
   const logo = logoDe(emp.slug);
   const zap = contato.whatsapp ? waLink(contato.whatsapp) : null;
+  const insta = contato.instagram ? (
+    <a href={linkInstagram(contato.instagram)} target="_blank" rel="noopener noreferrer" style={{ display: "inline-flex", alignItems: "center", gap: 8, padding: "10px 16px", borderRadius: 999, border: `2px solid ${C.dourado}`, background: "var(--c-ffffff)", color: C.verde, fontWeight: 700, textDecoration: "none" }}>
+      <Instagram size={20} aria-hidden="true" /> Siga @{contato.instagram} no Instagram
+    </a>
+  ) : null;
   const secao: React.CSSProperties = { maxWidth: 640, margin: "0 auto", padding: "0 16px" };
   const busca = f.tipo === "visita_busca";
 
@@ -91,6 +96,7 @@ export default function Retorno() {
             <h2 style={{ fontFamily: SERIF, color: C.verde, fontSize: 25, margin: "12px 0 8px" }}>Horário recebido!</h2>
             <p style={{ margin: 0, fontSize: 17, lineHeight: 1.5 }}>Obrigado, {f.nome.split(" ")[0]}! {contato.nome.split(" ")[0]} já foi avisado e retorna no horário que você marcou.</p>
             {confirmacao && <div style={{ marginTop: 18, textAlign: "left", whiteSpace: "pre-wrap", background: "var(--c-e7f6ec)", border: "1px solid var(--c-bfe3cb)", borderRadius: 14, padding: 16, fontSize: 15, lineHeight: 1.5 }}>{confirmacao}</div>}
+            {insta && <div style={{ marginTop: 20 }}><p style={{ margin: "0 0 8px", fontSize: 15 }}>Enquanto isso, acompanhe as novidades e as obras pelo Instagram:</p>{insta}</div>}
             {zap && <a href={zap} target="_blank" rel="noopener noreferrer" style={{ display: "inline-flex", alignItems: "center", gap: 8, marginTop: 20, padding: "12px 20px", borderRadius: 999, background: "var(--c-1f8a4c)", color: "var(--c-ffffff)", fontWeight: 700, textDecoration: "none" }}><MessageCircle size={20} /> Falar no WhatsApp</a>}
           </div>
         </main>
@@ -113,6 +119,7 @@ export default function Retorno() {
             <p style={{ margin: 0, display: "flex", gap: 10 }}><Car size={22} color={C.verde} aria-hidden="true" style={{ flexShrink: 0, marginTop: 2 }} />
               <span><b>2. Visita para escolher e fechar.</b> O condomínio fica a 17 km do centro de Açailândia. Buscamos você de carro e levamos até lá quando já tiver decidido pela compra, para escolher a posição da chácara e assinar o contrato.</span></p>
             <p style={{ margin: "12px 0 0", fontSize: 14, color: C.suave }}>Se ainda tem alguma dúvida, escolha a ligação: é rápido e sem compromisso.</p>
+            {insta && <div style={{ marginTop: 14 }}>{insta}</div>}
           </section>
 
           <form onSubmit={enviar} style={{ background: "var(--c-ffffff)", borderRadius: 20, padding: 22, border: `2px solid ${C.dourado}`, display: "grid", gap: 16 }}>

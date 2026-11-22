@@ -3,6 +3,15 @@
 Cada versão nova vai no TOPO. Depois rode `npm run release` (valida e atualiza o package.json);
 ao subir, o servidor grava a versão no banco e todos recebem o aviso "Novidades da versão".
 
+## 1.189.1 — 2026-11-22
+tipo: patch
+obrigatoria: nao
+titulo: Link de retorno com o seu Instagram
+publico: corretor
+
+### Melhorias
+- A página do link de retorno e a tela de confirmação mostram o botão "Siga no Instagram" com o seu perfil, e a mensagem pronta do link também traz o Instagram.
+
 ## 1.189.0 — 2026-11-22
 tipo: minor
 obrigatoria: nao
