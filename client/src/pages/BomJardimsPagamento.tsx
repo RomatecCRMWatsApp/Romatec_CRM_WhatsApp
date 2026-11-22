@@ -107,6 +107,10 @@ export default function BomJardimsPagamento() {
       </header>
 
       <main style={{ ...sec, padding: "18px 16px 40px", display: "grid", gridTemplateColumns: "minmax(0, 1fr)", gap: 16 }}>
+        <section style={{ ...card, padding: "12px 14px" }}>
+          <p style={{ margin: "0 0 6px", fontSize: 14, fontWeight: 700, color: C.verde }}>🔊 Ouça como funcionam as formas de pagamento (1 min e 40 s)</p>
+          <audio controls preload="none" src="/bom-jardims/audio-formas-de-pagamento.mp3" style={{ width: "100%" }}>Seu navegador não toca áudio.</audio>
+        </section>
         {/* 1. Chácara */}
         <section style={card}>
           <h2 style={h2}>1. Escolha a chácara</h2>

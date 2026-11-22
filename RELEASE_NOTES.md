@@ -3,6 +3,15 @@
 Cada versão nova vai no TOPO. Depois rode `npm run release` (valida e atualiza o package.json);
 ao subir, o servidor grava a versão no banco e todos recebem o aviso "Novidades da versão".
 
+## 1.189.9 — 2026-11-22
+tipo: patch
+obrigatoria: nao
+titulo: Áudio explicativo nas formas de pagamento
+publico: corretor
+
+### Melhorias
+- A página de formas de pagamento do Bom Jardims tem um áudio explicando a entrada de 30% e os planos A, B e C, com o exemplo de uma chácara de R$ 160 mil.
+
 ## 1.189.8 — 2026-11-22
 tipo: patch
 obrigatoria: nao
