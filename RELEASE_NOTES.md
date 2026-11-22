@@ -3,6 +3,15 @@
 Cada versão nova vai no TOPO. Depois rode `npm run release` (valida e atualiza o package.json);
 ao subir, o servidor grava a versão no banco e todos recebem o aviso "Novidades da versão".
 
+## 1.189.4 — 2026-11-22
+tipo: patch
+obrigatoria: nao
+titulo: Prévia própria do link de retorno no WhatsApp
+publico: corretor
+
+### Melhorias
+- O link de retorno mostra no WhatsApp a imagem de agenda com "Agende seu retorno — escolha o dia e o horário" e o texto explicando que é para marcar a ligação ou a visita para fechar.
+
 ## 1.189.3 — 2026-11-22
 tipo: patch
 obrigatoria: nao
