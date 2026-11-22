@@ -51,14 +51,14 @@ export const SOBRE_BOM_JARDIMS: { titulo: string; paragrafos: string[] }[] = [
   {
     titulo: 'Infraestrutura do condomínio',
     paragrafos: [
-      'Portal de acesso com guarita e controle de acesso, 8 ruas internas de 12 m (9 m de rolamento e calçada dos dois lados), água encanada de poço artesiano do condomínio com bombeamento automático para reservatório elevado de 10.000 litros e ponto de água na frente de cada chácara, com medição individual por hidrômetro.',
-      'A área de vivência é uma reserva de mata nativa preservada ao longo do córrego, exclusiva dos moradores: trilha ecológica e pontos de banho, apoio com quiosques, vestiário e churrasqueiras fora da faixa de preservação e um espaço exclusivo de 10 metros lineares à margem do córrego para cada chácara, com tenda e churrasqueira. A flora e a fauna permanecem intactas.',
+      'Portal de acesso com guarita e controle de acesso, 8 ruas internas de 12 m, em piçarra, com sarjeta e meio-fio, água encanada de poço artesiano do condomínio com bombeamento automático para reservatório elevado de 10.000 litros e ponto de água na frente de cada chácara, com medição individual por hidrômetro.',
+      'A área de vivência é uma reserva de mata nativa preservada ao longo do córrego, exclusiva dos moradores: trilha ecológica e pontos de banho, apoio com quiosques, vestiário e churrasqueiras fora da faixa de preservação. Cada chácara terá a concessão de uso de um trecho de 10 metros lineares à margem do córrego, só para estruturas removíveis (como tenda e churrasqueira), conforme as regras ambientais. A flora e a fauna são preservadas.',
     ],
   },
   {
     titulo: 'Documentação e condições',
     paragrafos: [
-      'A área é georreferenciada e certificada no SIGEF/INCRA, tem Licença de Operação da Secretaria Municipal de Meio Ambiente (SEMMA) e cada chácara tem memorial descritivo próprio.',
+      'Georreferenciamento, certificação e licenças em andamento. O corretor informa a situação atualizada de cada documento.',
       'O pagamento é direto com o empreendimento, sem banco: à vista com desconto ou a prazo, em pagamentos mensais. A tabela de valores e as condições completas são apresentadas pelo corretor no atendimento.',
     ],
   },
@@ -87,7 +87,7 @@ export const FAQ_BOM_JARDIMS: { pergunta: string; resposta: string }[] = [
   },
   {
     pergunta: 'O empreendimento tem documentação?',
-    resposta: 'Sim. A área é georreferenciada e certificada no SIGEF/INCRA, tem Licença de Operação da SEMMA de Açailândia e cada chácara tem memorial descritivo.',
+    resposta: 'A documentação está em andamento: georreferenciamento, certificação e licenças. O corretor informa a situação atualizada de cada documento.',
   },
   {
     pergunta: 'Bom Jardims ou Bom Jardim?',

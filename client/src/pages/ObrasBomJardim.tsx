@@ -218,10 +218,10 @@ export default function ObrasBomJardim() {
   };
 
   const DESTAQUES = [
-    { icon: Trees, n: "82", t: "chácaras — só isso" },
+    { icon: Trees, n: "84", t: "chácaras — só isso" },
     { icon: Ruler, n: "3.025 m²", t: "a partir de" },
-    { icon: FileCheck2, n: "100%", t: "documentado" },
-    { icon: CalendarCheck, n: "14/11", t: "lançamento oficial" },
+    { icon: FileCheck2, n: "17 km", t: "do centro" },
+    { icon: CalendarCheck, n: "05/12", t: "lançamento oficial" },
   ];
 
   return (
@@ -244,7 +244,7 @@ export default function ObrasBomJardim() {
               </span>
             </h1>
             <p style={{ color: C.creme, fontSize: "clamp(16px, 2.5vw, 19px)", margin: "0 0 20px", maxWidth: 720, lineHeight: 1.5 }}>
-              Só <b>84 chácaras</b>, a partir de <b>3.025 m²</b>. <b>100% documentado</b> — escritura, licença ambiental e georreferenciamento INCRA/SIGEF — e <b>liberado para vendas</b>.
+              Só <b>84 chácaras</b>, a partir de <b>3.025 m²</b>, a <b>17 km do centro</b>. Georreferenciamento, certificação e licenças <b>em andamento</b>.
             </p>
             <div style={{ display: "flex", flexWrap: "wrap", gap: 12 }}>
               <button type="button" onClick={saberValor} style={btn("var(--c-25d366)", "var(--c-ffffff)")}>
@@ -289,7 +289,7 @@ export default function ObrasBomJardim() {
           {[
             ["Obras em andamento", "Máquinas no terreno: abertura das ruas internas de 12 m, todas empiçarradas."],
             ["Estoque limitado", "São só 84 chácaras. Quem chega antes do lançamento escolhe primeiro."],
-            ["Documentação em ordem", "Escritura, licença ambiental e área certificada no INCRA/SIGEF."],
+            ["Documentação em andamento", "Georreferenciamento, certificação e licenças em andamento. O corretor informa a situação atualizada."],
             ["Atendimento na hora", "Corretores de plantão: valores, condições e visita guiada pelo WhatsApp."],
           ].map(([t, d]) => (
             <div key={t} style={{ padding: 16, borderRadius: 16, background: "var(--c-ffffff)", border: "1px solid var(--c-e2d9bf)" }}>

@@ -50,17 +50,17 @@ export const ARTIGOS_INICIAIS: ArtigoBase[] = [
 - Preço **a partir de R$ 160 mil** (chácara de 3.025 m²).
 - Endereço: Estrada do Piquiá dos Baianos, altura do km 15 da BR-222. **17 km do centro**, menos de 28 min de carro.
 - **Stand de vendas e administração:** na entrada do condomínio, junto ao portal (Rua Walter e Maria, esquina com a Rua Cedro) (área própria de 4.125 m², fora do condomínio).
-- **Lançamento oficial:** 14 de novembro de 2026.
+- **Lançamento oficial:** 5 de dezembro de 2026.
 
 ## Infraestrutura (projeto; confira o estágio da obra antes de afirmar que está pronto)
 - Portal com guarita e controle de acesso.
-- 8 ruas internas de 12 m (9 m de rolamento + 1,50 m de calçada de cada lado).
+- 8 ruas internas de 12 m, em piçarra, com sarjeta e meio-fio (sem calçada entregue).
 - Poço artesiano com reservatório elevado de 10.000 L e hidrômetro individual.
 - Energia elétrica e **sinal 5G** em todo o condomínio.
-- Área de vivência: mata nativa junto ao córrego, trilha, pontos de banho e deck (em construção).
+- Área de vivência: mata nativa junto ao córrego, trilha e pontos de banho. Cada chácara terá a concessão de uso de 10 metros lineares à margem do córrego, só para estruturas removíveis (tenda, churrasqueira). Não é área individual de 100 m², não inclui deck ou bangalô individual (o deck junto ao rio é da área comum) e não é autorização ambiental para construir.
 
 ## Documentação
-Área georreferenciada e certificada no SIGEF/INCRA, Licença de Operação da SEMMA e memorial descritivo de cada chácara.
+Georreferenciamento, certificação e licenças **em andamento**. Não diga que estão emitidos: informe a situação atualizada de cada documento.
 
 ## Onde mostrar ao cliente
 - Página do empreendimento: romateccrm.com/bom-jardims

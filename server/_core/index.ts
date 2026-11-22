@@ -1483,6 +1483,8 @@ async function startServer() {
     await ajustarJuridicoV2BomJardims().catch((e: any) => console.error('[Bom Jardims V2] configuração jurídica:', e?.message));
     const { sincronizarMapaV2BomJardims } = await import('./migrations/bomJardimsProjetoV2');
     await sincronizarMapaV2BomJardims().catch((e: any) => console.error('[Bom Jardims V2] sincronização do mapa:', e?.message));
+    const { atualizarFichaCampanhaBomJardims } = await import('./migrations/bomJardimsFichaCampanha');
+    await atualizarFichaCampanhaBomJardims().catch((e: any) => console.error('[Bom Jardims] ficha da base de conhecimento:', e?.message));
   } catch (e) {
     console.error('❌ Erro na migration addEmpreendimentos:', e);
   }
