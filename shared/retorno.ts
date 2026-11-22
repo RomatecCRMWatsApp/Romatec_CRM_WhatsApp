@@ -6,7 +6,7 @@
 import { z } from 'zod';
 
 export const TIPOS_RETORNO = [
-  ['ligacao', 'Ligação para tirar dúvidas', 'Explico tudo por telefone e envio os materiais'],
+  ['ligacao', 'Ligação para tirar dúvidas', 'Para quem prefere conversar por telefone'],
   ['visita_busca', 'Visita para escolher e fechar', 'Buscamos você de carro e levamos ao condomínio'],
 ] as const;
 export type TipoRetorno = typeof TIPOS_RETORNO[number][0];
@@ -40,7 +40,7 @@ export const retornoSchema = z.object({
     ctx.addIssue({ code: 'custom', path: ['enderecoBusca'], message: 'Informe o endereço onde vamos buscar vocês' });
   }
   if (p.tipo === 'visita_busca' && !p.decidido) {
-    ctx.addIssue({ code: 'custom', path: ['decidido'], message: 'A visita com busca é para quem já decidiu pela compra. Se ainda tem dúvidas, escolha a ligação.' });
+    ctx.addIssue({ code: 'custom', path: ['decidido'], message: 'A visita com busca é para quem já decidiu pela compra. Se ainda tem dúvidas, fale pelo WhatsApp ou escolha a ligação.' });
   }
 });
 export type PedidoRetorno = z.infer<typeof retornoSchema>;

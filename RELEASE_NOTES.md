@@ -3,6 +3,15 @@
 Cada versão nova vai no TOPO. Depois rode `npm run release` (valida e atualiza o package.json);
 ao subir, o servidor grava a versão no banco e todos recebem o aviso "Novidades da versão".
 
+## 1.189.7 — 2026-11-22
+tipo: patch
+obrigatoria: nao
+titulo: Link de retorno: dúvidas pelo WhatsApp
+publico: corretor
+
+### Melhorias
+- A página do link de retorno e a mensagem pronta passam a dizer que as dúvidas são tiradas pelo WhatsApp, com a ligação como opção para quem prefere conversar por telefone, como no áudio explicativo.
+
 ## 1.189.6 — 2026-11-22
 tipo: patch
 obrigatoria: nao

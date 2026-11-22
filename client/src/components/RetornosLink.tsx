@@ -14,7 +14,7 @@ export function textoRetorno(link: string, nome?: string, instagram?: string | n
     `Olá! Obrigado pelo contato${nome ? ` e pelo interesse no ${nome}` : ""}. Agora estou em atendimento e não consigo responder na hora, mas quero te atender bem.`,
     "",
     "Funciona assim:",
-    "📞 *Ligação para tirar dúvidas* — localização, documentação, prazo das obras, o que está incluso, valores, entrada e parcelas. Também te envio o mapa interativo, os vídeos, a simulação e a minuta do contrato.",
+    "💬 *Dúvidas pelo WhatsApp* — localização, documentação, prazo das obras, o que está incluso, valores, entrada e parcelas. Também te envio o mapa interativo, os vídeos, a simulação e a minuta do contrato. Se preferir, marco uma ligação.",
     "🚗 *Visita para escolher e fechar* — o condomínio fica a 17 km do centro. Buscamos você de carro quando já tiver decidido pela compra, para escolher a posição da chácara e assinar o contrato.",
     "",
     "Escolha aqui o que prefere e o melhor dia e horário:",
