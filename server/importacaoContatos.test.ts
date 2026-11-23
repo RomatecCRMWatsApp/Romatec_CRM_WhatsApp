@@ -149,3 +149,19 @@ describe('aviso no WhatsApp do José', () => {
     expect(v).not.toContain('Sem pressa');
   });
 });
+
+describe('motivo da fila parada (tela)', () => {
+  it('explica limite do dia, horário e domingo', async () => {
+    const { motivoDoRitmo } = await import('./leads/importacaoContatos');
+    const ter10h = Date.UTC(2026, 10, 24, 13), ter21h = Date.UTC(2026, 10, 25, 0), dom = Date.UTC(2026, 10, 29, 13);
+    expect(motivoDoRitmo({ agora: ter10h, enviadosHoje: 38, temPendente: true })).toMatch(/Limite do dia atingido \(38 de 30/);
+    expect(motivoDoRitmo({ agora: ter10h, enviadosHoje: 4, temPendente: true })).toMatch(/Enviando: 4 de 30/);
+    expect(motivoDoRitmo({ agora: ter21h, enviadosHoje: 0, temPendente: true })).toMatch(/Fora do horário/);
+    expect(motivoDoRitmo({ agora: dom, enviadosHoje: 0, temPendente: true })).toMatch(/Domingo/);
+    expect(motivoDoRitmo({ agora: ter10h, enviadosHoje: 0, temPendente: false })).toMatch(/Fila vazia/);
+    expect(motivoDoRitmo({ agora: ter10h, enviadosHoje: 0, temPendente: false, temPausado: true })).toMatch(/Pausado por você/);
+    const { ritmoAtivo } = await import('./leads/importacaoContatos');
+    expect(ritmoAtivo(motivoDoRitmo({ agora: ter10h, enviadosHoje: 4, temPendente: true }))).toBe(true);
+    expect(ritmoAtivo(motivoDoRitmo({ agora: ter21h, enviadosHoje: 4, temPendente: true }))).toBe(false);
+  });
+});

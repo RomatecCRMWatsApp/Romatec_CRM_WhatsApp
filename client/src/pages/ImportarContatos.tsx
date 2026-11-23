@@ -3,7 +3,7 @@ import { toast } from "sonner";
 import { trpc } from "@/lib/trpc";
 import PageHeader from "@/components/PageHeader";
 import { Button } from "@/components/ui/button";
-import { AlertTriangle, FileUp, Loader2, Pause, Play, Send, Trash2, UserPlus } from "lucide-react";
+import { AlertTriangle, Bot, FileUp, Loader2, Pause, Play, Send, Trash2, UserPlus } from "lucide-react";
 import {
   contatosMarcados, lerArquivoContatos, montarRetomada, MARCADOR_PADRAO, TEXTO_RETOMADA_PADRAO,
   type ContatoMarcado,
@@ -155,6 +155,21 @@ export default function ImportarContatos({ embutido = false }: { embutido?: bool
 
         <section className="rounded-xl border border-border bg-card p-4">
           <h2 className="font-semibold">Envios por importação</h2>
+          {fila.data?.ritmo?.motivo && (() => {
+            const ativo = !!fila.data.ritmo.ativo;
+            return (
+              <div role="status" aria-live="polite" className={`mt-3 flex items-center gap-3 rounded-xl border p-3 ${ativo ? "border-ok-500/40 bg-ok-500/10" : "border-danger-500/40 bg-danger-500/10"}`}>
+                <span className={`relative flex h-11 w-11 shrink-0 items-center justify-center rounded-full ${ativo ? "bg-ok-500/20 text-ok-400" : "bg-danger-500/20 text-danger-400"}`}>
+                  <Bot className="h-6 w-6" aria-hidden />
+                  <span className={`absolute right-0.5 top-0.5 h-2.5 w-2.5 rounded-full ${ativo ? "bg-ok-400 motion-safe:animate-pulse" : "bg-danger-400"}`} />
+                </span>
+                <div>
+                  <p className={`text-sm font-semibold ${ativo ? "text-ok-300" : "text-danger-300"}`}>{ativo ? "Robô enviando" : "Robô parado"}</p>
+                  <p className="text-xs text-muted-foreground">{fila.data.ritmo.motivo}</p>
+                </div>
+              </div>
+            );
+          })()}
           {fila.isLoading && <Loader2 className="mt-2 h-4 w-4 animate-spin text-muted-foreground" />}
           {fila.data && !fila.data.lotes.length && <p className="mt-2 text-sm text-muted-foreground">Nenhuma importação ainda.</p>}
           <div className="mt-3 space-y-2">

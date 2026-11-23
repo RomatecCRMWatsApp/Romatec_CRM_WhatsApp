@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { Link, useSearch } from "wouter";
 import { toast } from "sonner";
-import { FileUp, Loader2, Search, Send, Smartphone } from "lucide-react";
+import { Bot, FileUp, Loader2, Search, Send, Smartphone } from "lucide-react";
 import { trpc } from "@/lib/trpc";
 import { useAuth } from "@/_core/hooks/useAuth";
 import { perfilDe } from "@shared/equipe";
@@ -71,19 +71,26 @@ function ListaImportados({ irImportar }: { irImportar?: () => void }) {
   if (error) return <p className="text-sm text-danger-400">{error.message}</p>;
   return (
     <div className="space-y-3">
+      {data?.ritmo && <StatusRobo ativo={!!data.ritmo.ativo} motivo={data.ritmo.motivo} />}
       {r && (
-        <div className="grid grid-cols-2 gap-2 sm:grid-cols-4 lg:grid-cols-7">
+        <div className="grid grid-cols-3 gap-2 sm:grid-cols-6">
           {([
-            ["Importados", r.total], ["Novos", r.novos], ["Retomada na fila", r.naFila], ["Retomada enviada", r.enviados],
-            ["Responderam", r.responderam], ["Quentes", r.quentes], ["Pediram para sair", r.sairam],
-          ] as const).map(([rot, v]) => (
-            <div key={rot} className="rounded-xl border border-border bg-card p-3">
-              <p className="text-[11px] text-muted-foreground">{rot}</p>
-              <p className="text-xl font-semibold">{v}</p>
-            </div>
+            ["Conversando", r.conversando, "responderam e o robô está qualificando", "text-ok-300", "responderam"],
+            ["Qualificados", r.qualificados, "responderam tudo", "text-primary", "responderam"],
+            ["Com corretor", r.comCorretor, "atendimento humano", "text-info-300", "todos"],
+            ["Sem resposta", r.semResposta, "mensagem enviada, ainda parados", "text-warn-300", "sem_resposta"],
+            ["Na fila", r.naFila, "ainda sem mensagem", "text-muted-foreground", "na_fila"],
+            ["Saíram", r.sairam, "pediram para sair", "text-danger-300", "todos"],
+          ] as const).map(([rot, v, dica, cor, f]) => (
+            <button key={rot} onClick={() => { setFiltro(f as Filtro); setSel(new Set()); }} title={dica}
+              className="rounded-xl border border-border bg-card p-2.5 text-left transition-colors hover:border-primary/50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary sm:p-3">
+              <p className="text-[11px] leading-tight text-muted-foreground">{rot}</p>
+              <p className={`text-xl font-semibold tabular-nums ${cor}`}>{v}</p>
+            </button>
           ))}
         </div>
       )}
+      {r && <p className="text-[11px] text-muted-foreground">{r.total} importados · {r.enviados} já receberam a retomada · {r.novos} para trabalhar</p>}
       {r && !r.total && (
         <p className="rounded-xl border border-dashed border-border p-4 text-sm text-muted-foreground">
           Nenhum lead importado ainda.{irImportar && <> <button onClick={irImportar} className="text-primary hover:underline">Importar a agenda do celular</button>.</>}
@@ -104,10 +111,10 @@ function ListaImportados({ irImportar }: { irImportar?: () => void }) {
         </div>
       </div>
 
-      <div className="sticky top-[env(safe-area-inset-top)] z-10 flex flex-wrap items-end gap-2 rounded-lg border border-ok-500/40 bg-card p-3 shadow">
+      <div className="z-10 flex flex-wrap items-end gap-2 rounded-lg border border-ok-500/40 bg-card p-3 shadow md:sticky md:top-[env(safe-area-inset-top)]">
         <span className="text-sm font-semibold">{sel.size} selecionado(s)</span>
-        <label className="flex flex-col gap-1 text-xs text-muted-foreground">Encaminhar para
-          <select className={`${selectCls} min-w-[200px]`} value={paraId} onChange={e => setParaId(e.target.value ? Number(e.target.value) : "")}>
+        <label className="flex min-w-0 flex-1 flex-col gap-1 text-xs text-muted-foreground sm:flex-none">Encaminhar para
+          <select className={`${selectCls} w-full sm:min-w-[200px]`} value={paraId} onChange={e => setParaId(e.target.value ? Number(e.target.value) : "")}>
             <option value="">— escolha o corretor —</option>
             {equipe?.map(u => <option key={u.id} value={u.id} disabled={u.semAcesso}>{u.nome}{u.semAcesso ? " (sem acesso)" : ""}</option>)}
           </select>
@@ -116,13 +123,38 @@ function ListaImportados({ irImportar }: { irImportar?: () => void }) {
           onClick={() => { if (confirm(`Encaminhar ${sel.size} lead(s) importado(s) para ${nomePara}? Ele(a) recebe o aviso no sistema e no WhatsApp.`)) encaminhar.mutate({ leadIds: Array.from(sel), paraId: Number(paraId), observacao: "Lead importado do celular" }); }}>
           {encaminhar.isPending ? <Loader2 className="mr-1 h-4 w-4 animate-spin" /> : <Send className="mr-1 h-4 w-4" />} Encaminhar
         </Button>
-        <p className="w-full text-[11px] text-muted-foreground">O encaminhamento fica no relatório da Distribuição, igual aos leads de captação. Quem responder ao robô e quiser fechar vai direto para o corretor responsável.</p>
+        <p className="hidden w-full text-[11px] text-muted-foreground sm:block">O encaminhamento fica no relatório da Distribuição, igual aos leads de captação. Quem responder ao robô e quiser fechar vai direto para o corretor responsável.</p>
       </div>
 
       {isLoading && <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />}
       {!isLoading && !!r?.total && !itens.length && <p className="rounded-xl border border-dashed border-border p-4 text-sm text-muted-foreground">Nenhum lead neste filtro{busca ? ` para "${busca}"` : ""}.</p>}
       {!!itens.length && (
-        <div className="overflow-x-auto rounded-lg border border-border">
+        <ul className="space-y-2 md:hidden">
+          {itens.map(i => (
+            <li key={i.id} className={`rounded-xl border p-3 ${sel.has(i.id) ? "border-ok-500/60 bg-ok-500/10" : "border-border bg-card"}`}>
+              <div className="flex items-start gap-3">
+                <input type="checkbox" className="mt-1 h-5 w-5" aria-label={`Selecionar ${i.nome}`} checked={sel.has(i.id)} onChange={() => alternar(i.id)} />
+                <div className="min-w-0 flex-1">
+                  <div className="flex items-baseline justify-between gap-2">
+                    <Link href={`/leads/lead/${i.id}`} className="truncate font-medium hover:underline">{i.nome}</Link>
+                    <span className="shrink-0 text-[11px] text-muted-foreground">{dataBr(i.importadoEm)}</span>
+                  </div>
+                  <a href={`https://wa.me/${i.telefone}`} target="_blank" rel="noreferrer" className="text-xs text-muted-foreground hover:text-primary">+{i.telefone}</a>
+                  <p className="mt-1.5 text-sm"><Situacao i={i} /></p>
+                  {Object.keys(i.respostas).length > 0 && (
+                    <p className="mt-1 text-xs text-foreground/80">{(["finalidade", "prazo", "pagamento"] as const).map(k => i.respostas[k] ? ROTULO_RESPOSTA[k][i.respostas[k]!] ?? i.respostas[k] : null).filter(Boolean).join(" · ")}</p>
+                  )}
+                  <p className="mt-1 text-[11px] text-muted-foreground">
+                    Retomada: {i.envio ? ENVIO[i.envio] ?? i.envio : "não programada"}{i.enviadoAt ? ` em ${dataBr(i.enviadoAt)}` : ""} · {i.comCorretor ? `com ${i.responsavel}` : "sem corretor"}
+                  </p>
+                </div>
+              </div>
+            </li>
+          ))}
+        </ul>
+      )}
+      {!!itens.length && (
+        <div className="hidden overflow-x-auto rounded-lg border border-border md:block">
           <table className="w-full text-sm">
             <thead className="bg-secondary/30 text-left text-xs text-muted-foreground">
               <tr>
@@ -142,12 +174,7 @@ function ListaImportados({ irImportar }: { irImportar?: () => void }) {
                   <td className="p-2 text-xs">
                     {(["finalidade", "prazo", "pagamento"] as const).map(k => i.respostas[k] ? ROTULO_RESPOSTA[k][i.respostas[k]!] ?? i.respostas[k] : null).filter(Boolean).join(" · ") || <span className="text-muted-foreground">—</span>}
                   </td>
-                  <td className="p-2 text-xs">
-                    {i.saiu ? <span className="text-danger-400">Pediu para sair</span>
-                      : i.humano ? <span className="text-heat-400">Quer falar com corretor</span>
-                      : i.qualificado ? `Qualificado · ${i.score === "quente" ? "🔥 quente" : i.score === "morno" ? "🌡️ morno" : "❄️ frio"}`
-                      : i.respondeu ? "Respondendo ao robô" : "Aguardando resposta"}
-                  </td>
+                  <td className="p-2 text-xs"><Situacao i={i} /></td>
                   <td className="p-2 text-xs">{i.comCorretor ? i.responsavel : <span className="text-warn-300">Sem corretor{i.responsavel ? ` (com ${i.responsavel.split(" ")[0]})` : ""}</span>}</td>
                   <td className="p-2 whitespace-nowrap text-xs">{dataBr(i.importadoEm)}</td>
                 </tr>
@@ -156,6 +183,31 @@ function ListaImportados({ irImportar }: { irImportar?: () => void }) {
           </table>
         </div>
       )}
+    </div>
+  );
+}
+
+function Situacao({ i }: { i: { saiu: boolean; humano: boolean; qualificado: boolean; respondeu: boolean; score: string | null; envio: string | null } }) {
+  if (i.saiu) return <span className="text-danger-400">Pediu para sair</span>;
+  if (i.humano) return <span className="text-heat-400">Quer falar com corretor</span>;
+  if (i.qualificado) return <span className="text-primary">Qualificado · {i.score === "quente" ? "🔥 quente" : i.score === "morno" ? "🌡️ morno" : "❄️ frio"}</span>;
+  if (i.respondeu) return <span className="text-ok-300">Conversando com o robô</span>;
+  if (i.envio === "enviado") return <span className="text-warn-300">Sem resposta ainda</span>;
+  return <span className="text-muted-foreground">Na fila, ainda sem mensagem</span>;
+}
+
+/** Robozinho do topo: verde enviando, vermelho parado, com o motivo */
+export function StatusRobo({ ativo, motivo }: { ativo: boolean; motivo: string }) {
+  return (
+    <div role="status" aria-live="polite" className={`flex items-center gap-3 rounded-xl border p-3 ${ativo ? "border-ok-500/40 bg-ok-500/10" : "border-danger-500/40 bg-danger-500/10"}`}>
+      <span className={`relative flex h-11 w-11 shrink-0 items-center justify-center rounded-full ${ativo ? "bg-ok-500/20 text-ok-400" : "bg-danger-500/20 text-danger-400"}`}>
+        <Bot className="h-6 w-6" aria-hidden />
+        <span className={`absolute right-0.5 top-0.5 h-2.5 w-2.5 rounded-full ${ativo ? "bg-ok-400 motion-safe:animate-pulse" : "bg-danger-400"}`} />
+      </span>
+      <div className="min-w-0">
+        <p className={`text-sm font-semibold ${ativo ? "text-ok-300" : "text-danger-300"}`}>{ativo ? "Robô enviando" : "Robô parado"}</p>
+        <p className="text-xs text-muted-foreground">{motivo}</p>
+      </div>
     </div>
   );
 }

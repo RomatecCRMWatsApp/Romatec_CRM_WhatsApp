@@ -3,6 +3,17 @@
 Cada versão nova vai no TOPO. Depois rode `npm run release` (valida e atualiza o package.json);
 ao subir, o servidor grava a versão no banco e todos recebem o aviso "Novidades da versão".
 
+## 1.195.3 — 2026-11-23
+tipo: patch
+obrigatoria: nao
+titulo: Leads importados: robô verde ou vermelho e contadores no topo
+publico: admin
+
+### Melhorias
+- Leads importados: no topo, o robozinho fica verde quando está enviando e vermelho quando está parado, com o motivo (limite do dia, fora do horário, domingo, pausado ou fila vazia).
+- Contadores no topo: conversando com o robô, qualificados, com corretor, sem resposta, na fila (ainda sem mensagem) e saíram; tocar em um abre a lista daquele grupo.
+- No celular, a lista virou cartões (nome, telefone, situação, respostas e retomada) em vez da tabela larga.
+
 ## 1.195.2 — 2026-11-23
 tipo: patch
 obrigatoria: nao

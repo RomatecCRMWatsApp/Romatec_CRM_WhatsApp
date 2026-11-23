@@ -153,10 +153,31 @@ export async function situacaoFila() {
   return {
     lotes: Array.from(lotes.entries()).map(([lote, s]) => ({ lote, ...s })),
     contatos: ultimos.map(u => ({ ...u, respostas: respostasDosSlots(u.slots) })),
-    ritmo: { intervaloMin: INTERVALO_ENVIO_MS / 60_000, tetoDiario: TETO_DIARIO, dentroDoHorario: dentroDoHorario() },
+    ritmo: { intervaloMin: INTERVALO_ENVIO_MS / 60_000, tetoDiario: TETO_DIARIO, dentroDoHorario: dentroDoHorario(), ...(await situacaoDoRitmo(d)) },
   };
 }
 
+
+/** Por que a fila está (ou não) andando agora: texto para a tela */
+export function motivoDoRitmo(p: { agora: number; enviadosHoje: number; temPendente: boolean; temPausado?: boolean }): string {
+  if (!p.temPendente) return p.temPausado ? 'Pausado por você: clique em Continuar para voltar a enviar.' : 'Fila vazia: todas as retomadas já saíram.';
+  if (domingo(p.agora)) return 'Domingo não há envio: recomeça segunda às 8 h.';
+  const h = new Date(p.agora - 3 * 3_600_000).getUTCHours();
+  const proximo = new Date(p.agora - 3 * 3_600_000).getUTCDay() === 6 ? 'segunda às 8 h' : 'amanhã às 8 h';
+  if (h >= 20) return `Fora do horário (8 h às 20 h): recomeça ${proximo}.`;
+  if (h < 8) return 'Fora do horário: começa hoje às 8 h.';
+  if (p.enviadosHoje >= TETO_DIARIO) return `Limite do dia atingido (${p.enviadosHoje} de ${TETO_DIARIO} enviadas hoje): recomeça ${proximo}.`;
+  return `Enviando: ${p.enviadosHoje} de ${TETO_DIARIO} hoje, uma a cada 7 a 12 minutos.`;
+}
+export const ritmoAtivo = (motivo: string) => motivo.startsWith('Enviando');
+
+async function situacaoDoRitmo(d: any, agora = Date.now()) {
+  const hoje = await enviadosHoje(d, agora);
+  const [p]: any[] = await d.select({ id: leadRetomadas.id }).from(leadRetomadas).where(eq(leadRetomadas.status, 'pendente')).limit(1);
+  const [pz]: any[] = p ? [] : await d.select({ id: leadRetomadas.id }).from(leadRetomadas).where(eq(leadRetomadas.status, 'pausado')).limit(1);
+  const motivo = motivoDoRitmo({ agora, enviadosHoje: hoje, temPendente: !!p, temPausado: !!pz });
+  return { enviadosHoje: hoje, motivo, ativo: ritmoAtivo(motivo) };
+}
 
 /** Pausar (pendente → pausado), continuar (pausado → pendente) ou cancelar (pendente/pausado → cancelado) um lote */
 export async function mudarLote(lote: string, acao: 'pausar' | 'continuar' | 'cancelar') {
@@ -297,6 +318,11 @@ export async function leadsImportados(p: { filtro: FiltroImportados; busca?: str
     responderam: itens.filter(i => i.respondeu).length,
     quentes: itens.filter(i => i.score === 'quente').length,
     sairam: itens.filter(i => i.saiu).length,
+    // Para o contador do topo: conversando com o robô, mensagem enviada e parados sem resposta, ainda sem mensagem
+    conversando: itens.filter(i => i.respondeu && !i.saiu && !i.qualificado && !i.humano).length,
+    qualificados: itens.filter(i => i.qualificado).length,
+    comCorretor: itens.filter(i => (i.humano || i.comCorretor) && !i.saiu).length,
+    semResposta: itens.filter(i => i.envio === 'enviado' && !i.respondeu && !i.saiu && !i.humano).length,
   };
   const filtrados = itens.filter(i =>
     (p.filtro === 'todos'
@@ -307,7 +333,7 @@ export async function leadsImportados(p: { filtro: FiltroImportados; busca?: str
       || (p.filtro === 'responderam' && i.respondeu)
       || (p.filtro === 'quentes' && i.score === 'quente'))
     && (!b || i.nome.toLowerCase().includes(b) || (dig.length >= 4 && i.telefone.includes(dig))));
-  return { resumo, itens: filtrados.slice(0, 1000) };
+  return { resumo, ritmo: await situacaoDoRitmo(d).catch(() => null), itens: filtrados.slice(0, 1000) };
 }
 
 function safeJson(s: string): unknown { try { return JSON.parse(s); } catch { return null; } }
