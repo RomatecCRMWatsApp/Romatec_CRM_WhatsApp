@@ -25,6 +25,10 @@ export default function Escritorio() {
           <p style={{ margin: "4px 0 0", fontSize: 16, fontWeight: 700 }}>{HORARIO_ESCRITORIO_EXTRA}</p>
           <p style={{ margin: "6px 0 0", fontSize: 14, color: C.suave }}>Avise antes o dia e o horário da sua visita para eu te receber com atenção.</p>
         </div>
+        <div style={{ background: "var(--c-ffffff)", borderRadius: 16, padding: "12px 14px", border: "1px solid var(--c-e2d9bf)" }}>
+          <p style={{ margin: "0 0 6px", fontSize: 14, fontWeight: 700, color: C.verde }}>🔊 Ouça como funciona o atendimento (45 s)</p>
+          <audio controls preload="none" src="/brand/audio-escritorio.mp3" style={{ width: "100%" }}>Seu navegador não toca áudio.</audio>
+        </div>
         <a href={LINKS_MAPA_ESCRITORIO.google} target="_blank" rel="noopener noreferrer" style={btn(C.verde, "var(--c-ffffff)")}><Navigation size={20} /> Abrir no Google Maps</a>
         <a href={LINKS_MAPA_ESCRITORIO.waze} target="_blank" rel="noopener noreferrer" style={btn("var(--c-ffffff)", C.verde)}><Navigation size={20} /> Abrir no Waze</a>
         <a href={LINKS_MAPA_ESCRITORIO.apple} target="_blank" rel="noopener noreferrer" style={btn("var(--c-ffffff)", C.verde)}><Navigation size={20} /> Abrir no Apple Maps (iPhone)</a>

@@ -295,7 +295,7 @@ export function metaDaRota(path: string): MetaPagina | 'imovel' {
   if (p === ROTA_RIO) return META_RIO;
   if (p === ROTA_ESCRITORIO) return {
     ...META_PADRAO, path: p, indexavel: true, title: TITULO_ESCRITORIO, description: DESCRICAO_ESCRITORIO,
-    image: '/brand/og-escritorio.jpg', imageAlt: 'Nosso escritório — Rua São Raimundo, n.º 10, Centro, Açailândia/MA', imageSize: { w: 1200, h: 630 },
+    image: '/brand/og-escritorio-v2.jpg', imageAlt: 'Nosso escritório — Rua São Raimundo, n.º 10, Centro, Açailândia/MA', imageSize: { w: 1200, h: 630 },
   };
   if (p === ROTA_PAGAMENTO) return META_PAGAMENTO;
   // Página de oferta (link pessoal do robô no WhatsApp): prévia com o folder, fora do Google, sem preço na meta

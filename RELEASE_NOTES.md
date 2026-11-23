@@ -3,6 +3,15 @@
 Cada versão nova vai no TOPO. Depois rode `npm run release` (valida e atualiza o package.json);
 ao subir, o servidor grava a versão no banco e todos recebem o aviso "Novidades da versão".
 
+## 1.191.1 — 2026-11-23
+tipo: patch
+obrigatoria: nao
+titulo: Escritório: nova imagem e áudio explicativo
+publico: corretor
+
+### Melhorias
+- O link do escritório ganhou imagem nova na prévia do WhatsApp e um áudio de 45 segundos com o endereço e o horário de atendimento.
+
 ## 1.191.0 — 2026-11-23
 tipo: minor
 obrigatoria: nao

@@ -5,7 +5,7 @@ import { DESCRICAO_ESCRITORIO, LINKS_MAPA_ESCRITORIO, ROTA_ESCRITORIO } from '..
 describe('página do escritório', () => {
   it('tem prévia própria, endereço, referência e horário', () => {
     const m = metaDaRota(ROTA_ESCRITORIO);
-    expect(m !== 'imovel' && m.image).toBe('/brand/og-escritorio.jpg');
+    expect(m !== 'imovel' && m.image).toBe('/brand/og-escritorio-v2.jpg');
     expect(DESCRICAO_ESCRITORIO).toMatch(/Rua São Raimundo, n\.º 10/);
     expect(DESCRICAO_ESCRITORIO).toMatch(/Hotel Girafa/);
     expect(DESCRICAO_ESCRITORIO).toMatch(/9h às 12h e das 15h às 17h/);
