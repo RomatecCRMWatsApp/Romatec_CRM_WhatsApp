@@ -3,6 +3,16 @@
 Cada versão nova vai no TOPO. Depois rode `npm run release` (valida e atualiza o package.json);
 ao subir, o servidor grava a versão no banco e todos recebem o aviso "Novidades da versão".
 
+## 1.192.0 — 2026-11-23
+tipo: minor
+obrigatoria: nao
+titulo: Página do escritório renovada
+publico: corretor
+
+### Novo
+- A página do escritório ganhou foto no topo e um selo que mostra na hora se o escritório está aberto ("Aberto agora · até 12h", "Fechado agora · abre às 15h" ou "Hoje só com agendamento"), no horário de Açailândia e considerando os feriados nacionais de data fixa.
+- "Como chegar" vem primeiro, com o Google Maps em destaque. A tabela de horários destaca o dia de hoje. Há um player de áudio novo (52 segundos), o passo a passo da visita, a lista de contatos e a barra fixa "Combinar a visita pelo WhatsApp".
+
 ## 1.191.1 — 2026-11-23
 tipo: patch
 obrigatoria: nao
