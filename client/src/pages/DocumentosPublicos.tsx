@@ -177,6 +177,12 @@ function Documento({ emp, d }: { emp: string; d: DocumentoCliente }) {
     <>
       <Topo titulo={d.titulo} subtitulo={d.subtitulo} voltar={comRef(`/documentos/${emp}`)} />
       <main style={{ maxWidth: 980, margin: "0 auto", padding: "28px 16px 40px", display: "grid", gap: 24 }}>
+        {d.audio && (
+          <section style={{ background: "var(--c-ffffff)", border: "1px solid var(--c-e2d9bf)", borderRadius: 16, padding: "14px 16px" }}>
+            <p style={{ margin: "0 0 8px", fontWeight: 700, color: C.verde }}>🔊 Ouça os principais pontos ({d.audio.duracao})</p>
+            <audio controls preload="none" src={d.audio.src} style={{ width: "100%" }}>Seu navegador não toca áudio.</audio>
+          </section>
+        )}
         <Destaques d={d} />
         <section>
           <div style={{ display: "flex", alignItems: "center", gap: 8, margin: "0 0 12px", color: C.verde }}>

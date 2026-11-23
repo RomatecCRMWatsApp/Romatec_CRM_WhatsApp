@@ -18,6 +18,8 @@ export interface DocumentoCliente {
   forma: FormaDoc;
   /** Pontos principais mostrados acima do documento */
   destaques: string[];
+  /** Áudio explicativo (opcional), tocado na página antes dos pontos principais */
+  audio?: { src: string; duracao: string };
   /** Texto pronto do WhatsApp; {link} vira o link */
   textoWhatsapp: string;
 }
@@ -26,6 +28,7 @@ export const DOCUMENTOS_CLIENTE: DocumentoCliente[] = [
   {
     slug: 'contrato', forma: 'pdf',
     titulo: 'Contrato de Promessa de Compra e Venda',
+    audio: { src: '/bom-jardims/audio-contrato.mp3', duracao: '2 minutos' },
     subtitulo: 'Minuta do contrato (CPCV v3.1) com um cliente de exemplo — o seu sai com os seus dados e a chácara escolhida',
     destaques: [
       'Venda na planta de parcelamento já registrado; cada aprovação (Equatorial, matrículas individuais, licenças) entra por termo aditivo',

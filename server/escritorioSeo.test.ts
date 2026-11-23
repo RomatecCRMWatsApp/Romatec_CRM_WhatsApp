@@ -37,7 +37,7 @@ describe('contatos do escritório', async () => {
 describe('prévia do link do contrato', () => {
   it('usa a imagem própria e fica fora do Google', () => {
     const m = metaDaRota('/documentos/bom-jardims/contrato');
-    expect(m !== 'imovel' && m.image).toBe('/bom-jardims/og-contrato.jpg');
+    expect(m !== 'imovel' && m.image).toBe('/bom-jardims/og-contrato-v2.jpg');
     expect(m !== 'imovel' && m.indexavel).toBe(false);
   });
 });

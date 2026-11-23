@@ -3,6 +3,15 @@
 Cada versão nova vai no TOPO. Depois rode `npm run release` (valida e atualiza o package.json);
 ao subir, o servidor grava a versão no banco e todos recebem o aviso "Novidades da versão".
 
+## 1.192.4 — 2026-11-23
+tipo: patch
+obrigatoria: nao
+titulo: Contrato: áudio explicativo e imagem nova
+publico: corretor
+
+### Melhorias
+- A página da minuta do contrato ganhou um áudio de 2 minutos com os principais pontos, antes do documento. A prévia do link no WhatsApp tem imagem nova.
+
 ## 1.192.3 — 2026-11-23
 tipo: patch
 obrigatoria: nao

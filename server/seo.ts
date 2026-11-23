@@ -298,7 +298,7 @@ export function metaDaRota(path: string): MetaPagina | 'imovel' {
     ...META_PADRAO, path: p, indexavel: false,
     title: 'Contrato de compra e venda — Condomínio de Chácaras Bom Jardims',
     description: 'Minuta completa do contrato de promessa de compra e venda, só para leitura. O seu sai com os seus dados e a chácara escolhida.',
-    image: '/bom-jardims/og-contrato.jpg', imageAlt: 'Contrato de compra e venda do Condomínio de Chácaras Bom Jardims', imageSize: { w: 1200, h: 630 },
+    image: '/bom-jardims/og-contrato-v2.jpg', imageAlt: 'Contrato de compra e venda do Condomínio de Chácaras Bom Jardims', imageSize: { w: 1200, h: 630 },
   };
   if (p === ROTA_ESCRITORIO) return {
     ...META_PADRAO, path: p, indexavel: true, title: TITULO_ESCRITORIO, description: DESCRICAO_ESCRITORIO,
