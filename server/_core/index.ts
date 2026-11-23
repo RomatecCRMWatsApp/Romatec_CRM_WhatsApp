@@ -1590,6 +1590,8 @@ async function startServer() {
     await addMensagensAgendamento();
     const { addRetornos } = await import('./migrations/addRetornos');
     await addRetornos();
+    const { addRetomadas } = await import('./migrations/addRetomadas');
+    await addRetomadas();
     const { addReunioes } = await import('./migrations/addReunioes');
     await addReunioes();
     const { addRecrutamento } = await import('./migrations/addRecrutamento');
@@ -1734,6 +1736,7 @@ async function startServer() {
   import('../leads/followup').then(m => m.iniciarJobFollowUp()).catch(e => console.warn('[FollowUp] Job não iniciado:', e));
   // Régua do robô de respostas automáticas (24 h, 72 h, 7 dias) — só age em leads de empreendimento com o robô ligado
   import('../autoresposta/motor').then(m => m.iniciarJobRegua()).catch(e => console.warn('[Auto-resposta] Régua não iniciada:', e));
+  import('../leads/importacaoContatos').then(m => m.iniciarJobRetomada()).catch(e => console.warn('[Importação] Retomada não iniciada:', e));
   import('../leads/sla').then(m => m.iniciarJobSla()).catch(e => console.warn('[SLA] Job não iniciado:', e));
   // Agenda de visitas: lembrete ao cliente, aviso ao corretor e pedido de resultado
   import('../leads/visitas').then(m => m.iniciarJobVisitas()).catch(e => console.warn('[Visitas] Job não iniciado:', e));

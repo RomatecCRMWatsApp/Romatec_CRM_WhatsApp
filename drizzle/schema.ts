@@ -918,6 +918,26 @@ export const leadVisitas = mysqlTable("leadVisitas", {
 }));
 
 /** Pedidos do link de retorno (/retorno/:slug): ligação ou visita com busca no endereço do cliente */
+/** Fila de retomada dos contatos importados do celular (server/leads/importacaoContatos.ts) */
+export const leadRetomadas = mysqlTable("leadRetomadas", {
+  id: int("id").autoincrement().primaryKey(),
+  leadId: int("leadId").notNull().unique(),
+  phone: varchar("phone", { length: 20 }).notNull(),
+  /** Identificação da importação (ex.: CCBJ-2026-11-23) */
+  lote: varchar("lote", { length: 40 }).notNull(),
+  texto: text("texto").notNull(),
+  /** pendente | enviado | erro | cancelado */
+  status: varchar("status", { length: 15 }).notNull().default("pendente"),
+  erro: varchar("erro", { length: 255 }),
+  tentativas: int("tentativas").notNull().default(0),
+  criadoPor: int("criadoPor"),
+  enviadoAt: timestamp("enviadoAt"),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().notNull(),
+}, (t) => ({
+  idxStatus: index("idx_retomada_status").on(t.status, t.id),
+}));
+
 export const leadRetornos = mysqlTable("leadRetornos", {
   id: int("id").autoincrement().primaryKey(),
   leadId: int("leadId").notNull(),

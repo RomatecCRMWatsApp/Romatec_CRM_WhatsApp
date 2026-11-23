@@ -47,6 +47,7 @@ import { cartorioRouter } from "./routers/cartorio.router";
 import { autoRespostaRouter } from "./routers/autoResposta.router";
 import { verComoRouter } from "./routers/verComo.router";
 import { contatosNomesRouter } from "./routers/contatosNomes.router";
+import { importacaoContatosRouter } from "./routers/importacaoContatos.router";
 import { contratosRouter, pessoaZ } from "./routers/contratos.router";
 import { permissoesRouter } from "./routers/permissoes.router";
 import { cadastroRouter } from "./routers/cadastro.router";
@@ -147,6 +148,7 @@ export const appRouter = router({
   autoResposta: autoRespostaRouter,
   verComo: verComoRouter,
   contatosNomes: contatosNomesRouter,
+  importacaoContatos: importacaoContatosRouter,
   contratos: contratosRouter,
   permissoes: permissoesRouter,
   cadastro: cadastroRouter,

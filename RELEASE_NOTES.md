@@ -3,6 +3,18 @@
 Cada versão nova vai no TOPO. Depois rode `npm run release` (valida e atualiza o package.json);
 ao subir, o servidor grava a versão no banco e todos recebem o aviso "Novidades da versão".
 
+## 1.193.0 — 2026-11-23
+tipo: minor
+obrigatoria: nao
+titulo: Importar contatos do celular e qualificar pelo robô
+publico: admin
+
+### Novo
+- Leads › Importar contatos: suba o arquivo de contatos exportado do celular (.vcf ou .csv). Entram só os contatos cujo nome termina com o marcador (ex.: CCBJ), sem repetir quem já está no CRM.
+- Cada contato vira lead do Bom Jardims e recebe uma mensagem de retomada pelo número do CRM, aos poucos (uma a cada 2 minutos, das 8 h às 20 h, até 80 por dia), com opção de sair.
+- Quando o cliente responde, o robô pergunta finalidade, prazo e forma de pagamento. Quem quer fechar em até 3 meses vai para você com o resumo; os demais seguem com as novidades do robô.
+- Acompanhamento na mesma tela: enviados, respostas de cada cliente e etapa, com pausar, continuar e cancelar.
+
 ## 1.192.5 — 2026-11-23
 tipo: patch
 obrigatoria: nao

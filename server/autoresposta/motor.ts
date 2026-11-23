@@ -170,7 +170,7 @@ export async function linkDeOferta(leadId: number, emp: { id: number; slug: stri
 }
 
 /** O lead falou: a régua recomeça a contar da mensagem dele (e zera as automáticas seguidas) */
-async function agendarRegua(leadId: number, empreendimentoId: number, agora: number) {
+export async function agendarRegua(leadId: number, empreendimentoId: number, agora: number) {
   const d = await banco();
   const valores = { empreendimentoId, desde: new Date(agora), passo: 0, proximoAt: new Date(proximaJanela(agora + REGUA[0].horas * 3_600_000)), seguidas: 0, updatedAt: new Date(agora) };
   const [ja]: any[] = await d.select({ leadId: autoRespostaRegua.leadId }).from(autoRespostaRegua).where(eq(autoRespostaRegua.leadId, leadId)).limit(1);
@@ -252,6 +252,24 @@ export async function processarMensagem(p: { phone: string; texto: string; nome?
     await evento(lead.id, vis.visitaId ? 'visita_marcada_robo' : 'visita_nao_entendida', { status: vis.status, visitaId: vis.visitaId, texto: p.texto.slice(0, 300) });
     if (vis.visitaId) await pararRegua(lead.id);
     return { tratado: true, intencao: 'visita', enviados: enviadosVis };
+  }
+
+  // Contato importado do celular (retomada): o robô faz as perguntas de qualificação (finalidade, prazo, pagamento)
+  const ret = await import('./qualificacaoRetomada').then(async m => {
+    if (!m.emQualificacao(lead)) return null;
+    const corretorRet = await corretorDoLead(lead.responsavelId ?? null);
+    return m.tratarRetomada(lead, p.texto, agora, { corretor: corretorRet.nome, link: () => linkDeOferta(lead.id, ctx.emp) });
+  }).catch((e: any) => { console.warn('[Auto-resposta] retomada:', e?.message); return null; });
+  if (ret) {
+    const enviadosRet = await enviar(phone, lead.id, [{ tipo: 'texto', texto: ret.texto }]);
+    await import('../leads/followup').then(m => m.cancelarFollowUp(phone)).catch(() => {});
+    if (ret.quente) await passarParaCorretor(lead, ctx, `qualificado na retomada (contato do celular): ${ret.resumo}`);
+    else await agendarRegua(lead.id, ctx.emp.id, agora);
+    if (ret.concluida && !ret.quente) {
+      const { notificarAtendimento } = await import('../notificacoes');
+      await notificarAtendimento({ leadId: lead.id, responsavelId: lead.responsavelId ?? null, cliente: lead.nome || 'Cliente', empreendimentoId: ctx.emp.id, empreendimentoSlug: ctx.emp.slug, empreendimentoNome: ctx.emp.nome, motivo: `respondeu a qualificação (sem pressa): ${ret.resumo}` }).catch(() => {});
+    }
+    return { tratado: true, intencao: 'outra', enviados: enviadosRet, motivo: ret.concluida ? 'retomada_qualificada' : 'retomada' };
   }
 
   let { intencao, chacara } = classificar(p.texto, !!p.primeira, new Set(ctx.lotes.map(l => l.codigo))) as { intencao: Intencao | 'indefinida' | 'outra'; chacara?: string };

@@ -66,6 +66,7 @@ const Carteirinhas = lazy(() => import("./pages/Carteirinhas"));
 const DocumentosPublicos = lazy(() => import("./pages/DocumentosPublicos"));
 const FilaReservas = lazy(() => import("./pages/FilaReservas"));
 const RespostasAutomaticas = lazy(() => import("./pages/RespostasAutomaticas"));
+const ImportarContatos = lazy(() => import("./pages/ImportarContatos"));
 const ContratoNovo = lazy(() => import("./pages/ContratoNovo"));
 const ContratoDetalhe = lazy(() => import("./pages/ContratoDetalhe"));
 const PosicionarAssinaturas = lazy(() => import("./pages/PosicionarAssinaturas"));
@@ -181,6 +182,9 @@ function Router() {
       </Route>
       <Route path={"/performance"}>
         {() => <SetupGuard component={Performance} />}
+      </Route>
+      <Route path={"/leads/importar"}>
+        {() => <SetupGuard component={ImportarContatos} />}
       </Route>
       <Route path={"/leads/funil"}>
         {() => <SetupGuard component={LeadsFunil} />}
