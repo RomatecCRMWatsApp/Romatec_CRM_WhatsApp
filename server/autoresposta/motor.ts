@@ -285,6 +285,10 @@ export async function processarMensagem(p: { phone: string; texto: string; nome?
   if (ret) {
     const enviadosRet = await enviar(phone, lead.id, [{ tipo: 'texto', texto: ret.texto }]);
     await import('../leads/followup').then(m => m.cancelarFollowUp(phone)).catch(() => {});
+    if (ret.concluida) {
+      const resp = await corretorDoLead(lead.responsavelId ?? null);
+      await import('./avisoWhatsapp').then(m => m.avisarNoWhatsapp({ motivo: 'qualificado', leadId: lead.id, nome: lead.nome, telefone: phone, empreendimento: ctx.emp.nome, resumo: ret.resumo, quente: ret.quente, responsavel: resp.nome }, agora)).catch(() => {});
+    }
     if (ret.quente) await passarParaCorretor(lead, ctx, `qualificado na retomada (contato do celular): ${ret.resumo}`);
     else await agendarRegua(lead.id, ctx.emp.id, agora);
     if (ret.concluida && !ret.quente) {
@@ -338,6 +342,14 @@ export async function processarMensagem(p: { phone: string; texto: string; nome?
   await evento(lead.id, 'auto_resposta', { intencao, chacara: chacara ?? null, enviados, foraDoHorario });
   // Com o robô no comando, a régua antiga (1, 3, 7, 14, 30 dias) não sai para este lead
   await import('../leads/followup').then(m => m.cancelarFollowUp(phone)).catch(() => {});
+  if (intencao === 'fechar' || intencao === 'visita') {
+    const { respostasDosSlots, resumoRetomada } = await import('../../shared/importacaoContatos');
+    await import('./avisoWhatsapp').then(m => m.avisarNoWhatsapp({
+      motivo: intencao === 'fechar' ? 'fechar' : 'visita', leadId: lead.id, nome: lead.nome || p.nome, telefone: phone, empreendimento: ctx.emp.nome,
+      resumo: resumoRetomada(respostasDosSlots(lead.slots)) || null, responsavel: corretor.nome,
+      detalhe: `"${p.texto.slice(0, 160)}"${chacara ? ` · chácara ${chacara}` : ''}`,
+    }, agora)).catch(() => {});
+  }
   if (intencao === 'fechar') await passarParaCorretor(lead, ctx, `quer fechar${chacara ? ` a chácara ${chacara}` : ''}`);
   if (intencao === 'visita') {
     await evento(lead.id, 'pediu_visita', {});

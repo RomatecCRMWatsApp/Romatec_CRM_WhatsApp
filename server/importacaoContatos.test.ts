@@ -132,3 +132,20 @@ describe('retomada e qualificação', () => {
     expect(podeAbrir('secretario', '/leads/importar')).toBe(false);
   });
 });
+
+describe('aviso no WhatsApp do José', () => {
+  it('lead qualificado: nome, telefone, respostas, quente, link do cliente e do CRM', async () => {
+    const { textoAviso } = await import('./autoresposta/avisoWhatsapp');
+    const t = textoAviso({ motivo: 'qualificado', leadId: 7, nome: 'Maria', telefone: '5599991112222', empreendimento: 'Condomínio de Chácaras Bom Jardims', resumo: 'Morar · Imediato · Parcelado direto', quente: true, base: 'https://romateccrm.com' });
+    expect(t).toMatch(/^✅ \*Lead qualificado pelo robô\* · Condomínio de Chácaras Bom Jardims/);
+    expect(t).toContain('👤 Maria · (99) 9 9111-2222');
+    expect(t).toContain('📋 Morar · Imediato · Parcelado direto');
+    expect(t).toContain('🔥 Quer fechar em até 3 meses');
+    expect(t).toContain('https://wa.me/5599991112222');
+    expect(t).toContain('https://romateccrm.com/leads/lead/7');
+    const v = textoAviso({ motivo: 'visita', leadId: 8, telefone: '5599991113333', empreendimento: 'Bom Jardims', detalhe: '"posso ir sábado?"', base: 'https://x' });
+    expect(v).toMatch(/^🚗 \*Cliente pediu visita\*/);
+    expect(v).toContain('💬 "posso ir sábado?"');
+    expect(v).not.toContain('Sem pressa');
+  });
+});

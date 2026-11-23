@@ -3,6 +3,18 @@
 Cada versão nova vai no TOPO. Depois rode `npm run release` (valida e atualiza o package.json);
 ao subir, o servidor grava a versão no banco e todos recebem o aviso "Novidades da versão".
 
+## 1.195.2 — 2026-11-23
+tipo: patch
+obrigatoria: nao
+titulo: Aviso no seu WhatsApp quando o cliente quer
+publico: admin
+
+### Novo
+- Quando o robô termina a qualificação (finalidade, prazo e pagamento), ou o cliente pede visita ou quer fechar, chega um aviso no WhatsApp do José com o nome, o telefone, as respostas, o link para falar com o cliente e o link do lead no CRM. Um aviso por motivo a cada 24 h por cliente.
+
+### Melhorias
+- A persistência do robô continua só com quem conversou: a régua (24 h, 3 dias, 7 dias) recomeça a cada resposta do cliente.
+
 ## 1.195.1 — 2026-11-23
 tipo: patch
 obrigatoria: nao
