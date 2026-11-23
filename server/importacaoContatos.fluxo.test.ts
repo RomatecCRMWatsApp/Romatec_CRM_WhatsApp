@@ -43,6 +43,8 @@ describe('importação de contatos (banco)', () => {
     // No horário manda uma; a próxima só depois de 2 minutos
     expect(await I.processarFilaRetomada(DEZ_HORAS)).not.toBeNull();
     expect(enviados).toEqual([['5599991112222', 'Oi, Maria! Morar, investir ou lazer?']]);
+    // Ritmo: no domingo não manda
+    expect(await I.processarFilaRetomada(Date.UTC(2026, 10, 29, 13, 0, 0))).toBeNull();
     const fila = await I.situacaoFila();
     expect(fila.lotes[0]).toMatchObject({ enviado: 1 });
 
@@ -82,6 +84,15 @@ describe('importação de contatos (banco)', () => {
     expect(lista.itens[0]).toMatchObject({ nome: 'Maria', envio: 'enviado', qualificado: true });
     expect((await I.leadsImportados({ filtro: 'quentes' })).itens).toHaveLength(1);
     expect((await I.leadsImportados({ filtro: 'sem_resposta' })).itens).toHaveLength(0);
+    // Novos (para trabalhar): sai quem pediu para sair, quem foi atendido e quem está com corretor
+    (await getDb() as any).run(sql`UPDATE leadQualifications SET responsavelId = NULL WHERE phone = '5599991112222'`); // sem usuários no banco de teste: o dono 1 não é do escritório
+    expect((await I.leadsImportados({ filtro: 'novos' })).itens.map(i => i.nome)).toEqual(['Maria']);
+    const d: any = await getDb();
+    d.run(sql`UPDATE leadQualifications SET blockedUntil = ${new Date(Date.now() + 86_400_000).toISOString().slice(0, 19).replace('T', ' ')} WHERE phone = '5599991112222'`);
+    expect((await I.leadsImportados({ filtro: 'novos' })).itens).toHaveLength(0);
+    d.run(sql`UPDATE leadQualifications SET blockedUntil = NULL, atendidoAt = ${new Date().toISOString().slice(0, 19).replace('T', ' ')} WHERE phone = '5599991112222'`);
+    expect((await I.leadsImportados({ filtro: 'novos' })).itens).toHaveLength(0); // já atendido
+    d.run(sql`UPDATE leadQualifications SET atendidoAt = NULL WHERE phone = '5599991112222'`);
     const { leadsParaDistribuir } = await import('./leads/distribuicao');
     const imp = await leadsParaDistribuir('todos', '', Date.now(), 'importados');
     expect(imp.map(l => l.nome)).toEqual(['Maria']);

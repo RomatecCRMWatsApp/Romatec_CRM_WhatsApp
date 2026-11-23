@@ -15,9 +15,16 @@ export class ImportacaoErro extends Error {
   constructor(message: string, public status = 400) { super(message); this.name = 'ImportacaoErro'; }
 }
 
-/** Ritmo do envio: protege o número do CRM de bloqueio por disparo em massa */
-export const INTERVALO_ENVIO_MS = 2 * 60_000;
-export const TETO_DIARIO = 80;
+/**
+ * Ritmo do envio: protege o número do CRM de bloqueio por disparo em massa. Entre uma retomada e outra, de 7 a 12 min
+ * (varia por contato, para não ter cadência de robô), no máximo 30 por dia, só de segunda a sábado.
+ */
+export const INTERVALO_ENVIO_MS = 7 * 60_000;
+export const VARIACAO_ENVIO_MS = 5 * 60_000;
+export const TETO_DIARIO = 30;
+/** Espera variável antes deste contato (0 a 5 min a mais, fixa por item) */
+export const variacaoDoItem = (id: number) => ((id * 7919) % 300) * 1000;
+const domingo = (agora: number) => new Date(agora - 3 * 3_600_000).getUTCDay() === 0;
 const MAX_TENTATIVAS = 3;
 
 const banco = async () => { const d = await getDb(); if (!d) throw new ImportacaoErro('Banco indisponível', 503); return d as any; };
@@ -129,7 +136,7 @@ export async function importar(p: {
 /** Quanto tempo a fila leva no ritmo atual (horas de atendimento) */
 export function previsaoTermino(qtd: number): string {
   if (!qtd) return '';
-  const min = Math.ceil((qtd * INTERVALO_ENVIO_MS) / 60_000);
+  const min = Math.ceil((qtd * (INTERVALO_ENVIO_MS + VARIACAO_ENVIO_MS / 2)) / 60_000);
   const dias = Math.ceil(qtd / TETO_DIARIO);
   return min < 60 ? `cerca de ${min} min` : dias > 1 ? `cerca de ${dias} dias (até ${TETO_DIARIO} por dia)` : `cerca de ${Math.ceil(min / 60)} h`;
 }
@@ -170,12 +177,12 @@ async function enviadosHoje(d: any, agora: number): Promise<number> {
 
 /** Transporte (injetável nos testes) */
 export const transporteRetomada = {
-  texto: async (phone: string, texto: string) => { const z = await import('./zapiClient'); await z.enviarTexto(phone, texto); },
+  texto: async (phone: string, texto: string) => { const z = await import('./zapiClient'); await z.enviarTexto(phone, texto, { atraso: { mensagem: 3, digitando: 8 } }); },
 };
 
 /** Um passo do job: manda a próxima retomada se estiver no horário e no ritmo. Devolve o id enviado (ou null) */
 export async function processarFilaRetomada(agora = Date.now()): Promise<number | null> {
-  if (!dentroDoHorario(agora)) return null;
+  if (!dentroDoHorario(agora) || domingo(agora)) return null;
   const d = await banco();
   // Envio que travou no meio (queda do servidor): volta para a fila
   await d.update(leadRetomadas).set({ status: 'pendente', updatedAt: new Date(agora) } as any)
@@ -185,6 +192,7 @@ export async function processarFilaRetomada(agora = Date.now()): Promise<number 
   if ((await enviadosHoje(d, agora)) >= TETO_DIARIO) return null;
   const [item]: any[] = await d.select().from(leadRetomadas).where(eq(leadRetomadas.status, 'pendente')).orderBy(asc(leadRetomadas.id)).limit(1);
   if (!item) return null;
+  if (ultimo?.em && agora - new Date(ultimo.em).getTime() < INTERVALO_ENVIO_MS + variacaoDoItem(Number(item.id))) return null;
   const [lead]: any[] = await d.select().from(leadQualifications).where(eq(leadQualifications.id, item.leadId)).limit(1);
   // Saiu, foi descadastrado, já está com o corretor ou já conversou depois da importação: não manda
   if (!lead || bloqueado(lead, agora) || lead.humano === true || lead.humano === 1) {
@@ -198,14 +206,10 @@ export async function processarFilaRetomada(agora = Date.now()): Promise<number 
   try {
     await transporteRetomada.texto(item.phone, item.texto);
     await d.update(leadRetomadas).set({ status: 'enviado', enviadoAt: new Date(agora), erro: null, updatedAt: new Date(agora) } as any).where(eq(leadRetomadas.id, item.id));
+    // Sem resposta, ninguém manda mais nada: o robô só conversa (e a régua dele só começa) quando o cliente responder
     await d.update(leadQualifications).set({ lastActivityAt: new Date(agora), updatedAt: new Date(agora) } as any).where(eq(leadQualifications.id, item.leadId));
     await d.insert(leadEventos).values({ leadId: item.leadId, tipo: 'retomada_enviada', dados: { lote: item.lote }, createdAt: new Date(agora) } as any).catch(() => {});
     await import('./qualificacaoService').then(m => m.registrarMensagem(item.leadId, 'out', 'sistema', item.texto)).catch(() => {});
-    // Sem resposta, o robô do empreendimento segue com a régua dele (24 h, 3 dias, 7 dias)
-    await import('../autoresposta/motor').then(async m => {
-      const ctx = lead.empreendimentoSlug ? await m.contextoDoEmpreendimento(lead.empreendimentoSlug) : null;
-      if (ctx?.cfg.ativo) await m.agendarRegua(item.leadId, ctx.emp.id, agora);
-    }).catch(() => {});
     return item.id;
   } catch (e: any) {
     const tentativas = Number(item.tentativas ?? 0) + 1;
@@ -215,16 +219,37 @@ export async function processarFilaRetomada(agora = Date.now()): Promise<number 
   }
 }
 
+/**
+ * Importado que nunca respondeu não recebe a régua do robô (escassez 24 h, 3 dias, 7 dias): tira quem entrou nela
+ * pela retomada. Quem respondeu segue com a régua (o robô agenda de novo a cada resposta).
+ */
+export async function pararReguaSemResposta(): Promise<number> {
+  const d = await banco();
+  const { autoRespostaRegua, leadMensagens } = await import('../../drizzle/schema');
+  const naRegua: any[] = await d.select({ leadId: autoRespostaRegua.leadId }).from(autoRespostaRegua)
+    .innerJoin(leadQualifications, eq(leadQualifications.id, autoRespostaRegua.leadId))
+    .where(eq(leadQualifications.origemCanal, CANAL_IMPORTADO));
+  let n = 0;
+  for (const { leadId } of naRegua) {
+    const [falou]: any[] = await d.select({ id: leadMensagens.id }).from(leadMensagens)
+      .where(and(eq(leadMensagens.leadId, leadId), eq(leadMensagens.direcao, 'in'))).limit(1);
+    if (!falou) { await d.delete(autoRespostaRegua).where(eq(autoRespostaRegua.leadId, leadId)); n++; }
+  }
+  if (n) console.log(`[Importação] ${n} importado(s) sem resposta fora da régua do robô`);
+  return n;
+}
+
 let job: ReturnType<typeof setInterval> | null = null;
 export function iniciarJobRetomada(intervaloMs = 30_000) {
   if (job || process.env.NODE_ENV === 'test') return;
+  pararReguaSemResposta().catch(e => console.warn('[Importação] régua dos sem resposta:', e?.message));
   job = setInterval(() => { processarFilaRetomada().catch(e => console.warn('[Importação] fila:', e?.message)); }, intervaloMs);
   job.unref?.();
 }
 
 // ─── Tela "Leads importados" ──────────────────────────────────────────────────
 
-export type FiltroImportados = 'todos' | 'sem_corretor' | 'na_fila' | 'sem_resposta' | 'responderam' | 'quentes';
+export type FiltroImportados = 'novos' | 'todos' | 'sem_corretor' | 'na_fila' | 'sem_resposta' | 'responderam' | 'quentes';
 export const CANAL_IMPORTADO = 'importacao_celular';
 
 /**
@@ -239,6 +264,7 @@ export async function leadsImportados(p: { filtro: FiltroImportados; busca?: str
     id: leadQualifications.id, nome: leadQualifications.nome, phone: leadQualifications.phone, etapa: leadQualifications.etapa,
     score: leadQualifications.score, leadScore: leadQualifications.leadScore, humano: leadQualifications.humano, slots: leadQualifications.slots,
     responsavelId: leadQualifications.responsavelId, blockedUntil: leadQualifications.blockedUntil, createdAt: leadQualifications.createdAt,
+    atendidoAt: leadQualifications.atendidoAt, etapaKanban: leadQualifications.etapa, motivoPerda: leadQualifications.motivoPerda,
     envio: leadRetomadas.status, enviadoAt: leadRetomadas.enviadoAt, lote: leadRetomadas.lote,
   }).from(leadQualifications).leftJoin(leadRetomadas, eq(leadRetomadas.leadId, leadQualifications.id))
     .where(eq(leadQualifications.origemCanal, CANAL_IMPORTADO)).orderBy(desc(leadQualifications.createdAt)).limit(3000);
@@ -256,11 +282,15 @@ export async function leadsImportados(p: { filtro: FiltroImportados; busca?: str
       comCorretor: !!resp && !escritorio.has(resp), responsavelId: resp, responsavel: resp ? nomes.get(resp) ?? 'Usuário removido' : null,
       humano: l.humano === true || l.humano === 1, saiu: !!l.blockedUntil && new Date(l.blockedUntil).getTime() > agora,
       envio: l.envio ?? null, enviadoAt: l.enviadoAt ? new Date(l.enviadoAt).toISOString() : null, lote: l.lote ?? null,
+      atendido: !!l.atendidoAt, perdido: l.etapa === 'perdido' || l.etapa === 'fechado',
       respostas, respondeu, qualificado: l.etapa === 'qualificado', importadoEm: l.createdAt ? new Date(l.createdAt).toISOString() : null,
     };
   });
+  // Novos = para trabalhar: ninguém atendeu ainda, não pediu para sair, não está com corretor, não foi perdido/fechado
+  const ehNovo = (i: (typeof itens)[number]) => !i.saiu && !i.humano && !i.comCorretor && !i.atendido && !i.perdido;
   const resumo = {
     total: itens.length,
+    novos: itens.filter(ehNovo).length,
     semCorretor: itens.filter(i => !i.comCorretor).length,
     naFila: itens.filter(i => i.envio === 'pendente' || i.envio === 'enviando' || i.envio === 'pausado').length,
     enviados: itens.filter(i => i.envio === 'enviado').length,
@@ -270,6 +300,7 @@ export async function leadsImportados(p: { filtro: FiltroImportados; busca?: str
   };
   const filtrados = itens.filter(i =>
     (p.filtro === 'todos'
+      || (p.filtro === 'novos' && ehNovo(i))
       || (p.filtro === 'sem_corretor' && !i.comCorretor)
       || (p.filtro === 'na_fila' && (i.envio === 'pendente' || i.envio === 'enviando' || i.envio === 'pausado'))
       || (p.filtro === 'sem_resposta' && i.envio === 'enviado' && !i.respondeu && !i.humano)

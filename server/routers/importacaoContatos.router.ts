@@ -18,7 +18,7 @@ const marcador = z.string().trim().min(2).max(20);
 export const importacaoContatosRouter = router({
   /** Leads importados do celular (tela Leads importados): administrador e secretária, que também encaminham */
   lista: protectedProcedure
-    .input(z.object({ filtro: z.enum(["todos", "sem_corretor", "na_fila", "sem_resposta", "responderam", "quentes"]), busca: z.string().max(80).default("") }))
+    .input(z.object({ filtro: z.enum(["novos", "todos", "sem_corretor", "na_fila", "sem_resposta", "responderam", "quentes"]), busca: z.string().max(80).default("") }))
     .query(({ input, ctx }) => comErro(async () => {
       exigirDistribuicao(ctx.permissoes);
       return (await S()).leadsImportados(input);

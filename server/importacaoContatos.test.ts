@@ -82,6 +82,11 @@ describe('retomada e qualificação', () => {
     expect(montarRetomada(TEXTO_RETOMADA_PADRAO, 'Maria Souza')).toMatch(/^Oi, Maria, tudo bem\? Aqui é o José Romário/);
     expect(montarRetomada(TEXTO_RETOMADA_PADRAO, 'Cliente')).toMatch(/^Oi, tudo bem\?/);
     expect(montarRetomada('Olá {nome}!', 'Ana')).toBe('Olá Ana!');
+    // Nome de usuário do WhatsApp (minúsculo ou com número) não vira "Oi, metalmixma"
+    expect(montarRetomada(TEXTO_RETOMADA_PADRAO, 'metalmixma')).toMatch(/^Oi, tudo bem\?/);
+    expect(montarRetomada(TEXTO_RETOMADA_PADRAO, 'mesquitadeidson')).toMatch(/^Oi, tudo bem\?/);
+    expect(montarRetomada(TEXTO_RETOMADA_PADRAO, 'dinesson26')).toMatch(/^Oi, tudo bem\?/);
+    expect(montarRetomada(TEXTO_RETOMADA_PADRAO, 'Júnior')).toMatch(/^Oi, Júnior,/);
     expect(TEXTO_RETOMADA_PADRAO).toContain('SAIR');
   });
 

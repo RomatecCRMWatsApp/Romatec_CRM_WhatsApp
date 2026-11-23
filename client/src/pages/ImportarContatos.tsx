@@ -127,7 +127,7 @@ export default function ImportarContatos({ embutido = false }: { embutido?: bool
           <section className="rounded-xl border border-border bg-card p-4">
             <h2 className="font-semibold">3. Mensagem de retomada</h2>
             <p className="mt-1 text-xs text-muted-foreground">
-              Sai do número do CRM, uma a cada 2 minutos, das 8 h às 20 h, até 80 por dia (protege o número contra bloqueio). Use {"{nome}"} ou {"{, nome}"} para o primeiro nome. A pergunta final é a primeira da qualificação: deixe-a no texto.
+              Sai do número do CRM devagar: uma a cada 7 a 12 minutos, das 8 h às 20 h, de segunda a sábado, até 30 por dia (protege o número contra bloqueio). Quem não responder não recebe mais nada. Use {"{nome}"} ou {"{, nome}"} para o primeiro nome. A pergunta final é a primeira da qualificação: deixe-a no texto.
             </p>
             <div className="mt-3 grid gap-4 md:grid-cols-2">
               <textarea value={modelo} onChange={e => setModelo(e.target.value)} rows={11} className="w-full rounded-lg border border-border bg-background p-3 text-sm" />

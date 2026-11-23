@@ -38,16 +38,19 @@ const primeiroNome = (n: string | null | undefined) => String(n ?? '').trim().sp
 const banco = async () => { const d = await getDb(); if (!d) throw new Error('Banco indisponível'); return d as any; };
 
 /** Transporte (injetável nos testes): Z-API, mídia baixada e enviada em base64 */
+/** Pausa de pessoa: alguns segundos de espera e "digitando…" antes de cada resposta do robô (menos cara de disparo) */
+export const atrasoHumano = () => ({ mensagem: 3 + Math.floor(Math.random() * 5), digitando: 4 + Math.floor(Math.random() * 6) });
+
 export const transporte = {
-  async texto(telefone: string, texto: string) { const { enviarTexto } = await import('../leads/zapiClient'); await enviarTexto(telefone, texto); },
+  async texto(telefone: string, texto: string) { const { enviarTexto } = await import('../leads/zapiClient'); await enviarTexto(telefone, texto, { atraso: atrasoHumano() }); },
   async midia(telefone: string, m: Extract<Envio, { codigo: string }>) {
-    if (m.tipo === 'video') { const z = await import('../leads/zapiClient'); await z.enviarVideo(telefone, { url: absoluta(m.url), legenda: m.legenda ?? undefined }); return; }
+    if (m.tipo === 'video') { const z = await import('../leads/zapiClient'); await z.enviarVideo(telefone, { url: absoluta(m.url), legenda: m.legenda ?? undefined }, { atraso: atrasoHumano() }); return; }
     const r = await fetch(absoluta(m.url), { signal: AbortSignal.timeout(20_000) });
     if (!r.ok) throw new Error(`mídia ${m.codigo}: HTTP ${r.status}`);
     const buf = Buffer.from(await r.arrayBuffer());
     const z = await import('../leads/zapiClient');
-    if (m.tipo === 'pdf') await z.enviarDocumento(telefone, { base64: buf.toString('base64'), extensao: 'pdf', mime: 'application/pdf', nomeArquivo: m.nomeArquivo, legenda: m.legenda ?? undefined });
-    else await z.enviarImagem(telefone, { base64: buf.toString('base64'), mime: r.headers.get('content-type') || 'image/png', legenda: m.legenda ?? undefined });
+    if (m.tipo === 'pdf') await z.enviarDocumento(telefone, { base64: buf.toString('base64'), extensao: 'pdf', mime: 'application/pdf', nomeArquivo: m.nomeArquivo, legenda: m.legenda ?? undefined }, { atraso: { mensagem: 4 } });
+    else await z.enviarImagem(telefone, { base64: buf.toString('base64'), mime: r.headers.get('content-type') || 'image/png', legenda: m.legenda ?? undefined }, { atraso: { mensagem: 4 } });
   },
 };
 

@@ -11,9 +11,9 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import ImportarContatos from "./ImportarContatos";
 
-type Filtro = "todos" | "sem_corretor" | "na_fila" | "sem_resposta" | "responderam" | "quentes";
+type Filtro = "novos" | "todos" | "sem_corretor" | "na_fila" | "sem_resposta" | "responderam" | "quentes";
 const FILTROS: [Filtro, string][] = [
-  ["sem_corretor", "Sem corretor"], ["responderam", "Responderam"], ["quentes", "Quentes"],
+  ["novos", "Novos (para trabalhar)"], ["sem_corretor", "Sem corretor"], ["responderam", "Responderam"], ["quentes", "Quentes"],
   ["sem_resposta", "Ainda não responderam"], ["na_fila", "Retomada na fila"], ["todos", "Todos"],
 ];
 const ENVIO: Record<string, string> = {
@@ -49,7 +49,7 @@ export default function LeadsImportados() {
 
 function ListaImportados({ irImportar }: { irImportar?: () => void }) {
   const utils = trpc.useUtils();
-  const [filtro, setFiltro] = useState<Filtro>("sem_corretor");
+  const [filtro, setFiltro] = useState<Filtro>("novos");
   const [busca, setBusca] = useState("");
   const [sel, setSel] = useState<Set<number>>(new Set());
   const [paraId, setParaId] = useState<number | "">("");
@@ -74,7 +74,7 @@ function ListaImportados({ irImportar }: { irImportar?: () => void }) {
       {r && (
         <div className="grid grid-cols-2 gap-2 sm:grid-cols-4 lg:grid-cols-7">
           {([
-            ["Importados", r.total], ["Sem corretor", r.semCorretor], ["Retomada na fila", r.naFila], ["Retomada enviada", r.enviados],
+            ["Importados", r.total], ["Novos", r.novos], ["Retomada na fila", r.naFila], ["Retomada enviada", r.enviados],
             ["Responderam", r.responderam], ["Quentes", r.quentes], ["Pediram para sair", r.sairam],
           ] as const).map(([rot, v]) => (
             <div key={rot} className="rounded-xl border border-border bg-card p-3">
@@ -90,6 +90,7 @@ function ListaImportados({ irImportar }: { irImportar?: () => void }) {
         </p>
       )}
 
+      {filtro === "novos" && <p className="text-xs text-muted-foreground">Só quem ainda está para trabalhar, do mais novo para o mais antigo: ficam de fora quem já foi atendido, quem está com um corretor, quem pediu para sair e os perdidos ou fechados (estão nos outros filtros).</p>}
       <div className="flex flex-wrap items-end gap-2">
         <div className="flex flex-wrap gap-1.5">
           {FILTROS.map(([v, rot]) => (

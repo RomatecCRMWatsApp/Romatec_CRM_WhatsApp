@@ -9,7 +9,10 @@ export class ZApiError extends Error {
 
 export interface ZApiCreds { instanceId?: string; token?: string; clientToken?: string }
 
-type Opcoes = { creds?: ZApiCreds; fetchImpl?: typeof fetch; timeoutMs?: number };
+/** atraso: segundos que a Z-API espera antes de mandar (delayMessage) e mostrando "digitando…" (delayTyping), de 1 a 15 */
+type Opcoes = { creds?: ZApiCreds; fetchImpl?: typeof fetch; timeoutMs?: number; atraso?: { mensagem?: number; digitando?: number } };
+
+const seg = (n: number | undefined) => (n == null ? undefined : Math.max(1, Math.min(15, Math.round(n))));
 
 function credsDoEnv(): ZApiCreds {
   return { instanceId: process.env.ZAPI_INSTANCE_ID, token: process.env.ZAPI_TOKEN, clientToken: process.env.ZAPI_CLIENT_TOKEN };
@@ -69,7 +72,11 @@ async function postZApi(rota: string, telefone: string, corpo: Record<string, un
     const r = await (opts.fetchImpl ?? fetch)(`https://api.z-api.io/instances/${instanceId}/token/${token}/${rota}`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', ...(clientToken ? { 'Client-Token': clientToken } : {}) },
-      body: JSON.stringify({ phone, ...corpo }),
+      body: JSON.stringify({
+        phone, ...corpo,
+        ...(seg(opts.atraso?.mensagem) ? { delayMessage: seg(opts.atraso?.mensagem) } : {}),
+        ...(seg(opts.atraso?.digitando) ? { delayTyping: seg(opts.atraso?.digitando) } : {}),
+      }),
       signal: ctrl.signal,
     });
     const body: any = await r.json().catch(() => ({}));

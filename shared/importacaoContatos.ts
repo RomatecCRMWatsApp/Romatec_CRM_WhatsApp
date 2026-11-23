@@ -79,7 +79,8 @@ export function chaveTel(t: string): string {
 
 export const primeiroNome = (nome: string | null | undefined) => {
   const p = String(nome ?? '').trim().split(/\s+/)[0] || '';
-  return /^[A-Za-zÀ-ÿ'-]{2,20}$/.test(p) && !/^(cliente|lead|sr|sra|dr|dra)$/i.test(p) ? p : '';
+  // Nome de verdade começa com maiúscula; "mesquitadeidson", "metalmixma" (usuário do WhatsApp) e "dinesson26" ficam de fora
+  return /^[A-ZÀ-Ý][A-Za-zÀ-ÿ'-]{1,19}$/.test(p) && !/^(cliente|lead|sr|sra|dr|dra)$/i.test(p) ? p : '';
 };
 
 // ─── Arquivos exportados do celular / Google Contatos ─────────────────────────

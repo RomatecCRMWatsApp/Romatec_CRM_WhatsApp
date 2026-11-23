@@ -3,6 +3,21 @@
 Cada versão nova vai no TOPO. Depois rode `npm run release` (valida e atualiza o package.json);
 ao subir, o servidor grava a versão no banco e todos recebem o aviso "Novidades da versão".
 
+## 1.195.1 — 2026-11-23
+tipo: patch
+obrigatoria: nao
+titulo: Retomada mais devagar e filtro Novos
+publico: admin
+
+### Melhorias
+- Retomada dos importados mais devagar para proteger o número: uma a cada 7 a 12 minutos, até 30 por dia, de segunda a sábado, das 8 h às 20 h.
+- Quem não responde a retomada não recebe mais nenhuma mensagem automática; o robô só conversa com quem responde.
+- O robô espera alguns segundos mostrando "digitando…" antes de responder.
+- Leads importados: novo filtro "Novos (para trabalhar)", já aberto ao entrar, sem quem foi atendido, está com corretor, pediu para sair ou foi perdido.
+
+### Correções
+- Nome de usuário do WhatsApp (ex.: "metalmixma") não vira mais o nome na saudação.
+
 ## 1.195.0 — 2026-11-23
 tipo: minor
 obrigatoria: nao
