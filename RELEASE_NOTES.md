@@ -3,6 +3,15 @@
 Cada versão nova vai no TOPO. Depois rode `npm run release` (valida e atualiza o package.json);
 ao subir, o servidor grava a versão no banco e todos recebem o aviso "Novidades da versão".
 
+## 1.193.1 — 2026-11-23
+tipo: patch
+obrigatoria: nao
+titulo: Importar contatos: números sem DDD
+publico: admin
+
+### Melhorias
+- Importar contatos: números salvos sem DDD entram com o DDD 99, e números com código de operadora, como (015 99) 99177-7243, também são reconhecidos.
+
 ## 1.193.0 — 2026-11-23
 tipo: minor
 obrigatoria: nao

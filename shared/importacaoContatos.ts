@@ -9,14 +9,28 @@ export interface ContatoMarcado { nome: string; telefone: string; nomeOriginal: 
 const tirarAcentos = (s: string) => s.normalize('NFD').replace(/[̀-ͯ]/g, '');
 export const normalizarTexto = (s: string) => tirarAcentos(String(s ?? '')).toLowerCase().replace(/\s+/g, ' ').trim();
 
-/** Telefone para o padrão do CRM (só dígitos, com 55). null = não parece celular/fixo do Brasil */
-export function telefoneBr(t: string | null | undefined): string | null {
+/** DDD usado quando o número foi salvo sem DDD (Açailândia/MA) */
+export const DDD_PADRAO = '99';
+
+/**
+ * Telefone para o padrão do CRM (só dígitos, com 55). Aceita número salvo sem DDD (usa o DDD padrão), com código de
+ * operadora ("(015 99) 99177-7243", "0 21 99 ...") e com +55. null = não parece telefone do Brasil.
+ */
+export function telefoneBr(t: string | null | undefined, ddd = DDD_PADRAO): string | null {
   const bruto = String(t ?? '').trim();
   let d = bruto.replace(/\D/g, '');
-  if (d.startsWith('00')) d = d.slice(2);
-  if (/^(\+|00)/.test(bruto) && !d.startsWith('55')) return null; // código de outro país
+  if (/^(\+|00)/.test(bruto)) {
+    if (d.startsWith('00')) d = d.slice(2);
+    if (!d.startsWith('55')) return null; // código de outro país
+  } else if (d.startsWith('0')) {
+    // Discagem com operadora (0 + 2 dígitos + DDD + número) ou só o 0 antes do DDD
+    if (d.length === 13 || d.length === 14) d = d.slice(3);
+    else if (d.length === 11 || d.length === 12) d = d.slice(1);
+  }
   if (d.length === 12 || d.length === 13) return d.startsWith('55') ? d : null;
   if (d.length === 10 || d.length === 11) return `55${d}`;
+  if (d.length === 9 && d.startsWith('9')) return `55${ddd}${d}`; // celular sem DDD
+  if (d.length === 8) return `55${ddd}${d}`;                       // fixo (ou celular antigo) sem DDD
   return null;
 }
 

@@ -21,6 +21,13 @@ describe('marcador e telefone', () => {
     expect(telefoneBr('+55 99 99126-3738')).toBe('5599991263738');
     expect(telefoneBr('99 3538-1234')).toBe('559935381234');
     expect(telefoneBr('12345')).toBeNull();
+    // Salvo sem DDD (vale o 99 de Açailândia) e com código de operadora
+    expect(telefoneBr('99192-9669')).toBe('5599991929669');
+    expect(telefoneBr('98500-0160')).toBe('5599985000160');
+    expect(telefoneBr('3538-1234')).toBe('559935381234');
+    expect(telefoneBr('(015 99) 99177-7243')).toBe('5599991777243');
+    expect(telefoneBr('0 99 99177-7243')).toBe('5599991777243');
+    expect(telefoneBr('(011) 98877-6655')).toBe('5511988776655');
     expect(telefoneBr('+1 415 555 0100')).toBeNull();
   });
 
