@@ -26,3 +26,10 @@ describe('selo de horário do escritório (fuso de Açailândia)', async () => {
   it('feriado em dia útil (25/12, sexta): só com agendamento', () => expect(textoSituacao(situacaoEscritorio(em('2026-12-25T10:00:00')))).toBe('Feriado · hoje só com agendamento'));
   it('às 12h em ponto já fechou', () => expect(situacaoEscritorio(em('2026-11-24T12:00:00')).tipo).toBe('fechado'));
 });
+
+describe('contatos do escritório', async () => {
+  const { CONTATOS_ESCRITORIO } = await import('../shared/escritorio');
+  it('José e Daniele com WhatsApp no formato 55 + DDD + número', () => {
+    for (const c of [CONTATOS_ESCRITORIO.jose, CONTATOS_ESCRITORIO.daniele]) expect(c.whatsapp).toMatch(/^55\d{10,11}$/);
+  });
+});

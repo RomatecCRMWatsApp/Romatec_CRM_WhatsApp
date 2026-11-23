@@ -45,7 +45,7 @@ export const LINKS_MAPA_ESCRITORIO = {
 /** Contatos do escritório (o da Daniele aparece quando o número for preenchido: 55 + DDD + número) */
 export const CONTATOS_ESCRITORIO = {
   jose: { nome: 'José Romário', papel: 'Corretor · CRECI/MA F-4.705', whatsapp: '5599991811246' },
-  daniele: { nome: 'Daniele Cavalcante', papel: 'Secretária da Romatec', whatsapp: '' },
+  daniele: { nome: 'Daniele Cavalcante', papel: 'Secretária da Romatec', whatsapp: '5599992062871' },
   mensagem: 'Olá! Quero combinar uma visita ao escritório.',
 } as const;
 

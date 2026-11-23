@@ -3,6 +3,15 @@
 Cada versão nova vai no TOPO. Depois rode `npm run release` (valida e atualiza o package.json);
 ao subir, o servidor grava a versão no banco e todos recebem o aviso "Novidades da versão".
 
+## 1.192.1 — 2026-11-23
+tipo: patch
+obrigatoria: nao
+titulo: Escritório: contato da Daniele
+publico: corretor
+
+### Melhorias
+- A página do escritório passa a mostrar também a Daniele Cavalcante, secretária da Romatec, com o botão de WhatsApp dela.
+
 ## 1.192.0 — 2026-11-23
 tipo: minor
 obrigatoria: nao
