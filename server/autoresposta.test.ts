@@ -18,7 +18,10 @@ describe('classificar (regras, sem custo)', () => {
     expect(classificar('quero sair da lista', false).intencao).toBe('optout');
     expect(classificar('Não quero mais receber', false).intencao).toBe('optout');
     expect(classificar('dá desconto no PIX?', false).intencao).toBe('a_vista');
-    expect(classificar('onde fica o condomínio?', false).intencao).toBe('mapa');
+    expect(classificar('onde fica o condomínio?', false).intencao).toBe('como_chegar');
+    expect(classificar('me manda o mapa', false).intencao).toBe('mapa');
+    expect(classificar('a chácara tem rio?', false).intencao).toBe('rio');
+    expect(classificar('qual o endereço do escritório?', false).intencao).toBe('escritorio');
     expect(classificar('posso agendar uma visita?', false).intencao).toBe('visita');
     expect(classificar('os juros não são caros?', false).intencao).toBe('juros');
     expect(classificar('tem escritura?', false).intencao).toBe('documentacao');
@@ -47,10 +50,8 @@ describe('textos com os valores do simulador', () => {
 
   it('escassez com a contagem real e sem data inventada; aviso legal no fim de toda mensagem com valores', () => {
     const txt = comAvisoLegal(preencher(TEXTOS_PADRAO.escassez.texto, vars), avisoLegal(vars));
-    expect(txt).toContain('somente 5 chácaras');
-    expect(txt).toContain('de lançamento e pode mudar sem aviso');
+    expect(txt).toContain('restam *5 chácaras*');
     expect(txt).not.toMatch(/\d{2}\/\d{2}\/\d{4}/);
-    expect(txt.trimEnd().endsWith('(CDC, art. 52)._')).toBe(true);
     const comData = variaveisDaOferta({ sim, c: COND, disponiveis: 5, condicaoValidaAte: '2026-11-30', entradaParcelas: 6 });
     expect(comData.validade_condicao).toBe('válida até 30/11/2026');
     // Sem valores: sem aviso

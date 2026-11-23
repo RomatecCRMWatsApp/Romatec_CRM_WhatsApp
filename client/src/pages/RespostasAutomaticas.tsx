@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button";
 import { AlertTriangle, Bot, FileText, Image as ImageIcon, Loader2, Power, RotateCcw, Save, Send, Upload } from "lucide-react";
 import { MIDIAS, ROTULO_MIDIA, type CodigoMidia } from "@shared/autoresposta";
 
-const VARIAVEIS = "{{nome}} {{corretor}} {{creci}} {{telefone_corretor}} {{disponiveis}} {{lote}} {{link_oferta}} {{area}} {{preco}} {{avista}} {{desconto_avista}} {{entrada}} {{entrada_parcelas}} {{entrada_parcela}} {{entrada_avista}} {{saldo}} {{juros_aa}} {{juros_am}} {{prazo_maior}} {{parcela_maior}} {{total_prazo}} {{p12}} {{p24}} {{p36}} {{p60}} {{p120}} {{tabela_prazos}} {{validade_condicao}}";
+const VARIAVEIS = "{{nome}} {{corretor}} {{creci}} {{telefone_corretor}} {{disponiveis}} {{lote}} {{link_oferta}} {{area}} {{preco}} {{avista}} {{desconto_avista}} {{entrada}} {{entrada_parcelas}} {{entrada_parcela}} {{entrada_avista}} {{saldo}} {{juros_aa}} {{juros_am}} {{prazo_maior}} {{parcela_maior}} {{total_prazo}} {{p12}} {{p24}} {{p36}} {{p60}} {{p120}} {{tabela_prazos}} {{validade_condicao}} {{link_pagamento}} {{link_mapa3d}} {{link_rota}} {{link_visita}} {{link_rio}} {{link_escritorio}} {{link_contrato}} {{link_retorno}}";
 const dataHora = (d: string | Date | null) => (d ? new Date(d).toLocaleString("pt-BR", { timeZone: "America/Fortaleza", day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit" }) : "—");
 const paraBase64 = (f: File) => new Promise<string>((ok, erro) => { const r = new FileReader(); r.onload = () => ok(String(r.result).split(",")[1] ?? ""); r.onerror = () => erro(r.error); r.readAsDataURL(f); });
 
@@ -217,6 +217,11 @@ export default function RespostasAutomaticas() {
                     <p className="text-xs text-muted-foreground">Intenção: <b className="text-foreground">{previa.data.intencao}</b>{previa.data.chacara ? ` · chácara ${previa.data.chacara}` : ""}</p>
                     {previa.data.envios.map((e: any, i: number) => e.tipo === "texto"
                       ? <Balao key={i} texto={e.texto} />
+                      : e.tipo === "video"
+                        ? <div key={i} className="max-w-[340px] space-y-1">
+                            <video src={e.url} controls preload="metadata" className="w-full rounded-md border border-border" aria-label={e.nomeArquivo} />
+                            {e.legenda ? <Balao texto={e.legenda} /> : null}
+                          </div>
                       : e.codigo === "FOLDER_CHACARA"
                         ? <a key={i} href={e.url} target="_blank" rel="noreferrer" className="block w-40"><img src={e.url} alt={e.nomeArquivo} className="w-full rounded-md border border-border" /></a>
                         : <p key={i} className="inline-flex items-center gap-1 rounded-md bg-secondary/40 px-2 py-1 text-xs">{e.tipo === "pdf" ? <FileText className="h-3.5 w-3.5" /> : <ImageIcon className="h-3.5 w-3.5" />} {ROTULO_MIDIA[e.codigo as CodigoMidia] ?? e.codigo}</p>)}

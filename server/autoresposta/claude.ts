@@ -2,7 +2,7 @@
  * Reserva da classificação (respostas automáticas): só quando as regras por palavra-chave não casam. O Claude escolhe
  * UMA intenção da lista — nunca escreve texto com valores. Sem chave da Anthropic, devolve "outra" (vai para o corretor).
  */
-const OPCOES = ['primeiro_contato', 'valores', 'a_vista', 'mapa', 'visita', 'juros', 'documentacao', 'fechar', 'optout', 'outra'] as const;
+const OPCOES = ['primeiro_contato', 'valores', 'a_vista', 'mapa', 'visita', 'como_chegar', 'rio', 'escritorio', 'juros', 'documentacao', 'fechar', 'optout', 'outra'] as const;
 
 const SCHEMA = {
   type: 'object',
@@ -29,7 +29,7 @@ export async function intencaoPeloClaude(texto: string): Promise<string> {
       role: 'user',
       content: `Classifique a mensagem em UMA destas intenções: ${OPCOES.join(', ')}.\n` +
         `primeiro_contato = saudação ou interesse geral; valores = preço/parcelas/entrada/financiamento; a_vista = pagar à vista/desconto; ` +
-        `mapa = localização/disponíveis/quadras; visita = conhecer/agendar; juros = objeção sobre juros/preço alto; documentacao = escritura/registro/contrato; ` +
+        `mapa = mapa/chácaras disponíveis/quadras; visita = conhecer/agendar visita; como_chegar = onde fica o condomínio/caminho/distância; rio = rio, córrego, água, banho, deck; escritorio = endereço ou horário do escritório/imobiliária; juros = objeção sobre juros/preço alto; documentacao = escritura/registro/contrato; ` +
         `fechar = quer reservar/comprar; optout = não quer mais mensagens; outra = qualquer outra coisa.\n\nMensagem: """${texto.slice(0, 500)}"""`,
     }],
     output_config: { format: { type: 'json_schema', schema: SCHEMA as any } },

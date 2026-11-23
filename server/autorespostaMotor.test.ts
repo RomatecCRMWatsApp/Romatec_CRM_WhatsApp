@@ -37,7 +37,7 @@ beforeAll(async () => {
   // Robô desligado no começo
   db.run(sql`INSERT INTO autoRespostaConfig (empreendimentoId, ativo) VALUES (1, 0)`);
   M.transporte.texto = async (phone: string, texto: string) => { enviados.push({ phone, tipo: 'texto', conteudo: texto }); };
-  M.transporte.midia = async (phone: string, m: any) => { enviados.push({ phone, tipo: m.tipo, conteudo: m.codigo }); };
+  M.transporte.midia = async (phone: string, m: any) => { enviados.push({ phone, tipo: m.tipo, conteudo: m.tipo === 'video' && m.legenda ? m.legenda : m.codigo }); };
   M.classificador.claude = async () => 'outra';
 });
 
@@ -57,7 +57,7 @@ describe('respostas automáticas — motor', () => {
     const r = await M.processarMensagem({ phone: '5599900000001', texto: 'quanto fica a parcela?', agora: DENTRO });
     expect(r).toMatchObject({ tratado: true, intencao: 'valores' });
     const [txt, ...midias] = enviados;
-    expect(txt.tipo).toBe('texto');
+    expect(txt.tipo).toBe('video'); // vídeo "Formas de pagamento" com o texto na legenda
     expect(txt.conteudo).toMatch(/120× R\$\s1\.234,51/); // números do folder (3.025,11 m²)
     expect(txt.conteudo).toMatch(/6× R\$\s8\.000,00/);
     expect(txt.conteudo).toMatch(/\(CDC, art\. 52\)\._$/);
@@ -114,6 +114,22 @@ describe('respostas automáticas — motor', () => {
     expect(enviados.map(e => e.conteudo)).toContain('FOLDER_CHACARA');
   });
 
+  it('rio, como chegar e escritório: vídeo com o texto na legenda e o link da página com o código do corretor', async () => {
+    novoLead('5599900000012', { responsavelId: 2 });
+    const { refDoUsuario } = await import('./cartaoVendas');
+    await M.processarMensagem({ phone: '5599900000012', texto: 'a chácara tem rio?', agora: DENTRO });
+    expect(enviados[0]).toMatchObject({ tipo: 'video' });
+    expect(enviados[0].conteudo).toContain('10 metros lineares');
+    expect(enviados[0].conteudo).toContain(`/bom-jardims/rio-e-agua?utm_source=robo-whatsapp&utm_campaign=BJ-RIO&c=${refDoUsuario(2)}`);
+    enviados = [];
+    await M.processarMensagem({ phone: '5599900000012', texto: 'como chego aí?', agora: DENTRO + 60_000 });
+    expect(enviados[0].conteudo).toContain('/bom-jardims/rota?');
+    enviados = [];
+    await M.processarMensagem({ phone: '5599900000012', texto: 'qual o endereço do escritório de vocês?', agora: DENTRO + 120_000 });
+    expect(enviados[0].conteudo).toContain('Hotel Girafa');
+    expect(enviados[0].conteudo).toContain('/escritorio?');
+  });
+
   it('quer fechar: responde com a chácara pedida e passa para o corretor do lead', async () => {
     novoLead('5599900000007', { responsavelId: 2 });
     await M.processarMensagem({ phone: '5599900000007', texto: 'quero a c09', agora: DENTRO });
@@ -138,7 +154,7 @@ describe('régua do robô, link de oferta e folder', () => {
     await M.processarRegua(DENTRO + 23 * H);
     expect(doLead('5599900000008')).toHaveLength(0); // ainda não venceu
     await M.processarRegua(DENTRO + 24 * H + 60_000);
-    expect(doLead('5599900000008')[0].conteudo).toMatch(/restam \*somente \d+ chácaras\*/);
+    expect(doLead('5599900000008')[0].conteudo).toMatch(/restam \*\d+ chácaras\*/);
     expect(doLead('5599900000008').map(e => e.conteudo)).toContain('STORY_ESCASSEZ');
     enviados = [];
     await M.processarRegua(DENTRO + 30 * H);

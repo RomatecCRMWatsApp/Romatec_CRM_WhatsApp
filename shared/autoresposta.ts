@@ -4,15 +4,23 @@
  * Regras puras, usadas no servidor (server/autoresposta/motor.ts) e na tela de configuração.
  */
 import { brl, type CondicoesPagamento, type Simulacao } from './simulador';
+import { montarLink } from './linksDivulgacao';
+import { CAMPANHA_PAGAMENTO, ROTA_PAGAMENTO } from './pagamentoBomJardims';
+import { CAMPANHA_MAPA3D, ROTA_MAPA3D } from './mapa3dBomJardims';
+import { CAMPANHA_ROTA, ROTA_COMO_CHEGAR } from './rotaBomJardims';
+import { CAMPANHA_RIO, ROTA_RIO } from './rioBomJardims';
+import { ESCRITORIO, HORARIO_ESCRITORIO, HORARIO_ESCRITORIO_EXTRA, REFERENCIA_ESCRITORIO, ROTA_ESCRITORIO } from './escritorio';
 
 export const INTENCOES = [
-  'primeiro_contato', 'valores', 'a_vista', 'escassez', 'followup', 'mapa', 'visita', 'juros', 'documentacao', 'fechar', 'chacara_especifica', 'optout', 'ultimas_livres',
+  'primeiro_contato', 'valores', 'a_vista', 'escassez', 'followup', 'mapa', 'visita', 'como_chegar', 'rio', 'escritorio', 'juros', 'documentacao', 'fechar',
+  'chacara_especifica', 'optout', 'ultimas_livres',
 ] as const;
 export type Intencao = typeof INTENCOES[number];
 export const ROTULO_INTENCAO: Record<Intencao, string> = {
-  primeiro_contato: '1. Primeiro contato', valores: '2. Condições completas', a_vista: '3. Pagamento à vista', escassez: '4. Escassez (régua 24 h)',
-  followup: '5. Follow-up (régua 3 dias)', mapa: '6. Mapa e estrutura', visita: '7. Agendar visita', juros: '8. Objeção: juros',
-  documentacao: '9. Objeção: documentação', fechar: '10. Fechamento', chacara_especifica: 'Chácara específica (simulação)', optout: 'Descadastro',
+  primeiro_contato: '1. Primeiro contato', valores: '2. Condições especiais', a_vista: '3. Pagamento à vista', escassez: '4. Escassez (régua 24 h)',
+  followup: '5. Follow-up (régua 3 dias)', mapa: '6. Mapa com lupa e mapa 3D', visita: '7. Agendar visita', como_chegar: '8. Como chegar',
+  rio: '9. O rio e a água', escritorio: '10. Endereço do escritório', juros: '11. Objeção: juros',
+  documentacao: '12. Documentação e contrato', fechar: '13. Fechamento', chacara_especifica: 'Chácara específica (simulação)', optout: 'Descadastro',
   ultimas_livres: 'Régua 7 dias: três chácaras livres',
 };
 
@@ -53,8 +61,11 @@ const REGRAS: [Exclude<Intencao, 'chacara_especifica' | 'escassez' | 'followup'>
   ['fechar', /\b(reservar|fechar|comprar|vou ficar|quero (essa|esse|reservar|comprar|fechar|garantir))/],
   ['a_vista', /(a vista|avista|desconto|\bpix\b|dinheiro)/],
   ['valores', /(valor|preco|quanto|parcela|entrada|financ|tabela|condic)/],
-  ['mapa', /(mapa|onde fica|localiza|disponive|quadra)/],
-  ['visita', /(visita|conhecer|ir ai|endereco|agendar)/],
+  ['escritorio', /(escritorio|imobiliaria|onde voces ficam|onde fica a empresa|onde e a empresa|atendimento presencial|ir ate voces|loja)/],
+  ['rio', /(\brio\b|corrego|riacho|\bagua\b|banho|deck|bangalo|praia|beira)/],
+  ['como_chegar', /(como cheg|onde fica|localiza|endereco|\brota\b|caminho|distancia|quantos km|e longe|fica longe)/],
+  ['mapa', /(mapa|disponive|quadra|3d)/],
+  ['visita', /(visita|conhecer|ir ai|agendar)/],
   ['juros', /(juros|caro|taxa)/],
   ['documentacao', /(escritura|registro|documento|matricula|contrato)/],
   ['primeiro_contato', /^(oi|ola|opa|bom dia|boa tarde|boa noite|tenho interesse|interesse|info|vi o anuncio|anuncio)\b/],
@@ -133,65 +144,138 @@ export function comAvisoLegal(texto: string, aviso: string): string {
   return `${texto.trimEnd()}\n\n_${aviso}_`;
 }
 
-/** Textos de partida (do arquivo TEXTOS-WHATSAPP-BOM-JARDIMS, com os números trocados por variáveis do simulador) */
+/**
+ * Vídeo da intenção (imagem + áudio explicativo, o mesmo que o corretor manda nos links): sai como UMA mensagem,
+ * o vídeo com o texto na legenda. Texto maior que o limite da legenda vai em mensagem separada, logo depois.
+ */
+export const VIDEOS_DO_ROBO: Record<string, Partial<Record<Intencao, { url: string; titulo: string }>>> = {
+  'bom-jardims': {
+    valores: { url: '/bom-jardims/robo/formas-de-pagamento.mp4', titulo: 'Formas de pagamento' },
+    a_vista: { url: '/bom-jardims/robo/formas-de-pagamento.mp4', titulo: 'Formas de pagamento' },
+    juros: { url: '/bom-jardims/robo/formas-de-pagamento.mp4', titulo: 'Formas de pagamento' },
+    mapa: { url: '/bom-jardims/robo/mapa-3d.mp4', titulo: 'Mapa 3D' },
+    escassez: { url: '/bom-jardims/robo/mapa-3d.mp4', titulo: 'Mapa 3D' },
+    ultimas_livres: { url: '/bom-jardims/robo/mapa-3d.mp4', titulo: 'Mapa 3D' },
+    visita: { url: '/bom-jardims/robo/visita-e-retorno.mp4', titulo: 'Como funciona a visita' },
+    followup: { url: '/bom-jardims/robo/visita-e-retorno.mp4', titulo: 'Agende seu retorno' },
+    como_chegar: { url: '/bom-jardims/robo/como-chegar.mp4', titulo: 'Como chegar' },
+    rio: { url: '/bom-jardims/robo/rio-e-agua.mp4', titulo: 'O rio e a água' },
+    escritorio: { url: '/bom-jardims/robo/escritorio.mp4', titulo: 'Nosso escritório' },
+    documentacao: { url: '/bom-jardims/robo/contrato.mp4', titulo: 'Contrato' },
+    fechar: { url: '/bom-jardims/robo/contrato.mp4', titulo: 'Contrato' },
+  },
+};
+/** Limite seguro da legenda de vídeo no WhatsApp */
+export const LIMITE_LEGENDA = 1000;
+
+/** Páginas do empreendimento que o robô manda (cada uma com áudio explicativo), com o código do corretor (?c=) */
+export const VARIAVEIS_LINKS = ['link_pagamento', 'link_mapa3d', 'link_rota', 'link_visita', 'link_rio', 'link_escritorio', 'link_contrato', 'link_retorno'] as const;
+
+export function linksDoRobo(base: string, slug: string, ref?: string | null): Record<string, string> {
+  const l = (url: string, campanha: string | null) => montarLink(base, { url, utmSource: 'robo-whatsapp', utmCampaign: campanha }, ref);
+  const bj = slug === 'bom-jardims';
+  return {
+    link_pagamento: bj ? l(ROTA_PAGAMENTO, CAMPANHA_PAGAMENTO) : l(`/o/${slug}`, null),
+    link_mapa3d: bj ? l(ROTA_MAPA3D, CAMPANHA_MAPA3D) : l(`/${slug}`, null),
+    link_rota: bj ? l(ROTA_COMO_CHEGAR, CAMPANHA_ROTA) : l(`/${slug}`, null),
+    link_rio: bj ? l(ROTA_RIO, CAMPANHA_RIO) : l(`/${slug}`, null),
+    link_visita: l(`/agendar/${slug}`, 'BJ-VISITA'),
+    link_retorno: l(`/retorno/${slug}`, 'BJ-RETORNO'),
+    link_contrato: l(`/documentos/${slug}/contrato`, 'BJ-CONTRATO'),
+    link_escritorio: l(ROTA_ESCRITORIO, 'ESCRITORIO'),
+  };
+}
+
+const ENDERECO_ESCRITORIO = `${ESCRITORIO.endereco}, ${REFERENCIA_ESCRITORIO.charAt(0).toLowerCase()}${REFERENCIA_ESCRITORIO.slice(1)}`;
+
+/**
+ * Textos de partida (v2): curtos, uma pergunta por vez, e cada assunto com a página dele (áudio + detalhes) no lugar de
+ * textos longos. Valores só do simulador ou das condições de lançamento; nenhuma escassez inventada ({{disponiveis}} é real).
+ */
 export const TEXTOS_PADRAO: Record<Intencao, { texto: string; midias: CodigoMidia[] }> = {
   primeiro_contato: {
     midias: ['OFERTA'],
-    texto: 'Olá, {{nome}}! Tudo bem? 😊 Aqui é {{corretor}}, corretor do *Condomínio de Chácaras Bom Jardims*, em Açailândia.\n\n' +
-      'Que bom que você se interessou! São *chácaras de 3.025 m²* (55 × 55 m) em condomínio fechado, com portal e guarita, poço próprio, energia e uma área de vivência com rio para os chacreiros.\n\n' +
-      '💰 *Condição de lançamento:*\n• Entrada de *{{entrada_parcelas}}× {{entrada_parcela}}* sem juros\n• Saldo em *{{prazo_maior}}× fixas de {{parcela_maior}}*\n• Financiamento direto com a empreendedora, *sem banco*\n\n' +
-      'Te mandei o folder aqui embaixo 👇 Veja também a sua oferta: {{link_oferta}}\n\nVocê procura chácara para lazer da família ou para morar?',
+    texto: 'Olá, {{nome}}! Aqui é {{corretor}}, do *Condomínio de Chácaras Bom Jardims* 🌳\n\n' +
+      'São chácaras de *3.025 m²* em condomínio fechado, a 17 km do centro de Açailândia, com portaria, poço artesiano, energia e área de vivência à beira do rio.\n\n' +
+      '💰 *Entrada a partir de R$ 10 mil* e parcelas fixas direto com a empreendedora, sem banco.\n\n' +
+      '🏷️ Sua oferta (escolha a chácara e veja a parcela): {{link_oferta}}\n🧮 Formas de pagamento, com áudio: {{link_pagamento}}\n🗺️ Mapa 3D das chácaras: {{link_mapa3d}}\n\n' +
+      'Me conta: a ideia é *morar*, *investir* ou ter um lugar de *lazer* no fim de semana?',
   },
   valores: {
     midias: ['CONDICOES'],
-    texto: 'Segue a tabela completa da chácara padrão de *{{area}} m²*:\n\n🏷️ Preço de tabela: *{{preco}}*\n💵 À vista: *{{avista}}* (desconto de {{desconto_avista}})\n\n' +
-      '*Parcelado:*\n1️⃣ Entrada 30%: *{{entrada_parcelas}}× {{entrada_parcela}}* sem juros (ou {{entrada_avista}} à vista)\n2️⃣ Saldo de {{saldo}} no prazo que preferir:\n{{tabela_prazos}}\n\n' +
-      'Juros de {{juros_aa}} ao ano ({{juros_am}} ao mês), *parcelas fixas*. Se quiser antecipar parcelas, os juros são abatidos.\n\nQual prazo cabe melhor no seu orçamento?',
+    texto: '*Condições especiais de lançamento* do Bom Jardims, {{nome}}:\n\n' +
+      '✅ *Entrada de 30%*: {{entrada_parcelas}}× {{entrada_parcela}} sem juros + saldo em até {{prazo_maior}}× {{parcela_maior}} fixas (o menor total)\n✅ *Plano A*: R$ 10 mil + parcelas + reforço no 13º\n✅ *Plano B*: R$ 10 mil + até 180× fixas, sem reforço\n✅ *Plano C*: R$ 10 mil + resto da entrada em 36× sem juros\n\n' +
+      'Na página você escolhe a chácara, o plano e o prazo e vê na hora quanto paga por mês (tem um áudio explicando cada plano):\n{{link_pagamento}}\n\n' +
+      'Qual plano cabe melhor no seu bolso?',
   },
   a_vista: {
     midias: [],
-    texto: 'Ótima escolha, {{nome}}! À vista a chácara de 3.025 m² sai por *{{avista}}* — *{{desconto_avista}} de desconto* sobre a tabela.\n\n' +
-      'Também dá para pagar a *entrada à vista por {{entrada_avista}}* (economia de {{economia_entrada}}) e parcelar só o saldo. Quer que eu simule as duas opções com a chácara que você gostou?',
+    texto: 'À vista a chácara de {{area}} m² sai por *{{avista}}*: *{{desconto_avista}} de desconto* sobre a tabela. 💵\n\n' +
+      'Outra opção é pagar *a entrada à vista ({{entrada_avista}})* e parcelar só o saldo.\n\n' +
+      'Simule as duas na página de pagamento (tem áudio explicando):\n{{link_pagamento}}',
   },
   escassez: {
     midias: ['STORY_ESCASSEZ'],
-    texto: '{{nome}}, passando para te avisar: restam *somente {{disponiveis}} chácaras* e as melhores posições — perto do portal e da área de vivência — são as primeiras a sair. 🏃‍♂️\n\n' +
-      'Com a reserva, a chácara que você escolher fica *garantida por 24 horas* enquanto organizamos a documentação.\n\n' +
-      'A condição de *{{entrada_parcelas}}× {{entrada_parcela}} + {{prazo_maior}}× {{parcela_maior}}* é {{validade_condicao}}. Quer que eu separe uma para você?',
+    texto: '{{nome}}, passando rapidinho: hoje restam *{{disponiveis}} chácaras* no Bom Jardims, e as posições perto do portal e da área do rio são as primeiras a sair. 🏃\n\n' +
+      'No mapa 3D você vê quais ainda estão livres:\n{{link_mapa3d}}\n\n' +
+      'Se alguma te chamar atenção, me manda o código dela (ex.: *B07*) que eu simulo para você.',
   },
   followup: {
     midias: [],
-    texto: 'Oi, {{nome}}! Tudo certo? Ficou alguma dúvida sobre as chácaras do Bom Jardims?\n\nPosso te mandar o *mapa com as chácaras disponíveis* ou agendar uma *visita ao local* — é só me dizer o melhor dia. 🌳',
+    texto: 'Oi, {{nome}}! Ficou alguma dúvida sobre o Bom Jardims? Pode perguntar por aqui mesmo 😊\n\n' +
+      'Estas páginas têm um áudio curto explicando:\n🧮 Pagamento: {{link_pagamento}}\n🌊 O rio e a água: {{link_rio}}\n📄 Contrato: {{link_contrato}}\n\n' +
+      'Se preferir que eu te ligue, escolha o melhor horário aqui:\n{{link_retorno}}',
   },
   mapa: {
-    midias: ['ESTRUTURA', 'MAPA'],
-    texto: 'Aqui está o mapa do condomínio 🗺️ Cada chácara tem 3.025 m², com ruas de 12 m, portal com guarita, poço artesiano com bombeamento automático e reservatório elevado de 10.000 litros, rede elétrica com iluminação em LED e a área de vivência com rio e pontos de banho.\n\n' +
-      'Hoje são *{{disponiveis}} chácaras disponíveis*. Me fala qual quadra te chamou mais atenção que eu te passo as livres nela.',
+    midias: ['MAPA', 'ESTRUTURA'],
+    texto: 'Aqui está o mapa de vendas, com a lupa no portal 🗺️ Hoje são *{{disponiveis}} chácaras disponíveis*, todas com 3.025 m².\n\n' +
+      'Quer ver em 3D? Gire, aproxime e toque nas chácaras:\n{{link_mapa3d}}\n\n' +
+      'Me fala qual quadra te chamou mais atenção.',
   },
   visita: {
     midias: [],
-    texto: 'Perfeito! O condomínio fica na *Estrada do Piquiá dos Baianos, altura do km 15 da BR-222*, em Açailândia. 📍\n\n' +
-      'Me diz o melhor dia e horário para você que eu confirmo a visita. Se preferir, te encontro no stand de vendas.',
+    texto: 'Ótimo, {{nome}}! A visita é para escolher a posição da sua chácara e fechar: buscamos você de carro, o condomínio fica a 17 km do centro. 🚗\n\n' +
+      'Escolha o dia e o horário por aqui:\n{{link_visita}}\n\nQuer ver o caminho antes? {{link_rota}}',
+  },
+  como_chegar: {
+    midias: [],
+    texto: 'O Bom Jardims fica a *17 km do centro de Açailândia*, uns 24 minutos de carro. 📍\n\n' +
+      'Nesta página tem o vídeo do caminho com os pontos de referência, um áudio explicando e os botões para abrir no Google Maps ou no Waze:\n{{link_rota}}\n\n' +
+      'Quando decidir pela sua chácara, buscamos você de carro para a visita.',
+  },
+  rio: {
+    midias: [],
+    texto: 'Boa pergunta! 🌊 O rio *não passa dentro das chácaras*: ele fica na área de preservação, que é *área comum de todos os condôminos*, ' +
+      'e cada chácara tem um espaço exclusivo de *10 metros lineares* na margem, onde pode fazer deck ou bangalô de madeira. A água da chácara vem do *poço artesiano* do condomínio.\n\n' +
+      'Veja os detalhes e ouça o áudio explicativo:\n{{link_rio}}',
+  },
+  escritorio: {
+    midias: [],
+    texto: `Nosso escritório fica na *${ENDERECO_ESCRITORIO}*. 🏢\n\n🕘 ${HORARIO_ESCRITORIO}.\n📅 ${HORARIO_ESCRITORIO_EXTRA}.\n\n` +
+      'Abra o caminho no Google Maps ou no Waze (tem um áudio com as orientações):\n{{link_escritorio}}',
   },
   juros: {
     midias: [],
-    texto: 'Entendo, {{nome}}. Os juros são de *{{juros_aa}} ao ano* — bem abaixo do que bancos e consórcios costumam cobrar — e a *entrada não tem juros*.\n\n' +
-      'As parcelas são *fixas*: {{parcela_maior}} do começo ao fim se pagas em dia. E se sobrar um dinheiro extra, você pode antecipar parcelas e pagar menos juros.',
+    texto: 'Entendo, {{nome}}. Os juros são de *{{juros_aa}} ao ano*, bem abaixo do que bancos e consórcios costumam cobrar, e a *entrada não tem juros*.\n\n' +
+      'As parcelas são *fixas*: {{parcela_maior}} do começo ao fim se pagas em dia. E se sobrar um dinheiro extra, você pode antecipar e pagar menos juros.\n\n' +
+      'Veja o plano que fica melhor para você:\n{{link_pagamento}}',
   },
   documentacao: {
     midias: [],
-    texto: 'A venda é feita por *contrato particular de promessa de compra e venda*, com quadro-resumo de todas as condições, assinatura digital e boletos/PIX emitidos em nome da empreendedora.\n\n' +
-      'O empreendimento está em *fase de aprovação na Prefeitura*. Depois do registro do parcelamento, cada chácara terá sua matrícula individual e a escritura é feita após a quitação. Posso te enviar a minuta do contrato para você ler com calma.',
+    texto: 'A venda é feita por *contrato particular de promessa de compra e venda*, com quadro-resumo de todas as condições, assinatura digital e boletos/PIX em nome da empreendedora.\n\n' +
+      'O empreendimento está em *fase de aprovação na Prefeitura*. Depois do registro do parcelamento, cada chácara terá sua matrícula individual, e a escritura é feita após a quitação.\n\n' +
+      '📄 Leia a minuta do contrato com calma (tem um áudio de 2 minutos com os pontos principais):\n{{link_contrato}}',
   },
   fechar: {
     midias: [],
     texto: 'Vamos garantir a sua, {{nome}}? Para a reserva preciso de:\n📄 RG/CNH e CPF (e do cônjuge, se casado)\n🏠 Comprovante de endereço\n📱 Telefone e e-mail\n\n' +
-      'Assim que você me enviar, separo a chácara *{{lote}}* por 24 horas e já te mando o contrato para assinatura digital. ✍️',
+      'Assim que você me enviar, separo a chácara *{{lote}}* por 24 horas e te mando o contrato para assinatura digital. ✍️\n\n' +
+      'Se quiser ler a minuta antes: {{link_contrato}}',
   },
   chacara_especifica: {
     midias: [],
     texto: 'A chácara *{{lote}}* tem *{{area}} m²*:\n\n🏷️ Preço de tabela: *{{preco}}*\n💵 À vista: *{{avista}}*\n1️⃣ Entrada: *{{entrada_parcelas}}× {{entrada_parcela}}* sem juros (ou {{entrada_avista}} à vista)\n' +
-      '2️⃣ Saldo de {{saldo}}:\n{{tabela_prazos}}\n\nQuer que eu separe a {{lote}} para você? A reserva vale 24 horas.',
+      '2️⃣ Saldo de {{saldo}}:\n{{tabela_prazos}}\n\nOs planos com entrada a partir de R$ 10 mil estão aqui: {{link_pagamento}}\n\nQuer que eu separe a {{lote}} para você? A reserva vale 24 horas.',
   },
   optout: {
     midias: [],
@@ -200,7 +284,7 @@ export const TEXTOS_PADRAO: Record<Intencao, { texto: string; midias: CodigoMidi
   ultimas_livres: {
     midias: [],
     texto: '{{nome}}, separei *3 chácaras que ainda estão livres* e são ótimas posições: *{{livres}}*. 🌳\n\n' +
-      'Hoje são {{disponiveis}} disponíveis. A condição de *{{entrada_parcelas}}× {{entrada_parcela}} + {{prazo_maior}}× {{parcela_maior}}* é {{validade_condicao}}.\n\n' +
-      'Veja a sua oferta e simule a que você gostar: {{link_oferta}}\n\nQuer que eu te mande os valores de alguma delas?',
+      'Hoje são {{disponiveis}} disponíveis. Veja onde ficam no mapa 3D:\n{{link_mapa3d}}\n\n' +
+      'E simule a que você gostar: {{link_oferta}}',
   },
 };

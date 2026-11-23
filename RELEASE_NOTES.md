@@ -3,6 +3,21 @@
 Cada versão nova vai no TOPO. Depois rode `npm run release` (valida e atualiza o package.json);
 ao subir, o servidor grava a versão no banco e todos recebem o aviso "Novidades da versão".
 
+## 1.195.0 — 2026-11-23
+tipo: minor
+obrigatoria: nao
+titulo: Robô do Bom Jardims com vídeos e links das páginas
+publico: admin
+
+### Novo
+- O robô responde como o corretor manda: o vídeo com áudio (formas de pagamento, mapa 3D, como chegar, visita e retorno, rio e água, escritório, contrato) com o texto na legenda, numa mensagem só.
+- Todas as respostas levam o link da página certa (pagamento, mapa 3D, como chegar, agendar visita, rio e água, escritório, contrato e retorno), com o código do corretor do lead.
+- Três respostas novas: Como chegar, O rio e a água e Endereço do escritório.
+
+### Melhorias
+- Textos mais curtos e com uma pergunta por vez; "Condições especiais" com os planos de entrada a partir de R$ 10 mil e "Mapa com lupa e mapa 3D". A visita fica para quem já decidiu, com busca de carro.
+- Quem nunca editou os textos já recebe os novos; texto editado na tela continua o seu (use "Voltar ao padrão" para pegar o novo).
+
 ## 1.194.0 — 2026-11-23
 tipo: minor
 obrigatoria: nao

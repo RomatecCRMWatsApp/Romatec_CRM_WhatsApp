@@ -10,13 +10,14 @@ import { getDb } from '../db';
 import { randomBytes } from 'crypto';
 import { autoRespostaConfig, autoRespostaMidias, autoRespostaRegua, autoRespostaTextos, condicoesPagamento, empreendimentos, leadEventos, leadQualifications, linksOferta, lotes, users } from '../../drizzle/schema';
 import {
-  avisoLegal, classificar, comAvisoLegal, dentroDoHorario, INTENCOES, MAX_SEGUIDAS, MIDIAS, preencher, proximaJanela, REGUA, SO_DA_REGUA, TEXTOS_PADRAO, variaveisDaOferta,
+  avisoLegal, classificar, comAvisoLegal, dentroDoHorario, INTENCOES, LIMITE_LEGENDA, linksDoRobo, MAX_SEGUIDAS, MIDIAS, preencher, proximaJanela, REGUA, SO_DA_REGUA, TEXTOS_PADRAO, variaveisDaOferta, VIDEOS_DO_ROBO,
   type CodigoMidia, type Intencao,
 } from '../../shared/autoresposta';
 import { condicoesDaLinha, simular, precoLote, type CondicoesPagamento } from '../../shared/simulador';
 import { CARTAO_PADRAO, formatarTelefone } from '../../shared/cartaoVendas';
 import { numeroCreciPF } from '../../shared/cartaoVendas';
 import { mesmoTelefone } from '../leads/mesmoTelefone';
+import { refDoUsuario } from '../cartaoVendas';
 
 /** Mídias de partida (client/public/<slug>/divulgacao); a tela de configuração substitui por arquivo enviado */
 export const MIDIAS_PADRAO: Record<string, Partial<Record<CodigoMidia, { tipo: 'imagem' | 'pdf'; url: string; nomeArquivo: string }>>> = {
@@ -29,7 +30,7 @@ export const MIDIAS_PADRAO: Record<string, Partial<Record<CodigoMidia, { tipo: '
   },
 };
 
-export type Envio = { tipo: 'texto'; texto: string } | { tipo: 'imagem' | 'pdf'; codigo: string; url: string; nomeArquivo: string; legenda?: string | null };
+export type Envio = { tipo: 'texto'; texto: string } | { tipo: 'imagem' | 'pdf' | 'video'; codigo: string; url: string; nomeArquivo: string; legenda?: string | null };
 
 const urlPublica = () => (process.env.APP_PUBLIC_URL || 'https://romateccrm.com').replace(/\/+$/, '');
 const absoluta = (url: string) => (/^https?:\/\//.test(url) ? url : `${urlPublica()}${url}`);
@@ -40,6 +41,7 @@ const banco = async () => { const d = await getDb(); if (!d) throw new Error('Ba
 export const transporte = {
   async texto(telefone: string, texto: string) { const { enviarTexto } = await import('../leads/zapiClient'); await enviarTexto(telefone, texto); },
   async midia(telefone: string, m: Extract<Envio, { codigo: string }>) {
+    if (m.tipo === 'video') { const z = await import('../leads/zapiClient'); await z.enviarVideo(telefone, { url: absoluta(m.url), legenda: m.legenda ?? undefined }); return; }
     const r = await fetch(absoluta(m.url), { signal: AbortSignal.timeout(20_000) });
     if (!r.ok) throw new Error(`mídia ${m.codigo}: HTTP ${r.status}`);
     const buf = Buffer.from(await r.arrayBuffer());
@@ -122,7 +124,8 @@ export function montarResposta(ctx: ContextoEmp, p: { intencao: Intencao; chacar
   const livres = ref && ctx.lotes.some(l => l.codigo === ref) ? maisProximas(ctx, ref) : ctx.lotes.filter(l => l.situacao === 'disponivel').slice(0, 3).map(l => l.codigo);
   const base: Record<string, string> = {
     nome: primeiroNome(p.nome) || 'tudo bem', corretor: p.corretor.nome, creci: p.corretor.creci ?? '', telefone_corretor: p.corretor.telefone ?? '',
-    disponiveis: String(disponiveis), lote: p.chacara || 'que você escolher', link_oferta: `${urlPublica()}/o/${ctx.emp.slug}`, livres: livres.join(', '), ...p.extra,
+    disponiveis: String(disponiveis), lote: p.chacara || 'que você escolher', link_oferta: `${urlPublica()}/o/${ctx.emp.slug}`, livres: livres.join(', '),
+    ...linksDoRobo(urlPublica(), ctx.emp.slug, null), ...p.extra,
   };
   let intencao = p.intencao;
   // Chácara citada: simulação dela; se já saiu, avisa e oferece as livres mais perto
@@ -147,13 +150,26 @@ export function montarResposta(ctx: ContextoEmp, p: { intencao: Intencao; chacar
   const t = ctx.textos[intencao];
   if (!t || !t.ativo) return [];
   const aviso = avisoLegal(vars, ctx.cfg.avisoLegal);
-  const out: Envio[] = [{ tipo: 'texto', texto: comAvisoLegal(preencher(t.texto, vars).trim(), aviso) }];
+  const corpo = comAvisoLegal(preencher(t.texto, vars).trim(), aviso);
+  // Assunto com vídeo (imagem + áudio): vídeo com o texto na legenda, numa mensagem só (como o corretor manda)
+  const video = VIDEOS_DO_ROBO[ctx.emp.slug]?.[intencao];
+  const out: Envio[] = video
+    ? (corpo.length <= LIMITE_LEGENDA
+      ? [{ tipo: 'video', codigo: `VIDEO_${intencao.toUpperCase()}`, url: video.url, nomeArquivo: `${video.titulo}.mp4`, legenda: corpo }]
+      : [{ tipo: 'video', codigo: `VIDEO_${intencao.toUpperCase()}`, url: video.url, nomeArquivo: `${video.titulo}.mp4`, legenda: null }, { tipo: 'texto', texto: corpo }])
+    : [{ tipo: 'texto', texto: corpo }];
   for (const k of t.midias) { const m = ctx.midias[k]; if (m) out.push({ tipo: m.tipo, codigo: k, url: m.url, nomeArquivo: m.nomeArquivo, legenda: m.legenda }); }
   // Chácara livre pedida: folder dela gerado na hora (server/autoresposta/folderChacara.ts)
   if (intencao === 'chacara_especifica' && lote && lote.situacao === 'disponivel' && ctx.cond) {
     out.push({ tipo: 'imagem', codigo: 'FOLDER_CHACARA', url: `/api/public/oferta/${ctx.emp.slug}/chacara/${lote.codigo}.png`, nomeArquivo: `CHACARA-${lote.codigo}.png`, legenda: null });
   }
   return out;
+}
+
+/** Links das páginas (com áudio) com o código do corretor responsável: o lead que abrir continua sendo dele */
+export function linksDoLead(ctx: ContextoEmp, responsavelId: number | null | undefined): Record<string, string> {
+  const ref = responsavelId ? refDoUsuario(Number(responsavelId)) : null;
+  return linksDoRobo(urlPublica(), ctx.emp.slug, ref);
 }
 
 /** Link pessoal da página de oferta (cria na primeira vez) — /o/:slug?l=token */
@@ -216,7 +232,10 @@ async function enviar(phone: string, leadId: number, envios: Envio[]): Promise<n
   for (const e of envios) {
     try {
       if (e.tipo === 'texto') { await transporte.texto(phone, e.texto); await registrarMensagemPorTelefone(phone, 'out', 'bot', e.texto).catch(() => {}); }
-      else { await transporte.midia(phone, e); await evento(leadId, 'midia_enviada', { codigo: e.codigo }); }
+      else {
+        await transporte.midia(phone, e); await evento(leadId, 'midia_enviada', { codigo: e.codigo });
+        if (e.tipo === 'video' && e.legenda) await registrarMensagemPorTelefone(phone, 'out', 'bot', e.legenda).catch(() => {});
+      }
       enviados++;
     } catch (err: any) { console.warn(`[Auto-resposta] envio para ${phone}:`, err?.message); }
   }
@@ -292,13 +311,18 @@ export async function processarMensagem(p: { phone: string; texto: string; nome?
 
   const corretor = await corretorDoLead(lead.responsavelId ?? null);
   const link = await linkDeOferta(lead.id, ctx.emp).catch(() => null);
-  const envios = montarResposta(ctx, { intencao: intencao as Intencao, chacara: chacara ?? lead.loteCodigo ?? null, nome: lead.nome || p.nome, corretor, extra: link ? { link_oferta: link } : undefined });
+  const envios = montarResposta(ctx, { intencao: intencao as Intencao, chacara: chacara ?? lead.loteCodigo ?? null, nome: lead.nome || p.nome, corretor, extra: { ...linksDoLead(ctx, lead.responsavelId), ...(link ? { link_oferta: link } : {}) } });
   // Pediu visita: o robô já oferece 3 horários livres para o cliente escolher
-  if (intencao === 'visita' && envios[0]?.tipo === 'texto') {
-    const intro = envios[0].texto.split('\n\n')[0];
-    envios[0] = { tipo: 'texto', texto: await import('./visitaConversa').then(m => m.ofertarHorarios(lead.id, intro, agora)).catch(() => envios[0].tipo === 'texto' ? (envios[0] as any).texto : intro) };
+  // O texto pode estar na mensagem de texto ou na legenda do vídeo
+  const lerTexto = (e: Envio | undefined) => (e?.tipo === 'texto' ? e.texto : e?.tipo === 'video' ? e.legenda ?? null : null);
+  const trocarTexto = (i: number, t: string) => { const e = envios[i]; envios[i] = e.tipo === 'texto' ? { tipo: 'texto', texto: t } : { ...e, legenda: t } as Envio; };
+  const iTexto = envios.findIndex(e => lerTexto(e) != null);
+  if (intencao === 'visita' && iTexto >= 0) {
+    const atual = lerTexto(envios[iTexto])!;
+    const intro = atual.split('\n\n')[0];
+    trocarTexto(iTexto, await import('./visitaConversa').then(m => m.ofertarHorarios(lead.id, intro, agora)).catch(() => atual));
   }
-  if (foraDoHorario && envios[0]?.tipo === 'texto') envios[0] = { tipo: 'texto', texto: `${envios[0].texto}\n\n🕗 Nosso atendimento é das 8 h às 20 h — o ${corretor.nome.split(' ')[0]} te responde logo cedo.` };
+  if (foraDoHorario && iTexto >= 0) trocarTexto(iTexto, `${lerTexto(envios[iTexto])}\n\n🕗 Nosso atendimento é das 8 h às 20 h — o ${corretor.nome.split(' ')[0]} te responde logo cedo.`);
 
   if (intencao === 'optout') {
     await pararRegua(lead.id);
@@ -350,7 +374,7 @@ export async function processarRegua(agora = Date.now(), limite = 20): Promise<n
     if (linhasAfetadas(reserva) === 0) continue;
     const corretor = await corretorDoLead(lead.responsavelId ?? null);
     const link = await linkDeOferta(lead.id, ctx.emp).catch(() => null);
-    const envios = montarResposta(ctx, { intencao: etapa.intencao, chacara: lead.loteCodigo ?? null, nome: lead.nome, corretor, extra: link ? { link_oferta: link } : undefined });
+    const envios = montarResposta(ctx, { intencao: etapa.intencao, chacara: lead.loteCodigo ?? null, nome: lead.nome, corretor, extra: { ...linksDoLead(ctx, lead.responsavelId), ...(link ? { link_oferta: link } : {}) } });
     const enviados = await enviar(lead.phone, lead.id, envios);
     await evento(lead.id, 'regua', { passo: passo + 1, intencao: etapa.intencao, enviados });
     if (enviados) n++;

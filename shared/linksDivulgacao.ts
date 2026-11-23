@@ -131,7 +131,7 @@ export const LINKS_FIXOS: LinkDivulgacao[] = [
     chave: 'fixo:escritorio', titulo: 'Endereço do escritório — Romatec, em frente ao Hotel Girafa', fixo: true, destaque: false, empreendimento: null,
     descricao: 'Endereço, ponto de referência, horário e contatos do escritório, com caminho no Google Maps, Waze ou Apple Maps.',
     url: ROTA_ESCRITORIO, utmSource: 'whatsapp', utmCampaign: 'ESCRITORIO',
-    textoWhatsapp: `📍 *Escritório Romatec Consultoria Total*\n${ESCRITORIO.endereco} — ${REFERENCIA_ESCRITORIO.toLowerCase()}.\n\n🕘 ${HORARIO_ESCRITORIO}.\n📅 ${HORARIO_ESCRITORIO_EXTRA}.\n\nNa página você abre o caminho no Google Maps, Waze ou Apple Maps e ouve um áudio com as orientações:\n${MARCA_LINK}`,
+    textoWhatsapp: `📍 *Escritório Romatec Consultoria Total*\n${ESCRITORIO.endereco} — ${REFERENCIA_ESCRITORIO.charAt(0).toLowerCase()}${REFERENCIA_ESCRITORIO.slice(1)}.\n\n🕘 ${HORARIO_ESCRITORIO}.\n📅 ${HORARIO_ESCRITORIO_EXTRA}.\n\nNa página você abre o caminho no Google Maps, Waze ou Apple Maps e ouve um áudio com as orientações:\n${MARCA_LINK}`,
   },
   {
     chave: 'fixo:kml', titulo: 'Localização no Google Earth (KML)', fixo: true, destaque: false, empreendimento: 'Bom Jardims',

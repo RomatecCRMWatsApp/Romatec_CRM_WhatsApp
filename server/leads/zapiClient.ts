@@ -45,6 +45,18 @@ export async function enviarImagem(
   }, { timeoutMs: 30_000, ...opts });
 }
 
+/** Envia um vídeo (link público .mp4 que a Z-API baixa) com legenda; devolve o messageId. Lança ZApiError em qualquer falha. */
+export async function enviarVideo(
+  telefone: string,
+  video: { url: string; legenda?: string },
+  opts: Opcoes = {},
+): Promise<string> {
+  return postZApi('send-video', telefone, {
+    video: video.url,
+    ...(video.legenda ? { caption: video.legenda } : {}),
+  }, { timeoutMs: 60_000, ...opts });
+}
+
 async function postZApi(rota: string, telefone: string, corpo: Record<string, unknown>, opts: Opcoes): Promise<string> {
   const { instanceId, token, clientToken } = opts.creds ?? credsDoEnv();
   if (!instanceId || !token) throw new ZApiError('ZAPI_NAO_CONFIGURADA', 'Z-API sem Instance ID/Token');
