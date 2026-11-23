@@ -66,6 +66,7 @@ const CSS = `
 .esc .pessoa{display:flex;align-items:center;gap:12px;padding:12px 0;border-bottom:1px solid #eee4cc}
 .esc .pessoa:last-of-type{border-bottom:0}
 .esc .av{flex:none;width:48px;height:48px;border-radius:50%;background:var(--verde);color:var(--ouro2);display:grid;place-items:center;font-family:'Playfair Display',serif;font-weight:700;font-size:19px}
+.esc .av img{width:100%;height:100%;border-radius:50%;object-fit:cover;border:2px solid var(--ouro)}
 .esc .pessoa .n{font-weight:900;font-size:16px}
 .esc .pessoa .c{font-size:13px;color:#6b6b5c}
 .esc .pessoa .c span{white-space:nowrap}
@@ -126,8 +127,8 @@ export default function Escritorio() {
   const hoje = horaLocalEscritorio(agora).diaSemana;
   // Quem compartilhou o link (?c=) aparece no primeiro contato e na barra; sem ref, o José Romário
   const principal = corretor.doLink && corretor.whatsapp
-    ? { nome: corretor.nome, papel: [corretor.papel, corretor.creci].filter(Boolean).join(" · "), whatsapp: corretor.whatsapp }
-    : CONTATOS_ESCRITORIO.jose;
+    ? { nome: corretor.nome, papel: [corretor.papel, corretor.creci].filter(Boolean).join(" · "), whatsapp: corretor.whatsapp, foto: corretor.fotoUrl ?? null }
+    : { ...CONTATOS_ESCRITORIO.jose, foto: corretor.fotoUrl ?? CONTATOS_ESCRITORIO.jose.foto };
   const contatos = [principal, ...(CONTATOS_ESCRITORIO.daniele.whatsapp ? [CONTATOS_ESCRITORIO.daniele] : [])];
   const [rua, ...resto] = ESCRITORIO.endereco.split(", ");
 
@@ -180,7 +181,7 @@ export default function Escritorio() {
           <h2><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M21 12a8.5 8.5 0 0 1-12.4 7.5L3 21l1.6-5.4A8.5 8.5 0 1 1 21 12z" /></svg>Fale com a gente</h2>
           {contatos.map(p => (
             <div className="pessoa" key={p.whatsapp}>
-              <div className="av">{iniciais(p.nome)}</div>
+              <div className="av">{p.foto ? <img src={p.foto} alt={p.nome} width={48} height={48} loading="lazy" /> : iniciais(p.nome)}</div>
               <div><div className="n">{p.nome}</div><div className="c">{p.papel.split(" · ").map((t, i) => <span key={t}>{i ? " · " : ""}{t}</span>)}</div></div>
               <a href={wa(p.whatsapp)} target="_blank" rel="noopener noreferrer" aria-label={`WhatsApp de ${p.nome}`}>WhatsApp</a>
             </div>

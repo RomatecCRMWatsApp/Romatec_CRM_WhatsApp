@@ -3,6 +3,15 @@
 Cada versão nova vai no TOPO. Depois rode `npm run release` (valida e atualiza o package.json);
 ao subir, o servidor grava a versão no banco e todos recebem o aviso "Novidades da versão".
 
+## 1.192.2 — 2026-11-23
+tipo: patch
+obrigatoria: nao
+titulo: Escritório: foto da Daniele
+publico: corretor
+
+### Melhorias
+- O contato da Daniele Cavalcante na página do escritório passa a mostrar a foto dela. O contato do corretor mostra a foto do cadastro quando houver.
+
 ## 1.192.1 — 2026-11-23
 tipo: patch
 obrigatoria: nao
