@@ -3,6 +3,15 @@
 Cada versão nova vai no TOPO. Depois rode `npm run release` (valida e atualiza o package.json);
 ao subir, o servidor grava a versão no banco e todos recebem o aviso "Novidades da versão".
 
+## 1.191.0 — 2026-11-23
+tipo: minor
+obrigatoria: nao
+titulo: Página do escritório com endereço e horário
+publico: corretor
+
+### Novo
+- Nova página romateccrm.com/escritorio para responder "onde fica o escritório": endereço (Rua São Raimundo, n.º 10, Centro, em frente ao Hotel Girafa), horário de segunda a sexta, das 9h às 12h e das 15h às 17h (sábados, domingos e feriados somente com agendamento), e botões do Google Maps, Waze e Apple Maps. No WhatsApp, o link mostra a imagem do escritório.
+
 ## 1.190.3 — 2026-11-22
 tipo: patch
 obrigatoria: nao
