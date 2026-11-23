@@ -3,6 +3,15 @@
 Cada versão nova vai no TOPO. Depois rode `npm run release` (valida e atualiza o package.json);
 ao subir, o servidor grava a versão no banco e todos recebem o aviso "Novidades da versão".
 
+## 1.192.5 — 2026-11-23
+tipo: patch
+obrigatoria: nao
+titulo: Links de divulgação atualizados
+publico: corretor
+
+### Melhorias
+- Links de divulgação: entraram o link de retorno (ligação ou visita para fechar), a minuta do contrato com áudio e o endereço do escritório. Os textos de agendar visita, como chegar, rio, mapa 3D e formas de pagamento agora citam os áudios e explicam que as dúvidas são tiradas pelo WhatsApp e a visita é para escolher e fechar.
+
 ## 1.192.4 — 2026-11-23
 tipo: patch
 obrigatoria: nao

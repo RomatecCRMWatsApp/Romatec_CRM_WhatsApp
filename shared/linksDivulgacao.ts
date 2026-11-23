@@ -9,6 +9,7 @@ import { CAMPANHA_MAPA3D, ROTA_MAPA3D } from './mapa3dBomJardims';
 import { CAMPANHA_ROTA, ROTA_COMO_CHEGAR } from './rotaBomJardims';
 import { CAMPANHA_PAGAMENTO, ROTA_PAGAMENTO } from './pagamentoBomJardims';
 import { CAMPANHA_RIO, ROTA_RIO } from './rioBomJardims';
+import { ESCRITORIO, HORARIO_ESCRITORIO, HORARIO_ESCRITORIO_EXTRA, REFERENCIA_ESCRITORIO, ROTA_ESCRITORIO } from './escritorio';
 
 /** Marcador do link no texto: trocado pelo link de quem compartilha */
 export const MARCA_LINK = '{link}';
@@ -34,7 +35,7 @@ export const LINKS_FIXOS: LinkDivulgacao[] = [
     chave: 'fixo:pagamento', titulo: 'Formas de pagamento — entrada a partir de R$ 10 mil (folder interativo)', fixo: true, destaque: true, empreendimento: 'Bom Jardims',
     descricao: 'O cliente escolhe a chácara, a forma (entrada 30%, Plano A com reforço no 13º, Plano B em até 180× ou Plano C com entrada parcelada) e o prazo, vê quanto paga por mês e por ano e manda a escolha no seu WhatsApp.',
     url: ROTA_PAGAMENTO, utmSource: 'whatsapp', utmCampaign: CAMPANHA_PAGAMENTO,
-    textoWhatsapp: `🌳 *Condomínio de Chácaras Bom Jardims* — condição de lançamento\n\nAgora com *entrada a partir de R$ 10 mil*! Escolha a forma que cabe no seu bolso:\n\n✅ *Entrada de 30%* — o menor total\n✅ *Plano A* — R$ 10 mil + parcela de ≈ R$ 1.234 + reforço no 13º\n✅ *Plano B* — R$ 10 mil + até 180× fixas, sem reforço\n✅ *Plano C* — R$ 10 mil + resto da entrada em 36× sem juros\n\n👉 Simule a sua chácara e escolha o prazo:\n${MARCA_LINK}`,
+    textoWhatsapp: `🌳 *Condomínio de Chácaras Bom Jardims* — condição de lançamento\n\nAgora com *entrada a partir de R$ 10 mil*! Escolha a forma que cabe no seu bolso:\n\n✅ *Entrada de 30%* — o menor total\n✅ *Plano A* — R$ 10 mil + parcela de ≈ R$ 1.234 + reforço no 13º\n✅ *Plano B* — R$ 10 mil + até 180× fixas, sem reforço\n✅ *Plano C* — R$ 10 mil + resto da entrada em 36× sem juros\n\n🎧 Na página tem um áudio curto explicando cada plano.\n\n👉 Simule a sua chácara e escolha o prazo:\n${MARCA_LINK}`,
   },
   {
     chave: 'fixo:pagamento-status', titulo: 'Entrada de R$ 10 mil — texto para o Status do WhatsApp', fixo: true, destaque: false, empreendimento: 'Bom Jardims',
@@ -64,7 +65,7 @@ export const LINKS_FIXOS: LinkDivulgacao[] = [
     chave: 'fixo:mapa3d', titulo: 'Mapa 3D + vídeos — nova campanha', fixo: true, destaque: true, empreendimento: 'Bom Jardims',
     descricao: 'Página com o mapa 3D em destaque (girar, aproximar e tocar na chácara), os vídeos da galeria, as fotos do drone das obras, cadastro e o convite para seguir o @avalieimob.',
     url: ROTA_MAPA3D, utmSource: 'instagram', utmCampaign: CAMPANHA_MAPA3D,
-    textoWhatsapp: `🌳 *Condomínio de Chácaras Bom Jardims* agora em *3D*!\n\nGire o mapa, aproxime e escolha a sua chácara — a partir de *3.025 m²*, em Açailândia/MA. Veja também os vídeos das obras.\n\n📍 Abra o mapa 3D:\n${MARCA_LINK}`,
+    textoWhatsapp: `🌳 *Condomínio de Chácaras Bom Jardims* agora em *3D*!\n\nGire o mapa, aproxime e escolha a sua chácara — a partir de *3.025 m²*, em Açailândia/MA. Veja também os vídeos das obras e ouça o áudio que explica como usar o mapa.\n\n📍 Abra o mapa 3D:\n${MARCA_LINK}`,
   },
   {
     chave: 'fixo:obras', titulo: 'Obras iniciadas — campanha do Instagram', fixo: true, destaque: true, empreendimento: 'Bom Jardims',
@@ -82,13 +83,13 @@ export const LINKS_FIXOS: LinkDivulgacao[] = [
     chave: 'fixo:rota', titulo: 'Como chegar — rota do centro de Açailândia até o portal', fixo: true, destaque: true, empreendimento: 'Bom Jardims',
     descricao: 'Página com o vídeo narrado do caminho, os pontos de referência (Prefeitura, BR-222, PRF, estação ferroviária, duas ferrovias, Balneário Walter Figueiredo), botões do Google Maps, Waze e Apple Maps, arquivo da rota (GPX/KML), folder e PDF de apresentação.',
     url: ROTA_COMO_CHEGAR, utmSource: 'whatsapp', utmCampaign: CAMPANHA_ROTA,
-    textoWhatsapp: `Quer conhecer o *Condomínio de Chácaras Bom Jardims*? Preparamos um vídeo mostrando o caminho do centro de Açailândia até o portal do condomínio.\n\nAbra o link, escolha seu aplicativo de navegação e confira os pontos de referência:\n${MARCA_LINK}\n\nPara tirar dúvidas e combinar uma visita, é só me chamar.`,
+    textoWhatsapp: `Quer conhecer o *Condomínio de Chácaras Bom Jardims*? Preparamos um vídeo mostrando o caminho do centro de Açailândia até o portal do condomínio.\n\nAbra o link, escolha seu aplicativo de navegação e confira os pontos de referência (tem também um áudio explicando o trajeto):\n${MARCA_LINK}\n\nAs dúvidas a gente resolve aqui pelo WhatsApp; quando você decidir pela compra, buscamos você de carro para escolher a chácara.`,
   },
   {
     chave: 'fixo:rota-resposta', titulo: 'Como chegar — resposta pronta para quem pedir a rota', fixo: true, destaque: false, empreendimento: 'Bom Jardims',
     descricao: 'Mensagem curta para responder no WhatsApp quando o cliente pedir a localização: o link da rota com o vídeo e os apps de navegação.',
     url: ROTA_COMO_CHEGAR, utmSource: 'whatsapp', utmCampaign: CAMPANHA_ROTA,
-    textoWhatsapp: `Aqui está o caminho até o Condomínio de Chácaras Bom Jardims:\n${MARCA_LINK}\n\nA página abre a navegação no Google Maps, Waze ou Apple Maps e mostra os pontos de referência. Posso ajudar você a combinar uma visita?`,
+    textoWhatsapp: `Aqui está o caminho até o Condomínio de Chácaras Bom Jardims:\n${MARCA_LINK}\n\nA página abre a navegação no Google Maps, Waze ou Apple Maps, mostra os pontos de referência e tem um áudio explicando o trajeto. Se ainda tiver alguma dúvida sobre a chácara, me pergunte aqui.`,
   },
   {
     chave: 'fixo:rota-status', titulo: 'Como chegar — texto para o Status do WhatsApp', fixo: true, destaque: false, empreendimento: 'Bom Jardims',
@@ -106,13 +107,31 @@ export const LINKS_FIXOS: LinkDivulgacao[] = [
     chave: 'fixo:rio', titulo: 'O rio e a água — resposta para quem pergunta do rio', fixo: true, destaque: true, empreendimento: 'Bom Jardims',
     descricao: 'Página que explica: o rio não passa dentro das chácaras, fica na área de preservação (área comum de todos), cada chácara tem 10 metros lineares à margem e a água vem do poço artesiano.',
     url: ROTA_RIO, utmSource: 'whatsapp', utmCampaign: CAMPANHA_RIO,
-    textoWhatsapp: `Boa pergunta! 🌊 O rio *não passa dentro das chácaras*: ele fica na área de preservação, que é uma *área comum para todos os condôminos*, e cada chácara tem um espaço exclusivo de *10 metros lineares* à margem, onde pode fazer deck ou bangalô de madeira. A água da chácara vem do *poço artesiano* do condomínio.\n\nVeja todos os detalhes aqui:\n${MARCA_LINK}`,
+    textoWhatsapp: `Boa pergunta! 🌊 O rio *não passa dentro das chácaras*: ele fica na área de preservação, que é uma *área comum para todos os condôminos*, e cada chácara tem um espaço exclusivo de *10 metros lineares* à margem, onde pode fazer deck ou bangalô de madeira. A água da chácara vem do *poço artesiano* do condomínio.\n\nVeja todos os detalhes e ouça o áudio explicativo aqui:\n${MARCA_LINK}`,
   },
   {
     chave: 'fixo:agendar', titulo: 'Agendar visita ao Bom Jardims', fixo: true, destaque: false, empreendimento: 'Bom Jardims',
     descricao: 'O cliente escolhe o dia, o horário e a chácara no mapa; a visita cai na sua agenda.',
     url: '/agendar/bom-jardims', utmSource: 'whatsapp', utmCampaign: 'BJ-VISITA',
-    textoWhatsapp: `📅 *Agende sua visita ao Condomínio de Chácaras Bom Jardims*\n\nEscolha o melhor dia e horário — eu te acompanho na visita:\n${MARCA_LINK}`,
+    textoWhatsapp: `📅 *Visita ao Condomínio de Chácaras Bom Jardims*\n\nA visita é para quem já decidiu pela compra: buscamos você de carro (o condomínio fica a 17 km do centro) para escolher a posição da chácara e assinar o contrato. As dúvidas a gente resolve antes, aqui pelo WhatsApp.\n\nNa página tem um áudio explicando como funciona. Escolha o melhor dia e horário:\n${MARCA_LINK}`,
+  },
+  {
+    chave: 'fixo:retorno', titulo: 'Retorno — resposta quando estiver em atendimento (ligação ou visita para fechar)', fixo: true, destaque: true, empreendimento: 'Bom Jardims',
+    descricao: 'Mensagem para quando você está em atendimento: o cliente escolhe ligação ou visita para fechar, com dia e horário livres.',
+    url: '/retorno/bom-jardims', utmSource: 'whatsapp', utmCampaign: 'BJ-RETORNO',
+    textoWhatsapp: `Olá! Obrigado pelo contato e pelo interesse no Condomínio de Chácaras Bom Jardims. Agora estou em atendimento e não consigo responder na hora, mas quero te atender bem.\n\nFunciona assim:\n💬 *Dúvidas pelo WhatsApp* — localização, documentação, prazo das obras, o que está incluso, valores, entrada e parcelas. Também te envio o mapa interativo, os vídeos, a simulação e a minuta do contrato. Se preferir, marco uma ligação.\n🚗 *Visita para escolher e fechar* — o condomínio fica a 17 km do centro. Buscamos você de carro quando já tiver decidido pela compra, para escolher a posição da chácara e assinar o contrato.\n\nEscolha aqui o que prefere e o melhor dia e horário:\n${MARCA_LINK}`,
+  },
+  {
+    chave: 'fixo:contrato', titulo: 'Minuta do contrato de compra e venda (com áudio dos pontos principais)', fixo: true, destaque: true, empreendimento: 'Bom Jardims',
+    descricao: 'Página com a minuta do contrato de promessa de compra e venda e um áudio de 2 minutos com os pontos principais.',
+    url: '/documentos/bom-jardims/contrato', utmSource: 'whatsapp', utmCampaign: 'BJ-CONTRATO',
+    textoWhatsapp: `📄 *Minuta do contrato — Condomínio de Chácaras Bom Jardims*\n\nAqui você lê com calma o contrato de promessa de compra e venda, no modelo com um cliente de exemplo (o seu sai com os seus dados e a chácara escolhida).\n\n🎧 Antes do documento tem um áudio de 2 minutos com os pontos principais.\n\n${MARCA_LINK}\n\nQualquer cláusula que ficar em dúvida, me pergunte aqui.`,
+  },
+  {
+    chave: 'fixo:escritorio', titulo: 'Endereço do escritório — Romatec, em frente ao Hotel Girafa', fixo: true, destaque: false, empreendimento: null,
+    descricao: 'Endereço, ponto de referência, horário e contatos do escritório, com caminho no Google Maps, Waze ou Apple Maps.',
+    url: ROTA_ESCRITORIO, utmSource: 'whatsapp', utmCampaign: 'ESCRITORIO',
+    textoWhatsapp: `📍 *Escritório Romatec Consultoria Total*\n${ESCRITORIO.endereco} — ${REFERENCIA_ESCRITORIO.toLowerCase()}.\n\n🕘 ${HORARIO_ESCRITORIO}.\n📅 ${HORARIO_ESCRITORIO_EXTRA}.\n\nNa página você abre o caminho no Google Maps, Waze ou Apple Maps e ouve um áudio com as orientações:\n${MARCA_LINK}`,
   },
   {
     chave: 'fixo:kml', titulo: 'Localização no Google Earth (KML)', fixo: true, destaque: false, empreendimento: 'Bom Jardims',
