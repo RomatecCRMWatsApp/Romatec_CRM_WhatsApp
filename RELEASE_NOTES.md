@@ -3,6 +3,15 @@
 Cada versão nova vai no TOPO. Depois rode `npm run release` (valida e atualiza o package.json);
 ao subir, o servidor grava a versão no banco e todos recebem o aviso "Novidades da versão".
 
+## 1.192.3 — 2026-11-23
+tipo: patch
+obrigatoria: nao
+titulo: Prévia própria do link do contrato
+publico: corretor
+
+### Melhorias
+- O link da minuta do contrato do Bom Jardims mostra no WhatsApp a imagem do contrato com "Contrato de compra e venda — Leia a minuta completa com calma".
+
 ## 1.192.2 — 2026-11-23
 tipo: patch
 obrigatoria: nao

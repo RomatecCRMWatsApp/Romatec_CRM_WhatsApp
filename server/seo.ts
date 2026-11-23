@@ -293,6 +293,13 @@ export function metaDaRota(path: string): MetaPagina | 'imovel' {
   if (p === ROTA_MAPA3D) return META_MAPA3D;
   if (p === ROTA_COMO_CHEGAR) return META_ROTA;
   if (p === ROTA_RIO) return META_RIO;
+  // Minuta do contrato do Bom Jardims: prévia própria no WhatsApp, fora do Google (traz um cliente de exemplo)
+  if (p === '/documentos/bom-jardims/contrato') return {
+    ...META_PADRAO, path: p, indexavel: false,
+    title: 'Contrato de compra e venda — Condomínio de Chácaras Bom Jardims',
+    description: 'Minuta completa do contrato de promessa de compra e venda, só para leitura. O seu sai com os seus dados e a chácara escolhida.',
+    image: '/bom-jardims/og-contrato.jpg', imageAlt: 'Contrato de compra e venda do Condomínio de Chácaras Bom Jardims', imageSize: { w: 1200, h: 630 },
+  };
   if (p === ROTA_ESCRITORIO) return {
     ...META_PADRAO, path: p, indexavel: true, title: TITULO_ESCRITORIO, description: DESCRICAO_ESCRITORIO,
     image: '/brand/og-escritorio-v2.jpg', imageAlt: 'Nosso escritório — Rua São Raimundo, n.º 10, Centro, Açailândia/MA', imageSize: { w: 1200, h: 630 },

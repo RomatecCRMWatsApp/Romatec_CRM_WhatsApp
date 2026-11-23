@@ -33,3 +33,11 @@ describe('contatos do escritório', async () => {
     for (const c of [CONTATOS_ESCRITORIO.jose, CONTATOS_ESCRITORIO.daniele]) expect(c.whatsapp).toMatch(/^55\d{10,11}$/);
   });
 });
+
+describe('prévia do link do contrato', () => {
+  it('usa a imagem própria e fica fora do Google', () => {
+    const m = metaDaRota('/documentos/bom-jardims/contrato');
+    expect(m !== 'imovel' && m.image).toBe('/bom-jardims/og-contrato.jpg');
+    expect(m !== 'imovel' && m.indexavel).toBe(false);
+  });
+});
