@@ -221,3 +221,62 @@ export function iniciarJobRetomada(intervaloMs = 30_000) {
   job = setInterval(() => { processarFilaRetomada().catch(e => console.warn('[Importação] fila:', e?.message)); }, intervaloMs);
   job.unref?.();
 }
+
+// ─── Tela "Leads importados" ──────────────────────────────────────────────────
+
+export type FiltroImportados = 'todos' | 'sem_corretor' | 'na_fila' | 'sem_resposta' | 'responderam' | 'quentes';
+export const CANAL_IMPORTADO = 'importacao_celular';
+
+/**
+ * Leads que vieram da importação do celular (não de captação), com o envio da retomada, as respostas da
+ * qualificação e o responsável. "sem_corretor" = sem responsável ou só com o escritório (ainda não encaminhado).
+ */
+export async function leadsImportados(p: { filtro: FiltroImportados; busca?: string }) {
+  const d = await banco();
+  const { users } = await import('../../drizzle/schema');
+  const { idsDoEscritorio } = await import('./distribuicao');
+  const linhas: any[] = await d.select({
+    id: leadQualifications.id, nome: leadQualifications.nome, phone: leadQualifications.phone, etapa: leadQualifications.etapa,
+    score: leadQualifications.score, leadScore: leadQualifications.leadScore, humano: leadQualifications.humano, slots: leadQualifications.slots,
+    responsavelId: leadQualifications.responsavelId, blockedUntil: leadQualifications.blockedUntil, createdAt: leadQualifications.createdAt,
+    envio: leadRetomadas.status, enviadoAt: leadRetomadas.enviadoAt, lote: leadRetomadas.lote,
+  }).from(leadQualifications).leftJoin(leadRetomadas, eq(leadRetomadas.leadId, leadQualifications.id))
+    .where(eq(leadQualifications.origemCanal, CANAL_IMPORTADO)).orderBy(desc(leadQualifications.createdAt)).limit(3000);
+  const escritorio = await idsDoEscritorio(d);
+  const nomes = new Map<number, string>(((await d.select({ id: users.id, name: users.name }).from(users)) as any[]).map(u => [Number(u.id), String(u.name || 'Sem nome')]));
+  const b = String(p.busca ?? '').trim().toLowerCase();
+  const dig = b.replace(/\D/g, '');
+  const agora = Date.now();
+  const itens = linhas.map(l => {
+    const respostas = respostasDosSlots(typeof l.slots === 'string' ? safeJson(l.slots) : l.slots);
+    const respondeu = Object.keys(respostas).length > 0;
+    const resp = l.responsavelId ? Number(l.responsavelId) : null;
+    return {
+      id: Number(l.id), nome: l.nome || 'Sem nome', telefone: String(l.phone), etapa: l.etapa ?? null, score: l.score ?? null, leadScore: l.leadScore ?? null,
+      comCorretor: !!resp && !escritorio.has(resp), responsavelId: resp, responsavel: resp ? nomes.get(resp) ?? 'Usuário removido' : null,
+      humano: l.humano === true || l.humano === 1, saiu: !!l.blockedUntil && new Date(l.blockedUntil).getTime() > agora,
+      envio: l.envio ?? null, enviadoAt: l.enviadoAt ? new Date(l.enviadoAt).toISOString() : null, lote: l.lote ?? null,
+      respostas, respondeu, qualificado: l.etapa === 'qualificado', importadoEm: l.createdAt ? new Date(l.createdAt).toISOString() : null,
+    };
+  });
+  const resumo = {
+    total: itens.length,
+    semCorretor: itens.filter(i => !i.comCorretor).length,
+    naFila: itens.filter(i => i.envio === 'pendente' || i.envio === 'enviando' || i.envio === 'pausado').length,
+    enviados: itens.filter(i => i.envio === 'enviado').length,
+    responderam: itens.filter(i => i.respondeu).length,
+    quentes: itens.filter(i => i.score === 'quente').length,
+    sairam: itens.filter(i => i.saiu).length,
+  };
+  const filtrados = itens.filter(i =>
+    (p.filtro === 'todos'
+      || (p.filtro === 'sem_corretor' && !i.comCorretor)
+      || (p.filtro === 'na_fila' && (i.envio === 'pendente' || i.envio === 'enviando' || i.envio === 'pausado'))
+      || (p.filtro === 'sem_resposta' && i.envio === 'enviado' && !i.respondeu && !i.humano)
+      || (p.filtro === 'responderam' && i.respondeu)
+      || (p.filtro === 'quentes' && i.score === 'quente'))
+    && (!b || i.nome.toLowerCase().includes(b) || (dig.length >= 4 && i.telefone.includes(dig))));
+  return { resumo, itens: filtrados.slice(0, 1000) };
+}
+
+function safeJson(s: string): unknown { try { return JSON.parse(s); } catch { return null; } }

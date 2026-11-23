@@ -281,12 +281,12 @@ const CANAL_LABEL: Record<string, string> = {
   meta_ctwa: 'Anúncio Click-to-WhatsApp', meta_leadads: 'Meta Lead Ads', google_ads: 'Google Ads',
   portal_olx: 'OLX', evento: 'Evento / lançamento', portal_zap: 'ZAP Imóveis', portal_vivareal: 'VivaReal', instagram_organico: 'Instagram orgânico',
   placa_qr: 'QR da placa', site: 'Site', busca_organica: 'Google/busca orgânica',
-  facebook_organico: 'Facebook orgânico', outras_redes: 'Outras redes (YouTube, TikTok…)', indicacao: 'Indicação', wifi: 'Wi-Fi', whatsapp_direto: 'WhatsApp direto', outro: 'Outro',
+  facebook_organico: 'Facebook orgânico', outras_redes: 'Outras redes (YouTube, TikTok…)', indicacao: 'Indicação', wifi: 'Wi-Fi', whatsapp_direto: 'WhatsApp direto', importacao_celular: 'Importado do celular', outro: 'Outro',
 };
 export function rotuloCanal(canal: string): string {
   return CANAL_LABEL[canal] || canal;
 }
-export const CANAIS_CAMPANHA = Object.keys(CANAL_LABEL).filter(c => c !== 'whatsapp_direto');
+export const CANAIS_CAMPANHA = Object.keys(CANAL_LABEL).filter(c => c !== 'whatsapp_direto' && c !== 'importacao_celular');
 
 // ─── WhatsApp direto: contato novo sem código (viu o número na placa, folder, status…) ──
 // O bot de sempre responde; logo depois o lead ganha a origem "WhatsApp direto",

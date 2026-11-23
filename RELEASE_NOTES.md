@@ -3,6 +3,19 @@
 Cada versão nova vai no TOPO. Depois rode `npm run release` (valida e atualiza o package.json);
 ao subir, o servidor grava a versão no banco e todos recebem o aviso "Novidades da versão".
 
+## 1.194.0 — 2026-11-23
+tipo: minor
+obrigatoria: nao
+titulo: Leads importados: tela própria e encaminhamento aos corretores
+publico: admin
+
+### Novo
+- Leads › Leads importados: os contatos trazidos da agenda do celular ficam numa tela própria, separados dos leads de captação. Mostra a retomada, as respostas ao robô (finalidade, prazo e pagamento) e a situação de cada um, com filtros (sem corretor, responderam, quentes, ainda não responderam).
+- Na mesma tela você seleciona os leads e encaminha para um corretor; o encaminhamento entra no relatório da Distribuição. A secretária também tem acesso. A importação do arquivo fica na aba "Importar arquivo" (só administrador).
+
+### Melhorias
+- Distribuição: novo filtro "Tipo de lead" (captação ou importados do celular) e a marca "Importado do celular" na lista.
+
 ## 1.193.1 — 2026-11-23
 tipo: patch
 obrigatoria: nao

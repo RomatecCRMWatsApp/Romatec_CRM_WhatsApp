@@ -66,7 +66,7 @@ const Carteirinhas = lazy(() => import("./pages/Carteirinhas"));
 const DocumentosPublicos = lazy(() => import("./pages/DocumentosPublicos"));
 const FilaReservas = lazy(() => import("./pages/FilaReservas"));
 const RespostasAutomaticas = lazy(() => import("./pages/RespostasAutomaticas"));
-const ImportarContatos = lazy(() => import("./pages/ImportarContatos"));
+const LeadsImportados = lazy(() => import("./pages/LeadsImportados"));
 const ContratoNovo = lazy(() => import("./pages/ContratoNovo"));
 const ContratoDetalhe = lazy(() => import("./pages/ContratoDetalhe"));
 const PosicionarAssinaturas = lazy(() => import("./pages/PosicionarAssinaturas"));
@@ -183,8 +183,11 @@ function Router() {
       <Route path={"/performance"}>
         {() => <SetupGuard component={Performance} />}
       </Route>
+      <Route path={"/leads/importados"}>
+        {() => <SetupGuard component={LeadsImportados} />}
+      </Route>
       <Route path={"/leads/importar"}>
-        {() => <SetupGuard component={ImportarContatos} />}
+        {() => <Redirect to="/leads/importados?aba=importar" />}
       </Route>
       <Route path={"/leads/funil"}>
         {() => <SetupGuard component={LeadsFunil} />}

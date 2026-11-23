@@ -1,7 +1,8 @@
 /** Importação de contatos do celular + retomada com qualificação pelo robô (server/leads/importacaoContatos.ts) — administrador */
 import { z } from "zod";
 import { TRPCError } from "@trpc/server";
-import { adminProcedure, router } from "../_core/trpc";
+import { adminProcedure, protectedProcedure, router } from "../_core/trpc";
+import { exigirDistribuicao } from "../permissoes";
 
 const S = () => import("../leads/importacaoContatos");
 
@@ -15,6 +16,14 @@ async function comErro<T>(f: () => Promise<T>): Promise<T> {
 const marcador = z.string().trim().min(2).max(20);
 
 export const importacaoContatosRouter = router({
+  /** Leads importados do celular (tela Leads importados): administrador e secretária, que também encaminham */
+  lista: protectedProcedure
+    .input(z.object({ filtro: z.enum(["todos", "sem_corretor", "na_fila", "sem_resposta", "responderam", "quentes"]), busca: z.string().max(80).default("") }))
+    .query(({ input, ctx }) => comErro(async () => {
+      exigirDistribuicao(ctx.permissoes);
+      return (await S()).leadsImportados(input);
+    })),
+
   /** Situação dos contatos marcados (o navegador já leu o arquivo), sem gravar nada */
   previa: adminProcedure
     .input(z.object({ contatos: z.array(z.object({ nome: z.string().max(200), telefone: z.string().max(30), nomeOriginal: z.string().max(250) })).max(5000) }))

@@ -3,7 +3,7 @@
  * para um corretor, e todo encaminhamento fica registrado (leadEncaminhamentos) para o relatório — o manual
  * (tela de distribuição e troca de responsável no lead) e o automático (roleta: server/leads/sla.ts).
  */
-import { and, desc, eq, gte, inArray, isNotNull, isNull, lt, or, sql } from 'drizzle-orm';
+import { and, desc, eq, gte, inArray, isNotNull, isNull, lt, ne, or, sql } from 'drizzle-orm';
 import { getDb } from '../db';
 import { leadEncaminhamentos, leadQualifications, users } from '../../drizzle/schema';
 import { PRAZO_CONFIRMACAO_HORAS, DESFECHOS_DE_TROCA, DESFECHOS_CORRETOR, MOTIVO_PERDA_DO_DESFECHO, ROTULO_DESFECHO, ROTULO_SITUACAO, situacaoEncaminhamento, type Desfecho, type DesfechoCorretor } from '../../shared/distribuicaoLeads';
@@ -11,6 +11,9 @@ import { PRAZO_CONFIRMACAO_HORAS, DESFECHOS_DE_TROCA, DESFECHOS_CORRETOR, MOTIVO
 export class DistribuicaoErro extends Error { constructor(msg: string) { super(msg); this.name = 'DistribuicaoErro'; } }
 export type OrigemEncaminhamento = 'manual' | 'automatico';
 export type FiltroLeads = 'nao_encaminhados' | 'sem_responsavel' | 'aguardando' | 'recentes' | 'todos';
+/** Tipo de lead: captação (chegou pelo site, anúncio, WhatsApp…) ou importado do celular (server/leads/importacaoContatos.ts) */
+export type TipoLeads = 'todos' | 'captacao' | 'importados';
+export const CANAL_IMPORTADO = 'importacao_celular';
 
 const DIA = 86_400_000;
 /** Data → ISO; valor inválido (ex.: banco local) → null em vez de derrubar a lista */
@@ -52,7 +55,7 @@ export async function equipe(): Promise<{ id: number; nome: string; recebeLeads:
  * não foi encaminhado a um corretor (sem responsável, ou só com o administrador/escritório como dono), do mais novo
  * para o mais antigo. Descartados, sem interesse, perdidos e bloqueados ficam fora (só "todos" mostra tudo).
  */
-export async function leadsParaDistribuir(filtro: FiltroLeads, busca = '', agora = Date.now()) {
+export async function leadsParaDistribuir(filtro: FiltroLeads, busca = '', agora = Date.now(), tipo: TipoLeads = 'todos') {
   const d = await banco();
   const cond = filtro === 'sem_responsavel' ? isNull(leadQualifications.responsavelId)
     : filtro === 'aguardando' ? and(isNotNull(leadQualifications.aguardandoCorretorDesde), isNull(leadQualifications.atendidoAt))
@@ -61,7 +64,11 @@ export async function leadsParaDistribuir(filtro: FiltroLeads, busca = '', agora
   const b = busca.trim();
   const digitos = b.replace(/\D/g, '');
   const filtroBusca = b ? or(sql`lower(${leadQualifications.nome}) like ${`%${b.toLowerCase()}%`}`, ...(digitos.length >= 4 ? [sql`${leadQualifications.phone} like ${`%${digitos}%`}`] : [])) : undefined;
-  const onde = cond && filtroBusca ? and(cond, filtroBusca) : cond ?? filtroBusca;
+  const filtroTipo = tipo === 'importados' ? eq(leadQualifications.origemCanal, CANAL_IMPORTADO)
+    : tipo === 'captacao' ? or(isNull(leadQualifications.origemCanal), ne(leadQualifications.origemCanal, CANAL_IMPORTADO))
+    : undefined;
+  const partes = [cond, filtroBusca, filtroTipo].filter(Boolean) as any[];
+  const onde = partes.length > 1 ? and(...partes) : partes[0];
   const q = d.select({
     id: leadQualifications.id, nome: leadQualifications.nome, phone: leadQualifications.phone, origem: leadQualifications.origem, origemCanal: leadQualifications.origemCanal,
     empreendimentoSlug: leadQualifications.empreendimentoSlug, loteCodigo: leadQualifications.loteCodigo, score: leadQualifications.score, etapa: leadQualifications.etapa,
@@ -85,7 +92,7 @@ export async function leadsParaDistribuir(filtro: FiltroLeads, busca = '', agora
   const nomes = new Map((await equipe()).map(u => [u.id, u.nome]));
   return rows.slice(0, 500).map(l => ({
     id: Number(l.id), nome: l.nome || 'Sem nome', telefone: `+${String(l.phone).replace(/\D/g, '')}`,
-    origem: l.origemCanal || l.origem || null, empreendimento: l.empreendimentoSlug ?? null, lote: l.loteCodigo ?? null, score: l.score ?? null, etapa: l.etapa ?? null,
+    origem: l.origemCanal || l.origem || null, importado: l.origemCanal === CANAL_IMPORTADO, empreendimento: l.empreendimentoSlug ?? null, lote: l.loteCodigo ?? null, score: l.score ?? null, etapa: l.etapa ?? null,
     responsavelId: l.responsavelId ? Number(l.responsavelId) : null, responsavel: l.responsavelId ? nomes.get(Number(l.responsavelId)) ?? 'Usuário removido' : null,
     aguardandoDesde: iso(l.aguardandoDesde), criadoEm: iso(l.createdAt),
   }));
@@ -111,7 +118,7 @@ export async function liberarDoEscritorio(por: { id: number }) {
  * Escritório (administrador e secretária): dono "padrão" quando ninguém foi escolhido — lead só com eles conta como
  * não encaminhado (ex.: conversa do Instagram que a secretária virou lead continua na lista para ir a um corretor)
  */
-async function idsDoEscritorio(d: any): Promise<Set<number>> {
+export async function idsDoEscritorio(d: any): Promise<Set<number>> {
   const us: any[] = await d.select({ id: users.id, role: users.role, perfil: (users as any).perfil }).from(users);
   return new Set(us.filter(u => u.role === 'admin' || u.perfil === 'admin' || u.perfil === 'secretario').map(u => Number(u.id)));
 }

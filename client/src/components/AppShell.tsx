@@ -59,7 +59,7 @@ const MENU: Grupo[] = [
       { rotulo: "Reuniões", rota: "/reunioes", icone: Mic, modulo: "leads" },
       { rotulo: "Convites de reunião", rota: "/convites", icone: CalendarCheck },
       { rotulo: "Sala de vídeo", rota: "/sala-video", icone: Video },
-      { rotulo: "Importar contatos", rota: "/leads/importar", icone: UserPlus },
+      { rotulo: "Leads importados", rota: "/leads/importados", icone: Smartphone },
       { rotulo: "Clientes", rota: "/contacts", icone: Users, modulo: "contatos" },
       { rotulo: "Disparos WhatsApp", rota: "/campaigns", icone: Send, modulo: "campanhas" },
       { rotulo: "Desempenho", rota: "/performance", icone: LineChart, modulo: "desempenho" },

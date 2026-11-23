@@ -17,10 +17,10 @@ export const distribuicaoRouter = router({
     return (await import("../leads/distribuicao")).equipe();
   }),
   leads: protectedProcedure
-    .input(z.object({ filtro: z.enum(["nao_encaminhados", "sem_responsavel", "aguardando", "recentes", "todos"]), busca: z.string().max(80).default("") }))
+    .input(z.object({ filtro: z.enum(["nao_encaminhados", "sem_responsavel", "aguardando", "recentes", "todos"]), busca: z.string().max(80).default(""), tipo: z.enum(["todos", "captacao", "importados"]).default("todos") }))
     .query(async ({ input, ctx }) => {
       exigirDistribuicao(ctx.permissoes);
-      return (await import("../leads/distribuicao")).leadsParaDistribuir(input.filtro, input.busca).catch(erro);
+      return (await import("../leads/distribuicao")).leadsParaDistribuir(input.filtro, input.busca, Date.now(), input.tipo).catch(erro);
     }),
   /** Modo da distribuição: automático (roleta) ou manual (a secretária/escritório encaminha cada lead) */
   modo: protectedProcedure.query(async ({ ctx }) => {

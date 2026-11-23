@@ -38,12 +38,13 @@ export default function DistribuicaoLeads() {
 function Distribuir({ aoEncaminhar }: { aoEncaminhar: () => void }) {
   const utils = trpc.useUtils();
   const [filtro, setFiltro] = useState<Filtro>("nao_encaminhados");
+  const [tipo, setTipo] = useState<"todos" | "captacao" | "importados">("todos");
   const [busca, setBusca] = useState("");
   const [sel, setSel] = useState<Set<number>>(new Set());
   const [paraId, setParaId] = useState<number | "">("");
   const [obs, setObs] = useState("");
   const { data: equipe } = trpc.distribuicao.equipe.useQuery();
-  const { data: leads, isLoading } = trpc.distribuicao.leads.useQuery({ filtro, busca });
+  const { data: leads, isLoading } = trpc.distribuicao.leads.useQuery({ filtro, busca, tipo });
   const encaminhar = trpc.distribuicao.encaminhar.useMutation({
     onSuccess: r => {
       toast.success(`${r.encaminhados} lead(s) encaminhado(s) para ${r.para}${r.jaEram ? ` · ${r.jaEram} já estava(m) com ele aguardando confirmação` : ""}. O corretor foi avisado no sistema e no WhatsApp.`, {
@@ -71,6 +72,13 @@ function Distribuir({ aoEncaminhar }: { aoEncaminhar: () => void }) {
         <label className="flex flex-col gap-1 text-xs text-muted-foreground">Mostrar
           <select id="dist-filtro" className={selectCls} value={filtro} onChange={e => { setFiltro(e.target.value as Filtro); setSel(new Set()); }}>
             {FILTROS.map(([v, r]) => <option key={v} value={v}>{r}</option>)}
+          </select>
+        </label>
+        <label className="flex flex-col gap-1 text-xs text-muted-foreground">Tipo de lead
+          <select id="dist-tipo" className={selectCls} value={tipo} onChange={e => { setTipo(e.target.value as any); setSel(new Set()); }}>
+            <option value="todos">Todos</option>
+            <option value="captacao">Captação (site, anúncios, WhatsApp)</option>
+            <option value="importados">Importados do celular</option>
           </select>
         </label>
         <div className="relative min-w-[220px] flex-1">
@@ -124,7 +132,7 @@ function Distribuir({ aoEncaminhar }: { aoEncaminhar: () => void }) {
                   <td className="p-2 font-medium"><Link href={`/leads/lead/${l.id}`} onClick={(e: any) => e.stopPropagation()} className="hover:underline">{l.nome}</Link>{l.score === "quente" && <span className="ml-1 text-[10px] text-heat-400"></span>}</td>
                   <td className="p-2 whitespace-nowrap">{l.telefone}</td>
                   <td className="p-2 text-xs">{l.score === "quente" ? "🔥 quente" : l.score === "morno" ? "🌡️ morno" : "❄️ frio"}</td>
-                  <td className="p-2 text-xs text-muted-foreground">{l.origem ?? "—"}</td>
+                  <td className="p-2 text-xs text-muted-foreground">{l.importado ? <span className="rounded bg-info-600/25 px-1.5 py-0.5 text-[10px] font-bold text-info-200">IMPORTADO DO CELULAR</span> : l.origem ?? "—"}</td>
                   <td className="p-2 text-xs text-muted-foreground">{[l.empreendimento, l.lote].filter(Boolean).join(" · ") || "—"}</td>
                   <td className="p-2 whitespace-nowrap text-xs">{dataHora(l.criadoEm)}{l.aguardandoDesde && <span className="ml-1 text-warn-400">· esperando</span>}</td>
                   <td className="p-2 text-xs">{l.responsavel ?? <span className="text-danger-400">sem responsável</span>}</td>

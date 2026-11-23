@@ -119,9 +119,11 @@ describe('retomada e qualificação', () => {
     expect(respostasDosSlots({ finalidade: { valor: 'lazer' }, outro: { valor: 'x' } })).toEqual({ finalidade: 'lazer' });
   });
 
-  it('a tela de importação é só do administrador', () => {
+  it('leads importados: administrador e secretária; importar o arquivo, só o administrador', () => {
+    expect(podeAbrir('admin', '/leads/importados')).toBe(true);
+    expect(podeAbrir('secretario', '/leads/importados')).toBe(true);
+    expect(podeAbrir('corretor', '/leads/importados')).toBe(false);
     expect(podeAbrir('admin', '/leads/importar')).toBe(true);
     expect(podeAbrir('secretario', '/leads/importar')).toBe(false);
-    expect(podeAbrir('corretor', '/leads/importar')).toBe(false);
   });
 });

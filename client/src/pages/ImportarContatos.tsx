@@ -5,7 +5,7 @@ import PageHeader from "@/components/PageHeader";
 import { Button } from "@/components/ui/button";
 import { AlertTriangle, FileUp, Loader2, Pause, Play, Send, Trash2, UserPlus } from "lucide-react";
 import {
-  contatosMarcados, lerArquivoContatos, montarRetomada, MARCADOR_PADRAO, ROTULO_RESPOSTA, TEXTO_RETOMADA_PADRAO,
+  contatosMarcados, lerArquivoContatos, montarRetomada, MARCADOR_PADRAO, TEXTO_RETOMADA_PADRAO,
   type ContatoMarcado,
 } from "@shared/importacaoContatos";
 
@@ -14,16 +14,13 @@ const SITUACAO: Record<string, { rotulo: string; cor: string }> = {
   ja_no_crm: { rotulo: "Já no CRM", cor: "text-warn-300" },
   descadastrado: { rotulo: "Pediu para sair", cor: "text-danger-400" },
 };
-const STATUS: Record<string, string> = {
-  pendente: "Na fila", enviando: "Enviando", enviado: "Enviado", erro: "Erro no envio", cancelado: "Cancelado", pausado: "Pausado",
-};
 
 /**
  * Importar contatos do celular (/leads/importar): o arquivo .vcf/.csv é lido aqui no navegador, só os contatos com o
  * marcador (ex.: "CCBJ") vão para o servidor, viram leads do empreendimento e recebem a retomada pelo número do CRM,
  * aos poucos. A resposta cai no robô, que faz a qualificação.
  */
-export default function ImportarContatos() {
+export default function ImportarContatos({ embutido = false }: { embutido?: boolean }) {
   const [marcador, setMarcador] = useState(MARCADOR_PADRAO);
   const [arquivo, setArquivo] = useState<{ nome: string; total: number; contatos: ContatoMarcado[]; semTelefone: string[] } | null>(null);
   const [modelo, setModelo] = useState(TEXTO_RETOMADA_PADRAO);
@@ -61,8 +58,8 @@ export default function ImportarContatos() {
 
   return (
     <div>
-      <PageHeader icone={UserPlus} titulo="Importar contatos do celular" subtitulo="Traga os interessados salvos no seu celular para o CRM: o robô retoma a conversa pelo número do CRM e qualifica" />
-      <div className="mx-auto max-w-[1100px] space-y-5 px-4 pb-10 md:px-6">
+      {!embutido && <PageHeader icone={UserPlus} titulo="Importar contatos do celular" subtitulo="Traga os interessados salvos no seu celular para o CRM: o robô retoma a conversa pelo número do CRM e qualifica" />}
+      <div className={embutido ? "space-y-5" : "mx-auto max-w-[1100px] space-y-5 px-4 pb-10 md:px-6"}>
         {fila.data && !fila.data.roboBomJardims && (
           <p className="flex items-start gap-2 rounded-xl border border-warn-500/40 bg-warn-500/10 p-3 text-sm text-warn-200">
             <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0" />
@@ -157,7 +154,7 @@ export default function ImportarContatos() {
         )}
 
         <section className="rounded-xl border border-border bg-card p-4">
-          <h2 className="font-semibold">Acompanhamento</h2>
+          <h2 className="font-semibold">Envios por importação</h2>
           {fila.isLoading && <Loader2 className="mt-2 h-4 w-4 animate-spin text-muted-foreground" />}
           {fila.data && !fila.data.lotes.length && <p className="mt-2 text-sm text-muted-foreground">Nenhuma importação ainda.</p>}
           <div className="mt-3 space-y-2">
@@ -177,27 +174,6 @@ export default function ImportarContatos() {
               );
             })}
           </div>
-          {!!fila.data?.contatos.length && (
-            <div className="mt-4 max-h-[460px] overflow-auto rounded-lg border border-border">
-              <table className="w-full text-sm">
-                <thead className="sticky top-0 bg-card text-left text-xs text-muted-foreground">
-                  <tr><th className="p-2">Cliente</th><th className="p-2">Envio</th><th className="p-2">Respostas</th><th className="p-2">Etapa</th></tr>
-                </thead>
-                <tbody>
-                  {fila.data.contatos.map(c => (
-                    <tr key={c.id} className="border-t border-border">
-                      <td className="p-2"><a href={`/leads/lead/${c.leadId}`} className="text-primary hover:underline">{c.nome || c.phone}</a></td>
-                      <td className="p-2 text-xs">{STATUS[c.status] ?? c.status}{c.erro ? <span className="block text-danger-400">{c.erro}</span> : null}</td>
-                      <td className="p-2 text-xs">
-                        {(["finalidade", "prazo", "pagamento"] as const).map(k => c.respostas[k] ? ROTULO_RESPOSTA[k][c.respostas[k]!] : null).filter(Boolean).join(" · ") || <span className="text-muted-foreground">sem resposta</span>}
-                      </td>
-                      <td className="p-2 text-xs">{c.humano ? "Com você" : c.etapa === "qualificado" ? `Qualificado (${c.score})` : "Qualificando"}</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          )}
         </section>
       </div>
     </div>

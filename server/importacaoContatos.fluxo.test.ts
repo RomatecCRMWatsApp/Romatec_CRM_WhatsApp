@@ -75,4 +75,18 @@ describe('importação de contatos (banco)', () => {
     expect(salvo).toMatchObject({ etapa: 'qualificado', score: 'quente', leadScore: 30 });
     expect(JSON.parse(salvo.tags)).toContain('qualificado_retomada');
   });
+
+  it('separa importados de captação na lista e na distribuição', async () => {
+    const lista = await I.leadsImportados({ filtro: 'todos' });
+    expect(lista.resumo).toMatchObject({ total: 1, enviados: 1 });
+    expect(lista.itens[0]).toMatchObject({ nome: 'Maria', envio: 'enviado', qualificado: true });
+    expect((await I.leadsImportados({ filtro: 'quentes' })).itens).toHaveLength(1);
+    expect((await I.leadsImportados({ filtro: 'sem_resposta' })).itens).toHaveLength(0);
+    const { leadsParaDistribuir } = await import('./leads/distribuicao');
+    const imp = await leadsParaDistribuir('todos', '', Date.now(), 'importados');
+    expect(imp.map(l => l.nome)).toEqual(['Maria']);
+    expect(imp[0].importado).toBe(true);
+    const cap = await leadsParaDistribuir('todos', '', Date.now(), 'captacao');
+    expect(cap.map(l => l.nome)).toEqual(['Já Cliente']);
+  });
 });
