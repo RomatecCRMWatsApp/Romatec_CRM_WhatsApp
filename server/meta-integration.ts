@@ -233,6 +233,12 @@ export async function processLeadgenEvent(event: LeadgenEvent, deps: ProcessLead
     })
     : {};
 
+  // Formulário qualificado (procura, momento, pagamento, prioridade, regiao, visita): grava o roteiro e a nota A/B/C
+  const { respostasDoRoteiro } = await import('./leads/leadsQualificados');
+  const { ehFormularioQualificado, pontuar } = await import('../shared/leadScoreForm');
+  const roteiro = respostasDoRoteiro(fields.extras);
+  const qualificado = ehFormularioQualificado(roteiro);
+  const emp: any = empreendimento;
   const result = await deps.ingest({
     nome,
     phone: fields.phone,
@@ -240,8 +246,15 @@ export async function processLeadgenEvent(event: LeadgenEvent, deps: ProcessLead
     metaLeadId: lead.id || event.leadgenId,
     campanha,
     ...(formId ? { metaFormId: formId } : {}),
-    ...empreendimento,
+    ...emp,
+    ...(qualificado ? {
+      leadScore: pontuar(roteiro).leadScore,
+      answers: { ...(emp.answers ?? {}), ...roteiro, ...(lead.campaign_name ? { meta_campanha: lead.campaign_name } : {}), ...(lead.adset_name ? { meta_conjunto: lead.adset_name } : {}), ...(lead.ad_name ? { meta_anuncio: lead.ad_name } : {}) },
+    } : {}),
   });
+  if (qualificado && result.ok) {
+    import('./leads/leadsQualificados').then(m => m.aplicarFaixaPorTelefone(result.phone)).catch(e => console.warn('[Meta] faixa do lead:', e?.message));
+  }
   console.log(`[Meta] Lead ${event.leadgenId} → ${result.ok ? (result.created ? 'novo' : 'atualizado') : result.reason}`);
   return { leadgenId: event.leadgenId, status: 'ingested', result };
 }

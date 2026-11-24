@@ -5,6 +5,7 @@ import PageHeader from "@/components/PageHeader";
 import { Button } from "@/components/ui/button";
 import { AlertTriangle, Calculator, Copy, FileDown, Instagram, Loader2 } from "lucide-react";
 import type { DadosEmpreendimentoCampanha } from "@shared/campanhasInstagram";
+import LeadsQualificados from "@/components/campanhas/LeadsQualificados";
 
 const amanha = () => new Date(Date.now() - 3 * 3600_000 + 86_400_000).toISOString().slice(0, 10);
 const brl = (v: number) => v.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
@@ -42,6 +43,7 @@ export default function CampanhasInstagram() {
   const [ant, setAnt] = useState({ nome: "", gasto: "", resultados: "", alcance: "", impressoes: "", criativoVencedor: "" });
   const [pl, setPl] = useState({ orcamento: "1000", dias: "5", inicio: amanha(), vendas: "50", cMin: "3,50", cMax: "5,00", sMin: "0,60", sMax: "1,20", atuais: "", meta: "" });
   const [dados, setDados] = useState<DadosEmpreendimentoCampanha | null>(null);
+  const [aba, setAba] = useState<"leads" | "planejador">("leads");
 
   useEffect(() => {
     const p = padrao.data;
@@ -67,8 +69,13 @@ export default function CampanhasInstagram() {
 
   return (
     <div className="space-y-4">
-      <PageHeader icone={Instagram} titulo="Campanhas no Instagram" subtitulo="Vendas pelo WhatsApp + seguidores, só no Instagram: orçamento, projeção, configuração, regras e textos" />
-      {padrao.isLoading || !dados ? <p className="flex items-center gap-2 text-sm text-muted-foreground"><Loader2 className="h-4 w-4 animate-spin" /> Carregando…</p> : (
+      <PageHeader icone={Instagram} titulo="Campanhas no Instagram" subtitulo="Leads qualificados, vendas pelo WhatsApp e seguidores, só no Instagram" />
+      <div className="flex gap-1 border-b border-border">
+        {([["leads", "Leads qualificados"], ["planejador", "Planejador"]] as const).map(([k, r]) => (
+          <button key={k} onClick={() => setAba(k)} className={`-mb-px border-b-2 px-3 py-2 text-sm ${aba === k ? "border-primary font-semibold text-primary" : "border-transparent text-muted-foreground hover:text-foreground"}`}>{r}</button>
+        ))}
+      </div>
+      {aba === "leads" ? <LeadsQualificados /> : padrao.isLoading || !dados ? <p className="flex items-center gap-2 text-sm text-muted-foreground"><Loader2 className="h-4 w-4 animate-spin" /> Carregando…</p> : (
         <>
           <section className="grid gap-3 lg:grid-cols-2">
             <div className="space-y-2 rounded-xl border border-border bg-card p-3">

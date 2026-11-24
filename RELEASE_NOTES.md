@@ -3,6 +3,21 @@
 Cada versão nova vai no TOPO. Depois rode `npm run release` (valida e atualiza o package.json);
 ao subir, o servidor grava a versão no banco e todos recebem o aviso "Novidades da versão".
 
+## 1.205.0 — 2026-11-24
+tipo: minor
+obrigatoria: nao
+titulo: Leads qualificados do Instagram: nota A/B/C, importação da Central de Leads e funil até a venda
+publico: admin
+
+### Novo
+- Campanhas no Instagram › Leads qualificados: importa o arquivo baixado da Central de Leads da Meta (CSV, inclusive o UTF-16 com tabulação que a Meta gera). O CRM grava as respostas do formulário com filtro (procura, momento, pagamento, prioridade, região e visita), dá a nota de 0 a 100 e separa em A, B e C.
+- Lead A (nota 70 ou mais): aviso imediato no seu WhatsApp e no sininho, com as respostas e o link do WhatsApp do cliente, para chamar em até 5 minutos. Lead B: segue no atendimento normal. Lead C: etiqueta "nutricao", fora da fila do corretor.
+- Leads que chegam pelo webhook da Meta com esse formulário recebem a mesma nota e o mesmo encaminhamento, sozinhos.
+- Reimportar o mesmo arquivo não duplica leads. A mensagem de boas-vindas no WhatsApp é opcional na importação.
+- Painel por campanha: leads, % de A, visitas agendadas e feitas, propostas e vendas. Informando o gasto do Gerenciador, mostra custo por lead A, por visita e por venda.
+- Projeção do funil: com a verba por mês, as unidades e o prazo, mostra vendas por mês, meses para vender tudo, custo por venda e a verba necessária, nos cenários conservador, base e otimista, ou com as taxas reais do CRM quando houver 20 leads.
+- O roteiro do formulário (nomes dos campos, perguntas, pontos e lógica condicional) fica na tela para montar na Meta.
+
 ## 1.204.0 — 2026-11-24
 tipo: minor
 obrigatoria: nao

@@ -46,4 +46,26 @@ export const campanhasInstagramRouter = router({
     const { planoCampanhaPdf } = await import("../campanhasInstagramPdf");
     return { base64: (await planoCampanhaPdf(input, r)).toString("base64"), nome: `Plano-campanhas-Instagram-${input.inicio}.pdf` };
   }),
+  // ─── Leads qualificados (formulário com filtro + nota A/B/C) ───
+  importarLeads: protectedProcedure.input(z.object({ csv: z.string().min(10).max(6_000_000), empreendimentoSlug: z.string().max(80).nullable().optional(), boasVindas: z.boolean().default(false) }))
+    .mutation(async ({ ctx, input }) => {
+      escritorio(ctx);
+      const { importarCsvMeta } = await import("../leads/leadsQualificados");
+      try { return await importarCsvMeta(input.csv, { empreendimentoSlug: input.empreendimentoSlug ?? null, boasVindas: input.boasVindas }); }
+      catch (e: any) { throw new TRPCError({ code: "BAD_REQUEST", message: e?.message ?? "Arquivo inválido" }); }
+    }),
+  painelLeads: protectedProcedure.query(async ({ ctx }) => { escritorio(ctx); return (await import("../leads/leadsQualificados")).painelQualificados(); }),
+  leadsFaixa: protectedProcedure.input(z.object({ faixa: z.enum(["A", "B", "C"]) })).query(async ({ ctx, input }) => {
+    escritorio(ctx);
+    return (await import("../leads/leadsQualificados")).leadsDaFaixa(input.faixa);
+  }),
+  funil: protectedProcedure.input(z.object({
+    verba: z.number().positive().max(10_000_000), unidades: z.number().int().positive().max(100_000), mesesMeta: z.number().positive().max(120),
+    taxas: z.object({ cpl: z.number().positive(), qualif: z.number().min(0).max(1), visita: z.number().min(0).max(1), fecha: z.number().min(0).max(1) }).nullable().optional(),
+  })).query(async ({ ctx, input }) => {
+    escritorio(ctx);
+    const F = await import("../../shared/leadScoreForm");
+    const cen: Record<string, any> = input.taxas ? { informado: input.taxas } : F.CENARIOS_FUNIL;
+    return Object.entries(cen).map(([nome, t]) => ({ nome, taxas: t, ...F.projetarFunil(input.verba, input.unidades, input.mesesMeta, t) }));
+  }),
 });
