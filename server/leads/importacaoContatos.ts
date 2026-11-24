@@ -270,7 +270,9 @@ export function iniciarJobRetomada(intervaloMs = 30_000) {
 
 // ─── Tela "Leads importados" ──────────────────────────────────────────────────
 
-export type FiltroImportados = 'novos' | 'todos' | 'sem_corretor' | 'na_fila' | 'sem_resposta' | 'responderam' | 'quentes';
+export type FiltroImportados = 'novos' | 'todos' | 'sem_corretor' | 'na_fila' | 'sem_resposta' | 'responderam' | 'quentes' | 'removidos';
+/** Tag de quem a secretária tirou da lista (já comprou, já foi atendido, aguardando retorno fora do robô) */
+export const TAG_FORA_DA_LISTA = 'fora_da_lista';
 export const CANAL_IMPORTADO = 'importacao_celular';
 
 /**
@@ -286,7 +288,7 @@ export async function leadsImportados(p: { filtro: FiltroImportados; busca?: str
     score: leadQualifications.score, leadScore: leadQualifications.leadScore, humano: leadQualifications.humano, slots: leadQualifications.slots,
     responsavelId: leadQualifications.responsavelId, blockedUntil: leadQualifications.blockedUntil, createdAt: leadQualifications.createdAt,
     atendidoAt: leadQualifications.atendidoAt, etapaKanban: leadQualifications.etapa, motivoPerda: leadQualifications.motivoPerda,
-    envio: leadRetomadas.status, enviadoAt: leadRetomadas.enviadoAt, lote: leadRetomadas.lote,
+    envio: leadRetomadas.status, enviadoAt: leadRetomadas.enviadoAt, lote: leadRetomadas.lote, tags: leadQualifications.tags,
   }).from(leadQualifications).leftJoin(leadRetomadas, eq(leadRetomadas.leadId, leadQualifications.id))
     .where(eq(leadQualifications.origemCanal, CANAL_IMPORTADO)).orderBy(desc(leadQualifications.createdAt)).limit(3000);
   const escritorio = await idsDoEscritorio(d);
@@ -294,11 +296,13 @@ export async function leadsImportados(p: { filtro: FiltroImportados; busca?: str
   const b = String(p.busca ?? '').trim().toLowerCase();
   const dig = b.replace(/\D/g, '');
   const agora = Date.now();
-  const itens = linhas.map(l => {
+  const todosItens = linhas.map(l => {
     const respostas = respostasDosSlots(typeof l.slots === 'string' ? safeJson(l.slots) : l.slots);
     const respondeu = Object.keys(respostas).length > 0;
     const resp = l.responsavelId ? Number(l.responsavelId) : null;
+    const tags = (typeof l.tags === 'string' ? safeJson(l.tags) : l.tags) as unknown;
     return {
+      removido: Array.isArray(tags) && tags.includes(TAG_FORA_DA_LISTA),
       id: Number(l.id), nome: l.nome || 'Sem nome', telefone: String(l.phone), etapa: l.etapa ?? null, score: l.score ?? null, leadScore: l.leadScore ?? null,
       comCorretor: !!resp && !escritorio.has(resp), responsavelId: resp, responsavel: resp ? nomes.get(resp) ?? 'Usuário removido' : null,
       humano: l.humano === true || l.humano === 1, saiu: !!l.blockedUntil && new Date(l.blockedUntil).getTime() > agora,
@@ -308,24 +312,28 @@ export async function leadsImportados(p: { filtro: FiltroImportados; busca?: str
     };
   });
   // Novos = para trabalhar: ninguém atendeu ainda, não pediu para sair, não está com corretor, não foi perdido/fechado
+  const removidos = todosItens.filter(i => i.removido).length;
+  const itens = todosItens.filter(i => (p.filtro === 'removidos') === i.removido);
   const ehNovo = (i: (typeof itens)[number]) => !i.saiu && !i.humano && !i.comCorretor && !i.atendido && !i.perdido;
+  const base = p.filtro === 'removidos' ? todosItens.filter(i => !i.removido) : itens;
   const resumo = {
-    total: itens.length,
-    novos: itens.filter(ehNovo).length,
-    semCorretor: itens.filter(i => !i.comCorretor).length,
-    naFila: itens.filter(i => i.envio === 'pendente' || i.envio === 'enviando' || i.envio === 'pausado').length,
-    enviados: itens.filter(i => i.envio === 'enviado').length,
-    responderam: itens.filter(i => i.respondeu).length,
-    quentes: itens.filter(i => i.score === 'quente').length,
-    sairam: itens.filter(i => i.saiu).length,
+    removidos,
+    total: base.length,
+    novos: base.filter(ehNovo).length,
+    semCorretor: base.filter(i => !i.comCorretor).length,
+    naFila: base.filter(i => i.envio === 'pendente' || i.envio === 'enviando' || i.envio === 'pausado').length,
+    enviados: base.filter(i => i.envio === 'enviado').length,
+    responderam: base.filter(i => i.respondeu).length,
+    quentes: base.filter(i => i.score === 'quente').length,
+    sairam: base.filter(i => i.saiu).length,
     // Para o contador do topo: conversando com o robô, mensagem enviada e parados sem resposta, ainda sem mensagem
-    conversando: itens.filter(i => i.respondeu && !i.saiu && !i.qualificado && !i.humano).length,
-    qualificados: itens.filter(i => i.qualificado).length,
-    comCorretor: itens.filter(i => (i.humano || i.comCorretor) && !i.saiu).length,
-    semResposta: itens.filter(i => i.envio === 'enviado' && !i.respondeu && !i.saiu && !i.humano).length,
+    conversando: base.filter(i => i.respondeu && !i.saiu && !i.qualificado && !i.humano).length,
+    qualificados: base.filter(i => i.qualificado).length,
+    comCorretor: base.filter(i => (i.humano || i.comCorretor) && !i.saiu).length,
+    semResposta: base.filter(i => i.envio === 'enviado' && !i.respondeu && !i.saiu && !i.humano).length,
   };
   const filtrados = itens.filter(i =>
-    (p.filtro === 'todos'
+    (p.filtro === 'todos' || p.filtro === 'removidos'
       || (p.filtro === 'novos' && ehNovo(i))
       || (p.filtro === 'sem_corretor' && !i.comCorretor)
       || (p.filtro === 'na_fila' && (i.envio === 'pendente' || i.envio === 'enviando' || i.envio === 'pausado'))
@@ -337,3 +345,65 @@ export async function leadsImportados(p: { filtro: FiltroImportados; busca?: str
 }
 
 function safeJson(s: string): unknown { try { return JSON.parse(s); } catch { return null; } }
+
+// ─── Ações da secretária na tela "Leads importados" ───────────────────────────
+
+/**
+ * Tira os leads do robô: não recebe mais retomada nem régua (escassez 24 h, 3 e 7 dias) e, se escrever,
+ * o robô não responde (atendimento humano).
+ */
+async function tirarDoRobo(d: Awaited<ReturnType<typeof banco>>, ids: number[], motivo: string) {
+  if (!ids.length) return;
+  const { autoRespostaRegua } = await import('../../drizzle/schema');
+  await d.update(leadQualifications).set({ humano: true, updatedAt: new Date() } as any).where(inArray(leadQualifications.id, ids));
+  await d.delete(autoRespostaRegua).where(inArray(autoRespostaRegua.leadId, ids));
+  await d.update(leadRetomadas).set({ status: 'cancelado', erro: motivo, updatedAt: new Date() } as any)
+    .where(and(inArray(leadRetomadas.leadId, ids), inArray(leadRetomadas.status, ['pendente', 'pausado'])));
+}
+
+const idsValidos = (ids: number[]) => Array.from(new Set(ids.filter(n => Number.isInteger(n) && n > 0))).slice(0, 200);
+
+/** Encaminha ao corretor e o robô sai da conversa (o corretor assume a tratativa) */
+export async function passarAoCorretor(p: { leadIds: number[]; paraId: number; por: { id: number; nome: string }; observacao?: string | null }) {
+  const ids = idsValidos(p.leadIds);
+  const { encaminharManual } = await import('./distribuicao');
+  const r = await encaminharManual(ids, p.paraId, p.por, p.observacao);
+  const d = await banco();
+  await tirarDoRobo(d, ids, 'com o corretor');
+  for (const id of ids) await d.insert(leadEventos).values({ leadId: id, tipo: 'robo_desligado', dados: { motivo: 'encaminhado ao corretor', por: p.por.nome } } as any).catch(() => null);
+  return r;
+}
+
+async function trocarTag(d: Awaited<ReturnType<typeof banco>>, id: number, colocar: boolean) {
+  const [l]: any[] = await d.select({ tags: leadQualifications.tags }).from(leadQualifications).where(eq(leadQualifications.id, id)).limit(1);
+  if (!l) return false;
+  const atual = (typeof l.tags === 'string' ? safeJson(l.tags) : l.tags) as unknown;
+  const lista = Array.isArray(atual) ? atual.map(String).filter(t => t !== TAG_FORA_DA_LISTA) : [];
+  if (colocar) lista.push(TAG_FORA_DA_LISTA);
+  await d.update(leadQualifications).set({ tags: lista, updatedAt: new Date() } as any).where(eq(leadQualifications.id, id));
+  return true;
+}
+
+/** Tira da lista quem não precisa mais estar aqui (já comprou, já foi atendido…). O lead continua no CRM e o robô para. */
+export async function removerDaLista(p: { leadIds: number[]; motivo?: string | null; por: { id: number; nome: string } }) {
+  const ids = idsValidos(p.leadIds);
+  if (!ids.length) throw new ImportacaoErro('Escolha pelo menos um lead');
+  const d = await banco();
+  let removidos = 0;
+  for (const id of ids) {
+    if (!(await trocarTag(d, id, true))) continue;
+    removidos++;
+    await d.insert(leadEventos).values({ leadId: id, tipo: 'importado_removido', dados: { motivo: p.motivo ?? null, por: p.por.nome } } as any).catch(() => null);
+  }
+  await tirarDoRobo(d, ids, 'tirado da lista');
+  return { removidos };
+}
+
+/** Desfaz a remoção: volta para a lista (o robô continua desligado; quem decide é a secretária) */
+export async function voltarParaLista(p: { leadIds: number[] }) {
+  const ids = idsValidos(p.leadIds);
+  const d = await banco();
+  let voltaram = 0;
+  for (const id of ids) if (await trocarTag(d, id, false)) voltaram++;
+  return { voltaram };
+}

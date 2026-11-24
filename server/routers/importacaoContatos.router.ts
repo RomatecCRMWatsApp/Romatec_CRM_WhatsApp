@@ -18,10 +18,38 @@ const marcador = z.string().trim().min(2).max(20);
 export const importacaoContatosRouter = router({
   /** Leads importados do celular (tela Leads importados): administrador e secretária, que também encaminham */
   lista: protectedProcedure
-    .input(z.object({ filtro: z.enum(["novos", "todos", "sem_corretor", "na_fila", "sem_resposta", "responderam", "quentes"]), busca: z.string().max(80).default("") }))
+    .input(z.object({ filtro: z.enum(["novos", "todos", "sem_corretor", "na_fila", "sem_resposta", "responderam", "quentes", "removidos"]), busca: z.string().max(80).default("") }))
     .query(({ input, ctx }) => comErro(async () => {
       exigirDistribuicao(ctx.permissoes);
       return (await S()).leadsImportados(input);
+    })),
+
+  /** Encaminha ao corretor e tira do robô (o corretor assume a conversa) */
+  passarAoCorretor: protectedProcedure
+    .input(z.object({ leadIds: z.array(z.number().int().positive()).min(1).max(200), paraId: z.number().int().positive(), observacao: z.string().max(300).nullable().optional() }))
+    .mutation(({ input, ctx }) => comErro(async () => {
+      exigirDistribuicao(ctx.permissoes);
+      try {
+        return await (await S()).passarAoCorretor({ ...input, por: { id: ctx.user.id, nome: String((ctx.user as any).name ?? "o escritório") } });
+      } catch (e: any) {
+        if (e?.name === "DistribuicaoErro") throw new TRPCError({ code: "BAD_REQUEST", message: e.message });
+        throw e;
+      }
+    })),
+
+  /** Tira da lista quem não precisa mais estar aqui (já comprou, já foi atendido) — o robô para */
+  removerDaLista: protectedProcedure
+    .input(z.object({ leadIds: z.array(z.number().int().positive()).min(1).max(200), motivo: z.string().trim().max(200).nullable().optional() }))
+    .mutation(({ input, ctx }) => comErro(async () => {
+      exigirDistribuicao(ctx.permissoes);
+      return (await S()).removerDaLista({ ...input, por: { id: ctx.user.id, nome: String((ctx.user as any).name ?? "o escritório") } });
+    })),
+
+  voltarParaLista: protectedProcedure
+    .input(z.object({ leadIds: z.array(z.number().int().positive()).min(1).max(200) }))
+    .mutation(({ input, ctx }) => comErro(async () => {
+      exigirDistribuicao(ctx.permissoes);
+      return (await S()).voltarParaLista(input);
     })),
 
   /** Situação dos contatos marcados (o navegador já leu o arquivo), sem gravar nada */

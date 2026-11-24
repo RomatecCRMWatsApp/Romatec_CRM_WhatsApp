@@ -3,6 +3,18 @@
 Cada versão nova vai no TOPO. Depois rode `npm run release` (valida e atualiza o package.json);
 ao subir, o servidor grava a versão no banco e todos recebem o aviso "Novidades da versão".
 
+## 1.196.1 — 2026-11-24
+tipo: patch
+obrigatoria: nao
+titulo: Leads importados: cores por situação, botão "Ao corretor" e remover da lista
+publico: admin
+
+### Melhorias
+- Leads importados: cada linha ganhou uma cor, com legenda no topo. Azul: respondeu ao robô, pode ir para o corretor. Verde: sem resposta, o robô continua tentando. Amarelo: livre, o robô ainda não mandou mensagem.
+- Botão "Ao corretor" em quem respondeu: encaminha ao corretor escolhido e o robô sai da conversa (não manda mais retomada, nem os lembretes de 24 h, 3 e 7 dias, nem responde).
+- Botão "Remover" para quem não precisa mais estar na lista, como quem já comprou ou está aguardando retorno. O lead continua no CRM e o robô para de falar com ele. Os removidos ficam no filtro "Removidos da lista", com a opção "Voltar à lista".
+- Ao encaminhar um lead que ainda está com o robô (verde), o sistema avisa antes.
+
 ## 1.196.0 — 2026-11-24
 tipo: minor
 obrigatoria: nao

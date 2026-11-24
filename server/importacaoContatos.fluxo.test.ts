@@ -100,4 +100,29 @@ describe('importação de contatos (banco)', () => {
     const cap = await leadsParaDistribuir('todos', '', Date.now(), 'captacao');
     expect(cap.map(l => l.nome)).toEqual(['Já Cliente']);
   });
+
+  it('remove da lista quem não precisa mais (robô para) e permite voltar', async () => {
+    const d: any = await getDb();
+    await I.importar({ contatos: [{ nome: 'Kelly', telefone: '5599991113333' }], marcador: 'CCBJ', empreendimentoSlug: 'bom-jardims', modelo: 'Oi', enviar: true, incluirExistentes: false, userId: 1 });
+    const [kelly]: any[] = d.all(sql`SELECT id FROM leadQualifications WHERE phone = '5599991113333'`);
+    d.run(sql`INSERT INTO autoRespostaRegua (leadId, empreendimentoId, desde) VALUES (${kelly.id}, 1, '2026-11-24 10:00:00')`);
+    expect((await I.leadsImportados({ filtro: 'todos' })).itens.map(i => i.nome)).toContain('Kelly');
+
+    expect(await I.removerDaLista({ leadIds: [kelly.id], motivo: 'já comprou', por: { id: 1, nome: 'Secretária' } })).toEqual({ removidos: 1 });
+    const lista = await I.leadsImportados({ filtro: 'todos' });
+    expect(lista.itens.map(i => i.nome)).not.toContain('Kelly');
+    expect(lista.resumo.removidos).toBe(1);
+    expect((await I.leadsImportados({ filtro: 'removidos' })).itens.map(i => i.nome)).toEqual(['Kelly']);
+    // robô parado: atendimento humano, retomada cancelada e fora da régua
+    const [l]: any[] = d.all(sql`SELECT humano, tags FROM leadQualifications WHERE id = ${kelly.id}`);
+    expect(Boolean(l.humano)).toBe(true);
+    expect(JSON.parse(l.tags)).toEqual(['CCBJ', 'retomada', 'fora_da_lista']);
+    const [ret]: any[] = d.all(sql`SELECT status FROM leadRetomadas WHERE leadId = ${kelly.id}`);
+    expect(ret.status).toBe('cancelado');
+    const [{ n }]: any[] = d.all(sql`SELECT count(*) as n FROM autoRespostaRegua WHERE leadId = ${kelly.id}`);
+    expect(Number(n)).toBe(0);
+
+    expect(await I.voltarParaLista({ leadIds: [kelly.id] })).toEqual({ voltaram: 1 });
+    expect((await I.leadsImportados({ filtro: 'todos' })).itens.map(i => i.nome)).toContain('Kelly');
+  });
 });
