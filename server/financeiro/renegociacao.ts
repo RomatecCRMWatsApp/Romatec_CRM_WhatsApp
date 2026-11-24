@@ -138,7 +138,7 @@ async function termoPdf(contratoId: number, numero: number, r: Renegociacao, hoj
 }
 
 /** Página final com as evidências da assinatura eletrônica do comprador */
-export async function anexarManifesto(pdf: Buffer, ev: { aditivo: string; nome: string; cpf: string; telefone: string; em: Date; ip: string; ua: string; hashOriginal: string }): Promise<Buffer> {
+export async function anexarManifesto(pdf: Buffer, ev: { aditivo: string; nome: string; cpf: string; telefone: string; em: Date; ip: string; ua: string; hashOriginal: string; papel?: string; aceite?: string }): Promise<Buffer> {
   const doc = await PDFDocument.load(pdf);
   const f = await doc.embedFont(StandardFonts.Helvetica);
   const fb = await doc.embedFont(StandardFonts.HelveticaBold);
@@ -168,10 +168,10 @@ export async function anexarManifesto(pdf: Buffer, ev: { aditivo: string; nome: 
   linha('Signatário', { b: true, cor: verde });
   linha(`Nome: ${ev.nome}`);
   linha(`CPF: ${cpf}`);
-  linha('Papel: PROMISSÁRIO(A) COMPRADOR(A)');
+  linha(`Papel: ${ev.papel ?? 'PROMISSÁRIO(A) COMPRADOR(A)'}`);
   y -= 8;
   linha('Evidências', { b: true, cor: verde });
-  linha(`Método: código de confirmação de 6 dígitos enviado ao WhatsApp cadastrado (${tel}) e aceite expresso ("Li o Termo Aditivo e concordo com as condições").`);
+  linha(`Método: código de confirmação de 6 dígitos enviado ao WhatsApp cadastrado (${tel}) e aceite expresso ("${ev.aceite ?? 'Li o Termo Aditivo e concordo com as condições'}").`);
   linha(`Data e hora da assinatura: ${quando} (horário de Brasília/Açailândia).`);
   linha(`Endereço IP: ${ev.ip || 'não informado'}`);
   linha(`Navegador / aparelho: ${(ev.ua || 'não informado').slice(0, 220)}`, { size: 8.5 });

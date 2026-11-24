@@ -149,13 +149,13 @@ export async function arquivoDoDoc(docId: number) {
 }
 
 /** Pacote base do perfil (módulos marcados por padrão); corretor: o empreendimento da convocação (sem ele, todos) */
-async function acessoPadrao(perfil: 'corretor' | 'secretario' | 'juridico', slug?: string | null) {
+async function acessoPadrao(perfil: 'corretor' | 'secretario' | 'atendente' | 'juridico', slug?: string | null) {
   // Jurídico: o acesso é o empreendimento do login (users.empreendimentoSlug), sem módulos do CRM
   if (perfil === 'juridico') return { modulos: [] as string[], empreendimentosIds: [] as number[], imoveisIds: [] as number[] };
   const d = await banco();
   const emps: any[] = slug ? await d.select({ id: empreendimentos.id }).from(empreendimentos).where(eq(empreendimentos.slug, slug))
     : await d.select({ id: empreendimentos.id }).from(empreendimentos);
-  return { modulos: MODULOS.filter(m => m.padrao[perfil]).map(m => m.chave), empreendimentosIds: perfil === 'corretor' ? emps.map(e => e.id) : [], imoveisIds: [] as number[] };
+  return { modulos: MODULOS.filter(m => m.padrao[perfil]).map(m => m.chave), empreendimentosIds: perfil === 'corretor' || perfil === 'atendente' ? emps.map(e => e.id) : [], imoveisIds: [] as number[] };
 }
 
 /** Senha provisória nova: troca obrigatória no 1º login; vence em DIAS_SENHA_PROVISORIA */
@@ -193,7 +193,7 @@ async function enviarAcesso(usuarioId: number, telefone: string, senha: string, 
 export async function aprovarRecrutamento(id: number, autor: { id: number; role?: string | null }, agora = Date.now(), opcoes: { cortesiaAte?: string | null } = {}) {
   const r = await recrutamentoPorId(id);
   if (r.status !== 'preenchido') throw new RecrutamentoErro('Só dá para aprovar depois que o candidato enviar o formulário', 409);
-  const perfil = r.perfil as 'corretor' | 'secretario' | 'juridico';
+  const perfil = r.perfil as 'corretor' | 'secretario' | 'atendente' | 'juridico';
   const dados = { ...(json<Record<string, any>>(r.dadosJson) ?? {}), perfil, recebeLeads: false, ...(perfil === 'juridico' ? { empreendimentoSlug: r.empreendimentoSlug } : {}) };
   const d = await banco();
   const docs: any[] = await d.select().from(recrutamentoDocs).where(eq(recrutamentoDocs.recrutamentoId, id));

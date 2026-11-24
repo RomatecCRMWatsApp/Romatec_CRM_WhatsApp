@@ -8,9 +8,9 @@
  */
 import { ROTULO_DOCUMENTO } from './cadastro';
 
-export const PERFIS_RECRUTAMENTO = ['corretor', 'secretario', 'empreendedor', 'juridico'] as const;
+export const PERFIS_RECRUTAMENTO = ['corretor', 'secretario', 'atendente', 'empreendedor', 'juridico'] as const;
 export type PerfilRecrutamento = typeof PERFIS_RECRUTAMENTO[number];
-export const ROTULO_PERFIL_RECRUTAMENTO: Record<PerfilRecrutamento, string> = { corretor: 'Corretor(a)', secretario: 'Secretária(o)', empreendedor: 'Empreendedor(a)', juridico: 'Advogado(a) — corpo jurídico' };
+export const ROTULO_PERFIL_RECRUTAMENTO: Record<PerfilRecrutamento, string> = { corretor: 'Corretor(a)', secretario: 'Secretária(o)', atendente: 'Ajudante administrativo (atendimento de leads)', empreendedor: 'Empreendedor(a)', juridico: 'Advogado(a) — corpo jurídico' };
 
 /** Quem usa a aba Recrutamento: o administrador e a secretária */
 export const podeRecrutar = (perfil: string | null | undefined) => perfil === 'admin' || perfil === 'secretario';

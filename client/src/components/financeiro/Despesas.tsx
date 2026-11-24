@@ -52,7 +52,7 @@ function Formulario({ emps, inicial, onFechar }: { emps: Emp[]; inicial: typeof 
       } else toast.success("Despesa lançada");
       if (id && ciencia && f.empreendimentoId) {
         await pedirCiencia.mutateAsync({ id })
-          .then(c => toast.success(c.enviado ? `Ciência pedida no WhatsApp de ${c.proprietaria}` : "Pedido de ciência criado, mas o WhatsApp não saiu: use Reenviar ciência na lista"))
+          .then(c => (c.enviado ? toast.success(`Ciência pedida no WhatsApp de ${c.proprietaria} (texto, link e o comunicado em PDF)`) : toast.error(`Pedido criado, mas o WhatsApp não saiu${c.erroEnvio ? ` (${c.erroEnvio})` : ""}: use Reenviar ciência na lista`, { duration: 12000 })))
           .catch((e: any) => toast.error(`Ciência não pedida: ${e.message}`));
       }
       onFechar(true);
@@ -180,10 +180,11 @@ function Acoes({ l, onFeito, onEditar }: { l: Linha; onFeito: () => void; onEdit
     comprovante.mutate({ id: l.id, nomeArquivo: f.name, mime, base64: await paraBase64(f) });
   };
   const pedir = trpc.financeiro.pedirCienciaDespesa.useMutation({
-    onSuccess: r => { toast.success(r.enviado ? `Pedido de ciência enviado no WhatsApp de ${r.proprietaria}` : `Pedido criado, mas o WhatsApp não saiu. Link: ${r.link}`); onFeito(); },
+    onSuccess: r => { if (r.enviado) toast.success(`Pedido de ciência enviado no WhatsApp de ${r.proprietaria}`); else toast.error(`Pedido criado, mas o WhatsApp não saiu${r.erroEnvio ? ` (${r.erroEnvio})` : ''}. Link: ${r.link}`, { duration: 15000 }); onFeito(); },
     onError: e => toast.error(e.message),
   });
   const reenviar = trpc.financeiro.reenviarCienciaDespesa.useMutation({ onSuccess: () => toast.success("Link reenviado no WhatsApp da proprietária"), onError: e => toast.error(e.message) });
+  const viaAssinada = trpc.financeiro.reenviarViaCiencia.useMutation({ onSuccess: () => { toast.success("Via assinada (com o carimbo da assinatura) enviada no WhatsApp da proprietária"); onFeito(); }, onError: e => toast.error(e.message) });
   const pedirCiencia = () => {
     const valor = l.valorPago ?? l.valor;
     const aviso = l.comprovanteUrl ? "" : "\n\nAtenção: esta despesa está sem comprovante anexado.";
@@ -197,6 +198,12 @@ function Acoes({ l, onFeito, onEditar }: { l: Linha; onFeito: () => void; onEdit
           onClick={() => (l.ciencia?.status === "aguardando" && !confirm("Já existe um pedido aguardando. OK = reenviar o mesmo link; Cancelar = gerar um novo pedido.") ? pedirCiencia() : l.ciencia?.status === "aguardando" ? reenviar.mutate({ id: l.id }) : pedirCiencia())}>
           {pedir.isPending || reenviar.isPending ? <Loader2 className="mr-1 h-3.5 w-3.5 animate-spin" /> : <ShieldCheck className="mr-1 h-3.5 w-3.5" />}
           {l.ciencia?.status === "aguardando" ? "Reenviar ciência" : "Pedir ciência"}
+        </Button>
+      )}
+      {l.ciencia?.status === "ciente" && (
+        <Button size="sm" variant="outline" className="h-7 text-xs" disabled={viaAssinada.isPending} title="Refaz a via confirmada com o carimbo da assinatura e manda no WhatsApp da proprietária"
+          onClick={() => confirm("Enviar à proprietária, no WhatsApp, a via assinada desta ciência?") && viaAssinada.mutate({ id: l.id })}>
+          {viaAssinada.isPending ? <Loader2 className="mr-1 h-3.5 w-3.5 animate-spin" /> : <ShieldCheck className="mr-1 h-3.5 w-3.5" />} Enviar via assinada
         </Button>
       )}
       {l.status === "aberta" && <Pagar l={l} onFeito={onFeito} />}

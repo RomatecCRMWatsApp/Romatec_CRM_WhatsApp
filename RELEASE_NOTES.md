@@ -3,6 +3,22 @@
 Cada versão nova vai no TOPO. Depois rode `npm run release` (valida e atualiza o package.json);
 ao subir, o servidor grava a versão no banco e todos recebem o aviso "Novidades da versão".
 
+## 1.200.0 — 2026-11-24
+tipo: minor
+obrigatoria: nao
+titulo: Ajudante administrativo, fluxo de caixa da proprietária e assinatura na ciência
+publico: todos
+
+### Novo
+- Recrutamento: novo perfil "Ajudante administrativo", para quem só atende os leads. O convite e o formulário não pedem CRECI (só selfie, documento com foto e comprovante de residência, opcional). O login é pelo CPF ou e-mail.
+- O ajudante vê só os leads encaminhados a ele, sem financeiro, contratos nem disparos (o administrador pode liberar módulos por pessoa em Equipe). Em Leads recebidos, o botão "Passar ao corretor" entrega o fechamento a um corretor ativo, com um recado: o corretor é avisado no WhatsApp e o lead sai da lista do ajudante.
+- Portal do empreendedor: nova seção "Fluxo de caixa", com entradas (parcelas recebidas), saídas (despesas do empreendimento), saldo acumulado e previsão. Cada despesa mostra a ciência da proprietária ("Aguardando você" ou "Ciente em …", com o documento assinado).
+
+### Melhorias
+- Ciência de despesa: o documento confirmado traz o carimbo da assinatura eletrônica na linha da proprietária (nome, data e hora, IP e o código do documento), e o manifesto passa a indicar o papel de proprietária.
+- A proprietária recebe no WhatsApp o comunicado em PDF junto com o link e, depois que confirma, a via assinada.
+- Financeiro › Despesas: botão "Enviar via assinada" refaz a via com o carimbo (também para as ciências já confirmadas) e manda no WhatsApp dela. Se o WhatsApp não sair ao pedir a ciência, o aviso agora mostra o motivo.
+
 ## 1.199.1 — 2026-11-24
 tipo: patch
 obrigatoria: nao

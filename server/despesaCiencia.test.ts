@@ -14,10 +14,12 @@ const { sql } = await import('drizzle-orm');
 describe('ciência da proprietária nas despesas', () => {
   let db: any;
   const msgs: [string, string][] = [];
+  const pdfs: [string, string][] = [];
   let despesaId = 0;
   beforeAll(async () => {
     db = await getDb();
     R.definirEnviador(async (t, m) => { msgs.push([t, m]); });
+    C.definirEnviadorPdf(async (t, _pdf, nome) => { pdfs.push([t, nome]); });
     db.run(sql`INSERT INTO empreendimentos (id, slug, nome, municipio, uf) VALUES (1, 'bom-jardims', 'Condomínio de Chácaras Bom Jardims', 'Açailândia', 'MA')`);
     db.run(sql`INSERT INTO empJuridico (empreendimentoId, defaultsJson, vendedoraJson) VALUES (1, '{}', ${JSON.stringify({ vend_nome: 'VERA PROPRIETARIA FICTICIA', vend_cpf: '111.444.777-35', vend_telefone: '(99) 9 9000-0001' })})`);
     const r = await D.lancarDespesa({ descricao: 'Abertura das Ruas CCBJ', categoria: 'obras', empreendimentoId: 1, fornecedor: 'Construsul', valor: 12000, vencimento: '2026-11-24', meses: 1, pagoEm: '2026-11-24', formaPagamento: 'PIX', observacao: 'Pix ID E195' } as any, 1);
@@ -70,11 +72,23 @@ describe('ciência da proprietária nas despesas', () => {
     expect(ci.em).toBeTruthy();
     const pdf = await C.pdfDaCiencia(despesaId);
     expect(pdf!.nome).toMatch(/confirmada/);
+    // A via confirmada vai para o WhatsApp dela, depois do comunicado
+    expect(pdfs.some(([, n]) => /^Comunicado-saida-/.test(n))).toBe(true);
+    expect(pdfs.at(-1)![1]).toMatch(/confirmada\.pdf$/);
     await expect(C.assinarPublico(await C.porToken(token), codigo, { aceite: true, ip: '1.2.3.4', ua: 't' })).rejects.toThrow(/já foi confirmada/);
   });
 
   it('despesa do escritório (sem empreendimento) não tem proprietária para dar ciência', async () => {
     const r = await D.lancarDespesa({ descricao: 'Aluguel do escritório', categoria: 'administrativo', empreendimentoId: null, fornecedor: null, valor: 900, vencimento: '2026-12-05', meses: 1, observacao: null } as any, 1);
     await expect(C.pedirCiencia(r.ids[0], 1)).rejects.toThrow(/sem empreendimento/);
+  });
+
+  it('carimbo da assinatura eletrônica traz nome, data e hora, IP e o hash', () => {
+    const selo = C.seloCiencia('Vera Proprietaria', new Date('2026-11-24T15:30:05Z'), '1.2.3.4', 'abcdef0123456789ffff');
+    expect(selo[0]).toBe('Assinado eletronicamente por VERA PROPRIETARIA');
+    expect(selo[1]).toContain('24/11/2026');
+    expect(selo[1]).toContain('12:30:05');
+    expect(selo[1]).toContain('IP 1.2.3.4');
+    expect(selo[2]).toContain('abcdef0123456789');
   });
 });

@@ -664,12 +664,26 @@ export function registrarRotasFinanceiro(app: Express) {
     } catch (e) { erro(res, e); }
   });
   // PDF da ciência da proprietária numa despesa (administrador e secretária)
+  async function despesaDoEmpreendimento(despesaId: number, slug: string | null | undefined): Promise<boolean> {
+    if (!despesaId || !slug) return false;
+    const { getDb } = await import('../db');
+    const { financeiroDespesas, empreendimentos } = await import('../../drizzle/schema');
+    const { eq } = await import('drizzle-orm');
+    const d: any = await getDb();
+    if (!d) return false;
+    const [x]: any[] = await d.select({ e: financeiroDespesas.empreendimentoId }).from(financeiroDespesas).where(eq(financeiroDespesas.id, despesaId)).limit(1);
+    const [e]: any[] = await d.select({ id: empreendimentos.id }).from(empreendimentos).where(eq(empreendimentos.slug, String(slug))).limit(1);
+    return !!x && !!e && x.e != null && Number(x.e) === Number(e.id);
+  }
   app.get('/api/despesas/:id/ciencia.pdf', async (req, res) => {
     try {
       const { sdk } = await import('../_core/sdk');
       const user: any = await sdk.authenticateRequest(req).catch(() => null);
       const { perfilDe } = await import('../../shared/equipe');
-      if (!user || !['admin', 'secretario'].includes(String(perfilDe(user)))) return res.status(403).json({ erro: 'nao_autorizado' });
+      const perfil = String(perfilDe(user));
+      if (!user || !['admin', 'secretario', 'empreendedor'].includes(perfil)) return res.status(403).json({ erro: 'nao_autorizado' });
+      // Proprietária: só a ciência das despesas do empreendimento dela
+      if (perfil === 'empreendedor' && !(await despesaDoEmpreendimento(Number(req.params.id) || 0, user.empreendimentoSlug))) return res.status(403).json({ erro: 'nao_autorizado' });
       const { pdfDaCiencia } = await import('./despesaCiencia');
       const r = await pdfDaCiencia(Number(req.params.id) || 0);
       if (!r) return res.status(404).json({ erro: 'arquivo' });

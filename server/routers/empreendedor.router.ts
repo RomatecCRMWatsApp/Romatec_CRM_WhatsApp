@@ -4,6 +4,7 @@
  * gasto/custo — e as artes LIBERADAS para baixar e postar.
  */
 import { and, eq, gte, ne } from "drizzle-orm";
+import { z } from "zod";
 import { TRPCError } from "@trpc/server";
 import { protectedProcedure, router } from "../_core/trpc";
 import { getDb } from "../db";
@@ -113,6 +114,30 @@ export const empreendedorRouter = router({
   financeiro: protectedProcedure.query(async ({ ctx }) => {
     const { db, emp } = await contexto(ctx);
     return financeiroDoEmpreendimento(db, emp);
+  }),
+
+  /**
+   * Fluxo de caixa do empreendimento: entradas (parcelas recebidas) e saídas (despesas pagas) do período, a previsão e
+   * cada despesa com a ciência da proprietária (aguardando ou confirmada). Despesas do escritório não entram.
+   */
+  fluxoCaixa: protectedProcedure.input(z.object({
+    de: z.string().regex(/^\d{4}-\d{2}-\d{2}$/), ate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/), agrupar: z.enum(["mes", "dia"]).default("mes"),
+  })).query(async ({ ctx, input }) => {
+    const { emp } = await contexto(ctx);
+    if (!emp) return null;
+    const { fluxoCaixa } = await import("../financeiro/relatorios");
+    const { listarDespesas } = await import("../financeiro/despesas");
+    const { hojeBrasil } = await import("../financeiro/servico");
+    const fluxo = await fluxoCaixa(input.de, input.ate, input.agrupar, hojeBrasil(), Number(emp.id)).catch((e: any) => {
+      throw new TRPCError({ code: "BAD_REQUEST", message: e?.message || "Período inválido" });
+    });
+    const desp = await listarDespesas({ de: input.de, ate: input.ate, empreendimentoId: Number(emp.id), situacao: "todas" });
+    const despesas = desp.linhas.filter(x => x.status !== "cancelada").map(x => ({
+      id: x.id, descricao: x.descricao, categoria: x.rotuloCategoria, fornecedor: x.fornecedor, valor: x.valor, vencimento: x.vencimento,
+      situacao: x.situacao, pagoEm: x.pagoEm ? String(x.pagoEm).slice(0, 10) : null, valorPago: x.valorPago, formaPagamento: x.formaPagamento,
+      ciencia: x.ciencia ? { status: x.ciencia.status as string, em: x.ciencia.em } : null,
+    }));
+    return { ...fluxo, despesas, totaisDespesas: desp.totais };
   }),
 
   /** Artes liberadas do empreendimento (as bloqueadas — preço/condições — não aparecem) */

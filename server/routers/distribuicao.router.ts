@@ -44,6 +44,17 @@ export const distribuicaoRouter = router({
       const { encaminharManual } = await import("../leads/distribuicao");
       return encaminharManual(input.leadIds, input.paraId, { id: ctx.user.id, nome: String((ctx.user as any).name ?? "o escritório") }, input.observacao).catch(erro);
     }),
+  // ─── Ajudante administrativo: passa o fechamento do lead para um corretor ───
+  corretoresParaRepasse: protectedProcedure.query(async ({ ctx }) => {
+    if (ctx.permissoes.perfil !== "atendente" && ctx.permissoes.perfil !== "admin" && ctx.permissoes.perfil !== "secretario") throw new TRPCError({ code: "FORBIDDEN", message: "Só para o ajudante administrativo" });
+    return (await import("../leads/distribuicao")).corretoresParaRepasse();
+  }),
+  passarAoCorretor: protectedProcedure
+    .input(z.object({ id: z.number().int().positive(), paraId: z.number().int().positive(), observacao: z.string().max(200).nullable().optional() }))
+    .mutation(async ({ input, ctx }) => {
+      if (ctx.permissoes.perfil !== "atendente") throw new TRPCError({ code: "FORBIDDEN", message: "Só o ajudante administrativo passa o fechamento por aqui" });
+      return (await import("../leads/distribuicao")).passarAoCorretor(input.id, input.paraId, { id: ctx.user.id, nome: String((ctx.user as any).name ?? "Ajudante") }, input.observacao).catch(erro);
+    }),
   // ─── Corretor: leads recebidos, confirmar recebimento e informar o desfecho (toda a equipe) ───
   meus: protectedProcedure.query(async ({ ctx }) => (await import("../leads/distribuicao")).meusEncaminhamentos(ctx.user.id)),
   doLead: protectedProcedure.input(z.object({ leadId: z.number().int() })).query(async ({ input, ctx }) =>

@@ -7,7 +7,7 @@ import { useAuth } from "@/_core/hooks/useAuth";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Bar, BarChart, CartesianGrid, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
-import { PenTool, ArrowLeft, BadgePercent, BarChart3, CalendarCheck, Trophy, Copy, Download, ExternalLink, FileText, IdCard, Images, Map as MapIcon, Receipt, Share2, Table2, TrendingUp, Video } from "lucide-react";
+import { PenTool, ArrowLeft, BadgePercent, BarChart3, CalendarCheck, Trophy, Copy, Download, ExternalLink, FileText, IdCard, Images, Map as MapIcon, Receipt, Share2, Wallet, Table2, TrendingUp, Video } from "lucide-react";
 import { PortalLateral, type GrupoMenuLateral, type ItemMenuLateral } from "@/components/AppShell";
 import { APP_VERSION, AppFooter } from "@/brand";
 import { baixarBlob, ehImagem, ehVideo, miniatura, nomeArquivo } from "@/components/MateriaisPainel";
@@ -16,6 +16,7 @@ import { ROTULO_TIPO_MATERIAL, type TipoMaterial } from "@shared/materiais";
 import { ROTULO_SITUACAO, type SituacaoLote } from "@shared/lotes";
 import { CabecalhoEmpreendimento, MapaVendas } from "@/components/empreendimento/Vitrine";
 import TabelasFinanciamento from "@/components/financeiro/TabelasFinanciamento";
+import FluxoCaixaEmpreendedor from "@/components/financeiro/FluxoCaixaEmpreendedor";
 import { TabelaComissao } from "@/components/corretor/TabelaComissao";
 import { PainelCarteirinhas } from "@/pages/Carteirinhas";
 import { CertificadoDigital, DocumentosJuridicos } from "@/components/juridico/CertificadoDigital";
@@ -38,7 +39,7 @@ const STATUS_BOLETO: Record<string, [string, string]> = {
   emitida: ["Emitido", "bg-warn-500/15 text-warn-300"], paga: ["Pago", "bg-ok-500/15 text-ok-300"],
   vencida: ["Vencido", "bg-danger-500/15 text-danger-300"], estornada: ["Estornado", "bg-secondary text-muted-foreground"],
 };
-const SECOES = [["mapa", "Mapa", MapIcon], ["vendas", "Vendas", TrendingUp], ["financeiro", "Financeiro e boletos", Receipt], ["leads", "Leads", BarChart3], ["carteirinhas", "Carteirinhas", IdCard], ["tabelas", "Tabelas", Table2], ["comissao", "Comissão", BadgePercent], ["juridico", "Documentos jurídicos", PenTool], ["artes", "Artes", Images]] as const;
+const SECOES = [["mapa", "Mapa", MapIcon], ["vendas", "Vendas", TrendingUp], ["financeiro", "Financeiro e boletos", Receipt], ["fluxo", "Fluxo de caixa", Wallet], ["leads", "Leads", BarChart3], ["carteirinhas", "Carteirinhas", IdCard], ["tabelas", "Tabelas", Table2], ["comissao", "Comissão", BadgePercent], ["juridico", "Documentos jurídicos", PenTool], ["artes", "Artes", Images]] as const;
 
 function Numero({ titulo, valor, sub, cor }: { titulo: string; valor: string | number; sub?: string; cor?: string }) {
   return (
@@ -291,6 +292,10 @@ export default function Empreendedor() {
             </Card>
           </>
         ) : <p className="text-sm text-muted-foreground">{fin ? "Sem dados financeiros ainda." : "Carregando…"}</p>}
+
+        {/* 3b. Fluxo de caixa (entradas, despesas e a ciência da proprietária) */}
+        <Titulo id="fluxo" icone={Wallet} sub="Entradas, despesas do empreendimento e a sua ciência em cada uma">Fluxo de caixa</Titulo>
+        <FluxoCaixaEmpreendedor />
 
         {/* 4. Leads e divulgação */}
         <Titulo id="leads" icone={BarChart3} sub="Números da divulgação — os contatos dos interessados ficam com o corretor (LGPD)">Leads e divulgação</Titulo>

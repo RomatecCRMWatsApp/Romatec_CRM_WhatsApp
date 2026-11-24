@@ -6,6 +6,7 @@
 import { and, desc, eq, gte, inArray, isNotNull, isNull, lt, ne, or, sql } from 'drizzle-orm';
 import { getDb } from '../db';
 import { leadEncaminhamentos, leadQualifications, users } from '../../drizzle/schema';
+import { perfilDe } from '../../shared/equipe';
 import { PRAZO_CONFIRMACAO_HORAS, DESFECHOS_DE_TROCA, DESFECHOS_CORRETOR, MOTIVO_PERDA_DO_DESFECHO, ROTULO_DESFECHO, ROTULO_SITUACAO, situacaoEncaminhamento, type Desfecho, type DesfechoCorretor } from '../../shared/distribuicaoLeads';
 
 export class DistribuicaoErro extends Error { constructor(msg: string) { super(msg); this.name = 'DistribuicaoErro'; } }
@@ -40,13 +41,13 @@ export async function registrarEncaminhamento(e: { leadId: number; deId?: number
 }
 
 /** Equipe que pode receber lead (ativos, menos empreendedor) */
-export async function equipe(): Promise<{ id: number; nome: string; recebeLeads: boolean; semAcesso: boolean }[]> {
+export async function equipe(): Promise<{ id: number; nome: string; recebeLeads: boolean; semAcesso: boolean; perfil: string | null }[]> {
   const d = await banco();
   const rows: any[] = (await d.select().from(users)).filter((u: any) => u.ativo !== false && u.ativo !== 0 && u.perfil !== 'empreendedor');
   // Licença bloqueada / sem pagamento: aparece na lista, mas não pode receber lead (server/leads/podeReceber.ts)
   const { podeReceberLeads } = await import('./podeReceber');
   const liberados = await Promise.all(rows.map(u => podeReceberLeads(u)));
-  return rows.map((u, k) => ({ id: Number(u.id), nome: u.name || 'Sem nome', recebeLeads: u.recebeLeads === true || u.recebeLeads === 1, semAcesso: !liberados[k] }))
+  return rows.map((u, k) => ({ id: Number(u.id), nome: u.name || 'Sem nome', recebeLeads: u.recebeLeads === true || u.recebeLeads === 1, semAcesso: !liberados[k], perfil: perfilDe(u) }))
     .sort((a, b) => a.nome.localeCompare(b.nome, 'pt-BR'));
 }
 
@@ -162,6 +163,26 @@ export async function encaminharManual(leadIds: number[], paraId: number, por: {
     encaminhados++;
   }
   return { encaminhados, jaEram, naoEncontrados: ids.length - leads.length, para: destino.nome };
+}
+
+/** Corretores que podem receber o fechamento de um lead (ativos e com acesso liberado) */
+export async function corretoresParaRepasse() {
+  return (await equipe()).filter(u => u.perfil === 'corretor' && !u.semAcesso).map(u => ({ id: u.id, nome: u.nome }));
+}
+
+/**
+ * Ajudante administrativo passa o fechamento para um corretor: só um lead encaminhado a ele (em aberto) e só para
+ * um corretor. O lead troca de responsável, o encaminhamento do ajudante fecha como "repassado" e o corretor é avisado.
+ */
+export async function passarAoCorretor(encaminhamentoId: number, paraId: number, por: { id: number; nome: string }, observacao?: string | null) {
+  const d = await banco();
+  const e = await encaminhamentoDo(d, encaminhamentoId);
+  if (Number(e.paraId) !== por.id) throw new DistribuicaoErro('Este lead foi encaminhado para outra pessoa');
+  if (e.desfecho) throw new DistribuicaoErro('Este atendimento já foi finalizado');
+  const destino = (await corretoresParaRepasse()).find(u => u.id === paraId);
+  if (!destino) throw new DistribuicaoErro('Escolha um corretor ativo para o fechamento');
+  const obs = [`Fechamento passado por ${por.nome}`, observacao?.trim()].filter(Boolean).join(' — ').slice(0, 300);
+  return encaminharManual([Number(e.leadId)], paraId, por, obs);
 }
 
 /** "2026-11-04" no fuso de Açailândia (UTC−3) → instante */

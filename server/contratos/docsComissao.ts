@@ -142,7 +142,8 @@ export async function escritor(titulo: string, marca: string, rodapeDoc: string)
    * ("____") faz o selo achar a linha certa (server/assinatura/autoPosicao.ts).
    */
   const ESPACO_SELO = 42, TEXTO_ASSINATURA = 33;
-  const assinaturas = (blocos: { papel: string; nome: string; doc?: string }[], o: { local?: string } = {}) => {
+  /** selo: até 3 linhas do carimbo de assinatura eletrônica, desenhado acima da linha (quem assinou, quando, como) */
+  const assinaturas = (blocos: { papel: string; nome: string; doc?: string; selo?: string[] }[], o: { local?: string } = {}) => {
     // Local e data + todas as assinaturas juntos: se não couberem no resto da página, vão juntos para a próxima
     const total = (o.local ? 22 : 0) + blocos.length * (ESPACO_SELO + TEXTO_ASSINATURA) + 4;
     if (y - total < base && total < 600) nova();
@@ -159,6 +160,12 @@ export async function escritor(titulo: string, marca: string, rodapeDoc: string)
       garantir(ESPACO_SELO + TEXTO_ASSINATURA);
       const yy = y - ESPACO_SELO;
       p.drawText(tracoTxt, { x, y: yy + 1, size: 8, font: f, opacity: 0 });
+      if (b.selo?.length) {
+        const linhas = b.selo.slice(0, 3);
+        const alt = 8 + linhas.length * 10;
+        p.drawRectangle({ x: x + 6, y: yy + 3, width: col - 12, height: alt, color: rgb(0.93, 0.97, 0.94), borderColor: VERDE, borderWidth: 0.8, opacity: 0.95 });
+        linhas.forEach((t, i) => centro(t, i === 0 ? fb : f, i === 0 ? 8 : 7, yy + 3 + alt - 11 - i * 10, VERDE));
+      }
       p.drawLine({ start: { x, y: yy }, end: { x: x + col, y: yy }, thickness: 0.6, color: rgb(0.2, 0.2, 0.2) });
       centro(b.nome.slice(0, 80), fb, 8.6, yy - 11);
       centro(b.papel, f, 8, yy - 21, CINZA);

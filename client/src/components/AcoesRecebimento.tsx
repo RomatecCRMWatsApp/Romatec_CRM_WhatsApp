@@ -1,6 +1,8 @@
 import { useState } from "react";
 import { toast } from "sonner";
-import { CheckCircle2, Loader2, XCircle } from "lucide-react";
+import { CheckCircle2, Loader2, Send, XCircle } from "lucide-react";
+import { useAuth } from "@/_core/hooks/useAuth";
+import { perfilDe } from "@shared/equipe";
 import { trpc } from "@/lib/trpc";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -15,9 +17,17 @@ export default function AcoesRecebimento({ id, recebido, aoMudar }: { id: number
   const [abrir, setAbrir] = useState(false);
   const [desfecho, setDesfecho] = useState<DesfechoCorretor | "">("");
   const [motivo, setMotivo] = useState("");
+  const { user } = useAuth();
+  const atendente = perfilDe(user as any) === "atendente";
+  const [repassar, setRepassar] = useState(false);
+  const [corretorId, setCorretorId] = useState("");
+  const [nota, setNota] = useState("");
+  const corretores = trpc.distribuicao.corretoresParaRepasse.useQuery(undefined, { enabled: atendente && repassar });
   const atualizar = () => { utils.distribuicao.meus.invalidate(); utils.distribuicao.doLead.invalidate(); aoMudar?.(); };
   const confirmar = trpc.distribuicao.confirmar.useMutation({ onSuccess: () => { toast.success("Recebimento confirmado"); atualizar(); }, onError: e => toast.error(e.message) });
   const finalizar = trpc.distribuicao.finalizar.useMutation({ onSuccess: () => { toast.success("Atendimento finalizado"); setAbrir(false); atualizar(); }, onError: e => toast.error(e.message) });
+
+  const passar = trpc.distribuicao.passarAoCorretor.useMutation({ onSuccess: r => { toast.success(`Fechamento passado para ${r.para}`); setRepassar(false); atualizar(); }, onError: e => toast.error(e.message) });
 
   return (
     <div className="space-y-2">
@@ -27,8 +37,28 @@ export default function AcoesRecebimento({ id, recebido, aoMudar }: { id: number
             {confirmar.isPending ? <Loader2 className="mr-1 h-4 w-4 animate-spin" /> : <CheckCircle2 className="mr-1 h-4 w-4" />} Confirmar recebimento
           </Button>
         )}
+        {atendente && (
+          <Button size="sm" variant="outline" onClick={() => setRepassar(!repassar)}><Send className="mr-1 h-4 w-4" /> Passar ao corretor</Button>
+        )}
         <Button size="sm" variant="outline" onClick={() => setAbrir(!abrir)}><XCircle className="mr-1 h-4 w-4" /> Não deu certo</Button>
       </div>
+      {repassar && (
+        <div className="flex flex-wrap items-end gap-2 rounded-md border border-border bg-secondary/20 p-2">
+          <label className="flex flex-col gap-1 text-xs text-muted-foreground">Corretor do fechamento
+            <select className="h-9 rounded-md border border-border bg-background px-2 text-sm" value={corretorId} onChange={e => setCorretorId(e.target.value)}>
+              <option value="">{corretores.isLoading ? "Carregando…" : "— escolha —"}</option>
+              {(corretores.data ?? []).map(c => <option key={c.id} value={c.id}>{c.nome}</option>)}
+            </select>
+          </label>
+          <label className="flex min-w-[180px] flex-1 flex-col gap-1 text-xs text-muted-foreground">Recado para o corretor (opcional)
+            <Input value={nota} onChange={e => setNota(e.target.value)} maxLength={200} placeholder="Ex.: quer visitar sábado, prefere a C10" />
+          </label>
+          <Button size="sm" disabled={!corretorId || passar.isPending} onClick={() => passar.mutate({ id, paraId: Number(corretorId), observacao: nota || null })}>
+            {passar.isPending ? <Loader2 className="mr-1 h-4 w-4 animate-spin" /> : null} Passar o fechamento
+          </Button>
+          <p className="w-full text-[11px] text-muted-foreground">O corretor recebe o aviso no WhatsApp e o lead sai da sua lista.</p>
+        </div>
+      )}
       {abrir && (
         <div className="flex flex-wrap items-end gap-2 rounded-md border border-border bg-secondary/20 p-2">
           <label className="flex flex-col gap-1 text-xs text-muted-foreground">O que aconteceu?

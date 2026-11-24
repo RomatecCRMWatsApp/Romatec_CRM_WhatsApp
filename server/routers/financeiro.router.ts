@@ -237,6 +237,12 @@ export const financeiroRouter = router({
     const { reenviarCiencia } = await import("../financeiro/despesaCiencia");
     return comErroFin(() => reenviarCiencia(input.id));
   }),
+  /** Refaz a via confirmada da ciência (com o carimbo da assinatura) e manda no WhatsApp da proprietária */
+  reenviarViaCiencia: protectedProcedure.input(z.object({ id: z.number().int() })).mutation(async ({ ctx, input }) => {
+    await operador(ctx);
+    const { reenviarViaConfirmada } = await import("../financeiro/despesaCiencia");
+    return comErroFin(() => reenviarViaConfirmada(input.id));
+  }),
   /** Lê um comprovante (PDF ou foto) e devolve os dados para preencher a nova despesa (não grava nada) */
   lerComprovanteDespesa: protectedProcedure.input(z.object({
     mime: z.enum(["image/png", "image/jpeg", "application/pdf"]), base64: z.string().min(10).max(14_000_000),

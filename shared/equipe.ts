@@ -5,37 +5,42 @@
  * - admin: tudo (José).
  * - secretario: CRM inteiro (todos os leads), menos configurações, equipe, ZAYRA e distribuição de leads.
  * - corretor: só os leads em que é o responsável e os empreendimentos/imóveis habilitados para ele.
+ * - atendente (ajudante administrativo): sem CRECI; atende os leads que o escritório encaminha a ele e passa o
+ *   fechamento para um corretor. Vê só os leads em que é o responsável, como o corretor.
  * - empreendedor: só o painel do empreendimento dele (gráficos de leads, sem dados
  *   pessoais) e as artes liberadas para divulgar.
  * Secretário e corretor usam o portal de permissões (pacote base por perfil + ajuste por pessoa).
  * O antigo perfil "equipe" (até a v1.5.0) é lido como corretor.
  */
 
-export const PERFIS = ['admin', 'secretario', 'corretor', 'empreendedor', 'juridico'] as const;
+export const PERFIS = ['admin', 'secretario', 'corretor', 'atendente', 'empreendedor', 'juridico'] as const;
 export type Perfil = typeof PERFIS[number];
 
 export const ROTULO_PERFIL: Record<Perfil, string> = {
   admin: 'Administrador',
   secretario: 'Secretário(a)',
   corretor: 'Corretor(a)',
+  atendente: 'Ajudante administrativo',
   empreendedor: 'Empreendedor',
   juridico: 'Jurídico (advogado)',
 };
 
 /** Cor do selo do perfil (dourado, azul, verde, roxo) */
 export const COR_PERFIL: Record<Perfil, string> = {
-  admin: '#C9A84C', secretario: '#5AA9E6', corretor: '#2BD47A', empreendedor: '#B07CE0', juridico: '#E0904A',
+  admin: '#C9A84C', secretario: '#5AA9E6', corretor: '#2BD47A', atendente: '#4FC3B8', empreendedor: '#B07CE0', juridico: '#E0904A',
 };
 
 /** Perfis da equipe interna (usam o portal de permissões) */
-export const PERFIS_EQUIPE = ['secretario', 'corretor'] as const;
-export const daEquipe = (p: Perfil | null): p is 'secretario' | 'corretor' => p === 'secretario' || p === 'corretor';
+export const PERFIS_EQUIPE = ['secretario', 'corretor', 'atendente'] as const;
+export const daEquipe = (p: Perfil | null): p is 'secretario' | 'corretor' | 'atendente' => p === 'secretario' || p === 'corretor' || p === 'atendente';
+/** Atende leads como responsável (corretor ou ajudante administrativo) */
+export const atendeLeads = (p: Perfil | null) => p === 'corretor' || p === 'atendente';
 
 export function perfilDe(user: { role?: string | null; perfil?: string | null } | null | undefined): Perfil | null {
   if (!user) return null;
   if (user.role === 'admin') return 'admin';
   const p = String(user.perfil);
-  if (p === 'secretario' || p === 'corretor' || p === 'empreendedor' || p === 'juridico') return p;
+  if (p === 'secretario' || p === 'corretor' || p === 'atendente' || p === 'empreendedor' || p === 'juridico') return p;
   return 'corretor'; // "equipe" (antigo) ou vazio
 }
 

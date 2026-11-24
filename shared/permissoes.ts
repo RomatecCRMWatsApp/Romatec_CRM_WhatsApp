@@ -19,22 +19,24 @@ export interface Modulo {
   /** Procedimentos tRPC do módulo (prefixo "x." ou nome exato) */
   procedimentos: string[];
   /** Ligado no pacote base de cada perfil da equipe (matriz aprovada em 23/10/2026) */
-  padrao: { corretor: boolean; secretario: boolean };
+  padrao: { corretor: boolean; secretario: boolean; atendente: boolean };
 }
 
-const AMBOS = { corretor: true, secretario: true };
+const AMBOS = { corretor: true, secretario: true, atendente: true };
+/** Ajudante administrativo: só o que ajuda a atender (sem financeiro nem contratos; o admin pode liberar por pessoa) */
+const SEM_ATENDENTE = { corretor: true, secretario: true, atendente: false };
 
 export const MODULOS: Modulo[] = [
   { chave: 'empreendimentos', rotulo: 'Empreendimentos (mapa, lotes, documentos)', procedimentos: ['empreendimentosAdmin.'], padrao: AMBOS },
   { chave: 'simulador', rotulo: 'Simulador de financiamento', procedimentos: ['simulador.'], padrao: AMBOS },
-  { chave: 'financeiro', rotulo: 'Financeiro (vendas, sem comissão de terceiros)', procedimentos: ['financeiro.'], padrao: AMBOS },
-  { chave: 'contratos', rotulo: 'Contratos (minuta; o corretor só dos leads dele)', procedimentos: ['contratos.'], padrao: AMBOS },
+  { chave: 'financeiro', rotulo: 'Financeiro (vendas, sem comissão de terceiros)', procedimentos: ['financeiro.'], padrao: SEM_ATENDENTE },
+  { chave: 'contratos', rotulo: 'Contratos (minuta; o corretor só dos leads dele)', procedimentos: ['contratos.'], padrao: SEM_ATENDENTE },
   { chave: 'materiais', rotulo: 'Materiais e links de divulgação', procedimentos: ['materiais.'], padrao: AMBOS },
   { chave: 'imoveis', rotulo: 'Imóveis (cadastro e divulgação)', procedimentos: ['properties.'], padrao: AMBOS },
   { chave: 'leads', rotulo: 'Leads e funil', procedimentos: ['crm.', 'leadCampanhas.', 'reunioes.'], padrao: AMBOS },
   { chave: 'contatos', rotulo: 'Contatos', procedimentos: ['contacts.'], padrao: AMBOS },
   { chave: 'campanhas', rotulo: 'Campanhas de WhatsApp', procedimentos: ['campaigns.', 'scheduler.'], padrao: AMBOS },
-  { chave: 'desempenho', rotulo: 'Desempenho', procedimentos: ['performance.'], padrao: { corretor: false, secretario: false } },
+  { chave: 'desempenho', rotulo: 'Desempenho', procedimentos: ['performance.'], padrao: { corretor: false, secretario: false, atendente: false } },
 ];
 
 export type ChaveModulo = string;
@@ -47,7 +49,7 @@ export function moduloDoCaminho(caminho: string): Modulo | null {
   return MODULOS.find(m => m.procedimentos.some(p => casa(p, caminho))) ?? null;
 }
 
-export type PerfilEquipe = 'corretor' | 'secretario';
+export type PerfilEquipe = 'corretor' | 'secretario' | 'atendente';
 
 /** Pacote base (linhas de permissoesPerfil; módulo sem linha = padrão do código) + ajustes da pessoa */
 export function permissoesEfetivas(
@@ -59,7 +61,7 @@ export function permissoesEfetivas(
   for (const b of base) if (b.modulo in out) out[b.modulo] = !!b.permitido;
   for (const a of ajustes) if (a.modulo in out) out[a.modulo] = !!a.permitido;
   // Só do escritório: o corretor nunca recebe, nem por ajuste individual
-  if (perfil === 'corretor') for (const k of SO_ESCRITORIO) out[k] = false;
+  if (perfil === 'corretor' || perfil === 'atendente') for (const k of SO_ESCRITORIO) out[k] = false;
   return out;
 }
 
@@ -91,7 +93,7 @@ export interface AcessoCorretor { tipo: TipoAcesso; refId: number; comissaoPct?:
 export function temAcesso(perfil: Perfil | null, acessos: AcessoCorretor[], tipo: TipoAcesso, refId: number): boolean {
   if (perfil === 'admin' || perfil === 'secretario') return true;
   // Empreendedor: só o empreendimento dele (server/permissoes.ts carrega esse acesso pelo empreendimentoSlug)
-  if (perfil !== 'corretor' && perfil !== 'empreendedor' && perfil !== 'juridico') return false;
+  if (perfil !== 'corretor' && perfil !== 'atendente' && perfil !== 'empreendedor' && perfil !== 'juridico') return false;
   return acessos.some(a => a.tipo === tipo && a.refId === refId);
 }
 
@@ -101,7 +103,7 @@ export function temAcesso(perfil: Perfil | null, acessos: AcessoCorretor[], tipo
  */
 export function leadVisivel(perfil: Perfil | null, usuarioId: number, lead: { responsavelId?: number | null }): boolean {
   if (perfil === 'admin' || perfil === 'secretario') return true;
-  return perfil === 'corretor' && lead.responsavelId === usuarioId;
+  return (perfil === 'corretor' || perfil === 'atendente') && lead.responsavelId === usuarioId;
 }
 
 /** Distribuição/roteamento de leads (trocar o responsável): só o admin */
