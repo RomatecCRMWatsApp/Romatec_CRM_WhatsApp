@@ -32,7 +32,12 @@ async function banco(): Promise<any> {
 export interface RetratoDespesa {
   id: number; descricao: string; categoria: string; fornecedor: string | null; valor: number; valorPago: number | null;
   vencimento: string; pagoEm: string | null; forma: string | null; observacao: string | null; comprovanteUrl: string | null; status: string;
+  /** Bancada por terceiro: quem pagou, como e para quê (o empreendimento passa a dever esse valor) */
+  terceiro?: { nome: string; documento: string | null; modalidade: string; finalidade: string | null } | null;
 }
+
+const ROT_MOD: Record<string, string> = { emprestimo: 'empréstimo', permuta: 'permuta', adiantamento: 'adiantamento', outro: 'outro' };
+const fraseTerceiro = (t: NonNullable<RetratoDespesa['terceiro']>) => `pago com recurso de ${t.nome} (${ROT_MOD[t.modalidade] ?? t.modalidade}${t.finalidade ? `: ${t.finalidade}` : ''})`;
 
 export interface Proprietaria { nome: string; documento: string; empresa: string; telefone: string }
 
@@ -49,6 +54,7 @@ export function mensagemCiencia(p: { proprietaria: Proprietaria; empreendimento:
     `📝 Referente a: ${d.descricao} (${ROTULO_CATEGORIA[d.categoria as CategoriaDespesa] ?? d.categoria})`,
     d.pagoEm ? `📅 Pago em ${br(d.pagoEm)}${d.forma ? ` por ${FORMA[d.forma] ?? d.forma}` : ''}` : `📅 Vencimento: ${br(d.vencimento)}`,
     d.comprovanteUrl ? '📎 O comprovante está no documento.' : null,
+    d.terceiro ? `🤝 Não saiu do caixa do empreendimento: foi ${fraseTerceiro(d.terceiro)}. O valor fica como saldo devedor do empreendimento com ${d.terceiro.nome}, até ser devolvido.` : null,
     '',
     `Confira e confirme por aqui (você recebe um código no WhatsApp): ${p.link}`,
   ].filter(l => l !== null).join('\n');
@@ -63,6 +69,7 @@ export function pontosCiencia(d: RetratoDespesa, empreendimento: string): string
     `Referente a: ${d.descricao} · ${ROTULO_CATEGORIA[d.categoria as CategoriaDespesa] ?? d.categoria} · ${empreendimento}`,
     d.pagoEm ? `Pago em ${br(d.pagoEm)}${d.forma ? ` por ${FORMA[d.forma] ?? d.forma}` : ''}` : `Ainda não paga (vencimento ${br(d.vencimento)})`,
     d.comprovanteUrl ? 'Comprovante de pagamento anexado ao documento' : 'Sem comprovante anexado',
+    ...(d.terceiro ? [`Origem do recurso: ${fraseTerceiro(d.terceiro)} — fica como saldo devedor do empreendimento com ${d.terceiro.nome}`] : ['Origem do recurso: caixa do empreendimento']),
   ];
 }
 
@@ -71,6 +78,7 @@ function retrato(x: any): RetratoDespesa {
     id: Number(x.id), descricao: String(x.descricao), categoria: String(x.categoria), fornecedor: x.fornecedor ?? null, valor: Number(x.valor),
     valorPago: x.valorPago != null ? Number(x.valorPago) : null, vencimento: String(x.vencimento), pagoEm: x.pagoEm ?? null,
     forma: x.formaPagamento ?? null, observacao: x.observacao ?? null, comprovanteUrl: x.comprovanteUrl ?? null, status: String(x.status),
+    terceiro: x.origemRecurso === 'terceiro' ? { nome: String(x.terceiroNome ?? 'Terceiro'), documento: x.terceiroDocumento ?? null, modalidade: String(x.terceiroModalidade ?? 'emprestimo'), finalidade: x.terceiroFinalidade ?? null } : null,
   };
 }
 
@@ -117,10 +125,11 @@ async function documentoPdf(numero: number, emp: { nome: string; slug: string },
   const { escritor } = await import('../contratos/docsComissao');
   const marca = String(emp.slug ?? 'bom-jardims').replace(/-/g, '');
   const titulo = `Comunicação de saída n.º ${numero}`;
+  const tituloDoc = d.terceiro ? 'COMUNICAÇÃO DE SAÍDA E RECONHECIMENTO DE DÉBITO' : 'COMUNICAÇÃO DE SAÍDA DE RECURSOS';
   const w0 = await escritor(titulo, marca, `${titulo} · ${emp.nome}`);
   const w = { ...w0, paragrafo: (t: Parameters<typeof w0.paragrafo>[0], o: Parameters<typeof w0.paragrafo>[1] = {}) => w0.paragrafo(t, { size: 9.6, ...o }) };
   const valor = d.valorPago ?? d.valor;
-  w.cabecalho('COMUNICAÇÃO DE SAÍDA DE RECURSOS', `${titulo} · ${emp.nome}`);
+  w.cabecalho(tituloDoc, `${titulo} · ${emp.nome}`);
   w.paragrafo([{ t: 'O escritório gestor comunica à ' }, { t: prop.empresa || prop.nome, b: true },
     { t: `${prop.empresa ? `, neste ato representada por ${prop.nome}` : ''}, proprietária do empreendimento ${emp.nome}, a saída de recursos abaixo, para a sua ciência e o registro na prestação de contas.` }]);
   w.clausula('1. DADOS DA SAÍDA');
@@ -130,11 +139,19 @@ async function documentoPdf(numero: number, emp: { nome: string; slug: string },
     ['Referente a', d.descricao],
     ['Categoria', ROTULO_CATEGORIA[d.categoria as CategoriaDespesa] ?? d.categoria],
     ['Pagamento', d.pagoEm ? `${br(d.pagoEm)}${d.forma ? ` · ${FORMA[d.forma] ?? d.forma}` : ''}` : `Não paga · vencimento ${br(d.vencimento)}`],
+    ['Origem do recurso', d.terceiro ? `Recurso de terceiro: ${d.terceiro.nome}${d.terceiro.documento ? ` (${d.terceiro.documento.length > 11 ? 'CNPJ' : 'CPF'} ${d.terceiro.documento})` : ''}` : 'Caixa do empreendimento'],
+    ...(d.terceiro ? [['Modalidade', (ROT_MOD[d.terceiro.modalidade] ?? d.terceiro.modalidade).replace(/^./, c => c.toUpperCase())], ['Finalidade do débito', d.terceiro.finalidade || d.descricao]] : []),
     ['Despesa no sistema', `n.º ${d.id}`],
   ], { pesos: [1, 3], size: 8.6 });
+  if (d.terceiro) {
+    w.clausula('2. DO SALDO DEVEDOR');
+    w.paragrafo([{ t: 'O pagamento acima ' }, { t: 'não saiu do caixa do empreendimento', b: true },
+      { t: `: foi ${fraseTerceiro(d.terceiro)}. Em consequência, o empreendimento ${emp.nome} passa a dever a ${d.terceiro.nome} ` },
+      { t: `R$ ${brl(valor)}`, b: true }, { t: ', valor que constará como saldo devedor na prestação de contas até a sua devolução, a ser descontada do saldo do empreendimento.' }]);
+  }
   if (d.observacao?.trim()) w.paragrafo(`Observações e dados do comprovante: ${d.observacao.trim().replace(/\n+/g, ' · ')}`);
-  w.clausula('2. CIÊNCIA');
-  w.paragrafo([{ t: 'A PROPRIETÁRIA declara ' }, { t: 'ter ciência desta saída de recursos', b: true },
+  w.clausula(d.terceiro ? '3. CIÊNCIA' : '2. CIÊNCIA');
+  w.paragrafo([{ t: 'A PROPRIETÁRIA declara ' }, { t: d.terceiro ? 'ter ciência desta saída de recursos e do saldo devedor dela decorrente' : 'ter ciência desta saída de recursos', b: true },
     { t: `${d.comprovanteUrl ? ', conferida com o comprovante anexo,' : ''} para registro na prestação de contas e no rateio das despesas do empreendimento. A ciência não substitui a conferência da prestação de contas mensal. Confirmação eletrônica com código enviado ao seu WhatsApp e manifesto de evidências (MP n.º 2.200-2/2001, art. 10; Lei n.º 14.063/2020).` }]);
   const doc = prop.documento ? (prop.documento.replace(/\D/g, '').length > 11 ? `CNPJ ${prop.documento}` : `CPF ${prop.documento}`) : undefined;
   w.assinaturas([{ papel: prop.empresa ? `PROPRIETÁRIA — ${prop.empresa}` : 'PROPRIETÁRIA', nome: prop.nome, doc, selo: o.selo }], { local: `Açailândia/MA, ${br(new Date((o.data ?? new Date()).getTime() - 3 * 3600_000).toISOString())}.` });

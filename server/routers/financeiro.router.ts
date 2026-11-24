@@ -12,7 +12,7 @@ import { condicoesDaLinha, r2 } from "../../shared/simulador";
 import { SITUACOES_VENDA, linhaFinanceira, temAcesso } from "../../shared/permissoes";
 import { pctComissaoCorretor } from "../permissoes";
 import { TRPCError } from "@trpc/server";
-import { CATEGORIAS_DESPESA, FORMAS_DESPESA } from "../../shared/despesas";
+import { CATEGORIAS_DESPESA, FORMAS_DESPESA, MODALIDADES_TERCEIRO } from "../../shared/despesas";
 
 /** Pedido da tabela de financiamento: lote, área ou valor (sem nada, a área padrão das condições) */
 const pedidoTabela = z.object({
@@ -45,6 +45,16 @@ const despesaZ = z.object({
   valor: z.number().positive().max(100_000_000),
   vencimento: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
   observacao: z.string().trim().max(2000).nullable().optional(),
+}).merge(z.object({
+  origemRecurso: z.enum(["caixa", "terceiro"]).nullable().optional(),
+  terceiroNome: z.string().trim().max(120).nullable().optional(),
+  terceiroDocumento: z.string().trim().max(20).nullable().optional(),
+  terceiroModalidade: z.enum(MODALIDADES_TERCEIRO).nullable().optional(),
+  terceiroFinalidade: z.string().trim().max(300).nullable().optional(),
+}));
+const origemZ = z.object({
+  origemRecurso: z.enum(["caixa", "terceiro"]), terceiroNome: z.string().trim().max(120).nullable().optional(), terceiroDocumento: z.string().trim().max(20).nullable().optional(),
+  terceiroModalidade: z.enum(MODALIDADES_TERCEIRO).nullable().optional(), terceiroFinalidade: z.string().trim().max(300).nullable().optional(),
 });
 
 const num = (v: unknown) => (v === null || v === undefined || v === "" ? null : Number(v));
@@ -208,6 +218,26 @@ export const financeiroRouter = router({
     const { pagarDespesa } = await import("../financeiro/despesas");
     const { id, ...p } = input;
     return comErroFin(() => pagarDespesa(id, p, ctx.user.id));
+  }),
+  /** Corrige de onde saiu o dinheiro (também numa despesa já paga) */
+  origemDespesa: protectedProcedure.input(origemZ.extend({ id: z.number().int() })).mutation(async ({ ctx, input }) => {
+    await operador(ctx);
+    const { definirOrigem } = await import("../financeiro/despesas");
+    const { id, ...o } = input;
+    return comErroFin(() => definirOrigem(id, o, ctx.user.id));
+  }),
+  /** O empreendimento devolveu ao terceiro o que ele bancou */
+  reembolsarDespesa: protectedProcedure.input(z.object({
+    id: z.number().int(), em: z.string().regex(/^\d{4}-\d{2}-\d{2}$/), valor: z.number().positive().max(100_000_000).nullable().optional(), forma: z.enum(FORMAS_DESPESA),
+  })).mutation(async ({ ctx, input }) => {
+    await operador(ctx);
+    const { registrarReembolso } = await import("../financeiro/despesas");
+    return comErroFin(() => registrarReembolso(input.id, input, ctx.user.id));
+  }),
+  desfazerReembolsoDespesa: protectedProcedure.input(z.object({ id: z.number().int() })).mutation(async ({ ctx, input }) => {
+    await operador(ctx);
+    const { desfazerReembolso } = await import("../financeiro/despesas");
+    return comErroFin(() => desfazerReembolso(input.id, ctx.user.id));
   }),
   reabrirDespesa: protectedProcedure.input(z.object({ id: z.number().int() })).mutation(async ({ ctx, input }) => {
     await operador(ctx);

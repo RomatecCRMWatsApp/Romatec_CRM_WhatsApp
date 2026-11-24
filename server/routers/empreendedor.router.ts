@@ -137,7 +137,25 @@ export const empreendedorRouter = router({
       situacao: x.situacao, pagoEm: x.pagoEm ? String(x.pagoEm).slice(0, 10) : null, valorPago: x.valorPago, formaPagamento: x.formaPagamento,
       ciencia: x.ciencia ? { status: x.ciencia.status as string, em: x.ciencia.em } : null,
     }));
-    return { ...fluxo, despesas, totaisDespesas: desp.totais };
+    // Saldo livre da proprietária: caixa − comissões de gestão já devidas − concessões a pagar − dívida com terceiros
+    const { comissoesDeGestao, saldoLivre } = await import("../financeiro/saldoProprietaria");
+    const { concessoesDaProprietaria } = await import("../financeiro/comissoesConcessao");
+    const hoje = hojeBrasil();
+    const [comissoes, conc] = await Promise.all([comissoesDeGestao(Number(emp.id), hoje), concessoesDaProprietaria(Number(emp.id))]);
+    const soma = (l: { valor: number }[]) => Math.round(l.reduce((t, x) => t + x.valor, 0) * 100) / 100;
+    const devidas = comissoes.filter(x => x.devida && (!x.data || x.data <= input.ate));
+    const programadas = comissoes.filter(x => !x.devida).sort((a, b) => String(a.data).localeCompare(String(b.data)));
+    const saldo = saldoLivre({ saldoCaixa: fluxo.saldoFinal, comissoesDevidas: soma(devidas), concessoesAPagar: Math.round((conc.resumo.aReceber + conc.resumo.atrasado) * 100) / 100, dividaTerceiros: fluxo.terceiros.emAberto });
+    return { ...fluxo, despesas: despesas.map(x => ({ ...x, origem: desp.linhas.find(l => l.id === x.id) })).map(({ origem, ...x }) => ({
+      ...x, terceiro: origem?.origemRecurso === "terceiro" ? { nome: origem.terceiroNome, modalidade: origem.rotuloModalidade, finalidade: origem.terceiroFinalidade, devolvidoEm: origem.reembolsadoEm } : null,
+    })), totaisDespesas: desp.totais, saldo, comissoes: { devidas, programadas, totalProgramado: soma(programadas) }, concessoes: conc };
+  }),
+
+  /** Comissão de gestão das concessões: o valor integral (5%) que a proprietária paga à gestora, e se já pagou */
+  concessoes: protectedProcedure.query(async ({ ctx }) => {
+    const { emp } = await contexto(ctx);
+    if (!emp) return { resumo: { aReceber: 0, atrasado: 0, recebido: 0 }, itens: [] };
+    return (await import("../financeiro/comissoesConcessao")).concessoesDaProprietaria(Number(emp.id));
   }),
 
   /** Artes liberadas do empreendimento (as bloqueadas — preço/condições — não aparecem) */

@@ -3,8 +3,8 @@ import { toast } from "sonner";
 import { trpc } from "@/lib/trpc";
 import { Button } from "@/components/ui/button";
 import { brl } from "@shared/simulador";
-import { CATEGORIAS_DESPESA, FORMAS_DESPESA, ROTULO_CATEGORIA, type CategoriaDespesa, type FormaDespesa } from "@shared/despesas";
-import { Ban, CheckCircle2, Download, FileText, Loader2, Paperclip, Pencil, Plus, RotateCcw, ScanText, ShieldCheck, X } from "lucide-react";
+import { CATEGORIAS_DESPESA, FORMAS_DESPESA, MODALIDADES_TERCEIRO, ROTULO_CATEGORIA, ROTULO_MODALIDADE, type CategoriaDespesa, type FormaDespesa, type ModalidadeTerceiro } from "@shared/despesas";
+import { Ban, CheckCircle2, Download, FileText, HandCoins, Loader2, Paperclip, Pencil, Plus, RotateCcw, ScanText, ShieldCheck, Undo2, X } from "lucide-react";
 
 const hoje = () => new Date(Date.now() - 3 * 3600_000).toISOString().slice(0, 10);
 const inicioMes = () => `${hoje().slice(0, 7)}-01`;
@@ -26,10 +26,49 @@ type Linha = {
   formaPagamento: string | null; grupo: string | null; parcela: string | null; comprovanteUrl: string | null; observacao: string | null;
   /** Ciência da proprietária: aguardando a confirmação dela no WhatsApp, ou confirmada */
   ciencia: { status: "aguardando" | "ciente"; em: string | null; id: number } | null;
+  origemRecurso: "caixa" | "terceiro"; terceiroNome: string | null; terceiroDocumento: string | null; terceiroModalidade: ModalidadeTerceiro | null;
+  rotuloModalidade: string | null; terceiroFinalidade: string | null; reembolsadoEm: string | null; reembolsoValor: number | null; reembolsoForma: string | null;
 };
+/** Quem costuma bancar as despesas do empreendimento (o campo continua livre) */
+const SUGESTOES_TERCEIRO = ["José Romário Pinto Bezerra", "Romatec Consultoria Total (J R P Bezerra Ltda)"];
 type Emp = { id: number; nome: string };
 
-const vazio = { id: 0, descricao: "", categoria: "obras" as CategoriaDespesa, empreendimentoId: "", fornecedor: "", valor: "", vencimento: hoje(), meses: "1", jaPaga: false, pagoEm: hoje(), forma: "PIX" as FormaDespesa, observacao: "" };
+const vazio = { id: 0, descricao: "", categoria: "obras" as CategoriaDespesa, empreendimentoId: "", fornecedor: "", valor: "", vencimento: hoje(), meses: "1", jaPaga: false, pagoEm: hoje(), forma: "PIX" as FormaDespesa, observacao: "",
+  origem: "caixa" as "caixa" | "terceiro", terceiroNome: "", terceiroDocumento: "", terceiroModalidade: "emprestimo" as ModalidadeTerceiro, terceiroFinalidade: "" };
+
+const origemDoForm = (f: typeof vazio) => (f.origem === "terceiro" && f.empreendimentoId
+  ? { origemRecurso: "terceiro" as const, terceiroNome: f.terceiroNome || null, terceiroDocumento: f.terceiroDocumento || null, terceiroModalidade: f.terceiroModalidade, terceiroFinalidade: f.terceiroFinalidade || null }
+  : { origemRecurso: "caixa" as const });
+
+/** De onde saiu o dinheiro: caixa do empreendimento ou terceiro (empréstimo, permuta…), que o empreendimento passa a dever */
+function CamposOrigem({ f, set }: { f: typeof vazio; set: (k: keyof typeof vazio) => (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => void }) {
+  const rot = "flex flex-col gap-1 text-xs text-muted-foreground";
+  return (
+    <fieldset className="space-y-2 rounded-lg border border-border p-3">
+      <legend className="px-1 text-xs font-semibold">De onde saiu o dinheiro?</legend>
+      <div className="flex flex-wrap gap-4 text-sm">
+        <label className="inline-flex items-center gap-2"><input type="radio" name="origem" value="caixa" checked={f.origem === "caixa"} onChange={set("origem")} /> Caixa do empreendimento</label>
+        <label className="inline-flex items-center gap-2"><input type="radio" name="origem" value="terceiro" checked={f.origem === "terceiro"} onChange={set("origem")} /> Recurso de terceiro</label>
+      </div>
+      {f.origem === "terceiro" && (
+        <>
+          <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+            <label className={`${rot} sm:col-span-2`}>Quem pagou (terceiro) *
+              <input required list="sugestoes-terceiro" maxLength={120} value={f.terceiroNome} onChange={set("terceiroNome")} className={campo} placeholder="Nome de quem bancou" />
+              <datalist id="sugestoes-terceiro">{SUGESTOES_TERCEIRO.map(n => <option key={n} value={n} />)}</datalist>
+            </label>
+            <label className={rot}>CPF/CNPJ do terceiro<input inputMode="numeric" maxLength={20} value={f.terceiroDocumento} onChange={set("terceiroDocumento")} className={campo} /></label>
+            <label className={rot}>Como foi *<select value={f.terceiroModalidade} onChange={set("terceiroModalidade")} className={campo}>{MODALIDADES_TERCEIRO.map(m => <option key={m} value={m}>{ROTULO_MODALIDADE[m]}</option>)}</select></label>
+            <label className={`${rot} sm:col-span-2 lg:col-span-4`}>Finalidade do débito
+              <input maxLength={300} value={f.terceiroFinalidade} onChange={set("terceiroFinalidade")} className={campo} placeholder="Ex.: pagar a abertura das ruas enquanto o caixa não tinha o valor" />
+            </label>
+          </div>
+          <p className="text-[11px] text-muted-foreground">Não sai do caixa do empreendimento: vira saldo devedor do empreendimento com esse terceiro até a devolução. Anexe o comprovante do pagamento feito da conta dele. Na ciência, a proprietária reconhece o débito.</p>
+        </>
+      )}
+    </fieldset>
+  );
+}
 
 /** Lançar ou editar (editar: só a despesa em aberto, sem recorrência nem pagamento) */
 function Formulario({ emps, inicial, onFechar }: { emps: Emp[]; inicial: typeof vazio; onFechar: (salvou: boolean) => void }) {
@@ -100,8 +139,9 @@ function Formulario({ emps, inicial, onFechar }: { emps: Emp[]; inicial: typeof 
     if (!(valor > 0)) { toast.error("Informe o valor"); return; }
     const base = {
       descricao: f.descricao, categoria: f.categoria, empreendimentoId: f.empreendimentoId ? Number(f.empreendimentoId) : null,
-      fornecedor: f.fornecedor || null, valor, vencimento: f.vencimento, observacao: f.observacao || null,
+      fornecedor: f.fornecedor || null, valor, vencimento: f.vencimento, observacao: f.observacao || null, ...origemDoForm(f),
     };
+    if (f.origem === "terceiro" && f.empreendimentoId && !f.terceiroNome.trim()) { toast.error("Informe quem pagou (o terceiro)"); return; }
     if (f.id) editar.mutate({ id: f.id, ...base });
     else lancar.mutate({ ...base, meses: Math.max(1, Number(f.meses) || 1), pagoEm: f.jaPaga ? f.pagoEm : null, formaPagamento: f.jaPaga ? f.forma : null });
   };
@@ -129,6 +169,7 @@ function Formulario({ emps, inicial, onFechar }: { emps: Emp[]; inicial: typeof 
         <label className={rot}>Vencimento *<input required type="date" value={f.vencimento} onChange={set("vencimento")} className={campo} /></label>
         {!f.id && <label className={rot}>Repetir todo mês por<span className="flex items-center gap-1"><input type="number" min={1} max={60} value={f.meses} onChange={set("meses")} className={`${campo} w-20`} /> mês(es)</span></label>}
       </div>
+      {f.empreendimentoId ? <CamposOrigem f={f} set={set} /> : null}
       {!f.id && (
         <div className="flex flex-wrap items-end gap-3">
           <label className="inline-flex items-center gap-2 text-sm"><input type="checkbox" checked={f.jaPaga} onChange={set("jaPaga")} /> Já paga{Number(f.meses) > 1 ? " (só a primeira)" : ""}</label>
@@ -168,7 +209,44 @@ function Pagar({ l, onFeito }: { l: Linha; onFeito: () => void }) {
   );
 }
 
+/** O empreendimento devolveu ao terceiro: sai do caixa nesta data */
+function Devolver({ l, onFeito }: { l: Linha; onFeito: () => void }) {
+  const [aberto, setAberto] = useState(false);
+  const [em, setEm] = useState(hoje());
+  const [valor, setValor] = useState((l.valorPago ?? l.valor).toFixed(2).replace(".", ","));
+  const [forma, setForma] = useState<FormaDespesa>("PIX");
+  const devolver = trpc.financeiro.reembolsarDespesa.useMutation({ onSuccess: r => { toast.success(`Devolução de ${brl(r.valor)} registrada: saiu do caixa do empreendimento`); setAberto(false); onFeito(); }, onError: e => toast.error(e.message) });
+  if (!aberto) return <Button size="sm" variant="outline" className="h-7 text-xs" title={`Registrar a devolução a ${l.terceiroNome}`} onClick={() => setAberto(true)}><HandCoins className="mr-1 h-3.5 w-3.5" /> Devolver</Button>;
+  return (
+    <div className="flex flex-wrap items-center gap-1">
+      <input type="date" max={hoje()} value={em} onChange={e => setEm(e.target.value)} className="h-7 rounded-md border border-border bg-background px-1 text-xs" />
+      <input inputMode="decimal" value={valor} onChange={e => setValor(e.target.value)} className="h-7 w-24 rounded-md border border-border bg-background px-1 text-xs" aria-label="Valor devolvido" />
+      <select value={forma} onChange={e => setForma(e.target.value as FormaDespesa)} className="h-7 rounded-md border border-border bg-background px-1 text-xs">{FORMAS_DESPESA.map(x => <option key={x} value={x}>{FORMA[x]}</option>)}</select>
+      <Button size="sm" className="h-7 text-xs" disabled={devolver.isPending} onClick={() => devolver.mutate({ id: l.id, em, valor: paraNumero(valor) || null, forma })}>OK</Button>
+      <button className="text-muted-foreground" onClick={() => setAberto(false)}><X className="h-3.5 w-3.5" /></button>
+    </div>
+  );
+}
+
+/** Corrige de onde saiu o dinheiro numa despesa já paga (caixa ↔ terceiro) */
+function OrigemRapida({ l, onFeito }: { l: Linha; onFeito: () => void }) {
+  const [f, setF] = useState<typeof vazio | null>(null);
+  const salvar = trpc.financeiro.origemDespesa.useMutation({ onSuccess: () => { toast.success("Origem do recurso atualizada. Se a proprietária já deu ciência, peça uma nova ciência."); setF(null); onFeito(); }, onError: e => toast.error(e.message) });
+  const set = (k: keyof typeof vazio) => (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => setF(x => (x ? { ...x, [k]: e.target.value } : x));
+  if (!f) return <Button size="sm" variant="ghost" className="h-7 text-xs" title="Caixa do empreendimento ou recurso de terceiro" onClick={() => setF({ ...vazio, empreendimentoId: String(l.empreendimentoId), origem: l.origemRecurso, terceiroNome: l.terceiroNome ?? "", terceiroDocumento: l.terceiroDocumento ?? "", terceiroModalidade: l.terceiroModalidade ?? "emprestimo", terceiroFinalidade: l.terceiroFinalidade ?? "" })}>Origem</Button>;
+  return (
+    <div className="w-full min-w-[320px] space-y-2 text-left">
+      <CamposOrigem f={f} set={set} />
+      <div className="flex gap-2">
+        <Button size="sm" className="h-7 text-xs" disabled={salvar.isPending} onClick={() => { const o = origemDoForm(f); if (o.origemRecurso === "terceiro" && !f.terceiroNome.trim()) { toast.error("Informe quem pagou"); return; } salvar.mutate({ id: l.id, ...o }); }}>Salvar origem</Button>
+        <Button size="sm" variant="ghost" className="h-7 text-xs" onClick={() => setF(null)}>Cancelar</Button>
+      </div>
+    </div>
+  );
+}
+
 function Acoes({ l, onFeito, onEditar }: { l: Linha; onFeito: () => void; onEditar: () => void }) {
+  const desfazerDev = trpc.financeiro.desfazerReembolsoDespesa.useMutation({ onSuccess: () => { toast.success("Devolução desfeita"); onFeito(); }, onError: e => toast.error(e.message) });
   const reabrir = trpc.financeiro.reabrirDespesa.useMutation({ onSuccess: () => { toast.success("Pagamento desfeito"); onFeito(); }, onError: e => toast.error(e.message) });
   const cancelar = trpc.financeiro.cancelarDespesa.useMutation({ onSuccess: r => { toast.success(`${r.canceladas} despesa(s) cancelada(s)`); onFeito(); }, onError: e => toast.error(e.message) });
   const comprovante = trpc.financeiro.comprovanteDespesa.useMutation({ onSuccess: () => { toast.success("Comprovante anexado"); onFeito(); }, onError: e => toast.error(e.message) });
@@ -206,6 +284,9 @@ function Acoes({ l, onFeito, onEditar }: { l: Linha; onFeito: () => void; onEdit
           {viaAssinada.isPending ? <Loader2 className="mr-1 h-3.5 w-3.5 animate-spin" /> : <ShieldCheck className="mr-1 h-3.5 w-3.5" />} Enviar via assinada
         </Button>
       )}
+      {l.origemRecurso === "terceiro" && l.status === "paga" && !l.reembolsadoEm && <Devolver l={l} onFeito={onFeito} />}
+      {l.reembolsadoEm && <Button size="sm" variant="ghost" className="h-7 text-xs" disabled={desfazerDev.isPending} onClick={() => confirm("Desfazer o registro da devolução ao terceiro?") && desfazerDev.mutate({ id: l.id })}><Undo2 className="mr-1 h-3.5 w-3.5" /> Desfazer devolução</Button>}
+      {l.status === "paga" && l.empreendimentoId != null && !l.reembolsadoEm && <OrigemRapida l={l} onFeito={onFeito} />}
       {l.status === "aberta" && <Pagar l={l} onFeito={onFeito} />}
       {l.status === "aberta" && <Button size="sm" variant="ghost" className="h-7 px-2" title="Editar" onClick={onEditar}><Pencil className="h-3.5 w-3.5" /></Button>}
       {l.status === "paga" && <Button size="sm" variant="ghost" className="h-7 text-xs" disabled={reabrir.isPending} onClick={() => confirm("Desfazer o pagamento desta despesa?") && reabrir.mutate({ id: l.id })}><RotateCcw className="mr-1 h-3.5 w-3.5" /> Desfazer</Button>}
@@ -240,7 +321,8 @@ export default function Despesas() {
   const utils = trpc.useUtils();
   const atualizar = () => { refetch(); utils.financeiro.fluxoCaixa.invalidate(); };
   const editar = (l: Linha) => setForm({ ...vazio, id: l.id, descricao: l.descricao, categoria: l.categoria, empreendimentoId: l.empreendimentoId ? String(l.empreendimentoId) : "",
-    fornecedor: l.fornecedor ?? "", valor: l.valor.toFixed(2).replace(".", ","), vencimento: l.vencimento, observacao: l.observacao ?? "" });
+    fornecedor: l.fornecedor ?? "", valor: l.valor.toFixed(2).replace(".", ","), vencimento: l.vencimento, observacao: l.observacao ?? "",
+    origem: l.origemRecurso, terceiroNome: l.terceiroNome ?? "", terceiroDocumento: l.terceiroDocumento ?? "", terceiroModalidade: l.terceiroModalidade ?? "emprestimo", terceiroFinalidade: l.terceiroFinalidade ?? "" });
   const planilha = `/api/financeiro/despesas.xlsx?${new URLSearchParams(Object.entries({ de, ate, empreendimentoId: emp, categoria, situacao }).filter(([, v]) => v)).toString()}`;
   return (
     <section className="space-y-3">
@@ -278,6 +360,17 @@ export default function Despesas() {
               <div key={r} className="rounded-xl border border-border bg-card p-3"><p className="text-xs text-muted-foreground">{r}</p><p className={`text-lg font-bold ${cor}`}>{r === "Lançamentos" ? v : brl(v as number)}</p></div>
             ))}
           </div>
+          {data.terceiros.porTerceiro.length > 0 && (
+            <div className="rounded-xl border border-warn-500/40 bg-warn-500/5 p-3">
+              <p className="flex items-center gap-2 text-sm font-semibold"><HandCoins className="h-4 w-4 text-warn-300" /> Dívida do empreendimento com terceiros <span className="font-normal text-muted-foreground">(neste filtro)</span></p>
+              {data.terceiros.porTerceiro.map(t => (
+                <p key={t.terceiro} className="flex flex-wrap justify-between gap-2 border-t border-border/50 py-1.5 text-sm first:border-0">
+                  <span>{t.terceiro}</span>
+                  <span className="tabular-nums text-xs text-muted-foreground">bancou {brl(t.bancado)} · devolvido {brl(t.devolvido)} · <b className="text-sm text-warn-300">em aberto {brl(t.emAberto)}</b></span>
+                </p>
+              ))}
+            </div>
+          )}
           {!data.linhas.length ? <p className="rounded-xl border border-dashed border-border p-4 text-sm text-muted-foreground">Nenhuma despesa neste filtro.</p> : (
             <div className="overflow-x-auto rounded-xl border border-border bg-card">
               <table className="w-full min-w-[900px] text-sm">
@@ -291,6 +384,12 @@ export default function Despesas() {
                       <td className="p-2">
                         <p className="font-medium">{l.descricao}{l.parcela && <span className="ml-1 text-xs text-muted-foreground">({l.parcela})</span>}</p>
                         <p className="text-[11px] text-muted-foreground">{[l.empreendimento ?? "Escritório", l.fornecedor].filter(Boolean).join(" · ")}</p>
+                        {l.origemRecurso === "terceiro" && (
+                          <p className="mt-0.5 inline-flex flex-wrap items-center gap-1 rounded bg-warn-500/10 px-1.5 py-0.5 text-[11px] text-warn-300">
+                            <HandCoins className="h-3 w-3" /> {l.rotuloModalidade ?? "Recurso de terceiro"} de {l.terceiroNome}{l.terceiroFinalidade ? ` · ${l.terceiroFinalidade}` : ""}
+                            {l.reembolsadoEm ? <span className="text-ok-300"> · devolvido em {br(l.reembolsadoEm)}{l.reembolsoValor != null ? ` (${brl(l.reembolsoValor)})` : ""}</span> : l.status === "paga" ? <b> · em aberto</b> : null}
+                          </p>
+                        )}
                         {l.observacao && <p className="whitespace-pre-line text-[11px] text-muted-foreground">{l.observacao}</p>}
                       </td>
                       <td className="p-2 text-xs">{l.rotuloCategoria}</td>

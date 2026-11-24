@@ -46,6 +46,18 @@ export default function FluxoCaixa() {
               <div key={r} className="rounded-xl border border-border bg-card p-3"><p className="text-xs text-muted-foreground">{r}</p><p className={`text-lg font-bold ${c}`}>{brl(v)}</p></div>
             ))}
           </div>
+          {(data.bancadoNoPeriodo > 0 || data.terceiros.porTerceiro.length > 0) && (
+            <div className="rounded-xl border border-warn-500/40 bg-warn-500/5 p-3">
+              <h3 className="mb-1 text-sm font-semibold">Recursos de terceiros (não saíram do caixa)</h3>
+              <p className="text-xs text-muted-foreground">Bancado por terceiros no período: {brl(data.bancadoNoPeriodo)} · dívida em aberto no fim do período: <b className="text-warn-300">{brl(data.terceiros.emAberto)}</b>. A devolução entra como saída na data em que for paga.</p>
+              {data.terceiros.porTerceiro.map(t => (
+                <p key={t.terceiro} className="flex flex-wrap justify-between gap-2 border-t border-border/50 py-1.5 text-sm first:border-0">
+                  <span>{t.terceiro}</span>
+                  <span className="text-xs text-muted-foreground">bancou {brl(t.bancado)} · devolvido {brl(t.devolvido)} · <b className="text-sm text-warn-300">em aberto {brl(t.emAberto)}</b></span>
+                </p>
+              ))}
+            </div>
+          )}
           <div className="rounded-xl border border-border bg-card p-3">
             <h3 className="mb-2 text-sm font-semibold">Movimento</h3>
             {!data.serie.length ? <p className="text-xs text-muted-foreground">Nenhuma entrada ou saída no período.</p> : (

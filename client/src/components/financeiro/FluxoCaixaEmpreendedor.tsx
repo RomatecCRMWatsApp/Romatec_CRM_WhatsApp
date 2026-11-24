@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { CheckCircle2, Clock, FileText } from "lucide-react";
+import { CheckCircle2, Clock, FileText, Gift, HandCoins, Scale } from "lucide-react";
 import { trpc } from "@/lib/trpc";
 import { brl } from "@shared/simulador";
 
@@ -39,6 +39,18 @@ export default function FluxoCaixaEmpreendedor() {
       {data === null && <p className="text-sm text-muted-foreground">Sem empreendimento definido no seu acesso.</p>}
       {data && (
         <>
+          <div className="rounded-xl border border-primary/40 bg-primary/5 p-4">
+            <p className="flex items-center gap-2 text-sm font-semibold"><Scale className="h-4 w-4 text-primary" /> Seu saldo no empreendimento em {dataBr(data.ate)}</p>
+            <p className={`mt-1 text-2xl font-bold tabular-nums ${cor(data.saldo.saldo)}`}>{brl(data.saldo.saldo)}</p>
+            <div className="mt-2 grid gap-1 text-sm sm:grid-cols-2">
+              <p className="flex justify-between gap-2"><span className="text-muted-foreground">Em caixa (entradas − saídas)</span><span className="tabular-nums">{brl(data.saldo.saldoCaixa)}</span></p>
+              <p className="flex justify-between gap-2"><span className="text-muted-foreground">Comissões de gestão já devidas</span><span className="tabular-nums text-danger-300">− {brl(data.saldo.comissoesDevidas)}</span></p>
+              <p className="flex justify-between gap-2"><span className="text-muted-foreground">Comissões das concessões a pagar</span><span className="tabular-nums text-danger-300">− {brl(data.saldo.concessoesAPagar)}</span></p>
+              <p className="flex justify-between gap-2"><span className="text-muted-foreground">A devolver a quem bancou despesas</span><span className="tabular-nums text-danger-300">− {brl(data.saldo.dividaTerceiros)}</span></p>
+            </div>
+            {data.comissoes.totalProgramado > 0 && <p className="mt-2 text-xs text-muted-foreground">Ainda programado: {brl(data.comissoes.totalProgramado)} de comissões de gestão, que vencem conforme os compradores pagarem as parcelas.</p>}
+          </div>
+
           <div className="grid grid-cols-2 gap-3 lg:grid-cols-5">
             {([["Saldo antes do período", data.saldoInicial, cor(data.saldoInicial)], ["Entradas", data.totalEntradas, "text-ok-300"], ["Saídas", data.totalSaidas, "text-danger-300"],
               ["Resultado do período", data.resultado, cor(data.resultado)], ["Saldo no fim", data.saldoFinal, cor(data.saldoFinal)]] as const).map(([r, v, c]) => (
@@ -89,7 +101,9 @@ export default function FluxoCaixaEmpreendedor() {
                       return (
                         <tr key={x.id} className="border-b border-border/40">
                           <td className="px-2 py-1.5 font-mono">{dataBr(x.vencimento)}</td>
-                          <td className="px-2 py-1.5">{x.descricao}{x.fornecedor ? <span className="text-muted-foreground"> · {x.fornecedor}</span> : null}</td>
+                          <td className="px-2 py-1.5">{x.descricao}{x.fornecedor ? <span className="text-muted-foreground"> · {x.fornecedor}</span> : null}
+                            {x.terceiro && <span className="mt-0.5 block text-[11px] text-warn-300">{x.terceiro.modalidade ?? "Recurso de terceiro"} de {x.terceiro.nome}{x.terceiro.devolvidoEm ? ` · devolvido em ${dataBr(x.terceiro.devolvidoEm)}` : " · a devolver (não saiu do caixa)"}</span>}
+                          </td>
                           <td className="px-2 py-1.5">{x.categoria}</td>
                           <td className="px-2 py-1.5 tabular-nums">{brl(x.valorPago ?? x.valor)}</td>
                           <td className="px-2 py-1.5"><span className={`rounded-full px-2 py-0.5 ${c}`}>{r}{x.pagoEm ? ` em ${dataBr(x.pagoEm)}` : ""}</span></td>
@@ -109,6 +123,45 @@ export default function FluxoCaixaEmpreendedor() {
               </div>
             )}
           </div>
+
+          {data.concessoes.itens.length > 0 && (
+            <div className="rounded-xl border border-info-500/40 bg-info-500/5 p-3">
+              <h3 className="mb-1 flex items-center gap-2 text-sm font-semibold"><Gift className="h-4 w-4 text-info-300" /> Comissão das concessões (5%) a pagar à Romatec</h3>
+              {data.concessoes.itens.map(i => (
+                <p key={i.contratoId} className="flex flex-wrap justify-between gap-2 border-t border-border/50 py-1.5 text-sm first:border-0">
+                  <span>{i.lote} · {i.beneficiario}</span>
+                  <span className="tabular-nums"><b>{brl(i.valor)}</b> <span className={`text-xs ${i.situacao === "recebida" ? "text-ok-300" : i.situacao === "atrasada" ? "text-danger-300" : "text-muted-foreground"}`}>
+                    {i.situacao === "recebida" ? `paga${i.recebidoEm ? ` em ${dataBr(i.recebidoEm)}` : ""}` : `${i.situacao === "atrasada" ? "atrasada · " : ""}vence ${dataBr(i.vencimento)}`}</span></span>
+                </p>
+              ))}
+            </div>
+          )}
+
+          {(data.comissoes.devidas.length > 0 || data.comissoes.programadas.length > 0) && (
+            <div className="rounded-xl border border-border bg-card p-3">
+              <h3 className="mb-1 text-sm font-semibold">Comissões de gestão das vendas (5%)</h3>
+              <div className="max-h-[260px] overflow-auto text-sm">
+                {[...data.comissoes.devidas, ...data.comissoes.programadas].map((c, k) => (
+                  <p key={`${c.contrato}-${c.quando}-${k}`} className="flex flex-wrap justify-between gap-2 border-t border-border/50 py-1.5 first:border-0">
+                    <span>{c.lote} · {c.quando}</span>
+                    <span className="tabular-nums"><b>{brl(c.valor)}</b> <span className={`text-xs ${c.devida ? "text-warn-300" : "text-muted-foreground"}`}>{c.devida ? `devida (cliente pagou em ${dataBr(c.data)})` : `programada${c.data ? ` para ${dataBr(c.data)}` : ""}`}</span></span>
+                  </p>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {data.terceiros.porTerceiro.length > 0 && (
+            <div className="rounded-xl border border-warn-500/40 bg-warn-500/5 p-3">
+              <h3 className="mb-1 flex items-center gap-2 text-sm font-semibold"><HandCoins className="h-4 w-4 text-warn-300" /> Despesas bancadas por terceiros (a devolver)</h3>
+              {data.terceiros.porTerceiro.map(t => (
+                <p key={t.terceiro} className="flex flex-wrap justify-between gap-2 border-t border-border/50 py-1.5 text-sm first:border-0">
+                  <span>{t.terceiro}</span>
+                  <span className="tabular-nums text-xs text-muted-foreground">bancou {brl(t.bancado)} · devolvido {brl(t.devolvido)} · <b className="text-sm text-warn-300">em aberto {brl(t.emAberto)}</b></span>
+                </p>
+              ))}
+            </div>
+          )}
 
           {!!data.previsao.length && (
             <div className="rounded-xl border border-border bg-card p-3">

@@ -6,7 +6,7 @@ import { and, eq, gte } from 'drizzle-orm';
 import { randomBytes } from 'crypto';
 import { getDb } from '../db';
 import { empreendimentos, financeiroDespesas } from '../../drizzle/schema';
-import { CATEGORIAS_DESPESA, FORMAS_DESPESA, ROTULO_CATEGORIA, situacaoDespesa, vencimentosRecorrentes, type CategoriaDespesa } from '../../shared/despesas';
+import { CATEGORIAS_DESPESA, FORMAS_DESPESA, MODALIDADES_TERCEIRO, ROTULO_CATEGORIA, ROTULO_MODALIDADE, resumoTerceiros, situacaoDespesa, vencimentosRecorrentes, type CategoriaDespesa, type ModalidadeTerceiro } from '../../shared/despesas';
 import { auditar, FinanceiroErro } from './servico';
 
 const hojeBrasil = () => new Date(Date.now() - 3 * 3600_000).toISOString().slice(0, 10);
@@ -14,11 +14,29 @@ const centavos = (v: number) => Math.round(v * 100) / 100;
 const DATA = /^\d{4}-\d{2}-\d{2}$/;
 const banco = async () => { const d = await getDb(); if (!d) throw new FinanceiroErro('DB', 'Banco indisponível', 503); return d as any; };
 
-export interface NovaDespesa {
+export type NovaDespesa = {
   empreendimentoId?: number | null; descricao: string; categoria: CategoriaDespesa; fornecedor?: string | null; valor: number;
   vencimento: string; meses?: number; observacao?: string | null;
   /** Já paga no lançamento (só a primeira, se recorrente) */
   pagoEm?: string | null; formaPagamento?: string | null;
+} & OrigemDespesa;
+
+/** De onde saiu o dinheiro. Terceiro: quem pagou, como (empréstimo, permuta…) e para quê — vira dívida do empreendimento */
+export interface OrigemDespesa {
+  origemRecurso?: 'caixa' | 'terceiro' | null; terceiroNome?: string | null; terceiroDocumento?: string | null;
+  terceiroModalidade?: ModalidadeTerceiro | null; terceiroFinalidade?: string | null;
+}
+
+function camposOrigem(p: OrigemDespesa & { empreendimentoId?: number | null }) {
+  if (p.origemRecurso !== 'terceiro') return { origemRecurso: 'caixa', terceiroNome: null, terceiroDocumento: null, terceiroModalidade: null, terceiroFinalidade: null };
+  if (!p.empreendimentoId) throw new FinanceiroErro('ORIGEM', 'Recurso de terceiro é para despesa de um empreendimento (é ele que passa a dever)', 400);
+  if (!p.terceiroNome?.trim()) throw new FinanceiroErro('TERCEIRO', 'Informe quem pagou (o terceiro)', 400);
+  const modalidade = p.terceiroModalidade ?? 'emprestimo';
+  if (!(MODALIDADES_TERCEIRO as readonly string[]).includes(modalidade)) throw new FinanceiroErro('MODALIDADE', 'Modalidade inválida', 400);
+  return {
+    origemRecurso: 'terceiro', terceiroNome: p.terceiroNome.trim().slice(0, 120), terceiroDocumento: (p.terceiroDocumento ?? '').replace(/\D/g, '').slice(0, 20) || null,
+    terceiroModalidade: modalidade, terceiroFinalidade: p.terceiroFinalidade?.trim().slice(0, 300) || null,
+  };
 }
 
 function validar(p: NovaDespesa) {
@@ -34,6 +52,7 @@ function validar(p: NovaDespesa) {
 /** Lança a despesa; recorrente = uma linha por mês (mesmo dia), ligadas pelo grupo */
 export async function lancarDespesa(p: NovaDespesa, autorId: number) {
   validar(p);
+  const origem = camposOrigem(p);
   const d = await banco();
   const meses = p.meses ?? 1;
   const vencs = vencimentosRecorrentes(p.vencimento, meses);
@@ -46,7 +65,7 @@ export async function lancarDespesa(p: NovaDespesa, autorId: number) {
       empreendimentoId: p.empreendimentoId ?? null, descricao: p.descricao.trim().slice(0, 200), categoria: p.categoria, fornecedor: p.fornecedor?.trim() || null,
       valor: centavos(p.valor).toFixed(2), vencimento: vencs[i], status: paga ? 'paga' : 'aberta', pagoEm: paga ? p.pagoEm : null,
       valorPago: paga ? centavos(p.valor).toFixed(2) : null, formaPagamento: paga ? (p.formaPagamento || 'PIX') : null,
-      grupo, parcela: grupo ? `${i + 1}/${vencs.length}` : null, observacao: p.observacao?.trim() || null, criadoPor: autorId, createdAt: agora, updatedAt: agora,
+      grupo, parcela: grupo ? `${i + 1}/${vencs.length}` : null, observacao: p.observacao?.trim() || null, criadoPor: autorId, createdAt: agora, updatedAt: agora, ...origem,
     } as any);
     const id = Number(r?.[0]?.insertId ?? r?.lastInsertRowid ?? 0);
     if (id) ids.push(id);
@@ -69,7 +88,7 @@ export async function editarDespesa(id: number, p: Omit<NovaDespesa, 'meses' | '
   if (x.status !== 'aberta') throw new FinanceiroErro('STATUS', x.status === 'paga' ? 'Despesa paga: desfaça o pagamento para editar' : 'Despesa cancelada não pode ser editada', 409);
   await d.update(financeiroDespesas).set({
     empreendimentoId: p.empreendimentoId ?? null, descricao: p.descricao.trim().slice(0, 200), categoria: p.categoria, fornecedor: p.fornecedor?.trim() || null,
-    valor: centavos(p.valor).toFixed(2), vencimento: p.vencimento, observacao: p.observacao?.trim() || null, updatedAt: new Date(),
+    valor: centavos(p.valor).toFixed(2), vencimento: p.vencimento, observacao: p.observacao?.trim() || null, updatedAt: new Date(), ...camposOrigem(p),
   } as any).where(eq(financeiroDespesas.id, id));
   await auditar('despesa_editada', { usuarioId: autorId, origem: 'perfil', detalhe: { id, antes: { valor: Number(x.valor), vencimento: x.vencimento }, depois: { valor: p.valor, vencimento: p.vencimento } } });
   return { success: true };
@@ -143,6 +162,9 @@ export async function listarDespesas(f: FiltroDespesas = {}, hoje = hojeBrasil()
       situacao: situacaoDespesa({ status: x.status, vencimento: x.vencimento }, hoje), pagoEm: x.pagoEm ?? null,
       valorPago: x.valorPago == null ? null : Number(x.valorPago), formaPagamento: x.formaPagamento ?? null, grupo: x.grupo ?? null, parcela: x.parcela ?? null,
       comprovanteUrl: x.comprovanteUrl ?? null, observacao: x.observacao ?? null,
+      origemRecurso: (x.origemRecurso === 'terceiro' ? 'terceiro' : 'caixa') as 'caixa' | 'terceiro', terceiroNome: x.terceiroNome ?? null, terceiroDocumento: x.terceiroDocumento ?? null,
+      terceiroModalidade: (x.terceiroModalidade ?? null) as ModalidadeTerceiro | null, rotuloModalidade: x.terceiroModalidade ? ROTULO_MODALIDADE[x.terceiroModalidade as ModalidadeTerceiro] ?? x.terceiroModalidade : null,
+      terceiroFinalidade: x.terceiroFinalidade ?? null, reembolsadoEm: x.reembolsadoEm ?? null, reembolsoValor: x.reembolsoValor == null ? null : Number(x.reembolsoValor), reembolsoForma: x.reembolsoForma ?? null,
     }))
     .filter(x => !f.situacao || f.situacao === 'todas' || x.situacao === f.situacao)
     .sort((a, b) => a.vencimento.localeCompare(b.vencimento) || a.id - b.id);
@@ -159,7 +181,42 @@ export async function listarDespesas(f: FiltroDespesas = {}, hoje = hojeBrasil()
       pago: soma(linhas.filter(x => x.situacao === 'paga'), 'valorPago'), quantidade: linhas.filter(x => x.status !== 'cancelada').length,
     },
     porCategoria: Array.from(porCategoria.entries()).map(([categoria, valor]) => ({ categoria, valor })).sort((a, b) => b.valor - a.valor),
+    terceiros: resumoTerceiros(linhas),
   };
+}
+
+/** Corrige a origem do recurso de uma despesa (também paga): caixa ↔ terceiro, com quem pagou, modalidade e finalidade */
+export async function definirOrigem(id: number, o: OrigemDespesa, autorId: number) {
+  const { d, x } = await despesa(id);
+  if (x.status === 'cancelada') throw new FinanceiroErro('STATUS', 'Despesa cancelada', 409);
+  if (x.reembolsadoEm && o.origemRecurso !== 'terceiro') throw new FinanceiroErro('STATUS', 'Desfaça a devolução ao terceiro antes de mudar a origem', 409);
+  const campos = camposOrigem({ ...o, empreendimentoId: x.empreendimentoId });
+  await d.update(financeiroDespesas).set({ ...campos, updatedAt: new Date() } as any).where(eq(financeiroDespesas.id, id));
+  await auditar('despesa_origem', { usuarioId: autorId, origem: 'perfil', detalhe: { id, antes: { origem: x.origemRecurso ?? 'caixa', terceiro: x.terceiroNome ?? null }, depois: campos } });
+  return { success: true };
+}
+
+/** O empreendimento devolveu ao terceiro o que ele bancou (sai do caixa do empreendimento nesta data) */
+export async function registrarReembolso(id: number, r: { em: string; valor?: number | null; forma: string }, autorId: number, hoje = hojeBrasil()) {
+  const { d, x } = await despesa(id);
+  if (x.origemRecurso !== 'terceiro') throw new FinanceiroErro('ORIGEM', 'Esta despesa saiu do caixa: não há o que devolver', 409);
+  if (x.status !== 'paga') throw new FinanceiroErro('STATUS', 'A despesa ainda não foi paga pelo terceiro', 409);
+  if (x.reembolsadoEm) throw new FinanceiroErro('STATUS', 'Devolução já registrada', 409);
+  if (!DATA.test(r.em) || r.em > hoje) throw new FinanceiroErro('DATA', 'Data da devolução inválida', 400);
+  if (!(FORMAS_DESPESA as readonly string[]).includes(r.forma)) throw new FinanceiroErro('FORMA', 'Forma inválida', 400);
+  const valor = centavos(r.valor ?? Number(x.valorPago ?? x.valor));
+  if (!(valor > 0)) throw new FinanceiroErro('VALOR', 'Valor inválido', 400);
+  await d.update(financeiroDespesas).set({ reembolsadoEm: r.em, reembolsoValor: valor.toFixed(2), reembolsoForma: r.forma, updatedAt: new Date() } as any).where(eq(financeiroDespesas.id, id));
+  await auditar('despesa_reembolso', { usuarioId: autorId, origem: 'perfil', detalhe: { id, terceiro: x.terceiroNome, valor, em: r.em } });
+  return { success: true, valor };
+}
+
+export async function desfazerReembolso(id: number, autorId: number) {
+  const { d, x } = await despesa(id);
+  if (!x.reembolsadoEm) throw new FinanceiroErro('STATUS', 'Não há devolução registrada', 409);
+  await d.update(financeiroDespesas).set({ reembolsadoEm: null, reembolsoValor: null, reembolsoForma: null, updatedAt: new Date() } as any).where(eq(financeiroDespesas.id, id));
+  await auditar('despesa_reembolso_desfeito', { usuarioId: autorId, origem: 'perfil', detalhe: { id } });
+  return { success: true };
 }
 
 /** Planilha das despesas filtradas */

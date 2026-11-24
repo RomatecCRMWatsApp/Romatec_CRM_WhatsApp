@@ -157,7 +157,19 @@ export async function fluxoCaixa(de: string, ate: string, agrupar: 'dia' | 'mes'
     .filter(x => empreendimentoId == null || (empreendimentoId === 0 ? x.empreendimentoId == null : Number(x.empreendimentoId) === empreendimentoId));
 
   const pagas = cobs.filter(x => x.status === 'paga' && x.pagoEm).map(x => ({ data: String(x.pagoEm).slice(0, 10), valor: Number(x.valorPago ?? x.valor), forma: String(x.formaPagamento ?? 'BOLETO') }));
-  const saidas = despesas.filter(x => x.status === 'paga' && x.pagoEm).map(x => ({ data: String(x.pagoEm).slice(0, 10), valor: Number(x.valorPago ?? x.valor), categoria: String(x.categoria) }));
+  // Só sai do caixa o que o empreendimento pagou; despesa bancada por terceiro vira dívida e sai do caixa quando for devolvida
+  const doCaixa = (x: any) => x.origemRecurso !== 'terceiro';
+  const saidas = [
+    ...despesas.filter(x => x.status === 'paga' && x.pagoEm && doCaixa(x)).map(x => ({ data: String(x.pagoEm).slice(0, 10), valor: Number(x.valorPago ?? x.valor), categoria: String(x.categoria) })),
+    ...despesas.filter(x => x.status === 'paga' && !doCaixa(x) && x.reembolsadoEm).map(x => ({ data: String(x.reembolsadoEm).slice(0, 10), valor: Number(x.reembolsoValor ?? x.valorPago ?? x.valor), categoria: 'devolucao_terceiro' })),
+  ];
+  const { resumoTerceiros } = await import('../../shared/despesas');
+  const terceiros = resumoTerceiros(despesas.filter(x => !x.pagoEm || String(x.pagoEm).slice(0, 10) <= ate).map(x => ({
+    status: x.status, origemRecurso: x.origemRecurso, terceiroNome: x.terceiroNome, valor: Number(x.valor), valorPago: x.valorPago == null ? null : Number(x.valorPago),
+    reembolsadoEm: x.reembolsadoEm && String(x.reembolsadoEm) <= ate ? x.reembolsadoEm : null, reembolsoValor: x.reembolsoValor == null ? null : Number(x.reembolsoValor),
+  })));
+  const bancadoNoPeriodo = centavos(despesas.filter(x => x.status === 'paga' && !doCaixa(x) && x.pagoEm && String(x.pagoEm).slice(0, 10) >= de && String(x.pagoEm).slice(0, 10) <= ate)
+    .reduce((t, x) => t + Number(x.valorPago ?? x.valor), 0));
   const chave = (dt: string) => (agrupar === 'mes' ? dt.slice(0, 7) : dt);
   const somar = (l: { valor: number }[]) => centavos(l.reduce((s, p) => s + p.valor, 0));
   const saldoInicial = centavos(somar(pagas.filter(p => p.data < de)) - somar(saidas.filter(p => p.data < de)));
@@ -177,7 +189,7 @@ export async function fluxoCaixa(de: string, ate: string, agrupar: 'dia' | 'mes'
   for (const p of periodo) porForma.set(p.forma, centavos((porForma.get(p.forma) ?? 0) + p.valor));
   const porCategoria = new Map<string, number>();
   for (const p of saidasPeriodo) {
-    const r = ROTULO_CATEGORIA[p.categoria as keyof typeof ROTULO_CATEGORIA] ?? p.categoria;
+    const r = p.categoria === 'devolucao_terceiro' ? 'Devolução a terceiros (empréstimos)' : ROTULO_CATEGORIA[p.categoria as keyof typeof ROTULO_CATEGORIA] ?? p.categoria;
     porCategoria.set(r, centavos((porCategoria.get(r) ?? 0) + p.valor));
   }
   // Previsão: a receber (parcelas em aberto) e a pagar (despesas em aberto) por mês; as já vencidas em "ATRASADO"
@@ -185,11 +197,13 @@ export async function fluxoCaixa(de: string, ate: string, agrupar: 'dia' | 'mes'
   const mes = (v: string) => (v < hoje ? 'ATRASADO' : v.slice(0, 7));
   const prev = (k: string) => previsto.get(k) ?? (previsto.set(k, { valor: 0, pagar: 0 }), previsto.get(k)!);
   for (const x of cobs.filter(c => ABERTAS.includes(c.status))) { const p = prev(mes(String(x.vencimento).slice(0, 10))); p.valor = centavos(p.valor + Number(x.valor)); }
-  for (const x of despesas.filter(y => y.status === 'aberta')) { const p = prev(mes(String(x.vencimento))); p.pagar = centavos(p.pagar + Number(x.valor)); }
+  for (const x of despesas.filter(y => y.status === 'aberta' && doCaixa(y))) { const p = prev(mes(String(x.vencimento))); p.pagar = centavos(p.pagar + Number(x.valor)); }
   const totalEntradas = somar(periodo);
   const totalSaidas = somar(saidasPeriodo);
   return {
     de, ate, agrupar, empreendimentoId, saldoInicial, totalEntradas, totalSaidas, resultado: centavos(totalEntradas - totalSaidas), saldoFinal: acumulado, serie,
+    /** Bancado por terceiros (não saiu do caixa): no período e a dívida em aberto até o fim do período */
+    bancadoNoPeriodo, terceiros,
     porForma: Array.from(porForma.entries()).map(([forma, valor]) => ({ forma, valor })).sort((a, b) => b.valor - a.valor),
     porCategoria: Array.from(porCategoria.entries()).map(([categoria, valor]) => ({ categoria, valor })).sort((a, b) => b.valor - a.valor),
     // valor = a receber (nome mantido); pagar = despesas em aberto; liquido = valor − pagar

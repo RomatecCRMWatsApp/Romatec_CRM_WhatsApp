@@ -3,6 +3,21 @@
 Cada versão nova vai no TOPO. Depois rode `npm run release` (valida e atualiza o package.json);
 ao subir, o servidor grava a versão no banco e todos recebem o aviso "Novidades da versão".
 
+## 1.201.0 — 2026-11-24
+tipo: minor
+obrigatoria: nao
+titulo: Despesa bancada por terceiro (empréstimo), saldo da proprietária e divisão da comissão
+publico: todos
+
+### Novo
+- Despesas: "De onde saiu o dinheiro?" — caixa do empreendimento ou recurso de terceiro. No recurso de terceiro informe quem pagou, CPF/CNPJ, como foi (empréstimo, permuta, adiantamento ou outro) e a finalidade do débito, e anexe o comprovante do pagamento feito da conta dele.
+- Recurso de terceiro não sai do caixa: vira saldo devedor do empreendimento com quem pagou. O botão "Devolver" registra a devolução, que sai do caixa na data. O quadro "Dívida do empreendimento com terceiros" mostra quanto cada um bancou, quanto foi devolvido e o que está em aberto.
+- O botão "Origem" corrige de onde saiu o dinheiro numa despesa já paga.
+- A ciência da proprietária, nessas despesas, vira "Comunicação de saída e reconhecimento de débito": ela confirma a saída e o saldo devedor, com a mesma assinatura por código no WhatsApp.
+- Fluxo de caixa: as despesas bancadas por terceiros aparecem à parte, com a dívida em aberto; a devolução entra como saída.
+- Portal do empreendedor: "Seu saldo no empreendimento" = caixa menos as comissões de gestão já devidas, as comissões das concessões a pagar e o que deve a quem bancou despesas. Mostra também a comissão integral das concessões (5%), as comissões das vendas devidas e programadas e as despesas bancadas por terceiros.
+- Financeiro › Comissões (administrador e secretária): cada concessão mostra a divisão dos 5% — 3% do escritório e 2% para repassar ao corretor; quando o corretor é do escritório, o valor é integral do escritório. Corretor não vê essa informação.
+
 ## 1.200.0 — 2026-11-24
 tipo: minor
 obrigatoria: nao

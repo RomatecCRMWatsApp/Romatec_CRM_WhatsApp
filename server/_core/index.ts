@@ -1648,6 +1648,8 @@ async function startServer() {
     await addRetomadas();
     const { addDespesaCiencias } = await import('./migrations/addDespesaCiencias');
     await addDespesaCiencias();
+    const { addOrigemDespesa } = await import('./migrations/addOrigemDespesa');
+    await addOrigemDespesa();
     const { textosRoboV2 } = await import('./migrations/textosRoboV2');
     await textosRoboV2();
     const { addReunioes } = await import('./migrations/addReunioes');

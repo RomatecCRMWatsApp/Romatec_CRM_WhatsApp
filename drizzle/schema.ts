@@ -841,6 +841,17 @@ export const financeiroDespesas = mysqlTable("financeiroDespesas", {
   grupo: varchar("grupo", { length: 24 }),
   parcela: varchar("parcela", { length: 10 }),
   comprovanteUrl: varchar("comprovanteUrl", { length: 500 }),
+  /** De onde saiu o dinheiro: caixa do empreendimento ou terceiro (empréstimo que o empreendimento passa a dever) */
+  origemRecurso: varchar("origemRecurso", { length: 12 }).default("caixa").notNull(),
+  terceiroNome: varchar("terceiroNome", { length: 120 }),
+  terceiroDocumento: varchar("terceiroDocumento", { length: 20 }),
+  /** emprestimo | permuta | adiantamento | outro — e a finalidade do débito */
+  terceiroModalidade: varchar("terceiroModalidade", { length: 15 }),
+  terceiroFinalidade: varchar("terceiroFinalidade", { length: 300 }),
+  /** Devolução ao terceiro (sai do caixa do empreendimento nesta data) */
+  reembolsadoEm: varchar("reembolsadoEm", { length: 10 }),
+  reembolsoValor: decimal("reembolsoValor", { precision: 12, scale: 2 }),
+  reembolsoForma: varchar("reembolsoForma", { length: 20 }),
   observacao: text("observacao"),
   criadoPor: int("criadoPor"),
   createdAt: timestamp("createdAt").defaultNow().notNull(),

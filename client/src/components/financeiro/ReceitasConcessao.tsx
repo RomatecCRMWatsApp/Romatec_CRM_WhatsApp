@@ -49,6 +49,11 @@ export default function ReceitasConcessao() {
             <p className="mt-1 text-xs text-muted-foreground">
               Valor de referência {brl(i.valorReferencia)} · para {i.corretor} · {i.recebidoEm ? `recebida em ${data(i.recebidoEm)}${i.forma ? ` (${i.forma})` : ""}` : `vence em ${data(i.vencimento)} (${i.prazo})`}
             </p>
+            <p className="mt-1 text-xs">
+              {i.divisao.corretorEhEscritorio
+                ? <>Divisão: <b>{brl(i.divisao.escritorio)}</b> integral do escritório ({i.divisao.pctEscritorio.toLocaleString("pt-BR")}%) — o corretor da venda é do escritório</>
+                : <>Divisão: escritório <b>{brl(i.divisao.escritorio)}</b> ({i.divisao.pctEscritorio.toLocaleString("pt-BR")}%) · repassar a {i.corretor} <b>{brl(i.divisao.corretor)}</b> ({i.divisao.pctCorretor.toLocaleString("pt-BR")}%)</>}
+            </p>
             <div className="mt-1.5 flex flex-wrap items-center gap-2">
               {i.situacao === "recebida" ? (
                 <Button size="sm" variant="ghost" className="h-7 text-xs" disabled={desfazer.isPending}

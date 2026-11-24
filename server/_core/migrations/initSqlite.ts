@@ -623,6 +623,14 @@ export function initSqliteTables(sqlite: any): void {
     id INTEGER PRIMARY KEY AUTOINCREMENT, empreendimentoId INTEGER, descricao TEXT NOT NULL, categoria TEXT NOT NULL, fornecedor TEXT,
     valor TEXT NOT NULL, vencimento TEXT NOT NULL, status TEXT NOT NULL DEFAULT 'aberta', pagoEm TEXT, valorPago TEXT, formaPagamento TEXT,
     grupo TEXT, parcela TEXT, comprovanteUrl TEXT, observacao TEXT, criadoPor INTEGER, createdAt ${agoraS}, updatedAt ${agoraS})`);
+  addColumn(`ALTER TABLE financeiroDespesas ADD COLUMN origemRecurso TEXT NOT NULL DEFAULT 'caixa'`);
+  addColumn(`ALTER TABLE financeiroDespesas ADD COLUMN terceiroNome TEXT`);
+  addColumn(`ALTER TABLE financeiroDespesas ADD COLUMN terceiroDocumento TEXT`);
+  addColumn(`ALTER TABLE financeiroDespesas ADD COLUMN terceiroModalidade TEXT`);
+  addColumn(`ALTER TABLE financeiroDespesas ADD COLUMN terceiroFinalidade TEXT`);
+  addColumn(`ALTER TABLE financeiroDespesas ADD COLUMN reembolsadoEm TEXT`);
+  addColumn(`ALTER TABLE financeiroDespesas ADD COLUMN reembolsoValor TEXT`);
+  addColumn(`ALTER TABLE financeiroDespesas ADD COLUMN reembolsoForma TEXT`);
   run(`CREATE TABLE IF NOT EXISTS linksOferta (
     token TEXT PRIMARY KEY, leadId INTEGER NOT NULL, empreendimentoId INTEGER NOT NULL, aberturas INTEGER NOT NULL DEFAULT 0,
     primeiraAberturaAt INTEGER, ultimaAberturaAt INTEGER, createdAt ${agoraS}, UNIQUE (leadId, empreendimentoId))`);
