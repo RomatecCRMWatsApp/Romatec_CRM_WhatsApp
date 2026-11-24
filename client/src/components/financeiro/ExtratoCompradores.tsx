@@ -7,7 +7,7 @@ import { brl } from "@shared/simulador";
 
 const SITUACAO: Record<string, [string, string]> = {
   EM_ATRASO: ["Em atraso", "bg-danger-500/15 text-danger-300"], EM_DIA: ["Em dia", "bg-ok-500/15 text-ok-300"],
-  QUITADO: ["Quitado", "bg-info-500/15 text-info-300"], AGUARDANDO_ASSINATURA: ["Aguardando assinatura", "bg-secondary text-muted-foreground"],
+  QUITADO: ["Quitado", "bg-info-500/15 text-info-300"], AGUARDANDO_ASSINATURA: ["Aguardando assinatura", "bg-secondary text-muted-foreground"], CONCESSAO: ["Concessão (sem cobrança)", "bg-primary/15 text-primary"], SEM_PARCELAS: ["Assinado, sem parcelas", "bg-warn-500/15 text-warn-300"],
 };
 const br = (iso?: string | null) => (iso ? iso.split("-").reverse().join("/") : "—");
 

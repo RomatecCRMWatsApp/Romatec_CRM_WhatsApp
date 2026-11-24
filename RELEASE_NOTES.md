@@ -3,6 +3,15 @@
 Cada versão nova vai no TOPO. Depois rode `npm run release` (valida e atualiza o package.json);
 ao subir, o servidor grava a versão no banco e todos recebem o aviso "Novidades da versão".
 
+## 1.199.1 — 2026-11-24
+tipo: patch
+obrigatoria: nao
+titulo: Extrato: concessão assinada não aparece mais como aguardando assinatura
+publico: admin
+
+### Correções
+- Extrato por comprador: contrato sem parcelas do comprador só aparece como "Aguardando assinatura" se ainda não foi assinado. Concessão da proprietária (como o BJ-2026-0004) aparece como "Concessão (sem cobrança)" e contrato assinado sem parcelas como "Assinado, sem parcelas". Vale também para a tela do empreendedor e a planilha.
+
 ## 1.199.0 — 2026-11-24
 tipo: minor
 obrigatoria: nao

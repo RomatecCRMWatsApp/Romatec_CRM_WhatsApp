@@ -32,7 +32,7 @@ const dataBr = (d: string | Date | null | undefined) => {
 };
 const SITUACAO_CONTRATO: Record<string, [string, string]> = {
   EM_DIA: ["Em dia", "bg-ok-500/15 text-ok-300"], EM_ATRASO: ["Em atraso", "bg-danger-500/15 text-danger-300"],
-  QUITADO: ["Quitado", "bg-info-500/15 text-info-300"], AGUARDANDO_ASSINATURA: ["Aguardando assinatura", "bg-secondary text-muted-foreground"],
+  QUITADO: ["Quitado", "bg-info-500/15 text-info-300"], AGUARDANDO_ASSINATURA: ["Aguardando assinatura", "bg-secondary text-muted-foreground"], CONCESSAO: ["Concessão (sem cobrança)", "bg-primary/15 text-primary"], SEM_PARCELAS: ["Assinado, sem parcelas", "bg-warn-500/15 text-warn-300"],
 };
 const STATUS_BOLETO: Record<string, [string, string]> = {
   emitida: ["Emitido", "bg-warn-500/15 text-warn-300"], paga: ["Pago", "bg-ok-500/15 text-ok-300"],

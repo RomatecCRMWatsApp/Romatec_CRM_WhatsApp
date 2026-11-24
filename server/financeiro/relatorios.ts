@@ -26,7 +26,23 @@ async function base() {
   return { d, cs, cobs: cobs.filter(c => c.tipo !== 'antecipacao' && c.status !== 'cancelada') };
 }
 
-export type SituacaoExtrato = 'QUITADO' | 'EM_DIA' | 'EM_ATRASO' | 'AGUARDANDO_ASSINATURA';
+export type SituacaoExtrato = 'QUITADO' | 'EM_DIA' | 'EM_ATRASO' | 'AGUARDANDO_ASSINATURA' | 'CONCESSAO' | 'SEM_PARCELAS';
+
+const ASSINADOS = ['assinado', 'ativo', 'quitado'];
+const plano = (c: any): any => { try { return typeof c.simulacaoJson === 'string' ? JSON.parse(c.simulacaoJson) : c.simulacaoJson ?? {}; } catch { return {}; } };
+
+/**
+ * Situação de um contrato no extrato. Sem cobranças do comprador, olha o próprio contrato: concessão da proprietária
+ * não tem boleto do comprador; contrato assinado sem parcelas aparece como tal; só o que ainda não foi assinado
+ * fica "Aguardando assinatura".
+ */
+export function situacaoExtrato(c: { status: string; simulacaoJson?: unknown }, qtdCobrancas: number, abertas: number, vencido: number): SituacaoExtrato {
+  if (!qtdCobrancas) {
+    if (plano(c)?.concessao) return 'CONCESSAO';
+    return ASSINADOS.includes(String(c.status)) ? 'SEM_PARCELAS' : 'AGUARDANDO_ASSINATURA';
+  }
+  return !abertas ? 'QUITADO' : vencido > 0 ? 'EM_ATRASO' : 'EM_DIA';
+}
 export interface LinhaExtrato {
   contratoId: number; contratoNumero: string; loteCodigo: string; comprador: string;
   contratado: number; recebido: number; emAberto: number; vencido: number; aVencer: number; pctPago: number; situacao: SituacaoExtrato;
@@ -50,7 +66,7 @@ export async function extratoCompradores(hoje = hojeBrasil()) {
     const emAberto = centavos(abertas.reduce((s, x) => s + Number(x.valor), 0));
     const maisAntiga = vencidas.map(x => String(x.vencimento).slice(0, 10)).sort()[0] ?? null;
     const proxima = abertas.map(x => String(x.vencimento).slice(0, 10)).filter(v => v >= hoje).sort()[0] ?? null;
-    const situacao: SituacaoExtrato = !minhas.length ? 'AGUARDANDO_ASSINATURA' : !abertas.length ? 'QUITADO' : vencido > 0 ? 'EM_ATRASO' : 'EM_DIA';
+    const situacao = situacaoExtrato(c, minhas.length, abertas.length, vencido);
     linhas.push({
       contratoId: c.id, contratoNumero: c.numero, loteCodigo: c.loteCodigo, comprador: comprador?.nome ?? '—',
       contratado, recebido, emAberto, vencido, aVencer: centavos(emAberto - vencido),
@@ -69,7 +85,7 @@ export async function extratoCompradores(hoje = hojeBrasil()) {
   };
 }
 
-const ROTULO_SITUACAO: Record<SituacaoExtrato, string> = { QUITADO: 'Quitado', EM_DIA: 'Em dia', EM_ATRASO: 'Em atraso', AGUARDANDO_ASSINATURA: 'Aguardando assinatura' };
+const ROTULO_SITUACAO: Record<SituacaoExtrato, string> = { QUITADO: 'Quitado', EM_DIA: 'Em dia', EM_ATRASO: 'Em atraso', AGUARDANDO_ASSINATURA: 'Aguardando assinatura', CONCESSAO: 'Concessão (sem cobrança)', SEM_PARCELAS: 'Assinado, sem parcelas' };
 const br = (iso: string | null) => (iso ? iso.split('-').reverse().join('/') : '');
 
 export async function extratoXlsx(hoje = hojeBrasil()): Promise<Buffer> {
