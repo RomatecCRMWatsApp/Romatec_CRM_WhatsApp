@@ -66,6 +66,7 @@ const Carteirinhas = lazy(() => import("./pages/Carteirinhas"));
 const DocumentosPublicos = lazy(() => import("./pages/DocumentosPublicos"));
 const FilaReservas = lazy(() => import("./pages/FilaReservas"));
 const RespostasAutomaticas = lazy(() => import("./pages/RespostasAutomaticas"));
+const CampanhasInstagram = lazy(() => import("./pages/CampanhasInstagram"));
 const LeadsImportados = lazy(() => import("./pages/LeadsImportados"));
 const ContratoNovo = lazy(() => import("./pages/ContratoNovo"));
 const ContratoDetalhe = lazy(() => import("./pages/ContratoDetalhe"));
@@ -299,6 +300,9 @@ function Router() {
       </Route>
       <Route path={"/documentos-cliente"}>
         {() => <Redirect to="/contratos?aba=links" />}
+      </Route>
+      <Route path={"/campanhas-instagram"}>
+        {() => <SetupGuard component={CampanhasInstagram} />}
       </Route>
       <Route path={"/respostas-automaticas"}>
         {() => <SetupGuard component={RespostasAutomaticas} />}

@@ -3,6 +3,20 @@
 Cada versão nova vai no TOPO. Depois rode `npm run release` (valida e atualiza o package.json);
 ao subir, o servidor grava a versão no banco e todos recebem o aviso "Novidades da versão".
 
+## 1.203.0 — 2026-11-24
+tipo: minor
+obrigatoria: nao
+titulo: Planejador de campanhas no Instagram (vendas + seguidores)
+publico: admin
+
+### Novo
+- Conteúdo e atividades › Campanhas no Instagram (administrador e secretária): planeja as duas campanhas da Meta só no Instagram — vendas (conversas no WhatsApp) e seguidores (visitas ao perfil).
+- Calcula a campanha anterior a partir do relatório (custo por conversa, CPM, frequência, conversas por 1.000 alcançados). Já vem com os números da BJ_WHATSAPP_2DIAS_2026.
+- Divide o orçamento (50/50 por padrão), mostra o valor por dia, os conjuntos frio e remarketing (70/30) e a projeção de conversas e de seguidores. Avisa com clareza quando a meta de seguidores não cabe no orçamento.
+- Traz o passo a passo no Gerenciador de Anúncios, as regras de corte (dias 1 a 3) e a preparação do perfil.
+- Gera os textos prontos para copiar: anúncio de vendas, anúncio de seguidores, legendas dos dois Reels, mensagem automática do WhatsApp e os ganchos do topo do vídeo, com os dados do empreendimento editáveis.
+- Botão "Plano em PDF" com tudo isso.
+
 ## 1.202.0 — 2026-11-24
 tipo: minor
 obrigatoria: nao

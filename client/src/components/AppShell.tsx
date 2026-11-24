@@ -14,6 +14,7 @@ import { Scale,
   ChevronDown, ChevronLeft, ChevronRight,
   Radar, BookOpen,
  Shuffle, CheckCheck, ShieldCheck, Search, Camera, Sun, Moon, Monitor, Volume2, VolumeX, SlidersHorizontal,
+  Instagram,
 } from "lucide-react";
 import { abrirNovidades, SinoNovidades, useNovidadesNaoLidas } from "./sistema/Novidades";
 import { definirAparencia, definirSom, tocarNavegacao, usePreferenciasVisuais, useTemaDoApp, type Aparencia } from "@/lib/aparencia";
@@ -101,6 +102,7 @@ const MENU: Grupo[] = [
     itens: [
       { rotulo: "Materiais", rota: "/materiais", icone: Images, modulo: "materiais", exato: true },
       { rotulo: "Tour 3D (fotos)", rota: "/materiais/tour-3d", icone: Box, modulo: "materiais" },
+      { rotulo: "Campanhas no Instagram", rota: "/campanhas-instagram", icone: Instagram },
       { rotulo: "Relatórios fotográficos", rota: "/relatorios-fotograficos", icone: Camera },
     ],
   },

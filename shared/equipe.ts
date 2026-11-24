@@ -117,7 +117,7 @@ export function podeAbrir(perfil: Perfil | null, caminho: string): boolean {
   // Fila de reservas do escritório: administrador e secretária
   if (caminho === '/reservas' || caminho === '/portal-comprador' || caminho === '/imobiliarias-parceiras' || caminho === '/prospeccao' || caminho === '/tour-360') return perfil === 'secretario';
   // Respostas automáticas no WhatsApp (robô por empreendimento): administrador e secretária
-  if (caminho === '/respostas-automaticas') return perfil === 'secretario';
+  if (caminho === '/respostas-automaticas' || caminho === '/campanhas-instagram') return perfil === 'secretario';
   // "Ver como" (o sistema como cada pessoa vê, só leitura): só o administrador
   if (caminho === '/ver-como' || caminho.startsWith('/ver-como?') || caminho === '/visao-corretor') return false;
   // Disparos WhatsApp: administrador e secretária
