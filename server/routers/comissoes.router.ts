@@ -29,6 +29,8 @@ export const comissoesRouter = router({
   registrarPagamento: protectedProcedure.input(z.object({
     contratoId: z.number().int(), chave: z.string().regex(/^(avista|entrada|saldo)-\d{1,2}$/),
     pagoEm: z.string().regex(/^\d{4}-\d{2}-\d{2}$/), forma: z.string().max(30).optional(), observacao: z.string().max(300).optional(),
+    comprovante: z.object({ base64: z.string().min(10).max(14_000_000), mime: z.enum(["image/png", "image/jpeg", "application/pdf"]), nomeArquivo: z.string().max(120) }).nullable().optional(),
+    avisar: z.boolean().default(true),
   })).mutation(async ({ input, ctx }) => {
     const R = await import("../financeiro/comissoesRepasse");
     return comErroRepasse(() => R.registrarRepasse(ctx.permissoes, ctx.user.id, input));

@@ -47,10 +47,25 @@ export default function ComissoesAPagar() {
   const [pagoEm, setPagoEm] = useState(hoje());
   const [forma, setForma] = useState("Pix");
   const [obs, setObs] = useState("");
+  const [comp, setComp] = useState<{ base64: string; mime: "image/png" | "image/jpeg" | "application/pdf"; nomeArquivo: string } | null>(null);
+  const [avisar, setAvisar] = useState(true);
+  const escolherComp = (f?: File) => {
+    if (!f) return;
+    const mime = f.type === "application/pdf" ? "application/pdf" : f.type === "image/jpeg" ? "image/jpeg" : f.type === "image/png" ? "image/png" : null;
+    if (!mime) { toast.error("Envie PDF, PNG ou JPG"); return; }
+    if (f.size > 10 * 1024 * 1024) { toast.error("Arquivo grande demais (máx. 10 MB)"); return; }
+    const r = new FileReader();
+    r.onload = () => setComp({ base64: String(r.result).split(",")[1] ?? "", mime, nomeArquivo: f.name.slice(0, 120) });
+    r.readAsDataURL(f);
+  };
   const utils = trpc.useUtils();
   const { data: d, isLoading, error } = trpc.comissoes.aPagar.useQuery(corretorId ? { corretorId } : undefined, { placeholderData: prev => prev });
   const registrar = trpc.comissoes.registrarPagamento.useMutation({
-    onSuccess: r => { toast.success(`Repasse de ${brl(r.valor)} registrado`); setPagar(null); setObs(""); utils.comissoes.aPagar.invalidate(); },
+    onSuccess: r => {
+      if (r.avisado) toast.success(`Repasse de ${brl(r.valor)} registrado e o corretor avisado no WhatsApp${r.comprovanteUrl ? " com o comprovante" : ""}`);
+      else toast.warning(`Repasse de ${brl(r.valor)} registrado${r.erroAviso ? `, mas o aviso não saiu (${r.erroAviso})` : ""}`, { duration: 10000 });
+      setPagar(null); setObs(""); setComp(null); utils.comissoes.aPagar.invalidate();
+    },
     onError: e => toast.error(e.message),
   });
   const desfazer = trpc.comissoes.desfazerPagamento.useMutation({
@@ -206,6 +221,7 @@ export default function ComissoesAPagar() {
                       {!escritorio && p.situacao === "paga" ? "Recebida" : !escritorio && p.situacao === "a_pagar" ? "Liberada" : ROTULO_SITUACAO_REPASSE[p.situacao]}
                     </span>
                     {p.pagoEm && <span className="block text-[11px] text-muted-foreground">em {data(p.pagoEm)}{p.forma ? ` · ${p.forma}` : ""}</span>}
+                    {p.comprovanteUrl && <a href={p.comprovanteUrl} target="_blank" rel="noopener noreferrer" className="block text-[11px] text-primary hover:underline">comprovante</a>}
                   </td>
                   {escritorio && (
                     <td className="px-3 py-2 text-right">
@@ -231,7 +247,7 @@ export default function ComissoesAPagar() {
         Antes do pagamento do cliente, a data é a previsão pelo vencimento da parcela.
       </p>
 
-      <Dialog open={!!pagar} onOpenChange={o => !o && setPagar(null)}>
+      <Dialog open={!!pagar} onOpenChange={o => { if (!o) { setPagar(null); setComp(null); } }}>
         <DialogContent>
           <DialogHeader><DialogTitle>Registrar pagamento da comissão</DialogTitle></DialogHeader>
           {pagar && (
@@ -245,6 +261,12 @@ export default function ComissoesAPagar() {
                   {["Pix", "Transferência", "Dinheiro", "Split Asaas"].map(f => <option key={f}>{f}</option>)}
                 </select>
               </label>
+              <label className="block text-xs text-muted-foreground">Comprovante do pagamento (PDF ou foto)
+                <input type="file" accept="application/pdf,image/png,image/jpeg" onChange={e => { escolherComp(e.target.files?.[0]); e.target.value = ""; }}
+                  className="mt-1 block w-full text-sm text-foreground file:mr-2 file:rounded-md file:border file:border-border file:bg-secondary file:px-3 file:py-1.5 file:text-sm" />
+                {comp && <span className="mt-1 block text-xs text-ok-300">Anexado: {comp.nomeArquivo}</span>}
+              </label>
+              <label className="flex items-center gap-2 text-sm"><input type="checkbox" checked={avisar} onChange={e => setAvisar(e.target.checked)} /> Avisar o corretor no WhatsApp{comp ? " com o comprovante" : ""}</label>
               <label className="block text-xs text-muted-foreground">Observação (opcional)
                 <input value={obs} maxLength={300} onChange={e => setObs(e.target.value)} className="mt-1 block w-full rounded-lg border border-border bg-background px-2 py-2 text-sm text-foreground" />
               </label>
@@ -253,7 +275,7 @@ export default function ComissoesAPagar() {
           <DialogFooter>
             <Button variant="outline" onClick={() => setPagar(null)}>Cancelar</Button>
             <Button disabled={!pagar || !pagoEm || registrar.isPending}
-              onClick={() => pagar && registrar.mutate({ contratoId: pagar.contratoId, chave: pagar.chave, pagoEm, forma, observacao: obs || undefined })}>
+              onClick={() => pagar && registrar.mutate({ contratoId: pagar.contratoId, chave: pagar.chave, pagoEm, forma, observacao: obs || undefined, comprovante: comp, avisar })}>
               {registrar.isPending ? <Loader2 className="mr-1 h-4 w-4 animate-spin" /> : <CheckCircle2 className="mr-1 h-4 w-4" />} Registrar pagamento
             </Button>
           </DialogFooter>

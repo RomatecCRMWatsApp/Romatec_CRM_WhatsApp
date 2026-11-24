@@ -35,3 +35,15 @@ describe('campanhas do Instagram', () => {
     expect(pdf.subarray(0, 5).toString()).toBe('%PDF-');
   });
 });
+
+describe('aviso ao corretor quando a comissão é paga', () => {
+  it('mensagem com valor, parte, chácara e o comprovante', async () => {
+    const { mensagemRepassePago } = await import('./financeiro/comissoesRepasse');
+    const t = mensagemRepassePago({ corretor: 'Ana Souza', valor: 1662.3, parte: 'Entrada (R$ 10 mil)', lote: 'C10', contrato: 'BJ-2026-0007', empreendimento: 'Bom Jardims', pagoEm: '2026-11-24', forma: 'Pix', comComprovante: true });
+    expect(t).toContain('Olá, Ana!');
+    expect(t).toContain('R$ 1.662,30');
+    expect(t).toContain('chácara C10 · Bom Jardims (contrato BJ-2026-0007)');
+    expect(t).toContain('Pago em 24/11/2026 por Pix');
+    expect(t).toContain('Segue o comprovante');
+  });
+});

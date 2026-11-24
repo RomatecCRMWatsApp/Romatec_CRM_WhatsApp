@@ -66,7 +66,7 @@ export async function comissoesDeVenda(permissoes: PermissoesUsuario, usuarioId:
     const partes = partesDaComissao({
       plano, statusContrato: c.status, hoje, entradaPagaNoAto: !!c.entradaPagaNoAto,
       cobrancas: cobs.filter(x => Number(x.contratoId) === id).map(x => ({ tipo: x.tipo, numero: Number(x.numero), vencimento: String(x.vencimento), status: x.status, pagoEm: x.pagoEm ? String(x.pagoEm) : null })),
-      repasses: reps.filter(x => Number(x.contratoId) === id).map(x => ({ chave: x.chave, valor: Number(x.valor), pagoEm: String(x.pagoEm), forma: x.forma })),
+      repasses: reps.filter(x => Number(x.contratoId) === id).map(x => ({ chave: x.chave, valor: Number(x.valor), pagoEm: String(x.pagoEm), forma: x.forma, comprovanteUrl: x.comprovanteUrl ?? null })),
     });
     const emp = E.get(Number(c.empreendimentoId));
     return {
@@ -83,7 +83,31 @@ export async function comissoesDeVenda(permissoes: PermissoesUsuario, usuarioId:
 }
 
 /** Marca uma parte como paga ao corretor (administrador e secretária) */
-export async function registrarRepasse(permissoes: PermissoesUsuario, usuarioId: number, i: { contratoId: number; chave: string; pagoEm: string; forma?: string; observacao?: string }) {
+export interface ComprovanteRepasse { base64: string; mime: 'image/png' | 'image/jpeg' | 'application/pdf'; nomeArquivo: string }
+
+/** Texto do WhatsApp ao corretor quando a comissão é paga */
+export function mensagemRepassePago(o: { corretor: string; valor: number; parte: string; lote: string; contrato: string; empreendimento: string; pagoEm: string; forma?: string | null; comComprovante: boolean }) {
+  const nome = String(o.corretor || '').trim().split(/\s+/)[0] || 'tudo bem';
+  const valor = `R$ ${o.valor.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+  return [
+    `Olá, ${nome}! 💰 A Romatec pagou a sua comissão:`, '',
+    `Valor: ${valor}`, `Referente a: ${o.parte}`, `Venda: chácara ${o.lote} · ${o.empreendimento} (contrato ${o.contrato})`,
+    `Pago em ${o.pagoEm.split('-').reverse().join('/')}${o.forma ? ` por ${o.forma}` : ''}`,
+    ...(o.comComprovante ? ['', 'Segue o comprovante. Obrigado pela parceria! 🤝'] : ['', 'Obrigado pela parceria! 🤝']),
+  ].join('\n');
+}
+
+export type AvisoRepasse = (tel: string, texto: string, comp: ComprovanteRepasse | null) => Promise<void>;
+let avisoRepasse: AvisoRepasse = async (tel, texto, comp) => {
+  const Z = await import('../leads/zapiClient');
+  if (comp?.mime === 'application/pdf') await Z.enviarDocumento(tel, { base64: comp.base64, extensao: 'pdf', mime: comp.mime, nomeArquivo: comp.nomeArquivo || 'comprovante.pdf', legenda: texto });
+  else if (comp) await Z.enviarImagem(tel, { base64: comp.base64, mime: comp.mime, legenda: texto });
+  else await Z.enviarTexto(tel, texto);
+};
+/** Testes trocam o envio */
+export const definirAvisoRepasse = (f: AvisoRepasse | null) => { if (f) avisoRepasse = f; };
+
+export async function registrarRepasse(permissoes: PermissoesUsuario, usuarioId: number, i: { contratoId: number; chave: string; pagoEm: string; forma?: string; observacao?: string; comprovante?: ComprovanteRepasse | null; avisar?: boolean }) {
   if (permissoes.perfil !== 'admin' && permissoes.perfil !== 'secretario') throw new RepasseErro('Só o administrador e a secretária registram o pagamento da comissão.', 403);
   const d: any = await getDb();
   if (!d) throw new RepasseErro('Banco indisponível', 503);
@@ -96,11 +120,32 @@ export async function registrarRepasse(permissoes: PermissoesUsuario, usuarioId:
   if (!parte || !gatilhosDoPlano(plano).some(g => g.chave === i.chave)) throw new RepasseErro('Parte da comissão inválida para este contrato', 400);
   const [ja]: any[] = await d.select({ id: comissaoRepasses.id }).from(comissaoRepasses).where(and(eq(comissaoRepasses.contratoId, i.contratoId), eq(comissaoRepasses.chave, i.chave))).limit(1);
   if (ja) throw new RepasseErro('Esta parte da comissão já está registrada como paga', 409);
+  // Comprovante do Pix/transferência (fica no registro e vai ao corretor)
+  let comprovanteUrl: string | null = null;
+  if (i.comprovante) {
+    const buf = Buffer.from(i.comprovante.base64, 'base64');
+    if (buf.length > 10 * 1024 * 1024) throw new RepasseErro('Comprovante grande demais (máx. 10 MB)', 400);
+    const { uploadToCloudinary } = await import('../cloudinary');
+    comprovanteUrl = (await uploadToCloudinary(buf, i.comprovante.mime, i.comprovante.nomeArquivo, { folder: 'financeiro/comissoes' })).url;
+  }
   await d.insert(comissaoRepasses).values({
     contratoId: i.contratoId, corretorUserId: Number(c.corretorUserId), chave: i.chave, valor: parte.valor.toFixed(2), pagoEm: i.pagoEm,
-    forma: i.forma?.slice(0, 30) || null, observacao: i.observacao?.slice(0, 300) || null, registradoPor: usuarioId,
-  });
-  return { ok: true as const, valor: parte.valor };
+    forma: i.forma?.slice(0, 30) || null, observacao: i.observacao?.slice(0, 300) || null, registradoPor: usuarioId, comprovanteUrl,
+  } as any);
+  // Aviso ao corretor no WhatsApp, com o comprovante
+  let avisado = false; let erroAviso: string | null = null;
+  if (i.avisar !== false) {
+    const [u]: any[] = await d.select({ name: users.name, telefone: users.telefone }).from(users).where(eq(users.id, Number(c.corretorUserId))).limit(1);
+    const tel = String(u?.telefone ?? '').replace(/\D/g, '');
+    if (tel.length < 10) erroAviso = 'corretor sem WhatsApp no cadastro';
+    else {
+      const [e]: any[] = await d.select({ nome: empreendimentos.nome }).from(empreendimentos).where(eq(empreendimentos.id, Number(c.empreendimentoId))).limit(1);
+      const texto = mensagemRepassePago({ corretor: String(u?.name ?? ''), valor: parte.valor, parte: parte.quando, lote: String(c.loteCodigo), contrato: String(c.numero), empreendimento: String(e?.nome ?? ''), pagoEm: i.pagoEm, forma: i.forma, comComprovante: !!i.comprovante });
+      try { await avisoRepasse(tel.startsWith('55') && tel.length >= 12 ? tel : `55${tel}`, texto, i.comprovante ?? null); avisado = true; }
+      catch (err: any) { erroAviso = String(err?.message ?? err).slice(0, 160); console.warn('[Comissão] aviso ao corretor:', erroAviso); }
+    }
+  }
+  return { ok: true as const, valor: parte.valor, comprovanteUrl, avisado, erroAviso };
 }
 
 /** Desfaz um registro de pagamento (só o administrador, para corrigir engano) */

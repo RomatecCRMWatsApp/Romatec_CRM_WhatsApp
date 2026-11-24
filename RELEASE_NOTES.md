@@ -3,6 +3,17 @@
 Cada versão nova vai no TOPO. Depois rode `npm run release` (valida e atualiza o package.json);
 ao subir, o servidor grava a versão no banco e todos recebem o aviso "Novidades da versão".
 
+## 1.204.0 — 2026-11-24
+tipo: minor
+obrigatoria: nao
+titulo: Comissão do corretor paga com comprovante e aviso no WhatsApp
+publico: todos
+
+### Novo
+- Financeiro › Comissões › Marcar paga: dá para anexar o comprovante do Pix ou da transferência (PDF ou foto). O repasse fica registrado como pago, com o comprovante guardado.
+- O corretor recebe no WhatsApp o aviso do pagamento (valor, parte da comissão, chácara, contrato, data e forma) com o comprovante anexado. A opção vem marcada e pode ser desligada.
+- Nas comissões pagas aparece o link "comprovante".
+
 ## 1.203.0 — 2026-11-24
 tipo: minor
 obrigatoria: nao

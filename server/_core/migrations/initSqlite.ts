@@ -503,6 +503,7 @@ export function initSqliteTables(sqlite: any): void {
     id INTEGER PRIMARY KEY AUTOINCREMENT, contratoId INTEGER NOT NULL, corretorUserId INTEGER NOT NULL, chave TEXT NOT NULL, valor TEXT NOT NULL,
     pagoEm TEXT NOT NULL, forma TEXT, observacao TEXT, registradoPor INTEGER, criadoEm ${agora}, UNIQUE(contratoId, chave)
   )`);
+  addColumn(`ALTER TABLE comissaoRepasses ADD COLUMN comprovanteUrl TEXT`);
   run(`CREATE TABLE IF NOT EXISTS declaracoesQuitacao (
     id INTEGER PRIMARY KEY AUTOINCREMENT, contratoId INTEGER NOT NULL, anoRef INTEGER NOT NULL, status TEXT NOT NULL DEFAULT 'emitida', motivo TEXT,
     valorTotal TEXT, pdfArquivo TEXT, enviadoEm INTEGER, criadoEm ${agora}, UNIQUE(contratoId, anoRef)

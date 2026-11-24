@@ -2600,6 +2600,8 @@ export const comissaoRepasses = mysqlTable("comissaoRepasses", {
   pagoEm: date("pagoEm", { mode: "string" }).notNull(),
   forma: varchar("forma", { length: 30 }),
   observacao: varchar("observacao", { length: 300 }),
+  /** Comprovante do repasse ao corretor (Pix/transferência) */
+  comprovanteUrl: varchar("comprovanteUrl", { length: 500 }),
   registradoPor: int("registradoPor"),
   criadoEm: timestamp("criadoEm").defaultNow().notNull(),
 }, (t) => ({

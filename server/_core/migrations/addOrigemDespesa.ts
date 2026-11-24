@@ -10,6 +10,7 @@ const COLUNAS: { nome: string; stmt: ReturnType<typeof sql> }[] = [
   { nome: 'terceiroFinalidade', stmt: sql`ALTER TABLE financeiroDespesas ADD COLUMN terceiroFinalidade VARCHAR(300) NULL` },
   { nome: 'reembolsadoEm', stmt: sql`ALTER TABLE financeiroDespesas ADD COLUMN reembolsadoEm VARCHAR(10) NULL` },
   { nome: 'reembolsoValor', stmt: sql`ALTER TABLE financeiroDespesas ADD COLUMN reembolsoValor DECIMAL(12,2) NULL` },
+  { nome: 'comissaoRepasses.comprovanteUrl', stmt: sql`ALTER TABLE comissaoRepasses ADD COLUMN comprovanteUrl VARCHAR(500) NULL` },
   { nome: 'reembolsoForma', stmt: sql`ALTER TABLE financeiroDespesas ADD COLUMN reembolsoForma VARCHAR(20) NULL` },
 ];
 
