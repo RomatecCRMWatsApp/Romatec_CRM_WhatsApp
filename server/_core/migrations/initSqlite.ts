@@ -578,6 +578,12 @@ export function initSqliteTables(sqlite: any): void {
     status TEXT NOT NULL DEFAULT 'pendente', erro TEXT, tentativas INTEGER NOT NULL DEFAULT 0, criadoPor INTEGER, enviadoAt INTEGER,
     createdAt INTEGER NOT NULL DEFAULT (strftime('%s','now')), updatedAt INTEGER NOT NULL DEFAULT (strftime('%s','now'))
   )`);
+  run(`CREATE TABLE IF NOT EXISTS despesaCiencias (
+    id INTEGER PRIMARY KEY AUTOINCREMENT, despesaId INTEGER NOT NULL, empreendimentoId INTEGER NOT NULL, dadosJson TEXT NOT NULL,
+    status TEXT NOT NULL DEFAULT 'aguardando', pdfArquivo TEXT NOT NULL, pdfSha256 TEXT NOT NULL, pdfAssinadoArquivo TEXT, token TEXT NOT NULL UNIQUE,
+    otpHash TEXT, otpExpira INTEGER, otpTentativas INTEGER NOT NULL DEFAULT 0, otpEnvios INTEGER NOT NULL DEFAULT 0, assinadoEm INTEGER,
+    assinaturaIp TEXT, assinaturaUa TEXT, criadoPor INTEGER, criadoEm INTEGER NOT NULL DEFAULT (strftime('%s','now'))
+  )`);
   // Mensagens do link de agendamento (server/_core/migrations/addMensagensAgendamento.ts)
   addColumn(`ALTER TABLE leadVisitas ADD COLUMN pedidoJson TEXT`);
   addColumn(`ALTER TABLE leadVisitas ADD COLUMN confirmacaoEnviadaAt INTEGER`);

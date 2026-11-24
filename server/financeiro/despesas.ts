@@ -149,8 +149,11 @@ export async function listarDespesas(f: FiltroDespesas = {}, hoje = hojeBrasil()
   const soma = (l: typeof linhas, k: 'valor' | 'valorPago') => centavos(l.reduce((s, x) => s + (Number(x[k]) || 0), 0));
   const porCategoria = new Map<string, number>();
   for (const x of linhas.filter(y => y.status !== 'cancelada')) porCategoria.set(x.rotuloCategoria, centavos((porCategoria.get(x.rotuloCategoria) ?? 0) + (x.status === 'paga' ? Number(x.valorPago) : x.valor)));
+  // Ciência da proprietária de cada saída (aguardando ou confirmada)
+  const ciencias = await import('./despesaCiencia').then(m => m.cienciasDas(linhas.map(x => x.id))).catch(() => new Map());
+  const comCiencia = linhas.map(x => ({ ...x, ciencia: ciencias.get(x.id) ?? null }));
   return {
-    hoje, linhas,
+    hoje, linhas: comCiencia,
     totais: {
       aPagar: soma(linhas.filter(x => x.situacao === 'a_pagar'), 'valor'), vencido: soma(linhas.filter(x => x.situacao === 'vencida'), 'valor'),
       pago: soma(linhas.filter(x => x.situacao === 'paga'), 'valorPago'), quantidade: linhas.filter(x => x.status !== 'cancelada').length,

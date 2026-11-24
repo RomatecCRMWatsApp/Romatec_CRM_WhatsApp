@@ -3,6 +3,18 @@
 Cada versão nova vai no TOPO. Depois rode `npm run release` (valida e atualiza o package.json);
 ao subir, o servidor grava a versão no banco e todos recebem o aviso "Novidades da versão".
 
+## 1.199.0 — 2026-11-24
+tipo: minor
+obrigatoria: nao
+titulo: Ciência da proprietária nas saídas de recursos
+publico: admin
+
+### Novo
+- Financeiro › Despesas: botão "Pedir ciência" em cada saída de um empreendimento. A proprietária recebe no WhatsApp o valor, o destino, o motivo e a data do pagamento, abre o link, confere o documento com o comprovante anexado e confirma com o código que chega no WhatsApp, como na autorização de venda.
+- Na Nova despesa, a opção "Pedir a ciência da proprietária no WhatsApp ao lançar" já vem marcada quando a despesa é de um empreendimento.
+- A lista mostra "Aguardando ciência da proprietária" ou "Proprietária ciente em …". Clicando, abre o documento confirmado, com o manifesto de evidências (data, hora, IP e aparelho), para a prestação de contas.
+- Dá para reenviar o mesmo link ou gerar um novo pedido (o link anterior deixa de valer).
+
 ## 1.198.0 — 2026-11-24
 tipo: minor
 obrigatoria: nao

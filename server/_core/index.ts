@@ -1646,6 +1646,8 @@ async function startServer() {
     await addRetornos();
     const { addRetomadas } = await import('./migrations/addRetomadas');
     await addRetomadas();
+    const { addDespesaCiencias } = await import('./migrations/addDespesaCiencias');
+    await addDespesaCiencias();
     const { textosRoboV2 } = await import('./migrations/textosRoboV2');
     await textosRoboV2();
     const { addReunioes } = await import('./migrations/addReunioes');

@@ -847,6 +847,36 @@ export const financeiroDespesas = mysqlTable("financeiroDespesas", {
   updatedAt: timestamp("updatedAt").defaultNow().notNull(),
 });
 
+/**
+ * Ciência da proprietária numa despesa (saída de recursos): ela recebe no WhatsApp o destino e o valor, abre o link
+ * /aditivo/:token (a mesma página das autorizações) e confirma com o código. Uma ciência válida por despesa.
+ */
+export const despesaCiencias = mysqlTable("despesaCiencias", {
+  id: int("id").autoincrement().primaryKey(),
+  despesaId: int("despesaId").notNull(),
+  empreendimentoId: int("empreendimentoId").notNull(),
+  /** Retrato da despesa e da proprietária no momento do pedido (o que ela viu) */
+  dadosJson: text("dadosJson").notNull(),
+  /** aguardando | ciente | cancelada */
+  status: varchar("status", { length: 12 }).default("aguardando").notNull(),
+  pdfArquivo: varchar("pdfArquivo", { length: 255 }).notNull(),
+  pdfSha256: char("pdfSha256", { length: 64 }).notNull(),
+  pdfAssinadoArquivo: varchar("pdfAssinadoArquivo", { length: 255 }),
+  token: char("token", { length: 32 }).notNull(),
+  otpHash: char("otpHash", { length: 64 }),
+  otpExpira: datetime("otpExpira"),
+  otpTentativas: int("otpTentativas").default(0).notNull(),
+  otpEnvios: int("otpEnvios").default(0).notNull(),
+  assinadoEm: datetime("assinadoEm"),
+  assinaturaIp: varchar("assinaturaIp", { length: 64 }),
+  assinaturaUa: varchar("assinaturaUa", { length: 300 }),
+  criadoPor: int("criadoPor"),
+  criadoEm: timestamp("criadoEm").defaultNow().notNull(),
+}, (t) => ({
+  porDespesa: index("idx_ciencia_despesa").on(t.despesaId),
+  porToken: uniqueIndex("uq_ciencia_token").on(t.token),
+}));
+
 /** Mensagens da Z-API já recebidas (messageId): reenvio da Z-API ou outra cópia do servidor não respondem de novo */
 export const zapiMensagensVistas = mysqlTable("zapiMensagensVistas", {
   messageId: varchar("messageId", { length: 120 }).primaryKey(),

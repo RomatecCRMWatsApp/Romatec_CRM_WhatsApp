@@ -4,7 +4,7 @@ import { trpc } from "@/lib/trpc";
 import { Button } from "@/components/ui/button";
 import { brl } from "@shared/simulador";
 import { CATEGORIAS_DESPESA, FORMAS_DESPESA, ROTULO_CATEGORIA, type CategoriaDespesa, type FormaDespesa } from "@shared/despesas";
-import { Ban, CheckCircle2, Download, FileText, Loader2, Paperclip, Pencil, Plus, RotateCcw, ScanText, X } from "lucide-react";
+import { Ban, CheckCircle2, Download, FileText, Loader2, Paperclip, Pencil, Plus, RotateCcw, ScanText, ShieldCheck, X } from "lucide-react";
 
 const hoje = () => new Date(Date.now() - 3 * 3600_000).toISOString().slice(0, 10);
 const inicioMes = () => `${hoje().slice(0, 7)}-01`;
@@ -24,6 +24,8 @@ type Linha = {
   id: number; empreendimentoId: number | null; empreendimento: string | null; descricao: string; categoria: CategoriaDespesa; rotuloCategoria: string;
   fornecedor: string | null; valor: number; vencimento: string; status: string; situacao: string; pagoEm: string | null; valorPago: number | null;
   formaPagamento: string | null; grupo: string | null; parcela: string | null; comprovanteUrl: string | null; observacao: string | null;
+  /** Ciência da proprietária: aguardando a confirmação dela no WhatsApp, ou confirmada */
+  ciencia: { status: "aguardando" | "ciente"; em: string | null; id: number } | null;
 };
 type Emp = { id: number; nome: string };
 
@@ -38,12 +40,21 @@ function Formulario({ emps, inicial, onFechar }: { emps: Emp[]; inicial: typeof 
   // Comprovante lido: fica guardado e é anexado na primeira despesa lançada
   const [comprovante, setComprovante] = useState<{ nomeArquivo: string; mime: "image/png" | "image/jpeg" | "application/pdf"; base64: string } | null>(null);
   const anexarComp = trpc.financeiro.comprovanteDespesa.useMutation();
+  const pedirCiencia = trpc.financeiro.pedirCienciaDespesa.useMutation();
+  // Saída de um empreendimento: a proprietária confirma a ciência pelo WhatsApp (ligado por padrão)
+  const [ciencia, setCiencia] = useState(true);
   const lancar = trpc.financeiro.lancarDespesa.useMutation({
     onSuccess: async r => {
-      if (comprovante && r.ids?.[0]) {
-        await anexarComp.mutateAsync({ id: r.ids[0], ...comprovante }).then(() => toast.success("Despesa lançada com o comprovante anexado"))
+      const id = r.ids?.[0];
+      if (comprovante && id) {
+        await anexarComp.mutateAsync({ id, ...comprovante }).then(() => toast.success("Despesa lançada com o comprovante anexado"))
           .catch((e: any) => toast.error(`Despesa lançada, mas o comprovante não foi anexado: ${e.message}`));
       } else toast.success("Despesa lançada");
+      if (id && ciencia && f.empreendimentoId) {
+        await pedirCiencia.mutateAsync({ id })
+          .then(c => toast.success(c.enviado ? `Ciência pedida no WhatsApp de ${c.proprietaria}` : "Pedido de ciência criado, mas o WhatsApp não saiu: use Reenviar ciência na lista"))
+          .catch((e: any) => toast.error(`Ciência não pedida: ${e.message}`));
+      }
       onFechar(true);
     },
     onError: (e: any) => toast.error(e.message),
@@ -94,7 +105,7 @@ function Formulario({ emps, inicial, onFechar }: { emps: Emp[]; inicial: typeof 
     if (f.id) editar.mutate({ id: f.id, ...base });
     else lancar.mutate({ ...base, meses: Math.max(1, Number(f.meses) || 1), pagoEm: f.jaPaga ? f.pagoEm : null, formaPagamento: f.jaPaga ? f.forma : null });
   };
-  const ocupado = lancar.isPending || editar.isPending || anexarComp.isPending || ler.isPending;
+  const ocupado = lancar.isPending || editar.isPending || anexarComp.isPending || ler.isPending || pedirCiencia.isPending;
   const rot = "flex flex-col gap-1 text-xs text-muted-foreground";
   return (
     <form onSubmit={salvar} className="space-y-3 rounded-xl border border-primary/40 bg-card p-4">
@@ -126,6 +137,12 @@ function Formulario({ emps, inicial, onFechar }: { emps: Emp[]; inicial: typeof 
             <label className={rot}>Forma<select value={f.forma} onChange={set("forma")} className={campo}>{FORMAS_DESPESA.map(x => <option key={x} value={x}>{FORMA[x]}</option>)}</select></label>
           </>}
         </div>
+      )}
+      {!f.id && f.empreendimentoId && (
+        <label className="inline-flex items-center gap-2 text-sm">
+          <input type="checkbox" checked={ciencia} onChange={e => setCiencia(e.target.checked)} />
+          <ShieldCheck className="h-4 w-4 text-primary" /> Pedir a ciência da proprietária no WhatsApp ao lançar
+        </label>
       )}
       <label className={rot}>Observação<textarea rows={2} maxLength={2000} value={f.observacao} onChange={set("observacao")} className="rounded-lg border border-border bg-background p-2 text-sm" /></label>
       <Button type="submit" size="sm" disabled={ocupado}>{ocupado ? <Loader2 className="mr-1 h-4 w-4 animate-spin" /> : <CheckCircle2 className="mr-1 h-4 w-4" />}{f.id ? "Salvar" : Number(f.meses) > 1 ? `Lançar ${f.meses} meses` : "Lançar"}</Button>
@@ -162,9 +179,26 @@ function Acoes({ l, onFeito, onEditar }: { l: Linha; onFeito: () => void; onEdit
     if (f.size > 10 * 1024 * 1024) { toast.error("Arquivo grande demais (máx. 10 MB)"); return; }
     comprovante.mutate({ id: l.id, nomeArquivo: f.name, mime, base64: await paraBase64(f) });
   };
+  const pedir = trpc.financeiro.pedirCienciaDespesa.useMutation({
+    onSuccess: r => { toast.success(r.enviado ? `Pedido de ciência enviado no WhatsApp de ${r.proprietaria}` : `Pedido criado, mas o WhatsApp não saiu. Link: ${r.link}`); onFeito(); },
+    onError: e => toast.error(e.message),
+  });
+  const reenviar = trpc.financeiro.reenviarCienciaDespesa.useMutation({ onSuccess: () => toast.success("Link reenviado no WhatsApp da proprietária"), onError: e => toast.error(e.message) });
+  const pedirCiencia = () => {
+    const valor = l.valorPago ?? l.valor;
+    const aviso = l.comprovanteUrl ? "" : "\n\nAtenção: esta despesa está sem comprovante anexado.";
+    if (confirm(`${l.ciencia ? "Gerar um novo pedido de ciência (o link anterior deixa de valer)" : "Pedir a ciência da proprietária"} para a saída de ${brl(valor)} a ${l.fornecedor || "destino não informado"}? Ela recebe o resumo no WhatsApp e confirma com um código.${aviso}`)) pedir.mutate({ id: l.id });
+  };
   if (l.status === "cancelada") return null;
   return (
     <div className="flex flex-wrap items-center justify-end gap-1">
+      {l.empreendimentoId != null && l.ciencia?.status !== "ciente" && (
+        <Button size="sm" variant="outline" className="h-7 text-xs" disabled={pedir.isPending} title="Mandar à proprietária para ela confirmar a ciência da saída"
+          onClick={() => (l.ciencia?.status === "aguardando" && !confirm("Já existe um pedido aguardando. OK = reenviar o mesmo link; Cancelar = gerar um novo pedido.") ? pedirCiencia() : l.ciencia?.status === "aguardando" ? reenviar.mutate({ id: l.id }) : pedirCiencia())}>
+          {pedir.isPending || reenviar.isPending ? <Loader2 className="mr-1 h-3.5 w-3.5 animate-spin" /> : <ShieldCheck className="mr-1 h-3.5 w-3.5" />}
+          {l.ciencia?.status === "aguardando" ? "Reenviar ciência" : "Pedir ciência"}
+        </Button>
+      )}
       {l.status === "aberta" && <Pagar l={l} onFeito={onFeito} />}
       {l.status === "aberta" && <Button size="sm" variant="ghost" className="h-7 px-2" title="Editar" onClick={onEditar}><Pencil className="h-3.5 w-3.5" /></Button>}
       {l.status === "paga" && <Button size="sm" variant="ghost" className="h-7 text-xs" disabled={reabrir.isPending} onClick={() => confirm("Desfazer o pagamento desta despesa?") && reabrir.mutate({ id: l.id })}><RotateCcw className="mr-1 h-3.5 w-3.5" /> Desfazer</Button>}
@@ -261,6 +295,13 @@ export default function Despesas() {
                         <span className={`rounded-full px-2 py-0.5 ${SITUACAO[l.situacao]?.[1] ?? ""}`}>{SITUACAO[l.situacao]?.[0] ?? l.situacao}</span>
                         {l.pagoEm && <p className="mt-0.5 text-[11px] text-muted-foreground">{br(l.pagoEm)} · {FORMA[l.formaPagamento as FormaDespesa] ?? l.formaPagamento}</p>}
                         {l.comprovanteUrl && <a href={l.comprovanteUrl} target="_blank" rel="noreferrer" className="mt-0.5 inline-flex items-center gap-1 text-[11px] text-primary hover:underline"><FileText className="h-3 w-3" /> comprovante</a>}
+                        {l.ciencia && (
+                          <a href={`/api/despesas/${l.id}/ciencia.pdf`} target="_blank" rel="noreferrer"
+                            className={`mt-0.5 flex items-center gap-1 text-[11px] hover:underline ${l.ciencia.status === "ciente" ? "text-ok-300" : "text-warn-300"}`}>
+                            <ShieldCheck className="h-3 w-3" />
+                            {l.ciencia.status === "ciente" ? `Proprietária ciente em ${new Date(l.ciencia.em!).toLocaleString("pt-BR", { timeZone: "America/Fortaleza", dateStyle: "short", timeStyle: "short" })}` : "Aguardando ciência da proprietária"}
+                          </a>
+                        )}
                       </td>
                       <td className="p-2"><Acoes l={l} onFeito={atualizar} onEditar={() => editar(l)} /></td>
                     </tr>
