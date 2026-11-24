@@ -4,7 +4,7 @@ import { trpc } from "@/lib/trpc";
 import { Button } from "@/components/ui/button";
 import { brl } from "@shared/simulador";
 import { CATEGORIAS_DESPESA, FORMAS_DESPESA, ROTULO_CATEGORIA, type CategoriaDespesa, type FormaDespesa } from "@shared/despesas";
-import { Ban, CheckCircle2, Download, FileText, Loader2, Paperclip, Pencil, Plus, RotateCcw, X } from "lucide-react";
+import { Ban, CheckCircle2, Download, FileText, Loader2, Paperclip, Pencil, Plus, RotateCcw, ScanText, X } from "lucide-react";
 
 const hoje = () => new Date(Date.now() - 3 * 3600_000).toISOString().slice(0, 10);
 const inicioMes = () => `${hoje().slice(0, 7)}-01`;
@@ -35,7 +35,53 @@ function Formulario({ emps, inicial, onFechar }: { emps: Emp[]; inicial: typeof 
   const set = (k: keyof typeof f) => (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) =>
     setF(x => ({ ...x, [k]: e.target.type === "checkbox" ? (e.target as HTMLInputElement).checked : e.target.value }));
   const ok = { onSuccess: () => { toast.success(f.id ? "Despesa atualizada" : "Despesa lançada"); onFechar(true); }, onError: (e: any) => toast.error(e.message) };
-  const lancar = trpc.financeiro.lancarDespesa.useMutation(ok);
+  // Comprovante lido: fica guardado e é anexado na primeira despesa lançada
+  const [comprovante, setComprovante] = useState<{ nomeArquivo: string; mime: "image/png" | "image/jpeg" | "application/pdf"; base64: string } | null>(null);
+  const anexarComp = trpc.financeiro.comprovanteDespesa.useMutation();
+  const lancar = trpc.financeiro.lancarDespesa.useMutation({
+    onSuccess: async r => {
+      if (comprovante && r.ids?.[0]) {
+        await anexarComp.mutateAsync({ id: r.ids[0], ...comprovante }).then(() => toast.success("Despesa lançada com o comprovante anexado"))
+          .catch((e: any) => toast.error(`Despesa lançada, mas o comprovante não foi anexado: ${e.message}`));
+      } else toast.success("Despesa lançada");
+      onFechar(true);
+    },
+    onError: (e: any) => toast.error(e.message),
+  });
+  const ler = trpc.financeiro.lerComprovanteDespesa.useMutation({ onError: e => toast.error(e.message) });
+  const lerComprovante = async (arq?: File) => {
+    if (!arq) return;
+    const mime = arq.type === "application/pdf" ? "application/pdf" : arq.type === "image/jpeg" ? "image/jpeg" : arq.type === "image/png" ? "image/png" : null;
+    if (!mime) { toast.error("Envie PDF, PNG ou JPG"); return; }
+    if (arq.size > 10 * 1024 * 1024) { toast.error("Arquivo grande demais (máx. 10 MB)"); return; }
+    const base64 = await paraBase64(arq);
+    const r = await ler.mutateAsync({ mime, base64 }).catch(() => null);
+    setComprovante({ nomeArquivo: arq.name.slice(0, 120), mime, base64 });
+    if (!r) return;
+    const valorAtual = paraNumero(f.valor);
+    const valorTxt = r.valor ? r.valor.toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : null;
+    const detalhes = [
+      r.forma ? `Comprovante ${FORMA[r.forma as FormaDespesa] ?? r.forma}` : "Comprovante",
+      r.idTransacao ? `ID ${r.idTransacao}` : null,
+      r.recebedor ? `${r.recebedor}${r.documentoRecebedor ? ` (${r.documentoRecebedor})` : ""}` : null,
+      r.instituicaoRecebedor,
+    ].filter(Boolean).join(" · ");
+    setF(x => ({
+      ...x,
+      valor: valorTxt ?? x.valor,
+      fornecedor: r.recebedor ?? x.fornecedor,
+      jaPaga: r.data || r.valor ? true : x.jaPaga,
+      pagoEm: r.data && r.data <= hoje() ? r.data : x.pagoEm,
+      vencimento: r.data ?? x.vencimento,
+      forma: (r.forma && (FORMAS_DESPESA as readonly string[]).includes(r.forma) ? r.forma : x.forma) as FormaDespesa,
+      observacao: x.observacao.includes(detalhes) ? x.observacao : [x.observacao.trim(), detalhes].filter(Boolean).join("\n"),
+    }));
+    if (valorAtual > 0 && r.valor && Math.abs(valorAtual - r.valor) >= 0.01) {
+      toast.warning(`O comprovante é de R$ ${valorTxt}, e o valor digitado era R$ ${valorAtual.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}. Usei o do comprovante; confira.`);
+    } else {
+      toast.success(r.faltando.length ? `Comprovante lido. Confira: não achei ${r.faltando.join(", ")}.` : "Comprovante lido: confira os campos e lance.");
+    }
+  };
   const editar = trpc.financeiro.editarDespesa.useMutation(ok);
   const salvar = (e: React.FormEvent) => {
     e.preventDefault();
@@ -48,11 +94,20 @@ function Formulario({ emps, inicial, onFechar }: { emps: Emp[]; inicial: typeof 
     if (f.id) editar.mutate({ id: f.id, ...base });
     else lancar.mutate({ ...base, meses: Math.max(1, Number(f.meses) || 1), pagoEm: f.jaPaga ? f.pagoEm : null, formaPagamento: f.jaPaga ? f.forma : null });
   };
-  const ocupado = lancar.isPending || editar.isPending;
+  const ocupado = lancar.isPending || editar.isPending || anexarComp.isPending || ler.isPending;
   const rot = "flex flex-col gap-1 text-xs text-muted-foreground";
   return (
     <form onSubmit={salvar} className="space-y-3 rounded-xl border border-primary/40 bg-card p-4">
-      <div className="flex items-center"><p className="text-sm font-semibold">{f.id ? "Editar despesa" : "Nova despesa"}</p>
+      <div className="flex flex-wrap items-center gap-y-2"><p className="text-sm font-semibold">{f.id ? "Editar despesa" : "Nova despesa"}</p>
+        {!f.id && (
+          <label className={`ml-3 inline-flex h-8 cursor-pointer items-center gap-1.5 rounded-lg border border-primary/50 px-3 text-xs font-medium text-primary hover:bg-primary/10 ${ler.isPending ? "pointer-events-none opacity-60" : ""}`}
+            title="PDF ou foto do comprovante: preenche valor, fornecedor, data e forma de pagamento">
+            {ler.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : <ScanText className="h-4 w-4" />}
+            {ler.isPending ? "Lendo comprovante…" : comprovante ? "Trocar comprovante" : "Ler comprovante"}
+            <input type="file" accept="application/pdf,image/png,image/jpeg" className="hidden" onChange={e => { lerComprovante(e.target.files?.[0]); e.target.value = ""; }} />
+          </label>
+        )}
+        {comprovante && <span className="ml-2 flex min-w-0 items-center gap-1 truncate text-xs text-muted-foreground"><Paperclip className="h-3.5 w-3.5 shrink-0" /><span className="truncate">{comprovante.nomeArquivo}</span> (anexa ao lançar)</span>}
         <button type="button" className="ml-auto text-muted-foreground hover:text-foreground" onClick={() => onFechar(false)}><X className="h-4 w-4" /></button></div>
       <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
         <label className={`${rot} sm:col-span-2`}>Descrição *<input required minLength={2} maxLength={200} value={f.descricao} onChange={set("descricao")} className={campo} placeholder="Ex.: Cascalho das ruas, tráfego pago, cartório" /></label>

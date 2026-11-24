@@ -226,6 +226,14 @@ export const financeiroRouter = router({
     const { anexarComprovante } = await import("../financeiro/despesas");
     return comErroFin(() => anexarComprovante(input.id, input, ctx.user.id));
   }),
+  /** Lê um comprovante (PDF ou foto) e devolve os dados para preencher a nova despesa (não grava nada) */
+  lerComprovanteDespesa: protectedProcedure.input(z.object({
+    mime: z.enum(["image/png", "image/jpeg", "application/pdf"]), base64: z.string().min(10).max(14_000_000),
+  })).mutation(async ({ ctx, input }) => {
+    await operador(ctx);
+    const { lerComprovante } = await import("../financeiro/comprovante");
+    return comErroFin(() => lerComprovante(input));
+  }),
   /** Empreendimentos para o filtro e o lançamento */
   empreendimentosDespesa: protectedProcedure.query(async ({ ctx }) => {
     await operador(ctx);

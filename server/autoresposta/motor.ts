@@ -365,6 +365,7 @@ export async function processarMensagem(p: { phone: string; texto: string; nome?
  */
 export async function processarRegua(agora = Date.now(), limite = 20): Promise<number> {
   if (!dentroDoHorario(agora)) return 0;
+  if (await import('../configSistema').then(m => m.robosPausados()).catch(() => false)) return 0;
   const d = await banco();
   const { lte } = await import('drizzle-orm');
   const { linhasAfetadas } = await import('../leads/rotinas');

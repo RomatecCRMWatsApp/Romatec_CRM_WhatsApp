@@ -3,6 +3,19 @@
 Cada versão nova vai no TOPO. Depois rode `npm run release` (valida e atualiza o package.json);
 ao subir, o servidor grava a versão no banco e todos recebem o aviso "Novidades da versão".
 
+## 1.198.0 — 2026-11-24
+tipo: minor
+obrigatoria: nao
+titulo: Despesa lê o comprovante e chave geral dos robôs
+publico: admin
+
+### Novo
+- Financeiro › Despesas › Nova despesa: botão "Ler comprovante". Mande o PDF ou a foto do comprovante (Pix, TED, boleto) e o sistema preenche valor, fornecedor, data, forma de pagamento e anota o ID da transação, o CNPJ e o banco de quem recebeu. O arquivo é anexado sozinho quando a despesa é lançada. Se o valor digitado for diferente do comprovante, o sistema avisa.
+- Respostas automáticas: chave geral "Pausar todos os robôs". Para de uma vez o robô do empreendimento, o robô geral, a régua, o follow-up e a retomada dos leads importados. As mensagens recebidas ficam no histórico de quem já é lead, e ninguém novo vira lead enquanto estiver pausado.
+
+### Melhorias
+- Robô desligado agora aparece em vermelho na tela de Respostas automáticas.
+
 ## 1.197.0 — 2026-11-24
 tipo: minor
 obrigatoria: nao

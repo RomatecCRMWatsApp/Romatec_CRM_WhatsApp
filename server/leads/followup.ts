@@ -183,6 +183,7 @@ export async function cancelarFollowUp(phone: string): Promise<void> {
 /** Envia os follow-ups vencidos (até `limite` por rodada) */
 export async function processarFollowUps(agora = Date.now(), limite = 15): Promise<number> {
   if (!followUpLigado()) return 0;
+  if (await import('../configSistema').then(m => m.robosPausados()).catch(() => false)) return 0;
   // Fora do horário comercial não sai nada (os vencidos esperam a próxima janela)
   if (proximoHorarioComercial(agora) !== agora) return 0;
   const d = await db();

@@ -38,3 +38,12 @@ export async function modoDistribuicao(): Promise<ModoDistribuicao> {
   return (await lerConfig('distribuicao_modo')) === 'manual' ? 'manual' : 'automatico';
 }
 export const limparCacheConfig = () => cache.clear();
+
+/**
+ * Chave geral "pausar todos os robôs": nenhuma resposta automática (robô do empreendimento, robô geral, abertura de
+ * captação, confirmação de visita), nenhuma régua, follow-up ou retomada. As mensagens recebidas continuam no histórico
+ * dos leads que já existem, e nenhum lead novo é criado a partir delas (o WhatsApp conectado pode ser o pessoal).
+ */
+export async function robosPausados(): Promise<boolean> {
+  return (await lerConfig('robos_pausados')) === '1';
+}

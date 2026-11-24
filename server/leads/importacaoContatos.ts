@@ -219,6 +219,7 @@ export const transporteRetomada = {
 /** Um passo do job: manda a próxima retomada se estiver no horário e no ritmo. Devolve o id enviado (ou null) */
 export async function processarFilaRetomada(agora = Date.now()): Promise<number | null> {
   if (!dentroDoHorario(agora) || domingo(agora)) return null;
+  if (await import('../configSistema').then(m => m.robosPausados()).catch(() => false)) return null;
   const d = await banco();
   // Envio que travou no meio (queda do servidor): volta para a fila
   await d.update(leadRetomadas).set({ status: 'pendente', updatedAt: new Date(agora) } as any)

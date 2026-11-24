@@ -209,6 +209,17 @@ async function startServer() {
         return res.json({ received: true, processed: false, reason: 'equipe' });
       }
 
+      // Todos os robôs pausados (Respostas automáticas): só guarda no histórico de quem já é lead, sem responder
+      const { robosPausados } = await import('../configSistema');
+      if (await robosPausados().catch(() => false)) {
+        if (!req.body?.fromMe && msgText) {
+          const { registrarMensagemPorTelefone } = await import('../leads/qualificacaoService');
+          await registrarMensagemPorTelefone(payload.phone, 'in', 'lead', msgText).catch(() => {});
+        }
+        console.log(`[Webhook] ⏸️ Robôs pausados — ${payload.phone} não recebe resposta automática`);
+        return res.json({ received: true, processed: false, reason: 'robos_pausados' });
+      }
+
       // Resposta automática de outra empresa ("mensagem automática", "fora do horário"…):
       // não responde (dois robôs conversando viram um loop) e não conta como resposta do lead
       const { ehRespostaAutomatica, podeResponder } = await import('../leads/antiLoop');

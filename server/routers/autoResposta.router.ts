@@ -28,6 +28,18 @@ async function empPorSlug(slug: string) {
 const slugIn = z.object({ slug: z.string().min(1).max(80) });
 
 export const autoRespostaRouter = router({
+  /** Chave geral: pausa todos os robôs (respostas, régua, follow-up e retomada) de uma vez */
+  pausaGeral: protectedProcedure.query(async ({ ctx }) => {
+    escritorio(ctx);
+    const { robosPausados } = await import("../configSistema");
+    return { pausado: await robosPausados() };
+  }),
+  pausarTodos: protectedProcedure.input(z.object({ pausado: z.boolean() })).mutation(async ({ ctx, input }) => {
+    escritorio(ctx);
+    const { gravarConfig } = await import("../configSistema");
+    await gravarConfig("robos_pausados", input.pausado ? "1" : "0", ctx.user.id);
+    return { pausado: input.pausado };
+  }),
   empreendimentos: protectedProcedure.query(async ({ ctx }) => {
     escritorio(ctx);
     const d = await banco();

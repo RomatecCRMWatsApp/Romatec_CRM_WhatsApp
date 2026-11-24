@@ -4,7 +4,7 @@ import { toast } from "sonner";
 import { trpc } from "@/lib/trpc";
 import PageHeader from "@/components/PageHeader";
 import { Button } from "@/components/ui/button";
-import { AlertTriangle, Bot, FileText, Image as ImageIcon, Loader2, Power, RotateCcw, Save, Send, Upload } from "lucide-react";
+import { AlertTriangle, Bot, FileText, Image as ImageIcon, Loader2, OctagonPause, Play, Power, RotateCcw, Save, Send, Upload } from "lucide-react";
 import { MIDIAS, ROTULO_MIDIA, type CodigoMidia } from "@shared/autoresposta";
 
 const VARIAVEIS = "{{nome}} {{corretor}} {{creci}} {{telefone_corretor}} {{disponiveis}} {{lote}} {{link_oferta}} {{area}} {{preco}} {{avista}} {{desconto_avista}} {{entrada}} {{entrada_parcelas}} {{entrada_parcela}} {{entrada_avista}} {{saldo}} {{juros_aa}} {{juros_am}} {{prazo_maior}} {{parcela_maior}} {{total_prazo}} {{p12}} {{p24}} {{p36}} {{p60}} {{p120}} {{tabela_prazos}} {{validade_condicao}} {{link_pagamento}} {{link_mapa3d}} {{link_rota}} {{link_visita}} {{link_rio}} {{link_escritorio}} {{link_contrato}} {{link_retorno}}";
@@ -117,11 +117,36 @@ export default function RespostasAutomaticas() {
   const [primeira, setPrimeira] = useState(false);
   const previa = trpc.autoResposta.previa.useMutation({ onError: e => toast.error(e.message) });
 
+  const { data: pausa } = trpc.autoResposta.pausaGeral.useQuery(undefined, { refetchInterval: 60_000 });
+  const pausarTodos = trpc.autoResposta.pausarTodos.useMutation({
+    onSuccess: r => { toast.success(r.pausado ? "Todos os robôs pausados. Ninguém recebe resposta automática." : "Robôs liberados: cada um volta como estava."); utils.autoResposta.pausaGeral.invalidate(); },
+    onError: e => toast.error(e.message),
+  });
+  const pausado = !!pausa?.pausado;
+
   const ligado = !!data?.cfg.ativo;
   return (
     <div>
       <PageHeader icone={Bot} titulo="Respostas automáticas" subtitulo="O robô responde no WhatsApp os leads do empreendimento com os valores do simulador, folders e aviso legal" />
       <div className="mx-auto max-w-[1200px] space-y-4 px-4 pb-8 md:px-6">
+        {/* Chave geral: para tudo de uma vez (ex.: WhatsApp pessoal conectado, número em risco de bloqueio) */}
+        <div role="status" className={`flex flex-wrap items-center gap-3 rounded-xl border p-4 ${pausado ? "border-danger-500/60 bg-danger-500/15" : "border-border bg-card"}`}>
+          <OctagonPause className={`h-6 w-6 ${pausado ? "text-danger-400" : "text-muted-foreground"}`} aria-hidden />
+          <div className="min-w-0 flex-1">
+            <p className={`font-semibold ${pausado ? "text-danger-300" : ""}`}>{pausado ? "TODOS OS ROBÔS PAUSADOS" : "Chave geral dos robôs"}</p>
+            <p className="text-xs text-muted-foreground">
+              {pausado
+                ? "Nenhuma resposta automática, régua, follow-up ou retomada sai. As mensagens recebidas ficam no histórico de quem já é lead, e ninguém novo vira lead."
+                : "Pausa de uma vez o robô do empreendimento, o robô geral, a régua, o follow-up e a retomada dos leads importados."}
+            </p>
+          </div>
+          <Button variant={pausado ? "outline" : "destructive"} disabled={pausarTodos.isPending}
+            onClick={() => { if (confirm(pausado ? "Liberar os robôs? Cada um volta como estava antes (o do empreendimento só responde se estiver ligado)." : "Pausar TODOS os robôs agora? Ninguém recebe resposta automática até você liberar.")) pausarTodos.mutate({ pausado: !pausado }); }}>
+            {pausarTodos.isPending ? <Loader2 className="mr-1 h-4 w-4 animate-spin" /> : pausado ? <Play className="mr-1 h-4 w-4" /> : <OctagonPause className="mr-1 h-4 w-4" />}
+            {pausado ? "Liberar robôs" : "Pausar todos os robôs"}
+          </Button>
+        </div>
+
         <div className="flex flex-wrap items-center gap-2">
           {(emps ?? []).map(e => (
             <button key={e.slug} onClick={() => { setSlug(e.slug); previa.reset(); }} className={`rounded-full border px-3 py-1 text-xs ${slug === e.slug ? "border-primary bg-primary/15 text-primary" : "border-border text-muted-foreground hover:text-foreground"}`}>
@@ -134,10 +159,10 @@ export default function RespostasAutomaticas() {
 
         {data && (
           <>
-            <div className={`flex flex-wrap items-center gap-3 rounded-xl border p-4 ${ligado ? "border-ok-500/40 bg-ok-500/10" : "border-border bg-card"}`}>
-              <Power className={`h-6 w-6 ${ligado ? "text-ok-400" : "text-muted-foreground"}`} />
+            <div className={`flex flex-wrap items-center gap-3 rounded-xl border p-4 ${ligado && !pausado ? "border-ok-500/40 bg-ok-500/10" : "border-danger-500/50 bg-danger-500/10"}`}>
+              <Power className={`h-6 w-6 ${ligado && !pausado ? "text-ok-400" : "text-danger-400"}`} />
               <div className="flex-1">
-                <p className="font-semibold">{ligado ? "Robô LIGADO" : "Robô desligado"} · {data.emp.nome}</p>
+                <p className={`font-semibold ${ligado && !pausado ? "" : "text-danger-300"}`}>{ligado ? (pausado ? "Robô ligado, mas parado pela chave geral" : "Robô LIGADO") : "Robô DESLIGADO"} · {data.emp.nome}</p>
                 <p className="text-xs text-muted-foreground">
                   {ligado ? "Os leads deste empreendimento recebem a resposta automática (8 h às 20 h; fora disso, só o primeiro contato)." : "Nada muda no atendimento: o corretor responde como hoje. Use a prévia abaixo para conferir antes de ligar."}
                   {" "}{data.disponiveis} chácaras disponíveis agora.
