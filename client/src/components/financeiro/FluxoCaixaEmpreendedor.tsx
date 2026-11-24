@@ -137,14 +137,14 @@ export default function FluxoCaixaEmpreendedor() {
             </div>
           )}
 
-          {(data.comissoes.devidas.length > 0 || data.comissoes.programadas.length > 0) && (
+          {(data.comissoes.devidas.length > 0 || data.comissoes.programadas.length > 0 || data.comissoes.pagas.length > 0) && (
             <div className="rounded-xl border border-border bg-card p-3">
               <h3 className="mb-1 text-sm font-semibold">Comissões de gestão das vendas (5%)</h3>
               <div className="max-h-[260px] overflow-auto text-sm">
-                {[...data.comissoes.devidas, ...data.comissoes.programadas].map((c, k) => (
+                {[...data.comissoes.devidas, ...data.comissoes.programadas, ...data.comissoes.pagas].map((c, k) => (
                   <p key={`${c.contrato}-${c.quando}-${k}`} className="flex flex-wrap justify-between gap-2 border-t border-border/50 py-1.5 first:border-0">
                     <span>{c.lote} · {c.quando}</span>
-                    <span className="tabular-nums"><b>{brl(c.valor)}</b> <span className={`text-xs ${c.devida ? "text-warn-300" : "text-muted-foreground"}`}>{c.devida ? `devida (cliente pagou em ${dataBr(c.data)})` : `programada${c.data ? ` para ${dataBr(c.data)}` : ""}`}</span></span>
+                    <span className="tabular-nums"><b>{brl(c.valor)}</b> <span className={`text-xs ${c.recebidaEm ? "text-ok-300" : c.devida ? "text-warn-300" : "text-muted-foreground"}`}>{c.recebidaEm ? `paga em ${dataBr(c.recebidaEm)}` : c.devida ? `a pagar (cliente pagou em ${dataBr(c.data)})` : `programada${c.data ? ` para ${dataBr(c.data)}` : ""}`}</span></span>
                   </p>
                 ))}
               </div>

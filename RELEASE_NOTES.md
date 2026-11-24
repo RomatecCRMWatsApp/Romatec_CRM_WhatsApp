@@ -3,6 +3,17 @@
 Cada versão nova vai no TOPO. Depois rode `npm run release` (valida e atualiza o package.json);
 ao subir, o servidor grava a versão no banco e todos recebem o aviso "Novidades da versão".
 
+## 1.202.0 — 2026-11-24
+tipo: minor
+obrigatoria: nao
+titulo: Comissão de gestão paga pela proprietária: registro e saída do caixa
+publico: admin
+
+### Novo
+- Financeiro › Comissões: quadro "A receber da proprietária — comissões das vendas". O comprador paga a entrada inteira à proprietária e ela repassa os 5% por Pix. Cada parte da comissão fica "Devida" quando o comprador paga a parcela e "Programada" antes disso. O botão "Marcar recebida" registra o Pix.
+- Ao marcar a comissão como recebida (das vendas ou das concessões), o sistema lança a saída "Comissões" já paga no caixa do empreendimento. Desfazer o registro cancela essa saída.
+- Portal do empreendedor: as comissões aparecem como "a pagar", "programada" ou "paga em …". O saldo dela desconta só as que ainda não pagou; as pagas já saíram do caixa.
+
 ## 1.201.0 — 2026-11-24
 tipo: minor
 obrigatoria: nao

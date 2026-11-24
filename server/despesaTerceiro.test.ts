@@ -87,3 +87,18 @@ describe('despesa bancada por terceiro', () => {
     expect(l).toMatchObject({ origemRecurso: 'terceiro', rotuloModalidade: 'Adiantamento' });
   });
 });
+
+describe('comissão paga pela proprietária sai do caixa', () => {
+  it('lança a despesa Comissões já paga e o desfazer cancela', async () => {
+    const S = await import('./financeiro/saidaComissao');
+    const id = await S.lancarSaidaComissao({ empreendimentoId: 1, descricao: 'Comissão de gestão — B06', valor: 7500, pagoEm: '2026-11-25', forma: 'Pix', autorId: 1 });
+    expect(id).toBeTruthy();
+    let f = await F.fluxoCaixa('2026-11-25', '2026-11-25', 'dia', '2026-11-25', 1);
+    expect(f.totalSaidas).toBe(7500);
+    expect(f.porCategoria[0].categoria).toBe('Comissões');
+    await S.cancelarSaidaComissao(`Recebido · despesa:#${id}`, 1);
+    f = await F.fluxoCaixa('2026-11-25', '2026-11-25', 'dia', '2026-11-25', 1);
+    expect(f.totalSaidas).toBe(0);
+    expect(S.formaDespesa('Transferência')).toBe('TRANSFERENCIA');
+  });
+});

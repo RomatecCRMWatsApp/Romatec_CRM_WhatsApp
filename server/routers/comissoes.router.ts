@@ -47,6 +47,22 @@ export const comissoesRouter = router({
   }),
 
   /** Desfaz o registro (só o administrador) */
+  /** Comissões de gestão das vendas que as proprietárias pagam à gestora (escritório) */
+  gestaoVendas: protectedProcedure.query(async ({ ctx }) => {
+    if (ctx.permissoes.perfil !== "admin" && ctx.permissoes.perfil !== "secretario") throw new TRPCError({ code: "FORBIDDEN", message: "Só o administrador e a secretária" });
+    const { receitasGestaoVendas } = await import("../financeiro/saldoProprietaria");
+    const { hojeBrasil } = await import("../financeiro/servico");
+    return receitasGestaoVendas(hojeBrasil());
+  }),
+  registrarRecebimentoGestao: protectedProcedure.input(z.object({
+    contratoId: z.number().int(), chave: z.string().max(16), pagoEm: z.string().regex(/^\d{4}-\d{2}-\d{2}$/), forma: z.string().max(30).optional(),
+  })).mutation(async ({ input, ctx }) => {
+    if (ctx.permissoes.perfil !== "admin" && ctx.permissoes.perfil !== "secretario") throw new TRPCError({ code: "FORBIDDEN", message: "Só o administrador e a secretária" });
+    const G = await import("../financeiro/saldoProprietaria");
+    const { hojeBrasil } = await import("../financeiro/servico");
+    try { return await G.registrarRecebimentoGestao(ctx.user.id, input, hojeBrasil()); }
+    catch (e: any) { if (e instanceof G.GestaoErro) throw new TRPCError({ code: e.status === 404 ? "NOT_FOUND" : e.status === 409 ? "CONFLICT" : "BAD_REQUEST", message: e.message }); throw e; }
+  }),
   desfazerPagamento: protectedProcedure.input(z.object({ contratoId: z.number().int(), chave: z.string().max(20) })).mutation(async ({ input, ctx }) => {
     const R = await import("../financeiro/comissoesRepasse");
     return comErroRepasse(() => R.desfazerRepasse(ctx.permissoes, input));

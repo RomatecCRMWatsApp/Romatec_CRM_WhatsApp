@@ -108,6 +108,10 @@ export async function desfazerRepasse(permissoes: PermissoesUsuario, i: { contra
   if (permissoes.perfil !== 'admin') throw new RepasseErro('Só o administrador desfaz o registro de pagamento.', 403);
   const d: any = await getDb();
   if (!d) throw new RepasseErro('Banco indisponível', 503);
+  const ant: any[] = await d.select().from(comissaoRepasses).where(and(eq(comissaoRepasses.contratoId, i.contratoId), eq(comissaoRepasses.chave, i.chave)));
   await d.delete(comissaoRepasses).where(and(eq(comissaoRepasses.contratoId, i.contratoId), eq(comissaoRepasses.chave, i.chave)));
+  // Recebimento da proprietária: a saída lançada no caixa do empreendimento é cancelada junto
+  const { cancelarSaidaComissao } = await import('./saidaComissao');
+  for (const r of ant) await cancelarSaidaComissao(r.observacao, 0);
   return { ok: true as const };
 }

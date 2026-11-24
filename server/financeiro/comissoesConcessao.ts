@@ -100,9 +100,13 @@ export async function registrarRecebimentoConcessao(p: PermissoesUsuario, usuari
   if (!c || !k) throw new RepasseErro('Contrato de concessão não encontrado', 404);
   const [ja]: any[] = await d.select({ id: comissaoRepasses.id }).from(comissaoRepasses).where(and(eq(comissaoRepasses.contratoId, i.contratoId), eq(comissaoRepasses.chave, CHAVE))).limit(1);
   if (ja) throw new RepasseErro('Esta comissão já está registrada como recebida', 409);
+  // A proprietária pagou: sai do caixa do empreendimento (despesa "Comissões" já paga, vinculada ao registro)
+  const { lancarSaidaComissao } = await import('./saidaComissao');
+  const despesaId = await lancarSaidaComissao({ empreendimentoId: c.empreendimentoId ? Number(c.empreendimentoId) : null, descricao: `Comissão de gestão da concessão — ${c.loteCodigo} (${c.numero})`, valor: Number(k.comissaoValor ?? 0), pagoEm: i.pagoEm, forma: i.forma, autorId: usuarioId });
+  const obs = [i.observacao?.trim() || 'Recebido da proprietária (concessão)', despesaId ? `despesa:#${despesaId}` : null].filter(Boolean).join(' · ').slice(0, 300);
   await d.insert(comissaoRepasses).values({
     contratoId: i.contratoId, corretorUserId: Number(c.corretorUserId), chave: CHAVE, valor: Number(k.comissaoValor ?? 0).toFixed(2), pagoEm: i.pagoEm,
-    forma: i.forma?.slice(0, 30) || null, observacao: i.observacao?.slice(0, 300) || 'Recebido da proprietária (concessão)', registradoPor: usuarioId,
+    forma: i.forma?.slice(0, 30) || null, observacao: obs, registradoPor: usuarioId,
   });
   return { ok: true as const, valor: Number(k.comissaoValor ?? 0) };
 }

@@ -143,12 +143,13 @@ export const empreendedorRouter = router({
     const hoje = hojeBrasil();
     const [comissoes, conc] = await Promise.all([comissoesDeGestao(Number(emp.id), hoje), concessoesDaProprietaria(Number(emp.id))]);
     const soma = (l: { valor: number }[]) => Math.round(l.reduce((t, x) => t + x.valor, 0) * 100) / 100;
-    const devidas = comissoes.filter(x => x.devida && (!x.data || x.data <= input.ate));
+    const devidas = comissoes.filter(x => x.devida && !x.recebidaEm && (!x.data || x.data <= input.ate));
+    const pagas = comissoes.filter(x => !!x.recebidaEm);
     const programadas = comissoes.filter(x => !x.devida).sort((a, b) => String(a.data).localeCompare(String(b.data)));
     const saldo = saldoLivre({ saldoCaixa: fluxo.saldoFinal, comissoesDevidas: soma(devidas), concessoesAPagar: Math.round((conc.resumo.aReceber + conc.resumo.atrasado) * 100) / 100, dividaTerceiros: fluxo.terceiros.emAberto });
     return { ...fluxo, despesas: despesas.map(x => ({ ...x, origem: desp.linhas.find(l => l.id === x.id) })).map(({ origem, ...x }) => ({
       ...x, terceiro: origem?.origemRecurso === "terceiro" ? { nome: origem.terceiroNome, modalidade: origem.rotuloModalidade, finalidade: origem.terceiroFinalidade, devolvidoEm: origem.reembolsadoEm } : null,
-    })), totaisDespesas: desp.totais, saldo, comissoes: { devidas, programadas, totalProgramado: soma(programadas) }, concessoes: conc };
+    })), totaisDespesas: desp.totais, saldo, comissoes: { devidas, programadas, pagas, totalProgramado: soma(programadas) }, concessoes: conc };
   }),
 
   /** Comissão de gestão das concessões: o valor integral (5%) que a proprietária paga à gestora, e se já pagou */
