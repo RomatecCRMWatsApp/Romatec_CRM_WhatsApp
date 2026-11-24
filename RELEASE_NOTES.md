@@ -3,6 +3,18 @@
 Cada versão nova vai no TOPO. Depois rode `npm run release` (valida e atualiza o package.json);
 ao subir, o servidor grava a versão no banco e todos recebem o aviso "Novidades da versão".
 
+## 1.196.0 — 2026-11-24
+tipo: minor
+obrigatoria: nao
+titulo: Tour 3D com cortes no ritmo da música e textos animados
+publico: corretor
+
+### Melhorias
+- Tour 3D: com a música do sistema (suave, animada ou elegante), as fotos trocam no ritmo da batida. Dá para desligar na opção "Trocar as fotos no ritmo da música".
+- A câmera chega mais rápido no enquadramento e desacelera devagar, sem parar no meio da cena.
+- Título, preço e contato entram subindo, um depois do outro, e o cartão final aparece linha por linha.
+- Nas trocas com zoom ou clarão, a imagem dá uma tremida curta, como um corte de cinema.
+
 ## 1.195.3 — 2026-11-23
 tipo: patch
 obrigatoria: nao

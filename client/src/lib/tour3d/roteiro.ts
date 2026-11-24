@@ -105,6 +105,86 @@ export interface Quadro {
 
 const suave = (x: number) => x * x * (3 - 2 * x);
 
+/**
+ * Curva cúbica de Bézier (como o cubic-bezier do CSS): devolve y para um x de 0 a 1.
+ * As curvas usadas são as do guia de animação (Emil Kowalski) — nada inventado.
+ */
+export function curvaBezier(x1: number, y1: number, x2: number, y2: number): (x: number) => number {
+  const cx = 3 * x1, bx = 3 * (x2 - x1) - cx, ax = 1 - cx - bx;
+  const cy = 3 * y1, by = 3 * (y2 - y1) - cy, ay = 1 - cy - by;
+  const xEm = (u: number) => ((ax * u + bx) * u + cx) * u;
+  const yEm = (u: number) => ((ay * u + by) * u + cy) * u;
+  const dx = (u: number) => (3 * ax * u + 2 * bx) * u + cx;
+  return (x: number) => {
+    if (x <= 0) return 0;
+    if (x >= 1) return 1;
+    let u = x;
+    for (let i = 0; i < 8; i++) {
+      const erro = xEm(u) - x;
+      if (Math.abs(erro) < 1e-6) break;
+      const d = dx(u);
+      if (Math.abs(d) < 1e-6) break;
+      u -= erro / d;
+    }
+    // reforço por bisseção quando a derivada é pequena (pontas da curva)
+    let lo = 0, hi = 1;
+    for (let i = 0; i < 20 && Math.abs(xEm(u) - x) > 1e-5; i++) {
+      if (xEm(u) < x) lo = u; else hi = u;
+      u = (lo + hi) / 2;
+    }
+    return yEm(u);
+  };
+}
+
+/** Entrar/sair e textos: --ease-out forte. */
+export const EASE_OUT = curvaBezier(0.23, 1, 0.32, 1);
+/** Algo se movendo na tela (deslizes das transições): --ease-in-out. */
+export const EASE_IN_OUT = curvaBezier(0.77, 0, 0.175, 1);
+
+/**
+ * Progresso da câmera dentro da cena: chega rápido ao enquadramento e desacelera,
+ * mas nunca para (parte linear) — câmera parada parece vídeo travado.
+ */
+export function progressoCamera(p: number): number {
+  const x = Math.min(1, Math.max(0, p));
+  return 0.7 * EASE_OUT(x) + 0.3 * x;
+}
+
+/**
+ * Duração da foto encaixada no ritmo da música: cada troca de foto começa numa batida.
+ * Mantém o tempo pedido o mais perto possível (mínimo de 2 batidas por foto).
+ */
+export function segundosNoRitmo(segundos: number, bpm: number): number {
+  if (!(bpm > 0)) return segundos;
+  const batida = 60 / bpm;
+  const passos = Math.max(2, Math.round((segundos - TRANSICAO_S) / batida));
+  return TRANSICAO_S + passos * batida;
+}
+
+/** Texto entrando: sobe um pouco e aparece, em cascata (`ordem` × 60 ms), ease-out de 0,6 s. */
+export const TEXTO_ENTRADA_S = 0.6;
+export const TEXTO_CASCATA_S = 0.06;
+export function entradaTexto(tempo: number, ordem: number): { alfa: number; subida: number } {
+  const x = (tempo - ordem * TEXTO_CASCATA_S) / TEXTO_ENTRADA_S;
+  const e = EASE_OUT(Math.min(1, Math.max(0, x)));
+  return { alfa: e, subida: 1 - e };
+}
+
+/** Tremida de impacto nas trocas com zoom ou clarão: começa no meio da troca e some em 7 quadros. */
+const TREMIDA_QUADROS = 7;
+export function impactoEm(r: Roteiro, t: number, fps = FPS): { x: number; y: number } {
+  for (let i = 1; i < r.cenas.length; i++) {
+    const tr = r.cenas[i].transicao;
+    if (tr !== "zoom" && tr !== "flash") continue;
+    const dt = t - (r.inicios[i] + TRANSICAO_S / 2);
+    const q = dt * fps;
+    if (q < 0 || q >= TREMIDA_QUADROS) continue;
+    const forca = 0.008 * (1 - q / TREMIDA_QUADROS);
+    return { x: Math.sin(q * 2.1) * forca, y: Math.cos(q * 2.7) * forca };
+  }
+  return { x: 0, y: 0 };
+}
+
 /** O que aparece no instante t (segundos). */
 export function quadroEm(r: Roteiro, t: number): Quadro {
   const cenas: CenaNoQuadro[] = [];
@@ -114,7 +194,7 @@ export function quadroEm(r: Roteiro, t: number): Quadro {
     if (t < ini || t > fim) return;
     const progresso = Math.min(1, Math.max(0, (t - ini) / c.duracao));
     let opacidade = 1;
-    if (i > 0 && t < ini + TRANSICAO_S) opacidade = suave((t - ini) / TRANSICAO_S);
+    if (i > 0 && t < ini + TRANSICAO_S) opacidade = EASE_IN_OUT((t - ini) / TRANSICAO_S);
     cenas.push({ indice: i, progresso, opacidade, transicao: c.transicao ?? "dissolver" });
   });
   const cartao = r.cartaoFinal && t >= r.inicioCartao ? suave(Math.min(1, (t - r.inicioCartao) / TRANSICAO_S)) : 0;
@@ -136,7 +216,7 @@ export interface PoseCamera {
  * (em alturas de quadro), usado para o deslize mostrar a foto inteira.
  */
 export function poseCamera(m: Movimento, progresso: number, folga = 0.12): PoseCamera {
-  const p = suave(Math.min(1, Math.max(0, progresso)));
+  const p = progressoCamera(progresso);
   const lado = Math.max(0.08, folga);
   switch (m) {
     case "aproximar": return { x: 0, y: -0.02 * p, distancia: 1 - 0.16 * p, seguir: 0.5 };

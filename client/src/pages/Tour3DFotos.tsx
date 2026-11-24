@@ -10,13 +10,13 @@ import { useCartaoVendas } from "@/lib/cartaoVendas";
 import { enviarParaCloudinary } from "@/lib/uploadCloudinary";
 import NovoImovelTour3D from "@/components/tour3d/NovoImovelTour3D";
 import {
-  FORMATOS, MOVIMENTOS, TRANSICOES, montarRoteiro, movimentoAutomatico, nomeArquivo, transicaoVariada,
+  FORMATOS, MOVIMENTOS, TRANSICOES, montarRoteiro, movimentoAutomatico, nomeArquivo, segundosNoRitmo, transicaoVariada,
   type Formato, type Movimento, type Roteiro, type Transicao,
 } from "@/lib/tour3d/roteiro";
 import type { CenaTour3D, PosicaoLogo } from "@/lib/tour3d/cena";
 import type { MapaProfundidade } from "@/lib/tour3d/profundidade";
 import type { VideoGerado } from "@/lib/tour3d/video";
-import { TRILHAS, type EscolhaTrilha, type EstiloTrilha } from "@/lib/tour3d/trilha";
+import { TRILHAS, bpmDaTrilha, type EscolhaTrilha, type EstiloTrilha } from "@/lib/tour3d/trilha";
 
 /*
  * Tour 3D a partir de fotos: o corretor escolhe ou tira as fotos do imóvel, o sistema calcula a
@@ -111,6 +111,7 @@ export default function Tour3DFotos() {
   const [fotos, setFotos] = useState<FotoLocal[]>([]);
   const [formato, setFormato] = useState<Formato>("reel");
   const [segundos, setSegundos] = useState(4);
+  const [noRitmo, setNoRitmo] = useState(true);
   const [relevo, setRelevo] = useState(0.55);
   const [titulo, setTitulo] = useState("");
   const [subtitulo, setSubtitulo] = useState("");
@@ -176,18 +177,22 @@ export default function Tour3DFotos() {
     cenaRef.current?.destruir();
   }, []);
 
+  // com trilha composta pelo sistema, a troca de foto pode cair na batida da música
+  const ritmoDisponivel = trilhaEscolha !== "nenhuma" && trilhaEscolha !== "arquivo";
+  const segundosCena = ritmoDisponivel && noRitmo ? segundosNoRitmo(segundos, bpmDaTrilha(trilhaEscolha)) : segundos;
+
   const roteiroAtual = useMemo(() => {
     const { largura, altura } = FORMATOS[formato];
     const aspQ = largura / altura;
     return montarRoteiro(
       fotos.map((f, i) => ({
-        duracao: segundos,
+        duracao: segundosCena,
         movimento: f.movimento === "auto" ? movimentoAutomatico(i, f.imagem.width / f.imagem.height, aspQ) : f.movimento,
         transicao: i === 0 ? undefined : f.transicao !== "padrao" ? f.transicao : transicaoGeral === "variado" ? transicaoVariada(i - 1) : transicaoGeral,
       })),
       cartaoFinal,
     );
-  }, [fotos, formato, segundos, cartaoFinal, transicaoGeral]);
+  }, [fotos, formato, segundosCena, cartaoFinal, transicaoGeral]);
 
   const legendas = () => ({
     titulo: titulo.trim() || "Imóvel à venda",
@@ -677,9 +682,17 @@ export default function Tour3DFotos() {
               </div>
             </fieldset>
             <div className="mt-5 grid gap-4 sm:grid-cols-2">
-              <label><span className={rotulo}>Tempo de cada foto: {segundos} s</span>
-                <input type="range" min={3} max={7} step={0.5} value={segundos} onChange={e => setSegundos(Number(e.target.value))} disabled={etapa !== "editar"} className="mt-3 w-full accent-[var(--rt-gold)]" />
-              </label>
+              <div>
+                <label><span className={rotulo}>Tempo de cada foto: {segundosCena.toLocaleString("pt-BR", { maximumFractionDigits: 1 })} s</span>
+                  <input type="range" min={3} max={7} step={0.5} value={segundos} onChange={e => setSegundos(Number(e.target.value))} disabled={etapa !== "editar"} className="mt-3 w-full accent-[var(--rt-gold)]" />
+                </label>
+                {ritmoDisponivel && (
+                  <label className="mt-2 flex items-center gap-2 text-sm text-foreground">
+                    <input type="checkbox" checked={noRitmo} onChange={e => setNoRitmo(e.target.checked)} disabled={etapa !== "editar"} className="h-4 w-4 accent-[var(--rt-gold)]" />
+                    Trocar as fotos no ritmo da música
+                  </label>
+                )}
+              </div>
               <label><span className={rotulo}>Intensidade do 3D: {relevo < 0.4 ? "suave" : relevo < 0.75 ? "média" : "forte"}</span>
                 <input type="range" min={0.2} max={1} step={0.05} value={relevo} onChange={e => setRelevo(Number(e.target.value))} disabled={etapa !== "editar"} className="mt-3 w-full accent-[var(--rt-gold)]" />
               </label>

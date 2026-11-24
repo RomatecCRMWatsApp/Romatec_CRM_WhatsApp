@@ -53,6 +53,11 @@ function reverberacao(ctx: BaseAudioContext, segundos: number): ConvolverNode {
   return conv;
 }
 
+/** Batidas por minuto da trilha gerada (usado para cortar as fotos no ritmo). */
+export function bpmDaTrilha(estilo: EstiloTrilha): number {
+  return RECEITAS[estilo].bpm;
+}
+
 /** Duração em segundos de um compasso (4 tempos). */
 export function duracaoCompasso(estilo: EstiloTrilha): number {
   return (60 / RECEITAS[estilo].bpm) * 4;

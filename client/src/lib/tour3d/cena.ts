@@ -7,7 +7,7 @@
  */
 import * as THREE from "three";
 import type { MapaProfundidade } from "./profundidade";
-import { poseCamera, quadroEm, type CenaNoQuadro, type Movimento, type Roteiro } from "./roteiro";
+import { entradaTexto, impactoEm, poseCamera, quadroEm, type CenaNoQuadro, type Movimento, type Roteiro } from "./roteiro";
 
 export interface FotoCena {
   imagem: ImageBitmap;
@@ -186,6 +186,7 @@ export class CenaTour3D {
   desenhar(roteiro: Roteiro, t: number): HTMLCanvasElement {
     const q = quadroEm(roteiro, t);
     const { ctx, largura: W, altura: H } = this;
+    const tremida = impactoEm(roteiro, t);
     ctx.globalAlpha = 1;
     ctx.fillStyle = this.estilo.corFundo;
     ctx.fillRect(0, 0, W, H);
@@ -202,9 +203,10 @@ export class CenaTour3D {
       if (efeito.alfa <= 0.001) return;
       ctx.save();
       ctx.globalAlpha = efeito.alfa;
-      ctx.translate(W / 2 + efeito.x * W, H / 2 + efeito.y * H);
+      ctx.translate(W / 2 + (efeito.x + tremida.x) * W, H / 2 + (efeito.y + tremida.y) * H);
       if (efeito.giro) ctx.rotate(efeito.giro);
-      if (efeito.escala !== 1) ctx.scale(efeito.escala, efeito.escala);
+      const esc = efeito.escala * (tremida.x || tremida.y ? 1.02 : 1); // um respiro de margem para a tremida não mostrar borda
+      if (esc !== 1) ctx.scale(esc, esc);
       ctx.drawImage(this.renderer.domElement, -W / 2, -H / 2, W, H);
       ctx.restore();
       if (ehNova && (tr === "flash" || tr === "escurecer")) veu = { cor: tr === "flash" ? "255,255,255" : "0,0,0", alfa: 1 - Math.abs(2 * p - 1) };
@@ -214,7 +216,7 @@ export class CenaTour3D {
       ctx.fillStyle = `rgba(${v.cor},${v.alfa})`;
       ctx.fillRect(0, 0, W, H);
     }
-    this.compor(q.cartao, t, q.cenas);
+    this.compor(q.cartao, t, q.cenas, t - roteiro.inicioCartao);
     return this.saida;
   }
 
@@ -273,12 +275,22 @@ export class CenaTour3D {
     return { w: lg.width * esc, h: lg.height * esc };
   }
 
-  private compor(cartao: number, t: number, cenas: CenaNoQuadro[] = []) {
+  private compor(cartao: number, t: number, cenas: CenaNoQuadro[] = [], tCartao = 0) {
     const { ctx, largura: W, altura: H } = this;
     ctx.globalAlpha = 1;
     const u = Math.min(W, H) / 1080; // unidade de escala do texto
     const L = this.legendas;
-    const entrada = Math.min(1, t / 0.8);
+    // textos entram em cascata (sobem um pouco e aparecem), cada grupo 60 ms depois do anterior
+    const subidaPx = 28 * u;
+    const grupo = (ordem: number, desenhar: () => void) => {
+      const e = entradaTexto(t, ordem);
+      if (e.alfa <= 0.001) return;
+      ctx.save();
+      ctx.globalAlpha = e.alfa;
+      ctx.translate(0, e.subida * subidaPx);
+      desenhar();
+      ctx.restore();
+    };
     // faixa escura em cima e embaixo para os textos lerem sobre qualquer foto
     const topo = ctx.createLinearGradient(0, 0, 0, H * 0.28);
     topo.addColorStop(0, "rgba(0,0,0,0.62)");
@@ -292,7 +304,7 @@ export class CenaTour3D {
     ctx.fillRect(0, H * 0.66, W, H * 0.34);
 
     const m = 64 * u;
-    ctx.globalAlpha = entrada;
+    ctx.globalAlpha = entradaTexto(t, 0).alfa;
     ctx.textBaseline = "alphabetic";
     // logo: no canto escolhido; se dividir o canto com o título ou o rodapé, empurra o texto
     const tl = this.tamanhoLogo(u);
@@ -310,14 +322,14 @@ export class CenaTour3D {
       if (pos === "sup-esq") topoTexto = m + tl.h + gapLogo;
       if (pos === "inf-esq") baseTexto = H - m - tl.h - gapLogo;
     }
-    if (L.selo) {
+    if (L.selo) grupo(0, () => {
       ctx.font = `700 ${26 * u}px ${this.fonte}`;
-      const tw = ctx.measureText(L.selo).width;
+      const tw = ctx.measureText(L.selo!).width;
       ctx.fillStyle = this.estilo.corDestaque;
       this.retanguloArredondado(m, topoTexto, tw + 36 * u, 50 * u, 25 * u);
       ctx.fillStyle = "#0b1f14";
-      ctx.fillText(L.selo, m + 18 * u, topoTexto + 35 * u);
-    }
+      ctx.fillText(L.selo!, m + 18 * u, topoTexto + 35 * u);
+    });
     // com logo no canto superior direito, o título não passa por baixo dele
     const larguraTitulo = tl && pos === "sup-dir" ? W - 2 * m - tl.w - gapLogo : W - 2 * m;
     ctx.fillStyle = "#ffffff";
@@ -326,11 +338,18 @@ export class CenaTour3D {
     const linhasTitulo = this.quebrar(L.titulo || "", `800 ${66 * u}px ${this.fonte}`, larguraTitulo).slice(0, 2);
     ctx.font = `800 ${66 * u}px ${this.fonte}`;
     let y = topoTexto + (L.selo ? 130 : 70) * u;
-    linhasTitulo.forEach(l => { ctx.fillText(l, m, y); y += 76 * u; });
+    linhasTitulo.forEach((l, i) => {
+      const yl = y;
+      grupo(1 + i, () => { ctx.font = `800 ${66 * u}px ${this.fonte}`; ctx.fillStyle = "#ffffff"; ctx.fillText(l, m, yl); });
+      y += 76 * u;
+    });
     if (L.subtitulo) {
-      ctx.font = `500 ${36 * u}px ${this.fonte}`;
-      ctx.fillStyle = "rgba(255,255,255,0.9)";
-      this.quebrar(L.subtitulo, ctx.font, larguraTitulo).slice(0, 2).forEach(l => { ctx.fillText(l, m, y); y += 46 * u; });
+      const linhasSub = this.quebrar(L.subtitulo, `500 ${36 * u}px ${this.fonte}`, larguraTitulo).slice(0, 2);
+      linhasSub.forEach((l, i) => {
+        const yl = y;
+        grupo(3 + i, () => { ctx.font = `500 ${36 * u}px ${this.fonte}`; ctx.fillStyle = "rgba(255,255,255,0.9)"; ctx.fillText(l, m, yl); });
+        y += 46 * u;
+      });
     }
     // rodapé: preço e corretor
     let yb = baseTexto;
@@ -340,25 +359,34 @@ export class CenaTour3D {
     const linhaCorretor = [L.corretor, L.creciF, L.telefone].filter(Boolean).join("  ·  ");
     ctx.fillStyle = "#ffffff";
     if (linhaEscritorio) {
-      ctx.font = `500 ${30 * u}px ${this.fonte}`;
-      ctx.fillStyle = "rgba(255,255,255,0.88)";
-      ctx.fillText(linhaEscritorio, m, yb, larguraRodape);
+      const yl = yb;
+      grupo(7, () => {
+        ctx.font = `500 ${30 * u}px ${this.fonte}`;
+        ctx.fillStyle = "rgba(255,255,255,0.88)";
+        ctx.fillText(linhaEscritorio, m, yl, larguraRodape);
+      });
       yb -= 44 * u;
     }
     if (linhaCorretor) {
-      ctx.font = `600 ${34 * u}px ${this.fonte}`;
-      ctx.fillStyle = "#ffffff";
-      ctx.fillText(linhaCorretor, m, yb, larguraRodape);
+      const yl = yb;
+      grupo(6, () => {
+        ctx.font = `600 ${34 * u}px ${this.fonte}`;
+        ctx.fillStyle = "#ffffff";
+        ctx.fillText(linhaCorretor, m, yl, larguraRodape);
+      });
       yb -= 64 * u;
     } else if (linhaEscritorio) yb -= 20 * u;
     if (L.preco) {
-      ctx.shadowBlur = 0;
-      ctx.font = `800 ${52 * u}px ${this.fonte}`;
-      const tw = ctx.measureText(L.preco).width;
-      ctx.fillStyle = this.estilo.corDestaque;
-      this.retanguloArredondado(m, yb - 62 * u, tw + 48 * u, 82 * u, 16 * u);
-      ctx.fillStyle = "#0b1f14";
-      ctx.fillText(L.preco, m + 24 * u, yb - 4 * u);
+      const yl = yb;
+      grupo(5, () => {
+        ctx.shadowBlur = 0;
+        ctx.font = `800 ${52 * u}px ${this.fonte}`;
+        const tw = ctx.measureText(L.preco!).width;
+        ctx.fillStyle = this.estilo.corDestaque;
+        this.retanguloArredondado(m, yl - 62 * u, tw + 48 * u, 82 * u, 16 * u);
+        ctx.fillStyle = "#0b1f14";
+        ctx.fillText(L.preco!, m + 24 * u, yl - 4 * u);
+      });
       yb -= 62 * u;
     }
     ctx.shadowBlur = 0;
@@ -384,10 +412,10 @@ export class CenaTour3D {
       ctx.textAlign = "left";
     });
     ctx.globalAlpha = 1;
-    if (cartao > 0) this.cartaoFinal(cartao, u);
+    if (cartao > 0) this.cartaoFinal(cartao, u, tCartao);
   }
 
-  private cartaoFinal(alfa: number, u0: number) {
+  private cartaoFinal(alfa: number, u0: number, tempo = 99) {
     const { ctx, largura: W, altura: H } = this;
     const L = this.legendas;
     ctx.globalAlpha = alfa;
@@ -430,11 +458,16 @@ export class CenaTour3D {
     }
     ctx.textAlign = "center";
     ctx.textBaseline = "alphabetic";
-    linhas.forEach(l => {
+    // as linhas do cartão sobem em cascata depois que o fundo cobre a foto
+    linhas.forEach((l, i) => {
       y += l.antes + l.tam;
-      ctx.font = `${l.peso} ${l.tam}px ${this.fonte}`;
-      ctx.fillStyle = l.cor;
-      ctx.fillText(l.texto, W / 2, y, W - 100 * u);
+      const e = entradaTexto(tempo - 0.25, i);
+      if (e.alfa > 0.001) {
+        ctx.globalAlpha = alfa * e.alfa;
+        ctx.font = `${l.peso} ${l.tam}px ${this.fonte}`;
+        ctx.fillStyle = l.cor;
+        ctx.fillText(l.texto, W / 2, y + e.subida * 24 * u, W - 100 * u);
+      }
       y += l.tam * 0.15;
     });
     ctx.textAlign = "left";
