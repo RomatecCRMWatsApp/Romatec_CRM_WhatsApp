@@ -3,6 +3,19 @@
 Cada versão nova vai no TOPO. Depois rode `npm run release` (valida e atualiza o package.json);
 ao subir, o servidor grava a versão no banco e todos recebem o aviso "Novidades da versão".
 
+## 1.197.0 — 2026-11-24
+tipo: minor
+obrigatoria: nao
+titulo: WhatsApp oficial da Meta pronto para ligar
+publico: admin
+
+### Novo
+- O CRM pode enviar e receber pela API oficial do WhatsApp (Meta), com número verificado que não depende de QR code nem cai. Robô, retomada, avisos ao José e aos corretores, documentos e vídeos passam a sair por ela quando for ligada.
+- A retomada dos leads importados sai no modelo aprovado pela Meta, com o primeiro nome do cliente. Avisos e lembretes fora das 24 h saem no modelo padrão.
+- Áudio e foto que o cliente manda pela API oficial chegam ao robô e ao agente de imóveis como antes.
+- Configurações › WhatsApp oficial: o que falta configurar, situação do número (qualidade e limite de clientes novos por dia), teste de envio e os atalhos que o cliente vê ao abrir a conversa.
+- Enquanto a API oficial não for ligada, nada muda: o CRM segue na Z-API.
+
 ## 1.196.1 — 2026-11-24
 tipo: patch
 obrigatoria: nao

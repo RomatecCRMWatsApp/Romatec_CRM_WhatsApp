@@ -46,7 +46,7 @@ async function startServer() {
   // JSON: 50 MB só para o CRM logado (fotos/documentos em base64); 1 MB nas rotas públicas e webhooks.
   // Webhooks da Meta (X-Hub-Signature-256) e da Spedy (Standard Webhooks) assinam o corpo cru: guarda só nessas rotas
   app.use(...protecoes.jsonComLimite((req, _res, buf) => {
-    if (req.url?.startsWith('/api/webhook/meta') || req.url?.startsWith('/api/webhook/spedy')) (req as any).rawBody = Buffer.from(buf);
+    if (req.url?.startsWith('/api/webhook/meta') || req.url?.startsWith('/api/webhook/spedy') || req.url?.startsWith('/api/webhook/whatsapp-cloud')) (req as any).rawBody = Buffer.from(buf);
   }));
   // "Ver como" do administrador: só leitura também nas rotas REST (server/_core/verComo.ts)
   const { bloquearEscritaRest } = await import('./verComo');
@@ -87,7 +87,49 @@ async function startServer() {
           return res.status(401).json({ error: 'invalid signature' });
         }
       }
+      return processarEntradaWhatsapp(req, res);
+    } catch (error) {
+      console.error('[Webhook] Erro:', error);
+      res.json({ received: true, processed: false, error: String(error) });
+    }
+  });
 
+  // ─── WhatsApp oficial (Cloud API da Meta): mesmas mensagens, convertidas para o formato da Z-API ───
+  app.get('/api/webhook/whatsapp-cloud', async (req, res) => {
+    const { verificarWebhookCloud } = await import('../leads/whatsappCloud');
+    const challenge = verificarWebhookCloud(req.query as Record<string, unknown>);
+    if (challenge === null) {
+      console.warn('[WhatsApp oficial] Verificação do webhook recusada (WHATSAPP_CLOUD_VERIFY_TOKEN não confere ou não configurado)');
+      return res.sendStatus(403);
+    }
+    res.status(200).type('text/plain').send(challenge);
+  });
+
+  app.post('/api/webhook/whatsapp-cloud', async (req, res) => {
+    try {
+      const { assinaturaCloudValida, converterEntradaCloud, anexarMidiaCloud } = await import('../leads/whatsappCloud');
+      if (!assinaturaCloudValida((req as any).rawBody, req.headers['x-hub-signature-256'])) {
+        console.warn('[WhatsApp oficial] Assinatura X-Hub-Signature-256 inválida ou App Secret ausente — recusado');
+        return res.sendStatus(401);
+      }
+      const mensagens = converterEntradaCloud(req.body);
+      // A Meta espera 200 rápido; cada mensagem segue o mesmo fluxo do webhook da Z-API
+      res.sendStatus(200);
+      for (const m of mensagens) {
+        const resposta = { json: (_: unknown) => resposta, status: (_: number) => resposta, sendStatus: (_: number) => resposta } as any;
+        const corpo = await anexarMidiaCloud(m).catch(() => m);
+        await processarEntradaWhatsapp({ body: corpo, headers: {}, query: {} } as any, resposta)
+          .catch((e: unknown) => console.error('[WhatsApp oficial] Erro ao tratar mensagem:', e));
+      }
+    } catch (error) {
+      console.error('[WhatsApp oficial] Erro no webhook:', error);
+      if (!res.headersSent) res.sendStatus(500);
+    }
+  });
+
+  /** Mensagem recebida (Z-API ou WhatsApp oficial já convertido): agente de imóveis, leads, robô e caixa de entrada */
+  async function processarEntradaWhatsapp(req: { body: any; headers: any; query: any }, res: express.Response) {
+    try {
       const { parseWebhookPayload } = await import('../zapi-integration');
       const { processBotMessage, registerBotMessage } = await import('../bot-ai');
       const { sendMessageViaZAPI } = await import('../zapi-integration');
@@ -333,10 +375,11 @@ async function startServer() {
           const token = process.env.ZAPI_TOKEN;
           const clientToken = process.env.ZAPI_CLIENT_TOKEN;
 
-          if (instanceId && token) {
+          const { cloudAtivo } = await import('../leads/whatsappCloud');
+          if ((instanceId && token) || cloudAtivo()) {
             const sendResult = await sendMessageViaZAPI({
-              instanceId,
-              token,
+              instanceId: instanceId || '',
+              token: token || '',
               clientToken: clientToken || undefined,
               phone: payload.phone,
               message: botResponse.text,
@@ -374,7 +417,7 @@ async function startServer() {
       console.error('[Webhook] Erro:', error);
       res.json({ received: true, processed: false, error: String(error) });
     }
-  });
+  }
 
   // ─── Formulário público de captação (página do lote / link da bio do Instagram) ───
   const { createRateLimiter } = await import('../lead-intake');

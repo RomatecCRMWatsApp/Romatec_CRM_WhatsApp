@@ -14,6 +14,7 @@ import { useLocation } from "wouter";
 import { trpc } from "@/lib/trpc";
 import { toast } from "sonner";
 import ResumoSemanalConfig from "@/components/sistema/ResumoSemanalConfig";
+import WhatsappOficial from "@/components/sistema/WhatsappOficial";
 
 export default function Settings() {
   const [, navigate] = useLocation();
@@ -148,6 +149,8 @@ export default function Settings() {
             </div>
           </CardContent>
         </Card>
+
+        <WhatsappOficial />
 
         {/* Z-API */}
         <Card className="bg-card border-border">

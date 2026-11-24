@@ -34,6 +34,18 @@ export async function sendMessageViaZAPI({
   phone,
   message,
 }: SendMessageParams): Promise<ZAPIResponse> {
+  // WhatsApp oficial ligado (WHATSAPP_PROVIDER=cloud): sai pela API da Meta. Fora da janela de 24 h a Meta
+  // recusa texto livre e aqui NÃO cai no modelo padrão (disparo em massa precisa de modelo de marketing próprio).
+  const cloud = await import('./leads/whatsappCloud');
+  if (cloud.cloudAtivo()) {
+    try {
+      const messageId = await cloud.enviarTextoCloud(phone, message, { semModeloPadrao: true });
+      return { success: true, messageId, attempts: 1 };
+    } catch (e: any) {
+      return { success: false, error: e?.codigo === 'FORA_DA_JANELA' ? 'Fora da janela de 24 h do WhatsApp oficial: precisa de modelo aprovado' : (e?.message || 'falha na API oficial'), attempts: 1 };
+    }
+  }
+
   const MAX_RETRIES = 3;
   const BASE_DELAY = 2000; // 2 segundos
 

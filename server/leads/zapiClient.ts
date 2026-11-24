@@ -1,6 +1,8 @@
 /**
  * Cliente Z-API do módulo de captação (envio de texto e documento com timeout).
  * Credenciais: ZAPI_INSTANCE_ID, ZAPI_TOKEN, ZAPI_CLIENT_TOKEN.
+ * Com WHATSAPP_PROVIDER=cloud, os envios saem pela API oficial da Meta (server/leads/whatsappCloud.ts),
+ * a não ser que o chamador passe credenciais Z-API explícitas.
  */
 
 export class ZApiError extends Error {
@@ -18,8 +20,25 @@ function credsDoEnv(): ZApiCreds {
   return { instanceId: process.env.ZAPI_INSTANCE_ID, token: process.env.ZAPI_TOKEN, clientToken: process.env.ZAPI_CLIENT_TOKEN };
 }
 
+/** Vai pela API oficial? (provedor "cloud" e o chamador não forçou uma instância Z-API) */
+async function pelaCloud(opts: Opcoes) {
+  if (opts.creds) return null;
+  const c = await import('./whatsappCloud');
+  return c.cloudAtivo() ? c : null;
+}
+
+/** Erros da API oficial no mesmo formato dos da Z-API (os módulos tratam um só tipo) */
+async function viaCloud<T>(f: () => Promise<T>): Promise<T> {
+  try { return await f(); } catch (e: any) {
+    if (e instanceof ZApiError) throw e;
+    throw new ZApiError(e?.codigo || 'CLOUD_ERRO', e?.message || 'falha na API oficial do WhatsApp');
+  }
+}
+
 /** Envia texto; devolve o messageId. Lança ZApiError em qualquer falha. */
 export async function enviarTexto(telefone: string, mensagem: string, opts: Opcoes = {}): Promise<string> {
+  const c = await pelaCloud(opts);
+  if (c) return viaCloud(() => c.enviarTextoCloud(telefone, mensagem, { fetchImpl: opts.fetchImpl }));
   return postZApi('send-text', telefone, { message: mensagem }, opts);
 }
 
@@ -29,6 +48,8 @@ export async function enviarDocumento(
   doc: { base64: string; extensao: string; mime: string; nomeArquivo: string; legenda?: string },
   opts: Opcoes = {},
 ): Promise<string> {
+  const c = await pelaCloud(opts);
+  if (c) return viaCloud(() => c.enviarDocumentoCloud(telefone, doc, { fetchImpl: opts.fetchImpl }));
   return postZApi(`send-document/${doc.extensao}`, telefone, {
     document: `data:${doc.mime};base64,${doc.base64}`,
     fileName: doc.nomeArquivo,
@@ -42,6 +63,8 @@ export async function enviarImagem(
   img: { base64: string; mime: string; legenda?: string },
   opts: Opcoes = {},
 ): Promise<string> {
+  const c = await pelaCloud(opts);
+  if (c) return viaCloud(() => c.enviarImagemCloud(telefone, img, { fetchImpl: opts.fetchImpl }));
   return postZApi('send-image', telefone, {
     image: `data:${img.mime};base64,${img.base64}`,
     ...(img.legenda ? { caption: img.legenda } : {}),
@@ -54,6 +77,8 @@ export async function enviarVideo(
   video: { url: string; legenda?: string },
   opts: Opcoes = {},
 ): Promise<string> {
+  const c = await pelaCloud(opts);
+  if (c) return viaCloud(() => c.enviarVideoCloud(telefone, video, { fetchImpl: opts.fetchImpl }));
   return postZApi('send-video', telefone, {
     video: video.url,
     ...(video.legenda ? { caption: video.legenda } : {}),

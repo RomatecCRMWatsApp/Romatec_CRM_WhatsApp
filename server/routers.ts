@@ -789,6 +789,21 @@ export const appRouter = router({
     whatsappStatus: protectedProcedure
       .input(z.object({ force: z.boolean().optional() }).optional())
       .query(async ({ input, ctx }) => {
+        // WhatsApp oficial ligado: o status vem da Meta (conectado, qualidade, limite de envio)
+        const cloud = await import('./leads/whatsappCloud');
+        if (cloud.cloudAtivo()) {
+          const st = await cloud.statusCloud();
+          const ok = st.ok && st.qualidade !== 'RED';
+          return {
+            state: (st.ok ? 'connected' : st.erro ? 'error' : 'phone_disconnected') as import('./whatsapp-status').WhatsAppState,
+            title: st.ok ? `WhatsApp oficial${st.numero ? ` (${st.numero})` : ''}` : 'WhatsApp oficial com problema',
+            detail: st.erro ? `${st.resumo}: ${st.erro}` : st.resumo,
+            steps: ok ? [] : st.erro
+              ? ['Confira WHATSAPP_CLOUD_TOKEN e WHATSAPP_CLOUD_PHONE_NUMBER_ID no Railway', 'O token precisa ser o permanente do usuário do sistema (business.facebook.com › Usuários do sistema)']
+              : ['Abra o Gerenciador do WhatsApp (business.facebook.com) e veja o aviso do número', 'Qualidade baixa: diminua os envios para quem não respondeu'],
+            checkedAt: new Date().toISOString(),
+          };
+        }
         const config = await getCompanyConfig();
         const { checkWhatsAppStatus } = await import('./whatsapp-status');
         const status = await checkWhatsAppStatus({
@@ -802,6 +817,48 @@ export const appRouter = router({
           await updateCompanyConfig({ zApiConnected: connected, zApiLastChecked: new Date() }).catch(() => {});
         }
         return status;
+      }),
+    /** WhatsApp oficial: situação detalhada (número, qualidade, limite) — painel de Configurações */
+    whatsappOficial: adminProcedure.query(async () => {
+      const cloud = await import('./leads/whatsappCloud');
+      const c = cloud.configCloud();
+      return {
+        ativo: cloud.cloudAtivo(),
+        configurado: !!(c.token && c.phoneNumberId),
+        webhook: '/api/webhook/whatsapp-cloud',
+        verifyTokenDefinido: !!process.env.WHATSAPP_CLOUD_VERIFY_TOKEN,
+        appSecretDefinido: !!(process.env.WHATSAPP_CLOUD_APP_SECRET || process.env.META_APP_SECRET),
+        templateRetomada: c.templateRetomada || null,
+        templatePadrao: c.templatePadrao || null,
+        atalhosPadrao: cloud.ATALHOS_PADRAO,
+        status: c.token && c.phoneNumberId ? await cloud.statusCloud() : null,
+      };
+    }),
+    /** WhatsApp oficial: mensagem de boas-vindas e atalhos que o cliente vê ao abrir a conversa */
+    whatsappOficialAtalhos: adminProcedure
+      .input(z.object({ boasVindas: z.boolean(), atalhos: z.array(z.string().trim().min(1).max(80)).max(4) }))
+      .mutation(async ({ input }) => {
+        const cloud = await import('./leads/whatsappCloud');
+        try { return { ok: await cloud.configurarAutomacaoCloud(input) }; } catch (e: any) {
+          throw new TRPCError({ code: 'BAD_REQUEST', message: e?.message || 'A Meta recusou a configuração' });
+        }
+      }),
+    /** WhatsApp oficial: manda uma mensagem de teste (texto livre: precisa que o número tenha escrito nas últimas 24 h) */
+    whatsappOficialTeste: adminProcedure
+      .input(z.object({ telefone: z.string().min(10).max(20), modelo: z.boolean().default(false) }))
+      .mutation(async ({ input }) => {
+        const cloud = await import('./leads/whatsappCloud');
+        try {
+          const c = cloud.configCloud();
+          const id = input.modelo
+            ? (c.templateRetomada
+              ? await cloud.enviarModeloCloud(input.telefone, c.templateRetomada, ['José'])
+              : await cloud.enviarModeloCloud(input.telefone, 'hello_world', [], { config: { ...c, idioma: 'en_US' } }))
+            : await cloud.enviarTextoCloud(input.telefone, 'Teste do CRM Romatec pelo WhatsApp oficial ✅', { semModeloPadrao: true });
+          return { ok: true, id };
+        } catch (e: any) {
+          throw new TRPCError({ code: 'BAD_REQUEST', message: e?.codigo === 'FORA_DA_JANELA' ? 'Fora da janela de 24 h: mande uma mensagem do seu celular para o número oficial e tente de novo, ou teste com o modelo' : (e?.message || 'falha') });
+        }
       }),
     update: adminProcedure.input(z.object({
       companyName: z.string().optional(),

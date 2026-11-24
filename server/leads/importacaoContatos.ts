@@ -198,7 +198,22 @@ async function enviadosHoje(d: any, agora: number): Promise<number> {
 
 /** Transporte (injetável nos testes) */
 export const transporteRetomada = {
-  texto: async (phone: string, texto: string) => { const z = await import('./zapiClient'); await z.enviarTexto(phone, texto, { atraso: { mensagem: 3, digitando: 8 } }); },
+  /**
+   * Z-API: manda o texto da retomada. WhatsApp oficial: a retomada é a primeira mensagem (fora da janela de 24 h),
+   * então sai no modelo aprovado WHATSAPP_CLOUD_TEMPLATE_RETOMADA com {{1}} = primeiro nome ("tudo bem" se não houver).
+   */
+  texto: async (phone: string, texto: string, nome?: string | null) => {
+    const cloud = await import('./whatsappCloud');
+    if (cloud.cloudAtivo()) {
+      const { templateRetomada } = cloud.configCloud();
+      if (!templateRetomada) throw new Error('WhatsApp oficial sem o modelo da retomada (WHATSAPP_CLOUD_TEMPLATE_RETOMADA)');
+      const { primeiroNome } = await import('../../shared/importacaoContatos');
+      await cloud.enviarModeloCloud(phone, templateRetomada, [primeiroNome(nome) || 'tudo bem']);
+      return;
+    }
+    const z = await import('./zapiClient');
+    await z.enviarTexto(phone, texto, { atraso: { mensagem: 3, digitando: 8 } });
+  },
 };
 
 /** Um passo do job: manda a próxima retomada se estiver no horário e no ritmo. Devolve o id enviado (ou null) */
@@ -225,7 +240,7 @@ export async function processarFilaRetomada(agora = Date.now()): Promise<number 
   const afetados = Number(r?.[0]?.affectedRows ?? r?.changes ?? 1);
   if (!afetados) return null;
   try {
-    await transporteRetomada.texto(item.phone, item.texto);
+    await transporteRetomada.texto(item.phone, item.texto, lead.nome);
     await d.update(leadRetomadas).set({ status: 'enviado', enviadoAt: new Date(agora), erro: null, updatedAt: new Date(agora) } as any).where(eq(leadRetomadas.id, item.id));
     // Sem resposta, ninguém manda mais nada: o robô só conversa (e a régua dele só começa) quando o cliente responder
     await d.update(leadQualifications).set({ lastActivityAt: new Date(agora), updatedAt: new Date(agora) } as any).where(eq(leadQualifications.id, item.leadId));
