@@ -102,6 +102,11 @@ describe('comissão do corretor: sai do caixa da proprietária, com ciência e d
     expect(f.totalSaidas).toBe(4155.75);
     const vendas = await G.receitasGestaoVendas('2026-11-25');
     expect(vendas.itens.find(x => x.contratoId === 1 && x.chave === 'entrada-1')).toMatchObject({ valor: 2493.45, recebidaEm: '2026-11-25' });
+    // Painel financeiro: o repasse que saiu do caixa aparece uma vez só (na despesa "Comissões"), não duplicado como repasse
+    const Pn = await import('./financeiro/painel');
+    const pn: any = await Pn.painelFinanceiro({ de: '2026-11-25', ate: '2026-11-25' } as any, ADMIN, 1, Date.parse('2026-11-25T15:00:00Z'), true);
+    const saidasLidiany = pn.movimentacoes.filter((m: any) => m.natureza !== 'entrada' && /Lidiany/.test(m.pessoa) && /BJ-2026-0003/.test(m.descricao));
+    expect(saidasLidiany).toHaveLength(1);
   });
 
   it('repasse registrado antes (sem caixa): o botão debita agora; recebimento antigo com a parte inteira é corrigido', async () => {

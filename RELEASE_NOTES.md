@@ -3,6 +3,15 @@
 Cada versão nova vai no TOPO. Depois rode `npm run release` (valida e atualiza o package.json);
 ao subir, o servidor grava a versão no banco e todos recebem o aviso "Novidades da versão".
 
+## 1.208.4 — 2026-11-25
+tipo: patch
+obrigatoria: nao
+titulo: Comissão paga ao corretor não aparece mais duas vezes no Painel financeiro
+publico: admin
+
+### Correções
+- Painel financeiro › Movimentações: o repasse ao corretor que saiu do caixa aparecia duas vezes, uma como despesa "Comissões" e outra como "Comissão de corretor (repasses)". Agora fica só a despesa, e os totais de saída do período voltam ao valor certo.
+
 ## 1.208.3 — 2026-11-25
 tipo: patch
 obrigatoria: nao

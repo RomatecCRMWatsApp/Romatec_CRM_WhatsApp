@@ -96,6 +96,8 @@ async function fontes(emp: number | null, perm: PermissoesUsuario, usuarioId: nu
       if (!noEscopo(empId, true)) continue;
       for (const parte of venda.partes) {
         const base = { fornecedor: venda.corretor, descricao: `${venda.numero} · ${parte.quando} · chácara ${venda.lote}`, categoria: CAT_COMISSAO_CORRETOR, empreendimentoId: empId, contratoId: venda.contratoId };
+        // Repasse que saiu do caixa já está nas despesas (categoria Comissões): não conta duas vezes
+        if (parte.situacao === 'paga' && parte.despesaId) continue;
         if (parte.situacao === 'paga' && parte.pagoEm) pagamentos.push({ ...base, id: `k${venda.contratoId}-${parte.chave}`, data: parte.pagoEm, valor: parte.valor });
         else if ((parte.situacao === 'a_pagar' || parte.situacao === 'atrasada') && parte.dataRepasse) aPagar.push({ ...base, id: `k${venda.contratoId}-${parte.chave}`, vencimento: parte.dataRepasse, valor: parte.valor });
       }
