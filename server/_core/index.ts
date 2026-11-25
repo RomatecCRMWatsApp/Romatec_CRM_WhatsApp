@@ -1654,6 +1654,8 @@ async function startServer() {
     await addOrigemDespesa();
     const { addFabricaCriativos } = await import('./migrations/addFabricaCriativos');
     await addFabricaCriativos();
+    const { addSimulacoesTributarias } = await import('./migrations/addSimulacoesTributarias');
+    await addSimulacoesTributarias();
     const { textosRoboV2 } = await import('./migrations/textosRoboV2');
     await textosRoboV2();
     const { addReunioes } = await import('./migrations/addReunioes');

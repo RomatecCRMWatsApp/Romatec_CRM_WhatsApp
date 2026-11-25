@@ -504,6 +504,9 @@ export function initSqliteTables(sqlite: any): void {
     pagoEm TEXT NOT NULL, forma TEXT, observacao TEXT, registradoPor INTEGER, criadoEm ${agora}, UNIQUE(contratoId, chave)
   )`);
   addColumn(`ALTER TABLE comissaoRepasses ADD COLUMN comprovanteUrl TEXT`);
+  addColumn(`ALTER TABLE comissaoRepasses ADD COLUMN demonstrativoUrl TEXT`);
+  addColumn(`ALTER TABLE comissaoRepasses ADD COLUMN demonstrativoAssinadoEm INTEGER`);
+  addColumn(`ALTER TABLE comissaoRepasses ADD COLUMN demonstrativoEnviadoEm INTEGER`);
   run(`CREATE TABLE IF NOT EXISTS declaracoesQuitacao (
     id INTEGER PRIMARY KEY AUTOINCREMENT, contratoId INTEGER NOT NULL, anoRef INTEGER NOT NULL, status TEXT NOT NULL DEFAULT 'emitida', motivo TEXT,
     valorTotal TEXT, pdfArquivo TEXT, enviadoEm INTEGER, criadoEm ${agora}, UNIQUE(contratoId, anoRef)
@@ -632,6 +635,8 @@ export function initSqliteTables(sqlite: any): void {
   addColumn(`ALTER TABLE financeiroDespesas ADD COLUMN reembolsadoEm TEXT`);
   addColumn(`ALTER TABLE financeiroDespesas ADD COLUMN reembolsoValor TEXT`);
   addColumn(`ALTER TABLE financeiroDespesas ADD COLUMN reembolsoForma TEXT`);
+  addColumn(`ALTER TABLE financeiroDespesas ADD COLUMN comissaoContratoId INTEGER`);
+  addColumn(`ALTER TABLE financeiroDespesas ADD COLUMN comissaoChave TEXT`);
   run(`CREATE TABLE IF NOT EXISTS linksOferta (
     token TEXT PRIMARY KEY, leadId INTEGER NOT NULL, empreendimentoId INTEGER NOT NULL, aberturas INTEGER NOT NULL DEFAULT 0,
     primeiraAberturaAt INTEGER, ultimaAberturaAt INTEGER, createdAt ${agoraS}, UNIQUE (leadId, empreendimentoId))`);
@@ -823,6 +828,11 @@ export function initSqliteTables(sqlite: any): void {
     id INTEGER PRIMARY KEY AUTOINCREMENT, data TEXT NOT NULL, nome TEXT NOT NULL UNIQUE, empreendimentoSlug TEXT NOT NULL, tipo TEXT NOT NULL,
     destino TEXT NOT NULL, temPreco INTEGER NOT NULL DEFAULT 0, pautaJson TEXT NOT NULL, legenda TEXT, status TEXT NOT NULL DEFAULT 'pendente',
     pecasJson TEXT, erro TEXT, aprovadoPor INTEGER, aprovadoEm INTEGER, createdAt INTEGER NOT NULL DEFAULT (strftime('%s','now'))
+  )`);
+  run(`CREATE TABLE IF NOT EXISTS simulacoesTributarias (
+    id INTEGER PRIMARY KEY AUTOINCREMENT, contratoId INTEGER NOT NULL, regime TEXT NOT NULL, dataOperacao TEXT NOT NULL, valor TEXT NOT NULL,
+    nbs TEXT NOT NULL, cst TEXT, cClassTrib TEXT NOT NULL, situacao TEXT NOT NULL, idExterno TEXT, resultadoJson TEXT NOT NULL, solicitadoPor INTEGER,
+    createdAt INTEGER NOT NULL DEFAULT (strftime('%s','now'))
   )`);
   // Corpo jurídico (server/_core/migrations/addJuridico.ts)
   addColumn(`ALTER TABLE users ADD COLUMN oab TEXT`);

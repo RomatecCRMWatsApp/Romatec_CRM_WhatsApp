@@ -42,6 +42,22 @@ export const comissoesRouter = router({
     const R = await import("../financeiro/comissoesRepasse");
     return comErroRepasse(() => R.debitarRepasse(ctx.permissoes, ctx.user.id, input));
   }),
+  /** Troca ou remove (comprovante null) o comprovante de um repasse já registrado */
+  trocarComprovante: protectedProcedure.input(z.object({
+    contratoId: z.number().int(), chave: z.string().regex(/^(avista|entrada|saldo)-\d{1,2}$/),
+    comprovante: z.object({ base64: z.string().min(10).max(14_000_000), mime: z.enum(["image/png", "image/jpeg", "application/pdf"]), nomeArquivo: z.string().max(120) }).nullable(),
+  })).mutation(async ({ input, ctx }) => {
+    const R = await import("../financeiro/comissoesRepasse");
+    return comErroRepasse(() => R.trocarComprovante(ctx.permissoes, ctx.user.id, input));
+  }),
+  /** O administrador assina o demonstrativo com o certificado digital e o CRM manda ao corretor */
+  assinarDemonstrativo: protectedProcedure.input(z.object({
+    contratoId: z.number().int(), chave: z.string().regex(/^(avista|entrada|saldo)-\d{1,2}$/), senha: z.string().min(1).max(200),
+    pfxBase64: z.string().max(200_000).nullable().optional(), enviar: z.boolean().default(true),
+  })).mutation(async ({ input, ctx }) => {
+    const R = await import("../financeiro/comissoesRepasse");
+    return comErroRepasse(() => R.assinarDemonstrativo(ctx.permissoes, ctx.user.id, input));
+  }),
   /** Reenvia ao corretor o demonstrativo (PDF) de uma parte paga */
   reenviarDemonstrativo: protectedProcedure.input(z.object({ contratoId: z.number().int(), chave: z.string().regex(/^(avista|entrada|saldo)-\d{1,2}$/) })).mutation(async ({ input, ctx }) => {
     const R = await import("../financeiro/comissoesRepasse");

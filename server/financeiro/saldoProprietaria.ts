@@ -95,7 +95,7 @@ export async function registrarRecebimentoGestao(usuarioId: number, i: { contrat
   const { lancarSaidaComissao } = await import('./saidaComissao');
   const despesaId = await lancarSaidaComissao({
     empreendimentoId: parte.empreendimentoId, descricao: `Comissão do escritório — chácara ${parte.lote} (${parte.contrato}) · ${parte.quando}`,
-    valor: parte.valorEscritorio, pagoEm: i.pagoEm, forma: i.forma, autorId: usuarioId, pedirCiencia: i.pedirCiencia !== false,
+    valor: parte.valorEscritorio, pagoEm: i.pagoEm, forma: i.forma, autorId: usuarioId, pedirCiencia: i.pedirCiencia !== false, comissao: { contratoId: i.contratoId, chave: i.chave },
     observacao: `Parte do escritório na comissão de ${pct5(parte)}; a parte do corretor (${reais(parte.valorCorretor)}) sai do caixa no repasse a ele`,
   });
   await d.insert(comissaoRepasses).values({

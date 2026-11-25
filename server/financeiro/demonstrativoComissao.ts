@@ -89,6 +89,45 @@ export async function dadosDemonstrativo(contratoId: number, hoje: string): Prom
   };
 }
 
+/** Base da comissão de uma parte, para a ciência da proprietária: venda, comissão, divisão e condições do comprador */
+export interface BaseComissao { linhas: string[]; tabela: [string, string][]; condicoes: string[] }
+
+export async function baseComissaoDaParte(contratoId: number, chave: string, hoje: string): Promise<BaseComissao | null> {
+  const d: any = await getDb();
+  if (!d) return null;
+  const [c]: any[] = await d.select().from(contratos).where(eq(contratos.id, contratoId)).limit(1);
+  if (!c) return null;
+  const plano = json(c.simulacaoJson);
+  const dados = json(c.dadosJson);
+  const venda = r2(Number(plano.modalidade === 'avista' ? plano.preco_avista ?? plano.total_pagar ?? 0 : plano.preco_tabela ?? 0));
+  const total = r2(Number(plano.comissao_total ?? 0));
+  const escritorio = r2(Number(plano.comissao_romatec ?? total - Number(plano.comissao_corretor ?? 0)));
+  const corretorTotal = r2(Number(plano.comissao_corretor ?? 0));
+  const [u]: any[] = await d.select({ name: users.name }).from(users).where(eq(users.id, Number(c.corretorUserId))).limit(1);
+  const corretor = String(u?.name ?? 'corretor(a)');
+  const { comissoesDeGestao } = await import('./saldoProprietaria');
+  const parte = (await comissoesDeGestao(Number(c.empreendimentoId), hoje)).find(x => x.contratoId === contratoId && x.chave === chave.replace(/^g:/, ''));
+  const perc = venda > 0 && total > 0 ? pct(total / venda) : null;
+  const linhas = [
+    `Venda: chácara ${c.loteCodigo} · contrato ${c.numero} · comprador(a) ${dados.comp_nome ?? '—'} · valor de venda R$ ${brl(venda)} (${formaDoPlano(plano)})`,
+    `Comissão${perc ? ` de ${perc}` : ''} calculada sobre o valor de venda: R$ ${brl(total)} (escritório R$ ${brl(escritorio)} · corretor(a) ${corretor} R$ ${brl(corretorTotal)})`,
+    ...(parte ? [`Esta parte (${parte.quando}): R$ ${brl(parte.valor)} = escritório R$ ${brl(parte.valorEscritorio)} + corretor(a) R$ ${brl(parte.valorCorretor)}`] : []),
+  ];
+  const tabela: [string, string][] = [
+    ['Venda', `Chácara ${c.loteCodigo} · contrato ${c.numero} · comprador(a) ${dados.comp_nome ?? '—'}`],
+    ['Valor de venda (base da comissão)', `R$ ${brl(venda)} · ${formaDoPlano(plano)}`],
+    ['Comissão total', `R$ ${brl(total)}${perc ? ` (${perc} do valor de venda)` : ''}`],
+    ['Escritório (gestora) no total', `R$ ${brl(escritorio)}`],
+    ['Corretor(a) no total', `R$ ${brl(corretorTotal)} · ${corretor}`],
+    ...(parte ? [
+      ['Parte paga agora', `${parte.quando}: R$ ${brl(parte.valor)}`],
+      ['  ao escritório', `R$ ${brl(parte.valorEscritorio)}`],
+      ['  ao corretor(a)', `R$ ${brl(parte.valorCorretor)}`],
+    ] as [string, string][] : []),
+  ];
+  return { linhas, tabela, condicoes: condicoesDoComprador(plano) };
+}
+
 /** O PDF. `chave` = a parte que acabou de ser paga (destaque no topo); `comprovante` vai no fim */
 export async function pdfDemonstrativo(x: DadosDemonstrativo, chave: string, comprovante: FonteAnexo | null): Promise<Buffer> {
   const { escritor } = await import('../contratos/docsComissao');

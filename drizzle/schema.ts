@@ -852,6 +852,9 @@ export const financeiroDespesas = mysqlTable("financeiroDespesas", {
   reembolsadoEm: varchar("reembolsadoEm", { length: 10 }),
   reembolsoValor: decimal("reembolsoValor", { precision: 12, scale: 2 }),
   reembolsoForma: varchar("reembolsoForma", { length: 20 }),
+  /** Saída de comissão de venda: o contrato e a parte (para a ciência da proprietária mostrar a base da comissão) */
+  comissaoContratoId: int("comissaoContratoId"),
+  comissaoChave: varchar("comissaoChave", { length: 20 }),
   observacao: text("observacao"),
   criadoPor: int("criadoPor"),
   createdAt: timestamp("createdAt").defaultNow().notNull(),
@@ -2632,6 +2635,10 @@ export const comissaoRepasses = mysqlTable("comissaoRepasses", {
   observacao: varchar("observacao", { length: 300 }),
   /** Comprovante do repasse ao corretor (Pix/transferência) */
   comprovanteUrl: varchar("comprovanteUrl", { length: 500 }),
+  /** Demonstrativo assinado (certificado digital do administrador) — só ele vai ao corretor */
+  demonstrativoUrl: varchar("demonstrativoUrl", { length: 500 }),
+  demonstrativoAssinadoEm: timestamp("demonstrativoAssinadoEm"),
+  demonstrativoEnviadoEm: timestamp("demonstrativoEnviadoEm"),
   registradoPor: int("registradoPor"),
   criadoEm: timestamp("criadoEm").defaultNow().notNull(),
 }, (t) => ({
@@ -2799,3 +2806,24 @@ export const salasVideo = mysqlTable("salasVideo", {
   uqCodigo: uniqueIndex("ux_sala_codigo").on(t.codigo),
   ixAutor: index("ix_sala_autor").on(t.criadoPor),
 }));
+
+/** Simulações de CBS/IBS (calculadoras oficiais da Receita, via ponte do AvalieImob) feitas no contrato. Só estimativa, guardada para auditoria. */
+export const simulacoesTributarias = mysqlTable("simulacoesTributarias", {
+  id: int("id").autoincrement().primaryKey(),
+  contratoId: int("contratoId").notNull(),
+  /** REGULAR | SIMPLES */
+  regime: varchar("regime", { length: 10 }).notNull(),
+  dataOperacao: varchar("dataOperacao", { length: 10 }).notNull(),
+  /** valor da operação em texto com 2 casas (como foi enviado) */
+  valor: varchar("valor", { length: 20 }).notNull(),
+  nbs: varchar("nbs", { length: 9 }).notNull(),
+  cst: varchar("cst", { length: 3 }),
+  cClassTrib: varchar("cClassTrib", { length: 6 }).notNull(),
+  /** calculado | calculado_com_erros | nao_calculado */
+  situacao: varchar("situacao", { length: 24 }).notNull(),
+  /** id da simulação no AvalieImob */
+  idExterno: varchar("idExterno", { length: 64 }),
+  resultadoJson: text("resultadoJson").notNull(),
+  solicitadoPor: int("solicitadoPor"),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+}, t => ({ idxContrato: index("idx_simtrib_contrato").on(t.contratoId) }));

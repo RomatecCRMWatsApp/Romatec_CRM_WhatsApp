@@ -33,12 +33,17 @@ const textoPdf = (b64: string) => {
 describe('comissão do corretor: sai do caixa da proprietária, com ciência e demonstrativo', () => {
   const aoCorretor: { tel: string; texto: string; mime: string | null; b64: string | null }[] = [];
   const aProprietaria: string[] = [];
+  const guardados = new Map<string, Buffer>();
   let db: any;
   beforeAll(async () => {
     db = await getDb();
     Ren.definirEnviador(async (_t, m) => { aProprietaria.push(m); });
     C.definirEnviadorPdf(async () => {});
     Rep.definirAvisoRepasse(async (tel, texto, comp) => { aoCorretor.push({ tel, texto, mime: comp?.mime ?? null, b64: comp?.base64 ?? null }); });
+    // Assinatura e guarda trocadas: o "assinado" é o próprio PDF, guardado em memória
+    Rep.demonstrativoIO.assinar = async (_u, pdf, senha) => { if (senha !== 'certo') throw new Error('Senha do certificado incorreta'); return { pdf, titular: 'JOSE ROMARIO PINTO BEZERRA' }; };
+    Rep.demonstrativoIO.guardar = async (pdf, nome) => { guardados.set(`mem://${nome}`, pdf); return `mem://${nome}`; };
+    Rep.demonstrativoIO.ler = async url => guardados.get(url)!;
     db.run(sql`INSERT INTO empreendimentos (id, slug, nome, municipio, uf) VALUES (1, 'bom-jardims', 'Condomínio de Chácaras Bom Jardims', 'Açailândia', 'MA')`);
     db.run(sql`INSERT INTO empJuridico (empreendimentoId, defaultsJson, vendedoraJson) VALUES (1, '{}', ${JSON.stringify({ vend_nome: 'VERA PROPRIETARIA FICTICIA', vend_cpf: '111.444.777-35', vend_telefone: '(99) 9 9000-0001' })})`);
     db.run(sql`INSERT INTO users (id, openId, name, role, creci, telefone) VALUES (7, 'u7', 'Lidiany Corretora Ficticia', 'user', '9999', '99988887777')`);
@@ -54,11 +59,27 @@ describe('comissão do corretor: sai do caixa da proprietária, com ciência e d
     expect(p).toMatchObject({ valor: 4155.75, valorCorretor: 1662.3, valorEscritorio: 2493.45, devida: true, pendente: 4155.75, corretorDebitadoEm: null });
   });
 
-  it('pagar o corretor lança a saída no caixa, pede a ciência e manda o demonstrativo em PDF', async () => {
+  it('pagar o corretor lança a saída no caixa e pede a ciência; o demonstrativo só vai depois da assinatura do administrador', async () => {
     const r = await Rep.registrarRepasse(ADMIN, 1, { contratoId: 1, chave: 'entrada-1', pagoEm: '2026-11-25', forma: 'Pix' });
-    expect(r).toMatchObject({ valor: 1662.3, avisado: true });
+    expect(r).toMatchObject({ valor: 1662.3, aguardandoAssinatura: true });
     expect(r.despesaId).toBeTruthy();
-    expect(aProprietaria.at(-1)).toMatch(/Lidiany/);
+    // Ciência da proprietária com a base da comissão
+    const ciencia = aProprietaria.at(-1)!;
+    for (const t of ['Lidiany', 'Base da comissão', 'valor de venda R$ 166.230,00', 'R$ 8.311,50', 'escritório R$ 4.986,90', 'R$ 3.324,60',
+      'Esta parte', 'R$ 4.155,75 = escritório R$ 2.493,45 + corretor(a) R$ 1.662,30', 'Condições do comprador', '180 parcelas fixas de R$ 1.250,50']) expect(ciencia).toContain(t);
+    const comunicado = await C.pdfDaCiencia(r.despesaId!);
+    const tc = textoPdf(comunicado!.buf.toString('base64'));
+    for (const t of ['BASE DA COMISSÃO', 'Valor de venda (base da comissão)', 'R$ 166.230,00', 'Comissão total', 'Parte paga agora', 'Condições assumidas']) expect(tc).toContain(t);
+    // Nada foi ao corretor ainda; ele não baixa a prévia
+    expect(aoCorretor).toHaveLength(0);
+    await expect(Rep.reenviarDemonstrativo(ADMIN, { contratoId: 1, chave: 'entrada-1' })).rejects.toThrow(/assinado/);
+    await expect(Rep.demonstrativoPdf({ perfil: 'corretor', acessos: [{ tipo: 'empreendimento', refId: 1 }] } as any, 7, { contratoId: 1, chave: 'entrada-1' })).rejects.toThrow(/assinado/);
+    // Só o administrador assina; senha errada não envia
+    await expect(Rep.assinarDemonstrativo({ perfil: 'secretario', acessos: {} } as any, 2, { contratoId: 1, chave: 'entrada-1', senha: 'certo' })).rejects.toThrow(/administrador/);
+    await expect(Rep.assinarDemonstrativo(ADMIN, 1, { contratoId: 1, chave: 'entrada-1', senha: 'errada' })).rejects.toThrow(/Senha/);
+    expect(aoCorretor).toHaveLength(0);
+    const a = await Rep.assinarDemonstrativo(ADMIN, 1, { contratoId: 1, chave: 'entrada-1', senha: 'certo' });
+    expect(a).toMatchObject({ avisado: true, titular: 'JOSE ROMARIO PINTO BEZERRA' });
     const env = aoCorretor.at(-1)!;
     expect(env).toMatchObject({ tel: '5599988887777', mime: 'application/pdf' });
     expect(env.texto).toMatch(/R\$ 1\.662,30/);
@@ -101,10 +122,26 @@ describe('comissão do corretor: sai do caixa da proprietária, com ciência e d
   it('o corretor baixa só o demonstrativo dele; desfazer cancela a saída do caixa', async () => {
     const pdf = await Rep.demonstrativoPdf({ perfil: 'corretor', acessos: [{ tipo: 'empreendimento', refId: 1 }] } as any, 7, { contratoId: 1, chave: 'entrada-1' });
     expect(Buffer.from(pdf.base64, 'base64').subarray(0, 4).toString()).toBe('%PDF');
+    expect(pdf.assinado).toBe(true);
     await expect(Rep.demonstrativoPdf({ perfil: 'corretor', acessos: [{ tipo: 'empreendimento', refId: 1 }] } as any, 99, { contratoId: 1, chave: 'entrada-1' })).rejects.toThrow();
     await Rep.desfazerRepasse(ADMIN, { contratoId: 1, chave: 'entrada-1' });
     const [p] = (await G.comissoesDeGestao(1, '2026-11-25')).filter(x => x.contratoId === 1 && x.chave === 'entrada-1');
     expect(p).toMatchObject({ corretorDebitadoEm: null, pendente: 1662.3 });
+  });
+
+  it('comprovante com valor diferente da parte bloqueia; o certo passa; dá para remover', async () => {
+    const Cp = await import('./financeiro/comprovante');
+    let valorLido = 1662.57;
+    Cp.definirLeitorIa(async () => ({ valor: valorLido, data: null, recebedor: null, documentoRecebedor: null, instituicaoRecebedor: null, pagador: null, forma: null, idTransacao: null }));
+    const img = { base64: Buffer.from('imagem-falsa-do-comprovante').toString('base64'), mime: 'image/png' as const, nomeArquivo: 'c.png' };
+    await expect(Rep.registrarRepasse(ADMIN, 1, { contratoId: 1, chave: 'entrada-1', pagoEm: '2026-11-25', forma: 'Pix', comprovante: img }))
+      .rejects.toThrow(/R\$\s?1\.662,57.*R\$\s?1\.662,30/);
+    await expect(Rep.trocarComprovante(ADMIN, 1, { contratoId: 2, chave: 'entrada-1', comprovante: img })).rejects.toThrow(/não foi feito/);
+    valorLido = 1662.3;
+    expect(await Rep.conferirValorComprovante(img, 1662.3)).toEqual({ conferido: true, lido: 1662.3 });
+    const r = await Rep.trocarComprovante(ADMIN, 1, { contratoId: 2, chave: 'entrada-1', comprovante: null });
+    expect(r).toMatchObject({ comprovanteUrl: null });
+    Cp.definirLeitorIa(null);
   });
 
   it('condições do comprador em frases', () => {

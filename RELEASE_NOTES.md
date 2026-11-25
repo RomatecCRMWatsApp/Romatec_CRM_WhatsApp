@@ -3,6 +3,18 @@
 Cada versão nova vai no TOPO. Depois rode `npm run release` (valida e atualiza o package.json);
 ao subir, o servidor grava a versão no banco e todos recebem o aviso "Novidades da versão".
 
+## 1.208.0 — 2026-11-25
+tipo: minor
+obrigatoria: nao
+titulo: Simulação de CBS/IBS no contrato, demonstrativo assinado e ciência com a base da comissão
+publico: admin
+
+### Novo
+- Contrato › bloco "CBS/IBS (simulação)", abaixo do Plano, só para o administrador. A simulação usa as calculadoras oficiais da Receita pelo AvalieImob. Você confirma a data da operação e o valor e informa os códigos NBS, CST e cClassTrib confirmados pelo contador (o sistema não sugere código). Na tela aparecem a base, a CBS e o IBS. Cada simulação fica guardada no contrato, e a próxima já vem com os códigos da última. É só estimativa: não substitui o emissor nem o contador. O bloco só aparece quando o simulador está ligado no AvalieImob.
+- Comissões: o demonstrativo do corretor só vai a ele depois de assinado com o seu certificado digital. Ao marcar a comissão como paga, o CRM abre "Assinar o demonstrativo": confira a prévia, informe a senha do certificado e ele sai assinado no WhatsApp do corretor. As comissões pagas mostram "aguarda a sua assinatura" ou "assinado e enviado".
+- Ciência da proprietária com a base da comissão: a mensagem e o comunicado em PDF mostram o valor de venda, o percentual e o total da comissão, quanto é do escritório e quanto é do corretor, a divisão da parte paga e as condições do comprador, como no contrato.
+- Comprovante conferido: ao anexar o comprovante de uma comissão, o CRM lê o valor. Se for diferente do valor da parte, aparece o aviso e o registro não é feito. Nas comissões pagas, você também pode trocar ou remover o comprovante; se o demonstrativo já estava assinado, ele precisa ser assinado de novo.
+
 ## 1.207.0 — 2026-11-25
 tipo: minor
 obrigatoria: nao

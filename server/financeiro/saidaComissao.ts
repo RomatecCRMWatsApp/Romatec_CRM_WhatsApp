@@ -17,6 +17,8 @@ export interface SaidaComissao {
   comprovanteUrl?: string | null;
   /** Pede a ciência da proprietária no WhatsApp (comunicado de saída) */
   pedirCiencia?: boolean;
+  /** Comissão de venda: contrato e parte — a ciência da proprietária mostra a base (venda, comissão, escritório e corretor) */
+  comissao?: { contratoId: number; chave: string } | null;
 }
 
 export async function lancarSaidaComissao(o: SaidaComissao): Promise<number | null> {
@@ -29,6 +31,13 @@ export async function lancarSaidaComissao(o: SaidaComissao): Promise<number | nu
   }, o.autorId);
   const id = r.ids[0] ?? null;
   if (!id) return null;
+  if (o.comissao) {
+    const { getDb } = await import('../db');
+    const { financeiroDespesas } = await import('../../drizzle/schema');
+    const { eq } = await import('drizzle-orm');
+    const d: any = await getDb();
+    await d?.update(financeiroDespesas).set({ comissaoContratoId: o.comissao.contratoId, comissaoChave: o.comissao.chave.replace(/^g:/, '').slice(0, 20) } as any).where(eq(financeiroDespesas.id, id));
+  }
   if (o.comprovanteUrl) {
     const { getDb } = await import('../db');
     const { financeiroDespesas } = await import('../../drizzle/schema');

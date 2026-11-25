@@ -34,6 +34,8 @@ export interface RetratoDespesa {
   vencimento: string; pagoEm: string | null; forma: string | null; observacao: string | null; comprovanteUrl: string | null; status: string;
   /** Bancada por terceiro: quem pagou, como e para quê (o empreendimento passa a dever esse valor) */
   terceiro?: { nome: string; documento: string | null; modalidade: string; finalidade: string | null } | null;
+  /** Saída de comissão de venda: a base (valor de venda, comissão, escritório e corretor) e as condições do comprador */
+  comissao?: { linhas: string[]; tabela: [string, string][]; condicoes: string[] } | null;
 }
 
 const ROT_MOD: Record<string, string> = { emprestimo: 'empréstimo', permuta: 'permuta', adiantamento: 'adiantamento', outro: 'outro' };
@@ -54,6 +56,8 @@ export function mensagemCiencia(p: { proprietaria: Proprietaria; empreendimento:
     `📝 Referente a: ${d.descricao} (${ROTULO_CATEGORIA[d.categoria as CategoriaDespesa] ?? d.categoria})`,
     d.pagoEm ? `📅 Pago em ${br(d.pagoEm)}${d.forma ? ` por ${FORMA[d.forma] ?? d.forma}` : ''}` : `📅 Vencimento: ${br(d.vencimento)}`,
     d.comprovanteUrl ? '📎 O comprovante está no documento.' : null,
+    ...(d.comissao ? ['', '🧾 Base da comissão:', ...d.comissao.linhas.map(l => `• ${l}`),
+      ...(d.comissao.condicoes.length ? ['', '📋 Condições do comprador (como no contrato):', ...d.comissao.condicoes.map(l => `• ${l}`)] : [])] : []),
     d.terceiro ? `🤝 Não saiu do caixa do empreendimento: foi ${fraseTerceiro(d.terceiro)}. O valor fica como saldo devedor do empreendimento com ${d.terceiro.nome}, até ser devolvido.` : null,
     '',
     `Confira e confirme por aqui (você recebe um código no WhatsApp): ${p.link}`,
@@ -69,6 +73,7 @@ export function pontosCiencia(d: RetratoDespesa, empreendimento: string): string
     `Referente a: ${d.descricao} · ${ROTULO_CATEGORIA[d.categoria as CategoriaDespesa] ?? d.categoria} · ${empreendimento}`,
     d.pagoEm ? `Pago em ${br(d.pagoEm)}${d.forma ? ` por ${FORMA[d.forma] ?? d.forma}` : ''}` : `Ainda não paga (vencimento ${br(d.vencimento)})`,
     d.comprovanteUrl ? 'Comprovante de pagamento anexado ao documento' : 'Sem comprovante anexado',
+    ...(d.comissao?.linhas ?? []),
     ...(d.terceiro ? [`Origem do recurso: ${fraseTerceiro(d.terceiro)} — fica como saldo devedor do empreendimento com ${d.terceiro.nome}`] : ['Origem do recurso: caixa do empreendimento']),
   ];
 }
@@ -126,6 +131,14 @@ async function documentoPdf(numero: number, emp: { nome: string; slug: string },
       { t: `: foi ${fraseTerceiro(d.terceiro)}. Em consequência, o empreendimento ${emp.nome} passa a dever a ${d.terceiro.nome} ` },
       { t: `R$ ${brl(valor)}`, b: true }, { t: ', valor que constará como saldo devedor na prestação de contas até a sua devolução, a ser descontada do saldo do empreendimento.' }]);
   }
+  if (d.comissao) {
+    w.clausula(d.terceiro ? '2-A. BASE DA COMISSÃO' : '1-A. BASE DA COMISSÃO');
+    w.tabela(['Item', 'Valor'], d.comissao.tabela, { pesos: [1.3, 3], size: 8.6 });
+    if (d.comissao.condicoes.length) {
+      w.paragrafo([{ t: 'Condições assumidas pelo(a) comprador(a), conforme o contrato:', b: true }]);
+      d.comissao.condicoes.forEach(l => w.paragrafo(`• ${l}`));
+    }
+  }
   if (d.observacao?.trim()) w.paragrafo(`Observações e dados do comprovante: ${d.observacao.trim().replace(/\n+/g, ' · ')}`);
   w.clausula(d.terceiro ? '3. CIÊNCIA' : '2. CIÊNCIA');
   w.paragrafo([{ t: 'A PROPRIETÁRIA declara ' }, { t: d.terceiro ? 'ter ciência desta saída de recursos e do saldo devedor dela decorrente' : 'ter ciência desta saída de recursos', b: true },
@@ -164,6 +177,13 @@ export async function pedirCiencia(despesaId: number, autorId: number, proprieta
   if (!tel) throw new FinanceiroErro('TELEFONE', 'A proprietária está sem WhatsApp no cadastro jurídico do empreendimento', 409);
 
   const ret = retrato(x);
+  if (x.comissaoContratoId && x.comissaoChave) {
+    try {
+      const { baseComissaoDaParte } = await import('./demonstrativoComissao');
+      const hoje = new Date(Date.now() - 3 * 3600_000).toISOString().slice(0, 10);
+      ret.comissao = await baseComissaoDaParte(Number(x.comissaoContratoId), String(x.comissaoChave), hoje);
+    } catch (e: any) { console.warn('[Ciência despesa] base da comissão:', e?.message); }
+  }
   // Um pedido válido por despesa: o anterior (aguardando) deixa de valer
   await d.update(despesaCiencias).set({ status: 'cancelada', otpHash: null } as any).where(and(eq(despesaCiencias.despesaId, despesaId), eq(despesaCiencias.status, 'aguardando')));
   const pdf = await documentoPdf(despesaId, emp, prop, ret);

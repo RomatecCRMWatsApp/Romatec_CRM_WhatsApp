@@ -37,6 +37,8 @@ function formaDoPlano(p: PlanoParaRepasse): string {
   return ROTULO_FORMA[c] ?? c;
 }
 
+const dataTxt = (v: unknown): string | null => { if (v == null || v === '') return null; if (typeof v === 'string' && /^\d+$/.test(v)) v = Number(v); const d = v instanceof Date ? v : typeof v === 'number' ? new Date(v < 1e11 ? v * 1000 : v) : new Date(String(v).replace(' ', 'T')); return Number.isNaN(d.getTime()) ? null : d.toISOString(); };
+
 export async function comissoesDeVenda(permissoes: PermissoesUsuario, usuarioId: number, filtro: { corretorId?: number; slug?: string } = {}) {
   const perfil = permissoes.perfil;
   const escritorio = perfil === 'admin' || perfil === 'secretario';
@@ -69,14 +71,14 @@ export async function comissoesDeVenda(permissoes: PermissoesUsuario, usuarioId:
     const partes = partesDaComissao({
       plano, statusContrato: c.status, hoje, entradaPagaNoAto: !!c.entradaPagaNoAto,
       cobrancas: cobs.filter(x => Number(x.contratoId) === id).map(x => ({ tipo: x.tipo, numero: Number(x.numero), vencimento: String(x.vencimento), status: x.status, pagoEm: x.pagoEm ? String(x.pagoEm) : null })),
-      repasses: reps.filter(x => Number(x.contratoId) === id).map(x => ({ chave: x.chave, valor: Number(x.valor), pagoEm: String(x.pagoEm), forma: x.forma, comprovanteUrl: x.comprovanteUrl ?? null, despesaId: despesaDoRegistro(x.observacao) })),
+      repasses: reps.filter(x => Number(x.contratoId) === id).map(x => ({ chave: x.chave, valor: Number(x.valor), pagoEm: String(x.pagoEm), forma: x.forma, comprovanteUrl: x.comprovanteUrl ?? null, despesaId: despesaDoRegistro(x.observacao), demonstrativoAssinadoEm: dataTxt(x.demonstrativoAssinadoEm), demonstrativoEnviadoEm: dataTxt(x.demonstrativoEnviadoEm) })),
     });
     const emp = E.get(Number(c.empreendimentoId));
     return {
       contratoId: id, numero: String(c.numero), status: String(c.status), empreendimento: String(emp?.nome ?? ''), empreendimentoSlug: String(emp?.slug ?? ''),
       lote: String(c.loteCodigo), comprador: String(dados.comp_nome ?? '—'), corretorId: Number(c.corretorUserId), corretor: U.get(Number(c.corretorUserId)) || '—',
       formaPagamento: formaDoPlano(plano), valorVenda: r2(Number(plano.modalidade === 'avista' ? plano.preco_avista ?? 0 : plano.preco_tabela ?? 0)),
-      comissao: r2(Number(plano.comissao_corretor)), dataVenda: new Date(c.criadoEm ?? Date.now()).toISOString().slice(0, 10), partes,
+      comissao: r2(Number(plano.comissao_corretor)), dataVenda: (dataTxt(c.criadoEm) ?? new Date().toISOString()).slice(0, 10), partes,
     };
   }).sort((a, b) => b.contratoId - a.contratoId);
   const corretores = escritorio
@@ -123,8 +125,9 @@ export async function registrarRepasse(permissoes: PermissoesUsuario, usuarioId:
   if (!parte || !gatilhosDoPlano(plano).some(g => g.chave === i.chave)) throw new RepasseErro('Parte da comissão inválida para este contrato', 400);
   const [ja]: any[] = await d.select({ id: comissaoRepasses.id }).from(comissaoRepasses).where(and(eq(comissaoRepasses.contratoId, i.contratoId), eq(comissaoRepasses.chave, i.chave))).limit(1);
   if (ja) throw new RepasseErro('Esta parte da comissão já está registrada como paga', 409);
-  // Comprovante do Pix/transferência (fica no registro e vai ao corretor)
+  // Comprovante do Pix/transferência (fica no registro e vai ao corretor): o valor tem que bater com a parte
   let comprovanteUrl: string | null = null;
+  const conferencia = i.comprovante ? await conferirValorComprovante(i.comprovante, parte.valor) : null;
   if (i.comprovante) {
     const buf = Buffer.from(i.comprovante.base64, 'base64');
     if (buf.length > 10 * 1024 * 1024) throw new RepasseErro('Comprovante grande demais (máx. 10 MB)', 400);
@@ -138,15 +141,8 @@ export async function registrarRepasse(permissoes: PermissoesUsuario, usuarioId:
   // Saiu do caixa do empreendimento: despesa no saldo da proprietária, com o pedido de ciência dela
   let despesaId: number | null = null;
   if (i.doCaixa !== false) despesaId = await debitarNoCaixa(d, c, i.chave, parte.valor, parte.quando, { pagoEm: i.pagoEm, forma: i.forma, comprovanteUrl }, usuarioId);
-  // Aviso ao corretor no WhatsApp, com o demonstrativo em PDF (o comprovante vai anexo nele)
-  let avisado = false; let erroAviso: string | null = null;
-  if (i.avisar !== false) {
-    // O pagamento já está registrado: falha no aviso não desfaz nada
-    const r = await enviarDemonstrativoAoCorretor(c, i.chave, i.comprovante ?? null)
-      .catch((e: any) => ({ avisado: false, erroAviso: String(e?.message ?? e).slice(0, 160) }));
-    avisado = r.avisado; erroAviso = r.erroAviso;
-  }
-  return { ok: true as const, valor: parte.valor, comprovanteUrl, avisado, erroAviso, despesaId };
+  // O demonstrativo só vai ao corretor depois de assinado pelo administrador (certificado digital): ver assinarDemonstrativo
+  return { ok: true as const, valor: parte.valor, comprovanteUrl, despesaId, aguardandoAssinatura: true as const, valorConferido: conferencia?.conferido ?? null };
 }
 
 /** Lança a parte do corretor como despesa paga no caixa do empreendimento e marca o registro do repasse */
@@ -156,7 +152,7 @@ async function debitarNoCaixa(d: any, c: any, chave: string, valor: number, quan
   const { lancarSaidaComissao } = await import('./saidaComissao');
   const despesaId = await lancarSaidaComissao({
     empreendimentoId: Number(c.empreendimentoId), descricao: `Comissão do corretor — chácara ${c.loteCodigo} (${c.numero}) · ${quando}`,
-    valor, pagoEm: o.pagoEm, forma: o.forma, autorId: usuarioId, fornecedor: nome, comprovanteUrl: o.comprovanteUrl, pedirCiencia: true,
+    valor, pagoEm: o.pagoEm, forma: o.forma, autorId: usuarioId, fornecedor: nome, comprovanteUrl: o.comprovanteUrl, pedirCiencia: true, comissao: { contratoId: Number(c.id), chave },
     observacao: `Repasse da comissão de corretagem ao corretor(a) ${nome} (parte da comissão de venda; a parte do escritório sai à parte)`,
   });
   if (despesaId) {
@@ -188,8 +184,51 @@ async function ajustarGestaoAntiga(d: any, contratoId: number, chave: string, va
   console.log(`[Comissão] despesa #${idDesp} ajustada para a parte do escritório (R$ ${novo.toFixed(2)}) por ${usuarioId}`);
 }
 
-/** Monta o demonstrativo da parte paga e manda ao corretor (PDF com o comprovante anexo) */
-async function enviarDemonstrativoAoCorretor(c: any, chave: string, comprovante: ComprovanteRepasse | null): Promise<{ avisado: boolean; erroAviso: string | null }> {
+/**
+ * Confere o valor do comprovante com o valor da parte da comissão: divergência bloqueia o registro (evita anexar o
+ * comprovante de outra venda). Se o valor não puder ser lido, segue e avisa na tela para conferir.
+ */
+export async function conferirValorComprovante(comp: ComprovanteRepasse, esperado: number): Promise<{ conferido: boolean; lido: number | null }> {
+  let lido: number | null = null;
+  try {
+    const { lerComprovante } = await import('./comprovante');
+    lido = (await lerComprovante({ base64: comp.base64, mime: comp.mime })).valor ?? null;
+  } catch (e: any) { console.warn('[Comissão] comprovante não lido:', e?.message); }
+  if (lido == null) return { conferido: false, lido: null };
+  if (Math.abs(lido - esperado) > 0.01) {
+    const f = (v: number) => v.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
+    throw new RepasseErro(`O comprovante é de ${f(lido)}, mas esta parte da comissão é de ${f(esperado)}. Confira se é o comprovante desta venda: o registro não foi feito.`, 409);
+  }
+  return { conferido: true, lido };
+}
+
+/** Guardar, ler e assinar o demonstrativo (testes trocam) */
+export const demonstrativoIO = {
+  async guardar(pdf: Buffer, nome: string): Promise<string> {
+    const { uploadToCloudinary } = await import('../cloudinary');
+    return (await uploadToCloudinary(pdf, 'application/pdf', nome, { folder: 'financeiro/comissoes/demonstrativos' })).url;
+  },
+  async ler(url: string): Promise<Buffer> {
+    const r = await fetch(url, { signal: AbortSignal.timeout(20_000) });
+    if (!r.ok) throw new Error(`demonstrativo assinado indisponível (HTTP ${r.status})`);
+    return Buffer.from(await r.arrayBuffer());
+  },
+  async assinar(usuarioId: number, pdf: Buffer, senha: string, pfxAgora: Buffer | null): Promise<{ pdf: Buffer; titular: string }> {
+    const { assinarComMeuCertificado } = await import('../certificado/servico');
+    const r = await assinarComMeuCertificado(usuarioId, pdf, senha, { motivo: 'Demonstrativo de pagamento de comissão', pfxAgora });
+    return { pdf: r.pdf, titular: r.info.nome };
+  },
+};
+
+async function registroDaParte(d: any, contratoId: number, chave: string) {
+  const [r]: any[] = await d.select().from(comissaoRepasses).where(and(eq(comissaoRepasses.contratoId, contratoId), eq(comissaoRepasses.chave, chave))).limit(1);
+  return r ?? null;
+}
+
+/** Manda ao corretor o demonstrativo JÁ ASSINADO da parte paga */
+async function enviarDemonstrativoAoCorretor(d: any, c: any, chave: string): Promise<{ avisado: boolean; erroAviso: string | null }> {
+  const reg = await registroDaParte(d, Number(c.id), chave);
+  if (!reg?.demonstrativoUrl) return { avisado: false, erroAviso: 'o demonstrativo ainda não foi assinado' };
   const D = await import('./demonstrativoComissao');
   const dados = await D.dadosDemonstrativo(Number(c.id), hojeBR());
   if (!dados) return { avisado: false, erroAviso: 'contrato não encontrado' };
@@ -198,13 +237,15 @@ async function enviarDemonstrativoAoCorretor(c: any, chave: string, comprovante:
   const parte = dados.partes.find(p => p.chave === chave);
   if (!parte || parte.situacao !== 'paga') return { avisado: false, erroAviso: 'esta parte ainda não está paga' };
   const texto = mensagemRepassePago({ corretor: dados.corretor.nome, valor: parte.valor, parte: parte.quando, lote: dados.lote, contrato: dados.contrato.numero, empreendimento: dados.empreendimento, pagoEm: parte.pagoEm!, forma: parte.forma, comComprovante: true });
-  let anexo: ComprovanteRepasse | null = comprovante;
+  let pdf: Buffer;
+  try { pdf = await demonstrativoIO.ler(String(reg.demonstrativoUrl)); }
+  catch (e: any) { return { avisado: false, erroAviso: String(e?.message ?? e).slice(0, 160) }; }
+  const anexo: ComprovanteRepasse = { base64: pdf.toString('base64'), mime: 'application/pdf', nomeArquivo: D.nomeDemonstrativo(dados, chave) };
   try {
-    const pdf = await D.pdfDemonstrativo(dados, chave, comprovante ? { buf: Buffer.from(comprovante.base64, 'base64'), mime: comprovante.mime } : null);
-    anexo = { base64: pdf.toString('base64'), mime: 'application/pdf', nomeArquivo: D.nomeDemonstrativo(dados, chave) };
-  } catch (e: any) { console.warn('[Comissão] demonstrativo não gerado; vai só o comprovante:', e?.message); }
-  try { await avisoRepasse(tel.startsWith('55') && tel.length >= 12 ? tel : `55${tel}`, texto, anexo); return { avisado: true, erroAviso: null }; }
-  catch (err: any) { const m = String(err?.message ?? err).slice(0, 160); console.warn('[Comissão] aviso ao corretor:', m); return { avisado: false, erroAviso: m }; }
+    await avisoRepasse(tel.startsWith('55') && tel.length >= 12 ? tel : `55${tel}`, texto, anexo);
+    await d.update(comissaoRepasses).set({ demonstrativoEnviadoEm: new Date() } as any).where(eq(comissaoRepasses.id, reg.id));
+    return { avisado: true, erroAviso: null };
+  } catch (err: any) { const m = String(err?.message ?? err).slice(0, 160); console.warn('[Comissão] aviso ao corretor:', m); return { avisado: false, erroAviso: m }; }
 }
 
 async function contratoAutorizado(permissoes: PermissoesUsuario, contratoId: number) {
@@ -229,25 +270,82 @@ export async function debitarRepasse(permissoes: PermissoesUsuario, usuarioId: n
   return { ok: true as const, despesaId };
 }
 
-/** Reenvia ao corretor o demonstrativo de uma parte paga */
+/**
+ * O administrador assina o demonstrativo com o certificado digital dele (o comprovante vai anexo antes da assinatura)
+ * e o CRM manda o PDF assinado ao corretor. Assinar de novo troca o PDF (vale o último).
+ */
+export async function assinarDemonstrativo(permissoes: PermissoesUsuario, usuarioId: number, i: { contratoId: number; chave: string; senha: string; pfxBase64?: string | null; enviar?: boolean }) {
+  if (permissoes.perfil !== 'admin') throw new RepasseErro('Só o administrador assina o demonstrativo de comissão.', 403);
+  if (!i.senha) throw new RepasseErro('Informe a senha do certificado digital.', 400);
+  const { d, c } = await contratoAutorizado(permissoes, i.contratoId);
+  const reg = await registroDaParte(d, i.contratoId, i.chave);
+  if (!reg) throw new RepasseErro('Registre o pagamento desta parte antes de assinar o demonstrativo.', 409);
+  const D = await import('./demonstrativoComissao');
+  const dados = await D.dadosDemonstrativo(Number(c.id), hojeBR());
+  if (!dados || !dados.partes.some(p => p.chave === i.chave)) throw new RepasseErro('Parte da comissão não encontrada', 404);
+  const base = await D.pdfDemonstrativo(dados, i.chave, reg.comprovanteUrl ? { url: String(reg.comprovanteUrl) } : null);
+  let assinado: { pdf: Buffer; titular: string };
+  try { assinado = await demonstrativoIO.assinar(usuarioId, base, i.senha, i.pfxBase64 ? Buffer.from(i.pfxBase64, 'base64') : null); }
+  catch (e: any) { throw new RepasseErro(String(e?.message ?? e).slice(0, 220), Number(e?.status) || 422); }
+  const url = await demonstrativoIO.guardar(assinado.pdf, D.nomeDemonstrativo(dados, i.chave).replace(/\.pdf$/, '-assinado'));
+  await d.update(comissaoRepasses).set({ demonstrativoUrl: url, demonstrativoAssinadoEm: new Date() } as any).where(eq(comissaoRepasses.id, reg.id));
+  let avisado = false; let erroAviso: string | null = null;
+  if (i.enviar !== false) ({ avisado, erroAviso } = await enviarDemonstrativoAoCorretor(d, c, i.chave));
+  return { ok: true as const, titular: assinado.titular, avisado, erroAviso };
+}
+
+/**
+ * Troca ou remove o comprovante de um repasse já registrado (ex.: comprovante de outra venda anexado por engano).
+ * Vale também para a despesa no caixa da proprietária. Se o demonstrativo já foi assinado, ele precisa ser assinado de novo.
+ */
+export async function trocarComprovante(permissoes: PermissoesUsuario, usuarioId: number, i: { contratoId: number; chave: string; comprovante: ComprovanteRepasse | null }) {
+  if (permissoes.perfil !== 'admin' && permissoes.perfil !== 'secretario') throw new RepasseErro('Só o administrador e a secretária mexem no comprovante.', 403);
+  const { d } = await contratoAutorizado(permissoes, i.contratoId);
+  const reg = await registroDaParte(d, i.contratoId, i.chave);
+  if (!reg) throw new RepasseErro('Este repasse ainda não foi registrado como pago', 404);
+  let url: string | null = null;
+  const conferencia = i.comprovante ? await conferirValorComprovante(i.comprovante, Number(reg.valor)) : null;
+  if (i.comprovante) {
+    const buf = Buffer.from(i.comprovante.base64, 'base64');
+    if (buf.length > 10 * 1024 * 1024) throw new RepasseErro('Comprovante grande demais (máx. 10 MB)', 400);
+    const { uploadToCloudinary } = await import('../cloudinary');
+    url = (await uploadToCloudinary(buf, i.comprovante.mime, i.comprovante.nomeArquivo, { folder: 'financeiro/comissoes' })).url;
+  }
+  await d.update(comissaoRepasses).set({ comprovanteUrl: url, demonstrativoUrl: null, demonstrativoAssinadoEm: null, demonstrativoEnviadoEm: null } as any).where(eq(comissaoRepasses.id, reg.id));
+  const idDesp = despesaDoRegistro(reg.observacao);
+  if (idDesp) {
+    const { financeiroDespesas } = await import('../../drizzle/schema');
+    await d.update(financeiroDespesas).set({ comprovanteUrl: url, updatedAt: new Date() } as any).where(eq(financeiroDespesas.id, idDesp));
+  }
+  console.log(`[Comissão] comprovante do repasse ${i.contratoId}/${i.chave} ${url ? 'trocado' : 'removido'} por ${usuarioId}`);
+  return { ok: true as const, comprovanteUrl: url, reassinar: !!reg.demonstrativoUrl, valorConferido: conferencia?.conferido ?? null };
+}
+
+/** Reenvia ao corretor o demonstrativo assinado de uma parte paga */
 export async function reenviarDemonstrativo(permissoes: PermissoesUsuario, i: { contratoId: number; chave: string }) {
   if (permissoes.perfil !== 'admin' && permissoes.perfil !== 'secretario') throw new RepasseErro('Só o administrador e a secretária enviam o demonstrativo.', 403);
-  const { c } = await contratoAutorizado(permissoes, i.contratoId);
-  const r = await enviarDemonstrativoAoCorretor(c, i.chave, null);
+  const { d, c } = await contratoAutorizado(permissoes, i.contratoId);
+  const r = await enviarDemonstrativoAoCorretor(d, c, i.chave);
   if (!r.avisado) throw new RepasseErro(`Demonstrativo não enviado: ${r.erroAviso}`, 409);
   return { ok: true as const };
 }
 
-/** O PDF do demonstrativo (escritório: qualquer corretor; corretor: só as vendas dele) */
+/** O PDF do demonstrativo: o assinado; antes da assinatura, o escritório vê a prévia (sem assinatura) e o corretor ainda não tem acesso */
 export async function demonstrativoPdf(permissoes: PermissoesUsuario, usuarioId: number, i: { contratoId: number; chave: string }) {
-  const { c } = await contratoAutorizado(permissoes, i.contratoId);
+  const { d, c } = await contratoAutorizado(permissoes, i.contratoId);
   const escritorio = permissoes.perfil === 'admin' || permissoes.perfil === 'secretario';
   if (!escritorio && !(permissoes.perfil === 'corretor' && Number(c.corretorUserId) === usuarioId)) throw new RepasseErro('Sem acesso a este demonstrativo', 403);
   const D = await import('./demonstrativoComissao');
   const dados = await D.dadosDemonstrativo(Number(c.id), hojeBR());
   if (!dados || !dados.partes.some(p => p.chave === i.chave)) throw new RepasseErro('Parte da comissão não encontrada', 404);
-  const pdf = await D.pdfDemonstrativo(dados, i.chave, null);
-  return { base64: pdf.toString('base64'), nome: D.nomeDemonstrativo(dados, i.chave) };
+  const reg = await registroDaParte(d, i.contratoId, i.chave);
+  if (reg?.demonstrativoUrl) {
+    const pdf = await demonstrativoIO.ler(String(reg.demonstrativoUrl));
+    return { base64: pdf.toString('base64'), nome: D.nomeDemonstrativo(dados, i.chave).replace(/\.pdf$/, '-assinado.pdf'), assinado: true };
+  }
+  if (!escritorio) throw new RepasseErro('O demonstrativo desta parte ainda não foi assinado pelo escritório.', 409);
+  const pdf = await D.pdfDemonstrativo(dados, i.chave, reg?.comprovanteUrl ? { url: String(reg.comprovanteUrl) } : null);
+  return { base64: pdf.toString('base64'), nome: D.nomeDemonstrativo(dados, i.chave).replace(/\.pdf$/, '-PREVIA.pdf'), assinado: false };
 }
 
 

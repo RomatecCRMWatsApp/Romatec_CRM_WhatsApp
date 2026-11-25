@@ -26,6 +26,7 @@ import CarteirinhasContrato from "@/components/contratos/Carteirinhas";
 import { AnexosContrato } from "@/components/contratos/Anexos";
 import RenegociacaoContrato from "@/components/contratos/Renegociacao";
 import RegistroCartorio from "@/components/contratos/RegistroCartorio";
+import SimuladorCbsIbs from "@/components/contratos/SimuladorCbsIbs";
 
 const br = (iso?: string | null) => (iso ? String(iso).slice(0, 10).split("-").reverse().join("/") : "—");
 const ROTULO_TIPO: Record<string, string> = { entrada: "Entrada", saldo: "Saldo", avista: "À vista", antecipacao: "Antecipação", renegociacao: "Renegociação", reforco: "Reforço anual", complemento: "Compl. entrada", comissao: "Comissão" };
@@ -303,6 +304,7 @@ export default function ContratoDetalhe() {
                 </>}
                 <Linha rotulo="Código de verificação" valor={<span className="font-mono text-xs">{c.codigoVerificacao}</span>} />
               </section>
+              {d.pode.cancelar && <SimuladorCbsIbs contratoId={id} valorSugerido={Number(p?.modalidade === "avista" ? p?.preco_avista ?? p?.total_pagar : p?.preco_tabela) || null} />}
               <section className="rounded-xl border border-border bg-card p-4">
                 <h2 className="mb-2 text-sm font-semibold">Para o contrato definitivo</h2>
                 {gate?.erro && <p className="text-xs text-danger-400">{gate.erro}</p>}
