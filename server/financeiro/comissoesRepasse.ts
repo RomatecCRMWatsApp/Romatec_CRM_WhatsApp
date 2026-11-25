@@ -208,13 +208,22 @@ export async function conferirValorComprovante(comp: ComprovanteRepasse, esperad
 
 /** Guardar, ler e assinar o demonstrativo (testes trocam) */
 export const demonstrativoIO = {
+  /** Guarda no armazenamento do próprio CRM (o Cloudinary recusa a entrega de PDF: HTTP 401) */
   async guardar(pdf: Buffer, nome: string): Promise<string> {
-    const { uploadToCloudinary } = await import('../cloudinary');
-    return (await uploadToCloudinary(pdf, 'application/pdf', nome, { folder: 'financeiro/comissoes/demonstrativos' })).url;
+    const { salvarArquivo } = await import('../contratos/arquivos');
+    const chave = `comissoes/demonstrativos/${nome.replace(/[^\w.-]+/g, '-')}-${Date.now()}.pdf`;
+    await salvarArquivo(chave, pdf, 'application/pdf');
+    return `arq:${chave}`;
   },
-  async ler(url: string): Promise<Buffer> {
-    const r = await fetch(url, { signal: AbortSignal.timeout(20_000) });
-    if (!r.ok) throw new Error(`demonstrativo assinado indisponível (HTTP ${r.status})`);
+  async ler(ref: string): Promise<Buffer> {
+    if (ref.startsWith('arq:')) {
+      const { lerArquivo } = await import('../contratos/arquivos');
+      const f = await lerArquivo(ref.slice(4));
+      if (!f) throw new Error('demonstrativo assinado não encontrado: assine de novo');
+      return f.buf;
+    }
+    const r = await fetch(ref, { signal: AbortSignal.timeout(20_000) });
+    if (!r.ok) throw new Error(`demonstrativo assinado indisponível (HTTP ${r.status}): assine de novo`);
     return Buffer.from(await r.arrayBuffer());
   },
   async assinar(usuarioId: number, pdf: Buffer, senha: string, pfxAgora: Buffer | null): Promise<{ pdf: Buffer; titular: string }> {

@@ -318,10 +318,10 @@ export default function ComissoesAPagar() {
                                 <Landmark className="mr-1 h-3.5 w-3.5" /> Debitar do caixa
                               </Button>
                             )}
-                            {admin && !p.demonstrativoAssinadoEm && (
+                            {admin && (!p.demonstrativoAssinadoEm || !p.demonstrativoEnviadoEm) && (
                               <Button size="sm" className="h-7 text-xs" title="Assinar com o seu certificado digital e enviar ao corretor"
                                 onClick={() => setAssinar({ contratoId: p.venda.contratoId, chave: p.chave, rotulo: `${p.venda.corretor} — ${p.venda.lote}, ${p.quando}` })}>
-                                <FileSignature className="mr-1 h-3.5 w-3.5" /> Assinar e enviar
+                                <FileSignature className="mr-1 h-3.5 w-3.5" /> {p.demonstrativoAssinadoEm ? "Assinar de novo e enviar" : "Assinar e enviar"}
                               </Button>
                             )}
                             {!!p.demonstrativoAssinadoEm && (

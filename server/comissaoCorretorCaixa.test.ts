@@ -34,12 +34,14 @@ describe('comissão do corretor: sai do caixa da proprietária, com ciência e d
   const aoCorretor: { tel: string; texto: string; mime: string | null; b64: string | null }[] = [];
   const aProprietaria: string[] = [];
   const guardados = new Map<string, Buffer>();
+  let ioOriginal: { guardar: typeof Rep.demonstrativoIO.guardar; ler: typeof Rep.demonstrativoIO.ler };
   let db: any;
   beforeAll(async () => {
     db = await getDb();
     Ren.definirEnviador(async (_t, m) => { aProprietaria.push(m); });
     C.definirEnviadorPdf(async () => {});
     Rep.definirAvisoRepasse(async (tel, texto, comp) => { aoCorretor.push({ tel, texto, mime: comp?.mime ?? null, b64: comp?.base64 ?? null }); });
+    ioOriginal = { guardar: Rep.demonstrativoIO.guardar, ler: Rep.demonstrativoIO.ler };
     // Assinatura e guarda trocadas: o "assinado" é o próprio PDF, guardado em memória
     Rep.demonstrativoIO.assinar = async (_u, pdf, senha) => { if (senha !== 'certo') throw new Error('Senha do certificado incorreta'); return { pdf, titular: 'JOSE ROMARIO PINTO BEZERRA' }; };
     Rep.demonstrativoIO.guardar = async (pdf, nome) => { guardados.set(`mem://${nome}`, pdf); return `mem://${nome}`; };
@@ -155,6 +157,14 @@ describe('comissão do corretor: sai do caixa da proprietária, com ciência e d
     expect(aProprietaria.at(-1)).toContain('⚠️ Correção: o comprovante foi anexado à chácara errada.');
     expect(aProprietaria.at(-1)).toContain('Base da comissão');
     Cp.definirLeitorIa(null);
+  });
+
+  it('o PDF assinado fica no armazenamento do CRM (não no Cloudinary) e volta igual', async () => {
+    const pdf = Buffer.from('%PDF-1.4 teste assinado');
+    const ref = await ioOriginal.guardar(pdf, 'Comissao-BJ-2026-0003-entrada-1-assinado');
+    expect(ref.startsWith('arq:comissoes/demonstrativos/')).toBe(true);
+    expect((await ioOriginal.ler(ref)).equals(pdf)).toBe(true);
+    await expect(ioOriginal.ler('arq:nao-existe')).rejects.toThrow(/assine de novo/);
   });
 
   it('condições do comprador em frases', () => {

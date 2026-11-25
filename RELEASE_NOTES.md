@@ -3,6 +3,15 @@
 Cada versão nova vai no TOPO. Depois rode `npm run release` (valida e atualiza o package.json);
 ao subir, o servidor grava a versão no banco e todos recebem o aviso "Novidades da versão".
 
+## 1.208.2 — 2026-11-25
+tipo: patch
+obrigatoria: nao
+titulo: Demonstrativo assinado volta a ser enviado ao corretor
+publico: admin
+
+### Correções
+- Comissões: o demonstrativo assinado não ia ao corretor (erro "HTTP 401"), porque o serviço de arquivos recusava entregar o PDF. Agora ele fica guardado no próprio CRM. Nas comissões com "assinado (não enviado)", clique em "Assinar de novo e enviar".
+
 ## 1.208.1 — 2026-11-25
 tipo: patch
 obrigatoria: nao
