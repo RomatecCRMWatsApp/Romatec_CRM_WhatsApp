@@ -46,6 +46,7 @@ import { salaVideoRouter } from "./routers/salaVideo.router";
 import { cartorioRouter } from "./routers/cartorio.router";
 import { autoRespostaRouter } from "./routers/autoResposta.router";
 import { campanhasInstagramRouter } from "./routers/campanhasInstagram.router";
+import { fabricaCriativosRouter } from "./routers/fabricaCriativos.router";
 import { verComoRouter } from "./routers/verComo.router";
 import { contatosNomesRouter } from "./routers/contatosNomes.router";
 import { importacaoContatosRouter } from "./routers/importacaoContatos.router";
@@ -148,6 +149,7 @@ export const appRouter = router({
   cartorio: cartorioRouter,
   autoResposta: autoRespostaRouter,
   campanhasIg: campanhasInstagramRouter,
+  fabricaCriativos: fabricaCriativosRouter,
   verComo: verComoRouter,
   contatosNomes: contatosNomesRouter,
   importacaoContatos: importacaoContatosRouter,

@@ -231,6 +231,8 @@ async function startServer() {
       // O lead respondeu: cancela o follow-up automático pendente (server/leads/followup.ts)
       if (!req.body?.fromMe) {
         await import('../leads/followup').then(m => m.cancelarFollowUp(payload.phone)).catch(e => console.warn('[FollowUp] Cancelar falhou:', e?.message));
+        // Lead do formulário qualificado respondeu: a nota sobe 10 (uma vez)
+        await import('../leads/leadsQualificados').then(m => m.registrarEventoPorTelefone(payload.phone, 'respondeu_whatsapp')).catch(e => console.warn('[Leads qualificados] resposta:', e?.message));
       }
 
       // "Sim" ao lembrete de visita: confirma a visita e responde (o bot não entra)
@@ -1650,6 +1652,8 @@ async function startServer() {
     await addDespesaCiencias();
     const { addOrigemDespesa } = await import('./migrations/addOrigemDespesa');
     await addOrigemDespesa();
+    const { addFabricaCriativos } = await import('./migrations/addFabricaCriativos');
+    await addFabricaCriativos();
     const { textosRoboV2 } = await import('./migrations/textosRoboV2');
     await textosRoboV2();
     const { addReunioes } = await import('./migrations/addReunioes');
@@ -1780,6 +1784,8 @@ async function startServer() {
   import('../financeiro/jobs').then(m => m.iniciarJobsFinanceiro()).catch(e => console.warn('[Financeiro] Jobs não iniciados:', e));
   // Resumo da semana no WhatsApp do administrador (segunda, a partir das 8h)
   import('../resumoSemanal').then(m => m.iniciarResumoSemanal()).catch(e => console.warn('[Resumo semanal] não iniciado:', e));
+  import('../criativos/fabrica').then(m => m.iniciarFabrica()).catch(e => console.warn('[Fábrica de criativos] não iniciada:', e));
+  import('../leads/leadsQualificados').then(m => m.iniciarJobSemResposta()).catch(e => console.warn('[Leads qualificados] job não iniciado:', e));
   // Régua de cobrança das parcelas no WhatsApp do comprador (só roda se estiver ligada em Financeiro)
   import('../financeiro/reguaCobranca').then(m => m.iniciarReguaCobranca()).catch(e => console.warn('[Régua de cobrança] não iniciada:', e));
   // Emissão automática no Asaas: próximo carnê 45 dias antes (só roda se estiver ligada em Financeiro)

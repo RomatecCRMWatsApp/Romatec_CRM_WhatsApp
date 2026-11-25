@@ -374,6 +374,7 @@ export const crmRouter = router({
       // Visita marcada: conta como atendimento e pausa o follow-up automático
       await import("../leads/sla").then(m => m.marcarAtendido(lead.id)).catch(() => {});
       await import("../leads/followup").then(m => m.cancelarFollowUp(lead.phone)).catch(() => {});
+      await import("../leads/leadsQualificados").then(m => m.registrarEvento(lead.id, "visita_confirmada")).catch(() => {});
       if (id) await avisarVisitaAgendada(id).catch(e => console.warn("[Visitas] Aviso de agendamento falhou:", e?.message));
       return { id };
     }),
@@ -390,6 +391,7 @@ export const crmRouter = router({
       const { etapaDepoisDaVisita } = await import("../leads/visitas");
       const etapa = funilDo(lead) === "comprador" ? etapaDepoisDaVisita(etapaDoLead(lead), input.status) : null;
       if (etapa) await db.update(leadQualifications).set({ etapa, updatedAt: new Date() } as any).where(eq(leadQualifications.id, lead.id));
+      if (input.status === "agendada" || input.status === "confirmada") await import("../leads/leadsQualificados").then(m => m.registrarEvento(lead.id, "visita_confirmada")).catch(() => {});
       return { success: true };
     }),
 

@@ -1498,6 +1498,12 @@ export const materiais = mysqlTable("materiais", {
   recorteRodapePct: int("recorteRodapePct"),
   /** Vídeo: ms do final com o cartão de contato do escritório (sai e entra o cartão do corretor) */
   corteFinalMs: int("corteFinalMs"),
+  /** Fábrica de criativos: temas separados por vírgula (shared/pautaDiaria.ts TEMAS_MIDIA) */
+  temas: varchar("temas", { length: 200 }),
+  /** Mídia com texto/logo queimado: não serve de fundo para o gancho */
+  temTexto: boolean("temTexto").default(false).notNull(),
+  /** Vídeo: duração em ms (medida pelo ffprobe) */
+  duracaoMs: int("duracaoMs"),
   createdAt: timestamp("createdAt").defaultNow().notNull(),
 }, (t) => ({
   idxProperty: index("idx_material_property").on(t.propertyId),
@@ -1505,6 +1511,30 @@ export const materiais = mysqlTable("materiais", {
 }));
 
 export type Material = typeof materiais.$inferSelect;
+
+/** Fábrica diária de criativos: pautas do dia e peças montadas, na fila de aprovação (nada é publicado sem aprovação) */
+export const criativosPautas = mysqlTable("criativosPautas", {
+  id: int("id").autoincrement().primaryKey(),
+  data: varchar("data", { length: 10 }).notNull(),
+  nome: varchar("nome", { length: 80 }).notNull(),
+  empreendimentoSlug: varchar("empreendimentoSlug", { length: 80 }).notNull(),
+  /** reels | carrossel | foto */
+  tipo: varchar("tipo", { length: 12 }).notNull(),
+  destino: varchar("destino", { length: 20 }).notNull(),
+  temPreco: boolean("temPreco").default(false).notNull(),
+  pautaJson: text("pautaJson").notNull(),
+  legenda: text("legenda"),
+  /** pendente | montando | pronta | aprovada | descartada | erro */
+  status: varchar("status", { length: 12 }).notNull().default("pendente"),
+  pecasJson: text("pecasJson"),
+  erro: varchar("erro", { length: 500 }),
+  aprovadoPor: int("aprovadoPor"),
+  aprovadoEm: timestamp("aprovadoEm"),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+}, (t) => ({
+  uqNome: uniqueIndex("uq_criativo_nome").on(t.nome),
+  idxData: index("idx_criativo_data").on(t.data),
+}));
 
 /** v1.7.0 — notas de versão (RELEASE_NOTES.md ou publicadas pelo admin) e quem já leu */
 export const systemRelease = mysqlTable("systemRelease", {

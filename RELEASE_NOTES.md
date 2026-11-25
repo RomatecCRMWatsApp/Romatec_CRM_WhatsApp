@@ -3,6 +3,21 @@
 Cada versão nova vai no TOPO. Depois rode `npm run release` (valida e atualiza o package.json);
 ao subir, o servidor grava a versão no banco e todos recebem o aviso "Novidades da versão".
 
+## 1.206.0 — 2026-11-25
+tipo: minor
+obrigatoria: nao
+titulo: Fábrica diária de criativos e nota do lead que muda com o comportamento
+publico: admin
+
+### Novo
+- Campanhas no Instagram › Fábrica de criativos: todo dia o CRM monta as pautas a partir dos Materiais do Bom Jardims. São quatro peças: Reels de anúncio com entrada e parcelas, Reels para seguidores, carrossel 4:5 e Stories. O tema muda com o dia da semana (obra, natureza, mapa, pagamento, segurança, visita e família), e a mesma mídia não volta antes de 14 dias.
+- As peças saem montadas no padrão da marca: gancho no topo, selo verde e dourado e cartão final ("Agende sua visita" ou "+ Seguir").
+- Fila de aprovação: ver o vídeo ou as fotos, trocar uma mídia, editar a legenda, aprovar ou descartar. Nada é publicado no Instagram por aqui.
+- Catálogo das mídias: marque os temas de cada foto e vídeo e indique quando tem texto ou logo gravado. O CRM sugere temas pelo nome do arquivo. Mídia com "preço", "condições" ou "tabela" no nome fica de fora.
+- Condições nas peças com preço: o administrador confirma a entrada e as parcelas. A confirmação vale 30 dias; sem ela, as peças com preço não podem ser aprovadas.
+- Gerar sozinho às 6h: o administrador liga ou desliga. Começa desligado.
+- Leads do formulário qualificado: a nota passa a mudar com o comportamento. Sobe 10 quando o cliente responde no WhatsApp e 15 quando a visita é agendada ou confirmada. Cai 15 se ele ficar 24 horas sem responder; se responder depois, o desconto sai. Se a nota subir para A, o escritório recebe o aviso para chamar em até 5 minutos.
+
 ## 1.205.0 — 2026-11-24
 tipo: minor
 obrigatoria: nao

@@ -49,7 +49,7 @@ export function caminhoLocal(url: string, raizes = RAIZES()): string | null {
   return null;
 }
 
-async function baixar(url: string): Promise<Buffer> {
+export async function baixar(url: string): Promise<Buffer> {
   const local = caminhoLocal(url);
   if (local) return fs.readFile(local);
   let u: URL;
@@ -159,7 +159,7 @@ export async function imagemFormatada(original: Buffer, formato: FormatoDownload
 
 // ─── Vídeo ──────────────────────────────────────────────────────────────────────────────────────────────────
 
-function rodar(cmd: string, args: string[], limiteMs: number): Promise<string> {
+export function rodar(cmd: string, args: string[], limiteMs: number): Promise<string> {
   return new Promise((ok, erro) => {
     const p = spawn(cmd, args, { stdio: ['ignore', 'pipe', 'pipe'] });
     let out = '', err = '';

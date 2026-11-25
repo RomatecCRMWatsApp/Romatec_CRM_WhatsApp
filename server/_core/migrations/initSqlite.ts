@@ -816,6 +816,14 @@ export function initSqliteTables(sqlite: any): void {
     tipo TEXT NOT NULL DEFAULT 'outro', url TEXT NOT NULL, mime TEXT, tamanhoBytes INTEGER, liberado INTEGER NOT NULL DEFAULT 1,
     observacao TEXT, ordem INTEGER NOT NULL DEFAULT 0, recorteRodapePct INTEGER, corteFinalMs INTEGER, createdAt INTEGER NOT NULL DEFAULT (strftime('%s','now'))
   )`);
+  addColumn(`ALTER TABLE materiais ADD COLUMN temas TEXT`);
+  addColumn(`ALTER TABLE materiais ADD COLUMN temTexto INTEGER NOT NULL DEFAULT 0`);
+  addColumn(`ALTER TABLE materiais ADD COLUMN duracaoMs INTEGER`);
+  run(`CREATE TABLE IF NOT EXISTS criativosPautas (
+    id INTEGER PRIMARY KEY AUTOINCREMENT, data TEXT NOT NULL, nome TEXT NOT NULL UNIQUE, empreendimentoSlug TEXT NOT NULL, tipo TEXT NOT NULL,
+    destino TEXT NOT NULL, temPreco INTEGER NOT NULL DEFAULT 0, pautaJson TEXT NOT NULL, legenda TEXT, status TEXT NOT NULL DEFAULT 'pendente',
+    pecasJson TEXT, erro TEXT, aprovadoPor INTEGER, aprovadoEm INTEGER, createdAt INTEGER NOT NULL DEFAULT (strftime('%s','now'))
+  )`);
   // Corpo jurídico (server/_core/migrations/addJuridico.ts)
   addColumn(`ALTER TABLE users ADD COLUMN oab TEXT`);
   addColumn(`ALTER TABLE users ADD COLUMN oabUf TEXT`);

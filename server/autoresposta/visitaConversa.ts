@@ -103,6 +103,7 @@ async function marcar(lead: { id: number; nome?: string | null; responsavelId?: 
     if (etapa) await d.update(leadQualifications).set({ etapa, updatedAt: new Date(agora) } as any).where(eq(leadQualifications.id, lead.id));
   }
   await import('../leads/followup').then(m => m.cancelarFollowUp(lead.phone)).catch(() => {});
+  if (status === 'agendada') await import('../leads/leadsQualificados').then(m => m.registrarEvento(lead.id, 'visita_confirmada')).catch(() => {});
   if (visitaId) {
     const aviso = status === 'agendada' ? avisarVisitaAgendada(visitaId) : avisarPedidoDeAgendamento(visitaId, `🗓️ Pedido de visita pelo WhatsApp (robô) — ${rotuloOpcao(o)}`);
     aviso.catch((e: any) => console.warn('[Visita/robô] aviso ao corretor:', e?.message));

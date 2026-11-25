@@ -215,6 +215,7 @@ export async function confirmarPorResposta(phone: string, texto: string, agora =
     .orderBy(leadVisitas.quando).limit(1);
   if (!v || !v.lembreteClienteAt) return null; // só vale como resposta ao lembrete
   await db.update(leadVisitas).set({ status: 'confirmada', confirmadaAt: new Date(agora), updatedAt: new Date(agora) } as any).where(eq(leadVisitas.id, v.id));
+  await import('./leadsQualificados').then(m => m.registrarEvento(l.id, 'visita_confirmada')).catch(() => {});
   const completo = await carregar(v.id);
   await avisarCorretor(v.responsavelId, `✅ Visita confirmada pelo cliente — ${quandoPorExtenso(v.quando, agora)}\n${resumo(completo ?? v)}`).catch(() => {});
   const resposta = `Confirmado! ✅ Te esperamos ${quandoPorExtenso(v.quando, agora)}. Se precisar remarcar, é só me avisar por aqui.`;

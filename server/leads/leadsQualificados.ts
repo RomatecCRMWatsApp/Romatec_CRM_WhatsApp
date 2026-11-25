@@ -6,7 +6,7 @@
  *  C → etiqueta "nutricao": fora da fila do corretor.
  * Entradas: webhook leadgen (server/meta-integration.ts) e o CSV baixado da Central de Leads (até a aprovação do app).
  */
-import { eq, inArray } from 'drizzle-orm';
+import { eq, inArray, isNotNull } from 'drizzle-orm';
 import { getDb } from '../db';
 import { leadQualifications, users } from '../../drizzle/schema';
 import { CAMPOS_FORM, ehFormularioQualificado, norm, pontuar, type Faixa } from '../../shared/leadScoreForm';
@@ -84,6 +84,56 @@ export async function aplicarFaixaPorTelefone(phone: string, o: { avisar?: boole
   const d = await banco();
   const [l]: any[] = await d.select({ id: leadQualifications.id }).from(leadQualifications).where(mesmoTelefone(leadQualifications.phone, phone)).limit(1);
   return l ? aplicarFaixa(Number(l.id), o) : null;
+}
+
+// ─── Comportamento depois do formulário: a nota sobe ou cai ───────────────────
+/** +10 respondeu no WhatsApp · +15 confirmou/agendou a visita · −15 ficou 24 h sem responder (uma vez cada) */
+export type EventoLead = 'respondeu_whatsapp' | 'visita_confirmada' | 'sem_resposta_24h';
+const SIM = 'sim';
+
+export async function registrarEvento(leadId: number, evento: EventoLead) {
+  const d = await banco();
+  const [l]: any[] = await d.select({ answers: leadQualifications.answers }).from(leadQualifications).where(eq(leadQualifications.id, leadId)).limit(1);
+  if (!l) return null;
+  const answers = json(l.answers);
+  if (!ehFormularioQualificado(answers) || answers[evento] === SIM) return null;
+  if (evento === 'sem_resposta_24h' && answers.respondeu_whatsapp === SIM) return null;
+  const novo: Record<string, unknown> = { ...answers, [evento]: SIM, [`${evento}_em`]: RELOGIO().toISOString() };
+  // Respondeu depois do prazo: tira o desconto de "sem resposta"
+  if (evento === 'respondeu_whatsapp') { delete novo.sem_resposta_24h; delete novo.sem_resposta_24h_em; }
+  await d.update(leadQualifications).set({ answers: novo } as any).where(eq(leadQualifications.id, leadId));
+  return aplicarFaixa(leadId);
+}
+
+export async function registrarEventoPorTelefone(phone: string, evento: EventoLead) {
+  const d = await banco();
+  const [l]: any[] = await d.select({ id: leadQualifications.id }).from(leadQualifications).where(mesmoTelefone(leadQualifications.phone, phone)).limit(1);
+  return l ? registrarEvento(Number(l.id), evento) : null;
+}
+
+/** Leads do formulário com mais de 24 h (e menos de 30 dias) que não responderam no WhatsApp perdem 15 pontos */
+export async function verificarSemResposta(agora = RELOGIO().getTime()): Promise<number> {
+  const d = await banco();
+  const rows: any[] = await d.select({ id: leadQualifications.id, answers: leadQualifications.answers, createdAt: leadQualifications.createdAt, leadScore: leadQualifications.leadScore })
+    .from(leadQualifications).where(isNotNull(leadQualifications.leadScore));
+  let n = 0;
+  for (const r of rows) {
+    const criado = new Date(r.createdAt as any).getTime();
+    if (!(criado <= agora - 24 * 3600_000 && criado >= agora - 30 * 86_400_000)) continue;
+    const a = json(r.answers);
+    if (!ehFormularioQualificado(a) || a.respondeu_whatsapp === SIM || a.sem_resposta_24h === SIM) continue;
+    if (await registrarEvento(Number(r.id), 'sem_resposta_24h')) n++;
+  }
+  return n;
+}
+
+let jobIniciado = false;
+export function iniciarJobSemResposta() {
+  if (jobIniciado) return;
+  jobIniciado = true;
+  const tick = () => verificarSemResposta().then(n => { if (n) console.log(`[Leads qualificados] ${n} lead(s) sem resposta em 24 h`); }).catch(e => console.warn('[Leads qualificados] sem resposta:', e?.message));
+  setInterval(tick, 60 * 60_000).unref?.();
+  setTimeout(tick, 5 * 60_000).unref?.();
 }
 
 // ─── CSV da Central de Leads (Meta Business Suite) ────────────────────────────
