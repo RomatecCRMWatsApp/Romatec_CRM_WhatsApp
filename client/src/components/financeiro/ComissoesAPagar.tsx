@@ -56,6 +56,8 @@ export default function ComissoesAPagar() {
   const [assinar, setAssinar] = useState<{ contratoId: number; chave: string; rotulo: string } | null>(null);
   const [senhaCert, setSenhaCert] = useState("");
   const [pfx, setPfx] = useState<string | null>(null);
+  const [guardarPfx, setGuardarPfx] = useState(true);
+  const [outroArquivo, setOutroArquivo] = useState(false);
   /** Recado para a proprietária antes de debitar ou trocar o comprovante (vai no pedido de ciência) */
   type Comp = { base64: string; mime: "image/png" | "image/jpeg" | "application/pdf"; nomeArquivo: string };
   const [recado, setRecado] = useState<{ acao: "debitar" | "trocar" | "remover"; contratoId: number; chave: string; rotulo: string; comprovante?: Comp } | null>(null);
@@ -89,11 +91,14 @@ export default function ComissoesAPagar() {
     },
     onError: e => { if (e.message.startsWith("Não consegui ler o valor")) setPedeValor(true); toast.error(e.message, { duration: 12000 }); },
   });
+  const meuCert = trpc.certificado.meu.useQuery(undefined, { enabled: admin, retry: false });
+  const certGuardado = meuCert.data && meuCert.data.legivel && !meuCert.data.vencido ? meuCert.data : null;
+  const guardarCert = trpc.certificado.guardar.useMutation();
   const assinarDem = trpc.comissoes.assinarDemonstrativo.useMutation({
     onSuccess: r => {
       if (r.avisado) toast.success(`Demonstrativo assinado por ${r.titular} e enviado ao corretor no WhatsApp`);
       else toast.warning(`Demonstrativo assinado, mas não foi enviado (${r.erroAviso ?? "erro"}). Use o botão de reenviar.`, { duration: 10000 });
-      setAssinar(null); setSenhaCert(""); setPfx(null); utils.comissoes.aPagar.invalidate();
+      setAssinar(null); setSenhaCert(""); setPfx(null); setOutroArquivo(false); utils.comissoes.aPagar.invalidate();
     },
     onError: e => toast.error(e.message),
   });
@@ -388,14 +393,20 @@ export default function ComissoesAPagar() {
             <div className="space-y-3 text-sm">
               <p>{assinar.rotulo}</p>
               <p className="text-xs text-muted-foreground">Assinatura com o seu certificado digital (o guardado em Meu cadastro). Depois de assinado, o PDF vai ao corretor no WhatsApp.</p>
-              <button type="button" disabled={baixar.isPending} onClick={() => baixar.mutate({ contratoId: assinar.contratoId, chave: assinar.chave })}
+              <button type="button" disabled={baixar.isPending} onClick={() => baixar.mutate({ contratoId: assinar.contratoId, chave: assinar.chave, previa: true })}
                 className="flex items-center gap-1 text-xs text-primary hover:underline focus-visible:outline focus-visible:outline-2 focus-visible:outline-primary">
                 <FileText className="h-3.5 w-3.5" /> Conferir a prévia antes de assinar
               </button>
               <label className="block text-xs text-muted-foreground">Senha do certificado
                 <input type="password" autoComplete="off" value={senhaCert} onChange={e => setSenhaCert(e.target.value)} className="mt-1 block w-full rounded-lg border border-border bg-background px-2 py-2 text-sm text-foreground" />
               </label>
-              <label className="block text-xs text-muted-foreground">Ou use um arquivo .pfx agora (opcional, não fica guardado)
+              {certGuardado && !outroArquivo ? (
+                <p className="rounded-md bg-secondary/60 p-2 text-xs text-muted-foreground">
+                  Certificado guardado: <b className="text-foreground">{certGuardado.titular}</b>, válido até {data(certGuardado.validade)}. Só a senha é pedida.{" "}
+                  <button type="button" className="text-primary hover:underline focus-visible:outline focus-visible:outline-2 focus-visible:outline-primary" onClick={() => setOutroArquivo(true)}>usar outro arquivo</button>
+                </p>
+              ) : (<>
+              <label className="block text-xs text-muted-foreground">Arquivo do certificado (.pfx)
                 <input type="file" accept=".pfx,.p12,application/x-pkcs12" onChange={e => {
                   const f = e.target.files?.[0]; e.target.value = "";
                   if (!f) return;
@@ -403,12 +414,27 @@ export default function ComissoesAPagar() {
                 }} className="mt-1 block w-full text-sm text-foreground file:mr-2 file:rounded-md file:border file:border-border file:bg-secondary file:px-3 file:py-1.5 file:text-sm" />
                 {pfx && <span className="mt-1 block text-xs text-ok-300">Certificado carregado</span>}
               </label>
+              {pfx && (
+                <label className="flex items-start gap-2 text-xs"><input type="checkbox" className="mt-0.5" checked={guardarPfx} onChange={e => setGuardarPfx(e.target.checked)} />
+                  Guardar este certificado (cifrado; a senha não é guardada) para não precisar subir de novo</label>
+              )}
+              </>)}
             </div>
           )}
           <DialogFooter>
             <Button variant="outline" onClick={() => setAssinar(null)}>Depois</Button>
-            <Button disabled={!assinar || !senhaCert || assinarDem.isPending}
-              onClick={() => assinar && assinarDem.mutate({ contratoId: assinar.contratoId, chave: assinar.chave, senha: senhaCert, pfxBase64: pfx })}>
+            <Button disabled={!assinar || !senhaCert || assinarDem.isPending || guardarCert.isPending || (!certGuardado || outroArquivo ? !pfx && !meuCert.data : false)}
+              onClick={async () => {
+                if (!assinar) return;
+                // Guarda o arquivo antes (confere a senha) e assina com o guardado
+                if (pfx && guardarPfx) {
+                  try { await guardarCert.mutateAsync({ pfxBase64: pfx, senha: senhaCert }); await meuCert.refetch(); }
+                  catch (e: any) { toast.error(e?.message ?? "Não foi possível guardar o certificado"); return; }
+                  assinarDem.mutate({ contratoId: assinar.contratoId, chave: assinar.chave, senha: senhaCert, pfxBase64: null });
+                  return;
+                }
+                assinarDem.mutate({ contratoId: assinar.contratoId, chave: assinar.chave, senha: senhaCert, pfxBase64: certGuardado && !outroArquivo ? null : pfx });
+              }}>
               {assinarDem.isPending ? <Loader2 className="mr-1 h-4 w-4 animate-spin" /> : <FileSignature className="mr-1 h-4 w-4" />} Assinar e enviar
             </Button>
           </DialogFooter>

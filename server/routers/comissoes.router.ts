@@ -68,7 +68,7 @@ export const comissoesRouter = router({
     return comErroRepasse(() => R.reenviarDemonstrativo(ctx.permissoes, input));
   }),
   /** O demonstrativo em PDF para baixar (o corretor baixa os dele) */
-  demonstrativo: protectedProcedure.input(z.object({ contratoId: z.number().int(), chave: z.string().regex(/^(avista|entrada|saldo)-\d{1,2}$/) })).mutation(async ({ input, ctx }) => {
+  demonstrativo: protectedProcedure.input(z.object({ contratoId: z.number().int(), chave: z.string().regex(/^(avista|entrada|saldo)-\d{1,2}$/), previa: z.boolean().optional() })).mutation(async ({ input, ctx }) => {
     const R = await import("../financeiro/comissoesRepasse");
     return comErroRepasse(() => R.demonstrativoPdf(ctx.permissoes, ctx.user.id, input));
   }),

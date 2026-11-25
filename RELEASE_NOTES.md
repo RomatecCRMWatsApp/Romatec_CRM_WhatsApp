@@ -3,6 +3,17 @@
 Cada versão nova vai no TOPO. Depois rode `npm run release` (valida e atualiza o package.json);
 ao subir, o servidor grava a versão no banco e todos recebem o aviso "Novidades da versão".
 
+## 1.208.3 — 2026-11-25
+tipo: patch
+obrigatoria: nao
+titulo: Certificado guardado na assinatura do demonstrativo e prévia que sempre abre
+publico: admin
+
+### Melhorias
+- Assinar o demonstrativo: ao escolher o arquivo do certificado, deixe marcado "Guardar este certificado". Ele fica cifrado no CRM (a senha não é guardada) e, nas próximas vezes, só a senha é pedida. A janela mostra qual certificado está guardado e até quando vale.
+### Correções
+- "Conferir a prévia antes de assinar" sempre gera a prévia na hora, mesmo quando já existia um demonstrativo assinado que não abria.
+
 ## 1.208.2 — 2026-11-25
 tipo: patch
 obrigatoria: nao

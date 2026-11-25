@@ -350,7 +350,7 @@ export async function reenviarDemonstrativo(permissoes: PermissoesUsuario, i: { 
 }
 
 /** O PDF do demonstrativo: o assinado; antes da assinatura, o escritório vê a prévia (sem assinatura) e o corretor ainda não tem acesso */
-export async function demonstrativoPdf(permissoes: PermissoesUsuario, usuarioId: number, i: { contratoId: number; chave: string }) {
+export async function demonstrativoPdf(permissoes: PermissoesUsuario, usuarioId: number, i: { contratoId: number; chave: string; previa?: boolean }) {
   const { d, c } = await contratoAutorizado(permissoes, i.contratoId);
   const escritorio = permissoes.perfil === 'admin' || permissoes.perfil === 'secretario';
   if (!escritorio && !(permissoes.perfil === 'corretor' && Number(c.corretorUserId) === usuarioId)) throw new RepasseErro('Sem acesso a este demonstrativo', 403);
@@ -358,9 +358,15 @@ export async function demonstrativoPdf(permissoes: PermissoesUsuario, usuarioId:
   const dados = await D.dadosDemonstrativo(Number(c.id), hojeBR());
   if (!dados || !dados.partes.some(p => p.chave === i.chave)) throw new RepasseErro('Parte da comissão não encontrada', 404);
   const reg = await registroDaParte(d, i.contratoId, i.chave);
-  if (reg?.demonstrativoUrl) {
-    const pdf = await demonstrativoIO.ler(String(reg.demonstrativoUrl));
-    return { base64: pdf.toString('base64'), nome: D.nomeDemonstrativo(dados, i.chave).replace(/\.pdf$/, '-assinado.pdf'), assinado: true };
+  // A prévia (antes de assinar) é sempre gerada na hora; o assinado antigo que não abrir também cai na prévia para o escritório
+  if (reg?.demonstrativoUrl && !(escritorio && i.previa)) {
+    try {
+      const pdf = await demonstrativoIO.ler(String(reg.demonstrativoUrl));
+      return { base64: pdf.toString('base64'), nome: D.nomeDemonstrativo(dados, i.chave).replace(/\.pdf$/, '-assinado.pdf'), assinado: true };
+    } catch (e: any) {
+      if (!escritorio) throw new RepasseErro('O demonstrativo assinado não está disponível agora; peça ao escritório para reenviar.', 409);
+      console.warn('[Comissão] demonstrativo assinado não abriu; vai a prévia:', e?.message);
+    }
   }
   if (!escritorio) throw new RepasseErro('O demonstrativo desta parte ainda não foi assinado pelo escritório.', 409);
   const pdf = await D.pdfDemonstrativo(dados, i.chave, reg?.comprovanteUrl ? { url: String(reg.comprovanteUrl) } : null);

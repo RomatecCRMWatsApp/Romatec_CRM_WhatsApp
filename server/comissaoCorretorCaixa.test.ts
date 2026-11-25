@@ -165,6 +165,12 @@ describe('comissão do corretor: sai do caixa da proprietária, com ciência e d
     expect(ref.startsWith('arq:comissoes/demonstrativos/')).toBe(true);
     expect((await ioOriginal.ler(ref)).equals(pdf)).toBe(true);
     await expect(ioOriginal.ler('arq:nao-existe')).rejects.toThrow(/assine de novo/);
+    // Assinado que não abre: o escritório recebe a prévia; a prévia pedida é sempre gerada na hora
+    db.run(sql`UPDATE comissaoRepasses SET demonstrativoUrl = 'arq:sumiu' WHERE contratoId = 2 AND chave = 'entrada-1'`);
+    const p1 = await Rep.demonstrativoPdf(ADMIN, 1, { contratoId: 2, chave: 'entrada-1' });
+    expect(p1.assinado).toBe(false);
+    const p2 = await Rep.demonstrativoPdf(ADMIN, 1, { contratoId: 2, chave: 'entrada-1', previa: true });
+    expect(p2.nome).toMatch(/PREVIA/);
   });
 
   it('condições do comprador em frases', () => {
