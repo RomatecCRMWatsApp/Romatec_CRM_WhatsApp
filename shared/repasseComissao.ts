@@ -35,7 +35,7 @@ export interface PlanoParaRepasse {
   parcelas?: { tipo: string; numero: number; vencimento: string }[];
 }
 export interface CobrancaParaRepasse { tipo: string; numero: number; vencimento: string; status: string; pagoEm?: string | null }
-export interface RepassePago { chave: string; valor: number; pagoEm: string; forma?: string | null; comprovanteUrl?: string | null }
+export interface RepassePago { chave: string; valor: number; pagoEm: string; forma?: string | null; comprovanteUrl?: string | null; despesaId?: number | null }
 
 export interface ParteComissao {
   chave: string;
@@ -51,6 +51,8 @@ export interface ParteComissao {
   pagoEm: string | null;
   forma: string | null;
   comprovanteUrl?: string | null;
+  /** Despesa lançada no caixa do empreendimento pelo repasse (saiu do saldo da proprietária) */
+  despesaId?: number | null;
 }
 
 const iso = (d: Date) => d.toISOString().slice(0, 10);
@@ -116,7 +118,7 @@ export function partesDaComissao(o: {
     return {
       chave: g.chave, quando: g.quando, pct: g.pct, valor: pago ? Number(pago.valor) : valores[k].valor,
       vencimentoCliente, clientePagouEm, dataRepasse: pago ? pago.pagoEm.slice(0, 10) : dataRepasse, situacao,
-      pagoEm: pago ? pago.pagoEm.slice(0, 10) : null, forma: pago?.forma ?? null, comprovanteUrl: pago?.comprovanteUrl ?? null,
+      pagoEm: pago ? pago.pagoEm.slice(0, 10) : null, forma: pago?.forma ?? null, comprovanteUrl: pago?.comprovanteUrl ?? null, despesaId: pago?.despesaId ?? null,
     };
   });
 }

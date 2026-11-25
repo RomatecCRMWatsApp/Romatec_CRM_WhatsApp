@@ -3,6 +3,22 @@
 Cada versão nova vai no TOPO. Depois rode `npm run release` (valida e atualiza o package.json);
 ao subir, o servidor grava a versão no banco e todos recebem o aviso "Novidades da versão".
 
+## 1.207.0 — 2026-11-25
+tipo: minor
+obrigatoria: nao
+titulo: Comissão do corretor com demonstrativo em PDF e saída no caixa da proprietária com ciência
+publico: admin
+
+### Novo
+- Financeiro › Comissões: ao marcar a comissão como paga, o corretor recebe no WhatsApp um demonstrativo em PDF com o comprovante anexo. O documento traz o valor pago e a parte da comissão (ex.: 50% na entrada), o contrato, a chácara, a vendedora e o comprador, e as condições que ficaram para o comprador. Traz também todas as partes da comissão com a data prevista de cada repasse, em até 5 dias úteis da compensação do pagamento do cliente.
+- Botões nas comissões pagas: baixar o demonstrativo, reenviar ao corretor e "Debitar do caixa" para os repasses registrados antes desta versão.
+- O repasse ao corretor sai do caixa do empreendimento como despesa "Comissões", desconta do saldo da proprietária e manda a ela o comunicado de saída para dar a ciência. Fica marcado "Pago com o caixa do empreendimento"; desmarque se não for o caso.
+- A comissão de gestão foi dividida em duas saídas: a parte do escritório sai quando você registra o recebimento, e a parte do corretor sai no repasse a ele. Cada uma tem a sua ciência, e as duas somam os 5%, sem contar duas vezes. Recebimentos antigos lançados com a parte inteira são corrigidos sozinhos quando o repasse do corretor dessa parte sai do caixa.
+- Portal da proprietária: cada comissão mostra quanto foi para o escritório e quanto foi para o corretor, e o que já saiu do caixa.
+
+### Melhorias
+- Fábrica de criativos no celular: a prévia das peças ficou no tamanho da tela, as mídias aparecem pelo nome do arquivo e o botão Aprovar some nas peças com erro.
+
 ## 1.206.0 — 2026-11-25
 tipo: minor
 obrigatoria: nao

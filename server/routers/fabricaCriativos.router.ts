@@ -24,8 +24,11 @@ export const fabricaCriativosRouter = router({
   painel: protectedProcedure.query(async ({ ctx }) => {
     escritorio(ctx);
     const f = await F();
-    const [fila, cond, ligada] = await Promise.all([f.listar(7), f.condicoes(), f.fabricaLigada()]);
-    return { fila, condicoes: cond, ligada, hoje: f.agoraBrasilia().data };
+    const [fila, cond, ligada, cat] = await Promise.all([f.listar(7), f.condicoes(), f.fabricaLigada(), f.catalogo()]);
+    // Nome de cada mídia, para a fila mostrar o arquivo e não só o número
+    const titulos: Record<number, string> = {};
+    for (const m of cat) titulos[m.id] = m.titulo;
+    return { fila, condicoes: cond, ligada, hoje: f.agoraBrasilia().data, titulos };
   }),
   catalogo: protectedProcedure.query(async ({ ctx }) => {
     escritorio(ctx);

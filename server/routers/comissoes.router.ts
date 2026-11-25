@@ -31,9 +31,26 @@ export const comissoesRouter = router({
     pagoEm: z.string().regex(/^\d{4}-\d{2}-\d{2}$/), forma: z.string().max(30).optional(), observacao: z.string().max(300).optional(),
     comprovante: z.object({ base64: z.string().min(10).max(14_000_000), mime: z.enum(["image/png", "image/jpeg", "application/pdf"]), nomeArquivo: z.string().max(120) }).nullable().optional(),
     avisar: z.boolean().default(true),
+    /** Pago com o dinheiro do caixa do empreendimento: vira despesa no saldo da proprietária, com a ciência dela */
+    doCaixa: z.boolean().default(true),
   })).mutation(async ({ input, ctx }) => {
     const R = await import("../financeiro/comissoesRepasse");
     return comErroRepasse(() => R.registrarRepasse(ctx.permissoes, ctx.user.id, input));
+  }),
+  /** Repasse já pago antes desta versão: lança agora no caixa da proprietária e pede a ciência */
+  debitarRepasse: protectedProcedure.input(z.object({ contratoId: z.number().int(), chave: z.string().regex(/^(avista|entrada|saldo)-\d{1,2}$/) })).mutation(async ({ input, ctx }) => {
+    const R = await import("../financeiro/comissoesRepasse");
+    return comErroRepasse(() => R.debitarRepasse(ctx.permissoes, ctx.user.id, input));
+  }),
+  /** Reenvia ao corretor o demonstrativo (PDF) de uma parte paga */
+  reenviarDemonstrativo: protectedProcedure.input(z.object({ contratoId: z.number().int(), chave: z.string().regex(/^(avista|entrada|saldo)-\d{1,2}$/) })).mutation(async ({ input, ctx }) => {
+    const R = await import("../financeiro/comissoesRepasse");
+    return comErroRepasse(() => R.reenviarDemonstrativo(ctx.permissoes, input));
+  }),
+  /** O demonstrativo em PDF para baixar (o corretor baixa os dele) */
+  demonstrativo: protectedProcedure.input(z.object({ contratoId: z.number().int(), chave: z.string().regex(/^(avista|entrada|saldo)-\d{1,2}$/) })).mutation(async ({ input, ctx }) => {
+    const R = await import("../financeiro/comissoesRepasse");
+    return comErroRepasse(() => R.demonstrativoPdf(ctx.permissoes, ctx.user.id, input));
   }),
 
   /** Comissão de gestão das concessões da proprietária: receita a receber da gestora (sem boleto) */

@@ -143,8 +143,9 @@ export const empreendedorRouter = router({
     const hoje = hojeBrasil();
     const [comissoes, conc] = await Promise.all([comissoesDeGestao(Number(emp.id), hoje), concessoesDaProprietaria(Number(emp.id))]);
     const soma = (l: { valor: number }[]) => Math.round(l.reduce((t, x) => t + x.valor, 0) * 100) / 100;
-    const devidas = comissoes.filter(x => x.devida && !x.recebidaEm && (!x.data || x.data <= input.ate));
-    const pagas = comissoes.filter(x => !!x.recebidaEm);
+    // Devida = o que ainda vai sair do caixa (parte do escritório não recebida + parte do corretor não repassada)
+    const devidas = comissoes.filter(x => x.devida && x.pendente > 0 && (!x.data || x.data <= input.ate)).map(x => ({ ...x, valor: x.pendente }));
+    const pagas = comissoes.filter(x => x.devida && x.pendente === 0);
     const programadas = comissoes.filter(x => !x.devida).sort((a, b) => String(a.data).localeCompare(String(b.data)));
     const saldo = saldoLivre({ saldoCaixa: fluxo.saldoFinal, comissoesDevidas: soma(devidas), concessoesAPagar: Math.round((conc.resumo.aReceber + conc.resumo.atrasado) * 100) / 100, dividaTerceiros: fluxo.terceiros.emAberto });
     return { ...fluxo, despesas: despesas.map(x => ({ ...x, origem: desp.linhas.find(l => l.id === x.id) })).map(({ origem, ...x }) => ({

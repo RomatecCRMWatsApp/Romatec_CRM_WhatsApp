@@ -144,7 +144,12 @@ export default function FluxoCaixaEmpreendedor() {
                 {[...data.comissoes.devidas, ...data.comissoes.programadas, ...data.comissoes.pagas].map((c, k) => (
                   <p key={`${c.contrato}-${c.quando}-${k}`} className="flex flex-wrap justify-between gap-2 border-t border-border/50 py-1.5 first:border-0">
                     <span>{c.lote} · {c.quando}</span>
-                    <span className="tabular-nums"><b>{brl(c.valor)}</b> <span className={`text-xs ${c.recebidaEm ? "text-ok-300" : c.devida ? "text-warn-300" : "text-muted-foreground"}`}>{c.recebidaEm ? `paga em ${dataBr(c.recebidaEm)}` : c.devida ? `a pagar (cliente pagou em ${dataBr(c.data)})` : `programada${c.data ? ` para ${dataBr(c.data)}` : ""}`}</span></span>
+                    <span className="tabular-nums"><b>{brl(c.valor)}</b> <span className={`text-xs ${c.devida && c.pendente === 0 ? "text-ok-300" : c.devida ? "text-warn-300" : "text-muted-foreground"}`}>{c.devida && c.pendente === 0 ? "saiu do caixa" : c.devida ? `a sair do caixa (cliente pagou em ${dataBr(c.data)})` : `programada${c.data ? ` para ${dataBr(c.data)}` : ""}`}</span></span>
+                    {c.devida && c.valorCorretor > 0 && (
+                      <span className="w-full text-xs text-muted-foreground">
+                        Escritório {brl(c.valorEscritorio)} {c.recebidaEm ? `· pago em ${dataBr(c.recebidaEm)}` : "· a pagar"} · Corretor {brl(c.valorCorretor)} {c.corretorDebitadoEm ? `· repassado em ${dataBr(c.corretorDebitadoEm)}` : "· a repassar"}
+                      </span>
+                    )}
                   </p>
                 ))}
               </div>

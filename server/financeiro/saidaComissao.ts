@@ -7,15 +7,40 @@ const FORMA: Record<string, string> = { pix: 'PIX', transferência: 'TRANSFERENC
 export const formaDespesa = (f?: string | null) => FORMA[String(f ?? 'pix').trim().toLowerCase()] ?? 'OUTRO';
 export const MARCA_DESPESA = /despesa:#(\d+)/;
 
-export async function lancarSaidaComissao(o: { empreendimentoId: number | null; descricao: string; valor: number; pagoEm: string; forma?: string | null; autorId: number }): Promise<number | null> {
+export interface SaidaComissao {
+  empreendimentoId: number | null; descricao: string; valor: number; pagoEm: string; forma?: string | null; autorId: number;
+  /** Quem recebeu (padrão: a gestora) */
+  fornecedor?: string; observacao?: string;
+  /** Comprovante do Pix/transferência: fica na despesa e vai anexo ao comunicado da proprietária */
+  comprovante?: { base64: string; mime: string; nomeArquivo: string } | null;
+  /** Comprovante já guardado (ex.: o do repasse ao corretor): só liga à despesa, sem subir de novo */
+  comprovanteUrl?: string | null;
+  /** Pede a ciência da proprietária no WhatsApp (comunicado de saída) */
+  pedirCiencia?: boolean;
+}
+
+export async function lancarSaidaComissao(o: SaidaComissao): Promise<number | null> {
   if (!o.empreendimentoId || !(o.valor > 0)) return null;
-  const { lancarDespesa } = await import('./despesas');
+  const { lancarDespesa, anexarComprovante } = await import('./despesas');
   const r = await lancarDespesa({
-    empreendimentoId: o.empreendimentoId, descricao: o.descricao.slice(0, 200), categoria: 'comissoes', fornecedor: 'Romatec Consultoria Total',
+    empreendimentoId: o.empreendimentoId, descricao: o.descricao.slice(0, 200), categoria: 'comissoes', fornecedor: (o.fornecedor || 'Romatec Consultoria Total').slice(0, 120),
     valor: o.valor, vencimento: o.pagoEm, pagoEm: o.pagoEm, formaPagamento: formaDespesa(o.forma), origemRecurso: 'caixa',
-    observacao: 'Lançada pelo sistema ao registrar o recebimento da comissão pela gestora',
+    observacao: o.observacao ?? 'Lançada pelo sistema ao registrar o recebimento da comissão pela gestora',
   }, o.autorId);
-  return r.ids[0] ?? null;
+  const id = r.ids[0] ?? null;
+  if (!id) return null;
+  if (o.comprovanteUrl) {
+    const { getDb } = await import('../db');
+    const { financeiroDespesas } = await import('../../drizzle/schema');
+    const { eq } = await import('drizzle-orm');
+    const d: any = await getDb();
+    await d?.update(financeiroDespesas).set({ comprovanteUrl: o.comprovanteUrl } as any).where(eq(financeiroDespesas.id, id));
+  } else if (o.comprovante) await anexarComprovante(id, o.comprovante, o.autorId).catch((e: any) => console.warn('[Comissão] comprovante na despesa:', e?.message));
+  if (o.pedirCiencia) {
+    const { pedirCiencia } = await import('./despesaCiencia');
+    await pedirCiencia(id, o.autorId).catch((e: any) => console.warn('[Comissão] ciência da proprietária:', e?.message));
+  }
+  return id;
 }
 
 /** Cancela a despesa vinculada a um recebimento (se houver) */

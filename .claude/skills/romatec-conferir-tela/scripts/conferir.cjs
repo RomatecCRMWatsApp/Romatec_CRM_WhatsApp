@@ -1,6 +1,8 @@
 // Faz login no CRM local e tira captura de cada rota em 390 px (celular) e 1280 px (computador),
 // apontando elementos que passam da largura da tela (o usuário precisa "arrastar para o lado").
 // Uso: node conferir.cjs <pasta-saida> /rota1 /rota2 ...
+// CLICAR="Aba 1;Botão 2" clica nesses textos (em ordem) depois de abrir cada rota — para abas sem rota própria.
+// ESCALA=2 tira as capturas em alta resolução (para mostrar ao usuário).
 const { chromium } = require('playwright');
 const fs = require('fs'); const path = require('path');
 const [out, ...rotas] = process.argv.slice(2);
@@ -12,7 +14,7 @@ const TELAS = [{ nome: 'celular', viewport: { width: 390, height: 844 }, isMobil
   const b = await chromium.launch();
   let falhas = 0;
   for (const t of TELAS) {
-    const ctx = await b.newContext({ viewport: t.viewport, isMobile: !!t.isMobile, hasTouch: !!t.hasTouch, deviceScaleFactor: 1 });
+    const ctx = await b.newContext({ viewport: t.viewport, isMobile: !!t.isMobile, hasTouch: !!t.hasTouch, deviceScaleFactor: Number(process.env.ESCALA || 1) });
     const p = await ctx.newPage();
     const erros = []; p.on('pageerror', e => erros.push(e.message));
     await p.goto(BASE + '/login');
@@ -25,6 +27,10 @@ const TELAS = [{ nome: 'celular', viewport: { width: 390, height: 844 }, isMobil
     if (p.url().includes('/login')) { console.error('Login falhou: confira se o servidor subiu com subir.sh'); process.exit(1); }
     for (const r of rotas) {
       await p.goto(BASE + r, { waitUntil: 'domcontentloaded', timeout: 30000 }); await p.waitForTimeout(2500);
+      for (const alvo of (process.env.CLICAR || '').split(';').map(x => x.trim()).filter(Boolean)) {
+        const el = p.getByText(alvo, { exact: true });
+        if (await el.count()) { await el.first().click(); await p.waitForTimeout(1500); } else console.log(`aviso: não achei "${alvo}" em ${r}`);
+      }
       const largos = await p.evaluate(() => {
         const W = document.documentElement.clientWidth, ruins = [];
         for (const el of document.querySelectorAll('body *')) {
@@ -36,8 +42,11 @@ const TELAS = [{ nome: 'celular', viewport: { width: 390, height: 844 }, isMobil
         }
         return { W, rolaPagina: document.documentElement.scrollWidth > W + 2, ruins: ruins.slice(0, 5) };
       });
-      const arq = path.join(out, `${t.nome}${r.replace(/[^\w]+/g, '_')}.png`);
+      const sufixo = (process.env.CLICAR || '').replace(/[^\w]+/g, '_').slice(0, 40);
+      const arq = path.join(out, `${t.nome}${r.replace(/[^\w]+/g, '_')}${sufixo ? '_' + sufixo : ''}.png`);
       await p.screenshot({ path: arq, fullPage: true });
+      // A tela de erro do React ("Algo deu errado") não dispara pageerror: procura o texto
+      if (await p.getByText('Algo deu errado').count()) erros.push('tela de erro "Algo deu errado" (veja a captura)');
       const ok = !largos.rolaPagina && !erros.length;
       if (!ok) falhas++;
       console.log(`${ok ? 'OK ' : 'ERRO'} ${t.nome} ${r} -> ${arq}${largos.rolaPagina ? ` | passa da largura: ${largos.ruins.join('; ')}` : ''}${erros.length ? ` | erro na página: ${erros.join(' / ')}` : ''}`);

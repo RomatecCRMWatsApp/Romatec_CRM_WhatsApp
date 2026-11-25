@@ -20,7 +20,7 @@ const campo = "h-9 rounded-lg border border-border bg-background px-2 text-sm";
 
 type Fila = ItemFila[];
 
-function Peca({ it, condicoesValidas }: { it: Fila[number]; condicoesValidas: boolean }) {
+function Peca({ it, condicoesValidas, titulos }: { it: Fila[number]; condicoesValidas: boolean; titulos?: Record<number, string> }) {
   const utils = trpc.useUtils();
   const recarregar = () => utils.fabricaCriativos.painel.invalidate();
   const opcoes = { onSuccess: recarregar, onError: (e: { message: string }) => toast.error(e.message) };
@@ -43,12 +43,12 @@ function Peca({ it, condicoesValidas }: { it: Fila[number]; condicoesValidas: bo
         <span className="text-xs text-muted-foreground">{TIPO[it.tipo] ?? it.tipo} · {DESTINO[it.destino] ?? it.destino}{it.temPreco ? " · mostra preço" : ""}</span>
       </div>
       <div className="grid gap-3 md:grid-cols-[260px_minmax(0,1fr)]">
-        <div>
+        <div className="mx-auto w-full max-w-[240px] md:max-w-none">
           {ocupado ? (
             <div className="flex aspect-[9/16] items-center justify-center rounded-lg bg-secondary text-sm text-muted-foreground"><Loader2 className="mr-2 h-4 w-4 animate-spin" /> Montando…</div>
           ) : it.pecas.length ? (
             it.tipo === "reels" ? (
-              <video src={it.pecas[0]} controls playsInline preload="metadata" className="aspect-[9/16] w-full rounded-lg bg-black" />
+              <video src={`${it.pecas[0]}#t=0.5`} controls playsInline preload="metadata" className="aspect-[9/16] w-full rounded-lg bg-black" />
             ) : (
               <div className="flex snap-x gap-2 overflow-x-auto">
                 {it.pecas.map(u => <img key={u} src={u} alt="" loading="lazy" className="w-full shrink-0 snap-start rounded-lg" />)}
@@ -71,7 +71,7 @@ function Peca({ it, condicoesValidas }: { it: Fila[number]; condicoesValidas: bo
             <div className="flex flex-wrap gap-1.5">
               {it.pauta.midias.map((m, i) => (
                 <span key={`${m.id}-${i}`} className="inline-flex items-center gap-1 rounded-md border border-border px-1.5 py-0.5 text-xs">
-                  {m.tipo === "video" ? <Film className="h-3 w-3" /> : null}#{m.id} · {m.dur}s
+                  {m.tipo === "video" ? <Film className="h-3 w-3 shrink-0" /> : null}<span className="max-w-[150px] truncate" title={titulos?.[m.id] ?? `#${m.id}`}>{titulos?.[m.id] ?? `#${m.id}`}</span> · {m.dur}s
                   {editavel && !ocupado && (
                     <button aria-label={`Trocar a mídia ${i + 1}`} title="Trocar mídia" className="rounded p-0.5 hover:bg-secondary focus-visible:outline focus-visible:outline-2 focus-visible:outline-primary"
                       disabled={trocar.isPending} onClick={() => trocar.mutate({ id: it.id, indice: i })}><Shuffle className="h-3 w-3" /></button>
@@ -87,10 +87,10 @@ function Peca({ it, condicoesValidas }: { it: Fila[number]; condicoesValidas: bo
           {editavel && (
             <div className="flex flex-wrap gap-2">
               <Button size="sm" variant="outline" disabled={legenda === (it.legenda ?? "") || salvarLegenda.isPending} onClick={() => salvarLegenda.mutate({ id: it.id, legenda })}>Salvar legenda</Button>
-              <Button size="sm" disabled={it.status !== "pronta" || aprovar.isPending || (it.temPreco && !condicoesValidas)} onClick={() => aprovar.mutate({ id: it.id })}
+              {it.status !== "erro" && <Button size="sm" disabled={it.status !== "pronta" || aprovar.isPending || (it.temPreco && !condicoesValidas)} onClick={() => aprovar.mutate({ id: it.id })}
                 title={it.temPreco && !condicoesValidas ? "Confirme as condições comerciais antes" : undefined}>
                 <Check className="mr-1 h-3.5 w-3.5" /> Aprovar
-              </Button>
+              </Button>}
               {it.status === "erro" && <Button size="sm" variant="outline" disabled={remontar.isPending} onClick={() => remontar.mutate({ id: it.id })}><RefreshCw className="mr-1 h-3.5 w-3.5" /> Montar de novo</Button>}
               <Button size="sm" variant="ghost" disabled={descartar.isPending} onClick={() => descartar.mutate({ id: it.id })}><Trash2 className="mr-1 h-3.5 w-3.5" /> Descartar</Button>
             </div>
@@ -112,13 +112,13 @@ function Catalogo() {
   if (cat.isLoading) return <p className="flex items-center gap-2 text-sm text-muted-foreground"><Loader2 className="h-4 w-4 animate-spin" /> Carregando…</p>;
   return (
     <div className="flex flex-col gap-3">
-      <div className="flex flex-wrap items-center gap-2 text-sm">
+      <div className="flex flex-wrap items-center gap-2 px-1 text-sm">
         <p>{cat.data?.length ?? 0} mídias do Bom Jardims; {semTema} sem tema.</p>
         <select value={filtro} onChange={e => setFiltro(e.target.value as typeof filtro)} className={campo} aria-label="Filtrar o catálogo">
           <option value="sem_tema">Só as sem tema</option><option value="todas">Todas</option>
         </select>
       </div>
-      <p className="text-xs text-muted-foreground">Marque os temas de cada mídia. A sugestão sai do nome do arquivo; confirme tocando nela. Mídia com texto ou logo gravado não serve de fundo para o gancho.</p>
+      <p className="px-1 text-xs text-muted-foreground">Marque os temas de cada mídia. A sugestão sai do nome do arquivo; confirme tocando nela. Mídia com texto ou logo gravado não serve de fundo para o gancho.</p>
       {!itens.length && <p className="text-sm text-muted-foreground">Nada para mostrar aqui.</p>}
       <div className="grid gap-2 md:grid-cols-2">
         {itens.map(i => {
@@ -127,7 +127,7 @@ function Catalogo() {
             <div key={i.id} className="flex gap-3 rounded-xl border border-border bg-card p-2">
               {i.tipo === "imagem"
                 ? <img src={i.arquivo} alt="" loading="lazy" className="h-20 w-16 shrink-0 rounded-md object-cover" />
-                : <video src={i.arquivo} preload="metadata" muted className="h-20 w-16 shrink-0 rounded-md bg-black object-cover" />}
+                : <video src={`${i.arquivo}#t=1`} preload="metadata" muted className="h-20 w-16 shrink-0 rounded-md bg-black object-cover" />}
               <div className="min-w-0 flex-1">
                 <p className="truncate text-sm font-medium">{i.titulo}</p>
                 <p className="text-xs text-muted-foreground">#{i.id} · {i.tipo === "video" ? `vídeo${i.dur ? ` de ${Math.round(i.dur)} s` : ""}` : "foto"}{i.motivoBloqueio ? ` · ${i.motivoBloqueio}` : ""}</p>
@@ -225,14 +225,14 @@ export default function FabricaCriativos() {
       </div>
 
       {vista === "catalogo" ? <Catalogo /> : !porDia.length ? (
-        <p className="text-sm text-muted-foreground">Nenhuma pauta nos últimos 7 dias. Marque os temas no catálogo e gere as pautas de hoje.</p>
+        <p className="px-1 text-sm text-muted-foreground">Nenhuma pauta nos últimos 7 dias. Marque os temas no catálogo e gere as pautas de hoje.</p>
       ) : porDia.map(([dia, itens]) => (
         <section key={dia} className="flex flex-col gap-2">
-          <h3 className="text-sm font-semibold">{br(dia)} · {itens.filter(i => i.status === "aprovada").length} de {itens.length} aprovadas</h3>
-          {itens.map(it => <Peca key={it.id} it={it} condicoesValidas={d.condicoes.validas} />)}
+          <h3 className="px-1 text-sm font-semibold">{br(dia)} · {itens.filter(i => i.status === "aprovada").length} de {itens.length} aprovadas</h3>
+          {itens.map(it => <Peca key={it.id} it={it} condicoesValidas={d.condicoes.validas} titulos={d.titulos ?? {}} />)}
         </section>
       ))}
-      <p className="text-xs text-muted-foreground">Nada é publicado daqui. A publicação no Instagram e os anúncios (sempre pausados) entram depois da verificação da empresa na Meta.</p>
+      <p className="px-1 text-xs text-muted-foreground">Nada é publicado daqui. A publicação no Instagram e os anúncios (sempre pausados) entram depois da verificação da empresa na Meta.</p>
     </div>
   );
 }

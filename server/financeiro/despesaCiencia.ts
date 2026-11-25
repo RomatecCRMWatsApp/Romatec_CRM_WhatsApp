@@ -84,31 +84,8 @@ function retrato(x: any): RetratoDespesa {
 
 /** Anexa o comprovante (imagem ou PDF) ao final do documento; se não der para baixar, segue sem ele */
 async function anexarComprovante(pdf: Buffer, url: string | null): Promise<Buffer> {
-  if (!url) return pdf;
-  try {
-    const r = await fetch(url, { signal: AbortSignal.timeout(20_000) });
-    if (!r.ok) return pdf;
-    const buf = Buffer.from(await r.arrayBuffer());
-    const doc = await PDFDocument.load(pdf);
-    const tipo = String(r.headers.get('content-type') ?? '');
-    if (tipo.includes('pdf') || buf.subarray(0, 4).toString() === '%PDF') {
-      const fonte = await PDFDocument.load(buf, { ignoreEncryption: true });
-      const paginas = await doc.copyPages(fonte, fonte.getPageIndices().slice(0, 5));
-      paginas.forEach(p => doc.addPage(p));
-    } else {
-      const img = tipo.includes('png') || buf[0] === 0x89 ? await doc.embedPng(buf) : await doc.embedJpg(buf);
-      const pg = doc.addPage([595.28, 841.89]);
-      const max = { w: 595.28 - 80, h: 841.89 - 110 };
-      const esc = Math.min(max.w / img.width, max.h / img.height, 1);
-      const w = img.width * esc, h = img.height * esc;
-      pg.drawText('ANEXO — COMPROVANTE DE PAGAMENTO', { x: 40, y: 841.89 - 50, size: 11 });
-      pg.drawImage(img, { x: (595.28 - w) / 2, y: 841.89 - 70 - h, width: w, height: h });
-    }
-    return Buffer.from(await doc.save());
-  } catch (e: any) {
-    console.warn('[Ciência despesa] Comprovante não anexado ao PDF:', e?.message);
-    return pdf;
-  }
+  const { anexarAoPdf } = await import('./anexoPdf');
+  return anexarAoPdf(pdf, url ? { url } : null);
 }
 
 /** Carimbo da assinatura eletrônica (vai acima da linha da proprietária no documento confirmado) */

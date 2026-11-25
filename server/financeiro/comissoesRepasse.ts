@@ -16,6 +16,9 @@ export class RepasseErro extends Error {
   constructor(message: string, public status: number) { super(message); }
 }
 
+/** Id da despesa lançada no caixa pelo repasse (marcado na observação do registro) */
+export function despesaDoRegistro(obs: unknown): number | null { const m = /despesa:#(\d+)/.exec(String(obs ?? '')); return m ? Number(m[1]) : null; }
+
 const hojeBR = () => new Date(Date.now() - 3 * 3600_000).toISOString().slice(0, 10);
 const r2 = (x: number) => Math.round(x * 100) / 100;
 const json = (v: unknown) => { if (typeof v !== 'string') return (v ?? {}) as any; try { return JSON.parse(v); } catch { return {}; } };
@@ -66,7 +69,7 @@ export async function comissoesDeVenda(permissoes: PermissoesUsuario, usuarioId:
     const partes = partesDaComissao({
       plano, statusContrato: c.status, hoje, entradaPagaNoAto: !!c.entradaPagaNoAto,
       cobrancas: cobs.filter(x => Number(x.contratoId) === id).map(x => ({ tipo: x.tipo, numero: Number(x.numero), vencimento: String(x.vencimento), status: x.status, pagoEm: x.pagoEm ? String(x.pagoEm) : null })),
-      repasses: reps.filter(x => Number(x.contratoId) === id).map(x => ({ chave: x.chave, valor: Number(x.valor), pagoEm: String(x.pagoEm), forma: x.forma, comprovanteUrl: x.comprovanteUrl ?? null })),
+      repasses: reps.filter(x => Number(x.contratoId) === id).map(x => ({ chave: x.chave, valor: Number(x.valor), pagoEm: String(x.pagoEm), forma: x.forma, comprovanteUrl: x.comprovanteUrl ?? null, despesaId: despesaDoRegistro(x.observacao) })),
     });
     const emp = E.get(Number(c.empreendimentoId));
     return {
@@ -107,7 +110,7 @@ let avisoRepasse: AvisoRepasse = async (tel, texto, comp) => {
 /** Testes trocam o envio */
 export const definirAvisoRepasse = (f: AvisoRepasse | null) => { if (f) avisoRepasse = f; };
 
-export async function registrarRepasse(permissoes: PermissoesUsuario, usuarioId: number, i: { contratoId: number; chave: string; pagoEm: string; forma?: string; observacao?: string; comprovante?: ComprovanteRepasse | null; avisar?: boolean }) {
+export async function registrarRepasse(permissoes: PermissoesUsuario, usuarioId: number, i: { contratoId: number; chave: string; pagoEm: string; forma?: string; observacao?: string; comprovante?: ComprovanteRepasse | null; avisar?: boolean; doCaixa?: boolean }) {
   if (permissoes.perfil !== 'admin' && permissoes.perfil !== 'secretario') throw new RepasseErro('Só o administrador e a secretária registram o pagamento da comissão.', 403);
   const d: any = await getDb();
   if (!d) throw new RepasseErro('Banco indisponível', 503);
@@ -132,21 +135,121 @@ export async function registrarRepasse(permissoes: PermissoesUsuario, usuarioId:
     contratoId: i.contratoId, corretorUserId: Number(c.corretorUserId), chave: i.chave, valor: parte.valor.toFixed(2), pagoEm: i.pagoEm,
     forma: i.forma?.slice(0, 30) || null, observacao: i.observacao?.slice(0, 300) || null, registradoPor: usuarioId, comprovanteUrl,
   } as any);
-  // Aviso ao corretor no WhatsApp, com o comprovante
+  // Saiu do caixa do empreendimento: despesa no saldo da proprietária, com o pedido de ciência dela
+  let despesaId: number | null = null;
+  if (i.doCaixa !== false) despesaId = await debitarNoCaixa(d, c, i.chave, parte.valor, parte.quando, { pagoEm: i.pagoEm, forma: i.forma, comprovanteUrl }, usuarioId);
+  // Aviso ao corretor no WhatsApp, com o demonstrativo em PDF (o comprovante vai anexo nele)
   let avisado = false; let erroAviso: string | null = null;
   if (i.avisar !== false) {
-    const [u]: any[] = await d.select({ name: users.name, telefone: users.telefone }).from(users).where(eq(users.id, Number(c.corretorUserId))).limit(1);
-    const tel = String(u?.telefone ?? '').replace(/\D/g, '');
-    if (tel.length < 10) erroAviso = 'corretor sem WhatsApp no cadastro';
-    else {
-      const [e]: any[] = await d.select({ nome: empreendimentos.nome }).from(empreendimentos).where(eq(empreendimentos.id, Number(c.empreendimentoId))).limit(1);
-      const texto = mensagemRepassePago({ corretor: String(u?.name ?? ''), valor: parte.valor, parte: parte.quando, lote: String(c.loteCodigo), contrato: String(c.numero), empreendimento: String(e?.nome ?? ''), pagoEm: i.pagoEm, forma: i.forma, comComprovante: !!i.comprovante });
-      try { await avisoRepasse(tel.startsWith('55') && tel.length >= 12 ? tel : `55${tel}`, texto, i.comprovante ?? null); avisado = true; }
-      catch (err: any) { erroAviso = String(err?.message ?? err).slice(0, 160); console.warn('[Comissão] aviso ao corretor:', erroAviso); }
-    }
+    // O pagamento já está registrado: falha no aviso não desfaz nada
+    const r = await enviarDemonstrativoAoCorretor(c, i.chave, i.comprovante ?? null)
+      .catch((e: any) => ({ avisado: false, erroAviso: String(e?.message ?? e).slice(0, 160) }));
+    avisado = r.avisado; erroAviso = r.erroAviso;
   }
-  return { ok: true as const, valor: parte.valor, comprovanteUrl, avisado, erroAviso };
+  return { ok: true as const, valor: parte.valor, comprovanteUrl, avisado, erroAviso, despesaId };
 }
+
+/** Lança a parte do corretor como despesa paga no caixa do empreendimento e marca o registro do repasse */
+async function debitarNoCaixa(d: any, c: any, chave: string, valor: number, quando: string, o: { pagoEm: string; forma?: string | null; comprovanteUrl: string | null }, usuarioId: number): Promise<number | null> {
+  const [u]: any[] = await d.select({ name: users.name }).from(users).where(eq(users.id, Number(c.corretorUserId))).limit(1);
+  const nome = String(u?.name ?? 'corretor(a)');
+  const { lancarSaidaComissao } = await import('./saidaComissao');
+  const despesaId = await lancarSaidaComissao({
+    empreendimentoId: Number(c.empreendimentoId), descricao: `Comissão do corretor — chácara ${c.loteCodigo} (${c.numero}) · ${quando}`,
+    valor, pagoEm: o.pagoEm, forma: o.forma, autorId: usuarioId, fornecedor: nome, comprovanteUrl: o.comprovanteUrl, pedirCiencia: true,
+    observacao: `Repasse da comissão de corretagem ao corretor(a) ${nome} (parte da comissão de venda; a parte do escritório sai à parte)`,
+  });
+  if (despesaId) {
+    const [r]: any[] = await d.select({ id: comissaoRepasses.id, observacao: comissaoRepasses.observacao }).from(comissaoRepasses)
+      .where(and(eq(comissaoRepasses.contratoId, Number(c.id)), eq(comissaoRepasses.chave, chave))).limit(1);
+    if (r) await d.update(comissaoRepasses).set({ observacao: [r.observacao, `despesa:#${despesaId}`].filter(Boolean).join(' · ').slice(0, 300) } as any).where(eq(comissaoRepasses.id, r.id));
+    await ajustarGestaoAntiga(d, Number(c.id), chave, valor, usuarioId);
+  }
+  return despesaId;
+}
+
+/**
+ * Recebimentos da comissão de gestão registrados antes da divisão escritório × corretor lançaram a parte inteira
+ * (escritório + corretor) no caixa. Quando o repasse do corretor dessa parte sai do caixa, aquela despesa fica só
+ * com a parte do escritório, para não contar a do corretor duas vezes.
+ */
+async function ajustarGestaoAntiga(d: any, contratoId: number, chave: string, valorCorretor: number, usuarioId: number) {
+  const { chaveGestao } = await import('./saldoProprietaria');
+  const [g]: any[] = await d.select().from(comissaoRepasses).where(and(eq(comissaoRepasses.contratoId, contratoId), eq(comissaoRepasses.chave, chaveGestao(chave)))).limit(1);
+  const idDesp = despesaDoRegistro(g?.observacao);
+  if (!g || !idDesp) return;
+  const { financeiroDespesas } = await import('../../drizzle/schema');
+  const [x]: any[] = await d.select().from(financeiroDespesas).where(eq(financeiroDespesas.id, idDesp)).limit(1);
+  const atual = Number(x?.valorPago ?? x?.valor ?? 0);
+  if (!x || Math.abs(atual - Number(g.valor)) > 0.01 || !(atual - valorCorretor > 0)) return; // já está dividida
+  const novo = r2(atual - valorCorretor);
+  await d.update(financeiroDespesas).set({ valor: novo.toFixed(2), valorPago: novo.toFixed(2), updatedAt: new Date() } as any).where(eq(financeiroDespesas.id, idDesp));
+  await d.update(comissaoRepasses).set({ valor: novo.toFixed(2) } as any).where(eq(comissaoRepasses.id, g.id));
+  console.log(`[Comissão] despesa #${idDesp} ajustada para a parte do escritório (R$ ${novo.toFixed(2)}) por ${usuarioId}`);
+}
+
+/** Monta o demonstrativo da parte paga e manda ao corretor (PDF com o comprovante anexo) */
+async function enviarDemonstrativoAoCorretor(c: any, chave: string, comprovante: ComprovanteRepasse | null): Promise<{ avisado: boolean; erroAviso: string | null }> {
+  const D = await import('./demonstrativoComissao');
+  const dados = await D.dadosDemonstrativo(Number(c.id), hojeBR());
+  if (!dados) return { avisado: false, erroAviso: 'contrato não encontrado' };
+  const tel = dados.corretor.telefone.replace(/\D/g, '');
+  if (tel.length < 10) return { avisado: false, erroAviso: 'corretor sem WhatsApp no cadastro' };
+  const parte = dados.partes.find(p => p.chave === chave);
+  if (!parte || parte.situacao !== 'paga') return { avisado: false, erroAviso: 'esta parte ainda não está paga' };
+  const texto = mensagemRepassePago({ corretor: dados.corretor.nome, valor: parte.valor, parte: parte.quando, lote: dados.lote, contrato: dados.contrato.numero, empreendimento: dados.empreendimento, pagoEm: parte.pagoEm!, forma: parte.forma, comComprovante: true });
+  let anexo: ComprovanteRepasse | null = comprovante;
+  try {
+    const pdf = await D.pdfDemonstrativo(dados, chave, comprovante ? { buf: Buffer.from(comprovante.base64, 'base64'), mime: comprovante.mime } : null);
+    anexo = { base64: pdf.toString('base64'), mime: 'application/pdf', nomeArquivo: D.nomeDemonstrativo(dados, chave) };
+  } catch (e: any) { console.warn('[Comissão] demonstrativo não gerado; vai só o comprovante:', e?.message); }
+  try { await avisoRepasse(tel.startsWith('55') && tel.length >= 12 ? tel : `55${tel}`, texto, anexo); return { avisado: true, erroAviso: null }; }
+  catch (err: any) { const m = String(err?.message ?? err).slice(0, 160); console.warn('[Comissão] aviso ao corretor:', m); return { avisado: false, erroAviso: m }; }
+}
+
+async function contratoAutorizado(permissoes: PermissoesUsuario, contratoId: number) {
+  const d: any = await getDb();
+  if (!d) throw new RepasseErro('Banco indisponível', 503);
+  const [c]: any[] = await d.select().from(contratos).where(eq(contratos.id, contratoId)).limit(1);
+  if (!c) throw new RepasseErro('Contrato não encontrado', 404);
+  if (!temAcesso(permissoes.perfil, permissoes.acessos, 'empreendimento', Number(c.empreendimentoId))) throw new RepasseErro('Sem acesso a este empreendimento', 403);
+  return { d, c };
+}
+
+/** Repasse já pago que não saiu do caixa do empreendimento (registrado antes): lança agora e pede a ciência */
+export async function debitarRepasse(permissoes: PermissoesUsuario, usuarioId: number, i: { contratoId: number; chave: string }) {
+  if (permissoes.perfil !== 'admin' && permissoes.perfil !== 'secretario') throw new RepasseErro('Só o administrador e a secretária lançam no caixa.', 403);
+  const { d, c } = await contratoAutorizado(permissoes, i.contratoId);
+  const [r]: any[] = await d.select().from(comissaoRepasses).where(and(eq(comissaoRepasses.contratoId, i.contratoId), eq(comissaoRepasses.chave, i.chave))).limit(1);
+  if (!r) throw new RepasseErro('Este repasse ainda não foi registrado como pago', 404);
+  if (despesaDoRegistro(r.observacao)) throw new RepasseErro('Este repasse já saiu do caixa do empreendimento', 409);
+  const parte = gatilhosDoPlano(json(c.simulacaoJson)).find(g => g.chave === i.chave);
+  const despesaId = await debitarNoCaixa(d, c, i.chave, Number(r.valor), parte?.quando ?? i.chave, { pagoEm: String(r.pagoEm).slice(0, 10), forma: r.forma, comprovanteUrl: r.comprovanteUrl ?? null }, usuarioId);
+  if (!despesaId) throw new RepasseErro('Não foi possível lançar a despesa (empreendimento sem caixa?)', 409);
+  return { ok: true as const, despesaId };
+}
+
+/** Reenvia ao corretor o demonstrativo de uma parte paga */
+export async function reenviarDemonstrativo(permissoes: PermissoesUsuario, i: { contratoId: number; chave: string }) {
+  if (permissoes.perfil !== 'admin' && permissoes.perfil !== 'secretario') throw new RepasseErro('Só o administrador e a secretária enviam o demonstrativo.', 403);
+  const { c } = await contratoAutorizado(permissoes, i.contratoId);
+  const r = await enviarDemonstrativoAoCorretor(c, i.chave, null);
+  if (!r.avisado) throw new RepasseErro(`Demonstrativo não enviado: ${r.erroAviso}`, 409);
+  return { ok: true as const };
+}
+
+/** O PDF do demonstrativo (escritório: qualquer corretor; corretor: só as vendas dele) */
+export async function demonstrativoPdf(permissoes: PermissoesUsuario, usuarioId: number, i: { contratoId: number; chave: string }) {
+  const { c } = await contratoAutorizado(permissoes, i.contratoId);
+  const escritorio = permissoes.perfil === 'admin' || permissoes.perfil === 'secretario';
+  if (!escritorio && !(permissoes.perfil === 'corretor' && Number(c.corretorUserId) === usuarioId)) throw new RepasseErro('Sem acesso a este demonstrativo', 403);
+  const D = await import('./demonstrativoComissao');
+  const dados = await D.dadosDemonstrativo(Number(c.id), hojeBR());
+  if (!dados || !dados.partes.some(p => p.chave === i.chave)) throw new RepasseErro('Parte da comissão não encontrada', 404);
+  const pdf = await D.pdfDemonstrativo(dados, i.chave, null);
+  return { base64: pdf.toString('base64'), nome: D.nomeDemonstrativo(dados, i.chave) };
+}
+
 
 /** Desfaz um registro de pagamento (só o administrador, para corrigir engano) */
 export async function desfazerRepasse(permissoes: PermissoesUsuario, i: { contratoId: number; chave: string }) {

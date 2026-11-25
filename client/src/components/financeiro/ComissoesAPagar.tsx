@@ -1,7 +1,7 @@
 import { useMemo, useState } from "react";
 import { Bar, BarChart, CartesianGrid, Legend, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
 import { toast } from "sonner";
-import { CheckCircle2, Download, Loader2, Undo2 } from "lucide-react";
+import { CheckCircle2, Download, FileText, Landmark, Loader2, Send, Undo2 } from "lucide-react";
 import { trpc } from "@/lib/trpc";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
@@ -49,6 +49,7 @@ export default function ComissoesAPagar() {
   const [obs, setObs] = useState("");
   const [comp, setComp] = useState<{ base64: string; mime: "image/png" | "image/jpeg" | "application/pdf"; nomeArquivo: string } | null>(null);
   const [avisar, setAvisar] = useState(true);
+  const [doCaixa, setDoCaixa] = useState(true);
   const escolherComp = (f?: File) => {
     if (!f) return;
     const mime = f.type === "application/pdf" ? "application/pdf" : f.type === "image/jpeg" ? "image/jpeg" : f.type === "image/png" ? "image/png" : null;
@@ -62,10 +63,22 @@ export default function ComissoesAPagar() {
   const { data: d, isLoading, error } = trpc.comissoes.aPagar.useQuery(corretorId ? { corretorId } : undefined, { placeholderData: prev => prev });
   const registrar = trpc.comissoes.registrarPagamento.useMutation({
     onSuccess: r => {
-      if (r.avisado) toast.success(`Repasse de ${brl(r.valor)} registrado e o corretor avisado no WhatsApp${r.comprovanteUrl ? " com o comprovante" : ""}`);
+      if (r.avisado) toast.success(`Repasse de ${brl(r.valor)} registrado; o corretor recebeu o demonstrativo no WhatsApp${r.despesaId ? " e a proprietária o pedido de ciência" : ""}`);
       else toast.warning(`Repasse de ${brl(r.valor)} registrado${r.erroAviso ? `, mas o aviso não saiu (${r.erroAviso})` : ""}`, { duration: 10000 });
       setPagar(null); setObs(""); setComp(null); utils.comissoes.aPagar.invalidate();
     },
+    onError: e => toast.error(e.message),
+  });
+  const debitar = trpc.comissoes.debitarRepasse.useMutation({
+    onSuccess: () => { toast.success("Lançado no caixa do empreendimento; a proprietária recebeu o pedido de ciência"); utils.comissoes.aPagar.invalidate(); },
+    onError: e => toast.error(e.message),
+  });
+  const reenviar = trpc.comissoes.reenviarDemonstrativo.useMutation({
+    onSuccess: () => toast.success("Demonstrativo reenviado ao corretor no WhatsApp"),
+    onError: e => toast.error(e.message),
+  });
+  const baixar = trpc.comissoes.demonstrativo.useMutation({
+    onSuccess: r => { const a = document.createElement("a"); a.href = `data:application/pdf;base64,${r.base64}`; a.download = r.nome; a.click(); },
     onError: e => toast.error(e.message),
   });
   const desfazer = trpc.comissoes.desfazerPagamento.useMutation({
@@ -222,12 +235,31 @@ export default function ComissoesAPagar() {
                     </span>
                     {p.pagoEm && <span className="block text-[11px] text-muted-foreground">em {data(p.pagoEm)}{p.forma ? ` · ${p.forma}` : ""}</span>}
                     {p.comprovanteUrl && <a href={p.comprovanteUrl} target="_blank" rel="noopener noreferrer" className="block text-[11px] text-primary hover:underline">comprovante</a>}
+                    {p.situacao === "paga" && (
+                      <button type="button" disabled={baixar.isPending} onClick={() => baixar.mutate({ contratoId: p.venda.contratoId, chave: p.chave })}
+                        className="mt-0.5 flex items-center gap-1 text-[11px] text-primary hover:underline focus-visible:outline focus-visible:outline-2 focus-visible:outline-primary">
+                        <FileText className="h-3 w-3" /> demonstrativo (PDF)
+                      </button>
+                    )}
+                    {escritorio && p.situacao === "paga" && (p.despesaId
+                      ? <span className="block text-[11px] text-ok-300">saiu do caixa da proprietária</span>
+                      : <span className="block text-[11px] text-warn-300">ainda não saiu do caixa da proprietária</span>)}
                   </td>
                   {escritorio && (
                     <td className="px-3 py-2 text-right">
                       {p.situacao === "paga"
-                        ? <Button size="sm" variant="ghost" className="h-7 text-xs" title="Desfazer (só o administrador)" disabled={desfazer.isPending}
-                            onClick={() => { if (window.confirm("Desfazer o registro deste pagamento?")) desfazer.mutate({ contratoId: p.venda.contratoId, chave: p.chave }); }}><Undo2 className="h-3.5 w-3.5" /></Button>
+                        ? <span className="inline-flex flex-wrap justify-end gap-1">
+                            {!p.despesaId && (
+                              <Button size="sm" variant="outline" className="h-7 text-xs" disabled={debitar.isPending} title="Lança no caixa do empreendimento e pede a ciência da proprietária"
+                                onClick={() => { if (window.confirm(`Lançar ${brl(p.valor)} como saída do caixa do empreendimento e pedir a ciência da proprietária?`)) debitar.mutate({ contratoId: p.venda.contratoId, chave: p.chave }); }}>
+                                <Landmark className="mr-1 h-3.5 w-3.5" /> Debitar do caixa
+                              </Button>
+                            )}
+                            <Button size="sm" variant="ghost" className="h-7 text-xs" title="Reenviar o demonstrativo ao corretor" disabled={reenviar.isPending}
+                              onClick={() => reenviar.mutate({ contratoId: p.venda.contratoId, chave: p.chave })}><Send className="h-3.5 w-3.5" /></Button>
+                            <Button size="sm" variant="ghost" className="h-7 text-xs" title="Desfazer (só o administrador)" disabled={desfazer.isPending}
+                              onClick={() => { if (window.confirm("Desfazer o registro deste pagamento? A saída lançada no caixa também é cancelada.")) desfazer.mutate({ contratoId: p.venda.contratoId, chave: p.chave }); }}><Undo2 className="h-3.5 w-3.5" /></Button>
+                          </span>
                         : p.situacao !== "cancelada" && (
                           <Button size="sm" variant={p.situacao === "a_pagar" || p.situacao === "atrasada" ? "default" : "outline"} className="h-7 text-xs"
                             onClick={() => { setPagoEm(hoje()); setPagar({ contratoId: p.venda.contratoId, chave: p.chave, rotulo: `${p.venda.corretor} — ${p.venda.lote}, ${p.quando}`, valor: p.valor }); }}>
@@ -266,7 +298,8 @@ export default function ComissoesAPagar() {
                   className="mt-1 block w-full text-sm text-foreground file:mr-2 file:rounded-md file:border file:border-border file:bg-secondary file:px-3 file:py-1.5 file:text-sm" />
                 {comp && <span className="mt-1 block text-xs text-ok-300">Anexado: {comp.nomeArquivo}</span>}
               </label>
-              <label className="flex items-center gap-2 text-sm"><input type="checkbox" checked={avisar} onChange={e => setAvisar(e.target.checked)} /> Avisar o corretor no WhatsApp{comp ? " com o comprovante" : ""}</label>
+              <label className="flex items-start gap-2 text-sm"><input type="checkbox" className="mt-1" checked={avisar} onChange={e => setAvisar(e.target.checked)} /> Mandar ao corretor, no WhatsApp, o demonstrativo em PDF (venda, condições do comprador, partes da comissão com as datas{comp ? " e o comprovante anexo" : ""})</label>
+              <label className="flex items-start gap-2 text-sm"><input type="checkbox" className="mt-1" checked={doCaixa} onChange={e => setDoCaixa(e.target.checked)} /> Pago com o caixa do empreendimento: lança a saída no saldo da proprietária e pede a ciência dela</label>
               <label className="block text-xs text-muted-foreground">Observação (opcional)
                 <input value={obs} maxLength={300} onChange={e => setObs(e.target.value)} className="mt-1 block w-full rounded-lg border border-border bg-background px-2 py-2 text-sm text-foreground" />
               </label>
@@ -275,7 +308,7 @@ export default function ComissoesAPagar() {
           <DialogFooter>
             <Button variant="outline" onClick={() => setPagar(null)}>Cancelar</Button>
             <Button disabled={!pagar || !pagoEm || registrar.isPending}
-              onClick={() => pagar && registrar.mutate({ contratoId: pagar.contratoId, chave: pagar.chave, pagoEm, forma, observacao: obs || undefined, comprovante: comp, avisar })}>
+              onClick={() => pagar && registrar.mutate({ contratoId: pagar.contratoId, chave: pagar.chave, pagoEm, forma, observacao: obs || undefined, comprovante: comp, avisar, doCaixa })}>
               {registrar.isPending ? <Loader2 className="mr-1 h-4 w-4 animate-spin" /> : <CheckCircle2 className="mr-1 h-4 w-4" />} Registrar pagamento
             </Button>
           </DialogFooter>
