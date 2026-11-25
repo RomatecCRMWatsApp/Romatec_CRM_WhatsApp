@@ -36,6 +36,8 @@ export interface RetratoDespesa {
   terceiro?: { nome: string; documento: string | null; modalidade: string; finalidade: string | null } | null;
   /** Saída de comissão de venda: a base (valor de venda, comissão, escritório e corretor) e as condições do comprador */
   comissao?: { linhas: string[]; tabela: [string, string][]; condicoes: string[] } | null;
+  /** Recado do escritório para a proprietária (ex.: correção de um envio anterior) — vai no topo da mensagem e no documento */
+  nota?: string | null;
 }
 
 const ROT_MOD: Record<string, string> = { emprestimo: 'empréstimo', permuta: 'permuta', adiantamento: 'adiantamento', outro: 'outro' };
@@ -51,6 +53,7 @@ export function mensagemCiencia(p: { proprietaria: Proprietaria; empreendimento:
   return [
     `Olá, ${nome}! Saída de recursos do ${p.empreendimento} para a sua ciência:`,
     '',
+    ...(d.nota ? [`⚠️ ${d.nota}`, ''] : []),
     `💸 Valor: R$ ${brl(valor)}`,
     `🎯 Destino: ${d.fornecedor || 'não informado'}`,
     `📝 Referente a: ${d.descricao} (${ROTULO_CATEGORIA[d.categoria as CategoriaDespesa] ?? d.categoria})`,
@@ -114,6 +117,7 @@ async function documentoPdf(numero: number, emp: { nome: string; slug: string },
   w.cabecalho(tituloDoc, `${titulo} · ${emp.nome}`);
   w.paragrafo([{ t: 'O escritório gestor comunica à ' }, { t: prop.empresa || prop.nome, b: true },
     { t: `${prop.empresa ? `, neste ato representada por ${prop.nome}` : ''}, proprietária do empreendimento ${emp.nome}, a saída de recursos abaixo, para a sua ciência e o registro na prestação de contas.` }]);
+  if (d.nota) w.paragrafo([{ t: 'Observação do escritório: ', b: true }, { t: d.nota }]);
   w.clausula('1. DADOS DA SAÍDA');
   w.tabela(['Campo', 'Informação'], [
     ['Valor', `R$ ${brl(valor)}${d.valorPago != null && d.valorPago !== d.valor ? ` (previsto R$ ${brl(d.valor)})` : ''}`],
@@ -163,7 +167,7 @@ async function enviarPdf(tel: string, pdf: Buffer, nome: string, legenda: string
 }
 
 /** Pede a ciência da proprietária: gera o documento, troca o link anterior (se houver) e manda no WhatsApp dela */
-export async function pedirCiencia(despesaId: number, autorId: number, proprietariaInformada?: Partial<Proprietaria>) {
+export async function pedirCiencia(despesaId: number, autorId: number, proprietariaInformada?: Partial<Proprietaria>, nota?: string | null) {
   const d = await banco();
   const [x]: any[] = await d.select().from(financeiroDespesas).where(eq(financeiroDespesas.id, despesaId)).limit(1);
   if (!x) throw new FinanceiroErro('NAO_ENCONTRADA', 'Despesa não encontrada', 404);
@@ -177,6 +181,7 @@ export async function pedirCiencia(despesaId: number, autorId: number, proprieta
   if (!tel) throw new FinanceiroErro('TELEFONE', 'A proprietária está sem WhatsApp no cadastro jurídico do empreendimento', 409);
 
   const ret = retrato(x);
+  if (nota?.trim()) ret.nota = nota.trim().slice(0, 600);
   if (x.comissaoContratoId && x.comissaoChave) {
     try {
       const { baseComissaoDaParte } = await import('./demonstrativoComissao');

@@ -195,6 +195,43 @@ function normalizar(d: DadosComprovante): DadosComprovante {
   return { valor, data, recebedor: txt(d.recebedor), documentoRecebedor: txt(d.documentoRecebedor), instituicaoRecebedor: txt(d.instituicaoRecebedor), pagador: txt(d.pagador), forma, idTransacao: txt(d.idTransacao) };
 }
 
+/**
+ * OCR local (tesseract, português) para foto, print ou PDF escaneado: lê o texto sem IA e sem rede.
+ * PDF: converte a 1ª página em imagem com o pdftoppm. Sem tesseract instalado, devolve '' (cai na IA).
+ */
+export type Ocr = (arq: { base64: string; mime: string }) => Promise<string>;
+const ocrPadrao: Ocr = async arq => {
+  const { execFile } = await import('node:child_process');
+  const { promisify } = await import('node:util');
+  const { mkdtemp, writeFile, rm } = await import('node:fs/promises');
+  const { tmpdir } = await import('node:os');
+  const { join } = await import('node:path');
+  const run = promisify(execFile);
+  const dir = await mkdtemp(join(tmpdir(), 'comp-'));
+  try {
+    let img: string;
+    if (arq.mime === 'application/pdf') {
+      await writeFile(join(dir, 'a.pdf'), Buffer.from(arq.base64, 'base64'));
+      await run('pdftoppm', ['-f', '1', '-l', '1', '-r', '200', '-png', join(dir, 'a.pdf'), join(dir, 'p')], { timeout: 30_000 });
+      const { readdir } = await import('node:fs/promises');
+      const pg = (await readdir(dir)).find(f => f.startsWith('p') && f.endsWith('.png'));
+      if (!pg) return '';
+      img = join(dir, pg);
+    } else {
+      img = join(dir, arq.mime === 'image/png' ? 'a.png' : 'a.jpg');
+      await writeFile(img, Buffer.from(arq.base64, 'base64'));
+    }
+    const { stdout } = await run('tesseract', [img, '-', '-l', 'por'], { timeout: 60_000, maxBuffer: 4 * 1024 * 1024 });
+    return String(stdout ?? '');
+  } catch (e: any) {
+    console.warn('[Comprovante] OCR indisponível:', String(e?.message ?? e).slice(0, 160));
+    return '';
+  } finally { await rm(dir, { recursive: true, force: true }).catch(() => {}); }
+};
+let ocr: Ocr = ocrPadrao;
+/** Testes trocam o OCR */
+export const definirOcr = (f: Ocr | null) => { ocr = f ?? ocrPadrao; };
+
 export async function lerComprovante(arq: { base64: string; mime: string }): Promise<LeituraComprovante> {
   const tamanho = Buffer.byteLength(arq.base64, 'base64');
   if (tamanho > 10 * 1024 * 1024) throw new FinanceiroErro('ARQUIVO', 'Arquivo grande demais (máx. 10 MB)', 400);
@@ -208,11 +245,18 @@ export async function lerComprovante(arq: { base64: string; mime: string }): Pro
       return { ...junto, origem: 'ia', faltando: faltandoEm(junto) };
     }
   }
+  // Foto, print ou PDF escaneado: OCR local primeiro (sem IA); a IA só completa o que faltar
+  const lidoOcr = await ocr(arq).catch(() => '');
+  const doOcr = lidoOcr.length > 40 ? normalizar(extrairDeTexto(lidoOcr)) : null;
+  if (doOcr && !faltandoEm(doOcr).length) return { ...doOcr, origem: 'texto', faltando: [] };
   try {
-    const d = normalizar(await leitorIa({ base64: arq.base64, mime: arq.mime }));
+    const iaArq = arq.mime === 'application/pdf' && lidoOcr.length > 40 ? { texto: lidoOcr } : { base64: arq.base64, mime: arq.mime };
+    const ia = normalizar(await leitorIa(iaArq as any));
+    const d = doOcr ? Object.fromEntries(Object.keys(VAZIO).map(k => [k, (doOcr as any)[k] ?? (ia as any)[k]])) as unknown as DadosComprovante : ia;
     return { ...d, origem: 'ia', faltando: faltandoEm(d) };
   } catch (e: any) {
     console.warn('[Comprovante] Leitura falhou:', e?.message);
+    if (doOcr && doOcr.valor != null) return { ...doOcr, origem: 'texto', faltando: faltandoEm(doOcr) };
     throw new FinanceiroErro('LEITURA', 'Não consegui ler o comprovante. Preencha os campos à mão e anexe o arquivo depois.', 422);
   }
 }

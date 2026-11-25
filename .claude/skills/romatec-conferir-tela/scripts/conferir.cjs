@@ -27,6 +27,8 @@ const TELAS = [{ nome: 'celular', viewport: { width: 390, height: 844 }, isMobil
     if (p.url().includes('/login')) { console.error('Login falhou: confira se o servidor subiu com subir.sh'); process.exit(1); }
     for (const r of rotas) {
       await p.goto(BASE + r, { waitUntil: 'domcontentloaded', timeout: 30000 }); await p.waitForTimeout(2500);
+      // O aviso de novidades pode reaparecer depois de navegar (versão nova): fecha antes de clicar
+      for (let k = 0; k < 2; k++) { const l = p.getByText('Marcar todas como lidas'); if (await l.count() && await l.first().isVisible()) { await l.first().click(); await p.waitForTimeout(800); } }
       for (const alvo of (process.env.CLICAR || '').split(';').map(x => x.trim()).filter(Boolean)) {
         const el = p.getByText(alvo, { exact: true });
         if (await el.count()) { await el.first().click(); await p.waitForTimeout(1500); } else console.log(`aviso: não achei "${alvo}" em ${r}`);

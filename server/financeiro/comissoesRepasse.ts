@@ -112,7 +112,7 @@ let avisoRepasse: AvisoRepasse = async (tel, texto, comp) => {
 /** Testes trocam o envio */
 export const definirAvisoRepasse = (f: AvisoRepasse | null) => { if (f) avisoRepasse = f; };
 
-export async function registrarRepasse(permissoes: PermissoesUsuario, usuarioId: number, i: { contratoId: number; chave: string; pagoEm: string; forma?: string; observacao?: string; comprovante?: ComprovanteRepasse | null; avisar?: boolean; doCaixa?: boolean }) {
+export async function registrarRepasse(permissoes: PermissoesUsuario, usuarioId: number, i: { contratoId: number; chave: string; pagoEm: string; forma?: string; observacao?: string; comprovante?: ComprovanteRepasse | null; avisar?: boolean; doCaixa?: boolean; valorComprovante?: number | null }) {
   if (permissoes.perfil !== 'admin' && permissoes.perfil !== 'secretario') throw new RepasseErro('Só o administrador e a secretária registram o pagamento da comissão.', 403);
   const d: any = await getDb();
   if (!d) throw new RepasseErro('Banco indisponível', 503);
@@ -127,7 +127,7 @@ export async function registrarRepasse(permissoes: PermissoesUsuario, usuarioId:
   if (ja) throw new RepasseErro('Esta parte da comissão já está registrada como paga', 409);
   // Comprovante do Pix/transferência (fica no registro e vai ao corretor): o valor tem que bater com a parte
   let comprovanteUrl: string | null = null;
-  const conferencia = i.comprovante ? await conferirValorComprovante(i.comprovante, parte.valor) : null;
+  const conferencia = i.comprovante ? await conferirValorComprovante(i.comprovante, parte.valor, i.valorComprovante) : null;
   if (i.comprovante) {
     const buf = Buffer.from(i.comprovante.base64, 'base64');
     if (buf.length > 10 * 1024 * 1024) throw new RepasseErro('Comprovante grande demais (máx. 10 MB)', 400);
@@ -142,17 +142,17 @@ export async function registrarRepasse(permissoes: PermissoesUsuario, usuarioId:
   let despesaId: number | null = null;
   if (i.doCaixa !== false) despesaId = await debitarNoCaixa(d, c, i.chave, parte.valor, parte.quando, { pagoEm: i.pagoEm, forma: i.forma, comprovanteUrl }, usuarioId);
   // O demonstrativo só vai ao corretor depois de assinado pelo administrador (certificado digital): ver assinarDemonstrativo
-  return { ok: true as const, valor: parte.valor, comprovanteUrl, despesaId, aguardandoAssinatura: true as const, valorConferido: conferencia?.conferido ?? null };
+  return { ok: true as const, valor: parte.valor, comprovanteUrl, despesaId, aguardandoAssinatura: true as const, valorConferido: conferencia ? conferencia.origem : null };
 }
 
 /** Lança a parte do corretor como despesa paga no caixa do empreendimento e marca o registro do repasse */
-async function debitarNoCaixa(d: any, c: any, chave: string, valor: number, quando: string, o: { pagoEm: string; forma?: string | null; comprovanteUrl: string | null }, usuarioId: number): Promise<number | null> {
+async function debitarNoCaixa(d: any, c: any, chave: string, valor: number, quando: string, o: { pagoEm: string; forma?: string | null; comprovanteUrl: string | null; nota?: string | null }, usuarioId: number): Promise<number | null> {
   const [u]: any[] = await d.select({ name: users.name }).from(users).where(eq(users.id, Number(c.corretorUserId))).limit(1);
   const nome = String(u?.name ?? 'corretor(a)');
   const { lancarSaidaComissao } = await import('./saidaComissao');
   const despesaId = await lancarSaidaComissao({
     empreendimentoId: Number(c.empreendimentoId), descricao: `Comissão do corretor — chácara ${c.loteCodigo} (${c.numero}) · ${quando}`,
-    valor, pagoEm: o.pagoEm, forma: o.forma, autorId: usuarioId, fornecedor: nome, comprovanteUrl: o.comprovanteUrl, pedirCiencia: true, comissao: { contratoId: Number(c.id), chave },
+    valor, pagoEm: o.pagoEm, forma: o.forma, autorId: usuarioId, fornecedor: nome, comprovanteUrl: o.comprovanteUrl, pedirCiencia: true, comissao: { contratoId: Number(c.id), chave }, nota: o.nota ?? null,
     observacao: `Repasse da comissão de corretagem ao corretor(a) ${nome} (parte da comissão de venda; a parte do escritório sai à parte)`,
   });
   if (despesaId) {
@@ -188,18 +188,22 @@ async function ajustarGestaoAntiga(d: any, contratoId: number, chave: string, va
  * Confere o valor do comprovante com o valor da parte da comissão: divergência bloqueia o registro (evita anexar o
  * comprovante de outra venda). Se o valor não puder ser lido, segue e avisa na tela para conferir.
  */
-export async function conferirValorComprovante(comp: ComprovanteRepasse, esperado: number): Promise<{ conferido: boolean; lido: number | null }> {
+export const MSG_DIGITE_VALOR = 'Não consegui ler o valor do comprovante. Digite o valor que está nele no campo "Valor no comprovante" e confirme de novo.';
+export async function conferirValorComprovante(comp: ComprovanteRepasse, esperado: number, valorInformado?: number | null): Promise<{ conferido: boolean; lido: number | null; origem: 'leitura' | 'digitado' }> {
   let lido: number | null = null;
   try {
     const { lerComprovante } = await import('./comprovante');
     lido = (await lerComprovante({ base64: comp.base64, mime: comp.mime })).valor ?? null;
   } catch (e: any) { console.warn('[Comissão] comprovante não lido:', e?.message); }
-  if (lido == null) return { conferido: false, lido: null };
-  if (Math.abs(lido - esperado) > 0.01) {
+  const origem = lido != null ? 'leitura' as const : 'digitado' as const;
+  // Sem leitura, vale o valor que o escritório digitou olhando o comprovante; sem nenhum dos dois, não registra
+  const valor = lido ?? (valorInformado != null && valorInformado > 0 ? Math.round(valorInformado * 100) / 100 : null);
+  if (valor == null) throw new RepasseErro(MSG_DIGITE_VALOR, 422);
+  if (Math.abs(valor - esperado) > 0.01) {
     const f = (v: number) => v.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
-    throw new RepasseErro(`O comprovante é de ${f(lido)}, mas esta parte da comissão é de ${f(esperado)}. Confira se é o comprovante desta venda: o registro não foi feito.`, 409);
+    throw new RepasseErro(`O comprovante é de ${f(valor)}${origem === 'digitado' ? ' (valor digitado)' : ''}, mas esta parte da comissão é de ${f(esperado)}. Confira se é o comprovante desta venda: o registro não foi feito.`, 409);
   }
-  return { conferido: true, lido };
+  return { conferido: true, lido: valor, origem };
 }
 
 /** Guardar, ler e assinar o demonstrativo (testes trocam) */
@@ -258,14 +262,14 @@ async function contratoAutorizado(permissoes: PermissoesUsuario, contratoId: num
 }
 
 /** Repasse já pago que não saiu do caixa do empreendimento (registrado antes): lança agora e pede a ciência */
-export async function debitarRepasse(permissoes: PermissoesUsuario, usuarioId: number, i: { contratoId: number; chave: string }) {
+export async function debitarRepasse(permissoes: PermissoesUsuario, usuarioId: number, i: { contratoId: number; chave: string; nota?: string | null }) {
   if (permissoes.perfil !== 'admin' && permissoes.perfil !== 'secretario') throw new RepasseErro('Só o administrador e a secretária lançam no caixa.', 403);
   const { d, c } = await contratoAutorizado(permissoes, i.contratoId);
   const [r]: any[] = await d.select().from(comissaoRepasses).where(and(eq(comissaoRepasses.contratoId, i.contratoId), eq(comissaoRepasses.chave, i.chave))).limit(1);
   if (!r) throw new RepasseErro('Este repasse ainda não foi registrado como pago', 404);
   if (despesaDoRegistro(r.observacao)) throw new RepasseErro('Este repasse já saiu do caixa do empreendimento', 409);
   const parte = gatilhosDoPlano(json(c.simulacaoJson)).find(g => g.chave === i.chave);
-  const despesaId = await debitarNoCaixa(d, c, i.chave, Number(r.valor), parte?.quando ?? i.chave, { pagoEm: String(r.pagoEm).slice(0, 10), forma: r.forma, comprovanteUrl: r.comprovanteUrl ?? null }, usuarioId);
+  const despesaId = await debitarNoCaixa(d, c, i.chave, Number(r.valor), parte?.quando ?? i.chave, { pagoEm: String(r.pagoEm).slice(0, 10), forma: r.forma, comprovanteUrl: r.comprovanteUrl ?? null, nota: i.nota ?? null }, usuarioId);
   if (!despesaId) throw new RepasseErro('Não foi possível lançar a despesa (empreendimento sem caixa?)', 409);
   return { ok: true as const, despesaId };
 }
@@ -298,13 +302,13 @@ export async function assinarDemonstrativo(permissoes: PermissoesUsuario, usuari
  * Troca ou remove o comprovante de um repasse já registrado (ex.: comprovante de outra venda anexado por engano).
  * Vale também para a despesa no caixa da proprietária. Se o demonstrativo já foi assinado, ele precisa ser assinado de novo.
  */
-export async function trocarComprovante(permissoes: PermissoesUsuario, usuarioId: number, i: { contratoId: number; chave: string; comprovante: ComprovanteRepasse | null }) {
+export async function trocarComprovante(permissoes: PermissoesUsuario, usuarioId: number, i: { contratoId: number; chave: string; comprovante: ComprovanteRepasse | null; nota?: string | null; valorComprovante?: number | null }) {
   if (permissoes.perfil !== 'admin' && permissoes.perfil !== 'secretario') throw new RepasseErro('Só o administrador e a secretária mexem no comprovante.', 403);
   const { d } = await contratoAutorizado(permissoes, i.contratoId);
   const reg = await registroDaParte(d, i.contratoId, i.chave);
   if (!reg) throw new RepasseErro('Este repasse ainda não foi registrado como pago', 404);
   let url: string | null = null;
-  const conferencia = i.comprovante ? await conferirValorComprovante(i.comprovante, Number(reg.valor)) : null;
+  const conferencia = i.comprovante ? await conferirValorComprovante(i.comprovante, Number(reg.valor), i.valorComprovante) : null;
   if (i.comprovante) {
     const buf = Buffer.from(i.comprovante.base64, 'base64');
     if (buf.length > 10 * 1024 * 1024) throw new RepasseErro('Comprovante grande demais (máx. 10 MB)', 400);
@@ -317,8 +321,14 @@ export async function trocarComprovante(permissoes: PermissoesUsuario, usuarioId
     const { financeiroDespesas } = await import('../../drizzle/schema');
     await d.update(financeiroDespesas).set({ comprovanteUrl: url, updatedAt: new Date() } as any).where(eq(financeiroDespesas.id, idDesp));
   }
+  // O comunicado da proprietária muda com o comprovante: pede a ciência de novo (o pedido anterior deixa de valer)
+  let cienciaPedida = false;
+  if (idDesp) {
+    const { pedirCiencia } = await import('./despesaCiencia');
+    cienciaPedida = await pedirCiencia(idDesp, usuarioId, undefined, i.nota ?? null).then(() => true).catch((e: any) => { console.warn('[Comissão] ciência após trocar comprovante:', e?.message); return false; });
+  }
   console.log(`[Comissão] comprovante do repasse ${i.contratoId}/${i.chave} ${url ? 'trocado' : 'removido'} por ${usuarioId}`);
-  return { ok: true as const, comprovanteUrl: url, reassinar: !!reg.demonstrativoUrl, valorConferido: conferencia?.conferido ?? null };
+  return { ok: true as const, comprovanteUrl: url, reassinar: !!reg.demonstrativoUrl, valorConferido: conferencia ? conferencia.origem : null, cienciaPedida };
 }
 
 /** Reenvia ao corretor o demonstrativo assinado de uma parte paga */

@@ -3,6 +3,16 @@
 Cada versão nova vai no TOPO. Depois rode `npm run release` (valida e atualiza o package.json);
 ao subir, o servidor grava a versão no banco e todos recebem o aviso "Novidades da versão".
 
+## 1.208.1 — 2026-11-25
+tipo: patch
+obrigatoria: nao
+titulo: Leitor de comprovante próprio e recado para a proprietária nas correções
+publico: admin
+
+### Melhorias
+- Leitor de comprovante: o CRM agora lê sozinho a foto, o print ou o PDF escaneado do comprovante (como os do Pix do Asaas), sem depender da IA. O valor lido é conferido com o da parte da comissão: se não bater, o registro não é feito. Se mesmo assim não conseguir ler, ele pede o valor que está no comprovante e só aceita se for igual ao da comissão.
+- Trocar ou remover o comprovante de uma comissão paga e "Debitar do caixa" abrem uma janela com "Recado para a proprietária". O recado vai no topo da mensagem e do documento da ciência, e a ciência é pedida de novo com o documento corrigido. O botão "Usar o texto de correção" preenche um recado pronto para o caso do comprovante anexado à chácara errada.
+
 ## 1.208.0 — 2026-11-25
 tipo: minor
 obrigatoria: nao

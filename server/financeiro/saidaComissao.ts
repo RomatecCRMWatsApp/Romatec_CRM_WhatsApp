@@ -19,6 +19,8 @@ export interface SaidaComissao {
   pedirCiencia?: boolean;
   /** Comissão de venda: contrato e parte — a ciência da proprietária mostra a base (venda, comissão, escritório e corretor) */
   comissao?: { contratoId: number; chave: string } | null;
+  /** Recado para a proprietária no pedido de ciência */
+  nota?: string | null;
 }
 
 export async function lancarSaidaComissao(o: SaidaComissao): Promise<number | null> {
@@ -47,7 +49,7 @@ export async function lancarSaidaComissao(o: SaidaComissao): Promise<number | nu
   } else if (o.comprovante) await anexarComprovante(id, o.comprovante, o.autorId).catch((e: any) => console.warn('[Comissão] comprovante na despesa:', e?.message));
   if (o.pedirCiencia) {
     const { pedirCiencia } = await import('./despesaCiencia');
-    await pedirCiencia(id, o.autorId).catch((e: any) => console.warn('[Comissão] ciência da proprietária:', e?.message));
+    await pedirCiencia(id, o.autorId, undefined, o.nota ?? null).catch((e: any) => console.warn('[Comissão] ciência da proprietária:', e?.message));
   }
   return id;
 }

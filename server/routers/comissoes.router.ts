@@ -33,12 +33,14 @@ export const comissoesRouter = router({
     avisar: z.boolean().default(true),
     /** Pago com o dinheiro do caixa do empreendimento: vira despesa no saldo da proprietária, com a ciência dela */
     doCaixa: z.boolean().default(true),
+    /** Valor digitado do comprovante (quando o sistema não consegue ler) */
+    valorComprovante: z.number().positive().max(10_000_000).nullable().optional(),
   })).mutation(async ({ input, ctx }) => {
     const R = await import("../financeiro/comissoesRepasse");
     return comErroRepasse(() => R.registrarRepasse(ctx.permissoes, ctx.user.id, input));
   }),
   /** Repasse já pago antes desta versão: lança agora no caixa da proprietária e pede a ciência */
-  debitarRepasse: protectedProcedure.input(z.object({ contratoId: z.number().int(), chave: z.string().regex(/^(avista|entrada|saldo)-\d{1,2}$/) })).mutation(async ({ input, ctx }) => {
+  debitarRepasse: protectedProcedure.input(z.object({ contratoId: z.number().int(), chave: z.string().regex(/^(avista|entrada|saldo)-\d{1,2}$/), nota: z.string().max(600).nullable().optional() })).mutation(async ({ input, ctx }) => {
     const R = await import("../financeiro/comissoesRepasse");
     return comErroRepasse(() => R.debitarRepasse(ctx.permissoes, ctx.user.id, input));
   }),
@@ -46,6 +48,8 @@ export const comissoesRouter = router({
   trocarComprovante: protectedProcedure.input(z.object({
     contratoId: z.number().int(), chave: z.string().regex(/^(avista|entrada|saldo)-\d{1,2}$/),
     comprovante: z.object({ base64: z.string().min(10).max(14_000_000), mime: z.enum(["image/png", "image/jpeg", "application/pdf"]), nomeArquivo: z.string().max(120) }).nullable(),
+    nota: z.string().max(600).nullable().optional(),
+    valorComprovante: z.number().positive().max(10_000_000).nullable().optional(),
   })).mutation(async ({ input, ctx }) => {
     const R = await import("../financeiro/comissoesRepasse");
     return comErroRepasse(() => R.trocarComprovante(ctx.permissoes, ctx.user.id, input));

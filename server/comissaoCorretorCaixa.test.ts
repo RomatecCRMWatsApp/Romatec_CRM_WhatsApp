@@ -131,16 +131,29 @@ describe('comissão do corretor: sai do caixa da proprietária, com ciência e d
 
   it('comprovante com valor diferente da parte bloqueia; o certo passa; dá para remover', async () => {
     const Cp = await import('./financeiro/comprovante');
-    let valorLido = 1662.57;
+    Cp.definirOcr(async () => '');
+    let valorLido: number | null = 1662.57;
     Cp.definirLeitorIa(async () => ({ valor: valorLido, data: null, recebedor: null, documentoRecebedor: null, instituicaoRecebedor: null, pagador: null, forma: null, idTransacao: null }));
     const img = { base64: Buffer.from('imagem-falsa-do-comprovante').toString('base64'), mime: 'image/png' as const, nomeArquivo: 'c.png' };
     await expect(Rep.registrarRepasse(ADMIN, 1, { contratoId: 1, chave: 'entrada-1', pagoEm: '2026-11-25', forma: 'Pix', comprovante: img }))
       .rejects.toThrow(/R\$\s?1\.662,57.*R\$\s?1\.662,30/);
     await expect(Rep.trocarComprovante(ADMIN, 1, { contratoId: 2, chave: 'entrada-1', comprovante: img })).rejects.toThrow(/não foi feito/);
     valorLido = 1662.3;
-    expect(await Rep.conferirValorComprovante(img, 1662.3)).toEqual({ conferido: true, lido: 1662.3 });
-    const r = await Rep.trocarComprovante(ADMIN, 1, { contratoId: 2, chave: 'entrada-1', comprovante: null });
-    expect(r).toMatchObject({ comprovanteUrl: null });
+    expect(await Rep.conferirValorComprovante(img, 1662.3)).toEqual({ conferido: true, lido: 1662.3, origem: 'leitura' });
+    // Sem leitura: pede o valor digitado; digitado errado bloqueia, certo passa
+    valorLido = null;
+    await expect(Rep.conferirValorComprovante(img, 1662.3)).rejects.toThrow(/Digite o valor/);
+    await expect(Rep.conferirValorComprovante(img, 1662.3, 1662.57)).rejects.toThrow(/valor digitado/);
+    expect(await Rep.conferirValorComprovante(img, 1662.3, 1662.3)).toMatchObject({ conferido: true, origem: 'digitado' });
+    // OCR local (comprovante Pix do Asaas em foto) basta, sem IA
+    Cp.definirOcr(async () => 'Comprovante Transação Pix\nGerado em 25/11/2026 às 10:47\nDados da transação\nID/Transação\nE195405502026112513460R49L83BV\nValor\nR$ 1.662,30\nData/Hora\n25/11/2026 às 10:47\nDados do destinatário\nNome\nLidiany Lopes De Souza Lima\nInstituição\nNu Pagamentos S.A.\nDados do pagador\nNome\nJ R P Bezerra Ltda');
+    Cp.definirLeitorIa(async () => { throw new Error('IA fora do ar'); });
+    expect(await Rep.conferirValorComprovante(img, 1662.3)).toMatchObject({ conferido: true, lido: 1662.3, origem: 'leitura' });
+    Cp.definirOcr(null);
+    const r = await Rep.trocarComprovante(ADMIN, 1, { contratoId: 2, chave: 'entrada-1', comprovante: null, nota: 'Correção: o comprovante foi anexado à chácara errada.' });
+    expect(r).toMatchObject({ comprovanteUrl: null, cienciaPedida: true });
+    expect(aProprietaria.at(-1)).toContain('⚠️ Correção: o comprovante foi anexado à chácara errada.');
+    expect(aProprietaria.at(-1)).toContain('Base da comissão');
     Cp.definirLeitorIa(null);
   });
 

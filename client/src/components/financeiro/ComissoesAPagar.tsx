@@ -56,6 +56,19 @@ export default function ComissoesAPagar() {
   const [assinar, setAssinar] = useState<{ contratoId: number; chave: string; rotulo: string } | null>(null);
   const [senhaCert, setSenhaCert] = useState("");
   const [pfx, setPfx] = useState<string | null>(null);
+  /** Recado para a proprietária antes de debitar ou trocar o comprovante (vai no pedido de ciência) */
+  type Comp = { base64: string; mime: "image/png" | "image/jpeg" | "application/pdf"; nomeArquivo: string };
+  const [recado, setRecado] = useState<{ acao: "debitar" | "trocar" | "remover"; contratoId: number; chave: string; rotulo: string; comprovante?: Comp } | null>(null);
+  const [nota, setNota] = useState("");
+  /** O CRM não leu o valor do comprovante: pede o valor digitado (tem que bater com a parte) */
+  const [pedeValor, setPedeValor] = useState(false);
+  const [valorComp, setValorComp] = useState("");
+  const valorDigitado = () => { const n = Number(valorComp.replace(/\./g, "").replace(",", ".")); return Number.isFinite(n) && n > 0 ? n : null; };
+  const campoValor = (
+    <label className="block text-xs text-muted-foreground">Valor no comprovante (o CRM não conseguiu ler: digite o que está nele)
+      <input inputMode="decimal" value={valorComp} onChange={e => setValorComp(e.target.value)} placeholder="1.662,30" className="mt-1 block w-full rounded-lg border border-warn-400 bg-background px-2 py-2 text-sm text-foreground" />
+    </label>
+  );
   const [doCaixa, setDoCaixa] = useState(true);
   const escolherComp = (f?: File) => {
     if (!f) return;
@@ -63,7 +76,7 @@ export default function ComissoesAPagar() {
     if (!mime) { toast.error("Envie PDF, PNG ou JPG"); return; }
     if (f.size > 10 * 1024 * 1024) { toast.error("Arquivo grande demais (máx. 10 MB)"); return; }
     const r = new FileReader();
-    r.onload = () => setComp({ base64: String(r.result).split(",")[1] ?? "", mime, nomeArquivo: f.name.slice(0, 120) });
+    r.onload = () => { setPedeValor(false); setValorComp(""); setComp({ base64: String(r.result).split(",")[1] ?? "", mime, nomeArquivo: f.name.slice(0, 120) }); };
     r.readAsDataURL(f);
   };
   const utils = trpc.useUtils();
@@ -71,11 +84,10 @@ export default function ComissoesAPagar() {
   const registrar = trpc.comissoes.registrarPagamento.useMutation({
     onSuccess: r => {
       toast.success(`Repasse de ${brl(r.valor)} registrado${r.despesaId ? "; a proprietária recebeu o pedido de ciência" : ""}. Agora assine o demonstrativo para ele ir ao corretor.`, { duration: 8000 });
-      if (r.valorConferido === false) toast.warning("Não consegui ler o valor do comprovante: confira se ele é desta venda.", { duration: 10000 });
       if (admin && pagar) setAssinar({ contratoId: pagar.contratoId, chave: pagar.chave, rotulo: pagar.rotulo });
-      setPagar(null); setObs(""); setComp(null); utils.comissoes.aPagar.invalidate();
+      setPagar(null); setObs(""); setComp(null); setValorComp(""); setPedeValor(false); utils.comissoes.aPagar.invalidate();
     },
-    onError: e => toast.error(e.message),
+    onError: e => { if (e.message.startsWith("Não consegui ler o valor")) setPedeValor(true); toast.error(e.message, { duration: 12000 }); },
   });
   const assinarDem = trpc.comissoes.assinarDemonstrativo.useMutation({
     onSuccess: r => {
@@ -87,11 +99,11 @@ export default function ComissoesAPagar() {
   });
   const trocarComp = trpc.comissoes.trocarComprovante.useMutation({
     onSuccess: r => {
-      toast.success(`${r.comprovanteUrl ? "Comprovante trocado" : "Comprovante removido"}${r.reassinar ? ". Assine o demonstrativo de novo para ele sair com o comprovante certo." : ""}`);
-      if (r.valorConferido === false) toast.warning("Não consegui ler o valor do comprovante: confira se ele é desta venda.", { duration: 10000 });
+      toast.success(`${r.comprovanteUrl ? "Comprovante trocado" : "Comprovante removido"}${r.cienciaPedida ? "; a proprietária recebeu de novo o pedido de ciência" : ""}${r.reassinar ? ". Assine o demonstrativo de novo para ele sair com o comprovante certo." : ""}`, { duration: 9000 });
+      setRecado(null); setNota(""); setValorComp(""); setPedeValor(false);
       utils.comissoes.aPagar.invalidate();
     },
-    onError: e => toast.error(e.message, { duration: 12000 }),
+    onError: e => { if (e.message.startsWith("Não consegui ler o valor")) setPedeValor(true); toast.error(e.message, { duration: 12000 }); },
   });
   const novoComprovante = (contratoId: number, chave: string, f?: File) => {
     if (!f) return;
@@ -99,11 +111,11 @@ export default function ComissoesAPagar() {
     if (!mime) { toast.error("Envie PDF, PNG ou JPG"); return; }
     if (f.size > 10 * 1024 * 1024) { toast.error("Arquivo grande demais (máx. 10 MB)"); return; }
     const r = new FileReader();
-    r.onload = () => trocarComp.mutate({ contratoId, chave, comprovante: { base64: String(r.result).split(",")[1] ?? "", mime, nomeArquivo: f.name.slice(0, 120) } });
+    r.onload = () => { setNota(""); setPedeValor(false); setValorComp(""); setRecado({ acao: "trocar", contratoId, chave, rotulo: f.name, comprovante: { base64: String(r.result).split(",")[1] ?? "", mime, nomeArquivo: f.name.slice(0, 120) } }); };
     r.readAsDataURL(f);
   };
   const debitar = trpc.comissoes.debitarRepasse.useMutation({
-    onSuccess: () => { toast.success("Lançado no caixa do empreendimento; a proprietária recebeu o pedido de ciência"); utils.comissoes.aPagar.invalidate(); },
+    onSuccess: () => { toast.success("Lançado no caixa do empreendimento; a proprietária recebeu o pedido de ciência"); setRecado(null); setNota(""); utils.comissoes.aPagar.invalidate(); },
     onError: e => toast.error(e.message),
   });
   const reenviar = trpc.comissoes.reenviarDemonstrativo.useMutation({
@@ -277,7 +289,7 @@ export default function ComissoesAPagar() {
                         </label>
                         {p.comprovanteUrl && (
                           <button type="button" className="text-danger-300 hover:underline focus-visible:outline focus-visible:outline-2 focus-visible:outline-primary" disabled={trocarComp.isPending}
-                            onClick={() => { if (window.confirm("Remover o comprovante deste repasse? Ele sai também da despesa no caixa da proprietária.")) trocarComp.mutate({ contratoId: p.venda.contratoId, chave: p.chave, comprovante: null }); }}>
+                            onClick={() => { setNota(""); setPedeValor(false); setValorComp(""); setRecado({ acao: "remover", contratoId: p.venda.contratoId, chave: p.chave, rotulo: `${p.venda.lote}, ${p.quando}` }); }}>
                             remover
                           </button>
                         )}
@@ -302,7 +314,7 @@ export default function ComissoesAPagar() {
                         ? <span className="inline-flex flex-wrap justify-end gap-1">
                             {!p.despesaId && (
                               <Button size="sm" variant="outline" className="h-7 text-xs" disabled={debitar.isPending} title="Lança no caixa do empreendimento e pede a ciência da proprietária"
-                                onClick={() => { if (window.confirm(`Lançar ${brl(p.valor)} como saída do caixa do empreendimento e pedir a ciência da proprietária?`)) debitar.mutate({ contratoId: p.venda.contratoId, chave: p.chave }); }}>
+                                onClick={() => { setNota(""); setPedeValor(false); setValorComp(""); setRecado({ acao: "debitar", contratoId: p.venda.contratoId, chave: p.chave, rotulo: `${brl(p.valor)} — ${p.venda.lote}, ${p.quando}` }); }}>
                                 <Landmark className="mr-1 h-3.5 w-3.5" /> Debitar do caixa
                               </Button>
                             )}
@@ -337,6 +349,37 @@ export default function ComissoesAPagar() {
         Cada parte da comissão é liberada quando o comprador paga a parcela correspondente e deve ser repassada em até 5 dias úteis.
         Antes do pagamento do cliente, a data é a previsão pelo vencimento da parcela.
       </p>
+
+      <Dialog open={!!recado} onOpenChange={o => { if (!o) { setRecado(null); setNota(""); } }}>
+        <DialogContent>
+          <DialogHeader><DialogTitle>{recado?.acao === "debitar" ? "Debitar do caixa" : recado?.acao === "remover" ? "Remover o comprovante" : "Trocar o comprovante"}</DialogTitle></DialogHeader>
+          {recado && (
+            <div className="space-y-3 text-sm">
+              <p>{recado.acao === "debitar" ? `Lançar ${recado.rotulo} como saída do caixa do empreendimento` : recado.acao === "remover" ? `Tirar o comprovante de ${recado.rotulo}` : `Novo comprovante: ${recado.rotulo}`}. A proprietária recebe o pedido de ciência{recado.acao === "debitar" ? "" : " de novo, com o documento corrigido"}.</p>
+              <label className="block text-xs text-muted-foreground">Recado para a proprietária (opcional, vai no topo da mensagem e do documento)
+                <textarea rows={4} maxLength={600} value={nota} onChange={e => setNota(e.target.value)} className="mt-1 block w-full rounded-lg border border-border bg-background px-2 py-2 text-sm text-foreground" />
+              </label>
+              <button type="button" className="text-xs text-primary hover:underline focus-visible:outline focus-visible:outline-2 focus-visible:outline-primary"
+                onClick={() => setNota("Correção: por uma inconsistência no sistema, no envio do comprovante ele foi anexado à chácara errada. Já corrigimos e, por isso, pedimos de novo a sua ciência. Do caixa saíram somente os valores das comissões já informadas, nada a mais.")}>
+                Usar o texto de correção
+              </button>
+              {recado.acao === "trocar" && pedeValor && campoValor}
+            </div>
+          )}
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setRecado(null)}>Cancelar</Button>
+            <Button disabled={!recado || debitar.isPending || trocarComp.isPending}
+              onClick={() => {
+                if (!recado) return;
+                const n = nota.trim() || null;
+                if (recado.acao === "debitar") debitar.mutate({ contratoId: recado.contratoId, chave: recado.chave, nota: n });
+                else trocarComp.mutate({ contratoId: recado.contratoId, chave: recado.chave, comprovante: recado.acao === "trocar" ? recado.comprovante ?? null : null, nota: n, valorComprovante: recado.acao === "trocar" ? valorDigitado() : null });
+              }}>
+              {debitar.isPending || trocarComp.isPending ? <Loader2 className="mr-1 h-4 w-4 animate-spin" /> : <Send className="mr-1 h-4 w-4" />} Confirmar e pedir a ciência
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       <Dialog open={!!assinar} onOpenChange={o => { if (!o) { setAssinar(null); setSenhaCert(""); setPfx(null); } }}>
         <DialogContent>
@@ -392,6 +435,7 @@ export default function ComissoesAPagar() {
                 {comp && <span className="mt-1 block text-xs text-ok-300">Anexado: {comp.nomeArquivo}</span>}
                 <span className="mt-1 block text-[11px]">O valor do comprovante é conferido com o desta parte: se não bater, o registro não é feito.</span>
               </label>
+              {comp && pedeValor && campoValor}
               <p className="rounded-md bg-secondary/60 p-2 text-xs text-muted-foreground">O demonstrativo em PDF (venda, condições do comprador, partes da comissão{comp ? " e o comprovante anexo" : ""}) só vai ao corretor depois que o administrador assinar com o certificado digital.</p>
               <label className="flex items-start gap-2 text-sm"><input type="checkbox" className="mt-1" checked={doCaixa} onChange={e => setDoCaixa(e.target.checked)} /> Pago com o caixa do empreendimento: lança a saída no saldo da proprietária e pede a ciência dela</label>
               <label className="block text-xs text-muted-foreground">Observação (opcional)
@@ -402,7 +446,7 @@ export default function ComissoesAPagar() {
           <DialogFooter>
             <Button variant="outline" onClick={() => setPagar(null)}>Cancelar</Button>
             <Button disabled={!pagar || !pagoEm || registrar.isPending}
-              onClick={() => pagar && registrar.mutate({ contratoId: pagar.contratoId, chave: pagar.chave, pagoEm, forma, observacao: obs || undefined, comprovante: comp, avisar: false, doCaixa })}>
+              onClick={() => pagar && registrar.mutate({ contratoId: pagar.contratoId, chave: pagar.chave, pagoEm, forma, observacao: obs || undefined, comprovante: comp, avisar: false, doCaixa, valorComprovante: comp ? valorDigitado() : null })}>
               {registrar.isPending ? <Loader2 className="mr-1 h-4 w-4 animate-spin" /> : <CheckCircle2 className="mr-1 h-4 w-4" />} Registrar pagamento
             </Button>
           </DialogFooter>
