@@ -3,6 +3,15 @@
 Cada versão nova vai no TOPO. Depois rode `npm run release` (valida e atualiza o package.json);
 ao subir, o servidor grava a versão no banco e todos recebem o aviso "Novidades da versão".
 
+## 1.209.2 — 2026-11-26
+tipo: patch
+obrigatoria: nao
+titulo: Passeio no Mapa: pontos de referência no percurso
+publico: todos
+
+### Melhorias
+- Passeio no Mapa › Como chegar: o percurso mostra os pontos de referência numerados (Prefeitura, BR-222, PRF, entrada da estação ferroviária, duas ferrovias, Balneário Walter Figueiredo e Portal). No mapa entram como pinos os que já têm a localização cadastrada; os demais aparecem na lista do passo até a localização ser informada.
+
 ## 1.209.1 — 2026-11-26
 tipo: patch
 obrigatoria: nao

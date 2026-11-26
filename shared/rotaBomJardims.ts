@@ -13,15 +13,18 @@ export const DESCRICAO_ROTA = 'Percurso do centro de Açailândia até o portal 
 /** Ponto de partida: centro de Açailândia (sede do município) — o Google/Apple usam o nome; o GPX usa a coordenada */
 export const ORIGEM_ROTA = { nome: 'Prefeitura Municipal de Açailândia', busca: 'Prefeitura Municipal de Açailândia, MA', lat: -4.9469, lon: -47.5000 };
 
-/** Pontos de referência, na ordem de quem sai do centro */
-export const PONTOS_ROTA: { titulo: string; texto: string }[] = [
-  { titulo: 'Prefeitura Municipal', texto: 'Saia do centro de Açailândia passando em frente à Prefeitura Municipal.' },
+/**
+ * Pontos de referência, na ordem de quem sai do centro. `lat`/`lon` só quando a posição é conhecida (viram pinos no
+ * Passeio no Mapa); sem coordenada confirmada, o ponto aparece só na lista — nunca com posição chutada.
+ */
+export const PONTOS_ROTA: { titulo: string; texto: string; lat?: number; lon?: number }[] = [
+  { titulo: 'Prefeitura Municipal', texto: 'Saia do centro de Açailândia passando em frente à Prefeitura Municipal.', lat: -4.9469, lon: -47.5 },
   { titulo: 'BR-222', texto: 'Pegue a rodovia BR-222, sentido Piquiá.' },
   { titulo: 'Polícia Rodoviária Federal', texto: 'Siga pela BR-222 passando pelo posto da Polícia Rodoviária Federal (PRF).' },
   { titulo: 'Entrada da estação ferroviária', texto: 'Saia da rodovia e entre pela entrada da estação ferroviária.' },
   { titulo: 'Duas ferrovias', texto: 'Vire e atravesse as duas linhas de ferrovia, com atenção à passagem dos trens.' },
   { titulo: 'Balneário Walter Figueiredo', texto: 'Mais à frente, vire novamente e siga até o Balneário Walter Figueiredo.' },
-  { titulo: 'Portal do Bom Jardims', texto: 'Do Balneário Walter Figueiredo são cerca de 300 a 500 metros até o portal de entrada do condomínio.' },
+  { titulo: 'Portal do Bom Jardims', texto: 'Do Balneário Walter Figueiredo são cerca de 300 a 500 metros até o portal de entrada do condomínio.', lat: PORTAL_ENTRADA.lat, lon: PORTAL_ENTRADA.lon },
 ];
 
 const dest = `${ACESSO_ESTRADA.lat},${ACESSO_ESTRADA.lon}`;

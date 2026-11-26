@@ -37,7 +37,11 @@ function estilo(): StyleSpecification {
 
 export type Camera = { tipo: "visao" | "rota" | "lote" | "final"; loteId?: number | null };
 
-export default function MapaPasseio({ perimetro, lotes, entrada, rota, exagero = 1.5, camera, selecionado, esmaecer, livre, sol, desenharRota, onLote, onPronto }: {
+export type PontoMapa = { n: number; titulo: string; lon: number | null; lat: number | null };
+
+export default function MapaPasseio({ pontos = [], perimetro, lotes, entrada, rota, exagero = 1.5, camera, selecionado, esmaecer, livre, sol, desenharRota, onLote, onPronto }: {
+  /** Pontos de referência do percurso (pinos numerados no passo "Como chegar") */
+  pontos?: PontoMapa[];
   perimetro: Pt[] | null; lotes: LotePasseio[]; entrada: { lon: number; lat: number; rotulo: string } | null;
   rota: Pt[] | null; exagero?: number; camera: Camera; selecionado: number | null; esmaecer: boolean; livre: boolean;
   /** Sol: azimute (do norte) e altura em graus; null = luz padrão */
@@ -49,6 +53,7 @@ export default function MapaPasseio({ perimetro, lotes, entrada, rota, exagero =
   const caixa = useRef<HTMLDivElement>(null);
   const mapa = useRef<MapLibre | null>(null);
   const pronto = useRef(false);
+  const pinos = useRef<{ el: HTMLElement }[]>([]);
   const funcs = useRef<Record<"atualizarLotes" | "atualizarRota" | "atualizarSol" | "atualizarInteracao" | "moverCamera", () => void>>(null as any);
   const marcador = useRef<any>(null);
   const reduzir = typeof window !== "undefined" && window.matchMedia?.("(prefers-reduced-motion: reduce)").matches;
@@ -92,6 +97,16 @@ export default function MapaPasseio({ perimetro, lotes, entrada, rota, exagero =
           el.innerHTML = `<div style="display:flex;flex-direction:column;align-items:center;gap:2px;pointer-events:none"><span style="background:#F28C28;color:#fff;font:700 11px system-ui;padding:2px 7px;border-radius:999px;box-shadow:0 1px 4px rgba(0,0,0,.5)">${entrada.rotulo.replace(/[<>&]/g, "")}</span><span style="width:12px;height:12px;border-radius:999px;background:#F28C28;border:2px solid #fff"></span></div>`;
           marcador.current = new maplibre.Marker({ element: el, anchor: "bottom" }).setLngLat([entrada.lon, entrada.lat]).addTo(m);
         }
+        // Pinos de referência do percurso (só os que têm coordenada); aparecem no passo "Como chegar"
+        // O pino que cai na entrada (o Portal) não repete: o marcador "Entrada" já está lá
+        const naEntrada = (p: PontoMapa) => !!entrada && Math.abs((p.lon as number) - entrada.lon) < 0.0005 && Math.abs((p.lat as number) - entrada.lat) < 0.0005;
+        pinos.current = pontos.filter(p => p.lon != null && p.lat != null && !naEntrada(p)).map(p => {
+          const el = document.createElement("div");
+          el.style.display = "none";
+          el.innerHTML = `<div style="display:flex;flex-direction:column;align-items:center;pointer-events:none"><span style="background:#0d150f;color:#fff;font:600 11px system-ui;padding:2px 7px;border-radius:999px;border:1px solid #E8B54A;white-space:nowrap;box-shadow:0 1px 4px rgba(0,0,0,.5)">${p.n}. ${p.titulo.replace(/[<>&]/g, "")}</span><span style="width:10px;height:10px;border-radius:999px;background:#E8B54A;border:2px solid #fff;margin-top:2px"></span></div>`;
+          new maplibre.Marker({ element: el, anchor: "bottom" }).setLngLat([p.lon as number, p.lat as number]).addTo(m);
+          return { el };
+        });
         pronto.current = true;
         // Pelas versões atuais (o mapa pode terminar de carregar depois que o cliente já avançou de passo)
         const f = funcs.current; f.atualizarLotes(); f.atualizarRota(); f.atualizarSol(); f.atualizarInteracao(); f.moverCamera();
@@ -151,13 +166,14 @@ export default function MapaPasseio({ perimetro, lotes, entrada, rota, exagero =
   const moverCamera = () => {
     const m = mapa.current;
     if (!m || !pronto.current || !todos.length) return;
+    pinos.current.forEach(p => { p.el.style.display = camera.tipo === "rota" ? "" : "none"; });
     const dur = reduzir ? 0 : 2600;
     // O painel do passeio ocupa até ~45% da altura: a câmera enquadra só a parte de cima
     const alt = m.getContainer().clientHeight || 700;
     const baixo = Math.round(alt * 0.46), cima = Math.min(80, Math.round(alt * 0.09));
     m.stop();
     if (camera.tipo === "rota" && rota && rota.length > 1) {
-      m.fitBounds(caixaDe([...rota, ...(entrada ? [[entrada.lon, entrada.lat] as Pt] : [])]), { padding: { top: cima, bottom: baixo, left: 30, right: 30 }, pitch: 45, bearing: -10, duration: dur, essential: true });
+      m.fitBounds(caixaDe([...rota, ...(entrada ? [[entrada.lon, entrada.lat] as Pt] : [])]), { padding: { top: cima + 20, bottom: baixo, left: 80, right: 80 }, pitch: 45, bearing: -10, duration: dur, essential: true });
       return;
     }
     if (camera.tipo === "lote" && camera.loteId) {

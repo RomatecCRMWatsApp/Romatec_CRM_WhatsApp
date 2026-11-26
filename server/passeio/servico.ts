@@ -196,22 +196,28 @@ function aberturaDe(slug: string): { video: string; poster: string } | null {
  * Entrada e rota (fase 1: as que o Bom Jardims já tem — portal e traçado do "Como chegar", em cache).
  * Fase 2 grava entrada, origens, rota e pontos próximos por empreendimento.
  */
-async function chegada(slug: string): Promise<{ entrada: { lon: number; lat: number; rotulo: string } | null; rota: { origem: string; linha: [number, number][]; km: number | null; minutos: number | null } | null }> {
+async function chegada(slug: string): Promise<{ entrada: { lon: number; lat: number; rotulo: string } | null; rota: { origem: string; linha: [number, number][]; km: number | null; minutos: number | null; pontos: PontoRota[] } | null }> {
   if (slug !== 'bom-jardims') return { entrada: null, rota: null };
   try {
     const { PORTAL_ENTRADA } = await import('../../shared/chacaraLink');
-    const { ORIGEM_ROTA } = await import('../../shared/rotaBomJardims');
+    const { ORIGEM_ROTA, PONTOS_ROTA } = await import('../../shared/rotaBomJardims');
     const { tracadoRota } = await import('../bom-jardims');
     const r = await tracadoRota();
     return {
       entrada: { lon: PORTAL_ENTRADA.lon, lat: PORTAL_ENTRADA.lat, rotulo: 'Entrada' },
-      rota: r.linha.length ? { origem: String((ORIGEM_ROTA as any).nome ?? 'Centro de Açailândia'), linha: r.linha, km: r.km, minutos: r.minutos } : null,
+      rota: r.linha.length ? {
+        origem: String((ORIGEM_ROTA as any).nome ?? 'Centro de Açailândia'), linha: r.linha, km: r.km, minutos: r.minutos,
+        pontos: PONTOS_ROTA.map((p, i) => ({ n: i + 1, titulo: p.titulo, texto: p.texto, lon: p.lon ?? null, lat: p.lat ?? null })),
+      } : null,
     };
   } catch (e: any) {
     console.warn('[Passeio] rota:', e?.message);
     return { entrada: null, rota: null };
   }
 }
+
+/** Ponto de referência do percurso (sem coordenada: só aparece na lista) */
+export type PontoRota = { n: number; titulo: string; texto: string; lon: number | null; lat: number | null };
 
 /** Registra o que o cliente fez. Abertura e "Quero este lote" avisam o corretor e o administrador. */
 export async function registrarEvento(token: string, ev: { tipo: string; sessao?: string | null; passo?: number | null; loteId?: number | null; ua?: string | null }, agora = Date.now()) {

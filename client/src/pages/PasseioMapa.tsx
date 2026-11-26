@@ -17,7 +17,7 @@ type Dados = {
   empreendimento: { nome: string; slug: string; municipio: string | null; uf: string | null; lat: number | null; lon: number | null; perimetro: Pt[] | null; areaHa: number | null; abertura: { video: string; poster: string } | null };
   lotes: LotePasseio[]; loteDestaqueId: number | null;
   entrada: { lon: number; lat: number; rotulo: string } | null;
-  rota: { origem: string; linha: Pt[]; km: number | null; minutos: number | null } | null;
+  rota: { origem: string; linha: Pt[]; km: number | null; minutos: number | null; pontos?: { n: number; titulo: string; texto: string; lon: number | null; lat: number | null }[] } | null;
   sol: { fuso: string; exagero: number };
   contato: { nome: string; whatsapp: string | null; foto: string | null; creci: string | null };
   empresa: { nome: string; whatsapp: string | null };
@@ -164,7 +164,7 @@ function Passeio({ d, evento, url }: { d: Dados; evento: (t: string, x?: { passo
     <main className="fixed inset-0 overflow-hidden bg-[#0f1a12] text-white" style={{ height: "100dvh" }}>
       {webgl ? (
         <Suspense fallback={<div className="absolute inset-0 flex items-center justify-center"><Loader2 className="h-6 w-6 animate-spin" /></div>}>
-          <MapaPasseio perimetro={e.perimetro} lotes={d.lotes} entrada={d.entrada} rota={d.rota?.linha ?? null} exagero={d.sol.exagero}
+          <MapaPasseio pontos={d.rota?.pontos ?? []} perimetro={e.perimetro} lotes={d.lotes} entrada={d.entrada} rota={d.rota?.linha ?? null} exagero={d.sol.exagero}
             camera={camera} selecionado={passo.n === 5 || passo.n === 6 ? sel : null} esmaecer={passo.n === 5} livre={livre}
             sol={passo.n === 4 ? pos : null} desenharRota={passo.n === 2 ? rotaFrac : passo.n === 1 ? 0 : 1} onLote={escolher} />
         </Suspense>
@@ -216,6 +216,13 @@ function Passeio({ d, evento, url }: { d: Dados; evento: (t: string, x?: { passo
                 <p className="flex items-baseline gap-2"><span className="text-3xl font-bold tabular-nums" style={{ color: OURO }}>{br(kmAgora ?? 0, 1)}</span><span className="text-sm">km</span>
                   <span className="text-3xl font-bold tabular-nums" style={{ color: OURO }}>{minAgora ?? 0}</span><span className="text-sm">min aprox. de {d.rota.origem}</span></p>
               ) : <p className="text-sm text-white/75">A entrada está marcada no mapa em laranja.</p>}
+              {!!d.rota?.pontos?.length && (
+                <ol className="space-y-1 text-sm">
+                  {d.rota.pontos.map(p => (
+                    <li key={p.n} className="flex gap-2"><span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full text-[11px] font-bold text-[#1b1300]" style={{ background: OURO }}>{p.n}</span><span className="text-white/85"><b className="text-white">{p.titulo}</b> · {p.texto}</span></li>
+                  ))}
+                </ol>
+              )}
               <p className="text-xs text-white/60">Distância e tempo estimados pelas estradas; confirme na visita.</p>
             </div>
           )}
