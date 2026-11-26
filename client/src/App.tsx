@@ -77,6 +77,7 @@ const CarneDigital = lazy(() => import("./pages/CarneDigital"));
 const Agendar = lazy(() => import("./pages/Agendar"));
 const Retorno = lazy(() => import("./pages/Retorno"));
 const Oferta = lazy(() => import("./pages/Oferta"));
+const PasseioMapa = lazy(() => import("./pages/PasseioMapa"));
 const AreaCorretor = lazy(() => import("./pages/AreaCorretor"));
 const PainelCorretor = lazy(() => import("./pages/PainelCorretor"));
 const VerComo = lazy(() => import("./pages/VerComo"));
@@ -403,6 +404,7 @@ function Router() {
       <Route path={"/reuniao/:token"} component={ReuniaoPublica} />
       <Route path={"/sala/:codigo"} component={SalaVideoPublica} />
       <Route path={"/o/:slug"} component={Oferta} />
+      <Route path={"/p/:token"} component={PasseioMapa} />
       <Route path={"/bom-jardims/chacara/:codigo"} component={BomJardimsChacara} />
       <Route path={"/bom-jardims/3d"} component={BomJardims3D} />
       <Route path={"/bom-jardims/ao-vivo"} component={PainelVendasAoVivo} />
@@ -421,7 +423,7 @@ function Router() {
 }
 
 /** Páginas do site público (landing, imóveis, links): sem splash nem overlay do app */
-const rotaDoSite = (p: string) => ["/imoveis", "/i/", "/imovel/", "/links", "/bom-jardims", "/agendar/", "/retorno/", "/escritorio", "/o/", "/formulario/", "/reuniao/", "/obras-bom-jardim", "/documentos/", "/aditivo/", "/parceiro/"].some(r => p === r || p.startsWith(r.endsWith("/") ? r : `${r}/`));
+const rotaDoSite = (p: string) => ["/imoveis", "/i/", "/imovel/", "/links", "/bom-jardims", "/agendar/", "/retorno/", "/escritorio", "/o/", "/formulario/", "/reuniao/", "/obras-bom-jardim", "/documentos/", "/aditivo/", "/parceiro/", "/p/"].some(r => p === r || p.startsWith(r.endsWith("/") ? r : `${r}/`));
 
 function CamadaDoSistema() {
   const [location] = useLocation();

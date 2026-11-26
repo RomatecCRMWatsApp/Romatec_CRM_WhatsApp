@@ -834,6 +834,15 @@ export function initSqliteTables(sqlite: any): void {
     nbs TEXT NOT NULL, cst TEXT, cClassTrib TEXT NOT NULL, situacao TEXT NOT NULL, idExterno TEXT, resultadoJson TEXT NOT NULL, solicitadoPor INTEGER,
     createdAt INTEGER NOT NULL DEFAULT (strftime('%s','now'))
   )`);
+  run(`CREATE TABLE IF NOT EXISTS tourLinks (
+    id INTEGER PRIMARY KEY AUTOINCREMENT, token TEXT NOT NULL UNIQUE, empreendimentoId INTEGER NOT NULL, loteDestaqueId INTEGER, leadId INTEGER,
+    corretorId INTEGER NOT NULL, mostrarPreco INTEGER NOT NULL DEFAULT 1, expiraEm INTEGER, ativo INTEGER NOT NULL DEFAULT 1,
+    aberturas INTEGER NOT NULL DEFAULT 0, ultimaAberturaAt INTEGER, criadoEm INTEGER NOT NULL DEFAULT (strftime('%s','now'))
+  )`);
+  run(`CREATE TABLE IF NOT EXISTS tourEventos (
+    id INTEGER PRIMARY KEY AUTOINCREMENT, tourLinkId INTEGER NOT NULL, tipo TEXT NOT NULL, loteId INTEGER, passo INTEGER,
+    sessao TEXT, ua TEXT, ts INTEGER NOT NULL DEFAULT (strftime('%s','now'))
+  )`);
   // Corpo jurídico (server/_core/migrations/addJuridico.ts)
   addColumn(`ALTER TABLE users ADD COLUMN oab TEXT`);
   addColumn(`ALTER TABLE users ADD COLUMN oabUf TEXT`);

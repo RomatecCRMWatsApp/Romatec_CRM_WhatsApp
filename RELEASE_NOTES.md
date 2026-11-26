@@ -3,6 +3,17 @@
 Cada versão nova vai no TOPO. Depois rode `npm run release` (valida e atualiza o package.json);
 ao subir, o servidor grava a versão no banco e todos recebem o aviso "Novidades da versão".
 
+## 1.209.0 — 2026-11-26
+tipo: minor
+obrigatoria: nao
+titulo: Passeio no Mapa: link para o cliente ver o loteamento passo a passo
+publico: todos
+
+### Novo
+- Empreendimento › Passeio: gere um link para o cliente (com um lote em destaque, se quiser), copie ou mande no WhatsApp. O cliente abre no celular, sem login, e vê o loteamento em passos: abertura do planeta ao condomínio, como chegar, o sol ao longo do dia, os lotes com área e situação e o botão "Quero este lote", que abre a conversa com você.
+- Você e o administrador recebem aviso quando o cliente abre o link e quando toca em "Quero este lote". A lista mostra quantas vezes cada link foi aberto e os cliques.
+- O preço só aparece se o link estiver com "Mostrar preço" e o empreendimento liberar preço ao público. Lote vendido nunca aparece como disponível. O link vale 30 dias e pode ser desativado.
+
 ## 1.208.5 — 2026-11-26
 tipo: patch
 obrigatoria: nao

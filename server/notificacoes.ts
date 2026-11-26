@@ -486,3 +486,16 @@ export async function dadosDoEmpreendimento(empreendimentoId: number) {
   const [e]: any[] = await db.select({ slug: empreendimentos.slug, nome: empreendimentos.nome }).from(empreendimentos).where(eq(empreendimentos.id, empreendimentoId)).limit(1);
   return e ?? null;
 }
+
+/** Passeio no Mapa: cliente abriu o link ou clicou em "Quero este lote" → corretor dono do link e administradores */
+export async function notificarPasseio(
+  n: { corretorId: number; empreendimentoId: number; empreendimentoSlug: string; titulo: string; mensagem: string; chave?: string | null },
+  repo: RepoNotificacoes = repoBanco(), enviar?: EnviadorPush | null,
+) {
+  if (n.chave && await repo.jaEmitida("empreendimento", n.chave)) return null;
+  const usuarios = await repo.usuarios();
+  const ids = usuarios.filter(u => u.ativo !== false && u.ativo !== 0 && (u.id === n.corretorId || perfilDe(u as any) === "admin")).map(u => u.id);
+  return emitir(repo, enviar === undefined ? await enviadorWebPush() : enviar, usuarios, ids,
+    { tipo: "empreendimento", titulo: n.titulo.slice(0, 120), mensagem: n.mensagem.slice(0, 400), empreendimentoId: n.empreendimentoId, chave: n.chave ?? null },
+    { empreendimentoSlug: n.empreendimentoSlug });
+}

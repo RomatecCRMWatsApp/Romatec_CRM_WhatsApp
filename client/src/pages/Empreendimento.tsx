@@ -13,6 +13,7 @@ import MapaTematico from "@/components/empreendimento/MapaTematico";
 import { AlternadorMapa, Mapa3DEmpreendimento } from "@/components/empreendimento/Mapa3DEmpreendimento";
 import PainelLote, { type LotePainel } from "@/components/empreendimento/PainelLote";
 import Simulador from "@/components/empreendimento/Simulador";
+import { GerarPasseio, ListaPasseios } from "@/components/passeio/GerarPasseio";
 import { COR_SITUACAO, ROTULO_SITUACAO, SITUACOES_LOTE, VENDIDOS, type SituacaoLote } from "@shared/lotes";
 import { AlertTriangle, Download, FileText, Map as MapIcon, Printer, Trash2, Upload } from "lucide-react";
 
@@ -146,6 +147,8 @@ export default function Empreendimento() {
   const admin = perfil === "admin";
   // Comissões do empreendimento: gestão e venda (administrador e secretária), só a de venda (corretor)
   const veComissoes = perfil === "admin" || perfil === "secretario" || perfil === "corretor";
+  // Passeio no Mapa: quem atende cliente gera o link público
+  const fazPasseio = perfil === "admin" || perfil === "secretario" || perfil === "corretor" || perfil === "atendente";
   const utils = trpc.useUtils();
   const { data, isLoading, error } = trpc.empreendimentosAdmin.detalhe.useQuery({ slug }, { enabled: !!slug });
   const [sel, setSel] = useState<number | null>(null);
@@ -199,6 +202,7 @@ export default function Empreendimento() {
             <TabsTrigger value="geral">Visão geral</TabsTrigger>
             <TabsTrigger value="arquivos">Arquivos ({data.arquivos.length})</TabsTrigger>
             <TabsTrigger value="documentos">Documentos</TabsTrigger>
+            {fazPasseio && <TabsTrigger value="passeio">Passeio</TabsTrigger>}
           </TabsList>
 
           <TabsContent value="mapa" className="mt-3">
@@ -279,6 +283,14 @@ export default function Empreendimento() {
           <TabsContent value="arquivos" className="mt-3">
             <Arquivos slug={slug} arquivos={data.arquivos} admin={admin} onMudou={atualizar} />
           </TabsContent>
+
+          {fazPasseio && (
+            <TabsContent value="passeio" className="mt-3 space-y-3 max-w-3xl">
+              <GerarPasseio key={sel ?? 0} empreendimentoId={emp.id} nome={emp.nome} lotes={lotes.map(l => ({ id: l.id, codigo: l.codigo }))} loteInicial={sel} precosPublicos={emp.precosPublicos} />
+              <h3 className="text-sm font-semibold">Passeios enviados</h3>
+              <ListaPasseios empreendimentoId={emp.id} nome={emp.nome} />
+            </TabsContent>
+          )}
 
           <TabsContent value="documentos" className="mt-3 space-y-3">
             <div className="rounded-xl border border-border bg-card p-4 space-y-2 text-sm">

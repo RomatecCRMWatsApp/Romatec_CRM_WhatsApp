@@ -2827,3 +2827,32 @@ export const simulacoesTributarias = mysqlTable("simulacoesTributarias", {
   solicitadoPor: int("solicitadoPor"),
   createdAt: timestamp("createdAt").defaultNow().notNull(),
 }, t => ({ idxContrato: index("idx_simtrib_contrato").on(t.contratoId) }));
+
+/** Passeio no Mapa: link público de um empreendimento (ou de um lote em destaque) enviado ao cliente */
+export const tourLinks = mysqlTable("tourLinks", {
+  id: int("id").autoincrement().primaryKey(),
+  token: varchar("token", { length: 24 }).notNull(),
+  empreendimentoId: int("empreendimentoId").notNull(),
+  loteDestaqueId: int("loteDestaqueId"),
+  leadId: int("leadId"),
+  corretorId: int("corretorId").notNull(),
+  mostrarPreco: boolean("mostrarPreco").default(true).notNull(),
+  expiraEm: timestamp("expiraEm"),
+  ativo: boolean("ativo").default(true).notNull(),
+  aberturas: int("aberturas").default(0).notNull(),
+  ultimaAberturaAt: timestamp("ultimaAberturaAt"),
+  criadoEm: timestamp("criadoEm").defaultNow().notNull(),
+}, t => ({ uqToken: uniqueIndex("ux_tour_token").on(t.token), ixEmp: index("ix_tour_emp").on(t.empreendimentoId) }));
+
+/** Passeio no Mapa: o que o cliente fez no link (sem IP; sessão anônima) */
+export const tourEventos = mysqlTable("tourEventos", {
+  id: int("id").autoincrement().primaryKey(),
+  tourLinkId: int("tourLinkId").notNull(),
+  /** open | step_view | lote_view | sun_play | cta_click | free_explore */
+  tipo: varchar("tipo", { length: 16 }).notNull(),
+  loteId: int("loteId"),
+  passo: int("passo"),
+  sessao: varchar("sessao", { length: 40 }),
+  ua: varchar("ua", { length: 120 }),
+  ts: timestamp("ts").defaultNow().notNull(),
+}, t => ({ ixLink: index("ix_tourev_link").on(t.tourLinkId) }));

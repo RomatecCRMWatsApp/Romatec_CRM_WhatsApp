@@ -727,6 +727,41 @@ async function startServer() {
     return fwd[fwd.length - 1] || req.socket.remoteAddress || 'unknown';
   };
   const allowBeacon = createRateLimiter(60, 60 * 1000); // 60 eventos/min por IP
+  // ─── Passeio no Mapa (/p/:token): dados públicos filtrados e eventos do cliente (server/passeio/servico.ts) ───
+  const allowPasseio = createRateLimiter(90, 60 * 1000); // por IP
+  const allowPasseioEvento = createRateLimiter(40, 60 * 1000); // por sessão
+  app.get('/p/:token', (_req, res, next) => { res.setHeader('X-Robots-Tag', 'noindex, nofollow'); next(); });
+  app.get('/api/public/tour/:token', async (req, res) => {
+    try {
+      if (!allowPasseio(ipDe(req))) return res.status(429).json({ ok: false, error: 'Muitas requisições' });
+      res.setHeader('X-Robots-Tag', 'noindex, nofollow');
+      res.setHeader('Cache-Control', 'no-store');
+      const { dadosPublicos } = await import('../passeio/servico');
+      res.json(await dadosPublicos(String(req.params.token).slice(0, 24)));
+    } catch (e: any) {
+      if (e?.name === 'PasseioErro') return res.status(e.status).json({ ok: false, error: e.message });
+      console.error('[Passeio] dados:', e);
+      res.status(500).json({ ok: false, error: 'Falha ao carregar' });
+    }
+  });
+  app.post('/api/public/tour/:token/evento', async (req, res) => {
+    try {
+      const body = typeof req.body === 'string' ? JSON.parse(req.body || '{}') : (req.body ?? {});
+      const chave = `${ipDe(req)}:${String(body.sessao ?? '').slice(0, 40)}`;
+      if (!allowPasseio(ipDe(req)) || !allowPasseioEvento(chave)) return res.status(429).end();
+      const { registrarEvento } = await import('../passeio/servico');
+      await registrarEvento(String(req.params.token).slice(0, 24), {
+        tipo: String(body.tipo ?? ''), sessao: body.sessao ?? null, passo: body.passo != null ? Number(body.passo) : null,
+        loteId: body.loteId != null ? Number(body.loteId) : null, ua: String(req.headers['user-agent'] ?? ''),
+      });
+      res.status(204).end();
+    } catch (e: any) {
+      if (e?.name === 'PasseioErro') return res.status(e.status).end();
+      console.warn('[Passeio] evento:', e?.message);
+      res.status(500).end();
+    }
+  });
+
   app.post('/t', async (req, res) => {
     try {
       if (!allowBeacon(ipDe(req))) return res.status(429).end();
@@ -1656,6 +1691,8 @@ async function startServer() {
     await addFabricaCriativos();
     const { addSimulacoesTributarias } = await import('./migrations/addSimulacoesTributarias');
     await addSimulacoesTributarias();
+    const { addPasseioMapa } = await import('./migrations/addPasseioMapa');
+    await addPasseioMapa();
     const { textosRoboV2 } = await import('./migrations/textosRoboV2');
     await textosRoboV2();
     const { addReunioes } = await import('./migrations/addReunioes');

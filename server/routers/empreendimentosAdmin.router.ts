@@ -95,7 +95,7 @@ export const empreendimentosAdminRouter = router({
     const resumo = Object.fromEntries(SITUACOES_LOTE.map(s => [s, lotesOut.filter(l => l.situacao === s).length])) as Record<SituacaoLote, number>;
     return {
       empreendimento: {
-        slug: emp.slug, nome: emp.nome, municipio: emp.municipio, uf: emp.uf, endereco: emp.endereco, areaHa: num(emp.areaHa),
+        id: emp.id, slug: emp.slug, nome: emp.nome, municipio: emp.municipio, uf: emp.uf, endereco: emp.endereco, areaHa: num(emp.areaHa),
         registroMatricula: emp.registroMatricula, registroCartorio: emp.registroCartorio, responsavelTecnico: emp.responsavelTecnico,
         utmFuso: emp.utmFuso ?? 23, precosPublicos: !!emp.precosPublicos,
       },

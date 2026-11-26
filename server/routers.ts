@@ -48,6 +48,7 @@ import { autoRespostaRouter } from "./routers/autoResposta.router";
 import { campanhasInstagramRouter } from "./routers/campanhasInstagram.router";
 import { fabricaCriativosRouter } from "./routers/fabricaCriativos.router";
 import { tributosRouter } from "./routers/tributos.router";
+import { passeioRouter } from "./routers/passeio.router";
 import { verComoRouter } from "./routers/verComo.router";
 import { contatosNomesRouter } from "./routers/contatosNomes.router";
 import { importacaoContatosRouter } from "./routers/importacaoContatos.router";
@@ -152,6 +153,7 @@ export const appRouter = router({
   campanhasIg: campanhasInstagramRouter,
   fabricaCriativos: fabricaCriativosRouter,
   tributos: tributosRouter,
+  passeio: passeioRouter,
   verComo: verComoRouter,
   contatosNomes: contatosNomesRouter,
   importacaoContatos: importacaoContatosRouter,
