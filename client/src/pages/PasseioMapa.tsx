@@ -188,7 +188,7 @@ function Passeio({ d, evento, url }: { d: Dados; evento: (t: string, x?: { passo
       </div>
 
       {livre && (
-        <button type="button" onClick={() => setLivre(false)} className="absolute right-3 top-[max(70px,env(safe-area-inset-top))] z-20 min-h-[44px] rounded-full bg-black/70 px-4 text-sm font-semibold focus-visible:outline focus-visible:outline-2 focus-visible:outline-white">
+        <button type="button" onClick={() => setLivre(false)} className="absolute left-3 top-[max(76px,calc(env(safe-area-inset-top)+64px))] z-20 min-h-[44px] rounded-full bg-black/70 px-4 text-sm font-semibold focus-visible:outline focus-visible:outline-2 focus-visible:outline-white">
           Voltar ao passeio
         </button>
       )}

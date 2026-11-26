@@ -3,6 +3,17 @@
 Cada versão nova vai no TOPO. Depois rode `npm run release` (valida e atualiza o package.json);
 ao subir, o servidor grava a versão no banco e todos recebem o aviso "Novidades da versão".
 
+## 1.209.1 — 2026-11-26
+tipo: patch
+obrigatoria: nao
+titulo: Passeio no Mapa: zoom, giro e satélite corrigidos
+publico: todos
+
+### Correções
+- Passeio no Mapa: o mapa ficava travado. Agora dá para ampliar e reduzir com dois dedos, arrastar, girar e inclinar a qualquer momento, e há os botões de mais, menos e bússola no canto.
+- Passeio no Mapa: ao aproximar muito, o satélite virava cinza com "Map data not yet available". Agora a imagem de satélite é ampliada no zoom alto em vez de sumir.
+- Passeio no Mapa › Como chegar: se o mapa terminasse de carregar depois de o cliente avançar, a câmera não se afastava para mostrar o trajeto. Agora sempre mostra o caminho inteiro até a entrada.
+
 ## 1.209.0 — 2026-11-26
 tipo: minor
 obrigatoria: nao

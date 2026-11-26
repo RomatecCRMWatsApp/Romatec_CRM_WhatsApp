@@ -24,7 +24,7 @@ function estilo(): StyleSpecification {
   return {
     version: 8,
     sources: {
-      satelite: { type: "raster", tiles: [SATELITE_TILES], tileSize: 256, maxzoom: 18, attribution: SATELITE_CREDITO },
+      satelite: { type: "raster", tiles: [SATELITE_TILES], tileSize: 256, maxzoom: 17, attribution: SATELITE_CREDITO },
       demSombra: { type: "raster-dem", tiles: [DEM], encoding: "terrarium", tileSize: 256, maxzoom: 15, attribution: "Relevo: Mapzen/AWS Terrain Tiles" },
     },
     layers: [
@@ -49,6 +49,7 @@ export default function MapaPasseio({ perimetro, lotes, entrada, rota, exagero =
   const caixa = useRef<HTMLDivElement>(null);
   const mapa = useRef<MapLibre | null>(null);
   const pronto = useRef(false);
+  const funcs = useRef<Record<"atualizarLotes" | "atualizarRota" | "atualizarSol" | "atualizarInteracao" | "moverCamera", () => void>>(null as any);
   const marcador = useRef<any>(null);
   const reduzir = typeof window !== "undefined" && window.matchMedia?.("(prefers-reduced-motion: reduce)").matches;
   const todos: Pt[] = perimetro ?? lotes.flatMap(l => l.poligono);
@@ -63,8 +64,9 @@ export default function MapaPasseio({ perimetro, lotes, entrada, rota, exagero =
       if (!vivo || !caixa.current) return;
       const m = new maplibre.Map({
         container: caixa.current, style: estilo(), bounds: caixaDe(todos), fitBoundsOptions: { padding: 40 },
-        pitch: 55, bearing: -20, maxPitch: 80, attributionControl: { compact: true }, interactive: true,
+        pitch: 55, bearing: -20, maxPitch: 80, maxZoom: 19, attributionControl: { compact: true }, interactive: true,
       });
+      m.addControl(new maplibre.NavigationControl({ visualizePitch: true }), "top-right");
       mapa.current = m;
       if (import.meta.env.DEV) (window as any).__passeioMapa = m;
       m.on("error", (e: any) => { if (import.meta.env.DEV) console.warn("[Passeio mapa]", e?.error?.message ?? e); /* tile do relevo falhou: segue sem relevo */ });
@@ -91,7 +93,8 @@ export default function MapaPasseio({ perimetro, lotes, entrada, rota, exagero =
           marcador.current = new maplibre.Marker({ element: el, anchor: "bottom" }).setLngLat([entrada.lon, entrada.lat]).addTo(m);
         }
         pronto.current = true;
-        atualizarLotes(); atualizarRota(); atualizarSol(); atualizarInteracao(); moverCamera();
+        // Pelas versões atuais (o mapa pode terminar de carregar depois que o cliente já avançou de passo)
+        const f = funcs.current; f.atualizarLotes(); f.atualizarRota(); f.atualizarSol(); f.atualizarInteracao(); f.moverCamera();
         onPronto?.();
       };
       if (m.isStyleLoaded()) montar(); else m.once("style.load", montar);
@@ -142,7 +145,8 @@ export default function MapaPasseio({ perimetro, lotes, entrada, rota, exagero =
     const m = mapa.current;
     if (!m) return;
     const h = [m.dragPan, m.scrollZoom, m.boxZoom, m.dragRotate, m.keyboard, m.doubleClickZoom, m.touchZoomRotate, m.touchPitch] as any[];
-    h.forEach(x => (livre ? x?.enable?.() : x?.disable?.()));
+    // Pinça, giro e inclinação sempre liberados (como nos outros mapas); "livre" só esconde o painel
+    h.forEach(x => x?.enable?.());
   };
   const moverCamera = () => {
     const m = mapa.current;
@@ -163,11 +167,12 @@ export default function MapaPasseio({ perimetro, lotes, entrada, rota, exagero =
     m.fitBounds(caixaDe(todos), { padding: { top: cima, bottom: baixo, left: 30, right: 30 }, pitch: camera.tipo === "final" ? 40 : 62, bearing: camera.tipo === "final" ? 0 : -25, duration: dur, essential: true });
   };
 
+  funcs.current = { atualizarLotes, atualizarRota, atualizarSol, atualizarInteracao, moverCamera };
   useEffect(atualizarLotes, [lotes, selecionado, esmaecer]); // eslint-disable-line react-hooks/exhaustive-deps
   useEffect(atualizarRota, [rota, desenharRota]); // eslint-disable-line react-hooks/exhaustive-deps
   useEffect(atualizarSol, [sol?.azimute, sol?.altura]); // eslint-disable-line react-hooks/exhaustive-deps
   useEffect(atualizarInteracao, [livre]); // eslint-disable-line react-hooks/exhaustive-deps
   useEffect(moverCamera, [camera.tipo, camera.loteId]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  return <div className="absolute inset-0"><div ref={caixa} className="h-full w-full" aria-label="Mapa do empreendimento em 3D" role="img" /></div>;
+  return <div className="absolute inset-0 [&_.maplibregl-ctrl-top-right]:top-[max(76px,calc(env(safe-area-inset-top)+64px))]"><div ref={caixa} className="h-full w-full" aria-label="Mapa do empreendimento em 3D" role="img" /></div>;
 }
