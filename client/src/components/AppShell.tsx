@@ -606,7 +606,8 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
       {/* Barra do topo (celular): abre a gaveta */}
       <header className="sticky top-[env(safe-area-inset-top)] z-20 flex items-center gap-3 border-b border-[var(--rt-green)] bg-[var(--rt-shell)] px-3 py-2 text-[var(--rt-text)] min-[900px]:hidden">
         <button ref={botaoMenu} onClick={() => setAberto(true)} className="flex h-11 w-11 items-center justify-center rounded-lg hover:bg-white/5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--rt-gold)]" aria-label="Abrir menu" aria-expanded={aberto} aria-controls="menu-gaveta"><Menu className="h-6 w-6" /></button>
-        <RomatecAppIcon size={28} />
+        {/* Logo leva ao Painel, como em todo sistema (Jakob) */}
+        <Link href="/dashboard" aria-label="Ir para o Painel" className="flex h-11 w-11 items-center justify-center rounded-lg"><RomatecAppIcon size={28} /></Link>
         <p className="font-semibold truncate flex-1">{tituloDaRota(loc)}</p>
         {/* Celular: a busca é o R da barra de baixo; a lupa do topo fica para quem não tem a barra.
             Ela continua montada para o atalho Ctrl+K / "/" valer em qualquer tamanho de tela. */}

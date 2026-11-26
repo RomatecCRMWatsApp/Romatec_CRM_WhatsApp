@@ -127,6 +127,12 @@ export default function LeadDetalhe() {
               <Button size="sm" variant="outline" onClick={() => marcarAtendido.mutate({ id })}>Já atendi</Button>
             </div>
           )}
+          {/* Próximo passo (Zeigarnik): o que falta para avançar o lead */}
+          {lead.etapa !== "perdido" && lead.pendentes.length > 0 && (
+            <div className="rounded-xl border border-border bg-secondary/30 px-4 py-3 text-sm">
+              <span className="font-semibold">Próximo passo:</span> perguntar ao cliente {lead.pendentes.map(p => (ROTULO_SLOT[p] || p).replace(/\s*\(.*\)$/, "").toLowerCase()).join(", ")}.
+            </div>
+          )}
           <AvisoLeadEncaminhado leadId={id} aoMudar={atualizar} />
           <ResumoIaLead leadId={id} phone={String(lead.phone)} onEnviou={atualizar} />
           {/* Ações */}
@@ -134,26 +140,31 @@ export default function LeadDetalhe() {
             <CardContent className="py-4 flex flex-wrap items-center gap-2">
               <label className="text-sm text-muted-foreground">Responsável</label>
               <select value={lead.responsavelId ?? ""} onChange={e => definirResp.mutate({ id, responsavelId: e.target.value ? Number(e.target.value) : null })}
-                className="h-9 px-2 rounded-md border border-border bg-secondary/30 text-sm text-foreground">
+                className="h-11 sm:h-9 px-2 rounded-md border border-border bg-secondary/30 text-sm text-foreground">
                 <option value="">— sem responsável —</option>
                 {(responsaveis ?? []).map(r => <option key={r.id} value={r.id}>{r.nome}</option>)}
               </select>
               {lead.atendidoEm && <span className="text-xs text-ok-300">{lead.ultimoAtendimento === "encaminhado" ? "Encaminhado para atendimento" : "Atendido"} {new Date(lead.atendidoEm).toLocaleString("pt-BR", { timeZone: "America/Fortaleza", day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit" })}</span>}
               <label className="text-sm text-muted-foreground">Etapa</label>
               <select value={lead.etapa} onChange={e => (e.target.value === "perdido" ? setPerder(true) : mover.mutate({ id, etapa: e.target.value }))}
-                className="h-9 px-2 rounded-md border border-border bg-secondary/30 text-sm text-foreground">
+                className="h-11 sm:h-9 px-2 rounded-md border border-border bg-secondary/30 text-sm text-foreground">
                 {etapas.map(x => <option key={x} value={x}>{rotulos[x] ?? x}</option>)}
               </select>
               {lead.motivoPerda && <span className="text-xs text-danger-300">Perdido: {MOTIVOS[lead.motivoPerda.split(":")[0]] || lead.motivoPerda}</span>}
               <div className="flex-1" />
               {lead.humano || lead.funil === "proprietario"
-                ? lead.funil === "comprador" && <Button size="sm" variant="outline" disabled={devolver.isPending} onClick={() => devolver.mutate({ id })}><Bot className="mr-1.5 h-4 w-4" /> Devolver ao bot</Button>
-                : <Button size="sm" variant="outline" disabled={assumir.isPending} onClick={() => assumir.mutate({ id })}><Headset className="mr-1.5 h-4 w-4" /> Assumir conversa</Button>}
+                ? lead.funil === "comprador" && <Button size="sm" variant="outline" className="min-h-11 sm:min-h-0" disabled={devolver.isPending} onClick={() => devolver.mutate({ id })}><Bot className="mr-1.5 h-4 w-4" /> Devolver ao bot</Button>
+                : <Button size="sm" variant="outline" className="min-h-11 sm:min-h-0" disabled={assumir.isPending} onClick={() => assumir.mutate({ id })}><Headset className="mr-1.5 h-4 w-4" /> Assumir conversa</Button>}
               {lead.funil === "comprador" && lead.imoveis.length > 0 && (
-                <Button size="sm" variant="outline" disabled={similar.isPending} onClick={() => similar.mutate({ id })}><Send className="mr-1.5 h-4 w-4" /> {similar.isPending ? "Enviando..." : "Enviar imóvel similar"}</Button>
+                <Button size="sm" variant="outline" className="min-h-11 sm:min-h-0" disabled={similar.isPending} onClick={() => similar.mutate({ id })}><Send className="mr-1.5 h-4 w-4" /> {similar.isPending ? "Enviando..." : "Enviar imóvel similar"}</Button>
               )}
-              {lead.etapa !== "perdido" && <Button size="sm" variant="ghost" className="text-danger-300" onClick={() => setPerder(true)}><XCircle className="mr-1.5 h-4 w-4" /> Marcar perdido</Button>}
             </CardContent>
+            {/* Ação de perigo afastada das outras (Fitts) */}
+            {lead.etapa !== "perdido" && (
+              <div className="flex justify-end border-t border-border px-4 py-2">
+                <Button size="sm" variant="ghost" className="min-h-11 text-danger-300 sm:min-h-0" onClick={() => setPerder(true)}><XCircle className="mr-1.5 h-4 w-4" /> Marcar perdido</Button>
+              </div>
+            )}
           </Card>
 
           {/* Proprietário: AvalieImob e cadastro */}
@@ -320,6 +331,13 @@ export default function LeadDetalhe() {
             </Card>
           )}
         </div>
+      </div>
+
+      {/* No celular o WhatsApp fica sempre ao alcance do polegar (acima da barra de baixo) */}
+      <div className="md:hidden sticky bottom-[calc(6rem+env(safe-area-inset-bottom))] z-10 px-4 pb-2">
+        <Button asChild className="h-12 w-full bg-[color:var(--c-25d366)] text-base text-white shadow-lg hover:bg-[color:var(--c-1fb956)]">
+          <a href={`https://wa.me/${fone}`} onClick={() => abriuWhatsApp.mutate({ id })} target="_blank" rel="noreferrer"><MessageCircle className="mr-2 h-5 w-5" /> Conversar no WhatsApp</a>
+        </Button>
       </div>
 
       {perder && <MotivoPerda onCancelar={() => setPerder(false)} onConfirmar={m => { mover.mutate({ id, etapa: "perdido", motivoPerda: m }); setPerder(false); }} />}

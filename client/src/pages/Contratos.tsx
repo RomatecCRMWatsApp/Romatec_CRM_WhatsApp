@@ -142,12 +142,12 @@ export default function Contratos() {
         <div className="flex flex-wrap items-center gap-2">
           {FILTROS.map((f, i) => (
             <button key={f.rotulo} onClick={() => setFiltro(i)}
-              className={`rounded-full border px-3 py-1 text-xs ${i === filtro ? "border-primary bg-primary/15 text-primary" : "border-border text-muted-foreground hover:text-foreground"}`}>
+              className={`min-h-11 sm:min-h-0 rounded-full border px-3 py-1 text-xs ${i === filtro ? "border-primary bg-primary/15 text-primary" : "border-border text-muted-foreground hover:text-foreground"}`}>
               {f.rotulo}
             </button>
           ))}
           <input value={busca} onChange={e => setBusca(e.target.value)} placeholder="Buscar nº, comprador, chácara…" aria-label="Buscar contrato"
-            className="ml-auto h-8 w-full rounded-lg border border-border bg-background px-3 text-sm sm:w-64" />
+            className="ml-auto h-11 sm:h-8 w-full rounded-lg border border-border bg-background px-3 text-sm sm:w-64" />
         </div>
         {error && <p className="text-sm text-danger-400">{error.message}</p>}
         {isLoading && <p className="text-sm text-muted-foreground">Carregando…</p>}

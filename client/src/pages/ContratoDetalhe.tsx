@@ -231,6 +231,12 @@ export default function ContratoDetalhe() {
                   {d.pode.cancelar && !["cancelado", "distratado"].includes(c.status) && (
                     <Button variant="outline" onClick={() => setEditando(true)}><Pencil className="h-4 w-4" /> Editar contrato</Button>
                   )}
+                </div>
+                {/* Ações de perigo afastadas da principal (Fitts): ficam recolhidas no fim */}
+                {(d.pode.cancelar || d.pode.solicitarCancelamento) && (
+                  <details className="mt-3 rounded-lg border border-danger-500/30 p-2">
+                    <summary className="min-h-11 cursor-pointer select-none px-1 py-2 text-sm text-danger-400">Cancelar ou excluir este contrato</summary>
+                    <div className="mt-2 flex flex-wrap gap-2">
                   {d.pode.cancelar && !["cancelado", "distratado"].includes(c.status) && (
                     <Button variant="outline" className="text-danger-400" onClick={() => setModal({ tipo: "contrato" })}><XCircle className="h-4 w-4" /> Cancelar contrato</Button>
                   )}
@@ -243,7 +249,9 @@ export default function ContratoDetalhe() {
                       <Ban className="h-4 w-4" /> Solicitar cancelamento do contrato
                     </Button>
                   )}
-                </div>
+                    </div>
+                  </details>
+                )}
                 <p className="mt-2 text-xs text-muted-foreground">A geração leva alguns segundos (contrato + 6 anexos). Cada geração vira uma versão nova; nenhuma é sobrescrita.</p>
               </section>
               {d.financeiro && <RegistroCartorio contratoId={id} statusContrato={c.status} />}

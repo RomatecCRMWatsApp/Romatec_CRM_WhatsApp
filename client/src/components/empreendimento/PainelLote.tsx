@@ -45,8 +45,8 @@ function MedidasLote({ slug, codigo }: { slug: string; codigo: string }) {
             ))}
           </div>
           <div className="flex flex-wrap gap-1.5 pt-1">
-            <Button size="sm" variant="outline" className="h-7 text-xs" onClick={() => navigate(`/empreendimentos/${slug}/documentos?codigos=${codigo}`)}>Memorial descritivo</Button>
-            <Button size="sm" variant="outline" className="h-7 text-xs" onClick={() => navigate(`/empreendimentos/${slug}/folder?lote=${codigo}`)}>Folder deste lote</Button>
+            <Button size="sm" variant="outline" className="min-h-11 sm:min-h-0 sm:h-7 text-xs" onClick={() => navigate(`/empreendimentos/${slug}/documentos?codigos=${codigo}`)}>Memorial descritivo</Button>
+            <Button size="sm" variant="outline" className="min-h-11 sm:min-h-0 sm:h-7 text-xs" onClick={() => navigate(`/empreendimentos/${slug}/folder?lote=${codigo}`)}>Folder deste lote</Button>
           </div>
         </>
       )}
@@ -76,14 +76,14 @@ function LinkChacara({ slug, lote }: { slug: string; lote: LotePainel }) {
         {link.replace(/^https?:\/\//, "")} <ExternalLink className="h-3 w-3 shrink-0" />
       </a>
       <div className="flex flex-wrap gap-1.5">
-        <Button size="sm" variant="outline" className="h-7 text-xs" onClick={copiar}><Link2 className="mr-1 h-3.5 w-3.5" /> Copiar link da chácara</Button>
+        <Button size="sm" variant="outline" className="min-h-11 sm:min-h-0 sm:h-7 text-xs" onClick={copiar}><Link2 className="mr-1 h-3.5 w-3.5" /> Copiar link da chácara</Button>
         {/* Envio pelo WhatsApp do sistema é da equipe (o empreendedor copia o link e manda do próprio celular) */}
         {perfilDe(user as any) !== "empreendedor" && (
-          <Button size="sm" variant="outline" className="h-7 text-xs border-[color:var(--c-25d366)]/40 text-[color:var(--c-1fa855)] hover:text-[color:var(--c-1fa855)]" onClick={() => setEnviar(true)}>
+          <Button size="sm" variant="outline" className="min-h-11 sm:min-h-0 sm:h-7 text-xs border-[color:var(--c-25d366)]/40 text-[color:var(--c-1fa855)] hover:text-[color:var(--c-1fa855)]" onClick={() => setEnviar(true)}>
             <Send className="mr-1 h-3.5 w-3.5" /> Enviar no WhatsApp
           </Button>
         )}
-        <Button asChild size="sm" variant="outline" className="h-7 text-xs">
+        <Button asChild size="sm" variant="outline" className="min-h-11 sm:min-h-0 sm:h-7 text-xs">
           <a href={linkKml(window.location.origin, lote.codigo)} download><Globe2 className="mr-1 h-3.5 w-3.5" /> KML (Google Earth)</a>
         </Button>
       </div>
@@ -149,7 +149,7 @@ export default function PainelLote({ slug, lote, onMudou, onFechar }: { slug: st
           <p className="text-xs text-muted-foreground">{m2(lote.areaM2)}{lote.perimetroM ? ` · perímetro ${lote.perimetroM.toLocaleString("pt-BR")} m` : ""}</p>
         </div>
         <span className="rounded-full px-2 py-0.5 text-[11px] font-semibold text-[color:var(--c-0c3320)]" style={{ background: COR_SITUACAO[lote.situacao] }}>{ROTULO_SITUACAO[lote.situacao]}</span>
-        {onFechar && <button onClick={onFechar} className="text-muted-foreground hover:text-foreground text-lg leading-none" aria-label="Fechar">×</button>}
+        {onFechar && <button onClick={onFechar} className="flex h-11 w-11 items-center justify-center rounded-md text-muted-foreground hover:text-foreground text-xl leading-none" aria-label="Fechar">×</button>}
       </div>
 
       <MedidasLote slug={slug} codigo={lote.codigo} />

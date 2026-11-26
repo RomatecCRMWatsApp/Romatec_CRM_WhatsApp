@@ -260,6 +260,11 @@ export default function ContratoNovo() {
             <button type="button" className="text-xs text-primary underline" onClick={() => setPasso(0)}>Trocar</button>
           </p>
         )}
+        {/* Gradiente de meta: quanto falta */}
+        <div className="space-y-1.5">
+          <p className="text-sm font-semibold">Passo {passo + 1} de {PASSOS.length} · {PASSOS[passo]}</p>
+          <div className="h-1.5 rounded-full bg-secondary"><div className="h-1.5 rounded-full bg-primary transition-[width]" style={{ width: `${((passo + 1) / PASSOS.length) * 100}%` }} /></div>
+        </div>
         <ol className="flex flex-wrap gap-2 text-xs">
           {PASSOS.map((p, i) => (
             <li key={p} className={`rounded-full border px-3 py-1 ${i === passo ? "border-primary bg-primary/15 text-primary" : i < passo ? "border-ok-600/50 text-ok-400" : "border-border text-muted-foreground"}`}>
@@ -583,11 +588,12 @@ export default function ContratoNovo() {
           </section>
         )}
 
-        <div className="flex flex-wrap justify-between gap-2">
-          <Button variant="outline" disabled={passo === 0} onClick={() => setPasso(p => p - 1)}>Voltar</Button>
+        {/* No celular, Voltar/Continuar fixos acima da barra de baixo (Fitts) */}
+        <div className="sticky bottom-[calc(6rem+env(safe-area-inset-bottom))] z-10 -mx-4 flex flex-wrap justify-between gap-2 border-t border-border bg-background/95 px-4 py-3 backdrop-blur md:static md:mx-0 md:border-0 md:bg-transparent md:p-0">
+          <Button variant="outline" className="min-h-11" disabled={passo === 0} onClick={() => setPasso(p => p - 1)}>Voltar</Button>
           {passo < PASSOS.length - 1
-            ? <Button disabled={passo === 0 && !passo0ok} onClick={avancar}>Continuar</Button>
-            : <Button disabled={criar.isPending || subindo} onClick={enviar}>{criar.isPending || subindo ? <Loader2 className="h-4 w-4 animate-spin" /> : null} {subindo ? "Enviando documentos…" : "Criar contrato e reservar a chácara"}</Button>}
+            ? <Button className="min-h-11" disabled={passo === 0 && !passo0ok} onClick={avancar}>Continuar</Button>
+            : <Button className="min-h-11" disabled={criar.isPending || subindo} onClick={enviar}>{criar.isPending || subindo ? <Loader2 className="h-4 w-4 animate-spin" /> : null} {subindo ? "Enviando documentos…" : "Criar contrato e reservar a chácara"}</Button>}
         </div>
       </div>
     </div>

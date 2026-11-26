@@ -3,6 +3,20 @@
 Cada versão nova vai no TOPO. Depois rode `npm run release` (valida e atualiza o package.json);
 ao subir, o servidor grava a versão no banco e todos recebem o aviso "Novidades da versão".
 
+## 1.210.0 — 2026-11-26
+tipo: minor
+obrigatoria: nao
+titulo: Telas mais fáceis no celular (entrega 1)
+publico: todos
+
+### Melhorias
+- Funil de leads: no celular aparece uma etapa por vez. As etapas ficam numa barra no topo, com a quantidade de leads em cada uma. No computador as colunas continuam lado a lado.
+- Lead: mostra o "Próximo passo" (o que falta perguntar ao cliente). O botão "Conversar no WhatsApp" fica sempre ao alcance do polegar no celular. "Marcar perdido" saiu do meio das outras ações.
+- Contrato: "Cancelar contrato", "Excluir contrato" e "Solicitar cancelamento" ficam num bloco separado e recolhido no fim, longe do "Gerar definitivo".
+- Novo contrato: mostra "Passo X de 3" com barra de progresso. No celular, Voltar e Continuar ficam fixos embaixo.
+- Painel: os indicadores de leads aparecem logo no começo. O relógio fica só no computador.
+- Botões e filtros maiores para tocar no celular (funil, lead, contratos, painel do lote). No topo do celular, o logo leva ao Painel.
+
 ## 1.209.4 — 2026-11-26
 tipo: patch
 obrigatoria: nao

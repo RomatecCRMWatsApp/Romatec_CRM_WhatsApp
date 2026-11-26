@@ -59,6 +59,7 @@ export default function LeadsFunil() {
   const { data, isLoading, refetch, isFetching } = trpc.crm.kanban.useQuery({ funil }, { refetchInterval: 60000 });
   const [arrastando, setArrastando] = useState<number | null>(null);
   const [sobre, setSobre] = useState<string | null>(null);
+  const [etapaCel, setEtapaCel] = useState<string | null>(null);
   const [perder, setPerder] = useState<number | null>(null);
 
   const mover = trpc.crm.moverEtapa.useMutation({
@@ -83,12 +84,12 @@ export default function LeadsFunil() {
         acoes={<>
           <div className="flex rounded-lg bg-white/5 border border-border p-1">
             {(["comprador", "proprietario"] as Funil[]).map(f => (
-              <button key={f} onClick={() => setFunil(f)} className={`px-3 py-1.5 rounded-md text-sm font-semibold ${funil === f ? "bg-primary text-primary-foreground" : "text-muted-foreground"}`}>
+              <button key={f} onClick={() => setFunil(f)} className={`min-h-11 sm:min-h-0 px-3 py-1.5 rounded-md text-sm font-semibold ${funil === f ? "bg-primary text-primary-foreground" : "text-muted-foreground"}`}>
                 {f === "comprador" ? "Comprador" : "Proprietário"}
               </button>
             ))}
           </div>
-          <Button size="sm" variant="outline" onClick={() => refetch()}><RefreshCw className={`h-4 w-4 ${isFetching ? "animate-spin" : ""}`} /></Button>
+          <Button size="sm" variant="outline" className="min-h-11 sm:min-h-0" onClick={() => refetch()}><RefreshCw className={`h-4 w-4 ${isFetching ? "animate-spin" : ""}`} /> Atualizar</Button>
         </>}
       />
 
@@ -96,7 +97,20 @@ export default function LeadsFunil() {
         <p className="container py-8 text-sm text-muted-foreground">Carregando…</p>
       ) : (
         <div className="overflow-x-auto">
-          <div className="flex gap-3 p-4 min-w-max">
+          {/* Celular: uma etapa por vez (Hick/Miller); arrastar entre colunas só no computador */}
+          <div className="md:hidden flex gap-2 overflow-x-auto px-4 pt-4 pb-1" role="tablist" aria-label="Etapas do funil">
+            {etapas.map(etapa => {
+              const n = cards.filter(c => c.etapa === etapa).length;
+              const ativa = (etapaCel ?? etapas[0]) === etapa;
+              return (
+                <button key={etapa} role="tab" aria-selected={ativa} onClick={() => setEtapaCel(etapa)}
+                  className={`min-h-11 shrink-0 rounded-full border px-3 text-sm font-semibold ${ativa ? "border-primary bg-primary text-primary-foreground" : "border-border text-muted-foreground"}`}>
+                  {data?.rotulos[etapa] ?? etapa} · {n}
+                </button>
+              );
+            })}
+          </div>
+          <div className="flex gap-3 p-4 md:min-w-max">
             {etapas.map(etapa => {
               const daColuna = cards.filter(c => c.etapa === etapa);
               return (
@@ -104,7 +118,7 @@ export default function LeadsFunil() {
                   onDragOver={e => { e.preventDefault(); setSobre(etapa); }}
                   onDragLeave={() => setSobre(s => (s === etapa ? null : s))}
                   onDrop={e => { e.preventDefault(); setSobre(null); if (arrastando !== null) pedirMover(arrastando, etapa); setArrastando(null); }}
-                  className={`w-72 shrink-0 rounded-xl border p-2 transition-colors ${sobre === etapa ? "border-ok-500 bg-ok-500/5" : "border-border bg-card/40"} ${etapa === "perdido" ? "opacity-80" : ""}`}>
+                  className={`${(etapaCel ?? etapas[0]) === etapa ? "" : "hidden md:block"} w-full md:w-72 shrink-0 rounded-xl border p-2 transition-colors ${sobre === etapa ? "border-ok-500 bg-ok-500/5" : "border-border bg-card/40"} ${etapa === "perdido" ? "opacity-80" : ""}`}>
                   <div className="flex items-center justify-between px-2 py-1.5">
                     <span className="text-sm font-semibold text-foreground">{data?.rotulos[etapa] ?? etapa}</span>
                     <span className="text-xs text-muted-foreground">{daColuna.length}</span>
@@ -130,7 +144,7 @@ export default function LeadsFunil() {
                           </div>
                         )}
                         <select value="" onClick={e => e.stopPropagation()} onChange={e => { if (e.target.value) pedirMover(c.id, e.target.value); }}
-                          className="mt-2 w-full h-7 rounded border border-border bg-secondary/30 text-[11px] text-muted-foreground">
+                          className="mt-2 w-full h-11 md:h-8 rounded border border-border bg-secondary/30 text-sm md:text-[11px] text-muted-foreground">
                           <option value="">Mover para…</option>
                           {etapas.filter(x => x !== c.etapa).map(x => <option key={x} value={x}>{data?.rotulos[x] ?? x}</option>)}
                         </select>

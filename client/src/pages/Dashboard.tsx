@@ -545,15 +545,16 @@ export default function Dashboard() {
 
       <CabecalhoPainel nomeUsuario={primeiroNome} />
 
+      {/* Os indicadores principais vêm primeiro, na primeira tela do celular (Von Restorff) */}
+      <KpisLeads r={rel} leadsHoje={leadsData ? leadsHoje : undefined} />
+
       <AtalhosPainel />
 
-      <RelogioPainel />
+      <div className="hidden md:block"><RelogioPainel /></div>
 
       <WhatsAppStatusPanel />
 
       {user?.role === "admin" && <CredenciaisPendentes />}
-
-      <KpisLeads r={rel} leadsHoje={leadsData ? leadsHoje : undefined} />
 
       <div className="grid grid-cols-1 xl:grid-cols-3 gap-4">
         <div className="xl:col-span-2"><GraficoLeadsDia r={rel} /></div>
