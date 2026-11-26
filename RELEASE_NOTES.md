@@ -3,6 +3,15 @@
 Cada versão nova vai no TOPO. Depois rode `npm run release` (valida e atualiza o package.json);
 ao subir, o servidor grava a versão no banco e todos recebem o aviso "Novidades da versão".
 
+## 1.208.5 — 2026-11-26
+tipo: patch
+obrigatoria: nao
+titulo: Cotas do mapa legíveis no celular em qualquer zoom
+publico: todos
+
+### Correções
+- Mapa do empreendimento › Cotas: as medidas ficavam minúsculas no celular e diminuíam ao ampliar. Agora o código, a área e as medidas dos lados têm tamanho fixo e legível na tela. As medidas dos lados aparecem quando o lote fica largo o bastante para não encavalar com o código.
+
 ## 1.208.4 — 2026-11-25
 tipo: patch
 obrigatoria: nao

@@ -14,6 +14,9 @@ export const ZOOM_MIN = 1;
 /** Zoom atual do mapa para o conteúdo (ex.: cotas que só aparecem ampliado e mantêm o tamanho na tela) */
 const ZoomAtual = createContext(1);
 export const useZoomAtual = () => useContext(ZoomAtual);
+/** Pixels da tela por unidade do desenho (sem o zoom): rótulos com tamanho fixo em pixels de verdade */
+const EscalaTela = createContext(1);
+export const useEscalaTela = () => useContext(EscalaTela);
 export const ZOOM_MAX = 8;
 export const VISTA_INICIAL: Vista = { s: 1, tx: 0, ty: 0 };
 /** Passo dos botões de girar */
@@ -111,6 +114,17 @@ export default function ZoomSvg({ W, H, rotulo, children, fundo, cheia, canto }:
   // Giro da pinça só começa depois de passar do limiar (zoom puro não gira sem querer)
   const giroLiberado = useRef(false);
   const giroAcumulado = useRef(0);
+  // Largura real do mapa na tela ÷ largura do desenho (no celular o desenho fica bem reduzido)
+  const [escala, setEscala] = useState(1);
+  useEffect(() => {
+    const el = svg.current;
+    if (!el || typeof ResizeObserver === "undefined") return;
+    const medir = () => { const w = el.getBoundingClientRect().width; if (w > 0) setEscala(w / W); };
+    medir();
+    const ro = new ResizeObserver(medir);
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, [W]);
 
   /** Pixels da tela → unidades do viewBox (o SVG ocupa a largura toda, sem distorção) */
   const paraViewBox = useCallback((clientX: number, clientY: number) => {
@@ -215,7 +229,7 @@ export default function ZoomSvg({ W, H, rotulo, children, fundo, cheia, canto }:
       onClickCapture={e => { if (arrastou.current) { e.stopPropagation(); e.preventDefault(); arrastou.current = false; } }}>
       <svg ref={svg} viewBox={`0 0 ${W} ${H}`} role="img" aria-label={rotulo}
         style={{ display: "block", width: cheia ? `min(100%, calc(100dvh * ${W / H}))` : "100%", height: "auto", flexShrink: 0, cursor: ativo ? "grab" : undefined }}>
-        <g ref={conteudo} transform={`translate(${vista.tx} ${vista.ty}) scale(${vista.s})${rodado ? ` rotate(${r} ${W / 2} ${H / 2})` : ""}`}><ZoomAtual.Provider value={vista.s}>{children}</ZoomAtual.Provider></g>
+        <g ref={conteudo} transform={`translate(${vista.tx} ${vista.ty}) scale(${vista.s})${rodado ? ` rotate(${r} ${W / 2} ${H / 2})` : ""}`}><ZoomAtual.Provider value={vista.s}><EscalaTela.Provider value={escala}>{children}</EscalaTela.Provider></ZoomAtual.Provider></g>
       </svg>
       {canto && <div style={{ position: "absolute", right: 58, top: 10 }} onPointerDown={e => e.stopPropagation()}>{canto}</div>}
       <div style={{ position: "absolute", right: 10, top: 10 }} onPointerDown={e => e.stopPropagation()}>

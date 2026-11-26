@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { COR_SITUACAO, ROTULO_SITUACAO, SITUACOES_LOTE, type SituacaoLote } from "@shared/lotes";
 import LupaPortal, { alturaDaLupa, cantoDaLupa, densificar } from "@/components/bom-jardims/LupaPortal";
-import ZoomSvg, { useZoomAtual } from "@/components/mapa/ZoomSvg";
+import ZoomSvg, { useEscalaTela, useZoomAtual } from "@/components/mapa/ZoomSvg";
 import { BotaoSatelite, CreditoSatelite, SateliteSvg, useSatelite } from "@/lib/satelite";
 import { BotaoTelaCheia, estiloTelaCheia, useTelaCheia } from "@/lib/telaCheia";
 import { Ruler } from "lucide-react";
@@ -347,10 +347,12 @@ export default function MapaTematico({ slug, lotes, ruas, perimetro, selecionado
 
 /** A partir deste zoom aparecem as medidas dos lados (antes, só código e área) */
 const ZOOM_COTAS = 1.9;
-/** Tamanho das medidas na tela (unidades do desenho no zoom 1): fica igual ao ampliar */
-const FONTE_COTA_TELA = 10.5;
-/** Teto do código do lote na tela ao ampliar (não cresce sem fim com o zoom) */
-const FONTE_CODIGO_TELA = 17;
+/** Tamanho das medidas dos lados em PIXELS da tela (legível no celular e no computador, em qualquer zoom) */
+const FONTE_COTA_PX = 12;
+/** Largura mínima do lote na tela (pixels) para mostrar as medidas dos lados sem embolar com o código */
+const LARGURA_MIN_COTAS_PX = 78;
+/** Teto do código do lote em pixels da tela ao ampliar */
+const FONTE_CODIGO_PX = 18;
 
 /**
  * Código e área do lote alinhados ao comprimento do lote (cabem nas chácaras estreitas) e, ampliado o mapa,
@@ -360,6 +362,8 @@ function CotasDoLote({ codigo, poly, pts, centroTela, areaM2, fonte, apagado }: 
   codigo: string; poly: Pt[]; pts: [number, number][]; centroTela: [number, number]; areaM2: number | null; fonte: number; apagado: boolean;
 }) {
   const zoom = useZoomAtual();
+  // Unidades do desenho que viram 1 pixel na tela neste zoom
+  const umPx = 1 / Math.max(0.05, zoom * useEscalaTela());
   const vertTela = verticesDoLote(pts as Pt[]) as [number, number][];
   const lados = ladosDoLote(poly);
   const area = areaM2 ?? areaDoLote(poly);
@@ -372,13 +376,17 @@ function CotasDoLote({ codigo, poly, pts, centroTela, areaM2, fonte, apagado }: 
   const menor = Math.min(...ladosTela.filter(l => l.comp > 0).map(l => l.comp));
   const reto = (dx: number, dy: number) => { let g = (Math.atan2(dy, dx) * 180) / Math.PI; if (g > 90) g -= 180; else if (g <= -90) g += 180; return g; };
   const angLote = reto(maior.b[0] - maior.a[0], maior.b[1] - maior.a[1]);
-  // Código e área ao longo do lote, limitados pela largura (lado menor) e pelo comprimento
-  const fsCod = Math.min(fonte, menor * 0.36, maior.comp * 0.22, FONTE_CODIGO_TELA / zoom);
+  const fsLado = FONTE_COTA_PX * umPx;
+  // Medidas dos lados só quando o lote já está largo na tela: cabem as duas bordas e, no meio, código e área legíveis
+  const comLados = zoom >= ZOOM_COTAS && menor / umPx >= LARGURA_MIN_COTAS_PX;
+  // Com as medidas dos lados, o miolo do lote perde a faixa de cada borda (medida + folga)
+  const miolo = comLados ? Math.max(menor - 2 * fsLado * 1.45, menor * 0.3) : menor;
+  // Código e área ao longo do lote, limitados pela largura livre e pelo comprimento
+  const fsCod = Math.min(fonte, miolo * 0.42, maior.comp * 0.22, FONTE_CODIGO_PX * umPx);
   const txtArea = area > 0 ? areaBR(area) : "";
-  const fsArea = Math.min(fsCod * 0.72, (maior.comp * 0.8) / Math.max(1, txtArea.length * 0.56));
+  const fsArea = Math.min(fsCod * 0.72, miolo * 0.3, ((maior.comp - (comLados ? 2 * fsLado * 1.45 : 0)) * 0.8) / Math.max(1, txtArea.length * 0.56));
   const [cx, cy] = centroTela;
   const corTexto = apagado ? "#9AA3AB" : "#0C3320";
-  const fsLado = FONTE_COTA_TELA / zoom;
   return (
     <g pointerEvents="none">
       <g transform={`rotate(${angLote.toFixed(1)} ${cx.toFixed(1)} ${cy.toFixed(1)})`}>
@@ -389,14 +397,14 @@ function CotasDoLote({ codigo, poly, pts, centroTela, areaM2, fonte, apagado }: 
             stroke="#FFFFFF" strokeWidth={Math.max(0.8, fsArea * 0.25)} paintOrder="stroke">{txtArea}</text>
         )}
       </g>
-      {zoom >= ZOOM_COTAS && ladosTela.map(({ a, b, metros, comp }, k) => {
+      {comLados && ladosTela.map(({ a, b, metros, comp }, k) => {
         // Lado curto demais (curva, chanfro): sem cota para não embolar
         if (comp < fsLado * 4.5 || metros < 1) return null;
         const dx = b[0] - a[0], dy = b[1] - a[1];
         const mx = (a[0] + b[0]) / 2, my = (a[1] + b[1]) / 2;
         const nx = -dy / comp, ny = dx / comp;
         const dentro = (cx - mx) * nx + (cy - my) * ny > 0 ? 1 : -1;
-        const off = fsLado * 0.95;
+        const off = fsLado * 0.75;
         const x = mx + nx * off * dentro, y = my + ny * off * dentro;
         return (
           <text key={k} x={x} y={y} transform={`rotate(${reto(dx, dy).toFixed(1)} ${x.toFixed(1)} ${y.toFixed(1)})`} textAnchor="middle" dominantBaseline="middle"
