@@ -3,6 +3,15 @@
 Cada versão nova vai no TOPO. Depois rode `npm run release` (valida e atualiza o package.json);
 ao subir, o servidor grava a versão no banco e todos recebem o aviso "Novidades da versão".
 
+## 1.209.4 — 2026-11-26
+tipo: patch
+obrigatoria: nao
+titulo: Rota do Bom Jardims sai do Centro de Açailândia
+publico: todos
+
+### Correções
+- Como chegar ao Bom Jardims: o ponto de saída passa a ser o Centro de Açailândia, e não mais a Prefeitura Municipal. Vale para o Passeio no Mapa, a página da rota, os links do Google Maps e do Apple Maps e o texto de divulgação no WhatsApp.
+
 ## 1.209.3 — 2026-11-26
 tipo: patch
 obrigatoria: nao

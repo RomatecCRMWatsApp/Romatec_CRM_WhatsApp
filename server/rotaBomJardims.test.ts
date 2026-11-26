@@ -9,8 +9,8 @@ describe('Como chegar ao Bom Jardims (/bom-jardims/rota)', () => {
   afterEach(() => { vi.unstubAllGlobals(); vi.resetModules(); });
 
   it('pontos de referência em ordem, do centro ao portal', () => {
-    expect(PONTOS_ROTA.map(p => p.titulo)).toEqual(['Prefeitura Municipal', 'BR-222', 'Polícia Rodoviária Federal', 'Entrada da estação ferroviária', 'Duas ferrovias', 'Balneário Walter Figueiredo', 'Portal do Bom Jardims']);
-    expect(linkGoogleRota()).toContain('origin=Prefeitura%20Municipal%20de%20A%C3%A7ail%C3%A2ndia');
+    expect(PONTOS_ROTA.map(p => p.titulo)).toEqual(['Centro de Açailândia', 'BR-222', 'Polícia Rodoviária Federal', 'Entrada da estação ferroviária', 'Duas ferrovias', 'Balneário Walter Figueiredo', 'Portal do Bom Jardims']);
+    expect(linkGoogleRota()).toContain('origin=Centro%2C%20A%C3%A7ail%C3%A2ndia%20-%20MA');
     expect(linkWazeRota()).toMatch(/^https:\/\/waze\.com\/ul\?ll=-4\.9/);
   });
 

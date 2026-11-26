@@ -214,7 +214,7 @@ function Passeio({ d, evento, url }: { d: Dados; evento: (t: string, x?: { passo
               <h2 className="font-serif text-xl leading-snug">Onde fica e como chegar</h2>
               {d.rota?.km != null ? (
                 <p className="flex items-baseline gap-2"><span className="text-3xl font-bold tabular-nums" style={{ color: OURO }}>{br(kmAgora ?? 0, 1)}</span><span className="text-sm">km</span>
-                  <span className="text-3xl font-bold tabular-nums" style={{ color: OURO }}>{minAgora ?? 0}</span><span className="text-sm">min aprox. de {d.rota.origem}</span></p>
+                  <span className="text-3xl font-bold tabular-nums" style={{ color: OURO }}>{minAgora ?? 0}</span><span className="text-sm">min aprox. saindo do {d.rota.origem}</span></p>
               ) : <p className="text-sm text-white/75">A entrada está marcada no mapa em laranja.</p>}
               {!!d.rota?.pontos?.length && (
                 <ol className="space-y-1 text-sm">

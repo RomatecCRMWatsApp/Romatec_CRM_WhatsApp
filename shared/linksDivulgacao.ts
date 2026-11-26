@@ -81,7 +81,7 @@ export const LINKS_FIXOS: LinkDivulgacao[] = [
   },
   {
     chave: 'fixo:rota', titulo: 'Como chegar — rota do centro de Açailândia até o portal', fixo: true, destaque: true, empreendimento: 'Bom Jardims',
-    descricao: 'Página com o vídeo narrado do caminho, os pontos de referência (Prefeitura, BR-222, PRF, estação ferroviária, duas ferrovias, Balneário Walter Figueiredo), botões do Google Maps, Waze e Apple Maps, arquivo da rota (GPX/KML), folder e PDF de apresentação.',
+    descricao: 'Página com o vídeo narrado do caminho, os pontos de referência (centro de Açailândia, BR-222, PRF, estação ferroviária, duas ferrovias, Balneário Walter Figueiredo), botões do Google Maps, Waze e Apple Maps, arquivo da rota (GPX/KML), folder e PDF de apresentação.',
     url: ROTA_COMO_CHEGAR, utmSource: 'whatsapp', utmCampaign: CAMPANHA_ROTA,
     textoWhatsapp: `Quer conhecer o *Condomínio de Chácaras Bom Jardims*? Preparamos um vídeo mostrando o caminho do centro de Açailândia até o portal do condomínio.\n\nAbra o link, escolha seu aplicativo de navegação e confira os pontos de referência (tem também um áudio explicando o trajeto):\n${MARCA_LINK}\n\nAs dúvidas a gente resolve aqui pelo WhatsApp; quando você decidir pela compra, buscamos você de carro para escolher a chácara.`,
   },
@@ -101,7 +101,7 @@ export const LINKS_FIXOS: LinkDivulgacao[] = [
     chave: 'fixo:rota-instagram', titulo: 'Como chegar — legenda do Reels no Instagram', fixo: true, destaque: false, empreendimento: 'Bom Jardims',
     descricao: 'Legenda para o Reels do vídeo narrado da rota. No Instagram o link não fica clicável: quem comentar ROTA recebe o link pelo Direct ou WhatsApp.',
     url: ROTA_COMO_CHEGAR, utmSource: 'instagram', utmCampaign: CAMPANHA_ROTA,
-    textoWhatsapp: `📍 Como chegar ao Condomínio de Chácaras Bom Jardims\n\nDo centro de Açailândia até o portal em 17 km, cerca de 24 minutos de carro. No vídeo você vê o caminho inteiro com os pontos de referência:\n\n1️⃣ Prefeitura Municipal\n2️⃣ BR-222, sentido Piquiá\n3️⃣ Posto da PRF\n4️⃣ Entrada da estação ferroviária\n5️⃣ Duas ferrovias (atenção à passagem dos trens 🚆)\n6️⃣ Balneário Walter Figueiredo\n7️⃣ Portal do Bom Jardims 🌳\n\nQuer a rota no seu celular, com Google Maps, Waze e o vídeo narrado? Comente ROTA ou chame no WhatsApp que eu te mando o link.\n\n🌿 Chácaras a partir de 3.025 m² · Lançamento oficial em 05/12\n\n🔗 ${MARCA_LINK}\n\n#BomJardims #Açailândia #Chácaras #ComoChegar #Maranhão #ChácarasÀVenda #Imperatriz #CondomínioDeChácaras`,
+    textoWhatsapp: `📍 Como chegar ao Condomínio de Chácaras Bom Jardims\n\nDo centro de Açailândia até o portal em 17 km, cerca de 24 minutos de carro. No vídeo você vê o caminho inteiro com os pontos de referência:\n\n1️⃣ Centro de Açailândia\n2️⃣ BR-222, sentido Piquiá\n3️⃣ Posto da PRF\n4️⃣ Entrada da estação ferroviária\n5️⃣ Duas ferrovias (atenção à passagem dos trens 🚆)\n6️⃣ Balneário Walter Figueiredo\n7️⃣ Portal do Bom Jardims 🌳\n\nQuer a rota no seu celular, com Google Maps, Waze e o vídeo narrado? Comente ROTA ou chame no WhatsApp que eu te mando o link.\n\n🌿 Chácaras a partir de 3.025 m² · Lançamento oficial em 05/12\n\n🔗 ${MARCA_LINK}\n\n#BomJardims #Açailândia #Chácaras #ComoChegar #Maranhão #ChácarasÀVenda #Imperatriz #CondomínioDeChácaras`,
   },
   {
     chave: 'fixo:rio', titulo: 'O rio e a água — resposta para quem pergunta do rio', fixo: true, destaque: true, empreendimento: 'Bom Jardims',

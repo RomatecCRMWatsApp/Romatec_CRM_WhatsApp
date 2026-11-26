@@ -11,14 +11,14 @@ export const TITULO_ROTA = 'Como chegar ao Condomínio de Chácaras Bom Jardims 
 export const DESCRICAO_ROTA = 'Percurso do centro de Açailândia até o portal do Bom Jardims, com os pontos de referência e a rota para Google Maps, Waze e qualquer app de navegação.';
 
 /** Ponto de partida: centro de Açailândia (sede do município) — o Google/Apple usam o nome; o GPX usa a coordenada */
-export const ORIGEM_ROTA = { nome: 'Prefeitura Municipal de Açailândia', busca: 'Prefeitura Municipal de Açailândia, MA', lat: -4.9469, lon: -47.5000 };
+export const ORIGEM_ROTA = { nome: 'Centro de Açailândia', busca: 'Centro, Açailândia - MA', lat: -4.9469, lon: -47.5000 };
 
 /**
  * Pontos de referência, na ordem de quem sai do centro. `lat`/`lon` só quando a posição é conhecida (viram pinos no
  * Passeio no Mapa); sem coordenada confirmada, o ponto aparece só na lista — nunca com posição chutada.
  */
 export const PONTOS_ROTA: { titulo: string; texto: string; lat?: number; lon?: number }[] = [
-  { titulo: 'Prefeitura Municipal', texto: 'Saia do centro de Açailândia passando em frente à Prefeitura Municipal.', lat: -4.9469, lon: -47.5 },
+  { titulo: 'Centro de Açailândia', texto: 'Saia do centro de Açailândia.', lat: -4.9469, lon: -47.5 },
   { titulo: 'BR-222', texto: 'Pegue a rodovia BR-222, sentido Piquiá.' },
   { titulo: 'Polícia Rodoviária Federal', texto: 'Siga pela BR-222 passando pelo posto da Polícia Rodoviária Federal (PRF).' },
   { titulo: 'Entrada da estação ferroviária', texto: 'Saia da rodovia e entre pela entrada da estação ferroviária.' },

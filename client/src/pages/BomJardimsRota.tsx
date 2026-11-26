@@ -62,7 +62,7 @@ export default function BomJardimsRota() {
           <a href={linkWazeRota()} target="_blank" rel="noopener noreferrer" onClick={() => abriu("waze")} style={btn("var(--c-33ccff)", "var(--c-05233a)")}><Navigation size={20} /> Abrir no Waze</a>
           <a href={linkAppleRota()} target="_blank" rel="noopener noreferrer" onClick={() => abriu("apple")} style={btn("var(--c-ffffff)", C.verde)}><MapPin size={20} /> Apple Maps (iPhone)</a>
         </div>
-        <p style={{ fontSize: 13, color: C.suave, margin: "10px 0 0" }}>O Waze traça a rota a partir de onde você estiver. O Google Maps e o Apple Maps já abrem saindo da Prefeitura, no centro.</p>
+        <p style={{ fontSize: 13, color: C.suave, margin: "10px 0 0" }}>O Waze traça a rota a partir de onde você estiver. O Google Maps e o Apple Maps já abrem saindo do centro de Açailândia.</p>
       </section>
 
       <section style={{ ...sec, paddingTop: 24 }}>
