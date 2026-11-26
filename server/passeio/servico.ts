@@ -80,7 +80,9 @@ export async function listarLinks(p: PermissoesUsuario, usuarioId: number, empre
   if (!temAcesso(p.perfil, p.acessos, 'empreendimento', empreendimentoId)) throw new PasseioErro('Sem acesso a este empreendimento.', 403);
   const d = await banco();
   const escritorio = p.perfil === 'admin' || p.perfil === 'secretario';
-  const cond = escritorio ? eq(tourLinks.empreendimentoId, empreendimentoId) : and(eq(tourLinks.empreendimentoId, empreendimentoId), eq(tourLinks.corretorId, usuarioId));
+  // Link desativado some da lista (continua no banco: quem abrir o link antigo vê "passeio encerrado")
+  const base = and(eq(tourLinks.empreendimentoId, empreendimentoId), eq(tourLinks.ativo, true));
+  const cond = escritorio ? base : and(base, eq(tourLinks.corretorId, usuarioId));
   const rs: any[] = await d.select().from(tourLinks).where(cond).orderBy(desc(tourLinks.id)).limit(200);
   if (!rs.length) return [];
   const ids = rs.map(r => r.id);

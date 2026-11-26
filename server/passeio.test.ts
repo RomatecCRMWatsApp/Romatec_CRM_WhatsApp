@@ -91,6 +91,7 @@ describe('links', () => {
     await expect(P.desativarLink(CORRETOR, 8, l.id)).rejects.toThrow(/Só quem gerou/);
     await P.desativarLink(CORRETOR, 7, l.id);
     expect(await P.dadosPublicos(r.token)).toMatchObject({ ok: false, motivo: 'desativado' });
+    expect((await P.listarLinks(CORRETOR, 7, 2)).some(x => x.token === r.token)).toBe(false);
   });
 
   it('eventos: abertura conta uma vez por sessão; clique em "Quero" aparece na lista', async () => {

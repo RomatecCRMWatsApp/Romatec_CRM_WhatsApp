@@ -3,6 +3,15 @@
 Cada versão nova vai no TOPO. Depois rode `npm run release` (valida e atualiza o package.json);
 ao subir, o servidor grava a versão no banco e todos recebem o aviso "Novidades da versão".
 
+## 1.209.3 — 2026-11-26
+tipo: patch
+obrigatoria: nao
+titulo: Passeio no Mapa: link desligado sai da lista
+publico: todos
+
+### Melhorias
+- Empreendimento › Passeio › Passeios enviados: ao desligar um link (botão de energia), ele pede confirmação e some da lista. Quem abrir o link antigo vê que o passeio foi encerrado.
+
 ## 1.209.2 — 2026-11-26
 tipo: patch
 obrigatoria: nao

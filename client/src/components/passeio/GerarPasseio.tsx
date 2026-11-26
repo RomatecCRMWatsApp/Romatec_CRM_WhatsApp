@@ -77,7 +77,7 @@ export function ListaPasseios({ empreendimentoId, nome }: { empreendimentoId: nu
   const utils = trpc.useUtils();
   const { data, isLoading } = trpc.passeio.listar.useQuery({ empreendimentoId });
   const desativar = trpc.passeio.desativar.useMutation({
-    onSuccess: () => { utils.passeio.listar.invalidate({ empreendimentoId }); toast.success("Link desativado"); },
+    onSuccess: () => { utils.passeio.listar.invalidate({ empreendimentoId }); toast.success("Link desligado e removido da lista"); },
     onError: e => toast.error(e.message),
   });
   if (isLoading) return <p className="text-sm text-muted-foreground">Carregando…</p>;
@@ -97,7 +97,7 @@ export function ListaPasseios({ empreendimentoId, nome }: { empreendimentoId: nu
             <div className="flex flex-wrap gap-1.5">
               <Button size="sm" variant="ghost" asChild><a href={`https://wa.me/?text=${encodeURIComponent(textoWhatsApp(nome, urlDe(l.caminho), l.lote))}`} target="_blank" rel="noopener noreferrer" aria-label="Enviar no WhatsApp"><MessageCircle className="h-4 w-4" /></a></Button>
               <Button size="sm" variant="ghost" onClick={async () => { try { await navigator.clipboard.writeText(urlDe(l.caminho)); toast.success("Copiado"); } catch { toast.error("Não consegui copiar"); } }} aria-label="Copiar link"><Copy className="h-4 w-4" /></Button>
-              <Button size="sm" variant="ghost" onClick={() => desativar.mutate({ id: l.id })} aria-label="Desativar link"><Power className="h-4 w-4" /></Button>
+              <Button size="sm" variant="ghost" onClick={() => { if (window.confirm("Desligar este link? O cliente não consegue mais abrir e ele sai da lista.")) desativar.mutate({ id: l.id }); }} aria-label="Desligar e remover o link"><Power className="h-4 w-4" /></Button>
             </div>
           )}
         </li>
