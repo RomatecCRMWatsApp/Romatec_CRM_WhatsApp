@@ -358,8 +358,12 @@ export async function ingestLead(input: LeadIntakeInput): Promise<LeadIntakeResu
       ? await import('./leads/listaComunicacao').then(m => m.nomeDoEmpreendimento(input.empreendimentoSlug!)).catch(() => null) : null;
     const alvo = imovel || nomeEmp || input.empreendimentoSlug;
     const titulo = input.loteCodigo ? `${alvo} — chácara ${input.loteCodigo}` : alvo;
-    const score = scoreCalc?.score ?? input.leadScore ?? null;
-    const classe = scoreCalc?.classe ?? null;
+    // Formulário qualificado (Meta "Maior intenção"): a nota do roteiro A/B/C vale mais que o score de conversa, que ainda é 0
+    const { ehFormularioQualificado, pontuar } = await import('../shared/leadScoreForm');
+    const form = input.answers && ehFormularioQualificado(input.answers) ? pontuar(input.answers) : null;
+    const CLASSE_FAIXA = { A: 'quente', B: 'morno', C: 'frio' } as const;
+    const score = form?.leadScore ?? scoreCalc?.score ?? input.leadScore ?? null;
+    const classe = form ? CLASSE_FAIXA[form.faixa] : scoreCalc?.classe ?? null;
     await notificarLead({
       tipo: lead ? 'recorrente' : 'novo_lead',
       empreendimento: !!input.empreendimentoSlug,

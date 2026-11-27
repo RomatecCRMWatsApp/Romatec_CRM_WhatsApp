@@ -3,6 +3,15 @@
 Cada versão nova vai no TOPO. Depois rode `npm run release` (valida e atualiza o package.json);
 ao subir, o servidor grava a versão no banco e todos recebem o aviso "Novidades da versão".
 
+## 1.211.2 — 2026-11-27
+tipo: patch
+obrigatoria: nao
+titulo: Aviso de lead novo com a nota do formulário
+publico: todos
+
+### Correções
+- Aviso de lead novo no WhatsApp: cadastro do formulário do Instagram/Facebook agora chega com a nota A/B/C certa (ex.: "Score 100 (QUENTE)"). Antes o aviso saía antes da nota ser calculada e mostrava "Score 0 (FRIO)" para todos.
+
 ## 1.211.1 — 2026-11-27
 tipo: patch
 obrigatoria: nao
