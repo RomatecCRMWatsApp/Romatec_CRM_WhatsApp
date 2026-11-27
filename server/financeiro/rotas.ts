@@ -254,6 +254,24 @@ export function registrarRotasFinanceiro(app: Express) {
     } catch (e) { erro(res, e); }
   });
 
+  // Associados com parcelas em aberto, em PDF (administrador e secretária): nome, chácara, parcelas em aberto e saldo devedor
+  app.get(`${base}/parcelas-em-aberto.pdf`, async (req, res) => {
+    try {
+      const { sdk } = await import('../_core/sdk');
+      const user: any = await sdk.authenticateRequest(req).catch(() => null);
+      const { perfilDe } = await import('../../shared/equipe');
+      const { podeOperarCobranca } = await import('../../shared/contratos');
+      if (!user || !podeOperarCobranca(perfilDe(user))) return res.status(404).json({ erro: 'Não encontrado' });
+      const { parcelasEmAberto } = await import('./relatorios');
+      const { pdfParcelasEmAberto } = await import('./parcelasAbertasPdf');
+      const buf = await pdfParcelasEmAberto(await parcelasEmAberto());
+      res.setHeader('Content-Type', 'application/pdf');
+      res.setHeader('Content-Disposition', `inline; filename="Parcelas-em-aberto-${new Date().toISOString().slice(0, 10)}.pdf"`);
+      res.setHeader('Cache-Control', 'private, no-store');
+      res.send(buf);
+    } catch (e) { erro(res, e); }
+  });
+
   // Planilha anual para o contador / DIMOB (administrador e secretária)
   app.get(`${base}/dimob.xlsx`, async (req, res) => {
     try {

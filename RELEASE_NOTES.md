@@ -3,6 +3,15 @@
 Cada versão nova vai no TOPO. Depois rode `npm run release` (valida e atualiza o package.json);
 ao subir, o servidor grava a versão no banco e todos recebem o aviso "Novidades da versão".
 
+## 1.211.0 — 2026-11-27
+tipo: minor
+obrigatoria: nao
+titulo: Lista de associados com parcelas em aberto (PDF)
+publico: todos
+
+### Novo
+- Financeiro › Extrato por comprador: botão "Devedores (PDF)" com a lista simples dos associados que têm parcelas em aberto: nome, chácara, quantas parcelas estão em aberto (as vencidas em vermelho) e o saldo devedor, com o total no fim.
+
 ## 1.210.1 — 2026-11-27
 tipo: patch
 obrigatoria: nao

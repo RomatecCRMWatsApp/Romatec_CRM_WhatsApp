@@ -146,3 +146,21 @@ describe('planilha do contador (DIMOB)', () => {
     expect((await R.dimobXlsx(2026)).subarray(0, 2).toString()).toBe('PK');
   });
 });
+
+describe('associados com parcelas em aberto (PDF)', () => {
+  it('lista só quem tem parcela em aberto, com valor, vencimento e vencidas; o PDF tem uma linha por associado', async () => {
+    const r = await R.parcelasEmAberto(HOJE);
+    expect(r.associados.map(a => a.contratoNumero)).toEqual(['BJ-2026-0001']);
+    const [a] = r.associados;
+    expect(a).toMatchObject({ comprador: 'Fulano de Tal', emAberto: 16000, vencido: 8000 });
+    expect(a.parcelas).toEqual([
+      expect.objectContaining({ rotulo: 'Entrada 2/3', vencimento: '2026-11-10', valor: 8000, vencida: true }),
+      expect.objectContaining({ rotulo: 'Entrada 3/3', vencimento: '2026-12-10', valor: 8000, vencida: false }),
+    ]);
+    const P = await import('./financeiro/parcelasAbertasPdf');
+    expect(P.linhaDoAssociado(a)).toMatchObject({ nome: 'Fulano de Tal', chacara: 'A01', parcelas: '2 (1 vencida)', saldoNumero: 16000 });
+    const { PDFDocument } = await import('pdf-lib');
+    const pdf = await P.pdfParcelasEmAberto(r);
+    expect((await PDFDocument.load(pdf)).getPageCount()).toBeGreaterThan(0);
+  });
+});

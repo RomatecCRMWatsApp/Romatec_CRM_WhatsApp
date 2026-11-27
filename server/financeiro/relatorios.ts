@@ -85,6 +85,41 @@ export async function extratoCompradores(hoje = hojeBrasil()) {
   };
 }
 
+export interface ParcelaAberta { rotulo: string; vencimento: string; valor: number; vencida: boolean; status: string }
+export interface AssociadoEmAberto {
+  contratoNumero: string; loteCodigo: string; comprador: string; telefone: string | null;
+  parcelas: ParcelaAberta[]; emAberto: number; vencido: number;
+}
+
+/**
+ * Associados com parcelas em aberto (prevista, emitida ou vencida), cada parcela com o valor e o vencimento, do mais antigo
+ * ao mais novo. Contratos cancelados/distratados e antecipações ficam de fora (mesma base do extrato).
+ */
+export async function parcelasEmAberto(hoje = hojeBrasil()) {
+  const { cs, cobs } = await base();
+  const associados: AssociadoEmAberto[] = [];
+  for (const c of cs) {
+    const abertas = cobs.filter(x => x.contratoId === c.id && ABERTAS.includes(x.status))
+      .sort((a, b) => String(a.vencimento).localeCompare(String(b.vencimento)));
+    if (!abertas.length) continue;
+    const { comprador } = await pessoasDoContrato(c.id);
+    const parcelas = abertas.map(x => {
+      const venc = String(x.vencimento).slice(0, 10);
+      return { rotulo: rotuloParcela(x), vencimento: venc, valor: centavos(Number(x.valor)), vencida: venc < hoje, status: String(x.status) };
+    });
+    associados.push({
+      contratoNumero: c.numero, loteCodigo: c.loteCodigo, comprador: comprador?.nome ?? '—', telefone: comprador?.telefone1 ?? null,
+      parcelas, emAberto: centavos(parcelas.reduce((s, p) => s + p.valor, 0)), vencido: centavos(parcelas.filter(p => p.vencida).reduce((s, p) => s + p.valor, 0)),
+    });
+  }
+  associados.sort((a, b) => a.comprador.localeCompare(b.comprador, 'pt-BR'));
+  return {
+    hoje, associados,
+    totais: { associados: associados.length, parcelas: associados.reduce((s, a) => s + a.parcelas.length, 0),
+      emAberto: centavos(associados.reduce((s, a) => s + a.emAberto, 0)), vencido: centavos(associados.reduce((s, a) => s + a.vencido, 0)) },
+  };
+}
+
 const ROTULO_SITUACAO: Record<SituacaoExtrato, string> = { QUITADO: 'Quitado', EM_DIA: 'Em dia', EM_ATRASO: 'Em atraso', AGUARDANDO_ASSINATURA: 'Aguardando assinatura', CONCESSAO: 'Concessão (sem cobrança)', SEM_PARCELAS: 'Assinado, sem parcelas' };
 const br = (iso: string | null) => (iso ? iso.split('-').reverse().join('/') : '');
 

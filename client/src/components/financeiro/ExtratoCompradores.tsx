@@ -1,6 +1,6 @@
 import { useMemo, useState } from "react";
 import { useLocation } from "wouter";
-import { FileSpreadsheet } from "lucide-react";
+import { FileSpreadsheet, FileText } from "lucide-react";
 import { trpc } from "@/lib/trpc";
 import { Button } from "@/components/ui/button";
 import { brl } from "@shared/simulador";
@@ -41,6 +41,7 @@ export default function ExtratoCompradores() {
           <option value="">Todas as situações</option>{Object.entries(SITUACAO).map(([k, [r]]) => <option key={k} value={k}>{r}</option>)}
         </select>
         <Button variant="outline" onClick={() => window.open("/api/financeiro/extrato.xlsx", "_blank")}><FileSpreadsheet className="mr-1 h-4 w-4" /> Planilha (Excel)</Button>
+        <Button variant="outline" title="Lista dos associados com parcelas em aberto: nome, chácara, parcelas e saldo devedor" onClick={() => window.open("/api/financeiro/parcelas-em-aberto.pdf", "_blank")}><FileText className="mr-1 h-4 w-4" /> Devedores (PDF)</Button>
         <span className="inline-flex items-center gap-1">
           <select value={anoDimob} onChange={e => setAnoDimob(Number(e.target.value))} aria-label="Ano para o contador" className="h-9 rounded-lg border border-border bg-background px-2 text-sm">
             {Array.from({ length: 4 }, (_, i) => new Date().getFullYear() - i).map(a => <option key={a} value={a}>{a}</option>)}
