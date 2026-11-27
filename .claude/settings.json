@@ -1,0 +1,16 @@
+{
+  "hooks": {
+    "SessionStart": [
+      {
+        "matcher": "startup|resume|clear|compact",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node -e \"const fs=require('fs'),p=require('path');try{const f=p.join(process.env.CLAUDE_PROJECT_DIR||'.','.claude','skills','i-have-adhd','SKILL.md');const t=fs.readFileSync(f,'utf8').replace(/^---[\\s\\S]*?---\\s*/,'');console.log('ADHD MODE ACTIVE (sempre ligado neste projeto). Diga \\\"stop adhd mode\\\" para desligar na sessão.\\n\\n'+t)}catch(e){}\"",
+            "timeout": 30
+          }
+        ]
+      }
+    ]
+  }
+}
