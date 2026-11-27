@@ -28,7 +28,7 @@ export default function AvisoCookies() {
         background: "color-mix(in srgb, var(--c-08261a) 97%, transparent)", color: "var(--c-f3eedf)", boxShadow: "0 8px 30px color-mix(in srgb, var(--c-000000) 35%, transparent)", fontSize: 13, lineHeight: 1.5,
         display: "flex", flexWrap: "wrap", alignItems: "center", gap: 12 }}>
       <p style={{ margin: 0, flex: "1 1 260px" }}>
-        Usamos cookies do Google Analytics e do Google Ads para medir as visitas e os anúncios desta página (Lei n.º 13.709/2018).
+        Usamos cookies do Google Analytics e do Google Ads para medir as visitas e os anúncios desta página (Lei n.º 13.709/2018). <a href="/privacidade" style={{ color: "var(--c-f3eedf)", textDecoration: "underline" }}>Política de privacidade</a>
       </p>
       <div style={{ display: "flex", gap: 8 }}>
         <button type="button" onClick={() => escolher("recusado")} style={{ ...botao, background: "transparent", color: "var(--c-f3eedf)", border: "1px solid var(--c-8fa394)" }}>Recusar</button>

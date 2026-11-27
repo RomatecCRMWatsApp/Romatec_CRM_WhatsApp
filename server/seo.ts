@@ -14,6 +14,7 @@ import { DESCRICAO_MAPA3D, ROTA_MAPA3D, TITULO_MAPA3D } from '../shared/mapa3dBo
 import { DESCRICAO_ROTA, ROTA_COMO_CHEGAR, TITULO_ROTA } from '../shared/rotaBomJardims';
 import { DESCRICAO_RIO, ROTA_RIO, TITULO_RIO } from '../shared/rioBomJardims';
 import { DESCRICAO_ESCRITORIO, ROTA_ESCRITORIO, TITULO_ESCRITORIO } from '../shared/escritorio';
+import { DESCRICAO_PRIVACIDADE, ROTA_PRIVACIDADE, TITULO_PRIVACIDADE } from '../shared/privacidade';
 import { DESCRICAO_PAGAMENTO, ROTA_PAGAMENTO, TITULO_PAGAMENTO } from '../shared/pagamentoBomJardims';
 
 export interface MetaPagina {
@@ -304,6 +305,7 @@ export function metaDaRota(path: string): MetaPagina | 'imovel' {
     ...META_PADRAO, path: p, indexavel: true, title: TITULO_ESCRITORIO, description: DESCRICAO_ESCRITORIO,
     image: '/brand/og-escritorio-v2.jpg', imageAlt: 'Nosso escritório — Rua São Raimundo, n.º 10, Centro, Açailândia/MA', imageSize: { w: 1200, h: 630 },
   };
+  if (p === ROTA_PRIVACIDADE) return { ...META_PADRAO, path: p, indexavel: true, title: TITULO_PRIVACIDADE, description: DESCRICAO_PRIVACIDADE };
   if (p === ROTA_PAGAMENTO) return META_PAGAMENTO;
   // Página de oferta (link pessoal do robô no WhatsApp): prévia com o folder, fora do Google, sem preço na meta
   const oferta = /^\/o\/([a-z0-9-]+)$/.exec(p);

@@ -3,6 +3,16 @@
 Cada versão nova vai no TOPO. Depois rode `npm run release` (valida e atualiza o package.json);
 ao subir, o servidor grava a versão no banco e todos recebem o aviso "Novidades da versão".
 
+## 1.210.1 — 2026-11-27
+tipo: patch
+obrigatoria: nao
+titulo: Página de política de privacidade
+publico: todos
+
+### Novo
+- Página pública de política de privacidade em /privacidade (LGPD), com os dados da Romatec, o que é coletado, para que, com quem é compartilhado, como sair das mensagens e como pedir acesso, correção ou exclusão. É o link exigido pela Meta nos formulários de cadastro dos anúncios.
+- O aviso de cookies das páginas de divulgação ganhou o link para a política.
+
 ## 1.210.0 — 2026-11-26
 tipo: minor
 obrigatoria: nao
