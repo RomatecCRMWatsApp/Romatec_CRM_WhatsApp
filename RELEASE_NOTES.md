@@ -3,6 +3,15 @@
 Cada versão nova vai no TOPO. Depois rode `npm run release` (valida e atualiza o package.json);
 ao subir, o servidor grava a versão no banco e todos recebem o aviso "Novidades da versão".
 
+## 1.211.1 — 2026-11-27
+tipo: patch
+obrigatoria: nao
+titulo: Nota dos cadastros do formulário do Instagram/Facebook
+publico: todos
+
+### Correções
+- Leads qualificados: o CRM agora reconhece as respostas do formulário do Meta pelo texto de cada pergunta ("Quando pretende comprar?", "Onde você mora?"...). Antes só lia se o campo tivesse o nome curto (momento, regiao...), e o cadastro chegava sem a nota A/B/C.
+
 ## 1.211.0 — 2026-11-27
 tipo: minor
 obrigatoria: nao

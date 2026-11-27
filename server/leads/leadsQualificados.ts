@@ -9,7 +9,7 @@
 import { eq, inArray, isNotNull } from 'drizzle-orm';
 import { getDb } from '../db';
 import { leadQualifications, users } from '../../drizzle/schema';
-import { CAMPOS_FORM, ehFormularioQualificado, norm, pontuar, type Faixa } from '../../shared/leadScoreForm';
+import { campoDoRoteiro, ehFormularioQualificado, norm, pontuar, type Faixa } from '../../shared/leadScoreForm';
 import { mesmoTelefone } from './mesmoTelefone';
 import { etapaDoLead } from './kanban';
 
@@ -23,14 +23,20 @@ const banco = async () => { const d: any = await getDb(); if (!d) throw new Erro
 const lista = (v: unknown): string[] => { if (Array.isArray(v)) return v; try { const x = JSON.parse(String(v ?? '')); return Array.isArray(x) ? x : []; } catch { return []; } };
 const json = (v: unknown): any => { if (v && typeof v === 'object') return v; try { return JSON.parse(String(v ?? '')); } catch { return {}; } };
 
-/** Só os campos do roteiro (procura, momento, pagamento...), pelos nomes normalizados */
+/**
+ * Só os campos do roteiro (procura, momento, pagamento...). Vale o nome curto do campo ou, no formulário do Meta sem
+ * nome de campo, o texto da pergunta — este só quando vierem pelo menos 4 perguntas do roteiro (os formulários antigos
+ * têm "quando pretende comprar?" com outras respostas e seguem na nota antiga).
+ */
 export function respostasDoRoteiro(extras: Record<string, unknown>): Record<string, string> {
-  const out: Record<string, string> = {};
+  const exatos: Record<string, string> = {}, porTexto: Record<string, string> = {};
   for (const [k, v] of Object.entries(extras)) {
-    const nk = norm(k).replace(/ /g, '_');
-    if ((CAMPOS_FORM as readonly string[]).includes(nk) && String(v ?? '').trim()) out[nk] = String(v).trim().slice(0, 160);
+    const nk = campoDoRoteiro(k);
+    if (!nk || !String(v ?? '').trim()) continue;
+    const alvo = norm(k).replace(/ /g, '_') === nk ? exatos : porTexto;
+    if (!alvo[nk]) alvo[nk] = String(v).trim().slice(0, 160);
   }
-  return out;
+  return Object.keys(porTexto).length >= 4 ? { ...porTexto, ...exatos } : exatos;
 }
 
 export type Aviso = (texto: string) => Promise<void>;

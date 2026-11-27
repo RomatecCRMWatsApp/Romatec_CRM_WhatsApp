@@ -26,6 +26,24 @@ export function norm(t: unknown): string {
   return String(t ?? '').normalize('NFKD').replace(/[̀-ͯ]/g, '').toLowerCase().replace(/_/g, ' ').trim();
 }
 
+/**
+ * Nome do campo do roteiro a partir da chave que o Meta manda. Sem nome de campo definido no formulário, o Meta usa o
+ * texto da pergunta ("o_que_você_procura?", "quando_pretende_comprar?"...); aqui a pergunta vira o campo certo.
+ */
+const PISTAS: [typeof CAMPOS_FORM[number], RegExp][] = [
+  ['procura', /\bprocura\b/],
+  ['momento', /pretende comprar|\bquando\b/],
+  ['pagamento', /\bpagar\b|pagamento|parcelas/],
+  ['prioridade', /importante|prioridade/],
+  ['regiao', /\bmora\b|\bregiao\b/],
+  ['visita', /conhecer|\bvisita\b/],
+];
+export function campoDoRoteiro(chave: unknown): typeof CAMPOS_FORM[number] | null {
+  const k = norm(chave).replace(/[?!.:]/g, '').replace(/\s+/g, ' ');
+  if ((CAMPOS_FORM as readonly string[]).includes(k.replace(/ /g, '_'))) return k.replace(/ /g, '_') as typeof CAMPOS_FORM[number];
+  return PISTAS.find(([, re]) => re.test(k))?.[0] ?? null;
+}
+
 /** As respostas vieram do formulário qualificado (tem pelo menos um campo do roteiro novo) */
 export function ehFormularioQualificado(resp: Record<string, unknown>): boolean {
   const ks = Object.keys(resp).map(norm);
