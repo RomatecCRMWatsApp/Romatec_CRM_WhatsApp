@@ -20,9 +20,10 @@ export const ENV = {
   zairaAutonomyLevel: parseInt(process.env.ZAIRA_AUTONOMY_LEVEL ?? "50"),
   zairaCheckInterval: parseInt(process.env.ZAIRA_CHECK_INTERVAL ?? "300000"),
   // ── Meta (Instagram / Facebook Lead Ads) ────────────────────────────
-  metaAppSecret: process.env.META_APP_SECRET ?? "",
-  metaVerifyToken: process.env.META_VERIFY_TOKEN ?? "",
-  metaPageAccessToken: process.env.META_PAGE_ACCESS_TOKEN ?? "",
+  // .trim(): valor colado no Railway às vezes vem com espaço ou quebra de linha no fim e invalida a assinatura
+  metaAppSecret: (process.env.META_APP_SECRET ?? "").trim(),
+  metaVerifyToken: (process.env.META_VERIFY_TOKEN ?? "").trim(),
+  metaPageAccessToken: (process.env.META_PAGE_ACCESS_TOKEN ?? "").trim(),
   metaIgAccountId: process.env.META_IG_ACCOUNT_ID ?? "",
   metaGraphVersion: process.env.META_GRAPH_VERSION ?? "v26.0",
 };

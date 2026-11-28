@@ -3,6 +3,15 @@
 Cada versão nova vai no TOPO. Depois rode `npm run release` (valida e atualiza o package.json);
 ao subir, o servidor grava a versão no banco e todos recebem o aviso "Novidades da versão".
 
+## 1.211.3 — 2026-11-28
+tipo: patch
+obrigatoria: nao
+titulo: Cadastros do formulário do Meta chegando direto no CRM
+publico: todos
+
+### Correções
+- Leads do formulário do Instagram/Facebook: o CRM passou a aceitar o aviso do Meta mesmo quando a chave do app foi colada com espaço no fim, e aceita também a chave do WhatsApp oficial (mesmo app). Antes o cadastro era recusado e só entrava pelo CSV.
+
 ## 1.211.2 — 2026-11-27
 tipo: patch
 obrigatoria: nao

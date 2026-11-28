@@ -922,8 +922,11 @@ async function startServer() {
         console.error('[Meta] META_APP_SECRET não configurado — webhook recusado');
         return res.sendStatus(503);
       }
-      if (!verifyMetaSignature((req as any).rawBody, req.headers['x-hub-signature-256'], ENV.metaAppSecret)) {
-        console.warn('[Meta] Assinatura X-Hub-Signature-256 inválida — request rejeitado');
+      // O app dos leads pode ser o mesmo do WhatsApp oficial: aceita a chave de qualquer um dos dois
+      const segredos = [ENV.metaAppSecret, (process.env.WHATSAPP_CLOUD_APP_SECRET ?? '').trim()].filter(Boolean);
+      const assinatura = req.headers['x-hub-signature-256'];
+      if (!segredos.some(s => verifyMetaSignature((req as any).rawBody, assinatura, s))) {
+        console.warn(`[Meta] Assinatura X-Hub-Signature-256 inválida — request rejeitado (corpo cru: ${(req as any).rawBody ? 'ok' : 'ausente'}, chaves testadas: ${segredos.length})`);
         return res.sendStatus(401);
       }
 
